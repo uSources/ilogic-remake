@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { BUILDING, HQ, MAP_H, MAP_W, MAX_UNITS, TERRAIN, UNIT, UNIT_NAMES } from '../core/data';
+import { BUILDING, HQ, MAP_H, MAP_W, RULES, TERRAIN, UNIT, UNIT_NAMES } from '../core/data';
 import { samePos } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
@@ -464,7 +464,7 @@ export class GameScene extends Phaser.Scene {
             disabled: !o.affordable,
             detail:
               `${this.unitDetail(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
-              (o.affordable ? '' : ` · ${teamUnits(this.s, 0).length >= MAX_UNITS ? t('unitLimit') : t('cantAfford')}`),
+              (o.affordable ? '' : ` · ${teamUnits(this.s, 0).length >= RULES.maxUnits ? t('unitLimit') : t('cantAfford')}`),
           })),
         ];
         break;
@@ -1049,7 +1049,7 @@ export class GameScene extends Phaser.Scene {
     if (this.menuSel === 0 || !this.selBuilding) return this.toMap();
     const opt = this.buy[this.menuSel - 1];
     if (!opt) return;
-    if (!opt.affordable) return showToast(teamUnits(this.s, 0).length >= MAX_UNITS ? t('unitLimit') : t('cantAfford'));
+    if (!opt.affordable) return showToast(teamUnits(this.s, 0).length >= RULES.maxUnits ? t('unitLimit') : t('cantAfford'));
     const b = this.selBuilding;
     const u = spawn(this.s, b, opt.type);
     if (u) void this.playEvents([{ kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } }]).then(() => this.afterAction());
