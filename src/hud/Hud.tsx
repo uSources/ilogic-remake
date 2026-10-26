@@ -1,8 +1,9 @@
 import type { ComponentChildren } from 'preact';
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'preact/compat';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'preact/compat';
 import { imgUrl } from '../assets';
 import { settings, t } from '../settings';
-import { ui, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
+import { helpText } from './helpText';
+import { ui, type MinimapVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
 
 function useUI(): UIState {
   return useSyncExternalStore(ui.subscribe, ui.get);
@@ -310,6 +311,67 @@ function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Minimapa: 4 px por casilla, niebla oscurecida, edificios y unidades de colores
+// ---------------------------------------------------------------------------
+
+const MM = 4;
+const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+const TEAM_COLOR = ['#3aa8ff', '#ff4d45'] as const;
+
+function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const ctx = ref.current?.getContext('2d');
+    if (!ctx) return;
+    for (let y = 0; y < 32; y++)
+      for (let x = 0; x < 32; x++) {
+        ctx.fillStyle = hex(m.terrain[y * 32 + x] ?? 0);
+        ctx.fillRect(x * MM, y * MM, MM, MM);
+      }
+    ctx.fillStyle = 'rgba(5,8,12,0.45)';
+    for (let x = 0; x < 32; x++) for (let y = 0; y < 32; y++) if (!m.fog[x]?.[y]) ctx.fillRect(x * MM, y * MM, MM, MM);
+    for (const b of m.buildings) {
+      ctx.fillStyle = '#0b1220';
+      ctx.fillRect(b.x * MM, b.y * MM, MM, MM);
+      ctx.fillStyle = b.owner === null ? '#c9d2e3' : TEAM_COLOR[b.owner];
+      ctx.fillRect(b.x * MM + 1, b.y * MM + 1, MM - 2, MM - 2);
+    }
+    for (const u of m.units) {
+      ctx.fillStyle = '#0b1220';
+      ctx.fillRect(u.x * MM, u.y * MM, MM, MM);
+      ctx.fillStyle = u.team === 0 ? '#8fd0ff' : '#ff8a80';
+      ctx.fillRect(u.x * MM + 1, u.y * MM + 1, MM - 2, MM - 2);
+    }
+  }, [m]);
+  const jump = (e: PointerEvent) => {
+    const el = e.currentTarget as HTMLElement;
+    const r = el.getBoundingClientRect();
+    ui.actions.minimapJump(((e.clientX - r.left) / r.width) * 32, ((e.clientY - r.top) / r.height) * 32);
+  };
+  const k = 100 / 32;
+  return (
+    <div class="px minimap" title={t('minimap')}>
+      <div
+        class="mm-wrap"
+        onPointerDown={(e) => {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          jump(e);
+        }}
+        onPointerMove={(e) => {
+          if (e.buttons & 1) jump(e);
+        }}
+      >
+        <canvas ref={ref} width={32 * MM} height={32 * MM} />
+        <span
+          class="mm-view"
+          style={{ left: `${view.x * k}%`, top: `${view.y * k}%`, width: `${view.w * k}%`, height: `${view.h * k}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function GameHud({ s }: { s: UIState }) {
   const showCards = !s.busy && s.turn === 'player' && s.tile;
   return (
@@ -322,7 +384,10 @@ function GameHud({ s }: { s: UIState }) {
           {s.tile!.unit && <UnitCard u={s.tile!.unit} />}
         </div>
       )}
-      {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} />}
+      <div class="side">
+        {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
+        {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} />}
+      </div>
       {s.forecast && <Forecast f={s.forecast} />}
       {s.menu && <PopMenu m={s.menu} />}
     </>
@@ -361,6 +426,58 @@ function MainMenu({ s }: { s: UIState }) {
   );
 }
 
+function Help() {
+  const h = helpText();
+  return (
+    <div class="help-veil" onPointerDown={(e) => e.target === e.currentTarget && ui.actions.closeHelp()}>
+      <div class="px help" role="dialog" aria-label={h.title}>
+        <div class="help-head">
+          <span class="htitle">{h.title}</span>
+          <button tabIndex={-1} type="button" class="px-btn plain" onMouseDown={noFocus} onClick={() => ui.actions.closeHelp()}>
+            {h.close} <span class="key">Esc</span>
+          </button>
+        </div>
+        <div class="help-body">
+          <section>
+            <span class="label">{h.goalTitle}</span>
+            {h.goal.map((p) => (
+              <p>{p}</p>
+            ))}
+            <span class="label">{h.colorsTitle}</span>
+            <ul class="legend">
+              {h.colors.map(([c, txt]) => (
+                <li>
+                  <i style={{ background: c }} />
+                  {txt}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <span class="label">{h.controlsTitle}</span>
+            <table>
+              <thead>
+                <tr>
+                  {h.head.map((x) => (
+                    <th>{x}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {h.controls.map((row) => (
+                  <tr>
+                    {row.map((x, i) => (i === 1 ? <td class="kbd">{x}</td> : <td>{x}</td>))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Hud() {
   const s = useUI();
   return (
@@ -375,14 +492,59 @@ export function Hud() {
       )}
       {s.screen === 'menu' && <MainMenu s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
-      {s.screen === 'end' && (
-        <button tabIndex={-1} type="button" class="px-btn plain endhint" onMouseDown={noFocus} onClick={() => ui.actions.endContinue()}>
-          {t('pressKey')}
-        </button>
+      {s.screen === 'end' && s.end && (
+        <div class="px endpanel">
+          <span class={`endtitle ${s.end.won ? 'won' : 'lost'}`}>{s.end.won ? t('victory') : t('defeat')}</span>
+          {s.end.stats && (
+            <table class="endstats">
+              <thead>
+                <tr>
+                  <th />
+                  <th class="you">{t('you')}</th>
+                  <th class="enemy">{t('enemy')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(
+                  [
+                    ['statBuilt', s.end.stats.built],
+                    ['statLost', s.end.stats.lost],
+                    ['statCaptured', s.end.stats.captured],
+                    ['statSpent', s.end.stats.spent],
+                  ] as const
+                ).map(([k, v]) => (
+                  <tr>
+                    <td>{t(k)}</td>
+                    <td class="num">{fmt(v[0])}</td>
+                    <td class="num">{fmt(v[1])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <span class="muted" style={{ fontSize: 14 }}>
+            {t('statDays')}: {s.end.day}
+          </span>
+          <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => ui.actions.endContinue()}>
+            {t('pressKey')}
+          </button>
+        </div>
       )}
+      {s.help && <Help />}
       {s.toast && (
-        <div key={s.toast.id} class="px toast" role="status">
+        <div key={s.toast.id} class="px toast" role="status" style={{ animationDuration: `${Math.max(2.4, s.toast.text.length / 16).toFixed(1)}s` }}>
           {s.toast.text}
+        </div>
+      )}
+      {s.report && s.screen === 'game' && (
+        <div key={s.report.id} class="px report" role="status">
+          <span class="label">{s.report.title}</span>
+          {s.report.lines.map((l) => (
+            <div class={`line ${l.tone}`}>
+              <Icon k={l.icon} />
+              <span>{l.text}</span>
+            </div>
+          ))}
         </div>
       )}
       {s.banner && (

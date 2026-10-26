@@ -22,10 +22,12 @@ import {
   outcome,
   pathTo,
   removeUnit,
+  type RoundReport,
   spawn,
   supply,
   teamUnits,
   threatMap,
+  unitThreat,
   unitActions,
   unitAt,
   unitById,
@@ -38,13 +40,15 @@ import {
   type UnitActions,
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
+import { recordEvent, stats } from '../core/stats';
 import type { Building, GameEvent, GameState, Pos, Unit } from '../core/types';
-import { showBanner, showToast, ui, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM } from '../hud/store';
+import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM } from '../hud/store';
 import { TILE } from '../layout';
-import { playMusic } from '../music';
-import { buildingLabel, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
+import { playMusic, stopMusic } from '../music';
+import { buildingLabel, saveSettings, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
+import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { buildingKey, terrainKey, unitIconKey, unitKey } from '../ui/sprites';
 
 /**
@@ -56,8 +60,8 @@ type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unlo
 
 type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
-type GameMenuKey = 'endTurn' | 'save' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'resume', 'quit'];
+type GameMenuKey = 'endTurn' | 'save' | 'help' | 'music' | 'autosave' | 'quit' | 'resume';
+const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'help', 'music', 'autosave', 'resume', 'quit'];
 
 interface MoveUndo {
   uid: number;
@@ -109,6 +113,8 @@ export class GameScene extends Phaser.Scene {
   private enemyPlaying = false;
   /** Zona de amenaza enemiga visible (tecla T). */
   private threat = false;
+  /** Unidad cuyo alcance se esta mostrando (Enter o clic derecho sobre ella). */
+  private inspectUid: number | null = null;
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
 
   // Raton
@@ -192,6 +198,12 @@ export class GameScene extends Phaser.Scene {
       openGameMenu: () => {
         if (ready()) this.openGameMenu();
       },
+      minimapJump: (x: number, y: number) => {
+        if (this.ended) return;
+        this.cameras.main.centerOn(x * TILE, y * TILE);
+        this.refreshHud();
+      },
+      toggleMinimap: () => ui.set({ minimapOn: !ui.get().minimapOn }),
       toggleThreat: () => {
         if (!this.ended) this.toggleThreat();
       },
@@ -244,6 +256,19 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'map' && this.inspectUid !== null) {
+      // Alcance de una unidad señalada: adonde llega y que puede atacar en su proximo turno.
+      const u = unitById(this.s, this.inspectUid);
+      if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) {
+        const r = moveRange(this.s, { ...u, active: true, canMove: true });
+        const reach = 'reach';
+        const threat = unitThreat(this.s, u);
+        for (let x = 0; x < MAP_W; x++)
+          for (let y = 0; y < MAP_H; y++) {
+            if (r.steps[x]![y]! > 0 && UNIT.mover[u.type]! > 0) h.set(`${x},${y}`, reach);
+            else if (threat[x]![y]) h.set(`${x},${y}`, 'attack');
+          }
+      } else this.inspectUid = null;
     }
     return h;
   }
@@ -261,7 +286,48 @@ export class GameScene extends Phaser.Scene {
     const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, 1, 0) : null;
     this.view.render(this.s, { vis: this.vis, highlights: this.highlights(), hidden: this.hidden, path: this.previewPath(), threat });
     this.view.placeCursor(this.phase !== 'busy');
+    this.publishMinimap();
     this.refreshHud();
+  }
+
+  private terrainColors: number[] | null = null;
+
+  /** Color medio de cada imagen de terreno (para el minimapa). */
+  private terrainColor(type: number): number {
+    if (!this.terrainColors) {
+      this.terrainColors = [];
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = 8;
+      const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+      for (let i = 0; i < TERRAIN.protection.length; i++) {
+        let color = 0x3a7a3a;
+        const key = terrainKey(i);
+        if (this.textures.exists(key)) {
+          ctx.clearRect(0, 0, 8, 8);
+          ctx.drawImage(this.textures.get(key).getSourceImage() as CanvasImageSource, 0, 0, 8, 8);
+          const d = ctx.getImageData(0, 0, 8, 8).data;
+          let r = 0, g = 0, b = 0, n = 0;
+          for (let k = 0; k < d.length; k += 4) if (d[k + 3]! > 0) { r += d[k]!; g += d[k + 1]!; b += d[k + 2]!; n++; }
+          if (n) color = (Math.round(r / n) << 16) | (Math.round(g / n) << 8) | Math.round(b / n);
+        }
+        this.terrainColors.push(color);
+      }
+    }
+    return this.terrainColors[type] ?? 0x3a7a3a;
+  }
+
+  private publishMinimap(): void {
+    const s = this.s;
+    const terrain: number[] = [];
+    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) terrain.push(this.terrainColor(s.map[x]![y]!));
+    ui.set({
+      minimap: {
+        terrain,
+        fog: this.vis.map((col) => col.slice()),
+        buildings: s.buildings.map((b) => ({ x: b.x, y: b.y, owner: b.owner === 0 || this.visibleToPlayer(b) ? b.owner : null })),
+        units: s.units.filter((u) => u.carrier === null && !this.hidden.has(u.uid) && (u.team === 0 || this.visibleToPlayer(u))).map((u) => ({ x: u.x, y: u.y, team: u.team })),
+      },
+    });
   }
 
   /** Solo cambia el cursor: no hace falta redibujar unidades, salvo el camino previsto. */
@@ -290,10 +356,12 @@ export class GameScene extends Phaser.Scene {
       forecast: this.phase === 'attack' ? this.forecast(c) : null,
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
-      hint: busy ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? t('hintMap') : '',
+      hint: busy ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? (this.inspectUid !== null ? t('hintInspect') : t('hintMap')) : '',
     });
     const cam = this.cameras.main;
     this.lastScroll = { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom };
+    const wv = cam.worldView;
+    ui.set({ minimapView: { x: wv.x / TILE, y: wv.y / TILE, w: wv.width / TILE, h: wv.height / TILE } });
   }
 
   private forecast(c: Pos): ForecastVM | null {
@@ -365,7 +433,13 @@ export class GameScene extends Phaser.Scene {
     switch (this.phase) {
       case 'gameMenu':
         title = `${t('day')} ${this.s.day}`;
-        items = GAME_MENU.map((k) => ({ id: k, label: t(k as TextKey), hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : undefined, danger: k === 'quit' }));
+        items = GAME_MENU.map((k) => ({
+          id: k,
+          label: t(k as TextKey),
+          hint:
+            k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'music' ? (settings.music ? t('on') : t('off')) : k === 'autosave' ? (settings.autosave ? t('on') : t('off')) : undefined,
+          danger: k === 'quit',
+        }));
         break;
       case 'unitMenu':
         kind = 'unit';
@@ -420,6 +494,8 @@ export class GameScene extends Phaser.Scene {
 
   private setupInput(): void {
     this.input.mouse?.disableContextMenu();
+    // Dos dedos a la vez para pellizcar (zoom).
+    if (this.input.manager.pointersTotal < 3) this.input.addPointer(1);
     // Que el navegador no use estas teclas (Tab cambia el foco, Espacio desplaza la pagina...).
     this.input.keyboard!.addCapture('TAB,SPACE,UP,DOWN,LEFT,RIGHT,BACKSPACE');
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e));
@@ -436,6 +512,11 @@ export class GameScene extends Phaser.Scene {
 
   private onKey(e: KeyboardEvent): void {
     if (this.ended) return;
+    if (ui.get().help) {
+      if (['Escape', 'Backspace', 'KeyH', 'Enter', 'NumpadEnter', 'Space'].includes(e.code)) ui.set({ help: false });
+      return;
+    }
+    if (e.code === 'KeyH') return ui.set({ help: true });
     if (this.phase === 'busy') {
       if (['Enter', 'NumpadEnter', 'Space'].includes(e.code)) this.fastForward = true;
       return;
@@ -471,6 +552,8 @@ export class GameScene extends Phaser.Scene {
         return;
       case 'KeyT':
         return this.toggleThreat();
+      case 'KeyM':
+        return ui.actions.toggleMinimap();
       case 'Tab':
         if (this.phase === 'map') this.nextIdle();
         return;
@@ -522,14 +605,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onPointerMove(p: Phaser.Input.Pointer): void {
-    this.pointerInside = true;
+    this.pointerInside = !p.wasTouch;
     if (this.ended) return;
+    // Pellizcar: cada vez que la distancia entre los dedos cambia bastante, un paso de zoom.
+    if (this.touches.has(p.id)) this.touches.set(p.id, { x: p.x, y: p.y });
+    if (this.pinch) {
+      const pts = [...this.touches.values()];
+      if (pts.length >= 2) {
+        const [a, b] = pts as [{ x: number; y: number }, { x: number; y: number }];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        const ratio = d / this.pinch.d;
+        if (ratio > 1.3 || ratio < 0.77) {
+          this.view.zoomStep(ratio > 1 ? 1 : -1, (a.x + b.x) / 2, (a.y + b.y) / 2);
+          this.pinch.d = d;
+          this.refreshHud();
+        }
+      }
+      return;
+    }
     // Arrastrar el mapa.
     if (this.drag && p.isDown) {
       const dx = p.x - this.drag.x,
         dy = p.y - this.drag.y;
-      if (this.drag.moved || Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      if (this.drag.moved || Math.hypot(dx, dy) > DRAG_THRESHOLD * (window.devicePixelRatio || 1)) {
         this.drag.moved = true;
+        this.cancelLongPress();
         this.view.scrollBy(-dx, -dy);
         this.drag.x = p.x;
         this.drag.y = p.y;
@@ -548,11 +648,73 @@ export class GameScene extends Phaser.Scene {
       this.fastForward = true;
       return;
     }
-    if (p.rightButtonDown()) return this.back();
+    if (p.rightButtonDown()) {
+      // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
+      const tile = this.view.tileAtScreen(p.x, p.y);
+      const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
+      if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u)) && u.uid !== this.inspectUid) return this.inspect(u);
+      return this.back();
+    }
     this.drag = { x: p.x, y: p.y, moved: false };
+    if (p.wasTouch) {
+      this.touchHint();
+      this.touches.set(p.id, { x: p.x, y: p.y });
+      if (this.touches.size >= 2) {
+        // Segundo dedo: es un pellizco, no un toque ni un arrastre.
+        const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }];
+        this.pinch = { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
+        this.drag = null;
+        this.cancelLongPress();
+      } else {
+        this.cancelLongPress();
+        const at = { x: p.x, y: p.y };
+        this.longPress = this.time.delayedCall(480, () => this.onLongPress(at));
+      }
+    }
+  }
+
+  private touches = new Map<number, { x: number; y: number }>();
+  private pinch: { d: number } | null = null;
+  private longPress: Phaser.Time.TimerEvent | null = null;
+
+  private cancelLongPress(): void {
+    this.longPress?.remove(false);
+    this.longPress = null;
+  }
+
+  /** Pulsacion larga: llevar el cursor ahi (ficha de informacion) y ver el alcance si hay una unidad. */
+  private onLongPress(at: { x: number; y: number }): void {
+    this.longPress = null;
+    if (!this.drag || this.drag.moved || this.ended || this.phase !== 'map') return;
+    this.drag.moved = true; // que al levantar el dedo no cuente como toque
+    const tile = this.view.tileAtScreen(at.x, at.y);
+    if (!tile) return;
+    navigator.vibrate?.(12);
+    this.view.cursor = { ...tile };
+    const u = unitAt(this.s, tile.x, tile.y);
+    if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) return this.inspect(u);
+    this.cursorMoved();
+  }
+
+  /** La primera vez que se juega con el dedo, explicar los gestos. */
+  private touchHint(): void {
+    try {
+      if (localStorage.getItem('ilogic.touchHint')) return;
+      localStorage.setItem('ilogic.touchHint', '1');
+    } catch {
+      return;
+    }
+    showToast(t('touchHint'));
   }
 
   private onPointerUp(p: Phaser.Input.Pointer): void {
+    this.cancelLongPress();
+    if (this.touches.delete(p.id) && this.pinch) {
+      // Fin del pellizco: ignorar los dedos que quedan hasta que se levanten todos.
+      if (this.touches.size === 0) this.pinch = null;
+      this.drag = null;
+      return;
+    }
     const drag = this.drag;
     this.drag = null;
     if (this.ended || this.phase === 'busy' || p.rightButtonReleased() || !drag || drag.moved) return;
@@ -614,6 +776,10 @@ export class GameScene extends Phaser.Scene {
     this.deleteArmed = false;
     switch (this.phase) {
       case 'map':
+        if (this.inspectUid !== null) {
+          this.inspectUid = null;
+          return this.refresh();
+        }
         return this.openGameMenu();
       case 'gameMenu':
       case 'buy':
@@ -633,6 +799,7 @@ export class GameScene extends Phaser.Scene {
 
   private toMap(): void {
     this.phase = 'map';
+    this.inspectUid = null;
     this.sel = null;
     this.selBuilding = null;
     this.range = null;
@@ -662,6 +829,12 @@ export class GameScene extends Phaser.Scene {
 
   private acceptMap(c: Pos): void {
     const u = unitAt(this.s, c.x, c.y);
+    if (this.inspectUid !== null) {
+      // Segunda pulsacion: cerrar el alcance (o señalar otra unidad).
+      const same = u?.uid === this.inspectUid;
+      this.inspectUid = null;
+      if (same || !u) return this.refresh();
+    }
     if (u && u.team === 0 && u.active) return this.selectUnit(u);
     const b = buildingAt(this.s, c.x, c.y);
     if (b && b.owner === 0 && canBuyAt(this.s, b)) {
@@ -672,7 +845,14 @@ export class GameScene extends Phaser.Scene {
       this.phase = 'buy';
       return this.refresh();
     }
+    if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) return this.inspect(u);
     this.openGameMenu();
+  }
+
+  /** Muestra el alcance de una unidad (enemiga, o propia ya usada). */
+  private inspect(u: Unit): void {
+    this.inspectUid = u.uid;
+    this.refresh();
   }
 
   private selectUnit(u: Unit): void {
@@ -694,6 +874,19 @@ export class GameScene extends Phaser.Scene {
     switch (GAME_MENU[this.menuSel]) {
       case 'resume':
         return this.toMap();
+      case 'help':
+        this.toMap();
+        return ui.set({ help: true });
+      case 'music':
+        settings.music = !settings.music;
+        saveSettings();
+        if (settings.music) playMusic(this, 'game', true);
+        else stopMusic();
+        return this.refreshHud();
+      case 'autosave':
+        settings.autosave = !settings.autosave;
+        saveSettings();
+        return this.refreshHud();
       case 'save':
         if (writeSave(serialize(this.s))) {
           this.savedThisGame = true;
@@ -875,7 +1068,8 @@ export class GameScene extends Phaser.Scene {
     // [CAMBIO] borrar el guardado de esta partida al terminarla (antes solo si se habia cargado).
     if (this.fromSave || this.savedThisGame) deleteSave();
     this.refresh();
-    this.time.delayedCall(900, () => this.scene.start('End', { won: result === 'won' }));
+    const st = stats(this.s);
+    this.time.delayedCall(900, () => this.scene.start('End', { won: result === 'won', day: this.s.day, stats: st }));
     return true;
   }
 
@@ -913,7 +1107,8 @@ export class GameScene extends Phaser.Scene {
       await this.playEvents([ev]);
       if (this.checkEnd()) return;
     }
-    endRound(this.s);
+    const report = endRound(this.s);
+    for (const tm of report.crashedTeams) stats(this.s).lost[tm]++;
     if (settings.autosave && writeSave(serialize(this.s))) this.savedThisGame = true;
     this.enemyPlaying = false;
     if (this.checkEnd()) return;
@@ -924,6 +1119,26 @@ export class GameScene extends Phaser.Scene {
     this.inputLockUntil = this.time.now + 350;
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
+    this.showReport(report);
+  }
+
+  /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
+  private showReport(r: RoundReport): void {
+    const mine = r.healed.filter((h) => h.team === 0);
+    const lines: ReportLineVM[] = [{ icon: 'currency', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    if (mine.length) lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
+    const sup = r.resupplied.filter((uid) => unitById(this.s, uid)?.team === 0).length;
+    if (sup) lines.push({ icon: 'fuel', text: `${sup} ${t(sup === 1 ? 'reportSupplied1' : 'reportSupplied')}`, tone: 'plain' });
+    const lost = r.crashedTeams.filter((tm) => tm === 0).length;
+    if (lost) lines.push({ icon: 'minus', text: `${lost} ${t(lost === 1 ? 'reportCrashed1' : 'reportCrashed')}`, tone: 'red' });
+    showReport(`${t('day')} ${this.s.day}`, lines);
+    if (this.fastForward) return;
+    mine.forEach((h, i) => {
+      const u = unitById(this.s, h.uid);
+      if (!u || u.carrier !== null || !this.visibleToPlayer(u)) return;
+      const c = center(u);
+      void floatText(this, this.view, { x: c.x, y: c.y - 6 }, `+${h.amount}`, '#4fd36a', 1100 + i * 90);
+    });
   }
 
   private wait(ms: number): Promise<void> {
@@ -949,6 +1164,7 @@ export class GameScene extends Phaser.Scene {
     this.view.placeCursor(false);
     this.refreshHud();
     for (const ev of events) {
+      recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
       switch (ev.kind) {
         case 'move':
         case 'merge':
@@ -965,19 +1181,37 @@ export class GameScene extends Phaser.Scene {
           await this.animatePath(ev.uid, tex, ev.path, showAll);
           break;
         }
-        case 'attack':
-          this.refresh();
-          if (this.visibleToPlayer(ev.target) && !this.fastForward) {
+        case 'attack': {
+          const seen = this.visibleToPlayer(ev.target) && !this.fastForward;
+          // Lo que habia dibujado antes del ataque (la victima puede haber desaparecido ya del estado).
+          const victimKey = this.view.unitKeyAt(ev.target);
+          if (seen) {
             await this.lookAt(ev.target);
-            await this.attackFx(ev.target, ev.damage, ev.killed);
+            const atk = unitById(this.s, ev.attacker);
+            const atkSprite = this.view.unitSprite(ev.attacker);
+            if (atk && atkSprite) await lunge(this, atkSprite, { dx: ev.target.x - atk.x, dy: ev.target.y - atk.y });
+          }
+          this.refresh();
+          if (seen) await this.attackFx(ev.target, ev.damage, ev.killed, victimKey);
+          break;
+        }
+        case 'capture':
+          this.refresh();
+          if (!this.fastForward && this.visibleToPlayer(ev.at)) {
+            await this.lookAt(ev.at);
+            const c = center(ev.at);
+            void burst(this, this.view, c, { colors: COLORS.gold, count: 12, radius: 22 });
+            void tileFlash(this, this.view, ev.at, 0xffd447);
+            await floatText(this, this.view, { x: c.x, y: c.y - 6 }, ev.owner === null ? t('fxNeutral') : t('fxCaptured'), '#ffd447');
           }
           break;
-        case 'capture':
         case 'spawn':
           this.refresh();
           if (!this.fastForward && this.visibleToPlayer(ev.at)) {
             await this.lookAt(ev.at);
-            await this.flash(ev.at, ev.kind === 'capture' ? 0xf5c542 : 0xffffff);
+            const sp = this.view.unitSprite(ev.uid);
+            void burst(this, this.view, { x: center(ev.at).x, y: ev.at.y * TILE + TILE - 2 }, { colors: COLORS.smoke, count: 8, radius: 14, size: 2 });
+            await Promise.all([tileFlash(this, this.view, ev.at, 0xffffff), sp ? blink(this, sp, 2, 60) : Promise.resolve()]);
           }
           break;
       }
@@ -1003,11 +1237,13 @@ export class GameScene extends Phaser.Scene {
       const p = path[i]!;
       const shown = showAll || this.visibleToPlayer(p);
       if (!shown && !img.visible) {
-        img.setPosition(p.x * TILE, (p.y + 1) * TILE);
+        img.setPosition(p.x * TILE + TILE / 2, (p.y + 1) * TILE);
         continue;
       }
+      const prev = path[i - 1]!;
+      if (p.x !== prev.x) img.setFlipX(p.x < prev.x);
       await new Promise<void>((resolve) =>
-        this.tweens.add({ targets: img, x: p.x * TILE, y: (p.y + 1) * TILE, duration: this.fastForward ? 1 : STEP_MS, onComplete: () => resolve() }),
+        this.tweens.add({ targets: img, x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE, duration: this.fastForward ? 1 : STEP_MS, onComplete: () => resolve() }),
       );
       img.setVisible(shown);
     }
@@ -1015,26 +1251,27 @@ export class GameScene extends Phaser.Scene {
     this.hidden.delete(uid);
   }
 
-  private async attackFx(at: Pos, damage: number, killed: boolean): Promise<void> {
-    const cx = at.x * TILE + TILE / 2,
-      cy = at.y * TILE + TILE / 2;
-    const flash = this.add.rectangle(cx, cy, TILE, TILE, killed ? 0xff3020 : 0xffffff, 0.8);
-    this.view.addFx(flash);
-    this.cameras.main.shake(120, 0.004);
-    const text = this.add
-      .text(cx, cy - 8, `-${damage}`, { fontFamily: 'Silkscreen, monospace', fontSize: '16px', color: '#ff4d45', stroke: '#0b1220', strokeThickness: 4 })
-      .setOrigin(0.5, 1);
-    this.view.addFx(text);
-    this.tweens.add({ targets: flash, alpha: 0, scale: 1.4, duration: 380 });
-    await new Promise<void>((resolve) => this.tweens.add({ targets: text, y: cy - 30, alpha: 0, delay: 300, duration: 450, onComplete: () => resolve() }));
-    flash.destroy();
-    text.destroy();
-  }
-
-  private async flash(at: Pos, color: number): Promise<void> {
-    const r = this.add.rectangle(at.x * TILE + TILE / 2, at.y * TILE + TILE / 2, TILE, TILE, color, 0.7);
-    this.view.addFx(r);
-    await new Promise<void>((resolve) => this.tweens.add({ targets: r, alpha: 0, scale: 1.5, duration: 320, onComplete: () => resolve() }));
-    r.destroy();
+  private async attackFx(at: Pos, damage: number, killed: boolean, victimKey: string | null): Promise<void> {
+    const c = center(at);
+    if (!reducedMotion()) this.cameras.main.shake(killed ? 220 : 110, killed ? 0.006 : 0.003);
+    const jobs: Promise<void>[] = [burst(this, this.view, c, { colors: COLORS.fire, count: killed ? 12 : 9, radius: killed ? 20 : 16, size: 5 })];
+    jobs.push(floatText(this, this.view, { x: c.x, y: c.y - 4 }, `-${damage}`, '#ff4d45'));
+    // La victima parpadea (si queda viva, su sprite; si no, una copia que luego estalla).
+    const live = unitAt(this.s, at.x, at.y);
+    const sprite = live ? this.view.unitSprite(live.uid) : null;
+    if (sprite) jobs.push(blink(this, sprite, 2, 60));
+    else if (victimKey && killed) {
+      const ghost = this.view.ghost(victimKey, at);
+      jobs.push(
+        blink(this, ghost, 3, 80).then(async () => {
+          ghost.destroy();
+          await Promise.all([
+            burst(this, this.view, c, { colors: COLORS.fire, count: 18, radius: 28, size: 6, duration: 520 }),
+            burst(this, this.view, c, { colors: COLORS.smoke, count: 10, radius: 20, size: 3, duration: 700 }),
+          ]);
+        }),
+      );
+    }
+    await Promise.all(jobs);
   }
 }

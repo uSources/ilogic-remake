@@ -57,6 +57,8 @@ export interface GameState {
   nextUid: number;
   /** Numero de ronda (empieza en 1). */
   day: number;
+  /** Estadisticas para la pantalla final (opcional: las partidas antiguas no las tienen). */
+  stats?: import('./stats').GameStats;
 }
 
 /** Generador de numeros aleatorios en [0, 1). */

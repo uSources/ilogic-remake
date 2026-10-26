@@ -4,9 +4,10 @@ import type { GameState, Pos, Unit } from '../core/types';
 import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
 import { MAP_PX, TILE } from '../layout';
+import { reducedMotion } from './fx';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 
-export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload';
+export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach';
 
 const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
   move: { fill: 0x3aa8ff, alpha: 0.4, line: 0xcfe8ff },
@@ -14,6 +15,7 @@ const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> =
   merge: { fill: 0xb15cff, alpha: 0.45, line: 0xe0b8ff },
   load: { fill: 0x2fd3c3, alpha: 0.45, line: 0xa8fff6 },
   attack: { fill: 0xff4d45, alpha: 0.42, line: 0xffb0b2 },
+  reach: { fill: 0xff8a3d, alpha: 0.32, line: 0xffc9a0 },
 };
 
 export interface ViewOptions {
@@ -124,7 +126,7 @@ export class MapView {
   centerOn(p: Pos, instant = false): void {
     const wx = p.x * TILE + TILE / 2,
       wy = p.y * TILE + TILE / 2;
-    if (instant) this.cam.centerOn(wx, wy);
+    if (instant || reducedMotion()) this.cam.centerOn(wx, wy);
     else this.cam.pan(wx, wy, 220, 'Sine.easeOut', true);
   }
 
@@ -142,7 +144,7 @@ export class MapView {
     if (top < wv.y + m) cy -= wv.y + m - top;
     if (top + TILE > wv.bottom - m) cy += top + TILE - (wv.bottom - m);
     if (cx === wv.centerX && cy === wv.centerY) return;
-    if (instant) this.cam.centerOn(cx, cy);
+    if (instant || reducedMotion()) this.cam.centerOn(cx, cy);
     else this.cam.pan(cx, cy, 160, 'Sine.easeOut', true);
   }
 
@@ -371,8 +373,9 @@ export class MapView {
 
   /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y nubes. */
   tick(time: number, delta: number): void {
-    this.cursorImg.setAlpha(Math.floor(time / 450) % 2 ? 0.7 : 1);
-    const phase = Math.floor(time / 500) % 2;
+    const still = reducedMotion();
+    this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
+    const phase = still ? 0 : Math.floor(time / 500) % 2;
     if (phase !== this.bobPhase) {
       this.bobPhase = phase;
       for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
@@ -399,14 +402,26 @@ export class MapView {
     }
   }
 
+  /** Sprite (contenedor) de una unidad tal como esta dibujada ahora, si se ve. */
+  unitSprite(uid: number): Phaser.GameObjects.Container | null {
+    return this.units.get(uid)?.root ?? null;
+  }
+
+  /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
+  unitKeyAt(p: Pos): string | null {
+    for (const sp of this.units.values()) if (sp.root.x === p.x * TILE && sp.root.y === p.y * TILE && sp.root.visible) return sp.key;
+    return null;
+  }
+
   /** Objeto temporal para animaciones (coordenadas de mundo). */
   addFx(obj: Phaser.GameObjects.GameObject): void {
     this.fx.add(obj);
   }
 
-  /** Imagen de unidad para animar, colocada en una casilla. */
+  /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
   ghost(key: string, p: Pos): Phaser.GameObjects.Image {
-    const img = this.scene.add.image(p.x * TILE, (p.y + 1) * TILE, key).setOrigin(0, 1);
+    // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
+    const img = this.scene.add.image(p.x * TILE + TILE / 2, (p.y + 1) * TILE, key).setOrigin(0.5, 1);
     img.setDisplaySize(TILE, img.height);
     this.fx.add(img);
     return img;

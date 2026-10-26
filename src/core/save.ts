@@ -4,6 +4,7 @@
  * y sin modificar el estado al guardar.
  */
 import { BUILDING_TYPES, MAP_H, MAP_W, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
+import { sanitizeStats } from './stats';
 import type { Building, GameState, Unit } from './types';
 
 export function serialize(s: GameState): string {
@@ -55,5 +56,6 @@ export function deserialize(json: string): GameState | null {
   }
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...uids) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
+  if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
   return s;
 }

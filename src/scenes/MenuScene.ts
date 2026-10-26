@@ -50,6 +50,7 @@ export class MenuScene extends Phaser.Scene {
     this.buttons = [
       { id: 'play', label: () => t('play'), enabled: () => true, primary: true, run: () => start('new') },
       { id: 'continue', label: () => t('continue'), enabled: () => this.saveOk, run: () => start('load') },
+      { id: 'help', label: () => t('help'), enabled: () => true, run: () => ui.set({ help: true }) },
       {
         id: 'music',
         label: () => t('music'),
@@ -104,6 +105,10 @@ export class MenuScene extends Phaser.Scene {
 
     this.input.keyboard!.addCapture('SPACE,UP,DOWN');
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+      if (ui.get().help) {
+        if (['Escape', 'Backspace', 'Enter', 'NumpadEnter', 'Space', 'KeyH'].includes(e.code)) ui.set({ help: false });
+        return;
+      }
       if (['ArrowUp', 'KeyW', 'Numpad8'].includes(e.code)) this.move(-1);
       else if (['ArrowDown', 'KeyS', 'Numpad2'].includes(e.code)) this.move(1);
       else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) this.activate();
