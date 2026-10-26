@@ -318,7 +318,21 @@ export const MAPGEN = {"MINNB": 24, "MAXNB": 30, "MAXSPAWNDIST": 2, "MINUCAP": 9
 // ---- Reglas generales ----
 export const MAP_W = 32, MAP_H = 32;
 export const MAX_LIFE = 100;
-export const MAX_UNITS = 30; // por bando
-export const INITIAL_FUNDS = 5000;
+/**
+ * Reglas y parametros de partida que se pueden cambiar sin tocar el codigo
+ * (variantes de la herramienta de equilibrio, "reglas clasicas de 2013"...).
+ */
+export const RULES = {
+  /** Dinero inicial de cada bando. */
+  initialFunds: 5000,
+  /** Unidades maximas por bando. */
+  maxUnits: 30,
+  /** El defensor que sobrevive responde al ataque (plan de gameplay, fase 1). */
+  counterattack: false,
+  /** null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %). */
+  damageSpread: null as number | null,
+  /** 'instant' = original (enemigo -> neutral -> tuyo); 'points' = por puntos en varios turnos (fase 2). */
+  capture: 'instant' as 'instant' | 'points',
+};
 export const MAX_FUNDS = 999999;
 export const AI = { MAXMERGELIFE: 130, MAXCAPTDIST: 8, LIFETOBACK: 40 } as const;

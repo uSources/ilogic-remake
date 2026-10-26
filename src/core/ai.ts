@@ -5,7 +5,7 @@
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
-import { AI, BUILDING, FUELER, HEALER, HQ, MAX_UNITS, POWER, UNIT } from './data';
+import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
   attack,
@@ -280,7 +280,7 @@ const SUPPORT_TYPES = new Set([5, 7, 13, 15]); // Blocker, Transport, Supplier, 
  */
 function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
   for (const b of s.buildings) {
-    if (b.owner !== ME || teamUnits(s, ME).length >= MAX_UNITS || unitAt(s, b.x, b.y)) continue;
+    if (b.owner !== ME || teamUnits(s, ME).length >= RULES.maxUnits || unitAt(s, b.x, b.y)) continue;
     const mine = teamUnits(s, ME);
     let opts = buyOptions(s, b).filter(
       (o) => o.affordable && !(SUPPORT_TYPES.has(o.type) && mine.some((u) => u.type === o.type)),

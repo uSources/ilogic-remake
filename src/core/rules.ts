@@ -12,7 +12,7 @@ import {
   HQ,
   MAX_FUNDS,
   MAX_LIFE,
-  MAX_UNITS,
+  RULES,
   POWER,
   SPAWNER,
   TERRAIN,
@@ -481,7 +481,7 @@ export interface BuyOption {
 export function buyOptions(s: GameState, b: Building): BuyOption[] {
   if (b.owner === null) return [];
   const team = b.owner;
-  const full = teamUnits(s, team).length >= MAX_UNITS;
+  const full = teamUnits(s, team).length >= RULES.maxUnits;
   const out: BuyOption[] = [];
   for (let t = 0; t < UNIT_TYPES; t++) {
     if (!SPAWNER[t]![b.type]) continue;
@@ -501,7 +501,7 @@ export function spawn(s: GameState, b: Building, type: number): Unit | null {
   if (b.owner === null || !SPAWNER[type]![b.type]) return null;
   const team = b.owner;
   const cost = UNIT.cost[type]!;
-  if (cost > s.funds[team] || teamUnits(s, team).length >= MAX_UNITS) return null;
+  if (cost > s.funds[team] || teamUnits(s, team).length >= RULES.maxUnits) return null;
   if (!isWalkable(s, b.x, b.y, UNIT.movtype[type]!)) return null;
   s.funds[team] -= cost;
   return newUnit(s, type, team, b.x, b.y, false);

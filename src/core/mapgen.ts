@@ -7,7 +7,7 @@
  * tierra y separadas; si no, se genera otro mapa (en el original podian faltar o solaparse).
  */
 import {
-  INITIAL_FUNDS,
+  RULES,
   MAP_H,
   MAP_W,
   MAPGEN,
@@ -33,7 +33,7 @@ function emptyState(): GameState {
     version: 1,
     map: grid(0),
     theme: 0,
-    funds: [INITIAL_FUNDS, INITIAL_FUNDS],
+    funds: [RULES.initialFunds, RULES.initialFunds],
     units: [],
     buildings: [],
     nextUid: 1,
