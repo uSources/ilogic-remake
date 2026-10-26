@@ -26,6 +26,14 @@ Lo que más pesa en la estrategia:
 2. La captura instantánea vuelve las partidas muy rápidas o muy desequilibradas, y una Base se puede perder en un solo turno.
 3. No hay nada que ajustar ni que elegir antes de jugar (mapa, dificultad, reglas), y eso resta rejugabilidad.
 
+## Decisiones tomadas (26-10-2026)
+
+- **Contraataque:** sí, como en Advance Wars. La artillería y las unidades a distancia ni contraatacan ni lo reciben.
+- **Captura:** por puntos, en varios turnos (20 puntos; cada turno se resta la vida ÷ 10). Pasa directamente a ser tuyo, sin el paso por neutral.
+- **Azar en el daño:** poco, el daño esperado ±10 %.
+- **Orden:** fase 0 y luego 1 → 5.
+- Todo con la opción "Reglas clásicas de 2013" para jugar como el original.
+
 ---
 
 ## Fase 0: medir antes de tocar
