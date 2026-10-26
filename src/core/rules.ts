@@ -515,6 +515,12 @@ export interface RoundReport {
   income: [number, number];
   /** uids de unidades aereas que se han quedado sin combustible y han caido. */
   crashed: number[];
+  /** Unidades curadas en un edificio propio (uid, bando, vida recuperada). */
+  healed: { uid: number; team: Team; amount: number }[];
+  /** uids de unidades que han recibido combustible o municion en un edificio propio. */
+  resupplied: number[];
+  /** Bando de cada unidad que ha caido (se borran del estado). */
+  crashedTeams: Team[];
 }
 
 /**
@@ -523,7 +529,7 @@ export interface RoundReport {
  * [CAMBIO] el repostaje va antes del gasto: un avion en su aeropuerto ya no se estrella.
  */
 export function endRound(s: GameState): RoundReport {
-  const report: RoundReport = { income: [0, 0], crashed: [] };
+  const report: RoundReport = { income: [0, 0], crashed: [], healed: [], resupplied: [], crashedTeams: [] };
   for (const u of s.units) {
     u.active = true;
     u.canMove = true;
@@ -536,12 +542,19 @@ export function endRound(s: GameState): RoundReport {
     report.income[b.owner] += BUILDING.earning[b.type]!;
     const u = unitAt(s, b.x, b.y);
     if (!u || u.team !== b.owner) continue;
-    if (HEALER[u.type]![b.type]) u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
+    if (HEALER[u.type]![b.type]) {
+      const before = u.life;
+      u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
+      if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
+    }
+    const fuelBefore = u.fuel,
+      ammoBefore = u.ammo;
     if (FUELER[u.type]![b.type]) {
       u.fuel = UNIT.maxfuel[u.type]!;
       refueled.add(u.uid);
     }
     if (AMMO_RESTORER[u.type]![b.type]) u.ammo = UNIT.maxammo[u.type]!;
+    if (u.fuel > fuelBefore || u.ammo > ammoBefore) report.resupplied.push(u.uid);
   }
   for (const u of [...s.units]) {
     const burn = UNIT.fuelperturn[u.type]!;
@@ -549,6 +562,7 @@ export function endRound(s: GameState): RoundReport {
     u.fuel -= burn;
     if (u.fuel <= 0) {
       report.crashed.push(u.uid);
+      report.crashedTeams.push(u.team);
       removeUnit(s, u.uid);
     }
   }
@@ -664,19 +678,28 @@ export function threatMap(s: GameState, team: Team, viewer: Team): boolean[][] {
   const out = grid(false);
   const vis = visibility(s, viewer);
   for (const u of s.units) {
-    if (u.team !== team || u.carrier !== null || !UNIT.canfight[u.type] || !hasAmmo(u) || !vis[u.x]![u.y]) continue;
-    const minR = UNIT.minalc[u.type]!,
-      maxR = UNIT.alcance[u.type]!;
-    if (maxR === 0) continue;
-    // Las unidades a distancia no pueden mover y disparar: solo desde donde estan.
-    const origins: Pos[] = [{ x: u.x, y: u.y }];
-    if (minR === 0) {
-      const fresh = { ...u, active: true, canMove: true };
-      const r = moveRange(s, fresh);
-      for (let x = 0; x < r.steps.length; x++)
-        for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
-    }
-    for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) out[p.x]![p.y] = true;
+    if (u.team !== team || u.carrier !== null || !vis[u.x]![u.y]) continue;
+    unitThreat(s, u, out);
   }
+  return out;
+}
+
+/**
+ * Casillas que una unidad podria atacar en su proximo turno (moviendose si puede).
+ * Las unidades a distancia no pueden mover y disparar: solo cuentan desde donde estan.
+ */
+export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false)): boolean[][] {
+  if (!UNIT.canfight[u.type] || !hasAmmo(u)) return out;
+  const minR = UNIT.minalc[u.type]!,
+    maxR = UNIT.alcance[u.type]!;
+  if (maxR === 0) return out;
+  const origins: Pos[] = [{ x: u.x, y: u.y }];
+  if (minR === 0) {
+    const fresh = { ...u, active: true, canMove: true };
+    const r = moveRange(s, fresh);
+    for (let x = 0; x < r.steps.length; x++)
+      for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
+  }
+  for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) out[p.x]![p.y] = true;
   return out;
 }

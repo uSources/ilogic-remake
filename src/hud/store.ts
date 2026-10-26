@@ -1,3 +1,5 @@
+import { settings } from '../settings';
+
 /**
  * Estado de la interfaz (HTML) compartido con las escenas de Phaser.
  * Las escenas escriben con ui.set(...) y registran sus acciones en ui.actions;
@@ -78,6 +80,12 @@ export interface MainMenuItemVM {
   primary?: boolean;
 }
 
+export interface ReportLineVM {
+  icon: string;
+  text: string;
+  tone: 'gold' | 'green' | 'red' | 'plain';
+}
+
 export interface UIState {
   screen: 'loading' | 'logo' | 'menu' | 'game' | 'end';
   loading: number;
@@ -98,7 +106,21 @@ export interface UIState {
   toast: { text: string; id: number } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
-  end: { won: boolean } | null;
+  end: { won: boolean; day: number; stats: import('../core/stats').GameStats | null } | null;
+  report: { title: string; lines: ReportLineVM[]; id: number } | null;
+  minimap: MinimapVM | null;
+  /** Parte del mapa que se ve, en casillas. */
+  minimapView: { x: number; y: number; w: number; h: number };
+  minimapOn: boolean;
+  help: boolean;
+}
+
+export interface MinimapVM {
+  /** Color de terreno por casilla, fila a fila (y*32+x). */
+  terrain: number[];
+  fog: boolean[][];
+  buildings: { x: number; y: number; owner: 0 | 1 | null }[];
+  units: { x: number; y: number; team: 0 | 1 }[];
 }
 
 export interface UIActions {
@@ -110,8 +132,11 @@ export interface UIActions {
   endTurn(): void;
   openGameMenu(): void;
   toggleThreat(): void;
+  toggleMinimap(): void;
+  minimapJump(x: number, y: number): void;
   focusUnit(uid: number): void;
   endContinue(): void;
+  closeHelp(): void;
 }
 
 const noop = () => {};
@@ -136,6 +161,11 @@ const initial: UIState = {
   banner: null,
   hint: '',
   end: null,
+  report: null,
+  minimap: null,
+  minimapView: { x: 0, y: 0, w: 0, h: 0 },
+  help: false,
+  minimapOn: typeof window !== 'undefined' ? window.innerWidth > 900 : true,
 };
 
 type Listener = () => void;
@@ -169,8 +199,11 @@ export const ui = {
     endTurn: noop,
     openGameMenu: noop,
     toggleThreat: noop,
+    toggleMinimap: noop,
+    minimapJump: noop,
     focusUnit: noop,
     endContinue: noop,
+    closeHelp: () => ui.set({ help: false }),
   } as UIActions,
 };
 
@@ -178,6 +211,12 @@ let toastId = 0;
 export function showToast(text: string): void {
   ui.set({ toast: { text, id: ++toastId } });
 }
+export function showReport(title: string, lines: ReportLineVM[]): void {
+  ui.set({ report: { title, lines, id: ++toastId } });
+}
+
+export const fmtNum = (n: number): string => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
+
 export function showBanner(small: string, big: string, tone: 'blue' | 'red'): void {
   ui.set({ banner: { small, big, tone, id: ++toastId } });
 }

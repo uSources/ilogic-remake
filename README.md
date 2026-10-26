@@ -34,6 +34,9 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 | Zoom | + / - | Rueda |
 | Siguiente unidad sin mover | Tab | Clic en la bandeja de abajo a la derecha |
 | Zona de amenaza enemiga | T | Boton "Ver amenaza enemiga" |
+| Alcance de una unidad | Enter sobre ella | Clic derecho (movil: mantener pulsado) |
+| Minimapa | M | Clic o arrastrar sobre el minimapa |
+| Ayuda | H | Menu de partida > Como se juega |
 
 - Pulsa sobre una unidad tuya (azul) para ver adonde puede ir. Al pasar por encima de una casilla
   se dibuja el camino; pulsa el destino y elige una accion en el menu que aparece junto a la unidad.
@@ -48,7 +51,11 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 - **Se gana capturando (neutralizando) la Base enemiga.** Para quitarle un edificio al rival hay
   que capturarlo dos veces: primero pasa a neutral y luego a tuyo.
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
-- En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma.
+- En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
+  ensena el alcance de una unidad y se pellizca para hacer zoom.
+- Al empezar cada turno sale un resumen de la ronda (ingresos, unidades reparadas y reabastecidas).
+- Al acabar la partida se ven estadisticas de los dos bandos (compras, bajas, capturas, gasto).
+- Si el sistema pide reducir el movimiento, se quitan los temblores, parpadeos y paneos de camara.
 
 ## Estructura
 
@@ -67,6 +74,8 @@ src/
   ui/          Dibujo del mapa (mapView: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
   hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (componentes), hud.css
                (estilo "retro pixel") y store.ts (estado que publican las escenas)
+  ui/fx.ts     Efectos pixel: explosiones, textos flotantes, destellos
+  core/stats.ts Estadisticas de la partida (se guardan con ella)
   display.ts   Lienzo a resolucion fisica de la pantalla (nitido en pantallas de alta densidad)
 public/assets/ Graficos y musica originales (la musica, convertida a ogg/mp3)
 docs/          Especificacion del juego original sacada del codigo Java
@@ -95,7 +104,9 @@ marcados en el codigo con `[CAMBIO]`. Los principales:
 - Interfaz nueva de estilo pixel (HTML y CSS sobre el lienzo): mapa a pantalla completa y nitido
   a cualquier tamano (zoom entero), menus emergentes junto a la unidad, fichas de terreno y unidad,
   compra con nombres y estadisticas, camino previsto, prevision de combate, bandeja de unidades
-  sin mover (Tab), zona de amenaza enemiga (T), animaciones y cartel de cambio de turno. Se conservan los graficos,
+  sin mover (Tab), zona de amenaza enemiga (T), alcance de cualquier unidad, minimapa, ayuda,
+  resumen de cada ronda, estadisticas finales, gestos tactiles (pellizcar, mantener pulsado),
+  explosiones y efectos pixel, y cartel de cambio de turno. Se conservan los graficos,
   el logo, el fondo del menu y las pantallas de victoria y derrota originales.
 - Guardado y configuracion en el navegador (localStorage).
 - El original no tenia graficos para las esquinas inferiores de las orillas en los temas
