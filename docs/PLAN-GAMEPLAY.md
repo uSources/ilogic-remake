@@ -32,6 +32,7 @@ Lo que más pesa en la estrategia:
 - **Captura:** por puntos, en varios turnos (20 puntos; cada turno se resta la vida ÷ 10). Pasa directamente a ser tuyo, sin el paso por neutral.
 - **Azar en el daño:** poco, el daño esperado ±10 %.
 - **Orden:** fase 0 y luego 1 → 5.
+- **Fuera por ahora:** dificultades e IA nueva, y dos jugadores en el mismo ordenador. La IA solo se adapta a las reglas nuevas (fase 3).
 - Todo con la opción "Reglas clásicas de 2013" para jugar como el original.
 
 ---
@@ -77,21 +78,13 @@ Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se deci
 
 **Hecho cuando:** ninguna partida simulada se decida antes del día 6 por una captura sorpresa, y la mediana de duración esté entre 15 y 25 días.
 
-## Fase 3: una IA a la altura
+## Fase 3: adaptar la IA a las reglas nuevas (mínimo)
 
-1. **Tres dificultades.**
-   - **Fácil:** se equivoca adrede, no remata y compra al azar.
-   - **Normal:** lo de ahora, mejorado.
-   - **Difícil:** sin las ayudas de "ver" de más, pero con mejores decisiones.
-2. **Mejores decisiones:**
-   - usar la previsión de combate (con contraataque) para elegir ataques;
-   - concentrar el fuego y rematar;
-   - no meterse en la zona de amenaza si no le compensa;
-   - defender su Base cuando un capturador se acerca;
-   - usar transportes y poner la artillería detrás de la primera línea.
-3. **Que la IA haga trampas solo si se elige:** por ejemplo, que vea a través de la niebla en "difícil", si se quiere.
+Sin dificultades ni IA nueva: eso queda fuera por ahora. Solo lo imprescindible para que la IA de siempre juegue bien con las reglas de las fases 1 y 2:
+- que tenga en cuenta el contraataque al elegir a quién atacar;
+- que se quede quieta encima del edificio hasta terminar de capturarlo, y que intente echar al capturador que amenaza su Base.
 
-**Hecho cuando:** en el simulador, Difícil gane a Normal en más del 70 % de las partidas y Normal gane a Fácil en más del 70 %.
+**Hecho cuando:** contra un jugador pasivo la IA siga ganando más del 85 % de las partidas simuladas con las reglas nuevas.
 
 ## Fase 4: partidas a tu medida
 
@@ -101,13 +94,12 @@ Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se deci
    - semilla para compartir un mapa con un código;
    - dinero inicial e ingreso por edificio;
    - niebla de guerra sí o no;
-   - dificultad de la IA.
-2. **Dos jugadores en el mismo ordenador**, por turnos. Una pantalla de "pasa el dispositivo" oculta el mapa entre turnos si hay niebla.
-3. **Otras condiciones de victoria:**
+   - reglas clásicas de 2013 o nuevas.
+2. **Otras condiciones de victoria:**
    - límite de días, con victoria por puntos (edificios + valor de las unidades);
    - rendirse;
    - aniquilación.
-4. **Repetición** del último turno enemigo.
+3. **Repetición** del último turno enemigo.
 
 **Hecho cuando:** se pueda configurar y jugar cualquier combinación sin errores. Las partidas guardadas recordarán la configuración.
 
@@ -127,7 +119,7 @@ Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se deci
 
 ## Orden recomendado
 
-Fase 0 → 1 → 2 → 3 van seguidas: cada una cambia los números de la siguiente y la IA debe aprender las reglas nuevas. La 4 y la 5 son independientes y se pueden intercalar.
+Fase 0 → 1 → 2 → 3 van seguidas: cada una cambia los números de la siguiente, y la IA tiene que entender las reglas nuevas. La 4 y la 5 son independientes y se pueden intercalar.
 
 Cada fase:
 - deja tests de las reglas nuevas;
