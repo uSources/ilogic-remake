@@ -62,7 +62,7 @@ Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se deci
 3. **Terreno que se note.** Revisar la defensa de bosque, montaña y ciudad para que colocarse bien compense de verdad. La ficha ya enseña las estrellas.
 4. **Ventaja por flanqueo** (opcional): +10 % de acierto por cada aliado junto al objetivo. Premia rodear.
 
-**Hecho cuando:** en el simulador, la unidad que ataca primero gane menos del 70 % de los duelos igualados (hoy ronda el 100 %), y la artillería protegida rinda más que la expuesta.
+**Hecho cuando:** entre unidades iguales, atacar primero haga como mucho 3 veces el daño que se recibe (hoy no se recibe nada). Nota: en un duelo a muerte entre iguales siempre gana quien empieza (como en Advance Wars); lo que importa es que el primer golpe ya no salga gratis.
 
 ## Fase 2: captura y economía
 

@@ -38,6 +38,7 @@ function emptyState(): GameState {
     buildings: [],
     nextUid: 1,
     day: 1,
+    rules: { ...RULES },
   };
 }
 
@@ -268,15 +269,19 @@ export function generateGame(rng: Rng = Math.random): GameState {
     addDeepWater(s.map);
     if (tileCount < MAPGEN.MINTILENUM && attempt < 500) continue;
 
-    const player = findSpawn(s, false, () => true);
-    if (!player) continue;
-    const reach = groundDistance(s, player, WALK, grid(false));
-    const enemy = findSpawn(
+    const first = findSpawn(s, false, () => true);
+    if (!first) continue;
+    const reach = groundDistance(s, first, WALK, grid(false));
+    const second = findSpawn(
       s,
       true,
-      (p) => reach[p.x]![p.y]! > 0 && manhattan(p, player) >= MIN_SPAWN_DISTANCE,
+      (p) => reach[p.x]![p.y]! > 0 && manhattan(p, first) >= MIN_SPAWN_DISTANCE,
     );
-    if (!enemy) continue;
+    if (!second) continue;
+    // [CAMBIO] el original daba siempre la primera zona al jugador y la segunda a la IA. La segunda
+    // sale mejor situada mas a menudo (la herramienta de equilibrio: 59-61 % de ventaja para ese
+    // lado, en los dos sentidos). Ahora se sortea quien empieza en cada una.
+    const [player, enemy] = rng() < 0.5 ? [first, second] : [second, first];
 
     if (!generateBuilds(s, player, 0, rng) || !generateBuilds(s, enemy, 1, rng)) continue;
     generateUnits(s, player, 0, rng);

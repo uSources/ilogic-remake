@@ -318,21 +318,61 @@ export const MAPGEN = {"MINNB": 24, "MAXNB": 30, "MAXSPAWNDIST": 2, "MINUCAP": 9
 // ---- Reglas generales ----
 export const MAP_W = 32, MAP_H = 32;
 export const MAX_LIFE = 100;
-/**
- * Reglas y parametros de partida que se pueden cambiar sin tocar el codigo
- * (variantes de la herramienta de equilibrio, "reglas clasicas de 2013"...).
- */
-export const RULES = {
+/** Reglas y parametros de una partida (se guardan con ella). */
+export interface RulesConfig {
   /** Dinero inicial de cada bando. */
-  initialFunds: 5000,
+  initialFunds: number;
   /** Unidades maximas por bando. */
-  maxUnits: 30,
-  /** El defensor que sobrevive responde al ataque (plan de gameplay, fase 1). */
-  counterattack: false,
+  maxUnits: number;
+  /** [CAMBIO] El defensor que sobrevive responde al ataque. */
+  counterattack: boolean;
   /** null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %). */
-  damageSpread: null as number | null,
-  /** 'instant' = original (enemigo -> neutral -> tuyo); 'points' = por puntos en varios turnos (fase 2). */
-  capture: 'instant' as 'instant' | 'points',
+  damageSpread: number | null;
+  /** 'instant' = original (enemigo -> neutral -> tuyo); 'points' = por puntos en varios turnos. */
+  capture: 'instant' | 'points';
+  /** Puntos de captura de un edificio y de la Base (modo 'points'). */
+  capturePoints: number;
+  hqCapturePoints: number;
+  /** Multiplicador de los ingresos de los edificios. */
+  incomeScale: number;
+  /** Niebla de guerra. */
+  fog: boolean;
+  /** Limite de dias (null = sin limite): al acabar gana quien tenga mas puntos. */
+  dayLimit: number | null;
+}
+
+/** Las reglas del juego de 2013. */
+export const CLASSIC_RULES: Readonly<RulesConfig> = {
+  initialFunds: 5000,
+  maxUnits: 30,
+  counterattack: false,
+  damageSpread: null,
+  capture: 'instant',
+  capturePoints: 20,
+  hqCapturePoints: 20,
+  incomeScale: 1,
+  fog: true,
+  dayLimit: null,
 };
+
+/** Las reglas nuevas del remake (plan de gameplay). */
+export const MODERN_RULES: Readonly<RulesConfig> = {
+  ...CLASSIC_RULES,
+  counterattack: true,
+  damageSpread: 0.1,
+  capture: 'points',
+  capturePoints: 20,
+  hqCapturePoints: 30,
+};
+
+/**
+ * Reglas en uso. Las cambian la partida al empezar o cargarse (useRules) y las variantes
+ * de la herramienta de equilibrio.
+ */
+export const RULES: RulesConfig = { ...MODERN_RULES };
+
+export function useRules(r: Partial<RulesConfig>): void {
+  Object.assign(RULES, CLASSIC_RULES, r);
+}
 export const MAX_FUNDS = 999999;
 export const AI = { MAXMERGELIFE: 130, MAXCAPTDIST: 8, LIFETOBACK: 40 } as const;

@@ -17,16 +17,18 @@
  * Tablas: UNIT, POWER, BUILDING, TERRAIN, RULES, AI. Las filas/columnas se pueden
  * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
  */
-import { AI, BUILDING, BUILDING_NAMES, POWER, RULES, TERRAIN, TERRAIN_NAMES, UNIT, UNIT_NAMES } from '../../src/core/data';
+import { CLASSIC_RULES, MODERN_RULES, useRules, AI, BUILDING, BUILDING_NAMES, POWER, RULES, TERRAIN, TERRAIN_NAMES, UNIT, UNIT_NAMES } from '../../src/core/data';
 
 export interface Variant {
   name: string;
+  /** Reglas de partida: 'modern' (por defecto, las del remake) o 'classic' (las de 2013). */
+  rules?: 'modern' | 'classic';
   notes?: string;
   set?: Record<string, number | string | boolean | null>;
 }
 
 type Table = Record<string, unknown> | unknown[];
-const TABLES: Record<string, Table> = { UNIT, POWER: POWER as unknown as unknown[], BUILDING, TERRAIN, RULES, AI };
+const TABLES: Record<string, Table> = { UNIT, POWER: POWER as unknown as unknown[], BUILDING, TERRAIN, RULES: RULES as unknown as Record<string, unknown>, AI };
 
 /** Que nombres valen para los indices de cada tabla/campo. */
 function namesFor(table: string, depth: number): readonly string[] | null {
@@ -108,6 +110,7 @@ export function restore(snap: string): void {
 
 /** Aplica una variante a las tablas (modifica los datos globales del juego). Devuelve los cambios hechos. */
 export function applyVariant(v: Variant): { path: string; from: unknown; to: unknown }[] {
+  useRules(v.rules === 'classic' ? CLASSIC_RULES : MODERN_RULES);
   const changes: { path: string; from: unknown; to: unknown }[] = [];
   for (const [path, value] of Object.entries(v.set ?? {})) {
     for (const [container, key] of targets(path)) {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { HQ, UNIT } from '../src/core/data';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { CLASSIC_RULES, HQ, UNIT, useRules } from '../src/core/data';
 import { seededRng } from '../src/core/geom';
 import {
   attack,
@@ -19,6 +19,10 @@ import {
 import { blankState } from './helpers';
 
 const SOLDIER = 0, TANK = 1, ARTILLERY = 2, TRANSPORT = 7, LFIGHTER = 10, SUPPLIER = 13;
+
+
+// Estas pruebas son de las reglas de 2013; las nuevas estan en tests/modern.test.ts.
+beforeEach(() => useRules(CLASSIC_RULES));
 
 describe('movimiento', () => {
   it('un soldado mueve 3 casillas en rombo y las unidades bloquean', () => {

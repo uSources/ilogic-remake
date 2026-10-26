@@ -16,8 +16,8 @@ export interface Targets {
   timeouts: number;
   /** Margen de eficiencia (valor destruido / coste) respecto a la mediana antes de avisar. */
   efficiencyBand: [number, number];
-  /** Ataque primero en duelos mutuos: maximo aceptable. */
-  firstStrike: number;
+  /** Entre unidades iguales: daño hecho / daño devuelto en un intercambio (maximo aceptable). */
+  exchangeRatio: number;
 }
 
 export const DEFAULT_TARGETS: Targets = {
@@ -26,7 +26,7 @@ export const DEFAULT_TARGETS: Targets = {
   snowball5: 0.8,
   timeouts: 0.1,
   efficiencyBand: [0.67, 1.5],
-  firstStrike: 0.7,
+  exchangeRatio: 3,
 };
 
 export interface UnitRow {
@@ -75,7 +75,7 @@ export interface Report {
   snowball: { day: number; leaderWins: number | null; games: number }[];
   economy: { day10Buildings: [number, number] | null; day10Army: [number, number] | null };
   units: UnitRow[];
-  duel?: { terrain: string; firstStrikeMean: number | null; worst: DuelCell[] };
+  duel?: { terrain: string; firstStrikeMean: number | null; exchangeRatio: number | null; worst: DuelCell[] };
   flags: string[];
   suggestions: Suggestion[];
 }
@@ -196,7 +196,7 @@ export function buildReport(
   const ew: [number, number] = [wins[0] + adjudicated[0], wins[1] + adjudicated[1]];
   const decided = ew[0] + ew[1];
   if (mirror && decided >= 20 && Math.abs(ew[0] / decided - 0.5) > targets.sideGap)
-    flags.push(`Un bando gana mas (contando ventaja al final): ${pct(ew[0] / decided)} el que mueve primero frente a ${pct(ew[1] / decided)}.`);
+    flags.push(`Un bando gana mas (contando ventaja al final): bando 0 (el jugador) ${pct(ew[0] / decided)}, bando 1 (la IA) ${pct(ew[1] / decided)}.`);
   const med = quant(days, 0.5);
   if (days.length && (med < targets.days[0] || med > targets.days[1]))
     flags.push(`Duracion mediana ${med} dias (objetivo ${targets.days[0]}-${targets.days[1]}).`);
@@ -226,10 +226,16 @@ export function buildReport(
   if (duel) {
     const fs = duel.cells.filter((c) => c.firstStrikeWins !== null && c.attacker === c.defender);
     const firstStrikeMean = fs.length ? mean(fs.map((c) => c.firstStrikeWins!)) : null;
-    if (firstStrikeMean !== null && firstStrikeMean > targets.firstStrike)
-      flags.push(`En duelos entre unidades iguales, quien ataca primero gana el ${pct(firstStrikeMean)} de las veces.`);
+    // Ventaja de atacar primero en un intercambio entre iguales: daño hecho / daño recibido.
+    const same = duel.cells.filter((c) => c.attacker === c.defender && c.damage > 0);
+    const ratios = same.map((c) => c.damage / Math.max(c.counter, 0.5));
+    const exchangeRatio = ratios.length ? quant(ratios, 0.5) : null;
+    if (exchangeRatio !== null && exchangeRatio > targets.exchangeRatio)
+      flags.push(
+        `Atacar primero sale muy a cuenta: entre unidades iguales se hace ${exchangeRatio > 50 ? 'todo el' : exchangeRatio.toFixed(1) + ' veces mas'} daño del que se recibe.`,
+      );
     const worst = [...duel.cells].sort((a, b) => b.valuePer1000 - a.valuePer1000).slice(0, 8);
-    duelSummary = { terrain: duel.terrain, firstStrikeMean, worst };
+    duelSummary = { terrain: duel.terrain, firstStrikeMean, exchangeRatio, worst };
   }
 
   return {
@@ -296,7 +302,10 @@ export function reportMarkdown(r: Report): string {
   L.push('');
   if (r.duel) {
     L.push(`## Duelos (terreno ${r.duel.terrain})`, '');
-    L.push(`Quien ataca primero entre unidades iguales gana: ${r.duel.firstStrikeMean === null ? '—' : pct(r.duel.firstStrikeMean)}.`, '');
+    L.push(
+      `Entre unidades iguales, daño hecho / daño devuelto al atacar primero: ${r.duel.exchangeRatio === null ? '—' : r.duel.exchangeRatio > 50 ? 'sin respuesta' : r.duel.exchangeRatio.toFixed(1)}. En un duelo a muerte gana quien empieza el ${r.duel.firstStrikeMean === null ? '—' : pct(r.duel.firstStrikeMean)} de las veces.`,
+      '',
+    );
     L.push('Los cruces mas rentables para el atacante (valor quitado por cada 1000 de coste, en un ataque):', '');
     L.push('| Atacante | Defensor | Daño | Contraataque | Destruye | Valor/1000 |', '|---|---|---:|---:|---:|---:|');
     for (const c of r.duel.worst)
@@ -331,7 +340,7 @@ export function compareMarkdown(a: Report, b: Report): string {
   row('Sin terminar', a.outcome.unfinished / a.games, b.outcome.unfinished / b.games, p);
   row('Dias (mediana)', a.outcome.days.median, b.outcome.days.median, (v) => `${v}`);
   row('Bola de nieve dia 5', a.snowball[0]!.leaderWins, b.snowball[0]!.leaderWins, p);
-  if (a.duel || b.duel) row('Gana quien ataca primero', a.duel?.firstStrikeMean ?? null, b.duel?.firstStrikeMean ?? null, p);
+  if (a.duel || b.duel) row('Daño hecho / devuelto (iguales)', a.duel?.exchangeRatio ?? null, b.duel?.exchangeRatio ?? null, (v) => (v > 50 ? '∞' : v.toFixed(1)));
   L.push('', '## Unidades', '', '| Unidad | Coste | Compras (antes → despues) | Eficiencia (antes → despues) |', '|---|---|---|---|');
   for (const ua of a.units) {
     const ub = b.units.find((u) => u.type === ua.type)!;

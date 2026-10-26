@@ -3,9 +3,9 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { playGame, type Policy } from './play';
 import { applyVariant, type Variant } from './variant';
 
-const data = workerData as { variant: Variant; seeds: number[]; maxDays: number; policies: [Policy, Policy] };
+const data = workerData as { variant: Variant; seeds: number[]; maxDays: number; policies: [Policy, Policy]; firstTeam?: 0 | 1; swapSides?: boolean };
 applyVariant(data.variant);
 for (const seed of data.seeds) {
-  const rec = playGame({ seed, maxDays: data.maxDays, policies: data.policies });
+  const rec = playGame({ seed, maxDays: data.maxDays, policies: data.policies, firstTeam: data.firstTeam, swapSides: data.swapSides });
   parentPort!.postMessage(rec);
 }

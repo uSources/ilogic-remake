@@ -166,7 +166,14 @@ export function approachPath(s: GameState, u: Unit, target: Pos, range = moveRan
 // ---------------------------------------------------------------------------
 
 /** Casillas visibles para un bando: rombo de vision de sus unidades + casillas de sus edificios. */
+/** Ingresos de un edificio por ronda con las reglas actuales (multiplos de 100). */
+export function buildingIncome(type: number): number {
+  return Math.round((BUILDING.earning[type]! * RULES.incomeScale) / 100) * 100;
+}
+
 export function visibility(s: GameState, team: Team): boolean[][] {
+  // [CAMBIO] partida sin niebla: se ve todo.
+  if (!RULES.fog) return grid(true);
   const vis = grid(false);
   for (const u of s.units) {
     if (u.team !== team || u.carrier !== null) continue;
@@ -223,23 +230,73 @@ export function expectedDamage(s: GameState, atk: Unit, def: Unit): number {
  * Ataque (Ilogic.Attack): una tirada por punto de vida del atacante; cada acierto quita 1.
  * Sin contraataque. Gasta 1 de municion. Devuelve el dano hecho.
  */
-export function attack(s: GameState, atk: Unit, def: Unit, rng: Rng): number {
-  if (atk.team === def.team || !atk.canFire || !UNIT.canfight[atk.type] || !hasAmmo(atk)) return 0;
-  if (!inAttackRange(atk.type, atk, def)) return 0;
-  const p = hitChance(s, atk, def);
-  let dmg = 0;
-  for (let i = 0; i < atk.life && def.life > 0; i++) {
-    if (rng() < p) {
-      def.life--;
-      dmg++;
-    }
+export interface AttackResult {
+  /** Vida quitada al defensor. */
+  damage: number;
+  killed: boolean;
+  /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
+  counter: number;
+  attackerKilled: boolean;
+}
+
+/**
+ * Daño de un ataque de `atk` (con `life` puntos de vida) a una unidad con la probabilidad `p`.
+ * Original: cada punto de vida es un disparo que acierta con probabilidad p.
+ * [CAMBIO] con RULES.damageSpread: el daño esperado (life x p) +- ese tanto por uno.
+ */
+function rollDamage(life: number, p: number, rng: Rng): number {
+  if (RULES.damageSpread === null) {
+    let dmg = 0;
+    for (let i = 0; i < life; i++) if (rng() < p) dmg++;
+    return dmg;
   }
+  const expected = life * p;
+  return Math.max(0, Math.round(expected * (1 + (rng() * 2 - 1) * RULES.damageSpread)));
+}
+
+/**
+ * [CAMBIO] Contraataque (RULES.counterattack): el defensor que sobrevive responde si es una
+ * unidad de cuerpo a cuerpo, el atacante tambien lo es y lo tiene a su alcance.
+ * La artilleria y demas unidades a distancia ni contraatacan ni reciben contraataque.
+ */
+export function canCounter(def: Unit, atk: Unit): boolean {
+  return (
+    RULES.counterattack &&
+    def.life > 0 &&
+    !!UNIT.canfight[def.type] &&
+    UNIT.minalc[def.type] === 0 &&
+    UNIT.minalc[atk.type] === 0 &&
+    hasAmmo(def) &&
+    (POWER[def.type]![atk.type] ?? 0) > 0 &&
+    inAttackRange(def.type, def, atk)
+  );
+}
+
+/** Ataque completo: daño, y contraataque si las reglas lo tienen. */
+export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): AttackResult {
+  const none: AttackResult = { damage: 0, killed: false, counter: 0, attackerKilled: false };
+  if (atk.team === def.team || !atk.canFire || !UNIT.canfight[atk.type] || !hasAmmo(atk)) return none;
+  if (!inAttackRange(atk.type, atk, def)) return none;
+  const damage = Math.min(def.life, rollDamage(atk.life, Math.min(1, hitChance(s, atk, def)), rng));
+  def.life -= damage;
   if (UNIT.maxammo[atk.type]! !== 0) atk.ammo--;
   atk.active = false;
   atk.canFire = false;
   atk.canMove = false;
+  let counter = 0;
+  if (canCounter(def, atk)) {
+    counter = Math.min(atk.life, rollDamage(def.life, Math.min(1, hitChance(s, def, atk)), rng));
+    atk.life -= counter;
+    if (UNIT.maxammo[def.type]! !== 0) def.ammo--;
+  }
+  const result = { damage, killed: def.life <= 0, counter, attackerKilled: atk.life <= 0 };
   removeDead(s);
-  return dmg;
+  return result;
+}
+
+/** Ataca y devuelve el daño hecho (ver attackFull para el contraataque). */
+export function attack(s: GameState, atk: Unit, def: Unit, rng: Rng): number {
+  return attackFull(s, atk, def, rng).damage;
 }
 
 // ---------------------------------------------------------------------------
@@ -538,8 +595,8 @@ export function endRound(s: GameState): RoundReport {
   const refueled = new Set<number>();
   for (const b of s.buildings) {
     if (b.owner === null) continue;
-    s.funds[b.owner] += BUILDING.earning[b.type]!;
-    report.income[b.owner] += BUILDING.earning[b.type]!;
+    s.funds[b.owner] += buildingIncome(b.type);
+    report.income[b.owner] += buildingIncome(b.type);
     const u = unitAt(s, b.x, b.y);
     if (!u || u.team !== b.owner) continue;
     if (HEALER[u.type]![b.type]) {
@@ -631,26 +688,40 @@ export interface CombatForecast {
   killChance: number;
   /** Vida del defensor tras el dano esperado. */
   lifeAfter: number;
+  /** Contraataque previsto (null si no lo habra). */
+  counter: { expected: number; low: number; high: number; killChance: number; lifeAfter: number } | null;
 }
 
-/**
- * El dano es binomial: una tirada por punto de vida del atacante con probabilidad p,
- * cortado en la vida del defensor. Se calcula la distribucion exacta.
- */
-export function combatForecast(s: GameState, atk: Unit, def: Unit): CombatForecast {
-  const n = Math.max(0, atk.life);
-  const p = Math.min(1, Math.max(0, hitChance(s, atk, def)));
-  // dist[k] = P(k aciertos)
-  let dist = [1];
-  for (let i = 0; i < n; i++) {
-    const next = Array<number>(dist.length + 1).fill(0);
-    for (let k = 0; k < dist.length; k++) {
-      next[k]! += dist[k]! * (1 - p);
-      next[k + 1]! += dist[k]! * p;
+/** Distribucion del daño: dist[k] = P(daño = k), sin tope. */
+export function damageDistribution(life: number, p: number): number[] {
+  const n = Math.max(0, life);
+  p = Math.min(1, Math.max(0, p));
+  if (RULES.damageSpread === null) {
+    let dist = [1];
+    for (let i = 0; i < n; i++) {
+      const next = Array<number>(dist.length + 1).fill(0);
+      for (let k = 0; k < dist.length; k++) {
+        next[k]! += dist[k]! * (1 - p);
+        next[k + 1]! += dist[k]! * p;
+      }
+      dist = next;
     }
-    dist = next;
+    return dist;
   }
-  const cap = def.life;
+  // Daño esperado +- spread, uniforme: se muestrea con 401 puntos repartidos.
+  const expected = n * p;
+  const dist: number[] = [];
+  const N = 401;
+  for (let i = 0; i < N; i++) {
+    const u = (i / (N - 1)) * 2 - 1;
+    const k = Math.max(0, Math.round(expected * (1 + u * RULES.damageSpread)));
+    dist[k] = (dist[k] ?? 0) + 1 / N;
+  }
+  for (let k = 0; k < dist.length; k++) dist[k] ??= 0;
+  return dist;
+}
+
+function summarize(dist: number[], cap: number) {
   let expected = 0,
     killChance = 0,
     acc = 0,
@@ -661,13 +732,37 @@ export function combatForecast(s: GameState, atk: Unit, def: Unit): CombatForeca
     expected += dmg * dist[k]!;
     if (k >= cap) killChance += dist[k]!;
     acc += dist[k]!;
-    if (low < 0 && acc >= 0.05) low = dmg;
-    if (high < 0 && acc >= 0.95) high = dmg;
+    if (low < 0 && acc >= 0.05 - 1e-9) low = dmg;
+    if (high < 0 && acc >= 0.95 - 1e-9) high = dmg;
   }
-  if (high < 0) high = Math.min(n, cap);
+  if (high < 0) high = Math.min(dist.length - 1, cap);
   if (low < 0) low = 0;
-  const exp = Math.round(expected);
-  return { expected: exp, low, high, killChance, lifeAfter: Math.max(0, def.life - exp) };
+  return { expected, killChance, low, high };
+}
+
+export function combatForecast(s: GameState, atk: Unit, def: Unit): CombatForecast {
+  const dist = damageDistribution(atk.life, hitChance(s, atk, def));
+  const main = summarize(dist, def.life);
+  const exp = Math.round(main.expected);
+  let counter: CombatForecast['counter'] = null;
+  if (canCounter(def, atk)) {
+    // Para cada vida que le pueda quedar al defensor, el daño que devolveria.
+    const pc = hitChance(s, def, atk);
+    const total: number[] = [];
+    for (let k = 0; k < dist.length; k++) {
+      const left = def.life - Math.min(k, def.life);
+      if (left <= 0 || !dist[k]) continue;
+      const d = damageDistribution(left, pc);
+      for (let j = 0; j < d.length; j++) total[j] = (total[j] ?? 0) + dist[k]! * d[j]!;
+    }
+    for (let j = 0; j < total.length; j++) total[j] ??= 0;
+    const noCounter = 1 - total.reduce((a, b) => a + b, 0);
+    total[0] = (total[0] ?? 0) + Math.max(0, noCounter);
+    const c = summarize(total, atk.life);
+    const ce = Math.round(c.expected);
+    counter = { expected: ce, low: c.low, high: c.high, killChance: c.killChance, lifeAfter: Math.max(0, atk.life - ce) };
+  }
+  return { expected: exp, low: main.low, high: main.high, killChance: main.killChance, lifeAfter: Math.max(0, def.life - exp), counter };
 }
 
 /**

@@ -46,6 +46,8 @@ export interface ForecastVM {
   lifeAfter: number;
   killChance: number;
   anchor: Anchor;
+  /** Contraataque previsto sobre tu unidad (null si no habra). */
+  counter: { low: number; high: number; lifeBefore: number; lifeAfter: number; killChance: number } | null;
 }
 
 export interface UnitVM {

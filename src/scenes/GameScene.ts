@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { BUILDING, HQ, MAP_H, MAP_W, RULES, TERRAIN, UNIT, UNIT_NAMES } from '../core/data';
+import { BUILDING, CLASSIC_RULES, HQ, MAP_H, MAP_W, MODERN_RULES, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
 import { samePos } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
-  attack,
+  attackFull,
+  buildingIncome,
   attackTargets,
   buildingAt,
   buyOptions,
@@ -125,7 +126,7 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
-  init(data: { mode?: 'new' | 'load' }): void {
+  init(data: { mode?: 'new' | 'load'; rules?: Partial<RulesConfig> }): void {
     this.phase = 'map';
     this.sel = null;
     this.selBuilding = null;
@@ -145,7 +146,15 @@ export class GameScene extends Phaser.Scene {
     }
     this.corruptSave = data.mode === 'load' && !state;
     if (this.corruptSave) deleteSave();
-    this.s = state ?? generateGame();
+    if (state) {
+      // Partidas guardadas antes de las reglas nuevas: se siguen jugando con las de 2013.
+      state.rules ??= { ...CLASSIC_RULES };
+      useRules(state.rules);
+      this.s = state;
+    } else {
+      useRules(data.rules ?? MODERN_RULES);
+      this.s = generateGame();
+    }
   }
 
   create(): void {
@@ -347,7 +356,7 @@ export class GameScene extends Phaser.Scene {
     const idle: IdleVM[] = this.idleUnits().map((u) => ({ uid: u.uid, icon: unitKey(this.textures, s, u), name: unitLabel(u.type) }));
     ui.set({
       funds: s.funds[0],
-      income: owned.reduce((sum, b) => sum + BUILDING.earning[b.type]!, 0),
+      income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0),
       buildings: owned.length,
       day: s.day,
       turn: this.enemyPlaying ? 'enemy' : 'player',
@@ -380,6 +389,9 @@ export class GameScene extends Phaser.Scene {
       lifeAfter: f.lifeAfter,
       killChance: f.killChance,
       anchor: this.view.tileRectCss(target),
+      counter: f.counter
+        ? { low: f.counter.low, high: f.counter.high, lifeBefore: this.sel.life, lifeAfter: f.counter.lifeAfter, killChance: f.counter.killChance }
+        : null,
     };
   }
 
@@ -395,7 +407,7 @@ export class GameScene extends Phaser.Scene {
       info.building = {
         name: buildingLabel(b.type),
         owner: !known ? 'unknown' : b.owner === 0 ? 'you' : b.owner === 1 ? 'enemy' : 'neutral',
-        income: BUILDING.earning[b.type]!,
+        income: buildingIncome(b.type),
         icon: buildingKey(this.textures, s, b, vis),
       };
     }
@@ -1015,9 +1027,8 @@ export class GameScene extends Phaser.Scene {
     const targetUid = this.attackSet.get(key(c));
     if (!u || targetUid === undefined) return this.openUnitMenu();
     const target = unitById(this.s, targetUid)!;
-    const before = target.life;
-    const dmg = attack(this.s, u, target, Math.random);
-    await this.playEvents([{ kind: 'attack', attacker: u.uid, target: { x: c.x, y: c.y }, damage: dmg, killed: before - dmg <= 0 }]);
+    const r = attackFull(this.s, u, target, Math.random);
+    await this.playEvents([{ kind: 'attack', attacker: u.uid, target: { x: c.x, y: c.y }, damage: r.damage, killed: r.killed, counter: r.counter, attackerKilled: r.attackerKilled }]);
     this.afterAction();
   }
 
@@ -1185,14 +1196,23 @@ export class GameScene extends Phaser.Scene {
           const seen = this.visibleToPlayer(ev.target) && !this.fastForward;
           // Lo que habia dibujado antes del ataque (la victima puede haber desaparecido ya del estado).
           const victimKey = this.view.unitKeyAt(ev.target);
+          // El atacante puede haber caido en el contraataque: su posicion y su imagen, de lo dibujado.
+          const atkSprite = this.view.unitSprite(ev.attacker);
+          const atkPos = atkSprite ? { x: Math.round(atkSprite.x / TILE), y: Math.round(atkSprite.y / TILE) } : null;
+          const atkKey = atkPos ? this.view.unitKeyAt(atkPos) : null;
           if (seen) {
             await this.lookAt(ev.target);
-            const atk = unitById(this.s, ev.attacker);
-            const atkSprite = this.view.unitSprite(ev.attacker);
-            if (atk && atkSprite) await lunge(this, atkSprite, { dx: ev.target.x - atk.x, dy: ev.target.y - atk.y });
+            if (atkSprite && atkPos) await lunge(this, atkSprite, { dx: ev.target.x - atkPos.x, dy: ev.target.y - atkPos.y });
           }
           this.refresh();
           if (seen) await this.attackFx(ev.target, ev.damage, ev.killed, victimKey);
+          // Contraataque.
+          if (ev.counter !== undefined && atkPos && (ev.counter > 0 || ev.attackerKilled) && !this.fastForward && this.visibleToPlayer(atkPos)) {
+            const victim = unitAt(this.s, ev.target.x, ev.target.y);
+            const vs = victim ? this.view.unitSprite(victim.uid) : null;
+            if (vs) await lunge(this, vs, { dx: atkPos.x - ev.target.x, dy: atkPos.y - ev.target.y });
+            await this.attackFx(atkPos, ev.counter, !!ev.attackerKilled, atkKey);
+          }
           break;
         }
         case 'capture':
