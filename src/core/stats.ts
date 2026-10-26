@@ -25,6 +25,7 @@ export function recordEvent(s: GameState, ev: GameEvent, team: Team): void {
   switch (ev.kind) {
     case 'attack':
       if (ev.killed) st.lost[other]++;
+      if (ev.attackerKilled) st.lost[team]++;
       break;
     case 'capture':
       st.captured[team]++;

@@ -59,6 +59,8 @@ export interface GameState {
   day: number;
   /** Estadisticas para la pantalla final (opcional: las partidas antiguas no las tienen). */
   stats?: import('./stats').GameStats;
+  /** Reglas de esta partida (las antiguas no las tienen: se juegan con las clasicas). */
+  rules?: import('./data').RulesConfig;
 }
 
 /** Generador de numeros aleatorios en [0, 1). */
@@ -69,7 +71,7 @@ export type Outcome = 'playing' | 'won' | 'lost';
 /** Lo que acaba de pasar, para que la interfaz lo anime. Lo usan el jugador y la IA. */
 export type GameEvent =
   | { kind: 'move'; uid: number; path: Pos[] }
-  | { kind: 'attack'; attacker: number; target: Pos; damage: number; killed: boolean }
+  | { kind: 'attack'; attacker: number; target: Pos; damage: number; killed: boolean; counter?: number; attackerKilled?: boolean }
   | { kind: 'capture'; uid: number; at: Pos; owner: Team | null }
   | { kind: 'merge'; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; uid: number; into: number; path: Pos[] }

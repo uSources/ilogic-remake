@@ -1,0 +1,5 @@
+{
+  "name": "f1-contraataque",
+  "notes": "Fase 1: contraataque y daño esperado +-10 %",
+  "set": { "RULES.counterattack": true, "RULES.damageSpread": 0.1 }
+}

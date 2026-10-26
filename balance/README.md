@@ -64,7 +64,7 @@ Cada informe compara con objetivos (`DEFAULT_TARGETS` en `tools/balance/report.t
 | Bola de nieve el día 5 | menos del 80 % |
 | Partidas sin terminar | menos del 10 % |
 | Eficiencia de cada unidad | entre 0,67 y 1,5 veces la mediana |
-| Gana quien ataca primero (duelos iguales) | menos del 70 % |
+| Ventaja de atacar primero entre unidades iguales (daño hecho / devuelto) | 3 o menos |
 
 Si una unidad rinde demasiado o demasiado poco para lo que cuesta, propone un precio nuevo. El cambio máximo es de un 20–25 % por ronda y se redondea a 500. `tune` aplica las propuestas, vuelve a jugar y se queda con la versión que tenga menos avisos. Guarda el resultado como variante.
 
@@ -74,4 +74,4 @@ Si una unidad rinde demasiado o demasiado poco para lo que cuesta, propone un pr
 - La IA decide qué compra y cómo juega. Si una unidad "casi nadie la compra", puede ser culpa de la IA y no del precio. La eficiencia mide cómo la usa la IA, no cómo la usaría una persona.
 - La eficiencia favorece a las unidades baratas que se compran en masa. Es una pista para investigar, no una sentencia.
 - `--vs passive` enfrenta la IA a un bando que no hace nada. Sirve para comprobar que la IA sigue sabiendo ganar después de cambiar las reglas.
-- Opciones: `--games`, `--days` (60 por defecto), `--seed`, `--threads`, `--terrain`, `--no-duel`.
+- Opciones: `--games`, `--days` (60 por defecto), `--seed`, `--threads`, `--terrain`, `--no-duel`, `--first 1` (que mueva primero el bando 1) y `--swap` (cambiar de lado los bandos en cada mapa): sirven para separar la ventaja del orden de juego de la del mapa.

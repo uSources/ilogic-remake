@@ -13,6 +13,10 @@ export interface PlayOptions {
   maxDays: number;
   /** Quien juega cada bando. 'passive' no hace nada (para medir a la IA). */
   policies: [Policy, Policy];
+  /** Bando que mueve primero en cada ronda (en el juego, siempre el 0: el jugador). */
+  firstTeam?: Team;
+  /** Intercambiar los bandos en el mapa generado (para ver si el mapa favorece a un lado). */
+  swapSides?: boolean;
 }
 
 /** Por tipo de unidad y bando. */
@@ -62,6 +66,10 @@ function sample(s: GameState): DaySample {
 export function playGame(opts: PlayOptions): GameRecord {
   const rng = seededRng(opts.seed);
   const s = generateGame(rng);
+  if (opts.swapSides) {
+    for (const u of s.units) u.team = (1 - u.team) as Team;
+    for (const b of s.buildings) if (b.owner !== null) b.owner = (1 - b.owner) as Team;
+  }
   const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: UNIT_TYPES }, emptyTally));
   const samples: DaySample[] = [sample(s)];
   // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
@@ -76,7 +84,7 @@ export function playGame(opts: PlayOptions): GameRecord {
 
   const finished = () => outcome(s) !== 'playing';
   while (!finished() && s.day <= opts.maxDays) {
-    for (const team of [0, 1] as Team[]) {
+    for (const team of (opts.firstTeam === 1 ? [1, 0] : [0, 1]) as Team[]) {
       if (opts.policies[team] === 'passive') continue;
       for (const ev of aiTurn(s, rng, team)) {
         events++;

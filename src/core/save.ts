@@ -3,7 +3,7 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { BUILDING_TYPES, MAP_H, MAP_W, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
+import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_W, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
 import { sanitizeStats } from './stats';
 import type { Building, GameState, Unit } from './types';
 
@@ -57,5 +57,22 @@ export function deserialize(json: string): GameState | null {
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...uids) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
   if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
+  if (s.rules !== undefined) {
+    const r = s.rules as Partial<RulesConfig>;
+    const ok =
+      isInt(r.initialFunds, 0, 1e9) &&
+      isInt(r.maxUnits, 1, 200) &&
+      typeof r.counterattack === 'boolean' &&
+      (r.damageSpread === null || (typeof r.damageSpread === 'number' && r.damageSpread >= 0 && r.damageSpread <= 1)) &&
+      (r.capture === 'instant' || r.capture === 'points') &&
+      isInt(r.capturePoints, 1, 1000) &&
+      isInt(r.hqCapturePoints, 1, 1000) &&
+      typeof r.incomeScale === 'number' &&
+      r.incomeScale >= 0 &&
+      r.incomeScale <= 10 &&
+      typeof r.fog === 'boolean' &&
+      (r.dayLimit === null || isInt(r.dayLimit, 1, 10000));
+    if (!ok) return null;
+  }
   return s;
 }

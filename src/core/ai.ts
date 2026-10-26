@@ -8,7 +8,7 @@
 import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
-  attack,
+  attackFull,
   buildingAt,
   buyOptions,
   canCapture,
@@ -161,9 +161,8 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generato
   if (best) {
     yield* doMove(s, u, samePos(best.from, u) ? null : best.from, range);
     const targetPos = { x: best.target.x, y: best.target.y };
-    const before = best.target.life;
-    const dmg = attack(s, u, best.target, rng);
-    yield { kind: 'attack', attacker: u.uid, target: targetPos, damage: dmg, killed: before - dmg <= 0 };
+    const r = attackFull(s, u, best.target, rng);
+    yield { kind: 'attack', attacker: u.uid, target: targetPos, damage: r.damage, killed: r.killed, counter: r.counter, attackerKilled: r.attackerKilled };
     return true;
   }
   // Nadie a tiro este turno: acercarse al enemigo visible mas cercano al que pueda danar.

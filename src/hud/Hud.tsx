@@ -180,10 +180,26 @@ function Forecast({ f }: { f: ForecastVM }) {
         <span>{t('destroyIt')}</span>
         <span style={{ color: f.killChance >= 0.5 ? 'var(--gold)' : undefined }}>{pct(f.killChance)}</span>
       </div>
-      <div class="row muted">
-        <span>{t('counter')}</span>
-        <span>{t('none')}</span>
-      </div>
+      {f.counter ? (
+        <>
+          <div class="row">
+            <span>{t('counter')}</span>
+            <span style={{ color: 'var(--red-soft)' }}>{f.counter.low === f.counter.high ? f.counter.low : `${f.counter.low}–${f.counter.high}`}</span>
+          </div>
+          <div class="row">
+            <span>{t('yourLife')}</span>
+            <span style={{ color: f.counter.killChance >= 0.2 ? 'var(--red-soft)' : 'var(--blue)' }}>
+              {f.counter.lifeBefore} → {f.counter.lifeAfter}
+              {f.counter.killChance >= 0.01 ? ` (${t('dies')} ${pct(f.counter.killChance)})` : ''}
+            </span>
+          </div>
+        </>
+      ) : (
+        <div class="row muted">
+          <span>{t('counter')}</span>
+          <span>{t('none')}</span>
+        </div>
+      )}
     </Popover>
   );
 }
