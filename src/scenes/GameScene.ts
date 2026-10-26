@@ -11,8 +11,8 @@ import {
   canBuyAt,
   capture,
   cargoUnits,
+  combatForecast,
   endRound,
-  expectedDamage,
   load,
   loadTargets,
   merge,
@@ -25,6 +25,7 @@ import {
   spawn,
   supply,
   teamUnits,
+  threatMap,
   unitActions,
   unitAt,
   unitById,
@@ -38,14 +39,13 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import type { Building, GameEvent, GameState, Pos, Unit } from '../core/types';
-import { SCREEN_H, SCREEN_W, TILE } from '../layout';
+import { showBanner, showToast, ui, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM } from '../hud/store';
+import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { buildingLabel, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
-import { Banner, HintLine, InfoCard, PopMenu, Toast, Tooltip, TopBar, type InfoSpec, type MenuItem } from '../ui/hud';
 import { MapView, type HighlightKind } from '../ui/mapView';
-import { buildingKey, unitIconKey, unitKey } from '../ui/sprites';
-import { C, FONT } from '../ui/theme';
+import { buildingKey, terrainKey, unitIconKey, unitKey } from '../ui/sprites';
 
 /**
  * Fases de la partida (equivalen a las del original, docs/SPEC-INTERFAZ.md §2):
@@ -84,7 +84,7 @@ export class GameScene extends Phaser.Scene {
   private sel: Unit | null = null;
   private selBuilding: Building | null = null;
   private menuSel = 0;
-  private menuItems: MenuItem[] = [];
+  private menuItems: MenuItemVM[] = [];
   private actions: ActionKey[] = [];
   private buy: BuyOption[] = [];
   private range: MoveRange | null = null;
@@ -107,19 +107,9 @@ export class GameScene extends Phaser.Scene {
   private fastForward = false;
   private ended = false;
   private enemyPlaying = false;
-
-  // Interfaz
-  private uiRoot!: Phaser.GameObjects.Container;
-  private topBar!: TopBar;
-  private info!: InfoCard;
-  private menu!: PopMenu;
-  private tooltip!: Tooltip;
-  private banner!: Banner;
-  private toast!: Toast;
-  private hint!: HintLine;
-  private clouds: ({ img: Phaser.GameObjects.Image; y: number } | null)[] = [];
-  private cloudLayer!: Phaser.GameObjects.Container;
-  private cloudAcc = 0;
+  /** Zona de amenaza enemiga visible (tecla T). */
+  private threat = false;
+  private lastScroll = { x: NaN, y: NaN, zoom: NaN };
 
   // Raton
   private pointerInside = false;
@@ -156,40 +146,87 @@ export class GameScene extends Phaser.Scene {
     this.view = new MapView(this);
     this.view.buildTerrain(this.s);
 
-    // Interfaz en una camara aparte (sin zoom ni desplazamiento).
-    this.cloudLayer = this.add.container(0, 0);
-    this.clouds = Array(8).fill(null);
-    this.hint = new HintLine(this);
-    this.info = new InfoCard(this);
-    this.topBar = new TopBar(this);
-    this.menu = new PopMenu(this);
-    this.tooltip = new Tooltip(this);
-    this.toast = new Toast(this);
-    this.banner = new Banner(this);
-    this.uiRoot = this.add.container(0, 0, [
-      this.cloudLayer,
-      this.hint.root,
-      this.info.root,
-      this.topBar.root,
-      this.menu.root,
-      this.tooltip.root,
-      this.toast.root,
-      this.banner.root,
-    ]);
-    const uiCam = this.cameras.add(0, 0, SCREEN_W, SCREEN_H);
-    uiCam.ignore(this.view.root);
-    this.cameras.main.ignore(this.uiRoot);
-
     // Cursor y camara sobre la Base del jugador.
     const hq = this.s.buildings.find((b) => b.owner === 0 && b.type === HQ) ?? { x: 0, y: 0 };
     this.view.cursor = { x: hq.x, y: hq.y };
     this.view.centerOn(hq, true);
 
     this.setupInput();
+    this.bindHud();
+    const onResize = (size: Phaser.Structs.Size) => {
+      this.view.resize(size.width, size.height);
+      this.refreshHud();
+    };
+    this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+      ui.set({ menu: null, forecast: null, tile: null });
+    });
     playMusic(this, 'game');
+    ui.set({ screen: 'game', toast: null, banner: null, threat: this.threat });
     this.refresh();
-    this.banner.show(`${t('day')} ${this.s.day}`, t('yourTurn'), C.blue);
-    if (this.corruptSave) this.toast.show(t('badSave'), 3500);
+    showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
+    if (this.corruptSave) showToast(t('badSave'));
+  }
+
+  /** Acciones que puede lanzar la interfaz HTML. */
+  private bindHud(): void {
+    const ready = () => !this.ended && this.phase !== 'busy' && this.time.now >= this.inputLockUntil;
+    Object.assign(ui.actions, {
+      menuHover: (i: number) => {
+        // En la compra se pueden señalar las que no se pueden pagar (se ve por que); en el resto no.
+        if (this.menuItems[i]?.disabled && this.phase !== 'buy') return;
+        if (ready() && MENU_PHASES.includes(this.phase)) this.selectMenu(i);
+      },
+      menuPick: (i: number) => {
+        if (!ready() || !MENU_PHASES.includes(this.phase)) return;
+        this.selectMenu(i);
+        this.accept();
+      },
+      menuClose: () => {
+        if (ready() && MENU_PHASES.includes(this.phase)) this.back();
+      },
+      endTurn: () => {
+        if (ready()) this.requestEndTurn();
+      },
+      openGameMenu: () => {
+        if (ready()) this.openGameMenu();
+      },
+      toggleThreat: () => {
+        if (!this.ended) this.toggleThreat();
+      },
+      focusUnit: (uid: number) => {
+        if (!ready()) return;
+        const u = unitById(this.s, uid);
+        if (!u) return;
+        this.abandonSelection();
+        this.view.cursor = { x: u.x, y: u.y };
+        this.view.ensureVisible(u, 3);
+        this.selectUnit(u);
+      },
+    });
+  }
+
+  private toggleThreat(): void {
+    this.threat = !this.threat;
+    ui.set({ threat: this.threat });
+    this.refresh();
+  }
+
+  /** Tab: llevar el cursor a la siguiente unidad sin mover. */
+  private nextIdle(): void {
+    const idle = this.idleUnits();
+    if (!idle.length) return;
+    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    const i = here ? idle.findIndex((u) => u.uid === here.uid) : -1;
+    const u = idle[(i + 1) % idle.length]!;
+    this.view.cursor = { x: u.x, y: u.y };
+    this.view.ensureVisible(u, 3);
+    this.cursorMoved();
+  }
+
+  private idleUnits(): Unit[] {
+    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null);
   }
 
   // -------------------------------------------------------------------------
@@ -221,7 +258,8 @@ export class GameScene extends Phaser.Scene {
 
   private refresh(): void {
     this.vis = visibility(this.s, 0);
-    this.view.render(this.s, { vis: this.vis, highlights: this.highlights(), hidden: this.hidden, path: this.previewPath() });
+    const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, 1, 0) : null;
+    this.view.render(this.s, { vis: this.vis, highlights: this.highlights(), hidden: this.hidden, path: this.previewPath(), threat });
     this.view.placeCursor(this.phase !== 'busy');
     this.refreshHud();
   }
@@ -236,56 +274,72 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshHud(): void {
-    this.topBar.draw(this.s.funds[0], this.s.day, !this.enemyPlaying);
+    const s = this.s;
     const c = this.view.cursor;
-    const cs = this.view.screenOf(c);
-    this.info.show(this.phase === 'busy' ? null : this.infoAt(c), cs);
-    // Bocadillo de vista previa de ataque.
-    if (this.phase === 'attack' && this.sel) {
-      const targetUid = this.attackSet.get(key(c));
-      const target = targetUid !== undefined ? unitById(this.s, targetUid) : undefined;
-      if (target) {
-        const dmg = Math.round(expectedDamage(this.s, this.sel, target));
-        const after = Math.max(0, target.life - dmg);
-        this.tooltip.show(
-          [
-            { text: t('expected'), color: C.muted, size: 13 },
-            { text: `~${dmg}  (${target.life} → ${after})`, color: C.redText, size: 17 },
-            ...(after === 0 ? [{ text: t('kill'), color: C.gold, size: 13 }] : []),
-          ],
-          cs,
-        );
-      } else this.tooltip.hide();
-    } else this.tooltip.hide();
-    // Menu emergente.
-    if (MENU_PHASES.includes(this.phase)) this.showMenu();
-    else if (this.menu.visible) this.menu.hide();
-    this.hint.set(this.phase === 'busy' ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? t('hintMap') : '');
+    const busy = this.phase === 'busy';
+    const owned = s.buildings.filter((b) => b.owner === 0);
+    const idle: IdleVM[] = this.idleUnits().map((u) => ({ uid: u.uid, icon: unitKey(this.textures, s, u), name: unitLabel(u.type) }));
+    ui.set({
+      funds: s.funds[0],
+      income: owned.reduce((sum, b) => sum + BUILDING.earning[b.type]!, 0),
+      buildings: owned.length,
+      day: s.day,
+      turn: this.enemyPlaying ? 'enemy' : 'player',
+      busy,
+      tile: busy ? null : this.tileInfo(c),
+      forecast: this.phase === 'attack' ? this.forecast(c) : null,
+      menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
+      idle,
+      hint: busy ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? t('hintMap') : '',
+    });
+    const cam = this.cameras.main;
+    this.lastScroll = { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom };
   }
 
-  private infoAt(p: Pos): InfoSpec | null {
+  private forecast(c: Pos): ForecastVM | null {
+    if (!this.sel) return null;
+    const uid = this.attackSet.get(key(c));
+    const target = uid !== undefined ? unitById(this.s, uid) : undefined;
+    if (!target) return null;
+    const f = combatForecast(this.s, this.sel, target);
+    return {
+      attackerIcon: unitKey(this.textures, this.s, { ...this.sel, active: true }),
+      defenderIcon: unitKey(this.textures, this.s, target),
+      low: f.low,
+      high: f.high,
+      expected: f.expected,
+      lifeBefore: target.life,
+      lifeAfter: f.lifeAfter,
+      killChance: f.killChance,
+      anchor: this.view.tileRectCss(target),
+    };
+  }
+
+  private tileInfo(p: Pos): TileVM {
     const s = this.s;
     const terr = s.map[p.x]![p.y]!;
     const b = buildingAt(s, p.x, p.y);
     const vis = this.vis[p.x]![p.y]!;
     const prot = TERRAIN.protection[terr]! * (b ? BUILDING.protection[b.type]! : 1);
-    const spec: InfoSpec = { terrain: { name: terrainLabel(terr), defense: Math.round((1 - prot) * 100) } };
+    const info: TileVM = { terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - prot) * 100) } };
     if (b) {
       const known = vis || b.owner === 0;
-      const owner = !known ? t('unknown') : b.owner === 0 ? t('you') : b.owner === 1 ? t('enemy') : t('neutral');
-      const color = !known ? C.muted : b.owner === 0 ? C.blueText : b.owner === 1 ? C.redText : C.muted;
-      spec.building = { name: buildingLabel(b.type), owner, ownerColor: color, income: BUILDING.earning[b.type]!, icon: buildingKey(this.textures, s, b, vis) };
+      info.building = {
+        name: buildingLabel(b.type),
+        owner: !known ? 'unknown' : b.owner === 0 ? 'you' : b.owner === 1 ? 'enemy' : 'neutral',
+        income: BUILDING.earning[b.type]!,
+        icon: buildingKey(this.textures, s, b, vis),
+      };
     }
     const u = unitAt(s, p.x, p.y);
     const shown = u && vis && !this.hidden.has(u.uid) ? u : this.phase !== 'map' && this.sel && samePos(this.sel, p) ? this.sel : undefined;
     if (shown) {
       const T = shown.type;
       const cargo = cargoUnits(s, shown).map((c) => unitLabel(c.type));
-      spec.unit = {
+      info.unit = {
         icon: unitKey(this.textures, s, { ...shown, active: shown.team === 1 || shown.active }),
         name: unitLabel(T),
-        teamColor: shown.team === 0 ? C.blueText : C.redText,
-        teamLabel: shown.team === 0 ? t('you') : t('enemy'),
+        team: shown.team,
         life: shown.life,
         fuel: UNIT.maxfuel[T]! > 0 ? { now: shown.fuel, max: UNIT.maxfuel[T]! } : undefined,
         ammo: UNIT.maxammo[T]! > 0 ? { now: shown.ammo, max: UNIT.maxammo[T]! } : undefined,
@@ -293,62 +347,63 @@ export class GameScene extends Phaser.Scene {
         cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       };
     }
-    return spec;
+    return info;
   }
 
   private unitDetail(type: number): string {
-    const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}-${UNIT.alcance[type]}`;
-    return `${t('move')} ${UNIT.mover[type]} · ${range} · ${t('vision')} ${UNIT.vision[type]}`;
+    const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
+    return `${t('move')} ${UNIT.mover[type]} · ${range}`;
   }
 
-  /** Construye y muestra el menu emergente de la fase actual. */
-  private showMenu(): void {
-    let items: MenuItem[] = [];
-    let anchor = this.view.screenOf(this.view.cursor);
+  /** Menu emergente de la fase actual. */
+  private buildMenu(): MenuVM {
+    let items: MenuItemVM[] = [];
+    let at: Pos = this.view.cursor;
     let title: string | undefined;
+    let subtitle: string | undefined;
+    let kind: MenuVM['kind'] = 'game';
     switch (this.phase) {
       case 'gameMenu':
-        items = GAME_MENU.map((k) => ({
-          label: t(k as TextKey),
-          color: k === 'endTurn' ? C.blueText : k === 'quit' ? C.redText : undefined,
-          hint: k === 'endTurn' ? 'E' : undefined,
-        }));
+        title = `${t('day')} ${this.s.day}`;
+        items = GAME_MENU.map((k) => ({ id: k, label: t(k as TextKey), hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : undefined, danger: k === 'quit' }));
         break;
       case 'unitMenu':
-        if (this.sel) anchor = this.view.screenOf(this.sel);
-        items = this.actions.map((a) => ({
-          label: t(a as TextKey),
-          color: a === 'delete' ? C.redText : a === 'attack' ? '#ffd0d1' : undefined,
-        }));
+        kind = 'unit';
+        if (this.sel) at = this.sel;
+        items = this.actions.map((a) => ({ id: a, label: t(a as TextKey), danger: a === 'delete' }));
         title = this.sel ? unitLabel(this.sel.type) : undefined;
         break;
       case 'buy':
+        kind = 'buy';
         if (this.selBuilding) {
-          anchor = this.view.screenOf(this.selBuilding);
-          title = `${buildingLabel(this.selBuilding.type)} · ${t('funds')} ${this.s.funds[0]}`;
+          at = this.selBuilding;
+          title = buildingLabel(this.selBuilding.type);
+          subtitle = `${t('funds')}: ${this.s.funds[0].toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US')}`;
         }
         items = [
-          { label: t('cancel') },
+          { id: 'cancel', label: t('cancel'), icon: null },
           ...this.buy.map((o) => ({
+            id: `buy${o.type}`,
             label: unitLabel(o.type),
             hint: `${o.cost}`,
             icon: unitIconKey(o.type, o.affordable),
             disabled: !o.affordable,
             detail:
-              this.unitDetail(o.type) +
+              `${this.unitDetail(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
               (o.affordable ? '' : ` · ${teamUnits(this.s, 0).length >= MAX_UNITS ? t('unitLimit') : t('cantAfford')}`),
           })),
         ];
         break;
       case 'unloadPick': {
-        if (this.sel) anchor = this.view.screenOf(this.sel);
+        kind = 'cargo';
+        if (this.sel) at = this.sel;
         const cargo = this.sel ? this.sel.cargo.map((uid) => unitById(this.s, uid)) : [];
         items = [
-          { label: t('back') },
-          ...cargo.map((u) =>
+          { id: 'back', label: t('back'), icon: null },
+          ...cargo.map((u, i) =>
             u
-              ? { label: unitLabel(u.type), icon: unitIconKey(u.type, true), hint: `${u.life}`, disabled: !unloadTiles(this.s, this.sel!, u).length }
-              : { label: t('empty'), disabled: true },
+              ? { id: `c${i}`, label: unitLabel(u.type), icon: unitIconKey(u.type, true), hint: `${u.life}`, disabled: !unloadTiles(this.s, this.sel!, u).length }
+              : { id: `c${i}`, label: t('empty'), icon: null, disabled: true },
           ),
         ];
         title = t('unload');
@@ -356,7 +411,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.menuItems = items;
-    this.menu.show(items, anchor, this.menuSel, title);
+    return { kind, title, subtitle, items, selected: this.menuSel, anchor: this.view.tileRectCss(at) };
   }
 
   // -------------------------------------------------------------------------
@@ -365,6 +420,8 @@ export class GameScene extends Phaser.Scene {
 
   private setupInput(): void {
     this.input.mouse?.disableContextMenu();
+    // Que el navegador no use estas teclas (Tab cambia el foco, Espacio desplaza la pagina...).
+    this.input.keyboard!.addCapture('TAB,SPACE,UP,DOWN,LEFT,RIGHT,BACKSPACE');
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e));
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => this.onPointerMove(p));
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => this.onPointerDown(p));
@@ -412,15 +469,27 @@ export class GameScene extends Phaser.Scene {
       case 'KeyE':
         if (this.phase === 'map' || this.phase === 'gameMenu') this.requestEndTurn();
         return;
+      case 'KeyT':
+        return this.toggleThreat();
+      case 'Tab':
+        if (this.phase === 'map') this.nextIdle();
+        return;
       case 'Equal':
       case 'NumpadAdd':
-        this.view.zoomStep(1, SCREEN_W / 2, SCREEN_H / 2);
+        this.zoomKey(1);
         return this.refreshHud();
       case 'Minus':
       case 'NumpadSubtract':
-        this.view.zoomStep(-1, SCREEN_W / 2, SCREEN_H / 2);
+        this.zoomKey(-1);
         return this.refreshHud();
     }
+  }
+
+  /** Zoom con teclado: alrededor del cursor, y que siga a la vista. */
+  private zoomKey(dir: 1 | -1): void {
+    const c = this.view.screenOf(this.view.cursor);
+    this.view.zoomStep(dir, c.x, c.y);
+    this.view.ensureVisible(this.view.cursor, 2, true);
   }
 
   private direction(dx: number, dy: number): void {
@@ -442,7 +511,7 @@ export class GameScene extends Phaser.Scene {
     if (i === this.menuSel) return;
     this.menuSel = i;
     this.deleteArmed = false;
-    this.menu.select(i);
+    this.refreshHud();
   }
 
   private moveCursorTo(p: Pos, follow: boolean): void {
@@ -468,11 +537,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
     }
-    this.topBar.setHover(this.phase !== 'busy' ? this.topBar.hit(p.x, p.y) : null);
     if (this.phase === 'busy' || p.wasTouch) return;
-    const mi = this.menu.hit(p.x, p.y);
-    if (mi !== null) return this.selectMenu(mi);
-    if (this.menu.contains(p.x, p.y) || this.topBar.hit(p.x, p.y)) return;
     const tile = this.view.tileAtScreen(p.x, p.y);
     if (tile && CURSOR_PHASES.includes(this.phase)) this.moveCursorTo(tile, false);
   }
@@ -492,18 +557,7 @@ export class GameScene extends Phaser.Scene {
     this.drag = null;
     if (this.ended || this.phase === 'busy' || p.rightButtonReleased() || !drag || drag.moved) return;
     if (this.time.now < this.inputLockUntil) return;
-    // Barra superior.
-    const tb = this.topBar.hit(p.x, p.y);
-    if (tb === 'endTurn') return void this.enemyTurn();
-    if (tb === 'menu') return this.openGameMenu();
-    // Menu emergente.
-    const mi = this.menu.hit(p.x, p.y);
-    if (mi !== null) {
-      if (p.wasTouch && mi !== this.menuSel) return this.selectMenu(mi);
-      this.menuSel = mi;
-      return this.accept();
-    }
-    if (this.menu.contains(p.x, p.y)) return;
+    // (La barra superior y los menus son HTML: sus clics no llegan aqui.)
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
     if (MENU_PHASES.includes(this.phase)) return this.back();
     const tile = this.view.tileAtScreen(p.x, p.y);
@@ -514,48 +568,20 @@ export class GameScene extends Phaser.Scene {
     this.accept();
   }
 
-  override update(_time: number, delta: number): void {
-    this.cloudAcc += delta;
-    while (this.cloudAcc >= 100) {
-      this.cloudAcc -= 100;
-      this.stepClouds();
-    }
+  override update(time: number, delta: number): void {
+    this.view.tick(time, delta);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;
-    if (!this.pointerInside || this.ended || this.drag || p.wasTouch || MENU_PHASES.includes(this.phase)) return;
-    if (this.topBar.hit(p.x, p.y) || this.menu.contains(p.x, p.y)) return;
-    const edge = 14;
-    const dx = p.x < edge ? -1 : p.x > SCREEN_W - edge ? 1 : 0;
-    const dy = p.y < edge ? -1 : p.y > SCREEN_H - edge ? 1 : 0;
-    if (dx || dy) {
-      const speed = (delta / 1000) * 520;
-      this.view.scrollBy(dx * speed, dy * speed);
-      this.refreshHud();
+    if (this.pointerInside && !this.ended && !this.drag && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
+      const edge = 14 * (window.devicePixelRatio || 1);
+      const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
+      const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
+      if (dx || dy) this.view.scrollBy(dx * delta * 0.9 * (window.devicePixelRatio || 1), dy * delta * 0.9 * (window.devicePixelRatio || 1));
     }
-  }
-
-  private stepClouds(): void {
-    let born = false;
-    for (let i = 0; i < this.clouds.length; i++) {
-      const c = this.clouds[i];
-      if (c) {
-        c.y += 0.5;
-        c.img.y = Math.floor(c.y);
-        if (c.y >= SCREEN_H) {
-          c.img.destroy();
-          this.clouds[i] = null;
-        }
-      } else if (!born && Math.random() < 0.0005) {
-        born = true;
-        const img = this.add
-          .image(Math.floor(Math.random() * (SCREEN_W - 64)), -128, `cl_${Math.floor(Math.random() * 5)}`)
-          .setOrigin(0)
-          .setDisplaySize(64, 128)
-          .setAlpha(0.8);
-        this.cloudLayer.add(img);
-        this.clouds[i] = { img, y: -128 };
-      }
-    }
+    // Si la camara se ha movido (arrastre, borde, paneo animado), recolocar los bocadillos.
+    const cam = this.cameras.main;
+    const l = this.lastScroll;
+    if (cam.scrollX !== l.x || cam.scrollY !== l.y || cam.zoom !== l.zoom) this.refreshHud();
   }
 
   // -------------------------------------------------------------------------
@@ -671,7 +697,7 @@ export class GameScene extends Phaser.Scene {
       case 'save':
         if (writeSave(serialize(this.s))) {
           this.savedThisGame = true;
-          this.toast.show(t('saved'));
+          showToast(t('saved'));
         }
         return this.toMap();
       case 'endTurn':
@@ -680,7 +706,7 @@ export class GameScene extends Phaser.Scene {
         // [CAMBIO] en el original Esc abandonaba la partida al instante, sin confirmar.
         if (this.time.now - this.quitArmedAt < 2500) return this.quitToMenu();
         this.quitArmedAt = this.time.now;
-        return this.toast.show(t('confirmQuit'), 2200);
+        return showToast(t('confirmQuit'));
     }
   }
 
@@ -784,7 +810,7 @@ export class GameScene extends Phaser.Scene {
         // [CAMBIO] pedir confirmacion (en el original se borraba al instante).
         if (!this.deleteArmed) {
           this.deleteArmed = true;
-          return this.toast.show(t('confirmDelete'));
+          return showToast(t('confirmDelete'));
         }
         removeUnit(this.s, u.uid);
         return this.afterAction();
@@ -830,7 +856,7 @@ export class GameScene extends Phaser.Scene {
     if (this.menuSel === 0 || !this.selBuilding) return this.toMap();
     const opt = this.buy[this.menuSel - 1];
     if (!opt) return;
-    if (!opt.affordable) return this.toast.show(teamUnits(this.s, 0).length >= MAX_UNITS ? t('unitLimit') : t('cantAfford'));
+    if (!opt.affordable) return showToast(teamUnits(this.s, 0).length >= MAX_UNITS ? t('unitLimit') : t('cantAfford'));
     const b = this.selBuilding;
     const u = spawn(this.s, b, opt.type);
     if (u) void this.playEvents([{ kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } }]).then(() => this.afterAction());
@@ -864,10 +890,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Fin de turno con la tecla E: si quedan unidades sin usar, pedir que se pulse otra vez. */
   private requestEndTurn(): void {
-    const idle = this.s.units.some((u) => u.team === 0 && u.active && u.carrier === null);
+    const idle = this.idleUnits().length > 0;
     if (idle && this.time.now - this.endArmedAt > 2500) {
       this.endArmedAt = this.time.now;
-      return this.toast.show(t('confirmEndTurn'), 2200);
+      return showToast(t('confirmEndTurn'));
     }
     void this.enemyTurn();
   }
@@ -881,7 +907,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyPlaying = true;
     this.fastForward = false;
     this.refresh();
-    this.banner.show(`${t('day')} ${this.s.day}`, t('enemyTurn'), C.red);
+    showBanner(`${t('day')} ${this.s.day}`, t('enemyTurn'), 'red');
     await this.wait(900);
     for (const ev of aiTurn(this.s, Math.random)) {
       await this.playEvents([ev]);
@@ -892,11 +918,12 @@ export class GameScene extends Phaser.Scene {
     this.enemyPlaying = false;
     if (this.checkEnd()) return;
     this.view.cursor = saved.cursor;
+    this.fastForward = false;
     cam.pan(saved.x, saved.y, 300, 'Sine.easeInOut', true);
     this.phase = 'map';
     this.inputLockUntil = this.time.now + 350;
     this.refresh();
-    this.banner.show(`${t('day')} ${this.s.day}`, t('yourTurn'), C.blue);
+    showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
   }
 
   private wait(ms: number): Promise<void> {
@@ -920,9 +947,7 @@ export class GameScene extends Phaser.Scene {
     const prevPhase = this.phase;
     this.phase = 'busy';
     this.view.placeCursor(false);
-    this.menu.hide();
-    this.tooltip.hide();
-    this.info.show(null, { x: 0, y: 0 });
+    this.refreshHud();
     for (const ev of events) {
       switch (ev.kind) {
         case 'move':
@@ -958,7 +983,11 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.hidden.clear();
-    if (this.phase === 'busy' && prevPhase !== 'busy') this.phase = prevPhase;
+    if (this.phase === 'busy' && prevPhase !== 'busy') {
+      this.phase = prevPhase;
+      // Acelerar una animacion propia no debe saltarse las siguientes.
+      this.fastForward = false;
+    }
     this.refresh();
   }
 
@@ -993,7 +1022,7 @@ export class GameScene extends Phaser.Scene {
     this.view.addFx(flash);
     this.cameras.main.shake(120, 0.004);
     const text = this.add
-      .text(cx, cy - 8, `-${damage}`, { fontFamily: FONT, fontSize: '18px', fontStyle: 'bold', color: '#ff5a4f', stroke: '#000000', strokeThickness: 4, resolution: 2 })
+      .text(cx, cy - 8, `-${damage}`, { fontFamily: 'Silkscreen, monospace', fontSize: '16px', color: '#ff4d45', stroke: '#0b1220', strokeThickness: 4 })
       .setOrigin(0.5, 1);
     this.view.addFx(text);
     this.tweens.add({ targets: flash, alpha: 0, scale: 1.4, duration: 380 });

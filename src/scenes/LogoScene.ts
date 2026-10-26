@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCREEN_H, SCREEN_W } from '../layout';
+import { ui } from '../hud/store';
 
 /** Logo de Fingerprint Games durante 2 segundos (fase 0 del original), con fundido. */
 export class LogoScene extends Phaser.Scene {
@@ -8,10 +8,25 @@ export class LogoScene extends Phaser.Scene {
   }
 
   create(): void {
-    const logo = this.add.image(SCREEN_W / 2, SCREEN_H / 2, 'logoFP');
-    logo.setScale(SCREEN_H / logo.height);
+    ui.set({ screen: 'logo' });
+    const logo = this.add.image(0, 0, 'logoFP');
+    const layout = () => {
+      const { width, height } = this.scale;
+      logo.setPosition(width / 2, height / 2);
+      // Escala entera si se puede (pixel art nitido), y que quepa entero.
+      const fit = Math.min(width / logo.width, height / logo.height);
+      logo.setScale(fit >= 1 ? Math.floor(fit) : fit);
+    };
+    layout();
+    this.scale.on(Phaser.Scale.Events.RESIZE, layout);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, layout));
     this.cameras.main.fadeIn(400);
-    const next = () => this.scene.start('Menu');
+    let gone = false;
+    const next = () => {
+      if (gone) return;
+      gone = true;
+      this.scene.start('Menu');
+    };
     this.time.delayedCall(1800, () => {
       this.cameras.main.fadeOut(300);
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, next);
