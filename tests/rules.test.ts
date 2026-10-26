@@ -163,3 +163,40 @@ describe('compra y fin de ronda', () => {
     expect(unitActions(s, sup).supply).toBe(true);
   });
 });
+
+import { combatForecast, threatMap } from '../src/core/rules';
+
+describe('prevision y amenaza', () => {
+  it('prevision de tanque contra tanque coherente', () => {
+    const s = blankState();
+    const a = newUnit(s, 1, 0, 10, 10);
+    a.life = 80;
+    const d = newUnit(s, 1, 1, 10, 12);
+    d.life = 60;
+    const f = combatForecast(s, a, d);
+    expect(f.expected).toBe(40);
+    expect(f.low).toBeGreaterThanOrEqual(30);
+    expect(f.high).toBeLessThanOrEqual(50);
+    expect(f.killChance).toBeLessThan(0.01);
+    expect(f.lifeAfter).toBe(20);
+  });
+  it('probabilidad de destruir alta si el defensor esta casi muerto', () => {
+    const s = blankState();
+    const a = newUnit(s, 1, 0, 10, 10);
+    const d = newUnit(s, 0, 1, 10, 11);
+    d.life = 10;
+    expect(combatForecast(s, a, d).killChance).toBeGreaterThan(0.99);
+  });
+  it('amenaza: tanque enemigo visible cubre mover + alcance; invisible no cuenta', () => {
+    const s = blankState();
+    newUnit(s, 0, 0, 10, 10); // vision 4 del jugador
+    newUnit(s, 1, 1, 12, 10); // tanque enemigo visible: mover 5 + alcance 2
+    const th = threatMap(s, 1, 0);
+    expect(th[12]![17]).toBe(true); // 7 abajo
+    expect(th[12]![18]).toBe(false);
+    const s2 = blankState();
+    newUnit(s2, 0, 0, 0, 0);
+    newUnit(s2, 1, 1, 20, 20); // fuera de vision
+    expect(threatMap(s2, 1, 0).flat().some(Boolean)).toBe(false);
+  });
+});

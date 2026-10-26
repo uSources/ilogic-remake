@@ -602,3 +602,81 @@ export function groundDistance(s: GameState, from: Pos, moveType: number, occ = 
   }
   return dist;
 }
+
+// ---------------------------------------------------------------------------
+// Prevision de combate y zona de amenaza (para la interfaz)
+// ---------------------------------------------------------------------------
+
+export interface CombatForecast {
+  /** Dano mas probable (media). */
+  expected: number;
+  /** Margen probable: percentiles 5 y 95. */
+  low: number;
+  high: number;
+  /** Probabilidad de dejar al defensor sin vida (0..1). */
+  killChance: number;
+  /** Vida del defensor tras el dano esperado. */
+  lifeAfter: number;
+}
+
+/**
+ * El dano es binomial: una tirada por punto de vida del atacante con probabilidad p,
+ * cortado en la vida del defensor. Se calcula la distribucion exacta.
+ */
+export function combatForecast(s: GameState, atk: Unit, def: Unit): CombatForecast {
+  const n = Math.max(0, atk.life);
+  const p = Math.min(1, Math.max(0, hitChance(s, atk, def)));
+  // dist[k] = P(k aciertos)
+  let dist = [1];
+  for (let i = 0; i < n; i++) {
+    const next = Array<number>(dist.length + 1).fill(0);
+    for (let k = 0; k < dist.length; k++) {
+      next[k]! += dist[k]! * (1 - p);
+      next[k + 1]! += dist[k]! * p;
+    }
+    dist = next;
+  }
+  const cap = def.life;
+  let expected = 0,
+    killChance = 0,
+    acc = 0,
+    low = -1,
+    high = -1;
+  for (let k = 0; k < dist.length; k++) {
+    const dmg = Math.min(k, cap);
+    expected += dmg * dist[k]!;
+    if (k >= cap) killChance += dist[k]!;
+    acc += dist[k]!;
+    if (low < 0 && acc >= 0.05) low = dmg;
+    if (high < 0 && acc >= 0.95) high = dmg;
+  }
+  if (high < 0) high = Math.min(n, cap);
+  if (low < 0) low = 0;
+  const exp = Math.round(expected);
+  return { expected: exp, low, high, killChance, lifeAfter: Math.max(0, def.life - exp) };
+}
+
+/**
+ * Casillas que el bando `team` podria atacar en su proximo turno (moverse y disparar):
+ * solo cuenta las unidades de ese bando que `viewer` ve.
+ */
+export function threatMap(s: GameState, team: Team, viewer: Team): boolean[][] {
+  const out = grid(false);
+  const vis = visibility(s, viewer);
+  for (const u of s.units) {
+    if (u.team !== team || u.carrier !== null || !UNIT.canfight[u.type] || !hasAmmo(u) || !vis[u.x]![u.y]) continue;
+    const minR = UNIT.minalc[u.type]!,
+      maxR = UNIT.alcance[u.type]!;
+    if (maxR === 0) continue;
+    // Las unidades a distancia no pueden mover y disparar: solo desde donde estan.
+    const origins: Pos[] = [{ x: u.x, y: u.y }];
+    if (minR === 0) {
+      const fresh = { ...u, active: true, canMove: true };
+      const r = moveRange(s, fresh);
+      for (let x = 0; x < r.steps.length; x++)
+        for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
+    }
+    for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) out[p.x]![p.y] = true;
+  }
+  return out;
+}

@@ -32,11 +32,15 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 | Fin del turno | E | Boton "Fin del turno" |
 | Mover el mapa | (sigue al cursor) | Arrastrar, o raton en el borde de la pantalla |
 | Zoom | + / - | Rueda |
+| Siguiente unidad sin mover | Tab | Clic en la bandeja de abajo a la derecha |
+| Zona de amenaza enemiga | T | Boton "Ver amenaza enemiga" |
 
 - Pulsa sobre una unidad tuya (azul) para ver adonde puede ir. Al pasar por encima de una casilla
   se dibuja el camino; pulsa el destino y elige una accion en el menu que aparece junto a la unidad.
   Casillas azules = moverse, moradas = unirse a una unidad igual, turquesa = subir a un transporte,
-  rojas = objetivos de ataque (al pasar por encima se ve el dano estimado).
+  rojas = objetivos de ataque. Al pasar por encima de un objetivo sale la prevision de combate:
+  margen de dano (del 5 % al 95 % de las tiradas), vida que le quedara y probabilidad de destruirlo.
+- Con T se ve en rojo todo lo que el enemigo (lo que ves de el) puede atacar en su proximo turno.
 - La ficha de abajo muestra la unidad, el edificio y el terreno bajo el cursor (vida, combustible,
   municion, movimiento, alcance, defensa del terreno...).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
@@ -60,8 +64,10 @@ src/
     geom.ts      Rombos, distancias, numeros aleatorios con semilla
     types.ts     Modelo de datos (GameState, Unit, Building, GameEvent)
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida), End (victoria/derrota)
-  ui/          Dibujo del mapa (mapView), interfaz flotante (hud: barra, ficha, menus),
-               estilo (theme) y nombres de las imagenes (sprites)
+  ui/          Dibujo del mapa (mapView: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
+  hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (componentes), hud.css
+               (estilo "retro pixel") y store.ts (estado que publican las escenas)
+  display.ts   Lienzo a resolucion fisica de la pantalla (nitido en pantallas de alta densidad)
 public/assets/ Graficos y musica originales (la musica, convertida a ogg/mp3)
 docs/          Especificacion del juego original sacada del codigo Java
 tests/         Tests (vitest)
@@ -86,9 +92,10 @@ marcados en el codigo con `[CAMBIO]`. Los principales:
 - Mapas: las dos bases siempre existen, estan conectadas por tierra y separadas.
 - IA: ataca solo a lo que puede danar y elige el mejor objetivo, vuelve a repararse y
   repostar, avanza hacia la Base del jugador y compra con mas criterio.
-- Interfaz nueva: mapa a pantalla completa con camara (arrastre, zoom), menus emergentes junto
-  a la unidad, ficha de informacion, compra con nombres y estadisticas, camino previsto,
-  vista previa del dano, animaciones y cartel de cambio de turno. Se conservan los graficos,
+- Interfaz nueva de estilo pixel (HTML y CSS sobre el lienzo): mapa a pantalla completa y nitido
+  a cualquier tamano (zoom entero), menus emergentes junto a la unidad, fichas de terreno y unidad,
+  compra con nombres y estadisticas, camino previsto, prevision de combate, bandeja de unidades
+  sin mover (Tab), zona de amenaza enemiga (T), animaciones y cartel de cambio de turno. Se conservan los graficos,
   el logo, el fondo del menu y las pantallas de victoria y derrota originales.
 - Guardado y configuracion en el navegador (localStorage).
 - El original no tenia graficos para las esquinas inferiores de las orillas en los temas
