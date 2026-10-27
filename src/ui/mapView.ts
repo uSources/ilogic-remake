@@ -8,6 +8,7 @@ import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 import { drawWater, paintTerrain, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
+import { paintFog, visKey, type Mist } from './fog';
 import { settings } from '../settings';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
@@ -84,6 +85,13 @@ export class MapView {
   private readonly units = new Map<number, UnitSprite>();
   private readonly buildings: Phaser.GameObjects.Image[] = [];
   private clouds: { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image | null; x: number; y: number }[] = [];
+  /** Niebla del dibujo nuevo (lienzo con borde organico) y bruma que se mueve dentro. */
+  private readonly fogLayer: Phaser.GameObjects.Container;
+  private fogImg: Phaser.GameObjects.Image | null = null;
+  private fogCanvas: HTMLCanvasElement | null = null;
+  private fogSig = '';
+  private fogVis: boolean[][] | null = null;
+  private mist: Mist[] = [];
   /** Sombras de las nubes sobre el suelo (debajo de edificios y unidades). */
   private readonly cloudShadows: Phaser.GameObjects.Container;
   private level = 2;
@@ -105,10 +113,11 @@ export class MapView {
     this.fx = scene.add.container(0, 0);
     this.cloudLayer = scene.add.container(0, 0);
     this.cloudShadows = scene.add.container(0, 0);
+    this.fogLayer = scene.add.container(0, 0);
     this.cursorImg = scene.add.image(0, 0, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor, nubes.
     this.marks = scene.add.graphics();
-    this.root.add([this.terrain, this.cloudShadows, this.buildingLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg, this.cloudLayer]);
+    this.root.add([this.terrain, this.cloudShadows, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg, this.cloudLayer]);
     this.cam.setBackgroundColor('#0b1220');
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
@@ -401,12 +410,76 @@ export class MapView {
     sp.img.y = TILE - (sp.idle ? this.bobPhase : 0);
   }
 
+  private newArt(): boolean {
+    return settings.terrainArt === 'new' && this.scene.textures.exists('wang/cloud_0');
+  }
+
+  /** Repinta la niebla nueva si ha cambiado lo que se ve. */
+  private updateFog(vis: boolean[][]): void {
+    this.fogVis = vis;
+    const sig = visKey(vis);
+    if (sig === this.fogSig && this.fogImg) return;
+    this.fogSig = sig;
+    const tex = this.scene.textures;
+    this.fogCanvas = paintFog(vis, this.fogCanvas ?? undefined);
+    if (!this.fogImg) {
+      if (tex.exists('fogBake')) tex.remove('fogBake');
+      tex.addCanvas('fogBake', this.fogCanvas);
+      this.fogImg = this.scene.add.image(0, 0, 'fogBake').setOrigin(0);
+      this.fogLayer.addAt(this.fogImg, 0);
+    } else (tex.get('fogBake') as Phaser.Textures.CanvasTexture).refresh();
+  }
+
+  /** Bruma: nubecillas translucidas que van y vienen solo por encima de lo que no se ve. */
+  private tickMist(delta: number, still: boolean): void {
+    const vis = this.fogVis;
+    if (!vis || !this.newArt()) return;
+    const hidden = (px: number, py: number) => {
+      const x = Math.floor(px / TILE),
+        y = Math.floor(py / TILE);
+      return x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && !vis[x]![y];
+    };
+    for (const m of this.mist) {
+      if (!still) m.x += m.vx * delta;
+      const cx = m.x + m.img.width / 2,
+        cy = m.y - m.img.height / 2;
+      const target = hidden(cx, cy) && hidden(m.x + 8, cy) && hidden(m.x + m.img.width - 8, cy) ? 0.34 : 0;
+      m.alpha += (target - m.alpha) * Math.min(1, delta / 400);
+      m.img.setAlpha(m.alpha).setPosition(Math.round(m.x), Math.round(m.y));
+    }
+    this.mist = this.mist.filter((m) => {
+      const gone = m.x > MAP_W * TILE + 10 || (m.alpha < 0.02 && m.img.getData('born') + 4000 < this.scene.time.now);
+      if (gone) m.img.destroy();
+      return !gone;
+    });
+    let hiddenCount = 0;
+    for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!vis[x]![y]) hiddenCount++;
+    const want = Math.min(14, Math.floor(hiddenCount / 25));
+    if (this.mist.length < want && Math.random() < delta / 600) {
+      // Aparece sobre una casilla oculta al azar.
+      for (let k = 0; k < 20; k++) {
+        const x = Math.floor(Math.random() * MAP_W),
+          y = Math.floor(Math.random() * MAP_H);
+        if (vis[x]![y]) continue;
+        const img = this.scene.add.image(0, 0, `wang/cloud_${Math.floor(Math.random() * 5)}`).setOrigin(0, 1).setAlpha(0).setTint(0xb8c8e8);
+        img.setData('born', this.scene.time.now);
+        this.fogLayer.add(img);
+        this.mist.push({ img, x: x * TILE - img.width / 2 + TILE / 2, y: y * TILE + TILE, vx: 0.004 + Math.random() * 0.004, alpha: 0 });
+        break;
+      }
+    }
+  }
+
   private drawOverlay(opts: ViewOptions): void {
     const g = this.overlay;
     g.clear();
     // Niebla de guerra.
-    g.fillStyle(0x05080c, 0.5);
-    for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    this.fogLayer.setVisible(this.newArt());
+    if (this.newArt()) this.updateFog(opts.vis);
+    else {
+      g.fillStyle(0x05080c, 0.5);
+      for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    }
     // Zona de amenaza enemiga: relleno rojo suave y borde de 2 px por fuera de la zona.
     const th = opts.threat;
     if (th) {
@@ -615,7 +688,9 @@ export class MapView {
       }
       return true;
     });
-    if (this.clouds.length < (pixelClouds ? 4 : 3) && Math.random() < delta / (pixelClouds ? 9000 : 25000)) {
+    this.tickMist(delta, still);
+    // Con el dibujo nuevo no hay nubes por el cielo: la bruma va dentro de la niebla.
+    if (!pixelClouds && this.clouds.length < 3 && Math.random() < delta / 25000) {
       if (pixelClouds) {
         const n = Math.floor(Math.random() * 5);
         const img = this.scene.add.image(0, 0, `wang/cloud_${n}`).setOrigin(0, 1).setAlpha(0.92);
