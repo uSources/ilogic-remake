@@ -80,11 +80,45 @@ def main():
         row.save(os.path.join(OUT_IMG, name + '.png'))
         ts.append(f'  {name}: {json.dumps(idx)},')
     ts.append('};')
-    # Decorados sueltos: los dibujos de 2013 sin su suelo.
-    OLD = os.path.join(ROOT, '..', '..', 'public', 'assets', 'img')
-    for name, deco, base in (('decor_flowers', 'Flowers', 'Grass'), ('decor_cactus', 'Cactus', 'Sand'), ('decor_frosty', 'Frosty', 'Snow')):
-        im = cut(Image.open(os.path.join(OLD, deco + '.png')).convert('RGBA'), Image.open(os.path.join(OLD, base + '.png')).convert('RGBA'), tol=24)
-        im.save(os.path.join(OUT_IMG, name + '.png'))
+    # Primer plano para las unidades: una tira de copas de arbol o de rocas (con el borde de arriba
+    # ondulado o quebrado) que tapa los pies de la unidad y la "mete" en el bosque o la montaña.
+    import math, random
+    FRONTS = {'ts_grass_forest': 'leaf', 'ts_snow_forest': 'leaf', 'ts_grass_mountain': 'rock', 'ts_snow_mountain': 'rock', 'ts_sand_mesa': 'rock'}
+    for name, kind in FRONTS.items():
+        png = os.path.join(SRC, name + '.png')
+        if not os.path.exists(png): continue
+        info = json.load(open(os.path.join(SRC, name + '.json')))
+        sheet = Image.open(png).convert('RGBA')
+        full = None
+        for t in info['tiles']:
+            if all(t['corners'][k] == 'upper' for k in ORDER):
+                b = t['bounding_box']; full = sheet.crop((b['x'], b['y'], b['x'] + b['width'], b['y'] + b['height']))
+        a = np.asarray(full).astype(int)
+        lum = a[..., :3].sum(-1)
+        dark = tuple(int(v * 0.55) for v in a.reshape(-1, 4)[lum.reshape(-1).argmin()][:3]) + (255,)
+        H = 14
+        r = random.Random(7)
+        top = []
+        for x in range(32):
+            if kind == 'leaf':
+                # Bultos redondos de 8 px.
+                c = (x % 8) - 3.5
+                top.append(int(round(c * c / 3.2)))
+            else:
+                top.append(None)
+        if kind == 'rock':
+            y = 3
+            for x in range(32):
+                if x % 5 == 0: y = max(0, min(6, y + r.choice((-2, -1, 1, 2))))
+                top[x] = y
+        out = Image.new('RGBA', (32, H), (0, 0, 0, 0)); px = out.load()
+        for x in range(32):
+            for y in range(H):
+                if y < top[x]: continue
+                c = tuple(a[32 - H + y, x])
+                px[x, y] = dark if y == top[x] else (c[0], c[1], c[2], 255)
+        out.save(os.path.join(OUT_IMG, 'front_' + name[3:] + '.png'))
+    # Los decorados sueltos los hace tools/art/decor.py.
     open(OUT_TS, 'w').write('\n'.join(ts) + '\n')
     print(len(sets), 'sets')
 
