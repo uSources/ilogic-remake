@@ -50,7 +50,9 @@ import { deserialize, serialize } from '../core/save';
 import { recordEvent, stats } from '../core/stats';
 import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
-import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM } from '../hud/store';
+import { markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
+import { buildMission, missionById, missionRules } from '../core/missions';
+import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM, type UIState } from '../hud/store';
 import { TILE } from '../layout';
 import { playMusic, stopMusic } from '../music';
 import { buildingLabel, saveSettings, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
@@ -133,7 +135,10 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
-  init(data: { mode?: 'new' | 'load'; rules?: Partial<RulesConfig>; setup?: GameSetup }): void {
+  init(data: { mode?: 'new' | 'load' | 'mission'; rules?: Partial<RulesConfig>; setup?: GameSetup; mission?: string }): void {
+    this.tutorialStep = 0;
+    this.tutorialEvents = [];
+    this.lastEnemy = null;
     this.phase = 'map';
     this.sel = null;
     this.selBuilding = null;
@@ -158,6 +163,10 @@ export class GameScene extends Phaser.Scene {
       state.rules ??= { ...CLASSIC_RULES };
       useRules(state.rules);
       this.s = state;
+    } else if (data.mode === 'mission' && data.mission && missionById(data.mission)) {
+      const m = missionById(data.mission)!;
+      useRules(missionRules(m));
+      this.s = buildMission(m);
     } else {
       useRules(data.rules ?? MODERN_RULES);
       const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: 32, theme: null };
@@ -184,7 +193,7 @@ export class GameScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
-      ui.set({ menu: null, forecast: null, tile: null });
+      ui.set({ menu: null, forecast: null, tile: null, mission: null });
     });
     playMusic(this, 'game');
     ui.set({ screen: 'game', toast: null, banner: null, threat: this.threat });
@@ -306,7 +315,19 @@ export class GameScene extends Phaser.Scene {
       .map((b) => ({ b, c: captureProgress(this.s, b) }))
       .filter(({ b, c }) => c && (this.vis[b.x]![b.y] || b.owner === 0))
       .map(({ b, c }) => ({ x: b.x, y: b.y, left: c!.left, total: capturePointsOf(b), team: c!.team }));
-    this.view.render(this.s, { vis: this.vis, highlights: this.highlights(), hidden: this.hidden, path: this.previewPath(), threat, captures });
+    const obj = this.s.mission?.objective;
+    const vipUnit = obj?.kind === 'escort' ? unitById(this.s, obj.uid) : undefined;
+    const vipAt = vipUnit ? (vipUnit.carrier !== null ? unitById(this.s, vipUnit.carrier) ?? vipUnit : vipUnit) : undefined;
+    this.view.render(this.s, {
+      vis: this.vis,
+      highlights: this.highlights(),
+      hidden: this.hidden,
+      path: this.previewPath(),
+      threat,
+      captures,
+      goal: obj?.kind === 'escort' ? obj.to : null,
+      vip: vipAt && !this.hidden.has(vipAt.uid) ? { x: vipAt.x, y: vipAt.y } : null,
+    });
     this.view.placeCursor(this.phase !== 'busy');
     this.publishMinimap();
     this.refreshHud();
@@ -382,11 +403,49 @@ export class GameScene extends Phaser.Scene {
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
       hint: busy ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? (this.inspectUid !== null ? t('hintInspect') : t('hintMap')) : '',
+      mission: this.missionPanel(),
     });
     const cam = this.cameras.main;
     this.lastScroll = { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom };
     const wv = cam.worldView;
     ui.set({ minimapView: { x: wv.x / TILE, y: wv.y / TILE, w: wv.width / TILE, h: wv.height / TILE } });
+  }
+
+  // -------------------------------------------------------------------------
+  // Misiones y tutorial
+  // -------------------------------------------------------------------------
+
+  private tutorialStep = 0;
+  /** Acciones del jugador desde que empezo el paso actual del tutorial. */
+  private tutorialEvents: GameEvent[] = [];
+  private tutorialOwned = 0;
+
+  private missionPanel(): UIState['mission'] {
+    const id = this.s.mission?.id;
+    const m = id ? missionById(id) : undefined;
+    if (!m) return null;
+    let tip: string | null = null;
+    let step: string | null = null;
+    if (m.tutorial) {
+      this.advanceTutorial();
+      const st = TUTORIAL[this.tutorialStep];
+      if (st) {
+        tip = st.text[settings.lang];
+        step = `${this.tutorialStep + 1}/${TUTORIAL.length}`;
+      }
+    }
+    return { title: m.title[settings.lang], objective: objectiveText(m, this.s), status: objectiveStatus(this.s), tip, step };
+  }
+
+  /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
+  private advanceTutorial(): void {
+    if (this.tutorialStep === 0 && this.tutorialEvents.length === 0) this.tutorialOwned = this.s.buildings.filter((b) => b.owner === 0).length;
+    for (let guard = 0; guard < TUTORIAL.length; guard++) {
+      const st = TUTORIAL[this.tutorialStep];
+      if (!st || !st.done({ s: this.s, phase: this.phase, events: this.tutorialEvents, ownedAtStart: this.tutorialOwned })) return;
+      this.tutorialStep++;
+      this.tutorialEvents = [];
+    }
   }
 
   private forecast(c: Pos): ForecastVM | null {
@@ -1121,7 +1180,16 @@ export class GameScene extends Phaser.Scene {
     if (this.fromSave || this.savedThisGame) deleteSave();
     this.refresh();
     const st = stats(this.s);
-    const end = { won: result === 'won', day: this.s.day, stats: st, reason: endReason(this.s), score: [score(this.s, 0), score(this.s, 1)] };
+    const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
+    if (m && result === 'won') markCompleted(m.id);
+    const end = {
+      won: result === 'won',
+      day: this.s.day,
+      stats: st,
+      reason: endReason(this.s),
+      score: [score(this.s, 0), score(this.s, 1)],
+      mission: m ? m.title[settings.lang] : null,
+    };
     this.time.delayedCall(900, () => this.scene.start('End', end));
     return true;
   }
@@ -1133,7 +1201,15 @@ export class GameScene extends Phaser.Scene {
     if (this.fromSave || this.savedThisGame) deleteSave();
     this.toMap();
     this.phase = 'busy';
-    const end = { won: false, day: this.s.day, stats: stats(this.s), reason: 'surrender', score: [score(this.s, 0), score(this.s, 1)] };
+    const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
+    const end = {
+      won: false,
+      day: this.s.day,
+      stats: stats(this.s),
+      reason: 'surrender',
+      score: [score(this.s, 0), score(this.s, 1)],
+      mission: m ? m.title[settings.lang] : null,
+    };
     this.time.delayedCall(300, () => this.scene.start('End', end));
   }
 
@@ -1275,6 +1351,7 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
     for (const ev of events) {
       if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
+      if (!this.replaying && !this.enemyPlaying) this.tutorialEvents.push(ev);
       switch (ev.kind) {
         case 'move':
         case 'merge':

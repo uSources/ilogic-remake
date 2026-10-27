@@ -62,6 +62,12 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   valor del ejército + 1000 por edificio). Cada mapa tiene un código (menú de partida) que se puede
   escribir en "Código del mapa" para volver a jugarlo o pasárselo a alguien.
 - En el menú de partida: repetir el último turno enemigo y rendirse.
+- **Campaña** (menú principal): 6 misiones en mapas hechos a mano, que se desbloquean en orden.
+  La primera es un tutorial que va diciendo qué hacer; las demás tienen objetivos propios (capturar
+  ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
+  Las misiones están en `src/core/missions.ts` y es fácil añadir más.
+- **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
+  cada una con +5 % de acierto y de defensa.
 - Al empezar cada turno sale un resumen de la ronda (ingresos, unidades reparadas y reabastecidas).
 - Al acabar la partida se ven estadisticas de los dos bandos (compras, bajas, capturas, gasto).
 - Si el sistema pide reducir el movimiento, se quitan los temblores, parpadeos y paneos de camara.

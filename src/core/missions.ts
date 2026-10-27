@@ -130,7 +130,7 @@ export const MISSIONS: MissionDef[] = [
       ['Base', 0, 2, 13],
       ['Factory', 0, 4, 13],
       ['City', 0, 2, 11],
-      ['City', null, 5, 9],
+      ['City', null, 4, 10],
       ['City', null, 9, 11],
       ['City', null, 6, 4],
       ['Base', 1, 13, 2],
