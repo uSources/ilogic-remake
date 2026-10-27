@@ -93,7 +93,7 @@ describe('captura y victoria', () => {
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
     s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
     const a = newUnit(s, SOLDIER, 0, 3, 3);
-    expect(capture(s, a)).toBe(true);
+    expect(capture(s, a)?.done).toBe(true);
     expect(s.buildings[2]!.owner).toBe(0);
     expect(outcome(s)).toBe('playing');
     const b = newUnit(s, SOLDIER, 0, 5, 5);

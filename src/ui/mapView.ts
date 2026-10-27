@@ -26,6 +26,8 @@ export interface ViewOptions {
   path?: Pos[];
   /** Casillas que el enemigo puede atacar en su proximo turno (tecla T). */
   threat?: boolean[][] | null;
+  /** Capturas a medias que se ven (barra encima del edificio). */
+  captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
 }
 
 /** Sprite persistente de una unidad: imagen + vida + marca de carga. */
@@ -342,6 +344,16 @@ export class MapView {
       g.fillRect(px + 1, py + TILE - 2, TILE - 2, 1);
       g.fillRect(px + 1, py + 2, 1, TILE - 4);
       g.fillRect(px + TILE - 2, py + 2, 1, TILE - 4);
+    }
+    // Barras de captura: fondo oscuro y relleno del color de quien captura.
+    for (const c of opts.captures ?? []) {
+      const px = c.x * TILE + 3,
+        py = c.y * TILE + 1;
+      const w = TILE - 6;
+      g.fillStyle(0x0b1220, 0.9);
+      g.fillRect(px - 1, py - 1, w + 2, 6);
+      g.fillStyle(c.team === 0 ? 0x3aa8ff : 0xff4d45, 1);
+      g.fillRect(px, py, Math.max(1, Math.round((w * (c.total - c.left)) / c.total)), 4);
     }
     // Camino previsto: tramos de 4 px con borde oscuro.
     const path = opts.path;

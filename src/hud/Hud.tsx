@@ -284,6 +284,18 @@ function TerrainCard({ tile }: { tile: TileVM }) {
         <span class="muted">{t('defense')}</span>
         <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{'★'.repeat(stars) + '☆'.repeat(4 - stars)}</span>
       </div>
+      {b?.capture && (
+        <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
+          <span class="muted">{t('capturing')}</span>
+          <div class="blocks">
+            <span style={{ flex: b.capture.total - b.capture.left, background: b.capture.team === 0 ? 'var(--blue)' : 'var(--red)' }} />
+            <span style={{ flex: b.capture.left }} />
+          </div>
+          <span class="num" style={{ fontSize: 12 }}>
+            {b.capture.left}
+          </span>
+        </div>
+      )}
       {b && b.income > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
           <span class="muted">{t('income')}</span>

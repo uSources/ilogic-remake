@@ -28,7 +28,8 @@ export function recordEvent(s: GameState, ev: GameEvent, team: Team): void {
       if (ev.attackerKilled) st.lost[team]++;
       break;
     case 'capture':
-      st.captured[team]++;
+      // Con captura por puntos, solo cuenta cuando se termina.
+      if (ev.left === undefined || ev.left === 0) st.captured[team]++;
       break;
     case 'spawn': {
       const u = s.units.find((x) => x.uid === ev.uid);

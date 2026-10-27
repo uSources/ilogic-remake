@@ -29,6 +29,8 @@ import {
   visibility,
   wait,
   type MoveRange,
+  canCounter,
+  captureProgress,
 } from './rules';
 import type { GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
 
@@ -50,16 +52,16 @@ function occupancyWithout(s: GameState, u: Unit): boolean[][] {
  * [CAMBIO] la cercania se mide con el tipo de movimiento de la unidad (antes siempre "a pie")
  * y si ya esta tan cerca como puede, se queda.
  */
-function bestMoveToward(s: GameState, u: Unit, dest: Pos, range: MoveRange): Pos | null {
-  if (samePos(u, dest)) return null;
-  if (range.steps[dest.x]![dest.y]! > 0) return dest;
+function bestMoveToward(s: GameState, u: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
+  if (samePos(u, dest) && !avoidDest) return null;
+  if (!avoidDest && range.steps[dest.x]![dest.y]! > 0) return dest;
   const dd = groundDistance(s, dest, UNIT.movtype[u.type]!, occupancyWithout(s, u));
   let best: Pos | null = null;
   let bestD = dd[u.x]![u.y]! || Infinity;
   for (let x = 0; x < dd.length; x++) {
     for (let y = 0; y < dd[x]!.length; y++) {
       const d = dd[x]![y]!;
-      if (range.steps[x]![y]! > 0 && d > 0 && d < bestD) {
+      if (range.steps[x]![y]! > 0 && d > 0 && d < bestD && !(avoidDest && x === dest.x && y === dest.y)) {
         best = { x, y };
         bestD = d;
       }
@@ -125,10 +127,23 @@ function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange
 }
 
 /** Valor de un ataque: dano esperado ponderado por el precio del objetivo, y extra si lo mata. */
-function attackScore(s: GameState, u: Unit, t: Unit): number {
-  const dmg = expectedDamage(s, u, t);
+function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
+  const atk = { ...u, x: from.x, y: from.y };
+  const dmg = expectedDamage(s, atk, t);
   const value = UNIT.cost[t.type]! / 1000;
-  return dmg * value + (dmg >= t.life ? 50 * value : 0);
+  let score = dmg * value + (dmg >= t.life ? 50 * value : 0);
+  // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
+  if (RULES.counterattack && dmg < t.life) {
+    const left = { ...t, life: Math.max(1, Math.round(t.life - dmg)) };
+    if (canCounter(left, atk)) score -= expectedDamage(s, left, atk) * (UNIT.cost[u.type]! / 1000);
+  }
+  // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.
+  const tb = buildingAt(s, t.x, t.y);
+  if (RULES.capture === 'points' && tb && tb.type === HQ && tb.owner === t.team) score += 200 * Math.max(0.5, dmg / 50);
+  // Echar a quien esta capturando un edificio propio (sobre todo la Base).
+  const b = buildingAt(s, t.x, t.y);
+  if (b && b.owner === ME && captureProgress(s, b)) score += (b.type === HQ ? 400 : 60) * Math.max(0.5, dmg / 50);
+  return score;
 }
 
 function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generator<GameEvent, boolean> {
@@ -152,7 +167,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generato
   for (const t of enemies) {
     for (const from of froms) {
       if (!inAttackRange(u.type, from, t)) continue;
-      const score = attackScore(s, u, t);
+      const score = attackScore(s, u, t, from);
       if (score <= 0) continue;
       // A igualdad, preferir no moverse o la casilla con mas defensa (menor multiplicador).
       if (!best || score > best.score) best = { from, target: t, score };
@@ -180,14 +195,19 @@ function attackTargetsPossible(u: Unit, t: Unit): boolean {
   return UNIT.canfight[u.type]! && POWER[u.type]![t.type]! > 0;
 }
 
+/** Capturar el edificio de debajo y avisar a la interfaz. */
+function* captureHere(s: GameState, u: Unit): Generator<GameEvent, boolean> {
+  if (!canCapture(s, u)) return false;
+  const b = buildingAt(s, u.x, u.y)!;
+  const r = capture(s, u);
+  if (!r) return false;
+  yield { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total };
+  return true;
+}
+
 function* tryCapture(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   if (!UNIT.cancapt[u.type]) return false;
-  if (canCapture(s, u)) {
-    const b = buildingAt(s, u.x, u.y)!;
-    capture(s, u);
-    yield { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner };
-    return true;
-  }
+  if (yield* captureHere(s, u)) return true;
   const vis = visibility(s, ME);
   const dist = groundDistance(s, u, UNIT.movtype[u.type]!);
   let goal: Pos | null = null;
@@ -207,11 +227,7 @@ function* tryCapture(s: GameState, u: Unit, range: MoveRange): Generator<GameEve
   }
   if (!goal) return false;
   yield* doMove(s, u, bestMoveToward(s, u, goal, range), range);
-  if (canCapture(s, u)) {
-    const b = buildingAt(s, u.x, u.y)!;
-    capture(s, u);
-    yield { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner };
-  } else wait(u);
+  if (!(yield* captureHere(s, u))) wait(u);
   return true;
 }
 
@@ -252,7 +268,9 @@ function* advance(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent,
     }
   }
   if (!goal) return false;
-  const dest = bestMoveToward(s, u, goal, range);
+  // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).
+  const blocks = !UNIT.cancapt[u.type] && !!buildingAt(s, goal.x, goal.y);
+  const dest = bestMoveToward(s, u, goal, range, blocks);
   if (!dest) return false;
   yield* doMove(s, u, dest, range);
   wait(u);
@@ -309,7 +327,21 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
   for (const uid of order) {
     const u = unitById(s, uid);
     if (!u || !u.active || u.carrier !== null || u.life <= 0) continue;
+    // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
+    // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
+    const here = buildingAt(s, u.x, u.y);
+    if (here && (captureProgress(s, here)?.uid === u.uid || RULES.capture === 'points') && (yield* captureHere(s, u))) continue;
     const range = moveRange(s, u);
+    // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
+    if (here && here.type === HQ && here.owner !== ME && here.owner !== null && !UNIT.cancapt[u.type]) {
+      const dest = bestMoveToward(s, u, here, range, true);
+      if (dest) {
+        yield* doMove(s, u, dest, range);
+        const after = moveRange(s, u);
+        if (!(yield* tryAttack(s, u, after, rng))) wait(u);
+        continue;
+      }
+    }
     const need = needsRepair(u);
     if (need && (yield* retreat(s, u, need, range))) continue;
     if (yield* tryAttack(s, u, range, rng)) continue;

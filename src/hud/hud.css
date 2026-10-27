@@ -253,3 +253,6 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 .endstats td { padding: 4px 0; border-top: 2px solid var(--lo); }
 .endstats td.num { text-align: right; color: var(--gold); }
 .endpanel .px-btn { font-size: 14px; white-space: normal; text-align: center; justify-content: center; line-height: 1.3; }
+
+.capbar { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.capbar .blocks span { height: 8px; }

@@ -1,3 +1,4 @@
+import { RULES } from '../core/data';
 import { settings } from '../settings';
 
 /** Contenido de la ayuda ("Cómo se juega"), en los dos idiomas. */
@@ -6,7 +7,9 @@ const HELP = {
     title: 'Cómo se juega',
     goalTitle: 'Objetivo',
     goal: [
-      'Gana quien neutraliza la Base enemiga. Para quitarle un edificio al rival hay que capturarlo dos veces: primero queda neutral y luego pasa a ser tuyo.',
+      'Gana quien conquista la Base enemiga.',
+      'CAPTURE_ES',
+      'COUNTER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan y repostan al empezar la ronda.',
     ],
@@ -39,7 +42,9 @@ const HELP = {
     title: 'How to play',
     goalTitle: 'Goal',
     goal: [
-      'You win by neutralising the enemy HQ. To take a building from the enemy you capture it twice: first it turns neutral, then it becomes yours.',
+      'You win by taking the enemy HQ.',
+      'CAPTURE_EN',
+      'COUNTER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired and refuelled at the start of the round.',
     ],
@@ -70,4 +75,30 @@ const HELP = {
   },
 };
 
-export const helpText = () => HELP[settings.lang];
+/** Frases que dependen de las reglas de la partida (clasicas de 2013 o nuevas). */
+function ruleLines(lang: 'es' | 'en'): Record<string, string> {
+  const points = RULES.capture === 'points';
+  const es = {
+    CAPTURE_ES: points
+      ? `Capturar va por puntos: un edificio tiene ${RULES.capturePoints} (la Base ${RULES.hqCapturePoints}) y cada turno la unidad le resta su vida ÷ 10. Si se mueve o la destruyen, se pierde lo avanzado. Al llegar a 0 pasa a ser tuyo.`
+      : 'Capturar es instantáneo, pero un edificio enemigo hay que capturarlo dos veces: primero queda neutral y luego pasa a ser tuyo.',
+    COUNTER_ES: RULES.counterattack
+      ? 'Al atacar, si el defensor sobrevive y te alcanza, responde con la vida que le queda. Las unidades a distancia ni contraatacan ni reciben contraataque.'
+      : 'No hay contraataque: atacar primero sale gratis.',
+  };
+  const en = {
+    CAPTURE_EN: points
+      ? `Capturing takes points: a building has ${RULES.capturePoints} (the HQ ${RULES.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`
+      : 'Capturing is instant, but an enemy building must be captured twice: first it turns neutral, then it becomes yours.',
+    COUNTER_EN: RULES.counterattack
+      ? 'When you attack, a defender that survives and can reach you strikes back with the HP it has left. Ranged units neither counter nor get countered.'
+      : 'There is no counterattack: striking first is free.',
+  };
+  return lang === 'es' ? es : en;
+}
+
+export const helpText = () => {
+  const h = HELP[settings.lang];
+  const lines = ruleLines(settings.lang);
+  return { ...h, goal: h.goal.map((g) => lines[g] ?? g) };
+};
