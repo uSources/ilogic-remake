@@ -1,6 +1,13 @@
 # Plan: mover unidades
 
-## Cómo funciona ahora
+## Estado (27-10-2026)
+
+Hecho todo: M2, M0 (con el camino a mano de M4), M3, M1, M5, las órdenes de varios turnos y el movimiento en grupo. Notas:
+- **Emboscadas:** como todas las unidades ven al menos tanto como mueven, para que existan el bosque (y el cactus y el bosque nevado) esconde a quien está dentro, salvo desde una casilla vecina, como en Advance Wars.
+- **Coste del terreno:** la IA contra un jugador pasivo tarda 31 días de mediana en lugar de 27 (+15 %, en el límite marcado).
+- **Pendiente:** "deshacer varios movimientos" funciona como una pila de Ctrl+Z; las acciones con consecuencias (combates, capturas, compras, descubrir enemigos) la vacían.
+
+## Cómo funcionaba antes
 
 - **Coste:** todas las casillas cuestan 1, sea llanura, bosque, arena o nieve. El terreno solo decide si se puede pasar o no.
 - **Bloqueos:** cualquier unidad bloquea el paso, también las propias. Para pasar entre dos aliados hay que dar la vuelta.
