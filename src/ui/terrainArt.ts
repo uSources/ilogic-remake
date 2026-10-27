@@ -129,7 +129,7 @@ export function terrainArtReady(textures: Phaser.Textures.TextureManager): boole
 }
 
 /** Pinta el terreno entero del mapa en un lienzo (una sola vez por partida). */
-export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameState): HTMLCanvasElement {
+export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameState): { canvas: HTMLCanvasElement; land: HTMLCanvasElement } {
   const W = s.map.length,
     H = s.map[0]!.length;
   const cv = document.createElement('canvas');
@@ -142,7 +142,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   const half = TILE / 2;
 
   /** Recorre las piezas de la rejilla doble: `up(t)` dice si la casilla cuenta como "arriba". */
-  const pass = (set: string, up: (t: number) => boolean, always: boolean) => {
+  const pass = (set: string, up: (t: number) => boolean, always: boolean, into = ctx) => {
     const frames = WANG_SETS[set];
     if (!frames || !textures.exists(`wang/${set}`)) return;
     const img = src(`wang/${set}`);
@@ -150,7 +150,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       for (let y = 0; y <= H; y++) {
         const k = (up(cell(x - 1, y - 1)) ? 8 : 0) | (up(cell(x, y - 1)) ? 4 : 0) | (up(cell(x - 1, y)) ? 2 : 0) | (up(cell(x, y)) ? 1 : 0);
         if (!k && !always) continue;
-        ctx.drawImage(img, frames[k]! * TILE, 0, TILE, TILE, x * TILE - half, y * TILE - half, TILE, TILE);
+        into.drawImage(img, frames[k]! * TILE, 0, TILE, TILE, x * TILE - half, y * TILE - half, TILE, TILE);
       }
   };
 
@@ -158,7 +158,14 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   pass(l1, () => false, true); // todo agua profunda
   organicPass(ctx, textures, l1, s, (t) => LEVEL[t]! >= 1);
   organicPass(ctx, textures, l2, s, (t) => LEVEL[t]! >= 2);
-  pass(l3, (t) => LEVEL[t]! >= 3, false);
+  // La tierra se pinta aparte para saber luego donde esta la orilla (para animarla).
+  const land = document.createElement('canvas');
+  land.width = cv.width;
+  land.height = cv.height;
+  const lc = land.getContext('2d')!;
+  lc.imageSmoothingEnabled = false;
+  pass(l3, (t) => LEVEL[t]! >= 3, false, lc);
+  ctx.drawImage(land, 0, 0);
   for (const o of overlaySets(s.theme)) if (s.map.some((col) => col.some((t) => o.cells.includes(t)))) pass(o.set, (t) => o.cells.includes(t), false);
   for (let x = 0; x < W; x++)
     for (let y = 0; y < H; y++) {
@@ -168,7 +175,82 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
       if (textures.exists(k)) ctx.drawImage(src(k), x * TILE, y * TILE);
     }
-  return cv;
+  return { canvas: cv, land };
+}
+
+// ---------------------------------------------------------------------------
+// Orilla animada: olas que llegan a la costa y se retiran
+// ---------------------------------------------------------------------------
+
+/** Tramos horizontales [x, y, largo] de agua a cada distancia (1..SHORE_MAX px) de la tierra. */
+type Rings = [number, number, number][][];
+const SHORE_MAX = 6;
+
+export function shoreRings(land: HTMLCanvasElement, seed = 1): Rings {
+  const PW = land.width,
+    PH = land.height;
+  const a = land.getContext('2d')!.getImageData(0, 0, PW, PH).data;
+  const dist = new Uint8Array(PW * PH);
+  let frontier: number[] = [];
+  for (let i = 0; i < PW * PH; i++)
+    if (a[i * 4 + 3]! > 0) {
+      dist[i] = 255; // tierra
+      frontier.push(i);
+    }
+  // Distancia (4 vecinos) desde la tierra, solo hasta SHORE_MAX.
+  for (let d = 1; d <= SHORE_MAX; d++) {
+    const next: number[] = [];
+    for (const i of frontier) {
+      const x = i % PW,
+        y = (i / PW) | 0;
+      for (const j of [x > 0 ? i - 1 : -1, x < PW - 1 ? i + 1 : -1, y > 0 ? i - PW : -1, y < PH - 1 ? i + PW : -1]) {
+        if (j < 0 || dist[j]) continue;
+        dist[j] = d;
+        next.push(j);
+      }
+    }
+    frontier = next;
+  }
+  // Huecos fijos en la espuma (para que no sea una linea continua).
+  const gap = (x: number, y: number) => {
+    let h = (x * 374761393 + y * 668265263) ^ seed;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) % 100 < 18;
+  };
+  const rings: Rings = Array.from({ length: SHORE_MAX + 1 }, () => []);
+  for (let y = 0; y < PH; y++) {
+    let x = 0;
+    while (x < PW) {
+      const d = dist[y * PW + x]!;
+      if (d === 0 || d === 255 || gap(x >> 1, y >> 1)) {
+        x++;
+        continue;
+      }
+      let len = 1;
+      while (x + len < PW && dist[y * PW + x + len] === d && !gap((x + len) >> 1, y >> 1)) len++;
+      rings[d]!.push([x, y, len]);
+      x += len;
+    }
+  }
+  return rings;
+}
+
+/** La ola llega desde lejos hasta la orilla (fotogramas 0-5) y se retira dejando la arena mojada. */
+const WAVE_AT = [6, 5, 4, 3, 2, 1, 1, 2, 3, 0, 0, 0];
+
+export function drawShore(g: Phaser.GameObjects.Graphics, rings: Rings, f: number): void {
+  if (!rings.length) return;
+  // Linea de espuma fija pegada a la costa, que brilla mas cuando llega la ola.
+  const hit = WAVE_AT[f] === 1;
+  g.fillStyle(0xffffff, hit ? 0.85 : 0.45);
+  for (const [x, y, l] of rings[1]!) g.fillRect(x, y, l, 1);
+  const r = WAVE_AT[f % WAVE_AT.length]!;
+  if (r > 1) {
+    // Frente de la ola: mas opaco cuanto mas cerca de la orilla.
+    const back = f >= 6; // retirandose: mas tenue
+    g.fillStyle(0xffffff, (back ? 0.35 : 0.55) + (SHORE_MAX - r) * 0.06);
+    for (const [x, y, l] of rings[r]!) g.fillRect(x, y, l, 1);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +276,6 @@ export function waterMarks(s: GameState, seed = 1): WaterMark[] {
   let r = seed >>> 0 || 1;
   const rnd = () => (r = (r * 1664525 + 1013904223) >>> 0) / 4294967296;
   const water = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && LEVEL[s.map[x]![y]!]! < 3 && s.map[x]![y]! !== 14;
-  const land = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && LEVEL[s.map[x]![y]!]! === 3;
   const out: WaterMark[] = [];
   for (let x = 0; x < W; x++)
     for (let y = 0; y < H; y++) {
@@ -205,16 +286,6 @@ export function waterMarks(s: GameState, seed = 1): WaterMark[] {
       for (let i = 0; i < n; i++)
         out.push({ x: x * TILE + 3 + Math.floor(rnd() * 18), y: y * TILE + 4 + Math.floor(((i + rnd() * 0.8) * 24) / n), kind: 'wave', phase: rnd(), len: 5 + Math.floor(rnd() * 5) });
       if (rnd() < 0.7) out.push({ x: x * TILE + 4 + Math.floor(rnd() * 24), y: y * TILE + 4 + Math.floor(rnd() * 24), kind: 'spark', phase: rnd() });
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-        if (!land(x + dx, y + dy)) continue;
-        // Espuma a lo largo del borde con la tierra (que esta en el limite de las dos casillas).
-        for (let k = 0; k < 3; k++) {
-          const t = 2 + k * 10 + Math.floor(rnd() * 3);
-          const ex = dx > 0 ? x * TILE + TILE - 4 : dx < 0 ? x * TILE + 3 : x * TILE + t;
-          const ey = dy > 0 ? y * TILE + TILE - 4 : dy < 0 ? y * TILE + 3 : y * TILE + t;
-          out.push({ x: ex, y: ey, kind: 'foam', phase: rnd(), dx, dy, len: 5 + Math.floor(rnd() * 3) });
-        }
-      }
     }
   return out;
 }
