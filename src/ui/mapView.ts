@@ -7,7 +7,7 @@ import { TILE } from '../layout';
 import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
-import { drawShore, drawWater, paintTerrain, shoreRings, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
+import { drawShore, drawWater, frontKey, paintTerrain, shoreRings, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
 import { paintFog, visKey } from './fog';
 import { settings } from '../settings';
 
@@ -48,6 +48,8 @@ export interface ViewOptions {
 interface UnitSprite {
   root: Phaser.GameObjects.Container;
   img: Phaser.GameObjects.Image;
+  /** Primer plano del terreno (bosque, rocas) delante de la unidad. */
+  front: Phaser.GameObjects.Image;
   life: Phaser.GameObjects.Image;
   cargo: Phaser.GameObjects.Rectangle;
   /** Estrellas de veterania (arriba a la derecha). */
@@ -344,9 +346,11 @@ export class MapView {
     const life = this.scene.add.image(17, 17, 'n_9').setOrigin(0).setDisplaySize(14, 14);
     const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, 0x0b1220);
     const stars = this.scene.add.graphics();
-    const root = this.scene.add.container(0, 0, [img, life, cargo, stars]);
+    // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
+    const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
+    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars]);
     this.unitLayer.add(root);
-    return { root, img, life, cargo, stars, rank: 0, key, idle: false };
+    return { root, img, front, life, cargo, stars, rank: 0, key, idle: false };
   }
 
   private syncUnits(s: GameState, opts: ViewOptions): void {
@@ -366,7 +370,7 @@ export class MapView {
         sp.img.setDisplaySize(TILE, sp.img.frame.height);
         sp.key = key;
       }
-      this.updateUnitSprite(sp, u);
+      this.updateUnitSprite(sp, u, s);
     }
     for (const [uid, sp] of this.units) {
       if (!seen.has(uid)) {
@@ -378,8 +382,17 @@ export class MapView {
     this.unitLayer.sort('y');
   }
 
-  private updateUnitSprite(sp: UnitSprite, u: Unit): void {
+  private updateUnitSprite(sp: UnitSprite, u: Unit, s?: GameState): void {
     sp.root.setPosition(u.x * TILE, u.y * TILE);
+    // Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco.
+    const front = s && this.newArt() ? frontKey(s, u.x, u.y) : null;
+    if (front && this.scene.textures.exists(front)) {
+      sp.front.setTexture(front).setVisible(true);
+      sp.img.setTint(front.includes('forest') ? 0xd8e4d8 : 0xe8e8e8);
+    } else {
+      sp.front.setVisible(false);
+      sp.img.clearTint();
+    }
     const n = Math.ceil(u.life / 10);
     const showLife = u.life < 100 && n >= 1 && n <= 9;
     sp.life.setVisible(showLife);

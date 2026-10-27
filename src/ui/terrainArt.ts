@@ -335,3 +335,23 @@ export function drawWater(g: Phaser.GameObjects.Graphics, marks: WaterMark[], f:
     }
   }
 }
+
+/** Primer plano que tapa los pies de una unidad en esa casilla (null si no hay). */
+export function frontKey(s: GameState, x: number, y: number): string | null {
+  const t = s.map[x]?.[y];
+  const snow = s.theme === 4;
+  switch (t) {
+    case 2:
+      return snow ? 'wang/front_snow_forest' : 'wang/front_grass_forest';
+    case 13:
+      return 'wang/front_snow_forest';
+    case 7:
+      return snow ? 'wang/front_snow_mountain' : 'wang/front_grass_mountain';
+    case 12:
+      return 'wang/front_snow_mountain';
+    case 5:
+      return 'wang/front_sand_mesa';
+    default:
+      return null;
+  }
+}
