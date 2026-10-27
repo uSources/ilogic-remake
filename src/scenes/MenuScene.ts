@@ -6,7 +6,7 @@ import { generateGame } from '../core/mapgen';
 import { buildMission, MISSIONS, missionRules } from '../core/missions';
 import { endRound, outcome } from '../core/rules';
 import { deserialize } from '../core/save';
-import type { GameEvent, GameState, Team } from '../core/types';
+import type { GameEvent, GameState, Pos, Team } from '../core/types';
 import { bestDays, completedMissions, missionUnlocked, objectiveText } from '../campaign';
 import { ui, type CampaignItemVM, type MarkVM, type OptionRowVM, type PresetVM } from '../hud/store';
 import { WEB_URL } from '../layout';
@@ -32,6 +32,7 @@ import {
 } from '../setup';
 import { readSave } from '../storage';
 import { MapView } from '../ui/mapView';
+import { burst, center, COLORS, floatText, lunge, tileFlash } from '../ui/fx';
 import { TILE } from '../layout';
 import { terrainPalette } from '../ui/terrainColors';
 
@@ -170,8 +171,6 @@ export class MenuScene extends Phaser.Scene {
   private bgEvents: Generator<GameEvent> | null = null;
   private bgTeam: Team = 0;
   private bgRng = seededRng(1);
-  private bgNext = 0;
-  private bgPan = { x: 0.012, y: 0.007 };
 
   private createBackground(): void {
     this.bgGame = null;
@@ -199,6 +198,7 @@ export class MenuScene extends Phaser.Scene {
       this.bgGame = null;
       this.bgView = null;
       this.bgEvents = null;
+      this.bgToken++;
     });
   }
 
@@ -216,6 +216,7 @@ export class MenuScene extends Phaser.Scene {
     this.bgTeam = 0;
     this.bgEvents = aiTurn(this.bgGame, this.bgRng, 0);
     this.renderBg();
+    void this.bgLoop();
   }
 
   /** Que la camara del fondo no salga del mapa (sin los margenes de la partida). */
@@ -238,37 +239,104 @@ export class MenuScene extends Phaser.Scene {
     this.bgView.placeCursor(false);
   }
 
-  /** Un paso de la partida de fondo (una accion de la IA), sin animaciones. */
-  private stepBg(): void {
-    const s = this.bgGame;
-    if (!s || !this.bgEvents) return;
-    const r = this.bgEvents.next();
-    if (r.done) {
-      if (this.bgTeam === 0) {
-        this.bgTeam = 1;
-      } else {
-        endRound(s);
-        this.bgTeam = 0;
+  /** Bucle de la partida de fondo: cada accion de la IA se anima y la camara la sigue. */
+  private async bgLoop(): Promise<void> {
+    const token = ++this.bgToken;
+    const alive = () => token === this.bgToken && !!this.bgGame && this.scene.isActive();
+    await this.pause(600);
+    while (alive()) {
+      const s = this.bgGame!;
+      const r = this.bgEvents!.next();
+      if (r.done) {
+        if (this.bgTeam === 0) this.bgTeam = 1;
+        else {
+          endRound(s);
+          this.bgTeam = 0;
+        }
+        if (outcome(s) !== 'playing' || s.day > 45) {
+          this.startBgGame();
+          continue;
+        }
+        this.bgEvents = aiTurn(s, this.bgRng, this.bgTeam);
+        await this.pause(400);
+        continue;
       }
-      if (outcome(s) !== 'playing' || s.day > 45) return this.startBgGame();
-      this.bgEvents = aiTurn(s, this.bgRng, this.bgTeam);
+      await this.animateBg(r.value);
+      if (!alive()) return;
+      this.renderBg();
+      await this.pause(r.value.kind === 'wait' ? 30 : 220);
     }
-    this.renderBg();
+  }
+
+  private bgToken = 0;
+
+  private pause(ms: number): Promise<void> {
+    return new Promise((res) => this.time.delayedCall(ms, res));
+  }
+
+  /**
+   * Lleva la camara (despacio) para que la accion se vea en un lateral de la pantalla: el centro lo
+   * tapan las tarjetas del menu.
+   */
+  private async follow(p: Pos): Promise<void> {
+    const cam = this.cameras.main;
+    const c = center(p);
+    const z = cam.zoom;
+    const W = cam.width,
+      H = cam.height;
+    const sx = (c.x - cam.worldView.x) * z,
+      sy = (c.y - cam.worldView.y) * z;
+    const side = W < 900 ? 0.5 : 0.16;
+    const inBand = sy > H * 0.12 && sy < H * 0.88 && (W < 900 ? sx > W * 0.1 && sx < W * 0.9 : sx < W * 0.3 || sx > W * 0.7) && sx > 0 && sx < W;
+    if (inBand) return;
+    const tx = sx < W / 2 ? W * side : W * (1 - side);
+    const midX = c.x + (W / 2 - tx) / z;
+    const ms = 1100;
+    cam.pan(midX, c.y, ms, 'Sine.easeInOut', true);
+    await this.pause(ms);
+  }
+
+  private async animateBg(ev: GameEvent): Promise<void> {
+    const view = this.bgView!;
+    switch (ev.kind) {
+      case 'move':
+      case 'merge':
+      case 'load': {
+        const sp = view.unitSprite(ev.uid);
+        if (!sp || ev.path.length < 2) return;
+        await this.follow(ev.path[ev.path.length - 1]!);
+        for (const p of ev.path.slice(1)) {
+          await new Promise<void>((res) => this.tweens.add({ targets: sp, x: p.x * TILE, y: p.y * TILE, duration: 90, onComplete: () => res() }));
+        }
+        return;
+      }
+      case 'attack': {
+        await this.follow(ev.target);
+        const sp = view.unitSprite(ev.attacker);
+        const s = this.bgGame!;
+        const atk = s.units.find((u) => u.uid === ev.attacker);
+        if (sp && atk) await lunge(this, sp, { dx: Math.sign(ev.target.x - atk.x), dy: Math.sign(ev.target.y - atk.y) });
+        const c = center(ev.target);
+        void burst(this, view, c, { colors: ev.killed ? COLORS.smoke : COLORS.fire, count: ev.killed ? 16 : 10, radius: ev.killed ? 26 : 18 });
+        await floatText(this, view, { x: c.x, y: c.y - 6 }, `-${ev.damage}`, '#ff7a73');
+        return;
+      }
+      case 'capture':
+        await this.follow(ev.at);
+        void burst(this, view, center(ev.at), { colors: COLORS.gold, count: 12, radius: 22 });
+        await tileFlash(this, view, ev.at, 0xffd447);
+        return;
+      case 'spawn':
+        await this.follow(ev.at);
+        this.renderBg();
+        await tileFlash(this, view, ev.at, 0xffffff);
+        return;
+    }
   }
 
   override update(time: number, delta: number): void {
     if (!this.bgView || !this.bgGame) return;
     this.bgView.tick(time, delta);
-    if (time >= this.bgNext) {
-      this.bgNext = time + 260;
-      this.stepBg();
-    }
-    // Camara a la deriva, rebotando en los bordes.
-    const cam = this.cameras.main;
-    const before = { x: cam.scrollX, y: cam.scrollY };
-    this.bgView.scrollBy(this.bgPan.x * delta, this.bgPan.y * delta);
-    if (Math.abs(cam.scrollX - before.x) < 0.001) this.bgPan.x = -this.bgPan.x;
-    if (Math.abs(cam.scrollY - before.y) < 0.001) this.bgPan.y = -this.bgPan.y;
   }
 
   // -------------------------------------------------------------------------
