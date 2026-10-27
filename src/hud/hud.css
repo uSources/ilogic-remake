@@ -281,3 +281,23 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 .day .dl { padding: 0 0 0 2px; font-size: 13px; color: var(--muted); }
 
 .unitcard .rank { color: var(--gold); font-size: 13px; letter-spacing: 1px; }
+
+/* Campaña */
+.campaign { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(820px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.campaign .htitle { font-family: var(--display); font-size: 24px; color: var(--gold); }
+.cp-body { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; }
+.cp-list { display: flex; flex-direction: column; }
+.cp-list .item { padding-left: 30px; }
+.cp-brief { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: var(--lo); align-self: start; }
+.cp-brief p { margin: 0; font-size: 16px; line-height: 1.35; }
+.cp-brief .cp-obj { color: var(--gold); }
+.cp-brief .px-btn { align-self: flex-start; }
+.cp-back { align-self: flex-start; }
+@media (max-width: 720px) { .cp-body { grid-template-columns: 1fr; } }
+/* Panel de mision */
+.missionpanel { position: absolute; left: 16px; top: 86px; width: min(320px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; }
+.missionpanel .mp-obj { font-size: 15px; line-height: 1.3; }
+.missionpanel .mp-status { font-family: var(--display); font-size: 13px; color: var(--gold); }
+.missionpanel .mp-tip { margin-top: 4px; padding-top: 6px; border-top: 3px solid var(--lo); font-size: 15px; line-height: 1.35; color: var(--text); }
+.missionpanel .mp-tip .key { font-size: 11px; }
+@media (max-width: 720px) { .missionpanel { top: 112px; left: 10px; width: calc(100vw - 20px); padding: 8px 10px; } .missionpanel .mp-obj, .missionpanel .mp-tip { font-size: 13px; } }

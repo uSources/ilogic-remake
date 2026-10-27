@@ -27,6 +27,9 @@ export interface ViewOptions {
   path?: Pos[];
   /** Casillas que el enemigo puede atacar en su proximo turno (tecla T). */
   threat?: boolean[][] | null;
+  /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
+  goal?: Pos | null;
+  vip?: Pos | null;
   /** Capturas a medias que se ven (barra encima del edificio). */
   captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
 }
@@ -62,6 +65,10 @@ export class MapView {
   private readonly unitLayer: Phaser.GameObjects.Container;
   private readonly overlay: Phaser.GameObjects.Graphics;
   private readonly fx: Phaser.GameObjects.Container;
+  /** Marcas de mision, por encima de las unidades. */
+  private readonly marks: Phaser.GameObjects.Graphics;
+  private goal: Pos | null = null;
+  private vip: Pos | null = null;
   private readonly cloudLayer: Phaser.GameObjects.Container;
   private readonly cursorImg: Phaser.GameObjects.Image;
   private readonly cam: Phaser.Cameras.Scene2D.Camera;
@@ -84,7 +91,8 @@ export class MapView {
     this.cloudLayer = scene.add.container(0, 0);
     this.cursorImg = scene.add.image(0, 0, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor, nubes.
-    this.root.add([this.terrain, this.buildingLayer, this.overlay, this.unitLayer, this.fx, this.cursorImg, this.cloudLayer]);
+    this.marks = scene.add.graphics();
+    this.root.add([this.terrain, this.buildingLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg, this.cloudLayer]);
     this.cam.setBackgroundColor('#0b1220');
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
@@ -238,7 +246,41 @@ export class MapView {
     this.syncBuildings(s, opts.vis);
     this.syncUnits(s, opts);
     this.drawOverlay(opts);
+    this.goal = opts.goal ?? null;
+    this.vip = opts.vip ?? null;
+    this.drawMarks(0);
     this.placeCursor();
+  }
+
+  /** Destino (esquinas doradas) y flecha sobre la unidad a escoltar; se mueven a saltos. */
+  private drawMarks(phase: number): void {
+    const g = this.marks;
+    g.clear();
+    if (this.goal) {
+      const d = phase ? 2 : 0;
+      const x = this.goal.x * TILE - d,
+        y = this.goal.y * TILE - d,
+        w = TILE + 2 * d;
+      g.fillStyle(0x0b1220, 0.8);
+      for (const [cx, cy] of [[x - 1, y - 1], [x + w - 9, y - 1], [x - 1, y + w - 9], [x + w - 9, y + w - 9]] as const) g.fillRect(cx, cy, 10, 10);
+      g.fillStyle(0xffd447, 1);
+      g.fillRect(x, y, 8, 2), g.fillRect(x, y, 2, 8);
+      g.fillRect(x + w - 8, y, 8, 2), g.fillRect(x + w - 2, y, 2, 8);
+      g.fillRect(x, y + w - 2, 8, 2), g.fillRect(x, y + w - 8, 2, 8);
+      g.fillRect(x + w - 8, y + w - 2, 8, 2), g.fillRect(x + w - 2, y + w - 8, 2, 8);
+    }
+    if (this.vip) {
+      const cx = this.vip.x * TILE + TILE / 2,
+        top = this.vip.y * TILE - 10 - (phase ? 2 : 0);
+      g.fillStyle(0x0b1220, 1);
+      g.fillRect(cx - 6, top - 1, 12, 5);
+      g.fillRect(cx - 4, top + 4, 8, 3);
+      g.fillRect(cx - 2, top + 7, 4, 3);
+      g.fillStyle(0xffd447, 1);
+      g.fillRect(cx - 5, top, 10, 3);
+      g.fillRect(cx - 3, top + 3, 6, 2);
+      g.fillRect(cx - 1, top + 5, 2, 3);
+    }
   }
 
   private syncBuildings(s: GameState, vis: boolean[][]): void {
@@ -413,6 +455,7 @@ export class MapView {
     const phase = still ? 0 : Math.floor(time / 500) % 2;
     if (phase !== this.bobPhase) {
       this.bobPhase = phase;
+      if (this.goal || this.vip) this.drawMarks(phase);
       for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
     }
     // Nubes: cruzan el mapa despacio, de vez en cuando.

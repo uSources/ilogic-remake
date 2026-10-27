@@ -410,6 +410,7 @@ function GameHud({ s }: { s: UIState }) {
   return (
     <>
       <TopBar s={s} />
+      {s.mission && s.turn === 'player' && <MissionPanel m={s.mission} />}
       {s.hint && <div class="hintline">{s.hint}</div>}
       {showCards && (
         <div class="cards">
@@ -574,6 +575,67 @@ function NewGame({ s }: { s: UIState }) {
   );
 }
 
+function Campaign({ s }: { s: UIState }) {
+  const a = ui.actions;
+  const c = s.campaign;
+  const sel = c.items[c.selected];
+  return (
+    <div class="px campaign" role="dialog" aria-label={t('campaign')}>
+      <span class="htitle">{t('campaign')}</span>
+      <div class="cp-body">
+        <div class="cp-list" role="menu">
+          {c.items.map((it, i) => (
+            <button
+              tabIndex={-1}
+              type="button"
+              role="menuitem"
+              class={`item ${i === c.selected ? 'sel' : ''} ${it.status === 'locked' ? 'disabled' : ''}`}
+              onMouseDown={noFocus}
+              onMouseEnter={() => a.campaignHover(i)}
+              onClick={() => a.campaignPick(i)}
+            >
+              <span>
+                {i + 1}. {it.title}
+              </span>
+              <span class="hint">{it.status === 'done' ? '✓' : it.status === 'locked' ? '—' : ''}</span>
+            </button>
+          ))}
+        </div>
+        <div class="cp-brief">
+          {sel && <span class="label">{sel.title}</span>}
+          <p>{c.brief}</p>
+          <p class="cp-obj">{c.objective}</p>
+          {sel?.status === 'locked' ? (
+            <p class="muted">{t('locked')}</p>
+          ) : (
+            <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => a.campaignPick(c.selected)}>
+              {t('play')} <span class="key">Enter</span>
+            </button>
+          )}
+        </div>
+      </div>
+      <button tabIndex={-1} type="button" class="px-btn plain cp-back" onMouseDown={noFocus} onClick={() => a.campaignBack()}>
+        {t('back')} <span class="key">Esc</span>
+      </button>
+    </div>
+  );
+}
+
+function MissionPanel({ m }: { m: NonNullable<UIState['mission']> }) {
+  return (
+    <div class="px missionpanel" role="status">
+      <span class="label">{m.title}</span>
+      <span class="mp-obj">{m.objective}</span>
+      {m.status && <span class="mp-status">{m.status}</span>}
+      {m.tip && (
+        <div class="mp-tip">
+          {m.step && <span class="key">{m.step}</span>} {m.tip}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Hud() {
   const s = useUI();
   return (
@@ -588,13 +650,17 @@ export function Hud() {
       )}
       {s.screen === 'menu' && <MainMenu s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}
+      {s.screen === 'campaign' && <Campaign s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && (
         <div class="px endpanel">
-          <span class={`endtitle ${s.end.won ? 'won' : 'lost'}`}>{s.end.won ? t('victory') : t('defeat')}</span>
+          {s.end.mission && <span class="label">{s.end.mission}</span>}
+          <span class={`endtitle ${s.end.won ? 'won' : 'lost'}`}>
+            {s.end.mission ? (s.end.won ? t('missionWon') : t('missionLost')) : s.end.won ? t('victory') : t('defeat')}
+          </span>
           {s.end.reason && (
             <span class="muted" style={{ fontSize: 14 }}>
-              {t(({ hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', surrender: 'endSurrender' } as const)[s.end.reason])}
+              {t(({ hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', objective: 'endObjective', surrender: 'endSurrender' } as const)[s.end.reason])}
             </span>
           )}
           {s.end.stats && (

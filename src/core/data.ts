@@ -321,6 +321,9 @@ export let MAP_W = 32;
 export let MAP_H = 32;
 /** Tamaños de mapa admitidos. */
 export const MAP_SIZES = [20, 32, 40] as const;
+/** Tamaños admitidos en mapas hechos a mano (misiones, editor). */
+export const MAP_MIN = 10,
+  MAP_MAX = 48;
 export function setMapSize(w: number, h: number = w): void {
   MAP_W = w;
   MAP_H = h;

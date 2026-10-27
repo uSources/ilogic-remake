@@ -3,6 +3,8 @@ import { deserialize } from '../core/save';
 import { ui, type MainMenuItemVM, type SetupRowVM } from '../hud/store';
 import { WEB_URL } from '../layout';
 import { playMusic, stopMusic } from '../music';
+import { completedMissions, missionUnlocked, objectiveText } from '../campaign';
+import { MISSIONS } from '../core/missions';
 import { saveSettings, settings, t, type TextKey } from '../settings';
 import { CHOICES, choiceLabel, codeToSeed, DEFAULT_OPTIONS, loadOptions, randomSeed, rulesFor, saveOptions, type ChoiceKey, type NewGameOptions } from '../setup';
 import { readSave } from '../storage';
@@ -49,9 +51,11 @@ export class MenuScene extends Phaser.Scene {
       this.scene.start('Game', { mode });
     };
     this.setupMode = false;
+    this.campaignMode = false;
     this.options = loadOptions();
     this.buttons = [
       { id: 'play', label: () => t('play'), enabled: () => true, primary: true, run: () => this.openSetup() },
+      { id: 'campaign', label: () => t('campaign'), enabled: () => true, run: () => this.openCampaign() },
       { id: 'continue', label: () => t('continue'), enabled: () => this.saveOk, run: () => start('load') },
       { id: 'help', label: () => t('help'), enabled: () => true, run: () => ui.set({ help: true }) },
       {
@@ -114,6 +118,15 @@ export class MenuScene extends Phaser.Scene {
         this.setupSel = i;
         this.pickSetup();
       },
+      campaignHover: (i: number) => {
+        this.campaignSel = i;
+        this.publishCampaign();
+      },
+      campaignPick: (i: number) => {
+        this.campaignSel = i;
+        this.startMission();
+      },
+      campaignBack: () => this.closeCampaign(),
       setupCode: (text: string) => {
         this.code = text.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 7);
         this.publishSetup();
@@ -131,11 +144,62 @@ export class MenuScene extends Phaser.Scene {
         return;
       }
       if (this.setupMode) return this.setupKey(e);
+      if (this.campaignMode) return this.campaignKey(e);
       if (['ArrowUp', 'KeyW', 'Numpad8'].includes(e.code)) this.move(-1);
       else if (['ArrowDown', 'KeyS', 'Numpad2'].includes(e.code)) this.move(1);
       else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) this.activate();
     });
     playMusic(this, 'menu');
+  }
+
+  // -------------------------------------------------------------------------
+  // Campaña
+  // -------------------------------------------------------------------------
+
+  private campaignMode = false;
+  private campaignSel = 0;
+
+  private openCampaign(): void {
+    this.campaignMode = true;
+    const done = completedMissions();
+    // Empezar por la primera sin terminar.
+    const next = MISSIONS.findIndex((m, i) => !done.has(m.id) && missionUnlocked(i, done));
+    this.campaignSel = next >= 0 ? next : 0;
+    ui.set({ screen: 'campaign' });
+    this.publishCampaign();
+  }
+
+  private closeCampaign(): void {
+    this.campaignMode = false;
+    ui.set({ screen: 'menu' });
+    this.publish();
+  }
+
+  private publishCampaign(): void {
+    const done = completedMissions();
+    const lang = settings.lang;
+    const items = MISSIONS.map((m, i) => ({
+      id: m.id,
+      title: m.title[lang],
+      status: (done.has(m.id) ? 'done' : missionUnlocked(i, done) ? 'open' : 'locked') as 'done' | 'open' | 'locked',
+    }));
+    const m = MISSIONS[this.campaignSel]!;
+    ui.set({ campaign: { items, selected: this.campaignSel, brief: m.brief[lang], objective: objectiveText(m) } });
+  }
+
+  private startMission(): void {
+    if (this.leaving || !missionUnlocked(this.campaignSel)) return this.publishCampaign();
+    this.leaving = true;
+    this.scene.start('Game', { mode: 'mission', mission: MISSIONS[this.campaignSel]!.id });
+  }
+
+  private campaignKey(e: KeyboardEvent): void {
+    const n = MISSIONS.length;
+    if (['ArrowUp', 'KeyW', 'Numpad8'].includes(e.code)) this.campaignSel = (this.campaignSel - 1 + n) % n;
+    else if (['ArrowDown', 'KeyS', 'Numpad2'].includes(e.code)) this.campaignSel = (this.campaignSel + 1) % n;
+    else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) return this.startMission();
+    else if (e.code === 'Escape' || e.code === 'Backspace') return this.closeCampaign();
+    this.publishCampaign();
   }
 
   // -------------------------------------------------------------------------

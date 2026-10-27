@@ -23,7 +23,7 @@ import {
   UNIT_TYPES,
 } from './data';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
-import type { Building, GameState, Outcome, Pos, Rng, Team, Unit } from './types';
+import type { Building, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
 
 // ---------------------------------------------------------------------------
 // Consultas basicas
@@ -726,6 +726,8 @@ export const dayLimitReached = (s: GameState): boolean => RULES.dayLimit !== nul
 export function outcome(s: GameState): Outcome {
   if (defeated(s, 0)) return 'lost';
   if (defeated(s, 1)) return 'won';
+  const obj = s.mission?.objective;
+  if (obj && obj.kind !== 'hq') return objectiveOutcome(s, obj);
   if (dayLimitReached(s)) {
     const a = score(s, 0),
       b = score(s, 1);
@@ -736,12 +738,51 @@ export function outcome(s: GameState): Outcome {
   return 'playing';
 }
 
+/** Resultado de una mision con objetivo especial (la derrota por perder la Base ya se ha mirado). */
+function objectiveOutcome(s: GameState, obj: Exclude<Objective, { kind: 'hq' }>): Outcome {
+  const late = s.day > obj.days;
+  switch (obj.kind) {
+    case 'survive':
+      return late ? 'won' : 'playing';
+    case 'capture': {
+      const n = s.buildings.filter((b) => b.owner === 0 && (obj.type === null || b.type === obj.type)).length;
+      return n >= obj.count ? 'won' : late ? 'lost' : 'playing';
+    }
+    case 'destroy':
+      return !s.units.some((u) => u.team === 1) ? 'won' : late ? 'lost' : 'playing';
+    case 'escort': {
+      const v = s.units.find((u) => u.uid === obj.uid);
+      if (!v) return 'lost';
+      // Dentro de un transporte cuenta donde este el transporte.
+      const at = v.carrier !== null ? s.units.find((u) => u.uid === v.carrier) ?? v : v;
+      return at.x === obj.to.x && at.y === obj.to.y ? 'won' : late ? 'lost' : 'playing';
+    }
+  }
+}
+
+/** Progreso del objetivo de la mision, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
+export function objectiveProgress(s: GameState): { done: number; total: number } | null {
+  const obj = s.mission?.objective;
+  if (!obj || obj.kind === 'hq') return null;
+  switch (obj.kind) {
+    case 'survive':
+      return { done: Math.min(s.day - 1, obj.days), total: obj.days };
+    case 'capture':
+      return { done: s.buildings.filter((b) => b.owner === 0 && (obj.type === null || b.type === obj.type)).length, total: obj.count };
+    case 'destroy':
+      return { done: 0, total: s.units.filter((u) => u.team === 1).length };
+    case 'escort':
+      return null;
+  }
+}
+
 /** Por que ha terminado la partida. */
-export function endReason(s: GameState): 'hq' | 'wipeout' | 'days' | null {
+export function endReason(s: GameState): 'hq' | 'wipeout' | 'days' | 'objective' | null {
   if (outcome(s) === 'playing') return null;
   const loser: Team = outcome(s) === 'won' ? 1 : 0;
   if (!s.buildings.some((b) => b.owner === loser && b.type === HQ)) return 'hq';
   if (defeated(s, loser)) return 'wipeout';
+  if (s.mission && s.mission.objective.kind !== 'hq') return 'objective';
   return 'days';
 }
 

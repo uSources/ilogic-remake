@@ -48,7 +48,7 @@ export interface DaySample {
 export interface GameRecord {
   seed: number;
   winner: Team | null;
-  reason: 'hq' | 'wipeout' | 'days' | 'timeout';
+  reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'timeout';
   days: number;
   samples: DaySample[];
   units: UnitTally[][]; // [team][type]
