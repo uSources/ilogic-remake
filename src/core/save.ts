@@ -103,12 +103,14 @@ export function deserialize(json: string): GameState | null {
       (r.veterancy === undefined || typeof r.veterancy === 'boolean') &&
       (r.passAllies === undefined || typeof r.passAllies === 'boolean') &&
       (r.ambush === undefined || typeof r.ambush === 'boolean') &&
-      (r.forestHides === undefined || typeof r.forestHides === 'boolean');
+      (r.forestHides === undefined || typeof r.forestHides === 'boolean') &&
+      (r.terrainCost === undefined || typeof r.terrainCost === 'boolean');
     if (ok) {
       r.veterancy ??= false;
       r.passAllies ??= false;
       r.ambush ??= false;
       r.forestHides ??= false;
+      r.terrainCost ??= false;
     }
     if (!ok) return null;
   }

@@ -74,10 +74,11 @@ export interface MoveTipVM {
   stars?: number;
   fuel?: [number, number];
   danger?: boolean;
+  warn?: string;
 }
 
 export interface TileVM {
-  terrain: { key: string; name: string; defense: number };
+  terrain: { key: string; name: string; defense: number; cost?: { foot: number | null; vehicle: number | null } };
   building?: {
     icon: string | null;
     name: string;

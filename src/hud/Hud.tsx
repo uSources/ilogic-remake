@@ -288,6 +288,14 @@ function TerrainCard({ tile }: { tile: TileVM }) {
         <span class="muted">{t('defense')}</span>
         <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{'★'.repeat(stars) + '☆'.repeat(4 - stars)}</span>
       </div>
+      {tile.terrain.cost && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }} title={t('stepCostTitle')}>
+          <span class="muted">{t('stepCost')}</span>
+          <span>
+            {t('onFoot')} {tile.terrain.cost.foot ?? '—'} · {t('byVehicle')} {tile.terrain.cost.vehicle ?? '—'}
+          </span>
+        </div>
+      )}
       {b?.capture && (
         <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
           <span class="muted">{t('capturing')}</span>
@@ -424,6 +432,7 @@ function MoveTip({ m }: { m: MoveTipVM }) {
         </span>
       )}
       {m.danger && <span class="mt-danger" title={t('tipDanger')}>⚠</span>}
+      {m.warn && <span class="mt-warn">{m.warn}</span>}
     </div>
   );
 }

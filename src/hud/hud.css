@@ -311,3 +311,4 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 .movetip .mt-fuel .px-icon { width: 14px; height: 14px; }
 .movetip .mt-danger { color: var(--red); font-size: 15px; }
 .movetip.bad { background: #4a1714; }
+.movetip .mt-warn { color: var(--gold); font-size: 12px; }

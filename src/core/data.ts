@@ -306,6 +306,23 @@ export const TERRAIN = {
   ],
 } as const;
 
+/**
+ * [CAMBIO] Coste de movimiento por tipo de movimiento y terreno (reglas nuevas; con las clasicas
+ * todo cuesta 1). Solo cuenta en las casillas transitables (TERRAIN.canwalk).
+ * Terrenos: Grass, Water, Woods, Sand, Cactus, SandCliff, Flowers, GrassCliff, SWater, DWater,
+ *           Snow, Frosty, SnowCliff, SnowWood, Ice.
+ */
+export const MOVE_COST: number[][] = [
+  // a pie: acantilados y agua poco profunda cuestan 2
+  [1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 2, 1, 1],
+  // vehiculos: bosque, arena, cactus y nieve frenan
+  [1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 2, 2, 1, 3, 1],
+  // aereos: todo 1
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  // anfibios: rapidos en agua y llanura, lentos en bosque y nieve
+  [1, 1, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 1, 3, 1],
+];
+
 /** Terrenos que esconden a quien esta dentro (con la regla forestHides): bosque, cactus, bosque nevado. */
 export const HIDING_TERRAIN: readonly number[] = [2, 4, 13];
 
@@ -361,6 +378,8 @@ export interface RulesConfig {
   ambush: boolean;
   /** Con niebla, el bosque (y cactus, bosque nevado) solo se ve desde una casilla vecina. */
   forestHides: boolean;
+  /** Cada terreno cuesta lo que diga MOVE_COST (si no, todo cuesta 1). */
+  terrainCost: boolean;
 }
 
 /** Las reglas del juego de 2013. */
@@ -379,6 +398,7 @@ export const CLASSIC_RULES: Readonly<RulesConfig> = {
   passAllies: false,
   ambush: false,
   forestHides: false,
+  terrainCost: false,
 };
 
 /** Las reglas nuevas del remake (plan de gameplay). */
@@ -393,6 +413,7 @@ export const MODERN_RULES: Readonly<RulesConfig> = {
   passAllies: true,
   ambush: true,
   forestHides: true,
+  terrainCost: true,
 };
 
 /**
