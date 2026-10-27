@@ -27,6 +27,8 @@ export interface Settings {
   alwaysThreat: boolean;
   /** Fondo del menu principal: partida en directo o la imagen original de 2013. */
   menuBg: 'live' | 'classic';
+  /** Dibujo del terreno: el nuevo (piezas con orillas) o el de 2013. */
+  terrainArt: 'new' | 'classic';
 }
 
 const KEY = 'ilogic.settings';
@@ -43,6 +45,7 @@ const DEFAULTS: Settings = {
   reduceMotion: false,
   alwaysThreat: false,
   menuBg: 'live',
+  terrainArt: 'new',
 };
 export const UI_SCALES = [0.9, 1, 1.25];
 const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
@@ -64,6 +67,7 @@ function load(): Settings {
       reduceMotion: !!parsed.reduceMotion,
       alwaysThreat: !!parsed.alwaysThreat,
       menuBg: parsed.menuBg === 'classic' ? 'classic' : 'live',
+      terrainArt: parsed.terrainArt === 'classic' ? 'classic' : 'new',
     };
   } catch {
     return { ...DEFAULTS };
@@ -194,6 +198,9 @@ const TEXTS = {
     optReduceMotion: 'Reducir el movimiento',
     optAlwaysThreat: 'Ver siempre la amenaza enemiga',
     optMenuBg: 'Fondo del menú',
+    optTerrainArt: 'Dibujo del terreno',
+    artNew: 'Nuevo',
+    artClassic: '2013',
     bgLive: 'Partida en directo',
     bgClassic: 'Original de 2013',
     close: 'Cerrar',
@@ -394,6 +401,9 @@ const TEXTS = {
     optReduceMotion: 'Reduce motion',
     optAlwaysThreat: 'Always show enemy threat',
     optMenuBg: 'Menu background',
+    optTerrainArt: 'Terrain art',
+    artNew: 'New',
+    artClassic: '2013',
     bgLive: 'Live game',
     bgClassic: '2013 original',
     close: 'Close',

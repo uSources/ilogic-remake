@@ -1,0 +1,231 @@
+{
+ "pixellab_id": "8a89121e-f69a-4fd9-9109-60cc97720771",
+ "lower": "deep blue ocean water with soft gentle wave crests, moderate surface ripples, and vivid saturated colors under medium shading",
+ "upper": "clear shallow turquoise water, vivid saturated colors, cheerful classic 16-bit strategy game look",
+ "tiles": [
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  }
+ ]
+}

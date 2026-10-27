@@ -1,0 +1,231 @@
+{
+ "pixellab_id": "a587036c-3ce1-4c2e-ab54-fd0ff4c8a26c",
+ "lower": "clear shallow turquoise water in calm even tone with sparse light surface ripples and basic two-tone wave highlights",
+ "upper": "bright green grass meadow with short clean turf and simple light-and-shadow tone across flat areas",
+ "tiles": [
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  }
+ ]
+}

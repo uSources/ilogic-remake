@@ -385,5 +385,19 @@ export const IMAGE_KEYS: readonly string[] = [
   "r_Tank",
   "r_Transport",
   "r_WTank",
-  "seltile"
+  "seltile",
+  "wang/decor_cactus",
+  "wang/decor_flowers",
+  "wang/decor_frosty",
+  "wang/ts_deep_water",
+  "wang/ts_grass_forest",
+  "wang/ts_grass_mountain",
+  "wang/ts_ice_snow",
+  "wang/ts_sand_mesa",
+  "wang/ts_shallow_grass",
+  "wang/ts_shallow_sand",
+  "wang/ts_snow_forest",
+  "wang/ts_snow_mountain",
+  "wang/ts_water_ice",
+  "wang/ts_water_shallow"
 ];

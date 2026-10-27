@@ -78,7 +78,7 @@ export class MenuScene extends Phaser.Scene {
       'menu',
       (key) => {
         if (key === 'lang') this.publishAll();
-        if (key === 'menuBg') this.scene.restart();
+        if (key === 'menuBg' || key === 'terrainArt') this.scene.restart();
       },
       () => this.publishAll(),
     );
