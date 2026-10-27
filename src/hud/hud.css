@@ -180,9 +180,6 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 @media (max-width: 480px) {
   .unitcard { width: min(220px, calc(100vw - 150px)); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .toast, .banner { animation-timing-function: step-end; }
-}
 
 .px-btn:disabled { filter: grayscale(0.7) brightness(0.75); cursor: default; }
 .funds .coin { width: 32px; height: 32px; }
@@ -236,9 +233,6 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
   .item { padding-top: 12px; padding-bottom: 12px; }
   .tray .slots button img { width: 52px; height: 52px; }
   .menu-btn { min-width: 48px; min-height: 48px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mainmenu .logo { animation: none; }
 }
 
 /* Pantalla final */
@@ -432,7 +426,6 @@ html.reduce-motion .mainmenu .logo, html.reduce-motion .card { animation: none !
 .pause-item.disabled { opacity: 0.5; cursor: default; }
 .pause-item .key { font-size: 11px; }
 html.reduce-motion .card.sel .card-art img, html.reduce-motion .home .logo { animation: none !important; }
-@media (prefers-reduced-motion: reduce) { .card.sel .card-art img, .home .logo { animation: none; } .card { transition: none; } }
 @media (max-height: 820px) { .home { gap: 14px; } .home .logo { width: 220px; height: 88px; } .card .thumb { max-height: 34vh; } .card-art { min-height: 90px; } }
 .menu-veil { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, rgba(11, 18, 32, 0.25) 0%, rgba(11, 18, 32, 0.6) 55%, rgba(5, 8, 14, 0.92) 100%); }
 .menu-veil::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 4px); }
