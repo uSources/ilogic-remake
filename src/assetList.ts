@@ -387,8 +387,16 @@ export const IMAGE_KEYS: readonly string[] = [
   "r_WTank",
   "seltile",
   "wang/decor_cactus",
+  "wang/decor_cactus_0",
+  "wang/decor_cactus_1",
+  "wang/decor_cactus_2",
   "wang/decor_flowers",
+  "wang/decor_flowers_0",
+  "wang/decor_flowers_1",
+  "wang/decor_flowers_2",
   "wang/decor_frosty",
+  "wang/decor_frosty_0",
+  "wang/decor_frosty_1",
   "wang/ts_deep_water",
   "wang/ts_grass_forest",
   "wang/ts_grass_mountain",
@@ -399,5 +407,5 @@ export const IMAGE_KEYS: readonly string[] = [
   "wang/ts_snow_forest",
   "wang/ts_snow_mountain",
   "wang/ts_water_ice",
-  "wang/ts_water_shallow"
+  "wang/ts_water_shallow2"
 ];

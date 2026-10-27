@@ -18,12 +18,14 @@ import { WANG_SETS } from './wangSets';
 // Terrenos: 0 Grass, 1 Water, 2 Woods, 3 Sand, 4 Cactus, 5 SandCliff, 6 Flowers, 7 GrassCliff,
 // 8 SWater, 9 DWater, 10 Snow, 11 Frosty, 12 SnowCliff, 13 SnowWood, 14 Ice
 const LEVEL = [3, 1, 3, 3, 3, 3, 3, 3, 2, 0, 3, 3, 3, 3, 2];
-const DECOR: Record<number, string> = { 6: 'wang/decor_flowers', 4: 'wang/decor_cactus', 11: 'wang/decor_frosty' };
+/** Decorados sueltos y cuantas variantes hay de cada uno. */
+const DECOR: Record<number, [string, number]> = { 6: ['wang/decor_flowers', 3], 4: ['wang/decor_cactus', 3], 11: ['wang/decor_frosty', 2] };
+const decorKeys = (): string[] => Object.values(DECOR).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => `${k}_${i}`));
 
 function groundSets(theme: number): [string, string, string] {
   const snow = theme === 4;
   const land = theme === 1 ? 'ts_shallow_sand' : snow ? 'ts_ice_snow' : 'ts_shallow_grass';
-  return ['ts_deep_water', snow ? 'ts_water_ice' : 'ts_water_shallow', land];
+  return ['ts_deep_water', snow ? 'ts_water_ice' : 'ts_water_shallow2', land];
 }
 
 function overlaySets(theme: number): { set: string; cells: number[] }[] {
@@ -37,9 +39,89 @@ function overlaySets(theme: number): { set: string; cells: number[] }[] {
   ];
 }
 
+/**
+ * Borde organico entre dos aguas (o agua y hielo): en vez de las piezas Wang, cuyos bordes son
+ * rectos en las casillas de lado, se calcula pixel a pixel un campo suave (las esquinas de las
+ * casillas interpoladas y un poco de ruido) y se rellena con la textura lisa del terreno de arriba,
+ * con una linea clara en el borde.
+ */
+function organicPass(ctx: CanvasRenderingContext2D, textures: Phaser.Textures.TextureManager, set: string, s: GameState, up: (t: number) => boolean): void {
+  if (!textures.exists(`wang/${set}`)) return;
+  const W = s.map.length,
+    H = s.map[0]!.length;
+  const PW = W * TILE,
+    PH = H * TILE;
+  // Textura lisa del terreno de arriba (pieza 15) repetida por todo el mapa.
+  const pat = document.createElement('canvas');
+  pat.width = PW;
+  pat.height = PH;
+  const pc = pat.getContext('2d')!;
+  const img = textures.get(`wang/${set}`).getSourceImage() as CanvasImageSource;
+  for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) pc.drawImage(img, 15 * TILE, 0, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+  const src = pc.getImageData(0, 0, PW, PH).data;
+  const dst = ctx.getImageData(0, 0, PW, PH);
+  const d = dst.data;
+  const v = (x: number, y: number) => (up(s.map[Math.min(W - 1, Math.max(0, x))]![Math.min(H - 1, Math.max(0, y))]!) ? 1 : 0);
+  // Ruido suave (rejilla de 8 px) para que el borde serpentee.
+  const G = 8;
+  const hash = (i: number, j: number) => {
+    let h = (i * 374761393 + j * 668265263) ^ (s.setup?.seed ?? 7);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296 - 0.5;
+  };
+  const noise = (px: number, py: number) => {
+    const i = Math.floor(px / G),
+      j = Math.floor(py / G);
+    const fx = px / G - i,
+      fy = py / G - j;
+    const sx = fx * fx * (3 - 2 * fx),
+      sy = fy * fy * (3 - 2 * fy);
+    const a = hash(i, j) + (hash(i + 1, j) - hash(i, j)) * sx;
+    const b = hash(i, j + 1) + (hash(i + 1, j + 1) - hash(i, j + 1)) * sx;
+    return a + (b - a) * sy;
+  };
+  const inside = new Uint8Array(PW * PH);
+  for (let py = 0; py < PH; py++)
+    for (let px = 0; px < PW; px++) {
+      // Posicion relativa a los centros de las casillas.
+      const gx = (px + 0.5) / TILE - 0.5,
+        gy = (py + 0.5) / TILE - 0.5;
+      const cx = Math.floor(gx),
+        cy = Math.floor(gy);
+      const fx = gx - cx,
+        fy = gy - cy;
+      const sx = fx * fx * (3 - 2 * fx),
+        sy = fy * fy * (3 - 2 * fy);
+      const a = v(cx, cy) + (v(cx + 1, cy) - v(cx, cy)) * sx;
+      const b = v(cx, cy + 1) + (v(cx + 1, cy + 1) - v(cx, cy + 1)) * sx;
+      const f = a + (b - a) * sy + noise(px, py) * 0.42;
+      if (f > 0.5) inside[py * PW + px] = 1;
+    }
+  for (let py = 0; py < PH; py++)
+    for (let px = 0; px < PW; px++) {
+      const i = py * PW + px;
+      if (!inside[i]) continue;
+      const o = i * 4;
+      const edge =
+        (px > 0 && !inside[i - 1]) || (px < PW - 1 && !inside[i + 1]) || (py > 0 && !inside[i - PW]) || (py < PH - 1 && !inside[i + PW]);
+      if (edge) {
+        // Linea clara en el borde.
+        d[o] = Math.min(255, src[o]! + 70);
+        d[o + 1] = Math.min(255, src[o + 1]! + 70);
+        d[o + 2] = Math.min(255, src[o + 2]! + 60);
+      } else {
+        d[o] = src[o]!;
+        d[o + 1] = src[o + 1]!;
+        d[o + 2] = src[o + 2]!;
+      }
+      d[o + 3] = 255;
+    }
+  ctx.putImageData(dst, 0, 0);
+}
+
 /** Todas las imagenes que hacen falta (para saber si se puede usar el terreno nuevo). */
 export function terrainArtKeys(): string[] {
-  return [...Object.keys(WANG_SETS).map((k) => `wang/${k}`), ...Object.values(DECOR)];
+  return [...Object.keys(WANG_SETS).map((k) => `wang/${k}`), ...decorKeys()];
 }
 
 export function terrainArtReady(textures: Phaser.Textures.TextureManager): boolean {
@@ -73,14 +155,18 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   };
 
   const [l1, l2, l3] = groundSets(s.theme);
-  pass(l1, (t) => LEVEL[t]! >= 1, true);
-  pass(l2, (t) => LEVEL[t]! >= 2, false);
+  pass(l1, () => false, true); // todo agua profunda
+  organicPass(ctx, textures, l1, s, (t) => LEVEL[t]! >= 1);
+  organicPass(ctx, textures, l2, s, (t) => LEVEL[t]! >= 2);
   pass(l3, (t) => LEVEL[t]! >= 3, false);
   for (const o of overlaySets(s.theme)) if (s.map.some((col) => col.some((t) => o.cells.includes(t)))) pass(o.set, (t) => o.cells.includes(t), false);
   for (let x = 0; x < W; x++)
     for (let y = 0; y < H; y++) {
       const d = DECOR[s.map[x]![y]!];
-      if (d && textures.exists(d)) ctx.drawImage(src(d), x * TILE, y * TILE);
+      if (!d) continue;
+      // Variante fija por casilla (la misma cada vez que se dibuja el mapa).
+      const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
+      if (textures.exists(k)) ctx.drawImage(src(k), x * TILE, y * TILE);
     }
   return cv;
 }
@@ -106,7 +192,7 @@ export function waterMarks(s: GameState, seed = 1): WaterMark[] {
   const W = s.map.length,
     H = s.map[0]!.length;
   let r = seed >>> 0 || 1;
-  const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const rnd = () => (r = (r * 1664525 + 1013904223) >>> 0) / 4294967296;
   const water = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && LEVEL[s.map[x]![y]!]! < 3 && s.map[x]![y]! !== 14;
   const land = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && LEVEL[s.map[x]![y]!]! === 3;
   const out: WaterMark[] = [];
@@ -114,55 +200,67 @@ export function waterMarks(s: GameState, seed = 1): WaterMark[] {
     for (let y = 0; y < H; y++) {
       if (!water(x, y)) continue;
       const deep = s.map[x]![y]! === 9;
-      // Una ola corta por casilla (dos en las profundas) y un brillo de vez en cuando.
-      for (let i = 0; i < (deep ? 2 : 1); i++)
-        out.push({ x: x * TILE + 4 + Math.floor(rnd() * 20), y: y * TILE + 4 + Math.floor(rnd() * 24), kind: 'wave', phase: rnd(), len: 4 + Math.floor(rnd() * 4) });
-      if (rnd() < 0.45) out.push({ x: x * TILE + 3 + Math.floor(rnd() * 26), y: y * TILE + 3 + Math.floor(rnd() * 26), kind: 'spark', phase: rnd() });
+      // Olas: dos por casilla (tres en las profundas), repartidas en filas para que no se pisen.
+      const n = deep ? 3 : 2;
+      for (let i = 0; i < n; i++)
+        out.push({ x: x * TILE + 3 + Math.floor(rnd() * 18), y: y * TILE + 4 + Math.floor(((i + rnd() * 0.8) * 24) / n), kind: 'wave', phase: rnd(), len: 5 + Math.floor(rnd() * 5) });
+      if (rnd() < 0.7) out.push({ x: x * TILE + 4 + Math.floor(rnd() * 24), y: y * TILE + 4 + Math.floor(rnd() * 24), kind: 'spark', phase: rnd() });
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
         if (!land(x + dx, y + dy)) continue;
         // Espuma a lo largo del borde con la tierra (que esta en el limite de las dos casillas).
         for (let k = 0; k < 3; k++) {
-          const t = 5 + k * 9 + Math.floor(rnd() * 4);
-          const ex = dx > 0 ? x * TILE + TILE - 3 : dx < 0 ? x * TILE + 3 : x * TILE + t;
-          const ey = dy > 0 ? y * TILE + TILE - 3 : dy < 0 ? y * TILE + 3 : y * TILE + t;
-          out.push({ x: ex, y: ey, kind: 'foam', phase: rnd(), dx, dy });
+          const t = 2 + k * 10 + Math.floor(rnd() * 3);
+          const ex = dx > 0 ? x * TILE + TILE - 4 : dx < 0 ? x * TILE + 3 : x * TILE + t;
+          const ey = dy > 0 ? y * TILE + TILE - 4 : dy < 0 ? y * TILE + 3 : y * TILE + t;
+          out.push({ x: ex, y: ey, kind: 'foam', phase: rnd(), dx, dy, len: 5 + Math.floor(rnd() * 3) });
         }
       }
     }
   return out;
 }
 
-/** Dibuja el fotograma `f` (0..7) del agua. */
+export const WATER_FRAMES = 12;
+
+/** Dibuja el fotograma `f` (0..WATER_FRAMES-1) del agua. */
 export function drawWater(g: Phaser.GameObjects.Graphics, marks: WaterMark[], f: number): void {
   g.clear();
   for (const m of marks) {
-    const p = (f / 8 + m.phase) % 1;
+    const p = (f / WATER_FRAMES + m.phase) % 1;
     if (m.kind === 'wave') {
-      // Ola: una raya clara que se desplaza 2 px y se encoge en la mitad del ciclo.
-      const off = Math.round(Math.sin(p * Math.PI * 2) * 2);
-      const len = p < 0.5 ? m.len! : m.len! - 2;
-      g.fillStyle(0xffffff, 0.35);
-      g.fillRect(m.x + off, m.y, len, 1);
-      g.fillStyle(0x0b3a6b, 0.18);
-      g.fillRect(m.x + off + 1, m.y + 1, len - 1, 1);
+      // Ola: una cresta clara que aparece, se desplaza 3 px y se deshace.
+      if (p > 0.75) continue;
+      const q = p / 0.75;
+      const a = q < 0.2 ? 0.35 : q > 0.8 ? 0.35 : 0.7;
+      const off = Math.round(q * 3);
+      const len = q < 0.2 || q > 0.8 ? m.len! - 2 : m.len!;
+      const x = m.x + off;
+      g.fillStyle(0xffffff, a);
+      g.fillRect(x + 1, m.y, len - 2, 1);
+      g.fillRect(x, m.y + 1, 1, 1);
+      g.fillRect(x + len - 1, m.y + 1, 1, 1);
+      g.fillStyle(0x0b3a6b, a * 0.45);
+      g.fillRect(x + 1, m.y + 1, len - 2, 1);
     } else if (m.kind === 'spark') {
-      // Brillo: aparece en un tramo corto del ciclo, primero como punto y luego como cruz.
-      if (p < 0.08) {
-        g.fillStyle(0xffffff, 0.9);
-        g.fillRect(m.x, m.y, 1, 1);
-      } else if (p < 0.16) {
-        g.fillStyle(0xffffff, 0.85);
+      // Brillo: punto, cruz pequeña, cruz grande y otra vez punto.
+      g.fillStyle(0xffffff, 1);
+      if (p < 0.05 || (p >= 0.2 && p < 0.25)) g.fillRect(m.x, m.y, 1, 1);
+      else if ((p >= 0.05 && p < 0.1) || (p >= 0.15 && p < 0.2)) {
         g.fillRect(m.x - 1, m.y, 3, 1);
         g.fillRect(m.x, m.y - 1, 1, 3);
+      } else if (p >= 0.1 && p < 0.15) {
+        g.fillRect(m.x - 2, m.y, 5, 1);
+        g.fillRect(m.x, m.y - 2, 1, 5);
+        g.fillStyle(0xffffff, 0.5);
+        g.fillRect(m.x - 1, m.y - 1, 3, 3);
       }
     } else {
-      // Espuma: puntos blancos que se acercan y se alejan de la orilla.
+      // Espuma: una raya blanca que entra y sale de la orilla.
       const k = Math.round((Math.sin(p * Math.PI * 2) + 1) * 1.5);
       const x = m.x - m.dx! * k,
         y = m.y - m.dy! * k;
-      g.fillStyle(0xffffff, 0.75);
-      if (m.dx) g.fillRect(x, y, 1, 2);
-      else g.fillRect(x, y, 2, 1);
+      g.fillStyle(0xffffff, 0.85 - k * 0.12);
+      if (m.dx) g.fillRect(x, y, 1, m.len!);
+      else g.fillRect(x, y, m.len!, 1);
     }
   }
 }
