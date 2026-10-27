@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { MODERN_RULES, RULES, UNIT, useRules } from '../src/core/data';
 import { seededRng } from '../src/core/geom';
-import { attackFull, combatForecast, newUnit, visibility } from '../src/core/rules';
+import { attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '../src/core/rules';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,
@@ -65,5 +65,43 @@ describe('reglas nuevas: combate', () => {
     const s = blankState();
     RULES.fog = false;
     expect(visibility(s, 0).every((col) => col.every(Boolean))).toBe(true);
+  });
+});
+
+describe('reglas nuevas: captura por puntos', () => {
+  const HQ = 5;
+  it('una ciudad cuesta 2 turnos a una unidad entera y pasa directamente a ser tuya', () => {
+    const s = blankState();
+    s.buildings.push({ type: 0, owner: 1, x: 3, y: 3 });
+    const u = newUnit(s, SOLDIER, 0, 3, 3);
+    const r1 = capture(s, u)!;
+    expect(r1).toEqual({ done: false, left: 10, total: 20 });
+    expect(s.buildings[0]!.owner).toBe(1);
+    u.active = true;
+    const r2 = capture(s, u)!;
+    expect(r2.done).toBe(true);
+    expect(s.buildings[0]!.owner).toBe(0);
+    expect(s.buildings[0]!.capture).toBeNull();
+  });
+
+  it('una unidad herida captura mas despacio; la Base tiene 30 puntos', () => {
+    const s = blankState();
+    s.buildings.push({ type: HQ, owner: 1, x: 3, y: 3 });
+    const u = newUnit(s, SOLDIER, 0, 3, 3);
+    u.life = 45;
+    expect(capture(s, u)!.left).toBe(25);
+  });
+
+  it('si la unidad se va, se pierde lo avanzado', () => {
+    const s = blankState();
+    s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
+    const u = newUnit(s, SOLDIER, 0, 3, 3);
+    capture(s, u);
+    expect(captureProgress(s, s.buildings[0]!)?.left).toBe(10);
+    u.x = 4;
+    expect(captureProgress(s, s.buildings[0]!)).toBeNull();
+    u.x = 3;
+    u.active = true;
+    expect(capture(s, u)!.left).toBe(10);
   });
 });

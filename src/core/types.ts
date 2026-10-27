@@ -42,6 +42,11 @@ export interface Building {
   owner: Team | null;
   x: number;
   y: number;
+  /**
+   * [CAMBIO] Captura a medias (reglas nuevas): quien la hace, con que unidad y los puntos que
+   * le quedan al edificio. Se pierde si esa unidad se va o muere.
+   */
+  capture?: { team: Team; uid: number; left: number } | null;
 }
 
 export interface GameState {
@@ -72,7 +77,7 @@ export type Outcome = 'playing' | 'won' | 'lost';
 export type GameEvent =
   | { kind: 'move'; uid: number; path: Pos[] }
   | { kind: 'attack'; attacker: number; target: Pos; damage: number; killed: boolean; counter?: number; attackerKilled?: boolean }
-  | { kind: 'capture'; uid: number; at: Pos; owner: Team | null }
+  | { kind: 'capture'; uid: number; at: Pos; owner: Team | null; left?: number; total?: number }
   | { kind: 'merge'; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; uid: number; into: number; path: Pos[] }
   | { kind: 'spawn'; uid: number; at: Pos }

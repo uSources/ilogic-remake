@@ -11,6 +11,9 @@ import {
   buyOptions,
   canBuyAt,
   capture,
+  capturePointsOf,
+  captureProgress,
+  captureStrength,
   cargoUnits,
   combatForecast,
   endRound,
@@ -293,7 +296,11 @@ export class GameScene extends Phaser.Scene {
   private refresh(): void {
     this.vis = visibility(this.s, 0);
     const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, 1, 0) : null;
-    this.view.render(this.s, { vis: this.vis, highlights: this.highlights(), hidden: this.hidden, path: this.previewPath(), threat });
+    const captures = this.s.buildings
+      .map((b) => ({ b, c: captureProgress(this.s, b) }))
+      .filter(({ b, c }) => c && (this.vis[b.x]![b.y] || b.owner === 0))
+      .map(({ b, c }) => ({ x: b.x, y: b.y, left: c!.left, total: capturePointsOf(b), team: c!.team }));
+    this.view.render(this.s, { vis: this.vis, highlights: this.highlights(), hidden: this.hidden, path: this.previewPath(), threat, captures });
     this.view.placeCursor(this.phase !== 'busy');
     this.publishMinimap();
     this.refreshHud();
@@ -410,6 +417,8 @@ export class GameScene extends Phaser.Scene {
         income: buildingIncome(b.type),
         icon: buildingKey(this.textures, s, b, vis),
       };
+      const cp = captureProgress(s, b);
+      if (cp && (vis || b.owner === 0)) info.building.capture = { left: cp.left, total: capturePointsOf(b), team: cp.team };
     }
     const u = unitAt(s, p.x, p.y);
     const shown = u && vis && !this.hidden.has(u.uid) ? u : this.phase !== 'map' && this.sel && samePos(this.sel, p) ? this.sel : undefined;
@@ -435,6 +444,17 @@ export class GameScene extends Phaser.Scene {
     return `${t('move')} ${UNIT.mover[type]} · ${range}`;
   }
 
+  /** "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas). */
+  private captureHint(): string | undefined {
+    const u = this.sel;
+    if (!u || RULES.capture !== 'points') return undefined;
+    const b = buildingAt(this.s, u.x, u.y);
+    if (!b) return undefined;
+    const cp = captureProgress(this.s, b);
+    const now = cp && cp.uid === u.uid ? cp.left : capturePointsOf(b);
+    return `${now}→${Math.max(0, now - captureStrength(u))}`;
+  }
+
   /** Menu emergente de la fase actual. */
   private buildMenu(): MenuVM {
     let items: MenuItemVM[] = [];
@@ -456,7 +476,7 @@ export class GameScene extends Phaser.Scene {
       case 'unitMenu':
         kind = 'unit';
         if (this.sel) at = this.sel;
-        items = this.actions.map((a) => ({ id: a, label: t(a as TextKey), danger: a === 'delete' }));
+        items = this.actions.map((a) => ({ id: a, label: t(a as TextKey), danger: a === 'delete', hint: a === 'capture' ? this.captureHint() : undefined }));
         title = this.sel ? unitLabel(this.sel.type) : undefined;
         break;
       case 'buy':
@@ -994,8 +1014,9 @@ export class GameScene extends Phaser.Scene {
       }
       case 'capture': {
         const b = buildingAt(this.s, u.x, u.y);
-        capture(this.s, u);
-        if (b) void this.playEvents([{ kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner }]).then(() => this.afterAction());
+        const r = capture(this.s, u);
+        if (b && r)
+          void this.playEvents([{ kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total }]).then(() => this.afterAction());
         else this.afterAction();
         return;
       }
@@ -1222,7 +1243,14 @@ export class GameScene extends Phaser.Scene {
             const c = center(ev.at);
             void burst(this, this.view, c, { colors: COLORS.gold, count: 12, radius: 22 });
             void tileFlash(this, this.view, ev.at, 0xffd447);
-            await floatText(this, this.view, { x: c.x, y: c.y - 6 }, ev.owner === null ? t('fxNeutral') : t('fxCaptured'), '#ffd447');
+            const partial = ev.left !== undefined && ev.left > 0;
+            await floatText(
+              this,
+              this.view,
+              { x: c.x, y: c.y - 6 },
+              partial ? `${ev.left}/${ev.total}` : ev.owner === null ? t('fxNeutral') : t('fxCaptured'),
+              partial ? '#fff1a8' : '#ffd447',
+            );
           }
           break;
         case 'spawn':

@@ -48,8 +48,12 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   municion, movimiento, alcance, defensa del terreno...).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
-- **Se gana capturando (neutralizando) la Base enemiga.** Para quitarle un edificio al rival hay
-  que capturarlo dos veces: primero pasa a neutral y luego a tuyo.
+- **Se gana conquistando la Base enemiga.** Con las reglas nuevas (por defecto) capturar va por
+  puntos: un edificio tiene 20 (la Base 30) y cada turno la unidad le resta su vida ÷ 10; si se
+  mueve o muere se pierde lo avanzado. Con las reglas clásicas de 2013 es instantáneo, pero un
+  edificio enemigo hay que capturarlo dos veces (primero queda neutral).
+- Reglas nuevas: el defensor que sobrevive contraataca (salvo unidades a distancia) y el daño varía
+  poco (el esperado ±10 %). La previsión de combate enseña ambas cosas.
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
 - En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
   ensena el alcance de una unidad y se pellizca para hacer zoom.

@@ -64,7 +64,14 @@ export interface UnitVM {
 
 export interface TileVM {
   terrain: { key: string; name: string; defense: number };
-  building?: { icon: string | null; name: string; owner: 'you' | 'enemy' | 'neutral' | 'unknown'; income: number };
+  building?: {
+    icon: string | null;
+    name: string;
+    owner: 'you' | 'enemy' | 'neutral' | 'unknown';
+    income: number;
+    /** Captura a medias: puntos que quedan, total y quien captura. */
+    capture?: { left: number; total: number; team: 0 | 1 };
+  };
   unit?: UnitVM;
 }
 

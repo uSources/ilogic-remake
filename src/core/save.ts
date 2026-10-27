@@ -53,6 +53,10 @@ export function deserialize(json: string): GameState | null {
   for (const b of s.buildings as Building[]) {
     if (!isInt(b.type, 0, BUILDING_TYPES - 1) || !isInt(b.x, 0, MAP_W - 1) || !isInt(b.y, 0, MAP_H - 1)) return null;
     if (b.owner !== null && b.owner !== 0 && b.owner !== 1) return null;
+    if (b.capture != null) {
+      const c = b.capture;
+      if ((c.team !== 0 && c.team !== 1) || !isInt(c.uid, 1, Number.MAX_SAFE_INTEGER) || !isInt(c.left, 1, 1000)) b.capture = null;
+    }
   }
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...uids) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;

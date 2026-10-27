@@ -304,6 +304,29 @@ export function attack(s: GameState, atk: Unit, def: Unit, rng: Rng): number {
 // ---------------------------------------------------------------------------
 
 /** Se puede capturar el edificio de debajo (neutral o enemigo). */
+/** Puntos de captura de un edificio con las reglas actuales. */
+export function capturePointsOf(b: Building): number {
+  return b.type === HQ ? RULES.hqCapturePoints : RULES.capturePoints;
+}
+
+/** Puntos que resta una unidad al capturar: su vida en decenas (redondeando hacia arriba). */
+export const captureStrength = (u: Unit): number => Math.ceil(u.life / 10);
+
+/**
+ * Captura a medias de un edificio, si sigue siendo valida (la unidad que la hacia sigue encima).
+ * Si no, se borra.
+ */
+export function captureProgress(s: GameState, b: Building): { team: Team; uid: number; left: number } | null {
+  const c = b.capture;
+  if (!c) return null;
+  const u = unitAt(s, b.x, b.y);
+  if (!u || u.uid !== c.uid || u.team !== c.team || b.owner === c.team) {
+    b.capture = null;
+    return null;
+  }
+  return c;
+}
+
 export function canCapture(s: GameState, u: Unit): boolean {
   if (!u.active || !UNIT.cancapt[u.type]) return false;
   const b = buildingAt(s, u.x, u.y);
@@ -315,13 +338,39 @@ export function canCapture(s: GameState, u: Unit): boolean {
  * Quitar un edificio enemigo cuesta dos capturas. Neutralizar la Base enemiga gana la partida.
  * [CAMBIO] el original tambien dejaba "capturar" (neutralizar) un edificio propio.
  */
-export function capture(s: GameState, u: Unit): boolean {
-  if (!canCapture(s, u)) return false;
+export interface CaptureResult {
+  /** El edificio ha cambiado de dueño (o ha quedado neutral, en las reglas de 2013). */
+  done: boolean;
+  /** Puntos que le quedan (0 si ha terminado). */
+  left: number;
+  total: number;
+}
+
+/**
+ * Capturar el edificio de debajo.
+ * Reglas de 2013: al instante; uno enemigo pasa primero a neutral y luego a tuyo.
+ * [CAMBIO] Reglas nuevas: cada turno resta la vida/10 de la unidad a sus puntos (20, la Base 30);
+ * al llegar a 0 pasa a ser tuyo directamente. Si la unidad se va o muere, se pierde lo avanzado.
+ */
+export function capture(s: GameState, u: Unit): CaptureResult | null {
+  if (!canCapture(s, u)) return null;
   const b = buildingAt(s, u.x, u.y)!;
-  b.owner = b.owner === null ? u.team : null;
   u.active = false;
   u.canMove = false;
-  return true;
+  if (RULES.capture === 'instant') {
+    b.owner = b.owner === null ? u.team : null;
+    return { done: true, left: 0, total: 1 };
+  }
+  const total = capturePointsOf(b);
+  const prev = captureProgress(s, b);
+  const left = Math.max(0, (prev && prev.uid === u.uid ? prev.left : total) - captureStrength(u));
+  if (left === 0) {
+    b.owner = u.team;
+    b.capture = null;
+    return { done: true, left: 0, total };
+  }
+  b.capture = { team: u.team, uid: u.uid, left };
+  return { done: false, left, total };
 }
 
 /** Unidades del mismo tipo y bando con las que se puede unir este turno. */
@@ -587,6 +636,7 @@ export interface RoundReport {
  */
 export function endRound(s: GameState): RoundReport {
   const report: RoundReport = { income: [0, 0], crashed: [], healed: [], resupplied: [], crashedTeams: [] };
+  for (const b of s.buildings) captureProgress(s, b);
   for (const u of s.units) {
     u.active = true;
     u.canMove = true;

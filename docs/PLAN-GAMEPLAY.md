@@ -37,6 +37,13 @@ Lo que más pesa en la estrategia:
 
 ---
 
+## Estado
+
+- Fase 0: hecha (herramienta en `balance/`).
+- Fase 1: hecha.
+- Fase 2: hecha (los precios propuestos quedan pendientes de decisión, ver `docs/BALANCE.md`).
+- Fase 3: hecha (IA adaptada a las reglas nuevas).
+
 ## Fase 0: medir antes de tocar
 
 Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se decide a ojo.
