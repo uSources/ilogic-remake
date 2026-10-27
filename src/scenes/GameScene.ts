@@ -55,11 +55,11 @@ import {
   type UnitActions,
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
-import { recordEvent, stats } from '../core/stats';
+import { recordEvent, sampleArmy, stats } from '../core/stats';
 import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
-import { markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
-import { buildMission, missionById, missionRules } from '../core/missions';
+import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
+import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
 import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM, type UIState, type MoveTipVM } from '../hud/store';
 import { TILE } from '../layout';
 import { playMusic } from '../music';
@@ -81,6 +81,17 @@ type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
 type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
+
+type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
+const END_LABEL: Record<EndButton, TextKey> = { rematch: 'endRematch', new: 'newGame', menu: 'endMenu', next: 'endNext', retry: 'endRetry' };
+
+/** Filtro CSS del lienzo del juego (gris al perder). */
+function setEndFilter(f: string | null): void {
+  const el = document.getElementById('game');
+  if (!el) return;
+  el.style.transition = f ? 'filter 1.2s steps(6)' : '';
+  el.style.filter = f ?? '';
+}
 
 /** Que pasaria al soltar la unidad elegida en una casilla. */
 type Intent =
@@ -216,6 +227,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    setEndFilter(null);
+    sampleArmy(this.s);
+    this.lastAt = null;
     this.view = new MapView(this);
     this.view.buildTerrain(this.s);
 
@@ -233,6 +247,7 @@ export class GameScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+      setEndFilter(null);
       ui.set({ menu: null, forecast: null, tile: null, mission: null });
     });
     playMusic(this, 'game');
@@ -378,7 +393,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refresh(): void {
-    this.vis = visibility(this.s, 0);
+    // Al acabar se descubre todo el mapa.
+    this.vis = this.ended ? grid(true) : visibility(this.s, 0);
     const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, 1, 0) : null;
     const captures = this.s.buildings
       .map((b) => ({ b, c: captureProgress(this.s, b) }))
@@ -749,7 +765,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (this.ended) return;
+    if (this.ended) return this.endKey(e);
     if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
     if (ui.get().help) {
       if (['Escape', 'Backspace', 'KeyH', 'Enter', 'NumpadEnter', 'Space'].includes(e.code)) ui.set({ help: false });
@@ -1779,43 +1795,141 @@ export class GameScene extends Phaser.Scene {
   private checkEnd(): boolean {
     const result = outcome(this.s);
     if (result === 'playing') return false;
-    this.ended = true;
-    this.phase = 'busy';
-    // [CAMBIO] borrar el guardado de esta partida al terminarla (antes solo si se habia cargado).
-    if (this.fromSave || this.savedThisGame) deleteSave();
-    this.refresh();
-    const st = stats(this.s);
-    const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
-    if (m && result === 'won') markCompleted(m.id, this.s.day);
-    const end = {
-      won: result === 'won',
-      day: this.s.day,
-      stats: st,
-      reason: endReason(this.s),
-      score: [score(this.s, 0), score(this.s, 1)],
-      mission: m ? m.title[settings.lang] : null,
-    };
-    this.time.delayedCall(900, () => this.scene.start('End', end));
+    void this.finish(result === 'won', endReason(this.s));
     return true;
   }
 
   /** Rendirse: la partida termina como derrota. */
   private surrender(): void {
+    this.toMap();
+    void this.finish(false, 'surrender');
+  }
+
+  // -------------------------------------------------------------------------
+  // Final de la partida: el mapa tal como acabo, la camara en la jugada decisiva y el resumen
+  // -------------------------------------------------------------------------
+
+  /** Ultima casilla con un combate o una captura (para enfocar el final). */
+  private lastAt: Pos | null = null;
+  private endButtons: EndButton[] = [];
+  private endSel = 0;
+  private endFx: Phaser.Time.TimerEvent | null = null;
+
+  private async finish(won: boolean, reason: NonNullable<UIState['end']>['reason']): Promise<void> {
+    if (this.ended) return;
     this.ended = true;
     this.phase = 'busy';
+    // [CAMBIO] borrar el guardado de esta partida al terminarla (antes solo si se habia cargado).
     if (this.fromSave || this.savedThisGame) deleteSave();
-    this.toMap();
-    this.phase = 'busy';
+    sampleArmy(this.s);
     const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
-    const end = {
-      won: false,
-      day: this.s.day,
-      stats: stats(this.s),
-      reason: 'surrender',
-      score: [score(this.s, 0), score(this.s, 1)],
-      mission: m ? m.title[settings.lang] : null,
-    };
-    this.time.delayedCall(300, () => this.scene.start('End', end));
+    const before = m ? bestDays(m.id) : null;
+    if (m && won) markCompleted(m.id, this.s.day);
+    this.threat = false;
+    this.refresh();
+    ui.set({ screen: 'outro', menu: null, forecast: null, moveTip: null, tile: null, options: null, help: false, toast: null, report: null });
+
+    // Camara a la jugada que lo ha decidido.
+    const focus = this.endFocus(won, reason);
+    await this.wait(500);
+    const c = { x: focus.x * TILE + TILE / 2, y: focus.y * TILE + TILE / 2 };
+    this.cameras.main.pan(c.x, c.y, reducedMotion() ? 0 : 1200, 'Sine.easeInOut', true);
+    await this.wait(reducedMotion() ? 100 : 1250);
+    if (won) {
+      void tileFlash(this, this.view, focus, 0xffd447);
+      const confetti = () => {
+        const p = { x: c.x + (Math.random() - 0.5) * TILE * 8, y: c.y + (Math.random() - 0.5) * TILE * 5 };
+        void burst(this, this.view, p, { colors: [0xffd447, 0xfff1a8, 0x3aa8ff, 0x8fd0ff, 0xffffff], count: 14, radius: 30, duration: 900 });
+      };
+      confetti();
+      if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 420, loop: true, callback: confetti });
+    } else {
+      setEndFilter('grayscale(0.9) brightness(0.55)');
+      const smoke = () => void burst(this, this.view, { x: c.x + (Math.random() - 0.5) * TILE, y: c.y - TILE / 2 }, { colors: COLORS.smoke, count: 8, radius: 26, size: 6, duration: 1400 });
+      smoke();
+      if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 650, loop: true, callback: smoke });
+    }
+    await this.wait(reducedMotion() ? 200 : 1300);
+
+    // Botones del final.
+    const next = m ? MISSIONS[MISSIONS.indexOf(m) + 1] : undefined;
+    this.endButtons = m ? (won ? [...(next ? ['next' as const] : []), 'retry', 'menu'] : ['retry', 'menu']) : ['rematch', 'new', 'menu'];
+    this.endSel = 0;
+    const st = stats(this.s);
+    ui.set({
+      screen: 'end',
+      end: {
+        won,
+        day: this.s.day,
+        stats: st,
+        reason,
+        score: [score(this.s, 0), score(this.s, 1)],
+        mission: m ? m.title[settings.lang] : null,
+        chart: st.army && st.army.length > 1 ? st.army : null,
+        best: m ? (won ? bestDays(m.id) : before) : null,
+        newBest: !!m && won && (before === null || this.s.day < before),
+        buttons: this.endButtons.map((id) => ({ id, label: t(END_LABEL[id]) })),
+        selected: 0,
+      },
+    });
+    Object.assign(ui.actions, {
+      endHover: (i: number) => {
+        this.endSel = i;
+        this.publishEndSel();
+      },
+      endPick: (i: number) => this.endPick(i),
+    });
+  }
+
+  /** Donde mirar al acabar. */
+  private endFocus(won: boolean, reason: NonNullable<UIState['end']>['reason']): Pos {
+    const hq = (team: 0 | 1) => this.s.buildings.find((b) => b.type === HQ && b.owner === team);
+    const obj = this.s.mission?.objective;
+    if (reason === 'objective' && obj?.kind === 'escort') return obj.to;
+    if ((reason === 'hq' || reason === 'wipeout' || reason === 'objective') && this.lastAt) return this.lastAt;
+    const own = hq(0) ?? hq(1);
+    if (!won && own) return own;
+    return this.lastAt ?? own ?? { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
+  }
+
+  private publishEndSel(): void {
+    const e = ui.get().end;
+    if (e) ui.set({ end: { ...e, selected: this.endSel } });
+  }
+
+  private endKey(e: KeyboardEvent): void {
+    if (ui.get().screen !== 'end') return;
+    const n = this.endButtons.length;
+    if (['ArrowLeft', 'KeyA', 'ArrowUp', 'KeyW'].includes(e.code)) this.endSel = (this.endSel - 1 + n) % n;
+    else if (['ArrowRight', 'KeyD', 'ArrowDown', 'KeyS', 'Tab'].includes(e.code)) this.endSel = (this.endSel + 1) % n;
+    else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) return this.endPick(this.endSel);
+    else if (e.code === 'Escape') return this.endPick(this.endButtons.indexOf('menu'));
+    else return;
+    this.publishEndSel();
+  }
+
+  private endPick(i: number): void {
+    const id = this.endButtons[i];
+    if (!id || ui.get().screen !== 'end') return;
+    this.endFx?.remove(false);
+    this.endFx = null;
+    setEndFilter(null);
+    ui.set({ end: null });
+    const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
+    switch (id) {
+      case 'rematch':
+        return void this.scene.start('Game', { mode: 'new', rules: this.s.rules, setup: this.s.setup });
+      case 'retry':
+        return void this.scene.start('Game', m ? { mode: 'mission', mission: m.id } : { mode: 'new', rules: this.s.rules, setup: this.s.setup });
+      case 'next': {
+        const next = m ? MISSIONS[MISSIONS.indexOf(m) + 1] : undefined;
+        return void this.scene.start('Game', next ? { mode: 'mission', mission: next.id } : undefined);
+      }
+      case 'new':
+        return void this.scene.start('Menu', { open: 'setup' });
+      case 'menu':
+        return void this.scene.start('Menu');
+    }
   }
 
   /**
@@ -1915,6 +2029,7 @@ export class GameScene extends Phaser.Scene {
     this.lastEnemy = { before, seed };
     const report = endRound(this.s);
     for (const tm of report.crashedTeams) stats(this.s).lost[tm]++;
+    sampleArmy(this.s);
     if (settings.autosave && writeSave(serialize(this.s))) this.savedThisGame = true;
     this.enemyPlaying = false;
     if (this.checkEnd()) return;
@@ -1982,6 +2097,8 @@ export class GameScene extends Phaser.Scene {
       if (!this.enemyPlaying && ev.kind !== 'move') this.clearUndo();
       if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
       if (!this.replaying && !this.enemyPlaying) this.tutorialEvents.push(ev);
+      if (ev.kind === 'attack') this.lastAt = { ...ev.target };
+      else if (ev.kind === 'capture') this.lastAt = { ...ev.at };
       switch (ev.kind) {
         case 'move':
         case 'merge':

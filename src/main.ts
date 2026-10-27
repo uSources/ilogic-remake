@@ -10,7 +10,6 @@ import { BootScene } from './scenes/BootScene';
 import { LogoScene } from './scenes/LogoScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
-import { EndScene } from './scenes/EndScene';
 
 const hudRoot = document.getElementById('hud')!;
 render(h(Hud, {}), hudRoot);
@@ -31,7 +30,7 @@ const game = new Phaser.Game({
   backgroundColor: '#0b1220',
   pixelArt: true,
   scale: { mode: Phaser.Scale.NONE },
-  scene: [BootScene, LogoScene, MenuScene, GameScene, EndScene],
+  scene: [BootScene, LogoScene, MenuScene, GameScene],
 });
 game.events.once(Phaser.Core.Events.READY, () => {
   fitCanvas(game);
