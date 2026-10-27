@@ -39,7 +39,7 @@ No conviene aplicarlos todavía: el contraataque y la captura por puntos van a c
 Contraataque, daño esperado ±10 % y sorteo de quién empieza cada partida. Informes: `balance/reports/f1-orden.md` y `f1-combate.md`.
 
 - **El primer golpe ya no sale gratis.** Tanque contra tanque: el atacante quita 50 y recibe 25. Soldado contra soldado: 50 y 25. La artillería quita 40 a un tanque y no recibe nada, así que vale la pena protegerla. En un duelo a muerte entre iguales sigue ganando quien empieza, como en Advance Wars.
-- **Se acabó la ventaja del segundo en mover.** Con el sorteo de lados, las partidas que no terminan van 63/94 en f1-combate, pero 50/50 una vez corregido el orden (f1-orden).
+- **Se acabó la ventaja del segundo en mover.** Antes de sortear quién empieza, las partidas sin terminar iban 63 frente a 94 (f1-combate). Con el sorteo de lados van 77 frente a 83 (f1-orden).
 - **La infantería barata sigue rindiendo mucho.** Lo trata la propuesta de precios, más abajo.
 
 # Fase 2: captura por puntos y Base más dura
