@@ -66,6 +66,19 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   La primera es un tutorial que va diciendo qué hacer; las demás tienen objetivos propios (capturar
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
   Las misiones están en `src/core/missions.ts` y es fácil añadir más.
+- **Mover unidades:** se cogen y se arrastran (con el dedo, manteniendo pulsado). El camino sigue al
+  puntero como una flecha y un bocadillo dice cuánto movimiento se gasta, la defensa de la casilla,
+  el combustible que queda y si allí te pueden atacar. Al soltar pasa lo lógico: sobre un enemigo,
+  ataca desde la casilla por la que llegabas; sobre un edificio, captura; sobre una unidad igual, se
+  unen; sobre un transporte, sube; en una casilla vacía sin nada más que hacer, espera. Fuera del
+  alcance vuelve a su sitio; muy lejos, queda una orden de "ir hacia allí" que la unidad cumple sola
+  turno a turno. Mayúsculas + recuadro elige varias para moverlas en grupo. Ctrl+Z deshace el último
+  movimiento si no ha descubierto nada.
+- **Reglas nuevas de movimiento:** el terreno cuesta (bosque, arena y nieve frenan a los vehículos;
+  acantilados y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
+  niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada.
+- Opciones dentro de la partida (menú > Opciones): esperar sola al soltar, saltar a la siguiente
+  unidad, velocidad de las animaciones propias y del enemigo, música y autoguardado.
 - **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
   cada una con +5 % de acierto y de defensa.
 - Al empezar cada turno sale un resumen de la ronda (ingresos, unidades reparadas y reabastecidas).
