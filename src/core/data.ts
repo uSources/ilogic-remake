@@ -316,7 +316,15 @@ export const PROBS_PER_ADJ: readonly (readonly number[])[] = [[0.2, 0.3, 0.03, 0
 export const MAPGEN = {"MINNB": 24, "MAXNB": 30, "MAXSPAWNDIST": 2, "MINUCAP": 9, "MINBCAP": 6, "MINTILENUM": 200, "MINNBS": [8, 5, 3, 3, 1, 0], "MAXNBS": [11, 9, 5, 6, 3, 0], "INITUS": [0, 0, 2], "INITBS": [5, 0, 2, 1, 4], "isSWater": [true, true, true, true, false], "isIce": [false, false, false, false, true]} as const;
 
 // ---- Reglas generales ----
-export const MAP_W = 32, MAP_H = 32;
+/** Tamaño del mapa en casillas. 32x32 como el original; la pantalla de nueva partida permite otros. */
+export let MAP_W = 32;
+export let MAP_H = 32;
+/** Tamaños de mapa admitidos. */
+export const MAP_SIZES = [20, 32, 40] as const;
+export function setMapSize(w: number, h: number = w): void {
+  MAP_W = w;
+  MAP_H = h;
+}
 export const MAX_LIFE = 100;
 /** Reglas y parametros de una partida (se guardan con ella). */
 export interface RulesConfig {

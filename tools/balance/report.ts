@@ -97,7 +97,7 @@ export function buildReport(
 ): Report {
   const n = records.length;
   const wins: [number, number] = [0, 0];
-  const reasons: Record<string, number> = { hq: 0, wipeout: 0, timeout: 0 };
+  const reasons: Record<string, number> = { hq: 0, wipeout: 0, days: 0, timeout: 0 };
   for (const r of records) {
     if (r.winner !== null) wins[r.winner]++;
     reasons[r.reason] = (reasons[r.reason] ?? 0) + 1;
@@ -286,7 +286,7 @@ export function reportMarkdown(r: Report): string {
   L.push('| | |', '|---|---|');
   L.push(`| Victorias bando 0 / bando 1 | ${o.wins[0]} / ${o.wins[1]} (${pct(o.winRate[0])} / ${pct(o.winRate[1])}) |`);
   L.push(`| Sin terminar | ${o.unfinished}: con ventaja clara ${o.adjudicated[0]} / ${o.adjudicated[1]}, igualadas ${o.even} |`);
-  L.push(`| Por Base / por quedarse sin nada | ${o.reasons.hq} / ${o.reasons.wipeout} |`);
+  L.push(`| Por Base / por quedarse sin nada / por puntos al limite de dias | ${o.reasons.hq} / ${o.reasons.wipeout} / ${o.reasons.days ?? 0} |`);
   L.push(`| Dias (mediana, p10-p90, media) | ${o.days.median} (${o.days.p10}-${o.days.p90}), ${o.days.mean} |`);
   for (const sb of r.snowball)
     L.push(`| Gana (o va ganando al final) quien iba por delante el dia ${sb.day} | ${sb.leaderWins === null ? '—' : pct(sb.leaderWins)} (${sb.games} partidas) |`);

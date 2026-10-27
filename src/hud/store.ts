@@ -95,8 +95,18 @@ export interface ReportLineVM {
   tone: 'gold' | 'green' | 'red' | 'plain';
 }
 
+export interface SetupRowVM {
+  id: string;
+  label: string;
+  kind: 'choice' | 'code' | 'start' | 'back';
+  value?: string;
+  /** Explicacion corta que sale debajo cuando la fila esta elegida. */
+  note?: string;
+}
+
 export interface UIState {
-  screen: 'loading' | 'logo' | 'menu' | 'game' | 'end';
+  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'game' | 'end';
+  newGame: { rows: SetupRowVM[]; selected: number; code: string; codeError: boolean };
   loading: number;
   mainMenu: { items: MainMenuItemVM[]; selected: number };
   // Partida
@@ -115,7 +125,15 @@ export interface UIState {
   toast: { text: string; id: number } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
-  end: { won: boolean; day: number; stats: import('../core/stats').GameStats | null } | null;
+  end: {
+    won: boolean;
+    day: number;
+    stats: import('../core/stats').GameStats | null;
+    reason: 'hq' | 'wipeout' | 'days' | 'surrender' | null;
+    score: [number, number] | null;
+  } | null;
+  /** Limite de dias de la partida (null = sin limite). */
+  dayLimit: number | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
   minimap: MinimapVM | null;
   /** Parte del mapa que se ve, en casillas. */
@@ -125,7 +143,10 @@ export interface UIState {
 }
 
 export interface MinimapVM {
-  /** Color de terreno por casilla, fila a fila (y*32+x). */
+  /** Tamaño del mapa en casillas. */
+  w: number;
+  h: number;
+  /** Color de terreno por casilla, fila a fila (y*w+x). */
   terrain: number[];
   fog: boolean[][];
   buildings: { x: number; y: number; owner: 0 | 1 | null }[];
@@ -146,6 +167,11 @@ export interface UIActions {
   focusUnit(uid: number): void;
   endContinue(): void;
   closeHelp(): void;
+  setupHover(i: number): void;
+  setupChange(i: number, dir: 1 | -1): void;
+  setupPick(i: number): void;
+  setupCode(text: string): void;
+  surrender(): void;
 }
 
 const noop = () => {};
@@ -154,6 +180,7 @@ const initial: UIState = {
   screen: 'loading',
   loading: 0,
   mainMenu: { items: [], selected: 0 },
+  newGame: { rows: [], selected: 0, code: '', codeError: false },
   funds: 0,
   income: 0,
   buildings: 0,
@@ -170,6 +197,7 @@ const initial: UIState = {
   banner: null,
   hint: '',
   end: null,
+  dayLimit: null,
   report: null,
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },
@@ -213,6 +241,11 @@ export const ui = {
     focusUnit: noop,
     endContinue: noop,
     closeHelp: () => ui.set({ help: false }),
+    setupHover: noop,
+    setupChange: noop,
+    setupPick: noop,
+    setupCode: noop,
+    surrender: noop,
   } as UIActions,
 };
 

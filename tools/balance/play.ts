@@ -1,9 +1,9 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
 import { aiTurn } from '../../src/core/ai';
-import { BUILDING, HQ, UNIT, UNIT_TYPES } from '../../src/core/data';
+import { BUILDING, UNIT, UNIT_TYPES } from '../../src/core/data';
 import { seededRng } from '../../src/core/geom';
 import { generateGame } from '../../src/core/mapgen';
-import { endRound, outcome } from '../../src/core/rules';
+import { endReason, endRound, outcome } from '../../src/core/rules';
 import type { GameState, Team } from '../../src/core/types';
 
 export type Policy = 'ai' | 'passive';
@@ -17,6 +17,8 @@ export interface PlayOptions {
   firstTeam?: Team;
   /** Intercambiar los bandos en el mapa generado (para ver si el mapa favorece a un lado). */
   swapSides?: boolean;
+  /** Lado del mapa (32 por defecto). */
+  size?: number;
 }
 
 /** Por tipo de unidad y bando. */
@@ -46,7 +48,7 @@ export interface DaySample {
 export interface GameRecord {
   seed: number;
   winner: Team | null;
-  reason: 'hq' | 'wipeout' | 'timeout';
+  reason: 'hq' | 'wipeout' | 'days' | 'timeout';
   days: number;
   samples: DaySample[];
   units: UnitTally[][]; // [team][type]
@@ -65,7 +67,7 @@ function sample(s: GameState): DaySample {
 
 export function playGame(opts: PlayOptions): GameRecord {
   const rng = seededRng(opts.seed);
-  const s = generateGame(rng);
+  const s = generateGame(rng, { size: opts.size ?? 32 });
   if (opts.swapSides) {
     for (const u of s.units) u.team = (1 - u.team) as Team;
     for (const b of s.buildings) if (b.owner !== null) b.owner = (1 - b.owner) as Team;
@@ -155,8 +157,7 @@ export function playGame(opts: PlayOptions): GameRecord {
   let winner: Team | null = null;
   if (result !== 'playing') {
     winner = result === 'won' ? 0 : 1;
-    const loser = (1 - winner) as Team;
-    reason = s.buildings.some((b) => b.owner === loser && b.type === HQ) ? 'wipeout' : 'hq';
+    reason = endReason(s) ?? 'timeout';
   }
   if (result === 'playing') samples.push(sample(s));
   void BUILDING;

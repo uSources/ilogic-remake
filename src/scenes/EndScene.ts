@@ -9,7 +9,7 @@ export class EndScene extends Phaser.Scene {
     super('End');
   }
 
-  create(data: { won: boolean; day?: number; stats?: GameStats }): void {
+  create(data: { won: boolean; day?: number; stats?: GameStats; reason?: 'hq' | 'wipeout' | 'days' | 'surrender' | null; score?: [number, number] }): void {
     const img = this.add.image(0, 0, `${settings.lang}_${data.won ? 'victmsg' : 'deftmsg'}`).setOrigin(0.5, 0);
     // La imagen original se veia a 512x512 (recortada por abajo): mostrar esa parte.
     const shownH = img.height * (512 / 542);
@@ -26,7 +26,7 @@ export class EndScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, layout);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, layout));
     this.cameras.main.fadeIn(500);
-    ui.set({ screen: 'end', end: { won: data.won, day: data.day ?? 1, stats: data.stats ?? null }, toast: null, banner: null, report: null, help: false });
+    ui.set({ screen: 'end', end: { won: data.won, day: data.day ?? 1, stats: data.stats ?? null, reason: data.reason ?? null, score: data.score ?? null }, toast: null, banner: null, report: null, help: false });
 
     let gone = false;
     const back = () => {

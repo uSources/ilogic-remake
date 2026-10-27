@@ -256,3 +256,26 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 
 .capbar { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .capbar .blocks span { height: 8px; }
+
+/* Nueva partida */
+.newgame { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; }
+.newgame .htitle { font-family: var(--display); font-size: 24px; color: var(--gold); }
+.ng-rows { display: flex; flex-direction: column; gap: 4px; }
+.ng-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 8px; }
+.ng-row.sel { background: var(--sel); }
+.ng-label { font-family: var(--display); font-size: 15px; }
+.ng-row.sel .ng-label { color: var(--gold); }
+.ng-value { display: flex; align-items: center; gap: 6px; }
+.ng-v { min-width: 150px; text-align: center; font-size: 17px; cursor: pointer; }
+.ng-arrow { width: 32px; height: 30px; border: 3px solid var(--ink); background: var(--panel); color: var(--gold); font-size: 12px; cursor: pointer; box-shadow: inset 2px 2px 0 var(--hi), inset -2px -2px 0 var(--lo); }
+.ng-arrow:active { transform: translate(1px, 1px); }
+.ng-code { width: 214px; padding: 6px 10px; border: 3px solid var(--ink); background: var(--ink); color: var(--gold); font-family: var(--display); font-size: 17px; text-transform: uppercase; letter-spacing: 2px; text-align: center; outline: none; user-select: text; }
+.ng-code::placeholder { color: var(--muted); text-transform: none; letter-spacing: 0; font-family: var(--body); }
+.ng-code:focus { box-shadow: 0 0 0 2px var(--gold); }
+.ng-code.bad { box-shadow: 0 0 0 2px var(--red); }
+.newgame .px-btn { justify-content: center; margin-top: 4px; }
+.newgame .px-btn.sel { outline: 3px solid var(--gold); outline-offset: 2px; }
+.ng-note { min-height: 2.6em; font-size: 14px; color: var(--muted); line-height: 1.3; }
+@media (max-width: 520px) { .ng-v { min-width: 104px; font-size: 15px; } .ng-code { width: 156px; } .ng-label { font-size: 13px; } }
+
+.day .dl { padding: 0 0 0 2px; font-size: 13px; color: var(--muted); }
