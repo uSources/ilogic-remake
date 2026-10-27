@@ -347,6 +347,8 @@ export interface RulesConfig {
   fog: boolean;
   /** Limite de dias (null = sin limite): al acabar gana quien tenga mas puntos. */
   dayLimit: number | null;
+  /** Veterania: las unidades que destruyen enemigos suben de rango (+acierto, +defensa). */
+  veterancy: boolean;
 }
 
 /** Las reglas del juego de 2013. */
@@ -361,6 +363,7 @@ export const CLASSIC_RULES: Readonly<RulesConfig> = {
   incomeScale: 1,
   fog: true,
   dayLimit: null,
+  veterancy: false,
 };
 
 /** Las reglas nuevas del remake (plan de gameplay). */
@@ -371,6 +374,7 @@ export const MODERN_RULES: Readonly<RulesConfig> = {
   capture: 'points',
   capturePoints: 20,
   hqCapturePoints: 30,
+  veterancy: true,
 };
 
 /**

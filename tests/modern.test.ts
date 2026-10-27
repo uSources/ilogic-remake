@@ -105,3 +105,41 @@ describe('reglas nuevas: captura por puntos', () => {
     expect(capture(s, u)!.left).toBe(10);
   });
 });
+
+describe('reglas nuevas: veterania', () => {
+  it('sube de rango al destruir y mejora acierto y defensa', async () => {
+    const { hitChance, rank, attackFull, merge } = await import('../src/core/rules');
+    const s = blankState();
+    const a = newUnit(s, TANK, 0, 3, 3);
+    const b = newUnit(s, TANK, 1, 4, 3);
+    const base = hitChance(s, a, b);
+    expect(rank(a)).toBe(0);
+    b.life = 1;
+    const r = attackFull(s, a, b, seededRng(1));
+    expect(r.killed).toBe(true);
+    expect(a.kills).toBe(1);
+    expect(rank(a)).toBe(1);
+    const c = newUnit(s, TANK, 1, 4, 3);
+    expect(hitChance(s, a, c)).toBeCloseTo(base * 1.05);
+    expect(hitChance(s, c, a)).toBeCloseTo(base * 0.95);
+    a.kills = 6;
+    expect(rank(a)).toBe(3);
+    const d = newUnit(s, TANK, 0, 2, 3);
+    a.active = true;
+    d.active = true;
+    merge(s, d, a);
+    expect(a.kills).toBe(6);
+  });
+
+  it('con las reglas clasicas no hay veterania', async () => {
+    const { hitChance } = await import('../src/core/rules');
+    const { CLASSIC_RULES } = await import('../src/core/data');
+    useRules(CLASSIC_RULES);
+    const s = blankState();
+    const a = newUnit(s, TANK, 0, 3, 3);
+    const b = newUnit(s, TANK, 1, 4, 3);
+    const base = hitChance(s, a, b);
+    a.kills = 6;
+    expect(hitChance(s, a, b)).toBe(base);
+  });
+});

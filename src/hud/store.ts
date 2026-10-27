@@ -51,6 +51,8 @@ export interface ForecastVM {
 }
 
 export interface UnitVM {
+  /** Rango de veterania 0..3. */
+  rank?: number;
   icon: string | null;
   name: string;
   team: 0 | 1;

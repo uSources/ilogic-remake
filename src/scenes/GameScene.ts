@@ -26,6 +26,7 @@ import {
   outcome,
   endReason,
   score,
+  rank,
   pathTo,
   removeUnit,
   type RoundReport,
@@ -436,6 +437,7 @@ export class GameScene extends Phaser.Scene {
       info.unit = {
         icon: unitKey(this.textures, s, { ...shown, active: shown.team === 1 || shown.active }),
         name: unitLabel(T),
+        rank: RULES.veterancy ? rank(shown) : 0,
         team: shown.team,
         life: shown.life,
         fuel: UNIT.maxfuel[T]! > 0 ? { now: shown.fuel, max: UNIT.maxfuel[T]! } : undefined,

@@ -47,6 +47,7 @@ export function deserialize(json: string): GameState | null {
     u.active = !!u.active;
     u.canMove = !!u.canMove;
     u.canFire = !!u.canFire;
+    if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
   }
   const byUid = new Map(s.units.map((u) => [u.uid, u]));
   for (const u of s.units) {
@@ -83,7 +84,9 @@ export function deserialize(json: string): GameState | null {
       r.incomeScale >= 0 &&
       r.incomeScale <= 10 &&
       typeof r.fog === 'boolean' &&
-      (r.dayLimit === null || isInt(r.dayLimit, 1, 10000));
+      (r.dayLimit === null || isInt(r.dayLimit, 1, 10000)) &&
+      (r.veterancy === undefined || typeof r.veterancy === 'boolean');
+    if (ok) r.veterancy ??= false;
     if (!ok) return null;
   }
   return s;
