@@ -1,4 +1,3 @@
-import type Phaser from 'phaser';
 import { TILE } from '../layout';
 
 /**
@@ -93,13 +92,4 @@ export function visKey(vis: boolean[][]): string {
   let s = '';
   for (const col of vis) for (const v of col) s += v ? '1' : '0';
   return s;
-}
-
-/** Bruma que se mueve dentro de la niebla: nubecillas translucidas que solo se ven sobre lo oculto. */
-export interface Mist {
-  img: Phaser.GameObjects.Image;
-  x: number;
-  y: number;
-  vx: number;
-  alpha: number;
 }

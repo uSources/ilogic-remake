@@ -7,8 +7,8 @@ import { TILE } from '../layout';
 import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
-import { drawWater, paintTerrain, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
-import { paintFog, visKey, type Mist } from './fog';
+import { drawShore, drawWater, paintTerrain, shoreRings, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
+import { paintFog, visKey } from './fog';
 import { settings } from '../settings';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
@@ -79,27 +79,23 @@ export class MapView {
   private readonly marks: Phaser.GameObjects.Graphics;
   private goal: Pos | null = null;
   private vip: Pos | null = null;
-  private readonly cloudLayer: Phaser.GameObjects.Container;
   private readonly cursorImg: Phaser.GameObjects.Image;
   private readonly cam: Phaser.Cameras.Scene2D.Camera;
   private readonly units = new Map<number, UnitSprite>();
   private readonly buildings: Phaser.GameObjects.Image[] = [];
-  private clouds: { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image | null; x: number; y: number }[] = [];
-  /** Niebla del dibujo nuevo (lienzo con borde organico) y bruma que se mueve dentro. */
+  /** Niebla del dibujo nuevo (lienzo con borde organico). */
   private readonly fogLayer: Phaser.GameObjects.Container;
   private fogImg: Phaser.GameObjects.Image | null = null;
   private fogCanvas: HTMLCanvasElement | null = null;
   private fogSig = '';
   private fogVis: boolean[][] | null = null;
-  private mist: Mist[] = [];
-  /** Sombras de las nubes sobre el suelo (debajo de edificios y unidades). */
-  private readonly cloudShadows: Phaser.GameObjects.Container;
   private level = 2;
   private bobPhase = 0;
   /** Agua animada del terreno nuevo. */
   private water: Phaser.GameObjects.Graphics | null = null;
   private waterMarks: ReturnType<typeof waterMarks> = [];
   private waterFrame = -1;
+  private shore: ReturnType<typeof shoreRings> = [];
   private lastDpr = dpr();
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -111,13 +107,11 @@ export class MapView {
     this.unitLayer = scene.add.container(0, 0);
     this.overlay = scene.add.graphics();
     this.fx = scene.add.container(0, 0);
-    this.cloudLayer = scene.add.container(0, 0);
-    this.cloudShadows = scene.add.container(0, 0);
     this.fogLayer = scene.add.container(0, 0);
     this.cursorImg = scene.add.image(0, 0, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
-    // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor, nubes.
+    // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
-    this.root.add([this.terrain, this.cloudShadows, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg, this.cloudLayer]);
+    this.root.add([this.terrain, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg]);
     this.cam.setBackgroundColor('#0b1220');
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
@@ -260,9 +254,11 @@ export class MapView {
       // Terreno nuevo: pintado una vez en un lienzo.
       const key = 'terrainBake';
       if (tex.exists(key)) tex.remove(key);
-      tex.addCanvas(key, paintTerrain(tex, s));
+      const painted = paintTerrain(tex, s);
+      tex.addCanvas(key, painted.canvas);
       this.water = this.scene.add.graphics();
       this.waterMarks = waterMarks(s, s.setup?.seed ?? 1);
+      this.shore = shoreRings(painted.land, s.setup?.seed ?? 1);
       this.waterFrame = -1;
       this.terrain.add([this.scene.add.image(0, 0, key).setOrigin(0), this.water]);
       return;
@@ -411,7 +407,7 @@ export class MapView {
   }
 
   private newArt(): boolean {
-    return settings.terrainArt === 'new' && this.scene.textures.exists('wang/cloud_0');
+    return settings.terrainArt === 'new' && terrainArtReady(this.scene.textures);
   }
 
   /** Repinta la niebla nueva si ha cambiado lo que se ve. */
@@ -428,46 +424,6 @@ export class MapView {
       this.fogImg = this.scene.add.image(0, 0, 'fogBake').setOrigin(0);
       this.fogLayer.addAt(this.fogImg, 0);
     } else (tex.get('fogBake') as Phaser.Textures.CanvasTexture).refresh();
-  }
-
-  /** Bruma: nubecillas translucidas que van y vienen solo por encima de lo que no se ve. */
-  private tickMist(delta: number, still: boolean): void {
-    const vis = this.fogVis;
-    if (!vis || !this.newArt()) return;
-    const hidden = (px: number, py: number) => {
-      const x = Math.floor(px / TILE),
-        y = Math.floor(py / TILE);
-      return x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && !vis[x]![y];
-    };
-    for (const m of this.mist) {
-      if (!still) m.x += m.vx * delta;
-      const cx = m.x + m.img.width / 2,
-        cy = m.y - m.img.height / 2;
-      const target = hidden(cx, cy) && hidden(m.x + 8, cy) && hidden(m.x + m.img.width - 8, cy) ? 0.34 : 0;
-      m.alpha += (target - m.alpha) * Math.min(1, delta / 400);
-      m.img.setAlpha(m.alpha).setPosition(Math.round(m.x), Math.round(m.y));
-    }
-    this.mist = this.mist.filter((m) => {
-      const gone = m.x > MAP_W * TILE + 10 || (m.alpha < 0.02 && m.img.getData('born') + 4000 < this.scene.time.now);
-      if (gone) m.img.destroy();
-      return !gone;
-    });
-    let hiddenCount = 0;
-    for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!vis[x]![y]) hiddenCount++;
-    const want = Math.min(14, Math.floor(hiddenCount / 25));
-    if (this.mist.length < want && Math.random() < delta / 600) {
-      // Aparece sobre una casilla oculta al azar.
-      for (let k = 0; k < 20; k++) {
-        const x = Math.floor(Math.random() * MAP_W),
-          y = Math.floor(Math.random() * MAP_H);
-        if (vis[x]![y]) continue;
-        const img = this.scene.add.image(0, 0, `wang/cloud_${Math.floor(Math.random() * 5)}`).setOrigin(0, 1).setAlpha(0).setTint(0xb8c8e8);
-        img.setData('born', this.scene.time.now);
-        this.fogLayer.add(img);
-        this.mist.push({ img, x: x * TILE - img.width / 2 + TILE / 2, y: y * TILE + TILE, vx: 0.004 + Math.random() * 0.004, alpha: 0 });
-        break;
-      }
-    }
   }
 
   private drawOverlay(opts: ViewOptions): void {
@@ -655,7 +611,7 @@ export class MapView {
     this.cursorImg.setPosition(this.cursor.x * TILE, this.cursor.y * TILE).setVisible(visible);
   }
 
-  /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y nubes. */
+  /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y agua. */
   tick(time: number, delta: number): void {
     const still = reducedMotion();
     if (this.water) {
@@ -663,6 +619,7 @@ export class MapView {
       if (f !== this.waterFrame) {
         this.waterFrame = f;
         drawWater(this.water, this.waterMarks, f);
+        drawShore(this.water, this.shore, f);
       }
     }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
@@ -672,44 +629,7 @@ export class MapView {
       if (this.goal || this.vip) this.drawMarks(phase);
       for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
     }
-    // Nubes: cruzan el mapa despacio con el viento, de vez en cuando (las nuevas, con su sombra en el suelo).
-    const pixelClouds = settings.terrainArt === 'new' && this.scene.textures.exists('wang/cloud_0');
-    const vx = pixelClouds ? delta * 0.007 : 0,
-      vy = delta * (pixelClouds ? 0.0025 : 0.006);
-    this.clouds = this.clouds.filter((c) => {
-      c.x += vx;
-      c.y += vy;
-      c.img.setPosition(Math.round(c.x), Math.round(c.y));
-      c.shadow?.setPosition(Math.round(c.x) + 28, Math.round(c.y) + 52);
-      if (c.y > MAP_H * TILE + 40 || c.x > MAP_W * TILE + 20) {
-        c.img.destroy();
-        c.shadow?.destroy();
-        return false;
-      }
-      return true;
-    });
-    this.tickMist(delta, still);
-    // Con el dibujo nuevo no hay nubes por el cielo: la bruma va dentro de la niebla.
-    if (!pixelClouds && this.clouds.length < 3 && Math.random() < delta / 25000) {
-      if (pixelClouds) {
-        const n = Math.floor(Math.random() * 5);
-        const img = this.scene.add.image(0, 0, `wang/cloud_${n}`).setOrigin(0, 1).setAlpha(0.92);
-        const shadow = this.scene.add.image(0, 0, `wang/cloud_shadow_${n}`).setOrigin(0, 1);
-        this.cloudLayer.add(img);
-        this.cloudShadows.add(shadow);
-        // Entran por la izquierda o por arriba.
-        const fromLeft = Math.random() < 0.5;
-        this.clouds.push({ img, shadow, x: fromLeft ? -img.width : Math.random() * MAP_W * TILE, y: fromLeft ? Math.random() * MAP_H * TILE : -8 });
-      } else {
-        const img = this.scene.add
-          .image(0, 0, `cl_${Math.floor(Math.random() * 5)}`)
-          .setOrigin(0, 1)
-          .setDisplaySize(64, 128)
-          .setAlpha(0.75);
-        this.cloudLayer.add(img);
-        this.clouds.push({ img, shadow: null, x: Math.random() * (MAP_W * TILE - 64), y: -8 });
-      }
-    }
+
   }
 
   /** Sprite (contenedor) de una unidad tal como esta dibujada ahora, si se ve. */
