@@ -1,0 +1,231 @@
+{
+ "pixellab_id": "9f98ef1e-9bd9-4ab4-81f6-11ae1b230a21",
+ "lower": "fresh white snow with soft blue shadows, vivid saturated colors, cheerful classic 16-bit strategy game look",
+ "upper": "rugged snow-dusted stone outcrops featuring soft blue shadows and moderate surface texture",
+ "tiles": [
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  }
+ ]
+}

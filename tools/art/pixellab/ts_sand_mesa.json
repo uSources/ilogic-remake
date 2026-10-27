@@ -1,0 +1,231 @@
+{
+ "pixellab_id": "70af5463-46ef-4c1f-ad81-58b9168b39ff",
+ "lower": "golden desert sand with small ripples, vivid saturated colors, cheerful classic 16-bit strategy game look",
+ "upper": "vivid orange-red sandstone mesa rock with moderate horizontal strata lines and gentle tonal variation under medium depth lighting",
+ "tiles": [
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 0,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 32,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "lower",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 64,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 0,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "upper",
+    "SE": "lower",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 32,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "lower",
+    "NW": "upper",
+    "SE": "upper",
+    "SW": "lower"
+   },
+   "bounding_box": {
+    "x": 64,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  },
+  {
+   "corners": {
+    "NE": "upper",
+    "NW": "lower",
+    "SE": "upper",
+    "SW": "upper"
+   },
+   "bounding_box": {
+    "x": 96,
+    "y": 96,
+    "width": 32,
+    "height": 32
+   }
+  }
+ ]
+}

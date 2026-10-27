@@ -7,6 +7,8 @@ import { TILE } from '../layout';
 import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
+import { drawWater, paintTerrain, terrainArtReady, waterMarks } from './terrainArt';
+import { settings } from '../settings';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
 
@@ -84,6 +86,10 @@ export class MapView {
   private clouds: { img: Phaser.GameObjects.Image; x: number; y: number }[] = [];
   private level = 2;
   private bobPhase = 0;
+  /** Agua animada del terreno nuevo. */
+  private water: Phaser.GameObjects.Graphics | null = null;
+  private waterMarks: ReturnType<typeof waterMarks> = [];
+  private waterFrame = -1;
   private lastDpr = dpr();
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -236,6 +242,19 @@ export class MapView {
   /** Terreno y orillas: solo al empezar la partida (el terreno no cambia). */
   buildTerrain(s: GameState): void {
     this.terrain.removeAll(true);
+    this.water = null;
+    const tex = this.scene.textures;
+    if (settings.terrainArt === 'new' && terrainArtReady(tex)) {
+      // Terreno nuevo: pintado una vez en un lienzo.
+      const key = 'terrainBake';
+      if (tex.exists(key)) tex.remove(key);
+      tex.addCanvas(key, paintTerrain(tex, s));
+      this.water = this.scene.add.graphics();
+      this.waterMarks = waterMarks(s, s.setup?.seed ?? 1);
+      this.waterFrame = -1;
+      this.terrain.add([this.scene.add.image(0, 0, key).setOrigin(0), this.water]);
+      return;
+    }
     const objs: Phaser.GameObjects.GameObject[] = [];
     for (let x = 0; x < MAP_W; x++) {
       for (let y = 0; y < MAP_H; y++) {
@@ -563,6 +582,13 @@ export class MapView {
   /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y nubes. */
   tick(time: number, delta: number): void {
     const still = reducedMotion();
+    if (this.water) {
+      const f = still ? 0 : Math.floor(time / 160) % 8;
+      if (f !== this.waterFrame) {
+        this.waterFrame = f;
+        drawWater(this.water, this.waterMarks, f);
+      }
+    }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
     const phase = still ? 0 : Math.floor(time / 500) % 2;
     if (phase !== this.bobPhase) {
