@@ -61,6 +61,16 @@ function Marks({ marks }: { marks: UIState['home']['campaign']['marks'] }) {
   );
 }
 
+/** Corazon pixel (7×6), en rojo. */
+function Heart() {
+  return (
+    <svg class="heart" viewBox="0 0 7 6" width="21" height="18" role="img" aria-label="♥" shape-rendering="crispEdges">
+      <path fill="#ff4d45" d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z" />
+      <path fill="#ff9a94" d="M1 1h1v1H1z" />
+    </svg>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Inicio
 // ---------------------------------------------------------------------------
@@ -137,7 +147,11 @@ export function Home({ s }: { s: UIState }) {
       {h.credits && (
         <div class="px credits-box" role="dialog" onClick={pick('credits')}>
           <span class="label">{t('credits')}</span>
-          <p>{t('creditsText')}</p>
+          <p class="cr-main">
+            {t('creditsMade')} <Heart /> {t('creditsBy')}
+          </p>
+          <p>{t('creditsRemake')}</p>
+          <p class="cr-place">{t('creditsPlace')}</p>
         </div>
       )}
     </div>
