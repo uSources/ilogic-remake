@@ -1324,6 +1324,12 @@ export class GameScene extends Phaser.Scene {
         return this.toMap();
       case 'stay':
         if (opts.wait) return this.waitSelected();
+        if (opts.drop && canCapture(this.s, u)) {
+          this.actions = ['capture'];
+          this.menuSel = 0;
+          this.phase = 'unitMenu';
+          return this.acceptUnitMenu();
+        }
         return this.openUnitMenu();
       case 'merge': {
         this.clearUndo();
@@ -1409,6 +1415,7 @@ export class GameScene extends Phaser.Scene {
   /** Al empezar el turno: las unidades con orden avanzan solas (y pueden seguir actuando despues). */
   private async runOrders(): Promise<void> {
     const movers = this.s.units.filter((u) => u.team === 0 && u.order && u.active && u.canMove && u.carrier === null);
+    const arrived: Unit[] = [];
     for (const u of movers) {
       const goal = u.order!;
       if (samePos(u, goal)) {
@@ -1416,12 +1423,24 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       const r = moveRange(this.s, u);
+      // Si ya llega este turno, no gastar el turno en las ultimas casillas: la mueve el jugador
+      // (y puede seguir hasta donde quiera, atacar o capturar).
+      if ((r.steps[goal.x]?.[goal.y] ?? 0) > 0) {
+        delete u.order;
+        arrived.push(u);
+        continue;
+      }
       const dest = stepToward(this.s, u, goal, r);
       if (!dest) continue;
       const path = moveUnit(this.s, u, dest, r);
       if (!path) continue;
       await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }]);
       if (samePos(u, goal) || path.ambush) delete u.order;
+    }
+    if (arrived.length) {
+      this.view.cursor = { x: arrived[0]!.x, y: arrived[0]!.y };
+      this.view.ensureVisible(arrived[0]!, 3);
+      showToast(t('orderArrives'));
     }
     if (movers.length) this.refresh();
   }
@@ -1623,7 +1642,8 @@ export class GameScene extends Phaser.Scene {
     // [CAMBIO] "Atras" siempre: deshace el movimiento (en el original no se podia).
     av.back = true;
     this.actions = ACTION_ORDER.filter((a) => av[a]);
-    this.menuSel = 0;
+    // Encima de un edificio que se puede capturar, lo normal es capturar.
+    this.menuSel = Math.max(0, this.actions.indexOf('capture'));
     this.deleteArmed = false;
     this.phase = 'unitMenu';
     this.view.cursor = { x: this.sel.x, y: this.sel.y };
@@ -1848,8 +1868,14 @@ export class GameScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   /** Fin de turno con la tecla E: si quedan unidades sin usar, pedir que se pulse otra vez. */
+  /** Unidades sin usar encima de un edificio que pueden capturar: capturan solas al terminar el turno. */
+  private autoCapturers(): Unit[] {
+    return this.s.units.filter((u) => u.team === 0 && u.active && u.canMove && u.carrier === null && canCapture(this.s, u));
+  }
+
   private requestEndTurn(): void {
-    const idle = this.idleUnits().length > 0;
+    const auto = new Set(this.autoCapturers().map((u) => u.uid));
+    const idle = this.idleUnits().some((u) => !auto.has(u.uid));
     if (idle && this.time.now - this.endArmedAt > 2500) {
       this.endArmedAt = this.time.now;
       return showToast(t('confirmEndTurn'));
@@ -1864,6 +1890,13 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const saved = { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
     this.phase = 'busy';
+    // [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando.
+    for (const u of this.autoCapturers()) {
+      const b = buildingAt(this.s, u.x, u.y)!;
+      const r = capture(this.s, u);
+      if (r) await this.playEvents([{ kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total }]);
+      if (this.checkEnd()) return;
+    }
     this.enemyPlaying = true;
     // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
     this.fastForward = settings.speedEnemy === 'instant';
