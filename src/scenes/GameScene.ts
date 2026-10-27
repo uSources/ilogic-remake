@@ -1051,14 +1051,14 @@ export class GameScene extends Phaser.Scene {
       const target = unitById(this.s, mergeUid)!;
       const ghost = unitKey(this.textures, this.s, u);
       const path = merge(this.s, u, target);
-      if (path) await this.playEvents([{ kind: 'merge', uid: u.uid, into: target.uid, path }], ghost);
+      if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'merge', uid: u.uid, into: target.uid, path }], ghost);
       return this.afterAction();
     }
     if (loadUid !== undefined) {
       const tr = unitById(this.s, loadUid)!;
       const ghost = unitKey(this.textures, this.s, u);
       const path = load(this.s, u, tr);
-      if (path) await this.playEvents([{ kind: 'load', uid: u.uid, into: tr.uid, path }], ghost);
+      if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'load', uid: u.uid, into: tr.uid, path }], ghost);
       return this.afterAction();
     }
     if (samePos(c, u)) return this.openUnitMenu();
@@ -1068,7 +1068,9 @@ export class GameScene extends Phaser.Scene {
       const path = moveUnit(this.s, u, c, this.range);
       if (!path) return;
       this.range = null;
-      await this.playEvents([{ kind: 'move', uid: u.uid, path }], ghost);
+      await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+      // Emboscada: la unidad ha perdido el turno y no se puede deshacer (ya se sabe donde estaba el enemigo).
+      if (path.ambush) return this.afterAction();
       this.undo = snapshot;
       return this.openUnitMenu();
     }
@@ -1366,6 +1368,15 @@ export class GameScene extends Phaser.Scene {
           const mover = unitById(this.s, ev.uid) ?? unitById(this.s, (ev as { into?: number }).into ?? -1);
           const showAll = mover?.team === 0;
           await this.animatePath(ev.uid, tex, ev.path, showAll);
+          if (ev.kind === 'move' && ev.ambush && !this.fastForward) {
+            this.refresh();
+            const end = ev.path[ev.path.length - 1]!;
+            if (showAll || this.visibleToPlayer(end)) {
+              const c = center(end);
+              void tileFlash(this, this.view, ev.ambush, 0xff4d45);
+              await floatText(this, this.view, { x: c.x, y: c.y - 6 }, t('fxAmbush'), '#ff7a73');
+            }
+          }
           break;
         }
         case 'attack': {
