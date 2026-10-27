@@ -100,8 +100,16 @@ export function deserialize(json: string): GameState | null {
       r.incomeScale <= 10 &&
       typeof r.fog === 'boolean' &&
       (r.dayLimit === null || isInt(r.dayLimit, 1, 10000)) &&
-      (r.veterancy === undefined || typeof r.veterancy === 'boolean');
-    if (ok) r.veterancy ??= false;
+      (r.veterancy === undefined || typeof r.veterancy === 'boolean') &&
+      (r.passAllies === undefined || typeof r.passAllies === 'boolean') &&
+      (r.ambush === undefined || typeof r.ambush === 'boolean') &&
+      (r.forestHides === undefined || typeof r.forestHides === 'boolean');
+    if (ok) {
+      r.veterancy ??= false;
+      r.passAllies ??= false;
+      r.ambush ??= false;
+      r.forestHides ??= false;
+    }
     if (!ok) return null;
   }
   return s;

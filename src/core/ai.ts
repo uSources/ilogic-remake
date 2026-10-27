@@ -70,10 +70,13 @@ function bestMoveToward(s: GameState, u: Unit, dest: Pos, range: MoveRange, avoi
   return best;
 }
 
-function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRange): Generator<GameEvent> {
-  if (!dest) return;
+/** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
+function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRange): Generator<GameEvent, boolean> {
+  if (!dest) return false;
   const path = moveUnit(s, u, dest, range);
-  if (path) yield { kind: 'move', uid: u.uid, path };
+  if (!path) return false;
+  yield { kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) };
+  return !!path.ambush;
 }
 
 /** Necesita volver a un edificio: poca vida, o aereo con poco combustible. */
@@ -98,7 +101,8 @@ function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange
       const target = mates.sort((a, b) => manhattan(u, a) - manhattan(u, b))[0]!;
       const path = merge(s, u, target);
       if (path) {
-        yield { kind: 'merge', uid: u.uid, into: target.uid, path };
+        if (path.ambush) yield { kind: 'move', uid: u.uid, path, ambush: path.ambush };
+        else yield { kind: 'merge', uid: u.uid, into: target.uid, path };
         return true;
       }
     }
@@ -174,7 +178,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generato
     }
   }
   if (best) {
-    yield* doMove(s, u, samePos(best.from, u) ? null : best.from, range);
+    if (yield* doMove(s, u, samePos(best.from, u) ? null : best.from, range)) return true;
     const targetPos = { x: best.target.x, y: best.target.y };
     const r = attackFull(s, u, best.target, rng);
     yield { kind: 'attack', attacker: u.uid, target: targetPos, damage: r.damage, killed: r.killed, counter: r.counter, attackerKilled: r.attackerKilled };

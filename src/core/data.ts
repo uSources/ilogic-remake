@@ -306,6 +306,9 @@ export const TERRAIN = {
   ],
 } as const;
 
+/** Terrenos que esconden a quien esta dentro (con la regla forestHides): bosque, cactus, bosque nevado. */
+export const HIDING_TERRAIN: readonly number[] = [2, 4, 13];
+
 /** Indices de terreno usados por el codigo. */
 export const T_GRASS = 0, T_WATER = 1, T_SNOW = 10, T_SWATER = 8, T_DWATER = 9, T_ICE = 14;
 
@@ -352,6 +355,12 @@ export interface RulesConfig {
   dayLimit: number | null;
   /** Veterania: las unidades que destruyen enemigos suben de rango (+acierto, +defensa). */
   veterancy: boolean;
+  /** Se puede pasar por casillas de unidades propias (sin terminar en ellas). */
+  passAllies: boolean;
+  /** Emboscadas: el alcance no tiene en cuenta a los enemigos que no se ven; si el camino choca con uno, se para. */
+  ambush: boolean;
+  /** Con niebla, el bosque (y cactus, bosque nevado) solo se ve desde una casilla vecina. */
+  forestHides: boolean;
 }
 
 /** Las reglas del juego de 2013. */
@@ -367,6 +376,9 @@ export const CLASSIC_RULES: Readonly<RulesConfig> = {
   fog: true,
   dayLimit: null,
   veterancy: false,
+  passAllies: false,
+  ambush: false,
+  forestHides: false,
 };
 
 /** Las reglas nuevas del remake (plan de gameplay). */
@@ -378,6 +390,9 @@ export const MODERN_RULES: Readonly<RulesConfig> = {
   capturePoints: 20,
   hqCapturePoints: 30,
   veterancy: true,
+  passAllies: true,
+  ambush: true,
+  forestHides: true,
 };
 
 /**

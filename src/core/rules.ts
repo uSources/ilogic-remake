@@ -5,6 +5,7 @@
  */
 import {
   AMMO_RESTORER,
+  HIDING_TERRAIN,
   BUILDING,
   CAN_CARRY,
   FUELER,
@@ -81,12 +82,34 @@ export function maxSteps(u: Unit): number {
 }
 
 /** Mapa de movimiento por anchura (Ilogic.getMoveMap): cada casilla cuesta 1, las unidades bloquean. */
+/**
+ * Que casillas bloquean el paso a `u` y en cuales no puede terminar.
+ * [CAMBIO] Reglas nuevas: se atraviesan las unidades propias, y los enemigos que el bando de `u`
+ * no ve no cuentan (asi el alcance no delata donde estan; al moverse, emboscada).
+ */
+export function passMap(s: GameState, u: Unit): { block: boolean[][]; taken: boolean[][] } {
+  const block = grid(false);
+  const taken = grid(false);
+  const vis = RULES.ambush ? visibility(s, u.team) : null;
+  for (const o of s.units) {
+    if (o.carrier !== null || o.uid === u.uid) continue;
+    if (o.team === u.team) {
+      taken[o.x]![o.y] = true;
+      if (!RULES.passAllies) block[o.x]![o.y] = true;
+    } else if (!vis || vis[o.x]![o.y]) {
+      taken[o.x]![o.y] = true;
+      block[o.x]![o.y] = true;
+    }
+  }
+  return { block, taken };
+}
+
 export function moveRange(s: GameState, u: Unit): MoveRange {
   const steps = grid(0);
   const prev = grid<Pos | null>(null);
   const max = maxSteps(u);
   const mt = UNIT.movtype[u.type]!;
-  const occ = occupancy(s);
+  const { block, taken } = passMap(s, u);
   const seen = grid(false);
   seen[u.x]![u.y] = true;
   let frontier: Pos[] = [{ x: u.x, y: u.y }];
@@ -94,9 +117,10 @@ export function moveRange(s: GameState, u: Unit): MoveRange {
     const next: Pos[] = [];
     for (const p of frontier) {
       for (const n of neighbors4(p)) {
-        if (seen[n.x]![n.y] || !isWalkable(s, n.x, n.y, mt, occ)) continue;
+        if (seen[n.x]![n.y] || !canWalk(s, n.x, n.y, mt) || block[n.x]![n.y]) continue;
         seen[n.x]![n.y] = true;
-        steps[n.x]![n.y] = step;
+        // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
+        if (!taken[n.x]![n.y]) steps[n.x]![n.y] = step;
         prev[n.x]![n.y] = p;
         next.push(n);
       }
@@ -104,6 +128,42 @@ export function moveRange(s: GameState, u: Unit): MoveRange {
     frontier = next;
   }
   return { steps, prev, maxSteps: max };
+}
+
+/** Camino de un movimiento; si ha habido emboscada, donde estaba el enemigo escondido. */
+export type MovePath = Pos[] & { ambush?: Pos };
+
+/**
+ * Recorre un camino comprobando emboscadas: si una casilla tiene un enemigo (escondido), la unidad
+ * se para en la ultima casilla libre antes de el. Devuelve el camino recorrido de verdad.
+ */
+export function walkPath(s: GameState, u: Unit, path: Pos[]): MovePath {
+  let hit = -1;
+  for (let i = 1; i < path.length; i++) {
+    const p = path[i]!;
+    if (s.units.some((o) => o.carrier === null && o.team !== u.team && o.x === p.x && o.y === p.y)) {
+      hit = i;
+      break;
+    }
+  }
+  if (hit < 0) return path as MovePath;
+  let stop = hit - 1;
+  while (stop > 0 && s.units.some((o) => o.carrier === null && o.uid !== u.uid && o.x === path[stop]!.x && o.y === path[stop]!.y)) stop--;
+  const walked = path.slice(0, stop + 1) as MovePath;
+  walked.ambush = { ...path[hit]! };
+  return walked;
+}
+
+/** Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno. */
+function ambushed(u: Unit, walked: MovePath): MovePath {
+  const end = walked[walked.length - 1]!;
+  spendFuel(u, walked.length - 1);
+  u.x = end.x;
+  u.y = end.y;
+  u.active = false;
+  u.canMove = false;
+  u.canFire = false;
+  return walked;
 }
 
 /** Camino desde la unidad hasta dest (incluye ambos extremos). */
@@ -118,6 +178,28 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
   return path;
 }
 
+/**
+ * Un camino trazado a mano es valido si empieza en la unidad, va de casilla vecina en vecina por
+ * casillas del alcance (o de paso), sin repetir, no supera el movimiento y termina en un destino libre.
+ */
+export function validPath(s: GameState, u: Unit, path: Pos[], range: MoveRange): boolean {
+  if (path.length < 2 || !samePos(path[0]!, u) || path.length - 1 > range.maxSteps) return false;
+  const end = path[path.length - 1]!;
+  if (!canReach(range, end.x, end.y)) return false;
+  const { block } = passMap(s, u);
+  const mt = UNIT.movtype[u.type]!;
+  const seen = new Set<string>();
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1]!,
+      b = path[i]!;
+    if (manhattan(a, b) !== 1 || !canWalk(s, b.x, b.y, mt) || block[b.x]![b.y]) return false;
+    const k = `${b.x},${b.y}`;
+    if (seen.has(k) || samePos(b, u)) return false;
+    seen.add(k);
+  }
+  return true;
+}
+
 export function canReach(range: MoveRange, x: number, y: number): boolean {
   return inBounds(x, y) && range.steps[x]![y]! > 0;
 }
@@ -128,10 +210,13 @@ function spendFuel(u: Unit, steps: number): void {
 }
 
 /** Mueve la unidad (Ilogic.Move). Devuelve el camino recorrido o null si no es valido. */
-export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, u)): Pos[] | null {
+export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, u), via?: Pos[]): MovePath | null {
   if (!u.active || !u.canMove || samePos(u, dest) || !canReach(range, dest.x, dest.y)) return null;
-  const path = pathTo(range, u, dest);
-  spendFuel(u, range.steps[dest.x]![dest.y]!);
+  // `via`: camino trazado por el jugador (si es valido); si no, el mas corto.
+  const path = via && samePos(via[via.length - 1]!, dest) && validPath(s, u, via, range) ? via.map((p) => ({ ...p })) : pathTo(range, u, dest);
+  const walked = walkPath(s, u, path);
+  if (walked.ambush) return ambushed(u, walked);
+  spendFuel(u, path.length - 1);
   u.x = dest.x;
   u.y = dest.y;
   u.canMove = false;
@@ -175,9 +260,11 @@ export function visibility(s: GameState, team: Team): boolean[][] {
   // [CAMBIO] partida sin niebla: se ve todo.
   if (!RULES.fog) return grid(true);
   const vis = grid(false);
+  // [CAMBIO] Reglas nuevas: el bosque solo se ve desde al lado (o desde dentro).
+  const hides = RULES.forestHides ? (x: number, y: number) => HIDING_TERRAIN.includes(s.map[x]![y]!) : () => false;
   for (const u of s.units) {
     if (u.team !== team || u.carrier !== null) continue;
-    for (const p of diamond(u, 0, UNIT.vision[u.type]!)) vis[p.x]![p.y] = true;
+    for (const p of diamond(u, 0, UNIT.vision[u.type]!)) if (!hides(p.x, p.y) || manhattan(u, p) <= 1) vis[p.x]![p.y] = true;
   }
   for (const b of s.buildings) {
     if (b.owner !== team) continue;
@@ -406,10 +493,12 @@ export function mergeTargets(s: GameState, u: Unit, range = moveRange(s, u)): Un
  * La vida se suma (tope 100). [CAMBIO] combustible y municion: se queda el mayor de los dos.
  * Devuelve el camino recorrido.
  */
-export function merge(s: GameState, u: Unit, target: Unit): Pos[] | null {
+export function merge(s: GameState, u: Unit, target: Unit): MovePath | null {
   if (!u.active || u.type !== target.type || u.team !== target.team || u.uid === target.uid) return null;
   const path = approachPath(s, u, target);
   if (!path) return null;
+  const walked = walkPath(s, u, path);
+  if (walked.ambush) return ambushed(u, walked);
   spendFuel(u, path.length - 1 + 1);
   target.life = Math.min(MAX_LIFE, target.life + u.life);
   target.fuel = Math.max(target.fuel, u.fuel);
@@ -441,12 +530,14 @@ export function loadTargets(s: GameState, u: Unit, range = moveRange(s, u)): Uni
 }
 
 /** Subir a un transporte (Unit.Load): la unidad se mueve hasta el y queda dentro. */
-export function load(s: GameState, u: Unit, t: Unit): Pos[] | null {
+export function load(s: GameState, u: Unit, t: Unit): MovePath | null {
   if (!u.active || u.team !== t.team || !CAN_CARRY[t.type]![u.type] || u.carrier !== null) return null;
   const slot = freeSlot(t);
   if (slot === -1) return null;
   const path = approachPath(s, u, t);
   if (!path) return null;
+  const walked = walkPath(s, u, path);
+  if (walked.ambush) return ambushed(u, walked);
   spendFuel(u, path.length);
   path.push({ x: t.x, y: t.y });
   t.cargo[slot] = u.uid;

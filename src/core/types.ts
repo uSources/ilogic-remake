@@ -81,7 +81,7 @@ export type Outcome = 'playing' | 'won' | 'lost';
 
 /** Lo que acaba de pasar, para que la interfaz lo anime. Lo usan el jugador y la IA. */
 export type GameEvent =
-  | { kind: 'move'; uid: number; path: Pos[] }
+  | { kind: 'move'; uid: number; path: Pos[]; ambush?: Pos }
   | { kind: 'attack'; attacker: number; target: Pos; damage: number; killed: boolean; counter?: number; attackerKilled?: boolean }
   | { kind: 'capture'; uid: number; at: Pos; owner: Team | null; left?: number; total?: number }
   | { kind: 'merge'; uid: number; into: number; path: Pos[] }
