@@ -6,15 +6,25 @@
 
 export type Lang = 'es' | 'en';
 
+export type Speed = 'normal' | 'fast' | 'instant';
+
 export interface Settings {
   lang: Lang;
   autosave: boolean;
   music: boolean;
+  /** Al soltar una unidad donde no tiene nada mas que hacer, espera sola. */
+  autoWait: boolean;
+  /** Tras terminar con una unidad, el cursor salta a la siguiente sin mover. */
+  autoNext: boolean;
+  /** Velocidad de las animaciones de tus unidades y de las del enemigo. */
+  speedOwn: Speed;
+  speedEnemy: Speed;
 }
 
 const KEY = 'ilogic.settings';
 
-const DEFAULTS: Settings = { lang: 'es', autosave: false, music: false };
+const DEFAULTS: Settings = { lang: 'es', autosave: false, music: false, autoWait: true, autoNext: false, speedOwn: 'normal', speedEnemy: 'normal' };
+const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
 
 function load(): Settings {
   try {
@@ -25,6 +35,10 @@ function load(): Settings {
       lang: parsed.lang === 'en' ? 'en' : 'es',
       autosave: !!parsed.autosave,
       music: !!parsed.music,
+      autoWait: parsed.autoWait !== false,
+      autoNext: !!parsed.autoNext,
+      speedOwn: SPEEDS.includes(parsed.speedOwn as Speed) ? (parsed.speedOwn as Speed) : 'normal',
+      speedEnemy: SPEEDS.includes(parsed.speedEnemy as Speed) ? (parsed.speedEnemy as Speed) : 'normal',
     };
   } catch {
     return { ...DEFAULTS };
@@ -113,6 +127,22 @@ const TEXTS = {
     threatShort: 'Amenaza',
     fxCaptured: '¡CAPTURADO!',
     fxAmbush: '¡EMBOSCADA!',
+    tipMove: 'Mover',
+    tipCapture: 'Mover y capturar',
+    tipJoin: 'Unir',
+    tipBoard: 'Subir',
+    tipNone: 'No llega',
+    tipDanger: 'Te pueden atacar ahí',
+    undone: 'Movimiento deshecho',
+    nothingToUndo: 'No hay nada que deshacer',
+    optAutoWait: 'Esperar sola al soltar',
+    optAutoNext: 'Saltar a la siguiente unidad',
+    optSpeedOwn: 'Velocidad: tus unidades',
+    optSpeedEnemy: 'Velocidad: el enemigo',
+    speed_normal: 'Normal',
+    speed_fast: 'Rápida',
+    speed_instant: 'Instantánea',
+    options: 'Opciones',
     help: 'Cómo se juega',
     newGame: 'Nueva partida',
     random: 'Al azar',
@@ -246,6 +276,22 @@ const TEXTS = {
     threatShort: 'Threat',
     fxCaptured: 'CAPTURED!',
     fxAmbush: 'AMBUSH!',
+    tipMove: 'Move',
+    tipCapture: 'Move and capture',
+    tipJoin: 'Join',
+    tipBoard: 'Board',
+    tipNone: 'Out of reach',
+    tipDanger: 'Enemies can hit you here',
+    undone: 'Move undone',
+    nothingToUndo: 'Nothing to undo',
+    optAutoWait: 'Wait automatically on drop',
+    optAutoNext: 'Jump to the next unit',
+    optSpeedOwn: 'Speed: your units',
+    optSpeedEnemy: 'Speed: enemy',
+    speed_normal: 'Normal',
+    speed_fast: 'Fast',
+    speed_instant: 'Instant',
+    options: 'Options',
     help: 'How to play',
     newGame: 'New game',
     random: 'Random',

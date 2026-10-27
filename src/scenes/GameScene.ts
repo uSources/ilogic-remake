@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { BUILDING, CLASSIC_RULES, HQ, MAP_H, MAP_W, MODERN_RULES, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
-import { samePos, seededRng } from '../core/geom';
+import { BUILDING, CLASSIC_RULES, HQ, MAP_H, MAP_W, MODERN_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import { diamond, grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
   attackFull,
@@ -10,6 +10,11 @@ import {
   buildingAt,
   buyOptions,
   canBuyAt,
+  canCapture,
+  canWalk,
+  hasAmmo,
+  inAttackRange,
+  passMap,
   capture,
   capturePointsOf,
   captureProgress,
@@ -52,10 +57,10 @@ import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../co
 import { randomSeed, seedToCode } from '../setup';
 import { markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules } from '../core/missions';
-import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM, type UIState } from '../hud/store';
+import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM, type UIState, type MoveTipVM } from '../hud/store';
 import { TILE } from '../layout';
 import { playMusic, stopMusic } from '../music';
-import { buildingLabel, saveSettings, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
+import { buildingLabel, saveSettings, settings, t, type Speed, terrainLabel, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
@@ -70,8 +75,20 @@ type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unlo
 
 type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
-type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'help' | 'music' | 'autosave' | 'surrender' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'replay', 'help', 'music', 'autosave', 'resume', 'surrender', 'quit'];
+type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
+const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'replay', 'options', 'help', 'resume', 'surrender', 'quit'];
+type OptionKey = 'music' | 'autosave' | 'autoWait' | 'autoNext' | 'speedOwn' | 'speedEnemy' | 'back';
+const OPTIONS_MENU: OptionKey[] = ['autoWait', 'autoNext', 'speedOwn', 'speedEnemy', 'music', 'autosave', 'back'];
+const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
+
+/** Que pasaria al soltar la unidad elegida en una casilla. */
+type Intent =
+  | { kind: 'none' }
+  | { kind: 'stay' }
+  | { kind: 'move'; to: Pos; capture: boolean }
+  | { kind: 'attack'; from: Pos; target: Unit }
+  | { kind: 'merge'; target: Unit }
+  | { kind: 'load'; target: Unit };
 
 interface MoveUndo {
   uid: number;
@@ -108,6 +125,23 @@ export class GameScene extends Phaser.Scene {
   private unloadSet = new Set<string>();
   private passenger: Unit | null = null;
   private undo: MoveUndo | null = null;
+
+  // Movimiento: camino trazado, arrastrar y soltar, deshacer
+  /** Camino que se esta trazando, de la unidad elegida al cursor (incluye la casilla de salida). */
+  private trail: Pos[] = [];
+  /** Casillas que bloquean el paso a la unidad elegida (enemigos que se ven). */
+  private block: boolean[][] | null = null;
+  /** Unidad cogida para arrastrar y soltar. */
+  private carry: { uid: number; ghost: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; touch: boolean } | null = null;
+  /** Pulsacion sobre una unidad propia que aun no se sabe si es un clic o un arrastre. */
+  private pick: { uid: number; x: number; y: number; touch: boolean; timer: Phaser.Time.TimerEvent | null } | null = null;
+  /** Casillas que el enemigo visible puede atacar el turno siguiente (al mover) y alcance de ataque de la elegida. */
+  private dangerMap: boolean[][] | null = null;
+  private attackZone: boolean[][] | null = null;
+  /** Estados anteriores para deshacer movimientos sin consecuencias (Ctrl+Z). */
+  private undoStack: string[] = [];
+  /** Ultimo movimiento confirmado (para el doble clic: mover y esperar). */
+  private lastCommit: { at: Pos; time: number } | null = null;
 
   // Partida
   private fromSave = false;
@@ -283,6 +317,14 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'map' && this.inspectUid === null) {
+      // Solo pasando por encima de una unidad propia: su alcance, en tenue.
+      const c = this.view.cursor;
+      const u = unitAt(this.s, c.x, c.y);
+      if (u && u.team === 0 && u.active && u.canMove && u.carrier === null && !this.enemyPlaying) {
+        const r = moveRange(this.s, u);
+        for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (r.steps[x]![y]! > 0) h.set(`${x},${y}`, 'hover');
+      }
     } else if (this.phase === 'map' && this.inspectUid !== null) {
       // Alcance de una unidad señalada: adonde llega y que puede atacar en su proximo turno.
       const u = unitById(this.s, this.inspectUid);
@@ -300,12 +342,15 @@ export class GameScene extends Phaser.Scene {
     return h;
   }
 
-  /** Camino previsto de la unidad seleccionada hasta el cursor. */
+  /** Camino previsto de la unidad seleccionada: el trazado hasta el cursor, o hasta la casilla desde la que atacaria. */
   private previewPath(): Pos[] | undefined {
     if (this.phase !== 'move' || !this.sel || !this.range) return undefined;
-    const c = this.view.cursor;
-    if (this.range.steps[c.x]![c.y]! > 0) return pathTo(this.range, this.sel, c);
-    return undefined;
+    const it = this.intentAt(this.view.cursor);
+    const dest = it.kind === 'move' ? it.to : it.kind === 'attack' ? it.from : null;
+    // Sin destino valido (fuera del alcance, agua...): se sigue viendo el camino trazado hasta donde llega.
+    if (!dest) return this.trail.length > 1 ? this.trail : undefined;
+    if (samePos(dest, this.sel)) return undefined;
+    return this.trailTo(dest);
   }
 
   private refresh(): void {
@@ -324,6 +369,8 @@ export class GameScene extends Phaser.Scene {
       hidden: this.hidden,
       path: this.previewPath(),
       threat,
+      attackZone: this.phase === 'move' ? this.attackZone : null,
+      danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
       goal: obj?.kind === 'escort' ? obj.to : null,
       vip: vipAt && !this.hidden.has(vipAt.uid) ? { x: vipAt.x, y: vipAt.y } : null,
@@ -377,7 +424,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Solo cambia el cursor: no hace falta redibujar unidades, salvo el camino previsto. */
   private cursorMoved(): void {
-    if (this.phase === 'move') this.refresh();
+    if (this.phase === 'move') {
+      this.updateTrail(this.view.cursor);
+      this.refresh();
+    } else if (this.phase === 'map') this.refresh();
     else {
       this.view.placeCursor(true);
       this.refreshHud();
@@ -399,7 +449,8 @@ export class GameScene extends Phaser.Scene {
       turn: this.enemyPlaying ? 'enemy' : 'player',
       busy,
       tile: busy ? null : this.tileInfo(c),
-      forecast: this.phase === 'attack' ? this.forecast(c) : null,
+      forecast: this.phase === 'attack' || this.phase === 'move' ? this.forecast(c) : null,
+      moveTip: this.phase === 'move' ? this.moveTip(c) : null,
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
       hint: busy ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? (this.inspectUid !== null ? t('hintInspect') : t('hintMap')) : '',
@@ -450,10 +501,20 @@ export class GameScene extends Phaser.Scene {
 
   private forecast(c: Pos): ForecastVM | null {
     if (!this.sel) return null;
-    const uid = this.attackSet.get(key(c));
-    const target = uid !== undefined ? unitById(this.s, uid) : undefined;
+    let target: Unit | undefined;
+    let atk: Unit = this.sel;
+    if (this.phase === 'move') {
+      // Al mover: si el cursor esta sobre un enemigo atacable, prevision desde la casilla desde la que se atacaria.
+      const it = this.intentAt(c);
+      if (it.kind !== 'attack') return null;
+      target = it.target;
+      atk = { ...this.sel, x: it.from.x, y: it.from.y };
+    } else {
+      const uid = this.attackSet.get(key(c));
+      target = uid !== undefined ? unitById(this.s, uid) : undefined;
+    }
     if (!target) return null;
-    const f = combatForecast(this.s, this.sel, target);
+    const f = combatForecast(this.s, atk, target);
     return {
       attackerIcon: unitKey(this.textures, this.s, { ...this.sel, active: true }),
       defenderIcon: unitKey(this.textures, this.s, target),
@@ -467,6 +528,33 @@ export class GameScene extends Phaser.Scene {
       counter: f.counter
         ? { low: f.counter.low, high: f.counter.high, lifeBefore: this.sel.life, lifeAfter: f.counter.lifeAfter, killChance: f.counter.killChance }
         : null,
+    };
+  }
+
+  /** Bocadillo junto al cursor al mover: movimiento gastado, defensa, combustible, peligro y lo que pasaria al soltar. */
+  private moveTip(c: Pos): MoveTipVM | null {
+    const u = this.sel,
+      r = this.range;
+    if (!u || !r) return null;
+    const it = this.intentAt(c);
+    if (it.kind === 'attack' || it.kind === 'stay') return null; // de eso se encarga la prevision de combate
+    const anchor = this.view.tileRectCss(c);
+    if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
+    const dest = it.kind === 'move' ? it.to : null;
+    const used = dest ? this.trailTo(dest).length - 1 : r.steps[c.x]![c.y]! || 1;
+    const terr = this.s.map[c.x]![c.y]!;
+    const b = buildingAt(this.s, c.x, c.y);
+    const prot = TERRAIN.protection[terr]! * (b ? BUILDING.protection[b.type]! : 1);
+    const stars = Math.max(0, Math.min(4, Math.round(((1 - prot) * 100) / 10)));
+    const action = it.kind === 'merge' ? t('tipJoin') : it.kind === 'load' ? t('tipBoard') : it.capture ? t('tipCapture') : t('tipMove');
+    return {
+      anchor,
+      action,
+      used,
+      max: r.maxSteps,
+      stars: it.kind === 'move' ? stars : undefined,
+      fuel: UNIT.maxfuel[u.type]! > 0 ? [u.fuel, Math.max(0, u.fuel - used)] : undefined,
+      danger: it.kind === 'move' && !!this.dangerMap?.[c.x]?.[c.y],
     };
   }
 
@@ -536,11 +624,33 @@ export class GameScene extends Phaser.Scene {
         title = `${t('day')} ${this.s.day}${RULES.dayLimit ? ` / ${RULES.dayLimit}` : ''}`;
         // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
         if (this.s.setup) subtitle = `${t('mapCode')}: ${seedToCode(this.s.setup.seed)} · ${this.s.setup.size}×${this.s.setup.size}`;
+        if (this.optionsOpen) {
+          title = t('options');
+          subtitle = undefined;
+          const onOff = (v: boolean) => (v ? t('on') : t('off'));
+          const label: Record<OptionKey, TextKey> = {
+            music: 'music',
+            autosave: 'autosave',
+            autoWait: 'optAutoWait',
+            autoNext: 'optAutoNext',
+            speedOwn: 'optSpeedOwn',
+            speedEnemy: 'optSpeedEnemy',
+            back: 'back',
+          };
+          items = OPTIONS_MENU.map((k) => ({
+            id: k,
+            label: t(label[k]),
+            hint:
+              k === 'music' ? onOff(settings.music) : k === 'autosave' ? onOff(settings.autosave) : k === 'autoWait' ? onOff(settings.autoWait)
+              : k === 'autoNext' ? onOff(settings.autoNext) : k === 'speedOwn' ? t(`speed_${settings.speedOwn}` as TextKey)
+              : k === 'speedEnemy' ? t(`speed_${settings.speedEnemy}` as TextKey) : 'Esc',
+          }));
+          break;
+        }
         items = GAME_MENU.map((k) => ({
           id: k,
           label: t(k as TextKey),
-          hint:
-            k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'music' ? (settings.music ? t('on') : t('off')) : k === 'autosave' ? (settings.autosave ? t('on') : t('off')) : undefined,
+          hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : undefined,
           danger: k === 'quit' || k === 'surrender',
           disabled: k === 'replay' && !this.lastEnemy,
         }));
@@ -647,10 +757,24 @@ export class GameScene extends Phaser.Scene {
       case 'Space':
         e.preventDefault();
         if (this.time.now < this.inputLockUntil || e.repeat) return;
+        // Mayusculas + Enter al mover: mover y esperar, sin menu.
+        if (this.phase === 'move') return void this.commit(this.view.cursor, { wait: e.shiftKey });
         return this.accept();
-      case 'Escape':
       case 'Backspace':
+        // Al trazar un camino, Retroceso quita la ultima casilla.
+        if (this.phase === 'move' && this.trail.length > 1) {
+          this.trail = this.trail.slice(0, -1);
+          this.view.cursor = { ...this.trail[this.trail.length - 1]! };
+          this.view.ensureVisible(this.view.cursor, 3);
+          return this.refresh();
+        }
         return this.back();
+      case 'Escape':
+        if (this.carry) return this.cancelCarry();
+        return this.back();
+      case 'KeyZ':
+        if ((e.ctrlKey || e.metaKey) && this.phase === 'map') this.undoLast();
+        return;
       case 'KeyE':
         if (this.phase === 'map' || this.phase === 'gameMenu') this.requestEndTurn();
         return;
@@ -727,6 +851,17 @@ export class GameScene extends Phaser.Scene {
       }
       return;
     }
+    // Unidad cogida: sigue al puntero, encajada en las casillas.
+    if (this.carry) return this.carryTo(p);
+    if (this.pick) {
+      const moved = Math.hypot(p.x - this.pick.x, p.y - this.pick.y) > DRAG_THRESHOLD * (window.devicePixelRatio || 1);
+      if (moved && !this.pick.touch) {
+        this.beginCarry();
+        return this.carryTo(p);
+      }
+      // Con el dedo, moverse antes de que la unidad se levante es desplazar el mapa.
+      if (moved && this.pick.touch) this.dropPick();
+    }
     // Arrastrar el mapa.
     if (this.drag && p.isDown) {
       const dx = p.x - this.drag.x,
@@ -753,6 +888,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (p.rightButtonDown()) {
+      if (this.carry) return this.cancelCarry();
       // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
       const tile = this.view.tileAtScreen(p.x, p.y);
       const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
@@ -760,6 +896,16 @@ export class GameScene extends Phaser.Scene {
       return this.back();
     }
     this.drag = { x: p.x, y: p.y, moved: false };
+    // ¿Se coge una unidad propia? (en el mapa, o la que esta elegida al mover)
+    const tile = this.view.tileAtScreen(p.x, p.y);
+    const pu = tile ? unitAt(this.s, tile.x, tile.y) : undefined;
+    const pickable =
+      !!pu && pu.team === 0 && pu.active && pu.canMove && pu.carrier === null && (this.phase === 'map' || (this.phase === 'move' && this.sel?.uid === pu.uid));
+    if (pickable && this.touches.size < 1) {
+      this.pick = { uid: pu.uid, x: p.x, y: p.y, touch: p.wasTouch, timer: null };
+      // Con el dedo hay que mantener pulsado un momento para levantarla.
+      if (p.wasTouch) this.pick.timer = this.time.delayedCall(250, () => this.beginCarry());
+    }
     if (p.wasTouch) {
       this.touchHint();
       this.touches.set(p.id, { x: p.x, y: p.y });
@@ -769,7 +915,9 @@ export class GameScene extends Phaser.Scene {
         this.pinch = { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
         this.drag = null;
         this.cancelLongPress();
-      } else {
+        this.dropPick();
+        if (this.carry) this.cancelCarry();
+      } else if (!this.pick) {
         this.cancelLongPress();
         const at = { x: p.x, y: p.y };
         this.longPress = this.time.delayedCall(480, () => this.onLongPress(at));
@@ -813,6 +961,12 @@ export class GameScene extends Phaser.Scene {
 
   private onPointerUp(p: Phaser.Input.Pointer): void {
     this.cancelLongPress();
+    if (this.carry) {
+      this.touches.delete(p.id);
+      this.drag = null;
+      return this.dropCarry(this.view.tileAtScreen(p.x, p.y), !!(p.event as MouseEvent | undefined)?.shiftKey);
+    }
+    this.dropPick();
     if (this.touches.delete(p.id) && this.pinch) {
       // Fin del pellizco: ignorar los dedos que quedan hasta que se levanten todos.
       if (this.touches.size === 0) this.pinch = null;
@@ -824,10 +978,20 @@ export class GameScene extends Phaser.Scene {
     if (this.ended || this.phase === 'busy' || p.rightButtonReleased() || !drag || drag.moved) return;
     if (this.time.now < this.inputLockUntil) return;
     // (La barra superior y los menus son HTML: sus clics no llegan aqui.)
+    const tile = this.view.tileAtScreen(p.x, p.y);
+    // Doble clic en el destino: mover y esperar.
+    if (this.phase === 'unitMenu' && this.sel && tile && samePos(tile, this.sel) && this.lastCommit && this.time.now - this.lastCommit.time < 450) {
+      return this.waitSelected();
+    }
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
     if (MENU_PHASES.includes(this.phase)) return this.back();
-    const tile = this.view.tileAtScreen(p.x, p.y);
     if (!tile) return;
+    if (this.phase === 'move') {
+      // Al mover, un clic es como soltar: en un enemigo, ataca; en un edificio, se mueve (y sale el menu).
+      if (p.wasTouch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
+      this.moveCursorTo(tile, false);
+      return void this.commit(tile, { wait: !!(p.event as MouseEvent | undefined)?.shiftKey });
+    }
     // Tactil: primer toque mueve el cursor, segundo toque confirma.
     if (p.wasTouch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
     this.moveCursorTo(tile, false);
@@ -838,7 +1002,16 @@ export class GameScene extends Phaser.Scene {
     this.view.tick(time, delta);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;
-    if (this.pointerInside && !this.ended && !this.drag && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
+    if (this.carry && p.isDown) {
+      // Llevando una unidad cerca del borde: el mapa se desplaza solo (tambien con el dedo).
+      const edge = (this.carry.touch ? 40 : 24) * (window.devicePixelRatio || 1);
+      const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
+      const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
+      if (dx || dy) {
+        this.view.scrollBy(dx * delta * 0.6 * (window.devicePixelRatio || 1), dy * delta * 0.6 * (window.devicePixelRatio || 1));
+        this.carryTo(p);
+      }
+    } else if (this.pointerInside && !this.ended && !this.drag && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
       const edge = 14 * (window.devicePixelRatio || 1);
       const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
       const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
@@ -886,6 +1059,12 @@ export class GameScene extends Phaser.Scene {
         }
         return this.openGameMenu();
       case 'gameMenu':
+        if (this.optionsOpen) {
+          this.optionsOpen = false;
+          this.menuSel = GAME_MENU.indexOf('options');
+          return this.refreshHud();
+        }
+        return this.toMap();
       case 'buy':
       case 'move':
         return this.toMap();
@@ -903,7 +1082,12 @@ export class GameScene extends Phaser.Scene {
 
   private toMap(): void {
     this.phase = 'map';
+    this.optionsOpen = false;
     this.inspectUid = null;
+    this.trail = [];
+    this.block = null;
+    this.dangerMap = null;
+    this.attackZone = null;
     this.sel = null;
     this.selBuilding = null;
     this.range = null;
@@ -926,6 +1110,7 @@ export class GameScene extends Phaser.Scene {
 
   private openGameMenu(): void {
     if (this.phase !== 'map' && this.phase !== 'gameMenu') this.abandonSelection();
+    this.optionsOpen = false;
     this.menuSel = 0;
     this.phase = 'gameMenu';
     this.refresh();
@@ -970,27 +1155,348 @@ export class GameScene extends Phaser.Scene {
     this.range = moveRange(this.s, u);
     this.mergeSet = new Map(mergeTargets(this.s, u, this.range).map((o) => [key(o), o.uid]));
     this.loadSet = new Map(loadTargets(this.s, u, this.range).map((o) => [key(o), o.uid]));
+    this.trail = [{ x: u.x, y: u.y }];
+    this.block = passMap(this.s, u).block;
+    this.dangerMap = threatMap(this.s, 1, 0);
+    this.attackZone = this.computeAttackZone(u, this.range);
     this.phase = 'move';
+    this.updateTrail(this.view.cursor);
     this.refresh();
   }
 
+  /** Todo lo que la unidad podria atacar este turno (moviendose, si puede mover y disparar). */
+  private computeAttackZone(u: Unit, r: MoveRange): boolean[][] | null {
+    if (!UNIT.canfight[u.type] || UNIT.alcance[u.type]! === 0 || !hasAmmo(u) || !u.canFire) return null;
+    const z = grid(false);
+    const minR = UNIT.minalc[u.type]!,
+      maxR = UNIT.alcance[u.type]!;
+    const origins: Pos[] = [{ x: u.x, y: u.y }];
+    if (minR === 0) for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
+    for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) z[p.x]![p.y] = true;
+    return z;
+  }
+
+  // -------------------------------------------------------------------------
+  // Mover: camino trazado, intencion al soltar, arrastrar y soltar, deshacer
+  // -------------------------------------------------------------------------
+
+  /** Alarga, recorta o rehace el camino trazado al pasar el cursor por una casilla. */
+  private updateTrail(t: Pos): void {
+    const u = this.sel,
+      r = this.range;
+    if (!u || !r || !this.block) return;
+    const trail = this.trail.length ? this.trail : [{ x: u.x, y: u.y }];
+    const i = trail.findIndex((p) => samePos(p, t));
+    if (i >= 0) {
+      this.trail = trail.slice(0, i + 1);
+      return;
+    }
+    const end = trail[trail.length - 1]!;
+    const mt = UNIT.movtype[u.type]!;
+    if (manhattan(end, t) === 1 && trail.length <= r.maxSteps && canWalk(this.s, t.x, t.y, mt) && !this.block[t.x]![t.y]) {
+      this.trail = [...trail, { x: t.x, y: t.y }];
+      return;
+    }
+    // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
+    if (r.prev[t.x]![t.y]) this.trail = pathTo(r, u, t);
+  }
+
+  /** Camino hasta `dest`: el trazado si acaba ahi, si no el mas corto. */
+  private trailTo(dest: Pos): Pos[] {
+    const end = this.trail[this.trail.length - 1];
+    if (end && samePos(end, dest) && this.sel && samePos(this.trail[0]!, this.sel)) return this.trail;
+    const i = this.trail.findIndex((p) => samePos(p, dest));
+    if (i > 0) return this.trail.slice(0, i + 1);
+    return pathTo(this.range!, this.sel!, dest);
+  }
+
+  /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */
+  private intentAt(t: Pos): Intent {
+    const u = this.sel,
+      r = this.range;
+    if (!u || !r || !inBounds(t.x, t.y)) return { kind: 'none' };
+    if (samePos(t, u)) return { kind: 'stay' };
+    const mergeUid = this.mergeSet.get(key(t));
+    if (mergeUid !== undefined) return { kind: 'merge', target: unitById(this.s, mergeUid)! };
+    const loadUid = this.loadSet.get(key(t));
+    if (loadUid !== undefined) return { kind: 'load', target: unitById(this.s, loadUid)! };
+    const enemy = unitAt(this.s, t.x, t.y);
+    if (enemy && enemy.team !== u.team && enemy.carrier === null && this.visibleToPlayer(enemy)) {
+      const from = this.attackFrom(enemy);
+      return from ? { kind: 'attack', from, target: enemy } : { kind: 'none' };
+    }
+    if (r.steps[t.x]![t.y]! > 0) {
+      const b = buildingAt(this.s, t.x, t.y);
+      return { kind: 'move', to: { x: t.x, y: t.y }, capture: !!b && b.owner !== u.team && !!UNIT.cancapt[u.type] };
+    }
+    return { kind: 'none' };
+  }
+
+  /** Mejor casilla desde la que atacar a `t`: la del camino trazado si vale, si no la mas cercana a el, con mas defensa. */
+  private attackFrom(t: Unit): Pos | null {
+    const u = this.sel!,
+      r = this.range!;
+    if (!UNIT.canfight[u.type] || !hasAmmo(u) || !u.canFire || !(POWER[u.type]![t.type]! > 0)) return null;
+    if (UNIT.minalc[u.type]! > 0) return inAttackRange(u.type, u, t) ? { x: u.x, y: u.y } : null;
+    const cands: Pos[] = [];
+    if (inAttackRange(u.type, u, t)) cands.push({ x: u.x, y: u.y });
+    for (let x = 0; x < MAP_W; x++)
+      for (let y = 0; y < MAP_H; y++) if (r.steps[x]![y]! > 0 && inAttackRange(u.type, { x, y }, t)) cands.push({ x, y });
+    if (!cands.length) return null;
+    const end = this.trail[this.trail.length - 1] ?? u;
+    const onTrail = cands.find((c) => samePos(c, end));
+    if (onTrail) return onTrail;
+    const prot = (p: Pos) => TERRAIN.protection[this.s.map[p.x]![p.y]!]! * (buildingAt(this.s, p.x, p.y) ? BUILDING.protection[buildingAt(this.s, p.x, p.y)!.type]! : 1);
+    cands.sort((a, b) => manhattan(end, a) - manhattan(end, b) || prot(a) - prot(b) || manhattan(u, a) - manhattan(u, b));
+    return cands[0]!;
+  }
+
+  /**
+   * Confirmar el movimiento en una casilla (soltar, clic o Enter). `drop`: se ha soltado arrastrando,
+   * y entonces se hace directamente lo logico (capturar, esperar si no hay nada mas...). `wait`: mover y esperar.
+   */
+  private async commit(t: Pos, opts: { drop?: boolean; wait?: boolean } = {}): Promise<void> {
+    const u = this.sel,
+      r = this.range;
+    if (!u || !r || this.phase !== 'move') return;
+    const it = this.intentAt(t);
+    const ghost = unitKey(this.textures, this.s, u);
+    switch (it.kind) {
+      case 'none':
+        return this.toMap();
+      case 'stay':
+        if (opts.wait) return this.waitSelected();
+        return this.openUnitMenu();
+      case 'merge': {
+        this.clearUndo();
+        const path = merge(this.s, u, it.target);
+        if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'merge', uid: u.uid, into: it.target.uid, path }], ghost);
+        return this.afterAction();
+      }
+      case 'load': {
+        this.clearUndo();
+        const path = load(this.s, u, it.target);
+        if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'load', uid: u.uid, into: it.target.uid, path }], ghost);
+        return this.afterAction();
+      }
+      case 'attack': {
+        this.clearUndo();
+        if (!samePos(it.from, u)) {
+          const path = moveUnit(this.s, u, it.from, r, this.trailTo(it.from));
+          if (!path) return this.toMap();
+          this.range = null;
+          await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+          if (path.ambush) return this.afterAction();
+        }
+        const target = unitById(this.s, it.target.uid);
+        if (!target) return this.afterAction();
+        const res = attackFull(this.s, u, target, Math.random);
+        await this.playEvents([
+          { kind: 'attack', attacker: u.uid, target: { x: target.x, y: target.y }, damage: res.damage, killed: res.killed, counter: res.counter, attackerKilled: res.attackerKilled },
+        ]);
+        return this.afterAction();
+      }
+      case 'move': {
+        const before = serialize(this.s);
+        const seenBefore = this.visibleEnemies();
+        const snapshot: MoveUndo = { uid: u.uid, x: u.x, y: u.y, fuel: u.fuel, canFire: u.canFire };
+        const path = moveUnit(this.s, u, it.to, r, this.trailTo(it.to));
+        if (!path) return;
+        this.range = null;
+        await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+        if (path.ambush) {
+          this.clearUndo();
+          return this.afterAction();
+        }
+        // Se puede deshacer si no ha descubierto a nadie.
+        if (this.visibleEnemies() === seenBefore) this.undoStack.push(before);
+        else this.clearUndo();
+        this.lastCommit = { at: { ...it.to }, time: this.time.now };
+        if (opts.wait) return this.waitSelected();
+        if (opts.drop && it.capture && canCapture(this.s, u)) {
+          this.actions = ['capture'];
+          this.menuSel = 0;
+          this.phase = 'unitMenu';
+          return this.acceptUnitMenu();
+        }
+        if (opts.drop && settings.autoWait) {
+          const av = unitActions(this.s, u);
+          if (!av.attack && !av.capture && !av.unload && !av.supply) return this.waitSelected();
+        }
+        this.undo = snapshot;
+        return this.openUnitMenu();
+      }
+    }
+  }
+
+  /** Uids de las unidades enemigas que se ven ahora (para saber si un movimiento ha descubierto a alguien). */
+  private visibleEnemies(): string {
+    const vis = visibility(this.s, 0);
+    return this.s.units
+      .filter((o) => o.team === 1 && o.carrier === null && vis[o.x]![o.y])
+      .map((o) => o.uid)
+      .sort((a, b) => a - b)
+      .join(',');
+  }
+
+  private waitSelected(): void {
+    if (this.sel) wait(this.sel);
+    this.afterAction();
+  }
+
+  private clearUndo(): void {
+    this.undoStack = [];
+  }
+
+  /** Ctrl+Z: volver al estado de antes del ultimo movimiento (si no descubrio nada ni tuvo consecuencias). */
+  private undoLast(): void {
+    const prev = this.undoStack.pop();
+    if (!prev) return showToast(t('nothingToUndo'));
+    const st = deserialize(prev);
+    if (!st) return;
+    this.s = st;
+    this.toMap();
+    showToast(t('undone'));
+  }
+
+  /** Levantar la unidad de la pulsacion actual (arrastrar y soltar). */
+  private beginCarry(): void {
+    const pick = this.pick;
+    this.pick = null;
+    if (!pick || this.ended || this.carry) return;
+    pick.timer?.remove(false);
+    const u = unitById(this.s, pick.uid);
+    if (!u || !u.active || !u.canMove) return;
+    this.drag = null;
+    this.cancelLongPress();
+    if (this.phase !== 'move' || this.sel?.uid !== u.uid) {
+      if (this.phase !== 'map') this.toMap();
+      this.view.cursor = { x: u.x, y: u.y };
+      this.selectUnit(u);
+    }
+    if (pick.touch) navigator.vibrate?.(10);
+    const key = unitKey(this.textures, this.s, u);
+    if (!key) return;
+    // Sombra en el suelo y la unidad "levantada" 3 pixeles.
+    const shadow = this.add.rectangle(u.x * TILE + TILE / 2, (u.y + 1) * TILE - 3, 22, 5, 0x000000, 0.35);
+    this.view.addFx(shadow);
+    const ghost = this.view.ghost(key, u);
+    ghost.y -= 3;
+    this.carry = { uid: u.uid, ghost, shadow, touch: pick.touch };
+    this.hidden.add(u.uid);
+    this.refresh();
+  }
+
+  /** El puntero se mueve con la unidad cogida: la unidad salta de casilla en casilla y el camino la sigue. */
+  private carryTo(p: Phaser.Input.Pointer): void {
+    const c = this.carry;
+    if (!c) return;
+    const tile = this.view.tileAtScreen(p.x, p.y);
+    if (!tile || samePos(tile, this.view.cursor)) return;
+    this.view.cursor = { ...tile };
+    this.updateTrail(tile);
+    const it = this.intentAt(tile);
+    // Sobre un enemigo, la unidad se coloca en la casilla desde la que atacaria (y el cursor marca al enemigo).
+    const at = it.kind === 'attack' ? it.from : tile;
+    c.ghost.setPosition(at.x * TILE + TILE / 2, (at.y + 1) * TILE - 3);
+    c.shadow.setPosition(at.x * TILE + TILE / 2, (at.y + 1) * TILE - 3);
+    if (it.kind === 'none') c.ghost.setTint(0xff9090).setAlpha(0.7);
+    else c.ghost.clearTint().setAlpha(1);
+    this.refresh();
+  }
+
+  /** Soltar la unidad cogida. Fuera del alcance (o en su sitio) vuelve sin hacer nada. */
+  private dropCarry(tile: Pos | null, shift: boolean): void {
+    const c = this.carry;
+    if (!c) return;
+    this.carry = null;
+    this.hidden.delete(c.uid);
+    const it = tile ? this.intentAt(tile) : { kind: 'none' as const };
+    if (it.kind === 'none' || it.kind === 'stay') {
+      void this.snapBack(c);
+      return this.toMap();
+    }
+    c.ghost.destroy();
+    c.shadow.destroy();
+    this.view.cursor = { ...tile! };
+    void this.commit(tile!, { drop: true, wait: shift });
+  }
+
+  private cancelCarry(): void {
+    const c = this.carry;
+    if (!c) return;
+    this.carry = null;
+    this.hidden.delete(c.uid);
+    void this.snapBack(c);
+    this.toMap();
+  }
+
+  /** Animacion de "vuelve a su sitio" de la unidad cogida. */
+  private async snapBack(c: NonNullable<GameScene['carry']>): Promise<void> {
+    const u = unitById(this.s, c.uid);
+    c.shadow.destroy();
+    if (!u || reducedMotion()) return void c.ghost.destroy();
+    c.ghost.clearTint();
+    await new Promise<void>((resolve) =>
+      this.tweens.add({ targets: c.ghost, x: u.x * TILE + TILE / 2, y: (u.y + 1) * TILE, duration: 140, ease: 'Stepped', easeParams: [4], onComplete: () => resolve() }),
+    );
+    c.ghost.destroy();
+  }
+
+  /** Olvidar una pulsacion pendiente sobre una unidad (ha sido un clic, o se ha desplazado el mapa). */
+  private dropPick(): void {
+    this.pick?.timer?.remove(false);
+    this.pick = null;
+  }
+
+  /** Submenu de opciones dentro del menu de partida. */
+  private optionsOpen = false;
+
+  private acceptOptions(): void {
+    const k = OPTIONS_MENU[this.menuSel];
+    const next = (v: Speed) => SPEEDS[(SPEEDS.indexOf(v) + 1) % SPEEDS.length]!;
+    switch (k) {
+      case 'back':
+        this.optionsOpen = false;
+        this.menuSel = GAME_MENU.indexOf('options');
+        return this.refreshHud();
+      case 'music':
+        settings.music = !settings.music;
+        if (settings.music) playMusic(this, 'game', true);
+        else stopMusic();
+        break;
+      case 'autosave':
+        settings.autosave = !settings.autosave;
+        break;
+      case 'autoWait':
+        settings.autoWait = !settings.autoWait;
+        break;
+      case 'autoNext':
+        settings.autoNext = !settings.autoNext;
+        break;
+      case 'speedOwn':
+        settings.speedOwn = next(settings.speedOwn);
+        break;
+      case 'speedEnemy':
+        settings.speedEnemy = next(settings.speedEnemy);
+        break;
+    }
+    saveSettings();
+    this.refreshHud();
+  }
+
   private acceptGameMenu(): void {
+    if (this.optionsOpen) return this.acceptOptions();
     switch (GAME_MENU[this.menuSel]) {
+      case 'options':
+        this.optionsOpen = true;
+        this.menuSel = 0;
+        return this.refreshHud();
       case 'resume':
         return this.toMap();
       case 'help':
         this.toMap();
         return ui.set({ help: true });
-      case 'music':
-        settings.music = !settings.music;
-        saveSettings();
-        if (settings.music) playMusic(this, 'game', true);
-        else stopMusic();
-        return this.refreshHud();
-      case 'autosave':
-        settings.autosave = !settings.autosave;
-        saveSettings();
-        return this.refreshHud();
       case 'save':
         if (writeSave(serialize(this.s))) {
           this.savedThisGame = true;
@@ -1031,6 +1537,7 @@ export class GameScene extends Phaser.Scene {
     const u = this.sel;
     if (!u) return this.toMap();
     if (this.undo && this.undo.uid === u.uid) {
+      this.undoStack.pop();
       u.x = this.undo.x;
       u.y = this.undo.y;
       u.fuel = this.undo.fuel;
@@ -1043,39 +1550,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private async acceptMove(c: Pos): Promise<void> {
-    const u = this.sel;
-    if (!u || !this.range) return;
-    const mergeUid = this.mergeSet.get(key(c));
-    const loadUid = this.loadSet.get(key(c));
-    if (mergeUid !== undefined) {
-      const target = unitById(this.s, mergeUid)!;
-      const ghost = unitKey(this.textures, this.s, u);
-      const path = merge(this.s, u, target);
-      if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'merge', uid: u.uid, into: target.uid, path }], ghost);
-      return this.afterAction();
-    }
-    if (loadUid !== undefined) {
-      const tr = unitById(this.s, loadUid)!;
-      const ghost = unitKey(this.textures, this.s, u);
-      const path = load(this.s, u, tr);
-      if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'load', uid: u.uid, into: tr.uid, path }], ghost);
-      return this.afterAction();
-    }
-    if (samePos(c, u)) return this.openUnitMenu();
-    if (this.range.steps[c.x]![c.y]! > 0) {
-      const snapshot: MoveUndo = { uid: u.uid, x: u.x, y: u.y, fuel: u.fuel, canFire: u.canFire };
-      const ghost = unitKey(this.textures, this.s, u);
-      const path = moveUnit(this.s, u, c, this.range);
-      if (!path) return;
-      this.range = null;
-      await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
-      // Emboscada: la unidad ha perdido el turno y no se puede deshacer (ya se sabe donde estaba el enemigo).
-      if (path.ambush) return this.afterAction();
-      this.undo = snapshot;
-      return this.openUnitMenu();
-    }
-    this.toMap();
+    return this.commit(c);
   }
+
 
   private acceptUnitMenu(): void {
     const u = this.sel;
@@ -1106,6 +1583,7 @@ export class GameScene extends Phaser.Scene {
         this.phase = 'unloadPick';
         return this.refresh();
       case 'supply':
+        this.clearUndo();
         supply(this.s, u);
         return this.afterAction();
       case 'wait':
@@ -1119,6 +1597,7 @@ export class GameScene extends Phaser.Scene {
           this.deleteArmed = true;
           return showToast(t('confirmDelete'));
         }
+        this.clearUndo();
         removeUnit(this.s, u.uid);
         return this.afterAction();
     }
@@ -1155,7 +1634,10 @@ export class GameScene extends Phaser.Scene {
       this.phase = 'unloadPick';
       return this.refresh();
     }
-    if (unload(this.s, this.sel, this.passenger, c)) this.afterAction();
+    if (unload(this.s, this.sel, this.passenger, c)) {
+      this.clearUndo();
+      this.afterAction();
+    }
   }
 
   private acceptBuy(): void {
@@ -1171,6 +1653,8 @@ export class GameScene extends Phaser.Scene {
   private afterAction(): void {
     if (this.checkEnd()) return;
     this.toMap();
+    // Opcion: el cursor salta a la siguiente unidad sin mover.
+    if (settings.autoNext && this.idleUnits().length) this.nextIdle();
   }
 
   private checkEnd(): boolean {
@@ -1278,15 +1762,17 @@ export class GameScene extends Phaser.Scene {
 
   private async enemyTurn(): Promise<void> {
     if (this.phase === 'busy' || this.ended) return;
+    this.clearUndo();
     this.abandonSelection();
     const cam = this.cameras.main;
     const saved = { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
     this.phase = 'busy';
     this.enemyPlaying = true;
-    this.fastForward = false;
+    // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
+    this.fastForward = settings.speedEnemy === 'instant';
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('enemyTurn'), 'red');
-    await this.wait(900);
+    await this.wait(this.fastForward ? 300 : 900);
     // Semilla propia para este turno: asi se puede repetir exactamente (menu > Repetir turno enemigo).
     const before = serialize(this.s);
     const seed = randomSeed();
@@ -1329,6 +1815,12 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Milisegundos por casilla al mover, segun la velocidad elegida (tuyas o del enemigo). */
+  private stepMs(): number {
+    const sp = this.enemyPlaying ? settings.speedEnemy : settings.speedOwn;
+    return sp === 'instant' ? 1 : sp === 'fast' ? Math.round(STEP_MS / 2) : STEP_MS;
+  }
+
   private wait(ms: number): Promise<void> {
     if (ms <= 0) return Promise.resolve();
     return new Promise((resolve) => this.time.delayedCall(ms, resolve));
@@ -1348,10 +1840,13 @@ export class GameScene extends Phaser.Scene {
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
   private async playEvents(events: GameEvent[], ghostKey?: string | null): Promise<void> {
     const prevPhase = this.phase;
+    if (!this.enemyPlaying && !this.replaying && settings.speedOwn === 'instant') this.fastForward = true;
     this.phase = 'busy';
     this.view.placeCursor(false);
     this.refreshHud();
     for (const ev of events) {
+      // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
+      if (!this.enemyPlaying && ev.kind !== 'move') this.clearUndo();
       if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
       if (!this.replaying && !this.enemyPlaying) this.tutorialEvents.push(ev);
       switch (ev.kind) {
@@ -1457,9 +1952,14 @@ export class GameScene extends Phaser.Scene {
       const prev = path[i - 1]!;
       if (p.x !== prev.x) img.setFlipX(p.x < prev.x);
       await new Promise<void>((resolve) =>
-        this.tweens.add({ targets: img, x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE, duration: this.fastForward ? 1 : STEP_MS, onComplete: () => resolve() }),
+        this.tweens.add({ targets: img, x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE, duration: this.fastForward ? 1 : this.stepMs(), onComplete: () => resolve() }),
       );
       img.setVisible(shown);
+    }
+    // Al llegar, un poco de polvo (solo las unidades propias, que se ven siempre).
+    const last = path[path.length - 1]!;
+    if (showAll && path.length > 1 && !this.fastForward && this.stepMs() > 1) {
+      void burst(this, this.view, { x: last.x * TILE + TILE / 2, y: (last.y + 1) * TILE - 3 }, { colors: COLORS.smoke, count: 6, radius: 10, size: 2, duration: 260 });
     }
     img.destroy();
     this.hidden.delete(uid);

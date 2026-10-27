@@ -301,3 +301,13 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 .missionpanel .mp-tip { margin-top: 4px; padding-top: 6px; border-top: 3px solid var(--lo); font-size: 15px; line-height: 1.35; color: var(--text); }
 .missionpanel .mp-tip .key { font-size: 11px; }
 @media (max-width: 720px) { .missionpanel { top: 112px; left: 10px; width: calc(100vw - 20px); padding: 8px 10px; } .missionpanel .mp-obj, .missionpanel .mp-tip { font-size: 13px; } }
+
+/* Bocadillo al mover */
+.movetip { position: absolute; display: flex; align-items: center; gap: 8px; padding: 4px 8px; font-size: 13px; pointer-events: none; white-space: nowrap; }
+.movetip .mt-act { font-family: var(--display); font-size: 12px; }
+.movetip .num { font-size: 12px; }
+.movetip .gold { color: var(--gold); letter-spacing: 1px; }
+.movetip .mt-fuel { display: flex; align-items: center; gap: 3px; }
+.movetip .mt-fuel .px-icon { width: 14px; height: 14px; }
+.movetip .mt-danger { color: var(--red); font-size: 15px; }
+.movetip.bad { background: #4a1714; }

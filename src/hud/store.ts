@@ -64,6 +64,18 @@ export interface UnitVM {
   cargo?: string;
 }
 
+/** Bocadillo junto al cursor al mover una unidad. */
+export interface MoveTipVM {
+  anchor: Anchor;
+  action: string;
+  invalid?: boolean;
+  used?: number;
+  max?: number;
+  stars?: number;
+  fuel?: [number, number];
+  danger?: boolean;
+}
+
 export interface TileVM {
   terrain: { key: string; name: string; defense: number };
   building?: {
@@ -128,6 +140,7 @@ export interface UIState {
   busy: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;
+  moveTip: MoveTipVM | null;
   tile: TileVM | null;
   cursorScreen: { x: number; y: number };
   idle: IdleVM[];
@@ -206,6 +219,7 @@ const initial: UIState = {
   busy: false,
   menu: null,
   forecast: null,
+  moveTip: null,
   tile: null,
   cursorScreen: { x: 0, y: 0 },
   idle: [],
