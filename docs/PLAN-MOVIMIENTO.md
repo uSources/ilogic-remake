@@ -11,6 +11,61 @@
 - **Al seleccionar:** se ve adónde se puede ir, pero no a qué se podría atacar desde allí. Hay que mover, abrir el menú y elegir Atacar para descubrirlo.
 - **Combustible:** gastar casi todo no avisa. Un avión puede quedarse sin combustible lejos de un aeropuerto sin que el jugador se dé cuenta.
 
+## Fase M0: mover con las manos (arrastrar y soltar)
+
+Hoy mover son tres pasos: pulsar la unidad, pulsar el destino y elegir en un menú. La idea es que mover se sienta físico: **coger la unidad, llevarla y soltarla**, y que al soltar pase lo lógico sin más clics. Los clics de siempre siguen funcionando, igual que el teclado.
+
+### Coger
+- **Ratón:** pulsar sobre una unidad propia y arrastrar más de unos píxeles la "levanta".
+  - El sprite sube 2 píxeles y deja una sombra en su casilla.
+  - Aparece su alcance: azul para moverse y un borde rojo para lo que podría atacar.
+- **Táctil:** mantener pulsado 0,25 s sobre la unidad la levanta, con una pequeña vibración. Luego se arrastra con el dedo.
+- **Teclado:** Espacio sobre la unidad la levanta, las flechas la llevan y Espacio la suelta.
+- **Sin seleccionar, solo pasando por encima** de una unidad propia, su alcance se ve en tenue. Así se puede planear sin tocar nada.
+
+### Llevar
+- **La unidad fantasma sigue al puntero**, encajada en las casillas, y **el camino se dibuja por donde arrastras.** Es una flecha pixel con esquinas y punta, como en Advance Wars.
+  - Si vuelves atrás, el camino se recorta.
+  - Si te pasas del movimiento, se recalcula el más corto hasta donde estás.
+- **Bocadillo junto al puntero:**
+  - movimiento gastado y restante, por ejemplo "3/5";
+  - defensa del terreno de esa casilla (estrellas);
+  - combustible que quedaría;
+  - un icono de peligro si el enemigo visible puede atacar ahí el turno siguiente.
+- **Casillas no válidas:** fuera del alcance o ocupadas, el fantasma se pone rojo y el cursor muestra una ✕.
+- **Bordes de la pantalla:** si arrastras cerca de un borde, el mapa se desplaza solo, así que se puede llevar una unidad a cualquier punto del alcance aunque no se vea entero.
+
+### Soltar: pasa lo que tiene sentido
+- **En una casilla vacía:** se mueve y se abre el menú de acciones, con la opción más probable ya marcada.
+  - Si no hay nada más que hacer, la unidad espera sola. Se puede desactivar.
+- **Sobre un enemigo atacable:**
+  - la unidad va a la casilla desde la que llegaba tu arrastre (la última del camino junto al enemigo);
+  - se ve la previsión de combate y al soltar ataca.
+  - Si el enemigo está a distancia, para la artillería, ataca sin moverse.
+- **Sobre un edificio capturable:** se mueve y captura directamente, mostrando "20 → 10".
+- **Sobre una unidad igual:** se unen. **Sobre un transporte:** sube.
+- **Fuera del alcance, sobre la propia casilla o con Esc o clic derecho mientras arrastras:** la unidad vuelve a su sitio con una pequeña animación. No ha pasado nada.
+- **Mayúsculas al soltar:** mover y esperar, sin menú.
+
+### Sensación
+- **Al soltar:** la unidad recorre el camino casilla a casilla y aterriza con un poco de polvo pixel.
+- **Sonido opcional** al coger, al soltar y al cancelar, si se añaden efectos de sonido.
+- **Deshacer con Ctrl+Z** el último movimiento, mientras no haya revelado nada, aparte del "Atrás" del menú.
+
+### Órdenes de varios turnos (opcional)
+- **Arrastrar más allá del alcance:**
+  - la unidad se queda con una orden "ir hacia allí", marcada con una línea de puntos;
+  - cada turno avanza sola hasta llegar, salvo que la muevas tú.
+  - Va bien en mapas grandes.
+- **Mover en grupo:**
+  - con mayúsculas y arrastrar en el mapa se selecciona un recuadro de unidades;
+  - al soltar en un punto, cada una va lo más cerca posible, sin pisarse.
+
+**Hecho cuando:**
+- se pueda jugar un turno entero solo arrastrando, sin abrir ningún menú, salvo para comprar;
+- con ratón, dedo y teclado;
+- funcione en los tres tamaños de pantalla probados.
+
 ## Fase M1: el terreno cuesta
 
 - **Coste de movimiento por tipo de unidad y terreno**, como en Advance Wars. Por ejemplo:
@@ -54,14 +109,9 @@
    - la ficha enseña cómo quedarían, por ejemplo "Comb. 46 → 38";
    - si un avión no podría volver a un aeropuerto propio, sale el aviso "Sin combustible para volver".
 
-## Fase M4: el jugador traza el camino
+## Fase M4: (incluida en M0)
 
-1. **Camino a mano:**
-   - al mover el cursor dentro del alcance, el camino sigue por donde pasas, como en Advance Wars, siempre que no supere el movimiento;
-   - si te sales, vuelve al más corto.
-   - Así se puede rodear la zona de amenaza o pasar por bosque.
-2. **Con el teclado:** las flechas alargan el camino casilla a casilla y Retroceso quita la última.
-3. **En pantallas táctiles:** al arrastrar sobre el alcance se dibuja el camino, y al soltar se confirma.
+Trazar el camino a mano ya va con arrastrar y soltar. Con el teclado, las flechas alargan el camino y Retroceso quita la última casilla.
 
 ## Fase M5: comodidad y ritmo
 
@@ -85,11 +135,11 @@
 
 ## Orden recomendado
 
-M2 → M1 → M3 → M4 → M5.
+M2 → M0 → M3 → M1 → M5. Las órdenes de varios turnos y el movimiento en grupo, al final.
 
-- **M2 primero:** corrige que la niebla delate a los enemigos, que hoy es un fallo, y además es barata.
-- **M1 después:** es el cambio de reglas más grande.
-- **M3 y M4:** son sobre todo interfaz.
-- **M5:** pulido.
+- **M2 primero:** es corta y arregla que la niebla delate a los enemigos.
+- **M0, el arrastrar y soltar:** es el centro de este plan. Incluye el camino a mano y gran parte de las previsiones (alcance de ataque, bocadillo, peligro).
+- **M3:** completa lo que no entre en M0.
+- **M1, el coste del terreno:** cambia las reglas, así que va cuando el movimiento ya se sienta bien.
 
-Cada fase deja tests y se comprueba con el simulador de equilibrio. Las reglas que cambian el original (coste de terreno, atravesar aliados, emboscadas) van solo con las reglas nuevas.
+Cada fase deja tests y se prueba en el navegador con ratón, dedo y teclado. Las reglas que cambian el original (coste de terreno, atravesar aliados, emboscadas) van solo con las reglas nuevas.
