@@ -441,3 +441,33 @@ html.reduce-motion .card.sel .card-art img, html.reduce-motion .home .logo { ani
 .credits-box .cr-place { font-family: var(--display); font-size: 13px; color: var(--gold); letter-spacing: 1px; }
 @keyframes beat { 50% { transform: scale(1.15); } }
 html.reduce-motion .credits-box .heart { animation: none; }
+
+/* Final de la partida */
+.endscreen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 7vh 16px 16px; pointer-events: none; }
+.end-head { display: flex; flex-direction: column; align-items: center; gap: 6px; text-shadow: 3px 3px 0 #000; animation: endIn 0.5s steps(5) both; }
+.end-title { font-family: var(--display); font-size: clamp(36px, 8vw, 84px); letter-spacing: 4px; line-height: 1; }
+.endscreen.won .end-title { color: var(--gold); text-shadow: 4px 4px 0 #7a4a00, 8px 8px 0 #000; }
+.endscreen.lost .end-title { color: var(--red); text-shadow: 4px 4px 0 #4a0f0c, 8px 8px 0 #000; }
+.end-reason { font-family: var(--display); font-size: 16px; color: var(--text); }
+.end-head .label { color: var(--text); }
+@keyframes endIn { from { transform: translateY(-20px) scale(1.2); opacity: 0; } to { transform: none; opacity: 1; } }
+.end-card { width: min(720px, 100%); display: flex; flex-direction: column; gap: 12px; padding: 14px 18px; animation: endUp 0.4s steps(4) 0.3s both; }
+@keyframes endUp { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+.end-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.end-cols:has(> :only-child) { grid-template-columns: 1fr; }
+.end-chart { display: flex; flex-direction: column; gap: 6px; }
+.chart { width: 100%; height: 110px; background: var(--ink); border: 3px solid var(--ink); }
+.chart .grid { stroke: #24314d; stroke-width: 1; }
+.chart path { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.chart path.you { stroke: var(--blue); }
+.chart path.enemy { stroke: var(--red); }
+.legend { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 4px; margin-left: 6px; }
+.legend i.you { background: var(--blue); }
+.legend i.enemy { background: var(--red); }
+.end-best { font-family: var(--display); font-size: 14px; color: var(--muted); text-align: center; }
+.end-best.new { color: var(--gold); animation: bob 0.6s steps(2) infinite alternate; }
+.end-btns { display: flex; gap: 10px; justify-content: center; }
+.end-btns .px-btn { justify-content: center; flex: 1; max-width: 260px; font-size: 15px; }
+@media (max-width: 720px) { .end-cols { grid-template-columns: 1fr; } .chart { height: 70px; } .end-btns { flex-direction: column; } .end-btns .px-btn { max-width: none; } .endscreen { padding-top: 4vh; } .end-card { gap: 8px; padding: 10px 12px; } .endstats td { padding: 2px 0; } }
+html.reduce-motion .end-head, html.reduce-motion .end-card, html.reduce-motion .end-best.new { animation: none !important; }

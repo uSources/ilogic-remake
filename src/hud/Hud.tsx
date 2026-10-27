@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { imgUrl } from '../assets';
 import { settings, t } from '../settings';
 import { helpText } from './helpText';
-import { Campaign, Home, NewGame, Options, Pause } from './Menus';
+import { Campaign, EndScreen, Home, NewGame, Options, Pause } from './Menus';
 import { ui, type MinimapVM, type MoveTipVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
 
 function useUI(): UIState {
@@ -559,59 +559,7 @@ export function Hud() {
       {s.screen === 'setup' && <NewGame s={s} />}
       {s.screen === 'campaign' && <Campaign s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
-      {s.screen === 'end' && s.end && (
-        <div class="px endpanel">
-          {s.end.mission && <span class="label">{s.end.mission}</span>}
-          <span class={`endtitle ${s.end.won ? 'won' : 'lost'}`}>
-            {s.end.mission ? (s.end.won ? t('missionWon') : t('missionLost')) : s.end.won ? t('victory') : t('defeat')}
-          </span>
-          {s.end.reason && (
-            <span class="muted" style={{ fontSize: 14 }}>
-              {t(({ hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', objective: 'endObjective', surrender: 'endSurrender' } as const)[s.end.reason])}
-            </span>
-          )}
-          {s.end.stats && (
-            <table class="endstats">
-              <thead>
-                <tr>
-                  <th />
-                  <th class="you">{t('you')}</th>
-                  <th class="enemy">{t('enemy')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {s.end.score && (
-                  <tr>
-                    <td>{t('points')}</td>
-                    <td class="num">{fmt(s.end.score[0])}</td>
-                    <td class="num">{fmt(s.end.score[1])}</td>
-                  </tr>
-                )}
-                {(
-                  [
-                    ['statBuilt', s.end.stats.built],
-                    ['statLost', s.end.stats.lost],
-                    ['statCaptured', s.end.stats.captured],
-                    ['statSpent', s.end.stats.spent],
-                  ] as const
-                ).map(([k, v]) => (
-                  <tr>
-                    <td>{t(k)}</td>
-                    <td class="num">{fmt(v[0])}</td>
-                    <td class="num">{fmt(v[1])}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <span class="muted" style={{ fontSize: 14 }}>
-            {t('statDays')}: {s.end.day}
-          </span>
-          <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => ui.actions.endContinue()}>
-            {t('pressKey')}
-          </button>
-        </div>
-      )}
+      {s.screen === 'end' && s.end && <EndScreen e={s.end} />}
       {s.options && <Options o={s.options} />}
       {s.help && <Help />}
       {s.toast && (

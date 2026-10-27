@@ -63,7 +63,7 @@ export class MenuScene extends Phaser.Scene {
     super('Menu');
   }
 
-  create(): void {
+  create(data?: { open?: 'setup' }): void {
     this.leaving = false;
     this.mode = 'home';
     this.palette = terrainPalette(this.textures);
@@ -129,6 +129,7 @@ export class MenuScene extends Phaser.Scene {
     });
     ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null });
     this.publishHome();
+    if (data?.open === 'setup') this.openSetup();
 
     // Las teclas que captura la partida (Retroceso, flechas...) siguen capturadas: liberarlas para el campo de texto.
     this.input.keyboard!.clearCaptures();

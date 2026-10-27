@@ -176,7 +176,7 @@ export interface UIState {
   options: { focus: number; rows: OptionRowVM[] } | null;
   /** Panel de pausa centrado (menu de partida). */
   pause: { title: string; info: string[]; items: MenuItemVM[]; selected: number } | null;
-  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'game' | 'end';
+  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'game' | 'outro' | 'end';
   campaign: {
     items: CampaignItemVM[];
     selected: number;
@@ -213,6 +213,13 @@ export interface UIState {
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
     score: [number, number] | null;
+    /** Valor de los ejercitos dia a dia [jugador, IA]. */
+    chart: [number, number][] | null;
+    /** Mision: mejor marca en dias y si se acaba de batir. */
+    best: number | null;
+    newBest: boolean;
+    buttons: { id: string; label: string }[];
+    selected: number;
   } | null;
   /** Limite de dias de la partida (null = sin limite). */
   dayLimit: number | null;
@@ -248,6 +255,8 @@ export interface UIActions {
   minimapJump(x: number, y: number): void;
   focusUnit(uid: number): void;
   endContinue(): void;
+  endHover(i: number): void;
+  endPick(i: number): void;
   closeHelp(): void;
   homeHover(id: string): void;
   homePick(id: string): void;
@@ -339,6 +348,8 @@ export const ui = {
     minimapJump: noop,
     focusUnit: noop,
     endContinue: noop,
+    endHover: noop,
+    endPick: noop,
     closeHelp: () => ui.set({ help: false }),
     homeHover: noop,
     homePick: noop,

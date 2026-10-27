@@ -56,6 +56,10 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
 - En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
   ensena el alcance de una unidad y se pellizca para hacer zoom.
+- **Final de la partida:** el mapa se descubre entero y la cámara va a la jugada decisiva (confeti al
+  ganar; mapa en gris y humo al perder). Un resumen enseña la gráfica del valor de los ejércitos día a
+  día, las estadísticas, la mejor marca de la misión y botones: Revancha (mismo mapa), Nueva partida,
+  Siguiente misión o Reintentar.
 - **Menú con tarjetas:** Continuar (con miniatura de la partida guardada), Nueva partida (Rápida o
   Personalizar) y Campaña, sobre una partida IA contra IA en directo (o la imagen original).
   **Opciones** (también con la tecla O en partida): sonido, autoguardado, velocidades, tamaño de la
@@ -102,7 +106,7 @@ src/
     save.ts      Guardar / cargar en JSON
     geom.ts      Rombos, distancias, numeros aleatorios con semilla
     types.ts     Modelo de datos (GameState, Unit, Building, GameEvent)
-  scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida), End (victoria/derrota)
+  scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
   ui/          Dibujo del mapa (mapView: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
   hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (componentes), hud.css
                (estilo "retro pixel") y store.ts (estado que publican las escenas)
@@ -143,7 +147,8 @@ marcados en el codigo con `[CAMBIO]`. Los principales:
   sin mover (Tab), zona de amenaza enemiga (T), alcance de cualquier unidad, minimapa, ayuda,
   resumen de cada ronda, estadisticas finales, gestos tactiles (pellizcar, mantener pulsado),
   explosiones y efectos pixel, y cartel de cambio de turno. Se conservan los graficos,
-  el logo, el fondo del menu y las pantallas de victoria y derrota originales.
+  el logo y el fondo del menu originales (las pantallas de victoria y derrota de 2013 se cambiaron
+  por un final dentro del mapa).
 - Guardado y configuracion en el navegador (localStorage).
 - El original no tenia graficos para las esquinas inferiores de las orillas en los temas
   llanura y bosque: se han generado girando las superiores (`c_0_18/19`, `c_2_18/19`).
