@@ -3,9 +3,9 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_SIZES, MAP_W, setMapSize, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
+import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_MAX, MAP_MIN, MAP_W, setMapSize, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
 import { sanitizeStats } from './stats';
-import type { Building, GameState, Unit } from './types';
+import type { Building, GameState, Pos, Unit } from './types';
 
 export function serialize(s: GameState): string {
   return JSON.stringify(s);
@@ -26,7 +26,7 @@ export function deserialize(json: string): GameState | null {
   const s = raw as GameState;
   if (s.version !== 1) return null;
   // [CAMBIO] mapas de varios tamaños: el tamaño sale del propio mapa guardado.
-  if (!Array.isArray(s.map) || !(MAP_SIZES as readonly number[]).includes(s.map.length) || !Array.isArray(s.map[0])) return null;
+  if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return null;
   if (s.map[0].length !== s.map.length) return null;
   setMapSize(s.map.length, s.map[0].length);
   for (const col of s.map) {
@@ -65,6 +65,21 @@ export function deserialize(json: string): GameState | null {
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...uids) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
   if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
+  if (s.mission !== undefined) {
+    const m = s.mission;
+    const o = m?.objective as Record<string, unknown> | undefined;
+    const days = (v: unknown) => isInt(v, 1, 10000);
+    const ok =
+      !!m &&
+      typeof m.id === 'string' &&
+      !!o &&
+      (o.kind === 'hq' ||
+        (o.kind === 'survive' && days(o.days)) ||
+        (o.kind === 'destroy' && days(o.days)) ||
+        (o.kind === 'capture' && days(o.days) && isInt(o.count, 1, 1000) && (o.type === null || isInt(o.type, 0, BUILDING_TYPES - 1))) ||
+        (o.kind === 'escort' && days(o.days) && isInt(o.uid, 1, Number.MAX_SAFE_INTEGER) && !!o.to && isInt((o.to as Pos).x, 0, MAP_W - 1) && isInt((o.to as Pos).y, 0, MAP_H - 1)));
+    if (!ok) return null;
+  }
   if (s.setup !== undefined) {
     const g = s.setup;
     const ok = !!g && isInt(g.seed, 0, 2 ** 32) && g.size === s.map.length && (g.theme === null || isInt(g.theme, 0, 4));

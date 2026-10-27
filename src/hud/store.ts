@@ -107,7 +107,15 @@ export interface SetupRowVM {
 }
 
 export interface UIState {
-  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'game' | 'end';
+  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'game' | 'end';
+  campaign: {
+    items: { id: string; title: string; status: 'done' | 'open' | 'locked' }[];
+    selected: number;
+    brief: string;
+    objective: string;
+  };
+  /** Panel de la mision en curso (null fuera de la campaña). */
+  mission: { title: string; objective: string; status: string | null; tip: string | null; step: string | null } | null;
   newGame: { rows: SetupRowVM[]; selected: number; code: string; codeError: boolean };
   loading: number;
   mainMenu: { items: MainMenuItemVM[]; selected: number };
@@ -131,7 +139,9 @@ export interface UIState {
     won: boolean;
     day: number;
     stats: import('../core/stats').GameStats | null;
-    reason: 'hq' | 'wipeout' | 'days' | 'surrender' | null;
+    reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
+    /** Titulo de la mision, si se jugaba una. */
+    mission: string | null;
     score: [number, number] | null;
   } | null;
   /** Limite de dias de la partida (null = sin limite). */
@@ -173,6 +183,9 @@ export interface UIActions {
   setupChange(i: number, dir: 1 | -1): void;
   setupPick(i: number): void;
   setupCode(text: string): void;
+  campaignHover(i: number): void;
+  campaignPick(i: number): void;
+  campaignBack(): void;
   surrender(): void;
 }
 
@@ -183,6 +196,8 @@ const initial: UIState = {
   loading: 0,
   mainMenu: { items: [], selected: 0 },
   newGame: { rows: [], selected: 0, code: '', codeError: false },
+  campaign: { items: [], selected: 0, brief: '', objective: '' },
+  mission: null,
   funds: 0,
   income: 0,
   buildings: 0,
@@ -247,6 +262,9 @@ export const ui = {
     setupChange: noop,
     setupPick: noop,
     setupCode: noop,
+    campaignHover: noop,
+    campaignPick: noop,
+    campaignBack: noop,
     surrender: noop,
   } as UIActions,
 };
