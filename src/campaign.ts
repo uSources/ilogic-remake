@@ -9,20 +9,37 @@ import { buildingLabel, settings } from './settings';
 
 const KEY = 'ilogic.campaign';
 
-export function completedMissions(): Set<string> {
+/** Misiones terminadas y su mejor marca (dias). Las partidas antiguas guardaban solo la lista. */
+function loadRecords(): Record<string, number | null> {
   try {
-    const v = JSON.parse(localStorage.getItem(KEY) ?? '[]') as unknown;
-    return new Set(Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+    const v = JSON.parse(localStorage.getItem(KEY) ?? '{}') as unknown;
+    if (Array.isArray(v)) return Object.fromEntries(v.filter((x): x is string => typeof x === 'string').map((id) => [id, null]));
+    if (v && typeof v === 'object') {
+      const out: Record<string, number | null> = {};
+      for (const [k, d] of Object.entries(v)) out[k] = typeof d === 'number' && d > 0 ? d : null;
+      return out;
+    }
   } catch {
-    return new Set();
+    // datos dañados: como si no hubiera nada
   }
+  return {};
 }
 
-export function markCompleted(id: string): void {
-  const done = completedMissions();
-  done.add(id);
+export function completedMissions(): Set<string> {
+  return new Set(Object.keys(loadRecords()));
+}
+
+/** Mejor marca (menos dias) de una mision terminada. */
+export function bestDays(id: string): number | null {
+  return loadRecords()[id] ?? null;
+}
+
+export function markCompleted(id: string, days?: number): void {
+  const r = loadRecords();
+  const prev = r[id];
+  r[id] = days && (prev == null || days < prev) ? days : prev ?? days ?? null;
   try {
-    localStorage.setItem(KEY, JSON.stringify([...done]));
+    localStorage.setItem(KEY, JSON.stringify(r));
   } catch {
     // sin almacenamiento
   }

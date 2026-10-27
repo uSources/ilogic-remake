@@ -1,6 +1,16 @@
 # Plan: rehacer los menús con tarjetas
 
-## Cómo están ahora
+## Estado (27-10-2026)
+
+Hechas las seis fases:
+- **Inicio:** tarjetas Continuar (con miniatura de la partida guardada, solo tus unidades), Nueva partida (Rápida / Personalizar) y Campaña (progreso y casillas por misión). Abajo: Cómo se juega, Opciones, Créditos y Web original.
+- **Opciones:** pantalla propia por grupos, la misma desde el menú y desde la partida (tecla O). Añade tamaño de la interfaz, reducir movimiento, ver siempre la amenaza y el fondo del menú.
+- **Nueva partida:** vista previa del mapa que se va a jugar, "Otro mapa" (R), código, y los ajustes Normal / Rápida / Clásica 2013 / Personalizada con botones de segmento.
+- **Campaña:** tarjetas con miniatura, tipo de objetivo, estado y mejor marca en días.
+- **Pausa:** panel centrado con el día, el código del mapa y el objetivo de la misión.
+- **Fondo vivo:** partida IA contra IA sin niebla detrás del menú; se puede volver a la imagen de 2013 en Opciones (y no se usa con "reducir el movimiento").
+
+## Cómo estaban
 
 - **Menú principal:** una lista vertical de 8 botones iguales: Jugar, Campaña, Continuar, Cómo se juega, Música, Autoguardado, Idioma y Web original. Encima, el logo y el fondo original oscurecido.
   - Todo pesa lo mismo: "Continuar" una partida a medias queda en tercer lugar y no dice nada de esa partida.

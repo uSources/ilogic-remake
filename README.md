@@ -57,7 +57,12 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
 - En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
   ensena el alcance de una unidad y se pellizca para hacer zoom.
-- **Nueva partida** deja elegir reglas (nuevas o clásicas de 2013), tamaño del mapa (20, 32 o 40),
+- **Menú con tarjetas:** Continuar (con miniatura de la partida guardada), Nueva partida (Rápida o
+  Personalizar) y Campaña, sobre una partida IA contra IA en directo (o la imagen de 2013).
+  **Opciones** (también con la tecla O en partida): sonido, autoguardado, velocidades, tamaño de la
+  interfaz (90/100/125 %), reducir el movimiento, ver siempre la amenaza e idioma.
+- **Nueva partida** enseña el mapa que va a tocar ("Otro mapa" o R para sortear otro) y tiene los
+  ajustes Normal, Rápida (20×20, 20 días), Clásica 2013 y Personalizada, que deja elegir reglas (nuevas o clásicas de 2013), tamaño del mapa (20, 32 o 40),
   terreno, niebla, dinero inicial, ingresos y límite de días (al acabar gana quien tenga más puntos:
   valor del ejército + 1000 por edificio). Cada mapa tiene un código (menú de partida) que se puede
   escribir en "Código del mapa" para volver a jugarlo o pasárselo a alguien.

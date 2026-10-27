@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { settings } from '../settings';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
 import type { MapView } from './mapView';
@@ -11,7 +12,7 @@ import type { MapView } from './mapView';
 
 const STEPPED = { ease: 'Stepped', easeParams: [6] };
 
-export const reducedMotion = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+export const reducedMotion = (): boolean => settings.reduceMotion || (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
 
 function tween(scene: Phaser.Scene, cfg: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
   return new Promise((resolve) => scene.tweens.add({ ...cfg, onComplete: () => resolve() }));
