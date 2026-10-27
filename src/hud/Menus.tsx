@@ -87,7 +87,7 @@ export function Home({ s }: { s: UIState }) {
               </span>
               <span class="gold num">{fmt(h.save.funds)}</span>
               <span class="muted">
-                {h.save.mission ?? `${h.save.size}×${h.save.size} · ${h.save.rules}`}
+                {h.save.mission ?? `${h.save.size}×${h.save.size}`}
               </span>
             </div>
             <Btn sel={f === 'continue'} onPick={pick('continue')}>

@@ -359,9 +359,7 @@ export interface RulesConfig {
   counterattack: boolean;
   /** null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %). */
   damageSpread: number | null;
-  /** 'instant' = original (enemigo -> neutral -> tuyo); 'points' = por puntos en varios turnos. */
-  capture: 'instant' | 'points';
-  /** Puntos de captura de un edificio y de la Base (modo 'points'). */
+  /** Puntos de captura de un edificio y de la Base. */
   capturePoints: number;
   hqCapturePoints: number;
   /** Multiplicador de los ingresos de los edificios. */
@@ -382,33 +380,20 @@ export interface RulesConfig {
   terrainCost: boolean;
 }
 
-/** Las reglas del juego de 2013. */
-export const CLASSIC_RULES: Readonly<RulesConfig> = {
+/**
+ * Reglas del juego. Los interruptores sirven a la herramienta de equilibrio para probar variantes.
+ * [CAMBIO] El modo "reglas de 2013" se ha quitado (sin contraataque, captura al instante...).
+ */
+export const DEFAULT_RULES: Readonly<RulesConfig> = {
   initialFunds: 5000,
   maxUnits: 30,
-  counterattack: false,
-  damageSpread: null,
-  capture: 'instant',
+  counterattack: true,
+  damageSpread: 0.1,
   capturePoints: 20,
-  hqCapturePoints: 20,
+  hqCapturePoints: 30,
   incomeScale: 1,
   fog: true,
   dayLimit: null,
-  veterancy: false,
-  passAllies: false,
-  ambush: false,
-  forestHides: false,
-  terrainCost: false,
-};
-
-/** Las reglas nuevas del remake (plan de gameplay). */
-export const MODERN_RULES: Readonly<RulesConfig> = {
-  ...CLASSIC_RULES,
-  counterattack: true,
-  damageSpread: 0.1,
-  capture: 'points',
-  capturePoints: 20,
-  hqCapturePoints: 30,
   veterancy: true,
   passAllies: true,
   ambush: true,
@@ -420,10 +405,11 @@ export const MODERN_RULES: Readonly<RulesConfig> = {
  * Reglas en uso. Las cambian la partida al empezar o cargarse (useRules) y las variantes
  * de la herramienta de equilibrio.
  */
-export const RULES: RulesConfig = { ...MODERN_RULES };
+export const RULES: RulesConfig = { ...DEFAULT_RULES };
 
 export function useRules(r: Partial<RulesConfig>): void {
-  Object.assign(RULES, CLASSIC_RULES, r);
+  Object.assign(RULES, DEFAULT_RULES, r);
+  delete (RULES as Partial<RulesConfig> & { capture?: unknown }).capture;
 }
 export const MAX_FUNDS = 999999;
 export const AI = { MAXMERGELIFE: 130, MAXCAPTDIST: 8, LIFETOBACK: 40 } as const;

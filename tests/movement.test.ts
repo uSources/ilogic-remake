@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { CLASSIC_RULES, MODERN_RULES, useRules } from '../src/core/data';
+import { DEFAULT_RULES, useRules } from '../src/core/data';
+import { PLAIN_RULES } from './plainRules';
 import { load, merge, moveRange, moveUnit, validPath, visibility } from '../src/core/rules';
 import { newUnit } from '../src/core/rules';
 import { blankState } from './helpers';
@@ -8,7 +9,7 @@ const SOLDIER = 0,
   TANK = 1,
   TRANSPORT = 7;
 
-beforeEach(() => useRules(MODERN_RULES));
+beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('movimiento: pasar entre aliados', () => {
   it('se atraviesa a un aliado pero no se puede terminar encima', () => {
@@ -22,8 +23,8 @@ describe('movimiento: pasar entre aliados', () => {
     expect(r.steps[4]![5]).toBe(2); // pero se llega a la siguiente
   });
 
-  it('con las reglas clasicas el aliado bloquea', () => {
-    useRules(CLASSIC_RULES);
+  it('con los interruptores apagados el aliado bloquea', () => {
+    useRules(PLAIN_RULES);
     const s = blankState();
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
     const a = newUnit(s, TANK, 0, 2, 5);
@@ -34,7 +35,7 @@ describe('movimiento: pasar entre aliados', () => {
 
 describe('movimiento: emboscadas en la niebla', () => {
   // Aqui solo interesa la niebla: sin coste de terreno (el bosque frenaria a los tanques).
-  beforeEach(() => useRules({ ...MODERN_RULES, terrainCost: false }));
+  beforeEach(() => useRules({ ...DEFAULT_RULES, terrainCost: false }));
   /** Pasillo horizontal en y=5 con un bosque en x=6 donde se esconde un soldado enemigo. */
   function corridor() {
     const s = blankState();
@@ -108,8 +109,8 @@ describe('movimiento: emboscadas en la niebla', () => {
     void TRANSPORT;
   });
 
-  it('con las reglas clasicas no hay bosque que esconda ni emboscadas', () => {
-    useRules(CLASSIC_RULES);
+  it('con los interruptores apagados no hay bosque que esconda ni emboscadas', () => {
+    useRules(PLAIN_RULES);
     const s = corridor();
     newUnit(s, TANK, 0, 2, 5);
     const e = newUnit(s, SOLDIER, 1, 6, 5);
@@ -174,8 +175,8 @@ describe('movimiento: coste del terreno', () => {
     expect(r2.steps[7]![5]).toBe(4); // rodeando: abajo, derecha, derecha, arriba
   });
 
-  it('con las reglas clasicas todo cuesta 1', () => {
-    useRules(CLASSIC_RULES);
+  it('con los interruptores apagados todo cuesta 1', () => {
+    useRules(PLAIN_RULES);
     const s = blankState();
     s.map[6]![5] = 2;
     const tank = newUnit(s, TANK, 0, 5, 5);

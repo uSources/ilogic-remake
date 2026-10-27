@@ -372,7 +372,7 @@ html.reduce-motion .mainmenu .logo, html.reduce-motion .card { animation: none !
 .ng-code::placeholder { color: #6d7da6; letter-spacing: 2px; font-family: var(--display); }
 .bad-note { color: var(--red-soft); font-size: 14px; }
 .ng-side { display: flex; flex-direction: column; gap: 12px; }
-.presets { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .preset { padding: 12px 10px; border: 3px solid var(--ink); background: var(--panel); color: var(--text); font-family: var(--display); font-size: 15px; cursor: pointer; box-shadow: inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo); }
 .preset.on { background: var(--blue-btn); box-shadow: inset 3px 3px 0 var(--blue-hi), inset -3px -3px 0 var(--blue-lo); }
 .preset.sel { outline: 3px solid var(--gold); outline-offset: 2px; }

@@ -134,7 +134,7 @@ export type MarkVM = 'done' | 'open' | 'locked';
 
 export interface HomeVM {
   focus: string;
-  save: { thumb: string; day: number; funds: number; size: number; rules: string; mission: string | null; limit: number | null } | null;
+  save: { thumb: string; day: number; funds: number; size: number; mission: string | null; limit: number | null } | null;
   /** Resumen de las ultimas opciones (lo que hara "Rapida"). */
   quick: string;
   campaign: { done: number; total: number; next: string | null; thumb: string | null; marks: MarkVM[] };

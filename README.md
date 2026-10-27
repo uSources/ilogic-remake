@@ -48,21 +48,20 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   municion, movimiento, alcance, defensa del terreno...).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
-- **Se gana conquistando la Base enemiga.** Con las reglas nuevas (por defecto) capturar va por
-  puntos: un edificio tiene 20 (la Base 30) y cada turno la unidad le resta su vida ÷ 10; si se
-  mueve o muere se pierde lo avanzado. Con las reglas clásicas de 2013 es instantáneo, pero un
-  edificio enemigo hay que capturarlo dos veces (primero queda neutral).
-- Reglas nuevas: el defensor que sobrevive contraataca (salvo unidades a distancia) y el daño varía
+- **Se gana conquistando la Base enemiga.** Capturar va por puntos: un edificio tiene 20 (la
+  Base 30) y cada turno la unidad le resta su vida ÷ 10; si se mueve o muere se pierde lo avanzado.
+  Una unidad que se queda sin usar encima de un edificio sigue capturando sola al acabar el turno.
+- El defensor que sobrevive contraataca (salvo unidades a distancia) y el daño varía
   poco (el esperado ±10 %). La previsión de combate enseña ambas cosas.
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
 - En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
   ensena el alcance de una unidad y se pellizca para hacer zoom.
 - **Menú con tarjetas:** Continuar (con miniatura de la partida guardada), Nueva partida (Rápida o
-  Personalizar) y Campaña, sobre una partida IA contra IA en directo (o la imagen de 2013).
+  Personalizar) y Campaña, sobre una partida IA contra IA en directo (o la imagen original).
   **Opciones** (también con la tecla O en partida): sonido, autoguardado, velocidades, tamaño de la
   interfaz (90/100/125 %), reducir el movimiento, ver siempre la amenaza e idioma.
 - **Nueva partida** enseña el mapa que va a tocar ("Otro mapa" o R para sortear otro) y tiene los
-  ajustes Normal, Rápida (20×20, 20 días), Clásica 2013 y Personalizada, que deja elegir reglas (nuevas o clásicas de 2013), tamaño del mapa (20, 32 o 40),
+  ajustes Normal, Rápida (20×20, 20 días) y Personalizada, que deja elegir tamaño del mapa (20, 32 o 40),
   terreno, niebla, dinero inicial, ingresos y límite de días (al acabar gana quien tenga más puntos:
   valor del ejército + 1000 por edificio). Cada mapa tiene un código (menú de partida) que se puede
   escribir en "Código del mapa" para volver a jugarlo o pasárselo a alguien.
@@ -120,6 +119,10 @@ Si anadis o cambiais imagenes en `public/assets/img`, ejecutad `npm run assets` 
 regenerar `src/assetList.ts`.
 
 ## Diferencias con el original de 2013
+
+El modo "reglas de 2013" se quitó (27-10-2026): las partidas guardadas con esas reglas se siguen
+jugando con las actuales.
+
 
 Las reglas son las del juego original salvo los fallos que se han corregido. Todos estan
 marcados en el codigo con `[CAMBIO]`. Los principales:

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MODERN_RULES, RULES, UNIT, useRules } from '../src/core/data';
+import { DEFAULT_RULES, RULES, UNIT, useRules } from '../src/core/data';
 import { seededRng } from '../src/core/geom';
 import { attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '../src/core/rules';
 import { blankState } from './helpers';
@@ -8,7 +8,7 @@ const SOLDIER = 0,
   TANK = 1,
   ARTILLERY = 2;
 
-beforeEach(() => useRules(MODERN_RULES));
+beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('reglas nuevas: combate', () => {
   it('el defensor que sobrevive contraataca y gasta municion', () => {
@@ -131,10 +131,9 @@ describe('reglas nuevas: veterania', () => {
     expect(a.kills).toBe(6);
   });
 
-  it('con las reglas clasicas no hay veterania', async () => {
+  it('sin veterania las bajas no cuentan', async () => {
     const { hitChance } = await import('../src/core/rules');
-    const { CLASSIC_RULES } = await import('../src/core/data');
-    useRules(CLASSIC_RULES);
+    useRules({ veterancy: false });
     const s = blankState();
     const a = newUnit(s, TANK, 0, 3, 3);
     const b = newUnit(s, TANK, 1, 4, 3);

@@ -8,7 +8,7 @@
  *   P  bosque nevado    N  acantilado nevado
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  */
-import { BUILDING_NAMES, HQ, MODERN_RULES, setMapSize, TERRAIN, UNIT, UNIT_NAMES, type RulesConfig } from './data';
+import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT, UNIT_NAMES, type RulesConfig } from './data';
 import { newUnit } from './rules';
 import type { GameState, Objective, Pos, Team } from './types';
 
@@ -72,7 +72,7 @@ export function buildMission(m: MissionDef): GameState {
   return s;
 }
 
-export const missionRules = (m: MissionDef): RulesConfig => ({ ...MODERN_RULES, initialFunds: m.funds[0], ...m.rules });
+export const missionRules = (m: MissionDef): RulesConfig => ({ ...DEFAULT_RULES, initialFunds: m.funds[0], ...m.rules });
 
 /** Comprobaciones de un mapa de mision (para los tests). Devuelve los problemas encontrados. */
 export function checkMission(m: MissionDef): string[] {
