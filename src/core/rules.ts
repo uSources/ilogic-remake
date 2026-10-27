@@ -220,6 +220,32 @@ export function validPath(s: GameState, u: Unit, path: Pos[], range: MoveRange):
   return true;
 }
 
+/**
+ * Mejor casilla del alcance para acercarse a `goal` (por tierra, mar o aire segun la unidad),
+ * sin contar a las demas unidades: la que deja menos camino por delante y, a igualdad, la mas barata.
+ * null si no se puede llegar nunca o ya no se puede acercar mas.
+ */
+export function stepToward(s: GameState, u: Unit, goal: Pos, range = moveRange(s, u)): Pos | null {
+  if (!canWalk(s, goal.x, goal.y, UNIT.movtype[u.type]!)) return null;
+  const dist = groundDistance(s, goal, UNIT.movtype[u.type]!, grid(false));
+  const here = samePos(u, goal) ? 0 : dist[u.x]![u.y]! || Infinity;
+  let best: Pos | null = null;
+  let bestD = here;
+  let bestC = Infinity;
+  for (let x = 0; x < range.steps.length; x++)
+    for (let y = 0; y < range.steps[x]!.length; y++) {
+      const c = range.steps[x]![y]!;
+      if (c <= 0) continue;
+      const d = x === goal.x && y === goal.y ? 0 : dist[x]![y]! || Infinity;
+      if (d < bestD || (d === bestD && best && c < bestC)) {
+        best = { x, y };
+        bestD = d;
+        bestC = c;
+      }
+    }
+  return best;
+}
+
 export function canReach(range: MoveRange, x: number, y: number): boolean {
   return inBounds(x, y) && range.steps[x]![y]! > 0;
 }

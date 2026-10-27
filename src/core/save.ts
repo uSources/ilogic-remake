@@ -48,6 +48,7 @@ export function deserialize(json: string): GameState | null {
     u.canMove = !!u.canMove;
     u.canFire = !!u.canFire;
     if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
+    if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
   }
   const byUid = new Map(s.units.map((u) => [u.uid, u]));
   for (const u of s.units) {
