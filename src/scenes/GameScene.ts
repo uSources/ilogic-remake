@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { BUILDING, CLASSIC_RULES, HQ, MAP_H, MAP_W, MODERN_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import { BUILDING, CLASSIC_RULES, FUELER, HQ, MAP_H, MAP_W, MODERN_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
 import { diamond, grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
@@ -12,6 +12,8 @@ import {
   canBuyAt,
   canCapture,
   canWalk,
+  moveCost,
+  pathCost,
   hasAmmo,
   inAttackRange,
   passMap,
@@ -541,7 +543,7 @@ export class GameScene extends Phaser.Scene {
     const anchor = this.view.tileRectCss(c);
     if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
     const dest = it.kind === 'move' ? it.to : null;
-    const used = dest ? this.trailTo(dest).length - 1 : r.steps[c.x]![c.y]! || 1;
+    const used = dest ? pathCost(this.s, UNIT.movtype[u.type]!, this.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
     const terr = this.s.map[c.x]![c.y]!;
     const b = buildingAt(this.s, c.x, c.y);
     const prot = TERRAIN.protection[terr]! * (b ? BUILDING.protection[b.type]! : 1);
@@ -555,7 +557,19 @@ export class GameScene extends Phaser.Scene {
       stars: it.kind === 'move' ? stars : undefined,
       fuel: UNIT.maxfuel[u.type]! > 0 ? [u.fuel, Math.max(0, u.fuel - used)] : undefined,
       danger: it.kind === 'move' && !!this.dangerMap?.[c.x]?.[c.y],
+      warn: this.fuelWarning(u, dest, used),
     };
+  }
+
+  /** Aviones: si tras moverse no les llegaria el combustible para volver a un aeropuerto propio. */
+  private fuelWarning(u: Unit, dest: Pos | null, used: number): string | undefined {
+    const burn = UNIT.fuelperturn[u.type]!;
+    if (!dest || burn === 0) return undefined;
+    const left = u.fuel - used;
+    let nearest = Infinity;
+    for (const b of this.s.buildings) if (b.owner === 0 && FUELER[u.type]![b.type]) nearest = Math.min(nearest, manhattan(dest, b));
+    // Cada turno gasta `burn` y puede mover hasta su movimiento con lo que le quede.
+    return left - burn < nearest ? t('tipNoFuel') : undefined;
   }
 
   private tileInfo(p: Pos): TileVM {
@@ -565,6 +579,11 @@ export class GameScene extends Phaser.Scene {
     const vis = this.vis[p.x]![p.y]!;
     const prot = TERRAIN.protection[terr]! * (b ? BUILDING.protection[b.type]! : 1);
     const info: TileVM = { terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - prot) * 100) } };
+    if (RULES.terrainCost) {
+      // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
+      const cost = (mt: number) => (TERRAIN.canwalk[mt]![terr] ? moveCost(s, mt, p.x, p.y) : null);
+      info.terrain.cost = { foot: cost(0), vehicle: cost(1) };
+    }
     if (b) {
       const known = vis || b.owner === 0;
       info.building = {
@@ -1193,7 +1212,12 @@ export class GameScene extends Phaser.Scene {
     }
     const end = trail[trail.length - 1]!;
     const mt = UNIT.movtype[u.type]!;
-    if (manhattan(end, t) === 1 && trail.length <= r.maxSteps && canWalk(this.s, t.x, t.y, mt) && !this.block[t.x]![t.y]) {
+    if (
+      manhattan(end, t) === 1 &&
+      canWalk(this.s, t.x, t.y, mt) &&
+      !this.block[t.x]![t.y] &&
+      pathCost(this.s, mt, trail) + moveCost(this.s, mt, t.x, t.y) <= r.maxSteps
+    ) {
       this.trail = [...trail, { x: t.x, y: t.y }];
       return;
     }

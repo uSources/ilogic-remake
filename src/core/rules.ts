@@ -6,6 +6,7 @@
 import {
   AMMO_RESTORER,
   HIDING_TERRAIN,
+  MOVE_COST,
   BUILDING,
   CAN_CARRY,
   FUELER,
@@ -104,28 +105,47 @@ export function passMap(s: GameState, u: Unit): { block: boolean[][]; taken: boo
   return { block, taken };
 }
 
+/** Lo que cuesta entrar en una casilla (1 con las reglas clasicas). */
+export function moveCost(s: GameState, moveType: number, x: number, y: number): number {
+  return RULES.terrainCost ? MOVE_COST[moveType]![s.map[x]![y]!]! : 1;
+}
+
+/** Coste de recorrer un camino (sin contar la casilla de salida). */
+export function pathCost(s: GameState, moveType: number, path: Pos[]): number {
+  let c = 0;
+  for (let i = 1; i < path.length; i++) c += moveCost(s, moveType, path[i]!.x, path[i]!.y);
+  return c;
+}
+
+/**
+ * Alcance de movimiento: `steps` es lo que cuesta llegar a cada casilla en la que se puede terminar
+ * (0 si no se llega), `prev` el camino mas barato (tambien por casillas de paso, con aliados).
+ */
 export function moveRange(s: GameState, u: Unit): MoveRange {
   const steps = grid(0);
   const prev = grid<Pos | null>(null);
   const max = maxSteps(u);
   const mt = UNIT.movtype[u.type]!;
   const { block, taken } = passMap(s, u);
-  const seen = grid(false);
-  seen[u.x]![u.y] = true;
-  let frontier: Pos[] = [{ x: u.x, y: u.y }];
-  for (let step = 1; step <= max && frontier.length; step++) {
-    const next: Pos[] = [];
-    for (const p of frontier) {
-      for (const n of neighbors4(p)) {
-        if (seen[n.x]![n.y] || !canWalk(s, n.x, n.y, mt) || block[n.x]![n.y]) continue;
-        seen[n.x]![n.y] = true;
-        // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
-        if (!taken[n.x]![n.y]) steps[n.x]![n.y] = step;
-        prev[n.x]![n.y] = p;
-        next.push(n);
-      }
+  const best = grid(Infinity);
+  best[u.x]![u.y] = 0;
+  // Dijkstra sencillo: los costes son pequeños (1 a 3) y el alcance tambien.
+  const open: Pos[] = [{ x: u.x, y: u.y }];
+  while (open.length) {
+    let bi = 0;
+    for (let i = 1; i < open.length; i++) if (best[open[i]!.x]![open[i]!.y]! < best[open[bi]!.x]![open[bi]!.y]!) bi = i;
+    const p = open.splice(bi, 1)[0]!;
+    const cp = best[p.x]![p.y]!;
+    for (const n of neighbors4(p)) {
+      if (!canWalk(s, n.x, n.y, mt) || block[n.x]![n.y] || (n.x === u.x && n.y === u.y)) continue;
+      const c = cp + moveCost(s, mt, n.x, n.y);
+      if (c > max || c >= best[n.x]![n.y]!) continue;
+      if (best[n.x]![n.y] === Infinity) open.push(n);
+      best[n.x]![n.y] = c;
+      prev[n.x]![n.y] = p;
+      // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
+      steps[n.x]![n.y] = taken[n.x]![n.y] ? 0 : c;
     }
-    frontier = next;
   }
   return { steps, prev, maxSteps: max };
 }
@@ -155,9 +175,9 @@ export function walkPath(s: GameState, u: Unit, path: Pos[]): MovePath {
 }
 
 /** Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno. */
-function ambushed(u: Unit, walked: MovePath): MovePath {
+function ambushed(s: GameState, u: Unit, walked: MovePath): MovePath {
   const end = walked[walked.length - 1]!;
-  spendFuel(u, walked.length - 1);
+  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, walked));
   u.x = end.x;
   u.y = end.y;
   u.active = false;
@@ -183,7 +203,7 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
  * casillas del alcance (o de paso), sin repetir, no supera el movimiento y termina en un destino libre.
  */
 export function validPath(s: GameState, u: Unit, path: Pos[], range: MoveRange): boolean {
-  if (path.length < 2 || !samePos(path[0]!, u) || path.length - 1 > range.maxSteps) return false;
+  if (path.length < 2 || !samePos(path[0]!, u) || pathCost(s, UNIT.movtype[u.type]!, path) > range.maxSteps) return false;
   const end = path[path.length - 1]!;
   if (!canReach(range, end.x, end.y)) return false;
   const { block } = passMap(s, u);
@@ -215,8 +235,8 @@ export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, 
   // `via`: camino trazado por el jugador (si es valido); si no, el mas corto.
   const path = via && samePos(via[via.length - 1]!, dest) && validPath(s, u, via, range) ? via.map((p) => ({ ...p })) : pathTo(range, u, dest);
   const walked = walkPath(s, u, path);
-  if (walked.ambush) return ambushed(u, walked);
-  spendFuel(u, path.length - 1);
+  if (walked.ambush) return ambushed(s, u, walked);
+  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, path));
   u.x = dest.x;
   u.y = dest.y;
   u.canMove = false;
@@ -237,7 +257,8 @@ export function approachPath(s: GameState, u: Unit, target: Pos, range = moveRan
   let bestSteps = Infinity;
   for (const n of neighbors4(target)) {
     const st = samePos(n, u) ? 0 : range.steps[n.x]![n.y]!;
-    if ((samePos(n, u) || (st > 0 && st + 1 <= range.maxSteps)) && st < bestSteps) {
+    const last = moveCost(s, UNIT.movtype[u.type]!, target.x, target.y);
+    if ((samePos(n, u) || (st > 0 && st + last <= range.maxSteps)) && st < bestSteps) {
       best = n;
       bestSteps = st;
     }
@@ -498,8 +519,8 @@ export function merge(s: GameState, u: Unit, target: Unit): MovePath | null {
   const path = approachPath(s, u, target);
   if (!path) return null;
   const walked = walkPath(s, u, path);
-  if (walked.ambush) return ambushed(u, walked);
-  spendFuel(u, path.length - 1 + 1);
+  if (walked.ambush) return ambushed(s, u, walked);
+  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, [...path, { x: target.x, y: target.y }]));
   target.life = Math.min(MAX_LIFE, target.life + u.life);
   target.fuel = Math.max(target.fuel, u.fuel);
   target.ammo = Math.max(target.ammo, u.ammo);
@@ -537,8 +558,8 @@ export function load(s: GameState, u: Unit, t: Unit): MovePath | null {
   const path = approachPath(s, u, t);
   if (!path) return null;
   const walked = walkPath(s, u, path);
-  if (walked.ambush) return ambushed(u, walked);
-  spendFuel(u, path.length);
+  if (walked.ambush) return ambushed(s, u, walked);
+  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, [...path, { x: t.x, y: t.y }]));
   path.push({ x: t.x, y: t.y });
   t.cargo[slot] = u.uid;
   u.carrier = t.uid;

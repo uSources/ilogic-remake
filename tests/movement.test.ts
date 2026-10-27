@@ -33,6 +33,8 @@ describe('movimiento: pasar entre aliados', () => {
 });
 
 describe('movimiento: emboscadas en la niebla', () => {
+  // Aqui solo interesa la niebla: sin coste de terreno (el bosque frenaria a los tanques).
+  beforeEach(() => useRules({ ...MODERN_RULES, terrainCost: false }));
   /** Pasillo horizontal en y=5 con un bosque en x=6 donde se esconde un soldado enemigo. */
   function corridor() {
     const s = blankState();
@@ -141,5 +143,42 @@ describe('movimiento: camino trazado a mano', () => {
     expect(validPath(s, a, [{ x: 5, y: 5 }, { x: 6, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 6 }], r)).toBe(false);
     const long = Array.from({ length: 7 }, (_, i) => ({ x: 5 + i, y: 5 }));
     expect(validPath(s, a, long, r)).toBe(false);
+  });
+});
+
+describe('movimiento: coste del terreno', () => {
+  it('el bosque cuesta 2 a los vehiculos y 1 a pie; el combustible se gasta segun el coste', () => {
+    const s = blankState();
+    for (let x = 6; x <= 7; x++) s.map[x]![5] = 2; // dos casillas de bosque
+    for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
+    const tank = newUnit(s, TANK, 0, 5, 5);
+    const r = moveRange(s, tank);
+    expect(r.steps[6]![5]).toBe(2);
+    expect(r.steps[7]![5]).toBe(4);
+    expect(r.steps[8]![5]).toBe(5);
+    expect(r.steps[9]![5]).toBe(0); // 6 > movimiento 5
+    moveUnit(s, tank, { x: 8, y: 5 }, r);
+    expect(tank.fuel).toBe(50 - 5);
+    const sol = newUnit(s, SOLDIER, 0, 5, 5);
+    expect(moveRange(s, sol).steps[7]![5]).toBe(2);
+  });
+
+  it('prefiere rodear por llanura si sale mas barato', () => {
+    const s = blankState();
+    s.map[6]![5] = 2;
+    const tank = newUnit(s, TANK, 0, 5, 5);
+    const r = moveRange(s, tank);
+    expect(r.steps[7]![5]).toBe(3); // por el bosque costaria 3 tambien (2+1)
+    s.map[6]![5] = 13; // bosque nevado: 3 para vehiculos
+    const r2 = moveRange(s, tank);
+    expect(r2.steps[7]![5]).toBe(4); // rodeando: abajo, derecha, derecha, arriba
+  });
+
+  it('con las reglas clasicas todo cuesta 1', () => {
+    useRules(CLASSIC_RULES);
+    const s = blankState();
+    s.map[6]![5] = 2;
+    const tank = newUnit(s, TANK, 0, 5, 5);
+    expect(moveRange(s, tank).steps[6]![5]).toBe(1);
   });
 });
