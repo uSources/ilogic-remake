@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
 import { BUILDING, CLASSIC_RULES, HQ, MAP_H, MAP_W, MODERN_RULES, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
-import { samePos } from '../core/geom';
+import { samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
   attackFull,
@@ -24,6 +24,8 @@ import {
   moveRange,
   moveUnit,
   outcome,
+  endReason,
+  score,
   pathTo,
   removeUnit,
   type RoundReport,
@@ -45,7 +47,8 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, stats } from '../core/stats';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../core/types';
+import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
+import { randomSeed, seedToCode } from '../setup';
 import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM } from '../hud/store';
 import { TILE } from '../layout';
 import { playMusic, stopMusic } from '../music';
@@ -64,8 +67,8 @@ type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unlo
 
 type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
-type GameMenuKey = 'endTurn' | 'save' | 'help' | 'music' | 'autosave' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'help', 'music', 'autosave', 'resume', 'quit'];
+type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'help' | 'music' | 'autosave' | 'surrender' | 'quit' | 'resume';
+const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'replay', 'help', 'music', 'autosave', 'resume', 'surrender', 'quit'];
 
 interface MoveUndo {
   uid: number;
@@ -129,7 +132,7 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
-  init(data: { mode?: 'new' | 'load'; rules?: Partial<RulesConfig> }): void {
+  init(data: { mode?: 'new' | 'load'; rules?: Partial<RulesConfig>; setup?: GameSetup }): void {
     this.phase = 'map';
     this.sel = null;
     this.selBuilding = null;
@@ -156,7 +159,9 @@ export class GameScene extends Phaser.Scene {
       this.s = state;
     } else {
       useRules(data.rules ?? MODERN_RULES);
-      this.s = generateGame();
+      const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: 32, theme: null };
+      this.s = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
+      this.s.setup = setup;
     }
   }
 
@@ -338,6 +343,8 @@ export class GameScene extends Phaser.Scene {
     for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) terrain.push(this.terrainColor(s.map[x]![y]!));
     ui.set({
       minimap: {
+        w: MAP_W,
+        h: MAP_H,
         terrain,
         fog: this.vis.map((col) => col.slice()),
         buildings: s.buildings.map((b) => ({ x: b.x, y: b.y, owner: b.owner === 0 || this.visibleToPlayer(b) ? b.owner : null })),
@@ -366,6 +373,7 @@ export class GameScene extends Phaser.Scene {
       income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0),
       buildings: owned.length,
       day: s.day,
+      dayLimit: RULES.dayLimit,
       turn: this.enemyPlaying ? 'enemy' : 'player',
       busy,
       tile: busy ? null : this.tileInfo(c),
@@ -464,13 +472,16 @@ export class GameScene extends Phaser.Scene {
     let kind: MenuVM['kind'] = 'game';
     switch (this.phase) {
       case 'gameMenu':
-        title = `${t('day')} ${this.s.day}`;
+        title = `${t('day')} ${this.s.day}${RULES.dayLimit ? ` / ${RULES.dayLimit}` : ''}`;
+        // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
+        if (this.s.setup) subtitle = `${t('mapCode')}: ${seedToCode(this.s.setup.seed)} · ${this.s.setup.size}×${this.s.setup.size}`;
         items = GAME_MENU.map((k) => ({
           id: k,
           label: t(k as TextKey),
           hint:
             k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'music' ? (settings.music ? t('on') : t('off')) : k === 'autosave' ? (settings.autosave ? t('on') : t('off')) : undefined,
-          danger: k === 'quit',
+          danger: k === 'quit' || k === 'surrender',
+          disabled: k === 'replay' && !this.lastEnemy,
         }));
         break;
       case 'unitMenu':
@@ -927,6 +938,13 @@ export class GameScene extends Phaser.Scene {
         return this.toMap();
       case 'endTurn':
         return void this.enemyTurn();
+      case 'replay':
+        if (!this.lastEnemy) return showToast(t('noReplay'));
+        return void this.replayEnemyTurn();
+      case 'surrender':
+        if (this.time.now - this.surrenderArmedAt < 2500) return this.surrender();
+        this.surrenderArmedAt = this.time.now;
+        return showToast(t('confirmSurrender'));
       case 'quit':
         // [CAMBIO] en el original Esc abandonaba la partida al instante, sin confirmar.
         if (this.time.now - this.quitArmedAt < 2500) return this.quitToMenu();
@@ -1101,9 +1119,63 @@ export class GameScene extends Phaser.Scene {
     if (this.fromSave || this.savedThisGame) deleteSave();
     this.refresh();
     const st = stats(this.s);
-    this.time.delayedCall(900, () => this.scene.start('End', { won: result === 'won', day: this.s.day, stats: st }));
+    const end = { won: result === 'won', day: this.s.day, stats: st, reason: endReason(this.s), score: [score(this.s, 0), score(this.s, 1)] };
+    this.time.delayedCall(900, () => this.scene.start('End', end));
     return true;
   }
+
+  /** Rendirse: la partida termina como derrota. */
+  private surrender(): void {
+    this.ended = true;
+    this.phase = 'busy';
+    if (this.fromSave || this.savedThisGame) deleteSave();
+    this.toMap();
+    this.phase = 'busy';
+    const end = { won: false, day: this.s.day, stats: stats(this.s), reason: 'surrender', score: [score(this.s, 0), score(this.s, 1)] };
+    this.time.delayedCall(300, () => this.scene.start('End', end));
+  }
+
+  /**
+   * Volver a ver el ultimo turno enemigo: se restaura el estado de antes y se vuelve a jugar con
+   * la misma semilla (la IA y los combates son deterministas con ella); al acabar se deja todo
+   * exactamente como estaba.
+   */
+  private async replayEnemyTurn(): Promise<void> {
+    const last = this.lastEnemy;
+    if (!last || this.phase === 'busy' || this.ended) return;
+    this.toMap();
+    const cam = this.cameras.main;
+    const saved = { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
+    const after = serialize(this.s);
+    const before = deserialize(last.before);
+    if (!before) return;
+    this.s = before;
+    this.replaying = true;
+    this.phase = 'busy';
+    this.enemyPlaying = true;
+    this.fastForward = false;
+    this.refresh();
+    showBanner(`${t('day')} ${this.s.day}`, t('replayBanner'), 'red');
+    await this.wait(900);
+    for (const ev of aiTurn(this.s, seededRng(last.seed))) {
+      await this.playEvents([ev]);
+      if (this.ended) return;
+    }
+    this.s = deserialize(after)!;
+    this.replaying = false;
+    this.enemyPlaying = false;
+    this.fastForward = false;
+    this.view.cursor = saved.cursor;
+    cam.pan(saved.x, saved.y, 300, 'Sine.easeInOut', true);
+    this.phase = 'map';
+    this.inputLockUntil = this.time.now + 350;
+    this.refresh();
+  }
+
+  /** Estado antes del ultimo turno enemigo y semilla con la que se jugo (para repetirlo). */
+  private lastEnemy: { before: string; seed: number } | null = null;
+  private replaying = false;
+  private surrenderArmedAt = -1e9;
 
   private quitToMenu(): void {
     this.ended = true;
@@ -1135,10 +1207,14 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('enemyTurn'), 'red');
     await this.wait(900);
-    for (const ev of aiTurn(this.s, Math.random)) {
+    // Semilla propia para este turno: asi se puede repetir exactamente (menu > Repetir turno enemigo).
+    const before = serialize(this.s);
+    const seed = randomSeed();
+    for (const ev of aiTurn(this.s, seededRng(seed))) {
       await this.playEvents([ev]);
       if (this.checkEnd()) return;
     }
+    this.lastEnemy = { before, seed };
     const report = endRound(this.s);
     for (const tm of report.crashedTeams) stats(this.s).lost[tm]++;
     if (settings.autosave && writeSave(serialize(this.s))) this.savedThisGame = true;
@@ -1196,7 +1272,7 @@ export class GameScene extends Phaser.Scene {
     this.view.placeCursor(false);
     this.refreshHud();
     for (const ev of events) {
-      recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
+      if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
       switch (ev.kind) {
         case 'move':
         case 'merge':

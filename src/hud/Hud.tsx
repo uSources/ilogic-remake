@@ -90,6 +90,7 @@ function TopBar({ s }: { s: UIState }) {
       <div class="day">
         <span class="d">
           {t('day')} {s.day}
+          {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
         </span>
         <span class={`t ${mine ? '' : 'enemy'}`}>{mine ? t('yourTurn') : t('enemyTurn')}</span>
       </div>
@@ -352,13 +353,13 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
   useEffect(() => {
     const ctx = ref.current?.getContext('2d');
     if (!ctx) return;
-    for (let y = 0; y < 32; y++)
-      for (let x = 0; x < 32; x++) {
-        ctx.fillStyle = hex(m.terrain[y * 32 + x] ?? 0);
+    for (let y = 0; y < m.h; y++)
+      for (let x = 0; x < m.w; x++) {
+        ctx.fillStyle = hex(m.terrain[y * m.w + x] ?? 0);
         ctx.fillRect(x * MM, y * MM, MM, MM);
       }
     ctx.fillStyle = 'rgba(5,8,12,0.45)';
-    for (let x = 0; x < 32; x++) for (let y = 0; y < 32; y++) if (!m.fog[x]?.[y]) ctx.fillRect(x * MM, y * MM, MM, MM);
+    for (let x = 0; x < m.w; x++) for (let y = 0; y < m.h; y++) if (!m.fog[x]?.[y]) ctx.fillRect(x * MM, y * MM, MM, MM);
     for (const b of m.buildings) {
       ctx.fillStyle = '#0b1220';
       ctx.fillRect(b.x * MM, b.y * MM, MM, MM);
@@ -375,9 +376,10 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
   const jump = (e: PointerEvent) => {
     const el = e.currentTarget as HTMLElement;
     const r = el.getBoundingClientRect();
-    ui.actions.minimapJump(((e.clientX - r.left) / r.width) * 32, ((e.clientY - r.top) / r.height) * 32);
+    ui.actions.minimapJump(((e.clientX - r.left) / r.width) * m.w, ((e.clientY - r.top) / r.height) * m.h);
   };
-  const k = 100 / 32;
+  const kx = 100 / m.w,
+    ky = 100 / m.h;
   return (
     <div class="px minimap" title={t('minimap')}>
       <div
@@ -390,10 +392,10 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
           if (e.buttons & 1) jump(e);
         }}
       >
-        <canvas ref={ref} width={32 * MM} height={32 * MM} />
+        <canvas ref={ref} width={m.w * MM} height={m.h * MM} />
         <span
           class="mm-view"
-          style={{ left: `${view.x * k}%`, top: `${view.y * k}%`, width: `${view.w * k}%`, height: `${view.h * k}%` }}
+          style={{ left: `${view.x * kx}%`, top: `${view.y * ky}%`, width: `${view.w * kx}%`, height: `${view.h * ky}%` }}
         />
       </div>
     </div>
@@ -506,6 +508,69 @@ function Help() {
   );
 }
 
+function NewGame({ s }: { s: UIState }) {
+  const a = ui.actions;
+  const ng = s.newGame;
+  const sel = ng.rows[ng.selected];
+  return (
+    <div class="px newgame" role="dialog" aria-label={t('newGame')}>
+      <span class="htitle">{t('newGame')}</span>
+      <div class="ng-rows">
+        {ng.rows.map((r, i) => {
+          const cls = `ng-row ${i === ng.selected ? 'sel' : ''} ${r.kind}`;
+          if (r.kind === 'start' || r.kind === 'back')
+            return (
+              <button
+                tabIndex={-1}
+                type="button"
+                class={`px-btn ${r.kind === 'back' ? 'plain' : ''} ${i === ng.selected ? 'sel' : ''}`}
+                onMouseDown={noFocus}
+                onMouseEnter={() => a.setupHover(i)}
+                onClick={() => a.setupPick(i)}
+              >
+                {r.label}
+              </button>
+            );
+          if (r.kind === 'code')
+            return (
+              <div class={cls} onMouseEnter={() => a.setupHover(i)}>
+                <span class="ng-label">{r.label}</span>
+                <input
+                  class={`ng-code ${ng.codeError ? 'bad' : ''}`}
+                  value={ng.code}
+                  maxLength={7}
+                  placeholder={t('random')}
+                  spellcheck={false}
+                  autocomplete="off"
+                  aria-label={r.label}
+                  onFocus={() => a.setupHover(i)}
+                  onInput={(e) => a.setupCode((e.currentTarget as HTMLInputElement).value)}
+                />
+              </div>
+            );
+          return (
+            <div class={cls} onMouseEnter={() => a.setupHover(i)}>
+              <span class="ng-label">{r.label}</span>
+              <span class="ng-value">
+                <button tabIndex={-1} type="button" class="ng-arrow" aria-label="−" onMouseDown={noFocus} onClick={() => a.setupChange(i, -1)}>
+                  ◄
+                </button>
+                <span class="ng-v" onClick={() => a.setupChange(i, 1)}>
+                  {r.value}
+                </span>
+                <button tabIndex={-1} type="button" class="ng-arrow" aria-label="+" onMouseDown={noFocus} onClick={() => a.setupChange(i, 1)}>
+                  ►
+                </button>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div class="ng-note">{sel?.note ?? ''}</div>
+    </div>
+  );
+}
+
 export function Hud() {
   const s = useUI();
   return (
@@ -519,10 +584,16 @@ export function Hud() {
         </div>
       )}
       {s.screen === 'menu' && <MainMenu s={s} />}
+      {s.screen === 'setup' && <NewGame s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && (
         <div class="px endpanel">
           <span class={`endtitle ${s.end.won ? 'won' : 'lost'}`}>{s.end.won ? t('victory') : t('defeat')}</span>
+          {s.end.reason && (
+            <span class="muted" style={{ fontSize: 14 }}>
+              {t(({ hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', surrender: 'endSurrender' } as const)[s.end.reason])}
+            </span>
+          )}
           {s.end.stats && (
             <table class="endstats">
               <thead>
@@ -533,6 +604,13 @@ export function Hud() {
                 </tr>
               </thead>
               <tbody>
+                {s.end.score && (
+                  <tr>
+                    <td>{t('points')}</td>
+                    <td class="num">{fmt(s.end.score[0])}</td>
+                    <td class="num">{fmt(s.end.score[1])}</td>
+                  </tr>
+                )}
                 {(
                   [
                     ['statBuilt', s.end.stats.built],

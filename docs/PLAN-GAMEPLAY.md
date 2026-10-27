@@ -43,6 +43,7 @@ Lo que más pesa en la estrategia:
 - Fase 1: hecha.
 - Fase 2: hecha (los precios propuestos quedan pendientes de decisión, ver `docs/BALANCE.md`).
 - Fase 3: hecha (IA adaptada a las reglas nuevas).
+- Fase 4: hecha (pantalla de nueva partida con códigos de mapa, límite de días con victoria por puntos, rendirse, repetir el turno enemigo).
 
 ## Fase 0: medir antes de tocar
 

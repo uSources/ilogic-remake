@@ -66,6 +66,8 @@ export interface GameState {
   stats?: import('./stats').GameStats;
   /** Reglas de esta partida (las antiguas no las tienen: se juegan con las clasicas). */
   rules?: import('./data').RulesConfig;
+  /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
+  setup?: GameSetup;
 }
 
 /** Generador de numeros aleatorios en [0, 1). */
@@ -82,3 +84,13 @@ export type GameEvent =
   | { kind: 'load'; uid: number; into: number; path: Pos[] }
   | { kind: 'spawn'; uid: number; at: Pos }
   | { kind: 'wait'; uid: number };
+
+/** Opciones de una partida nueva que no son reglas: mapa. */
+export interface GameSetup {
+  /** Semilla del generador de mapas. */
+  seed: number;
+  /** Lado del mapa en casillas (20, 32 o 40). */
+  size: number;
+  /** Tema elegido (0..4) o null si fue al azar. */
+  theme: number | null;
+}

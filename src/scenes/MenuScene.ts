@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { deserialize } from '../core/save';
-import { ui, type MainMenuItemVM } from '../hud/store';
+import { ui, type MainMenuItemVM, type SetupRowVM } from '../hud/store';
 import { WEB_URL } from '../layout';
 import { playMusic, stopMusic } from '../music';
-import { saveSettings, settings, t } from '../settings';
+import { saveSettings, settings, t, type TextKey } from '../settings';
+import { CHOICES, choiceLabel, codeToSeed, DEFAULT_OPTIONS, loadOptions, randomSeed, rulesFor, saveOptions, type ChoiceKey, type NewGameOptions } from '../setup';
 import { readSave } from '../storage';
 
 interface MenuButton {
@@ -47,8 +48,10 @@ export class MenuScene extends Phaser.Scene {
       this.leaving = true;
       this.scene.start('Game', { mode });
     };
+    this.setupMode = false;
+    this.options = loadOptions();
     this.buttons = [
-      { id: 'play', label: () => t('play'), enabled: () => true, primary: true, run: () => start('new') },
+      { id: 'play', label: () => t('play'), enabled: () => true, primary: true, run: () => this.openSetup() },
       { id: 'continue', label: () => t('continue'), enabled: () => this.saveOk, run: () => start('load') },
       { id: 'help', label: () => t('help'), enabled: () => true, run: () => ui.set({ help: true }) },
       {
@@ -99,21 +102,155 @@ export class MenuScene extends Phaser.Scene {
         this.selected = i;
         this.activate();
       },
+      setupHover: (i: number) => {
+        this.setupSel = i;
+        this.publishSetup();
+      },
+      setupChange: (i: number, dir: 1 | -1) => {
+        this.setupSel = i;
+        this.changeOption(dir);
+      },
+      setupPick: (i: number) => {
+        this.setupSel = i;
+        this.pickSetup();
+      },
+      setupCode: (text: string) => {
+        this.code = text.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 7);
+        this.publishSetup();
+      },
     });
     ui.set({ screen: 'menu' });
     this.publish();
 
+    // Las teclas que captura la partida (Retroceso, flechas...) siguen capturadas: liberarlas para el campo de texto.
+    this.input.keyboard!.clearCaptures();
     this.input.keyboard!.addCapture('SPACE,UP,DOWN');
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
       if (ui.get().help) {
         if (['Escape', 'Backspace', 'Enter', 'NumpadEnter', 'Space', 'KeyH'].includes(e.code)) ui.set({ help: false });
         return;
       }
+      if (this.setupMode) return this.setupKey(e);
       if (['ArrowUp', 'KeyW', 'Numpad8'].includes(e.code)) this.move(-1);
       else if (['ArrowDown', 'KeyS', 'Numpad2'].includes(e.code)) this.move(1);
       else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) this.activate();
     });
     playMusic(this, 'menu');
+  }
+
+  // -------------------------------------------------------------------------
+  // Nueva partida
+  // -------------------------------------------------------------------------
+
+  private setupMode = false;
+  private setupSel = 0;
+  private options: NewGameOptions = { ...DEFAULT_OPTIONS };
+  private code = '';
+  private codeError = false;
+
+  private static readonly ROWS: { id: ChoiceKey | 'code' | 'start' | 'back'; label: TextKey; note?: TextKey }[] = [
+    { id: 'rules', label: 'optRules', note: 'noteRules' },
+    { id: 'size', label: 'optSize', note: 'noteSize' },
+    { id: 'theme', label: 'optTheme', note: 'noteTheme' },
+    { id: 'fog', label: 'optFog', note: 'noteFog' },
+    { id: 'funds', label: 'optFunds', note: 'noteFunds' },
+    { id: 'income', label: 'optIncome', note: 'noteIncome' },
+    { id: 'dayLimit', label: 'optDayLimit', note: 'noteDayLimit' },
+    { id: 'code', label: 'optCode', note: 'noteCode' },
+    { id: 'start', label: 'start' },
+    { id: 'back', label: 'back' },
+  ];
+
+  private openSetup(): void {
+    this.setupMode = true;
+    this.setupSel = MenuScene.ROWS.findIndex((r) => r.id === 'start');
+    this.code = '';
+    this.codeError = false;
+    ui.set({ screen: 'setup' });
+    this.publishSetup();
+  }
+
+  private closeSetup(): void {
+    this.setupMode = false;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    ui.set({ screen: 'menu' });
+    this.publish();
+  }
+
+  private publishSetup(): void {
+    const rows: SetupRowVM[] = MenuScene.ROWS.map((r) => ({
+      id: r.id,
+      label: t(r.label),
+      kind: r.id === 'code' ? 'code' : r.id === 'start' ? 'start' : r.id === 'back' ? 'back' : 'choice',
+      value: r.id in CHOICES ? choiceLabel(r.id as ChoiceKey, this.options[r.id as ChoiceKey]) : undefined,
+      note: r.note ? t(r.note) : undefined,
+    }));
+    if (this.codeError) rows[MenuScene.ROWS.findIndex((r) => r.id === 'code')]!.note = t('badCode');
+    ui.set({ newGame: { rows, selected: this.setupSel, code: this.code, codeError: this.codeError } });
+  }
+
+  private changeOption(dir: 1 | -1): void {
+    const row = MenuScene.ROWS[this.setupSel];
+    if (!row || !(row.id in CHOICES)) return this.publishSetup();
+    const k = row.id as ChoiceKey;
+    const list = CHOICES[k] as readonly unknown[];
+    const i = list.indexOf(this.options[k]);
+    (this.options as unknown as Record<string, unknown>)[k] = list[(i + dir + list.length) % list.length];
+    saveOptions(this.options);
+    this.publishSetup();
+  }
+
+  private pickSetup(): void {
+    const row = MenuScene.ROWS[this.setupSel];
+    if (!row) return;
+    if (row.id === 'back') return this.closeSetup();
+    if (row.id === 'start') return this.startNew();
+    if (row.id === 'code') {
+      (document.querySelector('.ng-code') as HTMLInputElement | null)?.focus();
+      return;
+    }
+    this.changeOption(1);
+  }
+
+  private startNew(): void {
+    if (this.leaving) return;
+    let seed = randomSeed();
+    if (this.code) {
+      const s = codeToSeed(this.code);
+      if (s === null) {
+        this.codeError = true;
+        return this.publishSetup();
+      }
+      seed = s;
+    }
+    this.leaving = true;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    const o = this.options;
+    this.scene.start('Game', { mode: 'new', rules: rulesFor(o), setup: { seed, size: o.size, theme: o.theme } });
+  }
+
+  private setupKey(e: KeyboardEvent): void {
+    const typing = (document.activeElement as HTMLElement | null)?.tagName === 'INPUT';
+    if (typing) {
+      if (e.code === 'Enter' || e.code === 'NumpadEnter') this.startNew();
+      else if (e.code === 'Escape' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+        (document.activeElement as HTMLElement).blur();
+        if (e.code !== 'Escape') this.moveSetup(e.code === 'ArrowUp' ? -1 : 1);
+      }
+      return;
+    }
+    if (['ArrowUp', 'KeyW', 'Numpad8'].includes(e.code)) this.moveSetup(-1);
+    else if (['ArrowDown', 'KeyS', 'Numpad2'].includes(e.code)) this.moveSetup(1);
+    else if (['ArrowLeft', 'KeyA', 'Numpad4'].includes(e.code)) this.changeOption(-1);
+    else if (['ArrowRight', 'KeyD', 'Numpad6'].includes(e.code)) this.changeOption(1);
+    else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) this.pickSetup();
+    else if (e.code === 'Escape' || e.code === 'Backspace') this.closeSetup();
+  }
+
+  private moveSetup(dir: 1 | -1): void {
+    const n = MenuScene.ROWS.length;
+    this.setupSel = (this.setupSel + dir + n) % n;
+    this.publishSetup();
   }
 
   private publish(): void {

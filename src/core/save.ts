@@ -3,7 +3,7 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_W, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
+import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_SIZES, MAP_W, setMapSize, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
 import { sanitizeStats } from './stats';
 import type { Building, GameState, Unit } from './types';
 
@@ -25,7 +25,10 @@ export function deserialize(json: string): GameState | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const s = raw as GameState;
   if (s.version !== 1) return null;
-  if (!Array.isArray(s.map) || s.map.length !== MAP_W) return null;
+  // [CAMBIO] mapas de varios tamaños: el tamaño sale del propio mapa guardado.
+  if (!Array.isArray(s.map) || !(MAP_SIZES as readonly number[]).includes(s.map.length) || !Array.isArray(s.map[0])) return null;
+  if (s.map[0].length !== s.map.length) return null;
+  setMapSize(s.map.length, s.map[0].length);
   for (const col of s.map) {
     if (!Array.isArray(col) || col.length !== MAP_H || !col.every((t) => isInt(t, 0, TERRAIN_TYPES - 1))) return null;
   }
@@ -61,6 +64,11 @@ export function deserialize(json: string): GameState | null {
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...uids) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
   if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
+  if (s.setup !== undefined) {
+    const g = s.setup;
+    const ok = !!g && isInt(g.seed, 0, 2 ** 32) && g.size === s.map.length && (g.theme === null || isInt(g.theme, 0, 4));
+    if (!ok) delete s.setup;
+  }
   if (s.rules !== undefined) {
     const r = s.rules as Partial<RulesConfig>;
     const ok =

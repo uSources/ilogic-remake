@@ -688,11 +688,45 @@ function defeated(s: GameState, team: Team): boolean {
   return !hasHQ || !hasAny;
 }
 
-/** Se gana neutralizando la Base enemiga (o si el enemigo se queda sin nada). Si ambas, se pierde. */
+/**
+ * Puntos de un bando para el limite de dias: valor de su ejercito (coste x vida/100)
+ * mas 1000 por cada edificio.
+ */
+export function score(s: GameState, team: Team): number {
+  let v = 0;
+  for (const u of s.units) if (u.team === team) v += (UNIT.cost[u.type]! * u.life) / 100;
+  for (const b of s.buildings) if (b.owner === team) v += 1000;
+  return Math.round(v);
+}
+
+/** El limite de dias (si lo hay) ya se ha cumplido. */
+export const dayLimitReached = (s: GameState): boolean => RULES.dayLimit !== null && s.day > RULES.dayLimit;
+
+/**
+ * Se gana neutralizando la Base enemiga (o si el enemigo se queda sin nada). Si ambas, se pierde.
+ * [CAMBIO] Con limite de dias, al acabar el ultimo gana quien tenga mas puntos (empate: mas edificios;
+ * si tambien empatan, pierde el jugador).
+ */
 export function outcome(s: GameState): Outcome {
   if (defeated(s, 0)) return 'lost';
   if (defeated(s, 1)) return 'won';
+  if (dayLimitReached(s)) {
+    const a = score(s, 0),
+      b = score(s, 1);
+    if (a !== b) return a > b ? 'won' : 'lost';
+    const nb = (t: Team) => s.buildings.filter((x) => x.owner === t).length;
+    return nb(0) > nb(1) ? 'won' : 'lost';
+  }
   return 'playing';
+}
+
+/** Por que ha terminado la partida. */
+export function endReason(s: GameState): 'hq' | 'wipeout' | 'days' | null {
+  if (outcome(s) === 'playing') return null;
+  const loser: Team = outcome(s) === 'won' ? 1 : 0;
+  if (!s.buildings.some((b) => b.owner === loser && b.type === HQ)) return 'hq';
+  if (defeated(s, loser)) return 'wipeout';
+  return 'days';
 }
 
 // ---------------------------------------------------------------------------

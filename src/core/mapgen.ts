@@ -10,6 +10,7 @@ import {
   RULES,
   MAP_H,
   MAP_W,
+  setMapSize,
   MAPGEN,
   PROBS_PER_ADJ,
   T_DWATER,
@@ -26,7 +27,10 @@ import { buildingAt, groundDistance, newUnit, unitAt } from './rules';
 import type { GameState, Pos, Rng, Team } from './types';
 
 const WALK = 0; // tipo de movimiento "a pie"
+/** Distancia minima entre las dos bases en un mapa de 32; se escala con el lado del mapa. */
 const MIN_SPAWN_DISTANCE = 14;
+/** Superficie del mapa respecto al original de 32x32 (para escalar cuantos edificios hay). */
+const areaScale = () => (MAP_W * MAP_H) / (32 * 32);
 
 function emptyState(): GameState {
   return {
@@ -226,9 +230,11 @@ function generateNeutral(s: GameState, rng: Rng): void {
   let toPlace: number[];
   let total: number;
   do {
-    toPlace = MAPGEN.MINNBS.map((min, t) => min + Math.floor(rng() * (MAPGEN.MAXNBS[t]! - min + 1)));
+    // [CAMBIO] en mapas de otro tamaño, el numero de edificios neutrales se escala con la superficie.
+    const k = areaScale();
+    toPlace = MAPGEN.MINNBS.map((min, t) => Math.round((min + Math.floor(rng() * (MAPGEN.MAXNBS[t]! - min + 1))) * k));
     total = toPlace.reduce((a, b) => a + b, 0);
-  } while (total < MAPGEN.MINNB || total > MAPGEN.MAXNB);
+  } while (total < Math.floor(MAPGEN.MINNB * areaScale()) || total > Math.ceil(MAPGEN.MAXNB * areaScale()));
 
   const available = grid(false);
   let availableCount = 0;
@@ -258,16 +264,18 @@ function generateNeutral(s: GameState, rng: Rng): void {
 }
 
 /** Genera una partida nueva con mapa aleatorio. */
-export function generateGame(rng: Rng = Math.random): GameState {
+export function generateGame(rng: Rng = Math.random, opts: { size?: number; theme?: number | null } = {}): GameState {
+  setMapSize(opts.size ?? 32);
   const origin = { x: Math.floor(rng() * MAP_W), y: Math.floor(rng() * MAP_H) };
   for (let attempt = 0; ; attempt++) {
     const s = emptyState();
-    s.theme = Math.floor(rng() * MAPGEN.isSWater.length);
+    const randomTheme = Math.floor(rng() * MAPGEN.isSWater.length);
+    s.theme = opts.theme ?? randomTheme;
     let tileCount = generateTerrain(s, origin, s.theme, rng);
     if (MAPGEN.isSWater[s.theme]) tileCount += addShallowWater(s.map);
     if (MAPGEN.isIce[s.theme]) tileCount += addIce(s.map);
     addDeepWater(s.map);
-    if (tileCount < MAPGEN.MINTILENUM && attempt < 500) continue;
+    if (tileCount < MAPGEN.MINTILENUM * areaScale() && attempt < 500) continue;
 
     const first = findSpawn(s, false, () => true);
     if (!first) continue;
@@ -275,7 +283,7 @@ export function generateGame(rng: Rng = Math.random): GameState {
     const second = findSpawn(
       s,
       true,
-      (p) => reach[p.x]![p.y]! > 0 && manhattan(p, first) >= MIN_SPAWN_DISTANCE,
+      (p) => reach[p.x]![p.y]! > 0 && manhattan(p, first) >= Math.round((MIN_SPAWN_DISTANCE * MAP_W) / 32),
     );
     if (!second) continue;
     // [CAMBIO] el original daba siempre la primera zona al jugador y la segunda a la IA. La segunda

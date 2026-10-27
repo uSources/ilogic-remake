@@ -73,7 +73,7 @@ function targetsFrom(a: ReturnType<typeof args>): Targets {
   return t;
 }
 
-async function runGames(variant: Variant, seeds: number[], maxDays: number, policies: [Policy, Policy], threads: number, firstTeam: 0 | 1 = 0, swapSides = false): Promise<GameRecord[]> {
+async function runGames(variant: Variant, seeds: number[], maxDays: number, policies: [Policy, Policy], threads: number, firstTeam: 0 | 1 = 0, swapSides = false, size = 32): Promise<GameRecord[]> {
   const chunks: number[][] = Array.from({ length: threads }, () => []);
   seeds.forEach((s, i) => chunks[i % threads]!.push(s));
   const records: GameRecord[] = [];
@@ -86,7 +86,7 @@ async function runGames(variant: Variant, seeds: number[], maxDays: number, poli
         (c) =>
           new Promise<void>((resolve, reject) => {
             const w = new Worker(new URL('./worker.ts', import.meta.url), {
-              workerData: { variant, seeds: c, maxDays, policies, firstTeam, swapSides },
+              workerData: { variant, seeds: c, maxDays, policies, firstTeam, swapSides, size },
               execArgv: ['--import', 'tsx'],
             });
             w.on('message', (r: GameRecord) => {
@@ -123,7 +123,7 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
   const snap = snapshot();
   const changes = applyVariant(variant); // en este hilo: para el informe, los duelos y la validacion
   console.log(`Variante "${variant.name}": ${changes.length} cambios. ${games} partidas, ${threads} hilos...`);
-  const records = await runGames(variant, seeds, maxDays, policies, threads, a.one('first') === '1' ? 1 : 0, a.one('swap') === 'true');
+  const records = await runGames(variant, seeds, maxDays, policies, threads, a.one('first') === '1' ? 1 : 0, a.one('swap') === 'true', a.num('size', 32));
   const terrain = a.one('terrain', 'Grass')!;
   const duel = a.one('no-duel') ? undefined : { terrain, cells: duelMatrix({ trials: 200, terrain, seed: seed0 }) };
   const report = buildReport(records, { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') }, targetsFrom(a), duel);

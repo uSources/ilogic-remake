@@ -3,7 +3,7 @@ import { MAP_H, MAP_W } from '../core/data';
 import type { GameState, Pos, Unit } from '../core/types';
 import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
-import { MAP_PX, TILE } from '../layout';
+import { TILE } from '../layout';
 import { reducedMotion } from './fx';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 
@@ -168,12 +168,13 @@ export class MapView {
   updateBounds(): void {
     const edgeCss = Math.min(EDGE_CSS, Math.round((this.cam.width / dpr()) * 0.08));
     const margin = (edgeCss * dpr()) / this.cam.zoom;
-    const full = MAP_PX + 2 * margin;
+    const mw = MAP_W * TILE,
+      mh = MAP_H * TILE;
     const vw = this.cam.width / this.cam.zoom,
       vh = this.cam.height / this.cam.zoom;
-    const bw = Math.max(full, vw),
-      bh = Math.max(full, vh);
-    this.cam.setBounds(MAP_PX / 2 - bw / 2, MAP_PX / 2 - bh / 2, bw, bh);
+    const bw = Math.max(mw + 2 * margin, vw),
+      bh = Math.max(mh + 2 * margin, vh);
+    this.cam.setBounds(mw / 2 - bw / 2, mh / 2 - bh / 2, bw, bh);
   }
 
   /** La ventana ha cambiado de tamaño: mantener el mismo punto en el centro. */
@@ -397,7 +398,7 @@ export class MapView {
     this.clouds = this.clouds.filter((c) => {
       c.y += dy;
       c.img.setPosition(Math.round(c.x), Math.round(c.y));
-      if (c.y > MAP_PX + 40) {
+      if (c.y > MAP_H * TILE + 40) {
         c.img.destroy();
         return false;
       }
@@ -410,7 +411,7 @@ export class MapView {
         .setDisplaySize(64, 128)
         .setAlpha(0.75);
       this.cloudLayer.add(img);
-      this.clouds.push({ img, x: Math.random() * (MAP_PX - 64), y: -8 });
+      this.clouds.push({ img, x: Math.random() * (MAP_W * TILE - 64), y: -8 });
     }
   }
 
