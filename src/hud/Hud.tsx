@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { imgUrl } from '../assets';
 import { settings, t } from '../settings';
 import { helpText } from './helpText';
-import { ui, type MinimapVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
+import { ui, type MinimapVM, type MoveTipVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
 
 function useUI(): UIState {
   return useSyncExternalStore(ui.subscribe, ui.get);
@@ -405,6 +405,29 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
   );
 }
 
+/** Etiqueta pequeña encima de la casilla al mover: no tapa el mapa ni recibe clics. */
+function MoveTip({ m }: { m: MoveTipVM }) {
+  const left = Math.round(m.anchor.x + m.anchor.w + 6);
+  const top = Math.round(m.anchor.y - 30);
+  return (
+    <div class={`px movetip ${m.invalid ? 'bad' : ''}`} style={{ left: Math.min(left, window.innerWidth - 200), top: Math.max(76, top) }}>
+      <span class="mt-act">{m.action}</span>
+      {m.used !== undefined && (
+        <span class="num">
+          {m.used}/{m.max}
+        </span>
+      )}
+      {m.stars !== undefined && m.stars > 0 && <span class="gold">{'★'.repeat(m.stars)}</span>}
+      {m.fuel && (
+        <span class="mt-fuel">
+          <Icon k="fuel" /> {m.fuel[0]}→{m.fuel[1]}
+        </span>
+      )}
+      {m.danger && <span class="mt-danger" title={t('tipDanger')}>⚠</span>}
+    </div>
+  );
+}
+
 function GameHud({ s }: { s: UIState }) {
   const showCards = !s.busy && s.turn === 'player' && s.tile;
   return (
@@ -422,6 +445,7 @@ function GameHud({ s }: { s: UIState }) {
         {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
         {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} />}
       </div>
+      {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}
       {s.menu && <PopMenu m={s.menu} />}
     </>

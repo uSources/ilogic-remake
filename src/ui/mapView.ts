@@ -8,7 +8,7 @@ import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 
-export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach';
+export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover';
 
 const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
   move: { fill: 0x3aa8ff, alpha: 0.4, line: 0xcfe8ff },
@@ -17,6 +17,7 @@ const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> =
   load: { fill: 0x2fd3c3, alpha: 0.45, line: 0xa8fff6 },
   attack: { fill: 0xff4d45, alpha: 0.42, line: 0xffb0b2 },
   reach: { fill: 0xff8a3d, alpha: 0.32, line: 0xffc9a0 },
+  hover: { fill: 0x3aa8ff, alpha: 0.16, line: 0x8fd0ff },
 };
 
 export interface ViewOptions {
@@ -27,6 +28,9 @@ export interface ViewOptions {
   path?: Pos[];
   /** Casillas que el enemigo puede atacar en su proximo turno (tecla T). */
   threat?: boolean[][] | null;
+  /** Al mover: todo lo que la unidad podria atacar (borde rojo) y destinos peligrosos (marca roja). */
+  attackZone?: boolean[][] | null;
+  danger?: boolean[][] | null;
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
@@ -420,27 +424,84 @@ export class MapView {
       g.fillStyle(c.team === 0 ? 0x3aa8ff : 0xff4d45, 1);
       g.fillRect(px, py, Math.max(1, Math.round((w * (c.total - c.left)) / c.total)), 4);
     }
-    // Camino previsto: tramos de 4 px con borde oscuro.
+    // Alcance de ataque al mover: relleno rojo tenue fuera del movimiento y borde de la zona.
+    const z = opts.attackZone;
+    if (z) {
+      const inZ = (x: number, y: number) => x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && z[x]![y]!;
+      g.fillStyle(0xff4d45, 0.14);
+      for (let x = 0; x < MAP_W; x++)
+        for (let y = 0; y < MAP_H; y++) if (z[x]![y] && !opts.highlights.has(`${x},${y}`)) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+      g.fillStyle(0xff4d45, 0.85);
+      for (let x = 0; x < MAP_W; x++)
+        for (let y = 0; y < MAP_H; y++) {
+          if (!z[x]![y]) continue;
+          const px = x * TILE,
+            py = y * TILE;
+          if (!inZ(x, y - 1)) g.fillRect(px, py, TILE, 2);
+          if (!inZ(x, y + 1)) g.fillRect(px, py + TILE - 2, TILE, 2);
+          if (!inZ(x - 1, y)) g.fillRect(px, py, 2, TILE);
+          if (!inZ(x + 1, y)) g.fillRect(px + TILE - 2, py, 2, TILE);
+        }
+    }
+    // Destinos peligrosos (el enemigo visible podria atacar ahi): esquina roja.
+    const dg = opts.danger;
+    if (dg) {
+      for (const [k, kind] of opts.highlights) {
+        if (kind !== 'move') continue;
+        const [x, y] = k.split(',').map(Number) as [number, number];
+        if (!dg[x]![y]) continue;
+        const px = x * TILE + TILE - 9,
+          py = y * TILE + 3;
+        g.fillStyle(0x0b1220, 0.8);
+        g.fillRect(px - 1, py - 1, 8, 8);
+        g.fillStyle(0xff4d45, 1);
+        for (let i = 0; i < 6; i++) g.fillRect(px + i, py, 6 - i, 1), g.fillRect(px + i, py + i, 1, 1);
+        g.fillRect(px, py, 6, 2);
+        g.fillRect(px + 4, py, 2, 6);
+      }
+    }
+    // Camino previsto: flecha pixel (tramos de 4 px con borde oscuro y punta), como en Advance Wars.
     const path = opts.path;
     if (path && path.length > 1) {
-      for (const [w, color] of [
-        [8, 0x0b1220],
-        [4, 0xffffff],
+      const end = path[path.length - 1]!,
+        before = path[path.length - 2]!;
+      const dx = Math.sign(end.x - before.x),
+        dy = Math.sign(end.y - before.y);
+      const cx = end.x * TILE + TILE / 2,
+        cy = end.y * TILE + TILE / 2;
+      for (const [w, color, alpha] of [
+        [8, 0x0b1220, 0.7],
+        [4, 0xffffff, 1],
       ] as const) {
-        g.fillStyle(color, color === 0xffffff ? 1 : 0.6);
+        g.fillStyle(color, alpha);
         for (let i = 0; i < path.length - 1; i++) {
           const a = path[i]!,
             b = path[i + 1]!;
-          const x0 = Math.min(a.x, b.x) * TILE + TILE / 2 - w / 2,
+          // El ultimo tramo se queda antes del centro: ahi va la punta.
+          const last = i === path.length - 2;
+          let x0 = Math.min(a.x, b.x) * TILE + TILE / 2 - w / 2,
             y0 = Math.min(a.y, b.y) * TILE + TILE / 2 - w / 2;
-          g.fillRect(x0, y0, Math.abs(a.x - b.x) * TILE + w, Math.abs(a.y - b.y) * TILE + w);
+          let ww = Math.abs(a.x - b.x) * TILE + w,
+            hh = Math.abs(a.y - b.y) * TILE + w;
+          if (last) {
+            const cut = 6;
+            if (dx > 0) ww -= cut;
+            if (dx < 0) (x0 += cut), (ww -= cut);
+            if (dy > 0) hh -= cut;
+            if (dy < 0) (y0 += cut), (hh -= cut);
+          }
+          g.fillRect(x0, y0, ww, hh);
+        }
+        // Punta: triangulo hecho de lineas de 1 px, mirando en la direccion del ultimo paso.
+        const H = w === 8 ? 8 : 6;
+        const base = w === 8 ? -7 : -5;
+        for (let i = 0; i <= H; i++) {
+          const half = H - i;
+          const along = base + i;
+          if (dx !== 0) g.fillRect(cx + dx * along - (dx < 0 ? 0 : 0), cy - half, 1, half * 2 + 1);
+          else g.fillRect(cx - half, cy + dy * along, half * 2 + 1, 1);
         }
       }
-      const end = path[path.length - 1]!;
-      g.fillStyle(0x0b1220, 0.6);
-      g.fillRect(end.x * TILE + TILE / 2 - 6, end.y * TILE + TILE / 2 - 6, 12, 12);
-      g.fillStyle(0xffd447, 1);
-      g.fillRect(end.x * TILE + TILE / 2 - 4, end.y * TILE + TILE / 2 - 4, 8, 8);
     }
   }
 
