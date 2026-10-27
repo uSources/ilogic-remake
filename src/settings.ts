@@ -19,11 +19,32 @@ export interface Settings {
   /** Velocidad de las animaciones de tus unidades y de las del enemigo. */
   speedOwn: Speed;
   speedEnemy: Speed;
+  /** Tamaño de la interfaz HTML (0.9, 1 o 1.25). */
+  uiScale: number;
+  /** Reducir el movimiento aunque el sistema no lo pida. */
+  reduceMotion: boolean;
+  /** Empezar cada partida con la zona de amenaza enemiga a la vista. */
+  alwaysThreat: boolean;
+  /** Fondo del menu principal: partida en directo o la imagen original de 2013. */
+  menuBg: 'live' | 'classic';
 }
 
 const KEY = 'ilogic.settings';
 
-const DEFAULTS: Settings = { lang: 'es', autosave: false, music: false, autoWait: true, autoNext: false, speedOwn: 'normal', speedEnemy: 'normal' };
+const DEFAULTS: Settings = {
+  lang: 'es',
+  autosave: false,
+  music: false,
+  autoWait: true,
+  autoNext: false,
+  speedOwn: 'normal',
+  speedEnemy: 'normal',
+  uiScale: 1,
+  reduceMotion: false,
+  alwaysThreat: false,
+  menuBg: 'live',
+};
+export const UI_SCALES = [0.9, 1, 1.25];
 const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
 
 function load(): Settings {
@@ -39,6 +60,10 @@ function load(): Settings {
       autoNext: !!parsed.autoNext,
       speedOwn: SPEEDS.includes(parsed.speedOwn as Speed) ? (parsed.speedOwn as Speed) : 'normal',
       speedEnemy: SPEEDS.includes(parsed.speedEnemy as Speed) ? (parsed.speedEnemy as Speed) : 'normal',
+      uiScale: UI_SCALES.includes(parsed.uiScale as number) ? (parsed.uiScale as number) : 1,
+      reduceMotion: !!parsed.reduceMotion,
+      alwaysThreat: !!parsed.alwaysThreat,
+      menuBg: parsed.menuBg === 'classic' ? 'classic' : 'live',
     };
   } catch {
     return { ...DEFAULTS };
@@ -47,7 +72,16 @@ function load(): Settings {
 
 export const settings: Settings = load();
 
+/** Aplica a la pagina lo que depende de las opciones (tamaño de la interfaz, menos movimiento, idioma). */
+export function applySettings(): void {
+  const hud = document.getElementById('hud');
+  if (hud) (hud.style as CSSStyleDeclaration & { zoom: string }).zoom = String(settings.uiScale);
+  document.documentElement.classList.toggle('reduce-motion', settings.reduceMotion);
+  document.documentElement.lang = settings.lang;
+}
+
 export function saveSettings(): void {
+  applySettings();
   try {
     localStorage.setItem(KEY, JSON.stringify(settings));
   } catch {
@@ -151,6 +185,45 @@ const TEXTS = {
     speed_fast: 'Rápida',
     speed_instant: 'Instantánea',
     options: 'Opciones',
+    optGroupSound: 'Sonido',
+    optGroupGame: 'Partida',
+    optGroupScreen: 'Pantalla y accesibilidad',
+    optGroupLang: 'Idioma',
+    optUiScale: 'Tamaño de la interfaz',
+    optReduceMotion: 'Reducir el movimiento',
+    optAlwaysThreat: 'Ver siempre la amenaza enemiga',
+    optMenuBg: 'Fondo del menú',
+    bgLive: 'Partida en directo',
+    bgClassic: 'Original de 2013',
+    close: 'Cerrar',
+    quickGame: 'Rápida',
+    customGame: 'Personalizar',
+    continueGame: 'Continuar',
+    savedGame: 'Partida guardada',
+    credits: 'Créditos',
+    creditsText: 'Ilogic, de Fingerprint Games (2013): idea, gráficos y música originales. Remake en TypeScript + Phaser 4 a partir del código descompilado (2026).',
+    nextMission: 'Siguiente',
+    allDone: '¡Campaña completa!',
+    of: 'de',
+    rulesModern: 'reglas nuevas',
+    rulesClassic: 'reglas de 2013',
+    presetNormal: 'Normal',
+    presetQuick: 'Rápida',
+    presetClassic: 'Clásica 2013',
+    presetCustom: 'Personalizada',
+    presetNormalNote: 'Reglas nuevas, mapa 32×32, sin límite de días.',
+    presetQuickNote: 'Mapa 20×20, 20 días, ingresos al 150 %: partidas de media hora.',
+    presetClassicNote: 'Como el juego de 2013: sin contraataque, captura al instante.',
+    presetCustomNote: 'Elige cada opción.',
+    otherMap: 'Otro mapa',
+    bestDays: 'Mejor marca',
+    days: 'días',
+    objHq: 'Base',
+    objSurvive: 'Aguantar',
+    objCapture: 'Capturar',
+    objDestroy: 'Destruir',
+    objEscort: 'Escoltar',
+    pause: 'Pausa',
     help: 'Cómo se juega',
     newGame: 'Nueva partida',
     random: 'Al azar',
@@ -308,6 +381,45 @@ const TEXTS = {
     speed_fast: 'Fast',
     speed_instant: 'Instant',
     options: 'Options',
+    optGroupSound: 'Sound',
+    optGroupGame: 'Game',
+    optGroupScreen: 'Display and accessibility',
+    optGroupLang: 'Language',
+    optUiScale: 'Interface size',
+    optReduceMotion: 'Reduce motion',
+    optAlwaysThreat: 'Always show enemy threat',
+    optMenuBg: 'Menu background',
+    bgLive: 'Live game',
+    bgClassic: '2013 original',
+    close: 'Close',
+    quickGame: 'Quick',
+    customGame: 'Customise',
+    continueGame: 'Continue',
+    savedGame: 'Saved game',
+    credits: 'Credits',
+    creditsText: 'Ilogic, by Fingerprint Games (2013): original idea, graphics and music. Remake in TypeScript + Phaser 4 from the decompiled code (2026).',
+    nextMission: 'Next',
+    allDone: 'Campaign complete!',
+    of: 'of',
+    rulesModern: 'new rules',
+    rulesClassic: '2013 rules',
+    presetNormal: 'Normal',
+    presetQuick: 'Quick',
+    presetClassic: 'Classic 2013',
+    presetCustom: 'Custom',
+    presetNormalNote: 'New rules, 32×32 map, no day limit.',
+    presetQuickNote: '20×20 map, 20 days, 150 % income: half-hour games.',
+    presetClassicNote: 'Like the 2013 game: no counterattacks, instant capture.',
+    presetCustomNote: 'Pick every option.',
+    otherMap: 'Another map',
+    bestDays: 'Best',
+    days: 'days',
+    objHq: 'HQ',
+    objSurvive: 'Hold',
+    objCapture: 'Capture',
+    objDestroy: 'Destroy',
+    objEscort: 'Escort',
+    pause: 'Paused',
     help: 'How to play',
     newGame: 'New game',
     random: 'Random',

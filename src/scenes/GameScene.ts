@@ -62,7 +62,8 @@ import { markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../camp
 import { buildMission, missionById, missionRules } from '../core/missions';
 import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM, type UIState, type MoveTipVM } from '../hud/store';
 import { TILE } from '../layout';
-import { playMusic, stopMusic } from '../music';
+import { playMusic } from '../music';
+import { OptionsPanel } from '../menu/optionsPanel';
 import { buildingLabel, saveSettings, settings, t, type Speed, terrainLabel, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
@@ -79,10 +80,7 @@ type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unlo
 type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
 type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['endTurn', 'save', 'replay', 'options', 'help', 'resume', 'surrender', 'quit'];
-type OptionKey = 'music' | 'autosave' | 'autoWait' | 'autoNext' | 'speedOwn' | 'speedEnemy' | 'back';
-const OPTIONS_MENU: OptionKey[] = ['autoWait', 'autoNext', 'speedOwn', 'speedEnemy', 'music', 'autosave', 'back'];
-const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
+const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 
 /** Que pasaria al soltar la unidad elegida en una casilla. */
 type Intent =
@@ -236,7 +234,20 @@ export class GameScene extends Phaser.Scene {
       ui.set({ menu: null, forecast: null, tile: null, mission: null });
     });
     playMusic(this, 'game');
-    ui.set({ screen: 'game', toast: null, banner: null, threat: this.threat });
+    this.threat = settings.alwaysThreat;
+    this.optionsPanel = new OptionsPanel(
+      this,
+      'game',
+      (key) => {
+        if (key === 'alwaysThreat') {
+          this.threat = settings.alwaysThreat;
+          ui.set({ threat: this.threat });
+          this.refresh();
+        } else this.refreshHud();
+      },
+      () => this.refreshHud(),
+    );
+    ui.set({ screen: 'game', toast: null, banner: null, threat: this.threat, options: null });
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
@@ -648,38 +659,20 @@ export class GameScene extends Phaser.Scene {
     let title: string | undefined;
     let subtitle: string | undefined;
     let kind: MenuVM['kind'] = 'game';
+    let info: string[] | undefined;
     switch (this.phase) {
       case 'gameMenu':
         title = `${t('day')} ${this.s.day}${RULES.dayLimit ? ` / ${RULES.dayLimit}` : ''}`;
         // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
         if (this.s.setup) subtitle = `${t('mapCode')}: ${seedToCode(this.s.setup.seed)} · ${this.s.setup.size}×${this.s.setup.size}`;
-        if (this.optionsOpen) {
-          title = t('options');
-          subtitle = undefined;
-          const onOff = (v: boolean) => (v ? t('on') : t('off'));
-          const label: Record<OptionKey, TextKey> = {
-            music: 'music',
-            autosave: 'autosave',
-            autoWait: 'optAutoWait',
-            autoNext: 'optAutoNext',
-            speedOwn: 'optSpeedOwn',
-            speedEnemy: 'optSpeedEnemy',
-            back: 'back',
-          };
-          items = OPTIONS_MENU.map((k) => ({
-            id: k,
-            label: t(label[k]),
-            hint:
-              k === 'music' ? onOff(settings.music) : k === 'autosave' ? onOff(settings.autosave) : k === 'autoWait' ? onOff(settings.autoWait)
-              : k === 'autoNext' ? onOff(settings.autoNext) : k === 'speedOwn' ? t(`speed_${settings.speedOwn}` as TextKey)
-              : k === 'speedEnemy' ? t(`speed_${settings.speedEnemy}` as TextKey) : 'Esc',
-          }));
-          break;
+        if (this.s.mission) {
+          const m = missionById(this.s.mission.id);
+          if (m) info = [`${m.title[settings.lang]}: ${objectiveText(m, this.s)}`];
         }
         items = GAME_MENU.map((k) => ({
           id: k,
           label: t(k as TextKey),
-          hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : undefined,
+          hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'options' ? 'O' : undefined,
           danger: k === 'quit' || k === 'surrender',
           disabled: k === 'replay' && !this.lastEnemy,
         }));
@@ -728,7 +721,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.menuItems = items;
-    return { kind, title, subtitle, items, selected: this.menuSel, anchor: this.view.tileRectCss(at) };
+    return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.view.tileRectCss(at) };
   }
 
   // -------------------------------------------------------------------------
@@ -755,11 +748,18 @@ export class GameScene extends Phaser.Scene {
 
   private onKey(e: KeyboardEvent): void {
     if (this.ended) return;
+    if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
     if (ui.get().help) {
       if (['Escape', 'Backspace', 'KeyH', 'Enter', 'NumpadEnter', 'Space'].includes(e.code)) ui.set({ help: false });
       return;
     }
     if (e.code === 'KeyH') return ui.set({ help: true });
+    if (e.code === 'KeyO' && (this.phase === 'map' || this.phase === 'gameMenu')) {
+      if (this.phase === 'map') this.openGameMenu();
+      this.menuSel = GAME_MENU.indexOf('options');
+      this.refreshHud();
+      return this.optionsPanel.open();
+    }
     if (this.phase === 'busy') {
       if (['Enter', 'NumpadEnter', 'Space'].includes(e.code)) this.fastForward = true;
       return;
@@ -1117,11 +1117,6 @@ export class GameScene extends Phaser.Scene {
         }
         return this.openGameMenu();
       case 'gameMenu':
-        if (this.optionsOpen) {
-          this.optionsOpen = false;
-          this.menuSel = GAME_MENU.indexOf('options');
-          return this.refreshHud();
-        }
         return this.toMap();
       case 'buy':
       case 'move':
@@ -1140,7 +1135,6 @@ export class GameScene extends Phaser.Scene {
 
   private toMap(): void {
     this.phase = 'map';
-    this.optionsOpen = false;
     this.inspectUid = null;
     this.trail = [];
     this.block = null;
@@ -1168,7 +1162,6 @@ export class GameScene extends Phaser.Scene {
 
   private openGameMenu(): void {
     if (this.phase !== 'map' && this.phase !== 'gameMenu') this.abandonSelection();
-    this.optionsOpen = false;
     this.menuSel = 0;
     this.phase = 'gameMenu';
     this.refresh();
@@ -1589,49 +1582,13 @@ export class GameScene extends Phaser.Scene {
     this.pick = null;
   }
 
-  /** Submenu de opciones dentro del menu de partida. */
-  private optionsOpen = false;
-
-  private acceptOptions(): void {
-    const k = OPTIONS_MENU[this.menuSel];
-    const next = (v: Speed) => SPEEDS[(SPEEDS.indexOf(v) + 1) % SPEEDS.length]!;
-    switch (k) {
-      case 'back':
-        this.optionsOpen = false;
-        this.menuSel = GAME_MENU.indexOf('options');
-        return this.refreshHud();
-      case 'music':
-        settings.music = !settings.music;
-        if (settings.music) playMusic(this, 'game', true);
-        else stopMusic();
-        break;
-      case 'autosave':
-        settings.autosave = !settings.autosave;
-        break;
-      case 'autoWait':
-        settings.autoWait = !settings.autoWait;
-        break;
-      case 'autoNext':
-        settings.autoNext = !settings.autoNext;
-        break;
-      case 'speedOwn':
-        settings.speedOwn = next(settings.speedOwn);
-        break;
-      case 'speedEnemy':
-        settings.speedEnemy = next(settings.speedEnemy);
-        break;
-    }
-    saveSettings();
-    this.refreshHud();
-  }
+  /** Pantalla de opciones (la misma que en el menu principal), encima del menu de pausa. */
+  private optionsPanel!: OptionsPanel;
 
   private acceptGameMenu(): void {
-    if (this.optionsOpen) return this.acceptOptions();
     switch (GAME_MENU[this.menuSel]) {
       case 'options':
-        this.optionsOpen = true;
-        this.menuSel = 0;
-        return this.refreshHud();
+        return this.optionsPanel.open();
       case 'resume':
         return this.toMap();
       case 'help':
@@ -1807,7 +1764,7 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
     const st = stats(this.s);
     const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
-    if (m && result === 'won') markCompleted(m.id);
+    if (m && result === 'won') markCompleted(m.id, this.s.day);
     const end = {
       won: result === 'won',
       day: this.s.day,

@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { imgUrl } from '../assets';
 import { settings, t } from '../settings';
 import { helpText } from './helpText';
+import { Campaign, Home, NewGame, Options, Pause } from './Menus';
 import { ui, type MinimapVM, type MoveTipVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
 
 function useUI(): UIState {
@@ -26,17 +27,25 @@ function Icon({ k, alt = '', cls = 'px-icon' }: { k: string | null | undefined; 
 const MARGIN = 16;
 const TOP_SAFE = 80;
 
+/** Con la interfaz ampliada (zoom en #hud), las coordenadas de pantalla se dividen por la escala. */
+const zoom = () => settings.uiScale || 1;
+function scaled(a: Anchor): Anchor {
+  const z = zoom();
+  return { x: a.x / z, y: a.y / z, w: a.w / z, h: a.h / z };
+}
+
 function Popover(props: { anchor: Anchor; prefer: 'right' | 'left'; class: string; children: ComponentChildren; label?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
-  const { anchor, prefer } = props;
+  const { prefer } = props;
+  const anchor = scaled(props.anchor);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const w = el.offsetWidth,
       h = el.offsetHeight;
-    const vw = window.innerWidth,
-      vh = window.innerHeight;
+    const vw = window.innerWidth / zoom(),
+      vh = window.innerHeight / zoom();
     const gap = 10;
     const rightX = anchor.x + anchor.w + gap;
     const leftX = anchor.x - gap - w;
@@ -415,10 +424,11 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
 
 /** Etiqueta pequeña encima de la casilla al mover: no tapa el mapa ni recibe clics. */
 function MoveTip({ m }: { m: MoveTipVM }) {
-  const left = Math.round(m.anchor.x + m.anchor.w + 6);
-  const top = Math.round(m.anchor.y - 30);
+  const a = scaled(m.anchor);
+  const left = Math.round(a.x + a.w + 6);
+  const top = Math.round(a.y - 30);
   return (
-    <div class={`px movetip ${m.invalid ? 'bad' : ''}`} style={{ left: Math.min(left, window.innerWidth - 200), top: Math.max(76, top) }}>
+    <div class={`px movetip ${m.invalid ? 'bad' : ''}`} style={{ left: Math.min(left, window.innerWidth / zoom() - 200), top: Math.max(76, top) }}>
       <span class="mt-act">{m.action}</span>
       {m.used !== undefined && (
         <span class="num">
@@ -456,7 +466,7 @@ function GameHud({ s }: { s: UIState }) {
       </div>
       {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}
-      {s.menu && <PopMenu m={s.menu} />}
+      {s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu m={s.menu} />)}
     </>
   );
 }
@@ -464,34 +474,6 @@ function GameHud({ s }: { s: UIState }) {
 // ---------------------------------------------------------------------------
 // Otras pantallas
 // ---------------------------------------------------------------------------
-
-function MainMenu({ s }: { s: UIState }) {
-  const a = ui.actions;
-  return (
-    <>
-      <div class="mainmenu">
-        <Icon k="logoilogic" alt="Ilogic" cls="px-icon logo" />
-        <div class="list" role="menu">
-          {s.mainMenu.items.map((it, i) => (
-            <button tabIndex={-1}
-              type="button"
-              role="menuitem"
-              class={`px-btn ${it.primary ? '' : 'plain'} ${i === s.mainMenu.selected ? 'sel' : ''}`}
-              disabled={it.disabled}
-              onMouseDown={noFocus}
-              onMouseEnter={() => !it.disabled && a.mainMenuHover(i)}
-              onClick={() => a.mainMenuPick(i)}
-            >
-              <span>{it.label}</span>
-              {it.value && <span class="val">{it.value}</span>}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div class="credits">Fingerprint Games · 2013 / 2026</div>
-    </>
-  );
-}
 
 function Help() {
   const h = helpText();
@@ -545,115 +527,6 @@ function Help() {
   );
 }
 
-function NewGame({ s }: { s: UIState }) {
-  const a = ui.actions;
-  const ng = s.newGame;
-  const sel = ng.rows[ng.selected];
-  return (
-    <div class="px newgame" role="dialog" aria-label={t('newGame')}>
-      <span class="htitle">{t('newGame')}</span>
-      <div class="ng-rows">
-        {ng.rows.map((r, i) => {
-          const cls = `ng-row ${i === ng.selected ? 'sel' : ''} ${r.kind}`;
-          if (r.kind === 'start' || r.kind === 'back')
-            return (
-              <button
-                tabIndex={-1}
-                type="button"
-                class={`px-btn ${r.kind === 'back' ? 'plain' : ''} ${i === ng.selected ? 'sel' : ''}`}
-                onMouseDown={noFocus}
-                onMouseEnter={() => a.setupHover(i)}
-                onClick={() => a.setupPick(i)}
-              >
-                {r.label}
-              </button>
-            );
-          if (r.kind === 'code')
-            return (
-              <div class={cls} onMouseEnter={() => a.setupHover(i)}>
-                <span class="ng-label">{r.label}</span>
-                <input
-                  class={`ng-code ${ng.codeError ? 'bad' : ''}`}
-                  value={ng.code}
-                  maxLength={7}
-                  placeholder={t('random')}
-                  spellcheck={false}
-                  autocomplete="off"
-                  aria-label={r.label}
-                  onFocus={() => a.setupHover(i)}
-                  onInput={(e) => a.setupCode((e.currentTarget as HTMLInputElement).value)}
-                />
-              </div>
-            );
-          return (
-            <div class={cls} onMouseEnter={() => a.setupHover(i)}>
-              <span class="ng-label">{r.label}</span>
-              <span class="ng-value">
-                <button tabIndex={-1} type="button" class="ng-arrow" aria-label="−" onMouseDown={noFocus} onClick={() => a.setupChange(i, -1)}>
-                  ◄
-                </button>
-                <span class="ng-v" onClick={() => a.setupChange(i, 1)}>
-                  {r.value}
-                </span>
-                <button tabIndex={-1} type="button" class="ng-arrow" aria-label="+" onMouseDown={noFocus} onClick={() => a.setupChange(i, 1)}>
-                  ►
-                </button>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div class="ng-note">{sel?.note ?? ''}</div>
-    </div>
-  );
-}
-
-function Campaign({ s }: { s: UIState }) {
-  const a = ui.actions;
-  const c = s.campaign;
-  const sel = c.items[c.selected];
-  return (
-    <div class="px campaign" role="dialog" aria-label={t('campaign')}>
-      <span class="htitle">{t('campaign')}</span>
-      <div class="cp-body">
-        <div class="cp-list" role="menu">
-          {c.items.map((it, i) => (
-            <button
-              tabIndex={-1}
-              type="button"
-              role="menuitem"
-              class={`item ${i === c.selected ? 'sel' : ''} ${it.status === 'locked' ? 'disabled' : ''}`}
-              onMouseDown={noFocus}
-              onMouseEnter={() => a.campaignHover(i)}
-              onClick={() => a.campaignPick(i)}
-            >
-              <span>
-                {i + 1}. {it.title}
-              </span>
-              <span class="hint">{it.status === 'done' ? '✓' : it.status === 'locked' ? '—' : ''}</span>
-            </button>
-          ))}
-        </div>
-        <div class="cp-brief">
-          {sel && <span class="label">{sel.title}</span>}
-          <p>{c.brief}</p>
-          <p class="cp-obj">{c.objective}</p>
-          {sel?.status === 'locked' ? (
-            <p class="muted">{t('locked')}</p>
-          ) : (
-            <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => a.campaignPick(c.selected)}>
-              {t('play')} <span class="key">Enter</span>
-            </button>
-          )}
-        </div>
-      </div>
-      <button tabIndex={-1} type="button" class="px-btn plain cp-back" onMouseDown={noFocus} onClick={() => a.campaignBack()}>
-        {t('back')} <span class="key">Esc</span>
-      </button>
-    </div>
-  );
-}
-
 function MissionPanel({ m }: { m: NonNullable<UIState['mission']> }) {
   return (
     <div class="px missionpanel" role="status">
@@ -681,7 +554,8 @@ export function Hud() {
           </div>
         </div>
       )}
-      {s.screen === 'menu' && <MainMenu s={s} />}
+      {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign') && <div class="menu-veil" />}
+      {s.screen === 'menu' && <Home s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}
       {s.screen === 'campaign' && <Campaign s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
@@ -738,6 +612,7 @@ export function Hud() {
           </button>
         </div>
       )}
+      {s.options && <Options o={s.options} />}
       {s.help && <Help />}
       {s.toast && (
         <div key={s.toast.id} class="px toast" role="status" style={{ animationDuration: `${Math.max(2.4, s.toast.text.length / 16).toFixed(1)}s` }}>

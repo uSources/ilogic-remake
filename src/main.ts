@@ -5,16 +5,16 @@ import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { deviceSize, fitCanvas, watchResize } from './display';
 import { Hud } from './hud/Hud';
-import { settings } from './settings';
+import { applySettings } from './settings';
 import { BootScene } from './scenes/BootScene';
 import { LogoScene } from './scenes/LogoScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
 import { EndScene } from './scenes/EndScene';
 
-document.documentElement.lang = settings.lang;
 const hudRoot = document.getElementById('hud')!;
 render(h(Hud, {}), hudRoot);
+applySettings();
 // Sin menu contextual del navegador sobre la interfaz, y Tab no recorre sus botones
 // (Tab es "siguiente unidad"; Enter ya lo maneja el juego).
 hudRoot.addEventListener('contextmenu', (e) => e.preventDefault());

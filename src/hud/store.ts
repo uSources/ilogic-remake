@@ -31,6 +31,8 @@ export interface MenuVM {
   kind: 'unit' | 'game' | 'buy' | 'cargo';
   title?: string;
   subtitle?: string;
+  /** Lineas extra (objetivo de la mision) en el panel de pausa. */
+  info?: string[];
   items: MenuItemVM[];
   selected: number;
   anchor: Anchor;
@@ -119,10 +121,64 @@ export interface SetupRowVM {
   note?: string;
 }
 
+/** Fila de la pantalla de opciones: un grupo, un nombre y botones de segmento. */
+export interface OptionRowVM {
+  id: string;
+  group: string;
+  label: string;
+  choices: string[];
+  index: number;
+}
+
+export type MarkVM = 'done' | 'open' | 'locked';
+
+export interface HomeVM {
+  focus: string;
+  save: { thumb: string; day: number; funds: number; size: number; rules: string; mission: string | null; limit: number | null } | null;
+  /** Resumen de las ultimas opciones (lo que hara "Rapida"). */
+  quick: string;
+  campaign: { done: number; total: number; next: string | null; thumb: string | null; marks: MarkVM[] };
+  credits: boolean;
+}
+
+export interface PresetVM {
+  id: string;
+  label: string;
+  note: string;
+}
+
+export interface SetupVM {
+  focus: string;
+  preset: string;
+  presets: PresetVM[];
+  /** Opciones de "Personalizada", con botones de segmento. */
+  groups: { title: string; rows: OptionRowVM[] }[];
+  code: string;
+  codeError: boolean;
+  /** Codigo del mapa que se ve en la vista previa. */
+  mapCode: string;
+  thumb: string;
+  mapInfo: string;
+}
+
+export interface CampaignItemVM {
+  id: string;
+  title: string;
+  status: MarkVM;
+  thumb: string;
+  kind: string;
+  best: number | null;
+}
+
 export interface UIState {
+  home: HomeVM;
+  setup: SetupVM;
+  options: { focus: number; rows: OptionRowVM[] } | null;
+  /** Panel de pausa centrado (menu de partida). */
+  pause: { title: string; info: string[]; items: MenuItemVM[]; selected: number } | null;
   screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'game' | 'end';
   campaign: {
-    items: { id: string; title: string; status: 'done' | 'open' | 'locked' }[];
+    items: CampaignItemVM[];
     selected: number;
     brief: string;
     objective: string;
@@ -193,10 +249,17 @@ export interface UIActions {
   focusUnit(uid: number): void;
   endContinue(): void;
   closeHelp(): void;
-  setupHover(i: number): void;
-  setupChange(i: number, dir: 1 | -1): void;
-  setupPick(i: number): void;
+  homeHover(id: string): void;
+  homePick(id: string): void;
+  setupHover(id: string): void;
+  setupPick(id: string): void;
+  setupSet(id: string, index: number): void;
   setupCode(text: string): void;
+  optionsHover(i: number): void;
+  optionsSet(i: number, index: number): void;
+  optionsClose(): void;
+  pauseHover(i: number): void;
+  pausePick(i: number): void;
   campaignHover(i: number): void;
   campaignPick(i: number): void;
   campaignBack(): void;
@@ -210,6 +273,10 @@ const initial: UIState = {
   loading: 0,
   mainMenu: { items: [], selected: 0 },
   newGame: { rows: [], selected: 0, code: '', codeError: false },
+  home: { focus: 'quick', save: null, quick: '', campaign: { done: 0, total: 0, next: null, thumb: null, marks: [] }, credits: false },
+  setup: { focus: 'start', preset: 'normal', presets: [], groups: [], code: '', codeError: false, mapCode: '', thumb: '', mapInfo: '' },
+  options: null,
+  pause: null,
   campaign: { items: [], selected: 0, brief: '', objective: '' },
   mission: null,
   funds: 0,
@@ -273,10 +340,17 @@ export const ui = {
     focusUnit: noop,
     endContinue: noop,
     closeHelp: () => ui.set({ help: false }),
+    homeHover: noop,
+    homePick: noop,
     setupHover: noop,
-    setupChange: noop,
     setupPick: noop,
+    setupSet: noop,
     setupCode: noop,
+    optionsHover: noop,
+    optionsSet: noop,
+    optionsClose: noop,
+    pauseHover: noop,
+    pausePick: noop,
     campaignHover: noop,
     campaignPick: noop,
     campaignBack: noop,

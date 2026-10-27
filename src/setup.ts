@@ -14,9 +14,25 @@ export interface NewGameOptions {
   dayLimit: number | null;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
   code: string;
+  /** Ajuste elegido en la pantalla de nueva partida. */
+  preset: PresetId;
 }
 
-export const DEFAULT_OPTIONS: NewGameOptions = { rules: 'modern', size: 32, theme: null, fog: true, funds: 5000, income: 1, dayLimit: null, code: '' };
+export type PresetId = 'normal' | 'quick' | 'classic' | 'custom';
+export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'classic', 'custom'];
+
+/** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
+export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset'>> = {
+  normal: { rules: 'modern', size: 32, fog: true, funds: 5000, income: 1, dayLimit: null },
+  quick: { rules: 'modern', size: 20, fog: true, funds: 5000, income: 1.5, dayLimit: 20 },
+  classic: { rules: 'classic', size: 32, fog: true, funds: 5000, income: 1, dayLimit: null },
+};
+
+export function applyPreset(o: NewGameOptions, id: PresetId): NewGameOptions {
+  return id === 'custom' ? { ...o, preset: id } : { ...o, ...PRESETS[id], preset: id };
+}
+
+export const DEFAULT_OPTIONS: NewGameOptions = { rules: 'modern', size: 32, theme: null, fog: true, funds: 5000, income: 1, dayLimit: null, code: '', preset: 'normal' };
 
 /** Valores posibles de cada opcion (en orden). */
 export const CHOICES = {
@@ -41,6 +57,7 @@ export function loadOptions(): NewGameOptions {
       const v = raw[k];
       if ((CHOICES[k] as readonly unknown[]).includes(v)) (o as Record<string, unknown>)[k] = v;
     }
+    if (PRESET_IDS.includes(raw.preset as PresetId)) o.preset = raw.preset as PresetId;
     return { ...o, code: '' };
   } catch {
     return { ...DEFAULT_OPTIONS };
