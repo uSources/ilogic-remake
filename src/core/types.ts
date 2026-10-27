@@ -27,6 +27,8 @@ export interface Unit {
   canFire: boolean;
   /** 0..100 */
   life: number;
+  /** [CAMBIO] Enemigos destruidos (veterania, reglas nuevas). Las partidas antiguas no lo tienen. */
+  kills?: number;
   fuel: number;
   ammo: number;
   /** uid del transporte que la lleva, o null. */

@@ -279,3 +279,5 @@ html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; 
 @media (max-width: 520px) { .ng-v { min-width: 104px; font-size: 15px; } .ng-code { width: 156px; } .ng-label { font-size: 13px; } }
 
 .day .dl { padding: 0 0 0 2px; font-size: 13px; color: var(--muted); }
+
+.unitcard .rank { color: var(--gold); font-size: 13px; letter-spacing: 1px; }

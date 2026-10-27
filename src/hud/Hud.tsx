@@ -223,7 +223,10 @@ function UnitCard({ u }: { u: UnitVM }) {
       <div class="head">
         <Icon k={u.icon} alt={u.name} cls="px-icon portrait" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-          <span class="name">{u.name}</span>
+          <span class="name">
+            {u.name}
+            {u.rank ? <span class="rank" title={t('veteran')}>{' ' + '★'.repeat(u.rank)}</span> : null}
+          </span>
           <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>{u.team === 0 ? t('you') : t('enemy')}</span>
           <span class="muted" style={{ fontSize: 13 }}>
             {u.stats}

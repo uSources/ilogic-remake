@@ -218,7 +218,19 @@ export function hitChance(s: GameState, atk: Unit, def: Unit): number {
   let p = POWER[atk.type]![def.type]! * TERRAIN.protection[s.map[def.x]![def.y]!]!;
   const b = buildingAt(s, def.x, def.y);
   if (b) p *= BUILDING.protection[b.type]!;
+  // [CAMBIO] Veterania: cada rango da +5 % de acierto al atacar y -5 % al que le ataca.
+  if (RULES.veterancy) p *= (1 + VET_BONUS * rank(atk)) * (1 - VET_BONUS * rank(def));
   return p;
+}
+
+/** Bajas necesarias para cada rango (1, 2 y 3 estrellas). */
+export const RANK_KILLS = [1, 3, 6] as const;
+export const VET_BONUS = 0.05;
+
+/** Rango de veterania de una unidad: 0 a 3. */
+export function rank(u: Unit): number {
+  const k = u.kills ?? 0;
+  return RANK_KILLS.filter((n) => k >= n).length;
 }
 
 /** Dano esperado (para la IA y para mostrarlo en pantalla). */
@@ -290,6 +302,8 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
     if (UNIT.maxammo[def.type]! !== 0) def.ammo--;
   }
   const result = { damage, killed: def.life <= 0, counter, attackerKilled: atk.life <= 0 };
+  if (result.killed && atk.life > 0) atk.kills = (atk.kills ?? 0) + 1;
+  if (result.attackerKilled && def.life > 0) def.kills = (def.kills ?? 0) + 1;
   removeDead(s);
   return result;
 }
@@ -400,6 +414,8 @@ export function merge(s: GameState, u: Unit, target: Unit): Pos[] | null {
   target.life = Math.min(MAX_LIFE, target.life + u.life);
   target.fuel = Math.max(target.fuel, u.fuel);
   target.ammo = Math.max(target.ammo, u.ammo);
+  // Al unirse se queda la experiencia de la mas veterana.
+  if (u.kills || target.kills) target.kills = Math.max(u.kills ?? 0, target.kills ?? 0);
   target.active = false;
   target.canMove = false;
   path.push({ x: target.x, y: target.y });

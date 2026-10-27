@@ -5,6 +5,7 @@ import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
 import { TILE } from '../layout';
 import { reducedMotion } from './fx';
+import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach';
@@ -36,6 +37,9 @@ interface UnitSprite {
   img: Phaser.GameObjects.Image;
   life: Phaser.GameObjects.Image;
   cargo: Phaser.GameObjects.Rectangle;
+  /** Estrellas de veterania (arriba a la derecha). */
+  stars: Phaser.GameObjects.Graphics;
+  rank: number;
   key: string;
   /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
   idle: boolean;
@@ -263,9 +267,10 @@ export class MapView {
     img.setDisplaySize(TILE, img.height);
     const life = this.scene.add.image(17, 17, 'n_9').setOrigin(0).setDisplaySize(14, 14);
     const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, 0x0b1220);
-    const root = this.scene.add.container(0, 0, [img, life, cargo]);
+    const stars = this.scene.add.graphics();
+    const root = this.scene.add.container(0, 0, [img, life, cargo, stars]);
     this.unitLayer.add(root);
-    return { root, img, life, cargo, key, idle: false };
+    return { root, img, life, cargo, stars, rank: 0, key, idle: false };
   }
 
   private syncUnits(s: GameState, opts: ViewOptions): void {
@@ -304,6 +309,23 @@ export class MapView {
     sp.life.setVisible(showLife);
     if (showLife) sp.life.setTexture(`n_${n}`).setDisplaySize(14, 14);
     sp.cargo.setVisible(u.cargo.some((c) => c !== null));
+    const r = rank(u);
+    if (r !== sp.rank) {
+      // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
+      sp.rank = r;
+      const g = sp.stars;
+      g.clear();
+      for (let i = 0; i < r; i++) {
+        const x = TILE - 5 - i * 5,
+          y = 1;
+        g.fillStyle(0x0b1220, 1);
+        g.fillRect(x - 1, y, 5, 5);
+        g.fillStyle(0xffd447, 1);
+        g.fillRect(x, y + 1, 3, 3);
+        g.fillStyle(0xfff1a8, 1);
+        g.fillRect(x + 1, y + 1, 1, 1);
+      }
+    }
     sp.idle = u.team === 0 && u.active;
     sp.img.y = TILE - (sp.idle ? this.bobPhase : 0);
   }

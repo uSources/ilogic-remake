@@ -10,6 +10,7 @@ const HELP = {
       'Gana quien conquista la Base enemiga.',
       'CAPTURE_ES',
       'COUNTER_ES',
+      'VET_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan y repostan al empezar la ronda.',
     ],
@@ -46,6 +47,7 @@ const HELP = {
       'You win by taking the enemy HQ.',
       'CAPTURE_EN',
       'COUNTER_EN',
+      'VET_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired and refuelled at the start of the round.',
     ],
@@ -87,6 +89,9 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     COUNTER_ES: RULES.counterattack
       ? 'Al atacar, si el defensor sobrevive y te alcanza, responde con la vida que le queda. Las unidades a distancia ni contraatacan ni reciben contraataque.'
       : 'No hay contraataque: atacar primero sale gratis.',
+    VET_ES: RULES.veterancy
+      ? 'Veteranía: una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas). Cada estrella da +5 % de acierto y de defensa; al unir dos unidades se queda la más veterana.'
+      : '',
   };
   const en = {
     CAPTURE_EN: points
@@ -95,6 +100,9 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     COUNTER_EN: RULES.counterattack
       ? 'When you attack, a defender that survives and can reach you strikes back with the HP it has left. Ranged units neither counter nor get countered.'
       : 'There is no counterattack: striking first is free.',
+    VET_EN: RULES.veterancy
+      ? 'Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +5 % hit chance and defence; joining two units keeps the more veteran one.'
+      : '',
   };
   return lang === 'es' ? es : en;
 }
@@ -102,5 +110,5 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
 export const helpText = () => {
   const h = HELP[settings.lang];
   const lines = ruleLines(settings.lang);
-  return { ...h, goal: h.goal.map((g) => lines[g] ?? g) };
+  return { ...h, goal: h.goal.map((g) => lines[g] ?? g).filter(Boolean) };
 };
