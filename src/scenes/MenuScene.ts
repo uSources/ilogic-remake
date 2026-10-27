@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { MODERN_RULES, useRules } from '../core/data';
+import { DEFAULT_RULES, useRules } from '../core/data';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { buildMission, MISSIONS, missionRules } from '../core/missions';
@@ -32,7 +32,7 @@ import {
 } from '../setup';
 import { readSave } from '../storage';
 import { MapView } from '../ui/mapView';
-import { burst, center, COLORS, floatText, lunge, tileFlash } from '../ui/fx';
+import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { TILE } from '../layout';
 import { terrainPalette } from '../ui/terrainColors';
 
@@ -40,7 +40,7 @@ type Mode = 'home' | 'setup' | 'campaign';
 
 /** Grupos de opciones de "Personalizada". */
 const CUSTOM_GROUPS: { title: TextKey; keys: { k: ChoiceKey; label: TextKey }[] }[] = [
-  { title: 'optRules', keys: [{ k: 'rules', label: 'optRules' }, { k: 'fog', label: 'optFog' }, { k: 'dayLimit', label: 'optDayLimit' }] },
+  { title: 'optGroupGame', keys: [{ k: 'fog', label: 'optFog' }, { k: 'dayLimit', label: 'optDayLimit' }] },
   { title: 'optSize', keys: [{ k: 'size', label: 'optSize' }, { k: 'theme', label: 'optTheme' }] },
   { title: 'optFunds', keys: [{ k: 'funds', label: 'optFunds' }, { k: 'income', label: 'optIncome' }] },
 ];
@@ -176,8 +176,8 @@ export class MenuScene extends Phaser.Scene {
     this.bgGame = null;
     this.bgView = null;
     let bg: Phaser.GameObjects.Image | null = null;
-    const reduced = settings.reduceMotion || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (settings.menuBg === 'live' && !reduced) {
+    // La partida en directo sale aunque el sistema pida menos movimiento (entonces la camara salta en vez de deslizarse).
+    if (settings.menuBg === 'live') {
       this.startBgGame();
     } else {
       bg = this.add.image(0, 0, 'menubackground').setScrollFactor(0);
@@ -203,7 +203,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private startBgGame(): void {
-    useRules({ ...MODERN_RULES, fog: false });
+    useRules({ ...DEFAULT_RULES, fog: false });
     const seed = randomSeed();
     this.bgRng = seededRng(seed ^ 0x5bd1e995);
     this.bgGame = generateGame(seededRng(seed), { size: 32 });
@@ -292,6 +292,10 @@ export class MenuScene extends Phaser.Scene {
     const tx = sx < W / 2 ? W * side : W * (1 - side);
     const midX = c.x + (W / 2 - tx) / z;
     const ms = 1100;
+    if (reducedMotion()) {
+      cam.centerOn(midX, c.y);
+      return;
+    }
     cam.pan(midX, c.y, ms, 'Sine.easeInOut', true);
     await this.pause(ms);
   }
@@ -361,7 +365,6 @@ export class MenuScene extends Phaser.Scene {
         day: s.day,
         funds: s.funds[0],
         size: s.map.length,
-        rules: t(s.rules && !s.rules.counterattack ? 'rulesClassic' : 'rulesModern'),
         mission,
         limit: s.rules?.dayLimit ?? null,
       };

@@ -60,7 +60,6 @@ function loadVariant(a: ReturnType<typeof args>): Variant {
     if (i < 0) throw new Error(`--set necesita ruta=valor: ${kv}`);
     v.set![kv.slice(0, i)] = parseValue(kv.slice(i + 1));
   }
-  if (a.one('rules')) v.rules = a.one('rules') === 'classic' ? 'classic' : 'modern';
   if (a.one('name')) v.name = a.one('name')!;
   else if (a.all('set').length && !file) v.name = 'prueba';
   return v;

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '../src/core/ai';
-import { HQ, MODERN_RULES, UNIT, setMapSize, useRules } from '../src/core/data';
+import { HQ, DEFAULT_RULES, UNIT, setMapSize, useRules } from '../src/core/data';
 import { grid, seededRng } from '../src/core/geom';
 import { buildMission, checkMission, missionRules, MISSIONS } from '../src/core/missions';
 import { endRound, groundDistance, outcome } from '../src/core/rules';
@@ -8,7 +8,7 @@ import { deserialize, serialize } from '../src/core/save';
 
 afterEach(() => {
   setMapSize(32);
-  useRules(MODERN_RULES);
+  useRules(DEFAULT_RULES);
 });
 
 describe('misiones', () => {

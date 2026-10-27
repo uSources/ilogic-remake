@@ -1,11 +1,10 @@
 /**
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
-import { CLASSIC_RULES, MODERN_RULES, type RulesConfig } from './core/data';
+import { DEFAULT_RULES, type RulesConfig } from './core/data';
 import { settings } from './settings';
 
 export interface NewGameOptions {
-  rules: 'modern' | 'classic';
   size: number;
   theme: number | null;
   fog: boolean;
@@ -18,25 +17,23 @@ export interface NewGameOptions {
   preset: PresetId;
 }
 
-export type PresetId = 'normal' | 'quick' | 'classic' | 'custom';
-export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'classic', 'custom'];
+export type PresetId = 'normal' | 'quick' | 'custom';
+export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
 export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset'>> = {
-  normal: { rules: 'modern', size: 32, fog: true, funds: 5000, income: 1, dayLimit: null },
-  quick: { rules: 'modern', size: 20, fog: true, funds: 5000, income: 1.5, dayLimit: 20 },
-  classic: { rules: 'classic', size: 32, fog: true, funds: 5000, income: 1, dayLimit: null },
+  normal: { size: 32, fog: true, funds: 5000, income: 1, dayLimit: null },
+  quick: { size: 20, fog: true, funds: 5000, income: 1.5, dayLimit: 20 },
 };
 
 export function applyPreset(o: NewGameOptions, id: PresetId): NewGameOptions {
   return id === 'custom' ? { ...o, preset: id } : { ...o, ...PRESETS[id], preset: id };
 }
 
-export const DEFAULT_OPTIONS: NewGameOptions = { rules: 'modern', size: 32, theme: null, fog: true, funds: 5000, income: 1, dayLimit: null, code: '', preset: 'normal' };
+export const DEFAULT_OPTIONS: NewGameOptions = { size: 32, theme: null, fog: true, funds: 5000, income: 1, dayLimit: null, code: '', preset: 'normal' };
 
 /** Valores posibles de cada opcion (en orden). */
 export const CHOICES = {
-  rules: ['modern', 'classic'] as const,
   size: [20, 32, 40] as const,
   theme: [null, 0, 1, 2, 3, 4] as const,
   fog: [true, false] as const,
@@ -74,8 +71,7 @@ export function saveOptions(o: NewGameOptions): void {
 
 /** Reglas de la partida a partir de las opciones. */
 export function rulesFor(o: NewGameOptions): RulesConfig {
-  const base = o.rules === 'classic' ? CLASSIC_RULES : MODERN_RULES;
-  return { ...base, fog: o.fog, initialFunds: o.funds, incomeScale: o.income, dayLimit: o.dayLimit };
+  return { ...DEFAULT_RULES, fog: o.fog, initialFunds: o.funds, incomeScale: o.income, dayLimit: o.dayLimit };
 }
 
 /** Codigo de mapa: la semilla en base 36, en mayusculas (p. ej. "K3F9A2"). */
@@ -97,8 +93,6 @@ const THEME_EN = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'];
 export function choiceLabel(k: ChoiceKey, v: unknown): string {
   const es = settings.lang === 'es';
   switch (k) {
-    case 'rules':
-      return v === 'modern' ? (es ? 'Nuevas' : 'New') : es ? 'Clásicas (2013)' : 'Classic (2013)';
     case 'size':
       return `${v}×${v}${v === 20 ? (es ? ' pequeño' : ' small') : v === 40 ? (es ? ' grande' : ' large') : ''}`;
     case 'theme':

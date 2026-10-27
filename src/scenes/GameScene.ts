@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { BUILDING, CLASSIC_RULES, FUELER, HQ, MAP_H, MAP_W, MODERN_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import { BUILDING, FUELER, HQ, MAP_H, MAP_W, DEFAULT_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
 import { diamond, grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
@@ -197,8 +197,10 @@ export class GameScene extends Phaser.Scene {
     this.corruptSave = data.mode === 'load' && !state;
     if (this.corruptSave) deleteSave();
     if (state) {
-      // Partidas guardadas antes de las reglas nuevas: se siguen jugando con las de 2013.
-      state.rules ??= { ...CLASSIC_RULES };
+      // Solo se guardan los ajustes de la partida; las reglas son siempre las actuales
+      // (las partidas antiguas con las reglas de 2013 pasan a jugarse con estas).
+      const r = state.rules;
+      state.rules = { ...DEFAULT_RULES, ...(r ? { initialFunds: r.initialFunds, maxUnits: r.maxUnits, incomeScale: r.incomeScale, fog: r.fog, dayLimit: r.dayLimit } : {}) };
       useRules(state.rules);
       this.s = state;
     } else if (data.mode === 'mission' && data.mission && missionById(data.mission)) {
@@ -206,7 +208,7 @@ export class GameScene extends Phaser.Scene {
       useRules(missionRules(m));
       this.s = buildMission(m);
     } else {
-      useRules(data.rules ?? MODERN_RULES);
+      useRules(data.rules ?? DEFAULT_RULES);
       const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: 32, theme: null };
       this.s = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
       this.s.setup = setup;
@@ -644,7 +646,7 @@ export class GameScene extends Phaser.Scene {
   /** "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas). */
   private captureHint(): string | undefined {
     const u = this.sel;
-    if (!u || RULES.capture !== 'points') return undefined;
+    if (!u) return undefined;
     const b = buildingAt(this.s, u.x, u.y);
     if (!b) return undefined;
     const cp = captureProgress(this.s, b);

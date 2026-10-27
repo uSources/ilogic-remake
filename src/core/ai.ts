@@ -143,7 +143,7 @@ function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
   }
   // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.
   const tb = buildingAt(s, t.x, t.y);
-  if (RULES.capture === 'points' && tb && tb.type === HQ && tb.owner === t.team) score += 200 * Math.max(0.5, dmg / 50);
+  if (tb && tb.type === HQ && tb.owner === t.team) score += 200 * Math.max(0.5, dmg / 50);
   // Echar a quien esta capturando un edificio propio (sobre todo la Base).
   const b = buildingAt(s, t.x, t.y);
   if (b && b.owner === ME && captureProgress(s, b)) score += (b.type === HQ ? 400 : 60) * Math.max(0.5, dmg / 50);
@@ -334,7 +334,7 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
     // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
     // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
     const here = buildingAt(s, u.x, u.y);
-    if (here && (captureProgress(s, here)?.uid === u.uid || RULES.capture === 'points') && (yield* captureHere(s, u))) continue;
+    if (here && (yield* captureHere(s, u))) continue;
     const range = moveRange(s, u);
     // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
     if (here && here.type === HQ && here.owner !== ME && here.owner !== null && !UNIT.cancapt[u.type]) {

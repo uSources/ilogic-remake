@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { CLASSIC_RULES, HQ, UNIT, useRules } from '../src/core/data';
+import { HQ, UNIT, useRules } from '../src/core/data';
+import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '../src/core/geom';
 import {
   attack,
@@ -22,7 +23,7 @@ const SOLDIER = 0, TANK = 1, ARTILLERY = 2, TRANSPORT = 7, LFIGHTER = 10, SUPPLI
 
 
 // Estas pruebas son de las reglas de 2013; las nuevas estan en tests/modern.test.ts.
-beforeEach(() => useRules(CLASSIC_RULES));
+beforeEach(() => useRules(PLAIN_RULES));
 
 describe('movimiento', () => {
   it('un soldado mueve 3 casillas en rombo y las unidades bloquean', () => {
@@ -87,18 +88,22 @@ describe('combate', () => {
 });
 
 describe('captura y victoria', () => {
-  it('neutral -> propio; enemigo -> neutral; neutralizar la Base gana', () => {
+  it('capturar por puntos en dos turnos; capturar la Base enemiga gana', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 });
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
     s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
     const a = newUnit(s, SOLDIER, 0, 3, 3);
+    expect(capture(s, a)?.done).toBe(false);
+    a.active = true;
     expect(capture(s, a)?.done).toBe(true);
     expect(s.buildings[2]!.owner).toBe(0);
     expect(outcome(s)).toBe('playing');
     const b = newUnit(s, SOLDIER, 0, 5, 5);
     capture(s, b);
-    expect(s.buildings[1]!.owner).toBeNull();
+    b.active = true;
+    capture(s, b);
+    expect(s.buildings[1]!.owner).toBe(0);
     expect(outcome(s)).toBe('won');
   });
 });

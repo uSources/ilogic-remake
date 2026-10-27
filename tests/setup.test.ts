@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '../src/core/ai';
-import { HQ, MAP_W, MODERN_RULES, setMapSize, useRules } from '../src/core/data';
+import { HQ, MAP_W, DEFAULT_RULES, setMapSize, useRules } from '../src/core/data';
 import { grid, seededRng } from '../src/core/geom';
 import { generateGame } from '../src/core/mapgen';
 import { endReason, groundDistance, newUnit, outcome, score } from '../src/core/rules';
@@ -10,7 +10,7 @@ import { blankState } from './helpers';
 
 afterEach(() => {
   setMapSize(32);
-  useRules(MODERN_RULES);
+  useRules(DEFAULT_RULES);
 });
 
 describe('nueva partida: tamaños de mapa', () => {
@@ -58,7 +58,7 @@ describe('nueva partida: tamaños de mapa', () => {
 
 describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
-    useRules({ ...MODERN_RULES, dayLimit: 10 });
+    useRules({ ...DEFAULT_RULES, dayLimit: 10 });
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
     newUnit(s, 1, 0, 1, 1); // tanque: 12000

@@ -93,7 +93,6 @@ export function deserialize(json: string): GameState | null {
       isInt(r.maxUnits, 1, 200) &&
       typeof r.counterattack === 'boolean' &&
       (r.damageSpread === null || (typeof r.damageSpread === 'number' && r.damageSpread >= 0 && r.damageSpread <= 1)) &&
-      (r.capture === 'instant' || r.capture === 'points') &&
       isInt(r.capturePoints, 1, 1000) &&
       isInt(r.hqCapturePoints, 1, 1000) &&
       typeof r.incomeScale === 'number' &&

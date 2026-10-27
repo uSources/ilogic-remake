@@ -505,10 +505,6 @@ export function capture(s: GameState, u: Unit): CaptureResult | null {
   const b = buildingAt(s, u.x, u.y)!;
   u.active = false;
   u.canMove = false;
-  if (RULES.capture === 'instant') {
-    b.owner = b.owner === null ? u.team : null;
-    return { done: true, left: 0, total: 1 };
-  }
   const total = capturePointsOf(b);
   const prev = captureProgress(s, b);
   const left = Math.max(0, (prev && prev.uid === u.uid ? prev.left : total) - captureStrength(u));

@@ -95,13 +95,10 @@ const HELP = {
   },
 };
 
-/** Frases que dependen de las reglas de la partida (clasicas de 2013 o nuevas). */
+/** Frases que dependen de las reglas de la partida. */
 function ruleLines(lang: 'es' | 'en'): Record<string, string> {
-  const points = RULES.capture === 'points';
   const es = {
-    CAPTURE_ES: points
-      ? `Capturar va por puntos: un edificio tiene ${RULES.capturePoints} (la Base ${RULES.hqCapturePoints}) y cada turno la unidad le resta su vida ÷ 10. Si se mueve o la destruyen, se pierde lo avanzado. Al llegar a 0 pasa a ser tuyo.`
-      : 'Capturar es instantáneo, pero un edificio enemigo hay que capturarlo dos veces: primero queda neutral y luego pasa a ser tuyo.',
+    CAPTURE_ES: `Capturar va por puntos: un edificio tiene ${RULES.capturePoints} (la Base ${RULES.hqCapturePoints}) y cada turno la unidad le resta su vida ÷ 10. Si se mueve o la destruyen, se pierde lo avanzado. Al llegar a 0 pasa a ser tuyo.`,
     COUNTER_ES: RULES.counterattack
       ? 'Al atacar, si el defensor sobrevive y te alcanza, responde con la vida que le queda. Las unidades a distancia ni contraatacan ni reciben contraataque.'
       : 'No hay contraataque: atacar primero sale gratis.',
@@ -114,9 +111,7 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       : '',
   };
   const en = {
-    CAPTURE_EN: points
-      ? `Capturing takes points: a building has ${RULES.capturePoints} (the HQ ${RULES.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`
-      : 'Capturing is instant, but an enemy building must be captured twice: first it turns neutral, then it becomes yours.',
+    CAPTURE_EN: `Capturing takes points: a building has ${RULES.capturePoints} (the HQ ${RULES.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`,
     COUNTER_EN: RULES.counterattack
       ? 'When you attack, a defender that survives and can reach you strikes back with the HP it has left. Ranged units neither counter nor get countered.'
       : 'There is no counterattack: striking first is free.',
