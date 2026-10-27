@@ -12,7 +12,12 @@ import type { MapView } from './mapView';
 
 const STEPPED = { ease: 'Stepped', easeParams: [6] };
 
-export const reducedMotion = (): boolean => settings.reduceMotion || (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+/**
+ * Menos movimiento: solo si se pide en Opciones. [CAMBIO] Antes tambien se hacia caso a la
+ * preferencia del sistema, pero en Windows con "efectos de animacion" apagados el agua, las nubes
+ * y el fondo del menu se quedaban quietos sin que el jugador supiera por que.
+ */
+export const reducedMotion = (): boolean => settings.reduceMotion;
 
 function tween(scene: Phaser.Scene, cfg: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
   return new Promise((resolve) => scene.tweens.add({ ...cfg, onComplete: () => resolve() }));

@@ -83,7 +83,9 @@ export class MapView {
   private readonly cam: Phaser.Cameras.Scene2D.Camera;
   private readonly units = new Map<number, UnitSprite>();
   private readonly buildings: Phaser.GameObjects.Image[] = [];
-  private clouds: { img: Phaser.GameObjects.Image; x: number; y: number }[] = [];
+  private clouds: { img: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image | null; x: number; y: number }[] = [];
+  /** Sombras de las nubes sobre el suelo (debajo de edificios y unidades). */
+  private readonly cloudShadows: Phaser.GameObjects.Container;
   private level = 2;
   private bobPhase = 0;
   /** Agua animada del terreno nuevo. */
@@ -102,10 +104,11 @@ export class MapView {
     this.overlay = scene.add.graphics();
     this.fx = scene.add.container(0, 0);
     this.cloudLayer = scene.add.container(0, 0);
+    this.cloudShadows = scene.add.container(0, 0);
     this.cursorImg = scene.add.image(0, 0, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor, nubes.
     this.marks = scene.add.graphics();
-    this.root.add([this.terrain, this.buildingLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg, this.cloudLayer]);
+    this.root.add([this.terrain, this.cloudShadows, this.buildingLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg, this.cloudLayer]);
     this.cam.setBackgroundColor('#0b1220');
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
@@ -596,25 +599,41 @@ export class MapView {
       if (this.goal || this.vip) this.drawMarks(phase);
       for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
     }
-    // Nubes: cruzan el mapa despacio, de vez en cuando.
-    const dy = delta * 0.006;
+    // Nubes: cruzan el mapa despacio con el viento, de vez en cuando (las nuevas, con su sombra en el suelo).
+    const pixelClouds = settings.terrainArt === 'new' && this.scene.textures.exists('wang/cloud_0');
+    const vx = pixelClouds ? delta * 0.007 : 0,
+      vy = delta * (pixelClouds ? 0.0025 : 0.006);
     this.clouds = this.clouds.filter((c) => {
-      c.y += dy;
+      c.x += vx;
+      c.y += vy;
       c.img.setPosition(Math.round(c.x), Math.round(c.y));
-      if (c.y > MAP_H * TILE + 40) {
+      c.shadow?.setPosition(Math.round(c.x) + 28, Math.round(c.y) + 52);
+      if (c.y > MAP_H * TILE + 40 || c.x > MAP_W * TILE + 20) {
         c.img.destroy();
+        c.shadow?.destroy();
         return false;
       }
       return true;
     });
-    if (this.clouds.length < 3 && Math.random() < delta / 25000) {
-      const img = this.scene.add
-        .image(0, 0, `cl_${Math.floor(Math.random() * 5)}`)
-        .setOrigin(0, 1)
-        .setDisplaySize(64, 128)
-        .setAlpha(0.75);
-      this.cloudLayer.add(img);
-      this.clouds.push({ img, x: Math.random() * (MAP_W * TILE - 64), y: -8 });
+    if (this.clouds.length < (pixelClouds ? 4 : 3) && Math.random() < delta / (pixelClouds ? 9000 : 25000)) {
+      if (pixelClouds) {
+        const n = Math.floor(Math.random() * 5);
+        const img = this.scene.add.image(0, 0, `wang/cloud_${n}`).setOrigin(0, 1).setAlpha(0.92);
+        const shadow = this.scene.add.image(0, 0, `wang/cloud_shadow_${n}`).setOrigin(0, 1);
+        this.cloudLayer.add(img);
+        this.cloudShadows.add(shadow);
+        // Entran por la izquierda o por arriba.
+        const fromLeft = Math.random() < 0.5;
+        this.clouds.push({ img, shadow, x: fromLeft ? -img.width : Math.random() * MAP_W * TILE, y: fromLeft ? Math.random() * MAP_H * TILE : -8 });
+      } else {
+        const img = this.scene.add
+          .image(0, 0, `cl_${Math.floor(Math.random() * 5)}`)
+          .setOrigin(0, 1)
+          .setDisplaySize(64, 128)
+          .setAlpha(0.75);
+        this.cloudLayer.add(img);
+        this.clouds.push({ img, shadow: null, x: Math.random() * (MAP_W * TILE - 64), y: -8 });
+      }
     }
   }
 
