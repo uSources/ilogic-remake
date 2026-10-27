@@ -182,3 +182,20 @@ describe('movimiento: coste del terreno', () => {
     expect(moveRange(s, tank).steps[6]![5]).toBe(1);
   });
 });
+
+describe('movimiento: ordenes de varios turnos', () => {
+  it('stepToward acerca la unidad al destino y la orden se guarda con la partida', async () => {
+    const { stepToward } = await import('../src/core/rules');
+    const { deserialize, serialize } = await import('../src/core/save');
+    const s = blankState();
+    const tank = newUnit(s, TANK, 0, 2, 2);
+    const goal = { x: 20, y: 2 };
+    const step = stepToward(s, tank, goal)!;
+    expect(step).toEqual({ x: 7, y: 2 });
+    tank.order = goal;
+    expect(deserialize(serialize(s))!.units[0]!.order).toEqual(goal);
+    // Un destino al que no se puede llegar (agua para un tanque): null.
+    s.map[25]![25] = 1;
+    expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();
+  });
+});

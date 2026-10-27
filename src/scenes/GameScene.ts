@@ -17,6 +17,7 @@ import {
   hasAmmo,
   inAttackRange,
   passMap,
+  stepToward,
   capture,
   capturePointsOf,
   captureProgress,
@@ -142,6 +143,9 @@ export class GameScene extends Phaser.Scene {
   private attackZone: boolean[][] | null = null;
   /** Estados anteriores para deshacer movimientos sin consecuencias (Ctrl+Z). */
   private undoStack: string[] = [];
+  /** Seleccion en grupo (Mayusculas + arrastrar) y recuadro que se esta dibujando. */
+  private group = new Set<number>();
+  private box: { x0: number; y0: number; x1: number; y1: number } | null = null;
   /** Ultimo movimiento confirmado (para el doble clic: mover y esperar). */
   private lastCommit: { at: Pos; time: number } | null = null;
 
@@ -319,6 +323,11 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'map' && this.group.size) {
+      for (const uid of this.group) {
+        const u = unitById(this.s, uid);
+        if (u) h.set(`${u.x},${u.y}`, 'group');
+      }
     } else if (this.phase === 'map' && this.inspectUid === null) {
       // Solo pasando por encima de una unidad propia: su alcance, en tenue.
       const c = this.view.cursor;
@@ -372,6 +381,7 @@ export class GameScene extends Phaser.Scene {
       path: this.previewPath(),
       threat,
       attackZone: this.phase === 'move' ? this.attackZone : null,
+      orders: this.s.units.filter((u) => u.team === 0 && u.order && u.carrier === null).map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
       goal: obj?.kind === 'escort' ? obj.to : null,
@@ -790,6 +800,10 @@ export class GameScene extends Phaser.Scene {
         return this.back();
       case 'Escape':
         if (this.carry) return this.cancelCarry();
+        if (this.group.size) {
+          this.group.clear();
+          return this.refresh();
+        }
         return this.back();
       case 'KeyZ':
         if ((e.ctrlKey || e.metaKey) && this.phase === 'map') this.undoLast();
@@ -872,6 +886,11 @@ export class GameScene extends Phaser.Scene {
     }
     // Unidad cogida: sigue al puntero, encajada en las casillas.
     if (this.carry) return this.carryTo(p);
+    if (this.box && p.isDown) {
+      this.box.x1 = p.x;
+      this.box.y1 = p.y;
+      return this.view.setBox(this.box);
+    }
     if (this.pick) {
       const moved = Math.hypot(p.x - this.pick.x, p.y - this.pick.y) > DRAG_THRESHOLD * (window.devicePixelRatio || 1);
       if (moved && !this.pick.touch) {
@@ -913,6 +932,12 @@ export class GameScene extends Phaser.Scene {
       const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
       if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u)) && u.uid !== this.inspectUid) return this.inspect(u);
       return this.back();
+    }
+    // Mayusculas + arrastrar en el mapa: recuadro para elegir varias unidades (mover en grupo).
+    if (!p.wasTouch && (p.event as MouseEvent | undefined)?.shiftKey && this.phase === 'map') {
+      this.box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+      this.drag = null;
+      return;
     }
     this.drag = { x: p.x, y: p.y, moved: false };
     // ¿Se coge una unidad propia? (en el mapa, o la que esta elegida al mover)
@@ -986,6 +1011,16 @@ export class GameScene extends Phaser.Scene {
       return this.dropCarry(this.view.tileAtScreen(p.x, p.y), !!(p.event as MouseEvent | undefined)?.shiftKey);
     }
     this.dropPick();
+    if (this.box) {
+      const r = this.view.tilesInBox(this.box);
+      this.box = null;
+      this.view.setBox(null);
+      this.group = new Set(
+        this.s.units.filter((u) => u.team === 0 && u.active && u.canMove && u.carrier === null && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1).map((u) => u.uid),
+      );
+      if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
+      return this.refresh();
+    }
     if (this.touches.delete(p.id) && this.pinch) {
       // Fin del pellizco: ignorar los dedos que quedan hasta que se levanten todos.
       if (this.touches.size === 0) this.pinch = null;
@@ -1005,6 +1040,10 @@ export class GameScene extends Phaser.Scene {
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
     if (MENU_PHASES.includes(this.phase)) return this.back();
     if (!tile) return;
+    if (this.phase === 'map' && this.group.size) {
+      this.moveCursorTo(tile, false);
+      return void this.groupMove(tile);
+    }
     if (this.phase === 'move') {
       // Al mover, un clic es como soltar: en un enemigo, ataca; en un edificio, se mueve (y sale el menu).
       if (p.wasTouch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
@@ -1285,6 +1324,8 @@ export class GameScene extends Phaser.Scene {
     if (!u || !r || this.phase !== 'move') return;
     const it = this.intentAt(t);
     const ghost = unitKey(this.textures, this.s, u);
+    // Moverla a mano cancela su orden de varios turnos.
+    if (it.kind !== 'none' && it.kind !== 'stay') delete u.order;
     switch (it.kind) {
       case 'none':
         return this.toMap();
@@ -1351,6 +1392,75 @@ export class GameScene extends Phaser.Scene {
         return this.openUnitMenu();
       }
     }
+  }
+
+  /** Orden de varios turnos: la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
+  private async giveOrder(u: Unit, goal: Pos): Promise<void> {
+    const r = this.range ?? moveRange(this.s, u);
+    const dest = stepToward(this.s, u, goal, r);
+    if (!dest) {
+      showToast(t('orderUnreachable'));
+      return this.toMap();
+    }
+    this.clearUndo();
+    u.order = { ...goal };
+    showToast(t('orderSet'));
+    const ghost = unitKey(this.textures, this.s, u);
+    const path = moveUnit(this.s, u, dest, r);
+    this.range = null;
+    if (path) await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+    if (samePos(u, goal) || path?.ambush) delete u.order;
+    this.toMap();
+  }
+
+  /** Al empezar el turno: las unidades con orden avanzan solas (y pueden seguir actuando despues). */
+  private async runOrders(): Promise<void> {
+    const movers = this.s.units.filter((u) => u.team === 0 && u.order && u.active && u.canMove && u.carrier === null);
+    for (const u of movers) {
+      const goal = u.order!;
+      if (samePos(u, goal)) {
+        delete u.order;
+        continue;
+      }
+      const r = moveRange(this.s, u);
+      const dest = stepToward(this.s, u, goal, r);
+      if (!dest) continue;
+      const path = moveUnit(this.s, u, dest, r);
+      if (!path) continue;
+      await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }]);
+      if (samePos(u, goal) || path.ambush) delete u.order;
+    }
+    if (movers.length) this.refresh();
+  }
+
+  /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
+  private async groupMove(goal: Pos): Promise<void> {
+    const units = [...this.group]
+      .map((uid) => unitById(this.s, uid))
+      .filter((u): u is Unit => !!u && u.active && u.canMove && u.carrier === null)
+      .sort((a, b) => manhattan(a, goal) - manhattan(b, goal));
+    this.group.clear();
+    this.clearUndo();
+    for (const u of units) {
+      const r = moveRange(this.s, u);
+      let best: Pos | null = null;
+      let bestD = manhattan(u, goal);
+      for (let x = 0; x < MAP_W; x++)
+        for (let y = 0; y < MAP_H; y++) {
+          if (r.steps[x]![y]! <= 0) continue;
+          const d = manhattan({ x, y }, goal);
+          if (d < bestD || (d === bestD && best && r.steps[x]![y]! < r.steps[best.x]![best.y]!)) {
+            best = { x, y };
+            bestD = d;
+          }
+        }
+      if (!best) continue;
+      delete u.order;
+      const path = moveUnit(this.s, u, best, r);
+      if (path) await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }]);
+      if (this.ended) return;
+    }
+    this.toMap();
   }
 
   /** Uids de las unidades enemigas que se ven ahora (para saber si un movimiento ha descubierto a alguien). */
@@ -1436,6 +1546,12 @@ export class GameScene extends Phaser.Scene {
     this.carry = null;
     this.hidden.delete(c.uid);
     const it = tile ? this.intentAt(tile) : { kind: 'none' as const };
+    // Soltar lejos, fuera del alcance, en una casilla a la que se puede llegar algun dia: orden de varios turnos.
+    if (it.kind === 'none' && tile && this.sel && !unitAt(this.s, tile.x, tile.y) && canWalk(this.s, tile.x, tile.y, UNIT.movtype[this.sel.type]!)) {
+      c.ghost.destroy();
+      c.shadow.destroy();
+      return void this.giveOrder(this.sel, tile);
+    }
     if (it.kind === 'none' || it.kind === 'stay') {
       void this.snapBack(c);
       return this.toMap();
@@ -1818,6 +1934,7 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     this.showReport(report);
+    await this.runOrders();
   }
 
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */

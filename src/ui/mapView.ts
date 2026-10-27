@@ -8,7 +8,7 @@ import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 
-export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover';
+export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
 
 const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
   move: { fill: 0x3aa8ff, alpha: 0.4, line: 0xcfe8ff },
@@ -18,6 +18,7 @@ const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> =
   attack: { fill: 0xff4d45, alpha: 0.42, line: 0xffb0b2 },
   reach: { fill: 0xff8a3d, alpha: 0.32, line: 0xffc9a0 },
   hover: { fill: 0x3aa8ff, alpha: 0.16, line: 0x8fd0ff },
+  group: { fill: 0xffd447, alpha: 0.18, line: 0xffd447 },
 };
 
 export interface ViewOptions {
@@ -31,6 +32,8 @@ export interface ViewOptions {
   /** Al mover: todo lo que la unidad podria atacar (borde rojo) y destinos peligrosos (marca roja). */
   attackZone?: boolean[][] | null;
   danger?: boolean[][] | null;
+  /** Ordenes de varios turnos: linea de puntos hasta el destino y banderita. */
+  orders?: { from: Pos; to: Pos }[];
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
@@ -460,6 +463,22 @@ export class MapView {
         g.fillRect(px + 4, py, 2, 6);
       }
     }
+    // Ordenes de varios turnos: puntos cada 8 px (primero en horizontal, luego en vertical) y banderita.
+    for (const o of opts.orders ?? []) {
+      const ax = o.from.x * TILE + TILE / 2,
+        ay = o.from.y * TILE + TILE / 2,
+        bx = o.to.x * TILE + TILE / 2,
+        by = o.to.y * TILE + TILE / 2;
+      g.fillStyle(0xffd447, 0.9);
+      for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
+      for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
+      g.fillStyle(0x0b1220, 1);
+      g.fillRect(bx - 1, by - 12, 3, 14);
+      g.fillStyle(0xffd447, 1);
+      g.fillRect(bx + 2, by - 12, 8, 6);
+      g.fillStyle(0xfff1a8, 1);
+      g.fillRect(bx, by - 11, 1, 12);
+    }
     // Camino previsto: flecha pixel (tramos de 4 px con borde oscuro y punta), como en Advance Wars.
     const path = opts.path;
     if (path && path.length > 1) {
@@ -503,6 +522,38 @@ export class MapView {
         }
       }
     }
+  }
+
+  private box: Phaser.GameObjects.Graphics | null = null;
+
+  /** Recuadro de seleccion (en pixeles de pantalla del lienzo), o null para quitarlo. */
+  setBox(r: { x0: number; y0: number; x1: number; y1: number } | null): void {
+    if (!r) {
+      this.box?.clear();
+      return;
+    }
+    if (!this.box) {
+      this.box = this.scene.add.graphics();
+      this.fx.add(this.box);
+    }
+    const a = this.cam.getWorldPoint(Math.min(r.x0, r.x1), Math.min(r.y0, r.y1));
+    const b = this.cam.getWorldPoint(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
+    const g = this.box;
+    g.clear();
+    g.fillStyle(0xffd447, 0.12);
+    g.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    g.fillStyle(0xffd447, 0.9);
+    g.fillRect(a.x, a.y, b.x - a.x, 1);
+    g.fillRect(a.x, b.y - 1, b.x - a.x, 1);
+    g.fillRect(a.x, a.y, 1, b.y - a.y);
+    g.fillRect(b.x - 1, a.y, 1, b.y - a.y);
+  }
+
+  /** Casillas dentro de un recuadro de pantalla. */
+  tilesInBox(r: { x0: number; y0: number; x1: number; y1: number }): { x0: number; y0: number; x1: number; y1: number } {
+    const a = this.cam.getWorldPoint(Math.min(r.x0, r.x1), Math.min(r.y0, r.y1));
+    const b = this.cam.getWorldPoint(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
+    return { x0: Math.floor(a.x / TILE), y0: Math.floor(a.y / TILE), x1: Math.floor(b.x / TILE), y1: Math.floor(b.y / TILE) };
   }
 
   placeCursor(visible = true): void {
