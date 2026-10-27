@@ -7,7 +7,7 @@ import { TILE } from '../layout';
 import { reducedMotion } from './fx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
-import { drawWater, paintTerrain, terrainArtReady, waterMarks } from './terrainArt';
+import { drawWater, paintTerrain, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
 import { settings } from '../settings';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
@@ -583,7 +583,7 @@ export class MapView {
   tick(time: number, delta: number): void {
     const still = reducedMotion();
     if (this.water) {
-      const f = still ? 0 : Math.floor(time / 160) % 8;
+      const f = still ? 0 : Math.floor(time / 140) % WATER_FRAMES;
       if (f !== this.waterFrame) {
         this.waterFrame = f;
         drawWater(this.water, this.waterMarks, f);

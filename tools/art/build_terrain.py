@@ -15,7 +15,10 @@ SRC = os.path.join(ROOT, 'pixellab')
 OUT_IMG = os.path.join(ROOT, '..', '..', 'public', 'assets', 'img', 'wang')
 OUT_TS = os.path.join(ROOT, '..', '..', 'src', 'ui', 'wangSets.ts')
 # Capas que van encima de otro suelo: se recortan contra su suelo de abajo.
-OVERLAYS = {'ts_grass_forest', 'ts_grass_mountain', 'ts_snow_forest', 'ts_snow_mountain', 'ts_sand_mesa'}
+OVERLAYS = {'ts_grass_forest', 'ts_grass_mountain', 'ts_snow_forest', 'ts_snow_mountain', 'ts_sand_mesa',
+            # Las capas de suelo de encima tambien: si no, su parte de abajo tapa en cuadrado lo de debajo.
+            'ts_shallow_grass', 'ts_shallow_sand', 'ts_ice_snow', 'ts_water_ice', 'ts_water_shallow2'}
+TOL = {'ts_shallow_grass': 40, 'ts_shallow_sand': 40, 'ts_ice_snow': 30, 'ts_water_ice': 30, 'ts_water_shallow2': 30}
 ORDER = ('NW', 'NE', 'SW', 'SE')
 
 def cut(tile, base, tol=38, seeds=None):
@@ -70,7 +73,7 @@ def main():
                     if not k & bit:
                         pts += [(cy, cx), (abs(cy - 2), abs(cx - 2)), (abs(cy - 1), cx), (cy, abs(cx - 1))]
                 return pts
-            crops = {k: cut(v, base, tol=60, seeds=seeds(k)) for k, v in crops.items()}
+            crops = {k: cut(v, base, tol=TOL.get(name, 60), seeds=seeds(k)) for k, v in crops.items()}
         for k in range(16):
             row.alpha_composite(crops[k], (k * 32, 0))
             idx[k] = k
