@@ -25,7 +25,7 @@ SPEC = {
     'Stronghold': ('overlay', list(range(8)), True),
     'City': ('overlay', list(range(8)), True),
     'Airport': ('overlay', list(range(8)), False),
-    'Oil': ('full', [0, 1, 2, 3, 4, 5, 4, 3, 2, 1], False),
+    # La refineria se anima aparte (oil_pump.py): RD no sabia hacer el balancin.
     'Base': ('full', list(range(1, 8)), False),
 }
 
