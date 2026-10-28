@@ -102,6 +102,8 @@ export class MapView {
   private bfx: Phaser.GameObjects.Graphics | null = null;
   private bfxList: BuildingFxInfo[] = [];
   private bfxStep = -1;
+  /** Humo animado de las fabricas (fotogramas de Retro Diffusion, flat/fx_Factory). */
+  private smoke: Phaser.GameObjects.Image[] = [];
   /** Montañas y bosques: en la capa de los edificios, ordenados por fila con ellos. */
   private objImgs: Phaser.GameObjects.Image[] = [];
   private shore: ReturnType<typeof shoreRings> = [];
@@ -362,6 +364,24 @@ export class MapView {
       const m = img?.visible ? /^flat\/bld_([brn])_(\w+)$/.exec(img.texture.key) : null;
       if (!m || !vis[b.x]![b.y]!) return;
       this.bfxList.push({ x: b.x, y: b.y, name: m[2]!, team: m[1] === 'b' ? 0 : m[1] === 'r' ? 1 : null, h: img!.frame.height });
+    });
+    // Humo de las fabricas: un sprite de 64x64 por fabrica visible, delante de su edificio.
+    const fxKey = 'flat/fx_Factory';
+    const smokeOn = this.scene.textures.exists(fxKey);
+    if (smokeOn) {
+      const t = this.scene.textures.get(fxKey);
+      if (!t.has('f0')) for (let i = 0; i < 8; i++) t.add(`f${i}`, 0, i * 64, 0, 64, 64);
+    }
+    const factories = smokeOn ? this.bfxList.filter((b) => b.name === 'Factory') : [];
+    while (this.smoke.length > factories.length) this.smoke.pop()!.destroy();
+    factories.forEach((b, i) => {
+      let img = this.smoke[i];
+      if (!img) {
+        img = this.scene.add.image(0, 0, fxKey, 'f0').setOrigin(0.5, 58 / 64);
+        this.smoke.push(img);
+        this.buildingLayer.add(img);
+      }
+      img.setPosition(b.x * TILE + TILE / 2, (b.y + 1) * TILE + 0.5);
     });
     if (!this.bfx) this.bfx = this.scene.add.graphics();
     this.buildingLayer.add(this.bfx);
@@ -675,7 +695,8 @@ export class MapView {
       const step = still ? 0 : Math.floor(time / 125);
       if (step !== this.bfxStep) {
         this.bfxStep = step;
-        drawBuildingFx(this.bfx, this.bfxList, time, still);
+        drawBuildingFx(this.bfx, this.bfxList, time, still, this.smoke.length > 0);
+        this.smoke.forEach((img, i) => img.setFrame(`f${still ? 0 : (Math.floor(time / 150) + i * 3) % 8}`));
       }
     }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);

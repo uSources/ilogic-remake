@@ -312,6 +312,7 @@ export const IMAGE_KEYS: readonly string[] = [
   "flat/front_tree_grass_3",
   "flat/front_tree_snow_0",
   "flat/front_tree_snow_1",
+  "flat/fx_Factory",
   "flat/i_Missile_truck",
   "flat/i_Soldier",
   "flat/i_Tank",
