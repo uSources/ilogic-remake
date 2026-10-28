@@ -256,7 +256,10 @@ export class GameScene extends Phaser.Scene {
       this,
       'game',
       (key) => {
-        if (key === 'terrainArt') this.view.buildTerrain(this.s);
+        if (key === 'terrainArt') {
+          this.view.buildTerrain(this.s);
+          this.refresh();
+        }
         if (key === 'alwaysThreat') {
           this.threat = settings.alwaysThreat;
           ui.set({ threat: this.threat });

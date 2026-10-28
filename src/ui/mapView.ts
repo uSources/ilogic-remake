@@ -341,8 +341,9 @@ export class MapView {
   }
 
   private newUnitSprite(key: string): UnitSprite {
-    const img = this.scene.add.image(0, TILE, key).setOrigin(0, 1);
-    img.setDisplaySize(TILE, img.height);
+    // Origen abajo en el centro: las unidades nuevas pueden ser algo mas anchas que la casilla.
+    const img = this.scene.add.image(TILE / 2, TILE, key).setOrigin(0.5, 1);
+    img.setDisplaySize(Math.max(TILE, img.width), img.height);
     const life = this.scene.add.image(17, 17, 'n_9').setOrigin(0).setDisplaySize(14, 14);
     const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, 0x0b1220);
     const stars = this.scene.add.graphics();
@@ -367,7 +368,7 @@ export class MapView {
         this.units.set(u.uid, sp);
       } else if (sp.key !== key) {
         sp.img.setTexture(key);
-        sp.img.setDisplaySize(TILE, sp.img.frame.height);
+        sp.img.setDisplaySize(Math.max(TILE, sp.img.frame.width), sp.img.frame.height);
         sp.key = key;
       }
       this.updateUnitSprite(sp, u, s);
@@ -665,7 +666,7 @@ export class MapView {
   ghost(key: string, p: Pos): Phaser.GameObjects.Image {
     // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
     const img = this.scene.add.image(p.x * TILE + TILE / 2, (p.y + 1) * TILE, key).setOrigin(0.5, 1);
-    img.setDisplaySize(TILE, img.height);
+    img.setDisplaySize(Math.max(TILE, img.width), img.height);
     this.fx.add(img);
     return img;
   }
