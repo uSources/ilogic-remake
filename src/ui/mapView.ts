@@ -5,6 +5,7 @@ import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
 import { TILE } from '../layout';
 import { reducedMotion } from './fx';
+import { drawBuildingFx, type BuildingFxInfo } from './buildingFx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 import { drawShore, drawWater, frontKey, paintTerrain, shoreRings, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
@@ -97,6 +98,10 @@ export class MapView {
   private water: Phaser.GameObjects.Graphics | null = null;
   private waterMarks: ReturnType<typeof waterMarks> = [];
   private waterFrame = -1;
+  /** Animaciones de los edificios (humo, luces, banderas), encima de sus sprites. */
+  private bfx: Phaser.GameObjects.Graphics | null = null;
+  private bfxList: BuildingFxInfo[] = [];
+  private bfxStep = -1;
   private shore: ReturnType<typeof shoreRings> = [];
   private lastDpr = dpr();
 
@@ -340,6 +345,18 @@ export class MapView {
       }
       img.setVisible(true);
     });
+    // Animaciones: solo con los dibujos nuevos y en los edificios que se ven.
+    this.bfxList = [];
+    s.buildings.forEach((b, i) => {
+      const img = this.buildings[i];
+      const m = img?.visible ? /^flat\/bld_([brn])_(\w+)$/.exec(img.texture.key) : null;
+      if (!m || !vis[b.x]![b.y]!) return;
+      this.bfxList.push({ x: b.x, y: b.y, name: m[2]!, team: m[1] === 'b' ? 0 : m[1] === 'r' ? 1 : null, h: img!.frame.height });
+    });
+    if (!this.bfx) this.bfx = this.scene.add.graphics();
+    this.buildingLayer.add(this.bfx);
+    this.buildingLayer.bringToTop(this.bfx);
+    this.bfxStep = -1;
   }
 
   private newUnitSprite(key: string): UnitSprite {
@@ -636,6 +653,13 @@ export class MapView {
         this.waterFrame = f;
         drawWater(this.water, this.waterMarks, f);
         drawShore(this.water, this.shore, f);
+      }
+    }
+    if (this.bfx) {
+      const step = still ? 0 : Math.floor(time / 125);
+      if (step !== this.bfxStep) {
+        this.bfxStep = step;
+        drawBuildingFx(this.bfx, this.bfxList, time, still);
       }
     }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
