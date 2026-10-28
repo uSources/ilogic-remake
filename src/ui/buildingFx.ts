@@ -1,11 +1,8 @@
 /**
  * Animaciones de los edificios, dibujadas por codigo encima de su sprite (estilo pixel, a pasos):
- *  - Ciudad: ventanas que se encienden y apagan.
- *  - Fabrica: humo que sale del tejado.
- *  - Aeropuerto: baliza de la torre y luces de pista que corren.
- *  - Petroleo: luz de la torre que late y vapores.
- *  - Fortaleza: las mirillas brillan con el color del bando.
- *  - Cuartel general: bandera ondeando y baliza.
+ *  - Fabrica: humo que sale del tejado (si no esta su sprite de humo).
+ *  - Petroleo y cuartel general: solo si no tienen su animacion en fotogramas.
+ * Ciudad, aeropuerto y fortaleza van sin animacion.
  * Las coordenadas son del sprite (32 px de ancho, origen arriba a la izquierda).
  */
 import Phaser from 'phaser';
@@ -44,17 +41,6 @@ export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxI
     };
     const team = b.team === null ? null : TEAM[b.team]!;
     switch (b.name) {
-      case 'City': {
-        // Tres ventanas encendidas que cambian cada 1,5 s.
-        const cols = [6, 11, 16, 21],
-          rows = [13, 18, 23, 28];
-        const step = Math.floor(f / 12);
-        for (let i = 0; i < 3; i++) {
-          const n = (seed + step * 7 + i * 5) % 16;
-          px(cols[n % 4]!, rows[(n / 4) | 0]!, 2, 2, LIGHT, 0.9);
-        }
-        break;
-      }
       case 'Factory': {
         // Bocanadas de humo que salen de los picos del tejado: suben, crecen y se desvanecen.
         // (Si existe la animacion de Retro Diffusion, el humo va en sprite aparte.)
@@ -71,14 +57,6 @@ export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxI
           }
         break;
       }
-      case 'Airport': {
-        // Baliza roja en la torre (medio segundo encendida) y luz que recorre la pista.
-        if (f % 8 < 4) px(10, 0, 2, 2, 0xff5a4a);
-        const run = 6 + ((f * 2) % 22);
-        px(run, 30, 2, 1, 0xffffff, 0.95);
-        px(run - 2, 30, 2, 1, 0xffffff, 0.35);
-        break;
-      }
       case 'Oil': {
         // Luz de la torre que late con el color del bando y algun vapor.
         const a = 0.45 + 0.55 * Math.abs(Math.sin((f / 16) * Math.PI));
@@ -87,17 +65,6 @@ export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxI
           const t = (f % 32) / 32;
           if (t < 0.6) px(17 + Math.floor(t * 4), -2 - Math.floor(t * 8), 2, 2, 0xc9cfd4, 0.7 * (1 - t / 0.6));
         }
-        break;
-      }
-      case 'Stronghold': {
-        // Mirillas que brillan con el color del bando y un punto que las barre.
-        const c = team ?? 0xbfc6cc;
-        const a = 0.35 + 0.35 * Math.abs(Math.sin((f / 20) * Math.PI));
-        px(7, 17, 4, 1, c, a);
-        px(21, 17, 4, 1, c, a);
-        const sweep = f % 16;
-        const sx = sweep < 8 ? 7 + (sweep % 4) : 21 + (sweep % 4);
-        px(sx, 17, 1, 1, 0xffffff, team === null ? 0.4 : 0.9);
         break;
       }
       case 'Base': {
