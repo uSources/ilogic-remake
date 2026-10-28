@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import type { GameState } from '../core/types';
 import { TILE } from '../layout';
 import { WANG_SETS } from './wangSets';
+import { BLOB_SETS } from './blobSets';
 
 /**
  * Terreno nuevo (piezas Wang de PixelLab) en "rejilla doble": cada pieza se dibuja centrada en
@@ -287,6 +288,46 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
     into.putImageData(out, 0, 0);
   };
 
+  /** Coloca las piezas de la lamina blob (tools/art/build_blob.py) segun los vecinos de cada casilla. */
+  const passBlob = (set: string, up: (t: number) => boolean, into: CanvasRenderingContext2D): boolean => {
+    const bs = BLOB_SETS[set];
+    const key = `blob/${set}`;
+    if (!bs || !textures.exists(key)) return false;
+    const img = src(key);
+    const isLand = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && up(cell(x, y));
+    const occupied = (x: number, y: number) => objectBase(s, x, y) !== null || s.buildings.some((b) => b.x === x && b.y === y);
+    const draw = (i: number, x: number, y: number) =>
+      into.drawImage(img, (i % 8) * TILE, Math.floor(i / 8) * TILE, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+    for (let x = 0; x < W; x++)
+      for (let y = 0; y < H; y++) {
+        // Fuera del mapa cuenta como lo de la casilla (sin orilla contra el borde).
+        const L = (dx: number, dy: number) => {
+          const xx = x + dx,
+            yy = y + dy;
+          return xx < 0 || yy < 0 || xx >= W || yy >= H ? isLand(x, y) : isLand(xx, yy);
+        };
+        if (isLand(x, y)) {
+          let k = 0;
+          if (!occupied(x, y)) {
+            if (!L(-1, 0) && !L(0, -1) && !L(-1, -1)) k |= 1;
+            if (!L(1, 0) && !L(0, -1) && !L(1, -1)) k |= 2;
+            if (!L(-1, 0) && !L(0, 1) && !L(-1, 1)) k |= 4;
+            if (!L(1, 0) && !L(0, 1) && !L(1, 1)) k |= 8;
+          }
+          draw(bs.land[k]!, x, y);
+          continue;
+        }
+        let m = (L(0, -1) ? 1 : 0) | (L(1, 0) ? 2 : 0) | (L(0, 1) ? 4 : 0) | (L(-1, 0) ? 8 : 0);
+        if (!(m & 1) && !(m & 2) && L(1, -1)) m |= 16;
+        if (!(m & 4) && !(m & 2) && L(1, 1)) m |= 32;
+        if (!(m & 4) && !(m & 8) && L(-1, 1)) m |= 64;
+        if (!(m & 1) && !(m & 8) && L(-1, -1)) m |= 128;
+        const i = bs.water[m];
+        if (i !== undefined) draw(i, x, y);
+      }
+    return true;
+  };
+
   const [l1, l2, l3] = groundSets(s.theme);
   pass(l1, () => false, true); // todo agua profunda
   organicPass(ctx, textures, l1, s, (t) => LEVEL[t]! >= 1);
@@ -297,7 +338,8 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   land.height = cv.height;
   const lc = land.getContext('2d')!;
   lc.imageSmoothingEnabled = false;
-  passLand(l3, (t) => LEVEL[t]! >= 3, lc);
+  // Costa: con la lamina blob del terreno si existe (como Advance Wars); si no, se calcula por pixeles.
+  if (!passBlob(l3, (t) => LEVEL[t]! >= 3, lc)) passLand(l3, (t) => LEVEL[t]! >= 3, lc);
   ctx.drawImage(land, 0, 0);
   // Bosques: si hay arboles sueltos (Retro Diffusion) se dibujan como sprites mas abajo; si no, el tileset Wang.
   const trees = textures.exists('flat/tree_grass_0');
