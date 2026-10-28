@@ -163,7 +163,11 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   lc.imageSmoothingEnabled = false;
   pass(l3, (t) => LEVEL[t]! >= 3, false, lc);
   ctx.drawImage(land, 0, 0);
-  for (const o of overlaySets(s.theme)) if (s.map.some((col) => col.some((t) => o.cells.includes(t)))) pass(o.set, (t) => o.cells.includes(t), false);
+  // Bosques: si hay arboles sueltos (Retro Diffusion) se dibujan como sprites mas abajo; si no, el tileset Wang.
+  const trees = textures.exists('flat/tree_grass_0');
+  treesLoaded = trees;
+  if (!trees)
+    for (const o of overlaySets(s.theme)) if (s.map.some((col) => col.some((t) => o.cells.includes(t)))) pass(o.set, (t) => o.cells.includes(t), false);
   for (let x = 0; x < W; x++)
     for (let y = 0; y < H; y++) {
       const d = DECOR[s.map[x]![y]!];
@@ -172,13 +176,11 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
       if (textures.exists(k)) ctx.drawImage(src(k), x * TILE, y * TILE);
     }
-  // Montañas: picos (o mesetas) dibujados en plano, de atras adelante para que se solapen bien.
+  // Montañas y bosques: sprites por casilla, de atras adelante para que se solapen bien.
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
-      const kind = mountainKind(s, x, y);
-      if (!kind) continue;
-      const k = `flat/mount_${kind}_${(((x * 2654435761) ^ (y * 40503)) >>> 0) % 2}`;
-      if (!textures.exists(k)) continue;
+      const k = objectKey(s, x, y);
+      if (!k || !textures.exists(k) || (!trees && k.startsWith('flat/tree_'))) continue;
       const img = src(k) as HTMLImageElement;
       ctx.drawImage(img, x * TILE + TILE / 2 - img.width / 2, (y + 1) * TILE + 3 - img.height);
     }
@@ -343,6 +345,28 @@ export function drawWater(g: Phaser.GameObjects.Graphics, marks: WaterMark[], f:
   }
 }
 
+/** Si el mapa actual se pinto con arboles sueltos (para elegir el primer plano). */
+let treesLoaded = false;
+
+/** Variantes de cada sprite de terreno (tools/art/rd_terrain.py). */
+const OBJ_VARIANTS: Record<string, number> = { mount_grass: 4, mount_snow: 4, mount_mesa: 4, tree_grass: 4, tree_snow: 2 };
+
+/** Nombre base del sprite de la casilla (montaña o bosque), sin variante. */
+function objectBase(s: GameState, x: number, y: number): string | null {
+  const t = s.map[x]?.[y];
+  if (t === 2) return s.theme === 4 ? 'tree_snow' : 'tree_grass';
+  if (t === 13) return 'tree_snow';
+  const m = mountainKind(s, x, y);
+  return m ? `mount_${m}` : null;
+}
+
+/** Sprite de la casilla con su variante fija (la misma en cada dibujo). */
+function objectKey(s: GameState, x: number, y: number, prefix = ''): string | null {
+  const b = objectBase(s, x, y);
+  if (!b) return null;
+  return `flat/${prefix}${b}_${(((x * 2654435761) ^ (y * 40503)) >>> 0) % OBJ_VARIANTS[b]!}`;
+}
+
 function mountainKind(s: GameState, x: number, y: number): 'grass' | 'snow' | 'mesa' | null {
   const t = s.map[x]?.[y];
   if (t === 7) return s.theme === 4 ? 'snow' : 'grass';
@@ -355,16 +379,6 @@ function mountainKind(s: GameState, x: number, y: number): 'grass' | 'snow' | 'm
 export function frontKey(s: GameState, x: number, y: number): string | null {
   const t = s.map[x]?.[y];
   const snow = s.theme === 4;
-  switch (t) {
-    case 2:
-      return snow ? 'wang/front_snow_forest' : 'wang/front_grass_forest';
-    case 13:
-      return 'wang/front_snow_forest';
-    case 7:
-    case 12:
-    case 5:
-      return `flat/front_${mountainKind(s, x, y)}`;
-    default:
-      return null;
-  }
+  if ((t === 2 || t === 13) && !treesLoaded) return t === 13 || snow ? 'wang/front_snow_forest' : 'wang/front_grass_forest';
+  return objectKey(s, x, y, 'front_');
 }
