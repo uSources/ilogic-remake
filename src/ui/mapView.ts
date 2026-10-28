@@ -340,20 +340,34 @@ export class MapView {
   private syncBuildings(s: GameState, vis: boolean[][]): void {
     const tex = this.scene.textures;
     s.buildings.forEach((b, i) => {
-      const key = buildingKey(tex, s, b, vis[b.x]![b.y]!);
+      const still = buildingKey(tex, s, b, vis[b.x]![b.y]!);
       let img = this.buildings[i];
-      if (!key) {
+      if (!still) {
         img?.setVisible(false);
         return;
       }
+      // Animacion de Retro Diffusion (flat/anim_<bando>_<Nombre>, fotogramas de 64x64) si existe.
+      const anim = still.replace('flat/bld_', 'flat/anim_');
+      const key = anim !== still && tex.exists(anim) ? anim : still;
+      if (key === anim) {
+        const t = tex.get(anim);
+        if (!t.has('a0')) {
+          const n = Math.floor((t.getSourceImage() as HTMLImageElement).width / 64);
+          for (let k = 0; k < n; k++) t.add(`a${k}`, 0, k * 64, 0, 64, 64);
+        }
+      }
       if (!img) {
-        img = this.tileImage(key, b.x, b.y);
+        img = this.tileImage(still, b.x, b.y);
         this.buildings[i] = img;
         this.buildingLayer.add(img);
-      } else if (img.texture.key !== key) {
-        img.setTexture(key);
-        img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
-        img.y = (b.y + 1) * TILE + 0;
+      }
+      if (img.texture.key !== key) {
+        if (key === anim) img.setTexture(key, 'a0').setOrigin(0.5, 58 / 64).setDisplaySize(64, 64);
+        else {
+          img.setTexture(key).setOrigin(0.5, 1);
+          img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
+        }
+        img.setPosition(b.x * TILE + TILE / 2, (b.y + 1) * TILE);
       }
       img.setVisible(true);
     });
@@ -361,9 +375,10 @@ export class MapView {
     this.bfxList = [];
     s.buildings.forEach((b, i) => {
       const img = this.buildings[i];
-      const m = img?.visible ? /^flat\/bld_([brn])_(\w+)$/.exec(img.texture.key) : null;
+      const m = img?.visible ? /^flat\/(?:bld|anim)_([brn])_(\w+)$/.exec(img.texture.key) : null;
       if (!m || !vis[b.x]![b.y]!) return;
-      this.bfxList.push({ x: b.x, y: b.y, name: m[2]!, team: m[1] === 'b' ? 0 : m[1] === 'r' ? 1 : null, h: img!.frame.height });
+      const animated = img!.texture.key.startsWith('flat/anim_');
+      this.bfxList.push({ x: b.x, y: b.y, name: m[2]!, team: m[1] === 'b' ? 0 : m[1] === 'r' ? 1 : null, h: animated ? this.scene.textures.getFrame(img!.texture.key.replace('flat/anim_', 'flat/bld_')).height : img!.frame.height, animated });
     });
     // Humo de las fabricas: un sprite de 64x64 por fabrica visible, delante de su edificio.
     const fxKey = 'flat/fx_Factory';
@@ -697,6 +712,13 @@ export class MapView {
         this.bfxStep = step;
         drawBuildingFx(this.bfx, this.bfxList, time, still, this.smoke.length > 0);
         this.smoke.forEach((img, i) => img.setFrame(`f${still ? 0 : (Math.floor(time / 150) + i * 3) % 8}`));
+        // Edificios animados: cada uno con su desfase para que no vayan todos a la vez.
+        this.buildings.forEach((img) => {
+          if (!img?.visible || !img.texture.key.startsWith('flat/anim_')) return;
+          const n = img.texture.frameTotal - 1;
+          const k = still ? 0 : (Math.floor(time / 160) + ((img.x * 7 + img.y * 13) >> 5)) % n;
+          img.setFrame(`a${k}`);
+        });
       }
     }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);

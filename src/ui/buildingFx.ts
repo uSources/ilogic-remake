@@ -18,6 +18,8 @@ export interface BuildingFxInfo {
   team: 0 | 1 | null;
   /** Alto del sprite en pixeles (para pasar de coordenadas del sprite a coordenadas del mapa). */
   h: number;
+  /** Tiene animacion de Retro Diffusion: no se le dibujan efectos por codigo (salvo la luz del petroleo). */
+  animated?: boolean;
 }
 
 const TEAM = [0x3aa8ff, 0xff4d45];
@@ -31,6 +33,7 @@ export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxI
   g.clear();
   const f0 = still ? 0 : Math.floor(time / 125); // 8 pasos por segundo
   for (const b of list) {
+    if (b.animated && b.name !== 'Oil') continue;
     const seed = seedOf(b.x, b.y);
     const f = f0 + (seed % 97);
     const ox = b.x * TILE,
