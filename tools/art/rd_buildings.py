@@ -1,7 +1,8 @@
 """Edificios redibujados con Retro Diffusion (RD Pro edit sobre los de 2013, con pro_map.png de referencia).
 Entrada: tools/art/retrodiffusion/bld_rd.png (6 edificios azules sobre blanco).
 Salida: public/assets/img/flat/bld_{b|r|n}_<Nombre>.png (azul tal cual, rojo por giro de tono, neutral en gris)."""
-import os, colorsys
+import os, sys, colorsys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 from PIL import Image
 from scipy import ndimage
@@ -32,24 +33,7 @@ for x0, sl, i in parts:
 assert sorted(cols) == list(range(6)), sorted(cols)
 
 
-def recolor(img, mode):
-    px = np.array(img).astype(float) / 255
-    out = px.copy()
-    for y in range(px.shape[0]):
-        for x in range(px.shape[1]):
-            r, g, b, al = px[y, x]
-            if not al:
-                continue
-            h, s, v = colorsys.rgb_to_hsv(r, g, b)
-            if 0.42 < h < 0.62 and s > 0.25:  # azul/cian del bando
-                if mode == 'r':
-                    h = (h - 0.5) % 1.0
-                    h = 0.99 if h > 0.5 else h * 0.2
-                else:
-                    s *= 0.1
-                    v *= 0.92
-                out[y, x, :3] = colorsys.hsv_to_rgb(h, s, v)
-    return Image.fromarray((out * 255).round().astype(np.uint8))
+from rd_buildings_colors import recolor  # noqa: E402
 
 
 for c, name in enumerate(NAMES):

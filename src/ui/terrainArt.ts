@@ -182,7 +182,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       const k = objectKey(s, x, y);
       if (!k || !textures.exists(k) || (!trees && k.startsWith('flat/tree_'))) continue;
       const img = src(k) as HTMLImageElement;
-      ctx.drawImage(img, x * TILE + TILE / 2 - img.width / 2, (y + 1) * TILE + 3 - img.height);
+      ctx.drawImage(img, x * TILE + TILE / 2 - img.width / 2, (y + 1) * TILE - img.height);
     }
   return { canvas: cv, land };
 }
