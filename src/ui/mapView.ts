@@ -243,7 +243,7 @@ export class MapView {
 
   private tileImage(key: string, x: number, y: number): Phaser.GameObjects.Image {
     // Origen abajo en el centro: los dibujos nuevos pueden ser algo mas anchos que la casilla.
-    const img = this.scene.add.image(x * TILE + TILE / 2, (y + 1) * TILE + (key.startsWith('flat/') ? 3 : 0), key).setOrigin(0.5, 1);
+    const img = this.scene.add.image(x * TILE + TILE / 2, (y + 1) * TILE + 0, key).setOrigin(0.5, 1);
     img.setDisplaySize(Math.max(TILE, img.width), img.height);
     return img;
   }
@@ -336,7 +336,7 @@ export class MapView {
       } else if (img.texture.key !== key) {
         img.setTexture(key);
         img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
-        img.y = (b.y + 1) * TILE + (key.startsWith('flat/') ? 3 : 0);
+        img.y = (b.y + 1) * TILE + 0;
       }
       img.setVisible(true);
     });
