@@ -33,9 +33,6 @@ function overlaySets(theme: number): { set: string; cells: number[] }[] {
   return [
     { set: snow ? 'ts_snow_forest' : 'ts_grass_forest', cells: snow ? [2, 13] : [2] },
     ...(snow ? [] : [{ set: 'ts_snow_forest', cells: [13] }]),
-    { set: snow ? 'ts_snow_mountain' : 'ts_grass_mountain', cells: snow ? [7, 12] : [7] },
-    ...(snow ? [] : [{ set: 'ts_snow_mountain', cells: [12] }]),
-    { set: 'ts_sand_mesa', cells: [5] },
   ];
 }
 
@@ -174,6 +171,16 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       // Variante fija por casilla (la misma cada vez que se dibuja el mapa).
       const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
       if (textures.exists(k)) ctx.drawImage(src(k), x * TILE, y * TILE);
+    }
+  // Montañas: picos (o mesetas) dibujados en plano, de atras adelante para que se solapen bien.
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const kind = mountainKind(s, x, y);
+      if (!kind) continue;
+      const k = `flat/mount_${kind}_${(((x * 2654435761) ^ (y * 40503)) >>> 0) % 2}`;
+      if (!textures.exists(k)) continue;
+      const img = src(k) as HTMLImageElement;
+      ctx.drawImage(img, x * TILE + TILE / 2 - img.width / 2, (y + 1) * TILE + 3 - img.height);
     }
   return { canvas: cv, land };
 }
@@ -336,6 +343,14 @@ export function drawWater(g: Phaser.GameObjects.Graphics, marks: WaterMark[], f:
   }
 }
 
+function mountainKind(s: GameState, x: number, y: number): 'grass' | 'snow' | 'mesa' | null {
+  const t = s.map[x]?.[y];
+  if (t === 7) return s.theme === 4 ? 'snow' : 'grass';
+  if (t === 12) return 'snow';
+  if (t === 5) return 'mesa';
+  return null;
+}
+
 /** Primer plano que tapa los pies de una unidad en esa casilla (null si no hay). */
 export function frontKey(s: GameState, x: number, y: number): string | null {
   const t = s.map[x]?.[y];
@@ -346,11 +361,9 @@ export function frontKey(s: GameState, x: number, y: number): string | null {
     case 13:
       return 'wang/front_snow_forest';
     case 7:
-      return snow ? 'wang/front_snow_mountain' : 'wang/front_grass_mountain';
     case 12:
-      return 'wang/front_snow_mountain';
     case 5:
-      return 'wang/front_sand_mesa';
+      return `flat/front_${mountainKind(s, x, y)}`;
     default:
       return null;
   }

@@ -53,6 +53,11 @@ export function buildingKey(
   const side = visible && b.owner === 0 ? 'b_' : visible && b.owner === 1 ? 'r_' : '';
   const terrain = BUILDING_TERRAIN_PREFIX[b.type]![s.map[b.x]![b.y]!]!;
   const name = BUILDING_NAMES[b.type]!;
+  // Dibujo nuevo (estilo plano).
+  if (settings.terrainArt === 'new') {
+    const k = `flat/bld_${side ? side[0] : 'n'}_${name}`;
+    if (textures.exists(k)) return k;
+  }
   // La Base no tiene imagen neutral: solo pasa al final de la partida.
   return firstExisting(textures, [side + terrain + name, side + name, 'b_' + name]);
 }
