@@ -10,6 +10,7 @@ import {
   UNIT_TERRAIN_PREFIX,
 } from '../core/data';
 import type { Building, GameState, Unit } from '../core/types';
+import { settings } from '../settings';
 
 /**
  * Nombres de imagen, igual que en el original (ver docs/SPEC-INTERFAZ.md §5):
@@ -33,11 +34,14 @@ export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, 
   const side = u.team === 1 ? 'r_' : u.active ? 'b_' : 'i_';
   const terrain = UNIT_TERRAIN_PREFIX[u.type]![s.map[u.x]![u.y]!]!;
   const name = UNIT_NAMES[u.type]!;
+  // Dibujo nuevo (carpeta u/), si esta elegido y existe.
+  if (settings.terrainArt === 'new' && textures.exists(`u/${side}${name}`)) return `u/${side}${name}`;
   return firstExisting(textures, [side + terrain + name, side + name, (u.team === 1 ? 'r_' : 'b_') + name]);
 }
 
 export function unitIconKey(type: number, available: boolean): string {
-  return (available ? 'b_' : 'i_') + UNIT_NAMES[type]!;
+  const k = (available ? 'b_' : 'i_') + UNIT_NAMES[type]!;
+  return settings.terrainArt === 'new' ? `u/${k}` : k;
 }
 
 export function buildingKey(
