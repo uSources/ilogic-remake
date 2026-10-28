@@ -513,6 +513,7 @@ export const IMAGE_KEYS: readonly string[] = [
   "wang/decor_flowers_2",
   "wang/decor_frosty_0",
   "wang/decor_frosty_1",
+  "wang/decor_frosty_2",
   "wang/front_grass_forest",
   "wang/front_grass_mountain",
   "wang/front_sand_mesa",
