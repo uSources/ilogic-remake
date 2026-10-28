@@ -15,13 +15,18 @@ OUT = os.path.join(ROOT, '..', '..', 'public', 'assets', 'img', 'u')
 
 # Nombre -> (fila, x0, x1)
 CROPS = {
-    'Soldier': ('pixen_inf3', 116, 138), 'BSoldier': ('pixen_inf3', 15, 45), 'SSoldier': ('pixen_inf3', 46, 67),
-    'MSoldier': ('pixen_inf3', 68, 95), 'FSoldier': ('pixen_inf3', 178, 200),
-    'Tank': ('pixen_veh1', 130, 158), 'LTank': ('pixen_veh1', 157, 177), 'Artillery': ('pixen_veh1', 176, 198), 'Missile_truck': ('pixen_veh1', 197, 220),
+    # Segunda pasada (descripciones del usuario): infanteria y tanques en la misma fila, mismo estilo y escala.
+    'Soldier': ('v2_22', 0, 26), 'BSoldier': ('v2_22', 27, 50), 'SSoldier': ('v2_21', 43, 65),
+    'MSoldier': ('v2_mortar', 0, 28), 'FSoldier': ('v2_22', 214, 238),
+    'LTank': ('v2_22', 70, 98), 'WTank': ('v2_22', 98, 131), 'Tank': ('v2_22', 266, 302),
+    'Artillery': ('v2_21', 275, 300), 'Missile_truck': ('v2_22', 300, 337),
+    # Primera pasada (pendientes de describir).
     'Supplier': ('pixen_veh2', 86, 112), 'Antiair': ('pixen_veh2', 111, 133), 'Car': ('pixen_veh2', 132, 154), 'Transport': ('pixen_veh2', 152, 176), 'Blocker': ('pixen_veh2', 194, 219),
     'Fighter': ('pixen_extra', 78, 110), 'THelicopter': ('pixen_air', 159, 192),
-    'Bomber': ('pixen_extra', 0, 28), 'WTank': ('pixen_extra', 28, 56), 'LFighter': ('pixen_extra', 164, 192),
+    'Bomber': ('pixen_extra', 0, 28), 'LFighter': ('pixen_extra', 164, 192),
 }
+# Algunas salieron a otra escala: se reducen para que cuadren con el resto.
+SCALE = {'MSoldier': 0.7}
 INFANTRY = {'Soldier', 'BSoldier', 'SSoldier', 'MSoldier', 'FSoldier'}
 # Rampa del bando azul (de oscuro a claro) y su equivalente rojo y gris.
 BLUE = [(13, 34, 78), (19, 74, 143), (31, 111, 209), (58, 168, 255), (154, 212, 255)]
@@ -84,6 +89,9 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     for name in CROPS:
         sp = crop(name)
+        if name in SCALE:
+            k = SCALE[name]
+            sp = sp.resize((round(sp.width * k), round(sp.height * k)), Image.NEAREST)
         inf = name in INFANTRY
         blue = paint(sp, BLUE, sp, inf)
         red = paint(sp, RED, sp, inf).transpose(Image.FLIP_LEFT_RIGHT)
