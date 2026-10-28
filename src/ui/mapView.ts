@@ -8,7 +8,7 @@ import { reducedMotion } from './fx';
 import { drawBuildingFx, type BuildingFxInfo } from './buildingFx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
-import { drawShore, drawWater, frontKey, paintTerrain, shoreRings, terrainArtReady, WATER_FRAMES, waterMarks } from './terrainArt';
+import { drawShore, drawWater, frontKey, paintTerrain, shoreRings, terrainArtReady, terrainObjects, WATER_FRAMES, waterMarks } from './terrainArt';
 import { paintFog, visKey } from './fog';
 import { settings } from '../settings';
 
@@ -102,6 +102,8 @@ export class MapView {
   private bfx: Phaser.GameObjects.Graphics | null = null;
   private bfxList: BuildingFxInfo[] = [];
   private bfxStep = -1;
+  /** Montañas y bosques: en la capa de los edificios, ordenados por fila con ellos. */
+  private objImgs: Phaser.GameObjects.Image[] = [];
   private shore: ReturnType<typeof shoreRings> = [];
   private lastDpr = dpr();
 
@@ -257,6 +259,8 @@ export class MapView {
   buildTerrain(s: GameState): void {
     this.terrain.removeAll(true);
     this.water = null;
+    for (const o of this.objImgs) o.destroy();
+    this.objImgs = [];
     const tex = this.scene.textures;
     if (settings.terrainArt === 'new' && terrainArtReady(tex)) {
       // Terreno nuevo: pintado una vez en un lienzo.
@@ -269,6 +273,12 @@ export class MapView {
       this.shore = shoreRings(painted.land, s.setup?.seed ?? 1);
       this.waterFrame = -1;
       this.terrain.add([this.scene.add.image(0, 0, key).setOrigin(0), this.water]);
+      for (const o of terrainObjects(tex, s)) {
+        const img = this.tileImage(o.key, o.x, o.y);
+        this.objImgs.push(img);
+        this.buildingLayer.add(img);
+      }
+      this.sortBuildingLayer();
       return;
     }
     const objs: Phaser.GameObjects.GameObject[] = [];
@@ -355,8 +365,14 @@ export class MapView {
     });
     if (!this.bfx) this.bfx = this.scene.add.graphics();
     this.buildingLayer.add(this.bfx);
-    this.buildingLayer.bringToTop(this.bfx);
+    this.sortBuildingLayer();
     this.bfxStep = -1;
+  }
+
+  /** Lo que esta mas abajo en el mapa se dibuja delante (los sprites tienen el origen abajo). */
+  private sortBuildingLayer(): void {
+    this.buildingLayer.sort('y');
+    if (this.bfx) this.buildingLayer.bringToTop(this.bfx);
   }
 
   private newUnitSprite(key: string): UnitSprite {

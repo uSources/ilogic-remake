@@ -235,15 +235,22 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
       if (textures.exists(k)) ctx.drawImage(src(k), x * TILE, y * TILE);
     }
-  // Montañas y bosques: sprites por casilla, de atras adelante para que se solapen bien.
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++) {
+  // Montañas y bosques no se pintan aqui: van como sprites en la capa de los edificios
+  // (terrainObjects), ordenados por fila, para que lo de delante tape a lo de detras.
+  return { canvas: cv, land };
+}
+
+/** Sprites de terreno (montañas y bosques) por casilla, para ponerlos en la capa de los edificios. */
+export function terrainObjects(textures: Phaser.Textures.TextureManager, s: GameState): { key: string; x: number; y: number }[] {
+  const out: { key: string; x: number; y: number }[] = [];
+  const trees = textures.exists('flat/tree_grass_0');
+  for (let y = 0; y < s.map[0]!.length; y++)
+    for (let x = 0; x < s.map.length; x++) {
       const k = objectKey(s, x, y);
       if (!k || !textures.exists(k) || (!trees && k.startsWith('flat/tree_'))) continue;
-      const img = src(k) as HTMLImageElement;
-      ctx.drawImage(img, x * TILE + TILE / 2 - img.width / 2, (y + 1) * TILE - img.height);
+      out.push({ key: k, x, y });
     }
-  return { canvas: cv, land };
+  return out;
 }
 
 // ---------------------------------------------------------------------------
