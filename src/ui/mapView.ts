@@ -391,7 +391,7 @@ export class MapView {
     const front = s && this.newArt() ? frontKey(s, u.x, u.y) : null;
     if (front && this.scene.textures.exists(front)) {
       sp.front.setTexture(front).setVisible(true);
-      sp.img.setTint(front.includes('forest') ? 0xd8e4d8 : 0xe8e8e8);
+      sp.img.setTint(front.includes('forest') || front.includes('tree') ? 0xd8e4d8 : 0xe8e8e8);
     } else {
       sp.front.setVisible(false);
       sp.img.clearTint();
