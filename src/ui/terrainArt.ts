@@ -151,6 +151,65 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       }
   };
 
+  /**
+   * Tierra al estilo Advance Wars: cada casilla de tierra es tierra entera y la orilla se dibuja
+   * dentro de la casilla de agua vecina. Una pieza por casilla; cada esquina de la casilla es
+   * "tierra" si alguna de las cuatro casillas que la tocan lo es. Si una casilla de agua quedaria
+   * cubierta entera (un canal de una casilla de ancho), se pinta como antes, con la rejilla doble,
+   * para que no desaparezca el agua.
+   */
+  const passCells = (set: string, up: (t: number) => boolean, into: CanvasRenderingContext2D) => {
+    const frames = WANG_SETS[set];
+    if (!frames || !textures.exists(`wang/${set}`)) return;
+    const img = src(`wang/${set}`);
+    const vert = (vx: number, vy: number) => up(cell(vx - 1, vy - 1)) || up(cell(vx, vy - 1)) || up(cell(vx - 1, vy)) || up(cell(vx, vy));
+    const narrow: [number, number][] = [];
+    for (let x = 0; x < W; x++)
+      for (let y = 0; y < H; y++) {
+        const k = (vert(x, y) ? 8 : 0) | (vert(x + 1, y) ? 4 : 0) | (vert(x, y + 1) ? 2 : 0) | (vert(x + 1, y + 1) ? 1 : 0);
+        if (!k) continue;
+        if (k === 15 && !up(cell(x, y))) {
+          narrow.push([x, y]);
+          continue;
+        }
+        into.drawImage(img, frames[k]! * TILE, 0, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+      }
+    // Agua estrecha (charcas, canales de una casilla): la casilla queda de agua y en cada lado que
+    // toca tierra se pone la franja de orilla (tierra, acantilado y arena) de la pieza recta de ese
+    // lado, metida SH px dentro de la casilla. Donde acaba la tierra en cada pieza se mide.
+    if (!narrow.length) return;
+    const B = 12,
+      SH = 5;
+    const pc = document.createElement('canvas');
+    pc.width = 16 * TILE;
+    pc.height = TILE;
+    const pctx = pc.getContext('2d')!;
+    pctx.drawImage(img, 0, 0);
+    /** Primera fila/columna (desde el lado de tierra) donde la pieza deja de ser tierra. */
+    const edge = (k: number, vertical: boolean, fromEnd: boolean): number => {
+      const d = pctx.getImageData(frames[k]! * TILE, 0, TILE, TILE).data;
+      for (let i = 0; i < TILE; i++) {
+        const line = fromEnd ? TILE - 1 - i : i;
+        let opaque = 0;
+        for (let j = 0; j < TILE; j++) opaque += d[((vertical ? j : line) * TILE + (vertical ? line : j)) * 4 + 3]! > 0 ? 1 : 0;
+        if (opaque < TILE / 2) return i;
+      }
+      return TILE;
+    };
+    const eT = edge(12, false, false),
+      eB = edge(3, false, true),
+      eL = edge(10, true, false),
+      eR = edge(5, true, true);
+    for (const [x, y] of narrow) {
+      const X = x * TILE,
+        Y = y * TILE;
+      if (up(cell(x, y - 1))) into.drawImage(img, frames[12]! * TILE, eT - B, TILE, B, X, Y + SH - B, TILE, B);
+      if (up(cell(x, y + 1))) into.drawImage(img, frames[3]! * TILE, TILE - eB, TILE, B, X, Y + TILE - SH, TILE, B);
+      if (up(cell(x - 1, y))) into.drawImage(img, frames[10]! * TILE + eL - B, 0, B, TILE, X + SH - B, Y, B, TILE);
+      if (up(cell(x + 1, y))) into.drawImage(img, frames[5]! * TILE + TILE - eR, 0, B, TILE, X + TILE - SH, Y, B, TILE);
+    }
+  };
+
   const [l1, l2, l3] = groundSets(s.theme);
   pass(l1, () => false, true); // todo agua profunda
   organicPass(ctx, textures, l1, s, (t) => LEVEL[t]! >= 1);
@@ -161,7 +220,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   land.height = cv.height;
   const lc = land.getContext('2d')!;
   lc.imageSmoothingEnabled = false;
-  pass(l3, (t) => LEVEL[t]! >= 3, false, lc);
+  passCells(l3, (t) => LEVEL[t]! >= 3, lc);
   ctx.drawImage(land, 0, 0);
   // Bosques: si hay arboles sueltos (Retro Diffusion) se dibujan como sprites mas abajo; si no, el tileset Wang.
   const trees = textures.exists('flat/tree_grass_0');
