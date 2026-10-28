@@ -152,62 +152,136 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   };
 
   /**
-   * Tierra al estilo Advance Wars: cada casilla de tierra es tierra entera y la orilla se dibuja
-   * dentro de la casilla de agua vecina. Una pieza por casilla; cada esquina de la casilla es
-   * "tierra" si alguna de las cuatro casillas que la tocan lo es. Si una casilla de agua quedaria
-   * cubierta entera (un canal de una casilla de ancho), se pinta como antes, con la rejilla doble,
-   * para que no desaparezca el agua.
+   * Tierra al estilo Advance Wars, dibujada por pixeles (vale para cualquier forma: canales de una
+   * casilla, islas sueltas, esquinas interiores...):
+   *  - cada casilla de tierra es tierra entera (textura lisa del set), con las esquinas de fuera
+   *    redondeadas cuando no hay tierra alrededor;
+   *  - en el agua se pinta la franja de orilla segun la distancia a la tierra. Su aspecto sale de
+   *    las piezas rectas del set (12 tierra arriba, 3 abajo, 10 izquierda, 5 derecha), eligiendo
+   *    la del lado donde esta la tierra mas cercana.
    */
-  const passCells = (set: string, up: (t: number) => boolean, into: CanvasRenderingContext2D) => {
+  const passLand = (set: string, up: (t: number) => boolean, into: CanvasRenderingContext2D) => {
     const frames = WANG_SETS[set];
     if (!frames || !textures.exists(`wang/${set}`)) return;
     const img = src(`wang/${set}`);
-    const vert = (vx: number, vy: number) => up(cell(vx - 1, vy - 1)) || up(cell(vx, vy - 1)) || up(cell(vx - 1, vy)) || up(cell(vx, vy));
-    const narrow: [number, number][] = [];
-    for (let x = 0; x < W; x++)
-      for (let y = 0; y < H; y++) {
-        const k = (vert(x, y) ? 8 : 0) | (vert(x + 1, y) ? 4 : 0) | (vert(x, y + 1) ? 2 : 0) | (vert(x + 1, y + 1) ? 1 : 0);
-        if (!k) continue;
-        if (k === 15 && !up(cell(x, y))) {
-          narrow.push([x, y]);
-          continue;
-        }
-        into.drawImage(img, frames[k]! * TILE, 0, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
-      }
-    // Agua estrecha (charcas, canales de una casilla): la casilla queda de agua y en cada lado que
-    // toca tierra se pone la franja de orilla (tierra, acantilado y arena) de la pieza recta de ese
-    // lado, metida SH px dentro de la casilla. Donde acaba la tierra en cada pieza se mide.
-    if (!narrow.length) return;
-    const B = 12,
-      SH = 5;
+    const PW = W * TILE,
+      PH = H * TILE;
     const pc = document.createElement('canvas');
     pc.width = 16 * TILE;
     pc.height = TILE;
     const pctx = pc.getContext('2d')!;
     pctx.drawImage(img, 0, 0);
-    /** Primera fila/columna (desde el lado de tierra) donde la pieza deja de ser tierra. */
-    const edge = (k: number, vertical: boolean, fromEnd: boolean): number => {
-      const d = pctx.getImageData(frames[k]! * TILE, 0, TILE, TILE).data;
-      for (let i = 0; i < TILE; i++) {
-        const line = fromEnd ? TILE - 1 - i : i;
-        let opaque = 0;
-        for (let j = 0; j < TILE; j++) opaque += d[((vertical ? j : line) * TILE + (vertical ? line : j)) * 4 + 3]! > 0 ? 1 : 0;
-        if (opaque < TILE / 2) return i;
-      }
-      return TILE;
-    };
-    const eT = edge(12, false, false),
-      eB = edge(3, false, true),
-      eL = edge(10, true, false),
-      eR = edge(5, true, true);
-    for (const [x, y] of narrow) {
-      const X = x * TILE,
-        Y = y * TILE;
-      if (up(cell(x, y - 1))) into.drawImage(img, frames[12]! * TILE, eT - B, TILE, B, X, Y + SH - B, TILE, B);
-      if (up(cell(x, y + 1))) into.drawImage(img, frames[3]! * TILE, TILE - eB, TILE, B, X, Y + TILE - SH, TILE, B);
-      if (up(cell(x - 1, y))) into.drawImage(img, frames[10]! * TILE + eL - B, 0, B, TILE, X + SH - B, Y, B, TILE);
-      if (up(cell(x + 1, y))) into.drawImage(img, frames[5]! * TILE + TILE - eR, 0, B, TILE, X + TILE - SH, Y, B, TILE);
+    const piece = (k: number) => pctx.getImageData(frames[k]! * TILE, 0, TILE, TILE).data;
+    const flat = piece(15);
+    // Color medio de la tierra lisa (para saber donde acaba la orilla dentro de cada pieza).
+    let mr = 0,
+      mg = 0,
+      mb = 0;
+    for (let i = 0; i < TILE * TILE; i++) {
+      mr += flat[i * 4]!;
+      mg += flat[i * 4 + 1]!;
+      mb += flat[i * 4 + 2]!;
     }
+    mr /= TILE * TILE;
+    mg /= TILE * TILE;
+    mb /= TILE * TILE;
+    /** Perfil de orilla de una pieza recta: lineas desde el lado de tierra, la franja y su largo. */
+    type Prof = { data: Uint8ClampedArray; side: 'T' | 'B' | 'L' | 'R'; start: number; len: number };
+    const at = (p: Prof, i: number, j: number) => {
+      // i: linea desde el lado de tierra; j: posicion a lo largo de la orilla.
+      const [x, y] = p.side === 'T' ? [j, i] : p.side === 'B' ? [j, TILE - 1 - i] : p.side === 'L' ? [i, j] : [TILE - 1 - i, j];
+      return (y * TILE + x) * 4;
+    };
+    const profile = (k: number, side: Prof['side']): Prof => {
+      const p: Prof = { data: piece(k), side, start: 0, len: 0 };
+      let e = TILE;
+      for (let i = 0; i < TILE; i++) {
+        let opaque = 0;
+        for (let j = 0; j < TILE; j++) opaque += p.data[at(p, i, j) + 3]! > 0 ? 1 : 0;
+        if (opaque < TILE / 2) {
+          e = i;
+          break;
+        }
+      }
+      // Hacia la tierra, mientras el color se aparte de la tierra lisa, es orilla (acantilado, arena).
+      let s0 = e - 1;
+      const diff = (i: number) => {
+        let d = 0;
+        for (let j = 0; j < TILE; j++) {
+          const o = at(p, i, j);
+          d += Math.abs(p.data[o]! - mr) + Math.abs(p.data[o + 1]! - mg) + Math.abs(p.data[o + 2]! - mb);
+        }
+        return d / TILE;
+      };
+      while (s0 > 0 && e - s0 < 10 && diff(s0 - 1) > 45) s0--;
+      p.start = Math.max(0, Math.min(s0, e - 3));
+      p.len = Math.max(3, e - p.start);
+      return p;
+    };
+    const profs = { T: profile(12, 'T'), B: profile(3, 'B'), L: profile(10, 'L'), R: profile(5, 'R') };
+    const BAND = Math.max(profs.T.len, profs.B.len, profs.L.len, profs.R.len);
+    // Mascara de tierra con las esquinas de fuera redondeadas.
+    const R = 5;
+    const mask = new Uint8Array(PW * PH);
+    for (let x = 0; x < W; x++)
+      for (let y = 0; y < H; y++) {
+        if (!up(cell(x, y))) continue;
+        for (let j = 0; j < TILE; j++) mask.fill(1, (y * TILE + j) * PW + x * TILE, (y * TILE + j) * PW + x * TILE + TILE);
+        for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+          if (up(cell(x + dx, y)) || up(cell(x, y + dy)) || up(cell(x + dx, y + dy))) continue;
+          for (let j = 0; j < R; j++)
+            for (let i = 0; i < R; i++)
+              if ((R - i - 0.5) ** 2 + (R - j - 0.5) ** 2 > R * R) {
+                const px = dx < 0 ? x * TILE + i : x * TILE + TILE - 1 - i;
+                const py = dy < 0 ? y * TILE + j : y * TILE + TILE - 1 - j;
+                mask[py * PW + px] = 0;
+              }
+        }
+      }
+    const out = into.createImageData(PW, PH);
+    const o = out.data;
+    for (let py = 0; py < PH; py++)
+      for (let px = 0; px < PW; px++) {
+        const i = py * PW + px;
+        if (mask[i]) {
+          const t = ((py % TILE) * TILE + (px % TILE)) * 4;
+          o[i * 4] = flat[t]!;
+          o[i * 4 + 1] = flat[t + 1]!;
+          o[i * 4 + 2] = flat[t + 2]!;
+          o[i * 4 + 3] = 255;
+          continue;
+        }
+        // Tierra mas cercana dentro de la franja.
+        let best = 1e9,
+          bx = 0,
+          by = 0;
+        for (let dy = -BAND; dy <= BAND; dy++) {
+          const yy = py + dy;
+          if (yy < 0 || yy >= PH) continue;
+          for (let dx = -BAND; dx <= BAND; dx++) {
+            const xx = px + dx;
+            if (xx < 0 || xx >= PW || !mask[yy * PW + xx]) continue;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < best) {
+              best = d2;
+              bx = dx;
+              by = dy;
+            }
+          }
+        }
+        if (best > BAND * BAND) continue;
+        const p = Math.abs(by) >= Math.abs(bx) ? (by < 0 ? profs.T : profs.B) : bx < 0 ? profs.L : profs.R;
+        const d = Math.ceil(Math.sqrt(best));
+        if (d > p.len) continue;
+        const along = p.side === 'T' || p.side === 'B' ? px % TILE : py % TILE;
+        const s = at(p, p.start + d - 1, along);
+        if (p.data[s + 3]! === 0) continue;
+        o[i * 4] = p.data[s]!;
+        o[i * 4 + 1] = p.data[s + 1]!;
+        o[i * 4 + 2] = p.data[s + 2]!;
+        o[i * 4 + 3] = 255;
+      }
+    into.putImageData(out, 0, 0);
   };
 
   const [l1, l2, l3] = groundSets(s.theme);
@@ -220,7 +294,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   land.height = cv.height;
   const lc = land.getContext('2d')!;
   lc.imageSmoothingEnabled = false;
-  passCells(l3, (t) => LEVEL[t]! >= 3, lc);
+  passLand(l3, (t) => LEVEL[t]! >= 3, lc);
   ctx.drawImage(land, 0, 0);
   // Bosques: si hay arboles sueltos (Retro Diffusion) se dibujan como sprites mas abajo; si no, el tileset Wang.
   const trees = textures.exists('flat/tree_grass_0');
