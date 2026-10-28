@@ -18,7 +18,12 @@ white = (a[..., :3].min(-1) > 235)
 lab, _ = ndimage.label(white)
 border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
 bg = np.isin(lab, list(border))
-a[bg, 3] = 0
+# Huecos blancos encerrados dentro de la refineria (columna 4 de 6): tambien son fondo.
+# (En el resto se respeta el blanco: rayas de la pista, brillos...)
+sizes = ndimage.sum(np.ones_like(lab), lab, index=np.arange(lab.max() + 1))
+oil_cols = (np.arange(a.shape[1]) * 6 // a.shape[1] == 3)[None, :]
+holes = (sizes[lab] >= 12) & (lab > 0) & oil_cols & (a[..., :3].min(-1) > 245)
+a[bg | holes, 3] = 0
 objs, n = ndimage.label(a[..., 3] > 0, structure=np.ones((3, 3)))
 parts = []
 for i, sl in enumerate(ndimage.find_objects(objs), 1):
