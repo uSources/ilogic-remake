@@ -27,7 +27,7 @@ const LIGHT = 0xffe27a;
 /** Numero fijo por casilla, para que cada edificio vaya a su ritmo. */
 const seedOf = (x: number, y: number) => ((x * 73856093) ^ (y * 19349663)) >>> 0;
 
-export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxInfo[], time: number, still: boolean): void {
+export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxInfo[], time: number, still: boolean, spriteSmoke = false): void {
   g.clear();
   const f0 = still ? 0 : Math.floor(time / 125); // 8 pasos por segundo
   for (const b of list) {
@@ -54,7 +54,8 @@ export function drawBuildingFx(g: Phaser.GameObjects.Graphics, list: BuildingFxI
       }
       case 'Factory': {
         // Bocanadas de humo que salen de los picos del tejado: suben, crecen y se desvanecen.
-        if (still) break;
+        // (Si existe la animacion de Retro Diffusion, el humo va en sprite aparte.)
+        if (still || spriteSmoke) break;
         for (const [cx, ph] of [[25, 0], [13, 11]] as const)
           for (let i = 0; i < 2; i++) {
             const t = ((f + ph + i * 11) % 22) / 22;
