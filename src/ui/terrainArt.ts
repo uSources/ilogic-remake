@@ -220,6 +220,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
     };
     const profs = { T: profile(12, 'T'), B: profile(3, 'B'), L: profile(10, 'L'), R: profile(5, 'R') };
     const BAND = Math.max(profs.T.len, profs.B.len, profs.L.len, profs.R.len);
+    const occupied = (x: number, y: number) => objectBase(s, x, y) !== null || s.buildings.some((b) => b.x === x && b.y === y);
     // Mascara de tierra con las esquinas de fuera redondeadas.
     const R = 5;
     const mask = new Uint8Array(PW * PH);
@@ -227,6 +228,8 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       for (let y = 0; y < H; y++) {
         if (!up(cell(x, y))) continue;
         for (let j = 0; j < TILE; j++) mask.fill(1, (y * TILE + j) * PW + x * TILE, (y * TILE + j) * PW + x * TILE + TILE);
+        // Con edificio, arbol o montaña la casilla queda cuadrada: su base no debe pisar la orilla.
+        if (occupied(x, y)) continue;
         for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
           if (up(cell(x + dx, y)) || up(cell(x, y + dy)) || up(cell(x + dx, y + dy))) continue;
           for (let j = 0; j < R; j++)
