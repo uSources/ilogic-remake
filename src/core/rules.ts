@@ -183,7 +183,18 @@ function ambushed(s: GameState, u: Unit, walked: MovePath): MovePath {
   u.active = false;
   u.canMove = false;
   u.canFire = false;
+  dropStaleCaptures(s);
   return walked;
+}
+
+/**
+ * [CAMBIO] Una captura a medias se pierde en cuanto la unidad que capturaba se va o muere. Antes solo
+ * se borraba al consultarla (captureProgress), asi que en las partidas sin pantalla (IA contra IA,
+ * equilibrio) una unidad podia irse y volver sin perderla. Lo encontro el cazador de fallos
+ * (npm run fuzz). Se llama al mover, unir, subir a un transporte y al quitar muertos.
+ */
+export function dropStaleCaptures(s: GameState): void {
+  for (const b of s.buildings) if (b.capture) captureProgress(s, b);
 }
 
 /** Camino desde la unidad hasta dest (incluye ambos extremos). */
@@ -269,6 +280,7 @@ export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, 
   u.canMove = false;
   // Las unidades a distancia no pueden mover y disparar en el mismo turno.
   if (UNIT.minalc[u.type]! !== 0) u.canFire = false;
+  dropStaleCaptures(s);
   return path;
 }
 
@@ -560,6 +572,7 @@ export function merge(s: GameState, u: Unit, target: Unit): MovePath | null {
   target.canMove = false;
   path.push({ x: target.x, y: target.y });
   removeUnit(s, u.uid);
+  dropStaleCaptures(s);
   return path;
 }
 
@@ -597,6 +610,7 @@ export function load(s: GameState, u: Unit, t: Unit): MovePath | null {
   u.y = t.y;
   u.active = false;
   u.canMove = false;
+  dropStaleCaptures(s);
   return path;
 }
 
@@ -729,6 +743,7 @@ export function removeUnit(s: GameState, uid: number): void {
 /** Limpieza (en el original, cada fotograma): fuera las unidades sin vida. */
 export function removeDead(s: GameState): void {
   for (const u of [...s.units]) if (u.life <= 0) removeUnit(s, u.uid);
+  dropStaleCaptures(s);
 }
 
 // ---------------------------------------------------------------------------
