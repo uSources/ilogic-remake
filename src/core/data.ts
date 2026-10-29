@@ -478,4 +478,28 @@ export function useRules(r: Partial<RulesConfig>): void {
   delete (RULES as Partial<RulesConfig> & { capture?: unknown }).capture;
 }
 export const MAX_FUNDS = 999999;
-export const AI = { MAXMERGELIFE: 130, MAXCAPTDIST: 8, LIFETOBACK: 40 } as const;
+export const AI = {
+  MAXMERGELIFE: 130,
+  MAXCAPTDIST: 8,
+  LIFETOBACK: 40,
+  // [CAMBIO] Pesos de la IA nueva (antes sueltos en ai.ts). Cambiarlos cambia como juega:
+  // comprobar con npm run balance y actualizar tests/aiGolden.test.ts.
+  /** Precio que vale 1 punto de puntuacion al valorar un ataque (dano x precio/COSTSCALE). */
+  COSTSCALE: 1000,
+  /** Extra por matar al objetivo (por cada punto de precio/COSTSCALE). */
+  KILLBONUS: 50,
+  /** Extra por atacar a quien defiende su Base encima de ella. */
+  HQDEFENDER: 200,
+  /** Extra por echar a quien captura un edificio propio: la Base y el resto. */
+  STOPCAPTUREHQ: 400,
+  STOPCAPTURE: 60,
+  /** Dano que da el extra completo (por debajo se reduce, nunca a menos de la mitad). */
+  BONUSDAMAGE: 50,
+  /** Preferencia al elegir edificio a capturar: Base enemiga y edificios con dueño. */
+  CAPTUREHQ: 12,
+  CAPTUREOWNED: 4,
+  /** Unidades que capturan que intenta tener siempre. */
+  MINCAPTURERS: 4,
+  /** Vuelve a repostar si el combustible no da para FUELTURNS turnos mas un movimiento. */
+  FUELTURNS: 3,
+} as const;

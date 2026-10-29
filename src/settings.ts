@@ -527,6 +527,9 @@ const TEXTS = {
 
 export type TextKey = keyof (typeof TEXTS)['es'];
 
+/** Numero con separador de miles del idioma del juego (1.000 / 1,000). */
+export const fmtNum = (n: number): string => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
+
 export function t(key: TextKey): string {
   return TEXTS[settings.lang][key];
 }

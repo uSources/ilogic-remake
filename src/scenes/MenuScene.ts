@@ -37,6 +37,7 @@ import { MapView } from '../ui/mapView';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { TILE } from '../layout';
 import { terrainPalette } from '../ui/terrainColors';
+import { PAL, PAL_CSS } from '../ui/palette';
 
 type Mode = 'home' | 'setup' | 'campaign';
 
@@ -366,13 +367,13 @@ export class MenuScene extends Phaser.Scene {
           count: ev.killed ? 16 : 10,
           radius: ev.killed ? 26 : 18,
         });
-        await floatText(this, view, { x: c.x, y: c.y - 6 }, `-${ev.damage}`, '#ff7a73');
+        await floatText(this, view, { x: c.x, y: c.y - 6 }, `-${ev.damage}`, PAL_CSS.redSoft);
         return;
       }
       case 'capture':
         await this.follow(ev.at);
         void burst(this, view, center(ev.at), { colors: COLORS.gold, count: 12, radius: 22 });
-        await tileFlash(this, view, ev.at, 0xffd447);
+        await tileFlash(this, view, ev.at, PAL.gold);
         return;
       case 'spawn':
         await this.follow(ev.at);

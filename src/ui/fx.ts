@@ -3,6 +3,7 @@ import { settings } from '../settings';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
 import type { MapView } from './mapView';
+import { PAL, PAL_CSS } from './palette';
 
 /**
  * Efectos "pixel": cuadraditos que saltan, textos que suben a saltos y parpadeos.
@@ -70,7 +71,7 @@ export function floatText(
       fontFamily: 'Silkscreen, monospace',
       fontSize: '16px',
       color,
-      stroke: '#0b1220',
+      stroke: PAL_CSS.ink,
       strokeThickness: 4,
     })
     .setOrigin(0.5, 1)
@@ -141,9 +142,9 @@ export async function lunge(
 }
 
 export const COLORS = {
-  fire: [0xffd447, 0xff8a3d, 0xff4d45, 0xffffff],
+  fire: [PAL.gold, 0xff8a3d, PAL.red, 0xffffff],
   smoke: [0x5b6478, 0x3a4256, 0x8a93a8],
-  gold: [0xffd447, 0xfff1a8, 0xffb43a],
-  heal: [0x4fd36a, 0xa8f5b5],
+  gold: [PAL.gold, 0xfff1a8, 0xffb43a],
+  heal: [PAL.green, 0xa8f5b5],
   white: [0xffffff, 0xcfe8ff],
 };

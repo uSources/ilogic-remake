@@ -2,7 +2,7 @@
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
 import { DEFAULT_RULES, type RulesConfig } from './core/data';
-import { settings } from './settings';
+import { fmtNum, settings } from './settings';
 
 export interface NewGameOptions {
   size: number;
@@ -109,7 +109,7 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
     case 'fog':
       return v ? (es ? 'Sí' : 'On') : es ? 'No' : 'Off';
     case 'funds':
-      return (v as number).toLocaleString(es ? 'es-ES' : 'en-US');
+      return fmtNum(v as number);
     case 'income':
       return `${Math.round((v as number) * 100)} %`;
     case 'dayLimit':

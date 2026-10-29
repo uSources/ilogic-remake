@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'preact/compat';
 import { imgUrl } from '../assets';
 import { PatchNotes } from './PatchNotes';
-import { settings, t } from '../settings';
+import { settings, t, fmtNum } from '../settings';
 import { helpText } from './helpText';
 import { Campaign, EndScreen, Home, NewGame, Options, Pause } from './Menus';
 import {
@@ -27,8 +27,6 @@ function useUI(): UIState {
 
 /** Evitar que los botones se queden con el foco (Enter los pulsaria ademas de la accion del juego). */
 const noFocus = (e: MouseEvent) => e.preventDefault();
-
-const fmt = (n: number) => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
 
 function Icon({ k, alt = '', cls = 'px-icon' }: { k: string | null | undefined; alt?: string; cls?: string }) {
   const src = imgUrl(k);
@@ -105,9 +103,9 @@ function TopBar({ s }: { s: UIState }) {
       <div class="px funds">
         <Icon k="currency" alt="" cls="px-icon coin" />
         <div>
-          <div class="amount num">{fmt(s.funds)}</div>
+          <div class="amount num">{fmtNum(s.funds)}</div>
           <div class="sub">
-            +{fmt(s.income)} {t('perDay')} · {s.buildings} {t('buildingsN')}
+            +{fmtNum(s.income)} {t('perDay')} · {s.buildings} {t('buildingsN')}
           </div>
         </div>
       </div>
@@ -364,7 +362,7 @@ function TerrainCard({ tile }: { tile: TileVM }) {
       {b && b.income > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
           <span class="muted">{t('income')}</span>
-          <span>+{fmt(b.income)}</span>
+          <span>+{fmtNum(b.income)}</span>
         </div>
       )}
     </div>

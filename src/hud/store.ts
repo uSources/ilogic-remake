@@ -1,6 +1,5 @@
 import type { GameStats } from '../core/stats';
 import type { Block } from '../patchNotes/markdown';
-import { settings } from '../settings';
 
 /**
  * Estado de la interfaz (HTML) compartido con las escenas de Phaser.
@@ -403,8 +402,6 @@ export function showToast(text: string): void {
 export function showReport(title: string, lines: ReportLineVM[]): void {
   ui.set({ report: { title, lines, id: ++toastId } });
 }
-
-export const fmtNum = (n: number): string => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
 
 export function showBanner(small: string, big: string, tone: 'blue' | 'red'): void {
   ui.set({ banner: { small, big, tone, id: ++toastId } });

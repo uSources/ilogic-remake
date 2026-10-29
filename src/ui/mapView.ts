@@ -12,18 +12,19 @@ import { frontKey, paintTerrain, terrainArtReady, terrainObjects, waterAnimCells
 import { ANIM_FRAMES } from './sheets';
 import { composeFog, visKey } from './fog';
 import { settings } from '../settings';
+import { PAL, PAL_CSS } from './palette';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
 
 const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
-  move: { fill: 0x3aa8ff, alpha: 0.4, line: 0xcfe8ff },
-  unload: { fill: 0x3aa8ff, alpha: 0.4, line: 0xcfe8ff },
+  move: { fill: PAL.blue, alpha: 0.4, line: 0xcfe8ff },
+  unload: { fill: PAL.blue, alpha: 0.4, line: 0xcfe8ff },
   merge: { fill: 0xb15cff, alpha: 0.45, line: 0xe0b8ff },
   load: { fill: 0x2fd3c3, alpha: 0.45, line: 0xa8fff6 },
-  attack: { fill: 0xff4d45, alpha: 0.42, line: 0xffb0b2 },
+  attack: { fill: PAL.red, alpha: 0.42, line: 0xffb0b2 },
   reach: { fill: 0xff8a3d, alpha: 0.32, line: 0xffc9a0 },
-  hover: { fill: 0x3aa8ff, alpha: 0.16, line: 0x8fd0ff },
-  group: { fill: 0xffd447, alpha: 0.18, line: 0xffd447 },
+  hover: { fill: PAL.blue, alpha: 0.16, line: 0x8fd0ff },
+  group: { fill: PAL.gold, alpha: 0.18, line: PAL.gold },
 };
 
 export interface ViewOptions {
@@ -124,7 +125,7 @@ export class MapView {
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
     this.root.add([this.terrain, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg]);
-    this.cam.setBackgroundColor('#0b1220');
+    this.cam.setBackgroundColor(PAL_CSS.ink);
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
     this.updateBounds();
@@ -325,7 +326,7 @@ export class MapView {
       const x = this.goal.x * TILE - d,
         y = this.goal.y * TILE - d,
         w = TILE + 2 * d;
-      g.fillStyle(0x0b1220, 0.8);
+      g.fillStyle(PAL.ink, 0.8);
       for (const [cx, cy] of [
         [x - 1, y - 1],
         [x + w - 9, y - 1],
@@ -333,7 +334,7 @@ export class MapView {
         [x + w - 9, y + w - 9],
       ] as const)
         g.fillRect(cx, cy, 10, 10);
-      g.fillStyle(0xffd447, 1);
+      g.fillStyle(PAL.gold, 1);
       // Esquinas en L del cursor.
       for (const [rx, ry, rw, rh] of [
         [x, y, 8, 2],
@@ -350,11 +351,11 @@ export class MapView {
     if (this.vip) {
       const cx = this.vip.x * TILE + TILE / 2,
         top = this.vip.y * TILE - 10 - (phase ? 2 : 0);
-      g.fillStyle(0x0b1220, 1);
+      g.fillStyle(PAL.ink, 1);
       g.fillRect(cx - 6, top - 1, 12, 5);
       g.fillRect(cx - 4, top + 4, 8, 3);
       g.fillRect(cx - 2, top + 7, 4, 3);
-      g.fillStyle(0xffd447, 1);
+      g.fillStyle(PAL.gold, 1);
       g.fillRect(cx - 5, top, 10, 3);
       g.fillRect(cx - 3, top + 3, 6, 2);
       g.fillRect(cx - 1, top + 5, 2, 3);
@@ -394,7 +395,7 @@ export class MapView {
     const img = this.scene.add.image(TILE / 2, TILE, ATLAS, key).setOrigin(0.5, 1);
     img.setDisplaySize(Math.max(TILE, img.width), img.height);
     const life = this.scene.add.image(17, 17, ATLAS, 'n_9').setOrigin(0).setDisplaySize(14, 14);
-    const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, 0x0b1220);
+    const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, PAL.ink);
     const stars = this.scene.add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
@@ -457,9 +458,9 @@ export class MapView {
       for (let i = 0; i < r; i++) {
         const x = TILE - 5 - i * 5,
           y = 1;
-        g.fillStyle(0x0b1220, 1);
+        g.fillStyle(PAL.ink, 1);
         g.fillRect(x - 1, y, 5, 5);
-        g.fillStyle(0xffd447, 1);
+        g.fillStyle(PAL.gold, 1);
         g.fillRect(x, y + 1, 3, 3);
         g.fillStyle(0xfff1a8, 1);
         g.fillRect(x + 1, y + 1, 1, 1);
@@ -510,9 +511,9 @@ export class MapView {
     const th = opts.threat;
     if (th) {
       const at = (x: number, y: number) => x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && th[x]![y]!;
-      g.fillStyle(0xff4d45, 0.2);
+      g.fillStyle(PAL.red, 0.2);
       for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (th[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-      g.fillStyle(0xff4d45, 0.9);
+      g.fillStyle(PAL.red, 0.9);
       for (let x = 0; x < MAP_W; x++)
         for (let y = 0; y < MAP_H; y++) {
           if (!th[x]![y]) continue;
@@ -543,19 +544,19 @@ export class MapView {
       const px = c.x * TILE + 3,
         py = c.y * TILE + 1;
       const w = TILE - 6;
-      g.fillStyle(0x0b1220, 0.9);
+      g.fillStyle(PAL.ink, 0.9);
       g.fillRect(px - 1, py - 1, w + 2, 6);
-      g.fillStyle(c.team === 0 ? 0x3aa8ff : 0xff4d45, 1);
+      g.fillStyle(c.team === 0 ? PAL.blue : PAL.red, 1);
       g.fillRect(px, py, Math.max(1, Math.round((w * (c.total - c.left)) / c.total)), 4);
     }
     // Alcance de ataque al mover: relleno rojo tenue fuera del movimiento y borde de la zona.
     const z = opts.attackZone;
     if (z) {
       const inZ = (x: number, y: number) => x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && z[x]![y]!;
-      g.fillStyle(0xff4d45, 0.14);
+      g.fillStyle(PAL.red, 0.14);
       for (let x = 0; x < MAP_W; x++)
         for (let y = 0; y < MAP_H; y++) if (z[x]![y] && !opts.highlights.has(`${x},${y}`)) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-      g.fillStyle(0xff4d45, 0.85);
+      g.fillStyle(PAL.red, 0.85);
       for (let x = 0; x < MAP_W; x++)
         for (let y = 0; y < MAP_H; y++) {
           if (!z[x]![y]) continue;
@@ -576,9 +577,9 @@ export class MapView {
         if (!dg[x]![y]) continue;
         const px = x * TILE + TILE - 9,
           py = y * TILE + 3;
-        g.fillStyle(0x0b1220, 0.8);
+        g.fillStyle(PAL.ink, 0.8);
         g.fillRect(px - 1, py - 1, 8, 8);
-        g.fillStyle(0xff4d45, 1);
+        g.fillStyle(PAL.red, 1);
         for (let i = 0; i < 6; i++) {
           g.fillRect(px + i, py, 6 - i, 1);
           g.fillRect(px + i, py + i, 1, 1);
@@ -593,12 +594,12 @@ export class MapView {
         ay = o.from.y * TILE + TILE / 2,
         bx = o.to.x * TILE + TILE / 2,
         by = o.to.y * TILE + TILE / 2;
-      g.fillStyle(0xffd447, 0.9);
+      g.fillStyle(PAL.gold, 0.9);
       for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
       for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
-      g.fillStyle(0x0b1220, 1);
+      g.fillStyle(PAL.ink, 1);
       g.fillRect(bx - 1, by - 12, 3, 14);
-      g.fillStyle(0xffd447, 1);
+      g.fillStyle(PAL.gold, 1);
       g.fillRect(bx + 2, by - 12, 8, 6);
       g.fillStyle(0xfff1a8, 1);
       g.fillRect(bx, by - 11, 1, 12);
@@ -613,7 +614,7 @@ export class MapView {
       const cx = end.x * TILE + TILE / 2,
         cy = end.y * TILE + TILE / 2;
       for (const [w, color, alpha] of [
-        [8, 0x0b1220, 0.7],
+        [8, PAL.ink, 0.7],
         [4, 0xffffff, 1],
       ] as const) {
         g.fillStyle(color, alpha);
@@ -670,9 +671,9 @@ export class MapView {
     const b = this.cam.getWorldPoint(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
     const g = this.box;
     g.clear();
-    g.fillStyle(0xffd447, 0.12);
+    g.fillStyle(PAL.gold, 0.12);
     g.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-    g.fillStyle(0xffd447, 0.9);
+    g.fillStyle(PAL.gold, 0.9);
     g.fillRect(a.x, a.y, b.x - a.x, 1);
     g.fillRect(a.x, b.y - 1, b.x - a.x, 1);
     g.fillRect(a.x, a.y, 1, b.y - a.y);
