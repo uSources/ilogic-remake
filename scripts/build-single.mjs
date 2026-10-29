@@ -10,9 +10,10 @@ const assets = {};
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) walk(full);
-    else if (/\.(png|json|ogg|mp3)$/.test(name)) {
+    // Musica: solo mp3 (lo leen todos los navegadores); el ogg duplicaria el peso.
+    else if (/\.(png|json|mp3)$/.test(name)) {
       const rel = relative(dist, full).replace(/\\/g, '/');
-      const mime = name.endsWith('.png') ? 'image/png' : name.endsWith('.json') ? 'application/json' : name.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg';
+      const mime = name.endsWith('.png') ? 'image/png' : name.endsWith('.json') ? 'application/json' : 'audio/mpeg';
       assets[rel] = `data:${mime};base64,${readFileSync(full).toString('base64')}`;
     }
   }

@@ -9,6 +9,12 @@ export function asset(path: string): string {
   return inline?.[path] ?? path;
 }
 
+/** Rutas de las que hay copia (en la version de un fichero solo va lo que se incrusto). */
+export function assetsAvailable(paths: string[]): string[] {
+  const inline = (window as unknown as { __ILOGIC_ASSETS__?: Record<string, string> }).__ILOGIC_ASSETS__;
+  return inline ? paths.filter((p) => p in inline) : paths;
+}
+
 let textures: Phaser.Textures.TextureManager | null = null;
 const urls = new Map<string, string>();
 

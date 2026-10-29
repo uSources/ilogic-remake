@@ -9,13 +9,14 @@ Salida:
 
 Las imagenes no se recortan ni se giran: cada marco mide lo mismo que su PNG, asi el codigo que
 coloca piezas por coordenadas (laminas de costa, olas, niebla) funciona igual que con el PNG suelto.
-Se deja un margen transparente entre marcos para que el filtrado no mezcle piezas vecinas.
+Se colocan con MaxRects y se deja un margen transparente entre marcos para que el filtrado no mezcle piezas vecinas.
 
 Validacion: cada marco se compara pixel a pixel con su PNG original; si algo no cuadra, falla.
 Uso: python3 tools/art/pack_atlas.py (lo llama npm run assets).
 """
 import glob, json, os, sys
 import numpy as np
+import oxipng
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -41,30 +42,22 @@ def load():
 
 
 def pack(items):
-    """Estanterias: de mas alta a mas baja, de izquierda a derecha; pagina nueva cuando no cabe."""
-    order = sorted(items, key=lambda it: (-it[1].height, -it[1].width, it[0]))
-    pages, cur = [], None
-    for key, im in order:
-        w, h = im.width + PAD, im.height + PAD
-        placed = False
-        for page in pages:
-            for shelf in page['shelves']:
-                if h <= shelf['h'] and shelf['x'] + w <= SIZE:
-                    page['frames'].append((key, im, shelf['x'], shelf['y']))
-                    shelf['x'] += w
-                    placed = True
-                    break
-            if placed:
-                break
-            if page['top'] + h <= SIZE:
-                page['shelves'].append({'y': page['top'], 'h': h, 'x': w})
-                page['frames'].append((key, im, 0, page['top']))
-                page['top'] += h
-                placed = True
-                break
-        if not placed:
-            cur = {'shelves': [{'y': 0, 'h': h, 'x': w}], 'frames': [(key, im, 0, 0)], 'top': h}
-            pages.append(cur)
+    """MaxRects (rectpack): las piezas se colocan en el hueco que menos espacio deja libre."""
+    import rectpack
+    pk = rectpack.newPacker(mode=rectpack.PackingMode.Offline, pack_algo=rectpack.MaxRectsBssf,
+                            sort_algo=rectpack.SORT_AREA, rotation=False)
+    for i, (key, im) in enumerate(items):
+        pk.add_rect(im.width + PAD, im.height + PAD, rid=i)
+    for _ in range(len(items)):
+        pk.add_bin(SIZE, SIZE)
+    pk.pack()
+    pages = []
+    for b in pk:
+        frames = [(items[r.rid][0], items[r.rid][1], r.x, r.y) for r in b]
+        if frames:
+            pages.append({'frames': sorted(frames, key=lambda f: f[0])})
+    if sum(len(p['frames']) for p in pages) != len(items):
+        sys.exit('El atlas no ha podido colocar todas las imagenes')
     return pages
 
 
@@ -85,11 +78,13 @@ def main():
         frames = {}
         for key, im, x, y in page['frames']:
             sheet.paste(im, (x, y))
-            frames[key] = {'frame': {'x': x, 'y': y, 'w': im.width, 'h': im.height}, 'rotated': False, 'trimmed': False,
-                           'spriteSourceSize': {'x': 0, 'y': 0, 'w': im.width, 'h': im.height},
-                           'sourceSize': {'w': im.width, 'h': im.height}}
+            # Sin recorte ni giro: a Phaser le basta con el rectangulo.
+            frames[key] = {'frame': {'x': x, 'y': y, 'w': im.width, 'h': im.height}}
         name = f'atlas-{n}'
-        sheet.save(os.path.join(OUT, name + '.png'), optimize=True)
+        path = os.path.join(OUT, name + '.png')
+        sheet.save(path)
+        # Compresion sin perdida (mismo resultado pixel a pixel, PNG mas pequeño).
+        oxipng.optimize(path, level=2, strip=oxipng.StripChunks.safe())
         meta = {'image': name + '.png', 'format': 'RGBA8888', 'size': {'w': pw, 'h': ph}, 'scale': 1}
         json.dump({'frames': dict(sorted(frames.items())), 'meta': meta}, open(os.path.join(OUT, name + '.json'), 'w'),
                   separators=(',', ':'))

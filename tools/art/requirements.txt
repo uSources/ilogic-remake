@@ -1,0 +1,5 @@
+# Para npm run assets (python3 -m pip install -r tools/art/requirements.txt)
+pillow
+numpy
+rectpack
+pyoxipng

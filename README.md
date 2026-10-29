@@ -124,18 +124,20 @@ scripts/       assets.mjs (compila los graficos), gen-assets.mjs (lista de image
 ### Graficos
 
 Los graficos se compilan antes de jugar, no mientras se juega. `npm run assets` (necesita Python 3
-con Pillow y NumPy) ejecuta en orden los scripts de `tools/art/`:
+con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/art/`:
 
 1. suelos Wang, montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y
    muñecos de nieve (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
 2. laminas de costa, agua organica, olas, espuma de la orilla y niebla (`public/assets/img/blob`, `anim`);
-3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`, 3 paginas);
+3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`: 2 paginas colocadas con MaxRects y
+   comprimidas sin perdida con oxipng);
 4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen ni lamina, que cada
    unidad y edificio tenga sus bandos y que nada se salga de la casilla.
 
 Se ejecuta solo antes de `npm run build`; si algo falla, no se publica. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
-En `dist` solo van el atlas, el cursor y el icono.
+En `dist` solo van el atlas, el cursor y el icono; en la version de un fichero la musica va solo en mp3.
+Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Diferencias con el original de 2013
 
