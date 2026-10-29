@@ -5,7 +5,18 @@ import { PatchNotes } from './PatchNotes';
 import { settings, t } from '../settings';
 import { helpText } from './helpText';
 import { Campaign, EndScreen, Home, NewGame, Options, Pause } from './Menus';
-import { ui, type MinimapVM, type MoveTipVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
+import {
+  ui,
+  type MinimapVM,
+  type MoveTipVM,
+  type Anchor,
+  type ForecastVM,
+  type IdleVM,
+  type MenuVM,
+  type TileVM,
+  type UIState,
+  type UnitVM,
+} from './store';
 
 function useUI(): UIState {
   return useSyncExternalStore(
@@ -111,7 +122,15 @@ function TopBar({ s }: { s: UIState }) {
       <button tabIndex={-1} type="button" class="px-btn end" disabled={!mine || s.busy} onMouseDown={noFocus} onClick={() => a.endTurn()}>
         {t('endTurn')} <span class="key">E</span>
       </button>
-      <button tabIndex={-1} type="button" class="px-btn plain menu-btn" aria-label={t('gameMenu')} disabled={!mine || s.busy} onMouseDown={noFocus} onClick={() => a.openGameMenu()}>
+      <button
+        tabIndex={-1}
+        type="button"
+        class="px-btn plain menu-btn"
+        aria-label={t('gameMenu')}
+        disabled={!mine || s.busy}
+        onMouseDown={noFocus}
+        onClick={() => a.openGameMenu()}
+      >
         <i />
         <i />
         <i />
@@ -132,7 +151,8 @@ function PopMenu({ m }: { m: MenuVM }) {
         {m.items.map((it, i) => (
           <>
             {it.danger && i > 0 && <div class="sep" />}
-            <button tabIndex={-1}
+            <button
+              tabIndex={-1}
               type="button"
               role="menuitem"
               class={`item ${withIcons ? 'icon' : ''} ${i === m.selected ? 'sel' : ''} ${it.disabled ? 'disabled' : ''} ${it.danger ? 'danger' : ''}`}
@@ -198,7 +218,9 @@ function Forecast({ f }: { f: ForecastVM }) {
         <>
           <div class="row">
             <span>{t('counter')}</span>
-            <span style={{ color: 'var(--red-soft)' }}>{f.counter.low === f.counter.high ? f.counter.low : `${f.counter.low}–${f.counter.high}`}</span>
+            <span style={{ color: 'var(--red-soft)' }}>
+              {f.counter.low === f.counter.high ? f.counter.low : `${f.counter.low}–${f.counter.high}`}
+            </span>
           </div>
           <div class="row">
             <span>{t('yourLife')}</span>
@@ -238,9 +260,15 @@ function UnitCard({ u }: { u: UnitVM }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <span class="name">
             {u.name}
-            {u.rank ? <span class="rank" title={t('veteran')}>{' ' + '★'.repeat(u.rank)}</span> : null}
+            {u.rank ? (
+              <span class="rank" title={t('veteran')}>
+                {' ' + '★'.repeat(u.rank)}
+              </span>
+            ) : null}
           </span>
-          <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>{u.team === 0 ? t('you') : t('enemy')}</span>
+          <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
+            {u.team === 0 ? t('you') : t('enemy')}
+          </span>
           <span class="muted" style={{ fontSize: 13 }}>
             {u.stats}
           </span>
@@ -271,7 +299,11 @@ function UnitCard({ u }: { u: UnitVM }) {
           )}
         </div>
       )}
-      {u.cargo && <span class="muted" style={{ fontSize: 13 }}>{u.cargo}</span>}
+      {u.cargo && (
+        <span class="muted" style={{ fontSize: 13 }}>
+          {u.cargo}
+        </span>
+      )}
     </div>
   );
 }
@@ -280,7 +312,15 @@ function TerrainCard({ tile }: { tile: TileVM }) {
   const stars = Math.max(0, Math.min(4, Math.round(tile.terrain.defense / 10)));
   const b = tile.building;
   const ownerColor = !b ? undefined : b.owner === 'you' ? 'var(--blue)' : b.owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)';
-  const ownerText = !b ? '' : b.owner === 'you' ? t('you') : b.owner === 'enemy' ? t('enemy') : b.owner === 'neutral' ? t('neutral') : t('unknown');
+  const ownerText = !b
+    ? ''
+    : b.owner === 'you'
+      ? t('you')
+      : b.owner === 'enemy'
+        ? t('enemy')
+        : b.owner === 'neutral'
+          ? t('neutral')
+          : t('unknown');
   return (
     <div class="px terrain">
       {b ? (
@@ -355,7 +395,14 @@ function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
       ) : (
         <span class="all">{t('allMoved')}</span>
       )}
-      <button tabIndex={-1} type="button" class={`px-btn plain threat ${threat ? 'on' : ''}`} onMouseDown={noFocus} onClick={() => a.toggleThreat()} aria-pressed={threat}>
+      <button
+        tabIndex={-1}
+        type="button"
+        class={`px-btn plain threat ${threat ? 'on' : ''}`}
+        onMouseDown={noFocus}
+        onClick={() => a.toggleThreat()}
+        aria-pressed={threat}
+      >
         <span class="key">T</span>
         <span class="long">{threat ? t('threatOn') : t('threatOff')}</span>
         <span class="short">{t('threatShort')}</span>
@@ -432,7 +479,10 @@ function MoveTip({ m }: { m: MoveTipVM }) {
   const left = Math.round(a.x + a.w + 6);
   const top = Math.round(a.y - 30);
   return (
-    <div class={`px movetip ${m.invalid ? 'bad' : ''}`} style={{ left: Math.min(left, window.innerWidth / zoom() - 200), top: Math.max(76, top) }}>
+    <div
+      class={`px movetip ${m.invalid ? 'bad' : ''}`}
+      style={{ left: Math.min(left, window.innerWidth / zoom() - 200), top: Math.max(76, top) }}
+    >
       <span class="mt-act">{m.action}</span>
       {m.used !== undefined && (
         <span class="num">
@@ -445,7 +495,11 @@ function MoveTip({ m }: { m: MoveTipVM }) {
           <Icon k="fuel" /> {m.fuel[0]}→{m.fuel[1]}
         </span>
       )}
-      {m.danger && <span class="mt-danger" title={t('tipDanger')}>⚠</span>}
+      {m.danger && (
+        <span class="mt-danger" title={t('tipDanger')}>
+          ⚠
+        </span>
+      )}
       {m.warn && <span class="mt-warn">{m.warn}</span>}
     </div>
   );
@@ -518,9 +572,7 @@ function Help() {
               </thead>
               <tbody>
                 {h.controls.map((row) => (
-                  <tr>
-                    {row.map((x, i) => (i === 1 ? <td class="kbd">{x}</td> : <td>{x}</td>))}
-                  </tr>
+                  <tr>{row.map((x, i) => (i === 1 ? <td class="kbd">{x}</td> : <td>{x}</td>))}</tr>
                 ))}
               </tbody>
             </table>
@@ -568,7 +620,12 @@ export function Hud() {
       {s.help && <Help />}
       {s.notes && <PatchNotes n={s.notes} />}
       {s.toast && (
-        <div key={s.toast.id} class="px toast" role="status" style={{ animationDuration: `${Math.max(2.4, s.toast.text.length / 16).toFixed(1)}s` }}>
+        <div
+          key={s.toast.id}
+          class="px toast"
+          role="status"
+          style={{ animationDuration: `${Math.max(2.4, s.toast.text.length / 16).toFixed(1)}s` }}
+        >
           {s.toast.text}
         </div>
       )}

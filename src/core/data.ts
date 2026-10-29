@@ -3,7 +3,27 @@
 // Correcciones respecto al original: tabla "poder" (filas 0, 8 y 17 desalineadas),
 // fila 18 de "unitHeals" (faltaba) y fila 2 de PROBS_PER_ADJ (sobraba un valor).
 
-export const UNIT_NAMES = ["Soldier", "Tank", "Artillery", "Car", "LTank", "Blocker", "BSoldier", "Transport", "SSoldier", "Missile_truck", "LFighter", "Fighter", "Bomber", "Supplier", "Antiair", "THelicopter", "MSoldier", "FSoldier", "WTank"] as const;
+export const UNIT_NAMES = [
+  'Soldier',
+  'Tank',
+  'Artillery',
+  'Car',
+  'LTank',
+  'Blocker',
+  'BSoldier',
+  'Transport',
+  'SSoldier',
+  'Missile_truck',
+  'LFighter',
+  'Fighter',
+  'Bomber',
+  'Supplier',
+  'Antiair',
+  'THelicopter',
+  'MSoldier',
+  'FSoldier',
+  'WTank',
+] as const;
 export const UNIT_TYPES = UNIT_NAMES.length; // 19
 
 /** Estadisticas por tipo de unidad (indices 0..18 como UNIT_NAMES). */
@@ -220,35 +240,35 @@ export const POWER: readonly (readonly number[])[] = [
 
 /** [unidad][terreno]: prefijo de imagen (1_ en agua, 2_ en nieve) */
 export const UNIT_TERRAIN_PREFIX: readonly (readonly string[])[] = [
-  ["", "", "", "", "", "", "", "", "1_", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "1_", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "1_", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "1_", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "2_", "2_", "2_", "2_"],
-  ["", "1_", "", "", "", "", "", "", "1_", "1_", "2_", "2_", "2_", "2_", ""],
+  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
+  ['', '1_', '', '', '', '', '', '', '1_', '1_', '2_', '2_', '2_', '2_', ''],
 ];
 
 /** [edificio][terreno]: prefijo de imagen */
 export const BUILDING_TERRAIN_PREFIX: readonly (readonly string[])[] = [
-  ["", "", "", "", "", "", "", "", "", "", "2_", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "", "", "", ""],
-  ["", "", "", "", "", "", "", "", "", "", "2_", "", "", "", ""],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
 ];
 
 /** [curador][curado]: vida que una unidad da a otra (todo 0 en el original) */
@@ -274,7 +294,7 @@ export const UNIT_HEALS: readonly (readonly number[])[] = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
 
-export const BUILDING_NAMES = ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"] as const;
+export const BUILDING_NAMES = ['City', 'Oil', 'Factory', 'Stronghold', 'Airport', 'Base'] as const;
 export const BUILDING_TYPES = BUILDING_NAMES.length; // 6
 export const HQ = 5; // Base = cuartel general
 export const BUILDING = {
@@ -288,7 +308,23 @@ export const BUILDING = {
   vision: [0, 0, 0, 0, 0, 0],
 } as const;
 
-export const TERRAIN_NAMES = ["Grass", "Water", "Woods", "Sand", "Cactus", "SandCliff", "Flowers", "GrassCliff", "SWater", "DWater", "Snow", "Frosty", "SnowCliff", "SnowWood", "Ice"] as const;
+export const TERRAIN_NAMES = [
+  'Grass',
+  'Water',
+  'Woods',
+  'Sand',
+  'Cactus',
+  'SandCliff',
+  'Flowers',
+  'GrassCliff',
+  'SWater',
+  'DWater',
+  'Snow',
+  'Frosty',
+  'SnowCliff',
+  'SnowWood',
+  'Ice',
+] as const;
 export const TERRAIN_TYPES = TERRAIN_NAMES.length; // 15
 export const TERRAIN = {
   /** Se puede construir encima (generador de mapas) */
@@ -327,13 +363,43 @@ export const MOVE_COST: number[][] = [
 export const HIDING_TERRAIN: readonly number[] = [2, 4, 13];
 
 /** Indices de terreno usados por el codigo. */
-export const T_GRASS = 0, T_WATER = 1, T_SNOW = 10, T_SWATER = 8, T_DWATER = 9, T_ICE = 14;
+export const T_GRASS = 0,
+  T_WATER = 1,
+  T_SNOW = 10,
+  T_SWATER = 8,
+  T_DWATER = 9,
+  T_ICE = 14;
 
 // ---- Generador de mapas (RandomMap) ----
-export const THEME_NAMES = ["Plains", "Desert", "Forest", "Swamp", "Snowy"] as const;
-export const TILE_BASE_PROBS: readonly (readonly number[])[] = [[0.05, 0.005, 0.05, 0.0, 0.0, 0.0, 0.03, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.005, 0.0, 0.05, 0.03, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.05, 0.005, 0.1, 0.0, 0.0, 0.0, 0.01, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.05, 0.03, 0.05, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.005, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.015, 0.02, 0.05, 0.0]];
-export const PROBS_PER_ADJ: readonly (readonly number[])[] = [[0.2, 0.3, 0.03, 0.0, 0.0, 0.0, 0.01, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.3, 0.0, 0.2, -0.05, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.1, 0.3, 0.15, 0.0, 0.0, 0.0, 0.005, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.05, 0.12, 0.02, 0.0, 0.0, 0.0, 0.0, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.05, -0.05, 0.03, 0.0]];
-export const MAPGEN = {"MINNB": 24, "MAXNB": 30, "MAXSPAWNDIST": 2, "MINUCAP": 9, "MINBCAP": 6, "MINTILENUM": 200, "MINNBS": [8, 5, 3, 3, 1, 0], "MAXNBS": [11, 9, 5, 6, 3, 0], "INITUS": [0, 0, 2], "INITBS": [5, 0, 2, 1, 4], "isSWater": [true, true, true, true, false], "isIce": [false, false, false, false, true]} as const;
+export const THEME_NAMES = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'] as const;
+export const TILE_BASE_PROBS: readonly (readonly number[])[] = [
+  [0.05, 0.005, 0.05, 0.0, 0.0, 0.0, 0.03, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.0, 0.005, 0.0, 0.05, 0.03, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.05, 0.005, 0.1, 0.0, 0.0, 0.0, 0.01, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.05, 0.03, 0.05, 0.0, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.0, 0.005, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.05, 0.015, 0.02, 0.05, 0.0],
+];
+export const PROBS_PER_ADJ: readonly (readonly number[])[] = [
+  [0.2, 0.3, 0.03, 0.0, 0.0, 0.0, 0.01, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.0, 0.3, 0.0, 0.2, -0.05, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.1, 0.3, 0.15, 0.0, 0.0, 0.0, 0.005, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.05, 0.12, 0.02, 0.0, 0.0, 0.0, 0.0, -0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  [0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.05, -0.05, 0.03, 0.0],
+];
+export const MAPGEN = {
+  MINNB: 24,
+  MAXNB: 30,
+  MAXSPAWNDIST: 2,
+  MINUCAP: 9,
+  MINBCAP: 6,
+  MINTILENUM: 200,
+  MINNBS: [8, 5, 3, 3, 1, 0],
+  MAXNBS: [11, 9, 5, 6, 3, 0],
+  INITUS: [0, 0, 2],
+  INITBS: [5, 0, 2, 1, 4],
+  isSWater: [true, true, true, true, false],
+  isIce: [false, false, false, false, true],
+} as const;
 
 // ---- Reglas generales ----
 /** Tamaño del mapa en casillas. 32x32 como el original; la pantalla de nueva partida permite otros. */

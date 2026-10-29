@@ -1,6 +1,20 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { BUILDING, FUELER, HQ, MAP_H, MAP_W, DEFAULT_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import {
+  BUILDING,
+  FUELER,
+  HQ,
+  MAP_H,
+  MAP_W,
+  DEFAULT_RULES,
+  POWER,
+  RULES,
+  TERRAIN,
+  UNIT,
+  UNIT_NAMES,
+  useRules,
+  type RulesConfig,
+} from '../core/data';
 import { diamond, grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
@@ -60,7 +74,21 @@ import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../co
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
-import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type ForecastVM, type IdleVM, type MenuItemVM, type MenuVM, type TileVM, type UIState, type MoveTipVM } from '../hud/store';
+import {
+  fmtNum,
+  showBanner,
+  showReport,
+  showToast,
+  ui,
+  type ReportLineVM,
+  type ForecastVM,
+  type IdleVM,
+  type MenuItemVM,
+  type MenuVM,
+  type TileVM,
+  type UIState,
+  type MoveTipVM,
+} from '../hud/store';
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
@@ -84,7 +112,13 @@ type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrend
 const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 
 type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
-const END_LABEL: Record<EndButton, TextKey> = { rematch: 'endRematch', new: 'newGame', menu: 'endMenu', next: 'endNext', retry: 'endRetry' };
+const END_LABEL: Record<EndButton, TextKey> = {
+  rematch: 'endRematch',
+  new: 'newGame',
+  menu: 'endMenu',
+  next: 'endNext',
+  retry: 'endRetry',
+};
 
 /** Filtro CSS del lienzo del juego (gris al perder). */
 function setEndFilter(f: string | null): void {
@@ -212,7 +246,10 @@ export class GameScene extends Phaser.Scene {
       // Solo se guardan los ajustes de la partida; las reglas son siempre las actuales
       // (las partidas antiguas con las reglas de 2013 pasan a jugarse con estas).
       const r = state.rules;
-      state.rules = { ...DEFAULT_RULES, ...(r ? { initialFunds: r.initialFunds, maxUnits: r.maxUnits, incomeScale: r.incomeScale, fog: r.fog, dayLimit: r.dayLimit } : {}) };
+      state.rules = {
+        ...DEFAULT_RULES,
+        ...(r ? { initialFunds: r.initialFunds, maxUnits: r.maxUnits, incomeScale: r.incomeScale, fog: r.fog, dayLimit: r.dayLimit } : {}),
+      };
       useRules(state.rules);
       this.s = state;
     } else if (data.mode === 'mission' && data.mission && missionById(data.mission)) {
@@ -348,8 +385,7 @@ export class GameScene extends Phaser.Scene {
   private highlights(): Map<string, HighlightKind> {
     const h = new Map<string, HighlightKind>();
     if (this.phase === 'move' && this.range) {
-      for (let x = 0; x < MAP_W; x++)
-        for (let y = 0; y < MAP_H; y++) if (this.range.steps[x]![y]! > 0) h.set(`${x},${y}`, 'move');
+      for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (this.range.steps[x]![y]! > 0) h.set(`${x},${y}`, 'move');
       for (const k of this.mergeSet.keys()) h.set(k, 'merge');
       for (const k of this.loadSet.keys()) h.set(k, 'load');
     } else if (this.phase === 'attack') {
@@ -407,7 +443,7 @@ export class GameScene extends Phaser.Scene {
       .map(({ b, c }) => ({ x: b.x, y: b.y, left: c!.left, total: capturePointsOf(b), team: c!.team }));
     const obj = this.s.mission?.objective;
     const vipUnit = obj?.kind === 'escort' ? unitById(this.s, obj.uid) : undefined;
-    const vipAt = vipUnit ? (vipUnit.carrier !== null ? unitById(this.s, vipUnit.carrier) ?? vipUnit : vipUnit) : undefined;
+    const vipAt = vipUnit ? (vipUnit.carrier !== null ? (unitById(this.s, vipUnit.carrier) ?? vipUnit) : vipUnit) : undefined;
     this.view.render(this.s, {
       vis: this.vis,
       highlights: this.highlights(),
@@ -415,7 +451,9 @@ export class GameScene extends Phaser.Scene {
       path: this.previewPath(),
       threat,
       attackZone: this.phase === 'move' ? this.attackZone : null,
-      orders: this.s.units.filter((u) => u.team === 0 && u.order && u.carrier === null).map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
+      orders: this.s.units
+        .filter((u) => u.team === 0 && u.order && u.carrier === null)
+        .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
       goal: obj?.kind === 'escort' ? obj.to : null,
@@ -438,7 +476,9 @@ export class GameScene extends Phaser.Scene {
         terrain,
         fog: this.vis.map((col) => col.slice()),
         buildings: s.buildings.map((b) => ({ x: b.x, y: b.y, owner: b.owner === 0 || this.visibleToPlayer(b) ? b.owner : null })),
-        units: s.units.filter((u) => u.carrier === null && !this.hidden.has(u.uid) && (u.team === 0 || this.visibleToPlayer(u))).map((u) => ({ x: u.x, y: u.y, team: u.team })),
+        units: s.units
+          .filter((u) => u.carrier === null && !this.hidden.has(u.uid) && (u.team === 0 || this.visibleToPlayer(u)))
+          .map((u) => ({ x: u.x, y: u.y, team: u.team })),
       },
     });
   }
@@ -474,7 +514,15 @@ export class GameScene extends Phaser.Scene {
       moveTip: this.phase === 'move' ? this.moveTip(c) : null,
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
-      hint: busy ? (this.enemyPlaying ? t('skip') : '') : this.phase === 'map' ? (this.inspectUid !== null ? t('hintInspect') : t('hintMap')) : '',
+      hint: busy
+        ? this.enemyPlaying
+          ? t('skip')
+          : ''
+        : this.phase === 'map'
+          ? this.inspectUid !== null
+            ? t('hintInspect')
+            : t('hintMap')
+          : '',
       mission: this.missionPanel(),
     });
     const cam = this.cameras.main;
@@ -511,7 +559,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
   private advanceTutorial(): void {
-    if (this.tutorialStep === 0 && this.tutorialEvents.length === 0) this.tutorialOwned = this.s.buildings.filter((b) => b.owner === 0).length;
+    if (this.tutorialStep === 0 && this.tutorialEvents.length === 0)
+      this.tutorialOwned = this.s.buildings.filter((b) => b.owner === 0).length;
     for (let guard = 0; guard < TUTORIAL.length; guard++) {
       const st = TUTORIAL[this.tutorialStep];
       if (!st || !st.done({ s: this.s, phase: this.phase, events: this.tutorialEvents, ownedAtStart: this.tutorialOwned })) return;
@@ -547,7 +596,13 @@ export class GameScene extends Phaser.Scene {
       killChance: f.killChance,
       anchor: this.view.tileRectCss(target),
       counter: f.counter
-        ? { low: f.counter.low, high: f.counter.high, lifeBefore: this.sel.life, lifeAfter: f.counter.lifeAfter, killChance: f.counter.killChance }
+        ? {
+            low: f.counter.low,
+            high: f.counter.high,
+            lifeBefore: this.sel.life,
+            lifeAfter: f.counter.lifeAfter,
+            killChance: f.counter.killChance,
+          }
         : null,
     };
   }
@@ -678,7 +733,12 @@ export class GameScene extends Phaser.Scene {
       case 'unitMenu':
         kind = 'unit';
         if (this.sel) at = this.sel;
-        items = this.actions.map((a) => ({ id: a, label: t(a as TextKey), danger: a === 'delete', hint: a === 'capture' ? this.captureHint() : undefined }));
+        items = this.actions.map((a) => ({
+          id: a,
+          label: t(a as TextKey),
+          danger: a === 'delete',
+          hint: a === 'capture' ? this.captureHint() : undefined,
+        }));
         title = this.sel ? unitLabel(this.sel.type) : undefined;
         break;
       case 'buy':
@@ -710,7 +770,13 @@ export class GameScene extends Phaser.Scene {
           { id: 'back', label: t('back'), icon: null },
           ...cargo.map((u, i) =>
             u
-              ? { id: `c${i}`, label: unitLabel(u.type), icon: unitIconKey(u.type, true), hint: `${u.life}`, disabled: !unloadTiles(this.s, this.sel!, u).length }
+              ? {
+                  id: `c${i}`,
+                  label: unitLabel(u.type),
+                  icon: unitIconKey(u.type, true),
+                  hint: `${u.life}`,
+                  disabled: !unloadTiles(this.s, this.sel!, u).length,
+                }
               : { id: `c${i}`, label: t('empty'), icon: null, disabled: true },
           ),
         ];
@@ -944,7 +1010,12 @@ export class GameScene extends Phaser.Scene {
     const tile = this.view.tileAtScreen(p.x, p.y);
     const pu = tile ? unitAt(this.s, tile.x, tile.y) : undefined;
     const pickable =
-      !!pu && pu.team === 0 && pu.active && pu.canMove && pu.carrier === null && (this.phase === 'map' || (this.phase === 'move' && this.sel?.uid === pu.uid));
+      !!pu &&
+      pu.team === 0 &&
+      pu.active &&
+      pu.canMove &&
+      pu.carrier === null &&
+      (this.phase === 'map' || (this.phase === 'move' && this.sel?.uid === pu.uid));
     if (pickable && this.touches.size < 1) {
       this.pick = { uid: pu.uid, x: p.x, y: p.y, touch: p.wasTouch, timer: null };
       // Con el dedo hay que mantener pulsado un momento para levantarla.
@@ -1016,7 +1087,11 @@ export class GameScene extends Phaser.Scene {
       this.box = null;
       this.view.setBox(null);
       this.group = new Set(
-        this.s.units.filter((u) => u.team === 0 && u.active && u.canMove && u.carrier === null && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1).map((u) => u.uid),
+        this.s.units
+          .filter(
+            (u) => u.team === 0 && u.active && u.canMove && u.carrier === null && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1,
+          )
+          .map((u) => u.uid),
       );
       if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
       return this.refresh();
@@ -1034,7 +1109,14 @@ export class GameScene extends Phaser.Scene {
     // (La barra superior y los menus son HTML: sus clics no llegan aqui.)
     const tile = this.view.tileAtScreen(p.x, p.y);
     // Doble clic en el destino: mover y esperar.
-    if (this.phase === 'unitMenu' && this.sel && tile && samePos(tile, this.sel) && this.lastCommit && this.time.now - this.lastCommit.time < 450) {
+    if (
+      this.phase === 'unitMenu' &&
+      this.sel &&
+      tile &&
+      samePos(tile, this.sel) &&
+      this.lastCommit &&
+      this.time.now - this.lastCommit.time < 450
+    ) {
       return this.waitSelected();
     }
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
@@ -1073,7 +1155,8 @@ export class GameScene extends Phaser.Scene {
       const edge = 14 * (window.devicePixelRatio || 1);
       const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
       const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
-      if (dx || dy) this.view.scrollBy(dx * delta * 0.9 * (window.devicePixelRatio || 1), dy * delta * 0.9 * (window.devicePixelRatio || 1));
+      if (dx || dy)
+        this.view.scrollBy(dx * delta * 0.9 * (window.devicePixelRatio || 1), dy * delta * 0.9 * (window.devicePixelRatio || 1));
     }
     // Si la camara se ha movido (arrastre, borde, paneo animado), recolocar los bocadillos.
     const cam = this.cameras.main;
@@ -1306,7 +1389,9 @@ export class GameScene extends Phaser.Scene {
     const end = this.trail[this.trail.length - 1] ?? u;
     const onTrail = cands.find((c) => samePos(c, end));
     if (onTrail) return onTrail;
-    const prot = (p: Pos) => TERRAIN.protection[this.s.map[p.x]![p.y]!]! * (buildingAt(this.s, p.x, p.y) ? BUILDING.protection[buildingAt(this.s, p.x, p.y)!.type]! : 1);
+    const prot = (p: Pos) =>
+      TERRAIN.protection[this.s.map[p.x]![p.y]!]! *
+      (buildingAt(this.s, p.x, p.y) ? BUILDING.protection[buildingAt(this.s, p.x, p.y)!.type]! : 1);
     cands.sort((a, b) => manhattan(end, a) - manhattan(end, b) || prot(a) - prot(b) || manhattan(u, a) - manhattan(u, b));
     return cands[0]!;
   }
@@ -1338,13 +1423,29 @@ export class GameScene extends Phaser.Scene {
       case 'merge': {
         this.clearUndo();
         const path = merge(this.s, u, it.target);
-        if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'merge', uid: u.uid, into: it.target.uid, path }], ghost);
+        if (path)
+          await this.playEvents(
+            [
+              path.ambush
+                ? { kind: 'move', uid: u.uid, path, ambush: path.ambush }
+                : { kind: 'merge', uid: u.uid, into: it.target.uid, path },
+            ],
+            ghost,
+          );
         return this.afterAction();
       }
       case 'load': {
         this.clearUndo();
         const path = load(this.s, u, it.target);
-        if (path) await this.playEvents([path.ambush ? { kind: 'move', uid: u.uid, path, ambush: path.ambush } : { kind: 'load', uid: u.uid, into: it.target.uid, path }], ghost);
+        if (path)
+          await this.playEvents(
+            [
+              path.ambush
+                ? { kind: 'move', uid: u.uid, path, ambush: path.ambush }
+                : { kind: 'load', uid: u.uid, into: it.target.uid, path },
+            ],
+            ghost,
+          );
         return this.afterAction();
       }
       case 'attack': {
@@ -1360,7 +1461,15 @@ export class GameScene extends Phaser.Scene {
         if (!target) return this.afterAction();
         const res = attackFull(this.s, u, target, Math.random);
         await this.playEvents([
-          { kind: 'attack', attacker: u.uid, target: { x: target.x, y: target.y }, damage: res.damage, killed: res.killed, counter: res.counter, attackerKilled: res.attackerKilled },
+          {
+            kind: 'attack',
+            attacker: u.uid,
+            target: { x: target.x, y: target.y },
+            damage: res.damage,
+            killed: res.killed,
+            counter: res.counter,
+            attackerKilled: res.attackerKilled,
+          },
         ]);
         return this.afterAction();
       }
@@ -1563,7 +1672,13 @@ export class GameScene extends Phaser.Scene {
     this.hidden.delete(c.uid);
     const it = tile ? this.intentAt(tile) : { kind: 'none' as const };
     // Soltar lejos, fuera del alcance, en una casilla a la que se puede llegar algun dia: orden de varios turnos.
-    if (it.kind === 'none' && tile && this.sel && !unitAt(this.s, tile.x, tile.y) && canWalk(this.s, tile.x, tile.y, UNIT.movtype[this.sel.type]!)) {
+    if (
+      it.kind === 'none' &&
+      tile &&
+      this.sel &&
+      !unitAt(this.s, tile.x, tile.y) &&
+      canWalk(this.s, tile.x, tile.y, UNIT.movtype[this.sel.type]!)
+    ) {
       c.ghost.destroy();
       c.shadow.destroy();
       return void this.giveOrder(this.sel, tile);
@@ -1594,7 +1709,15 @@ export class GameScene extends Phaser.Scene {
     if (!u || reducedMotion()) return void c.ghost.destroy();
     c.ghost.clearTint();
     await new Promise<void>((resolve) =>
-      this.tweens.add({ targets: c.ghost, x: u.x * TILE + TILE / 2, y: (u.y + 1) * TILE, duration: 140, ease: 'Stepped', easeParams: [4], onComplete: () => resolve() }),
+      this.tweens.add({
+        targets: c.ghost,
+        x: u.x * TILE + TILE / 2,
+        y: (u.y + 1) * TILE,
+        duration: 140,
+        ease: 'Stepped',
+        easeParams: [4],
+        onComplete: () => resolve(),
+      }),
     );
     c.ghost.destroy();
   }
@@ -1676,7 +1799,6 @@ export class GameScene extends Phaser.Scene {
     return this.commit(c);
   }
 
-
   private acceptUnitMenu(): void {
     const u = this.sel;
     const action = this.actions[this.menuSel];
@@ -1697,7 +1819,9 @@ export class GameScene extends Phaser.Scene {
         const b = buildingAt(this.s, u.x, u.y);
         const r = capture(this.s, u);
         if (b && r)
-          void this.playEvents([{ kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total }]).then(() => this.afterAction());
+          void this.playEvents([
+            { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total },
+          ]).then(() => this.afterAction());
         else this.afterAction();
         return;
       }
@@ -1732,7 +1856,17 @@ export class GameScene extends Phaser.Scene {
     if (!u || targetUid === undefined) return this.openUnitMenu();
     const target = unitById(this.s, targetUid)!;
     const r = attackFull(this.s, u, target, Math.random);
-    await this.playEvents([{ kind: 'attack', attacker: u.uid, target: { x: c.x, y: c.y }, damage: r.damage, killed: r.killed, counter: r.counter, attackerKilled: r.attackerKilled }]);
+    await this.playEvents([
+      {
+        kind: 'attack',
+        attacker: u.uid,
+        target: { x: c.x, y: c.y },
+        damage: r.damage,
+        killed: r.killed,
+        counter: r.counter,
+        attackerKilled: r.attackerKilled,
+      },
+    ]);
     this.afterAction();
   }
 
@@ -1815,7 +1949,17 @@ export class GameScene extends Phaser.Scene {
     if (m && won) markCompleted(m.id, this.s.day);
     this.threat = false;
     this.refresh();
-    ui.set({ screen: 'outro', menu: null, forecast: null, moveTip: null, tile: null, options: null, help: false, toast: null, report: null });
+    ui.set({
+      screen: 'outro',
+      menu: null,
+      forecast: null,
+      moveTip: null,
+      tile: null,
+      options: null,
+      help: false,
+      toast: null,
+      report: null,
+    });
 
     // Camara a la jugada que lo ha decidido.
     const focus = this.endFocus(won, reason);
@@ -1827,13 +1971,24 @@ export class GameScene extends Phaser.Scene {
       void tileFlash(this, this.view, focus, 0xffd447);
       const confetti = () => {
         const p = { x: c.x + (Math.random() - 0.5) * TILE * 8, y: c.y + (Math.random() - 0.5) * TILE * 5 };
-        void burst(this, this.view, p, { colors: [0xffd447, 0xfff1a8, 0x3aa8ff, 0x8fd0ff, 0xffffff], count: 14, radius: 30, duration: 900 });
+        void burst(this, this.view, p, {
+          colors: [0xffd447, 0xfff1a8, 0x3aa8ff, 0x8fd0ff, 0xffffff],
+          count: 14,
+          radius: 30,
+          duration: 900,
+        });
       };
       confetti();
       if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 420, loop: true, callback: confetti });
     } else {
       setEndFilter('grayscale(0.9) brightness(0.55)');
-      const smoke = () => void burst(this, this.view, { x: c.x + (Math.random() - 0.5) * TILE, y: c.y - TILE / 2 }, { colors: COLORS.smoke, count: 8, radius: 26, size: 6, duration: 1400 });
+      const smoke = () =>
+        void burst(
+          this,
+          this.view,
+          { x: c.x + (Math.random() - 0.5) * TILE, y: c.y - TILE / 2 },
+          { colors: COLORS.smoke, count: 8, radius: 26, size: 6, duration: 1400 },
+        );
       smoke();
       if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 650, loop: true, callback: smoke });
     }
@@ -1908,7 +2063,10 @@ export class GameScene extends Phaser.Scene {
       case 'rematch':
         return void this.scene.start('Game', { mode: 'new', rules: this.s.rules, setup: this.s.setup });
       case 'retry':
-        return void this.scene.start('Game', m ? { mode: 'mission', mission: m.id } : { mode: 'new', rules: this.s.rules, setup: this.s.setup });
+        return void this.scene.start(
+          'Game',
+          m ? { mode: 'mission', mission: m.id } : { mode: 'new', rules: this.s.rules, setup: this.s.setup },
+        );
       case 'next': {
         const next = m ? MISSIONS[MISSIONS.indexOf(m) + 1] : undefined;
         return void this.scene.start('Game', next ? { mode: 'mission', mission: next.id } : undefined);
@@ -2036,7 +2194,8 @@ export class GameScene extends Phaser.Scene {
   private showReport(r: RoundReport): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'currency', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
-    if (mine.length) lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
+    if (mine.length)
+      lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     const sup = r.resupplied.filter((uid) => unitById(this.s, uid)?.team === 0).length;
     if (sup) lines.push({ icon: 'fuel', text: `${sup} ${t(sup === 1 ? 'reportSupplied1' : 'reportSupplied')}`, tone: 'plain' });
     const lost = r.crashedTeams.filter((tm) => tm === 0).length;
@@ -2095,7 +2254,8 @@ export class GameScene extends Phaser.Scene {
           if (!seen || this.fastForward) break;
           const u = unitById(this.s, ev.uid);
           const fallback = 'r_' + UNIT_NAMES[unitById(this.s, (ev as { into?: number }).into ?? -1)?.type ?? 0];
-          const tex = ghostKey ?? (u ? unitKey(this.textures, this.s, { ...u, x: ev.path[0]!.x, y: ev.path[0]!.y, active: true }) : fallback);
+          const tex =
+            ghostKey ?? (u ? unitKey(this.textures, this.s, { ...u, x: ev.path[0]!.x, y: ev.path[0]!.y, active: true }) : fallback);
           if (!tex) break;
           // La IA solo se ve donde hay vision (no se delatan sus unidades en la niebla).
           const mover = unitById(this.s, ev.uid) ?? unitById(this.s, (ev as { into?: number }).into ?? -1);
@@ -2127,7 +2287,13 @@ export class GameScene extends Phaser.Scene {
           this.refresh();
           if (seen) await this.attackFx(ev.target, ev.damage, ev.killed, victimKey);
           // Contraataque.
-          if (ev.counter !== undefined && atkPos && (ev.counter > 0 || ev.attackerKilled) && !this.fastForward && this.visibleToPlayer(atkPos)) {
+          if (
+            ev.counter !== undefined &&
+            atkPos &&
+            (ev.counter > 0 || ev.attackerKilled) &&
+            !this.fastForward &&
+            this.visibleToPlayer(atkPos)
+          ) {
             const victim = unitAt(this.s, ev.target.x, ev.target.y);
             const vs = victim ? this.view.unitSprite(victim.uid) : null;
             if (vs) await lunge(this, vs, { dx: atkPos.x - ev.target.x, dy: atkPos.y - ev.target.y });
@@ -2157,7 +2323,12 @@ export class GameScene extends Phaser.Scene {
           if (!this.fastForward && this.visibleToPlayer(ev.at)) {
             await this.lookAt(ev.at);
             const sp = this.view.unitSprite(ev.uid);
-            void burst(this, this.view, { x: center(ev.at).x, y: ev.at.y * TILE + TILE - 2 }, { colors: COLORS.smoke, count: 8, radius: 14, size: 2 });
+            void burst(
+              this,
+              this.view,
+              { x: center(ev.at).x, y: ev.at.y * TILE + TILE - 2 },
+              { colors: COLORS.smoke, count: 8, radius: 14, size: 2 },
+            );
             await Promise.all([tileFlash(this, this.view, ev.at, 0xffffff), sp ? blink(this, sp, 2, 60) : Promise.resolve()]);
           }
           break;
@@ -2192,14 +2363,25 @@ export class GameScene extends Phaser.Scene {
       const prev = path[i - 1]!;
       if (p.x !== prev.x) img.setFlipX(p.x < prev.x);
       await new Promise<void>((resolve) =>
-        this.tweens.add({ targets: img, x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE, duration: this.fastForward ? 1 : this.stepMs(), onComplete: () => resolve() }),
+        this.tweens.add({
+          targets: img,
+          x: p.x * TILE + TILE / 2,
+          y: (p.y + 1) * TILE,
+          duration: this.fastForward ? 1 : this.stepMs(),
+          onComplete: () => resolve(),
+        }),
       );
       img.setVisible(shown);
     }
     // Al llegar, un poco de polvo (solo las unidades propias, que se ven siempre).
     const last = path[path.length - 1]!;
     if (showAll && path.length > 1 && !this.fastForward && this.stepMs() > 1) {
-      void burst(this, this.view, { x: last.x * TILE + TILE / 2, y: (last.y + 1) * TILE - 3 }, { colors: COLORS.smoke, count: 6, radius: 10, size: 2, duration: 260 });
+      void burst(
+        this,
+        this.view,
+        { x: last.x * TILE + TILE / 2, y: (last.y + 1) * TILE - 3 },
+        { colors: COLORS.smoke, count: 6, radius: 10, size: 2, duration: 260 },
+      );
     }
     img.destroy();
     this.hidden.delete(uid);
@@ -2208,7 +2390,9 @@ export class GameScene extends Phaser.Scene {
   private async attackFx(at: Pos, damage: number, killed: boolean, victimKey: string | null): Promise<void> {
     const c = center(at);
     if (!reducedMotion()) this.cameras.main.shake(killed ? 220 : 110, killed ? 0.006 : 0.003);
-    const jobs: Promise<void>[] = [burst(this, this.view, c, { colors: COLORS.fire, count: killed ? 12 : 9, radius: killed ? 20 : 16, size: 5 })];
+    const jobs: Promise<void>[] = [
+      burst(this, this.view, c, { colors: COLORS.fire, count: killed ? 12 : 9, radius: killed ? 20 : 16, size: 5 }),
+    ];
     jobs.push(floatText(this, this.view, { x: c.x, y: c.y - 4 }, `-${damage}`, '#ff4d45'));
     // La victima parpadea (si queda viva, su sprite; si no, una copia que luego estalla).
     const live = unitAt(this.s, at.x, at.y);

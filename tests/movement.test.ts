@@ -140,8 +140,30 @@ describe('movimiento: camino trazado a mano', () => {
     const s = blankState();
     const a = newUnit(s, TANK, 0, 5, 5);
     const r = moveRange(s, a);
-    expect(validPath(s, a, [{ x: 5, y: 5 }, { x: 7, y: 5 }], r)).toBe(false);
-    expect(validPath(s, a, [{ x: 5, y: 5 }, { x: 6, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 6 }], r)).toBe(false);
+    expect(
+      validPath(
+        s,
+        a,
+        [
+          { x: 5, y: 5 },
+          { x: 7, y: 5 },
+        ],
+        r,
+      ),
+    ).toBe(false);
+    expect(
+      validPath(
+        s,
+        a,
+        [
+          { x: 5, y: 5 },
+          { x: 6, y: 5 },
+          { x: 5, y: 5 },
+          { x: 5, y: 6 },
+        ],
+        r,
+      ),
+    ).toBe(false);
     const long = Array.from({ length: 7 }, (_, i) => ({ x: 5 + i, y: 5 }));
     expect(validPath(s, a, long, r)).toBe(false);
   });

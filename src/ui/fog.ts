@@ -27,7 +27,17 @@ export function composeFog(vis: boolean[][], textures: Phaser.Textures.TextureMa
     for (let y = 0; y < H; y++) {
       const i = FOG_SHEET[neighbourKey(x, y, hid)]!;
       if (i < 0) continue;
-      ctx.drawImage(img, f.cutX + (i % SHEET_COLS) * TILE, f.cutY + Math.floor(i / SHEET_COLS) * TILE, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+      ctx.drawImage(
+        img,
+        f.cutX + (i % SHEET_COLS) * TILE,
+        f.cutY + Math.floor(i / SHEET_COLS) * TILE,
+        TILE,
+        TILE,
+        x * TILE,
+        y * TILE,
+        TILE,
+        TILE,
+      );
     }
   return cv;
 }

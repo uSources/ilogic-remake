@@ -37,7 +37,7 @@ export function bestDays(id: string): number | null {
 export function markCompleted(id: string, days?: number): void {
   const r = loadRecords();
   const prev = r[id];
-  r[id] = days && (prev == null || days < prev) ? days : prev ?? days ?? null;
+  r[id] = days && (prev == null || days < prev) ? days : (prev ?? days ?? null);
   try {
     localStorage.setItem(KEY, JSON.stringify(r));
   } catch {
@@ -56,7 +56,7 @@ const es = () => settings.lang === 'es';
 export function objectiveText(m: MissionDef | null, s?: GameState): string {
   const o = s?.mission?.objective ?? null;
   const kind = o?.kind ?? m?.objective.kind ?? 'hq';
-  const days = (o && 'days' in o ? o.days : m && 'days' in m.objective ? m.objective.days : 0);
+  const days = o && 'days' in o ? o.days : m && 'days' in m.objective ? m.objective.days : 0;
   switch (kind) {
     case 'hq':
       return es() ? 'Conquista la Base enemiga.' : 'Take the enemy HQ.';
@@ -64,14 +64,23 @@ export function objectiveText(m: MissionDef | null, s?: GameState): string {
       return es() ? `Aguanta hasta el final del día ${days}.` : `Hold out until the end of day ${days}.`;
     case 'capture': {
       const count = o && o.kind === 'capture' ? o.count : m && m.objective.kind === 'capture' ? m.objective.count : 0;
-      const type = o && o.kind === 'capture' ? o.type : m && m.objective.kind === 'capture' && m.objective.type ? BUILDING_NAMES.indexOf(m.objective.type) : null;
+      const type =
+        o && o.kind === 'capture'
+          ? o.type
+          : m && m.objective.kind === 'capture' && m.objective.type
+            ? BUILDING_NAMES.indexOf(m.objective.type)
+            : null;
       const what = type === null ? (es() ? 'edificios' : 'buildings') : buildingLabel(type).toLowerCase() + (es() ? 'es' : 's');
       return es() ? `Ten ${count} ${what} antes de que acabe el día ${days}.` : `Own ${count} ${what} before day ${days} ends.`;
     }
     case 'destroy':
-      return es() ? `Destruye todas las unidades enemigas antes de que acabe el día ${days}.` : `Destroy every enemy unit before day ${days} ends.`;
+      return es()
+        ? `Destruye todas las unidades enemigas antes de que acabe el día ${days}.`
+        : `Destroy every enemy unit before day ${days} ends.`;
     case 'escort':
-      return es() ? `Lleva el camión de suministros a la ciudad marcada antes de que acabe el día ${days}.` : `Get the supply truck to the marked city before day ${days} ends.`;
+      return es()
+        ? `Lleva el camión de suministros a la ciudad marcada antes de que acabe el día ${days}.`
+        : `Get the supply truck to the marked city before day ${days} ends.`;
   }
 }
 
@@ -162,5 +171,3 @@ export const TUTORIAL: TutorialStep[] = [
     done: () => false,
   },
 ];
-
-

@@ -41,12 +41,36 @@ type Mode = 'home' | 'setup' | 'campaign';
 
 /** Grupos de opciones de "Personalizada". */
 const CUSTOM_GROUPS: { title: TextKey; keys: { k: ChoiceKey; label: TextKey }[] }[] = [
-  { title: 'optGroupGame', keys: [{ k: 'fog', label: 'optFog' }, { k: 'dayLimit', label: 'optDayLimit' }] },
-  { title: 'optSize', keys: [{ k: 'size', label: 'optSize' }, { k: 'theme', label: 'optTheme' }] },
-  { title: 'optFunds', keys: [{ k: 'funds', label: 'optFunds' }, { k: 'income', label: 'optIncome' }] },
+  {
+    title: 'optGroupGame',
+    keys: [
+      { k: 'fog', label: 'optFog' },
+      { k: 'dayLimit', label: 'optDayLimit' },
+    ],
+  },
+  {
+    title: 'optSize',
+    keys: [
+      { k: 'size', label: 'optSize' },
+      { k: 'theme', label: 'optTheme' },
+    ],
+  },
+  {
+    title: 'optFunds',
+    keys: [
+      { k: 'funds', label: 'optFunds' },
+      { k: 'income', label: 'optIncome' },
+    ],
+  },
 ];
 
-const OBJECTIVE_KEY: Record<string, TextKey> = { hq: 'objHq', survive: 'objSurvive', capture: 'objCapture', destroy: 'objDestroy', escort: 'objEscort' };
+const OBJECTIVE_KEY: Record<string, TextKey> = {
+  hq: 'objHq',
+  survive: 'objSurvive',
+  capture: 'objCapture',
+  destroy: 'objDestroy',
+  escort: 'objEscort',
+};
 
 /**
  * Menu principal con tarjetas (Continuar, Nueva partida, Campaña), la pantalla de nueva partida con
@@ -106,7 +130,10 @@ export class MenuScene extends Phaser.Scene {
         this.setChoice(id, index);
       },
       setupCode: (text: string) => {
-        this.code = text.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 7);
+        this.code = text
+          .toUpperCase()
+          .replace(/[^0-9A-Z]/g, '')
+          .slice(0, 7);
         this.codeError = false;
         const seed = this.code ? codeToSeed(this.code) : null;
         if (seed !== null) {
@@ -292,7 +319,8 @@ export class MenuScene extends Phaser.Scene {
     const sx = (c.x - cam.worldView.x) * z,
       sy = (c.y - cam.worldView.y) * z;
     const side = W < 900 ? 0.5 : 0.16;
-    const inBand = sy > H * 0.12 && sy < H * 0.88 && (W < 900 ? sx > W * 0.1 && sx < W * 0.9 : sx < W * 0.3 || sx > W * 0.7) && sx > 0 && sx < W;
+    const inBand =
+      sy > H * 0.12 && sy < H * 0.88 && (W < 900 ? sx > W * 0.1 && sx < W * 0.9 : sx < W * 0.3 || sx > W * 0.7) && sx > 0 && sx < W;
     if (inBand) return;
     const tx = sx < W / 2 ? W * side : W * (1 - side);
     const midX = c.x + (W / 2 - tx) / z;
@@ -315,7 +343,9 @@ export class MenuScene extends Phaser.Scene {
         if (!sp || ev.path.length < 2) return;
         await this.follow(ev.path[ev.path.length - 1]!);
         for (const p of ev.path.slice(1)) {
-          await new Promise<void>((res) => this.tweens.add({ targets: sp, x: p.x * TILE, y: p.y * TILE, duration: 90, onComplete: () => res() }));
+          await new Promise<void>((res) =>
+            this.tweens.add({ targets: sp, x: p.x * TILE, y: p.y * TILE, duration: 90, onComplete: () => res() }),
+          );
         }
         return;
       }
@@ -326,7 +356,11 @@ export class MenuScene extends Phaser.Scene {
         const atk = s.units.find((u) => u.uid === ev.attacker);
         if (sp && atk) await lunge(this, sp, { dx: Math.sign(ev.target.x - atk.x), dy: Math.sign(ev.target.y - atk.y) });
         const c = center(ev.target);
-        void burst(this, view, c, { colors: ev.killed ? COLORS.smoke : COLORS.fire, count: ev.killed ? 16 : 10, radius: ev.killed ? 26 : 18 });
+        void burst(this, view, c, {
+          colors: ev.killed ? COLORS.smoke : COLORS.fire,
+          count: ev.killed ? 16 : 10,
+          radius: ev.killed ? 26 : 18,
+        });
         await floatText(this, view, { x: c.x, y: c.y - 6 }, `-${ev.damage}`, '#ff7a73');
         return;
       }
@@ -471,7 +505,8 @@ export class MenuScene extends Phaser.Scene {
     const o = this.options;
     const s = keepMapSize(() => generateGame(seededRng(this.seed), { size: o.size, theme: o.theme }));
     this.thumb = mapThumb(s, this.palette, { px: o.size <= 20 ? 10 : o.size <= 32 ? 7 : 6 });
-    const themes = settings.lang === 'es' ? ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'] : ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'];
+    const themes =
+      settings.lang === 'es' ? ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'] : ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'];
     this.mapInfo = `${o.size}×${o.size} · ${themes[s.theme] ?? ''} · ${s.buildings.length} ${settings.lang === 'es' ? 'edificios' : 'buildings'}`;
   }
 
@@ -493,7 +528,13 @@ export class MenuScene extends Phaser.Scene {
       title: t(g.title),
       rows: g.keys.map(({ k, label }): OptionRowVM => {
         const list = CHOICES[k] as readonly unknown[];
-        return { id: `opt-${k}`, group: t(g.title), label: t(label), choices: list.map((v) => choiceLabel(k, v)), index: Math.max(0, list.indexOf(o[k])) };
+        return {
+          id: `opt-${k}`,
+          group: t(g.title),
+          label: t(label),
+          choices: list.map((v) => choiceLabel(k, v)),
+          index: Math.max(0, list.indexOf(o[k])),
+        };
       }),
     }));
     ui.set({

@@ -155,9 +155,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generato
   if (!UNIT.canfight[u.type] || !hasAmmo(u) || !u.canFire) return false;
   const vis = visibility(s, ME);
   const reach = UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
-  const enemies = s.units.filter(
-    (t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(u, t) <= reach,
-  );
+  const enemies = s.units.filter((t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(u, t) <= reach);
   if (!enemies.length) return false;
 
   // Opciones: (casilla desde la que dispara, objetivo). Las unidades a distancia no pueden mover y disparar.
@@ -181,13 +179,19 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generato
     if (yield* doMove(s, u, samePos(best.from, u) ? null : best.from, range)) return true;
     const targetPos = { x: best.target.x, y: best.target.y };
     const r = attackFull(s, u, best.target, rng);
-    yield { kind: 'attack', attacker: u.uid, target: targetPos, damage: r.damage, killed: r.killed, counter: r.counter, attackerKilled: r.attackerKilled };
+    yield {
+      kind: 'attack',
+      attacker: u.uid,
+      target: targetPos,
+      damage: r.damage,
+      killed: r.killed,
+      counter: r.counter,
+      attackerKilled: r.attackerKilled,
+    };
     return true;
   }
   // Nadie a tiro este turno: acercarse al enemigo visible mas cercano al que pueda danar.
-  const chase = enemies
-    .filter((t) => attackTargetsPossible(u, t))
-    .sort((a, b) => manhattan(u, a) - manhattan(u, b))[0];
+  const chase = enemies.filter((t) => attackTargetsPossible(u, t)).sort((a, b) => manhattan(u, a) - manhattan(u, b))[0];
   if (!chase) return false;
   yield* doMove(s, u, bestMoveToward(s, u, chase, range), range);
   wait(u);
@@ -303,9 +307,7 @@ function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
   for (const b of s.buildings) {
     if (b.owner !== ME || teamUnits(s, ME).length >= RULES.maxUnits || unitAt(s, b.x, b.y)) continue;
     const mine = teamUnits(s, ME);
-    let opts = buyOptions(s, b).filter(
-      (o) => o.affordable && !(SUPPORT_TYPES.has(o.type) && mine.some((u) => u.type === o.type)),
-    );
+    let opts = buyOptions(s, b).filter((o) => o.affordable && !(SUPPORT_TYPES.has(o.type) && mine.some((u) => u.type === o.type)));
     if (!opts.length) continue;
     const capturers = mine.filter((u) => UNIT.cancapt[u.type]).length;
     if (capturers < 4 && opts.some((o) => UNIT.cancapt[o.type])) opts = opts.filter((o) => UNIT.cancapt[o.type]);

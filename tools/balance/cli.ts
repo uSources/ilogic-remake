@@ -72,7 +72,16 @@ function targetsFrom(a: ReturnType<typeof args>): Targets {
   return t;
 }
 
-async function runGames(variant: Variant, seeds: number[], maxDays: number, policies: [Policy, Policy], threads: number, firstTeam: 0 | 1 = 0, swapSides = false, size = 32): Promise<GameRecord[]> {
+async function runGames(
+  variant: Variant,
+  seeds: number[],
+  maxDays: number,
+  policies: [Policy, Policy],
+  threads: number,
+  firstTeam: 0 | 1 = 0,
+  swapSides = false,
+  size = 32,
+): Promise<GameRecord[]> {
   const chunks: number[][] = Array.from({ length: threads }, () => []);
   seeds.forEach((s, i) => chunks[i % threads]!.push(s));
   const records: GameRecord[] = [];
@@ -122,17 +131,33 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
   const snap = snapshot();
   const changes = applyVariant(variant); // en este hilo: para el informe, los duelos y la validacion
   console.log(`Variante "${variant.name}": ${changes.length} cambios. ${games} partidas, ${threads} hilos...`);
-  const records = await runGames(variant, seeds, maxDays, policies, threads, a.one('first') === '1' ? 1 : 0, a.one('swap') === 'true', a.num('size', 32));
+  const records = await runGames(
+    variant,
+    seeds,
+    maxDays,
+    policies,
+    threads,
+    a.one('first') === '1' ? 1 : 0,
+    a.one('swap') === 'true',
+    a.num('size', 32),
+  );
   const terrain = a.one('terrain', 'Grass')!;
   const duel = a.one('no-duel') ? undefined : { terrain, cells: duelMatrix({ trials: 200, terrain, seed: seed0 }) };
-  const report = buildReport(records, { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') }, targetsFrom(a), duel);
+  const report = buildReport(
+    records,
+    { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') },
+    targetsFrom(a),
+    duel,
+  );
   restore(snap);
   return report;
 }
 
 function printSummary(r: Report, path: string): void {
   const o = r.outcome;
-  console.log(`\n${r.name}: victorias ${o.wins[0]}/${o.wins[1]}, sin terminar ${o.unfinished} (ventaja ${o.adjudicated[0]}/${o.adjudicated[1]}, igualadas ${o.even}), dias mediana ${o.days.median} (${o.days.p10}-${o.days.p90})`);
+  console.log(
+    `\n${r.name}: victorias ${o.wins[0]}/${o.wins[1]}, sin terminar ${o.unfinished} (ventaja ${o.adjudicated[0]}/${o.adjudicated[1]}, igualadas ${o.even}), dias mediana ${o.days.median} (${o.days.p10}-${o.days.p90})`,
+  );
   for (const f of r.flags) console.log(`  ! ${f}`);
   for (const s of r.suggestions) console.log(`  → ${s.path}: ${s.from} → ${s.to} (${s.why})`);
   console.log(`Informe: ${path}`);
@@ -189,7 +214,10 @@ async function main(): Promise<void> {
       }
       mkdirSync(VARIANTS, { recursive: true });
       const vpath = join(VARIANTS, `${variant.name}.json`);
-      writeFileSync(vpath, JSON.stringify({ ...variant, notes: `Generada por "balance tune" el ${new Date().toISOString().slice(0, 10)}` }, null, 2) + '\n');
+      writeFileSync(
+        vpath,
+        JSON.stringify({ ...variant, notes: `Generada por "balance tune" el ${new Date().toISOString().slice(0, 10)}` }, null, 2) + '\n',
+      );
       printSummary(best, save(variant.name, reportMarkdown(best), best));
       console.log(`Variante: ${vpath}`);
       return;

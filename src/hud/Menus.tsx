@@ -42,7 +42,15 @@ export function Seg({ row, sel, onHover, onSet }: { row: OptionRowVM; sel: boole
       <span class="seg-label">{row.label}</span>
       <span class="seg" role="radiogroup" aria-label={row.label}>
         {row.choices.map((c, i) => (
-          <button tabIndex={-1} type="button" role="radio" aria-checked={i === row.index} class={i === row.index ? 'on' : ''} onMouseDown={noFocus} onClick={() => onSet(i)}>
+          <button
+            tabIndex={-1}
+            type="button"
+            role="radio"
+            aria-checked={i === row.index}
+            class={i === row.index ? 'on' : ''}
+            onMouseDown={noFocus}
+            onClick={() => onSet(i)}
+          >
             {c}
           </button>
         ))}
@@ -96,9 +104,7 @@ export function Home({ s }: { s: UIState }) {
                 {h.save.limit ? <span class="muted"> / {h.save.limit}</span> : null}
               </span>
               <span class="gold num">{fmt(h.save.funds)}</span>
-              <span class="muted">
-                {h.save.mission ?? `${h.save.size}×${h.save.size}`}
-              </span>
+              <span class="muted">{h.save.mission ?? `${h.save.size}×${h.save.size}`}</span>
             </div>
             <Btn sel={f === 'continue'} onPick={pick('continue')}>
               {t('continueGame')} <span class="key">Enter</span>
@@ -140,7 +146,11 @@ export function Home({ s }: { s: UIState }) {
       <div class="home-foot">
         <Btn sel={f === 'news'} cls="link news-link" onHover={hover('news')} onPick={pick('news')}>
           {t('news')}
-          {s.updateAvailable ? <span class="news-badge">v{s.updateAvailable}</span> : s.newsBadge ? <span class="news-dot" aria-label={t('notesNew')} /> : null}
+          {s.updateAvailable ? (
+            <span class="news-badge">v{s.updateAvailable}</span>
+          ) : s.newsBadge ? (
+            <span class="news-dot" aria-label={t('notesNew')} />
+          ) : null}
         </Btn>
         {(['help', 'options', 'credits', 'web'] as const).map((id) => (
           <Btn sel={f === id} cls="link" onHover={hover(id)} onPick={pick(id)}>
@@ -191,7 +201,7 @@ export function NewGame({ s }: { s: UIState }) {
               aria-label={t('mapCode')}
               onFocus={() => a.setupHover('code')}
               onMouseEnter={() => a.setupHover('code')}
-              onInput={(e) => a.setupCode((e.currentTarget).value)}
+              onInput={(e) => a.setupCode(e.currentTarget.value)}
             />
             <Btn sel={f === 'reroll'} cls="px-btn plain" onHover={() => a.setupHover('reroll')} onPick={() => a.setupPick('reroll')}>
               {t('otherMap')} <span class="key">R</span>
@@ -369,7 +379,9 @@ export function Pause({ m }: { m: MenuVM }) {
       <div class="px pause" role="dialog" aria-label={t('pause')}>
         <span class="htitle">{m.title}</span>
         {m.subtitle && <span class="muted small">{m.subtitle}</span>}
-        {m.info?.map((l) => <span class="pause-info">{l}</span>)}
+        {m.info?.map((l) => (
+          <span class="pause-info">{l}</span>
+        ))}
         <div class="pause-grid">{main.map(item)}</div>
         <div class="pause-danger">{danger.map(item)}</div>
       </div>
@@ -393,7 +405,14 @@ function ArmyChart({ data }: { data: [number, number][] }) {
   // Escalones (estilo pixel): horizontal y luego vertical.
   const line = (k: 0 | 1) => data.map((d, i) => (i === 0 ? `M${x(0)},${y(d[k])}` : `H${x(i)}V${y(d[k])}`)).join('');
   return (
-    <svg class="chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={t('endChart')} shape-rendering="crispEdges">
+    <svg
+      class="chart"
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={t('endChart')}
+      shape-rendering="crispEdges"
+    >
       {[0.25, 0.5, 0.75].map((f) => (
         <line x1={0} x2={W} y1={Math.round(H * f)} y2={Math.round(H * f)} class="grid" />
       ))}

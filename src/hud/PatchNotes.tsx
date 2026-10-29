@@ -9,7 +9,9 @@ const noFocus = (e: MouseEvent) => e.preventDefault();
 function fmtDate(iso: string): string {
   if (!iso) return '';
   const d = new Date(`${iso}T12:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(settings.lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString(settings.lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function Inl({ c }: { c: Inline[] }) {
@@ -111,7 +113,10 @@ export function PatchNotes({ n }: { n: NotesVM }) {
         {n.update && (
           <div class="notes-update">
             <span>
-              {t('notesUpdate')} <b>v{n.update.version}</b> <span class="muted">({t('notesYouHave')} v{n.current})</span>
+              {t('notesUpdate')} <b>v{n.update.version}</b>{' '}
+              <span class="muted">
+                ({t('notesYouHave')} v{n.current})
+              </span>
             </span>
             <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => openLink(n.update!.url)}>
               {t('notesDownload')}

@@ -43,7 +43,9 @@ describe('notas de parche', () => {
       assets: [{ name: 'ilogic.html', browser_download_url: 'https://github.com/a/b/releases/download/v0.2.0/ilogic.html' }],
     })!;
     expect(r).toMatchObject({ version: '0.2.0', title: 'Tanques', date: '2026-11-02', download: expect.stringContaining('ilogic.html') });
-    expect(fromRelease({ tag_name: 'v1', draft: true, prerelease: false, name: '', body: '', html_url: '', published_at: null })).toBeNull();
+    expect(
+      fromRelease({ tag_name: 'v1', draft: true, prerelease: false, name: '', body: '', html_url: '', published_at: null }),
+    ).toBeNull();
     const local = parseChangelog('## [0.2.0] - 2026-11-01\nlocal\n## [0.1.0] - 2026-10-29\nviejo\n');
     const merged = mergeNotes(local, [r, { ...r, version: '0.3.0', body: { es: '', en: '' } }]);
     expect(merged.map((n) => n.version)).toEqual(['0.3.0', '0.2.0', '0.1.0']);
@@ -52,7 +54,9 @@ describe('notas de parche', () => {
   });
 
   it('markdown: bloques, enlaces seguros y nada de HTML', () => {
-    const b = parseMarkdown('### Novedades\n- **Campaña** con `6` misiones\n  - sub\n1. uno\n\n<script>alert(1)</script>texto [x](javascript:alert(1)) y https://github.com/a/b.\n\n---\n> cita');
+    const b = parseMarkdown(
+      '### Novedades\n- **Campaña** con `6` misiones\n  - sub\n1. uno\n\n<script>alert(1)</script>texto [x](javascript:alert(1)) y https://github.com/a/b.\n\n---\n> cita',
+    );
     expect(b.map((x) => x.t)).toEqual(['h', 'list', 'list', 'p', 'hr', 'quote']);
     const list = b[1] as Extract<(typeof b)[number], { t: 'list' }>;
     expect(list.items.map((i) => i.depth)).toEqual([0, 1]);

@@ -17,7 +17,19 @@
  * Tablas: UNIT, POWER, BUILDING, TERRAIN, RULES, AI. Las filas/columnas se pueden
  * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
  */
-import { DEFAULT_RULES, useRules, AI, BUILDING, BUILDING_NAMES, POWER, RULES, TERRAIN, TERRAIN_NAMES, UNIT, UNIT_NAMES } from '../../src/core/data';
+import {
+  DEFAULT_RULES,
+  useRules,
+  AI,
+  BUILDING,
+  BUILDING_NAMES,
+  POWER,
+  RULES,
+  TERRAIN,
+  TERRAIN_NAMES,
+  UNIT,
+  UNIT_NAMES,
+} from '../../src/core/data';
 
 export interface Variant {
   name: string;
@@ -26,7 +38,14 @@ export interface Variant {
 }
 
 type Table = Record<string, unknown> | unknown[];
-const TABLES: Record<string, Table> = { UNIT, POWER: POWER as unknown as unknown[], BUILDING, TERRAIN, RULES: RULES as unknown as Record<string, unknown>, AI };
+const TABLES: Record<string, Table> = {
+  UNIT,
+  POWER: POWER as unknown as unknown[],
+  BUILDING,
+  TERRAIN,
+  RULES: RULES as unknown as Record<string, unknown>,
+  AI,
+};
 
 /** Que nombres valen para los indices de cada tabla/campo. */
 function namesFor(table: string, depth: number): readonly string[] | null {
@@ -99,7 +118,8 @@ export function restore(snap: string): void {
   const copyInto = (dst: Record<string | number, unknown>, src: Record<string | number, unknown>) => {
     for (const k of Object.keys(src)) {
       const v = src[k];
-      if (v && typeof v === 'object' && dst[k] && typeof dst[k] === 'object') copyInto(dst[k] as Record<string, unknown>, v as Record<string, unknown>);
+      if (v && typeof v === 'object' && dst[k] && typeof dst[k] === 'object')
+        copyInto(dst[k] as Record<string, unknown>, v as Record<string, unknown>);
       else dst[k] = v;
     }
   };

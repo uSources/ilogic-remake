@@ -30,7 +30,16 @@ export function applyPreset(o: NewGameOptions, id: PresetId): NewGameOptions {
   return id === 'custom' ? { ...o, preset: id } : { ...o, ...PRESETS[id], preset: id };
 }
 
-export const DEFAULT_OPTIONS: NewGameOptions = { size: 32, theme: null, fog: true, funds: 5000, income: 1, dayLimit: null, code: '', preset: 'normal' };
+export const DEFAULT_OPTIONS: NewGameOptions = {
+  size: 32,
+  theme: null,
+  fog: true,
+  funds: 5000,
+  income: 1,
+  dayLimit: null,
+  code: '',
+  preset: 'normal',
+};
 
 /** Valores posibles de cada opcion (en orden). */
 export const CHOICES = {

@@ -280,11 +280,7 @@ export function generateGame(rng: Rng = Math.random, opts: { size?: number; them
     const first = findSpawn(s, false, () => true);
     if (!first) continue;
     const reach = groundDistance(s, first, WALK, grid(false));
-    const second = findSpawn(
-      s,
-      true,
-      (p) => reach[p.x]![p.y]! > 0 && manhattan(p, first) >= Math.round((MIN_SPAWN_DISTANCE * MAP_W) / 32),
-    );
+    const second = findSpawn(s, true, (p) => reach[p.x]![p.y]! > 0 && manhattan(p, first) >= Math.round((MIN_SPAWN_DISTANCE * MAP_W) / 32));
     if (!second) continue;
     // [CAMBIO] el original daba siempre la primera zona al jugador y la segunda a la IA. La segunda
     // sale mejor situada mas a menudo (la herramienta de equilibrio: 59-61 % de ventaja para ese

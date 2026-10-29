@@ -23,7 +23,7 @@ describe('nueva partida: tamaños de mapa', () => {
       const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
       expect(groundDistance(s, hq0, 0, grid(false))[hq1.x]![hq1.y]).toBeGreaterThan(0);
       const neutral = s.buildings.filter((b) => b.owner === null).length;
-      expect(neutral).toBeGreaterThanOrEqual(Math.floor(20 * (size * size) / 1024));
+      expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
       for (const b of s.buildings) expect(b.x < size && b.y < size).toBe(true);
     }
   });

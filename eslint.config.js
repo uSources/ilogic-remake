@@ -30,7 +30,10 @@ export default tseslint.config(
         {
           patterns: [
             { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
-            { group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'], message: 'src/core no puede depender de escenas, dibujo ni interfaz.' },
+            {
+              group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
+              message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
+            },
           ],
         },
       ],

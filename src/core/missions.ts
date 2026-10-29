@@ -27,7 +27,12 @@ export interface MissionDef {
   units: [U, Team, number, number, number?][];
   funds: [number, number];
   /** Objetivo; en 'escort', `vip` es el indice en `units` de la unidad a escoltar. */
-  objective: { kind: 'hq' } | { kind: 'survive'; days: number } | { kind: 'capture'; count: number; type: B | null; days: number } | { kind: 'destroy'; days: number } | { kind: 'escort'; vip: number; to: Pos; days: number };
+  objective:
+    | { kind: 'hq' }
+    | { kind: 'survive'; days: number }
+    | { kind: 'capture'; count: number; type: B | null; days: number }
+    | { kind: 'destroy'; days: number }
+    | { kind: 'escort'; vip: number; to: Pos; days: number };
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
   rules?: Partial<RulesConfig>;
   /** Consejos paso a paso (solo el tutorial). */
@@ -66,7 +71,8 @@ export function buildMission(m: MissionDef): GameState {
   const o = m.objective;
   let objective: Objective;
   if (o.kind === 'escort') objective = { kind: 'escort', uid: uids[o.vip]!, to: o.to, days: o.days };
-  else if (o.kind === 'capture') objective = { kind: 'capture', count: o.count, type: o.type === null ? null : BUILDING_NAMES.indexOf(o.type), days: o.days };
+  else if (o.kind === 'capture')
+    objective = { kind: 'capture', count: o.count, type: o.type === null ? null : BUILDING_NAMES.indexOf(o.type), days: o.days };
   else objective = o;
   s.mission = { id: m.id, objective };
   return s;

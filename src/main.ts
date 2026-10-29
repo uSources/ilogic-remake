@@ -17,9 +17,13 @@ applySettings();
 // Sin menu contextual del navegador sobre la interfaz, y Tab no recorre sus botones
 // (Tab es "siguiente unidad"; Enter ya lo maneja el juego).
 hudRoot.addEventListener('contextmenu', (e) => e.preventDefault());
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Tab') e.preventDefault();
-}, { capture: true });
+window.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key === 'Tab') e.preventDefault();
+  },
+  { capture: true },
+);
 
 const size = deviceSize();
 const game = new Phaser.Game({

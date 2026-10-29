@@ -46,7 +46,11 @@ export async function fetchReleases(repo: string, force = false): Promise<{ note
   try {
     const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
     if (cache?.etag) headers['If-None-Match'] = cache.etag;
-    const res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { headers, signal: ctrl.signal, cache: 'no-store' });
+    const res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, {
+      headers,
+      signal: ctrl.signal,
+      cache: 'no-store',
+    });
     if (res.status === 304 && cache) {
       writeCache({ ...cache, at: Date.now() });
       return { notes: cache.notes, status: 'online' };

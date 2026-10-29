@@ -19,8 +19,12 @@ import {
 } from '../src/core/rules';
 import { blankState } from './helpers';
 
-const SOLDIER = 0, TANK = 1, ARTILLERY = 2, TRANSPORT = 7, LFIGHTER = 10, SUPPLIER = 13;
-
+const SOLDIER = 0,
+  TANK = 1,
+  ARTILLERY = 2,
+  TRANSPORT = 7,
+  LFIGHTER = 10,
+  SUPPLIER = 13;
 
 // Estas pruebas son de las reglas de 2013; las nuevas estan en tests/modern.test.ts.
 beforeEach(() => useRules(PLAIN_RULES));

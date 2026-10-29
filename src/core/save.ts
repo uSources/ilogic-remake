@@ -3,7 +3,19 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_MAX, MAP_MIN, MAP_W, setMapSize, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
+import {
+  type RulesConfig,
+  BUILDING_TYPES,
+  MAP_H,
+  MAP_MAX,
+  MAP_MIN,
+  MAP_W,
+  setMapSize,
+  MAX_LIFE,
+  TERRAIN_TYPES,
+  UNIT,
+  UNIT_TYPES,
+} from './data';
 import { sanitizeStats } from './stats';
 import type { GameState, Pos } from './types';
 
@@ -11,8 +23,7 @@ export function serialize(s: GameState): string {
   return JSON.stringify(s);
 }
 
-const isInt = (v: unknown, min: number, max: number): v is number =>
-  typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
 
 /** Lee una partida guardada. Devuelve null si el contenido no es valido. */
 export function deserialize(json: string): GameState | null {
@@ -78,7 +89,12 @@ export function deserialize(json: string): GameState | null {
         (o.kind === 'survive' && days(o.days)) ||
         (o.kind === 'destroy' && days(o.days)) ||
         (o.kind === 'capture' && days(o.days) && isInt(o.count, 1, 1000) && (o.type === null || isInt(o.type, 0, BUILDING_TYPES - 1))) ||
-        (o.kind === 'escort' && days(o.days) && isInt(o.uid, 1, Number.MAX_SAFE_INTEGER) && !!o.to && isInt((o.to as Pos).x, 0, MAP_W - 1) && isInt((o.to as Pos).y, 0, MAP_H - 1)));
+        (o.kind === 'escort' &&
+          days(o.days) &&
+          isInt(o.uid, 1, Number.MAX_SAFE_INTEGER) &&
+          !!o.to &&
+          isInt((o.to as Pos).x, 0, MAP_W - 1) &&
+          isInt((o.to as Pos).y, 0, MAP_H - 1)));
     if (!ok) return null;
   }
   if (s.setup !== undefined) {
