@@ -43,6 +43,25 @@ export function terrainArtKeys(): string[] {
   return [...Object.keys(WANG_SETS).map((k) => `wang/${k}`), ...decorKeys()];
 }
 
+/**
+ * Todo lo que el terreno nuevo coloca: laminas Wang, decorados, costas, agua organica, niebla,
+ * olas, espuma y sprites de montaña y bosque (con su primer plano). Lo comprueba npm run assets.
+ */
+export function requiredArtKeys(): string[] {
+  const objs = Object.entries(OBJ_VARIANTS).flatMap(([b, n]) =>
+    Array.from({ length: n }, (_, i) => [`flat/${b}_${i}`, `flat/front_${b}_${i}`]).flat(),
+  );
+  return [
+    ...terrainArtKeys(),
+    ...Object.keys(BLOB_SETS).map((k) => `blob/${k}`),
+    ...Object.keys(ORG_SHEETS).map((k) => `blob/org_${k}`),
+    'blob/fog',
+    'anim/water',
+    ...Object.keys(SHORE_ROWS).map((k) => `anim/shore_${k}`),
+    ...objs,
+  ];
+}
+
 export function terrainArtReady(textures: Phaser.Textures.TextureManager): boolean {
   return terrainArtKeys().every((k) => textures.exists(k));
 }
@@ -56,7 +75,6 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   cv.height = H * TILE;
   const ctx = cv.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
-  const src = (key: string) => textures.get(key).getSourceImage() as CanvasImageSource;
   /** Dibuja un trozo de una imagen cargada (respeta su sitio dentro del atlas). */
   const blit = (into: CanvasRenderingContext2D, key: string, sx: number, sy: number, w: number, h: number, dx: number, dy: number) => {
     const f = textures.getFrame(key);

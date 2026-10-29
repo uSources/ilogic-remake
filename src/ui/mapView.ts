@@ -91,7 +91,6 @@ export class MapView {
   private fogImg: Phaser.GameObjects.Image | null = null;
   private fogCanvas: HTMLCanvasElement | null = null;
   private fogSig = '';
-  private fogVis: boolean[][] | null = null;
   private level = 2;
   private bobPhase = 0;
   /** Agua animada del terreno nuevo. */
@@ -457,7 +456,6 @@ export class MapView {
 
   /** Repinta la niebla nueva si ha cambiado lo que se ve. */
   private updateFog(vis: boolean[][]): void {
-    this.fogVis = vis;
     const sig = visKey(vis);
     if (sig === this.fogSig && this.fogImg) return;
     this.fogSig = sig;
@@ -657,7 +655,7 @@ export class MapView {
   }
 
   /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y agua. */
-  tick(time: number, delta: number): void {
+  tick(time: number): void {
     const still = reducedMotion();
     if (this.waterAnim.length) {
       const f = still ? 0 : Math.floor(time / 140) % ANIM_FRAMES;

@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { TERRAIN } from '../core/data';
 import { terrainKey } from './sprites';
+import { drawFrame } from '../atlas';
 
 let cache: number[] | null = null;
 
@@ -16,7 +17,7 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): number
     const key = terrainKey(i);
     if (textures.exists(key)) {
       ctx.clearRect(0, 0, 8, 8);
-      ctx.drawImage(textures.get(key).getSourceImage() as CanvasImageSource, 0, 0, 8, 8);
+      drawFrame(ctx, textures, key, 0, 0, 8, 8);
       const d = ctx.getImageData(0, 0, 8, 8).data;
       let r = 0,
         g = 0,

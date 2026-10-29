@@ -10,8 +10,10 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "assets": "node scripts/gen-assets.mjs",
-    "balance": "tsx tools/balance/cli.ts"
+    "assets": "node scripts/assets.mjs",
+    "balance": "tsx tools/balance/cli.ts",
+    "assets:pack": "node scripts/assets.mjs --pack",
+    "prebuild": "node scripts/assets.mjs"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
