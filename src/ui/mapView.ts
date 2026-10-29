@@ -5,11 +5,11 @@ import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
 import { TILE } from '../layout';
 import { reducedMotion } from './fx';
-import { drawBuildingFx, type BuildingFxInfo } from './buildingFx';
 import { rank } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
-import { drawShore, drawWater, frontKey, paintTerrain, shoreRings, terrainArtReady, terrainObjects, WATER_FRAMES, waterMarks } from './terrainArt';
-import { paintFog, visKey } from './fog';
+import { frontKey, paintTerrain, terrainArtReady, terrainObjects, waterAnimCells, type AnimCell } from './terrainArt';
+import { ANIM_FRAMES } from './sheets';
+import { composeFog, visKey } from './fog';
 import { settings } from '../settings';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
@@ -95,18 +95,11 @@ export class MapView {
   private level = 2;
   private bobPhase = 0;
   /** Agua animada del terreno nuevo. */
-  private water: Phaser.GameObjects.Graphics | null = null;
-  private waterMarks: ReturnType<typeof waterMarks> = [];
+  /** Agua animada: una imagen por casilla con su lamina (anim/water o anim/shore_<set>) y fila. */
+  private waterAnim: { img: Phaser.GameObjects.Image; cell: AnimCell }[] = [];
   private waterFrame = -1;
-  /** Animaciones de los edificios (humo, luces, banderas), encima de sus sprites. */
-  private bfx: Phaser.GameObjects.Graphics | null = null;
-  private bfxList: BuildingFxInfo[] = [];
-  private bfxStep = -1;
-  /** Humo animado de las fabricas (fotogramas de Retro Diffusion, flat/fx_Factory). */
-  private smoke: Phaser.GameObjects.Image[] = [];
   /** Montañas y bosques: en la capa de los edificios, ordenados por fila con ellos. */
   private objImgs: Phaser.GameObjects.Image[] = [];
-  private shore: ReturnType<typeof shoreRings> = [];
   private lastDpr = dpr();
 
   constructor(private readonly scene: Phaser.Scene) {
@@ -260,7 +253,7 @@ export class MapView {
   /** Terreno y orillas: solo al empezar la partida (el terreno no cambia). */
   buildTerrain(s: GameState): void {
     this.terrain.removeAll(true);
-    this.water = null;
+    this.waterAnim = [];
     for (const o of this.objImgs) o.destroy();
     this.objImgs = [];
     const tex = this.scene.textures;
@@ -268,13 +261,16 @@ export class MapView {
       // Terreno nuevo: pintado una vez en un lienzo.
       const key = 'terrainBake';
       if (tex.exists(key)) tex.remove(key);
-      const painted = paintTerrain(tex, s);
-      tex.addCanvas(key, painted.canvas);
-      this.water = this.scene.add.graphics();
-      this.waterMarks = waterMarks(s, s.setup?.seed ?? 1);
-      this.shore = shoreRings(painted.land, s.setup?.seed ?? 1);
+      tex.addCanvas(key, paintTerrain(tex, s));
+      this.terrain.add(this.scene.add.image(0, 0, key).setOrigin(0));
+      // Agua animada: piezas precompiladas, una por casilla; en tick() solo se cambia el fotograma.
+      for (const cell of waterAnimCells(s)) {
+        this.ensureAnimFrames(cell.key);
+        const img = this.scene.add.image(cell.x * TILE, cell.y * TILE, cell.key, `${cell.row}_0`).setOrigin(0);
+        this.waterAnim.push({ img, cell });
+        this.terrain.add(img);
+      }
       this.waterFrame = -1;
-      this.terrain.add([this.scene.add.image(0, 0, key).setOrigin(0), this.water]);
       for (const o of terrainObjects(tex, s)) {
         const img = this.tileImage(o.key, o.x, o.y);
         this.objImgs.push(img);
@@ -340,74 +336,29 @@ export class MapView {
   private syncBuildings(s: GameState, vis: boolean[][]): void {
     const tex = this.scene.textures;
     s.buildings.forEach((b, i) => {
-      const still = buildingKey(tex, s, b, vis[b.x]![b.y]!);
+      const key = buildingKey(tex, s, b, vis[b.x]![b.y]!);
       let img = this.buildings[i];
-      if (!still) {
+      if (!key) {
         img?.setVisible(false);
         return;
       }
-      // Animacion de Retro Diffusion (flat/anim_<bando>_<Nombre>, fotogramas de 64x64) si existe.
-      const anim = still.replace('flat/bld_', 'flat/anim_');
-      const key = anim !== still && tex.exists(anim) ? anim : still;
-      if (key === anim) {
-        const t = tex.get(anim);
-        if (!t.has('a0')) {
-          const n = Math.floor((t.getSourceImage() as HTMLImageElement).width / 64);
-          for (let k = 0; k < n; k++) t.add(`a${k}`, 0, k * 64, 0, 64, 64);
-        }
-      }
       if (!img) {
-        img = this.tileImage(still, b.x, b.y);
+        img = this.tileImage(key, b.x, b.y);
         this.buildings[i] = img;
         this.buildingLayer.add(img);
-      }
-      if (img.texture.key !== key) {
-        if (key === anim) img.setTexture(key, 'a0').setOrigin(0.5, 58 / 64).setDisplaySize(64, 64);
-        else {
-          img.setTexture(key).setOrigin(0.5, 1);
-          img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
-        }
+      } else if (img.texture.key !== key) {
+        img.setTexture(key);
+        img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
         img.setPosition(b.x * TILE + TILE / 2, (b.y + 1) * TILE);
       }
       img.setVisible(true);
     });
-    // Animaciones: solo con los dibujos nuevos y en los edificios que se ven.
-    this.bfxList = [];
-    s.buildings.forEach((b, i) => {
-      const img = this.buildings[i];
-      const m = img?.visible ? /^flat\/(?:bld|anim)_([brn])_(\w+)$/.exec(img.texture.key) : null;
-      if (!m || !vis[b.x]![b.y]!) return;
-      const animated = img!.texture.key.startsWith('flat/anim_');
-      this.bfxList.push({ x: b.x, y: b.y, name: m[2]!, team: m[1] === 'b' ? 0 : m[1] === 'r' ? 1 : null, h: animated ? this.scene.textures.getFrame(img!.texture.key.replace('flat/anim_', 'flat/bld_')).height : img!.frame.height, animated });
-    });
-    // Humo de las fabricas: un sprite de 64x64 por fabrica visible, delante de su edificio.
-    const fxKey = 'flat/fx_Factory';
-    const smokeOn = this.scene.textures.exists(fxKey);
-    if (smokeOn) {
-      const t = this.scene.textures.get(fxKey);
-      if (!t.has('f0')) for (let i = 0; i < 8; i++) t.add(`f${i}`, 0, i * 64, 0, 64, 64);
-    }
-    const factories = smokeOn ? this.bfxList.filter((b) => b.name === 'Factory') : [];
-    while (this.smoke.length > factories.length) this.smoke.pop()!.destroy();
-    factories.forEach((b, i) => {
-      let img = this.smoke[i];
-      if (!img) {
-        img = this.scene.add.image(0, 0, fxKey, 'f0').setOrigin(0.5, 58 / 64);
-        this.smoke.push(img);
-        this.buildingLayer.add(img);
-      }
-      img.setPosition(b.x * TILE + TILE / 2, (b.y + 1) * TILE + 0.5);
-    });
-    if (!this.bfx) this.bfx = this.scene.add.graphics();
-    this.buildingLayer.add(this.bfx);
     this.sortBuildingLayer();
-    this.bfxStep = -1;
   }
 
   /** Lo que esta mas abajo en el mapa se dibuja delante (los sprites tienen el origen abajo). */
   private sortBuildingLayer(): void {
     this.buildingLayer.sort('y');
-    if (this.bfx) this.buildingLayer.bringToTop(this.bfx);
   }
 
   private newUnitSprite(key: string): UnitSprite {
@@ -494,6 +445,16 @@ export class MapView {
     return settings.terrainArt === 'new' && terrainArtReady(this.scene.textures);
   }
 
+  /** Da nombre a las piezas de una lamina animada (fila_fotograma), respetando su sitio en el atlas. */
+  private ensureAnimFrames(key: string): void {
+    const t = this.scene.textures.get(key);
+    if (t.has('0_0')) return;
+    const base = this.scene.textures.getFrame(key);
+    const rows = Math.floor(base.cutHeight / TILE);
+    for (let r = 0; r < rows; r++)
+      for (let f = 0; f < ANIM_FRAMES; f++) t.add(`${r}_${f}`, base.sourceIndex, base.cutX + f * TILE, base.cutY + r * TILE, TILE, TILE);
+  }
+
   /** Repinta la niebla nueva si ha cambiado lo que se ve. */
   private updateFog(vis: boolean[][]): void {
     this.fogVis = vis;
@@ -501,7 +462,7 @@ export class MapView {
     if (sig === this.fogSig && this.fogImg) return;
     this.fogSig = sig;
     const tex = this.scene.textures;
-    this.fogCanvas = paintFog(vis, this.fogCanvas ?? undefined);
+    this.fogCanvas = composeFog(vis, this.scene.textures, this.fogCanvas ?? undefined);
     if (!this.fogImg) {
       if (tex.exists('fogBake')) tex.remove('fogBake');
       tex.addCanvas('fogBake', this.fogCanvas);
@@ -698,27 +659,11 @@ export class MapView {
   /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y agua. */
   tick(time: number, delta: number): void {
     const still = reducedMotion();
-    if (this.water) {
-      const f = still ? 0 : Math.floor(time / 140) % WATER_FRAMES;
+    if (this.waterAnim.length) {
+      const f = still ? 0 : Math.floor(time / 140) % ANIM_FRAMES;
       if (f !== this.waterFrame) {
         this.waterFrame = f;
-        drawWater(this.water, this.waterMarks, f);
-        drawShore(this.water, this.shore, f);
-      }
-    }
-    if (this.bfx) {
-      const step = still ? 0 : Math.floor(time / 125);
-      if (step !== this.bfxStep) {
-        this.bfxStep = step;
-        drawBuildingFx(this.bfx, this.bfxList, time, still, this.smoke.length > 0);
-        this.smoke.forEach((img, i) => img.setFrame(`f${still ? 0 : (Math.floor(time / 150) + i * 3) % 8}`));
-        // Edificios animados: cada uno con su desfase para que no vayan todos a la vez.
-        this.buildings.forEach((img) => {
-          if (!img?.visible || !img.texture.key.startsWith('flat/anim_')) return;
-          const n = img.texture.frameTotal - 1;
-          const k = still ? 0 : (Math.floor(time / 160) + ((img.x * 7 + img.y * 13) >> 5)) % n;
-          img.setFrame(`a${k}`);
-        });
+        for (const { img, cell } of this.waterAnim) img.setFrame(`${cell.row}_${(f + cell.phase) % ANIM_FRAMES}`);
       }
     }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
