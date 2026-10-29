@@ -24,7 +24,14 @@ export interface IlogicDebug {
    * `theme` 0..4, `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
    * GameState, ver `state()`); con `mission` una mision de la campaña.
    */
-  startGame(opts: { seed?: number; size?: number; theme?: number | null; fog?: boolean; state?: GameState | string; mission?: string }): Promise<void>;
+  startGame(opts: {
+    seed?: number;
+    size?: number;
+    theme?: number | null;
+    fog?: boolean;
+    state?: GameState | string;
+    mission?: string;
+  }): Promise<void>;
   /** Partida en curso (copia) o null fuera de la partida. */
   state(): GameState | null;
   /** Fase de la partida ('map', 'move', 'attack', 'busy'...), dia y si ha terminado. */
