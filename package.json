@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && eslint . && vite build",
     "build:single": "npm run build && node scripts/build-single.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -14,7 +14,10 @@
     "balance": "tsx tools/balance/cli.ts",
     "assets:pack": "node scripts/assets.mjs --pack",
     "prebuild": "node scripts/assets.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "check": "tsc --noEmit && eslint . && prettier --check . && vitest run"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
@@ -23,10 +26,15 @@
     "preact": "^10.29.8"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^22.20.5",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.9.10",
     "tsx": "^4.23.15",
     "typescript": "5.9",
+    "typescript-eslint": "8.71.1",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },

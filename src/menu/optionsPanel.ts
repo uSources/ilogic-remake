@@ -106,7 +106,7 @@ export class OptionsPanel {
   key(e: KeyboardEvent): void {
     const n = this.rows.length;
     const r = this.rows[this.focus]!;
-    const cur = Math.max(0, r.values.indexOf(settings[r.key] as never));
+    const cur = Math.max(0, r.values.indexOf(settings[r.key]));
     if (KEY_UP.includes(e.code)) this.focus = (this.focus - 1 + n) % n;
     else if (KEY_DOWN.includes(e.code)) this.focus = (this.focus + 1) % n;
     else if (KEY_LEFT.includes(e.code)) return this.set(this.focus, cur - 1);

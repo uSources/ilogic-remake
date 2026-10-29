@@ -166,7 +166,7 @@ export function walkPath(s: GameState, u: Unit, path: Pos[]): MovePath {
       break;
     }
   }
-  if (hit < 0) return path as MovePath;
+  if (hit < 0) return path;
   let stop = hit - 1;
   while (stop > 0 && s.units.some((o) => o.carrier === null && o.uid !== u.uid && o.x === path[stop]!.x && o.y === path[stop]!.y)) stop--;
   const walked = path.slice(0, stop + 1) as MovePath;

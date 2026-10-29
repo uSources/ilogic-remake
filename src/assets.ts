@@ -32,7 +32,7 @@ export function imgUrl(key: string | null | undefined): string | undefined {
   if (!key || !textures?.exists(key)) return undefined;
   let u = urls.get(key);
   if (!u) {
-    u = textures.getBase64(key) as string;
+    u = textures.getBase64(key);
     urls.set(key, u);
   }
   return u;

@@ -62,6 +62,9 @@ export function recordEvent(s: GameState, ev: GameEvent, team: Team): void {
       }
       break;
     }
+    default:
+      // Mover, unir, subir y esperar no cuentan para las estadisticas.
+      break;
   }
 }
 

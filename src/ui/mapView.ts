@@ -313,10 +313,14 @@ export class MapView {
       g.fillStyle(0x0b1220, 0.8);
       for (const [cx, cy] of [[x - 1, y - 1], [x + w - 9, y - 1], [x - 1, y + w - 9], [x + w - 9, y + w - 9]] as const) g.fillRect(cx, cy, 10, 10);
       g.fillStyle(0xffd447, 1);
-      g.fillRect(x, y, 8, 2), g.fillRect(x, y, 2, 8);
-      g.fillRect(x + w - 8, y, 8, 2), g.fillRect(x + w - 2, y, 2, 8);
-      g.fillRect(x, y + w - 2, 8, 2), g.fillRect(x, y + w - 8, 2, 8);
-      g.fillRect(x + w - 8, y + w - 2, 8, 2), g.fillRect(x + w - 2, y + w - 8, 2, 8);
+      // Esquinas en L del cursor.
+      for (const [rx, ry, rw, rh] of [
+        [x, y, 8, 2], [x, y, 2, 8],
+        [x + w - 8, y, 8, 2], [x + w - 2, y, 2, 8],
+        [x, y + w - 2, 8, 2], [x, y + w - 8, 2, 8],
+        [x + w - 8, y + w - 2, 8, 2], [x + w - 2, y + w - 8, 2, 8],
+      ] as const)
+        g.fillRect(rx, ry, rw, rh);
     }
     if (this.vip) {
       const cx = this.vip.x * TILE + TILE / 2,
@@ -552,7 +556,10 @@ export class MapView {
         g.fillStyle(0x0b1220, 0.8);
         g.fillRect(px - 1, py - 1, 8, 8);
         g.fillStyle(0xff4d45, 1);
-        for (let i = 0; i < 6; i++) g.fillRect(px + i, py, 6 - i, 1), g.fillRect(px + i, py + i, 1, 1);
+        for (let i = 0; i < 6; i++) {
+          g.fillRect(px + i, py, 6 - i, 1);
+          g.fillRect(px + i, py + i, 1, 1);
+        }
         g.fillRect(px, py, 6, 2);
         g.fillRect(px + 4, py, 2, 6);
       }
@@ -599,9 +606,15 @@ export class MapView {
           if (last) {
             const cut = 6;
             if (dx > 0) ww -= cut;
-            if (dx < 0) (x0 += cut), (ww -= cut);
+            if (dx < 0) {
+              x0 += cut;
+              ww -= cut;
+            }
             if (dy > 0) hh -= cut;
-            if (dy < 0) (y0 += cut), (hh -= cut);
+            if (dy < 0) {
+              y0 += cut;
+              hh -= cut;
+            }
           }
           g.fillRect(x0, y0, ww, hh);
         }

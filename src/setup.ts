@@ -94,7 +94,7 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
   const es = settings.lang === 'es';
   switch (k) {
     case 'size':
-      return `${v}×${v}${v === 20 ? (es ? ' pequeño' : ' small') : v === 40 ? (es ? ' grande' : ' large') : ''}`;
+      return `${String(v)}×${String(v)}${v === 20 ? (es ? ' pequeño' : ' small') : v === 40 ? (es ? ' grande' : ' large') : ''}`;
     case 'theme':
       return v === null ? (es ? 'Al azar' : 'Random') : (es ? THEME_ES : THEME_EN)[v as number]!;
     case 'fog':
@@ -104,6 +104,6 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
     case 'income':
       return `${Math.round((v as number) * 100)} %`;
     case 'dayLimit':
-      return v === null ? (es ? 'Sin límite' : 'None') : `${v} ${es ? 'días' : 'days'}`;
+      return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)} ${es ? 'días' : 'days'}`;
   }
 }

@@ -1,3 +1,4 @@
+import type { GameStats } from '../core/stats';
 import type { Block } from '../patchNotes/markdown';
 import { settings } from '../settings';
 
@@ -209,7 +210,7 @@ export interface UIState {
   end: {
     won: boolean;
     day: number;
-    stats: import('../core/stats').GameStats | null;
+    stats: GameStats | null;
     reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;

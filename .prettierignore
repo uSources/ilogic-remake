@@ -1,0 +1,10 @@
+dist
+dist-single
+node_modules
+public
+tools/art/pixellab
+tools/art/retrodiffusion
+tools/art/sin_usar_2013
+src/assetList.ts
+src/atlasPages.ts
+*.md

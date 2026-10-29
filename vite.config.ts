@@ -25,7 +25,7 @@ function pruneLooseImages(): Plugin {
   };
 }
 
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string; repository?: { url?: string } };
 /** "usuario/repo" a partir de package.json "repository" (las notas de parche salen de sus Releases). */
 const repo = /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?$/.exec(pkg.repository?.url ?? '')?.[1] ?? '';
 

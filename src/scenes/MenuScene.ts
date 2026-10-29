@@ -340,6 +340,8 @@ export class MenuScene extends Phaser.Scene {
         this.renderBg();
         await tileFlash(this, view, ev.at, 0xffffff);
         return;
+      default:
+        break;
     }
   }
 
@@ -542,7 +544,7 @@ export class MenuScene extends Phaser.Scene {
       this.seed = randomSeed();
       this.refreshPreview();
     } else if (f === 'code') {
-      (document.querySelector('.ng-code') as HTMLInputElement | null)?.focus();
+      document.querySelector<HTMLInputElement>('.ng-code')?.focus();
     } else if (f === 'back') return this.toHome();
     else if (f === 'start') return this.startFromSetup();
     this.publishSetup();

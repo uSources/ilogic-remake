@@ -56,7 +56,7 @@ const es = () => settings.lang === 'es';
 export function objectiveText(m: MissionDef | null, s?: GameState): string {
   const o = s?.mission?.objective ?? null;
   const kind = o?.kind ?? m?.objective.kind ?? 'hq';
-  const days = (o && 'days' in o ? o.days : m && 'days' in m.objective ? m.objective.days : 0) as number;
+  const days = (o && 'days' in o ? o.days : m && 'days' in m.objective ? m.objective.days : 0);
   switch (kind) {
     case 'hq':
       return es() ? 'Conquista la Base enemiga.' : 'Take the enemy HQ.';

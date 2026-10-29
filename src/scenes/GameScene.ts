@@ -717,6 +717,8 @@ export class GameScene extends Phaser.Scene {
         title = t('unload');
         break;
       }
+      default:
+        break;
     }
     this.menuItems = items;
     return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.view.tileRectCss(at) };
@@ -1102,6 +1104,8 @@ export class GameScene extends Phaser.Scene {
         return this.acceptUnloadPick();
       case 'unloadTile':
         return this.acceptUnloadTile(c);
+      default:
+        break;
     }
   }
 
@@ -1128,6 +1132,8 @@ export class GameScene extends Phaser.Scene {
         this.phase = 'unloadPick';
         this.menuSel = 0;
         return this.refresh();
+      default:
+        break;
     }
   }
 
@@ -1631,6 +1637,8 @@ export class GameScene extends Phaser.Scene {
         if (this.time.now - this.quitArmedAt < 2500) return this.quitToMenu();
         this.quitArmedAt = this.time.now;
         return showToast(t('confirmQuit'));
+      default:
+        break;
     }
   }
 
@@ -2152,6 +2160,8 @@ export class GameScene extends Phaser.Scene {
             void burst(this, this.view, { x: center(ev.at).x, y: ev.at.y * TILE + TILE - 2 }, { colors: COLORS.smoke, count: 8, radius: 14, size: 2 });
             await Promise.all([tileFlash(this, this.view, ev.at, 0xffffff), sp ? blink(this, sp, 2, 60) : Promise.resolve()]);
           }
+          break;
+        default:
           break;
       }
     }

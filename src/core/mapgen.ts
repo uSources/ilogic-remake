@@ -85,7 +85,7 @@ function generateTerrain(s: GameState, origin: Pos, theme: number, rng: Rng): nu
       }
       generated[p.x]![p.y] = true;
       placed++;
-      if (TERRAIN.canwalk[WALK]![s.map[p.x]![p.y]!]) walkable++;
+      if (TERRAIN.canwalk[WALK][s.map[p.x]![p.y]!]) walkable++;
     }
     if (placed === 0) break;
   }
@@ -154,7 +154,7 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
     const x = reverse ? MAP_W - 1 - i : i;
     for (let j = 0; j < MAP_H; j++) {
       const y = reverse ? MAP_H - 1 - j : j;
-      if (!TERRAIN.canwalk[WALK]![s.map[x]![y]!]) continue;
+      if (!TERRAIN.canwalk[WALK][s.map[x]![y]!]) continue;
       let buildable = 0,
         walkable = 0;
       for (let k = 0; k < rangeSize(R); k++) {
@@ -162,7 +162,7 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
         if (!p) continue;
         const t = s.map[p.x]![p.y]!;
         if (TERRAIN.canbuild[t]) buildable++;
-        if (TERRAIN.canwalk[WALK]![t]) walkable++;
+        if (TERRAIN.canwalk[WALK][t]) walkable++;
       }
       if (buildable >= MAPGEN.MINBCAP && walkable >= MAPGEN.MINUCAP && accept({ x, y })) return { x, y };
     }
@@ -174,11 +174,11 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
 function generateUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): void {
   const n = rangeSize(MAPGEN.MAXSPAWNDIST);
   MAPGEN.INITUS.forEach((type, u) => {
-    const mt = UNIT.movtype[type]!;
+    const mt = UNIT.movtype[type];
     const free: Pos[] = [];
     for (let k = 0; k < n; k++) {
       const p = rangePos(spawn, k);
-      if (p && TERRAIN.canwalk[mt]![s.map[p.x]![p.y]!] && !unitAt(s, p.x, p.y)) free.push(p);
+      if (p && TERRAIN.canwalk[mt][s.map[p.x]![p.y]!] && !unitAt(s, p.x, p.y)) free.push(p);
     }
     // Muestreo secuencial como el original, con la probabilidad corregida (INITUS.length).
     let remaining = free.length;

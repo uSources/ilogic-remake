@@ -89,7 +89,7 @@ export function checkMission(m: MissionDef): string[] {
   const occ = new Set<string>();
   for (const [u, , x, y] of m.units) {
     const T = UNIT_NAMES.indexOf(u);
-    if (!TERRAIN.canwalk[UNIT.movtype[T]!]![t(x, y)]) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
+    if (!TERRAIN.canwalk[UNIT.movtype[T]!][t(x, y)]) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
     if (occ.has(`${x},${y}`)) errs.push(`dos unidades en (${x},${y})`);
     occ.add(`${x},${y}`);
   }
