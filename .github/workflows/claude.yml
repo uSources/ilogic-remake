@@ -1,0 +1,64 @@
+# Claude en GitHub: escribe "@claude ..." en una issue, en un comentario o en una revision de PR y
+# Claude lo hace (respuesta, cambios en una rama, PR). Sigue CLAUDE.md, AGENTS.md y .claude/skills.
+#
+# Puesta en marcha (una vez): instalar la app https://github.com/apps/claude en este repo y crear UNO
+# de estos secretos en Settings → Secrets and variables → Actions:
+#   CLAUDE_CODE_OAUTH_TOKEN  (planes Pro/Max: `claude setup-token` en tu ordenador)
+#   ANTHROPIC_API_KEY        (clave de la API de Anthropic)
+# Sin secreto, este flujo no hace nada (no falla).
+name: Claude
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: ¿Hay credenciales de Claude?
+        id: auth
+        env:
+          OAUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$OAUTH$KEY" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::Falta el secreto CLAUDE_CODE_OAUTH_TOKEN o ANTHROPIC_API_KEY (ver .github/workflows/claude.yml)"; fi
+      - uses: actions/checkout@v5
+        if: steps.auth.outputs.ok
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v5
+        if: steps.auth.outputs.ok
+        with:
+          node-version: 22
+          cache: npm
+      - name: Dependencias (para que Claude pueda pasar npm run check)
+        if: steps.auth.outputs.ok
+        run: npm ci
+      - uses: anthropics/claude-code-action@v1
+        if: steps.auth.outputs.ok
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: |
+            --max-turns 40
+            --allowedTools "Bash(npm run check),Bash(npm run lint),Bash(npm run format),Bash(npm run play:*),Bash(npx vitest run:*),Bash(npx tsc --noEmit),Bash(git diff:*),Bash(git status),Bash(git log:*)"
+            --append-system-prompt "Proyecto Ilogic. Lee CLAUDE.md, AGENTS.md y las skills de .claude/skills antes de cambiar codigo. Responde en español. Antes de terminar, npm run check tiene que pasar. Nunca uses servicios de pago (Retro Diffusion) ni toques claves o secretos."

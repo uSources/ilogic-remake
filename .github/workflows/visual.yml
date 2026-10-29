@@ -1,0 +1,35 @@
+# Capturas de referencia (npm run shots) en cada PR y push a main. Informativo: la GPU y las fuentes
+# del servidor pueden diferir un poco de las de quien hizo las referencias, asi que no bloquea.
+# El informe (capturas, referencias y diferencias) queda en los artefactos del run: "capturas".
+name: Capturas
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tools/art/requirements.txt
+      - run: python -m pip install -r tools/art/requirements.txt
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas
+          path: tests/visual/out/
