@@ -138,6 +138,10 @@ export function Home({ s }: { s: UIState }) {
         </div>
       </div>
       <div class="home-foot">
+        <Btn sel={f === 'news'} cls="link news-link" onHover={hover('news')} onPick={pick('news')}>
+          {t('news')}
+          {s.updateAvailable ? <span class="news-badge">v{s.updateAvailable}</span> : s.newsBadge ? <span class="news-dot" aria-label={t('notesNew')} /> : null}
+        </Btn>
         {(['help', 'options', 'credits', 'web'] as const).map((id) => (
           <Btn sel={f === id} cls="link" onHover={hover(id)} onPick={pick(id)}>
             {t(id === 'web' ? 'website' : id)}
