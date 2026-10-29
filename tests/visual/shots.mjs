@@ -126,6 +126,18 @@ img{width:420px}td{vertical-align:top;padding:4px}.changed,.size{color:#f66}.sam
 <table><tr><th>escena</th><th>estado</th><th>ahora</th><th>referencia</th><th>diferencias</th></tr>${rows}</table>`,
   );
   for (const r of results) console.log(`${r.status.padEnd(8)} ${r.name} (${(r.ratio * 100).toFixed(2)} % distinto)`);
+  // En GitHub Actions: avisos visibles en el run y tabla en el resumen.
+  if (process.env.GITHUB_ACTIONS) {
+    for (const r of results.filter((x) => x.status === 'changed' || x.status === 'size'))
+      console.log(`::warning title=Captura distinta::${r.name}: ${(r.ratio * 100).toFixed(2)} % de pixeles distintos`);
+    for (const e of errors) console.log(`::warning title=Error en la pagina::${e}`);
+    if (process.env.GITHUB_STEP_SUMMARY)
+      writeFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        `| escena | estado | distinto |\n|---|---|---|\n${results.map((r) => `| ${r.name} | ${r.status} | ${(r.ratio * 100).toFixed(2)} % |`).join('\n')}\n`,
+        { flag: 'a' },
+      );
+  }
   if (errors.length) console.log(`\nErrores en la pagina:\n${errors.join('\n')}`);
   console.log(`\nInforme: tests/visual/out/index.html`);
   const bad = results.filter((r) => r.status === 'changed' || r.status === 'size');
