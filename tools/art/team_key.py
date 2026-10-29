@@ -16,17 +16,27 @@ def is_key(r, g, b):
     return (0.76 < h < 0.97) and s > 0.28
 
 
+# Tono de cada bando (0..1). El gris quita casi toda la saturacion.
+HUES = {'b': 0.575, 'r': 0.0}
+
+
 def recolor(im, team):
+    """Gira el tono de lo magenta al del bando conservando brillo y saturacion de cada pixel:
+    el contorno casi negro sigue casi negro y el sombreado se mantiene entero."""
     a = np.array(im.convert('RGBA'))
     out = a.copy()
-    ramp = RAMPS[team]
     for y in range(a.shape[0]):
         for x in range(a.shape[1]):
             r, g, b, al = (int(c) for c in a[y, x])
-            if al and is_key(r, g, b):
-                v = max(r, g, b) / 255
-                lo = min(r, g, b) / 255
-                # Brillo y blancura (los reflejos tiran a rosa claro): de sombra a brillo.
-                k = 0 if v < 0.45 else 1 if v < 0.72 else 3 if lo > 0.55 else 2
-                out[y, x, :3] = ramp[k]
+            if not al or not is_key(r, g, b):
+                continue
+            h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if team == 'i':
+                s, v = s * 0.12, min(1.0, v * 0.95 + 0.05)
+                h = 0.58
+            else:
+                h = HUES[team]
+                if team == 'b':
+                    v = min(1.0, v * 1.05)
+            out[y, x, :3] = [round(c * 255) for c in colorsys.hsv_to_rgb(h, s, v)]
     return Image.fromarray(out)
