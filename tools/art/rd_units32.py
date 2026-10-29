@@ -21,6 +21,11 @@ for f in sorted(glob.glob(SRC + '*.png')):
     lab, _ = ndimage.label(white)
     border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
     a[np.isin(lab, list(border)), 3] = 0
+    # Rayas sueltas de 1 px de alto (sombras mal hechas, p. ej. la del bombardero): fuera.
+    objs, _ = ndimage.label(a[..., 3] > 0, structure=np.ones((3, 3)))
+    for i, sl in enumerate(ndimage.find_objects(objs), 1):
+        if sl is not None and sl[0].stop - sl[0].start <= 1:
+            a[objs == i, 3] = 0
     im = Image.fromarray(a)
     recolor(im, 'b').save(OUT + f'b_{name}.png')
     recolor(im, 'i').save(OUT + f'i_{name}.png')
