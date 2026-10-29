@@ -21,7 +21,9 @@
     "shots": "npm run build:single && node tests/visual/shots.mjs",
     "shots:update": "npm run build:single && node tests/visual/shots.mjs --update",
     "play": "tsx tools/play/cli.ts",
-    "fuzz": "tsx tools/improve/fuzz.ts"
+    "fuzz": "tsx tools/improve/fuzz.ts",
+    "metrics": "tsx tools/improve/metrics.ts",
+    "arena": "tsx tools/improve/arena.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
