@@ -48,5 +48,10 @@ export default tseslint.config(
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
+  {
+    // Lo que va dentro de page.evaluate() se ejecuta en el navegador.
+    files: ['tests/visual/**/*.mjs', 'scripts/**/*.mjs'],
+    languageOptions: { globals: { window: 'readonly', localStorage: 'readonly', document: 'readonly' } },
+  },
   prettier,
 );
