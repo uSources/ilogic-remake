@@ -23,8 +23,12 @@ const only = process.argv
   .find((a) => a.startsWith('--only='))
   ?.slice(7)
   .split(',');
-/** Parte de pixeles distintos que se acepta (antialias de textos, GPU distinta). */
-const TOLERANCE = 0.004;
+/**
+ * Parte de pixeles distintos que se acepta. En la maquina donde se hicieron las referencias, casi
+ * nada (antialias). En GitHub Actions las fuentes y la GPU por software cambian ~1-4 % de los pixeles
+ * (sobre todo textos): alli solo se detectan cambios grandes.
+ */
+const TOLERANCE = process.env.CI ? 0.06 : 0.004;
 
 /** Escenas: nombre → que hacer antes de la captura (page = Playwright). Ajustes propios en SETTINGS. */
 const SCENES = {
