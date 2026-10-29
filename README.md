@@ -5,6 +5,10 @@ Remake en **TypeScript + Phaser 4** de *Ilogic*, el juego de estrategia por turn
 descompilando el `.jar`; las reglas, la IA y el generador de mapas se han portado
 a partir de el, con vuestros graficos y vuestra musica originales.
 
+**Jugar:** https://usources.github.io/ilogic-remake/ (se publica sola con cada push a `main`,
+`.github/workflows/pages.yml`). Descargas para jugar sin conexion en
+[Releases](https://github.com/uSources/ilogic-remake/releases).
+
 ## Requisitos
 
 - [Node.js](https://nodejs.org) 20 o superior.
