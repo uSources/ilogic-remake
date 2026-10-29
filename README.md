@@ -170,6 +170,20 @@ Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` 
 - `.claude/settings.json`: formato y lint automaticos al editar y proteccion de ficheros generados.
 - GitHub: `@claude` en issues y PRs y revision automatica de PRs (ver "Claude en GitHub").
 
+## Automejora
+
+El juego se puede mejorar solo, con pruebas, cuando se pide ("lanza un ciclo de automejora"): la skill
+`automejora` coordina subagentes (`.claude/agents/`) que proponen **un solo PR** para aprobar.
+
+- **Equilibrador**: un cambio de numeros que suba la nota del juego.
+- **Entrenador de la IA**: una mejora de la IA que gane a la anterior en la arena.
+- **Cazador de fallos**: busca partidas que rompan las reglas, añade el test y lo arregla.
+- **Revisor**: revisa cada propuesta y repite las medidas antes de que llegue al PR.
+
+Medidas: `npm run metrics` (nota 0-100 por partes, linea base en `improve/baseline.json`),
+`npm run arena` (IA actual contra la guardada) y `npm run fuzz` (invariantes). Todo lo probado,
+aceptado o no, queda en `improve/DIARIO.md`. Nada se fusiona sin aprobarlo.
+
 ## Claude en GitHub
 
 - `.github/workflows/claude.yml`: escribir `@claude ...` en una issue o en un PR y Claude lo hace

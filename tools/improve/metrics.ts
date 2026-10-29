@@ -54,7 +54,13 @@ export function score(r: Report, size: number): Metrics {
   const eff = [o.wins[0] + o.adjudicated[0], o.wins[1] + o.adjudicated[1]];
   const decided = eff[0]! + eff[1]!;
   const rate0 = decided ? eff[0]! / decided : 0.5;
-  add('lados', 'Ningun bando con ventaja (ganadas o con ventaja clara)', 25, 1 - Math.abs(2 * rate0 - 1) / 0.2, `${Math.round(rate0 * 100)} % / ${Math.round((1 - rate0) * 100)} %`);
+  add(
+    'lados',
+    'Ningun bando con ventaja (ganadas o con ventaja clara)',
+    25,
+    1 - Math.abs(2 * rate0 - 1) / 0.2,
+    `${Math.round(rate0 * 100)} % / ${Math.round((1 - rate0) * 100)} %`,
+  );
   const [lo, hi] = DEFAULT_TARGETS.days;
   const med = o.days.median;
   const off = med < lo ? lo - med : med > hi ? med - hi : 0;
@@ -62,7 +68,13 @@ export function score(r: Report, size: number): Metrics {
   const unfinished = o.unfinished / Math.max(1, r.games);
   add('decididas', 'Partidas que terminan', 15, 1 - unfinished / 0.3, `${Math.round(unfinished * 100)} % sin terminar`);
   const s5 = r.snowball.find((x) => x.day === 5)?.leaderWins ?? null;
-  add('remontadas', 'Se puede remontar (quien va delante el dia 5 no gana siempre)', 15, s5 === null ? 1 : (0.95 - s5) / 0.25, s5 === null ? '-' : `${Math.round(s5 * 100)} %`);
+  add(
+    'remontadas',
+    'Se puede remontar (quien va delante el dia 5 no gana siempre)',
+    15,
+    s5 === null ? 1 : (0.95 - s5) / 0.25,
+    s5 === null ? '-' : `${Math.round(s5 * 100)} %`,
+  );
   const bought = r.units.map((u) => u.bought).filter((b) => b > 0);
   const total = bought.reduce((a, b) => a + b, 0);
   const H = -bought.reduce((a, b) => a + (b / total) * Math.log(b / total), 0);
@@ -115,7 +127,11 @@ async function main(): Promise<void> {
   const variant = { name, set: {} };
   const a = await runGames(variant, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
   const b = await runGames(variant, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
-  const report = buildReport([...a, ...b], { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' }, DEFAULT_TARGETS);
+  const report = buildReport(
+    [...a, ...b],
+    { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' },
+    DEFAULT_TARGETS,
+  );
   const m = score(report, size);
   const base = existsSync(BASELINE) ? (JSON.parse(readFileSync(BASELINE, 'utf8')) as Metrics) : null;
   mkdirSync(OUT, { recursive: true });

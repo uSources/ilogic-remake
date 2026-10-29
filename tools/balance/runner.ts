@@ -42,4 +42,3 @@ export async function runGames(
   process.stderr.write('\n');
   return records.sort((x, y) => x.seed - y.seed);
 }
-
