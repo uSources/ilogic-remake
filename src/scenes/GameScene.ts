@@ -143,6 +143,16 @@ const INPUT_LOCK_MS = 350;
 /** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
 const CONFIRM_MS = 2500;
 
+/** Como empieza una partida (scene.start('Game', data)). */
+export interface GameStartData {
+  /** new: mapa al azar o con `setup`; load: la guardada; mission: `mission`; state: `state` (JSON de una partida). */
+  mode?: 'new' | 'load' | 'mission' | 'state';
+  rules?: Partial<RulesConfig>;
+  setup?: GameSetup;
+  mission?: string;
+  state?: string;
+}
+
 export class GameScene extends Phaser.Scene {
   private s!: GameState;
   private view!: MapView;
@@ -211,6 +221,18 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
+  /** Estado para src/debug.ts (tests y agentes): copia, no se puede cambiar la partida con ella. */
+  debugSnapshot(): { state: string; phase: string; busy: boolean; ended: boolean; day: number; cursor: Pos } {
+    return {
+      state: serialize(this.s),
+      phase: this.phase,
+      busy: this.phase === 'busy' || this.enemyPlaying,
+      ended: this.ended,
+      day: this.s.day,
+      cursor: { ...this.view.cursor },
+    };
+  }
+
   /** Partida en curso: cambia en cada init() y al cerrar la escena; las esperas asincronas la comprueban. */
   private match = 0;
 
@@ -276,15 +298,18 @@ export class GameScene extends Phaser.Scene {
     this.replaying = false;
   }
 
-  init(data: { mode?: 'new' | 'load' | 'mission'; rules?: Partial<RulesConfig>; setup?: GameSetup; mission?: string }): void {
+  init(data: GameStartData): void {
     this.resetMatch();
     let state: GameState | null = null;
     if (data.mode === 'load') {
       const raw = readSave();
       state = raw ? deserialize(raw) : null;
       this.fromSave = !!state;
+    } else if (data.mode === 'state' && data.state) {
+      // Partida preparada desde fuera (tests y src/debug.ts): no viene del guardado.
+      state = deserialize(data.state);
     }
-    this.corruptSave = data.mode === 'load' && !state;
+    this.corruptSave = (data.mode === 'load' || data.mode === 'state') && !state;
     if (this.corruptSave) deleteSave();
     if (state) {
       // Solo se guardan los ajustes de la partida; las reglas son siempre las actuales

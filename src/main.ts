@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { render, h } from 'preact';
 import { deviceSize, fitCanvas, watchResize } from './display';
 import { Hud } from './hud/Hud';
+import { installDebug } from './debug';
 import { applySettings } from './settings';
 import { BootScene } from './scenes/BootScene';
 import { LogoScene } from './scenes/LogoScene';
@@ -41,5 +42,7 @@ game.events.once(Phaser.Core.Events.READY, () => {
   watchResize(game);
 });
 
-// Acceso desde la consola del navegador para depurar.
+// Acceso desde la consola del navegador, los tests de navegador y los agentes de IA:
+// window.ilogic (el juego de Phaser) y window.ilogicDebug (src/debug.ts, docs/AGENTES.md).
 (window as unknown as { ilogic: Phaser.Game }).ilogic = game;
+installDebug(game);
