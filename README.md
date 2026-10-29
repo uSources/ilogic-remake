@@ -151,8 +151,9 @@ Para sacar una version:
 1. subir `version` en `package.json` y escribir su apartado en `CHANGELOG.md`
    (`## [x.y.z] - AAAA-MM-DD — Titulo`; el texto en ingles despues de `<!-- en -->`);
 2. commit y push;
-3. `npm run release` (necesita `gh` con sesion iniciada): crea o actualiza la Release `vx.y.z` con
-   esas notas y adjunta `ilogic.html`. Con `-- --dry-run` solo enseña lo que publicaria.
+3. `npm run release`: crea la etiqueta `vx.y.z` y la sube. GitHub (`.github/workflows/release.yml`)
+   pasa los tests, compila el juego y publica la Release con esas notas e `ilogic.html` adjunto.
+   Con `-- --dry-run` solo enseña las notas. Para rehacer una Release: Actions → Release → Run workflow.
 
 Las notas tambien se pueden escribir o corregir directamente en la web de GitHub: el juego enseña lo
 que haya en la Release (se consulta como mucho cada media hora).
