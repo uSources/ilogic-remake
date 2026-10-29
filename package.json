@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "check": "tsc --noEmit && eslint . && prettier --check . && vitest run",
     "shots": "npm run build:single && node tests/visual/shots.mjs",
-    "shots:update": "npm run build:single && node tests/visual/shots.mjs --update"
+    "shots:update": "npm run build:single && node tests/visual/shots.mjs --update",
+    "play": "tsx tools/play/cli.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
