@@ -2,7 +2,11 @@
   "_doc": "Prompts que funcionaron con Retro Diffusion (RD Pro, rd_pro__default). Descripcion + cola comun. Ver la skill arte-retro-diffusion.",
   "references": {
     "map": "tools/art/retrodiffusion/pro_map.png",
-    "units": ["tools/art/retrodiffusion/units32/Soldier.png", "tools/art/retrodiffusion/units32/Tank.png", "tools/art/retrodiffusion/units32/Bomber.png"]
+    "units": [
+      "tools/art/retrodiffusion/units32/Soldier.png",
+      "tools/art/retrodiffusion/units32/Tank.png",
+      "tools/art/retrodiffusion/units32/Bomber.png"
+    ]
   },
   "unit_tail": ", bright magenta is the team color, crisp dark outline, rich soft shading and highlights lit from the top left, small shadow under it, same polished chunky toy-like chibi style as the reference units, the whole unit fits inside the image with one pixel of empty margin on every side, on a plain white background",
   "building_tail": ", the team color parts are bright magenta, the rest uses neutral stone, concrete, metal and wood colors, crisp dark outline, rich soft shading and highlights lit from the top left, small shadow at the base, cute chunky toy-like style like the reference map and units, seen from a top-down 3/4 angle, the whole building fits inside the image with one pixel of empty margin, on a plain white background",
