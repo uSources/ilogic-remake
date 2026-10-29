@@ -105,9 +105,16 @@ async function main(): Promise<void> {
   const t0 = Date.now();
   const r = arena(aiTurn, base.aiTurn, games, size, days);
   const pct = (x: number) => `${Math.round(x * 100)} %`;
-  console.log(`IA actual contra la de referencia: ${r.wins} ganadas, ${r.losses} perdidas, ${r.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+  console.log(
+    `IA actual contra la de referencia: ${r.wins} ganadas, ${r.losses} perdidas, ${r.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
+  );
   console.log(`Gana el ${pct(r.rate)} de las decididas (95 %: ${pct(r.low)}-${pct(r.high)})`);
-  const verdict = r.low > 0.5 ? 'MEJOR: la IA actual gana claramente' : r.high < 0.5 ? 'PEOR: la IA actual pierde claramente' : 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)';
+  const verdict =
+    r.low > 0.5
+      ? 'MEJOR: la IA actual gana claramente'
+      : r.high < 0.5
+        ? 'PEOR: la IA actual pierde claramente'
+        : 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)';
   console.log(verdict);
 }
 

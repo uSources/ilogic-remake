@@ -17,6 +17,18 @@ codigo estan en la skill `ilogic-code`; la arquitectura en `docs/ARQUITECTURA.md
 diferencias en rojo. Leer las imagenes `.diff.png` para ver que ha cambiado. Si el cambio es a
 proposito: `npm run shots:update` y decirlo en el commit.
 
+## Automejora
+
+Solo cuando el usuario lo pide (skill `automejora`). Medidas:
+
+- `npm run metrics`: nota del juego 0-100 por partes con 120 partidas IA contra IA; se compara con
+  `improve/baseline.json`. `--save-baseline` al aceptar un cambio.
+- `npm run arena -- --games 200`: IA actual contra `improve/ai-baseline/ai.ts`; un cambio de IA solo vale
+  si el intervalo del 95 % queda por encima del 50 %. `--snapshot` al aceptarlo.
+- `npm run fuzz`: invariantes (`tools/improve/invariants.ts`) en partidas con jugadas al azar e IA;
+  `--repro N` para ver una partida entera.
+- `improve/DIARIO.md`: todo lo probado. Leerlo antes de proponer; apuntar tambien lo descartado.
+
 ## Partida por texto (`npm run play`)
 
 ```bash

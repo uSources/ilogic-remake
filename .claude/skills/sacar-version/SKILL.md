@@ -11,7 +11,8 @@ avisa a quien tenga una version anterior.
 
 1. Elegir numero (semver): arreglos → 0.1.1; novedades → 0.2.0.
 2. `package.json` → `version`.
-3. `CHANGELOG.md`: apartado nuevo arriba, `## [x.y.z] - AAAA-MM-DD — Titulo corto`. Texto para el
+3. `CHANGELOG.md`: si hay un apartado `## [Sin publicar]` (lo llenan los ciclos de automejora),
+   convertirlo en el de esta version; si no, apartado nuevo arriba, `## [x.y.z] - AAAA-MM-DD — Titulo corto`. Texto para el
    jugador (no para programadores): `### Novedades`, `### Graficos`, `### Arreglos`... Ingles despues
    de `<!-- en -->`. Mirar `git log` desde la version anterior para no olvidar nada.
 4. `npm run release` enseña las notas tal como saldran. `npm run check`.

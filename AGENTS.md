@@ -19,6 +19,9 @@ npm run shots               # capturas comparadas con tests/visual/ref
 npm run build:single        # juego en dist-single/ilogic.html (probar por file://)
 npm run assets              # recompilar graficos
 npm run balance -- run ...  # equilibrio (IA contra IA)
+npm run metrics             # nota del juego 0-100 (compara con improve/baseline.json)
+npm run arena               # IA actual contra la guardada
+npm run fuzz                # cazador de fallos (invariantes con jugadas al azar)
 ```
 
 ## Normas
@@ -36,6 +39,8 @@ npm run balance -- run ...  # equilibrio (IA contra IA)
 
 - `docs/ARQUITECTURA.md`: capas, flujo de un turno, decisiones.
 - `docs/AGENTES.md`: como comprobar el trabajo (API `window.ilogicDebug`, partida por texto, capturas).
+- `improve/DIARIO.md`: experimentos de mejora (leer antes de proponer cambios de equilibrio o IA).
+- `.claude/agents/*.md`: subagentes (equilibrador, entrenador-ia, cazador-fallos, revisor).
 - `.claude/skills/*/SKILL.md`: guias por tarea (codigo, Phaser 4, graficos con Retro Diffusion, nueva
   unidad, nueva mision, sacar version, equilibrar). Sirven para cualquier agente, no solo Claude.
 - Skills oficiales de Phaser 4: `node_modules/phaser/skills/<tema>/SKILL.md`.
