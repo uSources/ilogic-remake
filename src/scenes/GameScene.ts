@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { FUELER, HQ, MAP_H, MAP_W, DEFAULT_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
+import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '../core/orders';
 import {
   attackFull,
   buildingIncome,
@@ -12,18 +13,12 @@ import {
   canBuyAt,
   canCapture,
   canWalk,
-  moveCost,
   pathCost,
-  hasAmmo,
-  inAttackRange,
   passMap,
   stepToward,
   capture,
   capturePointsOf,
   captureProgress,
-  captureStrength,
-  cargoUnits,
-  combatForecast,
   endRound,
   load,
   loadTargets,
@@ -34,7 +29,6 @@ import {
   outcome,
   endReason,
   score,
-  rank,
   pathTo,
   removeUnit,
   type RoundReport,
@@ -48,7 +42,6 @@ import {
   defenseStars,
   moveEvent,
   reachableTiles,
-  tileProtection,
   unitActions,
   unitAt,
   unitById,
@@ -85,12 +78,13 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { buildingLabel, fmtNum, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
+import { buildingLabel, fmtNum, settings, t, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
-import { buildingKey, terrainKey, unitIconKey, unitKey } from '../ui/sprites';
+import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
+import { captureHintText, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
 import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
@@ -144,6 +138,10 @@ const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile'];
 const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
 const DRAG_THRESHOLD = 6;
+/** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
+const INPUT_LOCK_MS = 350;
+/** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
+const CONFIRM_MS = 2500;
 
 export class GameScene extends Phaser.Scene {
   private s!: GameState;
@@ -515,22 +513,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private publishMinimap(): void {
-    const s = this.s;
-    const terrain: number[] = [];
-    const pal = terrainPalette(this.textures);
-    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) terrain.push(pal[s.map[x]![y]!] ?? 0x3a7a3a);
-    ui.set({
-      minimap: {
-        w: MAP_W,
-        h: MAP_H,
-        terrain,
-        fog: this.vis.map((col) => col.slice()),
-        buildings: s.buildings.map((b) => ({ x: b.x, y: b.y, owner: b.owner === 0 || this.visibleToPlayer(b) ? b.owner : null })),
-        units: s.units
-          .filter((u) => u.carrier === null && !this.hidden.has(u.uid) && (u.team === 0 || this.visibleToPlayer(u)))
-          .map((u) => ({ x: u.x, y: u.y, team: u.team })),
-      },
-    });
+    ui.set({ minimap: minimapVM(terrainPalette(this.textures), this.s, this.vis, this.hidden) });
   }
 
   /** Solo cambia el cursor: no hace falta redibujar unidades, salvo el camino previsto. */
@@ -631,27 +614,7 @@ export class GameScene extends Phaser.Scene {
       target = uid !== undefined ? unitById(this.s, uid) : undefined;
     }
     if (!target) return null;
-    const f = combatForecast(this.s, atk, target);
-    return {
-      attackerIcon: unitKey(this.textures, this.s, { ...this.sel, active: true }),
-      defenderIcon: unitKey(this.textures, this.s, target),
-      low: f.low,
-      high: f.high,
-      expected: f.expected,
-      lifeBefore: target.life,
-      lifeAfter: f.lifeAfter,
-      killChance: f.killChance,
-      anchor: this.anchor('forecast', target),
-      counter: f.counter
-        ? {
-            low: f.counter.low,
-            high: f.counter.high,
-            lifeBefore: this.sel.life,
-            lifeAfter: f.counter.lifeAfter,
-            killChance: f.counter.killChance,
-          }
-        : null,
-    };
+    return forecastVM(this.textures, this.s, this.sel, atk, target, this.anchor('forecast', target));
   }
 
   /** Bocadillo junto al cursor al mover: movimiento gastado, defensa, combustible, peligro y lo que pasaria al soltar. */
@@ -681,72 +644,17 @@ export class GameScene extends Phaser.Scene {
 
   /** Aviones: si tras moverse no les llegaria el combustible para volver a un aeropuerto propio. */
   private fuelWarning(u: Unit, dest: Pos | null, used: number): string | undefined {
-    const burn = UNIT.fuelperturn[u.type]!;
-    if (!dest || burn === 0) return undefined;
-    const left = u.fuel - used;
-    let nearest = Infinity;
-    for (const b of this.s.buildings) if (b.owner === 0 && FUELER[u.type]![b.type]) nearest = Math.min(nearest, manhattan(dest, b));
-    // Cada turno gasta `burn` y puede mover hasta su movimiento con lo que le quede.
-    return left - burn < nearest ? t('tipNoFuel') : undefined;
+    return dest && runsOutOfFuel(this.s, u, dest, used) ? t('tipNoFuel') : undefined;
   }
 
   private tileInfo(p: Pos): TileVM {
-    const s = this.s;
-    const terr = s.map[p.x]![p.y]!;
-    const b = buildingAt(s, p.x, p.y);
-    const vis = this.vis[p.x]![p.y]!;
-    const prot = tileProtection(s, p);
-    const info: TileVM = { terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - prot) * 100) } };
-    if (RULES.terrainCost) {
-      // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-      const cost = (mt: number) => (TERRAIN.canwalk[mt]![terr] ? moveCost(s, mt, p.x, p.y) : null);
-      info.terrain.cost = { foot: cost(0), vehicle: cost(1) };
-    }
-    if (b) {
-      const known = vis || b.owner === 0;
-      info.building = {
-        name: buildingLabel(b.type),
-        owner: !known ? 'unknown' : b.owner === 0 ? 'you' : b.owner === 1 ? 'enemy' : 'neutral',
-        income: buildingIncome(b.type),
-        icon: buildingKey(this.textures, s, b, vis),
-      };
-      const cp = captureProgress(s, b);
-      if (cp && (vis || b.owner === 0)) info.building.capture = { left: cp.left, total: capturePointsOf(b), team: cp.team };
-    }
-    const u = unitAt(s, p.x, p.y);
-    const shown = u && vis && !this.hidden.has(u.uid) ? u : this.phase !== 'map' && this.sel && samePos(this.sel, p) ? this.sel : undefined;
-    if (shown) {
-      const T = shown.type;
-      const cargo = cargoUnits(s, shown).map((c) => unitLabel(c.type));
-      info.unit = {
-        icon: unitKey(this.textures, s, { ...shown, active: shown.team === 1 || shown.active }),
-        name: unitLabel(T),
-        rank: RULES.veterancy ? rank(shown) : 0,
-        team: shown.team,
-        life: shown.life,
-        fuel: UNIT.maxfuel[T]! > 0 ? { now: shown.fuel, max: UNIT.maxfuel[T]! } : undefined,
-        ammo: UNIT.maxammo[T]! > 0 ? { now: shown.ammo, max: UNIT.maxammo[T]! } : undefined,
-        stats: this.unitDetail(T),
-        cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
-      };
-    }
-    return info;
-  }
-
-  private unitDetail(type: number): string {
-    const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
-    return `${t('move')} ${UNIT.mover[type]} · ${range}`;
+    const selected = this.phase !== 'map' ? this.sel : null;
+    return tileVM(this.textures, this.s, p, { vis: this.vis, hidden: this.hidden, selected });
   }
 
   /** "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas). */
   private captureHint(): string | undefined {
-    const u = this.sel;
-    if (!u) return undefined;
-    const b = buildingAt(this.s, u.x, u.y);
-    if (!b) return undefined;
-    const cp = captureProgress(this.s, b);
-    const now = cp && cp.uid === u.uid ? cp.left : capturePointsOf(b);
-    return `${now}→${Math.max(0, now - captureStrength(u))}`;
+    return this.sel ? captureHintText(this.s, this.sel) : undefined;
   }
 
   /** Menu emergente de la fase actual. */
@@ -801,7 +709,7 @@ export class GameScene extends Phaser.Scene {
             icon: unitIconKey(o.type, o.affordable),
             disabled: !o.affordable,
             detail:
-              `${this.unitDetail(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
+              `${unitStatsText(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
               (o.affordable ? '' : ` · ${teamUnits(this.s, 0).length >= RULES.maxUnits ? t('unitLimit') : t('cantAfford')}`),
           })),
         ];
@@ -1385,25 +1293,7 @@ export class GameScene extends Phaser.Scene {
     const u = this.sel,
       r = this.range;
     if (!u || !r || !this.block) return;
-    const trail = this.trail.length ? this.trail : [{ x: u.x, y: u.y }];
-    const i = trail.findIndex((p) => samePos(p, t));
-    if (i >= 0) {
-      this.trail = trail.slice(0, i + 1);
-      return;
-    }
-    const end = trail[trail.length - 1]!;
-    const mt = UNIT.movtype[u.type]!;
-    if (
-      manhattan(end, t) === 1 &&
-      canWalk(this.s, t.x, t.y, mt) &&
-      !this.block[t.x]![t.y] &&
-      pathCost(this.s, mt, trail) + moveCost(this.s, mt, t.x, t.y) <= r.maxSteps
-    ) {
-      this.trail = [...trail, { x: t.x, y: t.y }];
-      return;
-    }
-    // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
-    if (r.prev[t.x]![t.y]) this.trail = pathTo(r, u, t);
+    this.trail = extendTrail(this.s, u, r, this.block, this.trail, t);
   }
 
   /** Camino hasta `dest`: el trazado si acaba ahi, si no el mas corto. */
@@ -1437,22 +1327,9 @@ export class GameScene extends Phaser.Scene {
     return { kind: 'none' };
   }
 
-  /** Mejor casilla desde la que atacar a `t`: la del camino trazado si vale, si no la mas cercana a el, con mas defensa. */
+  /** Mejor casilla desde la que atacar a `t` (ver bestAttackTile). */
   private attackFrom(t: Unit): Pos | null {
-    const u = this.sel!,
-      r = this.range!;
-    if (!UNIT.canfight[u.type] || !hasAmmo(u) || !u.canFire || !(POWER[u.type]![t.type]! > 0)) return null;
-    if (UNIT.minalc[u.type]! > 0) return inAttackRange(u.type, u, t) ? { x: u.x, y: u.y } : null;
-    const cands: Pos[] = [];
-    if (inAttackRange(u.type, u, t)) cands.push({ x: u.x, y: u.y });
-    cands.push(...reachableTiles(r).filter((p) => inAttackRange(u.type, p, t)));
-    if (!cands.length) return null;
-    const end = this.trail[this.trail.length - 1] ?? u;
-    const onTrail = cands.find((c) => samePos(c, end));
-    if (onTrail) return onTrail;
-    const prot = (p: Pos) => tileProtection(this.s, p);
-    cands.sort((a, b) => manhattan(end, a) - manhattan(end, b) || prot(a) - prot(b) || manhattan(u, a) - manhattan(u, b));
-    return cands[0]!;
+    return bestAttackTile(this.s, this.sel!, t, this.range!, this.trail[this.trail.length - 1] ?? this.sel!);
   }
 
   /**
@@ -1615,17 +1492,7 @@ export class GameScene extends Phaser.Scene {
     this.clearUndo();
     for (const u of units) {
       const r = moveRange(this.s, u);
-      let best: Pos | null = null;
-      let bestD = manhattan(u, goal);
-      for (let x = 0; x < MAP_W; x++)
-        for (let y = 0; y < MAP_H; y++) {
-          if (r.steps[x]![y]! <= 0) continue;
-          const d = manhattan({ x, y }, goal);
-          if (d < bestD || (d === bestD && best && r.steps[x]![y]! < r.steps[best.x]![best.y]!)) {
-            best = { x, y };
-            bestD = d;
-          }
-        }
+      const best = closestStep(u, goal, r);
       if (!best) continue;
       delete u.order;
       const path = moveUnit(this.s, u, best, r);
@@ -1799,12 +1666,12 @@ export class GameScene extends Phaser.Scene {
         if (!this.lastEnemy) return showToast(t('noReplay'));
         return void this.replayEnemyTurn();
       case 'surrender':
-        if (this.time.now - this.surrenderArmedAt < 2500) return this.surrender();
+        if (this.time.now - this.surrenderArmedAt < CONFIRM_MS) return this.surrender();
         this.surrenderArmedAt = this.time.now;
         return showToast(t('confirmSurrender'));
       case 'quit':
         // [CAMBIO] en el original Esc abandonaba la partida al instante, sin confirmar.
-        if (this.time.now - this.quitArmedAt < 2500) return this.quitToMenu();
+        if (this.time.now - this.quitArmedAt < CONFIRM_MS) return this.quitToMenu();
         this.quitArmedAt = this.time.now;
         return showToast(t('confirmQuit'));
       default:
@@ -2135,8 +2002,7 @@ export class GameScene extends Phaser.Scene {
     const last = this.lastEnemy;
     if (!last || this.phase === 'busy' || this.ended) return;
     this.toMap();
-    const cam = this.cameras.main;
-    const saved = { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
+    const saved = this.saveCamera();
     const after = serialize(this.s);
     const before = deserialize(last.before);
     if (!before) return;
@@ -2157,11 +2023,23 @@ export class GameScene extends Phaser.Scene {
     this.s = deserialize(after)!;
     this.replaying = false;
     this.enemyPlaying = false;
+    this.backToPlayer(saved);
+  }
+
+  /** Donde estaba mirando el jugador antes del turno enemigo. */
+  private saveCamera(): { x: number; y: number; cursor: Pos } {
+    const cam = this.cameras.main;
+    return { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
+  }
+
+  /** Vuelve el control al jugador tras el turno enemigo: camara donde estaba y entrada bloqueada un momento. */
+  private backToPlayer(saved: { x: number; y: number; cursor: Pos }): void {
     this.fastForward = false;
     this.view.cursor = saved.cursor;
-    cam.pan(saved.x, saved.y, 300, 'Sine.easeInOut', true);
+    this.cameras.main.pan(saved.x, saved.y, 300, 'Sine.easeInOut', true);
     this.phase = 'map';
-    this.inputLockUntil = this.time.now + 350;
+    // Que el Enter o el clic con el que se aceleraba la IA no actue ya en el turno propio.
+    this.inputLockUntil = this.time.now + INPUT_LOCK_MS;
     this.refresh();
   }
 
@@ -2188,7 +2066,7 @@ export class GameScene extends Phaser.Scene {
   private requestEndTurn(): void {
     const auto = new Set(this.autoCapturers().map((u) => u.uid));
     const idle = this.idleUnits().some((u) => !auto.has(u.uid));
-    if (idle && this.time.now - this.endArmedAt > 2500) {
+    if (idle && this.time.now - this.endArmedAt > CONFIRM_MS) {
       this.endArmedAt = this.time.now;
       return showToast(t('confirmEndTurn'));
     }
@@ -2200,8 +2078,7 @@ export class GameScene extends Phaser.Scene {
     const m = this.match;
     this.clearUndo();
     this.abandonSelection();
-    const cam = this.cameras.main;
-    const saved = { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
+    const saved = this.saveCamera();
     this.phase = 'busy';
     // [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando.
     for (const u of this.autoCapturers()) {
@@ -2231,12 +2108,7 @@ export class GameScene extends Phaser.Scene {
     if (settings.autosave && writeSave(serialize(this.s))) this.savedThisGame = true;
     this.enemyPlaying = false;
     if (this.checkEnd()) return;
-    this.view.cursor = saved.cursor;
-    this.fastForward = false;
-    cam.pan(saved.x, saved.y, 300, 'Sine.easeInOut', true);
-    this.phase = 'map';
-    this.inputLockUntil = this.time.now + 350;
-    this.refresh();
+    this.backToPlayer(saved);
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     this.showReport(report);
     await this.runOrders();
