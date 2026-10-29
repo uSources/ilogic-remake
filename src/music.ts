@@ -7,6 +7,8 @@ import { settings } from './settings';
  */
 let current: Phaser.Sound.BaseSound | null = null;
 let wanted: 'menu' | 'game' | null = null;
+/** Arranque pendiente hasta que el navegador deje sonar audio (solo uno a la vez). */
+let pending: { sound: Phaser.Sound.BaseSoundManager; start: () => void } | null = null;
 
 export function playMusic(scene: Phaser.Scene, track: 'menu' | 'game', restart = false): void {
   wanted = track;
@@ -22,11 +24,17 @@ export function playMusic(scene: Phaser.Scene, track: 'menu' | 'game', restart =
     if (current === sound && wanted === track) sound.play();
   };
   // Los navegadores no dejan sonar audio hasta la primera tecla o clic.
-  if (scene.sound.locked) scene.sound.once(Phaser.Sound.Events.UNLOCKED, start);
-  else start();
+  if (scene.sound.locked) {
+    pending = { sound: scene.sound, start };
+    scene.sound.once(Phaser.Sound.Events.UNLOCKED, start);
+  } else start();
 }
 
 export function stopMusic(): void {
+  if (pending) {
+    pending.sound.off(Phaser.Sound.Events.UNLOCKED, pending.start);
+    pending = null;
+  }
   if (current) {
     current.stop();
     current.destroy();

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { addSheetFrames, ATLAS, hasImage, sheetFrame } from '../atlas';
 import { MAP_H, MAP_W } from '../core/data';
 import type { GameState, Pos, Unit } from '../core/types';
 import { dpr } from '../display';
@@ -101,7 +102,15 @@ export class MapView {
   private objImgs: Phaser.GameObjects.Image[] = [];
   private lastDpr = dpr();
 
+  /** Claves propias de los lienzos de esta vista (el menu y la partida tienen cada uno la suya). */
+  private static count = 0;
+  private readonly terrainKey: string;
+  private readonly fogKey: string;
+
   constructor(private readonly scene: Phaser.Scene) {
+    MapView.count++;
+    this.terrainKey = `terrainBake${MapView.count}`;
+    this.fogKey = `fogBake${MapView.count}`;
     this.cam = scene.cameras.main;
     this.cam.setRoundPixels(true);
     this.root = scene.add.container(0, 0);
@@ -111,7 +120,7 @@ export class MapView {
     this.overlay = scene.add.graphics();
     this.fx = scene.add.container(0, 0);
     this.fogLayer = scene.add.container(0, 0);
-    this.cursorImg = scene.add.image(0, 0, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
+    this.cursorImg = scene.add.image(0, 0, ATLAS, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
     this.root.add([this.terrain, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg]);
@@ -244,7 +253,7 @@ export class MapView {
 
   private tileImage(key: string, x: number, y: number): Phaser.GameObjects.Image {
     // Origen abajo en el centro: los dibujos nuevos pueden ser algo mas anchos que la casilla.
-    const img = this.scene.add.image(x * TILE + TILE / 2, (y + 1) * TILE + 0, key).setOrigin(0.5, 1);
+    const img = this.scene.add.image(x * TILE + TILE / 2, (y + 1) * TILE + 0, ATLAS, key).setOrigin(0.5, 1);
     img.setDisplaySize(Math.max(TILE, img.width), img.height);
     return img;
   }
@@ -258,14 +267,14 @@ export class MapView {
     const tex = this.scene.textures;
     if (settings.terrainArt === 'new' && terrainArtReady(tex)) {
       // Terreno nuevo: pintado una vez en un lienzo.
-      const key = 'terrainBake';
+      const key = this.terrainKey;
       if (tex.exists(key)) tex.remove(key);
       tex.addCanvas(key, paintTerrain(tex, s));
       this.terrain.add(this.scene.add.image(0, 0, key).setOrigin(0));
       // Agua animada: piezas precompiladas, una por casilla; en tick() solo se cambia el fotograma.
       for (const cell of waterAnimCells(s)) {
-        this.ensureAnimFrames(cell.key);
-        const img = this.scene.add.image(cell.x * TILE, cell.y * TILE, cell.key, `${cell.row}_0`).setOrigin(0);
+        addSheetFrames(this.scene.textures, cell.key, ANIM_FRAMES, TILE);
+        const img = this.scene.add.image(cell.x * TILE, cell.y * TILE, ATLAS, sheetFrame(cell.key, cell.row, 0)).setOrigin(0);
         this.waterAnim.push({ img, cell });
         this.terrain.add(img);
       }
@@ -283,10 +292,10 @@ export class MapView {
       for (let y = 0; y < MAP_H; y++) {
         objs.push(this.tileImage(terrainKey(s.map[x]![y]!), x, y));
         for (const k of shoreKeys(s, x, y)) {
-          if (this.scene.textures.exists(k))
+          if (hasImage(this.scene.textures, k))
             objs.push(
               this.scene.add
-                .image(x * TILE, y * TILE, k)
+                .image(x * TILE, y * TILE, ATLAS, k)
                 .setOrigin(0)
                 .setDisplaySize(TILE, TILE),
             );
@@ -366,7 +375,7 @@ export class MapView {
         this.buildings[i] = img;
         this.buildingLayer.add(img);
       } else if (img.texture.key !== key) {
-        img.setTexture(key);
+        img.setTexture(ATLAS, key);
         img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
         img.setPosition(b.x * TILE + TILE / 2, (b.y + 1) * TILE);
       }
@@ -382,9 +391,9 @@ export class MapView {
 
   private newUnitSprite(key: string): UnitSprite {
     // Origen abajo en el centro: las unidades nuevas pueden ser algo mas anchas que la casilla.
-    const img = this.scene.add.image(TILE / 2, TILE, key).setOrigin(0.5, 1);
+    const img = this.scene.add.image(TILE / 2, TILE, ATLAS, key).setOrigin(0.5, 1);
     img.setDisplaySize(Math.max(TILE, img.width), img.height);
-    const life = this.scene.add.image(17, 17, 'n_9').setOrigin(0).setDisplaySize(14, 14);
+    const life = this.scene.add.image(17, 17, ATLAS, 'n_9').setOrigin(0).setDisplaySize(14, 14);
     const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, 0x0b1220);
     const stars = this.scene.add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
@@ -407,7 +416,7 @@ export class MapView {
         sp = this.newUnitSprite(key);
         this.units.set(u.uid, sp);
       } else if (sp.key !== key) {
-        sp.img.setTexture(key);
+        sp.img.setTexture(ATLAS, key);
         sp.img.setDisplaySize(Math.max(TILE, sp.img.frame.width), sp.img.frame.height);
         sp.key = key;
       }
@@ -427,8 +436,8 @@ export class MapView {
     sp.root.setPosition(u.x * TILE, u.y * TILE);
     // Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco.
     const front = s && this.newArt() ? frontKey(s, u.x, u.y) : null;
-    if (front && this.scene.textures.exists(front)) {
-      sp.front.setTexture(front).setVisible(true);
+    if (front && hasImage(this.scene.textures, front)) {
+      sp.front.setTexture(ATLAS, front).setVisible(true);
       sp.img.setTint(front.includes('forest') || front.includes('tree') ? 0xd8e4d8 : 0xe8e8e8);
     } else {
       sp.front.setVisible(false);
@@ -437,7 +446,7 @@ export class MapView {
     const n = Math.ceil(u.life / 10);
     const showLife = u.life < 100 && n >= 1 && n <= 9;
     sp.life.setVisible(showLife);
-    if (showLife) sp.life.setTexture(`n_${n}`).setDisplaySize(14, 14);
+    if (showLife) sp.life.setTexture(ATLAS, `n_${n}`).setDisplaySize(14, 14);
     sp.cargo.setVisible(u.cargo.some((c) => c !== null));
     const r = rank(u);
     if (r !== sp.rank) {
@@ -464,16 +473,6 @@ export class MapView {
     return settings.terrainArt === 'new' && terrainArtReady(this.scene.textures);
   }
 
-  /** Da nombre a las piezas de una lamina animada (fila_fotograma), respetando su sitio en el atlas. */
-  private ensureAnimFrames(key: string): void {
-    const t = this.scene.textures.get(key);
-    if (t.has('0_0')) return;
-    const base = this.scene.textures.getFrame(key);
-    const rows = Math.floor(base.cutHeight / TILE);
-    for (let r = 0; r < rows; r++)
-      for (let f = 0; f < ANIM_FRAMES; f++) t.add(`${r}_${f}`, base.sourceIndex, base.cutX + f * TILE, base.cutY + r * TILE, TILE, TILE);
-  }
-
   /** Repinta la niebla nueva si ha cambiado lo que se ve. */
   private updateFog(vis: boolean[][]): void {
     const sig = visKey(vis);
@@ -482,11 +481,19 @@ export class MapView {
     const tex = this.scene.textures;
     this.fogCanvas = composeFog(vis, this.scene.textures, this.fogCanvas ?? undefined);
     if (!this.fogImg) {
-      if (tex.exists('fogBake')) tex.remove('fogBake');
-      tex.addCanvas('fogBake', this.fogCanvas);
-      this.fogImg = this.scene.add.image(0, 0, 'fogBake').setOrigin(0);
+      if (tex.exists(this.fogKey)) tex.remove(this.fogKey);
+      tex.addCanvas(this.fogKey, this.fogCanvas);
+      this.fogImg = this.scene.add.image(0, 0, this.fogKey).setOrigin(0);
       this.fogLayer.addAt(this.fogImg, 0);
-    } else (tex.get('fogBake') as Phaser.Textures.CanvasTexture).refresh();
+    } else (tex.get(this.fogKey) as Phaser.Textures.CanvasTexture).refresh();
+  }
+
+  /** Suelta los lienzos de esta vista (los objetos los destruye la escena al cerrarse). Llamar en SHUTDOWN. */
+  destroy(): void {
+    const tex = this.scene.textures;
+    for (const k of [this.terrainKey, this.fogKey]) if (tex.exists(k)) tex.remove(k);
+    this.fogCanvas = null;
+    this.fogImg = null;
   }
 
   private drawOverlay(opts: ViewOptions): void {
@@ -690,7 +697,7 @@ export class MapView {
       const f = still ? 0 : Math.floor(time / 140) % ANIM_FRAMES;
       if (f !== this.waterFrame) {
         this.waterFrame = f;
-        for (const { img, cell } of this.waterAnim) img.setFrame(`${cell.row}_${(f + cell.phase) % ANIM_FRAMES}`);
+        for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (f + cell.phase) % ANIM_FRAMES));
       }
     }
     this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
@@ -721,7 +728,7 @@ export class MapView {
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
   ghost(key: string, p: Pos): Phaser.GameObjects.Image {
     // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
-    const img = this.scene.add.image(p.x * TILE + TILE / 2, (p.y + 1) * TILE, key).setOrigin(0.5, 1);
+    const img = this.scene.add.image(p.x * TILE + TILE / 2, (p.y + 1) * TILE, ATLAS, key).setOrigin(0.5, 1);
     img.setDisplaySize(Math.max(TILE, img.width), img.height);
     this.fx.add(img);
     return img;

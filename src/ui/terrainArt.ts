@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { GameState } from '../core/types';
+import { hasImage, imageFrame } from '../atlas';
 import { TILE } from '../layout';
 import { WANG_SETS } from './wangSets';
 import { BLOB_SETS } from './blobSets';
@@ -63,7 +64,7 @@ export function requiredArtKeys(): string[] {
 }
 
 export function terrainArtReady(textures: Phaser.Textures.TextureManager): boolean {
-  return terrainArtKeys().every((k) => textures.exists(k));
+  return terrainArtKeys().every((k) => hasImage(textures, k));
 }
 
 /** Pinta el terreno entero del mapa en un lienzo (una sola vez por partida). */
@@ -77,7 +78,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   ctx.imageSmoothingEnabled = false;
   /** Dibuja un trozo de una imagen cargada (respeta su sitio dentro del atlas). */
   const blit = (into: CanvasRenderingContext2D, key: string, sx: number, sy: number, w: number, h: number, dx: number, dy: number) => {
-    const f = textures.getFrame(key);
+    const f = imageFrame(textures, key);
     into.drawImage(f.source.image as CanvasImageSource, f.cutX + sx, f.cutY + sy, w, h, dx, dy, w, h);
   };
   const cell = (x: number, y: number) => s.map[Math.min(W - 1, Math.max(0, x))]![Math.min(H - 1, Math.max(0, y))]!;
@@ -86,7 +87,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   /** Recorre las piezas de la rejilla doble: `up(t)` dice si la casilla cuenta como "arriba". */
   const pass = (set: string, up: (t: number) => boolean, always: boolean, into = ctx) => {
     const frames = WANG_SETS[set];
-    if (!frames || !textures.exists(`wang/${set}`)) return;
+    if (!frames || !hasImage(textures, `wang/${set}`)) return;
     for (let x = 0; x <= W; x++)
       for (let y = 0; y <= H; y++) {
         const k = (up(cell(x - 1, y - 1)) ? 8 : 0) | (up(cell(x, y - 1)) ? 4 : 0) | (up(cell(x - 1, y)) ? 2 : 0) | (up(cell(x, y)) ? 1 : 0);
@@ -99,7 +100,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   const passBlob = (set: string, up: (t: number) => boolean, into: CanvasRenderingContext2D): boolean => {
     const bs = BLOB_SETS[set];
     const key = `blob/${set}`;
-    if (!bs || !textures.exists(key)) return false;
+    if (!bs || !hasImage(textures, key)) return false;
     const isLand = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && up(cell(x, y));
     const occupied = (x: number, y: number) => objectBase(s, x, y) !== null || s.buildings.some((b) => b.x === x && b.y === y);
     const draw = (i: number, x: number, y: number) =>
@@ -138,7 +139,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   const passOrg = (set: string, up: (t: number) => boolean) => {
     const idx = ORG_SHEETS[set];
     const key = `blob/org_${set}`;
-    if (!idx || !textures.exists(key)) return;
+    if (!idx || !hasImage(textures, key)) return;
     for (let x = 0; x < W; x++)
       for (let y = 0; y < H; y++) {
         const i = idx[neighbourKey(x, y, (xx, yy) => up(cell(xx, yy)))]!;
@@ -152,7 +153,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   passOrg(l2, (t) => LEVEL[t]! >= 2);
   passBlob(l3, (t) => LEVEL[t]! >= 3, ctx);
   // Bosques: si hay arboles sueltos (Retro Diffusion) se dibujan como sprites mas abajo; si no, el tileset Wang.
-  const trees = textures.exists('flat/tree_grass_0');
+  const trees = hasImage(textures, 'flat/tree_grass_0');
   treesLoaded = trees;
   if (!trees)
     for (const o of overlaySets(s.theme))
@@ -163,7 +164,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       if (!d) continue;
       // Variante fija por casilla (la misma cada vez que se dibuja el mapa).
       const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
-      if (textures.exists(k)) blit(ctx, k, 0, 0, TILE, TILE, x * TILE, y * TILE);
+      if (hasImage(textures, k)) blit(ctx, k, 0, 0, TILE, TILE, x * TILE, y * TILE);
     }
   // Montañas y bosques no se pintan aqui: van como sprites en la capa de los edificios
   // (terrainObjects), ordenados por fila, para que lo de delante tape a lo de detras.
@@ -173,11 +174,11 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
 /** Sprites de terreno (montañas y bosques) por casilla, para ponerlos en la capa de los edificios. */
 export function terrainObjects(textures: Phaser.Textures.TextureManager, s: GameState): { key: string; x: number; y: number }[] {
   const out: { key: string; x: number; y: number }[] = [];
-  const trees = textures.exists('flat/tree_grass_0');
+  const trees = hasImage(textures, 'flat/tree_grass_0');
   for (let y = 0; y < s.map[0]!.length; y++)
     for (let x = 0; x < s.map.length; x++) {
       const k = objectKey(s, x, y);
-      if (!k || !textures.exists(k) || (!trees && k.startsWith('flat/tree_'))) continue;
+      if (!k || !hasImage(textures, k) || (!trees && k.startsWith('flat/tree_'))) continue;
       out.push({ key: k, x, y });
     }
   return out;

@@ -337,6 +337,40 @@ const initial: UIState = {
   minimapOn: typeof window !== 'undefined' ? window.innerWidth > 900 : true,
 };
 
+/** Acciones sin escena: no hacen nada (salvo cerrar la ayuda). Las escenas ponen las suyas en create(). */
+const DEFAULT_ACTIONS: UIActions = {
+  mainMenuPick: noop,
+  mainMenuHover: noop,
+  menuPick: noop,
+  menuHover: noop,
+  menuClose: noop,
+  endTurn: noop,
+  openGameMenu: noop,
+  toggleThreat: noop,
+  toggleMinimap: noop,
+  minimapJump: noop,
+  focusUnit: noop,
+  endContinue: noop,
+  endHover: noop,
+  endPick: noop,
+  closeHelp: () => ui.set({ help: false }),
+  homeHover: noop,
+  homePick: noop,
+  setupHover: noop,
+  setupPick: noop,
+  setupSet: noop,
+  setupCode: noop,
+  optionsHover: noop,
+  optionsSet: noop,
+  optionsClose: noop,
+  pauseHover: noop,
+  pausePick: noop,
+  campaignHover: noop,
+  campaignPick: noop,
+  campaignBack: noop,
+  surrender: noop,
+};
+
 type Listener = () => void;
 let state: UIState = initial;
 const listeners = new Set<Listener>();
@@ -359,38 +393,7 @@ export const ui = {
     listeners.add(l);
     return () => listeners.delete(l);
   },
-  actions: {
-    mainMenuPick: noop,
-    mainMenuHover: noop,
-    menuPick: noop,
-    menuHover: noop,
-    menuClose: noop,
-    endTurn: noop,
-    openGameMenu: noop,
-    toggleThreat: noop,
-    toggleMinimap: noop,
-    minimapJump: noop,
-    focusUnit: noop,
-    endContinue: noop,
-    endHover: noop,
-    endPick: noop,
-    closeHelp: () => ui.set({ help: false }),
-    homeHover: noop,
-    homePick: noop,
-    setupHover: noop,
-    setupPick: noop,
-    setupSet: noop,
-    setupCode: noop,
-    optionsHover: noop,
-    optionsSet: noop,
-    optionsClose: noop,
-    pauseHover: noop,
-    pausePick: noop,
-    campaignHover: noop,
-    campaignPick: noop,
-    campaignBack: noop,
-    surrender: noop,
-  } as UIActions,
+  actions: { ...DEFAULT_ACTIONS },
 };
 
 let toastId = 0;
@@ -405,4 +408,9 @@ export const fmtNum = (n: number): string => n.toLocaleString(settings.lang === 
 
 export function showBanner(small: string, big: string, tone: 'blue' | 'red'): void {
   ui.set({ banner: { small, big, tone, id: ++toastId } });
+}
+
+/** Quita las acciones que registro una escena (se llama al cerrarla: nada de botones que actuen sobre una escena cerrada). */
+export function resetActions(): void {
+  Object.assign(ui.actions, DEFAULT_ACTIONS);
 }

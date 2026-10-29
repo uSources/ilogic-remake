@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ATLAS } from '../atlas';
 import { aiTurn } from '../core/ai';
 import { DEFAULT_RULES, useRules } from '../core/data';
 import { seededRng } from '../core/geom';
@@ -8,13 +9,13 @@ import { endRound, outcome } from '../core/rules';
 import { deserialize } from '../core/save';
 import type { GameEvent, GameState, Pos, Team } from '../core/types';
 import { bestDays, completedMissions, missionUnlocked, objectiveText } from '../campaign';
-import { ui, type CampaignItemVM, type MarkVM, type OptionRowVM, type PresetVM } from '../hud/store';
+import { resetActions, ui, type CampaignItemVM, type MarkVM, type OptionRowVM, type PresetVM } from '../hud/store';
 import { WEB_URL } from '../layout';
 import { KEY_BACK, KEY_DOWN, KEY_LEFT, KEY_OK, KEY_RIGHT, KEY_UP, navGrid } from '../menu/nav';
 import { OptionsPanel } from '../menu/optionsPanel';
 import { keepMapSize, mapThumb } from '../menu/thumb';
 import { playMusic } from '../music';
-import { checkNotes, notesKey, openNotes } from '../patchNotes';
+import { checkNotes, closeNotes, notesKey, openNotes } from '../patchNotes';
 import { settings, t, type TextKey } from '../settings';
 import {
   applyPreset,
@@ -206,13 +207,14 @@ export class MenuScene extends Phaser.Scene {
 
   private createBackground(): void {
     this.bgGame = null;
+    this.bgView?.destroy();
     this.bgView = null;
     let bg: Phaser.GameObjects.Image | null = null;
     // La partida en directo sale aunque el sistema pida menos movimiento (entonces la camara salta en vez de deslizarse).
     if (settings.menuBg === 'live') {
       this.startBgGame();
     } else {
-      bg = this.add.image(0, 0, 'menubackground').setScrollFactor(0);
+      bg = this.add.image(0, 0, ATLAS, 'menubackground').setScrollFactor(0);
     }
     const layout = () => {
       const { width, height } = this.scale;
@@ -228,9 +230,12 @@ export class MenuScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, layout);
       this.bgGame = null;
+      this.bgView?.destroy();
       this.bgView = null;
       this.bgEvents = null;
       this.bgToken++;
+      resetActions();
+      closeNotes();
     });
   }
 
