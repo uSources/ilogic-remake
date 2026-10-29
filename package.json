@@ -20,7 +20,8 @@
     "check": "tsc --noEmit && eslint . && prettier --check . && vitest run",
     "shots": "npm run build:single && node tests/visual/shots.mjs",
     "shots:update": "npm run build:single && node tests/visual/shots.mjs --update",
-    "play": "tsx tools/play/cli.ts"
+    "play": "tsx tools/play/cli.ts",
+    "fuzz": "tsx tools/improve/fuzz.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
