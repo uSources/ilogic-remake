@@ -1,21 +1,7 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import {
-  BUILDING,
-  FUELER,
-  HQ,
-  MAP_H,
-  MAP_W,
-  DEFAULT_RULES,
-  POWER,
-  RULES,
-  TERRAIN,
-  UNIT,
-  UNIT_NAMES,
-  useRules,
-  type RulesConfig,
-} from '../core/data';
-import { diamond, grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
+import { FUELER, HQ, MAP_H, MAP_W, DEFAULT_RULES, POWER, RULES, TERRAIN, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
   attackFull,
@@ -57,6 +43,12 @@ import {
   teamUnits,
   threatMap,
   unitThreat,
+  attackZone,
+  captureEvent,
+  defenseStars,
+  moveEvent,
+  reachableTiles,
+  tileProtection,
   unitActions,
   unitAt,
   unitById,
@@ -75,7 +67,6 @@ import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
 import {
-  fmtNum,
   resetActions,
   showBanner,
   showReport,
@@ -94,12 +85,13 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { buildingLabel, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
+import { buildingLabel, fmtNum, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { buildingKey, terrainKey, unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
+import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
  * Fases de la partida (equivalen a las del original, docs/SPEC-INTERFAZ.md §2):
@@ -443,7 +435,7 @@ export class GameScene extends Phaser.Scene {
   private highlights(): Map<string, HighlightKind> {
     const h = new Map<string, HighlightKind>();
     if (this.phase === 'move' && this.range) {
-      for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (this.range.steps[x]![y]! > 0) h.set(`${x},${y}`, 'move');
+      for (const p of reachableTiles(this.range)) h.set(key(p), 'move');
       for (const k of this.mergeSet.keys()) h.set(k, 'merge');
       for (const k of this.loadSet.keys()) h.set(k, 'load');
     } else if (this.phase === 'attack') {
@@ -461,7 +453,7 @@ export class GameScene extends Phaser.Scene {
       const u = unitAt(this.s, c.x, c.y);
       if (u && u.team === 0 && u.active && u.canMove && u.carrier === null && !this.enemyPlaying) {
         const r = moveRange(this.s, u);
-        for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (r.steps[x]![y]! > 0) h.set(`${x},${y}`, 'hover');
+        for (const p of reachableTiles(r)) h.set(key(p), 'hover');
       }
     } else if (this.phase === 'map' && this.inspectUid !== null) {
       // Alcance de una unidad señalada: adonde llega y que puede atacar en su proximo turno.
@@ -673,10 +665,7 @@ export class GameScene extends Phaser.Scene {
     if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
     const dest = it.kind === 'move' ? it.to : null;
     const used = dest ? pathCost(this.s, UNIT.movtype[u.type]!, this.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
-    const terr = this.s.map[c.x]![c.y]!;
-    const b = buildingAt(this.s, c.x, c.y);
-    const prot = TERRAIN.protection[terr]! * (b ? BUILDING.protection[b.type]! : 1);
-    const stars = Math.max(0, Math.min(4, Math.round(((1 - prot) * 100) / 10)));
+    const stars = defenseStars(this.s, c);
     const action = it.kind === 'merge' ? t('tipJoin') : it.kind === 'load' ? t('tipBoard') : it.capture ? t('tipCapture') : t('tipMove');
     return {
       anchor,
@@ -706,7 +695,7 @@ export class GameScene extends Phaser.Scene {
     const terr = s.map[p.x]![p.y]!;
     const b = buildingAt(s, p.x, p.y);
     const vis = this.vis[p.x]![p.y]!;
-    const prot = TERRAIN.protection[terr]! * (b ? BUILDING.protection[b.type]! : 1);
+    const prot = tileProtection(s, p);
     const info: TileVM = { terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - prot) * 100) } };
     if (RULES.terrainCost) {
       // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
@@ -801,7 +790,7 @@ export class GameScene extends Phaser.Scene {
         if (this.selBuilding) {
           at = this.selBuilding;
           title = buildingLabel(this.selBuilding.type);
-          subtitle = `${t('funds')}: ${this.s.funds[0].toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US')}`;
+          subtitle = `${t('funds')}: ${fmtNum(this.s.funds[0])}`;
         }
         items = [
           { id: 'cancel', label: t('cancel'), icon: null },
@@ -1381,22 +1370,10 @@ export class GameScene extends Phaser.Scene {
     this.trail = [{ x: u.x, y: u.y }];
     this.block = passMap(this.s, u).block;
     this.dangerMap = threatMap(this.s, 1, 0);
-    this.attackZone = this.computeAttackZone(u, this.range);
+    this.attackZone = attackZone(this.s, u, this.range);
     this.phase = 'move';
     this.updateTrail(this.view.cursor);
     this.refresh();
-  }
-
-  /** Todo lo que la unidad podria atacar este turno (moviendose, si puede mover y disparar). */
-  private computeAttackZone(u: Unit, r: MoveRange): boolean[][] | null {
-    if (!UNIT.canfight[u.type] || UNIT.alcance[u.type]! === 0 || !hasAmmo(u) || !u.canFire) return null;
-    const z = grid(false);
-    const minR = UNIT.minalc[u.type]!,
-      maxR = UNIT.alcance[u.type]!;
-    const origins: Pos[] = [{ x: u.x, y: u.y }];
-    if (minR === 0) for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
-    for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) z[p.x]![p.y] = true;
-    return z;
   }
 
   // -------------------------------------------------------------------------
@@ -1468,15 +1445,12 @@ export class GameScene extends Phaser.Scene {
     if (UNIT.minalc[u.type]! > 0) return inAttackRange(u.type, u, t) ? { x: u.x, y: u.y } : null;
     const cands: Pos[] = [];
     if (inAttackRange(u.type, u, t)) cands.push({ x: u.x, y: u.y });
-    for (let x = 0; x < MAP_W; x++)
-      for (let y = 0; y < MAP_H; y++) if (r.steps[x]![y]! > 0 && inAttackRange(u.type, { x, y }, t)) cands.push({ x, y });
+    cands.push(...reachableTiles(r).filter((p) => inAttackRange(u.type, p, t)));
     if (!cands.length) return null;
     const end = this.trail[this.trail.length - 1] ?? u;
     const onTrail = cands.find((c) => samePos(c, end));
     if (onTrail) return onTrail;
-    const prot = (p: Pos) =>
-      TERRAIN.protection[this.s.map[p.x]![p.y]!]! *
-      (buildingAt(this.s, p.x, p.y) ? BUILDING.protection[buildingAt(this.s, p.x, p.y)!.type]! : 1);
+    const prot = (p: Pos) => tileProtection(this.s, p);
     cands.sort((a, b) => manhattan(end, a) - manhattan(end, b) || prot(a) - prot(b) || manhattan(u, a) - manhattan(u, b));
     return cands[0]!;
   }
@@ -1509,28 +1483,14 @@ export class GameScene extends Phaser.Scene {
         this.clearUndo();
         const path = merge(this.s, u, it.target);
         if (path)
-          await this.playEvents(
-            [
-              path.ambush
-                ? { kind: 'move', uid: u.uid, path, ambush: path.ambush }
-                : { kind: 'merge', uid: u.uid, into: it.target.uid, path },
-            ],
-            ghost,
-          );
+          await this.playEvents([path.ambush ? moveEvent(u.uid, path) : { kind: 'merge', uid: u.uid, into: it.target.uid, path }], ghost);
         return this.afterAction();
       }
       case 'load': {
         this.clearUndo();
         const path = load(this.s, u, it.target);
         if (path)
-          await this.playEvents(
-            [
-              path.ambush
-                ? { kind: 'move', uid: u.uid, path, ambush: path.ambush }
-                : { kind: 'load', uid: u.uid, into: it.target.uid, path },
-            ],
-            ghost,
-          );
+          await this.playEvents([path.ambush ? moveEvent(u.uid, path) : { kind: 'load', uid: u.uid, into: it.target.uid, path }], ghost);
         return this.afterAction();
       }
       case 'attack': {
@@ -1539,7 +1499,7 @@ export class GameScene extends Phaser.Scene {
           const path = moveUnit(this.s, u, it.from, r, this.trailTo(it.from));
           if (!path) return this.toMap();
           this.range = null;
-          await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+          await this.playEvents([moveEvent(u.uid, path)], ghost);
           if (path.ambush) return this.afterAction();
         }
         const target = unitById(this.s, it.target.uid);
@@ -1565,7 +1525,7 @@ export class GameScene extends Phaser.Scene {
         const path = moveUnit(this.s, u, it.to, r, this.trailTo(it.to));
         if (!path) return;
         this.range = null;
-        await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+        await this.playEvents([moveEvent(u.uid, path)], ghost);
         if (path.ambush) {
           this.clearUndo();
           return this.afterAction();
@@ -1605,7 +1565,7 @@ export class GameScene extends Phaser.Scene {
     const ghost = unitKey(this.textures, this.s, u);
     const path = moveUnit(this.s, u, dest, r);
     this.range = null;
-    if (path) await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }], ghost);
+    if (path) await this.playEvents([moveEvent(u.uid, path)], ghost);
     if (samePos(u, goal) || path?.ambush) delete u.order;
     this.toMap();
   }
@@ -1634,7 +1594,7 @@ export class GameScene extends Phaser.Scene {
       if (!dest) continue;
       const path = moveUnit(this.s, u, dest, r);
       if (!path) continue;
-      await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }]);
+      await this.playEvents([moveEvent(u.uid, path)]);
       if (samePos(u, goal) || path.ambush) delete u.order;
     }
     if (arrived.length) {
@@ -1669,7 +1629,7 @@ export class GameScene extends Phaser.Scene {
       if (!best) continue;
       delete u.order;
       const path = moveUnit(this.s, u, best, r);
-      if (path) await this.playEvents([{ kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) }]);
+      if (path) await this.playEvents([moveEvent(u.uid, path)]);
       if (this.ended) return;
     }
     this.toMap();
@@ -1905,10 +1865,7 @@ export class GameScene extends Phaser.Scene {
       case 'capture': {
         const b = buildingAt(this.s, u.x, u.y);
         const r = capture(this.s, u);
-        if (b && r)
-          void this.playEvents([
-            { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total },
-          ]).then(() => this.afterAction());
+        if (b && r) void this.playEvents([captureEvent(u, b, r)]).then(() => this.afterAction());
         else this.afterAction();
         return;
       }
@@ -2058,11 +2015,11 @@ export class GameScene extends Phaser.Scene {
     await this.wait(reducedMotion() ? 100 : 1250);
     if (match !== this.match) return;
     if (won) {
-      void tileFlash(this, this.view, focus, 0xffd447);
+      void tileFlash(this, this.view, focus, PAL.gold);
       const confetti = () => {
         const p = { x: c.x + (Math.random() - 0.5) * TILE * 8, y: c.y + (Math.random() - 0.5) * TILE * 5 };
         void burst(this, this.view, p, {
-          colors: [0xffd447, 0xfff1a8, 0x3aa8ff, 0x8fd0ff, 0xffffff],
+          colors: [PAL.gold, 0xfff1a8, PAL.blue, 0x8fd0ff, 0xffffff],
           count: 14,
           radius: 30,
           duration: 900,
@@ -2250,7 +2207,7 @@ export class GameScene extends Phaser.Scene {
     for (const u of this.autoCapturers()) {
       const b = buildingAt(this.s, u.x, u.y)!;
       const r = capture(this.s, u);
-      if (r) await this.playEvents([{ kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total }]);
+      if (r) await this.playEvents([captureEvent(u, b, r)]);
       if (m !== this.match || this.checkEnd()) return;
     }
     this.enemyPlaying = true;
@@ -2301,7 +2258,7 @@ export class GameScene extends Phaser.Scene {
       const u = unitById(this.s, h.uid);
       if (!u || u.carrier !== null || !this.visibleToPlayer(u)) return;
       const c = center(u);
-      void floatText(this, this.view, { x: c.x, y: c.y - 6 }, `+${h.amount}`, '#4fd36a', 1100 + i * 90);
+      void floatText(this, this.view, { x: c.x, y: c.y - 6 }, `+${h.amount}`, PAL_CSS.green, 1100 + i * 90);
     });
   }
 
@@ -2361,8 +2318,8 @@ export class GameScene extends Phaser.Scene {
             const end = ev.path[ev.path.length - 1]!;
             if (showAll || this.visibleToPlayer(end)) {
               const c = center(end);
-              void tileFlash(this, this.view, ev.ambush, 0xff4d45);
-              await floatText(this, this.view, { x: c.x, y: c.y - 6 }, t('fxAmbush'), '#ff7a73');
+              void tileFlash(this, this.view, ev.ambush, PAL.red);
+              await floatText(this, this.view, { x: c.x, y: c.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
             }
           }
           break;
@@ -2402,7 +2359,7 @@ export class GameScene extends Phaser.Scene {
             await this.lookAt(ev.at);
             const c = center(ev.at);
             void burst(this, this.view, c, { colors: COLORS.gold, count: 12, radius: 22 });
-            void tileFlash(this, this.view, ev.at, 0xffd447);
+            void tileFlash(this, this.view, ev.at, PAL.gold);
             const partial = ev.left !== undefined && ev.left > 0;
             await floatText(
               this,
@@ -2488,7 +2445,7 @@ export class GameScene extends Phaser.Scene {
     const jobs: Promise<void>[] = [
       burst(this, this.view, c, { colors: COLORS.fire, count: killed ? 12 : 9, radius: killed ? 20 : 16, size: 5 }),
     ];
-    jobs.push(floatText(this, this.view, { x: c.x, y: c.y - 4 }, `-${damage}`, '#ff4d45'));
+    jobs.push(floatText(this, this.view, { x: c.x, y: c.y - 4 }, `-${damage}`, PAL_CSS.red));
     // La victima parpadea (si queda viva, su sprite; si no, una copia que luego estalla).
     const live = unitAt(this.s, at.x, at.y);
     const sprite = live ? this.view.unitSprite(live.uid) : null;

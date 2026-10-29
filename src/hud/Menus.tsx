@@ -1,9 +1,8 @@
 import { imgUrl } from '../assets';
-import { settings, t } from '../settings';
+import { fmtNum, t } from '../settings';
 import { ui, type MenuVM, type OptionRowVM, type UIState } from './store';
 
 const noFocus = (e: MouseEvent) => e.preventDefault();
-const fmt = (n: number) => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
 
 /** Boton sin foco del navegador (el foco lo lleva la escena, con el teclado). */
 function Btn(props: {
@@ -103,7 +102,7 @@ export function Home({ s }: { s: UIState }) {
                 {t('day')} {h.save.day}
                 {h.save.limit ? <span class="muted"> / {h.save.limit}</span> : null}
               </span>
-              <span class="gold num">{fmt(h.save.funds)}</span>
+              <span class="gold num">{fmtNum(h.save.funds)}</span>
               <span class="muted">{h.save.mission ?? `${h.save.size}×${h.save.size}`}</span>
             </div>
             <Btn sel={f === 'continue'} onPick={pick('continue')}>
@@ -458,8 +457,8 @@ export function EndScreen({ e }: { e: NonNullable<UIState['end']> }) {
                 {e.score && (
                   <tr>
                     <td>{t('points')}</td>
-                    <td class="num">{fmt(e.score[0])}</td>
-                    <td class="num">{fmt(e.score[1])}</td>
+                    <td class="num">{fmtNum(e.score[0])}</td>
+                    <td class="num">{fmtNum(e.score[1])}</td>
                   </tr>
                 )}
                 {(
@@ -472,8 +471,8 @@ export function EndScreen({ e }: { e: NonNullable<UIState['end']> }) {
                 ).map(([k, v]) => (
                   <tr>
                     <td>{t(k)}</td>
-                    <td class="num">{fmt(v[0])}</td>
-                    <td class="num">{fmt(v[1])}</td>
+                    <td class="num">{fmtNum(v[0])}</td>
+                    <td class="num">{fmtNum(v[1])}</td>
                   </tr>
                 ))}
                 <tr>

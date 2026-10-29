@@ -1,6 +1,7 @@
 import { HQ } from '../core/data';
 import { MAP_H, MAP_W, setMapSize } from '../core/data';
 import type { GameState } from '../core/types';
+import { PAL_CSS } from '../ui/palette';
 
 /** Ejecuta algo que cambia el tamaño del mapa global (crear o leer otra partida) y lo deja como estaba. */
 export function keepMapSize<T>(fn: () => T): T {
@@ -31,11 +32,11 @@ export function mapThumb(s: GameState, palette: number[], opts: { units?: boolea
       ctx.fillStyle = hex(palette[s.map[x]![y]!] ?? 0x3a7a3a);
       ctx.fillRect(x * px, y * px, px, px);
     }
-  const team = (o: 0 | 1 | null) => (o === 0 ? '#3aa8ff' : o === 1 ? '#ff4d45' : '#d6dbe6');
+  const team = (o: 0 | 1 | null) => (o === 0 ? '#3aa8ff' : o === 1 ? PAL_CSS.red : '#d6dbe6');
   for (const b of s.buildings) {
     const big = b.type === HQ;
     const pad = big ? -1 : 0;
-    ctx.fillStyle = '#0b1220';
+    ctx.fillStyle = PAL_CSS.ink;
     ctx.fillRect(b.x * px + pad - 1, b.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
     ctx.fillStyle = team(b.owner);
     ctx.fillRect(b.x * px + pad, b.y * px + pad, px - 2 * pad, px - 2 * pad);

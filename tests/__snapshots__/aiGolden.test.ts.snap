@@ -1,0 +1,73 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`IA: partidas de referencia > semilla 1 1`] = `
+{
+  "days": 26,
+  "events": 789,
+  "last": {
+    "army": [
+      104325,
+      124830,
+    ],
+    "buildings": [
+      8,
+      10,
+    ],
+    "day": 26,
+    "funds": [
+      9000,
+      59000,
+    ],
+  },
+  "reason": "timeout",
+  "winner": null,
+}
+`;
+
+exports[`IA: partidas de referencia > semilla 2 1`] = `
+{
+  "days": 26,
+  "events": 537,
+  "last": {
+    "army": [
+      24340,
+      37480,
+    ],
+    "buildings": [
+      5,
+      7,
+    ],
+    "day": 26,
+    "funds": [
+      7500,
+      9500,
+    ],
+  },
+  "reason": "timeout",
+  "winner": null,
+}
+`;
+
+exports[`IA: partidas de referencia > semilla 3 1`] = `
+{
+  "days": 26,
+  "events": 888,
+  "last": {
+    "army": [
+      42475,
+      105400,
+    ],
+    "buildings": [
+      8,
+      13,
+    ],
+    "day": 26,
+    "funds": [
+      15000,
+      11500,
+    ],
+  },
+  "reason": "timeout",
+  "winner": null,
+}
+`;

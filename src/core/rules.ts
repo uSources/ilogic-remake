@@ -25,7 +25,7 @@ import {
   UNIT_TYPES,
 } from './data';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
-import type { Building, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
+import type { Building, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
 
 // ---------------------------------------------------------------------------
 // Consultas basicas
@@ -343,11 +343,23 @@ export function attackTargets(s: GameState, u: Unit, vis = visibility(s, u.team)
   );
 }
 
+/**
+ * Factor de proteccion de una casilla (terreno por edificio, si lo hay): multiplica la probabilidad
+ * de que acierten a quien esta en ella. 1 = sin proteccion.
+ */
+export function tileProtection(s: GameState, p: Pos): number {
+  const b = buildingAt(s, p.x, p.y);
+  return TERRAIN.protection[s.map[p.x]![p.y]!]! * (b ? BUILDING.protection[b.type]! : 1);
+}
+
+/** Estrellas de defensa que se enseñan para una casilla (0..4). */
+export function defenseStars(s: GameState, p: Pos): number {
+  return Math.max(0, Math.min(4, Math.round(((1 - tileProtection(s, p)) * 100) / 10)));
+}
+
 /** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). */
 export function hitChance(s: GameState, atk: Unit, def: Unit): number {
-  let p = POWER[atk.type]![def.type]! * TERRAIN.protection[s.map[def.x]![def.y]!]!;
-  const b = buildingAt(s, def.x, def.y);
-  if (b) p *= BUILDING.protection[b.type]!;
+  let p = POWER[atk.type]![def.type]! * tileProtection(s, def);
   // [CAMBIO] Veterania: cada rango da +5 % de acierto al atacar y -5 % al que le ataca.
   if (RULES.veterancy) p *= (1 + VET_BONUS * rank(atk)) * (1 - VET_BONUS * rank(def));
   return p;
@@ -1054,17 +1066,37 @@ export function threatMap(s: GameState, team: Team, viewer: Team): boolean[][] {
  * Casillas que una unidad podria atacar en su proximo turno (moviendose si puede).
  * Las unidades a distancia no pueden mover y disparar: solo cuentan desde donde estan.
  */
-export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false)): boolean[][] {
+export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false), range?: MoveRange): boolean[][] {
   if (!UNIT.canfight[u.type] || !hasAmmo(u)) return out;
   const minR = UNIT.minalc[u.type]!,
     maxR = UNIT.alcance[u.type]!;
   if (maxR === 0) return out;
   const origins: Pos[] = [{ x: u.x, y: u.y }];
-  if (minR === 0) {
-    const fresh = { ...u, active: true, canMove: true };
-    const r = moveRange(s, fresh);
-    for (let x = 0; x < r.steps.length; x++) for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
-  }
+  // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen.
+  if (minR === 0) origins.push(...reachableTiles(range ?? moveRange(s, { ...u, active: true, canMove: true })));
   for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) out[p.x]![p.y] = true;
   return out;
+}
+
+/** Lo que la unidad puede atacar este turno con su alcance de movimiento `range` (null si no puede disparar). */
+export function attackZone(s: GameState, u: Unit, range: MoveRange): boolean[][] | null {
+  if (!UNIT.canfight[u.type] || UNIT.alcance[u.type]! === 0 || !hasAmmo(u) || !u.canFire) return null;
+  return unitThreat(s, u, grid(false), range);
+}
+
+/** Casillas a las que se puede mover (sin contar la de salida). */
+export function reachableTiles(r: MoveRange): Pos[] {
+  const out: Pos[] = [];
+  for (let x = 0; x < r.steps.length; x++) for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) out.push({ x, y });
+  return out;
+}
+
+// Eventos (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma.
+
+export function moveEvent(uid: number, path: MovePath): GameEvent {
+  return path.ambush ? { kind: 'move', uid, path, ambush: path.ambush } : { kind: 'move', uid, path };
+}
+
+export function captureEvent(u: Unit, b: Building, r: { left: number; total: number }): GameEvent {
+  return { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total };
 }

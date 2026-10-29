@@ -5,7 +5,7 @@
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
-import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT } from './data';
+import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT, UNIT_NAMES } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
   attackFull,
@@ -31,6 +31,9 @@ import {
   type MoveRange,
   canCounter,
   captureProgress,
+  captureEvent,
+  moveEvent,
+  reachableTiles,
 } from './rules';
 import type { GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
 
@@ -75,7 +78,7 @@ function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRange): Gen
   if (!dest) return false;
   const path = moveUnit(s, u, dest, range);
   if (!path) return false;
-  yield { kind: 'move', uid: u.uid, path, ...(path.ambush ? { ambush: path.ambush } : {}) };
+  yield moveEvent(u.uid, path);
   return !!path.ambush;
 }
 
@@ -83,7 +86,7 @@ function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRange): Gen
 function needsRepair(u: Unit): 'life' | 'fuel' | null {
   if (u.life < AI.LIFETOBACK) return 'life';
   const burn = UNIT.fuelperturn[u.type]!;
-  if (burn > 0 && u.fuel <= burn * 3 + UNIT.mover[u.type]!) return 'fuel';
+  if (burn > 0 && u.fuel <= burn * AI.FUELTURNS + UNIT.mover[u.type]!) return 'fuel';
   return null;
 }
 
@@ -101,7 +104,7 @@ function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange
       const target = mates.sort((a, b) => manhattan(u, a) - manhattan(u, b))[0]!;
       const path = merge(s, u, target);
       if (path) {
-        if (path.ambush) yield { kind: 'move', uid: u.uid, path, ambush: path.ambush };
+        if (path.ambush) yield moveEvent(u.uid, path);
         else yield { kind: 'merge', uid: u.uid, into: target.uid, path };
         return true;
       }
@@ -134,19 +137,20 @@ function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange
 function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
   const atk = { ...u, x: from.x, y: from.y };
   const dmg = expectedDamage(s, atk, t);
-  const value = UNIT.cost[t.type]! / 1000;
-  let score = dmg * value + (dmg >= t.life ? 50 * value : 0);
+  const value = UNIT.cost[t.type]! / AI.COSTSCALE;
+  let score = dmg * value + (dmg >= t.life ? AI.KILLBONUS * value : 0);
   // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
   if (RULES.counterattack && dmg < t.life) {
     const left = { ...t, life: Math.max(1, Math.round(t.life - dmg)) };
-    if (canCounter(left, atk)) score -= expectedDamage(s, left, atk) * (UNIT.cost[u.type]! / 1000);
+    if (canCounter(left, atk)) score -= expectedDamage(s, left, atk) * (UNIT.cost[u.type]! / AI.COSTSCALE);
   }
   // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.
   const tb = buildingAt(s, t.x, t.y);
-  if (tb && tb.type === HQ && tb.owner === t.team) score += 200 * Math.max(0.5, dmg / 50);
+  if (tb && tb.type === HQ && tb.owner === t.team) score += AI.HQDEFENDER * Math.max(0.5, dmg / AI.BONUSDAMAGE);
   // Echar a quien esta capturando un edificio propio (sobre todo la Base).
   const b = buildingAt(s, t.x, t.y);
-  if (b && b.owner === ME && captureProgress(s, b)) score += (b.type === HQ ? 400 : 60) * Math.max(0.5, dmg / 50);
+  if (b && b.owner === ME && captureProgress(s, b))
+    score += (b.type === HQ ? AI.STOPCAPTUREHQ : AI.STOPCAPTURE) * Math.max(0.5, dmg / AI.BONUSDAMAGE);
   return score;
 }
 
@@ -163,8 +167,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generato
   const ranged = UNIT.minalc[u.type]! > 0;
   const froms: Pos[] = [{ x: u.x, y: u.y }];
   if (!ranged) {
-    for (let x = 0; x < range.steps.length; x++)
-      for (let y = 0; y < range.steps[x]!.length; y++) if (range.steps[x]![y]! > 0) froms.push({ x, y });
+    froms.push(...reachableTiles(range));
   }
   for (const t of enemies) {
     for (const from of froms) {
@@ -209,7 +212,7 @@ function* captureHere(s: GameState, u: Unit): Generator<GameEvent, boolean> {
   const b = buildingAt(s, u.x, u.y)!;
   const r = capture(s, u);
   if (!r) return false;
-  yield { kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total };
+  yield captureEvent(u, b, r);
   return true;
 }
 
@@ -250,7 +253,7 @@ function* advance(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent,
   const bonus = (g: Pos): number => {
     const b = buildingAt(s, g.x, g.y);
     if (!b || !UNIT.cancapt[u.type]) return 0;
-    return b.type === HQ && b.owner !== null ? 12 : b.owner !== null ? 4 : 0;
+    return b.type === HQ && b.owner !== null ? AI.CAPTUREHQ : b.owner !== null ? AI.CAPTUREOWNED : 0;
   };
   const vis = visibility(s, ME);
   const goals: Pos[] = UNIT.cancapt[u.type]
@@ -287,15 +290,13 @@ function* advance(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent,
 
 /** [CAMBIO] eleccion uniforme (el original nunca elegia la ultima casilla). */
 function* randomMove(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generator<GameEvent> {
-  const options: Pos[] = [];
-  for (let x = 0; x < range.steps.length; x++)
-    for (let y = 0; y < range.steps[x]!.length; y++) if (range.steps[x]![y]! > 0) options.push({ x, y });
+  const options: Pos[] = reachableTiles(range);
   if (options.length) yield* doMove(s, u, options[Math.floor(rng() * options.length)]!, range);
   wait(u);
 }
 
 /** Tipos que no combaten: como mucho uno de cada a la vez. */
-const SUPPORT_TYPES = new Set([5, 7, 13, 15]); // Blocker, Transport, Supplier, THelicopter
+const SUPPORT_TYPES = new Set<number>((['Blocker', 'Transport', 'Supplier', 'THelicopter'] as const).map((n) => UNIT_NAMES.indexOf(n)));
 
 /**
  * Fabricar en cada edificio propio libre.
@@ -310,7 +311,7 @@ function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
     let opts = buyOptions(s, b).filter((o) => o.affordable && !(SUPPORT_TYPES.has(o.type) && mine.some((u) => u.type === o.type)));
     if (!opts.length) continue;
     const capturers = mine.filter((u) => UNIT.cancapt[u.type]).length;
-    if (capturers < 4 && opts.some((o) => UNIT.cancapt[o.type])) opts = opts.filter((o) => UNIT.cancapt[o.type]);
+    if (capturers < AI.MINCAPTURERS && opts.some((o) => UNIT.cancapt[o.type])) opts = opts.filter((o) => UNIT.cancapt[o.type]);
     const weights = opts.map((o) => Math.sqrt(o.cost));
     let r = rng() * weights.reduce((a, w) => a + w, 0);
     let type = opts[opts.length - 1]!.type;
