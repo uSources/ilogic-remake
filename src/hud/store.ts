@@ -1,3 +1,4 @@
+import type { Block } from '../patchNotes/markdown';
 import { settings } from '../settings';
 
 /**
@@ -229,6 +230,25 @@ export interface UIState {
   minimapView: { x: number; y: number; w: number; h: number };
   minimapOn: boolean;
   help: boolean;
+  notes: NotesVM | null;
+  /** Hay notas de parche sin leer. */
+  newsBadge: boolean;
+  /** Version nueva publicada (null si se juega la ultima). */
+  updateAvailable: string | null;
+}
+
+/** Panel de novedades (notas de parche). */
+export interface NotesVM {
+  status: 'loading' | 'online' | 'cached' | 'offline';
+  /** Version que se esta jugando. */
+  current: string;
+  repoUrl: string;
+  /** Version publicada mas nueva que la que se juega, con su descarga. */
+  update: { version: string; url: string } | null;
+  items: { version: string; title: string; date: string; isNew: boolean; current: boolean; prerelease: boolean }[];
+  selected: number;
+  blocks: Block[];
+  url: string | null;
 }
 
 export interface MinimapVM {
@@ -310,6 +330,9 @@ const initial: UIState = {
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },
   help: false,
+  notes: null,
+  newsBadge: false,
+  updateAvailable: null,
   minimapOn: typeof window !== 'undefined' ? window.innerWidth > 900 : true,
 };
 

@@ -139,6 +139,24 @@ solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG d
 En `dist` solo van el atlas, el cursor y el icono; en la version de un fichero la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
+## Notas de parche
+
+El menu tiene **Novedades**: las notas de cada version, sacadas de las Releases de GitHub del repo
+de `package.json` ("repository"). Si no hay conexion, salen las de `CHANGELOG.md`, que van dentro
+del juego. Una marca en el menu avisa de notas sin leer, y si hay una version publicada mas nueva
+que la que se juega, el panel lo dice y enlaza la descarga.
+
+Para sacar una version:
+
+1. subir `version` en `package.json` y escribir su apartado en `CHANGELOG.md`
+   (`## [x.y.z] - AAAA-MM-DD — Titulo`; el texto en ingles despues de `<!-- en -->`);
+2. commit y push;
+3. `npm run release` (necesita `gh` con sesion iniciada): crea o actualiza la Release `vx.y.z` con
+   esas notas y adjunta `ilogic.html`. Con `-- --dry-run` solo enseña lo que publicaria.
+
+Las notas tambien se pueden escribir o corregir directamente en la web de GitHub: el juego enseña lo
+que haya en la Release (se consulta como mucho cada media hora).
+
 ## Diferencias con el original de 2013
 
 El modo "reglas de 2013" se quitó (27-10-2026): las partidas guardadas con esas reglas se siguen

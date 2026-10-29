@@ -13,7 +13,8 @@
     "assets": "node scripts/assets.mjs",
     "balance": "tsx tools/balance/cli.ts",
     "assets:pack": "node scripts/assets.mjs --pack",
-    "prebuild": "node scripts/assets.mjs"
+    "prebuild": "node scripts/assets.mjs",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
@@ -29,5 +30,9 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
-  "description": "Ilogic: remake en TypeScript + Phaser del juego de estrategia por turnos de 2013"
+  "description": "Ilogic: remake en TypeScript + Phaser del juego de estrategia por turnos de 2013",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uSources/ilogic-remake.git"
+  }
 }

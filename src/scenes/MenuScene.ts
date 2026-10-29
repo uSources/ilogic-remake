@@ -14,6 +14,7 @@ import { KEY_BACK, KEY_DOWN, KEY_LEFT, KEY_OK, KEY_RIGHT, KEY_UP, navGrid } from
 import { OptionsPanel } from '../menu/optionsPanel';
 import { keepMapSize, mapThumb } from '../menu/thumb';
 import { playMusic } from '../music';
+import { checkNotes, notesKey, openNotes } from '../patchNotes';
 import { settings, t, type TextKey } from '../settings';
 import {
   applyPreset,
@@ -136,6 +137,8 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard!.addCapture('SPACE,UP,DOWN,LEFT,RIGHT');
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e));
     playMusic(this, 'menu');
+    // Notas de parche nuevas en GitHub (marca en "Novedades"); sin conexion no pasa nada.
+    void checkNotes();
   }
 
   private onKey(e: KeyboardEvent): void {
@@ -144,6 +147,7 @@ export class MenuScene extends Phaser.Scene {
       if ([...KEY_BACK, ...KEY_OK, 'KeyH'].includes(e.code)) ui.set({ help: false });
       return;
     }
+    if (notesKey(e)) return;
     if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
     if (this.mode === 'setup') return this.setupKey(e);
     if (this.mode === 'campaign') return this.campaignKey(e);
@@ -349,7 +353,7 @@ export class MenuScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private homeRows(): string[][] {
-    const foot = ['help', 'options', 'credits', 'web'];
+    const foot = ['news', 'help', 'options', 'credits', 'web'];
     return this.save
       ? [['continue', 'quick', 'campaign'], ['continue', 'custom', 'campaign'], foot]
       : [['quick', 'campaign'], ['custom', 'campaign'], foot];
@@ -424,6 +428,8 @@ export class MenuScene extends Phaser.Scene {
         return this.openSetup();
       case 'campaign':
         return this.openCampaign();
+      case 'news':
+        return openNotes();
       case 'help':
         return ui.set({ help: true });
       case 'options':

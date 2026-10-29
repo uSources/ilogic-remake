@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'preact/compat';
 import { imgUrl } from '../assets';
+import { PatchNotes } from './PatchNotes';
 import { settings, t } from '../settings';
 import { helpText } from './helpText';
 import { Campaign, EndScreen, Home, NewGame, Options, Pause } from './Menus';
@@ -562,6 +563,7 @@ export function Hud() {
       {s.screen === 'end' && s.end && <EndScreen e={s.end} />}
       {s.options && <Options o={s.options} />}
       {s.help && <Help />}
+      {s.notes && <PatchNotes n={s.notes} />}
       {s.toast && (
         <div key={s.toast.id} class="px toast" role="status" style={{ animationDuration: `${Math.max(2.4, s.toast.text.length / 16).toFixed(1)}s` }}>
           {s.toast.text}
