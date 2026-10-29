@@ -155,9 +155,20 @@ Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` 
   publicar la web; `npm run build` incluye tipos y lint.
 - `npm run format` pone el formato; `git config blame.ignoreRevsFile .git-blame-ignore-revs` para que
   `git blame` se salte el commit que formateo todo.
-- Guias para trabajar en el codigo (tambien las usa Claude): `CLAUDE.md`, `.claude/skills/ilogic-code`
-  y `.claude/skills/phaser4`, que lleva a las skills oficiales de Phaser 4 incluidas en
-  `node_modules/phaser/skills/` (de la version instalada).
+- `npm run shots`: capturas de 12 escenas comparadas con `tests/visual/ref/` (informe en
+  `tests/visual/out/index.html`); `npm run shots:update` para aceptar cambios.
+- `npm run play`: partida por texto (reglas sin graficos), para probar reglas o la IA en segundos.
+
+### Preparado para trabajar con IA
+
+- `CLAUDE.md` y `AGENTS.md` (el mismo contenido para otras IAs): normas y comandos.
+- `docs/ARQUITECTURA.md` (capas, flujo de un turno, decisiones) y `docs/AGENTES.md` (como comprobar el
+  trabajo: API `window.ilogicDebug`, partida por texto, capturas).
+- Skills en `.claude/skills/`: `ilogic-code`, `phaser4` (lleva a las oficiales de Phaser 4 en
+  `node_modules/phaser/skills/`), `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`,
+  `sacar-version` y `equilibrar`.
+- `.claude/settings.json`: formato y lint automaticos al editar y proteccion de ficheros generados.
+- GitHub: `@claude` en issues y PRs y revision automatica de PRs (ver "Claude en GitHub").
 
 ## Notas de parche
 
