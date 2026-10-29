@@ -1,0 +1,31 @@
+name: Fallo
+description: Algo que no funciona como deberia.
+labels: [fallo]
+body:
+  - type: textarea
+    id: pasa
+    attributes:
+      label: Que pasa
+    validations:
+      required: true
+  - type: textarea
+    id: deberia
+    attributes:
+      label: Que deberia pasar
+    validations:
+      required: true
+  - type: textarea
+    id: repetir
+    attributes:
+      label: Como repetirlo
+      description: Codigo del mapa (menu de partida) o mision, y los pasos. Una captura ayuda mucho.
+      placeholder: |
+        Mapa: ABC1234 (20x20, nieve)
+        1. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: La de Novedades (p. ej. v0.1.0) o "web".

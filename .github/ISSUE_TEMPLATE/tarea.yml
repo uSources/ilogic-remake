@@ -1,0 +1,37 @@
+name: Tarea o mejora
+description: Algo nuevo o un cambio. Escrito para que lo pueda hacer una persona o Claude (añade "@claude" para que lo haga).
+labels: [mejora]
+body:
+  - type: textarea
+    id: que
+    attributes:
+      label: Que se quiere
+      description: En una o dos frases, desde el punto de vista del jugador.
+    validations:
+      required: true
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Como saber que esta hecho
+      description: Criterios comprobables (p. ej. "el tanque cuesta 10.000", "la mision 3 se puede ganar en 15 dias").
+      placeholder: |
+        - [ ] ...
+        - [ ] npm run check pasa
+    validations:
+      required: true
+  - type: dropdown
+    id: zona
+    attributes:
+      label: Zona
+      options: [Reglas o IA, Interfaz, Graficos, Misiones, Equilibrio, Herramientas, Otra]
+  - type: textarea
+    id: pistas
+    attributes:
+      label: Pistas (opcional)
+      description: Ficheros, skills (.claude/skills) o capturas que ayuden.
+  - type: checkboxes
+    id: coste
+    attributes:
+      label: Coste
+      options:
+        - label: Necesita generar graficos de pago (Retro Diffusion). Si no se marca, no se gasta nada.

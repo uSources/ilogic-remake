@@ -170,6 +170,18 @@ Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` 
 - `.claude/settings.json`: formato y lint automaticos al editar y proteccion de ficheros generados.
 - GitHub: `@claude` en issues y PRs y revision automatica de PRs (ver "Claude en GitHub").
 
+## Claude en GitHub
+
+- `.github/workflows/claude.yml`: escribir `@claude ...` en una issue o en un PR y Claude lo hace
+  (responde, cambia el codigo en una rama, abre PR), siguiendo `CLAUDE.md` y las skills.
+- `.github/workflows/claude-review.yml`: revision automatica de cada PR con las normas del proyecto.
+- Plantillas de issue (`tarea`, `fallo`) con criterios de aceptacion, y de PR con lo que hay que comprobar.
+
+Para activarlo (una vez): instalar la app de Claude (https://github.com/apps/claude) en el repo y crear
+**uno** de estos secretos en *Settings → Secrets and variables → Actions*: `CLAUDE_CODE_OAUTH_TOKEN`
+(planes Pro/Max: `claude setup-token` en tu ordenador) o `ANTHROPIC_API_KEY`. Sin secreto no hacen
+nada. `.github/workflows/visual.yml` pasa las capturas en cada PR y deja el informe como artefacto.
+
 ## Notas de parche
 
 El menu tiene **Novedades**: las notas de cada version, sacadas de las Releases de GitHub del repo
