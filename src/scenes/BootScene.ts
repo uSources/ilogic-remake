@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { aliasAtlasFrames } from '../atlas';
 import { ATLAS_PAGES } from '../atlasPages';
-import { asset, setImageSource } from '../assets';
+import { asset, assetsAvailable, setImageSource } from '../assets';
 import { ui } from '../hud/store';
 
 /**
@@ -18,8 +18,8 @@ export class BootScene extends Phaser.Scene {
     this.load.on(Phaser.Loader.Events.PROGRESS, (p: number) => ui.set({ loading: p }));
     for (let i = 0; i < ATLAS_PAGES; i++)
       this.load.atlas(`atlas-${i}`, asset(`assets/atlas/atlas-${i}.png`), asset(`assets/atlas/atlas-${i}.json`));
-    this.load.audio('menu', [asset('assets/music/menu.ogg'), asset('assets/music/menu.mp3')]);
-    this.load.audio('game', [asset('assets/music/game.ogg'), asset('assets/music/game.mp3')]);
+    for (const song of ['menu', 'game'])
+      this.load.audio(song, assetsAvailable([`assets/music/${song}.ogg`, `assets/music/${song}.mp3`]).map(asset));
   }
 
   async create(): Promise<void> {
