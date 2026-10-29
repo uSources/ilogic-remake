@@ -2,6 +2,8 @@
  * Modelo de datos de una partida. Todo es serializable a JSON (para guardar).
  * Coordenadas: x = columna (crece a la derecha), y = fila (crece hacia abajo).
  */
+import type { RulesConfig } from './data';
+import type { GameStats } from './stats';
 
 export interface Pos {
   x: number;
@@ -67,9 +69,9 @@ export interface GameState {
   /** Numero de ronda (empieza en 1). */
   day: number;
   /** Estadisticas para la pantalla final (opcional: las partidas antiguas no las tienen). */
-  stats?: import('./stats').GameStats;
+  stats?: GameStats;
   /** Reglas de esta partida (las antiguas no las tienen: se juegan con las clasicas). */
-  rules?: import('./data').RulesConfig;
+  rules?: RulesConfig;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
   setup?: GameSetup;
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */

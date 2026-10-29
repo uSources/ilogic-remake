@@ -191,7 +191,7 @@ export function NewGame({ s }: { s: UIState }) {
               aria-label={t('mapCode')}
               onFocus={() => a.setupHover('code')}
               onMouseEnter={() => a.setupHover('code')}
-              onInput={(e) => a.setupCode((e.currentTarget as HTMLInputElement).value)}
+              onInput={(e) => a.setupCode((e.currentTarget).value)}
             />
             <Btn sel={f === 'reroll'} cls="px-btn plain" onHover={() => a.setupHover('reroll')} onPick={() => a.setupPick('reroll')}>
               {t('otherMap')} <span class="key">R</span>

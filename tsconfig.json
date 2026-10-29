@@ -20,11 +20,15 @@
       "node"
     ],
     "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src",
     "tests",
-    "tools"
+    "tools",
+    "vite.config.ts"
   ]
 }

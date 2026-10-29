@@ -5,7 +5,7 @@
  */
 import { type RulesConfig, BUILDING_TYPES, MAP_H, MAP_MAX, MAP_MIN, MAP_W, setMapSize, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES } from './data';
 import { sanitizeStats } from './stats';
-import type { Building, GameState, Pos, Unit } from './types';
+import type { GameState, Pos } from './types';
 
 export function serialize(s: GameState): string {
   return JSON.stringify(s);
@@ -36,7 +36,7 @@ export function deserialize(json: string): GameState | null {
   if (!s.funds.every((f) => isInt(f, 0, 1e9))) return null;
   if (!Array.isArray(s.units) || !Array.isArray(s.buildings)) return null;
   const uids = new Set<number>();
-  for (const u of s.units as Unit[]) {
+  for (const u of s.units) {
     if (!isInt(u.uid, 1, Number.MAX_SAFE_INTEGER) || uids.has(u.uid)) return null;
     uids.add(u.uid);
     if (!isInt(u.type, 0, UNIT_TYPES - 1) || (u.team !== 0 && u.team !== 1)) return null;
@@ -55,7 +55,7 @@ export function deserialize(json: string): GameState | null {
     if (u.carrier !== null && !byUid.get(u.carrier)?.cargo.includes(u.uid)) return null;
     if (u.cargo.some((c) => c !== null && byUid.get(c)?.carrier !== u.uid)) return null;
   }
-  for (const b of s.buildings as Building[]) {
+  for (const b of s.buildings) {
     if (!isInt(b.type, 0, BUILDING_TYPES - 1) || !isInt(b.x, 0, MAP_W - 1) || !isInt(b.y, 0, MAP_H - 1)) return null;
     if (b.owner !== null && b.owner !== 0 && b.owner !== 1) return null;
     if (b.capture != null) {

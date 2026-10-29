@@ -8,7 +8,10 @@ import { Campaign, EndScreen, Home, NewGame, Options, Pause } from './Menus';
 import { ui, type MinimapVM, type MoveTipVM, type Anchor, type ForecastVM, type IdleVM, type MenuVM, type TileVM, type UIState, type UnitVM } from './store';
 
 function useUI(): UIState {
-  return useSyncExternalStore(ui.subscribe, ui.get);
+  return useSyncExternalStore(
+    (l) => ui.subscribe(l),
+    () => ui.get(),
+  );
 }
 
 /** Evitar que los botones se queden con el foco (Enter los pulsaria ademas de la accion del juego). */

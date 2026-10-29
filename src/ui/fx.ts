@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { settings } from '../settings';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
