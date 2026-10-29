@@ -17,7 +17,6 @@ CACHE = D + '/retrodiffusion/fit/'
 TILE, MAX_H = 32, 48
 os.makedirs(CACHE, exist_ok=True)
 sys.path.insert(0, D)
-from rd_buildings_colors import recolor  # noqa: E402
 
 
 def trim(im):
@@ -92,11 +91,4 @@ if __name__ == '__main__':
         cv.save(f)
         front(cv).save(FLAT + 'front_' + n + '.png')
         print(n, cv.size)
-    for f in sorted(glob.glob(FLAT + 'bld_b_*.png')):
-        n = os.path.basename(f)[6:-4]
-        cv = fit(Image.open(f).convert('RGBA'), 'bld_' + n)
-        cv.save(f)
-        recolor(cv, 'r').save(FLAT + f'bld_r_{n}.png')
-        if n != 'Base':
-            recolor(cv, 'n').save(FLAT + f'bld_n_{n}.png')
-        print('bld', n, cv.size)
+    # Los edificios ya se generan a su tamaño (rd_buildings32.py): aqui no se tocan.
