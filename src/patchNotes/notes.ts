@@ -58,7 +58,16 @@ export function parseChangelog(md: string): PatchNote[] {
   const out: PatchNote[] = [];
   let cur: { version: string; date: string; title: string; lines: string[] } | null = null;
   const flush = () => {
-    if (cur) out.push({ version: cur.version, title: cur.title, date: cur.date, body: splitLangs(cur.lines.join('\n')), url: null, download: null, prerelease: (parseVersion(cur.version)?.[3] ?? 1) === 0 });
+    if (cur)
+      out.push({
+        version: cur.version,
+        title: cur.title,
+        date: cur.date,
+        body: splitLangs(cur.lines.join('\n')),
+        url: null,
+        download: null,
+        prerelease: (parseVersion(cur.version)?.[3] ?? 1) === 0,
+      });
   };
   for (const line of md.split(/\r?\n/)) {
     const h = HEAD.exec(line);

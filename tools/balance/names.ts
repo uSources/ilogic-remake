@@ -1,2 +1,22 @@
-const ES = ['Soldado', 'Tanque', 'Artillería', 'Jeep', 'Tanque ligero', 'Barricada', 'Bazuca', 'Transporte', 'Escudero', 'Lanzamisiles', 'Caza ligero', 'Caza', 'Bombardero', 'Suministros', 'Antiaéreo', 'Helicóptero', 'Mortero', 'Motorizado', 'Tanque anfibio'];
+const ES = [
+  'Soldado',
+  'Tanque',
+  'Artillería',
+  'Jeep',
+  'Tanque ligero',
+  'Barricada',
+  'Bazuca',
+  'Transporte',
+  'Escudero',
+  'Lanzamisiles',
+  'Caza ligero',
+  'Caza',
+  'Bombardero',
+  'Suministros',
+  'Antiaéreo',
+  'Helicóptero',
+  'Mortero',
+  'Motorizado',
+  'Tanque anfibio',
+];
 export const unitLabelEs = (t: number): string => ES[t] ?? String(t);

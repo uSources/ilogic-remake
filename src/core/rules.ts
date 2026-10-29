@@ -259,7 +259,8 @@ function spendFuel(u: Unit, steps: number): void {
 export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, u), via?: Pos[]): MovePath | null {
   if (!u.active || !u.canMove || samePos(u, dest) || !canReach(range, dest.x, dest.y)) return null;
   // `via`: camino trazado por el jugador (si es valido); si no, el mas corto.
-  const path = via && samePos(via[via.length - 1]!, dest) && validPath(s, u, via, range) ? via.map((p) => ({ ...p })) : pathTo(range, u, dest);
+  const path =
+    via && samePos(via[via.length - 1]!, dest) && validPath(s, u, via, range) ? via.map((p) => ({ ...p })) : pathTo(range, u, dest);
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
   spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, path));
@@ -338,12 +339,7 @@ export function attackTargets(s: GameState, u: Unit, vis = visibility(s, u.team)
   if (!u.canFire || !UNIT.canfight[u.type] || !hasAmmo(u)) return [];
   return s.units.filter(
     (t) =>
-      t.team !== u.team &&
-      t.carrier === null &&
-      t.life > 0 &&
-      vis[t.x]![t.y] &&
-      POWER[u.type]![t.type]! > 0 &&
-      inAttackRange(u.type, u, t),
+      t.team !== u.team && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && POWER[u.type]![t.type]! > 0 && inAttackRange(u.type, u, t),
   );
 }
 
@@ -888,7 +884,7 @@ function objectiveOutcome(s: GameState, obj: Exclude<Objective, { kind: 'hq' }>)
       const v = s.units.find((u) => u.uid === obj.uid);
       if (!v) return 'lost';
       // Dentro de un transporte cuenta donde este el transporte.
-      const at = v.carrier !== null ? s.units.find((u) => u.uid === v.carrier) ?? v : v;
+      const at = v.carrier !== null ? (s.units.find((u) => u.uid === v.carrier) ?? v) : v;
       return at.x === obj.to.x && at.y === obj.to.y ? 'won' : late ? 'lost' : 'playing';
     }
   }
@@ -1067,8 +1063,7 @@ export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false)
   if (minR === 0) {
     const fresh = { ...u, active: true, canMove: true };
     const r = moveRange(s, fresh);
-    for (let x = 0; x < r.steps.length; x++)
-      for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
+    for (let x = 0; x < r.steps.length; x++) for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) origins.push({ x, y });
   }
   for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) out[p.x]![p.y] = true;
   return out;

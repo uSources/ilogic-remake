@@ -55,7 +55,17 @@ export interface GameRecord {
   events: number;
 }
 
-const emptyTally = (): UnitTally => ({ bought: 0, spent: 0, damageDealt: 0, valueDealt: 0, valueLost: 0, kills: 0, deaths: 0, attacks: 0, captures: 0 });
+const emptyTally = (): UnitTally => ({
+  bought: 0,
+  spent: 0,
+  damageDealt: 0,
+  valueDealt: 0,
+  valueLost: 0,
+  kills: 0,
+  deaths: 0,
+  attacks: 0,
+  captures: 0,
+});
 
 function sample(s: GameState): DaySample {
   const army: [number, number] = [0, 0];

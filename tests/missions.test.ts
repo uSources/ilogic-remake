@@ -23,7 +23,9 @@ describe('misiones', () => {
     const obj = s.mission!.objective;
     if (obj.kind === 'escort') {
       const vip = s.units.find((u) => u.uid === obj.uid)!;
-      expect(groundDistance(s, vip, UNIT.movtype[vip.type]!, grid(false))[obj.to.x]![obj.to.y], 'el convoy puede llegar').toBeGreaterThan(0);
+      expect(groundDistance(s, vip, UNIT.movtype[vip.type]!, grid(false))[obj.to.x]![obj.to.y], 'el convoy puede llegar').toBeGreaterThan(
+        0,
+      );
     }
     // Guardar y cargar conserva la mision.
     expect(deserialize(serialize(s))!.mission).toEqual(s.mission);

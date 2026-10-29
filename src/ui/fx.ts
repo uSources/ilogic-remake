@@ -57,9 +57,22 @@ export function burst(
 }
 
 /** Texto que sube a saltos y desaparece (daño, curacion, captura...). */
-export function floatText(scene: Phaser.Scene, view: MapView, at: { x: number; y: number }, text: string, color: string, delay = 0): Promise<void> {
+export function floatText(
+  scene: Phaser.Scene,
+  view: MapView,
+  at: { x: number; y: number },
+  text: string,
+  color: string,
+  delay = 0,
+): Promise<void> {
   const t = scene.add
-    .text(Math.round(at.x), Math.round(at.y), text, { fontFamily: 'Silkscreen, monospace', fontSize: '16px', color, stroke: '#0b1220', strokeThickness: 4 })
+    .text(Math.round(at.x), Math.round(at.y), text, {
+      fontFamily: 'Silkscreen, monospace',
+      fontSize: '16px',
+      color,
+      stroke: '#0b1220',
+      strokeThickness: 4,
+    })
     .setOrigin(0.5, 1)
     .setAlpha(0);
   view.addFx(t);
@@ -112,7 +125,11 @@ export function tileFlash(scene: Phaser.Scene, view: MapView, p: Pos, color: num
 }
 
 /** Pequeño empujon de una imagen hacia un punto y vuelta (ataque). */
-export async function lunge(scene: Phaser.Scene, obj: Phaser.GameObjects.Components.Transform, toward: { dx: number; dy: number }): Promise<void> {
+export async function lunge(
+  scene: Phaser.Scene,
+  obj: Phaser.GameObjects.Components.Transform,
+  toward: { dx: number; dy: number },
+): Promise<void> {
   const len = Math.hypot(toward.dx, toward.dy) || 1;
   const ox = obj.x,
     oy = obj.y;

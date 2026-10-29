@@ -196,13 +196,17 @@ export function buildReport(
   const ew: [number, number] = [wins[0] + adjudicated[0], wins[1] + adjudicated[1]];
   const decided = ew[0] + ew[1];
   if (mirror && decided >= 20 && Math.abs(ew[0] / decided - 0.5) > targets.sideGap)
-    flags.push(`Un bando gana mas (contando ventaja al final): bando 0 (el jugador) ${pct(ew[0] / decided)}, bando 1 (la IA) ${pct(ew[1] / decided)}.`);
+    flags.push(
+      `Un bando gana mas (contando ventaja al final): bando 0 (el jugador) ${pct(ew[0] / decided)}, bando 1 (la IA) ${pct(ew[1] / decided)}.`,
+    );
   const med = quant(days, 0.5);
   if (days.length && (med < targets.days[0] || med > targets.days[1]))
     flags.push(`Duracion mediana ${med} dias (objetivo ${targets.days[0]}-${targets.days[1]}).`);
-  if (n && reasons.timeout! / n > targets.timeouts) flags.push(`${pct(reasons.timeout! / n)} de partidas sin terminar en ${meta.maxDays} dias.`);
+  if (n && reasons.timeout! / n > targets.timeouts)
+    flags.push(`${pct(reasons.timeout! / n)} de partidas sin terminar en ${meta.maxDays} dias.`);
   const sb5 = snowball[0]!.leaderWins;
-  if (mirror && sb5 !== null && sb5 > targets.snowball5) flags.push(`Bola de nieve: quien va por delante el dia 5 gana el ${pct(sb5)} de las veces.`);
+  if (mirror && sb5 !== null && sb5 > targets.snowball5)
+    flags.push(`Bola de nieve: quien va por delante el dia 5 gana el ${pct(sb5)} de las veces.`);
 
   const effs = units.filter((u) => u.efficiency !== null).map((u) => u.efficiency!);
   const medEff = quant(effs, 0.5);
@@ -215,11 +219,18 @@ export function buildReport(
         const to = Math.max(500, roundTo(u.cost * k, 500));
         flags.push(`${u.label}: rinde ${ratio.toFixed(2)}x la mediana (destruye ${u.efficiency.toFixed(2)} por cada 1 que cuesta).`);
         if (to !== u.cost)
-          suggestions.push({ path: `UNIT.cost.${u.type}`, from: u.cost, to, why: ratio > 1 ? 'rinde demasiado para lo que cuesta' : 'rinde poco para lo que cuesta' });
+          suggestions.push({
+            path: `UNIT.cost.${u.type}`,
+            from: u.cost,
+            to,
+            why: ratio > 1 ? 'rinde demasiado para lo que cuesta' : 'rinde poco para lo que cuesta',
+          });
       }
     }
     if (UNIT.canfight[T] && totalBought > 200 && u.share < 0.005)
-      flags.push(`${u.label}: casi nadie la compra (${(u.share * 100).toFixed(1)} % de las compras). Ojo: la IA elige compras con sus propias reglas.`);
+      flags.push(
+        `${u.label}: casi nadie la compra (${(u.share * 100).toFixed(1)} % de las compras). Ojo: la IA elige compras con sus propias reglas.`,
+      );
   }
 
   let duelSummary: Report['duel'];
@@ -268,7 +279,10 @@ export function buildReport(
 export function reportMarkdown(r: Report): string {
   const L: string[] = [];
   L.push(`# Informe de equilibrio: ${r.name}`, '');
-  L.push(`${r.games} partidas (${r.policies}), semillas ${r.seeds[0]}-${r.seeds[1]}, maximo ${r.maxDays} dias. ${r.date.slice(0, 16).replace('T', ' ')}.`, '');
+  L.push(
+    `${r.games} partidas (${r.policies}), semillas ${r.seeds[0]}-${r.seeds[1]}, maximo ${r.maxDays} dias. ${r.date.slice(0, 16).replace('T', ' ')}.`,
+    '',
+  );
   if (r.changes.length) {
     L.push('**Cambios de esta variante:**', '');
     for (const c of r.changes) L.push(`- \`${c.path}\`: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
@@ -286,15 +300,24 @@ export function reportMarkdown(r: Report): string {
   L.push('| | |', '|---|---|');
   L.push(`| Victorias bando 0 / bando 1 | ${o.wins[0]} / ${o.wins[1]} (${pct(o.winRate[0])} / ${pct(o.winRate[1])}) |`);
   L.push(`| Sin terminar | ${o.unfinished}: con ventaja clara ${o.adjudicated[0]} / ${o.adjudicated[1]}, igualadas ${o.even} |`);
-  L.push(`| Por Base / por quedarse sin nada / por puntos al limite de dias | ${o.reasons.hq} / ${o.reasons.wipeout} / ${o.reasons.days ?? 0} |`);
+  L.push(
+    `| Por Base / por quedarse sin nada / por puntos al limite de dias | ${o.reasons.hq} / ${o.reasons.wipeout} / ${o.reasons.days ?? 0} |`,
+  );
   L.push(`| Dias (mediana, p10-p90, media) | ${o.days.median} (${o.days.p10}-${o.days.p90}), ${o.days.mean} |`);
   for (const sb of r.snowball)
-    L.push(`| Gana (o va ganando al final) quien iba por delante el dia ${sb.day} | ${sb.leaderWins === null ? '—' : pct(sb.leaderWins)} (${sb.games} partidas) |`);
+    L.push(
+      `| Gana (o va ganando al final) quien iba por delante el dia ${sb.day} | ${sb.leaderWins === null ? '—' : pct(sb.leaderWins)} (${sb.games} partidas) |`,
+    );
   if (r.economy.day10Buildings)
-    L.push(`| Dia 10: edificios / valor del ejercito | ${r.economy.day10Buildings.map((x) => x.toFixed(1)).join(' vs ')} / ${r.economy.day10Army!.map((x) => Math.round(x)).join(' vs ')} |`);
+    L.push(
+      `| Dia 10: edificios / valor del ejercito | ${r.economy.day10Buildings.map((x) => x.toFixed(1)).join(' vs ')} / ${r.economy.day10Army!.map((x) => Math.round(x)).join(' vs ')} |`,
+    );
   L.push('');
   L.push('## Unidades', '', 'Eficiencia = valor destruido / dinero gastado en esa unidad (los dos bandos juntos).', '');
-  L.push('| Unidad | Coste | Compradas | % compras | Eficiencia | Sobreviven | Bajas causadas | Capturas |', '|---|---:|---:|---:|---:|---:|---:|---:|');
+  L.push(
+    '| Unidad | Coste | Compradas | % compras | Eficiencia | Sobreviven | Bajas causadas | Capturas |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|',
+  );
   for (const u of [...r.units].sort((a, b) => b.bought - a.bought))
     L.push(
       `| ${u.label} | ${u.cost} | ${u.bought} | ${(u.share * 100).toFixed(1)} | ${u.efficiency === null ? '—' : u.efficiency.toFixed(2)} | ${u.survival === null ? '—' : pct(u.survival)} | ${u.kills} | ${u.captures} |`,
@@ -309,15 +332,25 @@ export function reportMarkdown(r: Report): string {
     L.push('Los cruces mas rentables para el atacante (valor quitado por cada 1000 de coste, en un ataque):', '');
     L.push('| Atacante | Defensor | Daño | Contraataque | Destruye | Valor/1000 |', '|---|---|---:|---:|---:|---:|');
     for (const c of r.duel.worst)
-      L.push(`| ${c.attacker} | ${c.defender} | ${c.damage.toFixed(1)} | ${c.counter.toFixed(1)} | ${pct(c.killChance)} | ${Math.round(c.valuePer1000)} |`);
+      L.push(
+        `| ${c.attacker} | ${c.defender} | ${c.damage.toFixed(1)} | ${c.counter.toFixed(1)} | ${pct(c.killChance)} | ${Math.round(c.valuePer1000)} |`,
+      );
     L.push('');
   }
   return L.join('\n');
 }
 
 export function duelMarkdown(cells: DuelCell[], terrain: string): string {
-  const L = [`# Duelos en ${terrain}`, '', 'Una unidad a 100 de vida ataca a otra a 100. Valor/1000 = valor quitado por cada 1000 que cuesta el atacante.', ''];
-  L.push('| Atacante | Defensor | Daño | Contraataque | Destruye | Valor/1000 | Gana quien ataca primero |', '|---|---|---:|---:|---:|---:|---:|');
+  const L = [
+    `# Duelos en ${terrain}`,
+    '',
+    'Una unidad a 100 de vida ataca a otra a 100. Valor/1000 = valor quitado por cada 1000 que cuesta el atacante.',
+    '',
+  ];
+  L.push(
+    '| Atacante | Defensor | Daño | Contraataque | Destruye | Valor/1000 | Gana quien ataca primero |',
+    '|---|---|---:|---:|---:|---:|---:|',
+  );
   for (const c of cells)
     L.push(
       `| ${c.attacker} | ${c.defender} | ${c.damage.toFixed(1)} | ${c.counter.toFixed(1)} | ${pct(c.killChance)} | ${Math.round(c.valuePer1000)} | ${c.firstStrikeWins === null ? '—' : pct(c.firstStrikeWins)} |`,
@@ -340,12 +373,17 @@ export function compareMarkdown(a: Report, b: Report): string {
   row('Sin terminar', a.outcome.unfinished / a.games, b.outcome.unfinished / b.games, p);
   row('Dias (mediana)', a.outcome.days.median, b.outcome.days.median, (v) => `${v}`);
   row('Bola de nieve dia 5', a.snowball[0]!.leaderWins, b.snowball[0]!.leaderWins, p);
-  if (a.duel || b.duel) row('Daño hecho / devuelto (iguales)', a.duel?.exchangeRatio ?? null, b.duel?.exchangeRatio ?? null, (v) => (v > 50 ? '∞' : v.toFixed(1)));
+  if (a.duel || b.duel)
+    row('Daño hecho / devuelto (iguales)', a.duel?.exchangeRatio ?? null, b.duel?.exchangeRatio ?? null, (v) =>
+      v > 50 ? '∞' : v.toFixed(1),
+    );
   L.push('', '## Unidades', '', '| Unidad | Coste | Compras (antes → despues) | Eficiencia (antes → despues) |', '|---|---|---|---|');
   for (const ua of a.units) {
     const ub = b.units.find((u) => u.type === ua.type)!;
     const e = (x: number | null) => (x === null ? '—' : x.toFixed(2));
-    L.push(`| ${ua.label} | ${ua.cost}${ub.cost !== ua.cost ? ` → ${ub.cost}` : ''} | ${ua.bought} → ${ub.bought} | ${e(ua.efficiency)} → ${e(ub.efficiency)} |`);
+    L.push(
+      `| ${ua.label} | ${ua.cost}${ub.cost !== ua.cost ? ` → ${ub.cost}` : ''} | ${ua.bought} → ${ub.bought} | ${e(ua.efficiency)} → ${e(ub.efficiency)} |`,
+    );
   }
   L.push('', `Avisos antes: ${a.flags.length}, despues: ${b.flags.length}.`, '');
   return L.join('\n');

@@ -11,7 +11,14 @@ describe('herramienta de equilibrio: variantes', () => {
     const tank = UNIT.cost[1]!;
     const changes = applyVariant({
       name: 't',
-      set: { 'RULES.counterattack': false, 'UNIT.cost.Tank': 9000, 'UNIT.mover.0': 4, 'POWER.Tank.Soldier': '+0.1', 'UNIT.cost.*': 'x2', 'RULES.fog': false },
+      set: {
+        'RULES.counterattack': false,
+        'UNIT.cost.Tank': 9000,
+        'UNIT.mover.0': 4,
+        'POWER.Tank.Soldier': '+0.1',
+        'UNIT.cost.*': 'x2',
+        'RULES.fog': false,
+      },
     });
     expect(UNIT.cost[1]).toBe(18000);
     expect(UNIT.mover[0]).toBe(4);

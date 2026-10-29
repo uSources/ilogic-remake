@@ -44,12 +44,7 @@ export function unitIconKey(type: number, available: boolean): string {
   return settings.terrainArt === 'new' ? `u/${k}` : k;
 }
 
-export function buildingKey(
-  textures: Phaser.Textures.TextureManager,
-  s: GameState,
-  b: Building,
-  visible: boolean,
-): string | null {
+export function buildingKey(textures: Phaser.Textures.TextureManager, s: GameState, b: Building, visible: boolean): string | null {
   const side = visible && b.owner === 0 ? 'b_' : visible && b.owner === 1 ? 'r_' : '';
   const terrain = BUILDING_TERRAIN_PREFIX[b.type]![s.map[b.x]![b.y]!]!;
   const name = BUILDING_NAMES[b.type]!;

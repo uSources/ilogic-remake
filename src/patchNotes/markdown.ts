@@ -33,7 +33,8 @@ export function safeHref(href: string): string | null {
 }
 
 /** Patrones de linea, por orden de prioridad. */
-const INLINE = /(`+)([^`]+?)\1|!\[([^\]]*)\]\([^)\s]*\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|__(.+?)__|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?!\w)|(?<![\w_])_(?!\s)(.+?)(?<!\s)_(?!\w)|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/;
+const INLINE =
+  /(`+)([^`]+?)\1|!\[([^\]]*)\]\([^)\s]*\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|__(.+?)__|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?!\w)|(?<![\w_])_(?!\s)(.+?)(?<!\s)_(?!\w)|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/;
 
 export function parseInline(src: string): Inline[] {
   const out: Inline[] = [];
@@ -73,7 +74,10 @@ const LIST = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
 
 export function parseMarkdown(md: string): Block[] {
   // Fuera comentarios HTML y etiquetas sueltas (GitHub las admite; aqui no se pintan).
-  const lines = md.replace(/<!--[\s\S]*?-->/g, '').replace(/<\/?[a-z][^>]*>/gi, '').split(/\r?\n/);
+  const lines = md
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?[a-z][^>]*>/gi, '')
+    .split(/\r?\n/);
   const out: Block[] = [];
   let para: string[] = [];
   const endPara = () => {

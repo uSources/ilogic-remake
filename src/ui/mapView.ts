@@ -283,7 +283,13 @@ export class MapView {
       for (let y = 0; y < MAP_H; y++) {
         objs.push(this.tileImage(terrainKey(s.map[x]![y]!), x, y));
         for (const k of shoreKeys(s, x, y)) {
-          if (this.scene.textures.exists(k)) objs.push(this.scene.add.image(x * TILE, y * TILE, k).setOrigin(0).setDisplaySize(TILE, TILE));
+          if (this.scene.textures.exists(k))
+            objs.push(
+              this.scene.add
+                .image(x * TILE, y * TILE, k)
+                .setOrigin(0)
+                .setDisplaySize(TILE, TILE),
+            );
         }
       }
     }
@@ -311,14 +317,24 @@ export class MapView {
         y = this.goal.y * TILE - d,
         w = TILE + 2 * d;
       g.fillStyle(0x0b1220, 0.8);
-      for (const [cx, cy] of [[x - 1, y - 1], [x + w - 9, y - 1], [x - 1, y + w - 9], [x + w - 9, y + w - 9]] as const) g.fillRect(cx, cy, 10, 10);
+      for (const [cx, cy] of [
+        [x - 1, y - 1],
+        [x + w - 9, y - 1],
+        [x - 1, y + w - 9],
+        [x + w - 9, y + w - 9],
+      ] as const)
+        g.fillRect(cx, cy, 10, 10);
       g.fillStyle(0xffd447, 1);
       // Esquinas en L del cursor.
       for (const [rx, ry, rw, rh] of [
-        [x, y, 8, 2], [x, y, 2, 8],
-        [x + w - 8, y, 8, 2], [x + w - 2, y, 2, 8],
-        [x, y + w - 2, 8, 2], [x, y + w - 8, 2, 8],
-        [x + w - 8, y + w - 2, 8, 2], [x + w - 2, y + w - 8, 2, 8],
+        [x, y, 8, 2],
+        [x, y, 2, 8],
+        [x + w - 8, y, 8, 2],
+        [x + w - 2, y, 2, 8],
+        [x, y + w - 2, 8, 2],
+        [x, y + w - 8, 2, 8],
+        [x + w - 8, y + w - 2, 8, 2],
+        [x + w - 2, y + w - 8, 2, 8],
       ] as const)
         g.fillRect(rx, ry, rw, rh);
     }
@@ -684,7 +700,6 @@ export class MapView {
       if (this.goal || this.vip) this.drawMarks(phase);
       for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
     }
-
   }
 
   /** Sprite (contenedor) de una unidad tal como esta dibujada ahora, si se ve. */

@@ -102,7 +102,8 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
     if (!bs || !textures.exists(key)) return false;
     const isLand = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && up(cell(x, y));
     const occupied = (x: number, y: number) => objectBase(s, x, y) !== null || s.buildings.some((b) => b.x === x && b.y === y);
-    const draw = (i: number, x: number, y: number) => blit(into, key, (i % 8) * TILE, Math.floor(i / 8) * TILE, TILE, TILE, x * TILE, y * TILE);
+    const draw = (i: number, x: number, y: number) =>
+      blit(into, key, (i % 8) * TILE, Math.floor(i / 8) * TILE, TILE, TILE, x * TILE, y * TILE);
     for (let x = 0; x < W; x++)
       for (let y = 0; y < H; y++) {
         // Fuera del mapa cuenta como lo de la casilla (sin orilla contra el borde).
@@ -154,7 +155,8 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   const trees = textures.exists('flat/tree_grass_0');
   treesLoaded = trees;
   if (!trees)
-    for (const o of overlaySets(s.theme)) if (s.map.some((col) => col.some((t) => o.cells.includes(t)))) pass(o.set, (t) => o.cells.includes(t), false);
+    for (const o of overlaySets(s.theme))
+      if (s.map.some((col) => col.some((t) => o.cells.includes(t)))) pass(o.set, (t) => o.cells.includes(t), false);
   for (let x = 0; x < W; x++)
     for (let y = 0; y < H; y++) {
       const d = DECOR[s.map[x]![y]!];

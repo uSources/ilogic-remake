@@ -44,10 +44,14 @@ export function watchResize(game: Phaser.Game): void {
   // Cambio de densidad (mover la ventana a otra pantalla, zoom del navegador).
   const watchDpr = () => {
     const mq = window.matchMedia(`(resolution: ${dpr()}dppx)`);
-    mq.addEventListener('change', () => {
-      onResize();
-      watchDpr();
-    }, { once: true });
+    mq.addEventListener(
+      'change',
+      () => {
+        onResize();
+        watchDpr();
+      },
+      { once: true },
+    );
   };
   watchDpr();
 }

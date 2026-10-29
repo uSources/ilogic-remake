@@ -3,7 +3,11 @@ import { navGrid } from '../src/menu/nav';
 import { applyPreset, DEFAULT_OPTIONS, PRESETS } from '../src/setup';
 
 describe('menu', () => {
-  const rows = [['continue', 'quick', 'campaign'], ['continue', 'custom', 'campaign'], ['help', 'options', 'credits', 'web']];
+  const rows = [
+    ['continue', 'quick', 'campaign'],
+    ['continue', 'custom', 'campaign'],
+    ['help', 'options', 'credits', 'web'],
+  ];
   it('se mueve por la rejilla de tarjetas', () => {
     expect(navGrid(rows, 'continue', 1, 0)).toBe('quick');
     expect(navGrid(rows, 'quick', 0, 1)).toBe('custom');

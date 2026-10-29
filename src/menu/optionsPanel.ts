@@ -29,8 +29,21 @@ const ROWS: Row[] = [
   { key: 'uiScale', group: 'optGroupScreen', label: 'optUiScale', values: UI_SCALES, show: (v) => `${Math.round((v as number) * 100)} %` },
   { key: 'reduceMotion', group: 'optGroupScreen', label: 'optReduceMotion', values: BOOL, show: onOff },
   { key: 'alwaysThreat', group: 'optGroupScreen', label: 'optAlwaysThreat', values: BOOL, show: onOff },
-  { key: 'terrainArt', group: 'optGroupScreen', label: 'optTerrainArt', values: ['new', 'classic'], show: (v) => t(v === 'new' ? 'artNew' : 'artClassic') },
-  { key: 'menuBg', group: 'optGroupScreen', label: 'optMenuBg', values: ['live', 'classic'], show: (v) => t(v === 'live' ? 'bgLive' : 'bgClassic'), menuOnly: true },
+  {
+    key: 'terrainArt',
+    group: 'optGroupScreen',
+    label: 'optTerrainArt',
+    values: ['new', 'classic'],
+    show: (v) => t(v === 'new' ? 'artNew' : 'artClassic'),
+  },
+  {
+    key: 'menuBg',
+    group: 'optGroupScreen',
+    label: 'optMenuBg',
+    values: ['live', 'classic'],
+    show: (v) => t(v === 'live' ? 'bgLive' : 'bgClassic'),
+    menuOnly: true,
+  },
   { key: 'lang', group: 'optGroupLang', label: 'language', values: ['es', 'en'], show: (v) => (v === 'es' ? 'Español' : 'English') },
 ] as Row[];
 
