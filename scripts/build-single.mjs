@@ -10,9 +10,9 @@ const assets = {};
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) walk(full);
-    else if (/\.(png|ogg|mp3)$/.test(name)) {
+    else if (/\.(png|json|ogg|mp3)$/.test(name)) {
       const rel = relative(dist, full).replace(/\\/g, '/');
-      const mime = name.endsWith('.png') ? 'image/png' : name.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg';
+      const mime = name.endsWith('.png') ? 'image/png' : name.endsWith('.json') ? 'application/json' : name.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg';
       assets[rel] = `data:${mime};base64,${readFileSync(full).toString('base64')}`;
     }
   }

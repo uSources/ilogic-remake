@@ -339,9 +339,9 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  override update(time: number, delta: number): void {
+  override update(time: number): void {
     if (!this.bgView || !this.bgGame) return;
-    this.bgView.tick(time, delta);
+    this.bgView.tick(time);
   }
 
   // -------------------------------------------------------------------------

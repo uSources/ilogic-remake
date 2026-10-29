@@ -3,7 +3,7 @@
     con el K-Centroid de Retro Diffusion, que respeta el pixel art;
   - como mucho 1,5 casillas de alto (48 px): pueden asomar por arriba, nunca por los lados;
   - apoyados en el borde de abajo de su casilla.
-Se ejecuta despues de rd_terrain.py y rd_buildings.py. Las reducciones se guardan en
+Se ejecuta despues de rd_terrain.py (npm run assets). Las reducciones se guardan en
 tools/art/retrodiffusion/fit/ para no volver a pedirlas (y no volver a pagarlas).
 La reduccion necesita la clave de Retro Diffusion en RD_TOKEN_FILE (fuera del repositorio).
 """
@@ -47,6 +47,8 @@ def rd_downscale(im, w, h, name):
     path = CACHE + f'{name}_{w}x{h}.png'
     if os.path.exists(path):
         return Image.open(path).convert('RGBA')
+    if not os.environ.get('RD_TOKEN_FILE'):
+        sys.exit(f'Falta la reduccion guardada {path} y no hay RD_TOKEN_FILE para pedirla (cuesta dinero).')
     tok = open(os.environ['RD_TOKEN_FILE']).read().strip()
     import io
     buf = io.BytesIO()

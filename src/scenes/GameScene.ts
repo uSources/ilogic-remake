@@ -64,11 +64,12 @@ import { fmtNum, showBanner, showReport, showToast, ui, type ReportLineVM, type 
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { buildingLabel, saveSettings, settings, t, type Speed, terrainLabel, unitLabel, type TextKey } from '../settings';
+import { buildingLabel, settings, t, terrainLabel, unitLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { buildingKey, terrainKey, unitIconKey, unitKey } from '../ui/sprites';
+import { terrainPalette } from '../ui/terrainColors';
 
 /**
  * Fases de la partida (equivalen a las del original, docs/SPEC-INTERFAZ.md §2):
@@ -425,36 +426,11 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  private terrainColors: number[] | null = null;
-
-  /** Color medio de cada imagen de terreno (para el minimapa). */
-  private terrainColor(type: number): number {
-    if (!this.terrainColors) {
-      this.terrainColors = [];
-      const cv = document.createElement('canvas');
-      cv.width = cv.height = 8;
-      const ctx = cv.getContext('2d', { willReadFrequently: true })!;
-      for (let i = 0; i < TERRAIN.protection.length; i++) {
-        let color = 0x3a7a3a;
-        const key = terrainKey(i);
-        if (this.textures.exists(key)) {
-          ctx.clearRect(0, 0, 8, 8);
-          ctx.drawImage(this.textures.get(key).getSourceImage() as CanvasImageSource, 0, 0, 8, 8);
-          const d = ctx.getImageData(0, 0, 8, 8).data;
-          let r = 0, g = 0, b = 0, n = 0;
-          for (let k = 0; k < d.length; k += 4) if (d[k + 3]! > 0) { r += d[k]!; g += d[k + 1]!; b += d[k + 2]!; n++; }
-          if (n) color = (Math.round(r / n) << 16) | (Math.round(g / n) << 8) | Math.round(b / n);
-        }
-        this.terrainColors.push(color);
-      }
-    }
-    return this.terrainColors[type] ?? 0x3a7a3a;
-  }
-
   private publishMinimap(): void {
     const s = this.s;
     const terrain: number[] = [];
-    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) terrain.push(this.terrainColor(s.map[x]![y]!));
+    const pal = terrainPalette(this.textures);
+    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) terrain.push(pal[s.map[x]![y]!] ?? 0x3a7a3a);
     ui.set({
       minimap: {
         w: MAP_W,
@@ -1079,7 +1055,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
-    this.view.tick(time, delta);
+    this.view.tick(time);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;
     if (this.carry && p.isDown) {
