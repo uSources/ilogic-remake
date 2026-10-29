@@ -105,6 +105,7 @@ src/
                y reutilizar, por ejemplo, en un servidor para partidas online.
     data.ts      Tablas de datos: unidades, edificios, terrenos, dano... (para equilibrar el juego)
     rules.ts     Reglas: movimiento, combate, captura, union, transporte, compra, fin de ronda
+    orders.ts    Ayudas para las ordenes del jugador (desde donde atacar, combustible, grupo, camino)
     ai.ts        Inteligencia artificial (un generador que va devolviendo cada accion)
     mapgen.ts    Generador de mapas aleatorios
     save.ts      Guardar / cargar en JSON
@@ -112,6 +113,11 @@ src/
     types.ts     Modelo de datos (GameState, Unit, Building, GameEvent)
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
   ui/          Dibujo del mapa (mapView: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
+    hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa)
+    palette.ts   Colores de Phaser (los mismos que hud.css)
+  menu/        Pantallas del menu y fondo vivo (liveBackground: partida IA contra IA)
+  patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
+  atlas.ts     Atlas de imagenes del juego (una textura 'atlas' de varias paginas)
   hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (componentes), hud.css
                (estilo "retro pixel") y store.ts (estado que publican las escenas)
   ui/fx.ts     Efectos pixel: explosiones, textos flotantes, destellos
@@ -142,6 +148,16 @@ Se ejecuta solo antes de `npm run build`; si algo falla, no se publica. `npm run
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
 En `dist` solo van el atlas, el cursor y el icono; en la version de un fichero la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
+
+## Calidad del codigo
+
+- `npm run check`: tipos, ESLint (con tipos), formato (Prettier) y tests. GitHub lo pasa antes de
+  publicar la web; `npm run build` incluye tipos y lint.
+- `npm run format` pone el formato; `git config blame.ignoreRevsFile .git-blame-ignore-revs` para que
+  `git blame` se salte el commit que formateo todo.
+- Guias para trabajar en el codigo (tambien las usa Claude): `CLAUDE.md`, `.claude/skills/ilogic-code`
+  y `.claude/skills/phaser4`, que lleva a las skills oficiales de Phaser 4 incluidas en
+  `node_modules/phaser/skills/` (de la version instalada).
 
 ## Notas de parche
 

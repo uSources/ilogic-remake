@@ -8,3 +8,6 @@ tools/art/sin_usar_2013
 src/assetList.ts
 src/atlasPages.ts
 *.md
+src/ui/blobSets.ts
+src/ui/wangSets.ts
+src/ui/sheets.ts
