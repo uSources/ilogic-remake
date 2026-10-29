@@ -19,7 +19,10 @@ const REF = `${root}tests/visual/ref/`;
 const OUT = `${root}tests/visual/out/`;
 const GAME = `file://${root}dist-single/ilogic.html`;
 const update = process.argv.includes('--update');
-const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7).split(',');
+const only = process.argv
+  .find((a) => a.startsWith('--only='))
+  ?.slice(7)
+  .split(',');
 /** Parte de pixeles distintos que se acepta (antialias de textos, GPU distinta). */
 const TOLERANCE = 0.004;
 
