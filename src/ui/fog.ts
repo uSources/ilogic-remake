@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { hasImage, imageFrame } from '../atlas';
 import { TILE } from '../layout';
 import { FOG_SHEET, SHEET_COLS } from './sheets';
 import { neighbourKey } from './terrainArt';
@@ -18,8 +19,8 @@ export function composeFog(vis: boolean[][], textures: Phaser.Textures.TextureMa
   const ctx = cv.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, cv.width, cv.height);
-  if (!textures.exists('blob/fog')) return cv;
-  const f = textures.getFrame('blob/fog');
+  if (!hasImage(textures, 'blob/fog')) return cv;
+  const f = imageFrame(textures, 'blob/fog');
   const img = f.source.image as CanvasImageSource;
   // Fuera del mapa cuenta como la casilla mas cercana.
   const hid = (x: number, y: number) => !vis[Math.min(W - 1, Math.max(0, x))]![Math.min(H - 1, Math.max(0, y))]!;

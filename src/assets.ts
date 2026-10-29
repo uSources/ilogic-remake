@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { ATLAS, hasImage } from './atlas';
 
 /**
  * En la version de un solo fichero (scripts/build-single.mjs) los recursos van incrustados
@@ -29,10 +30,10 @@ export function setImageSource(t: Phaser.Textures.TextureManager): void {
  * cargado la primera vez que se pide y se guarda.
  */
 export function imgUrl(key: string | null | undefined): string | undefined {
-  if (!key || !textures?.exists(key)) return undefined;
+  if (!key || !textures || !hasImage(textures, key)) return undefined;
   let u = urls.get(key);
   if (!u) {
-    u = textures.getBase64(key);
+    u = textures.getBase64(ATLAS, key);
     urls.set(key, u);
   }
   return u;

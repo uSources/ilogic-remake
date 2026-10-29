@@ -76,6 +76,7 @@ import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } fro
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
 import {
   fmtNum,
+  resetActions,
   showBanner,
   showReport,
   showToast,
@@ -88,6 +89,7 @@ import {
   type TileVM,
   type UIState,
   type MoveTipVM,
+  type Anchor,
 } from '../hud/store';
 import { TILE } from '../layout';
 import { playMusic } from '../music';
@@ -219,21 +221,73 @@ export class GameScene extends Phaser.Scene {
     super('Game');
   }
 
-  init(data: { mode?: 'new' | 'load' | 'mission'; rules?: Partial<RulesConfig>; setup?: GameSetup; mission?: string }): void {
-    this.tutorialStep = 0;
-    this.tutorialEvents = [];
-    this.lastEnemy = null;
+  /** Partida en curso: cambia en cada init() y al cerrar la escena; las esperas asincronas la comprueban. */
+  private match = 0;
+
+  /**
+   * Phaser reutiliza el objeto escena al volver a entrar: los valores iniciales de los campos solo se
+   * ponen una vez. Todo lo que es de una partida se reinicia aqui (lo llama init()).
+   */
+  private resetMatch(): void {
+    this.match++;
     this.phase = 'map';
+    this.vis = [];
+    this.hidden = new Set();
     this.sel = null;
     this.selBuilding = null;
+    this.menuSel = 0;
+    this.menuItems = [];
+    this.actions = [];
+    this.buy = [];
+    this.range = null;
+    this.mergeSet = new Map();
+    this.loadSet = new Map();
+    this.attackSet = new Map();
+    this.unloadSet = new Set();
+    this.passenger = null;
     this.undo = null;
+    this.trail = [];
+    this.block = null;
+    this.carry = null;
+    this.pick = null;
+    this.dangerMap = null;
+    this.attackZone = null;
+    this.undoStack = [];
+    this.group = new Set();
+    this.box = null;
+    this.lastCommit = null;
+    this.fromSave = false;
+    this.savedThisGame = false;
+    this.quitArmedAt = -1e9;
+    this.endArmedAt = -1e9;
+    this.surrenderArmedAt = -1e9;
+    this.corruptSave = false;
+    this.inputLockUntil = 0;
+    this.deleteArmed = false;
+    this.fastForward = false;
     this.ended = false;
     this.enemyPlaying = false;
-    this.fastForward = false;
-    this.savedThisGame = false;
-    this.fromSave = false;
+    this.inspectUid = null;
+    this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
+    this.pointerInside = false;
     this.drag = null;
-    this.hidden.clear();
+    this.tutorialStep = 0;
+    this.tutorialEvents = [];
+    this.tutorialOwned = 0;
+    this.touches = new Map();
+    this.pinch = null;
+    this.longPress = null;
+    this.lastAt = null;
+    this.anchorAt = {};
+    this.endButtons = [];
+    this.endSel = 0;
+    this.endFx = null;
+    this.lastEnemy = null;
+    this.replaying = false;
+  }
+
+  init(data: { mode?: 'new' | 'load' | 'mission'; rules?: Partial<RulesConfig>; setup?: GameSetup; mission?: string }): void {
+    this.resetMatch();
     let state: GameState | null = null;
     if (data.mode === 'load') {
       const raw = readSave();
@@ -284,8 +338,12 @@ export class GameScene extends Phaser.Scene {
     };
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      // Lo que quede pendiente de esta partida (esperas, turno enemigo) ya no debe seguir.
+      this.match++;
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+      this.view.destroy();
       setEndFilter(null);
+      resetActions();
       ui.set({ menu: null, forecast: null, tile: null, mission: null });
     });
     playMusic(this, 'game');
@@ -525,10 +583,7 @@ export class GameScene extends Phaser.Scene {
           : '',
       mission: this.missionPanel(),
     });
-    const cam = this.cameras.main;
-    this.lastScroll = { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom };
-    const wv = cam.worldView;
-    ui.set({ minimapView: { x: wv.x / TILE, y: wv.y / TILE, w: wv.width / TILE, h: wv.height / TILE } });
+    this.publishCameraView();
   }
 
   // -------------------------------------------------------------------------
@@ -594,7 +649,7 @@ export class GameScene extends Phaser.Scene {
       lifeBefore: target.life,
       lifeAfter: f.lifeAfter,
       killChance: f.killChance,
-      anchor: this.view.tileRectCss(target),
+      anchor: this.anchor('forecast', target),
       counter: f.counter
         ? {
             low: f.counter.low,
@@ -614,7 +669,7 @@ export class GameScene extends Phaser.Scene {
     if (!u || !r) return null;
     const it = this.intentAt(c);
     if (it.kind === 'attack' || it.kind === 'stay') return null; // de eso se encarga la prevision de combate
-    const anchor = this.view.tileRectCss(c);
+    const anchor = this.anchor('moveTip', c);
     if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
     const dest = it.kind === 'move' ? it.to : null;
     const used = dest ? pathCost(this.s, UNIT.movtype[u.type]!, this.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
@@ -787,7 +842,7 @@ export class GameScene extends Phaser.Scene {
         break;
     }
     this.menuItems = items;
-    return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.view.tileRectCss(at) };
+    return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.anchor('menu', at) };
   }
 
   // -------------------------------------------------------------------------
@@ -1161,7 +1216,37 @@ export class GameScene extends Phaser.Scene {
     // Si la camara se ha movido (arrastre, borde, paneo animado), recolocar los bocadillos.
     const cam = this.cameras.main;
     const l = this.lastScroll;
-    if (cam.scrollX !== l.x || cam.scrollY !== l.y || cam.zoom !== l.zoom) this.refreshHud();
+    if (cam.scrollX !== l.x || cam.scrollY !== l.y || cam.zoom !== l.zoom) this.refreshCamera();
+  }
+
+  /** Casilla junto a la que va cada bocadillo (para recolocarlos al mover la camara sin rehacerlos). */
+  private anchorAt: Partial<Record<'menu' | 'forecast' | 'moveTip', Pos>> = {};
+
+  private anchor(kind: 'menu' | 'forecast' | 'moveTip', p: Pos): Anchor {
+    this.anchorAt[kind] = { x: p.x, y: p.y };
+    return this.view.tileRectCss(p);
+  }
+
+  /**
+   * La camara se ha movido: solo se recolocan los bocadillos que se ven y el recuadro del minimapa.
+   * (Rehacer todo el HUD en cada fotograma de un desplazamiento es caro y no cambia nada mas.)
+   */
+  private refreshCamera(): void {
+    const st = ui.get();
+    const at = this.anchorAt;
+    const patch: Partial<UIState> = {};
+    if (st.menu && at.menu) patch.menu = { ...st.menu, anchor: this.view.tileRectCss(at.menu) };
+    if (st.forecast && at.forecast) patch.forecast = { ...st.forecast, anchor: this.view.tileRectCss(at.forecast) };
+    if (st.moveTip && at.moveTip) patch.moveTip = { ...st.moveTip, anchor: this.view.tileRectCss(at.moveTip) };
+    ui.set(patch);
+    this.publishCameraView();
+  }
+
+  private publishCameraView(): void {
+    const cam = this.cameras.main;
+    this.lastScroll = { x: cam.scrollX, y: cam.scrollY, zoom: cam.zoom };
+    const wv = cam.worldView;
+    ui.set({ minimapView: { x: wv.x / TILE, y: wv.y / TILE, w: wv.width / TILE, h: wv.height / TILE } });
   }
 
   // -------------------------------------------------------------------------
@@ -1529,7 +1614,9 @@ export class GameScene extends Phaser.Scene {
   private async runOrders(): Promise<void> {
     const movers = this.s.units.filter((u) => u.team === 0 && u.order && u.active && u.canMove && u.carrier === null);
     const arrived: Unit[] = [];
+    const m = this.match;
     for (const u of movers) {
+      if (m !== this.match) return;
       const goal = u.order!;
       if (samePos(u, goal)) {
         delete u.order;
@@ -1963,10 +2050,13 @@ export class GameScene extends Phaser.Scene {
 
     // Camara a la jugada que lo ha decidido.
     const focus = this.endFocus(won, reason);
+    const match = this.match;
     await this.wait(500);
+    if (match !== this.match) return;
     const c = { x: focus.x * TILE + TILE / 2, y: focus.y * TILE + TILE / 2 };
     this.cameras.main.pan(c.x, c.y, reducedMotion() ? 0 : 1200, 'Sine.easeInOut', true);
     await this.wait(reducedMotion() ? 100 : 1250);
+    if (match !== this.match) return;
     if (won) {
       void tileFlash(this, this.view, focus, 0xffd447);
       const confetti = () => {
@@ -1993,6 +2083,7 @@ export class GameScene extends Phaser.Scene {
       if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 650, loop: true, callback: smoke });
     }
     await this.wait(reducedMotion() ? 200 : 1300);
+    if (match !== this.match) return;
 
     // Botones del final.
     const next = m ? MISSIONS[MISSIONS.indexOf(m) + 1] : undefined;
@@ -2099,10 +2190,12 @@ export class GameScene extends Phaser.Scene {
     this.fastForward = false;
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('replayBanner'), 'red');
+    const m = this.match;
     await this.wait(900);
     for (const ev of aiTurn(this.s, seededRng(last.seed))) {
+      if (m !== this.match) return;
       await this.playEvents([ev]);
-      if (this.ended) return;
+      if (m !== this.match || this.ended) return;
     }
     this.s = deserialize(after)!;
     this.replaying = false;
@@ -2147,6 +2240,7 @@ export class GameScene extends Phaser.Scene {
 
   private async enemyTurn(): Promise<void> {
     if (this.phase === 'busy' || this.ended) return;
+    const m = this.match;
     this.clearUndo();
     this.abandonSelection();
     const cam = this.cameras.main;
@@ -2157,7 +2251,7 @@ export class GameScene extends Phaser.Scene {
       const b = buildingAt(this.s, u.x, u.y)!;
       const r = capture(this.s, u);
       if (r) await this.playEvents([{ kind: 'capture', uid: u.uid, at: { x: b.x, y: b.y }, owner: b.owner, left: r.left, total: r.total }]);
-      if (this.checkEnd()) return;
+      if (m !== this.match || this.checkEnd()) return;
     }
     this.enemyPlaying = true;
     // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
@@ -2165,12 +2259,13 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('enemyTurn'), 'red');
     await this.wait(this.fastForward ? 300 : 900);
+    if (m !== this.match) return;
     // Semilla propia para este turno: asi se puede repetir exactamente (menu > Repetir turno enemigo).
     const before = serialize(this.s);
     const seed = randomSeed();
     for (const ev of aiTurn(this.s, seededRng(seed))) {
       await this.playEvents([ev]);
-      if (this.checkEnd()) return;
+      if (m !== this.match || this.checkEnd()) return;
     }
     this.lastEnemy = { before, seed };
     const report = endRound(this.s);

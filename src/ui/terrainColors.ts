@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { TERRAIN } from '../core/data';
 import { terrainKey } from './sprites';
-import { drawFrame } from '../atlas';
+import { drawFrame, hasImage } from '../atlas';
 
 let cache: number[] | null = null;
 
@@ -15,7 +15,7 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): number
   for (let i = 0; i < TERRAIN.protection.length; i++) {
     let color = 0x3a7a3a;
     const key = terrainKey(i);
-    if (textures.exists(key)) {
+    if (hasImage(textures, key)) {
       ctx.clearRect(0, 0, 8, 8);
       drawFrame(ctx, textures, key, 0, 0, 8, 8);
       const d = ctx.getImageData(0, 0, 8, 8).data;
@@ -35,6 +35,6 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): number
     out.push(color);
   }
   // Solo se guarda si ya estaban cargadas las imagenes.
-  if (textures.exists(terrainKey(0))) cache = out;
+  if (hasImage(textures, terrainKey(0))) cache = out;
   return out;
 }

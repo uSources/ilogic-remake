@@ -10,6 +10,7 @@ import {
   UNIT_TERRAIN_PREFIX,
 } from '../core/data';
 import type { Building, GameState, Unit } from '../core/types';
+import { hasImage } from '../atlas';
 import { settings } from '../settings';
 
 /**
@@ -22,7 +23,7 @@ const warned = new Set<string>();
 
 /** Devuelve la primera clave que exista; avisa una vez por consola si no hay ninguna. */
 function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[]): string | null {
-  for (const k of keys) if (textures.exists(k)) return k;
+  for (const k of keys) if (hasImage(textures, k)) return k;
   if (!warned.has(keys[0]!)) {
     warned.add(keys[0]!);
     console.warn('Falta la imagen', keys[0]);
@@ -35,7 +36,7 @@ export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, 
   const terrain = UNIT_TERRAIN_PREFIX[u.type]![s.map[u.x]![u.y]!]!;
   const name = UNIT_NAMES[u.type]!;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
-  if (settings.terrainArt === 'new' && textures.exists(`u/${side}${name}`)) return `u/${side}${name}`;
+  if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
   return firstExisting(textures, [side + terrain + name, side + name, (u.team === 1 ? 'r_' : 'b_') + name]);
 }
 
@@ -51,7 +52,7 @@ export function buildingKey(textures: Phaser.Textures.TextureManager, s: GameSta
   // Dibujo nuevo (estilo plano).
   if (settings.terrainArt === 'new') {
     const k = `flat/bld_${side ? side[0] : 'n'}_${name}`;
-    if (textures.exists(k)) return k;
+    if (hasImage(textures, k)) return k;
   }
   // La Base no tiene imagen neutral: solo pasa al final de la partida.
   return firstExisting(textures, [side + terrain + name, side + name, 'b_' + name]);

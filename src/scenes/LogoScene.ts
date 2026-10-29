@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ATLAS } from '../atlas';
 import { ui } from '../hud/store';
 
 /** Logo de Fingerprint Games durante 2 segundos (fase 0 del original), con fundido. */
@@ -9,7 +10,7 @@ export class LogoScene extends Phaser.Scene {
 
   create(): void {
     ui.set({ screen: 'logo' });
-    const logo = this.add.image(0, 0, 'logoFP');
+    const logo = this.add.image(0, 0, ATLAS, 'logoFP');
     const layout = () => {
       const { width, height } = this.scale;
       logo.setPosition(width / 2, height / 2);

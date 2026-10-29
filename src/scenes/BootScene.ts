@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aliasAtlasFrames } from '../atlas';
+import { createAtlas, loadAtlas } from '../atlas';
 import { ATLAS_PAGES } from '../atlasPages';
 import { asset, assetsAvailable, setImageSource } from '../assets';
 import { ui } from '../hud/store';
@@ -16,26 +16,21 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     ui.set({ screen: 'loading', loading: 0 });
     this.load.on(Phaser.Loader.Events.PROGRESS, (p: number) => ui.set({ loading: p }));
-    for (let i = 0; i < ATLAS_PAGES; i++)
-      this.load.atlas(`atlas-${i}`, asset(`assets/atlas/atlas-${i}.png`), asset(`assets/atlas/atlas-${i}.json`));
+    loadAtlas(this.load, ATLAS_PAGES, asset);
     for (const song of ['menu', 'game'])
       this.load.audio(song, assetsAvailable([`assets/music/${song}.ogg`, `assets/music/${song}.mp3`]).map(asset));
   }
 
-  async create(): Promise<void> {
-    for (let i = 0; i < ATLAS_PAGES; i++) aliasAtlasFrames(this.textures, `atlas-${i}`);
+  create(): void {
+    createAtlas(this, ATLAS_PAGES);
     setImageSource(this.textures);
-    // Esperar a las fuentes de la interfaz (van incluidas; el limite es por si acaso).
-    try {
-      await Promise.race([
-        Promise.all([document.fonts.load("16px 'Pixelify Sans'"), document.fonts.load("16px 'Silkscreen'")]),
-        new Promise((r) => setTimeout(r, 2500)),
-      ]);
-    } catch {
-      // sin fuentes: se usan las de reserva
-    }
     // Cursor del raton propio: el soldadito blanco, con el punto activo en (17,0).
     document.body.style.cursor = `url(${asset('assets/img/mouse.png')}) 17 0, auto`;
-    this.scene.start('Logo');
+    // Phaser no espera a create(): la escena siguiente se lanza cuando esten las fuentes de la
+    // interfaz (van incluidas; el limite es por si acaso; sin ellas se usan las de reserva).
+    const fonts = Promise.all([document.fonts.load("16px 'Pixelify Sans'"), document.fonts.load("16px 'Silkscreen'")]).catch(
+      () => undefined,
+    );
+    void Promise.race([fonts, new Promise((r) => setTimeout(r, 2500))]).then(() => this.scene.start('Logo'));
   }
 }
