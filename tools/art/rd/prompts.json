@@ -1,0 +1,29 @@
+{
+  "_doc": "Prompts que funcionaron con Retro Diffusion (RD Pro, rd_pro__default). Descripcion + cola comun. Ver la skill arte-retro-diffusion.",
+  "references": {
+    "map": "tools/art/retrodiffusion/pro_map.png",
+    "units": ["tools/art/retrodiffusion/units32/Soldier.png", "tools/art/retrodiffusion/units32/Tank.png", "tools/art/retrodiffusion/units32/Bomber.png"]
+  },
+  "unit_tail": ", bright magenta is the team color, crisp dark outline, rich soft shading and highlights lit from the top left, small shadow under it, same polished chunky toy-like chibi style as the reference units, the whole unit fits inside the image with one pixel of empty margin on every side, on a plain white background",
+  "building_tail": ", the team color parts are bright magenta, the rest uses neutral stone, concrete, metal and wood colors, crisp dark outline, rich soft shading and highlights lit from the top left, small shadow at the base, cute chunky toy-like style like the reference map and units, seen from a top-down 3/4 angle, the whole building fits inside the image with one pixel of empty margin, on a plain white background",
+  "units": {
+    "Tank": "cute chunky chibi HEAVY tank seen from the side facing right, much bigger and bulkier than the small light tank in the reference, thick armored hull with rivets, wide turret with TWO parallel gun barrels side by side pointing right, wide heavy tracks with many road wheels, hull and turret bright magenta, dark grey tracks and barrels",
+    "LTank": "cute chunky chibi light tank seen from the side facing right, small rounded hull, small turret with a short cannon, tracks with road wheels, hull and turret bright magenta, dark grey tracks",
+    "Artillery": "cute chunky toy-like chibi self-propelled artillery vehicle seen from the side facing right, same family as the light tank in the reference, rounded boxy body on tracks, a long thick barrel on top raised diagonally toward the upper right, small open crew seat with a soldier in a magenta helmet, body bright magenta, dark grey tracks and barrel",
+    "Blocker": "cute chunky chibi armored blocker vehicle seen from the side facing right: a big solid armored CUBE box with thick riveted armor plates and small vision slits, no turret and no gun, sitting on short wide tracks, the armored cube is bright magenta with darker magenta plate seams, dark grey tracks, same tracks and shading style as the tanks in the reference",
+    "MSoldier": "cute chunky chibi mortar soldier seen from the side facing right, the same character as the soldier in the reference with the bright magenta round helmet covered by a little camouflage net and goggles, crouching behind a small pile of sandbags, both hands dropping a shell into a short mortar tube on a bipod with a base plate, two spare shells standing next to him, helmet and uniform bright magenta, dark grey mortar, beige sandbags",
+    "Supplier": "cute chunky chibi military supply truck seen from the side facing right, rounded cab at the front, open cargo bed with wooden crates and a fuel barrel, truck body bright magenta, chunky dark wheels",
+    "Fighter": "cute chunky chibi jet fighter plane flying seen from the side facing right, same style as the bomber in the reference: plump rounded fuselage, short swept wings, closed bubble cockpit of tinted light blue glass with a white shine and NO visible pilot, small tail fin, jet exhaust nozzle at the back, fuselage bright magenta, grey metal details",
+    "LFighter": "cute chunky chibi small propeller fighter plane flying seen from the side facing right, same style as the bomber in the reference: plump rounded fuselage, round nose with a propeller, short straight wings, OPEN cockpit with a tiny pilot wearing a bright magenta round helmet and goggles, small tail fin, fuselage bright magenta, grey metal details",
+    "THelicopter": "cute chunky chibi transport helicopter flying seen from the side facing right, same style as the bomber in the reference: plump rounded body, closed cockpit of tinted light blue glass with a white shine and NO visible pilot, big main rotor on top, small tail rotor, landing skids, body bright magenta, grey metal details",
+    "Bomber": "cute chunky chibi BIG heavy bomber plane flying seen from the side facing right, fat rounded fuselage, tinted light blue glass nose with a white shine and no visible pilot, two propeller engines on the wing, bombs under the wing, tail fin, fuselage bright magenta, grey metal details"
+  },
+  "buildings": {
+    "Airport": "charming chibi military airport: a slim control tower with a radar dish and glass top, a small hangar with a curved roof, a short runway strip with white stripes and a windsock, magenta roofs and trims"
+  },
+  "misc": {
+    "snow": "seamless top-down ground texture of soft fresh white snow for a cheerful tactics game map tile, gentle light blue shadows, a few small snow drifts and tiny sparkles, subtle texture, no objects, same clean polished style as the reference map",
+    "flowers": "three separate small patches of colorful wildflowers for a top-down tactics game map, each patch centered in its own third of the image, small red, yellow, white and purple flowers with green leaves and stems, tiny shadow, crisp dark outline, soft shading lit from the top left, same polished style as the reference map, on a plain white background",
+    "cactus": "three separate small desert cacti for a top-down tactics game map, each centered in its own third of the image: a tall saguaro cactus with arms, a round barrel cactus with a pink flower on top, a prickly pear cactus with flat pads, green with light highlights, small shadow, crisp dark outline, soft shading lit from the top left, same polished style as the reference map, on a plain white background"
+  }
+}
