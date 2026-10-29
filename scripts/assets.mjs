@@ -7,7 +7,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const py = process.env.PYTHON ?? 'python3';
+// En Windows el ejecutable suele llamarse python (python3 no existe o abre la Tienda).
+const py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
 
 /** [descripcion, programa, argumentos] */
 const ART = [
