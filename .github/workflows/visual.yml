@@ -1,13 +1,30 @@
-# Capturas de referencia (npm run shots) en cada PR y push a main. Informativo: la GPU y las fuentes
-# del servidor pueden diferir un poco de las de quien hizo las referencias, asi que no bloquea.
-# El informe (capturas, referencias y diferencias) queda en los artefactos del run: "capturas".
+# Capturas de referencia (npm run shots) en las PR que pueden cambiar lo que se ve. Informativo: la
+# GPU y las fuentes del servidor pueden diferir un poco de las de quien hizo las referencias, asi que
+# no bloquea. El informe (capturas, referencias y diferencias) queda en los artefactos del run:
+# "capturas". No corre en main (ya se paso en la PR) ni en PR de documentacion, CI o herramientas.
 name: Capturas
 
 on:
   pull_request:
-  push:
-    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'CHANGELOG.md' # la pantalla de Novedades
+      - 'tests/visual/**'
+      - 'scripts/build-single.mjs'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un push nuevo a la PR cancela las capturas del anterior.
+concurrency:
+  group: capturas-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   shots:
@@ -19,15 +36,21 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: tools/art/requirements.txt
-      - run: python -m pip install -r tools/art/requirements.txt
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run shots
+      # El navegador se guarda en cache por version de Playwright; solo faltan las librerias del sistema.
+      - id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps --only-shell chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      # Graficos ya compilados en el repo: sin Python ni npm run assets.
+      - run: npm run build:ci && node tests/visual/shots.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
