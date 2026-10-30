@@ -32,6 +32,12 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 
 `dist-single/ilogic.html` se puede abrir con doble clic, sin servidor, y pasarselo a quien sea.
 
+La web publicada es una PWA: desde el navegador se puede instalar como app (movil u ordenador) y se
+juega sin conexion. `public/manifest.webmanifest` describe la app y `public/sw.js` (service worker)
+guarda el juego al instalarse; `vite build` le pone la version y la lista de ficheros, asi que cada
+publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en `npm run dev` ni en
+`dist-single/ilogic.html`.
+
 ## Como se juega
 
 | Accion | Teclado | Raton |
@@ -167,6 +173,8 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
    los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
    `ui/dinero`...) y la letra de titulos y botones (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`),
    las dos dibujadas como rejillas de pixeles en texto: se retocan editando el `.txt`;
+   los iconos de la app (pestaña, PWA y pantalla de inicio) a partir del Soldado azul nuevo
+   (`tools/art/build_app_icons.py` → `public/icons`);
 3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`: 2 paginas colocadas con MaxRects y
    comprimidas sin perdida con oxipng);
 4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen ni lamina, que cada
@@ -174,7 +182,7 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
 
 Se ejecuta solo antes de `npm run build`; si algo falla, no se publica. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
-En `dist` solo van el atlas, los punteros del raton (`raton*.png`) y el icono; en la version de un fichero la musica va solo en mp3.
+En `dist` solo van el atlas, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Calidad del codigo

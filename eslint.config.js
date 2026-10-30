@@ -93,5 +93,12 @@ export default tseslint.config(
     files: ['tests/visual/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: { window: 'readonly', localStorage: 'readonly', document: 'readonly' } },
   },
+  {
+    // El service worker de la PWA se ejecuta en el navegador, fuera de la pagina.
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: { self: 'readonly', caches: 'readonly', fetch: 'readonly', Promise: 'readonly', URL: 'readonly' },
+    },
+  },
   prettier,
 );
