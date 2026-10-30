@@ -196,6 +196,34 @@ async function scenarios(page, cdp, name) {
   await drag(page, cdp, a, { x: a.x - 100, y: a.y - 100 });
   const cam1 = await cam();
   check(cam1 !== cam0 && (await phase(page)) === 'map', `arrastrar desde una casilla vacia mueve el mapa (${cam0} → ${cam1})`);
+
+  // Pellizcar: dos dedos que se separan hacen zoom, y no eligen ni mueven nada.
+  await start(page);
+  const level = () => page.evaluate(() => window.ilogic.scene.getScene('Game').view.level);
+  const z0 = await level();
+  const c = await center(page, 10, 10);
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [
+      { x: c.x - 30, y: c.y },
+      { x: c.x + 30, y: c.y },
+    ],
+  });
+  for (let i = 1; i <= 6; i++) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        { x: c.x - 30 - i * 10, y: c.y },
+        { x: c.x + 30 + i * 10, y: c.y },
+      ],
+    });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(150);
+  await page.evaluate(() => window.ilogicDebug.idle());
+  const z1 = await level();
+  check(z1 > z0 && (await phase(page)) === 'map', `pellizcar con dos dedos hace zoom sin elegir nada (${z0} → ${z1})`);
 }
 
 const browser = await chromium.launch();

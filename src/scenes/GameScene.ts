@@ -88,6 +88,7 @@ import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion,
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
+import { LONG_PRESS_MS, PICK_HOLD_MS, Pinch, movedFar } from '../controls/pointer';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import {
@@ -155,7 +156,6 @@ const key = (p: Pos) => `${p.x},${p.y}`;
 const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile'];
 const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
-const DRAG_THRESHOLD = 6;
 /** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
 const INPUT_LOCK_MS = 350;
 /** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
@@ -313,8 +313,7 @@ export class GameScene extends Phaser.Scene {
     this.tutorialStep = 0;
     this.tutorialEvents = [];
     this.tutorialOwned = 0;
-    this.touches = new Map();
-    this.pinch = null;
+    this.pinch = new Pinch();
     this.longPress = null;
     this.lastAt = null;
     this.anchorAt = {};
@@ -953,18 +952,11 @@ export class GameScene extends Phaser.Scene {
     this.pointerInside = !p.wasTouch;
     if (this.ended) return;
     // Pellizcar: cada vez que la distancia entre los dedos cambia bastante, un paso de zoom.
-    if (this.touches.has(p.id)) this.touches.set(p.id, { x: p.x, y: p.y });
-    if (this.pinch) {
-      const pts = [...this.touches.values()];
-      if (pts.length >= 2) {
-        const [a, b] = pts as [{ x: number; y: number }, { x: number; y: number }];
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
-        const ratio = d / this.pinch.d;
-        if (ratio > 1.3 || ratio < 0.77) {
-          this.view.zoomStep(ratio > 1 ? 1 : -1, (a.x + b.x) / 2, (a.y + b.y) / 2);
-          this.pinch.d = d;
-          this.refreshHud();
-        }
+    const zoom = this.pinch.move(p.id, { x: p.x, y: p.y });
+    if (this.pinch.active) {
+      if (zoom) {
+        this.view.zoomStep(zoom.dir, zoom.x, zoom.y);
+        this.refreshHud();
       }
       return;
     }
@@ -976,7 +968,7 @@ export class GameScene extends Phaser.Scene {
       return this.view.setBox(this.box);
     }
     if (this.pick) {
-      const moved = Math.hypot(p.x - this.pick.x, p.y - this.pick.y) > DRAG_THRESHOLD * (window.devicePixelRatio || 1);
+      const moved = movedFar(p.x - this.pick.x, p.y - this.pick.y, window.devicePixelRatio || 1);
       // [CAMBIO] Tambien con el dedo: arrastrar desde la unidad la lleva, sin mantener pulsado antes.
       if (moved) {
         this.beginCarry(false);
@@ -987,7 +979,7 @@ export class GameScene extends Phaser.Scene {
     if (this.drag && p.isDown) {
       const dx = p.x - this.drag.x,
         dy = p.y - this.drag.y;
-      if (this.drag.moved || Math.hypot(dx, dy) > DRAG_THRESHOLD * (window.devicePixelRatio || 1)) {
+      if (this.drag.moved || movedFar(dx, dy, window.devicePixelRatio || 1)) {
         this.drag.moved = true;
         this.cancelLongPress();
         this.view.scrollBy(-dx, -dy);
@@ -1033,18 +1025,16 @@ export class GameScene extends Phaser.Scene {
       pu.canMove &&
       pu.carrier === null &&
       (this.phase === 'map' || (this.phase === 'move' && this.sel?.uid === pu.uid));
-    if (pickable && this.touches.size < 1) {
+    if (pickable && this.pinch.count < 1) {
       this.pick = { uid: pu.uid, x: p.x, y: p.y, touch: p.wasTouch, timer: null };
       // Con el dedo hay que mantener pulsado un momento para levantarla.
-      if (p.wasTouch) this.pick.timer = this.time.delayedCall(250, () => this.beginCarry(true));
+      if (p.wasTouch) this.pick.timer = this.time.delayedCall(PICK_HOLD_MS, () => this.beginCarry(true));
     }
     if (p.wasTouch) {
       this.touchHint();
-      this.touches.set(p.id, { x: p.x, y: p.y });
-      if (this.touches.size >= 2) {
+      this.pinch.add(p.id, { x: p.x, y: p.y });
+      if (this.pinch.count >= 2) {
         // Segundo dedo: es un pellizco, no un toque ni un arrastre.
-        const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }];
-        this.pinch = { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
         this.drag = null;
         this.cancelLongPress();
         this.dropPick();
@@ -1052,13 +1042,13 @@ export class GameScene extends Phaser.Scene {
       } else if (!this.pick) {
         this.cancelLongPress();
         const at = { x: p.x, y: p.y };
-        this.longPress = this.time.delayedCall(480, () => this.onLongPress(at));
+        this.longPress = this.time.delayedCall(LONG_PRESS_MS, () => this.onLongPress(at));
       }
     }
   }
 
-  private touches = new Map<number, { x: number; y: number }>();
-  private pinch: { d: number } | null = null;
+  /** Dedos y pellizco (ver src/controls/pointer.ts). */
+  private pinch = new Pinch();
   private longPress: Phaser.Time.TimerEvent | null = null;
 
   private cancelLongPress(): void {
@@ -1094,7 +1084,7 @@ export class GameScene extends Phaser.Scene {
   private onPointerUp(p: Phaser.Input.Pointer): void {
     this.cancelLongPress();
     if (this.carry) {
-      this.touches.delete(p.id);
+      this.pinch.remove(p.id);
       this.drag = null;
       return this.dropCarry(this.view.tileAtScreen(p.x, p.y), !!(p.event as MouseEvent | undefined)?.shiftKey);
     }
@@ -1113,9 +1103,8 @@ export class GameScene extends Phaser.Scene {
       if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
       return this.refresh();
     }
-    if (this.touches.delete(p.id) && this.pinch) {
+    if (this.pinch.remove(p.id)) {
       // Fin del pellizco: ignorar los dedos que quedan hasta que se levanten todos.
-      if (this.touches.size === 0) this.pinch = null;
       this.drag = null;
       return;
     }

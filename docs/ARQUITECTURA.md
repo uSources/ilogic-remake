@@ -110,6 +110,7 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
 | Cambiar el dibujo del mapa | `src/ui/mapView.ts`, `src/ui/terrainArt.ts` |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ordenes del juego y un adaptador por mando; `GameScene.command` las cumple) |
+| Cambiar los gestos del raton o del dedo (arrastrar, pellizcar, pulsacion larga) | `src/controls/pointer.ts` (umbrales, tiempos y dedos; lo que el gesto hace en el juego sigue en `GameScene`) |
 | Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |
 | Textos | `src/settings.ts` (`TEXTS.es` / `TEXTS.en`) |
 | Misiones | `src/core/missions.ts` (+ skill `nueva-mision`) |
