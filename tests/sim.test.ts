@@ -61,7 +61,7 @@ describe('partidas simuladas', () => {
         }
       }
     }
-  }, 120_000);
+  }, 300_000); // sin combustible quedan mas unidades vivas: mas lento que antes
 
   it('la IA gana a un jugador que no hace nada', () => {
     let won = 0;
@@ -80,5 +80,5 @@ describe('partidas simuladas', () => {
     }
     console.log(`la IA gana ${won}/20, dias: ${days.join(',')}`);
     expect(won).toBeGreaterThanOrEqual(16);
-  }, 120_000);
+  }, 300_000); // sin combustible quedan mas unidades vivas: mas lento que antes
 });
