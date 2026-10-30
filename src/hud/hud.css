@@ -428,6 +428,188 @@ body {
   font-size: 15px;
 }
 
+/* Panel de combate (abajo en el centro mientras se anima un ataque) */
+.combat {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  animation: combat-in 0.18s steps(3) both;
+}
+@keyframes combat-in {
+  from {
+    transform: translate(-50%, 24px);
+    opacity: 0;
+  }
+}
+.combat-vs {
+  font-family: var(--display);
+  font-size: 20px;
+  color: var(--gold);
+  text-shadow:
+    2px 0 var(--ink),
+    -2px 0 var(--ink),
+    0 2px var(--ink),
+    0 -2px var(--ink);
+}
+.combat-side {
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.combat-side.blue {
+  box-shadow:
+    inset 0 -4px 0 var(--blue-lo),
+    0 0 0 3px var(--ink);
+}
+.combat-side.red {
+  box-shadow:
+    inset 0 -4px 0 var(--red-lo),
+    0 0 0 3px var(--ink);
+}
+.combat-side.right .cs-head {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.combat-side .cs-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cs-portrait {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  background: var(--slot);
+  border: 3px solid var(--ink);
+}
+.cs-portrait img,
+.cs-portrait > .px-icon {
+  width: 100%;
+  height: 100%;
+}
+.combat-side.ko .cs-portrait img {
+  filter: grayscale(1) brightness(0.6);
+}
+.cs-ko {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  padding: 1px 4px;
+  font-family: var(--display);
+  font-size: 10px;
+  color: #fff;
+  background: var(--red-btn);
+  border: 2px solid var(--ink);
+  white-space: nowrap;
+}
+.cs-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.cs-name {
+  font-family: var(--display);
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-role {
+  font-family: var(--display);
+  font-size: 11px;
+  color: var(--muted);
+}
+.stage-start .cs-role.attacker,
+.stage-hit .cs-role.attacker,
+.stage-counter .cs-role.defender {
+  color: var(--gold);
+}
+.cs-hit {
+  font-size: 13px;
+}
+.cs-life {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.combat-side.right .cs-life {
+  flex-direction: row-reverse;
+}
+.cs-bar {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  background: var(--slot);
+  outline: 2px solid var(--ink);
+}
+.combat-side.right .cs-bar span {
+  left: auto;
+  right: 0;
+}
+.cs-bar span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+/* Lo perdido se queda en blanco un momento y luego se vacia a saltos. */
+.cs-bar .trail {
+  background: #fff;
+  transition: width 0.45s steps(5) 0.3s;
+}
+.cs-bar .fill {
+  background: var(--blue);
+}
+.combat-side.red .cs-bar .fill {
+  background: var(--red);
+}
+.cs-v {
+  width: 32px;
+  text-align: right;
+  font-family: var(--display);
+  font-size: 14px;
+}
+.combat-side.right .cs-v {
+  text-align: left;
+}
+.cs-hurt {
+  min-width: 40px;
+  font-family: var(--display);
+  font-size: 15px;
+  color: var(--red);
+  animation: cs-pop 0.3s steps(3) both;
+}
+.combat-side.right .cs-hurt {
+  text-align: right;
+}
+.cs-hurt.miss {
+  color: #cfe8ff;
+}
+@keyframes cs-pop {
+  from {
+    transform: translateY(-6px) scale(1.5);
+    opacity: 0;
+  }
+}
+.reduce-motion .combat,
+.reduce-motion .cs-hurt {
+  animation: none;
+}
+.reduce-motion .cs-bar .trail {
+  transition: none;
+}
+
 /* Fichas de abajo */
 .cards {
   position: absolute;
@@ -715,6 +897,28 @@ body {
   white-space: nowrap;
 }
 @media (max-width: 720px) {
+  .combat {
+    bottom: 10px;
+    gap: 4px;
+  }
+  .combat-vs {
+    font-size: 14px;
+  }
+  .combat-side {
+    width: calc(50vw - 30px);
+    max-width: 200px;
+    padding: 8px;
+  }
+  .cs-portrait {
+    width: 36px;
+    height: 36px;
+  }
+  .cs-name {
+    font-size: 12px;
+  }
+  .cs-hit {
+    display: none;
+  }
   .top {
     left: 10px;
     right: 10px;
