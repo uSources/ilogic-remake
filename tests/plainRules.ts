@@ -13,4 +13,5 @@ export const PLAIN_RULES: RulesConfig = {
   terrainCost: false,
   commandPoints: null,
   upkeep: 0,
+  weather: false,
 };

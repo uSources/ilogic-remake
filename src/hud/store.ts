@@ -103,9 +103,22 @@ export interface MainMenuItemVM {
   primary?: boolean;
 }
 
+/** Clima de la partida en la barra de arriba. */
+export interface WeatherVM {
+  /** id de weather.json (para el color del indicador). */
+  id: string;
+  name: string;
+  /** Efectos, en corto ("Vehículos −1 mov. · Visión −1"). */
+  effects: string;
+  /** Pronostico: el clima que entra mañana, o null si sigue igual. */
+  next: string | null;
+}
+
 export interface ReportLineVM {
   icon: string;
   text: string;
+  /** id de clima: se pinta su icono en vez de `icon`. */
+  weather?: string;
   tone: 'gold' | 'green' | 'red' | 'plain';
 }
 
@@ -197,6 +210,8 @@ export interface UIState {
   busy: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;
+  /** Clima (null si la partida no tiene). */
+  weather: WeatherVM | null;
   moveTip: MoveTipVM | null;
   tile: TileVM | null;
   cursorScreen: { x: number; y: number };
@@ -323,6 +338,7 @@ const initial: UIState = {
   threat: false,
   toast: null,
   banner: null,
+  weather: null,
   hint: '',
   end: null,
   dayLimit: null,

@@ -308,6 +308,20 @@ const TEXTS = {
     reportHealed1: 'unidad reparada',
     loading: 'Cargando',
     nextUnit: 'Tab: siguiente unidad',
+    optWeather: 'Clima',
+    noteWeather:
+      'Cada pocos días cambia el tiempo: la lluvia, la nieve y las tormentas quitan movimiento, visión o puntería a los dos bandos.',
+    weather: 'Clima',
+    weatherTomorrow: 'Mañana',
+    weatherStarts: 'Cambia el tiempo',
+    weatherNoEffect: 'Sin efectos',
+    weatherVision: 'visión',
+    weatherAim: 'puntería',
+    weatherMoveShort: 'mov.',
+    mtFoot: 'Infantería',
+    mtVehicle: 'Vehículos',
+    mtAir: 'Aviones',
+    mtAmphibious: 'Anfibios',
   },
   en: {
     enemyTurn: 'ENEMY TURN',
@@ -521,6 +535,19 @@ const TEXTS = {
     reportHealed1: 'unit repaired',
     loading: 'Loading',
     nextUnit: 'Tab: next unit',
+    optWeather: 'Weather',
+    noteWeather: 'Every few days the weather changes: rain, snow and storms cost both sides movement, vision or aim.',
+    weather: 'Weather',
+    weatherTomorrow: 'Tomorrow',
+    weatherStarts: 'The weather changes',
+    weatherNoEffect: 'No effects',
+    weatherVision: 'vision',
+    weatherAim: 'aim',
+    weatherMoveShort: 'move',
+    mtFoot: 'Infantry',
+    mtVehicle: 'Vehicles',
+    mtAir: 'Aircraft',
+    mtAmphibious: 'Amphibious',
   },
 } as const;
 
@@ -536,4 +563,5 @@ export function t(key: TextKey): string {
 /** Nombres de unidades, edificios y terrenos: los de src/core/content/*.json. */
 export const unitLabel = (type: number): string => CONTENT.units[type]?.name[settings.lang] ?? '?';
 export const buildingLabel = (type: number): string => CONTENT.buildings[type]?.name[settings.lang] ?? '?';
+export const weatherLabel = (kind: number): string => CONTENT.weather[kind]?.name[settings.lang] ?? '?';
 export const terrainLabel = (type: number): string => TERRAIN_CONTENT[type]?.name[settings.lang] ?? '?';

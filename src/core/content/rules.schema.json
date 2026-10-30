@@ -28,7 +28,8 @@
         "passAllies",
         "ambush",
         "forestHides",
-        "terrainCost"
+        "terrainCost",
+        "weather"
       ],
       "properties": {
         "initialFunds": {
@@ -111,6 +112,10 @@
           "type": "boolean",
           "minimum": 0,
           "description": "Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1)."
+        },
+        "weather": {
+          "type": "boolean",
+          "description": "Clima que cambia cada pocos dias (weather.json): vision, movimiento y punteria."
         }
       }
     },

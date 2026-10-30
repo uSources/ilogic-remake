@@ -1,6 +1,6 @@
 /**
  * Contenido del juego en ficheros de configuracion (src/core/content/*.json): unidades, edificios,
- * terreno, reglas por defecto y pesos de la IA. Ver docs/CONTENIDO.md.
+ * terreno, clima, reglas por defecto y pesos de la IA. Ver docs/CONTENIDO.md.
  *
  * Cada parte tiene su modulo con `validate*` y `build*` (units.ts, buildings.ts...); aqui solo se
  * leen los ficheros, se validan todos juntos (para dar todos los errores a la vez) y se construyen las
@@ -14,6 +14,7 @@ import buildingsFile from './buildings.json';
 import rulesFile from './rules.json';
 import terrainFile from './terrain.json';
 import unitsFile from './units.json';
+import weatherFile from './weather.json';
 import { buildAiWeights, validateAi } from './ai';
 import { buildBuildingTables, validateBuildings } from './buildings';
 import { Checker, uniqueIds } from './check';
@@ -21,10 +22,12 @@ import { validateRules, type RulesFile } from './rules';
 import { buildTerrainTables, validateTerrain } from './terrain';
 import { TERRAIN_NAMES, type BuildingDef, type ContentContext, type TerrainDef, type UnitDef } from './types';
 import { buildUnitTables, validateUnits } from './units';
+import { buildWeatherTables, validateWeather, type WeatherDef } from './weather';
 
 export * from './types';
 export type { RulesConfig } from './rules';
 export type { AiWeights } from './ai';
+export type { WeatherDef } from './weather';
 
 /** El contenido tal y como esta en los ficheros. */
 export interface Content {
@@ -33,6 +36,7 @@ export interface Content {
   terrain: TerrainDef[];
   rules: RulesFile;
   ai: Record<string, unknown>;
+  weather: WeatherDef[];
 }
 
 /** Lee los ficheros JSON del juego (sin validar). */
@@ -43,6 +47,7 @@ export function readContentFiles(): Content {
     terrain: (terrainFile as unknown as { terrain: TerrainDef[] }).terrain,
     rules: rulesFile,
     ai: aiFile,
+    weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
   };
 }
 
@@ -61,6 +66,7 @@ export function validateContent(c: Content): string[] {
   validateTerrain(c.terrain, TERRAIN_NAMES, check);
   validateRules(c.rules, check);
   validateAi(c.ai, check);
+  validateWeather(c.weather, check);
   return check.errors;
 }
 
@@ -82,6 +88,7 @@ export function buildTables(c: Content) {
     DEFAULT_RULES: { ...c.rules.defaults },
     MAX_FUNDS: c.rules.maxFunds,
     AI: buildAiWeights(c.ai),
+    ...buildWeatherTables(c.weather),
   };
 }
 

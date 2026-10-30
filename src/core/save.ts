@@ -15,6 +15,7 @@ import {
   TERRAIN_TYPES,
   UNIT,
   UNIT_TYPES,
+  WEATHER_TYPES,
 } from './data';
 import { sanitizeStats } from './stats';
 import type { GameState, Pos } from './types';
@@ -103,6 +104,12 @@ export function deserialize(json: string): GameState | null {
     const ok = !!g && isInt(g.seed, 0, 2 ** 32) && g.size === s.map.length && (g.theme === null || isInt(g.theme, 0, 4));
     if (!ok) delete s.setup;
   }
+  if (s.weather !== undefined) {
+    const w = s.weather;
+    const ok = !!w && isInt(w.kind, 0, WEATHER_TYPES - 1) && isInt(w.next, 0, WEATHER_TYPES - 1) && isInt(w.left, 0, 1000);
+    // Un clima roto no estropea la partida: se vuelve a empezar despejado.
+    if (!ok) delete s.weather;
+  }
   if (s.rules !== undefined) {
     const r = s.rules as Partial<RulesConfig>;
     const ok =
@@ -122,6 +129,7 @@ export function deserialize(json: string): GameState | null {
       (r.ambush === undefined || typeof r.ambush === 'boolean') &&
       (r.forestHides === undefined || typeof r.forestHides === 'boolean') &&
       (r.terrainCost === undefined || typeof r.terrainCost === 'boolean') &&
+      (r.weather === undefined || typeof r.weather === 'boolean') &&
       (r.commandPoints === undefined || r.commandPoints === null || isInt(r.commandPoints, 1, 10000)) &&
       (r.upkeep === undefined || (typeof r.upkeep === 'number' && r.upkeep >= 0 && r.upkeep <= 1));
     if (ok) {
@@ -130,6 +138,7 @@ export function deserialize(json: string): GameState | null {
       r.ambush ??= false;
       r.forestHides ??= false;
       r.terrainCost ??= false;
+      r.weather ??= false;
       r.commandPoints ??= null;
       r.upkeep ??= 0;
     }

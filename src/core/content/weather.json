@@ -1,0 +1,55 @@
+{
+  "$schema": "./weather.schema.json",
+  "weather": [
+    {
+      "id": "Clear",
+      "name": { "es": "Despejado", "en": "Clear" },
+      "vision": 0,
+      "move": {},
+      "hitChance": 1,
+      "days": [2, 4],
+      "chance": { "Plains": 6, "Desert": 7, "Forest": 5, "Swamp": 4, "Snowy": 4 },
+      "comment": "El primero es el tiempo neutro con el que empieza la partida."
+    },
+    {
+      "id": "Rain",
+      "name": { "es": "Lluvia", "en": "Rain" },
+      "vision": -1,
+      "move": { "vehicle": -1 },
+      "hitChance": 0.9,
+      "days": [1, 3],
+      "chance": { "Plains": 3, "Desert": 0, "Forest": 4, "Swamp": 5, "Snowy": 1 },
+      "comment": "El barro frena a los vehiculos con ruedas y orugas; la infanteria y los anfibios pasan igual."
+    },
+    {
+      "id": "Snow",
+      "name": { "es": "Nevada", "en": "Snowfall" },
+      "vision": -1,
+      "move": { "foot": -1, "vehicle": -1, "amphibious": -1 },
+      "hitChance": 1,
+      "days": [1, 3],
+      "chance": { "Plains": 1, "Desert": 0, "Forest": 1, "Swamp": 0, "Snowy": 5 },
+      "comment": "Frena a todo lo que va por tierra; los aviones vuelan por encima."
+    },
+    {
+      "id": "Storm",
+      "name": { "es": "Tormenta", "en": "Storm" },
+      "vision": -2,
+      "move": { "air": -2 },
+      "hitChance": 0.85,
+      "days": [1, 2],
+      "chance": { "Plains": 1, "Desert": 0, "Forest": 1, "Swamp": 2, "Snowy": 0 },
+      "comment": "El viento castiga a los aviones y se apunta peor: buen momento para atacar por tierra."
+    },
+    {
+      "id": "Sandstorm",
+      "name": { "es": "Tormenta de arena", "en": "Sandstorm" },
+      "vision": -2,
+      "move": { "foot": -1, "air": -1 },
+      "hitChance": 0.9,
+      "days": [1, 2],
+      "chance": { "Plains": 0, "Desert": 3, "Forest": 0, "Swamp": 0, "Snowy": 0 },
+      "comment": "Solo en el desierto. Ciega y frena a la infanteria y a los aviones."
+    }
+  ]
+}

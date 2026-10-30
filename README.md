@@ -102,6 +102,7 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada.
 - Opciones dentro de la partida (menú > Opciones): esperar sola al soltar, saltar a la siguiente
   unidad, velocidad de las animaciones propias y del enemigo, música y autoguardado.
+- **Clima** (reglas nuevas): cada pocos días cambia el tiempo para los dos bandos. La lluvia frena a los vehículos, la nevada a todo lo que va por tierra, la tormenta a los aviones y la tormenta de arena (desierto) a infantería y aviones; el mal tiempo quita visión y puntería. Arriba, junto al día, el clima de hoy, sus efectos (pasando por encima) y el de mañana si cambia. Se quita en Nueva partida → Personalizada; la campaña no lo usa. Números en `src/core/content/weather.json`.
 - **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
   cada una con +5 % de acierto y de defensa.
 - Al empezar cada turno sale un resumen de la ronda (ingresos y unidades reparadas).

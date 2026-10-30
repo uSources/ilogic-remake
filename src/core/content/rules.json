@@ -16,7 +16,8 @@
     "passAllies": true,
     "ambush": true,
     "forestHides": true,
-    "terrainCost": true
+    "terrainCost": true,
+    "weather": true
   },
   "maxFunds": 999999
 }

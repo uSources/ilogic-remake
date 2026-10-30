@@ -72,8 +72,18 @@ export interface GameState {
   rules?: RulesConfig;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
   setup?: GameSetup;
+  /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */
+  weather?: WeatherState;
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
+}
+
+/** Clima de la partida (indices de weather.json). */
+export interface WeatherState {
+  kind: number;
+  /** Dias que quedan contando el de hoy (al llegar a 0 entra `next`). */
+  left: number;
+  next: number;
 }
 
 /** Generador de numeros aleatorios en [0, 1). */

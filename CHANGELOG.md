@@ -7,6 +7,22 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Novedades
+- **Clima.** Cada pocos días cambia el tiempo, igual para los dos bandos: la **lluvia** frena a los vehículos, la **nevada** a todo lo que va por tierra, la **tormenta** a los aviones y la **tormenta de arena** (solo en el desierto) a la infantería y los aviones. El mal tiempo también quita visión con niebla y puntería. Arriba, junto al día, se ve el clima de hoy, sus efectos y el de mañana cuando va a cambiar. Se puede quitar en Nueva partida → Personalizada; la campaña no lo usa.
+
+### Para quien modifica el juego
+- Los climas están en `src/core/content/weather.json` (efectos, duración y probabilidad en cada terreno).
+
+<!-- en -->
+
+### New
+- **Weather.** Every few days the weather changes, the same for both sides: **rain** slows vehicles, **snowfall** slows everything on the ground, **storms** slow aircraft and **sandstorms** (desert only) slow infantry and aircraft. Bad weather also costs vision under fog and aim. Next to the day at the top you can see today's weather, its effects and tomorrow's when it is about to change. It can be turned off in New game → Custom; the campaign doesn't use it.
+
+### For modders
+- Weather lives in `src/core/content/weather.json` (effects, duration and chance on each terrain).
+
 ## [0.2.0] - 2026-10-30 — Sin repostar
 
 Menos logística y más batalla: fuera el combustible y la munición, y precios ajustados.

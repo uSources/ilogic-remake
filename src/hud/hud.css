@@ -172,6 +172,7 @@ body {
   padding: 8px 14px;
   font-family: var(--display);
   font-size: 18px;
+  white-space: nowrap;
 }
 .day .d {
   background: var(--panel);
@@ -184,6 +185,50 @@ body {
   box-shadow:
     inset 3px 3px 0 var(--blue-hi),
     inset -3px -3px 0 var(--blue-lo);
+}
+.day .w {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo);
+  cursor: help;
+}
+.day .w .wn {
+  font-weight: normal;
+}
+.day .w .wf {
+  font-style: normal;
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--muted);
+}
+.day .w.wx-Rain,
+.day .w.wx-Storm {
+  background: #23314f;
+}
+.day .w.wx-Snow {
+  background: #2e4166;
+}
+.day .w.wx-Sandstorm {
+  background: #4a3a24;
+}
+@media (max-width: 1100px) {
+  .day .w {
+    padding: 6px 10px;
+  }
+  .day .w .wn,
+  .day .w .wf {
+    display: none;
+  }
+}
+.wx-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  image-rendering: pixelated;
 }
 .day .t.enemy {
   background: var(--red-btn);
@@ -650,6 +695,13 @@ body {
   .day span {
     font-size: 14px;
     padding: 6px 10px;
+  }
+  .day .w {
+    padding: 6px 8px;
+  }
+  .day .w .wn,
+  .day .w .wf {
+    display: none;
   }
   .px-btn {
     font-size: 14px;

@@ -4,7 +4,8 @@ import { DEFAULT_RULES, HQ, UNIT_NAMES, useRules } from '@core/data';
 import { grid } from '@core/geom';
 import { newUnit } from '@core/rules';
 import { settings } from '../src/settings';
-import { captureHintText, minimapVM, tileVM, unitStatsText } from '../src/ui/hudModels';
+import { captureHintText, minimapVM, tileVM, unitStatsText, weatherEffectsText, weatherVM } from '../src/ui/hudModels';
+import { WEATHER } from '@core/data';
 import { blankState } from './helpers';
 
 /** Texturas de mentira: todas las imagenes "existen" (las fichas solo usan sus nombres). */
@@ -61,5 +62,30 @@ describe('datos de la interfaz', () => {
     vis[1]![1] = true;
     expect(minimapVM([], s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
     expect(minimapVM([], s, vis, new Set([mine.uid])).units).toEqual([]);
+  });
+});
+
+describe('clima en la barra de arriba', () => {
+  const W = (id: string) => WEATHER.ids.indexOf(id);
+
+  it('resume los efectos de cada clima', () => {
+    expect(weatherEffectsText(W('Clear'))).toBe('Sin efectos');
+    expect(weatherEffectsText(W('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
+    expect(weatherEffectsText(W('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
+    settings.lang = 'en';
+    expect(weatherEffectsText(W('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
+  });
+
+  it('enseña el clima de hoy y el pronostico solo si cambia mañana', () => {
+    const s = blankState();
+    s.weather = { kind: W('Rain'), left: 2, next: W('Clear') };
+    expect(weatherVM(s)).toMatchObject({ id: 'Rain', name: 'Lluvia', next: null });
+    s.weather.left = 1;
+    expect(weatherVM(s)!.next).toBe('Despejado');
+  });
+
+  it('sin la regla no hay indicador', () => {
+    useRules({ ...DEFAULT_RULES, weather: false });
+    expect(weatherVM(blankState())).toBeNull();
   });
 });

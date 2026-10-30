@@ -22,6 +22,7 @@ import {
   type MoveType,
 } from './data';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
+import { advanceWeather, weatherHit, weatherMove, weatherVision, type WeatherChange } from './weather';
 import type { Building, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
 
 // ---------------------------------------------------------------------------
@@ -96,9 +97,19 @@ export interface MoveRange {
   maxSteps: number;
 }
 
-/** Pasos maximos este turno. */
-export function maxSteps(u: Unit): number {
-  return UNIT.mover[u.type]!;
+/**
+ * Pasos maximos este turno.
+ * [CAMBIO] El clima puede quitar movimiento (nunca por debajo de 1 si la unidad se mueve).
+ */
+export function maxSteps(s: GameState, u: Unit): number {
+  const base = UNIT.mover[u.type]!;
+  return base > 0 ? Math.max(1, base + weatherMove(s, Movement.of(u.type))) : base;
+}
+
+/** Radio de vision de una unidad. [CAMBIO] El clima puede quitar vision (nunca por debajo de 1 si ve). */
+export function visionOf(s: GameState, u: Unit): number {
+  const base = UNIT.vision[u.type]!;
+  return base > 0 ? Math.max(1, base + weatherVision(s)) : base;
 }
 
 /** Mapa de movimiento por anchura (Ilogic.getMoveMap): cada casilla cuesta 1, las unidades bloquean. */
@@ -143,7 +154,7 @@ export function pathCost(s: GameState, moveType: MoveType, path: Pos[]): number 
 export function moveRange(s: GameState, u: Unit): MoveRange {
   const steps = grid(0);
   const prev = grid<Pos | null>(null);
-  const max = maxSteps(u);
+  const max = maxSteps(s, u);
   const mt = Movement.of(u.type);
   const { block, taken } = passMap(s, u);
   const best = grid(Infinity);
@@ -336,7 +347,7 @@ export function visibility(s: GameState, team: Team): boolean[][] {
   const hides = RULES.forestHides ? (x: number, y: number) => HIDING_TERRAIN.includes(s.map[x]![y]!) : () => false;
   for (const u of s.units) {
     if (u.team !== team || u.carrier !== null) continue;
-    for (const p of diamond(u, 0, UNIT.vision[u.type]!)) if (!hides(p.x, p.y) || manhattan(u, p) <= 1) vis[p.x]![p.y] = true;
+    for (const p of diamond(u, 0, visionOf(s, u))) if (!hides(p.x, p.y) || manhattan(u, p) <= 1) vis[p.x]![p.y] = true;
   }
   for (const b of s.buildings) {
     if (b.owner !== team) continue;
@@ -382,7 +393,8 @@ export function hitChance(s: GameState, atk: Unit, def: Unit): number {
   let p = POWER[atk.type]![def.type]! * tileProtection(s, def);
   // [CAMBIO] Veterania: cada rango da +5 % de acierto al atacar y -5 % al que le ataca.
   if (RULES.veterancy) p *= (1 + VET_BONUS * rank(atk)) * (1 - VET_BONUS * rank(def));
-  return p;
+  // [CAMBIO] Clima: con lluvia o tormenta se apunta peor.
+  return p * weatherHit(s);
 }
 
 /** Bajas necesarias para cada rango (1, 2 y 3 estrellas). */
@@ -794,6 +806,8 @@ export interface RoundReport {
   upkeep: [number, number];
   /** Unidades curadas en un edificio propio (uid, bando, vida recuperada). */
   healed: { uid: number; team: Team; amount: number }[];
+  /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
+  weather?: WeatherChange | null;
 }
 
 /**
@@ -827,6 +841,7 @@ export function endRound(s: GameState): RoundReport {
   }
   s.funds = [Math.min(s.funds[0], MAX_FUNDS), Math.min(s.funds[1], MAX_FUNDS)];
   s.day++;
+  report.weather = advanceWeather(s);
   return report;
 }
 

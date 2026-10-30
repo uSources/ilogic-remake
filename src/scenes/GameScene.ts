@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, useRules, type RulesConfig, Movement } from '../core/data';
+import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, WEATHER, useRules, type RulesConfig, Movement } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { bestAttackTile, closestStep, extendTrail } from '../core/orders';
@@ -60,6 +60,7 @@ import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../co
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
+import { ensureWeather } from '../core/weather';
 import {
   resetActions,
   showBanner,
@@ -79,13 +80,23 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { buildingLabel, fmtNum, settings, t, unitLabel, type TextKey } from '../settings';
+import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
+import { WeatherFx } from '../ui/weatherFx';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
-import { buyBlockedText, captureHintText, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
+import {
+  buyBlockedText,
+  captureHintText,
+  forecastVM,
+  minimapVM,
+  tileVM,
+  unitStatsText,
+  weatherEffectsText,
+  weatherVM,
+} from '../ui/hudModels';
 import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
@@ -156,6 +167,8 @@ export interface GameStartData {
 export class GameScene extends Phaser.Scene {
   private s!: GameState;
   private view!: MapView;
+  /** Lluvia, nieve... sobre el mapa. */
+  private weatherFx: WeatherFx | null = null;
   private phase: Phase = 'map';
   private vis: boolean[][] = [];
   private hidden = new Set<number>();
@@ -326,6 +339,7 @@ export class GameScene extends Phaser.Scene {
               dayLimit: r.dayLimit,
               commandPoints: r.commandPoints,
               upkeep: r.upkeep,
+              weather: r.weather ?? DEFAULT_RULES.weather,
             }
           : {}),
       };
@@ -341,6 +355,7 @@ export class GameScene extends Phaser.Scene {
       this.s = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
       this.s.setup = setup;
     }
+    ensureWeather(this.s);
   }
 
   create(): void {
@@ -349,6 +364,9 @@ export class GameScene extends Phaser.Scene {
     this.lastAt = null;
     this.view = new MapView(this);
     this.view.buildTerrain(this.s);
+    this.weatherFx = new WeatherFx(this);
+    const onUpdate = (_time: number, delta: number) => this.weatherFx?.update(delta);
+    this.events.on(Phaser.Scenes.Events.UPDATE, onUpdate);
 
     // Cursor y camara sobre la Base del jugador.
     const hq = this.s.buildings.find((b) => b.owner === 0 && b.type === HQ) ?? { x: 0, y: 0 };
@@ -366,10 +384,13 @@ export class GameScene extends Phaser.Scene {
       // Lo que quede pendiente de esta partida (esperas, turno enemigo) ya no debe seguir.
       this.match++;
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
+      this.events.off(Phaser.Scenes.Events.UPDATE, onUpdate);
+      this.weatherFx?.destroy();
+      this.weatherFx = null;
       this.view.destroy();
       setEndFilter(null);
       resetActions();
-      ui.set({ menu: null, forecast: null, tile: null, mission: null });
+      ui.set({ menu: null, forecast: null, tile: null, mission: null, weather: null });
     });
     playMusic(this, 'game');
     this.threat = settings.alwaysThreat;
@@ -569,6 +590,8 @@ export class GameScene extends Phaser.Scene {
     const busy = this.phase === 'busy';
     const owned = s.buildings.filter((b) => b.owner === 0);
     const idle: IdleVM[] = this.idleUnits().map((u) => ({ uid: u.uid, icon: unitKey(this.textures, s, u), name: unitLabel(u.type) }));
+    const weather = weatherVM(s);
+    this.weatherFx?.set(weather?.id ?? null);
     ui.set({
       funds: s.funds[0],
       income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0) - upkeepOf(s, 0),
@@ -576,6 +599,7 @@ export class GameScene extends Phaser.Scene {
       buildings: owned.length,
       day: s.day,
       dayLimit: RULES.dayLimit,
+      weather,
       turn: this.enemyPlaying ? 'enemy' : 'player',
       busy,
       tile: busy ? null : this.tileInfo(c),
@@ -2149,6 +2173,10 @@ export class GameScene extends Phaser.Scene {
     if (r.upkeep[0] > 0) lines.push({ icon: 'currency', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     if (mine.length)
       lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
+    if (r.weather) {
+      const to = r.weather.to;
+      lines.push({ icon: '', weather: WEATHER.ids[to]!, text: `${weatherLabel(to)}: ${weatherEffectsText(to)}`, tone: 'plain' });
+    }
     showReport(`${t('day')} ${this.s.day}`, lines);
     if (this.fastForward) return;
     mine.forEach((h, i) => {
