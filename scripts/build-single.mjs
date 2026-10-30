@@ -20,6 +20,7 @@ const assets = {};
 })(join(dist, 'assets'));
 
 let html = readFileSync(join(dist, 'index.html'), 'utf8');
+const favicon = `data:image/png;base64,${readFileSync(join(dist, 'icons', 'favicon-64.png')).toString('base64')}`;
 const m = html.match(/<script type="module" crossorigin src="\.\/(assets\/[^"]+\.js)"><\/script>/);
 if (!m) throw new Error('No encuentro el script en dist/index.html');
 const js = readFileSync(join(dist, m[1]), 'utf8').replace(/<\/script/g, '<\\/script');
@@ -36,7 +37,10 @@ const css = readFileSync(join(dist, cssLink[1]), 'utf8')
 html = html
   .replace(m[0], '')
   .replace(cssLink[0], `<style>${css}</style>`)
-  .replace(/<link rel="icon"[^>]*>/, `<link rel="icon" type="image/png" href="${assets['assets/img/b_Soldier.png']}" />`)
+  // Por file:// no hay PWA: fuera el manifest y los iconos de app; el de la pestaña va incrustado.
+  .replace(/\s*<link rel="(?:manifest|apple-touch-icon)"[^>]*>/g, '')
+  .replace(/\s*<link rel="icon"[^>]*>/g, '')
+  .replace('</head>', `  <link rel="icon" type="image/png" href="${favicon}" />\n  </head>`)
   .replace(
     '</body>',
     `<script>window.__ILOGIC_ASSETS__=${JSON.stringify(assets)};</script>\n<script type="module">${js}</script>\n</body>`,

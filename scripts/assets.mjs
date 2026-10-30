@@ -22,6 +22,7 @@ const ART = [
   ['Laminas de costa', py, ['tools/art/build_blob.py']],
   ['Laminas de agua, olas, espuma y niebla', py, ['tools/art/build_sheets.py']],
   ['Iconos de la interfaz', py, ['tools/art/build_icons.py']],
+  ['Iconos de la app (PWA)', py, ['tools/art/build_app_icons.py']],
   ['Letra Ilogic', py, ['tools/art/build_font.py']],
 ];
 const PACK = [
