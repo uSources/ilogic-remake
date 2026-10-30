@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Climas de Ilogic",
+  "description": "Climas que van cambiando durante la partida (regla weather). El primero es el neutro, con el que se empieza. El orden es el numero que guardan las partidas: los nuevos van al final. Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "required": ["weather"],
+  "additionalProperties": false,
+  "definitions": {
+    "delta": {
+      "type": "integer",
+      "minimum": -5,
+      "maximum": 5
+    },
+    "weight": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "weather": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "vision", "move", "hitChance", "days", "chance"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\w+$",
+            "description": "Nombre interno (en ingles, sin espacios)."
+          },
+          "name": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": { "type": "string", "minLength": 1 },
+              "en": { "type": "string", "minLength": 1 }
+            },
+            "description": "Nombre que ve el jugador."
+          },
+          "vision": {
+            "$ref": "#/definitions/delta",
+            "description": "Cambio del radio de vision de las unidades (negativo = ven menos; nunca baja de 1). Solo se nota con niebla."
+          },
+          "move": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "foot": { "$ref": "#/definitions/delta" },
+              "vehicle": { "$ref": "#/definitions/delta" },
+              "air": { "$ref": "#/definitions/delta" },
+              "amphibious": { "$ref": "#/definitions/delta" }
+            },
+            "description": "Cambio del movimiento por tipo de movimiento (negativo = mueven menos; nunca baja de 1)."
+          },
+          "hitChance": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 2,
+            "description": "Multiplica la probabilidad de acierto de todos los ataques (1 = igual, 0.9 = un 10 % menos)."
+          },
+          "days": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 1, "maximum": 30 },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Dias que dura: [minimo, maximo]."
+          },
+          "chance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["Plains", "Desert", "Forest", "Swamp", "Snowy"],
+            "properties": {
+              "Plains": { "$ref": "#/definitions/weight" },
+              "Desert": { "$ref": "#/definitions/weight" },
+              "Forest": { "$ref": "#/definitions/weight" },
+              "Swamp": { "$ref": "#/definitions/weight" },
+              "Snowy": { "$ref": "#/definitions/weight" }
+            },
+            "description": "Peso de que salga en cada tema de mapa (0 = nunca)."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comentario libre (diseño, por que tiene estos numeros)."
+          }
+        }
+      }
+    }
+  }
+}

@@ -21,7 +21,9 @@ import {
   type TileVM,
   type UIState,
   type UnitVM,
+  type WeatherVM,
 } from './store';
+import { WeatherIcon } from './WeatherIcon';
 
 function useUI(): UIState {
   return useSyncExternalStore(
@@ -245,6 +247,7 @@ function TopBar({ s }: { s: UIState }) {
           {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
         </span>
         <span class={`t ${mine ? '' : 'enemy'}`}>{mine ? t('yourTurn') : t('enemyTurn')}</span>
+        {s.weather && <WeatherChip w={s.weather} />}
         {s.dayInfo && <DayPanel d={s.dayInfo} />}
       </div>
       <div class="spacer" />
@@ -265,6 +268,18 @@ function TopBar({ s }: { s: UIState }) {
         <i />
       </button>
     </div>
+  );
+}
+
+/** Clima de hoy (y el de mañana si cambia); al pasar por encima, sus efectos. */
+function WeatherChip({ w }: { w: WeatherVM }) {
+  const tip = `${t('weather')}: ${w.name} — ${w.effects}${w.next ? `\n${t('weatherTomorrow')}: ${w.next}` : ''}`;
+  return (
+    <span class={`w wx-${w.id}`} title={tip} aria-label={tip}>
+      <WeatherIcon id={w.id} />
+      <b class="wn">{w.name}</b>
+      {w.next && <em class="wf">→ {w.next}</em>}
+    </span>
   );
 }
 
@@ -815,7 +830,7 @@ export function Hud() {
           <span class="label">{s.report.title}</span>
           {s.report.lines.map((l) => (
             <div class={`line ${l.tone}`}>
-              <Icon k={l.icon} />
+              {l.weather ? <WeatherIcon id={l.weather} cls="px-icon wx-icon" /> : <Icon k={l.icon} />}
               <span>{l.text}</span>
             </div>
           ))}

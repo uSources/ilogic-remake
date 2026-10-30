@@ -82,7 +82,7 @@ export const Movement = {
 };
 
 // ---- Generador de mapas (RandomMap) ----
-export const THEME_NAMES = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'] as const;
+export { THEME_NAMES } from './content';
 export const TILE_BASE_PROBS: readonly (readonly number[])[] = [
   [0.05, 0.005, 0.05, 0.0, 0.0, 0.0, 0.03, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
   [0.0, 0.005, 0.0, 0.05, 0.03, 0.03, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -147,3 +147,9 @@ export const MAX_FUNDS = T.MAX_FUNDS;
  * actualizar tests/aiGolden.test.ts.
  */
 export const AI = T.AI;
+/**
+ * [CAMBIO] Climas (weather.json): la clase Climate de 2013, que no se usaba. Indice 0 = despejado.
+ * WEATHER.move[clima][MoveType], WEATHER.chance[tema][clima]. Reglas en core/weather.ts.
+ */
+export const WEATHER = T.WEATHER;
+export const WEATHER_TYPES = WEATHER.ids.length;

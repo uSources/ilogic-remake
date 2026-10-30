@@ -735,6 +735,7 @@ Resumen: infantería a pie (0, 6, 8, 16) lleva `1_` en SWater (vadeando) y `2_` 
 - `Climate(game, id)` guarda `id % clquan`. `getImage(frame)` devolvería `imgsfolder + img[id] + "_" + (frame % imgq[id]) + ".png"` (= `"_0.png"`).
 - **No se usa en ninguna regla**: `Ilogic` nunca crea un `Climate`; `slow` (penalización de movimiento), `blind` (penalización de visión) y `protection` (multiplicador de daño) no se aplican en ningún sitio. **[REMAKE]** si se quieren climas, la semántica deducible es: `mover_efectivo = mover - slow`, `vision_efectiva = vision - blind`, `hitChance *= Climate.protection`; mantener todo neutro por defecto.
 - Los "temas" de mapa (Plains, Desert, Forest, Swamp, Snowy; §7) no son climas: solo cambian el generador y las imágenes de costa.
+- **[REMAKE, hecho]** regla `weather`: climas en `src/core/content/weather.json` con esa semántica (por tipo de movimiento, mínimo 1), que cambian cada pocos días según el tema del mapa (`src/core/weather.ts`).
 
 ---
 

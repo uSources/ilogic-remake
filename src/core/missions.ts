@@ -78,11 +78,12 @@ export function buildMission(m: MissionDef): GameState {
   return s;
 }
 
-/** Las misiones estan ajustadas sin puntos de mando ni mantenimiento (salvo que la mision los pida). */
+/** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
 export const missionRules = (m: MissionDef): RulesConfig => ({
   ...DEFAULT_RULES,
   commandPoints: null,
   upkeep: 0,
+  weather: false,
   initialFunds: m.funds[0],
   ...m.rules,
 });

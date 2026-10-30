@@ -42,6 +42,7 @@ const CUSTOM_GROUPS: { title: TextKey; keys: { k: ChoiceKey; label: TextKey }[] 
     title: 'optGroupGame',
     keys: [
       { k: 'fog', label: 'optFog' },
+      { k: 'weather', label: 'optWeather' },
       { k: 'dayLimit', label: 'optDayLimit' },
     ],
   },

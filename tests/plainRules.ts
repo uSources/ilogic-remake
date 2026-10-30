@@ -14,4 +14,5 @@ export const PLAIN_RULES: RulesConfig = {
   abilities: false,
   commandPoints: null,
   upkeep: 0,
+  weather: false,
 };

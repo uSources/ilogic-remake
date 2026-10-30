@@ -7,6 +7,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/units.json` | Las 19 unidades: precio, movimiento, vision, **ataque y daño contra cada unidad**, quien las fabrica y repara, transportes |
 | `src/core/content/buildings.json` | Los 6 edificios: ingresos, curacion, proteccion, vision y cual es el cuartel general |
 | `src/core/content/terrain.json` | Los 15 terrenos: nombre, defensa, si esconde, y por donde pasa y cuanto cuesta a cada tipo de movimiento |
+| `src/core/content/weather.json` | Los climas: cuanto quitan de movimiento, vision y punteria, cuantos dias duran y en que terreno salen |
 | `src/core/content/rules.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
 | `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
 
@@ -152,6 +153,24 @@ misiones): se cambian sus numeros, no se añaden ni se quitan.
 
 En el codigo se consulta con tipos legibles: `Movement.of(u.type)` (tipo de una unidad),
 `Movement.canWalk(MoveType.VEHICLE, TerrainType.WOODS)`, `Movement.cost(mt, terreno)`.
+
+## Clima
+
+`weather.json` tiene los climas de la regla `weather` (la clase `Climate` de 2013, que no se usaba).
+El **primero es el neutro** (despejado): con el empiezan las partidas. Los nuevos van al final (las
+partidas guardan el numero).
+
+| Campo | Que es |
+|---|---|
+| `vision` | Cambio del radio de vision de las unidades: `-1` = ven una casilla menos (nunca baja de 1) |
+| `move` | Cambio del movimiento por tipo: `{ "vehicle": -1 }` (nunca baja de 1) |
+| `hitChance` | Multiplica el acierto de todos los ataques: `0.9` = un 10 % menos |
+| `days` | Cuantos dias dura: `[minimo, maximo]` |
+| `chance` | Peso de que salga en cada tema de mapa: `{ "Plains": 3, "Desert": 0, ... }` (0 = nunca) |
+
+El tiempo de cada dia sale de la semilla del mapa (la misma partida tiene siempre el mismo clima) y el
+siguiente ya esta decidido: es el pronostico que se ve arriba. Reglas en `src/core/weather.ts`.
+Para probar sin el: `--set RULES.weather=false`.
 
 ## Reglas e IA
 

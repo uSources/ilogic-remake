@@ -110,6 +110,23 @@ Medido con `npm run balance -- run --games 100 --name ejercito` contra la varian
 - Pendiente: con la IA nueva se compran muchos aviones (los aeropuertos van primero) y casi ningún
   tanque. Revisar los pesos de compra o los puntos de los aviones.
 
+## Clima (30-10-2026)
+
+Medido con `npm run balance -- run --games 200 --name con-clima` contra `sin-clima`
+(`--set RULES.weather=false`). Informes en `balance/reports/con-clima.md`, `sin-clima.md` y
+`comparar-sin-clima-vs-con-clima.md`.
+
+| | Sin clima | Con clima |
+|---|---:|---:|
+| Victorias bando 0 / bando 1 | 5 % / 7 % | 7 % / 5 % |
+| Días (mediana) | 46 | 49 |
+| Daño hecho / devuelto (iguales) | 2,0 | 2,0 |
+
+- El clima es igual para los dos bandos y no inclina la balanza; las partidas duran unos 3 días más
+  (lluvia y nieve frenan los avances por tierra).
+- La eficiencia de cada unidad apenas se mueve; la que más, el tanque (0,25 → 0,14), con muy pocas
+  compras (55 → 48), así que es ruido más que efecto.
+
 ## Tanque contra infantería (30-10-2026)
 
 La infantería barata dominaba y el Tanque casi no se veía. Tres cambios, medidos uno detrás de otro con
