@@ -1,0 +1,8 @@
+{
+  "name": "sin-ejercito",
+  "notes": "Sin puntos de mando ni mantenimiento: como antes de estas reglas, para comparar.",
+  "set": {
+    "RULES.commandPoints": null,
+    "RULES.upkeep": 0
+  }
+}

@@ -60,6 +60,8 @@ export interface UnitDef {
   id: string;
   name: Texts;
   cost: number;
+  /** Puntos de mando que ocupa (regla commandPoints): las unidades grandes pesan mas. */
+  command: number;
   /** Casillas que puede mover por turno. */
   move: number;
   /** Radio de vision (rombo). */

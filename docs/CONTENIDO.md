@@ -82,6 +82,7 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 | `id` | Nombre interno; tambien el de sus imagenes |
 | `name` | `{ "es": ..., "en": ... }`, lo que ve el jugador |
 | `cost` | Precio |
+| `command` | Puntos de mando que ocupa (regla `commandPoints`): 1 la infanteria, hasta 5 lo mas grande |
 | `move` | Casillas por turno |
 | `vision` | Radio de vision |
 | `movement` | `foot` (a pie), `vehicle`, `air` o `amphibious`: por donde pasa y cuanto cuesta cada terreno |

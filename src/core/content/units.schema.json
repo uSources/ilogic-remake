@@ -13,7 +13,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "cost", "move", "vision", "movement", "captures", "attack", "builtAt", "repairedAt"],
+        "required": ["id", "name", "cost", "command", "move", "vision", "movement", "captures", "attack", "builtAt", "repairedAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -40,6 +40,12 @@
             "type": "integer",
             "minimum": 1,
             "description": "Precio de compra."
+          },
+          "command": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "Puntos de mando que ocupa (regla commandPoints). Las unidades grandes pesan mas."
           },
           "move": {
             "type": "integer",

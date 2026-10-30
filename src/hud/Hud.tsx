@@ -105,7 +105,9 @@ function TopBar({ s }: { s: UIState }) {
         <div>
           <div class="amount num">{fmtNum(s.funds)}</div>
           <div class="sub">
-            +{fmtNum(s.income)} {t('perDay')} · {s.buildings} {t('buildingsN')}
+            {s.income < 0 ? '−' : '+'}
+            {fmtNum(Math.abs(s.income))} {t('perDay')} · {s.buildings} {t('buildingsN')}
+            {s.command ? ` · ${t('commandShort')} ${s.command.used}/${s.command.max}` : null}
           </div>
         </div>
       </div>

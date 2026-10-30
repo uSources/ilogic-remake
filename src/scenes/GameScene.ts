@@ -7,6 +7,7 @@ import { bestAttackTile, closestStep, extendTrail } from '../core/orders';
 import {
   attackFull,
   buildingIncome,
+  commandUsed,
   attackTargets,
   buildingAt,
   buyOptions,
@@ -34,7 +35,7 @@ import {
   type RoundReport,
   spawn,
   supply,
-  teamUnits,
+  upkeepOf,
   threatMap,
   unitThreat,
   attackZone,
@@ -84,7 +85,7 @@ import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
-import { captureHintText, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
+import { buyBlockedText, captureHintText, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
 import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
@@ -316,7 +317,17 @@ export class GameScene extends Phaser.Scene {
       const r = state.rules;
       state.rules = {
         ...DEFAULT_RULES,
-        ...(r ? { initialFunds: r.initialFunds, maxUnits: r.maxUnits, incomeScale: r.incomeScale, fog: r.fog, dayLimit: r.dayLimit } : {}),
+        ...(r
+          ? {
+              initialFunds: r.initialFunds,
+              maxUnits: r.maxUnits,
+              incomeScale: r.incomeScale,
+              fog: r.fog,
+              dayLimit: r.dayLimit,
+              commandPoints: r.commandPoints,
+              upkeep: r.upkeep,
+            }
+          : {}),
       };
       useRules(state.rules);
       this.s = state;
@@ -560,7 +571,8 @@ export class GameScene extends Phaser.Scene {
     const idle: IdleVM[] = this.idleUnits().map((u) => ({ uid: u.uid, icon: unitKey(this.textures, s, u), name: unitLabel(u.type) }));
     ui.set({
       funds: s.funds[0],
-      income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0),
+      income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0) - upkeepOf(s, 0),
+      command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
       buildings: owned.length,
       day: s.day,
       dayLimit: RULES.dayLimit,
@@ -727,7 +739,8 @@ export class GameScene extends Phaser.Scene {
             disabled: !o.affordable,
             detail:
               `${unitStatsText(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
-              (o.affordable ? '' : ` · ${teamUnits(this.s, 0).length >= RULES.maxUnits ? t('unitLimit') : t('cantAfford')}`),
+              (RULES.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[o.type]}`) +
+              (o.blocked ? ` · ${buyBlockedText(o.blocked)}` : ''),
           })),
         ];
         break;
@@ -1828,7 +1841,7 @@ export class GameScene extends Phaser.Scene {
     if (this.menuSel === 0 || !this.selBuilding) return this.toMap();
     const opt = this.buy[this.menuSel - 1];
     if (!opt) return;
-    if (!opt.affordable) return showToast(teamUnits(this.s, 0).length >= RULES.maxUnits ? t('unitLimit') : t('cantAfford'));
+    if (opt.blocked) return showToast(buyBlockedText(opt.blocked));
     const b = this.selBuilding;
     const u = spawn(this.s, b, opt.type);
     if (u) void this.playEvents([{ kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } }]).then(() => this.afterAction());
@@ -2133,6 +2146,7 @@ export class GameScene extends Phaser.Scene {
   private showReport(r: RoundReport): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     if (mine.length)
       lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     showReport(`${t('day')} ${this.s.day}`, lines);

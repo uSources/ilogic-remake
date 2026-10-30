@@ -3,6 +3,8 @@
   "defaults": {
     "initialFunds": 5000,
     "maxUnits": 30,
+    "commandPoints": 30,
+    "upkeep": 0.1,
     "counterattack": true,
     "damageSpread": 0.1,
     "capturePoints": 20,

@@ -9,6 +9,7 @@ export function validateUnits(units: readonly UnitDef[], ctx: ContentContext, ch
     const s = check.scope(`unidad ${u?.id}`);
     s.texts('name', u?.name);
     s.num('cost', u?.cost, { min: 1, int: true });
+    s.num('command', u?.command, { min: 1, max: 20, int: true });
     s.num('move', u?.move, { min: 0, max: 30, int: true });
     s.num('vision', u?.vision, { min: 0, max: 30, int: true });
     s.expect(MOVEMENTS.includes(u?.movement), `movement tiene que ser ${MOVEMENTS.join(', ')}`);
@@ -51,6 +52,7 @@ export function buildUnitTables(units: readonly UnitDef[], ctx: ContentContext, 
     UNIT_NAMES: ids,
     UNIT: {
       cost: byUnit((u) => u.cost),
+      command: byUnit((u) => u.command),
       mover: byUnit((u) => u.move),
       vision: byUnit((u) => u.vision),
       alcance: byUnit((u) => u.attack?.range[1] ?? 0),

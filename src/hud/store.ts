@@ -196,7 +196,10 @@ export interface UIState {
   mainMenu: { items: MainMenuItemVM[]; selected: number };
   // Partida
   funds: number;
+  /** Ingresos por dia ya restado el mantenimiento (puede ser negativo). */
   income: number;
+  /** Puntos de mando usados y maximos (null = regla desactivada). */
+  command: { used: number; max: number } | null;
   buildings: number;
   day: number;
   turn: 'player' | 'enemy';
@@ -315,6 +318,7 @@ const initial: UIState = {
   mission: null,
   funds: 0,
   income: 0,
+  command: null,
   buildings: 0,
   day: 1,
   turn: 'player',
