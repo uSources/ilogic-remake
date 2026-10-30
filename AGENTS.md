@@ -27,7 +27,7 @@ npm run fuzz                # cazador de fallos (invariantes con jugadas al azar
 ## Normas
 
 - `src/core` es logica pura: sin Phaser, DOM ni interfaz (lo comprueba ESLint). Logica nueva → core + test.
-- Numeros del juego en `src/core/data.ts`; textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
+- Unidades y edificios en `src/core/content/*.json` (`docs/CONTENIDO.md`); el resto de numeros en `src/core/data.ts`; textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
 - No editar a mano lo generado: `public/assets/atlas/`, `src/assetList.ts`, `src/atlasPages.ts`,
   `src/ui/{wangSets,blobSets,sheets}.ts` → `npm run assets`.
 - Probar en el navegador solo por `file://` (`dist-single/ilogic.html`); nunca `vite preview` ni servidores.

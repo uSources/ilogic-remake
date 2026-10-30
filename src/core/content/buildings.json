@@ -1,0 +1,90 @@
+{
+  "$schema": "./buildings.schema.json",
+  "buildings": [
+    {
+      "id": "City",
+      "name": {
+        "es": "Ciudad",
+        "en": "City"
+      },
+      "earning": 1000,
+      "heals": 30,
+      "protection": 0.8,
+      "vision": 0,
+      "classicSprite": {
+        "Snow": "2_"
+      }
+    },
+    {
+      "id": "Oil",
+      "name": {
+        "es": "Pozo de petróleo",
+        "en": "Oil well"
+      },
+      "earning": 500,
+      "heals": 0,
+      "protection": 0.9,
+      "vision": 0,
+      "classicSprite": {
+        "Snow": "2_"
+      }
+    },
+    {
+      "id": "Factory",
+      "name": {
+        "es": "Fábrica",
+        "en": "Factory"
+      },
+      "earning": 1000,
+      "heals": 25,
+      "protection": 0.8,
+      "vision": 0,
+      "classicSprite": {
+        "Snow": "2_"
+      }
+    },
+    {
+      "id": "Stronghold",
+      "name": {
+        "es": "Fortaleza",
+        "en": "Stronghold"
+      },
+      "earning": 1500,
+      "heals": 20,
+      "protection": 0.7,
+      "vision": 0,
+      "classicSprite": {
+        "Snow": "2_"
+      }
+    },
+    {
+      "id": "Airport",
+      "name": {
+        "es": "Aeropuerto",
+        "en": "Airport"
+      },
+      "earning": 1000,
+      "heals": 25,
+      "protection": 0.85,
+      "vision": 0,
+      "classicSprite": {
+        "Snow": "2_"
+      }
+    },
+    {
+      "id": "Base",
+      "name": {
+        "es": "Base",
+        "en": "HQ"
+      },
+      "hq": true,
+      "earning": 1000,
+      "heals": 30,
+      "protection": 0.7,
+      "vision": 0,
+      "classicSprite": {
+        "Snow": "2_"
+      }
+    }
+  ]
+}

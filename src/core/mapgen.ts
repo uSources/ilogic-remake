@@ -174,11 +174,11 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
 function generateUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): void {
   const n = rangeSize(MAPGEN.MAXSPAWNDIST);
   MAPGEN.INITUS.forEach((type, u) => {
-    const mt = UNIT.movtype[type];
+    const mt = UNIT.movtype[type]!;
     const free: Pos[] = [];
     for (let k = 0; k < n; k++) {
       const p = rangePos(spawn, k);
-      if (p && TERRAIN.canwalk[mt][s.map[p.x]![p.y]!] && !unitAt(s, p.x, p.y)) free.push(p);
+      if (p && TERRAIN.canwalk[mt]![s.map[p.x]![p.y]!] && !unitAt(s, p.x, p.y)) free.push(p);
     }
     // Muestreo secuencial como el original, con la probabilidad corregida (INITUS.length).
     let remaining = free.length;

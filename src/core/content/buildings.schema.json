@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Edificios de Ilogic",
+  "description": "Edificios del juego. El ORDEN es el numero de tipo que guardan las partidas: los nuevos al final. Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "required": ["buildings"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "buildings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "earning", "heals", "protection", "vision"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\w+$",
+            "description": "Nombre interno. Graficos: public/assets/b/<color>_<id>.png."
+          },
+          "name": {
+            "type": "object",
+            "description": "Nombre que ve el jugador.",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "hq": {
+            "type": "boolean",
+            "description": "Cuartel general: si lo capturan, ese bando pierde. Exactamente uno."
+          },
+          "earning": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Dinero que da cada ronda a su dueño."
+          },
+          "heals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Vida que cura a las unidades propias que repara (ver repairedAt en units.json)."
+          },
+          "protection": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 1,
+            "description": "Multiplica la probabilidad de acierto contra quien esta encima: 0.7 = un 30 % menos de daño."
+          },
+          "vision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Radio de vision (0 = solo su casilla)."
+          },
+          "classicSprite": {
+            "type": "object",
+            "description": "Graficos de 2013: prefijo de la imagen segun el terreno donde esta (\"1_\" = version de agua, \"2_\" = version de nieve).",
+            "propertyNames": {
+              "enum": [
+                "Grass",
+                "Water",
+                "Woods",
+                "Sand",
+                "Cactus",
+                "SandCliff",
+                "Flowers",
+                "GrassCliff",
+                "SWater",
+                "DWater",
+                "Snow",
+                "Frosty",
+                "SnowCliff",
+                "SnowWood",
+                "Ice"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

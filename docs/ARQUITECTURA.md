@@ -8,7 +8,7 @@ tomaron las decisiones que no conviene deshacer sin pensarlo.
 ```mermaid
 flowchart TB
   subgraph core["src/core — TypeScript puro (sin Phaser, sin DOM)"]
-    data["data.ts<br/>tablas: unidades, edificios, terreno, IA, reglas"]
+    data["data.ts<br/>tablas: terreno, IA, reglas<br/>+ content/*.json: unidades, edificios"]
     rules["rules.ts<br/>mover, atacar, capturar, comprar, fin de ronda"]
     orders["orders.ts<br/>ayudas para ordenes del jugador"]
     ai["ai.ts<br/>IA (generador de eventos)"]
@@ -92,7 +92,8 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 
 | Quiero... | Fichero |
 |---|---|
-| Cambiar precios, daño, terreno | `src/core/data.ts` (+ skill `equilibrar`) |
+| Añadir o cambiar unidades y edificios (precio, daño...) | `src/core/content/*.json` (`docs/CONTENIDO.md`, skill `nueva-unidad`) |
+| Cambiar terreno, reglas, pesos de la IA | `src/core/data.ts` (+ skill `equilibrar`) |
 | Cambiar una regla | `src/core/rules.ts` (+ test en `tests/`) |
 | Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
