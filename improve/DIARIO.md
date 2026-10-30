@@ -13,6 +13,19 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-10-30 · equilibrio (precios) · DESCARTADO
+
+Cambio: `UNIT.cost.Antiair` 8000 → 9500 (solo prueba rapida, sobre el Tanque a 9500 ya aceptado).
+Hipotesis: el Antiaereo rinde 1.66x la mediana, justo por encima de la banda; un poco mas caro deberia
+volver a entrar.
+Resultado: prueba rapida (80 partidas, 40 dias, bandos cambiados): nota 56.2 → 37.0. El Antiaereo entra
+en la banda (0.83 → 0.68), pero precios sigue en 7 de 15 (sale el Motorizado por el borde de abajo:
+0.33 con la mediana mas alta) y **lados 52 % → 61 %** (19.2 → 0).
+Conclusion: con 80-120 partidas la parte de lados manda: cualquier cambio de precio la mueve varios
+puntos y tapa lo que se gana en precios (1 unidad = 1 punto). Antes de seguir afinando precios
+convendria que la nota de lados fuera menos ruidosa (mas partidas o un margen) o que las partidas
+terminen. Unidades en el borde de la banda (Tanque, Antiaereo, Mortero, Motorizado) entran y salen con el ruido.
+
 ## 2026-10-30 · equilibrio (precios) · ACEPTADO
 
 Cambio: `UNIT.cost.Tank` 12000 → 9500 (`src/core/data.ts`).
