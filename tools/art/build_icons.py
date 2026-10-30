@@ -3,7 +3,7 @@
 Cabecera de cada dibujo:
   "= nombre"          icono de la interfaz: centrado en SIZE x SIZE, en ui/<nombre>.png (va al atlas)
   "= nombre AxB"      igual pero a tamaño exacto A x B, sin centrar
-  "= nombre raton"    puntero del raton: 16x16, suelto en <nombre>.png (x2) y <nombre>_2x.png (x4)
+  "= nombre raton"    puntero del raton: 16x16, suelto en <nombre>.png al doble (32x32)
 No llama a ningun servicio.
 
     python3 tools/art/build_icons.py
@@ -91,7 +91,6 @@ def build() -> None:
                     img.putpixel((ox + x, oy + y), colors[ch])
         if kinds[name] == "raton":
             img.resize((cw * 2, ch_ * 2), Image.NEAREST).save(LOOSE_OUT / f"{name}.png", optimize=True)
-            img.resize((cw * 4, ch_ * 4), Image.NEAREST).save(LOOSE_OUT / f"{name}_2x.png", optimize=True)
         else:
             img.save(OUT / f"{name}.png", optimize=True)
     print(f"{len(ui)} iconos en {OUT.relative_to(ROOT)} y {len(icons) - len(ui)} punteros del raton")

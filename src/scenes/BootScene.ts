@@ -25,7 +25,7 @@ export class BootScene extends Phaser.Scene {
     createAtlas(this, ATLAS_PAGES);
     setImageSource(this.textures);
     // Punteros del raton propios (tools/art/icons/iconos.txt): el normal y el de lo que se puede
-    // pulsar, con el punto activo en la punta. Al doble para pantallas de alta densidad.
+    // pulsar, con el punto activo en la punta.
     const root = document.documentElement.style;
     root.setProperty('--cursor', pointerCss('raton', 'auto'));
     root.setProperty('--cursor-button', pointerCss('raton_boton', 'pointer'));
@@ -40,10 +40,10 @@ export class BootScene extends Phaser.Scene {
   }
 }
 
-/** Valor CSS de un puntero propio: con image-set (nitido en alta densidad) si el navegador lo entiende. */
+/**
+ * Valor CSS de un puntero propio: imagen de 32x32 con el punto activo en la punta. Sin image-set:
+ * algunos navegadores dicen entenderlo en `cursor` pero ponen la flecha del sistema.
+ */
 function pointerCss(name: string, fallback: string): string {
-  const one = asset(`assets/img/${name}.png`);
-  const two = asset(`assets/img/${name}_2x.png`);
-  const sharp = `image-set(url("${one}") 1x, url("${two}") 2x) 0 0, ${fallback}`;
-  return CSS.supports('cursor', sharp) ? sharp : `url("${one}") 0 0, ${fallback}`;
+  return `url("${asset(`assets/img/${name}.png`)}") 0 0, ${fallback}`;
 }

@@ -25,7 +25,7 @@ OUT = os.path.normpath(os.path.join(ROOT, '..', '..', 'public', 'assets', 'atlas
 OUT_TS = os.path.normpath(os.path.join(ROOT, '..', '..', 'src', 'atlasPages.ts'))
 SIZE, PAD = 2048, 2
 # Se quedan sueltas: los punteros del raton (los usa el CSS; tools/art/icons/iconos.txt).
-LOOSE = {'raton', 'raton_2x', 'raton_boton', 'raton_boton_2x'}
+LOOSE = {'raton', 'raton_boton'}
 
 
 def load():
