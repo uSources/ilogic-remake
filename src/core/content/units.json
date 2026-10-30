@@ -18,19 +18,19 @@
         "hitChance": {
           "Soldier": 0.5,
           "Tank": 0.05,
-          "Artillery": 0.1,
-          "Car": 0.3,
-          "LTank": 0.15,
+          "Artillery": 0.05,
+          "Car": 0.2,
+          "LTank": 0.1,
           "Blocker": 0.05,
           "BSoldier": 0.5,
-          "Transport": 0.2,
+          "Transport": 0.1,
           "SSoldier": 0.3,
-          "Missile_truck": 0.2,
-          "Supplier": 0.2,
-          "Antiair": 0.15,
+          "Missile_truck": 0.1,
+          "Supplier": 0.1,
+          "Antiair": 0.1,
           "MSoldier": 0.5,
           "FSoldier": 0.5,
-          "WTank": 0.15
+          "WTank": 0.1
         }
       },
       "builtAt": ["City"],
