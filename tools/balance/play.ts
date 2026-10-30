@@ -43,6 +43,8 @@ export interface DaySample {
   buildings: [number, number];
   /** Valor del ejercito: coste x vida/100. */
   army: [number, number];
+  /** Unidades en el mapa (informes antiguos: no esta). */
+  units?: [number, number];
 }
 
 export interface GameRecord {
@@ -69,10 +71,14 @@ const emptyTally = (): UnitTally => ({
 
 function sample(s: GameState): DaySample {
   const army: [number, number] = [0, 0];
-  for (const u of s.units) army[u.team] += (UNIT.cost[u.type]! * u.life) / 100;
+  const units: [number, number] = [0, 0];
+  for (const u of s.units) {
+    army[u.team] += (UNIT.cost[u.type]! * u.life) / 100;
+    units[u.team]++;
+  }
   const buildings: [number, number] = [0, 0];
   for (const b of s.buildings) if (b.owner !== null) buildings[b.owner]++;
-  return { day: s.day, funds: [s.funds[0], s.funds[1]], buildings, army: [Math.round(army[0]), Math.round(army[1])] };
+  return { day: s.day, funds: [s.funds[0], s.funds[1]], buildings, army: [Math.round(army[0]), Math.round(army[1])], units };
 }
 
 export function playGame(opts: PlayOptions): GameRecord {
