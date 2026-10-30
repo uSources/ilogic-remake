@@ -53,6 +53,16 @@ const SCENES = {
     await p.keyboard.press('Escape');
     await p.waitForSelector('.pop, .pause');
   },
+  'partida-dinero': async (p) => {
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
+    await p.hover('.top .funds');
+    await p.waitForSelector('.funds .breakdown', { state: 'visible' });
+  },
+  'partida-dia': async (p) => {
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, dayLimit: 20 }));
+    await p.hover('.top .day');
+    await p.waitForSelector('.day .breakdown', { state: 'visible' });
+  },
   'partida-ayuda': async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
     await p.keyboard.press('KeyH');

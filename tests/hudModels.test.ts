@@ -1,10 +1,10 @@
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, HQ, UNIT_NAMES, useRules } from '@core/data';
+import { BUILDING_NAMES, DEFAULT_RULES, HQ, MAX_FUNDS, UNIT, UNIT_NAMES, useRules } from '@core/data';
 import { grid } from '@core/geom';
-import { attackEvent, newUnit } from '@core/rules';
+import { attackEvent, endRound, newUnit, score } from '@core/rules';
 import { settings } from '../src/settings';
-import { captureHintText, combatVM, minimapVM, tileVM, unitStatsText } from '../src/ui/hudModels';
+import { captureHintText, combatVM, dayInfoVM, economyVM, minimapVM, tileVM, unitStatsText } from '../src/ui/hudModels';
 import { blankState } from './helpers';
 
 /** Texturas de mentira: todas las imagenes "existen" (las fichas solo usan sus nombres). */
@@ -117,5 +117,72 @@ describe('panel de combate', () => {
 
   it('eventos antiguos sin datos: sin panel', () => {
     expect(combatVM({ kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both)).toBeNull();
+  });
+});
+
+describe('desglose de la barra de arriba', () => {
+  const B = (n: string) => BUILDING_NAMES.indexOf(n);
+  const army = () => {
+    const s = blankState();
+    s.funds = [5000, 5000];
+    for (const [i, b] of ['City', 'City', 'Factory', 'Oil'].entries())
+      s.buildings.push({ type: B(b), owner: 0, x: 1 + i, y: 1, capture: null });
+    s.buildings.push({ type: B('City'), owner: 1, x: 9, y: 9, capture: null });
+    newUnit(s, T('Tank'), 0, 5, 5);
+    newUnit(s, T('Soldier'), 0, 6, 5);
+    newUnit(s, T('Soldier'), 0, 7, 5);
+    newUnit(s, T('Bomber'), 1, 9, 8);
+    return s;
+  };
+
+  it('ingresos por tipo de edificio y mantenimiento por tipo de unidad, con las cuentas de endRound', () => {
+    useRules({ upkeep: 0.1, commandPoints: 30 });
+    const s = army();
+    const e = economyVM(s, 0);
+    expect(e.income.lines.map((l) => [l.label, l.count])).toEqual([
+      ['Ciudad', 2],
+      ['Fábrica', 1],
+      ['Pozo de petróleo', 1],
+    ]);
+    expect(e.income.total).toBe(e.income.lines.reduce((n, l) => n + l.amount, 0));
+    expect(e.upkeep!.lines.find((l) => l.label === 'Soldado')!.count).toBe(2);
+    // El enemigo no cuenta
+    expect(e.upkeep!.lines.some((l) => l.label === 'Bombardero')).toBe(false);
+    expect(e.net).toBe(e.income.total - e.upkeep!.total);
+    const next = e.next;
+    endRound(s);
+    expect(s.funds[0]).toBe(next); // lo que dice el desglose es lo que pasa
+    expect(e.command!.used).toBe(UNIT.command[T('Tank')]! + 2 * UNIT.command[T('Soldier')]!);
+    expect(e.command!.lines.reduce((n, l) => n + l.amount, 0)).toBe(e.command!.used);
+  });
+
+  it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
+    useRules({ upkeep: 1 });
+    const s = army();
+    s.funds[0] = 0;
+    s.buildings = s.buildings.filter((b) => b.owner !== 0);
+    const e = economyVM(s, 0);
+    expect(e.income.total).toBe(0);
+    expect(e.shortfall).toBe(0);
+    expect(e.next).toBe(0);
+  });
+
+  it('sin las reglas de mantenimiento y mando no salen esos apartados; el tope de dinero cuenta', () => {
+    useRules({ upkeep: 0, commandPoints: null });
+    const s = army();
+    s.funds[0] = MAX_FUNDS;
+    const e = economyVM(s, 0);
+    expect(e.upkeep).toBeNull();
+    expect(e.command).toBeNull();
+    expect(e.next).toBe(MAX_FUNDS);
+  });
+
+  it('dia: lo que queda y los puntos solo con limite de dias', () => {
+    const s = army();
+    s.day = 18;
+    useRules({ dayLimit: null });
+    expect(dayInfoVM(s)).toEqual({ day: 18, limit: null, left: null, score: null });
+    useRules({ dayLimit: 20 });
+    expect(dayInfoVM(s)).toEqual({ day: 18, limit: 20, left: 3, score: [score(s, 0), score(s, 1)] });
   });
 });

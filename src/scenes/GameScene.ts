@@ -85,7 +85,17 @@ import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion, shot, targetMark, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
-import { buyBlockedText, captureHintText, combatVM, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
+import {
+  buyBlockedText,
+  captureHintText,
+  combatVM,
+  forecastVM,
+  minimapVM,
+  tileVM,
+  unitStatsText,
+  dayInfoVM,
+  economyVM,
+} from '../ui/hudModels';
 import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
@@ -573,6 +583,8 @@ export class GameScene extends Phaser.Scene {
       funds: s.funds[0],
       income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0) - upkeepOf(s, 0),
       command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
+      economy: economyVM(s, 0),
+      dayInfo: dayInfoVM(s),
       buildings: owned.length,
       day: s.day,
       dayLimit: RULES.dayLimit,
