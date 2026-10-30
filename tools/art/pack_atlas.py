@@ -24,8 +24,8 @@ IMG = os.path.normpath(os.path.join(ROOT, '..', '..', 'public', 'assets', 'img')
 OUT = os.path.normpath(os.path.join(ROOT, '..', '..', 'public', 'assets', 'atlas'))
 OUT_TS = os.path.normpath(os.path.join(ROOT, '..', '..', 'src', 'atlasPages.ts'))
 SIZE, PAD = 2048, 2
-# Se quedan sueltas: el cursor del raton (lo usa el CSS) y el icono de la pestaña.
-LOOSE = {'mouse'}
+# Se quedan sueltas: los punteros del raton (los usa el CSS; tools/art/icons/iconos.txt).
+LOOSE = {'raton', 'raton_2x', 'raton_boton', 'raton_boton_2x'}
 
 
 def load():

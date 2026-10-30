@@ -169,7 +169,7 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
 
 Se ejecuta solo antes de `npm run build`; si algo falla, no se publica. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
-En `dist` solo van el atlas, el cursor y el icono; en la version de un fichero la musica va solo en mp3.
+En `dist` solo van el atlas, los punteros del raton (`raton*.png`) y el icono; en la version de un fichero la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Calidad del codigo

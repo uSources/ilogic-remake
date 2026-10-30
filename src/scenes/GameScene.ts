@@ -1121,6 +1121,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
+    this.view.cursorAttack = this.phase === 'attack';
     this.view.tick(time);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;

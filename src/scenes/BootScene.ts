@@ -24,8 +24,11 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     createAtlas(this, ATLAS_PAGES);
     setImageSource(this.textures);
-    // Cursor del raton propio: el soldadito blanco, con el punto activo en (17,0).
-    document.body.style.cursor = `url(${asset('assets/img/mouse.png')}) 17 0, auto`;
+    // Punteros del raton propios (tools/art/icons/iconos.txt): el normal y el de lo que se puede
+    // pulsar, con el punto activo en la punta. Al doble para pantallas de alta densidad.
+    const root = document.documentElement.style;
+    root.setProperty('--cursor', pointerCss('raton', 'auto'));
+    root.setProperty('--cursor-button', pointerCss('raton_boton', 'pointer'));
     // Phaser no espera a create(): la escena siguiente se lanza cuando esten las fuentes de la
     // interfaz (van incluidas; el limite es por si acaso; sin ellas se usan las de reserva).
     const fonts = Promise.all([
@@ -35,4 +38,12 @@ export class BootScene extends Phaser.Scene {
     ]).catch(() => undefined);
     void Promise.race([fonts, new Promise((r) => setTimeout(r, 2500))]).then(() => this.scene.start('Logo'));
   }
+}
+
+/** Valor CSS de un puntero propio: con image-set (nitido en alta densidad) si el navegador lo entiende. */
+function pointerCss(name: string, fallback: string): string {
+  const one = asset(`assets/img/${name}.png`);
+  const two = asset(`assets/img/${name}_2x.png`);
+  const sharp = `image-set(url("${one}") 1x, url("${two}") 2x) 0 0, ${fallback}`;
+  return CSS.supports('cursor', sharp) ? sharp : `url("${one}") 0 0, ${fallback}`;
 }
