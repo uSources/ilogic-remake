@@ -7,7 +7,9 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.2.0] - 2026-10-30 — Sin repostar
+
+Menos logística y más batalla: fuera el combustible y la munición, y precios ajustados.
 
 ### Cambios de juego
 - **Fuera el combustible y la munición.** Casi solo estorbaban: unidades paradas sin combustible, aviones que caían y unidades que no podían disparar. Ya no hay que volver a repostar ni a recargar.
@@ -16,10 +18,18 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Equilibrio
 - El **Bombardero** cuesta 13000 en vez de 20000 y el **Lanzamisiles** 11000 en vez de 16000: rendían mucho menos de lo que costaban.
 
-### Modificar el juego
-- Las unidades y los edificios (precio, movimiento, daño contra cada unidad, quién los fabrica...) están ahora en ficheros de configuración (`src/core/content/units.json` y `buildings.json`), igual que el terreno (`terrain.json`), las reglas por defecto (`rules.json`) y los pesos de la IA (`ai.json`): se pueden cambiar o añadir sin tocar código. Una unidad nueva se crea con `npm run unit -- new <Id> --like <Parecida>`. Ver `docs/CONTENIDO.md`.
+### Arreglos
+- Una captura a medias ya no se conserva si la unidad que capturaba se va y vuelve (la IA podía aprovecharlo).
+
+### Interfaz
+- El enlace a la web del juego de 2013 del menú pasa a ser «GitHub» y lleva al repositorio del remake.
+
+### Para quien modifica el juego
+- Unidades, edificios, terreno, reglas por defecto y pesos de la IA están en ficheros de configuración (`src/core/content/*.json`): se pueden cambiar o añadir sin tocar código. Una unidad nueva se crea con `npm run unit -- new <Id> --like <Parecida>`. Guía: `docs/CONTENIDO.md`.
 
 <!-- en -->
+
+Less logistics, more battle: fuel and ammo are gone, and prices have been tuned.
 
 ### Gameplay
 - **Fuel and ammo are gone.** They mostly got in the way: units stuck without fuel, aircraft crashing and units unable to fire. No more trips back to refuel or rearm.
@@ -28,8 +38,14 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Balance
 - The **Bomber** now costs 13000 instead of 20000 and the **Missile truck** 11000 instead of 16000: they were worth much less than their price.
 
-### Modding
-- Units and buildings (price, movement, damage against each unit, who builds them...) now live in config files (`src/core/content/units.json` and `buildings.json`), as do terrain (`terrain.json`), default rules (`rules.json`) and AI weights (`ai.json`): they can be changed or added without touching code. A new unit is created with `npm run unit -- new <Id> --like <Similar>`. See `docs/CONTENIDO.md`.
+### Fixes
+- A half-finished capture is no longer kept when the capturing unit leaves and comes back (the AI could exploit it).
+
+### Interface
+- The menu link to the 2013 game's website is now "GitHub" and goes to the remake's repository.
+
+### For modders
+- Units, buildings, terrain, default rules and AI weights live in config files (`src/core/content/*.json`): they can be changed or added without touching code. A new unit is created with `npm run unit -- new <Id> --like <Similar>`. Guide: `docs/CONTENIDO.md`.
 
 ## [0.1.0] - 2026-10-29 — El remake
 
