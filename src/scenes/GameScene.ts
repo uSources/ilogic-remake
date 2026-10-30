@@ -386,7 +386,7 @@ export class GameScene extends Phaser.Scene {
     // Cursor y camara sobre la Base del jugador.
     const hq = this.s.buildings.find((b) => b.owner === 0 && b.type === HQ) ?? { x: 0, y: 0 };
     this.view.cursor = { x: hq.x, y: hq.y };
-    this.view.centerOn(hq, true);
+    this.view.centerInside(hq);
 
     this.setupInput();
     this.bindHud();
