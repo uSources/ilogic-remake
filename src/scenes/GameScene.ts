@@ -88,6 +88,8 @@ import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion,
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
+import { CLOSES_HELP, type GameCommand } from '../controls/commands';
+import { keyCommand } from '../controls/keyboard';
 import {
   abilitiesVM,
   buyBlockedText,
@@ -836,50 +838,46 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onKey(e: KeyboardEvent): void {
+    // Pantalla final y opciones: menus propios, con sus teclas.
     if (this.ended) return this.endKey(e);
     if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
+    const cmd = keyCommand(e);
+    if (!cmd) return;
+    if (cmd.kind === 'accept') e.preventDefault();
+    this.command(cmd);
+  }
+
+  /**
+   * Cumplir una orden del jugador, venga del teclado o de otro mando (ver src/controls). Es lo unico
+   * que un mando necesita de la escena.
+   */
+  command(cmd: GameCommand): void {
     if (ui.get().help) {
-      if (['Escape', 'Backspace', 'KeyH', 'Enter', 'NumpadEnter', 'Space'].includes(e.code)) ui.set({ help: false });
+      if (CLOSES_HELP.includes(cmd.kind)) ui.set({ help: false });
       return;
     }
-    if (e.code === 'KeyH') return ui.set({ help: true });
-    if (e.code === 'KeyO' && (this.phase === 'map' || this.phase === 'gameMenu')) {
+    if (cmd.kind === 'help') return ui.set({ help: true });
+    if (cmd.kind === 'options') {
+      if (this.phase !== 'map' && this.phase !== 'gameMenu') return;
       if (this.phase === 'map') this.openGameMenu();
       this.menuSel = GAME_MENU.indexOf('options');
       this.refreshHud();
       return this.optionsPanel.open();
     }
     if (this.phase === 'busy') {
-      if (['Enter', 'NumpadEnter', 'Space'].includes(e.code)) this.fastForward = true;
+      // Durante el turno enemigo, aceptar acelera las animaciones.
+      if (cmd.kind === 'accept') this.fastForward = true;
       return;
     }
-    switch (e.code) {
-      case 'ArrowUp':
-      case 'KeyW':
-      case 'Numpad8':
-        return this.direction(0, -1);
-      case 'ArrowDown':
-      case 'KeyS':
-      case 'Numpad2':
-        return this.direction(0, 1);
-      case 'ArrowLeft':
-      case 'KeyA':
-      case 'Numpad4':
-        return this.direction(-1, 0);
-      case 'ArrowRight':
-      case 'KeyD':
-      case 'Numpad6':
-        return this.direction(1, 0);
-      case 'Enter':
-      case 'NumpadEnter':
-      case 'Space':
-        e.preventDefault();
-        if (this.time.now < this.inputLockUntil || e.repeat) return;
-        // Mayusculas + Enter al mover: mover y esperar, sin menu.
-        if (this.phase === 'move') return void this.commit(this.view.cursor, { wait: e.shiftKey });
+    switch (cmd.kind) {
+      case 'cursor':
+        return this.direction(cmd.dx, cmd.dy);
+      case 'accept':
+        if (this.time.now < this.inputLockUntil) return;
+        if (this.phase === 'move') return void this.commit(this.view.cursor, { wait: cmd.wait });
         return this.accept();
-      case 'Backspace':
-        // Al trazar un camino, Retroceso quita la ultima casilla.
+      case 'stepBack':
+        // Al trazar un camino, quitar la ultima casilla.
         if (this.phase === 'move' && this.trail.length > 1) {
           this.trail = this.trail.slice(0, -1);
           this.view.cursor = { ...this.trail[this.trail.length - 1]! };
@@ -887,34 +885,31 @@ export class GameScene extends Phaser.Scene {
           return this.refresh();
         }
         return this.back();
-      case 'Escape':
+      case 'cancel':
         if (this.carry) return this.cancelCarry();
         if (this.group.size) {
           this.group.clear();
           return this.refresh();
         }
         return this.back();
-      case 'KeyZ':
-        if ((e.ctrlKey || e.metaKey) && this.phase === 'map') this.undoLast();
+      case 'undo':
+        if (this.phase === 'map') this.undoLast();
         return;
-      case 'KeyE':
+      case 'endTurn':
         if (this.phase === 'map' || this.phase === 'gameMenu') this.requestEndTurn();
         return;
-      case 'KeyT':
+      case 'threat':
         return this.toggleThreat();
-      case 'KeyM':
+      case 'minimap':
         return ui.actions.toggleMinimap();
-      case 'Tab':
+      case 'nextUnit':
         if (this.phase === 'map') this.nextIdle();
         return;
-      case 'Equal':
-      case 'NumpadAdd':
-        this.zoomKey(1);
+      case 'zoom':
+        this.zoomKey(cmd.dir);
         return this.refreshHud();
-      case 'Minus':
-      case 'NumpadSubtract':
-        this.zoomKey(-1);
-        return this.refreshHud();
+      default:
+        return;
     }
   }
 

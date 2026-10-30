@@ -109,5 +109,7 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 | Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
 | Cambiar el dibujo del mapa | `src/ui/mapView.ts`, `src/ui/terrainArt.ts` |
+| Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ordenes del juego y un adaptador por mando; `GameScene.command` las cumple) |
+| Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |
 | Textos | `src/settings.ts` (`TEXTS.es` / `TEXTS.en`) |
 | Misiones | `src/core/missions.ts` (+ skill `nueva-mision`) |
