@@ -13,6 +13,21 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-10-30 · reglas (combustible y municion) · ACEPTADO (por el usuario)
+
+Cambio: fuera combustible, municion, repostaje y aviones que caen; Suministros pasa a reparar 20 a los
+vehiculos y aviones de al lado (`src/core/content/units.json`, `rules.ts`, `ai.ts`).
+Hipotesis: en 60 partidas IA contra IA el 14 % de los turnos de unidades con combustible estaban a 0
+(paradas), el 7 % de las que usan municion no podian disparar y caian 171 aviones: estorbaban y quizas
+eran parte de que las partidas no terminen.
+Resultado (120 partidas 32x32): **66.2 → 66.4** (+0.2, ruido). Lados 53/47, remontadas 47 %, variedad
+88 %, precios 11.4. Siguen **100 % sin terminar**.
+Conclusion: quitarlos no estropea el equilibrio (lo pidio el usuario por diseño, no por la nota). Las
+partidas que no acaban NO eran por la logistica: es la IA (no remata ni avanza a la Base). Ese es el
+siguiente objetivo (entrenador de la IA, 30 puntos de margen en "duracion" y "decididas").
+Rendimiento: Soldado 2.55x la mediana, Artilleria 1.70x, Bazuca 1.63x; Tanque 0.39x, Jeep 0.56x,
+Motorizado 0.46x, Tanque anfibio 0.23x.
+
 ## 2026-10-30 · equilibrio (precios) · ACEPTADO (por el usuario, +0.9)
 
 Cambio: `UNIT.cost.Bomber` 20000 → 13000 y `UNIT.cost.Missile_truck` 16000 → 11000, juntos (`src/core/data.ts`).
