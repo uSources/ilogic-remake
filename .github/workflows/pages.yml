@@ -12,9 +12,11 @@ on:
 permissions:
   contents: write
 
-# Una publicacion a la vez en gh-pages (la comparte con preview.yml).
+# Una publicacion de la web a la vez. Cola propia, no la de las previews: en una cola compartida,
+# GitHub descarta la publicacion que espera si llega otra detras. Si dos suben a gh-pages a la vez,
+# la accion reintenta el push (attempt-limit).
 concurrency:
-  group: gh-pages
+  group: gh-pages-web
   cancel-in-progress: false
 
 jobs:
@@ -41,6 +43,7 @@ jobs:
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
+          attempt-limit: 5
           folder: dist
           # Borra lo viejo de la raiz, pero nunca las previews ni el aviso de Jekyll.
           clean-exclude: |
