@@ -78,7 +78,14 @@ export function buildMission(m: MissionDef): GameState {
   return s;
 }
 
-export const missionRules = (m: MissionDef): RulesConfig => ({ ...DEFAULT_RULES, initialFunds: m.funds[0], ...m.rules });
+/** Las misiones estan ajustadas sin puntos de mando ni mantenimiento (salvo que la mision los pida). */
+export const missionRules = (m: MissionDef): RulesConfig => ({
+  ...DEFAULT_RULES,
+  commandPoints: null,
+  upkeep: 0,
+  initialFunds: m.funds[0],
+  ...m.rules,
+});
 
 /** Comprobaciones de un mapa de mision (para los tests). Devuelve los problemas encontrados. */
 export function checkMission(m: MissionDef): string[] {

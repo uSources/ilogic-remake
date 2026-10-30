@@ -69,6 +69,7 @@ describe('contenido (src/core/content/*.json)', () => {
       id: 'Sniper',
       name: { es: 'Francotirador', en: 'Sniper' },
       cost: 4000,
+      command: 2,
       move: 3,
       vision: 6,
       movement: 'foot',

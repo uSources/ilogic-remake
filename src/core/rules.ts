@@ -61,6 +61,29 @@ export function teamUnits(s: GameState, team: Team): Unit[] {
   return s.units.filter((u) => u.team === team);
 }
 
+/** Puntos de mando que ocupan las unidades de un bando (regla commandPoints). */
+export function commandUsed(s: GameState, team: Team): number {
+  return teamUnits(s, team).reduce((n, u) => n + UNIT.command[u.type]!, 0);
+}
+
+/** Por que no cabe una unidad mas de ese tipo en el bando (null = cabe). */
+export type ArmyLimit = 'units' | 'command';
+export function armyLimit(s: GameState, team: Team, type: number): ArmyLimit | null {
+  if (teamUnits(s, team).length >= RULES.maxUnits) return 'units';
+  if (RULES.commandPoints !== null && commandUsed(s, team) + UNIT.command[type]! > RULES.commandPoints) return 'command';
+  return null;
+}
+
+/**
+ * [CAMBIO] Mantenimiento por ronda de un bando: el tanto por uno `upkeep` del precio de sus
+ * unidades, redondeado a 100. Frena la acumulacion de ejercitos enormes (el original no lo tenia).
+ */
+export function upkeepOf(s: GameState, team: Team): number {
+  if (RULES.upkeep <= 0) return 0;
+  const value = teamUnits(s, team).reduce((n, u) => n + UNIT.cost[u.type]!, 0);
+  return Math.round((value * RULES.upkeep) / 100) * 100;
+}
+
 // ---------------------------------------------------------------------------
 // Movimiento
 // ---------------------------------------------------------------------------
@@ -727,18 +750,20 @@ export interface BuyOption {
   type: number;
   cost: number;
   affordable: boolean;
+  /** Por que no se puede comprar (si no se puede): sin dinero o sin sitio en el ejercito. */
+  blocked?: ArmyLimit | 'funds';
 }
 
 /** Tipos que fabrica un edificio, en orden de tipo, y si se pueden pagar ahora. */
 export function buyOptions(s: GameState, b: Building): BuyOption[] {
   if (b.owner === null) return [];
   const team = b.owner;
-  const full = teamUnits(s, team).length >= RULES.maxUnits;
   const out: BuyOption[] = [];
   for (let t = 0; t < UNIT_TYPES; t++) {
     if (!SPAWNER[t]![b.type]) continue;
     const cost = UNIT.cost[t]!;
-    out.push({ type: t, cost, affordable: !full && cost <= s.funds[team] });
+    const blocked = armyLimit(s, team, t) ?? (cost > s.funds[team] ? 'funds' : undefined);
+    out.push(blocked ? { type: t, cost, affordable: false, blocked } : { type: t, cost, affordable: true });
   }
   return out;
 }
@@ -753,7 +778,7 @@ export function spawn(s: GameState, b: Building, type: number): Unit | null {
   if (b.owner === null || !SPAWNER[type]![b.type]) return null;
   const team = b.owner;
   const cost = UNIT.cost[type]!;
-  if (cost > s.funds[team] || teamUnits(s, team).length >= RULES.maxUnits) return null;
+  if (cost > s.funds[team] || armyLimit(s, team, type)) return null;
   if (!isWalkable(s, b.x, b.y, Movement.of(type))) return null;
   s.funds[team] -= cost;
   return newUnit(s, type, team, b.x, b.y, false);
@@ -765,6 +790,8 @@ export function spawn(s: GameState, b: Building, type: number): Unit | null {
 
 export interface RoundReport {
   income: [number, number];
+  /** Mantenimiento pagado por cada bando (si no llega el dinero, se paga lo que hay). */
+  upkeep: [number, number];
   /** Unidades curadas en un edificio propio (uid, bando, vida recuperada). */
   healed: { uid: number; team: Team; amount: number }[];
 }
@@ -775,7 +802,7 @@ export interface RoundReport {
  * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */
 export function endRound(s: GameState): RoundReport {
-  const report: RoundReport = { income: [0, 0], healed: [] };
+  const report: RoundReport = { income: [0, 0], upkeep: [0, 0], healed: [] };
   for (const b of s.buildings) captureProgress(s, b);
   for (const u of s.units) {
     u.active = true;
@@ -791,6 +818,12 @@ export function endRound(s: GameState): RoundReport {
     const before = u.life;
     u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
     if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
+  }
+  for (const team of [0, 1] as const) {
+    // [CAMBIO] Mantenimiento despues de cobrar. Sin dinero no hay castigo: se paga lo que haya.
+    const paid = Math.min(upkeepOf(s, team), s.funds[team]);
+    s.funds[team] -= paid;
+    report.upkeep[team] = paid;
   }
   s.funds = [Math.min(s.funds[0], MAX_FUNDS), Math.min(s.funds[1], MAX_FUNDS)];
   s.day++;

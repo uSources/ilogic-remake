@@ -4,6 +4,7 @@
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
 import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, UNIT, UNIT_TYPES, Movement } from '@core/data';
+import { commandUsed } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/types';
 
@@ -44,6 +45,9 @@ export function checkInvariants(s: GameState): string[] {
     if (!(Number.isInteger(f) && f >= 0 && f <= MAX_FUNDS)) errs.push(`dinero del bando ${t}: ${f}`);
     const n = s.units.filter((u) => u.team === t).length;
     if (n > RULES.maxUnits) errs.push(`bando ${t}: ${n} unidades, el limite es ${RULES.maxUnits}`);
+    const cp = commandUsed(s, t);
+    if (RULES.commandPoints !== null && cp > RULES.commandPoints)
+      errs.push(`bando ${t}: ${cp} puntos de mando, el limite es ${RULES.commandPoints}`);
   }
   const bpos = new Set<string>();
   for (const b of s.buildings) {

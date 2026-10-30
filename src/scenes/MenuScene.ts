@@ -59,6 +59,13 @@ const CUSTOM_GROUPS: { title: TextKey; keys: { k: ChoiceKey; label: TextKey }[] 
       { k: 'income', label: 'optIncome' },
     ],
   },
+  {
+    title: 'optGroupArmy',
+    keys: [
+      { k: 'command', label: 'optCommand' },
+      { k: 'upkeep', label: 'optUpkeep' },
+    ],
+  },
 ];
 
 const OBJECTIVE_KEY: Record<string, TextKey> = {
