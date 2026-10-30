@@ -7,6 +7,20 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Equilibrio
+- El **Tanque** ya rinde lo que cuesta: acierta el doble a la infantería (0,6 en vez de 0,3; 0,45 a la Bazuca), y el Soldado, el Escudero y el Motorizado le aciertan la mitad (0,05). El Mortero, 0,2 en vez de 0,4. La Bazuca sigue siendo el antitanque.
+- El **Soldado** acierta menos a los vehículos (Jeep 0,2; Tanque ligero, Transporte, Lanzamisiles, Suministros, Antiaéreo y Tanque anfibio 0,1; Artillería 0,05): con 1500 dominaba la partida.
+- La IA ya no se gasta casi todo en aviones: reparte las compras entre la Fábrica y el Aeropuerto, y vuelve a sacar Tanques.
+
+<!-- en -->
+
+### Balance
+- The **Tank** is now worth its price: it hits infantry twice as often (0.6 instead of 0.3; 0.45 against the Bazooka), and the Soldier, Shield trooper and Motor trooper hit it half as often (0.05). The Mortar, 0.2 instead of 0.4. The Bazooka is still the anti-tank unit.
+- The **Soldier** hits vehicles less often (Jeep 0.2; Light tank, Transport, Missile truck, Supplier, Anti-air and Amphibious tank 0.1; Artillery 0.05): at 1500 it dominated the game.
+- The AI no longer spends almost everything on aircraft: it splits purchases between the Factory and the Airport, and builds Tanks again.
+
 ## [0.2.0] - 2026-10-30 — Sin repostar
 
 Menos logística y más batalla: fuera el combustible y la munición, y precios ajustados.
