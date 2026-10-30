@@ -107,7 +107,13 @@ function TopBar({ s }: { s: UIState }) {
           <div class="sub">
             {s.income < 0 ? '−' : '+'}
             {fmtNum(Math.abs(s.income))} {t('perDay')} · {s.buildings} {t('buildingsN')}
-            {s.command ? ` · ${t('commandShort')} ${s.command.used}/${s.command.max}` : null}
+            {s.command ? (
+              <span class="cmd" title={t('commandShort')}>
+                {' · '}
+                <Icon k="ui/mando" alt={t('commandShort')} cls="px-icon ico-sm" />
+                {s.command.used}/{s.command.max}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

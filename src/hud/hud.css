@@ -2394,3 +2394,12 @@ html.reduce-motion .end-best.new {
   align-items: center;
   gap: 4px;
 }
+
+/* Icono a tamaño real (12x12) dentro de una linea de texto pequeño. */
+.px-icon.ico-sm {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin: 0 3px -1px 0;
+  vertical-align: baseline;
+}
