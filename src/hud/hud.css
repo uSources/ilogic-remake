@@ -3060,3 +3060,21 @@ html.reduce-motion .end-best.new {
     width: 112px;
   }
 }
+
+/* Movil, fase V3: el aviso de gestos sale abajo y pequeño, sin tapar el centro del mapa. */
+.toast.hint {
+  top: auto;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  max-width: min(360px, calc(100% - 32px));
+  padding: 6px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+/* Boton Atacar de la prevision de combate (pantallas tactiles). */
+.forecast .attack-go {
+  min-height: 48px;
+  pointer-events: auto;
+  font-size: 18px;
+}

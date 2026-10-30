@@ -382,6 +382,12 @@ function Forecast({ f }: { f: ForecastVM }) {
           <span>{t('none')}</span>
         </div>
       )}
+      {/* Con el dedo: boton grande para atacar (tocar otra vez el enemigo tambien ataca). */}
+      {matchMedia('(pointer: coarse)').matches && (
+        <button tabIndex={-1} type="button" class="px-btn attack-go" onMouseDown={noFocus} onClick={() => ui.actions.attackConfirm()}>
+          {t('attack')}
+        </button>
+      )}
     </Popover>
   );
 }
@@ -917,7 +923,7 @@ export function Hud() {
       {s.toast && (
         <div
           key={s.toast.id}
-          class="px toast"
+          class={`px toast ${s.toast.hint ? 'hint' : ''}`}
           role="status"
           style={{ animationDuration: `${Math.max(2.4, s.toast.text.length / 16).toFixed(1)}s` }}
         >

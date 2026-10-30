@@ -21,6 +21,7 @@ const SPEEDS = ['normal', 'fast', 'instant'] as const;
 
 const ROWS: Row[] = [
   { key: 'music', group: 'optGroupSound', label: 'music', values: BOOL, show: onOff },
+  { key: 'vibrate', group: 'optGroupSound', label: 'optVibrate', values: BOOL, show: onOff },
   { key: 'autosave', group: 'optGroupGame', label: 'autosave', values: BOOL, show: onOff },
   { key: 'autoWait', group: 'optGroupGame', label: 'optAutoWait', values: BOOL, show: onOff },
   { key: 'autoNext', group: 'optGroupGame', label: 'optAutoNext', values: BOOL, show: onOff },

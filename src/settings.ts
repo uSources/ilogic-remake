@@ -17,6 +17,8 @@ export interface Settings {
   autoWait: boolean;
   /** Tras terminar con una unidad, el cursor salta a la siguiente sin mover. */
   autoNext: boolean;
+  /** Vibracion corta al coger, soltar y atacar con el dedo. */
+  vibrate: boolean;
   /** Velocidad de las animaciones de tus unidades y de las del enemigo. */
   speedOwn: Speed;
   speedEnemy: Speed;
@@ -40,6 +42,7 @@ const DEFAULTS: Settings = {
   music: false,
   autoWait: true,
   autoNext: false,
+  vibrate: true,
   speedOwn: 'normal',
   speedEnemy: 'normal',
   uiScale: 1,
@@ -62,6 +65,7 @@ function load(): Settings {
       music: !!parsed.music,
       autoWait: parsed.autoWait !== false,
       autoNext: !!parsed.autoNext,
+      vibrate: parsed.vibrate !== false,
       speedOwn: SPEEDS.includes(parsed.speedOwn as Speed) ? (parsed.speedOwn as Speed) : 'normal',
       speedEnemy: SPEEDS.includes(parsed.speedEnemy as Speed) ? (parsed.speedEnemy as Speed) : 'normal',
       uiScale: UI_SCALES.includes(parsed.uiScale as number) ? (parsed.uiScale as number) : 1,
@@ -209,6 +213,7 @@ const TEXTS = {
     undone: 'Movimiento deshecho',
     nothingToUndo: 'No hay nada que deshacer',
     optAutoWait: 'Esperar sola al soltar',
+    optVibrate: 'Vibración',
     optAutoNext: 'Saltar a la siguiente unidad',
     optSpeedOwn: 'Velocidad: tus unidades',
     optSpeedEnemy: 'Velocidad: el enemigo',
@@ -476,6 +481,7 @@ const TEXTS = {
     undone: 'Move undone',
     nothingToUndo: 'Nothing to undo',
     optAutoWait: 'Wait automatically on drop',
+    optVibrate: 'Vibration',
     optAutoNext: 'Jump to the next unit',
     optSpeedOwn: 'Speed: your units',
     optSpeedEnemy: 'Speed: enemy',

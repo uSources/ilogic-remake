@@ -28,6 +28,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - La **ficha del terreno** enseña la casilla tal como se ve en el mapa (antes, un cuadrado verde liso).
 - El mapa se puede desplazar más allá de sus bordes: cualquier casilla llega al centro, lejos de la interfaz.
 - El **zoom inicial** se ajusta a la pantalla: unas 9 casillas en el lado corto, nunca casillas más pequeñas que un dedo.
+- Al atacar con el dedo, la previsión trae un botón **Atacar** (tocar otra vez el enemigo también ataca).
+- **Vibración** corta al coger, al soltar y al atacar con el dedo; se puede quitar en Opciones.
+- El aviso de gestos sale abajo y pequeño, y nunca encima de un menú.
 
 <!-- en -->
 
@@ -50,6 +53,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - The **terrain card** shows the tile as it looks on the map (it used to be a plain green square).
 - The map scrolls past its edges: any tile can reach the centre, away from the interface.
 - The **starting zoom** fits the screen: about 9 tiles on the short side, never tiles smaller than a finger.
+- When attacking with your finger, the forecast has an **Attack** button (tapping the enemy again also attacks).
+- Short **vibration** when picking up, dropping and attacking with your finger; it can be turned off in Options.
+- The gestures tip shows small at the bottom, and never on top of a menu.
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 

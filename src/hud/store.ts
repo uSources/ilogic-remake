@@ -310,7 +310,8 @@ export interface UIState {
   cursorScreen: { x: number; y: number };
   idle: IdleVM[];
   threat: boolean;
-  toast: { text: string; id: number } | null;
+  /** Aviso corto. `hint`: pequeño y abajo (ayuda de gestos), no en medio de la pantalla. */
+  toast: { text: string; id: number; hint?: boolean } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
   end: {
@@ -381,6 +382,8 @@ export interface UIActions {
   toggleMinimap(): void;
   minimapJump(x: number, y: number): void;
   focusUnit(uid: number): void;
+  /** Atacar al enemigo de la prevision de combate (boton Atacar, con el dedo). */
+  attackConfirm(): void;
   endContinue(): void;
   endHover(i: number): void;
   endPick(i: number): void;
@@ -461,6 +464,7 @@ const DEFAULT_ACTIONS: UIActions = {
   toggleMinimap: noop,
   minimapJump: noop,
   focusUnit: noop,
+  attackConfirm: noop,
   endContinue: noop,
   endHover: noop,
   endPick: noop,
@@ -508,8 +512,8 @@ export const ui = {
 };
 
 let toastId = 0;
-export function showToast(text: string): void {
-  ui.set({ toast: { text, id: ++toastId } });
+export function showToast(text: string, hint = false): void {
+  ui.set({ toast: { text, id: ++toastId, hint } });
 }
 export function showReport(title: string, lines: ReportLineVM[]): void {
   ui.set({ report: { title, lines, id: ++toastId } });

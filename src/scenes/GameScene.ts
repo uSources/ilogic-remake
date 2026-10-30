@@ -88,6 +88,7 @@ import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion,
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
+import { buzz } from '../ui/haptics';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import {
@@ -470,6 +471,11 @@ export class GameScene extends Phaser.Scene {
         this.view.cursor = { x: u.x, y: u.y };
         this.view.ensureVisible(u, 3);
         this.selectUnit(u);
+      },
+      attackConfirm: () => {
+        // Como el segundo toque sobre el enemigo (ver touchTap).
+        if (!ready() || this.phase !== 'move' || !ui.get().forecast) return;
+        void this.commit(this.view.cursor, { drop: true });
       },
     });
   }
@@ -1075,7 +1081,7 @@ export class GameScene extends Phaser.Scene {
     this.drag.moved = true; // que al levantar el dedo no cuente como toque
     const tile = this.view.tileAtScreen(at.x, at.y);
     if (!tile) return;
-    navigator.vibrate?.(12);
+    buzz(12);
     this.view.cursor = { ...tile };
     const u = unitAt(this.s, tile.x, tile.y);
     if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) return this.inspect(u);
@@ -1084,13 +1090,15 @@ export class GameScene extends Phaser.Scene {
 
   /** La primera vez que se juega con el dedo, explicar los gestos. */
   private touchHint(): void {
+    // Nunca encima de un menu: si hay uno abierto, se enseña en el siguiente toque.
+    if (MENU_PHASES.includes(this.phase) || ui.get().menu || ui.get().help) return;
     try {
       if (localStorage.getItem('ilogic.touchHint')) return;
       localStorage.setItem('ilogic.touchHint', '1');
     } catch {
       return;
     }
-    showToast(t('touchHint'));
+    showToast(t('touchHint'), true);
   }
 
   private onPointerUp(p: Phaser.Input.Pointer): void {
@@ -1496,6 +1504,7 @@ export class GameScene extends Phaser.Scene {
         }
         const target = unitById(this.s, it.target.uid);
         if (!target) return this.afterAction();
+        buzz(25);
         await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
         return this.afterAction();
       }
@@ -1655,7 +1664,7 @@ export class GameScene extends Phaser.Scene {
       this.view.cursor = { x: u.x, y: u.y };
       this.selectUnit(u);
     }
-    if (pick.touch) navigator.vibrate?.(10);
+    if (pick.touch) buzz(10);
     const key = unitKey(this.textures, this.s, u);
     if (!key) return;
     // Sombra en el suelo y la unidad "levantada" 3 pixeles.
@@ -1712,6 +1721,7 @@ export class GameScene extends Phaser.Scene {
     }
     c.ghost.destroy();
     c.shadow.destroy();
+    if (c.touch) buzz(10);
     this.view.cursor = { ...tile! };
     void this.commit(tile!, { drop: true, wait: shift });
   }
@@ -1874,6 +1884,7 @@ export class GameScene extends Phaser.Scene {
     const targetUid = this.attackSet.get(key(c));
     if (!u || targetUid === undefined) return this.openUnitMenu();
     const target = unitById(this.s, targetUid)!;
+    buzz(25);
     await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
     this.afterAction();
   }

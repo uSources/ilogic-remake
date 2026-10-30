@@ -3,7 +3,8 @@
 ## Estado (30-10-2026)
 
 En curso. Hechas: V0 (comprobación de lo que se sale de la pantalla: `npm run fuera`), V1 (que nada se
-corte), V2 (más mapa) y la parte de V3 de mover con dos toques. Siguiente: el resto de V3. El juego ya funciona con el dedo
+corte), V2 (más mapa) y
+V3 (mover con un toque). Siguiente: V4 (menús para el pulgar). El juego ya funciona con el dedo
 y se instala como app (PWA, versión 0.4.0).
 
 ## Cómo está ahora

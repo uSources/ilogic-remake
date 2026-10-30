@@ -159,6 +159,22 @@ async function scenarios(page, cdp, name) {
   const e2 = await unit(page, enemy.uid);
   check(!e2 || e2.life < enemy.life, 'segundo toque: ataca');
 
+  // Atacar con el boton de la prevision (en vez del segundo toque).
+  await start(page, true);
+  const enemyB = await page.evaluate(() => window.ilogicDebug.state().units.find((u) => u.team === 1 && u.x === 7 && u.y === 12));
+  await center(page, SOLDIER.x + 1, SOLDIER.y);
+  await tap(page, SOLDIER.x, SOLDIER.y);
+  await tap(page, SOLDIER.x + 1, SOLDIER.y);
+  const btn = page.locator('.forecast .attack-go');
+  const hasBtn = (await btn.count()) === 1;
+  if (hasBtn) {
+    await btn.tap();
+    await page.waitForTimeout(150);
+    await page.evaluate(() => window.ilogicDebug.idle());
+  }
+  const e3 = await unit(page, enemyB.uid);
+  check(hasBtn && (!e3 || e3.life < enemyB.life), 'boton Atacar de la prevision: ataca');
+
   // Comprar: tocar la fabrica libre.
   await start(page);
   await center(page, FACTORY.x, FACTORY.y);
