@@ -210,10 +210,12 @@ function DayPanel({ d }: { d: DayInfoVM }) {
   );
 }
 
-/** Abre su desglose al pasar el raton (CSS) o al tocarlo (pantallas tactiles). */
-function useTipToggle(): [boolean, () => void, () => void] {
+/** Desglose: se abre al pasar el raton (CSS) o al tocarlo, y se cierra al tocarlo otra vez. */
+function useTipToggle(): [boolean, () => void, (e: PointerEvent) => void] {
   const [open, setOpen] = useState(false);
-  return [open, () => setOpen((o) => !o), () => setOpen(false)];
+  // Salir con el raton lo cierra; con el dedo no (el navegador "sale" al levantarlo, justo tras abrirlo).
+  const leave = (e: PointerEvent) => e.pointerType === 'mouse' && setOpen(false);
+  return [open, () => setOpen((o) => !o), leave];
 }
 
 function TopBar({ s }: { s: UIState }) {
@@ -223,7 +225,7 @@ function TopBar({ s }: { s: UIState }) {
   const [dayOpen, toggleDay, closeDay] = useTipToggle();
   return (
     <div class="top">
-      <div class={`px funds has-tip ${fundsOpen ? 'open' : ''}`} onClick={toggleFunds} onMouseLeave={closeFunds}>
+      <div class={`px funds has-tip ${fundsOpen ? 'open' : ''}`} onClick={toggleFunds} onPointerLeave={closeFunds}>
         <Icon k="ui/dinero" alt="" cls="px-icon coin" />
         <div>
           <div class="amount num">{fmtNum(s.funds)}</div>
@@ -241,7 +243,7 @@ function TopBar({ s }: { s: UIState }) {
         </div>
         {s.economy && <EconomyPanel e={s.economy} />}
       </div>
-      <div class={`day has-tip ${dayOpen ? 'open' : ''}`} onClick={toggleDay} onMouseLeave={closeDay}>
+      <div class={`day has-tip ${dayOpen ? 'open' : ''}`} onClick={toggleDay} onPointerLeave={closeDay}>
         <span class="d">
           {t('day')} {s.day}
           {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
@@ -446,9 +448,10 @@ function CombatPanel({ c }: { c: CombatVM }) {
   );
 }
 
-function UnitCard({ u }: { u: UnitVM }) {
+function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
   return (
     <div class="px unitcard">
+      <FoldMark folded={folded} />
       <div class="head">
         <Icon k={u.icon} alt={u.name} cls="px-icon portrait" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
@@ -463,7 +466,7 @@ function UnitCard({ u }: { u: UnitVM }) {
           <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
             {u.team === 0 ? t('you') : t('enemy')}
           </span>
-          {u.chips ? (
+          {folded ? null : u.chips ? (
             <span class="chips">
               {u.chips.map((c) => (
                 <span class="chip" title={c.title} key={c.icon}>
@@ -484,12 +487,12 @@ function UnitCard({ u }: { u: UnitVM }) {
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
-      {u.cargo && (
+      {!folded && u.cargo && (
         <span class="muted" style={{ fontSize: 13 }}>
           {u.cargo}
         </span>
       )}
-      {u.abilities && u.abilities.length > 0 && (
+      {!folded && u.abilities && u.abilities.length > 0 && (
         <ul class="abilities" aria-label={t('abilities')}>
           {u.abilities.map((a) => (
             <li title={a.desc}>
@@ -503,7 +506,7 @@ function UnitCard({ u }: { u: UnitVM }) {
   );
 }
 
-function TerrainCard({ tile }: { tile: TileVM }) {
+function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean }) {
   const stars = Math.max(0, Math.min(4, Math.round(tile.terrain.defense / 10)));
   const b = tile.building;
   const ownerColor = !b ? undefined : b.owner === 'you' ? 'var(--blue)' : b.owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)';
@@ -518,6 +521,7 @@ function TerrainCard({ tile }: { tile: TileVM }) {
           : t('unknown');
   return (
     <div class="px terrain">
+      <FoldMark folded={folded} />
       {b ? (
         <div class="bld">
           <Icon k={b.icon} alt="" />
@@ -531,42 +535,48 @@ function TerrainCard({ tile }: { tile: TileVM }) {
       ) : (
         <span class="swatch" style={{ backgroundImage: `url(${imgUrl(tile.terrain.key)})` }} />
       )}
-      <span style={{ fontFamily: 'var(--display)', fontSize: 14 }}>{tile.terrain.name}</span>
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}
-        title={`${t('defense')} ${tile.terrain.defense}%`}
-      >
-        <Icon k="ui/defensa" alt={t('defense')} cls="px-icon ico" />
-        <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{'★'.repeat(stars) + '☆'.repeat(4 - stars)}</span>
-      </div>
-      {tile.terrain.cost && (
-        <div
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}
-          title={t('stepCostTitle')}
-        >
-          <Icon k="ui/movimiento" alt={t('stepCost')} cls="px-icon ico" />
-          <span>
-            {t('onFoot')} {tile.terrain.cost.foot ?? '—'} · {t('byVehicle')} {tile.terrain.cost.vehicle ?? '—'}
-          </span>
-        </div>
-      )}
-      {b?.capture && (
-        <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
-          <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
-          <div class="blocks">
-            <span style={{ flex: b.capture.total - b.capture.left, background: b.capture.team === 0 ? 'var(--blue)' : 'var(--red)' }} />
-            <span style={{ flex: b.capture.left }} />
+      <span class="tname" style={{ fontFamily: 'var(--display)', fontSize: 14 }}>
+        {tile.terrain.name}
+      </span>
+      {!folded && (
+        <>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}
+            title={`${t('defense')} ${tile.terrain.defense}%`}
+          >
+            <Icon k="ui/defensa" alt={t('defense')} cls="px-icon ico" />
+            <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{'★'.repeat(stars) + '☆'.repeat(4 - stars)}</span>
           </div>
-          <span class="num" style={{ fontSize: 12 }}>
-            {b.capture.left}
-          </span>
-        </div>
-      )}
-      {b && b.income > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }} title={t('income')}>
-          <Icon k="ui/dinero" alt={t('income')} cls="px-icon ico" />
-          <span>+{fmtNum(b.income)}</span>
-        </div>
+          {tile.terrain.cost && (
+            <div
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}
+              title={t('stepCostTitle')}
+            >
+              <Icon k="ui/movimiento" alt={t('stepCost')} cls="px-icon ico" />
+              <span>
+                {t('onFoot')} {tile.terrain.cost.foot ?? '—'} · {t('byVehicle')} {tile.terrain.cost.vehicle ?? '—'}
+              </span>
+            </div>
+          )}
+          {b?.capture && (
+            <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
+              <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
+              <div class="blocks">
+                <span style={{ flex: b.capture.total - b.capture.left, background: b.capture.team === 0 ? 'var(--blue)' : 'var(--red)' }} />
+                <span style={{ flex: b.capture.left }} />
+              </div>
+              <span class="num" style={{ fontSize: 12 }}>
+                {b.capture.left}
+              </span>
+            </div>
+          )}
+          {b && b.income > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }} title={t('income')}>
+              <Icon k="ui/dinero" alt={t('income')} cls="px-icon ico" />
+              <span>+{fmtNum(b.income)}</span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -574,15 +584,43 @@ function TerrainCard({ tile }: { tile: TileVM }) {
 
 const TRAY_MAX = 8;
 
+/** Pantallas donde se pueden plegar paneles (las mismas que en hud.css, "Plegar"). */
+const FOLD_SCREEN = '(max-width: 720px), (max-height: 500px)';
+const folded = new Set<string>();
+/** Panel plegable en el movil (bandeja, fichas): se recuerda mientras dura la sesion. */
+function useFold(key: string): [boolean, () => void] {
+  const [on, setOn] = useState(folded.has(key));
+  const toggle = () => {
+    if (!matchMedia(FOLD_SCREEN).matches) return;
+    if (on) folded.delete(key);
+    else folded.add(key);
+    setOn(!on);
+  };
+  return [on && matchMedia(FOLD_SCREEN).matches, toggle];
+}
+
+/** Flecha de plegar (solo se ve en el movil). */
+const FoldMark = ({ folded }: { folded: boolean }) => (
+  <span class="fold-mark" aria-hidden="true">
+    {folded ? '▸' : '▾'}
+  </span>
+);
+
 function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
   const a = ui.actions;
+  const [folded, toggleFold] = useFold('tray');
   return (
-    <div class="px tray">
-      <div class="label tray-head">
+    <div class={`px tray ${folded ? 'folded' : ''}`}>
+      <div class="label tray-head" onClick={toggleFold} aria-expanded={!folded}>
         <span>
+          <FoldMark folded={folded} />
           {t('idle')} · {idle.length}
         </span>
-        {idle.length > 0 && <span style={{ color: 'var(--gold)' }}>TAB</span>}
+        {idle.length > 0 && (
+          <span class="key-hint" style={{ color: 'var(--gold)' }}>
+            TAB
+          </span>
+        )}
       </div>
       {idle.length > 0 ? (
         <div class="slots">
@@ -700,6 +738,17 @@ function MoveTip({ m }: { m: MoveTipVM }) {
   );
 }
 
+/** Fichas de abajo: terreno y unidad. En el movil, tocar una las pliega (las dos) o despliega. */
+function Cards({ tile }: { tile: TileVM }) {
+  const [folded, toggleFold] = useFold('cards');
+  return (
+    <div class={`cards ${folded ? 'folded' : ''}`} onClick={toggleFold} aria-expanded={!folded}>
+      <TerrainCard tile={tile} folded={folded} />
+      {tile.unit && <UnitCard u={tile.unit} folded={folded} />}
+    </div>
+  );
+}
+
 function GameHud({ s }: { s: UIState }) {
   const showCards = !s.busy && s.turn === 'player' && s.tile;
   return (
@@ -707,12 +756,7 @@ function GameHud({ s }: { s: UIState }) {
       <TopBar s={s} />
       {s.mission && s.turn === 'player' && <MissionPanel m={s.mission} />}
       {s.hint && <div class="hintline">{s.hint}</div>}
-      {showCards && (
-        <div class="cards">
-          <TerrainCard tile={s.tile!} />
-          {s.tile!.unit && <UnitCard u={s.tile!.unit} />}
-        </div>
-      )}
+      {showCards && <Cards tile={s.tile!} />}
       <div class="side">
         {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
         {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} />}
