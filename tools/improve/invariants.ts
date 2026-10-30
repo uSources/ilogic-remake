@@ -3,9 +3,9 @@
  * Las comprueba el cazador de fallos (fuzz.ts) despues de cada accion. Si una falla, es un fallo del
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
-import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, UNIT, UNIT_TYPES, Movement } from '../../src/core/data';
-import { deserialize, serialize } from '../../src/core/save';
-import type { GameState } from '../../src/core/types';
+import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, UNIT, UNIT_TYPES, Movement } from '@core/data';
+import { deserialize, serialize } from '@core/save';
+import type { GameState } from '@core/types';
 
 export function checkInvariants(s: GameState): string[] {
   const errs: string[] = [];

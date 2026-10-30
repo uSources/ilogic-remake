@@ -3,11 +3,11 @@
  * segundos (la usan los agentes de IA y los tests). Cada orden es una linea; la respuesta, texto.
  * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
  */
-import { aiTurn } from '../../src/core/ai';
-import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT, UNIT_NAMES, useRules } from '../../src/core/data';
-import { seededRng } from '../../src/core/geom';
-import { generateGame } from '../../src/core/mapgen';
-import { buildMission, missionById, missionRules } from '../../src/core/missions';
+import { aiTurn } from '@core/ai';
+import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT, UNIT_NAMES, useRules } from '@core/data';
+import { seededRng } from '@core/geom';
+import { generateGame } from '@core/mapgen';
+import { buildMission, missionById, missionRules } from '@core/missions';
 import {
   attackFull,
   attackTargets,
@@ -25,9 +25,9 @@ import {
   unitById,
   visibility,
   wait,
-} from '../../src/core/rules';
-import { deserialize, serialize } from '../../src/core/save';
-import type { GameEvent, GameState, Rng, Unit } from '../../src/core/types';
+} from '@core/rules';
+import { deserialize, serialize } from '@core/save';
+import type { GameEvent, GameState, Rng, Unit } from '@core/types';
 
 /** Una letra por terreno (minuscula = suelo; mayuscula = obstaculo o agua). */
 const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {

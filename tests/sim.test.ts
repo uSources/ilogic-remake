@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { aiTurn } from '../src/core/ai';
-import { HQ, MAP_W } from '../src/core/data';
-import { seededRng } from '../src/core/geom';
-import { generateGame } from '../src/core/mapgen';
-import { endRound, groundDistance, outcome } from '../src/core/rules';
-import { deserialize, serialize } from '../src/core/save';
-import { grid } from '../src/core/geom';
-import type { GameState } from '../src/core/types';
+import { aiTurn } from '@core/ai';
+import { HQ, MAP_W } from '@core/data';
+import { seededRng } from '@core/geom';
+import { generateGame } from '@core/mapgen';
+import { endRound, groundDistance, outcome } from '@core/rules';
+import { deserialize, serialize } from '@core/save';
+import { grid } from '@core/geom';
+import type { GameState } from '@core/types';
 
 function checkInvariants(s: GameState): void {
   const seen = new Set<string>();

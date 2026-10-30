@@ -1,8 +1,8 @@
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, HQ, UNIT_NAMES, useRules } from '../src/core/data';
-import { grid } from '../src/core/geom';
-import { newUnit } from '../src/core/rules';
+import { DEFAULT_RULES, HQ, UNIT_NAMES, useRules } from '@core/data';
+import { grid } from '@core/geom';
+import { newUnit } from '@core/rules';
 import { settings } from '../src/settings';
 import { captureHintText, minimapVM, tileVM, unitStatsText } from '../src/ui/hudModels';
 import { blankState } from './helpers';

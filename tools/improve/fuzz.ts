@@ -6,13 +6,13 @@
  *   npm run fuzz -- --games 1000 --size 32 --days 40 --seed 5000
  *   npm run fuzz -- --repro 1234                  repetir una partida concreta con todo el detalle
  */
-import { aiTurn } from '../../src/core/ai';
-import { DEFAULT_RULES, useRules } from '../../src/core/data';
-import { seededRng } from '../../src/core/geom';
-import { generateGame } from '../../src/core/mapgen';
-import { endRound, outcome } from '../../src/core/rules';
-import { serialize } from '../../src/core/save';
-import type { GameState, Team } from '../../src/core/types';
+import { aiTurn } from '@core/ai';
+import { DEFAULT_RULES, useRules } from '@core/data';
+import { seededRng } from '@core/geom';
+import { generateGame } from '@core/mapgen';
+import { endRound, outcome } from '@core/rules';
+import { serialize } from '@core/save';
+import type { GameState, Team } from '@core/types';
 import { checkInvariants } from './invariants';
 import { randomTurn } from './randomPlayer';
 

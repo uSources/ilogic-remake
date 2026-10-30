@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rangePos, rangeSize } from '../src/core/geom';
+import { rangePos, rangeSize } from '@core/geom';
 
 describe('geometria', () => {
   it('rangeSize coincide con el original', () => {

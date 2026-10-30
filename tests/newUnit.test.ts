@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildTables, validateContent } from '../src/core/content';
-import { CONTENT } from '../src/core/data';
+import { buildTables, validateContent } from '@core/content';
+import { CONTENT } from '@core/data';
 import { addUnitLike } from '../tools/content/newUnit';
 
 describe('npm run unit -- new', () => {

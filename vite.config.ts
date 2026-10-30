@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import preact from '@preact/preset-vite';
 import { defineConfig, type Plugin } from 'vite';
 import { LOOSE_IMAGES } from './src/atlasPages.ts';
@@ -35,6 +36,8 @@ const repo = /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?$/.exec(pkg.repository
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version), __NOTES_REPO__: JSON.stringify(repo) },
   base: './',
+  // Las herramientas y los tests importan el nucleo como '@core/...' (ver tsconfig.json "paths").
+  resolve: { alias: { '@core': fileURLToPath(new URL('./src/core', import.meta.url)) } },
   plugins: [preact(), pruneLooseImages()],
   build: { target: 'es2022', chunkSizeWarningLimit: 2000, assetsInlineLimit: 0 },
   test: { include: ['tests/**/*.test.ts'] },

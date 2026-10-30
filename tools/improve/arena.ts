@@ -12,12 +12,12 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { aiTurn } from '../../src/core/ai';
-import { AI, DEFAULT_RULES, UNIT, useRules } from '../../src/core/data';
-import { seededRng } from '../../src/core/geom';
-import { generateGame } from '../../src/core/mapgen';
-import { endRound, outcome } from '../../src/core/rules';
-import type { GameEvent, GameState, Rng, Team } from '../../src/core/types';
+import { aiTurn } from '@core/ai';
+import { AI, DEFAULT_RULES, UNIT, useRules } from '@core/data';
+import { seededRng } from '@core/geom';
+import { generateGame } from '@core/mapgen';
+import { endRound, outcome } from '@core/rules';
+import type { GameEvent, GameState, Rng, Team } from '@core/types';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
@@ -83,7 +83,7 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
 function snapshot(): void {
   mkdirSync(BASE_DIR, { recursive: true });
   let src = readFileSync(`${ROOT}src/core/ai.ts`, 'utf8');
-  src = src.replace(/from '\.\/(\w+)'/g, "from '../../src/core/$1'");
+  src = src.replace(/from '\.\/(\w+)'/g, "from '@core/$1'");
   src = src.replace(/import \{ AI, /, 'import { ');
   src = `// Copia de la IA guardada por npm run arena -- --snapshot (${new Date().toISOString().slice(0, 10)}). No editar.\n// Pesos de data.AI de ese momento:\nconst AI = ${JSON.stringify(AI)} as const;\n${src}`;
   writeFileSync(`${BASE_DIR}ai.ts`, src);

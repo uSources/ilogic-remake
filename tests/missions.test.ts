@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { aiTurn } from '../src/core/ai';
-import { HQ, DEFAULT_RULES, setMapSize, useRules, Movement } from '../src/core/data';
-import { grid, seededRng } from '../src/core/geom';
-import { buildMission, checkMission, missionRules, MISSIONS } from '../src/core/missions';
-import { endRound, groundDistance, outcome } from '../src/core/rules';
-import { deserialize, serialize } from '../src/core/save';
+import { aiTurn } from '@core/ai';
+import { HQ, DEFAULT_RULES, setMapSize, useRules, Movement } from '@core/data';
+import { grid, seededRng } from '@core/geom';
+import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
+import { endRound, groundDistance, outcome } from '@core/rules';
+import { deserialize, serialize } from '@core/save';
 
 afterEach(() => {
   setMapSize(32);

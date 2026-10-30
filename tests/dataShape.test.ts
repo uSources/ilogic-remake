@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as D from '../src/core/data';
+import * as D from '@core/data';
 import { unitLabel, settings } from '../src/settings';
 
 /**

@@ -1,10 +1,10 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
-import { aiTurn } from '../../src/core/ai';
-import { BUILDING, UNIT, UNIT_TYPES } from '../../src/core/data';
-import { seededRng } from '../../src/core/geom';
-import { generateGame } from '../../src/core/mapgen';
-import { endReason, endRound, outcome } from '../../src/core/rules';
-import type { GameState, Team } from '../../src/core/types';
+import { aiTurn } from '@core/ai';
+import { BUILDING, UNIT, UNIT_TYPES } from '@core/data';
+import { seededRng } from '@core/geom';
+import { generateGame } from '@core/mapgen';
+import { endReason, endRound, outcome } from '@core/rules';
+import type { GameState, Team } from '@core/types';
 
 export type Policy = 'ai' | 'passive';
 

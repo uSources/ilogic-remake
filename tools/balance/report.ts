@@ -1,5 +1,5 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
-import { UNIT, UNIT_NAMES, UNIT_TYPES } from '../../src/core/data';
+import { UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
 import { unitLabelEs } from './names';
 import type { DuelCell } from './duel';
 import type { GameRecord } from './play';

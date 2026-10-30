@@ -37,6 +37,17 @@ flowchart TB
 - Las escenas orquestan: leen la entrada, llaman a las reglas, animan los eventos y publican el estado
   de la interfaz. La interfaz HTML no toca el juego: llama a `ui.actions`, que registra la escena.
 
+### Herramientas
+
+`tools/` (equilibrio, automejora, partida por texto, contenido) solo usa el nucleo, importado por su
+alias: `import { UNIT } from '@core/data'` (definido en `tsconfig.json` "paths" y en
+`vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
+(escenas, interfaz, ajustes) o Phaser/Preact, y que los tests importen el nucleo por ruta relativa.
+
+Es el paso previo a un monorepo: si algun dia hace falta (un servidor para partidas online que use el
+nucleo, una herramienta con dependencias propias, publicar el nucleo), `src/core` pasa a ser el paquete
+`@ilogic/core` y basta con cambiar el alias. Hasta entonces, un solo paquete es mas simple.
+
 ## Un turno, paso a paso
 
 ```mermaid

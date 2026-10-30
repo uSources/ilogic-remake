@@ -30,8 +30,8 @@ import {
   UNIT,
   UNIT_NAMES,
   Movement,
-} from '../../src/core/data';
-import { MOVEMENTS } from '../../src/core/content';
+} from '@core/data';
+import { MOVEMENTS } from '@core/content';
 
 export interface Variant {
   name: string;

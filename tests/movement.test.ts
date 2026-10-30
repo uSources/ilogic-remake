@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, useRules } from '../src/core/data';
+import { DEFAULT_RULES, useRules } from '@core/data';
 import { PLAIN_RULES } from './plainRules';
-import { load, merge, moveRange, moveUnit, validPath, visibility } from '../src/core/rules';
-import { newUnit } from '../src/core/rules';
+import { load, merge, moveRange, moveUnit, validPath, visibility } from '@core/rules';
+import { newUnit } from '@core/rules';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,
@@ -208,8 +208,8 @@ describe('movimiento: coste del terreno', () => {
 
 describe('movimiento: ordenes de varios turnos', () => {
   it('stepToward acerca la unidad al destino y la orden se guarda con la partida', async () => {
-    const { stepToward } = await import('../src/core/rules');
-    const { deserialize, serialize } = await import('../src/core/save');
+    const { stepToward } = await import('@core/rules');
+    const { deserialize, serialize } = await import('@core/save');
     const s = blankState();
     const tank = newUnit(s, TANK, 0, 2, 2);
     const goal = { x: 20, y: 2 };
