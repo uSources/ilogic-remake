@@ -463,10 +463,21 @@ function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
               </span>
             ) : null}
           </span>
-          <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
-            {u.team === 0 ? t('you') : t('enemy')}
-          </span>
-          {folded ? null : u.chips ? (
+          {!folded && (
+            <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
+              {u.team === 0 ? t('you') : t('enemy')}
+            </span>
+          )}
+          {folded ? (
+            u.chips?.[0] && (
+              <span class="chips">
+                <span class="chip" title={u.chips[0].title}>
+                  <Icon k={u.chips[0].icon} alt={u.chips[0].title} cls="px-icon ico" />
+                  <span class="num">{u.chips[0].text}</span>
+                </span>
+              </span>
+            )
+          ) : u.chips ? (
             <span class="chips">
               {u.chips.map((c) => (
                 <span class="chip" title={c.title} key={c.icon}>
@@ -533,7 +544,10 @@ function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean 
           </div>
         </div>
       ) : (
-        <span class="swatch" style={{ backgroundImage: `url(${imgUrl(tile.terrain.key)})` }} />
+        <span
+          class={`swatch ${tile.terrain.art ? 'art' : ''}`}
+          style={{ backgroundImage: `url(${tile.terrain.art ?? imgUrl(tile.terrain.key)})` }}
+        />
       )}
       <span class="tname" style={{ fontFamily: 'var(--display)', fontSize: 14 }}>
         {tile.terrain.name}
@@ -586,7 +600,8 @@ const TRAY_MAX = 8;
 
 /** Pantallas donde se pueden plegar paneles (las mismas que en hud.css, "Plegar"). */
 const FOLD_SCREEN = '(max-width: 720px), (max-height: 500px)';
-const folded = new Set<string>();
+/** En el movil las fichas empiezan plegadas (una linea): mas mapa a la vista. */
+const folded = new Set<string>(['cards']);
 /** Panel plegable en el movil (bandeja, fichas): se recuerda mientras dura la sesion. */
 function useFold(key: string): [boolean, () => void] {
   const [on, setOn] = useState(folded.has(key));
@@ -609,6 +624,44 @@ const FoldMark = ({ folded }: { folded: boolean }) => (
 function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
   const a = ui.actions;
   const [folded, toggleFold] = useFold('tray');
+  const last = useRef(-1);
+  if (matchMedia(FOLD_SCREEN).matches) {
+    // Movil: la bandeja es un boton con cuantas quedan; cada toque elige la siguiente.
+    const i = idle.findIndex((u) => u.uid === last.current);
+    const next = idle[(i + 1) % Math.max(1, idle.length)];
+    const label = `${t('idle')} · ${idle.length}`;
+    return (
+      <div class="px tray compact">
+        <button
+          tabIndex={-1}
+          type="button"
+          class="px-btn idle-next"
+          title={label}
+          aria-label={label}
+          disabled={!next}
+          onMouseDown={noFocus}
+          onClick={() => {
+            if (!next) return;
+            last.current = next.uid;
+            a.focusUnit(next.uid);
+          }}
+        >
+          {next ? <Icon k={next.icon} alt="" /> : <span class="all">✓</span>}
+          <span class="num">{idle.length}</span>
+        </button>
+        <button
+          tabIndex={-1}
+          type="button"
+          class={`px-btn plain threat ${threat ? 'on' : ''}`}
+          onMouseDown={noFocus}
+          onClick={() => a.toggleThreat()}
+          aria-pressed={threat}
+        >
+          <span class="short">{t('threatShort')}</span>
+        </button>
+      </div>
+    );
+  }
   return (
     <div class={`px tray ${folded ? 'folded' : ''}`}>
       <div class="label tray-head" onClick={toggleFold} aria-expanded={!folded}>
@@ -743,14 +796,16 @@ function Cards({ tile }: { tile: TileVM }) {
   const [folded, toggleFold] = useFold('cards');
   return (
     <div class={`cards ${folded ? 'folded' : ''}`} onClick={toggleFold} aria-expanded={!folded}>
-      <TerrainCard tile={tile} folded={folded} />
+      {!(folded && tile.unit) && <TerrainCard tile={tile} folded={folded} />}
       {tile.unit && <UnitCard u={tile.unit} folded={folded} />}
     </div>
   );
 }
 
 function GameHud({ s }: { s: UIState }) {
-  const showCards = !s.busy && s.turn === 'player' && s.tile;
+  // En el movil la ficha solo sale con algo que mirar: una unidad, un edificio o al elegir destino.
+  const small = matchMedia(FOLD_SCREEN).matches;
+  const showCards = !s.busy && s.turn === 'player' && s.tile && (!small || !!s.tile.unit || !!s.tile.building || !!s.moveTip);
   return (
     <>
       <TopBar s={s} />

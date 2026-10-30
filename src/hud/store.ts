@@ -158,7 +158,14 @@ export interface MoveTipVM {
 }
 
 export interface TileVM {
-  terrain: { key: string; name: string; defense: number; cost?: { foot: number | null; vehicle: number | null } };
+  terrain: {
+    key: string;
+    name: string;
+    defense: number;
+    cost?: { foot: number | null; vehicle: number | null };
+    /** Dibujo de la casilla tal como se ve en el mapa (data URL), si el terreno es el nuevo. */
+    art?: string;
+  };
   building?: {
     icon: string | null;
     name: string;

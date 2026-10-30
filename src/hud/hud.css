@@ -1035,9 +1035,6 @@ body {
     left: 10px;
     bottom: 10px;
   }
-  .cards .terrain {
-    display: none;
-  }
   .unitcard {
     width: 220px;
   }
@@ -2918,5 +2915,148 @@ html.reduce-motion .end-best.new {
     height: 100%;
     overflow-y: auto;
     scroll-snap-align: start;
+  }
+}
+
+/* Movil, fase V2 (docs/PLAN-MOVIL.md): mas mapa. */
+/* Ficha del terreno con el dibujo de la casilla tal como se ve en el mapa. */
+.terrain .swatch.art {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+/* Bandeja del movil: un boton con cuantas unidades quedan (cada toque elige la siguiente) y la amenaza. */
+.tray.compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  max-width: none;
+  pointer-events: auto;
+}
+.tray.compact .idle-next {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 4px 12px 4px 6px;
+}
+.tray.compact .idle-next img {
+  width: 36px;
+  height: 36px;
+  image-rendering: pixelated;
+}
+.tray.compact .idle-next .num {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--gold);
+}
+.tray.compact .threat {
+  min-height: 48px;
+}
+.tray.compact .threat .short {
+  display: inline;
+}
+@media (max-width: 720px), (max-height: 500px) {
+  /* Fichas plegadas: una sola linea (retrato, nombre, movimiento y vida). */
+  .cards.folded .unitcard {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: auto;
+    padding: 6px 10px;
+  }
+  .cards.folded .unitcard .head {
+    gap: 8px;
+  }
+  .cards.folded .unitcard .meter {
+    min-width: 120px;
+  }
+  .cards.folded .terrain {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 22px 6px 10px;
+  }
+  .cards.folded .terrain .swatch {
+    width: 32px;
+    height: 32px;
+    flex: none;
+  }
+}
+/* Horizontal bajo: una columna estrecha a la izquierda (dinero, dia, fin del turno, menu) en vez de
+   la barra de arriba; la ficha abajo y la bandeja arriba a la derecha. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .top {
+    flex-direction: column;
+    align-items: stretch;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    right: auto;
+    width: 92px;
+    gap: 6px;
+  }
+  .top .funds {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .top .funds .coin {
+    display: none;
+  }
+  .top .funds .sub {
+    display: none;
+  }
+  .top .funds .amount {
+    font-size: 16px;
+    line-height: 16px;
+  }
+  .top .day {
+    position: static;
+    transform: none;
+    flex-direction: column;
+  }
+  .top .day span {
+    padding: 4px 6px;
+    font-size: 13px;
+    text-align: center;
+  }
+  .top .day .w .wn,
+  .top .day .w .wf {
+    display: none;
+  }
+  .top .spacer {
+    display: none;
+  }
+  .top .px-btn.end {
+    padding: 8px 4px;
+    font-size: 13px;
+    line-height: 16px;
+    white-space: normal;
+  }
+  .top .menu-btn {
+    align-self: stretch;
+  }
+  .cards {
+    left: calc(108px + env(safe-area-inset-left, 0px));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .cards.right {
+    right: calc(8px + env(safe-area-inset-right, 0px));
+  }
+  .side {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    right: calc(8px + env(safe-area-inset-right, 0px));
+  }
+}
+/* Vertical: la ficha encima de la bandeja (las dos abajo no caben en una fila). */
+@media (max-width: 720px) and (orientation: portrait) {
+  .cards {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Desplegadas, terreno y unidad caben juntas en 360 px. */
+  .cards:not(.folded) .terrain {
+    width: 112px;
   }
 }

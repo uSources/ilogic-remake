@@ -11,7 +11,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interfaz
 - **Mover con el dedo en dos toques:** toca tu unidad y luego adónde ir; si no hay nada más que hacer, espera sola (antes eran cuatro toques y el menú). Para atacar, toca el enemigo dos veces: la primera enseña la previsión. También se puede arrastrar la unidad sin mantener pulsado, y tocar una fábrica libre abre la compra al momento.
-- En el móvil, la **bandeja de unidades sin mover** y las **fichas de unidad y terreno** se pliegan y despliegan tocándolas, para dejar más mapa a la vista.
+- En el móvil, las **fichas de unidad y terreno** se pliegan y despliegan tocándolas, para dejar más mapa a la vista.
 
 ### Arreglos
 - En el móvil, el **desglose del dinero y del día** se cierra al volver a tocarlo, y en horizontal ya no se sale de la pantalla (se desplaza dentro).
@@ -21,11 +21,19 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - En horizontal bajo, las **tarjetas de inicio** van en fila y se deslizan; cada una se desplaza por dentro, sin cortarse.
 - Márgenes seguros para la muesca y la barra de gestos del móvil en la barra de arriba y en el inicio.
 
+### Más mapa en el móvil
+- En **horizontal**, el dinero, el día, el fin del turno y el menú van en una columna estrecha a la izquierda: el mapa pasa de ocupar la mitad de la pantalla a más de cuatro quintos.
+- La **ficha** empieza plegada en una línea (retrato, nombre, movimiento y vida) y solo sale cuando hay algo que mirar: una unidad, un edificio o al elegir destino.
+- La bandeja **Sin mover** es un botón con el número: cada toque elige la siguiente unidad.
+- La **ficha del terreno** enseña la casilla tal como se ve en el mapa (antes, un cuadrado verde liso).
+- El mapa se puede desplazar más allá de sus bordes: cualquier casilla llega al centro, lejos de la interfaz.
+- El **zoom inicial** se ajusta a la pantalla: unas 9 casillas en el lado corto, nunca casillas más pequeñas que un dedo.
+
 <!-- en -->
 
 ### Interface
 - **Move with your finger in two taps:** tap your unit, then where to go; if there is nothing else to do, it waits on its own (it used to take four taps and the menu). To attack, tap the enemy twice: the first tap shows the forecast. You can also drag a unit without holding first, and tapping a free factory opens the shop right away.
-- On phones, the **unmoved units tray** and the **unit and terrain cards** fold and unfold with a tap, leaving more of the map in view.
+- On phones, the **unit and terrain cards** fold and unfold with a tap, leaving more of the map in view.
 
 ### Fixes
 - On phones, the **money and day breakdown** closes when tapped again, and in landscape it no longer runs off the screen (it scrolls inside).
@@ -34,6 +42,14 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - On touch screens the keys on buttons are hidden (only the mission step number stays).
 - In short landscape, the **start cards** sit in a row you can slide; each one scrolls inside, nothing is cut.
 - Safe margins for the notch and the gesture bar on phones, in the top bar and on the start screen.
+
+### More map on phones
+- In **landscape**, money, day, end turn and menu sit in a narrow column on the left: the map goes from half the screen to more than four fifths.
+- The **card** starts folded to one line (portrait, name, movement and health) and only shows when there is something to look at: a unit, a building or while choosing a destination.
+- The **Unmoved** tray is a button with the count: each tap selects the next unit.
+- The **terrain card** shows the tile as it looks on the map (it used to be a plain green square).
+- The map scrolls past its edges: any tile can reach the centre, away from the interface.
+- The **starting zoom** fits the screen: about 9 tiles on the short side, never tiles smaller than a finger.
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 

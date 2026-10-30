@@ -66,6 +66,12 @@ interface UnitSprite {
 /** Margen en pixeles CSS que se puede desplazar mas alla del mapa (para que no quede bajo la interfaz). */
 const EDGE_CSS = 110;
 
+/** Pantalla de movil (la misma regla que FOLD_SCREEN en el HUD): estrecha o baja, en pixeles CSS. */
+function smallScreen(w: number, h: number): boolean {
+  const r = dpr();
+  return w / r <= 720 || h / r <= 500;
+}
+
 /**
  * Mapa en coordenadas de mundo (1024x1024, 32 px por casilla). La camara tiene zoom
  * entero en pixeles fisicos, asi que el pixel art se ve siempre nitido.
@@ -150,6 +156,11 @@ export class MapView {
   private defaultLevel(): number {
     const r = dpr();
     const cssW = this.cam.width / r;
+    if (smallScreen(this.cam.width, this.cam.height)) {
+      // Movil: unas 9 casillas en el lado corto, pero nunca casillas de menos de 40 px CSS (el dedo).
+      const short = Math.min(this.cam.width, this.cam.height);
+      return this.clampLevel(Math.max(Math.round(short / (9 * TILE)), Math.ceil((40 * r) / TILE)));
+    }
     const target = cssW < 720 ? 1.5 : 2;
     return this.clampLevel(Math.round(target * r));
   }
@@ -229,8 +240,13 @@ export class MapView {
       mh = MAP_H * TILE;
     const vw = this.cam.width / this.cam.zoom,
       vh = this.cam.height / this.cam.zoom;
-    const bw = Math.max(mw + 2 * margin, vw),
-      bh = Math.max(mh + 2 * margin, vh);
+    // En el movil, cualquier casilla (tambien la columna 0 y la ultima fila) se puede llevar al centro
+    // de la pantalla, lejos de la interfaz de los bordes.
+    const small = smallScreen(this.cam.width, this.cam.height);
+    const mx = small ? Math.max(margin, vw / 2 - TILE / 2) : margin,
+      my = small ? Math.max(margin, vh / 2 - TILE / 2) : margin;
+    const bw = Math.max(mw + 2 * mx, vw),
+      bh = Math.max(mh + 2 * my, vh);
     this.cam.setBounds(mw / 2 - bw / 2, mh / 2 - bh / 2, bw, bh);
   }
 
@@ -263,6 +279,42 @@ export class MapView {
     this.cam.setScroll(this.cam.scrollX + before.x - after.x, this.cam.scrollY + before.y - after.y);
   }
 
+  /** Dibujos encima del suelo pintado de cada casilla (agua animada, arboles, montañas...). */
+  private objKeys = new Map<string, string[]>();
+  private artCache = new Map<string, string>();
+
+  /**
+   * El dibujo de una casilla tal como se ve en el mapa (suelo pintado y lo que tiene encima), como
+   * imagen para la ficha del terreno. Solo con el terreno nuevo; con el clasico, undefined (la ficha
+   * usa la imagen del tipo de terreno, que ya es la de la casilla).
+   */
+  tileArt(p: Pos): string | undefined {
+    const tex = this.scene.textures;
+    if (!tex.exists(this.terrainKey)) return undefined;
+    const k = `${p.x},${p.y}`;
+    const hit = this.artCache.get(k);
+    if (hit) return hit;
+    const c = document.createElement('canvas');
+    c.width = c.height = TILE;
+    const g = c.getContext('2d');
+    if (!g) return undefined;
+    g.imageSmoothingEnabled = false;
+    const ground = tex.get(this.terrainKey).getSourceImage() as CanvasImageSource;
+    g.drawImage(ground, p.x * TILE, p.y * TILE, TILE, TILE, 0, 0, TILE, TILE);
+    for (const key of this.objKeys.get(k) ?? []) {
+      const f = tex.getFrame(ATLAS, key);
+      if (!f) continue;
+      // Abajo en el centro, como en el mapa; si es mas alto o ancho que la casilla, se encoge.
+      const sc = Math.min(1, TILE / f.cutWidth, TILE / f.cutHeight);
+      const w = Math.round(f.cutWidth * sc),
+        h = Math.round(f.cutHeight * sc);
+      g.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, f.cutWidth, f.cutHeight, (TILE - w) / 2, TILE - h, w, h);
+    }
+    const url = c.toDataURL();
+    this.artCache.set(k, url);
+    return url;
+  }
+
   // --- Dibujado --------------------------------------------------------------
 
   private tileImage(key: string, x: number, y: number): Phaser.GameObjects.Image {
@@ -293,7 +345,12 @@ export class MapView {
         this.terrain.add(img);
       }
       this.waterFrame = -1;
+      this.artCache.clear();
+      this.objKeys.clear();
+      for (const cell of waterAnimCells(s)) this.objKeys.set(`${cell.x},${cell.y}`, [sheetFrame(cell.key, cell.row, 0)]);
       for (const o of terrainObjects(tex, s)) {
+        const k = `${o.x},${o.y}`;
+        this.objKeys.set(k, [...(this.objKeys.get(k) ?? []), o.key]);
         const img = this.tileImage(o.key, o.x, o.y);
         this.objImgs.push(img);
         this.buildingLayer.add(img);

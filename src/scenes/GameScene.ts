@@ -718,7 +718,9 @@ export class GameScene extends Phaser.Scene {
 
   private tileInfo(p: Pos): TileVM {
     const selected = this.phase !== 'map' ? this.sel : null;
-    return tileVM(this.textures, this.s, p, { vis: this.vis, hidden: this.hidden, selected });
+    const vm = tileVM(this.textures, this.s, p, { vis: this.vis, hidden: this.hidden, selected });
+    vm.terrain.art = this.view.tileArt(p);
+    return vm;
   }
 
   /** "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas). */
