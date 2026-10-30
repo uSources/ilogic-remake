@@ -4,7 +4,7 @@
  *   npm run unit -- new Sniper --like Soldier
  *
  * Añade la unidad al final de units.json copiando la que se diga (numeros, quien la ataca y con cuanto
- * acierto, transportes y suministros) y con su dibujo prestado. Despues: nombre, numeros y dibujo.
+ * acierto, transportes y quien la repara) y con su dibujo prestado. Despues: nombre, numeros y dibujo.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   writeFileSync(FILE, await format(json, { ...(await resolveConfig(FILE)), filepath: FILE }));
   console.log(`Añadida "${id}" (copia de ${like}) al final de src/core/content/units.json.
 - Le pueden atacar como a ${like}: ${copied.attackers.join(', ') || 'nadie'}.
-- La llevan: ${copied.carriers.join(', ') || 'nadie'}. La recargan: ${copied.suppliers.join(', ') || 'nadie'}.
+- La llevan: ${copied.carriers.join(', ') || 'nadie'}. La reparan: ${copied.healers.join(', ') || 'nadie'}.
 
 Falta:
 1. name (es/en), precio y numeros; su "attack.hitChance" y el acierto de cada una contra ella.

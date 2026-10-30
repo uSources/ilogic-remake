@@ -1296,15 +1296,6 @@ body {
   color: var(--gold);
   letter-spacing: 1px;
 }
-.movetip .mt-fuel {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-.movetip .mt-fuel .px-icon {
-  width: 14px;
-  height: 14px;
-}
 .movetip .mt-danger {
   color: var(--red);
   font-size: 15px;
@@ -1312,11 +1303,6 @@ body {
 .movetip.bad {
   background: #4a1714;
 }
-.movetip .mt-warn {
-  color: var(--gold);
-  font-size: 12px;
-}
-
 html.reduce-motion #hud * {
   animation-timing-function: step-end !important;
   animation-duration: 0.01s !important;

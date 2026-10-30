@@ -11,11 +11,6 @@
       "move": 3,
       "vision": 4,
       "movement": "foot",
-      "fuel": {
-        "max": 0,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": true,
       "attack": {
         "range": [1, 1],
@@ -39,8 +34,6 @@
       },
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
-      "refueledAt": [],
-      "rearmedAt": [],
       "classicSprite": {
         "SWater": "1_",
         "Snow": "2_",
@@ -60,11 +53,6 @@
       "move": 5,
       "vision": 6,
       "movement": "vehicle",
-      "fuel": {
-        "max": 50,
-        "perTurn": 0
-      },
-      "ammo": 5,
       "captures": false,
       "attack": {
         "range": [1, 2],
@@ -88,8 +76,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -108,11 +94,6 @@
       "move": 4,
       "vision": 6,
       "movement": "vehicle",
-      "fuel": {
-        "max": 50,
-        "perTurn": 0
-      },
-      "ammo": 5,
       "captures": false,
       "attack": {
         "range": [3, 5],
@@ -136,8 +117,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -156,11 +135,6 @@
       "move": 7,
       "vision": 7,
       "movement": "vehicle",
-      "fuel": {
-        "max": 70,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": false,
       "attack": {
         "range": [1, 1],
@@ -184,8 +158,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": [],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -204,11 +176,6 @@
       "move": 6,
       "vision": 6,
       "movement": "vehicle",
-      "fuel": {
-        "max": 50,
-        "perTurn": 0
-      },
-      "ammo": 8,
       "captures": false,
       "attack": {
         "range": [1, 1],
@@ -232,8 +199,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -252,17 +217,10 @@
       "move": 2,
       "vision": 0,
       "movement": "vehicle",
-      "fuel": {
-        "max": 30,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": false,
       "attack": null,
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": [],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -284,11 +242,6 @@
       "move": 3,
       "vision": 4,
       "movement": "foot",
-      "fuel": {
-        "max": 0,
-        "perTurn": 0
-      },
-      "ammo": 5,
       "captures": true,
       "attack": {
         "range": [1, 1],
@@ -312,8 +265,6 @@
       },
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
-      "refueledAt": [],
-      "rearmedAt": ["City", "Stronghold", "Base"],
       "classicSprite": {
         "SWater": "1_",
         "Snow": "2_",
@@ -333,11 +284,6 @@
       "move": 6,
       "vision": 6,
       "movement": "vehicle",
-      "fuel": {
-        "max": 50,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": false,
       "attack": null,
       "transport": {
@@ -346,8 +292,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": [],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -369,11 +313,6 @@
       "move": 3,
       "vision": 4,
       "movement": "foot",
-      "fuel": {
-        "max": 0,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": true,
       "attack": {
         "range": [1, 1],
@@ -397,8 +336,6 @@
       },
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
-      "refueledAt": [],
-      "rearmedAt": [],
       "classicSprite": {
         "SWater": "1_",
         "Snow": "2_",
@@ -418,11 +355,6 @@
       "move": 3,
       "vision": 4,
       "movement": "vehicle",
-      "fuel": {
-        "max": 45,
-        "perTurn": 0
-      },
-      "ammo": 3,
       "captures": false,
       "attack": {
         "range": [5, 10],
@@ -446,8 +378,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -466,11 +396,6 @@
       "move": 10,
       "vision": 10,
       "movement": "air",
-      "fuel": {
-        "max": 60,
-        "perTurn": 2
-      },
-      "ammo": 0,
       "captures": false,
       "attack": {
         "range": [1, 1],
@@ -498,8 +423,6 @@
       },
       "builtAt": ["Airport"],
       "repairedAt": ["Airport"],
-      "refueledAt": ["Airport"],
-      "rearmedAt": ["Airport"],
       "classicSprite": {}
     },
     {
@@ -512,11 +435,6 @@
       "move": 9,
       "vision": 10,
       "movement": "air",
-      "fuel": {
-        "max": 80,
-        "perTurn": 2
-      },
-      "ammo": 6,
       "captures": false,
       "attack": {
         "range": [1, 2],
@@ -529,8 +447,6 @@
       },
       "builtAt": ["Airport"],
       "repairedAt": ["Airport"],
-      "refueledAt": ["Airport"],
-      "rearmedAt": ["Airport"],
       "classicSprite": {}
     },
     {
@@ -543,11 +459,6 @@
       "move": 7,
       "vision": 8,
       "movement": "air",
-      "fuel": {
-        "max": 80,
-        "perTurn": 3
-      },
-      "ammo": 3,
       "captures": false,
       "attack": {
         "range": [1, 1],
@@ -571,8 +482,6 @@
       },
       "builtAt": ["Airport"],
       "repairedAt": ["Airport"],
-      "refueledAt": ["Airport"],
-      "rearmedAt": ["Airport"],
       "classicSprite": {}
     },
     {
@@ -585,52 +494,10 @@
       "move": 5,
       "vision": 6,
       "movement": "vehicle",
-      "fuel": {
-        "max": 0,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": false,
       "attack": null,
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
-      "supplies": {
-        "fuel": [
-          "Tank",
-          "Artillery",
-          "Car",
-          "LTank",
-          "Blocker",
-          "Transport",
-          "Missile_truck",
-          "LFighter",
-          "Fighter",
-          "Bomber",
-          "Supplier",
-          "Antiair",
-          "THelicopter",
-          "FSoldier",
-          "WTank"
-        ],
-        "ammo": [
-          "Tank",
-          "Artillery",
-          "LTank",
-          "Blocker",
-          "Transport",
-          "Missile_truck",
-          "LFighter",
-          "Fighter",
-          "Bomber",
-          "Supplier",
-          "Antiair",
-          "THelicopter",
-          "MSoldier",
-          "WTank"
-        ]
-      },
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -640,7 +507,25 @@
       },
       "ai": {
         "support": true
-      }
+      },
+      "heals": {
+        "Tank": 20,
+        "Artillery": 20,
+        "Car": 20,
+        "LTank": 20,
+        "Blocker": 20,
+        "Transport": 20,
+        "Missile_truck": 20,
+        "LFighter": 20,
+        "Fighter": 20,
+        "Bomber": 20,
+        "Antiair": 20,
+        "THelicopter": 20,
+        "MSoldier": 20,
+        "FSoldier": 20,
+        "WTank": 20
+      },
+      "notes": "Repara 20 de vida a los vehiculos y aviones propios de al lado (antes daba combustible y municion, que se quitaron)."
     },
     {
       "id": "Antiair",
@@ -652,11 +537,6 @@
       "move": 6,
       "vision": 7,
       "movement": "vehicle",
-      "fuel": {
-        "max": 60,
-        "perTurn": 0
-      },
-      "ammo": 6,
       "captures": false,
       "attack": {
         "range": [1, 2],
@@ -669,8 +549,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -689,11 +567,6 @@
       "move": 7,
       "vision": 7,
       "movement": "air",
-      "fuel": {
-        "max": 70,
-        "perTurn": 2
-      },
-      "ammo": 0,
       "captures": false,
       "attack": null,
       "transport": {
@@ -702,8 +575,6 @@
       },
       "builtAt": ["Airport"],
       "repairedAt": ["Airport"],
-      "refueledAt": ["Airport"],
-      "rearmedAt": ["Airport"],
       "classicSprite": {},
       "ai": {
         "support": true
@@ -719,11 +590,6 @@
       "move": 3,
       "vision": 4,
       "movement": "foot",
-      "fuel": {
-        "max": 0,
-        "perTurn": 0
-      },
-      "ammo": 4,
       "captures": true,
       "attack": {
         "range": [2, 3],
@@ -747,8 +613,6 @@
       },
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
-      "refueledAt": [],
-      "rearmedAt": ["City", "Stronghold", "Base"],
       "classicSprite": {
         "SWater": "1_",
         "Snow": "2_",
@@ -768,11 +632,6 @@
       "move": 5,
       "vision": 6,
       "movement": "vehicle",
-      "fuel": {
-        "max": 80,
-        "perTurn": 0
-      },
-      "ammo": 0,
       "captures": true,
       "attack": {
         "range": [1, 1],
@@ -796,8 +655,6 @@
       },
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": [],
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
@@ -816,11 +673,6 @@
       "move": 6,
       "vision": 6,
       "movement": "amphibious",
-      "fuel": {
-        "max": 60,
-        "perTurn": 0
-      },
-      "ammo": 8,
       "captures": false,
       "attack": {
         "range": [1, 1],
@@ -844,8 +696,6 @@
       },
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
-      "refueledAt": ["Oil"],
-      "rearmedAt": ["Factory"],
       "classicSprite": {
         "Water": "1_",
         "SWater": "1_",

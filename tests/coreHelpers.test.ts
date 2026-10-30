@@ -167,13 +167,14 @@ describe('partidas guardadas', () => {
     expect(deserialize(make())).toBeNull();
   });
 
-  it('corrige lo que se puede corregir (combustible, municion, uid siguiente, dia)', () => {
+  it('corrige lo que se puede corregir (uid siguiente, dia) e ignora el combustible de las antiguas', () => {
     const s = sample();
-    s.units[0]!.fuel = 1e9;
+    Object.assign(s.units[0]!, { fuel: 1e9, ammo: 3 }); // partida guardada antes de quitarlos
     s.nextUid = 0;
     s.day = -3;
     const back = deserialize(serialize(s))!;
-    expect(back.units[0]!.fuel).toBe(UNIT.maxfuel[SOLDIER]);
+    expect(back.units[0]).not.toHaveProperty('fuel');
+    expect(back.units[0]).not.toHaveProperty('ammo');
     expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((u) => u.uid)));
     expect(back.day).toBe(1);
   });

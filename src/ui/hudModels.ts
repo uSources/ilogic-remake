@@ -82,8 +82,6 @@ export function tileVM(
       rank: RULES.veterancy ? rank(shown) : 0,
       team: shown.team,
       life: shown.life,
-      fuel: UNIT.maxfuel[T]! > 0 ? { now: shown.fuel, max: UNIT.maxfuel[T]! } : undefined,
-      ammo: UNIT.maxammo[T]! > 0 ? { now: shown.ammo, max: UNIT.maxammo[T]! } : undefined,
       stats: unitStatsText(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
     };

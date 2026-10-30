@@ -20,8 +20,6 @@ export function checkInvariants(s: GameState): string[] {
     if (!(u.type >= 0 && u.type < UNIT_TYPES)) errs.push(`${id}: tipo ${u.type} no existe`);
     if (u.x < 0 || u.y < 0 || u.x >= W || u.y >= H) errs.push(`${id}: fuera del mapa (${u.x},${u.y})`);
     if (!(u.life > 0 && u.life <= MAX_LIFE)) errs.push(`${id}: vida ${u.life} fuera de 1..${MAX_LIFE}`);
-    if (u.fuel < 0 || u.fuel > UNIT.maxfuel[u.type]!) errs.push(`${id}: combustible ${u.fuel} fuera de 0..${UNIT.maxfuel[u.type]}`);
-    if (u.ammo < 0 || u.ammo > UNIT.maxammo[u.type]!) errs.push(`${id}: municion ${u.ammo} fuera de 0..${UNIT.maxammo[u.type]}`);
     if (u.cargo.length !== UNIT.maxcarry[u.type]) errs.push(`${id}: carga de tamaño ${u.cargo.length}`);
     if (u.carrier === null) {
       const k = `${u.x},${u.y}`;

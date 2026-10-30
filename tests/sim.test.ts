@@ -12,8 +12,6 @@ function checkInvariants(s: GameState): void {
   const seen = new Set<string>();
   for (const u of s.units) {
     expect(u.life).toBeGreaterThan(0);
-    expect(u.fuel).toBeGreaterThanOrEqual(0);
-    expect(u.ammo).toBeGreaterThanOrEqual(0);
     if (u.carrier === null) {
       const k = `${u.x},${u.y}`;
       expect(seen.has(k), `dos unidades en ${k}`).toBe(false);

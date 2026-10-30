@@ -67,7 +67,7 @@ sequenceDiagram
     G->>R: aiTurn(s, rng) (aplica y devuelve un evento)
     G->>V: animar el evento
   end
-  G->>R: endRound (ingresos, curar, combustible, dia + 1)
+  G->>R: endRound (ingresos, curar, dia + 1)
   G->>H: resumen de ronda, guardado automatico
 ```
 

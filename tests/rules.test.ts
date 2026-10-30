@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { HQ, UNIT, useRules } from '@core/data';
+import { HQ, useRules } from '@core/data';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/geom';
 import {
@@ -14,6 +14,7 @@ import {
   newUnit,
   outcome,
   spawn,
+  supply,
   unitActions,
   unload,
 } from '@core/rules';
@@ -41,13 +42,12 @@ describe('movimiento', () => {
     expect(r.steps[12]![10]).toBe(0); // necesitaria 4 pasos
     expect(r.steps[10]![14]).toBe(0);
   });
-  it('el agua no se pisa a pie y los vehiculos gastan combustible', () => {
+  it('el agua no la pisan los vehiculos', () => {
     const s = blankState();
     s.map[11]![10] = 1; // Water
     const t = newUnit(s, TANK, 0, 10, 10);
     expect(moveRange(s, t).steps[11]![10]).toBe(0);
     moveUnit(s, t, { x: 10, y: 14 });
-    expect(t.fuel).toBe(UNIT.maxfuel[TANK]! - 4);
     expect(t.canMove).toBe(false);
   });
   it('la artilleria no puede disparar despues de moverse', () => {
@@ -59,7 +59,7 @@ describe('movimiento', () => {
 });
 
 describe('combate', () => {
-  it('el dano es binomial, gasta municion y no hay contraataque', () => {
+  it('el dano es binomial y no hay contraataque', () => {
     const s = blankState();
     const t = newUnit(s, TANK, 0, 10, 10);
     const e = newUnit(s, TANK, 1, 10, 11);
@@ -69,7 +69,6 @@ describe('combate', () => {
     expect(dmg).toBeLessThan(70); // esperado 50
     expect(e.life).toBe(100 - dmg);
     expect(t.life).toBe(100);
-    expect(t.ammo).toBe(UNIT.maxammo[TANK]! - 1);
     expect(t.active).toBe(false);
   });
   it('los soldados ya no matan tanques ligeros de un golpe (tabla corregida)', () => {
@@ -149,31 +148,32 @@ describe('compra y fin de ronda', () => {
     expect(car.active).toBe(false);
     expect(s.funds[0]).toBe(0);
   });
-  it('ingresos, curacion y combustible de los aviones', () => {
+  it('ingresos y curacion; los aviones ya no caen', () => {
     const s = blankState();
     s.buildings.push({ type: 0, owner: 0, x: 1, y: 1 }); // City
-    s.buildings.push({ type: 4, owner: 0, x: 2, y: 2 }); // Airport
     const so = newUnit(s, SOLDIER, 0, 1, 1);
     so.life = 50;
-    const onAirport = newUnit(s, LFIGHTER, 0, 2, 2);
-    onAirport.fuel = 1;
     const flying = newUnit(s, LFIGHTER, 0, 8, 8);
-    flying.fuel = 2;
+    for (let i = 0; i < 60; i++) endRound(s);
+    expect(s.units).toContain(flying);
+    expect(so.life).toBe(100);
     const r = endRound(s);
-    expect(r.income[0]).toBe(2000);
-    expect(s.funds[0]).toBe(7000);
-    expect(so.life).toBe(80);
-    expect(onAirport.fuel).toBe(UNIT.maxfuel[LFIGHTER]); // ya no se estrella en su aeropuerto
-    expect(s.units.find((u) => u.uid === flying.uid)).toBeUndefined();
-    expect(s.day).toBe(2);
+    expect(r.income[0]).toBe(1000);
+    expect(s.day).toBe(62);
   });
-  it('el abastecedor rellena combustible y municion a las vecinas', () => {
+  it('Suministros repara a los vehiculos de al lado, no a la infanteria', () => {
     const s = blankState();
     const sup = newUnit(s, SUPPLIER, 0, 5, 5);
     const t = newUnit(s, TANK, 0, 5, 6);
-    t.fuel = 3;
-    t.ammo = 0;
+    const so = newUnit(s, SOLDIER, 0, 4, 5);
+    so.life = 40;
+    expect(unitActions(s, sup).supply).toBe(false); // el tanque esta entero y al soldado no le cura
+    t.life = 50;
     expect(unitActions(s, sup).supply).toBe(true);
+    expect(supply(s, sup)).toBe(1);
+    expect(t.life).toBe(70);
+    expect(so.life).toBe(40);
+    expect(sup.active).toBe(false);
   });
 });
 

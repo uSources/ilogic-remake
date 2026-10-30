@@ -15,7 +15,6 @@ export const AI_KEYS = [
   'CAPTUREHQ',
   'CAPTUREOWNED',
   'MINCAPTURERS',
-  'FUELTURNS',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 

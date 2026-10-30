@@ -277,26 +277,6 @@ function UnitCard({ u }: { u: UnitVM }) {
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
-      {(u.fuel || u.ammo) && (
-        <div style={{ display: 'flex', gap: 16, fontSize: 15 }}>
-          {u.fuel && (
-            <span class="meter" title={t('fuel')}>
-              <Icon k="fuel" alt={t('fuel')} />
-              <span style={{ color: u.fuel.now <= u.fuel.max * 0.25 ? 'var(--gold)' : undefined }}>
-                {u.fuel.now}/{u.fuel.max}
-              </span>
-            </span>
-          )}
-          {u.ammo && (
-            <span class="meter" title={t('ammo')}>
-              <Icon k="ammo" alt={t('ammo')} />
-              <span style={{ color: u.ammo.now === 0 ? 'var(--red-soft)' : undefined }}>
-                {u.ammo.now}/{u.ammo.max}
-              </span>
-            </span>
-          )}
-        </div>
-      )}
       {u.cargo && (
         <span class="muted" style={{ fontSize: 13 }}>
           {u.cargo}
@@ -488,17 +468,11 @@ function MoveTip({ m }: { m: MoveTipVM }) {
         </span>
       )}
       {m.stars !== undefined && m.stars > 0 && <span class="gold">{'★'.repeat(m.stars)}</span>}
-      {m.fuel && (
-        <span class="mt-fuel">
-          <Icon k="fuel" /> {m.fuel[0]}→{m.fuel[1]}
-        </span>
-      )}
       {m.danger && (
         <span class="mt-danger" title={t('tipDanger')}>
           ⚠
         </span>
       )}
-      {m.warn && <span class="mt-warn">{m.warn}</span>}
     </div>
   );
 }

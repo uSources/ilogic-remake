@@ -4,11 +4,9 @@
  * Las desviaciones respecto al original estan marcadas con [CAMBIO].
  */
 import {
-  AMMO_RESTORER,
   HIDING_TERRAIN,
   BUILDING,
   CAN_CARRY,
-  FUELER,
   HEALER,
   HQ,
   MAX_FUNDS,
@@ -18,8 +16,6 @@ import {
   SPAWNER,
   TERRAIN,
   UNIT,
-  UNIT_AMMO_RESTORER,
-  UNIT_FUELER,
   UNIT_HEALS,
   UNIT_TYPES,
   Movement,
@@ -77,10 +73,9 @@ export interface MoveRange {
   maxSteps: number;
 }
 
-/** Pasos maximos este turno: mover, limitado por el combustible si lo usa. */
+/** Pasos maximos este turno. */
 export function maxSteps(u: Unit): number {
-  const mover = UNIT.mover[u.type]!;
-  return UNIT.maxfuel[u.type]! !== 0 ? Math.min(mover, u.fuel) : mover;
+  return UNIT.mover[u.type]!;
 }
 
 /** Mapa de movimiento por anchura (Ilogic.getMoveMap): cada casilla cuesta 1, las unidades bloquean. */
@@ -178,7 +173,6 @@ export function walkPath(s: GameState, u: Unit, path: Pos[]): MovePath {
 /** Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno. */
 function ambushed(s: GameState, u: Unit, walked: MovePath): MovePath {
   const end = walked[walked.length - 1]!;
-  spendFuel(u, pathCost(s, Movement.of(u.type), walked));
   u.x = end.x;
   u.y = end.y;
   u.active = false;
@@ -262,11 +256,6 @@ export function canReach(range: MoveRange, x: number, y: number): boolean {
   return inBounds(x, y) && range.steps[x]![y]! > 0;
 }
 
-function spendFuel(u: Unit, steps: number): void {
-  // [CAMBIO] el original tambien restaba a las unidades sin combustible (quedaba negativo).
-  if (UNIT.maxfuel[u.type]! !== 0) u.fuel = Math.max(0, u.fuel - steps);
-}
-
 /** Mueve la unidad (Ilogic.Move). Devuelve el camino recorrido o null si no es valido. */
 export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, u), via?: Pos[]): MovePath | null {
   if (!u.active || !u.canMove || samePos(u, dest) || !canReach(range, dest.x, dest.y)) return null;
@@ -275,7 +264,6 @@ export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, 
     via && samePos(via[via.length - 1]!, dest) && validPath(s, u, via, range) ? via.map((p) => ({ ...p })) : pathTo(range, u, dest);
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
-  spendFuel(u, pathCost(s, Movement.of(u.type), path));
   u.x = dest.x;
   u.y = dest.y;
   u.canMove = false;
@@ -338,10 +326,6 @@ export function visibility(s: GameState, team: Team): boolean[][] {
 // Combate
 // ---------------------------------------------------------------------------
 
-export function hasAmmo(u: Unit): boolean {
-  return UNIT.maxammo[u.type]! === 0 || u.ammo > 0;
-}
-
 export function inAttackRange(type: number, from: Pos, to: Pos): boolean {
   const d = manhattan(from, to);
   return d > UNIT.minalc[type]! && d <= UNIT.alcance[type]!;
@@ -349,7 +333,7 @@ export function inAttackRange(type: number, from: Pos, to: Pos): boolean {
 
 /** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap). */
 export function attackTargets(s: GameState, u: Unit, vis = visibility(s, u.team)): Unit[] {
-  if (!u.canFire || !UNIT.canfight[u.type] || !hasAmmo(u)) return [];
+  if (!u.canFire || !UNIT.canfight[u.type]) return [];
   return s.units.filter(
     (t) =>
       t.team !== u.team && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && POWER[u.type]![t.type]! > 0 && inAttackRange(u.type, u, t),
@@ -433,7 +417,6 @@ export function canCounter(def: Unit, atk: Unit): boolean {
     !!UNIT.canfight[def.type] &&
     UNIT.minalc[def.type] === 0 &&
     UNIT.minalc[atk.type] === 0 &&
-    hasAmmo(def) &&
     (POWER[def.type]![atk.type] ?? 0) > 0 &&
     inAttackRange(def.type, def, atk)
   );
@@ -442,11 +425,10 @@ export function canCounter(def: Unit, atk: Unit): boolean {
 /** Ataque completo: daño, y contraataque si las reglas lo tienen. */
 export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): AttackResult {
   const none: AttackResult = { damage: 0, killed: false, counter: 0, attackerKilled: false };
-  if (atk.team === def.team || !atk.canFire || !UNIT.canfight[atk.type] || !hasAmmo(atk)) return none;
+  if (atk.team === def.team || !atk.canFire || !UNIT.canfight[atk.type]) return none;
   if (!inAttackRange(atk.type, atk, def)) return none;
   const damage = Math.min(def.life, rollDamage(atk.life, Math.min(1, hitChance(s, atk, def)), rng));
   def.life -= damage;
-  if (UNIT.maxammo[atk.type]! !== 0) atk.ammo--;
   atk.active = false;
   atk.canFire = false;
   atk.canMove = false;
@@ -454,7 +436,6 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
   if (canCounter(def, atk)) {
     counter = Math.min(atk.life, rollDamage(def.life, Math.min(1, hitChance(s, def, atk)), rng));
     atk.life -= counter;
-    if (UNIT.maxammo[def.type]! !== 0) def.ammo--;
   }
   const result = { damage, killed: def.life <= 0, counter, attackerKilled: atk.life <= 0 };
   if (result.killed && atk.life > 0) atk.kills = (atk.kills ?? 0) + 1;
@@ -563,10 +544,7 @@ export function merge(s: GameState, u: Unit, target: Unit): MovePath | null {
   if (!path) return null;
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
-  spendFuel(u, pathCost(s, Movement.of(u.type), [...path, { x: target.x, y: target.y }]));
   target.life = Math.min(MAX_LIFE, target.life + u.life);
-  target.fuel = Math.max(target.fuel, u.fuel);
-  target.ammo = Math.max(target.ammo, u.ammo);
   // Al unirse se queda la experiencia de la mas veterana.
   if (u.kills || target.kills) target.kills = Math.max(u.kills ?? 0, target.kills ?? 0);
   target.active = false;
@@ -603,7 +581,6 @@ export function load(s: GameState, u: Unit, t: Unit): MovePath | null {
   if (!path) return null;
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
-  spendFuel(u, pathCost(s, Movement.of(u.type), [...path, { x: t.x, y: t.y }]));
   path.push({ x: t.x, y: t.y });
   t.cargo[slot] = u.uid;
   u.carrier = t.uid;
@@ -642,14 +619,10 @@ export function unload(s: GameState, t: Unit, passenger: Unit, dest: Pos): boole
 }
 
 function canSupplyTo(u: Unit, o: Unit): boolean {
-  return (
-    (UNIT_HEALS[u.type]![o.type]! > 0 && o.life < MAX_LIFE) ||
-    (UNIT_FUELER[u.type]![o.type]! && o.fuel < UNIT.maxfuel[o.type]!) ||
-    (UNIT_AMMO_RESTORER[u.type]![o.type]! && o.ammo < UNIT.maxammo[o.type]!)
-  );
+  return UNIT_HEALS[u.type]![o.type]! > 0 && o.life < MAX_LIFE;
 }
 
-/** Hay alguna unidad aliada al lado a la que abastecer (en la practica solo el Supplier). */
+/** Hay alguna unidad aliada al lado a la que reparar (en la practica solo Suministros). */
 export function canSupply(s: GameState, u: Unit): boolean {
   return neighbors4(u).some((p) => {
     const o = unitAt(s, p.x, p.y);
@@ -657,15 +630,16 @@ export function canSupply(s: GameState, u: Unit): boolean {
   });
 }
 
-/** Abastecer (Unit.Heal sobre las 4 vecinas): combustible y municion al maximo. */
+/**
+ * Reparar (Unit.Heal sobre las 4 vecinas): cura lo que diga "heals" en units.json.
+ * [CAMBIO] antes tambien llenaba combustible y municion; se quitaron del juego.
+ */
 export function supply(s: GameState, u: Unit): number {
   let n = 0;
   for (const p of neighbors4(u)) {
     const o = unitAt(s, p.x, p.y);
     if (!o || o.team !== u.team || !canSupplyTo(u, o)) continue;
     o.life = Math.min(MAX_LIFE, o.life + UNIT_HEALS[u.type]![o.type]!);
-    if (UNIT_FUELER[u.type]![o.type]) o.fuel = UNIT.maxfuel[o.type]!;
-    if (UNIT_AMMO_RESTORER[u.type]![o.type]) o.ammo = UNIT.maxammo[o.type]!;
     n++;
   }
   u.active = false;
@@ -720,8 +694,6 @@ export function newUnit(s: GameState, type: number, team: Team, x: number, y: nu
     canMove: active,
     canFire: active,
     life: MAX_LIFE,
-    fuel: UNIT.maxfuel[type]!,
-    ammo: UNIT.maxammo[type]!,
     carrier: null,
     cargo: Array<number | null>(UNIT.maxcarry[type]!).fill(null),
   };
@@ -793,59 +765,32 @@ export function spawn(s: GameState, b: Building, type: number): Unit | null {
 
 export interface RoundReport {
   income: [number, number];
-  /** uids de unidades aereas que se han quedado sin combustible y han caido. */
-  crashed: number[];
   /** Unidades curadas en un edificio propio (uid, bando, vida recuperada). */
   healed: { uid: number; team: Team; amount: number }[];
-  /** uids de unidades que han recibido combustible o municion en un edificio propio. */
-  resupplied: number[];
-  /** Bando de cada unidad que ha caido (se borran del estado). */
-  crashedTeams: Team[];
 }
 
 /**
- * Mantenimiento tras el turno de la IA (ciclojuego, fase 2): reactivar unidades, cobrar,
- * curar/repostar/rearmar sobre edificios propios y gasto de combustible de los aereos.
- * [CAMBIO] el repostaje va antes del gasto: un avion en su aeropuerto ya no se estrella.
+ * Mantenimiento tras el turno de la IA (ciclojuego, fase 2): reactivar unidades, cobrar y curar
+ * sobre edificios propios.
+ * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */
 export function endRound(s: GameState): RoundReport {
-  const report: RoundReport = { income: [0, 0], crashed: [], healed: [], resupplied: [], crashedTeams: [] };
+  const report: RoundReport = { income: [0, 0], healed: [] };
   for (const b of s.buildings) captureProgress(s, b);
   for (const u of s.units) {
     u.active = true;
     u.canMove = true;
     u.canFire = true;
   }
-  const refueled = new Set<number>();
   for (const b of s.buildings) {
     if (b.owner === null) continue;
     s.funds[b.owner] += buildingIncome(b.type);
     report.income[b.owner] += buildingIncome(b.type);
     const u = unitAt(s, b.x, b.y);
-    if (!u || u.team !== b.owner) continue;
-    if (HEALER[u.type]![b.type]) {
-      const before = u.life;
-      u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
-      if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
-    }
-    const fuelBefore = u.fuel,
-      ammoBefore = u.ammo;
-    if (FUELER[u.type]![b.type]) {
-      u.fuel = UNIT.maxfuel[u.type]!;
-      refueled.add(u.uid);
-    }
-    if (AMMO_RESTORER[u.type]![b.type]) u.ammo = UNIT.maxammo[u.type]!;
-    if (u.fuel > fuelBefore || u.ammo > ammoBefore) report.resupplied.push(u.uid);
-  }
-  for (const u of [...s.units]) {
-    const burn = UNIT.fuelperturn[u.type]!;
-    if (burn === 0 || refueled.has(u.uid)) continue;
-    u.fuel -= burn;
-    if (u.fuel <= 0) {
-      report.crashed.push(u.uid);
-      report.crashedTeams.push(u.team);
-      removeUnit(s, u.uid);
-    }
+    if (!u || u.team !== b.owner || !HEALER[u.type]![b.type]) continue;
+    const before = u.life;
+    u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
+    if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
   }
   s.funds = [Math.min(s.funds[0], MAX_FUNDS), Math.min(s.funds[1], MAX_FUNDS)];
   s.day++;
@@ -1083,7 +1028,7 @@ export function threatMap(s: GameState, team: Team, viewer: Team): boolean[][] {
  * Las unidades a distancia no pueden mover y disparar: solo cuentan desde donde estan.
  */
 export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false), range?: MoveRange): boolean[][] {
-  if (!UNIT.canfight[u.type] || !hasAmmo(u)) return out;
+  if (!UNIT.canfight[u.type]) return out;
   const minR = UNIT.minalc[u.type]!,
     maxR = UNIT.alcance[u.type]!;
   if (maxR === 0) return out;
@@ -1096,7 +1041,7 @@ export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false)
 
 /** Lo que la unidad puede atacar este turno con su alcance de movimiento `range` (null si no puede disparar). */
 export function attackZone(s: GameState, u: Unit, range: MoveRange): boolean[][] | null {
-  if (!UNIT.canfight[u.type] || UNIT.alcance[u.type]! === 0 || !hasAmmo(u) || !u.canFire) return null;
+  if (!UNIT.canfight[u.type] || UNIT.alcance[u.type]! === 0 || !u.canFire) return null;
   return unitThreat(s, u, grid(false), range);
 }
 

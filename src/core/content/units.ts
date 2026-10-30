@@ -2,7 +2,7 @@
 import { type Checker, checkSprites, spriteRow } from './check';
 import { MOVEMENTS, type ContentContext, type MoveType, type UnitDef } from './types';
 
-const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt', 'refueledAt', 'rearmedAt'] as const;
+const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
 
 export function validateUnits(units: readonly UnitDef[], ctx: ContentContext, check: Checker): void {
   for (const u of units) {
@@ -12,9 +12,6 @@ export function validateUnits(units: readonly UnitDef[], ctx: ContentContext, ch
     s.num('move', u?.move, { min: 0, max: 30, int: true });
     s.num('vision', u?.vision, { min: 0, max: 30, int: true });
     s.expect(MOVEMENTS.includes(u?.movement), `movement tiene que ser ${MOVEMENTS.join(', ')}`);
-    if (s.num('fuel.max', u?.fuel?.max, { min: 0, int: true }) && s.num('fuel.perTurn', u?.fuel?.perTurn, { min: 0, int: true }))
-      s.expect(!(u.fuel.perTurn > 0 && u.fuel.max === 0), 'gasta combustible por ronda pero fuel.max es 0');
-    s.num('ammo', u?.ammo, { min: 0, max: 99, int: true });
     s.bool('captures', u?.captures);
     if (u?.attack !== null) {
       const a = u?.attack;
@@ -36,10 +33,6 @@ export function validateUnits(units: readonly UnitDef[], ctx: ContentContext, ch
     }
     for (const f of LINKS_TO_BUILDINGS) s.refs(f, u?.[f], ctx.buildingIds);
     if (Array.isArray(u?.builtAt)) s.expect(u.builtAt.length > 0, 'builtAt vacio: nadie la puede comprar');
-    if (u?.supplies) {
-      s.refs('supplies.fuel', u.supplies.fuel, ctx.unitIds);
-      s.refs('supplies.ammo', u.supplies.ammo, ctx.unitIds);
-    }
     for (const [t, h] of Object.entries(u?.heals ?? {})) {
       s.known('heals', t, ctx.unitIds);
       s.num(`heals.${t}`, h, { min: 0, max: 100, int: true });
@@ -63,20 +56,13 @@ export function buildUnitTables(units: readonly UnitDef[], ctx: ContentContext, 
       alcance: byUnit((u) => u.attack?.range[1] ?? 0),
       minalc: byUnit((u) => (u.attack ? u.attack.range[0] - 1 : 0)),
       movtype: byUnit((u) => MOVEMENTS.indexOf(u.movement) as MoveType),
-      maxfuel: byUnit((u) => u.fuel.max),
-      fuelperturn: byUnit((u) => u.fuel.perTurn),
-      maxammo: byUnit((u) => u.ammo),
       maxcarry: byUnit((u) => u.transport?.slots ?? 0),
       cancapt: byUnit((u) => u.captures),
       canfight: byUnit((u) => u.attack !== null),
     },
     HEALER: byUnit((u) => buildingRow(u.repairedAt)),
-    FUELER: byUnit((u) => buildingRow(u.refueledAt)),
-    AMMO_RESTORER: byUnit((u) => buildingRow(u.rearmedAt)),
     SPAWNER: byUnit((u) => buildingRow(u.builtAt)),
     CAN_CARRY: byUnit((u) => unitRow(u.transport?.carries)),
-    UNIT_FUELER: byUnit((u) => unitRow(u.supplies?.fuel)),
-    UNIT_AMMO_RESTORER: byUnit((u) => unitRow(u.supplies?.ammo)),
     POWER: byUnit((u) => ids.map((id) => u.attack?.hitChance[id] ?? 0)),
     UNIT_HEALS: byUnit((u) => ids.map((id) => u.heals?.[id] ?? 0)),
     UNIT_TERRAIN_PREFIX: byUnit((u) => spriteRow(u.classicSprite, ctx.terrainNames)),

@@ -16,8 +16,7 @@
     "BONUSDAMAGE",
     "CAPTUREHQ",
     "CAPTUREOWNED",
-    "MINCAPTURERS",
-    "FUELTURNS"
+    "MINCAPTURERS"
   ],
   "properties": {
     "$schema": {
@@ -82,11 +81,6 @@
       "type": "number",
       "minimum": 0,
       "description": "Unidades que capturan que intenta tener siempre."
-    },
-    "FUELTURNS": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Vuelve a repostar si el combustible no da para estos turnos mas un movimiento."
     }
   }
 }

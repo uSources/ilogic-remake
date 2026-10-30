@@ -13,7 +13,7 @@ const HELP = {
       'VET_ES',
       'MOVE_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
-      'Sobre un edificio propio, tus unidades se reparan y repostan al empezar la ronda.',
+      'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -58,7 +58,7 @@ const HELP = {
       'VET_EN',
       'MOVE_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
-      'Units standing on one of your buildings are repaired and refuelled at the start of the round.',
+      'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
     ],
     colorsTitle: 'Map colours',
     colors: [

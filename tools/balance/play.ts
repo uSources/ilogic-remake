@@ -149,16 +149,7 @@ export function playGame(opts: PlayOptions): GameRecord {
       if (finished()) break;
     }
     if (finished()) break;
-    const report = endRound(s);
-    // Aviones caidos sin combustible: cuentan como perdidos, sin que nadie los destruya.
-    report.crashed.forEach((uid, i) => {
-      const k = known.get(uid);
-      const tm = report.crashedTeams[i]!;
-      if (k) {
-        units[tm]![k.type]!.deaths++;
-        units[tm]![k.type]!.valueLost += (k.life * UNIT.cost[k.type]!) / 100;
-      }
-    });
+    endRound(s);
     remember();
     samples.push(sample(s));
   }

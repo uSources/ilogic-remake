@@ -48,8 +48,8 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   rojas = objetivos de ataque. Al pasar por encima de un objetivo sale la prevision de combate:
   margen de dano (del 5 % al 95 % de las tiradas), vida que le quedara y probabilidad de destruirlo.
 - Con T se ve en rojo todo lo que el enemigo (lo que ves de el) puede atacar en su proximo turno.
-- La ficha de abajo muestra la unidad, el edificio y el terreno bajo el cursor (vida, combustible,
-  municion, movimiento, alcance, defensa del terreno...).
+- La ficha de abajo muestra la unidad, el edificio y el terreno bajo el cursor (vida,
+  movimiento, alcance, defensa del terreno...).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
 - **Se gana conquistando la Base enemiga.** Capturar va por puntos: un edificio tiene 20 (la
@@ -79,8 +79,8 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
   Las misiones están en `src/core/missions.ts` y es fácil añadir más.
 - **Mover unidades:** se cogen y se arrastran (con el dedo, manteniendo pulsado). El camino sigue al
-  puntero como una flecha y un bocadillo dice cuánto movimiento se gasta, la defensa de la casilla,
-  el combustible que queda y si allí te pueden atacar. Al soltar pasa lo lógico: sobre un enemigo,
+  puntero como una flecha y un bocadillo dice cuánto movimiento se gasta, la defensa de la casilla
+  y si allí te pueden atacar. Al soltar pasa lo lógico: sobre un enemigo,
   ataca desde la casilla por la que llegabas; sobre un edificio, captura; sobre una unidad igual, se
   unen; sobre un transporte, sube; en una casilla vacía sin nada más que hacer, espera. Fuera del
   alcance vuelve a su sitio; muy lejos, queda una orden de "ir hacia allí" que la unidad cumple sola
@@ -93,7 +93,7 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   unidad, velocidad de las animaciones propias y del enemigo, música y autoguardado.
 - **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
   cada una con +5 % de acierto y de defensa.
-- Al empezar cada turno sale un resumen de la ronda (ingresos, unidades reparadas y reabastecidas).
+- Al empezar cada turno sale un resumen de la ronda (ingresos y unidades reparadas).
 - Al acabar la partida se ven estadisticas de los dos bandos (compras, bajas, capturas, gasto).
 - Si el sistema pide reducir el movimiento, se quitan los temblores, parpadeos y paneos de camara.
 
@@ -114,7 +114,7 @@ src/
     content/     Unidades, edificios, terreno, reglas e IA en JSON + su validacion: ver docs/CONTENIDO.md
     data.ts      Tablas sacadas de content/ (UNIT, POWER, Movement...) y el generador de mapas
     rules.ts     Reglas: movimiento, combate, captura, union, transporte, compra, fin de ronda
-    orders.ts    Ayudas para las ordenes del jugador (desde donde atacar, combustible, grupo, camino)
+    orders.ts    Ayudas para las ordenes del jugador (desde donde atacar, grupo, camino)
     ai.ts        Inteligencia artificial (un generador que va devolviendo cada accion)
     mapgen.ts    Generador de mapas aleatorios
     save.ts      Guardar / cargar en JSON
@@ -239,10 +239,11 @@ marcados en el codigo con `[CAMBIO]`. Los principales:
 - Unir unidades y subir a un transporte mueve de verdad a la unidad (antes se hacia a distancia).
 - Despues de mover se puede deshacer con "Atras".
 - Esc pide confirmacion antes de abandonar la partida; "Borrar unidad" tambien.
-- Los aviones que estan en su aeropuerto ya no se estrellan por falta de combustible.
+- Sin combustible ni municion: no aportaban (unidades paradas, aviones que caian, partidas que no
+  acababan). El camion de suministros ahora repara a los vehiculos y aviones de al lado.
 - Mapas: las dos bases siempre existen, estan conectadas por tierra y separadas.
-- IA: ataca solo a lo que puede danar y elige el mejor objetivo, vuelve a repararse y
-  repostar, avanza hacia la Base del jugador y compra con mas criterio.
+- IA: ataca solo a lo que puede danar y elige el mejor objetivo, vuelve a repararse,
+  avanza hacia la Base del jugador y compra con mas criterio.
 - Interfaz nueva de estilo pixel (HTML y CSS sobre el lienzo): mapa a pantalla completa y nitido
   a cualquier tamano (zoom entero), menus emergentes junto a la unidad, fichas de terreno y unidad,
   compra con nombres y estadisticas, camino previsto, prevision de combate, bandeja de unidades

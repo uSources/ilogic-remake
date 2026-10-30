@@ -17,12 +17,8 @@ describe('tablas de datos', () => {
 
   it.each([
     ['HEALER', U, B],
-    ['FUELER', U, B],
-    ['AMMO_RESTORER', U, B],
     ['SPAWNER', U, B],
     ['CAN_CARRY', U, U],
-    ['UNIT_FUELER', U, U],
-    ['UNIT_AMMO_RESTORER', U, U],
     ['POWER', U, U],
     ['UNIT_HEALS', U, U],
     ['UNIT_TERRAIN_PREFIX', U, T],
