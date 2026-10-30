@@ -7,6 +7,26 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.4.0] - 2026-10-30 — En el bolsillo
+
+Ilogic se instala como una app más y se juega sin conexión.
+
+### Novedades
+- **Se puede instalar como app** desde el navegador (móvil u ordenador) y **jugar sin conexión**. Se actualiza sola con cada versión.
+
+### Gráficos
+- Nuevo icono del juego con el Soldado nuevo.
+
+<!-- en -->
+
+Ilogic installs like any other app and plays offline.
+
+### New
+- **Install it as an app** from the browser (phone or computer) and **play offline**. It updates itself with each version.
+
+### Graphics
+- New game icon with the new Soldier.
+
 ## [0.3.0] - 2026-10-30 — Cielo y acero
 
 Ejércitos más pequeños, combates que se entienden, unidades con habilidades y un tiempo que cambia.
