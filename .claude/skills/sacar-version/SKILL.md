@@ -18,9 +18,12 @@ avisa a quien tenga una version anterior.
    `(traducir)` (ingles despues de `<!-- en -->`) y **borrar las marcas** `<!-- borrador ... -->` (si
    quedan, la Release no sale). Despues convertir `[Sin publicar]` en `## [x.y.z] - AAAA-MM-DD — Titulo corto`.
 4. `npm run release` enseña las notas tal como saldran. `npm run check`.
-5. Commit (`🔖 Version x.y.z`) y push a `main`. La Action `.github/workflows/release.yml` pasa los tests,
-   compila y publica la Release. Ver en Actions que termina en verde.
-6. Corregir notas ya publicadas: cambiar el CHANGELOG y hacer push (la Action pone al dia la Release).
+5. Commit (`🔖 Version x.y.z`) en una rama y PR a `main`: el ruleset de `main` no deja hacer push
+   directo y pide que pasen `check` (tests) y `commitlint`. Al fusionarla, la Action
+   `.github/workflows/release.yml` pasa los tests, compila y publica la Release. Ver en Actions que
+   termina en verde.
+6. Corregir notas ya publicadas: cambiar el CHANGELOG en una PR (al fusionarla, la Action pone al dia
+   la Release). Las etiquetas `v*` no se pueden mover ni borrar (ruleset de etiquetas).
 
 Desde algunas sesiones de Claude no se pueden crear Releases ni etiquetas a mano: no hace falta, lo
 hace la Action. Si hay que relanzarla: `gh api --method POST
