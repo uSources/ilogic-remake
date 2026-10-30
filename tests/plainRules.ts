@@ -11,6 +11,7 @@ export const PLAIN_RULES: RulesConfig = {
   ambush: false,
   forestHides: false,
   terrainCost: false,
+  abilities: false,
   commandPoints: null,
   upkeep: 0,
 };

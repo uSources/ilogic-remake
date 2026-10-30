@@ -86,6 +86,7 @@ import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion,
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import {
+  abilitiesVM,
   buyBlockedText,
   captureHintText,
   combatVM,
@@ -752,6 +753,9 @@ export class GameScene extends Phaser.Scene {
             detail:
               `${unitStatsText(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
               (RULES.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[o.type]}`) +
+              abilitiesVM(o.type)
+                .map((a) => ` · ${a.name}`)
+                .join('') +
               (o.blocked ? ` · ${buyBlockedText(o.blocked)}` : ''),
           })),
         ];

@@ -34,6 +34,8 @@ export interface RulesConfig {
   forestHides: boolean;
   /** Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1). */
   terrainCost: boolean;
+  /** Habilidades de las unidades (units.json, "abilities"). */
+  abilities: boolean;
 }
 
 export interface RulesFile {
@@ -60,6 +62,7 @@ const RULE_KINDS: Record<keyof RulesConfig, Kind> = {
   ambush: 'bool',
   forestHides: 'bool',
   terrainCost: 'bool',
+  abilities: 'bool',
 };
 
 export function validateRules(r: RulesFile, check: Checker): void {

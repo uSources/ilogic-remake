@@ -457,6 +457,16 @@ function UnitCard({ u }: { u: UnitVM }) {
           {u.cargo}
         </span>
       )}
+      {u.abilities && u.abilities.length > 0 && (
+        <ul class="abilities" aria-label={t('abilities')}>
+          {u.abilities.map((a) => (
+            <li title={a.desc}>
+              <span class="gold">{a.name}</span>
+              <span class="muted">{a.desc}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

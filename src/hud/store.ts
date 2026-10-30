@@ -53,6 +53,12 @@ export interface ForecastVM {
   counter: { low: number; high: number; lifeBefore: number; lifeAfter: number; killChance: number } | null;
 }
 
+/** Habilidad de una unidad: nombre y explicacion (con sus numeros). */
+export interface AbilityVM {
+  name: string;
+  desc: string;
+}
+
 /** Un lado del panel de combate. */
 export interface CombatSideVM {
   icon: string | null;
@@ -93,6 +99,8 @@ export interface UnitVM {
   team: 0 | 1;
   life: number;
   stats: string;
+  /** Habilidades (vacio si no tiene o la regla esta apagada). */
+  abilities?: AbilityVM[];
   status?: string;
   cargo?: string;
 }

@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { MAP_H, MAP_W, MAX_FUNDS, RULES, UNIT, Movement, MoveType } from '../core/data';
+import { abilitiesOf } from '../core/abilities';
+import { MAP_H, MAP_W, MAX_FUNDS, RULES, UNIT, Movement, MoveType, type AbilityDef } from '../core/data';
 import {
   buildingAt,
   buildingIncome,
@@ -18,7 +19,18 @@ import {
   type BuyOption,
 } from '../core/rules';
 import type { CombatInfo, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
-import type { Anchor, BreakdownLineVM, CombatSideVM, CombatVM, DayInfoVM, EconomyVM, ForecastVM, MinimapVM, TileVM } from '../hud/store';
+import type {
+  AbilityVM,
+  Anchor,
+  BreakdownLineVM,
+  CombatSideVM,
+  CombatVM,
+  DayInfoVM,
+  EconomyVM,
+  ForecastVM,
+  MinimapVM,
+  TileVM,
+} from '../hud/store';
 import { buildingLabel, t, terrainLabel, unitLabel } from '../settings';
 import { buildingKey, terrainKey, unitKey } from './sprites';
 
@@ -31,6 +43,37 @@ import { buildingKey, terrainKey, unitKey } from './sprites';
 export function unitStatsText(type: number): string {
   const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return `${t('move')} ${UNIT.mover[type]} · ${range}`;
+}
+
+const pct = (f: number): string => String(Math.round(f * 100));
+
+/** Nombre y explicacion de una habilidad, con sus numeros. */
+export function abilityVM(a: AbilityDef): AbilityVM {
+  switch (a.kind) {
+    case 'guard':
+      return { name: t('ability_guard'), desc: t('ability_guard_desc').replace('{n}', pct(1 - a.factor)) };
+    case 'zoneOfControl':
+      return {
+        name: t('ability_zoneOfControl'),
+        desc: t('ability_zoneOfControl_desc').replace('{m}', a.stops.map((m) => t(`move_${m}`)).join(', ')),
+      };
+    case 'aura':
+      return {
+        name: t('ability_aura'),
+        desc: t('ability_aura_desc')
+          .replace('{r}', String(a.radius))
+          .replace('{n}', pct(1 - a.defense)),
+      };
+    case 'piercing':
+      return { name: t('ability_piercing'), desc: t('ability_piercing_desc').replace('{n}', pct(a.ignoreCover)) };
+    default:
+      return a satisfies never;
+  }
+}
+
+/** Habilidades de un tipo de unidad que cuentan en esta partida (vacio con la regla apagada). */
+export function abilitiesVM(type: number): AbilityVM[] {
+  return abilitiesOf(type).map(abilityVM);
 }
 
 /** "20→10": puntos del edificio de debajo antes y despues de capturar este turno. */
@@ -87,6 +130,7 @@ export function tileVM(
       team: shown.team,
       life: shown.life,
       stats: unitStatsText(T),
+      abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
     };
   }
