@@ -1,14 +1,5 @@
 import type Phaser from 'phaser';
-import {
-  BUILDING_NAMES,
-  BUILDING_TERRAIN_PREFIX,
-  MAP_H,
-  MAP_W,
-  TERRAIN,
-  TERRAIN_NAMES,
-  UNIT_NAMES,
-  UNIT_TERRAIN_PREFIX,
-} from '../core/data';
+import { BUILDING_NAMES, BUILDING_TERRAIN_PREFIX, MAP_H, MAP_W, TERRAIN, TERRAIN_NAMES, UNIT_ART, UNIT_TERRAIN_PREFIX } from '../core/data';
 import type { Building, GameState, Unit } from '../core/types';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
@@ -34,14 +25,14 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
 export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, u: Unit): string | null {
   const side = u.team === 1 ? 'r_' : u.active ? 'b_' : 'i_';
   const terrain = UNIT_TERRAIN_PREFIX[u.type]![s.map[u.x]![u.y]!]!;
-  const name = UNIT_NAMES[u.type]!;
+  const name = UNIT_ART[u.type]!;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
   if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
   return firstExisting(textures, [side + terrain + name, side + name, (u.team === 1 ? 'r_' : 'b_') + name]);
 }
 
 export function unitIconKey(type: number, available: boolean): string {
-  const k = (available ? 'b_' : 'i_') + UNIT_NAMES[type]!;
+  const k = (available ? 'b_' : 'i_') + UNIT_ART[type]!;
   return settings.terrainArt === 'new' ? `u/${k}` : k;
 }
 

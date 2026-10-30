@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '../src/core/ai';
-import { HQ, DEFAULT_RULES, UNIT, setMapSize, useRules } from '../src/core/data';
+import { HQ, DEFAULT_RULES, setMapSize, useRules, Movement } from '../src/core/data';
 import { grid, seededRng } from '../src/core/geom';
 import { buildMission, checkMission, missionRules, MISSIONS } from '../src/core/missions';
 import { endRound, groundDistance, outcome } from '../src/core/rules';
@@ -23,9 +23,7 @@ describe('misiones', () => {
     const obj = s.mission!.objective;
     if (obj.kind === 'escort') {
       const vip = s.units.find((u) => u.uid === obj.uid)!;
-      expect(groundDistance(s, vip, UNIT.movtype[vip.type]!, grid(false))[obj.to.x]![obj.to.y], 'el convoy puede llegar').toBeGreaterThan(
-        0,
-      );
+      expect(groundDistance(s, vip, Movement.of(vip.type), grid(false))[obj.to.x]![obj.to.y], 'el convoy puede llegar').toBeGreaterThan(0);
     }
     // Guardar y cargar conserva la mision.
     expect(deserialize(serialize(s))!.mission).toEqual(s.mission);

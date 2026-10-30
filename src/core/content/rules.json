@@ -1,0 +1,20 @@
+{
+  "$schema": "./rules.schema.json",
+  "defaults": {
+    "initialFunds": 5000,
+    "maxUnits": 30,
+    "counterattack": true,
+    "damageSpread": 0.1,
+    "capturePoints": 20,
+    "hqCapturePoints": 30,
+    "incomeScale": 1,
+    "fog": true,
+    "dayLimit": null,
+    "veterancy": true,
+    "passAllies": true,
+    "ambush": true,
+    "forestHides": true,
+    "terrainCost": true
+  },
+  "maxFunds": 999999
+}

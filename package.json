@@ -23,7 +23,8 @@
     "play": "tsx tools/play/cli.ts",
     "fuzz": "tsx tools/improve/fuzz.ts",
     "metrics": "tsx tools/improve/metrics.ts",
-    "arena": "tsx tools/improve/arena.ts"
+    "arena": "tsx tools/improve/arena.ts",
+    "unit": "tsx tools/content/cli.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",

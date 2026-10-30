@@ -1,0 +1,53 @@
+/**
+ * Unidad nueva a partir de otra: copia sus numeros y su columna de daño (quien puede atacarla y con
+ * cuanto acierto), y la deja al final de la lista con el dibujo de la original ("art").
+ * Funcion pura: la usa tools/content/cli.ts y se prueba en tests/newUnit.test.ts.
+ */
+import type { UnitDef } from '../../src/core/content';
+
+export interface NewUnitResult {
+  units: UnitDef[];
+  /** Que se ha copiado, para contarlo. */
+  copied: { attackers: string[]; carriers: string[]; suppliers: string[] };
+}
+
+export function addUnitLike(units: readonly UnitDef[], id: string, like: string): NewUnitResult {
+  if (!/^\w+$/.test(id)) throw new Error(`"${id}" no vale como id (letras, numeros y _)`);
+  if (units.some((u) => u.id === id)) throw new Error(`Ya hay una unidad "${id}"`);
+  const base = units.find((u) => u.id === like);
+  if (!base) throw new Error(`No hay ninguna unidad "${like}" (hay: ${units.map((u) => u.id).join(', ')})`);
+
+  const copy: UnitDef = {
+    ...structuredClone(base),
+    id,
+    name: { es: `${base.name.es} (nueva)`, en: `${base.name.en} (new)` },
+    art: base.art ?? base.id,
+    notes: `Copiada de ${like}: ajustar numeros, nombre y dibujo.`,
+  };
+  delete copy.classicSprite;
+  // Se ataca a si misma como la original se atacaba a si misma.
+  if (copy.attack && base.attack?.hitChance[like] !== undefined) copy.attack.hitChance[id] = base.attack.hitChance[like];
+
+  const copied: NewUnitResult['copied'] = { attackers: [], carriers: [], suppliers: [] };
+  const next = units.map((u) => {
+    const v = structuredClone(u);
+    const p = v.attack?.hitChance[like];
+    if (v.attack && p !== undefined) {
+      v.attack.hitChance[id] = p;
+      copied.attackers.push(v.id);
+    }
+    if (v.transport?.carries.includes(like)) {
+      v.transport.carries.push(id);
+      copied.carriers.push(v.id);
+    }
+    if (v.supplies) {
+      const fuel = v.supplies.fuel.includes(like);
+      const ammo = v.supplies.ammo.includes(like);
+      if (fuel) v.supplies.fuel.push(id);
+      if (ammo) v.supplies.ammo.push(id);
+      if (fuel || ammo) copied.suppliers.push(v.id);
+    }
+    return v;
+  });
+  return { units: [...next, copy], copied };
+}

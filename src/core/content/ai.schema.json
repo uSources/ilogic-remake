@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pesos de la IA de Ilogic",
+  "description": "Cambiarlos cambia como juega la IA: medir con npm run balance / npm run arena y actualizar tests/aiGolden.test.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "MAXMERGELIFE",
+    "MAXCAPTDIST",
+    "LIFETOBACK",
+    "COSTSCALE",
+    "KILLBONUS",
+    "HQDEFENDER",
+    "STOPCAPTUREHQ",
+    "STOPCAPTURE",
+    "BONUSDAMAGE",
+    "CAPTUREHQ",
+    "CAPTUREOWNED",
+    "MINCAPTURERS",
+    "FUELTURNS"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "MAXMERGELIFE": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Vida maxima que suman dos unidades al unirse (la IA no une si pasa de aqui)."
+    },
+    "MAXCAPTDIST": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Distancia maxima a la que una unidad de captura va a por un edificio."
+    },
+    "LIFETOBACK": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Con menos vida que esto, vuelve a curarse."
+    },
+    "COSTSCALE": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Precio que vale 1 punto al valorar un ataque (daño x precio / COSTSCALE)."
+    },
+    "KILLBONUS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Extra por matar al objetivo (por cada punto de precio / COSTSCALE)."
+    },
+    "HQDEFENDER": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Extra por atacar a quien defiende su Base encima de ella."
+    },
+    "STOPCAPTUREHQ": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Extra por echar a quien captura la Base propia."
+    },
+    "STOPCAPTURE": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Extra por echar a quien captura otro edificio propio."
+    },
+    "BONUSDAMAGE": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Daño que da el extra completo (por debajo se reduce, nunca a menos de la mitad)."
+    },
+    "CAPTUREHQ": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Preferencia por capturar la Base enemiga."
+    },
+    "CAPTUREOWNED": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Preferencia por capturar edificios con dueño."
+    },
+    "MINCAPTURERS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Unidades que capturan que intenta tener siempre."
+    },
+    "FUELTURNS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Vuelve a repostar si el combustible no da para estos turnos mas un movimiento."
+    }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Reglas de Ilogic",
+  "description": "Reglas por defecto de una partida nueva (la pantalla de nueva partida y las misiones cambian algunas). Se guardan con cada partida.",
+  "type": "object",
+  "required": ["defaults", "maxFunds"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initialFunds",
+        "maxUnits",
+        "counterattack",
+        "damageSpread",
+        "capturePoints",
+        "hqCapturePoints",
+        "incomeScale",
+        "fog",
+        "dayLimit",
+        "veterancy",
+        "passAllies",
+        "ambush",
+        "forestHides",
+        "terrainCost"
+      ],
+      "properties": {
+        "initialFunds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Dinero inicial de cada bando."
+        },
+        "maxUnits": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Unidades maximas por bando."
+        },
+        "counterattack": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "El defensor que sobrevive responde al ataque."
+        },
+        "damageSpread": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %)."
+        },
+        "capturePoints": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Puntos de captura de un edificio."
+        },
+        "hqCapturePoints": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Puntos de captura de la Base."
+        },
+        "incomeScale": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Multiplicador de los ingresos de los edificios."
+        },
+        "fog": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "Niebla de guerra."
+        },
+        "dayLimit": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Limite de dias (null = sin limite): al acabar gana quien tenga mas puntos."
+        },
+        "veterancy": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "Las unidades que destruyen enemigos suben de rango (+acierto, +defensa)."
+        },
+        "passAllies": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "Se puede pasar por casillas de unidades propias (sin terminar en ellas)."
+        },
+        "ambush": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "Emboscadas: si el camino choca con un enemigo que no se veia, se para."
+        },
+        "forestHides": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "Con niebla, los terrenos con hides solo se ven desde una casilla vecina."
+        },
+        "terrainCost": {
+          "type": "boolean",
+          "minimum": 0,
+          "description": "Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1)."
+        }
+      }
+    },
+    "maxFunds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Dinero maximo que puede tener un bando."
+    }
+  }
+}

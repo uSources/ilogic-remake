@@ -2,7 +2,7 @@
  * Ayudas para las ordenes del jugador (mover, atacar, mover en grupo): que casilla elegir y si una
  * orden es arriesgada. Logica pura, sin interfaz: la usa GameScene y se puede probar.
  */
-import { FUELER, POWER, UNIT } from './data';
+import { FUELER, POWER, UNIT, Movement } from './data';
 import { manhattan, samePos } from './geom';
 import { canWalk, hasAmmo, inAttackRange, moveCost, pathCost, pathTo, reachableTiles, tileProtection, type MoveRange } from './rules';
 import type { GameState, Pos, Unit } from './types';
@@ -65,7 +65,7 @@ export function extendTrail(s: GameState, u: Unit, r: MoveRange, block: boolean[
   const i = cur.findIndex((p) => samePos(p, t));
   if (i >= 0) return cur.slice(0, i + 1);
   const end = cur[cur.length - 1]!;
-  const mt = UNIT.movtype[u.type]!;
+  const mt = Movement.of(u.type);
   if (
     manhattan(end, t) === 1 &&
     canWalk(s, t.x, t.y, mt) &&

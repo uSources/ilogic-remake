@@ -14,7 +14,7 @@
  *   }
  * }
  *
- * Tablas: UNIT, POWER, BUILDING, TERRAIN, RULES, AI. Las filas/columnas se pueden
+ * Tablas: UNIT, POWER, BUILDING, TERRAIN, MOVE_COST ("MOVE_COST.vehicle.Woods"), RULES, AI. Las filas/columnas se pueden
  * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
  */
 import {
@@ -29,7 +29,9 @@ import {
   TERRAIN_NAMES,
   UNIT,
   UNIT_NAMES,
+  Movement,
 } from '../../src/core/data';
+import { MOVEMENTS } from '../../src/core/content';
 
 export interface Variant {
   name: string;
@@ -45,12 +47,14 @@ const TABLES: Record<string, Table> = {
   TERRAIN,
   RULES: RULES as unknown as Record<string, unknown>,
   AI,
+  MOVE_COST: Movement.COST as unknown as unknown[],
 };
 
 /** Que nombres valen para los indices de cada tabla/campo. */
 function namesFor(table: string, depth: number): readonly string[] | null {
   if (table === 'UNIT' || table === 'POWER') return UNIT_NAMES;
   if (table === 'BUILDING') return BUILDING_NAMES;
+  if (table === 'MOVE_COST') return depth === 0 ? MOVEMENTS : TERRAIN_NAMES;
   if (table === 'TERRAIN') return depth === 1 ? TERRAIN_NAMES : TERRAIN_NAMES;
   return null;
 }

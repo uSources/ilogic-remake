@@ -5,7 +5,7 @@
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
-import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT } from './data';
+import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT, Movement } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
   attackFull,
@@ -58,7 +58,7 @@ function occupancyWithout(s: GameState, u: Unit): boolean[][] {
 function bestMoveToward(s: GameState, u: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(u, dest) && !avoidDest) return null;
   if (!avoidDest && range.steps[dest.x]![dest.y]! > 0) return dest;
-  const dd = groundDistance(s, dest, UNIT.movtype[u.type]!, occupancyWithout(s, u));
+  const dd = groundDistance(s, dest, Movement.of(u.type), occupancyWithout(s, u));
   let best: Pos | null = null;
   let bestD = dd[u.x]![u.y]! || Infinity;
   for (let x = 0; x < dd.length; x++) {
@@ -116,7 +116,7 @@ function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange
     return true;
   }
   // 3) Ir al edificio propio mas cercano que la repare y este libre.
-  const dist = groundDistance(s, u, UNIT.movtype[u.type]!);
+  const dist = groundDistance(s, u, Movement.of(u.type));
   let goal: Pos | null = null;
   let goalD = Infinity;
   for (const b of s.buildings) {
@@ -220,7 +220,7 @@ function* tryCapture(s: GameState, u: Unit, range: MoveRange): Generator<GameEve
   if (!UNIT.cancapt[u.type]) return false;
   if (yield* captureHere(s, u)) return true;
   const vis = visibility(s, ME);
-  const dist = groundDistance(s, u, UNIT.movtype[u.type]!);
+  const dist = groundDistance(s, u, Movement.of(u.type));
   let goal: Pos | null = null;
   let goalD = Infinity;
   for (const p of diamond(u, 1, AI.MAXCAPTDIST)) {
@@ -248,7 +248,7 @@ function* tryCapture(s: GameState, u: Unit, range: MoveRange): Generator<GameEve
  * [CAMBIO] en el original este paso casi nunca se activaba y la IA paseaba al azar.
  */
 function* advance(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent, boolean> {
-  const dist = groundDistance(s, u, UNIT.movtype[u.type]!, occupancyWithout(s, u));
+  const dist = groundDistance(s, u, Movement.of(u.type), occupancyWithout(s, u));
   // Las que capturan: edificios ajenos, con prioridad a la Base enemiga y a los del jugador.
   const bonus = (g: Pos): number => {
     const b = buildingAt(s, g.x, g.y);

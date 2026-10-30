@@ -1,6 +1,6 @@
 ---
 name: equilibrador
-description: Ilogic balance tuner. Use during an improvement cycle (skill automejora) to propose ONE data change (prices, power, terrain, income) in src/core/content/*.json or src/core/data.ts that raises the game score from npm run metrics without lowering other parts. Works in its own branch/worktree and reports evidence.
+description: Ilogic balance tuner. Use during an improvement cycle (skill automejora) to propose ONE data change (prices, power, terrain, income) in src/core/content/*.json that raises the game score from npm run metrics without lowering other parts. Works in its own branch/worktree and reports evidence.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 ---
@@ -13,11 +13,11 @@ Antes de nada lee: `improve/DIARIO.md` (que se probo ya: no repitas), `.claude/s
 
 Proceso:
 1. Elige UNA hipotesis a partir de la parte con mas margen (p. ej. "Unidades que rinden lo que cuestan"
-   o los avisos de precios). Solo tocas datos: unidades y edificios en `src/core/content/units.json` y
-   `buildings.json` (precio, `attack.hitChance`...), y `TERRAIN`/`RULES` en `src/core/data.ts`. **No** el bloque `AI` ni `src/core/ai.ts` (eso es del entrenador de la IA).
+   o los avisos de precios). Solo tocas datos en `src/core/content/`: `units.json`, `buildings.json`,
+   `terrain.json` y `rules.json`. **No** `ai.json` ni `src/core/ai.ts` (eso es del entrenador de la IA).
 2. Prueba rapida sin tocar ficheros: `npm run balance -- run --games 80 --set RUTA=VALOR --name prueba-X`
    y comparala con `npm run balance -- run --games 80 --name base-X` (mismas semillas).
-3. Si promete, aplica el cambio en el JSON (o `data.ts`) y mide de verdad: `npm run metrics -- --name <rama>`
+3. Si promete, aplica el cambio en el JSON y mide de verdad: `npm run metrics -- --name <rama>`
    (120 partidas, se compara sola con la linea base).
 4. **Criterio para aceptar**: nota total +1.0 o mas, ninguna parte baja mas de 2 puntos y
    "Ningun bando con ventaja" no baja. Si no se cumple, deshaz el cambio, apunta el intento como

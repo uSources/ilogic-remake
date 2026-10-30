@@ -100,9 +100,10 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
 ## Unidades y edificios
 
 Se definen en ficheros de configuracion, sin tocar codigo: `src/core/content/units.json` (precio,
-movimiento, daño contra cada unidad, quien la fabrica...) y `buildings.json`. El editor los autocompleta
-con su esquema y el juego dice que esta mal si hay un error. Como cambiar o añadir uno:
-[docs/CONTENIDO.md](docs/CONTENIDO.md).
+movimiento, daño contra cada unidad, quien la fabrica...), `buildings.json`, `terrain.json` (defensa y
+coste de movimiento), `rules.json` (reglas por defecto) y `ai.json` (pesos de la IA). El editor los
+autocompleta con su esquema y el juego dice que esta mal si hay un error. Para una unidad nueva:
+`npm run unit -- new <Id> --like <Parecida>`. Guia: [docs/CONTENIDO.md](docs/CONTENIDO.md).
 
 ## Estructura
 
@@ -110,8 +111,8 @@ con su esquema y el juego dice que esta mal si hay un error. Como cambiar o aña
 src/
   core/        Logica del juego en TypeScript puro (sin Phaser): se puede probar con tests
                y reutilizar, por ejemplo, en un servidor para partidas online.
-    content/     Unidades y edificios en JSON (precio, daño, quien los fabrica...): ver docs/CONTENIDO.md
-    data.ts      Tablas por indice sacadas de content/, mas terrenos, reglas y pesos de la IA
+    content/     Unidades, edificios, terreno, reglas e IA en JSON + su validacion: ver docs/CONTENIDO.md
+    data.ts      Tablas sacadas de content/ (UNIT, POWER, Movement...) y el generador de mapas
     rules.ts     Reglas: movimiento, combate, captura, union, transporte, compra, fin de ronda
     orders.ts    Ayudas para las ordenes del jugador (desde donde atacar, combustible, grupo, camino)
     ai.ts        Inteligencia artificial (un generador que va devolviendo cada accion)

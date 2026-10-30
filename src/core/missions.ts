@@ -8,7 +8,7 @@
  *   P  bosque nevado    N  acantilado nevado
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  */
-import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT, UNIT_NAMES, type RulesConfig } from './data';
+import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, type RulesConfig, Movement } from './data';
 import { newUnit } from './rules';
 import type { GameState, Objective, Pos, Team } from './types';
 
@@ -100,7 +100,7 @@ export function checkMission(m: MissionDef): string[] {
       errs.push(`unidad "${u}" no existe (src/core/content/units.json)`);
       continue;
     }
-    if (!TERRAIN.canwalk[UNIT.movtype[T]!]![t(x, y)]) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
+    if (!Movement.canWalk(Movement.of(T), t(x, y))) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
     if (occ.has(`${x},${y}`)) errs.push(`dos unidades en (${x},${y})`);
     occ.add(`${x},${y}`);
   }

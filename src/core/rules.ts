@@ -6,7 +6,6 @@
 import {
   AMMO_RESTORER,
   HIDING_TERRAIN,
-  MOVE_COST,
   BUILDING,
   CAN_CARRY,
   FUELER,
@@ -23,6 +22,8 @@ import {
   UNIT_FUELER,
   UNIT_HEALS,
   UNIT_TYPES,
+  Movement,
+  type MoveType,
 } from './data';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
 import type { Building, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
@@ -51,12 +52,12 @@ export function occupancy(s: GameState): boolean[][] {
   return occ;
 }
 
-export function canWalk(s: GameState, x: number, y: number, moveType: number): boolean {
-  return inBounds(x, y) && TERRAIN.canwalk[moveType]![s.map[x]![y]!]!;
+export function canWalk(s: GameState, x: number, y: number, moveType: MoveType): boolean {
+  return inBounds(x, y) && Movement.canWalk(moveType, s.map[x]![y]!);
 }
 
 /** Transitable y libre de unidades (amigas o enemigas: no se puede atravesar a nadie). */
-export function isWalkable(s: GameState, x: number, y: number, moveType: number, occ = occupancy(s)): boolean {
+export function isWalkable(s: GameState, x: number, y: number, moveType: MoveType, occ = occupancy(s)): boolean {
   return canWalk(s, x, y, moveType) && !occ[x]![y];
 }
 
@@ -106,12 +107,12 @@ export function passMap(s: GameState, u: Unit): { block: boolean[][]; taken: boo
 }
 
 /** Lo que cuesta entrar en una casilla (1 con las reglas clasicas). */
-export function moveCost(s: GameState, moveType: number, x: number, y: number): number {
-  return RULES.terrainCost ? MOVE_COST[moveType]![s.map[x]![y]!]! : 1;
+export function moveCost(s: GameState, moveType: MoveType, x: number, y: number): number {
+  return RULES.terrainCost ? Movement.cost(moveType, s.map[x]![y]!) : 1;
 }
 
 /** Coste de recorrer un camino (sin contar la casilla de salida). */
-export function pathCost(s: GameState, moveType: number, path: Pos[]): number {
+export function pathCost(s: GameState, moveType: MoveType, path: Pos[]): number {
   let c = 0;
   for (let i = 1; i < path.length; i++) c += moveCost(s, moveType, path[i]!.x, path[i]!.y);
   return c;
@@ -125,7 +126,7 @@ export function moveRange(s: GameState, u: Unit): MoveRange {
   const steps = grid(0);
   const prev = grid<Pos | null>(null);
   const max = maxSteps(u);
-  const mt = UNIT.movtype[u.type]!;
+  const mt = Movement.of(u.type);
   const { block, taken } = passMap(s, u);
   const best = grid(Infinity);
   best[u.x]![u.y] = 0;
@@ -177,7 +178,7 @@ export function walkPath(s: GameState, u: Unit, path: Pos[]): MovePath {
 /** Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno. */
 function ambushed(s: GameState, u: Unit, walked: MovePath): MovePath {
   const end = walked[walked.length - 1]!;
-  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, walked));
+  spendFuel(u, pathCost(s, Movement.of(u.type), walked));
   u.x = end.x;
   u.y = end.y;
   u.active = false;
@@ -214,11 +215,11 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
  * casillas del alcance (o de paso), sin repetir, no supera el movimiento y termina en un destino libre.
  */
 export function validPath(s: GameState, u: Unit, path: Pos[], range: MoveRange): boolean {
-  if (path.length < 2 || !samePos(path[0]!, u) || pathCost(s, UNIT.movtype[u.type]!, path) > range.maxSteps) return false;
+  if (path.length < 2 || !samePos(path[0]!, u) || pathCost(s, Movement.of(u.type), path) > range.maxSteps) return false;
   const end = path[path.length - 1]!;
   if (!canReach(range, end.x, end.y)) return false;
   const { block } = passMap(s, u);
-  const mt = UNIT.movtype[u.type]!;
+  const mt = Movement.of(u.type);
   const seen = new Set<string>();
   for (let i = 1; i < path.length; i++) {
     const a = path[i - 1]!,
@@ -237,8 +238,8 @@ export function validPath(s: GameState, u: Unit, path: Pos[], range: MoveRange):
  * null si no se puede llegar nunca o ya no se puede acercar mas.
  */
 export function stepToward(s: GameState, u: Unit, goal: Pos, range = moveRange(s, u)): Pos | null {
-  if (!canWalk(s, goal.x, goal.y, UNIT.movtype[u.type]!)) return null;
-  const dist = groundDistance(s, goal, UNIT.movtype[u.type]!, grid(false));
+  if (!canWalk(s, goal.x, goal.y, Movement.of(u.type))) return null;
+  const dist = groundDistance(s, goal, Movement.of(u.type), grid(false));
   const here = samePos(u, goal) ? 0 : dist[u.x]![u.y]! || Infinity;
   let best: Pos | null = null;
   let bestD = here;
@@ -274,7 +275,7 @@ export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, 
     via && samePos(via[via.length - 1]!, dest) && validPath(s, u, via, range) ? via.map((p) => ({ ...p })) : pathTo(range, u, dest);
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
-  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, path));
+  spendFuel(u, pathCost(s, Movement.of(u.type), path));
   u.x = dest.x;
   u.y = dest.y;
   u.canMove = false;
@@ -296,7 +297,7 @@ export function approachPath(s: GameState, u: Unit, target: Pos, range = moveRan
   let bestSteps = Infinity;
   for (const n of neighbors4(target)) {
     const st = samePos(n, u) ? 0 : range.steps[n.x]![n.y]!;
-    const last = moveCost(s, UNIT.movtype[u.type]!, target.x, target.y);
+    const last = moveCost(s, Movement.of(u.type), target.x, target.y);
     if ((samePos(n, u) || (st > 0 && st + last <= range.maxSteps)) && st < bestSteps) {
       best = n;
       bestSteps = st;
@@ -562,7 +563,7 @@ export function merge(s: GameState, u: Unit, target: Unit): MovePath | null {
   if (!path) return null;
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
-  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, [...path, { x: target.x, y: target.y }]));
+  spendFuel(u, pathCost(s, Movement.of(u.type), [...path, { x: target.x, y: target.y }]));
   target.life = Math.min(MAX_LIFE, target.life + u.life);
   target.fuel = Math.max(target.fuel, u.fuel);
   target.ammo = Math.max(target.ammo, u.ammo);
@@ -602,7 +603,7 @@ export function load(s: GameState, u: Unit, t: Unit): MovePath | null {
   if (!path) return null;
   const walked = walkPath(s, u, path);
   if (walked.ambush) return ambushed(s, u, walked);
-  spendFuel(u, pathCost(s, UNIT.movtype[u.type]!, [...path, { x: t.x, y: t.y }]));
+  spendFuel(u, pathCost(s, Movement.of(u.type), [...path, { x: t.x, y: t.y }]));
   path.push({ x: t.x, y: t.y });
   t.cargo[slot] = u.uid;
   u.carrier = t.uid;
@@ -620,7 +621,7 @@ export function cargoUnits(s: GameState, t: Unit): Unit[] {
 
 /** Casillas donde se puede bajar a un pasajero: vecinas transitables y libres. */
 export function unloadTiles(s: GameState, t: Unit, passenger: Unit): Pos[] {
-  const mt = UNIT.movtype[passenger.type]!;
+  const mt = Movement.of(passenger.type);
   const occ = occupancy(s);
   return neighbors4(t).filter((p) => isWalkable(s, p.x, p.y, mt, occ));
 }
@@ -781,7 +782,7 @@ export function spawn(s: GameState, b: Building, type: number): Unit | null {
   const team = b.owner;
   const cost = UNIT.cost[type]!;
   if (cost > s.funds[team] || teamUnits(s, team).length >= RULES.maxUnits) return null;
-  if (!isWalkable(s, b.x, b.y, UNIT.movtype[type]!)) return null;
+  if (!isWalkable(s, b.x, b.y, Movement.of(type))) return null;
   s.funds[team] -= cost;
   return newUnit(s, type, team, b.x, b.y, false);
 }
@@ -952,7 +953,7 @@ export function endReason(s: GameState): 'hq' | 'wipeout' | 'days' | 'objective'
  * 0 = inalcanzable (o la propia casilla de origen). El origen no tiene que ser transitable.
  * Las unidades bloquean salvo que se pase `occ` vacio.
  */
-export function groundDistance(s: GameState, from: Pos, moveType: number, occ = occupancy(s)): number[][] {
+export function groundDistance(s: GameState, from: Pos, moveType: MoveType, occ = occupancy(s)): number[][] {
   const dist = grid(0);
   const seen = grid(false);
   seen[from.x]![from.y] = true;

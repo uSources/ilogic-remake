@@ -291,6 +291,10 @@
               "maximum": 100
             }
           },
+          "art": {
+            "type": "string",
+            "description": "Mientras no tenga dibujo propio, se pinta con el de esta unidad (id). Quitarlo al añadir sus imagenes."
+          },
           "classicSprite": {
             "type": "object",
             "description": "Graficos de 2013: prefijo de la imagen segun el terreno donde esta (\"1_\" = version de agua, \"2_\" = version de nieve).",

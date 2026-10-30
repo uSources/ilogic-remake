@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import buildingsFile from '../src/core/content/buildings.json';
 import unitsFile from '../src/core/content/units.json';
 import { buildTables, validateContent, type Content } from '../src/core/content';
-import { CONTENT, TERRAIN_NAMES, UNIT_NAMES, BUILDING_NAMES } from '../src/core/data';
+import { MOVEMENTS, MoveType } from '../src/core/content';
+import { CONTENT, Movement, TERRAIN_NAMES, TerrainType, UNIT_ART, UNIT_NAMES, BUILDING_NAMES } from '../src/core/data';
 
 const clone = (): Content => structuredClone(CONTENT) as Content;
-const errsOf = (c: Content) => validateContent(c, TERRAIN_NAMES);
+const errsOf = (c: Content) => validateContent(c);
 
-describe('contenido (units.json y buildings.json)', () => {
+describe('contenido (src/core/content/*.json)', () => {
   it('el contenido del juego es valido', () => {
     expect(errsOf(clone())).toEqual([]);
   });
@@ -82,7 +83,7 @@ describe('contenido (units.json y buildings.json)', () => {
     });
     c.units[0]!.attack!.hitChance.Sniper = 0.6;
     expect(errsOf(c)).toEqual([]);
-    const T = buildTables(c, TERRAIN_NAMES);
+    const T = buildTables(c);
     const s = T.UNIT_NAMES.indexOf('Sniper');
     expect(s).toBe(19);
     expect(T.UNIT.minalc[s]).toBe(1);
@@ -92,5 +93,48 @@ describe('contenido (units.json y buildings.json)', () => {
     expect(T.POWER.every((row) => row.length === 20)).toBe(true);
     expect(T.SPAWNER[s]![0]).toBe(true);
     expect(T.UNIT_TERRAIN_PREFIX[s]!.length).toBe(TERRAIN_NAMES.length);
+  });
+
+  it('terreno, reglas e IA: explica lo que esta mal', () => {
+    const c = clone();
+    c.terrain[2]!.movement.vehicle = 0;
+    c.terrain[3]!.movement.air = null;
+    c.terrain.pop();
+    (c.rules.defaults as unknown as Record<string, unknown>).fog = 'si';
+    (c.rules.defaults as unknown as Record<string, unknown>).magic = true;
+    c.ai.KILLBONUS = -1;
+    const errs = errsOf(c);
+    expect(errs).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
+    expect(errs).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
+    expect(errs.some((e) => e.startsWith('terrain.json: tienen que estar los 15 terrenos'))).toBe(true);
+    expect(errs).toContain('rules.json: defaults.fog tiene que ser true o false');
+    expect(errs).toContain('rules.json: regla desconocida "magic"');
+    expect(errs.some((e) => e.startsWith('ai.json: KILLBONUS'))).toBe(true);
+  });
+
+  it('MoveType y TerrainType coinciden con las listas de los JSON', () => {
+    MOVEMENTS.forEach((m, i) => expect(MoveType[m.toUpperCase() as keyof typeof MoveType]).toBe(i));
+    expect(TERRAIN_NAMES[TerrainType.WOODS]).toBe('Woods');
+    expect(TERRAIN_NAMES[TerrainType.SHALLOW_WATER]).toBe('SWater');
+    expect(TERRAIN_NAMES[TerrainType.ICE]).toBe('Ice');
+    expect(Object.keys(TerrainType)).toHaveLength(TERRAIN_NAMES.length);
+  });
+
+  it('Movement: tipos legibles sobre las tablas de terrain.json', () => {
+    const tank = UNIT_NAMES.indexOf('Tank');
+    expect(Movement.of(tank)).toBe(MoveType.VEHICLE);
+    expect(Movement.canWalk(MoveType.VEHICLE, TerrainType.WATER)).toBe(false);
+    expect(Movement.canWalk(MoveType.AIR, TerrainType.DEEP_WATER)).toBe(true);
+    expect(Movement.cost(MoveType.VEHICLE, TerrainType.WOODS)).toBe(2);
+  });
+
+  it('art: una unidad sin dibujo usa el de otra', () => {
+    expect(UNIT_ART).toEqual(UNIT_NAMES);
+    const c = clone();
+    c.units.push({ ...structuredClone(c.units[0]!), id: 'Sniper', art: 'Soldier' });
+    expect(errsOf(c)).toEqual([]);
+    expect(buildTables(c).UNIT_ART[19]).toBe('Soldier');
+    c.units[19]!.art = 'Dragon';
+    expect(errsOf(c)).toContain('unidad Sniper: art nombra "Dragon", que no existe');
   });
 });

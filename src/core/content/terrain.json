@@ -1,0 +1,260 @@
+{
+  "$schema": "./terrain.schema.json",
+  "terrain": [
+    {
+      "id": "Grass",
+      "name": {
+        "es": "Llanura",
+        "en": "Plains"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": true,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 1,
+        "air": 1,
+        "amphibious": 1
+      }
+    },
+    {
+      "id": "Water",
+      "name": {
+        "es": "Agua",
+        "en": "Water"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": false,
+      "water": true,
+      "movement": {
+        "foot": null,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": 1
+      }
+    },
+    {
+      "id": "Woods",
+      "name": {
+        "es": "Bosque",
+        "en": "Woods"
+      },
+      "protection": 0.85,
+      "hides": true,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 2,
+        "air": 1,
+        "amphibious": 2
+      }
+    },
+    {
+      "id": "Sand",
+      "name": {
+        "es": "Arena",
+        "en": "Sand"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": true,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 2,
+        "air": 1,
+        "amphibious": 2
+      }
+    },
+    {
+      "id": "Cactus",
+      "name": {
+        "es": "Cactus",
+        "en": "Cactus"
+      },
+      "protection": 0.9,
+      "hides": true,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 2,
+        "air": 1,
+        "amphibious": 2
+      }
+    },
+    {
+      "id": "SandCliff",
+      "name": {
+        "es": "Acantilado",
+        "en": "Cliff"
+      },
+      "protection": 0.8,
+      "hides": false,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 2,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": null
+      }
+    },
+    {
+      "id": "Flowers",
+      "name": {
+        "es": "Flores",
+        "en": "Flowers"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 1,
+        "air": 1,
+        "amphibious": 1
+      }
+    },
+    {
+      "id": "GrassCliff",
+      "name": {
+        "es": "Acantilado",
+        "en": "Cliff"
+      },
+      "protection": 0.8,
+      "hides": false,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 2,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": null
+      }
+    },
+    {
+      "id": "SWater",
+      "name": {
+        "es": "Agua poco profunda",
+        "en": "Shallow water"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": false,
+      "water": true,
+      "movement": {
+        "foot": 2,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": 1
+      }
+    },
+    {
+      "id": "DWater",
+      "name": {
+        "es": "Agua profunda",
+        "en": "Deep water"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": false,
+      "water": true,
+      "movement": {
+        "foot": null,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": 2
+      }
+    },
+    {
+      "id": "Snow",
+      "name": {
+        "es": "Nieve",
+        "en": "Snow"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": true,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 2,
+        "air": 1,
+        "amphibious": 2
+      }
+    },
+    {
+      "id": "Frosty",
+      "name": {
+        "es": "Escarcha",
+        "en": "Frost"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 2,
+        "air": 1,
+        "amphibious": 2
+      }
+    },
+    {
+      "id": "SnowCliff",
+      "name": {
+        "es": "Acantilado nevado",
+        "en": "Snowy cliff"
+      },
+      "protection": 0.8,
+      "hides": false,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 2,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": null
+      }
+    },
+    {
+      "id": "SnowWood",
+      "name": {
+        "es": "Bosque nevado",
+        "en": "Snowy woods"
+      },
+      "protection": 0.85,
+      "hides": true,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": 3,
+        "air": 1,
+        "amphibious": 3
+      }
+    },
+    {
+      "id": "Ice",
+      "name": {
+        "es": "Hielo",
+        "en": "Ice"
+      },
+      "protection": 1,
+      "hides": false,
+      "buildable": false,
+      "water": false,
+      "movement": {
+        "foot": 1,
+        "vehicle": null,
+        "air": 1,
+        "amphibious": null
+      }
+    }
+  ]
+}
