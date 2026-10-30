@@ -51,11 +51,11 @@ exports[`IA: partidas de referencia > semilla 2 1`] = `
 exports[`IA: partidas de referencia > semilla 3 1`] = `
 {
   "days": 26,
-  "events": 882,
+  "events": 888,
   "last": {
     "army": [
-      47025,
-      100440,
+      42475,
+      105400,
     ],
     "buildings": [
       8,
@@ -63,8 +63,8 @@ exports[`IA: partidas de referencia > semilla 3 1`] = `
     ],
     "day": 26,
     "funds": [
-      17000,
-      17500,
+      15000,
+      11500,
     ],
   },
   "reason": "timeout",

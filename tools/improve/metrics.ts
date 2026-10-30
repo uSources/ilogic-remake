@@ -54,12 +54,18 @@ export function score(r: Report, size: number): Metrics {
   const eff = [o.wins[0] + o.adjudicated[0], o.wins[1] + o.adjudicated[1]];
   const decided = eff[0]! + eff[1]!;
   const rate0 = decided ? eff[0]! / decided : 0.5;
+  // Con N partidas decididas, el azar solo ya mueve el reparto unos 2/sqrt(N) puntos (95 %): una
+  // diferencia menor no es ventaja de un bando, es ruido. Puntos completos dentro del ruido y bajando
+  // hasta 0 cuando la diferencia lo pasa en 20 puntos. (Antes 1 % de diferencia restaba 2.5 puntos y la
+  // nota se movia mas por el azar que por los cambios.)
+  const gap = Math.abs(2 * rate0 - 1);
+  const noise = decided ? 2 / Math.sqrt(decided) : 1;
   add(
     'lados',
     'Ningun bando con ventaja (ganadas o con ventaja clara)',
     25,
-    1 - Math.abs(2 * rate0 - 1) / 0.2,
-    `${Math.round(rate0 * 100)} % / ${Math.round((1 - rate0) * 100)} %`,
+    1 - Math.max(0, gap - noise) / 0.2,
+    `${Math.round(rate0 * 100)} % / ${Math.round((1 - rate0) * 100)} % (ruido ±${Math.round((noise * 100) / 2)} %)`,
   );
   const [lo, hi] = DEFAULT_TARGETS.days;
   const med = o.days.median;
@@ -80,12 +86,27 @@ export function score(r: Report, size: number): Metrics {
   const H = -bought.reduce((a, b) => a + (b / total) * Math.log(b / total), 0);
   const variety = r.units.length > 1 ? H / Math.log(r.units.length) : 0;
   add('variedad', 'Variedad de unidades compradas', 15, variety / 0.85, `${Math.round(variety * 100)} % de la variedad maxima`);
+  // Rendimiento de cada unidad (valor destruido por coste) respecto a la mediana: dentro de la banda
+  // cuenta entero; fuera, cada vez menos segun lo lejos (en escala logaritmica: 2x por encima de la
+  // banda = 0). Asi acercar una unidad a la banda suma aunque aun no entre, y una que roza el borde no
+  // hace saltar la nota.
   const [blo, bhi] = DEFAULT_TARGETS.efficiencyBand;
   const effs = r.units.map((u) => u.efficiency).filter((e): e is number => e !== null);
   const med2 = [...effs].sort((a, b) => a - b)[Math.floor(effs.length / 2)] ?? 1;
+  const fit = (e: number) => {
+    const x = Math.log(e / med2);
+    const out = x > Math.log(bhi) ? x - Math.log(bhi) : x < Math.log(blo) ? Math.log(blo) - x : 0;
+    return clamp01(1 - out / Math.log(2));
+  };
   const inBand = effs.filter((e) => e >= med2 * blo && e <= med2 * bhi).length;
-  add('precios', 'Unidades que rinden lo que cuestan', 15, effs.length ? inBand / effs.length : 1, `${inBand} de ${effs.length}`);
-
+  const priceFit = effs.length ? effs.reduce((a, e) => a + fit(e), 0) / effs.length : 1;
+  add(
+    'precios',
+    'Unidades que rinden lo que cuestan',
+    15,
+    priceFit,
+    `${inBand} de ${effs.length} en la banda, ajuste ${Math.round(priceFit * 100)} %`,
+  );
   return {
     name: r.name,
     date: new Date().toISOString().slice(0, 10),

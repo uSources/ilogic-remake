@@ -13,6 +13,22 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-10-30 · revision de la medida · ACEPTADO (herramienta) / Tanque RETIRADO
+
+Cambio: la nota (`tools/improve/metrics.ts`) media mal dos cosas, y el Tanque a 9500 se retira.
+- "Ningun bando con ventaja": 1 % de diferencia restaba 2.5 puntos, pero con 120 partidas el azar solo ya
+  mueve el reparto unos ±10 %. Ahora puntua entero dentro del ruido (2/sqrt(partidas decididas)) y baja
+  despues. Asi la nota no sube ni baja por suerte.
+- "Unidades que rinden lo que cuestan": contaba unidades dentro de la banda (una que roza el borde
+  entraba o salia por azar). Ahora es un ajuste continuo: dentro de la banda entera, fuera cada vez menos
+  (escala logaritmica). Acercar una unidad a la banda suma aunque aun no entre.
+Resultado con la nota nueva (mismas 120 partidas): Tanque 12000 **65.3** · Tanque 9500 **65.2**.
+- Lados 25 → 25 (48/52 → 49/51, ruido ±10 %); precios 10.3 → 10.2 (ajuste 69 % → 68 %).
+Conclusion: el +2.5 del Tanque era ruido. Se retira y se vuelve a 12000 (el test de `tests/setup.test.ts`
+que lee el precio de `UNIT.cost` se queda: es mejor asi). Linea base nueva: **65.3** (Tanque 12000).
+Ojo: con la nota nueva, el intento del Soldado a 2000 (lados 58/42) quizas no era tan malo: 58 % entra
+casi en el ruido. Volver a medirlo con la nota nueva antes de descartarlo del todo.
+
 ## 2026-10-30 · equilibrio (precios) · DESCARTADO
 
 Cambio: `UNIT.cost.Antiair` 8000 → 9500 (solo prueba rapida, sobre el Tanque a 9500 ya aceptado).

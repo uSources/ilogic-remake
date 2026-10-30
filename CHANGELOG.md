@@ -7,11 +7,6 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
-
-### Equilibrio
-- El **Tanque** cuesta 9500 en vez de 12000: rendia mucho menos de lo que costaba.
-
 ## [0.1.0] - 2026-10-29 — El remake
 
 Primera versión del remake de **Ilogic** (2013), rehecho en TypeScript y Phaser 4.
