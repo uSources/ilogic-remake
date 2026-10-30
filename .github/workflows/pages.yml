@@ -28,17 +28,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: tools/art/requirements.txt
-      - run: python -m pip install -r tools/art/requirements.txt
       - run: npm ci
-      # Tipos, lint, formato y tests (npm run check); el build no sigue si algo falla.
-      - run: npm run check
-      # build compila tambien los graficos (prebuild → npm run assets).
-      - run: npm run build
+      # Sin npm run check: main solo cambia por PR y la PR ya lo ha pasado (workflow Tests).
+      # Sin compilar los graficos: van ya compilados en el repo (npm run assets antes del commit,
+      # y tests/assets.test.ts comprueba que esten completos). Asi no hace falta Python.
+      - run: npm run build:ci
       - run: touch dist/.nojekyll
       - uses: JamesIves/github-pages-deploy-action@v4
         with:

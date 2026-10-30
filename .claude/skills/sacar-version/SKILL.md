@@ -20,7 +20,7 @@ avisa a quien tenga una version anterior.
 4. `npm run release` enseña las notas tal como saldran. `npm run check`.
 5. Commit (`🔖 Version x.y.z`) en una rama y PR a `main`: el ruleset de `main` no deja hacer push
    directo y pide que pasen `check` (tests) y `commitlint`. Al fusionarla, la Action
-   `.github/workflows/release.yml` pasa los tests, compila y publica la Release. Ver en Actions que
+   `.github/workflows/release.yml` compila (los tests ya los paso la PR) y publica la Release. Ver en Actions que
    termina en verde.
 6. Corregir notas ya publicadas: cambiar el CHANGELOG en una PR (al fusionarla, la Action pone al dia
    la Release). Las etiquetas `v*` no se pueden mover ni borrar (ruleset de etiquetas).

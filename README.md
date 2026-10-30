@@ -28,6 +28,7 @@ npm run dev          # abre el juego en http://localhost:5173 y recarga al guard
 npm test             # tests de la logica (reglas, mapas, IA, guardado)
 npm run build        # version para publicar en dist/ (subela a cualquier hosting estatico)
 npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
+npm run build:ci     # dist y dist-single sin recompilar graficos ni pasar tipos/lint (lo usa GitHub)
 ```
 
 `dist-single/ilogic.html` se puede abrir con doble clic, sin servidor, y pasarselo a quien sea.
@@ -183,7 +184,9 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
 4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen ni lamina, que cada
    unidad y edificio tenga sus bandos y que nada se salga de la casilla.
 
-Se ejecuta solo antes de `npm run build`; si algo falla, no se publica. `npm run assets:pack` rehace
+Se ejecuta solo antes de `npm run build`; si algo falla, no se compila. Lo compilado se sube al repo:
+GitHub publica la web, las previews y las Releases con esos graficos (`npm run build:ci`, sin Python ni
+`npm run assets`), asi que tras retocar un dibujo hay que ejecutar `npm run assets` y subir lo que cambie. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
 En `dist` solo van el atlas, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
@@ -233,7 +236,12 @@ aceptado o no, queda en `improve/DIARIO.md`. Nada se fusiona sin aprobarlo.
 Para activarlo (una vez): instalar la app de Claude (https://github.com/apps/claude) en el repo y crear
 **uno** de estos secretos en *Settings → Secrets and variables → Actions*: `CLAUDE_CODE_OAUTH_TOKEN`
 (planes Pro/Max: `claude setup-token` en tu ordenador) o `ANTHROPIC_API_KEY`. Sin secreto no hacen
-nada. `.github/workflows/visual.yml` pasa las capturas en cada PR y deja el informe como artefacto.
+nada. `.github/workflows/visual.yml` pasa las capturas en las PR que pueden cambiar lo que se ve
+(codigo, graficos, CHANGELOG...) y deja el informe como artefacto.
+
+Para gastar pocos minutos de Actions, cada cosa se hace una vez: los tests (`npm run check`) solo en
+las PR (`main` solo cambia por PR), las capturas solo en las PR que tocan algo visible, y la web y las
+Releases solo compilan (`npm run build:ci`, unos segundos) con los graficos ya compilados del repo.
 
 ## Commits
 
@@ -256,7 +264,7 @@ Para sacar una version:
    `<!-- en -->`) y se borran sus marcas: con marcas la Release no sale;
 2. subir `version` en `package.json` y convertir `[Sin publicar]` en `## [x.y.z] - AAAA-MM-DD — Titulo`;
    `npm run release` enseña como quedaran las notas;
-3. commit (`🔖 Version x.y.z`) y PR a `main` (al fusionarla). GitHub (`.github/workflows/release.yml`) pasa los tests, compila el juego
+3. commit (`🔖 Version x.y.z`) y PR a `main` (al fusionarla). GitHub (`.github/workflows/release.yml`) compila el juego (los tests ya los paso la PR)
    y publica la Release `vx.y.z` con esas notas e `ilogic.html` adjunto. Si esa version ya estaba
    publicada, solo pone al dia sus notas (para corregir una errata basta con cambiar el CHANGELOG).
 

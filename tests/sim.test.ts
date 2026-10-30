@@ -4,23 +4,8 @@ import { HQ, MAP_W } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, groundDistance, outcome } from '@core/rules';
-import { deserialize, serialize } from '@core/save';
 import { grid } from '@core/geom';
-import type { GameState } from '@core/types';
-
-function checkInvariants(s: GameState): void {
-  const seen = new Set<string>();
-  for (const u of s.units) {
-    expect(u.life).toBeGreaterThan(0);
-    if (u.carrier === null) {
-      const k = `${u.x},${u.y}`;
-      expect(seen.has(k), `dos unidades en ${k}`).toBe(false);
-      seen.add(k);
-    } else {
-      expect(s.units.find((t) => t.uid === u.carrier)?.cargo).toContain(u.uid);
-    }
-  }
-}
+import { checkInvariants } from './sim/partidas';
 
 describe('generador de mapas', () => {
   it('100 mapas: ambas bases, conectadas por tierra, con unidades y neutrales', () => {
@@ -43,25 +28,7 @@ describe('generador de mapas', () => {
 });
 
 describe('partidas simuladas', () => {
-  it('20 partidas IA contra IA (60 dias): sin errores y guardar/cargar exacto', () => {
-    for (let seed = 1; seed <= 20; seed++) {
-      const rng = seededRng(seed * 7919);
-      const s = generateGame(rng);
-      while (outcome(s) === 'playing' && s.day <= 60) {
-        for (const team of [0, 1] as const) {
-          for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;
-          if (outcome(s) !== 'playing') break;
-        }
-        endRound(s);
-        checkInvariants(s);
-        if (s.day % 10 === 0) {
-          const copy = deserialize(serialize(s));
-          expect(copy).not.toBeNull();
-          expect(serialize(copy!)).toBe(serialize(s));
-        }
-      }
-    }
-  }, 300_000); // sin combustible quedan mas unidades vivas: mas lento que antes
+  // Las 20 partidas IA contra IA estan en tests/sim/ia-*.test.ts (repartidas para ir en paralelo).
 
   it('la IA gana a un jugador que no hace nada', () => {
     let won = 0;

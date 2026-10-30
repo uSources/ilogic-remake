@@ -54,18 +54,11 @@ jobs:
           node-version: 22
           cache: npm
       - if: env.MODE == 'publish'
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: pip
-          cache-dependency-path: tools/art/requirements.txt
-      - if: env.MODE == 'publish'
-        run: python -m pip install -r tools/art/requirements.txt
-      - if: env.MODE == 'publish'
         run: npm ci
       # Sin npm run check: eso ya lo hace el workflow Tests; la preview sale aunque falle un test.
+      # Graficos ya compilados en el repo: sin Python ni npm run assets.
       - if: env.MODE == 'publish'
-        run: npm run build
+        run: npm run build:ci
       - if: env.MODE == 'publish'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
