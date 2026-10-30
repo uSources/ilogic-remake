@@ -25,7 +25,7 @@ Menos logística y más batalla: fuera el combustible y la munición, y precios 
 - El enlace a la web del juego de 2013 del menú pasa a ser «GitHub» y lleva al repositorio del remake.
 
 ### Para quien modifica el juego
-- Unidades, edificios, terreno, reglas por defecto y pesos de la IA están en ficheros de configuración (`src/core/content/*.json`): se pueden cambiar o añadir sin tocar código. Una unidad nueva se crea con `npm run unit -- new <Id> --like <Parecida>`. Guía: `docs/CONTENIDO.md`.
+- Unidades, edificios, terreno, reglas por defecto y pesos de la IA están en ficheros de configuración (`src/core/content/*.json`): se pueden cambiar o añadir sin tocar código. Una unidad nueva se crea con `npm run unit -- new Sniper --like Soldier` (copia del soldado). Guía: `docs/CONTENIDO.md`.
 
 <!-- en -->
 
@@ -45,7 +45,7 @@ Less logistics, more battle: fuel and ammo are gone, and prices have been tuned.
 - The menu link to the 2013 game's website is now "GitHub" and goes to the remake's repository.
 
 ### For modders
-- Units, buildings, terrain, default rules and AI weights live in config files (`src/core/content/*.json`): they can be changed or added without touching code. A new unit is created with `npm run unit -- new <Id> --like <Similar>`. Guide: `docs/CONTENIDO.md`.
+- Units, buildings, terrain, default rules and AI weights live in config files (`src/core/content/*.json`): they can be changed or added without touching code. A new unit is created with `npm run unit -- new Sniper --like Soldier` (a copy of the soldier). Guide: `docs/CONTENIDO.md`.
 
 ## [0.1.0] - 2026-10-29 — El remake
 
