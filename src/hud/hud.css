@@ -1,4 +1,12 @@
 /* Interfaz "retro pixel" (direccion A): paneles con bisel, tipografia pixel, sin redondeos. */
+
+/* Letra propia de titulos y botones (tools/art/font/ilogic.txt → npm run assets). Lo que no tiene
+   (★, ☰...) sale con Silkscreen. Nitida a 10, 20, 30 y 40 px. */
+@font-face {
+  font-family: 'Ilogic';
+  src: url('./fonts/ilogic.woff2') format('woff2');
+  font-display: block;
+}
 :root {
   --ink: #0b1220;
   --panel: #1c2c4c;
@@ -19,7 +27,7 @@
   --gold: #ffd447;
   --green: #4fd36a;
   --sel: #2c5bb0;
-  --display: 'Silkscreen', 'Courier New', monospace;
+  --display: 'Ilogic', 'Silkscreen', 'Courier New', monospace;
   --body: 'Pixelify Sans', 'Courier New', monospace;
   color-scheme: dark;
 }
@@ -411,8 +419,8 @@ body {
   gap: 8px;
 }
 .meter img {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }
 .meter .v {
   width: 44px;
@@ -712,8 +720,8 @@ body {
   cursor: default;
 }
 .funds .coin {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 .tray .threat {
   padding: 6px 10px;
@@ -778,8 +786,8 @@ body {
   font-size: 16px;
 }
 .report .line .px-icon {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }
 .report .gold {
   color: var(--gold);
@@ -2367,4 +2375,22 @@ html.reduce-motion .end-best.new {
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+/* Iconos de la interfaz (tools/art/icons): 12x12 pintados al doble, sin suavizar. */
+.px-icon.ico {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.unitcard .chips {
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+}
+.unitcard .chip {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

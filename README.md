@@ -148,6 +148,9 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
 1. suelos Wang, montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y
    muñecos de nieve (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
 2. laminas de costa, agua organica, olas, espuma de la orilla y niebla (`public/assets/img/blob`, `anim`);
+   los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
+   `ui/dinero`...) y la letra de titulos y botones (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`),
+   las dos dibujadas como rejillas de pixeles en texto: se retocan editando el `.txt`;
 3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`: 2 paginas colocadas con MaxRects y
    comprimidas sin perdida con oxipng);
 4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen ni lamina, que cada

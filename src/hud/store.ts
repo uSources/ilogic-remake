@@ -53,6 +53,13 @@ export interface ForecastVM {
   counter: { low: number; high: number; lifeBefore: number; lifeAfter: number; killChance: number } | null;
 }
 
+/** Un dato con icono: clave de imagen, valor y texto al pasar el raton. */
+export interface StatChipVM {
+  icon: string;
+  text: string;
+  title: string;
+}
+
 export interface UnitVM {
   /** Rango de veterania 0..3. */
   rank?: number;
@@ -61,6 +68,8 @@ export interface UnitVM {
   team: 0 | 1;
   life: number;
   stats: string;
+  /** Movimiento, alcance y vision con su icono (ficha de la unidad). */
+  chips?: StatChipVM[];
   status?: string;
   cargo?: string;
 }

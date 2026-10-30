@@ -14,7 +14,7 @@ import {
   unitAt,
 } from '../core/rules';
 import type { GameState, Pos, Unit } from '../core/types';
-import type { Anchor, ForecastVM, MinimapVM, TileVM } from '../hud/store';
+import type { Anchor, ForecastVM, MinimapVM, StatChipVM, TileVM } from '../hud/store';
 import { buildingLabel, t, terrainLabel, unitLabel } from '../settings';
 import { buildingKey, terrainKey, unitKey } from './sprites';
 
@@ -24,6 +24,16 @@ import { buildingKey, terrainKey, unitKey } from './sprites';
  */
 
 /** "Mov 3 · Alcance 1–1" */
+/** Datos de la ficha de una unidad con su icono: movimiento, alcance y vision. */
+export function unitStatChips(type: number): StatChipVM[] {
+  const range = UNIT.alcance[type]! === 0 ? '—' : `${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
+  return [
+    { icon: 'ui/movimiento', text: String(UNIT.mover[type]), title: t('move') },
+    { icon: 'ui/alcance', text: range, title: UNIT.alcance[type]! === 0 ? t('noAttack') : t('range') },
+    { icon: 'ui/vision', text: String(UNIT.vision[type]), title: t('vision') },
+  ];
+}
+
 export function unitStatsText(type: number): string {
   const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return `${t('move')} ${UNIT.mover[type]} · ${range}`;
@@ -83,6 +93,7 @@ export function tileVM(
       team: shown.team,
       life: shown.life,
       stats: unitStatsText(T),
+      chips: unitStatChips(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
     };
   }

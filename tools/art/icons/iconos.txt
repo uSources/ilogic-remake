@@ -1,0 +1,117 @@
+# Iconos de la interfaz. Los compila tools/art/build_icons.py a public/assets/img/ui/<nombre>.png
+# (12x12, centrados). Se usan en el HUD con la clave "ui/<nombre>".
+#
+# Colores: una letra por color, con su valor. Son los de src/hud/hud.css (--ink, --red, --gold...).
+# Cada icono empieza con "= nombre" y sigue con sus filas; "." es transparente.
+
+colores:
+k #0b1220  contorno (--ink)
+W #ffffff  brillo
+R #ff4d45  rojo (--red)
+D #b8322c  rojo oscuro (--red-btn)
+Y #ffd447  oro (--gold)
+O #c98c1e  oro oscuro
+B #3aa8ff  azul (--blue)
+b #1f6fd1  azul oscuro (--blue-btn)
+M #9fb2d8  gris (--muted)
+m #5a6e96  gris oscuro
+
+= vida
+.kkk...kkk.
+kRRRk.kRRRk
+kRWRRkRRRRk
+kRWRRRRRRRk
+kRRRRRRRRDk
+.kRRRRRRDk.
+..kRRRRDk..
+...kRRDk...
+....kDk....
+.....k.....
+
+= dinero
+...kkkkk...
+..kYYYYYk..
+.kYWYYYYOk.
+kYWYYkYYYOk
+kYYYYkYYYOk
+kYYYYkYYYOk
+kYYYYkYYYOk
+kYYYYYYYYOk
+.kYYYYYYOk.
+..kOOOOOk..
+...kkkkk...
+
+= mando
+.....k.....
+....kYk....
+....kYk....
+kkkkYWYkkkk
+kYYYYWYYYOk
+.kYYYYYYOk.
+..kYYYYYk..
+..kYYOYYk..
+.kYOkkkYOk.
+.kOk...kOk.
+.kk.....kk.
+
+= defensa
+kkkkkkkkkk
+kBBBBBBBbk
+kBWBBBBBbk
+kBWBBBBBbk
+kBBBBBBBbk
+kBBBBBBBbk
+.kBBBBBbk.
+.kBBBBBbk.
+..kBBBbk..
+...kBbk...
+....kk....
+
+= vision
+....kkkk....
+..kkMMMMkk..
+.kMMMkkMMMk.
+kMMMkBBkMMMk
+kMMMkBkkMMMk
+.kMMMkkMMMk.
+..kkMMMMkk..
+....kkkk....
+
+= alcance
+...kkkkk...
+..kRRRRRk..
+.kRWWWWWRk.
+kRWkkkkkWRk
+kRWkRRRkWRk
+kRWkRWRkWRk
+kRWkRRRkWRk
+kRWkkkkkWRk
+.kRWWWWWRk.
+..kRRRRRk..
+...kkkkk...
+
+= captura
+.kk........
+.kMkkkkk...
+.kMBBBBBkkk
+.kMBWBBBBBk
+.kMBBBBBBk.
+.kMBBBBBBBk
+.kMkkkkkkkk
+.kMk.......
+.kMk.......
+kkMkk......
+kMMMk......
+kkkkk......
+
+= movimiento
+...kkkkk...
+...kMMMk...
+...kMWMk...
+...kMMMk...
+...kMMMk...
+..kMMMMkkk.
+.kMMMMMMMMk
+.kMMMMMMMMk
+.kmmmmmmmmk
+.kkkkkkkkkk

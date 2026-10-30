@@ -28,9 +28,11 @@ export class BootScene extends Phaser.Scene {
     document.body.style.cursor = `url(${asset('assets/img/mouse.png')}) 17 0, auto`;
     // Phaser no espera a create(): la escena siguiente se lanza cuando esten las fuentes de la
     // interfaz (van incluidas; el limite es por si acaso; sin ellas se usan las de reserva).
-    const fonts = Promise.all([document.fonts.load("16px 'Pixelify Sans'"), document.fonts.load("16px 'Silkscreen'")]).catch(
-      () => undefined,
-    );
+    const fonts = Promise.all([
+      document.fonts.load("16px 'Pixelify Sans'"),
+      document.fonts.load("16px 'Silkscreen'"),
+      document.fonts.load("16px 'Ilogic'"),
+    ]).catch(() => undefined);
     void Promise.race([fonts, new Promise((r) => setTimeout(r, 2500))]).then(() => this.scene.start('Logo'));
   }
 }

@@ -101,7 +101,7 @@ function TopBar({ s }: { s: UIState }) {
   return (
     <div class="top">
       <div class="px funds">
-        <Icon k="currency" alt="" cls="px-icon coin" />
+        <Icon k="ui/dinero" alt="" cls="px-icon coin" />
         <div>
           <div class="amount num">{fmtNum(s.funds)}</div>
           <div class="sub">
@@ -267,13 +267,24 @@ function UnitCard({ u }: { u: UnitVM }) {
           <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
             {u.team === 0 ? t('you') : t('enemy')}
           </span>
-          <span class="muted" style={{ fontSize: 13 }}>
-            {u.stats}
-          </span>
+          {u.chips ? (
+            <span class="chips">
+              {u.chips.map((c) => (
+                <span class="chip" title={c.title} key={c.icon}>
+                  <Icon k={c.icon} alt={c.title} cls="px-icon ico" />
+                  <span class="num">{c.text}</span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span class="muted" style={{ fontSize: 13 }}>
+              {u.stats}
+            </span>
+          )}
         </div>
       </div>
       <div class="meter" title={t('hp')}>
-        <Icon k="health" alt={t('hp')} />
+        <Icon k="ui/vida" alt={t('hp')} />
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
@@ -315,13 +326,19 @@ function TerrainCard({ tile }: { tile: TileVM }) {
         <span class="swatch" style={{ backgroundImage: `url(${imgUrl(tile.terrain.key)})` }} />
       )}
       <span style={{ fontFamily: 'var(--display)', fontSize: 14 }}>{tile.terrain.name}</span>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }} title={`${t('defense')} ${tile.terrain.defense}%`}>
-        <span class="muted">{t('defense')}</span>
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}
+        title={`${t('defense')} ${tile.terrain.defense}%`}
+      >
+        <Icon k="ui/defensa" alt={t('defense')} cls="px-icon ico" />
         <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{'★'.repeat(stars) + '☆'.repeat(4 - stars)}</span>
       </div>
       {tile.terrain.cost && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }} title={t('stepCostTitle')}>
-          <span class="muted">{t('stepCost')}</span>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}
+          title={t('stepCostTitle')}
+        >
+          <Icon k="ui/movimiento" alt={t('stepCost')} cls="px-icon ico" />
           <span>
             {t('onFoot')} {tile.terrain.cost.foot ?? '—'} · {t('byVehicle')} {tile.terrain.cost.vehicle ?? '—'}
           </span>
@@ -329,7 +346,7 @@ function TerrainCard({ tile }: { tile: TileVM }) {
       )}
       {b?.capture && (
         <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
-          <span class="muted">{t('capturing')}</span>
+          <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
           <div class="blocks">
             <span style={{ flex: b.capture.total - b.capture.left, background: b.capture.team === 0 ? 'var(--blue)' : 'var(--red)' }} />
             <span style={{ flex: b.capture.left }} />
@@ -340,8 +357,8 @@ function TerrainCard({ tile }: { tile: TileVM }) {
         </div>
       )}
       {b && b.income > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-          <span class="muted">{t('income')}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }} title={t('income')}>
+          <Icon k="ui/dinero" alt={t('income')} cls="px-icon ico" />
           <span>+{fmtNum(b.income)}</span>
         </div>
       )}

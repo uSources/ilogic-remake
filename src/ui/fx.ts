@@ -74,7 +74,7 @@ export function floatText(
 ): Promise<void> {
   const t = scene.add
     .text(Math.round(at.x), Math.round(at.y), text, {
-      fontFamily: 'Silkscreen, monospace',
+      fontFamily: 'Ilogic, Silkscreen, monospace',
       fontSize: '16px',
       color,
       stroke: PAL_CSS.ink,
