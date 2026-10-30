@@ -19,6 +19,8 @@ export interface Settings {
   autoNext: boolean;
   /** Vibracion corta al coger, soltar y atacar con el dedo. */
   vibrate: boolean;
+  /** Avisar al terminar el turno si quedan unidades sin mover. */
+  confirmEnd: boolean;
   /** Velocidad de las animaciones de tus unidades y de las del enemigo. */
   speedOwn: Speed;
   speedEnemy: Speed;
@@ -43,6 +45,7 @@ const DEFAULTS: Settings = {
   autoWait: true,
   autoNext: false,
   vibrate: true,
+  confirmEnd: true,
   speedOwn: 'normal',
   speedEnemy: 'normal',
   uiScale: 1,
@@ -66,6 +69,7 @@ function load(): Settings {
       autoWait: parsed.autoWait !== false,
       autoNext: !!parsed.autoNext,
       vibrate: parsed.vibrate !== false,
+      confirmEnd: parsed.confirmEnd !== false,
       speedOwn: SPEEDS.includes(parsed.speedOwn as Speed) ? (parsed.speedOwn as Speed) : 'normal',
       speedEnemy: SPEEDS.includes(parsed.speedEnemy as Speed) ? (parsed.speedEnemy as Speed) : 'normal',
       uiScale: UI_SCALES.includes(parsed.uiScale as number) ? (parsed.uiScale as number) : 1,
@@ -214,6 +218,10 @@ const TEXTS = {
     nothingToUndo: 'No hay nada que deshacer',
     optAutoWait: 'Esperar sola al soltar',
     optVibrate: 'Vibración',
+    optConfirmEnd: 'Avisar si quedan unidades sin mover',
+    endTurnAsk: '¿Terminar el turno?',
+    neverAsk: 'No volver a preguntar',
+    undo: 'Deshacer',
     optAutoNext: 'Saltar a la siguiente unidad',
     optSpeedOwn: 'Velocidad: tus unidades',
     optSpeedEnemy: 'Velocidad: el enemigo',
@@ -482,6 +490,10 @@ const TEXTS = {
     nothingToUndo: 'Nothing to undo',
     optAutoWait: 'Wait automatically on drop',
     optVibrate: 'Vibration',
+    optConfirmEnd: 'Warn about unmoved units',
+    endTurnAsk: 'End the turn?',
+    neverAsk: "Don't ask again",
+    undo: 'Undo',
     optAutoNext: 'Jump to the next unit',
     optSpeedOwn: 'Speed: your units',
     optSpeedEnemy: 'Speed: enemy',

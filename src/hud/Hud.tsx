@@ -289,6 +289,15 @@ function PopMenu({ m }: { m: MenuVM }) {
   const a = ui.actions;
   const sel = m.items[m.selected];
   const withIcons = m.items.some((i) => i.icon);
+  // Compra con el dedo: tocar una unidad enseña su ficha; se compra con el boton (o tocandola otra vez).
+  // Solo lo que tiene precio: "Cancelar" actua al momento.
+  const twoStep = m.kind === 'buy' && matchMedia('(pointer: coarse)').matches;
+  const [armed, setArmed] = useState(-1);
+  const pick = (i: number) => {
+    if (!twoStep || !m.items[i]?.hint || armed === i) return a.menuPick(i);
+    setArmed(i);
+    a.menuHover(i);
+  };
   return (
     <Popover anchor={m.anchor} prefer="right" class={`pop pop-${m.kind}`} label={m.title}>
       {m.title && <div class="label title">{m.title}</div>}
@@ -305,7 +314,7 @@ function PopMenu({ m }: { m: MenuVM }) {
               aria-disabled={it.disabled}
               onMouseDown={noFocus}
               onMouseEnter={() => a.menuHover(i)}
-              onClick={() => a.menuPick(i)}
+              onClick={() => pick(i)}
               ref={(el) => {
                 if (el && i === m.selected) el.scrollIntoView({ block: 'nearest' });
               }}
@@ -318,6 +327,18 @@ function PopMenu({ m }: { m: MenuVM }) {
         ))}
       </div>
       {sel?.detail && <div class="detail">{sel.detail}</div>}
+      {twoStep && sel?.hint && (
+        <button
+          tabIndex={-1}
+          type="button"
+          class="px-btn buy-go"
+          disabled={sel.disabled}
+          onMouseDown={noFocus}
+          onClick={() => a.menuPick(m.selected)}
+        >
+          {t('buy')} · {sel.label}
+        </button>
+      )}
     </Popover>
   );
 }
@@ -627,7 +648,7 @@ const FoldMark = ({ folded }: { folded: boolean }) => (
   </span>
 );
 
-function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
+function Tray({ idle, threat, canUndo }: { idle: IdleVM[]; threat: boolean; canUndo: boolean }) {
   const a = ui.actions;
   const [folded, toggleFold] = useFold('tray');
   const last = useRef(-1);
@@ -665,6 +686,7 @@ function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
         >
           <span class="short">{t('threatShort')}</span>
         </button>
+        {canUndo && <UndoButton />}
       </div>
     );
   }
@@ -705,6 +727,36 @@ function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
         <span class="long">{threat ? t('threatOn') : t('threatOff')}</span>
         <span class="short">{t('threatShort')}</span>
       </button>
+      {canUndo && <UndoButton />}
+    </div>
+  );
+}
+
+/** Deshacer el ultimo movimiento (Ctrl+Z), visible solo mientras se puede. */
+function UndoButton() {
+  return (
+    <button tabIndex={-1} type="button" class="px-btn plain undo" onMouseDown={noFocus} onClick={() => ui.actions.undo()}>
+      ↶ {t('undo')}
+    </button>
+  );
+}
+
+/** Aviso al terminar el turno con unidades sin mover. */
+function ConfirmEnd({ c }: { c: NonNullable<UIState['confirmEnd']> }) {
+  const a = ui.actions;
+  return (
+    <div class="px confirm-end" role="alertdialog" aria-label={t('endTurnAsk')}>
+      <span>
+        {t('idle')}: <b class="num">{c.idle}</b> · {t('endTurnAsk')}
+      </span>
+      <div class="ce-btns">
+        <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => a.endTurnConfirm()}>
+          {t('endTurn')}
+        </button>
+        <button tabIndex={-1} type="button" class="px-btn plain" onMouseDown={noFocus} onClick={() => a.endTurnNeverAsk()}>
+          {t('neverAsk')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -820,12 +872,13 @@ function GameHud({ s }: { s: UIState }) {
       {showCards && <Cards tile={s.tile!} />}
       <div class="side">
         {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
-        {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} />}
+        {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} canUndo={s.canUndo} />}
       </div>
+      {s.confirmEnd && !s.busy && <ConfirmEnd c={s.confirmEnd} />}
       {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}
       {s.combat && <CombatPanel c={s.combat} />}
-      {s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu m={s.menu} />)}
+      {s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu key={`${s.menu.kind}-${s.menu.title ?? ''}`} m={s.menu} />)}
     </>
   );
 }

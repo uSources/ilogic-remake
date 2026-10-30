@@ -4,6 +4,7 @@
 //   - un elemento visible sale de la pantalla y no esta dentro de algo que lo recorta o desplaza
 //
 //   npm run fuera     (compila dist-single y lo comprueba)
+//   node tests/visual/fuera.mjs --vista=movil-vertical   (sin compilar, solo una pantalla)
 //
 // Sale con error si encuentra algo. Sin red y sin animaciones (ilogicDebug.freeze).
 import { existsSync } from 'node:fs';
@@ -53,6 +54,37 @@ const SCENES = {
     await p.keyboard.press('Enter');
     await p.waitForTimeout(100);
   },
+  compra: async (p) => {
+    // Una fabrica propia en (11,12) con dinero para todo; tocarla abre la compra.
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false }));
+    const st = await p.evaluate(() => {
+      const s = window.ilogicDebug.state();
+      Object.assign(
+        s.buildings.find((b) => b.x === 0 && b.y === 10),
+        { x: 11, y: 12, type: 2 },
+      );
+      s.funds[0] = 20000;
+      return s;
+    });
+    await p.evaluate((s) => window.ilogicDebug.startGame({ state: s }), st);
+    await p.evaluate(() => window.ilogicDebug.idle());
+    await p.waitForTimeout(300);
+    const pt = await p.evaluate(() => {
+      const v = window.ilogic.scene.getScene('Game').view;
+      v.centerOn({ x: 11, y: 12 }, true);
+      const r = v.tileRectCss({ x: 11, y: 12 });
+      return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+    });
+    await p.touchscreen.tap(pt.x, pt.y);
+    await p.waitForSelector('.pop-buy');
+  },
+  'fin-turno': async (p) => {
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
+    await p.evaluate(() => window.ilogicDebug.idle());
+    await p.waitForTimeout(300);
+    await p.locator('.top .px-btn.end').tap();
+    await p.waitForSelector('.confirm-end');
+  },
   campana: async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ mission: 'tutorial' }));
   },
@@ -94,9 +126,15 @@ function measure() {
   return { page, out: out.slice(0, 8), total: out.length };
 }
 
+// --vista=movil-vertical,movil-horizontal: solo esas pantallas (por defecto, todas).
+const only = process.argv
+  .find((a) => a.startsWith('--vista='))
+  ?.slice(8)
+  .split(',');
 const browser = await chromium.launch();
 let problems = 0;
 for (const [vname, viewport] of Object.entries(VIEWPORTS)) {
+  if (only && !only.includes(vname)) continue;
   for (const [sname, setup] of Object.entries(SCENES)) {
     try {
       await checkScene(browser, vname, viewport, sname, setup);

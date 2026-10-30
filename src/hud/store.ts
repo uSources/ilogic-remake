@@ -310,6 +310,10 @@ export interface UIState {
   cursorScreen: { x: number; y: number };
   idle: IdleVM[];
   threat: boolean;
+  /** Se puede deshacer el ultimo movimiento (boton Deshacer). */
+  canUndo: boolean;
+  /** Aviso al terminar el turno con unidades sin mover: cuantas quedan. */
+  confirmEnd: { idle: number; id: number } | null;
   /** Aviso corto. `hint`: pequeño y abajo (ayuda de gestos), no en medio de la pantalla. */
   toast: { text: string; id: number; hint?: boolean } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
@@ -384,6 +388,10 @@ export interface UIActions {
   focusUnit(uid: number): void;
   /** Atacar al enemigo de la prevision de combate (boton Atacar, con el dedo). */
   attackConfirm(): void;
+  undo(): void;
+  /** Aviso de fin del turno: terminar igualmente, o terminar y no volver a preguntar. */
+  endTurnConfirm(): void;
+  endTurnNeverAsk(): void;
   endContinue(): void;
   endHover(i: number): void;
   endPick(i: number): void;
@@ -435,6 +443,8 @@ const initial: UIState = {
   cursorScreen: { x: 0, y: 0 },
   idle: [],
   threat: false,
+  canUndo: false,
+  confirmEnd: null,
   toast: null,
   banner: null,
   weather: null,
@@ -465,6 +475,9 @@ const DEFAULT_ACTIONS: UIActions = {
   minimapJump: noop,
   focusUnit: noop,
   attackConfirm: noop,
+  undo: noop,
+  endTurnConfirm: noop,
+  endTurnNeverAsk: noop,
   endContinue: noop,
   endHover: noop,
   endPick: noop,

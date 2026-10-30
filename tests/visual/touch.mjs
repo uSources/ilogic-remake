@@ -135,6 +135,30 @@ async function scenarios(page, cdp, name) {
   check(s1?.x === SOLDIER.x + 1 && s1?.y === SOLDIER.y, 'tocar el destino la mueve (2 toques)');
   check((await phase(page)) === 'map' && s1?.active === false, 'sin nada mas que hacer, espera sola');
 
+  // Deshacer: el boton sale tras mover y devuelve la unidad.
+  const undoBtn = page.locator('.tray .undo');
+  const hasUndo = (await undoBtn.count()) === 1;
+  if (hasUndo) await undoBtn.tap();
+  await page.waitForTimeout(150);
+  await page.evaluate(() => window.ilogicDebug.idle());
+  const s1u = await unit(page, s0.uid);
+  check(hasUndo && s1u?.x === SOLDIER.x && s1u?.active === true, 'boton Deshacer: vuelve atras el movimiento');
+
+  // Fin del turno con unidades sin mover: aviso con botones; "Terminar el turno" lo termina.
+  await page.locator('.top .px-btn.end').tap();
+  await page.waitForTimeout(150);
+  const bar = page.locator('.confirm-end');
+  const hasBar = (await bar.count()) === 1;
+  const day0 = await page.evaluate(() => window.ilogicDebug.state().day);
+  check(hasBar && (await phase(page)) === 'map', 'fin del turno con unidades sin mover: sale el aviso');
+  if (hasBar) await bar.locator('.px-btn').first().tap();
+  await page.waitForTimeout(300);
+  check(
+    (await page.evaluate(() => window.ilogicDebug.game().phase)) === 'busy' ||
+      (await page.evaluate(() => window.ilogicDebug.state().day)) > day0,
+    'el boton del aviso termina el turno',
+  );
+
   // Fuera del alcance: se deja de elegir.
   await start(page);
   await center(page, SOLDIER.x + 2, SOLDIER.y);
@@ -180,6 +204,21 @@ async function scenarios(page, cdp, name) {
   await center(page, FACTORY.x, FACTORY.y);
   await tap(page, FACTORY.x, FACTORY.y);
   check((await phase(page)) === 'buy', 'tocar una fabrica propia libre abre la compra');
+
+  // Comprar con el dedo: tocar una unidad enseña su ficha (no compra); el boton Comprar compra.
+  const funds = () => page.evaluate(() => window.ilogicDebug.state().funds[0]);
+  const f0 = await funds();
+  const item = page.locator('.pop-buy .item:not(.disabled):has(.hint)').first();
+  if ((await item.count()) === 1) await item.tap();
+  await page.waitForTimeout(100);
+  const f1 = await funds();
+  const buyBtn = page.locator('.pop-buy .buy-go');
+  const hasBuy = (await buyBtn.count()) === 1;
+  if (hasBuy) await buyBtn.tap();
+  await page.waitForTimeout(150);
+  await page.evaluate(() => window.ilogicDebug.idle());
+  const f2 = await funds();
+  check(f1 === f0 && hasBuy && f2 < f0, `compra en dos pasos: tocar enseña, el boton compra (${f0} → ${f1} → ${f2})`);
 
   // Arrastrar desde la unidad: la lleva sin mantener pulsado.
   await start(page);

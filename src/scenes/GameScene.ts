@@ -80,7 +80,7 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextKey } from '../settings';
+import { buildingLabel, fmtNum, saveSettings, settings, t, unitLabel, weatherLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
@@ -161,6 +161,8 @@ const DRAG_THRESHOLD = 6;
 const INPUT_LOCK_MS = 350;
 /** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
 const CONFIRM_MS = 2500;
+/** Tiempo para confirmar el fin del turno con unidades sin mover (barra con botones, o E otra vez). */
+const END_CONFIRM_MS = 6000;
 
 /** Como empieza una partida (scene.start('Game', data)). */
 export interface GameStartData {
@@ -472,6 +474,20 @@ export class GameScene extends Phaser.Scene {
         this.view.ensureVisible(u, 3);
         this.selectUnit(u);
       },
+      undo: () => {
+        if (ready() && this.phase === 'map') this.undoLast();
+      },
+      endTurnConfirm: () => {
+        if (!ui.get().confirmEnd) return;
+        ui.set({ confirmEnd: null });
+        if (ready() && (this.phase === 'map' || this.phase === 'gameMenu')) void this.enemyTurn();
+      },
+      endTurnNeverAsk: () => {
+        settings.confirmEnd = false;
+        saveSettings();
+        ui.set({ confirmEnd: null });
+        if (ready() && (this.phase === 'map' || this.phase === 'gameMenu')) void this.enemyTurn();
+      },
       attackConfirm: () => {
         // Como el segundo toque sobre el enemigo (ver touchTap).
         if (!ready() || this.phase !== 'move' || !ui.get().forecast) return;
@@ -629,6 +645,7 @@ export class GameScene extends Phaser.Scene {
       moveTip: this.phase === 'move' ? this.moveTip(c) : null,
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
+      canUndo: this.phase === 'map' && this.undoStack.length > 0,
       hint: busy
         ? this.enemyPlaying
           ? t('skip')
@@ -2173,13 +2190,21 @@ export class GameScene extends Phaser.Scene {
 
   private requestEndTurn(): void {
     const auto = new Set(this.autoCapturers().map((u) => u.uid));
-    const idle = this.idleUnits().some((u) => !auto.has(u.uid));
-    if (idle && this.time.now - this.endArmedAt > CONFIRM_MS) {
+    const idle = this.idleUnits().filter((u) => !auto.has(u.uid)).length;
+    // Con unidades sin mover: barra con "Terminar el turno" y "No volver a preguntar" (o E otra vez).
+    if (idle && settings.confirmEnd && this.time.now - this.endArmedAt > END_CONFIRM_MS) {
       this.endArmedAt = this.time.now;
-      return showToast(t('confirmEndTurn'));
+      const id = ++this.confirmEndId;
+      ui.set({ confirmEnd: { idle, id } });
+      this.time.delayedCall(END_CONFIRM_MS, () => {
+        if (ui.get().confirmEnd?.id === id) ui.set({ confirmEnd: null });
+      });
+      return;
     }
+    ui.set({ confirmEnd: null });
     void this.enemyTurn();
   }
+  private confirmEndId = 0;
 
   private async enemyTurn(): Promise<void> {
     if (this.phase === 'busy' || this.ended) return;

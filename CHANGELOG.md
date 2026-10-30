@@ -32,6 +32,12 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Vibración** corta al coger, al soltar y al atacar con el dedo; se puede quitar en Opciones.
 - El aviso de gestos sale abajo y pequeño, y nunca encima de un menú.
 
+### Menús para el pulgar
+- En vertical, los menús de acciones, compra y carga suben desde abajo, con filas más altas.
+- **Compra** en cuadrícula de unidades grandes con su precio; con el dedo, tocar una enseña su ficha y el botón **Comprar**.
+- Al terminar el turno con unidades sin mover sale un aviso con **Terminar el turno** y **No volver a preguntar** (también en Opciones).
+- Botón **Deshacer** a la vista mientras se pueda deshacer el último movimiento.
+
 <!-- en -->
 
 ### Interface
@@ -56,6 +62,12 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - When attacking with your finger, the forecast has an **Attack** button (tapping the enemy again also attacks).
 - Short **vibration** when picking up, dropping and attacking with your finger; it can be turned off in Options.
 - The gestures tip shows small at the bottom, and never on top of a menu.
+
+### Menus for your thumb
+- In portrait, the action, shop and cargo menus slide up from the bottom, with taller rows.
+- The **shop** is a grid of big units with their price; with your finger, tapping one shows its card and the **Buy** button.
+- Ending the turn with unmoved units shows a warning with **End turn** and **Don't ask again** (also in Options).
+- An **Undo** button is visible while the last move can be undone.
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 
