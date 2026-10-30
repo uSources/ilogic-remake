@@ -258,6 +258,9 @@ body {
   display: none;
   position: absolute;
   top: calc(100% + 10px);
+  /* Pantallas bajas (movil en horizontal): que no se salga por abajo; se desplaza dentro. */
+  max-height: calc(100dvh - 100px);
+  overflow-y: auto;
   left: -3px;
   z-index: 30;
   width: max-content;
@@ -274,7 +277,14 @@ body {
   left: 50%;
   transform: translateX(-50%);
 }
-.has-tip:hover > .breakdown,
+/* Pasar el raton abre el desglose; tocarlo lo abre y lo cierra (clase open). Con el dedo, el
+   navegador deja la casilla en :hover tras tocarla, asi que el hover solo vale con raton: si no,
+   no se podria cerrar tocando otra vez. */
+@media (hover: hover) {
+  .has-tip:hover > .breakdown {
+    display: block;
+  }
+}
 .has-tip.open > .breakdown {
   display: block;
 }
@@ -1030,6 +1040,14 @@ body {
   }
   .unitcard {
     width: 220px;
+  }
+  /* Retrato mas pequeño: deja sitio a los datos (movimiento, alcance, vision) en una linea. */
+  .unitcard .head {
+    gap: 8px;
+  }
+  .unitcard .portrait {
+    width: 48px;
+    height: 48px;
   }
   .tray {
     right: 10px;
@@ -2750,7 +2768,9 @@ html.reduce-motion .end-best.new {
 }
 .unitcard .chips {
   display: flex;
-  gap: 12px;
+  /* Si no caben (fichas estrechas del movil), pasan a otra linea en vez de salirse de la ficha. */
+  flex-wrap: wrap;
+  gap: 4px 10px;
   font-size: 14px;
 }
 .unitcard .chip {
@@ -2767,4 +2787,58 @@ html.reduce-motion .end-best.new {
   height: 12px;
   margin: 0 3px -1px 0;
   vertical-align: baseline;
+}
+
+/* Plegar (movil): la bandeja de unidades sin mover y las fichas de unidad y terreno se pliegan
+   tocando su cabecera o la ficha (useFold en Hud.tsx). En escritorio se ven siempre enteras. */
+.fold-mark {
+  display: none;
+}
+@media (max-width: 720px), (max-height: 500px) {
+  .fold-mark {
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--gold);
+  }
+  .tray-head .key-hint {
+    display: none;
+  }
+  .unitcard .chips {
+    column-gap: 6px;
+  }
+  .tray.folded {
+    gap: 0;
+    padding: 8px 10px;
+  }
+  .tray.folded .slots,
+  .tray.folded .all,
+  .tray.folded .threat {
+    display: none;
+  }
+  /* Fichas plegadas (Hud.tsx no pinta los detalles): nombre y vida. */
+  .unitcard,
+  .terrain {
+    position: relative;
+  }
+  .unitcard > .fold-mark,
+  .terrain > .fold-mark {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    margin: 0;
+  }
+  .unitcard .name {
+    padding-right: 14px;
+  }
+  .cards.folded .px {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .cards.folded .terrain {
+    width: auto;
+  }
+  .cards.folded .unitcard .portrait {
+    width: 32px;
+    height: 32px;
+  }
 }
