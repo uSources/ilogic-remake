@@ -1,5 +1,7 @@
 # Publica el juego en GitHub Pages (https://usources.github.io/ilogic-remake/) con cada push a main.
-# Requiere Settings → Pages → Source: GitHub Actions.
+# Se publica en la raiz de la rama gh-pages; las previews de las PR viven en gh-pages/preview/
+# (preview.yml) y esta publicacion no las toca.
+# Requiere Settings → Pages → Source: "Deploy from a branch", rama gh-pages, carpeta / (root).
 name: Web
 
 on:
@@ -8,17 +10,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Una publicacion a la vez; si llega otra, la que estaba esperando se descarta.
+# Una publicacion a la vez en gh-pages (la comparte con preview.yml).
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -37,17 +37,13 @@ jobs:
       - run: npm run check
       # build compila tambien los graficos (prebuild → npm run assets).
       - run: npm run build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
+      - run: touch dist/.nojekyll
+      - uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          branch: gh-pages
+          folder: dist
+          # Borra lo viejo de la raiz, pero nunca las previews ni el aviso de Jekyll.
+          clean-exclude: |
+            preview/
+            .nojekyll
+          commit-message: '🚀 Web desde ${{ github.sha }}'

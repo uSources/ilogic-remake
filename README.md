@@ -9,6 +9,12 @@ a partir de el, con vuestros graficos y vuestra musica originales.
 `.github/workflows/pages.yml`). Descargas para jugar sin conexion en
 [Releases](https://github.com/uSources/ilogic-remake/releases).
 
+**Previews:** cada PR se publica en su propia URL, `https://usources.github.io/ilogic-remake/preview/<hash>/`
+(`.github/workflows/preview.yml`); el enlace sale en un comentario de la PR y la carpeta se borra al
+cerrarla. La web y las previews salen de la rama `gh-pages` (Settings → Pages → Deploy from a branch →
+`gh-pages`). El hash usa el secreto opcional `PREVIEW_SALT`: con el, la URL no se puede calcular; aun
+asi la rama `gh-pages` es publica, asi que no es un control de acceso.
+
 ## Requisitos
 
 - [Node.js](https://nodejs.org) 20 o superior.
@@ -52,6 +58,10 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   movimiento, alcance, defensa del terreno...).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
+- **Ejército:** cada unidad ocupa puntos de mando (la infantería 1, lo más grande hasta 5) y el
+  ejército no puede pasar de 30. Cada ronda se paga de mantenimiento el 10 % del precio de tus unidades
+  (si no llega, se paga lo que haya). Las dos reglas se cambian o se quitan en Nueva partida →
+  Personalizada; la campaña no las usa.
 - **Se gana conquistando la Base enemiga.** Capturar va por puntos: un edificio tiene 20 (la
   Base 30) y cada turno la unidad le resta su vida ÷ 10; si se mueve o muere se pierde lo avanzado.
   Una unidad que se queda sin usar encima de un edificio sigue capturando sola al acabar el turno.
