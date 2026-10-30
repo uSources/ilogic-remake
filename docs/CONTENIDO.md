@@ -96,8 +96,32 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 | `repairedAt` | Edificios propios que la curan al empezar la ronda |
 | `heals` | Vida que cura a cada unidad propia de al lado con la orden "Reparar" (Suministros: `{ "Tank": 20, ... }`) |
 | `classicSprite` | Graficos de 2013: prefijo de imagen segun el terreno |
+| `abilities` | Habilidades pasivas (regla `abilities`), ver abajo |
 | `ai.support` | No combate: la IA tiene como mucho una |
 | `notes` | Comentario libre |
+
+### Habilidades (`abilities`)
+
+Lista de habilidades pasivas: siempre estan activas, no son ordenes. Cada una es una clase (`kind`)
+con sus numeros, asi que se pueden dar a cualquier unidad sin tocar codigo. Solo cuentan con la regla
+`abilities` (activada por defecto; las partidas guardadas antes de existir no la tienen). La IA y la
+prevision de combate las tienen en cuenta solas, porque pasan por las mismas reglas (`core/abilities.ts`).
+
+| `kind` | Numeros | Que hace | Ahora la tiene |
+|---|---|---|---|
+| `guard` | `factor` (0..1) | Escudo: los ataques a distancia (alcance minimo > 1) le aciertan `factor` veces | Escudero (0.5) |
+| `zoneOfControl` | `stops`: movimientos | Zona de control: un enemigo con ese movimiento que entra en una casilla de al lado se para ahi (sale el turno siguiente). Con niebla, solo si la ve | Barricada (a pie, vehiculos, anfibios) |
+| `aura` | `radius`, `defense` (0..1) | Apoyo: a las unidades propias a `radius` casillas o menos les aciertan `defense` veces. No se suma con otras auras; a ella misma no | Suministros (1, 0.9) |
+| `piercing` | `ignoreCover` (0..1) | Perforante: ignora esa parte de la proteccion del terreno y del edificio del objetivo | Mortero (1) |
+
+```json
+"abilities": [{ "kind": "guard", "factor": 0.5 }]
+```
+
+Una clase nueva: añadirla a `ABILITY_KINDS` y `AbilityDef` (`core/content/types.ts`), su validacion
+(`content/units.ts`), su efecto (`core/abilities.ts`, llamado desde `rules.ts`), sus textos
+(`ability_<kind>` en `settings.ts`, y `abilityVM` en `ui/hudModels.ts`), el esquema y un test en
+`tests/abilities.test.ts`.
 
 ## Campos de un edificio
 

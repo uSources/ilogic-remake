@@ -29,6 +29,8 @@ export interface IlogicDebug {
     size?: number;
     theme?: number | null;
     fog?: boolean;
+    /** Limite de dias (por defecto, sin limite). */
+    dayLimit?: number | null;
     state?: GameState | string;
     mission?: string;
   }): Promise<void>;
@@ -75,7 +77,7 @@ export function installDebug(game: Phaser.Game): void {
             ? { mode: 'mission', mission: opts.mission }
             : {
                 mode: 'new',
-                rules: { fog: opts.fog ?? false },
+                rules: { fog: opts.fog ?? false, dayLimit: opts.dayLimit ?? null },
                 setup: { seed: opts.seed ?? 1, size: opts.size ?? 20, theme: opts.theme ?? null },
               };
       const from = activeScene();

@@ -53,6 +53,51 @@ export interface ForecastVM {
   counter: { low: number; high: number; lifeBefore: number; lifeAfter: number; killChance: number } | null;
 }
 
+/** Un dato con icono: clave de imagen, valor y texto al pasar el raton. */
+export interface StatChipVM {
+  icon: string;
+  text: string;
+  title: string;
+}
+
+/** Habilidad de una unidad: nombre y explicacion (con sus numeros). */
+export interface AbilityVM {
+  name: string;
+  desc: string;
+}
+
+/** Un lado del panel de combate. */
+export interface CombatSideVM {
+  icon: string | null;
+  /** Nombre de la unidad ('???' si no se ve). */
+  name: string;
+  team: 0 | 1;
+  role: 'attacker' | 'defender';
+  /** Rango de veterania 0..3. */
+  rank: number;
+  /** Vida que se enseña en este momento del combate y la de antes de empezar. */
+  life: number;
+  lifeBefore: number;
+  /** Probabilidad de acierto de sus disparos (0..1), o null si no dispara o no se ve. */
+  hit: number | null;
+  /** Daño recibido hasta este momento (null = aun nada). */
+  hurt: number | null;
+  ko: boolean;
+}
+
+/**
+ * Panel de combate: se enseña mientras se anima un ataque (tuyo o del enemigo). Tu unidad siempre
+ * a la izquierda. `stage` dice por donde va: antes de disparar, tras el ataque o tras el contraataque.
+ */
+export interface CombatVM {
+  id: number;
+  stage: 'start' | 'hit' | 'counter';
+  left: CombatSideVM;
+  right: CombatSideVM;
+  /** Habra (o hubo) contraataque. */
+  counter: boolean;
+}
+
 export interface UnitVM {
   /** Rango de veterania 0..3. */
   rank?: number;
@@ -61,8 +106,44 @@ export interface UnitVM {
   team: 0 | 1;
   life: number;
   stats: string;
+  /** Movimiento, alcance y vision con su icono (ficha de la unidad). */
+  chips?: StatChipVM[];
+  /** Habilidades (vacio si no tiene o la regla esta apagada). */
+  abilities?: AbilityVM[];
   status?: string;
   cargo?: string;
+}
+
+/** Una fila del desglose: "3 × Ciudad   +3.000". */
+export interface BreakdownLineVM {
+  label: string;
+  count: number;
+  /** Cantidad total de la fila (dinero o puntos). */
+  amount: number;
+}
+
+/** Desglose del dinero al pasar por encima (barra de arriba). */
+export interface EconomyVM {
+  income: { lines: BreakdownLineVM[]; total: number; /** Multiplicador de la regla incomeScale (1 = normal). */ scale: number };
+  /** null = regla de mantenimiento apagada. */
+  upkeep: { lines: BreakdownLineVM[]; total: number; /** Tanto por uno del valor del ejercito. */ rate: number } | null;
+  net: number;
+  /** Dinero al empezar el proximo turno propio (ingresos, mantenimiento y tope de dinero). */
+  next: number;
+  /** El mantenimiento no se puede pagar entero: se paga solo esto. */
+  shortfall: number | null;
+  /** null = regla de puntos de mando apagada. */
+  command: { lines: BreakdownLineVM[]; used: number; max: number } | null;
+}
+
+/** Desglose del dia al pasar por encima. */
+export interface DayInfoVM {
+  day: number;
+  limit: number | null;
+  /** Dias que quedan contando el de hoy (null sin limite). */
+  left: number | null;
+  /** Puntos de cada bando si la partida acabase ahora (solo con limite de dias). */
+  score: [number, number] | null;
 }
 
 /** Bocadillo junto al cursor al mover una unidad. */
@@ -204,6 +285,10 @@ export interface UIState {
   income: number;
   /** Puntos de mando usados y maximos (null = regla desactivada). */
   command: { used: number; max: number } | null;
+  /** Desglose de dinero y mando (al pasar por encima del dinero). */
+  economy: EconomyVM | null;
+  /** Desglose del dia (al pasar por encima del dia). */
+  dayInfo: DayInfoVM | null;
   buildings: number;
   day: number;
   turn: 'player' | 'enemy';
@@ -212,6 +297,7 @@ export interface UIState {
   forecast: ForecastVM | null;
   /** Clima (null si la partida no tiene). */
   weather: WeatherVM | null;
+  combat: CombatVM | null;
   moveTip: MoveTipVM | null;
   tile: TileVM | null;
   cursorScreen: { x: number; y: number };
@@ -323,6 +409,8 @@ const initial: UIState = {
   campaign: { items: [], selected: 0, brief: '', objective: '' },
   mission: null,
   funds: 0,
+  economy: null,
+  dayInfo: null,
   income: 0,
   command: null,
   buildings: 0,
@@ -331,6 +419,7 @@ const initial: UIState = {
   busy: false,
   menu: null,
   forecast: null,
+  combat: null,
   moveTip: null,
   tile: null,
   cursorScreen: { x: 0, y: 0 },

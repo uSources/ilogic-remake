@@ -10,6 +10,11 @@ import {
   type MinimapVM,
   type MoveTipVM,
   type Anchor,
+  type CombatSideVM,
+  type CombatVM,
+  type BreakdownLineVM,
+  type DayInfoVM,
+  type EconomyVM,
   type ForecastVM,
   type IdleVM,
   type MenuVM,
@@ -97,29 +102,153 @@ function Popover(props: { anchor: Anchor; prefer: 'right' | 'left'; class: strin
 // Partida
 // ---------------------------------------------------------------------------
 
+/** Filas "3 × Ciudad  +3.000". `sign`: '+' ingresos, '−' gastos, '' puntos. */
+function BreakdownRows({ lines, sign, empty }: { lines: BreakdownLineVM[]; sign: '+' | '−' | ''; empty: string }) {
+  if (!lines.length) return <div class="row muted">{empty}</div>;
+  return (
+    <>
+      {lines.map((l) => (
+        <div class="row" key={l.label}>
+          <span class="n num">{l.count} ×</span>
+          <span class="l">{l.label}</span>
+          <span class={`v num ${sign === '+' ? 'pos' : sign === '−' ? 'neg' : ''}`}>
+            {sign}
+            {fmtNum(l.amount)}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+const signed = (n: number) => `${n < 0 ? '−' : '+'}${fmtNum(Math.abs(n))}`;
+
+/** Desglose del dinero (al pasar por encima o tocar el dinero de arriba). */
+function EconomyPanel({ e }: { e: EconomyVM }) {
+  return (
+    <div class="px breakdown" role="tooltip">
+      <h4>{t('ecoIncome')}</h4>
+      <BreakdownRows lines={e.income.lines} sign="+" empty={t('ecoNoBuildings')} />
+      {e.income.scale !== 1 && (
+        <div class="note">
+          {t('ecoScale')}: ×{e.income.scale}
+        </div>
+      )}
+      <div class="row total">
+        <span class="l" />
+        <span class="v num pos">+{fmtNum(e.income.total)}</span>
+      </div>
+      {e.upkeep && (
+        <>
+          <h4>{t('ecoUpkeep')}</h4>
+          <BreakdownRows lines={e.upkeep.lines} sign="−" empty={t('ecoNoUnits')} />
+          <div class="row total">
+            <span class="l note">
+              {Math.round(e.upkeep.rate * 100)} % {t('ecoUpkeepNote')}
+            </span>
+            <span class="v num neg">−{fmtNum(e.upkeep.total)}</span>
+          </div>
+        </>
+      )}
+      <div class="row net">
+        <span class="l">{t('ecoNet')}</span>
+        <span class={`v num ${e.net < 0 ? 'neg' : 'pos'}`}>{signed(e.net)}</span>
+      </div>
+      <div class="row">
+        <span class="l">{t('ecoNext')}</span>
+        <span class="v num gold">{fmtNum(e.next)}</span>
+      </div>
+      {e.shortfall !== null && (
+        <div class="note warn">
+          {t('ecoShortfall')} {fmtNum(e.shortfall)}
+        </div>
+      )}
+      {e.command && (
+        <>
+          <h4>{t('ecoCommand')}</h4>
+          <BreakdownRows lines={e.command.lines} sign="" empty={t('ecoNoUnits')} />
+          <div class="row total">
+            <span class="l note">
+              {Math.max(0, e.command.max - e.command.used)} {t('ecoFree')}
+            </span>
+            <span class="v num">
+              {e.command.used}/{e.command.max}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Desglose del dia: limite, lo que queda y los puntos si se acabase ahora. */
+function DayPanel({ d }: { d: DayInfoVM }) {
+  return (
+    <div class="px breakdown" role="tooltip">
+      <h4>
+        {t('day')} {d.day}
+        {d.limit !== null && ` ${t('dayOf')} ${d.limit}`}
+      </h4>
+      <div class="row">
+        <span class="l">{d.left === null ? t('dayNoLimit') : d.left <= 1 ? t('dayLeft1') : `${t('dayLeft')} ${d.left} ${t('days')}`}</span>
+      </div>
+      {d.score && (
+        <>
+          <h4>{t('dayScore')}</h4>
+          <div class="row">
+            <span class="l">{t('youShort')}</span>
+            <span class="v num pos">{fmtNum(d.score[0])}</span>
+          </div>
+          <div class="row">
+            <span class="l">{t('enemy')}</span>
+            <span class="v num neg">{fmtNum(d.score[1])}</span>
+          </div>
+          <div class="note">{t('dayScoreNote')}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Abre su desglose al pasar el raton (CSS) o al tocarlo (pantallas tactiles). */
+function useTipToggle(): [boolean, () => void, () => void] {
+  const [open, setOpen] = useState(false);
+  return [open, () => setOpen((o) => !o), () => setOpen(false)];
+}
+
 function TopBar({ s }: { s: UIState }) {
   const a = ui.actions;
   const mine = s.turn === 'player';
+  const [fundsOpen, toggleFunds, closeFunds] = useTipToggle();
+  const [dayOpen, toggleDay, closeDay] = useTipToggle();
   return (
     <div class="top">
-      <div class="px funds">
-        <Icon k="currency" alt="" cls="px-icon coin" />
+      <div class={`px funds has-tip ${fundsOpen ? 'open' : ''}`} onClick={toggleFunds} onMouseLeave={closeFunds}>
+        <Icon k="ui/dinero" alt="" cls="px-icon coin" />
         <div>
           <div class="amount num">{fmtNum(s.funds)}</div>
           <div class="sub">
             {s.income < 0 ? '−' : '+'}
             {fmtNum(Math.abs(s.income))} {t('perDay')} · {s.buildings} {t('buildingsN')}
-            {s.command ? ` · ${t('commandShort')} ${s.command.used}/${s.command.max}` : null}
+            {s.command ? (
+              <span class="cmd" title={t('commandShort')}>
+                {' · '}
+                <Icon k="ui/mando" alt={t('commandShort')} cls="px-icon ico-sm" />
+                {s.command.used}/{s.command.max}
+              </span>
+            ) : null}
           </div>
         </div>
+        {s.economy && <EconomyPanel e={s.economy} />}
       </div>
-      <div class="day">
+      <div class={`day has-tip ${dayOpen ? 'open' : ''}`} onClick={toggleDay} onMouseLeave={closeDay}>
         <span class="d">
           {t('day')} {s.day}
           {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
         </span>
         <span class={`t ${mine ? '' : 'enemy'}`}>{mine ? t('yourTurn') : t('enemyTurn')}</span>
         {s.weather && <WeatherChip w={s.weather} />}
+        {s.dayInfo && <DayPanel d={s.dayInfo} />}
       </div>
       <div class="spacer" />
       <button tabIndex={-1} type="button" class="px-btn end" disabled={!mine || s.busy} onMouseDown={noFocus} onClick={() => a.endTurn()}>
@@ -267,6 +396,56 @@ function Blocks({ life, team }: { life: number; team: 0 | 1 }) {
   );
 }
 
+/** Un lado del panel de combate: retrato, papel en el combate, vida que baja y acierto. */
+function CombatSide({ c, counter, align }: { c: CombatSideVM; counter: boolean; align: 'left' | 'right' }) {
+  const role = c.role === 'attacker' ? t('combatAttacks') : counter ? t('combatCounter') : t('combatDefends');
+  const tone = c.team === 0 ? 'blue' : 'red';
+  return (
+    <div class={`px combat-side ${tone} ${align}${c.ko ? ' ko' : ''}`}>
+      <div class="cs-head">
+        <span class="cs-portrait">
+          <Icon k={c.icon} alt={c.name} cls="px-icon" />
+          {c.ko && <span class="cs-ko">{t('combatKO')}</span>}
+        </span>
+        <div class="cs-info">
+          <span class="cs-name">
+            {c.name}
+            {c.rank ? <span class="rank">{' ' + '★'.repeat(c.rank)}</span> : null}
+          </span>
+          <span class={`cs-role ${c.role}`}>{role}</span>
+          {c.hit !== null && (
+            <span class="muted cs-hit">
+              {t('combatHit')} {pct(c.hit)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div class="cs-life" title={t('hp')}>
+        <div class="cs-bar" aria-hidden="true">
+          <span class="trail" style={{ width: `${c.life}%` }} />
+          <span class="fill" style={{ width: `${c.life}%` }} />
+        </div>
+        <span class="cs-v num">{c.life}</span>
+        {/* Hueco fijo para el daño: que la barra no cambie de ancho cuando aparece. */}
+        <span key={c.hurt ?? 'none'} class={`cs-hurt${c.hurt === 0 ? ' miss' : ''}`}>
+          {c.hurt === null ? '' : c.hurt > 0 ? `-${c.hurt}` : t('fxMiss')}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Panel de combate: abajo en el centro mientras se anima un ataque (ver CombatVM). */
+function CombatPanel({ c }: { c: CombatVM }) {
+  return (
+    <div key={c.id} class={`combat stage-${c.stage}`} role="status" aria-live="polite" aria-label={t('combat')}>
+      <CombatSide c={c.left} counter={c.counter} align="left" />
+      <span class="combat-vs">VS</span>
+      <CombatSide c={c.right} counter={c.counter} align="right" />
+    </div>
+  );
+}
+
 function UnitCard({ u }: { u: UnitVM }) {
   return (
     <div class="px unitcard">
@@ -284,13 +463,24 @@ function UnitCard({ u }: { u: UnitVM }) {
           <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
             {u.team === 0 ? t('you') : t('enemy')}
           </span>
-          <span class="muted" style={{ fontSize: 13 }}>
-            {u.stats}
-          </span>
+          {u.chips ? (
+            <span class="chips">
+              {u.chips.map((c) => (
+                <span class="chip" title={c.title} key={c.icon}>
+                  <Icon k={c.icon} alt={c.title} cls="px-icon ico" />
+                  <span class="num">{c.text}</span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span class="muted" style={{ fontSize: 13 }}>
+              {u.stats}
+            </span>
+          )}
         </div>
       </div>
       <div class="meter" title={t('hp')}>
-        <Icon k="health" alt={t('hp')} />
+        <Icon k="ui/vida" alt={t('hp')} />
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
@@ -298,6 +488,16 @@ function UnitCard({ u }: { u: UnitVM }) {
         <span class="muted" style={{ fontSize: 13 }}>
           {u.cargo}
         </span>
+      )}
+      {u.abilities && u.abilities.length > 0 && (
+        <ul class="abilities" aria-label={t('abilities')}>
+          {u.abilities.map((a) => (
+            <li title={a.desc}>
+              <span class="gold">{a.name}</span>
+              <span class="muted">{a.desc}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -332,13 +532,19 @@ function TerrainCard({ tile }: { tile: TileVM }) {
         <span class="swatch" style={{ backgroundImage: `url(${imgUrl(tile.terrain.key)})` }} />
       )}
       <span style={{ fontFamily: 'var(--display)', fontSize: 14 }}>{tile.terrain.name}</span>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }} title={`${t('defense')} ${tile.terrain.defense}%`}>
-        <span class="muted">{t('defense')}</span>
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}
+        title={`${t('defense')} ${tile.terrain.defense}%`}
+      >
+        <Icon k="ui/defensa" alt={t('defense')} cls="px-icon ico" />
         <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{'★'.repeat(stars) + '☆'.repeat(4 - stars)}</span>
       </div>
       {tile.terrain.cost && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }} title={t('stepCostTitle')}>
-          <span class="muted">{t('stepCost')}</span>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}
+          title={t('stepCostTitle')}
+        >
+          <Icon k="ui/movimiento" alt={t('stepCost')} cls="px-icon ico" />
           <span>
             {t('onFoot')} {tile.terrain.cost.foot ?? '—'} · {t('byVehicle')} {tile.terrain.cost.vehicle ?? '—'}
           </span>
@@ -346,7 +552,7 @@ function TerrainCard({ tile }: { tile: TileVM }) {
       )}
       {b?.capture && (
         <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
-          <span class="muted">{t('capturing')}</span>
+          <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
           <div class="blocks">
             <span style={{ flex: b.capture.total - b.capture.left, background: b.capture.team === 0 ? 'var(--blue)' : 'var(--red)' }} />
             <span style={{ flex: b.capture.left }} />
@@ -357,8 +563,8 @@ function TerrainCard({ tile }: { tile: TileVM }) {
         </div>
       )}
       {b && b.income > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-          <span class="muted">{t('income')}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }} title={t('income')}>
+          <Icon k="ui/dinero" alt={t('income')} cls="px-icon ico" />
           <span>+{fmtNum(b.income)}</span>
         </div>
       )}
@@ -513,6 +719,7 @@ function GameHud({ s }: { s: UIState }) {
       </div>
       {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}
+      {s.combat && <CombatPanel c={s.combat} />}
       {s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu m={s.menu} />)}
     </>
   );

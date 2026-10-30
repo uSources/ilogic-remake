@@ -5,7 +5,7 @@ import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { bestAttackTile, closestStep, extendTrail } from '../core/orders';
 import {
-  attackFull,
+  attackEvent,
   buildingIncome,
   commandUsed,
   attackTargets,
@@ -84,18 +84,22 @@ import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextK
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
-import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
+import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion, shot, targetMark, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import {
+  abilitiesVM,
   buyBlockedText,
   captureHintText,
+  combatVM,
   forecastVM,
   minimapVM,
   tileVM,
   unitStatsText,
   weatherEffectsText,
   weatherVM,
+  dayInfoVM,
+  economyVM,
 } from '../ui/hudModels';
 import { PAL, PAL_CSS } from '../ui/palette';
 
@@ -390,7 +394,7 @@ export class GameScene extends Phaser.Scene {
       this.view.destroy();
       setEndFilter(null);
       resetActions();
-      ui.set({ menu: null, forecast: null, tile: null, mission: null, weather: null });
+      ui.set({ menu: null, forecast: null, combat: null, tile: null, mission: null, weather: null });
     });
     playMusic(this, 'game');
     this.threat = settings.alwaysThreat;
@@ -410,7 +414,7 @@ export class GameScene extends Phaser.Scene {
       },
       () => this.refreshHud(),
     );
-    ui.set({ screen: 'game', toast: null, banner: null, threat: this.threat, options: null });
+    ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, options: null });
     this.refresh();
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
@@ -596,6 +600,8 @@ export class GameScene extends Phaser.Scene {
       funds: s.funds[0],
       income: owned.reduce((sum, b) => sum + buildingIncome(b.type), 0) - upkeepOf(s, 0),
       command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
+      economy: economyVM(s, 0),
+      dayInfo: dayInfoVM(s),
       buildings: owned.length,
       day: s.day,
       dayLimit: RULES.dayLimit,
@@ -764,6 +770,9 @@ export class GameScene extends Phaser.Scene {
             detail:
               `${unitStatsText(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
               (RULES.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[o.type]}`) +
+              abilitiesVM(o.type)
+                .map((a) => ` · ${a.name}`)
+                .join('') +
               (o.blocked ? ` · ${buyBlockedText(o.blocked)}` : ''),
           })),
         ];
@@ -1145,6 +1154,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
+    this.view.cursorAttack = this.phase === 'attack';
     this.view.tick(time);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;
@@ -1435,18 +1445,7 @@ export class GameScene extends Phaser.Scene {
         }
         const target = unitById(this.s, it.target.uid);
         if (!target) return this.afterAction();
-        const res = attackFull(this.s, u, target, Math.random);
-        await this.playEvents([
-          {
-            kind: 'attack',
-            attacker: u.uid,
-            target: { x: target.x, y: target.y },
-            damage: res.damage,
-            killed: res.killed,
-            counter: res.counter,
-            attackerKilled: res.attackerKilled,
-          },
-        ]);
+        await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
         return this.afterAction();
       }
       case 'move': {
@@ -1819,18 +1818,7 @@ export class GameScene extends Phaser.Scene {
     const targetUid = this.attackSet.get(key(c));
     if (!u || targetUid === undefined) return this.openUnitMenu();
     const target = unitById(this.s, targetUid)!;
-    const r = attackFull(this.s, u, target, Math.random);
-    await this.playEvents([
-      {
-        kind: 'attack',
-        attacker: u.uid,
-        target: { x: c.x, y: c.y },
-        damage: r.damage,
-        killed: r.killed,
-        counter: r.counter,
-        attackerKilled: r.attackerKilled,
-      },
-    ]);
+    await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
     this.afterAction();
   }
 
@@ -2169,10 +2157,10 @@ export class GameScene extends Phaser.Scene {
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
   private showReport(r: RoundReport): void {
     const mine = r.healed.filter((h) => h.team === 0);
-    const lines: ReportLineVM[] = [{ icon: 'currency', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
-    if (r.upkeep[0] > 0) lines.push({ icon: 'currency', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
+    const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     if (mine.length)
-      lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
+      lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     if (r.weather) {
       const to = r.weather.to;
       lines.push({ icon: '', weather: WEATHER.ids[to]!, text: `${weatherLabel(to)}: ${weatherEffectsText(to)}`, tone: 'plain' });
@@ -2249,35 +2237,9 @@ export class GameScene extends Phaser.Scene {
           }
           break;
         }
-        case 'attack': {
-          const seen = this.visibleToPlayer(ev.target) && !this.fastForward;
-          // Lo que habia dibujado antes del ataque (la victima puede haber desaparecido ya del estado).
-          const victimKey = this.view.unitKeyAt(ev.target);
-          // El atacante puede haber caido en el contraataque: su posicion y su imagen, de lo dibujado.
-          const atkSprite = this.view.unitSprite(ev.attacker);
-          const atkPos = atkSprite ? { x: Math.round(atkSprite.x / TILE), y: Math.round(atkSprite.y / TILE) } : null;
-          const atkKey = atkPos ? this.view.unitKeyAt(atkPos) : null;
-          if (seen) {
-            await this.lookAt(ev.target);
-            if (atkSprite && atkPos) await lunge(this, atkSprite, { dx: ev.target.x - atkPos.x, dy: ev.target.y - atkPos.y });
-          }
-          this.refresh();
-          if (seen) await this.attackFx(ev.target, ev.damage, ev.killed, victimKey);
-          // Contraataque.
-          if (
-            ev.counter !== undefined &&
-            atkPos &&
-            (ev.counter > 0 || ev.attackerKilled) &&
-            !this.fastForward &&
-            this.visibleToPlayer(atkPos)
-          ) {
-            const victim = unitAt(this.s, ev.target.x, ev.target.y);
-            const vs = victim ? this.view.unitSprite(victim.uid) : null;
-            if (vs) await lunge(this, vs, { dx: atkPos.x - ev.target.x, dy: atkPos.y - ev.target.y });
-            await this.attackFx(atkPos, ev.counter, !!ev.attackerKilled, atkKey);
-          }
+        case 'attack':
+          await this.playAttack(ev);
           break;
-        }
         case 'capture':
           this.refresh();
           if (!this.fastForward && this.visibleToPlayer(ev.at)) {
@@ -2364,13 +2326,86 @@ export class GameScene extends Phaser.Scene {
     this.hidden.delete(uid);
   }
 
+  /** Milisegundos de un efecto de combate a la velocidad elegida (0 si es instantanea). */
+  private combatMs(ms: number): number {
+    const step = this.stepMs();
+    return this.fastForward || step <= 1 ? 0 : Math.round((ms * step) / STEP_MS);
+  }
+
+  /**
+   * Combate, paso a paso para que se entienda: mira sobre el objetivo, disparo desde el atacante,
+   * daño con la barra de vida bajando y, si lo hay, el contraataque igual pero al reves. Mientras
+   * tanto el panel de combate (abajo) enseña las dos unidades, su acierto y sus vidas.
+   */
+  private async playAttack(ev: Extract<GameEvent, { kind: 'attack' }>): Promise<void> {
+    const seen = this.visibleToPlayer(ev.target) && !this.fastForward;
+    // Lo que habia dibujado antes del ataque (la victima puede haber desaparecido ya del estado).
+    const victimKey = this.view.unitKeyAt(ev.target);
+    // El atacante puede haber caido en el contraataque: su posicion y su imagen, de lo dibujado.
+    const atkSprite = this.view.unitSprite(ev.attacker);
+    const atkPos = atkSprite ? { x: Math.round(atkSprite.x / TILE), y: Math.round(atkSprite.y / TILE) } : null;
+    const atkKey = atkPos ? this.view.unitKeyAt(atkPos) : null;
+    const atkSeen = !!atkPos && this.visibleToPlayer(atkPos);
+    const info = ev.combat;
+    const atkTeam = info?.attackerTeam ?? unitById(this.s, ev.attacker)?.team ?? (this.enemyPlaying ? 1 : 0);
+    const teamColor = (team: number) => (team === 0 ? PAL.blue : PAL.red);
+    const panelId = Date.now();
+    const panel = (stage: 'start' | 'hit' | 'counter') => {
+      if (!seen) return;
+      const vm = combatVM(ev, stage, { attacker: atkKey, defender: victimKey }, { attacker: atkSeen, defender: true }, panelId);
+      if (vm) ui.set({ combat: vm });
+    };
+
+    // 1. Quien ataca a quien.
+    if (seen) {
+      panel('start');
+      await this.lookAt(ev.target);
+      await targetMark(this, this.view, ev.target, teamColor(atkTeam), this.combatMs(240));
+      if (atkSprite && atkPos) {
+        await lunge(this, atkSprite, { dx: ev.target.x - atkPos.x, dy: ev.target.y - atkPos.y });
+        if (atkSeen) await shot(this, this.view, atkPos, ev.target, teamColor(atkTeam), this.combatMs(260));
+      }
+    }
+    // 2. Daño.
+    this.refresh();
+    if (seen) {
+      panel('hit');
+      const before = info?.defenderLife ?? null;
+      await Promise.all([
+        this.attackFx(ev.target, ev.damage, ev.killed, victimKey),
+        before !== null
+          ? lifeBar(this, this.view, ev.target, before, before - ev.damage, teamColor(1 - atkTeam), this.combatMs(380))
+          : null,
+      ]);
+    }
+    // 3. Contraataque.
+    if (ev.counter !== undefined && atkPos && (ev.counter > 0 || ev.attackerKilled) && !this.fastForward && this.visibleToPlayer(atkPos)) {
+      const victim = unitAt(this.s, ev.target.x, ev.target.y);
+      const vs = victim ? this.view.unitSprite(victim.uid) : null;
+      const c = center(ev.target);
+      void floatText(this, this.view, { x: c.x, y: c.y - 14 }, t('fxCounter'), PAL_CSS.gold);
+      if (vs) await lunge(this, vs, { dx: atkPos.x - ev.target.x, dy: atkPos.y - ev.target.y });
+      await shot(this, this.view, ev.target, atkPos, teamColor(1 - atkTeam), this.combatMs(200));
+      panel('counter');
+      const before = info?.attackerLife ?? null;
+      await Promise.all([
+        this.attackFx(atkPos, ev.counter, !!ev.attackerKilled, atkKey),
+        before !== null ? lifeBar(this, this.view, atkPos, before, before - ev.counter, teamColor(atkTeam), this.combatMs(380)) : null,
+      ]);
+    }
+    if (seen && info) await this.wait(this.combatMs(350));
+    ui.set({ combat: null });
+  }
+
   private async attackFx(at: Pos, damage: number, killed: boolean, victimKey: string | null): Promise<void> {
     const c = center(at);
     if (!reducedMotion()) this.cameras.main.shake(killed ? 220 : 110, killed ? 0.006 : 0.003);
     const jobs: Promise<void>[] = [
       burst(this, this.view, c, { colors: COLORS.fire, count: killed ? 12 : 9, radius: killed ? 20 : 16, size: 5 }),
     ];
-    jobs.push(floatText(this, this.view, { x: c.x, y: c.y - 4 }, `-${damage}`, PAL_CSS.red));
+    jobs.push(
+      floatText(this, this.view, { x: c.x, y: c.y - 4 }, damage > 0 ? `-${damage}` : t('fxMiss'), damage > 0 ? PAL_CSS.red : '#cfe8ff'),
+    );
     // La victima parpadea (si queda viva, su sprite; si no, una copia que luego estalla).
     const live = unitAt(this.s, at.x, at.y);
     const sprite = live ? this.view.unitSprite(live.uid) : null;

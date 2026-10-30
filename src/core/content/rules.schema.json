@@ -29,7 +29,8 @@
         "ambush",
         "forestHides",
         "terrainCost",
-        "weather"
+        "weather",
+        "abilities"
       ],
       "properties": {
         "initialFunds": {
@@ -116,6 +117,10 @@
         "weather": {
           "type": "boolean",
           "description": "Clima que cambia cada pocos dias (weather.json): vision, movimiento y punteria."
+        },
+        "abilities": {
+          "type": "boolean",
+          "description": "Habilidades de las unidades (units.json, \"abilities\"): escudo, zona de control, aura, perforante."
         }
       }
     },

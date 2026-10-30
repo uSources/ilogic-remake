@@ -68,6 +68,11 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   Una unidad que se queda sin usar encima de un edificio sigue capturando sola al acabar el turno.
 - El defensor que sobrevive contraataca (salvo unidades a distancia) y el daño varía
   poco (el esperado ±10 %). La previsión de combate enseña ambas cosas.
+- **Combate a la vista:** cada ataque (tuyo o del enemigo) se ve paso a paso: una mira marca el
+  objetivo, el disparo sale del atacante (en parábola si es a distancia), la barra de vida baja sobre
+  la unidad y, si hay contraataque, se anuncia y pasa igual al revés. Abajo sale el panel de combate
+  con las dos unidades (la tuya a la izquierda), quién ataca, su acierto, las vidas bajando y el daño
+  de cada lado. Una unidad que dispara desde la niebla sale como «???».
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
 - En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
   ensena el alcance de una unidad y se pellizca para hacer zoom.
@@ -160,6 +165,9 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
 1. suelos Wang, montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y
    muñecos de nieve (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
 2. laminas de costa, agua organica, olas, espuma de la orilla y niebla (`public/assets/img/blob`, `anim`);
+   los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
+   `ui/dinero`...) y la letra de titulos y botones (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`),
+   las dos dibujadas como rejillas de pixeles en texto: se retocan editando el `.txt`;
 3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`: 2 paginas colocadas con MaxRects y
    comprimidas sin perdida con oxipng);
 4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen ni lamina, que cada
@@ -167,7 +175,7 @@ con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/a
 
 Se ejecuta solo antes de `npm run build`; si algo falla, no se publica. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
-En `dist` solo van el atlas, el cursor y el icono; en la version de un fichero la musica va solo en mp3.
+En `dist` solo van el atlas, los punteros del raton (`raton*.png`) y el icono; en la version de un fichero la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Calidad del codigo

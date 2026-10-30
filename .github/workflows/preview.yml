@@ -19,9 +19,9 @@ permissions:
   contents: write
   pull-requests: write
 
-# Una publicacion a la vez en gh-pages (la comparte con pages.yml).
+# Una cola por PR: un push nuevo no descarta la publicacion de la web ni la preview de otra PR.
 concurrency:
-  group: gh-pages
+  group: preview-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
@@ -70,6 +70,7 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
+          attempt-limit: 5
           folder: dist
           target-folder: ${{ steps.hash.outputs.dir }}
           commit-message: '🚀 Preview de la PR #${{ github.event.pull_request.number }}'

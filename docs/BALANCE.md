@@ -126,3 +126,23 @@ Medido con `npm run balance -- run --games 200 --name con-clima` contra `sin-cli
   (lluvia y nieve frenan los avances por tierra).
 - La eficiencia de cada unidad apenas se mueve; la que más, el tanque (0,25 → 0,14), con muy pocas
   compras (55 → 48), así que es ruido más que efecto.
+
+## Tanque contra infantería (30-10-2026)
+
+La infantería barata dominaba y el Tanque casi no se veía. Tres cambios, medidos uno detrás de otro con
+`npm run metrics` (120 partidas). Informe: `balance/reports/tanques-vs-infanteria.md`.
+
+| | Antes | Después |
+|---|---:|---:|
+| Nota | 61,8 | 66,4 |
+| Tanques comprados (de unas 6000 compras) | 21 | 129 |
+| Tanque: valor destruido por cada 1 que cuesta | — | 0,87 (en la banda) |
+| Soldado: veces la mediana | 3,2x | 2,2x |
+| Aviones, parte de las compras | 36 % | 12 % |
+
+- **La IA compra Tanques otra vez.** El Aeropuerto iba siempre antes que la Fábrica y se quedaba el
+  dinero; ahora los dos van en orden al azar (`src/core/ai.ts`, `produce`). Es lo que más cuenta (+3,8).
+- **El Tanque gana a la infantería**: le acierta 0,6 (0,45 a la Bazuca) y la infantería ligera le acierta
+  0,05; el Mortero 0,2. La Bazuca (0,4) sigue siendo el antitanque.
+- **El Soldado acierta menos a los vehículos** (0,1-0,2; Artillería 0,05).
+- Sigue pendiente: el Soldado aún rinde 2,2x la mediana.

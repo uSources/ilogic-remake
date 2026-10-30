@@ -36,6 +36,8 @@ export interface RulesConfig {
   terrainCost: boolean;
   /** [CAMBIO] Clima que cambia cada pocos dias (weather.json): vision, movimiento y punteria. */
   weather: boolean;
+  /** Habilidades de las unidades (units.json, "abilities"). */
+  abilities: boolean;
 }
 
 export interface RulesFile {
@@ -63,6 +65,7 @@ const RULE_KINDS: Record<keyof RulesConfig, Kind> = {
   forestHides: 'bool',
   terrainCost: 'bool',
   weather: 'bool',
+  abilities: 'bool',
 };
 
 export function validateRules(r: RulesFile, check: Checker): void {

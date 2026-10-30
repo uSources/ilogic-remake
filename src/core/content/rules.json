@@ -17,7 +17,8 @@
     "ambush": true,
     "forestHides": true,
     "terrainCost": true,
-    "weather": true
+    "weather": true,
+    "abilities": true
   },
   "maxFunds": 999999
 }
