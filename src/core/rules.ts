@@ -21,8 +21,9 @@ import {
   Movement,
   type MoveType,
 } from './data';
+import { coverAgainst, defenseFactor, zoneOfControl } from './abilities';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
-import type { Building, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
+import type { Building, CombatInfo, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
 
 // ---------------------------------------------------------------------------
 // Consultas basicas
@@ -107,10 +108,12 @@ export function maxSteps(u: Unit): number {
  * [CAMBIO] Reglas nuevas: se atraviesan las unidades propias, y los enemigos que el bando de `u`
  * no ve no cuentan (asi el alcance no delata donde estan; al moverse, emboscada).
  */
-export function passMap(s: GameState, u: Unit): { block: boolean[][]; taken: boolean[][] } {
+export function passMap(s: GameState, u: Unit): { block: boolean[][]; taken: boolean[][]; stop: boolean[][] } {
   const block = grid(false);
   const taken = grid(false);
   const vis = RULES.ambush ? visibility(s, u.team) : null;
+  // [CAMBIO] Zona de control (habilidades): casillas en las que hay que pararse.
+  const stop = zoneOfControl(s, u, vis);
   for (const o of s.units) {
     if (o.carrier !== null || o.uid === u.uid) continue;
     if (o.team === u.team) {
@@ -121,7 +124,7 @@ export function passMap(s: GameState, u: Unit): { block: boolean[][]; taken: boo
       block[o.x]![o.y] = true;
     }
   }
-  return { block, taken };
+  return { block, taken, stop };
 }
 
 /** Lo que cuesta entrar en una casilla (1 con las reglas clasicas). */
@@ -145,7 +148,7 @@ export function moveRange(s: GameState, u: Unit): MoveRange {
   const prev = grid<Pos | null>(null);
   const max = maxSteps(u);
   const mt = Movement.of(u.type);
-  const { block, taken } = passMap(s, u);
+  const { block, taken, stop } = passMap(s, u);
   const best = grid(Infinity);
   best[u.x]![u.y] = 0;
   // Dijkstra sencillo: los costes son pequeños (1 a 3) y el alcance tambien.
@@ -159,7 +162,8 @@ export function moveRange(s: GameState, u: Unit): MoveRange {
       if (!canWalk(s, n.x, n.y, mt) || block[n.x]![n.y] || (n.x === u.x && n.y === u.y)) continue;
       const c = cp + moveCost(s, mt, n.x, n.y);
       if (c > max || c >= best[n.x]![n.y]!) continue;
-      if (best[n.x]![n.y] === Infinity) open.push(n);
+      // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
+      if (best[n.x]![n.y] === Infinity && !stop[n.x]![n.y]) open.push(n);
       best[n.x]![n.y] = c;
       prev[n.x]![n.y] = p;
       // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
@@ -235,13 +239,14 @@ export function validPath(s: GameState, u: Unit, path: Pos[], range: MoveRange):
   if (path.length < 2 || !samePos(path[0]!, u) || pathCost(s, Movement.of(u.type), path) > range.maxSteps) return false;
   const end = path[path.length - 1]!;
   if (!canReach(range, end.x, end.y)) return false;
-  const { block } = passMap(s, u);
+  const { block, stop } = passMap(s, u);
   const mt = Movement.of(u.type);
   const seen = new Set<string>();
   for (let i = 1; i < path.length; i++) {
     const a = path[i - 1]!,
       b = path[i]!;
     if (manhattan(a, b) !== 1 || !canWalk(s, b.x, b.y, mt) || block[b.x]![b.y]) return false;
+    if (i < path.length - 1 && stop[b.x]![b.y]) return false;
     const k = `${b.x},${b.y}`;
     if (seen.has(k) || samePos(b, u)) return false;
     seen.add(k);
@@ -379,7 +384,9 @@ export function defenseStars(s: GameState, p: Pos): number {
 
 /** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). */
 export function hitChance(s: GameState, atk: Unit, def: Unit): number {
-  let p = POWER[atk.type]![def.type]! * tileProtection(s, def);
+  let p = POWER[atk.type]![def.type]! * coverAgainst(atk.type, tileProtection(s, def));
+  // [CAMBIO] Habilidades del defensor y de sus aliados (escudo, aura).
+  p *= defenseFactor(s, atk, def);
   // [CAMBIO] Veterania: cada rango da +5 % de acierto al atacar y -5 % al que le ataca.
   if (RULES.veterancy) p *= (1 + VET_BONUS * rank(atk)) * (1 - VET_BONUS * rank(def));
   return p;
@@ -465,6 +472,39 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
   if (result.attackerKilled && def.life > 0) def.kills = (def.kills ?? 0) + 1;
   removeDead(s);
   return result;
+}
+
+/**
+ * Ataque completo como evento para la interfaz (jugador e IA). Ademas del resultado lleva lo que
+ * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, bandos,
+ * vidas de antes, rangos y probabilidad de acierto de cada lado (ver CombatInfo).
+ */
+export function attackEvent(s: GameState, atk: Unit, def: Unit, rng: Rng): Extract<GameEvent, { kind: 'attack' }> {
+  const info: CombatInfo = {
+    attackerType: atk.type,
+    defenderType: def.type,
+    attackerTeam: atk.team,
+    attackerLife: atk.life,
+    defenderLife: def.life,
+    attackerRank: rank(atk),
+    defenderRank: rank(def),
+    hit: Math.min(1, hitChance(s, atk, def)),
+    counterHit: canCounter(def, atk) ? Math.min(1, hitChance(s, def, atk)) : null,
+  };
+  const target = { x: def.x, y: def.y };
+  const r = attackFull(s, atk, def, rng);
+  // Si el defensor cae no hay contraataque, aunque pudiera haberlo.
+  if (r.killed) info.counterHit = null;
+  return {
+    kind: 'attack',
+    attacker: atk.uid,
+    target,
+    damage: r.damage,
+    killed: r.killed,
+    counter: r.counter,
+    attackerKilled: r.attackerKilled,
+    combat: info,
+  };
 }
 
 /** Ataca y devuelve el daño hecho (ver attackFull para el contraataque). */

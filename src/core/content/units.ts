@@ -1,6 +1,6 @@
 /** Unidades (units.json): validacion y tablas por indice (UNIT, POWER, SPAWNER...). */
-import { type Checker, checkSprites, spriteRow } from './check';
-import { MOVEMENTS, type ContentContext, type MoveType, type UnitDef } from './types';
+import { type Checker, type Scope, checkSprites, spriteRow } from './check';
+import { ABILITY_KINDS, MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type UnitDef } from './types';
 
 const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
 
@@ -40,6 +40,37 @@ export function validateUnits(units: readonly UnitDef[], ctx: ContentContext, ch
     }
     if (u?.art !== undefined && s.known('art', u.art, ctx.unitIds)) s.expect(u.art !== u.id, 'art no puede ser ella misma');
     checkSprites(s, u?.classicSprite, ctx.terrainNames);
+    if (u?.abilities !== undefined) validateAbilities(s, u.abilities, u);
+  }
+}
+
+function validateAbilities(s: Scope, list: unknown, u: UnitDef): void {
+  if (!s.expect(Array.isArray(list), 'abilities tiene que ser una lista')) return;
+  const seen = new Set<string>();
+  for (const [i, a] of (list as AbilityDef[]).entries()) {
+    const f = `abilities[${i}]`;
+    if (!s.known(`${f}.kind`, a?.kind, ABILITY_KINDS, 'la habilidad ')) continue;
+    s.expect(!seen.has(a.kind), `${f}: la habilidad "${a.kind}" esta repetida`);
+    seen.add(a.kind);
+    switch (a.kind) {
+      case 'guard':
+        s.num(`${f}.factor`, a.factor, { min: 0, max: 1 });
+        break;
+      case 'zoneOfControl':
+        if (s.expect(Array.isArray(a.stops) && a.stops.length > 0, `${f}.stops tiene que ser una lista de movimientos`))
+          for (const m of a.stops) s.known(`${f}.stops`, m, MOVEMENTS, 'el movimiento ');
+        break;
+      case 'aura':
+        s.num(`${f}.radius`, a.radius, { min: 1, max: 5, int: true });
+        s.num(`${f}.defense`, a.defense, { min: 0, max: 1 });
+        break;
+      case 'piercing':
+        s.num(`${f}.ignoreCover`, a.ignoreCover, { min: 0, max: 1 });
+        s.expect(u.attack !== null, `${f}: piercing en una unidad que no ataca`);
+        break;
+      default:
+        break;
+    }
   }
 }
 
@@ -69,6 +100,8 @@ export function buildUnitTables(units: readonly UnitDef[], ctx: ContentContext, 
     UNIT_HEALS: byUnit((u) => ids.map((id) => u.heals?.[id] ?? 0)),
     UNIT_TERRAIN_PREFIX: byUnit((u) => spriteRow(u.classicSprite, ctx.terrainNames)),
     UNIT_SUPPORT: byUnit((u) => !!u.ai?.support),
+    /** Habilidades de cada unidad (lista vacia si no tiene). */
+    UNIT_ABILITIES: byUnit((u): readonly AbilityDef[] => u.abilities ?? []),
     /** Nombre de las imagenes de cada unidad (el suyo, o el de `art` mientras no tenga dibujo). */
     UNIT_ART: byUnit((u) => u.art ?? u.id),
   };

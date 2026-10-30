@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { MAP_H, MAP_W, RULES, UNIT, Movement, MoveType } from '../core/data';
+import { abilitiesOf } from '../core/abilities';
+import { MAP_H, MAP_W, MAX_FUNDS, RULES, UNIT, Movement, MoveType, type AbilityDef } from '../core/data';
 import {
   buildingAt,
   buildingIncome,
@@ -8,14 +9,29 @@ import {
   captureStrength,
   cargoUnits,
   combatForecast,
+  commandUsed,
   moveCost,
   rank,
+  score,
   tileProtection,
   unitAt,
+  upkeepOf,
   type BuyOption,
 } from '../core/rules';
-import type { GameState, Pos, Unit } from '../core/types';
-import type { Anchor, ForecastVM, MinimapVM, StatChipVM, TileVM } from '../hud/store';
+import type { CombatInfo, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
+import type {
+  AbilityVM,
+  Anchor,
+  BreakdownLineVM,
+  CombatSideVM,
+  CombatVM,
+  DayInfoVM,
+  EconomyVM,
+  ForecastVM,
+  MinimapVM,
+  StatChipVM,
+  TileVM,
+} from '../hud/store';
 import { buildingLabel, t, terrainLabel, unitLabel } from '../settings';
 import { buildingKey, terrainKey, unitKey } from './sprites';
 
@@ -38,6 +54,37 @@ export function unitStatChips(type: number): StatChipVM[] {
 export function unitStatsText(type: number): string {
   const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return `${t('move')} ${UNIT.mover[type]} · ${range}`;
+}
+
+const pct = (f: number): string => String(Math.round(f * 100));
+
+/** Nombre y explicacion de una habilidad, con sus numeros. */
+export function abilityVM(a: AbilityDef): AbilityVM {
+  switch (a.kind) {
+    case 'guard':
+      return { name: t('ability_guard'), desc: t('ability_guard_desc').replace('{n}', pct(1 - a.factor)) };
+    case 'zoneOfControl':
+      return {
+        name: t('ability_zoneOfControl'),
+        desc: t('ability_zoneOfControl_desc').replace('{m}', a.stops.map((m) => t(`move_${m}`)).join(', ')),
+      };
+    case 'aura':
+      return {
+        name: t('ability_aura'),
+        desc: t('ability_aura_desc')
+          .replace('{r}', String(a.radius))
+          .replace('{n}', pct(1 - a.defense)),
+      };
+    case 'piercing':
+      return { name: t('ability_piercing'), desc: t('ability_piercing_desc').replace('{n}', pct(a.ignoreCover)) };
+    default:
+      return a satisfies never;
+  }
+}
+
+/** Habilidades de un tipo de unidad que cuentan en esta partida (vacio con la regla apagada). */
+export function abilitiesVM(type: number): AbilityVM[] {
+  return abilitiesOf(type).map(abilityVM);
 }
 
 /** "20→10": puntos del edificio de debajo antes y despues de capturar este turno. */
@@ -95,6 +142,7 @@ export function tileVM(
       life: shown.life,
       stats: unitStatsText(T),
       chips: unitStatChips(T),
+      abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
     };
   }
@@ -133,6 +181,50 @@ export function forecastVM(
   };
 }
 
+/**
+ * Panel de combate de un ataque (ver CombatVM) en el momento `stage`. `icons` son las imagenes que
+ * habia dibujadas antes del combate y `seen` si el jugador ve a cada una: una unidad en la niebla
+ * sale como '???' (no se delata que unidad dispara desde donde no se ve).
+ * Devuelve null para eventos antiguos sin datos de combate.
+ */
+export function combatVM(
+  ev: Extract<GameEvent, { kind: 'attack' }>,
+  stage: CombatVM['stage'],
+  icons: { attacker: string | null; defender: string | null },
+  seen: { attacker: boolean; defender: boolean },
+  id = 0,
+): CombatVM | null {
+  const c: CombatInfo | undefined = ev.combat;
+  if (!c) return null;
+  const counter = ev.counter ?? 0;
+  const defTeam = (1 - c.attackerTeam) as 0 | 1;
+  const hitDone = stage !== 'start';
+  const counterDone = stage === 'counter';
+  const side = (role: CombatSideVM['role']): CombatSideVM => {
+    const atk = role === 'attacker';
+    const known = atk ? seen.attacker : seen.defender;
+    const before = atk ? c.attackerLife : c.defenderLife;
+    const hurt = atk ? (counterDone ? counter : null) : hitDone ? ev.damage : null;
+    const life = Math.max(0, before - (hurt ?? 0));
+    return {
+      icon: known ? (atk ? icons.attacker : icons.defender) : null,
+      name: known ? unitLabel(atk ? c.attackerType : c.defenderType) : '???',
+      team: atk ? c.attackerTeam : defTeam,
+      role,
+      rank: known ? (atk ? c.attackerRank : c.defenderRank) : 0,
+      life,
+      lifeBefore: before,
+      hit: known ? (atk ? c.hit : c.counterHit) : null,
+      hurt,
+      ko: hurt !== null && life <= 0,
+    };
+  };
+  const a = side('attacker');
+  const d = side('defender');
+  const playerAttacks = c.attackerTeam === 0;
+  return { id, stage, left: playerAttacks ? a : d, right: playerAttacks ? d : a, counter: c.counterHit !== null };
+}
+
 /** Minimapa (`palette`: color de cada terreno, ver terrainPalette): colores del terreno, niebla, edificios (dueño solo si se ve) y unidades visibles. */
 export function minimapVM(pal: readonly number[], s: GameState, vis: boolean[][], hidden: ReadonlySet<number>): MinimapVM {
   const terrain: number[] = [];
@@ -160,4 +252,54 @@ export function buyBlockedText(b: NonNullable<BuyOption['blocked']>): string {
     case 'command':
       return t('commandLimit').replace('{n}', String(RULES.commandPoints ?? 0));
   }
+}
+
+/** Cuenta por tipo y multiplica: filas "3 × Ciudad". Orden: de mas a menos cantidad. */
+function tally(types: number[], label: (t: number) => string, each: (t: number) => number): BreakdownLineVM[] {
+  const counts = new Map<number, number>();
+  for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
+  return [...counts]
+    .map(([t, count]) => ({ label: label(t), count, amount: count * each(t) }))
+    .sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label));
+}
+
+/**
+ * Desglose del dinero de un bando: ingresos por tipo de edificio, mantenimiento por tipo de unidad,
+ * lo que queda por dia, con cuanto se empieza el proximo turno y los puntos de mando por tipo. Mismas
+ * cuentas que endRound (las cifras de cada fila de mantenimiento son su parte sin redondear; el total
+ * es el que se cobra, redondeado a 100).
+ */
+export function economyVM(s: GameState, team: Team): EconomyVM {
+  const owned = s.buildings.filter((b) => b.owner === team).map((b) => b.type);
+  const units = s.units.filter((u) => u.team === team).map((u) => u.type);
+  const income = owned.reduce((n, t) => n + buildingIncome(t), 0);
+  const upkeep = upkeepOf(s, team);
+  // endRound cobra primero y despues paga lo que pueda del mantenimiento.
+  const afterIncome = s.funds[team] + income;
+  const paid = Math.min(upkeep, afterIncome);
+  return {
+    income: { lines: tally(owned, buildingLabel, buildingIncome), total: income, scale: RULES.incomeScale },
+    upkeep:
+      RULES.upkeep > 0
+        ? { lines: tally(units, unitLabel, (t) => Math.round(UNIT.cost[t]! * RULES.upkeep)), total: upkeep, rate: RULES.upkeep }
+        : null,
+    net: income - upkeep,
+    next: Math.min(afterIncome - paid, MAX_FUNDS),
+    shortfall: paid < upkeep ? paid : null,
+    command:
+      RULES.commandPoints === null
+        ? null
+        : { lines: tally(units, unitLabel, (t) => UNIT.command[t]!), used: commandUsed(s, team), max: RULES.commandPoints },
+  };
+}
+
+/** Desglose del dia: limite, dias que quedan y puntos si se acabase ahora. */
+export function dayInfoVM(s: GameState): DayInfoVM {
+  const limit = RULES.dayLimit;
+  return {
+    day: s.day,
+    limit,
+    left: limit === null ? null : Math.max(0, limit - s.day + 1),
+    score: limit === null ? null : [score(s, 0), score(s, 1)],
+  };
 }

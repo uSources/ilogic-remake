@@ -177,6 +177,90 @@
               "maximum": 100
             }
           },
+          "abilities": {
+            "type": "array",
+            "description": "Habilidades pasivas (regla abilities). Siempre activas; no son ordenes. Ver docs/CONTENIDO.md.",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "factor"],
+                  "description": "Escudo: los ataques a distancia (artilleria, mortero...) aciertan menos.",
+                  "properties": {
+                    "kind": {
+                      "const": "guard"
+                    },
+                    "factor": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Multiplica el acierto de los ataques a distancia contra ella (0.5 = la mitad)."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "stops"],
+                  "description": "Zona de control: un enemigo que entra en una casilla de al lado se tiene que parar ahi.",
+                  "properties": {
+                    "kind": {
+                      "const": "zoneOfControl"
+                    },
+                    "stops": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "enum": ["foot", "vehicle", "air", "amphibious"]
+                      },
+                      "description": "Movimientos de los enemigos a los que para."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "radius", "defense"],
+                  "description": "Aura: protege a las unidades propias cercanas (a ella misma no).",
+                  "properties": {
+                    "kind": {
+                      "const": "aura"
+                    },
+                    "radius": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 5,
+                      "description": "Distancia en casillas."
+                    },
+                    "defense": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Multiplica el acierto contra las unidades propias cercanas (0.9 = -10 %). No se suma con otras auras."
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "ignoreCover"],
+                  "description": "Perforante: ignora la proteccion del terreno y de los edificios del objetivo.",
+                  "properties": {
+                    "kind": {
+                      "const": "piercing"
+                    },
+                    "ignoreCover": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Parte de la proteccion del terreno y del edificio que ignora (1 = toda)."
+                    }
+                  }
+                }
+              ]
+            }
+          },
           "art": {
             "type": "string",
             "description": "Mientras no tenga dibujo propio, se pinta con el de esta unidad (id). Quitarlo al añadir sus imagenes."

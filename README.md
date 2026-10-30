@@ -68,6 +68,11 @@ npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
   Una unidad que se queda sin usar encima de un edificio sigue capturando sola al acabar el turno.
 - El defensor que sobrevive contraataca (salvo unidades a distancia) y el daño varía
   poco (el esperado ±10 %). La previsión de combate enseña ambas cosas.
+- **Combate a la vista:** cada ataque (tuyo o del enemigo) se ve paso a paso: una mira marca el
+  objetivo, el disparo sale del atacante (en parábola si es a distancia), la barra de vida baja sobre
+  la unidad y, si hay contraataque, se anuncia y pasa igual al revés. Abajo sale el panel de combate
+  con las dos unidades (la tuya a la izquierda), quién ataca, su acierto, las vidas bajando y el daño
+  de cada lado. Una unidad que dispara desde la niebla sale como «???».
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
 - En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
   ensena el alcance de una unidad y se pellizca para hacer zoom.

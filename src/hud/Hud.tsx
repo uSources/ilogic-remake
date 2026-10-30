@@ -10,6 +10,11 @@ import {
   type MinimapVM,
   type MoveTipVM,
   type Anchor,
+  type CombatSideVM,
+  type CombatVM,
+  type BreakdownLineVM,
+  type DayInfoVM,
+  type EconomyVM,
   type ForecastVM,
   type IdleVM,
   type MenuVM,
@@ -95,12 +100,128 @@ function Popover(props: { anchor: Anchor; prefer: 'right' | 'left'; class: strin
 // Partida
 // ---------------------------------------------------------------------------
 
+/** Filas "3 × Ciudad  +3.000". `sign`: '+' ingresos, '−' gastos, '' puntos. */
+function BreakdownRows({ lines, sign, empty }: { lines: BreakdownLineVM[]; sign: '+' | '−' | ''; empty: string }) {
+  if (!lines.length) return <div class="row muted">{empty}</div>;
+  return (
+    <>
+      {lines.map((l) => (
+        <div class="row" key={l.label}>
+          <span class="n num">{l.count} ×</span>
+          <span class="l">{l.label}</span>
+          <span class={`v num ${sign === '+' ? 'pos' : sign === '−' ? 'neg' : ''}`}>
+            {sign}
+            {fmtNum(l.amount)}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
+const signed = (n: number) => `${n < 0 ? '−' : '+'}${fmtNum(Math.abs(n))}`;
+
+/** Desglose del dinero (al pasar por encima o tocar el dinero de arriba). */
+function EconomyPanel({ e }: { e: EconomyVM }) {
+  return (
+    <div class="px breakdown" role="tooltip">
+      <h4>{t('ecoIncome')}</h4>
+      <BreakdownRows lines={e.income.lines} sign="+" empty={t('ecoNoBuildings')} />
+      {e.income.scale !== 1 && (
+        <div class="note">
+          {t('ecoScale')}: ×{e.income.scale}
+        </div>
+      )}
+      <div class="row total">
+        <span class="l" />
+        <span class="v num pos">+{fmtNum(e.income.total)}</span>
+      </div>
+      {e.upkeep && (
+        <>
+          <h4>{t('ecoUpkeep')}</h4>
+          <BreakdownRows lines={e.upkeep.lines} sign="−" empty={t('ecoNoUnits')} />
+          <div class="row total">
+            <span class="l note">
+              {Math.round(e.upkeep.rate * 100)} % {t('ecoUpkeepNote')}
+            </span>
+            <span class="v num neg">−{fmtNum(e.upkeep.total)}</span>
+          </div>
+        </>
+      )}
+      <div class="row net">
+        <span class="l">{t('ecoNet')}</span>
+        <span class={`v num ${e.net < 0 ? 'neg' : 'pos'}`}>{signed(e.net)}</span>
+      </div>
+      <div class="row">
+        <span class="l">{t('ecoNext')}</span>
+        <span class="v num gold">{fmtNum(e.next)}</span>
+      </div>
+      {e.shortfall !== null && (
+        <div class="note warn">
+          {t('ecoShortfall')} {fmtNum(e.shortfall)}
+        </div>
+      )}
+      {e.command && (
+        <>
+          <h4>{t('ecoCommand')}</h4>
+          <BreakdownRows lines={e.command.lines} sign="" empty={t('ecoNoUnits')} />
+          <div class="row total">
+            <span class="l note">
+              {Math.max(0, e.command.max - e.command.used)} {t('ecoFree')}
+            </span>
+            <span class="v num">
+              {e.command.used}/{e.command.max}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Desglose del dia: limite, lo que queda y los puntos si se acabase ahora. */
+function DayPanel({ d }: { d: DayInfoVM }) {
+  return (
+    <div class="px breakdown" role="tooltip">
+      <h4>
+        {t('day')} {d.day}
+        {d.limit !== null && ` ${t('dayOf')} ${d.limit}`}
+      </h4>
+      <div class="row">
+        <span class="l">{d.left === null ? t('dayNoLimit') : d.left <= 1 ? t('dayLeft1') : `${t('dayLeft')} ${d.left} ${t('days')}`}</span>
+      </div>
+      {d.score && (
+        <>
+          <h4>{t('dayScore')}</h4>
+          <div class="row">
+            <span class="l">{t('youShort')}</span>
+            <span class="v num pos">{fmtNum(d.score[0])}</span>
+          </div>
+          <div class="row">
+            <span class="l">{t('enemy')}</span>
+            <span class="v num neg">{fmtNum(d.score[1])}</span>
+          </div>
+          <div class="note">{t('dayScoreNote')}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Abre su desglose al pasar el raton (CSS) o al tocarlo (pantallas tactiles). */
+function useTipToggle(): [boolean, () => void, () => void] {
+  const [open, setOpen] = useState(false);
+  return [open, () => setOpen((o) => !o), () => setOpen(false)];
+}
+
 function TopBar({ s }: { s: UIState }) {
   const a = ui.actions;
   const mine = s.turn === 'player';
+  const [fundsOpen, toggleFunds, closeFunds] = useTipToggle();
+  const [dayOpen, toggleDay, closeDay] = useTipToggle();
   return (
     <div class="top">
-      <div class="px funds">
+      <div class={`px funds has-tip ${fundsOpen ? 'open' : ''}`} onClick={toggleFunds} onMouseLeave={closeFunds}>
         <Icon k="ui/dinero" alt="" cls="px-icon coin" />
         <div>
           <div class="amount num">{fmtNum(s.funds)}</div>
@@ -116,13 +237,15 @@ function TopBar({ s }: { s: UIState }) {
             ) : null}
           </div>
         </div>
+        {s.economy && <EconomyPanel e={s.economy} />}
       </div>
-      <div class="day">
+      <div class={`day has-tip ${dayOpen ? 'open' : ''}`} onClick={toggleDay} onMouseLeave={closeDay}>
         <span class="d">
           {t('day')} {s.day}
           {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
         </span>
         <span class={`t ${mine ? '' : 'enemy'}`}>{mine ? t('yourTurn') : t('enemyTurn')}</span>
+        {s.dayInfo && <DayPanel d={s.dayInfo} />}
       </div>
       <div class="spacer" />
       <button tabIndex={-1} type="button" class="px-btn end" disabled={!mine || s.busy} onMouseDown={noFocus} onClick={() => a.endTurn()}>
@@ -258,6 +381,56 @@ function Blocks({ life, team }: { life: number; team: 0 | 1 }) {
   );
 }
 
+/** Un lado del panel de combate: retrato, papel en el combate, vida que baja y acierto. */
+function CombatSide({ c, counter, align }: { c: CombatSideVM; counter: boolean; align: 'left' | 'right' }) {
+  const role = c.role === 'attacker' ? t('combatAttacks') : counter ? t('combatCounter') : t('combatDefends');
+  const tone = c.team === 0 ? 'blue' : 'red';
+  return (
+    <div class={`px combat-side ${tone} ${align}${c.ko ? ' ko' : ''}`}>
+      <div class="cs-head">
+        <span class="cs-portrait">
+          <Icon k={c.icon} alt={c.name} cls="px-icon" />
+          {c.ko && <span class="cs-ko">{t('combatKO')}</span>}
+        </span>
+        <div class="cs-info">
+          <span class="cs-name">
+            {c.name}
+            {c.rank ? <span class="rank">{' ' + '★'.repeat(c.rank)}</span> : null}
+          </span>
+          <span class={`cs-role ${c.role}`}>{role}</span>
+          {c.hit !== null && (
+            <span class="muted cs-hit">
+              {t('combatHit')} {pct(c.hit)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div class="cs-life" title={t('hp')}>
+        <div class="cs-bar" aria-hidden="true">
+          <span class="trail" style={{ width: `${c.life}%` }} />
+          <span class="fill" style={{ width: `${c.life}%` }} />
+        </div>
+        <span class="cs-v num">{c.life}</span>
+        {/* Hueco fijo para el daño: que la barra no cambie de ancho cuando aparece. */}
+        <span key={c.hurt ?? 'none'} class={`cs-hurt${c.hurt === 0 ? ' miss' : ''}`}>
+          {c.hurt === null ? '' : c.hurt > 0 ? `-${c.hurt}` : t('fxMiss')}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Panel de combate: abajo en el centro mientras se anima un ataque (ver CombatVM). */
+function CombatPanel({ c }: { c: CombatVM }) {
+  return (
+    <div key={c.id} class={`combat stage-${c.stage}`} role="status" aria-live="polite" aria-label={t('combat')}>
+      <CombatSide c={c.left} counter={c.counter} align="left" />
+      <span class="combat-vs">VS</span>
+      <CombatSide c={c.right} counter={c.counter} align="right" />
+    </div>
+  );
+}
+
 function UnitCard({ u }: { u: UnitVM }) {
   return (
     <div class="px unitcard">
@@ -300,6 +473,16 @@ function UnitCard({ u }: { u: UnitVM }) {
         <span class="muted" style={{ fontSize: 13 }}>
           {u.cargo}
         </span>
+      )}
+      {u.abilities && u.abilities.length > 0 && (
+        <ul class="abilities" aria-label={t('abilities')}>
+          {u.abilities.map((a) => (
+            <li title={a.desc}>
+              <span class="gold">{a.name}</span>
+              <span class="muted">{a.desc}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -521,6 +704,7 @@ function GameHud({ s }: { s: UIState }) {
       </div>
       {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}
+      {s.combat && <CombatPanel c={s.combat} />}
       {s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu m={s.menu} />)}
     </>
   );

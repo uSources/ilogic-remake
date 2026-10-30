@@ -13,6 +13,22 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-10-30 · equilibrio (Tanque e infanteria) + compras de la IA · ACEPTADO (PR del usuario)
+
+Cambio: (1) `src/core/ai.ts` `produce`: Fabrica y Aeropuerto en orden al azar (antes el Aeropuerto siempre
+primero); (2) `POWER` Tanque → infanteria 0.3 → 0.6 (Bazuca 0.45), infanteria ligera → Tanque 0.1 → 0.05,
+Mortero → Tanque 0.4 → 0.2; (3) `POWER` Soldado → vehiculos a 0.1-0.2 (Artilleria 0.05). En `units.json`.
+Hipotesis: con puntos de mando el Tanque casi no se compraba (0.3 %) y en cuerpo a cuerpo perdia contra
+la infanteria barata.
+Resultado (120 partidas 32x32; la linea base de 66.4 era de antes de los puntos de mando, sobre `main`
+la nota real era **61.8**): 61.8 → 65.6 (compras) → 65.7 (Tanque) → **66.4** (Soldado). Precios 6.8 → 11.4
+(ajuste 45 % → 76 %), lados 58/42 → 55/45 (ruido), remontadas y variedad enteras. Tanques 21 → 129,
+Tanque 0.87 por cada 1 (en la banda), Soldado 3.20x → 2.22x, aviones 36 % → 12 % de las compras.
+Descartado: ahorrar dos turnos (`funds + 2 x ingresos`): 65.1, ahorra para aviones (Tanques 38).
+Conclusion: el "Tanque rinde poco" de antes era sobre todo de la IA (no lo compraba), no del precio.
+Siguiente: Soldado aun 2.2x; Escudero/Motorizado contra vehiculos o la infanteria barata junta.
+Detalle: `balance/reports/tanques-vs-infanteria.md`.
+
 ## 2026-10-30 · reglas (combustible y municion) · ACEPTADO (por el usuario)
 
 Cambio: fuera combustible, municion, repostaje y aviones que caen; Suministros pasa a reparar 20 a los

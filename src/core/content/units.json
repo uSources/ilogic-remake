@@ -17,20 +17,20 @@
         "range": [1, 1],
         "hitChance": {
           "Soldier": 0.5,
-          "Tank": 0.1,
-          "Artillery": 0.1,
-          "Car": 0.3,
-          "LTank": 0.15,
+          "Tank": 0.05,
+          "Artillery": 0.05,
+          "Car": 0.2,
+          "LTank": 0.1,
           "Blocker": 0.05,
           "BSoldier": 0.5,
-          "Transport": 0.2,
+          "Transport": 0.1,
           "SSoldier": 0.3,
-          "Missile_truck": 0.2,
-          "Supplier": 0.2,
-          "Antiair": 0.15,
+          "Missile_truck": 0.1,
+          "Supplier": 0.1,
+          "Antiair": 0.1,
           "MSoldier": 0.5,
           "FSoldier": 0.5,
-          "WTank": 0.15
+          "WTank": 0.1
         }
       },
       "builtAt": ["City"],
@@ -59,20 +59,20 @@
       "attack": {
         "range": [1, 2],
         "hitChance": {
-          "Soldier": 0.3,
+          "Soldier": 0.6,
           "Tank": 0.5,
           "Artillery": 0.5,
           "Car": 0.7,
           "LTank": 0.5,
           "Blocker": 0.3,
-          "BSoldier": 0.3,
+          "BSoldier": 0.45,
           "Transport": 0.7,
-          "SSoldier": 0.3,
+          "SSoldier": 0.6,
           "Missile_truck": 0.7,
           "Supplier": 0.7,
           "Antiair": 0.5,
-          "MSoldier": 0.3,
-          "FSoldier": 0.3,
+          "MSoldier": 0.6,
+          "FSoldier": 0.6,
           "WTank": 0.7
         }
       },
@@ -225,6 +225,12 @@
       "movement": "vehicle",
       "captures": false,
       "attack": null,
+      "abilities": [
+        {
+          "kind": "zoneOfControl",
+          "stops": ["foot", "vehicle", "amphibious"]
+        }
+      ],
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
       "classicSprite": {
@@ -327,7 +333,7 @@
         "range": [1, 1],
         "hitChance": {
           "Soldier": 0.5,
-          "Tank": 0.1,
+          "Tank": 0.05,
           "Artillery": 0.1,
           "Car": 0.3,
           "LTank": 0.15,
@@ -343,6 +349,12 @@
           "WTank": 0.15
         }
       },
+      "abilities": [
+        {
+          "kind": "guard",
+          "factor": 0.5
+        }
+      ],
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
       "classicSprite": {
@@ -510,6 +522,13 @@
       "movement": "vehicle",
       "captures": false,
       "attack": null,
+      "abilities": [
+        {
+          "kind": "aura",
+          "radius": 1,
+          "defense": 0.9
+        }
+      ],
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
       "classicSprite": {
@@ -612,7 +631,7 @@
         "range": [2, 3],
         "hitChance": {
           "Soldier": 0.4,
-          "Tank": 0.4,
+          "Tank": 0.2,
           "Artillery": 0.4,
           "Car": 0.6,
           "LTank": 0.5,
@@ -628,6 +647,12 @@
           "WTank": 0.5
         }
       },
+      "abilities": [
+        {
+          "kind": "piercing",
+          "ignoreCover": 1
+        }
+      ],
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
       "classicSprite": {
@@ -655,7 +680,7 @@
         "range": [1, 1],
         "hitChance": {
           "Soldier": 0.5,
-          "Tank": 0.1,
+          "Tank": 0.05,
           "Artillery": 0.1,
           "Car": 0.3,
           "LTank": 0.15,
