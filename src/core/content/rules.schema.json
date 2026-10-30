@@ -28,7 +28,8 @@
         "passAllies",
         "ambush",
         "forestHides",
-        "terrainCost"
+        "terrainCost",
+        "abilities"
       ],
       "properties": {
         "initialFunds": {
@@ -111,6 +112,10 @@
           "type": "boolean",
           "minimum": 0,
           "description": "Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1)."
+        },
+        "abilities": {
+          "type": "boolean",
+          "description": "Habilidades de las unidades (units.json, \"abilities\"): escudo, zona de control, aura, perforante."
         }
       }
     },

@@ -3,9 +3,9 @@
 // src/core/content/*.json (ver docs/CONTENIDO.md) y aqui se convierten en las tablas de siempre.
 // Correcciones respecto al original: tabla "poder" (filas 0, 8 y 17 desalineadas),
 // fila 18 de "unitHeals" (faltaba) y fila 2 de PROBS_PER_ADJ (sobraba un valor).
-import { loadContent, MoveType, TERRAIN_NAMES, TerrainType, type RulesConfig } from './content';
+import { loadContent, MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef, type RulesConfig } from './content';
 
-export { MoveType, TerrainType, TERRAIN_NAMES, type RulesConfig };
+export { MoveType, TerrainType, TERRAIN_NAMES, type AbilityDef, type RulesConfig };
 
 const { content, tables: T } = loadContent();
 
@@ -42,6 +42,8 @@ export const UNIT_HEALS: readonly (readonly number[])[] = T.UNIT_HEALS;
 export const UNIT_SUPPORT: readonly boolean[] = T.UNIT_SUPPORT;
 /** Nombre de las imagenes de cada unidad: el suyo o, mientras no tenga dibujo, el de `art`. */
 export const UNIT_ART: readonly string[] = T.UNIT_ART;
+/** [unidad]: habilidades (abilities); solo cuentan con la regla abilities. Ver core/abilities.ts. */
+export const UNIT_ABILITIES = T.UNIT_ABILITIES;
 
 // ---- Edificios (buildings.json) ----
 

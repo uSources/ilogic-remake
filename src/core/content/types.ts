@@ -55,6 +55,25 @@ export const TerrainType = {
 } as const;
 export type TerrainType = (typeof TerrainType)[keyof typeof TerrainType];
 
+/** Clases de habilidad que entiende el juego. Cada una tiene sus numeros en el JSON. */
+export const ABILITY_KINDS = ['guard', 'zoneOfControl', 'aura', 'piercing'] as const;
+export type AbilityKind = (typeof ABILITY_KINDS)[number];
+
+/**
+ * Habilidad pasiva de una unidad (units.json, "abilities"). Siempre esta activa; no es una orden.
+ * - guard: los ataques a distancia (alcance minimo > 1) contra ella aciertan `factor` veces (0.5 = la mitad).
+ * - zoneOfControl: los enemigos con un movimiento de `stops` que entran en una casilla de al lado se
+ *   tienen que parar ahi (pueden salir el turno siguiente). Solo cuenta si la ven.
+ * - aura: a las unidades propias a `radius` casillas o menos les aciertan `defense` veces (no se suma
+ *   con otras auras: cuenta la mejor). A ella misma no.
+ * - piercing: ignora esa parte (0..1) de la proteccion del terreno y del edificio del objetivo.
+ */
+export type AbilityDef =
+  | { kind: 'guard'; factor: number }
+  | { kind: 'zoneOfControl'; stops: MovementName[] }
+  | { kind: 'aura'; radius: number; defense: number }
+  | { kind: 'piercing'; ignoreCover: number };
+
 export interface UnitDef {
   /** Nombre interno (en ingles, sin espacios). Las imagenes son u/b_<id>.png, u/r_<id>.png... */
   id: string;
@@ -83,6 +102,8 @@ export interface UnitDef {
   art?: string;
   /** Graficos de 2013: prefijo de la imagen segun el terreno ("1_" en agua, "2_" en nieve). */
   classicSprite?: Record<string, string>;
+  /** Habilidades pasivas (regla abilities): ver AbilityDef y docs/CONTENIDO.md. */
+  abilities?: AbilityDef[];
   /** Pistas para la IA. support: no combate (compra como mucho una a la vez). */
   ai?: { support?: boolean };
   /** Comentario libre (diseño, por que tiene estos numeros). */

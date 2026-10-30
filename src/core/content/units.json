@@ -225,6 +225,12 @@
       "movement": "vehicle",
       "captures": false,
       "attack": null,
+      "abilities": [
+        {
+          "kind": "zoneOfControl",
+          "stops": ["foot", "vehicle", "amphibious"]
+        }
+      ],
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
       "classicSprite": {
@@ -343,6 +349,12 @@
           "WTank": 0.15
         }
       },
+      "abilities": [
+        {
+          "kind": "guard",
+          "factor": 0.5
+        }
+      ],
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
       "classicSprite": {
@@ -510,6 +522,13 @@
       "movement": "vehicle",
       "captures": false,
       "attack": null,
+      "abilities": [
+        {
+          "kind": "aura",
+          "radius": 1,
+          "defense": 0.9
+        }
+      ],
       "builtAt": ["Factory"],
       "repairedAt": ["Factory"],
       "classicSprite": {
@@ -628,6 +647,12 @@
           "WTank": 0.5
         }
       },
+      "abilities": [
+        {
+          "kind": "piercing",
+          "ignoreCover": 1
+        }
+      ],
       "builtAt": ["City"],
       "repairedAt": ["City", "Stronghold", "Base"],
       "classicSprite": {

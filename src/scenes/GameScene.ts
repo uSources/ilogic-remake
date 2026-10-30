@@ -85,7 +85,7 @@ import { MapView, type HighlightKind } from '../ui/mapView';
 import { blink, burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
-import { buyBlockedText, captureHintText, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
+import { abilitiesVM, buyBlockedText, captureHintText, forecastVM, minimapVM, tileVM, unitStatsText } from '../ui/hudModels';
 import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
@@ -740,6 +740,9 @@ export class GameScene extends Phaser.Scene {
             detail:
               `${unitStatsText(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
               (RULES.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[o.type]}`) +
+              abilitiesVM(o.type)
+                .map((a) => ` · ${a.name}`)
+                .join('') +
               (o.blocked ? ` · ${buyBlockedText(o.blocked)}` : ''),
           })),
         ];

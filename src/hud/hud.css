@@ -1171,6 +1171,20 @@ body {
   font-size: 13px;
   letter-spacing: 1px;
 }
+.unitcard .abilities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.unitcard .abilities li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
 
 /* Campaña */
 .campaign {
