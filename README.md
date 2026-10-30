@@ -237,7 +237,7 @@ Para sacar una version:
    `<!-- en -->`) y se borran sus marcas: con marcas la Release no sale;
 2. subir `version` en `package.json` y convertir `[Sin publicar]` en `## [x.y.z] - AAAA-MM-DD — Titulo`;
    `npm run release` enseña como quedaran las notas;
-3. commit (`🔖 Version x.y.z`) y push a `main`. GitHub (`.github/workflows/release.yml`) pasa los tests, compila el juego
+3. commit (`🔖 Version x.y.z`) y PR a `main` (al fusionarla). GitHub (`.github/workflows/release.yml`) pasa los tests, compila el juego
    y publica la Release `vx.y.z` con esas notas e `ilogic.html` adjunto. Si esa version ya estaba
    publicada, solo pone al dia sus notas (para corregir una errata basta con cambiar el CHANGELOG).
 
