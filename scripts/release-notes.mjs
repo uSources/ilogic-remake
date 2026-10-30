@@ -17,6 +17,11 @@ export function releaseNotes(version) {
     .join('\n')
     .trim();
   if (!body) throw new Error(`El apartado ${version} del CHANGELOG esta vacio`);
+  // npm run notes deja un borrador marcado: no se publica sin reescribirlo para el jugador.
+  if (body.includes('<!-- borrador') || body.includes('(traducir)'))
+    throw new Error(
+      `El apartado ${version} del CHANGELOG aun tiene el borrador de npm run notes: reescribirlo, traducirlo y quitar las marcas`,
+    );
   return { title, body, name: title ? `v${version} — ${title}` : `v${version}` };
 }
 

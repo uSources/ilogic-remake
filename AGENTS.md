@@ -33,7 +33,7 @@ npm run fuzz                # cazador de fallos (invariantes con jugadas al azar
 - Probar en el navegador solo por `file://` (`dist-single/ilogic.html`); nunca `vite preview` ni servidores.
 - Retro Diffusion y cualquier servicio de pago: nunca sin permiso explicito; claves nunca en el repo.
 - Cambios de reglas/IA: revisar `tests/aiGolden.test.ts`; cambios visuales: `npm run shots`.
-- Commits pequeños, en español, explicando el porque.
+- Commits pequeños con gitmoji (`✨ Asunto`, ver `docs/COMMITS.md`), en español, explicando el porque.
 
 ## Documentacion
 

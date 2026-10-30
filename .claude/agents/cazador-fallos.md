@@ -23,7 +23,7 @@ Proceso:
    es correcto y actualiza con `-u`. `npm run check`.
 5. Apunta en `improve/DIARIO.md` las semillas buscadas y lo encontrado (aunque sea nada). Si añades
    invariantes nuevos utiles, mejor.
-6. Commit por fallo: `Fallo: <que pasaba> (fuzz semilla N)`.
+6. Commit por fallo: `🐛 <que pasaba> (fuzz semilla N)` (formato en `docs/COMMITS.md`).
 
 Nunca: quitar o relajar invariantes para que pase sin explicarlo, borrar tests, usar servicios de pago.
 

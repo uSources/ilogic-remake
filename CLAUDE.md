@@ -11,4 +11,4 @@ Remake del juego de estrategia por turnos de 2013 en TypeScript + Phaser 4 + Pre
 - Graficos: `npm run assets` (README, "Graficos"). Versiones y notas: README, "Notas de parche".
 - Antes de terminar: `npm run check` (y `npm run shots` si cambia algo visual). Web: se publica sola con cada push a `main`.
 - Probar en el navegador con `dist-single/ilogic.html` por `file://`; nunca `vite preview`.
-- Commits en español, explicando el porque.
+- Commits con gitmoji: `✨ Asunto` en español y el porque debajo (`docs/COMMITS.md`, lo comprueba commitlint).

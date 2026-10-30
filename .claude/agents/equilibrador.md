@@ -25,7 +25,7 @@ Proceso:
 5. Si se acepta: `npx vitest run -u tests/aiGolden.test.ts` (las partidas de referencia cambian, es lo
    esperado), `npm run metrics -- --save-baseline`, entrada ACEPTADO en el diario y en `CHANGELOG.md`
    (apartado "Sin publicar" arriba, si no existe crealo como `## [Sin publicar]`), `npm run check`.
-6. Commit en tu rama: `Equilibrio: <cambio> (nota X → Y)`.
+6. Commit en tu rama: `⚖️ <cambio> (nota X → Y)` (formato en `docs/COMMITS.md`).
 
 Nunca: tocar tests para que pasen, relajar invariantes, cambiar mas de una cosa por commit, usar
 servicios de pago, tocar `.github/` o secretos.

@@ -24,7 +24,7 @@ Proceso:
    y prueba otra idea (como mucho 3 intentos).
 5. Si gana: `npm run arena -- --snapshot` (nueva referencia), `npm run metrics -- --save-baseline`,
    `npx vitest run -u tests/aiGolden.test.ts`, entrada ACEPTADO en el diario, `CHANGELOG.md` (apartado
-   `## [Sin publicar]`), `npm run check`. Commit: `IA: <mejora> (arena X %, nota A → B)`.
+   `## [Sin publicar]`), `npm run check`. Commit: `⚖️ IA: <mejora> (arena X %, nota A → B)` (formato en `docs/COMMITS.md`).
 
 Nunca: hacer trampas (que la IA vea a traves de la niebla o rompa reglas), cambiar las reglas del
 juego para que la IA gane, tocar tests para que pasen, usar servicios de pago, tocar `.github/`.

@@ -205,6 +205,12 @@ Para activarlo (una vez): instalar la app de Claude (https://github.com/apps/cla
 (planes Pro/Max: `claude setup-token` en tu ordenador) o `ANTHROPIC_API_KEY`. Sin secreto no hacen
 nada. `.github/workflows/visual.yml` pasa las capturas en cada PR y deja el informe como artefacto.
 
+## Commits
+
+Con [gitmoji](https://gitmoji.dev): `✨ Asunto` en español y el porque debajo. El emoji dice que es
+(✨ novedad, 🐛 arreglo, ⚖️ equilibrio, 📝 docs...) y decide si sale en las notas de parche. Lo
+comprueba commitlint al hacer commit y en cada PR. Lista y reglas: [docs/COMMITS.md](docs/COMMITS.md).
+
 ## Notas de parche
 
 El menu tiene **Novedades**: las notas de cada version, sacadas de las Releases de GitHub del repo
@@ -214,10 +220,13 @@ que la que se juega, el panel lo dice y enlaza la descarga.
 
 Para sacar una version:
 
-1. subir `version` en `package.json` y escribir su apartado en `CHANGELOG.md`
-   (`## [x.y.z] - AAAA-MM-DD — Titulo`; el texto en ingles despues de `<!-- en -->`);
+1. `npm run notes -- --write` escribe en `CHANGELOG.md` (`[Sin publicar]`) un borrador con los commits
+   desde la version anterior, agrupados por su emoji (✨ Novedades, ⚖️ Equilibrio, 🐛 Arreglos...; ver
+   [docs/COMMITS.md](docs/COMMITS.md)). Se reescribe para el jugador, se traduce (el ingles despues de
+   `<!-- en -->`) y se borran sus marcas: con marcas la Release no sale;
+2. subir `version` en `package.json` y convertir `[Sin publicar]` en `## [x.y.z] - AAAA-MM-DD — Titulo`;
    `npm run release` enseña como quedaran las notas;
-2. commit y push a `main`. GitHub (`.github/workflows/release.yml`) pasa los tests, compila el juego
+3. commit (`🔖 Version x.y.z`) y push a `main`. GitHub (`.github/workflows/release.yml`) pasa los tests, compila el juego
    y publica la Release `vx.y.z` con esas notas e `ilogic.html` adjunto. Si esa version ya estaba
    publicada, solo pone al dia sus notas (para corregir una errata basta con cambiar el CHANGELOG).
 

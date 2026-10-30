@@ -1,0 +1,3 @@
+#!/bin/sh
+# Comprueba el mensaje del commit (gitmoji, ver docs/COMMITS.md). Se activa con npm install (prepare).
+exec npx --no -- commitlint --edit "$1"
