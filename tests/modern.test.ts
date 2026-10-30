@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_RULES, RULES, useRules } from '@core/data';
 import { seededRng } from '@core/geom';
-import { attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
+import { attackEvent, attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,
@@ -33,6 +33,35 @@ describe('reglas nuevas: combate', () => {
     const t2 = newUnit(s2, TANK, 0, 10, 10);
     const art2 = newUnit(s2, ARTILLERY, 1, 10, 11);
     expect(attackFull(s2, t2, art2, seededRng(1)).counter).toBe(0);
+  });
+
+  it('el evento de ataque guarda como estaban las unidades antes del combate', () => {
+    const s = blankState();
+    const a = newUnit(s, TANK, 0, 10, 10);
+    const d = newUnit(s, TANK, 1, 10, 11);
+    d.life = 80;
+    const ev = attackEvent(s, a, d, seededRng(2));
+    expect(ev.combat).toMatchObject({ attackerType: TANK, defenderType: TANK, attackerTeam: 0, attackerLife: 100, defenderLife: 80 });
+    expect(ev.target).toEqual({ x: 10, y: 11 });
+    expect(ev.combat!.hit).toBeGreaterThan(0);
+    expect(ev.combat!.counterHit).not.toBeNull();
+    // Las vidas de despues salen de las de antes menos el daño.
+    expect(d.life).toBe(80 - ev.damage);
+    expect(a.life).toBe(100 - ev.counter!);
+  });
+
+  it('sin contraataque si el defensor cae o es de distancia', () => {
+    const s = blankState();
+    const a = newUnit(s, TANK, 0, 10, 10);
+    const d = newUnit(s, SOLDIER, 1, 10, 11);
+    d.life = 1;
+    const ev = attackEvent(s, a, d, seededRng(1));
+    expect(ev.killed).toBe(true);
+    expect(ev.combat!.counterHit).toBeNull();
+    const s2 = blankState();
+    const art = newUnit(s2, ARTILLERY, 0, 10, 10);
+    const t = newUnit(s2, TANK, 1, 10, 13);
+    expect(attackEvent(s2, art, t, seededRng(1)).combat!.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {
