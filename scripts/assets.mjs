@@ -21,6 +21,8 @@ const ART = [
   ['Muñecos de nieve', py, ['tools/art/rd_snowmen.py']],
   ['Laminas de costa', py, ['tools/art/build_blob.py']],
   ['Laminas de agua, olas, espuma y niebla', py, ['tools/art/build_sheets.py']],
+  ['Iconos de la interfaz', py, ['tools/art/build_icons.py']],
+  ['Letra Ilogic', py, ['tools/art/build_font.py']],
 ];
 const PACK = [
   ['Lista de imagenes', process.execPath, ['scripts/gen-assets.mjs']],

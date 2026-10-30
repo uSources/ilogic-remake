@@ -1137,6 +1137,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
+    this.view.cursorAttack = this.phase === 'attack';
     this.view.tick(time);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;
@@ -2139,10 +2140,10 @@ export class GameScene extends Phaser.Scene {
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
   private showReport(r: RoundReport): void {
     const mine = r.healed.filter((h) => h.team === 0);
-    const lines: ReportLineVM[] = [{ icon: 'currency', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
-    if (r.upkeep[0] > 0) lines.push({ icon: 'currency', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
+    const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     if (mine.length)
-      lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
+      lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     showReport(`${t('day')} ${this.s.day}`, lines);
     if (this.fastForward) return;
     mine.forEach((h, i) => {
