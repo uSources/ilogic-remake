@@ -13,6 +13,35 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-10-30 · equilibrio (precios), segunda ronda · DESCARTADO (3 intentos)
+
+Con la nota corregida (linea base 65.3: lados 25, duracion 0, terminan 0, remontadas 15, variedad 15,
+precios 10.3, ajuste 69 %). Pruebas rapidas de 80 partidas contra `base-80` (65.4, precios 10.4, ajuste 69 %).
+Cambios en `UNIT.cost` (`src/core/data.ts`), uno cada vez y deshechos.
+
+Medidas completas (120 partidas), los tres con las demas partes iguales (lados 25, remontadas 15, variedad 15):
+- Lanzamisiles 16000 → 10000: **65.3 → 66.0** (+0.7). Precios 10.3 → 11.0 (ajuste 69 → 74 %, en la banda
+  7 → 5). El Lanzamisiles pasa de 0.30x a 0.62x la mediana, pero el Antiaereo y el Motorizado salen por los bordes.
+- Bombardero 20000 → 13000: **65.3 → 66.0** (+0.7). Precios 10.3 → 11.0 (ajuste 73 %, en la banda 8). Bombardero
+  0.45x → dentro de la banda; lados 49/51.
+- Lanzamisiles 16000 → 11000: **65.3 → 66.0** (+0.7). Precios 10.3 → 11.0 (ajuste 73 %). Lanzamisiles 0.52x.
+Solo pruebas rapidas (80 partidas; base-80 precios 10.4):
+- Soldado 1500 → 2000 (repetido con la nota nueva): lados 52/48, ya no resta (25/25), pero precios 10.4 → 10.4.
+  El Soldado baja a 2.77x, y la Bazuca (2.02 → 2.33x) y el Escudero (1.96 → 2.40x) suben.
+- Soldado 1500 → 3000: lados 50/50, precios 10.7. El Soldado **entra** en la banda (1.59x), pero Bazuca 2.55x,
+  Escudero 2.61x y Mortero 2.02x se alejan.
+- Lanzamisiles 8000: precios 10.9 (8 en la banda, pero Tanque y Tanque anfibio bajan). Tanque anfibio 10000: 10.6.
+Conclusion:
+- Ninguno llega al +1.0: con 15 unidades, arreglar una sola vale como mucho 1 punto de precios, y al moverla
+  las vecinas en el borde de la banda se mueven tambien. Tres precios distintos dieron exactamente +0.7: la
+  ganancia es real (sale igual en 80 y 120 partidas) pero pequeña. Con el criterio actual (+1.0 por cambio)
+  un solo precio no basta; o se baja el umbral para precios, o se acepta un paquete de dos precios medido junto.
+- Mejores candidatos si se aflojara: Bombardero 13000 (8 en la banda, sin efectos raros) y Lanzamisiles 10000-11000.
+- El Soldado ya no desequilibra los bandos con la nota nueva (52/48 a 2000, 50/50 a 3000): el aviso del
+  intento viejo era ruido. Pero encarecerlo pasa su ventaja a la Bazuca, el Escudero y el Mortero, que rinden
+  tanto porque matan Soldados: si el Soldado vale mas, matarlo vale mas. Hay que mover la infanteria de 2500
+  junto con el Soldado (o tocar su `POWER` contra infanteria), no el Soldado solo.
+
 ## 2026-10-30 · revision de la medida · ACEPTADO (herramienta) / Tanque RETIRADO
 
 Cambio: la nota (`tools/improve/metrics.ts`) media mal dos cosas, y el Tanque a 9500 se retira.
