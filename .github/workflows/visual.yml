@@ -28,6 +28,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run shots
+      # Gestos con el dedo en una pantalla de movil (mover con dos toques, atacar, comprar, arrastrar).
+      - run: node tests/visual/touch.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

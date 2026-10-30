@@ -10,6 +10,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ## [Sin publicar]
 
 ### Interfaz
+- **Mover con el dedo en dos toques:** toca tu unidad y luego adónde ir; si no hay nada más que hacer, espera sola (antes eran cuatro toques y el menú). Para atacar, toca el enemigo dos veces: la primera enseña la previsión. También se puede arrastrar la unidad sin mantener pulsado, y tocar una fábrica libre abre la compra al momento.
 - En el móvil, la **bandeja de unidades sin mover** y las **fichas de unidad y terreno** se pliegan y despliegan tocándolas, para dejar más mapa a la vista.
 
 ### Arreglos
@@ -19,6 +20,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 <!-- en -->
 
 ### Interface
+- **Move with your finger in two taps:** tap your unit, then where to go; if there is nothing else to do, it waits on its own (it used to take four taps and the menu). To attack, tap the enemy twice: the first tap shows the forecast. You can also drag a unit without holding first, and tapping a free factory opens the shop right away.
 - On phones, the **unmoved units tray** and the **unit and terrain cards** fold and unfold with a tap, leaving more of the map in view.
 
 ### Fixes
