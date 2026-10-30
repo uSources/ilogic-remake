@@ -17,7 +17,7 @@
         "range": [1, 1],
         "hitChance": {
           "Soldier": 0.5,
-          "Tank": 0.1,
+          "Tank": 0.05,
           "Artillery": 0.1,
           "Car": 0.3,
           "LTank": 0.15,
@@ -59,20 +59,20 @@
       "attack": {
         "range": [1, 2],
         "hitChance": {
-          "Soldier": 0.3,
+          "Soldier": 0.6,
           "Tank": 0.5,
           "Artillery": 0.5,
           "Car": 0.7,
           "LTank": 0.5,
           "Blocker": 0.3,
-          "BSoldier": 0.3,
+          "BSoldier": 0.45,
           "Transport": 0.7,
-          "SSoldier": 0.3,
+          "SSoldier": 0.6,
           "Missile_truck": 0.7,
           "Supplier": 0.7,
           "Antiair": 0.5,
-          "MSoldier": 0.3,
-          "FSoldier": 0.3,
+          "MSoldier": 0.6,
+          "FSoldier": 0.6,
           "WTank": 0.7
         }
       },
@@ -327,7 +327,7 @@
         "range": [1, 1],
         "hitChance": {
           "Soldier": 0.5,
-          "Tank": 0.1,
+          "Tank": 0.05,
           "Artillery": 0.1,
           "Car": 0.3,
           "LTank": 0.15,
@@ -612,7 +612,7 @@
         "range": [2, 3],
         "hitChance": {
           "Soldier": 0.4,
-          "Tank": 0.4,
+          "Tank": 0.2,
           "Artillery": 0.4,
           "Car": 0.6,
           "LTank": 0.5,
@@ -655,7 +655,7 @@
         "range": [1, 1],
         "hitChance": {
           "Soldier": 0.5,
-          "Tank": 0.1,
+          "Tank": 0.05,
           "Artillery": 0.1,
           "Car": 0.3,
           "LTank": 0.15,
