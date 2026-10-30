@@ -1,6 +1,10 @@
-# Preview de cada PR en GitHub Pages: https://usources.github.io/ilogic-remake/preview/<hash>/
+# Preview de una PR en GitHub Pages: https://usources.github.io/ilogic-remake/preview/<hash>/
+# Solo para las PR con la etiqueta "preview": se publica al ponerla, se pone al dia con cada push
+# mientras la tenga y se borra al quitarla o al cerrar la PR. Asi no se gastan minutos de Actions
+# compilando PR que no cambian nada que ver (documentacion, CI...).
+#
 # El hash sale de un secreto + el numero de la PR, asi la URL no se adivina probando pr-1, pr-2...
-# (es la misma en todos los pushes de la PR). Se borra al cerrar la PR.
+# (es la misma en todos los pushes de la PR).
 # Ojo: el repo es publico y la rama gh-pages tambien, asi que quien mire esa rama ve las carpetas.
 # El hash evita que se encuentre por casualidad, no es un control de acceso.
 # Secreto opcional PREVIEW_SALT (Settings → Secrets and variables → Actions); sin el, el hash sale
@@ -9,7 +13,7 @@ name: Preview
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [labeled, unlabeled, synchronize, reopened, closed]
 
 permissions:
   contents: write
@@ -23,11 +27,18 @@ concurrency:
 jobs:
   preview:
     # Las PR desde forks no tienen permiso para escribir en gh-pages.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository && (
+        ((github.event.action == 'labeled' || github.event.action == 'unlabeled') && github.event.label.name == 'preview') ||
+        ((github.event.action == 'synchronize' || github.event.action == 'reopened') && contains(github.event.pull_request.labels.*.name, 'preview')) ||
+        github.event.action == 'closed'
+      )
     runs-on: ubuntu-latest
     env:
       SALT: ${{ secrets.PREVIEW_SALT }}
       PR: ${{ github.event.pull_request.number }}
+      # publish = compilar y subir; remove = borrar la carpeta (PR cerrada o etiqueta quitada)
+      MODE: ${{ (github.event.action == 'closed' || github.event.action == 'unlabeled') && 'remove' || 'publish' }}
     steps:
       - id: hash
         run: |
@@ -35,27 +46,27 @@ jobs:
           echo "dir=preview/$h" >> "$GITHUB_OUTPUT"
           echo "url=https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/preview/$h/" >> "$GITHUB_OUTPUT"
 
-      - if: github.event.action != 'closed'
+      - if: env.MODE == 'publish'
         uses: actions/checkout@v5
-      - if: github.event.action != 'closed'
+      - if: env.MODE == 'publish'
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - if: github.event.action != 'closed'
+      - if: env.MODE == 'publish'
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: tools/art/requirements.txt
-      - if: github.event.action != 'closed'
+      - if: env.MODE == 'publish'
         run: python -m pip install -r tools/art/requirements.txt
-      - if: github.event.action != 'closed'
+      - if: env.MODE == 'publish'
         run: npm ci
-      # Sin npm run check: eso ya lo hace la revision de la PR; la preview tiene que salir aunque falle un test.
-      - if: github.event.action != 'closed'
+      # Sin npm run check: eso ya lo hace el workflow Tests; la preview sale aunque falle un test.
+      - if: env.MODE == 'publish'
         run: npm run build
-      - if: github.event.action != 'closed'
+      - if: env.MODE == 'publish'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
@@ -63,33 +74,35 @@ jobs:
           target-folder: ${{ steps.hash.outputs.dir }}
           commit-message: '🚀 Preview de la PR #${{ github.event.pull_request.number }}'
 
-      # Al cerrar la PR: quitar su carpeta.
-      - if: github.event.action == 'closed'
+      # Quitar la carpeta (si no la habia, no hace nada).
+      - if: env.MODE == 'remove'
         uses: actions/checkout@v5
         with:
           ref: gh-pages
-      - if: github.event.action == 'closed'
+      - id: remove
+        if: env.MODE == 'remove'
         env:
           DIR: ${{ steps.hash.outputs.dir }}
         run: |
-          [ -d "$DIR" ] || exit 0
+          if [ ! -d "$DIR" ]; then echo "had=0" >> "$GITHUB_OUTPUT"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm -rq "$DIR"
           git commit -m "🔥 Quitar la preview de la PR #$PR"
           git push
+          echo "had=1" >> "$GITHUB_OUTPUT"
 
       # Un solo comentario en la PR con el enlace, que se actualiza en cada push.
-      - uses: actions/github-script@v7
+      - if: env.MODE == 'publish' || steps.remove.outputs.had == '1'
+        uses: actions/github-script@v7
         env:
           URL: ${{ steps.hash.outputs.url }}
-          CLOSED: ${{ github.event.action == 'closed' }}
         with:
           script: |
             const mark = '<!-- ilogic-preview -->';
-            const body = process.env.CLOSED === 'true'
-              ? `${mark}\nPreview borrada al cerrar la PR.`
-              : `${mark}\n🎮 **Preview:** ${process.env.URL}\n\nCommit ${context.payload.pull_request.head.sha.slice(0, 7)}. Puede tardar un minuto en verse tras publicarse.`;
+            const body = process.env.MODE === 'remove'
+              ? `${mark}\nPreview borrada. Para volver a tenerla, pon la etiqueta \`preview\`.`
+              : `${mark}\n🎮 **Preview:** ${process.env.URL}\n\nCommit ${context.payload.pull_request.head.sha.slice(0, 7)}. Puede tardar un minuto en verse tras publicarse; se pone al día con cada push mientras la PR tenga la etiqueta \`preview\`.`;
             const { owner, repo } = context.repo;
             const issue_number = context.payload.pull_request.number;
             const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });

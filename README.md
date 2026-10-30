@@ -9,11 +9,12 @@ a partir de el, con vuestros graficos y vuestra musica originales.
 `.github/workflows/pages.yml`). Descargas para jugar sin conexion en
 [Releases](https://github.com/uSources/ilogic-remake/releases).
 
-**Previews:** cada PR se publica en su propia URL, `https://usources.github.io/ilogic-remake/preview/<hash>/`
-(`.github/workflows/preview.yml`); el enlace sale en un comentario de la PR y la carpeta se borra al
-cerrarla. La web y las previews salen de la rama `gh-pages` (Settings → Pages → Deploy from a branch →
-`gh-pages`). El hash usa el secreto opcional `PREVIEW_SALT`: con el, la URL no se puede calcular; aun
-asi la rama `gh-pages` es publica, asi que no es un control de acceso.
+**Previews:** las PR con la etiqueta `preview` se publican en su propia URL,
+`https://usources.github.io/ilogic-remake/preview/<hash>/` (`.github/workflows/preview.yml`). El enlace sale en
+un comentario de la PR, se pone al dia con cada push y la carpeta se borra al quitar la etiqueta o cerrar la PR.
+La web y las previews salen de la rama `gh-pages` (Settings → Pages → Deploy from a branch → `gh-pages`). El hash
+usa el secreto opcional `PREVIEW_SALT`: con el, la URL no se puede calcular; aun asi la rama `gh-pages` es publica,
+asi que no es un control de acceso.
 
 ## Requisitos
 
