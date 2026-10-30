@@ -87,6 +87,7 @@ import { WeatherFx } from '../ui/weatherFx';
 import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion, shot, targetMark, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
+import { mapTap, moveTap } from '../ui/touch';
 import {
   abilitiesVM,
   buyBlockedText,
@@ -198,7 +199,14 @@ export class GameScene extends Phaser.Scene {
   /** Casillas que bloquean el paso a la unidad elegida (enemigos que se ven). */
   private block: boolean[][] | null = null;
   /** Unidad cogida para arrastrar y soltar. */
-  private carry: { uid: number; ghost: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Rectangle; touch: boolean } | null = null;
+  private carry: {
+    uid: number;
+    ghost: Phaser.GameObjects.Image;
+    shadow: Phaser.GameObjects.Rectangle;
+    touch: boolean;
+    /** Cogida a proposito (raton, o dedo mantenido): soltar lejos da una orden de varios turnos. */
+    held: boolean;
+  } | null = null;
   /** Pulsacion sobre una unidad propia que aun no se sabe si es un clic o un arrastre. */
   private pick: { uid: number; x: number; y: number; touch: boolean; timer: Phaser.Time.TimerEvent | null } | null = null;
   /** Casillas que el enemigo visible puede atacar el turno siguiente (al mover) y alcance de ataque de la elegida. */
@@ -974,12 +982,11 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.pick) {
       const moved = Math.hypot(p.x - this.pick.x, p.y - this.pick.y) > DRAG_THRESHOLD * (window.devicePixelRatio || 1);
-      if (moved && !this.pick.touch) {
-        this.beginCarry();
+      // [CAMBIO] Tambien con el dedo: arrastrar desde la unidad la lleva, sin mantener pulsado antes.
+      if (moved) {
+        this.beginCarry(false);
         return this.carryTo(p);
       }
-      // Con el dedo, moverse antes de que la unidad se levante es desplazar el mapa.
-      if (moved && this.pick.touch) this.dropPick();
     }
     // Arrastrar el mapa.
     if (this.drag && p.isDown) {
@@ -1034,7 +1041,7 @@ export class GameScene extends Phaser.Scene {
     if (pickable && this.touches.size < 1) {
       this.pick = { uid: pu.uid, x: p.x, y: p.y, touch: p.wasTouch, timer: null };
       // Con el dedo hay que mantener pulsado un momento para levantarla.
-      if (p.wasTouch) this.pick.timer = this.time.delayedCall(250, () => this.beginCarry());
+      if (p.wasTouch) this.pick.timer = this.time.delayedCall(250, () => this.beginCarry(true));
     }
     if (p.wasTouch) {
       this.touchHint();
@@ -1141,16 +1148,63 @@ export class GameScene extends Phaser.Scene {
       this.moveCursorTo(tile, false);
       return void this.groupMove(tile);
     }
+    // Dedo, en el mapa o con una unidad elegida: un toque hace directamente lo logico (ver ui/touch.ts).
+    if (p.wasTouch && (this.phase === 'map' || this.phase === 'move')) return this.touchTap(tile);
     if (this.phase === 'move') {
       // Al mover, un clic es como soltar: en un enemigo, ataca; en un edificio, se mueve (y sale el menu).
-      if (p.wasTouch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
       this.moveCursorTo(tile, false);
       return void this.commit(tile, { wait: !!(p.event as MouseEvent | undefined)?.shiftKey });
     }
-    // Tactil: primer toque mueve el cursor, segundo toque confirma.
+    // Tactil, en el resto (elegir objetivo, descargar...): primer toque señala, segundo confirma.
     if (p.wasTouch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
     this.moveCursorTo(tile, false);
     this.accept();
+  }
+
+  /** Un toque con el dedo en el mapa (fases map y move). */
+  private touchTap(tile: Pos): void {
+    const u = unitAt(this.s, tile.x, tile.y);
+    const own = u && u.team === 0 && u.active && u.carrier === null ? u : null;
+    if (this.phase === 'move') {
+      const it = this.intentAt(tile);
+      const act = moveTap({
+        intent: it.kind,
+        atCursor: samePos(tile, this.view.cursor),
+        otherOwnActive: !!own && own.uid !== this.sel?.uid,
+      });
+      switch (act) {
+        case 'commit':
+          // Como soltar arrastrando: captura directamente, y espera sola si no hay nada mas que hacer.
+          this.moveCursorTo(tile, false);
+          return void this.commit(tile, { drop: true });
+        case 'preview':
+          return this.moveCursorTo(tile, false);
+        case 'reselect':
+          this.toMap();
+          this.view.cursor = { ...tile };
+          return this.selectUnit(own!);
+        case 'deselect':
+          this.toMap();
+          return this.moveCursorTo(tile, false);
+        default:
+          return;
+      }
+    }
+    const b = buildingAt(this.s, tile.x, tile.y);
+    const act = mapTap({
+      ownActive: !!own,
+      buyHere: !u && !!b && b.owner === 0 && canBuyAt(this.s, b),
+      visibleUnit: !!u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u)),
+      inspectingThis: !!u && u.uid === this.inspectUid,
+    });
+    this.moveCursorTo(tile, false);
+    if (act === 'point') {
+      if (this.inspectUid === null) return;
+      this.inspectUid = null;
+      return this.refresh();
+    }
+    if (this.group.size) this.group.clear();
+    this.acceptMap(tile);
   }
 
   override update(time: number, delta: number): void {
@@ -1585,8 +1639,12 @@ export class GameScene extends Phaser.Scene {
     showToast(t('undone'));
   }
 
-  /** Levantar la unidad de la pulsacion actual (arrastrar y soltar). */
-  private beginCarry(): void {
+  /**
+   * Levantar la unidad de la pulsacion actual (arrastrar y soltar). `held`: con el dedo, se ha
+   * mantenido pulsado antes de arrastrar (si no, el arrastre puede ser un desplazamiento del mapa
+   * que empezo sobre la unidad, y soltar lejos no le da una orden de varios turnos).
+   */
+  private beginCarry(held: boolean): void {
     const pick = this.pick;
     this.pick = null;
     if (!pick || this.ended || this.carry) return;
@@ -1608,7 +1666,7 @@ export class GameScene extends Phaser.Scene {
     this.view.addFx(shadow);
     const ghost = this.view.ghost(key, u);
     ghost.y -= 3;
-    this.carry = { uid: u.uid, ghost, shadow, touch: pick.touch };
+    this.carry = { uid: u.uid, ghost, shadow, touch: pick.touch, held: held || !pick.touch };
     this.hidden.add(u.uid);
     this.refresh();
   }
@@ -1641,6 +1699,7 @@ export class GameScene extends Phaser.Scene {
     // Soltar lejos, fuera del alcance, en una casilla a la que se puede llegar algun dia: orden de varios turnos.
     if (
       it.kind === 'none' &&
+      c.held &&
       tile &&
       this.sel &&
       !unitAt(this.s, tile.x, tile.y) &&
