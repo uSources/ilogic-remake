@@ -2,9 +2,9 @@
 
 ## Estado (30-10-2026)
 
-Sin empezar. El juego ya funciona con el dedo (tocar, mantener pulsado, pellizcar) y se instala como
-app (PWA, versión 0.4.0), pero jugar una partida entera en un móvil es incómodo: el mapa se ve poco,
-mover una unidad cuesta cuatro toques y varias pantallas se salen por los lados.
+En curso. Hechas: V0 (comprobación de lo que se sale de la pantalla: `npm run fuera`), V1 (que nada se
+corte) y la parte de V3 de mover con dos toques. Siguiente: V2 (más mapa). El juego ya funciona con el dedo
+y se instala como app (PWA, versión 0.4.0).
 
 ## Cómo está ahora
 

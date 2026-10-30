@@ -16,6 +16,10 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Arreglos
 - En el móvil, el **desglose del dinero y del día** se cierra al volver a tocarlo, y en horizontal ya no se sale de la pantalla (se desplaza dentro).
 - El icono de **visión** ya no se sale de la ficha de la unidad en pantallas estrechas.
+- En el móvil, la **ayuda** se lee en lista (cada control con su tecla) y no se corta por la derecha.
+- En pantallas táctiles no salen las teclas en los botones (solo el número del paso de una misión).
+- En horizontal bajo, las **tarjetas de inicio** van en fila y se deslizan; cada una se desplaza por dentro, sin cortarse.
+- Márgenes seguros para la muesca y la barra de gestos del móvil en la barra de arriba y en el inicio.
 
 <!-- en -->
 
@@ -26,6 +30,10 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Fixes
 - On phones, the **money and day breakdown** closes when tapped again, and in landscape it no longer runs off the screen (it scrolls inside).
 - The **vision** icon no longer sticks out of the unit card on narrow screens.
+- On phones, the **help** reads as a list (each control with its key) and no longer gets cut on the right.
+- On touch screens the keys on buttons are hidden (only the mission step number stays).
+- In short landscape, the **start cards** sit in a row you can slide; each one scrolls inside, nothing is cut.
+- Safe margins for the notch and the gesture bar on phones, in the top bar and on the start screen.
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 
