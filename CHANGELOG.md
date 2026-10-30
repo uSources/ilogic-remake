@@ -9,6 +9,10 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Cambios de juego
+- **Fuera el combustible y la munición.** Casi solo estorbaban: unidades paradas sin combustible, aviones que caían y unidades que no podían disparar. Ya no hay que volver a repostar ni a recargar.
+- El **camión de suministros** ahora **repara** 20 de vida a los vehículos y aviones de al lado (orden «Reparar»).
+
 ### Equilibrio
 - El **Bombardero** cuesta 13000 en vez de 20000 y el **Lanzamisiles** 11000 en vez de 16000: rendían mucho menos de lo que costaban.
 
@@ -16,6 +20,10 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - Las unidades y los edificios (precio, movimiento, daño contra cada unidad, quién los fabrica...) están ahora en ficheros de configuración (`src/core/content/units.json` y `buildings.json`), igual que el terreno (`terrain.json`), las reglas por defecto (`rules.json`) y los pesos de la IA (`ai.json`): se pueden cambiar o añadir sin tocar código. Una unidad nueva se crea con `npm run unit -- new <Id> --like <Parecida>`. Ver `docs/CONTENIDO.md`.
 
 <!-- en -->
+
+### Gameplay
+- **Fuel and ammo are gone.** They mostly got in the way: units stuck without fuel, aircraft crashing and units unable to fire. No more trips back to refuel or rearm.
+- The **supply truck** now **repairs** 20 health to adjacent vehicles and aircraft ("Repair" order).
 
 ### Balance
 - The **Bomber** now costs 13000 instead of 20000 and the **Missile truck** 11000 instead of 16000: they were worth much less than their price.
