@@ -1,0 +1,860 @@
+{
+  "$schema": "./units.schema.json",
+  "units": [
+    {
+      "id": "Soldier",
+      "name": {
+        "es": "Soldado",
+        "en": "Soldier"
+      },
+      "cost": 1500,
+      "move": 3,
+      "vision": 4,
+      "movement": "foot",
+      "fuel": {
+        "max": 0,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": true,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.5,
+          "Tank": 0.1,
+          "Artillery": 0.1,
+          "Car": 0.3,
+          "LTank": 0.15,
+          "Blocker": 0.05,
+          "BSoldier": 0.5,
+          "Transport": 0.2,
+          "SSoldier": 0.3,
+          "Missile_truck": 0.2,
+          "Supplier": 0.2,
+          "Antiair": 0.15,
+          "MSoldier": 0.5,
+          "FSoldier": 0.5,
+          "WTank": 0.15
+        }
+      },
+      "builtAt": ["City"],
+      "repairedAt": ["City", "Stronghold", "Base"],
+      "refueledAt": [],
+      "rearmedAt": [],
+      "classicSprite": {
+        "SWater": "1_",
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "Tank",
+      "name": {
+        "es": "Tanque",
+        "en": "Tank"
+      },
+      "cost": 12000,
+      "move": 5,
+      "vision": 6,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 50,
+        "perTurn": 0
+      },
+      "ammo": 5,
+      "captures": false,
+      "attack": {
+        "range": [1, 2],
+        "hitChance": {
+          "Soldier": 0.3,
+          "Tank": 0.5,
+          "Artillery": 0.5,
+          "Car": 0.7,
+          "LTank": 0.5,
+          "Blocker": 0.3,
+          "BSoldier": 0.3,
+          "Transport": 0.7,
+          "SSoldier": 0.3,
+          "Missile_truck": 0.7,
+          "Supplier": 0.7,
+          "Antiair": 0.5,
+          "MSoldier": 0.3,
+          "FSoldier": 0.3,
+          "WTank": 0.7
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "Artillery",
+      "name": {
+        "es": "Artillería",
+        "en": "Artillery"
+      },
+      "cost": 8000,
+      "move": 4,
+      "vision": 6,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 50,
+        "perTurn": 0
+      },
+      "ammo": 5,
+      "captures": false,
+      "attack": {
+        "range": [3, 5],
+        "hitChance": {
+          "Soldier": 0.3,
+          "Tank": 0.4,
+          "Artillery": 0.4,
+          "Car": 0.6,
+          "LTank": 0.5,
+          "Blocker": 0.25,
+          "BSoldier": 0.25,
+          "Transport": 0.6,
+          "SSoldier": 0.3,
+          "Missile_truck": 0.6,
+          "Supplier": 0.6,
+          "Antiair": 0.5,
+          "MSoldier": 0.3,
+          "FSoldier": 0.3,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "Car",
+      "name": {
+        "es": "Jeep",
+        "en": "Jeep"
+      },
+      "cost": 5000,
+      "move": 7,
+      "vision": 7,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 70,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": false,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.6,
+          "Tank": 0.1,
+          "Artillery": 0.1,
+          "Car": 0.3,
+          "LTank": 0.15,
+          "Blocker": 0.05,
+          "BSoldier": 0.6,
+          "Transport": 0.3,
+          "SSoldier": 0.15,
+          "Missile_truck": 0.3,
+          "Supplier": 0.3,
+          "Antiair": 0.15,
+          "MSoldier": 0.6,
+          "FSoldier": 0.6,
+          "WTank": 0.15
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": [],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "LTank",
+      "name": {
+        "es": "Tanque ligero",
+        "en": "Light tank"
+      },
+      "cost": 7000,
+      "move": 6,
+      "vision": 6,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 50,
+        "perTurn": 0
+      },
+      "ammo": 8,
+      "captures": false,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.4,
+          "Tank": 0.4,
+          "Artillery": 0.4,
+          "Car": 0.6,
+          "LTank": 0.5,
+          "Blocker": 0.2,
+          "BSoldier": 0.4,
+          "Transport": 0.6,
+          "SSoldier": 0.4,
+          "Missile_truck": 0.6,
+          "Supplier": 0.6,
+          "Antiair": 0.5,
+          "MSoldier": 0.4,
+          "FSoldier": 0.4,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "Blocker",
+      "name": {
+        "es": "Barricada",
+        "en": "Blocker"
+      },
+      "cost": 5000,
+      "move": 2,
+      "vision": 0,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 30,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": false,
+      "attack": null,
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": [],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      },
+      "ai": {
+        "support": true
+      }
+    },
+    {
+      "id": "BSoldier",
+      "name": {
+        "es": "Bazuca",
+        "en": "Bazooka"
+      },
+      "cost": 2500,
+      "move": 3,
+      "vision": 4,
+      "movement": "foot",
+      "fuel": {
+        "max": 0,
+        "perTurn": 0
+      },
+      "ammo": 5,
+      "captures": true,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.4,
+          "Tank": 0.4,
+          "Artillery": 0.4,
+          "Car": 0.6,
+          "LTank": 0.5,
+          "Blocker": 0.2,
+          "BSoldier": 0.4,
+          "Transport": 0.6,
+          "SSoldier": 0.4,
+          "Missile_truck": 0.6,
+          "Supplier": 0.6,
+          "Antiair": 0.5,
+          "MSoldier": 0.4,
+          "FSoldier": 0.4,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["City"],
+      "repairedAt": ["City", "Stronghold", "Base"],
+      "refueledAt": [],
+      "rearmedAt": ["City", "Stronghold", "Base"],
+      "classicSprite": {
+        "SWater": "1_",
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "Transport",
+      "name": {
+        "es": "Transporte",
+        "en": "Transport"
+      },
+      "cost": 8000,
+      "move": 6,
+      "vision": 6,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 50,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": false,
+      "attack": null,
+      "transport": {
+        "slots": 1,
+        "carries": ["Soldier", "BSoldier", "SSoldier", "MSoldier"]
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": [],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      },
+      "ai": {
+        "support": true
+      }
+    },
+    {
+      "id": "SSoldier",
+      "name": {
+        "es": "Escudero",
+        "en": "Shield trooper"
+      },
+      "cost": 2500,
+      "move": 3,
+      "vision": 4,
+      "movement": "foot",
+      "fuel": {
+        "max": 0,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": true,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.5,
+          "Tank": 0.1,
+          "Artillery": 0.1,
+          "Car": 0.3,
+          "LTank": 0.15,
+          "Blocker": 0.05,
+          "BSoldier": 0.5,
+          "Transport": 0.3,
+          "SSoldier": 0.15,
+          "Missile_truck": 0.3,
+          "Supplier": 0.3,
+          "Antiair": 0.15,
+          "MSoldier": 0.5,
+          "FSoldier": 0.5,
+          "WTank": 0.15
+        }
+      },
+      "builtAt": ["City"],
+      "repairedAt": ["City", "Stronghold", "Base"],
+      "refueledAt": [],
+      "rearmedAt": [],
+      "classicSprite": {
+        "SWater": "1_",
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "Missile_truck",
+      "name": {
+        "es": "Lanzamisiles",
+        "en": "Missile truck"
+      },
+      "cost": 11000,
+      "move": 3,
+      "vision": 4,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 45,
+        "perTurn": 0
+      },
+      "ammo": 3,
+      "captures": false,
+      "attack": {
+        "range": [5, 10],
+        "hitChance": {
+          "Soldier": 0.3,
+          "Tank": 0.5,
+          "Artillery": 0.5,
+          "Car": 0.7,
+          "LTank": 0.5,
+          "Blocker": 0.3,
+          "BSoldier": 0.3,
+          "Transport": 0.7,
+          "SSoldier": 0.3,
+          "Missile_truck": 0.7,
+          "Supplier": 0.7,
+          "Antiair": 0.5,
+          "MSoldier": 0.3,
+          "FSoldier": 0.3,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "LFighter",
+      "name": {
+        "es": "Caza ligero",
+        "en": "Light fighter"
+      },
+      "cost": 12000,
+      "move": 10,
+      "vision": 10,
+      "movement": "air",
+      "fuel": {
+        "max": 60,
+        "perTurn": 2
+      },
+      "ammo": 0,
+      "captures": false,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.6,
+          "Tank": 0.1,
+          "Artillery": 0.1,
+          "Car": 0.3,
+          "LTank": 0.15,
+          "Blocker": 0.05,
+          "BSoldier": 0.6,
+          "Transport": 0.3,
+          "SSoldier": 0.15,
+          "Missile_truck": 0.3,
+          "LFighter": 0.3,
+          "Fighter": 0.3,
+          "Bomber": 0.3,
+          "Supplier": 0.3,
+          "Antiair": 0.15,
+          "THelicopter": 0.4,
+          "MSoldier": 0.6,
+          "FSoldier": 0.6,
+          "WTank": 0.15
+        }
+      },
+      "builtAt": ["Airport"],
+      "repairedAt": ["Airport"],
+      "refueledAt": ["Airport"],
+      "rearmedAt": ["Airport"],
+      "classicSprite": {}
+    },
+    {
+      "id": "Fighter",
+      "name": {
+        "es": "Caza",
+        "en": "Fighter"
+      },
+      "cost": 20000,
+      "move": 9,
+      "vision": 10,
+      "movement": "air",
+      "fuel": {
+        "max": 80,
+        "perTurn": 2
+      },
+      "ammo": 6,
+      "captures": false,
+      "attack": {
+        "range": [1, 2],
+        "hitChance": {
+          "LFighter": 0.6,
+          "Fighter": 0.6,
+          "Bomber": 0.6,
+          "THelicopter": 0.8
+        }
+      },
+      "builtAt": ["Airport"],
+      "repairedAt": ["Airport"],
+      "refueledAt": ["Airport"],
+      "rearmedAt": ["Airport"],
+      "classicSprite": {}
+    },
+    {
+      "id": "Bomber",
+      "name": {
+        "es": "Bombardero",
+        "en": "Bomber"
+      },
+      "cost": 13000,
+      "move": 7,
+      "vision": 8,
+      "movement": "air",
+      "fuel": {
+        "max": 80,
+        "perTurn": 3
+      },
+      "ammo": 3,
+      "captures": false,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.3,
+          "Tank": 0.5,
+          "Artillery": 0.5,
+          "Car": 0.7,
+          "LTank": 0.5,
+          "Blocker": 0.3,
+          "BSoldier": 0.3,
+          "Transport": 0.7,
+          "SSoldier": 0.3,
+          "Missile_truck": 0.7,
+          "Supplier": 0.7,
+          "Antiair": 0.5,
+          "MSoldier": 0.3,
+          "FSoldier": 0.3,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["Airport"],
+      "repairedAt": ["Airport"],
+      "refueledAt": ["Airport"],
+      "rearmedAt": ["Airport"],
+      "classicSprite": {}
+    },
+    {
+      "id": "Supplier",
+      "name": {
+        "es": "Suministros",
+        "en": "Supplier"
+      },
+      "cost": 6000,
+      "move": 5,
+      "vision": 6,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 0,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": false,
+      "attack": null,
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "supplies": {
+        "fuel": [
+          "Tank",
+          "Artillery",
+          "Car",
+          "LTank",
+          "Blocker",
+          "Transport",
+          "Missile_truck",
+          "LFighter",
+          "Fighter",
+          "Bomber",
+          "Supplier",
+          "Antiair",
+          "THelicopter",
+          "FSoldier",
+          "WTank"
+        ],
+        "ammo": [
+          "Tank",
+          "Artillery",
+          "LTank",
+          "Blocker",
+          "Transport",
+          "Missile_truck",
+          "LFighter",
+          "Fighter",
+          "Bomber",
+          "Supplier",
+          "Antiair",
+          "THelicopter",
+          "MSoldier",
+          "WTank"
+        ]
+      },
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      },
+      "ai": {
+        "support": true
+      }
+    },
+    {
+      "id": "Antiair",
+      "name": {
+        "es": "Antiaéreo",
+        "en": "Anti-air"
+      },
+      "cost": 8000,
+      "move": 6,
+      "vision": 7,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 60,
+        "perTurn": 0
+      },
+      "ammo": 6,
+      "captures": false,
+      "attack": {
+        "range": [1, 2],
+        "hitChance": {
+          "LFighter": 0.8,
+          "Fighter": 0.8,
+          "Bomber": 0.8,
+          "THelicopter": 0.9
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "THelicopter",
+      "name": {
+        "es": "Helicóptero",
+        "en": "Helicopter"
+      },
+      "cost": 10000,
+      "move": 7,
+      "vision": 7,
+      "movement": "air",
+      "fuel": {
+        "max": 70,
+        "perTurn": 2
+      },
+      "ammo": 0,
+      "captures": false,
+      "attack": null,
+      "transport": {
+        "slots": 1,
+        "carries": ["Soldier", "BSoldier", "SSoldier", "MSoldier"]
+      },
+      "builtAt": ["Airport"],
+      "repairedAt": ["Airport"],
+      "refueledAt": ["Airport"],
+      "rearmedAt": ["Airport"],
+      "classicSprite": {},
+      "ai": {
+        "support": true
+      }
+    },
+    {
+      "id": "MSoldier",
+      "name": {
+        "es": "Mortero",
+        "en": "Mortar"
+      },
+      "cost": 2500,
+      "move": 3,
+      "vision": 4,
+      "movement": "foot",
+      "fuel": {
+        "max": 0,
+        "perTurn": 0
+      },
+      "ammo": 4,
+      "captures": true,
+      "attack": {
+        "range": [2, 3],
+        "hitChance": {
+          "Soldier": 0.4,
+          "Tank": 0.4,
+          "Artillery": 0.4,
+          "Car": 0.6,
+          "LTank": 0.5,
+          "Blocker": 0.2,
+          "BSoldier": 0.4,
+          "Transport": 0.6,
+          "SSoldier": 0.4,
+          "Missile_truck": 0.6,
+          "Supplier": 0.6,
+          "Antiair": 0.5,
+          "MSoldier": 0.4,
+          "FSoldier": 0.4,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["City"],
+      "repairedAt": ["City", "Stronghold", "Base"],
+      "refueledAt": [],
+      "rearmedAt": ["City", "Stronghold", "Base"],
+      "classicSprite": {
+        "SWater": "1_",
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "FSoldier",
+      "name": {
+        "es": "Motorizado",
+        "en": "Motor trooper"
+      },
+      "cost": 3500,
+      "move": 5,
+      "vision": 6,
+      "movement": "vehicle",
+      "fuel": {
+        "max": 80,
+        "perTurn": 0
+      },
+      "ammo": 0,
+      "captures": true,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.5,
+          "Tank": 0.1,
+          "Artillery": 0.1,
+          "Car": 0.3,
+          "LTank": 0.15,
+          "Blocker": 0.05,
+          "BSoldier": 0.5,
+          "Transport": 0.2,
+          "SSoldier": 0.3,
+          "Missile_truck": 0.2,
+          "Supplier": 0.2,
+          "Antiair": 0.15,
+          "MSoldier": 0.5,
+          "FSoldier": 0.5,
+          "WTank": 0.15
+        }
+      },
+      "builtAt": ["City"],
+      "repairedAt": ["City", "Stronghold", "Base"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": [],
+      "classicSprite": {
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_",
+        "Ice": "2_"
+      }
+    },
+    {
+      "id": "WTank",
+      "name": {
+        "es": "Tanque anfibio",
+        "en": "Amphibious tank"
+      },
+      "cost": 15000,
+      "move": 6,
+      "vision": 6,
+      "movement": "amphibious",
+      "fuel": {
+        "max": 60,
+        "perTurn": 0
+      },
+      "ammo": 8,
+      "captures": false,
+      "attack": {
+        "range": [1, 1],
+        "hitChance": {
+          "Soldier": 0.4,
+          "Tank": 0.4,
+          "Artillery": 0.4,
+          "Car": 0.6,
+          "LTank": 0.5,
+          "Blocker": 0.2,
+          "BSoldier": 0.4,
+          "Transport": 0.6,
+          "SSoldier": 0.4,
+          "Missile_truck": 0.6,
+          "Supplier": 0.6,
+          "Antiair": 0.5,
+          "MSoldier": 0.4,
+          "FSoldier": 0.4,
+          "WTank": 0.5
+        }
+      },
+      "builtAt": ["Factory"],
+      "repairedAt": ["Factory"],
+      "refueledAt": ["Oil"],
+      "rearmedAt": ["Factory"],
+      "classicSprite": {
+        "Water": "1_",
+        "SWater": "1_",
+        "DWater": "1_",
+        "Snow": "2_",
+        "Frosty": "2_",
+        "SnowCliff": "2_",
+        "SnowWood": "2_"
+      }
+    }
+  ]
+}

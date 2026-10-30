@@ -1,0 +1,340 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Unidades de Ilogic",
+  "description": "Unidades del juego. El ORDEN es el numero de tipo que guardan las partidas: las nuevas al final, nunca borrar ni reordenar. Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "required": ["units"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "cost",
+          "move",
+          "vision",
+          "movement",
+          "fuel",
+          "ammo",
+          "captures",
+          "attack",
+          "builtAt",
+          "repairedAt",
+          "refueledAt",
+          "rearmedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\w+$",
+            "description": "Nombre interno (ingles, sin espacios). Graficos: public/assets/u/b_<id>.png (azul) y r_<id>.png (rojo). No cambiarlo en una unidad existente: lo usan misiones e imagenes."
+          },
+          "name": {
+            "type": "object",
+            "description": "Nombre que ve el jugador.",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Precio de compra."
+          },
+          "move": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Casillas que puede mover por turno (cada terreno cuesta segun su tipo de movimiento)."
+          },
+          "vision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Radio de vision en casillas (rombo)."
+          },
+          "movement": {
+            "enum": ["foot", "vehicle", "air", "amphibious"],
+            "description": "Tipo de movimiento: foot a pie, vehicle vehiculo, air aereo, amphibious anfibio. Decide por donde pasa y cuanto le cuesta cada terreno."
+          },
+          "fuel": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["max", "perTurn"],
+            "description": "Combustible. max 0 = no usa.",
+            "properties": {
+              "max": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Deposito lleno (1 por casilla movida)."
+              },
+              "perTurn": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Lo que gasta cada ronda aunque no se mueva (aviones). Sin combustible, un avion cae."
+              }
+            }
+          },
+          "ammo": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Disparos antes de recargar. 0 = municion infinita."
+          },
+          "captures": {
+            "type": "boolean",
+            "description": "Puede capturar edificios."
+          },
+          "attack": {
+            "description": "null = no ataca.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["range", "hitChance"],
+                "properties": {
+                  "range": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "[desde, hasta] en casillas. [1, 1] = cuerpo a cuerpo; [3, 5] = artilleria (no dispara a 1 o 2)."
+                  },
+                  "hitChance": {
+                    "type": "object",
+                    "description": "DAÑO. Probabilidad de quitar cada punto de vida que le quede al atacante a cada unidad (0..1). Ejemplo: 0.5 con 100 de vida quita unos 50. Si una unidad no esta, no la puede atacar. Los nombres son los id de este fichero; una unidad nueva vale aunque no este en la lista de sugerencias.",
+                    "additionalProperties": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "propertyNames": {
+                      "pattern": "^\\w+$"
+                    },
+                    "examples": [
+                      {
+                        "Soldier": 0.5
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "transport": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["slots", "carries"],
+            "description": "Solo transportes.",
+            "properties": {
+              "slots": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Unidades que lleva a la vez."
+              },
+              "carries": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "id de una unidad de units.json.",
+                  "examples": [
+                    "Soldier",
+                    "Tank",
+                    "Artillery",
+                    "Car",
+                    "LTank",
+                    "Blocker",
+                    "BSoldier",
+                    "Transport",
+                    "SSoldier",
+                    "Missile_truck",
+                    "LFighter",
+                    "Fighter",
+                    "Bomber",
+                    "Supplier",
+                    "Antiair",
+                    "THelicopter",
+                    "MSoldier",
+                    "FSoldier",
+                    "WTank"
+                  ]
+                },
+                "description": "Unidades que puede llevar."
+              }
+            }
+          },
+          "builtAt": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
+              "description": "id de un edificio de buildings.json."
+            },
+            "minItems": 1,
+            "description": "Edificios que la fabrican."
+          },
+          "repairedAt": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
+              "description": "id de un edificio de buildings.json."
+            },
+            "description": "Edificios propios que le curan vida."
+          },
+          "refueledAt": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
+              "description": "id de un edificio de buildings.json."
+            },
+            "description": "Edificios que le llenan el combustible."
+          },
+          "rearmedAt": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
+              "description": "id de un edificio de buildings.json."
+            },
+            "description": "Edificios que le recargan la municion."
+          },
+          "supplies": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["fuel", "ammo"],
+            "description": "Unidades de apoyo: a quien da combustible y municion al lado.",
+            "properties": {
+              "fuel": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "id de una unidad de units.json.",
+                  "examples": [
+                    "Soldier",
+                    "Tank",
+                    "Artillery",
+                    "Car",
+                    "LTank",
+                    "Blocker",
+                    "BSoldier",
+                    "Transport",
+                    "SSoldier",
+                    "Missile_truck",
+                    "LFighter",
+                    "Fighter",
+                    "Bomber",
+                    "Supplier",
+                    "Antiair",
+                    "THelicopter",
+                    "MSoldier",
+                    "FSoldier",
+                    "WTank"
+                  ]
+                }
+              },
+              "ammo": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "id de una unidad de units.json.",
+                  "examples": [
+                    "Soldier",
+                    "Tank",
+                    "Artillery",
+                    "Car",
+                    "LTank",
+                    "Blocker",
+                    "BSoldier",
+                    "Transport",
+                    "SSoldier",
+                    "Missile_truck",
+                    "LFighter",
+                    "Fighter",
+                    "Bomber",
+                    "Supplier",
+                    "Antiair",
+                    "THelicopter",
+                    "MSoldier",
+                    "FSoldier",
+                    "WTank"
+                  ]
+                }
+              }
+            }
+          },
+          "heals": {
+            "type": "object",
+            "description": "Vida que cura cada ronda a cada unidad propia al lado.",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "classicSprite": {
+            "type": "object",
+            "description": "Graficos de 2013: prefijo de la imagen segun el terreno donde esta (\"1_\" = version de agua, \"2_\" = version de nieve).",
+            "propertyNames": {
+              "enum": [
+                "Grass",
+                "Water",
+                "Woods",
+                "Sand",
+                "Cactus",
+                "SandCliff",
+                "Flowers",
+                "GrassCliff",
+                "SWater",
+                "DWater",
+                "Snow",
+                "Frosty",
+                "SnowCliff",
+                "SnowWood",
+                "Ice"
+              ]
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "ai": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Pistas para la IA.",
+            "properties": {
+              "support": {
+                "type": "boolean",
+                "description": "No combate: la IA tiene como mucho una a la vez."
+              }
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Comentario libre (por que tiene estos numeros)."
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

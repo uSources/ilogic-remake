@@ -1,312 +1,9 @@
-// Tablas de datos del Ilogic original (2013), extraidas de docs/SPEC-REGLAS.md.
-// Se pueden retocar a mano para equilibrar el juego.
+// Tablas de reglas del Ilogic original (2013), extraidas de docs/SPEC-REGLAS.md.
+// Las unidades y los edificios NO estan aqui: viven en src/core/content/units.json y buildings.json
+// (ver docs/CONTENIDO.md) y aqui se convierten en las tablas por indice de siempre.
 // Correcciones respecto al original: tabla "poder" (filas 0, 8 y 17 desalineadas),
 // fila 18 de "unitHeals" (faltaba) y fila 2 de PROBS_PER_ADJ (sobraba un valor).
-
-export const UNIT_NAMES = [
-  'Soldier',
-  'Tank',
-  'Artillery',
-  'Car',
-  'LTank',
-  'Blocker',
-  'BSoldier',
-  'Transport',
-  'SSoldier',
-  'Missile_truck',
-  'LFighter',
-  'Fighter',
-  'Bomber',
-  'Supplier',
-  'Antiair',
-  'THelicopter',
-  'MSoldier',
-  'FSoldier',
-  'WTank',
-] as const;
-export const UNIT_TYPES = UNIT_NAMES.length; // 19
-
-/** Estadisticas por tipo de unidad (indices 0..18 como UNIT_NAMES). */
-export const UNIT = {
-  /** Precio de compra */
-  cost: [1500, 12000, 8000, 5000, 7000, 5000, 2500, 8000, 2500, 11000, 12000, 20000, 13000, 6000, 8000, 10000, 2500, 3500, 15000],
-  /** Casillas que puede mover por turno */
-  mover: [3, 5, 4, 7, 6, 2, 3, 6, 3, 3, 10, 9, 7, 5, 6, 7, 3, 5, 6],
-  /** Radio de vision (rombo) */
-  vision: [4, 6, 6, 7, 6, 0, 4, 6, 4, 4, 10, 10, 8, 6, 7, 7, 4, 6, 6],
-  /** Alcance maximo de ataque */
-  alcance: [1, 2, 5, 1, 1, 0, 1, 0, 1, 10, 1, 2, 1, 0, 2, 0, 3, 1, 1],
-  /** Se ataca a distancia d con minalc < d <= alcance */
-  minalc: [0, 0, 2, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-  /** 0 a pie, 1 vehiculo, 2 aereo, 3 anfibio */
-  movtype: [0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 2, 2, 2, 1, 1, 2, 0, 1, 3],
-  /** 0 = no usa combustible */
-  maxfuel: [0, 50, 50, 70, 50, 30, 0, 50, 0, 45, 60, 80, 80, 0, 60, 70, 0, 80, 60],
-  /** Combustible que gasta cada ronda (aereos) */
-  fuelperturn: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 3, 0, 0, 2, 0, 0, 0],
-  /** 0 = municion infinita */
-  maxammo: [0, 5, 5, 0, 8, 0, 5, 0, 0, 3, 0, 6, 3, 0, 6, 0, 4, 0, 8],
-  /** Plazas de transporte */
-  maxcarry: [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-  /** Puede capturar edificios */
-  cancapt: [true, false, false, false, false, false, true, false, true, false, false, false, false, false, false, false, true, true, false],
-  /** Puede atacar */
-  canfight: [true, true, true, true, true, false, true, false, true, true, true, true, true, false, true, false, true, true, true],
-} as const;
-
-/** [unidad][edificio]: el edificio cura a la unidad */
-export const HEALER: readonly (readonly boolean[])[] = [
-  [true, false, false, true, false, true],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [true, false, false, true, false, true],
-  [false, false, true, false, false, false],
-  [true, false, false, true, false, true],
-  [false, false, true, false, false, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, true, false],
-  [true, false, false, true, false, true],
-  [true, false, false, true, false, true],
-  [false, false, true, false, false, false],
-];
-
-/** [unidad][edificio]: el edificio rellena el combustible */
-export const FUELER: readonly (readonly boolean[])[] = [
-  [false, false, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, false, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, false, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, true, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, false, false],
-  [false, true, false, false, false, false],
-  [false, true, false, false, false, false],
-];
-
-/** [unidad][edificio]: el edificio rellena la municion */
-export const AMMO_RESTORER: readonly (readonly boolean[])[] = [
-  [false, false, false, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, false, false],
-  [true, false, false, true, false, true],
-  [false, false, false, false, false, false],
-  [false, false, false, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, true, false],
-  [true, false, false, true, false, true],
-  [false, false, false, false, false, false],
-  [false, false, true, false, false, false],
-];
-
-/** [unidad][edificio]: el edificio fabrica ese tipo */
-export const SPAWNER: readonly (readonly boolean[])[] = [
-  [true, false, false, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [true, false, false, false, false, false],
-  [false, false, true, false, false, false],
-  [true, false, false, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, false, false, true, false],
-  [false, false, true, false, false, false],
-  [false, false, true, false, false, false],
-  [false, false, false, false, true, false],
-  [true, false, false, false, false, false],
-  [true, false, false, false, false, false],
-  [false, false, true, false, false, false],
-];
-
-/** [transporte][pasajero] */
-export const CAN_CARRY: readonly (readonly boolean[])[] = [
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [true, false, false, false, false, false, true, false, true, false, false, false, false, false, false, false, true, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [true, false, false, false, false, false, true, false, true, false, false, false, false, false, false, false, true, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-];
-
-/** [abastecedor][receptor]: da combustible */
-export const UNIT_FUELER: readonly (readonly boolean[])[] = [
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, true, true, true, true, true, false, true, false, true, true, true, true, true, true, true, false, true, true],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-];
-
-/** [abastecedor][receptor]: da municion */
-export const UNIT_AMMO_RESTORER: readonly (readonly boolean[])[] = [
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, true, true, false, true, true, false, true, false, true, true, true, true, true, true, true, true, false, true],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-  [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
-];
-
-/** [atacante][defensor]: probabilidad de acierto por punto de vida */
-export const POWER: readonly (readonly number[])[] = [
-  [0.5, 0.1, 0.1, 0.3, 0.15, 0.05, 0.5, 0.2, 0.3, 0.2, 0.0, 0.0, 0.0, 0.2, 0.15, 0.0, 0.5, 0.5, 0.15],
-  [0.3, 0.5, 0.5, 0.7, 0.5, 0.3, 0.3, 0.7, 0.3, 0.7, 0.0, 0.0, 0.0, 0.7, 0.5, 0.0, 0.3, 0.3, 0.7],
-  [0.3, 0.4, 0.4, 0.6, 0.5, 0.25, 0.25, 0.6, 0.3, 0.6, 0.0, 0.0, 0.0, 0.6, 0.5, 0.0, 0.3, 0.3, 0.5],
-  [0.6, 0.1, 0.1, 0.3, 0.15, 0.05, 0.6, 0.3, 0.15, 0.3, 0.0, 0.0, 0.0, 0.3, 0.15, 0.0, 0.6, 0.6, 0.15],
-  [0.4, 0.4, 0.4, 0.6, 0.5, 0.2, 0.4, 0.6, 0.4, 0.6, 0.0, 0.0, 0.0, 0.6, 0.5, 0.0, 0.4, 0.4, 0.5],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.4, 0.4, 0.4, 0.6, 0.5, 0.2, 0.4, 0.6, 0.4, 0.6, 0.0, 0.0, 0.0, 0.6, 0.5, 0.0, 0.4, 0.4, 0.5],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.5, 0.1, 0.1, 0.3, 0.15, 0.05, 0.5, 0.3, 0.15, 0.3, 0.0, 0.0, 0.0, 0.3, 0.15, 0.0, 0.5, 0.5, 0.15],
-  [0.3, 0.5, 0.5, 0.7, 0.5, 0.3, 0.3, 0.7, 0.3, 0.7, 0.0, 0.0, 0.0, 0.7, 0.5, 0.0, 0.3, 0.3, 0.5],
-  [0.6, 0.1, 0.1, 0.3, 0.15, 0.05, 0.6, 0.3, 0.15, 0.3, 0.3, 0.3, 0.3, 0.3, 0.15, 0.4, 0.6, 0.6, 0.15],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.6, 0.6, 0.6, 0.0, 0.0, 0.8, 0.0, 0.0, 0.0],
-  [0.3, 0.5, 0.5, 0.7, 0.5, 0.3, 0.3, 0.7, 0.3, 0.7, 0.0, 0.0, 0.0, 0.7, 0.5, 0.0, 0.3, 0.3, 0.5],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.8, 0.8, 0.8, 0.0, 0.0, 0.9, 0.0, 0.0, 0.0],
-  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-  [0.4, 0.4, 0.4, 0.6, 0.5, 0.2, 0.4, 0.6, 0.4, 0.6, 0.0, 0.0, 0.0, 0.6, 0.5, 0.0, 0.4, 0.4, 0.5],
-  [0.5, 0.1, 0.1, 0.3, 0.15, 0.05, 0.5, 0.2, 0.3, 0.2, 0.0, 0.0, 0.0, 0.2, 0.15, 0.0, 0.5, 0.5, 0.15],
-  [0.4, 0.4, 0.4, 0.6, 0.5, 0.2, 0.4, 0.6, 0.4, 0.6, 0.0, 0.0, 0.0, 0.6, 0.5, 0.0, 0.4, 0.4, 0.5],
-];
-
-/** [unidad][terreno]: prefijo de imagen (1_ en agua, 2_ en nieve) */
-export const UNIT_TERRAIN_PREFIX: readonly (readonly string[])[] = [
-  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '1_', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '2_', '2_', '2_', '2_'],
-  ['', '1_', '', '', '', '', '', '', '1_', '1_', '2_', '2_', '2_', '2_', ''],
-];
-
-/** [edificio][terreno]: prefijo de imagen */
-export const BUILDING_TERRAIN_PREFIX: readonly (readonly string[])[] = [
-  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
-  ['', '', '', '', '', '', '', '', '', '', '2_', '', '', '', ''],
-];
-
-/** [curador][curado]: vida que una unidad da a otra (todo 0 en el original) */
-export const UNIT_HEALS: readonly (readonly number[])[] = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-];
-
-export const BUILDING_NAMES = ['City', 'Oil', 'Factory', 'Stronghold', 'Airport', 'Base'] as const;
-export const BUILDING_TYPES = BUILDING_NAMES.length; // 6
-export const HQ = 5; // Base = cuartel general
-export const BUILDING = {
-  /** Ingresos por ronda */
-  earning: [1000, 500, 1000, 1500, 1000, 1000],
-  /** Vida que cura a las unidades propias que puede curar */
-  heals: [30, 0, 25, 20, 25, 30],
-  /** Multiplicador de la probabilidad de acierto contra la unidad que esta encima */
-  protection: [0.8, 0.9, 0.8, 0.7, 0.85, 0.7],
-  /** Radio de vision (0 = solo su casilla) */
-  vision: [0, 0, 0, 0, 0, 0],
-} as const;
+import { loadContent } from './content';
 
 export const TERRAIN_NAMES = [
   'Grass',
@@ -325,6 +22,53 @@ export const TERRAIN_NAMES = [
   'SnowWood',
   'Ice',
 ] as const;
+
+const { content, tables: T } = loadContent(TERRAIN_NAMES);
+
+/** Unidades y edificios tal y como estan en los JSON (nombres, notas, pistas para la IA...). */
+export const CONTENT = content;
+
+/** Nombres internos de las unidades; el indice es el numero de tipo (el que guardan las partidas). */
+export const UNIT_NAMES: readonly string[] = T.UNIT_NAMES;
+export const UNIT_TYPES = UNIT_NAMES.length;
+
+/**
+ * Estadisticas por tipo de unidad (indice = UNIT_NAMES). Se pueden cambiar en memoria (las variantes de
+ * tools/balance lo hacen); para cambiarlas de verdad, units.json.
+ */
+export const UNIT = T.UNIT;
+
+/** [unidad][edificio]: el edificio cura a la unidad (repairedAt) */
+export const HEALER: readonly (readonly boolean[])[] = T.HEALER;
+/** [unidad][edificio]: el edificio le da combustible (refueledAt) */
+export const FUELER: readonly (readonly boolean[])[] = T.FUELER;
+/** [unidad][edificio]: el edificio le da municion (rearmedAt) */
+export const AMMO_RESTORER: readonly (readonly boolean[])[] = T.AMMO_RESTORER;
+/** [unidad][edificio]: el edificio la fabrica (builtAt) */
+export const SPAWNER: readonly (readonly boolean[])[] = T.SPAWNER;
+/** [transporte][unidad]: puede llevarla (transport.carries) */
+export const CAN_CARRY: readonly (readonly boolean[])[] = T.CAN_CARRY;
+/** [unidad][unidad]: le da combustible (supplies.fuel) */
+export const UNIT_FUELER: readonly (readonly boolean[])[] = T.UNIT_FUELER;
+/** [unidad][unidad]: le da municion (supplies.ammo) */
+export const UNIT_AMMO_RESTORER: readonly (readonly boolean[])[] = T.UNIT_AMMO_RESTORER;
+/** [atacante][defensor]: probabilidad de acierto por punto de vida (attack.hitChance) */
+export const POWER: number[][] = T.POWER;
+/** [unidad][terreno]: prefijo de la imagen de 2013 (classicSprite) */
+export const UNIT_TERRAIN_PREFIX: readonly (readonly string[])[] = T.UNIT_TERRAIN_PREFIX;
+/** [unidad][unidad]: vida que le cura al estar al lado (heals) */
+export const UNIT_HEALS: readonly (readonly number[])[] = T.UNIT_HEALS;
+/** La IA la trata como apoyo (ai.support): no combate, compra como mucho una a la vez. */
+export const UNIT_SUPPORT: readonly boolean[] = T.UNIT_SUPPORT;
+
+export const BUILDING_NAMES: readonly string[] = T.BUILDING_NAMES;
+export const BUILDING_TYPES = BUILDING_NAMES.length;
+/** Cuartel general ("hq": true en buildings.json): si lo capturan, se pierde. */
+export const HQ = T.HQ;
+/** Ingresos, curacion, proteccion y vision por edificio (indice = BUILDING_NAMES). */
+export const BUILDING = T.BUILDING;
+export const BUILDING_TERRAIN_PREFIX: readonly (readonly string[])[] = T.BUILDING_TERRAIN_PREFIX;
+
 export const TERRAIN_TYPES = TERRAIN_NAMES.length; // 15
 export const TERRAIN = {
   /** Se puede construir encima (generador de mapas) */

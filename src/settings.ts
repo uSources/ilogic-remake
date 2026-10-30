@@ -3,6 +3,7 @@
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
+import { CONTENT } from './core/data';
 
 export type Lang = 'es' | 'en';
 
@@ -534,54 +535,6 @@ export function t(key: TextKey): string {
   return TEXTS[settings.lang][key];
 }
 
-const UNIT_LABELS = {
-  es: [
-    'Soldado',
-    'Tanque',
-    'Artillería',
-    'Jeep',
-    'Tanque ligero',
-    'Barricada',
-    'Bazuca',
-    'Transporte',
-    'Escudero',
-    'Lanzamisiles',
-    'Caza ligero',
-    'Caza',
-    'Bombardero',
-    'Suministros',
-    'Antiaéreo',
-    'Helicóptero',
-    'Mortero',
-    'Motorizado',
-    'Tanque anfibio',
-  ],
-  en: [
-    'Soldier',
-    'Tank',
-    'Artillery',
-    'Jeep',
-    'Light tank',
-    'Blocker',
-    'Bazooka',
-    'Transport',
-    'Shield trooper',
-    'Missile truck',
-    'Light fighter',
-    'Fighter',
-    'Bomber',
-    'Supplier',
-    'Anti-air',
-    'Helicopter',
-    'Mortar',
-    'Motor trooper',
-    'Amphibious tank',
-  ],
-};
-const BUILDING_LABELS = {
-  es: ['Ciudad', 'Pozo de petróleo', 'Fábrica', 'Fortaleza', 'Aeropuerto', 'Base'],
-  en: ['City', 'Oil well', 'Factory', 'Stronghold', 'Airport', 'HQ'],
-};
 const TERRAIN_LABELS = {
   es: [
     'Llanura',
@@ -619,6 +572,7 @@ const TERRAIN_LABELS = {
   ],
 };
 
-export const unitLabel = (type: number): string => UNIT_LABELS[settings.lang][type] ?? '?';
-export const buildingLabel = (type: number): string => BUILDING_LABELS[settings.lang][type] ?? '?';
+/** Nombres de unidades y edificios: los de src/core/content/*.json. */
+export const unitLabel = (type: number): string => CONTENT.units[type]?.name[settings.lang] ?? '?';
+export const buildingLabel = (type: number): string => CONTENT.buildings[type]?.name[settings.lang] ?? '?';
 export const terrainLabel = (type: number): string => TERRAIN_LABELS[settings.lang][type] ?? '?';

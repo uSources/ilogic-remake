@@ -88,6 +88,7 @@ export function checkMission(m: MissionDef): string[] {
   const t = (x: number, y: number) => terrainOf(m.map[y]![x]!, m.theme);
   const seen = new Set<string>();
   for (const [b, , x, y] of m.buildings) {
+    if (!BUILDING_NAMES.includes(b)) errs.push(`edificio "${b}" no existe (src/core/content/buildings.json)`);
     if (!TERRAIN.canbuild[t(x, y)]) errs.push(`${b} en (${x},${y}) no esta sobre suelo`);
     if (seen.has(`${x},${y}`)) errs.push(`dos edificios en (${x},${y})`);
     seen.add(`${x},${y}`);
@@ -95,7 +96,11 @@ export function checkMission(m: MissionDef): string[] {
   const occ = new Set<string>();
   for (const [u, , x, y] of m.units) {
     const T = UNIT_NAMES.indexOf(u);
-    if (!TERRAIN.canwalk[UNIT.movtype[T]!][t(x, y)]) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
+    if (T < 0) {
+      errs.push(`unidad "${u}" no existe (src/core/content/units.json)`);
+      continue;
+    }
+    if (!TERRAIN.canwalk[UNIT.movtype[T]!]![t(x, y)]) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
     if (occ.has(`${x},${y}`)) errs.push(`dos unidades en (${x},${y})`);
     occ.add(`${x},${y}`);
   }

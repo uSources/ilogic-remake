@@ -5,7 +5,7 @@
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
-import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT, UNIT_NAMES } from './data';
+import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
   attackFull,
@@ -295,8 +295,8 @@ function* randomMove(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generat
   wait(u);
 }
 
-/** Tipos que no combaten: como mucho uno de cada a la vez. */
-const SUPPORT_TYPES = new Set<number>((['Blocker', 'Transport', 'Supplier', 'THelicopter'] as const).map((n) => UNIT_NAMES.indexOf(n)));
+/** Tipos que no combaten ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
+const SUPPORT_TYPES = new Set<number>(UNIT_SUPPORT.flatMap((sup, i) => (sup ? [i] : [])));
 
 /**
  * Fabricar en cada edificio propio libre.

@@ -12,10 +12,16 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Equilibrio
 - El **Bombardero** cuesta 13000 en vez de 20000 y el **Lanzamisiles** 11000 en vez de 16000: rendían mucho menos de lo que costaban.
 
+### Modificar el juego
+- Las unidades y los edificios (precio, movimiento, daño contra cada unidad, quién los fabrica...) están ahora en ficheros de configuración (`src/core/content/units.json` y `buildings.json`): se pueden cambiar o añadir sin tocar código. Ver `docs/CONTENIDO.md`.
+
 <!-- en -->
 
 ### Balance
 - The **Bomber** now costs 13000 instead of 20000 and the **Missile truck** 11000 instead of 16000: they were worth much less than their price.
+
+### Modding
+- Units and buildings (price, movement, damage against each unit, who builds them...) now live in config files (`src/core/content/units.json` and `buildings.json`): they can be changed or added without touching code. See `docs/CONTENIDO.md`.
 
 ## [0.1.0] - 2026-10-29 — El remake
 
