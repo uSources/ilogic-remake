@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '../src/core/ai';
-import { HQ, MAP_W, DEFAULT_RULES, setMapSize, useRules } from '../src/core/data';
+import { HQ, MAP_W, DEFAULT_RULES, UNIT, setMapSize, useRules } from '../src/core/data';
 import { grid, seededRng } from '../src/core/geom';
 import { generateGame } from '../src/core/mapgen';
 import { endReason, groundDistance, newUnit, outcome, score } from '../src/core/rules';
@@ -61,11 +61,11 @@ describe('limite de dias', () => {
     useRules({ ...DEFAULT_RULES, dayLimit: 10 });
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
-    newUnit(s, 1, 0, 1, 1); // tanque: 12000
+    newUnit(s, 1, 0, 1, 1); // tanque: vale su precio
     s.day = 10;
     expect(outcome(s)).toBe('playing');
     s.day = 11;
-    expect(score(s, 0)).toBe(13000);
+    expect(score(s, 0)).toBe(UNIT.cost[1]! + 1000); // tanque entero + su Base
     expect(score(s, 1)).toBe(2000);
     expect(outcome(s)).toBe('won');
     expect(endReason(s)).toBe('days');

@@ -76,3 +76,9 @@ Medido el 27-10-2026: `npm run balance -- run --games 200 --name f2-captura` y `
 | Bombardero | 20000 | 13000 |
 
 Reduce los avisos de 11 a 6, pero encarece mucho la infantería, que es la que captura. La métrica de eficiencia favorece a las unidades baratas compradas en masa, y la IA compra con sus propias reglas. Es una decisión de diseño: se puede probar en una partida con esa variante antes de aplicarla.
+
+## Precio del Tanque (2026-10-30)
+
+Tanque 12000 → 9500. Con 12000 destruía 0,34 por cada 1 que costaba (0,61x la mediana). Medido con
+`npm run metrics` (120 partidas 32x32): el Tanque entra en la banda y la nota pasa de 56,8 a 59,3.
+Encarecer el Soldado a 2000 se probó y se descartó: los bandos se van al 58/42. Detalle en `improve/DIARIO.md`.
