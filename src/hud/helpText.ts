@@ -13,6 +13,7 @@ const HELP = {
       'VET_ES',
       'ARMY_ES',
       'MOVE_ES',
+      'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
     ],
@@ -59,6 +60,7 @@ const HELP = {
       'VET_EN',
       'ARMY_EN',
       'MOVE_EN',
+      'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
     ],
@@ -108,6 +110,9 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       RULES.ambush && RULES.fog
         ? 'Puedes atravesar tus unidades. Con niebla, el bosque solo se ve desde al lado: si tu camino choca con un enemigo escondido, la unidad se para antes (¡emboscada!) y pierde el turno.'
         : '',
+    WEATHER_ES: RULES.weather
+      ? 'Clima: cada pocos días cambia el tiempo (arriba, junto al día; al pasar por encima ves sus efectos y el pronóstico). La lluvia frena a los vehículos, la nieve a todo lo que va por tierra y las tormentas a los aviones; el mal tiempo quita visión y puntería a los dos bandos.'
+      : '',
     VET_ES: RULES.veterancy
       ? 'Veteranía: una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas). Cada estrella da +5 % de acierto y de defensa; al unir dos unidades se queda la más veterana.'
       : '',
@@ -131,6 +136,9 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       RULES.ambush && RULES.fog
         ? 'You can move through your own units. With fog, woods are only visible from next to them: if your path runs into a hidden enemy, the unit stops short (ambush!) and loses its turn.'
         : '',
+    WEATHER_EN: RULES.weather
+      ? 'Weather: every few days it changes (top, next to the day; hover it to see its effects and the forecast). Rain slows vehicles, snow slows everything on the ground and storms slow aircraft; bad weather costs both sides vision and aim.'
+      : '',
     VET_EN: RULES.veterancy
       ? 'Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +5 % hit chance and defence; joining two units keeps the more veteran one.'
       : '',

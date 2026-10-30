@@ -8,6 +8,8 @@ export interface NewGameOptions {
   size: number;
   theme: number | null;
   fog: boolean;
+  /** [CAMBIO] Clima que cambia cada pocos dias. */
+  weather: boolean;
   funds: number;
   income: number;
   dayLimit: number | null;
@@ -26,8 +28,8 @@ export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
 export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset'>> = {
-  normal: { size: 32, fog: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
-  quick: { size: 20, fog: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
+  normal: { size: 32, fog: true, weather: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
+  quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
 
 export function applyPreset(o: NewGameOptions, id: PresetId): NewGameOptions {
@@ -38,6 +40,7 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   size: 32,
   theme: null,
   fog: true,
+  weather: true,
   funds: 5000,
   income: 1,
   dayLimit: null,
@@ -52,6 +55,7 @@ export const CHOICES = {
   size: [20, 32, 40] as const,
   theme: [null, 0, 1, 2, 3, 4] as const,
   fog: [true, false] as const,
+  weather: [true, false] as const,
   funds: [3000, 5000, 8000, 12000] as const,
   income: [0.5, 1, 1.5, 2] as const,
   dayLimit: [null, 20, 30, 40, 60] as const,
@@ -91,6 +95,7 @@ export function rulesFor(o: NewGameOptions): RulesConfig {
   return {
     ...DEFAULT_RULES,
     fog: o.fog,
+    weather: o.weather,
     initialFunds: o.funds,
     incomeScale: o.income,
     dayLimit: o.dayLimit,
@@ -123,6 +128,7 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
     case 'theme':
       return v === null ? (es ? 'Al azar' : 'Random') : (es ? THEME_ES : THEME_EN)[v as number]!;
     case 'fog':
+    case 'weather':
       return v ? (es ? 'Sí' : 'On') : es ? 'No' : 'Off';
     case 'funds':
       return fmtNum(v as number);

@@ -34,6 +34,8 @@ export interface RulesConfig {
   forestHides: boolean;
   /** Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1). */
   terrainCost: boolean;
+  /** [CAMBIO] Clima que cambia cada pocos dias (weather.json): vision, movimiento y punteria. */
+  weather: boolean;
   /** Habilidades de las unidades (units.json, "abilities"). */
   abilities: boolean;
 }
@@ -62,6 +64,7 @@ const RULE_KINDS: Record<keyof RulesConfig, Kind> = {
   ambush: 'bool',
   forestHides: 'bool',
   terrainCost: 'bool',
+  weather: 'bool',
   abilities: 'bool',
 };
 

@@ -18,6 +18,9 @@ export type MovementName = (typeof MOVEMENTS)[number];
  * Terrenos. Lista fija: el numero es el que guardan mapas y partidas, y lo usan el arte, el generador
  * de mapas y las misiones. terrain.json solo cambia sus numeros.
  */
+/** Temas de mapa (el numero es GameState.theme): cambian el generador, las orillas y el clima. */
+export const THEME_NAMES = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'] as const;
+
 export const TERRAIN_NAMES = [
   'Grass',
   'Water',
