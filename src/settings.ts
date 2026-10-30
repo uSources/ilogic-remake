@@ -8,6 +8,10 @@ import { CONTENT, TERRAIN_CONTENT } from './core/data';
 export type Lang = 'es' | 'en';
 
 export type Speed = 'normal' | 'fast' | 'instant';
+export type Orientation = 'auto' | 'portrait' | 'landscape';
+const ORIENTATIONS: Orientation[] = ['auto', 'portrait', 'landscape'];
+/** Pantalla tactil: el menu sin fondo en directo por defecto (gasta bateria). */
+const touchScreen = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export interface Settings {
   lang: Lang;
@@ -21,6 +25,10 @@ export interface Settings {
   vibrate: boolean;
   /** Avisar al terminar el turno si quedan unidades sin mover. */
   confirmEnd: boolean;
+  /** Movil: pantalla completa al empezar a jugar. */
+  fullscreen: boolean;
+  /** Movil (Android): fijar la orientacion durante la partida. */
+  orientation: Orientation;
   /** Velocidad de las animaciones de tus unidades y de las del enemigo. */
   speedOwn: Speed;
   speedEnemy: Speed;
@@ -46,12 +54,14 @@ const DEFAULTS: Settings = {
   autoNext: false,
   vibrate: true,
   confirmEnd: true,
+  fullscreen: true,
+  orientation: 'auto',
   speedOwn: 'normal',
   speedEnemy: 'normal',
   uiScale: 1,
   reduceMotion: false,
   alwaysThreat: false,
-  menuBg: 'live',
+  menuBg: touchScreen ? 'classic' : 'live',
   terrainArt: 'new',
 };
 export const UI_SCALES = [0.9, 1, 1.25];
@@ -70,12 +80,14 @@ function load(): Settings {
       autoNext: !!parsed.autoNext,
       vibrate: parsed.vibrate !== false,
       confirmEnd: parsed.confirmEnd !== false,
+      fullscreen: parsed.fullscreen !== false,
+      orientation: ORIENTATIONS.includes(parsed.orientation as Orientation) ? (parsed.orientation as Orientation) : 'auto',
       speedOwn: SPEEDS.includes(parsed.speedOwn as Speed) ? (parsed.speedOwn as Speed) : 'normal',
       speedEnemy: SPEEDS.includes(parsed.speedEnemy as Speed) ? (parsed.speedEnemy as Speed) : 'normal',
       uiScale: UI_SCALES.includes(parsed.uiScale as number) ? (parsed.uiScale as number) : 1,
       reduceMotion: !!parsed.reduceMotion,
       alwaysThreat: !!parsed.alwaysThreat,
-      menuBg: parsed.menuBg === 'classic' ? 'classic' : 'live',
+      menuBg: parsed.menuBg === 'classic' || parsed.menuBg === 'live' ? parsed.menuBg : DEFAULTS.menuBg,
       terrainArt: parsed.terrainArt === 'classic' ? 'classic' : 'new',
     };
   } catch {
@@ -238,6 +250,11 @@ const TEXTS = {
     optAlwaysThreat: 'Ver siempre la amenaza enemiga',
     optMenuBg: 'Fondo del menú',
     optTerrainArt: 'Gráficos',
+    optFullscreen: 'Pantalla completa (móvil)',
+    optOrientation: 'Orientación (móvil)',
+    orient_auto: 'Libre',
+    orient_portrait: 'Vertical',
+    orient_landscape: 'Horizontal',
     artNew: 'Nuevo',
     artClassic: '2013',
     bgLive: 'Partida en directo',
@@ -510,6 +527,11 @@ const TEXTS = {
     optAlwaysThreat: 'Always show enemy threat',
     optMenuBg: 'Menu background',
     optTerrainArt: 'Graphics',
+    optFullscreen: 'Fullscreen (phone)',
+    optOrientation: 'Orientation (phone)',
+    orient_auto: 'Free',
+    orient_portrait: 'Portrait',
+    orient_landscape: 'Landscape',
     artNew: 'New',
     artClassic: '2013',
     bgLive: 'Live game',

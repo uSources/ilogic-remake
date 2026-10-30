@@ -4,7 +4,8 @@
 
 En curso. Hechas: V0 (comprobación de lo que se sale de la pantalla: `npm run fuera`), V1 (que nada se
 corte), V2 (más mapa) y
-V3 (mover con un toque) y V4 (menús para el pulgar). Siguiente: V5 (como una app). El juego ya funciona con el dedo
+V3 (mover con un toque), V4 (menús para el pulgar) y V5 (como una app). Falta V6: probar
+en móviles de verdad. El juego ya funciona con el dedo
 y se instala como app (PWA, versión 0.4.0).
 
 ## Cómo está ahora

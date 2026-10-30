@@ -31,6 +31,14 @@ const ROWS: Row[] = [
   { key: 'uiScale', group: 'optGroupScreen', label: 'optUiScale', values: UI_SCALES, show: (v) => `${Math.round((v as number) * 100)} %` },
   { key: 'reduceMotion', group: 'optGroupScreen', label: 'optReduceMotion', values: BOOL, show: onOff },
   { key: 'alwaysThreat', group: 'optGroupScreen', label: 'optAlwaysThreat', values: BOOL, show: onOff },
+  { key: 'fullscreen', group: 'optGroupScreen', label: 'optFullscreen', values: BOOL, show: onOff },
+  {
+    key: 'orientation',
+    group: 'optGroupScreen',
+    label: 'optOrientation',
+    values: ['auto', 'portrait', 'landscape'],
+    show: (v) => t(`orient_${v}` as TextKey),
+  },
   {
     key: 'terrainArt',
     group: 'optGroupScreen',

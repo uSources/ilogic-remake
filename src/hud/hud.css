@@ -3172,3 +3172,20 @@ html.reduce-motion .end-best.new {
     min-height: 80px;
   }
 }
+
+/* Movil, fase V5 (docs/PLAN-MOVIL.md): que se sienta como una app. Sin "tirar para recargar", sin
+   seleccionar texto al mantener pulsado y sin el menu del navegador sobre las imagenes. */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+input,
+textarea,
+.help-body {
+  -webkit-user-select: text;
+  user-select: text;
+}

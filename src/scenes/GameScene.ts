@@ -89,6 +89,7 @@ import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
 import { buzz } from '../ui/haptics';
+import { activity, enterGameScreen, keepScreenOn } from '../appMode';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import {
@@ -230,6 +231,8 @@ export class GameScene extends Phaser.Scene {
   private savedThisGame = false;
   private quitArmedAt = -1e9;
   private endArmedAt = -1e9;
+  /** Ya se pidio la pantalla completa en esta partida. */
+  private screenEntered = false;
   private corruptSave = false;
   /** Ignorar Enter/clic hasta este instante (tras el turno enemigo). */
   private inputLockUntil = 0;
@@ -302,6 +305,7 @@ export class GameScene extends Phaser.Scene {
     this.savedThisGame = false;
     this.quitArmedAt = -1e9;
     this.endArmedAt = -1e9;
+    this.screenEntered = false;
     this.surrenderArmedAt = -1e9;
     this.corruptSave = false;
     this.inputLockUntil = 0;
@@ -397,7 +401,17 @@ export class GameScene extends Phaser.Scene {
       this.refreshHud();
     };
     this.scale.on(Phaser.Scale.Events.RESIZE, onResize);
+    // Movil: pantalla encendida durante la partida, y guardar al salir de la app (el sistema puede
+    // cerrarla) si esta partida ya se guarda (guardado automatico, o guardada a mano).
+    keepScreenOn(true);
+    const onHide = () => {
+      if (document.visibilityState !== 'hidden' || this.ended || this.phase === 'busy' || this.enemyPlaying) return;
+      if (settings.autosave || this.savedThisGame) writeSave(serialize(this.s));
+    };
+    document.addEventListener('visibilitychange', onHide);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      keepScreenOn(false);
+      document.removeEventListener('visibilitychange', onHide);
       // Lo que quede pendiente de esta partida (esperas, turno enemigo) ya no debe seguir.
       this.match++;
       this.scale.off(Phaser.Scale.Events.RESIZE, onResize);
@@ -1064,6 +1078,11 @@ export class GameScene extends Phaser.Scene {
       if (p.wasTouch) this.pick.timer = this.time.delayedCall(250, () => this.beginCarry(true));
     }
     if (p.wasTouch) {
+      // Pantalla completa y orientacion: una vez por partida (si se sale a proposito, no insistir).
+      if (!this.screenEntered) {
+        this.screenEntered = true;
+        enterGameScreen();
+      }
       this.touchHint();
       this.touches.set(p.id, { x: p.x, y: p.y });
       if (this.touches.size >= 2) {
@@ -2291,6 +2310,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
   private async playEvents(events: GameEvent[], ghostKey?: string | null): Promise<void> {
+    activity();
     const prevPhase = this.phase;
     if (!this.enemyPlaying && !this.replaying && settings.speedOwn === 'instant') this.fastForward = true;
     this.phase = 'busy';

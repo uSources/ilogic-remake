@@ -38,6 +38,13 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - Al terminar el turno con unidades sin mover sale un aviso con **Terminar el turno** y **No volver a preguntar** (también en Opciones).
 - Botón **Deshacer** a la vista mientras se pueda deshacer el último movimiento.
 
+### Como una app
+- En el móvil, **pantalla completa** al empezar a jugar (Android; en iPhone, instalando el juego como app) y **pantalla encendida** durante la partida.
+- Opción para **fijar la orientación** en vertical u horizontal (Android) y para quitar la pantalla completa.
+- Sin «tirar para recargar», sin seleccionar texto ni el menú del navegador al mantener pulsado.
+- Menos batería: sin tocar nada unos segundos, el juego dibuja a 30 fotogramas; y en pantallas táctiles el menú usa el fondo fijo de 2013.
+- Al salir de la app se guarda la partida si ya se estaba guardando (guardado automático o guardada a mano).
+
 <!-- en -->
 
 ### Interface
@@ -68,6 +75,13 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - The **shop** is a grid of big units with their price; with your finger, tapping one shows its card and the **Buy** button.
 - Ending the turn with unmoved units shows a warning with **End turn** and **Don't ask again** (also in Options).
 - An **Undo** button is visible while the last move can be undone.
+
+### Like an app
+- On phones, **fullscreen** when you start playing (Android; on iPhone, by installing the game as an app) and the **screen stays on** during the match.
+- Options to **lock the orientation** to portrait or landscape (Android) and to turn fullscreen off.
+- No pull-to-refresh, no text selection and no browser menu on long press.
+- Less battery: after a few seconds without touching, the game draws at 30 frames; and on touch screens the menu uses the fixed 2013 background.
+- Leaving the app saves the match if it was already being saved (autosave or saved by hand).
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 

@@ -6,6 +6,7 @@ import { render, h } from 'preact';
 import { deviceSize, fitCanvas, watchResize } from './display';
 import { Hud } from './hud/Hud';
 import { installDebug } from './debug';
+import { installAppMode } from './appMode';
 import { registerServiceWorker } from './pwa';
 import { applySettings } from './settings';
 import { BootScene } from './scenes/BootScene';
@@ -47,6 +48,8 @@ game.events.once(Phaser.Core.Events.READY, () => {
 // window.ilogic (el juego de Phaser) y window.ilogicDebug (src/debug.ts, docs/AGENTES.md).
 (window as unknown as { ilogic: Phaser.Game }).ilogic = game;
 installDebug(game);
+// Movil: menos fotogramas en reposo (bateria), pantalla encendida (ver src/appMode.ts).
+installAppMode(game);
 
 // Instalar como app y jugar sin conexion (solo en la web publicada).
 registerServiceWorker();
