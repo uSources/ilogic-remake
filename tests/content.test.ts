@@ -72,14 +72,10 @@ describe('contenido (src/core/content/*.json)', () => {
       move: 3,
       vision: 6,
       movement: 'foot',
-      fuel: { max: 0, perTurn: 0 },
-      ammo: 3,
       captures: false,
       attack: { range: [2, 3], hitChance: { Soldier: 0.9, Sniper: 0.5 } },
       builtAt: ['City'],
       repairedAt: ['City'],
-      refueledAt: [],
-      rearmedAt: ['City'],
     });
     c.units[0]!.attack!.hitChance.Sniper = 0.6;
     expect(errsOf(c)).toEqual([]);

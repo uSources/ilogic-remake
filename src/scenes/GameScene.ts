@@ -3,7 +3,7 @@ import { aiTurn } from '../core/ai';
 import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, useRules, type RulesConfig, Movement } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
-import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '../core/orders';
+import { bestAttackTile, closestStep, extendTrail } from '../core/orders';
 import {
   attackFull,
   buildingIncome,
@@ -129,7 +129,6 @@ interface MoveUndo {
   uid: number;
   x: number;
   y: number;
-  fuel: number;
   canFire: boolean;
 }
 
@@ -661,15 +660,8 @@ export class GameScene extends Phaser.Scene {
       used,
       max: r.maxSteps,
       stars: it.kind === 'move' ? stars : undefined,
-      fuel: UNIT.maxfuel[u.type]! > 0 ? [u.fuel, Math.max(0, u.fuel - used)] : undefined,
       danger: it.kind === 'move' && !!this.dangerMap?.[c.x]?.[c.y],
-      warn: this.fuelWarning(u, dest, used),
     };
-  }
-
-  /** Aviones: si tras moverse no les llegaria el combustible para volver a un aeropuerto propio. */
-  private fuelWarning(u: Unit, dest: Pos | null, used: number): string | undefined {
-    return dest && runsOutOfFuel(this.s, u, dest, used) ? t('tipNoFuel') : undefined;
   }
 
   private tileInfo(p: Pos): TileVM {
@@ -1423,7 +1415,7 @@ export class GameScene extends Phaser.Scene {
       case 'move': {
         const before = serialize(this.s);
         const seenBefore = this.visibleEnemies();
-        const snapshot: MoveUndo = { uid: u.uid, x: u.x, y: u.y, fuel: u.fuel, canFire: u.canFire };
+        const snapshot: MoveUndo = { uid: u.uid, x: u.x, y: u.y, canFire: u.canFire };
         const path = moveUnit(this.s, u, it.to, r, this.trailTo(it.to));
         if (!path) return;
         this.range = null;
@@ -1725,7 +1717,6 @@ export class GameScene extends Phaser.Scene {
       this.undoStack.pop();
       u.x = this.undo.x;
       u.y = this.undo.y;
-      u.fuel = this.undo.fuel;
       u.canFire = this.undo.canFire;
       u.canMove = true;
       this.view.cursor = { x: u.x, y: u.y };
@@ -2128,7 +2119,6 @@ export class GameScene extends Phaser.Scene {
     }
     this.lastEnemy = { before, seed };
     const report = endRound(this.s);
-    for (const tm of report.crashedTeams) stats(this.s).lost[tm]++;
     sampleArmy(this.s);
     if (settings.autosave && writeSave(serialize(this.s))) this.savedThisGame = true;
     this.enemyPlaying = false;
@@ -2145,10 +2135,6 @@ export class GameScene extends Phaser.Scene {
     const lines: ReportLineVM[] = [{ icon: 'currency', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
     if (mine.length)
       lines.push({ icon: 'health', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
-    const sup = r.resupplied.filter((uid) => unitById(this.s, uid)?.team === 0).length;
-    if (sup) lines.push({ icon: 'fuel', text: `${sup} ${t(sup === 1 ? 'reportSupplied1' : 'reportSupplied')}`, tone: 'plain' });
-    const lost = r.crashedTeams.filter((tm) => tm === 0).length;
-    if (lost) lines.push({ icon: 'minus', text: `${lost} ${t(lost === 1 ? 'reportCrashed1' : 'reportCrashed')}`, tone: 'red' });
     showReport(`${t('day')} ${this.s.day}`, lines);
     if (this.fastForward) return;
     mine.forEach((h, i) => {

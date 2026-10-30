@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING_NAMES, DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '@core/data';
+import { DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '@core/data';
 import { grid } from '@core/geom';
-import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '@core/orders';
+import { bestAttackTile, closestStep, extendTrail } from '@core/orders';
 import { moveRange, newUnit, pathCost } from '@core/rules';
 import { blankState } from './helpers';
 
 const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
 const WOODS = 2;
-const AIRPORT = BUILDING_NAMES.indexOf('Airport');
 
 beforeEach(() => useRules(DEFAULT_RULES));
 
@@ -40,18 +39,6 @@ describe('ordenes del jugador', () => {
     expect(bestAttackTile(s, art, far, r)).toEqual({ x: 10, y: 10 });
     art.canFire = false;
     expect(bestAttackTile(s, art, far, r)).toBeNull();
-  });
-
-  it('combustible: avisa si un avion no podra volver a repostar', () => {
-    const s = blankState();
-    const plane = newUnit(s, type('Fighter'), 0, 5, 5);
-    expect(UNIT.fuelperturn[plane.type]).toBeGreaterThan(0);
-    s.buildings.push({ type: AIRPORT, owner: 0, x: 5, y: 5, capture: null });
-    plane.fuel = 10;
-    expect(runsOutOfFuel(s, plane, { x: 6, y: 5 }, 1)).toBe(false);
-    expect(runsOutOfFuel(s, plane, { x: 30, y: 30 }, 5)).toBe(true);
-    const tank = newUnit(s, type('Tank'), 0, 8, 8);
-    expect(runsOutOfFuel(s, tank, { x: 30, y: 30 }, 50)).toBe(false); // no gasta por turno
   });
 
   it('mover en grupo: la casilla alcanzable mas cercana al destino', () => {

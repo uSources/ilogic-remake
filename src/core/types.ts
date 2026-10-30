@@ -33,8 +33,6 @@ export interface Unit {
   kills?: number;
   /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */
   order?: Pos;
-  fuel: number;
-  ammo: number;
   /** uid del transporte que la lleva, o null. */
   carrier: number | null;
   /** uids de las unidades que lleva (una entrada por plaza, null = libre). */

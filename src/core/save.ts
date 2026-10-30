@@ -53,8 +53,9 @@ export function deserialize(json: string): GameState | null {
     if (!isInt(u.type, 0, UNIT_TYPES - 1) || (u.team !== 0 && u.team !== 1)) return null;
     if (!isInt(u.x, 0, MAP_W - 1) || !isInt(u.y, 0, MAP_H - 1) || !isInt(u.life, 1, MAX_LIFE)) return null;
     if (!Array.isArray(u.cargo) || u.cargo.length !== UNIT.maxcarry[u.type]) return null;
-    u.fuel = Math.max(0, Math.min(Number(u.fuel) || 0, UNIT.maxfuel[u.type]!));
-    u.ammo = Math.max(0, Math.min(Number(u.ammo) || 0, UNIT.maxammo[u.type]!));
+    // [CAMBIO] Las partidas guardadas antes de quitar combustible y municion los traen: se ignoran.
+    delete (u as Partial<Record<'fuel' | 'ammo', unknown>>).fuel;
+    delete (u as Partial<Record<'fuel' | 'ammo', unknown>>).ammo;
     u.active = !!u.active;
     u.canMove = !!u.canMove;
     u.canFire = !!u.canFire;

@@ -1,5 +1,8 @@
 # Plan: mover unidades
 
+> Nota (30-10-2026): el combustible y la municion se quitaron del juego despues de este plan; lo que
+> se dice aqui de ellos (avisos, gasto por coste) ya no aplica.
+
 ## Estado (27-10-2026)
 
 Hecho todo: M2, M0 (con el camino a mano de M4), M3, M1, M5, las órdenes de varios turnos y el movimiento en grupo. Notas:

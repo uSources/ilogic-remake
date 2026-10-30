@@ -28,23 +28,15 @@ export const UNIT = T.UNIT;
 
 /** [unidad][edificio]: el edificio cura a la unidad (repairedAt) */
 export const HEALER: readonly (readonly boolean[])[] = T.HEALER;
-/** [unidad][edificio]: el edificio le da combustible (refueledAt) */
-export const FUELER: readonly (readonly boolean[])[] = T.FUELER;
-/** [unidad][edificio]: el edificio le da municion (rearmedAt) */
-export const AMMO_RESTORER: readonly (readonly boolean[])[] = T.AMMO_RESTORER;
 /** [unidad][edificio]: el edificio la fabrica (builtAt) */
 export const SPAWNER: readonly (readonly boolean[])[] = T.SPAWNER;
 /** [transporte][unidad]: puede llevarla (transport.carries) */
 export const CAN_CARRY: readonly (readonly boolean[])[] = T.CAN_CARRY;
-/** [unidad][unidad]: le da combustible (supplies.fuel) */
-export const UNIT_FUELER: readonly (readonly boolean[])[] = T.UNIT_FUELER;
-/** [unidad][unidad]: le da municion (supplies.ammo) */
-export const UNIT_AMMO_RESTORER: readonly (readonly boolean[])[] = T.UNIT_AMMO_RESTORER;
 /** [atacante][defensor]: probabilidad de acierto por punto de vida (attack.hitChance) */
 export const POWER: number[][] = T.POWER;
 /** [unidad][terreno]: prefijo de la imagen de 2013 (classicSprite) */
 export const UNIT_TERRAIN_PREFIX: readonly (readonly string[])[] = T.UNIT_TERRAIN_PREFIX;
-/** [unidad][unidad]: vida que le cura al estar al lado (heals) */
+/** [unidad][unidad]: vida que le cura con la orden de reparar, al lado (heals) */
 export const UNIT_HEALS: readonly (readonly number[])[] = T.UNIT_HEALS;
 /** La IA la trata como apoyo (ai.support): no combate, compra como mucho una a la vez. */
 export const UNIT_SUPPORT: readonly boolean[] = T.UNIT_SUPPORT;

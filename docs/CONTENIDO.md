@@ -4,7 +4,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 
 | Fichero | Que hay |
 |---|---|
-| `src/core/content/units.json` | Las 19 unidades: precio, movimiento, vision, combustible, municion, **ataque y daño contra cada unidad**, quien las fabrica, repara y recarga, transportes |
+| `src/core/content/units.json` | Las 19 unidades: precio, movimiento, vision, **ataque y daño contra cada unidad**, quien las fabrica y repara, transportes |
 | `src/core/content/buildings.json` | Los 6 edificios: ingresos, curacion, proteccion, vision y cual es el cuartel general |
 | `src/core/content/terrain.json` | Los 15 terrenos: nombre, defensa, si esconde, y por donde pasa y cuanto cuesta a cada tipo de movimiento |
 | `src/core/content/rules.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
@@ -55,7 +55,7 @@ npm run unit -- new Sniper --like Soldier
 
 Eso la añade **al final** de `units.json` como copia de la otra: mismos numeros, y **las demas la atacan
 con el mismo acierto que a la original** (se copia su columna de daño), la llevan los mismos transportes
-y la recargan los mismos suministros. Se pinta con el dibujo de la original (`"art": "Soldier"`) para
+y la repara Suministros si reparaba a la original. Se pinta con el dibujo de la original (`"art": "Soldier"`) para
 poder probarla y equilibrarla antes de dibujarla. Despues:
 
 1. `name` en español e ingles, precio, movimiento... y su `attack.hitChance` (a quien ataca y con
@@ -66,7 +66,7 @@ poder probarla y equilibrarla antes de dibujarla. Despues:
 3. `npm test`: dice lo que falte (nombres, referencias que no existen, graficos).
 
 A mano es lo mismo: copiar una unidad al final de la lista, cambiarle el `id`, y añadir su `id` en el
-`hitChance` de cada unidad que deba poder atacarla (y en `transport.carries` o `supplies` si toca).
+`hitChance` de cada unidad que deba poder atacarla (y en `transport.carries` o en el `heals` de Suministros si toca).
 
 Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): skill
 `.claude/skills/nueva-unidad/SKILL.md`.
@@ -85,17 +85,14 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 | `move` | Casillas por turno |
 | `vision` | Radio de vision |
 | `movement` | `foot` (a pie), `vehicle`, `air` o `amphibious`: por donde pasa y cuanto cuesta cada terreno |
-| `fuel` | `{ "max", "perTurn" }`: deposito (0 = no usa) y gasto por ronda (aviones: sin combustible caen) |
-| `ammo` | Disparos antes de recargar (0 = infinitos) |
 | `captures` | Puede capturar edificios |
 | `attack` | `null` si no ataca; si no, `range: [desde, hasta]` y `hitChance` |
 | `attack.range` | Distancias a las que dispara: `[1, 1]` cuerpo a cuerpo, `[3, 5]` artilleria |
 | `attack.hitChance` | **Daño**: probabilidad (0..1) de quitar cada punto de vida que le queda al atacante. Con 100 de vida y 0.5 quita unos 50 (menos si el defensor esta en un edificio, ver `protection`). Una unidad que no aparece no se puede atacar |
 | `transport` | `{ "slots", "carries" }`: plazas y unidades que lleva |
 | `builtAt` | Edificios que la fabrican |
-| `repairedAt`, `refueledAt`, `rearmedAt` | Edificios propios que la curan, le dan combustible, le dan municion |
-| `supplies` | `{ "fuel": [...], "ammo": [...] }`: a que unidades recarga al lado |
-| `heals` | Vida que cura cada ronda a las unidades propias al lado (`{ "Soldier": 10 }`) |
+| `repairedAt` | Edificios propios que la curan al empezar la ronda |
+| `heals` | Vida que cura a cada unidad propia de al lado con la orden "Reparar" (Suministros: `{ "Tank": 20, ... }`) |
 | `classicSprite` | Graficos de 2013: prefijo de imagen segun el terreno |
 | `ai.support` | No combate: la IA tiene como mucho una |
 | `notes` | Comentario libre |

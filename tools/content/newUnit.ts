@@ -1,6 +1,6 @@
 /**
  * Unidad nueva a partir de otra: copia sus numeros y su columna de daño (quien puede atacarla y con
- * cuanto acierto), y la deja al final de la lista con el dibujo de la original ("art").
+ * cuanto acierto), transportes y quien la repara, y la deja al final de la lista con el dibujo de la original ("art").
  * Funcion pura: la usa tools/content/cli.ts y se prueba en tests/newUnit.test.ts.
  */
 import type { UnitDef } from '@core/content';
@@ -8,7 +8,7 @@ import type { UnitDef } from '@core/content';
 export interface NewUnitResult {
   units: UnitDef[];
   /** Que se ha copiado, para contarlo. */
-  copied: { attackers: string[]; carriers: string[]; suppliers: string[] };
+  copied: { attackers: string[]; carriers: string[]; healers: string[] };
 }
 
 export function addUnitLike(units: readonly UnitDef[], id: string, like: string): NewUnitResult {
@@ -28,7 +28,7 @@ export function addUnitLike(units: readonly UnitDef[], id: string, like: string)
   // Se ataca a si misma como la original se atacaba a si misma.
   if (copy.attack && base.attack?.hitChance[like] !== undefined) copy.attack.hitChance[id] = base.attack.hitChance[like];
 
-  const copied: NewUnitResult['copied'] = { attackers: [], carriers: [], suppliers: [] };
+  const copied: NewUnitResult['copied'] = { attackers: [], carriers: [], healers: [] };
   const next = units.map((u) => {
     const v = structuredClone(u);
     const p = v.attack?.hitChance[like];
@@ -40,12 +40,10 @@ export function addUnitLike(units: readonly UnitDef[], id: string, like: string)
       v.transport.carries.push(id);
       copied.carriers.push(v.id);
     }
-    if (v.supplies) {
-      const fuel = v.supplies.fuel.includes(like);
-      const ammo = v.supplies.ammo.includes(like);
-      if (fuel) v.supplies.fuel.push(id);
-      if (ammo) v.supplies.ammo.push(id);
-      if (fuel || ammo) copied.suppliers.push(v.id);
+    const heal = v.heals?.[like];
+    if (v.heals && heal !== undefined) {
+      v.heals[id] = heal;
+      copied.healers.push(v.id);
     }
     return v;
   });

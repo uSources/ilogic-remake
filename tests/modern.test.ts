@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, RULES, UNIT, useRules } from '@core/data';
+import { DEFAULT_RULES, RULES, useRules } from '@core/data';
 import { seededRng } from '@core/geom';
 import { attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
 import { blankState } from './helpers';
@@ -20,7 +20,6 @@ describe('reglas nuevas: combate', () => {
     expect(r.killed).toBe(false);
     expect(r.counter).toBeGreaterThan(0);
     expect(a.life).toBe(100 - r.counter);
-    expect(d.ammo).toBe(UNIT.maxammo[TANK]! - 1);
     // Responde con la vida que le queda: menos de lo que recibio.
     expect(r.counter).toBeLessThan(r.damage);
   });

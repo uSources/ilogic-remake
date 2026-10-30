@@ -71,7 +71,6 @@ describe('movimiento: emboscadas en la niebla', () => {
     expect(a.x).toBe(5);
     expect(a.active).toBe(false);
     expect(a.canFire).toBe(false);
-    expect(a.fuel).toBe(50 - 3);
   });
 
   it('si la casilla anterior a la emboscada es de un aliado, se para en la de antes', () => {
@@ -133,7 +132,6 @@ describe('movimiento: camino trazado a mano', () => {
     expect(validPath(s, a, via, r)).toBe(true);
     const path = moveUnit(s, a, { x: 7, y: 5 }, r, via)!;
     expect(path).toEqual(via);
-    expect(a.fuel).toBe(50 - 4);
   });
 
   it('caminos no validos: saltos, repetir casilla o pasarse de movimiento', () => {
@@ -181,7 +179,6 @@ describe('movimiento: coste del terreno', () => {
     expect(r.steps[8]![5]).toBe(5);
     expect(r.steps[9]![5]).toBe(0); // 6 > movimiento 5
     moveUnit(s, tank, { x: 8, y: 5 }, r);
-    expect(tank.fuel).toBe(50 - 5);
     const sol = newUnit(s, SOLDIER, 0, 5, 5);
     expect(moveRange(s, sol).steps[7]![5]).toBe(2);
   });

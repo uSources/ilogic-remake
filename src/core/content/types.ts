@@ -65,10 +65,6 @@ export interface UnitDef {
   /** Radio de vision (rombo). */
   vision: number;
   movement: MovementName;
-  /** Combustible (0 = no usa) y lo que gasta cada ronda sin moverse (aviones). */
-  fuel: { max: number; perTurn: number };
-  /** Municion (0 = infinita). */
-  ammo: number;
   captures: boolean;
   /**
    * null = no ataca. `range`: distancias desde/hasta (1 = casilla de al lado; [2, 5] = artilleria).
@@ -76,14 +72,10 @@ export interface UnitDef {
    */
   attack: { range: [number, number]; hitChance: Record<string, number> } | null;
   transport?: { slots: number; carries: string[] };
-  /** Edificios que la fabrican, la reparan, le dan combustible o municion. */
+  /** Edificios que la fabrican y edificios propios que la curan al empezar la ronda. */
   builtAt: string[];
   repairedAt: string[];
-  refueledAt: string[];
-  rearmedAt: string[];
-  /** Unidades a las que da combustible o municion (Suministros). */
-  supplies?: { fuel: string[]; ammo: string[] };
-  /** Vida que da a otras unidades al lado (ninguna en el juego original). */
+  /** Vida que cura a cada unidad propia de al lado con la orden de reparar (Suministros). */
   heals?: Record<string, number>;
   /** Mientras no tenga dibujo propio, se pinta con el de esta unidad. */
   art?: string;

@@ -5,7 +5,7 @@
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
-import { AI, BUILDING, FUELER, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT, Movement } from './data';
+import { AI, BUILDING, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT, Movement } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
   attackFull,
@@ -15,7 +15,6 @@ import {
   capture,
   expectedDamage,
   groundDistance,
-  hasAmmo,
   inAttackRange,
   merge,
   mergeTargets,
@@ -82,36 +81,29 @@ function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRange): Gen
   return !!path.ambush;
 }
 
-/** Necesita volver a un edificio: poca vida, o aereo con poco combustible. */
-function needsRepair(u: Unit): 'life' | 'fuel' | null {
-  if (u.life < AI.LIFETOBACK) return 'life';
-  const burn = UNIT.fuelperturn[u.type]!;
-  if (burn > 0 && u.fuel <= burn * AI.FUELTURNS + UNIT.mover[u.type]!) return 'fuel';
-  return null;
-}
+/** Necesita volver a curarse a un edificio. */
+const needsRepair = (u: Unit): boolean => u.life < AI.LIFETOBACK;
 
-function repairsHere(s: GameState, u: Unit, x: number, y: number, need: 'life' | 'fuel'): boolean {
+function repairsHere(s: GameState, u: Unit, x: number, y: number): boolean {
   const b = buildingAt(s, x, y);
-  if (!b || b.owner !== u.team) return false;
-  return need === 'life' ? HEALER[u.type]![b.type]! && BUILDING.heals[b.type]! > 0 : FUELER[u.type]![b.type]!;
+  return !!b && b.owner === u.team && HEALER[u.type]![b.type]! && BUILDING.heals[b.type]! > 0;
 }
 
-function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange): Generator<GameEvent, boolean> {
+function* retreat(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   // 1) Unirse a una unidad igual si la suma de vidas no pasa de 130.
-  if (need === 'life') {
-    const mates = mergeTargets(s, u, range).filter((o) => o.life + u.life <= AI.MAXMERGELIFE);
-    if (mates.length) {
-      const target = mates.sort((a, b) => manhattan(u, a) - manhattan(u, b))[0]!;
-      const path = merge(s, u, target);
-      if (path) {
-        if (path.ambush) yield moveEvent(u.uid, path);
-        else yield { kind: 'merge', uid: u.uid, into: target.uid, path };
-        return true;
-      }
+  const mates = mergeTargets(s, u, range).filter((o) => o.life + u.life <= AI.MAXMERGELIFE);
+  if (mates.length) {
+    const target = mates.sort((a, b) => manhattan(u, a) - manhattan(u, b))[0]!;
+    const path = merge(s, u, target);
+    if (path) {
+      if (path.ambush) yield moveEvent(u.uid, path);
+      else yield { kind: 'merge', uid: u.uid, into: target.uid, path };
+      return true;
     }
   }
+
   // 2) [CAMBIO] Si ya esta en un edificio que la repara, se queda (antes se marchaba a otro).
-  if (repairsHere(s, u, u.x, u.y, need)) {
+  if (repairsHere(s, u, u.x, u.y)) {
     wait(u);
     return true;
   }
@@ -120,7 +112,7 @@ function* retreat(s: GameState, u: Unit, need: 'life' | 'fuel', range: MoveRange
   let goal: Pos | null = null;
   let goalD = Infinity;
   for (const b of s.buildings) {
-    if (!repairsHere(s, u, b.x, b.y, need)) continue;
+    if (!repairsHere(s, u, b.x, b.y)) continue;
     const d = dist[b.x]![b.y]!;
     if (d > 0 && d < goalD) {
       goal = b;
@@ -156,7 +148,7 @@ function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
 
 function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generator<GameEvent, boolean> {
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
-  if (!UNIT.canfight[u.type] || !hasAmmo(u) || !u.canFire) return false;
+  if (!UNIT.canfight[u.type] || !u.canFire) return false;
   const vis = visibility(s, ME);
   const reach = UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
   const enemies = s.units.filter((t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(u, t) <= reach);
@@ -349,8 +341,7 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
         continue;
       }
     }
-    const need = needsRepair(u);
-    if (need && (yield* retreat(s, u, need, range))) continue;
+    if (needsRepair(u) && (yield* retreat(s, u, range))) continue;
     if (yield* tryAttack(s, u, range, rng)) continue;
     if (yield* tryCapture(s, u, range)) continue;
     if (yield* advance(s, u, range)) continue;

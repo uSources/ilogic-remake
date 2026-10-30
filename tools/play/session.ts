@@ -4,7 +4,7 @@
  * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
  */
 import { aiTurn } from '@core/ai';
-import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT, UNIT_NAMES, useRules } from '@core/data';
+import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, useRules } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { buildMission, missionById, missionRules } from '@core/missions';
@@ -188,13 +188,7 @@ export class Session {
     if (!list.length) return '(ninguna)';
     return list
       .map((u) => {
-        const st = [
-          UNIT.maxfuel[u.type]! > 0 ? `comb ${u.fuel}` : '',
-          UNIT.maxammo[u.type]! > 0 ? `mun ${u.ammo}` : '',
-          u.active ? '' : 'usada',
-        ]
-          .filter(Boolean)
-          .join(' ');
+        const st = [u.active ? '' : 'usada'].filter(Boolean).join(' ');
         return `${String(u.uid).padStart(3)} ${u.team === 0 ? 'tuya   ' : 'enemiga'} ${UNIT_NAMES[u.type]!.padEnd(13)} (${u.x},${u.y}) vida ${u.life} ${st}`;
       })
       .join('\n');

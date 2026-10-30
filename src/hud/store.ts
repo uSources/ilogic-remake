@@ -60,8 +60,6 @@ export interface UnitVM {
   name: string;
   team: 0 | 1;
   life: number;
-  fuel?: { now: number; max: number };
-  ammo?: { now: number; max: number };
   stats: string;
   status?: string;
   cargo?: string;
@@ -75,9 +73,7 @@ export interface MoveTipVM {
   used?: number;
   max?: number;
   stars?: number;
-  fuel?: [number, number];
   danger?: boolean;
-  warn?: string;
 }
 
 export interface TileVM {

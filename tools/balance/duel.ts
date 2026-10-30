@@ -77,7 +77,6 @@ export function duelMatrix(opts: { trials: number; terrain: string; seed: number
             const [x, y] = round % 2 === 0 ? [a, b] : [b, a];
             if (!s.units.includes(x) || !s.units.includes(y)) break;
             fresh(x);
-            x.ammo = Math.max(x.ammo, 1);
             attack(s, x, y, rng);
           }
           const aAlive = s.units.includes(a),

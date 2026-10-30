@@ -13,22 +13,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "name",
-          "cost",
-          "move",
-          "vision",
-          "movement",
-          "fuel",
-          "ammo",
-          "captures",
-          "attack",
-          "builtAt",
-          "repairedAt",
-          "refueledAt",
-          "rearmedAt"
-        ],
+        "required": ["id", "name", "cost", "move", "vision", "movement", "captures", "attack", "builtAt", "repairedAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -69,29 +54,6 @@
           "movement": {
             "enum": ["foot", "vehicle", "air", "amphibious"],
             "description": "Tipo de movimiento: foot a pie, vehicle vehiculo, air aereo, amphibious anfibio. Decide por donde pasa y cuanto le cuesta cada terreno."
-          },
-          "fuel": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["max", "perTurn"],
-            "description": "Combustible. max 0 = no usa.",
-            "properties": {
-              "max": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Deposito lleno (1 por casilla movida)."
-              },
-              "perTurn": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Lo que gasta cada ronda aunque no se mueva (aviones). Sin combustible, un avion cae."
-              }
-            }
-          },
-          "ammo": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Disparos antes de recargar. 0 = municion infinita."
           },
           "captures": {
             "type": "boolean",
@@ -198,93 +160,11 @@
               "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
               "description": "id de un edificio de buildings.json."
             },
-            "description": "Edificios propios que le curan vida."
-          },
-          "refueledAt": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
-              "description": "id de un edificio de buildings.json."
-            },
-            "description": "Edificios que le llenan el combustible."
-          },
-          "rearmedAt": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["City", "Oil", "Factory", "Stronghold", "Airport", "Base"],
-              "description": "id de un edificio de buildings.json."
-            },
-            "description": "Edificios que le recargan la municion."
-          },
-          "supplies": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["fuel", "ammo"],
-            "description": "Unidades de apoyo: a quien da combustible y municion al lado.",
-            "properties": {
-              "fuel": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "description": "id de una unidad de units.json.",
-                  "examples": [
-                    "Soldier",
-                    "Tank",
-                    "Artillery",
-                    "Car",
-                    "LTank",
-                    "Blocker",
-                    "BSoldier",
-                    "Transport",
-                    "SSoldier",
-                    "Missile_truck",
-                    "LFighter",
-                    "Fighter",
-                    "Bomber",
-                    "Supplier",
-                    "Antiair",
-                    "THelicopter",
-                    "MSoldier",
-                    "FSoldier",
-                    "WTank"
-                  ]
-                }
-              },
-              "ammo": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "description": "id de una unidad de units.json.",
-                  "examples": [
-                    "Soldier",
-                    "Tank",
-                    "Artillery",
-                    "Car",
-                    "LTank",
-                    "Blocker",
-                    "BSoldier",
-                    "Transport",
-                    "SSoldier",
-                    "Missile_truck",
-                    "LFighter",
-                    "Fighter",
-                    "Bomber",
-                    "Supplier",
-                    "Antiair",
-                    "THelicopter",
-                    "MSoldier",
-                    "FSoldier",
-                    "WTank"
-                  ]
-                }
-              }
-            }
+            "description": "Edificios propios que le curan vida al empezar la ronda."
           },
           "heals": {
             "type": "object",
-            "description": "Vida que cura cada ronda a cada unidad propia al lado.",
+            "description": "Vida que cura a cada unidad propia de al lado cuando usa la orden de reparar (Suministros): { \"Tank\": 20 }.",
             "additionalProperties": {
               "type": "integer",
               "minimum": 0,
