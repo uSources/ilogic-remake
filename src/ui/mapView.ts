@@ -200,6 +200,25 @@ export class MapView {
     else this.cam.pan(wx, wy, 220, 'Sine.easeOut', true);
   }
 
+  /**
+   * Centrar en una casilla sin enseñar mas fuera del mapa que el margen normal. En el movil la camara
+   * puede ir mas alla del borde (para llevar la columna 0 al centro), pero al empezar la partida no
+   * hace falta: sin esto, una Base en la columna 0 dejaba media pantalla en negro.
+   */
+  centerInside(p: Pos): void {
+    const edgeCss = Math.min(EDGE_CSS, Math.round((this.cam.width / dpr()) * 0.08));
+    const m = (edgeCss * dpr()) / this.cam.zoom;
+    const vw = this.cam.width / this.cam.zoom,
+      vh = this.cam.height / this.cam.zoom;
+    const mw = MAP_W * TILE,
+      mh = MAP_H * TILE;
+    // Si el mapa (con su margen) es mas pequeño que la vista, centrado; si no, dentro.
+    const fit = (v: number, lo: number, hi: number) => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)));
+    const cx = fit(p.x * TILE + TILE / 2, vw / 2 - m, mw + m - vw / 2);
+    const cy = fit(p.y * TILE + TILE / 2, vh / 2 - m, mh + m - vh / 2);
+    this.cam.centerOn(cx, cy);
+  }
+
   /** Desplaza la camara lo justo para que la casilla quede dentro con un margen (en casillas). */
   ensureVisible(p: Pos, margin = 2, instant = false): void {
     const wv = this.cam.worldView;
