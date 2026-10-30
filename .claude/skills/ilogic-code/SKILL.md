@@ -17,6 +17,8 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | `src/hud/` | Componentes Preact y `store` (estado de la interfaz) | settings, assets, patchNotes, tipos de core |
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
+| `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
+| `tests/` | Vitest | todo; core como `'@core/...'` |
 
 - `src/core` **no** importa Phaser, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
   Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/orders.ts`).

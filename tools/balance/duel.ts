@@ -2,10 +2,10 @@
  * Laboratorio de duelos: una unidad contra otra, sin mapa ni IA, usando las reglas reales
  * (attack() de core/rules.ts, asi que incluye contraataque o menos azar si las reglas lo tienen).
  */
-import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '../../src/core/data';
-import { grid, seededRng } from '../../src/core/geom';
-import { attack, inAttackRange, newUnit } from '../../src/core/rules';
-import type { GameState, Unit } from '../../src/core/types';
+import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
+import { grid, seededRng } from '@core/geom';
+import { attack, inAttackRange, newUnit } from '@core/rules';
+import type { GameState, Unit } from '@core/types';
 
 export interface DuelCell {
   attacker: string;

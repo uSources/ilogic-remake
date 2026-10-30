@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, RULES, UNIT, useRules } from '../src/core/data';
-import { seededRng } from '../src/core/geom';
-import { attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '../src/core/rules';
+import { DEFAULT_RULES, RULES, UNIT, useRules } from '@core/data';
+import { seededRng } from '@core/geom';
+import { attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,
@@ -108,7 +108,7 @@ describe('reglas nuevas: captura por puntos', () => {
 
 describe('reglas nuevas: veterania', () => {
   it('sube de rango al destruir y mejora acierto y defensa', async () => {
-    const { hitChance, rank, attackFull, merge } = await import('../src/core/rules');
+    const { hitChance, rank, attackFull, merge } = await import('@core/rules');
     const s = blankState();
     const a = newUnit(s, TANK, 0, 3, 3);
     const b = newUnit(s, TANK, 1, 4, 3);
@@ -132,7 +132,7 @@ describe('reglas nuevas: veterania', () => {
   });
 
   it('sin veterania las bajas no cuentan', async () => {
-    const { hitChance } = await import('../src/core/rules');
+    const { hitChance } = await import('@core/rules');
     useRules({ veterancy: false });
     const s = blankState();
     const a = newUnit(s, TANK, 0, 3, 3);

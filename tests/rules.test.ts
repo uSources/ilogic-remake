@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { HQ, UNIT, useRules } from '../src/core/data';
+import { HQ, UNIT, useRules } from '@core/data';
 import { PLAIN_RULES } from './plainRules';
-import { seededRng } from '../src/core/geom';
+import { seededRng } from '@core/geom';
 import {
   attack,
   attackTargets,
@@ -16,7 +16,7 @@ import {
   spawn,
   unitActions,
   unload,
-} from '../src/core/rules';
+} from '@core/rules';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,
@@ -177,7 +177,7 @@ describe('compra y fin de ronda', () => {
   });
 });
 
-import { combatForecast, threatMap } from '../src/core/rules';
+import { combatForecast, threatMap } from '@core/rules';
 
 describe('prevision y amenaza', () => {
   it('prevision de tanque contra tanque coherente', () => {

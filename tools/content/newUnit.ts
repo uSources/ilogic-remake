@@ -3,7 +3,7 @@
  * cuanto acierto), y la deja al final de la lista con el dibujo de la original ("art").
  * Funcion pura: la usa tools/content/cli.ts y se prueba en tests/newUnit.test.ts.
  */
-import type { UnitDef } from '../../src/core/content';
+import type { UnitDef } from '@core/content';
 
 export interface NewUnitResult {
   units: UnitDef[];

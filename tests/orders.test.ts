@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING_NAMES, DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '../src/core/data';
-import { grid } from '../src/core/geom';
-import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '../src/core/orders';
-import { moveRange, newUnit, pathCost } from '../src/core/rules';
+import { BUILDING_NAMES, DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '@core/data';
+import { grid } from '@core/geom';
+import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '@core/orders';
+import { moveRange, newUnit, pathCost } from '@core/rules';
 import { blankState } from './helpers';
 
 const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);

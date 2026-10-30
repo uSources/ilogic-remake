@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, POWER, RULES, UNIT, useRules } from '../src/core/data';
+import { DEFAULT_RULES, POWER, RULES, UNIT, useRules } from '@core/data';
 import { PLAIN_RULES } from './plainRules';
 import { duelMatrix } from '../tools/balance/duel';
 import { playGame } from '../tools/balance/play';

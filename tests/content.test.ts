@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import buildingsFile from '../src/core/content/buildings.json';
-import unitsFile from '../src/core/content/units.json';
-import { buildTables, validateContent, type Content } from '../src/core/content';
-import { MOVEMENTS, MoveType } from '../src/core/content';
-import { CONTENT, Movement, TERRAIN_NAMES, TerrainType, UNIT_ART, UNIT_NAMES, BUILDING_NAMES } from '../src/core/data';
+import buildingsFile from '@core/content/buildings.json';
+import unitsFile from '@core/content/units.json';
+import { buildTables, validateContent, type Content } from '@core/content';
+import { MOVEMENTS, MoveType } from '@core/content';
+import { CONTENT, Movement, TERRAIN_NAMES, TerrainType, UNIT_ART, UNIT_NAMES, BUILDING_NAMES } from '@core/data';
 
 const clone = (): Content => structuredClone(CONTENT) as Content;
 const errsOf = (c: Content) => validateContent(c);

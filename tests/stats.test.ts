@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { UNIT } from '../src/core/data';
-import { newUnit } from '../src/core/rules';
-import { deserialize, serialize } from '../src/core/save';
-import { recordEvent, stats } from '../src/core/stats';
+import { UNIT } from '@core/data';
+import { newUnit } from '@core/rules';
+import { deserialize, serialize } from '@core/save';
+import { recordEvent, stats } from '@core/stats';
 import { blankState } from './helpers';
 
 describe('estadisticas', () => {

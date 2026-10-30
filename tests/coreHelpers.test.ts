@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING, DEFAULT_RULES, HQ, TERRAIN, UNIT, useRules } from '../src/core/data';
+import { BUILDING, DEFAULT_RULES, HQ, TERRAIN, UNIT, useRules } from '@core/data';
 import {
   attackZone,
   captureEvent,
@@ -10,9 +10,9 @@ import {
   reachableTiles,
   tileProtection,
   unitThreat,
-} from '../src/core/rules';
-import type { MovePath } from '../src/core/rules';
-import { deserialize, serialize } from '../src/core/save';
+} from '@core/rules';
+import type { MovePath } from '@core/rules';
+import { deserialize, serialize } from '@core/save';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,

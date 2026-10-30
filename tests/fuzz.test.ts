@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, setMapSize, useRules } from '../src/core/data';
-import { capture, moveUnit, newUnit, captureProgress, endRound } from '../src/core/rules';
+import { DEFAULT_RULES, setMapSize, useRules } from '@core/data';
+import { capture, moveUnit, newUnit, captureProgress, endRound } from '@core/rules';
 import { fuzzGame } from '../tools/improve/fuzz';
 import { blankState } from './helpers';
 

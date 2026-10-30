@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, useRules } from '../src/core/data';
+import { DEFAULT_RULES, useRules } from '@core/data';
 import { playGame } from '../tools/balance/play';
 
 /**

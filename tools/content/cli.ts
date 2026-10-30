@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
-import { validateContent, readContentFiles, type UnitDef } from '../../src/core/content';
+import { validateContent, readContentFiles, type UnitDef } from '@core/content';
 import { addUnitLike } from './newUnit';
 
 const FILE = fileURLToPath(new URL('../../src/core/content/units.json', import.meta.url));

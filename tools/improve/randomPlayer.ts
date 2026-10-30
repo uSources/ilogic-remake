@@ -3,7 +3,7 @@
  * abastecer, comprar). No juega bien: sirve para recorrer combinaciones raras que la IA nunca prueba.
  * Usa solo las funciones publicas de las reglas, como la interfaz del juego.
  */
-import { UNIT } from '../../src/core/data';
+import { UNIT } from '@core/data';
 import {
   attackFull,
   attackTargets,
@@ -25,8 +25,8 @@ import {
   unload,
   unloadTiles,
   wait,
-} from '../../src/core/rules';
-import type { GameState, Rng, Team, Unit } from '../../src/core/types';
+} from '@core/rules';
+import type { GameState, Rng, Team, Unit } from '@core/types';
 
 const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng() * xs.length)];
 

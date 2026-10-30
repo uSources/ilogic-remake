@@ -56,6 +56,35 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    // Las herramientas solo usan el nucleo, y por su alias: asi se podrian separar en su propio paquete
+    // sin tocar nada (ver docs/ARQUITECTURA.md, "Herramientas").
+    files: ['tools/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/src', '**/src/**'],
+              message: "tools/ solo puede usar el nucleo del juego, importandolo como '@core/...' (nada de escenas, interfaz ni ajustes).",
+            },
+            { group: ['phaser', 'preact', 'preact/*'], message: 'tools/ no puede depender de Phaser ni de la interfaz.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Los tests pueden probar la interfaz (../src/ui...), pero el nucleo se importa por su alias.
+    files: ['tests/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/src/core', '**/src/core/**'], message: "Importa el nucleo como '@core/...'." }] },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },

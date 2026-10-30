@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ATLAS_PAGES, LOOSE_IMAGES } from '../src/atlasPages';
 import { IMAGE_KEYS } from '../src/assetList';
-import { BUILDING_NAMES, HQ, UNIT_ART, UNIT_NAMES } from '../src/core/data';
+import { BUILDING_NAMES, HQ, UNIT_ART, UNIT_NAMES } from '@core/data';
 import { requiredArtKeys } from '../src/ui/terrainArt';
 
 /** Comprueba que los graficos compilados (npm run assets) estan completos. */
