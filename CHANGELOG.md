@@ -7,39 +7,69 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.3.0] - 2026-10-30 — Cielo y acero
+
+Ejércitos más pequeños, combates que se entienden, unidades con habilidades y un tiempo que cambia.
 
 ### Novedades
 - **Clima.** Cada pocos días cambia el tiempo, igual para los dos bandos: la **lluvia** frena a los vehículos, la **nevada** a todo lo que va por tierra, la **tormenta** a los aviones y la **tormenta de arena** (solo en el desierto) a la infantería y los aviones. El mal tiempo también quita visión con niebla y puntería. Arriba, junto al día, se ve el clima de hoy, sus efectos y el de mañana cuando va a cambiar. Se puede quitar en Nueva partida → Personalizada; la campaña no lo usa.
-- **Se puede instalar como app** desde el navegador (móvil u ordenador) y **jugar sin conexión**. Se actualiza sola con cada versión.
+- **Habilidades de las unidades**, explicadas en su ficha y en el menú de compra:
+  - **Escudero — Escudo:** los ataques a distancia le aciertan la mitad.
+  - **Barricada — Zona de control:** los enemigos por tierra que llegan a su lado se tienen que parar.
+  - **Suministros — Apoyo:** a las unidades propias de al lado les aciertan un 10 % menos.
+  - **Mortero — Perforante:** ignora la protección del terreno y de los edificios.
+- **Combate más visible**, tuyo y del enemigo: una mira se cierra sobre el objetivo, el disparo sale del atacante, la barra de vida baja a saltos y se avisa del contraataque («FALLO» si no hace daño). Abajo, un **panel de combate** enseña las dos unidades, su acierto y cuánta vida pierden. Lo que dispara desde la niebla sale como «???».
+- **Desglose del dinero y del día** al pasar por encima (o tocar): ingresos por edificio, mantenimiento por unidad, con cuánto empiezas el próximo turno, puntos de mando y, con límite de días, cuántos quedan y los puntos de cada bando.
 
-### Gráficos
-- Nuevo icono del juego con el Soldado nuevo.
-
-### Para quien modifica el juego
-- Los climas están en `src/core/content/weather.json` (efectos, duración y probabilidad en cada terreno).
+### Cambios de juego
+- **Puntos de mando:** cada unidad ocupa de 1 (infantería) a 5 (lo más grande), con un máximo de 30 por bando. El menú de compra dice cuánto ocupa cada una.
+- **Mantenimiento:** cada día se paga el 10 % del precio de tu ejército (si no llega, se paga lo que haya).
+- Las dos se cambian o se quitan en Nueva partida → Personalizada → Ejército. La campaña no las usa.
 
 ### Equilibrio
 - El **Tanque** ya rinde lo que cuesta: acierta el doble a la infantería (0,6 en vez de 0,3; 0,45 a la Bazuca), y el Soldado, el Escudero y el Motorizado le aciertan la mitad (0,05). El Mortero, 0,2 en vez de 0,4. La Bazuca sigue siendo el antitanque.
 - El **Soldado** acierta menos a los vehículos (Jeep 0,2; Tanque ligero, Transporte, Lanzamisiles, Suministros, Antiaéreo y Tanque anfibio 0,1; Artillería 0,05): con 1500 dominaba la partida.
-- La IA ya no se gasta casi todo en aviones: reparte las compras entre la Fábrica y el Aeropuerto, y vuelve a sacar Tanques.
+- La IA ahorra para unidades grandes y ya no se gasta casi todo en aviones: reparte las compras entre la Fábrica y el Aeropuerto y vuelve a sacar Tanques.
+
+### Interfaz
+- **Letra propia** de píxeles para títulos y botones, y **iconos nuevos** de vida, dinero, mando, defensa, visión, alcance, captura y movimiento en las fichas y la barra de arriba.
+- **Puntero del ratón** nuevo (dorado sobre lo que se puede pulsar) y un **marco de esquinas** animado en la casilla señalada, que se pone rojo al elegir objetivo.
+
+### Para quien modifica el juego
+- Los climas están en `src/core/content/weather.json` (efectos, duración y probabilidad en cada terreno).
+- Las habilidades se ponen en `units.json` (`"abilities"`); la guía para añadir una clase nueva está en `docs/CONTENIDO.md`.
 
 <!-- en -->
 
+Smaller armies, battles you can follow, units with abilities and changing weather.
+
 ### New
 - **Weather.** Every few days the weather changes, the same for both sides: **rain** slows vehicles, **snowfall** slows everything on the ground, **storms** slow aircraft and **sandstorms** (desert only) slow infantry and aircraft. Bad weather also costs vision under fog and aim. Next to the day at the top you can see today's weather, its effects and tomorrow's when it is about to change. It can be turned off in New game → Custom; the campaign doesn't use it.
-- **Install it as an app** from the browser (phone or computer) and **play offline**. It updates itself with each version.
+- **Unit abilities**, explained on the unit card and in the buy menu:
+  - **Shield trooper — Shield:** ranged attacks hit it half as often.
+  - **Barricade — Zone of control:** enemy ground units that move next to it have to stop.
+  - **Supplier — Support:** adjacent friendly units are hit 10 % less often.
+  - **Mortar — Piercing:** ignores the cover from terrain and buildings.
+- **Clearer combat**, yours and the enemy's: a reticle closes on the target, the shot leaves the attacker, the health bar drops step by step and counterattacks are announced ("MISS" when no damage is done). A **combat panel** at the bottom shows both units, their hit chance and how much health they lose. Anything firing from the fog shows as "???".
+- **Money and day breakdown** on hover (or tap): income per building, upkeep per unit, what you start your next turn with, command points and, with a day limit, the days left and each side's score.
 
-### Graphics
-- New game icon with the new Soldier.
-
-### For modders
-- Weather lives in `src/core/content/weather.json` (effects, duration and chance on each terrain).
+### Gameplay
+- **Command points:** each unit takes from 1 (infantry) to 5 (the biggest), up to 30 per side. The buy menu shows how many each one takes.
+- **Upkeep:** every day you pay 10 % of your army's price (if you can't, you pay what you have).
+- Both can be changed or turned off in New game → Custom → Army. The campaign doesn't use them.
 
 ### Balance
 - The **Tank** is now worth its price: it hits infantry twice as often (0.6 instead of 0.3; 0.45 against the Bazooka), and the Soldier, Shield trooper and Motor trooper hit it half as often (0.05). The Mortar, 0.2 instead of 0.4. The Bazooka is still the anti-tank unit.
 - The **Soldier** hits vehicles less often (Jeep 0.2; Light tank, Transport, Missile truck, Supplier, Anti-air and Amphibious tank 0.1; Artillery 0.05): at 1500 it dominated the game.
-- The AI no longer spends almost everything on aircraft: it splits purchases between the Factory and the Airport, and builds Tanks again.
+- The AI saves up for big units and no longer spends almost everything on aircraft: it splits purchases between the Factory and the Airport and builds Tanks again.
+
+### Interface
+- A **custom pixel font** for titles and buttons, and **new icons** for health, money, command, defense, vision, range, capture and movement on the cards and the top bar.
+- A new **mouse pointer** (gold over anything clickable) and an animated **corner frame** on the highlighted tile, which turns red when picking a target.
+
+### For modders
+- Weather lives in `src/core/content/weather.json` (effects, duration and chance on each terrain).
+- Abilities go in `units.json` (`"abilities"`); the guide to adding a new kind is in `docs/CONTENIDO.md`.
 
 ## [0.2.0] - 2026-10-30 — Sin repostar
 
