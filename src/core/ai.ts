@@ -308,13 +308,20 @@ function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: R
   return items[items.length - 1]!;
 }
 
+/** Un edificio que fabrica algo de este precio o mas fabrica "lo grande" (Fabrica, Aeropuerto). */
+const BIG_UNIT = 10000;
+
 function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
   // [CAMBIO] Con puntos de mando el ejercito tiene tope y gastarlo todo cada turno lo llena de
   // soldados de 1 punto. Entonces elige entre todo lo que cabe (no solo lo que puede pagar), empieza
   // por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
+  // [CAMBIO] Los edificios de lo grande (Fabrica, Aeropuerto) van en orden al azar: si el Aeropuerto
+  // (Caza, 20000) iba siempre primero se llevaba el dinero o el ahorro y la Fabrica casi nunca podia
+  // pagar un Tanque (0,3 % de las compras; ver balance/reports/tanques-vs-infanteria.md).
   const limited = RULES.commandPoints !== null;
   const top = (b: Building) => Math.max(0, ...buyOptions(s, b).map((o) => o.cost));
-  const order = limited ? [...s.buildings].sort((x, y) => top(y) - top(x)) : s.buildings;
+  const key = new Map(s.buildings.map((b) => [b, top(b) >= BIG_UNIT ? BIG_UNIT + rng() : top(b) / BIG_UNIT]));
+  const order = limited ? [...s.buildings].sort((x, y) => key.get(y)! - key.get(x)!) : s.buildings;
   const income = s.buildings.reduce((n, b) => n + (b.owner === ME ? buildingIncome(b.type) : 0), 0) - upkeepOf(s, ME);
   for (const b of order) {
     if (b.owner !== ME || teamUnits(s, ME).length >= RULES.maxUnits || unitAt(s, b.x, b.y)) continue;
