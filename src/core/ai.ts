@@ -11,6 +11,9 @@ import {
   attackFull,
   buildingAt,
   buyOptions,
+  buildingIncome,
+  upkeepOf,
+  type BuyOption,
   canCapture,
   capture,
   expectedDamage,
@@ -34,7 +37,7 @@ import {
   moveEvent,
   reachableTiles,
 } from './rules';
-import type { GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
+import type { Building, GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
 
 /**
  * Bando que juega el turno en curso. Se fija al empezar aiTurn; un turno de IA termina
@@ -296,25 +299,45 @@ const SUPPORT_TYPES = new Set<number>(UNIT_SUPPORT.flatMap((sup, i) => (sup ? [i
  * no combaten. Ahora: elige al azar dando mas peso a lo mas caro, sin repetir unidades de
  * apoyo, y asegura infanteria para capturar.
  */
+function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: Rng): T {
+  let r = rng() * weights.reduce((a, w) => a + w, 0);
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i]!;
+    if (r < 0) return items[i]!;
+  }
+  return items[items.length - 1]!;
+}
+
 function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
-  for (const b of s.buildings) {
+  // [CAMBIO] Con puntos de mando el ejercito tiene tope y gastarlo todo cada turno lo llena de
+  // soldados de 1 punto. Entonces elige entre todo lo que cabe (no solo lo que puede pagar), empieza
+  // por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
+  const limited = RULES.commandPoints !== null;
+  const top = (b: Building) => Math.max(0, ...buyOptions(s, b).map((o) => o.cost));
+  const order = limited ? [...s.buildings].sort((x, y) => top(y) - top(x)) : s.buildings;
+  const income = s.buildings.reduce((n, b) => n + (b.owner === ME ? buildingIncome(b.type) : 0), 0) - upkeepOf(s, ME);
+  for (const b of order) {
     if (b.owner !== ME || teamUnits(s, ME).length >= RULES.maxUnits || unitAt(s, b.x, b.y)) continue;
     const mine = teamUnits(s, ME);
-    let opts = buyOptions(s, b).filter((o) => o.affordable && !(SUPPORT_TYPES.has(o.type) && mine.some((u) => u.type === o.type)));
+    const fits = (o: BuyOption) => (limited ? o.blocked === undefined || o.blocked === 'funds' : o.affordable);
+    let opts = buyOptions(s, b).filter((o) => fits(o) && !(SUPPORT_TYPES.has(o.type) && mine.some((u) => u.type === o.type)));
     if (!opts.length) continue;
     const capturers = mine.filter((u) => UNIT.cancapt[u.type]).length;
-    if (capturers < AI.MINCAPTURERS && opts.some((o) => UNIT.cancapt[o.type])) opts = opts.filter((o) => UNIT.cancapt[o.type]);
+    if (capturers < AI.MINCAPTURERS && opts.some((o) => UNIT.cancapt[o.type] && o.affordable))
+      opts = opts.filter((o) => UNIT.cancapt[o.type] && o.affordable);
     const weights = opts.map((o) => Math.sqrt(o.cost));
-    let r = rng() * weights.reduce((a, w) => a + w, 0);
-    let type = opts[opts.length - 1]!.type;
-    for (let i = 0; i < opts.length; i++) {
-      r -= weights[i]!;
-      if (r < 0) {
-        type = opts[i]!.type;
-        break;
-      }
+    let pick = weightedPick(opts, weights, rng);
+    if (!pick.affordable) {
+      if (pick.cost <= s.funds[ME] + income) break; // se paga el turno que viene: ahorrar para ello
+      const can = opts.filter((o) => o.affordable);
+      if (!can.length) continue;
+      pick = weightedPick(
+        can,
+        can.map((o) => Math.sqrt(o.cost)),
+        rng,
+      );
     }
-    const u = spawn(s, b, type);
+    const u = spawn(s, b, pick.type);
     if (u) yield { kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } };
   }
 }

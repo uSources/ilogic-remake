@@ -73,7 +73,11 @@ export interface Report {
     days: { median: number; p10: number; p90: number; mean: number };
   };
   snowball: { day: number; leaderWins: number | null; games: number }[];
-  economy: { day10Buildings: [number, number] | null; day10Army: [number, number] | null };
+  economy: {
+    day10Buildings: [number, number] | null;
+    day10Army: [number, number] | null;
+    unitsOnMap?: { day10: number; day20: number } | null;
+  };
   units: UnitRow[];
   duel?: { terrain: string; firstStrikeMean: number | null; exchangeRatio: number | null; worst: DuelCell[] };
   flags: string[];
@@ -146,6 +150,7 @@ export function buildReport(
   const economy = {
     day10Buildings: d10.length ? ([mean(d10.map((x) => x.buildings[0])), mean(d10.map((x) => x.buildings[1]))] as [number, number]) : null,
     day10Army: d10.length ? ([mean(d10.map((x) => x.army[0])), mean(d10.map((x) => x.army[1]))] as [number, number]) : null,
+    unitsOnMap: unitsOnDay(records, 10) === null ? null : { day10: unitsOnDay(records, 10)!, day20: unitsOnDay(records, 20) ?? 0 },
   };
 
   // Unidades (los dos bandos juntos).
@@ -312,6 +317,10 @@ export function reportMarkdown(r: Report): string {
     L.push(
       `| Dia 10: edificios / valor del ejercito | ${r.economy.day10Buildings.map((x) => x.toFixed(1)).join(' vs ')} / ${r.economy.day10Army!.map((x) => Math.round(x)).join(' vs ')} |`,
     );
+  if (r.economy.unitsOnMap)
+    L.push(
+      `| Unidades en el mapa por bando (dia 10 / dia 20) | ${r.economy.unitsOnMap.day10.toFixed(1)} / ${r.economy.unitsOnMap.day20.toFixed(1)} |`,
+    );
   L.push('');
   L.push('## Unidades', '', 'Eficiencia = valor destruido / dinero gastado en esa unidad (los dos bandos juntos).', '');
   L.push(
@@ -387,4 +396,10 @@ export function compareMarkdown(a: Report, b: Report): string {
   }
   L.push('', `Avisos antes: ${a.flags.length}, despues: ${b.flags.length}.`, '');
   return L.join('\n');
+}
+
+/** Media de unidades en el mapa por bando ese dia (null si las muestras no lo tienen). */
+function unitsOnDay(records: readonly GameRecord[], day: number): number | null {
+  const d = records.map((r) => r.samples.find((x) => x.day === day)?.units).filter((x) => !!x);
+  return d.length ? mean(d.map((u) => (u[0] + u[1]) / 2)) : null;
 }

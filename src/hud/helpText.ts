@@ -11,6 +11,7 @@ const HELP = {
       'CAPTURE_ES',
       'COUNTER_ES',
       'VET_ES',
+      'ARMY_ES',
       'MOVE_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
@@ -56,6 +57,7 @@ const HELP = {
       'CAPTURE_EN',
       'COUNTER_EN',
       'VET_EN',
+      'ARMY_EN',
       'MOVE_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
@@ -109,6 +111,16 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     VET_ES: RULES.veterancy
       ? 'Veteranía: una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas). Cada estrella da +5 % de acierto y de defensa; al unir dos unidades se queda la más veterana.'
       : '',
+    ARMY_ES: [
+      RULES.commandPoints !== null
+        ? `Puntos de mando: tu ejército no puede pasar de ${RULES.commandPoints}. La infantería ocupa 1 y los vehículos y aviones grandes hasta 5 (lo pone al comprar).`
+        : '',
+      RULES.upkeep > 0
+        ? `Mantenimiento: cada ronda pagas el ${Math.round(RULES.upkeep * 100)} % del precio de tus unidades. Si no te llega, no pagas más.`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
   };
   const en = {
     CAPTURE_EN: `Capturing takes points: a building has ${RULES.capturePoints} (the HQ ${RULES.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`,
@@ -122,6 +134,16 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     VET_EN: RULES.veterancy
       ? 'Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +5 % hit chance and defence; joining two units keeps the more veteran one.'
       : '',
+    ARMY_EN: [
+      RULES.commandPoints !== null
+        ? `Command points: your army can't go over ${RULES.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`
+        : '',
+      RULES.upkeep > 0
+        ? `Upkeep: every round you pay ${Math.round(RULES.upkeep * 100)} % of your units' price. If you can't afford it, you just pay what you have.`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
   };
   return lang === 'es' ? es : en;
 }

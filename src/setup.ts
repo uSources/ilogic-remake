@@ -11,6 +11,10 @@ export interface NewGameOptions {
   funds: number;
   income: number;
   dayLimit: number | null;
+  /** Puntos de mando por bando (null = sin limite de puntos). */
+  command: number | null;
+  /** Mantenimiento por ronda, tanto por uno del precio de las unidades. */
+  upkeep: number;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
   code: string;
   /** Ajuste elegido en la pantalla de nueva partida. */
@@ -22,8 +26,8 @@ export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
 export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset'>> = {
-  normal: { size: 32, fog: true, funds: 5000, income: 1, dayLimit: null },
-  quick: { size: 20, fog: true, funds: 5000, income: 1.5, dayLimit: 20 },
+  normal: { size: 32, fog: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
+  quick: { size: 20, fog: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
 
 export function applyPreset(o: NewGameOptions, id: PresetId): NewGameOptions {
@@ -37,6 +41,8 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   funds: 5000,
   income: 1,
   dayLimit: null,
+  command: 30,
+  upkeep: 0.1,
   code: '',
   preset: 'normal',
 };
@@ -49,6 +55,8 @@ export const CHOICES = {
   funds: [3000, 5000, 8000, 12000] as const,
   income: [0.5, 1, 1.5, 2] as const,
   dayLimit: [null, 20, 30, 40, 60] as const,
+  command: [null, 20, 30, 40] as const,
+  upkeep: [0, 0.05, 0.1, 0.15] as const,
 };
 export type ChoiceKey = keyof typeof CHOICES;
 
@@ -80,7 +88,15 @@ export function saveOptions(o: NewGameOptions): void {
 
 /** Reglas de la partida a partir de las opciones. */
 export function rulesFor(o: NewGameOptions): RulesConfig {
-  return { ...DEFAULT_RULES, fog: o.fog, initialFunds: o.funds, incomeScale: o.income, dayLimit: o.dayLimit };
+  return {
+    ...DEFAULT_RULES,
+    fog: o.fog,
+    initialFunds: o.funds,
+    incomeScale: o.income,
+    dayLimit: o.dayLimit,
+    commandPoints: o.command,
+    upkeep: o.upkeep,
+  };
 }
 
 /** Codigo de mapa: la semilla en base 36, en mayusculas (p. ej. "K3F9A2"). */
@@ -114,5 +130,9 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
       return `${Math.round((v as number) * 100)} %`;
     case 'dayLimit':
       return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)} ${es ? 'días' : 'days'}`;
+    case 'command':
+      return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)}`;
+    case 'upkeep':
+      return v === 0 ? (es ? 'No' : 'Off') : `${Math.round((v as number) * 100)} %`;
   }
 }

@@ -91,3 +91,21 @@ partidas 32x32): nota 65,3 → 66,2 (precios: ajuste 69 % → 75 %, 8 de 15 en l
 de rendir 0,45x la mediana a 0,76x (entra en la banda) y el Lanzamisiles de 0,30x a 0,50x; el reparto
 entre bandos no cambia (48/52). Por separado cada uno daba +0,7. Aceptado por el usuario con +0,9 (el
 criterio general es +1,0). Detalle en `improve/DIARIO.md`.
+
+## Puntos de mando y mantenimiento (30-10-2026)
+
+Medido con `npm run balance -- run --games 100 --name ejercito` contra la variante `sin-ejercito`
+(las dos reglas apagadas). Informes en `balance/reports/ejercito.md`, `sin-ejercito.md` y
+`comparar-sin-ejercito-vs-ejercito.md`.
+
+| | Sin las reglas | Con 30 puntos y 10 % |
+|---|---:|---:|
+| Unidades en el mapa por bando, día 10 / día 20 | 18,1 / 28,7 | 8,7 / 10,9 |
+| Partidas decididas en 60 días | 1 % | 17 % |
+
+- Sin las reglas, el día 20 cada bando está casi en el tope de 30 unidades: el mapa se atasca.
+- Con puntos de mando, la IA compraba solo infantería (gasta todo cada turno y llena el tope de
+  unidades de 1 punto). Ahora empieza por los edificios que fabrican lo grande y ahorra un turno si lo
+  que elige se paga con lo que entra el siguiente.
+- Pendiente: con la IA nueva se compran muchos aviones (los aeropuertos van primero) y casi ningún
+  tanque. Revisar los pesos de compra o los puntos de los aviones.

@@ -12,6 +12,7 @@ import {
   rank,
   tileProtection,
   unitAt,
+  type BuyOption,
 } from '../core/rules';
 import type { GameState, Pos, Unit } from '../core/types';
 import type { Anchor, ForecastVM, MinimapVM, TileVM } from '../hud/store';
@@ -136,4 +137,16 @@ export function minimapVM(pal: readonly number[], s: GameState, vis: boolean[][]
       .filter((u) => u.carrier === null && !hidden.has(u.uid) && (u.team === 0 || seen(u)))
       .map((u) => ({ x: u.x, y: u.y, team: u.team })),
   };
+}
+
+/** Por que no se puede comprar una unidad (menu de compra y aviso). */
+export function buyBlockedText(b: NonNullable<BuyOption['blocked']>): string {
+  switch (b) {
+    case 'funds':
+      return t('cantAfford');
+    case 'units':
+      return t('unitLimit').replace('{n}', String(RULES.maxUnits));
+    case 'command':
+      return t('commandLimit').replace('{n}', String(RULES.commandPoints ?? 0));
+  }
 }

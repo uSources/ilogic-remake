@@ -15,6 +15,8 @@
       "required": [
         "initialFunds",
         "maxUnits",
+        "commandPoints",
+        "upkeep",
         "counterattack",
         "damageSpread",
         "capturePoints",
@@ -38,6 +40,17 @@
           "type": "integer",
           "minimum": 0,
           "description": "Unidades maximas por bando."
+        },
+        "commandPoints": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Puntos de mando por bando: cada unidad ocupa los de su campo command (null = sin limite de puntos)."
+        },
+        "upkeep": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Mantenimiento: cada ronda se paga este tanto por uno del precio de cada unidad (0 = sin mantenimiento)."
         },
         "counterattack": {
           "type": "boolean",
