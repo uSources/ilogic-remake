@@ -1,6 +1,10 @@
 """Compila los iconos de la interfaz (tools/art/icons/iconos.txt) a public/assets/img/ui/*.png.
 
-Cada icono se centra en un lienzo de SIZE x SIZE con fondo transparente. No llama a ningun servicio.
+Cabecera de cada dibujo:
+  "= nombre"          icono de la interfaz: centrado en SIZE x SIZE, en ui/<nombre>.png (va al atlas)
+  "= nombre AxB"      igual pero a tamaño exacto A x B, sin centrar
+  "= nombre raton"    puntero del raton: 16x16, suelto en <nombre>.png al doble (32x32)
+No llama a ningun servicio.
 
     python3 tools/art/build_icons.py
 """
@@ -14,12 +18,16 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "tools/art/icons/iconos.txt"
 OUT = ROOT / "public/assets/img/ui"
+LOOSE_OUT = ROOT / "public/assets/img"
 SIZE = 12
+MOUSE = 16
 
 
-def parse(text: str) -> tuple[dict[str, tuple[int, int, int, int]], dict[str, list[str]]]:
+def parse(text: str) -> tuple[dict[str, tuple[int, int, int, int]], dict[str, list[str]], dict[str, str]]:
+    """(colores, filas de cada dibujo, tipo de cada dibujo: "" | "AxB" | "raton")"""
     colors: dict[str, tuple[int, int, int, int]] = {}
     icons: dict[str, list[str]] = {}
+    kinds: dict[str, str] = {}
     mode = None
     cur: list[str] | None = None
     for n, raw in enumerate(text.splitlines(), 1):
@@ -30,7 +38,9 @@ def parse(text: str) -> tuple[dict[str, tuple[int, int, int, int]], dict[str, li
             mode = "colors"
             continue
         if line.startswith("= "):
-            name = line[2:].strip()
+            parts = line[2:].split()
+            name = parts[0]
+            kinds[name] = parts[1] if len(parts) > 1 else ""
             if name in icons:
                 raise SystemExit(f"{SRC.name}:{n}: icono repetido {name!r}")
             cur = icons[name] = []
@@ -44,31 +54,46 @@ def parse(text: str) -> tuple[dict[str, tuple[int, int, int, int]], dict[str, li
             cur.append(line)
     for name, rows in icons.items():
         w, h = max(len(r) for r in rows), len(rows)
-        if w > SIZE or h > SIZE:
-            raise SystemExit(f"icono {name!r}: {w}x{h}, el maximo es {SIZE}x{SIZE}")
+        cw, ch_ = canvas(kinds[name])
+        if w > cw or h > ch_:
+            raise SystemExit(f"icono {name!r}: {w}x{h}, el maximo es {cw}x{ch_}")
         for r in rows:
             for ch in r:
                 if ch != "." and ch not in colors:
                     raise SystemExit(f"icono {name!r}: color {ch!r} sin definir")
-    return colors, icons
+    return colors, icons, kinds
+
+
+def canvas(kind: str) -> tuple[int, int]:
+    if kind == "raton":
+        return MOUSE, MOUSE
+    if kind:
+        a, b = kind.lower().split("x")
+        return int(a), int(b)
+    return SIZE, SIZE
 
 
 def build() -> None:
-    colors, icons = parse(SRC.read_text(encoding="utf-8"))
+    colors, icons, kinds = parse(SRC.read_text(encoding="utf-8"))
     OUT.mkdir(parents=True, exist_ok=True)
+    ui = {n for n, k in kinds.items() if k != "raton"}
     for old in OUT.glob("*.png"):
-        if old.stem not in icons:
+        if old.stem not in ui:
             old.unlink()
     for name, rows in icons.items():
         w, h = max(len(r) for r in rows), len(rows)
-        img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-        ox, oy = (SIZE - w) // 2, (SIZE - h) // 2
+        cw, ch_ = canvas(kinds[name])
+        img = Image.new("RGBA", (cw, ch_), (0, 0, 0, 0))
+        ox, oy = ((cw - w) // 2, (ch_ - h) // 2) if not kinds[name] else (0, 0)
         for y, row in enumerate(rows):
             for x, ch in enumerate(row):
                 if ch != ".":
                     img.putpixel((ox + x, oy + y), colors[ch])
-        img.save(OUT / f"{name}.png", optimize=True)
-    print(f"{len(icons)} iconos en {OUT.relative_to(ROOT)}")
+        if kinds[name] == "raton":
+            img.resize((cw * 2, ch_ * 2), Image.NEAREST).save(LOOSE_OUT / f"{name}.png", optimize=True)
+        else:
+            img.save(OUT / f"{name}.png", optimize=True)
+    print(f"{len(ui)} iconos en {OUT.relative_to(ROOT)} y {len(icons) - len(ui)} punteros del raton")
 
 
 if __name__ == "__main__":

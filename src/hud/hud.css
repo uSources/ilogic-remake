@@ -35,6 +35,8 @@
 html,
 body {
   margin: 0;
+  /* Punteros propios del raton (los pone BootScene: --cursor y --cursor-button). */
+  cursor: var(--cursor, auto);
   height: 100%;
   background: var(--ink);
   overflow: hidden;
@@ -91,7 +93,7 @@ body {
   font-family: var(--display);
   font-size: 18px;
   line-height: 1;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   pointer-events: auto;
 }
 .px-btn:hover {
@@ -252,7 +254,7 @@ body {
   text-align: left;
   font-family: var(--display);
   font-size: 17px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
 }
 .item.icon {
   padding-left: 28px;
@@ -446,7 +448,7 @@ body {
   padding: 0;
   border: 3px solid var(--ink);
   background: var(--slot);
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
 }
 .tray .slots button:hover {
   background: var(--sel);
@@ -1098,7 +1100,7 @@ body {
   min-width: 150px;
   text-align: center;
   font-size: 17px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
 }
 .ng-arrow {
   width: 32px;
@@ -1107,7 +1109,7 @@ body {
   background: var(--panel);
   color: var(--gold);
   font-size: 12px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   box-shadow:
     inset 2px 2px 0 var(--hi),
     inset -2px -2px 0 var(--lo);
@@ -1380,7 +1382,7 @@ html.reduce-motion .card {
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   transition: transform 0.12s steps(2);
 }
 .card.sel {
@@ -1485,7 +1487,7 @@ html.reduce-motion .card {
   font-family: var(--display);
   font-size: 14px;
   color: var(--muted);
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   text-shadow: 1px 1px 0 #000;
 }
 .link:hover,
@@ -1616,7 +1618,7 @@ html.reduce-motion .card {
   color: var(--text);
   font-family: var(--display);
   font-size: 15px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   box-shadow:
     inset 3px 3px 0 var(--hi),
     inset -3px -3px 0 var(--lo);
@@ -1678,7 +1680,7 @@ html.reduce-motion .card {
   color: var(--muted);
   font-family: var(--body);
   font-size: 14px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   white-space: nowrap;
 }
 .seg button:first-child {
@@ -1748,7 +1750,7 @@ html.reduce-motion .card {
   color: var(--text);
   font-family: var(--body);
   text-align: left;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   scroll-snap-align: start;
   box-shadow:
     inset 2px 2px 0 var(--hi),
@@ -1894,7 +1896,7 @@ html.reduce-motion .card {
   color: var(--text);
   font-family: var(--display);
   font-size: 14px;
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   text-align: left;
   box-shadow:
     inset 2px 2px 0 var(--hi),
@@ -2236,7 +2238,7 @@ html.reduce-motion .end-best.new {
   color: var(--text);
   border: 3px solid var(--ink);
   font-family: var(--body);
-  cursor: pointer;
+  cursor: var(--cursor-button, pointer);
   box-shadow:
     inset 2px 2px 0 var(--hi),
     inset -2px -2px 0 var(--lo);

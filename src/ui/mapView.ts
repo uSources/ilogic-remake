@@ -84,7 +84,13 @@ export class MapView {
   private readonly marks: Phaser.GameObjects.Graphics;
   private goal: Pos | null = null;
   private vip: Pos | null = null;
-  private readonly cursorImg: Phaser.GameObjects.Image;
+  /** Marco de la casilla señalada: cuatro esquinas que se separan y se juntan. */
+  private readonly cursorBox: Phaser.GameObjects.Container;
+  private readonly cursorCorners: Phaser.GameObjects.Image[];
+  private cursorGap = -1;
+  /** Marco rojo: eligiendo objetivo de ataque. */
+  cursorAttack = false;
+  private cursorTinted = false;
   private readonly cam: Phaser.Cameras.Scene2D.Camera;
   private readonly units = new Map<number, UnitSprite>();
   private readonly buildings: Phaser.GameObjects.Image[] = [];
@@ -121,10 +127,17 @@ export class MapView {
     this.overlay = scene.add.graphics();
     this.fx = scene.add.container(0, 0);
     this.fogLayer = scene.add.container(0, 0);
-    this.cursorImg = scene.add.image(0, 0, ATLAS, 'cursor').setOrigin(0).setDisplaySize(TILE, TILE);
+    this.cursorCorners = [
+      [false, false],
+      [true, false],
+      [false, true],
+      [true, true],
+    ].map(([fx, fy]) => scene.add.image(0, 0, ATLAS, 'ui/esquina').setOrigin(0).setFlip(fx!, fy!));
+    this.cursorBox = scene.add.container(0, 0, this.cursorCorners);
+    this.layoutCursor(1);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
-    this.root.add([this.terrain, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorImg]);
+    this.root.add([this.terrain, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorBox]);
     this.cam.setBackgroundColor(PAL_CSS.ink);
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
@@ -688,7 +701,22 @@ export class MapView {
   }
 
   placeCursor(visible = true): void {
-    this.cursorImg.setPosition(this.cursor.x * TILE, this.cursor.y * TILE).setVisible(visible);
+    this.cursorBox.setPosition(this.cursor.x * TILE, this.cursor.y * TILE).setVisible(visible);
+  }
+
+  /** Coloca las esquinas `gap` pixeles por fuera de la casilla. */
+  private layoutCursor(gap: number): void {
+    if (gap === this.cursorGap) return;
+    this.cursorGap = gap;
+    const c = this.cursorCorners[0]!.width;
+    const far = TILE - c + gap;
+    const pos = [
+      [-gap, -gap],
+      [far, -gap],
+      [-gap, far],
+      [far, far],
+    ];
+    this.cursorCorners.forEach((img, i) => img.setPosition(pos[i]![0], pos[i]![1]));
   }
 
   /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y agua. */
@@ -701,7 +729,15 @@ export class MapView {
         for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (f + cell.phase) % ANIM_FRAMES));
       }
     }
-    this.cursorImg.setAlpha(!still && Math.floor(time / 450) % 2 ? 0.7 : 1);
+    // Por pasos de pixel entero (0, 1, 2, 1...): se mueve sin emborronar las esquinas.
+    this.layoutCursor(still ? 1 : ([0, 1, 2, 1] as const)[Math.floor(time / 160) % 4]!);
+    if (this.cursorAttack !== this.cursorTinted) {
+      this.cursorTinted = this.cursorAttack;
+      for (const img of this.cursorCorners) {
+        if (this.cursorAttack) img.setTint(PAL.red);
+        else img.clearTint();
+      }
+    }
     const phase = still ? 0 : Math.floor(time / 500) % 2;
     if (phase !== this.bobPhase) {
       this.bobPhase = phase;
