@@ -83,3 +83,11 @@ Tanque 12000 → 9500 se acepto primero (nota 56,8 → 59,3) y se retiro al revi
 venia del reparto de victorias entre bandos, que con 120 partidas se mueve ±10 puntos solo por azar.
 Con la nota corregida (`tools/improve/metrics.ts`: el reparto solo resta fuera del ruido y el precio
 cuenta lo cerca que esta cada unidad de la banda) queda igual: 65,3 → 65,2. Detalle en `improve/DIARIO.md`.
+
+## Bombardero y Lanzamisiles mas baratos (2026-10-30)
+
+Bombardero 20000 → 13000 y Lanzamisiles 16000 → 11000, medidos juntos con `npm run metrics` (120
+partidas 32x32): nota 65,3 → 66,2 (precios: ajuste 69 % → 75 %, 8 de 15 en la banda). El Bombardero pasa
+de rendir 0,45x la mediana a 0,76x (entra en la banda) y el Lanzamisiles de 0,30x a 0,50x; el reparto
+entre bandos no cambia (48/52). Por separado cada uno daba +0,7. Aceptado por el usuario con +0,9 (el
+criterio general es +1,0). Detalle en `improve/DIARIO.md`.
