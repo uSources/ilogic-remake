@@ -7,6 +7,26 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Interfaz
+- **Mover con el dedo en dos toques:** toca tu unidad y luego adónde ir; si no hay nada más que hacer, espera sola (antes eran cuatro toques y el menú). Para atacar, toca el enemigo dos veces: la primera enseña la previsión. También se puede arrastrar la unidad sin mantener pulsado, y tocar una fábrica libre abre la compra al momento.
+- En el móvil, la **bandeja de unidades sin mover** y las **fichas de unidad y terreno** se pliegan y despliegan tocándolas, para dejar más mapa a la vista.
+
+### Arreglos
+- En el móvil, el **desglose del dinero y del día** se cierra al volver a tocarlo, y en horizontal ya no se sale de la pantalla (se desplaza dentro).
+- El icono de **visión** ya no se sale de la ficha de la unidad en pantallas estrechas.
+
+<!-- en -->
+
+### Interface
+- **Move with your finger in two taps:** tap your unit, then where to go; if there is nothing else to do, it waits on its own (it used to take four taps and the menu). To attack, tap the enemy twice: the first tap shows the forecast. You can also drag a unit without holding first, and tapping a free factory opens the shop right away.
+- On phones, the **unmoved units tray** and the **unit and terrain cards** fold and unfold with a tap, leaving more of the map in view.
+
+### Fixes
+- On phones, the **money and day breakdown** closes when tapped again, and in landscape it no longer runs off the screen (it scrolls inside).
+- The **vision** icon no longer sticks out of the unit card on narrow screens.
+
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 
 Ilogic se instala como una app más y se juega sin conexión.

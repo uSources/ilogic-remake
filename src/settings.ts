@@ -324,7 +324,8 @@ const TEXTS = {
     statCaptured: 'Edificios capturados',
     statSpent: 'Dinero gastado',
     statDays: 'Días de campaña',
-    touchHint: 'Toca una casilla para señalarla y otra vez para confirmar. Mantén pulsado para ver el alcance. Pellizca para hacer zoom.',
+    touchHint:
+      'Toca una unidad tuya y luego adónde ir (o arrástrala). Para atacar, toca el enemigo dos veces. Mantén pulsado para ver el alcance; pellizca para el zoom.',
     minimap: 'Minimapa (M) · clic para ir',
     hintInspect: 'Alcance: naranja = adonde llega, rojo = lo que puede atacar · Esc: cerrar',
     fxNeutral: 'NEUTRAL',
@@ -590,7 +591,7 @@ const TEXTS = {
     statCaptured: 'Buildings captured',
     statSpent: 'Money spent',
     statDays: 'Days of campaign',
-    touchHint: 'Tap a tile to point at it, tap again to confirm. Long-press to see a unit’s range. Pinch to zoom.',
+    touchHint: 'Tap your unit, then where to go (or drag it). To attack, tap the enemy twice. Long-press to see a range; pinch to zoom.',
     minimap: 'Minimap (M) · click to jump',
     hintInspect: 'Range: orange = where it can go, red = what it can attack · Esc: close',
     fxNeutral: 'NEUTRAL',

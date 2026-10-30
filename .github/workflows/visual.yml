@@ -51,6 +51,8 @@ jobs:
         run: npx playwright install-deps chromium
       # Graficos ya compilados en el repo: sin Python ni npm run assets.
       - run: npm run build:ci && node tests/visual/shots.mjs
+      # Gestos con el dedo en una pantalla de movil (mover con dos toques, atacar, comprar, arrastrar).
+      - run: node tests/visual/touch.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

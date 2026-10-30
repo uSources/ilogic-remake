@@ -81,8 +81,10 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
   con las dos unidades (la tuya a la izquierda), quién ataca, su acierto, las vidas bajando y el daño
   de cada lado. Una unidad que dispara desde la niebla sale como «???».
 - Durante el turno enemigo, Enter o clic acelera las animaciones.
-- En pantallas tactiles: primer toque mueve el cursor, segundo toque confirma; mantener pulsado
-  ensena el alcance de una unidad y se pellizca para hacer zoom.
+- En pantallas tactiles: tocar una unidad tuya la elige y tocar el destino la mueve (captura o
+  espera sola si no hay nada mas que hacer); para atacar se toca el enemigo dos veces (el primero
+  ensena la prevision). Arrastrar una unidad la lleva; mantener pulsado ensena el alcance de cualquier
+  unidad y se pellizca para hacer zoom.
 - **Final de la partida:** el mapa se descubre entero y la cámara va a la jugada decisiva (confeti al
   ganar; mapa en gris y humo al perder). Un resumen enseña la gráfica del valor de los ejércitos día a
   día, las estadísticas, la mejor marca de la misión y botones: Revancha (mismo mapa), Nueva partida,
