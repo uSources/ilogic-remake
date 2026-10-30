@@ -45,5 +45,8 @@ export class BootScene extends Phaser.Scene {
  * algunos navegadores dicen entenderlo en `cursor` pero ponen la flecha del sistema.
  */
 function pointerCss(name: string, fallback: string): string {
-  return `url("${asset(`assets/img/${name}.png`)}") 0 0, ${fallback}`;
+  // Ruta absoluta: dentro de una variable CSS, una relativa se resuelve desde la hoja de estilos
+  // (assets/...), no desde la pagina, y la imagen no se encuentra.
+  const url = new URL(asset(`assets/img/${name}.png`), document.baseURI).href;
+  return `url("${url}") 0 0, ${fallback}`;
 }
