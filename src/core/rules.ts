@@ -23,7 +23,7 @@ import {
 } from './data';
 import { coverAgainst, defenseFactor, zoneOfControl } from './abilities';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
-import type { Building, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
+import type { Building, CombatInfo, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
 
 // ---------------------------------------------------------------------------
 // Consultas basicas
@@ -472,6 +472,39 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
   if (result.attackerKilled && def.life > 0) def.kills = (def.kills ?? 0) + 1;
   removeDead(s);
   return result;
+}
+
+/**
+ * Ataque completo como evento para la interfaz (jugador e IA). Ademas del resultado lleva lo que
+ * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, bandos,
+ * vidas de antes, rangos y probabilidad de acierto de cada lado (ver CombatInfo).
+ */
+export function attackEvent(s: GameState, atk: Unit, def: Unit, rng: Rng): Extract<GameEvent, { kind: 'attack' }> {
+  const info: CombatInfo = {
+    attackerType: atk.type,
+    defenderType: def.type,
+    attackerTeam: atk.team,
+    attackerLife: atk.life,
+    defenderLife: def.life,
+    attackerRank: rank(atk),
+    defenderRank: rank(def),
+    hit: Math.min(1, hitChance(s, atk, def)),
+    counterHit: canCounter(def, atk) ? Math.min(1, hitChance(s, def, atk)) : null,
+  };
+  const target = { x: def.x, y: def.y };
+  const r = attackFull(s, atk, def, rng);
+  // Si el defensor cae no hay contraataque, aunque pudiera haberlo.
+  if (r.killed) info.counterHit = null;
+  return {
+    kind: 'attack',
+    attacker: atk.uid,
+    target,
+    damage: r.damage,
+    killed: r.killed,
+    counter: r.counter,
+    attackerKilled: r.attackerKilled,
+    combat: info,
+  };
 }
 
 /** Ataca y devuelve el daño hecho (ver attackFull para el contraataque). */
