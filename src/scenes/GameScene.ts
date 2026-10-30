@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_NAMES, useRules, type RulesConfig } from '../core/data';
+import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, useRules, type RulesConfig, Movement } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '../core/orders';
@@ -652,7 +652,7 @@ export class GameScene extends Phaser.Scene {
     const anchor = this.anchor('moveTip', c);
     if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
     const dest = it.kind === 'move' ? it.to : null;
-    const used = dest ? pathCost(this.s, UNIT.movtype[u.type]!, this.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
+    const used = dest ? pathCost(this.s, Movement.of(u.type), this.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
     const stars = defenseStars(this.s, c);
     const action = it.kind === 'merge' ? t('tipJoin') : it.kind === 'load' ? t('tipBoard') : it.capture ? t('tipCapture') : t('tipMove');
     return {
@@ -1616,7 +1616,7 @@ export class GameScene extends Phaser.Scene {
       tile &&
       this.sel &&
       !unitAt(this.s, tile.x, tile.y) &&
-      canWalk(this.s, tile.x, tile.y, UNIT.movtype[this.sel.type]!)
+      canWalk(this.s, tile.x, tile.y, Movement.of(this.sel.type))
     ) {
       c.ghost.destroy();
       c.shadow.destroy();
@@ -2202,7 +2202,7 @@ export class GameScene extends Phaser.Scene {
           const seen = ev.path.some((p) => this.visibleToPlayer(p));
           if (!seen || this.fastForward) break;
           const u = unitById(this.s, ev.uid);
-          const fallback = 'r_' + UNIT_NAMES[unitById(this.s, (ev as { into?: number }).into ?? -1)?.type ?? 0];
+          const fallback = 'r_' + UNIT_ART[unitById(this.s, (ev as { into?: number }).into ?? -1)?.type ?? 0];
           const tex =
             ghostKey ?? (u ? unitKey(this.textures, this.s, { ...u, x: ev.path[0]!.x, y: ev.path[0]!.y, active: true }) : fallback);
           if (!tex) break;

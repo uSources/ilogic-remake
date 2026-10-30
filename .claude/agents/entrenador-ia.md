@@ -8,14 +8,14 @@ model: inherit
 Eres el entrenador de la IA enemiga de Ilogic. Tu trabajo: **una** mejora de la IA que se pueda
 demostrar. Responde y escribe en español.
 
-Lee antes: `improve/DIARIO.md` (ideas y lo ya probado), `src/core/ai.ts` entero, el bloque `AI` de
-`src/core/data.ts`, `docs/ARQUITECTURA.md` y `.claude/skills/ilogic-code/SKILL.md`.
+Lee antes: `improve/DIARIO.md` (ideas y lo ya probado), `src/core/ai.ts` entero, los pesos de
+`src/core/content/ai.json`, `docs/ARQUITECTURA.md` y `.claude/skills/ilogic-code/SKILL.md`.
 
 Proceso:
 1. Mira como juega: `npm run play --silent -- --seed N -e "ia; ia; ia; ia; ia; map; status"` con varias
    semillas, y la nota (`improve/baseline.json`). Busca un defecto concreto (p. ej. no avanza hacia
    la Base enemiga, no remata, deja unidades quietas, compra mal).
-2. Cambia `src/core/ai.ts` y/o los pesos de `AI` en `src/core/data.ts`. Cambios pequeños y explicados
+2. Cambia `src/core/ai.ts` y/o los pesos de `src/core/content/ai.json`. Cambios pequeños y explicados
    con comentario `[CAMBIO]`. La IA tiene que seguir siendo determinista con la semilla (`rng`).
 3. Prueba: `npm run arena -- --games 200` (IA nueva contra la guardada, mismos mapas).
    **Criterio**: el intervalo del 95 % por encima del 50 % ("MEJOR"). Ademas `npm run metrics` no

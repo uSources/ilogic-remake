@@ -1,11 +1,14 @@
-# Unidades y edificios (ficheros de configuracion)
+# Contenido del juego (ficheros de configuracion)
 
-Todo lo que define una unidad o un edificio esta en dos ficheros JSON, sin tocar codigo:
+Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 
 | Fichero | Que hay |
 |---|---|
 | `src/core/content/units.json` | Las 19 unidades: precio, movimiento, vision, combustible, municion, **ataque y daño contra cada unidad**, quien las fabrica, repara y recarga, transportes |
 | `src/core/content/buildings.json` | Los 6 edificios: ingresos, curacion, proteccion, vision y cual es el cuartel general |
+| `src/core/content/terrain.json` | Los 15 terrenos: nombre, defensa, si esconde, y por donde pasa y cuanto cuesta a cada tipo de movimiento |
+| `src/core/content/rules.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
+| `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
 
 Cada fichero tiene su esquema (`units.schema.json`, `buildings.schema.json`): VS Code y otros editores
 autocompletan los campos, explican cada uno al pasar el raton y marcan los errores mientras escribes.
@@ -44,15 +47,26 @@ con `npm run balance -- run --set UNIT.cost.Tank=10000 --set POWER.Tank.Artiller
 
 ## Añadir una unidad
 
-1. Copiar una unidad parecida **al final** de la lista `units` y cambiarle el `id` (nombre interno en
-   ingles, sin espacios), el `name` en español e ingles y sus numeros.
-2. Decir a quien ataca y con cuanto acierto (`attack.hitChance`) y, en las demas unidades, con cuanto
-   acierto la atacan a ella (añadir su `id` en el `hitChance` de cada una que pueda).
-3. Si un transporte debe poder llevarla, añadirla a su `transport.carries`; si el camion de suministros
-   debe recargarla, a su `supplies`.
-4. Graficos: `public/assets/u/b_<id>.png`, `r_<id>.png` e `i_<id>.png` (skill `arte-retro-diffusion` y
-   `npm run assets`).
-5. `npm test`: dice lo que falte (graficos, nombres, tablas).
+El atajo es partir de una parecida:
+
+```
+npm run unit -- new Sniper --like Soldier
+```
+
+Eso la añade **al final** de `units.json` como copia de la otra: mismos numeros, y **las demas la atacan
+con el mismo acierto que a la original** (se copia su columna de daño), la llevan los mismos transportes
+y la recargan los mismos suministros. Se pinta con el dibujo de la original (`"art": "Soldier"`) para
+poder probarla y equilibrarla antes de dibujarla. Despues:
+
+1. `name` en español e ingles, precio, movimiento... y su `attack.hitChance` (a quien ataca y con
+   cuanto acierto). Ajustar el acierto de las demas contra ella si no debe ser igual que contra la
+   original.
+2. Graficos: `u/b_<id>`, `u/i_<id>` y `u/r_<id>` (skill `arte-retro-diffusion` y `npm run assets`), y
+   quitar `"art"`.
+3. `npm test`: dice lo que falte (nombres, referencias que no existen, graficos).
+
+A mano es lo mismo: copiar una unidad al final de la lista, cambiarle el `id`, y añadir su `id` en el
+`hitChance` de cada unidad que deba poder atacarla (y en `transport.carries` o `supplies` si toca).
 
 Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): skill
 `.claude/skills/nueva-unidad/SKILL.md`.
@@ -99,3 +113,41 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 
 Un edificio nuevo necesita ademas graficos (`public/assets/b/`) y que el generador de mapas sepa
 colocarlo (`MAPGEN` en `data.ts`).
+
+Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mientras no tenga el propio.
+
+## Terreno
+
+`terrain.json` tiene los 15 terrenos en un orden fijo (lo usan el arte, el generador de mapas y las
+misiones): se cambian sus numeros, no se añaden ni se quitan.
+
+| Campo | Que es |
+|---|---|
+| `protection` | Multiplica el acierto contra quien esta encima: `0.85` = un 15 % menos de daño |
+| `hides` | Con niebla (regla `forestHides`), quien esta dentro solo se ve desde al lado |
+| `buildable`, `water` | Para el generador de mapas: se puede poner un edificio, cuenta como agua |
+| `movement` | Coste de entrar por tipo: `{ "foot": 1, "vehicle": 2, "air": 1, "amphibious": null }`; `null` = no se puede pasar |
+
+En el codigo se consulta con tipos legibles: `Movement.of(u.type)` (tipo de una unidad),
+`Movement.canWalk(MoveType.VEHICLE, TerrainType.WOODS)`, `Movement.cost(mt, terreno)`.
+
+## Reglas e IA
+
+- `rules.json`: `defaults` son las reglas con las que empieza una partida nueva (la pantalla de nueva
+  partida y las misiones cambian algunas) y `maxFunds` el dinero maximo. Cada regla esta explicada en el
+  esquema (pasar el raton por encima en el editor).
+- `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
+  `npm run balance` (skill `equilibrar`).
+
+Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas tablas por nombre:
+`--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60
+--set RULES.initialFunds=8000`.
+
+## Como esta hecho
+
+`src/core/content/` tiene un modulo por parte (`units.ts`, `buildings.ts`, `terrain.ts`, `rules.ts`,
+`ai.ts`), cada uno con su `validate*` y su `build*`; comparten `check.ts` (mensajes de error) y
+`types.ts` (`UnitDef`, `MoveType`, `TerrainType`...). `index.ts` solo los junta: lee los JSON, valida
+todo a la vez y construye las tablas que reexporta `data.ts` (`UNIT`, `POWER`, `TERRAIN`, `Movement`,
+`DEFAULT_RULES`, `AI`...). Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
+

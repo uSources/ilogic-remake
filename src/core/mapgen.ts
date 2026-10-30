@@ -13,20 +13,18 @@ import {
   setMapSize,
   MAPGEN,
   PROBS_PER_ADJ,
-  T_DWATER,
-  T_ICE,
-  T_SWATER,
-  T_WATER,
   TERRAIN,
   TERRAIN_TYPES,
   TILE_BASE_PROBS,
-  UNIT,
+  Movement,
+  TerrainType,
+  MoveType,
 } from './data';
 import { grid, inBounds, manhattan, rangePos, rangeSize } from './geom';
 import { buildingAt, groundDistance, newUnit, unitAt } from './rules';
 import type { GameState, Pos, Rng, Team } from './types';
 
-const WALK = 0; // tipo de movimiento "a pie"
+const WALK = MoveType.FOOT;
 /** Distancia minima entre las dos bases en un mapa de 32; se escala con el lado del mapa. */
 const MIN_SPAWN_DISTANCE = 14;
 /** Superficie del mapa respecto al original de 32x32 (para escalar cuantos edificios hay). */
@@ -85,7 +83,7 @@ function generateTerrain(s: GameState, origin: Pos, theme: number, rng: Rng): nu
       }
       generated[p.x]![p.y] = true;
       placed++;
-      if (TERRAIN.canwalk[WALK][s.map[p.x]![p.y]!]) walkable++;
+      if (Movement.canWalk(WALK, s.map[p.x]![p.y]!)) walkable++;
     }
     if (placed === 0) break;
   }
@@ -97,11 +95,11 @@ function addShallowWater(map: number[][]): number {
   let n = 0;
   for (let x = 0; x < MAP_W; x++) {
     for (let y = 0; y < MAP_H; y++) {
-      if (map[x]![y] !== T_WATER) continue;
+      if (map[x]![y] !== TerrainType.WATER) continue;
       const h = x > 0 && x < MAP_W - 1 && !isWater(map[x - 1]![y]!) && !isWater(map[x + 1]![y]!);
       const v = y > 0 && y < MAP_H - 1 && !isWater(map[x]![y - 1]!) && !isWater(map[x]![y + 1]!);
       if (h || v) {
-        map[x]![y] = T_SWATER;
+        map[x]![y] = TerrainType.SHALLOW_WATER;
         n++;
       }
     }
@@ -120,12 +118,12 @@ function addIce(map: number[][]): number {
         for (let dy = -1; dy <= 1 && !land; dy++) {
           const nx = x + dx,
             ny = y + dy;
-          if (inBounds(nx, ny) && !isWater(map[nx]![ny]!) && map[nx]![ny] !== T_ICE) land = true;
+          if (inBounds(nx, ny) && !isWater(map[nx]![ny]!) && map[nx]![ny] !== TerrainType.ICE) land = true;
         }
       if (land) toIce.push({ x, y });
     }
   }
-  for (const p of toIce) map[p.x]![p.y] = T_ICE;
+  for (const p of toIce) map[p.x]![p.y] = TerrainType.ICE;
   return toIce.length;
 }
 
@@ -144,7 +142,7 @@ function addDeepWater(map: number[][]): void {
       if (all) deep.push({ x, y });
     }
   }
-  for (const p of deep) map[p.x]![p.y] = T_DWATER;
+  for (const p of deep) map[p.x]![p.y] = TerrainType.DEEP_WATER;
 }
 
 /** Zona de inicio (RandomMap.getSpawn): casilla a pie con bastante sitio alrededor. */
@@ -154,7 +152,7 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
     const x = reverse ? MAP_W - 1 - i : i;
     for (let j = 0; j < MAP_H; j++) {
       const y = reverse ? MAP_H - 1 - j : j;
-      if (!TERRAIN.canwalk[WALK][s.map[x]![y]!]) continue;
+      if (!Movement.canWalk(WALK, s.map[x]![y]!)) continue;
       let buildable = 0,
         walkable = 0;
       for (let k = 0; k < rangeSize(R); k++) {
@@ -162,7 +160,7 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
         if (!p) continue;
         const t = s.map[p.x]![p.y]!;
         if (TERRAIN.canbuild[t]) buildable++;
-        if (TERRAIN.canwalk[WALK][t]) walkable++;
+        if (Movement.canWalk(WALK, t)) walkable++;
       }
       if (buildable >= MAPGEN.MINBCAP && walkable >= MAPGEN.MINUCAP && accept({ x, y })) return { x, y };
     }
@@ -174,11 +172,11 @@ function findSpawn(s: GameState, reverse: boolean, accept: (p: Pos) => boolean):
 function generateUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): void {
   const n = rangeSize(MAPGEN.MAXSPAWNDIST);
   MAPGEN.INITUS.forEach((type, u) => {
-    const mt = UNIT.movtype[type]!;
+    const mt = Movement.of(type);
     const free: Pos[] = [];
     for (let k = 0; k < n; k++) {
       const p = rangePos(spawn, k);
-      if (p && TERRAIN.canwalk[mt]![s.map[p.x]![p.y]!] && !unitAt(s, p.x, p.y)) free.push(p);
+      if (p && Movement.canWalk(mt, s.map[p.x]![p.y]!) && !unitAt(s, p.x, p.y)) free.push(p);
     }
     // Muestreo secuencial como el original, con la probabilidad corregida (INITUS.length).
     let remaining = free.length;

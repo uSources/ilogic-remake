@@ -3,7 +3,7 @@
  * Las comprueba el cazador de fallos (fuzz.ts) despues de cada accion. Si una falla, es un fallo del
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
-import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, TERRAIN, UNIT, UNIT_TYPES } from '../../src/core/data';
+import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, UNIT, UNIT_TYPES, Movement } from '../../src/core/data';
 import { deserialize, serialize } from '../../src/core/save';
 import type { GameState } from '../../src/core/types';
 
@@ -27,8 +27,8 @@ export function checkInvariants(s: GameState): string[] {
       const k = `${u.x},${u.y}`;
       if (where.has(k)) errs.push(`${id}: comparte casilla (${k}) con la unidad ${where.get(k)}`);
       where.set(k, u.uid);
-      const mt = UNIT.movtype[u.type]!;
-      if (!TERRAIN.canwalk[mt]![s.map[u.x]![u.y]!]) errs.push(`${id}: en un terreno por el que no puede ir (${u.x},${u.y})`);
+      const mt = Movement.of(u.type);
+      if (!Movement.canWalk(mt, s.map[u.x]![u.y]!)) errs.push(`${id}: en un terreno por el que no puede ir (${u.x},${u.y})`);
     }
   }
   for (const u of s.units) {

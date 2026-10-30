@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING_NAMES, DEFAULT_RULES, UNIT, UNIT_NAMES, useRules } from '../src/core/data';
+import { BUILDING_NAMES, DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '../src/core/data';
 import { grid } from '../src/core/geom';
 import { bestAttackTile, closestStep, extendTrail, runsOutOfFuel } from '../src/core/orders';
 import { moveRange, newUnit, pathCost } from '../src/core/rules';
@@ -82,7 +82,7 @@ describe('ordenes del jugador', () => {
     ]);
     const jump = extendTrail(s, u, r, block, trail, { x: 5, y: 8 });
     expect(jump[jump.length - 1]).toEqual({ x: 5, y: 8 });
-    expect(pathCost(s, UNIT.movtype[u.type]!, jump)).toBeLessThanOrEqual(r.maxSteps);
+    expect(pathCost(s, Movement.of(u.type), jump)).toBeLessThanOrEqual(r.maxSteps);
     // Fuera de alcance: se queda como estaba.
     expect(extendTrail(s, u, r, block, trail, { x: 30, y: 30 })).toBe(trail);
   });

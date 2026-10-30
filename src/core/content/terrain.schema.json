@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Terrenos de Ilogic",
+  "description": "Los 15 terrenos. El orden y los id son fijos (los usan el arte, el generador de mapas y las misiones): aqui solo se cambian sus numeros. Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "required": ["terrain"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "terrain": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "protection", "hides", "buildable", "water", "movement"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Nombre interno (fijo)."
+          },
+          "name": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Nombre que ve el jugador."
+          },
+          "protection": {
+            "type": "number",
+            "minimum": 0.05,
+            "maximum": 1,
+            "description": "Multiplica la probabilidad de acierto contra quien esta encima: 0.85 = un 15 % menos de daño."
+          },
+          "hides": {
+            "type": "boolean",
+            "description": "Con niebla y la regla forestHides, quien esta dentro solo se ve desde una casilla vecina."
+          },
+          "buildable": {
+            "type": "boolean",
+            "description": "El generador de mapas puede poner edificios encima."
+          },
+          "water": {
+            "type": "boolean",
+            "description": "Cuenta como agua (orillas, generador de mapas)."
+          },
+          "movement": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["foot", "vehicle", "air", "amphibious"],
+            "description": "Coste de movimiento por tipo (casillas de movimiento que gasta entrar; con la regla terrainCost apagada todo cuesta 1). null = no se puede pasar.",
+            "properties": {
+              "foot": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "maximum": 9,
+                "description": "A pie"
+              },
+              "vehicle": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Vehiculos"
+              },
+              "air": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Aereos"
+              },
+              "amphibious": {
+                "type": ["integer", "null"],
+                "minimum": 1,
+                "maximum": 9,
+                "description": "Anfibios"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

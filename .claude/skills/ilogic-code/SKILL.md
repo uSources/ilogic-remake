@@ -27,10 +27,15 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 
 ## Convenciones
 
-- **Datos, no numeros sueltos**: unidades y edificios (precios, daños, quien fabrica que) en
-  `core/content/units.json` y `buildings.json` (ver `docs/CONTENIDO.md`); `core/data.ts` los convierte en
-  las tablas por indice (`UNIT`, `POWER`, `BUILDING`...) y guarda terreno, `AI` y `RULES`. El codigo
-  no compara nombres de unidades (`'Tank'`): si necesita saber algo de una, es un campo del JSON. Colores de Phaser en `ui/palette.ts` (iguales que
+- **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
+  `core/content/*.json` (ver `docs/CONTENIDO.md`); `core/data.ts` los convierte en las tablas (`UNIT`,
+  `POWER`, `BUILDING`, `TERRAIN`, `Movement`, `DEFAULT_RULES`, `AI`). El codigo no compara nombres de
+  unidades (`'Tank'`): si necesita saber algo de una, es un campo del JSON.
+- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `Movement.of(u.type)`,
+  `Movement.canWalk(mt, t)`, `Movement.cost(mt, t)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
+- **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
+  unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
+  vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/hud.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, numeros con `fmtNum`. Antes de

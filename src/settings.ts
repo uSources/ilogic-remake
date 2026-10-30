@@ -3,7 +3,7 @@
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
-import { CONTENT } from './core/data';
+import { CONTENT, TERRAIN_CONTENT } from './core/data';
 
 export type Lang = 'es' | 'en';
 
@@ -535,44 +535,7 @@ export function t(key: TextKey): string {
   return TEXTS[settings.lang][key];
 }
 
-const TERRAIN_LABELS = {
-  es: [
-    'Llanura',
-    'Agua',
-    'Bosque',
-    'Arena',
-    'Cactus',
-    'Acantilado',
-    'Flores',
-    'Acantilado',
-    'Agua poco profunda',
-    'Agua profunda',
-    'Nieve',
-    'Escarcha',
-    'Acantilado nevado',
-    'Bosque nevado',
-    'Hielo',
-  ],
-  en: [
-    'Plains',
-    'Water',
-    'Woods',
-    'Sand',
-    'Cactus',
-    'Cliff',
-    'Flowers',
-    'Cliff',
-    'Shallow water',
-    'Deep water',
-    'Snow',
-    'Frost',
-    'Snowy cliff',
-    'Snowy woods',
-    'Ice',
-  ],
-};
-
-/** Nombres de unidades y edificios: los de src/core/content/*.json. */
+/** Nombres de unidades, edificios y terrenos: los de src/core/content/*.json. */
 export const unitLabel = (type: number): string => CONTENT.units[type]?.name[settings.lang] ?? '?';
 export const buildingLabel = (type: number): string => CONTENT.buildings[type]?.name[settings.lang] ?? '?';
-export const terrainLabel = (type: number): string => TERRAIN_LABELS[settings.lang][type] ?? '?';
+export const terrainLabel = (type: number): string => TERRAIN_CONTENT[type]?.name[settings.lang] ?? '?';

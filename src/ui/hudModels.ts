@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { MAP_H, MAP_W, RULES, TERRAIN, UNIT } from '../core/data';
+import { MAP_H, MAP_W, RULES, UNIT, Movement, MoveType } from '../core/data';
 import {
   buildingAt,
   buildingIncome,
@@ -56,8 +56,8 @@ export function tileVM(
   };
   if (RULES.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (mt: number) => (TERRAIN.canwalk[mt]![terr] ? moveCost(s, mt, p.x, p.y) : null);
-    info.terrain.cost = { foot: cost(0), vehicle: cost(1) };
+    const cost = (mt: MoveType) => (Movement.canWalk(mt, terr) ? moveCost(s, mt, p.x, p.y) : null);
+    info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
   if (b) {
     const known = vis || b.owner === 0;
