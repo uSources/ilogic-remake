@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Equilibrio
+- El **Bombardero** cuesta 13000 en vez de 20000 y el **Lanzamisiles** 11000 en vez de 16000: rendían mucho menos de lo que costaban.
+
+<!-- en -->
+
+### Balance
+- The **Bomber** now costs 13000 instead of 20000 and the **Missile truck** 11000 instead of 16000: they were worth much less than their price.
+
 ## [0.1.0] - 2026-10-29 — El remake
 
 Primera versión del remake de **Ilogic** (2013), rehecho en TypeScript y Phaser 4.

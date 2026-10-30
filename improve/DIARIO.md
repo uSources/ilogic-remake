@@ -13,6 +13,20 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-10-30 · equilibrio (precios) · ACEPTADO (por el usuario, +0.9)
+
+Cambio: `UNIT.cost.Bomber` 20000 → 13000 y `UNIT.cost.Missile_truck` 16000 → 11000, juntos (`src/core/data.ts`).
+Hipotesis: por separado daban +0.7 cada uno (consistente en 80 y 120 partidas); juntos deberian sumar.
+Resultado (120 partidas 32x32): **65.3 → 66.2** (+0.9). Precios 10.3 → 11.2 (ajuste 69 % → 75 %, 7 → 8 en la
+banda); el resto igual (lados 48/52, remontadas 49 %).
+- Rendimiento respecto a la mediana: Bombardero 0.45x → 0.76x (entra), Lanzamisiles 0.30x → 0.50x,
+  Antiaereo 1.47x → 1.26x (entra); la infanteria barata sube algo (Soldado 3.68x → 3.84x, Escudero
+  2.13x → 2.36x, Mortero 1.71x → 1.94x) porque la mediana cambia.
+Conclusion: no llega al +1.0 del criterio, pero la mejora es real y en la direccion buena; el usuario
+decidio aceptarlo. Con 15 unidades, cambios de precio sueltos dan menos de 1 punto: medir paquetes.
+Siguiente en precios: la infanteria de 1500-2500 (Soldado, Bazuca, Escudero, Mortero) junta o su `POWER`
+contra infanteria; Tanque anfibio (0.41x) sigue lejos.
+
 ## 2026-10-30 · equilibrio (precios), segunda ronda · DESCARTADO (3 intentos)
 
 Con la nota corregida (linea base 65.3: lados 25, duracion 0, terminan 0, remontadas 15, variedad 15,

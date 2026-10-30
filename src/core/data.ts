@@ -29,7 +29,7 @@ export const UNIT_TYPES = UNIT_NAMES.length; // 19
 /** Estadisticas por tipo de unidad (indices 0..18 como UNIT_NAMES). */
 export const UNIT = {
   /** Precio de compra */
-  cost: [1500, 12000, 8000, 5000, 7000, 5000, 2500, 8000, 2500, 16000, 12000, 20000, 20000, 6000, 8000, 10000, 2500, 3500, 15000],
+  cost: [1500, 12000, 8000, 5000, 7000, 5000, 2500, 8000, 2500, 11000, 12000, 20000, 13000, 6000, 8000, 10000, 2500, 3500, 15000],
   /** Casillas que puede mover por turno */
   mover: [3, 5, 4, 7, 6, 2, 3, 6, 3, 3, 10, 9, 7, 5, 6, 7, 3, 5, 6],
   /** Radio de vision (rombo) */
