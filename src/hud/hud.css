@@ -2937,3 +2937,49 @@ html.reduce-motion .end-best.new {
     height: 32px;
   }
 }
+
+/* Panel del general en el movil: que no tape el dia (vertical) ni choque con las fichas (horizontal). */
+@media (max-width: 720px) and (orientation: portrait) {
+  .general-panel {
+    top: 124px;
+    width: 210px;
+    padding: 8px 10px;
+  }
+  .gp-title {
+    display: none;
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Una tira de una linea bajo el dinero: general, barra y habilidades. */
+  .general-panel {
+    top: 84px;
+    width: auto;
+    max-width: calc(100% - 32px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+  }
+  .gp-face {
+    width: 26px;
+    height: 26px;
+    font-size: 16px;
+  }
+  .gp-title {
+    display: none;
+  }
+  .gp-charge {
+    width: 96px;
+    margin: 0;
+  }
+  .gp-abilities {
+    flex-direction: row;
+  }
+  .gp-ab {
+    width: auto;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
