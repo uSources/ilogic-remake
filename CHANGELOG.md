@@ -7,12 +7,30 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.6.0] - 2026-10-31 — Brisa al mando
+
+Llegan los generales: elige uno al empezar la partida y úsalo en el momento justo.
+
+### Novedades
+- **Generales.** En «Nueva partida» eliges general para ti y para el enemigo. El primero es **Brisa, coronel del aire**: sus aviones aciertan un 10 % más.
+- Cada general tiene una **barra de estrellas** que se llena con el daño que haces y el que recibes, y **habilidades** que la gastan (una por turno):
+  - **Reconocimiento** (2★): ves todo el mapa hasta el final de la ronda.
+  - **Ataque aéreo** (5★): eliges una casilla y los enemigos en su cuadrado de 3×3 pierden 30 de vida (nunca los destruye).
+- **La IA también usa a su general**, y su panel arriba a la derecha avisa de cuándo te puede bombardear.
 
 ### Gráficos
 - La **vida de las unidades** en el mapa se lee mejor: cifras nítidas con la letra del juego, en vez de los números de 2013, que se veían borrosos y aplastados.
 
 <!-- en -->
+
+Generals are here: pick one when you start a match and use it at the right moment.
+
+### New
+- **Generals.** In "New game" you choose a general for yourself and for the enemy. The first one is **Brisa, Air Colonel**: her planes hit 10% more often.
+- Each general has a **star bar** that fills with the damage you deal and take, and **abilities** that spend it (one per turn):
+  - **Recon** (2★): you see the whole map until the end of the round.
+  - **Air strike** (5★): pick a tile and the enemies in its 3×3 square lose 30 health (it never destroys them).
+- **The AI uses its general too**, and its panel at the top right warns you when it can bomb you.
 
 ### Graphics
 - **Unit health** on the map is easier to read: sharp numbers in the game's font instead of the 2013 ones, which looked blurry and squashed.
