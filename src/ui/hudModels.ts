@@ -12,6 +12,9 @@ import {
   commandUsed,
   moveCost,
   rank,
+  flanked,
+  bountyFor,
+  unhealable,
   score,
   tileProtection,
   unitAt,
@@ -152,6 +155,7 @@ export function tileVM(
       chips: unitStatChips(T),
       abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
+      ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
     };
   }
   return info;
@@ -177,6 +181,8 @@ export function forecastVM(
     lifeAfter: f.lifeAfter,
     killChance: f.killChance,
     anchor,
+    flank: flanked(s, target) ? RULES.flankBonus : 0,
+    bounty: bountyFor(target.type),
     counter: f.counter
       ? {
           low: f.counter.low,

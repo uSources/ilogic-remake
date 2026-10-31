@@ -49,6 +49,10 @@ export interface ForecastVM {
   lifeAfter: number;
   killChance: number;
   anchor: Anchor;
+  /** [CAMBIO] Acierto extra por flanqueo, en tanto por uno (0 si no hay). */
+  flank: number;
+  /** [CAMBIO] Dinero que se cobraria al destruirla (0 sin botin). */
+  bounty: number;
   /** Contraataque previsto sobre tu unidad (null si no habra). */
   counter: { low: number; high: number; lifeBefore: number; lifeAfter: number; killChance: number } | null;
 }
@@ -112,6 +116,8 @@ export interface UnitVM {
   abilities?: AbilityVM[];
   status?: string;
   cargo?: string;
+  /** [CAMBIO] Ha recibido un ataque hoy: esta noche no se cura (regla noHealUnderFire). */
+  noHeal?: boolean;
 }
 
 /** Una fila del desglose: "3 × Ciudad   +3.000". */

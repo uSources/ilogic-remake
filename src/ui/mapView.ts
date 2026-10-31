@@ -6,7 +6,7 @@ import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
 import { TILE } from '../layout';
 import { reducedMotion } from './fx';
-import { rank } from '../core/rules';
+import { rank, unhealable } from '../core/rules';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 import { frontKey, paintTerrain, terrainArtReady, terrainObjects, waterAnimCells, type AnimCell } from './terrainArt';
 import { ANIM_FRAMES } from './sheets';
@@ -56,8 +56,9 @@ interface UnitSprite {
   front: Phaser.GameObjects.Image;
   life: Phaser.GameObjects.Image;
   cargo: Phaser.GameObjects.Rectangle;
-  /** Estrellas de veterania (arriba a la derecha). */
+  /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
   stars: Phaser.GameObjects.Graphics;
+  /** Lo dibujado en `stars`: rango x 2 + 1 si lleva la señal de sin cura. */
   rank: number;
   key: string;
   /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
@@ -466,11 +467,24 @@ export class MapView {
     if (showLife) sp.life.setTexture(lifeKey(n));
     sp.cargo.setVisible(u.cargo.some((c) => c !== null));
     const r = rank(u);
-    if (r !== sp.rank) {
+    // [CAMBIO] Ha recibido un ataque hoy y no se curara esta noche (regla noHealUnderFire).
+    const noHeal = !!s && u.life < 100 && unhealable(s, u);
+    if (r * 2 + (noHeal ? 1 : 0) !== sp.rank) {
       // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
-      sp.rank = r;
+      sp.rank = r * 2 + (noHeal ? 1 : 0);
       const g = sp.stars;
       g.clear();
+      if (noHeal) {
+        // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
+        const x = 1,
+          y = TILE - 8;
+        g.fillStyle(PAL.ink, 1);
+        g.fillRect(x, y, 7, 7);
+        g.fillStyle(PAL.red, 1);
+        g.fillRect(x + 1, y + 1, 5, 5);
+        g.fillStyle(0xffffff, 1);
+        g.fillRect(x + 2, y + 3, 3, 1);
+      }
       for (let i = 0; i < r; i++) {
         const x = TILE - 5 - i * 5,
           y = 1;

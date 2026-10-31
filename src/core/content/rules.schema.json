@@ -25,6 +25,10 @@
         "fog",
         "dayLimit",
         "veterancy",
+        "vetBonus",
+        "bounty",
+        "flankBonus",
+        "noHealUnderFire",
         "passAllies",
         "ambush",
         "forestHides",
@@ -93,6 +97,28 @@
           "type": "boolean",
           "minimum": 0,
           "description": "Las unidades que destruyen enemigos suben de rango (+acierto, +defensa)."
+        },
+        "vetBonus": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Acierto que gana cada rango de veterania (y defensa), en tanto por uno."
+        },
+        "bounty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Botin: al destruir una unidad se cobra este tanto por uno de su precio (0 = sin botin)."
+        },
+        "flankBonus": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Flanqueo: acierto extra contra una unidad que ya ha recibido un ataque ese dia (0 = sin flanqueo)."
+        },
+        "noHealUnderFire": {
+          "type": "boolean",
+          "description": "Una unidad que ha recibido un ataque ese dia no se cura en los edificios al acabarlo."
         },
         "passAllies": {
           "type": "boolean",

@@ -62,6 +62,7 @@ export function deserialize(json: string): GameState | null {
     u.canMove = !!u.canMove;
     u.canFire = !!u.canFire;
     if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
+    if (u.hitDay !== undefined && !isInt(u.hitDay, 0, 1e6)) delete u.hitDay;
     if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
   }
   const byUid = new Map(s.units.map((u) => [u.uid, u]));
@@ -145,7 +146,9 @@ export function deserialize(json: string): GameState | null {
       (r.weather === undefined || typeof r.weather === 'boolean') &&
       (r.abilities === undefined || typeof r.abilities === 'boolean') &&
       (r.commandPoints === undefined || r.commandPoints === null || isInt(r.commandPoints, 1, 10000)) &&
-      (r.upkeep === undefined || (typeof r.upkeep === 'number' && r.upkeep >= 0 && r.upkeep <= 1));
+      (r.upkeep === undefined || (typeof r.upkeep === 'number' && r.upkeep >= 0 && r.upkeep <= 1)) &&
+      [r.vetBonus, r.bounty, r.flankBonus].every((v) => v === undefined || (typeof v === 'number' && v >= 0 && v <= 1)) &&
+      (r.noHealUnderFire === undefined || typeof r.noHealUnderFire === 'boolean');
     if (ok) {
       r.veterancy ??= false;
       r.passAllies ??= false;
@@ -156,6 +159,11 @@ export function deserialize(json: string): GameState | null {
       r.abilities ??= false;
       r.commandPoints ??= null;
       r.upkeep ??= 0;
+      // Partidas de antes del botin y el flanqueo: como se jugaban entonces.
+      r.vetBonus ??= 0.05;
+      r.bounty ??= 0;
+      r.flankBonus ??= 0;
+      r.noHealUnderFire ??= false;
     }
     if (!ok) return null;
   }

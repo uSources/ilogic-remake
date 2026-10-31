@@ -401,8 +401,10 @@ export function hitChance(s: GameState, atk: Unit, def: Unit): number {
   let p = POWER[atk.type]![def.type]! * coverAgainst(atk.type, tileProtection(s, def));
   // [CAMBIO] Habilidades del defensor y de sus aliados (escudo, aura).
   p *= defenseFactor(s, atk, def);
-  // [CAMBIO] Veterania: cada rango da +5 % de acierto al atacar y -5 % al que le ataca.
-  if (RULES.veterancy) p *= (1 + VET_BONUS * rank(atk)) * (1 - VET_BONUS * rank(def));
+  // [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca.
+  if (RULES.veterancy) p *= (1 + RULES.vetBonus * rank(atk)) * (1 - RULES.vetBonus * rank(def));
+  // [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil (premia atacar en grupo).
+  if (flanked(s, def)) p *= 1 + RULES.flankBonus;
   // [CAMBIO] Generales: ventaja fija de los dos bandos.
   p *= generalHitFactor(s, atk, def);
   // [CAMBIO] Clima: con lluvia o tormenta se apunta peor.
@@ -411,7 +413,16 @@ export function hitChance(s: GameState, atk: Unit, def: Unit): number {
 
 /** Bajas necesarias para cada rango (1, 2 y 3 estrellas). */
 export const RANK_KILLS = [1, 3, 6] as const;
-export const VET_BONUS = 0.05;
+
+/** [CAMBIO] La unidad ya ha recibido un ataque hoy y la regla de flanqueo esta puesta. */
+export function flanked(s: GameState, def: Unit): boolean {
+  return RULES.flankBonus > 0 && def.hitDay === s.day;
+}
+
+/** [CAMBIO] Botin por destruir una unidad de ese tipo (0 sin la regla). */
+export function bountyFor(type: number): number {
+  return Math.round(UNIT.cost[type]! * RULES.bounty);
+}
 
 /** Rango de veterania de una unidad: 0 a 3. */
 export function rank(u: Unit): number {
@@ -435,6 +446,8 @@ export interface AttackResult {
   /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
   counter: number;
   attackerKilled: boolean;
+  /** [CAMBIO] Dinero cobrado por quien destruyo una unidad (0 si nadie cayo o no hay botin). */
+  bounty: number;
 }
 
 /**
@@ -471,11 +484,12 @@ export function canCounter(def: Unit, atk: Unit): boolean {
 
 /** Ataque completo: daño, y contraataque si las reglas lo tienen. */
 export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): AttackResult {
-  const none: AttackResult = { damage: 0, killed: false, counter: 0, attackerKilled: false };
+  const none: AttackResult = { damage: 0, killed: false, counter: 0, attackerKilled: false, bounty: 0 };
   if (atk.team === def.team || !atk.canFire || !UNIT.canfight[atk.type]) return none;
   if (!inAttackRange(atk.type, atk, def)) return none;
   const damage = Math.min(def.life, rollDamage(atk.life, Math.min(1, hitChance(s, atk, def)), rng));
   def.life -= damage;
+  def.hitDay = s.day;
   atk.active = false;
   atk.canFire = false;
   atk.canMove = false;
@@ -485,9 +499,15 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
     atk.life -= counter;
   }
   chargeFromCombat(s, atk, def, damage, counter);
-  const result = { damage, killed: def.life <= 0, counter, attackerKilled: atk.life <= 0 };
+  const result: AttackResult = { damage, killed: def.life <= 0, counter, attackerKilled: atk.life <= 0, bounty: 0 };
   if (result.killed && atk.life > 0) atk.kills = (atk.kills ?? 0) + 1;
   if (result.attackerKilled && def.life > 0) def.kills = (def.kills ?? 0) + 1;
+  // [CAMBIO] Botin: quien destruye cobra parte del precio de lo destruido (atacar sale a cuenta).
+  const [winner, lost] = result.killed ? [atk.team, def.type] : result.attackerKilled ? [def.team, atk.type] : [null, 0];
+  if (winner !== null) {
+    result.bounty = bountyFor(lost);
+    s.funds[winner] = Math.min(MAX_FUNDS, s.funds[winner] + result.bounty);
+  }
   removeDead(s);
   return result;
 }
@@ -521,6 +541,7 @@ export function attackEvent(s: GameState, atk: Unit, def: Unit, rng: Rng): Extra
     killed: r.killed,
     counter: r.counter,
     attackerKilled: r.attackerKilled,
+    ...(r.bounty ? { bounty: r.bounty } : {}),
     combat: info,
   };
 }
@@ -857,6 +878,11 @@ export interface RoundReport {
   weather?: WeatherChange | null;
 }
 
+/** [CAMBIO] La unidad no se curara al acabar el dia: ha recibido un ataque hoy (regla noHealUnderFire). */
+export function unhealable(s: GameState, u: Unit): boolean {
+  return RULES.noHealUnderFire && u.hitDay === s.day;
+}
+
 /**
  * Mantenimiento tras el turno de la IA (ciclojuego, fase 2): reactivar unidades, cobrar y curar
  * sobre edificios propios.
@@ -877,6 +903,8 @@ export function endRound(s: GameState): RoundReport {
     report.income[b.owner] += buildingIncome(b.type);
     const u = unitAt(s, b.x, b.y);
     if (!u || u.team !== b.owner || !HEALER[u.type]![b.type]) continue;
+    // [CAMBIO] Sin cura bajo fuego: quien ha recibido un ataque hoy no se recupera esta noche.
+    if (unhealable(s, u)) continue;
     const before = u.life;
     u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
     if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });

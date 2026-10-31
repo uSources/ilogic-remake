@@ -2554,6 +2554,13 @@ export class GameScene extends Phaser.Scene {
         before !== null ? lifeBar(this, this.view, atkPos, before, before - ev.counter, teamColor(atkTeam), this.combatMs(380)) : null,
       ]);
     }
+    // [CAMBIO] Botin: quien destruye cobra parte del precio (dorado, como el dinero de Ambar).
+    const lootAt = ev.killed ? ev.target : ev.attackerKilled ? atkPos : null;
+    if (ev.bounty && lootAt && !this.fastForward && this.visibleToPlayer(lootAt)) {
+      const c = center(lootAt);
+      void floatText(this, this.view, { x: c.x, y: c.y - 16 }, `+${fmtNum(ev.bounty)}`, PAL_CSS.gold);
+      this.refreshHud();
+    }
     if (seen && info) await this.wait(this.combatMs(350));
     ui.set({ combat: null });
   }

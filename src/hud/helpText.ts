@@ -11,6 +11,7 @@ const HELP = {
       'CAPTURE_ES',
       'COUNTER_ES',
       'VET_ES',
+      'ATTACK_ES',
       'ARMY_ES',
       'MOVE_ES',
       'WEATHER_ES',
@@ -58,6 +59,7 @@ const HELP = {
       'CAPTURE_EN',
       'COUNTER_EN',
       'VET_EN',
+      'ATTACK_EN',
       'ARMY_EN',
       'MOVE_EN',
       'WEATHER_EN',
@@ -114,8 +116,19 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       ? 'Clima: cada pocos días cambia el tiempo (arriba, junto al día; al pasar por encima ves sus efectos y el pronóstico). La lluvia frena a los vehículos, la nieve a todo lo que va por tierra y las tormentas a los aviones; el mal tiempo quita visión y puntería a los dos bandos.'
       : '',
     VET_ES: RULES.veterancy
-      ? 'Veteranía: una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas). Cada estrella da +5 % de acierto y de defensa; al unir dos unidades se queda la más veterana.'
+      ? `Veteranía: una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas). Cada estrella da +${Math.round(RULES.vetBonus * 100)} % de acierto y de defensa: a una veterana dañada le compensa curarse antes que comprar otra. Al unir dos unidades se queda la más veterana.`
       : '',
+    ATTACK_ES: [
+      RULES.bounty > 0 ? `Botín: al destruir una unidad cobras el ${Math.round(RULES.bounty * 100)} % de su precio.` : '',
+      RULES.flankBonus > 0
+        ? `Flanqueo: contra una unidad que ya ha recibido un ataque ese día aciertas un ${Math.round(RULES.flankBonus * 100)} % más. Ataca en grupo.`
+        : '',
+      RULES.noHealUnderFire
+        ? 'Bajo fuego: una unidad que ha recibido un ataque ese día no se cura esa noche (lleva una señal roja abajo a la izquierda).'
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
     ARMY_ES: [
       RULES.commandPoints !== null
         ? `Puntos de mando: tu ejército no puede pasar de ${RULES.commandPoints}. La infantería ocupa 1 y los vehículos y aviones grandes hasta 5 (lo pone al comprar).`
@@ -140,8 +153,19 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       ? 'Weather: every few days it changes (top, next to the day; hover it to see its effects and the forecast). Rain slows vehicles, snow slows everything on the ground and storms slow aircraft; bad weather costs both sides vision and aim.'
       : '',
     VET_EN: RULES.veterancy
-      ? 'Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +5 % hit chance and defence; joining two units keeps the more veteran one.'
+      ? `Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +${Math.round(RULES.vetBonus * 100)} % hit chance and defence, so a damaged veteran is worth healing rather than replacing. Joining two units keeps the more veteran one.`
       : '',
+    ATTACK_EN: [
+      RULES.bounty > 0 ? `Bounty: destroying a unit pays you ${Math.round(RULES.bounty * 100)} % of its price.` : '',
+      RULES.flankBonus > 0
+        ? `Flanking: against a unit that has already been attacked that day you hit ${Math.round(RULES.flankBonus * 100)} % more. Attack together.`
+        : '',
+      RULES.noHealUnderFire
+        ? 'Under fire: a unit attacked that day does not heal that night (it shows a red mark at the bottom left).'
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
     ARMY_EN: [
       RULES.commandPoints !== null
         ? `Command points: your army can't go over ${RULES.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`

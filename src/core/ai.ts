@@ -134,7 +134,8 @@ function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
   const atk = { ...u, x: from.x, y: from.y };
   const dmg = expectedDamage(s, atk, t);
   const value = UNIT.cost[t.type]! / AI.COSTSCALE;
-  let score = dmg * value + (dmg >= t.life ? AI.KILLBONUS * value : 0);
+  // [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
+  let score = dmg * value + (dmg >= t.life ? (AI.KILLBONUS + 100 * RULES.bounty) * value : 0);
   // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
   if (RULES.counterattack && dmg < t.life) {
     const left = { ...t, life: Math.max(1, Math.round(t.life - dmg)) };
