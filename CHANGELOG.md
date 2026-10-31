@@ -7,7 +7,9 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.5.0] - 2026-10-31 — A dos toques
+
+Jugar con el dedo cuesta menos toques, y varios arreglos para el móvil.
 
 ### Interfaz
 - **Mover con el dedo en dos toques:** toca tu unidad y luego adónde ir; si no hay nada más que hacer, espera sola (antes eran cuatro toques y el menú). Para atacar, toca el enemigo dos veces: la primera enseña la previsión. También se puede arrastrar la unidad sin mantener pulsado, y tocar una fábrica libre abre la compra al momento.
@@ -18,8 +20,11 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - El icono de **visión** ya no se sale de la ficha de la unidad en pantallas estrechas.
 - Las **cifras** del texto ya no confunden el 5 con el 8 ("Fondos: 5000" se leía "8000").
 - En el móvil, el texto de la **ayuda** ya no se corta por la derecha.
+- Las teclas del juego ya no se disparan junto con los atajos del navegador: Ctrl+T abría una pestaña y a la vez enseñaba la amenaza.
 
 <!-- en -->
+
+Playing with your finger takes fewer taps, plus several fixes for phones.
 
 ### Interface
 - **Move with your finger in two taps:** tap your unit, then where to go; if there is nothing else to do, it waits on its own (it used to take four taps and the menu). To attack, tap the enemy twice: the first tap shows the forecast. You can also drag a unit without holding first, and tapping a free factory opens the shop right away.
@@ -30,6 +35,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - The **vision** icon no longer sticks out of the unit card on narrow screens.
 - **Numbers** in text no longer mix up 5 and 8 ("Funds: 5000" looked like "8000").
 - On phones, the **help** text is no longer cut off on the right.
+- Game keys no longer fire together with browser shortcuts: Ctrl+T opened a tab and showed the threat at the same time.
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 
