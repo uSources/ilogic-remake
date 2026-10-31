@@ -1,5 +1,7 @@
 import type Phaser from 'phaser';
 import type { GameState } from './core/types';
+import { UNIT_NAMES } from './core/data';
+import { defaultLab } from './lab';
 import { ui, type UIState } from './hud/store';
 import type { GameScene, GameStartData } from './scenes/GameScene';
 import { setFrozen } from './ui/fx';
@@ -37,6 +39,8 @@ export interface IlogicDebug {
     state?: GameState | string;
     mission?: string;
   }): Promise<void>;
+  /** Laboratorio de animaciones (src/lab.ts): unidades por nombre, camara lenta y accion a reproducir. */
+  lab(opts?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
   /** Partida en curso (copia) o null fuera de la partida. */
   state(): GameState | null;
   /** Fase de la partida ('map', 'move', 'attack', 'busy'...), dia y si ha terminado. */
@@ -89,6 +93,23 @@ export function installDebug(game: Phaser.Game): void {
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
       from.scene.start('Game', data);
       await until(() => !!gameScene()?.debugSnapshot, 20000, 'partida');
+      await sleep(50);
+    },
+    async lab(opts = {}) {
+      const from = activeScene();
+      if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
+      const type = (name: string | undefined, def: number) => (name ? Math.max(0, UNIT_NAMES.indexOf(name)) : def);
+      const base = defaultLab();
+      from.scene.start('Game', {
+        mode: 'lab',
+        lab: {
+          attacker: type(opts.attacker, base.attacker),
+          defender: type(opts.defender, base.defender),
+          slow: !!opts.slow,
+          play: opts.play ?? null,
+        },
+      });
+      await until(() => !!gameScene()?.debugSnapshot, 20000, 'laboratorio');
       await sleep(50);
     },
     state() {
