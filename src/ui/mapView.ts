@@ -28,12 +28,20 @@ const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> =
   group: { fill: PAL.gold, alpha: 0.18, line: PAL.gold },
 };
 
+/** Hacia donde mira una unidad. Los dibujos azules miran a la derecha y los rojos a la izquierda. */
+export type Facing = 'left' | 'right';
+export const baseFacing = (team: number): Facing => (team === 1 ? 'left' : 'right');
+/** Hay que voltear el dibujo para que mire a `dir`. */
+export const faceFlip = (team: number, dir: Facing): boolean => dir !== baseFacing(team);
+
 export interface ViewOptions {
   vis: boolean[][];
   highlights: Map<string, HighlightKind>;
   hidden: Set<number>;
   /** Camino previsto (de la unidad al cursor). */
   path?: Pos[];
+  /** Al soltar en el final del camino se ataca: la flecha va en rojo. */
+  pathAttack?: boolean;
   /** Casillas que el enemigo puede atacar en su proximo turno (tecla T). */
   threat?: boolean[][] | null;
   /** Al mover: todo lo que la unidad podria atacar (borde rojo) y destinos peligrosos (marca roja). */
@@ -63,6 +71,7 @@ interface UnitSprite {
   key: string;
   /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
   idle: boolean;
+  team: 0 | 1;
 }
 
 /** Margen en pixeles CSS que se puede desplazar mas alla del mapa (para que no quede bajo la interfaz). */
@@ -80,6 +89,8 @@ export class MapView {
   private readonly terrain: Phaser.GameObjects.Container;
   private readonly buildingLayer: Phaser.GameObjects.Container;
   private readonly unitLayer: Phaser.GameObjects.Container;
+  /** Marcas en el suelo (quemados), bajo edificios y unidades. */
+  private readonly decals: Phaser.GameObjects.Container;
   private readonly overlay: Phaser.GameObjects.Graphics;
   private readonly fx: Phaser.GameObjects.Container;
   /** Marcas de mision, por encima de las unidades. */
@@ -139,7 +150,18 @@ export class MapView {
     this.layoutCursor(1);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
-    this.root.add([this.terrain, this.buildingLayer, this.fogLayer, this.overlay, this.unitLayer, this.marks, this.fx, this.cursorBox]);
+    this.decals = scene.add.container(0, 0);
+    this.root.add([
+      this.terrain,
+      this.decals,
+      this.buildingLayer,
+      this.fogLayer,
+      this.overlay,
+      this.unitLayer,
+      this.marks,
+      this.fx,
+      this.cursorBox,
+    ]);
     this.cam.setBackgroundColor(PAL_CSS.ink);
     this.level = this.defaultLevel();
     this.cam.setZoom(this.level);
@@ -418,7 +440,7 @@ export class MapView {
     const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
     const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars]);
     this.unitLayer.add(root);
-    return { root, img, front, life, cargo, stars, rank: 0, key, idle: false };
+    return { root, img, front, life, cargo, stars, rank: 0, key, idle: false, team: 0 };
   }
 
   private syncUnits(s: GameState, opts: ViewOptions): void {
@@ -452,6 +474,8 @@ export class MapView {
 
   private updateUnitSprite(sp: UnitSprite, u: Unit, s?: GameState): void {
     sp.root.setPosition(u.x * TILE, u.y * TILE);
+    sp.team = u.team;
+    sp.img.setFlipX(faceFlip(u.team, this.facing.get(u.uid) ?? baseFacing(u.team)));
     // Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco.
     const front = s && this.newArt() ? frontKey(s, u.x, u.y) : null;
     if (front && hasImage(this.scene.textures, front)) {
@@ -643,9 +667,10 @@ export class MapView {
         dy = Math.sign(end.y - before.y);
       const cx = end.x * TILE + TILE / 2,
         cy = end.y * TILE + TILE / 2;
+      // [CAMBIO] Si al soltar ahi se ataca, la flecha va en rojo.
       for (const [w, color, alpha] of [
         [8, PAL.ink, 0.7],
-        [4, 0xffffff, 1],
+        [4, opts.pathAttack ? 0xff7a73 : 0xffffff, 1],
       ] as const) {
         g.fillStyle(color, alpha);
         for (let i = 0; i < path.length - 1; i++) {
@@ -780,6 +805,55 @@ export class MapView {
   }
 
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
+  // --- Hacia donde mira cada unidad y marcas de explosion -------------------
+
+  /** Ultimo lado al que ha mirado cada unidad (al moverse o disparar). Solo para dibujar. */
+  private readonly facing = new Map<number, Facing>();
+
+  /** Gira una unidad hacia un lado (y la deja asi). */
+  face(uid: number, dir: Facing): void {
+    this.facing.set(uid, dir);
+    const sp = this.units.get(uid);
+    if (sp) sp.img.setFlipX(faceFlip(sp.team, dir));
+  }
+
+  facingOf(uid: number, team: 0 | 1): Facing {
+    return this.facing.get(uid) ?? baseFacing(team);
+  }
+
+  /** Marcas de quemado en el suelo donde ha caido una unidad (dia en que se hicieron). */
+  private scorches: { g: Phaser.GameObjects.Graphics; day: number }[] = [];
+
+  /** Marca de quemado bajo las unidades: dura hasta el turno siguiente (ver pruneScorch). */
+  scorch(p: Pos, day: number): void {
+    const g = this.scene.add.graphics();
+    const cx = p.x * TILE + TILE / 2,
+      cy = p.y * TILE + TILE - 7;
+    g.fillStyle(0x1b1f14, 0.55);
+    g.fillRect(cx - 10, cy - 2, 20, 5);
+    g.fillRect(cx - 7, cy - 4, 14, 9);
+    g.fillStyle(0x3a3426, 0.6);
+    for (const [dx, dy] of [
+      [-12, 0],
+      [11, -1],
+      [-4, -6],
+      [5, 5],
+      [0, -1],
+    ] as const)
+      g.fillRect(cx + dx, cy + dy, 2, 2);
+    this.decals.add(g);
+    this.scorches.push({ g, day });
+  }
+
+  /** Quita las marcas de hace mas de un dia. */
+  pruneScorch(day: number): void {
+    this.scorches = this.scorches.filter((m) => {
+      if (day - m.day < 2) return true;
+      m.g.destroy();
+      return false;
+    });
+  }
+
   ghost(key: string, p: Pos): Phaser.GameObjects.Image {
     // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
     const img = this.scene.add.image(p.x * TILE + TILE / 2, (p.y + 1) * TILE, ATLAS, key).setOrigin(0.5, 1);
