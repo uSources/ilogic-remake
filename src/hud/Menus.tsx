@@ -233,6 +233,17 @@ export function NewGame({ s }: { s: UIState }) {
               {g.generalNote && <p class="ng-note">{g.generalNote}</p>}
             </div>
           )}
+          {g.enemyGeneral && (
+            <div class="ng-group ng-general">
+              <span class="label">{g.enemyGeneral.label}</span>
+              <Seg
+                row={g.enemyGeneral}
+                sel={f === g.enemyGeneral.id}
+                onHover={() => a.setupHover('opt-enemyGeneral')}
+                onSet={(i) => a.setupSet('opt-enemyGeneral', i)}
+              />
+            </div>
+          )}
           {g.preset === 'custom' ? (
             <div class="ng-groups">
               {g.groups.map((gr) => (

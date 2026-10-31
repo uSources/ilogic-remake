@@ -171,8 +171,9 @@ export interface GameStartData {
   setup?: GameSetup;
   mission?: string;
   state?: string;
-  /** Partida nueva: general del jugador (id de generals.json). */
+  /** Partida nueva: general del jugador y de la IA (id de generals.json). */
   general?: string | null;
+  enemyGeneral?: string | null;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -375,7 +376,8 @@ export class GameScene extends Phaser.Scene {
       this.s = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
       this.s.setup = setup;
       const g = newGeneral(data.general);
-      if (g) this.s.generals = [g, null];
+      const e = newGeneral(data.enemyGeneral);
+      if (g || e) this.s.generals = [g, e];
     }
     ensureWeather(this.s);
   }
@@ -630,6 +632,7 @@ export class GameScene extends Phaser.Scene {
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
       general: generalVM(s, 0, this.phase === 'target' ? this.targeting : null),
+      enemyGeneral: generalVM(s, 1, null),
       buildings: owned.length,
       day: s.day,
       dayLimit: RULES.dayLimit,
@@ -1384,6 +1387,8 @@ export class GameScene extends Phaser.Scene {
     const def = generalOf(this.s, ev.team)?.def;
     const ability = def?.abilities.find((a) => a.id === ev.ability);
     const name = ability?.name[settings.lang] ?? ev.ability;
+    // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
+    if (ev.team !== 0) showToast(`${t('enemy')} · ${def?.name[settings.lang] ?? ev.general}: ${name}`);
     const at = ev.target ?? this.view.cursor;
     if (ev.target) await this.lookAt(ev.target);
     const c = center(at);

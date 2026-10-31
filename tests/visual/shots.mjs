@@ -66,6 +66,9 @@ const SCENES = {
   'partida-general': async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa' }));
   },
+  'partida-general-enemigo': async (p) => {
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa', enemyGeneral: 'Brisa' }));
+  },
   'partida-ataque-aereo': async (p) => {
     // Brisa con la barra llena (partida preparada) apuntando el ataque aereo cerca del enemigo.
     await p.evaluate(async () => {

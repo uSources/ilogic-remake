@@ -120,7 +120,8 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 - **Generales**: en "Nueva partida" se puede elegir uno. Tiene una ventaja fija y una barra que se
   carga con el daño que haces y recibes; con ella usa sus habilidades (una por turno). **Brisa**,
   coronel del aire: sus aviones aciertan +10 %, *Reconocimiento* (ves todo el mapa la ronda) y
-  *Ataque aéreo* (−30 de vida a los enemigos en 3×3, sin destruirlos). La IA aún no tiene general.
+  *Ataque aéreo* (−30 de vida a los enemigos en 3×3, sin destruirlos). La IA también puede llevar
+  general ("General enemigo") y lo usa.
 - **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
   cada una con +5 % de acierto y de defensa.
 - Al empezar cada turno sale un resumen de la ronda (ingresos y unidades reparadas).

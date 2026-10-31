@@ -5,6 +5,7 @@
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
+import { aiGeneral } from './aiGenerals';
 import { AI, BUILDING, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT, Movement } from './data';
 import { diamond, manhattan, samePos } from './geom';
 import {
@@ -342,6 +343,8 @@ function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
 /** Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound). */
 export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): Generator<GameEvent> {
   ME = team;
+  // [CAMBIO] Primero el general (una habilidad, si merece la pena): ver aiGenerals.ts.
+  yield* aiGeneral(s, ME);
   const order = teamUnits(s, ME).map((u) => u.uid);
   for (const uid of order) {
     const u = unitById(s, uid);

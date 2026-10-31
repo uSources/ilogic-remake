@@ -19,6 +19,8 @@ export interface NewGameOptions {
   upkeep: number;
   /** General del jugador (id de generals.json; null = sin general). */
   general: string | null;
+  /** General de la IA (id de generals.json; null = sin general). */
+  enemyGeneral: string | null;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
   code: string;
   /** Ajuste elegido en la pantalla de nueva partida. */
@@ -29,7 +31,10 @@ export type PresetId = 'normal' | 'quick' | 'custom';
 export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
-export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'general'>> = {
+export const PRESETS: Record<
+  Exclude<PresetId, 'custom'>,
+  Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'general' | 'enemyGeneral'>
+> = {
   normal: { size: 32, fog: true, weather: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
   quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
@@ -49,6 +54,7 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   command: 30,
   upkeep: 0.1,
   general: null,
+  enemyGeneral: null,
   code: '',
   preset: 'normal',
 };
@@ -66,6 +72,7 @@ export const CHOICES = {
   upkeep: [0, 0.05, 0.1, 0.15] as const,
   /** Sin general o uno de generals.json. */
   general: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
+  enemyGeneral: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
 };
 export type ChoiceKey = keyof typeof CHOICES;
 
@@ -145,7 +152,8 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
       return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)}`;
     case 'upkeep':
       return v === 0 ? (es ? 'No' : 'Off') : `${Math.round((v as number) * 100)} %`;
-    case 'general': {
+    case 'general':
+    case 'enemyGeneral': {
       const g = GENERALS.find((x) => x.id === v);
       return g ? `${g.name[settings.lang]} · ${g.title[settings.lang]}` : es ? 'Sin general' : 'No general';
     }

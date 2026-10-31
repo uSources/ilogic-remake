@@ -273,6 +273,7 @@ export interface SetupVM {
   groups: { title: string; rows: OptionRowVM[] }[];
   /** General del jugador (siempre a la vista, no solo en "Personalizada") y lo que hace. */
   general: OptionRowVM | null;
+  enemyGeneral: OptionRowVM | null;
   generalNote: string;
   code: string;
   codeError: boolean;
@@ -321,6 +322,8 @@ export interface UIState {
   dayInfo: DayInfoVM | null;
   /** General del jugador. */
   general: GeneralVM | null;
+  /** General de la IA (solo para verlo). */
+  enemyGeneral: GeneralVM | null;
   buildings: number;
   day: number;
   turn: 'player' | 'enemy';
@@ -445,6 +448,7 @@ const initial: UIState = {
     presets: [],
     groups: [],
     general: null,
+    enemyGeneral: null,
     generalNote: '',
     code: '',
     codeError: false,
@@ -459,6 +463,7 @@ const initial: UIState = {
   funds: 0,
   economy: null,
   general: null,
+  enemyGeneral: null,
   dayInfo: null,
   income: 0,
   command: null,
