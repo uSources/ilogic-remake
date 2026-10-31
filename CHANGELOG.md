@@ -7,24 +7,30 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.6.0] - 2026-10-31 — Al mando
+
+Llegan los generales: elige uno al empezar la partida y úsalo en el momento justo.
 
 ### Novedades
-- **Dos generales más:**
-  - **Roca, general de blindados:** sus vehículos reciben un 5 % menos de daño, y con **Reparación** (4★) todas sus unidades recuperan 10 de vida.
-  - **Ámbar, intendente:** sus tropas de tierra aciertan un 7 % más. Tiene **Reconocimiento** (2★) y **Suministros** (4★), que dan 6000 de dinero al momento.
-- En «Nueva partida», el selector de general baja de línea para que quepan todos.
+- **Generales.** En «Nueva partida» eliges general para ti y para el enemigo. Cada uno tiene una ventaja fija, una **barra de estrellas** que se llena con el daño que haces y el que recibes, y **habilidades** que la gastan (una por turno):
+  - **Brisa, coronel del aire:** sus aviones aciertan un 10 % más. **Reconocimiento** (2★): ves todo el mapa hasta el final de la ronda. **Ataque aéreo** (5★): los enemigos en un cuadrado de 3×3 pierden 30 de vida (nunca los destruye).
+  - **Roca, general de blindados:** sus vehículos reciben un 5 % menos de daño. **Reparación** (4★): todas sus unidades recuperan 10 de vida.
+  - **Ámbar, intendente:** sus tropas de tierra aciertan un 7 % más. **Reconocimiento** (2★) y **Suministros** (4★): 6000 de dinero al momento.
+- **La IA también usa a su general**, y su panel arriba a la derecha avisa de cuándo puede usar sus habilidades.
 
 ### Gráficos
 - La **vida de las unidades** en el mapa se lee mejor: cifras nítidas con la letra del juego, en vez de los números de 2013, que se veían borrosos y aplastados.
 
 <!-- en -->
 
+Generals are here: pick one when you start a match and use it at the right moment.
+
 ### New
-- **Two more generals:**
-  - **Roca, Armor General:** his vehicles take 5% less damage, and with **Repair** (4★) all his units recover 10 health.
-  - **Ámbar, Quartermaster:** her ground troops hit 7% more often. She has **Recon** (2★) and **Supplies** (4★), which gives 6000 money right away.
-- In "New game", the general selector wraps so they all fit.
+- **Generals.** In "New game" you choose a general for yourself and for the enemy. Each one has a fixed advantage, a **star bar** that fills with the damage you deal and take, and **abilities** that spend it (one per turn):
+  - **Brisa, Air Colonel:** her planes hit 10% more often. **Recon** (2★): you see the whole map until the end of the round. **Air strike** (5★): enemies in a 3×3 square lose 30 health (it never destroys them).
+  - **Roca, Armor General:** his vehicles take 5% less damage. **Repair** (4★): all his units recover 10 health.
+  - **Ámbar, Quartermaster:** her ground troops hit 7% more often. **Recon** (2★) and **Supplies** (4★): 6000 money right away.
+- **The AI uses its general too**, and its panel at the top right warns you when it can use its abilities.
 
 ### Graphics
 - **Unit health** on the map is easier to read: sharp numbers in the game's font instead of the 2013 ones, which looked blurry and squashed.
