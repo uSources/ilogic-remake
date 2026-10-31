@@ -7,6 +7,14 @@
   src: url('./fonts/ilogic.woff2') format('woff2');
   font-display: block;
 }
+/* Cifras del texto con las de Ilogic: en Pixelify Sans, a tamaño pequeño, el 5 se confunde con el 8
+   ("Fondos: 5000" se leia "8000"). Solo las cifras (unicode-range); las letras siguen igual. */
+@font-face {
+  font-family: 'IlogicDigits';
+  src: url('./fonts/ilogic.woff2') format('woff2');
+  font-display: block;
+  unicode-range: U+0030-0039;
+}
 :root {
   --ink: #0b1220;
   --panel: #1c2c4c;
@@ -28,7 +36,7 @@
   --green: #4fd36a;
   --sel: #2c5bb0;
   --display: 'Ilogic', 'Silkscreen', 'Courier New', monospace;
-  --body: 'Pixelify Sans', 'Courier New', monospace;
+  --body: 'IlogicDigits', 'Pixelify Sans', 'Courier New', monospace;
   color-scheme: dark;
 }
 
