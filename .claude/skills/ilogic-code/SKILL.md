@@ -18,6 +18,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
 | `src/controls/` | Ordenes del jugador (`GameCommand`) y adaptadores de cada mando (teclado...): funciones puras, sin Phaser | menu (teclas compartidas) |
+| `src/controls/pointer.ts` | Adaptador de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, coger y soltar, recuadro, pulsacion larga, pellizco, rueda). Sin Phaser | `GameScene` implementa `PointerTarget` |
 | `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
 
