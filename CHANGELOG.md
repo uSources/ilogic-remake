@@ -7,6 +7,46 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.7.0] - 2026-10-31 — A la ofensiva
+
+Atacar por fin sale a cuenta: rematar da dinero, atacar en grupo da puntería y el enemigo ya no se cura gratis bajo tu fuego.
+
+### Cambios de juego
+- **Botín.** Al destruir una unidad cobras el 25 % de su precio (lo ves caer en dorado sobre el mapa).
+- **Flanqueo.** Contra una unidad que ya ha recibido un ataque ese día aciertas un 15 % más: ataca en grupo.
+- **Bajo fuego.** Una unidad que ha recibido un ataque ese día no se cura esa noche, aunque esté en una ciudad. Lleva una señal roja abajo a la izquierda y su ficha lo avisa.
+- **Veteranía más fuerte.** Cada estrella da ahora +10 % de acierto y de defensa (antes +5 %): a una veterana dañada le compensa curarse antes que comprar otra.
+- La **previsión de combate** enseña el flanqueo y el botín antes de atacar.
+- **Jeep — Explorador:** ve a las unidades escondidas en bosque, montaña o ciudad dentro de su visión, sin estar al lado.
+- **Motorizado — Captura rápida:** captura edificios 1,5 veces más rápido que el resto de la infantería.
+
+### Gráficos
+- **Combates y movimientos nuevos.** Las unidades miran a quien atacan y cada una dispara lo suyo (balas, proyectil, parábola de artillería, misil, bombas); la víctima destella y al caer deja restos y una marca quemada durante dos días. Al moverse aceleran y frenan, la infantería da saltitos y los vehículos levantan polvo.
+- Los combates son **más rápidos**: un ataque pasa de 2,7 s a 1,5 s, y con contraataque de 4,6 s a 2,3 s.
+- La flecha de movimiento se vuelve roja cuando soltar ahí ataca.
+- Las unidades rojas ya no giran al revés al moverse.
+- Arreglada la «fi» de los textos, que salía como «A» («edifAcios»).
+
+<!-- en -->
+
+Attacking finally pays: finishing units off earns money, attacking together improves your aim and the enemy no longer heals for free under your fire.
+
+### Gameplay
+- **Bounty.** Destroying a unit pays you 25% of its price (you see it pop up in gold on the map).
+- **Flanking.** Against a unit that has already been attacked that day you hit 15% more often: attack together.
+- **Under fire.** A unit attacked that day does not heal that night, even in a city. It shows a red mark at the bottom left and its card warns you.
+- **Stronger veterancy.** Each star now gives +10% hit chance and defence (was +5%): a damaged veteran is worth healing rather than replacing.
+- The **combat forecast** shows flanking and bounty before you attack.
+- **Jeep — Scout:** sees units hidden in woods, mountains or cities within its vision, without being next to them.
+- **Motorized — Fast capture:** captures buildings 1.5 times faster than other infantry.
+
+### Graphics
+- **New combat and movement animations.** Units face their target and each fires its own projectile (bullets, shell, artillery arc, missile, bombs); the victim flashes and leaves wreckage and a scorch mark for two days. Units speed up and slow down when moving, infantry hop and vehicles kick up dust.
+- Combat is **faster**: an attack goes from 2.7 s to 1.5 s, and with a counterattack from 4.6 s to 2.3 s.
+- The movement arrow turns red when dropping there attacks.
+- Red units no longer turn the wrong way when moving.
+- Fixed the Spanish texts where «fi» showed up as «A».
+
 ## [0.6.0] - 2026-10-31 — Al mando
 
 Llegan los generales: elige uno al empezar la partida y úsalo en el momento justo.
