@@ -114,6 +114,8 @@ prevision de combate las tienen en cuenta solas, porque pasan por las mismas reg
 | `zoneOfControl` | `stops`: movimientos | Zona de control: un enemigo con ese movimiento que entra en una casilla de al lado se para ahi (sale el turno siguiente). Con niebla, solo si la ve | Barricada (a pie, vehiculos, anfibios) |
 | `aura` | `radius`, `defense` (0..1) | Apoyo: a las unidades propias a `radius` casillas o menos les aciertan `defense` veces. No se suma con otras auras; a ella misma no | Suministros (1, 0.9) |
 | `piercing` | `ignoreCover` (0..1) | Perforante: ignora esa parte de la proteccion del terreno y del edificio del objetivo | Mortero (1) |
+| `scout` | — | Explorador: ve lo que se esconde en el bosque (regla `forestHides`) en todo su radio de vision | Jeep |
+| `quickCapture` | `factor` (≥ 1) | Captura rapida: multiplica lo que resta al capturar | Motorizado (1.5) |
 
 ```json
 "abilities": [{ "kind": "guard", "factor": 0.5 }]
