@@ -81,6 +81,10 @@ export function abilityVM(a: AbilityDef): AbilityVM {
       };
     case 'piercing':
       return { name: t('ability_piercing'), desc: t('ability_piercing_desc').replace('{n}', pct(a.ignoreCover)) };
+    case 'scout':
+      return { name: t('ability_scout'), desc: t('ability_scout_desc') };
+    case 'quickCapture':
+      return { name: t('ability_quickCapture'), desc: t('ability_quickCapture_desc').replace('{n}', pct(a.factor - 1)) };
     default:
       return a satisfies never;
   }

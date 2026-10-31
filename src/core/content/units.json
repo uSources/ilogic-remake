@@ -168,7 +168,12 @@
         "SnowCliff": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
-      }
+      },
+      "abilities": [
+        {
+          "kind": "scout"
+        }
+      ]
     },
     {
       "id": "LTank",
@@ -704,7 +709,13 @@
         "SnowCliff": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
-      }
+      },
+      "abilities": [
+        {
+          "kind": "quickCapture",
+          "factor": 1.5
+        }
+      ]
     },
     {
       "id": "WTank",

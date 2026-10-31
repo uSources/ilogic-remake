@@ -68,6 +68,12 @@ function validateAbilities(s: Scope, list: unknown, u: UnitDef): void {
         s.num(`${f}.ignoreCover`, a.ignoreCover, { min: 0, max: 1 });
         s.expect(u.attack !== null, `${f}: piercing en una unidad que no ataca`);
         break;
+      case 'scout':
+        break;
+      case 'quickCapture':
+        s.num(`${f}.factor`, a.factor, { min: 1, max: 5 });
+        s.expect(u.captures, `${f}: quickCapture en una unidad que no captura`);
+        break;
       default:
         break;
     }
