@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Gráficos
+- La **vida de las unidades** en el mapa se lee mejor: cifras nítidas con la letra del juego, en vez de los números de 2013, que se veían borrosos y aplastados.
+
+<!-- en -->
+
+### Graphics
+- **Unit health** on the map is easier to read: sharp numbers in the game's font instead of the 2013 ones, which looked blurry and squashed.
+
 ## [0.5.0] - 2026-10-31 — A dos toques
 
 Jugar con el dedo cuesta menos toques, y varios arreglos para el móvil.
