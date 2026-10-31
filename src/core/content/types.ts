@@ -59,7 +59,7 @@ export const TerrainType = {
 export type TerrainType = (typeof TerrainType)[keyof typeof TerrainType];
 
 /** Clases de habilidad que entiende el juego. Cada una tiene sus numeros en el JSON. */
-export const ABILITY_KINDS = ['guard', 'zoneOfControl', 'aura', 'piercing'] as const;
+export const ABILITY_KINDS = ['guard', 'zoneOfControl', 'aura', 'piercing', 'scout', 'quickCapture'] as const;
 export type AbilityKind = (typeof ABILITY_KINDS)[number];
 
 /**
@@ -70,12 +70,16 @@ export type AbilityKind = (typeof ABILITY_KINDS)[number];
  * - aura: a las unidades propias a `radius` casillas o menos les aciertan `defense` veces (no se suma
  *   con otras auras: cuenta la mejor). A ella misma no.
  * - piercing: ignora esa parte (0..1) de la proteccion del terreno y del edificio del objetivo.
+ * - scout: ve lo que se esconde en el bosque (regla forestHides) en todo su radio de vision.
+ * - quickCapture: multiplica lo que resta al capturar (1.5 = un 50 % mas rapido).
  */
 export type AbilityDef =
   | { kind: 'guard'; factor: number }
   | { kind: 'zoneOfControl'; stops: MovementName[] }
   | { kind: 'aura'; radius: number; defense: number }
-  | { kind: 'piercing'; ignoreCover: number };
+  | { kind: 'piercing'; ignoreCover: number }
+  | { kind: 'scout' }
+  | { kind: 'quickCapture'; factor: number };
 
 export interface UnitDef {
   /** Nombre interno (en ingles, sin espacios). Las imagenes son u/b_<id>.png, u/r_<id>.png... */
