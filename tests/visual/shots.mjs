@@ -63,6 +63,22 @@ const SCENES = {
     await p.hover('.top .day');
     await p.waitForSelector('.day .breakdown', { state: 'visible' });
   },
+  'partida-general': async (p) => {
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa' }));
+  },
+  'partida-ataque-aereo': async (p) => {
+    // Brisa con la barra llena (partida preparada) apuntando el ataque aereo cerca del enemigo.
+    await p.evaluate(async () => {
+      const d = window.ilogicDebug;
+      await d.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa' });
+      const s = d.state();
+      s.generals[0].charge = 6;
+      await d.startGame({ state: s });
+    });
+    await p.click('.gp-ab:has-text("Ataque aéreo")');
+    await p.mouse.move(900, 300);
+    await p.waitForTimeout(200);
+  },
   'partida-ayuda': async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
     await p.keyboard.press('KeyH');

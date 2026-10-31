@@ -17,6 +17,7 @@ import {
   UNIT_TYPES,
   WEATHER_TYPES,
 } from './data';
+import { generalDef } from './generals';
 import { sanitizeStats } from './stats';
 import type { GameState, Pos } from './types';
 
@@ -109,6 +110,18 @@ export function deserialize(json: string): GameState | null {
     const ok = !!w && isInt(w.kind, 0, WEATHER_TYPES - 1) && isInt(w.next, 0, WEATHER_TYPES - 1) && isInt(w.left, 0, 1000);
     // Un clima roto no estropea la partida: se vuelve a empezar despejado.
     if (!ok) delete s.weather;
+  }
+  if (s.generals !== undefined) {
+    // Un general que no existe (o con datos rotos) se quita: la partida sigue sin el.
+    const ok = Array.isArray(s.generals) && s.generals.length === 2;
+    if (!ok) delete s.generals;
+    else
+      s.generals = s.generals.map((g) => {
+        const def = g ? generalDef(g.id) : undefined;
+        if (!g || !def) return null;
+        const charge = typeof g.charge === 'number' && Number.isFinite(g.charge) ? Math.max(0, Math.min(g.charge, def.charge.max)) : 0;
+        return { id: g.id, charge, used: !!g.used, reveal: !!g.reveal };
+      }) as GameState['generals'];
   }
   if (s.rules !== undefined) {
     const r = s.rules as Partial<RulesConfig>;

@@ -15,6 +15,7 @@ import {
   type BreakdownLineVM,
   type DayInfoVM,
   type EconomyVM,
+  type GeneralVM,
   type ForecastVM,
   type IdleVM,
   type MenuVM,
@@ -216,6 +217,54 @@ function useTipToggle(): [boolean, () => void, (e: PointerEvent) => void] {
   // Salir con el raton lo cierra; con el dedo no (el navegador "sale" al levantarlo, justo tras abrirlo).
   const leave = (e: PointerEvent) => e.pointerType === 'mouse' && setOpen(false);
   return [open, () => setOpen((o) => !o), leave];
+}
+
+/** Panel del general: barra de carga en estrellas y un boton por habilidad. */
+function GeneralPanel({ g, mine }: { g: GeneralVM; mine: boolean }) {
+  const a = ui.actions;
+  return (
+    <div class="px general-panel" aria-label={`${t('general')}: ${g.name}`}>
+      <div class="gp-head">
+        <span class="gp-face" aria-hidden="true">
+          {g.name[0]}
+        </span>
+        <div>
+          <div class="gp-name">{g.name}</div>
+          <div class="gp-title">{g.title}</div>
+        </div>
+      </div>
+      <div class="gp-charge" title={t('genChargeHint')}>
+        {Array.from({ length: g.max }, (_, i) => (
+          <i
+            class={i < g.stars ? 'full' : i === g.stars ? 'part' : ''}
+            style={i === g.stars ? { '--fill': `${Math.round(g.fraction * 100)}%` } : undefined}
+          />
+        ))}
+      </div>
+      <div class="gp-abilities">
+        {g.abilities.map((ab) =>
+          g.targeting === ab.id ? (
+            <button tabIndex={-1} type="button" class="px-btn plain gp-ab on" onMouseDown={noFocus} onClick={() => a.cancelAbility()}>
+              {t('genCancel')} <span class="key">Esc</span>
+            </button>
+          ) : (
+            <button
+              tabIndex={-1}
+              type="button"
+              class={`px-btn gp-ab ${ab.ready && mine ? '' : 'off'}`}
+              disabled={!mine}
+              title={`${ab.description}${ab.reason ? ` · ${ab.reason}` : ''}`}
+              onMouseDown={noFocus}
+              onClick={() => a.useAbility(ab.id)}
+            >
+              <span class="gp-ab-name">{ab.name}</span>
+              <span class="gp-cost">{'★'.repeat(ab.cost)}</span>
+            </button>
+          ),
+        )}
+      </div>
+    </div>
+  );
 }
 
 function TopBar({ s }: { s: UIState }) {
@@ -754,6 +803,7 @@ function GameHud({ s }: { s: UIState }) {
   return (
     <>
       <TopBar s={s} />
+      {s.general && <GeneralPanel g={s.general} mine={s.turn === 'player'} />}
       {s.mission && s.turn === 'player' && <MissionPanel m={s.mission} />}
       {s.hint && <div class="hintline">{s.hint}</div>}
       {showCards && <Cards tile={s.tile!} />}

@@ -221,6 +221,18 @@ export function NewGame({ s }: { s: UIState }) {
               </Btn>
             ))}
           </div>
+          {g.general && (
+            <div class="ng-group ng-general">
+              <span class="label">{g.general.label}</span>
+              <Seg
+                row={g.general}
+                sel={f === g.general.id}
+                onHover={() => a.setupHover('opt-general')}
+                onSet={(i) => a.setupSet('opt-general', i)}
+              />
+              {g.generalNote && <p class="ng-note">{g.generalNote}</p>}
+            </div>
+          )}
           {g.preset === 'custom' ? (
             <div class="ng-groups">
               {g.groups.map((gr) => (

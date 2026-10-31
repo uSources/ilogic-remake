@@ -8,6 +8,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/buildings.json` | Los 6 edificios: ingresos, curacion, proteccion, vision y cual es el cuartel general |
 | `src/core/content/terrain.json` | Los 15 terrenos: nombre, defensa, si esconde, y por donde pasa y cuanto cuesta a cada tipo de movimiento |
 | `src/core/content/weather.json` | Los climas: cuanto quitan de movimiento, vision y punteria, cuantos dias duran y en que terreno salen |
+| `src/core/content/generals.json` | Los generales: ventaja fija, barra de carga y habilidades (ataque aereo, reconocimiento...) |
 | `src/core/content/rules.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
 | `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
 
@@ -171,6 +172,28 @@ partidas guardan el numero).
 El tiempo de cada dia sale de la semilla del mapa (la misma partida tiene siempre el mismo clima) y el
 siguiente ya esta decidido: es el pronostico que se ve arriba. Reglas en `src/core/weather.ts`.
 Para probar sin el: `--set RULES.weather=false`.
+
+## Generales
+
+`generals.json` tiene los generales que se pueden elegir en "Nueva partida". Cada uno tiene:
+
+| Campo | Que es |
+|---|---|
+| `id`, `name`, `title`, `description` | Nombre interno (lo guardan las partidas), nombre, cargo y lo que ve el jugador al elegirlo |
+| `passive` | Ventajas fijas: `{ "kind": "attack", "movement": ["air"], "factor": 1.1 }` = sus aviones aciertan un 10 % mas. `defense` con `factor` 0.9 = los enemigos le hacen un 10 % menos. Se filtran por `movement` y/o `units` (sin nada, a todas) |
+| `charge` | Barra: `max` estrellas; gana una por cada `per` de valor (precio × vida quitada / 100) que hace **o** recibe en combate |
+| `abilities` | Habilidades: `cost` (estrellas que gastan) y `effect`. Una por turno |
+
+Efectos que hay (`effect.kind`):
+
+| Efecto | Que hace |
+|---|---|
+| `reveal` | Ve todo el mapa hasta que acaba la ronda |
+| `areaDamage` | Quita `damage` de vida a los enemigos en un cuadrado de lado `2 × radius + 1` alrededor de la casilla elegida; nunca los deja por debajo de `minLife` (no mata) |
+
+Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
+`content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`useAbility`) y su
+animacion en `GameScene.playAbility`. La IA todavia no usa generales.
 
 ## Reglas e IA
 

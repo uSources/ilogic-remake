@@ -1,0 +1,39 @@
+{
+  "$schema": "./generals.schema.json",
+  "generals": [
+    {
+      "id": "Brisa",
+      "name": { "es": "Brisa", "en": "Brisa" },
+      "title": { "es": "Coronel del aire", "en": "Air Colonel" },
+      "description": {
+        "es": "Piloto veterana. Sus aviones aciertan más y puede bombardear cualquier punto del mapa.",
+        "en": "Veteran pilot. Her aircraft hit harder and she can bomb anywhere on the map."
+      },
+      "passive": [{ "kind": "attack", "movement": ["air"], "factor": 1.1 }],
+      "charge": { "max": 6, "per": 6000 },
+      "abilities": [
+        {
+          "id": "recon",
+          "name": { "es": "Reconocimiento", "en": "Recon" },
+          "description": {
+            "es": "Ves todo el mapa hasta el final de la ronda.",
+            "en": "You see the whole map until the end of the round."
+          },
+          "cost": 2,
+          "effect": { "kind": "reveal" }
+        },
+        {
+          "id": "airstrike",
+          "name": { "es": "Ataque aéreo", "en": "Air strike" },
+          "description": {
+            "es": "Bombardea un cuadrado de 3×3: −30 de vida a las unidades enemigas (no las destruye).",
+            "en": "Bombs a 3×3 square: −30 health to enemy units (never destroys them)."
+          },
+          "cost": 5,
+          "effect": { "kind": "areaDamage", "radius": 1, "damage": 30, "minLife": 10 }
+        }
+      ],
+      "notes": "Primer general. Numeros de partida: carga de 6, una estrella por cada 6000 de valor hecho o recibido."
+    }
+  ]
+}

@@ -74,8 +74,22 @@ export interface GameState {
   setup?: GameSetup;
   /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */
   weather?: WeatherState;
+  /** [CAMBIO] General de cada bando [jugador, IA] (null = sin general). Las partidas antiguas no lo tienen. */
+  generals?: [GeneralState | null, GeneralState | null];
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
+}
+
+/** General de un bando (ver core/generals.ts). */
+export interface GeneralState {
+  /** id de generals.json. */
+  id: string;
+  /** Carga de la barra, en estrellas (puede tener decimales; se enseña redondeada hacia abajo). */
+  charge: number;
+  /** Ya ha usado una habilidad este turno (una por turno). */
+  used: boolean;
+  /** Ve todo el mapa hasta que acabe la ronda (habilidad reveal). */
+  reveal: boolean;
 }
 
 /** Clima de la partida (indices de weather.json). */
@@ -109,7 +123,17 @@ export type GameEvent =
   | { kind: 'merge'; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; uid: number; into: number; path: Pos[] }
   | { kind: 'spawn'; uid: number; at: Pos }
-  | { kind: 'wait'; uid: number };
+  | { kind: 'wait'; uid: number }
+  | {
+      kind: 'ability';
+      team: Team;
+      general: string;
+      ability: string;
+      /** Casilla elegida (habilidades de area). */
+      target?: Pos;
+      /** Unidades tocadas y vida que han perdido. */
+      hits: { uid: number; damage: number }[];
+    };
 
 /**
  * Como estaban las dos unidades justo antes de un combate. La interfaz lo usa para enseñarlo

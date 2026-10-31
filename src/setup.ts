@@ -1,7 +1,7 @@
 /**
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
-import { DEFAULT_RULES, type RulesConfig } from './core/data';
+import { DEFAULT_RULES, GENERALS, type RulesConfig } from './core/data';
 import { fmtNum, settings } from './settings';
 
 export interface NewGameOptions {
@@ -17,6 +17,8 @@ export interface NewGameOptions {
   command: number | null;
   /** Mantenimiento por ronda, tanto por uno del precio de las unidades. */
   upkeep: number;
+  /** General del jugador (id de generals.json; null = sin general). */
+  general: string | null;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
   code: string;
   /** Ajuste elegido en la pantalla de nueva partida. */
@@ -27,7 +29,7 @@ export type PresetId = 'normal' | 'quick' | 'custom';
 export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
-export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset'>> = {
+export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'general'>> = {
   normal: { size: 32, fog: true, weather: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
   quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
@@ -46,6 +48,7 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   dayLimit: null,
   command: 30,
   upkeep: 0.1,
+  general: null,
   code: '',
   preset: 'normal',
 };
@@ -61,6 +64,8 @@ export const CHOICES = {
   dayLimit: [null, 20, 30, 40, 60] as const,
   command: [null, 20, 30, 40] as const,
   upkeep: [0, 0.05, 0.1, 0.15] as const,
+  /** Sin general o uno de generals.json. */
+  general: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
 };
 export type ChoiceKey = keyof typeof CHOICES;
 
@@ -140,5 +145,9 @@ export function choiceLabel(k: ChoiceKey, v: unknown): string {
       return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)}`;
     case 'upkeep':
       return v === 0 ? (es ? 'No' : 'Off') : `${Math.round((v as number) * 100)} %`;
+    case 'general': {
+      const g = GENERALS.find((x) => x.id === v);
+      return g ? `${g.name[settings.lang]} · ${g.title[settings.lang]}` : es ? 'Sin general' : 'No general';
+    }
   }
 }

@@ -4,9 +4,10 @@
  * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
  */
 import { aiTurn } from '@core/ai';
-import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, useRules } from '@core/data';
+import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, useRules, GENERALS } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
+import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
 import { buildMission, missionById, missionRules } from '@core/missions';
 import {
   attackFull,
@@ -58,6 +59,8 @@ export interface SessionOptions {
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */
   state?: string;
+  /** General del jugador (id de generals.json). */
+  general?: string;
 }
 
 export class Session {
@@ -80,6 +83,11 @@ export class Session {
     } else {
       useRules({ ...DEFAULT_RULES, fog: opts.fog ?? false });
       this.s = generateGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null });
+      if (opts.general) {
+        const g = newGeneral(opts.general);
+        if (!g) throw new Error(`No existe el general "${opts.general}" (${GENERALS.map((x) => x.id).join(', ')})`);
+        this.s.generals = [g, null];
+      }
     }
   }
 
@@ -124,6 +132,9 @@ export class Session {
         case 'buy':
         case 'comprar':
           return this.buy(n(0), n(1), a[2] ?? '');
+        case 'power':
+        case 'poder':
+          return this.power(a[0] ?? '', a[1] === undefined ? null : { x: n(1), y: n(2) });
         case 'end':
         case 'fin':
           return this.endTurn(false);
@@ -243,6 +254,18 @@ export class Session {
     return `comprada ${u.uid} ${UNIT_NAMES[type]} en (${x},${y}); quedan ${this.s.funds[0]}`;
   }
 
+  /** Usar una habilidad del general (sin id: lista de habilidades y carga). */
+  private power(id: string, target: { x: number; y: number } | null): string {
+    const g = generalOf(this.s, 0);
+    if (!g) throw new UsageError('no tienes general (--general Brisa)');
+    const list = g.def.abilities.map((a) => `${a.id} (${a.cost})`).join(', ');
+    if (!id)
+      return `${g.def.id}: carga ${g.state.charge.toFixed(1)}/${g.def.charge.max}${g.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
+    const block = abilityBlock(this.s, 0, id, target);
+    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (habilidades: ${list})`);
+    return describe(this.s, useAbility(this.s, 0, id, target)!);
+  }
+
   /** Fin del turno propio (o la IA juega por ti con `ai`), turno enemigo y fin de ronda. */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
@@ -260,6 +283,7 @@ export class Session {
     const own = (t: number) => s.buildings.filter((b) => b.owner === t).length;
     return [
       `dia ${s.day} · dinero ${s.funds[0]} (enemigo ${s.funds[1]}) · edificios ${own(0)} contra ${own(1)}`,
+      ...(s.generals?.[0] ? [`general ${s.generals[0].id}: carga ${s.generals[0].charge.toFixed(1)}`] : []),
       `unidades ${s.units.filter((u) => u.team === 0).length} contra ${s.units.filter((u) => u.team === 1).length} · resultado: ${outcome(s)}`,
       `sin usar: ${
         s.units
@@ -293,6 +317,8 @@ function describe(s: GameState, ev: GameEvent): string {
       return `${name(ev.uid)} sube a ${name(ev.into)}`;
     case 'wait':
       return `${name(ev.uid)} espera`;
+    case 'ability':
+      return `general ${ev.general} usa ${ev.ability}${ev.target ? ` en (${ev.target.x},${ev.target.y})` : ''}${ev.hits.length ? `: ${ev.hits.map((h) => `${name(h.uid)} -${h.damage}`).join(', ')}` : ''}`;
   }
 }
 
@@ -310,6 +336,7 @@ const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   capture <id>             capturar el edificio de debajo
   wait <id>                terminar con la unidad
   buy <x> <y> <Tipo>       comprar en un edificio tuyo (Soldier, Tank...; sin tipo, lista)
+  power [id] [x y]         habilidad del general (con --general; sin id, carga y lista)
   end                      fin de turno: juega la IA enemiga y empieza el dia siguiente
   ai                       la IA juega tu turno y el enemigo el suyo
   status                   dia, dinero, edificios y unidades

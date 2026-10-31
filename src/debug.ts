@@ -31,6 +31,8 @@ export interface IlogicDebug {
     fog?: boolean;
     /** Limite de dias (por defecto, sin limite). */
     dayLimit?: number | null;
+    /** General del jugador (id de generals.json). */
+    general?: string | null;
     state?: GameState | string;
     mission?: string;
   }): Promise<void>;
@@ -79,6 +81,7 @@ export function installDebug(game: Phaser.Game): void {
                 mode: 'new',
                 rules: { fog: opts.fog ?? false, dayLimit: opts.dayLimit ?? null },
                 setup: { seed: opts.seed ?? 1, size: opts.size ?? 20, theme: opts.theme ?? null },
+                general: opts.general ?? null,
               };
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
