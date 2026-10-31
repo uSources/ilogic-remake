@@ -59,8 +59,9 @@ export interface SessionOptions {
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */
   state?: string;
-  /** General del jugador (id de generals.json). */
+  /** General del jugador y de la IA (id de generals.json). */
   general?: string;
+  enemyGeneral?: string;
 }
 
 export class Session {
@@ -83,11 +84,14 @@ export class Session {
     } else {
       useRules({ ...DEFAULT_RULES, fog: opts.fog ?? false });
       this.s = generateGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null });
-      if (opts.general) {
-        const g = newGeneral(opts.general);
-        if (!g) throw new Error(`No existe el general "${opts.general}" (${GENERALS.map((x) => x.id).join(', ')})`);
-        this.s.generals = [g, null];
-      }
+      const pick = (id: string | undefined) => {
+        if (!id) return null;
+        const g = newGeneral(id);
+        if (!g) throw new Error(`No existe el general "${id}" (${GENERALS.map((x) => x.id).join(', ')})`);
+        return g;
+      };
+      const [g, e] = [pick(opts.general), pick(opts.enemyGeneral)];
+      if (g || e) this.s.generals = [g, e];
     }
   }
 

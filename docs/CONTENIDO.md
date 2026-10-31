@@ -193,7 +193,12 @@ Efectos que hay (`effect.kind`):
 
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
 `content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`useAbility`) y su
-animacion en `GameScene.playAbility`. La IA todavia no usa generales.
+animacion en `GameScene.playAbility`.
+
+La IA usa a su general sin saber cual es (`core/aiGenerals.ts`): al empezar su turno valora cada
+habilidad que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
+reconocimiento, un valor fijo con niebla) y usa la mejor si vale al menos `GENERALMINVALUE`
+(`ai.json`); con la barra llena, cualquiera que valga algo. Un efecto nuevo necesita su valoracion ahi.
 
 ## Reglas e IA
 

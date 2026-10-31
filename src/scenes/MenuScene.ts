@@ -367,7 +367,7 @@ export class MenuScene extends Phaser.Scene {
 
   private setupRows(): string[][] {
     const rows: string[][] = [[...PRESET_IDS.map((p) => `preset-${p}`)]];
-    if (GENERALS.length) rows.push(['opt-general']);
+    if (GENERALS.length) rows.push(['opt-general'], ['opt-enemyGeneral']);
     if (this.options.preset === 'custom') for (const g of CUSTOM_GROUPS) for (const k of g.keys) rows.push([`opt-${k.k}`]);
     rows.push(['code', 'reroll']);
     rows.push(['back', 'start']);
@@ -406,6 +406,15 @@ export class MenuScene extends Phaser.Scene {
               label: t('optGeneral'),
               choices: CHOICES.general.map((v) => choiceLabel('general', v)),
               index: Math.max(0, CHOICES.general.indexOf(o.general)),
+            }
+          : null,
+        enemyGeneral: GENERALS.length
+          ? {
+              id: 'opt-enemyGeneral',
+              group: t('optEnemyGeneral'),
+              label: t('optEnemyGeneral'),
+              choices: CHOICES.enemyGeneral.map((v) => choiceLabel('enemyGeneral', v)),
+              index: Math.max(0, CHOICES.enemyGeneral.indexOf(o.enemyGeneral)),
             }
           : null,
         generalNote: GENERALS.find((g) => g.id === o.general)?.description[settings.lang] ?? '',
@@ -474,7 +483,13 @@ export class MenuScene extends Phaser.Scene {
     this.leaving = true;
     (document.activeElement as HTMLElement | null)?.blur?.();
     const o = this.options;
-    this.scene.start('Game', { mode: 'new', rules: rulesFor(o), setup: { seed, size: o.size, theme: o.theme }, general: o.general });
+    this.scene.start('Game', {
+      mode: 'new',
+      rules: rulesFor(o),
+      setup: { seed, size: o.size, theme: o.theme },
+      general: o.general,
+      enemyGeneral: o.enemyGeneral,
+    });
   }
 
   private setupKey(e: KeyboardEvent): void {

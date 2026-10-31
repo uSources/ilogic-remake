@@ -267,6 +267,27 @@ function GeneralPanel({ g, mine }: { g: GeneralVM; mine: boolean }) {
   );
 }
 
+/** General de la IA: solo su nombre y su barra (para saber cuando puede usar sus habilidades). */
+function EnemyGeneral({ g }: { g: GeneralVM }) {
+  return (
+    <div
+      class="px enemy-general"
+      title={`${g.description}\n${g.abilities.map((a) => `${a.name} (${'★'.repeat(a.cost)}): ${a.description}`).join('\n')}`}
+    >
+      <span class="eg-label">{t('enemy')}</span>
+      <span class="gp-name">{g.name}</span>
+      <div class="gp-charge">
+        {Array.from({ length: g.max }, (_, i) => (
+          <i
+            class={i < g.stars ? 'full' : i === g.stars ? 'part' : ''}
+            style={i === g.stars ? { '--fill': `${Math.round(g.fraction * 100)}%` } : undefined}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TopBar({ s }: { s: UIState }) {
   const a = ui.actions;
   const mine = s.turn === 'player';
@@ -804,6 +825,7 @@ function GameHud({ s }: { s: UIState }) {
     <>
       <TopBar s={s} />
       {s.general && <GeneralPanel g={s.general} mine={s.turn === 'player'} />}
+      {s.enemyGeneral && <EnemyGeneral g={s.enemyGeneral} />}
       {s.mission && s.turn === 'player' && <MissionPanel m={s.mission} />}
       {s.hint && <div class="hintline">{s.hint}</div>}
       {showCards && <Cards tile={s.tile!} />}

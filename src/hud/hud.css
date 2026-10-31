@@ -329,6 +329,28 @@ body {
 .gp-ab.on {
   outline: 3px solid var(--red-soft);
 }
+.enemy-general {
+  position: absolute;
+  right: 16px;
+  top: 82px;
+  width: 200px;
+  padding: 8px 12px;
+  pointer-events: auto;
+  cursor: help;
+}
+.enemy-general .eg-label {
+  display: block;
+  font-size: 11px;
+  color: var(--red-soft);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.enemy-general .gp-charge {
+  margin: 6px 0 0;
+}
+.enemy-general .gp-charge i.full {
+  background: var(--red-soft);
+}
 /* Desglose al pasar por encima del dinero o del dia (o al tocarlos) */
 /* El dia ya va en position: absolute (centrado); el dinero necesita relative para su panel. */
 .has-tip {
@@ -2942,8 +2964,22 @@ html.reduce-motion .end-best.new {
 @media (max-width: 720px) and (orientation: portrait) {
   .general-panel {
     top: 124px;
-    width: 210px;
+    width: 176px;
     padding: 8px 10px;
+  }
+  /* El del enemigo, a la misma altura a la derecha: caben los dos en 360 px. */
+  .enemy-general {
+    top: 124px;
+    width: 140px;
+    padding: 6px 10px;
+  }
+  .general-panel .gp-ab {
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .general-panel .gp-ab .gp-cost {
+    letter-spacing: 0;
   }
   .gp-title {
     display: none;
