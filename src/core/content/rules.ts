@@ -26,6 +26,14 @@ export interface RulesConfig {
   dayLimit: number | null;
   /** Veterania: las unidades que destruyen enemigos suben de rango (+acierto, +defensa). */
   veterancy: boolean;
+  /** [CAMBIO] Veterania: acierto que gana (y defensa) cada rango, en tanto por uno. */
+  vetBonus: number;
+  /** [CAMBIO] Botin: al destruir una unidad se cobra este tanto por uno de su precio (0 = sin botin). */
+  bounty: number;
+  /** [CAMBIO] Flanqueo: acierto extra contra una unidad que ya ha recibido un ataque ese dia (0 = sin flanqueo). */
+  flankBonus: number;
+  /** [CAMBIO] Una unidad que ha recibido un ataque ese dia no se cura en los edificios al acabarlo. */
+  noHealUnderFire: boolean;
   /** Se puede pasar por casillas de unidades propias (sin terminar en ellas). */
   passAllies: boolean;
   /** Emboscadas: el alcance no tiene en cuenta a los enemigos que no se ven; si el camino choca con uno, se para. */
@@ -60,6 +68,10 @@ const RULE_KINDS: Record<keyof RulesConfig, Kind> = {
   fog: 'bool',
   dayLimit: 'days',
   veterancy: 'bool',
+  vetBonus: 'fraction',
+  bounty: 'fraction',
+  flankBonus: 'fraction',
+  noHealUnderFire: 'bool',
   passAllies: 'bool',
   ambush: 'bool',
   forestHides: 'bool',

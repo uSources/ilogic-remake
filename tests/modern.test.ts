@@ -148,8 +148,8 @@ describe('reglas nuevas: veterania', () => {
     expect(a.kills).toBe(1);
     expect(rank(a)).toBe(1);
     const c = newUnit(s, TANK, 1, 4, 3);
-    expect(hitChance(s, a, c)).toBeCloseTo(base * 1.05);
-    expect(hitChance(s, c, a)).toBeCloseTo(base * 0.95);
+    expect(hitChance(s, a, c)).toBeCloseTo(base * (1 + RULES.vetBonus));
+    expect(hitChance(s, c, a)).toBeCloseTo(base * (1 - RULES.vetBonus));
     a.kills = 6;
     expect(rank(a)).toBe(3);
     const d = newUnit(s, TANK, 0, 2, 3);

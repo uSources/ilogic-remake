@@ -146,3 +146,46 @@ La infantería barata dominaba y el Tanque casi no se veía. Tres cambios, medid
   0,05; el Mortero 0,2. La Bazuca (0,4) sigue siendo el antitanque.
 - **El Soldado acierta menos a los vehículos** (0,1-0,2; Artillería 0,05).
 - Sigue pendiente: el Soldado aún rinde 2,2x la mediana.
+
+## Que atacar salga a cuenta (31-10-2026)
+
+Un jugador decía que le costaba ganar terreno a la IA. Se midió con `npm run balance -- run --games 80`
+(IA contra IA, máximo 60 días): con las reglas de entonces el **95 %** de las partidas seguía sin
+ganador el día 60. Defenderse no costaba nada: la unidad dañada volvía a una ciudad, se curaba 30 y
+esperaba con el 70-90 % de protección.
+
+Palancas de reglas probadas (sin terminar el día 60; menos es mejor):
+
+| Variante | Sin terminar |
+|---|---:|
+| Reglas de entonces | 95 % |
+| Sin contraataque | 95 % |
+| 40 puntos de mando y 5 % de mantenimiento | 95 % |
+| Curación de edificios a la mitad / a un tercio | 93 % / 94 % |
+| Capturar con 10 puntos (Base 20) | 86 % |
+| Capturar la Base con 10 puntos | 85 % |
+| Captura rápida + curación a la mitad + sin contraataque | 83 % |
+| Botín 30 % | 91 % |
+| Flanqueo +15 % | 95 % |
+| Sin cura bajo fuego | 91 % |
+| Veteranía +10 % por rango | 94 % |
+| Las cuatro nuevas juntas (las de ahora) | 91-93 % |
+
+Reglas nuevas (`rules.json`, todas se pueden apagar):
+
+- `bounty` 0,25: quien destruye una unidad cobra el 25 % de su precio (también el defensor si el
+  atacante cae en el contraataque). La IA lo suma al valor de rematar.
+- `flankBonus` 0,15: +15 % de acierto contra una unidad que ya ha recibido un ataque ese día.
+- `noHealUnderFire`: una unidad atacada ese día no se cura en los edificios esa noche (señal roja
+  abajo a la izquierda y aviso en su ficha).
+- `vetBonus` 0,10 (antes 0,05 fijo): a una veterana dañada le compensa curarse antes que comprar otra.
+
+Conclusiones:
+
+- Ninguna regla rompe el empate entre IAs: el atasco viene sobre todo de cómo juega la IA (se queda en
+  las ciudades y apenas empuja). Estas reglas premian al que ataca, es decir, sobre todo al jugador; la
+  IA solo las aprovecha a medias.
+- Generales con las reglas nuevas (contra sin general, 80 partidas): Brisa 71 % (antes 60), Roca 70 %
+  (68), Ámbar 50 % (60). Brisa gana con el flanqueo y el bajo fuego (su daño en área marca a varias
+  unidades); Ámbar pierde porque el botín reparte dinero a los dos. Vigilar; margen ±10-11.
+- Pendiente: una IA que ataque en grupo (entrenador de IA) para acercar la duración a 15-25 días.

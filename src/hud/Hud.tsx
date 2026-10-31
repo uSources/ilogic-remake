@@ -430,6 +430,18 @@ function Forecast({ f }: { f: ForecastVM }) {
         <span>{t('destroyIt')}</span>
         <span style={{ color: f.killChance >= 0.5 ? 'var(--gold)' : undefined }}>{pct(f.killChance)}</span>
       </div>
+      {f.flank > 0 && (
+        <div class="row">
+          <span>{t('flank')}</span>
+          <span style={{ color: 'var(--gold)' }}>+{Math.round(f.flank * 100)} %</span>
+        </div>
+      )}
+      {f.bounty > 0 && f.killChance > 0 && (
+        <div class="row">
+          <span>{t('bounty')}</span>
+          <span style={{ color: 'var(--gold)' }}>+{fmtNum(f.bounty)}</span>
+        </div>
+      )}
       {f.counter ? (
         <>
           <div class="row">
@@ -557,6 +569,7 @@ function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
+      {!folded && u.noHeal && <span style={{ fontSize: 13, color: 'var(--red-soft)' }}>{t('noHeal')}</span>}
       {!folded && u.cargo && (
         <span class="muted" style={{ fontSize: 13 }}>
           {u.cargo}

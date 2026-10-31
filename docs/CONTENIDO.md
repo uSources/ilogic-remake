@@ -211,7 +211,10 @@ los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
 
 - `rules.json`: `defaults` son las reglas con las que empieza una partida nueva (la pantalla de nueva
   partida y las misiones cambian algunas) y `maxFunds` el dinero maximo. Cada regla esta explicada en el
-  esquema (pasar el raton por encima en el editor).
+  esquema (pasar el raton por encima en el editor). Las que premian atacar: `bounty` (botin al
+  destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
+  (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania); ver
+  `docs/BALANCE.md`.
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`).
 

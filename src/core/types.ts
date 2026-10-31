@@ -31,6 +31,8 @@ export interface Unit {
   life: number;
   /** [CAMBIO] Enemigos destruidos (veterania, reglas nuevas). Las partidas antiguas no lo tienen. */
   kills?: number;
+  /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
+  hitDay?: number;
   /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */
   order?: Pos;
   /** uid del transporte que la lleva, o null. */
@@ -116,6 +118,8 @@ export type GameEvent =
       killed: boolean;
       counter?: number;
       attackerKilled?: boolean;
+      /** [CAMBIO] Dinero cobrado por destruir una unidad (para quien la destruyo). */
+      bounty?: number;
       /** Datos para enseñar el combate (ver attackEvent). Los eventos antiguos no lo tienen. */
       combat?: CombatInfo;
     }
