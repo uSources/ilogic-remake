@@ -82,6 +82,9 @@ const SCENES = {
     await p.mouse.move(900, 300);
     await p.waitForTimeout(200);
   },
+  laboratorio: async (p) => {
+    await p.evaluate(() => window.ilogicDebug.lab({ attacker: 'Artillery', defender: 'Tank' }));
+  },
   'partida-ayuda': async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
     await p.keyboard.press('KeyH');

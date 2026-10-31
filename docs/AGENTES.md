@@ -67,6 +67,22 @@ Normas al probar en el navegador:
 - Cortar la red (`page.route(/^https?:\/\//, r => r.abort())`): Novedades consulta GitHub.
 - Ajustes del juego por `localStorage['ilogic.settings']` antes de cargar (p. ej. `{ "menuBg": "classic" }`).
 
+## Laboratorio de animaciones (`#lab`, `npm run lab:record`)
+
+Para ver y ajustar como se anima mover, atacar, el contraataque y una unidad destruida sin jugar:
+
+- Abrir el juego con `#lab` al final de la direccion (`dist-single/ilogic.html#lab`, o la web
+  publicada): una unidad propia y una enemiga en campo abierto, con botones para cada accion,
+  elegir las dos unidades y camara lenta (a un cuarto de velocidad). Cada boton empieza de cero.
+- Desde Playwright: `ilogicDebug.lab({ attacker: 'Artillery', defender: 'Tank', slow: true, play: 'counter' })`.
+- `npm run lab:record` (con el juego compilado) graba las cuatro acciones en video en
+  `tests/visual/out/lab/` y dice cuanto dura cada una; con ffmpeg instalado, ademas un GIF y una hoja
+  de fotogramas por accion (`counter.png`...), que se pueden mirar como imagen. Opciones:
+  `-- --attacker Bomber --defender Tank --slow --out carpeta` (para comparar antes y despues).
+
+Codigo: `src/lab.ts` (la partida de mentira) y el modo `lab` de `GameScene` (las animaciones son las
+de siempre: `playEvents`, `playAttack`...).
+
 ## Antes de tocar...
 
 - **Graficos**: nunca a mano en `public/assets/atlas`; skill `arte-retro-diffusion` (y **no gastar
