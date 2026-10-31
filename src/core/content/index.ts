@@ -30,7 +30,7 @@ export * from './types';
 export type { RulesConfig } from './rules';
 export type { AiWeights } from './ai';
 export type { WeatherDef } from './weather';
-export type { GeneralAbilityDef, GeneralDef, GeneralEffect, GeneralModifier } from './generals';
+export type { GeneralAbilityDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';
 
 /** El contenido tal y como esta en los ficheros. */
 export interface Content {

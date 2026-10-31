@@ -9,10 +9,22 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Novedades
+- **Dos generales más:**
+  - **Roca, general de blindados:** sus vehículos reciben un 5 % menos de daño, y con **Reparación** (4★) todas sus unidades recuperan 10 de vida.
+  - **Ámbar, intendente:** sus tropas de tierra aciertan un 7 % más. Tiene **Reconocimiento** (2★) y **Suministros** (4★), que dan 6000 de dinero al momento.
+- En «Nueva partida», el selector de general baja de línea para que quepan todos.
+
 ### Gráficos
 - La **vida de las unidades** en el mapa se lee mejor: cifras nítidas con la letra del juego, en vez de los números de 2013, que se veían borrosos y aplastados.
 
 <!-- en -->
+
+### New
+- **Two more generals:**
+  - **Roca, Armor General:** his vehicles take 5% less damage, and with **Repair** (4★) all his units recover 10 health.
+  - **Ámbar, Quartermaster:** her ground troops hit 7% more often. She has **Recon** (2★) and **Supplies** (4★), which gives 6000 money right away.
+- In "New game", the general selector wraps so they all fit.
 
 ### Graphics
 - **Unit health** on the map is easier to read: sharp numbers in the game's font instead of the 2013 ones, which looked blurry and squashed.

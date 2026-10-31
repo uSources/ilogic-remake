@@ -3019,3 +3019,15 @@ html.reduce-motion .end-best.new {
     white-space: nowrap;
   }
 }
+
+/* Selector de general en Nueva partida: con varios generales, los botones bajan de linea en vez de
+   salirse del panel. Separados por la linea oscura del borde. */
+.ng-general .seg {
+  flex-wrap: wrap;
+  gap: 2px;
+  background: var(--ink);
+}
+.ng-general .seg button {
+  flex: 1 1 auto;
+  border-left: 0;
+}

@@ -133,6 +133,10 @@ export type GameEvent =
       target?: Pos;
       /** Unidades tocadas y vida que han perdido. */
       hits: { uid: number; damage: number }[];
+      /** Unidades propias curadas y vida que han recuperado (heal). */
+      heals?: { uid: number; amount: number }[];
+      /** Dinero conseguido (funds). */
+      funds?: number;
     };
 
 /**
