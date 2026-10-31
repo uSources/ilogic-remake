@@ -13,6 +13,7 @@ import {
   type RulesConfig,
   Movement,
   UNIT_NAMES,
+  MoveType,
 } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
@@ -97,7 +98,7 @@ import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextK
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
-import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion, shot, targetMark, tileFlash } from '../ui/fx';
+import { blink, burst, center, COLORS, floatText, lifeBar, reducedMotion, targetMark, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
@@ -119,6 +120,20 @@ import {
   economyVM,
   generalVM,
 } from '../ui/hudModels';
+import {
+  debris,
+  facingToward,
+  hitFlash,
+  impact,
+  muzzleFlash,
+  popNumber,
+  projectile,
+  recoil,
+  shotKind,
+  tag,
+  type ShotKind,
+} from '../ui/combatFx';
+import { baseFacing, faceFlip } from '../ui/mapView';
 import { defaultLab, LAB_TARGET, labRange, labState, type LabAction, type LabOptions } from '../lab';
 import { abilityArea, abilityBlock, areaTiles, generalOf, newGeneral, useAbility } from '../core/generals';
 import { PAL, PAL_CSS } from '../ui/palette';
@@ -603,11 +618,13 @@ export class GameScene extends Phaser.Scene {
     const obj = this.s.mission?.objective;
     const vipUnit = obj?.kind === 'escort' ? unitById(this.s, obj.uid) : undefined;
     const vipAt = vipUnit ? (vipUnit.carrier !== null ? (unitById(this.s, vipUnit.carrier) ?? vipUnit) : vipUnit) : undefined;
+    this.view.pruneScorch(this.s.day);
     this.view.render(this.s, {
       vis: this.vis,
       highlights: this.highlights(),
       hidden: this.hidden,
       path: this.previewPath(),
+      pathAttack: this.phase === 'move' && this.intentAt(this.view.cursor).kind === 'attack',
       threat,
       attackZone: this.phase === 'move' ? this.attackZone : null,
       orders: this.s.units
@@ -2453,6 +2470,16 @@ export class GameScene extends Phaser.Scene {
     this.view.placeCursor(false);
     const img = this.view.ghost(texKey, path[0]!);
     img.setVisible(showAll || this.visibleToPlayer(path[0]!));
+    // [CAMBIO] Mira hacia donde va (los dibujos rojos miran a la izquierda: ver faceFlip), arranca y
+    // frena suave, la infanteria da un saltito por casilla y los vehiculos levantan polvo.
+    // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
+    const mover = unitById(this.s, uid);
+    const team = mover?.team ?? (this.enemyPlaying ? 1 : 0);
+    const foot = mover ? Movement.of(mover.type) === MoveType.FOOT : false;
+    const air = mover ? Movement.of(mover.type) === MoveType.AIR : false;
+    let facing = this.view.facingOf(uid, team);
+    img.setFlipX(faceFlip(team, facing));
+    const n = path.length - 1;
     for (let i = 1; i < path.length; i++) {
       const p = path[i]!;
       const shown = showAll || this.visibleToPlayer(p);
@@ -2461,18 +2488,40 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
       const prev = path[i - 1]!;
-      if (p.x !== prev.x) img.setFlipX(p.x < prev.x);
+      const dir = facingToward(prev, p);
+      if (dir) {
+        facing = dir;
+        img.setFlipX(faceFlip(team, dir));
+      }
+      const from = { x: prev.x * TILE + TILE / 2, y: (prev.y + 1) * TILE };
+      const to = { x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE };
+      const ms = this.fastForward ? 1 : this.stepMs() * (n === 1 ? 1.25 : i === 1 || i === n ? 1.15 : 0.9);
+      const ease = n === 1 ? 'Sine.easeInOut' : i === 1 ? 'Quad.easeIn' : i === n ? 'Quad.easeOut' : 'Linear';
+      if (!this.fastForward && !foot && !air && img.visible && this.stepMs() > 1)
+        void burst(
+          this,
+          this.view,
+          { x: from.x - (to.x - from.x) * 0.3, y: from.y - 3 },
+          { colors: COLORS.smoke, count: 2, radius: 6, size: 2, duration: 240 },
+        );
+      const prog = { t: 0 };
       await new Promise<void>((resolve) =>
         this.tweens.add({
-          targets: img,
-          x: p.x * TILE + TILE / 2,
-          y: (p.y + 1) * TILE,
-          duration: this.fastForward ? 1 : this.stepMs(),
+          targets: prog,
+          t: 1,
+          duration: ms,
+          ease,
+          onUpdate: () => {
+            const hop = foot ? Math.round(Math.sin(prog.t * Math.PI) * 3) : 0;
+            img.setPosition(Math.round(from.x + (to.x - from.x) * prog.t), Math.round(from.y + (to.y - from.y) * prog.t) - hop);
+          },
           onComplete: () => resolve(),
         }),
       );
+      img.setPosition(to.x, to.y);
       img.setVisible(shown);
     }
+    this.view.face(uid, facing);
     // Al llegar, un poco de polvo (solo las unidades propias, que se ven siempre).
     const last = path[path.length - 1]!;
     if (showAll && path.length > 1 && !this.fastForward && this.stepMs() > 1) {
@@ -2509,7 +2558,14 @@ export class GameScene extends Phaser.Scene {
     const atkSeen = !!atkPos && this.visibleToPlayer(atkPos);
     const info = ev.combat;
     const atkTeam = info?.attackerTeam ?? unitById(this.s, ev.attacker)?.team ?? (this.enemyPlaying ? 1 : 0);
+    const defTeam = (1 - atkTeam) as 0 | 1;
+    const atkType = info?.attackerType ?? unitById(this.s, ev.attacker)?.type ?? 0;
+    const defType = info?.defenderType ?? unitAt(this.s, ev.target.x, ev.target.y)?.type ?? 0;
+    const victim = unitAt(this.s, ev.target.x, ev.target.y);
+    const victimUid = victim?.uid ?? null;
     const teamColor = (team: number) => (team === 0 ? PAL.blue : PAL.red);
+    // Velocidad de las animaciones (Opciones): 1 = normal.
+    const k = this.combatMs(1000) / 1000;
     const panelId = Date.now();
     const panel = (stage: 'start' | 'hit' | 'counter') => {
       if (!seen) return;
@@ -2517,42 +2573,29 @@ export class GameScene extends Phaser.Scene {
       if (vm) ui.set({ combat: vm });
     };
 
-    // 1. Quien ataca a quien.
+    // 1. Apuntar y disparar: el atacante mira al objetivo, retrocede con el fogonazo y sale el proyectil.
     if (seen) {
       panel('start');
       await this.lookAt(ev.target);
-      await targetMark(this, this.view, ev.target, teamColor(atkTeam), this.combatMs(240));
-      if (atkSprite && atkPos) {
-        await lunge(this, atkSprite, { dx: ev.target.x - atkPos.x, dy: ev.target.y - atkPos.y });
-        if (atkSeen) await shot(this, this.view, atkPos, ev.target, teamColor(atkTeam), this.combatMs(260));
-      }
+      if (atkPos) this.faceTo(ev.attacker, atkPos, ev.target);
+      if (victimUid !== null && atkPos) this.faceTo(victimUid, ev.target, atkPos);
+      void targetMark(this, this.view, ev.target, teamColor(atkTeam), this.combatMs(150));
+      if (atkSprite && atkPos && atkSeen) await this.fire(atkSprite, atkPos, ev.target, shotKind(atkType, defType), k);
+      else await this.wait(this.combatMs(150));
     }
-    // 2. Daño.
-    this.refresh();
+    // 2. Impacto.
     if (seen) {
       panel('hit');
-      const before = info?.defenderLife ?? null;
-      await Promise.all([
-        this.attackFx(ev.target, ev.damage, ev.killed, victimKey),
-        before !== null
-          ? lifeBar(this, this.view, ev.target, before, before - ev.damage, teamColor(1 - atkTeam), this.combatMs(380))
-          : null,
-      ]);
-    }
-    // 3. Contraataque.
+      await this.hitFx(victimUid, ev.target, ev.damage, ev.killed, victimKey, defTeam, info?.defenderLife ?? null, k);
+    } else this.refresh();
+    // 3. Contraataque: el defensor responde enseguida, con el mismo lenguaje que el ataque.
     if (ev.counter !== undefined && atkPos && (ev.counter > 0 || ev.attackerKilled) && !this.fastForward && this.visibleToPlayer(atkPos)) {
-      const victim = unitAt(this.s, ev.target.x, ev.target.y);
-      const vs = victim ? this.view.unitSprite(victim.uid) : null;
-      const c = center(ev.target);
-      void floatText(this, this.view, { x: c.x, y: c.y - 14 }, t('fxCounter'), PAL_CSS.gold);
-      if (vs) await lunge(this, vs, { dx: atkPos.x - ev.target.x, dy: atkPos.y - ev.target.y });
-      await shot(this, this.view, ev.target, atkPos, teamColor(1 - atkTeam), this.combatMs(200));
+      const vs = victimUid !== null ? this.view.unitSprite(victimUid) : null;
+      void tag(this, this.view, ev.target, t('fxCounter'), PAL_CSS.gold, k);
+      await this.wait(this.combatMs(80));
+      if (vs) await this.fire(vs, ev.target, atkPos, shotKind(defType, atkType), k);
       panel('counter');
-      const before = info?.attackerLife ?? null;
-      await Promise.all([
-        this.attackFx(atkPos, ev.counter, !!ev.attackerKilled, atkKey),
-        before !== null ? lifeBar(this, this.view, atkPos, before, before - ev.counter, teamColor(atkTeam), this.combatMs(380)) : null,
-      ]);
+      await this.hitFx(ev.attacker, atkPos, ev.counter, !!ev.attackerKilled, atkKey, atkTeam, info?.attackerLife ?? null, k);
     }
     // [CAMBIO] Botin: quien destruye cobra parte del precio (dorado, como el dinero de Ambar).
     const lootAt = ev.killed ? ev.target : ev.attackerKilled ? atkPos : null;
@@ -2561,35 +2604,59 @@ export class GameScene extends Phaser.Scene {
       void floatText(this, this.view, { x: c.x, y: c.y - 16 }, `+${fmtNum(ev.bounty)}`, PAL_CSS.gold);
       this.refreshHud();
     }
-    if (seen && info) await this.wait(this.combatMs(350));
+    if (seen && info) await this.wait(this.combatMs(200));
     ui.set({ combat: null });
   }
 
-  private async attackFx(at: Pos, damage: number, killed: boolean, victimKey: string | null): Promise<void> {
-    const c = center(at);
-    if (!reducedMotion()) this.cameras.main.shake(killed ? 220 : 110, killed ? 0.006 : 0.003);
-    const jobs: Promise<void>[] = [
-      burst(this, this.view, c, { colors: COLORS.fire, count: killed ? 12 : 9, radius: killed ? 20 : 16, size: 5 }),
-    ];
-    jobs.push(
-      floatText(this, this.view, { x: c.x, y: c.y - 4 }, damage > 0 ? `-${damage}` : t('fxMiss'), damage > 0 ? PAL_CSS.red : '#cfe8ff'),
-    );
-    // La victima parpadea (si queda viva, su sprite; si no, una copia que luego estalla).
+  /** Gira una unidad para que mire de `from` hacia `to` (si no estan en la misma columna). */
+  private faceTo(uid: number, from: Pos, to: Pos): void {
+    const dir = facingToward(from, to);
+    if (dir) this.view.face(uid, dir);
+  }
+
+  /** Disparo: retroceso y fogonazo a la vez, y el proyectil hasta el impacto. */
+  private async fire(sprite: Phaser.GameObjects.Container, from: Pos, to: Pos, kind: ShotKind, k: number): Promise<void> {
+    void recoil(this, sprite, from, to, k);
+    void muzzleFlash(this, this.view, from, to, k);
+    await projectile(this, this.view, kind, from, to, k);
+  }
+
+  /**
+   * Impacto en `at`: destello en la unidad, explosion, numero de daño y su barra de vida bajando. Si cae,
+   * restos y una marca de quemado en el suelo hasta el turno siguiente.
+   */
+  private async hitFx(
+    uid: number | null,
+    at: Pos,
+    damage: number,
+    killed: boolean,
+    victimKey: string | null,
+    team: 0 | 1,
+    lifeBefore: number | null,
+    k: number,
+  ): Promise<void> {
     const live = unitAt(this.s, at.x, at.y);
-    const sprite = live ? this.view.unitSprite(live.uid) : null;
-    if (sprite) jobs.push(blink(this, sprite, 2, 60));
-    else if (victimKey && killed) {
+    // Si ha caido ya no esta en el estado: una copia de su dibujo, mirando hacia donde miraba.
+    let sprite: Phaser.GameObjects.Container | Phaser.GameObjects.Image | null = live ? this.view.unitSprite(live.uid) : null;
+    if (!live && killed && victimKey) {
       const ghost = this.view.ghost(victimKey, at);
-      jobs.push(
-        blink(this, ghost, 3, 80).then(async () => {
-          ghost.destroy();
-          await Promise.all([
-            burst(this, this.view, c, { colors: COLORS.fire, count: 18, radius: 28, size: 6, duration: 520 }),
-            burst(this, this.view, c, { colors: COLORS.smoke, count: 10, radius: 20, size: 3, duration: 700 }),
-          ]);
-        }),
-      );
+      ghost.setFlipX(faceFlip(team, uid !== null ? this.view.facingOf(uid, team) : baseFacing(team)));
+      sprite = ghost;
     }
-    await Promise.all(jobs);
+    void hitFlash(this, sprite, k);
+    void popNumber(this, this.view, at, damage > 0 ? `-${damage}` : t('fxMiss'), damage > 0 ? PAL_CSS.red : '#cfe8ff', k);
+    const bar =
+      lifeBefore !== null
+        ? lifeBar(this, this.view, at, lifeBefore, lifeBefore - damage, team === 0 ? PAL.blue : PAL.red, this.combatMs(220))
+        : Promise.resolve();
+    await impact(this, this.view, at, killed, k);
+    if (killed) {
+      if (sprite && !live) sprite.destroy();
+      this.view.scorch(at, this.s.day);
+      await debris(this, this.view, at, team, k);
+    }
+    this.refresh();
+    // La barra sigue bajando mientras pasa lo siguiente (no se espera).
+    void bar;
   }
 }
