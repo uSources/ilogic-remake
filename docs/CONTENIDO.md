@@ -190,6 +190,8 @@ Efectos que hay (`effect.kind`):
 |---|---|
 | `reveal` | Ve todo el mapa hasta que acaba la ronda |
 | `areaDamage` | Quita `damage` de vida a los enemigos en un cuadrado de lado `2 × radius + 1` alrededor de la casilla elegida; nunca los deja por debajo de `minLife` (no mata) |
+| `heal` | Sus unidades recuperan `amount` de vida (hasta 100). Con `movement` y/o `units`, solo esas (como en `passive`) |
+| `funds` | Consigue `amount` de dinero al momento |
 
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
 `content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`useAbility`) y su
@@ -197,8 +199,13 @@ animacion en `GameScene.playAbility`.
 
 La IA usa a su general sin saber cual es (`core/aiGenerals.ts`): al empezar su turno valora cada
 habilidad que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
-reconocimiento, un valor fijo con niebla) y usa la mejor si vale al menos `GENERALMINVALUE`
+reconocimiento, un valor fijo con niebla; curar, por la vida que recuperan sus unidades; el dinero,
+por lo que es) y usa la mejor si vale al menos `GENERALMINVALUE`
 (`ai.json`); con la barra llena, cualquiera que valga algo. Un efecto nuevo necesita su valoracion ahi.
+
+Para medir un general: `npm run generals -- --a Roca` (la IA con Roca contra la IA sin general, 80
+partidas en 40 mapas con los bandos cambiados; al dia 60 gana quien tenga mas puntos). `--b Brisa`
+los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
 
 ## Reglas e IA
 

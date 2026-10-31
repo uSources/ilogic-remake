@@ -1327,15 +1327,25 @@ export class GameScene extends Phaser.Scene {
         if (p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H) void tileFlash(this, this.view, p, PAL.red);
       this.cameras.main.shake(220, 0.006);
     }
-    await Promise.all(
-      ev.hits.map(async (h) => {
+    await Promise.all([
+      ...ev.hits.map(async (h) => {
         const u = unitById(this.s, h.uid);
         if (!u || (u.team !== 0 && !this.visibleToPlayer(u))) return;
         const p = center(u);
         void burst(this, this.view, p, { colors: COLORS.fire, count: 14, radius: 20 });
         await floatText(this, this.view, { x: p.x, y: p.y - 6 }, `-${h.damage}`, PAL_CSS.redSoft);
       }),
-    );
+      // Curar: "+N" en verde sobre cada unidad que recupera vida.
+      ...(ev.heals ?? []).map(async (h) => {
+        const u = unitById(this.s, h.uid);
+        if (!u || (u.team !== 0 && !this.visibleToPlayer(u))) return;
+        const p = center(u);
+        void burst(this, this.view, p, { colors: COLORS.heal, count: 10, radius: 16 });
+        await floatText(this, this.view, { x: p.x, y: p.y - 6 }, `+${h.amount}`, PAL_CSS.green);
+      }),
+      // Dinero: la cantidad, bajo el nombre de la habilidad.
+      ...(ev.funds ? [floatText(this, this.view, { x: c.x, y: c.y }, `+${fmtNum(ev.funds)}`, PAL_CSS.gold)] : []),
+    ]);
   }
 
   private toMap(): void {

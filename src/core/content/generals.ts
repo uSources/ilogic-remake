@@ -6,8 +6,8 @@
 import { type Checker } from './check';
 import { MOVEMENTS, type MovementName, type Texts } from './types';
 
-/** A que unidades afecta una ventaja: por tipo de movimiento y/o por id (sin nada = a todas). */
-interface UnitFilter {
+/** A que unidades afecta una ventaja o un efecto: por tipo de movimiento y/o por id (sin nada = a todas). */
+export interface UnitFilter {
   movement?: MovementName[];
   units?: string[];
 }
@@ -24,8 +24,14 @@ export type GeneralModifier = ({ kind: 'attack' } | { kind: 'defense' }) & UnitF
  * - reveal: el general ve todo el mapa hasta que acaba la ronda.
  * - areaDamage: quita `damage` de vida a las unidades enemigas en un cuadrado de lado 2*radius+1
  *   alrededor de la casilla que se elija; nunca las deja por debajo de `minLife` (no mata).
+ * - heal: sus unidades (las del filtro; sin filtro, todas) recuperan `amount` de vida, hasta 100.
+ * - funds: el general consigue `amount` de dinero al momento.
  */
-export type GeneralEffect = { kind: 'reveal' } | { kind: 'areaDamage'; radius: number; damage: number; minLife: number };
+export type GeneralEffect =
+  | { kind: 'reveal' }
+  | { kind: 'areaDamage'; radius: number; damage: number; minLife: number }
+  | ({ kind: 'heal'; amount: number } & UnitFilter)
+  | { kind: 'funds'; amount: number };
 
 export interface GeneralAbilityDef {
   id: string;
@@ -88,7 +94,13 @@ export function validateGenerals(list: readonly GeneralDef[], unitIds: ReadonlyS
           sa.num('effect.radius', e.radius, { min: 0, max: 5, int: true });
           sa.num('effect.damage', e.damage, { min: 1, max: 100, int: true });
           sa.num('effect.minLife', e.minLife, { min: 1, max: 99, int: true });
-        } else sa.expect(e?.kind === 'reveal', `effect.kind "${String(e?.kind)}" no existe (reveal, areaDamage)`);
+        } else if (e?.kind === 'heal') {
+          sa.num('effect.amount', e.amount, { min: 1, max: 100, int: true });
+          for (const mv of e.movement ?? []) sa.known('effect.movement', mv, MOVEMENTS);
+          for (const u of e.units ?? []) sa.known('effect.units', u, unitIds);
+        } else if (e?.kind === 'funds') {
+          sa.num('effect.amount', e.amount, { min: 100, max: 100000, int: true });
+        } else sa.expect(e?.kind === 'reveal', `effect.kind "${String(e?.kind)}" no existe (reveal, areaDamage, heal, funds)`);
       }
   });
 }

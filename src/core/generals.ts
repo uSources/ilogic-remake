@@ -6,12 +6,12 @@
  *   contra ellas (defense). hitChance la aplica, asi que la prevision y la IA la ven sin saberlo;
  * - una barra de carga: gana una estrella por cada `charge.per` de valor (precio × vida / 100) que
  *   hace o recibe en combate;
- * - habilidades que gastan carga, una por turno: ver todo el mapa (reveal) o daño en un area
- *   (areaDamage, nunca mata).
+ * - habilidades que gastan carga, una por turno: ver todo el mapa (reveal), daño en un area
+ *   (areaDamage, nunca mata), curar a sus unidades (heal) o conseguir dinero (funds).
  *
  * Este modulo no importa rules.ts (rules.ts lo importa a el).
  */
-import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralModifier } from './content';
+import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type UnitFilter } from './content';
 import { GENERALS, UNIT, UNIT_NAMES } from './data';
 import type { GameEvent, GameState, GeneralState, Pos, Team, Unit } from './types';
 
@@ -29,7 +29,8 @@ export function newGeneral(id: string | null | undefined): GeneralState | null {
   return id && generalDef(id) ? { id, charge: 0, used: false, reveal: false } : null;
 }
 
-function applies(m: GeneralModifier, type: number): boolean {
+/** La unidad de tipo `type` entra en el filtro (sin filtro, todas). */
+export function applies(m: UnitFilter, type: number): boolean {
   if (m.movement && !m.movement.includes(MOVEMENTS[UNIT.movtype[type]!])) return false;
   if (m.units && !m.units.includes(UNIT_NAMES[type]!)) return false;
   return true;
@@ -111,9 +112,22 @@ export function useAbility(
   g.state.charge = Math.max(0, g.state.charge - a.cost);
   g.state.used = true;
   const hits: { uid: number; damage: number }[] = [];
+  const heals: { uid: number; amount: number }[] = [];
+  let funds = 0;
   const e = a.effect;
   if (e.kind === 'reveal') g.state.reveal = true;
-  else {
+  else if (e.kind === 'heal') {
+    for (const u of s.units) {
+      if (u.team !== team || !applies(e, u.type)) continue;
+      const amount = Math.min(e.amount, 100 - u.life);
+      if (amount <= 0) continue;
+      u.life += amount;
+      heals.push({ uid: u.uid, amount });
+    }
+  } else if (e.kind === 'funds') {
+    s.funds[team] += e.amount;
+    funds = e.amount;
+  } else {
     const inArea = new Set(areaTiles(target!, e.radius).map((p) => `${p.x},${p.y}`));
     for (const u of s.units) {
       if (u.team === team || u.carrier !== null || !inArea.has(`${u.x},${u.y}`)) continue;
@@ -123,7 +137,16 @@ export function useAbility(
       hits.push({ uid: u.uid, damage });
     }
   }
-  return { kind: 'ability', team, general: g.def.id, ability: a.id, ...(target ? { target: { x: target.x, y: target.y } } : {}), hits };
+  return {
+    kind: 'ability',
+    team,
+    general: g.def.id,
+    ability: a.id,
+    ...(target ? { target: { x: target.x, y: target.y } } : {}),
+    hits,
+    ...(heals.length ? { heals } : {}),
+    ...(funds ? { funds } : {}),
+  };
 }
 
 /** Al acabar la ronda: se puede volver a usar una habilidad y se acaba el reconocimiento. */
