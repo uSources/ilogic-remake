@@ -13,6 +13,7 @@ import { ANIM_FRAMES } from './sheets';
 import { composeFog, visKey } from './fog';
 import { settings } from '../settings';
 import { PAL, PAL_CSS } from './palette';
+import { addLifeTextures, lifeKey } from './lifeDigits';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
 
@@ -407,7 +408,9 @@ export class MapView {
     // Origen abajo en el centro: las unidades nuevas pueden ser algo mas anchas que la casilla.
     const img = this.scene.add.image(TILE / 2, TILE, ATLAS, key).setOrigin(0.5, 1);
     img.setDisplaySize(Math.max(TILE, img.width), img.height);
-    const life = this.scene.add.image(17, 17, ATLAS, 'n_9').setOrigin(0).setDisplaySize(14, 14);
+    // Cifra de vida en la esquina de abajo a la derecha (letra Ilogic, ver lifeDigits.ts).
+    addLifeTextures(this.scene.textures);
+    const life = this.scene.add.image(TILE, TILE, lifeKey(9)).setOrigin(1, 1);
     const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, PAL.ink);
     const stars = this.scene.add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
@@ -460,7 +463,7 @@ export class MapView {
     const n = Math.ceil(u.life / 10);
     const showLife = u.life < 100 && n >= 1 && n <= 9;
     sp.life.setVisible(showLife);
-    if (showLife) sp.life.setTexture(ATLAS, `n_${n}`).setDisplaySize(14, 14);
+    if (showLife) sp.life.setTexture(lifeKey(n));
     sp.cargo.setVisible(u.cargo.some((c) => c !== null));
     const r = rank(u);
     if (r !== sp.rank) {
