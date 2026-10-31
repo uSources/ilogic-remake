@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
-import { useRules } from '../core/data';
+import { useRules, GENERALS } from '../core/data';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { buildMission, MISSIONS, missionRules } from '../core/missions';
@@ -367,6 +367,7 @@ export class MenuScene extends Phaser.Scene {
 
   private setupRows(): string[][] {
     const rows: string[][] = [[...PRESET_IDS.map((p) => `preset-${p}`)]];
+    if (GENERALS.length) rows.push(['opt-general']);
     if (this.options.preset === 'custom') for (const g of CUSTOM_GROUPS) for (const k of g.keys) rows.push([`opt-${k.k}`]);
     rows.push(['code', 'reroll']);
     rows.push(['back', 'start']);
@@ -398,6 +399,16 @@ export class MenuScene extends Phaser.Scene {
         preset: o.preset,
         presets,
         groups,
+        general: GENERALS.length
+          ? {
+              id: 'opt-general',
+              group: t('optGeneral'),
+              label: t('optGeneral'),
+              choices: CHOICES.general.map((v) => choiceLabel('general', v)),
+              index: Math.max(0, CHOICES.general.indexOf(o.general)),
+            }
+          : null,
+        generalNote: GENERALS.find((g) => g.id === o.general)?.description[settings.lang] ?? '',
         code: this.code,
         codeError: this.codeError,
         mapCode: seedToCode(this.seed),
@@ -463,7 +474,7 @@ export class MenuScene extends Phaser.Scene {
     this.leaving = true;
     (document.activeElement as HTMLElement | null)?.blur?.();
     const o = this.options;
-    this.scene.start('Game', { mode: 'new', rules: rulesFor(o), setup: { seed, size: o.size, theme: o.theme } });
+    this.scene.start('Game', { mode: 'new', rules: rulesFor(o), setup: { seed, size: o.size, theme: o.theme }, general: o.general });
   }
 
   private setupKey(e: KeyboardEvent): void {

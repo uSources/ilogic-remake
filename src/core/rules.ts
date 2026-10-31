@@ -24,6 +24,7 @@ import {
 import { coverAgainst, defenseFactor, zoneOfControl } from './abilities';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
 import { advanceWeather, weatherHit, weatherMove, weatherVision, type WeatherChange } from './weather';
+import { chargeFromCombat, generalHitFactor, generalsNewRound, revealsAll } from './generals';
 import type { Building, CombatInfo, GameEvent, GameState, Objective, Outcome, Pos, Rng, Team, Unit } from './types';
 
 // ---------------------------------------------------------------------------
@@ -345,8 +346,8 @@ export function buildingIncome(type: number): number {
 }
 
 export function visibility(s: GameState, team: Team): boolean[][] {
-  // [CAMBIO] partida sin niebla: se ve todo.
-  if (!RULES.fog) return grid(true);
+  // [CAMBIO] partida sin niebla, o el general ha usado reconocimiento: se ve todo.
+  if (!RULES.fog || revealsAll(s, team)) return grid(true);
   const vis = grid(false);
   // [CAMBIO] Reglas nuevas: el bosque solo se ve desde al lado (o desde dentro).
   const hides = RULES.forestHides ? (x: number, y: number) => HIDING_TERRAIN.includes(s.map[x]![y]!) : () => false;
@@ -400,6 +401,8 @@ export function hitChance(s: GameState, atk: Unit, def: Unit): number {
   p *= defenseFactor(s, atk, def);
   // [CAMBIO] Veterania: cada rango da +5 % de acierto al atacar y -5 % al que le ataca.
   if (RULES.veterancy) p *= (1 + VET_BONUS * rank(atk)) * (1 - VET_BONUS * rank(def));
+  // [CAMBIO] Generales: ventaja fija de los dos bandos.
+  p *= generalHitFactor(s, atk, def);
   // [CAMBIO] Clima: con lluvia o tormenta se apunta peor.
   return p * weatherHit(s);
 }
@@ -479,6 +482,7 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
     counter = Math.min(atk.life, rollDamage(def.life, Math.min(1, hitChance(s, def, atk)), rng));
     atk.life -= counter;
   }
+  chargeFromCombat(s, atk, def, damage, counter);
   const result = { damage, killed: def.life <= 0, counter, attackerKilled: atk.life <= 0 };
   if (result.killed && atk.life > 0) atk.kills = (atk.kills ?? 0) + 1;
   if (result.attackerKilled && def.life > 0) def.kills = (def.kills ?? 0) + 1;
@@ -863,6 +867,7 @@ export function endRound(s: GameState): RoundReport {
     u.canMove = true;
     u.canFire = true;
   }
+  generalsNewRound(s);
   for (const b of s.buildings) {
     if (b.owner === null) continue;
     s.funds[b.owner] += buildingIncome(b.type);

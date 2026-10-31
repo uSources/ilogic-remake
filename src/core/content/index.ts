@@ -11,6 +11,7 @@
  */
 import aiFile from './ai.json';
 import buildingsFile from './buildings.json';
+import generalsFile from './generals.json';
 import rulesFile from './rules.json';
 import terrainFile from './terrain.json';
 import unitsFile from './units.json';
@@ -18,6 +19,7 @@ import weatherFile from './weather.json';
 import { buildAiWeights, validateAi } from './ai';
 import { buildBuildingTables, validateBuildings } from './buildings';
 import { Checker, uniqueIds } from './check';
+import { validateGenerals, type GeneralDef } from './generals';
 import { validateRules, type RulesFile } from './rules';
 import { buildTerrainTables, validateTerrain } from './terrain';
 import { TERRAIN_NAMES, type BuildingDef, type ContentContext, type TerrainDef, type UnitDef } from './types';
@@ -28,6 +30,7 @@ export * from './types';
 export type { RulesConfig } from './rules';
 export type { AiWeights } from './ai';
 export type { WeatherDef } from './weather';
+export type { GeneralAbilityDef, GeneralDef, GeneralEffect, GeneralModifier } from './generals';
 
 /** El contenido tal y como esta en los ficheros. */
 export interface Content {
@@ -37,6 +40,7 @@ export interface Content {
   rules: RulesFile;
   ai: Record<string, unknown>;
   weather: WeatherDef[];
+  generals: GeneralDef[];
 }
 
 /** Lee los ficheros JSON del juego (sin validar). */
@@ -48,6 +52,7 @@ export function readContentFiles(): Content {
     rules: rulesFile,
     ai: aiFile,
     weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
+    generals: (generalsFile as unknown as { generals: GeneralDef[] }).generals,
   };
 }
 
@@ -67,6 +72,7 @@ export function validateContent(c: Content): string[] {
   validateRules(c.rules, check);
   validateAi(c.ai, check);
   validateWeather(c.weather, check);
+  validateGenerals(c.generals, ctx.unitIds, check);
   return check.errors;
 }
 

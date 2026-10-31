@@ -11,6 +11,9 @@ const { content, tables: T } = loadContent();
 
 /** Contenido tal y como esta en los JSON (nombres, notas, pistas para la IA...). */
 export const CONTENT = content;
+/** Generales (generals.json): ventaja fija, carga y habilidades. Reglas en core/generals.ts. */
+export const GENERALS = content.generals;
+
 /** Terrenos tal y como estan en terrain.json (nombres...). */
 export const TERRAIN_CONTENT = content.terrain;
 

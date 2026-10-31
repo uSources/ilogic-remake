@@ -103,7 +103,9 @@ import {
   weatherVM,
   dayInfoVM,
   economyVM,
+  generalVM,
 } from '../ui/hudModels';
+import { abilityArea, abilityBlock, areaTiles, generalOf, newGeneral, useAbility } from '../core/generals';
 import { PAL, PAL_CSS } from '../ui/palette';
 
 /**
@@ -111,7 +113,7 @@ import { PAL, PAL_CSS } from '../ui/palette';
  * map 3, gameMenu 4, unitMenu 5, buy 6, move 7, attack 8, unloadPick 11, unloadTile 12.
  * "busy" = animando o jugando la IA (no se acepta entrada).
  */
-type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'busy';
+type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
@@ -152,7 +154,7 @@ interface MoveUndo {
 }
 
 const key = (p: Pos) => `${p.x},${p.y}`;
-const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile'];
+const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
 const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
 const DRAG_THRESHOLD = 6;
@@ -169,6 +171,8 @@ export interface GameStartData {
   setup?: GameSetup;
   mission?: string;
   state?: string;
+  /** Partida nueva: general del jugador (id de generals.json). */
+  general?: string | null;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -177,6 +181,8 @@ export class GameScene extends Phaser.Scene {
   /** Lluvia, nieve... sobre el mapa. */
   private weatherFx: WeatherFx | null = null;
   private phase: Phase = 'map';
+  /** Habilidad del general que se esta apuntando (fase 'target'). */
+  private targeting: string | null = null;
   private vis: boolean[][] = [];
   private hidden = new Set<number>();
 
@@ -368,6 +374,8 @@ export class GameScene extends Phaser.Scene {
       const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: 32, theme: null };
       this.s = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
       this.s.setup = setup;
+      const g = newGeneral(data.general);
+      if (g) this.s.generals = [g, null];
     }
     ensureWeather(this.s);
   }
@@ -450,6 +458,12 @@ export class GameScene extends Phaser.Scene {
       endTurn: () => {
         if (ready()) this.requestEndTurn();
       },
+      useAbility: (id: string) => {
+        if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.startAbility(id);
+      },
+      cancelAbility: () => {
+        if (this.phase === 'target') this.toMap();
+      },
       openGameMenu: () => {
         if (ready()) this.openGameMenu();
       },
@@ -510,6 +524,8 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'target') {
+      for (const p of this.targetArea(this.view.cursor)) h.set(key(p), 'attack');
     } else if (this.phase === 'map' && this.group.size) {
       for (const uid of this.group) {
         const u = unitById(this.s, uid);
@@ -591,7 +607,8 @@ export class GameScene extends Phaser.Scene {
     if (this.phase === 'move') {
       this.updateTrail(this.view.cursor);
       this.refresh();
-    } else if (this.phase === 'map') this.refresh();
+    } else if (this.phase === 'map' || this.phase === 'target')
+      this.refresh(); // en 'target' el area sigue al cursor
     else {
       this.view.placeCursor(true);
       this.refreshHud();
@@ -612,6 +629,7 @@ export class GameScene extends Phaser.Scene {
       command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
+      general: generalVM(s, 0, this.phase === 'target' ? this.targeting : null),
       buildings: owned.length,
       day: s.day,
       dayLimit: RULES.dayLimit,
@@ -627,11 +645,13 @@ export class GameScene extends Phaser.Scene {
         ? this.enemyPlaying
           ? t('skip')
           : ''
-        : this.phase === 'map'
-          ? this.inspectUid !== null
-            ? t('hintInspect')
-            : t('hintMap')
-          : '',
+        : this.phase === 'target'
+          ? t('genTarget')
+          : this.phase === 'map'
+            ? this.inspectUid !== null
+              ? t('hintInspect')
+              : t('hintMap')
+            : '',
       mission: this.missionPanel(),
     });
     this.publishCameraView();
@@ -1203,7 +1223,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number, delta: number): void {
-    this.view.cursorAttack = this.phase === 'attack';
+    this.view.cursorAttack = this.phase === 'attack' || this.phase === 'target';
     this.view.tick(time);
     // Desplazar el mapa con el raton en el borde de la pantalla.
     const p = this.input.activePointer;
@@ -1282,6 +1302,8 @@ export class GameScene extends Phaser.Scene {
         return this.acceptUnloadPick();
       case 'unloadTile':
         return this.acceptUnloadTile(c);
+      case 'target':
+        return void this.fireAbility(c);
       default:
         break;
     }
@@ -1310,13 +1332,82 @@ export class GameScene extends Phaser.Scene {
         this.phase = 'unloadPick';
         this.menuSel = 0;
         return this.refresh();
+      case 'target':
+        return this.toMap();
       default:
         break;
     }
   }
 
+  // -------------------------------------------------------------------------
+  // General
+  // -------------------------------------------------------------------------
+
+  /** Habilidad elegida en el panel: las de area pasan a elegir casilla; el resto se usan ya. */
+  private async startAbility(id: string): Promise<void> {
+    const g = generalOf(this.s, 0);
+    const a = g?.def.abilities.find((x) => x.id === id);
+    if (!g || !a) return;
+    const block = abilityBlock(this.s, 0, id);
+    if (block === 'target') {
+      this.abandonSelection();
+      this.phase = 'target';
+      this.targeting = id;
+      return this.refresh();
+    }
+    if (block) return showToast(t(block === 'used' ? 'genUsed' : 'genCharge'));
+    if (this.phase === 'target') this.toMap();
+    const ev = useAbility(this.s, 0, id);
+    if (ev) await this.playEvents([ev]);
+  }
+
+  /** Casillas que tocaria la habilidad que se apunta si se lanza en `c` (dentro del mapa). */
+  private targetArea(c: Pos): Pos[] {
+    const a = this.targeting ? generalOf(this.s, 0)?.def.abilities.find((x) => x.id === this.targeting) : undefined;
+    const r = a ? abilityArea(a) : null;
+    if (r === null) return [];
+    return areaTiles(c, r).filter((p) => p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H);
+  }
+
+  private async fireAbility(c: Pos): Promise<void> {
+    const id = this.targeting;
+    if (!id) return this.toMap();
+    const ev = useAbility(this.s, 0, id, c);
+    this.toMap();
+    if (ev) await this.playEvents([ev]);
+  }
+
+  /** Animacion de una habilidad: el area se ilumina y cada unidad tocada explota y enseña lo que pierde. */
+  private async playAbility(ev: Extract<GameEvent, { kind: 'ability' }>): Promise<void> {
+    this.refresh();
+    if (this.fastForward) return;
+    const def = generalOf(this.s, ev.team)?.def;
+    const ability = def?.abilities.find((a) => a.id === ev.ability);
+    const name = ability?.name[settings.lang] ?? ev.ability;
+    const at = ev.target ?? this.view.cursor;
+    if (ev.target) await this.lookAt(ev.target);
+    const c = center(at);
+    void floatText(this, this.view, { x: c.x, y: c.y - 18 }, name, PAL_CSS.gold);
+    const r = ability ? abilityArea(ability) : null;
+    if (ev.target && r !== null) {
+      for (const p of areaTiles(ev.target, r))
+        if (p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H) void tileFlash(this, this.view, p, PAL.red);
+      this.cameras.main.shake(220, 0.006);
+    }
+    await Promise.all(
+      ev.hits.map(async (h) => {
+        const u = unitById(this.s, h.uid);
+        if (!u || (u.team !== 0 && !this.visibleToPlayer(u))) return;
+        const p = center(u);
+        void burst(this, this.view, p, { colors: COLORS.fire, count: 14, radius: 20 });
+        await floatText(this, this.view, { x: p.x, y: p.y - 6 }, `-${h.damage}`, PAL_CSS.redSoft);
+      }),
+    );
+  }
+
   private toMap(): void {
     this.phase = 'map';
+    this.targeting = null;
     this.inspectUid = null;
     this.trail = [];
     this.block = null;
@@ -2324,6 +2415,9 @@ export class GameScene extends Phaser.Scene {
             );
             await Promise.all([tileFlash(this, this.view, ev.at, 0xffffff), sp ? blink(this, sp, 2, 60) : Promise.resolve()]);
           }
+          break;
+        case 'ability':
+          await this.playAbility(ev);
           break;
         default:
           break;

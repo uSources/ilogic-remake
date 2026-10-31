@@ -246,6 +246,81 @@ body {
     inset 3px 3px 0 var(--red-hi),
     inset -3px -3px 0 var(--red-lo);
 }
+/* Panel del general (debajo del dinero) */
+.general-panel {
+  position: absolute;
+  left: 16px;
+  top: 92px;
+  width: 232px;
+  padding: 10px 12px;
+  pointer-events: auto;
+}
+.gp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.gp-face {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--blue-btn);
+  box-shadow:
+    inset 3px 3px 0 var(--blue-hi),
+    inset -3px -3px 0 var(--blue-lo);
+  font-family: var(--display);
+  font-size: 20px;
+  color: var(--text);
+}
+.gp-name {
+  font-family: var(--display);
+  font-size: 15px;
+  color: var(--gold);
+}
+.gp-title {
+  font-size: 12px;
+  color: var(--muted);
+}
+.gp-charge {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0;
+  cursor: help;
+}
+.gp-charge i {
+  flex: 1;
+  height: 10px;
+  background: var(--lo);
+  border: 2px solid var(--ink);
+}
+.gp-charge i.full {
+  background: var(--gold);
+}
+.gp-charge i.part {
+  background: linear-gradient(to right, #b8932a var(--fill), var(--lo) var(--fill));
+}
+.gp-abilities {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gp-ab {
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+.gp-ab.off {
+  opacity: 0.55;
+}
+.gp-ab .gp-cost {
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+.gp-ab.on {
+  outline: 3px solid var(--red-soft);
+}
 /* Desglose al pasar por encima del dinero o del dia (o al tocarlos) */
 /* El dia ya va en position: absolute (centrado); el dinero necesita relative para su panel. */
 .has-tip {

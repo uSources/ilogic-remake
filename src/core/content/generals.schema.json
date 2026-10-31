@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Generales de Ilogic",
+  "description": "Generales: ventaja fija, barra de carga y habilidades. Ver docs/CONTENIDO.md, \"Generales\".",
+  "type": "object",
+  "required": ["generals"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "generals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "title", "description", "passive", "charge", "abilities"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\w+$",
+            "description": "Nombre interno; lo guardan las partidas."
+          },
+          "name": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Nombre."
+          },
+          "title": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Cargo o apodo."
+          },
+          "description": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string",
+                "minLength": 1
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "description": "Lo que ve el jugador al elegirlo."
+          },
+          "passive": {
+            "type": "array",
+            "description": "Ventajas fijas (siempre activas).",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "factor"],
+              "properties": {
+                "kind": {
+                  "enum": ["attack", "defense"],
+                  "description": "attack: multiplica el acierto de sus unidades. defense: multiplica el acierto de los enemigos contra ellas (menos de 1 = mas defensa)."
+                },
+                "factor": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 3
+                },
+                "movement": {
+                  "type": "array",
+                  "items": {
+                    "enum": ["foot", "vehicle", "air", "amphibious"]
+                  },
+                  "description": "Solo unidades con este tipo de movimiento."
+                },
+                "units": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Solo estas unidades (id de units.json)."
+                }
+              }
+            }
+          },
+          "charge": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["max", "per"],
+            "description": "Barra de carga.",
+            "properties": {
+              "max": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20,
+                "description": "Estrellas de la barra."
+              },
+              "per": {
+                "type": "integer",
+                "minimum": 100,
+                "description": "Valor (precio × vida quitada / 100) que hay que hacer o recibir para ganar una estrella."
+              }
+            }
+          },
+          "abilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name", "description", "cost", "effect"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^\\w+$"
+                },
+                "name": {
+                  "type": "object",
+                  "required": ["es", "en"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "es": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "en": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "description": {
+                  "type": "object",
+                  "required": ["es", "en"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "es": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "en": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "cost": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Estrellas que gasta."
+                },
+                "effect": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind"],
+                      "properties": {
+                        "kind": {
+                          "const": "reveal",
+                          "description": "Ve todo el mapa hasta que acaba la ronda."
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["kind", "radius", "damage", "minLife"],
+                      "properties": {
+                        "kind": {
+                          "const": "areaDamage",
+                          "description": "Daño en un cuadrado alrededor de la casilla elegida."
+                        },
+                        "radius": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5,
+                          "description": "1 = cuadrado de 3×3."
+                        },
+                        "damage": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "minLife": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 99,
+                          "description": "Nunca deja a nadie con menos vida que esto (no mata)."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

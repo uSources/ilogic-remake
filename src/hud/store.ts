@@ -136,6 +136,33 @@ export interface EconomyVM {
   command: { lines: BreakdownLineVM[]; used: number; max: number } | null;
 }
 
+/** Habilidad del general en el panel. */
+export interface GeneralAbilityVM {
+  id: string;
+  name: string;
+  description: string;
+  /** Estrellas que gasta. */
+  cost: number;
+  /** Se puede usar ahora. */
+  ready: boolean;
+  /** Por que no (texto corto), si no se puede. */
+  reason: string | null;
+}
+
+/** Panel del general del jugador (null = juega sin general). */
+export interface GeneralVM {
+  name: string;
+  title: string;
+  description: string;
+  /** Estrellas llenas y maximo de la barra; `fraction`: lo que lleva de la siguiente (0..1). */
+  stars: number;
+  max: number;
+  fraction: number;
+  abilities: GeneralAbilityVM[];
+  /** Habilidad que se esta apuntando (fase de elegir casilla). */
+  targeting: string | null;
+}
+
 /** Desglose del dia al pasar por encima. */
 export interface DayInfoVM {
   day: number;
@@ -244,6 +271,9 @@ export interface SetupVM {
   presets: PresetVM[];
   /** Opciones de "Personalizada", con botones de segmento. */
   groups: { title: string; rows: OptionRowVM[] }[];
+  /** General del jugador (siempre a la vista, no solo en "Personalizada") y lo que hace. */
+  general: OptionRowVM | null;
+  generalNote: string;
   code: string;
   codeError: boolean;
   /** Codigo del mapa que se ve en la vista previa. */
@@ -289,6 +319,8 @@ export interface UIState {
   economy: EconomyVM | null;
   /** Desglose del dia (al pasar por encima del dia). */
   dayInfo: DayInfoVM | null;
+  /** General del jugador. */
+  general: GeneralVM | null;
   buildings: number;
   day: number;
   turn: 'player' | 'enemy';
@@ -369,6 +401,10 @@ export interface UIActions {
   menuHover(i: number): void;
   menuClose(): void;
   endTurn(): void;
+  /** Usar una habilidad del general (las de area pasan a elegir casilla). */
+  useAbility(id: string): void;
+  /** Dejar de apuntar una habilidad. */
+  cancelAbility(): void;
   openGameMenu(): void;
   toggleThreat(): void;
   toggleMinimap(): void;
@@ -403,13 +439,26 @@ const initial: UIState = {
   mainMenu: { items: [], selected: 0 },
   newGame: { rows: [], selected: 0, code: '', codeError: false },
   home: { focus: 'quick', save: null, quick: '', campaign: { done: 0, total: 0, next: null, thumb: null, marks: [] }, credits: false },
-  setup: { focus: 'start', preset: 'normal', presets: [], groups: [], code: '', codeError: false, mapCode: '', thumb: '', mapInfo: '' },
+  setup: {
+    focus: 'start',
+    preset: 'normal',
+    presets: [],
+    groups: [],
+    general: null,
+    generalNote: '',
+    code: '',
+    codeError: false,
+    mapCode: '',
+    thumb: '',
+    mapInfo: '',
+  },
   options: null,
   pause: null,
   campaign: { items: [], selected: 0, brief: '', objective: '' },
   mission: null,
   funds: 0,
   economy: null,
+  general: null,
   dayInfo: null,
   income: 0,
   command: null,
@@ -443,6 +492,8 @@ const initial: UIState = {
 
 /** Acciones sin escena: no hacen nada (salvo cerrar la ayuda). Las escenas ponen las suyas en create(). */
 const DEFAULT_ACTIONS: UIActions = {
+  useAbility: noop,
+  cancelAbility: noop,
   mainMenuPick: noop,
   mainMenuHover: noop,
   menuPick: noop,
