@@ -88,6 +88,7 @@ import { blink, burst, center, COLORS, floatText, lifeBar, lunge, reducedMotion,
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
+import { PointerGestures, type PointerIn, type PointerTarget } from '../controls/pointer';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import {
@@ -157,7 +158,6 @@ const key = (p: Pos) => `${p.x},${p.y}`;
 const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
 const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
-const DRAG_THRESHOLD = 6;
 /** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
 const INPUT_LOCK_MS = 350;
 /** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
@@ -216,16 +216,13 @@ export class GameScene extends Phaser.Scene {
     /** Cogida a proposito (raton, o dedo mantenido): soltar lejos da una orden de varios turnos. */
     held: boolean;
   } | null = null;
-  /** Pulsacion sobre una unidad propia que aun no se sabe si es un clic o un arrastre. */
-  private pick: { uid: number; x: number; y: number; touch: boolean; timer: Phaser.Time.TimerEvent | null } | null = null;
   /** Casillas que el enemigo visible puede atacar el turno siguiente (al mover) y alcance de ataque de la elegida. */
   private dangerMap: boolean[][] | null = null;
   private attackZone: boolean[][] | null = null;
   /** Estados anteriores para deshacer movimientos sin consecuencias (Ctrl+Z). */
   private undoStack: string[] = [];
-  /** Seleccion en grupo (Mayusculas + arrastrar) y recuadro que se esta dibujando. */
+  /** Seleccion en grupo (Mayusculas + arrastrar). */
   private group = new Set<number>();
-  private box: { x0: number; y0: number; x1: number; y1: number } | null = null;
   /** Ultimo movimiento confirmado (para el doble clic: mover y esperar). */
   private lastCommit: { at: Pos; time: number } | null = null;
 
@@ -247,9 +244,8 @@ export class GameScene extends Phaser.Scene {
   private inspectUid: number | null = null;
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
 
-  // Raton
-  private pointerInside = false;
-  private drag: { x: number; y: number; moved: boolean } | null = null;
+  // Raton y dedos (src/controls/pointer.ts)
+  private gestures = new PointerGestures(this.pointerTarget());
 
   constructor() {
     super('Game');
@@ -295,12 +291,10 @@ export class GameScene extends Phaser.Scene {
     this.trail = [];
     this.block = null;
     this.carry = null;
-    this.pick = null;
     this.dangerMap = null;
     this.attackZone = null;
     this.undoStack = [];
     this.group = new Set();
-    this.box = null;
     this.lastCommit = null;
     this.fromSave = false;
     this.savedThisGame = false;
@@ -315,14 +309,10 @@ export class GameScene extends Phaser.Scene {
     this.enemyPlaying = false;
     this.inspectUid = null;
     this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
-    this.pointerInside = false;
-    this.drag = null;
+    this.gestures.reset();
     this.tutorialStep = 0;
     this.tutorialEvents = [];
     this.tutorialOwned = 0;
-    this.touches = new Map();
-    this.pinch = null;
-    this.longPress = null;
     this.lastAt = null;
     this.anchorAt = {};
     this.endButtons = [];
@@ -849,15 +839,24 @@ export class GameScene extends Phaser.Scene {
     // Que el navegador no use estas teclas (Tab cambia el foco, Espacio desplaza la pagina...).
     this.input.keyboard!.addCapture('TAB,SPACE,UP,DOWN,LEFT,RIGHT,BACKSPACE');
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e));
-    this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => this.onPointerMove(p));
-    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => this.onPointerDown(p));
-    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => this.onPointerUp(p));
-    this.input.on(Phaser.Input.Events.GAME_OUT, () => (this.pointerInside = false));
-    this.input.on(Phaser.Input.Events.POINTER_WHEEL, (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) => {
-      if (this.ended) return;
-      this.view.zoomStep(dy < 0 ? 1 : -1, p.x, p.y);
-      this.time.delayedCall(0, () => this.refreshHud());
+    // Raton y dedos: el adaptador decide el gesto; pointerTarget() dice que hace en la partida.
+    const g = this.gestures;
+    const pin = (p: Phaser.Input.Pointer, right: boolean): PointerIn => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+      touch: p.wasTouch,
+      down: p.isDown,
+      right,
+      shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
     });
+    this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => g.move(pin(p, false)));
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => g.down(pin(p, p.rightButtonDown())));
+    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => g.up(pin(p, p.rightButtonReleased())));
+    this.input.on(Phaser.Input.Events.GAME_OUT, () => g.leave());
+    this.input.on(Phaser.Input.Events.POINTER_WHEEL, (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) =>
+      g.wheel(dy, p.x, p.y),
+    );
   }
 
   private onKey(e: KeyboardEvent): void {
@@ -972,135 +971,93 @@ export class GameScene extends Phaser.Scene {
     this.cursorMoved();
   }
 
-  private onPointerMove(p: Phaser.Input.Pointer): void {
-    this.pointerInside = !p.wasTouch;
-    if (this.ended) return;
-    // Pellizcar: cada vez que la distancia entre los dedos cambia bastante, un paso de zoom.
-    if (this.touches.has(p.id)) this.touches.set(p.id, { x: p.x, y: p.y });
-    if (this.pinch) {
-      const pts = [...this.touches.values()];
-      if (pts.length >= 2) {
-        const [a, b] = pts as [{ x: number; y: number }, { x: number; y: number }];
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
-        const ratio = d / this.pinch.d;
-        if (ratio > 1.3 || ratio < 0.77) {
-          this.view.zoomStep(ratio > 1 ? 1 : -1, (a.x + b.x) / 2, (a.y + b.y) / 2);
-          this.pinch.d = d;
-          this.refreshHud();
-        }
-      }
-      return;
-    }
-    // Unidad cogida: sigue al puntero, encajada en las casillas.
-    if (this.carry) return this.carryTo(p);
-    if (this.box && p.isDown) {
-      this.box.x1 = p.x;
-      this.box.y1 = p.y;
-      return this.view.setBox(this.box);
-    }
-    if (this.pick) {
-      const moved = Math.hypot(p.x - this.pick.x, p.y - this.pick.y) > DRAG_THRESHOLD * (window.devicePixelRatio || 1);
-      // [CAMBIO] Tambien con el dedo: arrastrar desde la unidad la lleva, sin mantener pulsado antes.
-      if (moved) {
-        this.beginCarry(false);
-        return this.carryTo(p);
-      }
-    }
-    // Arrastrar el mapa.
-    if (this.drag && p.isDown) {
-      const dx = p.x - this.drag.x,
-        dy = p.y - this.drag.y;
-      if (this.drag.moved || Math.hypot(dx, dy) > DRAG_THRESHOLD * (window.devicePixelRatio || 1)) {
-        this.drag.moved = true;
-        this.cancelLongPress();
-        this.view.scrollBy(-dx, -dy);
-        this.drag.x = p.x;
-        this.drag.y = p.y;
+  /**
+   * Lo que significa cada gesto del raton o del dedo en la partida. Que gesto es (toque, arrastre,
+   * pellizco...) lo decide el adaptador (src/controls/pointer.ts); aqui solo se cumple.
+   */
+  private pointerTarget(): PointerTarget {
+    return {
+      later: (ms, fn) => {
+        const ev = this.time.delayedCall(ms, fn);
+        return { cancel: () => ev.remove(false) };
+      },
+      ended: () => this.ended,
+      busy: () => this.phase === 'busy',
+      fastForward: () => {
+        this.fastForward = true;
+      },
+      carrying: () => this.carry !== null,
+      canBox: () => this.phase === 'map',
+      pickAt: (x, y) => {
+        // ¿Se coge una unidad propia? (en el mapa, o la que esta elegida al mover)
+        const tile = this.view.tileAtScreen(x, y);
+        const u = tile ? unitAt(this.s, tile.x, tile.y) : undefined;
+        const pickable =
+          !!u &&
+          u.team === 0 &&
+          u.active &&
+          u.canMove &&
+          u.carrier === null &&
+          (this.phase === 'map' || (this.phase === 'move' && this.sel?.uid === u.uid));
+        return pickable ? u.uid : null;
+      },
+      touchStart: () => this.touchHint(),
+      rightPress: (x, y) => {
+        if (this.carry) return this.cancelCarry();
+        // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
+        const tile = this.view.tileAtScreen(x, y);
+        const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
+        if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u)) && u.uid !== this.inspectUid) return this.inspect(u);
+        return this.back();
+      },
+      beginCarry: (uid, touch, held) => this.beginCarry(uid, touch, held),
+      carryTo: (x, y) => this.carryTo(x, y),
+      dropCarry: (x, y, shift) => this.dropCarry(this.view.tileAtScreen(x, y), shift),
+      cancelCarry: () => this.cancelCarry(),
+      boxUpdate: (box) => this.view.setBox(box),
+      boxEnd: (box) => {
+        // Mayusculas + arrastrar en el mapa: elegir varias unidades (mover en grupo).
+        const r = this.view.tilesInBox(box);
+        this.view.setBox(null);
+        this.group = new Set(
+          this.s.units
+            .filter(
+              (u) =>
+                u.team === 0 && u.active && u.canMove && u.carrier === null && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1,
+            )
+            .map((u) => u.uid),
+        );
+        if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
+        this.refresh();
+      },
+      pan: (dx, dy) => {
+        this.view.scrollBy(dx, dy);
         this.refreshHud();
-        return;
-      }
-    }
-    if (this.phase === 'busy' || p.wasTouch) return;
-    const tile = this.view.tileAtScreen(p.x, p.y);
-    if (tile && CURSOR_PHASES.includes(this.phase)) this.moveCursorTo(tile, false);
-  }
-
-  private onPointerDown(p: Phaser.Input.Pointer): void {
-    if (this.ended) return;
-    if (this.phase === 'busy') {
-      this.fastForward = true;
-      return;
-    }
-    if (p.rightButtonDown()) {
-      if (this.carry) return this.cancelCarry();
-      // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
-      const tile = this.view.tileAtScreen(p.x, p.y);
-      const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
-      if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u)) && u.uid !== this.inspectUid) return this.inspect(u);
-      return this.back();
-    }
-    // Mayusculas + arrastrar en el mapa: recuadro para elegir varias unidades (mover en grupo).
-    if (!p.wasTouch && (p.event as MouseEvent | undefined)?.shiftKey && this.phase === 'map') {
-      this.box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
-      this.drag = null;
-      return;
-    }
-    this.drag = { x: p.x, y: p.y, moved: false };
-    // ¿Se coge una unidad propia? (en el mapa, o la que esta elegida al mover)
-    const tile = this.view.tileAtScreen(p.x, p.y);
-    const pu = tile ? unitAt(this.s, tile.x, tile.y) : undefined;
-    const pickable =
-      !!pu &&
-      pu.team === 0 &&
-      pu.active &&
-      pu.canMove &&
-      pu.carrier === null &&
-      (this.phase === 'map' || (this.phase === 'move' && this.sel?.uid === pu.uid));
-    if (pickable && this.touches.size < 1) {
-      this.pick = { uid: pu.uid, x: p.x, y: p.y, touch: p.wasTouch, timer: null };
-      // Con el dedo hay que mantener pulsado un momento para levantarla.
-      if (p.wasTouch) this.pick.timer = this.time.delayedCall(250, () => this.beginCarry(true));
-    }
-    if (p.wasTouch) {
-      this.touchHint();
-      this.touches.set(p.id, { x: p.x, y: p.y });
-      if (this.touches.size >= 2) {
-        // Segundo dedo: es un pellizco, no un toque ni un arrastre.
-        const [a, b] = [...this.touches.values()] as [{ x: number; y: number }, { x: number; y: number }];
-        this.pinch = { d: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)) };
-        this.drag = null;
-        this.cancelLongPress();
-        this.dropPick();
-        if (this.carry) this.cancelCarry();
-      } else if (!this.pick) {
-        this.cancelLongPress();
-        const at = { x: p.x, y: p.y };
-        this.longPress = this.time.delayedCall(480, () => this.onLongPress(at));
-      }
-    }
-  }
-
-  private touches = new Map<number, { x: number; y: number }>();
-  private pinch: { d: number } | null = null;
-  private longPress: Phaser.Time.TimerEvent | null = null;
-
-  private cancelLongPress(): void {
-    this.longPress?.remove(false);
-    this.longPress = null;
-  }
-
-  /** Pulsacion larga: llevar el cursor ahi (ficha de informacion) y ver el alcance si hay una unidad. */
-  private onLongPress(at: { x: number; y: number }): void {
-    this.longPress = null;
-    if (!this.drag || this.drag.moved || this.ended || this.phase !== 'map') return;
-    this.drag.moved = true; // que al levantar el dedo no cuente como toque
-    const tile = this.view.tileAtScreen(at.x, at.y);
-    if (!tile) return;
-    navigator.vibrate?.(12);
-    this.view.cursor = { ...tile };
-    const u = unitAt(this.s, tile.x, tile.y);
-    if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) return this.inspect(u);
-    this.cursorMoved();
+      },
+      zoomAt: (dir, x, y, wheel) => {
+        this.view.zoomStep(dir, x, y);
+        if (wheel) this.time.delayedCall(0, () => this.refreshHud());
+        else this.refreshHud();
+      },
+      hover: (x, y) => {
+        if (this.phase === 'busy') return;
+        const tile = this.view.tileAtScreen(x, y);
+        if (tile && CURSOR_PHASES.includes(this.phase)) this.moveCursorTo(tile, false);
+      },
+      tap: (x, y, touch, shift) => this.pointerTap(x, y, touch, shift),
+      longPress: (x, y) => {
+        // Pulsacion larga: llevar el cursor ahi (ficha de informacion) y ver el alcance si hay una unidad.
+        if (this.phase !== 'map') return false;
+        const tile = this.view.tileAtScreen(x, y);
+        if (!tile) return true;
+        navigator.vibrate?.(12);
+        this.view.cursor = { ...tile };
+        const u = unitAt(this.s, tile.x, tile.y);
+        if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) this.inspect(u);
+        else this.cursorMoved();
+        return true;
+      },
+    };
   }
 
   /** La primera vez que se juega con el dedo, explicar los gestos. */
@@ -1114,40 +1071,11 @@ export class GameScene extends Phaser.Scene {
     showToast(t('touchHint'));
   }
 
-  private onPointerUp(p: Phaser.Input.Pointer): void {
-    this.cancelLongPress();
-    if (this.carry) {
-      this.touches.delete(p.id);
-      this.drag = null;
-      return this.dropCarry(this.view.tileAtScreen(p.x, p.y), !!(p.event as MouseEvent | undefined)?.shiftKey);
-    }
-    this.dropPick();
-    if (this.box) {
-      const r = this.view.tilesInBox(this.box);
-      this.box = null;
-      this.view.setBox(null);
-      this.group = new Set(
-        this.s.units
-          .filter(
-            (u) => u.team === 0 && u.active && u.canMove && u.carrier === null && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1,
-          )
-          .map((u) => u.uid),
-      );
-      if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
-      return this.refresh();
-    }
-    if (this.touches.delete(p.id) && this.pinch) {
-      // Fin del pellizco: ignorar los dedos que quedan hasta que se levanten todos.
-      if (this.touches.size === 0) this.pinch = null;
-      this.drag = null;
-      return;
-    }
-    const drag = this.drag;
-    this.drag = null;
-    if (this.ended || this.phase === 'busy' || p.rightButtonReleased() || !drag || drag.moved) return;
+  /** Un toque o un clic sin arrastrar. */
+  private pointerTap(x: number, y: number, touch: boolean, shift: boolean): void {
     if (this.time.now < this.inputLockUntil) return;
     // (La barra superior y los menus son HTML: sus clics no llegan aqui.)
-    const tile = this.view.tileAtScreen(p.x, p.y);
+    const tile = this.view.tileAtScreen(x, y);
     // Doble clic en el destino: mover y esperar.
     if (
       this.phase === 'unitMenu' &&
@@ -1167,14 +1095,14 @@ export class GameScene extends Phaser.Scene {
       return void this.groupMove(tile);
     }
     // Dedo, en el mapa o con una unidad elegida: un toque hace directamente lo logico (ver ui/touch.ts).
-    if (p.wasTouch && (this.phase === 'map' || this.phase === 'move')) return this.touchTap(tile);
+    if (touch && (this.phase === 'map' || this.phase === 'move')) return this.touchTap(tile);
     if (this.phase === 'move') {
       // Al mover, un clic es como soltar: en un enemigo, ataca; en un edificio, se mueve (y sale el menu).
       this.moveCursorTo(tile, false);
-      return void this.commit(tile, { wait: !!(p.event as MouseEvent | undefined)?.shiftKey });
+      return void this.commit(tile, { wait: shift });
     }
     // Tactil, en el resto (elegir objetivo, descargar...): primer toque señala, segundo confirma.
-    if (p.wasTouch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
+    if (touch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
     this.moveCursorTo(tile, false);
     this.accept();
   }
@@ -1237,9 +1165,9 @@ export class GameScene extends Phaser.Scene {
       const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
       if (dx || dy) {
         this.view.scrollBy(dx * delta * 0.6 * (window.devicePixelRatio || 1), dy * delta * 0.6 * (window.devicePixelRatio || 1));
-        this.carryTo(p);
+        this.carryTo(p.x, p.y);
       }
-    } else if (this.pointerInside && !this.ended && !this.drag && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
+    } else if (this.gestures.inside && !this.ended && !this.gestures.dragging && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
       const edge = 14 * (window.devicePixelRatio || 1);
       const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
       const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
@@ -1735,38 +1663,33 @@ export class GameScene extends Phaser.Scene {
    * mantenido pulsado antes de arrastrar (si no, el arrastre puede ser un desplazamiento del mapa
    * que empezo sobre la unidad, y soltar lejos no le da una orden de varios turnos).
    */
-  private beginCarry(held: boolean): void {
-    const pick = this.pick;
-    this.pick = null;
-    if (!pick || this.ended || this.carry) return;
-    pick.timer?.remove(false);
-    const u = unitById(this.s, pick.uid);
-    if (!u || !u.active || !u.canMove) return;
-    this.drag = null;
-    this.cancelLongPress();
+  private beginCarry(uid: number, touch: boolean, held: boolean): boolean {
+    const u = unitById(this.s, uid);
+    if (!u || !u.active || !u.canMove) return false;
     if (this.phase !== 'move' || this.sel?.uid !== u.uid) {
       if (this.phase !== 'map') this.toMap();
       this.view.cursor = { x: u.x, y: u.y };
       this.selectUnit(u);
     }
-    if (pick.touch) navigator.vibrate?.(10);
+    if (touch) navigator.vibrate?.(10);
     const key = unitKey(this.textures, this.s, u);
-    if (!key) return;
+    if (!key) return true;
     // Sombra en el suelo y la unidad "levantada" 3 pixeles.
     const shadow = this.add.rectangle(u.x * TILE + TILE / 2, (u.y + 1) * TILE - 3, 22, 5, 0x000000, 0.35);
     this.view.addFx(shadow);
     const ghost = this.view.ghost(key, u);
     ghost.y -= 3;
-    this.carry = { uid: u.uid, ghost, shadow, touch: pick.touch, held: held || !pick.touch };
+    this.carry = { uid: u.uid, ghost, shadow, touch, held: held || !touch };
     this.hidden.add(u.uid);
     this.refresh();
+    return true;
   }
 
   /** El puntero se mueve con la unidad cogida: la unidad salta de casilla en casilla y el camino la sigue. */
-  private carryTo(p: Phaser.Input.Pointer): void {
+  private carryTo(x: number, y: number): void {
     const c = this.carry;
     if (!c) return;
-    const tile = this.view.tileAtScreen(p.x, p.y);
+    const tile = this.view.tileAtScreen(x, y);
     if (!tile || samePos(tile, this.view.cursor)) return;
     this.view.cursor = { ...tile };
     this.updateTrail(tile);
@@ -1837,12 +1760,6 @@ export class GameScene extends Phaser.Scene {
       }),
     );
     c.ghost.destroy();
-  }
-
-  /** Olvidar una pulsacion pendiente sobre una unidad (ha sido un clic, o se ha desplazado el mapa). */
-  private dropPick(): void {
-    this.pick?.timer?.remove(false);
-    this.pick = null;
   }
 
   /** Pantalla de opciones (la misma que en el menu principal), encima del menu de pausa. */
