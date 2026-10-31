@@ -6,13 +6,15 @@
  * Cada habilidad se valora en "valor" (precio × vida que quita / 100, como el resto de la IA):
  * - areaDamage: el mejor cuadrado sobre los enemigos que ve (nunca a ciegas en la niebla).
  * - reveal: un valor fijo pequeño (AI.REVEALVALUE) y solo con niebla.
+ * - heal: la vida que recuperarian sus unidades, en valor (lo que ya esta entero no cuenta).
+ * - funds: el dinero que da (el valor es dinero).
  * Se usa la de mas valor si llega a AI.GENERALMINVALUE. Con la barra llena se usa cualquiera que
  * valga algo, para no desperdiciar la carga que seguiria ganando.
  *
  * Generico por tipo de efecto: un general nuevo con efectos que ya existen no necesita tocar esto.
  */
 import { AI, RULES, UNIT } from './data';
-import { areaTiles, chargeStars, generalOf, useAbility } from './generals';
+import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
 import { visibility } from './rules';
 import type { GameEvent, GameState, Pos, Team } from './types';
 
@@ -60,6 +62,14 @@ export function chooseAbility(s: GameState, team: Team): AbilityChoice | null {
       const t = bestAreaTarget(s, team, a.effect.radius, a.effect.damage, a.effect.minLife);
       if (t) c = { ability: a.id, target: t.target, value: t.value };
     } else if (a.effect.kind === 'reveal' && RULES.fog) c = { ability: a.id, target: null, value: AI.REVEALVALUE };
+    else if (a.effect.kind === 'heal') {
+      const e = a.effect;
+      const value = s.units.reduce(
+        (v, u) => v + (u.team === team && applies(e, u.type) ? (Math.min(e.amount, 100 - u.life) * UNIT.cost[u.type]!) / 100 : 0),
+        0,
+      );
+      c = { ability: a.id, target: null, value };
+    } else if (a.effect.kind === 'funds') c = { ability: a.id, target: null, value: a.effect.amount };
     if (c && (!best || c.value > best.value)) best = c;
   }
   if (!best) return null;

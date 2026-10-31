@@ -3,37 +3,170 @@
   "generals": [
     {
       "id": "Brisa",
-      "name": { "es": "Brisa", "en": "Brisa" },
-      "title": { "es": "Coronel del aire", "en": "Air Colonel" },
+      "name": {
+        "es": "Brisa",
+        "en": "Brisa"
+      },
+      "title": {
+        "es": "Coronel del aire",
+        "en": "Air Colonel"
+      },
       "description": {
         "es": "Piloto veterana. Sus aviones aciertan más y puede bombardear cualquier punto del mapa.",
         "en": "Veteran pilot. Her aircraft hit harder and she can bomb anywhere on the map."
       },
-      "passive": [{ "kind": "attack", "movement": ["air"], "factor": 1.1 }],
-      "charge": { "max": 6, "per": 6000 },
+      "passive": [
+        {
+          "kind": "attack",
+          "movement": ["air"],
+          "factor": 1.1
+        }
+      ],
+      "charge": {
+        "max": 6,
+        "per": 6000
+      },
       "abilities": [
         {
           "id": "recon",
-          "name": { "es": "Reconocimiento", "en": "Recon" },
+          "name": {
+            "es": "Reconocimiento",
+            "en": "Recon"
+          },
           "description": {
             "es": "Ves todo el mapa hasta el final de la ronda.",
             "en": "You see the whole map until the end of the round."
           },
           "cost": 2,
-          "effect": { "kind": "reveal" }
+          "effect": {
+            "kind": "reveal"
+          }
         },
         {
           "id": "airstrike",
-          "name": { "es": "Ataque aéreo", "en": "Air strike" },
+          "name": {
+            "es": "Ataque aéreo",
+            "en": "Air strike"
+          },
           "description": {
             "es": "Bombardea un cuadrado de 3×3: −30 de vida a las unidades enemigas (no las destruye).",
             "en": "Bombs a 3×3 square: −30 health to enemy units (never destroys them)."
           },
           "cost": 5,
-          "effect": { "kind": "areaDamage", "radius": 1, "damage": 30, "minLife": 10 }
+          "effect": {
+            "kind": "areaDamage",
+            "radius": 1,
+            "damage": 30,
+            "minLife": 10
+          }
         }
       ],
-      "notes": "Primer general. Numeros de partida: carga de 6, una estrella por cada 6000 de valor hecho o recibido."
+      "notes": "Primer general. Carga de 6, una estrella por cada 6000 de valor hecho o recibido. Medido (npm run generals, 80 partidas): gana el 60 % (±11) contra la IA sin general."
+    },
+    {
+      "id": "Roca",
+      "name": {
+        "es": "Roca",
+        "en": "Roca"
+      },
+      "title": {
+        "es": "General de blindados",
+        "en": "Armor General"
+      },
+      "description": {
+        "es": "Aguanta lo que le echen. Sus vehículos reciben menos daño y puede reparar a su ejército en mitad de la batalla.",
+        "en": "Takes whatever you throw at him. His vehicles take less damage and he can repair his army mid-battle."
+      },
+      "passive": [
+        {
+          "kind": "defense",
+          "movement": ["vehicle", "amphibious"],
+          "factor": 0.95
+        }
+      ],
+      "charge": {
+        "max": 6,
+        "per": 6000
+      },
+      "abilities": [
+        {
+          "id": "repair",
+          "name": {
+            "es": "Reparación",
+            "en": "Repair"
+          },
+          "description": {
+            "es": "Todas tus unidades recuperan 10 de vida.",
+            "en": "All your units recover 10 health."
+          },
+          "cost": 4,
+          "effect": {
+            "kind": "heal",
+            "amount": 10
+          }
+        }
+      ],
+      "notes": "Defensivo. Curar a todo el ejercito pesa mucho (una cura de +20 a todas sus unidades vale mas que un ataque aereo): por eso +10 y 4 estrellas. Medido (80 partidas): 68 % (±10) contra sin general; contra Brisa 57 % (±15, 40 partidas)."
+    },
+    {
+      "id": "Ambar",
+      "name": {
+        "es": "Ámbar",
+        "en": "Ámbar"
+      },
+      "title": {
+        "es": "Intendente",
+        "en": "Quartermaster"
+      },
+      "description": {
+        "es": "Nunca le falta de nada. Sus tropas de tierra aciertan más y consigue dinero cuando más falta hace.",
+        "en": "Never runs short. Her ground troops hit more often and she raises money when it's needed most."
+      },
+      "passive": [
+        {
+          "kind": "attack",
+          "movement": ["foot", "vehicle", "amphibious"],
+          "factor": 1.07
+        }
+      ],
+      "charge": {
+        "max": 6,
+        "per": 6000
+      },
+      "abilities": [
+        {
+          "id": "recon",
+          "name": {
+            "es": "Reconocimiento",
+            "en": "Recon"
+          },
+          "description": {
+            "es": "Ves todo el mapa hasta el final de la ronda.",
+            "en": "You see the whole map until the end of the round."
+          },
+          "cost": 2,
+          "effect": {
+            "kind": "reveal"
+          }
+        },
+        {
+          "id": "supplies",
+          "name": {
+            "es": "Suministros",
+            "en": "Supplies"
+          },
+          "description": {
+            "es": "Consigues 6000 de dinero al momento.",
+            "en": "You get 6000 money right away."
+          },
+          "cost": 4,
+          "effect": {
+            "kind": "funds",
+            "amount": 6000
+          }
+        }
+      ],
+      "notes": "Tierra y dinero. El dinero ayuda poco (el ejercito tiene tope de puntos de mando); su fuerza es el +7 % de tierra (con +10 % ganaba el 70 %). Medido (80 partidas): 60 % (±11) contra sin general."
     }
   ]
 }
