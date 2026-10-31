@@ -3217,6 +3217,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Arreglos
 - En el móvil, el **desglose del dinero y del día** se cierra al volver a tocarlo, y en horizontal ya no se sale de la pantalla (se desplaza dentro).
 - El icono de **visión** ya no se sale de la ficha de la unidad en pantallas estrechas.
+- Las **cifras** del texto ya no confunden el 5 con el 8 ("Fondos: 5000" se leía "8000").
 
 <!-- en -->
 
@@ -3227,6 +3228,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Fixes
 - On phones, the **money and day breakdown** closes when tapped again, and in landscape it no longer runs off the screen (it scrolls inside).
 - The **vision** icon no longer sticks out of the unit card on narrow screens.
+- **Numbers** in text no longer mix up 5 and 8 ("Funds: 5000" looked like "8000").
 
 ## [0.4.0] - 2026-10-30 — En el bolsillo
 
