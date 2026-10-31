@@ -2964,8 +2964,22 @@ html.reduce-motion .end-best.new {
 @media (max-width: 720px) and (orientation: portrait) {
   .general-panel {
     top: 124px;
-    width: 210px;
+    width: 176px;
     padding: 8px 10px;
+  }
+  /* El del enemigo, a la misma altura a la derecha: caben los dos en 360 px. */
+  .enemy-general {
+    top: 124px;
+    width: 140px;
+    padding: 6px 10px;
+  }
+  .general-panel .gp-ab {
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .general-panel .gp-ab .gp-cost {
+    letter-spacing: 0;
   }
   .gp-title {
     display: none;
