@@ -17,7 +17,7 @@ const HELP = {
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
-      'Ayudante: en el menú de una unidad, «Auto» le da una misión y la deja en manos de la IA: capturar edificios, defender aquí (solo ataca a quien se acerque) o atacar. Lleva una letra (C, D o A) y, al terminar cada turno, si no la has usado, la cumple sola. «Llevar a mano» la recupera. Con Mayúsculas + recuadro eliges varias y les das la misma misión. En el menú de partida, «Fábrica automática» compra al terminar el turno en tus edificios libres (equilibrada, ofensiva o defensiva).',
+      'Ayudante: en el menú de una unidad, «Auto» le da una misión y la deja en manos de la IA: capturar edificios, defender aquí (solo ataca a quien se acerque) o atacar. Lleva una letra (C, D o A) y, al terminar cada turno, si no la has usado, la cumple sola. «Llevar a mano» la recupera. Con Mayúsculas + recuadro eliges varias y les das la misma misión. En el menú de partida, «Fábrica automática» compra al terminar el turno en tus edificios libres: equilibrada, responder (lo que mejor le va contra los enemigos que ves), ofensiva o defensiva; con «Reserva» eliges cuánto dinero no toca. Al empezar tu turno, el informe dice qué compró.',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -67,7 +67,7 @@ const HELP = {
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
-      'Assistant: in a unit’s menu, “Auto” gives it a mission and hands it to the AI: capture buildings, hold here (it only attacks enemies that come close) or attack. It shows a letter (C, D or A) and, at the end of each turn, if you haven’t used it, it carries out the mission by itself. “Take control” gets it back. Shift + box picks several units to give them the same mission. In the game menu, “Auto factory” buys at your free buildings at the end of the turn (balanced, offensive or defensive).',
+      'Assistant: in a unit’s menu, “Auto” gives it a mission and hands it to the AI: capture buildings, hold here (it only attacks enemies that come close) or attack. It shows a letter (C, D or A) and, at the end of each turn, if you haven’t used it, it carries out the mission by itself. “Take control” gets it back. Shift + box picks several units to give them the same mission. In the game menu, “Auto factory” buys at your free buildings at the end of the turn: balanced, counter (what works best against the enemies you can see), offensive or defensive; “Keep” sets how much money it leaves alone. At the start of your turn, the report says what it bought.',
     ],
     colorsTitle: 'Map colours',
     colors: [

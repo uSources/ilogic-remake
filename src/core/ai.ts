@@ -310,18 +310,53 @@ function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: R
 const BIG_UNIT = 10000;
 
 /**
+ * [CAMBIO] Postura "responder": cuanto le sirve una unidad de ese tipo contra los enemigos que se
+ * ven (0..1): su acierto contra cada uno, pesado por lo que vale (precio x vida).
+ */
+export function counterValue(type: number, enemies: readonly Unit[]): number {
+  let total = 0,
+    hit = 0;
+  for (const e of enemies) {
+    const v = UNIT.cost[e.type]! * e.life;
+    total += v;
+    hit += v * (POWER[type]?.[e.type] ?? 0);
+  }
+  return total > 0 ? hit / total : 0;
+}
+
+/**
  * Peso de compra de una unidad: lo caro pesa mas (raiz del precio). Con postura, el ayudante
  * multiplica por AI.POSTUREBIAS lo que encaja: al atacar, lo que combate y no captura; al
- * defender, lo que dispara a distancia.
+ * defender, lo que dispara a distancia; al responder, lo que mejor acierta a los enemigos que se ven
+ * (sin enemigos a la vista, como equilibrada).
  */
-function buyWeight(o: BuyOption, posture: Posture): number {
+function buyWeight(o: BuyOption, posture: Posture, enemies: readonly Unit[]): number {
   const w = Math.sqrt(o.cost);
   if (posture === 'attack') return UNIT.canfight[o.type] && !UNIT.cancapt[o.type] ? w * AI.POSTUREBIAS : w;
   if (posture === 'defense') return UNIT.minalc[o.type]! > 0 ? w * AI.POSTUREBIAS : w;
+  if (posture === 'counter' && enemies.length) {
+    const c = counterValue(o.type, enemies);
+    // Al cuadrado: lo que acierta 0,6 pesa cuatro veces lo que acierta 0,3.
+    return w * (0.05 + AI.POSTUREBIAS * c * c);
+  }
   return w;
 }
 
-function* produce(s: GameState, rng: Rng, posture: Posture = 'balanced', save = true): Generator<GameEvent> {
+/** Como compra el ayudante del jugador (assistTurn); la IA enemiga usa lo de por defecto. */
+interface ProduceOptions {
+  posture: Posture;
+  /** Ahorrar un turno si lo elegido se paga con lo que entra el siguiente (solo la IA enemiga). */
+  save: boolean;
+  /** Dinero que no se toca. */
+  reserve: number;
+}
+const ENEMY_PRODUCE: ProduceOptions = { posture: 'balanced', save: true, reserve: 0 };
+
+function* produce(s: GameState, rng: Rng, o: ProduceOptions = ENEMY_PRODUCE): Generator<GameEvent> {
+  const { posture, save, reserve } = o;
+  const vis = posture === 'counter' ? visibility(s, ME) : null;
+  const enemies = vis ? s.units.filter((u) => u.team !== ME && u.carrier === null && vis[u.x]![u.y]) : [];
+  const weight = (b: BuyOption) => buyWeight(b, posture, enemies);
   // [CAMBIO] Con puntos de mando el ejercito tiene tope y gastarlo todo cada turno lo llena de
   // soldados de 1 punto. Entonces elige entre todo lo que cabe (no solo lo que puede pagar), empieza
   // por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
@@ -342,20 +377,16 @@ function* produce(s: GameState, rng: Rng, posture: Posture = 'balanced', save = 
     const capturers = mine.filter((u) => UNIT.cancapt[u.type]).length;
     if (capturers < AI.MINCAPTURERS && opts.some((o) => UNIT.cancapt[o.type] && o.affordable))
       opts = opts.filter((o) => UNIT.cancapt[o.type] && o.affordable);
-    // El ayudante del jugador no ahorra: compra lo que se pueda pagar ya (no se queda el dinero sin avisar).
-    if (!save) opts = opts.filter((o) => o.affordable);
+    // El ayudante del jugador no ahorra: compra lo que se pueda pagar ya sin tocar la reserva.
+    if (!save) opts = opts.filter((o) => o.affordable && o.cost <= s.funds[ME] - reserve);
     if (!opts.length) continue;
-    const weights = opts.map((o) => buyWeight(o, posture));
+    const weights = opts.map(weight);
     let pick = weightedPick(opts, weights, rng);
     if (!pick.affordable) {
       if (pick.cost <= s.funds[ME] + income) break; // se paga el turno que viene: ahorrar para ello
       const can = opts.filter((o) => o.affordable);
       if (!can.length) continue;
-      pick = weightedPick(
-        can,
-        can.map((o) => buyWeight(o, posture)),
-        rng,
-      );
+      pick = weightedPick(can, can.map(weight), rng);
     }
     const u = spawn(s, b, pick.type);
     if (u) yield { kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } };
@@ -381,8 +412,14 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
 export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
   ME = team;
   for (const u of teamUnits(s, ME).filter((u) => u.auto)) yield* missionTurn(s, u.uid, rng);
-  const posture = s.assist?.produce;
-  if (posture) yield* produce(s, rng, posture, false);
+  const a = s.assist;
+  if (a?.produce) yield* produce(s, rng, { posture: a.produce, save: false, reserve: reserveAmount(s, team) });
+}
+
+/** [CAMBIO] Dinero que la fabrica automatica deja sin tocar (GameState.assist.reserve). */
+export function reserveAmount(s: GameState, team: Team = 0): number {
+  const r = s.assist?.reserve ?? 0;
+  return r === 'half' ? Math.floor(s.funds[team] / 2) : r;
 }
 
 /** [CAMBIO] Ayudante: la IA juega ya esta unidad del jugador (al dejarla en automatico). */

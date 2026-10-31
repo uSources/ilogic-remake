@@ -114,7 +114,9 @@ export function deserialize(json: string): GameState | null {
     // Un clima roto no estropea la partida: se vuelve a empezar despejado.
     if (!ok) delete s.weather;
   }
-  if (s.assist !== undefined && !(s.assist && [null, 'balanced', 'attack', 'defense'].includes(s.assist.produce))) delete s.assist;
+  if (s.assist !== undefined && !(s.assist && [null, 'balanced', 'counter', 'attack', 'defense'].includes(s.assist.produce)))
+    delete s.assist;
+  if (s.assist?.reserve !== undefined && ![0, 5000, 10000, 'half'].includes(s.assist.reserve)) delete s.assist.reserve;
   if (s.generals !== undefined) {
     // Un general que no existe (o con datos rotos) se quita: la partida sigue sin el.
     const ok = Array.isArray(s.generals) && s.generals.length === 2;

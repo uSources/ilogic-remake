@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { assistTurn, assistUnit } from '@core/ai';
-import { DEFAULT_RULES, HQ, UNIT, useRules } from '@core/data';
+import { assistTurn, assistUnit, counterValue, reserveAmount } from '@core/ai';
+import { DEFAULT_RULES, HQ, POWER, UNIT, useRules } from '@core/data';
 import { seededRng } from '@core/geom';
 import { newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -148,6 +148,55 @@ describe('fabrica automatica', () => {
   });
 });
 
+describe('fabrica automatica: responder y reserva', () => {
+  const BOMBER = 12;
+  const factoryWorld = (funds: number) => {
+    const s = world();
+    s.buildings.push({ type: FACTORY, owner: 0, x: 4, y: 4 });
+    s.funds = [funds, 5000];
+    for (let i = 0; i < 6; i++) newUnit(s, SOLDIER, 0, 10 + i, 10);
+    return s;
+  };
+
+  it('counterValue: lo que acierta a los enemigos que se ven, pesado por lo que valen', () => {
+    const s = world();
+    const bombers = [newUnit(s, BOMBER, 1, 9, 9)];
+    expect(counterValue(TANK, bombers)).toBeCloseTo(POWER[TANK]![BOMBER]!);
+    expect(counterValue(TANK, [])).toBe(0);
+  });
+
+  it('responder: contra bombarderos compra mas de lo que mejor les acierta', () => {
+    // Lo que mejor acierta a un bombardero de lo que hace la fabrica.
+    const best = (type: number) => POWER[type]![BOMBER]!;
+    const tally = (posture: 'balanced' | 'counter') => {
+      let hit = 0;
+      for (let seed = 1; seed <= 60; seed++) {
+        const s = factoryWorld(30000);
+        // A la vista de los soldados de (10..15, 10).
+        for (let i = 0; i < 3; i++) newUnit(s, BOMBER, 1, 11 + i, 8);
+        s.assist = { produce: posture };
+        Array.from(assistTurn(s, seededRng(seed)));
+        for (const u of s.units.filter((u) => u.x === 4 && u.y === 4)) hit += best(u.type);
+      }
+      return hit;
+    };
+    expect(tally('counter')).toBeGreaterThan(tally('balanced') * 1.5);
+  });
+
+  it('respeta la reserva: fija o la mitad', () => {
+    const s = factoryWorld(6000);
+    s.assist = { produce: 'balanced', reserve: 5000 };
+    expect(reserveAmount(s)).toBe(5000);
+    Array.from(assistTurn(s, seededRng(1)));
+    expect(s.funds[0]).toBeGreaterThanOrEqual(5000);
+    const h = factoryWorld(30000);
+    h.assist = { produce: 'attack', reserve: 'half' };
+    Array.from(assistTurn(h, seededRng(2)));
+    expect(h.funds[0]).toBeGreaterThanOrEqual(15000);
+    expect(h.units.some((u) => u.x === 4 && u.y === 4)).toBe(true);
+  });
+});
+
 describe('partidas guardadas', () => {
   it('guardan el automatico de cada unidad y la postura de la fabrica', () => {
     const s = world();
@@ -165,5 +214,7 @@ describe('partidas guardadas', () => {
     const raw = JSON.parse(serialize(s)) as Record<string, unknown>;
     raw.assist = { produce: 'loco' };
     expect(deserialize(JSON.stringify(raw))!.assist).toBeUndefined();
+    raw.assist = { produce: 'counter', reserve: 123 };
+    expect(deserialize(JSON.stringify(raw))!.assist).toEqual({ produce: 'counter' });
   });
 });

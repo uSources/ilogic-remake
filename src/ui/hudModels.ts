@@ -39,7 +39,7 @@ import type {
   WeatherVM,
 } from '../hud/store';
 import { abilityBlock, chargeStars, generalOf, type AbilityBlock } from '../core/generals';
-import { buildingLabel, settings, t, terrainLabel, unitLabel, weatherLabel, type TextKey } from '../settings';
+import { buildingLabel, fmtNum, settings, t, terrainLabel, unitLabel, weatherLabel, type TextKey } from '../settings';
 import { buildingKey, terrainKey, unitKey } from './sprites';
 
 /**
@@ -49,6 +49,18 @@ import { buildingKey, terrainKey, unitKey } from './sprites';
 
 /** "Mov 3 · Alcance 1–1" */
 /** Datos de la ficha de una unidad con su icono: movimiento, alcance y vision. */
+/**
+ * [CAMBIO] Linea del informe de la ronda con lo que compro la fabrica automatica:
+ * "Fábrica automática: Tanque, Soldado ×2 (−15.500)".
+ */
+export function factoryReportText(types: readonly number[]): string {
+  const count = new Map<number, number>();
+  for (const ty of types) count.set(ty, (count.get(ty) ?? 0) + 1);
+  const list = [...count].map(([ty, n]) => (n > 1 ? `${unitLabel(ty)} ×${n}` : unitLabel(ty))).join(', ');
+  const spent = types.reduce((sum, ty) => sum + UNIT.cost[ty]!, 0);
+  return `${t('reportFactory')}: ${list} (−${fmtNum(spent)})`;
+}
+
 /** [CAMBIO] Nombre de la mision de una unidad en automatico. */
 export const missionLabel = (m: AutoMission): string =>
   t(m === 'capture' ? 'missionCapture' : m === 'defend' ? 'missionDefend' : 'missionAttack');
