@@ -17,6 +17,7 @@ const HELP = {
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
+      'Ayudante: en el menú de una unidad, «Automático» la deja en manos de la IA (lleva una «A»): al terminar cada turno, si no la has usado, se mueve sola. «Llevar a mano» la recupera. En el menú de partida, «Fábrica automática» compra al terminar el turno en tus edificios libres (equilibrada, ofensiva o defensiva).',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -36,6 +37,7 @@ const HELP = {
       ['Deshacer el último movimiento', 'Ctrl+Z', '—'],
       ['Orden de varios turnos', '—', 'Soltar lejos, fuera del alcance (dedo: mantener antes de arrastrar)'],
       ['Mover en grupo', '—', 'Mayúsculas + recuadro, luego clic'],
+      ['Unidad en automático', 'Enter dos veces sobre ella, Automático', 'Clic dos veces sobre ella, Automático'],
       ['Mover el cursor', 'Flechas / WASD', 'Pasar por encima / tocar'],
       ['Aceptar', 'Enter / Espacio', 'Clic / segundo toque'],
       ['Atrás', 'Esc / Retroceso', 'Clic derecho / tocar fuera'],
@@ -65,6 +67,7 @@ const HELP = {
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
+      'Assistant: in a unit’s menu, “Automatic” hands it to the AI (it shows an “A”): at the end of each turn, if you haven’t used it, it moves by itself. “Take control” gets it back. In the game menu, “Auto factory” buys at your free buildings at the end of the turn (balanced, offensive or defensive).',
     ],
     colorsTitle: 'Map colours',
     colors: [
@@ -84,6 +87,7 @@ const HELP = {
       ['Undo the last move', 'Ctrl+Z', '—'],
       ['Multi-turn order', '—', 'Drop far, out of range (touch: hold before dragging)'],
       ['Group move', '—', 'Shift + box, then click'],
+      ['Unit on automatic', 'Enter twice on it, Automatic', 'Click it twice, Automatic'],
       ['Move the cursor', 'Arrows / WASD', 'Hover / tap'],
       ['Accept', 'Enter / Space', 'Click / second tap'],
       ['Back', 'Esc / Backspace', 'Right-click / tap outside'],

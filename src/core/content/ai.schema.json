@@ -18,7 +18,8 @@
     "CAPTUREOWNED",
     "MINCAPTURERS",
     "GENERALMINVALUE",
-    "REVEALVALUE"
+    "REVEALVALUE",
+    "POSTUREBIAS"
   ],
   "properties": {
     "$schema": {
@@ -93,6 +94,11 @@
       "type": "number",
       "minimum": 0,
       "description": "Lo que vale ver todo el mapa una ronda (habilidad reveal), solo con niebla. Bajo: se usa cuando la barra esta llena y no hay nada mejor."
+    },
+    "POSTUREBIAS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Fabrica automatica del jugador: cuanto mas pesa lo que encaja con la postura (ofensiva: lo que combate y no captura; defensiva: lo que dispara a distancia)."
     }
   }
 }

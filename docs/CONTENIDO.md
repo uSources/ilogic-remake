@@ -219,6 +219,9 @@ los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
   `docs/BALANCE.md`.
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`).
+  `POSTUREBIAS` es del ayudante del jugador (fabrica automatica): cuanto pesa lo que encaja con la
+  postura elegida. Las unidades en automatico y la fabrica juegan con la misma IA (`assistTurn` en
+  `src/core/ai.ts`).
 
 Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas tablas por nombre:
 `--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60

@@ -15,6 +15,20 @@ import { settings } from '../settings';
 import { PAL, PAL_CSS } from './palette';
 import { addLifeTextures, lifeKey } from './lifeDigits';
 
+/** Pixeles de la "A" de las unidades en automatico (3x5). */
+const AUTO_A: [number, number][] = [
+  [1, 0],
+  [0, 1],
+  [2, 1],
+  [0, 2],
+  [1, 2],
+  [2, 2],
+  [0, 3],
+  [2, 3],
+  [0, 4],
+  [2, 4],
+];
+
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
 
 const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
@@ -66,7 +80,7 @@ interface UnitSprite {
   cargo: Phaser.GameObjects.Rectangle;
   /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
   stars: Phaser.GameObjects.Graphics;
-  /** Lo dibujado en `stars`: rango x 2 + 1 si lleva la señal de sin cura. */
+  /** Lo dibujado en `stars`: rango x 8 + 1 sin cura + 2 automatico + 4 con carga. */
   rank: number;
   key: string;
   /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
@@ -493,11 +507,25 @@ export class MapView {
     const r = rank(u);
     // [CAMBIO] Ha recibido un ataque hoy y no se curara esta noche (regla noHealUnderFire).
     const noHeal = !!s && u.life < 100 && unhealable(s, u);
-    if (r * 2 + (noHeal ? 1 : 0) !== sp.rank) {
+    // [CAMBIO] Ayudante: unidad en automatico (al lado de la marca de carga si la lleva).
+    const cargo = u.cargo.some((c) => c !== null);
+    const marks = r * 8 + (noHeal ? 1 : 0) + (u.auto ? 2 : 0) + (cargo ? 4 : 0);
+    if (marks !== sp.rank) {
       // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
-      sp.rank = r * 2 + (noHeal ? 1 : 0);
+      sp.rank = marks;
       const g = sp.stars;
       g.clear();
+      if (u.auto) {
+        // Placa con una "A" de 3x5 en blanco sobre verde azulado.
+        const x = cargo ? 12 : 1,
+          y = 1;
+        g.fillStyle(PAL.ink, 1);
+        g.fillRect(x, y, 9, 9);
+        g.fillStyle(0x2f8f83, 1);
+        g.fillRect(x + 1, y + 1, 7, 7);
+        g.fillStyle(0xffffff, 1);
+        for (const [dx, dy] of AUTO_A) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
+      }
       if (noHeal) {
         // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
         const x = 1,

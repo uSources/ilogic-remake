@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aiTurn } from '../core/ai';
+import { aiTurn, assistTurn, assistUnit } from '../core/ai';
 import {
   HQ,
   MAP_H,
@@ -70,7 +70,7 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy, stats } from '../core/stats';
-import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
+import type { Building, GameEvent, GameSetup, GameState, Pos, Posture, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
@@ -146,9 +146,13 @@ import { PAL, PAL_CSS } from '../ui/palette';
 type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
-const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
-type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
+const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'auto', 'manual', 'back', 'delete'];
+type GameMenuKey = 'endTurn' | 'autoBuy' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
+const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'autoBuy', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
+/** [CAMBIO] Fabrica automatica: lo que va saliendo al pulsarla en el menu de partida (null = apagada). */
+const POSTURES: (Posture | null)[] = [null, 'balanced', 'attack', 'defense'];
+const postureLabel = (p: Posture | null): string =>
+  t(p === 'balanced' ? 'postureBalanced' : p === 'attack' ? 'postureAttack' : p === 'defense' ? 'postureDefense' : 'postureOff');
 
 type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
 const END_LABEL: Record<EndButton, TextKey> = {
@@ -547,7 +551,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private idleUnits(): Unit[] {
-    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null);
+    // Las de automatico no cuentan: se moveran solas al terminar el turno.
+    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null && !u.auto);
   }
 
   // -------------------------------------------------------------------------
@@ -817,7 +822,7 @@ export class GameScene extends Phaser.Scene {
         }
         items = GAME_MENU.map((k) => ({
           id: k,
-          label: t(k as TextKey),
+          label: k === 'autoBuy' ? `${t('autoBuy')}: ${postureLabel(this.s.assist?.produce ?? null)}` : t(k as TextKey),
           hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'options' ? 'O' : undefined,
           danger: k === 'quit' || k === 'surrender',
           disabled: k === 'replay' && !this.lastEnemy,
@@ -1888,6 +1893,14 @@ export class GameScene extends Phaser.Scene {
         return this.toMap();
       case 'endTurn':
         return void this.enemyTurn();
+      case 'autoBuy': {
+        // Cada pulsacion pasa a la siguiente postura: apagada, equilibrada, ofensiva, defensiva.
+        const now = POSTURES.indexOf(this.s.assist?.produce ?? null);
+        const next = POSTURES[(now + 1) % POSTURES.length]!;
+        this.s.assist = { produce: next };
+        showToast(next ? t('autoBuyOn') : t('autoBuyOff'));
+        return this.refresh();
+      }
       case 'replay':
         if (!this.lastEnemy) return showToast(t('noReplay'));
         return void this.replayEnemyTurn();
@@ -1972,6 +1985,23 @@ export class GameScene extends Phaser.Scene {
       case 'wait':
         wait(u);
         return this.afterAction();
+      case 'auto': {
+        // [CAMBIO] Ayudante: deshace lo movido, la deja en automatico y la IA la juega ya.
+        if (this.undo && this.undo.uid === u.uid) {
+          u.x = this.undo.x;
+          u.y = this.undo.y;
+          u.canFire = this.undo.canFire;
+          u.canMove = true;
+        }
+        this.clearUndo();
+        u.auto = true;
+        this.abandonSelection();
+        return void this.playAuto(u);
+      }
+      case 'manual':
+        delete u.auto;
+        showToast(t('autoOff'));
+        return this.openUnitMenu();
       case 'back':
         return this.undoMove();
       case 'delete':
@@ -1984,6 +2014,20 @@ export class GameScene extends Phaser.Scene {
         removeUnit(this.s, u.uid);
         return this.afterAction();
     }
+  }
+
+  /** [CAMBIO] Ayudante: la IA juega ya la unidad que se acaba de dejar en automatico. */
+  private async playAuto(u: Unit): Promise<void> {
+    const m = this.match;
+    this.phase = 'busy';
+    this.refresh();
+    for (const ev of assistUnit(this.s, u.uid, Math.random)) {
+      await this.playEvents([ev]);
+      if (m !== this.match || this.checkEnd()) return;
+    }
+    wait(u);
+    showToast(t('autoOn'));
+    this.afterAction();
   }
 
   private async acceptAttack(c: Pos): Promise<void> {
@@ -2296,6 +2340,11 @@ export class GameScene extends Phaser.Scene {
     this.abandonSelection();
     const saved = this.saveCamera();
     this.phase = 'busy';
+    // [CAMBIO] Ayudante: las unidades en automatico que siguen sin usar juegan, y la fabrica automatica compra.
+    for (const ev of assistTurn(this.s, Math.random)) {
+      await this.playEvents([ev]);
+      if (m !== this.match || this.checkEnd()) return;
+    }
     // [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando.
     for (const u of this.autoCapturers()) {
       const b = buildingAt(this.s, u.x, u.y)!;

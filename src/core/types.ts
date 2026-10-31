@@ -33,6 +33,8 @@ export interface Unit {
   kills?: number;
   /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
   hitDay?: number;
+  /** [CAMBIO] Ayudante: la mueve la IA al terminar el turno si sigue sin usar (solo unidades del jugador). */
+  auto?: boolean;
   /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */
   order?: Pos;
   /** uid del transporte que la lleva, o null. */
@@ -80,6 +82,8 @@ export interface GameState {
   generals?: [GeneralState | null, GeneralState | null];
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
+  /** [CAMBIO] Ayudante del jugador: fabrica automatica al terminar el turno (postura, o null = apagada). */
+  assist?: { produce: Posture | null };
 }
 
 /** General de un bando (ver core/generals.ts). */
@@ -187,3 +191,6 @@ export type Objective =
   | { kind: 'capture'; count: number; type: number | null; days: number }
   | { kind: 'destroy'; days: number }
   | { kind: 'escort'; uid: number; to: Pos; days: number };
+
+/** [CAMBIO] Postura de la fabrica automatica del jugador (ver assistTurn en ai.ts). */
+export type Posture = 'balanced' | 'attack' | 'defense';

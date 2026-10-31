@@ -156,6 +156,8 @@ export function tileVM(
       abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
+      ...(shown.auto && shown.team === 0 ? { auto: true } : {}),
+      ...(shown.auto && shown.team === 0 ? { auto: true } : {}),
     };
   }
   return info;

@@ -618,6 +618,7 @@ function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
+      {!folded && u.auto && <span style={{ fontSize: 13, color: '#5fd6c6' }}>{t('autoUnit')}</span>}
       {!folded && u.noHeal && <span style={{ fontSize: 13, color: 'var(--red-soft)' }}>{t('noHeal')}</span>}
       {!folded && u.cargo && (
         <span class="muted" style={{ fontSize: 13 }}>

@@ -767,6 +767,9 @@ export interface UnitActions {
   wait: boolean;
   /** Volver atras sin hacer nada: solo si aun no se ha movido. */
   back: boolean;
+  /** [CAMBIO] Ayudante: dejarla en automatico (la IA la mueve) o volver a llevarla a mano. */
+  auto: boolean;
+  manual: boolean;
   delete: boolean;
 }
 
@@ -778,6 +781,8 @@ export function unitActions(s: GameState, u: Unit): UnitActions {
     supply: canSupply(s, u),
     wait: true,
     back: u.canMove,
+    auto: u.team === 0 && !u.auto,
+    manual: !!u.auto,
     delete: true,
   };
 }

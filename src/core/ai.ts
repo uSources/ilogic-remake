@@ -38,7 +38,7 @@ import {
   moveEvent,
   reachableTiles,
 } from './rules';
-import type { Building, GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
+import type { Building, GameEvent, GameState, Pos, Posture, Rng, Team, Unit } from './types';
 
 /**
  * Bando que juega el turno en curso. Se fija al empezar aiTurn; un turno de IA termina
@@ -303,7 +303,19 @@ function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: R
 /** Un edificio que fabrica algo de este precio o mas fabrica "lo grande" (Fabrica, Aeropuerto). */
 const BIG_UNIT = 10000;
 
-function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
+/**
+ * Peso de compra de una unidad: lo caro pesa mas (raiz del precio). Con postura, el ayudante
+ * multiplica por AI.POSTUREBIAS lo que encaja: al atacar, lo que combate y no captura; al
+ * defender, lo que dispara a distancia.
+ */
+function buyWeight(o: BuyOption, posture: Posture): number {
+  const w = Math.sqrt(o.cost);
+  if (posture === 'attack') return UNIT.canfight[o.type] && !UNIT.cancapt[o.type] ? w * AI.POSTUREBIAS : w;
+  if (posture === 'defense') return UNIT.minalc[o.type]! > 0 ? w * AI.POSTUREBIAS : w;
+  return w;
+}
+
+function* produce(s: GameState, rng: Rng, posture: Posture = 'balanced', save = true): Generator<GameEvent> {
   // [CAMBIO] Con puntos de mando el ejercito tiene tope y gastarlo todo cada turno lo llena de
   // soldados de 1 punto. Entonces elige entre todo lo que cabe (no solo lo que puede pagar), empieza
   // por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
@@ -324,7 +336,10 @@ function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
     const capturers = mine.filter((u) => UNIT.cancapt[u.type]).length;
     if (capturers < AI.MINCAPTURERS && opts.some((o) => UNIT.cancapt[o.type] && o.affordable))
       opts = opts.filter((o) => UNIT.cancapt[o.type] && o.affordable);
-    const weights = opts.map((o) => Math.sqrt(o.cost));
+    // El ayudante del jugador no ahorra: compra lo que se pueda pagar ya (no se queda el dinero sin avisar).
+    if (!save) opts = opts.filter((o) => o.affordable);
+    if (!opts.length) continue;
+    const weights = opts.map((o) => buyWeight(o, posture));
     let pick = weightedPick(opts, weights, rng);
     if (!pick.affordable) {
       if (pick.cost <= s.funds[ME] + income) break; // se paga el turno que viene: ahorrar para ello
@@ -332,7 +347,7 @@ function* produce(s: GameState, rng: Rng): Generator<GameEvent> {
       if (!can.length) continue;
       pick = weightedPick(
         can,
-        can.map((o) => Math.sqrt(o.cost)),
+        can.map((o) => buyWeight(o, posture)),
         rng,
       );
     }
@@ -347,30 +362,52 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
   // [CAMBIO] Primero el general (una habilidad, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ME);
   const order = teamUnits(s, ME).map((u) => u.uid);
-  for (const uid of order) {
-    const u = unitById(s, uid);
-    if (!u || !u.active || u.carrier !== null || u.life <= 0) continue;
-    // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
-    // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
-    const here = buildingAt(s, u.x, u.y);
-    if (here && (yield* captureHere(s, u))) continue;
-    const range = moveRange(s, u);
-    // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
-    if (here && here.type === HQ && here.owner !== ME && here.owner !== null && !UNIT.cancapt[u.type]) {
-      const dest = bestMoveToward(s, u, here, range, true);
-      if (dest) {
-        yield* doMove(s, u, dest, range);
-        const after = moveRange(s, u);
-        if (!(yield* tryAttack(s, u, after, rng))) wait(u);
-        continue;
-      }
-    }
-    if (needsRepair(u) && (yield* retreat(s, u, range))) continue;
-    if (yield* tryAttack(s, u, range, rng)) continue;
-    if (yield* tryCapture(s, u, range)) continue;
-    if (yield* advance(s, u, range)) continue;
-    yield* randomMove(s, u, range, rng);
-  }
+  for (const uid of order) yield* unitTurn(s, uid, rng);
   yield* produce(s, rng);
   for (const u of teamUnits(s, ME)) wait(u);
+}
+
+/**
+ * [CAMBIO] Ayudante del jugador (al terminar su turno): las unidades marcadas en automatico
+ * (Unit.auto) que siguen sin usar juegan como la IA, y si la fabrica automatica esta puesta
+ * (GameState.assist.produce) compra en los edificios libres con esa postura, sin ahorrar.
+ * No toca las demas unidades.
+ */
+export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
+  ME = team;
+  for (const u of teamUnits(s, ME).filter((u) => u.auto)) yield* unitTurn(s, u.uid, rng);
+  const posture = s.assist?.produce;
+  if (posture) yield* produce(s, rng, posture, false);
+}
+
+/** [CAMBIO] Ayudante: la IA juega ya esta unidad del jugador (al dejarla en automatico). */
+export function* assistUnit(s: GameState, uid: number, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
+  ME = team;
+  yield* unitTurn(s, uid, rng);
+}
+
+/** Lo que hace la IA con una unidad en su turno (si sigue activa). */
+function* unitTurn(s: GameState, uid: number, rng: Rng): Generator<GameEvent> {
+  const u = unitById(s, uid);
+  if (!u || !u.active || u.carrier !== null || u.life <= 0) return;
+  // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
+  // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
+  const here = buildingAt(s, u.x, u.y);
+  if (here && (yield* captureHere(s, u))) return;
+  const range = moveRange(s, u);
+  // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
+  if (here && here.type === HQ && here.owner !== ME && here.owner !== null && !UNIT.cancapt[u.type]) {
+    const dest = bestMoveToward(s, u, here, range, true);
+    if (dest) {
+      yield* doMove(s, u, dest, range);
+      const after = moveRange(s, u);
+      if (!(yield* tryAttack(s, u, after, rng))) wait(u);
+      return;
+    }
+  }
+  if (needsRepair(u) && (yield* retreat(s, u, range))) return;
+  if (yield* tryAttack(s, u, range, rng)) return;
+  if (yield* tryCapture(s, u, range)) return;
+  if (yield* advance(s, u, range)) return;
+  yield* randomMove(s, u, range, rng);
 }

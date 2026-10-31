@@ -63,6 +63,7 @@ export function deserialize(json: string): GameState | null {
     u.canFire = !!u.canFire;
     if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
     if (u.hitDay !== undefined && !isInt(u.hitDay, 0, 1e6)) delete u.hitDay;
+    if (u.auto !== undefined && u.auto !== true) delete u.auto;
     if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
   }
   const byUid = new Map(s.units.map((u) => [u.uid, u]));
@@ -112,6 +113,7 @@ export function deserialize(json: string): GameState | null {
     // Un clima roto no estropea la partida: se vuelve a empezar despejado.
     if (!ok) delete s.weather;
   }
+  if (s.assist !== undefined && !(s.assist && [null, 'balanced', 'attack', 'defense'].includes(s.assist.produce))) delete s.assist;
   if (s.generals !== undefined) {
     // Un general que no existe (o con datos rotos) se quita: la partida sigue sin el.
     const ok = Array.isArray(s.generals) && s.generals.length === 2;
