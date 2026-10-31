@@ -13,7 +13,7 @@ import {
   type AbilityDef,
 } from '@core/data';
 import { validateContent, type Content } from '@core/content';
-import { hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath } from '@core/rules';
+import { captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
 import { blankState } from './helpers';
@@ -196,5 +196,30 @@ describe('habilidades: interfaz', () => {
     expect(abilitiesVM(withAbility('zoneOfControl'))[0]!.desc).toContain('foot, vehicles');
     useRules({ ...DEFAULT_RULES, abilities: false });
     expect(abilitiesVM(G)).toEqual([]);
+  });
+});
+
+describe('habilidades: explorador (scout)', () => {
+  it('ve dentro del bosque en todo su radio; otra unidad solo desde al lado', () => {
+    useRules({ ...DEFAULT_RULES, fog: true, forestHides: true, weather: false });
+    const s = blankState();
+    s.map[10]![14] = TerrainType.WOODS;
+    const scout = newUnit(s, withAbility('scout'), 0, 10, 10);
+    expect(visibility(s, 0)[10]![14]).toBe(true); // a 4 casillas, dentro de su vision
+    scout.type = plain((t) => UNIT.vision[t]! >= UNIT.vision[withAbility('scout')]!);
+    expect(visibility(s, 0)[10]![14]).toBe(false);
+  });
+});
+
+describe('habilidades: captura rapida (quickCapture)', () => {
+  it('resta un 50 % mas al capturar que una unidad igual sin la habilidad', () => {
+    const s = blankState();
+    const fast = newUnit(s, withAbility('quickCapture'), 0, 5, 5);
+    const factor = (abilityOf(fast.type, 'quickCapture') as { factor: number }).factor;
+    expect(captureStrength(fast)).toBe(Math.ceil(10 * factor));
+    fast.life = 40;
+    expect(captureStrength(fast)).toBe(Math.ceil(4 * factor));
+    useRules({ ...DEFAULT_RULES, abilities: false });
+    expect(captureStrength(fast)).toBe(4); // con la regla apagada, como cualquiera
   });
 });

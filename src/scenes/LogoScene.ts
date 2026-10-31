@@ -26,7 +26,9 @@ export class LogoScene extends Phaser.Scene {
     const next = () => {
       if (gone) return;
       gone = true;
-      this.scene.start('Menu');
+      // #lab en la direccion: directo al laboratorio de animaciones (src/lab.ts).
+      if (window.location.hash === '#lab') this.scene.start('Game', { mode: 'lab' });
+      else this.scene.start('Menu');
     };
     this.time.delayedCall(1800, () => {
       this.cameras.main.fadeOut(300);

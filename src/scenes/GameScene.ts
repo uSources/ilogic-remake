@@ -1,6 +1,19 @@
 import Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, WEATHER, useRules, type RulesConfig, Movement } from '../core/data';
+import {
+  HQ,
+  MAP_H,
+  MAP_W,
+  DEFAULT_RULES,
+  RULES,
+  UNIT,
+  UNIT_ART,
+  WEATHER,
+  useRules,
+  type RulesConfig,
+  Movement,
+  UNIT_NAMES,
+} from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { bestAttackTile, closestStep, extendTrail } from '../core/orders';
@@ -106,6 +119,7 @@ import {
   economyVM,
   generalVM,
 } from '../ui/hudModels';
+import { defaultLab, LAB_TARGET, labRange, labState, type LabAction, type LabOptions } from '../lab';
 import { abilityArea, abilityBlock, areaTiles, generalOf, newGeneral, useAbility } from '../core/generals';
 import { PAL, PAL_CSS } from '../ui/palette';
 
@@ -166,7 +180,9 @@ const CONFIRM_MS = 2500;
 /** Como empieza una partida (scene.start('Game', data)). */
 export interface GameStartData {
   /** new: mapa al azar o con `setup`; load: la guardada; mission: `mission`; state: `state` (JSON de una partida). */
-  mode?: 'new' | 'load' | 'mission' | 'state';
+  mode?: 'new' | 'load' | 'mission' | 'state' | 'lab';
+  /** Laboratorio de animaciones (src/lab.ts). */
+  lab?: LabOptions;
   rules?: Partial<RulesConfig>;
   setup?: GameSetup;
   mission?: string;
@@ -182,6 +198,8 @@ export class GameScene extends Phaser.Scene {
   /** Lluvia, nieve... sobre el mapa. */
   private weatherFx: WeatherFx | null = null;
   private phase: Phase = 'map';
+  /** Laboratorio de animaciones (null en una partida normal). */
+  private lab: LabOptions | null = null;
   /** Habilidad del general que se esta apuntando (fase 'target'). */
   private targeting: string | null = null;
   private vis: boolean[][] = [];
@@ -324,6 +342,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameStartData): void {
     this.resetMatch();
+    this.lab = data.mode === 'lab' ? (data.lab ?? defaultLab()) : null;
     let state: GameState | null = null;
     if (data.mode === 'load') {
       const raw = readSave();
@@ -335,7 +354,11 @@ export class GameScene extends Phaser.Scene {
     }
     this.corruptSave = (data.mode === 'load' || data.mode === 'state') && !state;
     if (this.corruptSave) deleteSave();
-    if (state) {
+    if (this.lab) {
+      // Contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde).
+      useRules({ ...DEFAULT_RULES, fog: false, weather: false, counterattack: this.lab.play !== 'attack' });
+      this.s = labState(this.lab, this.lab.play);
+    } else if (state) {
       // Solo se guardan los ajustes de la partida; las reglas son siempre las actuales
       // (las partidas antiguas con las reglas de 2013 pasan a jugarse con estas).
       const r = state.rules;
@@ -426,7 +449,8 @@ export class GameScene extends Phaser.Scene {
     );
     ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, options: null });
     this.refresh();
-    showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
+    if (this.lab) this.startLab(this.lab);
+    else showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
   }
 
@@ -449,6 +473,15 @@ export class GameScene extends Phaser.Scene {
       },
       endTurn: () => {
         if (ready()) this.requestEndTurn();
+      },
+      labPlay: (action: LabAction) => {
+        if (this.lab && this.phase !== 'busy') this.restartLab({ ...this.lab, play: action });
+      },
+      labSet: (patch: Partial<LabOptions>) => {
+        if (this.lab && this.phase !== 'busy') this.restartLab({ ...this.lab, ...patch, play: null });
+      },
+      labExit: () => {
+        this.scene.start('Menu');
       },
       useAbility: (id: string) => {
         if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.startAbility(id);
@@ -621,6 +654,15 @@ export class GameScene extends Phaser.Scene {
       command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
+      lab: this.lab
+        ? {
+            units: UNIT_NAMES.map((_, i) => unitLabel(i)),
+            attacker: this.lab.attacker,
+            defender: this.lab.defender,
+            slow: this.lab.slow,
+            canAttack: !!UNIT.canfight[this.lab.attacker],
+          }
+        : null,
       general: generalVM(s, 0, this.phase === 'target' ? this.targeting : null),
       enemyGeneral: generalVM(s, 1, null),
       buildings: owned.length,
@@ -1348,6 +1390,43 @@ export class GameScene extends Phaser.Scene {
     ]);
   }
 
+  // -------------------------------------------------------------------------
+  // Laboratorio de animaciones (src/lab.ts)
+  // -------------------------------------------------------------------------
+
+  private startLab(o: LabOptions): void {
+    // Camara lenta: todo lo que va por tweens y temporizadores de la escena.
+    const scale = o.slow ? 0.25 : 1;
+    this.tweens.timeScale = scale;
+    this.time.timeScale = scale;
+    this.view.cursor = { ...LAB_TARGET };
+    // Mas cerca que en una partida: se ven bien los efectos. Centrado entre las dos unidades.
+    const cam = this.cameras.main;
+    for (let i = 0; i < 2; i++) this.view.zoomStep(1, cam.width / 2, cam.height / 2);
+    cam.centerOn((LAB_TARGET.x - 1) * TILE, (LAB_TARGET.y + 0.5) * TILE);
+    this.refresh();
+    if (o.play) this.time.delayedCall(450, () => void this.runLab(o.play!));
+  }
+
+  private async runLab(action: LabAction): Promise<void> {
+    const me = this.s.units.find((u) => u.team === 0);
+    const foe = this.s.units.find((u) => u.team === 1);
+    if (!me || !foe) return;
+    if (action === 'move') {
+      const range = moveRange(this.s, me);
+      const dest = { x: LAB_TARGET.x - labRange(me.type), y: LAB_TARGET.y };
+      const path = moveUnit(this.s, me, dest, range);
+      if (path) await this.playEvents([moveEvent(me.uid, path)]);
+      return;
+    }
+    await this.playEvents([attackEvent(this.s, me, foe, seededRng(3))]);
+  }
+
+  /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */
+  private restartLab(o: LabOptions): void {
+    this.scene.start('Game', { mode: 'lab', lab: o } satisfies GameStartData);
+  }
+
   private toMap(): void {
     this.phase = 'map';
     this.targeting = null;
@@ -1944,6 +2023,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private checkEnd(): boolean {
+    if (this.lab) return false;
     const result = outcome(this.s);
     if (result === 'playing') return false;
     void this.finish(result === 'won', endReason(this.s));
@@ -2182,6 +2262,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private requestEndTurn(): void {
+    if (this.lab) return;
     const auto = new Set(this.autoCapturers().map((u) => u.uid));
     const idle = this.idleUnits().some((u) => !auto.has(u.uid));
     if (idle && this.time.now - this.endArmedAt > CONFIRM_MS) {

@@ -169,6 +169,17 @@ export interface GeneralVM {
   targeting: string | null;
 }
 
+/** Laboratorio de animaciones (src/lab.ts): que unidades y si va a camara lenta. */
+export interface LabVM {
+  /** Nombre de cada tipo de unidad (indice = tipo). */
+  units: string[];
+  attacker: number;
+  defender: number;
+  slow: boolean;
+  /** La unidad propia puede atacar (si no, solo se puede mover). */
+  canAttack: boolean;
+}
+
 /** Desglose del dia al pasar por encima. */
 export interface DayInfoVM {
   day: number;
@@ -326,6 +337,8 @@ export interface UIState {
   economy: EconomyVM | null;
   /** Desglose del dia (al pasar por encima del dia). */
   dayInfo: DayInfoVM | null;
+  /** Laboratorio de animaciones (null en una partida normal). */
+  lab: LabVM | null;
   /** General del jugador. */
   general: GeneralVM | null;
   /** General de la IA (solo para verlo). */
@@ -410,6 +423,10 @@ export interface UIActions {
   menuHover(i: number): void;
   menuClose(): void;
   endTurn(): void;
+  /** Laboratorio de animaciones: reproducir una accion, cambiar opciones, salir. */
+  labPlay(action: 'move' | 'attack' | 'counter' | 'kill'): void;
+  labSet(patch: { attacker?: number; defender?: number; slow?: boolean }): void;
+  labExit(): void;
   /** Usar una habilidad del general (las de area pasan a elegir casilla). */
   useAbility(id: string): void;
   /** Dejar de apuntar una habilidad. */
@@ -468,6 +485,7 @@ const initial: UIState = {
   mission: null,
   funds: 0,
   economy: null,
+  lab: null,
   general: null,
   enemyGeneral: null,
   dayInfo: null,
@@ -503,6 +521,9 @@ const initial: UIState = {
 
 /** Acciones sin escena: no hacen nada (salvo cerrar la ayuda). Las escenas ponen las suyas en create(). */
 const DEFAULT_ACTIONS: UIActions = {
+  labPlay: noop,
+  labSet: noop,
+  labExit: noop,
   useAbility: noop,
   cancelAbility: noop,
   mainMenuPick: noop,

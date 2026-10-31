@@ -21,7 +21,7 @@ import {
   Movement,
   type MoveType,
 } from './data';
-import { coverAgainst, defenseFactor, zoneOfControl } from './abilities';
+import { abilityOf, coverAgainst, defenseFactor, zoneOfControl } from './abilities';
 import { diamond, grid, inBounds, manhattan, neighbors4, samePos } from './geom';
 import { advanceWeather, weatherHit, weatherMove, weatherVision, type WeatherChange } from './weather';
 import { chargeFromCombat, generalHitFactor, generalsNewRound, revealsAll } from './generals';
@@ -353,7 +353,9 @@ export function visibility(s: GameState, team: Team): boolean[][] {
   const hides = RULES.forestHides ? (x: number, y: number) => HIDING_TERRAIN.includes(s.map[x]![y]!) : () => false;
   for (const u of s.units) {
     if (u.team !== team || u.carrier !== null) continue;
-    for (const p of diamond(u, 0, visionOf(s, u))) if (!hides(p.x, p.y) || manhattan(u, p) <= 1) vis[p.x]![p.y] = true;
+    // [CAMBIO] Habilidad scout (Jeep): ve dentro del bosque en todo su radio.
+    const scout = !!abilityOf(u.type, 'scout');
+    for (const p of diamond(u, 0, visionOf(s, u))) if (scout || !hides(p.x, p.y) || manhattan(u, p) <= 1) vis[p.x]![p.y] = true;
   }
   for (const b of s.buildings) {
     if (b.owner !== team) continue;
@@ -560,7 +562,8 @@ export function capturePointsOf(b: Building): number {
 }
 
 /** Puntos que resta una unidad al capturar: su vida en decenas (redondeando hacia arriba). */
-export const captureStrength = (u: Unit): number => Math.ceil(u.life / 10);
+/** Lo que resta una unidad al capturar: su vida / 10 (y mas con la habilidad quickCapture). */
+export const captureStrength = (u: Unit): number => Math.ceil((u.life / 10) * (abilityOf(u.type, 'quickCapture')?.factor ?? 1));
 
 /**
  * Captura a medias de un edificio, si sigue siendo valida (la unidad que la hacia sigue encima).

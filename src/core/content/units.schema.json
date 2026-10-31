@@ -257,6 +257,34 @@
                       "description": "Parte de la proteccion del terreno y del edificio que ignora (1 = toda)."
                     }
                   }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind"],
+                  "description": "Explorador: ve lo que se esconde en el bosque (regla forestHides) en todo su radio de vision.",
+                  "properties": {
+                    "kind": {
+                      "const": "scout"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "factor"],
+                  "description": "Captura rapida: lo que resta al capturar se multiplica por factor.",
+                  "properties": {
+                    "kind": {
+                      "const": "quickCapture"
+                    },
+                    "factor": {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 5,
+                      "description": "1.5 = un 50 % mas rapido."
+                    }
+                  }
                 }
               ]
             }
