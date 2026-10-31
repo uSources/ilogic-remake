@@ -767,8 +767,10 @@ export interface UnitActions {
   wait: boolean;
   /** Volver atras sin hacer nada: solo si aun no se ha movido. */
   back: boolean;
-  /** [CAMBIO] Ayudante: dejarla en automatico (la IA la mueve) o volver a llevarla a mano. */
-  auto: boolean;
+  /** [CAMBIO] Ayudante: dejarla en automatico con una mision (la IA la mueve) o volver a llevarla a mano. */
+  autoCapture: boolean;
+  autoDefend: boolean;
+  autoAttack: boolean;
   manual: boolean;
   delete: boolean;
 }
@@ -781,7 +783,9 @@ export function unitActions(s: GameState, u: Unit): UnitActions {
     supply: canSupply(s, u),
     wait: true,
     back: u.canMove,
-    auto: u.team === 0 && !u.auto,
+    autoCapture: u.team === 0 && !!UNIT.cancapt[u.type] && u.auto !== 'capture',
+    autoDefend: u.team === 0 && !!UNIT.canfight[u.type] && u.auto !== 'defend',
+    autoAttack: u.team === 0 && u.auto !== 'attack',
     manual: !!u.auto,
     delete: true,
   };

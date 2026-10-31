@@ -26,10 +26,10 @@ describe('unidades en automatico', () => {
   it('al terminar el turno solo juegan las que estan en automatico y sin usar', () => {
     const s = world();
     const auto = newUnit(s, SOLDIER, 0, 5, 5);
-    auto.auto = true;
+    auto.auto = 'attack';
     const manual = newUnit(s, SOLDIER, 0, 3, 3);
     const used = newUnit(s, SOLDIER, 0, 8, 8);
-    used.auto = true;
+    used.auto = 'attack';
     used.active = false;
     used.canMove = false;
     const evs = [...assistTurn(s, seededRng(1))];
@@ -44,17 +44,52 @@ describe('unidades en automatico', () => {
   it('una unidad en automatico va a por el edificio de al lado', () => {
     const s = world();
     const u = newUnit(s, SOLDIER, 0, 5, 5);
-    u.auto = true;
+    u.auto = 'attack';
     Array.from(assistUnit(s, u.uid, seededRng(1)));
     expect({ x: u.x, y: u.y }).toEqual({ x: 6, y: 5 });
   });
 
-  it('el menu ofrece Automatico o Llevar a mano segun este', () => {
+  it('el menu ofrece las misiones que no tiene y Llevar a mano si esta en automatico', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
-    expect(unitActions(s, u)).toMatchObject({ auto: true, manual: false });
-    u.auto = true;
-    expect(unitActions(s, u)).toMatchObject({ auto: false, manual: true });
+    const u = newUnit(s, SOLDIER, 0, 5, 5);
+    expect(unitActions(s, u)).toMatchObject({ autoCapture: true, autoDefend: true, autoAttack: true, manual: false });
+    u.auto = 'defend';
+    expect(unitActions(s, u)).toMatchObject({ autoCapture: true, autoDefend: false, autoAttack: true, manual: true });
+    // Un tanque no captura.
+    expect(unitActions(s, newUnit(s, TANK, 0, 9, 9)).autoCapture).toBe(false);
+  });
+});
+
+describe('misiones', () => {
+  it('capturar: va al edificio aunque tenga un enemigo a tiro', () => {
+    const s = world();
+    const u = newUnit(s, SOLDIER, 0, 5, 5);
+    newUnit(s, SOLDIER, 1, 4, 6);
+    u.auto = 'capture';
+    Array.from(assistUnit(s, u.uid, seededRng(1)));
+    expect({ x: u.x, y: u.y }).toEqual({ x: 6, y: 5 });
+  });
+
+  it('defender: no persigue a los enemigos lejanos de su casilla y vuelve a ella', () => {
+    const s = world();
+    const u = newUnit(s, TANK, 0, 10, 10);
+    u.auto = 'defend';
+    u.guard = { x: 12, y: 10 };
+    // Enemigo a tiro de la unidad pero lejos de la casilla que guarda (12,10): distancia 7.
+    const far = newUnit(s, SOLDIER, 1, 5, 10);
+    Array.from(assistUnit(s, u.uid, seededRng(1)));
+    expect(far.life).toBe(100);
+    expect(Math.abs(u.x - 12) + Math.abs(u.y - 10)).toBeLessThanOrEqual(1);
+  });
+
+  it('defender: ataca a quien se acerca a su casilla', () => {
+    const s = world();
+    const u = newUnit(s, TANK, 0, 10, 10);
+    u.auto = 'defend';
+    u.guard = { x: 10, y: 10 };
+    const near = newUnit(s, SOLDIER, 1, 10, 12);
+    Array.from(assistUnit(s, u.uid, seededRng(1)));
+    expect(near.life).toBeLessThan(100);
   });
 });
 
@@ -117,10 +152,11 @@ describe('partidas guardadas', () => {
   it('guardan el automatico de cada unidad y la postura de la fabrica', () => {
     const s = world();
     const u = newUnit(s, SOLDIER, 0, 5, 5);
-    u.auto = true;
+    u.auto = 'defend';
+    u.guard = { x: 5, y: 5 };
     s.assist = { produce: 'defense' };
     const back = deserialize(serialize(s))!;
-    expect(back.units[0]!.auto).toBe(true);
+    expect(back.units[0]).toMatchObject({ auto: 'defend', guard: { x: 5, y: 5 } });
     expect(back.assist).toEqual({ produce: 'defense' });
   });
 

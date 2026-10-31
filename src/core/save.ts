@@ -63,7 +63,8 @@ export function deserialize(json: string): GameState | null {
     u.canFire = !!u.canFire;
     if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
     if (u.hitDay !== undefined && !isInt(u.hitDay, 0, 1e6)) delete u.hitDay;
-    if (u.auto !== undefined && u.auto !== true) delete u.auto;
+    if (u.auto !== undefined && !['capture', 'defend', 'attack'].includes(u.auto)) delete u.auto;
+    if (u.guard !== undefined && !(u.guard && isInt(u.guard.x, 0, MAP_W - 1) && isInt(u.guard.y, 0, MAP_H - 1))) delete u.guard;
     if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
   }
   const byUid = new Map(s.units.map((u) => [u.uid, u]));

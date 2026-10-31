@@ -19,7 +19,8 @@
     "MINCAPTURERS",
     "GENERALMINVALUE",
     "REVEALVALUE",
-    "POSTUREBIAS"
+    "POSTUREBIAS",
+    "GUARDRADIUS"
   ],
   "properties": {
     "$schema": {
@@ -99,6 +100,11 @@
       "type": "number",
       "minimum": 0,
       "description": "Fabrica automatica del jugador: cuanto mas pesa lo que encaja con la postura (ofensiva: lo que combate y no captura; defensiva: lo que dispara a distancia)."
+    },
+    "GUARDRADIUS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Unidades del jugador en automatico con la mision defender: atacan a los enemigos a esta distancia (o menos) de la casilla que guardan."
     }
   }
 }

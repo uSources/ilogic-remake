@@ -151,12 +151,18 @@ function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
   return score;
 }
 
-function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng): Generator<GameEvent, boolean> {
+/**
+ * Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano. `zone` (mision defender
+ * del ayudante) limita a que enemigos se mira.
+ */
+function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, zone?: (t: Unit) => boolean): Generator<GameEvent, boolean> {
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!UNIT.canfight[u.type] || !u.canFire) return false;
   const vis = visibility(s, ME);
   const reach = UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
-  const enemies = s.units.filter((t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(u, t) <= reach);
+  const enemies = s.units.filter(
+    (t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(u, t) <= reach && (!zone || zone(t)),
+  );
   if (!enemies.length) return false;
 
   // Opciones: (casilla desde la que dispara, objetivo). Las unidades a distancia no pueden mover y disparar.
@@ -368,14 +374,13 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
 }
 
 /**
- * [CAMBIO] Ayudante del jugador (al terminar su turno): las unidades marcadas en automatico
- * (Unit.auto) que siguen sin usar juegan como la IA, y si la fabrica automatica esta puesta
- * (GameState.assist.produce) compra en los edificios libres con esa postura, sin ahorrar.
- * No toca las demas unidades.
+ * [CAMBIO] Ayudante del jugador (al terminar su turno): las unidades en automatico (Unit.auto) que
+ * siguen sin usar cumplen su mision, y si la fabrica automatica esta puesta (GameState.assist.produce)
+ * compra en los edificios libres con esa postura, sin ahorrar. No toca las demas unidades.
  */
 export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
   ME = team;
-  for (const u of teamUnits(s, ME).filter((u) => u.auto)) yield* unitTurn(s, u.uid, rng);
+  for (const u of teamUnits(s, ME).filter((u) => u.auto)) yield* missionTurn(s, u.uid, rng);
   const posture = s.assist?.produce;
   if (posture) yield* produce(s, rng, posture, false);
 }
@@ -383,6 +388,39 @@ export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0
 /** [CAMBIO] Ayudante: la IA juega ya esta unidad del jugador (al dejarla en automatico). */
 export function* assistUnit(s: GameState, uid: number, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
   ME = team;
+  yield* missionTurn(s, uid, rng);
+}
+
+/**
+ * [CAMBIO] Turno de una unidad del jugador en automatico, segun su mision:
+ * - atacar: como la IA enemiga (retirarse si esta debil, atacar, capturar, avanzar);
+ * - capturar: va a por edificios ajenos y solo ataca si no tiene ninguno cerca (las que no
+ *   pueden capturar, como atacar);
+ * - defender: se queda junto a la casilla que guarda y solo ataca a los enemigos que se acercan a
+ *   ella (a AI.GUARDRADIUS o menos); si se ha alejado, vuelve.
+ */
+function* missionTurn(s: GameState, uid: number, rng: Rng): Generator<GameEvent> {
+  const u = unitById(s, uid);
+  if (!u || !u.active || u.carrier !== null || u.life <= 0) return;
+  const mission = u.auto === 'capture' && !UNIT.cancapt[u.type] ? 'attack' : u.auto;
+  if (mission === 'capture') {
+    if (yield* captureHere(s, u)) return;
+    const range = moveRange(s, u);
+    if (needsRepair(u) && (yield* retreat(s, u, range))) return;
+    if (yield* tryCapture(s, u, range)) return;
+    if (yield* tryAttack(s, u, range, rng)) return;
+    if (yield* advance(s, u, range)) return;
+    return wait(u);
+  }
+  if (mission === 'defend') {
+    const guard = u.guard ?? { x: u.x, y: u.y };
+    u.guard = guard;
+    const range = moveRange(s, u);
+    if (needsRepair(u) && (yield* retreat(s, u, range))) return;
+    if (yield* tryAttack(s, u, range, rng, (t) => manhattan(t, guard) <= AI.GUARDRADIUS)) return;
+    if (manhattan(u, guard) > 1) yield* doMove(s, u, bestMoveToward(s, u, guard, range), range);
+    return wait(u);
+  }
   yield* unitTurn(s, uid, rng);
 }
 

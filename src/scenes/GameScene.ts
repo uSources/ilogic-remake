@@ -70,7 +70,7 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy, stats } from '../core/stats';
-import type { Building, GameEvent, GameSetup, GameState, Pos, Posture, Unit } from '../core/types';
+import type { AutoMission, Building, GameEvent, GameSetup, GameState, Pos, Posture, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
@@ -143,14 +143,31 @@ import { PAL, PAL_CSS } from '../ui/palette';
  * map 3, gameMenu 4, unitMenu 5, buy 6, move 7, attack 8, unloadPick 11, unloadTile 12.
  * "busy" = animando o jugando la IA (no se acepta entrada).
  */
-type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
+type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
-const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'auto', 'manual', 'back', 'delete'];
+const ACTION_ORDER: ActionKey[] = [
+  'attack',
+  'capture',
+  'unload',
+  'supply',
+  'wait',
+  'autoCapture',
+  'autoDefend',
+  'autoAttack',
+  'manual',
+  'back',
+  'delete',
+];
 type GameMenuKey = 'endTurn' | 'autoBuy' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'autoBuy', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 /** [CAMBIO] Fabrica automatica: lo que va saliendo al pulsarla en el menu de partida (null = apagada). */
 const POSTURES: (Posture | null)[] = [null, 'balanced', 'attack', 'defense'];
+/** [CAMBIO] Menu de grupo (Mayusculas + recuadro): mover o dar a todas la misma mision. */
+type GroupMenuKey = 'move' | 'autoCapture' | 'autoDefend' | 'autoAttack' | 'manual' | 'cancel';
+const GROUP_MENU: GroupMenuKey[] = ['move', 'autoCapture', 'autoDefend', 'autoAttack', 'manual', 'cancel'];
+/** Aviso al dar una mision a una unidad (o a un grupo). */
+const missionToast = (m: AutoMission): string => t(m === 'capture' ? 'autoOnCapture' : m === 'defend' ? 'autoOnDefend' : 'autoOnAttack');
 const postureLabel = (p: Posture | null): string =>
   t(p === 'balanced' ? 'postureBalanced' : p === 'attack' ? 'postureAttack' : p === 'defense' ? 'postureDefense' : 'postureOff');
 
@@ -189,7 +206,7 @@ interface MoveUndo {
 
 const key = (p: Pos) => `${p.x},${p.y}`;
 const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
-const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'buy', 'unloadPick'];
+const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'groupMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
 /** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
 const INPUT_LOCK_MS = 350;
@@ -864,6 +881,17 @@ export class GameScene extends Phaser.Scene {
           })),
         ];
         break;
+      case 'groupMenu': {
+        kind = 'unit';
+        const units = this.groupUnits();
+        if (units[0]) at = units[0];
+        title = `${t('groupMenu')} · ${units.length}`;
+        items = GROUP_MENU.filter((k) => this.groupOption(k, units)).map((k) => ({
+          id: k,
+          label: t(k === 'move' ? 'groupMoveHint' : (k as TextKey)),
+        }));
+        break;
+      }
       case 'unloadPick': {
         kind = 'cargo';
         if (this.sel) at = this.sel;
@@ -1091,7 +1119,8 @@ export class GameScene extends Phaser.Scene {
             )
             .map((u) => u.uid),
         );
-        if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
+        // [CAMBIO] Ayudante: con varias elegidas sale el menu de grupo (mover o darles una mision).
+        if (this.group.size) return this.openGroupMenu();
         this.refresh();
       },
       pan: (dx, dy) => {
@@ -1150,6 +1179,12 @@ export class GameScene extends Phaser.Scene {
       this.time.now - this.lastCommit.time < 450
     ) {
       return this.waitSelected();
+    }
+    // Con el menu de grupo abierto, un clic en el mapa mueve el grupo ahi.
+    if (this.phase === 'groupMenu' && tile && this.group.size) {
+      this.toMap();
+      this.moveCursorTo(tile, false);
+      return void this.groupMove(tile);
     }
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
     if (MENU_PHASES.includes(this.phase)) return this.back();
@@ -1283,6 +1318,8 @@ export class GameScene extends Phaser.Scene {
     switch (this.phase) {
       case 'map':
         return this.acceptMap(c);
+      case 'groupMenu':
+        return this.acceptGroupMenu();
       case 'gameMenu':
         return this.acceptGameMenu();
       case 'unitMenu':
@@ -1314,6 +1351,9 @@ export class GameScene extends Phaser.Scene {
         }
         return this.openGameMenu();
       case 'gameMenu':
+        return this.toMap();
+      case 'groupMenu':
+        // Atras deja el grupo elegido: el siguiente clic en el mapa lo mueve.
         return this.toMap();
       case 'buy':
       case 'move':
@@ -1985,21 +2025,15 @@ export class GameScene extends Phaser.Scene {
       case 'wait':
         wait(u);
         return this.afterAction();
-      case 'auto': {
-        // [CAMBIO] Ayudante: deshace lo movido, la deja en automatico y la IA la juega ya.
-        if (this.undo && this.undo.uid === u.uid) {
-          u.x = this.undo.x;
-          u.y = this.undo.y;
-          u.canFire = this.undo.canFire;
-          u.canMove = true;
-        }
-        this.clearUndo();
-        u.auto = true;
-        this.abandonSelection();
-        return void this.playAuto(u);
-      }
+      case 'autoCapture':
+        return this.setMission(u, 'capture');
+      case 'autoDefend':
+        return this.setMission(u, 'defend');
+      case 'autoAttack':
+        return this.setMission(u, 'attack');
       case 'manual':
         delete u.auto;
+        delete u.guard;
         showToast(t('autoOff'));
         return this.openUnitMenu();
       case 'back':
@@ -2016,8 +2050,79 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Unidades del grupo elegido que siguen existiendo. */
+  private groupUnits(): Unit[] {
+    return [...this.group].map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u);
+  }
+
+  /** [CAMBIO] Menu de grupo, al elegir varias con Mayusculas + recuadro. */
+  private openGroupMenu(): void {
+    this.menuSel = 0;
+    this.phase = 'groupMenu';
+    this.refresh();
+  }
+
+  /** Que opciones del menu de grupo tienen sentido para estas unidades. */
+  private groupOption(k: GroupMenuKey, units: Unit[]): boolean {
+    if (k === 'autoCapture') return units.some((u) => UNIT.cancapt[u.type]);
+    if (k === 'manual') return units.some((u) => u.auto);
+    return true;
+  }
+
+  private acceptGroupMenu(): void {
+    const k = this.menuItems[this.menuSel]?.id as GroupMenuKey | undefined;
+    const units = this.groupUnits();
+    if (k === 'move') {
+      // Sigue elegido: el siguiente clic en el mapa lo mueve.
+      showToast(`${units.length} ${t('groupSelected')}`);
+      return this.toMap();
+    }
+    if (k === 'cancel' || !k) {
+      this.group.clear();
+      return this.toMap();
+    }
+    this.group.clear();
+    if (k === 'manual') {
+      for (const u of units) {
+        delete u.auto;
+        delete u.guard;
+      }
+      showToast(t('autoOff'));
+      return this.toMap();
+    }
+    // [CAMBIO] La misma mision para todas (las que no pueden capturar, si se pidio capturar, atacan).
+    // Empieza al terminar el turno: no se juegan ya, para no perder el hilo.
+    const mission: AutoMission = k === 'autoCapture' ? 'capture' : k === 'autoDefend' ? 'defend' : 'attack';
+    for (const u of units) {
+      u.auto = mission === 'capture' && !UNIT.cancapt[u.type] ? 'attack' : mission;
+      u.guard = { x: u.x, y: u.y };
+    }
+    showToast(`${units.length} · ${missionToast(mission)}`);
+    this.toMap();
+  }
+
+  /**
+   * [CAMBIO] Ayudante: deja la unidad en automatico con una mision. Si se acaba de mover, lo movido
+   * cuenta y la mision empieza el turno que viene (defender guarda la casilla nueva); si no se ha
+   * movido, la IA la juega ya.
+   */
+  private setMission(u: Unit, mission: AutoMission): void {
+    const moved = !!this.undo && this.undo.uid === u.uid && (this.undo.x !== u.x || this.undo.y !== u.y);
+    if (this.undo && this.undo.uid === u.uid && !moved) u.canMove = true;
+    this.clearUndo();
+    u.auto = mission;
+    u.guard = { x: u.x, y: u.y };
+    if (moved) {
+      wait(u);
+      showToast(missionToast(mission));
+      return this.afterAction();
+    }
+    this.abandonSelection();
+    void this.playAuto(u, mission);
+  }
+
   /** [CAMBIO] Ayudante: la IA juega ya la unidad que se acaba de dejar en automatico. */
-  private async playAuto(u: Unit): Promise<void> {
+  private async playAuto(u: Unit, mission: AutoMission): Promise<void> {
     const m = this.match;
     this.phase = 'busy';
     this.refresh();
@@ -2026,7 +2131,7 @@ export class GameScene extends Phaser.Scene {
       if (m !== this.match || this.checkEnd()) return;
     }
     wait(u);
-    showToast(t('autoOn'));
+    showToast(missionToast(mission));
     this.afterAction();
   }
 

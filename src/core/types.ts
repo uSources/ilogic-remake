@@ -33,8 +33,10 @@ export interface Unit {
   kills?: number;
   /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
   hitDay?: number;
-  /** [CAMBIO] Ayudante: la mueve la IA al terminar el turno si sigue sin usar (solo unidades del jugador). */
-  auto?: boolean;
+  /** [CAMBIO] Ayudante: mision de la unidad en automatico (la mueve la IA al terminar el turno si sigue sin usar). */
+  auto?: AutoMission;
+  /** [CAMBIO] Casilla que guarda una unidad en automatico con la mision "defender". */
+  guard?: Pos;
   /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */
   order?: Pos;
   /** uid del transporte que la lleva, o null. */
@@ -191,6 +193,12 @@ export type Objective =
   | { kind: 'capture'; count: number; type: number | null; days: number }
   | { kind: 'destroy'; days: number }
   | { kind: 'escort'; uid: number; to: Pos; days: number };
+
+/**
+ * [CAMBIO] Mision de una unidad del jugador en automatico: capturar edificios, defender la casilla
+ * donde se le dio la orden (solo ataca a quien se acerque) o atacar (juega como la IA enemiga).
+ */
+export type AutoMission = 'capture' | 'defend' | 'attack';
 
 /** [CAMBIO] Postura de la fabrica automatica del jugador (ver assistTurn en ai.ts). */
 export type Posture = 'balanced' | 'attack' | 'defense';

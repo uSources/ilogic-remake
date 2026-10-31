@@ -118,8 +118,8 @@ export interface UnitVM {
   cargo?: string;
   /** [CAMBIO] Ha recibido un ataque hoy: esta noche no se cura (regla noHealUnderFire). */
   noHeal?: boolean;
-  /** [CAMBIO] Ayudante: la mueve la IA al terminar el turno. */
-  auto?: boolean;
+  /** [CAMBIO] Ayudante: mision en automatico, ya traducida ("capturar"...). */
+  auto?: string;
 }
 
 /** Una fila del desglose: "3 × Ciudad   +3.000". */

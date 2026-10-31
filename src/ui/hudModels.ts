@@ -21,7 +21,7 @@ import {
   upkeepOf,
   type BuyOption,
 } from '../core/rules';
-import type { CombatInfo, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
+import type { AutoMission, CombatInfo, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
 import { forecast, weatherNow } from '../core/weather';
 import type {
   GeneralVM,
@@ -49,6 +49,10 @@ import { buildingKey, terrainKey, unitKey } from './sprites';
 
 /** "Mov 3 · Alcance 1–1" */
 /** Datos de la ficha de una unidad con su icono: movimiento, alcance y vision. */
+/** [CAMBIO] Nombre de la mision de una unidad en automatico. */
+export const missionLabel = (m: AutoMission): string =>
+  t(m === 'capture' ? 'missionCapture' : m === 'defend' ? 'missionDefend' : 'missionAttack');
+
 export function unitStatChips(type: number): StatChipVM[] {
   const range = UNIT.alcance[type]! === 0 ? '—' : `${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return [
@@ -156,8 +160,7 @@ export function tileVM(
       abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(shown.auto && shown.team === 0 ? { auto: true } : {}),
-      ...(shown.auto && shown.team === 0 ? { auto: true } : {}),
+      ...(shown.auto && shown.team === 0 ? { auto: missionLabel(shown.auto) } : {}),
     };
   }
   return info;
