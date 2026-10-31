@@ -48,6 +48,8 @@ body {
   height: 100%;
   background: var(--ink);
   overflow: hidden;
+  /* La letra pixel trae la ligadura "fi" rota (salia "An", "edifAcios"): letras sueltas siempre. */
+  font-variant-ligatures: none;
 }
 #game {
   position: fixed;
