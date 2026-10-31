@@ -10,7 +10,7 @@
 //   conexion. Asi una version nueva nunca mezcla su codigo con graficos viejos.
 // - Peticiones a otros sitios (notas de parche de GitHub) y a las previews de las PR
 //   (preview/<hash>/, que tienen su propio service worker) no se tocan.
-const BUILD = {"version":"530ae7f2bb45","precache":["./","assets/atlas/atlas-0.json","assets/atlas/atlas-0.png","assets/atlas/atlas-1.json","assets/atlas/atlas-1.png","assets/ilogic-CbWqDDSn.woff2","assets/img/raton.png","assets/img/raton_boton.png","assets/index-BV3p_CEk.css","assets/index-DlCukvfW.js","assets/pixelify-sans-latin-400-normal-DLrIX9QE.woff2","assets/silkscreen-latin-400-normal-CtPo2yA5.woff2","icons/apple-touch-icon.png","icons/favicon-32.png","icons/favicon-64.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-192.png","icons/maskable-512.png","index.html","manifest.webmanifest"]};
+const BUILD = {"version":"9188eb12c742","precache":["./","assets/atlas/atlas-0.json","assets/atlas/atlas-0.png","assets/atlas/atlas-1.json","assets/atlas/atlas-1.png","assets/ilogic-CbWqDDSn.woff2","assets/img/raton.png","assets/img/raton_boton.png","assets/index-BV3p_CEk.css","assets/index-vpF4_i2d.js","assets/pixelify-sans-latin-400-normal-DLrIX9QE.woff2","assets/silkscreen-latin-400-normal-CtPo2yA5.woff2","icons/apple-touch-icon.png","icons/favicon-32.png","icons/favicon-64.png","icons/icon-192.png","icons/icon-512.png","icons/maskable-192.png","icons/maskable-512.png","index.html","manifest.webmanifest"]};
 
 const PREFIX = 'ilogic-';
 const CACHE = PREFIX + BUILD.version;
