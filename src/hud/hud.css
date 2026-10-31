@@ -1326,7 +1326,19 @@ body {
 }
 @media (max-width: 720px) {
   .help-body {
-    grid-template-columns: 1fr;
+    /* minmax(0, ...): 1fr a secas no baja del ancho de su contenido y el texto se salia por la derecha. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* La tabla de controles (tres columnas) cabe en el ancho: columnas fijas y el texto se parte. */
+  .help table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  .help th,
+  .help td,
+  .help td.kbd {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .help .htitle {
     font-size: 18px;
