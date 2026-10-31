@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.7.1] - 2026-10-31 — Polvo en los ojos
+
+### Arreglos
+- La **tormenta de arena** por fin se ve: rayas claras que cruzan toda la pantalla, un velo ocre y nubes de polvo. Antes las rayas eran del color de la arena y al poco rato se juntaban todas arriba.
+
+<!-- en -->
+
+### Fixes
+- The **sandstorm** is finally visible: pale streaks across the whole screen, an ochre haze and drifting dust clouds. Before, the streaks were sand-coloured and soon bunched up at the top of the screen.
+
 ## [0.7.0] - 2026-10-31 — A la ofensiva
 
 Atacar por fin sale a cuenta: rematar da dinero, atacar en grupo da puntería y el enemigo ya no se cura gratis bajo tu fuego.
