@@ -99,6 +99,46 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 | Version en un solo fichero HTML | Jugar sin servidor (file://), compartir por correo | Releases, pruebas por file:// |
 | Releases y web por GitHub Actions | La sesion de Claude no puede crear Releases; asi no hace falta | Novedades y aviso de version |
 
+## Mandos
+
+Las escenas no leen teclas, botones ni punteros: un **adaptador** de `src/controls/` (funciones
+puras, sin Phaser, con tests) traduce lo que pulsa el jugador a **ordenes**, y la escena las cumple.
+
+| Orden | Donde vale | Quien la cumple |
+|---|---|---|
+| `GameCommand` (`commands.ts`): cursor, aceptar, atras, deshacer, fin de turno, zoom... | el mapa y sus menus de bocadillo | `GameScene.command(cmd)` |
+| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda, fin de partida | `MenuScene.menu(cmd)`, `GameScene.menu(cmd)` (que pasan a `OptionsPanel.command`, `notesCommand`...) |
+| gestos de `PointerGestures` (`pointer.ts`) | raton y dedos en la partida, incluido desplazar el mapa por el borde (`tick`, cada fotograma) | `GameScene.pointerTarget()` |
+
+Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `GameCommand`) o el menu
+abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
+
+- **Teclado**: `keyCommand(e)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(e, ctx)` (tabla
+  `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas.
+- **Raton y dedos**: la escena traduce el `Phaser.Input.Pointer` a `PointerIn` (`pointerIn`) y llama a
+  `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
+- **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`Hud.tsx`, para el
+  teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
+  capturas de teclas de Phaser (`addCapture`) y saltar el logo con cualquier tecla o clic (`LogoScene`;
+  no es una orden, es "lo que sea").
+
+### Añadir un mando (gamepad)
+
+Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
+
+1. Tablas puras de botones → ordenes, p. ej. `padCommand(button): GameCommand | null` (A = aceptar,
+   B = cancelar, cruceta = cursor, Start = opciones, LB/RB = zoom...) y
+   `padMenuCommand(button, ctx): MenuCommand | null` (cruceta = mover, A = `ok`, B = `back`). La
+   repeticion al mantener la cruceta se decide aqui (`ok` lleva `repeat`, como el teclado). Con tests.
+2. En la escena, solo el enganche: leer los botones recien pulsados (`this.input.gamepad`, o la API
+   `navigator.getGamepads()` en `update()`) y, segun `controlContext()`, llamar a
+   `this.command(padCommand(b))` o a `this.menu(padMenuCommand(b, ctx))`. Nada mas de la escena cambia.
+3. Phaser necesita `input: { gamepad: true }` en la configuracion del juego (`main.ts`).
+4. La ayuda (`helpText.ts`) explica los botones.
+
+El cursor del mapa y los menus de bocadillo ya funcionan solo con ordenes `GameCommand`, asi que un
+mando puede jugar una partida entera sin raton.
+
 ## Donde mirar
 
 | Quiero... | Fichero |
@@ -109,8 +149,8 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 | Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
 | Cambiar el dibujo del mapa | `src/ui/mapView.ts`, `src/ui/terrainArt.ts` |
-| Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ordenes del juego y un adaptador por mando; `GameScene.command` las cumple) |
-| Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `GameScene.pointerTarget()`) |
+| Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
+| Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `GameScene.pointerTarget()`) |
 | Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |
 | Textos | `src/settings.ts` (`TEXTS.es` / `TEXTS.en`) |
 | Misiones | `src/core/missions.ts` (+ skill `nueva-mision`) |

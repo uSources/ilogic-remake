@@ -3,6 +3,7 @@
 Remake del juego de estrategia por turnos de 2013 en TypeScript + Phaser 4 + Preact. Ver README.md.
 
 - Codigo: skill `ilogic-code` (capas, convenciones y comprobaciones). Arquitectura: `docs/ARQUITECTURA.md`.
+- Ideas pendientes y descartadas (con el porque): `docs/IDEAS.md`; quitar de ahi lo que se haga.
 - Comprobar el trabajo sin ayuda (API `window.ilogicDebug`, `npm run play`, `npm run shots`): `docs/AGENTES.md`.
 - Tareas: skills `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`, `sacar-version`, `equilibrar`.
 - Automejora (solo si el usuario lo pide): skill `automejora` + subagentes de `.claude/agents/`; diario en `improve/DIARIO.md`.
