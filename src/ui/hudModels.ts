@@ -161,6 +161,9 @@ export function tileVM(
     const cp = captureProgress(s, b);
     if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(b), team: cp.team };
   }
+  // [CAMBIO] Punto de control (se ve aunque haya niebla: esta marcado en el mapa).
+  const cp = s.controlPoints?.find((c) => c.x === p.x && c.y === p.y);
+  if (cp) info.point = { owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral', income: RULES.controlIncome };
   const u = unitAt(s, p.x, p.y);
   const sel = view.selected;
   const shown = u && vis && !view.hidden.has(u.uid) ? u : sel && sel.x === p.x && sel.y === p.y ? sel : undefined;
@@ -277,6 +280,7 @@ export function minimapVM(pal: readonly number[], s: GameState, vis: boolean[][]
     units: s.units
       .filter((u) => u.carrier === null && !hidden.has(u.uid) && (u.team === 0 || seen(u)))
       .map((u) => ({ x: u.x, y: u.y, team: u.team })),
+    ...(s.controlPoints ? { points: s.controlPoints.map((c) => ({ x: c.x, y: c.y, owner: c.owner })) } : {}),
   };
 }
 

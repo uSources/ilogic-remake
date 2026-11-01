@@ -122,6 +122,14 @@ export function deserialize(json: string): GameState | null {
     if (!ok) delete s.squads;
   }
   for (const u of s.units) if (u.squad !== undefined && !s.squads?.some((q) => q.id === u.squad)) delete u.squad;
+  if (s.controlPoints !== undefined) {
+    const ok =
+      Array.isArray(s.controlPoints) &&
+      s.controlPoints.every(
+        (c) => c && isInt(c.x, 0, MAP_W - 1) && isInt(c.y, 0, MAP_H - 1) && (c.owner === null || c.owner === 0 || c.owner === 1),
+      );
+    if (!ok) delete s.controlPoints;
+  }
   if (s.generals !== undefined) {
     // Un general que no existe (o con datos rotos) se quita: la partida sigue sin el.
     const ok = Array.isArray(s.generals) && s.generals.length === 2;
@@ -158,7 +166,9 @@ export function deserialize(json: string): GameState | null {
       (r.commandPoints === undefined || r.commandPoints === null || isInt(r.commandPoints, 1, 10000)) &&
       (r.upkeep === undefined || (typeof r.upkeep === 'number' && r.upkeep >= 0 && r.upkeep <= 1)) &&
       [r.vetBonus, r.bounty, r.flankBonus].every((v) => v === undefined || (typeof v === 'number' && v >= 0 && v <= 1)) &&
-      (r.noHealUnderFire === undefined || typeof r.noHealUnderFire === 'boolean');
+      (r.noHealUnderFire === undefined || typeof r.noHealUnderFire === 'boolean') &&
+      (r.controlPoints === undefined || isInt(r.controlPoints, 0, 6)) &&
+      (r.controlIncome === undefined || isInt(r.controlIncome, 0, 1e6));
     if (ok) {
       r.veterancy ??= false;
       r.passAllies ??= false;
@@ -174,6 +184,9 @@ export function deserialize(json: string): GameState | null {
       r.bounty ??= 0;
       r.flankBonus ??= 0;
       r.noHealUnderFire ??= false;
+      // Partidas de antes de los puntos de control: sin ellos.
+      r.controlPoints ??= 0;
+      r.controlIncome ??= 0;
     }
     if (!ok) return null;
   }

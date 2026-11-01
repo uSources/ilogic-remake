@@ -3134,3 +3134,10 @@ html.reduce-motion .end-best.new {
     inset -3px -3px 0 var(--lo),
     4px 4px 0 rgba(0, 0, 0, 0.45);
 }
+/* [CAMBIO] Punto de control en la ficha de la casilla. */
+.terrain .cpoint {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}

@@ -13,6 +13,7 @@ const HELP = {
       'VET_ES',
       'ATTACK_ES',
       'ARMY_ES',
+      'CONTROL_ES',
       'MOVE_ES',
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
@@ -67,6 +68,7 @@ const HELP = {
       'VET_EN',
       'ATTACK_EN',
       'ARMY_EN',
+      'CONTROL_EN',
       'MOVE_EN',
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
@@ -141,6 +143,10 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     ]
       .filter(Boolean)
       .join(' '),
+    CONTROL_ES:
+      RULES.controlPoints > 0
+        ? `Puntos de control: casillas marcadas con esquinas (grises si no son de nadie). Al acabar la ronda pasan a ser de quien tenga una unidad encima, y siguen suyos aunque se vaya. Cada uno da ${RULES.controlIncome} por ronda: pelea por ellos.`
+        : '',
     ARMY_ES: [
       RULES.commandPoints !== null
         ? `Puntos de mando: tu ejército no puede pasar de ${RULES.commandPoints}. La infantería ocupa 1 y los vehículos y aviones grandes hasta 5 (lo pone al comprar).`
@@ -178,6 +184,10 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     ]
       .filter(Boolean)
       .join(' '),
+    CONTROL_EN:
+      RULES.controlPoints > 0
+        ? `Control points: tiles marked with corners (grey if nobody holds them). At the end of the round they become whoever has a unit on them, and stay theirs after the unit leaves. Each pays ${RULES.controlIncome} per round: fight for them.`
+        : '',
     ARMY_EN: [
       RULES.commandPoints !== null
         ? `Command points: your army can't go over ${RULES.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`

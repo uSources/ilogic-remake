@@ -718,6 +718,7 @@ export class GameScene extends Phaser.Scene {
       ],
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
+      controlPoints: this.s.controlPoints,
       goal: obj?.kind === 'escort' ? obj.to : null,
       vip: vipAt && !this.hidden.has(vipAt.uid) ? { x: vipAt.x, y: vipAt.y } : null,
     });
@@ -2624,6 +2625,9 @@ export class GameScene extends Phaser.Scene {
   private showReport(r: RoundReport, done: string[] = []): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    // [CAMBIO] Parte de los ingresos que viene de los puntos de control.
+    if (r.control && r.control.held[0] > 0)
+      lines.push({ icon: 'ui/dinero', text: `+${fmtNum(r.control.income[0])} ${t('reportControl')} (${r.control.held[0]})`, tone: 'gold' });
     if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     // [CAMBIO] Unidades que cumplieron su orden al terminar el turno anterior (ahora esperan otra).
     if (done.length) lines.push({ icon: '', text: `${t('orderDone')}: ${done.join(', ')}`, tone: 'plain' });

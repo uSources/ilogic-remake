@@ -885,6 +885,26 @@ export interface RoundReport {
   healed: { uid: number; team: Team; amount: number }[];
   /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
   weather?: WeatherChange | null;
+  /** [CAMBIO] Puntos de control: dinero que ha dado a cada bando (ya sumado en income) y cuantos tiene. */
+  control?: { income: [number, number]; held: [number, number] };
+}
+
+/**
+ * [CAMBIO] Puntos de control al acabar la ronda: pasan a ser de quien tenga una unidad encima (y
+ * siguen suyos al irse) y cada uno da RULES.controlIncome a su dueño. Nada si la partida no tiene.
+ */
+export function controlRound(s: GameState): RoundReport['control'] {
+  if (!s.controlPoints?.length) return undefined;
+  const out: NonNullable<RoundReport['control']> = { income: [0, 0], held: [0, 0] };
+  for (const c of s.controlPoints) {
+    const u = unitAt(s, c.x, c.y);
+    if (u && u.carrier === null) c.owner = u.team;
+    if (c.owner === null) continue;
+    out.held[c.owner]++;
+    out.income[c.owner] += RULES.controlIncome;
+    s.funds[c.owner] += RULES.controlIncome;
+  }
+  return out;
 }
 
 /** [CAMBIO] La unidad no se curara al acabar el dia: ha recibido un ataque hoy (regla noHealUnderFire). */
@@ -917,6 +937,11 @@ export function endRound(s: GameState): RoundReport {
     const before = u.life;
     u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
     if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
+  }
+  const control = controlRound(s);
+  if (control) {
+    report.control = control;
+    for (const team of [0, 1] as const) report.income[team] += control.income[team];
   }
   for (const team of [0, 1] as const) {
     // [CAMBIO] Mantenimiento despues de cobrar. Sin dinero no hay castigo: se paga lo que haya.

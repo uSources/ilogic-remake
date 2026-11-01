@@ -262,6 +262,39 @@ function generateNeutral(s: GameState, rng: Rng): void {
 }
 
 /** Genera una partida nueva con mapa aleatorio. */
+/**
+ * [CAMBIO] Puntos de control (RULES.controlPoints): casillas de tierra libres, igual de lejos (a pie)
+ * de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
+ * medio del mapa. Si no caben todos, pone los que pueda.
+ */
+export function placeControlPoints(s: GameState, a: Pos, b: Pos, rng: Rng): void {
+  const n = RULES.controlPoints;
+  if (n <= 0) return;
+  const da = groundDistance(s, a, WALK, grid(false));
+  const db = groundDistance(s, b, WALK, grid(false));
+  const span = da[b.x]![b.y]! || manhattan(a, b);
+  const cands: { p: Pos; score: number }[] = [];
+  for (let x = 0; x < MAP_W; x++)
+    for (let y = 0; y < MAP_H; y++) {
+      const p = { x, y };
+      const ga = da[x]![y]!,
+        gb = db[x]![y]!;
+      if (!ga || !gb || !Movement.canWalk(WALK, s.map[x]![y]!) || buildingAt(s, x, y) || unitAt(s, x, y)) continue;
+      if (Math.min(ga, gb) < span / 4) continue;
+      // Lo justo: misma distancia a las dos salidas. Un poco de azar para que no salgan siempre igual.
+      cands.push({ p, score: Math.abs(ga - gb) + rng() * 1.5 });
+    }
+  cands.sort((x, y) => x.score - y.score);
+  const gap = Math.max(3, Math.round(MAP_W / 4));
+  const out: Pos[] = [];
+  for (const c of cands) {
+    if (out.length >= n) break;
+    if (c.score > 4) break;
+    if (out.every((o) => manhattan(o, c.p) >= gap)) out.push(c.p);
+  }
+  if (out.length) s.controlPoints = out.map((p) => ({ ...p, owner: null }));
+}
+
 export function generateGame(rng: Rng = Math.random, opts: { size?: number; theme?: number | null } = {}): GameState {
   setMapSize(opts.size ?? 32);
   const origin = { x: Math.floor(rng() * MAP_W), y: Math.floor(rng() * MAP_H) };
@@ -289,6 +322,7 @@ export function generateGame(rng: Rng = Math.random, opts: { size?: number; them
     generateUnits(s, player, 0, rng);
     generateUnits(s, enemy, 1, rng);
     generateNeutral(s, rng);
+    placeControlPoints(s, player, enemy, rng);
     return s;
   }
 }
