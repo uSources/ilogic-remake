@@ -221,15 +221,23 @@ function useTipToggle(): [boolean, () => void, (e: PointerEvent) => void] {
   return [open, () => setOpen((o) => !o), leave];
 }
 
+/** Retrato del general (o su inicial si no hay dibujo). */
+function GeneralFace({ g, cls = 'gp-face' }: { g: GeneralVM; cls?: string }) {
+  const src = imgUrl(g.face);
+  return (
+    <span class={`${cls}${src ? ' has-img' : ''}`} aria-hidden="true">
+      {src ? <img class="px-icon" src={src} alt="" draggable={false} /> : g.name[0]}
+    </span>
+  );
+}
+
 /** Panel del general: barra de carga en estrellas y un boton por habilidad. */
 function GeneralPanel({ g, mine }: { g: GeneralVM; mine: boolean }) {
   const a = ui.actions;
   return (
     <div class="px general-panel" aria-label={`${t('general')}: ${g.name}`}>
       <div class="gp-head">
-        <span class="gp-face" aria-hidden="true">
-          {g.name[0]}
-        </span>
+        <GeneralFace g={g} />
         <div>
           <div class="gp-name">{g.name}</div>
           <div class="gp-title">{g.title}</div>
@@ -259,7 +267,10 @@ function GeneralPanel({ g, mine }: { g: GeneralVM; mine: boolean }) {
               onMouseDown={noFocus}
               onClick={() => a.useAbility(ab.id)}
             >
-              <span class="gp-ab-name">{ab.name}</span>
+              <span class="gp-ab-name">
+                {imgUrl(ab.icon) && <Icon k={ab.icon} cls="px-icon gp-ab-icon" />}
+                {ab.name}
+              </span>
               <span class="gp-cost">{'★'.repeat(ab.cost)}</span>
             </button>
           ),
@@ -276,8 +287,13 @@ function EnemyGeneral({ g }: { g: GeneralVM }) {
       class="px enemy-general"
       title={`${g.description}\n${g.abilities.map((a) => `${a.name} (${'★'.repeat(a.cost)}): ${a.description}`).join('\n')}`}
     >
-      <span class="eg-label">{t('enemy')}</span>
-      <span class="gp-name">{g.name}</span>
+      <div class="gp-head">
+        <GeneralFace g={g} cls="gp-face eg-face" />
+        <div>
+          <span class="eg-label">{t('enemy')}</span>
+          <span class="gp-name">{g.name}</span>
+        </div>
+      </div>
       <div class="gp-charge">
         {Array.from({ length: g.max }, (_, i) => (
           <i
@@ -716,6 +732,7 @@ function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean 
           )}
           {tile.point && (
             <div class="cpoint" title={t('controlPointHelp')}>
+              {imgUrl(tile.point.icon) && <Icon k={tile.point.icon} cls="px-icon ico" />}
               <span
                 style={{
                   color: tile.point.owner === 'you' ? 'var(--blue)' : tile.point.owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)',

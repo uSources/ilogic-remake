@@ -1,5 +1,7 @@
+import { imgUrl } from '../assets';
+
 /**
- * Iconos pixel del clima (10×10), dibujados con SVG para no tener que compilar imagenes nuevas.
+ * Iconos pixel del clima (10×10) en SVG: solo se usan si falta el dibujo ui/wx_<id> del atlas.
  * Cada dibujo es una lista de filas; cada letra es un color (ver INK) y "." es transparente.
  */
 const INK: Record<string, string> = {
@@ -76,6 +78,9 @@ const ART: Record<string, string[]> = {
 };
 
 export function WeatherIcon({ id, cls = 'wx-icon' }: { id: string; cls?: string }) {
+  // Dibujo de Retro Diffusion (ui/wx_<id>, 16x16) si esta en el atlas; si no, el de pixeles de aqui.
+  const src = imgUrl(`ui/wx_${id}`);
+  if (src) return <img class={`${cls} wx-img`} src={src} alt="" aria-hidden="true" draggable={false} />;
   const rows = ART[id] ?? ART.Clear!;
   const rects: preact.JSX.Element[] = [];
   rows.forEach((row, y) => {

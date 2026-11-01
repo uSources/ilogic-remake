@@ -139,6 +139,9 @@ export class MapView {
   private readonly unitLayer: Phaser.GameObjects.Container;
   /** Marcas en el suelo (quemados), bajo edificios y unidades. */
   private readonly decals: Phaser.GameObjects.Container;
+  /** [CAMBIO] Banderines de los puntos de control (dibujo ui/flag_*), encima de la zona y debajo de las unidades. */
+  private readonly flagLayer: Phaser.GameObjects.Container;
+  private readonly flags: Phaser.GameObjects.Image[] = [];
   private readonly overlay: Phaser.GameObjects.Graphics;
   private readonly fx: Phaser.GameObjects.Container;
   /** Marcas de mision, por encima de las unidades. */
@@ -199,12 +202,14 @@ export class MapView {
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
     this.decals = scene.add.container(0, 0);
+    this.flagLayer = scene.add.container(0, 0);
     this.root.add([
       this.terrain,
       this.decals,
       this.buildingLayer,
       this.fogLayer,
       this.overlay,
+      this.flagLayer,
       this.unitLayer,
       this.marks,
       this.fx,
@@ -613,6 +618,23 @@ export class MapView {
     this.fogImg = null;
   }
 
+  /** Un banderin por punto de control, del color de su dueño (gris si no es de nadie), en la casilla central. */
+  private syncFlags(points: NonNullable<ViewOptions['controlPoints']>): void {
+    while (this.flags.length < points.length) {
+      const img = this.scene.add.image(0, 0, ATLAS, 'ui/flag_i').setOrigin(0.5, 1);
+      this.flagLayer.add(img);
+      this.flags.push(img);
+    }
+    this.flags.forEach((img, i) => {
+      const c = points[i];
+      img.setVisible(!!c);
+      if (!c) return;
+      img.setTexture(ATLAS, `ui/flag_${c.owner === 0 ? 'b' : c.owner === 1 ? 'r' : 'i'}`);
+      // El pie del mastil un poco por encima del borde de abajo de la casilla.
+      img.setPosition(c.x * TILE + TILE / 2, (c.y + 1) * TILE - 4);
+    });
+  }
+
   private drawOverlay(opts: ViewOptions): void {
     const g = this.overlay;
     g.clear();
@@ -625,6 +647,8 @@ export class MapView {
     }
     // [CAMBIO] Puntos de control: la zona teñida del color de su dueño (gris si no es de nadie), con
     // borde de puntos, y un banderin en el centro. Disputada: borde de rayas rojas y doradas.
+    const flagArt = hasImage(this.scene.textures, 'ui/flag_b');
+    this.syncFlags(flagArt ? (opts.controlPoints ?? []) : []);
     for (const c of opts.controlPoints ?? []) {
       const x0 = Math.max(0, c.x - c.r) * TILE,
         y0 = Math.max(0, c.y - c.r) * TILE,
@@ -644,6 +668,8 @@ export class MapView {
           g.fillRect(x1 - 2, y0 + i, 2, 2);
         }
       }
+      // El banderin dibujado (ui/flag_*) va en flagLayer; este de pixeles solo si falta en el atlas.
+      if (flagArt) continue;
       // Mastil y banderin triangular con borde oscuro, arriba a la izquierda de la casilla central.
       const x = c.x * TILE,
         y = c.y * TILE;
