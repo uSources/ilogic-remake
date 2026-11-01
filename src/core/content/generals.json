@@ -49,19 +49,19 @@
             "en": "Air strike"
           },
           "description": {
-            "es": "Bombardea un cuadrado de 3×3: −30 de vida a las unidades enemigas (no las destruye).",
-            "en": "Bombs a 3×3 square: −30 health to enemy units (never destroys them)."
+            "es": "Bombardea un cuadrado de 3×3: −20 de vida a las unidades enemigas (no las destruye).",
+            "en": "Bombs a 3×3 square: −20 health to enemy units (never destroys them)."
           },
-          "cost": 5,
+          "cost": 6,
           "effect": {
             "kind": "areaDamage",
             "radius": 1,
-            "damage": 30,
+            "damage": 20,
             "minLife": 10
           }
         }
       ],
-      "notes": "Primer general. Carga de 6, una estrella por cada 6000 de valor hecho o recibido. Medido (npm run generals, 80 partidas): gana el 60 % (±11) contra la IA sin general."
+      "notes": "Primer general. Carga de 6, una estrella por cada 6000 de valor hecho o recibido. Con las reglas de la 0.7.0 el ataque aereo (−30, 5 estrellas) le daba el 72 % contra sin general: marca a varias unidades para el flanqueo y el bajo fuego. Ahora −20 y la barra entera (6). Medido (npm run generals, 400 partidas, 01-11-2026): 63 % (±5) contra sin general; su pasiva casi no cuenta (1,05 daba lo mismo)."
     },
     {
       "id": "Roca",
@@ -96,17 +96,17 @@
             "en": "Repair"
           },
           "description": {
-            "es": "Todas tus unidades recuperan 10 de vida.",
-            "en": "All your units recover 10 health."
+            "es": "Todas tus unidades recuperan 8 de vida.",
+            "en": "All your units recover 8 health."
           },
-          "cost": 4,
+          "cost": 5,
           "effect": {
             "kind": "heal",
-            "amount": 10
+            "amount": 8
           }
         }
       ],
-      "notes": "Defensivo. Curar a todo el ejercito pesa mucho (una cura de +20 a todas sus unidades vale mas que un ataque aereo): por eso +10 y 4 estrellas. Medido (80 partidas): 68 % (±10) contra sin general; contra Brisa 57 % (±15, 40 partidas)."
+      "notes": "Defensivo. Curar a todo el ejercito pesa mucho (una cura de +20 a todas sus unidades vale mas que un ataque aereo). Con +10 y 4 estrellas ganaba el 69 %; ahora +8 y 5 estrellas. Medido (400 partidas, 01-11-2026): 64 % (±5) contra sin general; contra Brisa 54 % (±6), contra Ambar 52 % (±6)."
     },
     {
       "id": "Ambar",
@@ -126,7 +126,7 @@
         {
           "kind": "attack",
           "movement": ["foot", "vehicle", "amphibious"],
-          "factor": 1.07
+          "factor": 1.15
         }
       ],
       "charge": {
@@ -166,7 +166,7 @@
           }
         }
       ],
-      "notes": "Tierra y dinero. El dinero ayuda poco (el ejercito tiene tope de puntos de mando); su fuerza es el +7 % de tierra (con +10 % ganaba el 70 %). Medido (80 partidas): 60 % (±11) contra sin general."
+      "notes": "Tierra y dinero. El dinero ayuda poco (el ejercito tiene tope de puntos de mando y el botin reparte dinero a los dos); su fuerza es la pasiva de tierra. Con +7 % ganaba el 55 % y con +10 % el 56 %; ahora +15 %. Medido (400 partidas, 01-11-2026): 61 % (±5) contra sin general; contra Brisa 49 % (±6)."
     }
   ]
 }

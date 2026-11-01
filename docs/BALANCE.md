@@ -258,3 +258,43 @@ terminan 34 → 29 días (+7,5), sin terminar 96 % → 94 %, lados 47/53 → 50/
 - Detrás del atasco: con 30 puntos de mando el ejército tiene tope y el dinero se amontona (100.000-
   270.000 sin gastar el día 40); perder unidades apenas cuesta y la Base (30 puntos, 3 turnos
   seguidos) se defiende sola con lo que se fabrica al lado.
+
+## Generales (01-11-2026)
+
+Con las reglas de la 0.7.0, la IA en grupo y los puntos de control, los generales se habían separado.
+`npm run generals` (la IA con el general contra la IA sin general o con otro, en los mismos mapas y
+con los bandos cambiados; al día 60 gana quien tenga más puntos), tandas de 40 partidas en paralelo
+sumadas. Margen del 95 % entre paréntesis.
+
+| Enfrentamiento | Antes | Después |
+|---|---:|---:|
+| Brisa contra sin general | 72 % (±6, 240) | 63 % (±5, 400) |
+| Roca contra sin general | 69 % (±6, 240) | 64 % (±5, 400) |
+| Ámbar contra sin general | 55 % (±6, 240) | 61 % (±5, 400) |
+| Brisa contra Roca | 59 % (±8, 160) | 46 % (±6, 240) |
+| Brisa contra Ámbar | 61 % (±8, 160) | 51 % (±6, 240) |
+| Roca contra Ámbar | 62 % (±8, 160) | 52 % (±6, 240) |
+
+Cambios (solo `generals.json`, uno cada vez):
+
+| General | Antes | Después | Contra sin general (240, mismos mapas) |
+|---|---|---|---:|
+| Brisa | Ataque aéreo −30, 5 estrellas | −20 | 72 → 65 % |
+| Brisa | Ataque aéreo 5 estrellas | 6 (la barra entera) | 65 → 62 % (contra Ámbar 57 → 51 %) |
+| Roca | Reparación 4 estrellas | 5 | 69 → 63 % |
+| Roca | Reparación +10 | +8 | 63 → 66 % (ruido); contra Ámbar 60 → 52 % |
+| Ámbar | Pasiva de tierra +7 % | +10 % | 55 → 56 % |
+| Ámbar | +10 % | +15 % | 56 → 61 % |
+
+Descartado: la pasiva de Brisa (aviones +10 % → +5 %) no cambia nada (65 → 65 %): la IA compra pocos
+aviones y su fuerza es el ataque aéreo, que usaba unas 11 veces por partida (ahora 9).
+
+- Brisa ganaba con el ataque aéreo: daña a 2-4 unidades a la vez y todas quedan marcadas para el
+  flanqueo (+15 %) y sin curarse esa noche. Menos daño y la barra entera para usarlo.
+- Roca curaba a todo el ejército unas 15 veces por partida (ahora 12).
+- A Ámbar el dinero apenas le sirve (17 Suministros por partida, unos 100.000: el ejército tiene tope
+  de puntos de mando y el botín da dinero a los dos); solo la pasiva la mueve.
+- Con 80 partidas el margen es de ±11 y las diferencias entre generales caben en el ruido: medir con
+  200-400 (`--json` y `--from` distintos, sumando tandas).
+- La IA golden (`tests/aiGolden.test.ts`) juega sin generales: no cambia.
+
