@@ -80,6 +80,20 @@ export function commandBlock(s: GameState, kind: CommandKind, at: Pos, units: re
 }
 
 /**
+ * Ordenes que tiene sentido ofrecer en una casilla (clic derecho o pulsacion larga en el destino, con
+ * unidades elegidas), en el orden del menu. Con un enemigo visible ahi, atacar va primero; si no, con
+ * un edificio que estas unidades pueden capturar, capturar va primero. Defender siempre se puede.
+ * `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide la escena).
+ */
+export function commandChoices(s: GameState, at: Pos, units: readonly Unit[], enemyHere: boolean): CommandKind[] {
+  const mine = units.filter((u) => u.team === 0);
+  if (!mine.length) return [];
+  const canCapture = commandBlock(s, 'capture', at, mine) === null;
+  if (enemyHere) return canCapture ? ['attack', 'capture', 'defend'] : ['attack', 'defend'];
+  return canCapture ? ['capture', 'attack', 'defend'] : ['attack', 'defend'];
+}
+
+/**
  * Da una orden con destino a estas unidades del jugador. Con "capturar", las que no pueden capturar
  * van escoltando: atacan hacia ese sitio. Devuelve cuantas la han recibido.
  */

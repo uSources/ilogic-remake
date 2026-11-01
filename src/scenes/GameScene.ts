@@ -3,6 +3,7 @@ import { aiTurn, assistTurn, commandNow } from '../core/ai';
 import {
   cancelCommand,
   commandBlock,
+  commandChoices,
   disbandSquad,
   formSquad,
   giveCommand,
@@ -120,6 +121,7 @@ import { keyCommand } from '../controls/keyboard';
 import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
 import {
   squadsVM,
+  commandLabel,
   abilitiesVM,
   buyBlockedText,
   captureHintText,
@@ -157,7 +159,8 @@ import { PAL, PAL_CSS } from '../ui/palette';
  * map 3, gameMenu 4, unitMenu 5, buy 6, move 7, attack 8, unloadPick 11, unloadTile 12.
  * "busy" = animando o jugando la IA (no se acepta entrada).
  */
-type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
+type Phase =
+  'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'orderMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
 const ACTION_ORDER: ActionKey[] = [
@@ -239,7 +242,7 @@ function pointerIn(p: Phaser.Input.Pointer, right: boolean): PointerIn {
 
 const key = (p: Pos) => `${p.x},${p.y}`;
 const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
-const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'groupMenu', 'buy', 'unloadPick'];
+const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'groupMenu', 'orderMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
 /** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
 const INPUT_LOCK_MS = 350;
@@ -273,6 +276,11 @@ export class GameScene extends Phaser.Scene {
   private multi = false;
   /** [CAMBIO] Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
   private ordering: { kind: CommandKind; uids: number[]; single: boolean } | null = null;
+  /**
+   * [CAMBIO] Menu de ordenes en una casilla (fase 'orderMenu'): clic derecho, pulsacion larga o F en el
+   * destino con una unidad o un grupo elegido. `from`: de donde se venia (adonde vuelve al cancelar).
+   */
+  private orderMenu: { at: Pos; uids: number[]; kinds: CommandKind[]; from: 'move' | 'unitMenu' | 'map' } | null = null;
   /** Habilidad del general que se esta apuntando (fase 'target'). */
   private targeting: string | null = null;
   private vis: boolean[][] = [];
@@ -653,6 +661,11 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'orderMenu' && this.orderMenu) {
+      for (const uid of this.orderMenu.uids) {
+        const u = unitById(this.s, uid);
+        if (u) h.set(`${u.x},${u.y}`, 'group');
+      }
     } else if (this.phase === 'target' && this.ordering) {
       for (const uid of this.ordering.uids) {
         const u = unitById(this.s, uid);
@@ -974,6 +987,16 @@ export class GameScene extends Phaser.Scene {
         }));
         break;
       }
+      case 'orderMenu': {
+        kind = 'unit';
+        const o = this.orderMenu;
+        if (o) {
+          at = o.at;
+          title = o.uids.length > 1 ? `${t('orderUnit')} · ${o.uids.length}` : t('orderUnit');
+        }
+        items = (o?.kinds ?? []).map((k) => ({ id: k, label: commandLabel(k) }));
+        break;
+      }
       case 'unloadPick': {
         kind = 'cargo';
         if (this.sel) at = this.sel;
@@ -1094,9 +1117,12 @@ export class GameScene extends Phaser.Scene {
         return this.back();
       case 'cancel':
         if (this.carry) return this.cancelCarry();
+        if (this.phase === 'orderMenu') return this.back();
         if (this.group.size || this.multi) {
           this.group.clear();
           this.multi = false;
+          // Con el menu de grupo abierto, cerrarlo tambien (no dejarlo abierto sin unidades).
+          if (this.phase === 'groupMenu') return this.toMap();
           return this.refresh();
         }
         return this.back();
@@ -1112,6 +1138,10 @@ export class GameScene extends Phaser.Scene {
         return ui.actions.toggleMinimap();
       case 'nextUnit':
         if (this.phase === 'map') this.nextIdle();
+        return;
+      case 'orderHere':
+        // [CAMBIO] F: menu de ordenes en la casilla del cursor, con la unidad o el grupo elegido.
+        if (!this.openOrderMenu(this.view.cursor) && (this.phase === 'map' || this.phase === 'move')) showToast(t('orderHereNone'));
         return;
       case 'zoom':
         this.zoomKey(cmd.dir);
@@ -1190,8 +1220,12 @@ export class GameScene extends Phaser.Scene {
       touchStart: () => this.touchHint(),
       rightPress: (x, y) => {
         if (this.carry) return this.cancelCarry();
-        // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
         const tile = this.view.tileAtScreen(x, y);
+        // [CAMBIO] Con una unidad o un grupo elegido, clic derecho en otra casilla: ordenes alli (atacar,
+        // capturar, defender). Sobre la propia unidad elegida sigue siendo atras.
+        const onSel = !!tile && !!this.sel && this.phase !== 'map' && samePos(tile, this.sel);
+        if (tile && !onSel && this.openOrderMenu(tile)) return;
+        // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
         const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
         if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u)) && u.uid !== this.inspectUid) return this.inspect(u);
         return this.back();
@@ -1237,9 +1271,14 @@ export class GameScene extends Phaser.Scene {
       },
       tap: (x, y, touch, shift) => this.pointerTap(x, y, touch, shift),
       longPress: (x, y) => {
+        const tile = this.view.tileAtScreen(x, y);
+        // [CAMBIO] Con una unidad o un grupo elegido, mantener pulsada la casilla de destino: ordenes alli.
+        if (tile && this.openOrderMenu(tile)) {
+          navigator.vibrate?.(12);
+          return true;
+        }
         // Pulsacion larga: llevar el cursor ahi (ficha de informacion) y ver el alcance si hay una unidad.
         if (this.phase !== 'map') return false;
-        const tile = this.view.tileAtScreen(x, y);
         if (!tile) return true;
         navigator.vibrate?.(12);
         this.view.cursor = { ...tile };
@@ -1415,6 +1454,8 @@ export class GameScene extends Phaser.Scene {
         return this.acceptMap(c);
       case 'groupMenu':
         return this.acceptGroupMenu();
+      case 'orderMenu':
+        return void this.acceptOrderMenu();
       case 'gameMenu':
         return this.acceptGameMenu();
       case 'unitMenu':
@@ -1451,6 +1492,14 @@ export class GameScene extends Phaser.Scene {
       case 'groupMenu':
         // Atras deja el grupo elegido: el siguiente clic en el mapa lo mueve.
         return this.toMap();
+      case 'orderMenu': {
+        // Vuelve a donde estaba: la unidad elegida (moviendo o en su menu) o el grupo.
+        const from = this.orderMenu?.from;
+        this.orderMenu = null;
+        if (from === 'move' && this.sel) return this.selectUnit(this.sel);
+        if (from === 'unitMenu' && this.sel) return this.openUnitMenu();
+        return this.toMap();
+      }
       case 'buy':
       case 'move':
         return this.toMap();
@@ -1595,6 +1644,7 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'map';
     this.targeting = null;
     this.ordering = null;
+    this.orderMenu = null;
     this.inspectUid = null;
     this.trail = [];
     this.block = null;
@@ -2231,6 +2281,51 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'target';
     showToast(t('orderPick'));
     this.refresh();
+  }
+
+  /**
+   * Unidades a las que iria una orden dada ahora con un gesto en el mapa: la elegida (moviendo o en su
+   * menu) o el grupo elegido (recuadro, «Elegir varias» o una escuadra). null si no hay ninguna.
+   */
+  private orderSubjects(): { units: Unit[]; from: 'move' | 'unitMenu' | 'map' } | null {
+    if ((this.phase === 'move' || this.phase === 'unitMenu') && this.sel && this.sel.team === 0)
+      return { units: [this.sel], from: this.phase };
+    if ((this.phase === 'map' || this.phase === 'groupMenu') && this.group.size) {
+      const units = this.groupUnits();
+      return units.length ? { units, from: 'map' } : null;
+    }
+    return null;
+  }
+
+  /**
+   * [CAMBIO] Menu de ordenes en una casilla (sin pasar por el menu de la unidad): solo las que tienen
+   * sentido ahi (commandChoices). false si no hay unidad ni grupo elegido: el gesto hace lo de siempre.
+   */
+  private openOrderMenu(at: Pos): boolean {
+    const who = this.orderSubjects();
+    if (!who || !inBounds(at.x, at.y)) return false;
+    const e = unitAt(this.s, at.x, at.y);
+    const enemyHere = !!e && e.team !== 0 && e.carrier === null && this.visibleToPlayer(e);
+    const kinds = commandChoices(this.s, at, who.units, enemyHere);
+    if (!kinds.length) return false;
+    this.orderMenu = { at: { x: at.x, y: at.y }, uids: who.units.map((u) => u.uid), kinds, from: who.from };
+    this.multi = false;
+    this.inspectUid = null;
+    this.view.cursor = { x: at.x, y: at.y };
+    this.menuSel = 0;
+    this.phase = 'orderMenu';
+    this.refresh();
+    return true;
+  }
+
+  /** Orden elegida en el menu de la casilla: se da ahi directamente (como placeOrder). */
+  private async acceptOrderMenu(): Promise<void> {
+    const o = this.orderMenu;
+    const kind = this.menuItems[this.menuSel]?.id as CommandKind | undefined;
+    if (!o || !kind || !o.kinds.includes(kind)) return this.back();
+    this.orderMenu = null;
+    this.ordering = { kind, uids: o.uids, single: o.from !== 'map' };
+    return this.placeOrder(o.at);
   }
 
   /** Casilla elegida para la orden: se da, y las que aun no se han movido la empiezan ya. */

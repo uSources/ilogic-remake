@@ -19,6 +19,8 @@ export type GameCommand =
   /** Ver u ocultar la zona de amenaza enemiga. */
   | { kind: 'threat' }
   | { kind: 'minimap' }
+  /** [CAMBIO] Dar una orden (atacar, capturar, defender) en la casilla del cursor a la unidad o grupo elegido. */
+  | { kind: 'orderHere' }
   /** Siguiente unidad sin mover. */
   | { kind: 'nextUnit' }
   | { kind: 'zoom'; dir: 1 | -1 }

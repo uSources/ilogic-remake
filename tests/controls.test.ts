@@ -58,6 +58,7 @@ describe('adaptador de teclado', () => {
       ['Tab', 'nextUnit'],
       ['KeyH', 'help'],
       ['KeyO', 'options'],
+      ['KeyF', 'orderHere'],
     ];
     for (const [code, kind] of cases) expect(keyCommand(key(code))?.kind, code).toBe(kind);
     expect(keyCommand(key('NumpadAdd'))).toEqual({ kind: 'zoom', dir: 1 });
