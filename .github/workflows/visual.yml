@@ -53,6 +53,8 @@ jobs:
       - run: npm run build:ci && node tests/visual/shots.mjs
       # Gestos con el dedo en una pantalla de movil (mover con dos toques, atacar, comprar, arrastrar).
       - run: node tests/visual/touch.mjs
+      # Teclado de verdad: Tab en el mapa, la pantalla final y los cuadros de texto.
+      - run: node tests/visual/keys.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

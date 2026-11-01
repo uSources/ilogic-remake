@@ -978,6 +978,8 @@ function RenameSquad({ r }: { r: { id: number; name: string; max: number } }) {
           onInput={(e) => setName((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => {
             e.stopPropagation();
+            // Sin propagacion no llega al guardian de Tab (controls/browserKeys.ts): el foco no sale del cuadro.
+            if (e.key === 'Tab') e.preventDefault();
             if (e.key === 'Escape') ui.actions.renameClose();
           }}
           onKeyUp={(e) => e.stopPropagation()}
