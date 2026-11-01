@@ -52,8 +52,11 @@ export interface ViewOptions {
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
-  /** [CAMBIO] Puntos de control: casilla teñida y esquinas del color de su dueño. */
-  controlPoints?: { x: number; y: number; owner: 0 | 1 | null }[];
+  /**
+   * [CAMBIO] Puntos de control: zona teñida del color de su dueño, con borde y banderin en el centro.
+   * `r` = casillas alrededor del centro; `contested` = se ven unidades de los dos bandos dentro.
+   */
+  controlPoints?: { x: number; y: number; owner: 0 | 1 | null; r: number; contested: boolean }[];
   /** Capturas a medias que se ven (barra encima del edificio). */
   captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
 }
@@ -563,28 +566,36 @@ export class MapView {
       g.fillStyle(0x05080c, 0.5);
       for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
     }
-    // [CAMBIO] Puntos de control: casilla teñida del color de su dueño (gris si no es de nadie), con
-    // borde de puntos y un banderin arriba a la izquierda (distinto del cursor, que son esquinas).
+    // [CAMBIO] Puntos de control: la zona teñida del color de su dueño (gris si no es de nadie), con
+    // borde de puntos, y un banderin en el centro. Disputada: borde de rayas rojas y doradas.
     for (const c of opts.controlPoints ?? []) {
+      const x0 = Math.max(0, c.x - c.r) * TILE,
+        y0 = Math.max(0, c.y - c.r) * TILE,
+        x1 = Math.min(MAP_W, c.x + c.r + 1) * TILE,
+        y1 = Math.min(MAP_H, c.y + c.r + 1) * TILE;
+      const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : 0xc8c8c8;
+      g.fillStyle(color, 0.16);
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      for (let i = 0; i < Math.max(x1 - x0, y1 - y0); i += 4) {
+        g.fillStyle(c.contested ? (i % 8 ? PAL.gold : PAL.red) : color, 0.95);
+        if (x0 + i < x1) {
+          g.fillRect(x0 + i, y0, 2, 2);
+          g.fillRect(x0 + i, y1 - 2, 2, 2);
+        }
+        if (y0 + i < y1) {
+          g.fillRect(x0, y0 + i, 2, 2);
+          g.fillRect(x1 - 2, y0 + i, 2, 2);
+        }
+      }
+      // Mastil y banderin triangular con borde oscuro, arriba a la izquierda de la casilla central.
       const x = c.x * TILE,
         y = c.y * TILE;
-      const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : 0xc8c8c8;
-      g.fillStyle(color, 0.22);
-      g.fillRect(x, y, TILE, TILE);
-      g.fillStyle(color, 0.9);
-      for (let i = 0; i < TILE; i += 4) {
-        g.fillRect(x + i, y, 2, 2);
-        g.fillRect(x + i, y + TILE - 2, 2, 2);
-        g.fillRect(x, y + i, 2, 2);
-        g.fillRect(x + TILE - 2, y + i, 2, 2);
-      }
-      // Mastil y banderin triangular con borde oscuro.
       g.fillStyle(PAL.ink, 1);
       g.fillRect(x + 3, y + 3, 3, 14);
       g.fillRect(x + 5, y + 3, 9, 8);
       g.fillStyle(0xffffff, 1);
       g.fillRect(x + 4, y + 4, 1, 12);
-      g.fillStyle(color, 1);
+      g.fillStyle(c.contested ? PAL.gold : color, 1);
       for (let r = 0; r < 6; r++) g.fillRect(x + 6, y + 4 + r, 7 - Math.abs(r - 2.5) * 2, 1);
     }
     // Zona de amenaza enemiga: relleno rojo suave y borde de 2 px por fuera de la zona.

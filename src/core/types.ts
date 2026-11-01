@@ -81,8 +81,10 @@ export interface GameState {
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
   /**
-   * [CAMBIO] Puntos de control: casillas sin edificio que dan RULES.controlIncome cada ronda a su
-   * dueño. Pasan a ser de quien acabe la ronda con una unidad encima (y siguen suyos al irse).
+   * [CAMBIO] Puntos de control: zonas (RULES.controlRadius alrededor del centro) que dan
+   * RULES.controlIncome cada ronda a su dueño. Al acabar la ronda: si dentro solo hay unidades de un
+   * bando, el punto es suyo y paga; si hay de los dos, esta disputado y no paga a nadie; si no hay
+   * nadie, sigue siendo de quien era y paga.
    */
   controlPoints?: ControlPoint[];
 }

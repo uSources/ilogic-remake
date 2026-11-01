@@ -263,8 +263,8 @@ function generateNeutral(s: GameState, rng: Rng): void {
 
 /** Genera una partida nueva con mapa aleatorio. */
 /**
- * [CAMBIO] Puntos de control (RULES.controlPoints): casillas de tierra libres, igual de lejos (a pie)
- * de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
+ * [CAMBIO] Puntos de control (RULES.controlPoints): zonas de tierra, con el centro igual de lejos (a
+ * pie) de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
  * medio del mapa. Si no caben todos, pone los que pueda.
  */
 export function placeControlPoints(s: GameState, a: Pos, b: Pos, rng: Rng): void {
@@ -281,11 +281,21 @@ export function placeControlPoints(s: GameState, a: Pos, b: Pos, rng: Rng): void
         gb = db[x]![y]!;
       if (!ga || !gb || !Movement.canWalk(WALK, s.map[x]![y]!) || buildingAt(s, x, y) || unitAt(s, x, y)) continue;
       if (Math.min(ga, gb) < span / 4) continue;
+      // La zona tiene que ser casi toda tierra (si no, no se puede pelear por ella).
+      let land = 0,
+        tiles = 0;
+      for (let dx = -RULES.controlRadius; dx <= RULES.controlRadius; dx++)
+        for (let dy = -RULES.controlRadius; dy <= RULES.controlRadius; dy++) {
+          if (x + dx < 0 || y + dy < 0 || x + dx >= MAP_W || y + dy >= MAP_H) continue;
+          tiles++;
+          if (Movement.canWalk(WALK, s.map[x + dx]![y + dy]!)) land++;
+        }
+      if (land < tiles * 0.6) continue;
       // Lo justo: misma distancia a las dos salidas. Un poco de azar para que no salgan siempre igual.
       cands.push({ p, score: Math.abs(ga - gb) + rng() * 1.5 });
     }
   cands.sort((x, y) => x.score - y.score);
-  const gap = Math.max(3, Math.round(MAP_W / 4));
+  const gap = Math.max(3, Math.round(MAP_W / 4)) + 2 * RULES.controlRadius;
   const out: Pos[] = [];
   for (const c of cands) {
     if (out.length >= n) break;

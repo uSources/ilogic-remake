@@ -24,7 +24,8 @@
     "weather": true,
     "abilities": true,
     "controlPoints": 3,
-    "controlIncome": 1000
+    "controlIncome": 1000,
+    "controlRadius": 1
   },
   "maxFunds": 999999
 }

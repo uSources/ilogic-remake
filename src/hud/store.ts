@@ -213,7 +213,7 @@ export interface TileVM {
   };
   unit?: UnitVM;
   /** [CAMBIO] Punto de control en la casilla: de quien es y lo que da por ronda. */
-  point?: { owner: 'you' | 'enemy' | 'neutral'; income: number };
+  point?: { owner: 'you' | 'enemy' | 'neutral'; income: number; contested: boolean };
 }
 
 export interface IdleVM {
@@ -417,7 +417,7 @@ export interface MinimapVM {
   buildings: { x: number; y: number; owner: 0 | 1 | null }[];
   units: { x: number; y: number; team: 0 | 1 }[];
   /** [CAMBIO] Puntos de control (rombo dorado con el color de su dueño). */
-  points?: { x: number; y: number; owner: 0 | 1 | null }[];
+  points?: { x: number; y: number; owner: 0 | 1 | null; r: number }[];
 }
 
 export interface UIActions {

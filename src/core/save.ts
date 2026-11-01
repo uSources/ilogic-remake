@@ -158,7 +158,8 @@ export function deserialize(json: string): GameState | null {
       [r.vetBonus, r.bounty, r.flankBonus].every((v) => v === undefined || (typeof v === 'number' && v >= 0 && v <= 1)) &&
       (r.noHealUnderFire === undefined || typeof r.noHealUnderFire === 'boolean') &&
       (r.controlPoints === undefined || isInt(r.controlPoints, 0, 6)) &&
-      (r.controlIncome === undefined || isInt(r.controlIncome, 0, 1e6));
+      (r.controlIncome === undefined || isInt(r.controlIncome, 0, 1e6)) &&
+      (r.controlRadius === undefined || isInt(r.controlRadius, 0, 3));
     if (ok) {
       r.veterancy ??= false;
       r.passAllies ??= false;
@@ -177,6 +178,7 @@ export function deserialize(json: string): GameState | null {
       // Partidas de antes de los puntos de control: sin ellos.
       r.controlPoints ??= 0;
       r.controlIncome ??= 0;
+      r.controlRadius ??= 0;
     }
     if (!ok) return null;
   }

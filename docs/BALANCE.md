@@ -207,6 +207,10 @@ de ventaja).
 | 3 puntos de 2000 | 98 % | 32 / 41 |
 | 3 de 1000 y la IA los busca más (10) | 91 % | 28 / 39 |
 
-Con 200 partidas, 3 de 1000: ventaja 77 / 89, sin un lado claramente favorecido. Como con las demás
+Con 200 partidas, 3 de 1000: ventaja 77 / 89, sin un lado claramente favorecido.
+
+**Zonas de 3×3 que solo pagan sin disputa** (`RULES.controlRadius` 1): un punto paga a su dueño solo
+si en su zona no hay unidades de los dos bandos, para que haya batallas por él. 80 partidas: 90 % sin
+terminar, ventaja 33 / 38, igualadas 1 (antes 5): se decide más a menudo quién va por delante. Como con las demás
 reglas, el empate entre IAs casi no se mueve; los puntos dan al jugador un objetivo claro en el
 centro y dinero por avanzar.
