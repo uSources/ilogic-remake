@@ -18,7 +18,8 @@
     "CAPTUREOWNED",
     "MINCAPTURERS",
     "GENERALMINVALUE",
-    "REVEALVALUE"
+    "REVEALVALUE",
+    "GUARDRADIUS"
   ],
   "properties": {
     "$schema": {
@@ -93,6 +94,11 @@
       "type": "number",
       "minimum": 0,
       "description": "Lo que vale ver todo el mapa una ronda (habilidad reveal), solo con niebla. Bajo: se usa cuando la barra esta llena y no hay nada mejor."
+    },
+    "GUARDRADIUS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Unidades del jugador en automatico con la mision defender: atacan a los enemigos a esta distancia (o menos) de la casilla que guardan."
     }
   }
 }

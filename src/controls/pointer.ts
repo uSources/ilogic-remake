@@ -97,6 +97,34 @@ function dist(a: Pt, b: Pt): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+// --- Desplazar el mapa por el borde --------------------------------------------
+
+/** Franja del borde (pixeles CSS) y velocidad (pixeles CSS por ms) de un tipo de desplazamiento. */
+export interface EdgeZone {
+  margin: number;
+  speed: number;
+}
+
+/** Raton parado cerca del borde de la pantalla, sin arrastrar. */
+export const EDGE_HOVER: EdgeZone = { margin: 14, speed: 0.9 };
+/** Llevando una unidad con el raton cerca del borde. */
+export const EDGE_CARRY_MOUSE: EdgeZone = { margin: 24, speed: 0.6 };
+/** Llevando una unidad con el dedo (franja mas ancha: el dedo tapa). */
+export const EDGE_CARRY_TOUCH: EdgeZone = { margin: 40, speed: 0.6 };
+
+/**
+ * Cuanto desplazar el mapa (pixeles del lienzo) en `dt` ms con el puntero en `p`, en una vista de
+ * `w` x `h` pixeles del lienzo. `dpr`: densidad de pantalla (franja y velocidad son en pixeles CSS).
+ * {0, 0} si el puntero no esta en la franja del borde.
+ */
+export function edgeScroll(p: Pt, w: number, h: number, dt: number, zone: EdgeZone, dpr: number): Pt {
+  const edge = zone.margin * dpr;
+  const sx = p.x < edge ? -1 : p.x > w - edge ? 1 : 0;
+  const sy = p.y < edge ? -1 : p.y > h - edge ? 1 : 0;
+  const v = dt * zone.speed * dpr;
+  return { x: sx * v, y: sy * v };
+}
+
 // --- Gestos ------------------------------------------------------------------
 
 /** Un evento del raton o de un dedo, sin Phaser (GameScene lo traduce desde Phaser.Input.Pointer). */
@@ -159,6 +187,12 @@ export interface PointerTarget {
   boxEnd(box: Box): void;
   /** Desplazar el mapa (pixeles del lienzo). */
   pan(dx: number, dy: number): void;
+  /** La unidad cogida se cogio con el dedo. */
+  carryTouch(): boolean;
+  /** El mapa se puede desplazar por el borde con el raton (en el mapa, sin menus). */
+  edgeScrollable(): boolean;
+  /** Desplazamiento continuo por el borde (cada fotograma; pixeles del lienzo). */
+  edgeScroll(dx: number, dy: number): void;
   /** Un paso de zoom alrededor de un punto. `wheel`: viene de la rueda del raton. */
   zoomAt(dir: 1 | -1, x: number, y: number, wheel: boolean): void;
   /** El raton pasa por encima (sin dedo). */
@@ -211,6 +245,24 @@ export class PointerGestures {
   wheel(dy: number, x: number, y: number): void {
     if (this.t.ended()) return;
     this.t.zoomAt(dy < 0 ? 1 : -1, x, y, true);
+  }
+
+  /**
+   * Cada fotograma, con el estado actual del puntero (`p`) y el tamaño de la vista: desplazar el mapa
+   * si el puntero esta en el borde. Llevando una unidad (raton o dedo) el mapa la sigue; con el raton
+   * parado cerca del borde, tambien (pero no arrastrando, con menus ni con la partida acabada).
+   */
+  tick(p: PointerIn, w: number, h: number, dt: number): void {
+    const t = this.t;
+    const carry = t.carrying() && p.down;
+    let zone: EdgeZone;
+    if (carry) zone = t.carryTouch() ? EDGE_CARRY_TOUCH : EDGE_CARRY_MOUSE;
+    else if (this.inside && !t.ended() && !this.dragging && !p.touch && t.edgeScrollable()) zone = EDGE_HOVER;
+    else return;
+    const d = edgeScroll(p, w, h, dt, zone, this.dpr());
+    if (!d.x && !d.y) return;
+    t.edgeScroll(d.x, d.y);
+    if (carry) t.carryTo(p.x, p.y);
   }
 
   move(p: PointerIn): void {

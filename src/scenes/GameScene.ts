@@ -1,5 +1,17 @@
 import Phaser from 'phaser';
-import { aiTurn } from '../core/ai';
+import { aiTurn, assistTurn, commandNow } from '../core/ai';
+import {
+  cancelCommand,
+  commandBlock,
+  disbandSquad,
+  formSquad,
+  giveCommand,
+  pruneSquads,
+  renameSquad,
+  squadById,
+  squadUnits,
+  SQUAD_NAME_MAX,
+} from '../core/squads';
 import {
   HQ,
   MAP_H,
@@ -70,7 +82,7 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy, stats } from '../core/stats';
-import type { Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
+import type { Building, CommandKind, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
@@ -105,7 +117,9 @@ import { mapTap, moveTap } from '../ui/touch';
 import { PointerGestures, type PointerIn, type PointerTarget } from '../controls/pointer';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
+import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
 import {
+  squadsVM,
   abilitiesVM,
   buyBlockedText,
   captureHintText,
@@ -143,13 +157,40 @@ import { PAL, PAL_CSS } from '../ui/palette';
  * map 3, gameMenu 4, unitMenu 5, buy 6, move 7, attack 8, unloadPick 11, unloadTile 12.
  * "busy" = animando o jugando la IA (no se acepta entrada).
  */
-type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
+type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
-const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'back', 'delete'];
+const ACTION_ORDER: ActionKey[] = [
+  'attack',
+  'capture',
+  'unload',
+  'supply',
+  'wait',
+  'cmdAttack',
+  'cmdCapture',
+  'cmdDefend',
+  'cmdCancel',
+  'back',
+  'delete',
+];
 type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
-
+/** [CAMBIO] Menu de grupo (Mayusculas + recuadro, o una escuadra de la bandeja): mover, dar una orden o escuadras. */
+type GroupMenuKey =
+  'move' | 'cmdAttack' | 'cmdCapture' | 'cmdDefend' | 'cmdCancel' | 'squadForm' | 'squadRename' | 'squadDisband' | 'cancel';
+const GROUP_MENU: GroupMenuKey[] = [
+  'move',
+  'cmdAttack',
+  'cmdCapture',
+  'cmdDefend',
+  'cmdCancel',
+  'squadForm',
+  'squadRename',
+  'squadDisband',
+  'cancel',
+];
+/** Orden de cada opcion de menu. */
+const CMD_OF: Partial<Record<string, CommandKind>> = { cmdAttack: 'attack', cmdCapture: 'capture', cmdDefend: 'defend' };
 type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
 const END_LABEL: Record<EndButton, TextKey> = {
   rematch: 'endRematch',
@@ -183,9 +224,22 @@ interface MoveUndo {
   canFire: boolean;
 }
 
+/** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
+function pointerIn(p: Phaser.Input.Pointer, right: boolean): PointerIn {
+  return {
+    id: p.id,
+    x: p.x,
+    y: p.y,
+    touch: p.wasTouch,
+    down: p.isDown,
+    right,
+    shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
+  };
+}
+
 const key = (p: Pos) => `${p.x},${p.y}`;
 const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
-const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'buy', 'unloadPick'];
+const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'groupMenu', 'buy', 'unloadPick'];
 const STEP_MS = 70;
 /** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
 const INPUT_LOCK_MS = 350;
@@ -215,6 +269,10 @@ export class GameScene extends Phaser.Scene {
   private phase: Phase = 'map';
   /** Laboratorio de animaciones (null en una partida normal). */
   private lab: LabOptions | null = null;
+  /** [CAMBIO] Modo "Elegir varias" de la bandeja: cada toque en una unidad propia la añade al grupo. */
+  private multi = false;
+  /** [CAMBIO] Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
+  private ordering: { kind: CommandKind; uids: number[]; single: boolean } | null = null;
   /** Habilidad del general que se esta apuntando (fase 'target'). */
   private targeting: string | null = null;
   private vis: boolean[][] = [];
@@ -498,6 +556,29 @@ export class GameScene extends Phaser.Scene {
       labExit: () => {
         this.scene.start('Menu');
       },
+      multiSelect: () => {
+        if (!ready() || this.phase !== 'map') return;
+        // Con unidades elegidas, el boton abre sus ordenes; sin ninguna, entra o sale del modo.
+        if (this.multi && this.group.size) return this.openGroupMenu();
+        this.multi = !this.multi;
+        if (!this.multi) this.group.clear();
+        else showToast(t('multiHint'));
+        this.refresh();
+      },
+      selectSquad: (id: number) => {
+        if (!ready() || (this.phase !== 'map' && this.phase !== 'groupMenu')) return;
+        const units = squadUnits(this.s, id).filter((u) => u.carrier === null);
+        if (!units.length) return;
+        this.group = new Set(units.map((u) => u.uid));
+        this.view.cursor = { x: units[0]!.x, y: units[0]!.y };
+        this.view.ensureVisible(units[0]!, 3);
+        this.openGroupMenu();
+      },
+      renameSquad: (id: number, name: string) => {
+        renameSquad(this.s, id, name);
+        ui.set({ rename: null });
+        this.refresh();
+      },
       useAbility: (id: string) => {
         if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.startAbility(id);
       },
@@ -546,8 +627,16 @@ export class GameScene extends Phaser.Scene {
     this.cursorMoved();
   }
 
+  /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
+  private showsOrderLine(u: Unit): boolean {
+    if (this.ordering?.uids.includes(u.uid) || this.group.has(u.uid)) return true;
+    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    return !!here && (here.uid === u.uid || (here.squad !== undefined && here.squad === u.squad));
+  }
+
   private idleUnits(): Unit[] {
-    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null);
+    // Las que tienen orden no cuentan: la cumpliran solas al terminar el turno.
+    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null && !u.command);
   }
 
   // -------------------------------------------------------------------------
@@ -564,6 +653,11 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'target' && this.ordering) {
+      for (const uid of this.ordering.uids) {
+        const u = unitById(this.s, uid);
+        if (u) h.set(`${u.x},${u.y}`, 'group');
+      }
     } else if (this.phase === 'target') {
       for (const p of this.targetArea(this.view.cursor)) h.set(key(p), 'attack');
     } else if (this.phase === 'map' && this.group.size) {
@@ -627,9 +721,15 @@ export class GameScene extends Phaser.Scene {
       pathAttack: this.phase === 'move' && this.intentAt(this.view.cursor).kind === 'attack',
       threat,
       attackZone: this.phase === 'move' ? this.attackZone : null,
-      orders: this.s.units
-        .filter((u) => u.team === 0 && u.order && u.carrier === null)
-        .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
+      orders: [
+        ...this.s.units
+          .filter((u) => u.team === 0 && u.order && u.carrier === null)
+          .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
+        // [CAMBIO] Ordenes con destino: bandera siempre; linea para la unidad señalada y su escuadra.
+        ...this.s.units
+          .filter((u) => u.team === 0 && u.command && u.carrier === null)
+          .map((u) => ({ from: { x: u.x, y: u.y }, to: u.command!.at, kind: u.command!.kind, line: this.showsOrderLine(u) })),
+      ],
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
       goal: obj?.kind === 'escort' ? obj.to : null,
@@ -693,12 +793,16 @@ export class GameScene extends Phaser.Scene {
       moveTip: this.phase === 'move' ? this.moveTip(c) : null,
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
+      squads: squadsVM(this.s),
+      multi: this.multi ? this.group.size : null,
       hint: busy
         ? this.enemyPlaying
           ? t('skip')
           : ''
         : this.phase === 'target'
-          ? t('genTarget')
+          ? this.ordering
+            ? t('orderPick')
+            : t('genTarget')
           : this.phase === 'map'
             ? this.inspectUid !== null
               ? t('hintInspect')
@@ -859,6 +963,17 @@ export class GameScene extends Phaser.Scene {
           })),
         ];
         break;
+      case 'groupMenu': {
+        kind = 'unit';
+        const units = this.groupUnits();
+        if (units[0]) at = units[0];
+        title = `${t('groupMenu')} · ${units.length}`;
+        items = GROUP_MENU.filter((k) => this.groupOption(k, units)).map((k) => ({
+          id: k,
+          label: t(k === 'move' ? 'groupMoveHint' : (k as TextKey)),
+        }));
+        break;
+      }
       case 'unloadPick': {
         kind = 'cargo';
         if (this.sel) at = this.sel;
@@ -900,15 +1015,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e));
     // Raton y dedos: el adaptador decide el gesto; pointerTarget() dice que hace en la partida.
     const g = this.gestures;
-    const pin = (p: Phaser.Input.Pointer, right: boolean): PointerIn => ({
-      id: p.id,
-      x: p.x,
-      y: p.y,
-      touch: p.wasTouch,
-      down: p.isDown,
-      right,
-      shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
-    });
+    const pin = pointerIn;
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => g.move(pin(p, false)));
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => g.down(pin(p, p.rightButtonDown())));
     this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => g.up(pin(p, p.rightButtonReleased())));
@@ -918,14 +1025,31 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  /** Adaptador de teclado: en el mapa, ordenes GameCommand; en la pantalla final y opciones, MenuCommand. */
   private onKey(e: KeyboardEvent): void {
-    // Pantalla final y opciones: menus propios, con sus teclas.
-    if (this.ended) return this.endKey(e);
-    if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
+    const ctx = this.controlContext();
+    if (ctx !== 'map') {
+      const cmd = menuKeyCommand(e, ctx);
+      if (cmd) this.menu(cmd);
+      return;
+    }
     const cmd = keyCommand(e);
     if (!cmd) return;
     if (cmd.kind === 'accept') e.preventDefault();
     this.command(cmd);
+  }
+
+  /** Donde va lo que pulse un mando: al mapa (command) o a un menu propio (menu). */
+  controlContext(): ControlContext {
+    if (this.ended) return 'end';
+    if (this.optionsPanel.isOpen) return 'options';
+    return 'map';
+  }
+
+  /** Cumplir una orden de menu (pantalla final u opciones), venga del mando que venga. */
+  menu(cmd: MenuCommand): void {
+    if (this.ended) return this.endCommand(cmd);
+    if (this.optionsPanel.isOpen) this.optionsPanel.command(cmd);
   }
 
   /**
@@ -933,6 +1057,8 @@ export class GameScene extends Phaser.Scene {
    * que un mando necesita de la escena.
    */
   command(cmd: GameCommand): void {
+    // Escribiendo el nombre de una escuadra: el teclado es del cuadro de texto.
+    if (ui.get().rename) return;
     if (ui.get().help) {
       if (CLOSES_HELP.includes(cmd.kind)) ui.set({ help: false });
       return;
@@ -968,8 +1094,9 @@ export class GameScene extends Phaser.Scene {
         return this.back();
       case 'cancel':
         if (this.carry) return this.cancelCarry();
-        if (this.group.size) {
+        if (this.group.size || this.multi) {
           this.group.clear();
+          this.multi = false;
           return this.refresh();
         }
         return this.back();
@@ -1086,13 +1213,18 @@ export class GameScene extends Phaser.Scene {
             )
             .map((u) => u.uid),
         );
-        if (this.group.size) showToast(`${this.group.size} ${t('groupSelected')}`);
+        // [CAMBIO] Ayudante: con varias elegidas sale el menu de grupo (mover o darles una mision).
+        if (this.group.size) return this.openGroupMenu();
         this.refresh();
       },
       pan: (dx, dy) => {
         this.view.scrollBy(dx, dy);
         this.refreshHud();
       },
+      carryTouch: () => !!this.carry?.touch,
+      edgeScrollable: () => !MENU_PHASES.includes(this.phase),
+      // Sin rehacer el HUD: update() recoloca los bocadillos si la camara se ha movido.
+      edgeScroll: (dx, dy) => this.view.scrollBy(dx, dy),
       zoomAt: (dir, x, y, wheel) => {
         this.view.zoomStep(dir, x, y);
         if (wheel) this.time.delayedCall(0, () => this.refreshHud());
@@ -1146,9 +1278,25 @@ export class GameScene extends Phaser.Scene {
     ) {
       return this.waitSelected();
     }
+    // Con el menu de grupo abierto, un clic en el mapa mueve el grupo ahi.
+    if (this.phase === 'groupMenu' && tile && this.group.size) {
+      this.toMap();
+      this.moveCursorTo(tile, false);
+      return void this.groupMove(tile);
+    }
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
     if (MENU_PHASES.includes(this.phase)) return this.back();
     if (!tile) return;
+    // [CAMBIO] "Elegir varias" (para el dedo, sin recuadro): tocar una unidad propia la añade o la quita.
+    if (this.phase === 'map' && this.multi) {
+      const own = unitAt(this.s, tile.x, tile.y);
+      if (own && own.team === 0 && own.carrier === null) {
+        this.moveCursorTo(tile, false);
+        if (this.group.has(own.uid)) this.group.delete(own.uid);
+        else this.group.add(own.uid);
+        return this.refresh();
+      }
+    }
     if (this.phase === 'map' && this.group.size) {
       this.moveCursorTo(tile, false);
       return void this.groupMove(tile);
@@ -1179,8 +1327,11 @@ export class GameScene extends Phaser.Scene {
       });
       switch (act) {
         case 'commit':
-          // Como soltar arrastrando: captura directamente, y espera sola si no hay nada mas que hacer.
           this.moveCursorTo(tile, false);
+          // [CAMBIO] Tocar otra vez la propia unidad abre su menu (esperar, ordenes...): con el dedo no
+          // habia otra forma de llegar a el.
+          if (it.kind === 'stay') return void this.commit(tile);
+          // Como soltar arrastrando: captura directamente, y espera sola si no hay nada mas que hacer.
           return void this.commit(tile, { drop: true });
         case 'preview':
           return this.moveCursorTo(tile, false);
@@ -1215,24 +1366,8 @@ export class GameScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     this.view.cursorAttack = this.phase === 'attack' || this.phase === 'target';
     this.view.tick(time);
-    // Desplazar el mapa con el raton en el borde de la pantalla.
-    const p = this.input.activePointer;
-    if (this.carry && p.isDown) {
-      // Llevando una unidad cerca del borde: el mapa se desplaza solo (tambien con el dedo).
-      const edge = (this.carry.touch ? 40 : 24) * (window.devicePixelRatio || 1);
-      const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
-      const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
-      if (dx || dy) {
-        this.view.scrollBy(dx * delta * 0.6 * (window.devicePixelRatio || 1), dy * delta * 0.6 * (window.devicePixelRatio || 1));
-        this.carryTo(p.x, p.y);
-      }
-    } else if (this.gestures.inside && !this.ended && !this.gestures.dragging && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
-      const edge = 14 * (window.devicePixelRatio || 1);
-      const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
-      const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
-      if (dx || dy)
-        this.view.scrollBy(dx * delta * 0.9 * (window.devicePixelRatio || 1), dy * delta * 0.9 * (window.devicePixelRatio || 1));
-    }
+    // Desplazar el mapa con el puntero en el borde (el adaptador decide cuanto; ver PointerGestures.tick).
+    this.gestures.tick(pointerIn(this.input.activePointer, false), this.scale.width, this.scale.height, delta);
     // Si la camara se ha movido (arrastre, borde, paneo animado), recolocar los bocadillos.
     const cam = this.cameras.main;
     const l = this.lastScroll;
@@ -1278,6 +1413,8 @@ export class GameScene extends Phaser.Scene {
     switch (this.phase) {
       case 'map':
         return this.acceptMap(c);
+      case 'groupMenu':
+        return this.acceptGroupMenu();
       case 'gameMenu':
         return this.acceptGameMenu();
       case 'unitMenu':
@@ -1293,6 +1430,7 @@ export class GameScene extends Phaser.Scene {
       case 'unloadTile':
         return this.acceptUnloadTile(c);
       case 'target':
+        if (this.ordering) return void this.placeOrder(c);
         return void this.fireAbility(c);
       default:
         break;
@@ -1310,6 +1448,9 @@ export class GameScene extends Phaser.Scene {
         return this.openGameMenu();
       case 'gameMenu':
         return this.toMap();
+      case 'groupMenu':
+        // Atras deja el grupo elegido: el siguiente clic en el mapa lo mueve.
+        return this.toMap();
       case 'buy':
       case 'move':
         return this.toMap();
@@ -1323,6 +1464,12 @@ export class GameScene extends Phaser.Scene {
         this.menuSel = 0;
         return this.refresh();
       case 'target':
+        if (this.ordering?.single) {
+          // Desde el menu de la unidad: vuelve a el (su movimiento sigue a medio decidir).
+          this.ordering = null;
+          return this.openUnitMenu();
+        }
+        this.ordering = null;
         return this.toMap();
       default:
         break;
@@ -1447,6 +1594,7 @@ export class GameScene extends Phaser.Scene {
   private toMap(): void {
     this.phase = 'map';
     this.targeting = null;
+    this.ordering = null;
     this.inspectUid = null;
     this.trail = [];
     this.block = null;
@@ -1662,6 +1810,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Orden de varios turnos: la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
   private async giveOrder(u: Unit, goal: Pos): Promise<void> {
+    delete u.command;
     const r = this.range ?? moveRange(this.s, u);
     const dest = stepToward(this.s, u, goal, r);
     if (!dest) {
@@ -1716,6 +1865,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
   private async groupMove(goal: Pos): Promise<void> {
+    this.multi = false;
     const units = [...this.group]
       .map((uid) => unitById(this.s, uid))
       .filter((u): u is Unit => !!u && u.active && u.canMove && u.carrier === null)
@@ -1972,6 +2122,14 @@ export class GameScene extends Phaser.Scene {
       case 'wait':
         wait(u);
         return this.afterAction();
+      case 'cmdAttack':
+      case 'cmdCapture':
+      case 'cmdDefend':
+        return this.startOrder(CMD_OF[action]!, [u], true);
+      case 'cmdCancel':
+        cancelCommand([u]);
+        showToast(t('orderCancelled'));
+        return this.openUnitMenu();
       case 'back':
         return this.undoMove();
       case 'delete':
@@ -1984,6 +2142,137 @@ export class GameScene extends Phaser.Scene {
         removeUnit(this.s, u.uid);
         return this.afterAction();
     }
+  }
+
+  /** Unidades del grupo elegido que siguen existiendo. */
+  private groupUnits(): Unit[] {
+    return [...this.group].map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u);
+  }
+
+  /** [CAMBIO] Menu de grupo, al elegir varias con Mayusculas + recuadro. */
+  private openGroupMenu(): void {
+    this.multi = false;
+    this.menuSel = 0;
+    this.phase = 'groupMenu';
+    this.refresh();
+  }
+
+  /** Escuadra que forman exactamente las unidades del grupo (null si no son una escuadra). */
+  private groupSquad(units: Unit[]): number | null {
+    const id = units[0]?.squad;
+    if (id === undefined || !units.every((u) => u.squad === id)) return null;
+    return squadUnits(this.s, id).length === units.length ? id : null;
+  }
+
+  /** Que opciones del menu de grupo tienen sentido para estas unidades. */
+  private groupOption(k: GroupMenuKey, units: Unit[]): boolean {
+    const squad = this.groupSquad(units);
+    switch (k) {
+      case 'cmdCapture':
+        return units.some((u) => UNIT.cancapt[u.type]);
+      case 'cmdCancel':
+        return units.some((u) => u.command);
+      case 'squadForm':
+        return squad === null;
+      case 'squadRename':
+      case 'squadDisband':
+        return squad !== null;
+      default:
+        return true;
+    }
+  }
+
+  private acceptGroupMenu(): void {
+    const k = this.menuItems[this.menuSel]?.id as GroupMenuKey | undefined;
+    const units = this.groupUnits();
+    const squad = this.groupSquad(units);
+    switch (k) {
+      case 'move':
+        // Sigue elegido: el siguiente clic en el mapa lo mueve.
+        showToast(`${units.length} ${t('groupSelected')}`);
+        return this.toMap();
+      case 'cmdAttack':
+      case 'cmdCapture':
+      case 'cmdDefend':
+        return this.startOrder(CMD_OF[k]!, units, false);
+      case 'cmdCancel':
+        cancelCommand(units);
+        showToast(t('orderCancelled'));
+        break;
+      case 'squadForm': {
+        const q = formSquad(this.s, units);
+        if (q) showToast(`${t('squadFormed')}: ${q.name}`);
+        break;
+      }
+      case 'squadRename':
+        if (squad !== null) ui.set({ rename: { id: squad, name: squadById(this.s, squad)?.name ?? '', max: SQUAD_NAME_MAX } });
+        break;
+      case 'squadDisband':
+        if (squad !== null) disbandSquad(this.s, squad);
+        break;
+      default:
+        break;
+    }
+    this.group.clear();
+    this.toMap();
+  }
+
+  // -------------------------------------------------------------------------
+  // [CAMBIO] Ordenes con destino (estilo RTS)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Empieza a dar una orden a estas unidades: ahora se elige la casilla en el mapa (fase 'target').
+   * `single` = una unidad desde su menu (su movimiento de este turno, si lo hay, se mantiene).
+   */
+  private startOrder(kind: CommandKind, units: Unit[], single: boolean): void {
+    if (!units.length) return this.toMap();
+    this.ordering = { kind, uids: units.map((u) => u.uid), single };
+    this.phase = 'target';
+    showToast(t('orderPick'));
+    this.refresh();
+  }
+
+  /** Casilla elegida para la orden: se da, y las que aun no se han movido la empiezan ya. */
+  private async placeOrder(c: Pos): Promise<void> {
+    const o = this.ordering;
+    if (!o) return this.toMap();
+    const units = o.uids.map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u);
+    const block = commandBlock(this.s, o.kind, c, units);
+    if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
+    this.ordering = null;
+    giveCommand(units, o.kind, c);
+    // Una unidad movida este turno: lo movido cuenta y espera; la orden empieza el turno que viene.
+    const sel = o.single ? units[0] : undefined;
+    const moved = !!sel && !!this.undo && this.undo.uid === sel.uid && (this.undo.x !== sel.x || this.undo.y !== sel.y);
+    if (sel && this.undo && this.undo.uid === sel.uid && !moved) {
+      sel.canMove = true;
+      sel.canFire = this.undo.canFire;
+    }
+    if (moved) wait(sel);
+    this.clearUndo();
+    this.group.clear();
+    this.toMap();
+    showToast(t('orderGiven'));
+    const now = units.filter((u) => u.active && u.canMove && u.carrier === null);
+    if (now.length) await this.playCommands(now);
+    else this.afterAction();
+  }
+
+  /** Las unidades empiezan ya su orden (animado); luego esperan. */
+  private async playCommands(units: Unit[]): Promise<void> {
+    const m = this.match;
+    this.phase = 'busy';
+    this.refresh();
+    for (const u of units) {
+      for (const ev of commandNow(this.s, u.uid, Math.random)) {
+        await this.playEvents([ev]);
+        if (m !== this.match || this.checkEnd()) return;
+      }
+      if (unitById(this.s, u.uid)) wait(u);
+    }
+    pruneSquads(this.s);
+    this.afterAction();
   }
 
   private async acceptAttack(c: Pos): Promise<void> {
@@ -2170,13 +2459,14 @@ export class GameScene extends Phaser.Scene {
     if (e) ui.set({ end: { ...e, selected: this.endSel } });
   }
 
-  private endKey(e: KeyboardEvent): void {
+  /** Menu de fin de partida: una fila de botones. */
+  private endCommand(cmd: MenuCommand): void {
     if (ui.get().screen !== 'end') return;
     const n = this.endButtons.length;
-    if (['ArrowLeft', 'KeyA', 'ArrowUp', 'KeyW'].includes(e.code)) this.endSel = (this.endSel - 1 + n) % n;
-    else if (['ArrowRight', 'KeyD', 'ArrowDown', 'KeyS', 'Tab'].includes(e.code)) this.endSel = (this.endSel + 1) % n;
-    else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) return this.endPick(this.endSel);
-    else if (e.code === 'Escape') return this.endPick(this.endButtons.indexOf('menu'));
+    const step = listStep(cmd);
+    if (step) this.endSel = (this.endSel + step + n) % n;
+    else if (cmd.kind === 'ok' && !cmd.repeat) return this.endPick(this.endSel);
+    else if (cmd.kind === 'back') return this.endPick(this.endButtons.indexOf('menu'));
     else return;
     this.publishEndSel();
   }
@@ -2296,6 +2586,19 @@ export class GameScene extends Phaser.Scene {
     this.abandonSelection();
     const saved = this.saveCamera();
     this.phase = 'busy';
+    // [CAMBIO] Ordenes con destino: las unidades con orden que siguen sin usar la cumplen.
+    const orders = assistTurn(this.s, Math.random);
+    let step = orders.next();
+    while (!step.done) {
+      await this.playEvents([step.value]);
+      if (m !== this.match || this.checkEnd()) return;
+      step = orders.next();
+    }
+    const done = step.value
+      .map((uid) => unitById(this.s, uid))
+      .filter((u): u is Unit => !!u)
+      .map((u) => unitLabel(u.type) + (squadById(this.s, u.squad) ? ` (${squadById(this.s, u.squad)!.name})` : ''));
+    pruneSquads(this.s);
     // [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando.
     for (const u of this.autoCapturers()) {
       const b = buildingAt(this.s, u.x, u.y)!;
@@ -2325,15 +2628,17 @@ export class GameScene extends Phaser.Scene {
     if (this.checkEnd()) return;
     this.backToPlayer(saved);
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
-    this.showReport(report);
+    this.showReport(report, done);
     await this.runOrders();
   }
 
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
-  private showReport(r: RoundReport): void {
+  private showReport(r: RoundReport, done: string[] = []): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
     if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
+    // [CAMBIO] Unidades que cumplieron su orden al terminar el turno anterior (ahora esperan otra).
+    if (done.length) lines.push({ icon: '', text: `${t('orderDone')}: ${done.join(', ')}`, tone: 'plain' });
     if (mine.length)
       lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     if (r.weather) {

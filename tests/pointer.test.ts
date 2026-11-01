@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   DRAG_THRESHOLD,
+  EDGE_CARRY_MOUSE,
+  EDGE_CARRY_TOUCH,
+  EDGE_HOVER,
   LONG_PRESS_MS,
   PICK_HOLD_MS,
   Pinch,
   PointerGestures,
+  edgeScroll,
   movedFar,
   type PointerIn,
   type PointerTarget,
@@ -93,18 +97,28 @@ describe('pellizco', () => {
 // --- Gestos (PointerGestures) con un destino falso -------------------------------------------------
 
 /** Destino que apunta lo que le piden; `unitAt` dice donde hay una unidad que se puede coger. */
-function fake(o: { unitAt?: (x: number, y: number) => number | null; busy?: boolean; canBox?: boolean; longPressOk?: boolean } = {}) {
+function fake(
+  o: {
+    unitAt?: (x: number, y: number) => number | null;
+    busy?: boolean;
+    canBox?: boolean;
+    longPressOk?: boolean;
+    ended?: boolean;
+    menu?: boolean;
+  } = {},
+) {
   const log: string[] = [];
   const timers: { at: number; fn: () => void; dead: boolean }[] = [];
   let now = 0;
   let carrying = false;
+  let carryTouch = false;
   const t: PointerTarget = {
     later: (ms, fn) => {
       const tm = { at: now + ms, fn, dead: false };
       timers.push(tm);
       return { cancel: () => (tm.dead = true) };
     },
-    ended: () => false,
+    ended: () => !!o.ended,
     busy: () => !!o.busy,
     fastForward: () => log.push('fastForward'),
     carrying: () => carrying,
@@ -114,6 +128,7 @@ function fake(o: { unitAt?: (x: number, y: number) => number | null; busy?: bool
     rightPress: () => log.push('right'),
     beginCarry: (uid, touch, held) => {
       carrying = true;
+      carryTouch = touch;
       log.push(`carry ${uid} ${touch ? 'dedo' : 'raton'} ${held ? 'mantenida' : 'arrastrada'}`);
       return true;
     },
@@ -129,6 +144,9 @@ function fake(o: { unitAt?: (x: number, y: number) => number | null; busy?: bool
     boxUpdate: (b) => log.push(`box ${b.x1},${b.y1}`),
     boxEnd: (b) => log.push(`boxEnd ${b.x0},${b.y0}-${b.x1},${b.y1}`),
     pan: (dx, dy) => log.push(`pan ${dx},${dy}`),
+    carryTouch: () => carryTouch,
+    edgeScrollable: () => !o.menu,
+    edgeScroll: (dx, dy) => log.push(`edge ${dx},${dy}`),
     zoomAt: (dir, _x, _y, wheel) => log.push(`zoom ${dir}${wheel ? ' rueda' : ''}`),
     hover: (x, y) => log.push(`hover ${x},${y}`),
     tap: (x, y, touch) => log.push(`tap ${x},${y}${touch ? ' dedo' : ''}`),
@@ -264,5 +282,82 @@ describe('gestos del raton y del dedo', () => {
     busy.g.down(pt(10, 10));
     busy.g.up(pt(10, 10, { down: false }));
     expect(busy.log).toEqual(['fastForward']);
+  });
+});
+
+describe('desplazar el mapa por el borde', () => {
+  const W = 800,
+    H = 600;
+
+  it('solo dentro de la franja del borde, y mas rapido cuanto mas tiempo', () => {
+    expect(edgeScroll({ x: 400, y: 300 }, W, H, 16, EDGE_HOVER, 1)).toEqual({ x: 0, y: 0 });
+    expect(edgeScroll({ x: 13, y: 300 }, W, H, 10, EDGE_HOVER, 1)).toEqual({ x: -9, y: 0 });
+    expect(edgeScroll({ x: 14, y: 300 }, W, H, 10, EDGE_HOVER, 1)).toEqual({ x: 0, y: 0 });
+    expect(edgeScroll({ x: 790, y: 590 }, W, H, 10, EDGE_HOVER, 1)).toEqual({ x: 9, y: 9 });
+    expect(edgeScroll({ x: 5, y: 5 }, W, H, 20, EDGE_HOVER, 1)).toEqual({ x: -18, y: -18 });
+  });
+
+  it('franja y velocidad en pixeles CSS (con densidad 2, el doble de pixeles)', () => {
+    expect(edgeScroll({ x: 20, y: 300 }, W, H, 10, EDGE_HOVER, 1)).toEqual({ x: 0, y: 0 });
+    expect(edgeScroll({ x: 20, y: 300 }, W, H, 10, EDGE_HOVER, 2)).toEqual({ x: -18, y: 0 });
+  });
+
+  it('llevando una unidad la franja es mas ancha (mas con el dedo) y mas lenta', () => {
+    expect(edgeScroll({ x: 30, y: 300 }, W, H, 10, EDGE_CARRY_MOUSE, 1)).toEqual({ x: 0, y: 0 });
+    expect(edgeScroll({ x: 20, y: 300 }, W, H, 10, EDGE_CARRY_MOUSE, 1)).toEqual({ x: -6, y: 0 });
+    expect(edgeScroll({ x: 30, y: 300 }, W, H, 10, EDGE_CARRY_TOUCH, 1)).toEqual({ x: -6, y: 0 });
+  });
+
+  it('con el raton dentro del juego, parado cerca del borde', () => {
+    const { g, log } = fake();
+    g.tick(pt(5, 300, { down: false }), W, H, 10); // aun no ha entrado el raton
+    g.move(pt(5, 300, { down: false }));
+    log.length = 0;
+    g.tick(pt(5, 300, { down: false }), W, H, 10);
+    g.tick(pt(400, 300, { down: false }), W, H, 10);
+    expect(log).toEqual(['edge -9,0']);
+    g.leave();
+    g.tick(pt(5, 300, { down: false }), W, H, 10);
+    expect(log).toEqual(['edge -9,0']);
+  });
+
+  it('no con el dedo, ni arrastrando el mapa, ni con menus, ni con la partida acabada', () => {
+    const touch = fake();
+    touch.g.move(pt(5, 300, { down: false, touch: true }));
+    touch.g.tick(pt(5, 300, { down: false, touch: true }), W, H, 10);
+    expect(touch.log.filter((l) => l.startsWith('edge'))).toEqual([]);
+
+    const drag = fake();
+    drag.g.move(pt(400, 300, { down: false }));
+    drag.g.down(pt(400, 300));
+    drag.g.tick(pt(5, 300), W, H, 10);
+    expect(drag.log.filter((l) => l.startsWith('edge'))).toEqual([]);
+
+    for (const o of [{ menu: true }, { ended: true }]) {
+      const f = fake(o);
+      f.g.move(pt(5, 300, { down: false }));
+      f.g.tick(pt(5, 300, { down: false }), W, H, 10);
+      expect(f.log.filter((l) => l.startsWith('edge'))).toEqual([]);
+    }
+  });
+
+  it('llevando una unidad el mapa se desplaza y la unidad le sigue (tambien con el dedo)', () => {
+    const mouse = fake({ unitAt: () => 7 });
+    mouse.g.down(pt(100, 100));
+    mouse.g.move(pt(20, 100));
+    mouse.log.length = 0;
+    mouse.g.tick(pt(20, 100), W, H, 10);
+    expect(mouse.log).toEqual(['edge -6,0', 'carryTo 20,100']);
+    // Soltado el boton (antes de que llegue el evento de subir) no se desplaza.
+    mouse.log.length = 0;
+    mouse.g.tick(pt(20, 100, { down: false }), W, H, 10);
+    expect(mouse.log).toEqual([]);
+
+    const finger = fake({ unitAt: () => 7 });
+    finger.g.down(pt(100, 100, { touch: true }));
+    finger.wait(PICK_HOLD_MS);
+    finger.log.length = 0;
+    finger.g.tick(pt(30, 100, { touch: true }), W, H, 10);
+    expect(finger.log).toEqual(['edge -6,0', 'carryTo 30,100']);
   });
 });

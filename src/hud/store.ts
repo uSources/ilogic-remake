@@ -118,6 +118,9 @@ export interface UnitVM {
   cargo?: string;
   /** [CAMBIO] Ha recibido un ataque hoy: esta noche no se cura (regla noHealUnderFire). */
   noHeal?: boolean;
+  /** [CAMBIO] Orden con destino, ya traducida ("Atacar aquí"), y escuadra a la que pertenece. */
+  order?: string;
+  squad?: string;
 }
 
 /** Una fila del desglose: "3 × Ciudad   +3.000". */
@@ -212,6 +215,14 @@ export interface TileVM {
     capture?: { left: number; total: number; team: 0 | 1 };
   };
   unit?: UnitVM;
+}
+
+/** [CAMBIO] Escuadra del jugador en la bandeja: nombre, unidades y orden que llevan (si todas la misma). */
+export interface SquadVM {
+  id: number;
+  name: string;
+  count: number;
+  order: string | null;
 }
 
 export interface IdleVM {
@@ -356,6 +367,11 @@ export interface UIState {
   tile: TileVM | null;
   cursorScreen: { x: number; y: number };
   idle: IdleVM[];
+  /** [CAMBIO] Escuadras del jugador y la que se esta renombrando (null = ninguna). */
+  squads: SquadVM[];
+  /** [CAMBIO] Modo "Elegir varias": cuantas hay elegidas (null = modo apagado). */
+  multi: number | null;
+  rename: { id: number; name: string; max: number } | null;
   threat: boolean;
   toast: { text: string; id: number } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
@@ -423,6 +439,12 @@ export interface UIActions {
   menuHover(i: number): void;
   menuClose(): void;
   endTurn(): void;
+  /** [CAMBIO] Elegir una escuadra de la bandeja (sale su menu) y cambiarle el nombre. */
+  /** [CAMBIO] Boton "Elegir varias" de la bandeja (con unidades elegidas, abre sus ordenes). */
+  multiSelect(): void;
+  selectSquad(id: number): void;
+  renameSquad(id: number, name: string): void;
+  renameClose(): void;
   /** Laboratorio de animaciones: reproducir una accion, cambiar opciones, salir. */
   labPlay(action: 'move' | 'attack' | 'counter' | 'kill'): void;
   labSet(patch: { attacker?: number; defender?: number; slow?: boolean }): void;
@@ -502,6 +524,9 @@ const initial: UIState = {
   tile: null,
   cursorScreen: { x: 0, y: 0 },
   idle: [],
+  squads: [],
+  multi: null,
+  rename: null,
   threat: false,
   toast: null,
   banner: null,
@@ -532,6 +557,10 @@ const DEFAULT_ACTIONS: UIActions = {
   menuHover: noop,
   menuClose: noop,
   endTurn: noop,
+  multiSelect: noop,
+  selectSquad: noop,
+  renameSquad: noop,
+  renameClose: () => ui.set({ rename: null }),
   openGameMenu: noop,
   toggleThreat: noop,
   toggleMinimap: noop,

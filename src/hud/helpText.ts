@@ -17,6 +17,7 @@ const HELP = {
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
+      'Órdenes: en el menú de una unidad, «Orden: atacar, capturar o defender allí» y luego eliges la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre.',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -36,6 +37,11 @@ const HELP = {
       ['Deshacer el último movimiento', 'Ctrl+Z', '—'],
       ['Orden de varios turnos', '—', 'Soltar lejos, fuera del alcance (dedo: mantener antes de arrastrar)'],
       ['Mover en grupo', '—', 'Mayúsculas + recuadro, luego clic'],
+      [
+        'Dar una orden',
+        'Enter dos veces sobre ella, Orden, Enter en el destino',
+        'Clic (o toque) dos veces sobre ella, Orden, el destino; varias: Mayúsculas + recuadro o «Elegir varias»',
+      ],
       ['Mover el cursor', 'Flechas / WASD', 'Pasar por encima / tocar'],
       ['Aceptar', 'Enter / Espacio', 'Clic / segundo toque'],
       ['Atrás', 'Esc / Retroceso', 'Clic derecho / tocar fuera'],
@@ -65,6 +71,7 @@ const HELP = {
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
+      'Orders: in a unit’s menu, “Order: attack, capture or hold there”, then pick the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it.',
     ],
     colorsTitle: 'Map colours',
     colors: [
@@ -84,6 +91,11 @@ const HELP = {
       ['Undo the last move', 'Ctrl+Z', '—'],
       ['Multi-turn order', '—', 'Drop far, out of range (touch: hold before dragging)'],
       ['Group move', '—', 'Shift + box, then click'],
+      [
+        'Give an order',
+        'Enter twice on it, Order, Enter on the destination',
+        'Click (or tap) it twice, Order, the destination; several: Shift + box or “Pick several”',
+      ],
       ['Move the cursor', 'Arrows / WASD', 'Hover / tap'],
       ['Accept', 'Enter / Space', 'Click / second tap'],
       ['Back', 'Esc / Backspace', 'Right-click / tap outside'],

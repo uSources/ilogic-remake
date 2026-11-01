@@ -3065,3 +3065,72 @@ html.reduce-motion .end-best.new {
   flex: 1 1 auto;
   border-left: 0;
 }
+
+/* [CAMBIO] Escuadras en la bandeja y cambiar su nombre. */
+.tray .squads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tray .squad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  padding: 4px 8px;
+  border: 3px solid var(--ink);
+  background: var(--slot);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: 13px;
+  cursor: var(--cursor-button, pointer);
+  max-width: 100%;
+  text-align: left;
+}
+.tray .squad:hover {
+  background: var(--sel);
+}
+.tray .sq-name {
+  font-family: var(--display);
+  color: #5fd6c6;
+}
+.tray .sq-count {
+  color: var(--muted);
+}
+.tray .sq-order {
+  flex-basis: 100%;
+  color: var(--gold);
+}
+.rename {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  width: min(340px, 100%);
+}
+.rename input {
+  font-family: var(--body);
+  font-size: 18px;
+  padding: 6px 8px;
+  border: 3px solid var(--ink);
+  background: var(--slot);
+  color: var(--text);
+}
+.rename-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tray .multi {
+  padding: 6px 10px;
+  font-family: var(--body);
+  font-size: 13px;
+}
+.tray .multi.on {
+  background: var(--sel);
+  color: #fff;
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+}

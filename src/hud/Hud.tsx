@@ -19,6 +19,7 @@ import {
   type GeneralVM,
   type ForecastVM,
   type IdleVM,
+  type SquadVM,
   type MenuVM,
   type TileVM,
   type UIState,
@@ -618,6 +619,11 @@ function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
         <Blocks life={u.life} team={u.team} />
         <span class="v">{u.life}</span>
       </div>
+      {!folded && (u.order || u.squad) && (
+        <span style={{ fontSize: 13, color: '#5fd6c6' }}>
+          {[u.squad && `${t('squad')} ${u.squad}`, u.order].filter(Boolean).join(' · ')}
+        </span>
+      )}
       {!folded && u.noHeal && <span style={{ fontSize: 13, color: 'var(--red-soft)' }}>{t('noHeal')}</span>}
       {!folded && u.cargo && (
         <span class="muted" style={{ fontSize: 13 }}>
@@ -738,7 +744,7 @@ const FoldMark = ({ folded }: { folded: boolean }) => (
   </span>
 );
 
-function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
+function Tray({ idle, threat, squads, multi }: { idle: IdleVM[]; threat: boolean; squads: SquadVM[]; multi: number | null }) {
   const a = ui.actions;
   const [folded, toggleFold] = useFold('tray');
   return (
@@ -766,6 +772,34 @@ function Tray({ idle, threat }: { idle: IdleVM[]; threat: boolean }) {
       ) : (
         <span class="all">{t('allMoved')}</span>
       )}
+      {!folded && squads.length > 0 && (
+        <div class="squads" aria-label={t('squads')}>
+          {squads.map((q) => (
+            <button
+              tabIndex={-1}
+              type="button"
+              class="squad"
+              title={q.order ?? q.name}
+              onMouseDown={noFocus}
+              onClick={() => a.selectSquad(q.id)}
+            >
+              <span class="sq-name">{q.name}</span>
+              <span class="sq-count num">×{q.count}</span>
+              {q.order && <span class="sq-order">{q.order}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      <button
+        tabIndex={-1}
+        type="button"
+        class={`px-btn plain multi ${multi !== null ? 'on' : ''}`}
+        onMouseDown={noFocus}
+        onClick={() => a.multiSelect()}
+        aria-pressed={multi !== null}
+      >
+        {multi === null ? t('multiOff') : multi > 0 ? `${t('multiOrders')} (${multi})` : t('multiOn')}
+      </button>
       <button
         tabIndex={-1}
         type="button"
@@ -901,7 +935,7 @@ function GameHud({ s }: { s: UIState }) {
       {showCards && <Cards tile={s.tile!} />}
       <div class="side">
         {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
-        {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} />}
+        {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} squads={s.squads} multi={s.multi} />}
       </div>
       {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}
@@ -914,6 +948,52 @@ function GameHud({ s }: { s: UIState }) {
 // ---------------------------------------------------------------------------
 // Otras pantallas
 // ---------------------------------------------------------------------------
+
+/** [CAMBIO] Cambiar el nombre de una escuadra. Las teclas no llegan al juego mientras se escribe. */
+function RenameSquad({ r }: { r: { id: number; name: string; max: number } }) {
+  const [name, setName] = useState(r.name);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  const ok = () => ui.actions.renameSquad(r.id, name);
+  return (
+    <div class="help-veil" onPointerDown={(e) => e.target === e.currentTarget && ui.actions.renameClose()}>
+      <form
+        class="px rename"
+        role="dialog"
+        aria-label={t('squadName')}
+        onSubmit={(e) => {
+          e.preventDefault();
+          ok();
+        }}
+      >
+        <span class="label">{t('squadName')}</span>
+        <input
+          ref={ref}
+          type="text"
+          value={name}
+          maxLength={r.max}
+          onInput={(e) => setName((e.target as HTMLInputElement).value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Escape') ui.actions.renameClose();
+          }}
+          onKeyUp={(e) => e.stopPropagation()}
+        />
+        <div class="rename-buttons">
+          <button type="button" class="px-btn plain" onClick={() => ui.actions.renameClose()}>
+            {t('cancel')}
+          </button>
+          <button type="submit" class="px-btn">
+            {t('squadRename')}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 function Help() {
   const h = helpText();
@@ -1000,6 +1080,7 @@ export function Hud() {
       {s.screen === 'end' && s.end && <EndScreen e={s.end} />}
       {s.options && <Options o={s.options} />}
       {s.help && <Help />}
+      {s.rename && <RenameSquad r={s.rename} />}
       {s.notes && <PatchNotes n={s.notes} />}
       {s.toast && (
         <div

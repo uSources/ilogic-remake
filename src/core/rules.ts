@@ -767,6 +767,11 @@ export interface UnitActions {
   wait: boolean;
   /** Volver atras sin hacer nada: solo si aun no se ha movido. */
   back: boolean;
+  /** [CAMBIO] Ordenes con destino (se elige la casilla despues) y quitar la que tenga. */
+  cmdAttack: boolean;
+  cmdCapture: boolean;
+  cmdDefend: boolean;
+  cmdCancel: boolean;
   delete: boolean;
 }
 
@@ -778,6 +783,10 @@ export function unitActions(s: GameState, u: Unit): UnitActions {
     supply: canSupply(s, u),
     wait: true,
     back: u.canMove,
+    cmdAttack: u.team === 0 && !!UNIT.canfight[u.type],
+    cmdCapture: u.team === 0 && !!UNIT.cancapt[u.type],
+    cmdDefend: u.team === 0 && !!UNIT.canfight[u.type],
+    cmdCancel: !!u.command,
     delete: true,
   };
 }

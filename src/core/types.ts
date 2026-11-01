@@ -33,6 +33,10 @@ export interface Unit {
   kills?: number;
   /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
   hitDay?: number;
+  /** [CAMBIO] Orden con destino (atacar, capturar o defender aqui): la cumple sola al terminar cada turno si sigue sin usar. */
+  command?: Command;
+  /** [CAMBIO] Escuadra a la que pertenece (id de GameState.squads). */
+  squad?: number;
   /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */
   order?: Pos;
   /** uid del transporte que la lleva, o null. */
@@ -80,6 +84,8 @@ export interface GameState {
   generals?: [GeneralState | null, GeneralState | null];
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
+  /** [CAMBIO] Escuadras del jugador (las unidades dicen a cual pertenecen con Unit.squad). */
+  squads?: Squad[];
 }
 
 /** General de un bando (ver core/generals.ts). */
@@ -187,3 +193,25 @@ export type Objective =
   | { kind: 'capture'; count: number; type: number | null; days: number }
   | { kind: 'destroy'; days: number }
   | { kind: 'escort'; uid: number; to: Pos; days: number };
+
+/**
+ * [CAMBIO] Orden con destino de una unidad del jugador (estilo RTS), ver commandTurn en ai.ts:
+ * - attack: avanza hacia `at` atacando lo que tenga a tiro por el camino; al llegar, cuando no
+ *   quedan enemigos cerca, la orden se cumple;
+ * - capture: va al edificio de `at` y lo captura (responde si puede, sin desviarse); cumplida al
+ *   ser suyo;
+ * - defend: va a `at` y la guarda (solo ataca a quien se acerque); no se cumple nunca, dura hasta
+ *   que se cancela.
+ * Al cumplirse, la unidad se queda quieta esperando otra orden.
+ */
+export type CommandKind = 'attack' | 'capture' | 'defend';
+export interface Command {
+  kind: CommandKind;
+  at: Pos;
+}
+
+/** [CAMBIO] Escuadra con nombre: varias unidades del jugador que reciben las ordenes juntas. */
+export interface Squad {
+  id: number;
+  name: string;
+}
