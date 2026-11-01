@@ -255,6 +255,8 @@ export class GameScene extends Phaser.Scene {
   private phase: Phase = 'map';
   /** Laboratorio de animaciones (null en una partida normal). */
   private lab: LabOptions | null = null;
+  /** [CAMBIO] Modo "Elegir varias" de la bandeja: cada toque en una unidad propia la añade al grupo. */
+  private multi = false;
   /** [CAMBIO] Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
   private ordering: { kind: CommandKind; uids: number[]; single: boolean } | null = null;
   /** Habilidad del general que se esta apuntando (fase 'target'). */
@@ -540,6 +542,15 @@ export class GameScene extends Phaser.Scene {
       labExit: () => {
         this.scene.start('Menu');
       },
+      multiSelect: () => {
+        if (!ready() || this.phase !== 'map') return;
+        // Con unidades elegidas, el boton abre sus ordenes; sin ninguna, entra o sale del modo.
+        if (this.multi && this.group.size) return this.openGroupMenu();
+        this.multi = !this.multi;
+        if (!this.multi) this.group.clear();
+        else showToast(t('multiHint'));
+        this.refresh();
+      },
       selectSquad: (id: number) => {
         if (!ready() || (this.phase !== 'map' && this.phase !== 'groupMenu')) return;
         const units = squadUnits(this.s, id).filter((u) => u.carrier === null);
@@ -769,6 +780,7 @@ export class GameScene extends Phaser.Scene {
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
       squads: squadsVM(this.s),
+      multi: this.multi ? this.group.size : null,
       hint: busy
         ? this.enemyPlaying
           ? t('skip')
@@ -1059,8 +1071,9 @@ export class GameScene extends Phaser.Scene {
         return this.back();
       case 'cancel':
         if (this.carry) return this.cancelCarry();
-        if (this.group.size) {
+        if (this.group.size || this.multi) {
           this.group.clear();
+          this.multi = false;
           return this.refresh();
         }
         return this.back();
@@ -1247,6 +1260,16 @@ export class GameScene extends Phaser.Scene {
     // Clic fuera de un menu: cerrarlo (en el de acciones, deshace el movimiento).
     if (MENU_PHASES.includes(this.phase)) return this.back();
     if (!tile) return;
+    // [CAMBIO] "Elegir varias" (para el dedo, sin recuadro): tocar una unidad propia la añade o la quita.
+    if (this.phase === 'map' && this.multi) {
+      const own = unitAt(this.s, tile.x, tile.y);
+      if (own && own.team === 0 && own.carrier === null) {
+        this.moveCursorTo(tile, false);
+        if (this.group.has(own.uid)) this.group.delete(own.uid);
+        else this.group.add(own.uid);
+        return this.refresh();
+      }
+    }
     if (this.phase === 'map' && this.group.size) {
       this.moveCursorTo(tile, false);
       return void this.groupMove(tile);
@@ -1277,8 +1300,11 @@ export class GameScene extends Phaser.Scene {
       });
       switch (act) {
         case 'commit':
-          // Como soltar arrastrando: captura directamente, y espera sola si no hay nada mas que hacer.
           this.moveCursorTo(tile, false);
+          // [CAMBIO] Tocar otra vez la propia unidad abre su menu (esperar, ordenes...): con el dedo no
+          // habia otra forma de llegar a el.
+          if (it.kind === 'stay') return void this.commit(tile);
+          // Como soltar arrastrando: captura directamente, y espera sola si no hay nada mas que hacer.
           return void this.commit(tile, { drop: true });
         case 'preview':
           return this.moveCursorTo(tile, false);
@@ -1828,6 +1854,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
   private async groupMove(goal: Pos): Promise<void> {
+    this.multi = false;
     const units = [...this.group]
       .map((uid) => unitById(this.s, uid))
       .filter((u): u is Unit => !!u && u.active && u.canMove && u.carrier === null)
@@ -2113,6 +2140,7 @@ export class GameScene extends Phaser.Scene {
 
   /** [CAMBIO] Menu de grupo, al elegir varias con Mayusculas + recuadro. */
   private openGroupMenu(): void {
+    this.multi = false;
     this.menuSel = 0;
     this.phase = 'groupMenu';
     this.refresh();

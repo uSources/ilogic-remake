@@ -369,6 +369,8 @@ export interface UIState {
   idle: IdleVM[];
   /** [CAMBIO] Escuadras del jugador y la que se esta renombrando (null = ninguna). */
   squads: SquadVM[];
+  /** [CAMBIO] Modo "Elegir varias": cuantas hay elegidas (null = modo apagado). */
+  multi: number | null;
   rename: { id: number; name: string; max: number } | null;
   threat: boolean;
   toast: { text: string; id: number } | null;
@@ -438,6 +440,8 @@ export interface UIActions {
   menuClose(): void;
   endTurn(): void;
   /** [CAMBIO] Elegir una escuadra de la bandeja (sale su menu) y cambiarle el nombre. */
+  /** [CAMBIO] Boton "Elegir varias" de la bandeja (con unidades elegidas, abre sus ordenes). */
+  multiSelect(): void;
   selectSquad(id: number): void;
   renameSquad(id: number, name: string): void;
   renameClose(): void;
@@ -521,6 +525,7 @@ const initial: UIState = {
   cursorScreen: { x: 0, y: 0 },
   idle: [],
   squads: [],
+  multi: null,
   rename: null,
   threat: false,
   toast: null,
@@ -552,6 +557,7 @@ const DEFAULT_ACTIONS: UIActions = {
   menuHover: noop,
   menuClose: noop,
   endTurn: noop,
+  multiSelect: noop,
   selectSquad: noop,
   renameSquad: noop,
   renameClose: () => ui.set({ rename: null }),

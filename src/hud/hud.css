@@ -3121,3 +3121,16 @@ html.reduce-motion .end-best.new {
   justify-content: flex-end;
   gap: 8px;
 }
+.tray .multi {
+  padding: 6px 10px;
+  font-family: var(--body);
+  font-size: 13px;
+}
+.tray .multi.on {
+  background: var(--sel);
+  color: #fff;
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+}
