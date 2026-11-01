@@ -19,7 +19,8 @@
     "MINCAPTURERS",
     "GENERALMINVALUE",
     "REVEALVALUE",
-    "GUARDRADIUS"
+    "GUARDRADIUS",
+    "SQUADSPREAD"
   ],
   "properties": {
     "$schema": {
@@ -99,6 +100,11 @@
       "type": "number",
       "minimum": 0,
       "description": "Unidades del jugador en automatico con la mision defender: atacan a los enemigos a esta distancia (o menos) de la casilla que guardan."
+    },
+    "SQUADSPREAD": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Escuadras del jugador con la misma orden: casillas que una unidad puede adelantarse a la mas retrasada (medido por tierra hasta el destino) antes de esperarla."
     }
   }
 }

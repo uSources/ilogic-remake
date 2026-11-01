@@ -779,7 +779,7 @@ function Tray({ idle, threat, squads, multi }: { idle: IdleVM[]; threat: boolean
               tabIndex={-1}
               type="button"
               class="squad"
-              title={q.order ?? q.name}
+              title={q.order ? (q.formation ? `${q.order} · ${t('squadFormation')}` : q.order) : q.name}
               onMouseDown={noFocus}
               onClick={() => a.selectSquad(q.id)}
             >

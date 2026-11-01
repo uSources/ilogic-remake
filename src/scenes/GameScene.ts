@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aiTurn, assistTurn, commandNow } from '../core/ai';
+import { aiTurn, assistTurn, commandNow, commandOrder } from '../core/ai';
 import {
   cancelCommand,
   commandBlock,
@@ -2253,7 +2253,8 @@ export class GameScene extends Phaser.Scene {
     const m = this.match;
     this.phase = 'busy';
     this.refresh();
-    for (const u of units) {
+    // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
+    for (const u of commandOrder(this.s, units)) {
       for (const ev of commandNow(this.s, u.uid, Math.random)) {
         await this.playEvents([ev]);
         if (m !== this.match || this.checkEnd()) return;

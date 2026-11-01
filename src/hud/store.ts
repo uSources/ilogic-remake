@@ -223,6 +223,8 @@ export interface SquadVM {
   name: string;
   count: number;
   order: string | null;
+  /** [CAMBIO] Todas llevan la misma orden: avanzan juntas (ver squadInFormation). */
+  formation: boolean;
 }
 
 export interface IdleVM {

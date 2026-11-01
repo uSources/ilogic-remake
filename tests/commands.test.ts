@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { assistTurn, commandNow } from '@core/ai';
+import { assistTurn, commandNow, commandOrder } from '@core/ai';
 import { DEFAULT_RULES, HQ, useRules } from '@core/data';
-import { seededRng } from '@core/geom';
+import { manhattan, seededRng } from '@core/geom';
 import { newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
@@ -13,6 +13,8 @@ import {
   giveCommand,
   pruneSquads,
   renameSquad,
+  sameFormation,
+  squadInFormation,
   squadUnits,
 } from '@core/squads';
 import type { GameState } from '@core/types';
@@ -21,6 +23,7 @@ import { blankState } from './helpers';
 /** [CAMBIO] Ordenes con destino estilo RTS y escuadras con nombre. */
 const SOLDIER = 0,
   TANK = 1,
+  CAR = 3,
   CITY = 0,
   FACTORY = 2;
 
@@ -217,5 +220,116 @@ describe('escuadras', () => {
     const back = deserialize(JSON.stringify(raw))!;
     expect(back.units[0]!.command).toBeUndefined();
     expect(back.units[0]!.squad).toBeUndefined();
+  });
+});
+
+describe('escuadras en formacion', () => {
+  /** Casillas que le quedan hasta el destino (todo hierba: en linea recta). */
+  const left = (u: { x: number; y: number }, at: { x: number; y: number }) => Math.abs(u.x - at.x) + Math.abs(u.y - at.y);
+  const SPREAD = 2; // AI.SQUADSPREAD en ai.json
+
+  it('el jeep no deja atras al soldado: van juntos hacia un destino lejano', () => {
+    const s = world();
+    const sol = newUnit(s, SOLDIER, 0, 1, 5);
+    const car = newUnit(s, CAR, 0, 1, 6);
+    formSquad(s, [car, sol]);
+    const at = { x: 18, y: 5 };
+    giveCommand([car, sol], 'attack', at);
+    expect(squadInFormation(s, sol.squad!)).toBe(true);
+    turns(s, 2);
+    expect(left(sol, at)).toBe(17 - 6); // el soldado va a su ritmo (3 por turno)
+    expect(left(car, at)).toBeGreaterThanOrEqual(left(sol, at) - SPREAD);
+    expect(manhattan(car, sol)).toBeLessThanOrEqual(SPREAD + 1);
+  });
+
+  it('juegan primero las mas retrasadas y lentas', () => {
+    const s = world();
+    const car = newUnit(s, CAR, 0, 3, 6); // le queda lo mismo que al soldado: va antes el lento
+    const sol = newUnit(s, SOLDIER, 0, 2, 5);
+    const lone = newUnit(s, CAR, 0, 9, 9);
+    formSquad(s, [car, sol]);
+    giveCommand([car, sol, lone], 'attack', { x: 18, y: 5 });
+    expect(commandOrder(s, [car, lone, sol]).map((u) => u.uid)).toEqual([sol.uid, car.uid, lone.uid]);
+  });
+
+  it('la mas lenta no espera a la rapida: avanza todo lo que puede', () => {
+    const s = world();
+    const sol = newUnit(s, SOLDIER, 0, 2, 5);
+    const car = newUnit(s, CAR, 0, 3, 6); // les queda lo mismo
+    formSquad(s, [car, sol]);
+    const at = { x: 18, y: 5 };
+    giveCommand([car, sol], 'attack', at);
+    turns(s, 1);
+    expect(left(sol, at)).toBe(16 - 3);
+    expect(left(car, at)).toBe(16 - 3 - SPREAD);
+  });
+
+  it('el jeep no se lanza solo a por un enemigo lejano: lo espera con la escuadra', () => {
+    const s = world();
+    const sol = newUnit(s, SOLDIER, 0, 1, 5);
+    const car = newUnit(s, CAR, 0, 1, 6);
+    const enemy = newUnit(s, SOLDIER, 1, 9, 6); // al alcance del jeep, lejos del soldado
+    formSquad(s, [car, sol]);
+    const at = { x: 18, y: 5 };
+    giveCommand([car, sol], 'attack', at);
+    turns(s, 1);
+    expect(enemy.life).toBe(100);
+    expect(left(car, at)).toBeGreaterThanOrEqual(left(sol, at) - SPREAD);
+  });
+
+  it('con un enemigo a tiro sin dejar atras a la escuadra, el jeep ataca', () => {
+    const s = world();
+    const sol = newUnit(s, SOLDIER, 0, 1, 5);
+    const car = newUnit(s, CAR, 0, 1, 6);
+    const enemy = newUnit(s, SOLDIER, 1, 7, 6);
+    formSquad(s, [car, sol]);
+    giveCommand([car, sol], 'attack', { x: 18, y: 5 });
+    turns(s, 1);
+    expect(enemy.life).toBeLessThan(100);
+  });
+
+  it('cerca del destino la formacion se suelta y cada una va a lo suyo', () => {
+    const s = world();
+    const sol = newUnit(s, SOLDIER, 0, 10, 5);
+    const car = newUnit(s, CAR, 0, 10, 6);
+    formSquad(s, [car, sol]);
+    const at = { x: 14, y: 6 };
+    giveCommand([car, sol], 'attack', at);
+    turns(s, 1);
+    expect(left(car, at)).toBeLessThanOrEqual(1);
+  });
+
+  it('sin escuadra, o con ordenes distintas, cada una va a su ritmo', () => {
+    const s = world();
+    const sol = newUnit(s, SOLDIER, 0, 1, 5);
+    const car = newUnit(s, CAR, 0, 1, 6);
+    const at = { x: 18, y: 6 };
+    giveCommand([car, sol], 'attack', at);
+    turns(s, 1);
+    expect(left(car, at)).toBe(17 - 7);
+
+    const s2 = world();
+    const sol2 = newUnit(s2, SOLDIER, 0, 1, 5);
+    const car2 = newUnit(s2, CAR, 0, 1, 6);
+    formSquad(s2, [car2, sol2]);
+    giveCommand([sol2], 'attack', { x: 18, y: 5 });
+    giveCommand([car2], 'attack', at);
+    expect(sameFormation(car2, sol2)).toBe(false);
+    turns(s2, 1);
+    expect(left(car2, at)).toBe(17 - 7);
+  });
+
+  it('capturar con escolta tambien va en formacion', () => {
+    const s = world();
+    s.buildings.push({ type: CITY, owner: null, x: 18, y: 5 });
+    const sol = newUnit(s, SOLDIER, 0, 1, 5);
+    const car = newUnit(s, CAR, 0, 1, 6);
+    const q = formSquad(s, [car, sol])!;
+    const at = { x: 18, y: 5 };
+    giveCommand([car, sol], 'capture', at);
+    expect(car.command?.kind).toBe('attack');
+    expect(squadInFormation(s, q.id)).toBe(true);
+    turns(s, 2);
+    expect(left(car, at)).toBeGreaterThanOrEqual(left(sol, at) - SPREAD);
   });
 });

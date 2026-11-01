@@ -18,6 +18,7 @@ export const AI_KEYS = [
   'GENERALMINVALUE',
   'REVEALVALUE',
   'GUARDRADIUS',
+  'SQUADSPREAD',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 

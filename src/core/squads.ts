@@ -101,3 +101,19 @@ export function cancelCommand(units: readonly Unit[]): void {
 
 /** Ya ha llegado a la zona de su orden (a 1 casilla o menos). */
 export const atCommand = (u: Unit): boolean => !!u.command && manhattan(u, u.command.at) <= 1;
+
+/**
+ * [CAMBIO] Dos unidades van en formacion: misma escuadra y misma orden (mismo destino; capturar y
+ * atacar cuentan igual, porque con "capturar" las que no capturan van escoltando con "atacar").
+ */
+export function sameFormation(a: Unit, b: Unit): boolean {
+  if (a.squad === undefined || a.squad !== b.squad || a.team !== b.team || !a.command || !b.command) return false;
+  const holds = (u: Unit) => u.command!.kind === 'defend';
+  return holds(a) === holds(b) && a.command.at.x === b.command.at.x && a.command.at.y === b.command.at.y;
+}
+
+/** [CAMBIO] La escuadra entera (dos o mas unidades) lleva la misma orden: avanza en formacion. */
+export function squadInFormation(s: GameState, id: number): boolean {
+  const units = squadUnits(s, id);
+  return units.length > 1 && units.every((u) => sameFormation(units[0]!, u));
+}

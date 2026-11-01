@@ -24,7 +24,7 @@ import {
 import type { CombatInfo, CommandKind, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
 import { forecast, weatherNow } from '../core/weather';
 import { samePos } from '../core/geom';
-import { squadById } from '../core/squads';
+import { squadById, squadInFormation } from '../core/squads';
 import type {
   GeneralVM,
   AbilityVM,
@@ -57,8 +57,9 @@ export const commandLabel = (k: CommandKind): string =>
   t(k === 'capture' ? 'orderCapture' : k === 'defend' ? 'orderDefend' : 'orderAttack');
 
 /**
- * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades y su orden si todas
- * llevan la misma (null si no llevan ninguna o son distintas).
+ * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades, su orden si todas
+ * llevan la misma (null si no llevan ninguna o son distintas; capturar con escolta cuenta como
+ * capturar) y si avanzan en formacion (ver squadInFormation).
  */
 export function squadsVM(s: GameState): SquadVM[] {
   return (s.squads ?? [])
@@ -66,7 +67,9 @@ export function squadsVM(s: GameState): SquadVM[] {
       const units = s.units.filter((u) => u.squad === q.id);
       const first = units[0]?.command;
       const same = !!first && units.every((u) => u.command?.kind === first.kind && samePos(u.command.at, first.at));
-      return { id: q.id, name: q.name, count: units.length, order: same ? commandLabel(first.kind) : null };
+      const formation = squadInFormation(s, q.id);
+      const kind = same ? first.kind : formation ? 'capture' : null;
+      return { id: q.id, name: q.name, count: units.length, order: kind ? commandLabel(kind) : null, formation };
     })
     .filter((q) => q.count > 0);
 }

@@ -7,7 +7,7 @@
  */
 import { aiGeneral } from './aiGenerals';
 import { AI, BUILDING, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT, Movement } from './data';
-import { diamond, manhattan, samePos } from './geom';
+import { diamond, grid, manhattan, samePos } from './geom';
 import {
   attackEvent,
   buildingAt,
@@ -38,6 +38,7 @@ import {
   moveEvent,
   reachableTiles,
 } from './rules';
+import { sameFormation } from './squads';
 import type { Building, GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
 
 /**
@@ -159,11 +160,13 @@ interface AttackOpts {
   zone?: (t: Unit) => boolean;
   chase?: boolean;
   stay?: boolean;
+  /** Casillas desde las que puede disparar si se mueve (formacion: sin adelantarse a su escuadra). */
+  from?: (p: Pos) => boolean;
 }
 
 /** Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano (ver AttackOpts). */
 function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, opts: AttackOpts = {}): Generator<GameEvent, boolean> {
-  const { zone, chase: follow = true, stay = false } = opts;
+  const { zone, chase: follow = true, stay = false, from: allowed } = opts;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!UNIT.canfight[u.type] || !u.canFire) return false;
   const vis = visibility(s, ME);
@@ -178,7 +181,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, opts: Att
   const ranged = UNIT.minalc[u.type]! > 0;
   const froms: Pos[] = [{ x: u.x, y: u.y }];
   if (!ranged && !stay) {
-    froms.push(...reachableTiles(range));
+    froms.push(...reachableTiles(range).filter((p) => !allowed || allowed(p)));
   }
   for (const t of enemies) {
     for (const from of froms) {
@@ -375,9 +378,117 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
 export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, number[]> {
   ME = team;
   const done: number[] = [];
-  for (const u of teamUnits(s, ME).filter((u) => u.command)) if (yield* commandTurn(s, u.uid, rng)) done.push(u.uid);
+  for (const u of commandOrder(
+    s,
+    teamUnits(s, ME).filter((u) => u.command),
+  ))
+    if (yield* commandTurn(s, u.uid, rng)) done.push(u.uid);
   return done;
 }
+
+// ---------------------------------------------------------------------------
+// [CAMBIO] Formacion: una escuadra con la misma orden avanza junta. Sin ella, los jeeps y tanques
+// llegaban solos antes que la infanteria y los destrozaban. Las rapidas no se adelantan mas de
+// AI.SQUADSPREAD casillas a la mas retrasada (por tierra hasta el destino), salvo para atacar a algo a
+// tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
+// ---------------------------------------------------------------------------
+
+/** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
+const remainingMap = (s: GameState, u: Unit, at: Pos): number[][] => groundDistance(s, at, Movement.of(u.type), grid(false));
+/** Lo que queda desde `p` (Infinity si no llega). */
+const remainingAt = (rem: number[][], at: Pos, p: Pos): number => (samePos(p, at) ? 0 : rem[p.x]![p.y]! || Infinity);
+const remainingOf = (s: GameState, u: Unit): number => remainingAt(remainingMap(s, u, u.command!.at), u.command!.at, u);
+/** Hasta donde puede llegar y disparar este turno. */
+const strikeReach = (u: Unit): number => UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
+
+/** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
+function formationMates(s: GameState, u: Unit): Unit[] {
+  return s.units.filter((o) => o !== u && o.carrier === null && o.life > 0 && !needsRepair(o) && sameFormation(u, o));
+}
+
+/**
+ * Orden de juego de las unidades con orden: las de una misma formacion juntas, primero las mas
+ * retrasadas y, a igualdad, las mas lentas; las demas, en su orden de siempre.
+ */
+export function commandOrder(s: GameState, units: readonly Unit[]): Unit[] {
+  const out: Unit[] = [];
+  const placed = new Set<Unit>();
+  for (const u of units) {
+    if (placed.has(u)) continue;
+    const group = units.filter((o) => o === u || (!placed.has(o) && sameFormation(u, o)));
+    const key = new Map(group.map((o) => [o, remainingOf(s, o)]));
+    group.sort((a, b) => key.get(b)! - key.get(a)! || UNIT.mover[a.type]! - UNIT.mover[b.type]!);
+    for (const o of group) placed.add(o);
+    out.push(...group);
+  }
+  return out;
+}
+
+interface Formation {
+  /** Lo que le queda a la unidad desde cada casilla. */
+  rem: number[][];
+  /** No puede acabar mas cerca del destino que esto. */
+  minRem: number;
+  /** La compañera mas retrasada: a igualdad, se coloca cerca de ella. */
+  rear: Unit;
+}
+
+/** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
+function formation(s: GameState, u: Unit): Formation | null {
+  if (!u.command || needsRepair(u)) return null;
+  const at = u.command.at;
+  // Las que aun no han jugado este turno cuentan donde podrian acabar (si no, la mas lenta, que
+  // juega primero, esperaria a una rapida que va igual de retrasada).
+  const mates = formationMates(s, u)
+    .map((o) => {
+      const d = remainingOf(s, o);
+      return { o, d, next: o.active && o.canMove ? Math.max(0, d - UNIT.mover[o.type]!) : d };
+    })
+    .filter((m) => m.d < Infinity);
+  if (!mates.length) return null;
+  const rem = remainingMap(s, u, at);
+  const mine = remainingAt(rem, at, u);
+  if (mine === Infinity) return null; // no llega por tierra: como siempre
+  const rearMate = mates.reduce((a, b) => (b.next > a.next ? b : a));
+  const behind = mates.reduce((a, b) => (b.d > a.d ? b : a));
+  const rear = mine > behind.d ? { o: u, d: mine } : behind;
+  // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
+  if (rear.d <= strikeReach(rear.o)) return null;
+  const vis = visibility(s, ME);
+  const reach = strikeReach(rear.o);
+  if (s.units.some((t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(t, rear.o) <= reach))
+    return null;
+  return { rem, minRem: rearMate.next - AI.SQUADSPREAD, rear: rearMate.o };
+}
+
+/**
+ * Casilla a la que avanzar sin pasarse del limite de la formacion: lo mas cerca del destino que se
+ * pueda y, a igualdad, junto a la mas retrasada. null = mejor quedarse (ya va por delante).
+ */
+function formationMove(u: Unit, at: Pos, range: MoveRange, f: Formation): Pos | null {
+  let best: Pos | null = null;
+  let bestR = remainingAt(f.rem, at, u);
+  let bestA = manhattan(u, f.rear);
+  for (const p of reachableTiles(range)) {
+    const r = remainingAt(f.rem, at, p);
+    if (r < f.minRem || r === Infinity) continue;
+    const a = manhattan(p, f.rear);
+    if (r < bestR || (r === bestR && a < bestA)) {
+      best = p;
+      bestR = r;
+      bestA = a;
+    }
+  }
+  return best;
+}
+
+/** Hacia el destino de su orden: en formacion si va con su escuadra, si no como siempre. */
+function commandStep(s: GameState, u: Unit, at: Pos, range: MoveRange, f: Formation | null): Pos | null {
+  return f ? formationMove(u, at, range, f) : bestMoveToward(s, u, at, range);
+}
+
+/** En formacion solo dispara desde donde no se adelanta a su escuadra (o desde donde esta). */
+const formationFrom = (at: Pos, f: Formation | null) => (f ? (p: Pos) => remainingAt(f.rem, at, p) >= f.minRem : undefined);
 
 /** [CAMBIO] La unidad del jugador empieza ya su orden recien dada (si aun no se ha movido). */
 export function* commandNow(s: GameState, uid: number, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, boolean> {
@@ -406,7 +517,7 @@ export function* commandTurn(s: GameState, uid: number, rng: Rng): Generator<Gam
       return buildingAt(s, at.x, at.y)?.owner === ME ? finish() : false;
     }
     const range = moveRange(s, u);
-    if (yield* doMove(s, u, bestMoveToward(s, u, at, range), range)) return false;
+    if (yield* doMove(s, u, commandStep(s, u, at, range, formation(s, u)), range)) return false;
     if (samePos(u, at)) {
       yield* captureHere(s, u);
     } else if (!(yield* tryAttack(s, u, moveRange(s, u), rng, { stay: true, chase: false }))) wait(u);
@@ -416,16 +527,18 @@ export function* commandTurn(s: GameState, uid: number, rng: Rng): Generator<Gam
   const range = moveRange(s, u);
   if (needsRepair(u) && (yield* retreat(s, u, range))) return false;
   const near = (t: Pos) => manhattan(t, at) <= AI.GUARDRADIUS;
+  const f = formation(s, u);
+  const from = formationFrom(at, f);
   if (kind === 'defend') {
-    if (yield* tryAttack(s, u, range, rng, { zone: near })) return false;
-    if (manhattan(u, at) > 1) yield* doMove(s, u, bestMoveToward(s, u, at, range), range);
+    if (yield* tryAttack(s, u, range, rng, { zone: near, from })) return false;
+    if (manhattan(u, at) > 1) yield* doMove(s, u, commandStep(s, u, at, range, f), range);
     wait(u);
     return false;
   }
   // Atacar aqui: dispara a lo que tenga a tiro por el camino, sin perseguir, y avanza.
-  if (yield* tryAttack(s, u, range, rng, { chase: false })) return false;
+  if (yield* tryAttack(s, u, range, rng, { chase: false, from })) return false;
   if (manhattan(u, at) > 1) {
-    if (yield* doMove(s, u, bestMoveToward(s, u, at, range), range)) return false;
+    if (yield* doMove(s, u, commandStep(s, u, at, range, f), range)) return false;
     if (!(yield* tryAttack(s, u, moveRange(s, u), rng, { stay: true, chase: false }))) wait(u);
     return false;
   }

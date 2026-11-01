@@ -220,7 +220,9 @@ los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`).
   `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
-  unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar). Las ordenes
+  unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
+  `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
+  (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
   las cumple la misma IA que el enemigo (`assistTurn`/`commandTurn` en `src/core/ai.ts`); escuadras
   y ordenes estan en `src/core/squads.ts`.
 

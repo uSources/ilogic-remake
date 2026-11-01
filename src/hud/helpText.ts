@@ -17,7 +17,7 @@ const HELP = {
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
-      'Órdenes: en el menú de una unidad, «Orden: atacar, capturar o defender allí» y luego eliges la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre.',
+      'Órdenes: en el menú de una unidad, «Orden: atacar, capturar o defender allí» y luego eliges la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre. Una escuadra con la misma orden va en formación: las rápidas esperan a las lentas (salvo para atacar algo a tiro) y, cerca del destino o del enemigo, cada una lucha por su cuenta.',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -71,7 +71,7 @@ const HELP = {
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
-      'Orders: in a unit’s menu, “Order: attack, capture or hold there”, then pick the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it.',
+      'Orders: in a unit’s menu, “Order: attack, capture or hold there”, then pick the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it. A squad with the same order moves in formation: fast units wait for slow ones (unless they can hit something in range) and, near the destination or the enemy, each fights on its own.',
     ],
     colorsTitle: 'Map colours',
     colors: [
