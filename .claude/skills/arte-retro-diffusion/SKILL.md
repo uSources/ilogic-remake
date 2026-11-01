@@ -54,6 +54,9 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 - **Fondo:** el quitafondos de RD (`remove_bg`) se come lo fino o blanco (gotas, copos, rayos, cajas
   claras) y aun asi cobra. Mejor pedir un fondo liso de un color que no salga en el dibujo (verde
   vivo, azul cielo) y quitarlo aqui con un relleno desde el borde o por color.
+- Iconos pequeños (ordenes `cmd_<orden>.png`): basta `rd_plus__low_res` 16x16 (0,06 $, un tercio que
+  Pro). Ignora el color de fondo pedido y lo devuelve gris opaco: quitarlo con relleno desde el borde.
+  `rd_ui.py` les pone un contorno oscuro porque van encima de la unidad.
 - Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
   sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.

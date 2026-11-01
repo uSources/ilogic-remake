@@ -114,6 +114,8 @@ interface UnitSprite {
   cargo: Phaser.GameObjects.Rectangle;
   /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
   stars: Phaser.GameObjects.Graphics;
+  /** [CAMBIO] Icono de la mision en automatico (ui/cmd_<tipo>); si falta, placa con letra en `stars`. */
+  cmd: Phaser.GameObjects.Image;
   /** Lo dibujado en `stars`: rango x 16 + 1 sin cura + 2 con carga + 4 x mision en automatico. */
   rank: number;
   key: string;
@@ -491,9 +493,10 @@ export class MapView {
     const stars = this.scene.add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
-    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars]);
+    const cmd = this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
+    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars, cmd]);
     this.unitLayer.add(root);
-    return { root, img, front, life, cargo, stars, rank: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, cmd, rank: 0, key, idle: false, team: 0 };
   }
 
   private syncUnits(s: GameState, opts: ViewOptions): void {
@@ -554,7 +557,12 @@ export class MapView {
       sp.rank = marks;
       const g = sp.stars;
       g.clear();
-      if (u.command) {
+      const cmdKey = u.command ? `ui/cmd_${u.command.kind}` : null;
+      const cmdArt = !!cmdKey && hasImage(this.scene.textures, cmdKey);
+      sp.cmd.setVisible(cmdArt);
+      // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
+      if (cmdArt) sp.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo ? 10 : 0, 0);
+      if (u.command && !cmdArt) {
         // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
         const x = cargo ? 12 : 1,
           y = 1;
