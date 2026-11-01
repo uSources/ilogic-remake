@@ -212,6 +212,8 @@ export interface TileVM {
     capture?: { left: number; total: number; team: 0 | 1 };
   };
   unit?: UnitVM;
+  /** [CAMBIO] Punto de control en la casilla: de quien es y lo que da por ronda. */
+  point?: { owner: 'you' | 'enemy' | 'neutral'; income: number };
 }
 
 export interface IdleVM {
@@ -414,6 +416,8 @@ export interface MinimapVM {
   fog: boolean[][];
   buildings: { x: number; y: number; owner: 0 | 1 | null }[];
   units: { x: number; y: number; team: 0 | 1 }[];
+  /** [CAMBIO] Puntos de control (rombo dorado con el color de su dueño). */
+  points?: { x: number; y: number; owner: 0 | 1 | null }[];
 }
 
 export interface UIActions {

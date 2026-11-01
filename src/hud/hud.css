@@ -3065,3 +3065,10 @@ html.reduce-motion .end-best.new {
   flex: 1 1 auto;
   border-left: 0;
 }
+/* [CAMBIO] Punto de control en la ficha de la casilla. */
+.terrain .cpoint {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}

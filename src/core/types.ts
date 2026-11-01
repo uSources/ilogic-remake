@@ -80,6 +80,11 @@ export interface GameState {
   generals?: [GeneralState | null, GeneralState | null];
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
+  /**
+   * [CAMBIO] Puntos de control: casillas sin edificio que dan RULES.controlIncome cada ronda a su
+   * dueño. Pasan a ser de quien acabe la ronda con una unidad encima (y siguen suyos al irse).
+   */
+  controlPoints?: ControlPoint[];
 }
 
 /** General de un bando (ver core/generals.ts). */
@@ -100,6 +105,13 @@ export interface WeatherState {
   /** Dias que quedan contando el de hoy (al llegar a 0 entra `next`). */
   left: number;
   next: number;
+}
+
+/** [CAMBIO] Punto de control (ver GameState.controlPoints). */
+export interface ControlPoint {
+  x: number;
+  y: number;
+  owner: Team | null;
 }
 
 /** Generador de numeros aleatorios en [0, 1). */

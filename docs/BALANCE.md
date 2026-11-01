@@ -189,3 +189,24 @@ Conclusiones:
   (68), Ámbar 50 % (60). Brisa gana con el flanqueo y el bajo fuego (su daño en área marca a varias
   unidades); Ámbar pierde porque el botín reparte dinero a los dos. Vigilar; margen ±10-11.
 - Pendiente: una IA que ataque en grupo (entrenador de IA) para acercar la duración a 15-25 días.
+
+## Puntos de control (01-11-2026)
+
+Para que haya algo por lo que pelear en el medio del mapa: 3 casillas por mapa al azar
+(`RULES.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
+ronda son de quien tenga una unidad encima (y siguen suyas al irse) y cada una da
+`RULES.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
+de ventaja).
+
+`npm run balance -- run --games 80` (IA contra IA, máximo 60 días):
+
+| Variante | Sin terminar | Ventaja bando 0 / 1 |
+|---|---:|---:|
+| Sin puntos | 94 % | 38 / 31 |
+| 3 puntos de 1000 (las de ahora) | 90 % | 23 / 44 |
+| 3 puntos de 2000 | 98 % | 32 / 41 |
+| 3 de 1000 y la IA los busca más (10) | 91 % | 28 / 39 |
+
+Con 200 partidas, 3 de 1000: ventaja 77 / 89, sin un lado claramente favorecido. Como con las demás
+reglas, el empate entre IAs casi no se mueve; los puntos dan al jugador un objetivo claro en el
+centro y dinero por avanzar.

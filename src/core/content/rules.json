@@ -22,7 +22,9 @@
     "forestHides": true,
     "terrainCost": true,
     "weather": true,
-    "abilities": true
+    "abilities": true,
+    "controlPoints": 3,
+    "controlIncome": 1000
   },
   "maxFunds": 999999
 }

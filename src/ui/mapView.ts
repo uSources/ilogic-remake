@@ -52,6 +52,8 @@ export interface ViewOptions {
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
+  /** [CAMBIO] Puntos de control: casilla teñida y esquinas del color de su dueño. */
+  controlPoints?: { x: number; y: number; owner: 0 | 1 | null }[];
   /** Capturas a medias que se ven (barra encima del edificio). */
   captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
 }
@@ -560,6 +562,30 @@ export class MapView {
     else {
       g.fillStyle(0x05080c, 0.5);
       for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    }
+    // [CAMBIO] Puntos de control: casilla teñida del color de su dueño (gris si no es de nadie), con
+    // borde de puntos y un banderin arriba a la izquierda (distinto del cursor, que son esquinas).
+    for (const c of opts.controlPoints ?? []) {
+      const x = c.x * TILE,
+        y = c.y * TILE;
+      const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : 0xc8c8c8;
+      g.fillStyle(color, 0.22);
+      g.fillRect(x, y, TILE, TILE);
+      g.fillStyle(color, 0.9);
+      for (let i = 0; i < TILE; i += 4) {
+        g.fillRect(x + i, y, 2, 2);
+        g.fillRect(x + i, y + TILE - 2, 2, 2);
+        g.fillRect(x, y + i, 2, 2);
+        g.fillRect(x + TILE - 2, y + i, 2, 2);
+      }
+      // Mastil y banderin triangular con borde oscuro.
+      g.fillStyle(PAL.ink, 1);
+      g.fillRect(x + 3, y + 3, 3, 14);
+      g.fillRect(x + 5, y + 3, 9, 8);
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(x + 4, y + 4, 1, 12);
+      g.fillStyle(color, 1);
+      for (let r = 0; r < 6; r++) g.fillRect(x + 6, y + 4 + r, 7 - Math.abs(r - 2.5) * 2, 1);
     }
     // Zona de amenaza enemiga: relleno rojo suave y borde de 2 px por fuera de la zona.
     const th = opts.threat;

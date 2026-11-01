@@ -46,6 +46,10 @@ export interface RulesConfig {
   weather: boolean;
   /** Habilidades de las unidades (units.json, "abilities"). */
   abilities: boolean;
+  /** [CAMBIO] Puntos de control en los mapas al azar (0 = ninguno): casillas que dan dinero cada ronda a quien las tiene. */
+  controlPoints: number;
+  /** [CAMBIO] Dinero que da cada punto de control por ronda. */
+  controlIncome: number;
 }
 
 export interface RulesFile {
@@ -78,6 +82,8 @@ const RULE_KINDS: Record<keyof RulesConfig, Kind> = {
   terrainCost: 'bool',
   weather: 'bool',
   abilities: 'bool',
+  controlPoints: 'int',
+  controlIncome: 'int',
 };
 
 export function validateRules(r: RulesFile, check: Checker): void {

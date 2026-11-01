@@ -632,6 +632,7 @@ export class GameScene extends Phaser.Scene {
         .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
+      controlPoints: this.s.controlPoints,
       goal: obj?.kind === 'escort' ? obj.to : null,
       vip: vipAt && !this.hidden.has(vipAt.uid) ? { x: vipAt.x, y: vipAt.y } : null,
     });
@@ -2333,6 +2334,9 @@ export class GameScene extends Phaser.Scene {
   private showReport(r: RoundReport): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    // [CAMBIO] Parte de los ingresos que viene de los puntos de control.
+    if (r.control && r.control.held[0] > 0)
+      lines.push({ icon: 'ui/dinero', text: `+${fmtNum(r.control.income[0])} ${t('reportControl')} (${r.control.held[0]})`, tone: 'gold' });
     if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     if (mine.length)
       lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });

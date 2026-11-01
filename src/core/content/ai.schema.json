@@ -18,7 +18,8 @@
     "CAPTUREOWNED",
     "MINCAPTURERS",
     "GENERALMINVALUE",
-    "REVEALVALUE"
+    "REVEALVALUE",
+    "CONTROLPOINT"
   ],
   "properties": {
     "$schema": {
@@ -93,6 +94,11 @@
       "type": "number",
       "minimum": 0,
       "description": "Lo que vale ver todo el mapa una ronda (habilidad reveal), solo con niebla. Bajo: se usa cuando la barra esta llena y no hay nada mejor."
+    },
+    "CONTROLPOINT": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Puntos de control ajenos: cuantas casillas mas cerca cuentan al elegir adonde avanzar."
     }
   }
 }

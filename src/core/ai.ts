@@ -238,16 +238,20 @@ function* advance(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent,
   const dist = groundDistance(s, u, Movement.of(u.type), occupancyWithout(s, u));
   // Las que capturan: edificios ajenos, con prioridad a la Base enemiga y a los del jugador.
   const bonus = (g: Pos): number => {
+    // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
+    if (s.controlPoints?.some((c) => c.x === g.x && c.y === g.y && c.owner !== ME)) return AI.CONTROLPOINT;
     const b = buildingAt(s, g.x, g.y);
     if (!b || !UNIT.cancapt[u.type]) return 0;
     return b.type === HQ && b.owner !== null ? AI.CAPTUREHQ : b.owner !== null ? AI.CAPTUREOWNED : 0;
   };
   const vis = visibility(s, ME);
+  const points: Pos[] = (s.controlPoints ?? []).filter((c) => c.owner !== ME && !unitAt(s, c.x, c.y));
   const goals: Pos[] = UNIT.cancapt[u.type]
-    ? s.buildings.filter((b) => b.owner !== ME)
+    ? [...s.buildings.filter((b) => b.owner !== ME), ...points]
     : [
         ...s.units.filter((o) => o.team !== ME && o.carrier === null && vis[o.x]![o.y] && attackTargetsPossible(u, o)),
         ...s.buildings.filter((b) => b.owner !== ME && b.owner !== null && b.type === HQ),
+        ...points,
       ];
   let goal: Pos | null = null;
   let goalD = Infinity;
