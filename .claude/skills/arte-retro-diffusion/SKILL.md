@@ -57,6 +57,11 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 - Iconos pequeños (ordenes `cmd_<orden>.png`): basta `rd_plus__low_res` 16x16 (0,06 $, un tercio que
   Pro). Ignora el color de fondo pedido y lo devuelve gris opaco: quitarlo con relleno desde el borde.
   `rd_ui.py` les pone un contorno oscuro porque van encima de la unidad.
+- Marcas de unidad (`mk_star/noheal/cargo`): igual que las de orden y luego reducidas a 8-10 px por
+  moda de color (sin mezclar) antes de guardarlas en `ui/`.
+- Efectos animados: `rd_animation__vfx` (24-96 px, 0,07 $ la animacion entera) con `return_spritesheet`.
+  No pedir fondo negro (lo quita y se lleva el humo). La hoja va como `ui/anim_<nombre>.png` y `rd_ui.py`
+  la parte en fotogramas de 48x48 sin los vacios ni el magenta suelto; `playAnim` (src/ui/fx.ts) la pone.
 - Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
   sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.

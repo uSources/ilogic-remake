@@ -116,6 +116,8 @@ interface UnitSprite {
   stars: Phaser.GameObjects.Graphics;
   /** [CAMBIO] Icono de la mision en automatico (ui/cmd_<tipo>); si falta, placa con letra en `stars`. */
   cmd: Phaser.GameObjects.Image;
+  /** [CAMBIO] Marcas dibujadas (ui/mk_*): sin cura, carga y hasta 3 estrellas; si faltan, van en `stars`. */
+  badges: Phaser.GameObjects.Image[];
   /** Lo dibujado en `stars`: rango x 16 + 1 sin cura + 2 con carga + 4 x mision en automatico. */
   rank: number;
   key: string;
@@ -144,6 +146,8 @@ export class MapView {
   /** [CAMBIO] Banderines de los puntos de control (dibujo ui/flag_*), encima de la zona y debajo de las unidades. */
   private readonly flagLayer: Phaser.GameObjects.Container;
   private readonly flags: Phaser.GameObjects.Image[] = [];
+  /** Banderines de destino de las ordenes de varios turnos (ui/flag_cmd_*). */
+  private readonly orderFlags: Phaser.GameObjects.Image[] = [];
   private readonly overlay: Phaser.GameObjects.Graphics;
   private readonly fx: Phaser.GameObjects.Container;
   /** Marcas de mision, por encima de las unidades. */
@@ -494,9 +498,10 @@ export class MapView {
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
     const cmd = this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
-    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars, cmd]);
+    const badges = Array.from({ length: 5 }, () => this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
+    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars, cmd, ...badges]);
     this.unitLayer.add(root);
-    return { root, img, front, life, cargo, stars, cmd, rank: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, cmd, badges, rank: 0, key, idle: false, team: 0 };
   }
 
   private syncUnits(s: GameState, opts: ViewOptions): void {
@@ -545,7 +550,10 @@ export class MapView {
     const showLife = u.life < 100 && n >= 1 && n <= 9;
     sp.life.setVisible(showLife);
     if (showLife) sp.life.setTexture(lifeKey(n));
-    sp.cargo.setVisible(u.cargo.some((c) => c !== null));
+    // Con las marcas dibujadas, la carga va abajo a la izquierda (junto a la de sin cura) y el
+    // cuadradito turquesa de antes se esconde.
+    const markArt = hasImage(this.scene.textures, 'ui/mk_star');
+    sp.cargo.setVisible(!markArt && u.cargo.some((c) => c !== null));
     const r = rank(u);
     // [CAMBIO] Ha recibido un ataque hoy y no se curara esta noche (regla noHealUnderFire).
     const noHeal = !!s && u.life < 100 && unhealable(s, u);
@@ -561,7 +569,19 @@ export class MapView {
       const cmdArt = !!cmdKey && hasImage(this.scene.textures, cmdKey);
       sp.cmd.setVisible(cmdArt);
       // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
-      if (cmdArt) sp.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo ? 10 : 0, 0);
+      if (cmdArt) sp.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo && !markArt ? 10 : 0, 0);
+      if (markArt) {
+        // Abajo a la izquierda: sin cura y carga (10x10); arriba a la derecha: una estrella (8x8) por rango.
+        const list: [string, number, number][] = [];
+        if (noHeal) list.push(['ui/mk_noheal', 0, TILE - 10]);
+        if (cargo) list.push(['ui/mk_cargo', noHeal ? 10 : 0, TILE - 10]);
+        for (let i = 0; i < r; i++) list.push(['ui/mk_star', TILE - 8 - i * 7, 0]);
+        sp.badges.forEach((b, i) => {
+          const m = list[i];
+          b.setVisible(!!m);
+          if (m) b.setTexture(ATLAS, m[0]).setPosition(m[1], m[2]);
+        });
+      } else sp.badges.forEach((b) => b.setVisible(false));
       if (u.command && !cmdArt) {
         // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
         const x = cargo ? 12 : 1,
@@ -573,7 +593,7 @@ export class MapView {
         g.fillStyle(0xffffff, 1);
         for (const [dx, dy] of MISSION_GLYPH[u.command.kind]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
       }
-      if (noHeal) {
+      if (noHeal && !markArt) {
         // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
         const x = 1,
           y = TILE - 8;
@@ -584,7 +604,7 @@ export class MapView {
         g.fillStyle(0xffffff, 1);
         g.fillRect(x + 2, y + 3, 3, 1);
       }
-      for (let i = 0; i < r; i++) {
+      for (let i = 0; i < (markArt ? 0 : r); i++) {
         const x = TILE - 5 - i * 5,
           y = 1;
         g.fillStyle(PAL.ink, 1);
@@ -640,6 +660,22 @@ export class MapView {
       img.setTexture(ATLAS, `ui/flag_${c.owner === 0 ? 'b' : c.owner === 1 ? 'r' : 'i'}`);
       // El pie del mastil un poco por encima del borde de abajo de la casilla.
       img.setPosition(c.x * TILE + TILE / 2, (c.y + 1) * TILE - 4);
+    });
+  }
+
+  /** Banderin del color de la orden en el destino (dorado si solo es "ir alli"); el mastil en el centro. */
+  private syncOrderFlags(orders: NonNullable<ViewOptions['orders']>): void {
+    while (this.orderFlags.length < orders.length) {
+      const img = this.scene.add.image(0, 0, ATLAS, 'ui/flag_cmd_go').setOrigin(0.25, 1);
+      this.flagLayer.add(img);
+      this.orderFlags.push(img);
+    }
+    this.orderFlags.forEach((img, i) => {
+      const o = orders[i];
+      img.setVisible(!!o);
+      if (!o) return;
+      img.setTexture(ATLAS, `ui/flag_cmd_${o.kind ?? 'go'}`);
+      img.setPosition(o.to.x * TILE + TILE / 2, o.to.y * TILE + TILE / 2 + 4);
     });
   }
 
@@ -771,6 +807,8 @@ export class MapView {
       }
     }
     // Ordenes de varios turnos: puntos cada 8 px (primero en horizontal, luego en vertical) y banderita.
+    const orderArt = hasImage(this.scene.textures, 'ui/flag_cmd_go');
+    this.syncOrderFlags(orderArt ? (opts.orders ?? []) : []);
     for (const o of opts.orders ?? []) {
       const ax = o.from.x * TILE + TILE / 2,
         ay = o.from.y * TILE + TILE / 2,
@@ -782,6 +820,7 @@ export class MapView {
         for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
         for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
       }
+      if (orderArt) continue;
       g.fillStyle(PAL.ink, 1);
       g.fillRect(bx - 1, by - 12, 3, 14);
       g.fillRect(bx + 1, by - 13, 10, 8);

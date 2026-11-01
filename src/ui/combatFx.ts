@@ -10,7 +10,7 @@ import type Phaser from 'phaser';
 import { Movement, MoveType, UNIT } from '../core/data';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
-import { burst, center, COLORS, reducedMotion } from './fx';
+import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import type { Facing, MapView } from './mapView';
 import { PAL, PAL_CSS } from './palette';
 
@@ -205,10 +205,19 @@ export async function impact(scene: Phaser.Scene, view: MapView, at: Pos, killed
     }
     g.destroy();
   };
+  // Explosion dibujada (ui/anim_boom_*) si esta en el atlas; si no, el anillo de cuadraditos de siempre.
+  const drawn = animFrameCount(scene, 'boom') > 0;
   await Promise.all([
-    ring(),
-    burst(scene, view, c, { colors: COLORS.fire, count: killed ? 12 : 8, radius: killed ? 22 : 15, size: 4, duration: 320 * k }),
+    drawn ? playAnim(scene, view, c, 'boom', { frameMs: 40 * k }) : ring(),
+    burst(scene, view, c, {
+      colors: COLORS.fire,
+      count: drawn ? (killed ? 8 : 5) : killed ? 12 : 8,
+      radius: killed ? 22 : 15,
+      size: drawn ? 3 : 4,
+      duration: 320 * k,
+    }),
   ]);
+  if (drawn) g.destroy();
 }
 
 /** Numero que salta: aparece grande, se encoge a su tamaño, sube un poco y se va. No hay que esperarlo entero. */
