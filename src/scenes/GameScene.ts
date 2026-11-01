@@ -117,6 +117,7 @@ import { mapTap, moveTap } from '../ui/touch';
 import { PointerGestures, type PointerIn, type PointerTarget } from '../controls/pointer';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
+import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
 import {
   squadsVM,
   abilitiesVM,
@@ -221,6 +222,19 @@ interface MoveUndo {
   x: number;
   y: number;
   canFire: boolean;
+}
+
+/** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
+function pointerIn(p: Phaser.Input.Pointer, right: boolean): PointerIn {
+  return {
+    id: p.id,
+    x: p.x,
+    y: p.y,
+    touch: p.wasTouch,
+    down: p.isDown,
+    right,
+    shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
+  };
 }
 
 const key = (p: Pos) => `${p.x},${p.y}`;
@@ -1001,15 +1015,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => this.onKey(e));
     // Raton y dedos: el adaptador decide el gesto; pointerTarget() dice que hace en la partida.
     const g = this.gestures;
-    const pin = (p: Phaser.Input.Pointer, right: boolean): PointerIn => ({
-      id: p.id,
-      x: p.x,
-      y: p.y,
-      touch: p.wasTouch,
-      down: p.isDown,
-      right,
-      shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
-    });
+    const pin = pointerIn;
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => g.move(pin(p, false)));
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => g.down(pin(p, p.rightButtonDown())));
     this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => g.up(pin(p, p.rightButtonReleased())));
@@ -1019,14 +1025,31 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  /** Adaptador de teclado: en el mapa, ordenes GameCommand; en la pantalla final y opciones, MenuCommand. */
   private onKey(e: KeyboardEvent): void {
-    // Pantalla final y opciones: menus propios, con sus teclas.
-    if (this.ended) return this.endKey(e);
-    if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
+    const ctx = this.controlContext();
+    if (ctx !== 'map') {
+      const cmd = menuKeyCommand(e, ctx);
+      if (cmd) this.menu(cmd);
+      return;
+    }
     const cmd = keyCommand(e);
     if (!cmd) return;
     if (cmd.kind === 'accept') e.preventDefault();
     this.command(cmd);
+  }
+
+  /** Donde va lo que pulse un mando: al mapa (command) o a un menu propio (menu). */
+  controlContext(): ControlContext {
+    if (this.ended) return 'end';
+    if (this.optionsPanel.isOpen) return 'options';
+    return 'map';
+  }
+
+  /** Cumplir una orden de menu (pantalla final u opciones), venga del mando que venga. */
+  menu(cmd: MenuCommand): void {
+    if (this.ended) return this.endCommand(cmd);
+    if (this.optionsPanel.isOpen) this.optionsPanel.command(cmd);
   }
 
   /**
@@ -1198,6 +1221,10 @@ export class GameScene extends Phaser.Scene {
         this.view.scrollBy(dx, dy);
         this.refreshHud();
       },
+      carryTouch: () => !!this.carry?.touch,
+      edgeScrollable: () => !MENU_PHASES.includes(this.phase),
+      // Sin rehacer el HUD: update() recoloca los bocadillos si la camara se ha movido.
+      edgeScroll: (dx, dy) => this.view.scrollBy(dx, dy),
       zoomAt: (dir, x, y, wheel) => {
         this.view.zoomStep(dir, x, y);
         if (wheel) this.time.delayedCall(0, () => this.refreshHud());
@@ -1339,24 +1366,8 @@ export class GameScene extends Phaser.Scene {
   override update(time: number, delta: number): void {
     this.view.cursorAttack = this.phase === 'attack' || this.phase === 'target';
     this.view.tick(time);
-    // Desplazar el mapa con el raton en el borde de la pantalla.
-    const p = this.input.activePointer;
-    if (this.carry && p.isDown) {
-      // Llevando una unidad cerca del borde: el mapa se desplaza solo (tambien con el dedo).
-      const edge = (this.carry.touch ? 40 : 24) * (window.devicePixelRatio || 1);
-      const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
-      const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
-      if (dx || dy) {
-        this.view.scrollBy(dx * delta * 0.6 * (window.devicePixelRatio || 1), dy * delta * 0.6 * (window.devicePixelRatio || 1));
-        this.carryTo(p.x, p.y);
-      }
-    } else if (this.gestures.inside && !this.ended && !this.gestures.dragging && !p.wasTouch && !MENU_PHASES.includes(this.phase)) {
-      const edge = 14 * (window.devicePixelRatio || 1);
-      const dx = p.x < edge ? -1 : p.x > this.scale.width - edge ? 1 : 0;
-      const dy = p.y < edge ? -1 : p.y > this.scale.height - edge ? 1 : 0;
-      if (dx || dy)
-        this.view.scrollBy(dx * delta * 0.9 * (window.devicePixelRatio || 1), dy * delta * 0.9 * (window.devicePixelRatio || 1));
-    }
+    // Desplazar el mapa con el puntero en el borde (el adaptador decide cuanto; ver PointerGestures.tick).
+    this.gestures.tick(pointerIn(this.input.activePointer, false), this.scale.width, this.scale.height, delta);
     // Si la camara se ha movido (arrastre, borde, paneo animado), recolocar los bocadillos.
     const cam = this.cameras.main;
     const l = this.lastScroll;
@@ -2448,13 +2459,14 @@ export class GameScene extends Phaser.Scene {
     if (e) ui.set({ end: { ...e, selected: this.endSel } });
   }
 
-  private endKey(e: KeyboardEvent): void {
+  /** Menu de fin de partida: una fila de botones. */
+  private endCommand(cmd: MenuCommand): void {
     if (ui.get().screen !== 'end') return;
     const n = this.endButtons.length;
-    if (['ArrowLeft', 'KeyA', 'ArrowUp', 'KeyW'].includes(e.code)) this.endSel = (this.endSel - 1 + n) % n;
-    else if (['ArrowRight', 'KeyD', 'ArrowDown', 'KeyS', 'Tab'].includes(e.code)) this.endSel = (this.endSel + 1) % n;
-    else if (['Enter', 'NumpadEnter', 'Space'].includes(e.code) && !e.repeat) return this.endPick(this.endSel);
-    else if (e.code === 'Escape') return this.endPick(this.endButtons.indexOf('menu'));
+    const step = listStep(cmd);
+    if (step) this.endSel = (this.endSel + step + n) % n;
+    else if (cmd.kind === 'ok' && !cmd.repeat) return this.endPick(this.endSel);
+    else if (cmd.kind === 'back') return this.endPick(this.endButtons.indexOf('menu'));
     else return;
     this.publishEndSel();
   }

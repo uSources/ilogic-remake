@@ -9,11 +9,12 @@ import type { GameState } from '../core/types';
 import { bestDays, completedMissions, missionUnlocked, objectiveText } from '../campaign';
 import { resetActions, ui, type CampaignItemVM, type MarkVM, type OptionRowVM, type PresetVM } from '../hud/store';
 import { WEB_URL } from '../layout';
-import { KEY_BACK, KEY_DOWN, KEY_LEFT, KEY_OK, KEY_RIGHT, KEY_UP, navGrid } from '../menu/nav';
+import { navGrid } from '../menu/nav';
+import { listStep, menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { OptionsPanel } from '../menu/optionsPanel';
 import { keepMapSize, mapThumb } from '../menu/thumb';
 import { playMusic } from '../music';
-import { checkNotes, closeNotes, notesKey, openNotes } from '../patchNotes';
+import { checkNotes, closeNotes, notesCommand, notesOpen, openNotes } from '../patchNotes';
 import { settings, t, type TextKey } from '../settings';
 import {
   applyPreset,
@@ -173,17 +174,40 @@ export class MenuScene extends Phaser.Scene {
     void checkNotes();
   }
 
+  /** Adaptador de teclado: la tecla, en el menu que tiene el foco, es una orden MenuCommand. */
   private onKey(e: KeyboardEvent): void {
     if (this.leaving) return;
+    const cmd = menuKeyCommand(e, this.controlContext());
+    if (cmd) this.menu(cmd);
+  }
+
+  /** El menu que tiene el foco (decide que teclas valen). Mismo orden que menu(). */
+  controlContext(): MenuContext {
+    if (ui.get().help) return 'help';
+    if (notesOpen()) return 'notes';
+    if (this.optionsPanel.isOpen) return 'options';
+    if (this.mode === 'setup') return this.typing() ? 'typing' : 'setup';
+    if (this.mode === 'campaign') return 'campaign';
+    return 'home';
+  }
+
+  /** Cumplir una orden de menu, venga del mando que venga. */
+  menu(cmd: MenuCommand): void {
+    if (this.leaving) return;
     if (ui.get().help) {
-      if ([...KEY_BACK, ...KEY_OK, 'KeyH'].includes(e.code)) ui.set({ help: false });
+      if (cmd.kind === 'back' || cmd.kind === 'ok' || cmd.kind === 'help') ui.set({ help: false });
       return;
     }
-    if (notesKey(e)) return;
-    if (this.optionsPanel.isOpen) return this.optionsPanel.key(e);
-    if (this.mode === 'setup') return this.setupKey(e);
-    if (this.mode === 'campaign') return this.campaignKey(e);
-    this.homeKey(e);
+    if (notesOpen()) return notesCommand(cmd);
+    if (this.optionsPanel.isOpen) return this.optionsPanel.command(cmd);
+    if (this.mode === 'setup') return this.typing() ? this.typingCommand(cmd) : this.setupCommand(cmd);
+    if (this.mode === 'campaign') return this.campaignCommand(cmd);
+    this.homeCommand(cmd);
+  }
+
+  /** Escribiendo en el cuadro del codigo de mapa. */
+  private typing(): boolean {
+    return (document.activeElement as HTMLElement | null)?.tagName === 'INPUT';
   }
 
   private publishAll(): void {
@@ -288,15 +312,12 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
-  private homeKey(e: KeyboardEvent): void {
+  private homeCommand(cmd: MenuCommand): void {
     const rows = this.homeRows();
-    if (ui.get().home.credits && (KEY_BACK.includes(e.code) || KEY_OK.includes(e.code))) return this.setCredits(false);
-    if (KEY_LEFT.includes(e.code)) this.homeFocus = navGrid(rows, this.homeFocus, -1, 0);
-    else if (KEY_RIGHT.includes(e.code)) this.homeFocus = navGrid(rows, this.homeFocus, 1, 0);
-    else if (KEY_UP.includes(e.code)) this.homeFocus = navGrid(rows, this.homeFocus, 0, -1);
-    else if (KEY_DOWN.includes(e.code)) this.homeFocus = navGrid(rows, this.homeFocus, 0, 1);
-    else if (KEY_OK.includes(e.code) && !e.repeat) return this.pickHome();
-    else if (e.code === 'KeyO') return this.optionsPanel.open();
+    if (ui.get().home.credits && (cmd.kind === 'back' || cmd.kind === 'ok')) return this.setCredits(false);
+    if (cmd.kind === 'move') this.homeFocus = navGrid(rows, this.homeFocus, cmd.dx, cmd.dy);
+    else if (cmd.kind === 'ok' && !cmd.repeat) return this.pickHome();
+    else if (cmd.kind === 'options') return this.optionsPanel.open();
     else return;
     this.publishHome();
   }
@@ -492,31 +513,28 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
-  private setupKey(e: KeyboardEvent): void {
-    const typing = (document.activeElement as HTMLElement | null)?.tagName === 'INPUT';
-    if (typing) {
-      if (e.code === 'Enter' || e.code === 'NumpadEnter') this.startFromSetup();
-      else if (e.code === 'Escape' || e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-        (document.activeElement as HTMLElement).blur();
-        if (e.code !== 'Escape') this.moveSetup(0, e.code === 'ArrowUp' ? -1 : 1);
-      }
-      return;
-    }
+  /** Escribiendo el codigo: Enter empieza; Esc o arriba/abajo salen del cuadro (MENU_BINDINGS.typing). */
+  private typingCommand(cmd: MenuCommand): void {
+    if (cmd.kind === 'ok') return this.startFromSetup();
+    if (cmd.kind !== 'back' && !(cmd.kind === 'move' && cmd.dy)) return;
+    (document.activeElement as HTMLElement).blur();
+    if (cmd.kind === 'move') this.moveSetup(0, cmd.dy);
+  }
+
+  private setupCommand(cmd: MenuCommand): void {
     const f = this.setupFocus;
-    const dx = KEY_LEFT.includes(e.code) ? -1 : KEY_RIGHT.includes(e.code) ? 1 : 0;
+    const dx = cmd.kind === 'move' ? cmd.dx : 0;
     if (dx && f.startsWith('opt-')) {
       const k = f.slice(4) as ChoiceKey;
       return this.setChoice(f, (CHOICES[k] as readonly unknown[]).indexOf(this.options[k]) + dx);
     }
-    if (dx) return this.moveSetup(dx, 0);
-    if (KEY_UP.includes(e.code)) return this.moveSetup(0, -1);
-    if (KEY_DOWN.includes(e.code)) return this.moveSetup(0, 1);
-    if (KEY_OK.includes(e.code) && !e.repeat) return this.pickSetup();
-    if (e.code === 'KeyR') {
+    if (cmd.kind === 'move') return this.moveSetup(cmd.dx, cmd.dy);
+    if (cmd.kind === 'ok' && !cmd.repeat) return this.pickSetup();
+    if (cmd.kind === 'reroll') {
       this.setupFocus = 'reroll';
       return this.pickSetup();
     }
-    if (KEY_BACK.includes(e.code)) this.toHome();
+    if (cmd.kind === 'back') this.toHome();
   }
 
   private moveSetup(dx: number, dy: number): void {
@@ -576,12 +594,12 @@ export class MenuScene extends Phaser.Scene {
     this.scene.start('Game', { mode: 'mission', mission: m.id });
   }
 
-  private campaignKey(e: KeyboardEvent): void {
+  private campaignCommand(cmd: MenuCommand): void {
     const n = MISSIONS.length;
-    if ([...KEY_LEFT, ...KEY_UP].includes(e.code)) this.campaignSel = (this.campaignSel - 1 + n) % n;
-    else if ([...KEY_RIGHT, ...KEY_DOWN].includes(e.code)) this.campaignSel = (this.campaignSel + 1) % n;
-    else if (KEY_OK.includes(e.code) && !e.repeat) return this.startMission();
-    else if (KEY_BACK.includes(e.code)) return this.toHome();
+    const step = listStep(cmd);
+    if (step) this.campaignSel = (this.campaignSel + step + n) % n;
+    else if (cmd.kind === 'ok' && !cmd.repeat) return this.startMission();
+    else if (cmd.kind === 'back') return this.toHome();
     else return;
     this.publishCampaign();
   }
