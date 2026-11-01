@@ -47,6 +47,26 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 - Unidades: `units32/<Nombre>.png` → `public/assets/img/u/{b,i,r}_<Nombre>.png` (r mira a la izquierda).
 - Edificios: `buildings32/<Nombre>.png` → `flat/bld_{b,r,n}_<Nombre>.png` (la Base sin neutral).
 - Flores y cactus: hojas de 96x32 (3 piezas) en `decor/`; muñecos de nieve `snow_rd.png`.
+- Interfaz (`ui/`, lo compila `tools/art/rd_ui.py` a `public/assets/img/ui/`): retratos de general
+  `gen_<id>.png` 48x48 (magenta → `gen_b_`/`gen_r_`), habilidades `ab_<id>.png` 16x16, clima
+  `wx_<id>.png` 16x16, `zona.png` 16x16 y `flag.png` 16x24 (magenta → `_b`/`_r`/`_i`). Si falta uno,
+  el juego usa lo de antes (inicial, SVG del clima, banderin por codigo).
+- **Fondo:** el quitafondos de RD (`remove_bg`) se come lo fino o blanco (gotas, copos, rayos, cajas
+  claras) y aun asi cobra. Mejor pedir un fondo liso de un color que no salga en el dibujo (verde
+  vivo, azul cielo) y quitarlo aqui con un relleno desde el borde o por color.
+- Iconos pequeños (ordenes `cmd_<orden>.png`): basta `rd_plus__low_res` 16x16 (0,06 $, un tercio que
+  Pro). Ignora el color de fondo pedido y lo devuelve gris opaco: quitarlo con relleno desde el borde.
+  `rd_ui.py` les pone un contorno oscuro porque van encima de la unidad.
+- Marcas de unidad (`mk_star/noheal/cargo`): igual que las de orden y luego reducidas a 8-10 px por
+  moda de color (sin mezclar) antes de guardarlas en `ui/`.
+- Efectos animados: `rd_animation__vfx` (24-96 px, 0,07 $ la animacion entera) con `return_spritesheet`.
+  No pedir fondo negro (lo quita y se lleva el humo). La hoja va como `ui/anim_<nombre>.png` y `rd_ui.py`
+  la parte en fotogramas de 48x48 sin los vacios ni el magenta suelto; `playAnim` (src/ui/fx.ts) la pone.
+- Proyectiles (`pj_missile/ball/bomb`): RD Plus low_res 16x16, recortados a su caja. Le cuestan los
+  obuses alargados y los fogonazos (salen palos y antorchas); el fogonazo con `rd_animation__vfx` a
+  24x24 salio vacio. El fogonazo y las balas siguen por codigo.
+- Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
+  sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.
 - Lo que no se usa del 2013 esta en `tools/art/sin_usar_2013/` (no se publica).
 

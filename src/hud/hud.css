@@ -250,6 +250,12 @@ body {
   flex: none;
   image-rendering: pixelated;
 }
+/* Dibujo de 16x16: a 32 px (2x) para que se vea nitido. */
+.wx-icon.wx-img {
+  width: 32px;
+  height: 32px;
+  margin: -6px 0;
+}
 .day .t.enemy {
   background: var(--red-btn);
   box-shadow:
@@ -320,6 +326,40 @@ body {
   width: 100%;
   padding: 6px 10px;
   font-size: 14px;
+}
+/* Retrato del general (48x48 de Retro Diffusion): sin texto, el dibujo sobre el fondo del bando. */
+.gp-face.has-img {
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  align-items: end;
+}
+.gp-face.has-img img {
+  width: 48px;
+  height: 48px;
+}
+.enemy-general .gp-face {
+  background: var(--red-btn);
+  box-shadow: none;
+}
+.enemy-general .gp-face.has-img {
+  width: 36px;
+  height: 36px;
+}
+.enemy-general .gp-face.has-img img {
+  width: 32px;
+  height: 32px;
+}
+.gp-ab-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.px-icon.gp-ab-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  margin: -6px 0;
 }
 .gp-ab.off {
   opacity: 0.55;
@@ -3035,6 +3075,14 @@ html.reduce-motion .end-best.new {
     height: 26px;
     font-size: 16px;
   }
+  .gp-face.has-img {
+    width: 36px;
+    height: 36px;
+  }
+  .gp-face.has-img img {
+    width: 32px;
+    height: 32px;
+  }
   .gp-title {
     display: none;
   }
@@ -3137,6 +3185,7 @@ html.reduce-motion .end-best.new {
 /* [CAMBIO] Punto de control en la ficha de la casilla. */
 .terrain .cpoint {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
   font-size: 13px;

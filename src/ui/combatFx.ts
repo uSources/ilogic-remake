@@ -10,7 +10,8 @@ import type Phaser from 'phaser';
 import { Movement, MoveType, UNIT } from '../core/data';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
-import { burst, center, COLORS, reducedMotion } from './fx';
+import { ATLAS, hasImage } from '../atlas';
+import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import type { Facing, MapView } from './mapView';
 import { PAL, PAL_CSS } from './palette';
 
@@ -51,6 +52,15 @@ function rect(scene: Phaser.Scene, view: MapView, x: number, y: number, w: numbe
   return r;
 }
 
+/** [CAMBIO] Proyectil dibujado (ui/pj_<nombre>, Retro Diffusion) o null si no esta en el atlas. */
+function sprite(scene: Phaser.Scene, view: MapView, x: number, y: number, name: string): Phaser.GameObjects.Image | null {
+  const key = `ui/pj_${name}`;
+  if (!hasImage(scene.textures, key)) return null;
+  const img = scene.add.image(Math.round(x), Math.round(y), ATLAS, key).setOrigin(0.5);
+  view.addFx(img);
+  return img;
+}
+
 /** Retroceso al disparar: la unidad se echa hacia atras y vuelve (en dos saltos). */
 export async function recoil(scene: Phaser.Scene, sprite: Phaser.GameObjects.Container, from: Pos, to: Pos, k: number): Promise<void> {
   const dx = -Math.sign(to.x - from.x) * 3,
@@ -83,7 +93,7 @@ export async function muzzleFlash(scene: Phaser.Scene, view: MapView, from: Pos,
 /** Lleva un cuadradito de a a b en `ms`, por pasos; `lift` = altura de la parabola. Llama a `each` en cada paso. */
 async function fly(
   scene: Phaser.Scene,
-  obj: Phaser.GameObjects.Rectangle,
+  obj: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Image,
   a: { x: number; y: number },
   b: { x: number; y: number },
   ms: number,
@@ -121,7 +131,7 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
       return;
     }
     case 'shell': {
-      const shell = rect(scene, view, a.x, a.y, 5, 4, 0xffffff);
+      const shell = sprite(scene, view, a.x, a.y, 'ball') ?? rect(scene, view, a.x, a.y, 5, 4, 0xffffff);
       const trail: Phaser.GameObjects.Rectangle[] = [];
       await fly(scene, shell, a, b, 130 * k, 0, (x, y) => {
         trail.push(rect(scene, view, x, y, 3, 2, PAL.gold, 0.8));
@@ -133,7 +143,7 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
     }
     case 'arc': {
       // Parabola alta con una sombra en el suelo que avanza debajo.
-      const shellA = rect(scene, view, a.x, a.y, 5, 5, 0xffffff);
+      const shellA = sprite(scene, view, a.x, a.y, 'ball') ?? rect(scene, view, a.x, a.y, 5, 5, 0xffffff);
       const shadow = rect(scene, view, a.x, a.y + 10, 6, 2, PAL.ink, 0.35);
       await fly(scene, shellA, a, b, (260 + dist * 30) * k, Math.min(56, 18 + dist * 9), (x, _y, t) => {
         shadow.setPosition(Math.round(x), Math.round(a.y + 10 + (b.y + 10 - a.y - 10) * t));
@@ -143,9 +153,14 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
       return;
     }
     case 'missile': {
-      const missile = rect(scene, view, a.x, a.y, 6, 3, 0xffffff);
+      const drawn = sprite(scene, view, a.x, a.y, 'missile');
+      const missile = drawn ?? rect(scene, view, a.x, a.y, 6, 3, 0xffffff);
       const puffs: Phaser.GameObjects.Rectangle[] = [];
+      let last = a;
       await fly(scene, missile, a, b, (240 + dist * 25) * k, Math.min(36, 10 + dist * 4), (x, y) => {
+        // El dibujo mira arriba a la derecha (-45 grados): se gira hacia donde va.
+        if (drawn) drawn.setRotation(Math.atan2(y - last.y, x - last.x) + Math.PI / 4);
+        last = { x, y };
         const p = rect(scene, view, x, y, 3, 3, 0x8a93a8, 0.85);
         puffs.push(p);
         scene.tweens.add({ targets: p, alpha: 0, duration: 380 * k, onComplete: () => p.destroy() });
@@ -158,7 +173,7 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
       const jobs = [0, 1].map(async (i) => {
         await sleep(scene, i * 70 * k);
         const top = { x: b.x + (i ? 5 : -5), y: b.y - 46 };
-        const bomb = rect(scene, view, top.x, top.y, 4, 6, PAL.ink);
+        const bomb = sprite(scene, view, top.x, top.y, 'bomb') ?? rect(scene, view, top.x, top.y, 4, 6, PAL.ink);
         await fly(scene, bomb, top, { x: top.x, y: b.y }, 170 * k);
         bomb.destroy();
       });
@@ -205,10 +220,19 @@ export async function impact(scene: Phaser.Scene, view: MapView, at: Pos, killed
     }
     g.destroy();
   };
+  // Explosion dibujada (ui/anim_boom_*) si esta en el atlas; si no, el anillo de cuadraditos de siempre.
+  const drawn = animFrameCount(scene, 'boom') > 0;
   await Promise.all([
-    ring(),
-    burst(scene, view, c, { colors: COLORS.fire, count: killed ? 12 : 8, radius: killed ? 22 : 15, size: 4, duration: 320 * k }),
+    drawn ? playAnim(scene, view, c, 'boom', { frameMs: 40 * k }) : ring(),
+    burst(scene, view, c, {
+      colors: COLORS.fire,
+      count: drawn ? (killed ? 8 : 5) : killed ? 12 : 8,
+      radius: killed ? 22 : 15,
+      size: drawn ? 3 : 4,
+      duration: 320 * k,
+    }),
   ]);
+  if (drawn) g.destroy();
 }
 
 /** Numero que salta: aparece grande, se encoge a su tamaño, sube un poco y se va. No hay que esperarlo entero. */

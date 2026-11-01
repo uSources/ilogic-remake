@@ -112,7 +112,7 @@ import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextK
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
-import { blink, burst, center, COLORS, floatText, lifeBar, reducedMotion, targetMark, tileFlash } from '../ui/fx';
+import { blink, burst, center, COLORS, floatText, lifeBar, playAnim, reducedMotion, targetMark, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
@@ -1589,6 +1589,7 @@ export class GameScene extends Phaser.Scene {
         const u = unitById(this.s, h.uid);
         if (!u || (u.team !== 0 && !this.visibleToPlayer(u))) return;
         const p = center(u);
+        void playAnim(this, this.view, p, 'boom', { frameMs: 45 });
         void burst(this, this.view, p, { colors: COLORS.fire, count: 14, radius: 20 });
         await floatText(this, this.view, { x: p.x, y: p.y - 6 }, `-${h.damage}`, PAL_CSS.redSoft);
       }),

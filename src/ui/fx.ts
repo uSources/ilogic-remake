@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { ATLAS, hasImage } from '../atlas';
 import { settings } from '../settings';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
@@ -61,6 +62,42 @@ export function burst(
     );
   }
   return Promise.all(jobs).then(() => undefined);
+}
+
+/** Fotogramas de una animacion dibujada (ui/anim_<name>_<n> del atlas); 0 si no esta. */
+const animFrames = new Map<string, number>();
+export function animFrameCount(scene: Phaser.Scene, name: string): number {
+  let n = animFrames.get(name);
+  if (n === undefined) {
+    n = 0;
+    while (hasImage(scene.textures, `ui/anim_${name}_${n}`)) n++;
+    animFrames.set(name, n);
+  }
+  return n;
+}
+
+/**
+ * [CAMBIO] Reproduce una animacion dibujada (Retro Diffusion) centrada en `at`, un fotograma cada
+ * `frameMs`, y la quita al acabar. Si no esta en el atlas, no hace nada (el que llama pone otra cosa).
+ */
+export async function playAnim(
+  scene: Phaser.Scene,
+  view: MapView,
+  at: { x: number; y: number },
+  name: string,
+  opts: { frameMs: number; scale?: number },
+): Promise<void> {
+  const n = animFrameCount(scene, name);
+  if (!n) return;
+  const img = scene.add.image(Math.round(at.x), Math.round(at.y), ATLAS, `ui/anim_${name}_0`).setOrigin(0.5);
+  if (opts.scale) img.setScale(opts.scale);
+  view.addFx(img);
+  for (let i = 1; i < n; i++) {
+    await new Promise<void>((r) => scene.time.delayedCall(opts.frameMs, r));
+    img.setFrame(`ui/anim_${name}_${i}`);
+  }
+  await new Promise<void>((r) => scene.time.delayedCall(opts.frameMs, r));
+  img.destroy();
 }
 
 /** Texto que sube a saltos y desaparece (daño, curacion, captura...). */

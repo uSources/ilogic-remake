@@ -171,6 +171,7 @@ export function tileVM(
       owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral',
       income: RULES.controlIncome,
       contested: inside.some((u) => u.team === 0) && inside.some((u) => u.team === 1),
+      icon: `ui/zona_${cp.owner === 0 ? 'b' : cp.owner === 1 ? 'r' : 'i'}`,
     };
   }
   const u = unitAt(s, p.x, p.y);
@@ -400,6 +401,7 @@ export function generalVM(s: GameState, team: Team, targeting: string | null): G
   const lang = settings.lang;
   const stars = chargeStars(g.state);
   return {
+    face: `ui/gen_${team === 0 ? 'b' : 'r'}_${g.def.id}`,
     name: g.def.name[lang],
     title: g.def.title[lang],
     description: g.def.description[lang],
@@ -413,6 +415,7 @@ export function generalVM(s: GameState, team: Team, targeting: string | null): G
       const text = block ? BLOCK_TEXT[block] : undefined;
       return {
         id: a.id,
+        icon: `ui/ab_${a.id}`,
         name: a.name[lang],
         description: a.description[lang],
         cost: a.cost,
