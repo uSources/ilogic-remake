@@ -13,6 +13,7 @@ const HELP = {
       'VET_ES',
       'ATTACK_ES',
       'ARMY_ES',
+      'CONTROL_ES',
       'MOVE_ES',
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
@@ -67,6 +68,7 @@ const HELP = {
       'VET_EN',
       'ATTACK_EN',
       'ARMY_EN',
+      'CONTROL_EN',
       'MOVE_EN',
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
@@ -141,6 +143,10 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     ]
       .filter(Boolean)
       .join(' '),
+    CONTROL_ES:
+      RULES.controlPoints > 0
+        ? `Puntos de control: zonas de ${2 * RULES.controlRadius + 1}×${2 * RULES.controlRadius + 1} marcadas con un borde y un banderín (grises si no son de nadie). Al acabar la ronda, si dentro solo hay unidades tuyas, la zona es tuya y te da ${RULES.controlIncome}; si hay de los dos bandos, está disputada y no paga a nadie; vacía, sigue pagando a quien la tenía. Pelea por ellas.`
+        : '',
     ARMY_ES: [
       RULES.commandPoints !== null
         ? `Puntos de mando: tu ejército no puede pasar de ${RULES.commandPoints}. La infantería ocupa 1 y los vehículos y aviones grandes hasta 5 (lo pone al comprar).`
@@ -178,6 +184,10 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     ]
       .filter(Boolean)
       .join(' '),
+    CONTROL_EN:
+      RULES.controlPoints > 0
+        ? `Control points: ${2 * RULES.controlRadius + 1}×${2 * RULES.controlRadius + 1} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${RULES.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
+        : '',
     ARMY_EN: [
       RULES.commandPoints !== null
         ? `Command points: your army can't go over ${RULES.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`

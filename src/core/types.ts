@@ -86,6 +86,13 @@ export interface GameState {
   mission?: { id: string; objective: Objective };
   /** [CAMBIO] Escuadras del jugador (las unidades dicen a cual pertenecen con Unit.squad). */
   squads?: Squad[];
+  /**
+   * [CAMBIO] Puntos de control: zonas (RULES.controlRadius alrededor del centro) que dan
+   * RULES.controlIncome cada ronda a su dueño. Al acabar la ronda: si dentro solo hay unidades de un
+   * bando, el punto es suyo y paga; si hay de los dos, esta disputado y no paga a nadie; si no hay
+   * nadie, sigue siendo de quien era y paga.
+   */
+  controlPoints?: ControlPoint[];
 }
 
 /** General de un bando (ver core/generals.ts). */
@@ -106,6 +113,13 @@ export interface WeatherState {
   /** Dias que quedan contando el de hoy (al llegar a 0 entra `next`). */
   left: number;
   next: number;
+}
+
+/** [CAMBIO] Punto de control (ver GameState.controlPoints). */
+export interface ControlPoint {
+  x: number;
+  y: number;
+  owner: Team | null;
 }
 
 /** Generador de numeros aleatorios en [0, 1). */

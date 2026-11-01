@@ -40,6 +40,7 @@ import {
   buyOptions,
   canBuyAt,
   canCapture,
+  inControlZone,
   canWalk,
   pathCost,
   passMap,
@@ -109,7 +110,7 @@ import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
 import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextKey } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
-import { MapView, type HighlightKind } from '../ui/mapView';
+import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
 import { blink, burst, center, COLORS, floatText, lifeBar, reducedMotion, targetMark, tileFlash } from '../ui/fx';
 import { unitIconKey, unitKey } from '../ui/sprites';
@@ -745,6 +746,7 @@ export class GameScene extends Phaser.Scene {
       ],
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
+      controlPoints: this.controlPointsView(),
       goal: obj?.kind === 'escort' ? obj.to : null,
       vip: vipAt && !this.hidden.has(vipAt.uid) ? { x: vipAt.x, y: vipAt.y } : null,
     });
@@ -2727,10 +2729,23 @@ export class GameScene extends Phaser.Scene {
     await this.runOrders();
   }
 
+  /** [CAMBIO] Puntos de control para dibujar: disputado solo si se ven unidades de los dos bandos dentro. */
+  private controlPointsView(): ViewOptions['controlPoints'] {
+    return this.s.controlPoints?.map((c) => {
+      const inside = this.s.units.filter((u) => u.carrier === null && inControlZone(c, u) && (u.team === 0 || this.visibleToPlayer(u)));
+      return { ...c, r: RULES.controlRadius, contested: inside.some((u) => u.team === 0) && inside.some((u) => u.team === 1) };
+    });
+  }
+
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
   private showReport(r: RoundReport, done: string[] = []): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+    // [CAMBIO] Parte de los ingresos que viene de los puntos de control.
+    if (r.control && r.control.held[0] > 0)
+      lines.push({ icon: 'ui/dinero', text: `+${fmtNum(r.control.income[0])} ${t('reportControl')} (${r.control.held[0]})`, tone: 'gold' });
+    if (r.control && r.control.contested > 0)
+      lines.push({ icon: '', text: `${t('reportContested')}: ${r.control.contested}`, tone: 'plain' });
     if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
     // [CAMBIO] Unidades que cumplieron su orden al terminar el turno anterior (ahora esperan otra).
     if (done.length) lines.push({ icon: '', text: `${t('orderDone')}: ${done.join(', ')}`, tone: 'plain' });

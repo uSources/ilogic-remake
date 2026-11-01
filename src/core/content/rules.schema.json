@@ -34,7 +34,10 @@
         "forestHides",
         "terrainCost",
         "weather",
-        "abilities"
+        "abilities",
+        "controlPoints",
+        "controlIncome",
+        "controlRadius"
       ],
       "properties": {
         "initialFunds": {
@@ -147,6 +150,23 @@
         "abilities": {
           "type": "boolean",
           "description": "Habilidades de las unidades (units.json, \"abilities\"): escudo, zona de control, aura, perforante."
+        },
+        "controlPoints": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6,
+          "description": "Puntos de control en los mapas al azar (0 = ninguno): zonas que dan dinero cada ronda a su dueño, solo si no hay unidades de los dos bandos dentro."
+        },
+        "controlIncome": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Dinero que da cada punto de control por ronda."
+        },
+        "controlRadius": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Tamaño de la zona de cada punto de control: casillas alrededor del centro (1 = zona de 3x3)."
         }
       }
     },

@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import { abilitiesOf } from '../core/abilities';
 import { MAP_H, MAP_W, MAX_FUNDS, RULES, UNIT, WEATHER, Movement, MoveType, type AbilityDef } from '../core/data';
 import {
+  inControlZone,
   buildingAt,
   buildingIncome,
   capturePointsOf,
@@ -161,6 +162,17 @@ export function tileVM(
     const cp = captureProgress(s, b);
     if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(b), team: cp.team };
   }
+  // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
+  // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
+  const cp = s.controlPoints?.find((c) => inControlZone(c, p));
+  if (cp) {
+    const inside = s.units.filter((u) => u.carrier === null && inControlZone(cp, u) && (u.team === 0 || !!view.vis[u.x]?.[u.y]));
+    info.point = {
+      owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral',
+      income: RULES.controlIncome,
+      contested: inside.some((u) => u.team === 0) && inside.some((u) => u.team === 1),
+    };
+  }
   const u = unitAt(s, p.x, p.y);
   const sel = view.selected;
   const shown = u && vis && !view.hidden.has(u.uid) ? u : sel && sel.x === p.x && sel.y === p.y ? sel : undefined;
@@ -277,6 +289,7 @@ export function minimapVM(pal: readonly number[], s: GameState, vis: boolean[][]
     units: s.units
       .filter((u) => u.carrier === null && !hidden.has(u.uid) && (u.team === 0 || seen(u)))
       .map((u) => ({ x: u.x, y: u.y, team: u.team })),
+    ...(s.controlPoints ? { points: s.controlPoints.map((c) => ({ x: c.x, y: c.y, owner: c.owner, r: RULES.controlRadius })) } : {}),
   };
 }
 

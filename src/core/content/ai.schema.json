@@ -19,7 +19,9 @@
     "MINCAPTURERS",
     "GENERALMINVALUE",
     "REVEALVALUE",
-    "GUARDRADIUS"
+    "CONTROLPOINT",
+    "GUARDRADIUS",
+    "FOCUSFIRE"
   ],
   "properties": {
     "$schema": {
@@ -94,6 +96,16 @@
       "type": "number",
       "minimum": 0,
       "description": "Lo que vale ver todo el mapa una ronda (habilidad reveal), solo con niebla. Bajo: se usa cuando la barra esta llena y no hay nada mejor."
+    },
+    "CONTROLPOINT": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Puntos de control ajenos: cuantas casillas mas cerca cuentan al elegir adonde avanzar."
+    },
+    "FOCUSFIRE": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Solo la IA enemiga (fuego concentrado): extra, por cada 1000 de precio del objetivo, por atacar al enemigo que el plan del turno reparte entre varias unidades para destruirlo."
     },
     "GUARDRADIUS": {
       "type": "number",

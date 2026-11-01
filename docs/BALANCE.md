@@ -189,3 +189,72 @@ Conclusiones:
   (68), Ámbar 50 % (60). Brisa gana con el flanqueo y el bajo fuego (su daño en área marca a varias
   unidades); Ámbar pierde porque el botín reparte dinero a los dos. Vigilar; margen ±10-11.
 - Pendiente: una IA que ataque en grupo (entrenador de IA) para acercar la duración a 15-25 días.
+
+## Puntos de control (01-11-2026)
+
+Para que haya algo por lo que pelear en el medio del mapa: 3 casillas por mapa al azar
+(`RULES.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
+ronda son de quien tenga una unidad encima (y siguen suyas al irse) y cada una da
+`RULES.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
+de ventaja).
+
+`npm run balance -- run --games 80` (IA contra IA, máximo 60 días):
+
+| Variante | Sin terminar | Ventaja bando 0 / 1 |
+|---|---:|---:|
+| Sin puntos | 94 % | 38 / 31 |
+| 3 puntos de 1000 (las de ahora) | 90 % | 23 / 44 |
+| 3 puntos de 2000 | 98 % | 32 / 41 |
+| 3 de 1000 y la IA los busca más (10) | 91 % | 28 / 39 |
+
+Con 200 partidas, 3 de 1000: ventaja 77 / 89, sin un lado claramente favorecido.
+
+**Zonas de 3×3 que solo pagan sin disputa** (`RULES.controlRadius` 1): un punto paga a su dueño solo
+si en su zona no hay unidades de los dos bandos, para que haya batallas por él. 80 partidas: 90 % sin
+terminar, ventaja 33 / 38, igualadas 1 (antes 5): se decide más a menudo quién va por delante. Como con las demás
+reglas, el empate entre IAs casi no se mueve; los puntos dan al jugador un objetivo claro en el
+centro y dinero por avanzar.
+
+## IA que juega en grupo (01-11-2026)
+
+Cada unidad de la IA decidía sola y llegaban de una en una. Dos cambios, solo en el turno de la IA
+enemiga (las órdenes del jugador se cumplen igual que antes):
+
+- **Fuego concentrado** (`planFire` en `src/core/ai.ts`, peso `AI.FOCUSFIRE`): antes de mover, busca
+  enemigos visibles que puede destruir ese turno sumando el daño esperado de varias unidades (con el
+  flanqueo para las que siguen) y reparte a quién dispara a cada uno, empezando por el que más vale.
+  Las del plan juegan primero (las de distancia antes).
+- **Las propias ya no cortan el camino**: al buscar adónde ir, las unidades propias no tapaban el paso
+  aunque la regla `passAllies` deja atravesarlas. Una columna en un puente o en la salida de la Fábrica
+  dejaba a las de detrás "sin camino" y paseaban al azar en casa (13 % de los turnos de unidad).
+
+Medido con la arena (`npm run arena`, contra la IA de antes, mapas 20x20) y `npm run balance -- run`
+(IA contra IA, 32x32, máximo 60 días):
+
+| Variante | Arena 200 (600) | Sin terminar, 80 (160) | Días (mediana) | Ventaja bando 0 / 1 (80) |
+|---|---:|---:|---:|---:|
+| IA de antes | — | 90 % (92,5 %) | 46 | 23 / 44 |
+| Fuego concentrado (preferir tocados) + orden | 46 % | 92 % | 45 | 29 / 40 |
+| Solo orden de juego | 48 % | 94 % | 46 | 28 / 42 |
+| Las que no capturan van a la Base enemiga | 47 % | 95 % | 43 | 32 / 34 |
+| + asalto con 2 que capturan, siempre | 33 % | 86 % | 40 | 27 / 34 |
+| + asalto solo con masa (1,5x cerca de la Base) | 48 % | 92 % | 49 | 27 / 40 |
+| No avanzar a casillas donde el enemigo es más fuerte | 47 % | 97 % | 40 | 28 / 45 |
+| Las propias no cortan el camino | 58 % (53 %) | 94 % | 40 | 26 / 40 |
+| + Suministros acompañan y reparan | 53 % (50 %) | 86 % | 50 | 25 / 39 |
+| + asalto con masa y marcha a la Base | 53 % (51 %) | 85 % (88 %) | 41 | 28 / 31 |
+| **Camino + plan de fuego (la de ahora)** | **60 % (56 %)** | **89 % (90 %)** | **40** | **24 / 43** |
+| Ahora + asalto con masa y marcha a la Base | 51 % (50 %) | 85 % (84 %) | 46 | 51 / 68 (160) |
+
+Nota (`npm run metrics`, 120 partidas 32x32, 40 días): **67,7 → 76,2**. Duración mediana de las que
+terminan 34 → 29 días (+7,5), sin terminar 96 % → 94 %, lados 47/53 → 50/50, precios 11,2 → 12,2.
+
+- El plan de fuego gana a la IA de antes (60 % en 200 partidas, 56 % en 600: 52-60 %) y las partidas
+  que terminan lo hacen antes, pero el atasco casi no se mueve (90 % → 89 % sin terminar).
+- El asalto a la Base (mandar a las que capturan cuando hay masa cerca) es lo único que baja de verdad
+  las partidas sin terminar (92,5 % → 84 % en 160), pero pierde contra la IA de antes en la arena
+  (50 %): las que capturan dejan de quitar edificios y caen en el camino. Queda como siguiente idea:
+  un asalto que no cueste edificios (p. ej. solo con las que sobran, o escoltadas de cerca).
+- Detrás del atasco: con 30 puntos de mando el ejército tiene tope y el dinero se amontona (100.000-
+  270.000 sin gastar el día 40); perder unidades apenas cuesta y la Base (30 puntos, 3 turnos
+  seguidos) se defiende sola con lo que se fabrica al lado.

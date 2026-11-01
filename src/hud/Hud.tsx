@@ -714,6 +714,19 @@ function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean 
               <span>+{fmtNum(b.income)}</span>
             </div>
           )}
+          {tile.point && (
+            <div class="cpoint" title={t('controlPointHelp')}>
+              <span
+                style={{
+                  color: tile.point.owner === 'you' ? 'var(--blue)' : tile.point.owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)',
+                }}
+              >
+                {t('controlPoint')} · {tile.point.owner === 'you' ? t('you') : tile.point.owner === 'enemy' ? t('enemy') : t('neutral')}
+                {tile.point.contested ? ` · ${t('contested')}` : ''}
+              </span>
+              <span>+{fmtNum(tile.point.income)}</span>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -841,6 +854,15 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
       ctx.fillRect(b.x * MM, b.y * MM, MM, MM);
       ctx.fillStyle = b.owner === null ? '#c9d2e3' : TEAM_COLOR[b.owner];
       ctx.fillRect(b.x * MM + 1, b.y * MM + 1, MM - 2, MM - 2);
+    }
+    // [CAMBIO] Puntos de control: borde dorado y dentro el color de su dueño.
+    for (const c of m.points ?? []) {
+      // La zona de 3×3 (MM px por casilla) con borde dorado y el color del dueño dentro.
+      const r = c.r;
+      ctx.fillStyle = '#ffd34d';
+      ctx.fillRect((c.x - r) * MM - 1, (c.y - r) * MM - 1, (2 * r + 1) * MM + 2, (2 * r + 1) * MM + 2);
+      ctx.fillStyle = c.owner === null ? '#c9d2e3' : TEAM_COLOR[c.owner];
+      ctx.fillRect((c.x - r) * MM, (c.y - r) * MM, (2 * r + 1) * MM, (2 * r + 1) * MM);
     }
     for (const u of m.units) {
       ctx.fillStyle = '#0b1220';

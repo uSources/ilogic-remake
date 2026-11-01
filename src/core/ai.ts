@@ -2,6 +2,7 @@
  * Inteligencia artificial del rival (IA.java), con sus fallos corregidos.
  * Cada unidad decide sola, en orden: retirarse (si esta debil o sin combustible),
  * atacar, capturar, avanzar hacia edificios ajenos y, si nada de eso, moverse al azar.
+ * [CAMBIO] Antes de mover reparte un plan de fuego concentrado (planFire) entre varias unidades.
  * Al final fabrica unidades en sus edificios.
  * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
  */
@@ -37,6 +38,7 @@ import {
   captureEvent,
   moveEvent,
   reachableTiles,
+  teamsInZone,
 } from './rules';
 import type { Building, GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
 
@@ -46,9 +48,26 @@ import type { Building, GameEvent, GameState, Pos, Rng, Team, Unit } from './typ
  */
 let ME: Team = 1;
 
-/** Ocupacion sin contar a la propia unidad (para medir distancias desde su sitio). */
+/**
+ * [CAMBIO] Juego en grupo: solo en el turno de la IA enemiga (aiTurn). Las ordenes del jugador
+ * (commandTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
+ */
+let GROUP = false;
+/** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
+let PLAN = new Map<number, number>();
+
+/**
+ * Ocupacion sin contar a la propia unidad (para medir distancias desde su sitio).
+ * [CAMBIO] En grupo, si se puede pasar entre aliados, las propias no cortan el camino (solo las
+ * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
+ * detras "sin camino" a nada y paseaban al azar en casa.
+ */
 function occupancyWithout(s: GameState, u: Unit): boolean[][] {
   const occ = occupancy(s);
+  if (GROUP && RULES.passAllies) {
+    const vis = visibility(s, ME);
+    for (const o of s.units) if (o.carrier === null && (o.team === ME || !vis[o.x]![o.y])) occ[o.x]![o.y] = false;
+  }
   occ[u.x]![u.y] = false;
   return occ;
 }
@@ -112,7 +131,7 @@ function* retreat(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent,
     return true;
   }
   // 3) Ir al edificio propio mas cercano que la repare y este libre.
-  const dist = groundDistance(s, u, Movement.of(u.type));
+  const dist = groundDistance(s, u, Movement.of(u.type), occupancyWithout(s, u));
   let goal: Pos | null = null;
   let goalD = Infinity;
   for (const b of s.buildings) {
@@ -183,7 +202,9 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, opts: Att
   for (const t of enemies) {
     for (const from of froms) {
       if (!inAttackRange(u.type, from, t)) continue;
-      const score = attackScore(s, u, t, from);
+      let score = attackScore(s, u, t, from);
+      // [CAMBIO] Fuego concentrado: el objetivo del plan del turno vale mas (lo rematan entre varias).
+      if (GROUP && PLAN.get(u.uid) === t.uid) score += AI.FOCUSFIRE * (UNIT.cost[t.type]! / AI.COSTSCALE);
       if (score <= 0) continue;
       // A igualdad, preferir no moverse o la casilla con mas defensa (menor multiplicador).
       if (!best || score > best.score) best = { from, target: t, score };
@@ -222,7 +243,7 @@ function* tryCapture(s: GameState, u: Unit, range: MoveRange): Generator<GameEve
   if (!UNIT.cancapt[u.type]) return false;
   if (yield* captureHere(s, u)) return true;
   const vis = visibility(s, ME);
-  const dist = groundDistance(s, u, Movement.of(u.type));
+  const dist = groundDistance(s, u, Movement.of(u.type), occupancyWithout(s, u));
   let goal: Pos | null = null;
   let goalD = Infinity;
   for (const p of diamond(u, 1, AI.MAXCAPTDIST)) {
@@ -253,16 +274,21 @@ function* advance(s: GameState, u: Unit, range: MoveRange): Generator<GameEvent,
   const dist = groundDistance(s, u, Movement.of(u.type), occupancyWithout(s, u));
   // Las que capturan: edificios ajenos, con prioridad a la Base enemiga y a los del jugador.
   const bonus = (g: Pos): number => {
+    // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
+    if (s.controlPoints?.some((c) => c.x === g.x && c.y === g.y)) return AI.CONTROLPOINT;
     const b = buildingAt(s, g.x, g.y);
     if (!b || !UNIT.cancapt[u.type]) return 0;
     return b.type === HQ && b.owner !== null ? AI.CAPTUREHQ : b.owner !== null ? AI.CAPTUREOWNED : 0;
   };
   const vis = visibility(s, ME);
+  // [CAMBIO] Puntos de control que no son suyos o que estan disputados (sus zonas: ver controlRound).
+  const points: Pos[] = (s.controlPoints ?? []).filter((c) => (c.owner !== ME || teamsInZone(s, c).size > 1) && !unitAt(s, c.x, c.y));
   const goals: Pos[] = UNIT.cancapt[u.type]
-    ? s.buildings.filter((b) => b.owner !== ME)
+    ? [...s.buildings.filter((b) => b.owner !== ME), ...points]
     : [
         ...s.units.filter((o) => o.team !== ME && o.carrier === null && vis[o.x]![o.y] && attackTargetsPossible(u, o)),
         ...s.buildings.filter((b) => b.owner !== ME && b.owner !== null && b.type === HQ),
+        ...points,
       ];
   let goal: Pos | null = null;
   let goalD = Infinity;
@@ -361,8 +387,14 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
   ME = team;
   // [CAMBIO] Primero el general (una habilidad, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ME);
-  const order = teamUnits(s, ME).map((u) => u.uid);
-  for (const uid of order) yield* unitTurn(s, uid, rng);
+  const order = planFire(s);
+  GROUP = true;
+  try {
+    for (const uid of order) yield* unitTurn(s, uid, rng);
+  } finally {
+    GROUP = false;
+    PLAN = new Map();
+  }
   yield* produce(s, rng);
   for (const u of teamUnits(s, ME)) wait(u);
 }
@@ -434,6 +466,57 @@ export function* commandTurn(s: GameState, uid: number, rng: Rng): Generator<Gam
   const vis = visibility(s, ME);
   const left = s.units.some((t) => t.team !== ME && t.carrier === null && vis[t.x]![t.y] && near(t));
   return left ? false : finish();
+}
+
+/**
+ * [CAMBIO] Fuego concentrado: antes de mover, busca enemigos visibles que se pueden destruir este
+ * turno sumando el dano esperado de varias unidades propias (las que siguen ya disparan con el
+ * flanqueo) y reparte a quien dispara a cada uno, empezando por el que mas vale. Devuelve el orden de
+ * juego: primero las del plan (las de distancia antes, no se mueven y dejan al objetivo flanqueado),
+ * despues el resto en el orden de siempre.
+ */
+function planFire(s: GameState): number[] {
+  PLAN = new Map();
+  const mine = teamUnits(s, ME);
+  const vis = visibility(s, ME);
+  const foes = s.units.filter((t) => t.team !== ME && t.carrier === null && t.life > 0 && vis[t.x]![t.y]);
+  const shooters = mine.filter((u) => u.carrier === null && u.canFire && UNIT.canfight[u.type] && !needsRepair(u));
+  // Dano esperado de cada unidad contra cada objetivo al que llega este turno.
+  const dmg = new Map<number, Map<number, number>>();
+  for (const u of shooters) {
+    const reach = UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
+    const near = foes.filter((t) => manhattan(u, t) <= reach && attackTargetsPossible(u, t));
+    if (!near.length) continue;
+    const froms: Pos[] = [{ x: u.x, y: u.y }];
+    if (UNIT.minalc[u.type]! === 0) froms.push(...reachableTiles(moveRange(s, u)));
+    const m = new Map<number, number>();
+    for (const t of near) if (froms.some((f) => inAttackRange(u.type, f, t))) m.set(t.uid, expectedDamage(s, u, t));
+    if (m.size) dmg.set(u.uid, m);
+  }
+  const free = new Set(dmg.keys());
+  const byValue = [...foes].sort((a, b) => UNIT.cost[b.type]! * b.life - UNIT.cost[a.type]! * a.life);
+  for (const t of byValue) {
+    const can = [...free].filter((id) => dmg.get(id)!.has(t.uid)).sort((a, b) => dmg.get(b)!.get(t.uid)! - dmg.get(a)!.get(t.uid)!);
+    let sum = 0;
+    const team: number[] = [];
+    for (const id of can) {
+      if (sum >= t.life) break;
+      // Despues del primero, el objetivo ya esta flanqueado.
+      sum += dmg.get(id)!.get(t.uid)! * (team.length ? 1 + RULES.flankBonus : 1);
+      team.push(id);
+    }
+    if (sum < t.life || team.length < 2) continue;
+    for (const id of team) {
+      PLAN.set(id, t.uid);
+      free.delete(id);
+    }
+  }
+  const ranged = (u: Unit) => UNIT.minalc[u.type]! > 0;
+  const key = (u: Unit, i: number) => (PLAN.has(u.uid) ? (ranged(u) ? 0 : 1) : 2) * 10000 + i;
+  return mine
+    .map((u, i) => ({ uid: u.uid, k: key(u, i) }))
+    .sort((a, b) => a.k - b.k)
+    .map((o) => o.uid);
 }
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa). */
