@@ -219,9 +219,10 @@ los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
   `docs/BALANCE.md`.
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`).
-  `GUARDRADIUS` es del ayudante del jugador: a que distancia de su casilla ataca una unidad en
-  automatico con la mision defender. Las unidades en automatico juegan con la misma IA que el
-  enemigo (`assistTurn` en `src/core/ai.ts`).
+  `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
+  unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar). Las ordenes
+  las cumple la misma IA que el enemigo (`assistTurn`/`commandTurn` en `src/core/ai.ts`); escuadras
+  y ordenes estan en `src/core/squads.ts`.
 
 Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas tablas por nombre:
 `--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60

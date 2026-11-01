@@ -1,5 +1,17 @@
 import Phaser from 'phaser';
-import { aiTurn, assistTurn, assistUnit } from '../core/ai';
+import { aiTurn, assistTurn, commandNow } from '../core/ai';
+import {
+  cancelCommand,
+  commandBlock,
+  disbandSquad,
+  formSquad,
+  giveCommand,
+  pruneSquads,
+  renameSquad,
+  squadById,
+  squadUnits,
+  SQUAD_NAME_MAX,
+} from '../core/squads';
 import {
   HQ,
   MAP_H,
@@ -70,7 +82,7 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy, stats } from '../core/stats';
-import type { AutoMission, Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
+import type { Building, CommandKind, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
@@ -106,6 +118,7 @@ import { PointerGestures, type PointerIn, type PointerTarget } from '../controls
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import {
+  squadsVM,
   abilitiesVM,
   buyBlockedText,
   captureHintText,
@@ -146,16 +159,37 @@ import { PAL, PAL_CSS } from '../ui/palette';
 type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
-const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'auto', 'autoDefend', 'manual', 'back', 'delete'];
+const ACTION_ORDER: ActionKey[] = [
+  'attack',
+  'capture',
+  'unload',
+  'supply',
+  'wait',
+  'cmdAttack',
+  'cmdCapture',
+  'cmdDefend',
+  'cmdCancel',
+  'back',
+  'delete',
+];
 type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
-/** [CAMBIO] Menu de grupo (Mayusculas + recuadro): mover o dar a todas la misma mision. */
-type GroupMenuKey = 'move' | 'auto' | 'autoDefend' | 'manual' | 'cancel';
-const GROUP_MENU: GroupMenuKey[] = ['move', 'auto', 'autoDefend', 'manual', 'cancel'];
-/** [CAMBIO] Mision de "Auto": la infanteria (lo que captura) captura; el resto ataca. */
-const defaultMission = (type: number): AutoMission => (UNIT.cancapt[type] ? 'capture' : 'attack');
-/** Aviso al dar una mision a una unidad. */
-const missionToast = (m: AutoMission): string => t(m === 'capture' ? 'autoOnCapture' : m === 'defend' ? 'autoOnDefend' : 'autoOnAttack');
+/** [CAMBIO] Menu de grupo (Mayusculas + recuadro, o una escuadra de la bandeja): mover, dar una orden o escuadras. */
+type GroupMenuKey =
+  'move' | 'cmdAttack' | 'cmdCapture' | 'cmdDefend' | 'cmdCancel' | 'squadForm' | 'squadRename' | 'squadDisband' | 'cancel';
+const GROUP_MENU: GroupMenuKey[] = [
+  'move',
+  'cmdAttack',
+  'cmdCapture',
+  'cmdDefend',
+  'cmdCancel',
+  'squadForm',
+  'squadRename',
+  'squadDisband',
+  'cancel',
+];
+/** Orden de cada opcion de menu. */
+const CMD_OF: Partial<Record<string, CommandKind>> = { cmdAttack: 'attack', cmdCapture: 'capture', cmdDefend: 'defend' };
 type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
 const END_LABEL: Record<EndButton, TextKey> = {
   rematch: 'endRematch',
@@ -221,6 +255,8 @@ export class GameScene extends Phaser.Scene {
   private phase: Phase = 'map';
   /** Laboratorio de animaciones (null en una partida normal). */
   private lab: LabOptions | null = null;
+  /** [CAMBIO] Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
+  private ordering: { kind: CommandKind; uids: number[]; single: boolean } | null = null;
   /** Habilidad del general que se esta apuntando (fase 'target'). */
   private targeting: string | null = null;
   private vis: boolean[][] = [];
@@ -504,6 +540,20 @@ export class GameScene extends Phaser.Scene {
       labExit: () => {
         this.scene.start('Menu');
       },
+      selectSquad: (id: number) => {
+        if (!ready() || (this.phase !== 'map' && this.phase !== 'groupMenu')) return;
+        const units = squadUnits(this.s, id).filter((u) => u.carrier === null);
+        if (!units.length) return;
+        this.group = new Set(units.map((u) => u.uid));
+        this.view.cursor = { x: units[0]!.x, y: units[0]!.y };
+        this.view.ensureVisible(units[0]!, 3);
+        this.openGroupMenu();
+      },
+      renameSquad: (id: number, name: string) => {
+        renameSquad(this.s, id, name);
+        ui.set({ rename: null });
+        this.refresh();
+      },
       useAbility: (id: string) => {
         if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.startAbility(id);
       },
@@ -552,9 +602,16 @@ export class GameScene extends Phaser.Scene {
     this.cursorMoved();
   }
 
+  /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
+  private showsOrderLine(u: Unit): boolean {
+    if (this.ordering?.uids.includes(u.uid) || this.group.has(u.uid)) return true;
+    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    return !!here && (here.uid === u.uid || (here.squad !== undefined && here.squad === u.squad));
+  }
+
   private idleUnits(): Unit[] {
-    // Las de automatico no cuentan: se moveran solas al terminar el turno.
-    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null && !u.auto);
+    // Las que tienen orden no cuentan: la cumpliran solas al terminar el turno.
+    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null && !u.command);
   }
 
   // -------------------------------------------------------------------------
@@ -571,6 +628,11 @@ export class GameScene extends Phaser.Scene {
       for (const k of this.attackSet.keys()) h.set(k, 'attack');
     } else if (this.phase === 'unloadTile') {
       for (const k of this.unloadSet) h.set(k, 'unload');
+    } else if (this.phase === 'target' && this.ordering) {
+      for (const uid of this.ordering.uids) {
+        const u = unitById(this.s, uid);
+        if (u) h.set(`${u.x},${u.y}`, 'group');
+      }
     } else if (this.phase === 'target') {
       for (const p of this.targetArea(this.view.cursor)) h.set(key(p), 'attack');
     } else if (this.phase === 'map' && this.group.size) {
@@ -634,9 +696,15 @@ export class GameScene extends Phaser.Scene {
       pathAttack: this.phase === 'move' && this.intentAt(this.view.cursor).kind === 'attack',
       threat,
       attackZone: this.phase === 'move' ? this.attackZone : null,
-      orders: this.s.units
-        .filter((u) => u.team === 0 && u.order && u.carrier === null)
-        .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
+      orders: [
+        ...this.s.units
+          .filter((u) => u.team === 0 && u.order && u.carrier === null)
+          .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
+        // [CAMBIO] Ordenes con destino: bandera siempre; linea para la unidad señalada y su escuadra.
+        ...this.s.units
+          .filter((u) => u.team === 0 && u.command && u.carrier === null)
+          .map((u) => ({ from: { x: u.x, y: u.y }, to: u.command!.at, kind: u.command!.kind, line: this.showsOrderLine(u) })),
+      ],
       danger: this.phase === 'move' ? this.dangerMap : null,
       captures,
       goal: obj?.kind === 'escort' ? obj.to : null,
@@ -700,12 +768,15 @@ export class GameScene extends Phaser.Scene {
       moveTip: this.phase === 'move' ? this.moveTip(c) : null,
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
+      squads: squadsVM(this.s),
       hint: busy
         ? this.enemyPlaying
           ? t('skip')
           : ''
         : this.phase === 'target'
-          ? t('genTarget')
+          ? this.ordering
+            ? t('orderPick')
+            : t('genTarget')
           : this.phase === 'map'
             ? this.inspectUid !== null
               ? t('hintInspect')
@@ -951,6 +1022,8 @@ export class GameScene extends Phaser.Scene {
    * que un mando necesita de la escena.
    */
   command(cmd: GameCommand): void {
+    // Escribiendo el nombre de una escuadra: el teclado es del cuadro de texto.
+    if (ui.get().rename) return;
     if (ui.get().help) {
       if (CLOSES_HELP.includes(cmd.kind)) ui.set({ help: false });
       return;
@@ -1320,6 +1393,7 @@ export class GameScene extends Phaser.Scene {
       case 'unloadTile':
         return this.acceptUnloadTile(c);
       case 'target':
+        if (this.ordering) return void this.placeOrder(c);
         return void this.fireAbility(c);
       default:
         break;
@@ -1353,6 +1427,12 @@ export class GameScene extends Phaser.Scene {
         this.menuSel = 0;
         return this.refresh();
       case 'target':
+        if (this.ordering?.single) {
+          // Desde el menu de la unidad: vuelve a el (su movimiento sigue a medio decidir).
+          this.ordering = null;
+          return this.openUnitMenu();
+        }
+        this.ordering = null;
         return this.toMap();
       default:
         break;
@@ -1477,6 +1557,7 @@ export class GameScene extends Phaser.Scene {
   private toMap(): void {
     this.phase = 'map';
     this.targeting = null;
+    this.ordering = null;
     this.inspectUid = null;
     this.trail = [];
     this.block = null;
@@ -1692,6 +1773,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Orden de varios turnos: la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
   private async giveOrder(u: Unit, goal: Pos): Promise<void> {
+    delete u.command;
     const r = this.range ?? moveRange(this.s, u);
     const dest = stepToward(this.s, u, goal, r);
     if (!dest) {
@@ -2002,14 +2084,13 @@ export class GameScene extends Phaser.Scene {
       case 'wait':
         wait(u);
         return this.afterAction();
-      case 'auto':
-        return this.setMission(u, defaultMission(u.type));
-      case 'autoDefend':
-        return this.setMission(u, 'defend');
-      case 'manual':
-        delete u.auto;
-        delete u.guard;
-        showToast(t('autoOff'));
+      case 'cmdAttack':
+      case 'cmdCapture':
+      case 'cmdDefend':
+        return this.startOrder(CMD_OF[action]!, [u], true);
+      case 'cmdCancel':
+        cancelCommand([u]);
+        showToast(t('orderCancelled'));
         return this.openUnitMenu();
       case 'back':
         return this.undoMove();
@@ -2037,74 +2118,121 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
   }
 
+  /** Escuadra que forman exactamente las unidades del grupo (null si no son una escuadra). */
+  private groupSquad(units: Unit[]): number | null {
+    const id = units[0]?.squad;
+    if (id === undefined || !units.every((u) => u.squad === id)) return null;
+    return squadUnits(this.s, id).length === units.length ? id : null;
+  }
+
   /** Que opciones del menu de grupo tienen sentido para estas unidades. */
   private groupOption(k: GroupMenuKey, units: Unit[]): boolean {
-    if (k === 'manual') return units.some((u) => u.auto);
-    return true;
+    const squad = this.groupSquad(units);
+    switch (k) {
+      case 'cmdCapture':
+        return units.some((u) => UNIT.cancapt[u.type]);
+      case 'cmdCancel':
+        return units.some((u) => u.command);
+      case 'squadForm':
+        return squad === null;
+      case 'squadRename':
+      case 'squadDisband':
+        return squad !== null;
+      default:
+        return true;
+    }
   }
 
   private acceptGroupMenu(): void {
     const k = this.menuItems[this.menuSel]?.id as GroupMenuKey | undefined;
     const units = this.groupUnits();
-    if (k === 'move') {
-      // Sigue elegido: el siguiente clic en el mapa lo mueve.
-      showToast(`${units.length} ${t('groupSelected')}`);
-      return this.toMap();
-    }
-    if (k === 'cancel' || !k) {
-      this.group.clear();
-      return this.toMap();
+    const squad = this.groupSquad(units);
+    switch (k) {
+      case 'move':
+        // Sigue elegido: el siguiente clic en el mapa lo mueve.
+        showToast(`${units.length} ${t('groupSelected')}`);
+        return this.toMap();
+      case 'cmdAttack':
+      case 'cmdCapture':
+      case 'cmdDefend':
+        return this.startOrder(CMD_OF[k]!, units, false);
+      case 'cmdCancel':
+        cancelCommand(units);
+        showToast(t('orderCancelled'));
+        break;
+      case 'squadForm': {
+        const q = formSquad(this.s, units);
+        if (q) showToast(`${t('squadFormed')}: ${q.name}`);
+        break;
+      }
+      case 'squadRename':
+        if (squad !== null) ui.set({ rename: { id: squad, name: squadById(this.s, squad)?.name ?? '', max: SQUAD_NAME_MAX } });
+        break;
+      case 'squadDisband':
+        if (squad !== null) disbandSquad(this.s, squad);
+        break;
+      default:
+        break;
     }
     this.group.clear();
-    if (k === 'manual') {
-      for (const u of units) {
-        delete u.auto;
-        delete u.guard;
-      }
-      showToast(t('autoOff'));
-      return this.toMap();
-    }
-    // [CAMBIO] Auto: cada una con la mision de su tipo (la infanteria captura, el resto ataca); o
-    // todas a defender su casilla. Empieza al terminar el turno: no se juegan ya, para no perder el hilo.
-    for (const u of units) {
-      u.auto = k === 'autoDefend' ? 'defend' : defaultMission(u.type);
-      u.guard = { x: u.x, y: u.y };
-    }
-    showToast(`${units.length} · ${t(k === 'autoDefend' ? 'autoOnDefend' : 'autoOnGroup')}`);
     this.toMap();
   }
 
+  // -------------------------------------------------------------------------
+  // [CAMBIO] Ordenes con destino (estilo RTS)
+  // -------------------------------------------------------------------------
+
   /**
-   * [CAMBIO] Ayudante: deja la unidad en automatico con una mision. Si se acaba de mover, lo movido
-   * cuenta y la mision empieza el turno que viene (defender guarda la casilla nueva); si no se ha
-   * movido, la IA la juega ya.
+   * Empieza a dar una orden a estas unidades: ahora se elige la casilla en el mapa (fase 'target').
+   * `single` = una unidad desde su menu (su movimiento de este turno, si lo hay, se mantiene).
    */
-  private setMission(u: Unit, mission: AutoMission): void {
-    const moved = !!this.undo && this.undo.uid === u.uid && (this.undo.x !== u.x || this.undo.y !== u.y);
-    if (this.undo && this.undo.uid === u.uid && !moved) u.canMove = true;
-    this.clearUndo();
-    u.auto = mission;
-    u.guard = { x: u.x, y: u.y };
-    if (moved) {
-      wait(u);
-      showToast(missionToast(mission));
-      return this.afterAction();
-    }
-    this.abandonSelection();
-    void this.playAuto(u, mission);
+  private startOrder(kind: CommandKind, units: Unit[], single: boolean): void {
+    if (!units.length) return this.toMap();
+    this.ordering = { kind, uids: units.map((u) => u.uid), single };
+    this.phase = 'target';
+    showToast(t('orderPick'));
+    this.refresh();
   }
 
-  /** [CAMBIO] Ayudante: la IA juega ya la unidad que se acaba de dejar en automatico. */
-  private async playAuto(u: Unit, mission: AutoMission): Promise<void> {
+  /** Casilla elegida para la orden: se da, y las que aun no se han movido la empiezan ya. */
+  private async placeOrder(c: Pos): Promise<void> {
+    const o = this.ordering;
+    if (!o) return this.toMap();
+    const units = o.uids.map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u);
+    const block = commandBlock(this.s, o.kind, c, units);
+    if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
+    this.ordering = null;
+    giveCommand(units, o.kind, c);
+    // Una unidad movida este turno: lo movido cuenta y espera; la orden empieza el turno que viene.
+    const sel = o.single ? units[0] : undefined;
+    const moved = !!sel && !!this.undo && this.undo.uid === sel.uid && (this.undo.x !== sel.x || this.undo.y !== sel.y);
+    if (sel && this.undo && this.undo.uid === sel.uid && !moved) {
+      sel.canMove = true;
+      sel.canFire = this.undo.canFire;
+    }
+    if (moved) wait(sel);
+    this.clearUndo();
+    this.group.clear();
+    this.toMap();
+    showToast(t('orderGiven'));
+    const now = units.filter((u) => u.active && u.canMove && u.carrier === null);
+    if (now.length) await this.playCommands(now);
+    else this.afterAction();
+  }
+
+  /** Las unidades empiezan ya su orden (animado); luego esperan. */
+  private async playCommands(units: Unit[]): Promise<void> {
     const m = this.match;
     this.phase = 'busy';
     this.refresh();
-    for (const ev of assistUnit(this.s, u.uid, Math.random)) {
-      await this.playEvents([ev]);
-      if (m !== this.match || this.checkEnd()) return;
+    for (const u of units) {
+      for (const ev of commandNow(this.s, u.uid, Math.random)) {
+        await this.playEvents([ev]);
+        if (m !== this.match || this.checkEnd()) return;
+      }
+      if (unitById(this.s, u.uid)) wait(u);
     }
-    wait(u);
-    showToast(missionToast(mission));
+    pruneSquads(this.s);
     this.afterAction();
   }
 
@@ -2418,11 +2546,19 @@ export class GameScene extends Phaser.Scene {
     this.abandonSelection();
     const saved = this.saveCamera();
     this.phase = 'busy';
-    // [CAMBIO] Ayudante: las unidades en automatico que siguen sin usar cumplen su mision.
-    for (const ev of assistTurn(this.s, Math.random)) {
-      await this.playEvents([ev]);
+    // [CAMBIO] Ordenes con destino: las unidades con orden que siguen sin usar la cumplen.
+    const orders = assistTurn(this.s, Math.random);
+    let step = orders.next();
+    while (!step.done) {
+      await this.playEvents([step.value]);
       if (m !== this.match || this.checkEnd()) return;
+      step = orders.next();
     }
+    const done = step.value
+      .map((uid) => unitById(this.s, uid))
+      .filter((u): u is Unit => !!u)
+      .map((u) => unitLabel(u.type) + (squadById(this.s, u.squad) ? ` (${squadById(this.s, u.squad)!.name})` : ''));
+    pruneSquads(this.s);
     // [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando.
     for (const u of this.autoCapturers()) {
       const b = buildingAt(this.s, u.x, u.y)!;
@@ -2452,15 +2588,17 @@ export class GameScene extends Phaser.Scene {
     if (this.checkEnd()) return;
     this.backToPlayer(saved);
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
-    this.showReport(report);
+    this.showReport(report, done);
     await this.runOrders();
   }
 
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
-  private showReport(r: RoundReport): void {
+  private showReport(r: RoundReport, done: string[] = []): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
     if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
+    // [CAMBIO] Unidades que cumplieron su orden al terminar el turno anterior (ahora esperan otra).
+    if (done.length) lines.push({ icon: '', text: `${t('orderDone')}: ${done.join(', ')}`, tone: 'plain' });
     if (mine.length)
       lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     if (r.weather) {

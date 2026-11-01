@@ -152,10 +152,18 @@ function attackScore(s: GameState, u: Unit, t: Unit, from: Pos = u): number {
 }
 
 /**
- * Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano. `zone` (mision defender
- * del ayudante) limita a que enemigos se mira.
+ * Opciones de tryAttack para las ordenes del jugador: `zone` limita a que enemigos se mira (defender),
+ * `chase: false` no persigue a nadie fuera de tiro y `stay` solo dispara desde donde esta.
  */
-function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, zone?: (t: Unit) => boolean): Generator<GameEvent, boolean> {
+interface AttackOpts {
+  zone?: (t: Unit) => boolean;
+  chase?: boolean;
+  stay?: boolean;
+}
+
+/** Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano (ver AttackOpts). */
+function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, opts: AttackOpts = {}): Generator<GameEvent, boolean> {
+  const { zone, chase: follow = true, stay = false } = opts;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!UNIT.canfight[u.type] || !u.canFire) return false;
   const vis = visibility(s, ME);
@@ -169,7 +177,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, zone?: (t
   let best: { from: Pos; target: Unit; score: number } | null = null;
   const ranged = UNIT.minalc[u.type]! > 0;
   const froms: Pos[] = [{ x: u.x, y: u.y }];
-  if (!ranged) {
+  if (!ranged && !stay) {
     froms.push(...reachableTiles(range));
   }
   for (const t of enemies) {
@@ -187,6 +195,7 @@ function* tryAttack(s: GameState, u: Unit, range: MoveRange, rng: Rng, zone?: (t
     return true;
   }
   // Nadie a tiro este turno: acercarse al enemigo visible mas cercano al que pueda danar.
+  if (!follow) return false;
   const chase = enemies.filter((t) => attackTargetsPossible(u, t)).sort((a, b) => manhattan(u, a) - manhattan(u, b))[0];
   if (!chase) return false;
   yield* doMove(s, u, bestMoveToward(s, u, chase, range), range);
@@ -359,51 +368,72 @@ export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): G
 }
 
 /**
- * [CAMBIO] Ayudante del jugador (al terminar su turno): las unidades en automatico (Unit.auto) que
- * siguen sin usar cumplen su mision. No toca las demas unidades ni compra nada.
+ * [CAMBIO] Ordenes del jugador (al terminar su turno): las unidades con orden con destino
+ * (Unit.command) que siguen sin usar la cumplen. No toca las demas unidades ni compra nada.
+ * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
-export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
+export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, number[]> {
   ME = team;
-  for (const u of teamUnits(s, ME).filter((u) => u.auto)) yield* missionTurn(s, u.uid, rng);
+  const done: number[] = [];
+  for (const u of teamUnits(s, ME).filter((u) => u.command)) if (yield* commandTurn(s, u.uid, rng)) done.push(u.uid);
+  return done;
 }
 
-/** [CAMBIO] Ayudante: la IA juega ya esta unidad del jugador (al dejarla en automatico). */
-export function* assistUnit(s: GameState, uid: number, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent> {
+/** [CAMBIO] La unidad del jugador empieza ya su orden recien dada (si aun no se ha movido). */
+export function* commandNow(s: GameState, uid: number, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, boolean> {
   ME = team;
-  yield* missionTurn(s, uid, rng);
+  return yield* commandTurn(s, uid, rng);
 }
 
 /**
- * [CAMBIO] Turno de una unidad del jugador en automatico, segun su mision:
- * - atacar: como la IA enemiga (retirarse si esta debil, atacar, capturar, avanzar);
- * - capturar: va a por edificios ajenos y solo ataca si no tiene ninguno cerca (las que no
- *   pueden capturar, como atacar);
- * - defender: se queda junto a la casilla que guarda y solo ataca a los enemigos que se acercan a
- *   ella (a AI.GUARDRADIUS o menos); si se ha alejado, vuelve.
+ * [CAMBIO] Turno de una unidad del jugador con orden con destino (ver Command en types.ts).
+ * Devuelve true si la orden se ha cumplido (y la quita: la unidad se queda esperando).
  */
-function* missionTurn(s: GameState, uid: number, rng: Rng): Generator<GameEvent> {
+export function* commandTurn(s: GameState, uid: number, rng: Rng): Generator<GameEvent, boolean> {
   const u = unitById(s, uid);
-  if (!u || !u.active || u.carrier !== null || u.life <= 0) return;
-  const mission = u.auto === 'capture' && !UNIT.cancapt[u.type] ? 'attack' : u.auto;
-  if (mission === 'capture') {
-    if (yield* captureHere(s, u)) return;
+  if (!u || !u.command || !u.active || u.carrier !== null || u.life <= 0) return false;
+  const { kind, at } = u.command;
+  const finish = () => {
+    delete u.command;
+    return true;
+  };
+  if (kind === 'capture') {
+    const b = buildingAt(s, at.x, at.y);
+    if (!b || b.owner === ME || !UNIT.cancapt[u.type]) return finish();
+    if (samePos(u, at)) {
+      yield* captureHere(s, u);
+      wait(u);
+      return buildingAt(s, at.x, at.y)?.owner === ME ? finish() : false;
+    }
     const range = moveRange(s, u);
-    if (needsRepair(u) && (yield* retreat(s, u, range))) return;
-    if (yield* tryCapture(s, u, range)) return;
-    if (yield* tryAttack(s, u, range, rng)) return;
-    if (yield* advance(s, u, range)) return;
-    return wait(u);
+    if (yield* doMove(s, u, bestMoveToward(s, u, at, range), range)) return false;
+    if (samePos(u, at)) {
+      yield* captureHere(s, u);
+    } else if (!(yield* tryAttack(s, u, moveRange(s, u), rng, { stay: true, chase: false }))) wait(u);
+    wait(u);
+    return buildingAt(s, at.x, at.y)?.owner === ME ? finish() : false;
   }
-  if (mission === 'defend') {
-    const guard = u.guard ?? { x: u.x, y: u.y };
-    u.guard = guard;
-    const range = moveRange(s, u);
-    if (needsRepair(u) && (yield* retreat(s, u, range))) return;
-    if (yield* tryAttack(s, u, range, rng, (t) => manhattan(t, guard) <= AI.GUARDRADIUS)) return;
-    if (manhattan(u, guard) > 1) yield* doMove(s, u, bestMoveToward(s, u, guard, range), range);
-    return wait(u);
+  const range = moveRange(s, u);
+  if (needsRepair(u) && (yield* retreat(s, u, range))) return false;
+  const near = (t: Pos) => manhattan(t, at) <= AI.GUARDRADIUS;
+  if (kind === 'defend') {
+    if (yield* tryAttack(s, u, range, rng, { zone: near })) return false;
+    if (manhattan(u, at) > 1) yield* doMove(s, u, bestMoveToward(s, u, at, range), range);
+    wait(u);
+    return false;
   }
-  yield* unitTurn(s, uid, rng);
+  // Atacar aqui: dispara a lo que tenga a tiro por el camino, sin perseguir, y avanza.
+  if (yield* tryAttack(s, u, range, rng, { chase: false })) return false;
+  if (manhattan(u, at) > 1) {
+    if (yield* doMove(s, u, bestMoveToward(s, u, at, range), range)) return false;
+    if (!(yield* tryAttack(s, u, moveRange(s, u), rng, { stay: true, chase: false }))) wait(u);
+    return false;
+  }
+  // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.
+  wait(u);
+  const vis = visibility(s, ME);
+  const left = s.units.some((t) => t.team !== ME && t.carrier === null && vis[t.x]![t.y] && near(t));
+  return left ? false : finish();
 }
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa). */

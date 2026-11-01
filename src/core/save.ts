@@ -63,8 +63,10 @@ export function deserialize(json: string): GameState | null {
     u.canFire = !!u.canFire;
     if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
     if (u.hitDay !== undefined && !isInt(u.hitDay, 0, 1e6)) delete u.hitDay;
-    if (u.auto !== undefined && !['capture', 'defend', 'attack'].includes(u.auto)) delete u.auto;
-    if (u.guard !== undefined && !(u.guard && isInt(u.guard.x, 0, MAP_W - 1) && isInt(u.guard.y, 0, MAP_H - 1))) delete u.guard;
+    const okPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
+    if (u.command !== undefined && !(u.command && ['attack', 'capture', 'defend'].includes(u.command.kind) && okPos(u.command.at)))
+      delete u.command;
+    if (u.squad !== undefined && !isInt(u.squad, 1, 1e6)) delete u.squad;
     if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
   }
   const byUid = new Map(s.units.map((u) => [u.uid, u]));
@@ -114,6 +116,12 @@ export function deserialize(json: string): GameState | null {
     // Un clima roto no estropea la partida: se vuelve a empezar despejado.
     if (!ok) delete s.weather;
   }
+  if (s.squads !== undefined) {
+    const ok =
+      Array.isArray(s.squads) && s.squads.every((q) => q && isInt(q.id, 1, 1e6) && typeof q.name === 'string' && q.name.length > 0);
+    if (!ok) delete s.squads;
+  }
+  for (const u of s.units) if (u.squad !== undefined && !s.squads?.some((q) => q.id === u.squad)) delete u.squad;
   if (s.generals !== undefined) {
     // Un general que no existe (o con datos rotos) se quita: la partida sigue sin el.
     const ok = Array.isArray(s.generals) && s.generals.length === 2;

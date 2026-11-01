@@ -21,8 +21,10 @@ import {
   upkeepOf,
   type BuyOption,
 } from '../core/rules';
-import type { AutoMission, CombatInfo, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
+import type { CombatInfo, CommandKind, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
 import { forecast, weatherNow } from '../core/weather';
+import { samePos } from '../core/geom';
+import { squadById } from '../core/squads';
 import type {
   GeneralVM,
   AbilityVM,
@@ -34,6 +36,7 @@ import type {
   EconomyVM,
   ForecastVM,
   MinimapVM,
+  SquadVM,
   StatChipVM,
   TileVM,
   WeatherVM,
@@ -49,9 +52,24 @@ import { buildingKey, terrainKey, unitKey } from './sprites';
 
 /** "Mov 3 · Alcance 1–1" */
 /** Datos de la ficha de una unidad con su icono: movimiento, alcance y vision. */
-/** [CAMBIO] Nombre de la mision de una unidad en automatico. */
-export const missionLabel = (m: AutoMission): string =>
-  t(m === 'capture' ? 'missionCapture' : m === 'defend' ? 'missionDefend' : 'missionAttack');
+/** [CAMBIO] Nombre de una orden con destino ("Atacar aquí"...). */
+export const commandLabel = (k: CommandKind): string =>
+  t(k === 'capture' ? 'orderCapture' : k === 'defend' ? 'orderDefend' : 'orderAttack');
+
+/**
+ * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades y su orden si todas
+ * llevan la misma (null si no llevan ninguna o son distintas).
+ */
+export function squadsVM(s: GameState): SquadVM[] {
+  return (s.squads ?? [])
+    .map((q) => {
+      const units = s.units.filter((u) => u.squad === q.id);
+      const first = units[0]?.command;
+      const same = !!first && units.every((u) => u.command?.kind === first.kind && samePos(u.command.at, first.at));
+      return { id: q.id, name: q.name, count: units.length, order: same ? commandLabel(first.kind) : null };
+    })
+    .filter((q) => q.count > 0);
+}
 
 export function unitStatChips(type: number): StatChipVM[] {
   const range = UNIT.alcance[type]! === 0 ? '—' : `${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
@@ -160,7 +178,8 @@ export function tileVM(
       abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(shown.auto && shown.team === 0 ? { auto: missionLabel(shown.auto) } : {}),
+      ...(shown.command && shown.team === 0 ? { order: commandLabel(shown.command.kind) } : {}),
+      ...(shown.team === 0 && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
     };
   }
   return info;

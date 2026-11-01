@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { addSheetFrames, ATLAS, hasImage, sheetFrame } from '../atlas';
 import { MAP_H, MAP_W } from '../core/data';
-import type { AutoMission, GameState, Pos, Unit } from '../core/types';
+import type { CommandKind, GameState, Pos, Unit } from '../core/types';
 import { dpr } from '../display';
 import type { Anchor } from '../hud/store';
 import { TILE } from '../layout';
@@ -15,8 +15,8 @@ import { settings } from '../settings';
 import { PAL, PAL_CSS } from './palette';
 import { addLifeTextures, lifeKey } from './lifeDigits';
 
-/** Letra (3x5 pixeles) de cada mision de las unidades en automatico: Capturar, Defender, Atacar. */
-const MISSION_GLYPH: Record<AutoMission, [number, number][]> = {
+/** Letra (3x5 pixeles) de cada orden con destino: Capturar, Defender, Atacar. */
+const MISSION_GLYPH: Record<CommandKind, [number, number][]> = {
   capture: [
     [1, 0],
     [2, 0],
@@ -51,7 +51,9 @@ const MISSION_GLYPH: Record<AutoMission, [number, number][]> = {
     [2, 4],
   ],
 };
-const MISSION_KEY: Record<AutoMission, number> = { capture: 1, defend: 2, attack: 3 };
+const MISSION_KEY: Record<CommandKind, number> = { capture: 1, defend: 2, attack: 3 };
+/** Color de la bandera de cada orden en su casilla de destino. */
+const COMMAND_FLAG: Record<CommandKind, number> = { attack: PAL.red, capture: PAL.gold, defend: 0x5fd6c6 };
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
 
@@ -85,8 +87,11 @@ export interface ViewOptions {
   /** Al mover: todo lo que la unidad podria atacar (borde rojo) y destinos peligrosos (marca roja). */
   attackZone?: boolean[][] | null;
   danger?: boolean[][] | null;
-  /** Ordenes de varios turnos: linea de puntos hasta el destino y banderita. */
-  orders?: { from: Pos; to: Pos }[];
+  /**
+   * Ordenes de varios turnos: linea de puntos hasta el destino y banderita. [CAMBIO] Las ordenes con
+   * destino llevan su tipo (color de la bandera) y la linea solo si `line` (unidad o escuadra señalada).
+   */
+  orders?: { from: Pos; to: Pos; kind?: CommandKind; line?: boolean }[];
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
@@ -533,13 +538,13 @@ export class MapView {
     const noHeal = !!s && u.life < 100 && unhealable(s, u);
     // [CAMBIO] Ayudante: unidad en automatico (al lado de la marca de carga si la lleva).
     const cargo = u.cargo.some((c) => c !== null);
-    const marks = r * 16 + (noHeal ? 1 : 0) + (cargo ? 2 : 0) + (u.auto ? MISSION_KEY[u.auto] * 4 : 0);
+    const marks = r * 16 + (noHeal ? 1 : 0) + (cargo ? 2 : 0) + (u.command ? MISSION_KEY[u.command.kind] * 4 : 0);
     if (marks !== sp.rank) {
       // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
       sp.rank = marks;
       const g = sp.stars;
       g.clear();
-      if (u.auto) {
+      if (u.command) {
         // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
         const x = cargo ? 12 : 1,
           y = 1;
@@ -548,7 +553,7 @@ export class MapView {
         g.fillStyle(0x2f8f83, 1);
         g.fillRect(x + 1, y + 1, 7, 7);
         g.fillStyle(0xffffff, 1);
-        for (const [dx, dy] of MISSION_GLYPH[u.auto]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
+        for (const [dx, dy] of MISSION_GLYPH[u.command.kind]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
       }
       if (noHeal) {
         // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
@@ -700,12 +705,16 @@ export class MapView {
         ay = o.from.y * TILE + TILE / 2,
         bx = o.to.x * TILE + TILE / 2,
         by = o.to.y * TILE + TILE / 2;
-      g.fillStyle(PAL.gold, 0.9);
-      for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
-      for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
+      const color = o.kind ? COMMAND_FLAG[o.kind] : PAL.gold;
+      if (!o.kind || o.line) {
+        g.fillStyle(color, 0.9);
+        for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
+        for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
+      }
       g.fillStyle(PAL.ink, 1);
       g.fillRect(bx - 1, by - 12, 3, 14);
-      g.fillStyle(PAL.gold, 1);
+      g.fillRect(bx + 1, by - 13, 10, 8);
+      g.fillStyle(color, 1);
       g.fillRect(bx + 2, by - 12, 8, 6);
       g.fillStyle(0xfff1a8, 1);
       g.fillRect(bx, by - 11, 1, 12);
