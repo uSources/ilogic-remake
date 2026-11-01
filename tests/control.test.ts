@@ -3,12 +3,12 @@ import { aiTurn } from '@core/ai';
 import { DEFAULT_RULES, HQ, MoveType, RULES, useRules } from '@core/data';
 import { grid, manhattan, seededRng } from '@core/geom';
 import { generateGame, placeControlPoints } from '@core/mapgen';
-import { controlRound, endRound, groundDistance, newUnit } from '@core/rules';
+import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/types';
 import { blankState } from './helpers';
 
-/** [CAMBIO] Puntos de control: casillas que dan dinero cada ronda a quien las tiene. */
+/** [CAMBIO] Puntos de control: zonas que dan dinero cada ronda a su dueño si no estan disputadas. */
 const SOLDIER = 0,
   TANK = 1;
 
@@ -25,25 +25,48 @@ function withPoints(): GameState {
 }
 
 describe('puntos de control', () => {
-  it('al acabar la ronda pasan a ser de quien tiene una unidad encima y siguen suyos al irse', () => {
+  it('con unidades de un solo bando en la zona es suyo y paga; vacio sigue pagando a su dueño', () => {
     const s = withPoints();
-    const u = newUnit(s, SOLDIER, 0, 10, 10);
+    // En la zona (radio 1) aunque no en el centro.
+    const u = newUnit(s, SOLDIER, 0, 11, 9);
     const before = s.funds[0];
     const r = controlRound(s)!;
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(r.held).toEqual([1, 1]);
+    expect(r.contested).toBe(0);
     expect(r.income).toEqual([RULES.controlIncome, RULES.controlIncome]);
     expect(s.funds[0]).toBe(before + RULES.controlIncome);
-    u.x = 11;
+    u.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
   });
 
-  it('el enemigo se lo quita poniendose encima', () => {
+  it('disputado (unidades de los dos bandos dentro): no paga a nadie ni cambia de dueño', () => {
     const s = withPoints();
-    newUnit(s, TANK, 0, 5, 14);
+    newUnit(s, TANK, 0, 4, 14);
+    newUnit(s, SOLDIER, 1, 6, 15);
+    const funds = [...s.funds];
+    const r = controlRound(s)!;
+    expect(r.contested).toBe(1);
+    expect(s.controlPoints![1]!.owner).toBe(1);
+    expect(r.held).toEqual([0, 0]);
+    expect(s.funds).toEqual(funds);
+  });
+
+  it('el enemigo se lo queda echando a todos los del otro bando de la zona', () => {
+    const s = withPoints();
+    newUnit(s, TANK, 0, 5, 13);
     controlRound(s);
     expect(s.controlPoints![1]!.owner).toBe(0);
+  });
+
+  it('una unidad fuera de la zona no cuenta', () => {
+    const s = withPoints();
+    newUnit(s, TANK, 0, 12, 12);
+    controlRound(s);
+    expect(s.controlPoints![0]!.owner).toBeNull();
+    expect(inControlZone({ x: 10, y: 10 }, { x: 11, y: 11 })).toBe(true);
+    expect(inControlZone({ x: 10, y: 10 }, { x: 12, y: 10 })).toBe(false);
   });
 
   it('endRound suma su dinero a los ingresos del informe', () => {
@@ -75,7 +98,8 @@ describe('puntos de control', () => {
         // Casi a la misma distancia de las dos Bases (las salidas estan junto a ellas).
         expect(Math.abs(da[p.x]![p.y]! - db[p.x]![p.y]!)).toBeLessThanOrEqual(8);
       }
-      for (const a of pts) for (const b of pts) if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3);
+      // Las zonas no se tocan.
+      for (const a of pts) for (const b of pts) if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * RULES.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });
@@ -105,9 +129,10 @@ describe('puntos de control', () => {
     const raw = JSON.parse(serialize(s)) as { rules: Record<string, unknown>; controlPoints: unknown };
     delete raw.rules.controlPoints;
     delete raw.rules.controlIncome;
+    delete raw.rules.controlRadius;
     raw.controlPoints = [{ x: -1, y: 2, owner: 0 }];
     const old = deserialize(JSON.stringify(raw))!;
-    expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0 });
+    expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0, controlRadius: 0 });
     expect(old.controlPoints).toBeUndefined();
   });
 });

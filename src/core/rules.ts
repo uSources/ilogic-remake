@@ -885,20 +885,34 @@ export interface RoundReport {
   healed: { uid: number; team: Team; amount: number }[];
   /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
   weather?: WeatherChange | null;
-  /** [CAMBIO] Puntos de control: dinero que ha dado a cada bando (ya sumado en income) y cuantos tiene. */
-  control?: { income: [number, number]; held: [number, number] };
+  /** [CAMBIO] Puntos de control: dinero que ha dado a cada bando (ya sumado en income), cuantos le han pagado y cuantos estan disputados. */
+  control?: { income: [number, number]; held: [number, number]; contested: number };
+}
+
+/** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de RULES.controlRadius). */
+export function inControlZone(c: Pos, p: Pos): boolean {
+  return Math.max(Math.abs(c.x - p.x), Math.abs(c.y - p.y)) <= RULES.controlRadius;
+}
+
+/** [CAMBIO] Bandos con unidades dentro de la zona de un punto de control. */
+export function teamsInZone(s: GameState, c: Pos): Set<Team> {
+  return new Set(s.units.filter((u) => u.carrier === null && inControlZone(c, u)).map((u) => u.team));
 }
 
 /**
- * [CAMBIO] Puntos de control al acabar la ronda: pasan a ser de quien tenga una unidad encima (y
- * siguen suyos al irse) y cada uno da RULES.controlIncome a su dueño. Nada si la partida no tiene.
+ * [CAMBIO] Puntos de control al acabar la ronda (ver GameState.controlPoints): solo paga el que no
+ * esta disputado, para que haya batallas por ellos. Nada si la partida no tiene.
  */
 export function controlRound(s: GameState): RoundReport['control'] {
   if (!s.controlPoints?.length) return undefined;
-  const out: NonNullable<RoundReport['control']> = { income: [0, 0], held: [0, 0] };
+  const out: NonNullable<RoundReport['control']> = { income: [0, 0], held: [0, 0], contested: 0 };
   for (const c of s.controlPoints) {
-    const u = unitAt(s, c.x, c.y);
-    if (u && u.carrier === null) c.owner = u.team;
+    const teams = teamsInZone(s, c);
+    if (teams.size > 1) {
+      out.contested++;
+      continue;
+    }
+    if (teams.size === 1) c.owner = [...teams][0]!;
     if (c.owner === null) continue;
     out.held[c.owner]++;
     out.income[c.owner] += RULES.controlIncome;

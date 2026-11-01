@@ -145,7 +145,7 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       .join(' '),
     CONTROL_ES:
       RULES.controlPoints > 0
-        ? `Puntos de control: casillas marcadas con esquinas (grises si no son de nadie). Al acabar la ronda pasan a ser de quien tenga una unidad encima, y siguen suyos aunque se vaya. Cada uno da ${RULES.controlIncome} por ronda: pelea por ellos.`
+        ? `Puntos de control: zonas de ${2 * RULES.controlRadius + 1}×${2 * RULES.controlRadius + 1} marcadas con un borde y un banderín (grises si no son de nadie). Al acabar la ronda, si dentro solo hay unidades tuyas, la zona es tuya y te da ${RULES.controlIncome}; si hay de los dos bandos, está disputada y no paga a nadie; vacía, sigue pagando a quien la tenía. Pelea por ellas.`
         : '',
     ARMY_ES: [
       RULES.commandPoints !== null
@@ -186,7 +186,7 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
       .join(' '),
     CONTROL_EN:
       RULES.controlPoints > 0
-        ? `Control points: tiles marked with corners (grey if nobody holds them). At the end of the round they become whoever has a unit on them, and stay theirs after the unit leaves. Each pays ${RULES.controlIncome} per round: fight for them.`
+        ? `Control points: ${2 * RULES.controlRadius + 1}×${2 * RULES.controlRadius + 1} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${RULES.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
         : '',
     ARMY_EN: [
       RULES.commandPoints !== null
