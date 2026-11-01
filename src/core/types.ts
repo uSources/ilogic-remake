@@ -84,8 +84,6 @@ export interface GameState {
   generals?: [GeneralState | null, GeneralState | null];
   /** Mision de la campaña que se esta jugando (su id) y objetivo especial, si lo hay. */
   mission?: { id: string; objective: Objective };
-  /** [CAMBIO] Ayudante del jugador: fabrica automatica al terminar el turno (postura, o null = apagada). */
-  assist?: { produce: Posture | null; reserve?: Reserve };
 }
 
 /** General de un bando (ver core/generals.ts). */
@@ -199,9 +197,3 @@ export type Objective =
  * donde se le dio la orden (solo ataca a quien se acerque) o atacar (juega como la IA enemiga).
  */
 export type AutoMission = 'capture' | 'defend' | 'attack';
-
-/** [CAMBIO] Postura de la fabrica automatica del jugador (ver assistTurn en ai.ts). */
-export type Posture = 'balanced' | 'counter' | 'attack' | 'defense';
-
-/** [CAMBIO] Dinero que la fabrica automatica no toca: una cantidad fija o la mitad de lo que haya. */
-export type Reserve = 0 | 5000 | 10000 | 'half';

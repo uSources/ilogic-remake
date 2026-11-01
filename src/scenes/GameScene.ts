@@ -70,7 +70,7 @@ import {
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy, stats } from '../core/stats';
-import type { AutoMission, Building, GameEvent, GameSetup, GameState, Pos, Posture, Reserve, Unit } from '../core/types';
+import type { AutoMission, Building, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
 import { randomSeed, seedToCode } from '../setup';
 import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
@@ -106,7 +106,6 @@ import { PointerGestures, type PointerIn, type PointerTarget } from '../controls
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import {
-  factoryReportText,
   abilitiesVM,
   buyBlockedText,
   captureHintText,
@@ -147,44 +146,16 @@ import { PAL, PAL_CSS } from '../ui/palette';
 type Phase = 'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 type ActionKey = keyof UnitActions;
-const ACTION_ORDER: ActionKey[] = [
-  'attack',
-  'capture',
-  'unload',
-  'supply',
-  'wait',
-  'autoCapture',
-  'autoDefend',
-  'autoAttack',
-  'manual',
-  'back',
-  'delete',
-];
-type GameMenuKey = 'endTurn' | 'autoBuy' | 'autoReserve' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'autoBuy', 'autoReserve', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
-/** [CAMBIO] Fabrica automatica: lo que va saliendo al pulsarla en el menu de partida (null = apagada). */
-const POSTURES: (Posture | null)[] = [null, 'balanced', 'counter', 'attack', 'defense'];
-/** [CAMBIO] Reserva de la fabrica automatica: lo que va saliendo al pulsarla. */
-const RESERVES: Reserve[] = [0, 5000, 10000, 'half'];
-const reserveLabel = (r: Reserve): string => (r === 'half' ? t('reserveHalf') : r === 0 ? t('reserveNone') : fmtNum(r));
+const ACTION_ORDER: ActionKey[] = ['attack', 'capture', 'unload', 'supply', 'wait', 'auto', 'autoDefend', 'manual', 'back', 'delete'];
+type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
+const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 /** [CAMBIO] Menu de grupo (Mayusculas + recuadro): mover o dar a todas la misma mision. */
-type GroupMenuKey = 'move' | 'autoCapture' | 'autoDefend' | 'autoAttack' | 'manual' | 'cancel';
-const GROUP_MENU: GroupMenuKey[] = ['move', 'autoCapture', 'autoDefend', 'autoAttack', 'manual', 'cancel'];
-/** Aviso al dar una mision a una unidad (o a un grupo). */
+type GroupMenuKey = 'move' | 'auto' | 'autoDefend' | 'manual' | 'cancel';
+const GROUP_MENU: GroupMenuKey[] = ['move', 'auto', 'autoDefend', 'manual', 'cancel'];
+/** [CAMBIO] Mision de "Auto": la infanteria (lo que captura) captura; el resto ataca. */
+const defaultMission = (type: number): AutoMission => (UNIT.cancapt[type] ? 'capture' : 'attack');
+/** Aviso al dar una mision a una unidad. */
 const missionToast = (m: AutoMission): string => t(m === 'capture' ? 'autoOnCapture' : m === 'defend' ? 'autoOnDefend' : 'autoOnAttack');
-const postureLabel = (p: Posture | null): string =>
-  t(
-    p === 'balanced'
-      ? 'postureBalanced'
-      : p === 'counter'
-        ? 'postureCounter'
-        : p === 'attack'
-          ? 'postureAttack'
-          : p === 'defense'
-            ? 'postureDefense'
-            : 'postureOff',
-  );
-
 type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
 const END_LABEL: Record<EndButton, TextKey> = {
   rematch: 'endRematch',
@@ -853,15 +824,10 @@ export class GameScene extends Phaser.Scene {
         }
         items = GAME_MENU.map((k) => ({
           id: k,
-          label:
-            k === 'autoBuy'
-              ? `${t('autoBuy')}: ${postureLabel(this.s.assist?.produce ?? null)}`
-              : k === 'autoReserve'
-                ? `${t('autoReserve')}: ${reserveLabel(this.s.assist?.reserve ?? 0)}`
-                : t(k as TextKey),
+          label: t(k as TextKey),
           hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'options' ? 'O' : undefined,
           danger: k === 'quit' || k === 'surrender',
-          disabled: (k === 'replay' && !this.lastEnemy) || (k === 'autoReserve' && !this.s.assist?.produce),
+          disabled: k === 'replay' && !this.lastEnemy,
         }));
         break;
       case 'unitMenu':
@@ -1952,20 +1918,6 @@ export class GameScene extends Phaser.Scene {
         return this.toMap();
       case 'endTurn':
         return void this.enemyTurn();
-      case 'autoBuy': {
-        // Cada pulsacion pasa a la siguiente postura: apagada, equilibrada, ofensiva, defensiva.
-        const now = POSTURES.indexOf(this.s.assist?.produce ?? null);
-        const next = POSTURES[(now + 1) % POSTURES.length]!;
-        this.s.assist = { ...this.s.assist, produce: next };
-        showToast(next ? t('autoBuyOn') : t('autoBuyOff'));
-        return this.refresh();
-      }
-      case 'autoReserve': {
-        if (!this.s.assist?.produce) return;
-        const now = RESERVES.indexOf(this.s.assist.reserve ?? 0);
-        this.s.assist = { ...this.s.assist, reserve: RESERVES[(now + 1) % RESERVES.length]! };
-        return this.refresh();
-      }
       case 'replay':
         if (!this.lastEnemy) return showToast(t('noReplay'));
         return void this.replayEnemyTurn();
@@ -2050,12 +2002,10 @@ export class GameScene extends Phaser.Scene {
       case 'wait':
         wait(u);
         return this.afterAction();
-      case 'autoCapture':
-        return this.setMission(u, 'capture');
+      case 'auto':
+        return this.setMission(u, defaultMission(u.type));
       case 'autoDefend':
         return this.setMission(u, 'defend');
-      case 'autoAttack':
-        return this.setMission(u, 'attack');
       case 'manual':
         delete u.auto;
         delete u.guard;
@@ -2089,7 +2039,6 @@ export class GameScene extends Phaser.Scene {
 
   /** Que opciones del menu de grupo tienen sentido para estas unidades. */
   private groupOption(k: GroupMenuKey, units: Unit[]): boolean {
-    if (k === 'autoCapture') return units.some((u) => UNIT.cancapt[u.type]);
     if (k === 'manual') return units.some((u) => u.auto);
     return true;
   }
@@ -2115,14 +2064,13 @@ export class GameScene extends Phaser.Scene {
       showToast(t('autoOff'));
       return this.toMap();
     }
-    // [CAMBIO] La misma mision para todas (las que no pueden capturar, si se pidio capturar, atacan).
-    // Empieza al terminar el turno: no se juegan ya, para no perder el hilo.
-    const mission: AutoMission = k === 'autoCapture' ? 'capture' : k === 'autoDefend' ? 'defend' : 'attack';
+    // [CAMBIO] Auto: cada una con la mision de su tipo (la infanteria captura, el resto ataca); o
+    // todas a defender su casilla. Empieza al terminar el turno: no se juegan ya, para no perder el hilo.
     for (const u of units) {
-      u.auto = mission === 'capture' && !UNIT.cancapt[u.type] ? 'attack' : mission;
+      u.auto = k === 'autoDefend' ? 'defend' : defaultMission(u.type);
       u.guard = { x: u.x, y: u.y };
     }
-    showToast(`${units.length} · ${missionToast(mission)}`);
+    showToast(`${units.length} · ${t(k === 'autoDefend' ? 'autoOnDefend' : 'autoOnGroup')}`);
     this.toMap();
   }
 
@@ -2470,13 +2418,8 @@ export class GameScene extends Phaser.Scene {
     this.abandonSelection();
     const saved = this.saveCamera();
     this.phase = 'busy';
-    // [CAMBIO] Ayudante: las unidades en automatico que siguen sin usar juegan, y la fabrica automatica compra.
-    const bought: number[] = [];
+    // [CAMBIO] Ayudante: las unidades en automatico que siguen sin usar cumplen su mision.
     for (const ev of assistTurn(this.s, Math.random)) {
-      if (ev.kind === 'spawn') {
-        const nu = unitById(this.s, ev.uid);
-        if (nu) bought.push(nu.type);
-      }
       await this.playEvents([ev]);
       if (m !== this.match || this.checkEnd()) return;
     }
@@ -2509,17 +2452,15 @@ export class GameScene extends Phaser.Scene {
     if (this.checkEnd()) return;
     this.backToPlayer(saved);
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
-    this.showReport(report, bought);
+    this.showReport(report);
     await this.runOrders();
   }
 
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
-  private showReport(r: RoundReport, bought: number[] = []): void {
+  private showReport(r: RoundReport): void {
     const mine = r.healed.filter((h) => h.team === 0);
     const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
     if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
-    // [CAMBIO] Lo que compro la fabrica automatica al terminar el turno anterior.
-    if (bought.length) lines.push({ icon: 'ui/dinero', text: factoryReportText(bought), tone: 'plain' });
     if (mine.length)
       lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
     if (r.weather) {

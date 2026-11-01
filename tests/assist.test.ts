@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { assistTurn, assistUnit, counterValue, reserveAmount } from '@core/ai';
-import { DEFAULT_RULES, HQ, POWER, UNIT, useRules } from '@core/data';
+import { assistTurn, assistUnit } from '@core/ai';
+import { DEFAULT_RULES, HQ, useRules } from '@core/data';
 import { seededRng } from '@core/geom';
 import { newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -49,14 +49,14 @@ describe('unidades en automatico', () => {
     expect({ x: u.x, y: u.y }).toEqual({ x: 6, y: 5 });
   });
 
-  it('el menu ofrece las misiones que no tiene y Llevar a mano si esta en automatico', () => {
+  it('el menu ofrece Auto, defender aqui y Llevar a mano segun este', () => {
     const s = world();
     const u = newUnit(s, SOLDIER, 0, 5, 5);
-    expect(unitActions(s, u)).toMatchObject({ autoCapture: true, autoDefend: true, autoAttack: true, manual: false });
+    expect(unitActions(s, u)).toMatchObject({ auto: true, autoDefend: true, manual: false });
+    u.auto = 'capture';
+    expect(unitActions(s, u)).toMatchObject({ auto: false, autoDefend: true, manual: true });
     u.auto = 'defend';
-    expect(unitActions(s, u)).toMatchObject({ autoCapture: true, autoDefend: false, autoAttack: true, manual: true });
-    // Un tanque no captura.
-    expect(unitActions(s, newUnit(s, TANK, 0, 9, 9)).autoCapture).toBe(false);
+    expect(unitActions(s, u)).toMatchObject({ auto: true, autoDefend: false, manual: true });
   });
 });
 
@@ -93,128 +93,34 @@ describe('misiones', () => {
   });
 });
 
-describe('fabrica automatica', () => {
-  const factoryWorld = (funds: number) => {
+describe('sin fabrica automatica', () => {
+  it('el ayudante nunca compra: el dinero y los edificios libres son cosa del jugador', () => {
     const s = world();
     s.buildings.push({ type: FACTORY, owner: 0, x: 4, y: 4 });
-    s.funds = [funds, 5000];
-    return s;
-  };
-
-  it('apagada no compra nada', () => {
-    const s = factoryWorld(20000);
-    expect([...assistTurn(s, seededRng(1))]).toEqual([]);
-    expect(s.units).toHaveLength(0);
-  });
-
-  it('encendida compra en los edificios libres y no se pasa del dinero', () => {
-    const s = factoryWorld(20000);
-    s.assist = { produce: 'balanced' };
-    const evs = [...assistTurn(s, seededRng(1))];
-    expect(evs.some((e) => e.kind === 'spawn')).toBe(true);
-    expect(s.funds[0]).toBeGreaterThanOrEqual(0);
-    expect(s.units.every((u) => u.team === 0)).toBe(true);
-  });
-
-  it('ofensiva compra mas de lo que combate de cerca; defensiva, de lo que dispara a distancia', () => {
-    const tally = (posture: 'attack' | 'defense') => {
-      let fighters = 0,
-        ranged = 0;
-      for (let seed = 1; seed <= 60; seed++) {
-        const s = factoryWorld(30000);
-        // Con capturadores de sobra, para que no fuerce infanteria.
-        for (let i = 0; i < 6; i++) newUnit(s, SOLDIER, 0, 10 + i, 10);
-        s.assist = { produce: posture };
-        Array.from(assistTurn(s, seededRng(seed)));
-        const bought = s.units.filter((u) => u.x === 4 && u.y === 4);
-        for (const u of bought) {
-          if (UNIT.canfight[u.type] && !UNIT.cancapt[u.type]) fighters++;
-          if (UNIT.minalc[u.type]! > 0) ranged++;
-        }
-      }
-      return { fighters, ranged };
-    };
-    const atk = tally('attack');
-    const def = tally('defense');
-    expect(atk.fighters - atk.ranged).toBeGreaterThan(def.fighters - def.ranged);
-    expect(def.ranged).toBeGreaterThan(atk.ranged);
-  });
-
-  it('no ahorra: si no llega para nada, no compra y guarda el dinero', () => {
-    const s = factoryWorld(100);
-    s.assist = { produce: 'attack' };
-    expect([...assistTurn(s, seededRng(1))]).toEqual([]);
-    expect(s.funds[0]).toBe(100);
-  });
-});
-
-describe('fabrica automatica: responder y reserva', () => {
-  const BOMBER = 12;
-  const factoryWorld = (funds: number) => {
-    const s = world();
-    s.buildings.push({ type: FACTORY, owner: 0, x: 4, y: 4 });
-    s.funds = [funds, 5000];
-    for (let i = 0; i < 6; i++) newUnit(s, SOLDIER, 0, 10 + i, 10);
-    return s;
-  };
-
-  it('counterValue: lo que acierta a los enemigos que se ven, pesado por lo que valen', () => {
-    const s = world();
-    const bombers = [newUnit(s, BOMBER, 1, 9, 9)];
-    expect(counterValue(TANK, bombers)).toBeCloseTo(POWER[TANK]![BOMBER]!);
-    expect(counterValue(TANK, [])).toBe(0);
-  });
-
-  it('responder: contra bombarderos compra mas de lo que mejor les acierta', () => {
-    // Lo que mejor acierta a un bombardero de lo que hace la fabrica.
-    const best = (type: number) => POWER[type]![BOMBER]!;
-    const tally = (posture: 'balanced' | 'counter') => {
-      let hit = 0;
-      for (let seed = 1; seed <= 60; seed++) {
-        const s = factoryWorld(30000);
-        // A la vista de los soldados de (10..15, 10).
-        for (let i = 0; i < 3; i++) newUnit(s, BOMBER, 1, 11 + i, 8);
-        s.assist = { produce: posture };
-        Array.from(assistTurn(s, seededRng(seed)));
-        for (const u of s.units.filter((u) => u.x === 4 && u.y === 4)) hit += best(u.type);
-      }
-      return hit;
-    };
-    expect(tally('counter')).toBeGreaterThan(tally('balanced') * 1.5);
-  });
-
-  it('respeta la reserva: fija o la mitad', () => {
-    const s = factoryWorld(6000);
-    s.assist = { produce: 'balanced', reserve: 5000 };
-    expect(reserveAmount(s)).toBe(5000);
-    Array.from(assistTurn(s, seededRng(1)));
-    expect(s.funds[0]).toBeGreaterThanOrEqual(5000);
-    const h = factoryWorld(30000);
-    h.assist = { produce: 'attack', reserve: 'half' };
-    Array.from(assistTurn(h, seededRng(2)));
-    expect(h.funds[0]).toBeGreaterThanOrEqual(15000);
-    expect(h.units.some((u) => u.x === 4 && u.y === 4)).toBe(true);
+    s.funds = [50000, 5000];
+    const u = newUnit(s, SOLDIER, 0, 5, 5);
+    u.auto = 'capture';
+    const evs = Array.from(assistTurn(s, seededRng(1)));
+    expect(evs.some((e) => e.kind === 'spawn')).toBe(false);
+    expect(s.funds[0]).toBe(50000);
   });
 });
 
 describe('partidas guardadas', () => {
-  it('guardan el automatico de cada unidad y la postura de la fabrica', () => {
+  it('guardan el automatico de cada unidad y la casilla que defiende', () => {
     const s = world();
     const u = newUnit(s, SOLDIER, 0, 5, 5);
     u.auto = 'defend';
     u.guard = { x: 5, y: 5 };
-    s.assist = { produce: 'defense' };
     const back = deserialize(serialize(s))!;
     expect(back.units[0]).toMatchObject({ auto: 'defend', guard: { x: 5, y: 5 } });
-    expect(back.assist).toEqual({ produce: 'defense' });
   });
 
-  it('una postura que no existe se ignora', () => {
+  it('una mision que no existe se ignora', () => {
     const s = world();
-    const raw = JSON.parse(serialize(s)) as Record<string, unknown>;
-    raw.assist = { produce: 'loco' };
-    expect(deserialize(JSON.stringify(raw))!.assist).toBeUndefined();
-    raw.assist = { produce: 'counter', reserve: 123 };
-    expect(deserialize(JSON.stringify(raw))!.assist).toEqual({ produce: 'counter' });
+    newUnit(s, SOLDIER, 0, 5, 5);
+    const raw = JSON.parse(serialize(s)) as { units: Record<string, unknown>[] };
+    raw.units[0]!.auto = 'loco';
+    expect(deserialize(JSON.stringify(raw))!.units[0]!.auto).toBeUndefined();
   });
 });

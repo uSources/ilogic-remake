@@ -17,7 +17,6 @@ export const AI_KEYS = [
   'MINCAPTURERS',
   'GENERALMINVALUE',
   'REVEALVALUE',
-  'POSTUREBIAS',
   'GUARDRADIUS',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;

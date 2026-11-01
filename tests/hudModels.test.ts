@@ -222,13 +222,3 @@ describe('desglose de la barra de arriba', () => {
     expect(dayInfoVM(s)).toEqual({ day: 18, limit: 20, left: 3, score: [score(s, 0), score(s, 1)] });
   });
 });
-
-describe('informe de la fabrica automatica', () => {
-  it('junta las repetidas y suma lo gastado', async () => {
-    const { factoryReportText } = await import('../src/ui/hudModels');
-    const { UNIT } = await import('@core/data');
-    const txt = factoryReportText([1, 0, 0]);
-    expect(txt).toContain('×2');
-    expect(txt).toContain((UNIT.cost[1]! + 2 * UNIT.cost[0]!).toLocaleString('es-ES').replace(/\s/g, ''));
-  });
-});
