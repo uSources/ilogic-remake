@@ -134,7 +134,7 @@
         "es": "Jeep",
         "en": "Jeep"
       },
-      "cost": 5000,
+      "cost": 4000,
       "command": 2,
       "move": 7,
       "vision": 7,
@@ -419,7 +419,7 @@
         "es": "Caza ligero",
         "en": "Light fighter"
       },
-      "cost": 12000,
+      "cost": 15000,
       "command": 4,
       "move": 10,
       "vision": 10,
@@ -675,7 +675,7 @@
         "es": "Motorizado",
         "en": "Motor trooper"
       },
-      "cost": 3500,
+      "cost": 2500,
       "command": 2,
       "move": 5,
       "vision": 6,
@@ -723,7 +723,7 @@
         "es": "Tanque anfibio",
         "en": "Amphibious tank"
       },
-      "cost": 15000,
+      "cost": 11000,
       "command": 4,
       "move": 6,
       "vision": 6,
