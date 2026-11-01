@@ -62,6 +62,9 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 - Efectos animados: `rd_animation__vfx` (24-96 px, 0,07 $ la animacion entera) con `return_spritesheet`.
   No pedir fondo negro (lo quita y se lleva el humo). La hoja va como `ui/anim_<nombre>.png` y `rd_ui.py`
   la parte en fotogramas de 48x48 sin los vacios ni el magenta suelto; `playAnim` (src/ui/fx.ts) la pone.
+- Proyectiles (`pj_missile/ball/bomb`): RD Plus low_res 16x16, recortados a su caja. Le cuestan los
+  obuses alargados y los fogonazos (salen palos y antorchas); el fogonazo con `rd_animation__vfx` a
+  24x24 salio vacio. El fogonazo y las balas siguen por codigo.
 - Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
   sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.

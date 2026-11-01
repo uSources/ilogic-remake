@@ -9,6 +9,7 @@ Fuente: tools/art/retrodiffusion/ui/ (PNG ya recortados, sin fondo, al tamaño n
   flag.png           16x24  banderin que se planta en el mapa (magenta = bando)
   cmd_<orden>.png    16x16  icono sobre la unidad en automatico (attack, defend, capture; RD Plus low_res)
   mk_<marca>.png     8-10px marcas de la unidad: star (veterania), noheal (no se cura), cargo (lleva carga)
+  pj_<proyectil>.png proyectiles del combate (missile mirando arriba a la derecha, ball, bomb hacia abajo)
   anim_<efecto>.png  hoja de RD (rd_animation__vfx) en rejilla de 48x48: sale un PNG por fotograma
                      (anim_<efecto>_<n>), sin los vacios y sin las manchas magenta sueltas que deja RD
 
@@ -32,14 +33,14 @@ OUT = os.path.normpath(os.path.join(D, '..', '..', 'public', 'assets', 'img', 'u
 
 # Prefijo -> bandos que se sacan (None = se copia tal cual).
 ANIM_FRAME = 48
-TEAMS = {'anim': None, 'gen': 'br', 'zona': 'bri', 'flag': 'bri', 'ab': None, 'wx': None, 'cmd': None, 'mk': None}
+TEAMS = {'anim': None, 'pj': None, 'gen': 'br', 'zona': 'bri', 'flag': 'bri', 'ab': None, 'wx': None, 'cmd': None, 'mk': None}
 
 # Color de cada orden (tono 0..1), el mismo que COMMAND_FLAG de src/ui/mapView.ts; 'go' = ir alli (dorado).
 CMD_HUES = {'attack': 0.0, 'defend': 0.47, 'capture': 0.13, 'go': 0.13}
 
 
 # Contorno oscuro de 1 px alrededor (los iconos de orden van encima del dibujo de la unidad).
-OUTLINE = {'cmd', 'mk'}
+OUTLINE = {'cmd', 'mk', 'pj'}
 INK = (20, 24, 32, 255)
 
 
@@ -86,7 +87,7 @@ def split_anim(im, name):
                     r, g, b, a = px[x, y]
                     if a and r > 180 and b > 180 and g < 120:
                         px[x, y] = (0, 0, 0, 0)
-            if sum(1 for p in fr.getdata() if p[3]) > 40:
+            if sum(fr.getchannel('A').point(lambda a: 1 if a else 0).histogram()[1:]) > 40:
                 frames.append(fr)
     for i, fr in enumerate(frames):
         fr.save(os.path.join(OUT, f'{name}_{i}.png'))
