@@ -17,7 +17,7 @@ const HELP = {
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
-      'Órdenes: en el menú de una unidad, «Orden: atacar, capturar o defender allí» y luego eliges la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre.',
+      'Órdenes: en el menú de una unidad, «Orden: atacar, capturar o defender allí» y luego eliges la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre. Al señalar una unidad con orden ves lo que hará al terminar el turno: una flecha clara con el camino, un marco rojo sobre la unidad a la que va a atacar o uno dorado sobre el edificio que va a capturar («Ver órdenes» o V: las de todas).',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -48,6 +48,7 @@ const HELP = {
       ['Ver alcance de una unidad', 'Enter sobre ella', 'Clic derecho / pulsación larga'],
       ['Siguiente unidad sin mover', 'Tab', 'Bandeja de abajo'],
       ['Amenaza enemiga', 'T', 'Botón de la bandeja'],
+      ['Qué harán las unidades con orden', 'V', 'Botón «Ver órdenes» de la bandeja'],
       ['Minimapa', 'M', 'Clic en él para ir'],
       ['Mover el mapa', '—', 'Arrastrar (fuera de tus unidades)'],
       ['Zoom', '+ / −', 'Rueda / pellizcar'],
@@ -71,7 +72,7 @@ const HELP = {
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
-      'Orders: in a unit’s menu, “Order: attack, capture or hold there”, then pick the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it.',
+      'Orders: in a unit’s menu, “Order: attack, capture or hold there”, then pick the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it. Point at a unit with an order to see what it will do when you end the turn: a pale arrow with its path, a red frame on the unit it will attack or a gold one on the building it will capture (“Show orders” or V: all of them).',
     ],
     colorsTitle: 'Map colours',
     colors: [
@@ -102,6 +103,7 @@ const HELP = {
       ['Inspect a unit’s range', 'Enter on it', 'Right-click / long press'],
       ['Next unmoved unit', 'Tab', 'Tray at the bottom'],
       ['Enemy threat', 'T', 'Tray button'],
+      ['What units with orders will do', 'V', '“Show orders” tray button'],
       ['Minimap', 'M', 'Click it to jump'],
       ['Pan the map', '—', 'Drag (not from your units)'],
       ['Zoom', '+ / −', 'Wheel / pinch'],

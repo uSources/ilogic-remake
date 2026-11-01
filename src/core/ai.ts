@@ -7,7 +7,7 @@
  */
 import { aiGeneral } from './aiGenerals';
 import { AI, BUILDING, HEALER, HQ, RULES, POWER, UNIT, UNIT_SUPPORT, Movement } from './data';
-import { diamond, manhattan, samePos } from './geom';
+import { diamond, manhattan, samePos, seededRng } from './geom';
 import {
   attackEvent,
   buildingAt,
@@ -434,6 +434,71 @@ export function* commandTurn(s: GameState, uid: number, rng: Rng): Generator<Gam
   const vis = visibility(s, ME);
   const left = s.units.some((t) => t.team !== ME && t.carrier === null && vis[t.x]![t.y] && near(t));
   return left ? false : finish();
+}
+
+/** [CAMBIO] Lo que hara una unidad con orden al terminar el turno (ver previewCommands). */
+export interface CommandIntent {
+  /** Camino de este turno, desde donde esta (vacio si no se mueve). */
+  path: Pos[];
+  /** Casilla de la unidad a la que va a atacar. */
+  attack?: Pos;
+  /** Edificio que va a capturar (o seguir capturando). */
+  capture?: Pos;
+  /** Al final del camino se une a otra unidad igual (para curarse). */
+  merge?: boolean;
+}
+
+/** Semilla fija de la prevision: la misma partida da siempre la misma prevision. */
+const PREVIEW_SEED = 0x1d0c;
+
+/**
+ * [CAMBIO] Flechas de intencion: simula assistTurn sobre una copia de la partida y devuelve, por uid,
+ * lo que hara cada unidad del bando con orden al terminar el turno. No toca `s`. Solo usa lo que el
+ * bando ve: los enemigos escondidos se quitan de la copia antes de simular, asi la prevision no
+ * puede delatarlos (ni como objetivo, ni por un camino que los rodee o una emboscada).
+ * Es una prevision: con enemigos escondidos o la suerte del combate, el turno real puede variar.
+ */
+export function previewCommands(s: GameState, team: Team = 0, seed = PREVIEW_SEED): Map<number, CommandIntent> {
+  const out = new Map<number, CommandIntent>();
+  const actors = s.units.filter((u) => u.team === team && u.command && u.active && u.carrier === null && u.life > 0);
+  if (!actors.length) return out;
+  const copy = structuredClone(s);
+  const vis = visibility(copy, team);
+  const hidden = new Set(copy.units.filter((u) => u.team !== team && u.carrier === null && !vis[u.x]![u.y]).map((u) => u.uid));
+  if (hidden.size) copy.units = copy.units.filter((u) => !hidden.has(u.uid) && !(u.carrier !== null && hidden.has(u.carrier)));
+  for (const u of actors) out.set(u.uid, { path: [] });
+  const prev = ME;
+  try {
+    const it = assistTurn(copy, seededRng(seed), team);
+    for (let r = it.next(); !r.done; r = it.next()) {
+      const ev = r.value;
+      switch (ev.kind) {
+        case 'move':
+        case 'merge': {
+          const i = out.get(ev.uid);
+          if (!i) break;
+          i.path = i.path.length ? [...i.path, ...ev.path.slice(1)] : ev.path.map((p) => ({ x: p.x, y: p.y }));
+          if (ev.kind === 'merge') i.merge = true;
+          break;
+        }
+        case 'attack': {
+          const i = out.get(ev.attacker);
+          if (i && !i.attack) i.attack = { x: ev.target.x, y: ev.target.y };
+          break;
+        }
+        case 'capture': {
+          const i = out.get(ev.uid);
+          if (i) i.capture = { x: ev.at.x, y: ev.at.y };
+          break;
+        }
+        default:
+          break;
+      }
+    }
+  } finally {
+    ME = prev;
+  }
+  return out;
 }
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa). */

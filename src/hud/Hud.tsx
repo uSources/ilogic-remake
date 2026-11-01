@@ -744,7 +744,21 @@ const FoldMark = ({ folded }: { folded: boolean }) => (
   </span>
 );
 
-function Tray({ idle, threat, squads, multi }: { idle: IdleVM[]; threat: boolean; squads: SquadVM[]; multi: number | null }) {
+function Tray({
+  idle,
+  threat,
+  intents,
+  anyCommand,
+  squads,
+  multi,
+}: {
+  idle: IdleVM[];
+  threat: boolean;
+  intents: boolean;
+  anyCommand: boolean;
+  squads: SquadVM[];
+  multi: number | null;
+}) {
   const a = ui.actions;
   const [folded, toggleFold] = useFold('tray');
   return (
@@ -812,6 +826,20 @@ function Tray({ idle, threat, squads, multi }: { idle: IdleVM[]; threat: boolean
         <span class="long">{threat ? t('threatOn') : t('threatOff')}</span>
         <span class="short">{t('threatShort')}</span>
       </button>
+      {anyCommand && (
+        <button
+          tabIndex={-1}
+          type="button"
+          class={`px-btn plain threat intents ${intents ? 'on' : ''}`}
+          onMouseDown={noFocus}
+          onClick={() => a.toggleIntents()}
+          aria-pressed={intents}
+        >
+          <span class="key">V</span>
+          <span class="long">{intents ? t('intentsOn') : t('intentsOff')}</span>
+          <span class="short">{t('intentsShort')}</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -935,7 +963,9 @@ function GameHud({ s }: { s: UIState }) {
       {showCards && <Cards tile={s.tile!} />}
       <div class="side">
         {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
-        {!s.busy && s.turn === 'player' && <Tray idle={s.idle} threat={s.threat} squads={s.squads} multi={s.multi} />}
+        {!s.busy && s.turn === 'player' && (
+          <Tray idle={s.idle} threat={s.threat} intents={s.intents} anyCommand={s.anyCommand} squads={s.squads} multi={s.multi} />
+        )}
       </div>
       {s.moveTip && <MoveTip m={s.moveTip} />}
       {s.forecast && <Forecast f={s.forecast} />}

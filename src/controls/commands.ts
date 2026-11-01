@@ -18,6 +18,8 @@ export type GameCommand =
   | { kind: 'endTurn' }
   /** Ver u ocultar la zona de amenaza enemiga. */
   | { kind: 'threat' }
+  /** [CAMBIO] Ver u ocultar lo que hara cada unidad con orden al terminar el turno. */
+  | { kind: 'intents' }
   | { kind: 'minimap' }
   /** Siguiente unidad sin mover. */
   | { kind: 'nextUnit' }

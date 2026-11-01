@@ -92,6 +92,8 @@ export interface ViewOptions {
    * destino llevan su tipo (color de la bandera) y la linea solo si `line` (unidad o escuadra señalada).
    */
   orders?: { from: Pos; to: Pos; kind?: CommandKind; line?: boolean }[];
+  /** [CAMBIO] Lo que hara cada unidad con orden al terminar el turno: camino, objetivo y captura. */
+  intents?: { path: Pos[]; attack?: Pos; capture?: Pos }[];
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
@@ -719,54 +721,92 @@ export class MapView {
       g.fillStyle(0xfff1a8, 1);
       g.fillRect(bx, by - 11, 1, 12);
     }
+    // [CAMBIO] Intenciones de las ordenes con destino: lo que hara cada unidad al terminar el turno.
+    for (const it of opts.intents ?? []) {
+      if (it.path.length > 1) this.drawArrow(it.path, 0xdff4ff, 0.6, 0.4);
+      if (it.attack) this.drawTargetMark(it.attack, PAL.red);
+      if (it.capture) this.drawTargetMark(it.capture, PAL.gold);
+    }
     // Camino previsto: flecha pixel (tramos de 4 px con borde oscuro y punta), como en Advance Wars.
+    // [CAMBIO] Si al soltar ahi se ataca, la flecha va en rojo.
     const path = opts.path;
-    if (path && path.length > 1) {
-      const end = path[path.length - 1]!,
-        before = path[path.length - 2]!;
-      const dx = Math.sign(end.x - before.x),
-        dy = Math.sign(end.y - before.y);
-      const cx = end.x * TILE + TILE / 2,
-        cy = end.y * TILE + TILE / 2;
-      // [CAMBIO] Si al soltar ahi se ataca, la flecha va en rojo.
-      for (const [w, color, alpha] of [
-        [8, PAL.ink, 0.7],
-        [4, opts.pathAttack ? 0xff7a73 : 0xffffff, 1],
-      ] as const) {
-        g.fillStyle(color, alpha);
-        for (let i = 0; i < path.length - 1; i++) {
-          const a = path[i]!,
-            b = path[i + 1]!;
-          // El ultimo tramo se queda antes del centro: ahi va la punta.
-          const last = i === path.length - 2;
-          let x0 = Math.min(a.x, b.x) * TILE + TILE / 2 - w / 2,
-            y0 = Math.min(a.y, b.y) * TILE + TILE / 2 - w / 2;
-          let ww = Math.abs(a.x - b.x) * TILE + w,
-            hh = Math.abs(a.y - b.y) * TILE + w;
-          if (last) {
-            const cut = 6;
-            if (dx > 0) ww -= cut;
-            if (dx < 0) {
-              x0 += cut;
-              ww -= cut;
-            }
-            if (dy > 0) hh -= cut;
-            if (dy < 0) {
-              y0 += cut;
-              hh -= cut;
-            }
+    if (path && path.length > 1) this.drawArrow(path, opts.pathAttack ? 0xff7a73 : 0xffffff, 1, 0.7);
+  }
+
+  /** Flecha pixel por un camino: tramos de 4 px del color, con borde oscuro de 8 px, y punta. */
+  private drawArrow(path: readonly Pos[], color: number, alpha: number, borderAlpha: number): void {
+    const g = this.overlay;
+    const end = path[path.length - 1]!,
+      before = path[path.length - 2]!;
+    const dx = Math.sign(end.x - before.x),
+      dy = Math.sign(end.y - before.y);
+    const cx = end.x * TILE + TILE / 2,
+      cy = end.y * TILE + TILE / 2;
+    for (const [w, c, a] of [
+      [8, PAL.ink, borderAlpha],
+      [4, color, alpha],
+    ] as const) {
+      g.fillStyle(c, a);
+      for (let i = 0; i < path.length - 1; i++) {
+        const a = path[i]!,
+          b = path[i + 1]!;
+        // El ultimo tramo se queda antes del centro: ahi va la punta.
+        const last = i === path.length - 2;
+        let x0 = Math.min(a.x, b.x) * TILE + TILE / 2 - w / 2,
+          y0 = Math.min(a.y, b.y) * TILE + TILE / 2 - w / 2;
+        let ww = Math.abs(a.x - b.x) * TILE + w,
+          hh = Math.abs(a.y - b.y) * TILE + w;
+        if (last) {
+          const cut = 6;
+          if (dx > 0) ww -= cut;
+          if (dx < 0) {
+            x0 += cut;
+            ww -= cut;
           }
-          g.fillRect(x0, y0, ww, hh);
+          if (dy > 0) hh -= cut;
+          if (dy < 0) {
+            y0 += cut;
+            hh -= cut;
+          }
         }
-        // Punta: triangulo hecho de lineas de 1 px, mirando en la direccion del ultimo paso.
-        const H = w === 8 ? 8 : 6;
-        const base = w === 8 ? -7 : -5;
-        for (let i = 0; i <= H; i++) {
-          const half = H - i;
-          const along = base + i;
-          if (dx !== 0) g.fillRect(cx + dx * along - (dx < 0 ? 0 : 0), cy - half, 1, half * 2 + 1);
-          else g.fillRect(cx - half, cy + dy * along, half * 2 + 1, 1);
-        }
+        g.fillRect(x0, y0, ww, hh);
+      }
+      // Punta: triangulo hecho de lineas de 1 px, mirando en la direccion del ultimo paso.
+      const H = w === 8 ? 8 : 6;
+      const base = w === 8 ? -7 : -5;
+      for (let i = 0; i <= H; i++) {
+        const half = H - i;
+        const along = base + i;
+        if (dx !== 0) g.fillRect(cx + dx * along - (dx < 0 ? 0 : 0), cy - half, 1, half * 2 + 1);
+        else g.fillRect(cx - half, cy + dy * along, half * 2 + 1, 1);
+      }
+    }
+  }
+
+  /** Marco de esquinas sobre una casilla (objetivo de ataque o edificio a capturar), con borde oscuro. */
+  private drawTargetMark(p: Pos, color: number): void {
+    const g = this.overlay;
+    const px = p.x * TILE,
+      py = p.y * TILE;
+    const L = 7;
+    for (const [inset, w, c, a] of [
+      [1, 4, PAL.ink, 0.75],
+      [2, 2, color, 1],
+    ] as const) {
+      g.fillStyle(c, a);
+      const x0 = px + inset,
+        y0 = py + inset,
+        x1 = px + TILE - inset - w,
+        y1 = py + TILE - inset - w;
+      const len = L + (w === 4 ? 2 : 0);
+      for (const [cx, cy, sx, sy] of [
+        [x0, y0, 1, 1],
+        [x1, y0, -1, 1],
+        [x0, y1, 1, -1],
+        [x1, y1, -1, -1],
+      ] as const) {
+        g.fillRect(sx > 0 ? cx : cx + w - len, cy, len, w);
+        g.fillRect(cx, sy > 0 ? cy : cy + w - len, w, len);
       }
     }
   }
