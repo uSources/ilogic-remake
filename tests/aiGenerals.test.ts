@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { aiGeneral, bestAreaTarget, chooseAbility } from '@core/aiGenerals';
 import { AI, DEFAULT_RULES, UNIT_NAMES, useRules } from '@core/data';
-import { newGeneral } from '@core/generals';
+import { generalDef, newGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';
 import type { GameState } from '@core/types';
 import { blankState } from './helpers';
@@ -22,7 +22,7 @@ beforeEach(() => useRules({ ...DEFAULT_RULES, weather: false }));
 
 describe('la IA usa a su general', () => {
   it('ataque aereo donde mas valor quita (dos tanques juntos mejor que uno solo)', () => {
-    const s = aiBrisa(5);
+    const s = aiBrisa(6);
     newUnit(s, T('Tank'), 0, 3, 3);
     newUnit(s, T('Tank'), 0, 14, 14);
     newUnit(s, T('Tank'), 0, 15, 15);
@@ -38,8 +38,12 @@ describe('la IA usa a su general', () => {
   });
 
   it('no gasta la carga en algo que vale poco', () => {
-    const s = aiBrisa(5);
-    newUnit(s, T('Soldier'), 0, 3, 3); // 30 de vida de un soldado: poco valor
+    // Con Roca: su reparacion no gasta la barra entera, asi que puede esperar a que valga la pena.
+    useRules({ ...DEFAULT_RULES, weather: false });
+    const s = blankState();
+    s.generals = [null, newGeneral('Roca')];
+    s.generals[1]!.charge = generalDef('Roca')!.abilities[0]!.cost;
+    newUnit(s, T('Tank'), 1, 3, 3).life = 98; // 2 de vida de un tanque: poco valor
     expect(chooseAbility(s, 1)).toBeNull();
   });
 
