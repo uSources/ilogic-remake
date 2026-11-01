@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { HQ, useRules } from '@core/data';
+import { HQ, UNIT, useRules } from '@core/data';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/geom';
 import {
@@ -146,7 +146,7 @@ describe('compra y fin de ronda', () => {
     expect(s.funds[0]).toBe(5000);
     const car = spawn(s, s.buildings[0]!, 3)!;
     expect(car.active).toBe(false);
-    expect(s.funds[0]).toBe(0);
+    expect(s.funds[0]).toBe(5000 - UNIT.cost[3]!); // el Jeep: lo que cueste ahora
   });
   it('ingresos y curacion; los aviones ya no caen', () => {
     const s = blankState();

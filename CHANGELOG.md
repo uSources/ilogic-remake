@@ -7,6 +7,18 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Equilibrio
+- **Motorizado** 3500 → 2500, **Jeep** 5000 → 4000 y **Tanque anfibio** 15000 → 11000: rendían menos de la mitad de lo que costaban.
+- **Caza ligero** 12000 → 15000: rendía casi el doble de lo que costaba.
+
+<!-- en -->
+
+### Balance
+- **Motor trooper** 3500 → 2500, **Jeep** 5000 → 4000 and **Amphibious tank** 15000 → 11000: they were worth less than half their price.
+- **Light fighter** 12000 → 15000: it was worth almost twice its price.
+
 ## [0.7.1] - 2026-10-31 — Polvo en los ojos
 
 ### Arreglos
