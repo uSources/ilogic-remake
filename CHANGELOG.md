@@ -13,6 +13,13 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Órdenes de escuadra**: una orden a toda la escuadra es de la escuadra. A solo algunas de sus unidades, esas van **destacadas** (raya naranja, y «2 destacadas» en el botón de la escuadra) y al cumplirla vuelven solas a la orden de la escuadra.
 - Si empiezas a capturar a mano con una unidad que tenía orden, la acaba en vez de irse el turno siguiente.
 
+### Controles
+- **Elegir unidades como en los juegos de estrategia en tiempo real**: recuadro arrastrando desde fuera de tus unidades (sin tecla), Mayúsculas + clic para añadir o quitar, doble clic (o Ctrl + clic) para todas las de ese tipo en pantalla y clic en vacío o Esc para soltar. Las elegidas llevan un aro a los pies.
+- **Grupos con número**: Ctrl + 1…9 hace el grupo con lo elegido (es una escuadra), Mayúsculas + número añade, el número lo elige y pulsarlo dos veces lleva la cámara allí. El botón de la bandeja hace lo mismo.
+- Clic derecho en un destino libre mueve el grupo; el grupo sigue elegido después.
+- La cámara se mueve arrastrando con el botón derecho o la rueda (además del borde de la pantalla).
+- Al señalar una unidad de escuadra se marcan sus compañeras.
+
 ### Equilibrio
 - **Motorizado** 3500 → 2500, **Jeep** 5000 → 4000 y **Tanque anfibio** 15000 → 11000: rendían menos de la mitad de lo que costaban.
 - **Caza ligero** 12000 → 15000: rendía casi el doble de lo que costaba.
@@ -22,6 +29,13 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Gameplay
 - **Squad orders**: an order to a whole squad belongs to the squad. To only some of its units, those go **detached** (orange stripe, and "2 detached" on the squad button) and rejoin the squad's order once done.
 - If you start a capture by hand with a unit that had an order, it finishes it instead of leaving next turn.
+
+### Controls
+- **Select units like in real-time strategy games**: drag a box from outside your units (no key needed), Shift + click adds or removes, double-click (or Ctrl + click) picks all of that type on screen, and clicking empty ground or Esc clears. Selected units have a ring at their feet.
+- **Number groups**: Ctrl + 1…9 makes the group from the selection (it is a squad), Shift + number adds, the number selects it and pressing it twice moves the camera there. The tray button does the same.
+- Right-click a free destination to move the group; the group stays selected afterwards.
+- Pan the camera by dragging with the right button or the wheel (besides the screen edge).
+- Pointing at a squad unit highlights its squadmates.
 
 ### Balance
 - **Motor trooper** 3500 → 2500, **Jeep** 5000 → 4000 and **Amphibious tank** 15000 → 11000: they were worth less than half their price.

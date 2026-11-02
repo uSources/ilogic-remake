@@ -25,11 +25,17 @@ export type GameCommand =
   | { kind: 'orderHere' }
   /** Siguiente unidad sin mover. */
   | { kind: 'nextUnit' }
-  /** [CAMBIO] Seleccionar la escuadra n (1..9, en el orden de la bandeja) y abrir sus ordenes. */
-  | { kind: 'squad'; n: number }
+  /**
+   * [CAMBIO] Grupos con numero, como en los juegos de estrategia en tiempo real: `select` elige la
+   * escuadra de la tecla n (dos veces seguidas lleva la camara hasta ella), `set` hace de lo elegido
+   * el grupo n (Ctrl+n) y `add` lo añade (Mayusculas+n).
+   */
+  | { kind: 'group'; n: number; mode: GroupMode }
   | { kind: 'zoom'; dir: 1 | -1 }
   | { kind: 'help' }
   | { kind: 'options' };
+
+export type GroupMode = 'select' | 'set' | 'add';
 
 export type CommandKind = GameCommand['kind'];
 

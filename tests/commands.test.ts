@@ -6,6 +6,9 @@ import { capture, newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
   SQUAD_NAME_MAX,
+  addToGroup,
+  setGroup,
+  squadByKey,
   cancelCommand,
   commandBlock,
   commandChoices,
@@ -235,7 +238,7 @@ describe('escuadras', () => {
     giveCommand(s, [a], 'capture', { x: 12, y: 5 });
     const back = deserialize(serialize(s))!;
     // Toda la escuadra: la orden es de la escuadra, no de la unidad.
-    expect(back.squads).toEqual([{ id: q.id, name: 'Lobos', command: { kind: 'capture', at: { x: 12, y: 5 } } }]);
+    expect(back.squads).toEqual([{ id: q.id, name: 'Lobos', key: 1, command: { kind: 'capture', at: { x: 12, y: 5 } } }]);
     expect(back.units[0]).toMatchObject({ squad: q.id });
     expect(back.units[0]!.command).toBeUndefined();
   });
@@ -470,5 +473,59 @@ describe('orden de la escuadra y unidades destacadas', () => {
     giveCommand(s, [a, b, t], 'attack', { x: 15, y: 15 });
     a.order = { x: 0, y: 9 };
     expect(effectiveCommand(s, a)).toBeUndefined();
+  });
+});
+
+describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
+  it('cada escuadra nueva toma la primera tecla libre; Ctrl+3 forma «Charlie» con la tecla 3', () => {
+    const s = world();
+    const [a, b, c] = [newUnit(s, SOLDIER, 0, 1, 1), newUnit(s, SOLDIER, 0, 1, 2), newUnit(s, TANK, 0, 1, 3)];
+    expect(formSquad(s, [a])!.key).toBe(1);
+    const q = setGroup(s, [b, c], 3)!;
+    expect(q).toMatchObject({ key: 3, name: 'Charlie' });
+    expect(squadByKey(s, 3)).toBe(q);
+  });
+
+  it('Ctrl+n otra vez: el grupo se queda solo con las nuevas (las demas salen con lo que hacian)', () => {
+    const s = world();
+    const [a, b, c] = [newUnit(s, SOLDIER, 0, 1, 1), newUnit(s, SOLDIER, 0, 1, 2), newUnit(s, TANK, 0, 1, 3)];
+    const q = setGroup(s, [a, b], 2)!;
+    giveCommand(s, [a, b], 'attack', { x: 15, y: 15 });
+    setGroup(s, [b, c], 2);
+    expect(
+      squadUnits(s, q.id)
+        .map((u) => u.uid)
+        .sort(),
+    ).toEqual([b.uid, c.uid].sort());
+    expect(a.squad).toBeUndefined();
+    expect(a.command).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
+    // La nueva sigue la orden del grupo.
+    expect(effectiveCommand(s, c)).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
+  });
+
+  it('Mayusculas+n añade al grupo (o lo forma si no existe); sale de su escuadra anterior', () => {
+    const s = world();
+    const [a, b, c] = [newUnit(s, SOLDIER, 0, 1, 1), newUnit(s, SOLDIER, 0, 1, 2), newUnit(s, TANK, 0, 1, 3)];
+    const q1 = setGroup(s, [a], 1)!;
+    const q2 = addToGroup(s, [b], 2)!;
+    addToGroup(s, [c, b], 1);
+    expect(squadUnits(s, q1.id).length).toBe(3);
+    // La escuadra 2 se ha quedado vacia: desaparece y su tecla queda libre.
+    expect(s.squads!.some((q) => q.id === q2.id)).toBe(false);
+    expect(squadByKey(s, 2)).toBeUndefined();
+  });
+
+  it('las partidas de antes dan tecla a sus escuadras al cargar, sin repetir', () => {
+    const s = world();
+    const a = newUnit(s, SOLDIER, 0, 1, 1),
+      b = newUnit(s, SOLDIER, 0, 1, 2);
+    formSquad(s, [a]);
+    formSquad(s, [b]);
+    for (const q of s.squads!) delete q.key;
+    const back = deserialize(serialize(s))!;
+    expect(back.squads!.map((q) => q.key)).toEqual([1, 2]);
+    s.squads![0]!.key = 4;
+    s.squads![1]!.key = 4;
+    expect(deserialize(serialize(s))!.squads!.map((q) => q.key)).toEqual([4, 1]);
   });
 });

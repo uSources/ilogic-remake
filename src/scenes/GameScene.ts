@@ -7,8 +7,11 @@ import {
   disbandSquad,
   effectiveCommand,
   formSquad,
+  addToGroup,
   giveCommand,
   keepCapturing,
+  setGroup,
+  squadByKey,
   pruneSquads,
   renameSquad,
   squadById,
@@ -118,8 +121,9 @@ import { blink, burst, center, COLORS, floatText, lifeBar, playAnim, reducedMoti
 import { unitIconKey, unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
-import { PointerGestures, type PointerIn, type PointerTarget } from '../controls/pointer';
-import { CLOSES_HELP, type GameCommand } from '../controls/commands';
+import { DOUBLE_MS, PointerGestures, type PointerIn, type PointerTarget, type TapInfo } from '../controls/pointer';
+import { EMPTY, boxSelect, clickSelect, sameSelection, type Selection } from '../controls/selection';
+import { CLOSES_HELP, type GameCommand, type GroupMode } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
 import {
@@ -231,7 +235,8 @@ interface MoveUndo {
 }
 
 /** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
-function pointerIn(p: Phaser.Input.Pointer, right: boolean): PointerIn {
+function pointerIn(p: Phaser.Input.Pointer, right: boolean, middle = false): PointerIn {
+  const e = p.event as MouseEvent | undefined;
   return {
     id: p.id,
     x: p.x,
@@ -239,8 +244,10 @@ function pointerIn(p: Phaser.Input.Pointer, right: boolean): PointerIn {
     touch: p.wasTouch,
     down: p.isDown,
     right,
-    shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
-    ctrl: !!(p.event as MouseEvent | undefined)?.ctrlKey || !!(p.event as MouseEvent | undefined)?.metaKey,
+    shift: !!e?.shiftKey,
+    ctrl: !!e?.ctrlKey || !!e?.metaKey,
+    alt: !!e?.altKey,
+    middle,
   };
 }
 
@@ -583,13 +590,7 @@ export class GameScene extends Phaser.Scene {
         this.refresh();
       },
       selectSquad: (id: number) => {
-        if (!ready() || (this.phase !== 'map' && this.phase !== 'groupMenu')) return;
-        const units = squadUnits(this.s, id).filter((u) => u.carrier === null);
-        if (!units.length) return;
-        this.group = new Set(units.map((u) => u.uid));
-        this.view.cursor = { x: units[0]!.x, y: units[0]!.y };
-        this.view.ensureVisible(units[0]!, 3);
-        this.openGroupMenu();
+        if (ready()) this.pickSquad(id);
       },
       renameSquad: (id: number, name: string) => {
         renameSquad(this.s, id, name);
@@ -760,6 +761,9 @@ export class GameScene extends Phaser.Scene {
         const r = moveRange(this.s, u);
         for (const p of reachableTiles(r)) h.set(key(p), 'hover');
       }
+      // [CAMBIO] Señalando una unidad de escuadra: se marcan sus compañeras.
+      if (u && u.team === 0 && u.squad !== undefined && !this.enemyPlaying)
+        for (const o of squadUnits(this.s, u.squad)) if (o.uid !== u.uid && o.carrier === null) h.set(key(o), 'squad');
     } else if (this.phase === 'map' && this.inspectUid !== null) {
       // Alcance de una unidad señalada: adonde llega y que puede atacar en su proximo turno.
       const u = unitById(this.s, this.inspectUid);
@@ -1119,8 +1123,10 @@ export class GameScene extends Phaser.Scene {
     const g = this.gestures;
     const pin = pointerIn;
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => g.move(pin(p, false)));
-    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => g.down(pin(p, p.rightButtonDown())));
-    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) => g.up(pin(p, p.rightButtonReleased())));
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => g.down(pin(p, p.rightButtonDown(), p.middleButtonDown())));
+    this.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) =>
+      g.up(pin(p, p.rightButtonReleased(), p.middleButtonReleased())),
+    );
     this.input.on(Phaser.Input.Events.GAME_OUT, () => g.leave());
     this.input.on(Phaser.Input.Events.POINTER_WHEEL, (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) =>
       g.wheel(dy, p.x, p.y),
@@ -1137,7 +1143,8 @@ export class GameScene extends Phaser.Scene {
     }
     const cmd = keyCommand(e);
     if (!cmd) return;
-    if (cmd.kind === 'accept') e.preventDefault();
+    // Ctrl+numero cambia de pestaña en algunos navegadores: aqui es hacer un grupo.
+    if (cmd.kind === 'accept' || (cmd.kind === 'group' && cmd.mode !== 'select')) e.preventDefault();
     this.command(cmd);
   }
 
@@ -1220,12 +1227,9 @@ export class GameScene extends Phaser.Scene {
       case 'nextUnit':
         if (this.phase === 'map') this.nextIdle();
         return;
-      case 'squad': {
-        // [CAMBIO] 1-9: la escuadra de ese numero en la bandeja.
-        const q = squadsVM(this.s)[cmd.n - 1];
-        if (q) ui.actions.selectSquad(q.id);
-        return;
-      }
+      case 'group':
+        // [CAMBIO] 1-9 elige el grupo (dos veces: la camara va alli); Ctrl lo hace; Mayusculas añade.
+        return this.groupKey(cmd.n, cmd.mode);
       case 'orderHere':
         // [CAMBIO] F: menu de ordenes en la casilla del cursor, con la unidad o el grupo elegido.
         if (!this.openOrderMenu(this.view.cursor) && (this.phase === 'map' || this.phase === 'move')) showToast(t('orderHereNone'));
@@ -1290,7 +1294,10 @@ export class GameScene extends Phaser.Scene {
         this.fastForward = true;
       },
       carrying: () => this.carry !== null,
-      canBox: () => this.phase === 'map',
+      now: () => this.time.now,
+      // [CAMBIO] Con el raton, arrastrar desde una casilla sin unidad propia es recuadro (en el mapa o con
+      // una unidad elegida); con el dedo, solo en "Elegir varias".
+      canBox: (touch) => (touch ? this.multi && this.phase === 'map' : this.phase === 'map' || this.phase === 'move'),
       pickAt: (x, y) => {
         // ¿Se coge una unidad propia? (en el mapa, o la que esta elegida al mover)
         const tile = this.view.tileAtScreen(x, y);
@@ -1305,10 +1312,16 @@ export class GameScene extends Phaser.Scene {
         return pickable ? u.uid : null;
       },
       touchStart: () => this.touchHint(),
-      rightPress: (x, y) => {
+      rightClick: (x, y, mods) => {
         if (this.carry) return this.cancelCarry();
         const tile = this.view.tileAtScreen(x, y);
-        // [CAMBIO] Con una unidad o un grupo elegido, clic derecho en otra casilla: ordenes alli (atacar,
+        // [CAMBIO] Con un grupo elegido, clic derecho en una casilla libre lo mueve alli (Alt: menu de
+        // ordenes completo).
+        if (tile && !mods.alt && this.phase === 'map' && this.group.size && this.plainDestination(tile)) {
+          this.moveCursorTo(tile, false);
+          return void this.groupMove(tile);
+        }
+        // Con una unidad o un grupo elegido, clic derecho en otra casilla: ordenes alli (atacar,
         // capturar, defender). Sobre la propia unidad elegida sigue siendo atras.
         const onSel = !!tile && !!this.sel && this.phase !== 'map' && samePos(tile, this.sel);
         if (tile && !onSel && this.openOrderMenu(tile)) return;
@@ -1323,25 +1336,21 @@ export class GameScene extends Phaser.Scene {
       cancelCarry: () => this.cancelCarry(),
       boxUpdate: (box) => this.view.setBox(box),
       boxEnd: (box) => {
-        // [CAMBIO] Ctrl o Mayusculas + clic/arrastrar (como en Windows): un clic añade o quita la unidad
-        // de debajo; un recuadro añade las suyas. El grupo se queda elegido en el mapa: clic en un
-        // destino lo mueve, clic derecho da ordenes y «Órdenes» (bandeja) forma escuadra.
+        // [CAMBIO] Recuadro: las unidades propias de dentro (con Mayusculas o Ctrl, se añaden). Un clic
+        // con Mayusculas o Ctrl (recuadro sin tamaño) añade o quita la de debajo.
         this.view.setBox(null);
-        if (this.phase !== 'map') return this.refresh();
-        const pickable = (u: Unit) => u.team === 0 && u.active && u.canMove && u.carrier === null;
+        if (this.phase !== 'map' && this.phase !== 'move') return this.refresh();
         if (Math.abs(box.x1 - box.x0) < 6 && Math.abs(box.y1 - box.y0) < 6) {
           const tile = this.view.tileAtScreen(box.x1, box.y1);
           const u = tile ? unitAt(this.s, tile.x, tile.y) : undefined;
-          if (u && pickable(u)) {
-            if (this.group.has(u.uid)) this.group.delete(u.uid);
-            else this.group.add(u.uid);
-            this.moveCursorTo(tile!, false);
-          }
-          return this.refresh();
+          if (tile) this.moveCursorTo(tile, false);
+          return this.applySelection(
+            clickSelect(this.selection(), u && this.selectable(u) ? u : null, { shift: true, ctrl: false, count: 1 }, () => []),
+          );
         }
         const r = this.view.tilesInBox(box);
-        for (const u of this.s.units) if (pickable(u) && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1) this.group.add(u.uid);
-        this.refresh();
+        const inside = this.s.units.filter((u) => this.selectable(u) && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1);
+        this.applySelection(boxSelect(this.selection(), inside, !!box.add));
       },
       pan: (dx, dy) => {
         this.view.scrollBy(dx, dy);
@@ -1361,7 +1370,7 @@ export class GameScene extends Phaser.Scene {
         const tile = this.view.tileAtScreen(x, y);
         if (tile && CURSOR_PHASES.includes(this.phase)) this.moveCursorTo(tile, false);
       },
-      tap: (x, y, touch, shift) => this.pointerTap(x, y, touch, shift),
+      tap: (x, y, info) => this.pointerTap(x, y, info),
       longPress: (x, y) => {
         const tile = this.view.tileAtScreen(x, y);
         // [CAMBIO] Con una unidad o un grupo elegido, mantener pulsada la casilla de destino: ordenes alli.
@@ -1394,8 +1403,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Un toque o un clic sin arrastrar. */
-  private pointerTap(x: number, y: number, touch: boolean, shift: boolean): void {
+  private pointerTap(x: number, y: number, info: TapInfo): void {
     if (this.time.now < this.inputLockUntil) return;
+    const { touch, shift } = info;
     // (La barra superior y los menus son HTML: sus clics no llegan aqui.)
     const tile = this.view.tileAtScreen(x, y);
     // Doble clic en el destino: mover y esperar.
@@ -1421,17 +1431,13 @@ export class GameScene extends Phaser.Scene {
     // [CAMBIO] "Elegir varias" (para el dedo, sin recuadro): tocar una unidad propia la añade o la quita.
     if (this.phase === 'map' && this.multi) {
       const own = unitAt(this.s, tile.x, tile.y);
-      if (own && own.team === 0 && own.carrier === null) {
+      if (own && this.selectable(own)) {
         this.moveCursorTo(tile, false);
-        if (this.group.has(own.uid)) this.group.delete(own.uid);
-        else this.group.add(own.uid);
-        return this.refresh();
+        return this.applySelection(clickSelect(this.selection(), own, { shift: true, ctrl: false, count: 1 }, () => []));
       }
     }
-    if (this.phase === 'map' && this.group.size) {
-      this.moveCursorTo(tile, false);
-      return void this.groupMove(tile);
-    }
+    // [CAMBIO] Raton: seleccion como en los juegos de estrategia en tiempo real (ver controls/selection.ts).
+    if (!touch && this.selectClick(tile, info)) return;
     // Dedo, en el mapa o con una unidad elegida: un toque hace directamente lo logico (ver ui/touch.ts).
     if (touch && (this.phase === 'map' || this.phase === 'move')) return this.touchTap(tile);
     if (this.phase === 'move') {
@@ -1443,6 +1449,28 @@ export class GameScene extends Phaser.Scene {
     if (touch && !samePos(tile, this.view.cursor)) return this.moveCursorTo(tile, false);
     this.moveCursorTo(tile, false);
     this.accept();
+  }
+
+  /**
+   * [CAMBIO] Clic de raton que elige unidades (en el mapa, o con una unidad elegida). true si lo ha
+   * resuelto. Con Mayusculas o Ctrl, doble clic o un grupo ya elegido, cambia la seleccion; con una
+   * unidad elegida, clic en otra propia a la que no se puede ir (ni unirse ni subir) la elige a ella.
+   */
+  private selectClick(tile: Pos, info: TapInfo): boolean {
+    if (this.phase !== 'map' && this.phase !== 'move') return false;
+    const here = unitAt(this.s, tile.x, tile.y);
+    const hit = here && this.selectable(here) ? here : null;
+    const mods = { shift: info.shift, ctrl: info.ctrl, count: info.count };
+    const grouping = info.shift || info.ctrl || (info.count >= 2 && !!hit) || this.group.size > 0;
+    if (this.phase === 'move') {
+      if (!this.sel || !hit) return false;
+      // Sobre la propia elegida, un clic normal sigue siendo "quedarse aqui" (menu de acciones).
+      if (hit.uid === this.sel.uid && !(info.shift || info.ctrl || info.count >= 2)) return false;
+      if (!grouping && this.intentAt(tile).kind !== 'none') return false;
+    } else if (!grouping) return false;
+    this.moveCursorTo(tile, false);
+    this.applySelection(clickSelect(this.selection(), hit, mods, (u) => this.sameTypeOnScreen(u)));
+    return true;
   }
 
   /** Un toque con el dedo en el mapa (fases map y move). */
@@ -1542,17 +1570,20 @@ export class GameScene extends Phaser.Scene {
   private accept(): void {
     const c = this.view.cursor;
     switch (this.phase) {
-      case 'map':
-        // [CAMBIO] "Elegir varias" con el teclado (G): Enter sobre una unidad propia la añade o la quita.
-        if (this.multi) {
-          const own = unitAt(this.s, c.x, c.y);
-          if (own && own.team === 0 && own.carrier === null) {
-            if (this.group.has(own.uid)) this.group.delete(own.uid);
-            else this.group.add(own.uid);
-            return this.refresh();
-          }
+      case 'map': {
+        const own = unitAt(this.s, c.x, c.y);
+        // [CAMBIO] "Elegir varias" con el teclado: Enter sobre una unidad propia la añade o la quita.
+        if (this.multi && own && this.selectable(own))
+          return this.applySelection(clickSelect(this.selection(), own, { shift: true, ctrl: false, count: 1 }, () => []));
+        // [CAMBIO] Con un grupo elegido: Enter sobre una de sus unidades abre sus ordenes (escuadra,
+        // atacar, capturar...); sobre otra propia, la elige a ella; en otra casilla, mueve el grupo.
+        if (this.group.size && !this.multi) {
+          if (own && this.group.has(own.uid)) return this.openGroupMenu();
+          if (own && this.selectable(own)) return this.applySelection(new Set([own.uid]));
+          return void this.groupMove(c);
         }
         return this.acceptMap(c);
+      }
       case 'groupMenu':
         return this.acceptGroupMenu();
       case 'orderMenu':
@@ -2022,7 +2053,7 @@ export class GameScene extends Phaser.Scene {
       .map((uid) => unitById(this.s, uid))
       .filter((u): u is Unit => !!u && u.active && u.canMove && u.carrier === null)
       .sort((a, b) => manhattan(a, goal) - manhattan(b, goal));
-    this.group.clear();
+    // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
     this.clearUndo();
     for (const u of units) {
       const r = moveRange(this.s, u);
@@ -2299,6 +2330,98 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Unidades del grupo elegido que siguen existiendo. */
+  // -------------------------------------------------------------------------
+  // [CAMBIO] Seleccion (ver controls/selection.ts): una unidad elegida (sel, al moverla) o un grupo
+  // -------------------------------------------------------------------------
+
+  /** Se puede elegir para un grupo: propia, viva y en el mapa (aunque ya se haya movido: para ordenes). */
+  private selectable(u: Unit): boolean {
+    return u.team === 0 && u.carrier === null && u.life > 0;
+  }
+
+  /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */
+  private selection(): Selection {
+    if (this.group.size) return this.group;
+    return this.sel && (this.phase === 'move' || this.phase === 'unitMenu') ? new Set([this.sel.uid]) : EMPTY;
+  }
+
+  private selectionUnits(): Unit[] {
+    return [...this.selection()].map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u && this.selectable(u));
+  }
+
+  /**
+   * Cambiar lo elegido. Una sola unidad que puede actuar queda elegida para moverla (como un clic
+   * normal); varias, o una ya usada, forman el grupo (aro a los pies; clic derecho las manda).
+   */
+  private applySelection(next: Selection): void {
+    const units = [...next].map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u && this.selectable(u));
+    if (this.phase === 'move' || this.phase === 'groupMenu') this.toMap();
+    if (this.phase !== 'map') return this.refresh();
+    this.inspectUid = null;
+    const one = units.length === 1 ? units[0]! : null;
+    if (one && one.active) {
+      this.group.clear();
+      this.multi = false;
+      return this.selectUnit(one);
+    }
+    this.group = new Set(units.map((u) => u.uid));
+    this.refresh();
+  }
+
+  /** Las elegibles del mismo tipo que se ven en pantalla (doble clic o Ctrl + clic). */
+  private sameTypeOnScreen(u: Unit): Unit[] {
+    const r = this.view.tilesInBox({ x0: 0, y0: 0, x1: this.scale.width, y1: this.scale.height });
+    return this.s.units.filter((o) => o.type === u.type && this.selectable(o) && o.x >= r.x0 && o.x <= r.x1 && o.y >= r.y0 && o.y <= r.y1);
+  }
+
+  /** Casilla a la que un grupo simplemente va: sin enemigo a la vista ni edificio que tomar. */
+  private plainDestination(tile: Pos): boolean {
+    const u = unitAt(this.s, tile.x, tile.y);
+    if (u && u.team !== 0 && this.visibleToPlayer(u)) return false;
+    const b = buildingAt(this.s, tile.x, tile.y);
+    return !b || b.owner === 0;
+  }
+
+  /** Ultima escuadra elegida (bandeja o tecla), para que elegirla dos veces seguidas lleve la camara. */
+  private lastPick: { id: number; at: number } | null = null;
+
+  /** [CAMBIO] Elegir una escuadra (su boton o su tecla). Otra vez enseguida: la camara va alli. */
+  private pickSquad(id: number): void {
+    if (this.phase !== 'map' && this.phase !== 'move' && this.phase !== 'groupMenu') return;
+    const units = squadUnits(this.s, id).filter((u) => this.selectable(u));
+    if (!units.length) return;
+    const again = this.lastPick?.id === id && this.time.now - this.lastPick.at <= DOUBLE_MS * 2;
+    this.lastPick = { id, at: this.time.now };
+    const ids = new Set(units.map((u) => u.uid));
+    if (again && sameSelection(this.selection(), ids)) {
+      // Al centro de la escuadra (la unidad mas cerca del medio).
+      const cx = units.reduce((a, u) => a + u.x, 0) / units.length,
+        cy = units.reduce((a, u) => a + u.y, 0) / units.length;
+      const mid = units.reduce((a, u) => (Math.hypot(u.x - cx, u.y - cy) < Math.hypot(a.x - cx, a.y - cy) ? u : a));
+      this.view.cursor = { x: mid.x, y: mid.y };
+      this.view.centerOn(mid);
+      return this.cursorMoved();
+    }
+    this.view.cursor = { x: units[0]!.x, y: units[0]!.y };
+    this.view.ensureVisible(units[0]!, 3);
+    this.applySelection(ids);
+  }
+
+  /** [CAMBIO] Tecla de grupo n: elegir (n), hacer el grupo con lo elegido (Ctrl+n) o añadirlo (Mayusculas+n). */
+  private groupKey(n: number, mode: GroupMode): void {
+    if (this.phase !== 'map' && this.phase !== 'move' && this.phase !== 'groupMenu') return;
+    if (mode === 'select') {
+      const q = squadByKey(this.s, n);
+      if (q) this.pickSquad(q.id);
+      return;
+    }
+    const units = this.selectionUnits();
+    if (!units.length) return showToast(t('groupNone'));
+    const q = mode === 'set' ? setGroup(this.s, units, n) : addToGroup(this.s, units, n);
+    if (q) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${n} · ${q.name}`);
+    this.refresh();
+  }
+
   private groupUnits(): Unit[] {
     return [...this.group].map((uid) => unitById(this.s, uid)).filter((u): u is Unit => !!u);
   }

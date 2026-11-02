@@ -56,7 +56,7 @@ const MISSION_KEY: Record<CommandKind, number> = { capture: 1, defend: 2, attack
 /** Color de la bandera de cada orden en su casilla de destino. */
 const COMMAND_FLAG: Record<CommandKind, number> = { attack: PAL.red, capture: PAL.gold, defend: 0x5fd6c6 };
 
-export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group';
+export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group' | 'squad';
 
 const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
   move: { fill: PAL.blue, alpha: 0.4, line: 0xcfe8ff },
@@ -67,6 +67,8 @@ const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> =
   reach: { fill: 0xff8a3d, alpha: 0.32, line: 0xffc9a0 },
   hover: { fill: PAL.blue, alpha: 0.16, line: 0x8fd0ff },
   group: { fill: PAL.gold, alpha: 0.18, line: PAL.gold },
+  // [CAMBIO] Compañeras de escuadra de la unidad señalada.
+  squad: { fill: PAL.gold, alpha: 0.06, line: 0xffe9a8 },
 };
 
 /** Hacia donde mira una unidad. Los dibujos azules miran a la derecha y los rojos a la izquierda. */
@@ -156,6 +158,8 @@ export class MapView {
   /** Marcas de mision, por encima de las unidades. */
   private readonly marks: Phaser.GameObjects.Graphics;
   private goal: Pos | null = null;
+  /** [CAMBIO] Casillas de las unidades elegidas (aro a los pies). */
+  private rings: [number, number][] = [];
   private vip: Pos | null = null;
   /** Marco de la casilla señalada: cuatro esquinas que se separan y se juntan. */
   private readonly cursorBox: Phaser.GameObjects.Container;
@@ -412,6 +416,7 @@ export class MapView {
     this.drawOverlay(opts);
     this.goal = opts.goal ?? null;
     this.vip = opts.vip ?? null;
+    this.rings = [...opts.highlights].filter(([, k]) => k === 'group').map(([k]) => k.split(',').map(Number) as [number, number]);
     this.drawMarks(0);
     this.placeCursor();
   }
@@ -420,6 +425,8 @@ export class MapView {
   private drawMarks(phase: number): void {
     const g = this.marks;
     g.clear();
+    // [CAMBIO] Elegidas: aro a los pies (la mitad de delante, por encima del dibujo de la unidad).
+    for (const [x, y] of this.rings) this.drawRing(g, x * TILE + TILE / 2, y * TILE + TILE - 8);
     if (this.goal) {
       const d = phase ? 2 : 0;
       const x = this.goal.x * TILE - d,
@@ -534,6 +541,28 @@ export class MapView {
     }
     // Las de mas abajo se dibujan encima (los sprites altos tapan la casilla de arriba).
     this.unitLayer.sort('y');
+  }
+
+  /** Aro de seleccion (media elipse de pixeles, la de delante) centrado en (cx, cy). */
+  private drawRing(g: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+    const rx = Math.round(TILE * 0.36),
+      ry = Math.round(TILE * 0.13);
+    const dots = new Set<string>();
+    // Solo la mitad de delante: la de detras quedaria tapada por la unidad.
+    for (let i = 0; i <= 32; i++) {
+      const a = (i / 32) * Math.PI;
+      dots.add(`${Math.round(cx + Math.cos(a) * rx)},${Math.round(cy + Math.sin(a) * ry)}`);
+    }
+    for (const [color, d] of [
+      [PAL.ink, 1],
+      [PAL.gold, 0],
+    ] as const) {
+      g.fillStyle(color, 0.9);
+      for (const k of dots) {
+        const [x, y] = k.split(',').map(Number) as [number, number];
+        g.fillRect(x - 1, y - 1 + d, 2, 2);
+      }
+    }
   }
 
   private updateUnitSprite(sp: UnitSprite, u: Unit, s?: GameState): void {

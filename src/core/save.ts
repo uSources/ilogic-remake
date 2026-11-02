@@ -19,7 +19,7 @@ import {
 } from './data';
 import { generalDef } from './generals';
 import { sanitizeStats } from './stats';
-import { liftCommand } from './squads';
+import { assignKeys, liftCommand } from './squads';
 import type { GameState, Pos } from './types';
 
 const okPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
@@ -133,6 +133,13 @@ export function deserialize(json: string): GameState | null {
   for (const u of s.units) if (u.squad !== undefined && !s.squads?.some((q) => q.id === u.squad)) delete u.squad;
   // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
   for (const q of s.squads ?? []) if (!q.command) liftCommand(s, q);
+  // [CAMBIO] Teclas de grupo: sin repetir; las que no tienen, la primera libre.
+  const keys = new Set<number>();
+  for (const q of s.squads ?? []) {
+    if (q.key !== undefined && keys.has(q.key)) delete q.key;
+    if (q.key !== undefined) keys.add(q.key);
+  }
+  assignKeys(s);
   if (s.controlPoints !== undefined) {
     const ok =
       Array.isArray(s.controlPoints) &&

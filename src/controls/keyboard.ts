@@ -10,7 +10,11 @@ export interface KeyBinding {
   command: GameCommand;
   /** Solo con Ctrl (o Cmd en Mac). */
   ctrl?: boolean;
+  /** [CAMBIO] Solo con Mayusculas (sin esto, Mayusculas da igual: Mayusculas + Enter es aceptar). */
+  shift?: boolean;
 }
+
+const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: KEY_UP, command: { kind: 'cursor', dx: 0, dy: -1 } },
@@ -27,7 +31,10 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyM'], command: { kind: 'minimap' } },
   { codes: ['KeyF'], command: { kind: 'orderHere' } },
   { codes: ['Tab'], command: { kind: 'nextUnit' } },
-  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'squad', n } })),
+  // [CAMBIO] Grupos: Ctrl+n lo hace, Mayusculas+n añade, n elige (dos veces: la camara va alli).
+  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'set' }, ctrl: true })),
+  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'add' }, shift: true })),
+  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'select' } })),
   { codes: ['Equal', 'NumpadAdd'], command: { kind: 'zoom', dir: 1 } },
   { codes: ['Minus', 'NumpadSubtract'], command: { kind: 'zoom', dir: -1 } },
   { codes: ['KeyH'], command: { kind: 'help' } },
@@ -40,7 +47,8 @@ export type KeyInput = Pick<KeyboardEvent, 'code' | 'shiftKey' | 'ctrlKey' | 'me
 /** La orden de una pulsacion, o null si la tecla no hace nada en el mapa. */
 export function keyCommand(e: KeyInput): GameCommand | null {
   const ctrl = e.ctrlKey || e.metaKey;
-  const b = KEY_BINDINGS.find((k) => k.codes.includes(e.code) && !!k.ctrl === ctrl);
+  // Las que piden Mayusculas van antes en la tabla y ganan a la misma tecla sin ellas.
+  const b = KEY_BINDINGS.find((k) => k.codes.includes(e.code) && !!k.ctrl === ctrl && (!k.shift || e.shiftKey));
   if (!b) return null;
   if (b.command.kind === 'accept') {
     // Mantener la tecla pulsada no repite la aceptacion (confirmaria varias cosas seguidas).

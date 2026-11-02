@@ -140,6 +140,36 @@ async function squadTab(page) {
   check((await focused(page)) === 'INPUT', 'nombre de escuadra: Tab deja el foco en el cuadro');
 }
 
+/** [CAMBIO] Grupos con numero: 1 elige la escuadra, Ctrl+2 hace el grupo 2 y 2 dos veces lleva la camara. */
+async function groupKeys(page) {
+  // Cierra el cuadro del nombre de escuadra de la prueba anterior.
+  await press(page, 'Escape');
+  await page.evaluate(async () => {
+    await window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false });
+    const s = window.ilogicDebug.state();
+    const mine = s.units.filter((u) => u.team === 0);
+    for (const u of mine) u.squad = 1;
+    s.squads = [{ id: 1, name: 'Alfa' }];
+    await window.ilogicDebug.startGame({ state: s });
+  });
+  const n = await page.evaluate(() => window.ilogicDebug.state().units.filter((u) => u.team === 0).length);
+  await press(page, 'Digit1');
+  check((await page.evaluate(() => window.ilogicDebug.ui().multi)) === n, `grupos: 1 elige la escuadra (${n} unidades)`);
+  await press(page, 'Control+Digit2');
+  const squads = await page.evaluate(() => window.ilogicDebug.state().squads ?? []);
+  check(squads.length === 1 && squads[0].key === 2, `grupos: Ctrl+2 hace el grupo 2 (${JSON.stringify(squads.map((q) => q.key))})`);
+  await press(page, 'Escape');
+  check((await page.evaluate(() => window.ilogicDebug.ui().multi)) === null, 'grupos: Esc suelta la seleccion');
+  await page.evaluate(() => {
+    const g = window.ilogic.scene.getScene('Game');
+    g.view.cursor = { x: 19, y: 0 };
+  });
+  await press(page, 'Digit2');
+  await press(page, 'Digit2');
+  const c = (await game(page)).cursor;
+  check(c.x < 10, `grupos: 2 dos veces lleva el cursor a la escuadra (${c.x},${c.y})`);
+}
+
 const browser = await chromium.launch();
 try {
   const page = await open(browser);
@@ -147,6 +177,7 @@ try {
   await endTab(page);
   await codeTab(page);
   await squadTab(page);
+  await groupKeys(page);
 } finally {
   await browser.close();
 }
