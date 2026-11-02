@@ -107,9 +107,6 @@
   .tray .threat span.short {
     display: inline;
   }
-  .credits {
-    display: none;
-  }
   .forecast {
     width: 220px;
   }
@@ -160,9 +157,6 @@
   .hintline {
     display: none;
   }
-}
-.mainmenu .logo {
-  animation: bob 1.8s steps(2) infinite alternate;
 }
 @keyframes bob {
   from {
