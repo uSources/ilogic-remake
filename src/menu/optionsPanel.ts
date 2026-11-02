@@ -24,6 +24,7 @@ const ROWS: Row[] = [
   { key: 'autosave', group: 'optGroupGame', label: 'autosave', values: BOOL, show: onOff },
   { key: 'autoWait', group: 'optGroupGame', label: 'optAutoWait', values: BOOL, show: onOff },
   { key: 'autoNext', group: 'optGroupGame', label: 'optAutoNext', values: BOOL, show: onOff },
+  { key: 'warnIdle', group: 'optGroupGame', label: 'optWarnIdle', values: BOOL, show: onOff },
   { key: 'speedOwn', group: 'optGroupGame', label: 'optSpeedOwn', values: SPEEDS, show: speed },
   { key: 'speedEnemy', group: 'optGroupGame', label: 'optSpeedEnemy', values: SPEEDS, show: speed },
   { key: 'uiScale', group: 'optGroupScreen', label: 'optUiScale', values: UI_SCALES, show: (v) => `${Math.round((v as number) * 100)} %` },

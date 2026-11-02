@@ -373,8 +373,19 @@ function TopBar({ s }: { s: UIState }) {
         {s.dayInfo && <DayPanel d={s.dayInfo} />}
       </div>
       <div class="spacer" />
-      <button tabIndex={-1} type="button" class="px-btn end" disabled={!mine || s.busy} onMouseDown={noFocus} onClick={() => a.endTurn()}>
-        {t('endTurn')} <span class="key">E</span>
+      {/* [CAMBIO] El aviso de unidades sin mover lo da el propio boton: cuantas quedan y, al primer clic, "¿Terminar?". */}
+      <button
+        tabIndex={-1}
+        type="button"
+        class={`px-btn end ${s.endTurn.armed ? 'armed' : ''}`}
+        disabled={!mine || s.busy}
+        onMouseDown={noFocus}
+        onClick={() => a.endTurn()}
+        title={s.endTurn.pending > 0 ? `${s.endTurn.pending} ${t('endTurnIdle')}` : undefined}
+      >
+        {s.endTurn.armed ? t('endTurnConfirm') : t('endTurn')}
+        {mine && !s.busy && s.endTurn.pending > 0 && <span class="pending num">{s.endTurn.pending}</span>}
+        <span class="key">E</span>
       </button>
       <button
         tabIndex={-1}
@@ -785,17 +796,19 @@ function Tray({ idle, threat, squads, multi }: { idle: IdleVM[]; threat: boolean
       ) : (
         <span class="all">{t('allMoved')}</span>
       )}
+      {!folded && squads.length === 0 && <div class="squads-none">{t('squadsNone')}</div>}
       {!folded && squads.length > 0 && (
         <div class="squads" aria-label={t('squads')}>
-          {squads.map((q) => (
+          {squads.map((q, i) => (
             <button
               tabIndex={-1}
               type="button"
               class="squad"
-              title={q.order ?? q.name}
+              title={`${q.order ?? q.name}${i < 9 ? ` · ${t('squadKeyHint')} ${i + 1}` : ''}`}
               onMouseDown={noFocus}
               onClick={() => a.selectSquad(q.id)}
             >
+              {i < 9 && <span class="key">{i + 1}</span>}
               <span class="sq-name">{q.name}</span>
               <span class="sq-count num">×{q.count}</span>
               {q.order && <span class="sq-order">{q.order}</span>}

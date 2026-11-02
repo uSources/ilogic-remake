@@ -34,6 +34,13 @@ describe('adaptador de teclado', () => {
     expect(keyCommand(key('Enter', { repeat: true }))).toBeNull();
   });
 
+  it('1-9 eligen la escuadra de ese numero', () => {
+    expect(keyCommand(key('Digit1'))).toEqual({ kind: 'squad', n: 1 });
+    expect(keyCommand(key('Digit9'))).toEqual({ kind: 'squad', n: 9 });
+    // El teclado numerico sigue moviendo el cursor.
+    expect(keyCommand(key('Numpad1'))?.kind).not.toBe('squad');
+  });
+
   it('Esc cancela y Retroceso da un paso atras', () => {
     expect(keyCommand(key('Escape'))?.kind).toBe('cancel');
     expect(keyCommand(key('Backspace'))?.kind).toBe('stepBack');
