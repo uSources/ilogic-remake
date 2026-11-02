@@ -23,6 +23,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyZ'], command: { kind: 'undo' }, ctrl: true },
   { codes: ['KeyE'], command: { kind: 'endTurn' } },
   { codes: ['KeyT'], command: { kind: 'threat' } },
+  { codes: ['KeyV'], command: { kind: 'intents' } },
   { codes: ['KeyM'], command: { kind: 'minimap' } },
   { codes: ['KeyF'], command: { kind: 'orderHere' } },
   { codes: ['Tab'], command: { kind: 'nextUnit' } },
