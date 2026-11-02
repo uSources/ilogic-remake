@@ -8,6 +8,9 @@ import { hintText } from '../src/scenes/game/hudParts';
 import { key } from '../src/scenes/game/types';
 import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
+import { Orders, type OrderHost } from '../src/scenes/game/orders';
+import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
+import type { Phase } from '../src/scenes/game/types';
 import { MISSIONS } from '@core/missions';
 import { blankState } from './helpers';
 
@@ -147,5 +150,67 @@ describe('escena: puente a los modulos (game/host.ts)', () => {
     expect(h.n).toBe(2);
     h.phase = 'busy';
     expect(origin.phase).toBe('busy');
+  });
+});
+
+describe('escena: a quien va una orden (game/orders.ts)', () => {
+  /** Ordenes con una escena de mentira: solo la partida, la fase, la unidad elegida y el grupo. */
+  function setup(s: GameState) {
+    const st = { phase: 'map' as Phase, sel: null as Unit | null };
+    const nop = () => {};
+    const selection = new GroupSelection({ state: s, phase: 'map', sel: null } as unknown as SelectionHost);
+    const orders = new Orders(
+      live<OrderHost>({
+        scene: { get: () => null as never },
+        view: { get: () => null as never },
+        state: { get: () => s },
+        phase: { get: () => st.phase, set: (v) => (st.phase = v) },
+        menuSel: { get: () => 0 },
+        match: { get: () => 1 },
+        sel: { get: () => st.sel },
+        undo: { get: () => null },
+        selection: { get: () => selection },
+        menuPick: () => undefined,
+        stopInspect: nop,
+        visible: seeAll,
+        intentAt: () => ({ kind: 'none' }),
+        toMap: nop,
+        back: nop,
+        refresh: nop,
+        selectUnit: nop,
+        moveCursorTo: nop,
+        commit: async () => {},
+        groupMove: async () => {},
+        giveOrder: async () => {},
+        clearUndo: nop,
+        afterAction: nop,
+        checkEnd: () => false,
+        play: async () => {},
+      }),
+    );
+    return { st, selection, orders };
+  }
+
+  it('moviendo, a la unidad elegida; en el mapa, al grupo; sin nada, a nadie', () => {
+    const s = blankState();
+    const a = newUnit(s, type('Soldier'), 0, 5, 5);
+    const b = newUnit(s, type('Soldier'), 0, 6, 5);
+    const { st, selection, orders } = setup(s);
+    expect(orders.subjects()).toBeNull();
+    selection.group = new Set([a.uid, b.uid]);
+    expect(orders.subjects()?.units.map((u) => u.uid)).toEqual([a.uid, b.uid]);
+    st.phase = 'move';
+    st.sel = a;
+    expect(orders.subjects()).toEqual({ units: [a], from: 'move' });
+  });
+
+  it('el contexto de las acciones dice si en la casilla hay un enemigo que se ve', () => {
+    const s = blankState();
+    const a = newUnit(s, type('Soldier'), 0, 5, 5);
+    newUnit(s, type('Soldier'), 1, 8, 5);
+    const { selection, orders } = setup(s);
+    selection.group = new Set([a.uid]);
+    expect(orders.ctx({ x: 8, y: 5 })?.enemyHere).toBe(true);
+    expect(orders.ctx({ x: 9, y: 5 })?.enemyHere).toBe(false);
   });
 });
