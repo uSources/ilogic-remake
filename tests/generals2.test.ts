@@ -48,7 +48,7 @@ describe('Roca: reparar', () => {
     const s = blankState();
     s.generals = [null, newGeneral('Roca')];
     s.generals[1]!.charge = def('Roca').abilities[0]!.cost;
-    const tanks = [3, 5, 7].map((x) => newUnit(s, T('Tank'), 1, x, 3));
+    const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, T('Tank'), 1, x, 3));
     expect(chooseAbility(s, 1)).toBeNull(); // todos enteros: no vale nada
     for (const t of tanks) t.life = 40;
     const c = chooseAbility(s, 1)!;
