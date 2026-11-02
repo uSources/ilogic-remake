@@ -381,6 +381,9 @@ export interface UIState {
   multi: number | null;
   rename: { id: number; name: string; max: number } | null;
   threat: boolean;
+  /** [CAMBIO] Se ven las intenciones de todas las unidades con orden (tecla V) y si hay alguna con orden. */
+  intents: boolean;
+  anyCommand: boolean;
   toast: { text: string; id: number } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
@@ -465,6 +468,7 @@ export interface UIActions {
   cancelAbility(): void;
   openGameMenu(): void;
   toggleThreat(): void;
+  toggleIntents(): void;
   toggleMinimap(): void;
   minimapJump(x: number, y: number): void;
   focusUnit(uid: number): void;
@@ -538,6 +542,8 @@ const initial: UIState = {
   multi: null,
   rename: null,
   threat: false,
+  intents: false,
+  anyCommand: false,
   toast: null,
   banner: null,
   weather: null,
@@ -573,6 +579,7 @@ const DEFAULT_ACTIONS: UIActions = {
   renameClose: () => ui.set({ rename: null }),
   openGameMenu: noop,
   toggleThreat: noop,
+  toggleIntents: noop,
   toggleMinimap: noop,
   minimapJump: noop,
   focusUnit: noop,
