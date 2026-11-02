@@ -126,6 +126,13 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
 - **Raton**: arrastrar con el izquierdo desde una casilla sin unidad propia es recuadro; con el
   derecho o la rueda, mueve el mapa; el derecho sin arrastrar es clic derecho (al soltar). El doble
   clic lo cuenta `PointerGestures` (`TapInfo.count`).
+- **Acciones** (`actions.ts`): registro de lo que se puede hacer con lo elegido (mover, atacar,
+  capturar, unirse, subir, ir alli, ordenes, escuadra). Cada accion dice cuando vale (`ok`), su texto
+  y su cursor. De ahi salen el clic derecho (`smartAction`: la primera principal que vale), el menu
+  completo de Alt + clic derecho, F, la pulsacion larga y la bandeja (`menuActions`) y el puntero del
+  raton (`cursorFor`, dibujado en `ui/cursors.ts`). La escena le pasa lo que solo ella sabe (que
+  significa soltar la unidad elegida en esa casilla) y cumple la accion (`runAction`). Una accion
+  nueva es una entrada en `ACTIONS` y un caso en `runAction`: los mandos no cambian.
 - **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`Hud.tsx`, para el
   teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
   capturas de teclas de Phaser (`addCapture`) y saltar el logo con cualquier tecla o clic (`LogoScene`;

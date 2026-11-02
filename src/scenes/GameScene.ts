@@ -3,13 +3,13 @@ import { aiTurn, assistTurn, commandNow, commandOrder, previewCommands, type Com
 import {
   cancelCommand,
   commandBlock,
-  commandChoices,
   disbandSquad,
   effectiveCommand,
   formSquad,
   addToGroup,
   giveCommand,
   keepCapturing,
+  leaveSquad,
   setGroup,
   squadByKey,
   pruneSquads,
@@ -123,6 +123,17 @@ import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
 import { DOUBLE_MS, PointerGestures, type PointerIn, type PointerTarget, type TapInfo } from '../controls/pointer';
 import { EMPTY, boxSelect, clickSelect, sameSelection, type Selection } from '../controls/selection';
+import {
+  actionById,
+  cursorFor,
+  exactSquad,
+  menuActions,
+  smartAction,
+  type ActionCtx,
+  type ActionId,
+  type CursorKind,
+} from '../controls/actions';
+import { cursorCss } from '../ui/cursors';
 import { CLOSES_HELP, type GameCommand, type GroupMode } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
 import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
@@ -185,20 +196,6 @@ const ACTION_ORDER: ActionKey[] = [
 ];
 type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
-/** [CAMBIO] Menu de grupo (Mayusculas + recuadro, o una escuadra de la bandeja): mover, dar una orden o escuadras. */
-type GroupMenuKey =
-  'move' | 'cmdAttack' | 'cmdCapture' | 'cmdDefend' | 'cmdCancel' | 'squadForm' | 'squadRename' | 'squadDisband' | 'cancel';
-const GROUP_MENU: GroupMenuKey[] = [
-  'move',
-  'cmdAttack',
-  'cmdCapture',
-  'cmdDefend',
-  'cmdCancel',
-  'squadForm',
-  'squadRename',
-  'squadDisband',
-  'cancel',
-];
 /** Orden de cada opcion de menu. */
 const CMD_OF: Partial<Record<string, CommandKind>> = { cmdAttack: 'attack', cmdCapture: 'capture', cmdDefend: 'defend' };
 type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
@@ -291,7 +288,7 @@ export class GameScene extends Phaser.Scene {
    * [CAMBIO] Menu de ordenes en una casilla (fase 'orderMenu'): clic derecho, pulsacion larga o F en el
    * destino con una unidad o un grupo elegido. `from`: de donde se venia (adonde vuelve al cancelar).
    */
-  private orderMenu: { at: Pos; uids: number[]; kinds: CommandKind[]; from: 'move' | 'unitMenu' | 'map' } | null = null;
+  private orderMenu: { at: Pos; uids: number[]; ids: ActionId[]; from: 'move' | 'unitMenu' | 'map' } | null = null;
   /** Habilidad del general que se esta apuntando (fase 'target'). */
   private targeting: string | null = null;
   private vis: boolean[][] = [];
@@ -793,6 +790,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refresh(): void {
+    // [CAMBIO] Puntero del raton segun lo que haria el clic derecho donde esta el cursor.
+    if (this.gestures.inside) this.updatePointer(this.phase === 'busy' ? null : this.view.cursor);
     // Al acabar se descubre todo el mapa.
     this.vis = this.ended ? grid(true) : visibility(this.s, 0);
     const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, 1, 0) : null;
@@ -1064,10 +1063,14 @@ export class GameScene extends Phaser.Scene {
         const units = this.groupUnits();
         if (units[0]) at = units[0];
         title = `${t('groupMenu')} · ${units.length}`;
-        items = GROUP_MENU.filter((k) => this.groupOption(k, units)).map((k) => ({
-          id: k,
-          label: t(k === 'move' ? 'groupMoveHint' : (k as TextKey)),
-        }));
+        // [CAMBIO] Las acciones sin casilla del registro (controls/actions.ts); las ordenes piden despues
+        // el destino. "Mover" deja el grupo elegido para el clic derecho.
+        const ctx = this.actionCtx(null);
+        items = [
+          { id: 'move', label: t('groupMoveHint') },
+          ...(ctx ? menuActions(ctx) : []).map((a) => ({ id: a.id, label: t(a.label as TextKey) })),
+          { id: 'cancel', label: t('cancel') },
+        ];
         break;
       }
       case 'orderMenu': {
@@ -1077,7 +1080,7 @@ export class GameScene extends Phaser.Scene {
           at = o.at;
           title = o.uids.length > 1 ? `${t('orderUnit')} · ${o.uids.length}` : t('orderUnit');
         }
-        items = (o?.kinds ?? []).map((k) => ({ id: k, label: commandLabel(k) }));
+        items = (o?.ids ?? []).map((id) => ({ id, label: t(actionById(id)!.label as TextKey) }));
         break;
       }
       case 'unloadPick': {
@@ -1315,15 +1318,18 @@ export class GameScene extends Phaser.Scene {
       rightClick: (x, y, mods) => {
         if (this.carry) return this.cancelCarry();
         const tile = this.view.tileAtScreen(x, y);
-        // [CAMBIO] Con un grupo elegido, clic derecho en una casilla libre lo mueve alli (Alt: menu de
-        // ordenes completo).
-        if (tile && !mods.alt && this.phase === 'map' && this.group.size && this.plainDestination(tile)) {
-          this.moveCursorTo(tile, false);
-          return void this.groupMove(tile);
-        }
-        // Con una unidad o un grupo elegido, clic derecho en otra casilla: ordenes alli (atacar,
-        // capturar, defender). Sobre la propia unidad elegida sigue siendo atras.
+        // Sobre la propia unidad elegida sigue siendo atras.
         const onSel = !!tile && !!this.sel && this.phase !== 'map' && samePos(tile, this.sel);
+        if (tile && !onSel && (this.phase === 'map' || this.phase === 'move') && this.selectionUnits().length) {
+          // [CAMBIO] Alt + clic derecho: el menu completo. Si no, lo que toca en esa casilla (ver
+          // controls/actions.ts); con Mayusculas, se deja como orden sin gastar el turno.
+          if (mods.alt) return void this.openOrderMenu(tile);
+          const ctx = this.actionCtx(tile);
+          const a = ctx && smartAction(ctx);
+          if (a) return void this.runAction(a.id, tile, { queue: mods.shift });
+          if (this.openOrderMenu(tile)) return;
+          return showToast(t('smartNone'));
+        }
         if (tile && !onSel && this.openOrderMenu(tile)) return;
         // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
         const u = tile && this.phase === 'map' ? unitAt(this.s, tile.x, tile.y) : undefined;
@@ -1366,9 +1372,10 @@ export class GameScene extends Phaser.Scene {
         else this.refreshHud();
       },
       hover: (x, y) => {
-        if (this.phase === 'busy') return;
+        if (this.phase === 'busy') return this.setPointer('default');
         const tile = this.view.tileAtScreen(x, y);
         if (tile && CURSOR_PHASES.includes(this.phase)) this.moveCursorTo(tile, false);
+        this.updatePointer(tile);
       },
       tap: (x, y, info) => this.pointerTap(x, y, info),
       longPress: (x, y) => {
@@ -2374,14 +2381,6 @@ export class GameScene extends Phaser.Scene {
     return this.s.units.filter((o) => o.type === u.type && this.selectable(o) && o.x >= r.x0 && o.x <= r.x1 && o.y >= r.y0 && o.y <= r.y1);
   }
 
-  /** Casilla a la que un grupo simplemente va: sin enemigo a la vista ni edificio que tomar. */
-  private plainDestination(tile: Pos): boolean {
-    const u = unitAt(this.s, tile.x, tile.y);
-    if (u && u.team !== 0 && this.visibleToPlayer(u)) return false;
-    const b = buildingAt(this.s, tile.x, tile.y);
-    return !b || b.owner === 0;
-  }
-
   /** Ultima escuadra elegida (bandeja o tecla), para que elegirla dos veces seguidas lleve la camara. */
   private lastPick: { id: number; at: number } | null = null;
 
@@ -2434,64 +2433,16 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
   }
 
-  /** Escuadra que forman exactamente las unidades del grupo (null si no son una escuadra). */
-  private groupSquad(units: Unit[]): number | null {
-    const id = units[0]?.squad;
-    if (id === undefined || !units.every((u) => u.squad === id)) return null;
-    return squadUnits(this.s, id).length === units.length ? id : null;
-  }
-
-  /** Que opciones del menu de grupo tienen sentido para estas unidades. */
-  private groupOption(k: GroupMenuKey, units: Unit[]): boolean {
-    const squad = this.groupSquad(units);
-    switch (k) {
-      case 'cmdCapture':
-        return units.some((u) => UNIT.cancapt[u.type]);
-      case 'cmdCancel':
-        return units.some((u) => !!this.cmdOf(u));
-      case 'squadForm':
-        return squad === null;
-      case 'squadRename':
-      case 'squadDisband':
-        return squad !== null;
-      default:
-        return true;
-    }
-  }
-
   private acceptGroupMenu(): void {
-    const k = this.menuItems[this.menuSel]?.id as GroupMenuKey | undefined;
+    const k = this.menuItems[this.menuSel]?.id;
     const units = this.groupUnits();
-    const squad = this.groupSquad(units);
-    switch (k) {
-      case 'move':
-        // Sigue elegido: el siguiente clic en el mapa lo mueve.
-        showToast(`${units.length} ${t('groupSelected')}`);
-        return this.toMap();
-      case 'cmdAttack':
-      case 'cmdCapture':
-      case 'cmdDefend':
-        return this.startOrder(CMD_OF[k]!, units, false);
-      case 'cmdCancel':
-        cancelCommand(this.s, units);
-        showToast(t('orderCancelled'));
-        break;
-      case 'squadForm': {
-        const q = formSquad(this.s, units);
-        if (q) showToast(`${t('squadFormed')}: ${q.name}`);
-        break;
-      }
-      case 'squadRename':
-        if (squad !== null) ui.set({ rename: { id: squad, name: squadById(this.s, squad)?.name ?? '', max: SQUAD_NAME_MAX } });
-        break;
-      case 'squadDisband':
-        if (squad !== null) disbandSquad(this.s, squad);
-        break;
-      default:
-        break;
+    if (k === 'move') {
+      // Sigue elegido: el clic derecho (o Enter) en el destino lo mueve.
+      showToast(`${units.length} ${t('groupSelected')}`);
+      return this.toMap();
     }
-    this.group.clear();
-    this.toMap();
+    if (!k || k === 'cancel' || !actionById(k)) return this.toMap();
+    void this.runAction(k as ActionId, null, { queue: false, single: false });
   }
 
   // -------------------------------------------------------------------------
@@ -2531,11 +2482,10 @@ export class GameScene extends Phaser.Scene {
   private openOrderMenu(at: Pos): boolean {
     const who = this.orderSubjects();
     if (!who || !inBounds(at.x, at.y)) return false;
-    const e = unitAt(this.s, at.x, at.y);
-    const enemyHere = !!e && e.team !== 0 && e.carrier === null && this.visibleToPlayer(e);
-    const kinds = commandChoices(this.s, at, who.units, enemyHere);
-    if (!kinds.length) return false;
-    this.orderMenu = { at: { x: at.x, y: at.y }, uids: who.units.map((u) => u.uid), kinds, from: who.from };
+    const ctx = this.actionCtx(at);
+    const ids = ctx ? menuActions(ctx).map((a) => a.id) : [];
+    if (!ids.length) return false;
+    this.orderMenu = { at: { x: at.x, y: at.y }, uids: who.units.map((u) => u.uid), ids, from: who.from };
     this.multi = false;
     this.inspectUid = null;
     this.view.cursor = { x: at.x, y: at.y };
@@ -2545,14 +2495,130 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
-  /** Orden elegida en el menu de la casilla: se da ahi directamente (como placeOrder). */
+  /** Accion elegida en el menu de la casilla. */
   private async acceptOrderMenu(): Promise<void> {
     const o = this.orderMenu;
-    const kind = this.menuItems[this.menuSel]?.id as CommandKind | undefined;
-    if (!o || !kind || !o.kinds.includes(kind)) return this.back();
+    const id = this.menuItems[this.menuSel]?.id as ActionId | undefined;
+    if (!o || !id || !o.ids.includes(id)) return this.back();
+    const from = o.from;
     this.orderMenu = null;
-    this.ordering = { kind, uids: o.uids, single: o.from !== 'map' };
-    return this.placeOrder(o.at);
+    // Vuelve a la fase de la que salio el menu, que es donde la accion tiene sentido.
+    if (from === 'move' && this.sel) this.selectUnit(this.sel);
+    else if (from === 'unitMenu' && this.sel) this.phase = 'unitMenu';
+    else this.phase = 'map';
+    return this.runAction(id, o.at, { queue: false, single: from !== 'map' });
+  }
+
+  // -------------------------------------------------------------------------
+  // [CAMBIO] Acciones sobre lo elegido (controls/actions.ts): clic derecho, menu de casilla y bandeja
+  // -------------------------------------------------------------------------
+
+  /** Contexto de las acciones en `at` (null: menu sin casilla) con lo elegido ahora. */
+  private actionCtx(at: Pos | null): ActionCtx | null {
+    const units = this.orderSubjects()?.units ?? this.selectionUnits();
+    if (!units.length) return null;
+    const e = at ? unitAt(this.s, at.x, at.y) : undefined;
+    const enemyHere = !!e && e.team !== 0 && e.carrier === null && this.visibleToPlayer(e);
+    const ctx: ActionCtx = { s: this.s, units, at: at ? { x: at.x, y: at.y } : null, enemyHere };
+    if (at && this.phase === 'move' && this.sel && units.length === 1 && units[0]!.uid === this.sel.uid) {
+      const it = this.intentAt(at);
+      ctx.intent = it.kind;
+      ctx.intentCapture = it.kind === 'move' && it.capture;
+      ctx.farOk = it.kind === 'none' && !unitAt(this.s, at.x, at.y) && canWalk(this.s, at.x, at.y, Movement.of(this.sel.type));
+    }
+    return ctx;
+  }
+
+  /**
+   * Cumplir una accion del registro. `queue` (Mayusculas + clic derecho): atacar, capturar o mover
+   * quedan como orden (se cumplen al terminar el turno) sin mover nada ahora. `single`: viene del
+   * menu de una unidad elegida (la orden respeta lo ya movido, ver placeOrder).
+   */
+  private async runAction(id: ActionId, at: Pos | null, opts: { queue: boolean; single?: boolean } = { queue: false }): Promise<void> {
+    const units = this.orderSubjects()?.units ?? this.selectionUnits();
+    if (!units.length) return;
+    const one = this.phase === 'move' && this.sel && units.length === 1 ? this.sel : null;
+    if (opts.queue && at && (id === 'attack' || id === 'capture' || id === 'move' || id === 'go')) {
+      // Orden sin gastar el turno: atacar/capturar alli, o ir y quedarse (defender).
+      const kind = id === 'attack' ? 'attack' : id === 'capture' ? 'capture' : 'defend';
+      if (commandBlock(this.s, kind, at, units)) return;
+      giveCommand(this.s, units, kind, at);
+      showToast(`${commandLabel(kind)} · ${units.length}`);
+      if (one) this.toMap();
+      return this.refresh();
+    }
+    switch (id) {
+      case 'attack':
+      case 'capture':
+      case 'merge':
+      case 'load':
+      case 'move':
+        if (!at) return;
+        if (one) {
+          this.moveCursorTo(at, false);
+          return this.commit(at, { drop: id === 'capture' });
+        }
+        if (id === 'move') {
+          this.moveCursorTo(at, false);
+          return this.groupMove(at);
+        }
+        // Grupo: atacar o capturar alli es una orden que empiezan ya las que pueden.
+        this.ordering = { kind: id === 'attack' ? 'attack' : 'capture', uids: units.map((u) => u.uid), single: false };
+        return this.placeOrder(at);
+      case 'go':
+        if (at && one) return this.giveOrder(one, at);
+        return;
+      case 'cmdAttack':
+      case 'cmdCapture':
+      case 'cmdDefend': {
+        const kind = CMD_OF[id]!;
+        const single = opts.single ?? !!one;
+        if (!at) return this.startOrder(kind, units, single);
+        this.ordering = { kind, uids: units.map((u) => u.uid), single };
+        return this.placeOrder(at);
+      }
+      case 'cmdCancel':
+        cancelCommand(this.s, units);
+        showToast(t('orderCancelled'));
+        break;
+      case 'squadForm': {
+        const q = formSquad(this.s, units);
+        if (q) showToast(`${t('squadFormed')}: ${q.name}${q.key ? ` · ${t('squadKeyHint')} ${q.key}` : ''}`);
+        break;
+      }
+      case 'squadLeave':
+        for (const u of units) leaveSquad(this.s, u);
+        pruneSquads(this.s);
+        break;
+      case 'squadRename': {
+        const q = exactSquad(this.s, units);
+        if (q !== null) ui.set({ rename: { id: q, name: squadById(this.s, q)?.name ?? '', max: SQUAD_NAME_MAX } });
+        break;
+      }
+      case 'squadDisband': {
+        const q = exactSquad(this.s, units);
+        if (q !== null) disbandSquad(this.s, q);
+        break;
+      }
+      default:
+        break;
+    }
+    if (this.phase === 'groupMenu' || this.phase === 'orderMenu') this.toMap();
+    this.refresh();
+  }
+
+  /** [CAMBIO] Puntero del raton segun lo que haria el clic derecho en esa casilla. */
+  private updatePointer(tile: Pos | null): void {
+    if (!tile || (this.phase !== 'map' && this.phase !== 'move')) return this.setPointer('default');
+    const ctx = this.selectionUnits().length ? this.actionCtx(tile) : null;
+    this.setPointer(ctx ? cursorFor(ctx) : 'default');
+  }
+
+  private pointerKind: CursorKind = 'default';
+  private setPointer(kind: CursorKind): void {
+    if (kind === this.pointerKind) return;
+    this.pointerKind = kind;
+    this.game.canvas.style.cursor = cursorCss(kind);
   }
 
   /** Casilla elegida para la orden: se da, y las que aun no se han movido la empiezan ya. */
@@ -2573,7 +2639,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (moved) wait(sel);
     this.clearUndo();
-    this.group.clear();
+    // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
     this.toMap();
     showToast(t('orderGiven'));
     const now = units.filter((u) => u.active && u.canMove && u.carrier === null);

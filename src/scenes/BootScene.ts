@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { installCursors } from '../ui/cursors';
 import { createAtlas, loadAtlas } from '../atlas';
 import { ATLAS_PAGES } from '../atlasPages';
 import { asset, assetsAvailable, setImageSource } from '../assets';
@@ -29,6 +30,8 @@ export class BootScene extends Phaser.Scene {
     const root = document.documentElement.style;
     root.setProperty('--cursor', pointerCss('raton', 'auto'));
     root.setProperty('--cursor-button', pointerCss('raton_boton', 'pointer'));
+    // [CAMBIO] Punteros que anuncian el clic derecho (mover, atacar, capturar...): ui/cursors.ts.
+    installCursors();
     // Phaser no espera a create(): la escena siguiente se lanza cuando esten las fuentes de la
     // interfaz (van incluidas; el limite es por si acaso; sin ellas se usan las de reserva).
     const fonts = Promise.all([
