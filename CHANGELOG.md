@@ -16,7 +16,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Controles
 - **Elegir unidades como en los juegos de estrategia en tiempo real**: recuadro arrastrando desde fuera de tus unidades (sin tecla), Mayúsculas + clic para añadir o quitar, doble clic (o Ctrl + clic) para todas las de ese tipo en pantalla y clic en vacío o Esc para soltar. Las elegidas llevan un aro a los pies.
 - **Grupos con número**: Ctrl + 1…9 hace el grupo con lo elegido (es una escuadra), Mayúsculas + número añade, el número lo elige y pulsarlo dos veces lleva la cámara allí. El botón de la bandeja hace lo mismo.
-- Clic derecho en un destino libre mueve el grupo; el grupo sigue elegido después.
+- **Clic derecho que acierta solo**: con unidades elegidas, en una casilla libre las mueve, en un enemigo ataca, en un edificio captura, en un transporte sube y, fuera del alcance de una sola unidad, va allí en varios turnos. El puntero del ratón dice qué hará (y prohibido si no puede). Mayúsculas + clic derecho lo deja como orden sin mover nada ahora; Alt + clic derecho (o F, o mantener pulsado) abre el menú con todas las acciones, también «Formar escuadra» y «Sacar de la escuadra». El grupo sigue elegido después.
 - La cámara se mueve arrastrando con el botón derecho o la rueda (además del borde de la pantalla).
 - Al señalar una unidad de escuadra se marcan sus compañeras.
 
@@ -33,7 +33,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Controls
 - **Select units like in real-time strategy games**: drag a box from outside your units (no key needed), Shift + click adds or removes, double-click (or Ctrl + click) picks all of that type on screen, and clicking empty ground or Esc clears. Selected units have a ring at their feet.
 - **Number groups**: Ctrl + 1…9 makes the group from the selection (it is a squad), Shift + number adds, the number selects it and pressing it twice moves the camera there. The tray button does the same.
-- Right-click a free destination to move the group; the group stays selected afterwards.
+- **Smart right-click**: with units selected, a free tile moves them, an enemy is attacked, a building is captured, a transport is boarded and, out of a single unit's range, it goes there over several turns. The mouse pointer shows what will happen (or a no-entry sign). Shift + right-click leaves it as an order without moving now; Alt + right-click (or F, or a long press) opens the menu with every action, including "Form squad" and "Leave the squad". The group stays selected afterwards.
 - Pan the camera by dragging with the right button or the wheel (besides the screen edge).
 - Pointing at a squad unit highlights its squadmates.
 

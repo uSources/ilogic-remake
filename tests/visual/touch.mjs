@@ -199,10 +199,11 @@ async function scenarios(page, cdp, name) {
   await hold(SOLDIER.x + 4, SOLDIER.y);
   const om = await page.evaluate(() => window.ilogicDebug.ui().menu?.items.map((i) => i.id));
   check(
-    (await phase(page)) === 'orderMenu' && om?.join() === 'attack,defend',
+    // [CAMBIO] Menu completo (controls/actions.ts): fuera de alcance, ir alli; y las ordenes.
+    (await phase(page)) === 'orderMenu' && om?.join() === 'go,cmdAttack,cmdDefend',
     `con la unidad elegida, mantener pulsado el destino abre las ordenes (${await phase(page)}: ${om})`,
   );
-  const btn = page.locator('[role=menuitem]').filter({ hasText: /Defender|Hold/ });
+  const btn = page.locator('[role=menuitem]').filter({ hasText: /defender allí|hold there/i });
   if (await btn.count()) await btn.first().tap();
   await page.waitForTimeout(150);
   await page.evaluate(() => window.ilogicDebug.idle());

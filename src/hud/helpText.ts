@@ -40,7 +40,13 @@ const HELP = {
       ['Elegir varias', '—', 'Recuadro arrastrando desde fuera de tus unidades; Mayúsculas + clic añade o quita; dedo: «Elegir varias»'],
       ['Todas las de un tipo en pantalla', '—', 'Doble clic (o Ctrl + clic) en una'],
       ['Soltar lo elegido', 'Esc', 'Clic en una casilla vacía'],
-      ['Mover en grupo', 'Enter en el destino', 'Clic derecho en el destino'],
+      [
+        'Mandar a lo elegido (mover, atacar, capturar, subir…)',
+        'Enter en el destino',
+        'Clic derecho en el destino: el puntero dice qué hará',
+      ],
+      ['Dejarlo como orden, sin mover ahora', '—', 'Mayúsculas + clic derecho'],
+      ['Todas las acciones (órdenes, escuadra…)', 'F', 'Alt + clic derecho / mantener pulsado el destino'],
       [
         'Hacer un grupo (escuadra) con lo elegido',
         'Ctrl + 1 … 9 (Mayúsculas + número: añadir)',
@@ -105,7 +111,13 @@ const HELP = {
       ['Pick several', '—', 'Drag a box from outside your units; Shift + click adds or removes; touch: “Pick several”'],
       ['All of one type on screen', '—', 'Double-click (or Ctrl + click) one'],
       ['Clear the selection', 'Esc', 'Click an empty tile'],
-      ['Group move', 'Enter on the destination', 'Right-click the destination'],
+      [
+        'Command the selection (move, attack, capture, board…)',
+        'Enter on the destination',
+        'Right-click the destination: the pointer shows what it will do',
+      ],
+      ['Leave it as an order, without moving now', '—', 'Shift + right-click'],
+      ['All actions (orders, squad…)', 'F', 'Alt + right-click / hold the destination'],
       ['Make a group (squad) from the selection', 'Ctrl + 1 … 9 (Shift + number: add)', 'Pick several, “Orders”, then “Form squad”'],
       ['Select a group / jump to it', '1 … 9 (twice: camera goes there)', 'Its tray button (twice: jump)'],
       [
