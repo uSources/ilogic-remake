@@ -19,7 +19,13 @@ import {
 } from './data';
 import { generalDef } from './generals';
 import { sanitizeStats } from './stats';
+import { liftCommand } from './squads';
 import type { GameState, Pos } from './types';
+
+const okPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
+/** Una orden con destino bien formada (Unit.command o Squad.command). */
+const okCommand = (c: unknown): boolean =>
+  !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && okPos((c as { at: unknown }).at);
 
 export function serialize(s: GameState): string {
   return JSON.stringify(s);
@@ -63,9 +69,7 @@ export function deserialize(json: string): GameState | null {
     u.canFire = !!u.canFire;
     if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
     if (u.hitDay !== undefined && !isInt(u.hitDay, 0, 1e6)) delete u.hitDay;
-    const okPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
-    if (u.command !== undefined && !(u.command && ['attack', 'capture', 'defend'].includes(u.command.kind) && okPos(u.command.at)))
-      delete u.command;
+    if (u.command !== undefined && !okCommand(u.command)) delete u.command;
     if (u.squad !== undefined && !isInt(u.squad, 1, 1e6)) delete u.squad;
     if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
   }
@@ -120,8 +124,15 @@ export function deserialize(json: string): GameState | null {
     const ok =
       Array.isArray(s.squads) && s.squads.every((q) => q && isInt(q.id, 1, 1e6) && typeof q.name === 'string' && q.name.length > 0);
     if (!ok) delete s.squads;
+    for (const q of s.squads ?? []) {
+      // [CAMBIO] Orden y tecla de la escuadra: si estan rotas, se quitan (la escuadra sigue).
+      if (q.command !== undefined && !okCommand(q.command)) delete q.command;
+      if (q.key !== undefined && !isInt(q.key, 1, 9)) delete q.key;
+    }
   }
   for (const u of s.units) if (u.squad !== undefined && !s.squads?.some((q) => q.id === u.squad)) delete u.squad;
+  // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
+  for (const q of s.squads ?? []) if (!q.command) liftCommand(s, q);
   if (s.controlPoints !== undefined) {
     const ok =
       Array.isArray(s.controlPoints) &&

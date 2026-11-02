@@ -32,7 +32,7 @@ describe('previewCommands', () => {
   it('capturar: prevé el camino hasta el edificio y la captura, y el turno real hace eso', () => {
     const s = world();
     const u = newUnit(s, SOLDIER, 0, 9, 5);
-    giveCommand([u], 'capture', { x: 12, y: 5 });
+    giveCommand(s, [u], 'capture', { x: 12, y: 5 });
     const it = previewCommands(s).get(u.uid)!;
     expect(it.path[0]).toEqual({ x: 9, y: 5 });
     expect(last(it.path)).toEqual({ x: 12, y: 5 });
@@ -47,7 +47,7 @@ describe('previewCommands', () => {
     const s = world();
     const u = newUnit(s, TANK, 0, 5, 5);
     const foe = newUnit(s, SOLDIER, 1, 9, 5);
-    giveCommand([u], 'attack', { x: 15, y: 5 });
+    giveCommand(s, [u], 'attack', { x: 15, y: 5 });
     const it = previewCommands(s).get(u.uid)!;
     expect(it.attack).toEqual({ x: 9, y: 5 });
     const end = last(it.path) ?? { x: 5, y: 5 };
@@ -59,7 +59,7 @@ describe('previewCommands', () => {
   it('una unidad sin nada que hacer este turno no tiene camino ni objetivo', () => {
     const s = world();
     const u = newUnit(s, TANK, 0, 5, 5);
-    giveCommand([u], 'defend', { x: 5, y: 6 });
+    giveCommand(s, [u], 'defend', { x: 5, y: 6 });
     expect(previewCommands(s).get(u.uid)).toEqual({ path: [] });
   });
 
@@ -68,8 +68,8 @@ describe('previewCommands', () => {
     const a = newUnit(s, SOLDIER, 0, 9, 5);
     const b = newUnit(s, TANK, 0, 5, 5);
     newUnit(s, SOLDIER, 1, 9, 7);
-    giveCommand([a], 'capture', { x: 12, y: 5 });
-    giveCommand([b], 'attack', { x: 15, y: 5 });
+    giveCommand(s, [a], 'capture', { x: 12, y: 5 });
+    giveCommand(s, [b], 'attack', { x: 15, y: 5 });
     const before = serialize(s);
     const p1 = previewCommands(s);
     expect(serialize(s)).toBe(before);
@@ -81,7 +81,7 @@ describe('previewCommands', () => {
     const s = world();
     const used = newUnit(s, TANK, 0, 5, 5);
     newUnit(s, TANK, 0, 6, 6);
-    giveCommand([used], 'attack', { x: 15, y: 5 });
+    giveCommand(s, [used], 'attack', { x: 15, y: 5 });
     Object.assign(used, { active: false, canMove: false });
     expect(previewCommands(s).size).toBe(0);
   });
@@ -89,7 +89,7 @@ describe('previewCommands', () => {
   it('no delata enemigos escondidos: la prevision es la misma que si no estuvieran', () => {
     const s = world();
     const u = newUnit(s, TANK, 0, 5, 5);
-    giveCommand([u], 'attack', { x: 15, y: 5 });
+    giveCommand(s, [u], 'attack', { x: 15, y: 5 });
     const clean = previewCommands(s);
     // A 7 casillas: el tanque (vision 6) no lo ve, pero llegaria a dispararle (mueve 5, alcance 2).
     const hidden = newUnit(s, SOLDIER, 1, 12, 5);
@@ -106,7 +106,7 @@ describe('previewCommands', () => {
     const make = () => {
       const s = world();
       const mine = newUnit(s, TANK, 0, 2, 2);
-      giveCommand([mine], 'attack', { x: 15, y: 15 });
+      giveCommand(s, [mine], 'attack', { x: 15, y: 15 });
       newUnit(s, SOLDIER, 1, 14, 6);
       newUnit(s, TANK, 1, 16, 16);
       return s;

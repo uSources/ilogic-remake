@@ -648,7 +648,7 @@ function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
       </div>
       {!folded && (u.order || u.squad) && (
         <span style={{ fontSize: 13, color: '#5fd6c6' }}>
-          {[u.squad && `${t('squad')} ${u.squad}`, u.order].filter(Boolean).join(' · ')}
+          {[u.squad && `${t('squad')} ${u.squad}`, u.detached && t('detached'), u.order].filter(Boolean).join(' · ')}
         </span>
       )}
       {!folded && u.noHeal && <span style={{ fontSize: 13, color: 'var(--red-soft)' }}>{t('noHeal')}</span>}
@@ -843,6 +843,11 @@ function Tray({
               <span class="sq-name">{q.name}</span>
               <span class="sq-count num">×{q.count}</span>
               {q.order && <span class="sq-order">{q.order}</span>}
+              {q.detached > 0 && (
+                <span class="sq-detached num" title={t('detachedHint')}>
+                  {q.detached} {t(q.detached === 1 ? 'detachedOne' : 'detachedMany')}
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -9,11 +9,19 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Cambios de juego
+- **Órdenes de escuadra**: una orden a toda la escuadra es de la escuadra. A solo algunas de sus unidades, esas van **destacadas** (raya naranja, y «2 destacadas» en el botón de la escuadra) y al cumplirla vuelven solas a la orden de la escuadra.
+- Si empiezas a capturar a mano con una unidad que tenía orden, la acaba en vez de irse el turno siguiente.
+
 ### Equilibrio
 - **Motorizado** 3500 → 2500, **Jeep** 5000 → 4000 y **Tanque anfibio** 15000 → 11000: rendían menos de la mitad de lo que costaban.
 - **Caza ligero** 12000 → 15000: rendía casi el doble de lo que costaba.
 
 <!-- en -->
+
+### Gameplay
+- **Squad orders**: an order to a whole squad belongs to the squad. To only some of its units, those go **detached** (orange stripe, and "2 detached" on the squad button) and rejoin the squad's order once done.
+- If you start a capture by hand with a unit that had an order, it finishes it instead of leaving next turn.
 
 ### Balance
 - **Motor trooper** 3500 → 2500, **Jeep** 5000 → 4000 and **Amphibious tank** 15000 → 11000: they were worth less than half their price.

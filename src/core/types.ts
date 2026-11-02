@@ -33,7 +33,10 @@ export interface Unit {
   kills?: number;
   /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
   hitDay?: number;
-  /** [CAMBIO] Orden con destino (atacar, capturar o defender aqui): la cumple sola al terminar cada turno si sigue sin usar. */
+  /**
+   * [CAMBIO] Orden con destino propia (atacar, capturar o defender aqui): la cumple sola al terminar
+   * cada turno si sigue sin usar. En una escuadra manda sobre la orden de la escuadra (destacada).
+   */
   command?: Command;
   /** [CAMBIO] Escuadra a la que pertenece (id de GameState.squads). */
   squad?: number;
@@ -224,8 +227,16 @@ export interface Command {
   at: Pos;
 }
 
-/** [CAMBIO] Escuadra con nombre: varias unidades del jugador que reciben las ordenes juntas. */
+/**
+ * [CAMBIO] Escuadra con nombre: varias unidades del jugador que reciben las ordenes juntas.
+ * La orden de la escuadra la siguen todas sus unidades salvo las destacadas, que llevan una orden
+ * propia (Unit.command) y al cumplirla vuelven a la de la escuadra (ver effectiveCommand).
+ */
 export interface Squad {
   id: number;
   name: string;
+  /** Orden de toda la escuadra. */
+  command?: Command;
+  /** Tecla del grupo (1-9), como Ctrl+1 en los juegos de estrategia en tiempo real. */
+  key?: number;
 }

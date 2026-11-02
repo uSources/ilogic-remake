@@ -121,6 +121,8 @@ export interface UnitVM {
   /** [CAMBIO] Orden con destino, ya traducida ("Atacar aquí"), y escuadra a la que pertenece. */
   order?: string;
   squad?: string;
+  /** [CAMBIO] Va por su cuenta con otra orden y al cumplirla vuelve con su escuadra. */
+  detached?: boolean;
 }
 
 /** Una fila del desglose: "3 × Ciudad   +3.000". */
@@ -231,6 +233,8 @@ export interface SquadVM {
   order: string | null;
   /** [CAMBIO] Todas llevan la misma orden: avanzan juntas (ver squadInFormation). */
   formation: boolean;
+  /** [CAMBIO] Unidades que van por su cuenta con otra orden (ver isDetached). */
+  detached: number;
 }
 
 export interface IdleVM {

@@ -3187,6 +3187,11 @@ html.reduce-motion .end-best.new {
   flex-basis: 100%;
   color: var(--gold);
 }
+/* [CAMBIO] Cuantas van por su cuenta con otra orden. */
+.tray .sq-detached {
+  flex-basis: 100%;
+  color: #ffb43a;
+}
 .rename {
   display: flex;
   flex-direction: column;
