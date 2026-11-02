@@ -885,6 +885,40 @@ export interface RoundReport {
   healed: { uid: number; team: Team; amount: number }[];
   /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
   weather?: WeatherChange | null;
+  /** [CAMBIO] Puntos de control: dinero que ha dado a cada bando (ya sumado en income), cuantos le han pagado y cuantos estan disputados. */
+  control?: { income: [number, number]; held: [number, number]; contested: number };
+}
+
+/** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de RULES.controlRadius). */
+export function inControlZone(c: Pos, p: Pos): boolean {
+  return Math.max(Math.abs(c.x - p.x), Math.abs(c.y - p.y)) <= RULES.controlRadius;
+}
+
+/** [CAMBIO] Bandos con unidades dentro de la zona de un punto de control. */
+export function teamsInZone(s: GameState, c: Pos): Set<Team> {
+  return new Set(s.units.filter((u) => u.carrier === null && inControlZone(c, u)).map((u) => u.team));
+}
+
+/**
+ * [CAMBIO] Puntos de control al acabar la ronda (ver GameState.controlPoints): solo paga el que no
+ * esta disputado, para que haya batallas por ellos. Nada si la partida no tiene.
+ */
+export function controlRound(s: GameState): RoundReport['control'] {
+  if (!s.controlPoints?.length) return undefined;
+  const out: NonNullable<RoundReport['control']> = { income: [0, 0], held: [0, 0], contested: 0 };
+  for (const c of s.controlPoints) {
+    const teams = teamsInZone(s, c);
+    if (teams.size > 1) {
+      out.contested++;
+      continue;
+    }
+    if (teams.size === 1) c.owner = [...teams][0]!;
+    if (c.owner === null) continue;
+    out.held[c.owner]++;
+    out.income[c.owner] += RULES.controlIncome;
+    s.funds[c.owner] += RULES.controlIncome;
+  }
+  return out;
 }
 
 /** [CAMBIO] La unidad no se curara al acabar el dia: ha recibido un ataque hoy (regla noHealUnderFire). */
@@ -917,6 +951,11 @@ export function endRound(s: GameState): RoundReport {
     const before = u.life;
     u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
     if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
+  }
+  const control = controlRound(s);
+  if (control) {
+    report.control = control;
+    for (const team of [0, 1] as const) report.income[team] += control.income[team];
   }
   for (const team of [0, 1] as const) {
     // [CAMBIO] Mantenimiento despues de cobrar. Sin dinero no hay castigo: se paga lo que haya.

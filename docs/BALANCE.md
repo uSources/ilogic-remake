@@ -189,3 +189,117 @@ Conclusiones:
   (68), Ámbar 50 % (60). Brisa gana con el flanqueo y el bajo fuego (su daño en área marca a varias
   unidades); Ámbar pierde porque el botín reparte dinero a los dos. Vigilar; margen ±10-11.
 - Pendiente: una IA que ataque en grupo (entrenador de IA) para acercar la duración a 15-25 días.
+
+## Puntos de control (01-11-2026)
+
+Para que haya algo por lo que pelear en el medio del mapa: 3 casillas por mapa al azar
+(`RULES.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
+ronda son de quien tenga una unidad encima (y siguen suyas al irse) y cada una da
+`RULES.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
+de ventaja).
+
+`npm run balance -- run --games 80` (IA contra IA, máximo 60 días):
+
+| Variante | Sin terminar | Ventaja bando 0 / 1 |
+|---|---:|---:|
+| Sin puntos | 94 % | 38 / 31 |
+| 3 puntos de 1000 (las de ahora) | 90 % | 23 / 44 |
+| 3 puntos de 2000 | 98 % | 32 / 41 |
+| 3 de 1000 y la IA los busca más (10) | 91 % | 28 / 39 |
+
+Con 200 partidas, 3 de 1000: ventaja 77 / 89, sin un lado claramente favorecido.
+
+**Zonas de 3×3 que solo pagan sin disputa** (`RULES.controlRadius` 1): un punto paga a su dueño solo
+si en su zona no hay unidades de los dos bandos, para que haya batallas por él. 80 partidas: 90 % sin
+terminar, ventaja 33 / 38, igualadas 1 (antes 5): se decide más a menudo quién va por delante. Como con las demás
+reglas, el empate entre IAs casi no se mueve; los puntos dan al jugador un objetivo claro en el
+centro y dinero por avanzar.
+
+## IA que juega en grupo (01-11-2026)
+
+Cada unidad de la IA decidía sola y llegaban de una en una. Dos cambios, solo en el turno de la IA
+enemiga (las órdenes del jugador se cumplen igual que antes):
+
+- **Fuego concentrado** (`planFire` en `src/core/ai.ts`, peso `AI.FOCUSFIRE`): antes de mover, busca
+  enemigos visibles que puede destruir ese turno sumando el daño esperado de varias unidades (con el
+  flanqueo para las que siguen) y reparte a quién dispara a cada uno, empezando por el que más vale.
+  Las del plan juegan primero (las de distancia antes).
+- **Las propias ya no cortan el camino**: al buscar adónde ir, las unidades propias no tapaban el paso
+  aunque la regla `passAllies` deja atravesarlas. Una columna en un puente o en la salida de la Fábrica
+  dejaba a las de detrás "sin camino" y paseaban al azar en casa (13 % de los turnos de unidad).
+
+Medido con la arena (`npm run arena`, contra la IA de antes, mapas 20x20) y `npm run balance -- run`
+(IA contra IA, 32x32, máximo 60 días):
+
+| Variante | Arena 200 (600) | Sin terminar, 80 (160) | Días (mediana) | Ventaja bando 0 / 1 (80) |
+|---|---:|---:|---:|---:|
+| IA de antes | — | 90 % (92,5 %) | 46 | 23 / 44 |
+| Fuego concentrado (preferir tocados) + orden | 46 % | 92 % | 45 | 29 / 40 |
+| Solo orden de juego | 48 % | 94 % | 46 | 28 / 42 |
+| Las que no capturan van a la Base enemiga | 47 % | 95 % | 43 | 32 / 34 |
+| + asalto con 2 que capturan, siempre | 33 % | 86 % | 40 | 27 / 34 |
+| + asalto solo con masa (1,5x cerca de la Base) | 48 % | 92 % | 49 | 27 / 40 |
+| No avanzar a casillas donde el enemigo es más fuerte | 47 % | 97 % | 40 | 28 / 45 |
+| Las propias no cortan el camino | 58 % (53 %) | 94 % | 40 | 26 / 40 |
+| + Suministros acompañan y reparan | 53 % (50 %) | 86 % | 50 | 25 / 39 |
+| + asalto con masa y marcha a la Base | 53 % (51 %) | 85 % (88 %) | 41 | 28 / 31 |
+| **Camino + plan de fuego (la de ahora)** | **60 % (56 %)** | **89 % (90 %)** | **40** | **24 / 43** |
+| Ahora + asalto con masa y marcha a la Base | 51 % (50 %) | 85 % (84 %) | 46 | 51 / 68 (160) |
+
+Nota (`npm run metrics`, 120 partidas 32x32, 40 días): **67,7 → 76,2**. Duración mediana de las que
+terminan 34 → 29 días (+7,5), sin terminar 96 % → 94 %, lados 47/53 → 50/50, precios 11,2 → 12,2.
+
+- El plan de fuego gana a la IA de antes (60 % en 200 partidas, 56 % en 600: 52-60 %) y las partidas
+  que terminan lo hacen antes, pero el atasco casi no se mueve (90 % → 89 % sin terminar).
+- El asalto a la Base (mandar a las que capturan cuando hay masa cerca) es lo único que baja de verdad
+  las partidas sin terminar (92,5 % → 84 % en 160), pero pierde contra la IA de antes en la arena
+  (50 %): las que capturan dejan de quitar edificios y caen en el camino. Queda como siguiente idea:
+  un asalto que no cueste edificios (p. ej. solo con las que sobran, o escoltadas de cerca).
+- Detrás del atasco: con 30 puntos de mando el ejército tiene tope y el dinero se amontona (100.000-
+  270.000 sin gastar el día 40); perder unidades apenas cuesta y la Base (30 puntos, 3 turnos
+  seguidos) se defiende sola con lo que se fabrica al lado.
+
+## Precios de unidades (01-11-2026)
+
+Eficiencia = valor destruido / dinero gastado, y entre paréntesis veces la mediana (banda buena:
+0,67x-1,5x). Cambios en `src/core/content/units.json`, uno cada vez y encima del anterior:
+
+| Unidad | Precio | Eficiencia, 120 partidas | Eficiencia, 240 partidas | Compradas (240) |
+|---|---|---:|---:|---:|
+| Motorizado | 3500 → **2500** | 0,27 (0,29x) → 0,50 (0,53x) | 0,29 (0,32x) → 0,48 (0,59x) | 445 → 501 |
+| Jeep | 5000 → **4000** | 0,40 (0,43x) → 0,51 (0,54x) | 0,37 (0,40x) → 0,49 (0,60x) | 2060 → 2830 |
+| Tanque anfibio | 15000 → **11000** | 0,30 (0,32x) → 0,43 (0,46x) | 0,27 (0,29x) → 0,46 (0,56x) | 204 → 256 |
+| Caza ligero | 12000 → **15000** | 1,61 (1,73x) → 1,19 (1,27x) | 1,66 (1,80x) → 1,15 (1,40x) | 522 → 324 |
+| Soldado (sin tocar) | 1500 | 1,46 (1,57x) → 1,34 (1,43x) | 1,51 (1,64x) → 1,37 (1,67x) | 1322 → 1284 |
+| Bombardero (sin tocar) | 13000 | 1,10 (1,18x) → 1,61 (1,71x) | 1,23 (1,34x) → 1,66 (2,02x) | 413 → 415 |
+
+| Medida | Antes | Después |
+|---|---:|---:|
+| Nota (`npm run metrics`, 120 partidas, 40 días) | 68,5 | 68,5 |
+| — precios | 12,0 (9 de 15 en la banda) | **13,5** (10 de 15) |
+| — duración (mediana de las que terminan) | 1,5 (34 días) | 0 (35 días) |
+| — lados | 25 (51 / 49) | 25 (55 / 45) |
+| Nota con 240 partidas (semillas 1-120, mismo cálculo) | 69,7 | 78,9 |
+| — precios / duración | 11,7 / 3 (33 días) | 13,4 / 10,5 (28 días) |
+| Sin terminar en 40 días (120 / 240) | 93 % / 95,8 % | 95 % / 96,3 % |
+| `npm run balance -- run --games 80` (60 días): sin terminar | 88 % | 93 % |
+| — días (mediana de las que terminan) / ventaja bando 0 / 1 | 39 / 23-35 | 50 / 29-38 |
+| Capturas (120 partidas) | 7292 | 7026 (-3,6 %) |
+
+La línea base guardada (76,2) era de antes de juntar los puntos de control en zonas: con el código
+de esta rama sin tocar precios la nota sale 68,5 (repetible: las semillas son fijas).
+
+- **Motorizado 2500**: el cambio más claro. Se compra más (223 → 362 en la medida de 120 con solo
+  este cambio) y captura más del doble (274 → 628); la expansión total no baja.
+- **Jeep 4000**: sube en eficiencia, pero la IA compra un 40 % más de Jeeps, que pelean poco. Junto
+  con el Motorizado, 2-5 partidas más sin terminar de cada 80-240: poco, pero todas las medidas van
+  hacia ese lado. Con 3500 los precios empeoran (12,5).
+- **Tanque anfibio 11000**: era un Tanque ligero (mismo ataque, más frágil) al doble de precio; sigue
+  por debajo de la banda, el agua solo le sirve en algunos mapas.
+- **Caza ligero 15000**: entra en la banda. Efecto de lado: hay menos cazas y el Bombardero rinde más
+  (1,18x → 1,71x): es el siguiente candidato (la herramienta propone 13000 → 16000), y el Antiaéreo (1,6x, 8000 → 10000).
+- Descartados: **Soldado 2000** (encima del Motorizado: precios 12,3 → 12,0; captura un 2 % menos),
+  **Artillería 9500** (precios +0,1 encima del Jeep), **Jeep 3500** (precios 12,8 → 12,5).
+- La parte de duración se calcula con las 3-10 partidas que terminan en 40 días y salta 0-15 puntos
+  de una medida a otra sin cambiar nada de peso (el mismo cambio dio 82,8 en 120 y 67,3 en 240): las
+  decisiones se han tomado con precios, lados, partidas sin terminar y capturas, y confirmadas con 240.

@@ -1,6 +1,6 @@
 import changelog from '../../CHANGELOG.md?raw';
 import { ui } from '../hud/store';
-import { KEY_BACK, KEY_DOWN, KEY_OK, KEY_UP } from '../menu/nav';
+import type { MenuCommand } from '../controls/menu';
 import { settings } from '../settings';
 import { fetchReleases, type FetchStatus } from './github';
 import { parseMarkdown } from './markdown';
@@ -126,12 +126,14 @@ export function openLink(url: string | null): void {
   if (url) window.open(url, '_blank', 'noopener');
 }
 
-/** Teclado con el panel abierto. Devuelve true si la tecla era para el panel. */
-export function notesKey(e: KeyboardEvent): boolean {
-  if (!ui.get().notes) return false;
-  if (KEY_BACK.includes(e.code) || e.code === 'KeyN') closeNotes();
-  else if (KEY_UP.includes(e.code)) selectNote(selected - 1);
-  else if (KEY_DOWN.includes(e.code)) selectNote(selected + 1);
-  else if (KEY_OK.includes(e.code) && !e.repeat) openLink(notes[selected]?.url ?? null);
-  return true;
+/** El panel esta abierto (entonces se queda con todas las ordenes de menu). */
+export function notesOpen(): boolean {
+  return !!ui.get().notes;
+}
+
+/** Ordenes de menu con el panel abierto (teclas en MENU_BINDINGS.notes, src/controls/menu.ts). */
+export function notesCommand(cmd: MenuCommand): void {
+  if (cmd.kind === 'back' || cmd.kind === 'notes') closeNotes();
+  else if (cmd.kind === 'move' && cmd.dy) selectNote(selected + cmd.dy);
+  else if (cmd.kind === 'ok' && !cmd.repeat) openLink(notes[selected]?.url ?? null);
 }

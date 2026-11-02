@@ -21,6 +21,8 @@ export type GameCommand =
   /** [CAMBIO] Ver u ocultar lo que hara cada unidad con orden al terminar el turno. */
   | { kind: 'intents' }
   | { kind: 'minimap' }
+  /** [CAMBIO] Dar una orden (atacar, capturar, defender) en la casilla del cursor a la unidad o grupo elegido. */
+  | { kind: 'orderHere' }
   /** Siguiente unidad sin mover. */
   | { kind: 'nextUnit' }
   | { kind: 'zoom'; dir: 1 | -1 }

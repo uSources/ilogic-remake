@@ -221,15 +221,23 @@ function useTipToggle(): [boolean, () => void, (e: PointerEvent) => void] {
   return [open, () => setOpen((o) => !o), leave];
 }
 
+/** Retrato del general (o su inicial si no hay dibujo). */
+function GeneralFace({ g, cls = 'gp-face' }: { g: GeneralVM; cls?: string }) {
+  const src = imgUrl(g.face);
+  return (
+    <span class={`${cls}${src ? ' has-img' : ''}`} aria-hidden="true">
+      {src ? <img class="px-icon" src={src} alt="" draggable={false} /> : g.name[0]}
+    </span>
+  );
+}
+
 /** Panel del general: barra de carga en estrellas y un boton por habilidad. */
 function GeneralPanel({ g, mine }: { g: GeneralVM; mine: boolean }) {
   const a = ui.actions;
   return (
     <div class="px general-panel" aria-label={`${t('general')}: ${g.name}`}>
       <div class="gp-head">
-        <span class="gp-face" aria-hidden="true">
-          {g.name[0]}
-        </span>
+        <GeneralFace g={g} />
         <div>
           <div class="gp-name">{g.name}</div>
           <div class="gp-title">{g.title}</div>
@@ -259,7 +267,10 @@ function GeneralPanel({ g, mine }: { g: GeneralVM; mine: boolean }) {
               onMouseDown={noFocus}
               onClick={() => a.useAbility(ab.id)}
             >
-              <span class="gp-ab-name">{ab.name}</span>
+              <span class="gp-ab-name">
+                {imgUrl(ab.icon) && <Icon k={ab.icon} cls="px-icon gp-ab-icon" />}
+                {ab.name}
+              </span>
               <span class="gp-cost">{'★'.repeat(ab.cost)}</span>
             </button>
           ),
@@ -276,8 +287,13 @@ function EnemyGeneral({ g }: { g: GeneralVM }) {
       class="px enemy-general"
       title={`${g.description}\n${g.abilities.map((a) => `${a.name} (${'★'.repeat(a.cost)}): ${a.description}`).join('\n')}`}
     >
-      <span class="eg-label">{t('enemy')}</span>
-      <span class="gp-name">{g.name}</span>
+      <div class="gp-head">
+        <GeneralFace g={g} cls="gp-face eg-face" />
+        <div>
+          <span class="eg-label">{t('enemy')}</span>
+          <span class="gp-name">{g.name}</span>
+        </div>
+      </div>
       <div class="gp-charge">
         {Array.from({ length: g.max }, (_, i) => (
           <i
@@ -714,6 +730,20 @@ function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean 
               <span>+{fmtNum(b.income)}</span>
             </div>
           )}
+          {tile.point && (
+            <div class="cpoint" title={t('controlPointHelp')}>
+              {imgUrl(tile.point.icon) && <Icon k={tile.point.icon} cls="px-icon ico" />}
+              <span
+                style={{
+                  color: tile.point.owner === 'you' ? 'var(--blue)' : tile.point.owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)',
+                }}
+              >
+                {t('controlPoint')} · {tile.point.owner === 'you' ? t('you') : tile.point.owner === 'enemy' ? t('enemy') : t('neutral')}
+                {tile.point.contested ? ` · ${t('contested')}` : ''}
+              </span>
+              <span>+{fmtNum(tile.point.income)}</span>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -870,6 +900,15 @@ function Minimap({ m, view }: { m: MinimapVM; view: UIState['minimapView'] }) {
       ctx.fillStyle = b.owner === null ? '#c9d2e3' : TEAM_COLOR[b.owner];
       ctx.fillRect(b.x * MM + 1, b.y * MM + 1, MM - 2, MM - 2);
     }
+    // [CAMBIO] Puntos de control: borde dorado y dentro el color de su dueño.
+    for (const c of m.points ?? []) {
+      // La zona de 3×3 (MM px por casilla) con borde dorado y el color del dueño dentro.
+      const r = c.r;
+      ctx.fillStyle = '#ffd34d';
+      ctx.fillRect((c.x - r) * MM - 1, (c.y - r) * MM - 1, (2 * r + 1) * MM + 2, (2 * r + 1) * MM + 2);
+      ctx.fillStyle = c.owner === null ? '#c9d2e3' : TEAM_COLOR[c.owner];
+      ctx.fillRect((c.x - r) * MM, (c.y - r) * MM, (2 * r + 1) * MM, (2 * r + 1) * MM);
+    }
     for (const u of m.units) {
       ctx.fillStyle = '#0b1220';
       ctx.fillRect(u.x * MM, u.y * MM, MM, MM);
@@ -1008,6 +1047,8 @@ function RenameSquad({ r }: { r: { id: number; name: string; max: number } }) {
           onInput={(e) => setName((e.target as HTMLInputElement).value)}
           onKeyDown={(e) => {
             e.stopPropagation();
+            // Sin propagacion no llega al guardian de Tab (controls/browserKeys.ts): el foco no sale del cuadro.
+            if (e.key === 'Tab') e.preventDefault();
             if (e.key === 'Escape') ui.actions.renameClose();
           }}
           onKeyUp={(e) => e.stopPropagation()}

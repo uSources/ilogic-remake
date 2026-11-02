@@ -97,6 +97,11 @@ export interface ViewOptions {
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
   goal?: Pos | null;
   vip?: Pos | null;
+  /**
+   * [CAMBIO] Puntos de control: zona teñida del color de su dueño, con borde y banderin en el centro.
+   * `r` = casillas alrededor del centro; `contested` = se ven unidades de los dos bandos dentro.
+   */
+  controlPoints?: { x: number; y: number; owner: 0 | 1 | null; r: number; contested: boolean }[];
   /** Capturas a medias que se ven (barra encima del edificio). */
   captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
 }
@@ -111,6 +116,10 @@ interface UnitSprite {
   cargo: Phaser.GameObjects.Rectangle;
   /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
   stars: Phaser.GameObjects.Graphics;
+  /** [CAMBIO] Icono de la mision en automatico (ui/cmd_<tipo>); si falta, placa con letra en `stars`. */
+  cmd: Phaser.GameObjects.Image;
+  /** [CAMBIO] Marcas dibujadas (ui/mk_*): sin cura, carga y hasta 3 estrellas; si faltan, van en `stars`. */
+  badges: Phaser.GameObjects.Image[];
   /** Lo dibujado en `stars`: rango x 16 + 1 sin cura + 2 con carga + 4 x mision en automatico. */
   rank: number;
   key: string;
@@ -136,6 +145,11 @@ export class MapView {
   private readonly unitLayer: Phaser.GameObjects.Container;
   /** Marcas en el suelo (quemados), bajo edificios y unidades. */
   private readonly decals: Phaser.GameObjects.Container;
+  /** [CAMBIO] Banderines de los puntos de control (dibujo ui/flag_*), encima de la zona y debajo de las unidades. */
+  private readonly flagLayer: Phaser.GameObjects.Container;
+  private readonly flags: Phaser.GameObjects.Image[] = [];
+  /** Banderines de destino de las ordenes de varios turnos (ui/flag_cmd_*). */
+  private readonly orderFlags: Phaser.GameObjects.Image[] = [];
   private readonly overlay: Phaser.GameObjects.Graphics;
   private readonly fx: Phaser.GameObjects.Container;
   /** Marcas de mision, por encima de las unidades. */
@@ -196,12 +210,14 @@ export class MapView {
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
     this.marks = scene.add.graphics();
     this.decals = scene.add.container(0, 0);
+    this.flagLayer = scene.add.container(0, 0);
     this.root.add([
       this.terrain,
       this.decals,
       this.buildingLayer,
       this.fogLayer,
       this.overlay,
+      this.flagLayer,
       this.unitLayer,
       this.marks,
       this.fx,
@@ -483,9 +499,11 @@ export class MapView {
     const stars = this.scene.add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
-    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars]);
+    const cmd = this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
+    const badges = Array.from({ length: 5 }, () => this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
+    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars, cmd, ...badges]);
     this.unitLayer.add(root);
-    return { root, img, front, life, cargo, stars, rank: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, cmd, badges, rank: 0, key, idle: false, team: 0 };
   }
 
   private syncUnits(s: GameState, opts: ViewOptions): void {
@@ -534,7 +552,10 @@ export class MapView {
     const showLife = u.life < 100 && n >= 1 && n <= 9;
     sp.life.setVisible(showLife);
     if (showLife) sp.life.setTexture(lifeKey(n));
-    sp.cargo.setVisible(u.cargo.some((c) => c !== null));
+    // Con las marcas dibujadas, la carga va abajo a la izquierda (junto a la de sin cura) y el
+    // cuadradito turquesa de antes se esconde.
+    const markArt = hasImage(this.scene.textures, 'ui/mk_star');
+    sp.cargo.setVisible(!markArt && u.cargo.some((c) => c !== null));
     const r = rank(u);
     // [CAMBIO] Ha recibido un ataque hoy y no se curara esta noche (regla noHealUnderFire).
     const noHeal = !!s && u.life < 100 && unhealable(s, u);
@@ -546,7 +567,24 @@ export class MapView {
       sp.rank = marks;
       const g = sp.stars;
       g.clear();
-      if (u.command) {
+      const cmdKey = u.command ? `ui/cmd_${u.command.kind}` : null;
+      const cmdArt = !!cmdKey && hasImage(this.scene.textures, cmdKey);
+      sp.cmd.setVisible(cmdArt);
+      // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
+      if (cmdArt) sp.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo && !markArt ? 10 : 0, 0);
+      if (markArt) {
+        // Abajo a la izquierda: sin cura y carga (10x10); arriba a la derecha: una estrella (8x8) por rango.
+        const list: [string, number, number][] = [];
+        if (noHeal) list.push(['ui/mk_noheal', 0, TILE - 10]);
+        if (cargo) list.push(['ui/mk_cargo', noHeal ? 10 : 0, TILE - 10]);
+        for (let i = 0; i < r; i++) list.push(['ui/mk_star', TILE - 8 - i * 7, 0]);
+        sp.badges.forEach((b, i) => {
+          const m = list[i];
+          b.setVisible(!!m);
+          if (m) b.setTexture(ATLAS, m[0]).setPosition(m[1], m[2]);
+        });
+      } else sp.badges.forEach((b) => b.setVisible(false));
+      if (u.command && !cmdArt) {
         // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
         const x = cargo ? 12 : 1,
           y = 1;
@@ -557,7 +595,7 @@ export class MapView {
         g.fillStyle(0xffffff, 1);
         for (const [dx, dy] of MISSION_GLYPH[u.command.kind]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
       }
-      if (noHeal) {
+      if (noHeal && !markArt) {
         // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
         const x = 1,
           y = TILE - 8;
@@ -568,7 +606,7 @@ export class MapView {
         g.fillStyle(0xffffff, 1);
         g.fillRect(x + 2, y + 3, 3, 1);
       }
-      for (let i = 0; i < r; i++) {
+      for (let i = 0; i < (markArt ? 0 : r); i++) {
         const x = TILE - 5 - i * 5,
           y = 1;
         g.fillStyle(PAL.ink, 1);
@@ -610,6 +648,39 @@ export class MapView {
     this.fogImg = null;
   }
 
+  /** Un banderin por punto de control, del color de su dueño (gris si no es de nadie), en la casilla central. */
+  private syncFlags(points: NonNullable<ViewOptions['controlPoints']>): void {
+    while (this.flags.length < points.length) {
+      const img = this.scene.add.image(0, 0, ATLAS, 'ui/flag_i').setOrigin(0.5, 1);
+      this.flagLayer.add(img);
+      this.flags.push(img);
+    }
+    this.flags.forEach((img, i) => {
+      const c = points[i];
+      img.setVisible(!!c);
+      if (!c) return;
+      img.setTexture(ATLAS, `ui/flag_${c.owner === 0 ? 'b' : c.owner === 1 ? 'r' : 'i'}`);
+      // El pie del mastil un poco por encima del borde de abajo de la casilla.
+      img.setPosition(c.x * TILE + TILE / 2, (c.y + 1) * TILE - 4);
+    });
+  }
+
+  /** Banderin del color de la orden en el destino (dorado si solo es "ir alli"); el mastil en el centro. */
+  private syncOrderFlags(orders: NonNullable<ViewOptions['orders']>): void {
+    while (this.orderFlags.length < orders.length) {
+      const img = this.scene.add.image(0, 0, ATLAS, 'ui/flag_cmd_go').setOrigin(0.25, 1);
+      this.flagLayer.add(img);
+      this.orderFlags.push(img);
+    }
+    this.orderFlags.forEach((img, i) => {
+      const o = orders[i];
+      img.setVisible(!!o);
+      if (!o) return;
+      img.setTexture(ATLAS, `ui/flag_cmd_${o.kind ?? 'go'}`);
+      img.setPosition(o.to.x * TILE + TILE / 2, o.to.y * TILE + TILE / 2 + 4);
+    });
+  }
+
   private drawOverlay(opts: ViewOptions): void {
     const g = this.overlay;
     g.clear();
@@ -619,6 +690,42 @@ export class MapView {
     else {
       g.fillStyle(0x05080c, 0.5);
       for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    }
+    // [CAMBIO] Puntos de control: la zona teñida del color de su dueño (gris si no es de nadie), con
+    // borde de puntos, y un banderin en el centro. Disputada: borde de rayas rojas y doradas.
+    const flagArt = hasImage(this.scene.textures, 'ui/flag_b');
+    this.syncFlags(flagArt ? (opts.controlPoints ?? []) : []);
+    for (const c of opts.controlPoints ?? []) {
+      const x0 = Math.max(0, c.x - c.r) * TILE,
+        y0 = Math.max(0, c.y - c.r) * TILE,
+        x1 = Math.min(MAP_W, c.x + c.r + 1) * TILE,
+        y1 = Math.min(MAP_H, c.y + c.r + 1) * TILE;
+      const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : 0xc8c8c8;
+      g.fillStyle(color, 0.16);
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      for (let i = 0; i < Math.max(x1 - x0, y1 - y0); i += 4) {
+        g.fillStyle(c.contested ? (i % 8 ? PAL.gold : PAL.red) : color, 0.95);
+        if (x0 + i < x1) {
+          g.fillRect(x0 + i, y0, 2, 2);
+          g.fillRect(x0 + i, y1 - 2, 2, 2);
+        }
+        if (y0 + i < y1) {
+          g.fillRect(x0, y0 + i, 2, 2);
+          g.fillRect(x1 - 2, y0 + i, 2, 2);
+        }
+      }
+      // El banderin dibujado (ui/flag_*) va en flagLayer; este de pixeles solo si falta en el atlas.
+      if (flagArt) continue;
+      // Mastil y banderin triangular con borde oscuro, arriba a la izquierda de la casilla central.
+      const x = c.x * TILE,
+        y = c.y * TILE;
+      g.fillStyle(PAL.ink, 1);
+      g.fillRect(x + 3, y + 3, 3, 14);
+      g.fillRect(x + 5, y + 3, 9, 8);
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(x + 4, y + 4, 1, 12);
+      g.fillStyle(c.contested ? PAL.gold : color, 1);
+      for (let r = 0; r < 6; r++) g.fillRect(x + 6, y + 4 + r, 7 - Math.abs(r - 2.5) * 2, 1);
     }
     // Zona de amenaza enemiga: relleno rojo suave y borde de 2 px por fuera de la zona.
     const th = opts.threat;
@@ -702,6 +809,8 @@ export class MapView {
       }
     }
     // Ordenes de varios turnos: puntos cada 8 px (primero en horizontal, luego en vertical) y banderita.
+    const orderArt = hasImage(this.scene.textures, 'ui/flag_cmd_go');
+    this.syncOrderFlags(orderArt ? (opts.orders ?? []) : []);
     for (const o of opts.orders ?? []) {
       const ax = o.from.x * TILE + TILE / 2,
         ay = o.from.y * TILE + TILE / 2,
@@ -713,6 +822,7 @@ export class MapView {
         for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
         for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
       }
+      if (orderArt) continue;
       g.fillStyle(PAL.ink, 1);
       g.fillRect(bx - 1, by - 12, 3, 14);
       g.fillRect(bx + 1, by - 13, 10, 8);

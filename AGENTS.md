@@ -39,6 +39,7 @@ npm run fuzz                # cazador de fallos (invariantes con jugadas al azar
 ## Documentacion
 
 - `docs/ARQUITECTURA.md`: capas, flujo de un turno, decisiones.
+- `docs/IDEAS.md`: ideas pendientes y descartadas (con el porque); quitar de ahi lo que se haga.
 - `docs/AGENTES.md`: como comprobar el trabajo (API `window.ilogicDebug`, partida por texto, capturas).
 - `improve/DIARIO.md`: experimentos de mejora (leer antes de proponer cambios de equilibrio o IA).
 - `.claude/agents/*.md`: subagentes (equilibrador, entrenador-ia, cazador-fallos, revisor).

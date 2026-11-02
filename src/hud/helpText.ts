@@ -13,11 +13,12 @@ const HELP = {
       'VET_ES',
       'ATTACK_ES',
       'ARMY_ES',
+      'CONTROL_ES',
       'MOVE_ES',
       'WEATHER_ES',
       'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
       'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
-      'Órdenes: en el menú de una unidad, «Orden: atacar, capturar o defender allí» y luego eliges la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre. Al señalar una unidad con orden ves lo que hará al terminar el turno: una flecha clara con el camino, un marco rojo sobre la unidad a la que va a atacar o uno dorado sobre el edificio que va a capturar («Ver órdenes» o V: las de todas).',
+      'Órdenes: con una unidad (o un grupo) elegida, clic derecho en la casilla de destino (con el dedo, mantenerla pulsada; con el teclado, F) y eliges «Atacar, Capturar o Defender allí». También desde el menú de la unidad: «Orden: …» y luego la casilla. Una bandera marca el destino y la unidad lleva la letra de la orden (A, C o D). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» la quita. Con Mayúsculas + recuadro (o con «Elegir varias», abajo) eliges varias: puedes darles una orden o formar una escuadra (Alfa, Bravo...). Las escuadras salen abajo, junto a «Sin mover»: tócalas para darles órdenes o cambiarles el nombre. Al señalar una unidad con orden ves lo que hará al terminar el turno: una flecha clara con el camino, un marco rojo sobre la unidad a la que va a atacar o uno dorado sobre el edificio que va a capturar («Ver órdenes» o V: las de todas).',
     ],
     colorsTitle: 'Colores del mapa',
     colors: [
@@ -39,13 +40,13 @@ const HELP = {
       ['Mover en grupo', '—', 'Mayúsculas + recuadro, luego clic'],
       [
         'Dar una orden',
-        'Enter dos veces sobre ella, Orden, Enter en el destino',
-        'Clic (o toque) dos veces sobre ella, Orden, el destino; varias: Mayúsculas + recuadro o «Elegir varias»',
+        'Elegirla (Enter), F en el destino',
+        'Elegirla (o varias: Mayúsculas + recuadro o «Elegir varias») y clic derecho en el destino (dedo: mantener pulsado el destino)',
       ],
       ['Mover el cursor', 'Flechas / WASD', 'Pasar por encima / tocar'],
       ['Aceptar', 'Enter / Espacio', 'Clic / segundo toque'],
-      ['Atrás', 'Esc / Retroceso', 'Clic derecho / tocar fuera'],
-      ['Ver alcance de una unidad', 'Enter sobre ella', 'Clic derecho / pulsación larga'],
+      ['Atrás', 'Esc / Retroceso', 'Clic derecho (sin nada elegido) / tocar fuera'],
+      ['Ver alcance de una unidad', 'Enter sobre ella', 'Clic derecho / pulsación larga (sin nada elegido)'],
       ['Siguiente unidad sin mover', 'Tab', 'Bandeja de abajo'],
       ['Amenaza enemiga', 'T', 'Botón de la bandeja'],
       ['Qué harán las unidades con orden', 'V', 'Botón «Ver órdenes» de la bandeja'],
@@ -68,11 +69,12 @@ const HELP = {
       'VET_EN',
       'ATTACK_EN',
       'ARMY_EN',
+      'CONTROL_EN',
       'MOVE_EN',
       'WEATHER_EN',
       'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
       'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
-      'Orders: in a unit’s menu, “Order: attack, capture or hold there”, then pick the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it. Point at a unit with an order to see what it will do when you end the turn: a pale arrow with its path, a red frame on the unit it will attack or a gold one on the building it will capture (“Show orders” or V: all of them).',
+      'Orders: with a unit (or a group) selected, right-click the destination tile (touch: hold it; keyboard: F) and pick “Attack, Capture or Hold there”. Also from the unit’s menu: “Order: …”, then the tile. A flag marks the destination and the unit shows the order’s letter (A, C or D). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” removes it. Shift + box (or “Pick several”, at the bottom) picks several units: give them an order or form a squad (Alfa, Bravo...). Squads appear at the bottom next to “Not moved”: tap one to give it orders or rename it. Point at a unit with an order to see what it will do when you end the turn: a pale arrow with its path, a red frame on the unit it will attack or a gold one on the building it will capture (“Show orders” or V: all of them).',
     ],
     colorsTitle: 'Map colours',
     colors: [
@@ -94,13 +96,13 @@ const HELP = {
       ['Group move', '—', 'Shift + box, then click'],
       [
         'Give an order',
-        'Enter twice on it, Order, Enter on the destination',
-        'Click (or tap) it twice, Order, the destination; several: Shift + box or “Pick several”',
+        'Select it (Enter), F on the destination',
+        'Select it (or several: Shift + box or “Pick several”) and right-click the destination (touch: hold the destination)',
       ],
       ['Move the cursor', 'Arrows / WASD', 'Hover / tap'],
       ['Accept', 'Enter / Space', 'Click / second tap'],
-      ['Back', 'Esc / Backspace', 'Right-click / tap outside'],
-      ['Inspect a unit’s range', 'Enter on it', 'Right-click / long press'],
+      ['Back', 'Esc / Backspace', 'Right-click (nothing selected) / tap outside'],
+      ['Inspect a unit’s range', 'Enter on it', 'Right-click / long press (nothing selected)'],
       ['Next unmoved unit', 'Tab', 'Tray at the bottom'],
       ['Enemy threat', 'T', 'Tray button'],
       ['What units with orders will do', 'V', '“Show orders” tray button'],
@@ -143,6 +145,10 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     ]
       .filter(Boolean)
       .join(' '),
+    CONTROL_ES:
+      RULES.controlPoints > 0
+        ? `Puntos de control: zonas de ${2 * RULES.controlRadius + 1}×${2 * RULES.controlRadius + 1} marcadas con un borde y un banderín (grises si no son de nadie). Al acabar la ronda, si dentro solo hay unidades tuyas, la zona es tuya y te da ${RULES.controlIncome}; si hay de los dos bandos, está disputada y no paga a nadie; vacía, sigue pagando a quien la tenía. Pelea por ellas.`
+        : '',
     ARMY_ES: [
       RULES.commandPoints !== null
         ? `Puntos de mando: tu ejército no puede pasar de ${RULES.commandPoints}. La infantería ocupa 1 y los vehículos y aviones grandes hasta 5 (lo pone al comprar).`
@@ -180,6 +186,10 @@ function ruleLines(lang: 'es' | 'en'): Record<string, string> {
     ]
       .filter(Boolean)
       .join(' '),
+    CONTROL_EN:
+      RULES.controlPoints > 0
+        ? `Control points: ${2 * RULES.controlRadius + 1}×${2 * RULES.controlRadius + 1} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${RULES.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
+        : '',
     ARMY_EN: [
       RULES.commandPoints !== null
         ? `Command points: your army can't go over ${RULES.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`

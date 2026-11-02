@@ -25,6 +25,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyT'], command: { kind: 'threat' } },
   { codes: ['KeyV'], command: { kind: 'intents' } },
   { codes: ['KeyM'], command: { kind: 'minimap' } },
+  { codes: ['KeyF'], command: { kind: 'orderHere' } },
   { codes: ['Tab'], command: { kind: 'nextUnit' } },
   { codes: ['Equal', 'NumpadAdd'], command: { kind: 'zoom', dir: 1 } },
   { codes: ['Minus', 'NumpadSubtract'], command: { kind: 'zoom', dir: -1 } },

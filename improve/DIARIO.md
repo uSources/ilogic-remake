@@ -13,6 +13,57 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-11-01 · equilibrio (precios de unidades) · ACEPTADO
+
+Cambio: `src/core/content/units.json`: Motorizado 3500 → 2500, Jeep 5000 → 4000, Tanque anfibio
+15000 → 11000, Caza ligero 12000 → 15000 (uno cada vez, cada uno encima del anterior).
+Hipotesis: las tres que rinden menos de la mitad de la mediana (0,29x-0,43x) y el Caza ligero (1,73x)
+entran o se acercan a la banda solo con el precio, sin tocar su papel (Jeep explorador, Motorizado
+captura rapida).
+Resultado: la linea base guardada (76,2) era vieja: con esta rama sin tocar precios sale **68,5**.
+Nota 120 partidas **68,5 → 68,5** (precios 12,0 → 13,5, duracion 1,5 → 0, lo demas igual); con 240
+partidas 69,7 → 78,9 (precios 11,7 → 13,4, duracion 3 → 10,5). Eficiencia (240): Motorizado 0,32x →
+0,59x, Jeep 0,40x → 0,60x, Tanque anfibio 0,29x → 0,56x, Caza ligero 1,80x → 1,40x. Sin terminar
+(40 dias) 95,8 % → 96,3 % en 240; balance 80 (60 dias) 88 % → 93 %. Capturas -3,6 %.
+Descartados: Soldado 1500 → 2000 (encima del Motorizado: precios 12,3 → 12,0, -2 % capturas),
+Artilleria 8000 → 9500 (precios +0,1), Jeep 3500 (precios 12,8 → 12,5).
+Conclusion: la parte de duracion se calcula con 3-10 partidas y salta 0-15 puntos sin cambios de peso
+(Jeep 4000 dio +8 en 120 y -7 en 240): decidir con precios, lados, sin terminar y capturas, y confirmar
+con 240 (pu-m: el mismo calculo que metrics con `--set`). Jeep mas barato = la IA compra un 40 % mas de
+Jeeps y las partidas se cierran algo menos. Siguientes: Bombardero (1,71x tras subir el Caza ligero;
+propuesta 13000 → 16000) y Antiaereo (1,6x; 8000 → 10000).
+
+## 2026-11-01 · IA (juego en grupo) · ACEPTADO
+
+Cambio: `src/core/ai.ts`, solo en `aiTurn` (bandera `GROUP`; `commandTurn` igual que antes):
+(1) `planFire`: plan de fuego concentrado del turno (enemigos visibles que se destruyen sumando el dano
+esperado de 2 o mas unidades, flanqueo incluido; las del plan juegan primero, las de distancia antes;
+peso nuevo `AI.FOCUSFIRE` 100 por cada 1000 de precio del objetivo); (2) `occupancyWithout`: con
+`passAllies`, las propias (y las enemigas que no se ven) no cortan el camino al medir distancias.
+Hipotesis: la IA llegaba de una en una; ademas el 13 % de los turnos de unidad eran paseos al azar en
+casa porque una columna propia tapaba el unico camino (puente, salida de la Fabrica).
+Resultado: arena (referencia = IA de la rama antes del cambio; la guardada del 29-10 ya no compilaba)
+**60 % (95 %: 53-67 %)** en 200, 56 % (52-60 %) en 600. Balance 80 partidas: sin terminar 90 % → 89 %
+(160: 92,5 % → 90 %), mediana 46 → 40 dias, ventaja 23/44 → 24/43. Nota **67,7 → 76,2** (duracion
+34 → 29 dias, +7,5; precios +1,0; lados 25 → 25).
+Descartados (arena 200 / sin terminar en 80):
+- Preferir objetivos tocados (`FOCUSFIRE` sobre la vida que falta) + orden: 46 % / 92 %.
+- Solo orden de juego (distancia primero): 48 % / 94 %.
+- Las que no capturan marchan a la Base enemiga en vez de perseguir: 47 % / 95 %.
+- Asalto: las 2 que capturan mas cerca van derechas a la Base: 33 % / 86 % (termina mas, pierde edificios).
+- Asalto solo con masa (1,5x el valor enemigo visible a 8 de la Base): 48 % / 92 %.
+- No avanzar a casillas donde el enemigo visible trae mas que lo propio a 3: 47 % / 97 % (demasiado pasiva).
+- Camino libre + Suministros que acompanan y reparan (la IA nunca usaba `supply`): 53 % (600: 50 %) / 86 %.
+- Camino libre + plan + asalto con masa y marcha a la Base: 51 % (600: 50 %) / 84 % en 160. Con ratio 3: igual
+  (50 % / 84 %). Sin la marcha ni el esperar: 48 % (600) / 87,5 % (160).
+Conclusion: la arena entre IAs parecidas es muy ruidosa (±7 % en 200; el mismo cambio dio 58 % y 53 %
+en 200 y 600): confirmar con 600 antes de fiarse. Todo lo que manda a las que capturan a la Base baja
+de verdad el atasco (84-86 %) pero pierde en la arena (que decide casi todo por edificios y dinero).
+Detras del atasco: con puntos de mando el dinero se amontona (100.000-270.000 el dia 40) y perder
+unidades sale gratis; la Base se defiende sola. Siguiente idea: asalto escoltado de cerca o solo con
+las unidades que sobran, sin dejar de capturar; y que la IA gaste el dinero en calidad (probado de
+pasada: pesos de compra cost^2 en vez de sqrt, 45 % en la arena, no sirve asi). Tabla en docs/BALANCE.md.
+
 ## 2026-10-30 · equilibrio (Tanque e infanteria) + compras de la IA · ACEPTADO (PR del usuario)
 
 Cambio: (1) `src/core/ai.ts` `produce`: Fabrica y Aeropuerto en orden al azar (antes el Aeropuerto siempre

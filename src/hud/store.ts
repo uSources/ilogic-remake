@@ -148,6 +148,8 @@ export interface EconomyVM {
 /** Habilidad del general en el panel. */
 export interface GeneralAbilityVM {
   id: string;
+  /** Clave del icono en el atlas (ui/ab_<id>); puede no existir. */
+  icon: string;
   name: string;
   description: string;
   /** Estrellas que gasta. */
@@ -160,6 +162,8 @@ export interface GeneralAbilityVM {
 
 /** Panel del general del jugador (null = juega sin general). */
 export interface GeneralVM {
+  /** Clave del retrato en el atlas (ui/gen_<b|r>_<id>), con el color de su bando; puede no existir. */
+  face: string;
   name: string;
   title: string;
   description: string;
@@ -215,6 +219,8 @@ export interface TileVM {
     capture?: { left: number; total: number; team: 0 | 1 };
   };
   unit?: UnitVM;
+  /** [CAMBIO] Punto de control en la casilla: de quien es y lo que da por ronda. */
+  point?: { owner: 'you' | 'enemy' | 'neutral'; income: number; contested: boolean; icon: string };
 }
 
 /** [CAMBIO] Escuadra del jugador en la bandeja: nombre, unidades y orden que llevan (si todas la misma). */
@@ -433,6 +439,8 @@ export interface MinimapVM {
   fog: boolean[][];
   buildings: { x: number; y: number; owner: 0 | 1 | null }[];
   units: { x: number; y: number; team: 0 | 1 }[];
+  /** [CAMBIO] Puntos de control (rombo dorado con el color de su dueño). */
+  points?: { x: number; y: number; owner: 0 | 1 | null; r: number }[];
 }
 
 export interface UIActions {
