@@ -25,6 +25,8 @@ export type GameCommand =
   | { kind: 'orderHere' }
   /** Siguiente unidad sin mover. */
   | { kind: 'nextUnit' }
+  /** [CAMBIO] Seleccionar la escuadra n (1..9, en el orden de la bandeja) y abrir sus ordenes. */
+  | { kind: 'squad'; n: number }
   | { kind: 'zoom'; dir: 1 | -1 }
   | { kind: 'help' }
   | { kind: 'options' };

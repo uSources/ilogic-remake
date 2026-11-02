@@ -26,6 +26,8 @@ export interface Settings {
   reduceMotion: boolean;
   /** Empezar cada partida con la zona de amenaza enemiga a la vista. */
   alwaysThreat: boolean;
+  /** [CAMBIO] Al terminar el turno con unidades sin mover, el boton pide confirmarlo. */
+  warnIdle: boolean;
   /** Fondo del menu principal: partida en directo o la imagen original de 2013. */
   menuBg: 'live' | 'classic';
   /** Dibujo del terreno: el nuevo (piezas con orillas) o el de 2013. */
@@ -45,6 +47,7 @@ const DEFAULTS: Settings = {
   uiScale: 1,
   reduceMotion: false,
   alwaysThreat: false,
+  warnIdle: true,
   menuBg: 'live',
   terrainArt: 'new',
 };
@@ -67,6 +70,7 @@ function load(): Settings {
       uiScale: UI_SCALES.includes(parsed.uiScale as number) ? (parsed.uiScale as number) : 1,
       reduceMotion: !!parsed.reduceMotion,
       alwaysThreat: !!parsed.alwaysThreat,
+      warnIdle: parsed.warnIdle !== false,
       menuBg: parsed.menuBg === 'classic' ? 'classic' : 'live',
       terrainArt: parsed.terrainArt === 'classic' ? 'classic' : 'new',
     };
@@ -148,6 +152,11 @@ const TEXTS = {
     commandShort: 'mando',
     hintMap: 'Enter: seleccionar · Esc: menú · Tab: siguiente · T: amenaza · M: minimapa · H: ayuda',
     confirmEndTurn: 'Quedan unidades sin mover. Vuelve a pulsar para terminar el turno',
+    endTurnConfirm: '¿Terminar?',
+    endTurnIdle: 'sin mover',
+    optWarnIdle: 'Avisar de unidades sin mover',
+    squadsNone: 'Escuadra: Ctrl + clic o recuadro, y «Órdenes»',
+    squadKeyHint: 'Tecla',
     badSave: 'La partida guardada estaba dañada: empieza una nueva',
     perDay: 'por día',
     buildingsN: 'edificios',
@@ -474,6 +483,11 @@ const TEXTS = {
     commandShort: 'command',
     hintMap: 'Enter: select · Esc: menu · Tab: next · T: threat · M: minimap · H: help',
     confirmEndTurn: 'Some units have not moved. Press again to end the turn',
+    endTurnConfirm: 'End anyway?',
+    endTurnIdle: 'not moved',
+    optWarnIdle: 'Warn about units not moved',
+    squadsNone: 'Squad: Ctrl + click or box, then “Orders”',
+    squadKeyHint: 'Key',
     badSave: 'The saved game was damaged: starting a new one',
     perDay: 'per day',
     buildingsN: 'buildings',

@@ -27,6 +27,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyM'], command: { kind: 'minimap' } },
   { codes: ['KeyF'], command: { kind: 'orderHere' } },
   { codes: ['Tab'], command: { kind: 'nextUnit' } },
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'squad', n } })),
   { codes: ['Equal', 'NumpadAdd'], command: { kind: 'zoom', dir: 1 } },
   { codes: ['Minus', 'NumpadSubtract'], command: { kind: 'zoom', dir: -1 } },
   { codes: ['KeyH'], command: { kind: 'help' } },

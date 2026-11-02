@@ -47,10 +47,13 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 | Aceptar | Enter / Espacio | Clic |
 | Atras / cancelar | Esc / Retroceso | Clic derecho (o clic fuera del menu) |
 | Menu de partida | Esc en el mapa | Boton ☰ arriba a la derecha |
-| Fin del turno | E | Boton "Fin del turno" |
+| Fin del turno | E | Boton "Fin del turno" (dice cuántas unidades quedan sin mover; con alguna, hay que pulsar dos veces) |
 | Mover el mapa | (sigue al cursor) | Arrastrar, o raton en el borde de la pantalla |
 | Zoom | + / - | Rueda |
 | Siguiente unidad sin mover | Tab | Clic en la bandeja de abajo a la derecha |
+| Elegir varias | — | Ctrl + clic en cada una, o Ctrl (o Mayúsculas) + recuadro; con el dedo, "Elegir varias" |
+| Formar escuadra | — | Con varias elegidas, "Órdenes" en la bandeja y "Formar escuadra" |
+| Elegir una escuadra | 1 … 9 | Su botón en la bandeja |
 | Zona de amenaza enemiga | T | Boton "Ver amenaza enemiga" |
 | Alcance de una unidad | Enter sobre ella | Clic derecho (movil: mantener pulsado) |
 | Minimapa | M | Clic o arrastrar sobre el minimapa |
@@ -91,7 +94,7 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
   Siguiente misión o Reintentar.
 - **Menú con tarjetas:** Continuar (con miniatura de la partida guardada), Nueva partida (Rápida o
   Personalizar) y Campaña, sobre una partida IA contra IA en directo (o la imagen original).
-  **Opciones** (también con la tecla O en partida): sonido, autoguardado, velocidades, tamaño de la
+  **Opciones** (también con la tecla O en partida): sonido, autoguardado, avisar de unidades sin mover, velocidades, tamaño de la
   interfaz (90/100/125 %), reducir el movimiento, ver siempre la amenaza e idioma.
 - **Nueva partida** enseña el mapa que va a tocar ("Otro mapa" o R para sortear otro) y tiene los
   ajustes Normal, Rápida (20×20, 20 días) y Personalizada, que deja elegir tamaño del mapa (20, 32 o 40),
@@ -109,7 +112,7 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
   ataca desde la casilla por la que llegabas; sobre un edificio, captura; sobre una unidad igual, se
   unen; sobre un transporte, sube; en una casilla vacía sin nada más que hacer, espera. Fuera del
   alcance vuelve a su sitio; muy lejos, queda una orden de "ir hacia allí" que la unidad cumple sola
-  turno a turno. Mayúsculas + recuadro elige varias para moverlas en grupo. Ctrl+Z deshace el último
+  turno a turno. Ctrl + clic (o Ctrl + recuadro, como en Windows) elige varias para moverlas en grupo. Ctrl+Z deshace el último
   movimiento si no ha descubierto nada.
 - **Reglas nuevas de movimiento:** el terreno cuesta (bosque, arena y nieve frenan a los vehículos;
   acantilados y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con

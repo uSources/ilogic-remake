@@ -238,6 +238,7 @@ function pointerIn(p: Phaser.Input.Pointer, right: boolean): PointerIn {
     down: p.isDown,
     right,
     shift: !!(p.event as MouseEvent | undefined)?.shiftKey,
+    ctrl: !!(p.event as MouseEvent | undefined)?.ctrlKey || !!(p.event as MouseEvent | undefined)?.metaKey,
   };
 }
 
@@ -573,7 +574,7 @@ export class GameScene extends Phaser.Scene {
       multiSelect: () => {
         if (!ready() || this.phase !== 'map') return;
         // Con unidades elegidas, el boton abre sus ordenes; sin ninguna, entra o sale del modo.
-        if (this.multi && this.group.size) return this.openGroupMenu();
+        if (this.group.size) return this.openGroupMenu();
         this.multi = !this.multi;
         if (!this.multi) this.group.clear();
         else showToast(t('multiHint'));
@@ -859,7 +860,8 @@ export class GameScene extends Phaser.Scene {
       menu: MENU_PHASES.includes(this.phase) ? this.buildMenu() : null,
       idle,
       squads: squadsVM(this.s),
-      multi: this.multi ? this.group.size : null,
+      multi: this.multi || this.group.size ? this.group.size : null,
+      endTurn: { pending: this.pendingUnits().length, armed: this.endArmed() },
       anyCommand: this.s.units.some((u) => u.team === 0 && u.command),
       hint: busy
         ? this.enemyPlaying
@@ -1194,6 +1196,12 @@ export class GameScene extends Phaser.Scene {
       case 'nextUnit':
         if (this.phase === 'map') this.nextIdle();
         return;
+      case 'squad': {
+        // [CAMBIO] 1-9: la escuadra de ese numero en la bandeja.
+        const q = squadsVM(this.s)[cmd.n - 1];
+        if (q) ui.actions.selectSquad(q.id);
+        return;
+      }
       case 'orderHere':
         // [CAMBIO] F: menu de ordenes en la casilla del cursor, con la unidad o el grupo elegido.
         if (!this.openOrderMenu(this.view.cursor) && (this.phase === 'map' || this.phase === 'move')) showToast(t('orderHereNone'));
@@ -1291,19 +1299,24 @@ export class GameScene extends Phaser.Scene {
       cancelCarry: () => this.cancelCarry(),
       boxUpdate: (box) => this.view.setBox(box),
       boxEnd: (box) => {
-        // Mayusculas + arrastrar en el mapa: elegir varias unidades (mover en grupo).
-        const r = this.view.tilesInBox(box);
+        // [CAMBIO] Ctrl o Mayusculas + clic/arrastrar (como en Windows): un clic añade o quita la unidad
+        // de debajo; un recuadro añade las suyas. El grupo se queda elegido en el mapa: clic en un
+        // destino lo mueve, clic derecho da ordenes y «Órdenes» (bandeja) forma escuadra.
         this.view.setBox(null);
-        this.group = new Set(
-          this.s.units
-            .filter(
-              (u) =>
-                u.team === 0 && u.active && u.canMove && u.carrier === null && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1,
-            )
-            .map((u) => u.uid),
-        );
-        // [CAMBIO] Ayudante: con varias elegidas sale el menu de grupo (mover o darles una mision).
-        if (this.group.size) return this.openGroupMenu();
+        if (this.phase !== 'map') return this.refresh();
+        const pickable = (u: Unit) => u.team === 0 && u.active && u.canMove && u.carrier === null;
+        if (Math.abs(box.x1 - box.x0) < 6 && Math.abs(box.y1 - box.y0) < 6) {
+          const tile = this.view.tileAtScreen(box.x1, box.y1);
+          const u = tile ? unitAt(this.s, tile.x, tile.y) : undefined;
+          if (u && pickable(u)) {
+            if (this.group.has(u.uid)) this.group.delete(u.uid);
+            else this.group.add(u.uid);
+            this.moveCursorTo(tile!, false);
+          }
+          return this.refresh();
+        }
+        const r = this.view.tilesInBox(box);
+        for (const u of this.s.units) if (pickable(u) && u.x >= r.x0 && u.x <= r.x1 && u.y >= r.y0 && u.y <= r.y1) this.group.add(u.uid);
         this.refresh();
       },
       pan: (dx, dy) => {
@@ -1506,6 +1519,15 @@ export class GameScene extends Phaser.Scene {
     const c = this.view.cursor;
     switch (this.phase) {
       case 'map':
+        // [CAMBIO] "Elegir varias" con el teclado (G): Enter sobre una unidad propia la añade o la quita.
+        if (this.multi) {
+          const own = unitAt(this.s, c.x, c.y);
+          if (own && own.team === 0 && own.carrier === null) {
+            if (this.group.has(own.uid)) this.group.delete(own.uid);
+            else this.group.add(own.uid);
+            return this.refresh();
+          }
+        }
         return this.acceptMap(c);
       case 'groupMenu':
         return this.acceptGroupMenu();
@@ -2720,14 +2742,32 @@ export class GameScene extends Phaser.Scene {
     return this.s.units.filter((u) => u.team === 0 && u.active && u.canMove && u.carrier === null && canCapture(this.s, u));
   }
 
+  /** Unidades sin mover que no hacen nada solas al terminar (las que capturan solas no cuentan). */
+  private pendingUnits(): Unit[] {
+    const auto = new Set(this.autoCapturers().map((u) => u.uid));
+    return this.idleUnits().filter((u) => !auto.has(u.uid));
+  }
+
+  /** El boton de fin de turno espera la confirmacion (primer clic hace menos de CONFIRM_MS). */
+  private endArmed(): boolean {
+    return this.time.now - this.endArmedAt <= CONFIRM_MS;
+  }
+
+  /**
+   * [CAMBIO] Fin de turno (boton o tecla E). Con unidades sin mover y la opcion "Avisar de unidades
+   * sin mover", el primer clic no termina: el propio boton pasa a "¿Terminar?" y hay que pulsar otra
+   * vez antes de CONFIRM_MS. Sin la opcion, termina directamente.
+   */
   private requestEndTurn(): void {
     if (this.lab) return;
-    const auto = new Set(this.autoCapturers().map((u) => u.uid));
-    const idle = this.idleUnits().some((u) => !auto.has(u.uid));
-    if (idle && this.time.now - this.endArmedAt > CONFIRM_MS) {
+    if (settings.warnIdle && this.pendingUnits().length > 0 && !this.endArmed()) {
       this.endArmedAt = this.time.now;
-      return showToast(t('confirmEndTurn'));
+      this.refreshHud();
+      // Al caducar, el boton vuelve a su texto normal.
+      this.time.delayedCall(CONFIRM_MS + 50, () => this.refreshHud());
+      return;
     }
+    this.endArmedAt = -1e9;
     void this.enemyTurn();
   }
 

@@ -141,6 +141,8 @@ export interface PointerIn {
   right: boolean;
   /** Mayusculas pulsadas. */
   shift: boolean;
+  /** [CAMBIO] Ctrl (o Cmd en Mac) pulsado: elegir varias, como en Windows. */
+  ctrl?: boolean;
 }
 
 /** Algo programado para despues (temporizador de la escena), que se puede cancelar. */
@@ -308,8 +310,9 @@ export class PointerGestures {
     if (t.ended()) return;
     if (t.busy()) return t.fastForward();
     if (p.right) return t.rightPress(p.x, p.y);
-    // Mayusculas + arrastrar: recuadro para elegir varias unidades.
-    if (!p.touch && p.shift && t.canBox()) {
+    // Mayusculas o Ctrl + arrastrar: recuadro para elegir varias unidades (un clic sin arrastrar
+    // añade o quita la unidad de debajo, como Ctrl + clic en Windows).
+    if (!p.touch && (p.shift || p.ctrl) && t.canBox()) {
       this.box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
       this.drag = null;
       return;

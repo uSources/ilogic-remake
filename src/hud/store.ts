@@ -379,6 +379,11 @@ export interface UIState {
   squads: SquadVM[];
   /** [CAMBIO] Modo "Elegir varias": cuantas hay elegidas (null = modo apagado). */
   multi: number | null;
+  /**
+   * [CAMBIO] Boton de fin de turno: unidades que quedan sin mover (las que capturan solas no cuentan)
+   * y si esta esperando la confirmacion (primer clic con unidades sin mover y el aviso activado).
+   */
+  endTurn: { pending: number; armed: boolean };
   rename: { id: number; name: string; max: number } | null;
   threat: boolean;
   /** [CAMBIO] Se ven las intenciones de todas las unidades con orden (tecla V) y si hay alguna con orden. */
@@ -540,6 +545,7 @@ const initial: UIState = {
   idle: [],
   squads: [],
   multi: null,
+  endTurn: { pending: 0, armed: false },
   rename: null,
   threat: false,
   intents: false,
