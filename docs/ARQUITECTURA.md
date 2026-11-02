@@ -21,10 +21,10 @@ flowchart TB
   subgraph ui["src/ui — dibujo y datos para la interfaz"]
     mapView["mapView.ts<br/>mapa, sprites, capas"]
     fx["fx.ts<br/>efectos pixel"]
-    hudModels["hudModels.ts<br/>fichas, prevision, minimapa"]
+    hudModels["hudModels.ts → models/*<br/>fichas, prevision, minimapa"]
   end
   subgraph hud["src/hud — interfaz HTML (Preact)"]
-    store["store.ts<br/>estado de la interfaz"] --> comps["Hud.tsx / Menus.tsx / PatchNotes.tsx"]
+    store["store.ts<br/>estado de la interfaz"] --> comps["Hud.tsx → game/ · menus/ · overlays/"]
   end
   game --> rules & ai & orders
   game --> mapView & fx & hudModels
@@ -47,6 +47,39 @@ alias: `import { UNIT } from '@core/data'` (definido en `tsconfig.json` "paths" 
 Es el paso previo a un monorepo: si algun dia hace falta (un servidor para partidas online que use el
 nucleo, una herramienta con dependencias propias, publicar el nucleo), `src/core` pasa a ser el paquete
 `@ilogic/core` y basta con cambiar el alias. Hasta entonces, un solo paquete es mas simple.
+
+### Interfaz HTML (src/hud)
+
+Las escenas publican con `ui.set(...)` lo que hay que enseñar y los componentes de Preact solo lo
+pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en su sitio:
+
+| Que | Donde |
+|---|---|
+| El store (`ui`, `showToast`, `resetActions`...) | `store.ts` (reexporta todos los tipos: se importan de ahi) |
+| Forma del estado y valor al arrancar | `state.ts` (`UIState`, `initialState`) |
+| Lo que piden los botones, agrupado por pantalla | `actions.ts` (`UIActions`; su valor sin escena, en `store.ts`) |
+| Tipo de lo que enseña cada panel | `vm/<panel>.ts` (`TileVM` en `vm/tile.ts`...) |
+| Calculo de esos datos a partir de la partida (puro, con test) | `src/ui/models/<panel>.ts`, reexportado en `src/ui/hudModels.ts` |
+| Raiz: pantalla en curso, dialogos y avisos | `Hud.tsx` |
+| Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` |
+| Pantallas del menu, pausa y final | `menus/*.tsx` |
+| Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
+| Piezas compartidas | `common/`: `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
+| Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
+
+- **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,
+  la funcion que lo calcula en `ui/models/` (con test), el componente en `game/` (o `menus/`,
+  `overlays/`), su sitio en `GameHud.tsx` (o `Hud.tsx`), sus acciones en `actions.ts` con su valor
+  por defecto en `DEFAULT_ACTIONS`, y su hoja al final de `hud.css`.
+- **Botones**: siempre `Button` (o `Btn` en los menus), que no se queda con el foco: Enter y las
+  flechas son del juego (lo lleva la escena con el teclado). Solo el cuadro del nombre de escuadra
+  usa botones normales, porque ahi se escribe.
+- **Estilos**: cada hoja de `styles/` es un trozo seguido de la hoja de antes y `hud.css` las importa
+  en ese orden, que es el de la cascada. Por eso hay alguna mezclada (`base/narrow.css`,
+  `legacy.css`): mover reglas de sitio puede cambiar quien gana. Lo nuevo va al final; los colores son
+  variables de `styles/base/base.css` (los mismos que `ui/palette.ts`).
+- Los textos salen de `t('clave')` al pintar: por eso los componentes no se memorizan (`memo`), un
+  cambio de idioma o de escala tiene que repintarlos aunque sus datos no cambien.
 
 ## Un turno, paso a paso
 
@@ -133,7 +166,7 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   raton (`cursorFor`, dibujado en `ui/cursors.ts`). La escena le pasa lo que solo ella sabe (que
   significa soltar la unidad elegida en esa casilla) y cumple la accion (`runAction`). Una accion
   nueva es una entrada en `ACTIONS` y un caso en `runAction`: los mandos no cambian.
-- **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`Hud.tsx`, para el
+- **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`hud/overlays/RenameSquad.tsx`, para el
   teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
   capturas de teclas de Phaser (`addCapture`) y saltar el logo con cualquier tecla o clic (`LogoScene`;
   no es una orden, es "lo que sea").
@@ -163,7 +196,8 @@ mando puede jugar una partida entera sin raton.
 | Cambiar terreno, reglas, pesos de la IA | `src/core/content/terrain.json`, `rules.json`, `ai.json` (+ skill `equilibrar`) |
 | Cambiar una regla | `src/core/rules.ts` (+ test en `tests/`) |
 | Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
-| Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
+| Cambiar lo que enseña una ficha | `src/ui/models/tile.ts` y `src/hud/game/Cards.tsx` (ver "Interfaz HTML") |
+| Añadir un panel o una pantalla a la interfaz | `src/hud/` (ver "Interfaz HTML") |
 | Cambiar el dibujo del mapa | `src/ui/mapView.ts`, `src/ui/terrainArt.ts` |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
 | Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `GameScene.pointerTarget()`) |

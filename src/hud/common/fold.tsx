@@ -1,6 +1,6 @@
 import { useState } from 'preact/compat';
 
-/** Pantallas donde se pueden plegar paneles (las mismas que en styles/fold.css, "Plegar"). */
+/** Pantallas donde se pueden plegar paneles (las mismas que en styles/game/fold.css). */
 const FOLD_SCREEN = '(max-width: 720px), (max-height: 500px)';
 const folded = new Set<string>();
 
