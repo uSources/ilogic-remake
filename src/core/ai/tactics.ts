@@ -6,7 +6,7 @@
 import { AI, HQ, UNIT, Movement } from '../data';
 import { diamond, manhattan, samePos } from '../geom';
 import { canCapture, capture, captureEvent } from '../rules/capture';
-import { attackEvent, inAttackRange } from '../rules/combat';
+import { attackEvent, canDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { teamsInZone } from '../rules/control';
 import { groundDistance, moveEvent, reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
@@ -14,8 +14,8 @@ import { merge, mergeTargets } from '../rules/transport';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
 import type { GameEvent, GameState, Pos, Rng, Unit } from '../types';
-import { bestMoveToward, doMove, occupancyWithout, repairsHere, type AiCtx } from './context';
-import { attackScore, attackTargetsPossible } from './scoring';
+import { bestMoveToward, doMove, occupancyWithout, repairsHere, strikeReach, visibleFoes, type AiCtx } from './context';
+import { attackScore } from './scoring';
 
 export function* retreat(s: GameState, ctx: AiCtx, u: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   // 1) Unirse a una unidad igual si la suma de vidas no pasa de 130.
@@ -77,20 +77,13 @@ export function* tryAttack(
   const { zone, chase: follow = true, stay = false, from: allowed } = opts;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!UNIT.canfight[u.type] || !u.canFire) return false;
-  const vis = visibility(s, ctx.me);
-  const reach = UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
-  const enemies = s.units.filter(
-    (t) => t.team !== ctx.me && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(u, t) <= reach && (!zone || zone(t)),
-  );
+  const reach = strikeReach(u);
+  const enemies = visibleFoes(s, ctx.me).filter((t) => manhattan(u, t) <= reach && (!zone || zone(t)));
   if (!enemies.length) return false;
 
   // Opciones: (casilla desde la que dispara, objetivo). Las unidades a distancia no pueden mover y disparar.
   let best: { from: Pos; target: Unit; score: number } | null = null;
-  const ranged = UNIT.minalc[u.type]! > 0;
-  const froms: Pos[] = [{ x: u.x, y: u.y }];
-  if (!ranged && !stay) {
-    froms.push(...reachableTiles(range).filter((p) => !allowed || allowed(p)));
-  }
+  const froms = fireOrigins(u, stay ? null : range, allowed);
   for (const t of enemies) {
     for (const from of froms) {
       if (!inAttackRange(u.type, from, t)) continue;
@@ -109,7 +102,7 @@ export function* tryAttack(
   }
   // Nadie a tiro este turno: acercarse al enemigo visible mas cercano al que pueda danar.
   if (!follow) return false;
-  const chase = enemies.filter((t) => attackTargetsPossible(u, t)).sort((a, b) => manhattan(u, a) - manhattan(u, b))[0];
+  const chase = enemies.filter((t) => canDamage(u, t)).sort((a, b) => manhattan(u, a) - manhattan(u, b))[0];
   if (!chase) return false;
   yield* doMove(s, u, bestMoveToward(s, ctx, u, chase, range), range);
   wait(u);
@@ -173,7 +166,7 @@ export function* advance(s: GameState, ctx: AiCtx, u: Unit, range: MoveRange): G
   const goals: Pos[] = UNIT.cancapt[u.type]
     ? [...s.buildings.filter((b) => b.owner !== ctx.me), ...points]
     : [
-        ...s.units.filter((o) => o.team !== ctx.me && o.carrier === null && vis[o.x]![o.y] && attackTargetsPossible(u, o)),
+        ...s.units.filter((o) => o.team !== ctx.me && o.carrier === null && vis[o.x]![o.y] && canDamage(u, o)),
         ...s.buildings.filter((b) => b.owner !== ctx.me && b.owner !== null && b.type === HQ),
         ...points,
       ];

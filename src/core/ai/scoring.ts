@@ -1,7 +1,7 @@
 /**
  * Cuanto vale para la IA cada cosa que puede hacer: de momento, cada ataque posible.
  */
-import { AI, HQ, POWER, RULES, UNIT } from '../data';
+import { AI, HQ, RULES, UNIT } from '../data';
 import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
@@ -28,9 +28,4 @@ export function attackScore(s: GameState, ctx: AiCtx, u: Unit, t: Unit, from: Po
   if (b && b.owner === ctx.me && captureProgress(s, b))
     score += (b.type === HQ ? AI.STOPCAPTUREHQ : AI.STOPCAPTURE) * Math.max(0.5, dmg / AI.BONUSDAMAGE);
   return score;
-}
-
-/** El atacante puede hacer dano a ese tipo de unidad. */
-export function attackTargetsPossible(u: Unit, t: Unit): boolean {
-  return UNIT.canfight[u.type]! && POWER[u.type]![t.type]! > 0;
 }

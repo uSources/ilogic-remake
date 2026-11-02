@@ -3,18 +3,34 @@
  * y el ataque en si (con su evento).
  */
 import { BUILDING, MAX_FUNDS, POWER, RULES, TERRAIN, UNIT } from '../data';
-import { coverAgainst, defenseFactor } from '../abilities';
+import { coverAgainst, defenseFactor, isRanged } from '../abilities';
 import { manhattan } from '../geom';
 import { chargeFromCombat, generalHitFactor } from '../generals';
 import { weatherHit } from '../weather';
 import type { CombatInfo, GameEventOf, GameState, Pos, Rng, Unit } from '../types';
 import { removeDead } from './lifecycle';
+import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { visibility } from './visibility';
 
 export function inAttackRange(type: number, from: Pos, to: Pos): boolean {
   const d = manhattan(from, to);
   return d > UNIT.minalc[type]! && d <= UNIT.alcance[type]!;
+}
+
+/** `atk` puede luchar y hacer dano a una unidad como `def` (sin mirar distancias). */
+export function canDamage(atk: Unit, def: Unit): boolean {
+  return !!UNIT.canfight[atk.type] && POWER[atk.type]![def.type]! > 0;
+}
+
+/**
+ * Casillas desde las que `u` puede disparar este turno: donde esta y, si no es de distancia (esas no
+ * pueden mover y disparar) y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`).
+ */
+export function fireOrigins(u: Unit, range: MoveRange | null, allowed?: (p: Pos) => boolean): Pos[] {
+  const out: Pos[] = [{ x: u.x, y: u.y }];
+  if (range && !isRanged(u.type)) out.push(...reachableTiles(range).filter((p) => !allowed || allowed(p)));
+  return out;
 }
 
 /** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap). */
@@ -143,8 +159,8 @@ export function canCounter(def: Unit, atk: Unit): boolean {
     RULES.counterattack &&
     def.life > 0 &&
     !!UNIT.canfight[def.type] &&
-    UNIT.minalc[def.type] === 0 &&
-    UNIT.minalc[atk.type] === 0 &&
+    !isRanged(def.type) &&
+    !isRanged(atk.type) &&
     (POWER[def.type]![atk.type] ?? 0) > 0 &&
     inAttackRange(def.type, def, atk)
   );

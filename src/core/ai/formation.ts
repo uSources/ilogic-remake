@@ -7,10 +7,9 @@
 import { AI, UNIT, Movement } from '../data';
 import { grid, manhattan, samePos } from '../geom';
 import { groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
-import { visibility } from '../rules/visibility';
 import { effectiveCommand, sameFormation } from '../squads';
 import type { GameState, Pos, Unit } from '../types';
-import { bestMoveToward, needsRepair, type AiCtx } from './context';
+import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
 
 /** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
 const remainingMap = (s: GameState, u: Unit, at: Pos): number[][] => groundDistance(s, at, Movement.of(u.type), grid(false));
@@ -20,8 +19,6 @@ const remainingOf = (s: GameState, u: Unit): number => {
   const at = effectiveCommand(s, u)!.at;
   return remainingAt(remainingMap(s, u, at), at, u);
 };
-/** Hasta donde puede llegar y disparar este turno. */
-const strikeReach = (u: Unit): number => UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
 function formationMates(s: GameState, u: Unit): Unit[] {
@@ -77,10 +74,8 @@ export function formation(s: GameState, ctx: AiCtx, u: Unit): Formation | null {
   const rear = mine > behind.d ? { o: u, d: mine } : behind;
   // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
   if (rear.d <= strikeReach(rear.o)) return null;
-  const vis = visibility(s, ctx.me);
   const reach = strikeReach(rear.o);
-  if (s.units.some((t) => t.team !== ctx.me && t.carrier === null && t.life > 0 && vis[t.x]![t.y] && manhattan(t, rear.o) <= reach))
-    return null;
+  if (visibleFoes(s, ctx.me).some((t) => manhattan(t, rear.o) <= reach)) return null;
   return { rem, minRem: rearMate.next - AI.SQUADSPREAD, rear: rearMate.o };
 }
 

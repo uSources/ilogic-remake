@@ -2,7 +2,7 @@
  * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
-import { AI, BUILDING, HEALER, RULES, Movement } from '../data';
+import { AI, BUILDING, HEALER, RULES, UNIT, Movement } from '../data';
 import { samePos } from '../geom';
 import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, type MoveRange } from '../rules/movement';
@@ -77,6 +77,14 @@ export function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRang
   if (!path) return false;
   yield moveEvent(u.uid, path);
   return !!path.ambush;
+}
+
+/** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
+export const strikeReach = (u: Unit): number => UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
+
+/** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
+export function visibleFoes(s: GameState, me: Team, vis = visibility(s, me)): Unit[] {
+  return s.units.filter((t) => t.team !== me && t.carrier === null && t.life > 0 && vis[t.x]![t.y]);
 }
 
 /** Necesita volver a curarse a un edificio. */

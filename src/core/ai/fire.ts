@@ -3,13 +3,12 @@
  */
 import { RULES, UNIT } from '../data';
 import { manhattan } from '../geom';
-import { expectedDamage, inAttackRange } from '../rules/combat';
-import { moveRange, reachableTiles } from '../rules/movement';
+import { isRanged } from '../abilities';
+import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
+import { moveRange } from '../rules/movement';
 import { teamUnits } from '../rules/queries';
-import { visibility } from '../rules/visibility';
-import type { GameState, Pos, Team, Unit } from '../types';
-import { needsRepair } from './context';
-import { attackTargetsPossible } from './scoring';
+import type { GameState, Team, Unit } from '../types';
+import { needsRepair, strikeReach, visibleFoes } from './context';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {
@@ -29,17 +28,15 @@ export interface FirePlan {
 export function planFire(s: GameState, me: Team): FirePlan {
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
-  const vis = visibility(s, me);
-  const foes = s.units.filter((t) => t.team !== me && t.carrier === null && t.life > 0 && vis[t.x]![t.y]);
+  const foes = visibleFoes(s, me);
   const shooters = mine.filter((u) => u.carrier === null && u.canFire && UNIT.canfight[u.type] && !needsRepair(u));
   // Dano esperado de cada unidad contra cada objetivo al que llega este turno.
   const dmg = new Map<number, Map<number, number>>();
   for (const u of shooters) {
-    const reach = UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
-    const near = foes.filter((t) => manhattan(u, t) <= reach && attackTargetsPossible(u, t));
+    const reach = strikeReach(u);
+    const near = foes.filter((t) => manhattan(u, t) <= reach && canDamage(u, t));
     if (!near.length) continue;
-    const froms: Pos[] = [{ x: u.x, y: u.y }];
-    if (UNIT.minalc[u.type]! === 0) froms.push(...reachableTiles(moveRange(s, u)));
+    const froms = fireOrigins(u, isRanged(u.type) ? null : moveRange(s, u));
     const m = new Map<number, number>();
     for (const t of near) if (froms.some((f) => inAttackRange(u.type, f, t))) m.set(t.uid, expectedDamage(s, u, t));
     if (m.size) dmg.set(u.uid, m);
@@ -62,8 +59,7 @@ export function planFire(s: GameState, me: Team): FirePlan {
       free.delete(id);
     }
   }
-  const ranged = (u: Unit) => UNIT.minalc[u.type]! > 0;
-  const key = (u: Unit, i: number) => (plan.has(u.uid) ? (ranged(u) ? 0 : 1) : 2) * 10000 + i;
+  const key = (u: Unit, i: number) => (plan.has(u.uid) ? (isRanged(u.type) ? 0 : 1) : 2) * 10000 + i;
   const order = mine
     .map((u, i) => ({ uid: u.uid, k: key(u, i) }))
     .sort((a, b) => a.k - b.k)

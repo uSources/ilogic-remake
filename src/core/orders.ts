@@ -2,9 +2,10 @@
  * Ayudas para las ordenes del jugador (mover, atacar, mover en grupo): que casilla elegir y si una
  * orden es arriesgada. Logica pura, sin interfaz: la usa GameScene y se puede probar.
  */
-import { POWER, UNIT, Movement } from './data';
+import { Movement } from './data';
 import { manhattan, samePos } from './geom';
-import { inAttackRange, tileProtection } from './rules/combat';
+import { isRanged } from './abilities';
+import { canDamage, inAttackRange, tileProtection } from './rules/combat';
 import { moveCost, pathCost, pathTo, reachableTiles, type MoveRange } from './rules/movement';
 import { canWalk } from './rules/queries';
 import type { GameState, Pos, Unit } from './types';
@@ -15,9 +16,9 @@ import type { GameState, Pos, Unit } from './types';
  * cercana a la unidad. Null si no puede atacarle.
  */
 export function bestAttackTile(s: GameState, u: Unit, t: Unit, r: MoveRange, end: Pos = u): Pos | null {
-  if (!UNIT.canfight[u.type] || !u.canFire || !(POWER[u.type]![t.type]! > 0)) return null;
+  if (!u.canFire || !canDamage(u, t)) return null;
   // Las que no pueden mover y disparar solo atacan desde donde estan.
-  if (UNIT.minalc[u.type]! > 0) return inAttackRange(u.type, u, t) ? { x: u.x, y: u.y } : null;
+  if (isRanged(u.type)) return inAttackRange(u.type, u, t) ? { x: u.x, y: u.y } : null;
   const cands: Pos[] = [];
   if (inAttackRange(u.type, u, t)) cands.push({ x: u.x, y: u.y });
   cands.push(...reachableTiles(r).filter((p) => inAttackRange(u.type, p, t)));

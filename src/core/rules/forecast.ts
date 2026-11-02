@@ -3,9 +3,9 @@
  */
 import { RULES, UNIT } from '../data';
 import { diamond, grid } from '../geom';
-import type { GameState, Pos, Team, Unit } from '../types';
-import { canCounter, hitChance } from './combat';
-import { moveRange, reachableTiles, type MoveRange } from './movement';
+import type { GameState, Team, Unit } from '../types';
+import { canCounter, fireOrigins, hitChance } from './combat';
+import { moveRange, type MoveRange } from './movement';
 import { visibility } from './visibility';
 
 export interface CombatForecast {
@@ -118,9 +118,8 @@ export function unitThreat(s: GameState, u: Unit, out: boolean[][] = grid(false)
   const minR = UNIT.minalc[u.type]!,
     maxR = UNIT.alcance[u.type]!;
   if (maxR === 0) return out;
-  const origins: Pos[] = [{ x: u.x, y: u.y }];
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen.
-  if (minR === 0) origins.push(...reachableTiles(range ?? moveRange(s, { ...u, active: true, canMove: true })));
+  const origins = fireOrigins(u, minR === 0 ? (range ?? moveRange(s, { ...u, active: true, canMove: true })) : null);
   for (const o of origins) for (const p of diamond(o, minR + 1, maxR)) out[p.x]![p.y] = true;
   return out;
 }

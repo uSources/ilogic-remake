@@ -3,7 +3,7 @@
  * y el evento de mover.
  */
 import { RULES, UNIT, Movement, type MoveType } from '../data';
-import { zoneOfControl } from '../abilities';
+import { isRanged, zoneOfControl } from '../abilities';
 import { grid, inBounds, manhattan, neighbors4, samePos } from '../geom';
 import { weatherMove } from '../weather';
 import type { GameEvent, GameState, Pos, Unit } from '../types';
@@ -256,7 +256,7 @@ export function moveUnit(s: GameState, u: Unit, dest: Pos, range = moveRange(s, 
   u.y = dest.y;
   u.canMove = false;
   // Las unidades a distancia no pueden mover y disparar en el mismo turno.
-  if (UNIT.minalc[u.type]! !== 0) u.canFire = false;
+  if (isRanged(u.type)) u.canFire = false;
   dropStaleCaptures(s);
   return path;
 }

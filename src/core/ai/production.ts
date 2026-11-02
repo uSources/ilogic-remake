@@ -19,6 +19,14 @@ export function weightedPick<T>(items: readonly T[], weights: readonly number[],
   return items[items.length - 1]!;
 }
 
+/** Elige una compra al azar, con mas peso a lo mas caro (raiz del precio). */
+const pickByCost = (opts: readonly BuyOption[], rng: Rng): BuyOption =>
+  weightedPick(
+    opts,
+    opts.map((o) => Math.sqrt(o.cost)),
+    rng,
+  );
+
 /** Un edificio que fabrica algo de este precio o mas fabrica "lo grande" (Fabrica, Aeropuerto). */
 const BIG_UNIT = 10000;
 
@@ -49,17 +57,12 @@ export function* produce(s: GameState, me: Team, rng: Rng): Generator<GameEvent>
     const capturers = mine.filter((u) => UNIT.cancapt[u.type]).length;
     if (capturers < AI.MINCAPTURERS && opts.some((o) => UNIT.cancapt[o.type] && o.affordable))
       opts = opts.filter((o) => UNIT.cancapt[o.type] && o.affordable);
-    const weights = opts.map((o) => Math.sqrt(o.cost));
-    let pick = weightedPick(opts, weights, rng);
+    let pick = pickByCost(opts, rng);
     if (!pick.affordable) {
       if (pick.cost <= s.funds[me] + income) break; // se paga el turno que viene: ahorrar para ello
       const can = opts.filter((o) => o.affordable);
       if (!can.length) continue;
-      pick = weightedPick(
-        can,
-        can.map((o) => Math.sqrt(o.cost)),
-        rng,
-      );
+      pick = pickByCost(can, rng);
     }
     const u = spawn(s, b, pick.type);
     if (u) yield { kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } };

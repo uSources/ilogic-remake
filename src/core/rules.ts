@@ -60,6 +60,8 @@ export {
 } from './rules/movement';
 export {
   inAttackRange,
+  canDamage,
+  fireOrigins,
   attackTargets,
   tileProtection,
   defenseStars,

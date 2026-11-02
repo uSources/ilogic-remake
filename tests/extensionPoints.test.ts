@@ -1,10 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_RULES, POWER, UNIT, useRules } from '@core/data';
-import { HIT_MODIFIERS, ROUND_PHASES, endRound, hitChance, newUnit, tileProtection } from '@core/rules';
+import {
+  HIT_MODIFIERS,
+  ROUND_PHASES,
+  canDamage,
+  endRound,
+  fireOrigins,
+  hitChance,
+  moveRange,
+  newUnit,
+  reachableTiles,
+  tileProtection,
+} from '@core/rules';
 import { coverAgainst } from '@core/abilities';
 import { blankState } from './helpers';
 
-/** Puntos de extension del nucleo: listas de modificadores del acierto y pasos del fin de ronda. */
+/** Puntos de extension y ayudas compartidas del nucleo: modificadores del acierto, pasos del fin de ronda, origenes de tiro. */
 beforeEach(() => useRules({ ...DEFAULT_RULES, fog: false }));
 
 const fighter = (): number => UNIT.canfight.findIndex((f, t) => !!f && POWER[t]!.some((p) => p > 0));
@@ -53,5 +64,29 @@ describe('pasos del fin de ronda (ROUND_PHASES)', () => {
     expect(s.day).toBe(2);
     expect(u.active && u.canMove && u.canFire).toBe(true);
     expect(r.income).toEqual([0, 0]);
+  });
+});
+
+describe('ayudas de combate compartidas', () => {
+  it('fireOrigins: donde esta y, si puede mover y disparar, lo que alcanza', () => {
+    const s = blankState();
+    const melee = UNIT.canfight.findIndex((f, t) => !!f && UNIT.minalc[t] === 0 && UNIT.mover[t]! > 0);
+    const ranged = UNIT.canfight.findIndex((f, t) => !!f && UNIT.minalc[t]! > 0);
+    const m = newUnit(s, melee, 0, 5, 5);
+    const r = newUnit(s, ranged, 0, 9, 9);
+    const range = moveRange(s, m);
+    expect(fireOrigins(m, range)).toEqual([{ x: 5, y: 5 }, ...reachableTiles(range)]);
+    expect(fireOrigins(m, null)).toEqual([{ x: 5, y: 5 }]);
+    expect(fireOrigins(m, range, () => false)).toEqual([{ x: 5, y: 5 }]);
+    expect(fireOrigins(r, moveRange(s, r))).toEqual([{ x: 9, y: 9 }]);
+  });
+
+  it('canDamage: lucha y su poder contra ese tipo es mayor que 0', () => {
+    const s = blankState();
+    const t = fighter();
+    const a = newUnit(s, t, 0, 1, 1);
+    for (let d = 0; d < POWER[t]!.length; d++) expect(canDamage(a, newUnit(s, d, 1, 2, 1))).toBe(POWER[t]![d]! > 0);
+    const pacifist = UNIT.canfight.findIndex((f) => !f);
+    if (pacifist >= 0) expect(canDamage(newUnit(s, pacifist, 0, 3, 3), a)).toBe(false);
   });
 });
