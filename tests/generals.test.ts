@@ -69,18 +69,18 @@ describe('generales: reglas', () => {
     const mine = newUnit(s, T('Tank'), 0, 9, 9);
     expect(abilityBlock(s, 0, 'airstrike')).toBe('target');
     const ev = useAbility(s, 0, 'airstrike', { x: 10, y: 10 })!;
-    expect(e1.life).toBe(70);
+    expect(e1.life).toBe(80);
     expect(e2.life).toBe(10); // no baja de minLife
     expect(far.life).toBe(100); // fuera del cuadrado
     expect(mine.life).toBe(100); // las propias no
     expect(ev.hits).toEqual([
-      { uid: e1.uid, damage: 30 },
+      { uid: e1.uid, damage: 20 },
       { uid: e2.uid, damage: 15 },
     ]);
-    expect(chargeStars(s.generals![0]!)).toBe(1);
+    expect(chargeStars(s.generals![0]!)).toBe(0); // cuesta la barra entera (6)
     expect(abilityBlock(s, 0, 'recon')).toBe('used');
     endRound(s);
-    expect(abilityBlock(s, 0, 'recon')).toBe('charge'); // nuevo turno, pero 1 estrella no llega
+    expect(abilityBlock(s, 0, 'recon')).toBe('charge'); // nuevo turno, pero sin estrellas no llega
   });
 
   it('reconocimiento: ve todo el mapa hasta que acaba la ronda', () => {

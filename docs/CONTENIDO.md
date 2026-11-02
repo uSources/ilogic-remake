@@ -207,7 +207,10 @@ por lo que es) y usa la mejor si vale al menos `GENERALMINVALUE`
 
 Para medir un general: `npm run generals -- --a Roca` (la IA con Roca contra la IA sin general, 80
 partidas en 40 mapas con los bandos cambiados; al dia 60 gana quien tenga mas puntos). `--b Brisa`
-los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
+los enfrenta (`--json` y `--from` distintos para sumar tandas en paralelo). Con 80 partidas el margen
+es de ±11: para comparar generales hacen falta 200-400. Ahora (01-11-2026, 400 partidas) los tres
+ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % (ver
+`docs/BALANCE.md`, "Generales (01-11-2026)").
 
 ## Reglas e IA
 
@@ -220,7 +223,9 @@ los enfrenta. Al hacerlo, los tres rondaban el 60-68 % contra la IA sin general.
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`).
   `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
-  unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar). Las ordenes
+  unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
+  `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
+  (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
   las cumple la misma IA que el enemigo (`assistTurn`/`commandTurn` en `src/core/ai.ts`); escuadras
   y ordenes estan en `src/core/squads.ts`.
 

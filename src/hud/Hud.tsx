@@ -835,7 +835,7 @@ function Tray({
               tabIndex={-1}
               type="button"
               class="squad"
-              title={`${q.order ?? q.name}${i < 9 ? ` · ${t('squadKeyHint')} ${i + 1}` : ''}`}
+              title={`${q.order ? (q.formation ? `${q.order} · ${t('squadFormation')}` : q.order) : q.name}${i < 9 ? ` · ${t('squadKeyHint')} ${i + 1}` : ''}`}
               onMouseDown={noFocus}
               onClick={() => a.selectSquad(q.id)}
             >

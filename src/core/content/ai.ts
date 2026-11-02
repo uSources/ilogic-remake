@@ -20,6 +20,7 @@ export const AI_KEYS = [
   'GUARDRADIUS',
   'CONTROLPOINT',
   'FOCUSFIRE',
+  'SQUADSPREAD',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 
