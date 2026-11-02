@@ -36,25 +36,89 @@ export function cleanSquadName(name: string): string | null {
   return n || null;
 }
 
+/** Teclas de grupo: 1-9, como en los juegos de estrategia en tiempo real. */
+export const SQUAD_KEYS = 9;
+
 /**
  * Forma una escuadra con estas unidades (solo las del jugador; salen de la que tuvieran) y le da el
- * primer nombre libre. Devuelve la escuadra, o null si no hay unidades.
+ * primer nombre libre y la primera tecla libre (o la tecla `key`, cuyo nombre de la lista prefiere:
+ * Ctrl+3 forma «Charlie»). Devuelve la escuadra, o null si no hay unidades.
  */
-export function formSquad(s: GameState, units: readonly Unit[], name?: string): Squad | null {
+export function formSquad(s: GameState, units: readonly Unit[], name?: string, key?: number): Squad | null {
   const mine = units.filter((u) => u.team === 0);
   if (!mine.length) return null;
+  for (const u of mine) leaveSquad(s, u);
   pruneSquads(s);
   const squads = s.squads ?? [];
   const id = squads.reduce((m, q) => Math.max(m, q.id), 0) + 1;
   const used = new Set(squads.map((q) => q.name));
-  const free = SQUAD_NAMES.find((n) => !used.has(n)) ?? `${SQUAD_NAMES[0]} ${id}`;
-  const squad: Squad = { id, name: (name && cleanSquadName(name)) || free };
-  for (const u of mine) leaveSquad(s, u);
+  const byKey = key !== undefined ? SQUAD_NAMES[key - 1] : undefined;
+  const free = (byKey && !used.has(byKey) ? byKey : SQUAD_NAMES.find((n) => !used.has(n))) ?? `${SQUAD_NAMES[0]} ${id}`;
+  const k = key ?? freeKey(s);
+  const squad: Squad = { id, name: (name && cleanSquadName(name)) || free, ...(k !== undefined ? { key: k } : {}) };
   for (const u of mine) u.squad = id;
-  s.squads = [...(s.squads ?? []), squad];
+  s.squads = [...squads, squad];
   liftCommand(s, squad);
   pruneSquads(s);
   return squad;
+}
+
+/** La primera tecla de grupo (1-9) que no tiene ninguna escuadra. */
+export function freeKey(s: GameState): number | undefined {
+  const used = new Set((s.squads ?? []).map((q) => q.key));
+  for (let k = 1; k <= SQUAD_KEYS; k++) if (!used.has(k)) return k;
+  return undefined;
+}
+
+/** La escuadra de esa tecla de grupo. */
+export function squadByKey(s: GameState, key: number): Squad | undefined {
+  return s.squads?.find((q) => q.key === key);
+}
+
+/** Da tecla a las escuadras que no tienen (partidas de antes, o cuando se libera una). */
+export function assignKeys(s: GameState): void {
+  for (const q of s.squads ?? [])
+    if (q.key === undefined) {
+      const k = freeKey(s);
+      if (k === undefined) return;
+      q.key = k;
+    }
+}
+
+/**
+ * [CAMBIO] Ctrl + numero: estas unidades pasan a ser el grupo de esa tecla. Si ya habia una
+ * escuadra con esa tecla, se queda solo con estas (las demas salen, con lo que estaban haciendo);
+ * si no, se forma. Devuelve la escuadra, o null si no hay unidades.
+ */
+export function setGroup(s: GameState, units: readonly Unit[], key: number): Squad | null {
+  const mine = units.filter((u) => u.team === 0);
+  if (!mine.length) return null;
+  const q = squadByKey(s, key);
+  if (!q) return formSquad(s, mine, undefined, key);
+  const keep = new Set(mine.map((u) => u.uid));
+  for (const u of squadUnits(s, q.id)) if (!keep.has(u.uid)) leaveSquad(s, u);
+  return joinSquad(s, q, mine);
+}
+
+/** [CAMBIO] Mayusculas + numero: añadir estas unidades al grupo de esa tecla (o formarlo). */
+export function addToGroup(s: GameState, units: readonly Unit[], key: number): Squad | null {
+  const mine = units.filter((u) => u.team === 0);
+  if (!mine.length) return null;
+  const q = squadByKey(s, key);
+  return q ? joinSquad(s, q, mine) : formSquad(s, mine, undefined, key);
+}
+
+/** Meter unidades en una escuadra que ya existe (salen de la suya; las que no tenian orden siguen la de esta). */
+function joinSquad(s: GameState, q: Squad, units: readonly Unit[]): Squad {
+  for (const u of units) {
+    if (u.squad === q.id) continue;
+    leaveSquad(s, u);
+    u.squad = q.id;
+    // Si ya hacia justo lo de la escuadra, la sigue (no va destacada).
+    if (u.command && q.command && sameCommand(u.command, forUnit(u, q.command))) delete u.command;
+  }
+  pruneSquads(s);
+  return q;
 }
 
 /** Saca la unidad de su escuadra; si seguia la orden de la escuadra, se la queda como propia. */

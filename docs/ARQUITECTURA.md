@@ -117,6 +117,15 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas.
 - **Raton y dedos**: la escena traduce el `Phaser.Input.Pointer` a `PointerIn` (`pointerIn`) y llama a
   `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
+- **Seleccion** (`selection.ts`): como en los juegos de estrategia en tiempo real. Funciones puras que
+  reciben el gesto ya decidido (clic con sus teclas y cuantas veces, recuadro) y devuelven la
+  seleccion nueva (`clickSelect`, `boxSelect`); la escena solo la aplica (`applySelection`: una unidad
+  que puede actuar queda elegida para moverla; varias forman el grupo, con aro a los pies). Los
+  grupos con numero son escuadras con `Squad.key` (`setGroup`, `addToGroup`, `squadByKey` en
+  `core/squads.ts`), y las teclas son la orden `group {n, mode}`.
+- **Raton**: arrastrar con el izquierdo desde una casilla sin unidad propia es recuadro; con el
+  derecho o la rueda, mueve el mapa; el derecho sin arrastrar es clic derecho (al soltar). El doble
+  clic lo cuenta `PointerGestures` (`TapInfo.count`).
 - **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`Hud.tsx`, para el
   teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
   capturas de teclas de Phaser (`addCapture`) y saltar el logo con cualquier tecla o clic (`LogoScene`;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DOUBLE_MS,
   DRAG_THRESHOLD,
   EDGE_CARRY_MOUSE,
   EDGE_CARRY_TOUCH,
@@ -102,6 +103,8 @@ function fake(
     unitAt?: (x: number, y: number) => number | null;
     busy?: boolean;
     canBox?: boolean;
+    /** El dedo puede hacer recuadro (modo "Elegir varias"). */
+    touchBox?: boolean;
     longPressOk?: boolean;
     ended?: boolean;
     menu?: boolean;
@@ -122,10 +125,11 @@ function fake(
     busy: () => !!o.busy,
     fastForward: () => log.push('fastForward'),
     carrying: () => carrying,
-    canBox: () => o.canBox ?? true,
+    now: () => now,
+    canBox: (touch) => (touch ? !!o.touchBox : (o.canBox ?? true)),
     pickAt: (x, y) => o.unitAt?.(x, y) ?? null,
     touchStart: () => log.push('touchStart'),
-    rightPress: () => log.push('right'),
+    rightClick: (x, y, m) => log.push(`right ${x},${y}${m.alt ? ' alt' : ''}${m.shift ? ' shift' : ''}`),
     beginCarry: (uid, touch, held) => {
       carrying = true;
       carryTouch = touch;
@@ -142,14 +146,17 @@ function fake(
       log.push('cancelCarry');
     },
     boxUpdate: (b) => log.push(`box ${b.x1},${b.y1}`),
-    boxEnd: (b) => log.push(`boxEnd ${b.x0},${b.y0}-${b.x1},${b.y1}`),
+    boxEnd: (b) => log.push(`boxEnd ${b.x0},${b.y0}-${b.x1},${b.y1}${b.add ? ' add' : ''}`),
     pan: (dx, dy) => log.push(`pan ${dx},${dy}`),
     carryTouch: () => carryTouch,
     edgeScrollable: () => !o.menu,
     edgeScroll: (dx, dy) => log.push(`edge ${dx},${dy}`),
     zoomAt: (dir, _x, _y, wheel) => log.push(`zoom ${dir}${wheel ? ' rueda' : ''}`),
     hover: (x, y) => log.push(`hover ${x},${y}`),
-    tap: (x, y, touch) => log.push(`tap ${x},${y}${touch ? ' dedo' : ''}`),
+    tap: (x, y, i) =>
+      log.push(
+        `tap ${x},${y}${i.touch ? ' dedo' : ''}${i.count > 1 ? ` x${i.count}` : ''}${i.shift ? ' shift' : ''}${i.ctrl ? ' ctrl' : ''}`,
+      ),
     longPress: (x, y) => {
       log.push(`long ${x},${y}`);
       return o.longPressOk ?? true;
@@ -188,8 +195,8 @@ describe('gestos del raton y del dedo', () => {
     expect(log).toEqual(['hover 13,12', 'tap 13,12']);
   });
 
-  it('arrastrar desde una casilla vacia mueve el mapa y no es un toque', () => {
-    const { g, log } = fake();
+  it('sin recuadro posible (menus), arrastrar desde una casilla vacia mueve el mapa y no es un toque', () => {
+    const { g, log } = fake({ canBox: false });
     g.down(pt(10, 10));
     g.move(pt(30, 10));
     g.move(pt(40, 15));
@@ -256,12 +263,64 @@ describe('gestos del raton y del dedo', () => {
     expect(log).toEqual(['touchStart', 'carry 5 dedo arrastrada', 'carryTo 30,10', 'touchStart', 'cancelCarry']);
   });
 
-  it('Mayusculas + arrastrar con el raton dibuja un recuadro', () => {
+  it('Mayusculas + arrastrar con el raton dibuja un recuadro que añade', () => {
     const { g, log } = fake();
     g.down(pt(10, 10, { shift: true }));
     g.move(pt(50, 40, { shift: true }));
     g.up(pt(50, 40, { shift: true, down: false }));
-    expect(log).toEqual(['box 50,40', 'boxEnd 10,10-50,40']);
+    expect(log).toEqual(['box 50,40', 'boxEnd 10,10-50,40 add']);
+  });
+
+  it('[CAMBIO] arrastrar con el raton desde una casilla sin unidad propia es un recuadro (sin tecla)', () => {
+    const { g, log } = fake();
+    g.down(pt(10, 10));
+    g.move(pt(30, 10));
+    g.move(pt(40, 15));
+    g.up(pt(40, 15, { down: false }));
+    expect(log).toEqual(['box 30,10', 'box 40,15', 'boxEnd 10,10-40,15']);
+  });
+
+  it('[CAMBIO] con el dedo, arrastrar mueve el mapa salvo en "Elegir varias" (recuadro)', () => {
+    const pan = fake();
+    pan.g.down(pt(10, 10, { touch: true }));
+    pan.g.move(pt(30, 10, { touch: true }));
+    expect(pan.log).toEqual(['touchStart', 'pan -20,0']);
+    const box = fake({ touchBox: true });
+    box.g.down(pt(10, 10, { touch: true }));
+    box.g.move(pt(30, 10, { touch: true }));
+    box.g.up(pt(30, 10, { touch: true, down: false }));
+    expect(box.log).toEqual(['touchStart', 'box 30,10', 'boxEnd 10,10-30,10']);
+  });
+
+  it('[CAMBIO] arrastrar con el boton derecho o el central mueve el mapa; el derecho sin arrastrar es clic derecho', () => {
+    const { g, log } = fake();
+    g.down(pt(10, 10, { right: true }));
+    g.move(pt(30, 10, { right: true }));
+    g.up(pt(30, 10, { right: true, down: false }));
+    g.down(pt(10, 10, { middle: true }));
+    g.move(pt(10, 40, { middle: true }));
+    g.up(pt(10, 40, { middle: true, down: false }));
+    g.down(pt(10, 10, { middle: true }));
+    g.up(pt(10, 10, { middle: true, down: false }));
+    g.down(pt(5, 5, { right: true, alt: true }));
+    g.up(pt(5, 5, { right: true, alt: true, down: false }));
+    expect(log).toEqual(['pan -20,0', 'pan 0,-30', 'right 5,5 alt']);
+  });
+
+  it('[CAMBIO] doble clic: dos clics seguidos en el mismo sitio; lejos o tarde, no', () => {
+    const { g, log, wait } = fake();
+    const click = (x: number, o: Partial<PointerIn> = {}) => {
+      g.down(pt(x, 10, o));
+      g.up(pt(x, 10, { ...o, down: false }));
+    };
+    click(10);
+    wait(100);
+    click(11, { ctrl: false });
+    wait(DOUBLE_MS + 1);
+    click(11);
+    wait(50);
+    click(200);
+    expect(log).toEqual(['tap 10,10', 'tap 11,10 x2', 'tap 11,10', 'tap 200,10']);
   });
 
   it('sin recuadro posible, Mayusculas + arrastrar mueve el mapa', () => {
@@ -277,7 +336,7 @@ describe('gestos del raton y del dedo', () => {
     g.up(pt(10, 10, { right: true, down: false }));
     g.wheel(-100, 0, 0);
     g.wheel(100, 0, 0);
-    expect(log).toEqual(['right', 'zoom 1 rueda', 'zoom -1 rueda']);
+    expect(log).toEqual(['right 10,10', 'zoom 1 rueda', 'zoom -1 rueda']);
     const busy = fake({ busy: true });
     busy.g.down(pt(10, 10));
     busy.g.up(pt(10, 10, { down: false }));

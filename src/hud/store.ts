@@ -229,6 +229,8 @@ export interface TileVM {
 export interface SquadVM {
   id: number;
   name: string;
+  /** [CAMBIO] Tecla del grupo (1-9). */
+  key?: number;
   count: number;
   order: string | null;
   /** [CAMBIO] Todas llevan la misma orden: avanzan juntas (ver squadInFormation). */

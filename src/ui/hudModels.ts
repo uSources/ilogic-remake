@@ -76,9 +76,10 @@ export function squadsVM(s: GameState): SquadVM[] {
       const formation = squadInFormation(s, q.id);
       const kind = q.command?.kind ?? (same ? first.kind : formation ? 'capture' : null);
       const detached = units.filter((u) => isDetached(s, u)).length;
-      return { id: q.id, name: q.name, count: units.length, order: kind ? commandLabel(kind) : null, formation, detached };
+      return { id: q.id, name: q.name, key: q.key, count: units.length, order: kind ? commandLabel(kind) : null, formation, detached };
     })
-    .filter((q) => q.count > 0);
+    .filter((q) => q.count > 0)
+    .sort((a, b) => (a.key ?? 99) - (b.key ?? 99));
 }
 
 export function unitStatChips(type: number): StatChipVM[] {

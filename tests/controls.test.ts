@@ -16,7 +16,7 @@ describe('adaptador de teclado', () => {
     const seen = new Set<string>();
     for (const b of KEY_BINDINGS) {
       for (const c of b.codes) {
-        const k = `${b.ctrl ? 'Ctrl+' : ''}${c}`;
+        const k = `${b.ctrl ? 'Ctrl+' : ''}${b.shift ? 'Shift+' : ''}${c}`;
         expect(seen.has(k), k).toBe(false);
         seen.add(k);
       }
@@ -34,11 +34,16 @@ describe('adaptador de teclado', () => {
     expect(keyCommand(key('Enter', { repeat: true }))).toBeNull();
   });
 
-  it('1-9 eligen la escuadra de ese numero', () => {
-    expect(keyCommand(key('Digit1'))).toEqual({ kind: 'squad', n: 1 });
-    expect(keyCommand(key('Digit9'))).toEqual({ kind: 'squad', n: 9 });
+  it('grupos: 1-9 eligen, Ctrl+n hace el grupo y Mayusculas+n añade', () => {
+    expect(keyCommand(key('Digit1'))).toEqual({ kind: 'group', n: 1, mode: 'select' });
+    expect(keyCommand(key('Digit9'))).toEqual({ kind: 'group', n: 9, mode: 'select' });
+    expect(keyCommand(key('Digit3', { ctrlKey: true }))).toEqual({ kind: 'group', n: 3, mode: 'set' });
+    expect(keyCommand(key('Digit3', { metaKey: true }))).toEqual({ kind: 'group', n: 3, mode: 'set' });
+    expect(keyCommand(key('Digit4', { shiftKey: true }))).toEqual({ kind: 'group', n: 4, mode: 'add' });
     // El teclado numerico sigue moviendo el cursor.
-    expect(keyCommand(key('Numpad1'))?.kind).not.toBe('squad');
+    expect(keyCommand(key('Numpad1'))?.kind).not.toBe('group');
+    // Mayusculas + Enter sigue siendo aceptar (mover y esperar).
+    expect(keyCommand(key('Enter', { shiftKey: true }))).toEqual({ kind: 'accept', wait: true });
   });
 
   it('Esc cancela y Retroceso da un paso atras', () => {

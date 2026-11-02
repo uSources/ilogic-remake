@@ -14,6 +14,8 @@ export const DRAG_THRESHOLD = 6;
 export const PICK_HOLD_MS = 250;
 /** Mantener pulsado este tiempo (ms) para llevar el cursor ahi (ficha de informacion). */
 export const LONG_PRESS_MS = 480;
+/** [CAMBIO] Dos clics (o toques) seguidos en el mismo sitio dentro de este tiempo (ms) son doble clic. */
+export const DOUBLE_MS = 350;
 
 /** Se ha movido lo bastante para ser arrastre. `dpr`: densidad de pantalla (el umbral es en pixeles reales). */
 export function movedFar(dx: number, dy: number, dpr: number): boolean {
@@ -143,19 +145,40 @@ export interface PointerIn {
   shift: boolean;
   /** [CAMBIO] Ctrl (o Cmd en Mac) pulsado: elegir varias, como en Windows. */
   ctrl?: boolean;
+  /** [CAMBIO] Alt pulsado (Alt + clic derecho: el menu completo de ordenes). */
+  alt?: boolean;
+  /** [CAMBIO] Boton central (rueda): pulsado (en down) o soltado (en up). Solo arrastra el mapa. */
+  middle?: boolean;
 }
+
+/** [CAMBIO] Teclas que acompañan a un clic. */
+export interface Mods {
+  shift: boolean;
+  ctrl: boolean;
+  alt: boolean;
+}
+
+/** [CAMBIO] Un toque o clic sin arrastrar: con que, que teclas y cuantas veces seguidas (2 = doble clic). */
+export interface TapInfo extends Mods {
+  touch: boolean;
+  count: number;
+}
+
+const modsOf = (p: PointerIn): Mods => ({ shift: p.shift, ctrl: !!p.ctrl, alt: !!p.alt });
 
 /** Algo programado para despues (temporizador de la escena), que se puede cancelar. */
 export interface Later {
   cancel(): void;
 }
 
-/** Recuadro de seleccion en pixeles del lienzo (Mayusculas + arrastrar). */
+/** Recuadro de seleccion en pixeles del lienzo (arrastrar desde una casilla sin unidad propia). */
 export interface Box {
   x0: number;
   y0: number;
   x1: number;
   y1: number;
+  /** Mayusculas o Ctrl: añadir a lo elegido en vez de cambiarlo. */
+  add?: boolean;
 }
 
 /**
@@ -172,14 +195,19 @@ export interface PointerTarget {
   fastForward(): void;
   /** Hay una unidad cogida (arrastrandola). */
   carrying(): boolean;
-  /** Se puede empezar un recuadro de seleccion aqui (en el mapa, sin menus). */
-  canBox(): boolean;
+  /** Hora (ms) para reconocer el doble clic. */
+  now(): number;
+  /**
+   * Se puede empezar un recuadro de seleccion aqui (en el mapa, sin menus). Con el raton, arrastrar
+   * desde una casilla sin unidad propia es recuadro; con el dedo solo si se pide (modo "Elegir varias").
+   */
+  canBox(touch: boolean): boolean;
   /** Unidad propia que se puede coger en ese punto, o null. */
   pickAt(x: number, y: number): number | null;
   /** Primer toque de un dedo (aviso de gestos). */
   touchStart(): void;
-  /** Boton derecho pulsado. */
-  rightPress(x: number, y: number): void;
+  /** [CAMBIO] Clic derecho (soltado sin arrastrar: arrastrar con el derecho mueve el mapa). */
+  rightClick(x: number, y: number, mods: Mods): void;
   /** Levantar la unidad `uid`. false si ya no se puede (entonces no hay arrastre que olvidar). */
   beginCarry(uid: number, touch: boolean, held: boolean): boolean;
   carryTo(x: number, y: number): void;
@@ -200,7 +228,7 @@ export interface PointerTarget {
   /** El raton pasa por encima (sin dedo). */
   hover(x: number, y: number): void;
   /** Un toque o clic sin arrastrar. */
-  tap(x: number, y: number, touch: boolean, shift: boolean): void;
+  tap(x: number, y: number, info: TapInfo): void;
   /** Pulsacion larga con el dedo. false si ahora no tiene efecto (el gesto sigue pudiendo ser un toque). */
   longPress(x: number, y: number): boolean;
 }
@@ -214,7 +242,11 @@ export interface PointerTarget {
 export class PointerGestures {
   /** El raton esta sobre el juego (para desplazar el mapa en el borde). */
   inside = false;
-  private drag: { x: number; y: number; moved: boolean } | null = null;
+  /** Pulsado sin soltar: `button` (izquierdo, derecho o central), donde empezo y por donde va. */
+  private drag: { x: number; y: number; x0: number; y0: number; moved: boolean; button: 'left' | 'right' | 'middle'; mods: Mods } | null =
+    null;
+  /** El ultimo toque, para el doble clic. */
+  private lastTap: { x: number; y: number; at: number; count: number } | null = null;
   private pick: { uid: number; x: number; y: number; touch: boolean; timer: Later | null } | null = null;
   private box: Box | null = null;
   private pinch = new Pinch();
@@ -237,6 +269,7 @@ export class PointerGestures {
     this.inside = false;
     this.drag = null;
     this.box = null;
+    this.lastTap = null;
     this.pinch = new Pinch();
   }
 
@@ -289,10 +322,17 @@ export class PointerGestures {
       this.startCarry(false);
       return t.carryTo(p.x, p.y);
     }
-    // Arrastrar el mapa.
+    // Arrastrar el mapa (o, con el boton izquierdo desde una casilla sin unidad propia, un recuadro).
     if (this.drag && p.down) {
       const dx = p.x - this.drag.x,
         dy = p.y - this.drag.y;
+      if (!this.drag.moved && this.drag.button === 'left' && movedFar(dx, dy, this.dpr()) && t.canBox(p.touch)) {
+        const d = this.drag;
+        this.drag = null;
+        this.cancelLongPress();
+        this.box = { x0: d.x0, y0: d.y0, x1: p.x, y1: p.y, add: d.mods.shift || d.mods.ctrl };
+        return t.boxUpdate(this.box);
+      }
       if (this.drag.moved || movedFar(dx, dy, this.dpr())) {
         this.drag.moved = true;
         this.cancelLongPress();
@@ -309,15 +349,20 @@ export class PointerGestures {
     const t = this.t;
     if (t.ended()) return;
     if (t.busy()) return t.fastForward();
-    if (p.right) return t.rightPress(p.x, p.y);
-    // Mayusculas o Ctrl + arrastrar: recuadro para elegir varias unidades (un clic sin arrastrar
-    // añade o quita la unidad de debajo, como Ctrl + clic en Windows).
-    if (!p.touch && (p.shift || p.ctrl) && t.canBox()) {
-      this.box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+    // [CAMBIO] Botones derecho y central: arrastrar mueve el mapa; el derecho sin arrastrar es un clic
+    // derecho (al soltar).
+    if (p.right || p.middle) {
+      this.drag = { x: p.x, y: p.y, x0: p.x, y0: p.y, moved: false, button: p.right ? 'right' : 'middle', mods: modsOf(p) };
+      return;
+    }
+    // Mayusculas o Ctrl + clic o arrastrar: recuadro que añade (un clic sin arrastrar añade o quita la
+    // unidad de debajo, como Ctrl + clic en Windows).
+    if (!p.touch && (p.shift || p.ctrl) && t.canBox(false)) {
+      this.box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, add: true };
       this.drag = null;
       return;
     }
-    this.drag = { x: p.x, y: p.y, moved: false };
+    this.drag = { x: p.x, y: p.y, x0: p.x, y0: p.y, moved: false, button: 'left', mods: modsOf(p) };
     const uid = t.pickAt(p.x, p.y);
     if (uid !== null && this.pinch.count < 1) {
       this.pick = { uid, x: p.x, y: p.y, touch: p.touch, timer: null };
@@ -361,8 +406,19 @@ export class PointerGestures {
     }
     const drag = this.drag;
     this.drag = null;
-    if (t.ended() || t.busy() || p.right || !drag || drag.moved) return;
-    t.tap(p.x, p.y, p.touch, p.shift);
+    if (t.ended() || t.busy() || !drag || drag.moved) return;
+    if (drag.button === 'right') return t.rightClick(p.x, p.y, modsOf(p));
+    if (drag.button !== 'left') return;
+    t.tap(p.x, p.y, { touch: p.touch, ...modsOf(p), count: this.tapCount(p) });
+  }
+
+  /** Cuantos toques seguidos van en el mismo sitio (2 = doble clic). */
+  private tapCount(p: PointerIn): number {
+    const now = this.t.now();
+    const l = this.lastTap;
+    const count = l && now - l.at <= DOUBLE_MS && !movedFar(p.x - l.x, p.y - l.y, this.dpr()) ? l.count + 1 : 1;
+    this.lastTap = { x: p.x, y: p.y, at: now, count };
+    return count;
   }
 
   /** Levantar la unidad pulsada. `held`: con el dedo, se ha mantenido pulsado antes de arrastrar. */

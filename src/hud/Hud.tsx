@@ -830,16 +830,16 @@ function Tray({
       {!folded && squads.length === 0 && <div class="squads-none">{t('squadsNone')}</div>}
       {!folded && squads.length > 0 && (
         <div class="squads" aria-label={t('squads')}>
-          {squads.map((q, i) => (
+          {squads.map((q) => (
             <button
               tabIndex={-1}
               type="button"
               class="squad"
-              title={`${q.order ? (q.formation ? `${q.order} · ${t('squadFormation')}` : q.order) : q.name}${i < 9 ? ` · ${t('squadKeyHint')} ${i + 1}` : ''}`}
+              title={`${q.order ? (q.formation ? `${q.order} · ${t('squadFormation')}` : q.order) : q.name}${q.key ? ` · ${t('squadKeyHint')} ${q.key}` : ''}`}
               onMouseDown={noFocus}
               onClick={() => a.selectSquad(q.id)}
             >
-              {i < 9 && <span class="key">{i + 1}</span>}
+              {q.key && <span class="key">{q.key}</span>}
               <span class="sq-name">{q.name}</span>
               <span class="sq-count num">×{q.count}</span>
               {q.order && <span class="sq-order">{q.order}</span>}
