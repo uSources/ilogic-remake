@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aiTurn, assistTurn, commandNow, commandOrder, previewCommands, type CommandIntent } from '../core/ai';
+import { aiTurn, assistTurn, commandNow, commandOrder } from '../core/ai';
 import {
   cancelCommand,
   commandBlock,
@@ -18,24 +18,10 @@ import {
   squadUnits,
   SQUAD_NAME_MAX,
 } from '../core/squads';
-import {
-  HQ,
-  MAP_H,
-  MAP_W,
-  DEFAULT_RULES,
-  RULES,
-  UNIT,
-  UNIT_ART,
-  WEATHER,
-  useRules,
-  type RulesConfig,
-  Movement,
-  UNIT_NAMES,
-  MoveType,
-} from '../core/data';
+import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, WEATHER, useRules, Movement, UNIT_NAMES, MoveType } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
-import { bestAttackTile, closestStep, extendTrail } from '../core/orders';
+import { closestStep, extendTrail } from '../core/orders';
 import {
   attackEvent,
   buildingIncome,
@@ -47,7 +33,6 @@ import {
   canCapture,
   inControlZone,
   canWalk,
-  pathCost,
   passMap,
   stepToward,
   capture,
@@ -63,19 +48,15 @@ import {
   outcome,
   endReason,
   score,
-  pathTo,
   removeUnit,
   type RoundReport,
   spawn,
   supply,
   upkeepOf,
   threatMap,
-  unitThreat,
   attackZone,
   captureEvent,
-  defenseStars,
   moveEvent,
-  reachableTiles,
   unitActions,
   unitAt,
   unitById,
@@ -85,13 +66,12 @@ import {
   wait,
   type BuyOption,
   type MoveRange,
-  type UnitActions,
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy, stats } from '../core/stats';
 import type { Building, CommandKind, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
-import { randomSeed, seedToCode } from '../setup';
-import { bestDays, markCompleted, objectiveStatus, objectiveText, TUTORIAL } from '../campaign';
+import { randomSeed } from '../setup';
+import { bestDays, markCompleted } from '../campaign';
 import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
 import { ensureWeather } from '../core/weather';
 import {
@@ -114,12 +94,12 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { buildingLabel, fmtNum, settings, t, unitLabel, weatherLabel, type TextKey } from '../settings';
+import { fmtNum, settings, t, unitLabel, weatherLabel } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
 import { blink, burst, center, COLORS, floatText, lifeBar, playAnim, reducedMotion, targetMark, tileFlash } from '../ui/fx';
-import { unitIconKey, unitKey } from '../ui/sprites';
+import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
 import { DOUBLE_MS, PointerGestures, type PointerIn, type PointerTarget, type TapInfo } from '../controls/pointer';
@@ -141,14 +121,10 @@ import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from 
 import {
   squadsVM,
   commandLabel,
-  abilitiesVM,
   buyBlockedText,
-  captureHintText,
   combatVM,
-  forecastVM,
   minimapVM,
   tileVM,
-  unitStatsText,
   weatherEffectsText,
   weatherVM,
   dayInfoVM,
@@ -172,41 +148,30 @@ import { baseFacing, faceFlip } from '../ui/mapView';
 import { defaultLab, LAB_TARGET, labRange, labState, type LabAction, type LabOptions } from '../lab';
 import { abilityArea, abilityBlock, areaTiles, generalOf, newGeneral, useAbility } from '../core/generals';
 import { PAL, PAL_CSS } from '../ui/palette';
-
-/**
- * Fases de la partida (equivalen a las del original, docs/SPEC-INTERFAZ.md §2):
- * map 3, gameMenu 4, unitMenu 5, buy 6, move 7, attack 8, unloadPick 11, unloadTile 12.
- * "busy" = animando o jugando la IA (no se acepta entrada).
- */
-type Phase =
-  'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'orderMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
-
-type ActionKey = keyof UnitActions;
-const ACTION_ORDER: ActionKey[] = [
-  'attack',
-  'capture',
-  'unload',
-  'supply',
-  'wait',
-  'cmdAttack',
-  'cmdCapture',
-  'cmdDefend',
-  'cmdCancel',
-  'back',
-  'delete',
-];
-type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
-const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
-/** Orden de cada opcion de menu. */
-const CMD_OF: Partial<Record<string, CommandKind>> = { cmdAttack: 'attack', cmdCapture: 'capture', cmdDefend: 'defend' };
-type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
-const END_LABEL: Record<EndButton, TextKey> = {
-  rematch: 'endRematch',
-  new: 'newGame',
-  menu: 'endMenu',
-  next: 'endNext',
-  retry: 'endRetry',
-};
+import {
+  ACTION_ORDER,
+  CMD_OF,
+  CONFIRM_MS,
+  CURSOR_PHASES,
+  END_LABEL,
+  GAME_MENU,
+  INPUT_LOCK_MS,
+  key,
+  MENU_PHASES,
+  STEP_MS,
+  type ActionKey,
+  type EndButton,
+  type GameStartData,
+  type Intent,
+  type MoveUndo,
+  type Phase,
+} from './game/types';
+import { intentAt, trailTo, type MovePlan } from './game/intent';
+import { computeHighlights } from './game/highlights';
+import { menuModel } from './game/menuModel';
+import { forecastFor, hintText, moveTipFor, selectionPanel } from './game/hudParts';
+import { TutorialTracker } from './game/tutorial';
+import { CommandPreview } from './game/commandPreview';
 
 /** Filtro CSS del lienzo del juego (gris al perder). */
 function setEndFilter(f: string | null): void {
@@ -214,22 +179,6 @@ function setEndFilter(f: string | null): void {
   if (!el) return;
   el.style.transition = f ? 'filter 1.2s steps(6)' : '';
   el.style.filter = f ?? '';
-}
-
-/** Que pasaria al soltar la unidad elegida en una casilla. */
-type Intent =
-  | { kind: 'none' }
-  | { kind: 'stay' }
-  | { kind: 'move'; to: Pos; capture: boolean }
-  | { kind: 'attack'; from: Pos; target: Unit }
-  | { kind: 'merge'; target: Unit }
-  | { kind: 'load'; target: Unit };
-
-interface MoveUndo {
-  uid: number;
-  x: number;
-  y: number;
-  canFire: boolean;
 }
 
 /** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
@@ -249,29 +198,7 @@ function pointerIn(p: Phaser.Input.Pointer, right: boolean, middle = false): Poi
   };
 }
 
-const key = (p: Pos) => `${p.x},${p.y}`;
-const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
-const MENU_PHASES: Phase[] = ['gameMenu', 'unitMenu', 'groupMenu', 'orderMenu', 'buy', 'unloadPick'];
-const STEP_MS = 70;
-/** Tiempo sin aceptar Enter/clic al volver el turno al jugador. */
-const INPUT_LOCK_MS = 350;
-/** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
-const CONFIRM_MS = 2500;
-
-/** Como empieza una partida (scene.start('Game', data)). */
-export interface GameStartData {
-  /** new: mapa al azar o con `setup`; load: la guardada; mission: `mission`; state: `state` (JSON de una partida). */
-  mode?: 'new' | 'load' | 'mission' | 'state' | 'lab';
-  /** Laboratorio de animaciones (src/lab.ts). */
-  lab?: LabOptions;
-  rules?: Partial<RulesConfig>;
-  setup?: GameSetup;
-  mission?: string;
-  state?: string;
-  /** Partida nueva: general del jugador y de la IA (id de generals.json). */
-  general?: string | null;
-  enemyGeneral?: string | null;
-}
+export type { GameStartData } from './game/types';
 
 export class GameScene extends Phaser.Scene {
   private s!: GameState;
@@ -350,11 +277,14 @@ export class GameScene extends Phaser.Scene {
   private threat = false;
   /** [CAMBIO] Ver lo que hara cada unidad con orden al terminar el turno (todas, tecla V). */
   private intents = false;
-  /** Prevision de las ordenes (previewCommands) y la firma de la partida con la que se calculo. */
-  private intentCache: { sig: string; map: Map<number, CommandIntent> } | null = null;
+  /** Prevision de las ordenes (previewCommands), recalculada solo si cambia la partida. */
+  private preview = new CommandPreview();
   /** Unidad cuyo alcance se esta mostrando (Enter o clic derecho sobre ella). */
   private inspectUid: number | null = null;
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
+
+  /** Panel de la mision y pasos del tutorial. */
+  private tutorial = new TutorialTracker();
 
   // Raton y dedos (src/controls/pointer.ts)
   private gestures = new PointerGestures(this.pointerTarget());
@@ -420,12 +350,10 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.enemyPlaying = false;
     this.inspectUid = null;
-    this.intentCache = null;
+    this.preview.reset();
     this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
     this.gestures.reset();
-    this.tutorialStep = 0;
-    this.tutorialEvents = [];
-    this.tutorialOwned = 0;
+    this.tutorial.reset();
     this.lastAt = null;
     this.anchorAt = {};
     this.endButtons = [];
@@ -637,46 +565,13 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
   }
 
-  /**
-   * [CAMBIO] Prevision de las ordenes con destino. Solo se recalcula si cambia algo de la partida que
-   * pueda cambiarla (unidades, edificios, dia); mover el cursor solo cambia cuales se dibujan.
-   */
-  private commandIntents(): Map<number, CommandIntent> {
-    const s = this.s;
-    const sig = JSON.stringify([
-      s.day,
-      s.weather,
-      s.generals?.map((g) => g?.reveal ?? null),
-      s.units.map((u) => [
-        u.uid,
-        u.type,
-        u.team,
-        u.x,
-        u.y,
-        u.life,
-        u.active,
-        u.canMove,
-        u.canFire,
-        u.carrier,
-        u.cargo,
-        u.command,
-        u.squad,
-        u.order,
-      ]),
-      s.squads?.map((q) => [q.id, q.command]),
-      s.buildings.map((b) => [b.owner, b.capture]),
-    ]);
-    if (this.intentCache?.sig !== sig) this.intentCache = { sig, map: previewCommands(s, 0) };
-    return this.intentCache.map;
-  }
-
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): { path: Pos[]; attack?: Pos; capture?: Pos }[] {
     if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
     const mine = this.s.units.filter((u) => u.team === 0 && this.cmdOf(u) && u.active && u.carrier === null);
     const shown = mine.filter((u) => this.intents || this.showsOrderLine(u));
     if (!shown.length) return [];
-    const all = this.commandIntents();
+    const all = this.preview.get(this.s);
     const out: { path: Pos[]; attack?: Pos; capture?: Pos }[] = [];
     for (const u of shown) {
       const i = all.get(u.uid);
@@ -728,58 +623,25 @@ export class GameScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private highlights(): Map<string, HighlightKind> {
-    const h = new Map<string, HighlightKind>();
-    if (this.phase === 'move' && this.range) {
-      for (const p of reachableTiles(this.range)) h.set(key(p), 'move');
-      for (const k of this.mergeSet.keys()) h.set(k, 'merge');
-      for (const k of this.loadSet.keys()) h.set(k, 'load');
-    } else if (this.phase === 'attack') {
-      for (const k of this.attackSet.keys()) h.set(k, 'attack');
-    } else if (this.phase === 'unloadTile') {
-      for (const k of this.unloadSet) h.set(k, 'unload');
-    } else if (this.phase === 'orderMenu' && this.orderMenu) {
-      for (const uid of this.orderMenu.uids) {
-        const u = unitById(this.s, uid);
-        if (u) h.set(`${u.x},${u.y}`, 'group');
-      }
-    } else if (this.phase === 'target' && this.ordering) {
-      for (const uid of this.ordering.uids) {
-        const u = unitById(this.s, uid);
-        if (u) h.set(`${u.x},${u.y}`, 'group');
-      }
-    } else if (this.phase === 'target') {
-      for (const p of this.targetArea(this.view.cursor)) h.set(key(p), 'attack');
-    } else if (this.phase === 'map' && this.group.size) {
-      for (const uid of this.group) {
-        const u = unitById(this.s, uid);
-        if (u) h.set(`${u.x},${u.y}`, 'group');
-      }
-    } else if (this.phase === 'map' && this.inspectUid === null) {
-      // Solo pasando por encima de una unidad propia: su alcance, en tenue.
-      const c = this.view.cursor;
-      const u = unitAt(this.s, c.x, c.y);
-      if (u && u.team === 0 && u.active && u.canMove && u.carrier === null && !this.enemyPlaying) {
-        const r = moveRange(this.s, u);
-        for (const p of reachableTiles(r)) h.set(key(p), 'hover');
-      }
-      // [CAMBIO] Señalando una unidad de escuadra: se marcan sus compañeras.
-      if (u && u.team === 0 && u.squad !== undefined && !this.enemyPlaying)
-        for (const o of squadUnits(this.s, u.squad)) if (o.uid !== u.uid && o.carrier === null) h.set(key(o), 'squad');
-    } else if (this.phase === 'map' && this.inspectUid !== null) {
-      // Alcance de una unidad señalada: adonde llega y que puede atacar en su proximo turno.
-      const u = unitById(this.s, this.inspectUid);
-      if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) {
-        const r = moveRange(this.s, { ...u, active: true, canMove: true });
-        const reach = 'reach';
-        const threat = unitThreat(this.s, u);
-        for (let x = 0; x < MAP_W; x++)
-          for (let y = 0; y < MAP_H; y++) {
-            if (r.steps[x]![y]! > 0 && UNIT.mover[u.type]! > 0) h.set(`${x},${y}`, reach);
-            else if (threat[x]![y]) h.set(`${x},${y}`, 'attack');
-          }
-      } else this.inspectUid = null;
-    }
-    return h;
+    const h = computeHighlights({
+      s: this.s,
+      phase: this.phase,
+      cursor: this.view.cursor,
+      range: this.range,
+      merge: this.mergeSet,
+      load: this.loadSet,
+      attack: this.attackSet,
+      unload: this.unloadSet,
+      orderMenuUids: this.orderMenu?.uids ?? null,
+      orderingUids: this.ordering?.uids ?? null,
+      targetArea: (c) => this.targetArea(c),
+      group: this.group,
+      inspectUid: this.inspectUid,
+      enemyPlaying: this.enemyPlaying,
+      visible: (p) => this.visibleToPlayer(p),
+    });
+    if (h.inspectGone) this.inspectUid = null;
+    return h.tiles;
   }
 
   /** Camino previsto de la unidad seleccionada: el trazado hasta el cursor, o hasta la casilla desde la que atacaria. */
@@ -895,101 +757,40 @@ export class GameScene extends Phaser.Scene {
       selection: this.selectionVM(),
       endTurn: { pending: this.pendingUnits().length, armed: this.endArmed() },
       anyCommand: this.s.units.some((u) => u.team === 0 && !!this.cmdOf(u)),
-      hint: busy
-        ? this.enemyPlaying
-          ? t('skip')
-          : ''
-        : this.phase === 'target'
-          ? this.ordering
-            ? t('orderPick')
-            : t('genTarget')
-          : this.phase === 'map'
-            ? this.inspectUid !== null
-              ? t('hintInspect')
-              : t('hintMap')
-            : '',
-      mission: this.missionPanel(),
+      hint: hintText({
+        busy,
+        enemyPlaying: this.enemyPlaying,
+        phase: this.phase,
+        ordering: !!this.ordering,
+        inspecting: this.inspectUid !== null,
+      }),
+      mission: this.tutorial.panel(this.s, this.phase),
     });
     this.publishCameraView();
   }
 
-  // -------------------------------------------------------------------------
-  // Misiones y tutorial
-  // -------------------------------------------------------------------------
-
-  private tutorialStep = 0;
-  /** Acciones del jugador desde que empezo el paso actual del tutorial. */
-  private tutorialEvents: GameEvent[] = [];
-  private tutorialOwned = 0;
-
-  private missionPanel(): UIState['mission'] {
-    const id = this.s.mission?.id;
-    const m = id ? missionById(id) : undefined;
-    if (!m) return null;
-    let tip: string | null = null;
-    let step: string | null = null;
-    if (m.tutorial) {
-      this.advanceTutorial();
-      const st = TUTORIAL[this.tutorialStep];
-      if (st) {
-        tip = st.text[settings.lang];
-        step = `${this.tutorialStep + 1}/${TUTORIAL.length}`;
-      }
-    }
-    return { title: m.title[settings.lang], objective: objectiveText(m, this.s), status: objectiveStatus(this.s), tip, step };
-  }
-
-  /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
-  private advanceTutorial(): void {
-    if (this.tutorialStep === 0 && this.tutorialEvents.length === 0)
-      this.tutorialOwned = this.s.buildings.filter((b) => b.owner === 0).length;
-    for (let guard = 0; guard < TUTORIAL.length; guard++) {
-      const st = TUTORIAL[this.tutorialStep];
-      if (!st || !st.done({ s: this.s, phase: this.phase, events: this.tutorialEvents, ownedAtStart: this.tutorialOwned })) return;
-      this.tutorialStep++;
-      this.tutorialEvents = [];
-    }
-  }
-
   private forecast(c: Pos): ForecastVM | null {
-    if (!this.sel) return null;
-    let target: Unit | undefined;
-    let atk: Unit = this.sel;
-    if (this.phase === 'move') {
-      // Al mover: si el cursor esta sobre un enemigo atacable, prevision desde la casilla desde la que se atacaria.
-      const it = this.intentAt(c);
-      if (it.kind !== 'attack') return null;
-      target = it.target;
-      atk = { ...this.sel, x: it.from.x, y: it.from.y };
-    } else {
-      const uid = this.attackSet.get(key(c));
-      target = uid !== undefined ? unitById(this.s, uid) : undefined;
-    }
-    if (!target) return null;
-    return forecastVM(this.textures, this.s, this.sel, atk, target, this.anchor('forecast', target));
+    return forecastFor(this.textures, this.s, {
+      phase: this.phase,
+      sel: this.sel,
+      c,
+      intentAt: (p) => this.intentAt(p),
+      attackSet: this.attackSet,
+      anchor: (p) => this.anchor('forecast', p),
+    });
   }
 
-  /** Bocadillo junto al cursor al mover: movimiento gastado, defensa, combustible, peligro y lo que pasaria al soltar. */
+  /** Bocadillo junto al cursor al mover (ver moveTipFor). */
   private moveTip(c: Pos): MoveTipVM | null {
-    const u = this.sel,
-      r = this.range;
-    if (!u || !r) return null;
-    const it = this.intentAt(c);
-    if (it.kind === 'attack' || it.kind === 'stay') return null; // de eso se encarga la prevision de combate
-    const anchor = this.anchor('moveTip', c);
-    if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
-    const dest = it.kind === 'move' ? it.to : null;
-    const used = dest ? pathCost(this.s, Movement.of(u.type), this.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
-    const stars = defenseStars(this.s, c);
-    const action = it.kind === 'merge' ? t('tipJoin') : it.kind === 'load' ? t('tipBoard') : it.capture ? t('tipCapture') : t('tipMove');
-    return {
-      anchor,
-      action,
-      used,
-      max: r.maxSteps,
-      stars: it.kind === 'move' ? stars : undefined,
-      danger: it.kind === 'move' && !!this.dangerMap?.[c.x]?.[c.y],
-    };
+    return moveTipFor(this.s, {
+      sel: this.sel,
+      range: this.range,
+      c,
+      intentAt: (p) => this.intentAt(p),
+      trailTo: (d) => this.trailTo(d),
+      danger: this.dangerMap,
+      anchor: (p) => this.anchor('moveTip', p),
+    });
   }
 
   private tileInfo(p: Pos): TileVM {
@@ -997,121 +798,21 @@ export class GameScene extends Phaser.Scene {
     return tileVM(this.textures, this.s, p, { vis: this.vis, hidden: this.hidden, selected });
   }
 
-  /** "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas). */
-  private captureHint(): string | undefined {
-    return this.sel ? captureHintText(this.s, this.sel) : undefined;
-  }
-
   /** Menu emergente de la fase actual. */
   private buildMenu(): MenuVM {
-    let items: MenuItemVM[] = [];
-    let at: Pos = this.view.cursor;
-    let title: string | undefined;
-    let subtitle: string | undefined;
-    let kind: MenuVM['kind'] = 'game';
-    let info: string[] | undefined;
-    switch (this.phase) {
-      case 'gameMenu':
-        title = `${t('day')} ${this.s.day}${RULES.dayLimit ? ` / ${RULES.dayLimit}` : ''}`;
-        // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
-        if (this.s.setup) subtitle = `${t('mapCode')}: ${seedToCode(this.s.setup.seed)} · ${this.s.setup.size}×${this.s.setup.size}`;
-        if (this.s.mission) {
-          const m = missionById(this.s.mission.id);
-          if (m) info = [`${m.title[settings.lang]}: ${objectiveText(m, this.s)}`];
-        }
-        items = GAME_MENU.map((k) => ({
-          id: k,
-          label: t(k as TextKey),
-          hint: k === 'endTurn' ? 'E' : k === 'resume' ? 'Esc' : k === 'help' ? 'H' : k === 'options' ? 'O' : undefined,
-          danger: k === 'quit' || k === 'surrender',
-          disabled: k === 'replay' && !this.lastEnemy,
-        }));
-        break;
-      case 'unitMenu':
-        kind = 'unit';
-        if (this.sel) at = this.sel;
-        items = this.actions.map((a) => ({
-          id: a,
-          label: t(a as TextKey),
-          danger: a === 'delete',
-          hint: a === 'capture' ? this.captureHint() : undefined,
-        }));
-        title = this.sel ? unitLabel(this.sel.type) : undefined;
-        break;
-      case 'buy':
-        kind = 'buy';
-        if (this.selBuilding) {
-          at = this.selBuilding;
-          title = buildingLabel(this.selBuilding.type);
-          subtitle = `${t('funds')}: ${fmtNum(this.s.funds[0])}`;
-        }
-        items = [
-          { id: 'cancel', label: t('cancel'), icon: null },
-          ...this.buy.map((o) => ({
-            id: `buy${o.type}`,
-            label: unitLabel(o.type),
-            hint: `${o.cost}`,
-            icon: unitIconKey(o.type, o.affordable),
-            disabled: !o.affordable,
-            detail:
-              `${unitStatsText(o.type)} · ${t('vision')} ${UNIT.vision[o.type]}` +
-              (RULES.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[o.type]}`) +
-              abilitiesVM(o.type)
-                .map((a) => ` · ${a.name}`)
-                .join('') +
-              (o.blocked ? ` · ${buyBlockedText(o.blocked)}` : ''),
-          })),
-        ];
-        break;
-      case 'groupMenu': {
-        kind = 'unit';
-        const units = this.groupUnits();
-        if (units[0]) at = units[0];
-        title = `${t('groupMenu')} · ${units.length}`;
-        // [CAMBIO] Las acciones sin casilla del registro (controls/actions.ts); las ordenes piden despues
-        // el destino. "Mover" deja el grupo elegido para el clic derecho.
-        const ctx = this.actionCtx(null);
-        items = [
-          { id: 'move', label: t('groupMoveHint') },
-          ...(ctx ? menuActions(ctx) : []).map((a) => ({ id: a.id, label: t(a.label as TextKey) })),
-          { id: 'cancel', label: t('cancel') },
-        ];
-        break;
-      }
-      case 'orderMenu': {
-        kind = 'unit';
-        const o = this.orderMenu;
-        if (o) {
-          at = o.at;
-          title = o.uids.length > 1 ? `${t('orderUnit')} · ${o.uids.length}` : t('orderUnit');
-        }
-        items = (o?.ids ?? []).map((id) => ({ id, label: t(actionById(id)!.label as TextKey) }));
-        break;
-      }
-      case 'unloadPick': {
-        kind = 'cargo';
-        if (this.sel) at = this.sel;
-        const cargo = this.sel ? this.sel.cargo.map((uid) => unitById(this.s, uid)) : [];
-        items = [
-          { id: 'back', label: t('back'), icon: null },
-          ...cargo.map((u, i) =>
-            u
-              ? {
-                  id: `c${i}`,
-                  label: unitLabel(u.type),
-                  icon: unitIconKey(u.type, true),
-                  hint: `${u.life}`,
-                  disabled: !unloadTiles(this.s, this.sel!, u).length,
-                }
-              : { id: `c${i}`, label: t('empty'), icon: null, disabled: true },
-          ),
-        ];
-        title = t('unload');
-        break;
-      }
-      default:
-        break;
-    }
+    const { kind, title, subtitle, info, items, at } = menuModel({
+      s: this.s,
+      phase: this.phase,
+      cursor: this.view.cursor,
+      sel: this.sel,
+      actions: this.actions,
+      building: this.selBuilding,
+      buy: this.buy,
+      groupUnits: () => this.groupUnits(),
+      groupCtx: () => this.actionCtx(null),
+      orderMenu: this.orderMenu,
+      canReplay: !!this.lastEnemy,
+    });
     this.menuItems = items;
     return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.anchor('menu', at) };
   }
@@ -1886,40 +1587,21 @@ export class GameScene extends Phaser.Scene {
     this.trail = extendTrail(this.s, u, r, this.block, this.trail, t);
   }
 
+  /** La unidad elegida y lo calculado al elegirla (null si no se esta moviendo ninguna). */
+  private plan(): MovePlan | null {
+    const unit = this.sel,
+      range = this.range;
+    return unit && range ? { unit, range, merge: this.mergeSet, load: this.loadSet, trail: this.trail } : null;
+  }
+
   /** Camino hasta `dest`: el trazado si acaba ahi, si no el mas corto. */
   private trailTo(dest: Pos): Pos[] {
-    const end = this.trail[this.trail.length - 1];
-    if (end && samePos(end, dest) && this.sel && samePos(this.trail[0]!, this.sel)) return this.trail;
-    const i = this.trail.findIndex((p) => samePos(p, dest));
-    if (i > 0) return this.trail.slice(0, i + 1);
-    return pathTo(this.range!, this.sel!, dest);
+    return trailTo(this.plan()!, dest);
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */
   private intentAt(t: Pos): Intent {
-    const u = this.sel,
-      r = this.range;
-    if (!u || !r || !inBounds(t.x, t.y)) return { kind: 'none' };
-    if (samePos(t, u)) return { kind: 'stay' };
-    const mergeUid = this.mergeSet.get(key(t));
-    if (mergeUid !== undefined) return { kind: 'merge', target: unitById(this.s, mergeUid)! };
-    const loadUid = this.loadSet.get(key(t));
-    if (loadUid !== undefined) return { kind: 'load', target: unitById(this.s, loadUid)! };
-    const enemy = unitAt(this.s, t.x, t.y);
-    if (enemy && enemy.team !== u.team && enemy.carrier === null && this.visibleToPlayer(enemy)) {
-      const from = this.attackFrom(enemy);
-      return from ? { kind: 'attack', from, target: enemy } : { kind: 'none' };
-    }
-    if (r.steps[t.x]![t.y]! > 0) {
-      const b = buildingAt(this.s, t.x, t.y);
-      return { kind: 'move', to: { x: t.x, y: t.y }, capture: !!b && b.owner !== u.team && !!UNIT.cancapt[u.type] };
-    }
-    return { kind: 'none' };
-  }
-
-  /** Mejor casilla desde la que atacar a `t` (ver bestAttackTile). */
-  private attackFrom(t: Unit): Pos | null {
-    return bestAttackTile(this.s, this.sel!, t, this.range!, this.trail[this.trail.length - 1] ?? this.sel!);
+    return intentAt(this.s, this.plan(), t, (p) => this.visibleToPlayer(p));
   }
 
   /**
@@ -2435,19 +2117,7 @@ export class GameScene extends Phaser.Scene {
     if (this.group.size < 2 || !['map', 'groupMenu', 'orderMenu', 'target'].includes(this.phase) || this.enemyPlaying) return null;
     const list = this.pickedInOrder();
     if (list.length < 2) return null;
-    const c = this.view.cursor;
-    const types = new Map<number, number>();
-    for (const u of list) types.set(u.type, (types.get(u.type) ?? 0) + 1);
-    return {
-      units: list.map((u) => ({
-        uid: u.uid,
-        icon: unitKey(this.textures, this.s, u),
-        name: unitLabel(u.type),
-        life: u.life,
-        current: u.x === c.x && u.y === c.y,
-      })),
-      types: [...types].map(([type, count]) => ({ name: unitLabel(type), count })),
-    };
+    return selectionPanel(this.textures, this.s, list, this.view.cursor);
   }
 
   /** [CAMBIO] Las elegidas en el orden del panel: por tipo y, dentro, como estan en la partida. */
@@ -3200,7 +2870,7 @@ export class GameScene extends Phaser.Scene {
       // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
       if (!this.enemyPlaying && ev.kind !== 'move') this.clearUndo();
       if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
-      if (!this.replaying && !this.enemyPlaying) this.tutorialEvents.push(ev);
+      if (!this.replaying && !this.enemyPlaying) this.tutorial.record(ev);
       if (ev.kind === 'attack') this.lastAt = { ...ev.target };
       else if (ev.kind === 'capture') this.lastAt = { ...ev.at };
       switch (ev.kind) {
