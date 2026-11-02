@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, UNIT_NAMES, useRules } from '@core/data';
+import { DEFAULT_RULES, HQ, UNIT_NAMES, useRules } from '@core/data';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/types';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { key } from '../src/scenes/game/types';
+import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
+import { live } from '../src/scenes/game/host';
+import { MISSIONS } from '@core/missions';
 import { blankState } from './helpers';
 
 const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
@@ -111,5 +114,38 @@ describe('escena: linea de ayuda (game/hudParts.ts)', () => {
     expect(hintText({ ...o, busy: true })).toBe('');
     expect(hintText(o)).not.toBe(hintText({ ...o, inspecting: true }));
     expect(hintText({ ...o, phase: 'move' })).toBe('');
+  });
+});
+
+describe('escena: final de la partida (game/endOfMatch.ts)', () => {
+  it('botones: en una mision ganada, la siguiente si la hay; si no es mision, revancha', () => {
+    expect(endButtonsFor(MISSIONS[0], true)).toEqual(['next', 'retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], true)).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], false)).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(undefined, true)).toEqual(['rematch', 'new', 'menu']);
+  });
+
+  it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
+    const s = blankState();
+    s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
+    expect(endFocus(s, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+    expect(endFocus(s, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
+  });
+});
+
+describe('escena: puente a los modulos (game/host.ts)', () => {
+  it('los campos se leen y escriben cada vez en el sitio de origen', () => {
+    const origin = { phase: 'map', n: 1 };
+    const h = live<{ phase: string; readonly n: number; bump(): void }>({
+      phase: { get: () => origin.phase, set: (v) => (origin.phase = v) },
+      n: { get: () => origin.n },
+      bump: () => {
+        origin.n++;
+      },
+    });
+    h.bump();
+    expect(h.n).toBe(2);
+    h.phase = 'busy';
+    expect(origin.phase).toBe('busy');
   });
 });

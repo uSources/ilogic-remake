@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aiTurn, assistTurn, commandNow, commandOrder } from '../core/ai';
+import { commandNow, commandOrder } from '../core/ai';
 import {
   cancelCommand,
   commandBlock,
@@ -18,7 +18,7 @@ import {
   squadUnits,
   SQUAD_NAME_MAX,
 } from '../core/squads';
-import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, UNIT_ART, WEATHER, useRules, Movement, UNIT_NAMES, MoveType } from '../core/data';
+import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, useRules, Movement, UNIT_NAMES } from '../core/data';
 import { grid, inBounds, manhattan, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { closestStep, extendTrail } from '../core/orders';
@@ -38,7 +38,6 @@ import {
   capture,
   capturePointsOf,
   captureProgress,
-  endRound,
   load,
   loadTargets,
   merge,
@@ -47,9 +46,7 @@ import {
   moveUnit,
   outcome,
   endReason,
-  score,
   removeUnit,
-  type RoundReport,
   spawn,
   supply,
   upkeepOf,
@@ -68,19 +65,16 @@ import {
   type MoveRange,
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
-import { recordEvent, sampleArmy, stats } from '../core/stats';
+import { recordEvent, sampleArmy } from '../core/stats';
 import type { Building, CommandKind, GameEvent, GameSetup, GameState, Pos, Unit } from '../core/types';
 import { randomSeed } from '../setup';
-import { bestDays, markCompleted } from '../campaign';
-import { buildMission, missionById, missionRules, MISSIONS } from '../core/missions';
+import { buildMission, missionById, missionRules } from '../core/missions';
 import { ensureWeather } from '../core/weather';
 import {
   resetActions,
   showBanner,
-  showReport,
   showToast,
   ui,
-  type ReportLineVM,
   type ForecastVM,
   type IdleVM,
   type SelectionVM,
@@ -94,11 +88,11 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { fmtNum, settings, t, unitLabel, weatherLabel } from '../settings';
+import { settings, t, unitLabel } from '../settings';
 import { deleteSave, readSave, writeSave } from '../storage';
 import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
-import { blink, burst, center, COLORS, floatText, lifeBar, playAnim, reducedMotion, targetMark, tileFlash } from '../ui/fx';
+import { reducedMotion } from '../ui/fx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { mapTap, moveTap } from '../ui/touch';
@@ -117,50 +111,19 @@ import {
 import { cursorCss } from '../ui/cursors';
 import { CLOSES_HELP, type GameCommand, type GroupMode } from '../controls/commands';
 import { keyCommand } from '../controls/keyboard';
-import { listStep, menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
-import {
-  squadsVM,
-  commandLabel,
-  buyBlockedText,
-  combatVM,
-  minimapVM,
-  tileVM,
-  weatherEffectsText,
-  weatherVM,
-  dayInfoVM,
-  economyVM,
-  generalVM,
-} from '../ui/hudModels';
-import {
-  debris,
-  facingToward,
-  hitFlash,
-  impact,
-  muzzleFlash,
-  popNumber,
-  projectile,
-  recoil,
-  shotKind,
-  tag,
-  type ShotKind,
-} from '../ui/combatFx';
-import { baseFacing, faceFlip } from '../ui/mapView';
-import { defaultLab, LAB_TARGET, labRange, labState, type LabAction, type LabOptions } from '../lab';
-import { abilityArea, abilityBlock, areaTiles, generalOf, newGeneral, useAbility } from '../core/generals';
-import { PAL, PAL_CSS } from '../ui/palette';
+import { menuKeyCommand, type ControlContext, type MenuCommand } from '../controls/menu';
+import { squadsVM, commandLabel, buyBlockedText, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
+import { defaultLab, labState, type LabAction, type LabOptions } from '../lab';
+import { newGeneral } from '../core/generals';
 import {
   ACTION_ORDER,
   CMD_OF,
   CONFIRM_MS,
   CURSOR_PHASES,
-  END_LABEL,
   GAME_MENU,
-  INPUT_LOCK_MS,
   key,
   MENU_PHASES,
-  STEP_MS,
   type ActionKey,
-  type EndButton,
   type GameStartData,
   type Intent,
   type MoveUndo,
@@ -172,14 +135,12 @@ import { menuModel } from './game/menuModel';
 import { forecastFor, hintText, moveTipFor, selectionPanel } from './game/hudParts';
 import { TutorialTracker } from './game/tutorial';
 import { CommandPreview } from './game/commandPreview';
-
-/** Filtro CSS del lienzo del juego (gris al perder). */
-function setEndFilter(f: string | null): void {
-  const el = document.getElementById('game');
-  if (!el) return;
-  el.style.transition = f ? 'filter 1.2s steps(6)' : '';
-  el.style.filter = f ?? '';
-}
+import { EventPlayer, type PlaybackHost } from './game/playback';
+import { TurnFlow, type TurnHost } from './game/turns';
+import { EndOfMatch, setEndFilter, type EndHost } from './game/endOfMatch';
+import { GeneralAbilities, type AbilityHost } from './game/abilities';
+import { restartLab, startLab, type LabHost } from './game/labMode';
+import { live } from './game/host';
 
 /** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
 function pointerIn(p: Phaser.Input.Pointer, right: boolean, middle = false): PointerIn {
@@ -217,8 +178,6 @@ export class GameScene extends Phaser.Scene {
    * destino con una unidad o un grupo elegido. `from`: de donde se venia (adonde vuelve al cancelar).
    */
   private orderMenu: { at: Pos; uids: number[]; ids: ActionId[]; from: 'move' | 'unitMenu' | 'map' } | null = null;
-  /** Habilidad del general que se esta apuntando (fase 'target'). */
-  private targeting: string | null = null;
   private vis: boolean[][] = [];
   private hidden = new Set<number>();
 
@@ -265,14 +224,12 @@ export class GameScene extends Phaser.Scene {
   private fromSave = false;
   private savedThisGame = false;
   private quitArmedAt = -1e9;
-  private endArmedAt = -1e9;
   private corruptSave = false;
   /** Ignorar Enter/clic hasta este instante (tras el turno enemigo). */
   private inputLockUntil = 0;
   private deleteArmed = false;
   private fastForward = false;
   private ended = false;
-  private enemyPlaying = false;
   /** Zona de amenaza enemiga visible (tecla T). */
   private threat = false;
   /** [CAMBIO] Ver lo que hara cada unidad con orden al terminar el turno (todas, tecla V). */
@@ -285,6 +242,15 @@ export class GameScene extends Phaser.Scene {
 
   /** Panel de la mision y pasos del tutorial. */
   private tutorial = new TutorialTracker();
+
+  /** Animar los eventos de las reglas (game/playback.ts). */
+  private player = new EventPlayer(this.playbackHost());
+  /** Fin de turno, turno de la IA y su repeticion (game/turns.ts). */
+  private turns = new TurnFlow(this.turnHost());
+  /** Final de la partida (game/endOfMatch.ts). */
+  private endScreen = new EndOfMatch(this.endHost());
+  /** Habilidades del general del jugador (game/abilities.ts). */
+  private abilities = new GeneralAbilities(this.abilityHost());
 
   // Raton y dedos (src/controls/pointer.ts)
   private gestures = new PointerGestures(this.pointerTarget());
@@ -341,14 +307,13 @@ export class GameScene extends Phaser.Scene {
     this.fromSave = false;
     this.savedThisGame = false;
     this.quitArmedAt = -1e9;
-    this.endArmedAt = -1e9;
     this.surrenderArmedAt = -1e9;
     this.corruptSave = false;
     this.inputLockUntil = 0;
     this.deleteArmed = false;
     this.fastForward = false;
     this.ended = false;
-    this.enemyPlaying = false;
+    this.turns.reset();
     this.inspectUid = null;
     this.preview.reset();
     this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
@@ -356,11 +321,7 @@ export class GameScene extends Phaser.Scene {
     this.tutorial.reset();
     this.lastAt = null;
     this.anchorAt = {};
-    this.endButtons = [];
-    this.endSel = 0;
-    this.endFx = null;
-    this.lastEnemy = null;
-    this.replaying = false;
+    this.endScreen.reset();
   }
 
   init(data: GameStartData): void {
@@ -472,7 +433,7 @@ export class GameScene extends Phaser.Scene {
     );
     ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, intents: this.intents, options: null });
     this.refresh();
-    if (this.lab) this.startLab(this.lab);
+    if (this.lab) startLab(this.labHost(), this.lab);
     else showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
   }
@@ -495,13 +456,13 @@ export class GameScene extends Phaser.Scene {
         if (ready() && MENU_PHASES.includes(this.phase)) this.back();
       },
       endTurn: () => {
-        if (ready()) this.requestEndTurn();
+        if (ready()) this.turns.requestEndTurn();
       },
       labPlay: (action: LabAction) => {
-        if (this.lab && this.phase !== 'busy') this.restartLab({ ...this.lab, play: action });
+        if (this.lab && this.phase !== 'busy') restartLab(this, { ...this.lab, play: action });
       },
       labSet: (patch: Partial<LabOptions>) => {
-        if (this.lab && this.phase !== 'busy') this.restartLab({ ...this.lab, ...patch, play: null });
+        if (this.lab && this.phase !== 'busy') restartLab(this, { ...this.lab, ...patch, play: null });
       },
       labExit: () => {
         this.scene.start('Menu');
@@ -524,7 +485,7 @@ export class GameScene extends Phaser.Scene {
         this.refresh();
       },
       useAbility: (id: string) => {
-        if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.startAbility(id);
+        if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.abilities.start(id);
       },
       cancelAbility: () => {
         if (this.phase === 'target') this.toMap();
@@ -634,7 +595,7 @@ export class GameScene extends Phaser.Scene {
       unload: this.unloadSet,
       orderMenuUids: this.orderMenu?.uids ?? null,
       orderingUids: this.ordering?.uids ?? null,
-      targetArea: (c) => this.targetArea(c),
+      targetArea: (c) => this.abilities.area(c),
       group: this.group,
       inspectUid: this.inspectUid,
       enemyPlaying: this.enemyPlaying,
@@ -739,7 +700,7 @@ export class GameScene extends Phaser.Scene {
             canAttack: !!UNIT.canfight[this.lab.attacker],
           }
         : null,
-      general: generalVM(s, 0, this.phase === 'target' ? this.targeting : null),
+      general: generalVM(s, 0, this.phase === 'target' ? this.abilities.targeting : null),
       enemyGeneral: generalVM(s, 1, null),
       buildings: owned.length,
       day: s.day,
@@ -755,7 +716,7 @@ export class GameScene extends Phaser.Scene {
       squads: squadsVM(this.s),
       multi: this.multi || this.group.size ? this.group.size : null,
       selection: this.selectionVM(),
-      endTurn: { pending: this.pendingUnits().length, armed: this.endArmed() },
+      endTurn: { pending: this.turns.pendingUnits().length, armed: this.turns.endArmed() },
       anyCommand: this.s.units.some((u) => u.team === 0 && !!this.cmdOf(u)),
       hint: hintText({
         busy,
@@ -811,7 +772,7 @@ export class GameScene extends Phaser.Scene {
       groupUnits: () => this.groupUnits(),
       groupCtx: () => this.actionCtx(null),
       orderMenu: this.orderMenu,
-      canReplay: !!this.lastEnemy,
+      canReplay: this.turns.canReplay,
     });
     this.menuItems = items;
     return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.anchor('menu', at) };
@@ -866,7 +827,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Cumplir una orden de menu (pantalla final u opciones), venga del mando que venga. */
   menu(cmd: MenuCommand): void {
-    if (this.ended) return this.endCommand(cmd);
+    if (this.ended) return this.endScreen.command(cmd);
     if (this.optionsPanel.isOpen) this.optionsPanel.command(cmd);
   }
 
@@ -925,7 +886,7 @@ export class GameScene extends Phaser.Scene {
         if (this.phase === 'map') this.undoLast();
         return;
       case 'endTurn':
-        if (this.phase === 'map' || this.phase === 'gameMenu') this.requestEndTurn();
+        if (this.phase === 'map' || this.phase === 'gameMenu') this.turns.requestEndTurn();
         return;
       case 'threat':
         return this.toggleThreat();
@@ -1321,7 +1282,7 @@ export class GameScene extends Phaser.Scene {
         return this.acceptUnloadTile(c);
       case 'target':
         if (this.ordering) return void this.placeOrder(c);
-        return void this.fireAbility(c);
+        return void this.abilities.fire(c);
       default:
         break;
     }
@@ -1374,125 +1335,9 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // General
-  // -------------------------------------------------------------------------
-
-  /** Habilidad elegida en el panel: las de area pasan a elegir casilla; el resto se usan ya. */
-  private async startAbility(id: string): Promise<void> {
-    const g = generalOf(this.s, 0);
-    const a = g?.def.abilities.find((x) => x.id === id);
-    if (!g || !a) return;
-    const block = abilityBlock(this.s, 0, id);
-    if (block === 'target') {
-      this.abandonSelection();
-      this.phase = 'target';
-      this.targeting = id;
-      return this.refresh();
-    }
-    if (block) return showToast(t(block === 'used' ? 'genUsed' : 'genCharge'));
-    if (this.phase === 'target') this.toMap();
-    const ev = useAbility(this.s, 0, id);
-    if (ev) await this.playEvents([ev]);
-  }
-
-  /** Casillas que tocaria la habilidad que se apunta si se lanza en `c` (dentro del mapa). */
-  private targetArea(c: Pos): Pos[] {
-    const a = this.targeting ? generalOf(this.s, 0)?.def.abilities.find((x) => x.id === this.targeting) : undefined;
-    const r = a ? abilityArea(a) : null;
-    if (r === null) return [];
-    return areaTiles(c, r).filter((p) => p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H);
-  }
-
-  private async fireAbility(c: Pos): Promise<void> {
-    const id = this.targeting;
-    if (!id) return this.toMap();
-    const ev = useAbility(this.s, 0, id, c);
-    this.toMap();
-    if (ev) await this.playEvents([ev]);
-  }
-
-  /** Animacion de una habilidad: el area se ilumina y cada unidad tocada explota y enseña lo que pierde. */
-  private async playAbility(ev: Extract<GameEvent, { kind: 'ability' }>): Promise<void> {
-    this.refresh();
-    if (this.fastForward) return;
-    const def = generalOf(this.s, ev.team)?.def;
-    const ability = def?.abilities.find((a) => a.id === ev.ability);
-    const name = ability?.name[settings.lang] ?? ev.ability;
-    // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
-    if (ev.team !== 0) showToast(`${t('enemy')} · ${def?.name[settings.lang] ?? ev.general}: ${name}`);
-    const at = ev.target ?? this.view.cursor;
-    if (ev.target) await this.lookAt(ev.target);
-    const c = center(at);
-    void floatText(this, this.view, { x: c.x, y: c.y - 18 }, name, PAL_CSS.gold);
-    const r = ability ? abilityArea(ability) : null;
-    if (ev.target && r !== null) {
-      for (const p of areaTiles(ev.target, r))
-        if (p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H) void tileFlash(this, this.view, p, PAL.red);
-      this.cameras.main.shake(220, 0.006);
-    }
-    await Promise.all([
-      ...ev.hits.map(async (h) => {
-        const u = unitById(this.s, h.uid);
-        if (!u || (u.team !== 0 && !this.visibleToPlayer(u))) return;
-        const p = center(u);
-        void playAnim(this, this.view, p, 'boom', { frameMs: 65 });
-        void burst(this, this.view, p, { colors: COLORS.fire, count: 14, radius: 20 });
-        await floatText(this, this.view, { x: p.x, y: p.y - 6 }, `-${h.damage}`, PAL_CSS.redSoft);
-      }),
-      // Curar: "+N" en verde sobre cada unidad que recupera vida.
-      ...(ev.heals ?? []).map(async (h) => {
-        const u = unitById(this.s, h.uid);
-        if (!u || (u.team !== 0 && !this.visibleToPlayer(u))) return;
-        const p = center(u);
-        void burst(this, this.view, p, { colors: COLORS.heal, count: 10, radius: 16 });
-        await floatText(this, this.view, { x: p.x, y: p.y - 6 }, `+${h.amount}`, PAL_CSS.green);
-      }),
-      // Dinero: la cantidad, bajo el nombre de la habilidad.
-      ...(ev.funds ? [floatText(this, this.view, { x: c.x, y: c.y }, `+${fmtNum(ev.funds)}`, PAL_CSS.gold)] : []),
-    ]);
-  }
-
-  // -------------------------------------------------------------------------
-  // Laboratorio de animaciones (src/lab.ts)
-  // -------------------------------------------------------------------------
-
-  private startLab(o: LabOptions): void {
-    // Camara lenta: todo lo que va por tweens y temporizadores de la escena.
-    const scale = o.slow ? 0.25 : 1;
-    this.tweens.timeScale = scale;
-    this.time.timeScale = scale;
-    this.view.cursor = { ...LAB_TARGET };
-    // Mas cerca que en una partida: se ven bien los efectos. Centrado entre las dos unidades.
-    const cam = this.cameras.main;
-    for (let i = 0; i < 2; i++) this.view.zoomStep(1, cam.width / 2, cam.height / 2);
-    cam.centerOn((LAB_TARGET.x - 1) * TILE, (LAB_TARGET.y + 0.5) * TILE);
-    this.refresh();
-    if (o.play) this.time.delayedCall(450, () => void this.runLab(o.play!));
-  }
-
-  private async runLab(action: LabAction): Promise<void> {
-    const me = this.s.units.find((u) => u.team === 0);
-    const foe = this.s.units.find((u) => u.team === 1);
-    if (!me || !foe) return;
-    if (action === 'move') {
-      const range = moveRange(this.s, me);
-      const dest = { x: LAB_TARGET.x - labRange(me.type), y: LAB_TARGET.y };
-      const path = moveUnit(this.s, me, dest, range);
-      if (path) await this.playEvents([moveEvent(me.uid, path)]);
-      return;
-    }
-    await this.playEvents([attackEvent(this.s, me, foe, seededRng(3))]);
-  }
-
-  /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */
-  private restartLab(o: LabOptions): void {
-    this.scene.start('Game', { mode: 'lab', lab: o } satisfies GameStartData);
-  }
-
   private toMap(): void {
     this.phase = 'map';
-    this.targeting = null;
+    this.abilities.targeting = null;
     this.ordering = null;
     this.orderMenu = null;
     this.inspectUid = null;
@@ -1709,41 +1554,6 @@ export class GameScene extends Phaser.Scene {
     this.toMap();
   }
 
-  /** Al empezar el turno: las unidades con orden avanzan solas (y pueden seguir actuando despues). */
-  private async runOrders(): Promise<void> {
-    const movers = this.s.units.filter((u) => u.team === 0 && u.order && u.active && u.canMove && u.carrier === null);
-    const arrived: Unit[] = [];
-    const m = this.match;
-    for (const u of movers) {
-      if (m !== this.match) return;
-      const goal = u.order!;
-      if (samePos(u, goal)) {
-        delete u.order;
-        continue;
-      }
-      const r = moveRange(this.s, u);
-      // Si ya llega este turno, no gastar el turno en las ultimas casillas: la mueve el jugador
-      // (y puede seguir hasta donde quiera, atacar o capturar).
-      if ((r.steps[goal.x]?.[goal.y] ?? 0) > 0) {
-        delete u.order;
-        arrived.push(u);
-        continue;
-      }
-      const dest = stepToward(this.s, u, goal, r);
-      if (!dest) continue;
-      const path = moveUnit(this.s, u, dest, r);
-      if (!path) continue;
-      await this.playEvents([moveEvent(u.uid, path)]);
-      if (samePos(u, goal) || path.ambush) delete u.order;
-    }
-    if (arrived.length) {
-      this.view.cursor = { x: arrived[0]!.x, y: arrived[0]!.y };
-      this.view.ensureVisible(arrived[0]!, 3);
-      showToast(t('orderArrives'));
-    }
-    if (movers.length) this.refresh();
-  }
-
   /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
   private async groupMove(goal: Pos): Promise<void> {
     this.multi = false;
@@ -1918,10 +1728,10 @@ export class GameScene extends Phaser.Scene {
         }
         return this.toMap();
       case 'endTurn':
-        return void this.enemyTurn();
+        return void this.turns.enemyTurn();
       case 'replay':
-        if (!this.lastEnemy) return showToast(t('noReplay'));
-        return void this.replayEnemyTurn();
+        if (!this.turns.canReplay) return showToast(t('noReplay'));
+        return void this.turns.replayEnemyTurn();
       case 'surrender':
         if (this.time.now - this.surrenderArmedAt < CONFIRM_MS) return this.surrender();
         this.surrenderArmedAt = this.time.now;
@@ -2483,226 +2293,28 @@ export class GameScene extends Phaser.Scene {
     if (this.lab) return false;
     const result = outcome(this.s);
     if (result === 'playing') return false;
-    void this.finish(result === 'won', endReason(this.s));
+    void this.endScreen.finish(result === 'won', endReason(this.s));
     return true;
   }
 
   /** Rendirse: la partida termina como derrota. */
   private surrender(): void {
     this.toMap();
-    void this.finish(false, 'surrender');
+    void this.endScreen.finish(false, 'surrender');
   }
-
-  // -------------------------------------------------------------------------
-  // Final de la partida: el mapa tal como acabo, la camara en la jugada decisiva y el resumen
-  // -------------------------------------------------------------------------
 
   /** Ultima casilla con un combate o una captura (para enfocar el final). */
   private lastAt: Pos | null = null;
-  private endButtons: EndButton[] = [];
-  private endSel = 0;
-  private endFx: Phaser.Time.TimerEvent | null = null;
+  private surrenderArmedAt = -1e9;
 
-  private async finish(won: boolean, reason: NonNullable<UIState['end']>['reason']): Promise<void> {
-    if (this.ended) return;
+  /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */
+  private closeMatch(): void {
     this.ended = true;
     this.phase = 'busy';
     // [CAMBIO] borrar el guardado de esta partida al terminarla (antes solo si se habia cargado).
     if (this.fromSave || this.savedThisGame) deleteSave();
-    sampleArmy(this.s);
-    const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
-    const before = m ? bestDays(m.id) : null;
-    if (m && won) markCompleted(m.id, this.s.day);
     this.threat = false;
-    this.refresh();
-    ui.set({
-      screen: 'outro',
-      menu: null,
-      forecast: null,
-      moveTip: null,
-      tile: null,
-      options: null,
-      help: false,
-      toast: null,
-      report: null,
-    });
-
-    // Camara a la jugada que lo ha decidido.
-    const focus = this.endFocus(won, reason);
-    const match = this.match;
-    await this.wait(500);
-    if (match !== this.match) return;
-    const c = { x: focus.x * TILE + TILE / 2, y: focus.y * TILE + TILE / 2 };
-    this.cameras.main.pan(c.x, c.y, reducedMotion() ? 0 : 1200, 'Sine.easeInOut', true);
-    await this.wait(reducedMotion() ? 100 : 1250);
-    if (match !== this.match) return;
-    if (won) {
-      void tileFlash(this, this.view, focus, PAL.gold);
-      const confetti = () => {
-        const p = { x: c.x + (Math.random() - 0.5) * TILE * 8, y: c.y + (Math.random() - 0.5) * TILE * 5 };
-        void burst(this, this.view, p, {
-          colors: [PAL.gold, 0xfff1a8, PAL.blue, 0x8fd0ff, 0xffffff],
-          count: 14,
-          radius: 30,
-          duration: 900,
-        });
-      };
-      confetti();
-      if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 420, loop: true, callback: confetti });
-    } else {
-      setEndFilter('grayscale(0.9) brightness(0.55)');
-      const smoke = () =>
-        void burst(
-          this,
-          this.view,
-          { x: c.x + (Math.random() - 0.5) * TILE, y: c.y - TILE / 2 },
-          { colors: COLORS.smoke, count: 8, radius: 26, size: 6, duration: 1400 },
-        );
-      smoke();
-      if (!reducedMotion()) this.endFx = this.time.addEvent({ delay: 650, loop: true, callback: smoke });
-    }
-    await this.wait(reducedMotion() ? 200 : 1300);
-    if (match !== this.match) return;
-
-    // Botones del final.
-    const next = m ? MISSIONS[MISSIONS.indexOf(m) + 1] : undefined;
-    this.endButtons = m ? (won ? [...(next ? ['next' as const] : []), 'retry', 'menu'] : ['retry', 'menu']) : ['rematch', 'new', 'menu'];
-    this.endSel = 0;
-    const st = stats(this.s);
-    ui.set({
-      screen: 'end',
-      end: {
-        won,
-        day: this.s.day,
-        stats: st,
-        reason,
-        score: [score(this.s, 0), score(this.s, 1)],
-        mission: m ? m.title[settings.lang] : null,
-        chart: st.army && st.army.length > 1 ? st.army : null,
-        best: m ? (won ? bestDays(m.id) : before) : null,
-        newBest: !!m && won && (before === null || this.s.day < before),
-        buttons: this.endButtons.map((id) => ({ id, label: t(END_LABEL[id]) })),
-        selected: 0,
-      },
-    });
-    Object.assign(ui.actions, {
-      endHover: (i: number) => {
-        this.endSel = i;
-        this.publishEndSel();
-      },
-      endPick: (i: number) => this.endPick(i),
-    });
   }
-
-  /** Donde mirar al acabar. */
-  private endFocus(won: boolean, reason: NonNullable<UIState['end']>['reason']): Pos {
-    const hq = (team: 0 | 1) => this.s.buildings.find((b) => b.type === HQ && b.owner === team);
-    const obj = this.s.mission?.objective;
-    if (reason === 'objective' && obj?.kind === 'escort') return obj.to;
-    if ((reason === 'hq' || reason === 'wipeout' || reason === 'objective') && this.lastAt) return this.lastAt;
-    const own = hq(0) ?? hq(1);
-    if (!won && own) return own;
-    return this.lastAt ?? own ?? { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
-  }
-
-  private publishEndSel(): void {
-    const e = ui.get().end;
-    if (e) ui.set({ end: { ...e, selected: this.endSel } });
-  }
-
-  /** Menu de fin de partida: una fila de botones. */
-  private endCommand(cmd: MenuCommand): void {
-    if (ui.get().screen !== 'end') return;
-    const n = this.endButtons.length;
-    const step = listStep(cmd);
-    if (step) this.endSel = (this.endSel + step + n) % n;
-    else if (cmd.kind === 'ok' && !cmd.repeat) return this.endPick(this.endSel);
-    else if (cmd.kind === 'back') return this.endPick(this.endButtons.indexOf('menu'));
-    else return;
-    this.publishEndSel();
-  }
-
-  private endPick(i: number): void {
-    const id = this.endButtons[i];
-    if (!id || ui.get().screen !== 'end') return;
-    this.endFx?.remove(false);
-    this.endFx = null;
-    setEndFilter(null);
-    ui.set({ end: null });
-    const m = this.s.mission ? missionById(this.s.mission.id) : undefined;
-    switch (id) {
-      case 'rematch':
-        return void this.scene.start('Game', { mode: 'new', rules: this.s.rules, setup: this.s.setup });
-      case 'retry':
-        return void this.scene.start(
-          'Game',
-          m ? { mode: 'mission', mission: m.id } : { mode: 'new', rules: this.s.rules, setup: this.s.setup },
-        );
-      case 'next': {
-        const next = m ? MISSIONS[MISSIONS.indexOf(m) + 1] : undefined;
-        return void this.scene.start('Game', next ? { mode: 'mission', mission: next.id } : undefined);
-      }
-      case 'new':
-        return void this.scene.start('Menu', { open: 'setup' });
-      case 'menu':
-        return void this.scene.start('Menu');
-    }
-  }
-
-  /**
-   * Volver a ver el ultimo turno enemigo: se restaura el estado de antes y se vuelve a jugar con
-   * la misma semilla (la IA y los combates son deterministas con ella); al acabar se deja todo
-   * exactamente como estaba.
-   */
-  private async replayEnemyTurn(): Promise<void> {
-    const last = this.lastEnemy;
-    if (!last || this.phase === 'busy' || this.ended) return;
-    this.toMap();
-    const saved = this.saveCamera();
-    const after = serialize(this.s);
-    const before = deserialize(last.before);
-    if (!before) return;
-    this.s = before;
-    this.replaying = true;
-    this.phase = 'busy';
-    this.enemyPlaying = true;
-    this.fastForward = false;
-    this.refresh();
-    showBanner(`${t('day')} ${this.s.day}`, t('replayBanner'), 'red');
-    const m = this.match;
-    await this.wait(900);
-    for (const ev of aiTurn(this.s, seededRng(last.seed))) {
-      if (m !== this.match) return;
-      await this.playEvents([ev]);
-      if (m !== this.match || this.ended) return;
-    }
-    this.s = deserialize(after)!;
-    this.replaying = false;
-    this.enemyPlaying = false;
-    this.backToPlayer(saved);
-  }
-
-  /** Donde estaba mirando el jugador antes del turno enemigo. */
-  private saveCamera(): { x: number; y: number; cursor: Pos } {
-    const cam = this.cameras.main;
-    return { x: cam.midPoint.x, y: cam.midPoint.y, cursor: { ...this.view.cursor } };
-  }
-
-  /** Vuelve el control al jugador tras el turno enemigo: camara donde estaba y entrada bloqueada un momento. */
-  private backToPlayer(saved: { x: number; y: number; cursor: Pos }): void {
-    this.fastForward = false;
-    this.view.cursor = saved.cursor;
-    this.cameras.main.pan(saved.x, saved.y, 300, 'Sine.easeInOut', true);
-    this.phase = 'map';
-    // Que el Enter o el clic con el que se aceleraba la IA no actue ya en el turno propio.
-    this.inputLockUntil = this.time.now + INPUT_LOCK_MS;
-    this.refresh();
-  }
-
-  /** Estado antes del ultimo turno enemigo y semilla con la que se jugo (para repetirlo). */
-  private lastEnemy: { before: string; seed: number } | null = null;
-  private replaying = false;
-  private surrenderArmedAt = -1e9;
 
   private quitToMenu(): void {
     this.ended = true;
@@ -2710,96 +2322,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   // -------------------------------------------------------------------------
-  // Turno de la IA y animaciones
+  // Turno de la IA y animaciones (game/turns.ts, game/playback.ts)
   // -------------------------------------------------------------------------
-
-  /** Fin de turno con la tecla E: si quedan unidades sin usar, pedir que se pulse otra vez. */
-  /** Unidades sin usar encima de un edificio que pueden capturar: capturan solas al terminar el turno. */
-  private autoCapturers(): Unit[] {
-    return this.s.units.filter((u) => u.team === 0 && u.active && u.canMove && u.carrier === null && canCapture(this.s, u));
-  }
-
-  /** Unidades sin mover que no hacen nada solas al terminar (las que capturan solas no cuentan). */
-  private pendingUnits(): Unit[] {
-    const auto = new Set(this.autoCapturers().map((u) => u.uid));
-    return this.idleUnits().filter((u) => !auto.has(u.uid));
-  }
-
-  /** El boton de fin de turno espera la confirmacion (primer clic hace menos de CONFIRM_MS). */
-  private endArmed(): boolean {
-    return this.time.now - this.endArmedAt <= CONFIRM_MS;
-  }
-
-  /**
-   * [CAMBIO] Fin de turno (boton o tecla E). Con unidades sin mover y la opcion "Avisar de unidades
-   * sin mover", el primer clic no termina: el propio boton pasa a "¿Terminar?" y hay que pulsar otra
-   * vez antes de CONFIRM_MS. Sin la opcion, termina directamente.
-   */
-  private requestEndTurn(): void {
-    if (this.lab) return;
-    if (settings.warnIdle && this.pendingUnits().length > 0 && !this.endArmed()) {
-      this.endArmedAt = this.time.now;
-      this.refreshHud();
-      // Al caducar, el boton vuelve a su texto normal.
-      this.time.delayedCall(CONFIRM_MS + 50, () => this.refreshHud());
-      return;
-    }
-    this.endArmedAt = -1e9;
-    void this.enemyTurn();
-  }
-
-  private async enemyTurn(): Promise<void> {
-    if (this.phase === 'busy' || this.ended) return;
-    const m = this.match;
-    this.clearUndo();
-    this.abandonSelection();
-    const saved = this.saveCamera();
-    this.phase = 'busy';
-    // [CAMBIO] Ordenes con destino: las unidades con orden que siguen sin usar la cumplen.
-    const orders = assistTurn(this.s, Math.random);
-    let step = orders.next();
-    while (!step.done) {
-      await this.playEvents([step.value]);
-      if (m !== this.match || this.checkEnd()) return;
-      step = orders.next();
-    }
-    const done = step.value
-      .map((uid) => unitById(this.s, uid))
-      .filter((u): u is Unit => !!u)
-      .map((u) => unitLabel(u.type) + (squadById(this.s, u.squad) ? ` (${squadById(this.s, u.squad)!.name})` : ''));
-    pruneSquads(this.s);
-    // [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando.
-    for (const u of this.autoCapturers()) {
-      const b = buildingAt(this.s, u.x, u.y)!;
-      const r = capture(this.s, u);
-      if (r) await this.playEvents([captureEvent(u, b, r)]);
-      if (m !== this.match || this.checkEnd()) return;
-    }
-    this.enemyPlaying = true;
-    // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
-    this.fastForward = settings.speedEnemy === 'instant';
-    this.refresh();
-    showBanner(`${t('day')} ${this.s.day}`, t('enemyTurn'), 'red');
-    await this.wait(this.fastForward ? 300 : 900);
-    if (m !== this.match) return;
-    // Semilla propia para este turno: asi se puede repetir exactamente (menu > Repetir turno enemigo).
-    const before = serialize(this.s);
-    const seed = randomSeed();
-    for (const ev of aiTurn(this.s, seededRng(seed))) {
-      await this.playEvents([ev]);
-      if (m !== this.match || this.checkEnd()) return;
-    }
-    this.lastEnemy = { before, seed };
-    const report = endRound(this.s);
-    sampleArmy(this.s);
-    if (settings.autosave && writeSave(serialize(this.s))) this.savedThisGame = true;
-    this.enemyPlaying = false;
-    if (this.checkEnd()) return;
-    this.backToPlayer(saved);
-    showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
-    this.showReport(report, done);
-    await this.runOrders();
-  }
 
   /** [CAMBIO] Puntos de control para dibujar: disputado solo si se ven unidades de los dos bandos dentro. */
   private controlPointsView(): ViewOptions['controlPoints'] {
@@ -2809,341 +2333,152 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
-  private showReport(r: RoundReport, done: string[] = []): void {
-    const mine = r.healed.filter((h) => h.team === 0);
-    const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(r.income[0])} ${t('reportIncome')}`, tone: 'gold' }];
-    // [CAMBIO] Parte de los ingresos que viene de los puntos de control.
-    if (r.control && r.control.held[0] > 0)
-      lines.push({ icon: 'ui/dinero', text: `+${fmtNum(r.control.income[0])} ${t('reportControl')} (${r.control.held[0]})`, tone: 'gold' });
-    if (r.control && r.control.contested > 0)
-      lines.push({ icon: '', text: `${t('reportContested')}: ${r.control.contested}`, tone: 'plain' });
-    if (r.upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(r.upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
-    // [CAMBIO] Unidades que cumplieron su orden al terminar el turno anterior (ahora esperan otra).
-    if (done.length) lines.push({ icon: '', text: `${t('orderDone')}: ${done.join(', ')}`, tone: 'plain' });
-    if (mine.length)
-      lines.push({ icon: 'ui/vida', text: `${mine.length} ${t(mine.length === 1 ? 'reportHealed1' : 'reportHealed')}`, tone: 'green' });
-    if (r.weather) {
-      const to = r.weather.to;
-      lines.push({ icon: '', weather: WEATHER.ids[to]!, text: `${weatherLabel(to)}: ${weatherEffectsText(to)}`, tone: 'plain' });
-    }
-    showReport(`${t('day')} ${this.s.day}`, lines);
-    if (this.fastForward) return;
-    mine.forEach((h, i) => {
-      const u = unitById(this.s, h.uid);
-      if (!u || u.carrier !== null || !this.visibleToPlayer(u)) return;
-      const c = center(u);
-      void floatText(this, this.view, { x: c.x, y: c.y - 6 }, `+${h.amount}`, PAL_CSS.green, 1100 + i * 90);
-    });
-  }
-
-  /** Milisegundos por casilla al mover, segun la velocidad elegida (tuyas o del enemigo). */
-  private stepMs(): number {
-    const sp = this.enemyPlaying ? settings.speedEnemy : settings.speedOwn;
-    return sp === 'instant' ? 1 : sp === 'fast' ? Math.round(STEP_MS / 2) : STEP_MS;
-  }
-
   private wait(ms: number): Promise<void> {
-    if (ms <= 0) return Promise.resolve();
-    return new Promise((resolve) => this.time.delayedCall(ms, resolve));
+    return this.player.wait(ms);
   }
 
   private visibleToPlayer(p: Pos): boolean {
     return !!this.vis[p.x]?.[p.y];
   }
 
-  /** Lleva la camara a una casilla si no se ve bien, y espera a que llegue. */
-  private async lookAt(p: Pos): Promise<void> {
-    if (!this.visibleToPlayer(p) || this.view.isOnScreen(p, 2)) return;
-    this.view.ensureVisible(p, 4);
-    await this.wait(this.fastForward ? 0 : 180);
-  }
-
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
-  private async playEvents(events: GameEvent[], ghostKey?: string | null): Promise<void> {
-    const prevPhase = this.phase;
-    if (!this.enemyPlaying && !this.replaying && settings.speedOwn === 'instant') this.fastForward = true;
-    this.phase = 'busy';
-    this.view.placeCursor(false);
-    this.refreshHud();
-    for (const ev of events) {
-      // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
-      if (!this.enemyPlaying && ev.kind !== 'move') this.clearUndo();
-      if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
-      if (!this.replaying && !this.enemyPlaying) this.tutorial.record(ev);
-      if (ev.kind === 'attack') this.lastAt = { ...ev.target };
-      else if (ev.kind === 'capture') this.lastAt = { ...ev.at };
-      switch (ev.kind) {
-        case 'move':
-        case 'merge':
-        case 'load': {
-          const seen = ev.path.some((p) => this.visibleToPlayer(p));
-          if (!seen || this.fastForward) break;
-          const u = unitById(this.s, ev.uid);
-          const fallback = 'r_' + UNIT_ART[unitById(this.s, (ev as { into?: number }).into ?? -1)?.type ?? 0];
-          const tex =
-            ghostKey ?? (u ? unitKey(this.textures, this.s, { ...u, x: ev.path[0]!.x, y: ev.path[0]!.y, active: true }) : fallback);
-          if (!tex) break;
-          // La IA solo se ve donde hay vision (no se delatan sus unidades en la niebla).
-          const mover = unitById(this.s, ev.uid) ?? unitById(this.s, (ev as { into?: number }).into ?? -1);
-          const showAll = mover?.team === 0;
-          await this.animatePath(ev.uid, tex, ev.path, showAll);
-          if (ev.kind === 'move' && ev.ambush && !this.fastForward) {
-            this.refresh();
-            const end = ev.path[ev.path.length - 1]!;
-            if (showAll || this.visibleToPlayer(end)) {
-              const c = center(end);
-              void tileFlash(this, this.view, ev.ambush, PAL.red);
-              await floatText(this, this.view, { x: c.x, y: c.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
-            }
-          }
-          break;
-        }
-        case 'attack':
-          await this.playAttack(ev);
-          break;
-        case 'capture':
-          this.refresh();
-          if (!this.fastForward && this.visibleToPlayer(ev.at)) {
-            await this.lookAt(ev.at);
-            const c = center(ev.at);
-            void burst(this, this.view, c, { colors: COLORS.gold, count: 12, radius: 22 });
-            void tileFlash(this, this.view, ev.at, PAL.gold);
-            const partial = ev.left !== undefined && ev.left > 0;
-            await floatText(
-              this,
-              this.view,
-              { x: c.x, y: c.y - 6 },
-              partial ? `${ev.left}/${ev.total}` : ev.owner === null ? t('fxNeutral') : t('fxCaptured'),
-              partial ? '#fff1a8' : '#ffd447',
-            );
-          }
-          break;
-        case 'spawn':
-          this.refresh();
-          if (!this.fastForward && this.visibleToPlayer(ev.at)) {
-            await this.lookAt(ev.at);
-            const sp = this.view.unitSprite(ev.uid);
-            void burst(
-              this,
-              this.view,
-              { x: center(ev.at).x, y: ev.at.y * TILE + TILE - 2 },
-              { colors: COLORS.smoke, count: 8, radius: 14, size: 2 },
-            );
-            await Promise.all([tileFlash(this, this.view, ev.at, 0xffffff), sp ? blink(this, sp, 2, 60) : Promise.resolve()]);
-          }
-          break;
-        case 'ability':
-          await this.playAbility(ev);
-          break;
-        default:
-          break;
-      }
-    }
-    this.hidden.clear();
-    if (this.phase === 'busy' && prevPhase !== 'busy') {
-      this.phase = prevPhase;
-      // Acelerar una animacion propia no debe saltarse las siguientes.
-      this.fastForward = false;
-    }
-    this.refresh();
+  private playEvents(events: GameEvent[], ghostKey?: string | null): Promise<void> {
+    return this.player.play(events, ghostKey);
   }
 
-  private async animatePath(uid: number, texKey: string, path: Pos[], showAll = true): Promise<void> {
-    const visiblePart = showAll ? path : path.filter((p) => this.visibleToPlayer(p));
-    await this.lookAt(visiblePart[visiblePart.length - 1] ?? path[path.length - 1]!);
-    this.hidden.add(uid);
-    this.refresh();
-    this.view.placeCursor(false);
-    const img = this.view.ghost(texKey, path[0]!);
-    img.setVisible(showAll || this.visibleToPlayer(path[0]!));
-    // [CAMBIO] Mira hacia donde va (los dibujos rojos miran a la izquierda: ver faceFlip), arranca y
-    // frena suave, la infanteria da un saltito por casilla y los vehiculos levantan polvo.
-    // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
-    const mover = unitById(this.s, uid);
-    const team = mover?.team ?? (this.enemyPlaying ? 1 : 0);
-    const foot = mover ? Movement.of(mover.type) === MoveType.FOOT : false;
-    const air = mover ? Movement.of(mover.type) === MoveType.AIR : false;
-    let facing = this.view.facingOf(uid, team);
-    img.setFlipX(faceFlip(team, facing));
-    const n = path.length - 1;
-    for (let i = 1; i < path.length; i++) {
-      const p = path[i]!;
-      const shown = showAll || this.visibleToPlayer(p);
-      if (!shown && !img.visible) {
-        img.setPosition(p.x * TILE + TILE / 2, (p.y + 1) * TILE);
-        continue;
-      }
-      const prev = path[i - 1]!;
-      const dir = facingToward(prev, p);
-      if (dir) {
-        facing = dir;
-        img.setFlipX(faceFlip(team, dir));
-      }
-      const from = { x: prev.x * TILE + TILE / 2, y: (prev.y + 1) * TILE };
-      const to = { x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE };
-      const ms = this.fastForward ? 1 : this.stepMs() * (n === 1 ? 1.25 : i === 1 || i === n ? 1.15 : 0.9);
-      const ease = n === 1 ? 'Sine.easeInOut' : i === 1 ? 'Quad.easeIn' : i === n ? 'Quad.easeOut' : 'Linear';
-      if (!this.fastForward && !foot && !air && img.visible && this.stepMs() > 1)
-        void burst(
-          this,
-          this.view,
-          { x: from.x - (to.x - from.x) * 0.3, y: from.y - 3 },
-          { colors: COLORS.smoke, count: 2, radius: 6, size: 2, duration: 240 },
-        );
-      const prog = { t: 0 };
-      await new Promise<void>((resolve) =>
-        this.tweens.add({
-          targets: prog,
-          t: 1,
-          duration: ms,
-          ease,
-          onUpdate: () => {
-            const hop = foot ? Math.round(Math.sin(prog.t * Math.PI) * 3) : 0;
-            img.setPosition(Math.round(from.x + (to.x - from.x) * prog.t), Math.round(from.y + (to.y - from.y) * prog.t) - hop);
-          },
-          onComplete: () => resolve(),
-        }),
-      );
-      img.setPosition(to.x, to.y);
-      img.setVisible(shown);
-    }
-    this.view.face(uid, facing);
-    // Al llegar, un poco de polvo (solo las unidades propias, que se ven siempre).
-    const last = path[path.length - 1]!;
-    if (showAll && path.length > 1 && !this.fastForward && this.stepMs() > 1) {
-      void burst(
-        this,
-        this.view,
-        { x: last.x * TILE + TILE / 2, y: (last.y + 1) * TILE - 3 },
-        { colors: COLORS.smoke, count: 6, radius: 10, size: 2, duration: 260 },
-      );
-    }
-    img.destroy();
-    this.hidden.delete(uid);
+  /** Cada evento, antes de animarlo. */
+  private noteEvent(ev: GameEvent): void {
+    // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
+    if (!this.enemyPlaying && ev.kind !== 'move') this.clearUndo();
+    if (!this.replaying) recordEvent(this.s, ev, this.enemyPlaying ? 1 : 0);
+    if (!this.replaying && !this.enemyPlaying) this.tutorial.record(ev);
+    if (ev.kind === 'attack') this.lastAt = { ...ev.target };
+    else if (ev.kind === 'capture') this.lastAt = { ...ev.at };
   }
 
-  /** Milisegundos de un efecto de combate a la velocidad elegida (0 si es instantanea). */
-  private combatMs(ms: number): number {
-    const step = this.stepMs();
-    return this.fastForward || step <= 1 ? 0 : Math.round((ms * step) / STEP_MS);
+  private get enemyPlaying(): boolean {
+    return this.turns.enemyPlaying;
   }
 
-  /**
-   * Combate, paso a paso para que se entienda: mira sobre el objetivo, disparo desde el atacante,
-   * daño con la barra de vida bajando y, si lo hay, el contraataque igual pero al reves. Mientras
-   * tanto el panel de combate (abajo) enseña las dos unidades, su acierto y sus vidas.
-   */
-  private async playAttack(ev: Extract<GameEvent, { kind: 'attack' }>): Promise<void> {
-    const seen = this.visibleToPlayer(ev.target) && !this.fastForward;
-    // Lo que habia dibujado antes del ataque (la victima puede haber desaparecido ya del estado).
-    const victimKey = this.view.unitKeyAt(ev.target);
-    // El atacante puede haber caido en el contraataque: su posicion y su imagen, de lo dibujado.
-    const atkSprite = this.view.unitSprite(ev.attacker);
-    const atkPos = atkSprite ? { x: Math.round(atkSprite.x / TILE), y: Math.round(atkSprite.y / TILE) } : null;
-    const atkKey = atkPos ? this.view.unitKeyAt(atkPos) : null;
-    const atkSeen = !!atkPos && this.visibleToPlayer(atkPos);
-    const info = ev.combat;
-    const atkTeam = info?.attackerTeam ?? unitById(this.s, ev.attacker)?.team ?? (this.enemyPlaying ? 1 : 0);
-    const defTeam = (1 - atkTeam) as 0 | 1;
-    const atkType = info?.attackerType ?? unitById(this.s, ev.attacker)?.type ?? 0;
-    const defType = info?.defenderType ?? unitAt(this.s, ev.target.x, ev.target.y)?.type ?? 0;
-    const victim = unitAt(this.s, ev.target.x, ev.target.y);
-    const victimUid = victim?.uid ?? null;
-    const teamColor = (team: number) => (team === 0 ? PAL.blue : PAL.red);
-    // Velocidad de las animaciones (Opciones): 1 = normal.
-    const k = this.combatMs(1000) / 1000;
-    const panelId = Date.now();
-    const panel = (stage: 'start' | 'hit' | 'counter') => {
-      if (!seen) return;
-      const vm = combatVM(ev, stage, { attacker: atkKey, defender: victimKey }, { attacker: atkSeen, defender: true }, panelId);
-      if (vm) ui.set({ combat: vm });
-    };
-
-    // 1. Apuntar y disparar: el atacante mira al objetivo, retrocede con el fogonazo y sale el proyectil.
-    if (seen) {
-      panel('start');
-      await this.lookAt(ev.target);
-      if (atkPos) this.faceTo(ev.attacker, atkPos, ev.target);
-      if (victimUid !== null && atkPos) this.faceTo(victimUid, ev.target, atkPos);
-      void targetMark(this, this.view, ev.target, teamColor(atkTeam), this.combatMs(150));
-      if (atkSprite && atkPos && atkSeen) await this.fire(atkSprite, atkPos, ev.target, shotKind(atkType, defType), k);
-      else await this.wait(this.combatMs(150));
-    }
-    // 2. Impacto.
-    if (seen) {
-      panel('hit');
-      await this.hitFx(victimUid, ev.target, ev.damage, ev.killed, victimKey, defTeam, info?.defenderLife ?? null, k);
-    } else this.refresh();
-    // 3. Contraataque: el defensor responde enseguida, con el mismo lenguaje que el ataque.
-    if (ev.counter !== undefined && atkPos && (ev.counter > 0 || ev.attackerKilled) && !this.fastForward && this.visibleToPlayer(atkPos)) {
-      const vs = victimUid !== null ? this.view.unitSprite(victimUid) : null;
-      void tag(this, this.view, ev.target, t('fxCounter'), PAL_CSS.gold, k);
-      await this.wait(this.combatMs(80));
-      if (vs) await this.fire(vs, ev.target, atkPos, shotKind(defType, atkType), k);
-      panel('counter');
-      await this.hitFx(ev.attacker, atkPos, ev.counter, !!ev.attackerKilled, atkKey, atkTeam, info?.attackerLife ?? null, k);
-    }
-    // [CAMBIO] Botin: quien destruye cobra parte del precio (dorado, como el dinero de Ambar).
-    const lootAt = ev.killed ? ev.target : ev.attackerKilled ? atkPos : null;
-    if (ev.bounty && lootAt && !this.fastForward && this.visibleToPlayer(lootAt)) {
-      const c = center(lootAt);
-      void floatText(this, this.view, { x: c.x, y: c.y - 16 }, `+${fmtNum(ev.bounty)}`, PAL_CSS.gold);
-      this.refreshHud();
-    }
-    if (seen && info) await this.wait(this.combatMs(200));
-    ui.set({ combat: null });
+  private get replaying(): boolean {
+    return this.turns.replaying;
   }
 
-  /** Gira una unidad para que mire de `from` hacia `to` (si no estan en la misma columna). */
-  private faceTo(uid: number, from: Pos, to: Pos): void {
-    const dir = facingToward(from, to);
-    if (dir) this.view.face(uid, dir);
+  // -------------------------------------------------------------------------
+  // Lo que cada modulo de game/ ve de la escena
+  // -------------------------------------------------------------------------
+
+  private playbackHost(): PlaybackHost {
+    return live<PlaybackHost>({
+      scene: { get: () => this },
+      view: { get: () => this.view },
+      state: { get: () => this.s },
+      phase: {
+        get: () => this.phase,
+        set: (v) => {
+          this.phase = v;
+        },
+      },
+      fastForward: {
+        get: () => this.fastForward,
+        set: (v) => {
+          this.fastForward = v;
+        },
+      },
+      enemyPlaying: { get: () => this.enemyPlaying },
+      replaying: { get: () => this.replaying },
+      hidden: { get: () => this.hidden },
+      visible: (p) => this.visibleToPlayer(p),
+      refresh: () => this.refresh(),
+      refreshHud: () => this.refreshHud(),
+      noteEvent: (ev) => this.noteEvent(ev),
+    });
   }
 
-  /** Disparo: retroceso y fogonazo a la vez, y el proyectil hasta el impacto. */
-  private async fire(sprite: Phaser.GameObjects.Container, from: Pos, to: Pos, kind: ShotKind, k: number): Promise<void> {
-    void recoil(this, sprite, from, to, k);
-    void muzzleFlash(this, this.view, from, to, k);
-    await projectile(this, this.view, kind, from, to, k);
+  private turnHost(): TurnHost {
+    return live<TurnHost>({
+      scene: { get: () => this },
+      view: { get: () => this.view },
+      state: {
+        get: () => this.s,
+        set: (v) => {
+          this.s = v;
+        },
+      },
+      phase: {
+        get: () => this.phase,
+        set: (v) => {
+          this.phase = v;
+        },
+      },
+      match: { get: () => this.match },
+      ended: { get: () => this.ended },
+      lab: { get: () => !!this.lab },
+      fastForward: {
+        get: () => this.fastForward,
+        set: (v) => {
+          this.fastForward = v;
+        },
+      },
+      inputLockUntil: {
+        get: () => this.inputLockUntil,
+        set: (v) => {
+          this.inputLockUntil = v;
+        },
+      },
+      play: (events) => this.playEvents(events),
+      wait: (ms) => this.wait(ms),
+      checkEnd: () => this.checkEnd(),
+      clearUndo: () => this.clearUndo(),
+      abandonSelection: () => this.abandonSelection(),
+      toMap: () => this.toMap(),
+      refresh: () => this.refresh(),
+      refreshHud: () => this.refreshHud(),
+      visible: (p) => this.visibleToPlayer(p),
+      idleUnits: () => this.idleUnits(),
+      markSaved: () => {
+        this.savedThisGame = true;
+      },
+    });
   }
 
-  /**
-   * Impacto en `at`: destello en la unidad, explosion, numero de daño y su barra de vida bajando. Si cae,
-   * restos y una marca de quemado en el suelo hasta el turno siguiente.
-   */
-  private async hitFx(
-    uid: number | null,
-    at: Pos,
-    damage: number,
-    killed: boolean,
-    victimKey: string | null,
-    team: 0 | 1,
-    lifeBefore: number | null,
-    k: number,
-  ): Promise<void> {
-    const live = unitAt(this.s, at.x, at.y);
-    // Si ha caido ya no esta en el estado: una copia de su dibujo, mirando hacia donde miraba.
-    let sprite: Phaser.GameObjects.Container | Phaser.GameObjects.Image | null = live ? this.view.unitSprite(live.uid) : null;
-    if (!live && killed && victimKey) {
-      const ghost = this.view.ghost(victimKey, at);
-      ghost.setFlipX(faceFlip(team, uid !== null ? this.view.facingOf(uid, team) : baseFacing(team)));
-      sprite = ghost;
-    }
-    void hitFlash(this, sprite, k);
-    void popNumber(this, this.view, at, damage > 0 ? `-${damage}` : t('fxMiss'), damage > 0 ? PAL_CSS.red : '#cfe8ff', k);
-    const bar =
-      lifeBefore !== null
-        ? lifeBar(this, this.view, at, lifeBefore, lifeBefore - damage, team === 0 ? PAL.blue : PAL.red, this.combatMs(220))
-        : Promise.resolve();
-    await impact(this, this.view, at, killed, k);
-    if (killed) {
-      if (sprite && !live) sprite.destroy();
-      this.view.scorch(at, this.s.day);
-      await debris(this, this.view, at, team, k);
-    }
-    this.refresh();
-    // La barra sigue bajando mientras pasa lo siguiente (no se espera).
-    void bar;
+  private endHost(): EndHost {
+    return live<EndHost>({
+      scene: { get: () => this },
+      view: { get: () => this.view },
+      state: { get: () => this.s },
+      match: { get: () => this.match },
+      ended: { get: () => this.ended },
+      lastAt: { get: () => this.lastAt },
+      closeMatch: () => this.closeMatch(),
+      refresh: () => this.refresh(),
+      wait: (ms) => this.wait(ms),
+    });
+  }
+
+  private abilityHost(): AbilityHost {
+    return live<AbilityHost>({
+      state: { get: () => this.s },
+      phase: {
+        get: () => this.phase,
+        set: (v) => {
+          this.phase = v;
+        },
+      },
+      abandonSelection: () => this.abandonSelection(),
+      toMap: () => this.toMap(),
+      refresh: () => this.refresh(),
+      play: (events) => this.playEvents(events),
+    });
+  }
+
+  private labHost(): LabHost {
+    return live<LabHost>({
+      scene: { get: () => this },
+      view: { get: () => this.view },
+      state: { get: () => this.s },
+      refresh: () => this.refresh(),
+      play: (events) => this.playEvents(events),
+    });
   }
 }
