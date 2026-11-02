@@ -19,6 +19,7 @@ import {
   type GeneralVM,
   type ForecastVM,
   type IdleVM,
+  type SelectionVM,
   type SquadVM,
   type MenuVM,
   type TileVM,
@@ -1000,6 +1001,49 @@ function Cards({ tile }: { tile: TileVM }) {
   );
 }
 
+/** Retratos que caben en el panel de lo elegido (el resto, "+n"). */
+const PICKED_MAX = 24;
+
+/**
+ * [CAMBIO] Panel de lo elegido, como en los juegos de estrategia en tiempo real: un retrato por
+ * unidad (por tipo) con su vida. Clic: solo esa; Mayusculas: quitarla; Ctrl: solo las de su tipo.
+ * Tab va pasando por ellas.
+ */
+function SelectionPanel({ sel }: { sel: SelectionVM }) {
+  const a = ui.actions;
+  return (
+    <div class="px picked" aria-label={t('pickedTitle')}>
+      <div class="label picked-head">
+        <span>
+          {t('pickedTitle')} · {sel.units.length}
+        </span>
+        <span class="key-hint" style={{ color: 'var(--gold)' }}>
+          TAB
+        </span>
+      </div>
+      <div class="picked-types">{sel.types.map((ty) => `${ty.count} ${ty.name}`).join(' · ')}</div>
+      <div class="picked-grid">
+        {sel.units.slice(0, PICKED_MAX).map((u) => (
+          <button
+            tabIndex={-1}
+            type="button"
+            class={u.current ? 'on' : ''}
+            title={`${u.name} · ${u.life}`}
+            aria-label={`${u.name} ${u.life}`}
+            onMouseDown={noFocus}
+            onClick={(e) => a.pickInSelection(u.uid, e.shiftKey, e.ctrlKey || e.metaKey)}
+          >
+            <Icon k={u.icon} alt={u.name} />
+            <i class="life" style={{ width: `${Math.max(4, u.life)}%` }} />
+          </button>
+        ))}
+        {sel.units.length > PICKED_MAX && <span class="more">+{sel.units.length - PICKED_MAX}</span>}
+      </div>
+      <div class="picked-hint">{t('pickedHint')}</div>
+    </div>
+  );
+}
+
 function GameHud({ s }: { s: UIState }) {
   const showCards = !s.busy && s.turn === 'player' && s.tile;
   // Laboratorio de animaciones: solo su panel y lo que enseña un combate (el resto estorba).
@@ -1017,7 +1061,7 @@ function GameHud({ s }: { s: UIState }) {
       {s.enemyGeneral && <EnemyGeneral g={s.enemyGeneral} />}
       {s.mission && s.turn === 'player' && <MissionPanel m={s.mission} />}
       {s.hint && <div class="hintline">{s.hint}</div>}
-      {showCards && <Cards tile={s.tile!} />}
+      {s.selection && !s.busy ? <SelectionPanel sel={s.selection} /> : showCards && <Cards tile={s.tile!} />}
       <div class="side">
         {s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} />}
         {!s.busy && s.turn === 'player' && (

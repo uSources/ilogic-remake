@@ -3233,3 +3233,73 @@ html.reduce-motion .end-best.new {
   gap: 8px;
   font-size: 13px;
 }
+
+/* [CAMBIO] Panel de lo elegido (abajo a la izquierda, en lugar de las fichas). */
+.picked {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  max-width: min(480px, calc(100vw - 360px));
+}
+.picked-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.picked-types {
+  color: var(--muted);
+  font-size: 14px;
+}
+.picked-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.picked-grid button {
+  position: relative;
+  padding: 0 0 5px;
+  border: 3px solid var(--ink);
+  background: var(--slot);
+  cursor: var(--cursor-button, pointer);
+}
+.picked-grid button:hover {
+  background: var(--sel);
+}
+.picked-grid button.on {
+  border-color: var(--gold);
+}
+.picked-grid img {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+.picked-grid .life {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--blue, #3aa8ff);
+}
+.picked-grid .more {
+  align-self: center;
+  padding: 0 6px;
+  font-family: var(--display);
+}
+.picked-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .picked {
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+  }
+  .picked-hint {
+    display: none;
+  }
+}

@@ -47,6 +47,8 @@ const HELP = {
       ],
       ['Dejarlo como orden, sin mover ahora', '—', 'Mayúsculas + clic derecho'],
       ['Todas las acciones (órdenes, escuadra…)', 'F', 'Alt + clic derecho / mantener pulsado el destino'],
+      ['Orden a lo elegido y luego la casilla', 'Q atacar · C capturar · G defender (X: quitar orden)', 'Menú de la casilla'],
+      ['Pasar por las elegidas', 'Tab', 'Panel de abajo: clic solo esa, Mayúsculas la quita, Ctrl su tipo'],
       [
         'Hacer un grupo (escuadra) con lo elegido',
         'Ctrl + 1 … 9 (Mayúsculas + número: añadir)',
@@ -118,6 +120,8 @@ const HELP = {
       ],
       ['Leave it as an order, without moving now', '—', 'Shift + right-click'],
       ['All actions (orders, squad…)', 'F', 'Alt + right-click / hold the destination'],
+      ['Order the selection, then pick the tile', 'Q attack · C capture · G hold (X: clear order)', 'Tile menu'],
+      ['Go through the selected units', 'Tab', 'Bottom panel: click only that one, Shift removes it, Ctrl its type'],
       ['Make a group (squad) from the selection', 'Ctrl + 1 … 9 (Shift + number: add)', 'Pick several, “Orders”, then “Form squad”'],
       ['Select a group / jump to it', '1 … 9 (twice: camera goes there)', 'Its tray button (twice: jump)'],
       [

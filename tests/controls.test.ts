@@ -46,6 +46,15 @@ describe('adaptador de teclado', () => {
     expect(keyCommand(key('Enter', { shiftKey: true }))).toEqual({ kind: 'accept', wait: true });
   });
 
+  it('[CAMBIO] ordenes a lo elegido: Q atacar, C capturar, G defender, X quitar', () => {
+    expect(keyCommand(key('KeyQ'))).toEqual({ kind: 'order', order: 'attack' });
+    expect(keyCommand(key('KeyC'))).toEqual({ kind: 'order', order: 'capture' });
+    expect(keyCommand(key('KeyG'))).toEqual({ kind: 'order', order: 'defend' });
+    expect(keyCommand(key('KeyX'))).toEqual({ kind: 'order', order: 'cancel' });
+    // A, D y S siguen moviendo el cursor.
+    for (const code of ['KeyA', 'KeyD', 'KeyS']) expect(keyCommand(key(code))?.kind).toBe('cursor');
+  });
+
   it('Esc cancela y Retroceso da un paso atras', () => {
     expect(keyCommand(key('Escape'))?.kind).toBe('cancel');
     expect(keyCommand(key('Backspace'))?.kind).toBe('stepBack');
@@ -75,7 +84,7 @@ describe('adaptador de teclado', () => {
     for (const [code, kind] of cases) expect(keyCommand(key(code))?.kind, code).toBe(kind);
     expect(keyCommand(key('NumpadAdd'))).toEqual({ kind: 'zoom', dir: 1 });
     expect(keyCommand(key('Minus'))).toEqual({ kind: 'zoom', dir: -1 });
-    expect(keyCommand(key('KeyQ'))).toBeNull();
+    expect(keyCommand(key('KeyJ'))).toBeNull();
   });
 });
 

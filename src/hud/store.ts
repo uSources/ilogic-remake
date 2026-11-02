@@ -239,6 +239,21 @@ export interface SquadVM {
   detached: number;
 }
 
+/** [CAMBIO] Una unidad del panel de lo elegido (retrato, vida y si es la señalada con Tab). */
+export interface PickedVM {
+  uid: number;
+  icon: string | null;
+  name: string;
+  life: number;
+  current: boolean;
+}
+
+/** [CAMBIO] Panel de lo elegido: las unidades, ordenadas por tipo, y cuantas de cada tipo. */
+export interface SelectionVM {
+  units: PickedVM[];
+  types: { name: string; count: number }[];
+}
+
 export interface IdleVM {
   uid: number;
   icon: string | null;
@@ -385,6 +400,8 @@ export interface UIState {
   squads: SquadVM[];
   /** [CAMBIO] Modo "Elegir varias": cuantas hay elegidas (null = modo apagado). */
   multi: number | null;
+  /** [CAMBIO] Panel de lo elegido (con dos o mas unidades; null = no se enseña). */
+  selection: SelectionVM | null;
   /**
    * [CAMBIO] Boton de fin de turno: unidades que quedan sin mover (las que capturan solas no cuentan)
    * y si esta esperando la confirmacion (primer clic con unidades sin mover y el aviso activado).
@@ -483,6 +500,8 @@ export interface UIActions {
   toggleMinimap(): void;
   minimapJump(x: number, y: number): void;
   focusUnit(uid: number): void;
+  /** [CAMBIO] Retrato del panel de lo elegido: solo esa (clic), quitarla (Mayusculas) o las de su tipo (Ctrl). */
+  pickInSelection(uid: number, shift: boolean, ctrl: boolean): void;
   endContinue(): void;
   endHover(i: number): void;
   endPick(i: number): void;
@@ -551,6 +570,7 @@ const initial: UIState = {
   idle: [],
   squads: [],
   multi: null,
+  selection: null,
   endTurn: { pending: 0, armed: false },
   rename: null,
   threat: false,
@@ -595,6 +615,7 @@ const DEFAULT_ACTIONS: UIActions = {
   toggleMinimap: noop,
   minimapJump: noop,
   focusUnit: noop,
+  pickInSelection: noop,
   endContinue: noop,
   endHover: noop,
   endPick: noop,
