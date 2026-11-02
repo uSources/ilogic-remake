@@ -4,7 +4,9 @@
  */
 import { POWER, UNIT, Movement } from './data';
 import { manhattan, samePos } from './geom';
-import { canWalk, inAttackRange, moveCost, pathCost, pathTo, reachableTiles, tileProtection, type MoveRange } from './rules';
+import { inAttackRange, tileProtection } from './rules/combat';
+import { moveCost, pathCost, pathTo, reachableTiles, type MoveRange } from './rules/movement';
+import { canWalk } from './rules/queries';
 import type { GameState, Pos, Unit } from './types';
 
 /**

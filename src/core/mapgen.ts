@@ -21,7 +21,9 @@ import {
   MoveType,
 } from './data';
 import { grid, inBounds, manhattan, rangePos, rangeSize } from './geom';
-import { buildingAt, groundDistance, newUnit, unitAt } from './rules';
+import { newUnit } from './rules/lifecycle';
+import { groundDistance } from './rules/movement';
+import { buildingAt, unitAt } from './rules/queries';
 import type { GameState, Pos, Rng, Team } from './types';
 
 const WALK = MoveType.FOOT;
