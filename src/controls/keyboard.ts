@@ -31,6 +31,12 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyM'], command: { kind: 'minimap' } },
   { codes: ['KeyF'], command: { kind: 'orderHere' } },
   { codes: ['Tab'], command: { kind: 'nextUnit' } },
+  // [CAMBIO] Ordenes a lo elegido y luego la casilla (A, D y S ya mueven el cursor): Q atacar,
+  // C capturar, G guardar (defender), X quitar la orden.
+  { codes: ['KeyQ'], command: { kind: 'order', order: 'attack' } },
+  { codes: ['KeyC'], command: { kind: 'order', order: 'capture' } },
+  { codes: ['KeyG'], command: { kind: 'order', order: 'defend' } },
+  { codes: ['KeyX'], command: { kind: 'order', order: 'cancel' } },
   // [CAMBIO] Grupos: Ctrl+n lo hace, Mayusculas+n añade, n elige (dos veces: la camara va alli).
   ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'set' }, ctrl: true })),
   ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'add' }, shift: true })),

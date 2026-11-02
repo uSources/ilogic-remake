@@ -31,6 +31,11 @@ export type GameCommand =
    * el grupo n (Ctrl+n) y `add` lo añade (Mayusculas+n).
    */
   | { kind: 'group'; n: number; mode: GroupMode }
+  /**
+   * [CAMBIO] Orden a lo elegido: atacar, capturar o defender alli (luego se elige la casilla) o
+   * quitar la orden. Como "A + clic" en los juegos de estrategia en tiempo real.
+   */
+  | { kind: 'order'; order: 'attack' | 'capture' | 'defend' | 'cancel' }
   | { kind: 'zoom'; dir: 1 | -1 }
   | { kind: 'help' }
   | { kind: 'options' };

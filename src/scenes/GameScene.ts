@@ -103,6 +103,7 @@ import {
   type ReportLineVM,
   type ForecastVM,
   type IdleVM,
+  type SelectionVM,
   type MenuItemVM,
   type MenuVM,
   type TileVM,
@@ -615,6 +616,9 @@ export class GameScene extends Phaser.Scene {
       toggleIntents: () => {
         if (!this.ended) this.toggleIntents();
       },
+      pickInSelection: (uid: number, shift: boolean, ctrl: boolean) => {
+        if (ready()) this.pickInSelection(uid, shift, ctrl);
+      },
       focusUnit: (uid: number) => {
         if (!ready()) return;
         const u = unitById(this.s, uid);
@@ -888,6 +892,7 @@ export class GameScene extends Phaser.Scene {
       idle,
       squads: squadsVM(this.s),
       multi: this.multi || this.group.size ? this.group.size : null,
+      selection: this.selectionVM(),
       endTurn: { pending: this.pendingUnits().length, armed: this.endArmed() },
       anyCommand: this.s.units.some((u) => u.team === 0 && !!this.cmdOf(u)),
       hint: busy
@@ -1228,8 +1233,12 @@ export class GameScene extends Phaser.Scene {
       case 'minimap':
         return ui.actions.toggleMinimap();
       case 'nextUnit':
+        // [CAMBIO] Con varias elegidas, Tab va pasando por ellas (panel de lo elegido); si no, la siguiente sin mover.
+        if (this.phase === 'map' && this.group.size > 1) return this.nextPicked();
         if (this.phase === 'map') this.nextIdle();
         return;
+      case 'order':
+        return this.orderKey(cmd.order);
       case 'group':
         // [CAMBIO] 1-9 elige el grupo (dos veces: la camara va alli); Ctrl lo hace; Mayusculas añade.
         return this.groupKey(cmd.n, cmd.mode);
@@ -2419,6 +2428,89 @@ export class GameScene extends Phaser.Scene {
     const q = mode === 'set' ? setGroup(this.s, units, n) : addToGroup(this.s, units, n);
     if (q) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${n} · ${q.name}`);
     this.refresh();
+  }
+
+  /** [CAMBIO] Panel de lo elegido: con dos o mas unidades, en el mapa (o eligiendo que hacer con ellas). */
+  private selectionVM(): SelectionVM | null {
+    if (this.group.size < 2 || !['map', 'groupMenu', 'orderMenu', 'target'].includes(this.phase) || this.enemyPlaying) return null;
+    const list = this.pickedInOrder();
+    if (list.length < 2) return null;
+    const c = this.view.cursor;
+    const types = new Map<number, number>();
+    for (const u of list) types.set(u.type, (types.get(u.type) ?? 0) + 1);
+    return {
+      units: list.map((u) => ({
+        uid: u.uid,
+        icon: unitKey(this.textures, this.s, u),
+        name: unitLabel(u.type),
+        life: u.life,
+        current: u.x === c.x && u.y === c.y,
+      })),
+      types: [...types].map(([type, count]) => ({ name: unitLabel(type), count })),
+    };
+  }
+
+  /** [CAMBIO] Las elegidas en el orden del panel: por tipo y, dentro, como estan en la partida. */
+  private pickedInOrder(): Unit[] {
+    return this.groupUnits()
+      .filter((u) => this.selectable(u))
+      .sort((a, b) => a.type - b.type || a.uid - b.uid);
+  }
+
+  /** La señalada con Tab en el panel de lo elegido. */
+  private pickedFocus: number | null = null;
+
+  /** [CAMBIO] Tab con varias elegidas: llevar el cursor a la siguiente (su ficha se ve abajo). */
+  private nextPicked(): void {
+    const list = this.pickedInOrder();
+    if (!list.length) return;
+    const i = list.findIndex((u) => u.uid === this.pickedFocus);
+    const u = list[(i + 1) % list.length]!;
+    this.pickedFocus = u.uid;
+    this.view.cursor = { x: u.x, y: u.y };
+    this.view.ensureVisible(u, 3);
+    this.cursorMoved();
+  }
+
+  /** [CAMBIO] Retrato del panel: solo esa unidad, quitarla (Mayusculas) o solo las de su tipo (Ctrl). */
+  private pickInSelection(uid: number, shift: boolean, ctrl: boolean): void {
+    if (this.phase !== 'map' && this.phase !== 'groupMenu') return;
+    const u = unitById(this.s, uid);
+    if (!u || !this.group.has(uid)) return;
+    if (shift) {
+      const next = new Set(this.group);
+      next.delete(uid);
+      return this.applySelection(next);
+    }
+    if (ctrl)
+      return this.applySelection(
+        new Set(
+          this.groupUnits()
+            .filter((o) => o.type === u.type)
+            .map((o) => o.uid),
+        ),
+      );
+    this.view.cursor = { x: u.x, y: u.y };
+    this.view.ensureVisible(u, 3);
+    this.applySelection(new Set([uid]));
+  }
+
+  /**
+   * [CAMBIO] Teclas de orden con lo elegido (Q atacar, C capturar, G defender, X quitar): las tres
+   * primeras piden luego la casilla (clic o Enter), como "A + clic" en los juegos de estrategia.
+   */
+  private orderKey(order: 'attack' | 'capture' | 'defend' | 'cancel'): void {
+    const who = this.orderSubjects();
+    if (!who) return showToast(t('groupNone'));
+    if (order === 'cancel') {
+      cancelCommand(this.s, who.units);
+      showToast(t('orderCancelled'));
+      if (this.phase === 'groupMenu') this.toMap();
+      return this.refresh();
+    }
+    if (order === 'capture' && !who.units.some((u) => UNIT.cancapt[u.type])) return showToast(t('orderNoCapturer'));
+    if (this.phase === 'groupMenu') this.phase = 'map';
+    this.startOrder(order, who.units, who.from !== 'map');
   }
 
   private groupUnits(): Unit[] {

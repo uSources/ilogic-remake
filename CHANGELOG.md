@@ -19,6 +19,8 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Clic derecho que acierta solo**: con unidades elegidas, en una casilla libre las mueve, en un enemigo ataca, en un edificio captura, en un transporte sube y, fuera del alcance de una sola unidad, va allí en varios turnos. El puntero del ratón dice qué hará (y prohibido si no puede). Mayúsculas + clic derecho lo deja como orden sin mover nada ahora; Alt + clic derecho (o F, o mantener pulsado) abre el menú con todas las acciones, también «Formar escuadra» y «Sacar de la escuadra». El grupo sigue elegido después.
 - La cámara se mueve arrastrando con el botón derecho o la rueda (además del borde de la pantalla).
 - Al señalar una unidad de escuadra se marcan sus compañeras.
+- **Panel de lo elegido**: con varias unidades elegidas, abajo salen sus retratos por tipo con su vida. Clic en uno elige solo esa, Mayúsculas + clic la quita y Ctrl + clic deja solo las de su tipo. Tab va pasando por ellas.
+- **Teclas de orden**: Q atacar, C capturar y G defender, y luego la casilla (clic o Enter); X quita la orden. (A, D y S siguen moviendo el cursor.)
 
 ### Equilibrio
 - **Motorizado** 3500 → 2500, **Jeep** 5000 → 4000 y **Tanque anfibio** 15000 → 11000: rendían menos de la mitad de lo que costaban.
@@ -36,6 +38,8 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Smart right-click**: with units selected, a free tile moves them, an enemy is attacked, a building is captured, a transport is boarded and, out of a single unit's range, it goes there over several turns. The mouse pointer shows what will happen (or a no-entry sign). Shift + right-click leaves it as an order without moving now; Alt + right-click (or F, or a long press) opens the menu with every action, including "Form squad" and "Leave the squad". The group stays selected afterwards.
 - Pan the camera by dragging with the right button or the wheel (besides the screen edge).
 - Pointing at a squad unit highlights its squadmates.
+- **Selection panel**: with several units selected, their portraits appear at the bottom by type with their health. Click one to select only it, Shift + click removes it and Ctrl + click keeps only its type. Tab goes through them.
+- **Order keys**: Q attack, C capture and G hold, then the tile (click or Enter); X clears the order. (A, D and S still move the cursor.)
 
 ### Balance
 - **Motor trooper** 3500 → 2500, **Jeep** 5000 → 4000 and **Amphibious tank** 15000 → 11000: they were worth less than half their price.
