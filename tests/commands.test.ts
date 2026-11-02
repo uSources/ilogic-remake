@@ -8,6 +8,7 @@ import {
   SQUAD_NAME_MAX,
   cancelCommand,
   commandBlock,
+  commandChoices,
   disbandSquad,
   formSquad,
   giveCommand,
@@ -122,6 +123,27 @@ describe('ordenes con destino', () => {
     expect(commandBlock(s, 'capture', { x: 12, y: 5 }, [t])).toBe('noCapturer');
     expect(commandBlock(s, 'capture', { x: 12, y: 5 }, [t, sol])).toBeNull();
     expect(commandBlock(s, 'attack', { x: 3, y: 3 }, [t])).toBeNull();
+  });
+
+  it('ordenes que se ofrecen en una casilla (gesto en el mapa): atacar primero si hay enemigo, capturar si se puede', () => {
+    const s = world();
+    const t = newUnit(s, TANK, 0, 5, 5);
+    const sol = newUnit(s, SOLDIER, 0, 5, 6);
+    const foe = newUnit(s, SOLDIER, 1, 9, 9);
+    // Casilla vacia: atacar o defender.
+    expect(commandChoices(s, { x: 3, y: 3 }, [sol], false)).toEqual(['attack', 'defend']);
+    // Ciudad neutral: capturar va primero, pero solo si alguna puede capturar.
+    expect(commandChoices(s, { x: 12, y: 5 }, [sol], false)).toEqual(['capture', 'attack', 'defend']);
+    expect(commandChoices(s, { x: 12, y: 5 }, [t], false)).toEqual(['attack', 'defend']);
+    expect(commandChoices(s, { x: 12, y: 5 }, [t, sol], false)).toEqual(['capture', 'attack', 'defend']);
+    // Edificio propio: no se captura.
+    expect(commandChoices(s, { x: 0, y: 0 }, [sol], false)).toEqual(['attack', 'defend']);
+    // Enemigo visible: atacar primero (tambien sobre un edificio que se puede capturar).
+    expect(commandChoices(s, foe, [sol], true)).toEqual(['attack', 'defend']);
+    expect(commandChoices(s, { x: 19, y: 19 }, [sol], true)).toEqual(['attack', 'capture', 'defend']);
+    // Sin unidades propias no hay nada que ofrecer.
+    expect(commandChoices(s, { x: 3, y: 3 }, [foe], false)).toEqual([]);
+    expect(commandChoices(s, { x: 3, y: 3 }, [], false)).toEqual([]);
   });
 
   it('solo juegan las que tienen orden y siguen sin usar; nunca compra', () => {
