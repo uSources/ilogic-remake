@@ -73,7 +73,9 @@ export {
   attackFull,
   attackEvent,
   attack,
+  HIT_MODIFIERS,
   type AttackResult,
+  type HitModifier,
 } from './rules/combat';
 export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
 export { mergeTargets, merge, loadTargets, load, unloadTiles, unload } from './rules/transport';
@@ -91,5 +93,5 @@ export {
   type BuyOption,
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
-export { unhealable, endRound, type RoundReport } from './rules/round';
+export { unhealable, endRound, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export { score, dayLimitReached, outcome, objectiveProgress, endReason } from './rules/outcome';

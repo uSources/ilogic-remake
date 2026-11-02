@@ -2,7 +2,7 @@
  * Captura de edificios: puntos, capturas a medias y el evento que las cuenta.
  */
 import { HQ, RULES, UNIT } from '../data';
-import { abilityOf } from '../abilities';
+import { captureFactor } from '../abilities';
 import type { Building, GameEvent, GameState, Unit } from '../types';
 import { buildingAt, unitAt } from './queries';
 
@@ -12,7 +12,7 @@ export function capturePointsOf(b: Building): number {
 }
 
 /** Lo que resta una unidad al capturar: su vida / 10 (y mas con la habilidad quickCapture). */
-export const captureStrength = (u: Unit): number => Math.ceil((u.life / 10) * (abilityOf(u.type, 'quickCapture')?.factor ?? 1));
+export const captureStrength = (u: Unit): number => Math.ceil((u.life / 10) * captureFactor(u.type));
 
 /** Captura a medias de un edificio (ver Building.capture). */
 export type CaptureProgress = NonNullable<Building['capture']>;

@@ -2,6 +2,7 @@
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
 import { UNIT } from '../data';
+import { effectiveCommand } from '../squads';
 import type { GameState, Unit } from '../types';
 import { canCapture } from './capture';
 import { attackTargets } from './combat';
@@ -42,8 +43,8 @@ export function unitActions(s: GameState, u: Unit): UnitActions {
     cmdAttack: u.team === 0 && !!UNIT.canfight[u.type],
     cmdCapture: u.team === 0 && !!UNIT.cancapt[u.type],
     cmdDefend: u.team === 0 && !!UNIT.canfight[u.type],
-    // Orden propia o de su escuadra (como effectiveCommand en squads.ts, sin importarlo: ciclo).
-    cmdCancel: !u.order && (!!u.command || !!s.squads?.find((q) => q.id === u.squad)?.command),
+    // Orden propia o de su escuadra.
+    cmdCancel: !!effectiveCommand(s, u),
     delete: true,
   };
 }

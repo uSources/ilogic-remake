@@ -7,7 +7,7 @@ import { coverAgainst, defenseFactor } from '../abilities';
 import { manhattan } from '../geom';
 import { chargeFromCombat, generalHitFactor } from '../generals';
 import { weatherHit } from '../weather';
-import type { CombatInfo, GameEvent, GameState, Pos, Rng, Unit } from '../types';
+import type { CombatInfo, GameEventOf, GameState, Pos, Rng, Unit } from '../types';
 import { removeDead } from './lifecycle';
 import { buildingAt } from './queries';
 import { visibility } from './visibility';
@@ -40,19 +40,43 @@ export function defenseStars(s: GameState, p: Pos): number {
   return Math.max(0, Math.min(4, Math.round(((1 - tileProtection(s, p)) * 100) / 10)));
 }
 
-/** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). */
+/**
+ * Algo que cambia la probabilidad de acierto (habilidades, veterania, generales, clima...). Devuelve
+ * un multiplicador: 1 = nada (con la regla apagada, por ejemplo).
+ */
+export interface HitModifier {
+  /** Nombre corto (para depurar o enseñar el desglose). */
+  readonly id: string;
+  factor(s: GameState, atk: Unit, def: Unit): number;
+}
+
+/**
+ * [CAMBIO] Modificadores del acierto, en el orden en que se aplican sobre el poder base y la
+ * proteccion de la casilla. Una regla nueva que cambie el acierto es una entrada mas: la prevision,
+ * el panel de combate y la IA la ven solas porque todas pasan por hitChance.
+ * El orden importa (redondeo de coma flotante: las partidas de referencia lo notarian).
+ */
+export const HIT_MODIFIERS: readonly HitModifier[] = [
+  // [CAMBIO] Habilidades del defensor y de sus aliados (escudo, aura).
+  { id: 'abilities', factor: defenseFactor },
+  // [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca.
+  {
+    id: 'veterancy',
+    factor: (_s, atk, def) => (RULES.veterancy ? (1 + RULES.vetBonus * rank(atk)) * (1 - RULES.vetBonus * rank(def)) : 1),
+  },
+  // [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil (premia atacar en grupo).
+  { id: 'flank', factor: (s, _atk, def) => (flanked(s, def) ? 1 + RULES.flankBonus : 1) },
+  // [CAMBIO] Generales: ventaja fija de los dos bandos.
+  { id: 'generals', factor: generalHitFactor },
+  // [CAMBIO] Clima: con lluvia o tormenta se apunta peor.
+  { id: 'weather', factor: (s) => weatherHit(s) },
+];
+
+/** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). Puede pasar de 1. */
 export function hitChance(s: GameState, atk: Unit, def: Unit): number {
   let p = POWER[atk.type]![def.type]! * coverAgainst(atk.type, tileProtection(s, def));
-  // [CAMBIO] Habilidades del defensor y de sus aliados (escudo, aura).
-  p *= defenseFactor(s, atk, def);
-  // [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca.
-  if (RULES.veterancy) p *= (1 + RULES.vetBonus * rank(atk)) * (1 - RULES.vetBonus * rank(def));
-  // [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil (premia atacar en grupo).
-  if (flanked(s, def)) p *= 1 + RULES.flankBonus;
-  // [CAMBIO] Generales: ventaja fija de los dos bandos.
-  p *= generalHitFactor(s, atk, def);
-  // [CAMBIO] Clima: con lluvia o tormenta se apunta peor.
-  return p * weatherHit(s);
+  for (const m of HIT_MODIFIERS) p *= m.factor(s, atk, def);
+  return p;
 }
 
 /** Bajas necesarias para cada rango (1, 2 y 3 estrellas). */
@@ -161,7 +185,7 @@ export function attackFull(s: GameState, atk: Unit, def: Unit, rng: Rng): Attack
  * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, bandos,
  * vidas de antes, rangos y probabilidad de acierto de cada lado (ver CombatInfo).
  */
-export function attackEvent(s: GameState, atk: Unit, def: Unit, rng: Rng): Extract<GameEvent, { kind: 'attack' }> {
+export function attackEvent(s: GameState, atk: Unit, def: Unit, rng: Rng): GameEventOf<'attack'> {
   const info: CombatInfo = {
     attackerType: atk.type,
     defenderType: def.type,

@@ -2,7 +2,7 @@
  * Vision y niebla: que casillas ve cada bando.
  */
 import { BUILDING, HIDING_TERRAIN, RULES, UNIT } from '../data';
-import { abilityOf } from '../abilities';
+import { seesIntoCover } from '../abilities';
 import { diamond, grid, manhattan } from '../geom';
 import { revealsAll } from '../generals';
 import { weatherVision } from '../weather';
@@ -24,7 +24,7 @@ export function visibility(s: GameState, team: Team): boolean[][] {
   for (const u of s.units) {
     if (u.team !== team || u.carrier !== null) continue;
     // [CAMBIO] Habilidad scout (Jeep): ve dentro del bosque en todo su radio.
-    const scout = !!abilityOf(u.type, 'scout');
+    const scout = seesIntoCover(u.type);
     for (const p of diamond(u, 0, visionOf(s, u))) if (scout || !hides(p.x, p.y) || manhattan(u, p) <= 1) vis[p.x]![p.y] = true;
   }
   for (const b of s.buildings) {
