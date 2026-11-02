@@ -25,7 +25,7 @@ import {
 import type { CombatInfo, CommandKind, GameEvent, GameState, Pos, Team, Unit } from '../core/types';
 import { forecast, weatherNow } from '../core/weather';
 import { samePos } from '../core/geom';
-import { squadById, squadInFormation } from '../core/squads';
+import { effectiveCommand, isDetached, squadById, squadInFormation } from '../core/squads';
 import type {
   GeneralVM,
   AbilityVM,
@@ -58,19 +58,25 @@ export const commandLabel = (k: CommandKind): string =>
   t(k === 'capture' ? 'orderCapture' : k === 'defend' ? 'orderDefend' : 'orderAttack');
 
 /**
- * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades, su orden si todas
- * llevan la misma (null si no llevan ninguna o son distintas; capturar con escolta cuenta como
- * capturar) y si avanzan en formacion (ver squadInFormation).
+ * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades, su orden (la de la
+ * escuadra; sin ella, la que lleven todas si es la misma), si avanzan en formacion (ver
+ * squadInFormation) y cuantas van destacadas con otra orden.
  */
 export function squadsVM(s: GameState): SquadVM[] {
   return (s.squads ?? [])
     .map((q) => {
       const units = s.units.filter((u) => u.squad === q.id);
-      const first = units[0]?.command;
-      const same = !!first && units.every((u) => u.command?.kind === first.kind && samePos(u.command.at, first.at));
+      const first = units[0] && effectiveCommand(s, units[0]);
+      const same =
+        !!first &&
+        units.every((u) => {
+          const c = effectiveCommand(s, u);
+          return c?.kind === first.kind && samePos(c.at, first.at);
+        });
       const formation = squadInFormation(s, q.id);
-      const kind = same ? first.kind : formation ? 'capture' : null;
-      return { id: q.id, name: q.name, count: units.length, order: kind ? commandLabel(kind) : null, formation };
+      const kind = q.command?.kind ?? (same ? first.kind : formation ? 'capture' : null);
+      const detached = units.filter((u) => isDetached(s, u)).length;
+      return { id: q.id, name: q.name, count: units.length, order: kind ? commandLabel(kind) : null, formation, detached };
     })
     .filter((q) => q.count > 0);
 }
@@ -194,7 +200,8 @@ export function tileVM(
       abilities: abilitiesVM(T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(shown.command && shown.team === 0 ? { order: commandLabel(shown.command.kind) } : {}),
+      ...(shown.team === 0 && effectiveCommand(s, shown) ? { order: commandLabel(effectiveCommand(s, shown)!.kind) } : {}),
+      ...(shown.team === 0 && isDetached(s, shown) ? { detached: true } : {}),
       ...(shown.team === 0 && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
     };
   }

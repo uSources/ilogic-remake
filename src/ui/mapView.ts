@@ -7,6 +7,7 @@ import type { Anchor } from '../hud/store';
 import { TILE } from '../layout';
 import { reducedMotion } from './fx';
 import { rank, unhealable } from '../core/rules';
+import { effectiveCommand, isDetached } from '../core/squads';
 import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
 import { frontKey, paintTerrain, terrainArtReady, terrainObjects, waterAnimCells, type AnimCell } from './terrainArt';
 import { ANIM_FRAMES } from './sheets';
@@ -561,13 +562,16 @@ export class MapView {
     const noHeal = !!s && u.life < 100 && unhealable(s, u);
     // [CAMBIO] Ayudante: unidad en automatico (al lado de la marca de carga si la lleva).
     const cargo = u.cargo.some((c) => c !== null);
-    const marks = r * 16 + (noHeal ? 1 : 0) + (cargo ? 2 : 0) + (u.command ? MISSION_KEY[u.command.kind] * 4 : 0);
+    // [CAMBIO] La orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
+    const cmd = s ? effectiveCommand(s, u) : u.command;
+    const detached = !!s && isDetached(s, u);
+    const marks = r * 16 + (noHeal ? 1 : 0) + (cargo ? 2 : 0) + (cmd ? MISSION_KEY[cmd.kind] * 4 : 0) + (detached ? 100 : 0);
     if (marks !== sp.rank) {
       // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
       sp.rank = marks;
       const g = sp.stars;
       g.clear();
-      const cmdKey = u.command ? `ui/cmd_${u.command.kind}` : null;
+      const cmdKey = cmd ? `ui/cmd_${cmd.kind}` : null;
       const cmdArt = !!cmdKey && hasImage(this.scene.textures, cmdKey);
       sp.cmd.setVisible(cmdArt);
       // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
@@ -584,7 +588,15 @@ export class MapView {
           if (m) b.setTexture(ATLAS, m[0]).setPosition(m[1], m[2]);
         });
       } else sp.badges.forEach((b) => b.setVisible(false));
-      if (u.command && !cmdArt) {
+      if (cmd && detached) {
+        // Destacada: raya naranja bajo la placa de la orden (va por su cuenta y luego vuelve).
+        const x = cargo && !markArt ? (cmdArt ? 10 : 12) : cmdArt ? 0 : 1;
+        g.fillStyle(PAL.ink, 1);
+        g.fillRect(x, cmdArt ? 16 : 10, cmdArt ? 16 : 9, 3);
+        g.fillStyle(0xffb43a, 1);
+        g.fillRect(x + 1, cmdArt ? 17 : 11, cmdArt ? 14 : 7, 1);
+      }
+      if (cmd && !cmdArt) {
         // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
         const x = cargo ? 12 : 1,
           y = 1;
@@ -593,7 +605,7 @@ export class MapView {
         g.fillStyle(0x2f8f83, 1);
         g.fillRect(x + 1, y + 1, 7, 7);
         g.fillStyle(0xffffff, 1);
-        for (const [dx, dy] of MISSION_GLYPH[u.command.kind]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
+        for (const [dx, dy] of MISSION_GLYPH[cmd.kind]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
       }
       if (noHeal && !markArt) {
         // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.

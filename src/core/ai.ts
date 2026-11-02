@@ -40,7 +40,7 @@ import {
   reachableTiles,
   teamsInZone,
 } from './rules';
-import { sameFormation } from './squads';
+import { effectiveCommand, finishCommand, sameFormation } from './squads';
 import type { Building, GameEvent, GameState, Pos, Rng, Team, Unit } from './types';
 
 /**
@@ -412,7 +412,7 @@ export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0
   const done: number[] = [];
   for (const u of commandOrder(
     s,
-    teamUnits(s, ME).filter((u) => u.command),
+    teamUnits(s, ME).filter((u) => effectiveCommand(s, u)),
   ))
     if (yield* commandTurn(s, u.uid, rng)) done.push(u.uid);
   return done;
@@ -429,13 +429,16 @@ export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0
 const remainingMap = (s: GameState, u: Unit, at: Pos): number[][] => groundDistance(s, at, Movement.of(u.type), grid(false));
 /** Lo que queda desde `p` (Infinity si no llega). */
 const remainingAt = (rem: number[][], at: Pos, p: Pos): number => (samePos(p, at) ? 0 : rem[p.x]![p.y]! || Infinity);
-const remainingOf = (s: GameState, u: Unit): number => remainingAt(remainingMap(s, u, u.command!.at), u.command!.at, u);
+const remainingOf = (s: GameState, u: Unit): number => {
+  const at = effectiveCommand(s, u)!.at;
+  return remainingAt(remainingMap(s, u, at), at, u);
+};
 /** Hasta donde puede llegar y disparar este turno. */
 const strikeReach = (u: Unit): number => UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
 function formationMates(s: GameState, u: Unit): Unit[] {
-  return s.units.filter((o) => o !== u && o.carrier === null && o.life > 0 && !needsRepair(o) && sameFormation(u, o));
+  return s.units.filter((o) => o !== u && o.carrier === null && o.life > 0 && !needsRepair(o) && sameFormation(s, u, o));
 }
 
 /**
@@ -447,7 +450,7 @@ export function commandOrder(s: GameState, units: readonly Unit[]): Unit[] {
   const placed = new Set<Unit>();
   for (const u of units) {
     if (placed.has(u)) continue;
-    const group = units.filter((o) => o === u || (!placed.has(o) && sameFormation(u, o)));
+    const group = units.filter((o) => o === u || (!placed.has(o) && sameFormation(s, u, o)));
     const key = new Map(group.map((o) => [o, remainingOf(s, o)]));
     group.sort((a, b) => key.get(b)! - key.get(a)! || UNIT.mover[a.type]! - UNIT.mover[b.type]!);
     for (const o of group) placed.add(o);
@@ -467,8 +470,9 @@ interface Formation {
 
 /** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
 function formation(s: GameState, u: Unit): Formation | null {
-  if (!u.command || needsRepair(u)) return null;
-  const at = u.command.at;
+  const c = effectiveCommand(s, u);
+  if (!c || needsRepair(u)) return null;
+  const at = c.at;
   // Las que aun no han jugado este turno cuentan donde podrian acabar (si no, la mas lenta, que
   // juega primero, esperaria a una rapida que va igual de retrasada).
   const mates = formationMates(s, u)
@@ -534,10 +538,11 @@ export function* commandNow(s: GameState, uid: number, rng: Rng = Math.random, t
  */
 export function* commandTurn(s: GameState, uid: number, rng: Rng): Generator<GameEvent, boolean> {
   const u = unitById(s, uid);
-  if (!u || !u.command || !u.active || u.carrier !== null || u.life <= 0) return false;
-  const { kind, at } = u.command;
+  const c = u && effectiveCommand(s, u);
+  if (!u || !c || !u.active || u.carrier !== null || u.life <= 0) return false;
+  const { kind, at } = c;
   const finish = () => {
-    delete u.command;
+    finishCommand(s, u);
     return true;
   };
   if (kind === 'capture') {
@@ -605,7 +610,7 @@ const PREVIEW_SEED = 0x1d0c;
  */
 export function previewCommands(s: GameState, team: Team = 0, seed = PREVIEW_SEED): Map<number, CommandIntent> {
   const out = new Map<number, CommandIntent>();
-  const actors = s.units.filter((u) => u.team === team && u.command && u.active && u.carrier === null && u.life > 0);
+  const actors = s.units.filter((u) => u.team === team && effectiveCommand(s, u) && u.active && u.carrier === null && u.life > 0);
   if (!actors.length) return out;
   const copy = structuredClone(s);
   const vis = visibility(copy, team);

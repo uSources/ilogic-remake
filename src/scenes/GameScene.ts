@@ -5,8 +5,10 @@ import {
   commandBlock,
   commandChoices,
   disbandSquad,
+  effectiveCommand,
   formSquad,
   giveCommand,
+  keepCapturing,
   pruneSquads,
   renameSquad,
   squadById,
@@ -643,7 +645,23 @@ export class GameScene extends Phaser.Scene {
       s.day,
       s.weather,
       s.generals?.map((g) => g?.reveal ?? null),
-      s.units.map((u) => [u.uid, u.type, u.team, u.x, u.y, u.life, u.active, u.canMove, u.canFire, u.carrier, u.cargo, u.command]),
+      s.units.map((u) => [
+        u.uid,
+        u.type,
+        u.team,
+        u.x,
+        u.y,
+        u.life,
+        u.active,
+        u.canMove,
+        u.canFire,
+        u.carrier,
+        u.cargo,
+        u.command,
+        u.squad,
+        u.order,
+      ]),
+      s.squads?.map((q) => [q.id, q.command]),
       s.buildings.map((b) => [b.owner, b.capture]),
     ]);
     if (this.intentCache?.sig !== sig) this.intentCache = { sig, map: previewCommands(s, 0) };
@@ -653,7 +671,7 @@ export class GameScene extends Phaser.Scene {
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): { path: Pos[]; attack?: Pos; capture?: Pos }[] {
     if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
-    const mine = this.s.units.filter((u) => u.team === 0 && u.command && u.active && u.carrier === null);
+    const mine = this.s.units.filter((u) => u.team === 0 && this.cmdOf(u) && u.active && u.carrier === null);
     const shown = mine.filter((u) => this.intents || this.showsOrderLine(u));
     if (!shown.length) return [];
     const all = this.commandIntents();
@@ -693,9 +711,14 @@ export class GameScene extends Phaser.Scene {
     return !!here && (here.uid === u.uid || (here.squad !== undefined && here.squad === u.squad));
   }
 
+  /** La orden que cumple la unidad (la suya o la de su escuadra). */
+  private cmdOf(u: Unit) {
+    return effectiveCommand(this.s, u);
+  }
+
   private idleUnits(): Unit[] {
     // Las que tienen orden no cuentan: la cumpliran solas al terminar el turno.
-    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null && !u.command);
+    return this.s.units.filter((u) => u.team === 0 && u.active && u.carrier === null && !this.cmdOf(u));
   }
 
   // -------------------------------------------------------------------------
@@ -790,9 +813,10 @@ export class GameScene extends Phaser.Scene {
           .filter((u) => u.team === 0 && u.order && u.carrier === null)
           .map((u) => ({ from: { x: u.x, y: u.y }, to: u.order! })),
         // [CAMBIO] Ordenes con destino: bandera siempre; linea para la unidad señalada y su escuadra.
-        ...this.s.units
-          .filter((u) => u.team === 0 && u.command && u.carrier === null)
-          .map((u) => ({ from: { x: u.x, y: u.y }, to: u.command!.at, kind: u.command!.kind, line: this.showsOrderLine(u) })),
+        ...this.s.units.flatMap((u) => {
+          const c = u.team === 0 && u.carrier === null ? this.cmdOf(u) : undefined;
+          return c ? [{ from: { x: u.x, y: u.y }, to: c.at, kind: c.kind, line: this.showsOrderLine(u) }] : [];
+        }),
       ],
       danger: this.phase === 'move' ? this.dangerMap : null,
       intents: this.intentsToDraw(),
@@ -862,7 +886,7 @@ export class GameScene extends Phaser.Scene {
       squads: squadsVM(this.s),
       multi: this.multi || this.group.size ? this.group.size : null,
       endTurn: { pending: this.pendingUnits().length, armed: this.endArmed() },
-      anyCommand: this.s.units.some((u) => u.team === 0 && u.command),
+      anyCommand: this.s.units.some((u) => u.team === 0 && !!this.cmdOf(u)),
       hint: busy
         ? this.enemyPlaying
           ? t('skip')
@@ -2235,6 +2259,8 @@ export class GameScene extends Phaser.Scene {
       case 'capture': {
         const b = buildingAt(this.s, u.x, u.y);
         const r = capture(this.s, u);
+        // [CAMBIO] Si a mitad de captura, que la acabe aunque tuviera otra orden (destacada).
+        keepCapturing(this.s, u);
         if (b && r) void this.playEvents([captureEvent(u, b, r)]).then(() => this.afterAction());
         else this.afterAction();
         return;
@@ -2255,7 +2281,7 @@ export class GameScene extends Phaser.Scene {
       case 'cmdDefend':
         return this.startOrder(CMD_OF[action]!, [u], true);
       case 'cmdCancel':
-        cancelCommand([u]);
+        cancelCommand(this.s, [u]);
         showToast(t('orderCancelled'));
         return this.openUnitMenu();
       case 'back':
@@ -2299,7 +2325,7 @@ export class GameScene extends Phaser.Scene {
       case 'cmdCapture':
         return units.some((u) => UNIT.cancapt[u.type]);
       case 'cmdCancel':
-        return units.some((u) => u.command);
+        return units.some((u) => !!this.cmdOf(u));
       case 'squadForm':
         return squad === null;
       case 'squadRename':
@@ -2324,7 +2350,7 @@ export class GameScene extends Phaser.Scene {
       case 'cmdDefend':
         return this.startOrder(CMD_OF[k]!, units, false);
       case 'cmdCancel':
-        cancelCommand(units);
+        cancelCommand(this.s, units);
         showToast(t('orderCancelled'));
         break;
       case 'squadForm': {
@@ -2414,7 +2440,7 @@ export class GameScene extends Phaser.Scene {
     const block = commandBlock(this.s, o.kind, c, units);
     if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
     this.ordering = null;
-    giveCommand(units, o.kind, c);
+    giveCommand(this.s, units, o.kind, c);
     // Una unidad movida este turno: lo movido cuenta y espera; la orden empieza el turno que viene.
     const sel = o.single ? units[0] : undefined;
     const moved = !!sel && !!this.undo && this.undo.uid === sel.uid && (this.undo.x !== sel.x || this.undo.y !== sel.y);
