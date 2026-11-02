@@ -85,12 +85,19 @@ async function endTab(page) {
   await page.waitForFunction(() => window.ilogicDebug.ui().screen === 'end', null, { timeout: 15000 });
   await page.waitForTimeout(300);
   const sel = () => page.evaluate(() => window.ilogicDebug.ui().end?.selected);
+  // Phaser atiende las teclas en cola, una vez por fotograma; en CI (sin pantalla) los fotogramas
+  // tardan y dos pulsaciones muy seguidas se pisaban. Se espera a ver el cambio y un poco mas.
+  const changed = async (from) => {
+    for (let i = 0; i < 20 && (await sel()) === from; i++) await page.waitForTimeout(50);
+    await page.waitForTimeout(250);
+    return sel();
+  };
   const s0 = await sel();
   await press(page, 'Tab');
-  const s1 = await sel();
+  const s1 = await changed(s0);
   check(s1 !== s0, `pantalla final: Tab pasa al siguiente boton (${s0} -> ${s1})`);
   await press(page, 'Shift+Tab');
-  check((await sel()) !== s1, 'pantalla final: Mayusculas+Tab tambien');
+  check((await changed(s1)) !== s1, 'pantalla final: Mayusculas+Tab tambien');
   check((await focused(page)) === 'BODY', 'pantalla final: el foco del navegador no se ha movido');
 }
 
