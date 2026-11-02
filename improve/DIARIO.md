@@ -13,6 +13,26 @@ Resultado: nota antes → despues (por partes si cambia), arena, fuzz.
 Conclusion: que se aprende (tambien de lo descartado).
 ```
 
+## 2026-11-01 · equilibrio (precios de unidades) · ACEPTADO
+
+Cambio: `src/core/content/units.json`: Motorizado 3500 → 2500, Jeep 5000 → 4000, Tanque anfibio
+15000 → 11000, Caza ligero 12000 → 15000 (uno cada vez, cada uno encima del anterior).
+Hipotesis: las tres que rinden menos de la mitad de la mediana (0,29x-0,43x) y el Caza ligero (1,73x)
+entran o se acercan a la banda solo con el precio, sin tocar su papel (Jeep explorador, Motorizado
+captura rapida).
+Resultado: la linea base guardada (76,2) era vieja: con esta rama sin tocar precios sale **68,5**.
+Nota 120 partidas **68,5 → 68,5** (precios 12,0 → 13,5, duracion 1,5 → 0, lo demas igual); con 240
+partidas 69,7 → 78,9 (precios 11,7 → 13,4, duracion 3 → 10,5). Eficiencia (240): Motorizado 0,32x →
+0,59x, Jeep 0,40x → 0,60x, Tanque anfibio 0,29x → 0,56x, Caza ligero 1,80x → 1,40x. Sin terminar
+(40 dias) 95,8 % → 96,3 % en 240; balance 80 (60 dias) 88 % → 93 %. Capturas -3,6 %.
+Descartados: Soldado 1500 → 2000 (encima del Motorizado: precios 12,3 → 12,0, -2 % capturas),
+Artilleria 8000 → 9500 (precios +0,1), Jeep 3500 (precios 12,8 → 12,5).
+Conclusion: la parte de duracion se calcula con 3-10 partidas y salta 0-15 puntos sin cambios de peso
+(Jeep 4000 dio +8 en 120 y -7 en 240): decidir con precios, lados, sin terminar y capturas, y confirmar
+con 240 (pu-m: el mismo calculo que metrics con `--set`). Jeep mas barato = la IA compra un 40 % mas de
+Jeeps y las partidas se cierran algo menos. Siguientes: Bombardero (1,71x tras subir el Caza ligero;
+propuesta 13000 → 16000) y Antiaereo (1,6x; 8000 → 10000).
+
 ## 2026-11-01 · IA (juego en grupo) · ACEPTADO
 
 Cambio: `src/core/ai.ts`, solo en `aiTurn` (bandera `GROUP`; `commandTurn` igual que antes):

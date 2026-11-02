@@ -258,3 +258,48 @@ terminan 34 → 29 días (+7,5), sin terminar 96 % → 94 %, lados 47/53 → 50/
 - Detrás del atasco: con 30 puntos de mando el ejército tiene tope y el dinero se amontona (100.000-
   270.000 sin gastar el día 40); perder unidades apenas cuesta y la Base (30 puntos, 3 turnos
   seguidos) se defiende sola con lo que se fabrica al lado.
+
+## Precios de unidades (01-11-2026)
+
+Eficiencia = valor destruido / dinero gastado, y entre paréntesis veces la mediana (banda buena:
+0,67x-1,5x). Cambios en `src/core/content/units.json`, uno cada vez y encima del anterior:
+
+| Unidad | Precio | Eficiencia, 120 partidas | Eficiencia, 240 partidas | Compradas (240) |
+|---|---|---:|---:|---:|
+| Motorizado | 3500 → **2500** | 0,27 (0,29x) → 0,50 (0,53x) | 0,29 (0,32x) → 0,48 (0,59x) | 445 → 501 |
+| Jeep | 5000 → **4000** | 0,40 (0,43x) → 0,51 (0,54x) | 0,37 (0,40x) → 0,49 (0,60x) | 2060 → 2830 |
+| Tanque anfibio | 15000 → **11000** | 0,30 (0,32x) → 0,43 (0,46x) | 0,27 (0,29x) → 0,46 (0,56x) | 204 → 256 |
+| Caza ligero | 12000 → **15000** | 1,61 (1,73x) → 1,19 (1,27x) | 1,66 (1,80x) → 1,15 (1,40x) | 522 → 324 |
+| Soldado (sin tocar) | 1500 | 1,46 (1,57x) → 1,34 (1,43x) | 1,51 (1,64x) → 1,37 (1,67x) | 1322 → 1284 |
+| Bombardero (sin tocar) | 13000 | 1,10 (1,18x) → 1,61 (1,71x) | 1,23 (1,34x) → 1,66 (2,02x) | 413 → 415 |
+
+| Medida | Antes | Después |
+|---|---:|---:|
+| Nota (`npm run metrics`, 120 partidas, 40 días) | 68,5 | 68,5 |
+| — precios | 12,0 (9 de 15 en la banda) | **13,5** (10 de 15) |
+| — duración (mediana de las que terminan) | 1,5 (34 días) | 0 (35 días) |
+| — lados | 25 (51 / 49) | 25 (55 / 45) |
+| Nota con 240 partidas (semillas 1-120, mismo cálculo) | 69,7 | 78,9 |
+| — precios / duración | 11,7 / 3 (33 días) | 13,4 / 10,5 (28 días) |
+| Sin terminar en 40 días (120 / 240) | 93 % / 95,8 % | 95 % / 96,3 % |
+| `npm run balance -- run --games 80` (60 días): sin terminar | 88 % | 93 % |
+| — días (mediana de las que terminan) / ventaja bando 0 / 1 | 39 / 23-35 | 50 / 29-38 |
+| Capturas (120 partidas) | 7292 | 7026 (-3,6 %) |
+
+La línea base guardada (76,2) era de antes de juntar los puntos de control en zonas: con el código
+de esta rama sin tocar precios la nota sale 68,5 (repetible: las semillas son fijas).
+
+- **Motorizado 2500**: el cambio más claro. Se compra más (223 → 362 en la medida de 120 con solo
+  este cambio) y captura más del doble (274 → 628); la expansión total no baja.
+- **Jeep 4000**: sube en eficiencia, pero la IA compra un 40 % más de Jeeps, que pelean poco. Junto
+  con el Motorizado, 2-5 partidas más sin terminar de cada 80-240: poco, pero todas las medidas van
+  hacia ese lado. Con 3500 los precios empeoran (12,5).
+- **Tanque anfibio 11000**: era un Tanque ligero (mismo ataque, más frágil) al doble de precio; sigue
+  por debajo de la banda, el agua solo le sirve en algunos mapas.
+- **Caza ligero 15000**: entra en la banda. Efecto de lado: hay menos cazas y el Bombardero rinde más
+  (1,18x → 1,71x): es el siguiente candidato (la herramienta propone 13000 → 16000), y el Antiaéreo (1,6x, 8000 → 10000).
+- Descartados: **Soldado 2000** (encima del Motorizado: precios 12,3 → 12,0; captura un 2 % menos),
+  **Artillería 9500** (precios +0,1 encima del Jeep), **Jeep 3500** (precios 12,8 → 12,5).
+- La parte de duración se calcula con las 3-10 partidas que terminan en 40 días y salta 0-15 puntos
+  de una medida a otra sin cambiar nada de peso (el mismo cambio dio 82,8 en 120 y 67,3 en 240): las
+  decisiones se han tomado con precios, lados, partidas sin terminar y capturas, y confirmadas con 240.
