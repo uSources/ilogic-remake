@@ -183,6 +183,42 @@ async function scenarios(page, cdp, name) {
     `arrastre rapido lejos: vuelve, sin orden (${JSON.stringify([s3?.x, s3?.y, s3?.order, far])})`,
   );
 
+  // Orden con un gesto: con la unidad elegida, mantener pulsado el destino abre el menu de ordenes.
+  await start(page);
+  await center(page, SOLDIER.x + 2, SOLDIER.y);
+  const hold = async (x, y, ms = 650) => {
+    const p = await at(page, x, y);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: p.x, y: p.y }] });
+    await page.waitForTimeout(ms);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(150);
+  };
+  await hold(SOLDIER.x + 4, SOLDIER.y);
+  check((await phase(page)) === 'map', 'sin unidad elegida, mantener pulsado no abre ordenes');
+  await tap(page, SOLDIER.x, SOLDIER.y);
+  await hold(SOLDIER.x + 4, SOLDIER.y);
+  const om = await page.evaluate(() => window.ilogicDebug.ui().menu?.items.map((i) => i.id));
+  check(
+    (await phase(page)) === 'orderMenu' && om?.join() === 'attack,defend',
+    `con la unidad elegida, mantener pulsado el destino abre las ordenes (${await phase(page)}: ${om})`,
+  );
+  const btn = page.locator('[role=menuitem]').filter({ hasText: /Defender|Hold/ });
+  if (await btn.count()) await btn.first().tap();
+  await page.waitForTimeout(150);
+  await page.evaluate(() => window.ilogicDebug.idle());
+  const s4 = await unit(page, s0.uid);
+  check(
+    s4?.command?.kind === 'defend' && s4.command.at.x === SOLDIER.x + 4 && (await phase(page)) === 'map',
+    `tocar «Defender allí» da la orden (${JSON.stringify(s4?.command)})`,
+  );
+  // Mantener pulsada la propia unidad elegida la sigue cogiendo (no abre ordenes).
+  await start(page);
+  await center(page, SOLDIER.x + 1, SOLDIER.y);
+  await tap(page, SOLDIER.x, SOLDIER.y);
+  await drag(page, cdp, await at(page, SOLDIER.x, SOLDIER.y), await at(page, SOLDIER.x + 1, SOLDIER.y), 320);
+  const s5 = await unit(page, s0.uid);
+  check(s5?.x === SOLDIER.x + 1 && !s5?.command, 'mantener y arrastrar la unidad elegida la sigue moviendo');
+
   // Arrastrar desde una casilla vacia: mueve el mapa.
   await start(page);
   await center(page, 15, 11);

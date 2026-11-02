@@ -6,6 +6,7 @@ import { render, h } from 'preact';
 import { deviceSize, fitCanvas, watchResize } from './display';
 import { Hud } from './hud/Hud';
 import { installDebug } from './debug';
+import { installTabGuard } from './controls/browserKeys';
 import { registerServiceWorker } from './pwa';
 import { applySettings } from './settings';
 import { BootScene } from './scenes/BootScene';
@@ -17,15 +18,9 @@ const hudRoot = document.getElementById('hud')!;
 render(h(Hud, {}), hudRoot);
 applySettings();
 // Sin menu contextual del navegador sobre la interfaz, y Tab no recorre sus botones
-// (Tab es "siguiente unidad"; Enter ya lo maneja el juego).
+// (Tab es "siguiente unidad"; Enter ya lo maneja el juego). El orden importa: ver browserKeys.ts.
 hudRoot.addEventListener('contextmenu', (e) => e.preventDefault());
-window.addEventListener(
-  'keydown',
-  (e) => {
-    if (e.key === 'Tab') e.preventDefault();
-  },
-  { capture: true },
-);
+installTabGuard(window);
 
 const size = deviceSize();
 const game = new Phaser.Game({
@@ -36,6 +31,8 @@ const game = new Phaser.Game({
   backgroundColor: '#0b1220',
   pixelArt: true,
   scale: { mode: Phaser.Scale.NONE },
+  // En document, no en window: asi ve Tab antes que el guardian de main (ver browserKeys.ts).
+  input: { keyboard: { target: document } },
   scene: [BootScene, LogoScene, MenuScene, GameScene],
 });
 game.events.once(Phaser.Core.Events.READY, () => {

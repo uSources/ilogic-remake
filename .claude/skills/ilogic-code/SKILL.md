@@ -17,7 +17,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | `src/hud/` | Componentes Preact y `store` (estado de la interfaz) | settings, assets, patchNotes, tipos de core |
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
-| `src/controls/` | Ordenes del jugador (`GameCommand`) y adaptadores de cada mando (teclado...): funciones puras, sin Phaser | menu (teclas compartidas) |
+| `src/controls/` | Ordenes del jugador (`GameCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras, sin Phaser | menu (teclas compartidas) |
 | `src/controls/pointer.ts` | Adaptador de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, coger y soltar, recuadro, pulsacion larga, pellizco, rueda). Sin Phaser | `GameScene` implementa `PointerTarget` |
 | `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
@@ -25,7 +25,8 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 - `src/core` **no** importa Phaser, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
   Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/orders.ts`).
 - Las escenas no leen teclas ni botones de un mando: un adaptador de `src/controls` los traduce a
-  `GameCommand` y la escena los cumple (`GameScene.command`). Un mando nuevo es un adaptador nuevo.
+  `GameCommand` (mapa) o `MenuCommand` (menus) y la escena los cumple (`command` / `menu`, segun
+  `controlContext()`). Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
 - Las escenas no calculan lo que enseña la interfaz a mano: usan funciones puras de `ui/hudModels.ts`
   y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store.
 - La aleatoriedad pasa siempre por un `Rng` con semilla (`seededRng`); nada de `Math.random` en core

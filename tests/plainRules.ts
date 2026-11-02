@@ -18,4 +18,5 @@ export const PLAIN_RULES: RulesConfig = {
   commandPoints: null,
   upkeep: 0,
   weather: false,
+  controlPoints: 0,
 };

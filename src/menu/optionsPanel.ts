@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { ui, type OptionRowVM } from '../hud/store';
 import { playMusic, stopMusic } from '../music';
 import { saveSettings, settings, t, UI_SCALES, type Settings, type TextKey } from '../settings';
-import { KEY_BACK, KEY_DOWN, KEY_LEFT, KEY_OK, KEY_RIGHT, KEY_UP } from './nav';
+import type { MenuCommand } from '../controls/menu';
 
 interface Row<K extends keyof Settings = keyof Settings> {
   key: K;
@@ -115,16 +115,16 @@ export class OptionsPanel {
     this.publish();
   }
 
-  /** Teclas mientras esta abierta. */
-  key(e: KeyboardEvent): void {
+  /** Ordenes de menu mientras esta abierta (teclas en MENU_BINDINGS.options, src/controls/menu.ts). */
+  command(cmd: MenuCommand): void {
     const n = this.rows.length;
     const r = this.rows[this.focus]!;
     const cur = Math.max(0, r.values.indexOf(settings[r.key]));
-    if (KEY_UP.includes(e.code)) this.focus = (this.focus - 1 + n) % n;
-    else if (KEY_DOWN.includes(e.code)) this.focus = (this.focus + 1) % n;
-    else if (KEY_LEFT.includes(e.code)) return this.set(this.focus, cur - 1);
-    else if (KEY_RIGHT.includes(e.code) || (KEY_OK.includes(e.code) && !e.repeat)) return this.set(this.focus, cur + 1);
-    else if (KEY_BACK.includes(e.code) || e.code === 'KeyO') return this.close();
+    const mv = cmd.kind === 'move' ? cmd : { dx: 0, dy: 0 };
+    if (mv.dy) this.focus = (this.focus + mv.dy + n) % n;
+    else if (mv.dx < 0) return this.set(this.focus, cur - 1);
+    else if (mv.dx > 0 || (cmd.kind === 'ok' && !cmd.repeat)) return this.set(this.focus, cur + 1);
+    else if (cmd.kind === 'back' || cmd.kind === 'options') return this.close();
     this.publish();
   }
 }
