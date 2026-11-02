@@ -14,7 +14,7 @@ Antes de nada lee: `improve/DIARIO.md` (que se probo ya: no repitas), `.claude/s
 Proceso:
 1. Elige UNA hipotesis a partir de la parte con mas margen (p. ej. "Unidades que rinden lo que cuestan"
    o los avisos de precios). Solo tocas datos en `src/core/content/`: `units.json`, `buildings.json`,
-   `terrain.json` y `rules.json`. **No** `ai.json` ni `src/core/ai.ts` (eso es del entrenador de la IA).
+   `terrain.json` y `rules.json`. **No** `ai.json` ni `src/core/ai.ts` / `src/core/ai/` (eso es del entrenador de la IA).
 2. Prueba rapida sin tocar ficheros: `npm run balance -- run --games 80 --set RUTA=VALOR --name prueba-X`
    y comparala con `npm run balance -- run --games 80 --name base-X` (mismas semillas).
 3. Si promete, aplica el cambio en el JSON y mide de verdad: `npm run metrics -- --name <rama>`
