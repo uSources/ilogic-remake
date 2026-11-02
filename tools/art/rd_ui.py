@@ -86,7 +86,7 @@ def split_anim(im, name):
                     r, g, b, a = px[x, y]
                     if a and r > 180 and b > 180 and g < 120:
                         px[x, y] = (0, 0, 0, 0)
-            if sum(1 for p in fr.getdata() if p[3]) > 40:
+            if sum(fr.getchannel('A').point(lambda a: 1 if a else 0).histogram()[1:]) > 40:
                 frames.append(fr)
     for i, fr in enumerate(frames):
         fr.save(os.path.join(OUT, f'{name}_{i}.png'))

@@ -61,9 +61,9 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
   moda de color (sin mezclar) antes de guardarlas en `ui/`.
 - Efectos animados: `rd_animation__vfx` (24-96 px, 0,07 $ la animacion entera) con `return_spritesheet`.
   No pedir fondo negro (lo quita y se lleva el humo). La hoja va como `ui/anim_<nombre>.png` y `rd_ui.py`
-  la parte en fotogramas de 48x48 sin los vacios ni el magenta suelto; `playAnim` (src/ui/fx.ts) la pone.
-- **Rechazado:** proyectiles del combate (misil, bala de cañon, bombas) con RD Plus: otro estilo,
-  apagado, que no encaja con las unidades de Pro. Se quedan los de codigo.
+  la parte en fotogramas de 48x48 sin los vacios ni el magenta suelto (ahora no se usa ninguna: ver abajo).
+- **Rechazado:** proyectiles del combate (misil, bala de cañon, bombas) con RD Plus y la explosion
+  animada de `rd_animation__vfx`: no encajan con la estetica del juego. Se quedan los de codigo.
 - Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
   sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.
