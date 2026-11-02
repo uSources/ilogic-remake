@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aiTurn, assistTurn, commandNow } from '../core/ai';
+import { aiTurn, assistTurn, commandNow, previewCommands, type CommandIntent } from '../core/ai';
 import {
   cancelCommand,
   commandBlock,
@@ -341,6 +341,10 @@ export class GameScene extends Phaser.Scene {
   private enemyPlaying = false;
   /** Zona de amenaza enemiga visible (tecla T). */
   private threat = false;
+  /** [CAMBIO] Ver lo que hara cada unidad con orden al terminar el turno (todas, tecla V). */
+  private intents = false;
+  /** Prevision de las ordenes (previewCommands) y la firma de la partida con la que se calculo. */
+  private intentCache: { sig: string; map: Map<number, CommandIntent> } | null = null;
   /** Unidad cuyo alcance se esta mostrando (Enter o clic derecho sobre ella). */
   private inspectUid: number | null = null;
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
@@ -409,6 +413,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.enemyPlaying = false;
     this.inspectUid = null;
+    this.intentCache = null;
     this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
     this.gestures.reset();
     this.tutorialStep = 0;
@@ -530,7 +535,7 @@ export class GameScene extends Phaser.Scene {
       },
       () => this.refreshHud(),
     );
-    ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, options: null });
+    ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, intents: this.intents, options: null });
     this.refresh();
     if (this.lab) this.startLab(this.lab);
     else showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
@@ -607,6 +612,9 @@ export class GameScene extends Phaser.Scene {
       toggleThreat: () => {
         if (!this.ended) this.toggleThreat();
       },
+      toggleIntents: () => {
+        if (!this.ended) this.toggleIntents();
+      },
       focusUnit: (uid: number) => {
         if (!ready()) return;
         const u = unitById(this.s, uid);
@@ -617,6 +625,47 @@ export class GameScene extends Phaser.Scene {
         this.selectUnit(u);
       },
     });
+  }
+
+  private toggleIntents(): void {
+    this.intents = !this.intents;
+    ui.set({ intents: this.intents });
+    this.refresh();
+  }
+
+  /**
+   * [CAMBIO] Prevision de las ordenes con destino. Solo se recalcula si cambia algo de la partida que
+   * pueda cambiarla (unidades, edificios, dia); mover el cursor solo cambia cuales se dibujan.
+   */
+  private commandIntents(): Map<number, CommandIntent> {
+    const s = this.s;
+    const sig = JSON.stringify([
+      s.day,
+      s.weather,
+      s.generals?.map((g) => g?.reveal ?? null),
+      s.units.map((u) => [u.uid, u.type, u.team, u.x, u.y, u.life, u.active, u.canMove, u.canFire, u.carrier, u.cargo, u.command]),
+      s.buildings.map((b) => [b.owner, b.capture]),
+    ]);
+    if (this.intentCache?.sig !== sig) this.intentCache = { sig, map: previewCommands(s, 0) };
+    return this.intentCache.map;
+  }
+
+  /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
+  private intentsToDraw(): { path: Pos[]; attack?: Pos; capture?: Pos }[] {
+    if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
+    const mine = this.s.units.filter((u) => u.team === 0 && u.command && u.active && u.carrier === null);
+    const shown = mine.filter((u) => this.intents || this.showsOrderLine(u));
+    if (!shown.length) return [];
+    const all = this.commandIntents();
+    const out: { path: Pos[]; attack?: Pos; capture?: Pos }[] = [];
+    for (const u of shown) {
+      const i = all.get(u.uid);
+      if (!i) continue;
+      // Por si acaso: nunca se marca un objetivo que el jugador no ve.
+      const attack = i.attack && this.vis[i.attack.x]![i.attack.y] ? i.attack : undefined;
+      if (i.path.length > 1 || attack || i.capture) out.push({ path: i.path, attack, capture: i.capture });
+    }
+    return out;
   }
 
   private toggleThreat(): void {
@@ -746,6 +795,7 @@ export class GameScene extends Phaser.Scene {
           .map((u) => ({ from: { x: u.x, y: u.y }, to: u.command!.at, kind: u.command!.kind, line: this.showsOrderLine(u) })),
       ],
       danger: this.phase === 'move' ? this.dangerMap : null,
+      intents: this.intentsToDraw(),
       captures,
       controlPoints: this.controlPointsView(),
       goal: obj?.kind === 'escort' ? obj.to : null,
@@ -812,6 +862,7 @@ export class GameScene extends Phaser.Scene {
       squads: squadsVM(this.s),
       multi: this.multi || this.group.size ? this.group.size : null,
       endTurn: { pending: this.pendingUnits().length, armed: this.endArmed() },
+      anyCommand: this.s.units.some((u) => u.team === 0 && u.command),
       hint: busy
         ? this.enemyPlaying
           ? t('skip')
@@ -1138,6 +1189,8 @@ export class GameScene extends Phaser.Scene {
         return;
       case 'threat':
         return this.toggleThreat();
+      case 'intents':
+        return this.toggleIntents();
       case 'minimap':
         return ui.actions.toggleMinimap();
       case 'nextUnit':
