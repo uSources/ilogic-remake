@@ -9,7 +9,7 @@ Fuente: tools/art/retrodiffusion/ui/ (PNG ya recortados, sin fondo, al tamaño n
   flag.png           16x24  banderin que se planta en el mapa (magenta = bando)
   cmd_<orden>.png    16x16  icono sobre la unidad en automatico (attack, defend, capture; RD Plus low_res)
   mk_<marca>.png     8-10px marcas de la unidad: star (veterania), noheal (no se cura), cargo (lleva carga)
-  anim_<efecto>.png  hoja de RD (rd_animation__vfx) en rejilla de 48x48: sale un PNG por fotograma
+  anim_<efecto>.png  hoja de RD en rejilla (48x48, o lo que diga ANIM_FRAME): sale un PNG por fotograma
                      (anim_<efecto>_<n>), sin los vacios y sin las manchas magenta sueltas que deja RD
 
 Del banderin salen tambien los de destino de las ordenes (flag_cmd_<orden> y flag_cmd_go), girando el
@@ -31,7 +31,8 @@ SRC = os.path.join(D, 'retrodiffusion', 'ui')
 OUT = os.path.normpath(os.path.join(D, '..', '..', 'public', 'assets', 'img', 'ui'))
 
 # Prefijo -> bandos que se sacan (None = se copia tal cual).
-ANIM_FRAME = 48
+# Lado de cada fotograma en las hojas de animacion (por defecto 48).
+ANIM_FRAME = {'boom': 64}
 TEAMS = {'anim': None, 'gen': 'br', 'zona': 'bri', 'flag': 'bri', 'ab': None, 'wx': None, 'cmd': None, 'mk': None}
 
 # Color de cada orden (tono 0..1), el mismo que COMMAND_FLAG de src/ui/mapView.ts; 'go' = ir alli (dorado).
@@ -75,14 +76,15 @@ def to_hue(im, hue):
 
 def split_anim(im, name):
     """Fotogramas de una hoja de animacion, en orden de lectura, quitando los vacios y el magenta suelto."""
+    F = ANIM_FRAME.get(name.partition('_')[2], 48)
     frames = []
-    for row in range(im.height // ANIM_FRAME):
-        for col in range(im.width // ANIM_FRAME):
-            box = (col * ANIM_FRAME, row * ANIM_FRAME, (col + 1) * ANIM_FRAME, (row + 1) * ANIM_FRAME)
+    for row in range(im.height // F):
+        for col in range(im.width // F):
+            box = (col * F, row * F, (col + 1) * F, (row + 1) * F)
             fr = im.crop(box)
             px = fr.load()
-            for y in range(ANIM_FRAME):
-                for x in range(ANIM_FRAME):
+            for y in range(F):
+                for x in range(F):
                     r, g, b, a = px[x, y]
                     if a and r > 180 and b > 180 and g < 120:
                         px[x, y] = (0, 0, 0, 0)

@@ -59,11 +59,14 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
   `rd_ui.py` les pone un contorno oscuro porque van encima de la unidad.
 - Marcas de unidad (`mk_star/noheal/cargo`): igual que las de orden y luego reducidas a 8-10 px por
   moda de color (sin mezclar) antes de guardarlas en `ui/`.
-- Efectos animados: `rd_animation__vfx` (24-96 px, 0,07 $ la animacion entera) con `return_spritesheet`.
-  No pedir fondo negro (lo quita y se lleva el humo). La hoja va como `ui/anim_<nombre>.png` y `rd_ui.py`
-  la parte en fotogramas de 48x48 sin los vacios ni el magenta suelto (ahora no se usa ninguna: ver abajo).
+- Efectos animados: la hoja va como `ui/anim_<nombre>.png` y `rd_ui.py` la parte en fotogramas (lado
+  en `ANIM_FRAME`) sin los vacios ni el magenta suelto; `playAnim` (src/ui/fx.ts) la reproduce.
 - **Rechazado:** proyectiles del combate (misil, bala de cañon, bombas) con RD Plus y la explosion
-  animada de `rd_animation__vfx`: no encajan con la estetica del juego. Se quedan los de codigo.
+  de `rd_animation__vfx`: no encajan con la estetica del juego. Los proyectiles siguen por codigo.
+- **Explosion que si encaja** (`ui/anim_boom.png`, fotogramas de 64x64): fotograma clave con
+  `rd_pro__default` 48x48 y unidades de referencia (0,18 $), centrado en 64x64 con margen, y animado
+  con `rd_advanced_animation__custom_action` (8 fotogramas, 0,25 $). La animacion avanzada respeta el
+  estilo del fotograma de entrada: es la receta para cualquier efecto animado.
 - Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
   sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.
