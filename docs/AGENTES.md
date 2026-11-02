@@ -81,8 +81,8 @@ Para ver y ajustar como se anima mover, atacar, el contraataque y una unidad des
   de fotogramas por accion (`counter.png`...), que se pueden mirar como imagen. Opciones:
   `-- --attacker Bomber --defender Tank --slow --out carpeta` (para comparar antes y despues).
 
-Codigo: `src/lab.ts` (la partida de mentira) y el modo `lab` de `GameScene` (las animaciones son las
-de siempre: `playEvents`, `playAttack`...).
+Codigo: `src/lab.ts` (la partida de mentira) y `src/scenes/game/labMode.ts` (las animaciones son las
+de siempre: `EventPlayer` en `src/scenes/game/playback.ts`).
 
 ## Antes de tocar...
 
