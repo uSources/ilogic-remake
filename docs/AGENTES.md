@@ -11,6 +11,7 @@ codigo estan en la skill `ilogic-code`; la arquitectura en `docs/ARQUITECTURA.md
 | Que nada visual cambie sin querer | `npm run shots` | Cambios en dibujo, interfaz, escenas, graficos |
 | Ver una regla funcionando | `npm run play -- --seed 7 -e "..."` | Cambios de reglas o IA |
 | Equilibrio | `npm run balance -- run ...` | Cambios de numeros o de IA (skill `equilibrar`) |
+| Teclado en un navegador real (Tab, foco) | `npm run keys` | Cambios en teclado, `main.ts` o cuadros de texto |
 | Jugarlo en un navegador | `npm run build:single` y abrir `dist-single/ilogic.html` | Interaccion, tactil, raton |
 
 `npm run shots` deja `tests/visual/out/index.html` con cada escena: captura actual, referencia y
