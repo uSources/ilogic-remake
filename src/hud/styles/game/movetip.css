@@ -1,0 +1,29 @@
+/* Bocadillo al mover */
+.movetip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.movetip .mt-act {
+  font-family: var(--display);
+  font-size: 12px;
+}
+.movetip .num {
+  font-size: 12px;
+}
+.movetip .gold {
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+.movetip .mt-danger {
+  color: var(--red);
+  font-size: 15px;
+}
+.movetip.bad {
+  background: #4a1714;
+}

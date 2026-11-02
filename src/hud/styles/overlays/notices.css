@@ -1,0 +1,81 @@
+/* Avisos */
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 104px;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  font-size: 16px;
+  animation: toast 2.4s steps(6) forwards;
+}
+@keyframes toast {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0;
+  background: rgba(11, 18, 32, 0.86);
+  border-top: 4px solid var(--blue);
+  border-bottom: 4px solid var(--blue);
+  animation: banner 1.6s steps(8) forwards;
+}
+.banner.red {
+  border-color: var(--red);
+}
+.banner .s {
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--muted);
+}
+.banner .b {
+  font-family: var(--display);
+  font-size: 40px;
+  letter-spacing: 2px;
+}
+@keyframes banner {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.hintline {
+  position: absolute;
+  left: 50%;
+  top: 78px;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: var(--muted);
+  text-shadow:
+    1px 1px 0 #000,
+    -1px 1px 0 #000,
+    1px -1px 0 #000;
+  white-space: nowrap;
+}

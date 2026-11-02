@@ -1,0 +1,79 @@
+/* Letras, colores (variables), pagina y #hud. */
+
+/* Letra propia de titulos y botones (tools/art/font/ilogic.txt → npm run assets). Lo que no tiene
+   (★, ☰...) sale con Silkscreen. Nitida a 10, 20, 30 y 40 px. */
+@font-face {
+  font-family: 'Ilogic';
+  src: url('../../fonts/ilogic.woff2') format('woff2');
+  font-display: block;
+}
+/* Cifras del texto con las de Ilogic: en Pixelify Sans, a tamaño pequeño, el 5 se confunde con el 8
+   ("Fondos: 5000" se leia "8000"). Solo las cifras (unicode-range); las letras siguen igual. */
+@font-face {
+  font-family: 'IlogicDigits';
+  src: url('../../fonts/ilogic.woff2') format('woff2');
+  font-display: block;
+  unicode-range: U+0030-0039;
+}
+:root {
+  --ink: #0b1220;
+  --panel: #1c2c4c;
+  --hi: #31497a;
+  --lo: #111b31;
+  --slot: #24314d;
+  --text: #f2f5ff;
+  --muted: #9fb2d8;
+  --blue: #3aa8ff;
+  --blue-btn: #1f6fd1;
+  --blue-hi: #5eb3ff;
+  --blue-lo: #134a8f;
+  --red: #ff4d45;
+  --red-soft: #ff7a73;
+  --red-btn: #b8322c;
+  --red-hi: #ff6a62;
+  --red-lo: #7a1d19;
+  --gold: #ffd447;
+  --green: #4fd36a;
+  --sel: #2c5bb0;
+  --display: 'Ilogic', 'Silkscreen', 'Courier New', monospace;
+  --body: 'IlogicDigits', 'Pixelify Sans', 'Courier New', monospace;
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  /* Punteros propios del raton (los pone BootScene: --cursor y --cursor-button). */
+  cursor: var(--cursor, auto);
+  height: 100%;
+  background: var(--ink);
+  overflow: hidden;
+  /* La letra pixel trae la ligadura "fi" rota (salia "An", "edifAcios"): letras sueltas siempre. */
+  font-variant-ligatures: none;
+}
+#game {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+}
+#game canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--body);
+  color: var(--text);
+  font-size: 16px;
+  -webkit-font-smoothing: none;
+  user-select: none;
+}
+#hud * {
+  box-sizing: border-box;
+}
+.px-icon {
+  image-rendering: pixelated;
+  display: block;
+}

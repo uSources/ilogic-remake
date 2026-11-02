@@ -1,0 +1,73 @@
+/* Panel con bisel pixel */
+.px {
+  background: var(--panel);
+  border: 3px solid var(--ink);
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+.px-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 3px solid var(--ink);
+  background: var(--blue-btn);
+  color: #fff;
+  box-shadow:
+    inset 3px 3px 0 var(--blue-hi),
+    inset -3px -3px 0 var(--blue-lo),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+  font-family: var(--display);
+  font-size: 18px;
+  line-height: 1;
+  cursor: var(--cursor-button, pointer);
+  pointer-events: auto;
+}
+.px-btn:hover {
+  filter: brightness(1.12);
+}
+.px-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 3px 3px 0 var(--blue-hi),
+    inset -3px -3px 0 var(--blue-lo),
+    2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+.px-btn.plain {
+  background: var(--panel);
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+}
+.px-btn.on {
+  background: #6b1f1c;
+  box-shadow:
+    inset 3px 3px 0 var(--red-hi),
+    inset -3px -3px 0 var(--red-lo),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+}
+.key {
+  padding: 2px 6px;
+  background: var(--ink);
+  color: var(--gold);
+  font-size: 13px;
+  font-family: var(--display);
+}
+.label {
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.muted {
+  color: var(--muted);
+}
+.num {
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+}

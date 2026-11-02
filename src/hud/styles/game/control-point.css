@@ -1,0 +1,8 @@
+/* [CAMBIO] Punto de control en la ficha de la casilla. */
+.terrain .cpoint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}

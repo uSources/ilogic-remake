@@ -1,0 +1,174 @@
+/* Pantallas estrechas (movil); detras, retoques de botones, bandeja y menu emergente. */
+.px-btn {
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .combat {
+    bottom: 10px;
+    gap: 4px;
+  }
+  .combat-vs {
+    font-size: 14px;
+  }
+  .combat-side {
+    width: calc(50vw - 30px);
+    max-width: 200px;
+    padding: 8px;
+  }
+  .cs-portrait {
+    width: 36px;
+    height: 36px;
+  }
+  .cs-name {
+    font-size: 12px;
+  }
+  .cs-hit {
+    display: none;
+  }
+  .top {
+    left: 10px;
+    right: 10px;
+    top: 10px;
+    gap: 8px;
+  }
+  .funds {
+    padding: 6px 10px 6px 8px;
+    gap: 8px;
+  }
+  .funds .coin {
+    width: 24px;
+    height: 24px;
+  }
+  .funds .amount {
+    font-size: 18px;
+    line-height: 18px;
+  }
+  .funds .sub,
+  .hintline {
+    display: none;
+  }
+  .day {
+    top: 62px;
+  }
+  .day span {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+  .day .w {
+    padding: 6px 8px;
+  }
+  .day .w .wn,
+  .day .w .wf {
+    display: none;
+  }
+  .px-btn {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+  .px-btn.end .key {
+    display: none;
+  }
+  .menu-btn {
+    width: 44px;
+    height: 42px;
+  }
+  .cards {
+    left: 10px;
+    bottom: 10px;
+  }
+  .cards .terrain {
+    display: none;
+  }
+  .unitcard {
+    width: 220px;
+  }
+  /* Retrato mas pequeño: deja sitio a los datos (movimiento, alcance, vision) en una linea. */
+  .unitcard .head {
+    gap: 8px;
+  }
+  .unitcard .portrait {
+    width: 48px;
+    height: 48px;
+  }
+  .tray {
+    right: 10px;
+    bottom: 10px;
+    padding: 6px;
+  }
+  .tray .tray-head,
+  .tray .slots,
+  .tray .all {
+    display: none;
+  }
+  .tray .threat .key,
+  .tray .threat .long {
+    display: none;
+  }
+  .tray .threat span.short {
+    display: inline;
+  }
+  .credits {
+    display: none;
+  }
+  .forecast {
+    width: 220px;
+  }
+  .toast {
+    top: 112px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+  }
+}
+@media (max-width: 480px) {
+  .unitcard {
+    width: min(220px, calc(100vw - 150px));
+  }
+}
+
+.px-btn:disabled {
+  filter: grayscale(0.7) brightness(0.75);
+  cursor: default;
+}
+.funds .coin {
+  width: 24px;
+  height: 24px;
+}
+.tray .threat {
+  padding: 6px 10px;
+  gap: 8px;
+  font-family: var(--body);
+  font-size: 13px;
+}
+.tray-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+.tray .all {
+  font-size: 14px;
+}
+.tray .threat .short {
+  display: none;
+}
+.tray .threat .key {
+  font-size: 12px;
+}
+.pop .item span {
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .hintline {
+    display: none;
+  }
+}
+.mainmenu .logo {
+  animation: bob 1.8s steps(2) infinite alternate;
+}
+@keyframes bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(6px);
+  }
+}

@@ -1,0 +1,32 @@
+/* Laboratorio de animaciones (#lab) */
+.lab-panel {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  pointer-events: auto;
+  z-index: 20;
+}
+.lab-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lab-select {
+  font: inherit;
+  background: var(--lo);
+  color: var(--text);
+  border: 2px solid var(--ink);
+  padding: 4px 6px;
+}
+.lab-slow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}

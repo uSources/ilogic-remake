@@ -1,0 +1,85 @@
+/* Fichas de abajo */
+.cards {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.cards.right {
+  left: auto;
+  right: 16px;
+  flex-direction: row-reverse;
+}
+.terrain {
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+.terrain .swatch {
+  width: 100%;
+  height: 56px;
+  border: 3px solid var(--ink);
+  image-rendering: pixelated;
+  background-size: 64px 64px;
+}
+.terrain .bld {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.terrain .bld img {
+  width: 32px;
+  height: 32px;
+}
+.unitcard {
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.unitcard .head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.unitcard .portrait {
+  width: 64px;
+  height: 64px;
+  background: var(--slot);
+  border: 3px solid var(--ink);
+}
+.unitcard .name {
+  font-family: var(--display);
+  font-size: 17px;
+}
+.blocks {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+.blocks span {
+  flex: 1;
+  height: 12px;
+  background: var(--slot);
+}
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.meter img {
+  width: 24px;
+  height: 24px;
+}
+.meter .v {
+  width: 44px;
+  text-align: right;
+  font-family: var(--display);
+  font-size: 14px;
+}

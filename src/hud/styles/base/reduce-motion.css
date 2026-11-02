@@ -1,0 +1,10 @@
+/* Menos movimiento (opcion de accesibilidad). */
+
+html.reduce-motion #hud * {
+  animation-timing-function: step-end !important;
+  animation-duration: 0.01s !important;
+}
+html.reduce-motion .mainmenu .logo,
+html.reduce-motion .card {
+  animation: none !important;
+}

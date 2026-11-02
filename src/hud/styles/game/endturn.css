@@ -1,0 +1,25 @@
+/* [CAMBIO] Fin de turno: cuantas unidades quedan sin mover y, al primer clic, "¿Terminar?" en rojo. */
+.px-btn.end .pending {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 13px;
+  text-align: center;
+}
+.px-btn.end.armed {
+  background: var(--red-btn);
+  animation: end-armed 0.5s steps(2) infinite alternate;
+}
+@keyframes end-armed {
+  to {
+    filter: brightness(1.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .px-btn.end.armed {
+    animation: none;
+  }
+}

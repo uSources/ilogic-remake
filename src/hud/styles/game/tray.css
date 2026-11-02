@@ -1,0 +1,35 @@
+/* Bandeja de unidades sin mover */
+.tray {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  max-width: 300px;
+}
+.tray .slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tray .slots button {
+  padding: 0;
+  border: 3px solid var(--ink);
+  background: var(--slot);
+  cursor: var(--cursor-button, pointer);
+}
+.tray .slots button:hover {
+  background: var(--sel);
+}
+.tray img {
+  width: 48px;
+  height: 48px;
+}
+.tray .more {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  color: var(--muted);
+}

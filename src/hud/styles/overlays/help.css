@@ -1,0 +1,110 @@
+/* Ayuda */
+.help-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: auto;
+}
+.help {
+  width: min(980px, 100%);
+  max-height: calc(100% - 16px);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  gap: 12px;
+}
+.help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.help .htitle {
+  font-family: var(--display);
+  font-size: 24px;
+  color: var(--gold);
+}
+.help-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 24px;
+  overflow-y: auto;
+  user-select: text;
+}
+.help section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help p {
+  margin: 0 0 4px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.help .legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 15px;
+}
+.help .legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.help .legend i {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--ink);
+}
+.help table {
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.help th {
+  text-align: left;
+  font-family: var(--display);
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 8px 6px 0;
+  font-weight: normal;
+}
+.help td {
+  padding: 5px 8px 5px 0;
+  border-top: 2px solid var(--lo);
+  vertical-align: top;
+}
+.help td.kbd {
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 13px;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .help-body {
+    /* minmax(0, ...): 1fr a secas no baja del ancho de su contenido y el texto se salia por la derecha. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* La tabla de controles (tres columnas) cabe en el ancho: columnas fijas y el texto se parte. */
+  .help table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  .help th,
+  .help td,
+  .help td.kbd {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .help .htitle {
+    font-size: 18px;
+  }
+}

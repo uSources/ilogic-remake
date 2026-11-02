@@ -1,0 +1,89 @@
+/* Menu emergente */
+.pop {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  min-width: 200px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.pop .title {
+  padding: 4px 8px 8px;
+}
+.pop .sub {
+  padding: 0 8px 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.pop .scroll {
+  overflow-y: auto;
+  max-height: calc(100vh - 220px);
+  display: flex;
+  flex-direction: column;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 30px;
+  position: relative;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  font-family: var(--display);
+  font-size: 17px;
+  cursor: var(--cursor-button, pointer);
+}
+.item.icon {
+  padding-left: 28px;
+  font-family: var(--body);
+  font-size: 17px;
+}
+.item .hint {
+  margin-left: auto;
+  padding-left: 16px;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 15px;
+}
+.item.sel {
+  background: var(--sel);
+  color: var(--gold);
+}
+.item.sel::before {
+  content: '►';
+  position: absolute;
+  left: 8px;
+  font-size: 13px;
+}
+.item.disabled {
+  color: #67759a;
+}
+.item.disabled .hint {
+  color: #67759a;
+}
+.item.danger {
+  color: var(--red-soft);
+}
+.item .px-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.item.disabled img {
+  opacity: 0.55;
+}
+.pop .sep {
+  height: 3px;
+  margin: 6px 4px;
+  background: var(--lo);
+}
+.pop .detail {
+  margin: 6px 4px 2px;
+  padding-top: 8px;
+  border-top: 3px solid var(--lo);
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 360px;
+}
