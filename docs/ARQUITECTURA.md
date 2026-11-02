@@ -19,8 +19,8 @@ flowchart TB
     boot["BootScene<br/>carga el atlas"] --> logo[LogoScene] --> menu[MenuScene] --> game[GameScene]
   end
   subgraph ui["src/ui — dibujo y datos para la interfaz"]
-    mapView["mapView.ts<br/>mapa, sprites, capas"]
-    fx["fx.ts<br/>efectos pixel"]
+    mapView["mapView.ts<br/>fachada del mapa"] --> layers["map/*<br/>camara y capas"]
+    fx["fx.ts / combatFx.ts<br/>efectos pixel"]
     hudModels["hudModels.ts<br/>fichas, prevision, minimapa"]
   end
   subgraph hud["src/hud — interfaz HTML (Preact)"]
@@ -84,6 +84,41 @@ sequenceDiagram
 `public/assets/img/` (cada imagen) → `public/assets/atlas/` (2 paginas) → BootScene crea la textura
 `'atlas'`. El terreno nuevo se pinta una vez por partida en un lienzo (`terrainArt.ts`) con piezas
 precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver README, "Graficos".
+
+## Vista del mapa
+
+`MapView` (`src/ui/mapView.ts`) es solo la fachada que usan la escena, el menu y las pruebas: crea las
+capas de `src/ui/map/`, las apila en un contenedor y les reparte `render(s, opts)` y `tick(time)`.
+Cada capa hace una cosa:
+
+| Capa (de abajo arriba) | Fichero | Que dibuja |
+|---|---|---|
+| terreno | `map/terrainLayer.ts` | lienzo del terreno nuevo (`terrainArt.ts`) y agua animada, o casillas de 2013 |
+| quemados | `map/decals.ts` | marcas en el suelo donde cae una unidad |
+| edificios | `map/buildingLayer.ts` | edificios y, ordenados por fila con ellos, montañas y bosques |
+| niebla | `map/fogLayer.ts` | niebla del dibujo nuevo (lienzo, `fog.ts`) |
+| resaltados | `map/overlayLayer.ts` | un Graphics que se rehace entero: lista `OVERLAYS` (abajo) |
+| banderines | `map/flagLayer.ts` | banderines dibujados de puntos de control y de ordenes |
+| unidades | `map/unitLayer.ts`, `map/unitMarks.ts` | un sprite por unidad, vida, primer plano, estrellas, carga, orden |
+| marcas | `map/markLayer.ts` | destino y escolta de la mision, aro de las elegidas |
+| efectos | contenedor `fx` | lo que ponen `fx.ts`/`combatFx.ts` (`addFx`, `ghost`) y el recuadro (`map/selectionBox.ts`) |
+| cursor | `map/cursor.ts` | esquinas de la casilla señalada |
+
+La camara (zoom entero, limites, casilla ↔ pantalla) esta en `map/camera.ts`; las cuentas de
+casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `HighlightKind`) en
+`map/viewOptions.ts` (los reexporta `mapView.ts`, igual que `Facing`, `baseFacing` y `faceFlip`).
+
+- **Una marca nueva sobre el mapa** (zona, marco, flecha, barra): una funcion `OverlayPainter`
+  (`(g, opts, ctx) => void`) en `OVERLAYS` (`map/overlayLayer.ts`), en su sitio del orden, y el
+  dato que necesite en `ViewOptions`. Hoy: niebla de 2013, puntos de control, amenaza, resaltados,
+  capturas, alcance, peligro, ordenes, intenciones y camino (`map/zones.ts`, `map/highlights.ts`,
+  `map/orders.ts`).
+- **Una capa con objetos propios**: una clase con `object` (`MapLayer`) y, si se anima por pasos,
+  `tick(clock)` (`AnimatedLayer`, con `stepOf` para el paso); se apila en el constructor de `MapView`.
+- **Un efecto** (animacion de un momento): una funcion en `fx.ts` o `combatFx.ts` que recibe la escena
+  y un `FxHost` (la `MapView`). Las piezas comunes estan en `fxKit.ts` (`sleep`, `tween`, `fxRect`,
+  `fxText`) y el dibujo de pixeles en `pixelDraw.ts` (`cornerBrackets`, `frameRect`, `fillRects`).
+- Colores: `PAL` (los de `hud.css`) y `PAL_MAP` (solo del mapa) en `ui/palette.ts`.
 
 ## Decisiones (y por que)
 
@@ -164,7 +199,8 @@ mando puede jugar una partida entera sin raton.
 | Cambiar una regla | `src/core/rules.ts` (+ test en `tests/`) |
 | Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
-| Cambiar el dibujo del mapa | `src/ui/mapView.ts`, `src/ui/terrainArt.ts` |
+| Cambiar el dibujo del mapa | la capa de `src/ui/map/` (ver "Vista del mapa"), `src/ui/terrainArt.ts` |
+| Añadir una marca sobre el mapa o un efecto | `OVERLAYS` en `src/ui/map/overlayLayer.ts`; `src/ui/fx.ts`, `src/ui/combatFx.ts` |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
 | Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `GameScene.pointerTarget()`) |
 | Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |

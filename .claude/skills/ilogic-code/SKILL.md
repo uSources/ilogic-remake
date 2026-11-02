@@ -13,7 +13,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | Carpeta | Que va | Puede importar |
 |---|---|---|
 | `src/core/` | Reglas, IA, mapas, misiones, guardado, estadisticas. **TypeScript puro.** | solo `src/core` |
-| `src/ui/` | Dibujo del mapa con Phaser (`mapView`, `fx`, `terrainArt`), datos para el HUD (`hudModels`) | core, settings, atlas |
+| `src/ui/` | Dibujo del mapa con Phaser (`mapView` = fachada de las capas de `ui/map/`; `fx`, `combatFx`, `terrainArt`), datos para el HUD (`hudModels`) | core, settings, atlas |
 | `src/hud/` | Componentes Preact y `store` (estado de la interfaz) | settings, assets, patchNotes, tipos de core |
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
@@ -45,7 +45,10 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/hud.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
-  `tileProtection`, casillas alcanzables con `reachableTiles`, numeros con `fmtNum`. Antes de
+  `tileProtection`, casillas alcanzables con `reachableTiles`, numeros con `fmtNum`; en el mapa,
+  esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`, casillas
+  con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`, "Vista
+  del mapa"). Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: los `!` de indexar rejillas son normales; un `!`
   sobre algo que puede no existir (unidad por uid, seleccion) es un fallo esperando a pasar.

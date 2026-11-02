@@ -155,7 +155,7 @@ src/
     geom.ts      Rombos, distancias, numeros aleatorios con semilla
     types.ts     Modelo de datos (GameState, Unit, Building, GameEvent)
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
-  ui/          Dibujo del mapa (mapView: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
+  ui/          Dibujo del mapa (mapView y sus capas en ui/map: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
     hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa)
     palette.ts   Colores de Phaser (los mismos que hud.css)
   menu/        Pantallas del menu y fondo vivo (liveBackground: partida IA contra IA)
