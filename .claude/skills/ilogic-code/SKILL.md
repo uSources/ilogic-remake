@@ -13,8 +13,8 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | Carpeta | Que va | Puede importar |
 |---|---|---|
 | `src/core/` | Reglas, IA, mapas, misiones, guardado, estadisticas. **TypeScript puro.** | solo `src/core` |
-| `src/ui/` | Dibujo del mapa con Phaser (`mapView` = fachada de las capas de `ui/map/`; `fx`, `combatFx`, `terrainArt`), datos para el HUD (`hudModels`) | core, settings, atlas |
-| `src/hud/` | Componentes Preact y `store` (estado de la interfaz) | settings, assets, patchNotes, tipos de core |
+| `src/ui/` | Dibujo del mapa con Phaser (`mapView` = fachada de las capas de `ui/map/`; `fx`, `combatFx`, `terrainArt`), datos para el HUD (`hudModels` → `models/<panel>.ts`) | core, settings, atlas |
+| `src/hud/` | Componentes Preact (`game/`, `menus/`, `overlays/`, piezas en `common/`), `store` (estado; tipos en `state.ts`, `actions.ts`, `vm/`) y estilos (`styles/`) | settings, assets, patchNotes, tipos de core |
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/scenes/game/` | Modulos de `GameScene` (animar eventos, turno enemigo, final, seleccion, ordenes, modelos del HUD...). Cada uno recibe de la escena una interfaz `...Host` pequeña (con `live()`, `host.ts`); lo puro, con test | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
@@ -32,7 +32,8 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   `GameCommand` (mapa) o `MenuCommand` (menus) y la escena los cumple (`command` / `menu`, segun
   `controlContext()`). Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
 - Las escenas no calculan lo que enseña la interfaz a mano: usan funciones puras de `ui/hudModels.ts`
-  y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store.
+  y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store. Como se añade un
+  panel y que pieza usar (`Button`, `Popover`, `Veil`...): `docs/ARQUITECTURA.md`, "Interfaz HTML".
 - La aleatoriedad pasa siempre por un `Rng` con semilla (`seededRng`); nada de `Math.random` en core
   salvo como valor por defecto. La IA y la generacion de mapas son deterministas con la misma semilla.
 
@@ -47,7 +48,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
-  las variables de `hud/hud.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
+  las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
   `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en

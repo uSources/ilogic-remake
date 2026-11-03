@@ -1,0 +1,35 @@
+/* Prevision de combate */
+.forecast {
+  position: absolute;
+  width: 252px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+.forecast .vs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.forecast .vs img {
+  width: 48px;
+  height: 48px;
+}
+.forecast .range {
+  font-family: var(--display);
+  font-size: 24px;
+  color: var(--gold);
+}
+.forecast .lifebar {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  padding: 2px;
+  background: var(--ink);
+}
+.forecast .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}

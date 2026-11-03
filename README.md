@@ -156,13 +156,14 @@ src/
     types.ts     Modelo de datos (GameState, Unit, Building, GameEvent)
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
   ui/          Dibujo del mapa (mapView y sus capas en ui/map: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
-    hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa)
+    hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa), por panel en models/
     palette.ts   Colores de Phaser (los mismos que hud.css)
   menu/        Pantallas del menu y fondo vivo (liveBackground: partida IA contra IA)
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
   atlas.ts     Atlas de imagenes del juego (una textura 'atlas' de varias paginas)
-  hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (componentes), hud.css
-               (estilo "retro pixel") y store.ts (estado que publican las escenas)
+  hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (raiz), game/ menus/ overlays/
+               (un componente por fichero), common/ (piezas compartidas), store.ts (estado que publican
+               las escenas; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
   ui/fx.ts     Efectos pixel: explosiones, textos flotantes, destellos
   core/stats.ts Estadisticas de la partida (se guardan con ella)
   display.ts   Lienzo a resolucion fisica de la pantalla (nitido en pantallas de alta densidad)

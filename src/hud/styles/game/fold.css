@@ -1,0 +1,53 @@
+/* Plegar (movil): la bandeja de unidades sin mover y las fichas de unidad y terreno se pliegan
+   tocando su cabecera o la ficha (useFold en Hud.tsx). En escritorio se ven siempre enteras. */
+.fold-mark {
+  display: none;
+}
+@media (max-width: 720px), (max-height: 500px) {
+  .fold-mark {
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--gold);
+  }
+  .tray-head .key-hint {
+    display: none;
+  }
+  .unitcard .chips {
+    column-gap: 6px;
+  }
+  .tray.folded {
+    gap: 0;
+    padding: 8px 10px;
+  }
+  .tray.folded .slots,
+  .tray.folded .all,
+  .tray.folded .threat {
+    display: none;
+  }
+  /* Fichas plegadas (Hud.tsx no pinta los detalles): nombre y vida. */
+  .unitcard,
+  .terrain {
+    position: relative;
+  }
+  .unitcard > .fold-mark,
+  .terrain > .fold-mark {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    margin: 0;
+  }
+  .unitcard .name {
+    padding-right: 14px;
+  }
+  .cards.folded .px {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .cards.folded .terrain {
+    width: auto;
+  }
+  .cards.folded .unitcard .portrait {
+    width: 32px;
+    height: 32px;
+  }
+}

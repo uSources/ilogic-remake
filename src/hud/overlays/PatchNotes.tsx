@@ -1,10 +1,10 @@
 import type { ComponentChildren } from 'preact';
-import { closeNotes, openLink, selectNote } from '../patchNotes';
-import type { Block, Inline } from '../patchNotes/markdown';
-import { settings, t } from '../settings';
-import type { NotesVM } from './store';
-
-const noFocus = (e: MouseEvent) => e.preventDefault();
+import { closeNotes, openLink, selectNote } from '../../patchNotes';
+import type { Block, Inline } from '../../patchNotes/markdown';
+import { settings, t } from '../../settings';
+import { Button } from '../common/buttons';
+import { Veil } from '../common/Veil';
+import type { NotesVM } from '../vm/notes';
 
 function fmtDate(iso: string): string {
   if (!iso) return '';
@@ -102,13 +102,13 @@ export function PatchNotes({ n }: { n: NotesVM }) {
   const status =
     n.status === 'loading' ? t('notesLoading') : n.status === 'offline' ? t('notesOffline') : n.status === 'cached' ? t('notesCached') : '';
   return (
-    <div class="help-veil" onPointerDown={(e) => e.target === e.currentTarget && closeNotes()}>
+    <Veil kind="help-veil" onClose={closeNotes}>
       <div class="px notes" role="dialog" aria-label={t('news')}>
         <div class="help-head">
           <span class="htitle">{t('news')}</span>
-          <button tabIndex={-1} type="button" class="px-btn plain" onMouseDown={noFocus} onClick={closeNotes}>
+          <Button class="px-btn plain" onClick={closeNotes}>
             {t('close')} <span class="key">Esc</span>
-          </button>
+          </Button>
         </div>
         {n.update && (
           <div class="notes-update">
@@ -118,25 +118,21 @@ export function PatchNotes({ n }: { n: NotesVM }) {
                 ({t('notesYouHave')} v{n.current})
               </span>
             </span>
-            <button tabIndex={-1} type="button" class="px-btn" onMouseDown={noFocus} onClick={() => openLink(n.update!.url)}>
+            <Button class="px-btn" onClick={() => openLink(n.update!.url)}>
               {t('notesDownload')}
-            </button>
+            </Button>
           </div>
         )}
         <div class="notes-body">
           <div class="notes-list" role="listbox">
             {n.items.map((x, i) => (
-              <button
-                tabIndex={-1}
-                type="button"
+              <Button
+                key={x.version}
                 role="option"
                 aria-selected={i === n.selected}
                 class={`notes-ver ${i === n.selected ? 'sel' : ''}`}
-                onMouseDown={noFocus}
                 onClick={() => selectNote(i)}
-                ref={(el) => {
-                  if (el && i === n.selected) el.scrollIntoView?.({ block: 'nearest' });
-                }}
+                scrollTo={i === n.selected}
               >
                 <span class="nv-top">
                   <span class="nv-num">v{x.version}</span>
@@ -146,7 +142,7 @@ export function PatchNotes({ n }: { n: NotesVM }) {
                 </span>
                 {x.title && <span class="nv-title">{x.title}</span>}
                 {x.date && <span class="nv-date">{fmtDate(x.date)}</span>}
-              </button>
+              </Button>
             ))}
             {!n.items.length && <p class="muted">{t('notesEmpty')}</p>}
           </div>
@@ -165,11 +161,11 @@ export function PatchNotes({ n }: { n: NotesVM }) {
         </div>
         <div class="notes-foot">
           <span class="muted small">{status}</span>
-          <button tabIndex={-1} type="button" class="link" onMouseDown={noFocus} onClick={() => openLink(n.url ?? n.repoUrl)}>
+          <Button class="link" onClick={() => openLink(n.url ?? n.repoUrl)}>
             {t('notesOnGithub')} ↗
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Veil>
   );
 }

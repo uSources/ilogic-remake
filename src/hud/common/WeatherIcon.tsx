@@ -1,4 +1,4 @@
-import { imgUrl } from '../assets';
+import { imgUrl } from '../../assets';
 
 /**
  * Iconos pixel del clima (10×10) en SVG: solo se usan si falta el dibujo ui/wx_<id> del atlas.

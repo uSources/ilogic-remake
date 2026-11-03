@@ -1,0 +1,31 @@
+/* Opciones */
+.options {
+  width: min(900px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+.opt-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 12px;
+}
+.opt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--lo);
+}
+.opt-card .label {
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+@media (max-width: 520px) {
+  .opt-groups {
+    grid-template-columns: 1fr;
+  }
+}

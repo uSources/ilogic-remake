@@ -1,0 +1,26 @@
+/* ===================== Menus con tarjetas ===================== */
+.small {
+  font-size: 14px;
+}
+.big {
+  font-family: var(--display);
+  font-size: 20px;
+}
+.gold {
+  color: var(--gold);
+}
+.veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: auto;
+}
+.sel.px-btn,
+.px-btn.sel {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}

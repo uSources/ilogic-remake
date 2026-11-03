@@ -1,0 +1,50 @@
+/* Columna derecha: minimapa y bandeja */
+.side {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+.minimap {
+  padding: 6px;
+}
+.mm-wrap {
+  position: relative;
+  width: 192px;
+  height: 192px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+.mm-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.mm-view {
+  position: absolute;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px #0b1220;
+  pointer-events: none;
+}
+@media (max-height: 640px) {
+  .mm-wrap {
+    width: 128px;
+    height: 128px;
+  }
+}
+@media (max-width: 720px) {
+  .side {
+    right: 10px;
+    bottom: 10px;
+  }
+  .minimap {
+    display: none;
+  }
+}

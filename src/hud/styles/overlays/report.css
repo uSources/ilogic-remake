@@ -1,0 +1,50 @@
+/* Resumen de la ronda */
+.report {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 70px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 16px 12px;
+  min-width: 240px;
+  animation: report 4.2s steps(8) forwards;
+  animation-delay: 0.9s;
+  opacity: 0;
+  pointer-events: none;
+}
+.report .line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+}
+.report .line .px-icon {
+  width: 24px;
+  height: 24px;
+}
+.report .gold {
+  color: var(--gold);
+}
+.report .green {
+  color: var(--green);
+}
+.report .red {
+  color: var(--red-soft);
+}
+@keyframes report {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
