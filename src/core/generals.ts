@@ -13,7 +13,7 @@
  */
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type UnitFilter } from './content';
 import { GENERALS, UNIT, UNIT_NAMES } from './data';
-import type { GameEvent, GameState, GeneralState, Pos, Team, Unit } from './types';
+import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './types';
 
 export const generalDef = (id: string): GeneralDef | undefined => GENERALS.find((g) => g.id === id);
 
@@ -100,12 +100,7 @@ export function abilityArea(a: GeneralAbilityDef): number | null {
  * Usa una habilidad: gasta la carga, la marca como usada este turno y aplica el efecto.
  * Devuelve el evento para animarlo, o null si no se puede (ver abilityBlock).
  */
-export function useAbility(
-  s: GameState,
-  team: Team,
-  abilityId: string,
-  target?: Pos | null,
-): Extract<GameEvent, { kind: 'ability' }> | null {
+export function useAbility(s: GameState, team: Team, abilityId: string, target?: Pos | null): GameEventOf<'ability'> | null {
   if (abilityBlock(s, team, abilityId, target)) return null;
   const g = generalOf(s, team)!;
   const a = g.def.abilities.find((x) => x.id === abilityId)!;

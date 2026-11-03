@@ -9,9 +9,9 @@ tomaron las decisiones que no conviene deshacer sin pensarlo.
 flowchart TB
   subgraph core["src/core — TypeScript puro (sin Phaser, sin DOM)"]
     data["data.ts<br/>tablas de content/*.json:<br/>unidades, edificios, terreno, reglas, IA"]
-    rules["rules.ts<br/>mover, atacar, capturar, comprar, fin de ronda"]
+    rules["rules.ts + rules/<br/>mover, atacar, capturar, comprar, fin de ronda"]
     orders["orders.ts<br/>ayudas para ordenes del jugador"]
-    ai["ai.ts<br/>IA (generador de eventos)"]
+    ai["ai.ts + ai/<br/>IA (generador de eventos)"]
     gen["mapgen.ts / missions.ts"]
     save["save.ts / stats.ts"]
   end
@@ -19,8 +19,8 @@ flowchart TB
     boot["BootScene<br/>carga el atlas"] --> logo[LogoScene] --> menu[MenuScene] --> game[GameScene]
   end
   subgraph ui["src/ui — dibujo y datos para la interfaz"]
-    mapView["mapView.ts<br/>mapa, sprites, capas"]
-    fx["fx.ts<br/>efectos pixel"]
+    mapView["mapView.ts<br/>fachada del mapa"] --> layers["map/*<br/>camara y capas"]
+    fx["fx.ts / combatFx.ts<br/>efectos pixel"]
     hudModels["hudModels.ts<br/>fichas, prevision, minimapa"]
   end
   subgraph hud["src/hud — interfaz HTML (Preact)"]
@@ -36,6 +36,48 @@ flowchart TB
   partida por texto (`npm run play`). ESLint prohibe que importe Phaser, Preact o el DOM.
 - Las escenas orquestan: leen la entrada, llaman a las reglas, animan los eventos y publican el estado
   de la interfaz. La interfaz HTML no toca el juego: llama a `ui.actions`, que registra la escena.
+
+### El nucleo por dentro
+
+`rules.ts` y `ai.ts` son fachadas: reexportan lo publico de sus modulos, uno por tema, y desde
+fuera de `src/core` se importa siempre de ellas (`'../core/rules'`, `'@core/ai'`). Dentro de core,
+mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclos.
+
+`src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
+
+| Modulo | Que va |
+|---|---|
+| `queries` | que hay en una casilla, por donde se anda, unidades de un bando, pasajeros |
+| `visibility` | vision y niebla |
+| `capture` | puntos de captura, capturas a medias, capturar y su evento |
+| `lifecycle` | crear, quitar y limpiar unidades |
+| `movement` | alcance (`moveRange`), caminos, emboscadas, distancia por tierra, mover y su evento |
+| `combat` | alcance de tiro, proteccion, acierto (`HIT_MODIFIERS`), veterania, contraataque, botin, atacar |
+| `forecast` | prevision de combate y zona de amenaza |
+| `transport`, `supply`, `unitActions` | unir y transportes; reparar; menu de acciones y esperar |
+| `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
+| `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`) |
+| `outcome` | victoria, derrota y objetivos de mision |
+
+`src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
+ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
+(prioridades de cada unidad), `production` (que fabrica), `formation` (escuadras que avanzan juntas)
+y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
+
+- **Sin estado global en la IA**: el bando que juega, el modo grupo y el plan de fuego van en un
+  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `commandNow`) y se pasa a cada
+  paso. Dos turnos, o una prevision en medio de uno, no se mezclan (lo necesitara un PvP o un
+  servidor con varias partidas).
+- **Puntos de extension**:
+  - una regla que cambia la probabilidad de acierto es una entrada en `HIT_MODIFIERS`
+    (`rules/combat.ts`); la prevision, el panel de combate y la IA la ven solas;
+  - un sistema que actua cada ronda es un paso en `ROUND_PHASES` (`rules/round.ts`), en su sitio;
+  - una clase de habilidad de unidad es su forma en `AbilityDef` (`content/types.ts`) y su efecto en
+    `abilities.ts`, como funcion que pregunta la regla que toca (las reglas no leen `abilityOf`);
+  - un comportamiento de IA nuevo es un paso en `ai/tactics.ts` que devuelve si ha usado la unidad,
+    y su sitio en la lista de prioridades de `ai/unitTurn.ts`.
+- La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
+  IA entra solo en la referencia.
 
 ### Herramientas
 
@@ -84,6 +126,41 @@ sequenceDiagram
 `public/assets/img/` (cada imagen) → `public/assets/atlas/` (2 paginas) → BootScene crea la textura
 `'atlas'`. El terreno nuevo se pinta una vez por partida en un lienzo (`terrainArt.ts`) con piezas
 precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver README, "Graficos".
+
+## Vista del mapa
+
+`MapView` (`src/ui/mapView.ts`) es solo la fachada que usan la escena, el menu y las pruebas: crea las
+capas de `src/ui/map/`, las apila en un contenedor y les reparte `render(s, opts)` y `tick(time)`.
+Cada capa hace una cosa:
+
+| Capa (de abajo arriba) | Fichero | Que dibuja |
+|---|---|---|
+| terreno | `map/terrainLayer.ts` | lienzo del terreno nuevo (`terrainArt.ts`) y agua animada, o casillas de 2013 |
+| quemados | `map/decals.ts` | marcas en el suelo donde cae una unidad |
+| edificios | `map/buildingLayer.ts` | edificios y, ordenados por fila con ellos, montañas y bosques |
+| niebla | `map/fogLayer.ts` | niebla del dibujo nuevo (lienzo, `fog.ts`) |
+| resaltados | `map/overlayLayer.ts` | un Graphics que se rehace entero: lista `OVERLAYS` (abajo) |
+| banderines | `map/flagLayer.ts` | banderines dibujados de puntos de control y de ordenes |
+| unidades | `map/unitLayer.ts`, `map/unitMarks.ts` | un sprite por unidad, vida, primer plano, estrellas, carga, orden |
+| marcas | `map/markLayer.ts` | destino y escolta de la mision, aro de las elegidas |
+| efectos | contenedor `fx` | lo que ponen `fx.ts`/`combatFx.ts` (`addFx`, `ghost`) y el recuadro (`map/selectionBox.ts`) |
+| cursor | `map/cursor.ts` | esquinas de la casilla señalada |
+
+La camara (zoom entero, limites, casilla ↔ pantalla) esta en `map/camera.ts`; las cuentas de
+casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `HighlightKind`) en
+`map/viewOptions.ts` (los reexporta `mapView.ts`, igual que `Facing`, `baseFacing` y `faceFlip`).
+
+- **Una marca nueva sobre el mapa** (zona, marco, flecha, barra): una funcion `OverlayPainter`
+  (`(g, opts, ctx) => void`) en `OVERLAYS` (`map/overlayLayer.ts`), en su sitio del orden, y el
+  dato que necesite en `ViewOptions`. Hoy: niebla de 2013, puntos de control, amenaza, resaltados,
+  capturas, alcance, peligro, ordenes, intenciones y camino (`map/zones.ts`, `map/highlights.ts`,
+  `map/orders.ts`).
+- **Una capa con objetos propios**: una clase con `object` (`MapLayer`) y, si se anima por pasos,
+  `tick(clock)` (`AnimatedLayer`, con `stepOf` para el paso); se apila en el constructor de `MapView`.
+- **Un efecto** (animacion de un momento): una funcion en `fx.ts` o `combatFx.ts` que recibe la escena
+  y un `FxHost` (la `MapView`). Las piezas comunes estan en `fxKit.ts` (`sleep`, `tween`, `fxRect`,
+  `fxText`) y el dibujo de pixeles en `pixelDraw.ts` (`cornerBrackets`, `frameRect`, `fillRects`).
+- Colores: `PAL` (los de `hud.css`) y `PAL_MAP` (solo del mapa) en `ui/palette.ts`.
 
 ## Decisiones (y por que)
 
@@ -195,10 +272,11 @@ mando puede jugar una partida entera sin raton.
 |---|---|
 | Añadir o cambiar unidades y edificios (precio, daño...) | `src/core/content/*.json` (`docs/CONTENIDO.md`, skill `nueva-unidad`) |
 | Cambiar terreno, reglas, pesos de la IA | `src/core/content/terrain.json`, `rules.json`, `ai.json` (+ skill `equilibrar`) |
-| Cambiar una regla | `src/core/rules.ts` (+ test en `tests/`) |
-| Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
+| Cambiar una regla | su modulo en `src/core/rules/` (ver "El nucleo por dentro"; + test en `tests/`) |
+| Cambiar como juega la IA | `src/core/ai/` (`unitTurn.ts` prioridades, `tactics.ts` cada paso, `production.ts` compras), pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
-| Cambiar el dibujo del mapa | `src/ui/mapView.ts`, `src/ui/terrainArt.ts` |
+| Cambiar el dibujo del mapa | la capa de `src/ui/map/` (ver "Vista del mapa"), `src/ui/terrainArt.ts` |
+| Añadir una marca sobre el mapa o un efecto | `OVERLAYS` en `src/ui/map/overlayLayer.ts`; `src/ui/fx.ts`, `src/ui/combatFx.ts` |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
 | Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `src/scenes/game/pointerInput.ts`) |
 | Cambiar algo de la partida en pantalla (animaciones, turno enemigo, final, seleccion...) | `src/scenes/game/` (ver "La escena de la partida") |

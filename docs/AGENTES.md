@@ -24,7 +24,7 @@ Solo cuando el usuario lo pide (skill `automejora`). Medidas:
 
 - `npm run metrics`: nota del juego 0-100 por partes con 120 partidas IA contra IA; se compara con
   `improve/baseline.json`. `--save-baseline` al aceptar un cambio.
-- `npm run arena -- --games 200`: IA actual contra `improve/ai-baseline/ai.ts`; un cambio de IA solo vale
+- `npm run arena -- --games 200`: IA actual contra la copia de `improve/ai-baseline/`; un cambio de IA solo vale
   si el intervalo del 95 % queda por encima del 50 %. `--snapshot` al aceptarlo.
 - `npm run fuzz`: invariantes (`tools/improve/invariants.ts`) en partidas con jugadas al azar e IA;
   `--repro N` para ver una partida entera.

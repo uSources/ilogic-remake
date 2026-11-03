@@ -9,7 +9,7 @@
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  */
 import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, type RulesConfig, Movement } from './data';
-import { newUnit } from './rules';
+import { newUnit } from './rules/lifecycle';
 import type { GameState, Objective, Pos, Team } from './types';
 
 type Text = { es: string; en: string };

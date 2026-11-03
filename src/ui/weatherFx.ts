@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { reducedMotion } from './fx';
+import { reducedMotion } from './motion';
+import { PAL } from './palette';
 
 /**
  * Efecto de clima sobre el mapa: lluvia, nieve, tormenta o arena, y un velo de color.
@@ -152,7 +153,7 @@ export class WeatherFx {
     }
     if (s.lightning && Math.random() < s.lightning * dt) this.flash = 1;
     if (this.flash > 0) {
-      g.fillStyle(0xffffff, 0.35 * this.flash);
+      g.fillStyle(PAL.white, 0.35 * this.flash);
       g.fillRect(v.x, v.y, v.width, v.height);
       this.flash = Math.max(0, this.flash - dt * 4);
     }

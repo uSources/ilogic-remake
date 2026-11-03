@@ -1,5 +1,5 @@
 /**
- * Arena de la IA: la IA actual (src/core/ai.ts) contra la guardada (improve/ai-baseline/ai.ts),
+ * Arena de la IA: la IA actual (src/core/ai.ts y src/core/ai/) contra la guardada (improve/ai-baseline/),
  * mismos mapas, la mitad de las partidas con los bandos cambiados. Un cambio en la IA solo se
  * acepta si gana claramente a la anterior.
  *
@@ -10,7 +10,8 @@
  * Las partidas que no terminan se dan a quien tiene clara ventaja (ejercito + edificios + dinero,
  * al menos un 15 % mas); si no, empate.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { AI, DEFAULT_RULES, UNIT, useRules } from '@core/data';
@@ -79,15 +80,59 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
   return { games, wins, losses, draws, rate, low: Math.max(0, rate - se), high: Math.min(1, rate + se) };
 }
 
-/** Copia la IA actual como referencia, con sus pesos (data.AI) congelados dentro. */
+/**
+ * Ficheros de la IA que se copian: ai.ts y todo src/core/ai/ (rutas relativas a src/core). Las
+ * reglas, los datos y demas se siguen usando los de ahora, por su alias.
+ */
+function aiFiles(): string[] {
+  return [
+    'ai.ts',
+    ...readdirSync(`${ROOT}src/core/ai`)
+      .filter((f) => f.endsWith('.ts'))
+      .map((f) => `ai/${f}`),
+  ];
+}
+
+/**
+ * Prepara un fichero de la IA para la copia: los imports de fuera de la IA pasan a '@core/...' y
+ * los pesos (AI de data) salen de weights.ts, congelados al hacer la copia.
+ */
+export function snapshotSource(rel: string, src: string, copied: ReadonlySet<string>): string {
+  const dir = posix.dirname(rel);
+  const weights = dir === '.' ? './weights' : posix.relative(dir, 'weights');
+  const out = src.replace(/from '(\.{1,2}\/[^']+)'/g, (m, spec: string) => {
+    const target = posix.normalize(posix.join(dir, spec));
+    return copied.has(`${target}.ts`) ? m : `from '@core/${target}'`;
+  });
+  // import { AI, X } from '@core/data' -> import { X } from '@core/data' + import { AI } from './weights'
+  return out.replace(/import \{([^}]*)\} from '@core\/data';/, (m, names: string) => {
+    const list = names
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean);
+    if (!list.includes('AI')) return m;
+    const rest = list.filter((n) => n !== 'AI');
+    const own = `import { AI } from '${weights}';`;
+    return rest.length ? `import { ${rest.join(', ')} } from '@core/data';\n${own}` : own;
+  });
+}
+
+/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (data.AI) congelados. */
 function snapshot(): void {
-  mkdirSync(BASE_DIR, { recursive: true });
-  let src = readFileSync(`${ROOT}src/core/ai.ts`, 'utf8');
-  src = src.replace(/from '\.\/(\w+)'/g, "from '@core/$1'");
-  src = src.replace(/import \{ AI, /, 'import { ');
-  src = `// Copia de la IA guardada por npm run arena -- --snapshot (${new Date().toISOString().slice(0, 10)}). No editar.\n// Pesos de data.AI de ese momento:\nconst AI = ${JSON.stringify(AI)} as const;\n${src}`;
-  writeFileSync(`${BASE_DIR}ai.ts`, src);
-  console.log('IA actual guardada como referencia en improve/ai-baseline/ai.ts');
+  rmSync(`${BASE_DIR}ai`, { recursive: true, force: true });
+  mkdirSync(`${BASE_DIR}ai`, { recursive: true });
+  const files = aiFiles();
+  const copied = new Set(files);
+  const day = new Date().toISOString().slice(0, 10);
+  for (const rel of files) {
+    const src = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
+    writeFileSync(`${BASE_DIR}${rel}`, `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar.\n${src}`);
+  }
+  writeFileSync(
+    `${BASE_DIR}weights.ts`,
+    `// Pesos de data.AI al guardar la IA de referencia (${day}). No editar.\nexport const AI = ${JSON.stringify(AI)} as const;\n`,
+  );
+  console.log(`IA actual guardada como referencia en improve/ai-baseline/ (${files.length} ficheros)`);
 }
 
 async function main(): Promise<void> {

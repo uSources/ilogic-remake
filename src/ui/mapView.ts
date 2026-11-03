@@ -1,1054 +1,230 @@
-import Phaser from 'phaser';
-import { addSheetFrames, ATLAS, hasImage, sheetFrame } from '../atlas';
-import { MAP_H, MAP_W } from '../core/data';
-import type { CommandKind, GameState, Pos, Unit } from '../core/types';
-import { dpr } from '../display';
+import type Phaser from 'phaser';
+import type { GameState, Pos } from '../core/types';
 import type { Anchor } from '../hud/store';
-import { TILE } from '../layout';
-import { reducedMotion } from './fx';
-import { rank, unhealable } from '../core/rules';
-import { effectiveCommand, isDetached } from '../core/squads';
-import { buildingKey, shoreKeys, terrainKey, unitKey } from './sprites';
-import { frontKey, paintTerrain, terrainArtReady, terrainObjects, waterAnimCells, type AnimCell } from './terrainArt';
-import { ANIM_FRAMES } from './sheets';
-import { composeFog, visKey } from './fog';
 import { settings } from '../settings';
-import { PAL, PAL_CSS } from './palette';
-import { addLifeTextures, lifeKey } from './lifeDigits';
+import { MapCamera, type ScreenBox } from './map/camera';
+import { BuildingLayer } from './map/buildingLayer';
+import { MapCursor } from './map/cursor';
+import { DecalLayer } from './map/decals';
+import { FlagLayer } from './map/flagLayer';
+import { FogLayer } from './map/fogLayer';
+import type { AnimatedLayer, MapLayer } from './map/layer';
+import { MarkLayer } from './map/markLayer';
+import { OverlayLayer } from './map/overlayLayer';
+import { SelectionBox } from './map/selectionBox';
+import { TerrainLayer } from './map/terrainLayer';
+import { tileImage } from './map/tileImage';
+import { UnitLayer, type Facing } from './map/unitLayer';
+import type { ViewOptions } from './map/viewOptions';
+import { reducedMotion } from './motion';
+import { PAL_CSS } from './palette';
+import { terrainArtReady } from './terrainArt';
 
-/** Letra (3x5 pixeles) de cada orden con destino: Capturar, Defender, Atacar. */
-const MISSION_GLYPH: Record<CommandKind, [number, number][]> = {
-  capture: [
-    [1, 0],
-    [2, 0],
-    [0, 1],
-    [0, 2],
-    [0, 3],
-    [1, 4],
-    [2, 4],
-  ],
-  defend: [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [2, 1],
-    [0, 2],
-    [2, 2],
-    [0, 3],
-    [2, 3],
-    [0, 4],
-    [1, 4],
-  ],
-  attack: [
-    [1, 0],
-    [0, 1],
-    [2, 1],
-    [0, 2],
-    [1, 2],
-    [2, 2],
-    [0, 3],
-    [2, 3],
-    [0, 4],
-    [2, 4],
-  ],
-};
-const MISSION_KEY: Record<CommandKind, number> = { capture: 1, defend: 2, attack: 3 };
-/** Color de la bandera de cada orden en su casilla de destino. */
-const COMMAND_FLAG: Record<CommandKind, number> = { attack: PAL.red, capture: PAL.gold, defend: 0x5fd6c6 };
-
-export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group' | 'squad';
-
-const HL: Record<HighlightKind, { fill: number; alpha: number; line: number }> = {
-  move: { fill: PAL.blue, alpha: 0.4, line: 0xcfe8ff },
-  unload: { fill: PAL.blue, alpha: 0.4, line: 0xcfe8ff },
-  merge: { fill: 0xb15cff, alpha: 0.45, line: 0xe0b8ff },
-  load: { fill: 0x2fd3c3, alpha: 0.45, line: 0xa8fff6 },
-  attack: { fill: PAL.red, alpha: 0.42, line: 0xffb0b2 },
-  reach: { fill: 0xff8a3d, alpha: 0.32, line: 0xffc9a0 },
-  hover: { fill: PAL.blue, alpha: 0.16, line: 0x8fd0ff },
-  group: { fill: PAL.gold, alpha: 0.18, line: PAL.gold },
-  // [CAMBIO] Compañeras de escuadra de la unidad señalada.
-  squad: { fill: PAL.gold, alpha: 0.06, line: 0xffe9a8 },
-};
-
-/** Hacia donde mira una unidad. Los dibujos azules miran a la derecha y los rojos a la izquierda. */
-export type Facing = 'left' | 'right';
-export const baseFacing = (team: number): Facing => (team === 1 ? 'left' : 'right');
-/** Hay que voltear el dibujo para que mire a `dir`. */
-export const faceFlip = (team: number, dir: Facing): boolean => dir !== baseFacing(team);
-
-export interface ViewOptions {
-  vis: boolean[][];
-  highlights: Map<string, HighlightKind>;
-  hidden: Set<number>;
-  /** Camino previsto (de la unidad al cursor). */
-  path?: Pos[];
-  /** Al soltar en el final del camino se ataca: la flecha va en rojo. */
-  pathAttack?: boolean;
-  /** Casillas que el enemigo puede atacar en su proximo turno (tecla T). */
-  threat?: boolean[][] | null;
-  /** Al mover: todo lo que la unidad podria atacar (borde rojo) y destinos peligrosos (marca roja). */
-  attackZone?: boolean[][] | null;
-  danger?: boolean[][] | null;
-  /**
-   * Ordenes de varios turnos: linea de puntos hasta el destino y banderita. [CAMBIO] Las ordenes con
-   * destino llevan su tipo (color de la bandera) y la linea solo si `line` (unidad o escuadra señalada).
-   */
-  orders?: { from: Pos; to: Pos; kind?: CommandKind; line?: boolean }[];
-  /** [CAMBIO] Lo que hara cada unidad con orden al terminar el turno: camino, objetivo y captura. */
-  intents?: { path: Pos[]; attack?: Pos; capture?: Pos }[];
-  /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */
-  goal?: Pos | null;
-  vip?: Pos | null;
-  /**
-   * [CAMBIO] Puntos de control: zona teñida del color de su dueño, con borde y banderin en el centro.
-   * `r` = casillas alrededor del centro; `contested` = se ven unidades de los dos bandos dentro.
-   */
-  controlPoints?: { x: number; y: number; owner: 0 | 1 | null; r: number; contested: boolean }[];
-  /** Capturas a medias que se ven (barra encima del edificio). */
-  captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
-}
-
-/** Sprite persistente de una unidad: imagen + vida + marca de carga. */
-interface UnitSprite {
-  root: Phaser.GameObjects.Container;
-  img: Phaser.GameObjects.Image;
-  /** Primer plano del terreno (bosque, rocas) delante de la unidad. */
-  front: Phaser.GameObjects.Image;
-  life: Phaser.GameObjects.Image;
-  cargo: Phaser.GameObjects.Rectangle;
-  /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
-  stars: Phaser.GameObjects.Graphics;
-  /** [CAMBIO] Icono de la mision en automatico (ui/cmd_<tipo>); si falta, placa con letra en `stars`. */
-  cmd: Phaser.GameObjects.Image;
-  /** [CAMBIO] Marcas dibujadas (ui/mk_*): sin cura, carga y hasta 3 estrellas; si faltan, van en `stars`. */
-  badges: Phaser.GameObjects.Image[];
-  /** Lo dibujado en `stars`: rango x 16 + 1 sin cura + 2 con carga + 4 x mision en automatico. */
-  rank: number;
-  key: string;
-  /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
-  idle: boolean;
-  team: 0 | 1;
-}
-
-/** Margen en pixeles CSS que se puede desplazar mas alla del mapa (para que no quede bajo la interfaz). */
-const EDGE_CSS = 110;
+// La escena, el menu y los efectos importan estos tipos de aqui.
+export type { HighlightKind, ViewOptions } from './map/viewOptions';
+export { baseFacing, faceFlip, type Facing } from './map/unitLayer';
 
 /**
  * Mapa en coordenadas de mundo (1024x1024, 32 px por casilla). La camara tiene zoom
  * entero en pixeles fisicos, asi que el pixel art se ve siempre nitido.
  * Terreno: se crea una vez. Edificios y unidades: un sprite persistente por cada uno,
  * que se actualiza (no se redibuja todo en cada cambio).
+ *
+ * Es solo la fachada: cada parte del dibujo es una capa de src/ui/map/ (camara, terreno,
+ * edificios, unidades, niebla, resaltados, banderines, marcas, cursor, quemados) y aqui solo se
+ * crean, se apilan en orden y se les pasa lo que piden la escena y el menu (ver map/layer.ts).
  */
 export class MapView {
   cursor: Pos = { x: 0, y: 0 };
-  private readonly root: Phaser.GameObjects.Container;
-  private readonly terrain: Phaser.GameObjects.Container;
-  private readonly buildingLayer: Phaser.GameObjects.Container;
-  private readonly unitLayer: Phaser.GameObjects.Container;
-  /** Marcas en el suelo (quemados), bajo edificios y unidades. */
-  private readonly decals: Phaser.GameObjects.Container;
-  /** [CAMBIO] Banderines de los puntos de control (dibujo ui/flag_*), encima de la zona y debajo de las unidades. */
-  private readonly flagLayer: Phaser.GameObjects.Container;
-  private readonly flags: Phaser.GameObjects.Image[] = [];
-  /** Banderines de destino de las ordenes de varios turnos (ui/flag_cmd_*). */
-  private readonly orderFlags: Phaser.GameObjects.Image[] = [];
-  private readonly overlay: Phaser.GameObjects.Graphics;
-  private readonly fx: Phaser.GameObjects.Container;
-  /** Marcas de mision, por encima de las unidades. */
-  private readonly marks: Phaser.GameObjects.Graphics;
-  private goal: Pos | null = null;
-  /** [CAMBIO] Casillas de las unidades elegidas (aro a los pies). */
-  private rings: [number, number][] = [];
-  private vip: Pos | null = null;
-  /** Marco de la casilla señalada: cuatro esquinas que se separan y se juntan. */
-  private readonly cursorBox: Phaser.GameObjects.Container;
-  private readonly cursorCorners: Phaser.GameObjects.Image[];
-  private cursorGap = -1;
   /** Marco rojo: eligiendo objetivo de ataque. */
   cursorAttack = false;
-  private cursorTinted = false;
-  private readonly cam: Phaser.Cameras.Scene2D.Camera;
-  private readonly units = new Map<number, UnitSprite>();
-  private readonly buildings: Phaser.GameObjects.Image[] = [];
+  /** La camara de la escena (las pruebas de tests/visual la leen). */
+  readonly cam: Phaser.Cameras.Scene2D.Camera;
+
+  private readonly root: Phaser.GameObjects.Container;
+  private readonly camera: MapCamera;
+  private readonly terrain: TerrainLayer;
+  /** Marcas en el suelo (quemados), bajo edificios y unidades. */
+  private readonly decals: DecalLayer;
+  private readonly buildings: BuildingLayer;
   /** Niebla del dibujo nuevo (lienzo con borde organico). */
-  private readonly fogLayer: Phaser.GameObjects.Container;
-  private fogImg: Phaser.GameObjects.Image | null = null;
-  private fogCanvas: HTMLCanvasElement | null = null;
-  private fogSig = '';
-  private level = 2;
-  private bobPhase = 0;
-  /** Agua animada del terreno nuevo. */
-  /** Agua animada: una imagen por casilla con su lamina (anim/water o anim/shore_<set>) y fila. */
-  private waterAnim: { img: Phaser.GameObjects.Image; cell: AnimCell }[] = [];
-  private waterFrame = -1;
-  /** Montañas y bosques: en la capa de los edificios, ordenados por fila con ellos. */
-  private objImgs: Phaser.GameObjects.Image[] = [];
-  private lastDpr = dpr();
+  private readonly fog: FogLayer;
+  /** Resaltados, zonas, ordenes y flechas (y la niebla del dibujo de 2013). */
+  private readonly overlay: OverlayLayer;
+  /** [CAMBIO] Banderines de los puntos de control y de las ordenes, encima de la zona y debajo de las unidades. */
+  private readonly flags: FlagLayer;
+  private readonly units: UnitLayer;
+  /** Marcas de mision y aros de seleccion, por encima de las unidades. */
+  private readonly marks: MarkLayer;
+  /** Objetos temporales de las animaciones (ui/fx.ts, ui/combatFx.ts) y recuadro de seleccion. */
+  private readonly fx: Phaser.GameObjects.Container;
+  private readonly box: SelectionBox;
+  private readonly cursorView: MapCursor;
+  /** Capas con animacion por pasos, en el orden en que se mueven en `tick`. */
+  private readonly animated: AnimatedLayer[];
 
   /** Claves propias de los lienzos de esta vista (el menu y la partida tienen cada uno la suya). */
   private static count = 0;
-  private readonly terrainKey: string;
-  private readonly fogKey: string;
 
   constructor(private readonly scene: Phaser.Scene) {
     MapView.count++;
-    this.terrainKey = `terrainBake${MapView.count}`;
-    this.fogKey = `fogBake${MapView.count}`;
     this.cam = scene.cameras.main;
-    this.cam.setRoundPixels(true);
+    this.camera = new MapCamera(this.cam);
     this.root = scene.add.container(0, 0);
-    this.terrain = scene.add.container(0, 0);
-    this.buildingLayer = scene.add.container(0, 0);
-    this.unitLayer = scene.add.container(0, 0);
-    this.overlay = scene.add.graphics();
+    this.buildings = new BuildingLayer(scene);
+    this.terrain = new TerrainLayer(scene, `terrainBake${MapView.count}`, this.buildings);
+    this.units = new UnitLayer(scene);
+    this.overlay = new OverlayLayer(scene);
     this.fx = scene.add.container(0, 0);
-    this.fogLayer = scene.add.container(0, 0);
-    this.cursorCorners = [
-      [false, false],
-      [true, false],
-      [false, true],
-      [true, true],
-    ].map(([fx, fy]) => scene.add.image(0, 0, ATLAS, 'ui/esquina').setOrigin(0).setFlip(fx!, fy!));
-    this.cursorBox = scene.add.container(0, 0, this.cursorCorners);
-    this.layoutCursor(1);
+    this.fog = new FogLayer(scene, `fogBake${MapView.count}`);
+    this.cursorView = new MapCursor(scene);
+    this.marks = new MarkLayer(scene);
+    this.decals = new DecalLayer(scene);
+    this.flags = new FlagLayer(scene);
+    this.box = new SelectionBox(scene, this.camera, this.fx);
     // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
-    this.marks = scene.add.graphics();
-    this.decals = scene.add.container(0, 0);
-    this.flagLayer = scene.add.container(0, 0);
-    this.root.add([
+    const stack: (MapLayer | Phaser.GameObjects.GameObject)[] = [
       this.terrain,
       this.decals,
-      this.buildingLayer,
-      this.fogLayer,
+      this.buildings,
+      this.fog,
       this.overlay,
-      this.flagLayer,
-      this.unitLayer,
+      this.flags,
+      this.units,
       this.marks,
       this.fx,
-      this.cursorBox,
-    ]);
+      this.cursorView,
+    ];
+    this.root.add(stack.map((l) => ('object' in l ? l.object : l)));
+    this.animated = [this.terrain, this.cursorView, this.marks, this.units];
     this.cam.setBackgroundColor(PAL_CSS.ink);
-    this.level = this.defaultLevel();
-    this.cam.setZoom(this.level);
-    this.updateBounds();
+    this.camera.apply();
   }
 
-  // --- Camara --------------------------------------------------------------
+  // --- Camara (map/camera.ts) ------------------------------------------------
 
-  /** Pixeles fisicos por pixel del dibujo: casillas de ~64 px CSS en escritorio, ~48 en movil. */
-  private defaultLevel(): number {
-    const r = dpr();
-    const cssW = this.cam.width / r;
-    const target = cssW < 720 ? 1.5 : 2;
-    return this.clampLevel(Math.round(target * r));
-  }
-
-  private clampLevel(z: number): number {
-    const r = dpr();
-    return Phaser.Math.Clamp(z, Math.max(1, Math.round(r)), Math.max(4, Math.round(4 * r)));
+  /** Pixeles fisicos por pixel del dibujo (zoom entero); lo leen las pruebas de tests/visual. */
+  get level(): number {
+    return this.camera.level;
   }
 
   /** Posicion en pantalla (pixeles del lienzo) del centro de una casilla. */
   screenOf(p: Pos): { x: number; y: number } {
-    const wv = this.cam.worldView;
-    return { x: (p.x * TILE + TILE / 2 - wv.x) * this.cam.zoom, y: (p.y * TILE + TILE / 2 - wv.y) * this.cam.zoom };
+    return this.camera.screenOf(p);
   }
 
   /** Rectangulo de una casilla en pixeles CSS de la ventana (para colocar la interfaz HTML). */
   tileRectCss(p: Pos): Anchor {
-    // worldView solo se actualiza al dibujar: recalcularlo por si la camara acaba de moverse.
-    this.cam.preRender();
-    const wv = this.cam.worldView;
-    const k = this.cam.zoom / dpr();
-    return { x: (p.x * TILE - wv.x) * k, y: (p.y * TILE - wv.y) * k, w: TILE * k, h: TILE * k };
+    return this.camera.tileRectCss(p);
   }
 
   /** Casilla bajo un punto de la pantalla (null si cae fuera del mapa). */
   tileAtScreen(sx: number, sy: number): Pos | null {
-    const wp = this.cam.getWorldPoint(sx, sy);
-    const x = Math.floor(wp.x / TILE),
-      y = Math.floor(wp.y / TILE);
-    return x >= 0 && y >= 0 && x < MAP_W && y < MAP_H ? { x, y } : null;
+    return this.camera.tileAtScreen(sx, sy);
   }
 
   centerOn(p: Pos, instant = false): void {
-    const wx = p.x * TILE + TILE / 2,
-      wy = p.y * TILE + TILE / 2;
-    if (instant || reducedMotion()) this.cam.centerOn(wx, wy);
-    else this.cam.pan(wx, wy, 220, 'Sine.easeOut', true);
+    this.camera.centerOn(p, instant);
   }
 
   /** Desplaza la camara lo justo para que la casilla quede dentro con un margen (en casillas). */
   ensureVisible(p: Pos, margin = 2, instant = false): void {
-    const wv = this.cam.worldView;
-    // El margen no puede ser mayor que media vista (pantallas pequeñas o mucho zoom).
-    const m = Math.min(margin * TILE, Math.max(0, wv.width / 2 - TILE), Math.max(0, wv.height / 2 - TILE));
-    let cx = wv.centerX,
-      cy = wv.centerY;
-    const left = p.x * TILE,
-      top = p.y * TILE;
-    if (left < wv.x + m) cx -= wv.x + m - left;
-    if (left + TILE > wv.right - m) cx += left + TILE - (wv.right - m);
-    if (top < wv.y + m) cy -= wv.y + m - top;
-    if (top + TILE > wv.bottom - m) cy += top + TILE - (wv.bottom - m);
-    if (cx === wv.centerX && cy === wv.centerY) return;
-    if (instant || reducedMotion()) this.cam.centerOn(cx, cy);
-    else this.cam.pan(cx, cy, 160, 'Sine.easeOut', true);
+    this.camera.ensureVisible(p, margin, instant);
   }
 
   isOnScreen(p: Pos, margin = 1): boolean {
-    const wv = this.cam.worldView;
-    return (
-      p.x * TILE >= wv.x + margin * TILE &&
-      (p.x + 1) * TILE <= wv.right - margin * TILE &&
-      p.y * TILE >= wv.y + margin * TILE &&
-      (p.y + 1) * TILE <= wv.bottom - margin * TILE
-    );
+    return this.camera.isOnScreen(p, margin);
   }
 
   scrollBy(dx: number, dy: number): void {
-    this.cam.setScroll(this.cam.scrollX + dx / this.cam.zoom, this.cam.scrollY + dy / this.cam.zoom);
+    this.camera.scrollBy(dx, dy);
   }
 
   /** Limites de la camara: el mapa con un margen; si cabe entero en la vista, centrado. */
   updateBounds(): void {
-    const edgeCss = Math.min(EDGE_CSS, Math.round((this.cam.width / dpr()) * 0.08));
-    const margin = (edgeCss * dpr()) / this.cam.zoom;
-    const mw = MAP_W * TILE,
-      mh = MAP_H * TILE;
-    const vw = this.cam.width / this.cam.zoom,
-      vh = this.cam.height / this.cam.zoom;
-    const bw = Math.max(mw + 2 * margin, vw),
-      bh = Math.max(mh + 2 * margin, vh);
-    this.cam.setBounds(mw / 2 - bw / 2, mh / 2 - bh / 2, bw, bh);
+    this.camera.updateBounds();
   }
 
   /** La ventana ha cambiado de tamaño: mantener el mismo punto en el centro. */
   resize(w: number, h: number): void {
-    const mid = { x: this.cam.midPoint.x, y: this.cam.midPoint.y };
-    this.cam.setSize(w, h);
-    // Si cambia la densidad (otra pantalla, zoom del navegador), mantener el tamaño de casilla en CSS.
-    const r = dpr();
-    if (r !== this.lastDpr) {
-      this.level = Math.round((this.level * r) / this.lastDpr);
-      this.lastDpr = r;
-    }
-    this.level = this.clampLevel(this.level);
-    this.cam.setZoom(this.level);
-    this.updateBounds();
-    this.cam.centerOn(mid.x, mid.y);
+    this.camera.resize(w, h);
   }
 
   /** Zoom entero por pasos alrededor de un punto de la pantalla. */
   zoomStep(dir: 1 | -1, sx: number, sy: number): void {
-    const next = this.clampLevel(this.level + dir);
-    if (next === this.level) return;
-    const before = this.cam.getWorldPoint(sx, sy);
-    this.level = next;
-    this.cam.setZoom(next);
-    this.updateBounds();
-    this.cam.preRender();
-    const after = this.cam.getWorldPoint(sx, sy);
-    this.cam.setScroll(this.cam.scrollX + before.x - after.x, this.cam.scrollY + before.y - after.y);
+    this.camera.zoomStep(dir, sx, sy);
+  }
+
+  /** Casillas dentro de un recuadro de pantalla. */
+  tilesInBox(r: ScreenBox): ScreenBox {
+    return this.camera.tilesInBox(r);
   }
 
   // --- Dibujado --------------------------------------------------------------
 
-  private tileImage(key: string, x: number, y: number): Phaser.GameObjects.Image {
-    // Origen abajo en el centro: los dibujos nuevos pueden ser algo mas anchos que la casilla.
-    const img = this.scene.add.image(x * TILE + TILE / 2, (y + 1) * TILE + 0, ATLAS, key).setOrigin(0.5, 1);
-    img.setDisplaySize(Math.max(TILE, img.width), img.height);
-    return img;
-  }
-
-  /** Terreno y orillas: solo al empezar la partida (el terreno no cambia). */
-  buildTerrain(s: GameState): void {
-    this.terrain.removeAll(true);
-    this.waterAnim = [];
-    for (const o of this.objImgs) o.destroy();
-    this.objImgs = [];
-    const tex = this.scene.textures;
-    if (settings.terrainArt === 'new' && terrainArtReady(tex)) {
-      // Terreno nuevo: pintado una vez en un lienzo.
-      const key = this.terrainKey;
-      if (tex.exists(key)) tex.remove(key);
-      tex.addCanvas(key, paintTerrain(tex, s));
-      this.terrain.add(this.scene.add.image(0, 0, key).setOrigin(0));
-      // Agua animada: piezas precompiladas, una por casilla; en tick() solo se cambia el fotograma.
-      for (const cell of waterAnimCells(s)) {
-        addSheetFrames(this.scene.textures, cell.key, ANIM_FRAMES, TILE);
-        const img = this.scene.add.image(cell.x * TILE, cell.y * TILE, ATLAS, sheetFrame(cell.key, cell.row, 0)).setOrigin(0);
-        this.waterAnim.push({ img, cell });
-        this.terrain.add(img);
-      }
-      this.waterFrame = -1;
-      for (const o of terrainObjects(tex, s)) {
-        const img = this.tileImage(o.key, o.x, o.y);
-        this.objImgs.push(img);
-        this.buildingLayer.add(img);
-      }
-      this.sortBuildingLayer();
-      return;
-    }
-    const objs: Phaser.GameObjects.GameObject[] = [];
-    for (let x = 0; x < MAP_W; x++) {
-      for (let y = 0; y < MAP_H; y++) {
-        objs.push(this.tileImage(terrainKey(s.map[x]![y]!), x, y));
-        for (const k of shoreKeys(s, x, y)) {
-          if (hasImage(this.scene.textures, k))
-            objs.push(
-              this.scene.add
-                .image(x * TILE, y * TILE, ATLAS, k)
-                .setOrigin(0)
-                .setDisplaySize(TILE, TILE),
-            );
-        }
-      }
-    }
-    this.terrain.add(objs);
-  }
-
-  /** Pone al dia edificios, unidades, niebla y resaltados. */
-  render(s: GameState, opts: ViewOptions): void {
-    this.syncBuildings(s, opts.vis);
-    this.syncUnits(s, opts);
-    this.drawOverlay(opts);
-    this.goal = opts.goal ?? null;
-    this.vip = opts.vip ?? null;
-    this.rings = [...opts.highlights].filter(([, k]) => k === 'group').map(([k]) => k.split(',').map(Number) as [number, number]);
-    this.drawMarks(0);
-    this.placeCursor();
-  }
-
-  /** Destino (esquinas doradas) y flecha sobre la unidad a escoltar; se mueven a saltos. */
-  private drawMarks(phase: number): void {
-    const g = this.marks;
-    g.clear();
-    // [CAMBIO] Elegidas: aro a los pies (la mitad de delante, por encima del dibujo de la unidad).
-    for (const [x, y] of this.rings) this.drawRing(g, x * TILE + TILE / 2, y * TILE + TILE - 8);
-    if (this.goal) {
-      const d = phase ? 2 : 0;
-      const x = this.goal.x * TILE - d,
-        y = this.goal.y * TILE - d,
-        w = TILE + 2 * d;
-      g.fillStyle(PAL.ink, 0.8);
-      for (const [cx, cy] of [
-        [x - 1, y - 1],
-        [x + w - 9, y - 1],
-        [x - 1, y + w - 9],
-        [x + w - 9, y + w - 9],
-      ] as const)
-        g.fillRect(cx, cy, 10, 10);
-      g.fillStyle(PAL.gold, 1);
-      // Esquinas en L del cursor.
-      for (const [rx, ry, rw, rh] of [
-        [x, y, 8, 2],
-        [x, y, 2, 8],
-        [x + w - 8, y, 8, 2],
-        [x + w - 2, y, 2, 8],
-        [x, y + w - 2, 8, 2],
-        [x, y + w - 8, 2, 8],
-        [x + w - 8, y + w - 2, 8, 2],
-        [x + w - 2, y + w - 8, 2, 8],
-      ] as const)
-        g.fillRect(rx, ry, rw, rh);
-    }
-    if (this.vip) {
-      const cx = this.vip.x * TILE + TILE / 2,
-        top = this.vip.y * TILE - 10 - (phase ? 2 : 0);
-      g.fillStyle(PAL.ink, 1);
-      g.fillRect(cx - 6, top - 1, 12, 5);
-      g.fillRect(cx - 4, top + 4, 8, 3);
-      g.fillRect(cx - 2, top + 7, 4, 3);
-      g.fillStyle(PAL.gold, 1);
-      g.fillRect(cx - 5, top, 10, 3);
-      g.fillRect(cx - 3, top + 3, 6, 2);
-      g.fillRect(cx - 1, top + 5, 2, 3);
-    }
-  }
-
-  private syncBuildings(s: GameState, vis: boolean[][]): void {
-    const tex = this.scene.textures;
-    s.buildings.forEach((b, i) => {
-      const key = buildingKey(tex, s, b, vis[b.x]![b.y]!);
-      let img = this.buildings[i];
-      if (!key) {
-        img?.setVisible(false);
-        return;
-      }
-      if (!img) {
-        img = this.tileImage(key, b.x, b.y);
-        this.buildings[i] = img;
-        this.buildingLayer.add(img);
-      } else if (img.texture.key !== key) {
-        img.setTexture(ATLAS, key);
-        img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
-        img.setPosition(b.x * TILE + TILE / 2, (b.y + 1) * TILE);
-      }
-      img.setVisible(true);
-    });
-    this.sortBuildingLayer();
-  }
-
-  /** Lo que esta mas abajo en el mapa se dibuja delante (los sprites tienen el origen abajo). */
-  private sortBuildingLayer(): void {
-    this.buildingLayer.sort('y');
-  }
-
-  private newUnitSprite(key: string): UnitSprite {
-    // Origen abajo en el centro: las unidades nuevas pueden ser algo mas anchas que la casilla.
-    const img = this.scene.add.image(TILE / 2, TILE, ATLAS, key).setOrigin(0.5, 1);
-    img.setDisplaySize(Math.max(TILE, img.width), img.height);
-    // Cifra de vida en la esquina de abajo a la derecha (letra Ilogic, ver lifeDigits.ts).
-    addLifeTextures(this.scene.textures);
-    const life = this.scene.add.image(TILE, TILE, lifeKey(9)).setOrigin(1, 1);
-    const cargo = this.scene.add.rectangle(2, 2, 8, 8, 0x2fd3c3).setOrigin(0).setStrokeStyle(2, PAL.ink);
-    const stars = this.scene.add.graphics();
-    // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
-    const front = this.scene.add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
-    const cmd = this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
-    const badges = Array.from({ length: 5 }, () => this.scene.add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
-    const root = this.scene.add.container(0, 0, [img, front, life, cargo, stars, cmd, ...badges]);
-    this.unitLayer.add(root);
-    return { root, img, front, life, cargo, stars, cmd, badges, rank: 0, key, idle: false, team: 0 };
-  }
-
-  private syncUnits(s: GameState, opts: ViewOptions): void {
-    const tex = this.scene.textures;
-    const seen = new Set<number>();
-    for (const u of s.units) {
-      if (u.carrier !== null || opts.hidden.has(u.uid) || !opts.vis[u.x]![u.y]) continue;
-      const key = unitKey(tex, s, u);
-      if (!key) continue;
-      seen.add(u.uid);
-      let sp = this.units.get(u.uid);
-      if (!sp) {
-        sp = this.newUnitSprite(key);
-        this.units.set(u.uid, sp);
-      } else if (sp.key !== key) {
-        sp.img.setTexture(ATLAS, key);
-        sp.img.setDisplaySize(Math.max(TILE, sp.img.frame.width), sp.img.frame.height);
-        sp.key = key;
-      }
-      this.updateUnitSprite(sp, u, s);
-    }
-    for (const [uid, sp] of this.units) {
-      if (!seen.has(uid)) {
-        sp.root.destroy();
-        this.units.delete(uid);
-      }
-    }
-    // Las de mas abajo se dibujan encima (los sprites altos tapan la casilla de arriba).
-    this.unitLayer.sort('y');
-  }
-
-  /** Aro de seleccion (media elipse de pixeles, la de delante) centrado en (cx, cy). */
-  private drawRing(g: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
-    const rx = Math.round(TILE * 0.36),
-      ry = Math.round(TILE * 0.13);
-    const dots = new Set<string>();
-    // Solo la mitad de delante: la de detras quedaria tapada por la unidad.
-    for (let i = 0; i <= 32; i++) {
-      const a = (i / 32) * Math.PI;
-      dots.add(`${Math.round(cx + Math.cos(a) * rx)},${Math.round(cy + Math.sin(a) * ry)}`);
-    }
-    for (const [color, d] of [
-      [PAL.ink, 1],
-      [PAL.gold, 0],
-    ] as const) {
-      g.fillStyle(color, 0.9);
-      for (const k of dots) {
-        const [x, y] = k.split(',').map(Number) as [number, number];
-        g.fillRect(x - 1, y - 1 + d, 2, 2);
-      }
-    }
-  }
-
-  private updateUnitSprite(sp: UnitSprite, u: Unit, s?: GameState): void {
-    sp.root.setPosition(u.x * TILE, u.y * TILE);
-    sp.team = u.team;
-    sp.img.setFlipX(faceFlip(u.team, this.facing.get(u.uid) ?? baseFacing(u.team)));
-    // Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco.
-    const front = s && this.newArt() ? frontKey(s, u.x, u.y) : null;
-    if (front && hasImage(this.scene.textures, front)) {
-      sp.front.setTexture(ATLAS, front).setVisible(true);
-      sp.img.setTint(front.includes('forest') || front.includes('tree') ? 0xd8e4d8 : 0xe8e8e8);
-    } else {
-      sp.front.setVisible(false);
-      sp.img.clearTint();
-    }
-    const n = Math.ceil(u.life / 10);
-    const showLife = u.life < 100 && n >= 1 && n <= 9;
-    sp.life.setVisible(showLife);
-    if (showLife) sp.life.setTexture(lifeKey(n));
-    // Con las marcas dibujadas, la carga va abajo a la izquierda (junto a la de sin cura) y el
-    // cuadradito turquesa de antes se esconde.
-    const markArt = hasImage(this.scene.textures, 'ui/mk_star');
-    sp.cargo.setVisible(!markArt && u.cargo.some((c) => c !== null));
-    const r = rank(u);
-    // [CAMBIO] Ha recibido un ataque hoy y no se curara esta noche (regla noHealUnderFire).
-    const noHeal = !!s && u.life < 100 && unhealable(s, u);
-    // [CAMBIO] Ayudante: unidad en automatico (al lado de la marca de carga si la lleva).
-    const cargo = u.cargo.some((c) => c !== null);
-    // [CAMBIO] La orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
-    const cmd = s ? effectiveCommand(s, u) : u.command;
-    const detached = !!s && isDetached(s, u);
-    const marks = r * 16 + (noHeal ? 1 : 0) + (cargo ? 2 : 0) + (cmd ? MISSION_KEY[cmd.kind] * 4 : 0) + (detached ? 100 : 0);
-    if (marks !== sp.rank) {
-      // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
-      sp.rank = marks;
-      const g = sp.stars;
-      g.clear();
-      const cmdKey = cmd ? `ui/cmd_${cmd.kind}` : null;
-      const cmdArt = !!cmdKey && hasImage(this.scene.textures, cmdKey);
-      sp.cmd.setVisible(cmdArt);
-      // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
-      if (cmdArt) sp.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo && !markArt ? 10 : 0, 0);
-      if (markArt) {
-        // Abajo a la izquierda: sin cura y carga (10x10); arriba a la derecha: una estrella (8x8) por rango.
-        const list: [string, number, number][] = [];
-        if (noHeal) list.push(['ui/mk_noheal', 0, TILE - 10]);
-        if (cargo) list.push(['ui/mk_cargo', noHeal ? 10 : 0, TILE - 10]);
-        for (let i = 0; i < r; i++) list.push(['ui/mk_star', TILE - 8 - i * 7, 0]);
-        sp.badges.forEach((b, i) => {
-          const m = list[i];
-          b.setVisible(!!m);
-          if (m) b.setTexture(ATLAS, m[0]).setPosition(m[1], m[2]);
-        });
-      } else sp.badges.forEach((b) => b.setVisible(false));
-      if (cmd && detached) {
-        // Destacada: raya naranja bajo la placa de la orden (va por su cuenta y luego vuelve).
-        const x = cargo && !markArt ? (cmdArt ? 10 : 12) : cmdArt ? 0 : 1;
-        g.fillStyle(PAL.ink, 1);
-        g.fillRect(x, cmdArt ? 16 : 10, cmdArt ? 16 : 9, 3);
-        g.fillStyle(0xffb43a, 1);
-        g.fillRect(x + 1, cmdArt ? 17 : 11, cmdArt ? 14 : 7, 1);
-      }
-      if (cmd && !cmdArt) {
-        // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
-        const x = cargo ? 12 : 1,
-          y = 1;
-        g.fillStyle(PAL.ink, 1);
-        g.fillRect(x, y, 9, 9);
-        g.fillStyle(0x2f8f83, 1);
-        g.fillRect(x + 1, y + 1, 7, 7);
-        g.fillStyle(0xffffff, 1);
-        for (const [dx, dy] of MISSION_GLYPH[cmd.kind]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
-      }
-      if (noHeal && !markArt) {
-        // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
-        const x = 1,
-          y = TILE - 8;
-        g.fillStyle(PAL.ink, 1);
-        g.fillRect(x, y, 7, 7);
-        g.fillStyle(PAL.red, 1);
-        g.fillRect(x + 1, y + 1, 5, 5);
-        g.fillStyle(0xffffff, 1);
-        g.fillRect(x + 2, y + 3, 3, 1);
-      }
-      for (let i = 0; i < (markArt ? 0 : r); i++) {
-        const x = TILE - 5 - i * 5,
-          y = 1;
-        g.fillStyle(PAL.ink, 1);
-        g.fillRect(x - 1, y, 5, 5);
-        g.fillStyle(PAL.gold, 1);
-        g.fillRect(x, y + 1, 3, 3);
-        g.fillStyle(0xfff1a8, 1);
-        g.fillRect(x + 1, y + 1, 1, 1);
-      }
-    }
-    sp.idle = u.team === 0 && u.active;
-    sp.img.y = TILE - (sp.idle ? this.bobPhase : 0);
-  }
-
+  /** Dibujo nuevo elegido en Opciones y con sus imagenes en el atlas. */
   private newArt(): boolean {
     return settings.terrainArt === 'new' && terrainArtReady(this.scene.textures);
   }
 
-  /** Repinta la niebla nueva si ha cambiado lo que se ve. */
-  private updateFog(vis: boolean[][]): void {
-    const sig = visKey(vis);
-    if (sig === this.fogSig && this.fogImg) return;
-    this.fogSig = sig;
-    const tex = this.scene.textures;
-    this.fogCanvas = composeFog(vis, this.scene.textures, this.fogCanvas ?? undefined);
-    if (!this.fogImg) {
-      if (tex.exists(this.fogKey)) tex.remove(this.fogKey);
-      tex.addCanvas(this.fogKey, this.fogCanvas);
-      this.fogImg = this.scene.add.image(0, 0, this.fogKey).setOrigin(0);
-      this.fogLayer.addAt(this.fogImg, 0);
-    } else (tex.get(this.fogKey) as Phaser.Textures.CanvasTexture).refresh();
+  /** Terreno y orillas: solo al empezar la partida (el terreno no cambia). */
+  buildTerrain(s: GameState): void {
+    this.terrain.build(s, this.newArt());
+  }
+
+  /** Pone al dia edificios, unidades, niebla y resaltados. */
+  render(s: GameState, opts: ViewOptions): void {
+    const newArt = this.newArt();
+    this.buildings.sync(s, opts.vis);
+    this.units.sync(s, opts, newArt);
+    this.fog.sync(opts.vis, newArt);
+    this.flags.sync(opts);
+    this.overlay.draw(opts, { textures: this.scene.textures, newArt });
+    this.marks.set(opts);
+    this.placeCursor();
   }
 
   /** Suelta los lienzos de esta vista (los objetos los destruye la escena al cerrarse). Llamar en SHUTDOWN. */
   destroy(): void {
-    const tex = this.scene.textures;
-    for (const k of [this.terrainKey, this.fogKey]) if (tex.exists(k)) tex.remove(k);
-    this.fogCanvas = null;
-    this.fogImg = null;
+    this.terrain.destroy();
+    this.fog.destroy();
   }
-
-  /** Un banderin por punto de control, del color de su dueño (gris si no es de nadie), en la casilla central. */
-  private syncFlags(points: NonNullable<ViewOptions['controlPoints']>): void {
-    while (this.flags.length < points.length) {
-      const img = this.scene.add.image(0, 0, ATLAS, 'ui/flag_i').setOrigin(0.5, 1);
-      this.flagLayer.add(img);
-      this.flags.push(img);
-    }
-    this.flags.forEach((img, i) => {
-      const c = points[i];
-      img.setVisible(!!c);
-      if (!c) return;
-      img.setTexture(ATLAS, `ui/flag_${c.owner === 0 ? 'b' : c.owner === 1 ? 'r' : 'i'}`);
-      // El pie del mastil un poco por encima del borde de abajo de la casilla.
-      img.setPosition(c.x * TILE + TILE / 2, (c.y + 1) * TILE - 4);
-    });
-  }
-
-  /** Banderin del color de la orden en el destino (dorado si solo es "ir alli"); el mastil en el centro. */
-  private syncOrderFlags(orders: NonNullable<ViewOptions['orders']>): void {
-    while (this.orderFlags.length < orders.length) {
-      const img = this.scene.add.image(0, 0, ATLAS, 'ui/flag_cmd_go').setOrigin(0.25, 1);
-      this.flagLayer.add(img);
-      this.orderFlags.push(img);
-    }
-    this.orderFlags.forEach((img, i) => {
-      const o = orders[i];
-      img.setVisible(!!o);
-      if (!o) return;
-      img.setTexture(ATLAS, `ui/flag_cmd_${o.kind ?? 'go'}`);
-      img.setPosition(o.to.x * TILE + TILE / 2, o.to.y * TILE + TILE / 2 + 4);
-    });
-  }
-
-  private drawOverlay(opts: ViewOptions): void {
-    const g = this.overlay;
-    g.clear();
-    // Niebla de guerra.
-    this.fogLayer.setVisible(this.newArt());
-    if (this.newArt()) this.updateFog(opts.vis);
-    else {
-      g.fillStyle(0x05080c, 0.5);
-      for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-    }
-    // [CAMBIO] Puntos de control: la zona teñida del color de su dueño (gris si no es de nadie), con
-    // borde de puntos, y un banderin en el centro. Disputada: borde de rayas rojas y doradas.
-    const flagArt = hasImage(this.scene.textures, 'ui/flag_b');
-    this.syncFlags(flagArt ? (opts.controlPoints ?? []) : []);
-    for (const c of opts.controlPoints ?? []) {
-      const x0 = Math.max(0, c.x - c.r) * TILE,
-        y0 = Math.max(0, c.y - c.r) * TILE,
-        x1 = Math.min(MAP_W, c.x + c.r + 1) * TILE,
-        y1 = Math.min(MAP_H, c.y + c.r + 1) * TILE;
-      const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : 0xc8c8c8;
-      g.fillStyle(color, 0.16);
-      g.fillRect(x0, y0, x1 - x0, y1 - y0);
-      for (let i = 0; i < Math.max(x1 - x0, y1 - y0); i += 4) {
-        g.fillStyle(c.contested ? (i % 8 ? PAL.gold : PAL.red) : color, 0.95);
-        if (x0 + i < x1) {
-          g.fillRect(x0 + i, y0, 2, 2);
-          g.fillRect(x0 + i, y1 - 2, 2, 2);
-        }
-        if (y0 + i < y1) {
-          g.fillRect(x0, y0 + i, 2, 2);
-          g.fillRect(x1 - 2, y0 + i, 2, 2);
-        }
-      }
-      // El banderin dibujado (ui/flag_*) va en flagLayer; este de pixeles solo si falta en el atlas.
-      if (flagArt) continue;
-      // Mastil y banderin triangular con borde oscuro, arriba a la izquierda de la casilla central.
-      const x = c.x * TILE,
-        y = c.y * TILE;
-      g.fillStyle(PAL.ink, 1);
-      g.fillRect(x + 3, y + 3, 3, 14);
-      g.fillRect(x + 5, y + 3, 9, 8);
-      g.fillStyle(0xffffff, 1);
-      g.fillRect(x + 4, y + 4, 1, 12);
-      g.fillStyle(c.contested ? PAL.gold : color, 1);
-      for (let r = 0; r < 6; r++) g.fillRect(x + 6, y + 4 + r, 7 - Math.abs(r - 2.5) * 2, 1);
-    }
-    // Zona de amenaza enemiga: relleno rojo suave y borde de 2 px por fuera de la zona.
-    const th = opts.threat;
-    if (th) {
-      const at = (x: number, y: number) => x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && th[x]![y]!;
-      g.fillStyle(PAL.red, 0.2);
-      for (let x = 0; x < MAP_W; x++) for (let y = 0; y < MAP_H; y++) if (th[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-      g.fillStyle(PAL.red, 0.9);
-      for (let x = 0; x < MAP_W; x++)
-        for (let y = 0; y < MAP_H; y++) {
-          if (!th[x]![y]) continue;
-          const px = x * TILE,
-            py = y * TILE;
-          if (!at(x, y - 1)) g.fillRect(px, py, TILE, 2);
-          if (!at(x, y + 1)) g.fillRect(px, py + TILE - 2, TILE, 2);
-          if (!at(x - 1, y)) g.fillRect(px, py, 2, TILE);
-          if (!at(x + 1, y)) g.fillRect(px + TILE - 2, py, 2, TILE);
-        }
-    }
-    // Resaltados (bordes de 1 px dibujados con rectangulos para que queden nitidos).
-    for (const [k, kind] of opts.highlights) {
-      const [x, y] = k.split(',').map(Number) as [number, number];
-      const st = HL[kind];
-      const px = x * TILE,
-        py = y * TILE;
-      g.fillStyle(st.fill, st.alpha);
-      g.fillRect(px + 1, py + 1, TILE - 2, TILE - 2);
-      g.fillStyle(st.line, 0.75);
-      g.fillRect(px + 1, py + 1, TILE - 2, 1);
-      g.fillRect(px + 1, py + TILE - 2, TILE - 2, 1);
-      g.fillRect(px + 1, py + 2, 1, TILE - 4);
-      g.fillRect(px + TILE - 2, py + 2, 1, TILE - 4);
-    }
-    // Barras de captura: fondo oscuro y relleno del color de quien captura.
-    for (const c of opts.captures ?? []) {
-      const px = c.x * TILE + 3,
-        py = c.y * TILE + 1;
-      const w = TILE - 6;
-      g.fillStyle(PAL.ink, 0.9);
-      g.fillRect(px - 1, py - 1, w + 2, 6);
-      g.fillStyle(c.team === 0 ? PAL.blue : PAL.red, 1);
-      g.fillRect(px, py, Math.max(1, Math.round((w * (c.total - c.left)) / c.total)), 4);
-    }
-    // Alcance de ataque al mover: relleno rojo tenue fuera del movimiento y borde de la zona.
-    const z = opts.attackZone;
-    if (z) {
-      const inZ = (x: number, y: number) => x >= 0 && y >= 0 && x < MAP_W && y < MAP_H && z[x]![y]!;
-      g.fillStyle(PAL.red, 0.14);
-      for (let x = 0; x < MAP_W; x++)
-        for (let y = 0; y < MAP_H; y++) if (z[x]![y] && !opts.highlights.has(`${x},${y}`)) g.fillRect(x * TILE, y * TILE, TILE, TILE);
-      g.fillStyle(PAL.red, 0.85);
-      for (let x = 0; x < MAP_W; x++)
-        for (let y = 0; y < MAP_H; y++) {
-          if (!z[x]![y]) continue;
-          const px = x * TILE,
-            py = y * TILE;
-          if (!inZ(x, y - 1)) g.fillRect(px, py, TILE, 2);
-          if (!inZ(x, y + 1)) g.fillRect(px, py + TILE - 2, TILE, 2);
-          if (!inZ(x - 1, y)) g.fillRect(px, py, 2, TILE);
-          if (!inZ(x + 1, y)) g.fillRect(px + TILE - 2, py, 2, TILE);
-        }
-    }
-    // Destinos peligrosos (el enemigo visible podria atacar ahi): esquina roja.
-    const dg = opts.danger;
-    if (dg) {
-      for (const [k, kind] of opts.highlights) {
-        if (kind !== 'move') continue;
-        const [x, y] = k.split(',').map(Number) as [number, number];
-        if (!dg[x]![y]) continue;
-        const px = x * TILE + TILE - 9,
-          py = y * TILE + 3;
-        g.fillStyle(PAL.ink, 0.8);
-        g.fillRect(px - 1, py - 1, 8, 8);
-        g.fillStyle(PAL.red, 1);
-        for (let i = 0; i < 6; i++) {
-          g.fillRect(px + i, py, 6 - i, 1);
-          g.fillRect(px + i, py + i, 1, 1);
-        }
-        g.fillRect(px, py, 6, 2);
-        g.fillRect(px + 4, py, 2, 6);
-      }
-    }
-    // Ordenes de varios turnos: puntos cada 8 px (primero en horizontal, luego en vertical) y banderita.
-    const orderArt = hasImage(this.scene.textures, 'ui/flag_cmd_go');
-    this.syncOrderFlags(orderArt ? (opts.orders ?? []) : []);
-    for (const o of opts.orders ?? []) {
-      const ax = o.from.x * TILE + TILE / 2,
-        ay = o.from.y * TILE + TILE / 2,
-        bx = o.to.x * TILE + TILE / 2,
-        by = o.to.y * TILE + TILE / 2;
-      const color = o.kind ? COMMAND_FLAG[o.kind] : PAL.gold;
-      if (!o.kind || o.line) {
-        g.fillStyle(color, 0.9);
-        for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x += 8) g.fillRect(x - 1, ay - 1, 3, 3);
-        for (let y = Math.min(ay, by); y <= Math.max(ay, by); y += 8) g.fillRect(bx - 1, y - 1, 3, 3);
-      }
-      if (orderArt) continue;
-      g.fillStyle(PAL.ink, 1);
-      g.fillRect(bx - 1, by - 12, 3, 14);
-      g.fillRect(bx + 1, by - 13, 10, 8);
-      g.fillStyle(color, 1);
-      g.fillRect(bx + 2, by - 12, 8, 6);
-      g.fillStyle(0xfff1a8, 1);
-      g.fillRect(bx, by - 11, 1, 12);
-    }
-    // [CAMBIO] Intenciones de las ordenes con destino: lo que hara cada unidad al terminar el turno.
-    for (const it of opts.intents ?? []) {
-      if (it.path.length > 1) this.drawArrow(it.path, 0xdff4ff, 0.6, 0.4);
-      if (it.attack) this.drawTargetMark(it.attack, PAL.red);
-      if (it.capture) this.drawTargetMark(it.capture, PAL.gold);
-    }
-    // Camino previsto: flecha pixel (tramos de 4 px con borde oscuro y punta), como en Advance Wars.
-    // [CAMBIO] Si al soltar ahi se ataca, la flecha va en rojo.
-    const path = opts.path;
-    if (path && path.length > 1) this.drawArrow(path, opts.pathAttack ? 0xff7a73 : 0xffffff, 1, 0.7);
-  }
-
-  /** Flecha pixel por un camino: tramos de 4 px del color, con borde oscuro de 8 px, y punta. */
-  private drawArrow(path: readonly Pos[], color: number, alpha: number, borderAlpha: number): void {
-    const g = this.overlay;
-    const end = path[path.length - 1]!,
-      before = path[path.length - 2]!;
-    const dx = Math.sign(end.x - before.x),
-      dy = Math.sign(end.y - before.y);
-    const cx = end.x * TILE + TILE / 2,
-      cy = end.y * TILE + TILE / 2;
-    for (const [w, c, a] of [
-      [8, PAL.ink, borderAlpha],
-      [4, color, alpha],
-    ] as const) {
-      g.fillStyle(c, a);
-      for (let i = 0; i < path.length - 1; i++) {
-        const a = path[i]!,
-          b = path[i + 1]!;
-        // El ultimo tramo se queda antes del centro: ahi va la punta.
-        const last = i === path.length - 2;
-        let x0 = Math.min(a.x, b.x) * TILE + TILE / 2 - w / 2,
-          y0 = Math.min(a.y, b.y) * TILE + TILE / 2 - w / 2;
-        let ww = Math.abs(a.x - b.x) * TILE + w,
-          hh = Math.abs(a.y - b.y) * TILE + w;
-        if (last) {
-          const cut = 6;
-          if (dx > 0) ww -= cut;
-          if (dx < 0) {
-            x0 += cut;
-            ww -= cut;
-          }
-          if (dy > 0) hh -= cut;
-          if (dy < 0) {
-            y0 += cut;
-            hh -= cut;
-          }
-        }
-        g.fillRect(x0, y0, ww, hh);
-      }
-      // Punta: triangulo hecho de lineas de 1 px, mirando en la direccion del ultimo paso.
-      const H = w === 8 ? 8 : 6;
-      const base = w === 8 ? -7 : -5;
-      for (let i = 0; i <= H; i++) {
-        const half = H - i;
-        const along = base + i;
-        if (dx !== 0) g.fillRect(cx + dx * along - (dx < 0 ? 0 : 0), cy - half, 1, half * 2 + 1);
-        else g.fillRect(cx - half, cy + dy * along, half * 2 + 1, 1);
-      }
-    }
-  }
-
-  /** Marco de esquinas sobre una casilla (objetivo de ataque o edificio a capturar), con borde oscuro. */
-  private drawTargetMark(p: Pos, color: number): void {
-    const g = this.overlay;
-    const px = p.x * TILE,
-      py = p.y * TILE;
-    const L = 7;
-    for (const [inset, w, c, a] of [
-      [1, 4, PAL.ink, 0.75],
-      [2, 2, color, 1],
-    ] as const) {
-      g.fillStyle(c, a);
-      const x0 = px + inset,
-        y0 = py + inset,
-        x1 = px + TILE - inset - w,
-        y1 = py + TILE - inset - w;
-      const len = L + (w === 4 ? 2 : 0);
-      for (const [cx, cy, sx, sy] of [
-        [x0, y0, 1, 1],
-        [x1, y0, -1, 1],
-        [x0, y1, 1, -1],
-        [x1, y1, -1, -1],
-      ] as const) {
-        g.fillRect(sx > 0 ? cx : cx + w - len, cy, len, w);
-        g.fillRect(cx, sy > 0 ? cy : cy + w - len, w, len);
-      }
-    }
-  }
-
-  private box: Phaser.GameObjects.Graphics | null = null;
 
   /** Recuadro de seleccion (en pixeles de pantalla del lienzo), o null para quitarlo. */
-  setBox(r: { x0: number; y0: number; x1: number; y1: number } | null): void {
-    if (!r) {
-      this.box?.clear();
-      return;
-    }
-    if (!this.box) {
-      this.box = this.scene.add.graphics();
-      this.fx.add(this.box);
-    }
-    const a = this.cam.getWorldPoint(Math.min(r.x0, r.x1), Math.min(r.y0, r.y1));
-    const b = this.cam.getWorldPoint(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
-    const g = this.box;
-    g.clear();
-    g.fillStyle(PAL.gold, 0.12);
-    g.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-    g.fillStyle(PAL.gold, 0.9);
-    g.fillRect(a.x, a.y, b.x - a.x, 1);
-    g.fillRect(a.x, b.y - 1, b.x - a.x, 1);
-    g.fillRect(a.x, a.y, 1, b.y - a.y);
-    g.fillRect(b.x - 1, a.y, 1, b.y - a.y);
-  }
-
-  /** Casillas dentro de un recuadro de pantalla. */
-  tilesInBox(r: { x0: number; y0: number; x1: number; y1: number }): { x0: number; y0: number; x1: number; y1: number } {
-    const a = this.cam.getWorldPoint(Math.min(r.x0, r.x1), Math.min(r.y0, r.y1));
-    const b = this.cam.getWorldPoint(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
-    return { x0: Math.floor(a.x / TILE), y0: Math.floor(a.y / TILE), x1: Math.floor(b.x / TILE), y1: Math.floor(b.y / TILE) };
+  setBox(r: ScreenBox | null): void {
+    this.box.set(r);
   }
 
   placeCursor(visible = true): void {
-    this.cursorBox.setPosition(this.cursor.x * TILE, this.cursor.y * TILE).setVisible(visible);
+    this.cursorView.place(this.cursor, visible);
   }
 
-  /** Coloca las esquinas `gap` pixeles por fuera de la casilla. */
-  private layoutCursor(gap: number): void {
-    if (gap === this.cursorGap) return;
-    this.cursorGap = gap;
-    const c = this.cursorCorners[0]!.width;
-    const far = TILE - c + gap;
-    const pos = [
-      [-gap, -gap],
-      [far, -gap],
-      [-gap, far],
-      [far, far],
-    ];
-    this.cursorCorners.forEach((img, i) => img.setPosition(pos[i]![0], pos[i]![1]));
-  }
-
-  /** Animaciones por pasos (estilo pixel): parpadeo del cursor, unidades en espera y agua. */
+  /** Animaciones por pasos (estilo pixel): agua, parpadeo del cursor, marcas y unidades en espera. */
   tick(time: number): void {
-    const still = reducedMotion();
-    if (this.waterAnim.length) {
-      const f = still ? 0 : Math.floor(time / 140) % ANIM_FRAMES;
-      if (f !== this.waterFrame) {
-        this.waterFrame = f;
-        for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (f + cell.phase) % ANIM_FRAMES));
-      }
-    }
-    // Por pasos de pixel entero (0, 1, 2, 1...): se mueve sin emborronar las esquinas.
-    this.layoutCursor(still ? 1 : ([0, 1, 2, 1] as const)[Math.floor(time / 160) % 4]!);
-    if (this.cursorAttack !== this.cursorTinted) {
-      this.cursorTinted = this.cursorAttack;
-      for (const img of this.cursorCorners) {
-        if (this.cursorAttack) img.setTint(PAL.red);
-        else img.clearTint();
-      }
-    }
-    const phase = still ? 0 : Math.floor(time / 500) % 2;
-    if (phase !== this.bobPhase) {
-      this.bobPhase = phase;
-      if (this.goal || this.vip) this.drawMarks(phase);
-      for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
-    }
+    this.cursorView.attack = this.cursorAttack;
+    const clock = { time, still: reducedMotion() };
+    for (const layer of this.animated) layer.tick(clock);
   }
+
+  // --- Unidades (map/unitLayer.ts) y efectos ---------------------------------
 
   /** Sprite (contenedor) de una unidad tal como esta dibujada ahora, si se ve. */
   unitSprite(uid: number): Phaser.GameObjects.Container | null {
-    return this.units.get(uid)?.root ?? null;
+    return this.units.sprite(uid);
   }
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
   unitKeyAt(p: Pos): string | null {
-    for (const sp of this.units.values()) if (sp.root.x === p.x * TILE && sp.root.y === p.y * TILE && sp.root.visible) return sp.key;
-    return null;
+    return this.units.keyAt(p);
+  }
+
+  /** Gira una unidad hacia un lado (y la deja asi). */
+  face(uid: number, dir: Facing): void {
+    this.units.face(uid, dir);
+  }
+
+  facingOf(uid: number, team: 0 | 1): Facing {
+    return this.units.facingOf(uid, team);
   }
 
   /** Objeto temporal para animaciones (coordenadas de mundo). */
@@ -1057,60 +233,20 @@ export class MapView {
   }
 
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
-  // --- Hacia donde mira cada unidad y marcas de explosion -------------------
-
-  /** Ultimo lado al que ha mirado cada unidad (al moverse o disparar). Solo para dibujar. */
-  private readonly facing = new Map<number, Facing>();
-
-  /** Gira una unidad hacia un lado (y la deja asi). */
-  face(uid: number, dir: Facing): void {
-    this.facing.set(uid, dir);
-    const sp = this.units.get(uid);
-    if (sp) sp.img.setFlipX(faceFlip(sp.team, dir));
+  ghost(key: string, p: Pos): Phaser.GameObjects.Image {
+    // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
+    const img = tileImage(this.scene, key, p.x, p.y);
+    this.fx.add(img);
+    return img;
   }
-
-  facingOf(uid: number, team: 0 | 1): Facing {
-    return this.facing.get(uid) ?? baseFacing(team);
-  }
-
-  /** Marcas de quemado en el suelo donde ha caido una unidad (dia en que se hicieron). */
-  private scorches: { g: Phaser.GameObjects.Graphics; day: number }[] = [];
 
   /** Marca de quemado bajo las unidades: dura hasta el turno siguiente (ver pruneScorch). */
   scorch(p: Pos, day: number): void {
-    const g = this.scene.add.graphics();
-    const cx = p.x * TILE + TILE / 2,
-      cy = p.y * TILE + TILE - 7;
-    g.fillStyle(0x1b1f14, 0.55);
-    g.fillRect(cx - 10, cy - 2, 20, 5);
-    g.fillRect(cx - 7, cy - 4, 14, 9);
-    g.fillStyle(0x3a3426, 0.6);
-    for (const [dx, dy] of [
-      [-12, 0],
-      [11, -1],
-      [-4, -6],
-      [5, 5],
-      [0, -1],
-    ] as const)
-      g.fillRect(cx + dx, cy + dy, 2, 2);
-    this.decals.add(g);
-    this.scorches.push({ g, day });
+    this.decals.scorch(p, day);
   }
 
   /** Quita las marcas de hace mas de un dia. */
   pruneScorch(day: number): void {
-    this.scorches = this.scorches.filter((m) => {
-      if (day - m.day < 2) return true;
-      m.g.destroy();
-      return false;
-    });
-  }
-
-  ghost(key: string, p: Pos): Phaser.GameObjects.Image {
-    // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
-    const img = this.scene.add.image(p.x * TILE + TILE / 2, (p.y + 1) * TILE, ATLAS, key).setOrigin(0.5, 1);
-    img.setDisplaySize(Math.max(TILE, img.width), img.height);
-    this.fx.add(img);
-    return img;
+    this.decals.prune(day);
   }
 }

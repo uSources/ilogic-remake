@@ -5,7 +5,7 @@
  * variables CSS (--cursor-move, --cursor-attack...) y GameScene elige una para el lienzo.
  */
 import type { CursorKind } from '../controls/actions';
-import { PAL } from './palette';
+import { PAL, PAL_MAP } from './palette';
 
 const SIZE = 32;
 const S = 2; // cada pixel del dibujo son 2x2 en el puntero
@@ -42,9 +42,9 @@ const BADGE: Record<Exclude<CursorKind, 'default'>, number> = {
   move: PAL.blue,
   attack: PAL.red,
   capture: PAL.gold,
-  load: 0x2fd3c3,
-  merge: 0xb15cff,
-  go: 0x5fd6c6,
+  load: PAL_MAP.teal,
+  merge: PAL_MAP.violet,
+  go: PAL_MAP.mint,
   forbidden: PAL.red,
 };
 
