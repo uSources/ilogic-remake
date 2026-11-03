@@ -1,4 +1,5 @@
 import { UNIT } from './data';
+import { AI_TEAM, PLAYER, opponentOf } from './util/predicates';
 import type { GameEvent, GameState, Team } from './types';
 
 /** Estadisticas de la partida, por bando [jugador, IA] (para la pantalla final). */
@@ -15,23 +16,23 @@ export interface GameStats {
 
 /** Valor de un ejercito: coste de cada unidad por su vida. */
 export function armyValue(s: GameState, team: Team): number {
-  let v = 0;
-  for (const u of s.units) if (u.team === team) v += (UNIT.cost[u.type]! * u.life) / 100;
-  return Math.round(v);
+  let value = 0;
+  for (const unit of s.units) if (unit.team === team) value += (UNIT.cost[unit.type]! * unit.life) / 100;
+  return Math.round(value);
 }
 
 /** Apunta el valor de los dos ejercitos del dia actual (una muestra por dia). */
 export function sampleArmy(s: GameState): void {
-  const st = stats(s);
-  const a = (st.army ??= []);
-  const v: [number, number] = [armyValue(s, 0), armyValue(s, 1)];
-  const i = Math.max(0, s.day - 1);
-  if (i < a.length) a[i] = v;
-  else {
-    // Dias sin muestra (partidas antiguas): repetir la ultima.
-    while (a.length < i) a.push(a[a.length - 1] ?? v);
-    a.push(v);
+  const samples = (stats(s).army ??= []);
+  const today: [number, number] = [armyValue(s, PLAYER), armyValue(s, AI_TEAM)];
+  const dayIndex = Math.max(0, s.day - 1);
+  if (dayIndex < samples.length) {
+    samples[dayIndex] = today;
+    return;
   }
+  // Dias sin muestra (partidas antiguas): repetir la ultima.
+  while (samples.length < dayIndex) samples.push(samples[samples.length - 1] ?? today);
+  samples.push(today);
 }
 
 export const emptyStats = (): GameStats => ({ built: [0, 0], spent: [0, 0], lost: [0, 0], captured: [0, 0] });
@@ -42,23 +43,22 @@ export function stats(s: GameState): GameStats {
 }
 
 /** Apunta un evento ya aplicado al estado. `team` = bando que lo ha hecho. */
-export function recordEvent(s: GameState, ev: GameEvent, team: Team): void {
-  const st = stats(s);
-  const other = (1 - team) as Team;
-  switch (ev.kind) {
+export function recordEvent(s: GameState, event: GameEvent, team: Team): void {
+  const counts = stats(s);
+  switch (event.kind) {
     case 'attack':
-      if (ev.killed) st.lost[other]++;
-      if (ev.attackerKilled) st.lost[team]++;
+      if (event.killed) counts.lost[opponentOf(team)]++;
+      if (event.attackerKilled) counts.lost[team]++;
       break;
     case 'capture':
       // Con captura por puntos, solo cuenta cuando se termina.
-      if (ev.left === undefined || ev.left === 0) st.captured[team]++;
+      if (event.left === undefined || event.left === 0) counts.captured[team]++;
       break;
     case 'spawn': {
-      const u = s.units.find((x) => x.uid === ev.uid);
-      if (u) {
-        st.built[team]++;
-        st.spent[team] += UNIT.cost[u.type]!;
+      const built = s.units.find((unit) => unit.uid === event.uid);
+      if (built) {
+        counts.built[team]++;
+        counts.spent[team] += UNIT.cost[built.type]!;
       }
       break;
     }
@@ -68,13 +68,21 @@ export function recordEvent(s: GameState, ev: GameEvent, team: Team): void {
   }
 }
 
+/** Muestras de ejercito que se aceptan de una partida guardada (una por dia; mas es un fichero roto). */
+const MAX_ARMY_SAMPLES = 5000;
+
+/** Un par [jugador, IA] de enteros no negativos. */
+function isCountPair(value: unknown): value is [number, number] {
+  return Array.isArray(value) && value.length === 2 && value.every((n) => typeof n === 'number' && Number.isInteger(n) && n >= 0);
+}
+
 /** Valida las estadisticas leidas de una partida guardada (las antiguas no las tienen). */
 export function sanitizeStats(v: unknown): GameStats {
-  const ok = (a: unknown): a is [number, number] =>
-    Array.isArray(a) && a.length === 2 && a.every((n) => typeof n === 'number' && Number.isInteger(n) && n >= 0);
-  const o = (v ?? {}) as Partial<GameStats>;
-  if (!(ok(o.built) && ok(o.spent) && ok(o.lost) && ok(o.captured))) return emptyStats();
-  const out: GameStats = { built: o.built, spent: o.spent, lost: o.lost, captured: o.captured };
-  if (Array.isArray(o.army) && o.army.length <= 5000 && o.army.every(ok)) out.army = o.army;
-  return out;
+  const saved = (v ?? {}) as Partial<GameStats>;
+  if (!(isCountPair(saved.built) && isCountPair(saved.spent) && isCountPair(saved.lost) && isCountPair(saved.captured)))
+    return emptyStats();
+  const clean: GameStats = { built: saved.built, spent: saved.spent, lost: saved.lost, captured: saved.captured };
+  const army = saved.army;
+  if (Array.isArray(army) && army.length <= MAX_ARMY_SAMPLES && army.every(isCountPair)) clean.army = army;
+  return clean;
 }
