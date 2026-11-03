@@ -212,13 +212,16 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 ## La escena de la partida (`src/scenes/game/`)
 
 `GameScene` es la raiz de composicion: tiene el ciclo de Phaser (`init`, `create`, `update`,
-`SHUTDOWN`), el estado de la partida y la maquina de fases del turno del jugador (`accept`, `back`,
-`toMap`, mover y el menu de la unidad). Lo demas son modulos de `src/scenes/game/`, cada uno con una
-responsabilidad:
+`SHUTDOWN`), el estado de la partida y la entrada de los mandos (`command`, `menu`), y lo reparte a
+los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 
 | Modulo | Que hace | Phaser |
 |---|---|---|
 | `types.ts` | `Phase`, `Intent`, constantes, `GameStartData` | no |
+| `matchSetup.ts` | con que partida se empieza (guardada, preparada, laboratorio, mision o mapa nuevo) | no |
+| `phases/` | que hace cada fase del turno del jugador: una entrada de `PHASES` por fase (ver abajo) | solo tipos |
+| `moveSession.ts`, `unitMoves.ts` | la unidad elegida (alcance, camino, deshacer) y moverla: soltar, atacar, unirse, ordenes de varios turnos, mover en grupo, Ctrl+Z | solo tipos |
+| `mapOverlays.ts` | lo que se dibuja encima del mapa: capturas, ordenes, intenciones, puntos de control, escolta | no |
 | `intent.ts` | que pasa al soltar la unidad elegida y por que camino (`MovePlan`) | no |
 | `highlights.ts`, `menuModel.ts`, `hudParts.ts` | casillas marcadas, menu de bocadillo, prevision, panel de lo elegido, ayuda | no |
 | `tutorial.ts`, `commandPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
@@ -226,7 +229,7 @@ responsabilidad:
 | `pointerInput.ts` | lo que hace cada gesto en la partida (`PointerTarget`) | solo tipos |
 | `groupSelection.ts` | grupo, «Elegir varias», escuadras, teclas de grupo | solo tipos |
 | `carry.ts` | coger, arrastrar y soltar una unidad | si |
-| `orders.ts` | acciones del registro y ordenes con destino; puntero del raton | solo tipos |
+| `orders.ts`, `actionRunners.ts` | elegir y cumplir las acciones del registro (`ACTION_RUNNERS`: una entrada por accion) y las ordenes con destino; puntero del raton | solo tipos |
 | `abilities.ts`, `labMode.ts` | habilidades del general; laboratorio de animaciones | poco |
 | `playback.ts` | animar los `GameEvent` (mover, combate, captura, compra, habilidad) | si |
 | `turns.ts` | fin de turno, turno de la IA, repeticion, ordenes de varios turnos | si |
@@ -240,7 +243,13 @@ responsabilidad:
   `TurnFlow`...) y lo reinicia en `reset()`, que llama `resetMatch()`. La escena conserva accesores
   donde lo usan las pruebas (`group`, `multi`, `openGroupMenu`, `view`).
 - **Lo que no usa Phaser se prueba** en `tests/sceneGame.test.ts`.
-- Un sistema nuevo es un modulo nuevo con su `Host`; la escena solo lo crea y lo enchufa.
+- Un sistema nuevo es un modulo nuevo con su `Host`; la escena solo lo crea y lo enchufa. Un campo
+  que el modulo lee y cambia se da con `rw(get, set)` (`host.ts`).
+- **Fases** (`phases/`): cada fase es un `PhaseHandler { enter?, accept, back, menu?, highlights? }`
+  en `PHASES`, cuyo tipo pide una entrada por `Phase`. `accept` y `back` reciben un `PhaseHost`; `menu`
+  (bocadillo) y `highlights` (casillas marcadas) son puros y los usan `menuModel` y `computeHighlights`.
+  Las opciones del menu de la unidad (`UNIT_MENU_ACTIONS`) y del de pausa (`GameMenuChoices`) son
+  tablas por opcion. Una fase nueva es una entrada nueva; la escena no cambia.
 
 ## Mandos
 
@@ -275,7 +284,8 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   completo de Alt + clic derecho, F, la pulsacion larga y la bandeja (`menuActions`) y el puntero del
   raton (`cursorFor`, dibujado en `ui/cursors.ts`). La escena le pasa lo que solo ella sabe (que
   significa soltar la unidad elegida en esa casilla) y cumple la accion (`Orders.run`, en
-  `scenes/game/orders.ts`). Una accion nueva es una entrada en `ACTIONS` y un caso en `Orders.run`:
+  `scenes/game/orders.ts`, con lo que hace cada una en `ACTION_RUNNERS` de `scenes/game/actionRunners.ts`).
+  Una accion nueva es una entrada en `ACTIONS` y otra en `ACTION_RUNNERS` (el tipo la pide):
   los mandos no cambian.
 - **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`hud/overlays/RenameSquad.tsx`, para el
   teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
