@@ -37,6 +37,16 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 - La aleatoriedad pasa siempre por un `Rng` con semilla (`seededRng`); nada de `Math.random` en core
   salvo como valor por defecto. La IA y la generacion de mapas son deterministas con la misma semilla.
 
+## Estilo: que se lea a la primera
+
+Todo codigo nuevo o tocado sigue `docs/ESTILO.md` (con un ejemplo de antes y despues). En corto:
+nombres completos (`unit`, `distanceToGoal`; no `u`, `d`, `c`), una funcion por idea (unas 25
+lineas, 2 niveles de anidacion), salir pronto con `return`, nada de numeros ni condiciones magicas,
+recorrer y elegir con las piezas comunes (`cellAt`/`cells` de `core/util/grid.ts`, `minBy`/`maxBy`
+de `core/util/pick.ts`, `reachableTilesWithCost`, `distancesIgnoringUnits`) en vez de bucles a mano,
+lo que crece como lista de datos y no como `switch`, cada modulo pide solo lo que usa, y comentarios
+del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar lo mismo antes y despues.
+
 ## Convenciones
 
 - **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
@@ -59,8 +69,9 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   ronda = entrada en `ROUND_PHASES`; habilidad nueva = su efecto en `abilities.ts`. La IA no tiene
   variables globales: lo del turno va en `AiCtx`. Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
-- Tipos estrictos con `noUncheckedIndexedAccess`: los `!` de indexar rejillas son normales; un `!`
-  sobre algo que puede no existir (unidad por uid, seleccion) es un fallo esperando a pasar.
+- Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `cellAt(grid, pos)` en vez de
+  `grid[x]![y]!`; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
+  esperando a pasar.
 - `switch` sobre uniones: con todos los casos o con `default:` explicito (lo pide el lint).
 - Las reglas cambiadas respecto al juego de 2013 llevan `[CAMBIO]` en un comentario con el porque.
 - Comentarios y nombres de cara al jugador en español, sin tildes en el codigo (si en los textos).
@@ -75,6 +86,8 @@ npm run format       # si Prettier se queja
 npm run build:single # y abrir dist-single/ilogic.html (file://) para probarlo jugando
 ```
 
+- Reescribir sin cambiar comportamiento (refactor): `npm run huella` antes y despues; la "huella
+  total" tiene que ser la misma (24 partidas IA contra IA con varias reglas, generales y escuadras).
 - Cambios de reglas o IA: `tests/aiGolden.test.ts` compara partidas IA contra IA con semilla fija.
   Si falla sin querer cambiar el comportamiento, es un fallo del refactor. Si el cambio es a
   proposito, actualizar con `npx vitest run -u tests/aiGolden.test.ts` y comprobar el equilibrio con
