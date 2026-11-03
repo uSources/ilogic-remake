@@ -15,7 +15,7 @@
  */
 import { AI, RULES, UNIT } from './data';
 import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
-import { visibility } from './rules';
+import { visibility } from './rules/visibility';
 import type { GameEvent, GameState, Pos, Team } from './types';
 
 export interface AbilityChoice {

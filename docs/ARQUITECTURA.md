@@ -9,9 +9,9 @@ tomaron las decisiones que no conviene deshacer sin pensarlo.
 flowchart TB
   subgraph core["src/core — TypeScript puro (sin Phaser, sin DOM)"]
     data["data.ts<br/>tablas de content/*.json:<br/>unidades, edificios, terreno, reglas, IA"]
-    rules["rules.ts<br/>mover, atacar, capturar, comprar, fin de ronda"]
+    rules["rules.ts + rules/<br/>mover, atacar, capturar, comprar, fin de ronda"]
     orders["orders.ts<br/>ayudas para ordenes del jugador"]
-    ai["ai.ts<br/>IA (generador de eventos)"]
+    ai["ai.ts + ai/<br/>IA (generador de eventos)"]
     gen["mapgen.ts / missions.ts"]
     save["save.ts / stats.ts"]
   end
@@ -36,6 +36,48 @@ flowchart TB
   partida por texto (`npm run play`). ESLint prohibe que importe Phaser, Preact o el DOM.
 - Las escenas orquestan: leen la entrada, llaman a las reglas, animan los eventos y publican el estado
   de la interfaz. La interfaz HTML no toca el juego: llama a `ui.actions`, que registra la escena.
+
+### El nucleo por dentro
+
+`rules.ts` y `ai.ts` son fachadas: reexportan lo publico de sus modulos, uno por tema, y desde
+fuera de `src/core` se importa siempre de ellas (`'../core/rules'`, `'@core/ai'`). Dentro de core,
+mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclos.
+
+`src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
+
+| Modulo | Que va |
+|---|---|
+| `queries` | que hay en una casilla, por donde se anda, unidades de un bando, pasajeros |
+| `visibility` | vision y niebla |
+| `capture` | puntos de captura, capturas a medias, capturar y su evento |
+| `lifecycle` | crear, quitar y limpiar unidades |
+| `movement` | alcance (`moveRange`), caminos, emboscadas, distancia por tierra, mover y su evento |
+| `combat` | alcance de tiro, proteccion, acierto (`HIT_MODIFIERS`), veterania, contraataque, botin, atacar |
+| `forecast` | prevision de combate y zona de amenaza |
+| `transport`, `supply`, `unitActions` | unir y transportes; reparar; menu de acciones y esperar |
+| `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
+| `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`) |
+| `outcome` | victoria, derrota y objetivos de mision |
+
+`src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
+ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
+(prioridades de cada unidad), `production` (que fabrica), `formation` (escuadras que avanzan juntas)
+y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
+
+- **Sin estado global en la IA**: el bando que juega, el modo grupo y el plan de fuego van en un
+  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `commandNow`) y se pasa a cada
+  paso. Dos turnos, o una prevision en medio de uno, no se mezclan (lo necesitara un PvP o un
+  servidor con varias partidas).
+- **Puntos de extension**:
+  - una regla que cambia la probabilidad de acierto es una entrada en `HIT_MODIFIERS`
+    (`rules/combat.ts`); la prevision, el panel de combate y la IA la ven solas;
+  - un sistema que actua cada ronda es un paso en `ROUND_PHASES` (`rules/round.ts`), en su sitio;
+  - una clase de habilidad de unidad es su forma en `AbilityDef` (`content/types.ts`) y su efecto en
+    `abilities.ts`, como funcion que pregunta la regla que toca (las reglas no leen `abilityOf`);
+  - un comportamiento de IA nuevo es un paso en `ai/tactics.ts` que devuelve si ha usado la unidad,
+    y su sitio en la lista de prioridades de `ai/unitTurn.ts`.
+- La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
+  IA entra solo en la referencia.
 
 ### Herramientas
 
@@ -196,8 +238,8 @@ mando puede jugar una partida entera sin raton.
 |---|---|
 | Añadir o cambiar unidades y edificios (precio, daño...) | `src/core/content/*.json` (`docs/CONTENIDO.md`, skill `nueva-unidad`) |
 | Cambiar terreno, reglas, pesos de la IA | `src/core/content/terrain.json`, `rules.json`, `ai.json` (+ skill `equilibrar`) |
-| Cambiar una regla | `src/core/rules.ts` (+ test en `tests/`) |
-| Cambiar como juega la IA | `src/core/ai.ts`, pesos en `data.AI` |
+| Cambiar una regla | su modulo en `src/core/rules/` (ver "El nucleo por dentro"; + test en `tests/`) |
+| Cambiar como juega la IA | `src/core/ai/` (`unitTurn.ts` prioridades, `tactics.ts` cada paso, `production.ts` compras), pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/hudModels.ts` y `src/hud/Hud.tsx` |
 | Cambiar el dibujo del mapa | la capa de `src/ui/map/` (ver "Vista del mapa"), `src/ui/terrainArt.ts` |
 | Añadir una marca sobre el mapa o un efecto | `OVERLAYS` en `src/ui/map/overlayLayer.ts`; `src/ui/fx.ts`, `src/ui/combatFx.ts` |

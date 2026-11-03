@@ -27,7 +27,7 @@ tampoco se cambia (misiones e imagenes lo usan).
    `npm run assets`, y quitar `"art"`. `tests/assets.test.ts` exige `u/b_`, `u/i_` y `u/r_` (los de
    `art` mientras lo tenga) y avisa de las unidades que aun usan dibujo prestado. Sin dibujo de 2013 se ve
    el nuevo tambien con la opcion "2013" (o `classicSprite` si lo hay).
-3. IA (`src/core/ai.ts`): revisar `produce()` si la unidad hace algo nuevo.
+3. IA (`src/core/ai/production.ts`): revisar `produce()` si la unidad hace algo nuevo.
 4. Equilibrio: skill `equilibrar` (`npm run balance -- duel` contra cada unidad y una tanda de partidas).
 5. `tests/aiGolden.test.ts` cambiara (la IA compra distinto): actualizar con
    `npx vitest run -u tests/aiGolden.test.ts` solo tras revisar el equilibrio.
@@ -35,6 +35,6 @@ tampoco se cambia (misiones e imagenes lo usan).
 7. CHANGELOG.md (apartado `[Sin publicar]`) y `npm run check`, `npm run shots`.
 
 Una regla nueva (curar al lado, volar sobre agua...) que el JSON no sabe expresar si es codigo: campo
-nuevo en `UnitDef` + validacion + tabla en `buildTables` + esquema + test, y la regla en `core/rules.ts`.
+nuevo en `UnitDef` + validacion + tabla en `buildTables` + esquema + test, y la regla en su modulo de `core/rules/` (una habilidad pasiva: su efecto en `core/abilities.ts`).
 
 Probar rapido sin navegador: `npm run play -- --seed 7 -e "buy <x> <y> <id>; unit <id>; end; map"`.

@@ -22,6 +22,9 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
 
+- `src/core/rules.ts` y `src/core/ai.ts` son fachadas: el codigo esta en `src/core/rules/` y
+  `src/core/ai/`, un modulo por tema (mapa en `docs/ARQUITECTURA.md`, "El nucleo por dentro").
+  Fuera de core se importa de la fachada; dentro, del modulo concreto, sin crear ciclos.
 - `src/core` **no** importa Phaser, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
   Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/orders.ts`).
 - Las escenas no leen teclas ni botones de un mando: un adaptador de `src/controls` los traduce a
@@ -45,10 +48,14 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/hud.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
-  `tileProtection`, casillas alcanzables con `reachableTiles`, numeros con `fmtNum`; en el mapa,
-  esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`, casillas
-  con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`, "Vista
-  del mapa"). Antes de
+  `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
+  `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en
+  el mapa, esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`,
+  casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
+  "Vista del mapa").
+- **Extender sin abrir funciones grandes**: acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
+  ronda = entrada en `ROUND_PHASES`; habilidad nueva = su efecto en `abilities.ts`. La IA no tiene
+  variables globales: lo del turno va en `AiCtx`. Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: los `!` de indexar rejillas son normales; un `!`
   sobre algo que puede no existir (unidad por uid, seleccion) es un fallo esperando a pasar.
