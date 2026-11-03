@@ -1,13 +1,15 @@
 /**
  * Piezas del HUD que dependen de lo que hay elegido en la escena: prevision de combate, bocadillo al
- * mover, panel de lo elegido y la linea de ayuda. Sin efectos: la escena junta el resultado y lo
- * publica con ui.set (las fichas en si se calculan en ui/hudModels.ts).
+ * mover, panel de lo elegido, panel del laboratorio y la linea de ayuda. Sin efectos: la escena junta
+ * el resultado y lo publica con ui.set (las fichas en si se calculan en ui/hudModels.ts).
  */
 import type Phaser from 'phaser';
-import { Movement } from '../../core/data';
-import { defenseStars, pathCost, unitById, type MoveRange } from '../../core/rules';
+import { Movement, UNIT, UNIT_NAMES } from '../../core/data';
+import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
+import { cellAt } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/types';
-import type { Anchor, ForecastVM, MoveTipVM, SelectionVM } from '../../hud/store';
+import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
+import type { LabOptions } from '../../lab';
 import { t, unitLabel } from '../../settings';
 import { forecastVM } from '../../ui/hudModels';
 import { unitKey } from '../../ui/sprites';
@@ -26,22 +28,29 @@ export function forecastFor(
     anchor: (p: Pos) => Anchor;
   },
 ): ForecastVM | null {
-  const sel = o.sel;
-  if (!sel) return null;
-  let target: Unit | undefined;
-  let atk: Unit = sel;
-  if (o.phase === 'move') {
-    // Al mover: si el cursor esta sobre un enemigo atacable, prevision desde la casilla desde la que se atacaria.
-    const it = o.intentAt(o.c);
-    if (it.kind !== 'attack') return null;
-    target = it.target;
-    atk = { ...sel, x: it.from.x, y: it.from.y };
-  } else {
-    const uid = o.attackSet.get(key(o.c));
-    target = uid !== undefined ? unitById(s, uid) : undefined;
-  }
-  if (!target) return null;
-  return forecastVM(textures, s, sel, atk, target, o.anchor(target));
+  const attacker = o.sel;
+  if (!attacker) return null;
+  const fight = o.phase === 'move' ? fightFromMove(attacker, o.intentAt(o.c)) : fightFromHere(s, attacker, o.attackSet, o.c);
+  if (!fight) return null;
+  return forecastVM(textures, s, attacker, fight.attackerAt, fight.target, o.anchor(fight.target));
+}
+
+/** Al mover: si el cursor esta sobre un enemigo atacable, desde la casilla desde la que se atacaria. */
+function fightFromMove(attacker: Unit, intent: Intent): { attackerAt: Unit; target: Unit } | null {
+  if (intent.kind !== 'attack') return null;
+  return { attackerAt: { ...attacker, x: intent.from.x, y: intent.from.y }, target: intent.target };
+}
+
+/** Eligiendo a quien atacar (fase 'attack'): desde donde esta. */
+function fightFromHere(
+  s: GameState,
+  attacker: Unit,
+  targets: ReadonlyMap<string, number>,
+  cursor: Pos,
+): { attackerAt: Unit; target: Unit } | null {
+  const uid = targets.get(key(cursor));
+  const target = uid !== undefined ? unitById(s, uid) : undefined;
+  return target ? { attackerAt: attacker, target } : null;
 }
 
 /** Bocadillo junto al cursor al mover: movimiento gastado, defensa, combustible, peligro y lo que pasaria al soltar. */
@@ -57,57 +66,72 @@ export function moveTipFor(
     anchor: (p: Pos) => Anchor;
   },
 ): MoveTipVM | null {
-  const u = o.sel,
-    r = o.range,
-    c = o.c;
-  if (!u || !r) return null;
-  const it = o.intentAt(c);
-  if (it.kind === 'attack' || it.kind === 'stay') return null; // de eso se encarga la prevision de combate
-  const anchor = o.anchor(c);
-  if (it.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
-  const dest = it.kind === 'move' ? it.to : null;
-  const used = dest ? pathCost(s, Movement.of(u.type), o.trailTo(dest)) : r.steps[c.x]![c.y]! || 1;
-  const stars = defenseStars(s, c);
-  const action = it.kind === 'merge' ? t('tipJoin') : it.kind === 'load' ? t('tipBoard') : it.capture ? t('tipCapture') : t('tipMove');
+  const unit = o.sel;
+  const range = o.range;
+  const cursor = o.c;
+  if (!unit || !range) return null;
+  const intent = o.intentAt(cursor);
+  // De atacar (y de quedarse) se encarga la prevision de combate.
+  if (intent.kind === 'attack' || intent.kind === 'stay') return null;
+  const anchor = o.anchor(cursor);
+  if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
+  const isMove = intent.kind === 'move';
+  const used = isMove ? pathCost(s, Movement.of(unit.type), o.trailTo(intent.to)) : cellAt(range.steps, cursor) || 1;
   return {
     anchor,
-    action,
+    action: moveTipAction(intent),
     used,
-    max: r.maxSteps,
-    stars: it.kind === 'move' ? stars : undefined,
-    danger: it.kind === 'move' && !!o.danger?.[c.x]?.[c.y],
+    max: range.maxSteps,
+    stars: isMove ? defenseStars(s, cursor) : undefined,
+    danger: isMove && !!o.danger?.[cursor.x]?.[cursor.y],
   };
+}
+
+function moveTipAction(intent: Intent): string {
+  if (intent.kind === 'merge') return t('tipJoin');
+  if (intent.kind === 'load') return t('tipBoard');
+  return intent.kind === 'move' && intent.capture ? t('tipCapture') : t('tipMove');
 }
 
 /** [CAMBIO] Panel de lo elegido (dos o mas unidades): retratos en orden y cuantas hay de cada tipo. */
 export function selectionPanel(textures: Phaser.Textures.TextureManager, s: GameState, list: Unit[], c: Pos): SelectionVM {
-  const types = new Map<number, number>();
-  for (const u of list) types.set(u.type, (types.get(u.type) ?? 0) + 1);
+  const countByType = new Map<number, number>();
+  for (const unit of list) countByType.set(unit.type, (countByType.get(unit.type) ?? 0) + 1);
   return {
-    units: list.map((u) => ({
-      uid: u.uid,
-      icon: unitKey(textures, s, u),
-      name: unitLabel(u.type),
-      life: u.life,
-      current: u.x === c.x && u.y === c.y,
+    units: list.map((unit) => ({
+      uid: unit.uid,
+      icon: unitKey(textures, s, unit),
+      name: unitLabel(unit.type),
+      life: unit.life,
+      current: unit.x === c.x && unit.y === c.y,
     })),
-    types: [...types].map(([type, count]) => ({ name: unitLabel(type), count })),
+    types: [...countByType].map(([type, count]) => ({ name: unitLabel(type), count })),
+  };
+}
+
+/** Ingresos del jugador por turno: lo que dan sus edificios menos el mantenimiento de su ejercito. */
+export function playerIncome(s: GameState): number {
+  const owned = s.buildings.filter((building) => building.owner === 0);
+  return owned.reduce((sum, building) => sum + buildingIncome(building.type), 0) - upkeepOf(s, 0);
+}
+
+/** Panel del laboratorio de animaciones (null en una partida normal). */
+export function labPanel(lab: LabOptions | null): UIState['lab'] {
+  if (!lab) return null;
+  return {
+    units: UNIT_NAMES.map((_, type) => unitLabel(type)),
+    attacker: lab.attacker,
+    defender: lab.defender,
+    slow: lab.slow,
+    canAttack: !!UNIT.canfight[lab.attacker],
   };
 }
 
 /** Linea de ayuda de abajo segun la fase. */
 export function hintText(o: { busy: boolean; enemyPlaying: boolean; phase: Phase; ordering: boolean; inspecting: boolean }): string {
-  return o.busy
-    ? o.enemyPlaying
-      ? t('skip')
-      : ''
-    : o.phase === 'target'
-      ? o.ordering
-        ? t('orderPick')
-        : t('genTarget')
-      : o.phase === 'map'
-        ? o.inspecting
-          ? t('hintInspect')
-          : t('hintMap')
-        : '';
+  // Animando lo propio no se dice nada; en el turno enemigo, como saltarlo.
+  if (o.busy) return o.enemyPlaying ? t('skip') : '';
+  if (o.phase === 'target') return o.ordering ? t('orderPick') : t('genTarget');
+  if (o.phase === 'map') return o.inspecting ? t('hintInspect') : t('hintMap');
+  return '';
 }

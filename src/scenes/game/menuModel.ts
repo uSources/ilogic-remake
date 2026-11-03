@@ -6,7 +6,7 @@
 import type { BuyOption } from '../../core/rules';
 import type { Building, GameState, Pos, Unit } from '../../core/types';
 import type { ActionCtx, ActionId } from '../../controls/actions';
-import type { MenuVM } from '../../hud/store';
+import type { MenuItemVM, MenuVM } from '../../hud/store';
 import { PHASES } from './phases';
 import type { ActionKey, Phase } from './types';
 
@@ -36,6 +36,20 @@ export type MenuModel = Omit<MenuVM, 'selected' | 'anchor'> & { at: Pos };
 
 export function menuModel(input: MenuInput): MenuModel {
   return PHASES[input.phase].menu?.(input) ?? { kind: 'game', items: [], at: input.cursor };
+}
+
+/**
+ * Opcion a la que se pasa con arriba (-1) o abajo (+1), dando la vuelta. Se saltan las desactivadas
+ * salvo con `canPointDisabled` (en la compra se ven, aunque no se puedan pagar).
+ */
+export function stepMenuRow(items: readonly MenuItemVM[], from: number, step: number, canPointDisabled: boolean): number {
+  const count = items.length;
+  let row = from;
+  for (let tries = 0; tries < count; tries++) {
+    row = (row + step + count) % count;
+    if (!items[row]?.disabled || canPointDisabled) break;
+  }
+  return row;
 }
 
 /** La fase tiene un menu de bocadillo abierto. */
