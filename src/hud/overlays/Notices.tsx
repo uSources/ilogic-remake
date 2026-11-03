@@ -2,16 +2,22 @@ import { t } from '../../settings';
 import { Icon } from '../common/Icon';
 import { WeatherIcon } from '../common/WeatherIcon';
 import type { UIState } from '../state';
+import type { ReportLineVM } from '../vm/notices';
 
 /** Avisos que salen solos y se van (sus animaciones, en styles/): carga, aviso corto, resumen y cartel. */
 
-/** Barra de carga del arranque (`p`: 0..1). */
-export function Loading({ p }: { p: number }) {
+/** Un aviso dura al menos esto, en segundos... */
+const TOAST_MIN_SECONDS = 2.4;
+/** ...o lo que se tarda en leerlo a esta velocidad, si es mas largo. */
+const READING_CHARS_PER_SECOND = 16;
+
+/** Barra de carga del arranque (`progress`: 0..1). */
+export function Loading({ progress }: { progress: number }) {
   return (
     <div class="px loading">
       <span class="label">{t('loading')}</span>
       <div class="bar">
-        <span style={{ width: `${Math.round(p * 100)}%` }} />
+        <span style={{ width: `${Math.round(progress * 100)}%` }} />
       </div>
     </div>
   );
@@ -19,9 +25,19 @@ export function Loading({ p }: { p: number }) {
 
 /** Aviso corto abajo; dura mas cuanto mas largo es el texto. Se pinta con `key={id}`: un aviso nuevo vuelve a empezar la animacion. */
 export function Toast({ toast }: { toast: NonNullable<UIState['toast']> }) {
+  const seconds = Math.max(TOAST_MIN_SECONDS, toast.text.length / READING_CHARS_PER_SECOND);
   return (
-    <div class="px toast" role="status" style={{ animationDuration: `${Math.max(2.4, toast.text.length / 16).toFixed(1)}s` }}>
+    <div class="px toast" role="status" style={{ animationDuration: `${seconds.toFixed(1)}s` }}>
       {toast.text}
+    </div>
+  );
+}
+
+function ReportLine({ line }: { line: ReportLineVM }) {
+  return (
+    <div class={`line ${line.tone}`}>
+      {line.weather ? <WeatherIcon id={line.weather} cls="px-icon wx-icon" /> : <Icon k={line.icon} />}
+      <span>{line.text}</span>
     </div>
   );
 }
@@ -31,11 +47,8 @@ export function Report({ report }: { report: NonNullable<UIState['report']> }) {
   return (
     <div class="px report" role="status">
       <span class="label">{report.title}</span>
-      {report.lines.map((l) => (
-        <div class={`line ${l.tone}`}>
-          {l.weather ? <WeatherIcon id={l.weather} cls="px-icon wx-icon" /> : <Icon k={l.icon} />}
-          <span>{l.text}</span>
-        </div>
+      {report.lines.map((line) => (
+        <ReportLine line={line} />
       ))}
     </div>
   );

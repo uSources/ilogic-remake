@@ -25,7 +25,7 @@ export function Hud() {
   const s = useUI();
   return (
     <>
-      {s.screen === 'loading' && <Loading p={s.loading} />}
+      {s.screen === 'loading' && <Loading progress={s.loading} />}
       {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign') && <div class="menu-veil" />}
       {s.screen === 'menu' && <Home s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}
@@ -34,8 +34,8 @@ export function Hud() {
       {s.screen === 'end' && s.end && <EndScreen e={s.end} />}
       {s.options && <Options o={s.options} />}
       {s.help && <Help />}
-      {s.rename && <RenameSquad r={s.rename} />}
-      {s.notes && <PatchNotes n={s.notes} />}
+      {s.rename && <RenameSquad rename={s.rename} />}
+      {s.notes && <PatchNotes notes={s.notes} />}
       {s.toast && <Toast key={s.toast.id} toast={s.toast} />}
       {s.report && s.screen === 'game' && <Report key={s.report.id} report={s.report} />}
       {s.banner && <Banner key={s.banner.id} banner={s.banner} />}
