@@ -5,9 +5,11 @@
 import { AI, BUILDING, HEALER, RULES, UNIT, Movement } from '../data';
 import { samePos } from '../geom';
 import { buildingAt, occupancy } from '../rules/queries';
-import { groundDistance, moveEvent, moveUnit, type MoveRange } from '../rules/movement';
+import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
 import { visibility } from '../rules/visibility';
 import type { GameEvent, GameState, Pos, Team, Unit } from '../types';
+import { cellAt, setCell } from '../util/grid';
+import { minBy } from '../util/pick';
 
 /**
  * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, commandNow) y se pasa a cada
@@ -37,61 +39,66 @@ export function aiCtx(me: Team): AiCtx {
  * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
  * detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function occupancyWithout(s: GameState, ctx: AiCtx, u: Unit): boolean[][] {
-  const occ = occupancy(s);
-  if (ctx.group && RULES.passAllies) {
-    const vis = visibility(s, ctx.me);
-    for (const o of s.units) if (o.carrier === null && (o.team === ctx.me || !vis[o.x]![o.y])) occ[o.x]![o.y] = false;
+export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): boolean[][] {
+  const occupied = occupancy(s);
+  if (ai.group && RULES.passAllies) {
+    const visible = visibility(s, ai.me);
+    const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !cellAt(visible, other));
+    for (const other of s.units) if (letsPass(other)) setCell(occupied, other, false);
   }
-  occ[u.x]![u.y] = false;
-  return occ;
+  setCell(occupied, unit, false);
+  return occupied;
 }
 
 /**
- * Mejor casilla alcanzable este turno para acercarse a `dest` (IA.getBestMove).
+ * Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con las demas
+ * unidades cortando el paso como en occupancyWithout. Infinity si no se llega o si es la propia
+ * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
+ */
+export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
+  const steps = groundDistance(s, from, Movement.of(unit.type), occupancyWithout(s, ai, unit));
+  // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
+  return (pos) => cellAt(steps, pos) || Infinity;
+}
+
+/**
+ * Mejor casilla alcanzable este turno para acercarse a `dest` (IA.getBestMove): la que menos pasos
+ * deja, si deja menos que quedarse. `avoidDest` no deja acabar en el propio destino.
  * [CAMBIO] la cercania se mide con el tipo de movimiento de la unidad (antes siempre "a pie")
  * y si ya esta tan cerca como puede, se queda.
  */
-export function bestMoveToward(s: GameState, ctx: AiCtx, u: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
-  if (samePos(u, dest) && !avoidDest) return null;
-  if (!avoidDest && range.steps[dest.x]![dest.y]! > 0) return dest;
-  const dd = groundDistance(s, dest, Movement.of(u.type), occupancyWithout(s, ctx, u));
-  let best: Pos | null = null;
-  let bestD = dd[u.x]![u.y]! || Infinity;
-  for (let x = 0; x < dd.length; x++) {
-    for (let y = 0; y < dd[x]!.length; y++) {
-      const d = dd[x]![y]!;
-      if (range.steps[x]![y]! > 0 && d > 0 && d < bestD && !(avoidDest && x === dest.x && y === dest.y)) {
-        best = { x, y };
-        bestD = d;
-      }
-    }
-  }
-  return best;
+export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
+  if (samePos(unit, dest) && !avoidDest) return null;
+  if (!avoidDest && cellAt(range.steps, dest) > 0) return dest;
+  const stepsToDest = stepsFrom(s, ai, unit, dest);
+  const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
+  const best = minBy(options, stepsToDest);
+  const getsCloser = best !== null && stepsToDest(best) < stepsToDest(unit);
+  return getsCloser ? best : null;
 }
 
 /** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
-export function* doMove(s: GameState, u: Unit, dest: Pos | null, range: MoveRange): Generator<GameEvent, boolean> {
+export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveRange): Generator<GameEvent, boolean> {
   if (!dest) return false;
-  const path = moveUnit(s, u, dest, range);
+  const path = moveUnit(s, unit, dest, range);
   if (!path) return false;
-  yield moveEvent(u.uid, path);
+  yield moveEvent(unit.uid, path);
   return !!path.ambush;
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (u: Unit): number => UNIT.mover[u.type]! + UNIT.alcance[u.type]!;
+export const strikeReach = (unit: Unit): number => UNIT.mover[unit.type]! + UNIT.alcance[unit.type]!;
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
-export function visibleFoes(s: GameState, me: Team, vis = visibility(s, me)): Unit[] {
-  return s.units.filter((t) => t.team !== me && t.carrier === null && t.life > 0 && vis[t.x]![t.y]);
+export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me)): Unit[] {
+  return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && cellAt(visible, other));
 }
 
 /** Necesita volver a curarse a un edificio. */
-export const needsRepair = (u: Unit): boolean => u.life < AI.LIFETOBACK;
+export const needsRepair = (unit: Unit): boolean => unit.life < AI.LIFETOBACK;
 
 /** En esa casilla hay un edificio propio que repara a la unidad. */
-export function repairsHere(s: GameState, u: Unit, x: number, y: number): boolean {
-  const b = buildingAt(s, x, y);
-  return !!b && b.owner === u.team && HEALER[u.type]![b.type]! && BUILDING.heals[b.type]! > 0;
+export function repairsHere(s: GameState, unit: Unit, x: number, y: number): boolean {
+  const building = buildingAt(s, x, y);
+  return !!building && building.owner === unit.team && HEALER[unit.type]![building.type]! && BUILDING.heals[building.type]! > 0;
 }
