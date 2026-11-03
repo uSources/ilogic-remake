@@ -37,7 +37,7 @@ export interface Settings {
   terrainArt: 'new' | 'classic';
 }
 
-const KEY = 'ilogic.settings';
+const STORAGE_KEY = 'ilogic.settings';
 
 const DEFAULTS: Settings = {
   lang: 'es',
@@ -55,34 +55,48 @@ const DEFAULTS: Settings = {
   terrainArt: 'new',
 };
 export const UI_SCALES = [0.9, 1, 1.25];
+const LANGS: Lang[] = ['es', 'en'];
 const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
+const MENU_BACKGROUNDS: Settings['menuBg'][] = ['live', 'classic'];
+const TERRAIN_ARTS: Settings['terrainArt'][] = ['new', 'classic'];
 
-function load(): Settings {
+/** Lo guardado si es uno de los valores validos; si no (o no estaba, o es de otra version), `fallback`. */
+const oneOf = <T>(saved: unknown, valid: readonly T[], fallback: T): T => (valid.includes(saved as T) ? (saved as T) : fallback);
+
+/**
+ * Las opciones guardadas, sin fiarse de lo que haya: cada campo se comprueba y, si no vale, se queda
+ * el de por defecto. Las que empiezan encendidas solo se apagan con un `false` guardado.
+ */
+function parseSaved(saved: Partial<Settings>): Settings {
+  return {
+    lang: oneOf(saved.lang, LANGS, DEFAULTS.lang),
+    autosave: !!saved.autosave,
+    music: !!saved.music,
+    autoWait: saved.autoWait !== false,
+    autoNext: !!saved.autoNext,
+    speedOwn: oneOf(saved.speedOwn, SPEEDS, DEFAULTS.speedOwn),
+    speedEnemy: oneOf(saved.speedEnemy, SPEEDS, DEFAULTS.speedEnemy),
+    uiScale: oneOf(saved.uiScale, UI_SCALES, DEFAULTS.uiScale),
+    reduceMotion: !!saved.reduceMotion,
+    alwaysThreat: !!saved.alwaysThreat,
+    warnIdle: saved.warnIdle !== false,
+    menuBg: oneOf(saved.menuBg, MENU_BACKGROUNDS, DEFAULTS.menuBg),
+    terrainArt: oneOf(saved.terrainArt, TERRAIN_ARTS, DEFAULTS.terrainArt),
+  };
+}
+
+function loadSettings(): Settings {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULTS };
-    const parsed = JSON.parse(raw) as Partial<Settings>;
-    return {
-      lang: parsed.lang === 'en' ? 'en' : 'es',
-      autosave: !!parsed.autosave,
-      music: !!parsed.music,
-      autoWait: parsed.autoWait !== false,
-      autoNext: !!parsed.autoNext,
-      speedOwn: SPEEDS.includes(parsed.speedOwn as Speed) ? (parsed.speedOwn as Speed) : 'normal',
-      speedEnemy: SPEEDS.includes(parsed.speedEnemy as Speed) ? (parsed.speedEnemy as Speed) : 'normal',
-      uiScale: UI_SCALES.includes(parsed.uiScale as number) ? (parsed.uiScale as number) : 1,
-      reduceMotion: !!parsed.reduceMotion,
-      alwaysThreat: !!parsed.alwaysThreat,
-      warnIdle: parsed.warnIdle !== false,
-      menuBg: parsed.menuBg === 'classic' ? 'classic' : 'live',
-      terrainArt: parsed.terrainArt === 'classic' ? 'classic' : 'new',
-    };
+    return parseSaved(JSON.parse(raw) as Partial<Settings>);
   } catch {
+    // Sin almacenamiento (modo privado...) o con algo que no es JSON: las de por defecto.
     return { ...DEFAULTS };
   }
 }
 
-export const settings: Settings = load();
+export const settings: Settings = loadSettings();
 
 /** Aplica a la pagina lo que depende de las opciones (tamaño de la interfaz, menos movimiento, idioma). */
 export function applySettings(): void {
@@ -95,7 +109,7 @@ export function applySettings(): void {
 export function saveSettings(): void {
   applySettings();
   try {
-    localStorage.setItem(KEY, JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch {
     // Sin almacenamiento disponible (modo privado, etc.): se ignora.
   }
