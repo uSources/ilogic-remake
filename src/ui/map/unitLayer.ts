@@ -3,6 +3,7 @@ import { ATLAS, hasImage } from '../../atlas';
 import { rank, unhealable } from '../../core/rules';
 import { effectiveCommand, isDetached } from '../../core/squads';
 import type { GameState, Pos, Unit } from '../../core/types';
+import { cellAt } from '../../core/util/grid';
 import { TILE } from '../../layout';
 import { addLifeTextures, lifeKey } from '../lifeDigits';
 import { PAL, PAL_MAP } from '../palette';
@@ -42,7 +43,7 @@ interface UnitSprite {
   /** [CAMBIO] Marcas dibujadas (ui/mk_*): sin cura, carga y hasta 3 estrellas; si faltan, van en `stars`. */
   badges: Phaser.GameObjects.Image[];
   /** Firma de lo dibujado en las marcas (`markSignature`). */
-  rank: number;
+  marksDrawn: number;
   key: string;
   /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
   idle: boolean;
@@ -76,77 +77,86 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const badges = Array.from({ length: BADGE_SLOTS }, () => add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
     const root = add.container(0, 0, [img, front, life, cargo, stars, cmd, ...badges]);
     this.object.add(root);
-    return { root, img, front, life, cargo, stars, cmd, badges, rank: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, cmd, badges, marksDrawn: 0, key, idle: false, team: 0 };
   }
 
   sync(s: GameState, opts: ViewOptions, newArt: boolean): void {
-    const tex = this.scene.textures;
     const seen = new Set<number>();
-    for (const u of s.units) {
-      if (u.carrier !== null || opts.hidden.has(u.uid) || !opts.vis[u.x]![u.y]) continue;
-      const key = unitKey(tex, s, u);
+    for (const unit of s.units) {
+      if (unit.carrier !== null || opts.hidden.has(unit.uid) || !cellAt(opts.vis, unit)) continue;
+      const key = unitKey(this.scene.textures, s, unit);
       if (!key) continue;
-      seen.add(u.uid);
-      let sp = this.units.get(u.uid);
-      if (!sp) {
-        sp = this.newSprite(key);
-        this.units.set(u.uid, sp);
-      } else if (sp.key !== key) {
-        fitToTile(sp.img.setTexture(ATLAS, key));
-        sp.key = key;
-      }
-      this.update(sp, u, s, newArt);
+      seen.add(unit.uid);
+      this.update(this.spriteFor(unit.uid, key), unit, s, newArt);
     }
-    for (const [uid, sp] of this.units) {
-      if (!seen.has(uid)) {
-        sp.root.destroy();
-        this.units.delete(uid);
-      }
+    for (const [uid, sprite] of this.units) {
+      if (seen.has(uid)) continue;
+      sprite.root.destroy();
+      this.units.delete(uid);
     }
     // Las de mas abajo se dibujan encima (los sprites altos tapan la casilla de arriba).
     this.object.sort('y');
   }
 
-  private update(sp: UnitSprite, u: Unit, s: GameState, newArt: boolean): void {
-    const tex = this.scene.textures;
-    sp.root.setPosition(u.x * TILE, u.y * TILE);
-    sp.team = u.team;
-    sp.img.setFlipX(faceFlip(u.team, this.facingOf(u.uid, u.team)));
-    // Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco.
-    const front = newArt ? frontKey(s, u.x, u.y) : null;
-    if (front && hasImage(tex, front)) {
-      sp.front.setTexture(ATLAS, front).setVisible(true);
-      sp.img.setTint(front.includes('forest') || front.includes('tree') ? FRONT_TINT.forest : FRONT_TINT.rock);
-    } else {
-      sp.front.setVisible(false);
-      sp.img.clearTint();
+  /** El sprite de una unidad con el dibujo `key`: lo crea la primera vez y le cambia el dibujo si hace falta. */
+  private spriteFor(uid: number, key: string): UnitSprite {
+    const existing = this.units.get(uid);
+    if (!existing) {
+      const created = this.newSprite(key);
+      this.units.set(uid, created);
+      return created;
     }
-    const n = Math.ceil(u.life / 10);
-    const showLife = u.life < 100 && n >= 1 && n <= 9;
-    sp.life.setVisible(showLife);
-    if (showLife) sp.life.setTexture(lifeKey(n));
+    if (existing.key !== key) {
+      fitToTile(existing.img.setTexture(ATLAS, key));
+      existing.key = key;
+    }
+    return existing;
+  }
+
+  private update(sprite: UnitSprite, unit: Unit, s: GameState, newArt: boolean): void {
+    sprite.root.setPosition(unit.x * TILE, unit.y * TILE);
+    sprite.team = unit.team;
+    sprite.img.setFlipX(faceFlip(unit.team, this.facingOf(unit.uid, unit.team)));
+    this.updateTerrainFront(sprite, newArt ? frontKey(s, unit.x, unit.y) : null);
+    updateLifeDigit(sprite, unit.life);
+    this.updateMarks(sprite, unit, s);
+    sprite.idle = unit.team === 0 && unit.active;
+    sprite.img.y = TILE - (sprite.idle ? this.bobPhase : 0);
+  }
+
+  /** Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco. */
+  private updateTerrainFront(sprite: UnitSprite, front: string | null): void {
+    if (front && hasImage(this.scene.textures, front)) {
+      sprite.front.setTexture(ATLAS, front).setVisible(true);
+      const isWoods = front.includes('forest') || front.includes('tree');
+      sprite.img.setTint(isWoods ? FRONT_TINT.forest : FRONT_TINT.rock);
+      return;
+    }
+    sprite.front.setVisible(false);
+    sprite.img.clearTint();
+  }
+
+  /** Estrellas, carga, sin cura y orden; solo se redibujan si han cambiado (ver markSignature). */
+  private updateMarks(sprite: UnitSprite, unit: Unit, s: GameState): void {
+    const textures = this.scene.textures;
     // Con las marcas dibujadas, la carga va abajo a la izquierda (junto a la de sin cura) y el
     // cuadradito turquesa de antes se esconde.
-    const markArt = hasImage(tex, 'ui/mk_star');
-    const cargo = u.cargo.some((c) => c !== null);
-    sp.cargo.setVisible(!markArt && cargo);
+    const markArt = hasImage(textures, 'ui/mk_star');
+    const hasCargo = unit.cargo.some((carried) => carried !== null);
+    sprite.cargo.setVisible(!markArt && hasCargo);
     const marks = {
-      rank: rank(u),
+      rank: rank(unit),
       // [CAMBIO] Ha recibido un ataque hoy y no se curara esta noche (regla noHealUnderFire).
-      noHeal: u.life < 100 && unhealable(s, u),
-      // [CAMBIO] Ayudante: unidad en automatico (al lado de la marca de carga si la lleva).
-      cargo,
-      // [CAMBIO] La orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
-      cmd: effectiveCommand(s, u)?.kind ?? null,
-      detached: isDetached(s, u),
+      noHeal: unit.life < 100 && unhealable(s, unit),
+      cargo: hasCargo,
+      // [CAMBIO] Ayudante: la orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
+      cmd: effectiveCommand(s, unit)?.kind ?? null,
+      detached: isDetached(s, unit),
     };
-    const sig = markSignature(marks);
-    if (sig !== sp.rank) {
-      sp.rank = sig;
-      drawUnitMarks(tex, sp, marks, markArt);
-    }
-    sp.idle = u.team === 0 && u.active;
-    sp.img.y = TILE - (sp.idle ? this.bobPhase : 0);
+    const signature = markSignature(marks);
+    if (signature === sprite.marksDrawn) return;
+    sprite.marksDrawn = signature;
+    drawUnitMarks(textures, sprite, marks, markArt);
   }
 
   /** Unidades propias sin usar: suben y bajan a saltos de 1 pixel. */
@@ -154,14 +164,14 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const phase = stepOf(clock, BOB_MS, 2);
     if (phase === this.bobPhase) return;
     this.bobPhase = phase;
-    for (const sp of this.units.values()) sp.img.y = TILE - (sp.idle ? phase : 0);
+    for (const sprite of this.units.values()) sprite.img.y = TILE - (sprite.idle ? phase : 0);
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
   face(uid: number, dir: Facing): void {
     this.facing.set(uid, dir);
-    const sp = this.units.get(uid);
-    if (sp) sp.img.setFlipX(faceFlip(sp.team, dir));
+    const sprite = this.units.get(uid);
+    if (sprite) sprite.img.setFlipX(faceFlip(sprite.team, dir));
   }
 
   facingOf(uid: number, team: 0 | 1): Facing {
@@ -175,7 +185,15 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
   keyAt(p: Pos): string | null {
-    for (const sp of this.units.values()) if (sp.root.x === p.x * TILE && sp.root.y === p.y * TILE && sp.root.visible) return sp.key;
+    for (const { root, key } of this.units.values()) if (root.x === p.x * TILE && root.y === p.y * TILE && root.visible) return key;
     return null;
   }
+}
+
+/** Cifra de vida (decenas, 1-9) en la esquina; no se enseña con la vida llena. */
+function updateLifeDigit(sprite: UnitSprite, life: number): void {
+  const tens = Math.ceil(life / 10);
+  const isShown = life < 100 && tens >= 1 && tens <= 9;
+  sprite.life.setVisible(isShown);
+  if (isShown) sprite.life.setTexture(lifeKey(tens));
 }
