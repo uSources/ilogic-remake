@@ -176,6 +176,39 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 | Version en un solo fichero HTML | Jugar sin servidor (file://), compartir por correo | Releases, pruebas por file:// |
 | Releases y web por GitHub Actions | La sesion de Claude no puede crear Releases; asi no hace falta | Novedades y aviso de version |
 
+## La escena de la partida (`src/scenes/game/`)
+
+`GameScene` es la raiz de composicion: tiene el ciclo de Phaser (`init`, `create`, `update`,
+`SHUTDOWN`), el estado de la partida y la maquina de fases del turno del jugador (`accept`, `back`,
+`toMap`, mover y el menu de la unidad). Lo demas son modulos de `src/scenes/game/`, cada uno con una
+responsabilidad:
+
+| Modulo | Que hace | Phaser |
+|---|---|---|
+| `types.ts` | `Phase`, `Intent`, constantes, `GameStartData` | no |
+| `intent.ts` | que pasa al soltar la unidad elegida y por que camino (`MovePlan`) | no |
+| `highlights.ts`, `menuModel.ts`, `hudParts.ts` | casillas marcadas, menu de bocadillo, prevision, panel de lo elegido, ayuda | no |
+| `tutorial.ts`, `commandPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
+| `input.ts` | enganche del teclado y los punteros a `src/controls` (`CommandTarget`) | si |
+| `pointerInput.ts` | lo que hace cada gesto en la partida (`PointerTarget`) | solo tipos |
+| `groupSelection.ts` | grupo, «Elegir varias», escuadras, teclas de grupo | solo tipos |
+| `carry.ts` | coger, arrastrar y soltar una unidad | si |
+| `orders.ts` | acciones del registro y ordenes con destino; puntero del raton | solo tipos |
+| `abilities.ts`, `labMode.ts` | habilidades del general; laboratorio de animaciones | poco |
+| `playback.ts` | animar los `GameEvent` (mover, combate, captura, compra, habilidad) | si |
+| `turns.ts` | fin de turno, turno de la IA, repeticion, ordenes de varios turnos | si |
+| `endOfMatch.ts` | final de la partida y su pantalla | si |
+
+- **Dependencias por interfaces pequeñas**: cada modulo declara lo que necesita de la escena en una
+  interfaz `...Host` (como `PointerTarget` en `src/controls`). La escena se la da con `live()`
+  (`host.ts`): los campos se leen en la escena cada vez, asi que el modulo ve siempre la partida y la
+  fase del momento sin que la escena haga publicos sus privados.
+- **Estado**: cada modulo es dueño del suyo (la seleccion de `GroupSelection`, `enemyPlaying` de
+  `TurnFlow`...) y lo reinicia en `reset()`, que llama `resetMatch()`. La escena conserva accesores
+  donde lo usan las pruebas (`group`, `multi`, `openGroupMenu`, `view`).
+- **Lo que no usa Phaser se prueba** en `tests/sceneGame.test.ts`.
+- Un sistema nuevo es un modulo nuevo con su `Host`; la escena solo lo crea y lo enchufa.
+
 ## Mandos
 
 Las escenas no leen teclas, botones ni punteros: un **adaptador** de `src/controls/` (funciones
@@ -185,7 +218,7 @@ puras, sin Phaser, con tests) traduce lo que pulsa el jugador a **ordenes**, y l
 |---|---|---|
 | `GameCommand` (`commands.ts`): cursor, aceptar, atras, deshacer, fin de turno, zoom... | el mapa y sus menus de bocadillo | `GameScene.command(cmd)` |
 | `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda, fin de partida | `MenuScene.menu(cmd)`, `GameScene.menu(cmd)` (que pasan a `OptionsPanel.command`, `notesCommand`...) |
-| gestos de `PointerGestures` (`pointer.ts`) | raton y dedos en la partida, incluido desplazar el mapa por el borde (`tick`, cada fotograma) | `GameScene.pointerTarget()` |
+| gestos de `PointerGestures` (`pointer.ts`) | raton y dedos en la partida, incluido desplazar el mapa por el borde (`tick`, cada fotograma) | `pointerTarget()` de `scenes/game/pointerInput.ts` |
 
 Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `GameCommand`) o el menu
 abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
@@ -208,8 +241,9 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   y su cursor. De ahi salen el clic derecho (`smartAction`: la primera principal que vale), el menu
   completo de Alt + clic derecho, F, la pulsacion larga y la bandeja (`menuActions`) y el puntero del
   raton (`cursorFor`, dibujado en `ui/cursors.ts`). La escena le pasa lo que solo ella sabe (que
-  significa soltar la unidad elegida en esa casilla) y cumple la accion (`runAction`). Una accion
-  nueva es una entrada en `ACTIONS` y un caso en `runAction`: los mandos no cambian.
+  significa soltar la unidad elegida en esa casilla) y cumple la accion (`Orders.run`, en
+  `scenes/game/orders.ts`). Una accion nueva es una entrada en `ACTIONS` y un caso en `Orders.run`:
+  los mandos no cambian.
 - **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`Hud.tsx`, para el
   teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
   capturas de teclas de Phaser (`addCapture`) y saltar el logo con cualquier tecla o clic (`LogoScene`;
@@ -244,7 +278,8 @@ mando puede jugar una partida entera sin raton.
 | Cambiar el dibujo del mapa | la capa de `src/ui/map/` (ver "Vista del mapa"), `src/ui/terrainArt.ts` |
 | Añadir una marca sobre el mapa o un efecto | `OVERLAYS` en `src/ui/map/overlayLayer.ts`; `src/ui/fx.ts`, `src/ui/combatFx.ts` |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
-| Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `GameScene.pointerTarget()`) |
+| Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` decide el gesto; lo que hace en la partida esta en `src/scenes/game/pointerInput.ts`) |
+| Cambiar algo de la partida en pantalla (animaciones, turno enemigo, final, seleccion...) | `src/scenes/game/` (ver "La escena de la partida") |
 | Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |
 | Textos | `src/settings.ts` (`TEXTS.es` / `TEXTS.en`) |
 | Misiones | `src/core/missions.ts` (+ skill `nueva-mision`) |

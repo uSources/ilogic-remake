@@ -197,7 +197,7 @@ Efectos que hay (`effect.kind`):
 
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
 `content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`useAbility`) y su
-animacion en `GameScene.playAbility`.
+animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `ability`).
 
 La IA usa a su general sin saber cual es (`core/aiGenerals.ts`): al empezar su turno valora cada
 habilidad que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
