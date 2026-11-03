@@ -74,8 +74,12 @@ y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `ai
   - un sistema que actua cada ronda es un paso en `ROUND_PHASES` (`rules/round.ts`), en su sitio;
   - una clase de habilidad de unidad es su forma en `AbilityDef` (`content/types.ts`) y su efecto en
     `abilities.ts`, como funcion que pregunta la regla que toca (las reglas no leen `abilityOf`);
-  - un comportamiento de IA nuevo es un paso en `ai/tactics.ts` que devuelve si ha usado la unidad,
-    y su sitio en la lista de prioridades de `ai/unitTurn.ts`.
+  - un comportamiento de IA nuevo (un papel de unidad) es una entrada `{ id, when, run }` en
+    `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`), en su sitio de la lista; `run` devuelve si ha usado la
+    unidad y suele llamar a un paso de `ai/tactics.ts`;
+  - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
+    (`ai/scoring.ts`); un tipo de orden del jugador, una entrada en `COMMAND_TURNS`
+    (`ai/commands.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
 - La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
   IA entra solo en la referencia.
 

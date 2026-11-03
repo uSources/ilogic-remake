@@ -11,10 +11,10 @@
  * | Modulo | Que va |
  * |---|---|
  * | `context` | AiCtx (estado del turno: bando, grupo, plan) y ayudas comunes (acercarse, mover) |
- * | `scoring` | cuanto vale cada ataque |
+ * | `scoring` | cuanto vale cada ataque (`ATTACK_SCORE_TERMS`) |
  * | `tactics` | retirarse, atacar, capturar, avanzar, moverse al azar |
  * | `fire` | plan de fuego concentrado y orden de juego |
- * | `unitTurn` | prioridades de cada unidad en el turno de la IA |
+ * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
  * | `production` | que fabrica |
  * | `formation` | escuadras que avanzan juntas |
  * | `commands` | ordenes con destino del jugador y su prevision |
@@ -36,15 +36,15 @@ export type { AiCtx } from './ai/context';
 
 /** Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound). */
 export function* aiTurn(s: GameState, rng: Rng = Math.random, team: Team = 1): Generator<GameEvent> {
-  const ctx = aiCtx(team);
+  const ai = aiCtx(team);
   // [CAMBIO] Primero el general (una habilidad, si merece la pena): ver aiGenerals.ts.
-  yield* aiGeneral(s, ctx.me);
-  const { plan, order } = planFire(s, ctx.me);
-  ctx.plan = plan;
-  ctx.group = true;
-  for (const uid of order) yield* unitTurn(s, ctx, uid, rng);
-  ctx.group = false;
-  ctx.plan = new Map();
-  yield* produce(s, ctx.me, rng);
-  for (const u of teamUnits(s, ctx.me)) wait(u);
+  yield* aiGeneral(s, ai.me);
+  const { plan, order } = planFire(s, ai.me);
+  ai.plan = plan;
+  ai.group = true;
+  for (const uid of order) yield* unitTurn(s, ai, uid, rng);
+  ai.group = false;
+  ai.plan = new Map();
+  yield* produce(s, ai.me, rng);
+  for (const unit of teamUnits(s, ai.me)) wait(unit);
 }
