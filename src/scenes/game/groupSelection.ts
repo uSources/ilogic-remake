@@ -6,7 +6,8 @@
 import type Phaser from 'phaser';
 import { unitById } from '../../core/rules';
 import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
-import type { GameState, Unit } from '../../core/types';
+import { minBy } from '../../core/util/pick';
+import type { GameState, Pos, Unit } from '../../core/types';
 import type { GroupMode } from '../../controls/commands';
 import { DOUBLE_MS } from '../../controls/pointer';
 import { EMPTY, sameSelection, type Selection } from '../../controls/selection';
@@ -31,6 +32,18 @@ export interface SelectionHost {
   cursorMoved(): void;
 }
 
+/** Elegir la misma escuadra otra vez antes de esto (ms) lleva la camara alli. */
+const SQUAD_AGAIN_MS = DOUBLE_MS * 2;
+/** Casillas de margen al llevar la camara a una unidad. */
+const FOLLOW_MARGIN = 3;
+
+/** La unidad mas cerca del centro del grupo. */
+function middleUnit(units: readonly Unit[]): Unit {
+  const centerX = units.reduce((sum, unit) => sum + unit.x, 0) / units.length;
+  const centerY = units.reduce((sum, unit) => sum + unit.y, 0) / units.length;
+  return minBy(units, (unit) => Math.hypot(unit.x - centerX, unit.y - centerY))!;
+}
+
 export class GroupSelection {
   /** Seleccion en grupo (recuadro, Mayusculas + clic...). */
   group = new Set<number>();
@@ -49,8 +62,8 @@ export class GroupSelection {
   }
 
   /** Se puede elegir para un grupo: propia, viva y en el mapa (aunque ya se haya movido: para ordenes). */
-  selectable(u: Unit): boolean {
-    return u.team === 0 && u.carrier === null && u.life > 0;
+  selectable(unit: Unit): boolean {
+    return unit.team === 0 && unit.carrier === null && unit.life > 0;
   }
 
   /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */
@@ -61,12 +74,16 @@ export class GroupSelection {
   }
 
   units(): Unit[] {
-    return [...this.selection()].map((uid) => unitById(this.h.state, uid)).filter((u): u is Unit => !!u && this.selectable(u));
+    return this.existing(this.selection()).filter((unit) => this.selectable(unit));
   }
 
   /** Unidades del grupo elegido que siguen existiendo. */
   groupUnits(): Unit[] {
-    return [...this.group].map((uid) => unitById(this.h.state, uid)).filter((u): u is Unit => !!u);
+    return this.existing(this.group);
+  }
+
+  private existing(uids: Iterable<number>): Unit[] {
+    return [...uids].map((uid) => unitById(this.h.state, uid)).filter((unit): unit is Unit => !!unit);
   }
 
   /**
@@ -75,73 +92,80 @@ export class GroupSelection {
    */
   apply(next: Selection): void {
     const h = this.h;
-    const units = [...next].map((uid) => unitById(h.state, uid)).filter((u): u is Unit => !!u && this.selectable(u));
+    const units = this.existing(next).filter((unit) => this.selectable(unit));
     if (h.phase === 'move' || h.phase === 'groupMenu') h.toMap();
     if (h.phase !== 'map') return h.refresh();
     h.stopInspect();
-    const one = units.length === 1 ? units[0]! : null;
-    if (one && one.active) {
+    const onlyOne = units.length === 1 ? units[0]! : null;
+    if (onlyOne?.active) {
       this.group.clear();
       this.multi = false;
-      return h.selectUnit(one);
+      return h.selectUnit(onlyOne);
     }
-    this.group = new Set(units.map((u) => u.uid));
+    this.group = new Set(units.map((unit) => unit.uid));
     h.refresh();
   }
 
   /** Las elegibles del mismo tipo que se ven en pantalla (doble clic o Ctrl + clic). */
-  sameTypeOnScreen(u: Unit): Unit[] {
-    const sc = this.h.scene;
-    const r = this.h.view.tilesInBox({ x0: 0, y0: 0, x1: sc.scale.width, y1: sc.scale.height });
-    return this.h.state.units.filter(
-      (o) => o.type === u.type && this.selectable(o) && o.x >= r.x0 && o.x <= r.x1 && o.y >= r.y0 && o.y <= r.y1,
-    );
+  sameTypeOnScreen(like: Unit): Unit[] {
+    const screen = this.h.scene.scale;
+    const area = this.h.view.tilesInBox({ x0: 0, y0: 0, x1: screen.width, y1: screen.height });
+    const isOnScreen = (unit: Unit) => unit.x >= area.x0 && unit.x <= area.x1 && unit.y >= area.y0 && unit.y <= area.y1;
+    return this.h.state.units.filter((unit) => unit.type === like.type && this.selectable(unit) && isOnScreen(unit));
+  }
+
+  /** En estas fases se puede elegir una escuadra o usar las teclas de grupo. */
+  private canPickGroups(): boolean {
+    const phase = this.h.phase;
+    return phase === 'map' || phase === 'move' || phase === 'groupMenu';
   }
 
   /** [CAMBIO] Elegir una escuadra (su boton o su tecla). Otra vez enseguida: la camara va alli. */
   pickSquad(id: number): void {
     const h = this.h;
-    if (h.phase !== 'map' && h.phase !== 'move' && h.phase !== 'groupMenu') return;
-    const units = squadUnits(h.state, id).filter((u) => this.selectable(u));
+    if (!this.canPickGroups()) return;
+    const units = squadUnits(h.state, id).filter((unit) => this.selectable(unit));
     if (!units.length) return;
     const now = h.scene.time.now;
-    const again = this.lastPick?.id === id && now - this.lastPick.at <= DOUBLE_MS * 2;
+    const isAgain = this.lastPick?.id === id && now - this.lastPick.at <= SQUAD_AGAIN_MS;
     this.lastPick = { id, at: now };
-    const ids = new Set(units.map((u) => u.uid));
-    if (again && sameSelection(this.selection(), ids)) {
-      // Al centro de la escuadra (la unidad mas cerca del medio).
-      const cx = units.reduce((a, u) => a + u.x, 0) / units.length,
-        cy = units.reduce((a, u) => a + u.y, 0) / units.length;
-      const mid = units.reduce((a, u) => (Math.hypot(u.x - cx, u.y - cy) < Math.hypot(a.x - cx, a.y - cy) ? u : a));
-      h.view.cursor = { x: mid.x, y: mid.y };
-      h.view.centerOn(mid);
-      return h.cursorMoved();
-    }
-    h.view.cursor = { x: units[0]!.x, y: units[0]!.y };
-    h.view.ensureVisible(units[0]!, 3);
-    this.apply(ids);
+    const uids = new Set(units.map((unit) => unit.uid));
+    if (isAgain && sameSelection(this.selection(), uids)) return this.cameraTo(middleUnit(units));
+    this.moveCursorTo(units[0]!);
+    this.apply(uids);
+  }
+
+  private cameraTo(unit: Unit): void {
+    this.h.view.cursor = { x: unit.x, y: unit.y };
+    this.h.view.centerOn(unit);
+    this.h.cursorMoved();
+  }
+
+  private moveCursorTo(p: Pos): void {
+    this.h.view.cursor = { x: p.x, y: p.y };
+    this.h.view.ensureVisible(p, FOLLOW_MARGIN);
   }
 
   /** [CAMBIO] Tecla de grupo n: elegir (n), hacer el grupo con lo elegido (Ctrl+n) o añadirlo (Mayusculas+n). */
   groupKey(n: number, mode: GroupMode): void {
     const h = this.h;
-    if (h.phase !== 'map' && h.phase !== 'move' && h.phase !== 'groupMenu') return;
+    if (!this.canPickGroups()) return;
     if (mode === 'select') {
-      const q = squadByKey(h.state, n);
-      if (q) this.pickSquad(q.id);
+      const squad = squadByKey(h.state, n);
+      if (squad) this.pickSquad(squad.id);
       return;
     }
     const units = this.units();
     if (!units.length) return showToast(t('groupNone'));
-    const q = mode === 'set' ? setGroup(h.state, units, n) : addToGroup(h.state, units, n);
-    if (q) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${n} · ${q.name}`);
+    const squad = mode === 'set' ? setGroup(h.state, units, n) : addToGroup(h.state, units, n);
+    if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${n} · ${squad.name}`);
     h.refresh();
   }
 
   /** [CAMBIO] Las elegidas en el orden del panel: por tipo y, dentro, como estan en la partida. */
   pickedInOrder(): Unit[] {
     return this.groupUnits()
-      .filter((u) => this.selectable(u))
+      .filter((unit) => this.selectable(unit))
       .sort((a, b) => a.type - b.type || a.uid - b.uid);
   }
 
@@ -149,11 +173,10 @@ export class GroupSelection {
   nextPicked(): void {
     const list = this.pickedInOrder();
     if (!list.length) return;
-    const i = list.findIndex((u) => u.uid === this.pickedFocus);
-    const u = list[(i + 1) % list.length]!;
-    this.pickedFocus = u.uid;
-    this.h.view.cursor = { x: u.x, y: u.y };
-    this.h.view.ensureVisible(u, 3);
+    const focusIndex = list.findIndex((unit) => unit.uid === this.pickedFocus);
+    const next = list[(focusIndex + 1) % list.length]!;
+    this.pickedFocus = next.uid;
+    this.moveCursorTo(next);
     this.h.cursorMoved();
   }
 
@@ -161,23 +184,18 @@ export class GroupSelection {
   pickInSelection(uid: number, shift: boolean, ctrl: boolean): void {
     const h = this.h;
     if (h.phase !== 'map' && h.phase !== 'groupMenu') return;
-    const u = unitById(h.state, uid);
-    if (!u || !this.group.has(uid)) return;
-    if (shift) {
-      const next = new Set(this.group);
-      next.delete(uid);
-      return this.apply(next);
-    }
+    const unit = unitById(h.state, uid);
+    if (!unit || !this.group.has(uid)) return;
+    if (shift) return this.apply(new Set([...this.group].filter((other) => other !== uid)));
     if (ctrl)
       return this.apply(
         new Set(
           this.groupUnits()
-            .filter((o) => o.type === u.type)
-            .map((o) => o.uid),
+            .filter((other) => other.type === unit.type)
+            .map((other) => other.uid),
         ),
       );
-    h.view.cursor = { x: u.x, y: u.y };
-    h.view.ensureVisible(u, 3);
+    this.moveCursorTo(unit);
     this.apply(new Set([uid]));
   }
 }
