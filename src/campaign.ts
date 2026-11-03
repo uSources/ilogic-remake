@@ -61,6 +61,11 @@ export function missionUnlocked(index: number, done = completedMissions()): bool
   return index === 0 || done.has(MISSIONS[index - 1]!.id) || done.has(MISSIONS[index]!.id);
 }
 
+/** La primera mision que queda por hacer y se puede jugar, o -1. */
+export function nextMissionIndex(done = completedMissions()): number {
+  return MISSIONS.findIndex((mission, index) => !done.has(mission.id) && missionUnlocked(index, done));
+}
+
 const es = () => settings.lang === 'es';
 
 /** Frase de cada objetivo, para la pantalla de campaña y el panel de la partida. */
