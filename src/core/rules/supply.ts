@@ -6,31 +6,35 @@ import { neighbors4 } from '../geom';
 import type { GameState, Unit } from '../types';
 import { unitAt } from './queries';
 
-function canSupplyTo(u: Unit, o: Unit): boolean {
-  return UNIT_HEALS[u.type]![o.type]! > 0 && o.life < MAX_LIFE;
+/** Vida que `supplier` le cura a `patient` cada vez (units.json, "heals"). */
+function healAmount(supplier: Unit, patient: Unit): number {
+  return UNIT_HEALS[supplier.type]![patient.type]!;
+}
+
+function canSupplyTo(supplier: Unit, patient: Unit): boolean {
+  return healAmount(supplier, patient) > 0 && patient.life < MAX_LIFE;
+}
+
+/** Aliadas de al lado a las que `supplier` puede reparar ahora, en el orden de las vecinas. */
+function patientsOf(s: GameState, supplier: Unit): Unit[] {
+  return neighbors4(supplier)
+    .map((pos) => unitAt(s, pos.x, pos.y))
+    .filter((other): other is Unit => !!other && other.team === supplier.team && canSupplyTo(supplier, other));
 }
 
 /** Hay alguna unidad aliada al lado a la que reparar (en la practica solo Suministros). */
-export function canSupply(s: GameState, u: Unit): boolean {
-  return neighbors4(u).some((p) => {
-    const o = unitAt(s, p.x, p.y);
-    return !!o && o.team === u.team && canSupplyTo(u, o);
-  });
+export function canSupply(s: GameState, supplier: Unit): boolean {
+  return patientsOf(s, supplier).length > 0;
 }
 
 /**
  * Reparar (Unit.Heal sobre las 4 vecinas): cura lo que diga "heals" en units.json.
  * [CAMBIO] antes tambien llenaba combustible y municion; se quitaron del juego.
  */
-export function supply(s: GameState, u: Unit): number {
-  let n = 0;
-  for (const p of neighbors4(u)) {
-    const o = unitAt(s, p.x, p.y);
-    if (!o || o.team !== u.team || !canSupplyTo(u, o)) continue;
-    o.life = Math.min(MAX_LIFE, o.life + UNIT_HEALS[u.type]![o.type]!);
-    n++;
-  }
-  u.active = false;
-  u.canMove = false;
-  return n;
+export function supply(s: GameState, supplier: Unit): number {
+  const patients = patientsOf(s, supplier);
+  for (const patient of patients) patient.life = Math.min(MAX_LIFE, patient.life + healAmount(supplier, patient));
+  supplier.active = false;
+  supplier.canMove = false;
+  return patients.length;
 }
