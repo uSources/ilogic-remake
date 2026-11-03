@@ -197,7 +197,7 @@ Efectos que hay (`effect.kind`):
 
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
 `content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`useAbility`) y su
-animacion en `GameScene.playAbility`.
+animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `ability`).
 
 La IA usa a su general sin saber cual es (`core/aiGenerals.ts`): al empezar su turno valora cada
 habilidad que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
@@ -226,7 +226,7 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
   `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
   (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
-  las cumple la misma IA que el enemigo (`assistTurn`/`commandTurn` en `src/core/ai.ts`); escuadras
+  las cumple la misma IA que el enemigo (`assistTurn`/`commandTurn` en `src/core/ai/commands.ts`); escuadras
   y ordenes estan en `src/core/squads.ts`.
 
 Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas tablas por nombre:

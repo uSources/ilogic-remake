@@ -13,6 +13,9 @@ export interface Pos {
 /** Bando: 0 = jugador, 1 = IA. */
 export type Team = 0 | 1;
 
+/** Los dos bandos, en orden (para recorrerlos sin escribir `[0, 1] as const`). */
+export const TEAMS: readonly Team[] = [0, 1];
+
 export interface Unit {
   /** Identificador estable (no cambia al morir otras unidades ni al guardar). */
   uid: number;
@@ -165,6 +168,11 @@ export type GameEvent =
       /** Dinero conseguido (funds). */
       funds?: number;
     };
+
+/** Tipo de evento ('move', 'attack'...). */
+export type GameEventKind = GameEvent['kind'];
+/** El evento de un tipo concreto, p. ej. `GameEventOf<'attack'>`. */
+export type GameEventOf<K extends GameEventKind> = Extract<GameEvent, { kind: K }>;
 
 /**
  * Como estaban las dos unidades justo antes de un combate. La interfaz lo usa para enseñarlo

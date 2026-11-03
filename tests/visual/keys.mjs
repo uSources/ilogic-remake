@@ -86,9 +86,9 @@ async function endTab(page) {
   await page.waitForTimeout(300);
   const sel = () => page.evaluate(() => window.ilogicDebug.ui().end?.selected);
   // Phaser atiende las teclas en cola, una vez por fotograma; en CI (sin pantalla) los fotogramas
-  // tardan y dos pulsaciones muy seguidas se pisaban. Se espera a ver el cambio y un poco mas.
+  // tardan y dos pulsaciones muy seguidas se pisaban. Se espera a ver el cambio (hasta 3 s) y un poco mas.
   const changed = async (from) => {
-    for (let i = 0; i < 20 && (await sel()) === from; i++) await page.waitForTimeout(50);
+    for (let i = 0; i < 60 && (await sel()) === from; i++) await page.waitForTimeout(50);
     await page.waitForTimeout(250);
     return sel();
   };

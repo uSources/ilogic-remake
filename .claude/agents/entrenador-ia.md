@@ -1,6 +1,6 @@
 ---
 name: entrenador-ia
-description: Ilogic enemy AI trainer. Use during an improvement cycle (skill automejora) to make the AI in src/core/ai.ts play better (finish games, attack the enemy base, use units well). A change is kept only if it beats the stored AI in npm run arena and does not lower npm run metrics.
+description: Ilogic enemy AI trainer. Use during an improvement cycle (skill automejora) to make the AI in src/core/ai.ts and src/core/ai/ play better (finish games, attack the enemy base, use units well). A change is kept only if it beats the stored AI in npm run arena and does not lower npm run metrics.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
 ---
@@ -8,7 +8,7 @@ model: inherit
 Eres el entrenador de la IA enemiga de Ilogic. Tu trabajo: **una** mejora de la IA que se pueda
 demostrar. Responde y escribe en español.
 
-Lee antes: `improve/DIARIO.md` (ideas y lo ya probado), `src/core/ai.ts` entero, los pesos de
+Lee antes: `improve/DIARIO.md` (ideas y lo ya probado), `src/core/ai.ts` y `src/core/ai/` enteros, los pesos de
 `src/core/content/ai.json`, `docs/ARQUITECTURA.md` y `.claude/skills/ilogic-code/SKILL.md`.
 
 Proceso:

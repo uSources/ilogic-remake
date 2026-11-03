@@ -1,7 +1,8 @@
 /**
  * [CAMBIO] Animaciones de combate rediseñadas: retroceso y fogonazo al disparar, proyectil segun el
  * tipo de unidad, impacto con destello y explosion, numero de daño que salta y restos al caer.
- * Mismo estilo pixel que ui/fx.ts (cuadraditos y saltos), en coordenadas de mundo.
+ * Mismo estilo pixel que ui/fx.ts (cuadraditos y saltos), en coordenadas de mundo; las piezas
+ * comunes (esperas, cuadraditos, textos) estan en ui/fxKit.ts.
  *
  * Todas las duraciones van multiplicadas por `k` (velocidad de las animaciones de las Opciones:
  * 1 = normal); GameScene no llama a nada de esto si hay que saltarse las animaciones.
@@ -11,10 +12,9 @@ import { Movement, MoveType, UNIT } from '../core/data';
 import type { Pos } from '../core/types';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
-import type { Facing, MapView } from './mapView';
-import { PAL, PAL_CSS } from './palette';
-
-const sleep = (scene: Phaser.Scene, ms: number) => new Promise<void>((r) => scene.time.delayedCall(Math.max(0, ms), r));
+import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost } from './fxKit';
+import type { Facing } from './mapView';
+import { PAL, PAL_MAP } from './palette';
 
 /** Lado al que tiene que mirar quien esta en `from` para disparar a `to` (null si estan en la misma columna). */
 export const facingToward = (from: Pos, to: Pos): Facing | null => (to.x > from.x ? 'right' : to.x < from.x ? 'left' : null);
@@ -45,12 +45,6 @@ function muzzle(from: Pos, to: Pos): { x: number; y: number } {
   return { x: c.x + dir * 13, y: c.y - 3 + dy * 8 };
 }
 
-function rect(scene: Phaser.Scene, view: MapView, x: number, y: number, w: number, h: number, color: number, alpha = 1) {
-  const r = scene.add.rectangle(Math.round(x), Math.round(y), w, h, color, alpha).setOrigin(0.5);
-  view.addFx(r);
-  return r;
-}
-
 /** Retroceso al disparar: la unidad se echa hacia atras y vuelve (en dos saltos). */
 export async function recoil(scene: Phaser.Scene, sprite: Phaser.GameObjects.Container, from: Pos, to: Pos, k: number): Promise<void> {
   const dx = -Math.sign(to.x - from.x) * 3,
@@ -65,10 +59,10 @@ export async function recoil(scene: Phaser.Scene, sprite: Phaser.GameObjects.Con
 }
 
 /** Fogonazo en la punta del arma: estrella de cuadraditos que se apaga en tres fotogramas. */
-export async function muzzleFlash(scene: Phaser.Scene, view: MapView, from: Pos, to: Pos, k: number): Promise<void> {
+export async function muzzleFlash(scene: Phaser.Scene, view: FxHost, from: Pos, to: Pos, k: number): Promise<void> {
   const m = muzzle(from, to);
   const parts = [
-    rect(scene, view, m.x, m.y, 6, 6, 0xffffff),
+    rect(scene, view, m.x, m.y, 6, 6, PAL.white),
     rect(scene, view, m.x, m.y, 10, 2, PAL.gold),
     rect(scene, view, m.x, m.y, 2, 10, PAL.gold),
   ];
@@ -102,7 +96,7 @@ async function fly(
 }
 
 /** El disparo de `from` a `to`: termina en el momento del impacto. */
-export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotKind, from: Pos, to: Pos, k: number): Promise<void> {
+export async function projectile(scene: Phaser.Scene, view: FxHost, kind: ShotKind, from: Pos, to: Pos, k: number): Promise<void> {
   const a = muzzle(from, to);
   const b = center(to);
   const dist = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
@@ -113,7 +107,7 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
       const n = kind === 'tracer' ? 5 : 3;
       const jobs: Promise<void>[] = [];
       for (let i = 0; i < n; i++) {
-        const bullet = rect(scene, view, a.x, a.y, 4, 2, i % 2 ? 0xffffff : PAL.gold);
+        const bullet = rect(scene, view, a.x, a.y, 4, 2, i % 2 ? PAL.white : PAL.gold);
         const spread = { x: b.x + ((i % 3) - 1) * 3, y: b.y + ((i % 2) * 2 - 1) * 3 };
         jobs.push(sleep(scene, i * 45 * k).then(() => fly(scene, bullet, a, spread, 110 * k).then(() => bullet.destroy())));
       }
@@ -121,7 +115,7 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
       return;
     }
     case 'shell': {
-      const shell = rect(scene, view, a.x, a.y, 5, 4, 0xffffff);
+      const shell = rect(scene, view, a.x, a.y, 5, 4, PAL.white);
       const trail: Phaser.GameObjects.Rectangle[] = [];
       await fly(scene, shell, a, b, 130 * k, 0, (x, y) => {
         trail.push(rect(scene, view, x, y, 3, 2, PAL.gold, 0.8));
@@ -133,7 +127,7 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
     }
     case 'arc': {
       // Parabola alta con una sombra en el suelo que avanza debajo.
-      const shellA = rect(scene, view, a.x, a.y, 5, 5, 0xffffff);
+      const shellA = rect(scene, view, a.x, a.y, 5, 5, PAL.white);
       const shadow = rect(scene, view, a.x, a.y + 10, 6, 2, PAL.ink, 0.35);
       await fly(scene, shellA, a, b, (260 + dist * 30) * k, Math.min(56, 18 + dist * 9), (x, _y, t) => {
         shadow.setPosition(Math.round(x), Math.round(a.y + 10 + (b.y + 10 - a.y - 10) * t));
@@ -143,10 +137,10 @@ export async function projectile(scene: Phaser.Scene, view: MapView, kind: ShotK
       return;
     }
     case 'missile': {
-      const missile = rect(scene, view, a.x, a.y, 6, 3, 0xffffff);
+      const missile = rect(scene, view, a.x, a.y, 6, 3, PAL.white);
       const puffs: Phaser.GameObjects.Rectangle[] = [];
       await fly(scene, missile, a, b, (240 + dist * 25) * k, Math.min(36, 10 + dist * 4), (x, y) => {
-        const p = rect(scene, view, x, y, 3, 3, 0x8a93a8, 0.85);
+        const p = rect(scene, view, x, y, 3, 3, PAL_MAP.smokeLight, 0.85);
         puffs.push(p);
         scene.tweens.add({ targets: p, alpha: 0, duration: 380 * k, onComplete: () => p.destroy() });
       });
@@ -180,13 +174,13 @@ export async function hitFlash(
   const main = 'list' in sprite ? sprite.list.find((o): o is Phaser.GameObjects.Image => 'setTintFill' in o) : sprite;
   if (!main) return;
   // Phaser 4: color + modo FILL (1 = Phaser.TintModes.FILL; aqui Phaser solo se importa como tipo).
-  main.setTint(0xffffff).setTintMode(1);
+  main.setTint(PAL.white).setTintMode(1);
   await sleep(scene, 70 * k);
   main.clearTint();
 }
 
 /** Explosion del impacto: anillo de cuadraditos que se abre y chispas. Mas grande si cae. */
-export async function impact(scene: Phaser.Scene, view: MapView, at: Pos, killed: boolean, k: number): Promise<void> {
+export async function impact(scene: Phaser.Scene, view: FxHost, at: Pos, killed: boolean, k: number): Promise<void> {
   const c = center(at);
   if (!reducedMotion()) scene.cameras.main.shake(killed ? 200 : 100, killed ? 0.006 : 0.003);
   const g = scene.add.graphics();
@@ -195,7 +189,7 @@ export async function impact(scene: Phaser.Scene, view: MapView, at: Pos, killed
     const radii = killed ? [5, 10, 15, 19] : [4, 8, 12];
     for (const [i, r] of radii.entries()) {
       g.clear();
-      g.fillStyle(i === 0 ? 0xffffff : i < 2 ? PAL.gold : 0xff8a3d, 1 - i / (radii.length + 1));
+      g.fillStyle(i === 0 ? PAL.white : i < 2 ? PAL.gold : PAL_MAP.orange, 1 - i / (radii.length + 1));
       for (let a = 0; a < 12; a++) {
         const ang = (a / 12) * Math.PI * 2;
         g.fillRect(Math.round(c.x + Math.cos(ang) * r) - 2, Math.round(c.y + Math.sin(ang) * r) - 2, 4, 4);
@@ -221,19 +215,9 @@ export async function impact(scene: Phaser.Scene, view: MapView, at: Pos, killed
 }
 
 /** Numero que salta: aparece grande, se encoge a su tamaño, sube un poco y se va. No hay que esperarlo entero. */
-export function popNumber(scene: Phaser.Scene, view: MapView, at: Pos, text: string, color: string, k: number): Promise<void> {
+export function popNumber(scene: Phaser.Scene, view: FxHost, at: Pos, text: string, color: string, k: number): Promise<void> {
   const c = center(at);
-  const t = scene.add
-    .text(c.x, c.y - 16, text, {
-      fontFamily: 'Ilogic, Silkscreen, monospace',
-      fontSize: '20px',
-      color,
-      stroke: PAL_CSS.ink,
-      strokeThickness: 5,
-    })
-    .setOrigin(0.5, 1)
-    .setScale(1.6);
-  view.addFx(t);
+  const t = fxText(scene, view, c.x, c.y - 16, text, color, FX_TEXT.pop).setScale(1.6);
   return (async () => {
     await sleep(scene, 50 * k);
     t.setScale(1.25);
@@ -249,32 +233,23 @@ export function popNumber(scene: Phaser.Scene, view: MapView, at: Pos, text: str
 }
 
 /** Etiqueta pequeña sobre una unidad (p. ej. "Contraataque"): no tapa el combate. */
-export function tag(scene: Phaser.Scene, view: MapView, at: Pos, text: string, color: string, k: number): Promise<void> {
+export function tag(scene: Phaser.Scene, view: FxHost, at: Pos, text: string, color: string, k: number): Promise<void> {
   const c = center(at);
-  const t = scene.add
-    .text(c.x, at.y * TILE - 2, text, {
-      fontFamily: 'Ilogic, Silkscreen, monospace',
-      fontSize: '10px',
-      color,
-      stroke: PAL_CSS.ink,
-      strokeThickness: 3,
-    })
-    .setOrigin(0.5, 1);
-  view.addFx(t);
+  const t = fxText(scene, view, c.x, at.y * TILE - 2, text, color, FX_TEXT.tag);
   return sleep(scene, 650 * k).then(() => t.destroy());
 }
 
 /** Restos al caer una unidad: trozos del color de su bando que saltan y caen, y una columna de humo. */
-export async function debris(scene: Phaser.Scene, view: MapView, at: Pos, team: number, k: number): Promise<void> {
+export async function debris(scene: Phaser.Scene, view: FxHost, at: Pos, team: number, k: number): Promise<void> {
   const c = center(at);
-  const colors = [team === 0 ? PAL.blue : PAL.red, 0x5b6478, PAL.ink, 0x3a4256];
+  const colors = [team === 0 ? PAL.blue : PAL.red, PAL_MAP.smoke, PAL.ink, PAL_MAP.smokeDark];
   const parts = Array.from({ length: 10 }, (_, i) => {
     const r = rect(scene, view, c.x, c.y, i % 3 ? 3 : 4, i % 3 ? 3 : 4, colors[i % colors.length]!);
     const vx = (i / 10 - 0.5) * 2.6 + (Math.random() - 0.5) * 0.4;
     const vy = -1.6 - Math.random() * 1.2;
     return { r, vx, vy };
   });
-  const smoke = Array.from({ length: 5 }, (_, i) => rect(scene, view, c.x + (i - 2) * 3, c.y + 4, 5, 5, 0x5b6478, 0.8));
+  const smoke = Array.from({ length: 5 }, (_, i) => rect(scene, view, c.x + (i - 2) * 3, c.y + 4, 5, 5, PAL_MAP.smoke, 0.8));
   for (let f = 1; f <= 9; f++) {
     for (const p of parts) {
       p.r.setPosition(Math.round(c.x + p.vx * f * 3), Math.round(c.y + p.vy * f * 3 + 0.5 * 0.9 * f * f));

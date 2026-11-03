@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { TerrainType, THEME_NAMES } from '../core/data';
 import type { GameState } from '../core/types';
 import { hasImage, imageFrame } from '../atlas';
 import { TILE } from '../layout';
@@ -21,21 +22,48 @@ import { ORG_SHEETS, SHEET_COLS, SHORE_ROWS, WATER_ROWS } from './sheets';
 // Terrenos: 0 Grass, 1 Water, 2 Woods, 3 Sand, 4 Cactus, 5 SandCliff, 6 Flowers, 7 GrassCliff,
 // 8 SWater, 9 DWater, 10 Snow, 11 Frosty, 12 SnowCliff, 13 SnowWood, 14 Ice
 const LEVEL = [3, 1, 3, 3, 3, 3, 3, 3, 2, 0, 3, 3, 3, 3, 2];
+/** Nivel del suelo a partir del cual es tierra (por debajo, agua). */
+const LAND = 3;
+/** Temas de mapa con suelo propio (el resto, hierba). */
+const DESERT = THEME_NAMES.indexOf('Desert');
+const SNOWY = THEME_NAMES.indexOf('Snowy');
 /** Decorados sueltos y cuantas variantes hay de cada uno. */
-const DECOR: Record<number, [string, number]> = { 6: ['wang/decor_flowers', 3], 4: ['wang/decor_cactus', 3], 11: ['wang/decor_frosty', 3] };
+const DECOR: Record<number, [string, number]> = {
+  [TerrainType.FLOWERS]: ['wang/decor_flowers', 3],
+  [TerrainType.CACTUS]: ['wang/decor_cactus', 3],
+  [TerrainType.FROSTY]: ['wang/decor_frosty', 3],
+};
+const FORESTS: number[] = [TerrainType.WOODS, TerrainType.SNOW_WOOD];
+
+/** Numero fijo por casilla (la misma variante cada vez que se dibuja el mapa). */
+const cellHash = (x: number, y: number): number => ((x * 73856093) ^ (y * 19349663)) >>> 0;
+
+/**
+ * Mascara de costa de una casilla de agua segun sus vecinos de tierra (`L(dx, dy)`): lados N1 E2
+ * S4 W8 y esquinas NE16 SE32 SW64 NW128 (solo si no hay tierra en los dos lados de esa esquina).
+ * Es la de las laminas blob (BLOB_SETS[set].water) y la de la espuma animada (SHORE_ROWS).
+ */
+function coastMask(L: (dx: number, dy: number) => boolean): number {
+  let m = (L(0, -1) ? 1 : 0) | (L(1, 0) ? 2 : 0) | (L(0, 1) ? 4 : 0) | (L(-1, 0) ? 8 : 0);
+  if (!(m & 1) && !(m & 2) && L(1, -1)) m |= 16;
+  if (!(m & 4) && !(m & 2) && L(1, 1)) m |= 32;
+  if (!(m & 4) && !(m & 8) && L(-1, 1)) m |= 64;
+  if (!(m & 1) && !(m & 8) && L(-1, -1)) m |= 128;
+  return m;
+}
 const decorKeys = (): string[] => Object.values(DECOR).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => `${k}_${i}`));
 
 function groundSets(theme: number): [string, string, string] {
-  const snow = theme === 4;
-  const land = theme === 1 ? 'ts_shallow_sand' : snow ? 'ts_ice_snow' : 'ts_shallow_grass';
+  const snow = theme === SNOWY;
+  const land = theme === DESERT ? 'ts_shallow_sand' : snow ? 'ts_ice_snow' : 'ts_shallow_grass';
   return ['ts_deep_water', snow ? 'ts_water_ice' : 'ts_water_shallow2', land];
 }
 
 function overlaySets(theme: number): { set: string; cells: number[] }[] {
-  const snow = theme === 4;
+  const snow = theme === SNOWY;
   return [
-    { set: snow ? 'ts_snow_forest' : 'ts_grass_forest', cells: snow ? [2, 13] : [2] },
-    ...(snow ? [] : [{ set: 'ts_snow_forest', cells: [13] }]),
+    { set: snow ? 'ts_snow_forest' : 'ts_grass_forest', cells: snow ? FORESTS : [TerrainType.WOODS] },
+    ...(snow ? [] : [{ set: 'ts_snow_forest', cells: [TerrainType.SNOW_WOOD] }]),
   ];
 }
 
@@ -124,12 +152,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
           draw(bs.land[k]!, x, y);
           continue;
         }
-        let m = (L(0, -1) ? 1 : 0) | (L(1, 0) ? 2 : 0) | (L(0, 1) ? 4 : 0) | (L(-1, 0) ? 8 : 0);
-        if (!(m & 1) && !(m & 2) && L(1, -1)) m |= 16;
-        if (!(m & 4) && !(m & 2) && L(1, 1)) m |= 32;
-        if (!(m & 4) && !(m & 8) && L(-1, 1)) m |= 64;
-        if (!(m & 1) && !(m & 8) && L(-1, -1)) m |= 128;
-        const i = bs.water[m];
+        const i = bs.water[coastMask(L)];
         if (i !== undefined) draw(i, x, y);
       }
     return true;
@@ -151,7 +174,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   pass(l1, () => false, true); // todo agua profunda
   passOrg(l1, (t) => LEVEL[t]! >= 1);
   passOrg(l2, (t) => LEVEL[t]! >= 2);
-  passBlob(l3, (t) => LEVEL[t]! >= 3, ctx);
+  passBlob(l3, (t) => LEVEL[t]! >= LAND, ctx);
   // Bosques: si hay arboles sueltos (Retro Diffusion) se dibujan como sprites mas abajo; si no, el tileset Wang.
   const trees = hasImage(textures, 'flat/tree_grass_0');
   treesLoaded = trees;
@@ -163,7 +186,7 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
       const d = DECOR[s.map[x]![y]!];
       if (!d) continue;
       // Variante fija por casilla (la misma cada vez que se dibuja el mapa).
-      const k = `${d[0]}_${(((x * 73856093) ^ (y * 19349663)) >>> 0) % d[1]}`;
+      const k = `${d[0]}_${cellHash(x, y) % d[1]}`;
       if (hasImage(textures, k)) blit(ctx, k, 0, 0, TILE, TILE, x * TILE, y * TILE);
     }
   // Montañas y bosques no se pintan aqui: van como sprites en la capa de los edificios
@@ -219,25 +242,20 @@ export function waterAnimCells(s: GameState): AnimCell[] {
   const W = s.map.length,
     H = s.map[0]!.length;
   const t = (x: number, y: number) => s.map[Math.min(W - 1, Math.max(0, x))]![Math.min(H - 1, Math.max(0, y))]!;
-  const land = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= H ? null : LEVEL[t(x, y)]! >= 3);
+  const land = (x: number, y: number) => (x < 0 || y < 0 || x >= W || y >= H ? null : LEVEL[t(x, y)]! >= LAND);
   const shoreSet = groundSets(s.theme)[2];
   const shoreRows = SHORE_ROWS[shoreSet] ?? {};
   const out: AnimCell[] = [];
   for (let x = 0; x < W; x++)
     for (let y = 0; y < H; y++) {
       if (land(x, y)) continue;
-      const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
-      if (t(x, y) !== 14) {
-        const rows = t(x, y) === 9 ? WATER_ROWS.deep : WATER_ROWS.water;
+      const h = cellHash(x, y);
+      if (t(x, y) !== TerrainType.ICE) {
+        const rows = t(x, y) === TerrainType.DEEP_WATER ? WATER_ROWS.deep : WATER_ROWS.water;
         out.push({ x, y, key: 'anim/water', row: rows[h % rows.length]!, phase: h % 12 });
       }
       // Espuma: mascara de costa igual que la de la lamina blob (fuera del mapa cuenta como agua).
-      const L = (dx: number, dy: number) => land(x + dx, y + dy) ?? false;
-      let m = (L(0, -1) ? 1 : 0) | (L(1, 0) ? 2 : 0) | (L(0, 1) ? 4 : 0) | (L(-1, 0) ? 8 : 0);
-      if (!(m & 1) && !(m & 2) && L(1, -1)) m |= 16;
-      if (!(m & 4) && !(m & 2) && L(1, 1)) m |= 32;
-      if (!(m & 4) && !(m & 8) && L(-1, 1)) m |= 64;
-      if (!(m & 1) && !(m & 8) && L(-1, -1)) m |= 128;
+      const m = coastMask((dx, dy) => land(x + dx, y + dy) ?? false);
       const row = shoreRows[m];
       if (m && row !== undefined) out.push({ x, y, key: `anim/shore_${shoreSet}`, row, phase: 0 });
     }
@@ -253,8 +271,8 @@ const OBJ_VARIANTS: Record<string, number> = { mount_grass: 4, mount_snow: 4, mo
 /** Nombre base del sprite de la casilla (montaña o bosque), sin variante. */
 function objectBase(s: GameState, x: number, y: number): string | null {
   const t = s.map[x]?.[y];
-  if (t === 2) return s.theme === 4 ? 'tree_snow' : 'tree_grass';
-  if (t === 13) return 'tree_snow';
+  if (t === TerrainType.WOODS) return s.theme === SNOWY ? 'tree_snow' : 'tree_grass';
+  if (t === TerrainType.SNOW_WOOD) return 'tree_snow';
   const m = mountainKind(s, x, y);
   return m ? `mount_${m}` : null;
 }
@@ -268,16 +286,17 @@ function objectKey(s: GameState, x: number, y: number, prefix = ''): string | nu
 
 function mountainKind(s: GameState, x: number, y: number): 'grass' | 'snow' | 'mesa' | null {
   const t = s.map[x]?.[y];
-  if (t === 7) return s.theme === 4 ? 'snow' : 'grass';
-  if (t === 12) return 'snow';
-  if (t === 5) return 'mesa';
+  if (t === TerrainType.GRASS_CLIFF) return s.theme === SNOWY ? 'snow' : 'grass';
+  if (t === TerrainType.SNOW_CLIFF) return 'snow';
+  if (t === TerrainType.SAND_CLIFF) return 'mesa';
   return null;
 }
 
 /** Primer plano que tapa los pies de una unidad en esa casilla (null si no hay). */
 export function frontKey(s: GameState, x: number, y: number): string | null {
   const t = s.map[x]?.[y];
-  const snow = s.theme === 4;
-  if ((t === 2 || t === 13) && !treesLoaded) return t === 13 || snow ? 'wang/front_snow_forest' : 'wang/front_grass_forest';
+  const snow = s.theme === SNOWY;
+  if (t !== undefined && FORESTS.includes(t) && !treesLoaded)
+    return t === TerrainType.SNOW_WOOD || snow ? 'wang/front_snow_forest' : 'wang/front_grass_forest';
   return objectKey(s, x, y, 'front_');
 }
