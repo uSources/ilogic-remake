@@ -4,7 +4,7 @@
  */
 import type { RulesConfig } from '../../core/data';
 import type { UnitActions } from '../../core/rules';
-import type { CommandKind, GameSetup, Pos, Unit } from '../../core/types';
+import type { GameSetup, Pos, Unit } from '../../core/types';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -33,8 +33,6 @@ export const ACTION_ORDER: ActionKey[] = [
 ];
 export type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 export const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
-/** Orden de cada opcion de menu. */
-export const CMD_OF: Partial<Record<string, CommandKind>> = { cmdAttack: 'attack', cmdCapture: 'capture', cmdDefend: 'defend' };
 
 export type EndButton = 'rematch' | 'new' | 'menu' | 'next' | 'retry';
 export const END_LABEL: Record<EndButton, TextKey> = {

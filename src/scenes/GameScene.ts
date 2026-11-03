@@ -1,35 +1,21 @@
 import Phaser from 'phaser';
-import { cancelCommand, effectiveCommand, keepCapturing, renameSquad } from '../core/squads';
+import { effectiveCommand, renameSquad } from '../core/squads';
 import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, useRules, UNIT_NAMES } from '../core/data';
 import { grid, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import {
-  attackEvent,
   buildingIncome,
   commandUsed,
-  attackTargets,
-  buildingAt,
-  buyOptions,
-  canBuyAt,
   inControlZone,
-  capture,
   capturePointsOf,
   captureProgress,
   outcome,
   endReason,
-  removeUnit,
-  spawn,
-  supply,
   upkeepOf,
   threatMap,
-  captureEvent,
-  unitActions,
   unitAt,
   unitById,
-  unload,
-  unloadTiles,
   visibility,
-  wait,
   type BuyOption,
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
@@ -63,25 +49,12 @@ import { WeatherFx } from '../ui/weatherFx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { PointerGestures } from '../controls/pointer';
-import { clickSelect } from '../controls/selection';
-import { actionById, type ActionId } from '../controls/actions';
 import { CLOSES_HELP, type GameCommand } from '../controls/commands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
-import { squadsVM, buyBlockedText, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
+import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import { defaultLab, labState, type LabAction, type LabOptions } from '../lab';
 import { newGeneral } from '../core/generals';
-import {
-  ACTION_ORDER,
-  CMD_OF,
-  CONFIRM_MS,
-  GAME_MENU,
-  key,
-  MENU_PHASES,
-  type ActionKey,
-  type GameStartData,
-  type Intent,
-  type Phase,
-} from './game/types';
+import { GAME_MENU, MENU_PHASES, type ActionKey, type GameStartData, type Intent, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel } from './game/menuModel';
 import { forecastFor, hintText, moveTipFor, selectionPanel } from './game/hudParts';
@@ -99,6 +72,7 @@ import { Carry, type CarryHost } from './game/carry';
 import { pointerTarget, type PointerHost } from './game/pointerInput';
 import { Orders, type OrderHost, type OrderMenu, type Ordering } from './game/orders';
 import { UnitMoves, type MoveHost } from './game/unitMoves';
+import { acceptMapTile, captureNow, GameMenuChoices, PHASES, type GameMenuHost, type PhaseHost } from './game/phases';
 
 /** Sin casillas marcadas (sin unidad elegida). */
 const NO_TILES: ReadonlyMap<string, number> = new Map();
@@ -125,11 +99,17 @@ export class GameScene extends Phaser.Scene {
   private get sel(): Unit | null {
     return this.moves.selected;
   }
-  private selBuilding: Building | null = null;
   private menuSel = 0;
   private menuItems: MenuItemVM[] = [];
-  private actions: ActionKey[] = [];
-  private buy: BuyOption[] = [];
+  /** Opciones del menu de la unidad, ya ordenadas. */
+  private unitOptions: ActionKey[] = [];
+  /** Fabrica de la compra y lo que se puede comprar en ella. */
+  private buyAt: Building | null = null;
+  private buyOptions: BuyOption[] = [];
+  /** Lo que hace cada opcion del menu de pausa (game/phases/gameMenu.ts). */
+  private gameMenu = new GameMenuChoices(this.gameMenuHost());
+  /** Lo que ven las fases del turno del jugador (game/phases). */
+  private phaseHost = this.makePhaseHost();
   /** Unidad cogida para arrastrar y soltar (game/carry.ts). */
   private carry = new Carry(this.carryHost());
   /** [CAMBIO] Lo elegido: grupo, «Elegir varias», escuadras y teclas de grupo (game/groupSelection.ts). */
@@ -138,7 +118,6 @@ export class GameScene extends Phaser.Scene {
   // Partida
   private fromSave = false;
   private savedThisGame = false;
-  private quitArmedAt = -1e9;
   private corruptSave = false;
   /** Ignorar Enter/clic hasta este instante (tras el turno enemigo). */
   private inputLockUntil = 0;
@@ -199,17 +178,16 @@ export class GameScene extends Phaser.Scene {
     this.vis = [];
     this.hidden = new Set();
     this.moves.reset();
-    this.selBuilding = null;
+    this.buyAt = null;
     this.menuSel = 0;
     this.menuItems = [];
-    this.actions = [];
-    this.buy = [];
+    this.unitOptions = [];
+    this.buyOptions = [];
     this.carry.reset();
     this.selection.reset();
     this.fromSave = false;
     this.savedThisGame = false;
-    this.quitArmedAt = -1e9;
-    this.surrenderArmedAt = -1e9;
+    this.gameMenu.reset();
     this.corruptSave = false;
     this.inputLockUntil = 0;
     this.deleteArmed = false;
@@ -670,9 +648,9 @@ export class GameScene extends Phaser.Scene {
       phase: this.phase,
       cursor: this.view.cursor,
       sel: this.sel,
-      actions: this.actions,
-      building: this.selBuilding,
-      buy: this.buy,
+      actions: this.unitOptions,
+      building: this.buyAt,
+      buy: this.buyOptions,
       groupUnits: () => this.selection.groupUnits(),
       groupCtx: () => this.orders.ctx(null),
       orderMenu: this.orderMenu,
@@ -867,95 +845,22 @@ export class GameScene extends Phaser.Scene {
   // Aceptar / atras
   // -------------------------------------------------------------------------
 
+  /** Aceptar en la fase actual (ver game/phases). */
   private accept(): void {
-    const c = this.view.cursor;
-    switch (this.phase) {
-      case 'map': {
-        const own = unitAt(this.s, c.x, c.y);
-        // [CAMBIO] "Elegir varias" con el teclado: Enter sobre una unidad propia la añade o la quita.
-        const picks = this.selection;
-        if (this.multi && own && picks.selectable(own))
-          return picks.apply(clickSelect(picks.selection(), own, { shift: true, ctrl: false, count: 1 }, () => []));
-        // [CAMBIO] Con un grupo elegido: Enter sobre una de sus unidades abre sus ordenes (escuadra,
-        // atacar, capturar...); sobre otra propia, la elige a ella; en otra casilla, mueve el grupo.
-        if (this.group.size && !this.multi) {
-          if (own && this.group.has(own.uid)) return this.openGroupMenu();
-          if (own && picks.selectable(own)) return picks.apply(new Set([own.uid]));
-          return void this.moves.groupMove(c);
-        }
-        return this.acceptMap(c);
-      }
-      case 'groupMenu':
-        return this.acceptGroupMenu();
-      case 'orderMenu':
-        return void this.orders.acceptMenu();
-      case 'gameMenu':
-        return this.acceptGameMenu();
-      case 'unitMenu':
-        return this.acceptUnitMenu();
-      case 'buy':
-        return this.acceptBuy();
-      case 'move':
-        return void this.acceptMove(c);
-      case 'attack':
-        return void this.acceptAttack(c);
-      case 'unloadPick':
-        return this.acceptUnloadPick();
-      case 'unloadTile':
-        return this.acceptUnloadTile(c);
-      case 'target':
-        if (this.ordering) return void this.orders.place(c);
-        return void this.abilities.fire(c);
-      default:
-        break;
-    }
+    PHASES[this.phase].accept(this.phaseHost);
   }
 
   private back(): void {
     this.deleteArmed = false;
-    switch (this.phase) {
-      case 'map':
-        if (this.inspectUid !== null) {
-          this.inspectUid = null;
-          return this.refresh();
-        }
-        return this.openGameMenu();
-      case 'gameMenu':
-        return this.toMap();
-      case 'groupMenu':
-        // Atras deja el grupo elegido: el siguiente clic en el mapa lo mueve.
-        return this.toMap();
-      case 'orderMenu': {
-        // Vuelve a donde estaba: la unidad elegida (moviendo o en su menu) o el grupo.
-        const from = this.orderMenu?.from;
-        this.orderMenu = null;
-        if (from === 'move' && this.sel) return this.selectUnit(this.sel);
-        if (from === 'unitMenu' && this.sel) return this.openUnitMenu();
-        return this.toMap();
-      }
-      case 'buy':
-      case 'move':
-        return this.toMap();
-      case 'unitMenu':
-        return this.moves.undoMove();
-      case 'attack':
-      case 'unloadPick':
-        return this.openUnitMenu();
-      case 'unloadTile':
-        this.phase = 'unloadPick';
-        this.menuSel = 0;
-        return this.refresh();
-      case 'target':
-        if (this.ordering?.single) {
-          // Desde el menu de la unidad: vuelve a el (su movimiento sigue a medio decidir).
-          this.ordering = null;
-          return this.openUnitMenu();
-        }
-        this.ordering = null;
-        return this.toMap();
-      default:
-        break;
-    }
+    PHASES[this.phase].back(this.phaseHost);
+  }
+
+  /** Entrar en una fase que prepara algo al entrar (abrir su menu); las demas, solo se ponen. */
+  private enterPhase(phase: Phase): void {
+    const handler = PHASES[phase];
+    if (handler.enter) return handler.enter(this.phaseHost);
+    this.phase = phase;
+    this.refresh();
   }
 
   private toMap(): void {
@@ -965,7 +870,7 @@ export class GameScene extends Phaser.Scene {
     this.orderMenu = null;
     this.inspectUid = null;
     this.moves.deselect();
-    this.selBuilding = null;
+    this.buyAt = null;
     this.refresh();
   }
 
@@ -981,32 +886,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private openGameMenu(): void {
-    if (this.phase !== 'map' && this.phase !== 'gameMenu') this.abandonSelection();
-    this.menuSel = 0;
-    this.phase = 'gameMenu';
-    this.refresh();
+    this.enterPhase('gameMenu');
   }
 
-  private acceptMap(c: Pos): void {
-    const u = unitAt(this.s, c.x, c.y);
-    if (this.inspectUid !== null) {
-      // Segunda pulsacion: cerrar el alcance (o señalar otra unidad).
-      const same = u?.uid === this.inspectUid;
-      this.inspectUid = null;
-      if (same || !u) return this.refresh();
-    }
-    if (u && u.team === 0 && u.active) return this.selectUnit(u);
-    const b = buildingAt(this.s, c.x, c.y);
-    if (b && b.owner === 0 && canBuyAt(this.s, b)) {
-      this.selBuilding = b;
-      this.buy = buyOptions(this.s, b);
-      const firstAffordable = this.buy.findIndex((o) => o.affordable);
-      this.menuSel = firstAffordable >= 0 ? firstAffordable + 1 : 0;
-      this.phase = 'buy';
-      return this.refresh();
-    }
-    if (u && u.carrier === null && (u.team === 0 || this.visibleToPlayer(u))) return this.inspect(u);
-    this.openGameMenu();
+  private openUnitMenu(): void {
+    this.enterPhase('unitMenu');
   }
 
   /** Muestra el alcance de una unidad (enemiga, o propia ya usada). */
@@ -1024,14 +908,6 @@ export class GameScene extends Phaser.Scene {
     return this.moves.intentAt(t);
   }
 
-  /** Capturar ya con la unidad elegida (al soltarla encima de un edificio), como desde su menu. */
-  private captureNow(): void {
-    this.actions = ['capture'];
-    this.menuSel = 0;
-    this.phase = 'unitMenu';
-    this.acceptUnitMenu();
-  }
-
   private waitSelected(): void {
     this.moves.waitSelected();
   }
@@ -1042,116 +918,6 @@ export class GameScene extends Phaser.Scene {
 
   /** Pantalla de opciones (la misma que en el menu principal), encima del menu de pausa. */
   private optionsPanel!: OptionsPanel;
-
-  private acceptGameMenu(): void {
-    switch (GAME_MENU[this.menuSel]) {
-      case 'options':
-        return this.optionsPanel.open();
-      case 'resume':
-        return this.toMap();
-      case 'help':
-        this.toMap();
-        return ui.set({ help: true });
-      case 'save':
-        if (writeSave(serialize(this.s))) {
-          this.savedThisGame = true;
-          showToast(t('saved'));
-        }
-        return this.toMap();
-      case 'endTurn':
-        return void this.turns.enemyTurn();
-      case 'replay':
-        if (!this.turns.canReplay) return showToast(t('noReplay'));
-        return void this.turns.replayEnemyTurn();
-      case 'surrender':
-        if (this.time.now - this.surrenderArmedAt < CONFIRM_MS) return this.surrender();
-        this.surrenderArmedAt = this.time.now;
-        return showToast(t('confirmSurrender'));
-      case 'quit':
-        // [CAMBIO] en el original Esc abandonaba la partida al instante, sin confirmar.
-        if (this.time.now - this.quitArmedAt < CONFIRM_MS) return this.quitToMenu();
-        this.quitArmedAt = this.time.now;
-        return showToast(t('confirmQuit'));
-      default:
-        break;
-    }
-  }
-
-  private openUnitMenu(): void {
-    if (!this.sel) return this.toMap();
-    const av = unitActions(this.s, this.sel);
-    // [CAMBIO] "Atras" siempre: deshace el movimiento (en el original no se podia).
-    av.back = true;
-    this.actions = ACTION_ORDER.filter((a) => av[a]);
-    // Encima de un edificio que se puede capturar, lo normal es capturar.
-    this.menuSel = Math.max(0, this.actions.indexOf('capture'));
-    this.deleteArmed = false;
-    this.phase = 'unitMenu';
-    this.view.cursor = { x: this.sel.x, y: this.sel.y };
-    this.refresh();
-  }
-
-  private async acceptMove(c: Pos): Promise<void> {
-    return this.moves.commit(c);
-  }
-
-  private acceptUnitMenu(): void {
-    const u = this.sel;
-    const action = this.actions[this.menuSel];
-    if (!u || !action) return;
-    switch (action) {
-      case 'attack': {
-        const targets = attackTargets(this.s, u);
-        this.moves.session!.attackTargets = new Map(targets.map((o) => [key(o), o.uid]));
-        this.phase = 'attack';
-        const first = targets[0];
-        if (first) {
-          this.view.cursor = { x: first.x, y: first.y };
-          this.view.ensureVisible(first, 3);
-        }
-        return this.refresh();
-      }
-      case 'capture': {
-        const b = buildingAt(this.s, u.x, u.y);
-        const r = capture(this.s, u);
-        // [CAMBIO] Si a mitad de captura, que la acabe aunque tuviera otra orden (destacada).
-        keepCapturing(this.s, u);
-        if (b && r) void this.playEvents([captureEvent(u, b, r)]).then(() => this.afterAction());
-        else this.afterAction();
-        return;
-      }
-      case 'unload':
-        this.menuSel = 1;
-        this.phase = 'unloadPick';
-        return this.refresh();
-      case 'supply':
-        this.clearUndo();
-        supply(this.s, u);
-        return this.afterAction();
-      case 'wait':
-        wait(u);
-        return this.afterAction();
-      case 'cmdAttack':
-      case 'cmdCapture':
-      case 'cmdDefend':
-        return this.orders.start(CMD_OF[action]!, [u], true);
-      case 'cmdCancel':
-        cancelCommand(this.s, [u]);
-        showToast(t('orderCancelled'));
-        return this.openUnitMenu();
-      case 'back':
-        return this.moves.undoMove();
-      case 'delete':
-        // [CAMBIO] pedir confirmacion (en el original se borraba al instante).
-        if (!this.deleteArmed) {
-          this.deleteArmed = true;
-          return showToast(t('confirmDelete'));
-        }
-        this.clearUndo();
-        removeUnit(this.s, u.uid);
-        return this.afterAction();
-    }
-  }
 
   // -------------------------------------------------------------------------
   // [CAMBIO] Seleccion (game/groupSelection.ts): una unidad elegida (sel, al moverla) o un grupo
@@ -1182,24 +948,9 @@ export class GameScene extends Phaser.Scene {
     return selectionPanel(this.textures, this.s, list, this.view.cursor);
   }
 
-  /** [CAMBIO] Menu de grupo, al elegir varias con Mayusculas + recuadro. */
+  /** [CAMBIO] Menu de grupo, al elegir varias con Mayusculas + recuadro (tambien lo abre tests/visual/keys.mjs). */
   private openGroupMenu(): void {
-    this.multi = false;
-    this.menuSel = 0;
-    this.phase = 'groupMenu';
-    this.refresh();
-  }
-
-  private acceptGroupMenu(): void {
-    const k = this.menuItems[this.menuSel]?.id;
-    const units = this.selection.groupUnits();
-    if (k === 'move') {
-      // Sigue elegido: el clic derecho (o Enter) en el destino lo mueve.
-      showToast(`${units.length} ${t('groupSelected')}`);
-      return this.toMap();
-    }
-    if (!k || k === 'cancel' || !actionById(k)) return this.toMap();
-    void this.orders.run(k as ActionId, null, { queue: false, single: false });
+    this.enterPhase('groupMenu');
   }
 
   // -------------------------------------------------------------------------
@@ -1227,53 +978,6 @@ export class GameScene extends Phaser.Scene {
     this.orders.menu = v;
   }
 
-  private async acceptAttack(c: Pos): Promise<void> {
-    const u = this.sel;
-    const targetUid = this.moves.session?.attackTargets.get(key(c));
-    if (!u || targetUid === undefined) return this.openUnitMenu();
-    const target = unitById(this.s, targetUid)!;
-    await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
-    this.afterAction();
-  }
-
-  private acceptUnloadPick(): void {
-    if (this.menuSel === 0) return this.openUnitMenu();
-    const u = this.sel;
-    if (!u) return;
-    const p = unitById(this.s, u.cargo[this.menuSel - 1] ?? null);
-    if (!p) return;
-    const tiles = unloadTiles(this.s, u, p);
-    if (!tiles.length) return;
-    this.moves.session!.passenger = p;
-    this.moves.session!.unloadTiles = new Set(tiles.map(key));
-    this.phase = 'unloadTile';
-    this.view.cursor = { ...tiles[0]! };
-    this.refresh();
-  }
-
-  private acceptUnloadTile(c: Pos): void {
-    const session = this.moves.session;
-    if (!session?.passenger) return;
-    if (!session.unloadTiles.has(key(c))) {
-      this.phase = 'unloadPick';
-      return this.refresh();
-    }
-    if (unload(this.s, session.unit, session.passenger, c)) {
-      this.clearUndo();
-      this.afterAction();
-    }
-  }
-
-  private acceptBuy(): void {
-    if (this.menuSel === 0 || !this.selBuilding) return this.toMap();
-    const opt = this.buy[this.menuSel - 1];
-    if (!opt) return;
-    if (opt.blocked) return showToast(buyBlockedText(opt.blocked));
-    const b = this.selBuilding;
-    const u = spawn(this.s, b, opt.type);
-    if (u) void this.playEvents([{ kind: 'spawn', uid: u.uid, at: { x: b.x, y: b.y } }]).then(() => this.afterAction());
-  }
-
   private afterAction(): void {
     if (this.checkEnd()) return;
     this.toMap();
@@ -1297,7 +1001,6 @@ export class GameScene extends Phaser.Scene {
 
   /** Ultima casilla con un combate o una captura (para enfocar el final). */
   private lastAt: Pos | null = null;
-  private surrenderArmedAt = -1e9;
 
   /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */
   private closeMatch(): void {
@@ -1549,7 +1252,7 @@ export class GameScene extends Phaser.Scene {
       waitSelected: () => this.waitSelected(),
       groupMove: (goal) => this.moves.groupMove(goal),
       selectUnit: (u) => this.selectUnit(u),
-      acceptMap: (c) => this.acceptMap(c),
+      acceptMap: (c) => acceptMapTile(this.phaseHost, c),
     });
   }
 
@@ -1577,7 +1280,89 @@ export class GameScene extends Phaser.Scene {
       refresh: () => this.refresh(),
       afterAction: () => this.afterAction(),
       openUnitMenu: () => this.openUnitMenu(),
-      captureNow: () => this.captureNow(),
+      captureNow: () => captureNow(this.phaseHost),
+    });
+  }
+
+  private makePhaseHost(): PhaseHost {
+    return live<PhaseHost>({
+      state: { get: () => this.s },
+      view: { get: () => this.view },
+      phase: {
+        get: () => this.phase,
+        set: (v) => {
+          this.phase = v;
+        },
+      },
+      menuSel: {
+        get: () => this.menuSel,
+        set: (v) => {
+          this.menuSel = v;
+        },
+      },
+      menuItems: { get: () => this.menuItems },
+      inspectUid: {
+        get: () => this.inspectUid,
+        set: (v) => {
+          this.inspectUid = v;
+        },
+      },
+      unitOptions: {
+        get: () => this.unitOptions,
+        set: (v) => {
+          this.unitOptions = v;
+        },
+      },
+      deleteArmed: {
+        get: () => this.deleteArmed,
+        set: (v) => {
+          this.deleteArmed = v;
+        },
+      },
+      buyAt: {
+        get: () => this.buyAt,
+        set: (v) => {
+          this.buyAt = v;
+        },
+      },
+      buyOptions: {
+        get: () => this.buyOptions,
+        set: (v) => {
+          this.buyOptions = v;
+        },
+      },
+      moves: { get: () => this.moves },
+      selection: { get: () => this.selection },
+      orders: { get: () => this.orders },
+      abilities: { get: () => this.abilities },
+      gameMenu: { get: () => this.gameMenu },
+      enter: (phase) => this.enterPhase(phase),
+      toMap: () => this.toMap(),
+      refresh: () => this.refresh(),
+      afterAction: () => this.afterAction(),
+      abandonSelection: () => this.abandonSelection(),
+      inspect: (u) => this.inspect(u),
+      visible: (p) => this.visibleToPlayer(p),
+      play: (events) => this.playEvents(events),
+    });
+  }
+
+  private gameMenuHost(): GameMenuHost {
+    return live<GameMenuHost>({
+      now: { get: () => this.time.now },
+      canReplay: { get: () => this.turns.canReplay },
+      toMap: () => this.toMap(),
+      openOptions: () => this.optionsPanel.open(),
+      showHelp: () => ui.set({ help: true }),
+      saveGame: () => {
+        if (!writeSave(serialize(this.s))) return false;
+        this.savedThisGame = true;
+        return true;
+      },
+      endTurn: () => void this.turns.enemyTurn(),
+      replayEnemyTurn: () => void this.turns.replayEnemyTurn(),
+      surrender: () => this.surrender(),
+      quitToMenu: () => this.quitToMenu(),
     });
   }
 
