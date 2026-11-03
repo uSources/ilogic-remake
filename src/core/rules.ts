@@ -101,3 +101,4 @@ export {
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
 export { unhealable, endRound, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export { score, dayLimitReached, outcome, objectiveProgress, endReason } from './rules/outcome';
+export { PLAYER, AI_TEAM, isPlayer, opponentOf, isEnemyOf, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';
