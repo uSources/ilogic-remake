@@ -39,8 +39,8 @@ export const PRESETS: Record<
   quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
 
-export function applyPreset(o: NewGameOptions, id: PresetId): NewGameOptions {
-  return id === 'custom' ? { ...o, preset: id } : { ...o, ...PRESETS[id], preset: id };
+export function applyPreset(options: NewGameOptions, id: PresetId): NewGameOptions {
+  return id === 'custom' ? { ...options, preset: id } : { ...options, ...PRESETS[id], preset: id };
 }
 
 export const DEFAULT_OPTIONS: NewGameOptions = {
@@ -76,86 +76,109 @@ export const CHOICES = {
 };
 export type ChoiceKey = keyof typeof CHOICES;
 
-const KEY = 'ilogic.newgame';
+const STORAGE_KEY = 'ilogic.newgame';
+
+/** Las opciones guardadas que siguen siendo validas; las demas, las de siempre. */
+function optionsFromSaved(saved: Partial<NewGameOptions>): NewGameOptions {
+  const options = { ...DEFAULT_OPTIONS };
+  for (const key of Object.keys(CHOICES) as ChoiceKey[]) {
+    const value = saved[key];
+    if ((CHOICES[key] as readonly unknown[]).includes(value)) (options as Record<string, unknown>)[key] = value;
+  }
+  if (PRESET_IDS.includes(saved.preset as PresetId)) options.preset = saved.preset as PresetId;
+  return { ...options, code: '' };
+}
 
 export function loadOptions(): NewGameOptions {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<NewGameOptions> | null;
-    if (!raw) return { ...DEFAULT_OPTIONS };
-    const o = { ...DEFAULT_OPTIONS };
-    for (const k of Object.keys(CHOICES) as ChoiceKey[]) {
-      const v = raw[k];
-      if ((CHOICES[k] as readonly unknown[]).includes(v)) (o as Record<string, unknown>)[k] = v;
-    }
-    if (PRESET_IDS.includes(raw.preset as PresetId)) o.preset = raw.preset as PresetId;
-    return { ...o, code: '' };
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Partial<NewGameOptions> | null;
+    return saved ? optionsFromSaved(saved) : { ...DEFAULT_OPTIONS };
   } catch {
     return { ...DEFAULT_OPTIONS };
   }
 }
 
-export function saveOptions(o: NewGameOptions): void {
+export function saveOptions(options: NewGameOptions): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ ...o, code: '' }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...options, code: '' }));
   } catch {
     // sin almacenamiento
   }
 }
 
 /** Reglas de la partida a partir de las opciones. */
-export function rulesFor(o: NewGameOptions): RulesConfig {
+export function rulesFor(options: NewGameOptions): RulesConfig {
   return {
     ...DEFAULT_RULES,
-    fog: o.fog,
-    weather: o.weather,
-    initialFunds: o.funds,
-    incomeScale: o.income,
-    dayLimit: o.dayLimit,
-    commandPoints: o.command,
-    upkeep: o.upkeep,
+    fog: options.fog,
+    weather: options.weather,
+    initialFunds: options.funds,
+    incomeScale: options.income,
+    dayLimit: options.dayLimit,
+    commandPoints: options.command,
+    upkeep: options.upkeep,
   };
 }
 
 /** Codigo de mapa: la semilla en base 36, en mayusculas (p. ej. "K3F9A2"). */
 export const seedToCode = (seed: number): string => (seed >>> 0).toString(36).toUpperCase();
 
+/** Lo mas largo que puede ser un codigo: 7 cifras en base 36 cubren todas las semillas de 32 bits. */
+export const MAX_CODE_LENGTH = 7;
+const MAX_SEED = 0xffffffff;
+const CODE_PATTERN = new RegExp(`^[0-9a-z]{1,${MAX_CODE_LENGTH}}$`);
+
 export function codeToSeed(code: string): number | null {
-  const c = code.trim().toLowerCase();
-  if (!/^[0-9a-z]{1,7}$/.test(c)) return null;
-  const n = parseInt(c, 36);
-  return Number.isFinite(n) && n <= 0xffffffff ? n : null;
+  const cleaned = code.trim().toLowerCase();
+  if (!CODE_PATTERN.test(cleaned)) return null;
+  const seed = parseInt(cleaned, 36);
+  return Number.isFinite(seed) && seed <= MAX_SEED ? seed : null;
 }
 
-export const randomSeed = (): number => Math.floor(Math.random() * 0xffffffff) >>> 0;
+export const randomSeed = (): number => Math.floor(Math.random() * MAX_SEED) >>> 0;
 
-const THEME_ES = ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'];
-const THEME_EN = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'];
+/** Nombre de cada tema de graficos del mapa, en el orden de los temas. */
+export const THEME_NAMES = {
+  es: ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'],
+  en: ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'],
+};
+
+const SMALL_SIZE = 20;
+const LARGE_SIZE = 40;
+
+const isSpanish = () => settings.lang === 'es';
+const percent = (value: unknown) => `${Math.round((value as number) * 100)} %`;
+const onOff = (value: unknown) => (value ? (isSpanish() ? 'Sí' : 'On') : isSpanish() ? 'No' : 'Off');
+const noLimit = () => (isSpanish() ? 'Sin límite' : 'None');
+
+function sizeLabel(value: unknown): string {
+  const note =
+    value === SMALL_SIZE ? (isSpanish() ? ' pequeño' : ' small') : value === LARGE_SIZE ? (isSpanish() ? ' grande' : ' large') : '';
+  return `${String(value)}×${String(value)}${note}`;
+}
+
+function generalLabel(value: unknown): string {
+  const general = GENERALS.find((candidate) => candidate.id === value);
+  if (!general) return isSpanish() ? 'Sin general' : 'No general';
+  return `${general.name[settings.lang]} · ${general.title[settings.lang]}`;
+}
+
+/** Texto de cada valor de cada opcion, para la pantalla. */
+const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
+  size: sizeLabel,
+  theme: (value) => (value === null ? (isSpanish() ? 'Al azar' : 'Random') : THEME_NAMES[isSpanish() ? 'es' : 'en'][value as number]!),
+  fog: onOff,
+  weather: onOff,
+  funds: (value) => fmtNum(value as number),
+  income: percent,
+  dayLimit: (value) => (value === null ? noLimit() : `${Number(value)} ${isSpanish() ? 'días' : 'days'}`),
+  command: (value) => (value === null ? noLimit() : `${Number(value)}`),
+  upkeep: (value) => (value === 0 ? (isSpanish() ? 'No' : 'Off') : percent(value)),
+  general: generalLabel,
+  enemyGeneral: generalLabel,
+};
 
 /** Texto de cada valor, para la pantalla. */
-export function choiceLabel(k: ChoiceKey, v: unknown): string {
-  const es = settings.lang === 'es';
-  switch (k) {
-    case 'size':
-      return `${String(v)}×${String(v)}${v === 20 ? (es ? ' pequeño' : ' small') : v === 40 ? (es ? ' grande' : ' large') : ''}`;
-    case 'theme':
-      return v === null ? (es ? 'Al azar' : 'Random') : (es ? THEME_ES : THEME_EN)[v as number]!;
-    case 'fog':
-    case 'weather':
-      return v ? (es ? 'Sí' : 'On') : es ? 'No' : 'Off';
-    case 'funds':
-      return fmtNum(v as number);
-    case 'income':
-      return `${Math.round((v as number) * 100)} %`;
-    case 'dayLimit':
-      return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)} ${es ? 'días' : 'days'}`;
-    case 'command':
-      return v === null ? (es ? 'Sin límite' : 'None') : `${Number(v)}`;
-    case 'upkeep':
-      return v === 0 ? (es ? 'No' : 'Off') : `${Math.round((v as number) * 100)} %`;
-    case 'general':
-    case 'enemyGeneral': {
-      const g = GENERALS.find((x) => x.id === v);
-      return g ? `${g.name[settings.lang]} · ${g.title[settings.lang]}` : es ? 'Sin general' : 'No general';
-    }
-  }
+export function choiceLabel(key: ChoiceKey, value: unknown): string {
+  return CHOICE_LABELS[key](value);
 }

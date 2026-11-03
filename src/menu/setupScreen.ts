@@ -14,10 +14,12 @@ import {
   choiceLabel,
   codeToSeed,
   loadOptions,
+  MAX_CODE_LENGTH,
   PRESET_IDS,
   randomSeed,
   saveOptions,
   seedToCode,
+  THEME_NAMES,
   type ChoiceKey,
   type NewGameOptions,
   type PresetId,
@@ -64,14 +66,6 @@ const CUSTOM_GROUPS: { title: TextKey; keys: { k: ChoiceKey; label: TextKey }[] 
     ],
   },
 ];
-
-const THEME_NAMES = {
-  es: ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'],
-  en: ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'],
-};
-
-/** Longitud maxima del codigo de mapa (ver `seedToCode`). */
-const MAX_CODE_LENGTH = 7;
 
 const OPTION_PREFIX = 'opt-';
 const PRESET_PREFIX = 'preset-';
