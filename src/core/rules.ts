@@ -46,6 +46,8 @@ export {
   moveRange,
   canReach,
   reachableTiles,
+  reachableTilesWithCost,
+  distancesIgnoringUnits,
   walkPath,
   pathTo,
   validPath,
@@ -57,6 +59,8 @@ export {
   type MoveRange,
   type MovePath,
   type PassMap,
+  type ReachableTile,
+  type DistanceMap,
 } from './rules/movement';
 export {
   inAttackRange,

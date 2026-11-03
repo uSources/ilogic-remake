@@ -5,6 +5,8 @@
 import { RULES, UNIT, Movement, type MoveType } from '../data';
 import { isRanged, zoneOfControl } from '../abilities';
 import { grid, inBounds, manhattan, neighbors4, samePos } from '../geom';
+import { cellAt, cells } from '../util/grid';
+import { minBy } from '../util/pick';
 import { weatherMove } from '../weather';
 import type { GameEvent, GameState, Pos, Unit } from '../types';
 import { dropStaleCaptures } from './capture';
@@ -114,9 +116,20 @@ export function canReach(range: MoveRange, x: number, y: number): boolean {
 
 /** Casillas a las que se puede mover (sin contar la de salida). */
 export function reachableTiles(r: MoveRange): Pos[] {
-  const out: Pos[] = [];
-  for (let x = 0; x < r.steps.length; x++) for (let y = 0; y < r.steps[x]!.length; y++) if (r.steps[x]![y]! > 0) out.push({ x, y });
-  return out;
+  return reachableTilesWithCost(r).map((tile) => tile.pos);
+}
+
+/** Una casilla del alcance y los pasos que cuesta llegar. */
+export interface ReachableTile {
+  pos: Pos;
+  cost: number;
+}
+
+/** Las casillas del alcance con lo que cuesta llegar a cada una, columna a columna. */
+export function reachableTilesWithCost(range: MoveRange): ReachableTile[] {
+  const tiles: ReachableTile[] = [];
+  for (const { pos, value: cost } of cells(range.steps)) if (cost > 0) tiles.push({ pos, cost });
+  return tiles;
 }
 
 /** Camino de un movimiento; si ha habido emboscada, donde estaba el enemigo escondido. */
@@ -218,30 +231,33 @@ export function groundDistance(s: GameState, from: Pos, moveType: MoveType, occ 
   return dist;
 }
 
+/** Pasos que faltan hasta un destino desde cada casilla. */
+export interface DistanceMap {
+  /** Pasos desde `pos` hasta el destino: 0 en el propio destino, Infinity si no se llega nunca. */
+  at(pos: Pos): number;
+}
+
+/** Distancias hasta `goal` para un tipo de movimiento, como si no hubiera unidades en medio. */
+export function distancesIgnoringUnits(s: GameState, goal: Pos, movement: MoveType): DistanceMap {
+  const steps = groundDistance(s, goal, movement, grid(false));
+  // groundDistance marca con 0 tanto el destino como lo que no se alcanza.
+  return { at: (pos) => (samePos(pos, goal) ? 0 : cellAt(steps, pos) || Infinity) };
+}
+
 /**
- * Mejor casilla del alcance para acercarse a `goal` (por tierra, mar o aire segun la unidad),
- * sin contar a las demas unidades: la que deja menos camino por delante y, a igualdad, la mas barata.
- * null si no se puede llegar nunca o ya no se puede acercar mas.
+ * Casilla del alcance que mas acerca a `goal` (por tierra, mar o aire segun la unidad), sin contar a
+ * las demas unidades. A igual distancia, la que menos pasos gasta.
+ * null si no se puede llegar nunca o ninguna casilla acerca mas que quedarse donde esta.
  */
-export function stepToward(s: GameState, u: Unit, goal: Pos, range = moveRange(s, u)): Pos | null {
-  if (!canWalk(s, goal.x, goal.y, Movement.of(u.type))) return null;
-  const dist = groundDistance(s, goal, Movement.of(u.type), grid(false));
-  const here = samePos(u, goal) ? 0 : dist[u.x]![u.y]! || Infinity;
-  let best: Pos | null = null;
-  let bestD = here;
-  let bestC = Infinity;
-  for (let x = 0; x < range.steps.length; x++)
-    for (let y = 0; y < range.steps[x]!.length; y++) {
-      const c = range.steps[x]![y]!;
-      if (c <= 0) continue;
-      const d = x === goal.x && y === goal.y ? 0 : dist[x]![y]! || Infinity;
-      if (d < bestD || (d === bestD && best && c < bestC)) {
-        best = { x, y };
-        bestD = d;
-        bestC = c;
-      }
-    }
-  return best;
+export function stepToward(s: GameState, unit: Unit, goal: Pos, range = moveRange(s, unit)): Pos | null {
+  const movement = Movement.of(unit.type);
+  if (!canWalk(s, goal.x, goal.y, movement)) return null;
+
+  const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
+  const best = minBy(reachableTilesWithCost(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
+
+  const getsCloser = best !== null && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);
+  return getsCloser ? best.pos : null;
 }
 
 /** Mueve la unidad (Ilogic.Move). Devuelve el camino recorrido o null si no es valido. */
