@@ -4,7 +4,7 @@
  */
 import { UNIT } from './data';
 import { manhattan } from './geom';
-import { buildingAt } from './rules';
+import { buildingAt } from './rules/queries';
 import type { Command, CommandKind, GameState, Pos, Squad, Unit } from './types';
 
 /** Nombres que se van dando a las escuadras nuevas (el jugador los puede cambiar). */

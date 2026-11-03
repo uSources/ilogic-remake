@@ -3,10 +3,13 @@
  *
  * Son pasivas y salen de units.json ("abilities"): el codigo no sabe que unidad tiene cual, solo
  * que hace cada clase (ver AbilityDef en content/types.ts y docs/CONTENIDO.md). Las reglas
- * (hitChance, moveRange, validPath) llaman a estas funciones; la IA y la prevision de combate las
- * usan sin saberlo porque pasan por las mismas reglas.
+ * (hitChance, moveRange, validPath, visibility, captureStrength) llaman a estas funciones; la IA y la
+ * prevision de combate las usan sin saberlo porque pasan por las mismas reglas.
  *
- * Este modulo no importa rules.ts (rules.ts lo importa a el).
+ * Una clase de habilidad nueva: su forma en AbilityDef (content/types.ts) y su efecto aqui, como
+ * funcion que pregunta la regla que toca. Las reglas no leen `abilityOf` directamente.
+ *
+ * Este modulo no importa rules/ (las reglas lo importan a el).
  */
 import { MOVEMENTS } from './content';
 import { RULES, UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
@@ -24,6 +27,16 @@ export function abilityOf<K extends AbilityDef['kind']>(type: number, kind: K): 
 /** Habilidades de un tipo de unidad que cuentan con las reglas actuales (para enseñarlas). */
 export function abilitiesOf(type: number): readonly AbilityDef[] {
   return RULES.abilities ? (UNIT_ABILITIES[type] ?? []) : [];
+}
+
+/** Ve dentro del terreno que esconde (bosque) en todo su radio de vision (scout). */
+export function seesIntoCover(type: number): boolean {
+  return !!abilityOf(type, 'scout');
+}
+
+/** Multiplicador de lo que resta al capturar (quickCapture). 1 = nada. */
+export function captureFactor(type: number): number {
+  return abilityOf(type, 'quickCapture')?.factor ?? 1;
 }
 
 /** Ataca a distancia (no puede disparar a la casilla de al lado). */
