@@ -7,9 +7,10 @@
  *   que valen (menuActions);
  * - el cursor del raton al pasar por encima (cursorFor).
  *
- * Logica pura: no mueve nada ni sabe de mandos. GameScene cumple la accion elegida (runAction) y
- * le pasa lo que solo ella sabe (que significa ir a esa casilla con la unidad elegida: `intent`).
- * Añadir una accion es una entrada mas en ACTIONS y un caso en runAction; los mandos no cambian.
+ * Logica pura: no mueve nada ni sabe de mandos. Lo que hace cada accion al elegirla esta en
+ * scenes/game/actionRunners.ts (una entrada por cada `ActionId`, lo obliga el tipo). La escena le
+ * pasa aqui lo que solo ella sabe (que significa ir a esa casilla con la unidad elegida: `intent`).
+ * Añadir una accion es una entrada en ACTIONS y otra en ACTION_RUNNERS; los mandos no cambian.
  */
 import { UNIT } from '../core/data';
 import { buildingAt } from '../core/rules';
@@ -64,31 +65,44 @@ export interface ActionDef {
   smart: boolean;
   /** Pide una casilla (sin ella, el menu de la bandeja la pide despues). */
   needsTile: boolean;
-  ok(c: ActionCtx): boolean;
+  ok(ctx: ActionCtx): boolean;
 }
 
-const single = (c: ActionCtx) => (c.units.length === 1 && c.intent !== undefined ? c.units[0]! : null);
-const group = (c: ActionCtx) => single(c) === null && c.units.length > 0;
+type ActionEntry = Pick<ActionDef, 'id' | 'label' | 'cursor' | 'ok'>;
+
+/** Accion sobre una casilla que puede hacer el clic derecho (atacar, mover, unirse...). */
+const onTile = (entry: ActionEntry): ActionDef => ({ ...entry, smart: true, needsTile: true });
+
+/** Accion que solo sale en el menu; sin casilla, la pide despues (ordenes, escuadras). */
+const inMenu = (entry: ActionEntry): ActionDef => ({ ...entry, smart: false, needsTile: false });
+
+/** La unica unidad elegida, si se esta moviendo (la escena ha dicho que pasaria en la casilla). */
+const movingUnit = (ctx: ActionCtx): Unit | null => (ctx.units.length === 1 && ctx.intent !== undefined ? ctx.units[0]! : null);
+const isMoving = (ctx: ActionCtx) => movingUnit(ctx) !== null;
+const isGroup = (ctx: ActionCtx) => !isMoving(ctx) && ctx.units.length > 0;
+const anyCanCapture = (units: readonly Unit[]) => units.some((unit) => UNIT.cancapt[unit.type]);
+const anyCanFight = (units: readonly Unit[]) => units.some((unit) => UNIT.canfight[unit.type]);
 
 /** La casilla tiene un edificio que no es del jugador y alguna de estas unidades puede capturar. */
-function capturable(c: ActionCtx): boolean {
-  if (!c.at) return false;
-  const b = buildingAt(c.s, c.at.x, c.at.y);
-  return !!b && b.owner !== 0 && c.units.some((u) => UNIT.cancapt[u.type]);
+function hasBuildingToCapture(ctx: ActionCtx): boolean {
+  if (!ctx.at) return false;
+  const building = buildingAt(ctx.s, ctx.at.x, ctx.at.y);
+  return !!building && building.owner !== 0 && anyCanCapture(ctx.units);
 }
 
 /** Escuadra que forman exactamente estas unidades (o null). */
 export function exactSquad(s: GameState, units: readonly Unit[]): number | null {
   const id = units[0]?.squad;
-  if (id === undefined || !units.every((u) => u.squad === id)) return null;
+  if (id === undefined || !units.every((unit) => unit.squad === id)) return null;
   return squadUnits(s, id).length === units.length ? id : null;
 }
 
+const isWholeSquad = (ctx: ActionCtx) => exactSquad(ctx.s, ctx.units) !== null;
+
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
-function orderOk(c: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
-  if (c.at) return commandChoices(c.s, c.at, c.units, c.enemyHere).includes(kind);
-  if (kind === 'capture') return c.units.some((u) => UNIT.cancapt[u.type]);
-  return c.units.some((u) => UNIT.canfight[u.type]);
+function canOrder(ctx: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
+  if (ctx.at) return commandChoices(ctx.s, ctx.at, ctx.units, ctx.enemyHere).includes(kind);
+  return kind === 'capture' ? anyCanCapture(ctx.units) : anyCanFight(ctx.units);
 }
 
 /**
@@ -97,96 +111,69 @@ function orderOk(c: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
  * un grupo, atacar y capturar son ordenes que empiezan ya y mover lleva a cada una lo mas cerca.
  */
 export const ACTIONS: readonly ActionDef[] = [
-  {
+  onTile({
     id: 'attack',
     label: 'attack',
     cursor: 'attack',
-    smart: true,
-    needsTile: true,
-    ok: (c) => (single(c) ? c.intent === 'attack' : group(c) && c.enemyHere && c.units.some((u) => UNIT.canfight[u.type])),
-  },
-  {
+    ok: (ctx) => (isMoving(ctx) ? ctx.intent === 'attack' : isGroup(ctx) && ctx.enemyHere && anyCanFight(ctx.units)),
+  }),
+  onTile({
     id: 'capture',
     label: 'capture',
     cursor: 'capture',
-    smart: true,
-    needsTile: true,
-    ok: (c) => (single(c) ? c.intent === 'move' && !!c.intentCapture : group(c) && !c.enemyHere && capturable(c)),
-  },
-  { id: 'merge', label: 'actMerge', cursor: 'merge', smart: true, needsTile: true, ok: (c) => !!single(c) && c.intent === 'merge' },
-  { id: 'load', label: 'actLoad', cursor: 'load', smart: true, needsTile: true, ok: (c) => !!single(c) && c.intent === 'load' },
-  {
+    ok: (ctx) =>
+      isMoving(ctx) ? ctx.intent === 'move' && !!ctx.intentCapture : isGroup(ctx) && !ctx.enemyHere && hasBuildingToCapture(ctx),
+  }),
+  onTile({ id: 'merge', label: 'actMerge', cursor: 'merge', ok: (ctx) => isMoving(ctx) && ctx.intent === 'merge' }),
+  onTile({ id: 'load', label: 'actLoad', cursor: 'load', ok: (ctx) => isMoving(ctx) && ctx.intent === 'load' }),
+  onTile({
     id: 'move',
     label: 'actMove',
     cursor: 'move',
-    smart: true,
-    needsTile: true,
-    ok: (c) => (single(c) ? c.intent === 'move' && !c.intentCapture : group(c) && !!c.at && !c.enemyHere && !capturable(c)),
-  },
-  { id: 'go', label: 'goThere', cursor: 'go', smart: true, needsTile: true, ok: (c) => !!single(c) && c.intent === 'none' && !!c.farOk },
-  { id: 'cmdAttack', label: 'cmdAttack', cursor: 'attack', smart: false, needsTile: false, ok: (c) => orderOk(c, 'attack') },
-  { id: 'cmdCapture', label: 'cmdCapture', cursor: 'capture', smart: false, needsTile: false, ok: (c) => orderOk(c, 'capture') },
-  { id: 'cmdDefend', label: 'cmdDefend', cursor: 'move', smart: false, needsTile: false, ok: (c) => orderOk(c, 'defend') },
-  {
+    ok: (ctx) =>
+      isMoving(ctx)
+        ? ctx.intent === 'move' && !ctx.intentCapture
+        : isGroup(ctx) && !!ctx.at && !ctx.enemyHere && !hasBuildingToCapture(ctx),
+  }),
+  onTile({ id: 'go', label: 'goThere', cursor: 'go', ok: (ctx) => isMoving(ctx) && ctx.intent === 'none' && !!ctx.farOk }),
+  inMenu({ id: 'cmdAttack', label: 'cmdAttack', cursor: 'attack', ok: (ctx) => canOrder(ctx, 'attack') }),
+  inMenu({ id: 'cmdCapture', label: 'cmdCapture', cursor: 'capture', ok: (ctx) => canOrder(ctx, 'capture') }),
+  inMenu({ id: 'cmdDefend', label: 'cmdDefend', cursor: 'move', ok: (ctx) => canOrder(ctx, 'defend') }),
+  inMenu({
     id: 'cmdCancel',
     label: 'cmdCancel',
     cursor: 'default',
-    smart: false,
-    needsTile: false,
-    ok: (c) => c.units.some((u) => !!effectiveCommand(c.s, u)),
-  },
-  {
-    id: 'squadForm',
-    label: 'squadForm',
-    cursor: 'default',
-    smart: false,
-    needsTile: false,
-    ok: (c) => c.units.length > 1 && exactSquad(c.s, c.units) === null,
-  },
-  {
+    ok: (ctx) => ctx.units.some((unit) => !!effectiveCommand(ctx.s, unit)),
+  }),
+  inMenu({ id: 'squadForm', label: 'squadForm', cursor: 'default', ok: (ctx) => ctx.units.length > 1 && !isWholeSquad(ctx) }),
+  inMenu({
     id: 'squadLeave',
     label: 'squadLeave',
     cursor: 'default',
-    smart: false,
-    needsTile: false,
-    ok: (c) => c.units.some((u) => u.squad !== undefined) && exactSquad(c.s, c.units) === null,
-  },
-  {
-    id: 'squadRename',
-    label: 'squadRename',
-    cursor: 'default',
-    smart: false,
-    needsTile: false,
-    ok: (c) => exactSquad(c.s, c.units) !== null,
-  },
-  {
-    id: 'squadDisband',
-    label: 'squadDisband',
-    cursor: 'default',
-    smart: false,
-    needsTile: false,
-    ok: (c) => exactSquad(c.s, c.units) !== null,
-  },
+    ok: (ctx) => ctx.units.some((unit) => unit.squad !== undefined) && !isWholeSquad(ctx),
+  }),
+  inMenu({ id: 'squadRename', label: 'squadRename', cursor: 'default', ok: isWholeSquad }),
+  inMenu({ id: 'squadDisband', label: 'squadDisband', cursor: 'default', ok: isWholeSquad }),
 ];
 
-const valid = (c: ActionCtx) => (a: ActionDef) => (!a.needsTile || c.at !== null) && a.ok(c);
+const isValid = (ctx: ActionCtx, action: ActionDef) => (!action.needsTile || ctx.at !== null) && action.ok(ctx);
 
 /** Lo que hace el clic derecho en esa casilla (null: nada, la escena hace lo de siempre). */
-export function smartAction(c: ActionCtx): ActionDef | null {
-  if (!c.units.length || !c.at) return null;
-  return ACTIONS.find((a) => a.smart && valid(c)(a)) ?? null;
+export function smartAction(ctx: ActionCtx): ActionDef | null {
+  if (!ctx.units.length || !ctx.at) return null;
+  return ACTIONS.find((action) => action.smart && isValid(ctx, action)) ?? null;
 }
 
 /** El menu completo: todas las acciones que valen, en orden. */
-export function menuActions(c: ActionCtx): ActionDef[] {
-  if (!c.units.length) return [];
-  return ACTIONS.filter(valid(c));
+export function menuActions(ctx: ActionCtx): ActionDef[] {
+  if (!ctx.units.length) return [];
+  return ACTIONS.filter((action) => isValid(ctx, action));
 }
 
 /** Puntero del raton en esa casilla: el de la accion del clic derecho, o prohibido si no hay ninguna. */
-export function cursorFor(c: ActionCtx): CursorKind {
-  if (!c.units.length || !c.at) return 'default';
-  return smartAction(c)?.cursor ?? 'forbidden';
+export function cursorFor(ctx: ActionCtx): CursorKind {
+  if (!ctx.units.length || !ctx.at) return 'default';
+  return smartAction(ctx)?.cursor ?? 'forbidden';
 }
 
-export const actionById = (id: string): ActionDef | undefined => ACTIONS.find((a) => a.id === id);
+export const actionById = (id: string): ActionDef | undefined => ACTIONS.find((action) => action.id === id);

@@ -1,34 +1,26 @@
 /**
  * [CAMBIO] Acciones y ordenes sobre lo elegido (estilo RTS). Que acciones hay y cuando valen lo dice el
- * registro de controls/actions.ts; aqui se cumplen (`run`): clic derecho, menu de ordenes de una
- * casilla, bandeja, teclas de orden y ordenes con destino (fase 'target'). Tambien el puntero del
- * raton, que enseña lo que haria el clic derecho.
+ * registro de controls/actions.ts, y que hace cada una, ACTION_RUNNERS (actionRunners.ts). Aqui se
+ * eligen y se cumplen: clic derecho, menu de ordenes de una casilla, bandeja, teclas de orden y
+ * ordenes con destino (fase 'target'). Tambien el puntero del raton, que enseña lo que haria el clic
+ * derecho.
  */
 import type Phaser from 'phaser';
 import { commandNow, commandOrder } from '../../core/ai';
 import { Movement, UNIT } from '../../core/data';
 import { inBounds } from '../../core/geom';
 import { canWalk, unitAt, unitById, wait } from '../../core/rules';
-import {
-  cancelCommand,
-  commandBlock,
-  disbandSquad,
-  formSquad,
-  giveCommand,
-  leaveSquad,
-  pruneSquads,
-  squadById,
-  SQUAD_NAME_MAX,
-} from '../../core/squads';
+import { cancelCommand, commandBlock, giveCommand, pruneSquads } from '../../core/squads';
 import type { CommandKind, GameEvent, GameState, Pos, Unit } from '../../core/types';
-import { cursorFor, exactSquad, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
-import { showToast, ui } from '../../hud/store';
+import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
+import { showToast } from '../../hud/store';
 import { t } from '../../settings';
 import { cursorCss } from '../../ui/cursors';
 import { commandLabel } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
+import { ACTION_RUNNERS, type ActionRunHost } from './actionRunners';
 import type { GroupSelection } from './groupSelection';
-import { CMD_OF, type Intent, type MoveUndo, type Phase } from './types';
+import type { Intent, MoveUndo, Phase } from './types';
 
 /** De donde se abrio el menu de ordenes de una casilla (adonde vuelve al cancelar). */
 export type OrderFrom = 'move' | 'unitMenu' | 'map';
@@ -48,6 +40,9 @@ export interface OrderMenu {
   ids: ActionId[];
   from: OrderFrom;
 }
+
+/** Tecla de orden con lo elegido (ver orderKey). */
+export type OrderKey = 'attack' | 'capture' | 'defend' | 'cancel';
 
 /** Lo que las ordenes necesitan de la escena. */
 export interface OrderHost {
@@ -82,12 +77,33 @@ export interface OrderHost {
   play(events: GameEvent[]): Promise<void>;
 }
 
+const isPlayer = (unit: Unit) => unit.team === 0;
+const uidsOf = (units: readonly Unit[]) => units.map((unit) => unit.uid);
+
 export class Orders {
   ordering: Ordering | null = null;
   menu: OrderMenu | null = null;
   private pointerKind: CursorKind = 'default';
+  /** Lo que las acciones del registro usan para cumplirse. */
+  private readonly runHost: ActionRunHost;
 
-  constructor(private readonly h: OrderHost) {}
+  constructor(private readonly h: OrderHost) {
+    this.runHost = {
+      get state() {
+        return h.state;
+      },
+      moveCursorTo: (p, follow) => h.moveCursorTo(p, follow),
+      commit: (at, opts) => h.commit(at, opts),
+      groupMove: (goal) => h.groupMove(goal),
+      giveOrder: (unit, goal) => h.giveOrder(unit, goal),
+      pickOrderTarget: (kind, units, fromUnitMenu) => this.start(kind, units, fromUnitMenu),
+      placeOrder: (kind, units, fromUnitMenu, at) => {
+        this.ordering = { kind, uids: uidsOf(units), single: fromUnitMenu };
+        return this.place(at);
+      },
+      finish: () => this.closeMenuAndRefresh(),
+    };
+  }
 
   /**
    * Unidades a las que iria una orden dada ahora con un gesto en el mapa: la elegida (moviendo o en su
@@ -95,31 +111,39 @@ export class Orders {
    */
   subjects(): { units: Unit[]; from: OrderFrom } | null {
     const h = this.h;
-    if ((h.phase === 'move' || h.phase === 'unitMenu') && h.sel && h.sel.team === 0) return { units: [h.sel], from: h.phase };
-    if ((h.phase === 'map' || h.phase === 'groupMenu') && h.selection.group.size) {
-      const units = h.selection.groupUnits();
-      return units.length ? { units, from: 'map' } : null;
-    }
-    return null;
+    const withSelectedUnit = h.phase === 'move' || h.phase === 'unitMenu';
+    if (withSelectedUnit && h.sel && isPlayer(h.sel)) return { units: [h.sel], from: h.phase as OrderFrom };
+    const withGroup = h.phase === 'map' || h.phase === 'groupMenu';
+    if (!withGroup || !h.selection.group.size) return null;
+    const units = h.selection.groupUnits();
+    return units.length ? { units, from: 'map' } : null;
+  }
+
+  /** Lo elegido ahora: lo que dice subjects o, si no hay, la seleccion. */
+  private chosenUnits(): Unit[] {
+    return this.subjects()?.units ?? this.h.selection.units();
   }
 
   /**
    * [CAMBIO] Teclas de orden con lo elegido (Q atacar, C capturar, G defender, X quitar): las tres
    * primeras piden luego la casilla (clic o Enter), como "A + clic" en los juegos de estrategia.
    */
-  orderKey(order: 'attack' | 'capture' | 'defend' | 'cancel'): void {
+  orderKey(order: OrderKey): void {
     const h = this.h;
     const who = this.subjects();
     if (!who) return showToast(t('groupNone'));
-    if (order === 'cancel') {
-      cancelCommand(h.state, who.units);
-      showToast(t('orderCancelled'));
-      if (h.phase === 'groupMenu') h.toMap();
-      return h.refresh();
-    }
-    if (order === 'capture' && !who.units.some((u) => UNIT.cancapt[u.type])) return showToast(t('orderNoCapturer'));
+    if (order === 'cancel') return this.cancelOrdersOf(who.units);
+    if (order === 'capture' && !who.units.some((unit) => UNIT.cancapt[unit.type])) return showToast(t('orderNoCapturer'));
     if (h.phase === 'groupMenu') h.phase = 'map';
     this.start(order, who.units, who.from !== 'map');
+  }
+
+  private cancelOrdersOf(units: Unit[]): void {
+    const h = this.h;
+    cancelCommand(h.state, units);
+    showToast(t('orderCancelled'));
+    if (h.phase === 'groupMenu') h.toMap();
+    h.refresh();
   }
 
   /**
@@ -129,7 +153,7 @@ export class Orders {
   start(kind: CommandKind, units: Unit[], single: boolean): void {
     const h = this.h;
     if (!units.length) return h.toMap();
-    this.ordering = { kind, uids: units.map((u) => u.uid), single };
+    this.ordering = { kind, uids: uidsOf(units), single };
     h.phase = 'target';
     showToast(t('orderPick'));
     h.refresh();
@@ -144,9 +168,9 @@ export class Orders {
     const who = this.subjects();
     if (!who || !inBounds(at.x, at.y)) return false;
     const ctx = this.ctx(at);
-    const ids = ctx ? menuActions(ctx).map((a) => a.id) : [];
+    const ids = ctx ? menuActions(ctx).map((action) => action.id) : [];
     if (!ids.length) return false;
-    this.menu = { at: { x: at.x, y: at.y }, uids: who.units.map((u) => u.uid), ids, from: who.from };
+    this.menu = { at: { x: at.x, y: at.y }, uids: uidsOf(who.units), ids, from: who.from };
     h.selection.multi = false;
     h.stopInspect();
     h.view.cursor = { x: at.x, y: at.y };
@@ -159,158 +183,127 @@ export class Orders {
   /** Accion elegida en el menu de la casilla. */
   async acceptMenu(): Promise<void> {
     const h = this.h;
-    const o = this.menu;
+    const menu = this.menu;
     const id = h.menuPick() as ActionId | undefined;
-    if (!o || !id || !o.ids.includes(id)) return h.back();
-    const from = o.from;
+    if (!menu || !id || !menu.ids.includes(id)) return h.back();
     this.menu = null;
-    // Vuelve a la fase de la que salio el menu, que es donde la accion tiene sentido.
+    this.returnTo(menu.from);
+    return this.run(id, menu.at, { queue: false, single: menu.from !== 'map' });
+  }
+
+  /** Vuelve a la fase de la que salio el menu, que es donde la accion tiene sentido. */
+  private returnTo(from: OrderFrom): void {
+    const h = this.h;
     if (from === 'move' && h.sel) h.selectUnit(h.sel);
     else if (from === 'unitMenu' && h.sel) h.phase = 'unitMenu';
     else h.phase = 'map';
-    return this.run(id, o.at, { queue: false, single: from !== 'map' });
   }
 
   /** Contexto de las acciones en `at` (null: menu sin casilla) con lo elegido ahora. */
   ctx(at: Pos | null): ActionCtx | null {
     const h = this.h;
     const s = h.state;
-    const units = this.subjects()?.units ?? h.selection.units();
+    const units = this.chosenUnits();
     if (!units.length) return null;
-    const e = at ? unitAt(s, at.x, at.y) : undefined;
-    const enemyHere = !!e && e.team !== 0 && e.carrier === null && h.visible(e);
+    const unitHere = at ? unitAt(s, at.x, at.y) : undefined;
+    const enemyHere = !!unitHere && !isPlayer(unitHere) && unitHere.carrier === null && h.visible(unitHere);
     const ctx: ActionCtx = { s, units, at: at ? { x: at.x, y: at.y } : null, enemyHere };
-    if (at && h.phase === 'move' && h.sel && units.length === 1 && units[0]!.uid === h.sel.uid) {
-      const it = h.intentAt(at);
-      ctx.intent = it.kind;
-      ctx.intentCapture = it.kind === 'move' && it.capture;
-      ctx.farOk = it.kind === 'none' && !unitAt(s, at.x, at.y) && canWalk(s, at.x, at.y, Movement.of(h.sel.type));
-    }
+    const isSelectedUnit = h.phase === 'move' && h.sel && units.length === 1 && units[0]!.uid === h.sel.uid;
+    if (at && isSelectedUnit) Object.assign(ctx, this.movingIntent(h.sel, at));
     return ctx;
   }
 
+  /** Lo que la escena sabe de soltar la unidad elegida en `at` (ver ActionCtx.intent). */
+  private movingIntent(unit: Unit, at: Pos): Pick<ActionCtx, 'intent' | 'intentCapture' | 'farOk'> {
+    const s = this.h.state;
+    const intent = this.h.intentAt(at);
+    const isFreeWalkable = !unitAt(s, at.x, at.y) && canWalk(s, at.x, at.y, Movement.of(unit.type));
+    return {
+      intent: intent.kind,
+      intentCapture: intent.kind === 'move' && intent.capture,
+      farOk: intent.kind === 'none' && isFreeWalkable,
+    };
+  }
+
   /**
-   * Cumplir una accion del registro. `queue` (Mayusculas + clic derecho): atacar, capturar o mover
-   * quedan como orden (se cumplen al terminar el turno) sin mover nada ahora. `single`: viene del
-   * menu de una unidad elegida (la orden respeta lo ya movido, ver place).
+   * Cumplir una accion del registro (lo que hace cada una esta en ACTION_RUNNERS). `queue`
+   * (Mayusculas + clic derecho): atacar, capturar o mover quedan como orden (se cumplen al terminar
+   * el turno) sin mover nada ahora. `single`: viene del menu de una unidad elegida (la orden respeta
+   * lo ya movido, ver place).
    */
   async run(id: ActionId, at: Pos | null, opts: { queue: boolean; single?: boolean } = { queue: false }): Promise<void> {
     const h = this.h;
-    const s = h.state;
-    const units = this.subjects()?.units ?? h.selection.units();
+    const units = this.chosenUnits();
     if (!units.length) return;
-    const one = h.phase === 'move' && h.sel && units.length === 1 ? h.sel : null;
-    if (opts.queue && at && (id === 'attack' || id === 'capture' || id === 'move' || id === 'go')) {
-      // Orden sin gastar el turno: atacar/capturar alli, o ir y quedarse (defender).
-      const kind = id === 'attack' ? 'attack' : id === 'capture' ? 'capture' : 'defend';
-      if (commandBlock(s, kind, at, units)) return;
-      giveCommand(s, units, kind, at);
-      showToast(`${commandLabel(kind)} · ${units.length}`);
-      if (one) h.toMap();
-      return h.refresh();
-    }
-    switch (id) {
-      case 'attack':
-      case 'capture':
-      case 'merge':
-      case 'load':
-      case 'move':
-        if (!at) return;
-        if (one) {
-          h.moveCursorTo(at, false);
-          return h.commit(at, { drop: id === 'capture' });
-        }
-        if (id === 'move') {
-          h.moveCursorTo(at, false);
-          return h.groupMove(at);
-        }
-        // Grupo: atacar o capturar alli es una orden que empiezan ya las que pueden.
-        this.ordering = { kind: id === 'attack' ? 'attack' : 'capture', uids: units.map((u) => u.uid), single: false };
-        return this.place(at);
-      case 'go':
-        if (at && one) return h.giveOrder(one, at);
-        return;
-      case 'cmdAttack':
-      case 'cmdCapture':
-      case 'cmdDefend': {
-        const kind = CMD_OF[id]!;
-        const single = opts.single ?? !!one;
-        if (!at) return this.start(kind, units, single);
-        this.ordering = { kind, uids: units.map((u) => u.uid), single };
-        return this.place(at);
-      }
-      case 'cmdCancel':
-        cancelCommand(s, units);
-        showToast(t('orderCancelled'));
-        break;
-      case 'squadForm': {
-        const q = formSquad(s, units);
-        if (q) showToast(`${t('squadFormed')}: ${q.name}${q.key ? ` · ${t('squadKeyHint')} ${q.key}` : ''}`);
-        break;
-      }
-      case 'squadLeave':
-        for (const u of units) leaveSquad(s, u);
-        pruneSquads(s);
-        break;
-      case 'squadRename': {
-        const q = exactSquad(s, units);
-        if (q !== null) ui.set({ rename: { id: q, name: squadById(s, q)?.name ?? '', max: SQUAD_NAME_MAX } });
-        break;
-      }
-      case 'squadDisband': {
-        const q = exactSquad(s, units);
-        if (q !== null) disbandSquad(s, q);
-        break;
-      }
-      default:
-        break;
-    }
+    const moving = h.phase === 'move' && h.sel && units.length === 1 ? h.sel : null;
+    const runner = ACTION_RUNNERS[id];
+    if (opts.queue && at && runner.queueAs) return this.queue(runner.queueAs, units, at, moving);
+    return runner.run({ units, at, moving, fromUnitMenu: opts.single }, this.runHost);
+  }
+
+  /** Orden sin gastar el turno: se cumple al terminarlo. */
+  private queue(kind: CommandKind, units: Unit[], at: Pos, moving: Unit | null): void {
+    const h = this.h;
+    if (commandBlock(h.state, kind, at, units)) return;
+    giveCommand(h.state, units, kind, at);
+    showToast(`${commandLabel(kind)} · ${units.length}`);
+    if (moving) h.toMap();
+    h.refresh();
+  }
+
+  private closeMenuAndRefresh(): void {
+    const h = this.h;
     if (h.phase === 'groupMenu' || h.phase === 'orderMenu') h.toMap();
     h.refresh();
   }
 
   /** Casilla elegida para la orden: se da, y las que aun no se han movido la empiezan ya. */
-  async place(c: Pos): Promise<void> {
+  async place(at: Pos): Promise<void> {
     const h = this.h;
     const s = h.state;
-    const o = this.ordering;
-    if (!o) return h.toMap();
-    const units = o.uids.map((uid) => unitById(s, uid)).filter((u): u is Unit => !!u);
-    const block = commandBlock(s, o.kind, c, units);
+    const ordering = this.ordering;
+    if (!ordering) return h.toMap();
+    const units = ordering.uids.map((uid) => unitById(s, uid)).filter((unit): unit is Unit => !!unit);
+    const block = commandBlock(s, ordering.kind, at, units);
     if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
     this.ordering = null;
-    giveCommand(s, units, o.kind, c);
-    // Una unidad movida este turno: lo movido cuenta y espera; la orden empieza el turno que viene.
-    const sel = o.single ? units[0] : undefined;
-    const undo = h.undo;
-    const moved = !!sel && !!undo && undo.uid === sel.uid && (undo.x !== sel.x || undo.y !== sel.y);
-    if (sel && undo && undo.uid === sel.uid && !moved) {
-      sel.canMove = true;
-      sel.canFire = undo.canFire;
-    }
-    if (moved) wait(sel);
+    giveCommand(s, units, ordering.kind, at);
+    if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);
     h.clearUndo();
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
     h.toMap();
     showToast(t('orderGiven'));
-    const now = units.filter((u) => u.active && u.canMove && u.carrier === null);
-    if (now.length) await this.playCommands(now);
+    const canStartNow = units.filter((unit) => unit.active && unit.canMove && unit.carrier === null);
+    if (canStartNow.length) await this.playCommands(canStartNow);
     else h.afterAction();
+  }
+
+  /**
+   * Orden desde el menu de una unidad: si se movio este turno, lo movido cuenta y espera (la orden
+   * empieza el turno que viene); si no se movio, vuelve a poder moverse para empezarla ya.
+   */
+  private keepThisTurnMove(unit: Unit): void {
+    const undo = this.h.undo;
+    if (!undo || undo.uid !== unit.uid) return;
+    const moved = undo.x !== unit.x || undo.y !== unit.y;
+    if (moved) return wait(unit);
+    unit.canMove = true;
+    unit.canFire = undo.canFire;
   }
 
   /** Las unidades empiezan ya su orden (animado); luego esperan. */
   private async playCommands(units: Unit[]): Promise<void> {
     const h = this.h;
-    const m = h.match;
+    const match = h.match;
     h.phase = 'busy';
     h.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
-    for (const u of commandOrder(h.state, units)) {
-      for (const ev of commandNow(h.state, u.uid, Math.random)) {
-        await h.play([ev]);
-        if (m !== h.match || h.checkEnd()) return;
+    for (const unit of commandOrder(h.state, units)) {
+      for (const event of commandNow(h.state, unit.uid, Math.random)) {
+        await h.play([event]);
+        if (match !== h.match || h.checkEnd()) return;
       }
-      if (unitById(h.state, u.uid)) wait(u);
+      if (unitById(h.state, unit.uid)) wait(unit);
     }
     pruneSquads(h.state);
     h.afterAction();
