@@ -10,11 +10,11 @@
  */
 
 /** Tab (con o sin Mayusculas) no mueve el foco del navegador; la pulsacion sigue llegando al juego. */
-export function blockTabFocus(e: Pick<KeyboardEvent, 'key' | 'preventDefault'>): void {
-  if (e.key === 'Tab') e.preventDefault();
+export function blockTabFocus(event: Pick<KeyboardEvent, 'key' | 'preventDefault'>): void {
+  if (event.key === 'Tab') event.preventDefault();
 }
 
 /** Pone el guardian de Tab en `win` (fase de burbuja: despues de que Phaser haya visto la tecla). */
 export function installTabGuard(win: Pick<EventTarget, 'addEventListener'>): void {
-  win.addEventListener('keydown', (e) => blockTabFocus(e as KeyboardEvent), { capture: false });
+  win.addEventListener('keydown', (event) => blockTabFocus(event as KeyboardEvent), { capture: false });
 }

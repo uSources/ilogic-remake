@@ -27,10 +27,10 @@ export interface ClickMods {
  * Seleccion tras un clic. `hit`: la unidad propia elegible de debajo (o null). `sameType`: las
  * elegibles del mismo tipo que se ven en pantalla (solo se llama con doble clic o Ctrl + clic).
  */
-export function clickSelect(current: Selection, hit: Unit | null, mods: ClickMods, sameType: (u: Unit) => readonly Unit[]): Selection {
+export function clickSelect(current: Selection, hit: Unit | null, mods: ClickMods, sameType: (unit: Unit) => readonly Unit[]): Selection {
   if (!hit) return mods.shift ? current : EMPTY;
   if (mods.count >= 2 || mods.ctrl) {
-    const all = sameType(hit).map((u) => u.uid);
+    const all = sameType(hit).map((unit) => unit.uid);
     return mods.shift ? new Set([...current, ...all]) : new Set(all);
   }
   if (mods.shift) {
@@ -44,13 +44,13 @@ export function clickSelect(current: Selection, hit: Unit | null, mods: ClickMod
 
 /** Seleccion tras un recuadro con estas unidades dentro. `add`: Mayusculas o Ctrl (se suman). */
 export function boxSelect(current: Selection, inside: readonly Unit[], add: boolean): Selection {
-  const ids = inside.map((u) => u.uid);
+  const ids = inside.map((unit) => unit.uid);
   return add ? new Set([...current, ...ids]) : new Set(ids);
 }
 
 /** Quitar de la seleccion las que ya no se pueden elegir (muertas, cargadas en un transporte...). */
-export function pruneSelection(current: Selection, ok: (uid: number) => boolean): Selection {
-  const next = [...current].filter(ok);
+export function pruneSelection(current: Selection, canSelect: (uid: number) => boolean): Selection {
+  const next = [...current].filter(canSelect);
   return next.length === current.size ? current : new Set(next);
 }
 

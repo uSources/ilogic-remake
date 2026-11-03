@@ -51,16 +51,16 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
 export type KeyInput = Pick<KeyboardEvent, 'code' | 'shiftKey' | 'ctrlKey' | 'metaKey' | 'repeat'>;
 
 /** La orden de una pulsacion, o null si la tecla no hace nada en el mapa. */
-export function keyCommand(e: KeyInput): GameCommand | null {
-  const ctrl = e.ctrlKey || e.metaKey;
+export function keyCommand(key: KeyInput): GameCommand | null {
+  const isCtrl = key.ctrlKey || key.metaKey;
+  const matches = (binding: KeyBinding) =>
+    binding.codes.includes(key.code) && !!binding.ctrl === isCtrl && (!binding.shift || key.shiftKey);
   // Las que piden Mayusculas van antes en la tabla y ganan a la misma tecla sin ellas.
-  const b = KEY_BINDINGS.find((k) => k.codes.includes(e.code) && !!k.ctrl === ctrl && (!k.shift || e.shiftKey));
-  if (!b) return null;
-  if (b.command.kind === 'accept') {
-    // Mantener la tecla pulsada no repite la aceptacion (confirmaria varias cosas seguidas).
-    if (e.repeat) return null;
-    // Mayusculas + Enter al mover: mover y esperar, sin menu.
-    return { kind: 'accept', wait: e.shiftKey };
-  }
-  return b.command;
+  const binding = KEY_BINDINGS.find(matches);
+  if (!binding) return null;
+  if (binding.command.kind !== 'accept') return binding.command;
+  // Mantener la tecla pulsada no repite la aceptacion (confirmaria varias cosas seguidas).
+  if (key.repeat) return null;
+  // Mayusculas + Enter al mover: mover y esperar, sin menu.
+  return { kind: 'accept', wait: key.shiftKey };
 }
