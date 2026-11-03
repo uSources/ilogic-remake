@@ -8,6 +8,63 @@ import type { IdleVM, SquadVM } from '../vm/army';
 /** Retratos de unidades sin mover que caben en la bandeja (el resto, "+n"). */
 const TRAY_MAX = 8;
 
+/** Unidades sin mover: un retrato por unidad (clic: ir a ella), o "Todas movidas". */
+function IdleSlots({ idle }: { idle: IdleVM[] }) {
+  if (idle.length === 0) return <span class="all">{t('allMoved')}</span>;
+  return (
+    <div class="slots">
+      {idle.slice(0, TRAY_MAX).map((unit) => (
+        <Button key={unit.uid} title={unit.name} aria-label={unit.name} onClick={() => ui.actions.focusUnit(unit.uid)}>
+          <Icon k={unit.icon} alt={unit.name} />
+        </Button>
+      ))}
+      {idle.length > TRAY_MAX && <span class="more">+{idle.length - TRAY_MAX}</span>}
+    </div>
+  );
+}
+
+/** Al pasar por encima: la orden (y si van en formacion) o el nombre, y su tecla. */
+function squadTitle(squad: SquadVM): string {
+  const order = squad.formation ? `${squad.order} · ${t('squadFormation')}` : squad.order;
+  const what = squad.order ? order : squad.name;
+  const key = squad.key ? ` · ${t('squadKeyHint')} ${squad.key}` : '';
+  return `${what}${key}`;
+}
+
+function SquadButton({ squad }: { squad: SquadVM }) {
+  return (
+    <Button class="squad" title={squadTitle(squad)} onClick={() => ui.actions.selectSquad(squad.id)}>
+      {squad.key && <span class="key">{squad.key}</span>}
+      <span class="sq-name">{squad.name}</span>
+      <span class="sq-count num">×{squad.count}</span>
+      {squad.order && <span class="sq-order">{squad.order}</span>}
+      {squad.detached > 0 && (
+        <span class="sq-detached num" title={t('detachedHint')}>
+          {squad.detached} {t(squad.detached === 1 ? 'detachedOne' : 'detachedMany')}
+        </span>
+      )}
+    </Button>
+  );
+}
+
+/** Escuadras, o como hacer una si no hay ninguna. */
+function Squads({ squads }: { squads: SquadVM[] }) {
+  if (squads.length === 0) return <div class="squads-none">{t('squadsNone')}</div>;
+  return (
+    <div class="squads" aria-label={t('squads')}>
+      {squads.map((squad) => (
+        <SquadButton key={squad.id} squad={squad} />
+      ))}
+    </div>
+  );
+}
+
+/** "Elegir varias" apagado; encendido, "Toca tus unidades…" o "Órdenes (n)" con las elegidas. */
+function multiSelectLabel(picked: number | null): string {
+  if (picked === null) return t('multiOff');
+  return picked > 0 ? `${t('multiOrders')} (${picked})` : t('multiOn');
+}
+
 /** Bandeja de la derecha: unidades sin mover, escuadras y los botones de elegir varias, amenaza y ordenes. */
 export function Tray({
   idle,
@@ -24,8 +81,9 @@ export function Tray({
   squads: SquadVM[];
   multi: number | null;
 }) {
-  const a = ui.actions;
+  const actions = ui.actions;
   const [folded, toggleFold] = useFold('tray');
+  const isMultiSelecting = multi !== null;
   return (
     <div class={`px tray ${folded ? 'folded' : ''}`}>
       <div class="label tray-head" onClick={toggleFold} aria-expanded={!folded}>
@@ -39,60 +97,31 @@ export function Tray({
           </span>
         )}
       </div>
-      {idle.length > 0 ? (
-        <div class="slots">
-          {idle.slice(0, TRAY_MAX).map((u) => (
-            <Button key={u.uid} title={u.name} aria-label={u.name} onClick={() => a.focusUnit(u.uid)}>
-              <Icon k={u.icon} alt={u.name} />
-            </Button>
-          ))}
-          {idle.length > TRAY_MAX && <span class="more">+{idle.length - TRAY_MAX}</span>}
-        </div>
-      ) : (
-        <span class="all">{t('allMoved')}</span>
-      )}
-      {!folded && squads.length === 0 && <div class="squads-none">{t('squadsNone')}</div>}
-      {!folded && squads.length > 0 && (
-        <div class="squads" aria-label={t('squads')}>
-          {squads.map((q) => (
-            <Button
-              key={q.id}
-              class="squad"
-              title={`${q.order ? (q.formation ? `${q.order} · ${t('squadFormation')}` : q.order) : q.name}${q.key ? ` · ${t('squadKeyHint')} ${q.key}` : ''}`}
-              onClick={() => a.selectSquad(q.id)}
-            >
-              {q.key && <span class="key">{q.key}</span>}
-              <span class="sq-name">{q.name}</span>
-              <span class="sq-count num">×{q.count}</span>
-              {q.order && <span class="sq-order">{q.order}</span>}
-              {q.detached > 0 && (
-                <span class="sq-detached num" title={t('detachedHint')}>
-                  {q.detached} {t(q.detached === 1 ? 'detachedOne' : 'detachedMany')}
-                </span>
-              )}
-            </Button>
-          ))}
-        </div>
-      )}
-      <Button class={`px-btn plain multi ${multi !== null ? 'on' : ''}`} onClick={() => a.multiSelect()} aria-pressed={multi !== null}>
-        {multi === null ? t('multiOff') : multi > 0 ? `${t('multiOrders')} (${multi})` : t('multiOn')}
+      <IdleSlots idle={idle} />
+      {!folded && <Squads squads={squads} />}
+      <Button
+        class={`px-btn plain multi ${isMultiSelecting ? 'on' : ''}`}
+        onClick={() => actions.multiSelect()}
+        aria-pressed={isMultiSelecting}
+      >
+        {multiSelectLabel(multi)}
       </Button>
       <ToggleButton
         cls="threat"
         on={threat}
-        k="T"
+        keyLabel="T"
         long={threat ? t('threatOn') : t('threatOff')}
         short={t('threatShort')}
-        onClick={() => a.toggleThreat()}
+        onClick={() => actions.toggleThreat()}
       />
       {anyCommand && (
         <ToggleButton
           cls="threat intents"
           on={intents}
-          k="V"
+          keyLabel="V"
           long={intents ? t('intentsOn') : t('intentsOff')}
           short={t('intentsShort')}
-          onClick={() => a.toggleIntents()}
+          onClick={() => actions.toggleIntents()}
         />
       )}
     </div>
@@ -100,12 +129,12 @@ export function Tray({
 }
 
 /** Interruptor de la bandeja con su tecla y el texto largo o corto (segun el ancho, ver styles/). */
-function ToggleButton(p: { cls: string; on: boolean; k: string; long: string; short: string; onClick: () => void }) {
+function ToggleButton(props: { cls: string; on: boolean; keyLabel: string; long: string; short: string; onClick: () => void }) {
   return (
-    <Button class={`px-btn plain ${p.cls} ${p.on ? 'on' : ''}`} onClick={p.onClick} aria-pressed={p.on}>
-      <span class="key">{p.k}</span>
-      <span class="long">{p.long}</span>
-      <span class="short">{p.short}</span>
+    <Button class={`px-btn plain ${props.cls} ${props.on ? 'on' : ''}`} onClick={props.onClick} aria-pressed={props.on}>
+      <span class="key">{props.keyLabel}</span>
+      <span class="long">{props.long}</span>
+      <span class="short">{props.short}</span>
     </Button>
   );
 }
