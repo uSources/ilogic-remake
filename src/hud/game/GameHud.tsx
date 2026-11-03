@@ -29,7 +29,7 @@ const showsSelection = (s: UIState) => !!s.selection && !s.busy;
 
 /** Columna de la derecha: minimapa y bandeja (sin mover, amenaza, escuadras...). */
 const SIDE_PANELS: GamePanel[] = [
-  { id: 'minimap', render: (s) => s.minimap && s.minimapOn && <Minimap m={s.minimap} view={s.minimapView} /> },
+  { id: 'minimap', render: (s) => s.minimap && s.minimapOn && <Minimap minimap={s.minimap} view={s.minimapView} /> },
   {
     id: 'tray',
     render: (s) =>
