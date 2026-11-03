@@ -29,6 +29,7 @@ import {
   type ShotKind,
 } from '../../ui/combatFx';
 import { blink, burst, center, COLORS, floatText, lifeBar, playAnim, targetMark, tileFlash } from '../../ui/fx';
+import { FxTimeline } from '../../ui/fxKit';
 import { baseFacing, faceFlip, type MapView } from '../../ui/mapView';
 import { combatVM } from '../../ui/hudModels';
 import { PAL, PAL_CSS } from '../../ui/palette';
@@ -346,13 +347,13 @@ interface Battle {
   readonly defenderTeam: Team;
   readonly attackerType: number;
   readonly defenderType: number;
-  /** Velocidad de las animaciones (Opciones): 1 = normal. */
-  readonly speed: number;
+  /** Reloj de los efectos, a la velocidad de las animaciones (Opciones). */
+  readonly timeline: FxTimeline;
   /** Identifica este combate en el panel (para que no se mezcle con el anterior). */
   readonly panelId: number;
 }
 
-/** Un efecto de combate de 1000 ms a la velocidad elegida, en segundos: el factor `k` de combatFx. */
+/** Un efecto de combate de 1000 ms a la velocidad elegida, en segundos: el factor del reloj de combatFx. */
 const SPEED_REFERENCE_MS = 1000;
 
 function describeBattle(stage: EventStage, event: AttackEvent): Battle {
@@ -379,7 +380,7 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
     defenderTeam: (1 - attackerTeam) as Team,
     attackerType: info?.attackerType ?? unitById(s, event.attacker)?.type ?? 0,
     defenderType: info?.defenderType ?? victim?.type ?? 0,
-    speed: stage.combatMs(SPEED_REFERENCE_MS) / SPEED_REFERENCE_MS,
+    timeline: new FxTimeline(stage.scene, stage.combatMs(SPEED_REFERENCE_MS) / SPEED_REFERENCE_MS),
     panelId: Date.now(),
   };
 }
@@ -413,7 +414,7 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
       drawnKey: battle.victimKey,
       team: battle.defenderTeam,
       lifeBefore: event.combat?.defenderLife ?? null,
-      speed: battle.speed,
+      timeline: battle.timeline,
     });
   } else stage.refresh();
   await counterAttack(stage, battle);
@@ -431,7 +432,7 @@ async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
   void targetMark(stage.scene, stage.view, event.target, teamColor(battle.attackerTeam), stage.combatMs(150));
   if (attackerSprite && attackerPos && battle.isAttackerSeen) {
-    await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.speed);
+    await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.timeline);
   } else await stage.wait(stage.combatMs(150));
 }
 
@@ -442,10 +443,10 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   const didCounter = event.counter > 0 || !!event.attackerKilled;
   if (!didCounter || stage.fastForward || !stage.visible(attackerPos)) return;
   const defenderSprite = battle.victimUid !== null ? stage.view.unitSprite(battle.victimUid) : null;
-  void tag(stage.scene, stage.view, event.target, t('fxCounter'), PAL_CSS.gold, battle.speed);
+  void tag(battle.timeline, stage.view, event.target, t('fxCounter'), PAL_CSS.gold);
   await stage.wait(stage.combatMs(80));
   if (defenderSprite) {
-    await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.speed);
+    await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.timeline);
   }
   showCombatPanel(battle, 'counter');
   await hitEffects(stage, {
@@ -456,7 +457,7 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
     drawnKey: battle.attackerKey,
     team: battle.attackerTeam,
     lifeBefore: event.combat?.attackerLife ?? null,
-    speed: battle.speed,
+    timeline: battle.timeline,
   });
 }
 
@@ -483,11 +484,11 @@ async function fire(
   from: Pos,
   to: Pos,
   kind: ShotKind,
-  speed: number,
+  timeline: FxTimeline,
 ): Promise<void> {
-  void recoil(stage.scene, sprite, from, to, speed);
-  void muzzleFlash(stage.scene, stage.view, from, to, speed);
-  await projectile(stage.scene, stage.view, kind, from, to, speed);
+  void recoil(timeline, sprite, from, to);
+  void muzzleFlash(timeline, stage.view, from, to);
+  await projectile(timeline, stage.view, kind, from, to);
 }
 
 /** Quien recibe un golpe y como estaba antes. */
@@ -500,7 +501,7 @@ interface HitTarget {
   readonly drawnKey: string | null;
   readonly team: Team;
   readonly lifeBefore: number | null;
-  readonly speed: number;
+  readonly timeline: FxTimeline;
 }
 
 /** Color del numero cuando el golpe falla. */
@@ -514,18 +515,18 @@ async function hitEffects(stage: EventStage, hit: HitTarget): Promise<void> {
   const { scene, view } = stage;
   const survivor = unitAt(stage.state, hit.at.x, hit.at.y);
   const sprite = survivor ? view.unitSprite(survivor.uid) : fallenCopy(stage, hit);
-  void hitFlash(scene, sprite, hit.speed);
+  void hitFlash(hit.timeline, sprite);
   const isHit = hit.damage > 0;
-  void popNumber(scene, view, hit.at, isHit ? `-${hit.damage}` : t('fxMiss'), isHit ? PAL_CSS.red : MISS_COLOR, hit.speed);
+  void popNumber(hit.timeline, view, hit.at, isHit ? `-${hit.damage}` : t('fxMiss'), isHit ? PAL_CSS.red : MISS_COLOR);
   // La barra sigue bajando mientras pasa lo siguiente (no se espera).
   if (hit.lifeBefore !== null) {
     void lifeBar(scene, view, hit.at, hit.lifeBefore, hit.lifeBefore - hit.damage, teamColor(hit.team), stage.combatMs(220));
   }
-  await impact(scene, view, hit.at, hit.killed, hit.speed);
+  await impact(hit.timeline, view, hit.at, hit.killed);
   if (hit.killed) {
     if (sprite && !survivor) sprite.destroy();
     view.scorch(hit.at, stage.state.day);
-    await debris(scene, view, hit.at, hit.team, hit.speed);
+    await debris(hit.timeline, view, hit.at, hit.team);
   }
   stage.refresh();
 }

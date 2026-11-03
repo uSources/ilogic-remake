@@ -18,6 +18,29 @@ export const STEPPED = { ease: 'Stepped', easeParams: [6] };
 export const sleep = (scene: Phaser.Scene, ms: number): Promise<void> =>
   new Promise<void>((r) => scene.time.delayedCall(Math.max(0, ms), r));
 
+/**
+ * El reloj de un efecto: la escena y la velocidad de las animaciones (Opciones; 1 = normal, 0.5 =
+ * el doble de rapido). Los efectos escriben sus duraciones a velocidad normal (`wait(70)`) y el
+ * reloj las ajusta, en vez de llevar `scene` y `k` a cada funcion y multiplicar a mano.
+ */
+export class FxTimeline {
+  constructor(
+    readonly scene: Phaser.Scene,
+    /** Factor de las duraciones (el `k` de antes). */
+    readonly speed = 1,
+  ) {}
+
+  /** `ms` (a velocidad normal) a la velocidad elegida. */
+  ms(ms: number): number {
+    return ms * this.speed;
+  }
+
+  /** Espera `ms` (a velocidad normal) con el reloj de la escena. */
+  wait(ms: number): Promise<void> {
+    return sleep(this.scene, ms * this.speed);
+  }
+}
+
 /** Tween que se puede esperar con `await`. */
 export function tween(scene: Phaser.Scene, cfg: Phaser.Types.Tweens.TweenBuilderConfig): Promise<void> {
   return new Promise((resolve) => scene.tweens.add({ ...cfg, onComplete: () => resolve() }));
