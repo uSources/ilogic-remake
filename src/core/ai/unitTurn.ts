@@ -8,7 +8,7 @@ import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
 import type { Building, GameEvent, GameState, Rng, Unit } from '../types';
-import { bestMoveToward, doMove, needsRepair, type AiCtx } from './context';
+import { bestMoveToward, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { advance, captureHere, randomMove, retreat, tryAttack, tryCapture } from './tactics';
 
 /** Lo que necesita un comportamiento para decidir y actuar con una unidad. */
@@ -93,9 +93,6 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     },
   },
 ];
-
-/** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */
-const canAct = (unit: Unit): boolean => unit.active && unit.carrier === null && unit.life > 0;
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa). */
 export function* unitTurn(s: GameState, ai: AiCtx, uid: number, rng: Rng): Generator<GameEvent> {

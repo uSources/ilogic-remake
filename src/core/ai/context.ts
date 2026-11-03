@@ -94,6 +94,9 @@ export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me))
   return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && cellAt(visible, other));
 }
 
+/** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */
+export const canAct = (unit: Unit): boolean => unit.active && unit.carrier === null && unit.life > 0;
+
 /** Necesita volver a curarse a un edificio. */
 export const needsRepair = (unit: Unit): boolean => unit.life < AI.LIFETOBACK;
 

@@ -10,8 +10,9 @@ import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
 import { effectiveCommand, finishCommand } from '../squads';
-import type { GameEvent, GameState, Pos, Rng, Team } from '../types';
-import { aiCtx, doMove, needsRepair, type AiCtx } from './context';
+import type { CommandKind, GameEvent, GameState, Pos, Rng, Team, Unit } from '../types';
+import { cellAt } from '../util/grid';
+import { aiCtx, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { commandOrder, commandStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
 
@@ -21,14 +22,11 @@ import { captureHere, retreat, tryAttack } from './tactics';
  * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
 export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, number[]> {
-  const ctx = aiCtx(team);
-  const done: number[] = [];
-  for (const u of commandOrder(
-    s,
-    teamUnits(s, ctx.me).filter((u) => effectiveCommand(s, u)),
-  ))
-    if (yield* unitCommandTurn(s, ctx, u.uid, rng)) done.push(u.uid);
-  return done;
+  const ai = aiCtx(team);
+  const withCommand = teamUnits(s, ai.me).filter((unit) => effectiveCommand(s, unit));
+  const fulfilled: number[] = [];
+  for (const unit of commandOrder(s, withCommand)) if (yield* unitCommandTurn(s, ai, unit.uid, rng)) fulfilled.push(unit.uid);
+  return fulfilled;
 }
 
 /** [CAMBIO] La unidad del jugador empieza ya su orden recien dada (si aun no se ha movido). */
@@ -44,55 +42,95 @@ export function* commandTurn(s: GameState, uid: number, rng: Rng, team: Team = 0
   return yield* unitCommandTurn(s, aiCtx(team), uid, rng);
 }
 
-/** Lo de commandTurn, dentro de un turno ya empezado (`ctx`). */
-function* unitCommandTurn(s: GameState, ctx: AiCtx, uid: number, rng: Rng): Generator<GameEvent, boolean> {
-  const u = unitById(s, uid);
-  const c = u && effectiveCommand(s, u);
-  if (!u || !c || !u.active || u.carrier !== null || u.life <= 0) return false;
-  const { kind, at } = c;
-  const finish = () => {
-    finishCommand(s, u);
-    return true;
-  };
-  if (kind === 'capture') {
-    const b = buildingAt(s, at.x, at.y);
-    if (!b || b.owner === ctx.me || !UNIT.cancapt[u.type]) return finish();
-    if (samePos(u, at)) {
-      yield* captureHere(s, u);
-      wait(u);
-      return buildingAt(s, at.x, at.y)?.owner === ctx.me ? finish() : false;
-    }
-    const range = moveRange(s, u);
-    if (yield* doMove(s, u, commandStep(s, ctx, u, at, range, formation(s, ctx, u)), range)) return false;
-    if (samePos(u, at)) {
-      yield* captureHere(s, u);
-    } else if (!(yield* tryAttack(s, ctx, u, moveRange(s, u), rng, { stay: true, chase: false }))) wait(u);
-    wait(u);
-    return buildingAt(s, at.x, at.y)?.owner === ctx.me ? finish() : false;
+/** Lo que necesita cada tipo de orden para jugar el turno de una unidad. */
+interface CommandTurnContext {
+  s: GameState;
+  ai: AiCtx;
+  unit: Unit;
+  /** Casilla de destino de la orden. */
+  at: Pos;
+  rng: Rng;
+}
+
+/** Juega el turno de una unidad con una orden de ese tipo. Devuelve true si la orden se ha cumplido (o ya no tiene sentido). */
+type CommandTurn = (turn: CommandTurnContext) => Generator<GameEvent, boolean>;
+
+/** Ya es suyo el edificio de la casilla. */
+const ownsBuildingAt = (s: GameState, ai: AiCtx, at: Pos): boolean => buildingAt(s, at.x, at.y)?.owner === ai.me;
+
+/** Dispara sin moverse a lo que tenga a tiro; si no hay nada, espera. */
+function* shootFromHereOrWait({ s, ai, unit, rng }: CommandTurnContext): Generator<GameEvent> {
+  if (!(yield* tryAttack(s, ai, unit, moveRange(s, unit), rng, { stay: true, chase: false }))) wait(unit);
+}
+
+/** Capturar: ir al edificio (en formacion) y capturarlo; por el camino, disparar sin desviarse. */
+function* captureCommand(turn: CommandTurnContext): Generator<GameEvent, boolean> {
+  const { s, ai, unit, at } = turn;
+  const building = buildingAt(s, at.x, at.y);
+  if (!building || building.owner === ai.me || !UNIT.cancapt[unit.type]) return true;
+  if (samePos(unit, at)) {
+    yield* captureHere(s, unit);
+    wait(unit);
+    return ownsBuildingAt(s, ai, at);
   }
-  const range = moveRange(s, u);
-  if (needsRepair(u) && (yield* retreat(s, ctx, u, range))) return false;
-  const near = (t: Pos) => manhattan(t, at) <= AI.GUARDRADIUS;
-  const f = formation(s, ctx, u);
-  const from = formationFrom(f);
-  if (kind === 'defend') {
-    if (yield* tryAttack(s, ctx, u, range, rng, { zone: near, from })) return false;
-    if (manhattan(u, at) > 1) yield* doMove(s, u, commandStep(s, ctx, u, at, range, f), range);
-    wait(u);
-    return false;
-  }
-  // Atacar aqui: dispara a lo que tenga a tiro por el camino, sin perseguir, y avanza.
-  if (yield* tryAttack(s, ctx, u, range, rng, { chase: false, from })) return false;
-  if (manhattan(u, at) > 1) {
-    if (yield* doMove(s, u, commandStep(s, ctx, u, at, range, f), range)) return false;
-    if (!(yield* tryAttack(s, ctx, u, moveRange(s, u), rng, { stay: true, chase: false }))) wait(u);
+  const range = moveRange(s, unit);
+  const ambushed = yield* doMove(s, unit, commandStep(s, ai, unit, at, range, formation(s, ai, unit)), range);
+  if (ambushed) return false;
+  if (samePos(unit, at)) yield* captureHere(s, unit);
+  else yield* shootFromHereOrWait(turn);
+  wait(unit);
+  return ownsBuildingAt(s, ai, at);
+}
+
+/** Esta en la zona que guarda la orden (a AI.GUARDRADIUS o menos del destino). */
+const inGuardZone = (at: Pos) => (pos: Pos) => manhattan(pos, at) <= AI.GUARDRADIUS;
+
+/** Defender: disparar a lo que entre en la zona y, si no, colocarse junto al destino. Nunca se cumple sola. */
+function* defendCommand({ s, ai, unit, at, rng }: CommandTurnContext): Generator<GameEvent, boolean> {
+  const range = moveRange(s, unit);
+  if (needsRepair(unit) && (yield* retreat(s, ai, unit, range))) return false;
+  const squadFormation = formation(s, ai, unit);
+  if (yield* tryAttack(s, ai, unit, range, rng, { zone: inGuardZone(at), from: formationFrom(squadFormation) })) return false;
+  if (manhattan(unit, at) > 1) yield* doMove(s, unit, commandStep(s, ai, unit, at, range, squadFormation), range);
+  wait(unit);
+  return false;
+}
+
+/** Atacar: dispara a lo que tenga a tiro por el camino, sin perseguir, y avanza. Se cumple al llegar sin enemigos cerca. */
+function* attackCommand(turn: CommandTurnContext): Generator<GameEvent, boolean> {
+  const { s, ai, unit, at, rng } = turn;
+  const range = moveRange(s, unit);
+  if (needsRepair(unit) && (yield* retreat(s, ai, unit, range))) return false;
+  const squadFormation = formation(s, ai, unit);
+  if (yield* tryAttack(s, ai, unit, range, rng, { chase: false, from: formationFrom(squadFormation) })) return false;
+  if (manhattan(unit, at) > 1) {
+    const ambushed = yield* doMove(s, unit, commandStep(s, ai, unit, at, range, squadFormation), range);
+    if (!ambushed) yield* shootFromHereOrWait(turn);
     return false;
   }
   // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.
-  wait(u);
-  const vis = visibility(s, ctx.me);
-  const left = s.units.some((t) => t.team !== ctx.me && t.carrier === null && vis[t.x]![t.y] && near(t));
-  return left ? false : finish();
+  wait(unit);
+  const visible = visibility(s, ai.me);
+  const isNear = inGuardZone(at);
+  const enemiesLeft = s.units.some((other) => other.team !== ai.me && other.carrier === null && cellAt(visible, other) && isNear(other));
+  return !enemiesLeft;
+}
+
+/** Como juega una unidad cada tipo de orden. Un tipo de orden nuevo es una entrada aqui. */
+const COMMAND_TURNS: Record<CommandKind, CommandTurn> = {
+  capture: captureCommand,
+  defend: defendCommand,
+  attack: attackCommand,
+};
+
+/** Lo de commandTurn, dentro de un turno ya empezado (`ai`). */
+function* unitCommandTurn(s: GameState, ai: AiCtx, uid: number, rng: Rng): Generator<GameEvent, boolean> {
+  const unit = unitById(s, uid);
+  const command = unit && effectiveCommand(s, unit);
+  if (!unit || !command || !canAct(unit)) return false;
+  const isFulfilled = yield* COMMAND_TURNS[command.kind]({ s, ai, unit, at: command.at, rng });
+  if (isFulfilled) finishCommand(s, unit);
+  return isFulfilled;
 }
 
 /** [CAMBIO] Lo que hara una unidad con orden al terminar el turno (ver previewCommands). */
@@ -118,39 +156,50 @@ const PREVIEW_SEED = 0x1d0c;
  * Es una prevision: con enemigos escondidos o la suerte del combate, el turno real puede variar.
  */
 export function previewCommands(s: GameState, team: Team = 0, seed = PREVIEW_SEED): Map<number, CommandIntent> {
-  const out = new Map<number, CommandIntent>();
-  const actors = s.units.filter((u) => u.team === team && effectiveCommand(s, u) && u.active && u.carrier === null && u.life > 0);
-  if (!actors.length) return out;
+  const intents = new Map<number, CommandIntent>();
+  const actors = s.units.filter((unit) => unit.team === team && effectiveCommand(s, unit) && canAct(unit));
+  if (!actors.length) return intents;
+  const copy = withoutHiddenEnemies(s, team);
+  for (const unit of actors) intents.set(unit.uid, { path: [] });
+  const turn = assistTurn(copy, seededRng(seed), team);
+  for (let step = turn.next(); !step.done; step = turn.next()) recordIntent(intents, step.value);
+  return intents;
+}
+
+/** Copia de la partida sin los enemigos que `team` no ve (ni lo que llevan dentro). */
+function withoutHiddenEnemies(s: GameState, team: Team): GameState {
   const copy = structuredClone(s);
-  const vis = visibility(copy, team);
-  const hidden = new Set(copy.units.filter((u) => u.team !== team && u.carrier === null && !vis[u.x]![u.y]).map((u) => u.uid));
-  if (hidden.size) copy.units = copy.units.filter((u) => !hidden.has(u.uid) && !(u.carrier !== null && hidden.has(u.carrier)));
-  for (const u of actors) out.set(u.uid, { path: [] });
-  const it = assistTurn(copy, seededRng(seed), team);
-  for (let r = it.next(); !r.done; r = it.next()) {
-    const ev = r.value;
-    switch (ev.kind) {
-      case 'move':
-      case 'merge': {
-        const i = out.get(ev.uid);
-        if (!i) break;
-        i.path = i.path.length ? [...i.path, ...ev.path.slice(1)] : ev.path.map((p) => ({ x: p.x, y: p.y }));
-        if (ev.kind === 'merge') i.merge = true;
-        break;
-      }
-      case 'attack': {
-        const i = out.get(ev.attacker);
-        if (i && !i.attack) i.attack = { x: ev.target.x, y: ev.target.y };
-        break;
-      }
-      case 'capture': {
-        const i = out.get(ev.uid);
-        if (i) i.capture = { x: ev.at.x, y: ev.at.y };
-        break;
-      }
-      default:
-        break;
+  const visible = visibility(copy, team);
+  const isHiddenEnemy = (unit: Unit) => unit.team !== team && unit.carrier === null && !cellAt(visible, unit);
+  const hidden = new Set(copy.units.filter(isHiddenEnemy).map((unit) => unit.uid));
+  const isCarriedByHidden = (unit: Unit) => unit.carrier !== null && hidden.has(unit.carrier);
+  if (hidden.size) copy.units = copy.units.filter((unit) => !hidden.has(unit.uid) && !isCarriedByHidden(unit));
+  return copy;
+}
+
+/** Apunta en la intencion de su unidad lo que dice un suceso del turno simulado. */
+function recordIntent(intents: Map<number, CommandIntent>, event: GameEvent): void {
+  switch (event.kind) {
+    case 'move':
+    case 'merge': {
+      const intent = intents.get(event.uid);
+      if (!intent) return;
+      // Un camino que sigue a otro empieza donde acabo el anterior: esa casilla no se repite.
+      intent.path = intent.path.length ? [...intent.path, ...event.path.slice(1)] : event.path.map((pos) => ({ x: pos.x, y: pos.y }));
+      if (event.kind === 'merge') intent.merge = true;
+      return;
     }
+    case 'attack': {
+      const intent = intents.get(event.attacker);
+      if (intent && !intent.attack) intent.attack = { x: event.target.x, y: event.target.y };
+      return;
+    }
+    case 'capture': {
+      const intent = intents.get(event.uid);
+      if (intent) intent.capture = { x: event.at.x, y: event.at.y };
+      return;
+    }
+    default:
+      return;
   }
-  return out;
 }

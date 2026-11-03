@@ -17,13 +17,10 @@ import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } fro
 import { cellAt } from '../util/grid';
 import { maxBy, minBy } from '../util/pick';
 import { bestMoveToward, doMove, repairsHere, stepsFrom, strikeReach, visibleFoes, type AiCtx } from './context';
-import { attackScore } from './scoring';
+import { attackScore, unitValue } from './scoring';
 
 /** La Base enemiga vale mas que otro edificio: al buscar que capturar, cuenta como si estuviera estos pasos mas cerca. */
 const HQ_CAPTURE_HEAD_START = 4;
-
-/** Lo que vale una unidad de ese tipo en la escala de la IA (su precio, escalado). */
-const unitValue = (type: number): number => UNIT.cost[type]! / AI.COSTSCALE;
 
 // ---------------------------------------------------------------------------------------------
 // Retirarse

@@ -30,7 +30,7 @@ export interface AttackScoreTerm {
 }
 
 /** Lo que vale una unidad de ese tipo en la escala de la IA (su precio, escalado). */
-const unitValue = (type: number): number => UNIT.cost[type]! / AI.COSTSCALE;
+export const unitValue = (type: number): number => UNIT.cost[type]! / AI.COSTSCALE;
 
 const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
 
