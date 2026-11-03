@@ -2,12 +2,19 @@
  * Victoria y derrota: Base, limite de dias, puntos y objetivos de mision.
  */
 import { HQ, RULES, UNIT } from '../data';
-import type { GameState, Objective, Outcome, Team } from '../types';
+import { AI_TEAM, PLAYER } from '../util/predicates';
+import type { Building, GameState, Objective, Outcome, Pos, Team } from '../types';
+
+/** Puntos que vale cada edificio para el limite de dias. */
+const BUILDING_SCORE = 1000;
+
+const hasHQ = (s: GameState, team: Team): boolean => s.buildings.some((building) => building.owner === team && building.type === HQ);
+
+const buildingsOf = (s: GameState, team: Team): Building[] => s.buildings.filter((building) => building.owner === team);
 
 function defeated(s: GameState, team: Team): boolean {
-  const hasHQ = s.buildings.some((b) => b.owner === team && b.type === HQ);
-  const hasAny = s.units.some((u) => u.team === team) || s.buildings.some((b) => b.owner === team);
-  return !hasHQ || !hasAny;
+  const hasAnything = s.units.some((unit) => unit.team === team) || buildingsOf(s, team).length > 0;
+  return !hasHQ(s, team) || !hasAnything;
 }
 
 /**
@@ -15,14 +22,22 @@ function defeated(s: GameState, team: Team): boolean {
  * mas 1000 por cada edificio.
  */
 export function score(s: GameState, team: Team): number {
-  let v = 0;
-  for (const u of s.units) if (u.team === team) v += (UNIT.cost[u.type]! * u.life) / 100;
-  for (const b of s.buildings) if (b.owner === team) v += 1000;
-  return Math.round(v);
+  let total = 0;
+  for (const unit of s.units) if (unit.team === team) total += (UNIT.cost[unit.type]! * unit.life) / 100;
+  for (const building of s.buildings) if (building.owner === team) total += BUILDING_SCORE;
+  return Math.round(total);
 }
 
 /** El limite de dias (si lo hay) ya se ha cumplido. */
 export const dayLimitReached = (s: GameState): boolean => RULES.dayLimit !== null && s.day > RULES.dayLimit;
+
+/** Al acabar el ultimo dia: mas puntos; si empatan, mas edificios; si tambien, pierde el jugador. */
+function dayLimitOutcome(s: GameState): Outcome {
+  const playerScore = score(s, PLAYER);
+  const aiScore = score(s, AI_TEAM);
+  if (playerScore !== aiScore) return playerScore > aiScore ? 'won' : 'lost';
+  return buildingsOf(s, PLAYER).length > buildingsOf(s, AI_TEAM).length ? 'won' : 'lost';
+}
 
 /**
  * Se gana neutralizando la Base enemiga (o si el enemigo se queda sin nada). Si ambas, se pierde.
@@ -30,53 +45,59 @@ export const dayLimitReached = (s: GameState): boolean => RULES.dayLimit !== nul
  * si tambien empatan, pierde el jugador).
  */
 export function outcome(s: GameState): Outcome {
-  if (defeated(s, 0)) return 'lost';
-  if (defeated(s, 1)) return 'won';
-  const obj = s.mission?.objective;
-  if (obj && obj.kind !== 'hq') return objectiveOutcome(s, obj);
-  if (dayLimitReached(s)) {
-    const a = score(s, 0),
-      b = score(s, 1);
-    if (a !== b) return a > b ? 'won' : 'lost';
-    const nb = (t: Team) => s.buildings.filter((x) => x.owner === t).length;
-    return nb(0) > nb(1) ? 'won' : 'lost';
-  }
+  if (defeated(s, PLAYER)) return 'lost';
+  if (defeated(s, AI_TEAM)) return 'won';
+  const objective = s.mission?.objective;
+  if (objective && objective.kind !== 'hq') return objectiveOutcome(s, objective);
+  if (dayLimitReached(s)) return dayLimitOutcome(s);
   return 'playing';
 }
 
+/** Edificios del jugador que cuentan para un objetivo de capturar. */
+function capturedForObjective(s: GameState, objective: Extract<Objective, { kind: 'capture' }>): number {
+  return buildingsOf(s, PLAYER).filter((building) => objective.type === null || building.type === objective.type).length;
+}
+
+const aiUnitCount = (s: GameState): number => s.units.filter((unit) => unit.team === AI_TEAM).length;
+
+/** Donde esta la unidad escoltada: dentro de un transporte cuenta donde este el transporte. */
+function escortPosition(s: GameState, uid: number): Pos | null {
+  const escorted = s.units.find((unit) => unit.uid === uid);
+  if (!escorted) return null;
+  if (escorted.carrier === null) return escorted;
+  return s.units.find((unit) => unit.uid === escorted.carrier) ?? escorted;
+}
+
 /** Resultado de una mision con objetivo especial (la derrota por perder la Base ya se ha mirado). */
-function objectiveOutcome(s: GameState, obj: Exclude<Objective, { kind: 'hq' }>): Outcome {
-  const late = s.day > obj.days;
-  switch (obj.kind) {
+function objectiveOutcome(s: GameState, objective: Exclude<Objective, { kind: 'hq' }>): Outcome {
+  const isLate = s.day > objective.days;
+  const wonOrWait = (isDone: boolean): Outcome => (isDone ? 'won' : isLate ? 'lost' : 'playing');
+  switch (objective.kind) {
     case 'survive':
-      return late ? 'won' : 'playing';
-    case 'capture': {
-      const n = s.buildings.filter((b) => b.owner === 0 && (obj.type === null || b.type === obj.type)).length;
-      return n >= obj.count ? 'won' : late ? 'lost' : 'playing';
-    }
+      return isLate ? 'won' : 'playing';
+    case 'capture':
+      return wonOrWait(capturedForObjective(s, objective) >= objective.count);
     case 'destroy':
-      return !s.units.some((u) => u.team === 1) ? 'won' : late ? 'lost' : 'playing';
+      return wonOrWait(aiUnitCount(s) === 0);
     case 'escort': {
-      const v = s.units.find((u) => u.uid === obj.uid);
-      if (!v) return 'lost';
-      // Dentro de un transporte cuenta donde este el transporte.
-      const at = v.carrier !== null ? (s.units.find((u) => u.uid === v.carrier) ?? v) : v;
-      return at.x === obj.to.x && at.y === obj.to.y ? 'won' : late ? 'lost' : 'playing';
+      const at = escortPosition(s, objective.uid);
+      if (!at) return 'lost';
+      return wonOrWait(at.x === objective.to.x && at.y === objective.to.y);
     }
   }
 }
 
 /** Progreso del objetivo de la mision, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
 export function objectiveProgress(s: GameState): { done: number; total: number } | null {
-  const obj = s.mission?.objective;
-  if (!obj || obj.kind === 'hq') return null;
-  switch (obj.kind) {
+  const objective = s.mission?.objective;
+  if (!objective || objective.kind === 'hq') return null;
+  switch (objective.kind) {
     case 'survive':
-      return { done: Math.min(s.day - 1, obj.days), total: obj.days };
+      return { done: Math.min(s.day - 1, objective.days), total: objective.days };
     case 'capture':
-      return { done: s.buildings.filter((b) => b.owner === 0 && (obj.type === null || b.type === obj.type)).length, total: obj.count };
+      return { done: capturedForObjective(s, objective), total: objective.count };
     case 'destroy':
-      return { done: 0, total: s.units.filter((u) => u.team === 1).length };
+      return { done: 0, total: aiUnitCount(s) };
     case 'escort':
       return null;
   }
@@ -84,9 +105,10 @@ export function objectiveProgress(s: GameState): { done: number; total: number }
 
 /** Por que ha terminado la partida. */
 export function endReason(s: GameState): 'hq' | 'wipeout' | 'days' | 'objective' | null {
-  if (outcome(s) === 'playing') return null;
-  const loser: Team = outcome(s) === 'won' ? 1 : 0;
-  if (!s.buildings.some((b) => b.owner === loser && b.type === HQ)) return 'hq';
+  const result = outcome(s);
+  if (result === 'playing') return null;
+  const loser: Team = result === 'won' ? AI_TEAM : PLAYER;
+  if (!hasHQ(s, loser)) return 'hq';
   if (defeated(s, loser)) return 'wipeout';
   if (s.mission && s.mission.objective.kind !== 'hq') return 'objective';
   return 'days';
