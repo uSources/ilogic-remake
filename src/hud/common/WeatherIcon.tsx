@@ -82,16 +82,10 @@ export function WeatherIcon({ id, cls = 'wx-icon' }: { id: string; cls?: string 
   const src = imgUrl(`ui/wx_${id}`);
   if (src) return <img class={`${cls} wx-img`} src={src} alt="" aria-hidden="true" draggable={false} />;
   const rows = ART[id] ?? ART.Clear!;
-  const rects: preact.JSX.Element[] = [];
-  rows.forEach((row, y) => {
-    for (let x = 0; x < row.length; x++) {
-      const c = INK[row[x]!];
-      if (c) rects.push(<rect x={x} y={y} width={1} height={1} fill={c} />);
-    }
-  });
+  const pixels = rows.flatMap((row, y) => [...row].map((letter, x) => ({ x, y, color: INK[letter] })));
   return (
     <svg class={cls} viewBox="0 0 10 10" shape-rendering="crispEdges" aria-hidden="true">
-      {rects}
+      {pixels.map(({ x, y, color }) => color && <rect x={x} y={y} width={1} height={1} fill={color} />)}
     </svg>
   );
 }
