@@ -2,18 +2,23 @@ import { fmtNum, t } from '../../settings';
 import { signed } from '../common/format';
 import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../vm/topBar';
 
-/** Filas "3 × Ciudad  +3.000". `sign`: '+' ingresos, '−' gastos, '' puntos. */
-function BreakdownRows({ lines, sign, empty }: { lines: BreakdownLineVM[]; sign: '+' | '−' | ''; empty: string }) {
+/** '+' ingresos, '−' gastos, '' puntos (sin color). */
+type Sign = '+' | '−' | '';
+
+const SIGN_CLASS: Record<Sign, string> = { '+': 'pos', '−': 'neg', '': '' };
+
+/** Filas "3 × Ciudad  +3.000", o `empty` si no hay ninguna. */
+function BreakdownRows({ lines, sign, empty }: { lines: BreakdownLineVM[]; sign: Sign; empty: string }) {
   if (!lines.length) return <div class="row muted">{empty}</div>;
   return (
     <>
-      {lines.map((l) => (
-        <div class="row" key={l.label}>
-          <span class="n num">{l.count} ×</span>
-          <span class="l">{l.label}</span>
-          <span class={`v num ${sign === '+' ? 'pos' : sign === '−' ? 'neg' : ''}`}>
+      {lines.map((line) => (
+        <div class="row" key={line.label}>
+          <span class="n num">{line.count} ×</span>
+          <span class="l">{line.label}</span>
+          <span class={`v num ${SIGN_CLASS[sign]}`}>
             {sign}
-            {fmtNum(l.amount)}
+            {fmtNum(line.amount)}
           </span>
         </div>
       ))}
@@ -21,89 +26,118 @@ function BreakdownRows({ lines, sign, empty }: { lines: BreakdownLineVM[]; sign:
   );
 }
 
-/** Desglose del dinero (al pasar por encima o tocar el dinero de arriba). */
-export function EconomyPanel({ e }: { e: EconomyVM }) {
+function IncomeSection({ income }: { income: EconomyVM['income'] }) {
   return (
-    <div class="px breakdown" role="tooltip">
+    <>
       <h4>{t('ecoIncome')}</h4>
-      <BreakdownRows lines={e.income.lines} sign="+" empty={t('ecoNoBuildings')} />
-      {e.income.scale !== 1 && (
+      <BreakdownRows lines={income.lines} sign="+" empty={t('ecoNoBuildings')} />
+      {income.scale !== 1 && (
         <div class="note">
-          {t('ecoScale')}: ×{e.income.scale}
+          {t('ecoScale')}: ×{income.scale}
         </div>
       )}
       <div class="row total">
         <span class="l" />
-        <span class="v num pos">+{fmtNum(e.income.total)}</span>
+        <span class="v num pos">+{fmtNum(income.total)}</span>
       </div>
-      {e.upkeep && (
-        <>
-          <h4>{t('ecoUpkeep')}</h4>
-          <BreakdownRows lines={e.upkeep.lines} sign="−" empty={t('ecoNoUnits')} />
-          <div class="row total">
-            <span class="l note">
-              {Math.round(e.upkeep.rate * 100)} % {t('ecoUpkeepNote')}
-            </span>
-            <span class="v num neg">−{fmtNum(e.upkeep.total)}</span>
-          </div>
-        </>
-      )}
+    </>
+  );
+}
+
+function UpkeepSection({ upkeep }: { upkeep: NonNullable<EconomyVM['upkeep']> }) {
+  return (
+    <>
+      <h4>{t('ecoUpkeep')}</h4>
+      <BreakdownRows lines={upkeep.lines} sign="−" empty={t('ecoNoUnits')} />
+      <div class="row total">
+        <span class="l note">
+          {Math.round(upkeep.rate * 100)} % {t('ecoUpkeepNote')}
+        </span>
+        <span class="v num neg">−{fmtNum(upkeep.total)}</span>
+      </div>
+    </>
+  );
+}
+
+function CommandSection({ command }: { command: NonNullable<EconomyVM['command']> }) {
+  const free = Math.max(0, command.max - command.used);
+  return (
+    <>
+      <h4>{t('ecoCommand')}</h4>
+      <BreakdownRows lines={command.lines} sign="" empty={t('ecoNoUnits')} />
+      <div class="row total">
+        <span class="l note">
+          {free} {t('ecoFree')}
+        </span>
+        <span class="v num">
+          {command.used}/{command.max}
+        </span>
+      </div>
+    </>
+  );
+}
+
+/** Desglose del dinero (al pasar por encima o tocar el dinero de arriba). */
+export function EconomyPanel({ economy }: { economy: EconomyVM }) {
+  return (
+    <div class="px breakdown" role="tooltip">
+      <IncomeSection income={economy.income} />
+      {economy.upkeep && <UpkeepSection upkeep={economy.upkeep} />}
       <div class="row net">
         <span class="l">{t('ecoNet')}</span>
-        <span class={`v num ${e.net < 0 ? 'neg' : 'pos'}`}>{signed(e.net)}</span>
+        <span class={`v num ${economy.net < 0 ? 'neg' : 'pos'}`}>{signed(economy.net)}</span>
       </div>
       <div class="row">
         <span class="l">{t('ecoNext')}</span>
-        <span class="v num gold">{fmtNum(e.next)}</span>
+        <span class="v num gold">{fmtNum(economy.next)}</span>
       </div>
-      {e.shortfall !== null && (
+      {economy.shortfall !== null && (
         <div class="note warn">
-          {t('ecoShortfall')} {fmtNum(e.shortfall)}
+          {t('ecoShortfall')} {fmtNum(economy.shortfall)}
         </div>
       )}
-      {e.command && (
-        <>
-          <h4>{t('ecoCommand')}</h4>
-          <BreakdownRows lines={e.command.lines} sign="" empty={t('ecoNoUnits')} />
-          <div class="row total">
-            <span class="l note">
-              {Math.max(0, e.command.max - e.command.used)} {t('ecoFree')}
-            </span>
-            <span class="v num">
-              {e.command.used}/{e.command.max}
-            </span>
-          </div>
-        </>
-      )}
+      {economy.command && <CommandSection command={economy.command} />}
     </div>
   );
 }
 
+/** "Sin límite de días", "Último día" o "Quedan 5 días". */
+function daysLeftText(daysLeft: number | null): string {
+  if (daysLeft === null) return t('dayNoLimit');
+  if (daysLeft <= 1) return t('dayLeft1');
+  return `${t('dayLeft')} ${daysLeft} ${t('days')}`;
+}
+
+function ScoreSection({ score }: { score: NonNullable<DayInfoVM['score']> }) {
+  const [mine, enemy] = score;
+  return (
+    <>
+      <h4>{t('dayScore')}</h4>
+      <div class="row">
+        <span class="l">{t('youShort')}</span>
+        <span class="v num pos">{fmtNum(mine)}</span>
+      </div>
+      <div class="row">
+        <span class="l">{t('enemy')}</span>
+        <span class="v num neg">{fmtNum(enemy)}</span>
+      </div>
+      <div class="note">{t('dayScoreNote')}</div>
+    </>
+  );
+}
+
 /** Desglose del dia: limite, lo que queda y los puntos si se acabase ahora. */
-export function DayPanel({ d }: { d: DayInfoVM }) {
+export function DayPanel({ dayInfo }: { dayInfo: DayInfoVM }) {
   return (
     <div class="px breakdown" role="tooltip">
       <h4>
-        {t('day')} {d.day}
-        {d.limit !== null && ` ${t('dayOf')} ${d.limit}`}
+        {t('day')} {dayInfo.day}
+        {dayInfo.limit !== null && ` ${t('dayOf')} ${dayInfo.limit}`}
       </h4>
       <div class="row">
-        <span class="l">{d.left === null ? t('dayNoLimit') : d.left <= 1 ? t('dayLeft1') : `${t('dayLeft')} ${d.left} ${t('days')}`}</span>
+        <span class="l">{daysLeftText(dayInfo.left)}</span>
       </div>
-      {d.score && (
-        <>
-          <h4>{t('dayScore')}</h4>
-          <div class="row">
-            <span class="l">{t('youShort')}</span>
-            <span class="v num pos">{fmtNum(d.score[0])}</span>
-          </div>
-          <div class="row">
-            <span class="l">{t('enemy')}</span>
-            <span class="v num neg">{fmtNum(d.score[1])}</span>
-          </div>
-          <div class="note">{t('dayScoreNote')}</div>
-        </>
-      )}
+      {dayInfo.score && <ScoreSection score={dayInfo.score} />}
     </div>
   );
 }

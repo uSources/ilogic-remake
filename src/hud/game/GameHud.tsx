@@ -13,6 +13,7 @@ import { PopMenu } from './PopMenu';
 import { SelectionPanel } from './SelectionPanel';
 import { TopBar } from './TopBar';
 import { Tray } from './Tray';
+import { canAct, isPlayerTurn } from './turn';
 
 /**
  * Un panel de la partida: lo que pinta segun el estado, o nada (null/false) si no le toca salir.
@@ -23,9 +24,6 @@ interface GamePanel {
   render: (s: UIState) => ComponentChild;
 }
 
-const isPlayerTurn = (s: UIState) => s.turn === 'player';
-/** El jugador puede mandar: su turno y sin animaciones en curso. */
-const canAct = (s: UIState) => !s.busy && isPlayerTurn(s);
 /** Con dos o mas unidades elegidas, su panel sustituye a las fichas de la casilla. */
 const showsSelection = (s: UIState) => !!s.selection && !s.busy;
 
