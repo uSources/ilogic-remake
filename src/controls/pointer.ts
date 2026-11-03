@@ -4,182 +4,24 @@
  * unidad, un recuadro, una pulsacion larga, un pellizco. Sin Phaser ni estado de partida, asi que se
  * prueba sola (tests/pointer.test.ts).
  *
- * Lo que cada gesto significa en la partida lo cumple GameScene a traves de PointerTarget: la escena
- * ya no lee punteros, solo traduce el evento de Phaser a PointerIn y lo pasa aqui.
+ * Cada gesto tiene su pieza en `gestures/` (pellizco, borde, toque, pulsacion, mantener pulsado);
+ * aqui solo se reparten los eventos entre ellas. Lo que cada gesto significa en la partida lo cumple
+ * GameScene a traves de PointerTarget: la escena no lee punteros, solo traduce el evento de Phaser a
+ * PointerIn y lo pasa aqui.
  */
+import { modsOf, movedFar, type Later, type Mods, type PointerIn, type Pt } from './gestures/basics';
+import { edgeScroll, edgeZoneFor } from './gestures/edgeScroll';
+import { LONG_PRESS_MS, PICK_HOLD_MS, TimerSlot } from './gestures/hold';
+import { Pinch } from './gestures/pinch';
+import { boxFromPress, classifyPressMove, newPress, type Box, type Press } from './gestures/press';
+import { nextTap, type TapInfo, type TapRecord } from './gestures/tap';
 
-/** Pixeles (CSS) que hay que mover el puntero para que no cuente como toque. */
-export const DRAG_THRESHOLD = 6;
-/** Con el dedo, mantener pulsado este tiempo (ms) para levantar la unidad. */
-export const PICK_HOLD_MS = 250;
-/** Mantener pulsado este tiempo (ms) para llevar el cursor ahi (ficha de informacion). */
-export const LONG_PRESS_MS = 480;
-/** [CAMBIO] Dos clics (o toques) seguidos en el mismo sitio dentro de este tiempo (ms) son doble clic. */
-export const DOUBLE_MS = 350;
-
-/** Se ha movido lo bastante para ser arrastre. `dpr`: densidad de pantalla (el umbral es en pixeles reales). */
-export function movedFar(dx: number, dy: number, dpr: number): boolean {
-  return Math.hypot(dx, dy) > DRAG_THRESHOLD * dpr;
-}
-
-export interface Pt {
-  x: number;
-  y: number;
-}
-
-/** Un paso de zoom del pellizco, y el punto medio entre los dedos (alrededor de ese punto). */
-export interface PinchZoom {
-  dir: 1 | -1;
-  x: number;
-  y: number;
-}
-
-/** Cuanto tiene que cambiar la distancia entre dos dedos para dar un paso de zoom. */
-const PINCH_IN = 1.3;
-const PINCH_OUT = 0.77;
-
-/**
- * Los dedos que estan en la pantalla y el pellizco. Con dos o mas dedos, cada cambio grande de la
- * distancia entre los dos primeros da un paso de zoom. El pellizco dura hasta que se levantan todos.
- */
-export class Pinch {
-  private points = new Map<number, Pt>();
-  /** Distancia de referencia del pellizco; null si no se pellizca. */
-  private base: number | null = null;
-
-  /** Dedos en pantalla. */
-  get count(): number {
-    return this.points.size;
-  }
-
-  /** Hay un pellizco en curso. */
-  get active(): boolean {
-    return this.base !== null;
-  }
-
-  /** Un dedo nuevo. Con dos o mas, (re)empieza el pellizco con los dos primeros. */
-  add(id: number, p: Pt): void {
-    this.points.set(id, { ...p });
-    if (this.points.size >= 2) {
-      const [a, b] = this.first2();
-      this.base = Math.max(1, dist(a, b));
-    }
-  }
-
-  /** Un dedo se ha movido. Devuelve el paso de zoom si la distancia ha cambiado bastante. */
-  move(id: number, p: Pt): PinchZoom | null {
-    if (this.points.has(id)) this.points.set(id, { ...p });
-    if (this.base === null || this.points.size < 2) return null;
-    const [a, b] = this.first2();
-    const d = dist(a, b);
-    const ratio = d / this.base;
-    if (ratio <= PINCH_IN && ratio >= PINCH_OUT) return null;
-    this.base = d;
-    return { dir: ratio > 1 ? 1 : -1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-  }
-
-  /**
-   * Un dedo se levanta. Devuelve true si era parte de un pellizco: entonces el gesto no es un toque
-   * ni un arrastre. El pellizco termina cuando no queda ningun dedo.
-   */
-  remove(id: number): boolean {
-    const had = this.points.delete(id);
-    const was = this.base !== null;
-    if (this.points.size === 0) this.base = null;
-    return had && was;
-  }
-
-  private first2(): [Pt, Pt] {
-    const [a, b] = [...this.points.values()];
-    return [a!, b!];
-  }
-}
-
-function dist(a: Pt, b: Pt): number {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-// --- Desplazar el mapa por el borde --------------------------------------------
-
-/** Franja del borde (pixeles CSS) y velocidad (pixeles CSS por ms) de un tipo de desplazamiento. */
-export interface EdgeZone {
-  margin: number;
-  speed: number;
-}
-
-/** Raton parado cerca del borde de la pantalla, sin arrastrar. */
-export const EDGE_HOVER: EdgeZone = { margin: 14, speed: 0.9 };
-/** Llevando una unidad con el raton cerca del borde. */
-export const EDGE_CARRY_MOUSE: EdgeZone = { margin: 24, speed: 0.6 };
-/** Llevando una unidad con el dedo (franja mas ancha: el dedo tapa). */
-export const EDGE_CARRY_TOUCH: EdgeZone = { margin: 40, speed: 0.6 };
-
-/**
- * Cuanto desplazar el mapa (pixeles del lienzo) en `dt` ms con el puntero en `p`, en una vista de
- * `w` x `h` pixeles del lienzo. `dpr`: densidad de pantalla (franja y velocidad son en pixeles CSS).
- * {0, 0} si el puntero no esta en la franja del borde.
- */
-export function edgeScroll(p: Pt, w: number, h: number, dt: number, zone: EdgeZone, dpr: number): Pt {
-  const edge = zone.margin * dpr;
-  const sx = p.x < edge ? -1 : p.x > w - edge ? 1 : 0;
-  const sy = p.y < edge ? -1 : p.y > h - edge ? 1 : 0;
-  const v = dt * zone.speed * dpr;
-  return { x: sx * v, y: sy * v };
-}
-
-// --- Gestos ------------------------------------------------------------------
-
-/** Un evento del raton o de un dedo, sin Phaser (GameScene lo traduce desde Phaser.Input.Pointer). */
-export interface PointerIn {
-  id: number;
-  /** Posicion en pixeles del lienzo. */
-  x: number;
-  y: number;
-  /** Viene de un dedo (no del raton). */
-  touch: boolean;
-  /** Algun boton (o el dedo) esta pulsado. */
-  down: boolean;
-  /** Boton derecho: pulsado (en down) o soltado (en up). */
-  right: boolean;
-  /** Mayusculas pulsadas. */
-  shift: boolean;
-  /** [CAMBIO] Ctrl (o Cmd en Mac) pulsado: elegir varias, como en Windows. */
-  ctrl?: boolean;
-  /** [CAMBIO] Alt pulsado (Alt + clic derecho: el menu completo de ordenes). */
-  alt?: boolean;
-  /** [CAMBIO] Boton central (rueda): pulsado (en down) o soltado (en up). Solo arrastra el mapa. */
-  middle?: boolean;
-}
-
-/** [CAMBIO] Teclas que acompañan a un clic. */
-export interface Mods {
-  shift: boolean;
-  ctrl: boolean;
-  alt: boolean;
-}
-
-/** [CAMBIO] Un toque o clic sin arrastrar: con que, que teclas y cuantas veces seguidas (2 = doble clic). */
-export interface TapInfo extends Mods {
-  touch: boolean;
-  count: number;
-}
-
-const modsOf = (p: PointerIn): Mods => ({ shift: p.shift, ctrl: !!p.ctrl, alt: !!p.alt });
-
-/** Algo programado para despues (temporizador de la escena), que se puede cancelar. */
-export interface Later {
-  cancel(): void;
-}
-
-/** Recuadro de seleccion en pixeles del lienzo (arrastrar desde una casilla sin unidad propia). */
-export interface Box {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-  /** Mayusculas o Ctrl: añadir a lo elegido en vez de cambiarlo. */
-  add?: boolean;
-}
+export { DRAG_THRESHOLD, movedFar, type Later, type Mods, type PointerIn, type Pt } from './gestures/basics';
+export { EDGE_CARRY_MOUSE, EDGE_CARRY_TOUCH, EDGE_HOVER, edgeScroll, type EdgeZone } from './gestures/edgeScroll';
+export { LONG_PRESS_MS, PICK_HOLD_MS } from './gestures/hold';
+export { Pinch, type PinchZoom } from './gestures/pinch';
+export type { Box } from './gestures/press';
+export { DOUBLE_MS, type TapInfo } from './gestures/tap';
 
 /**
  * Lo que el juego hace con cada gesto. Lo pone GameScene: aqui solo se decide que gesto es (un toque,
@@ -233,6 +75,17 @@ export interface PointerTarget {
   longPress(x: number, y: number): boolean;
 }
 
+/** Una unidad pulsada que aun no se sabe si es clic o arrastre (con el dedo, con su temporizador). */
+interface PendingPick extends Pt {
+  uid: number;
+  touch: boolean;
+  timer: Later | null;
+}
+
+const positionOf = (pointer: PointerIn): Pt => ({ x: pointer.x, y: pointer.y });
+
+const defaultDpr = () => (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
+
 /**
  * Adaptador de raton y dedos: recibe los eventos de bajo nivel (bajar, mover, subir, rueda, salir) y
  * los convierte en gestos que cumple un PointerTarget. Todo el estado de un gesto vive aqui: el
@@ -242,32 +95,31 @@ export interface PointerTarget {
 export class PointerGestures {
   /** El raton esta sobre el juego (para desplazar el mapa en el borde). */
   inside = false;
-  /** Pulsado sin soltar: `button` (izquierdo, derecho o central), donde empezo y por donde va. */
-  private drag: { x: number; y: number; x0: number; y0: number; moved: boolean; button: 'left' | 'right' | 'middle'; mods: Mods } | null =
-    null;
+  /** Pulsado sin soltar (izquierdo, derecho o central): donde empezo y por donde va. */
+  private press: Press | null = null;
   /** El ultimo toque, para el doble clic. */
-  private lastTap: { x: number; y: number; at: number; count: number } | null = null;
-  private pick: { uid: number; x: number; y: number; touch: boolean; timer: Later | null } | null = null;
+  private lastTap: TapRecord | null = null;
+  private pick: PendingPick | null = null;
   private box: Box | null = null;
   private pinch = new Pinch();
-  private longTimer: Later | null = null;
+  private readonly longPressTimer = new TimerSlot();
 
   constructor(
-    private readonly t: PointerTarget,
-    private readonly dpr: () => number = () => (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1),
+    private readonly target: PointerTarget,
+    private readonly dpr: () => number = defaultDpr,
   ) {}
 
   /** Se esta arrastrando el mapa o pulsando sin soltar (no desplazar por el borde). */
   get dragging(): boolean {
-    return this.drag !== null;
+    return this.press !== null;
   }
 
   /** Olvidar cualquier gesto a medias (partida nueva). */
   reset(): void {
-    this.cancelLongPress();
+    this.longPressTimer.cancel();
     this.dropPick();
     this.inside = false;
-    this.drag = null;
+    this.press = null;
     this.box = null;
     this.lastTap = null;
     this.pinch = new Pinch();
@@ -278,8 +130,8 @@ export class PointerGestures {
   }
 
   wheel(dy: number, x: number, y: number): void {
-    if (this.t.ended()) return;
-    this.t.zoomAt(dy < 0 ? 1 : -1, x, y, true);
+    if (this.target.ended()) return;
+    this.target.zoomAt(dy < 0 ? 1 : -1, x, y, true);
   }
 
   /**
@@ -288,138 +140,165 @@ export class PointerGestures {
    * parado cerca del borde, tambien (pero no arrastrando, con menus ni con la partida acabada).
    */
   tick(p: PointerIn, w: number, h: number, dt: number): void {
-    const t = this.t;
-    const carry = t.carrying() && p.down;
-    let zone: EdgeZone;
-    if (carry) zone = t.carryTouch() ? EDGE_CARRY_TOUCH : EDGE_CARRY_MOUSE;
-    else if (this.inside && !t.ended() && !this.dragging && !p.touch && t.edgeScrollable()) zone = EDGE_HOVER;
-    else return;
-    const d = edgeScroll(p, w, h, dt, zone, this.dpr());
-    if (!d.x && !d.y) return;
-    t.edgeScroll(d.x, d.y);
-    if (carry) t.carryTo(p.x, p.y);
+    const target = this.target;
+    const isCarrying = target.carrying() && p.down;
+    const zone = edgeZoneFor({
+      isCarrying,
+      carryIsTouch: isCarrying && target.carryTouch(),
+      isHoveringMap: !isCarrying && this.isHoveringMap(p),
+    });
+    if (!zone) return;
+    const scroll = edgeScroll(p, w, h, dt, zone, this.dpr());
+    if (!scroll.x && !scroll.y) return;
+    target.edgeScroll(scroll.x, scroll.y);
+    if (isCarrying) target.carryTo(p.x, p.y);
   }
 
   move(p: PointerIn): void {
-    const t = this.t;
+    const target = this.target;
     this.inside = !p.touch;
-    if (t.ended()) return;
-    // Pellizcar: cada vez que la distancia entre los dedos cambia bastante, un paso de zoom.
-    const zoom = this.pinch.move(p.id, { x: p.x, y: p.y });
-    if (this.pinch.active) {
-      if (zoom) t.zoomAt(zoom.dir, zoom.x, zoom.y, false);
-      return;
-    }
+    if (target.ended()) return;
+    if (this.movePinch(p)) return;
     // Unidad cogida: sigue al puntero.
-    if (t.carrying()) return t.carryTo(p.x, p.y);
-    if (this.box && p.down) {
-      this.box.x1 = p.x;
-      this.box.y1 = p.y;
-      return t.boxUpdate(this.box);
-    }
+    if (target.carrying()) return target.carryTo(p.x, p.y);
+    if (this.box && p.down) return this.extendBox(this.box, p);
     // Arrastrar desde la unidad la lleva (tambien con el dedo, sin mantener pulsado antes).
     if (this.pick && movedFar(p.x - this.pick.x, p.y - this.pick.y, this.dpr())) {
       this.startCarry(false);
-      return t.carryTo(p.x, p.y);
+      return target.carryTo(p.x, p.y);
     }
-    // Arrastrar el mapa (o, con el boton izquierdo desde una casilla sin unidad propia, un recuadro).
-    if (this.drag && p.down) {
-      const dx = p.x - this.drag.x,
-        dy = p.y - this.drag.y;
-      if (!this.drag.moved && this.drag.button === 'left' && movedFar(dx, dy, this.dpr()) && t.canBox(p.touch)) {
-        const d = this.drag;
-        this.drag = null;
-        this.cancelLongPress();
-        this.box = { x0: d.x0, y0: d.y0, x1: p.x, y1: p.y, add: d.mods.shift || d.mods.ctrl };
-        return t.boxUpdate(this.box);
-      }
-      if (this.drag.moved || movedFar(dx, dy, this.dpr())) {
-        this.drag.moved = true;
-        this.cancelLongPress();
-        t.pan(-dx, -dy);
-        this.drag.x = p.x;
-        this.drag.y = p.y;
-        return;
-      }
-    }
-    if (!p.touch) t.hover(p.x, p.y);
+    if (this.press && p.down && this.movePress(this.press, p)) return;
+    if (!p.touch) target.hover(p.x, p.y);
   }
 
   down(p: PointerIn): void {
-    const t = this.t;
-    if (t.ended()) return;
-    if (t.busy()) return t.fastForward();
+    const target = this.target;
+    if (target.ended()) return;
+    if (target.busy()) return target.fastForward();
     // [CAMBIO] Botones derecho y central: arrastrar mueve el mapa; el derecho sin arrastrar es un clic
     // derecho (al soltar).
     if (p.right || p.middle) {
-      this.drag = { x: p.x, y: p.y, x0: p.x, y0: p.y, moved: false, button: p.right ? 'right' : 'middle', mods: modsOf(p) };
+      this.press = newPress(p, p.right ? 'right' : 'middle', modsOf(p));
       return;
     }
     // Mayusculas o Ctrl + clic o arrastrar: recuadro que añade (un clic sin arrastrar añade o quita la
     // unidad de debajo, como Ctrl + clic en Windows).
-    if (!p.touch && (p.shift || p.ctrl) && t.canBox(false)) {
+    if (!p.touch && (p.shift || p.ctrl) && target.canBox(false)) {
       this.box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, add: true };
-      this.drag = null;
+      this.press = null;
       return;
     }
-    this.drag = { x: p.x, y: p.y, x0: p.x, y0: p.y, moved: false, button: 'left', mods: modsOf(p) };
-    const uid = t.pickAt(p.x, p.y);
-    if (uid !== null && this.pinch.count < 1) {
-      this.pick = { uid, x: p.x, y: p.y, touch: p.touch, timer: null };
-      // Con el dedo, mantener pulsado un momento tambien la levanta.
-      if (p.touch) this.pick.timer = t.later(PICK_HOLD_MS, () => this.startCarry(true));
-    }
-    if (!p.touch) return;
-    t.touchStart();
-    this.pinch.add(p.id, { x: p.x, y: p.y });
-    if (this.pinch.count >= 2) {
-      // Segundo dedo: es un pellizco, no un toque ni un arrastre.
-      this.drag = null;
-      this.cancelLongPress();
-      this.dropPick();
-      if (t.carrying()) t.cancelCarry();
-    } else if (!this.pick) {
-      this.cancelLongPress();
-      const at = { x: p.x, y: p.y };
-      this.longTimer = t.later(LONG_PRESS_MS, () => this.onLongPress(at));
-    }
+    this.press = newPress(p, 'left', modsOf(p));
+    this.pressUnitUnder(p);
+    if (p.touch) this.fingerDown(p);
   }
 
   up(p: PointerIn): void {
-    const t = this.t;
-    this.cancelLongPress();
-    if (t.carrying()) {
+    const target = this.target;
+    this.longPressTimer.cancel();
+    if (target.carrying()) {
       this.pinch.remove(p.id);
-      this.drag = null;
-      return t.dropCarry(p.x, p.y, p.shift);
+      this.press = null;
+      return target.dropCarry(p.x, p.y, p.shift);
     }
     this.dropPick();
-    if (this.box) {
-      const b = this.box;
-      this.box = null;
-      return t.boxEnd(b);
-    }
+    if (this.box) return this.finishBox(this.box);
     if (this.pinch.remove(p.id)) {
       // Fin del pellizco: ignorar los dedos que quedan hasta que se levanten todos.
-      this.drag = null;
+      this.press = null;
       return;
     }
-    const drag = this.drag;
-    this.drag = null;
-    if (t.ended() || t.busy() || !drag || drag.moved) return;
-    if (drag.button === 'right') return t.rightClick(p.x, p.y, modsOf(p));
-    if (drag.button !== 'left') return;
-    t.tap(p.x, p.y, { touch: p.touch, ...modsOf(p), count: this.tapCount(p) });
+    const press = this.press;
+    this.press = null;
+    if (target.ended() || target.busy() || !press || press.moved) return;
+    if (press.button === 'right') return target.rightClick(p.x, p.y, modsOf(p));
+    if (press.button !== 'left') return;
+    target.tap(p.x, p.y, { touch: p.touch, ...modsOf(p), count: this.tapCount(p) });
+  }
+
+  // --- Mover -----------------------------------------------------------------------------------
+
+  /** Raton sobre el juego, sin pulsar, con la partida en marcha y el mapa a la vista. */
+  private isHoveringMap(p: PointerIn): boolean {
+    return this.inside && !this.target.ended() && !this.dragging && !p.touch && this.target.edgeScrollable();
+  }
+
+  /** Pellizcar: cada vez que la distancia entre los dedos cambia bastante, un paso de zoom. */
+  private movePinch(p: PointerIn): boolean {
+    const zoom = this.pinch.move(p.id, positionOf(p));
+    if (!this.pinch.active) return false;
+    if (zoom) this.target.zoomAt(zoom.dir, zoom.x, zoom.y, false);
+    return true;
+  }
+
+  private extendBox(box: Box, p: PointerIn): void {
+    box.x1 = p.x;
+    box.y1 = p.y;
+    this.target.boxUpdate(box);
+  }
+
+  /** Arrastrar el mapa (o, con el boton izquierdo desde una casilla sin unidad propia, un recuadro). */
+  private movePress(press: Press, p: PointerIn): boolean {
+    const gesture = classifyPressMove(press, p, this.dpr(), () => this.target.canBox(p.touch));
+    if (gesture === 'still') return false;
+    this.longPressTimer.cancel();
+    if (gesture === 'box') {
+      this.press = null;
+      this.box = boxFromPress(press, p);
+      this.target.boxUpdate(this.box);
+      return true;
+    }
+    press.moved = true;
+    this.target.pan(-(p.x - press.last.x), -(p.y - press.last.y));
+    press.last = positionOf(p);
+    return true;
+  }
+
+  // --- Bajar -----------------------------------------------------------------------------------
+
+  /** Pulsar sobre una unidad propia (con un solo dedo): aun no se sabe si es clic o arrastre. */
+  private pressUnitUnder(p: PointerIn): void {
+    const uid = this.target.pickAt(p.x, p.y);
+    if (uid === null || this.pinch.count >= 1) return;
+    this.pick = { uid, x: p.x, y: p.y, touch: p.touch, timer: null };
+    // Con el dedo, mantener pulsado un momento tambien la levanta.
+    if (p.touch) this.pick.timer = this.target.later(PICK_HOLD_MS, () => this.startCarry(true));
+  }
+
+  private fingerDown(p: PointerIn): void {
+    this.target.touchStart();
+    this.pinch.add(p.id, positionOf(p));
+    if (this.pinch.count >= 2) return this.startPinch();
+    if (this.pick) return;
+    const at = positionOf(p);
+    this.longPressTimer.start(
+      (fire) => this.target.later(LONG_PRESS_MS, fire),
+      () => this.onLongPress(at),
+    );
+  }
+
+  /** Segundo dedo: es un pellizco, no un toque ni un arrastre. */
+  private startPinch(): void {
+    this.press = null;
+    this.longPressTimer.cancel();
+    this.dropPick();
+    if (this.target.carrying()) this.target.cancelCarry();
+  }
+
+  // --- Soltar ----------------------------------------------------------------------------------
+
+  private finishBox(box: Box): void {
+    this.box = null;
+    this.target.boxEnd(box);
   }
 
   /** Cuantos toques seguidos van en el mismo sitio (2 = doble clic). */
   private tapCount(p: PointerIn): number {
-    const now = this.t.now();
-    const l = this.lastTap;
-    const count = l && now - l.at <= DOUBLE_MS && !movedFar(p.x - l.x, p.y - l.y, this.dpr()) ? l.count + 1 : 1;
-    this.lastTap = { x: p.x, y: p.y, at: now, count };
-    return count;
+    this.lastTap = nextTap(this.lastTap, p, this.target.now(), this.dpr());
+    return this.lastTap.count;
   }
+
+  // --- Coger una unidad y mantener pulsado -----------------------------------------------------
 
   /** Levantar la unidad pulsada. `held`: con el dedo, se ha mantenido pulsado antes de arrastrar. */
   private startCarry(held: boolean): void {
@@ -427,22 +306,16 @@ export class PointerGestures {
     this.pick = null;
     if (!pick) return;
     pick.timer?.cancel();
-    if (this.t.ended() || this.t.carrying()) return;
-    if (!this.t.beginCarry(pick.uid, pick.touch, held)) return;
-    this.drag = null;
-    this.cancelLongPress();
+    if (this.target.ended() || this.target.carrying()) return;
+    if (!this.target.beginCarry(pick.uid, pick.touch, held)) return;
+    this.press = null;
+    this.longPressTimer.cancel();
   }
 
-  private onLongPress(at: { x: number; y: number }): void {
-    this.longTimer = null;
-    if (!this.drag || this.drag.moved || this.t.ended()) return;
+  private onLongPress(at: Pt): void {
+    if (!this.press || this.press.moved || this.target.ended()) return;
     // Que al levantar el dedo no cuente como toque.
-    if (this.t.longPress(at.x, at.y)) this.drag.moved = true;
-  }
-
-  private cancelLongPress(): void {
-    this.longTimer?.cancel();
-    this.longTimer = null;
+    if (this.target.longPress(at.x, at.y)) this.press.moved = true;
   }
 
   /** Olvidar una pulsacion pendiente sobre una unidad (ha sido un clic, o se ha desplazado el mapa). */
