@@ -50,7 +50,7 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'moveTip', render: (s) => s.moveTip && <MoveTip moveTip={s.moveTip} /> },
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
   { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
-  { id: 'menu', render: (s) => s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu m={s.menu} />) },
+  { id: 'menu', render: (s) => s.menu && (s.menu.kind === 'game' ? <Pause menu={s.menu} /> : <PopMenu menu={s.menu} />) },
 ];
 
 /** Laboratorio de animaciones: solo su panel y lo que enseña un combate (el resto estorba). */

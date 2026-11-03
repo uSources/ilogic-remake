@@ -4,34 +4,42 @@ import { Veil } from '../common/Veil';
 import { ui } from '../store';
 import type { MenuItemVM, MenuVM } from '../vm/menus';
 
-/** Pausa (menu de la partida): las opciones normales en rejilla y las peligrosas aparte, abajo. */
-export function Pause({ m }: { m: MenuVM }) {
-  const a = ui.actions;
-  const all = m.items.map((it, i) => ({ it, i }));
-  const main = all.filter(({ it }) => !it.danger);
-  const danger = all.filter(({ it }) => it.danger);
-  const item = ({ it, i }: { it: MenuItemVM; i: number }) => (
+/** Una opcion con su posicion en el menu entero (la que entienden menuHover y menuPick). */
+interface IndexedItem {
+  item: MenuItemVM;
+  index: number;
+}
+
+function PauseItem({ item, index, isSelected }: IndexedItem & { isSelected: boolean }) {
+  return (
     <Button
-      key={i}
-      class={`pause-item ${i === m.selected ? 'sel' : ''} ${it.danger ? 'danger' : ''} ${it.disabled ? 'disabled' : ''}`}
-      aria-disabled={it.disabled}
-      onMouseEnter={() => a.menuHover(i)}
-      onClick={() => a.menuPick(i)}
+      class={`pause-item ${isSelected ? 'sel' : ''} ${item.danger ? 'danger' : ''} ${item.disabled ? 'disabled' : ''}`}
+      aria-disabled={item.disabled}
+      onMouseEnter={() => ui.actions.menuHover(index)}
+      onClick={() => ui.actions.menuPick(index)}
     >
-      <span>{it.label}</span>
-      {it.hint && <span class="key">{it.hint}</span>}
+      <span>{item.label}</span>
+      {item.hint && <span class="key">{item.hint}</span>}
     </Button>
   );
+}
+
+/** Pausa (menu de la partida): las opciones normales en rejilla y las peligrosas aparte, abajo. */
+export function Pause({ menu }: { menu: MenuVM }) {
+  const all: IndexedItem[] = menu.items.map((item, index) => ({ item, index }));
+  const renderItem = ({ item, index }: IndexedItem) => (
+    <PauseItem key={index} item={item} index={index} isSelected={index === menu.selected} />
+  );
   return (
-    <Veil kind="veil" onClose={() => a.menuClose()}>
+    <Veil kind="veil" onClose={() => ui.actions.menuClose()}>
       <div class="px pause" role="dialog" aria-label={t('pause')}>
-        <span class="htitle">{m.title}</span>
-        {m.subtitle && <span class="muted small">{m.subtitle}</span>}
-        {m.info?.map((l) => (
-          <span class="pause-info">{l}</span>
+        <span class="htitle">{menu.title}</span>
+        {menu.subtitle && <span class="muted small">{menu.subtitle}</span>}
+        {menu.info?.map((line) => (
+          <span class="pause-info">{line}</span>
         ))}
-        <div class="pause-grid">{main.map(item)}</div>
-        <div class="pause-danger">{danger.map(item)}</div>
+        <div class="pause-grid">{all.filter(({ item }) => !item.danger).map(renderItem)}</div>
+        <div class="pause-danger">{all.filter(({ item }) => item.danger).map(renderItem)}</div>
       </div>
     </Veil>
   );
