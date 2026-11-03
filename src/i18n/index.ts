@@ -7,10 +7,16 @@
  * busca todas en un solo diccionario.
  */
 import { EN, EN_BY_FEATURE } from './en';
+import { help as EN_HELP } from './en/help';
 import { ES, ES_BY_FEATURE, type TextKey } from './es';
+import { help as ES_HELP } from './es/help';
+import type { HelpTexts } from './help';
 
 export type { TextKey };
 
 export const TEXTS = { es: ES, en: EN };
 
 export const TEXTS_BY_FEATURE = { es: ES_BY_FEATURE, en: EN_BY_FEATURE };
+
+/** La ayuda ("Cómo se juega") va aparte: no son frases sueltas sino listas y una tabla. */
+export const HELP_TEXTS: Record<keyof typeof TEXTS, HelpTexts> = { es: ES_HELP, en: EN_HELP };

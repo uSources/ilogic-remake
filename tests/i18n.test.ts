@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { TEXTS, TEXTS_BY_FEATURE } from '../src/i18n';
+import { DEFAULT_RULES } from '@core/data';
+import { HELP_TEXTS, TEXTS, TEXTS_BY_FEATURE } from '../src/i18n';
 
 describe('textos por tema', () => {
   it('ninguna clave se repite entre temas (si no, un tema taparia el texto de otro en t())', () => {
@@ -16,5 +17,16 @@ describe('textos por tema', () => {
 
   it('ningun texto esta vacio', () => {
     for (const texts of Object.values(TEXTS)) for (const text of Object.values(texts)) expect(text.trim()).not.toBe('');
+  });
+});
+
+describe('ayuda', () => {
+  it('los dos idiomas tienen las mismas filas, colores y frases segun las reglas', () => {
+    const { es, en } = HELP_TEXTS;
+    expect(en.controls.length).toBe(es.controls.length);
+    expect(en.colors.map(([color]) => color)).toEqual(es.colors.map(([color]) => color));
+    expect(en.goalBasics.length).toBe(es.goalBasics.length);
+    const ruleLineIsShown = (lines: string[]) => lines.map((line) => line !== '');
+    expect(ruleLineIsShown(en.ruleLines(DEFAULT_RULES))).toEqual(ruleLineIsShown(es.ruleLines(DEFAULT_RULES)));
   });
 });

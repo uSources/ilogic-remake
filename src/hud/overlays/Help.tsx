@@ -3,7 +3,7 @@ import { Veil } from '../common/Veil';
 import { helpText } from '../helpText';
 import { ui } from '../store';
 
-/** Ayuda ("Cómo se juega"): objetivo, colores del mapa y controles (textos en helpText.ts). */
+/** Ayuda ("Cómo se juega"): objetivo, colores del mapa y controles (textos en src/i18n/<idioma>/help.ts). */
 export function Help() {
   const h = helpText();
   return (
