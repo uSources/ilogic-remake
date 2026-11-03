@@ -32,7 +32,7 @@ export function Hud() {
       {s.screen === 'campaign' && <Campaign s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && <EndScreen end={s.end} />}
-      {s.options && <Options o={s.options} />}
+      {s.options && <Options options={s.options} />}
       {s.help && <Help />}
       {s.rename && <RenameSquad rename={s.rename} />}
       {s.notes && <PatchNotes notes={s.notes} />}
