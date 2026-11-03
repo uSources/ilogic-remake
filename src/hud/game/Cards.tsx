@@ -3,163 +3,236 @@ import { fmtNum, t } from '../../settings';
 import { FoldMark, useFold } from '../common/fold';
 import { stars } from '../common/format';
 import { Icon } from '../common/Icon';
-import type { TileVM, UnitVM } from '../vm/tile';
+import type { BuildingVM, TileVM, UnitVM } from '../vm/tile';
 
 type Owner = 'you' | 'enemy' | 'neutral' | 'unknown';
+type Team = UnitVM['team'];
+
+const LIFE_BLOCKS = 10;
+const LIFE_PER_BLOCK = 10;
+/** Con esta vida o menos, los bloques salen dorados (avisan de que esta a punto de caer). */
+const LOW_LIFE = 30;
+/** La defensa del terreno sale en estrellas: una por cada 10 %, hasta 4. */
+const DEFENSE_PER_STAR = 10;
+const MAX_DEFENSE_STARS = 4;
+
+const isMine = (team: Team) => team === 0;
 
 /** Color y nombre del dueño de un edificio o de un punto de control. */
-const ownerColor = (o: Owner) => (o === 'you' ? 'var(--blue)' : o === 'enemy' ? 'var(--red-soft)' : 'var(--muted)');
-const ownerText = (o: Owner) => (o === 'you' ? t('you') : o === 'enemy' ? t('enemy') : o === 'neutral' ? t('neutral') : t('unknown'));
+const ownerColor = (owner: Owner) => (owner === 'you' ? 'var(--blue)' : owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)');
+/** Los textos se llaman como el dueño ('you', 'enemy', 'neutral', 'unknown'). */
+const ownerText = (owner: Owner) => t(owner);
 
 /** Vida en 10 bloques (dorados con 30 o menos). */
-function Blocks({ life, team }: { life: number; team: 0 | 1 }) {
-  const n = Math.ceil(Math.max(0, life) / 10);
-  const color = team === 0 ? 'var(--blue)' : 'var(--red)';
+function Blocks({ life, team }: { life: number; team: Team }) {
+  const filled = Math.ceil(Math.max(0, life) / LIFE_PER_BLOCK);
+  const teamColor = isMine(team) ? 'var(--blue)' : 'var(--red)';
+  const fill = life <= LOW_LIFE ? 'var(--gold)' : teamColor;
   return (
     <div class="blocks" aria-hidden="true">
-      {Array.from({ length: 10 }, (_, i) => (
-        <span style={i < n ? { background: life <= 30 && i < n ? 'var(--gold)' : color } : undefined} />
+      {Array.from({ length: LIFE_BLOCKS }, (_, i) => (
+        <span style={i < filled ? { background: fill } : undefined} />
       ))}
     </div>
   );
 }
 
-function UnitCard({ u, folded = false }: { u: UnitVM; folded?: boolean }) {
+function UnitName({ unit }: { unit: UnitVM }) {
+  return (
+    <span class="name">
+      {unit.name}
+      {unit.rank ? (
+        <span class="rank" title={t('veteran')}>
+          {' ' + stars(unit.rank)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Ataque, defensa, movimiento... como iconos (chips) o, si no los hay, en una linea de texto. */
+function UnitStats({ unit }: { unit: UnitVM }) {
+  if (!unit.chips)
+    return (
+      <span class="muted" style={{ fontSize: 13 }}>
+        {unit.stats}
+      </span>
+    );
+  return (
+    <span class="chips">
+      {unit.chips.map((chip) => (
+        <span class="chip" title={chip.title} key={chip.icon}>
+          <Icon k={chip.icon} alt={chip.title} cls="px-icon ico" />
+          <span class="num">{chip.text}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** "Escuadra Alfa · Destacada · Orden: atacar allí" (lo que haya). */
+const squadAndOrder = (unit: UnitVM) =>
+  [unit.squad && `${t('squad')} ${unit.squad}`, unit.detached && t('detached'), unit.order].filter(Boolean).join(' · ');
+
+function Abilities({ abilities }: { abilities: NonNullable<UnitVM['abilities']> }) {
+  return (
+    <ul class="abilities" aria-label={t('abilities')}>
+      {abilities.map((ability) => (
+        <li title={ability.desc}>
+          <span class="gold">{ability.name}</span>
+          <span class="muted">{ability.desc}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Lo de debajo de la vida (escuadra y orden, sin curar, carga, habilidades); plegada no sale. */
+function UnitNotes({ unit }: { unit: UnitVM }) {
+  return (
+    <>
+      {(unit.order || unit.squad) && <span style={{ fontSize: 13, color: '#5fd6c6' }}>{squadAndOrder(unit)}</span>}
+      {unit.noHeal && <span style={{ fontSize: 13, color: 'var(--red-soft)' }}>{t('noHeal')}</span>}
+      {unit.cargo && (
+        <span class="muted" style={{ fontSize: 13 }}>
+          {unit.cargo}
+        </span>
+      )}
+      {unit.abilities && unit.abilities.length > 0 && <Abilities abilities={unit.abilities} />}
+    </>
+  );
+}
+
+function UnitCard({ unit, folded = false }: { unit: UnitVM; folded?: boolean }) {
   return (
     <div class="px unitcard">
       <FoldMark folded={folded} />
       <div class="head">
-        <Icon k={u.icon} alt={u.name} cls="px-icon portrait" />
+        <Icon k={unit.icon} alt={unit.name} cls="px-icon portrait" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-          <span class="name">
-            {u.name}
-            {u.rank ? (
-              <span class="rank" title={t('veteran')}>
-                {' ' + stars(u.rank)}
-              </span>
-            ) : null}
+          <UnitName unit={unit} />
+          <span style={{ fontSize: 13, color: isMine(unit.team) ? 'var(--blue)' : 'var(--red-soft)' }}>
+            {isMine(unit.team) ? t('you') : t('enemy')}
           </span>
-          <span style={{ fontSize: 13, color: u.team === 0 ? 'var(--blue)' : 'var(--red-soft)' }}>
-            {u.team === 0 ? t('you') : t('enemy')}
-          </span>
-          {folded ? null : u.chips ? (
-            <span class="chips">
-              {u.chips.map((c) => (
-                <span class="chip" title={c.title} key={c.icon}>
-                  <Icon k={c.icon} alt={c.title} cls="px-icon ico" />
-                  <span class="num">{c.text}</span>
-                </span>
-              ))}
-            </span>
-          ) : (
-            <span class="muted" style={{ fontSize: 13 }}>
-              {u.stats}
-            </span>
-          )}
+          {!folded && <UnitStats unit={unit} />}
         </div>
       </div>
       <div class="meter" title={t('hp')}>
         <Icon k="ui/vida" alt={t('hp')} />
-        <Blocks life={u.life} team={u.team} />
-        <span class="v">{u.life}</span>
+        <Blocks life={unit.life} team={unit.team} />
+        <span class="v">{unit.life}</span>
       </div>
-      {!folded && (u.order || u.squad) && (
-        <span style={{ fontSize: 13, color: '#5fd6c6' }}>
-          {[u.squad && `${t('squad')} ${u.squad}`, u.detached && t('detached'), u.order].filter(Boolean).join(' · ')}
-        </span>
-      )}
-      {!folded && u.noHeal && <span style={{ fontSize: 13, color: 'var(--red-soft)' }}>{t('noHeal')}</span>}
-      {!folded && u.cargo && (
-        <span class="muted" style={{ fontSize: 13 }}>
-          {u.cargo}
-        </span>
-      )}
-      {!folded && u.abilities && u.abilities.length > 0 && (
-        <ul class="abilities" aria-label={t('abilities')}>
-          {u.abilities.map((a) => (
-            <li title={a.desc}>
-              <span class="gold">{a.name}</span>
-              <span class="muted">{a.desc}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {!folded && <UnitNotes unit={unit} />}
     </div>
   );
 }
 
+function BuildingHeader({ building }: { building: BuildingVM }) {
+  return (
+    <div class="bld">
+      <Icon k={building.icon} alt="" />
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span class="name" style={{ fontFamily: 'var(--display)', fontSize: 14 }}>
+          {building.name}
+        </span>
+        <span style={{ color: ownerColor(building.owner), fontSize: 13 }}>{ownerText(building.owner)}</span>
+      </div>
+    </div>
+  );
+}
+
+function DefenseRow({ defense }: { defense: number }) {
+  const filledStars = Math.max(0, Math.min(MAX_DEFENSE_STARS, Math.round(defense / DEFENSE_PER_STAR)));
+  return (
+    <div
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}
+      title={`${t('defense')} ${defense}%`}
+    >
+      <Icon k="ui/defensa" alt={t('defense')} cls="px-icon ico" />
+      <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{stars(filledStars) + '☆'.repeat(MAX_DEFENSE_STARS - filledStars)}</span>
+    </div>
+  );
+}
+
+function StepCostRow({ cost }: { cost: NonNullable<TileVM['terrain']['cost']> }) {
+  return (
+    <div
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}
+      title={t('stepCostTitle')}
+    >
+      <Icon k="ui/movimiento" alt={t('stepCost')} cls="px-icon ico" />
+      <span>
+        {t('onFoot')} {cost.foot ?? '—'} · {t('byVehicle')} {cost.vehicle ?? '—'}
+      </span>
+    </div>
+  );
+}
+
+/** Barra de captura: lo capturado, del color de quien captura, y lo que falta. */
+function CaptureBar({ capture }: { capture: NonNullable<BuildingVM['capture']> }) {
+  return (
+    <div class="capbar" title={`${t('captureLeft')}: ${capture.left}/${capture.total}`}>
+      <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
+      <div class="blocks">
+        <span style={{ flex: capture.total - capture.left, background: isMine(capture.team) ? 'var(--blue)' : 'var(--red)' }} />
+        <span style={{ flex: capture.left }} />
+      </div>
+      <span class="num" style={{ fontSize: 12 }}>
+        {capture.left}
+      </span>
+    </div>
+  );
+}
+
+function IncomeRow({ income }: { income: number }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }} title={t('income')}>
+      <Icon k="ui/dinero" alt={t('income')} cls="px-icon ico" />
+      <span>+{fmtNum(income)}</span>
+    </div>
+  );
+}
+
+function ControlPointRow({ point }: { point: NonNullable<TileVM['point']> }) {
+  return (
+    <div class="cpoint" title={t('controlPointHelp')}>
+      {imgUrl(point.icon) && <Icon k={point.icon} cls="px-icon ico" />}
+      <span style={{ color: ownerColor(point.owner) }}>
+        {t('controlPoint')} · {ownerText(point.owner)}
+        {point.contested ? ` · ${t('contested')}` : ''}
+      </span>
+      <span>+{fmtNum(point.income)}</span>
+    </div>
+  );
+}
+
+/** Defensa, coste de paso, captura, ingresos y punto de control; plegada no sale. */
+function TerrainDetails({ tile }: { tile: TileVM }) {
+  const building = tile.building;
+  return (
+    <>
+      <DefenseRow defense={tile.terrain.defense} />
+      {tile.terrain.cost && <StepCostRow cost={tile.terrain.cost} />}
+      {building?.capture && <CaptureBar capture={building.capture} />}
+      {building && building.income > 0 && <IncomeRow income={building.income} />}
+      {tile.point && <ControlPointRow point={tile.point} />}
+    </>
+  );
+}
+
 function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean }) {
-  const defStars = Math.max(0, Math.min(4, Math.round(tile.terrain.defense / 10)));
-  const b = tile.building;
   return (
     <div class="px terrain">
       <FoldMark folded={folded} />
-      {b ? (
-        <div class="bld">
-          <Icon k={b.icon} alt="" />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span class="name" style={{ fontFamily: 'var(--display)', fontSize: 14 }}>
-              {b.name}
-            </span>
-            <span style={{ color: ownerColor(b.owner), fontSize: 13 }}>{ownerText(b.owner)}</span>
-          </div>
-        </div>
+      {tile.building ? (
+        <BuildingHeader building={tile.building} />
       ) : (
         <span class="swatch" style={{ backgroundImage: `url(${imgUrl(tile.terrain.key)})` }} />
       )}
       <span class="tname" style={{ fontFamily: 'var(--display)', fontSize: 14 }}>
         {tile.terrain.name}
       </span>
-      {!folded && (
-        <>
-          <div
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}
-            title={`${t('defense')} ${tile.terrain.defense}%`}
-          >
-            <Icon k="ui/defensa" alt={t('defense')} cls="px-icon ico" />
-            <span style={{ color: 'var(--gold)', letterSpacing: 1 }}>{stars(defStars) + '☆'.repeat(4 - defStars)}</span>
-          </div>
-          {tile.terrain.cost && (
-            <div
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13 }}
-              title={t('stepCostTitle')}
-            >
-              <Icon k="ui/movimiento" alt={t('stepCost')} cls="px-icon ico" />
-              <span>
-                {t('onFoot')} {tile.terrain.cost.foot ?? '—'} · {t('byVehicle')} {tile.terrain.cost.vehicle ?? '—'}
-              </span>
-            </div>
-          )}
-          {b?.capture && (
-            <div class="capbar" title={`${t('captureLeft')}: ${b.capture.left}/${b.capture.total}`}>
-              <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
-              <div class="blocks">
-                <span style={{ flex: b.capture.total - b.capture.left, background: b.capture.team === 0 ? 'var(--blue)' : 'var(--red)' }} />
-                <span style={{ flex: b.capture.left }} />
-              </div>
-              <span class="num" style={{ fontSize: 12 }}>
-                {b.capture.left}
-              </span>
-            </div>
-          )}
-          {b && b.income > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }} title={t('income')}>
-              <Icon k="ui/dinero" alt={t('income')} cls="px-icon ico" />
-              <span>+{fmtNum(b.income)}</span>
-            </div>
-          )}
-          {tile.point && (
-            <div class="cpoint" title={t('controlPointHelp')}>
-              {imgUrl(tile.point.icon) && <Icon k={tile.point.icon} cls="px-icon ico" />}
-              <span style={{ color: ownerColor(tile.point.owner) }}>
-                {t('controlPoint')} · {ownerText(tile.point.owner)}
-                {tile.point.contested ? ` · ${t('contested')}` : ''}
-              </span>
-              <span>+{fmtNum(tile.point.income)}</span>
-            </div>
-          )}
-        </>
-      )}
+      {!folded && <TerrainDetails tile={tile} />}
     </div>
   );
 }
@@ -170,7 +243,7 @@ export function Cards({ tile }: { tile: TileVM }) {
   return (
     <div class={`cards ${folded ? 'folded' : ''}`} onClick={toggleFold} aria-expanded={!folded}>
       <TerrainCard tile={tile} folded={folded} />
-      {tile.unit && <UnitCard u={tile.unit} folded={folded} />}
+      {tile.unit && <UnitCard unit={tile.unit} folded={folded} />}
     </div>
   );
 }
