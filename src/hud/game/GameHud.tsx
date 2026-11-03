@@ -40,23 +40,23 @@ const SIDE_PANELS: GamePanel[] = [
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [
   { id: 'topBar', render: (s) => <TopBar s={s} /> },
-  { id: 'general', render: (s) => s.general && <GeneralPanel g={s.general} mine={isPlayerTurn(s)} /> },
-  { id: 'enemyGeneral', render: (s) => s.enemyGeneral && <EnemyGeneral g={s.enemyGeneral} /> },
-  { id: 'mission', render: (s) => s.mission && isPlayerTurn(s) && <MissionPanel m={s.mission} /> },
+  { id: 'general', render: (s) => s.general && <GeneralPanel general={s.general} mine={isPlayerTurn(s)} /> },
+  { id: 'enemyGeneral', render: (s) => s.enemyGeneral && <EnemyGeneral general={s.enemyGeneral} /> },
+  { id: 'mission', render: (s) => s.mission && isPlayerTurn(s) && <MissionPanel mission={s.mission} /> },
   { id: 'hint', render: (s) => s.hint && <div class="hintline">{s.hint}</div> },
-  { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel sel={s.selection} /> },
+  { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   { id: 'cards', render: (s) => !showsSelection(s) && canAct(s) && s.tile && <Cards tile={s.tile} /> },
   { id: 'side', render: (s) => <div class="side">{renderPanels(SIDE_PANELS, s)}</div> },
-  { id: 'moveTip', render: (s) => s.moveTip && <MoveTip m={s.moveTip} /> },
-  { id: 'forecast', render: (s) => s.forecast && <Forecast f={s.forecast} /> },
-  { id: 'combat', render: (s) => s.combat && <CombatPanel c={s.combat} /> },
+  { id: 'moveTip', render: (s) => s.moveTip && <MoveTip moveTip={s.moveTip} /> },
+  { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
+  { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
   { id: 'menu', render: (s) => s.menu && (s.menu.kind === 'game' ? <Pause m={s.menu} /> : <PopMenu m={s.menu} />) },
 ];
 
 /** Laboratorio de animaciones: solo su panel y lo que enseña un combate (el resto estorba). */
 const LAB_PANELS: GamePanel[] = [
-  { id: 'lab', render: (s) => s.lab && <LabPanel l={s.lab} busy={s.busy} /> },
-  { id: 'combat', render: (s) => s.combat && <CombatPanel c={s.combat} /> },
+  { id: 'lab', render: (s) => s.lab && <LabPanel lab={s.lab} busy={s.busy} /> },
+  { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
 ];
 
 function renderPanels(panels: GamePanel[], s: UIState) {

@@ -4,69 +4,98 @@ import { Icon } from '../common/Icon';
 import { Popover } from '../common/Popover';
 import type { ForecastVM } from '../vm/combat';
 
-/** Prevision de combate junto al objetivo: daño, vida que le queda, contraataque y extras. */
-export function Forecast({ f }: { f: ForecastVM }) {
-  // Barra de la vida enemiga: lo que seguro queda | lo que puede perder | lo que seguro pierde | vacio.
-  const safe = Math.max(0, f.lifeBefore - f.high);
-  const maybe = Math.max(0, Math.min(f.lifeBefore, f.high) - Math.min(f.lifeBefore, f.low));
-  const sure = Math.min(f.lifeBefore, f.low);
-  const empty = Math.max(0, 100 - f.lifeBefore);
+const FULL_LIFE = 100;
+/** Desde esta probabilidad de destruirlo, se resalta en dorado. */
+const LIKELY_KILL = 0.5;
+/** Desde esta probabilidad de que caiga tu unidad en el contraataque, tu vida sale en rojo. */
+const RISKY_COUNTER = 0.2;
+/** Por debajo de esta probabilidad no se dice "(cae x%)". */
+const MENTION_DEATH = 0.01;
+const LOST_LIFE_COLOR = '#6b1f1c';
+
+/**
+ * Barra de la vida enemiga en cuatro tramos: lo que seguro le queda, lo que puede perder, lo que
+ * seguro pierde y el hueco de la vida que ya no tenia.
+ */
+function EnemyLifeBar({ forecast }: { forecast: ForecastVM }) {
+  const { lifeBefore, low, high } = forecast;
+  const surelyKept = Math.max(0, lifeBefore - high);
+  const maybeLost = Math.max(0, Math.min(lifeBefore, high) - Math.min(lifeBefore, low));
+  const surelyLost = Math.min(lifeBefore, low);
+  const alreadyMissing = Math.max(0, FULL_LIFE - lifeBefore);
   return (
-    <Popover anchor={f.anchor} prefer="left" class="forecast" label={t('forecast')}>
+    <div class="lifebar" aria-hidden="true">
+      {surelyKept > 0 && <span style={{ flex: surelyKept, background: 'var(--red)' }} />}
+      {maybeLost > 0 && (
+        <span style={{ flex: maybeLost, background: `repeating-linear-gradient(90deg, var(--red) 0 4px, ${LOST_LIFE_COLOR} 4px 8px)` }} />
+      )}
+      {surelyLost > 0 && <span style={{ flex: surelyLost, background: LOST_LIFE_COLOR }} />}
+      {alreadyMissing > 0 && <span style={{ flex: alreadyMissing, background: 'var(--slot)' }} />}
+    </div>
+  );
+}
+
+/** Daño que te devuelve y como queda tu unidad, o "Contraataque: no hay". */
+function CounterRows({ counter }: { counter: ForecastVM['counter'] }) {
+  if (!counter)
+    return (
+      <div class="row muted">
+        <span>{t('counter')}</span>
+        <span>{t('none')}</span>
+      </div>
+    );
+  const deathNote = counter.killChance >= MENTION_DEATH ? ` (${t('dies')} ${pct(counter.killChance)})` : '';
+  return (
+    <>
+      <div class="row">
+        <span>{t('counter')}</span>
+        <span style={{ color: 'var(--red-soft)' }}>{range(counter.low, counter.high)}</span>
+      </div>
+      <div class="row">
+        <span>{t('yourLife')}</span>
+        <span style={{ color: counter.killChance >= RISKY_COUNTER ? 'var(--red-soft)' : 'var(--blue)' }}>
+          {counter.lifeBefore} → {counter.lifeAfter}
+          {deathNote}
+        </span>
+      </div>
+    </>
+  );
+}
+
+/** Fila "nombre  valor" con el valor en dorado (flanqueo, botin). */
+function GoldRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div class="row">
+      <span>{label}</span>
+      <span style={{ color: 'var(--gold)' }}>{value}</span>
+    </div>
+  );
+}
+
+/** Prevision de combate junto al objetivo: daño, vida que le queda, contraataque y extras. */
+export function Forecast({ forecast }: { forecast: ForecastVM }) {
+  return (
+    <Popover anchor={forecast.anchor} prefer="left" class="forecast" label={t('forecast')}>
       <span class="label">{t('forecast')}</span>
       <div class="vs">
-        <Icon k={f.attackerIcon} />
-        <span class="range num">{range(f.low, f.high)}</span>
-        <Icon k={f.defenderIcon} />
+        <Icon k={forecast.attackerIcon} />
+        <span class="range num">{range(forecast.low, forecast.high)}</span>
+        <Icon k={forecast.defenderIcon} />
       </div>
-      <div class="lifebar" aria-hidden="true">
-        {safe > 0 && <span style={{ flex: safe, background: 'var(--red)' }} />}
-        {maybe > 0 && <span style={{ flex: maybe, background: 'repeating-linear-gradient(90deg, var(--red) 0 4px, #6b1f1c 4px 8px)' }} />}
-        {sure > 0 && <span style={{ flex: sure, background: '#6b1f1c' }} />}
-        {empty > 0 && <span style={{ flex: empty, background: 'var(--slot)' }} />}
-      </div>
+      <EnemyLifeBar forecast={forecast} />
       <div class="row">
         <span>{t('enemyLife')}</span>
         <span style={{ color: 'var(--gold)' }}>
-          {f.lifeBefore} → {f.lifeAfter}
+          {forecast.lifeBefore} → {forecast.lifeAfter}
         </span>
       </div>
       <div class="row">
         <span>{t('destroyIt')}</span>
-        <span style={{ color: f.killChance >= 0.5 ? 'var(--gold)' : undefined }}>{pct(f.killChance)}</span>
+        <span style={{ color: forecast.killChance >= LIKELY_KILL ? 'var(--gold)' : undefined }}>{pct(forecast.killChance)}</span>
       </div>
-      {f.flank > 0 && (
-        <div class="row">
-          <span>{t('flank')}</span>
-          <span style={{ color: 'var(--gold)' }}>+{Math.round(f.flank * 100)} %</span>
-        </div>
-      )}
-      {f.bounty > 0 && f.killChance > 0 && (
-        <div class="row">
-          <span>{t('bounty')}</span>
-          <span style={{ color: 'var(--gold)' }}>+{fmtNum(f.bounty)}</span>
-        </div>
-      )}
-      {f.counter ? (
-        <>
-          <div class="row">
-            <span>{t('counter')}</span>
-            <span style={{ color: 'var(--red-soft)' }}>{range(f.counter.low, f.counter.high)}</span>
-          </div>
-          <div class="row">
-            <span>{t('yourLife')}</span>
-            <span style={{ color: f.counter.killChance >= 0.2 ? 'var(--red-soft)' : 'var(--blue)' }}>
-              {f.counter.lifeBefore} → {f.counter.lifeAfter}
-              {f.counter.killChance >= 0.01 ? ` (${t('dies')} ${pct(f.counter.killChance)})` : ''}
-            </span>
-          </div>
-        </>
-      ) : (
-        <div class="row muted">
-          <span>{t('counter')}</span>
-          <span>{t('none')}</span>
-        </div>
-      )}
+      {forecast.flank > 0 && <GoldRow label={t('flank')} value={`+${Math.round(forecast.flank * 100)} %`} />}
+      {forecast.bounty > 0 && forecast.killChance > 0 && <GoldRow label={t('bounty')} value={`+${fmtNum(forecast.bounty)}`} />}
+      <CounterRows counter={forecast.counter} />
     </Popover>
   );
 }
