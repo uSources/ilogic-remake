@@ -74,7 +74,7 @@ function* unitCommandTurn(s: GameState, ctx: AiCtx, uid: number, rng: Rng): Gene
   if (needsRepair(u) && (yield* retreat(s, ctx, u, range))) return false;
   const near = (t: Pos) => manhattan(t, at) <= AI.GUARDRADIUS;
   const f = formation(s, ctx, u);
-  const from = formationFrom(at, f);
+  const from = formationFrom(f);
   if (kind === 'defend') {
     if (yield* tryAttack(s, ctx, u, range, rng, { zone: near, from })) return false;
     if (manhattan(u, at) > 1) yield* doMove(s, u, commandStep(s, ctx, u, at, range, f), range);
