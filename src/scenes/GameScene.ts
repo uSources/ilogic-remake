@@ -1,9 +1,8 @@
 import Phaser from 'phaser';
 import { cancelCommand, effectiveCommand, keepCapturing, renameSquad } from '../core/squads';
 import { HQ, MAP_H, MAP_W, DEFAULT_RULES, RULES, UNIT, useRules, UNIT_NAMES } from '../core/data';
-import { grid, manhattan, samePos, seededRng } from '../core/geom';
+import { grid, samePos, seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
-import { closestStep, extendTrail } from '../core/orders';
 import {
   attackEvent,
   buildingIncome,
@@ -12,19 +11,10 @@ import {
   buildingAt,
   buyOptions,
   canBuyAt,
-  canCapture,
   inControlZone,
-  passMap,
-  stepToward,
   capture,
   capturePointsOf,
   captureProgress,
-  load,
-  loadTargets,
-  merge,
-  mergeTargets,
-  moveRange,
-  moveUnit,
   outcome,
   endReason,
   removeUnit,
@@ -32,9 +22,7 @@ import {
   supply,
   upkeepOf,
   threatMap,
-  attackZone,
   captureEvent,
-  moveEvent,
   unitActions,
   unitAt,
   unitById,
@@ -43,7 +31,6 @@ import {
   visibility,
   wait,
   type BuyOption,
-  type MoveRange,
 } from '../core/rules';
 import { deserialize, serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
@@ -93,10 +80,8 @@ import {
   type ActionKey,
   type GameStartData,
   type Intent,
-  type MoveUndo,
   type Phase,
 } from './game/types';
-import { intentAt, trailTo, type MovePlan } from './game/intent';
 import { computeHighlights } from './game/highlights';
 import { menuModel } from './game/menuModel';
 import { forecastFor, hintText, moveTipFor, selectionPanel } from './game/hudParts';
@@ -113,6 +98,10 @@ import { GroupSelection, type SelectionHost } from './game/groupSelection';
 import { Carry, type CarryHost } from './game/carry';
 import { pointerTarget, type PointerHost } from './game/pointerInput';
 import { Orders, type OrderHost, type OrderMenu, type Ordering } from './game/orders';
+import { UnitMoves, type MoveHost } from './game/unitMoves';
+
+/** Sin casillas marcadas (sin unidad elegida). */
+const NO_TILES: ReadonlyMap<string, number> = new Map();
 
 export type { GameStartData } from './game/types';
 
@@ -130,36 +119,21 @@ export class GameScene extends Phaser.Scene {
   private hidden = new Set<number>();
 
   // Seleccion
-  private sel: Unit | null = null;
+  /** La unidad elegida y como moverla (game/unitMoves.ts, game/moveSession.ts). */
+  private moves = new UnitMoves(this.moveHost());
+  /** La unidad elegida para moverla (o en su menu). */
+  private get sel(): Unit | null {
+    return this.moves.selected;
+  }
   private selBuilding: Building | null = null;
   private menuSel = 0;
   private menuItems: MenuItemVM[] = [];
   private actions: ActionKey[] = [];
   private buy: BuyOption[] = [];
-  private range: MoveRange | null = null;
-  private mergeSet = new Map<string, number>();
-  private loadSet = new Map<string, number>();
-  private attackSet = new Map<string, number>();
-  private unloadSet = new Set<string>();
-  private passenger: Unit | null = null;
-  private undo: MoveUndo | null = null;
-
-  // Movimiento: camino trazado, arrastrar y soltar, deshacer
-  /** Camino que se esta trazando, de la unidad elegida al cursor (incluye la casilla de salida). */
-  private trail: Pos[] = [];
-  /** Casillas que bloquean el paso a la unidad elegida (enemigos que se ven). */
-  private block: boolean[][] | null = null;
   /** Unidad cogida para arrastrar y soltar (game/carry.ts). */
   private carry = new Carry(this.carryHost());
-  /** Casillas que el enemigo visible puede atacar el turno siguiente (al mover) y alcance de ataque de la elegida. */
-  private dangerMap: boolean[][] | null = null;
-  private attackZone: boolean[][] | null = null;
-  /** Estados anteriores para deshacer movimientos sin consecuencias (Ctrl+Z). */
-  private undoStack: string[] = [];
   /** [CAMBIO] Lo elegido: grupo, «Elegir varias», escuadras y teclas de grupo (game/groupSelection.ts). */
   private selection = new GroupSelection(this.selectionHost());
-  /** Ultimo movimiento confirmado (para el doble clic: mover y esperar). */
-  private lastCommit: { at: Pos; time: number } | null = null;
 
   // Partida
   private fromSave = false;
@@ -224,27 +198,14 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'map';
     this.vis = [];
     this.hidden = new Set();
-    this.sel = null;
+    this.moves.reset();
     this.selBuilding = null;
     this.menuSel = 0;
     this.menuItems = [];
     this.actions = [];
     this.buy = [];
-    this.range = null;
-    this.mergeSet = new Map();
-    this.loadSet = new Map();
-    this.attackSet = new Map();
-    this.unloadSet = new Set();
-    this.passenger = null;
-    this.undo = null;
-    this.trail = [];
-    this.block = null;
     this.carry.reset();
-    this.dangerMap = null;
-    this.attackZone = null;
-    this.undoStack = [];
     this.selection.reset();
-    this.lastCommit = null;
     this.fromSave = false;
     this.savedThisGame = false;
     this.quitArmedAt = -1e9;
@@ -525,15 +486,16 @@ export class GameScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
 
   private highlights(): Map<string, HighlightKind> {
+    const session = this.moves.session;
     const h = computeHighlights({
       s: this.s,
       phase: this.phase,
       cursor: this.view.cursor,
-      range: this.range,
-      merge: this.mergeSet,
-      load: this.loadSet,
-      attack: this.attackSet,
-      unload: this.unloadSet,
+      range: session?.range ?? null,
+      merge: session?.merge ?? NO_TILES,
+      load: session?.load ?? NO_TILES,
+      attack: session?.attackTargets ?? NO_TILES,
+      unload: session?.unloadTiles ?? new Set(),
       orderMenuUids: this.orderMenu?.uids ?? null,
       orderingUids: this.ordering?.uids ?? null,
       targetArea: (c) => this.abilities.area(c),
@@ -548,13 +510,14 @@ export class GameScene extends Phaser.Scene {
 
   /** Camino previsto de la unidad seleccionada: el trazado hasta el cursor, o hasta la casilla desde la que atacaria. */
   private previewPath(): Pos[] | undefined {
-    if (this.phase !== 'move' || !this.sel || !this.range) return undefined;
+    const session = this.moves.session;
+    if (this.phase !== 'move' || !session?.range) return undefined;
     const it = this.intentAt(this.view.cursor);
     const dest = it.kind === 'move' ? it.to : it.kind === 'attack' ? it.from : null;
     // Sin destino valido (fuera del alcance, agua...): se sigue viendo el camino trazado hasta donde llega.
-    if (!dest) return this.trail.length > 1 ? this.trail : undefined;
-    if (samePos(dest, this.sel)) return undefined;
-    return this.trailTo(dest);
+    if (!dest) return session.trail.length > 1 ? session.trail : undefined;
+    if (samePos(dest, session.unit)) return undefined;
+    return this.moves.trailTo(dest);
   }
 
   private refresh(): void {
@@ -578,7 +541,7 @@ export class GameScene extends Phaser.Scene {
       path: this.previewPath(),
       pathAttack: this.phase === 'move' && this.intentAt(this.view.cursor).kind === 'attack',
       threat,
-      attackZone: this.phase === 'move' ? this.attackZone : null,
+      attackZone: this.phase === 'move' ? (this.moves.session?.attackZone ?? null) : null,
       orders: [
         ...this.s.units
           .filter((u) => u.team === 0 && u.order && u.carrier === null)
@@ -589,7 +552,7 @@ export class GameScene extends Phaser.Scene {
           return c ? [{ from: { x: u.x, y: u.y }, to: c.at, kind: c.kind, line: this.showsOrderLine(u) }] : [];
         }),
       ],
-      danger: this.phase === 'move' ? this.dangerMap : null,
+      danger: this.phase === 'move' ? (this.moves.session?.danger ?? null) : null,
       intents: this.intentsToDraw(),
       captures,
       controlPoints: this.controlPointsView(),
@@ -608,7 +571,7 @@ export class GameScene extends Phaser.Scene {
   /** Solo cambia el cursor: no hace falta redibujar unidades, salvo el camino previsto. */
   private cursorMoved(): void {
     if (this.phase === 'move') {
-      this.updateTrail(this.view.cursor);
+      this.moves.followCursor(this.view.cursor);
       this.refresh();
     } else if (this.phase === 'map' || this.phase === 'target')
       this.refresh(); // en 'target' el area sigue al cursor
@@ -677,7 +640,7 @@ export class GameScene extends Phaser.Scene {
       sel: this.sel,
       c,
       intentAt: (p) => this.intentAt(p),
-      attackSet: this.attackSet,
+      attackSet: this.moves.session?.attackTargets ?? NO_TILES,
       anchor: (p) => this.anchor('forecast', p),
     });
   }
@@ -686,11 +649,11 @@ export class GameScene extends Phaser.Scene {
   private moveTip(c: Pos): MoveTipVM | null {
     return moveTipFor(this.s, {
       sel: this.sel,
-      range: this.range,
+      range: this.moves.session?.range ?? null,
       c,
       intentAt: (p) => this.intentAt(p),
-      trailTo: (d) => this.trailTo(d),
-      danger: this.dangerMap,
+      trailTo: (d) => this.moves.trailTo(d),
+      danger: this.moves.session?.danger ?? null,
       anchor: (p) => this.anchor('moveTip', p),
     });
   }
@@ -765,15 +728,17 @@ export class GameScene extends Phaser.Scene {
         return this.direction(cmd.dx, cmd.dy);
       case 'accept':
         if (this.time.now < this.inputLockUntil) return;
-        if (this.phase === 'move') return void this.commit(this.view.cursor, { wait: cmd.wait });
+        if (this.phase === 'move') return void this.moves.commit(this.view.cursor, { wait: cmd.wait });
         return this.accept();
       case 'stepBack':
         // Al trazar un camino, quitar la ultima casilla.
-        if (this.phase === 'move' && this.trail.length > 1) {
-          this.trail = this.trail.slice(0, -1);
-          this.view.cursor = { ...this.trail[this.trail.length - 1]! };
-          this.view.ensureVisible(this.view.cursor, 3);
-          return this.refresh();
+        if (this.phase === 'move') {
+          const trailEnd = this.moves.session?.stepBack();
+          if (trailEnd) {
+            this.view.cursor = { ...trailEnd };
+            this.view.ensureVisible(this.view.cursor, 3);
+            return this.refresh();
+          }
         }
         return this.back();
       case 'cancel':
@@ -788,7 +753,7 @@ export class GameScene extends Phaser.Scene {
         }
         return this.back();
       case 'undo':
-        if (this.phase === 'map') this.undoLast();
+        if (this.phase === 'map') this.moves.undoLast();
         return;
       case 'endTurn':
         if (this.phase === 'map' || this.phase === 'gameMenu') this.turns.requestEndTurn();
@@ -916,7 +881,7 @@ export class GameScene extends Phaser.Scene {
         if (this.group.size && !this.multi) {
           if (own && this.group.has(own.uid)) return this.openGroupMenu();
           if (own && picks.selectable(own)) return picks.apply(new Set([own.uid]));
-          return void this.groupMove(c);
+          return void this.moves.groupMove(c);
         }
         return this.acceptMap(c);
       }
@@ -972,7 +937,7 @@ export class GameScene extends Phaser.Scene {
       case 'move':
         return this.toMap();
       case 'unitMenu':
-        return this.undoMove();
+        return this.moves.undoMove();
       case 'attack':
       case 'unloadPick':
         return this.openUnitMenu();
@@ -999,26 +964,18 @@ export class GameScene extends Phaser.Scene {
     this.ordering = null;
     this.orderMenu = null;
     this.inspectUid = null;
-    this.trail = [];
-    this.block = null;
-    this.dangerMap = null;
-    this.attackZone = null;
-    this.sel = null;
+    this.moves.deselect();
     this.selBuilding = null;
-    this.range = null;
-    this.undo = null;
-    this.passenger = null;
-    this.mergeSet.clear();
-    this.loadSet.clear();
-    this.attackSet.clear();
-    this.unloadSet.clear();
     this.refresh();
   }
 
   /** Si hay una unidad movida a medio decidir, deshacer su movimiento antes de salir. */
   private abandonSelection(): void {
-    if ((this.phase === 'unitMenu' || this.phase === 'attack' || this.phase === 'unloadPick' || this.phase === 'unloadTile') && this.undo) {
-      this.undoMove();
+    if (
+      (this.phase === 'unitMenu' || this.phase === 'attack' || this.phase === 'unloadPick' || this.phase === 'unloadTile') &&
+      this.moves.session?.undo
+    ) {
+      this.moves.undoMove();
     }
     if (this.phase !== 'map') this.toMap();
   }
@@ -1059,208 +1016,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private selectUnit(u: Unit): void {
-    if (!u.canMove) {
-      // Ya se ha movido este turno: directamente a sus acciones.
-      this.sel = u;
-      return this.openUnitMenu();
-    }
-    this.sel = u;
-    this.undo = null;
-    this.range = moveRange(this.s, u);
-    this.mergeSet = new Map(mergeTargets(this.s, u, this.range).map((o) => [key(o), o.uid]));
-    this.loadSet = new Map(loadTargets(this.s, u, this.range).map((o) => [key(o), o.uid]));
-    this.trail = [{ x: u.x, y: u.y }];
-    this.block = passMap(this.s, u).block;
-    this.dangerMap = threatMap(this.s, 1, 0);
-    this.attackZone = attackZone(this.s, u, this.range);
-    this.phase = 'move';
-    this.updateTrail(this.view.cursor);
-    this.refresh();
-  }
-
-  // -------------------------------------------------------------------------
-  // Mover: camino trazado, intencion al soltar, arrastrar y soltar, deshacer
-  // -------------------------------------------------------------------------
-
-  /** Alarga, recorta o rehace el camino trazado al pasar el cursor por una casilla. */
-  private updateTrail(t: Pos): void {
-    const u = this.sel,
-      r = this.range;
-    if (!u || !r || !this.block) return;
-    this.trail = extendTrail(this.s, u, r, this.block, this.trail, t);
-  }
-
-  /** La unidad elegida y lo calculado al elegirla (null si no se esta moviendo ninguna). */
-  private plan(): MovePlan | null {
-    const unit = this.sel,
-      range = this.range;
-    return unit && range ? { unit, range, merge: this.mergeSet, load: this.loadSet, trail: this.trail } : null;
-  }
-
-  /** Camino hasta `dest`: el trazado si acaba ahi, si no el mas corto. */
-  private trailTo(dest: Pos): Pos[] {
-    return trailTo(this.plan()!, dest);
+    this.moves.select(u);
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */
   private intentAt(t: Pos): Intent {
-    return intentAt(this.s, this.plan(), t, (p) => this.visibleToPlayer(p));
+    return this.moves.intentAt(t);
   }
 
-  /**
-   * Confirmar el movimiento en una casilla (soltar, clic o Enter). `drop`: se ha soltado arrastrando,
-   * y entonces se hace directamente lo logico (capturar, esperar si no hay nada mas...). `wait`: mover y esperar.
-   */
-  private async commit(t: Pos, opts: { drop?: boolean; wait?: boolean } = {}): Promise<void> {
-    const u = this.sel,
-      r = this.range;
-    if (!u || !r || this.phase !== 'move') return;
-    const it = this.intentAt(t);
-    const ghost = unitKey(this.textures, this.s, u);
-    // Moverla a mano cancela su orden de varios turnos.
-    if (it.kind !== 'none' && it.kind !== 'stay') delete u.order;
-    switch (it.kind) {
-      case 'none':
-        return this.toMap();
-      case 'stay':
-        if (opts.wait) return this.waitSelected();
-        if (opts.drop && canCapture(this.s, u)) {
-          this.actions = ['capture'];
-          this.menuSel = 0;
-          this.phase = 'unitMenu';
-          return this.acceptUnitMenu();
-        }
-        return this.openUnitMenu();
-      case 'merge': {
-        this.clearUndo();
-        const path = merge(this.s, u, it.target);
-        if (path)
-          await this.playEvents([path.ambush ? moveEvent(u.uid, path) : { kind: 'merge', uid: u.uid, into: it.target.uid, path }], ghost);
-        return this.afterAction();
-      }
-      case 'load': {
-        this.clearUndo();
-        const path = load(this.s, u, it.target);
-        if (path)
-          await this.playEvents([path.ambush ? moveEvent(u.uid, path) : { kind: 'load', uid: u.uid, into: it.target.uid, path }], ghost);
-        return this.afterAction();
-      }
-      case 'attack': {
-        this.clearUndo();
-        if (!samePos(it.from, u)) {
-          const path = moveUnit(this.s, u, it.from, r, this.trailTo(it.from));
-          if (!path) return this.toMap();
-          this.range = null;
-          await this.playEvents([moveEvent(u.uid, path)], ghost);
-          if (path.ambush) return this.afterAction();
-        }
-        const target = unitById(this.s, it.target.uid);
-        if (!target) return this.afterAction();
-        await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
-        return this.afterAction();
-      }
-      case 'move': {
-        const before = serialize(this.s);
-        const seenBefore = this.visibleEnemies();
-        const snapshot: MoveUndo = { uid: u.uid, x: u.x, y: u.y, canFire: u.canFire };
-        const path = moveUnit(this.s, u, it.to, r, this.trailTo(it.to));
-        if (!path) return;
-        this.range = null;
-        await this.playEvents([moveEvent(u.uid, path)], ghost);
-        if (path.ambush) {
-          this.clearUndo();
-          return this.afterAction();
-        }
-        // Se puede deshacer si no ha descubierto a nadie.
-        if (this.visibleEnemies() === seenBefore) this.undoStack.push(before);
-        else this.clearUndo();
-        this.lastCommit = { at: { ...it.to }, time: this.time.now };
-        if (opts.wait) return this.waitSelected();
-        if (opts.drop && it.capture && canCapture(this.s, u)) {
-          this.actions = ['capture'];
-          this.menuSel = 0;
-          this.phase = 'unitMenu';
-          return this.acceptUnitMenu();
-        }
-        if (opts.drop && settings.autoWait) {
-          const av = unitActions(this.s, u);
-          if (!av.attack && !av.capture && !av.unload && !av.supply) return this.waitSelected();
-        }
-        this.undo = snapshot;
-        return this.openUnitMenu();
-      }
-    }
-  }
-
-  /** Orden de varios turnos: la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
-  private async giveOrder(u: Unit, goal: Pos): Promise<void> {
-    delete u.command;
-    const r = this.range ?? moveRange(this.s, u);
-    const dest = stepToward(this.s, u, goal, r);
-    if (!dest) {
-      showToast(t('orderUnreachable'));
-      return this.toMap();
-    }
-    this.clearUndo();
-    u.order = { ...goal };
-    showToast(t('orderSet'));
-    const ghost = unitKey(this.textures, this.s, u);
-    const path = moveUnit(this.s, u, dest, r);
-    this.range = null;
-    if (path) await this.playEvents([moveEvent(u.uid, path)], ghost);
-    if (samePos(u, goal) || path?.ambush) delete u.order;
-    this.toMap();
-  }
-
-  /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
-  private async groupMove(goal: Pos): Promise<void> {
-    this.multi = false;
-    const units = [...this.group]
-      .map((uid) => unitById(this.s, uid))
-      .filter((u): u is Unit => !!u && u.active && u.canMove && u.carrier === null)
-      .sort((a, b) => manhattan(a, goal) - manhattan(b, goal));
-    // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
-    this.clearUndo();
-    for (const u of units) {
-      const r = moveRange(this.s, u);
-      const best = closestStep(u, goal, r);
-      if (!best) continue;
-      delete u.order;
-      const path = moveUnit(this.s, u, best, r);
-      if (path) await this.playEvents([moveEvent(u.uid, path)]);
-      if (this.ended) return;
-    }
-    this.toMap();
-  }
-
-  /** Uids de las unidades enemigas que se ven ahora (para saber si un movimiento ha descubierto a alguien). */
-  private visibleEnemies(): string {
-    const vis = visibility(this.s, 0);
-    return this.s.units
-      .filter((o) => o.team === 1 && o.carrier === null && vis[o.x]![o.y])
-      .map((o) => o.uid)
-      .sort((a, b) => a - b)
-      .join(',');
+  /** Capturar ya con la unidad elegida (al soltarla encima de un edificio), como desde su menu. */
+  private captureNow(): void {
+    this.actions = ['capture'];
+    this.menuSel = 0;
+    this.phase = 'unitMenu';
+    this.acceptUnitMenu();
   }
 
   private waitSelected(): void {
-    if (this.sel) wait(this.sel);
-    this.afterAction();
+    this.moves.waitSelected();
   }
 
   private clearUndo(): void {
-    this.undoStack = [];
-  }
-
-  /** Ctrl+Z: volver al estado de antes del ultimo movimiento (si no descubrio nada ni tuvo consecuencias). */
-  private undoLast(): void {
-    const prev = this.undoStack.pop();
-    if (!prev) return showToast(t('nothingToUndo'));
-    const st = deserialize(prev);
-    if (!st) return;
-    this.s = st;
-    this.toMap();
-    showToast(t('undone'));
+    this.moves.clearUndo();
   }
 
   /** Pantalla de opciones (la misma que en el menu principal), encima del menu de pausa. */
@@ -1314,23 +1091,8 @@ export class GameScene extends Phaser.Scene {
     this.refresh();
   }
 
-  private undoMove(): void {
-    const u = this.sel;
-    if (!u) return this.toMap();
-    if (this.undo && this.undo.uid === u.uid) {
-      this.undoStack.pop();
-      u.x = this.undo.x;
-      u.y = this.undo.y;
-      u.canFire = this.undo.canFire;
-      u.canMove = true;
-      this.view.cursor = { x: u.x, y: u.y };
-      return this.selectUnit(u);
-    }
-    this.toMap();
-  }
-
   private async acceptMove(c: Pos): Promise<void> {
-    return this.commit(c);
+    return this.moves.commit(c);
   }
 
   private acceptUnitMenu(): void {
@@ -1340,7 +1102,7 @@ export class GameScene extends Phaser.Scene {
     switch (action) {
       case 'attack': {
         const targets = attackTargets(this.s, u);
-        this.attackSet = new Map(targets.map((o) => [key(o), o.uid]));
+        this.moves.session!.attackTargets = new Map(targets.map((o) => [key(o), o.uid]));
         this.phase = 'attack';
         const first = targets[0];
         if (first) {
@@ -1378,7 +1140,7 @@ export class GameScene extends Phaser.Scene {
         showToast(t('orderCancelled'));
         return this.openUnitMenu();
       case 'back':
-        return this.undoMove();
+        return this.moves.undoMove();
       case 'delete':
         // [CAMBIO] pedir confirmacion (en el original se borraba al instante).
         if (!this.deleteArmed) {
@@ -1467,7 +1229,7 @@ export class GameScene extends Phaser.Scene {
 
   private async acceptAttack(c: Pos): Promise<void> {
     const u = this.sel;
-    const targetUid = this.attackSet.get(key(c));
+    const targetUid = this.moves.session?.attackTargets.get(key(c));
     if (!u || targetUid === undefined) return this.openUnitMenu();
     const target = unitById(this.s, targetUid)!;
     await this.playEvents([attackEvent(this.s, u, target, Math.random)]);
@@ -1482,20 +1244,21 @@ export class GameScene extends Phaser.Scene {
     if (!p) return;
     const tiles = unloadTiles(this.s, u, p);
     if (!tiles.length) return;
-    this.passenger = p;
-    this.unloadSet = new Set(tiles.map(key));
+    this.moves.session!.passenger = p;
+    this.moves.session!.unloadTiles = new Set(tiles.map(key));
     this.phase = 'unloadTile';
     this.view.cursor = { ...tiles[0]! };
     this.refresh();
   }
 
   private acceptUnloadTile(c: Pos): void {
-    if (!this.sel || !this.passenger) return;
-    if (!this.unloadSet.has(key(c))) {
+    const session = this.moves.session;
+    if (!session?.passenger) return;
+    if (!session.unloadTiles.has(key(c))) {
       this.phase = 'unloadPick';
       return this.refresh();
     }
-    if (unload(this.s, this.sel, this.passenger, c)) {
+    if (unload(this.s, session.unit, session.passenger, c)) {
       this.clearUndo();
       this.afterAction();
     }
@@ -1738,11 +1501,11 @@ export class GameScene extends Phaser.Scene {
       hidden: { get: () => this.hidden },
       toMap: () => this.toMap(),
       selectUnit: (u) => this.selectUnit(u),
-      updateTrail: (t) => this.updateTrail(t),
+      updateTrail: (t) => this.moves.followCursor(t),
       intentAt: (t) => this.intentAt(t),
       refresh: () => this.refresh(),
-      giveOrder: (u, goal) => this.giveOrder(u, goal),
-      commit: (t, opts) => this.commit(t, opts),
+      giveOrder: (u, goal) => this.moves.giveOrder(u, goal),
+      commit: (t, opts) => this.moves.commit(t, opts),
     });
   }
 
@@ -1755,7 +1518,7 @@ export class GameScene extends Phaser.Scene {
       ended: { get: () => this.ended },
       sel: { get: () => this.sel },
       inputLockUntil: { get: () => this.inputLockUntil },
-      lastCommit: { get: () => this.lastCommit },
+      lastCommit: { get: () => this.moves.lastCommit },
       inspectUid: {
         get: () => this.inspectUid,
         set: (v) => {
@@ -1782,11 +1545,39 @@ export class GameScene extends Phaser.Scene {
       moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
       setPointer: (kind) => this.orders.setPointer(kind),
       updatePointer: (tile) => this.orders.updatePointer(tile),
-      commit: (t, opts) => this.commit(t, opts),
+      commit: (t, opts) => this.moves.commit(t, opts),
       waitSelected: () => this.waitSelected(),
-      groupMove: (goal) => this.groupMove(goal),
+      groupMove: (goal) => this.moves.groupMove(goal),
       selectUnit: (u) => this.selectUnit(u),
       acceptMap: (c) => this.acceptMap(c),
+    });
+  }
+
+  private moveHost(): MoveHost {
+    return live<MoveHost>({
+      scene: { get: () => this },
+      view: { get: () => this.view },
+      state: {
+        get: () => this.s,
+        set: (v) => {
+          this.s = v;
+        },
+      },
+      phase: {
+        get: () => this.phase,
+        set: (v) => {
+          this.phase = v;
+        },
+      },
+      ended: { get: () => this.ended },
+      selection: { get: () => this.selection },
+      visible: (p) => this.visibleToPlayer(p),
+      play: (events, ghostKey) => this.playEvents(events, ghostKey),
+      toMap: () => this.toMap(),
+      refresh: () => this.refresh(),
+      afterAction: () => this.afterAction(),
+      openUnitMenu: () => this.openUnitMenu(),
+      captureNow: () => this.captureNow(),
     });
   }
 
@@ -1809,7 +1600,7 @@ export class GameScene extends Phaser.Scene {
       },
       match: { get: () => this.match },
       sel: { get: () => this.sel },
-      undo: { get: () => this.undo },
+      undo: { get: () => this.moves.session?.undo ?? null },
       selection: { get: () => this.selection },
       menuPick: () => this.menuItems[this.menuSel]?.id,
       stopInspect: () => {
@@ -1822,9 +1613,9 @@ export class GameScene extends Phaser.Scene {
       refresh: () => this.refresh(),
       selectUnit: (u) => this.selectUnit(u),
       moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
-      commit: (t, opts) => this.commit(t, opts),
-      groupMove: (goal) => this.groupMove(goal),
-      giveOrder: (u, goal) => this.giveOrder(u, goal),
+      commit: (t, opts) => this.moves.commit(t, opts),
+      groupMove: (goal) => this.moves.groupMove(goal),
+      giveOrder: (u, goal) => this.moves.giveOrder(u, goal),
       clearUndo: () => this.clearUndo(),
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
