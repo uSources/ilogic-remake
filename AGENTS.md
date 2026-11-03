@@ -22,10 +22,14 @@ npm run balance -- run ...  # equilibrio (IA contra IA)
 npm run metrics             # nota del juego 0-100 (compara con improve/baseline.json)
 npm run arena               # IA actual contra la guardada
 npm run fuzz                # cazador de fallos (invariantes con jugadas al azar)
+npm run huella              # huella del comportamiento: igual antes y despues de un refactor
 ```
 
 ## Normas
 
+- **Estilo (obligatorio en todo codigo nuevo o tocado): `docs/ESTILO.md`.** Nombres completos, una funcion por
+  idea, salir pronto, nada magico, piezas comunes (`core/util/`) en vez de bucles a mano, lo que crece como lista
+  de datos, comentarios del porque. Al reescribir, `npm run huella` tiene que dar lo mismo.
 - `src/core` es logica pura: sin Phaser, DOM ni interfaz (lo comprueba ESLint). Logica nueva → core + test.
 - Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/data.ts`; textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
 - No editar a mano lo generado: `public/assets/atlas/`, `src/assetList.ts`, `src/atlasPages.ts`,
@@ -39,6 +43,7 @@ npm run fuzz                # cazador de fallos (invariantes con jugadas al azar
 ## Documentacion
 
 - `docs/ARQUITECTURA.md`: capas, flujo de un turno, decisiones.
+- `docs/ESTILO.md`: como escribir codigo que se lea a la primera (con ejemplo de antes y despues).
 - `docs/IDEAS.md`: ideas pendientes y descartadas (con el porque); quitar de ahi lo que se haga.
 - `docs/AGENTES.md`: como comprobar el trabajo (API `window.ilogicDebug`, partida por texto, capturas).
 - `improve/DIARIO.md`: experimentos de mejora (leer antes de proponer cambios de equilibrio o IA).
