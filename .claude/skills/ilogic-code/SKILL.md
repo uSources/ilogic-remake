@@ -13,7 +13,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | Carpeta | Que va | Puede importar |
 |---|---|---|
 | `src/core/` | Reglas, IA, mapas, misiones, guardado, estadisticas. **TypeScript puro.** | solo `src/core` |
-| `src/ui/` | Dibujo del mapa con Phaser (`mapView`, `fx`, `terrainArt`), datos para el HUD (`hudModels`) | core, settings, atlas |
+| `src/ui/` | Dibujo del mapa con Phaser (`mapView` = fachada de las capas de `ui/map/`; `fx`, `combatFx`, `terrainArt`), datos para el HUD (`hudModels`) | core, settings, atlas |
 | `src/hud/` | Componentes Preact y `store` (estado de la interfaz) | settings, assets, patchNotes, tipos de core |
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
@@ -49,7 +49,10 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   las variables de `hud/hud.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
-  `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`.
+  `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en
+  el mapa, esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`,
+  casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
+  "Vista del mapa").
 - **Extender sin abrir funciones grandes**: acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
   ronda = entrada en `ROUND_PHASES`; habilidad nueva = su efecto en `abilities.ts`. La IA no tiene
   variables globales: lo del turno va en `AiCtx`. Antes de
