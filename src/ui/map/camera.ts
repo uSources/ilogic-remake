@@ -46,15 +46,15 @@ export class MapCamera {
 
   /** Pixeles fisicos por pixel del dibujo al empezar (ver START_SCALE). */
   private defaultLevel(): number {
-    const r = dpr();
-    const cssW = this.cam.width / r;
-    const target = cssW < MOBILE_CSS_W ? START_SCALE.mobile : START_SCALE.desktop;
-    return this.clampLevel(Math.round(target * r));
+    const ratio = dpr();
+    const cssWidth = this.cam.width / ratio;
+    const target = cssWidth < MOBILE_CSS_W ? START_SCALE.mobile : START_SCALE.desktop;
+    return this.clampLevel(Math.round(target * ratio));
   }
 
-  private clampLevel(z: number): number {
-    const r = dpr();
-    return Phaser.Math.Clamp(z, Math.max(1, Math.round(r)), Math.max(MAX_SCALE, Math.round(MAX_SCALE * r)));
+  private clampLevel(level: number): number {
+    const ratio = dpr();
+    return Phaser.Math.Clamp(level, Math.max(1, Math.round(ratio)), Math.max(MAX_SCALE, Math.round(MAX_SCALE * ratio)));
   }
 
   /** Pone el zoom actual en la camara y recalcula los limites. */
@@ -65,25 +65,30 @@ export class MapCamera {
 
   /** Posicion en pantalla (pixeles del lienzo) del centro de una casilla. */
   screenOf(p: Pos): { x: number; y: number } {
-    const wv = this.cam.worldView;
+    const view = this.cam.worldView;
     const c = tileCenter(p);
-    return { x: (c.x - wv.x) * this.cam.zoom, y: (c.y - wv.y) * this.cam.zoom };
+    return { x: (c.x - view.x) * this.cam.zoom, y: (c.y - view.y) * this.cam.zoom };
   }
 
   /** Rectangulo de una casilla en pixeles CSS de la ventana (para colocar la interfaz HTML). */
   tileRectCss(p: Pos): Anchor {
     // worldView solo se actualiza al dibujar: recalcularlo por si la camara acaba de moverse.
     this.cam.preRender();
-    const wv = this.cam.worldView;
-    const k = this.cam.zoom / dpr();
-    return { x: (p.x * TILE - wv.x) * k, y: (p.y * TILE - wv.y) * k, w: TILE * k, h: TILE * k };
+    const view = this.cam.worldView;
+    const cssPerPixel = this.cam.zoom / dpr();
+    return {
+      x: (p.x * TILE - view.x) * cssPerPixel,
+      y: (p.y * TILE - view.y) * cssPerPixel,
+      w: TILE * cssPerPixel,
+      h: TILE * cssPerPixel,
+    };
   }
 
   /** Casilla bajo un punto de la pantalla (null si cae fuera del mapa). */
   tileAtScreen(sx: number, sy: number): Pos | null {
-    const wp = this.cam.getWorldPoint(sx, sy);
-    const x = Math.floor(wp.x / TILE),
-      y = Math.floor(wp.y / TILE);
+    const world = this.cam.getWorldPoint(sx, sy);
+    const x = Math.floor(world.x / TILE);
+    const y = Math.floor(world.y / TILE);
     return inMap(x, y) ? { x, y } : null;
   }
 
@@ -113,28 +118,29 @@ export class MapCamera {
 
   /** Desplaza la camara lo justo para que la casilla quede dentro con un margen (en casillas). */
   ensureVisible(p: Pos, margin = 2, instant = false): void {
-    const wv = this.cam.worldView;
+    const view = this.cam.worldView;
     // El margen no puede ser mayor que media vista (pantallas pequeñas o mucho zoom).
-    const m = Math.min(margin * TILE, Math.max(0, wv.width / 2 - TILE), Math.max(0, wv.height / 2 - TILE));
-    let cx = wv.centerX,
-      cy = wv.centerY;
-    const left = p.x * TILE,
-      top = p.y * TILE;
-    if (left < wv.x + m) cx -= wv.x + m - left;
-    if (left + TILE > wv.right - m) cx += left + TILE - (wv.right - m);
-    if (top < wv.y + m) cy -= wv.y + m - top;
-    if (top + TILE > wv.bottom - m) cy += top + TILE - (wv.bottom - m);
-    if (cx === wv.centerX && cy === wv.centerY) return;
-    this.moveTo(cx, cy, instant, NUDGE_MS);
+    const marginPx = Math.min(margin * TILE, Math.max(0, view.width / 2 - TILE), Math.max(0, view.height / 2 - TILE));
+    let centerX = view.centerX;
+    let centerY = view.centerY;
+    const left = p.x * TILE;
+    const top = p.y * TILE;
+    if (left < view.x + marginPx) centerX -= view.x + marginPx - left;
+    if (left + TILE > view.right - marginPx) centerX += left + TILE - (view.right - marginPx);
+    if (top < view.y + marginPx) centerY -= view.y + marginPx - top;
+    if (top + TILE > view.bottom - marginPx) centerY += top + TILE - (view.bottom - marginPx);
+    if (centerX === view.centerX && centerY === view.centerY) return;
+    this.moveTo(centerX, centerY, instant, NUDGE_MS);
   }
 
   isOnScreen(p: Pos, margin = 1): boolean {
-    const wv = this.cam.worldView;
+    const view = this.cam.worldView;
+    const marginPx = margin * TILE;
     return (
-      p.x * TILE >= wv.x + margin * TILE &&
-      (p.x + 1) * TILE <= wv.right - margin * TILE &&
-      p.y * TILE >= wv.y + margin * TILE &&
-      (p.y + 1) * TILE <= wv.bottom - margin * TILE
+      p.x * TILE >= view.x + marginPx &&
+      (p.x + 1) * TILE <= view.right - marginPx &&
+      p.y * TILE >= view.y + marginPx &&
+      (p.y + 1) * TILE <= view.bottom - marginPx
     );
   }
 
@@ -146,13 +152,13 @@ export class MapCamera {
   updateBounds(): void {
     const edgeCss = Math.min(EDGE_CSS, Math.round((this.cam.width / dpr()) * EDGE_MAX_FRACTION));
     const margin = (edgeCss * dpr()) / this.cam.zoom;
-    const mw = MAP_W * TILE,
-      mh = MAP_H * TILE;
-    const vw = this.cam.width / this.cam.zoom,
-      vh = this.cam.height / this.cam.zoom;
-    const bw = Math.max(mw + 2 * margin, vw),
-      bh = Math.max(mh + 2 * margin, vh);
-    this.cam.setBounds(mw / 2 - bw / 2, mh / 2 - bh / 2, bw, bh);
+    const mapWidth = MAP_W * TILE;
+    const mapHeight = MAP_H * TILE;
+    const viewWidth = this.cam.width / this.cam.zoom;
+    const viewHeight = this.cam.height / this.cam.zoom;
+    const boundsWidth = Math.max(mapWidth + 2 * margin, viewWidth);
+    const boundsHeight = Math.max(mapHeight + 2 * margin, viewHeight);
+    this.cam.setBounds(mapWidth / 2 - boundsWidth / 2, mapHeight / 2 - boundsHeight / 2, boundsWidth, boundsHeight);
   }
 
   /** La ventana ha cambiado de tamaño: mantener el mismo punto en el centro. */
@@ -160,10 +166,10 @@ export class MapCamera {
     const mid = { x: this.cam.midPoint.x, y: this.cam.midPoint.y };
     this.cam.setSize(w, h);
     // Si cambia la densidad (otra pantalla, zoom del navegador), mantener el tamaño de casilla en CSS.
-    const r = dpr();
-    if (r !== this.lastDpr) {
-      this.level = Math.round((this.level * r) / this.lastDpr);
-      this.lastDpr = r;
+    const ratio = dpr();
+    if (ratio !== this.lastDpr) {
+      this.level = Math.round((this.level * ratio) / this.lastDpr);
+      this.lastDpr = ratio;
     }
     this.level = this.clampLevel(this.level);
     this.apply();
