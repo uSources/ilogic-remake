@@ -126,7 +126,10 @@ export const seedToCode = (seed: number): string => (seed >>> 0).toString(36).to
 /** Lo mas largo que puede ser un codigo: 7 cifras en base 36 cubren todas las semillas de 32 bits. */
 export const MAX_CODE_LENGTH = 7;
 const MAX_SEED = 0xffffffff;
-const CODE_PATTERN = new RegExp(`^[0-9a-z]{1,${MAX_CODE_LENGTH}}$`);
+// De 1 a MAX_CODE_LENGTH cifras en base 36. Escrito tal cual (no con new RegExp y una plantilla):
+// scripts/build-single.mjs mete el codigo con String.replace, y un "$" seguido de comilla invertida
+// en el codigo se tomaria como patron de reemplazo y romperia el juego empaquetado.
+const CODE_PATTERN = /^[0-9a-z]{1,7}$/;
 
 export function codeToSeed(code: string): number | null {
   const cleaned = code.trim().toLowerCase();
