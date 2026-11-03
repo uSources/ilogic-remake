@@ -7,14 +7,18 @@
  *   ~  agua    ,  agua poco profunda    =  agua profunda    i  hielo
  *   P  bosque nevado    N  acantilado nevado
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
+ * Objetivos: uno por entrada en `objectives.ts`.
  */
 import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, type RulesConfig, Movement } from './data';
+import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
-import type { GameState, Objective, Pos, Team } from './types';
+import type { GameState, Team } from './types';
 
 type Text = { es: string; en: string };
-type B = (typeof BUILDING_NAMES)[number];
-type U = (typeof UNIT_NAMES)[number];
+type BuildingName = (typeof BUILDING_NAMES)[number];
+type UnitName = (typeof UNIT_NAMES)[number];
+type MissionBuilding = [type: BuildingName, owner: Team | null, x: number, y: number];
+type MissionUnit = [type: UnitName, team: Team, x: number, y: number, life?: number];
 
 export interface MissionDef {
   id: string;
@@ -23,58 +27,69 @@ export interface MissionDef {
   /** Tema de graficos: 0 llanura, 1 desierto, 2 bosque, 3 pantano, 4 nieve. */
   theme: number;
   map: string[];
-  buildings: [B, Team | null, number, number][];
-  units: [U, Team, number, number, number?][];
+  buildings: MissionBuilding[];
+  units: MissionUnit[];
   funds: [number, number];
-  /** Objetivo; en 'escort', `vip` es el indice en `units` de la unidad a escoltar. */
-  objective:
-    | { kind: 'hq' }
-    | { kind: 'survive'; days: number }
-    | { kind: 'capture'; count: number; type: B | null; days: number }
-    | { kind: 'destroy'; days: number }
-    | { kind: 'escort'; vip: number; to: Pos; days: number };
+  objective: MissionObjective;
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
   rules?: Partial<RulesConfig>;
   /** Consejos paso a paso (solo el tutorial). */
   tutorial?: boolean;
 }
 
-const GENERIC: Record<string, number[]> = {
+/** Letras cuyo terreno depende del tema, en el orden de los temas. */
+const TERRAIN_BY_THEME: Record<string, number[]> = {
   // tema:      llanura desierto bosque pantano nieve
   '.': [0, 3, 0, 0, 10],
   T: [2, 4, 2, 2, 13],
   M: [7, 5, 7, 7, 12],
   '*': [6, 3, 6, 6, 11],
 };
-const FIXED: Record<string, number> = { '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 };
+/** Letras con el mismo terreno en todos los temas. */
+const TERRAIN_IN_ANY_THEME: Record<string, number> = { '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 };
 
-export function terrainOf(ch: string, theme: number): number {
-  if (ch in FIXED) return FIXED[ch]!;
-  const g = GENERIC[ch];
-  if (!g) throw new Error(`Letra de terreno desconocida: "${ch}"`);
-  return g[theme]!;
+export function terrainOf(letter: string, theme: number): number {
+  if (letter in TERRAIN_IN_ANY_THEME) return TERRAIN_IN_ANY_THEME[letter]!;
+  const byTheme = TERRAIN_BY_THEME[letter];
+  if (!byTheme) throw new Error(`Letra de terreno desconocida: "${letter}"`);
+  return byTheme[theme]!;
+}
+
+/** Terreno de la casilla (x, y) del mapa en texto. */
+const terrainAt = (m: MissionDef, x: number, y: number) => terrainOf(m.map[y]![x]!, m.theme);
+
+/** El mapa en texto (filas = y) como rejilla de terreno `map[x][y]`. */
+function terrainGrid(m: MissionDef): number[][] {
+  const size = m.map.length;
+  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => terrainAt(m, x, y)));
+}
+
+/** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
+function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
+  return units.map(([type, team, x, y, life]) => {
+    const unit = newUnit(s, UNIT_NAMES.indexOf(type), team, x, y);
+    if (life) unit.life = life;
+    return unit.uid;
+  });
 }
 
 /** Crea la partida de una mision (con las reglas ya puestas por quien llama: ver `missionRules`). */
 export function buildMission(m: MissionDef): GameState {
-  const n = m.map.length;
-  setMapSize(n, n);
-  const map: number[][] = Array.from({ length: n }, (_, x) => Array.from({ length: n }, (_, y) => terrainOf(m.map[y]![x]!, m.theme)));
-  const s: GameState = { version: 1, map, theme: m.theme, funds: [m.funds[0], m.funds[1]], units: [], buildings: [], nextUid: 1, day: 1 };
-  for (const [t, owner, x, y] of m.buildings) s.buildings.push({ type: BUILDING_NAMES.indexOf(t), owner, x, y });
-  const uids: number[] = [];
-  for (const [t, team, x, y, life] of m.units) {
-    const u = newUnit(s, UNIT_NAMES.indexOf(t), team, x, y);
-    if (life) u.life = life;
-    uids.push(u.uid);
-  }
-  const o = m.objective;
-  let objective: Objective;
-  if (o.kind === 'escort') objective = { kind: 'escort', uid: uids[o.vip]!, to: o.to, days: o.days };
-  else if (o.kind === 'capture')
-    objective = { kind: 'capture', count: o.count, type: o.type === null ? null : BUILDING_NAMES.indexOf(o.type), days: o.days };
-  else objective = o;
-  s.mission = { id: m.id, objective };
+  const size = m.map.length;
+  setMapSize(size, size);
+  const s: GameState = {
+    version: 1,
+    map: terrainGrid(m),
+    theme: m.theme,
+    funds: [m.funds[0], m.funds[1]],
+    units: [],
+    buildings: [],
+    nextUid: 1,
+    day: 1,
+  };
+  for (const [type, owner, x, y] of m.buildings) s.buildings.push({ type: BUILDING_NAMES.indexOf(type), owner, x, y });
+  const unitUids = placeUnits(s, m.units);
+  s.mission = { id: m.id, objective: objectiveFromMission(m.objective, unitUids) };
   return s;
 }
 
@@ -88,33 +103,51 @@ export const missionRules = (m: MissionDef): RulesConfig => ({
   ...m.rules,
 });
 
-/** Comprobaciones de un mapa de mision (para los tests). Devuelve los problemas encontrados. */
-export function checkMission(m: MissionDef): string[] {
-  const errs: string[] = [];
-  const n = m.map.length;
-  if (m.map.some((r) => r.length !== n)) errs.push('el mapa no es cuadrado');
-  const t = (x: number, y: number) => terrainOf(m.map[y]![x]!, m.theme);
-  const seen = new Set<string>();
-  for (const [b, , x, y] of m.buildings) {
-    if (!BUILDING_NAMES.includes(b)) errs.push(`edificio "${b}" no existe (src/core/content/buildings.json)`);
-    if (!TERRAIN.canbuild[t(x, y)]) errs.push(`${b} en (${x},${y}) no esta sobre suelo`);
-    if (seen.has(`${x},${y}`)) errs.push(`dos edificios en (${x},${y})`);
-    seen.add(`${x},${y}`);
+const posKey = (x: number, y: number) => `${x},${y}`;
+
+function buildingProblems(m: MissionDef): string[] {
+  const problems: string[] = [];
+  const taken = new Set<string>();
+  for (const [type, , x, y] of m.buildings) {
+    if (!BUILDING_NAMES.includes(type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
+    if (!TERRAIN.canbuild[terrainAt(m, x, y)]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
+    if (taken.has(posKey(x, y))) problems.push(`dos edificios en (${x},${y})`);
+    taken.add(posKey(x, y));
   }
-  const occ = new Set<string>();
-  for (const [u, , x, y] of m.units) {
-    const T = UNIT_NAMES.indexOf(u);
-    if (T < 0) {
-      errs.push(`unidad "${u}" no existe (src/core/content/units.json)`);
+  return problems;
+}
+
+function unitProblems(m: MissionDef): string[] {
+  const problems: string[] = [];
+  const taken = new Set<string>();
+  for (const [name, , x, y] of m.units) {
+    const type = UNIT_NAMES.indexOf(name);
+    if (type < 0) {
+      problems.push(`unidad "${name}" no existe (src/core/content/units.json)`);
       continue;
     }
-    if (!Movement.canWalk(Movement.of(T), t(x, y))) errs.push(`${u} en (${x},${y}) no puede estar en ese terreno`);
-    if (occ.has(`${x},${y}`)) errs.push(`dos unidades en (${x},${y})`);
-    occ.add(`${x},${y}`);
+    if (!Movement.canWalk(Movement.of(type), terrainAt(m, x, y))) problems.push(`${name} en (${x},${y}) no puede estar en ese terreno`);
+    if (taken.has(posKey(x, y))) problems.push(`dos unidades en (${x},${y})`);
+    taken.add(posKey(x, y));
   }
-  for (const team of [0, 1] as const)
-    if (!m.buildings.some(([b, o]) => b === BUILDING_NAMES[HQ] && o === team)) errs.push(`falta la Base del bando ${team}`);
-  return errs;
+  return problems;
+}
+
+function missingBases(m: MissionDef): string[] {
+  const hasBase = (team: Team) => m.buildings.some(([type, owner]) => type === BUILDING_NAMES[HQ] && owner === team);
+  return ([0, 1] as const).filter((team) => !hasBase(team)).map((team) => `falta la Base del bando ${team}`);
+}
+
+/** Comprobaciones de un mapa de mision (para los tests). Devuelve los problemas encontrados. */
+export function checkMission(m: MissionDef): string[] {
+  const size = m.map.length;
+  return [
+    ...(m.map.some((row) => row.length !== size) ? ['el mapa no es cuadrado'] : []),
+    ...buildingProblems(m),
+    ...unitProblems(m),
+    ...missingBases(m),
+    ...objectiveProblems(m.objective, { unitCount: m.units.length, mapSize: size }),
+  ];
 }
 
 export const MISSIONS: MissionDef[] = [
@@ -455,4 +488,4 @@ export const MISSIONS: MissionDef[] = [
   },
 ];
 
-export const missionById = (id: string): MissionDef | undefined => MISSIONS.find((m) => m.id === id);
+export const missionById = (id: string): MissionDef | undefined => MISSIONS.find((mission) => mission.id === id);
