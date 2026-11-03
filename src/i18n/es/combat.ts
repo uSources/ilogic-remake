@@ -1,0 +1,22 @@
+/** Prevision de combate, panel del combate y textos que salen sobre el mapa. */
+export const combat = {
+  lessThan1: 'menos del 1%',
+  moreThan99: 'más del 99%',
+  forecast: 'Previsión de combate',
+  enemyLife: 'Vida enemiga',
+  destroyIt: 'Destruirlo',
+  flank: 'Flanqueo',
+  fxCaptured: '¡CAPTURADO!',
+  fxAmbush: '¡EMBOSCADA!',
+  fxCounter: '¡CONTRAATAQUE!',
+  fxMiss: 'FALLO',
+  combat: 'Combate',
+  combatAttacks: 'Ataca',
+  combatDefends: 'Defiende',
+  combatHit: 'Acierto',
+  combatKO: 'Destruida',
+  combatCounter: 'Contraataca',
+  yourLife: 'Tu vida',
+  dies: 'cae',
+  fxNeutral: 'NEUTRAL',
+};

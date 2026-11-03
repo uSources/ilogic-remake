@@ -1,0 +1,32 @@
+import type { actions as es } from '../es/actions';
+import type { Translation } from '../translation';
+
+export const actions: Translation<typeof es> = {
+  attack: 'Attack',
+  capture: 'Capture',
+  unload: 'Unload',
+  supply: 'Repair',
+  wait: 'Wait',
+  back: 'Back',
+  delete: 'Disband',
+  cancel: 'Cancel',
+  buy: 'Buy',
+  cantAfford: 'Not enough funds',
+  unitLimit: '{n} unit limit reached',
+  commandLimit: 'Not enough command points (max {n})',
+  commandShort: 'command',
+  actMove: 'Move here',
+  actMerge: 'Join',
+  actLoad: 'Board',
+  goThere: 'Go there (several turns)',
+  tipMove: 'Move',
+  tipCapture: 'Move and capture',
+  tipJoin: 'Join',
+  tipBoard: 'Board',
+  tipNone: 'Out of reach',
+  tipDanger: 'Enemies can hit you here',
+  stepCost: 'Move cost',
+  onFoot: 'foot',
+  byVehicle: 'veh.',
+  stepCostTitle: 'Cost to enter: on foot and by vehicle',
+};

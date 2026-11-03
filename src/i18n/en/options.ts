@@ -1,0 +1,32 @@
+import type { options as es } from '../es/options';
+import type { Translation } from '../translation';
+
+export const options: Translation<typeof es> = {
+  music: 'Music',
+  autosave: 'Autosave',
+  language: 'Language',
+  on: 'ON',
+  off: 'OFF',
+  optAutoWait: 'Wait automatically on drop',
+  optAutoNext: 'Jump to the next unit',
+  optSpeedOwn: 'Speed: your units',
+  optSpeedEnemy: 'Speed: enemy',
+  speed_normal: 'Normal',
+  speed_fast: 'Fast',
+  speed_instant: 'Instant',
+  options: 'Options',
+  optGroupSound: 'Sound',
+  optGroupGame: 'Game',
+  optGroupScreen: 'Display and accessibility',
+  optGroupLang: 'Language',
+  optUiScale: 'Interface size',
+  optReduceMotion: 'Reduce motion',
+  optAlwaysThreat: 'Always show enemy threat',
+  optMenuBg: 'Menu background',
+  optTerrainArt: 'Graphics',
+  artNew: 'New',
+  artClassic: '2013',
+  bgLive: 'Live game',
+  bgClassic: '2013 original',
+  close: 'Close',
+};

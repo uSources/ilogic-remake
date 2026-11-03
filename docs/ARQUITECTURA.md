@@ -120,6 +120,10 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
   en ese orden, que es el de la cascada. Por eso hay alguna mezclada (`base/narrow.css`,
   `legacy.css`): mover reglas de sitio puede cambiar quien gana. Lo nuevo va al final; los colores son
   variables de `styles/base/base.css` (los mismos que `ui/palette.ts`).
+- **Textos**: `t('clave')` (de `settings.ts`) busca en `src/i18n/`, un fichero por tema en `es/` y su
+  traduccion con el mismo nombre en `en/` (tipada con `Translation`: si falta una clave, no
+  compila). Un texto nuevo va al tema que toca en `es/` y luego en `en/`; las claves no se repiten
+  entre temas (`tests/i18n.test.ts`).
 - Los textos salen de `t('clave')` al pintar: por eso los componentes no se memorizan (`memo`), un
   cambio de idioma o de escala tiene que repintarlos aunque sus datos no cambien.
 
