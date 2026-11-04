@@ -1,11 +1,11 @@
 /**
  * [CAMBIO] Escuadras y ordenes con destino del jugador (estilo RTS). Logica pura: la usa GameScene
- * y la cumple la IA al terminar el turno (commandTurn en ai.ts).
+ * y la cumple la IA al terminar el turno (standingOrderTurn en ai.ts).
  */
 import { manhattan, samePos } from './geom';
 import { buildingAt } from './rules/queries';
 import { isAlive, isCapturer, isPlayer } from './util/predicates';
-import type { Command, CommandKind, GameState, Pos, Squad, Unit } from './model';
+import type { StandingOrder, StandingOrderKind, GameState, Pos, Squad, Unit } from './model';
 
 /** Nombres que se van dando a las escuadras nuevas (el jugador los puede cambiar). */
 export const SQUAD_NAMES = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Eco', 'Fox', 'Golf', 'Hotel', 'India', 'Juliet'] as const;
@@ -73,7 +73,7 @@ export function formSquad(s: GameState, units: readonly Unit[], name?: string, k
   };
   for (const unit of mine) unit.squad = id;
   s.squads = [...squads, squad];
-  liftCommand(s, squad);
+  liftStandingOrder(s, squad);
   pruneSquads(s);
   return squad;
 }
@@ -130,7 +130,8 @@ function joinSquad(s: GameState, squad: Squad, units: readonly Unit[]): Squad {
     leaveSquad(s, unit);
     unit.squad = squad.id;
     // Si ya hacia justo lo de la escuadra, la sigue (no va destacada).
-    if (unit.command && squad.command && sameCommand(unit.command, forUnit(unit, squad.command))) delete unit.command;
+    if (unit.standingOrder && squad.standingOrder && sameStandingOrder(unit.standingOrder, forUnit(unit, squad.standingOrder)))
+      delete unit.standingOrder;
   }
   pruneSquads(s);
   return squad;
@@ -139,9 +140,9 @@ function joinSquad(s: GameState, squad: Squad, units: readonly Unit[]): Squad {
 /** Saca la unidad de su escuadra; si seguia la orden de la escuadra, se la queda como propia. */
 export function leaveSquad(s: GameState, unit: Unit): void {
   if (unit.squad === undefined) return;
-  if (!unit.command) {
-    const squadCommand = squadById(s, unit.squad)?.command;
-    if (squadCommand) unit.command = forUnit(unit, squadCommand);
+  if (!unit.standingOrder) {
+    const squadOrder = squadById(s, unit.squad)?.standingOrder;
+    if (squadOrder) unit.standingOrder = forUnit(unit, squadOrder);
   }
   delete unit.squad;
 }
@@ -151,15 +152,15 @@ export function leaveSquad(s: GameState, unit: Unit): void {
  * captura), pasa a ser la orden de la escuadra. Asi una escuadra formada con unidades que ya iban
  * juntas, o una partida guardada antes de que las escuadras tuvieran orden, sigue igual.
  */
-export function liftCommand(s: GameState, squad: Squad): void {
+export function liftStandingOrder(s: GameState, squad: Squad): void {
   const units = squadUnits(s, squad.id);
-  if (!units.length || units.some((unit) => !unit.command)) return;
+  if (!units.length || units.some((unit) => !unit.standingOrder)) return;
   // La de capturar manda: las demas van de escolta con "atacar" al mismo sitio.
-  const lead = units.find((unit) => unit.command!.kind === 'capture') ?? units[0]!;
-  const command = lead.command!;
-  if (!units.every((unit) => sameCommand(unit.command!, forUnit(unit, command)))) return;
-  squad.command = copyCommand(command);
-  for (const unit of units) delete unit.command;
+  const lead = units.find((unit) => unit.standingOrder!.kind === 'capture') ?? units[0]!;
+  const standingOrder = lead.standingOrder!;
+  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, forUnit(unit, standingOrder)))) return;
+  squad.standingOrder = copyStandingOrder(standingOrder);
+  for (const unit of units) delete unit.standingOrder;
 }
 
 /** Cambia el nombre de una escuadra. Devuelve false si no existe o el nombre queda vacio. */
@@ -181,36 +182,39 @@ export function disbandSquad(s: GameState, id: number): void {
 // Ordenes: la de la escuadra y la propia de cada unidad (destacada)
 // ---------------------------------------------------------------------------
 
-const sameCommand = (a: Command, b: Command): boolean => a.kind === b.kind && samePos(a.at, b.at);
+const sameStandingOrder = (a: StandingOrder, b: StandingOrder): boolean => a.kind === b.kind && samePos(a.at, b.at);
 
-const copyCommand = (command: Command): Command => ({ kind: command.kind, at: { x: command.at.x, y: command.at.y } });
+const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
+  kind: standingOrder.kind,
+  at: { x: standingOrder.at.x, y: standingOrder.at.y },
+});
 
 /** La orden tal como la cumple esta unidad: con "capturar", las que no pueden capturar van de escolta (atacar). */
-function forUnit(unit: Unit, command: Command): Command {
-  const kind = command.kind === 'capture' && !isCapturer(unit) ? 'attack' : command.kind;
-  return { kind, at: { x: command.at.x, y: command.at.y } };
+function forUnit(unit: Unit, standingOrder: StandingOrder): StandingOrder {
+  const kind = standingOrder.kind === 'capture' && !isCapturer(unit) ? 'attack' : standingOrder.kind;
+  return { kind, at: { x: standingOrder.at.x, y: standingOrder.at.y } };
 }
 
 /**
  * [CAMBIO] La orden que cumple la unidad: la suya propia si la tiene (destacada) y si no la de su
  * escuadra (adaptada: escolta en una captura). undefined = no tiene orden.
  */
-export function effectiveCommand(s: GameState, unit: Unit): Command | undefined {
+export function effectiveStandingOrder(s: GameState, unit: Unit): StandingOrder | undefined {
   // Llevada a mano a una casilla lejana (Unit.order): eso manda mientras dura.
   if (unit.order) return undefined;
-  if (unit.command) return unit.command;
-  const squadCommand = squadById(s, unit.squad)?.command;
-  return squadCommand ? forUnit(unit, squadCommand) : undefined;
+  if (unit.standingOrder) return unit.standingOrder;
+  const squadOrder = squadById(s, unit.squad)?.standingOrder;
+  return squadOrder ? forUnit(unit, squadOrder) : undefined;
 }
 
 /** [CAMBIO] Va por su cuenta: es de una escuadra con orden y lleva otra propia distinta. */
 export function isDetached(s: GameState, unit: Unit): boolean {
-  const squadCommand = squadById(s, unit.squad)?.command;
-  return !!unit.command && !!squadCommand && !sameCommand(unit.command, forUnit(unit, squadCommand));
+  const squadOrder = squadById(s, unit.squad)?.standingOrder;
+  return !!unit.standingOrder && !!squadOrder && !sameStandingOrder(unit.standingOrder, forUnit(unit, squadOrder));
 }
 
 /** Unidades del jugador de esa escuadra que siguen su orden (no destacadas). */
-const followers = (s: GameState, squad: Squad) => squadUnits(s, squad.id).filter((unit) => !unit.command);
+const followers = (s: GameState, squad: Squad) => squadUnits(s, squad.id).filter((unit) => !unit.standingOrder);
 
 /** Los ids de escuadra a los que pertenecen todas sus unidades vivas de esta lista. */
 function wholeSquads(s: GameState, units: readonly Unit[]): Set<number> {
@@ -221,7 +225,12 @@ function wholeSquads(s: GameState, units: readonly Unit[]): Set<number> {
 }
 
 /** Por que no se puede dar esa orden ahi (null = se puede). */
-export function commandBlock(s: GameState, kind: CommandKind, at: Pos, units: readonly Unit[]): 'noBuilding' | 'noCapturer' | null {
+export function standingOrderBlock(
+  s: GameState,
+  kind: StandingOrderKind,
+  at: Pos,
+  units: readonly Unit[],
+): 'noBuilding' | 'noCapturer' | null {
   if (kind !== 'capture') return null;
   const building = buildingAt(s, at);
   if (!building || isPlayer(building.owner)) return 'noBuilding';
@@ -235,19 +244,19 @@ export function commandBlock(s: GameState, kind: CommandKind, at: Pos, units: re
  * un edificio que estas unidades pueden capturar, capturar va primero. Defender siempre se puede.
  * `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide la escena).
  */
-export function commandChoices(s: GameState, at: Pos, units: readonly Unit[], enemyHere: boolean): CommandKind[] {
+export function standingOrderChoices(s: GameState, at: Pos, units: readonly Unit[], enemyHere: boolean): StandingOrderKind[] {
   const mine = playerUnits(units);
   if (!mine.length) return [];
-  const canCapture = commandBlock(s, 'capture', at, mine) === null;
+  const canCapture = standingOrderBlock(s, 'capture', at, mine) === null;
   if (enemyHere) return canCapture ? ['attack', 'capture', 'defend'] : ['attack', 'defend'];
   return canCapture ? ['capture', 'attack', 'defend'] : ['attack', 'defend'];
 }
 
 /** La unidad se queda con la orden como propia, salvo que sea justo la de su escuadra (entonces la sigue). */
-function giveOwnCommand(s: GameState, unit: Unit, command: Command): void {
-  unit.command = forUnit(unit, command);
-  const squadCommand = squadById(s, unit.squad)?.command;
-  if (squadCommand && sameCommand(unit.command, forUnit(unit, squadCommand))) delete unit.command;
+function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingOrder): void {
+  unit.standingOrder = forUnit(unit, standingOrder);
+  const squadOrder = squadById(s, unit.squad)?.standingOrder;
+  if (squadOrder && sameStandingOrder(unit.standingOrder, forUnit(unit, squadOrder))) delete unit.standingOrder;
 }
 
 /**
@@ -256,14 +265,14 @@ function giveOwnCommand(s: GameState, unit: Unit, command: Command): void {
  * propia (destacada) y al cumplirla vuelve a la de su escuadra. Con "capturar", las que no pueden
  * capturar van de escolta. Devuelve cuantas la han recibido.
  */
-export function giveCommand(s: GameState, units: readonly Unit[], kind: CommandKind, at: Pos): number {
+export function giveStandingOrder(s: GameState, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
   const mine = playerUnits(units);
-  const command: Command = { kind, at: { x: at.x, y: at.y } };
+  const standingOrder: StandingOrder = { kind, at: { x: at.x, y: at.y } };
   const whole = wholeSquads(s, mine);
-  for (const id of whole) squadById(s, id)!.command = { ...command, at: { ...command.at } };
+  for (const id of whole) squadById(s, id)!.standingOrder = { ...standingOrder, at: { ...standingOrder.at } };
   for (const unit of mine) {
-    if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.command;
-    else giveOwnCommand(s, unit, command);
+    if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
+    else giveOwnStandingOrder(s, unit, standingOrder);
     delete unit.order;
   }
   return mine.length;
@@ -274,23 +283,23 @@ export function giveCommand(s: GameState, units: readonly Unit[], kind: CommandK
  * Una destacada vuelve a la orden de su escuadra; una que seguia a su escuadra se queda guardando
  * donde esta (defender aqui), que es "parar" sin sacarla de la escuadra.
  */
-export function cancelCommand(s: GameState, units: readonly Unit[]): void {
+export function cancelStandingOrder(s: GameState, units: readonly Unit[]): void {
   const whole = wholeSquads(s, units);
-  for (const id of whole) delete squadById(s, id)!.command;
+  for (const id of whole) delete squadById(s, id)!.standingOrder;
   for (const unit of units) {
-    if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.command;
-    else if (unit.command) delete unit.command;
-    else if (effectiveCommand(s, unit)) unit.command = { kind: 'defend', at: { x: unit.x, y: unit.y } };
+    if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
+    else if (unit.standingOrder) delete unit.standingOrder;
+    else if (effectiveStandingOrder(s, unit)) unit.standingOrder = { kind: 'defend', at: { x: unit.x, y: unit.y } };
   }
 }
 
 /** La orden de la escuadra ya esta cumplida: edificio tomado, o todas las que la siguen han llegado. */
-function squadCommandDone(s: GameState, squad: Squad, command: Command): boolean {
-  if (command.kind === 'capture') {
-    const building = buildingAt(s, command.at);
+function squadOrderDone(s: GameState, squad: Squad, standingOrder: StandingOrder): boolean {
+  if (standingOrder.kind === 'capture') {
+    const building = buildingAt(s, standingOrder.at);
     return !building || isPlayer(building.owner);
   }
-  return followers(s, squad).every((unit) => !isAlive(unit) || atCommand(s, unit));
+  return followers(s, squad).every((unit) => !isAlive(unit) || atStandingOrder(s, unit));
 }
 
 /**
@@ -298,14 +307,14 @@ function squadCommandDone(s: GameState, squad: Squad, command: Command): boolean
  * escuadra). Si era la de la escuadra, se quita cuando ya esta cumplida para la escuadra: al
  * capturar el edificio, o al atacar cuando han llegado todas las que la siguen.
  */
-export function finishCommand(s: GameState, unit: Unit): void {
-  if (unit.command) {
-    delete unit.command;
+export function finishStandingOrder(s: GameState, unit: Unit): void {
+  if (unit.standingOrder) {
+    delete unit.standingOrder;
     return;
   }
   const squad = squadById(s, unit.squad);
-  if (!squad?.command) return;
-  if (squadCommandDone(s, squad, squad.command)) delete squad.command;
+  if (!squad?.standingOrder) return;
+  if (squadOrderDone(s, squad, squad.standingOrder)) delete squad.standingOrder;
 }
 
 /**
@@ -315,16 +324,16 @@ export function finishCommand(s: GameState, unit: Unit): void {
  */
 export function keepCapturing(s: GameState, unit: Unit): void {
   const building = buildingAt(s, unit);
-  const command = effectiveCommand(s, unit);
-  if (!isPlayer(unit.team) || !building || isPlayer(building.owner) || !command) return;
-  if (command.kind === 'capture' && samePos(command.at, unit)) return;
-  unit.command = { kind: 'capture', at: { x: unit.x, y: unit.y } };
+  const standingOrder = effectiveStandingOrder(s, unit);
+  if (!isPlayer(unit.team) || !building || isPlayer(building.owner) || !standingOrder) return;
+  if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return;
+  unit.standingOrder = { kind: 'capture', at: { x: unit.x, y: unit.y } };
 }
 
 /** Ya ha llegado a la zona de su orden (a 1 casilla o menos). */
-export function atCommand(s: GameState, unit: Unit): boolean {
-  const command = effectiveCommand(s, unit);
-  return !!command && manhattan(unit, command.at) <= 1;
+export function atStandingOrder(s: GameState, unit: Unit): boolean {
+  const standingOrder = effectiveStandingOrder(s, unit);
+  return !!standingOrder && manhattan(unit, standingOrder.at) <= 1;
 }
 
 /**
@@ -333,10 +342,10 @@ export function atCommand(s: GameState, unit: Unit): boolean {
  */
 export function sameFormation(s: GameState, a: Unit, b: Unit): boolean {
   if (a.squad === undefined || a.squad !== b.squad || a.team !== b.team) return false;
-  const commandA = effectiveCommand(s, a);
-  const commandB = effectiveCommand(s, b);
+  const commandA = effectiveStandingOrder(s, a);
+  const commandB = effectiveStandingOrder(s, b);
   if (!commandA || !commandB) return false;
-  const holds = (command: Command) => command.kind === 'defend';
+  const holds = (standingOrder: StandingOrder) => standingOrder.kind === 'defend';
   return holds(commandA) === holds(commandB) && samePos(commandA.at, commandB.at);
 }
 

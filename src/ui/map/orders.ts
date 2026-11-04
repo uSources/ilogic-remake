@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { hasImage } from '../../atlas';
-import type { CommandKind, Pos } from '../../core/model';
+import type { StandingOrderKind, Pos } from '../../core/model';
 import { TILE } from '../../layout';
 import { PAL, PAL_MAP } from '../palette';
 import { cornerBrackets, fillRects } from '../pixelDraw';
@@ -8,7 +8,7 @@ import { tileCenter } from './geometry';
 import type { OverlayPainter } from './layer';
 
 /** Color de la bandera de cada orden en su casilla de destino. */
-const COMMAND_FLAG: Record<CommandKind, number> = { attack: PAL.red, capture: PAL.gold, defend: PAL_MAP.mint };
+const COMMAND_FLAG: Record<StandingOrderKind, number> = { attack: PAL.red, capture: PAL.gold, defend: PAL_MAP.mint };
 /** Linea de una orden: un punto de 3x3 cada ORDER_DOT_STEP pixeles. */
 const ORDER_DOT_STEP = 8;
 

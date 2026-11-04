@@ -2,7 +2,7 @@
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
 import { UNIT } from '../data';
-import { effectiveCommand } from '../squads';
+import { effectiveStandingOrder } from '../squads';
 import { canFight, isCapturer, isPlayer } from '../util/predicates';
 import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
@@ -53,7 +53,7 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     cmdCapture: isMine && isCapturer(unit),
     cmdDefend: isMine && canFight(unit),
     // Orden propia o de su escuadra.
-    cmdCancel: !!effectiveCommand(s, unit),
+    cmdCancel: !!effectiveStandingOrder(s, unit),
     delete: true,
   };
 }

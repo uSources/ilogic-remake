@@ -1,4 +1,4 @@
-import type { CommandKind, Pos } from '../../core/model';
+import type { StandingOrderKind, Pos } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group' | 'squad';
@@ -22,7 +22,7 @@ export interface ViewOptions {
    * Ordenes de varios turnos: linea de puntos hasta el destino y banderita. [CAMBIO] Las ordenes con
    * destino llevan su tipo (color de la bandera) y la linea solo si `line` (unidad o escuadra señalada).
    */
-  orders?: { from: Pos; to: Pos; kind?: CommandKind; line?: boolean }[];
+  orders?: { from: Pos; to: Pos; kind?: StandingOrderKind; line?: boolean }[];
   /** [CAMBIO] Lo que hara cada unidad con orden al terminar el turno: camino, objetivo y captura. */
   intents?: { path: Pos[]; attack?: Pos; capture?: Pos }[];
   /** Mision: casilla de destino (marco dorado) y unidad a escoltar (flecha encima). */

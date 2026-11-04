@@ -14,7 +14,7 @@
  */
 import { UNIT } from '../core/data';
 import { buildingAt } from '../core/rules';
-import { commandChoices, effectiveCommand, squadUnits } from '../core/squads';
+import { standingOrderChoices, effectiveStandingOrder, squadUnits } from '../core/squads';
 import type { GameState, Pos, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
@@ -101,7 +101,7 @@ const isWholeSquad = (ctx: ActionCtx) => exactSquad(ctx.s, ctx.units) !== null;
 
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
 function canOrder(ctx: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
-  if (ctx.at) return commandChoices(ctx.s, ctx.at, ctx.units, ctx.enemyHere).includes(kind);
+  if (ctx.at) return standingOrderChoices(ctx.s, ctx.at, ctx.units, ctx.enemyHere).includes(kind);
   return kind === 'capture' ? anyCanCapture(ctx.units) : anyCanFight(ctx.units);
 }
 
@@ -143,7 +143,7 @@ export const ACTIONS: readonly ActionDef[] = [
     id: 'cmdCancel',
     label: 'cmdCancel',
     cursor: 'default',
-    ok: (ctx) => ctx.units.some((unit) => !!effectiveCommand(ctx.s, unit)),
+    ok: (ctx) => ctx.units.some((unit) => !!effectiveStandingOrder(ctx.s, unit)),
   }),
   inMenu({ id: 'squadForm', label: 'squadForm', cursor: 'default', ok: (ctx) => ctx.units.length > 1 && !isWholeSquad(ctx) }),
   inMenu({

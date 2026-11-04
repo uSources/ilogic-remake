@@ -18,7 +18,7 @@ import {
 import { terrainAt } from '../../core/mapGrid';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
-import { effectiveCommand, isDetached, squadById } from '../../core/squads';
+import { effectiveStandingOrder, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
 import { buildingLabel, t, terrainLabel, unitLabel } from '../../settings';
 import { buildingKey, terrainKey, unitKey } from '../sprites';
@@ -147,7 +147,7 @@ export function tileVM(
       abilities: abilitiesVM(s, T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(shown.team === 0 && effectiveCommand(s, shown) ? { order: commandLabel(effectiveCommand(s, shown)!.kind) } : {}),
+      ...(shown.team === 0 && effectiveStandingOrder(s, shown) ? { order: commandLabel(effectiveStandingOrder(s, shown)!.kind) } : {}),
       ...(shown.team === 0 && isDetached(s, shown) ? { detached: true } : {}),
       ...(shown.team === 0 && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
     };

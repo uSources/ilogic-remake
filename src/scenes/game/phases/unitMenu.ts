@@ -17,8 +17,8 @@ import {
   unloadTiles,
   wait,
 } from '../../../core/rules';
-import { cancelCommand, keepCapturing } from '../../../core/squads';
-import type { CommandKind, Unit } from '../../../core/model';
+import { cancelStandingOrder, keepCapturing } from '../../../core/squads';
+import type { StandingOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, unitLabel, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
@@ -53,7 +53,7 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (h: PhaseHost, unit: 
   cmdCapture: (h, unit) => startOrder(h, unit, 'capture'),
   cmdDefend: (h, unit) => startOrder(h, unit, 'defend'),
   cmdCancel: (h, unit) => {
-    cancelCommand(h.state, [unit]);
+    cancelStandingOrder(h.state, [unit]);
     showToast(t('orderCancelled'));
     h.enter('unitMenu');
   },
@@ -62,7 +62,7 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (h: PhaseHost, unit: 
 };
 
 /** La orden pide despues la casilla; lo ya movido este turno se mantiene. */
-function startOrder(h: PhaseHost, unit: Unit, kind: CommandKind): void {
+function startOrder(h: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
   h.orders.start(kind, [unit], true);
 }
 

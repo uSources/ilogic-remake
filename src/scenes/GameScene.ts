@@ -5,7 +5,7 @@
  * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
-import { effectiveCommand, renameSquad } from '../core/squads';
+import { effectiveStandingOrder, renameSquad } from '../core/squads';
 import { HQ } from '../core/data';
 import { samePos } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
@@ -111,7 +111,7 @@ export class GameScene extends Phaser.Scene {
   private intents = false;
   /** Unidad cuyo alcance se esta mostrando (Enter o clic derecho sobre ella). */
   private inspectUid: number | null = null;
-  /** Prevision de las ordenes (previewCommands), recalculada solo si cambia la partida. */
+  /** Prevision de las ordenes (previewStandingOrders), recalculada solo si cambia la partida. */
   private preview = new CommandPreview();
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
   /** Casilla junto a la que va cada bocadillo (para recolocarlos al mover la camara sin rehacerlos). */
@@ -682,7 +682,7 @@ export class GameScene extends Phaser.Scene {
 
   /** La orden que cumple la unidad (la suya o la de su escuadra). */
   private commandOf(unit: Unit) {
-    return effectiveCommand(this.s, unit);
+    return effectiveStandingOrder(this.s, unit);
   }
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
@@ -807,8 +807,8 @@ export class GameScene extends Phaser.Scene {
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): ViewOptions['intents'] {
     if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
-    const withCommand = this.s.units.filter((unit) => isPlayer(unit) && this.commandOf(unit) && unit.active && unit.carrier === null);
-    const shown = withCommand.filter((unit) => this.intents || this.showsOrderLine(unit));
+    const withStandingOrder = this.s.units.filter((unit) => isPlayer(unit) && this.commandOf(unit) && unit.active && unit.carrier === null);
+    const shown = withStandingOrder.filter((unit) => this.intents || this.showsOrderLine(unit));
     if (!shown.length) return [];
     return intentLines(shown, this.preview.get(this.s), this.vis);
   }

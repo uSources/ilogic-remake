@@ -7,7 +7,7 @@
 import { AI, UNIT, Movement } from '../data';
 import { manhattan } from '../geom';
 import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
-import { effectiveCommand, sameFormation } from '../squads';
+import { effectiveStandingOrder, sameFormation } from '../squads';
 import type { GameState, Pos, Unit } from '../model';
 import { compareKeys, maxBy, minBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
@@ -16,7 +16,7 @@ import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } fro
 const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, Movement.of(unit.type));
 
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega). */
-const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, effectiveCommand(s, unit)!.at).at(unit);
+const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, effectiveStandingOrder(s, unit)!.at).at(unit);
 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
 function formationMates(s: GameState, unit: Unit): Unit[] {
@@ -29,7 +29,7 @@ function formationMates(s: GameState, unit: Unit): Unit[] {
  * Orden de juego de las unidades con orden: las de una misma formacion juntas, primero las mas
  * retrasadas y, a igualdad, las mas lentas; las demas, en su orden de siempre.
  */
-export function commandOrder(s: GameState, units: readonly Unit[]): Unit[] {
+export function standingOrderPlayOrder(s: GameState, units: readonly Unit[]): Unit[] {
   const ordered: Unit[] = [];
   const placed = new Set<Unit>();
   for (const unit of units) {
@@ -78,11 +78,11 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
 
 /** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
 export function formation(s: GameState, ai: AiCtx, unit: Unit): Formation | null {
-  const command = effectiveCommand(s, unit);
-  if (!command || needsRepair(unit)) return null;
+  const standingOrder = effectiveStandingOrder(s, unit);
+  if (!standingOrder || needsRepair(unit)) return null;
   const mates = matesProgress(s, unit);
   if (!mates.length) return null;
-  const remaining = remainingMap(s, unit, command.at);
+  const remaining = remainingMap(s, unit, standingOrder.at);
   const mine = remaining.at(unit);
   if (mine === Infinity) return null; // no llega por tierra: como siempre
   const rearAfterThisTurn = maxBy(mates, (mate) => mate.afterThisTurn)!;
@@ -111,7 +111,7 @@ function formationMove(unit: Unit, range: MoveRange, f: Formation): Pos | null {
 }
 
 /** Hacia el destino de su orden: en formacion si va con su escuadra, si no como siempre. */
-export function commandStep(s: GameState, ai: AiCtx, unit: Unit, at: Pos, range: MoveRange, f: Formation | null): Pos | null {
+export function standingOrderStep(s: GameState, ai: AiCtx, unit: Unit, at: Pos, range: MoveRange, f: Formation | null): Pos | null {
   return f ? formationMove(unit, range, f) : bestMoveToward(s, ai, unit, at, range);
 }
 

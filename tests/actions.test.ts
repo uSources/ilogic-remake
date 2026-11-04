@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
 import { HQ } from '@core/data';
 import { newUnit } from '@core/rules';
-import { formSquad, giveCommand } from '@core/squads';
+import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
@@ -49,7 +49,7 @@ describe('acciones con un grupo', () => {
     expect(ids(ctx(6, 6))).toEqual(['capture', 'cmdAttack', 'cmdCapture', 'cmdDefend', 'squadForm']);
     formSquad(s, units);
     expect(ids(ctx(9, 3))).toEqual(['move', 'cmdAttack', 'cmdDefend', 'squadRename', 'squadDisband']);
-    giveCommand(s, units, 'defend', { x: 9, y: 3 });
+    giveStandingOrder(s, units, 'defend', { x: 9, y: 3 });
     expect(ids(ctx(9, 3))).toContain('cmdCancel');
   });
 

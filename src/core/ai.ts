@@ -17,7 +17,7 @@
  * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
  * | `production` | que fabrica |
  * | `formation` | escuadras que avanzan juntas |
- * | `commands` | ordenes con destino del jugador y su prevision |
+ * | `standingOrders` | ordenes permanentes del jugador (con destino) y su prevision |
  *
  * Fuera de aqui se importa de este fichero (lo publico de `ai/` se reexporta abajo).
  */
@@ -30,8 +30,8 @@ import { planFire } from './ai/fire';
 import { produce } from './ai/production';
 import { unitTurn } from './ai/unitTurn';
 
-export { assistTurn, commandNow, commandTurn, previewCommands, type CommandIntent } from './ai/commands';
-export { commandOrder } from './ai/formation';
+export { assistTurn, startStandingOrder, standingOrderTurn, previewStandingOrders, type StandingOrderIntent } from './ai/standingOrders';
+export { standingOrderPlayOrder } from './ai/formation';
 export type { AiCtx } from './ai/context';
 
 /** Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound). */

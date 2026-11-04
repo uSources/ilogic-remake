@@ -1,7 +1,7 @@
 import type { Building, ControlPoint } from './building';
 import type { GeneralState } from './general';
 import type { Objective } from './objective';
-import type { Squad } from './orders';
+import type { Squad } from './squad';
 import type { RulesConfig } from './rules';
 import type { GameStats } from './stats';
 import type { Unit } from './unit';

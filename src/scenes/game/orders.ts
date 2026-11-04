@@ -6,12 +6,12 @@
  * derecho.
  */
 import type Phaser from 'phaser';
-import { commandNow, commandOrder } from '../../core/ai';
+import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
 import { Movement, UNIT } from '../../core/data';
 import { isOnBoard } from '../../core/mapGrid';
 import { canWalk, unitAt, unitById, wait } from '../../core/rules';
-import { cancelCommand, commandBlock, giveCommand, pruneSquads } from '../../core/squads';
-import type { CommandKind, GameEvent, GameState, Pos, Unit } from '../../core/model';
+import { cancelStandingOrder, standingOrderBlock, giveStandingOrder, pruneSquads } from '../../core/squads';
+import type { StandingOrderKind, GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
@@ -27,7 +27,7 @@ export type OrderFrom = 'move' | 'unitMenu' | 'map';
 
 /** Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
 export interface Ordering {
-  kind: CommandKind;
+  kind: StandingOrderKind;
   uids: number[];
   /** Una unidad desde su menu: su movimiento de este turno, si lo hay, se mantiene. */
   single: boolean;
@@ -140,7 +140,7 @@ export class Orders {
 
   private cancelOrdersOf(units: Unit[]): void {
     const h = this.h;
-    cancelCommand(h.state, units);
+    cancelStandingOrder(h.state, units);
     showToast(t('orderCancelled'));
     if (h.phase === 'groupMenu') h.toMap();
     h.refresh();
@@ -150,7 +150,7 @@ export class Orders {
    * Empieza a dar una orden a estas unidades: ahora se elige la casilla en el mapa (fase 'target').
    * `single` = una unidad desde su menu (su movimiento de este turno, si lo hay, se mantiene).
    */
-  start(kind: CommandKind, units: Unit[], single: boolean): void {
+  start(kind: StandingOrderKind, units: Unit[], single: boolean): void {
     const h = this.h;
     if (!units.length) return h.toMap();
     this.ordering = { kind, uids: uidsOf(units), single };
@@ -161,7 +161,7 @@ export class Orders {
 
   /**
    * [CAMBIO] Menu de ordenes en una casilla (sin pasar por el menu de la unidad): solo las que tienen
-   * sentido ahi (commandChoices). false si no hay unidad ni grupo elegido: el gesto hace lo de siempre.
+   * sentido ahi (standingOrderChoices). false si no hay unidad ni grupo elegido: el gesto hace lo de siempre.
    */
   openMenu(at: Pos): boolean {
     const h = this.h;
@@ -242,10 +242,10 @@ export class Orders {
   }
 
   /** Orden sin gastar el turno: se cumple al terminarlo. */
-  private queue(kind: CommandKind, units: Unit[], at: Pos, moving: Unit | null): void {
+  private queue(kind: StandingOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
     const h = this.h;
-    if (commandBlock(h.state, kind, at, units)) return;
-    giveCommand(h.state, units, kind, at);
+    if (standingOrderBlock(h.state, kind, at, units)) return;
+    giveStandingOrder(h.state, units, kind, at);
     showToast(`${commandLabel(kind)} · ${units.length}`);
     if (moving) h.toMap();
     h.refresh();
@@ -264,10 +264,10 @@ export class Orders {
     const ordering = this.ordering;
     if (!ordering) return h.toMap();
     const units = ordering.uids.map((uid) => unitById(s, uid)).filter((unit): unit is Unit => !!unit);
-    const block = commandBlock(s, ordering.kind, at, units);
+    const block = standingOrderBlock(s, ordering.kind, at, units);
     if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
     this.ordering = null;
-    giveCommand(s, units, ordering.kind, at);
+    giveStandingOrder(s, units, ordering.kind, at);
     if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);
     h.clearUndo();
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
@@ -298,8 +298,8 @@ export class Orders {
     h.phase = 'busy';
     h.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
-    for (const unit of commandOrder(h.state, units)) {
-      for (const event of commandNow(h.state, unit.uid, Math.random)) {
+    for (const unit of standingOrderPlayOrder(h.state, units)) {
+      for (const event of startStandingOrder(h.state, unit.uid, Math.random)) {
         await h.play([event]);
         if (match !== h.match || h.checkEnd()) return;
       }

@@ -218,7 +218,7 @@ export class UnitMoves {
   /** Orden de varios turnos: la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
   async giveOrder(unit: Unit, goal: Pos): Promise<void> {
     const h = this.h;
-    delete unit.command;
+    delete unit.standingOrder;
     const range = this.session?.range ?? moveRange(h.state, unit);
     const dest = stepToward(h.state, unit, goal, range);
     if (!dest) {

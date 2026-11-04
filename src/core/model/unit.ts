@@ -1,5 +1,5 @@
 import type { Pos } from './geometry';
-import type { Command } from './orders';
+import type { StandingOrder } from './standingOrder';
 import type { Team } from './team';
 
 export interface Unit {
@@ -26,7 +26,7 @@ export interface Unit {
    * [CAMBIO] Orden con destino propia (atacar, capturar o defender aqui): la cumple sola al terminar
    * cada turno si sigue sin usar. En una escuadra manda sobre la orden de la escuadra (destacada).
    */
-  command?: Command;
+  standingOrder?: StandingOrder;
   /** [CAMBIO] Escuadra a la que pertenece (id de GameState.squads). */
   squad?: number;
   /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */

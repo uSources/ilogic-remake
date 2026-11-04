@@ -62,10 +62,10 @@ mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclo
 `src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
 (prioridades de cada unidad), `production` (que fabrica), `formation` (escuadras que avanzan juntas)
-y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
+y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
 
 - **Sin estado global en la IA**: el bando que juega, el modo grupo y el plan de fuego van en un
-  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `commandNow`) y se pasa a cada
+  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `startStandingOrder`) y se pasa a cada
   paso. Dos turnos, o una prevision en medio de uno, no se mezclan (lo necesitara un PvP o un
   servidor con varias partidas).
 - **Puntos de extension**:
@@ -78,8 +78,8 @@ y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `ai
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`), en su sitio de la lista; `run` devuelve si ha usado la
     unidad y suele llamar a un paso de `ai/tactics.ts`;
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
-    (`ai/scoring.ts`); un tipo de orden del jugador, una entrada en `COMMAND_TURNS`
-    (`ai/commands.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
+    (`ai/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
+    `STANDING_ORDER_TURNS` (`ai/standingOrders.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
 - La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
   IA entra solo en la referencia.
 

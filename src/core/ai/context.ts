@@ -12,7 +12,7 @@ import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
 /**
- * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, commandNow) y se pasa a cada
+ * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
  * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan.
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).
  */
@@ -21,7 +21,7 @@ export interface AiCtx {
   readonly me: Team;
   /**
    * [CAMBIO] Juego en grupo: solo en el turno de la IA enemiga (aiTurn). Las ordenes del jugador
-   * (commandTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
+   * (standingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
    */
   group: boolean;
   /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */

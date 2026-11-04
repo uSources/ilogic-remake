@@ -9,8 +9,8 @@ import { missionById, missionRules } from './missions';
 import { mapGrid } from './mapGrid';
 import { isInside, type GridSize } from './util/grid';
 import { sanitizeStats } from './stats';
-import { assignKeys, liftCommand } from './squads';
-import type { GameState, Pos, RulesConfig, Unit } from './model';
+import { assignKeys, liftStandingOrder } from './squads';
+import type { GameState, Pos, RulesConfig, StandingOrder, Unit } from './model';
 
 const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
 
@@ -26,9 +26,17 @@ const MAX_UID = Number.MAX_SAFE_INTEGER;
 /** Una casilla bien formada y dentro del mapa de la partida que se lee. */
 const isMapPos = (size: GridSize, p: unknown): boolean =>
   !!p && isInt((p as Pos).x, 0, 1e6) && isInt((p as Pos).y, 0, 1e6) && isInside(size, p as Pos);
-/** Una orden con destino bien formada (Unit.command o Squad.command). */
-const isCommand = (size: GridSize, c: unknown): boolean =>
+/** Una orden con destino bien formada (Unit.standingOrder o Squad.standingOrder). */
+const isStandingOrder = (size: GridSize, c: unknown): boolean =>
   !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos(size, (c as { at: unknown }).at);
+
+/** [CAMBIO] Partidas guardadas antes de llamarla "orden permanente": la orden iba en `command`. */
+function renameLegacyOrder(holder: { standingOrder?: StandingOrder }): void {
+  const legacy = holder as { command?: StandingOrder };
+  if (legacy.command === undefined) return;
+  holder.standingOrder ??= legacy.command;
+  delete legacy.command;
+}
 
 export function serialize(s: GameState): string {
   return JSON.stringify(s);
@@ -107,7 +115,8 @@ function cleanUnit(s: GameState, unit: Unit): void {
   unit.canFire = !!unit.canFire;
   if (unit.kills !== undefined && !isInt(unit.kills, 0, MAX_COUNT)) delete unit.kills;
   if (unit.hitDay !== undefined && !isInt(unit.hitDay, 0, MAX_COUNT)) delete unit.hitDay;
-  if (unit.command !== undefined && !isCommand(mapGrid(s), unit.command)) delete unit.command;
+  renameLegacyOrder(unit);
+  if (unit.standingOrder !== undefined && !isStandingOrder(mapGrid(s), unit.standingOrder)) delete unit.standingOrder;
   if (unit.squad !== undefined && !isInt(unit.squad, 1, MAX_COUNT)) delete unit.squad;
   if (unit.order !== undefined && !isMapPos(mapGrid(s), unit.order)) delete unit.order;
 }
@@ -177,13 +186,14 @@ function cleanSquads(s: GameState): void {
     if (!Array.isArray(s.squads) || !s.squads.every(isValidSquad)) delete s.squads;
     for (const squad of s.squads ?? []) {
       // [CAMBIO] Orden y tecla de la escuadra: si estan rotas, se quitan (la escuadra sigue).
-      if (squad.command !== undefined && !isCommand(mapGrid(s), squad.command)) delete squad.command;
+      renameLegacyOrder(squad);
+      if (squad.standingOrder !== undefined && !isStandingOrder(mapGrid(s), squad.standingOrder)) delete squad.standingOrder;
       if (squad.key !== undefined && !isInt(squad.key, 1, 9)) delete squad.key;
     }
   }
   for (const unit of s.units) if (unit.squad !== undefined && !s.squads?.some((squad) => squad.id === unit.squad)) delete unit.squad;
   // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
-  for (const squad of s.squads ?? []) if (!squad.command) liftCommand(s, squad);
+  for (const squad of s.squads ?? []) if (!squad.standingOrder) liftStandingOrder(s, squad);
   dropRepeatedKeys(s);
   assignKeys(s);
 }

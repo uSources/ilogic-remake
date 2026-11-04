@@ -15,7 +15,7 @@ import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
-import { formSquad, giveCommand } from '@core/squads';
+import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState, RulesConfig, Team } from '@core/model';
 
 const MAX_DAYS = 30;
@@ -55,7 +55,7 @@ function orderPlayerSquad(s: GameState): void {
   if (!target) return;
   const squadUnits = s.units.filter((u) => u.team === 0 && u.squad === undefined).slice(0, 3);
   if (squadUnits.length < 2 || !formSquad(s, squadUnits)) return;
-  giveCommand(s, squadUnits, 'attack', target);
+  giveStandingOrder(s, squadUnits, 'attack', target);
 }
 
 function playScenario(scenario: Scenario): string {

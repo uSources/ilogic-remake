@@ -3,9 +3,9 @@
  * (lineas y banderas), lo que hara cada unidad con orden, puntos de control y la escolta de una
  * mision. Funciones puras: la escena las junta en las ViewOptions de MapView.render.
  */
-import type { CommandIntent } from '../../core/ai';
+import type { StandingOrderIntent } from '../../core/ai';
 import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
-import { effectiveCommand } from '../../core/squads';
+import { effectiveStandingOrder } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { ViewOptions } from '../../ui/mapView';
@@ -33,14 +33,18 @@ export function orderMarks(s: GameState, showsLine: (unit: Unit) => boolean): Ov
     .filter((unit) => isPlayer(unit) && unit.order && onMap(unit))
     .map((unit) => ({ from: { x: unit.x, y: unit.y }, to: unit.order! }));
   const withTarget = s.units.flatMap((unit) => {
-    const command = isPlayer(unit) && onMap(unit) ? effectiveCommand(s, unit) : undefined;
+    const command = isPlayer(unit) && onMap(unit) ? effectiveStandingOrder(s, unit) : undefined;
     return command ? [{ from: { x: unit.x, y: unit.y }, to: command.at, kind: command.kind, line: showsLine(unit) }] : [];
   });
   return [...multiTurn, ...withTarget];
 }
 
 /** Lo que hara al terminar el turno cada una de estas unidades con orden (si se mueve, ataca o captura). */
-export function intentLines(shown: readonly Unit[], preview: ReadonlyMap<number, CommandIntent>, vis: Grid<boolean>): Overlay<'intents'> {
+export function intentLines(
+  shown: readonly Unit[],
+  preview: ReadonlyMap<number, StandingOrderIntent>,
+  vis: Grid<boolean>,
+): Overlay<'intents'> {
   return shown.flatMap((unit) => {
     const intent = preview.get(unit.uid);
     if (!intent) return [];
