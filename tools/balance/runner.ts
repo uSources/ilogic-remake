@@ -5,12 +5,13 @@
  */
 import { Worker } from 'node:worker_threads';
 import type { Content } from '@core/content';
+import type { DeepReadonly } from '@core/util/freeze';
 import type { DuelCell, DuelOptions } from './duel';
 import type { GameRecord, PlayOptions, Policy } from './play';
 import type { VariantSetup } from './variant';
 
 /** Lo que hace un hilo, con los ficheros de contenido de la variante. */
-export type WorkerJob = { files: Content } & (
+export type WorkerJob = { files: DeepReadonly<Content> } & (
   | { kind: 'games'; seeds: number[]; game: Omit<PlayOptions, 'seed' | 'rules' | 'content'> }
   | { kind: 'duels'; duel: Omit<DuelOptions, 'rules' | 'content'> }
 );

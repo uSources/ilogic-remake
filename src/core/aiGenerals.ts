@@ -11,14 +11,17 @@
  * tipo de efecto nuevo es una entrada en EFFECT_VALUES.
  */
 import { tablesOf, weightsOf } from './gameContent';
-import type { GeneralEffect } from './content';
-
+import type { GeneralEffect as GeneralEffectDef } from './content';
+import type { DeepReadonly } from './util/freeze';
 import { applies, chargeStars, generalOf, useAbility } from './generals';
 import { posKey, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
 import type { GameEvent, GameState, Pos, Team } from './model';
 import { maxBy } from './util/pick';
+
+/** Un efecto de general tal como esta en el contenido (de solo lectura). */
+type GeneralEffect = DeepReadonly<GeneralEffectDef>;
 
 export interface AbilityChoice {
   ability: string;

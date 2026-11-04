@@ -10,7 +10,7 @@
  * El ORDEN de las listas de unidades y edificios es el numero de tipo que guardan las partidas: las
  * nuevas van siempre al final, nunca en medio, y no se borran.
  */
-import { deepFreeze } from '../util/freeze';
+import { deepFreeze, mutableCopy, type DeepReadonly } from '../util/freeze';
 import aiFile from './ai.json';
 import buildingsFile from './buildings.json';
 import generalsFile from './generals.json';
@@ -75,7 +75,7 @@ export function validateContent(c: Content): string[] {
  * Cada partida lleva el suyo (ver core/gameContent.ts).
  */
 export interface GameContent {
-  readonly files: Content;
+  readonly files: DeepReadonly<Content>;
   readonly tables: ContentTables;
 }
 
@@ -86,8 +86,10 @@ declare module '../model/state' {
 }
 
 /** Lee, valida y convierte el contenido (congelado). Si algo esta mal, lanza un error que dice que. */
-export function loadContent(c: Content): GameContent {
-  const errs = validateContent(c);
+export function loadContent(source: DeepReadonly<Content>): GameContent {
+  // Una copia propia: quien la da puede seguir cambiando la suya.
+  const files = mutableCopy<Content>(source);
+  const errs = validateContent(files);
   if (errs.length) throw new Error(`Contenido del juego no valido (src/core/content):\n- ${errs.join('\n- ')}`);
-  return deepFreeze({ files: structuredClone(c), tables: buildTables(c) });
+  return deepFreeze({ files, tables: buildTables(files) });
 }

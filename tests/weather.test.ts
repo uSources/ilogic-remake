@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { validateContent, THEME_NAMES } from '@core/content';
+import { validateContent, THEME_NAMES, type Content } from '@core/content';
+import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
 import { CLEAR, advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
@@ -32,19 +33,19 @@ function withWeather(k: number): GameState {
 
 describe('clima: contenido', () => {
   it('weather.json es valido y el primero es el despejado', () => {
-    expect(validateContent(defaultContent().files)).toEqual([]);
+    expect(validateContent(mutableCopy<Content>(defaultContent().files))).toEqual([]);
     expect(WEATHER.ids[CLEAR]).toBe('Clear');
     for (const id of ['Rain', 'Snow', 'Storm', 'Sandstorm']) expect(kind(id)).toBeGreaterThan(0);
   });
 
   it('dice que esta mal si el primer clima no es neutro', () => {
-    const bad = structuredClone(defaultContent().files);
+    const bad = mutableCopy<Content>(defaultContent().files);
     bad.weather[0]!.vision = -1;
     expect(validateContent(bad).join()).toMatch(/primer clima es el neutro/);
   });
 
   it('dice que esta mal un tipo de movimiento que no existe', () => {
-    const bad = structuredClone(defaultContent().files);
+    const bad = mutableCopy<Content>(defaultContent().files);
     (bad.weather[1]!.move as Record<string, number>).boat = -1;
     expect(validateContent(bad).join()).toMatch(/move nombra el movimiento "boat"/);
   });

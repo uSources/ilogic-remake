@@ -3,6 +3,7 @@
  * construyen con ellos (`buildTables`, `ContentTables`). Lo usan index.ts (cargar el contenido) y
  * movement.ts; aparte para que no dependan uno del otro.
  */
+import type { DeepReadonly } from '../util/freeze';
 import { buildAiWeights } from './ai';
 import { buildBuildingTables } from './buildings';
 import type { GeneralDef } from './generals';
@@ -23,7 +24,7 @@ export interface Content {
   generals: GeneralDef[];
 }
 
-/** Tablas que usan las reglas. El contenido tiene que estar validado. */
+/** Tablas que usan las reglas (recien construidas: luego se congelan). El contenido tiene que estar validado. */
 export function buildTables(c: Content) {
   const ctx: ContentContext = {
     unitIds: new Set(c.units.map((u) => u.id)),
@@ -45,5 +46,5 @@ export function buildTables(c: Content) {
   };
 }
 
-/** Las tablas que usan las reglas, construidas a partir de los ficheros. */
-export type ContentTables = ReturnType<typeof buildTables>;
+/** Las tablas que usan las reglas, construidas a partir de los ficheros, de solo lectura (estan congeladas). */
+export type ContentTables = DeepReadonly<ReturnType<typeof buildTables>>;

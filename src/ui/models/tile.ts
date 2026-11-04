@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { abilitiesOf } from '../../core/abilities';
 import { MoveType, type AbilityDef } from '../../core/content';
+import type { DeepReadonly } from '../../core/util/freeze';
 import { tablesOf } from '../../core/gameContent';
 import {
   canMoveOn,
@@ -49,7 +50,7 @@ export function unitStatsText(s: GameState, type: number): string {
 const pct = (f: number): string => String(Math.round(f * 100));
 
 /** Nombre y explicacion de una habilidad, con sus numeros. */
-export function abilityVM(a: AbilityDef): AbilityVM {
+export function abilityVM(a: DeepReadonly<AbilityDef>): AbilityVM {
   switch (a.kind) {
     case 'guard':
       return { name: t('ability_guard'), desc: t('ability_guard_desc').replace('{n}', pct(1 - a.factor)) };

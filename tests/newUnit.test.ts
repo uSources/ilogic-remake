@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildTables, validateContent } from '@core/content';
+import { buildTables, validateContent, type Content } from '@core/content';
+import { mutableCopy } from '@core/util/freeze';
 import { defaultContent } from '@core/content/default';
 import { addUnitLike } from '../tools/content/newUnit';
 
 describe('npm run unit -- new', () => {
-  const { units, copied } = addUnitLike(defaultContent().files.units, 'Sniper', 'Soldier');
-  const content = { ...structuredClone(defaultContent().files), units };
+  const { units, copied } = addUnitLike(mutableCopy<Content>(defaultContent().files).units, 'Sniper', 'Soldier');
+  const content: Content = { ...mutableCopy<Content>(defaultContent().files), units };
   const T = buildTables(content);
   const sniper = T.UNIT_NAMES.indexOf('Sniper');
   const soldier = T.UNIT_NAMES.indexOf('Soldier');
@@ -34,7 +35,9 @@ describe('npm run unit -- new', () => {
   });
 
   it('explica los errores', () => {
-    expect(() => addUnitLike(defaultContent().files.units, 'Tank', 'Soldier')).toThrow('Ya hay una unidad "Tank"');
-    expect(() => addUnitLike(defaultContent().files.units, 'Sniper', 'Dragon')).toThrow('No hay ninguna unidad "Dragon"');
+    expect(() => addUnitLike(mutableCopy<Content>(defaultContent().files).units, 'Tank', 'Soldier')).toThrow('Ya hay una unidad "Tank"');
+    expect(() => addUnitLike(mutableCopy<Content>(defaultContent().files).units, 'Sniper', 'Dragon')).toThrow(
+      'No hay ninguna unidad "Dragon"',
+    );
   });
 });

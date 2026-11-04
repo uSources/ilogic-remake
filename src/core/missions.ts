@@ -145,8 +145,7 @@ export function checkMission(m: MissionDef, content: GameContent): string[] {
   ];
 }
 
-/** Las misiones de la campaña, congeladas: nadie las cambia mientras se juega. */
-export const MISSIONS: readonly MissionDef[] = deepFreeze([
+const MISSION_DEFS: MissionDef[] = [
   {
     id: 'tutorial',
     tutorial: true,
@@ -482,6 +481,9 @@ export const MISSIONS: readonly MissionDef[] = deepFreeze([
     funds: [8000, 14000],
     objective: { kind: 'hq' },
   },
-]);
+];
+deepFreeze(MISSION_DEFS);
+/** Las misiones de la campaña, congeladas: nadie las cambia mientras se juega. */
+export const MISSIONS: readonly MissionDef[] = MISSION_DEFS;
 
 export const missionById = (id: string): MissionDef | undefined => MISSIONS.find((mission) => mission.id === id);

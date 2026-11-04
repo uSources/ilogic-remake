@@ -28,6 +28,7 @@
  * `rulesWith(variante.content)`.
  */
 import { loadContent, MOVEMENTS, type Content, type GameContent } from '@core/content';
+import { mutableCopy } from '@core/util/freeze';
 
 export interface Variant {
   name: string;
@@ -176,7 +177,7 @@ function applySetting(files: Content, path: string, value: Value, changes: Varia
  * cambia.
  */
 export function buildVariant(variant: Variant, base: GameContent): VariantSetup {
-  const files = structuredClone(base.files);
+  const files = mutableCopy<Content>(base.files);
   const changes: VariantChange[] = [];
   for (const [path, value] of Object.entries(variant.set ?? {})) applySetting(files, path, value, changes);
   return { name: variant.name, content: loadContent(files), changes };

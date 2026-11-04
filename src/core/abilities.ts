@@ -13,7 +13,7 @@
  */
 import { tablesOf } from './gameContent';
 import { MOVEMENTS } from './content';
-import type { AbilityDef } from './content';
+import type { AbilityDef, ContentTables } from './content';
 import { manhattan, neighbors4 } from './geom';
 import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';
@@ -29,7 +29,7 @@ export function abilityOf<K extends AbilityDef['kind']>(s: GameState, type: numb
 }
 
 /** Habilidades de un tipo de unidad que cuentan con las reglas de la partida (para enseñarlas). */
-export function abilitiesOf(s: GameState, type: number): readonly AbilityDef[] {
+export function abilitiesOf(s: GameState, type: number): ContentTables['UNIT_ABILITIES'][number] {
   return s.rules.abilities ? (tablesOf(s).UNIT_ABILITIES[type] ?? []) : [];
 }
 

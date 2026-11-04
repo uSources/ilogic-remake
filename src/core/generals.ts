@@ -12,6 +12,7 @@
  * Este modulo no importa rules.ts (rules.ts lo importa a el).
  */
 import { tablesOf } from './gameContent';
+import type { DeepReadonly } from './util/freeze';
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
@@ -19,10 +20,11 @@ import { mapGrid } from './mapGrid';
 import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
-export const generalDef = (s: GameState, id: string): GeneralDef | undefined => s.content.files.generals.find((g) => g.id === id);
+export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined =>
+  s.content.files.generals.find((general) => general.id === id);
 
 /** General de un bando con sus datos (null si no tiene). */
-export function generalOf(s: GameState, team: Team): { state: GeneralState; def: GeneralDef } | null {
+export function generalOf(s: GameState, team: Team): { state: GeneralState; def: DeepReadonly<GeneralDef> } | null {
   const state = s.generals?.[team];
   const def = state ? generalDef(s, state.id) : undefined;
   return state && def ? { state, def } : null;
@@ -34,7 +36,7 @@ export function newGeneral(s: GameState, id: string | null | undefined): General
 }
 
 /** La unidad de tipo `type` entra en el filtro (sin filtro, todas). */
-export function applies(s: GameState, filter: UnitFilter, type: number): boolean {
+export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, type: number): boolean {
   if (filter.movement && !filter.movement.includes(MOVEMENTS[tablesOf(s).UNIT.movtype[type]!])) return false;
   if (filter.units && !filter.units.includes(tablesOf(s).UNIT_NAMES[type]!)) return false;
   return true;
@@ -91,7 +93,7 @@ export function abilityBlock(s: GameState, team: Team, abilityId: string, target
 }
 
 /** Radio del area de una habilidad (null si no es de area). */
-export function abilityArea(ability: GeneralAbilityDef): number | null {
+export function abilityArea(ability: DeepReadonly<GeneralAbilityDef>): number | null {
   return ability.effect.kind === 'areaDamage' ? ability.effect.radius : null;
 }
 
@@ -107,7 +109,7 @@ interface EffectContext<K extends GeneralEffect['kind']> {
   s: GameState;
   team: Team;
   general: GeneralState;
-  effect: Extract<GeneralEffect, { kind: K }>;
+  effect: Extract<DeepReadonly<GeneralEffect>, { kind: K }>;
   /** Casilla elegida (solo en las de area, que no se pueden usar sin ella: ver abilityBlock). */
   target: Pos | null | undefined;
   out: AbilityEffects;

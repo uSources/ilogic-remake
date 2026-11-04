@@ -63,6 +63,21 @@ describe('contenido de cada partida', () => {
     expect(cloneState(s).content).toBe(variant);
   });
 
+  it('el contenido es de solo lectura tambien en los tipos', () => {
+    const s = newMatch(defaultContent());
+    const write = () => {
+      // @ts-expect-error las tablas del contenido no se pueden cambiar
+      s.content.tables.UNIT.cost[0] = 1;
+    };
+    const rename = () => {
+      // @ts-expect-error ni los ficheros
+      s.content.files.units[0]!.name.es = 'otro';
+    };
+    // Y en marcha esta congelado: si se fuerza, lanza un error.
+    expect(write).toThrow(TypeError);
+    expect(rename).toThrow(TypeError);
+  });
+
   it('el contenido es un campo de la partida: sin el no compila, y serialize no lo escribe', () => {
     const s = newMatch(defaultContent());
     const saved = JSON.parse(serialize(s)) as SavedGameState;
