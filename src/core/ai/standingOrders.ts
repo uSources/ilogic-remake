@@ -21,7 +21,7 @@ import { captureHere, retreat, tryAttack } from './tactics';
  * (Unit.standingOrder) que siguen sin usar la cumplen. No toca las demas unidades ni compra nada.
  * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
-export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, number[]> {
+export function* assistTurn(s: GameState, rng: Rng, team: Team = 0): Generator<GameEvent, number[]> {
   const ai = aiCtx(team);
   const withStandingOrder = teamUnits(s, ai.me).filter((unit) => effectiveStandingOrder(s, unit));
   const fulfilled: number[] = [];
@@ -31,7 +31,7 @@ export function* assistTurn(s: GameState, rng: Rng = Math.random, team: Team = 0
 }
 
 /** [CAMBIO] La unidad del jugador empieza ya su orden recien dada (si aun no se ha movido). */
-export function* startStandingOrder(s: GameState, uid: number, rng: Rng = Math.random, team: Team = 0): Generator<GameEvent, boolean> {
+export function* startStandingOrder(s: GameState, uid: number, rng: Rng, team: Team = 0): Generator<GameEvent, boolean> {
   return yield* unitStandingOrderTurn(s, aiCtx(team), uid, rng);
 }
 
