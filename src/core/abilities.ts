@@ -14,6 +14,8 @@
 import { MOVEMENTS } from './content';
 import { RULES, UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
 import { grid, manhattan, neighbors4 } from './geom';
+import { cellAt, setCell } from './util/grid';
+import { isAlive, isEnemyOf, isOnMap } from './util/predicates';
 import type { GameState, Unit } from './types';
 
 type AbilityOf<K extends AbilityDef['kind']> = Extract<AbilityDef, { kind: K }>;
@@ -21,7 +23,7 @@ type AbilityOf<K extends AbilityDef['kind']> = Extract<AbilityDef, { kind: K }>;
 /** Habilidad `kind` de un tipo de unidad, si la tiene y la regla esta activa. */
 export function abilityOf<K extends AbilityDef['kind']>(type: number, kind: K): AbilityOf<K> | undefined {
   if (!RULES.abilities) return undefined;
-  return UNIT_ABILITIES[type]?.find((a): a is AbilityOf<K> => a.kind === kind);
+  return UNIT_ABILITIES[type]?.find((ability): ability is AbilityOf<K> => ability.kind === kind);
 }
 
 /** Habilidades de un tipo de unidad que cuentan con las reglas actuales (para enseñarlas). */
@@ -45,54 +47,57 @@ export function isRanged(type: number): boolean {
 }
 
 /**
- * Proteccion de la casilla que le queda al objetivo frente a `atkType` (piercing): 1 = sin proteccion.
- * `protection` es la de tileProtection.
+ * Proteccion de la casilla que le queda al objetivo frente a `attackerType` (piercing): 1 = sin
+ * proteccion. `protection` es la de tileProtection.
  */
-export function coverAgainst(atkType: number, protection: number): number {
-  const p = abilityOf(atkType, 'piercing');
-  return p ? protection + (1 - protection) * p.ignoreCover : protection;
+export function coverAgainst(attackerType: number, protection: number): number {
+  const piercing = abilityOf(attackerType, 'piercing');
+  return piercing ? protection + (1 - protection) * piercing.ignoreCover : protection;
 }
 
 /**
- * Multiplicador del acierto de `atk` contra `def` por las habilidades del defensor y de sus aliados
- * (guard, aura). 1 = nada.
+ * Multiplicador del acierto de `attacker` contra `defender` por las habilidades del defensor y de
+ * sus aliados (guard, aura). 1 = nada.
  */
-export function defenseFactor(s: GameState, atk: Unit, def: Unit): number {
+export function defenseFactor(s: GameState, attacker: Unit, defender: Unit): number {
   if (!RULES.abilities) return 1;
-  let f = 1;
-  const guard = abilityOf(def.type, 'guard');
-  if (guard && isRanged(atk.type)) f *= guard.factor;
-  f *= auraFactor(s, def);
-  return f;
+  let factor = 1;
+  const guard = abilityOf(defender.type, 'guard');
+  if (guard && isRanged(attacker.type)) factor *= guard.factor;
+  factor *= auraFactor(s, defender);
+  return factor;
 }
 
-/** Mejor aura de las unidades propias cercanas a `def` (1 si no hay ninguna). */
-export function auraFactor(s: GameState, def: Unit): number {
+/** Puede dar o sufrir efectos de habilidades de otras unidades: en el mapa y con vida. */
+const isFieldUnit = (unit: Unit): boolean => isOnMap(unit) && isAlive(unit);
+
+/** Mejor aura de las unidades propias cercanas a `defender` (1 si no hay ninguna). */
+export function auraFactor(s: GameState, defender: Unit): number {
   if (!RULES.abilities) return 1;
   let best = 1;
-  for (const o of s.units) {
-    if (o.uid === def.uid || o.team !== def.team || o.carrier !== null || o.life <= 0) continue;
-    const a = abilityOf(o.type, 'aura');
-    if (a && manhattan(o, def) <= a.radius) best = Math.min(best, a.defense);
+  for (const ally of s.units) {
+    if (ally.uid === defender.uid || isEnemyOf(ally, defender) || !isFieldUnit(ally)) continue;
+    const aura = abilityOf(ally.type, 'aura');
+    if (aura && manhattan(ally, defender) <= aura.radius) best = Math.min(best, aura.defense);
   }
   return best;
 }
 
 /**
- * Casillas en las que `u` se tiene que parar (zoneOfControl de los enemigos): las de al lado de un
- * enemigo con la habilidad que para a su tipo de movimiento. `vis` (opcional): solo cuentan los
+ * Casillas en las que `unit` se tiene que parar (zoneOfControl de los enemigos): las de al lado de un
+ * enemigo con la habilidad que para a su tipo de movimiento. `visible` (opcional): solo cuentan los
  * enemigos que se ven, como en passMap.
  */
-export function zoneOfControl(s: GameState, u: Unit, vis?: boolean[][] | null): boolean[][] {
-  const zoc = grid(false);
-  if (!RULES.abilities) return zoc;
-  const mt = MOVEMENTS[UNIT.movtype[u.type]!];
-  for (const o of s.units) {
-    if (o.team === u.team || o.carrier !== null || o.life <= 0) continue;
-    if (vis && !vis[o.x]![o.y]) continue;
-    const z = abilityOf(o.type, 'zoneOfControl');
-    if (!z?.stops.includes(mt)) continue;
-    for (const n of neighbors4(o)) zoc[n.x]![n.y] = true;
+export function zoneOfControl(s: GameState, unit: Unit, visible?: boolean[][] | null): boolean[][] {
+  const mustStop = grid(false);
+  if (!RULES.abilities) return mustStop;
+  const movement = MOVEMENTS[UNIT.movtype[unit.type]!];
+  for (const enemy of s.units) {
+    if (!isEnemyOf(enemy, unit) || !isFieldUnit(enemy)) continue;
+    if (visible && !cellAt(visible, enemy)) continue;
+    const zone = abilityOf(enemy.type, 'zoneOfControl');
+    if (!zone?.stops.includes(movement)) continue;
+    for (const tile of neighbors4(enemy)) setCell(mustStop, tile, true);
   }
-  return zoc;
+  return mustStop;
 }

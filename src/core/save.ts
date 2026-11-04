@@ -20,21 +20,49 @@ import {
 import { generalDef } from './generals';
 import { sanitizeStats } from './stats';
 import { assignKeys, liftCommand } from './squads';
-import type { GameState, Pos } from './types';
+import type { GameState, Pos, Unit } from './types';
 
-const okPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
+const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+
+/** Bando valido (0 jugador, 1 IA). */
+const isTeam = (v: unknown): boolean => v === 0 || v === 1;
+/** Ultimo tema de mapa (Plains..Snowy, ver GameState.theme). */
+const MAX_THEME = 4;
+/** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
+const MAX_SAVED_FUNDS = 1e9;
+const MAX_COUNT = 1e6;
+const MAX_UID = Number.MAX_SAFE_INTEGER;
+
+const isMapPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
 /** Una orden con destino bien formada (Unit.command o Squad.command). */
-const okCommand = (c: unknown): boolean =>
-  !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && okPos((c as { at: unknown }).at);
+const isCommand = (c: unknown): boolean =>
+  !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos((c as { at: unknown }).at);
 
 export function serialize(s: GameState): string {
   return JSON.stringify(s);
 }
 
-const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
-
 /** Lee una partida guardada. Devuelve null si el contenido no es valido. */
 export function deserialize(json: string): GameState | null {
+  const s = parseState(json);
+  if (!s || !readMap(s) || !hasValidBasics(s)) return null;
+  if (!readUnits(s) || !hasConsistentCargo(s) || !readBuildings(s)) return null;
+  s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...s.units.map((unit) => unit.uid)) + 1);
+  s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
+  if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
+  if (s.mission !== undefined && !isValidMission(s.mission)) return null;
+  // Lo opcional que esta roto se quita y la partida sigue sin ello.
+  cleanSetup(s);
+  cleanWeather(s);
+  cleanSquads(s);
+  cleanControlPoints(s);
+  cleanGenerals(s);
+  if (s.rules !== undefined && !readRules(s.rules)) return null;
+  return s;
+}
+
+/** El JSON, si es un objeto con la version que se sabe leer. */
+function parseState(json: string): GameState | null {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -43,172 +71,227 @@ export function deserialize(json: string): GameState | null {
   }
   if (typeof raw !== 'object' || raw === null) return null;
   const s = raw as GameState;
-  if (s.version !== 1) return null;
-  // [CAMBIO] mapas de varios tamaños: el tamaño sale del propio mapa guardado.
-  if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return null;
-  if (s.map[0].length !== s.map.length) return null;
+  return s.version === 1 ? s : null;
+}
+
+/** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado (y se pone en uso). */
+function readMap(s: GameState): boolean {
+  if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
+  if (s.map[0].length !== s.map.length) return false;
   setMapSize(s.map.length, s.map[0].length);
-  for (const col of s.map) {
-    if (!Array.isArray(col) || col.length !== MAP_H || !col.every((t) => isInt(t, 0, TERRAIN_TYPES - 1))) return null;
-  }
-  if (!isInt(s.theme, 0, 4) || !Array.isArray(s.funds) || s.funds.length !== 2) return null;
-  if (!s.funds.every((f) => isInt(f, 0, 1e9))) return null;
-  if (!Array.isArray(s.units) || !Array.isArray(s.buildings)) return null;
+  const isTerrain = (t: unknown) => isInt(t, 0, TERRAIN_TYPES - 1);
+  return s.map.every((column) => Array.isArray(column) && column.length === MAP_H && column.every(isTerrain));
+}
+
+function hasValidBasics(s: GameState): boolean {
+  if (!isInt(s.theme, 0, MAX_THEME) || !Array.isArray(s.funds) || s.funds.length !== 2) return false;
+  if (!s.funds.every((funds) => isInt(funds, 0, MAX_SAVED_FUNDS))) return false;
+  return Array.isArray(s.units) && Array.isArray(s.buildings);
+}
+
+/** Comprueba cada unidad (uid sin repetir) y quita lo opcional que este roto. */
+function readUnits(s: GameState): boolean {
   const uids = new Set<number>();
-  for (const u of s.units) {
-    if (!isInt(u.uid, 1, Number.MAX_SAFE_INTEGER) || uids.has(u.uid)) return null;
-    uids.add(u.uid);
-    if (!isInt(u.type, 0, UNIT_TYPES - 1) || (u.team !== 0 && u.team !== 1)) return null;
-    if (!isInt(u.x, 0, MAP_W - 1) || !isInt(u.y, 0, MAP_H - 1) || !isInt(u.life, 1, MAX_LIFE)) return null;
-    if (!Array.isArray(u.cargo) || u.cargo.length !== UNIT.maxcarry[u.type]) return null;
-    // [CAMBIO] Las partidas guardadas antes de quitar combustible y municion los traen: se ignoran.
-    delete (u as Partial<Record<'fuel' | 'ammo', unknown>>).fuel;
-    delete (u as Partial<Record<'fuel' | 'ammo', unknown>>).ammo;
-    u.active = !!u.active;
-    u.canMove = !!u.canMove;
-    u.canFire = !!u.canFire;
-    if (u.kills !== undefined && !isInt(u.kills, 0, 1e6)) delete u.kills;
-    if (u.hitDay !== undefined && !isInt(u.hitDay, 0, 1e6)) delete u.hitDay;
-    if (u.command !== undefined && !okCommand(u.command)) delete u.command;
-    if (u.squad !== undefined && !isInt(u.squad, 1, 1e6)) delete u.squad;
-    if (u.order !== undefined && !(u.order && isInt(u.order.x, 0, MAP_W - 1) && isInt(u.order.y, 0, MAP_H - 1))) delete u.order;
+  for (const unit of s.units) {
+    if (!isInt(unit.uid, 1, MAX_UID) || uids.has(unit.uid)) return false;
+    uids.add(unit.uid);
+    if (!isValidUnit(unit)) return false;
+    cleanUnit(unit);
   }
-  const byUid = new Map(s.units.map((u) => [u.uid, u]));
-  for (const u of s.units) {
-    if (u.carrier !== null && !byUid.get(u.carrier)?.cargo.includes(u.uid)) return null;
-    if (u.cargo.some((c) => c !== null && byUid.get(c)?.carrier !== u.uid)) return null;
+  return true;
+}
+
+function isValidUnit(unit: Unit): boolean {
+  if (!isInt(unit.type, 0, UNIT_TYPES - 1) || !isTeam(unit.team)) return false;
+  if (!isMapPos(unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
+  return Array.isArray(unit.cargo) && unit.cargo.length === UNIT.maxcarry[unit.type];
+}
+
+function cleanUnit(unit: Unit): void {
+  // [CAMBIO] Las partidas guardadas antes de quitar combustible y municion los traen: se ignoran.
+  delete (unit as Partial<Record<'fuel' | 'ammo', unknown>>).fuel;
+  delete (unit as Partial<Record<'fuel' | 'ammo', unknown>>).ammo;
+  unit.active = !!unit.active;
+  unit.canMove = !!unit.canMove;
+  unit.canFire = !!unit.canFire;
+  if (unit.kills !== undefined && !isInt(unit.kills, 0, MAX_COUNT)) delete unit.kills;
+  if (unit.hitDay !== undefined && !isInt(unit.hitDay, 0, MAX_COUNT)) delete unit.hitDay;
+  if (unit.command !== undefined && !isCommand(unit.command)) delete unit.command;
+  if (unit.squad !== undefined && !isInt(unit.squad, 1, MAX_COUNT)) delete unit.squad;
+  if (unit.order !== undefined && !isMapPos(unit.order)) delete unit.order;
+}
+
+/** Cada pasajero esta en la lista de su transporte y cada transporte lleva a quien dice. */
+function hasConsistentCargo(s: GameState): boolean {
+  const byUid = new Map(s.units.map((unit) => [unit.uid, unit]));
+  const isInItsCarrier = (unit: Unit) => unit.carrier === null || !!byUid.get(unit.carrier)?.cargo.includes(unit.uid);
+  const carriesWhoItSays = (unit: Unit) => unit.cargo.every((uid) => uid === null || byUid.get(uid)?.carrier === unit.uid);
+  return s.units.every((unit) => isInItsCarrier(unit) && carriesWhoItSays(unit));
+}
+
+function readBuildings(s: GameState): boolean {
+  for (const building of s.buildings) {
+    if (!isInt(building.type, 0, BUILDING_TYPES - 1) || !isMapPos(building)) return false;
+    if (building.owner !== null && !isTeam(building.owner)) return false;
+    // Una captura a medias rota se olvida (el edificio sigue).
+    const progress = building.capture;
+    if (progress == null) continue;
+    if (!isTeam(progress.team) || !isInt(progress.uid, 1, MAX_UID) || !isInt(progress.left, 1, 1000)) building.capture = null;
   }
-  for (const b of s.buildings) {
-    if (!isInt(b.type, 0, BUILDING_TYPES - 1) || !isInt(b.x, 0, MAP_W - 1) || !isInt(b.y, 0, MAP_H - 1)) return null;
-    if (b.owner !== null && b.owner !== 0 && b.owner !== 1) return null;
-    if (b.capture != null) {
-      const c = b.capture;
-      if ((c.team !== 0 && c.team !== 1) || !isInt(c.uid, 1, Number.MAX_SAFE_INTEGER) || !isInt(c.left, 1, 1000)) b.capture = null;
-    }
+  return true;
+}
+
+function isValidMission(mission: GameState['mission']): boolean {
+  const objective = mission?.objective as Record<string, unknown> | undefined;
+  if (!mission || typeof mission.id !== 'string' || !objective) return false;
+  const hasDays = isInt(objective.days, 1, 10000);
+  switch (objective.kind) {
+    case 'hq':
+      return true;
+    case 'survive':
+    case 'destroy':
+      return hasDays;
+    case 'capture':
+      return hasDays && isInt(objective.count, 1, 1000) && (objective.type === null || isInt(objective.type, 0, BUILDING_TYPES - 1));
+    case 'escort':
+      return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(objective.to);
+    default:
+      return false;
   }
-  s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...uids) + 1);
-  s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
-  if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
-  if (s.mission !== undefined) {
-    const m = s.mission;
-    const o = m?.objective as Record<string, unknown> | undefined;
-    const days = (v: unknown) => isInt(v, 1, 10000);
-    const ok =
-      !!m &&
-      typeof m.id === 'string' &&
-      !!o &&
-      (o.kind === 'hq' ||
-        (o.kind === 'survive' && days(o.days)) ||
-        (o.kind === 'destroy' && days(o.days)) ||
-        (o.kind === 'capture' && days(o.days) && isInt(o.count, 1, 1000) && (o.type === null || isInt(o.type, 0, BUILDING_TYPES - 1))) ||
-        (o.kind === 'escort' &&
-          days(o.days) &&
-          isInt(o.uid, 1, Number.MAX_SAFE_INTEGER) &&
-          !!o.to &&
-          isInt((o.to as Pos).x, 0, MAP_W - 1) &&
-          isInt((o.to as Pos).y, 0, MAP_H - 1)));
-    if (!ok) return null;
-  }
-  if (s.setup !== undefined) {
-    const g = s.setup;
-    const ok = !!g && isInt(g.seed, 0, 2 ** 32) && g.size === s.map.length && (g.theme === null || isInt(g.theme, 0, 4));
-    if (!ok) delete s.setup;
-  }
-  if (s.weather !== undefined) {
-    const w = s.weather;
-    const ok = !!w && isInt(w.kind, 0, WEATHER_TYPES - 1) && isInt(w.next, 0, WEATHER_TYPES - 1) && isInt(w.left, 0, 1000);
-    // Un clima roto no estropea la partida: se vuelve a empezar despejado.
-    if (!ok) delete s.weather;
-  }
+}
+
+function cleanSetup(s: GameState): void {
+  if (s.setup === undefined) return;
+  const setup = s.setup;
+  const ok =
+    !!setup && isInt(setup.seed, 0, 2 ** 32) && setup.size === s.map.length && (setup.theme === null || isInt(setup.theme, 0, MAX_THEME));
+  if (!ok) delete s.setup;
+}
+
+/** Un clima roto no estropea la partida: se vuelve a empezar despejado. */
+function cleanWeather(s: GameState): void {
+  if (s.weather === undefined) return;
+  const weather = s.weather;
+  const ok =
+    !!weather && isInt(weather.kind, 0, WEATHER_TYPES - 1) && isInt(weather.next, 0, WEATHER_TYPES - 1) && isInt(weather.left, 0, 1000);
+  if (!ok) delete s.weather;
+}
+
+function cleanSquads(s: GameState): void {
   if (s.squads !== undefined) {
-    const ok =
-      Array.isArray(s.squads) && s.squads.every((q) => q && isInt(q.id, 1, 1e6) && typeof q.name === 'string' && q.name.length > 0);
-    if (!ok) delete s.squads;
-    for (const q of s.squads ?? []) {
+    const isValidSquad = (squad: unknown) => {
+      const saved = squad as { id?: unknown; name?: unknown } | null;
+      return !!saved && isInt(saved.id, 1, MAX_COUNT) && typeof saved.name === 'string' && saved.name.length > 0;
+    };
+    if (!Array.isArray(s.squads) || !s.squads.every(isValidSquad)) delete s.squads;
+    for (const squad of s.squads ?? []) {
       // [CAMBIO] Orden y tecla de la escuadra: si estan rotas, se quitan (la escuadra sigue).
-      if (q.command !== undefined && !okCommand(q.command)) delete q.command;
-      if (q.key !== undefined && !isInt(q.key, 1, 9)) delete q.key;
+      if (squad.command !== undefined && !isCommand(squad.command)) delete squad.command;
+      if (squad.key !== undefined && !isInt(squad.key, 1, 9)) delete squad.key;
     }
   }
-  for (const u of s.units) if (u.squad !== undefined && !s.squads?.some((q) => q.id === u.squad)) delete u.squad;
+  for (const unit of s.units) if (unit.squad !== undefined && !s.squads?.some((squad) => squad.id === unit.squad)) delete unit.squad;
   // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
-  for (const q of s.squads ?? []) if (!q.command) liftCommand(s, q);
-  // [CAMBIO] Teclas de grupo: sin repetir; las que no tienen, la primera libre.
-  const keys = new Set<number>();
-  for (const q of s.squads ?? []) {
-    if (q.key !== undefined && keys.has(q.key)) delete q.key;
-    if (q.key !== undefined) keys.add(q.key);
-  }
+  for (const squad of s.squads ?? []) if (!squad.command) liftCommand(s, squad);
+  dropRepeatedKeys(s);
   assignKeys(s);
-  if (s.controlPoints !== undefined) {
-    const ok =
-      Array.isArray(s.controlPoints) &&
-      s.controlPoints.every(
-        (c) => c && isInt(c.x, 0, MAP_W - 1) && isInt(c.y, 0, MAP_H - 1) && (c.owner === null || c.owner === 0 || c.owner === 1),
-      );
-    if (!ok) delete s.controlPoints;
+}
+
+/** [CAMBIO] Teclas de grupo sin repetir (se la queda la primera escuadra); las demas, la primera libre (assignKeys). */
+function dropRepeatedKeys(s: GameState): void {
+  const keys = new Set<number>();
+  for (const squad of s.squads ?? []) {
+    if (squad.key !== undefined && keys.has(squad.key)) delete squad.key;
+    if (squad.key !== undefined) keys.add(squad.key);
   }
-  if (s.generals !== undefined) {
-    // Un general que no existe (o con datos rotos) se quita: la partida sigue sin el.
-    const ok = Array.isArray(s.generals) && s.generals.length === 2;
-    if (!ok) delete s.generals;
-    else
-      s.generals = s.generals.map((g) => {
-        const def = g ? generalDef(g.id) : undefined;
-        if (!g || !def) return null;
-        const charge = typeof g.charge === 'number' && Number.isFinite(g.charge) ? Math.max(0, Math.min(g.charge, def.charge.max)) : 0;
-        return { id: g.id, charge, used: !!g.used, reveal: !!g.reveal };
-      }) as GameState['generals'];
+}
+
+function cleanControlPoints(s: GameState): void {
+  if (s.controlPoints === undefined) return;
+  const ok =
+    Array.isArray(s.controlPoints) &&
+    s.controlPoints.every((point) => point && isMapPos(point) && (point.owner === null || isTeam(point.owner)));
+  if (!ok) delete s.controlPoints;
+}
+
+/** Un general que no existe (o con datos rotos) se quita: la partida sigue sin el. */
+function cleanGenerals(s: GameState): void {
+  if (s.generals === undefined) return;
+  if (!Array.isArray(s.generals) || s.generals.length !== 2) {
+    delete s.generals;
+    return;
   }
-  if (s.rules !== undefined) {
-    const r = s.rules as Partial<RulesConfig>;
-    const ok =
-      isInt(r.initialFunds, 0, 1e9) &&
-      isInt(r.maxUnits, 1, 200) &&
-      typeof r.counterattack === 'boolean' &&
-      (r.damageSpread === null || (typeof r.damageSpread === 'number' && r.damageSpread >= 0 && r.damageSpread <= 1)) &&
-      isInt(r.capturePoints, 1, 1000) &&
-      isInt(r.hqCapturePoints, 1, 1000) &&
-      typeof r.incomeScale === 'number' &&
-      r.incomeScale >= 0 &&
-      r.incomeScale <= 10 &&
-      typeof r.fog === 'boolean' &&
-      (r.dayLimit === null || isInt(r.dayLimit, 1, 10000)) &&
-      (r.veterancy === undefined || typeof r.veterancy === 'boolean') &&
-      (r.passAllies === undefined || typeof r.passAllies === 'boolean') &&
-      (r.ambush === undefined || typeof r.ambush === 'boolean') &&
-      (r.forestHides === undefined || typeof r.forestHides === 'boolean') &&
-      (r.terrainCost === undefined || typeof r.terrainCost === 'boolean') &&
-      (r.weather === undefined || typeof r.weather === 'boolean') &&
-      (r.abilities === undefined || typeof r.abilities === 'boolean') &&
-      (r.commandPoints === undefined || r.commandPoints === null || isInt(r.commandPoints, 1, 10000)) &&
-      (r.upkeep === undefined || (typeof r.upkeep === 'number' && r.upkeep >= 0 && r.upkeep <= 1)) &&
-      [r.vetBonus, r.bounty, r.flankBonus].every((v) => v === undefined || (typeof v === 'number' && v >= 0 && v <= 1)) &&
-      (r.noHealUnderFire === undefined || typeof r.noHealUnderFire === 'boolean') &&
-      (r.controlPoints === undefined || isInt(r.controlPoints, 0, 6)) &&
-      (r.controlIncome === undefined || isInt(r.controlIncome, 0, 1e6)) &&
-      (r.controlRadius === undefined || isInt(r.controlRadius, 0, 3));
-    if (ok) {
-      r.veterancy ??= false;
-      r.passAllies ??= false;
-      r.ambush ??= false;
-      r.forestHides ??= false;
-      r.terrainCost ??= false;
-      r.weather ??= false;
-      r.abilities ??= false;
-      r.commandPoints ??= null;
-      r.upkeep ??= 0;
-      // Partidas de antes del botin y el flanqueo: como se jugaban entonces.
-      r.vetBonus ??= 0.05;
-      r.bounty ??= 0;
-      r.flankBonus ??= 0;
-      r.noHealUnderFire ??= false;
-      // Partidas de antes de los puntos de control: sin ellos.
-      r.controlPoints ??= 0;
-      r.controlIncome ??= 0;
-      r.controlRadius ??= 0;
-    }
-    if (!ok) return null;
-  }
-  return s;
+  s.generals = s.generals.map((saved) => {
+    const def = saved ? generalDef(saved.id) : undefined;
+    if (!saved || !def) return null;
+    const hasCharge = typeof saved.charge === 'number' && Number.isFinite(saved.charge);
+    const charge = hasCharge ? Math.max(0, Math.min(saved.charge, def.charge.max)) : 0;
+    return { id: saved.id, charge, used: !!saved.used, reveal: !!saved.reveal };
+  }) as GameState['generals'];
+}
+
+const isOptionalBoolean = (v: unknown): boolean => v === undefined || typeof v === 'boolean';
+/** Un tanto por uno (0..1). */
+const isFraction = (v: unknown): boolean => typeof v === 'number' && v >= 0 && v <= 1;
+
+/** Las reglas guardadas son validas (las que faltan, por ser de antes, valen: ver fillMissingRules). */
+function isValidRules(rules: Partial<RulesConfig>): boolean {
+  const optionalSwitches = [
+    rules.veterancy,
+    rules.passAllies,
+    rules.ambush,
+    rules.forestHides,
+    rules.terrainCost,
+    rules.weather,
+    rules.abilities,
+    rules.noHealUnderFire,
+  ];
+  return (
+    isInt(rules.initialFunds, 0, MAX_SAVED_FUNDS) &&
+    isInt(rules.maxUnits, 1, 200) &&
+    typeof rules.counterattack === 'boolean' &&
+    (rules.damageSpread === null || isFraction(rules.damageSpread)) &&
+    isInt(rules.capturePoints, 1, 1000) &&
+    isInt(rules.hqCapturePoints, 1, 1000) &&
+    typeof rules.incomeScale === 'number' &&
+    rules.incomeScale >= 0 &&
+    rules.incomeScale <= 10 &&
+    typeof rules.fog === 'boolean' &&
+    (rules.dayLimit === null || isInt(rules.dayLimit, 1, 10000)) &&
+    optionalSwitches.every(isOptionalBoolean) &&
+    (rules.commandPoints === undefined || rules.commandPoints === null || isInt(rules.commandPoints, 1, 10000)) &&
+    (rules.upkeep === undefined || isFraction(rules.upkeep)) &&
+    [rules.vetBonus, rules.bounty, rules.flankBonus].every((v) => v === undefined || isFraction(v)) &&
+    (rules.controlPoints === undefined || isInt(rules.controlPoints, 0, 6)) &&
+    (rules.controlIncome === undefined || isInt(rules.controlIncome, 0, 1e6)) &&
+    (rules.controlRadius === undefined || isInt(rules.controlRadius, 0, 3))
+  );
+}
+
+/** Reglas que no existian cuando se guardo la partida: como se jugaba entonces. */
+function fillMissingRules(rules: Partial<RulesConfig>): void {
+  rules.veterancy ??= false;
+  rules.passAllies ??= false;
+  rules.ambush ??= false;
+  rules.forestHides ??= false;
+  rules.terrainCost ??= false;
+  rules.weather ??= false;
+  rules.abilities ??= false;
+  rules.commandPoints ??= null;
+  rules.upkeep ??= 0;
+  // Partidas de antes del botin y el flanqueo.
+  rules.vetBonus ??= 0.05;
+  rules.bounty ??= 0;
+  rules.flankBonus ??= 0;
+  rules.noHealUnderFire ??= false;
+  // Partidas de antes de los puntos de control: sin ellos.
+  rules.controlPoints ??= 0;
+  rules.controlIncome ??= 0;
+  rules.controlRadius ??= 0;
+}
+
+function readRules(rules: Partial<RulesConfig>): boolean {
+  if (!isValidRules(rules)) return false;
+  fillMissingRules(rules);
+  return true;
 }

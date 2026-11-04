@@ -24,7 +24,7 @@ export function weatherNow(s: GameState): number {
 }
 
 /** Cambio de movimiento por el clima para un tipo de movimiento. */
-export const weatherMove = (s: GameState, mt: MoveType): number => WEATHER.move[weatherNow(s)]![mt] ?? 0;
+export const weatherMove = (s: GameState, movement: MoveType): number => WEATHER.move[weatherNow(s)]![movement] ?? 0;
 
 /** Cambio del radio de vision de las unidades por el clima. */
 export const weatherVision = (s: GameState): number => WEATHER.vision[weatherNow(s)]!;
@@ -42,18 +42,20 @@ function dayRng(s: GameState): Rng {
 
 /** Elige un clima segun los pesos del tema; si sale el mismo mal tiempo que hay, despeja. */
 export function rollWeather(theme: number, rng: Rng, current = CLEAR): number {
-  const w = WEATHER.chance[theme] ?? WEATHER.chance[0]!;
-  const total = w.reduce((a, b) => a + b, 0);
-  let r = rng() * total;
-  let kind = CLEAR;
-  for (let i = 0; i < WEATHER_TYPES; i++) {
-    r -= w[i]!;
-    if (r < 0) {
-      kind = i;
-      break;
-    }
-  }
+  const kind = pickWeighted(WEATHER.chance[theme] ?? WEATHER.chance[0]!, rng);
+  // El mismo mal tiempo dos veces seguidas se haria eterno: despeja.
   return kind === current && kind !== CLEAR ? CLEAR : kind;
+}
+
+/** Indice elegido al azar segun los pesos (despejado si la tirada se pasa de todos). */
+function pickWeighted(weights: readonly number[], rng: Rng): number {
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  let roll = rng() * total;
+  for (let kind = 0; kind < WEATHER_TYPES; kind++) {
+    roll -= weights[kind]!;
+    if (roll < 0) return kind;
+  }
+  return CLEAR;
 }
 
 /** Dias que dura un clima. */
@@ -85,15 +87,15 @@ export function advanceWeather(s: GameState): WeatherChange | null {
     ensureWeather(s);
     return null;
   }
-  const w: WeatherState = s.weather;
-  w.left--;
-  if (w.left > 0) return null;
+  const weather: WeatherState = s.weather;
+  weather.left--;
+  if (weather.left > 0) return null;
   const rng = dayRng(s);
-  const from = w.kind;
-  w.kind = w.next;
-  w.left = rollDays(w.kind, rng);
-  w.next = rollWeather(s.theme, rng, w.kind);
-  return from === w.kind ? null : { from, to: w.kind };
+  const from = weather.kind;
+  weather.kind = weather.next;
+  weather.left = rollDays(weather.kind, rng);
+  weather.next = rollWeather(s.theme, rng, weather.kind);
+  return from === weather.kind ? null : { from, to: weather.kind };
 }
 
 /** Pronostico: el clima que entra al empezar la ronda siguiente, o null si mañana sigue igual. */

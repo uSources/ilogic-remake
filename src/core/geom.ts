@@ -11,61 +11,60 @@ export function manhattan(a: Pos, b: Pos): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
 
-/** Numero de casillas a distancia <= r: 2r(r+1)+1 (0 si r < 0). */
-export function rangeSize(r: number): number {
-  return r < 0 ? 0 : 2 * r * (r + 1) + 1;
+/** Numero de casillas a distancia <= radius: 2r(r+1)+1 (0 si radius < 0). */
+export function rangeSize(radius: number): number {
+  return radius < 0 ? 0 : 2 * radius * (radius + 1) + 1;
 }
 
 /**
- * Casilla numero `index` del rombo alrededor de `c`, anillo a anillo, en el mismo orden
+ * Casilla numero `index` del rombo alrededor de `center`, anillo a anillo, en el mismo orden
  * que el original (Auxiliar.getRangePos): el 0 es el centro; en cada anillo empieza abajo
  * y gira en sentido antihorario en pantalla (abajo, derecha, arriba, izquierda...).
  * Devuelve null si cae fuera del mapa. El orden importa para la IA y el generador.
  */
-export function rangePos(c: Pos, index: number): Pos | null {
-  if (index < 0 || !inBounds(c.x, c.y)) return null;
-  if (index === 0) return { x: c.x, y: c.y };
-  let r = 1;
-  while (rangeSize(r) <= index) r++;
-  const k = index - rangeSize(r - 1);
-  const side = Math.floor(k / r);
-  const o = k % r;
-  let x: number, y: number;
+export function rangePos(center: Pos, index: number): Pos | null {
+  if (index < 0 || !inBounds(center.x, center.y)) return null;
+  if (index === 0) return { x: center.x, y: center.y };
+  let ring = 1;
+  while (rangeSize(ring) <= index) ring++;
+  // Cada anillo tiene 4 lados de `ring` casillas: de abajo a la derecha, a arriba, a la izquierda y vuelta.
+  const indexInRing = index - rangeSize(ring - 1);
+  const side = Math.floor(indexInRing / ring);
+  const offset = indexInRing % ring;
+  const { x, y } = center;
+  let pos: Pos;
   switch (side) {
     case 0:
-      x = c.x + o;
-      y = c.y + r - o;
+      pos = { x: x + offset, y: y + ring - offset };
       break;
     case 1:
-      x = c.x + r - o;
-      y = c.y - o;
+      pos = { x: x + ring - offset, y: y - offset };
       break;
     case 2:
-      x = c.x - o;
-      y = c.y + o - r;
+      pos = { x: x - offset, y: y + offset - ring };
       break;
     default:
-      x = c.x - r + o;
-      y = c.y + o;
+      pos = { x: x - ring + offset, y: y + offset };
   }
-  return inBounds(x, y) ? { x, y } : null;
+  return inBounds(pos.x, pos.y) ? pos : null;
 }
 
 /** Las 4 vecinas ortogonales dentro del mapa, en el orden del original: abajo, derecha, arriba, izquierda. */
 export function neighbors4(p: Pos): Pos[] {
-  const out: Pos[] = [];
+  const neighbors: Pos[] = [];
+  // Los indices 1 a 4 del rombo son el primer anillo, en el orden del original.
   for (let i = 1; i <= 4; i++) {
-    const q = rangePos(p, i);
-    if (q) out.push(q);
+    const neighbor = rangePos(p, i);
+    if (neighbor) neighbors.push(neighbor);
   }
-  return out;
+  return neighbors;
 }
 
-/** Recorre las casillas con minR <= d <= maxR en orden de rombo. */
-export function* diamond(c: Pos, minR: number, maxR: number): Generator<Pos> {
-  for (let i = rangeSize(minR - 1); i < rangeSize(maxR); i++) {
-    const p = rangePos(c, i);
-    if (p) yield p;
+/** Recorre las casillas a distancia entre minRadius y maxRadius (ambas incluidas) en orden de rombo. */
+export function* diamond(center: Pos, minRadius: number, maxRadius: number): Generator<Pos> {
+  for (let i = rangeSize(minRadius - 1); i < rangeSize(maxRadius); i++) {
+    const pos = rangePos(center, i);
+    if (pos) yield pos;
   }
 }
 

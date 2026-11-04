@@ -11,8 +11,9 @@
  *
  * Este modulo no importa rules.ts (rules.ts lo importa a el).
  */
-import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type UnitFilter } from './content';
-import { GENERALS, UNIT, UNIT_NAMES } from './data';
+import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
+import { GENERALS, MAX_LIFE, UNIT, UNIT_NAMES } from './data';
+import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './types';
 
 export const generalDef = (id: string): GeneralDef | undefined => GENERALS.find((g) => g.id === id);
@@ -30,38 +31,40 @@ export function newGeneral(id: string | null | undefined): GeneralState | null {
 }
 
 /** La unidad de tipo `type` entra en el filtro (sin filtro, todas). */
-export function applies(m: UnitFilter, type: number): boolean {
-  if (m.movement && !m.movement.includes(MOVEMENTS[UNIT.movtype[type]!])) return false;
-  if (m.units && !m.units.includes(UNIT_NAMES[type]!)) return false;
+export function applies(filter: UnitFilter, type: number): boolean {
+  if (filter.movement && !filter.movement.includes(MOVEMENTS[UNIT.movtype[type]!])) return false;
+  if (filter.units && !filter.units.includes(UNIT_NAMES[type]!)) return false;
   return true;
 }
 
-/** Multiplicador del acierto de `atk` contra `def` por los generales de los dos bandos (1 = nada). */
-export function generalHitFactor(s: GameState, atk: Unit, def: Unit): number {
-  let f = 1;
-  const a = generalOf(s, atk.team);
-  for (const m of a?.def.passive ?? []) if (m.kind === 'attack' && applies(m, atk.type)) f *= m.factor;
-  const d = generalOf(s, def.team);
-  for (const m of d?.def.passive ?? []) if (m.kind === 'defense' && applies(m, def.type)) f *= m.factor;
-  return f;
+/** Multiplicador del acierto de `attacker` contra `defender` por los generales de los dos bandos (1 = nada). */
+export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): number {
+  let factor = 1;
+  const attackerGeneral = generalOf(s, attacker.team);
+  for (const passive of attackerGeneral?.def.passive ?? [])
+    if (passive.kind === 'attack' && applies(passive, attacker.type)) factor *= passive.factor;
+  const defenderGeneral = generalOf(s, defender.team);
+  for (const passive of defenderGeneral?.def.passive ?? [])
+    if (passive.kind === 'defense' && applies(passive, defender.type)) factor *= passive.factor;
+  return factor;
 }
 
 /** Suma carga a un bando por `value` de valor hecho o recibido (sin pasar del maximo). */
 function addCharge(s: GameState, team: Team, value: number): void {
-  const g = generalOf(s, team);
-  if (!g || value <= 0) return;
-  g.state.charge = Math.min(g.def.charge.max, g.state.charge + value / g.def.charge.per);
+  const general = generalOf(s, team);
+  if (!general || value <= 0) return;
+  general.state.charge = Math.min(general.def.charge.max, general.state.charge + value / general.def.charge.per);
 }
 
 /**
  * Carga por un combate: los dos bandos ganan por el valor que hacen y por el que reciben.
- * `toDef`/`toAtk`: vida que ha perdido cada uno.
+ * `toDefender`/`toAttacker`: vida que ha perdido cada uno.
  */
-export function chargeFromCombat(s: GameState, atk: Unit, def: Unit, toDef: number, toAtk: number): void {
-  const vDef = (toDef * UNIT.cost[def.type]!) / 100;
-  const vAtk = (toAtk * UNIT.cost[atk.type]!) / 100;
-  addCharge(s, atk.team, vDef + vAtk);
-  addCharge(s, def.team, vDef + vAtk);
+export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): void {
+  const defenderValueLost = (toDefender * UNIT.cost[defender.type]!) / 100;
+  const attackerValueLost = (toAttacker * UNIT.cost[attacker.type]!) / 100;
+  addCharge(s, attacker.team, defenderValueLost + attackerValueLost);
+  addCharge(s, defender.team, defenderValueLost + attackerValueLost);
 }
 
 /** El bando ve todo el mapa (habilidad reveal activa). */
@@ -74,26 +77,82 @@ export type AbilityBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target
 
 /** Por que no se puede usar ahora una habilidad (null = se puede). `target` hace falta en las de area. */
 export function abilityBlock(s: GameState, team: Team, abilityId: string, target?: Pos | null): AbilityBlock | null {
-  const g = generalOf(s, team);
-  if (!g) return 'noGeneral';
-  const a = g.def.abilities.find((x) => x.id === abilityId);
-  if (!a) return 'unknown';
-  if (g.state.used) return 'used';
-  if (chargeStars(g.state) < a.cost) return 'charge';
-  if (a.effect.kind === 'areaDamage' && !target) return 'target';
+  const general = generalOf(s, team);
+  if (!general) return 'noGeneral';
+  const ability = general.def.abilities.find((candidate) => candidate.id === abilityId);
+  if (!ability) return 'unknown';
+  if (general.state.used) return 'used';
+  if (chargeStars(general.state) < ability.cost) return 'charge';
+  if (ability.effect.kind === 'areaDamage' && !target) return 'target';
   return null;
 }
 
 /** Casillas de un area cuadrada de radio `r` alrededor de `c` (dentro del mapa o no: el que llama filtra). */
-export function areaTiles(c: Pos, r: number): Pos[] {
-  const out: Pos[] = [];
-  for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) out.push({ x: c.x + dx, y: c.y + dy });
-  return out;
+export function areaTiles(center: Pos, radius: number): Pos[] {
+  const tiles: Pos[] = [];
+  for (let dx = -radius; dx <= radius; dx++) for (let dy = -radius; dy <= radius; dy++) tiles.push({ x: center.x + dx, y: center.y + dy });
+  return tiles;
 }
 
 /** Radio del area de una habilidad (null si no es de area). */
-export function abilityArea(a: GeneralAbilityDef): number | null {
-  return a.effect.kind === 'areaDamage' ? a.effect.radius : null;
+export function abilityArea(ability: GeneralAbilityDef): number | null {
+  return ability.effect.kind === 'areaDamage' ? ability.effect.radius : null;
+}
+
+/** Lo que ha hecho una habilidad, para su evento. */
+interface AbilityEffects {
+  hits: { uid: number; damage: number }[];
+  heals: { uid: number; amount: number }[];
+  funds: number;
+}
+
+/** Lo que necesita el efecto de una habilidad para aplicarse. */
+interface EffectContext<K extends GeneralEffect['kind']> {
+  s: GameState;
+  team: Team;
+  general: GeneralState;
+  effect: Extract<GeneralEffect, { kind: K }>;
+  /** Casilla elegida (solo en las de area, que no se pueden usar sin ella: ver abilityBlock). */
+  target: Pos | null | undefined;
+  out: AbilityEffects;
+}
+
+/**
+ * Que hace cada clase de habilidad (generals.json, "effect.kind"). Una clase nueva es una entrada
+ * mas aqui (y su forma en content/generals.ts).
+ */
+const ABILITY_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>) => void } = {
+  reveal: ({ general }) => {
+    general.reveal = true;
+  },
+  heal: ({ s, team, effect, out }) => {
+    for (const unit of s.units) {
+      if (unit.team !== team || !applies(effect, unit.type)) continue;
+      const amount = Math.min(effect.amount, MAX_LIFE - unit.life);
+      if (amount <= 0) continue;
+      unit.life += amount;
+      out.heals.push({ uid: unit.uid, amount });
+    }
+  },
+  funds: ({ s, team, effect, out }) => {
+    s.funds[team] += effect.amount;
+    out.funds = effect.amount;
+  },
+  // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata).
+  areaDamage: ({ s, team, effect, target, out }) => {
+    const inArea = new Set(areaTiles(target!, effect.radius).map((pos) => `${pos.x},${pos.y}`));
+    for (const unit of s.units) {
+      if (unit.team === team || !isOnMap(unit) || !inArea.has(`${unit.x},${unit.y}`)) continue;
+      const damage = Math.max(0, Math.min(effect.damage, unit.life - effect.minLife));
+      if (damage <= 0) continue;
+      unit.life -= damage;
+      out.hits.push({ uid: unit.uid, damage });
+    }
+  },
+};
+
+function applyEffect<K extends GeneralEffect['kind']>(context: EffectContext<K>): void {
+  (ABILITY_EFFECTS[context.effect.kind] as (context: EffectContext<K>) => void)(context);
 }
 
 /**
@@ -102,53 +161,29 @@ export function abilityArea(a: GeneralAbilityDef): number | null {
  */
 export function useAbility(s: GameState, team: Team, abilityId: string, target?: Pos | null): GameEventOf<'ability'> | null {
   if (abilityBlock(s, team, abilityId, target)) return null;
-  const g = generalOf(s, team)!;
-  const a = g.def.abilities.find((x) => x.id === abilityId)!;
-  g.state.charge = Math.max(0, g.state.charge - a.cost);
-  g.state.used = true;
-  const hits: { uid: number; damage: number }[] = [];
-  const heals: { uid: number; amount: number }[] = [];
-  let funds = 0;
-  const e = a.effect;
-  if (e.kind === 'reveal') g.state.reveal = true;
-  else if (e.kind === 'heal') {
-    for (const u of s.units) {
-      if (u.team !== team || !applies(e, u.type)) continue;
-      const amount = Math.min(e.amount, 100 - u.life);
-      if (amount <= 0) continue;
-      u.life += amount;
-      heals.push({ uid: u.uid, amount });
-    }
-  } else if (e.kind === 'funds') {
-    s.funds[team] += e.amount;
-    funds = e.amount;
-  } else {
-    const inArea = new Set(areaTiles(target!, e.radius).map((p) => `${p.x},${p.y}`));
-    for (const u of s.units) {
-      if (u.team === team || u.carrier !== null || !inArea.has(`${u.x},${u.y}`)) continue;
-      const damage = Math.max(0, Math.min(e.damage, u.life - e.minLife));
-      if (damage <= 0) continue;
-      u.life -= damage;
-      hits.push({ uid: u.uid, damage });
-    }
-  }
+  const general = generalOf(s, team)!;
+  const ability = general.def.abilities.find((candidate) => candidate.id === abilityId)!;
+  general.state.charge = Math.max(0, general.state.charge - ability.cost);
+  general.state.used = true;
+  const out: AbilityEffects = { hits: [], heals: [], funds: 0 };
+  applyEffect({ s, team, general: general.state, effect: ability.effect, target, out });
   return {
     kind: 'ability',
     team,
-    general: g.def.id,
-    ability: a.id,
+    general: general.def.id,
+    ability: ability.id,
     ...(target ? { target: { x: target.x, y: target.y } } : {}),
-    hits,
-    ...(heals.length ? { heals } : {}),
-    ...(funds ? { funds } : {}),
+    hits: out.hits,
+    ...(out.heals.length ? { heals: out.heals } : {}),
+    ...(out.funds ? { funds: out.funds } : {}),
   };
 }
 
 /** Al acabar la ronda: se puede volver a usar una habilidad y se acaba el reconocimiento. */
 export function generalsNewRound(s: GameState): void {
-  for (const g of s.generals ?? []) {
-    if (!g) continue;
-    g.used = false;
-    g.reveal = false;
+  for (const general of s.generals ?? []) {
+    if (!general) continue;
+    general.used = false;
+    general.reveal = false;
   }
 }

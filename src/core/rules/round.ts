@@ -4,7 +4,7 @@
 import { BUILDING, HEALER, MAX_FUNDS, MAX_LIFE, RULES } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
-import { TEAMS, type GameState, type Team, type Unit } from '../types';
+import { TEAMS, type Building, type GameState, type Team, type Unit } from '../types';
 import { dropStaleCaptures } from './capture';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
@@ -23,8 +23,8 @@ export interface RoundReport {
 }
 
 /** [CAMBIO] La unidad no se curara al acabar el dia: ha recibido un ataque hoy (regla noHealUnderFire). */
-export function unhealable(s: GameState, u: Unit): boolean {
-  return RULES.noHealUnderFire && u.hitDay === s.day;
+export function unhealable(s: GameState, unit: Unit): boolean {
+  return RULES.noHealUnderFire && unit.hitDay === s.day;
 }
 
 /** Un paso del fin de ronda: cambia el estado y apunta en el informe lo que la interfaz enseña. */
@@ -34,76 +34,89 @@ export interface RoundPhase {
   run(s: GameState, report: RoundReport): void;
 }
 
+/** Todas las unidades pueden volver a moverse y disparar. */
+function refreshUnits(s: GameState): void {
+  for (const unit of s.units) {
+    unit.active = true;
+    unit.canMove = true;
+    unit.canFire = true;
+  }
+}
+
+/** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */
+function patientOn(s: GameState, building: Building): Unit | null {
+  const unit = unitAt(s, building.x, building.y);
+  if (!unit || unit.team !== building.owner || !HEALER[unit.type]![building.type]) return null;
+  // [CAMBIO] Sin cura bajo fuego: quien ha recibido un ataque hoy no se recupera esta noche.
+  return unhealable(s, unit) ? null : unit;
+}
+
+function healOnBuilding(s: GameState, building: Building, report: RoundReport): void {
+  const patient = patientOn(s, building);
+  if (!patient) return;
+  const before = patient.life;
+  patient.life = Math.min(MAX_LIFE, patient.life + BUILDING.heals[building.type]!);
+  if (patient.life > before) report.healed.push({ uid: patient.uid, team: patient.team, amount: patient.life - before });
+}
+
+/** Cada edificio con dueño le paga y cura a la unidad propia que tenga encima. */
+function collectAndHeal(s: GameState, report: RoundReport): void {
+  for (const building of s.buildings) {
+    if (building.owner === null) continue;
+    s.funds[building.owner] += buildingIncome(building.type);
+    report.income[building.owner] += buildingIncome(building.type);
+    healOnBuilding(s, building, report);
+  }
+}
+
+function payControlPoints(s: GameState, report: RoundReport): void {
+  const control = controlRound(s);
+  if (!control) return;
+  report.control = control;
+  for (const team of TEAMS) report.income[team] += control.income[team];
+}
+
+/** [CAMBIO] Mantenimiento. Sin dinero no hay castigo: se paga lo que haya. */
+function payUpkeep(s: GameState, report: RoundReport): void {
+  for (const team of TEAMS) {
+    const paid = Math.min(upkeepOf(s, team), s.funds[team]);
+    s.funds[team] -= paid;
+    report.upkeep[team] = paid;
+  }
+}
+
+/** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
+function nextDay(s: GameState): void {
+  s.funds = [Math.min(s.funds[0], MAX_FUNDS), Math.min(s.funds[1], MAX_FUNDS)];
+  s.day++;
+}
+
+function changeWeather(s: GameState, report: RoundReport): void {
+  report.weather = advanceWeather(s);
+}
+
 /**
  * Pasos del fin de ronda, en orden. Un sistema nuevo que actua cada ronda (moral, suministro...)
  * es un paso mas aqui, en su sitio: el orden importa (p. ej. el mantenimiento se paga despues de
  * cobrar, y el clima cambia con el dia nuevo).
  */
 export const ROUND_PHASES: readonly RoundPhase[] = [
-  // Las capturas a medias que ya no valen se pierden.
+  // Antes de nada: una captura a medias cuya unidad se ha ido no debe seguir contando.
   { id: 'captures', run: (s) => dropStaleCaptures(s) },
-  {
-    id: 'refresh',
-    run: (s) => {
-      for (const u of s.units) {
-        u.active = true;
-        u.canMove = true;
-        u.canFire = true;
-      }
-    },
-  },
+  // Las unidades vuelven a poder actuar en la ronda nueva.
+  { id: 'refresh', run: refreshUnits },
+  // Los generales pueden volver a usar una habilidad y se acaba el reconocimiento.
   { id: 'generals', run: (s) => generalsNewRound(s) },
   // Ingresos de los edificios y cura de las unidades propias encima.
-  {
-    id: 'buildings',
-    run: (s, report) => {
-      for (const b of s.buildings) {
-        if (b.owner === null) continue;
-        s.funds[b.owner] += buildingIncome(b.type);
-        report.income[b.owner] += buildingIncome(b.type);
-        const u = unitAt(s, b.x, b.y);
-        if (!u || u.team !== b.owner || !HEALER[u.type]![b.type]) continue;
-        // [CAMBIO] Sin cura bajo fuego: quien ha recibido un ataque hoy no se recupera esta noche.
-        if (unhealable(s, u)) continue;
-        const before = u.life;
-        u.life = Math.min(MAX_LIFE, u.life + BUILDING.heals[b.type]!);
-        if (u.life > before) report.healed.push({ uid: u.uid, team: u.team, amount: u.life - before });
-      }
-    },
-  },
-  {
-    id: 'control',
-    run: (s, report) => {
-      const control = controlRound(s);
-      if (!control) return;
-      report.control = control;
-      for (const team of TEAMS) report.income[team] += control.income[team];
-    },
-  },
-  {
-    id: 'upkeep',
-    run: (s, report) => {
-      for (const team of TEAMS) {
-        // [CAMBIO] Mantenimiento despues de cobrar. Sin dinero no hay castigo: se paga lo que haya.
-        const paid = Math.min(upkeepOf(s, team), s.funds[team]);
-        s.funds[team] -= paid;
-        report.upkeep[team] = paid;
-      }
-    },
-  },
-  {
-    id: 'day',
-    run: (s) => {
-      s.funds = [Math.min(s.funds[0], MAX_FUNDS), Math.min(s.funds[1], MAX_FUNDS)];
-      s.day++;
-    },
-  },
-  {
-    id: 'weather',
-    run: (s, report) => {
-      report.weather = advanceWeather(s);
-    },
-  },
+  { id: 'buildings', run: collectAndHeal },
+  // Los puntos de control pagan despues de los edificios (se suman al mismo ingreso).
+  { id: 'control', run: payControlPoints },
+  // Despues de cobrar, para que se pague con lo de hoy.
+  { id: 'upkeep', run: payUpkeep },
+  // El tope de dinero se aplica al final, con todo ya cobrado y pagado.
+  { id: 'day', run: nextDay },
+  // El clima cambia con el dia nuevo (depende de s.day).
+  { id: 'weather', run: changeWeather },
 ];
 
 /**

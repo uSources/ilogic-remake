@@ -6,62 +6,55 @@ import { Movement } from './data';
 import { manhattan, samePos } from './geom';
 import { isRanged } from './abilities';
 import { canDamage, inAttackRange, tileProtection } from './rules/combat';
-import { moveCost, pathCost, pathTo, reachableTiles, type MoveRange } from './rules/movement';
+import { moveCost, pathCost, pathTo, reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
 import { canWalk } from './rules/queries';
+import { cellAt } from './util/grid';
+import { minBy } from './util/pick';
 import type { GameState, Pos, Unit } from './types';
 
 /**
- * Mejor casilla desde la que `u` puede atacar a `t` con su alcance `r`: la de `end` (donde acaba el
- * camino trazado) si vale; si no, la mas cercana a `end`, luego la de mas defensa y luego la mas
- * cercana a la unidad. Null si no puede atacarle.
+ * Mejor casilla desde la que `unit` puede atacar a `target` con su alcance `range`: la de `end`
+ * (donde acaba el camino trazado) si vale; si no, la mas cercana a `end`, luego la de mas defensa y
+ * luego la mas cercana a la unidad. Null si no puede atacarle.
  */
-export function bestAttackTile(s: GameState, u: Unit, t: Unit, r: MoveRange, end: Pos = u): Pos | null {
-  if (!u.canFire || !canDamage(u, t)) return null;
+export function bestAttackTile(s: GameState, unit: Unit, target: Unit, range: MoveRange, end: Pos = unit): Pos | null {
+  if (!unit.canFire || !canDamage(unit, target)) return null;
+  const reaches = (from: Pos) => inAttackRange(unit.type, from, target);
   // Las que no pueden mover y disparar solo atacan desde donde estan.
-  if (isRanged(u.type)) return inAttackRange(u.type, u, t) ? { x: u.x, y: u.y } : null;
-  const cands: Pos[] = [];
-  if (inAttackRange(u.type, u, t)) cands.push({ x: u.x, y: u.y });
-  cands.push(...reachableTiles(r).filter((p) => inAttackRange(u.type, p, t)));
-  if (!cands.length) return null;
-  const onTrail = cands.find((c) => samePos(c, end));
+  if (isRanged(unit.type)) return reaches(unit) ? { x: unit.x, y: unit.y } : null;
+
+  const candidates: Pos[] = [];
+  if (reaches(unit)) candidates.push({ x: unit.x, y: unit.y });
+  candidates.push(...reachableTiles(range).filter(reaches));
+  const onTrail = candidates.find((tile) => samePos(tile, end));
   if (onTrail) return onTrail;
-  const prot = (p: Pos) => tileProtection(s, p);
-  cands.sort((a, b) => manhattan(end, a) - manhattan(end, b) || prot(a) - prot(b) || manhattan(u, a) - manhattan(u, b));
-  return cands[0]!;
+  return minBy(candidates, (tile) => [manhattan(end, tile), tileProtection(s, tile), manhattan(unit, tile)]);
 }
 
 /** Casilla alcanzable mas cercana a `goal` (si empata, la que cuesta menos); null si ninguna acerca. */
-export function closestStep(u: Unit, goal: Pos, r: MoveRange): Pos | null {
-  let best: Pos | null = null;
-  let bestD = manhattan(u, goal);
-  for (const p of reachableTiles(r)) {
-    const d = manhattan(p, goal);
-    if (d < bestD || (d === bestD && best && r.steps[p.x]![p.y]! < r.steps[best.x]![best.y]!)) {
-      best = p;
-      bestD = d;
-    }
-  }
-  return best;
+export function closestStep(unit: Unit, goal: Pos, range: MoveRange): Pos | null {
+  const distanceNow = manhattan(unit, goal);
+  const closer = reachableTilesWithCost(range).filter((tile) => manhattan(tile.pos, goal) < distanceNow);
+  return minBy(closer, (tile) => [manhattan(tile.pos, goal), tile.cost])?.pos ?? null;
 }
 
 /**
- * Camino que se traza al pasar el cursor por `t`: si vuelve sobre el camino, se recorta; si es la
- * casilla de al lado y cabe en el movimiento, se alarga; si no, el camino mas corto hasta alli (o el
- * mismo si no se llega). `block` = casillas por las que no puede pasar (enemigos a la vista).
+ * Camino que se traza al pasar el cursor por `hovered`: si vuelve sobre el camino, se recorta; si es
+ * la casilla de al lado y cabe en el movimiento, se alarga; si no, el camino mas corto hasta alli (o
+ * el mismo si no se llega). `block` = casillas por las que no puede pasar (enemigos a la vista).
  */
-export function extendTrail(s: GameState, u: Unit, r: MoveRange, block: boolean[][], trail: Pos[], t: Pos): Pos[] {
-  const cur = trail.length ? trail : [{ x: u.x, y: u.y }];
-  const i = cur.findIndex((p) => samePos(p, t));
-  if (i >= 0) return cur.slice(0, i + 1);
-  const end = cur[cur.length - 1]!;
-  const mt = Movement.of(u.type);
-  if (
-    manhattan(end, t) === 1 &&
-    canWalk(s, t.x, t.y, mt) &&
-    !block[t.x]![t.y] &&
-    pathCost(s, mt, cur) + moveCost(s, mt, t.x, t.y) <= r.maxSteps
-  )
-    return [...cur, { x: t.x, y: t.y }];
+export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: boolean[][], trail: Pos[], hovered: Pos): Pos[] {
+  const current = trail.length ? trail : [{ x: unit.x, y: unit.y }];
+  const backIndex = current.findIndex((step) => samePos(step, hovered));
+  if (backIndex >= 0) return current.slice(0, backIndex + 1);
+  const end = current[current.length - 1]!;
+  const movement = Movement.of(unit.type);
+  const canExtend =
+    manhattan(end, hovered) === 1 &&
+    canWalk(s, hovered.x, hovered.y, movement) &&
+    !cellAt(block, hovered) &&
+    pathCost(s, movement, current) + moveCost(s, movement, hovered.x, hovered.y) <= range.maxSteps;
+  if (canExtend) return [...current, { x: hovered.x, y: hovered.y }];
   // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
-  return r.prev[t.x]![t.y] ? pathTo(r, u, t) : trail;
+  return cellAt(range.prev, hovered) ? pathTo(range, unit, hovered) : trail;
 }

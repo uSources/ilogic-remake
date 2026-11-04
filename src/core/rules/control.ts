@@ -3,7 +3,8 @@
  * las tiene sin disputa.
  */
 import { RULES } from '../data';
-import type { GameState, Pos, Team } from '../types';
+import { isOnMap } from '../util/predicates';
+import type { ControlPoint, GameState, Pos, Team } from '../types';
 
 /** Lo que han dado los puntos de control en una ronda (ver RoundReport.control). */
 export interface ControlReport {
@@ -16,13 +17,24 @@ export interface ControlReport {
 }
 
 /** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de RULES.controlRadius). */
-export function inControlZone(c: Pos, p: Pos): boolean {
-  return Math.max(Math.abs(c.x - p.x), Math.abs(c.y - p.y)) <= RULES.controlRadius;
+export function inControlZone(center: Pos, pos: Pos): boolean {
+  return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= RULES.controlRadius;
 }
 
 /** [CAMBIO] Bandos con unidades dentro de la zona de un punto de control. */
-export function teamsInZone(s: GameState, c: Pos): Set<Team> {
-  return new Set(s.units.filter((u) => u.carrier === null && inControlZone(c, u)).map((u) => u.team));
+export function teamsInZone(s: GameState, center: Pos): Set<Team> {
+  return new Set(s.units.filter((unit) => isOnMap(unit) && inControlZone(center, unit)).map((unit) => unit.team));
+}
+
+/**
+ * Pasa el punto a quien este solo dentro (si no hay nadie, sigue siendo de quien era) y devuelve
+ * su dueño; 'contested' si hay unidades de los dos bandos.
+ */
+function updateOwner(s: GameState, point: ControlPoint): Team | null | 'contested' {
+  const teams = teamsInZone(s, point);
+  if (teams.size > 1) return 'contested';
+  if (teams.size === 1) point.owner = [...teams][0]!;
+  return point.owner;
 }
 
 /**
@@ -31,18 +43,17 @@ export function teamsInZone(s: GameState, c: Pos): Set<Team> {
  */
 export function controlRound(s: GameState): ControlReport | undefined {
   if (!s.controlPoints?.length) return undefined;
-  const out: ControlReport = { income: [0, 0], held: [0, 0], contested: 0 };
-  for (const c of s.controlPoints) {
-    const teams = teamsInZone(s, c);
-    if (teams.size > 1) {
-      out.contested++;
+  const report: ControlReport = { income: [0, 0], held: [0, 0], contested: 0 };
+  for (const point of s.controlPoints) {
+    const owner = updateOwner(s, point);
+    if (owner === 'contested') {
+      report.contested++;
       continue;
     }
-    if (teams.size === 1) c.owner = [...teams][0]!;
-    if (c.owner === null) continue;
-    out.held[c.owner]++;
-    out.income[c.owner] += RULES.controlIncome;
-    s.funds[c.owner] += RULES.controlIncome;
+    if (owner === null) continue;
+    report.held[owner]++;
+    report.income[owner] += RULES.controlIncome;
+    s.funds[owner] += RULES.controlIncome;
   }
-  return out;
+  return report;
 }
