@@ -4,7 +4,7 @@
  */
 import type Phaser from 'phaser';
 import { movementOf } from '../../core/gameContent';
-import { samePos } from '../../core/geom';
+import { samePos, posOf } from '../../core/geom';
 import { canWalk, unitAt, unitById } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { TILE } from '../../layout';
@@ -104,7 +104,7 @@ export class Carry {
   private selectToMove(unit: Unit): void {
     const h = this.h;
     if (h.phase !== 'map') h.toMap();
-    h.view.cursor = { x: unit.x, y: unit.y };
+    h.view.cursor = posOf(unit);
     h.selectUnit(unit);
   }
 

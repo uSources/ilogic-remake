@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn, assistTurn, previewStandingOrders } from '@core/ai';
 import { rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
-import { seededRng } from '@core/geom';
+import { seededRng, posOf } from '@core/geom';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads';
@@ -40,7 +40,7 @@ describe('previewStandingOrders', () => {
     expect(it.capture).toEqual({ x: 12, y: 5 });
     expect(it.attack).toBeUndefined();
     playOrders(s);
-    expect({ x: u.x, y: u.y }).toEqual({ x: 12, y: 5 });
+    expect(posOf(u)).toEqual({ x: 12, y: 5 });
     expect(s.buildings[2]!.capture?.team ?? s.buildings[2]!.owner).toBe(0);
   });
 
@@ -54,7 +54,7 @@ describe('previewStandingOrders', () => {
     const end = last(it.path) ?? { x: 5, y: 5 };
     playOrders(s);
     expect(foe.life).toBeLessThan(100);
-    expect({ x: u.x, y: u.y }).toEqual(end);
+    expect(posOf(u)).toEqual(end);
   });
 
   it('una unidad sin nada que hacer este turno no tiene camino ni objetivo', () => {
@@ -100,7 +100,7 @@ describe('previewStandingOrders', () => {
     expect(withHidden.get(u.uid)!.attack).toBeUndefined();
     // Sin niebla si lo ve, y la prevision si lo marca (la prueba de arriba no es casualidad).
     s.rules = rulesWith({ fog: false });
-    expect(previewStandingOrders(s).get(u.uid)!.attack).toEqual({ x: hidden.x, y: hidden.y });
+    expect(previewStandingOrders(s).get(u.uid)!.attack).toEqual(posOf(hidden));
   });
 
   it('calcularla a mitad del turno de la IA no cambia lo que hace la IA', () => {

@@ -11,10 +11,20 @@ export interface GridSize {
   readonly height: number;
 }
 
-/** La casilla cae dentro de una rejilla de ese tamaño. */
-export function isInside(size: GridSize, pos: Pos): boolean {
+/**
+ * Los bordes de una rejilla: su tamaño y si una casilla cae dentro. Lo que solo necesita saber donde
+ * acaba el mapa (geom, el generador, leer partidas) recibe esto: el mapa (`mapGrid(s)`) o una capa.
+ */
+export interface GridBounds extends GridSize {
+  contains(pos: Pos): boolean;
+}
+
+/** La casilla cae dentro de una rejilla de ese tamaño (fuera de este modulo: `contains`). */
+function isInside(size: GridSize, pos: Pos): boolean {
   return pos.x >= 0 && pos.y >= 0 && pos.x < size.width && pos.y < size.height;
 }
+
+const clamp = (value: number, max: number): number => Math.max(0, Math.min(value, max));
 
 /** Una casilla y lo que hay en ella. */
 export interface GridCell<T> {
@@ -23,7 +33,7 @@ export interface GridCell<T> {
 }
 
 /** Una rejilla `columns[x][y]`. Las casillas que se leen o escriben tienen que estar dentro (`contains`). */
-export class Grid<T> implements GridSize {
+export class Grid<T> implements GridBounds {
   readonly width: number;
   readonly height: number;
 
@@ -48,6 +58,11 @@ export class Grid<T> implements GridSize {
 
   at(pos: Pos): T {
     return this.columns[pos.x]![pos.y]!;
+  }
+
+  /** La casilla, o la del borde mas cercana si cae fuera (para dibujar los bordes del mapa). */
+  atClamped(pos: Pos): T {
+    return this.at({ x: clamp(pos.x, this.width - 1), y: clamp(pos.y, this.height - 1) });
   }
 
   set(pos: Pos, value: T): void {

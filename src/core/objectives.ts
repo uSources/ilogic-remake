@@ -9,6 +9,7 @@
 
 import type { ContentTables } from './content';
 import type { GameState, Objective, Outcome, Pos } from './model';
+import { Grid } from './util/grid';
 
 /** Nombre interno de un edificio (buildings.json). */
 type BuildingName = string;
@@ -77,7 +78,7 @@ function positionOf(s: GameState, uid: number): Pos | undefined {
   return s.units.find((candidate) => candidate.uid === unit.carrier) ?? unit;
 }
 
-const isInsideMap = (pos: Pos, mapSize: number) => pos.x >= 0 && pos.y >= 0 && pos.x < mapSize && pos.y < mapSize;
+const isInsideMap = (pos: Pos, mapSize: number) => Grid.filled({ width: mapSize, height: mapSize }, false).contains(pos);
 
 const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
   hq: {

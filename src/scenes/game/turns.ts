@@ -8,7 +8,7 @@ import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
 import { defaultContent } from '../../core/content/default';
 import { contentOf } from '../../core/gameContent';
-import { samePos, seededRng } from '../../core/geom';
+import { samePos, seededRng, posOf } from '../../core/geom';
 import {
   buildingAt,
   canCapture,
@@ -295,7 +295,7 @@ export class TurnFlow {
     }
     const firstArrived = arrived[0];
     if (firstArrived) {
-      host.view.cursor = { x: firstArrived.x, y: firstArrived.y };
+      host.view.cursor = posOf(firstArrived);
       host.view.ensureVisible(firstArrived, ARRIVED_MARGIN);
       showToast(t('orderArrives'));
     }

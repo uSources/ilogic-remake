@@ -3,7 +3,7 @@
  * trazado, peligro, de donde venia (para deshacer) y los objetivos de su menu (atacar, descargar).
  * Vive desde que se elige la unidad hasta que se vuelve al mapa. Sin Phaser.
  */
-import { posKey } from '../../core/geom';
+import { posKey, posOf } from '../../core/geom';
 import { extendTrail } from '../../core/trail';
 import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
@@ -50,7 +50,7 @@ export class MoveSession {
     session.range = range;
     session.merge = byTile(mergeTargets(s, unit, range));
     session.load = byTile(loadTargets(s, unit, range));
-    session.trail = [{ x: unit.x, y: unit.y }];
+    session.trail = [posOf(unit)];
     session.block = passMap(s, unit).block;
     session.danger = threatMap(s, 1, 0);
     session.attackZone = attackZone(s, unit, range);

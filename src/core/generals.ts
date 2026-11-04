@@ -14,7 +14,7 @@
 import { contentOf, tablesOf } from './gameContent';
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { MAX_LIFE } from './data';
-import { posKey, squareArea } from './geom';
+import { posKey, squareArea, posOf } from './geom';
 import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
@@ -167,7 +167,7 @@ export function useAbility(s: GameState, team: Team, abilityId: string, target?:
     team,
     general: general.def.id,
     ability: ability.id,
-    ...(target ? { target: { x: target.x, y: target.y } } : {}),
+    ...(target ? { target: posOf(target) } : {}),
     hits: out.hits,
     ...(out.heals.length ? { heals: out.heals } : {}),
     ...(out.funds ? { funds: out.funds } : {}),

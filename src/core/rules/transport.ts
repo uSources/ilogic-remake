@@ -3,7 +3,7 @@
  */
 import { movementOf, tablesOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
-import { manhattan, neighbors4, samePos } from '../geom';
+import { manhattan, neighbors4, samePos, posOf } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { isOnMap } from '../util/predicates';
 import type { GameState, Pos, Unit } from '../model';
@@ -48,7 +48,7 @@ export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
   // Al unirse se queda la experiencia de la mas veterana.
   if (unit.kills || target.kills) target.kills = Math.max(unit.kills ?? 0, target.kills ?? 0);
   endTurn(target);
-  path.push({ x: target.x, y: target.y });
+  path.push(posOf(target));
   removeUnit(s, unit.uid);
   dropStaleCaptures(s);
   return path;
@@ -79,7 +79,7 @@ export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null
   if (!path) return null;
   const walked = walkPath(s, unit, path);
   if (walked.ambush) return ambushed(s, unit, walked);
-  path.push({ x: transport.x, y: transport.y });
+  path.push(posOf(transport));
   transport.cargo[slot] = unit.uid;
   unit.carrier = transport.uid;
   unit.x = transport.x;

@@ -8,7 +8,8 @@ import { defaultContent } from '@core/content/default';
 import { TERRAIN_NAMES, rulesWith } from '@core/data';
 import { createGame, loadGame } from '@core/defaultGames';
 import { tablesOf } from '@core/gameContent';
-import { posKey, seededRng } from '@core/geom';
+import { posKey, samePos, seededRng } from '@core/geom';
+import { mapGrid } from '@core/mapGrid';
 import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
@@ -30,7 +31,7 @@ import {
   wait,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import type { GameEvent, GameState, Rng, Unit } from '@core/model';
+import type { GameEvent, GameState, Pos, Rng, Unit } from '@core/model';
 
 /** Una letra por terreno (minuscula = suelo; mayuscula = obstaculo o agua). */
 const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {
@@ -127,10 +128,10 @@ export class Session {
           return this.unitInfo(this.mine(n(0), false));
         case 'move':
         case 'mover':
-          return this.move(this.mine(n(0)), n(1), n(2));
+          return this.move(this.mine(n(0)), { x: n(1), y: n(2) });
         case 'attack':
         case 'atacar':
-          return this.attack(this.mine(n(0)), n(1), n(2));
+          return this.attack(this.mine(n(0)), { x: n(1), y: n(2) });
         case 'capture':
         case 'capturar':
           return this.capture(this.mine(n(0)));
@@ -140,7 +141,7 @@ export class Session {
           return 'ok';
         case 'buy':
         case 'comprar':
-          return this.buy(n(0), n(1), a[2] ?? '');
+          return this.buy({ x: n(0), y: n(1) }, a[2] ?? '');
         case 'power':
         case 'poder':
           return this.power(a[0] ?? '', a[1] === undefined ? null : { x: n(1), y: n(2) });
@@ -178,8 +179,9 @@ export class Session {
   map(): string {
     const s = this.s;
     const vis = visibility(s, 0);
-    const W = s.map.length,
-      H = s.map[0]!.length;
+    const map = mapGrid(s);
+    const W = map.width,
+      H = map.height;
     const head = '    ' + Array.from({ length: W }, (_, x) => String(x % 10).padStart(3)).join('');
     const rows = [head];
     for (let y = 0; y < H; y++) {
@@ -187,7 +189,7 @@ export class Session {
       for (let x = 0; x < W; x++) {
         const u = unitAt(s, { x, y });
         const b = buildingAt(s, { x, y });
-        let cell = ' ' + TERRAIN_CHAR[TERRAIN_NAMES[s.map[x]![y]!]!] + ' ';
+        let cell = ' ' + TERRAIN_CHAR[TERRAIN_NAMES[map.at({ x, y })]!] + ' ';
         if (b) {
           const c = BUILDING_CHAR[b.type]!;
           cell = b.owner === null ? `*${c} ` : ` ${b.owner === 0 ? c : c.toLowerCase()} `;
@@ -228,15 +230,15 @@ export class Session {
       .join('\n');
   }
 
-  private move(u: Unit, x: number, y: number): string {
-    const path = moveUnit(this.s, u, { x, y });
-    if (!path) throw new UsageError(`la unidad ${u.uid} no puede llegar a (${x},${y})`);
+  private move(u: Unit, to: Pos): string {
+    const path = moveUnit(this.s, u, to);
+    if (!path) throw new UsageError(`la unidad ${u.uid} no puede llegar a (${posKey(to)})`);
     return path.ambush ? `emboscada: se para en (${u.x},${u.y})` : `movida a (${u.x},${u.y})`;
   }
 
-  private attack(u: Unit, x: number, y: number): string {
-    const t = attackTargets(this.s, u).find((v) => v.x === x && v.y === y);
-    if (!t) throw new UsageError(`la unidad ${u.uid} no puede atacar a (${x},${y}) desde (${u.x},${u.y})`);
+  private attack(u: Unit, at: Pos): string {
+    const t = attackTargets(this.s, u).find((target) => samePos(target, at));
+    if (!t) throw new UsageError(`la unidad ${u.uid} no puede atacar a (${posKey(at)}) desde (${u.x},${u.y})`);
     const r = attackFull(this.s, u, t, this.rng);
     wait(u);
     return `daño ${r.damage}${r.killed ? ' (destruida)' : ''}${r.counter ? `, contraataque ${r.counter}${r.attackerKilled ? ' (la tuya destruida)' : ''}` : ''}`;
@@ -248,9 +250,9 @@ export class Session {
     return r.done ? 'edificio capturado' : `capturando: quedan ${r.left} de ${r.total}`;
   }
 
-  private buy(x: number, y: number, name: string): string {
-    const b = buildingAt(this.s, { x, y });
-    if (!b || b.owner !== 0) throw new UsageError(`no tienes un edificio en (${x},${y})`);
+  private buy(at: Pos, name: string): string {
+    const b = buildingAt(this.s, at);
+    if (!b || b.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
     const type = tablesOf(this.s).UNIT_NAMES.findIndex((n) => n.toLowerCase() === name.toLowerCase());
     const opts = buyOptions(this.s, b);
     if (!opts.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[b.type]} no fabrica unidades`);
@@ -258,7 +260,7 @@ export class Session {
       return `error: tipo desconocido. Aqui se puede: ${opts.map((o) => `${tablesOf(this.s).UNIT_NAMES[o.type]} (${o.cost})`).join(', ')}`;
     const u = spawn(this.s, b, type);
     if (!u) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
-    return `comprada ${u.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${x},${y}); quedan ${this.s.funds[0]}`;
+    return `comprada ${u.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
   }
 
   /** Usar una habilidad del general (sin id: lista de habilidades y carga). */

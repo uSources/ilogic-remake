@@ -5,7 +5,7 @@
 
 import { tablesOf } from '../gameContent';
 import { coverAgainst, defenseFactor, isRanged } from '../abilities';
-import { manhattan } from '../geom';
+import { manhattan, posOf } from '../geom';
 import { chargeFromCombat, generalHitFactor } from '../generals';
 import { terrainAt } from '../mapGrid';
 import { canFight, isAlive, isEnemyOf, isOnMap } from '../util/predicates';
@@ -39,7 +39,7 @@ function basePower(s: GameState, attacker: Unit, defender: Unit): number {
  * no pueden mover y disparar) y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`).
  */
 export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
-  const origins: Pos[] = [{ x: unit.x, y: unit.y }];
+  const origins: Pos[] = [posOf(unit)];
   if (!range || isRanged(s, unit.type)) return origins;
   const reachable = reachableTiles(range);
   origins.push(...(allowed ? reachable.filter((pos) => allowed(pos)) : reachable));
@@ -283,7 +283,7 @@ function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatI
  */
 export function attackEvent(s: GameState, attacker: Unit, defender: Unit, rng: Rng): GameEventOf<'attack'> {
   const info = combatInfoBefore(s, attacker, defender);
-  const target = { x: defender.x, y: defender.y };
+  const target = posOf(defender);
   const result = attackFull(s, attacker, defender, rng);
   // Si el defensor cae no hay contraataque, aunque pudiera haberlo.
   if (result.killed) info.counterHit = null;

@@ -3,7 +3,7 @@
  * puras (sin Phaser): reciben el plan de movimiento de la escena (tests/sceneIntent.test.ts).
  */
 import { isCapturer } from '../../core/util/predicates';
-import { posKey, samePos } from '../../core/geom';
+import { posKey, samePos, posOf } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/targeting';
 import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
@@ -38,7 +38,7 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   if (!isReachable(plan.range, tile)) return { kind: 'none' };
   const building = buildingAt(s, tile);
   const isCapture = !!building && building.owner !== unit.team && isCapturer(s, unit);
-  return { kind: 'move', to: { x: tile.x, y: tile.y }, capture: isCapture };
+  return { kind: 'move', to: posOf(tile), capture: isCapture };
 }
 
 /** La unidad puede terminar su movimiento en esa casilla este turno. */

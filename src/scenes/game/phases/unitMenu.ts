@@ -3,7 +3,7 @@
  * algunas de ellas, elegir a quien atacar ('attack') y a quien descargar y donde ('unloadPick',
  * 'unloadTile').
  */
-import { posKey } from '../../../core/geom';
+import { posKey, posOf } from '../../../core/geom';
 import {
   attackEvent,
   attackTargets,
@@ -73,7 +73,7 @@ function pickAttackTarget(h: PhaseHost, unit: Unit): void {
   h.phase = 'attack';
   const first = targets[0];
   if (first) {
-    h.view.cursor = { x: first.x, y: first.y };
+    h.view.cursor = posOf(first);
     h.view.ensureVisible(first, 3);
   }
   h.refresh();
@@ -112,7 +112,7 @@ export const unitMenuPhase: PhaseHandler = {
     h.menuSel = Math.max(0, h.unitOptions.indexOf('capture'));
     h.deleteArmed = false;
     h.phase = 'unitMenu';
-    h.view.cursor = { x: unit.x, y: unit.y };
+    h.view.cursor = posOf(unit);
     h.refresh();
   },
   accept: (h) => {

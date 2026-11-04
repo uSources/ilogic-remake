@@ -3,7 +3,7 @@
  * (destacada). Logica pura: la usan la escena y la IA, que las cumple al terminar el turno
  * (ai/standingOrders.ts).
  */
-import { manhattan, samePos } from '../geom';
+import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt } from '../rules/queries';
 import { isAlive, isCapturer, isPlayer } from '../util/predicates';
 import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, Unit } from '../model';
@@ -13,13 +13,13 @@ export const sameStandingOrder = (a: StandingOrder, b: StandingOrder): boolean =
 
 const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
   kind: standingOrder.kind,
-  at: { x: standingOrder.at.x, y: standingOrder.at.y },
+  at: posOf(standingOrder.at),
 });
 
 /** La orden tal como la cumple esta unidad: con "capturar", las que no pueden capturar van de escolta (atacar). */
 export function forUnit(s: GameState, unit: Unit, standingOrder: StandingOrder): StandingOrder {
   const kind = standingOrder.kind === 'capture' && !isCapturer(s, unit) ? 'attack' : standingOrder.kind;
-  return { kind, at: { x: standingOrder.at.x, y: standingOrder.at.y } };
+  return { kind, at: posOf(standingOrder.at) };
 }
 
 /**
@@ -94,7 +94,7 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
  */
 export function giveStandingOrder(s: GameState, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
   const mine = playerUnits(units);
-  const standingOrder: StandingOrder = { kind, at: { x: at.x, y: at.y } };
+  const standingOrder: StandingOrder = { kind, at: posOf(at) };
   const whole = wholeSquads(s, mine);
   for (const id of whole) squadById(s, id)!.standingOrder = { ...standingOrder, at: { ...standingOrder.at } };
   for (const unit of mine) {
@@ -116,7 +116,7 @@ export function cancelStandingOrder(s: GameState, units: readonly Unit[]): void 
   for (const unit of units) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else if (unit.standingOrder) delete unit.standingOrder;
-    else if (effectiveStandingOrder(s, unit)) unit.standingOrder = { kind: 'defend', at: { x: unit.x, y: unit.y } };
+    else if (effectiveStandingOrder(s, unit)) unit.standingOrder = { kind: 'defend', at: posOf(unit) };
   }
 }
 
@@ -154,7 +154,7 @@ export function keepCapturing(s: GameState, unit: Unit): void {
   const standingOrder = effectiveStandingOrder(s, unit);
   if (!isPlayer(unit.team) || !building || isPlayer(building.owner) || !standingOrder) return;
   if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return;
-  unit.standingOrder = { kind: 'capture', at: { x: unit.x, y: unit.y } };
+  unit.standingOrder = { kind: 'capture', at: posOf(unit) };
 }
 
 /** Ya ha llegado a la zona de su orden (a 1 casilla o menos). */

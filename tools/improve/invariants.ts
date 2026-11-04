@@ -7,7 +7,7 @@ import { saveContext } from '@core/defaultGames';
 import { MAX_LIFE } from '@core/data';
 import { canMoveOn, contentOf, movementOf, tablesOf } from '@core/gameContent';
 import { posKey } from '@core/geom';
-import { terrainAt } from '@core/mapGrid';
+import { mapGrid, terrainAt } from '@core/mapGrid';
 import { commandUsed } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
@@ -15,8 +15,7 @@ import type { GameState } from '@core/model';
 export function checkInvariants(s: GameState): string[] {
   const { UNIT, UNIT_NAMES, BUILDING_NAMES, MAX_FUNDS } = tablesOf(s);
   const errs: string[] = [];
-  const W = s.map.length,
-    H = s.map[0]!.length;
+  const map = mapGrid(s);
   const where = new Map<string, number>();
   const uids = new Set<number>();
   for (const u of s.units) {
@@ -24,7 +23,7 @@ export function checkInvariants(s: GameState): string[] {
     if (uids.has(u.uid)) errs.push(`${id}: uid repetido`);
     uids.add(u.uid);
     if (!(u.type >= 0 && u.type < UNIT_NAMES.length)) errs.push(`${id}: tipo ${u.type} no existe`);
-    if (u.x < 0 || u.y < 0 || u.x >= W || u.y >= H) errs.push(`${id}: fuera del mapa (${u.x},${u.y})`);
+    if (!map.contains(u)) errs.push(`${id}: fuera del mapa (${u.x},${u.y})`);
     if (!(u.life > 0 && u.life <= MAX_LIFE)) errs.push(`${id}: vida ${u.life} fuera de 1..${MAX_LIFE}`);
     if (u.cargo.length !== UNIT.maxcarry[u.type]) errs.push(`${id}: carga de tamaño ${u.cargo.length}`);
     if (u.carrier === null) {

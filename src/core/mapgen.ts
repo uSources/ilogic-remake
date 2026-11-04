@@ -17,7 +17,7 @@ import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';
 import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, unitAt } from './rules/queries';
-import { isInside, type Grid, type GridSize } from './util/grid';
+import type { Grid, GridBounds, GridSize } from './util/grid';
 import type { GameContent } from './content';
 import type { GameState, Pos, Rng, RulesConfig, Team } from './model';
 
@@ -45,21 +45,21 @@ const canBuildOn = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.canbui
 const isWalkable = (s: GameState, terrain: number) => canMoveOn(s, WALK, terrain);
 
 /** Casillas del cuadrado de lado 2*radius+1 alrededor de `center` que caen dentro del mapa. */
-const squareAround = (size: GridSize, center: Pos, radius: number): Pos[] =>
-  squareArea(center, radius).filter((pos) => isInside(size, pos));
+const squareAround = (board: GridBounds, center: Pos, radius: number): Pos[] =>
+  squareArea(center, radius).filter((pos) => board.contains(pos));
 
 // ---------------------------------------------------------------------------------------------
 // Terreno
 // ---------------------------------------------------------------------------------------------
 
 /** Las vecinas en el orden del original: izquierda, arriba, derecha, abajo. */
-const sideNeighbours = (size: GridSize, pos: Pos): Pos[] =>
+const sideNeighbours = (board: GridBounds, pos: Pos): Pos[] =>
   [
     { x: pos.x - 1, y: pos.y },
     { x: pos.x, y: pos.y - 1 },
     { x: pos.x + 1, y: pos.y },
     { x: pos.x, y: pos.y + 1 },
-  ].filter((neighbour) => isInside(size, neighbour));
+  ].filter((neighbour) => board.contains(neighbour));
 
 /** Probabilidad de que `pos` sea `terrain`: la base del tema mas un extra por cada vecina ya hecha igual. */
 function terrainChance(map: Grid<number>, generated: Grid<boolean>, pos: Pos, terrain: number, theme: number): number {

@@ -78,9 +78,10 @@ function drawMinimap(painter: Painter, minimap: MinimapVM) {
 /** Lleva la camara a la casilla bajo el puntero. */
 function jumpToPointer(event: PointerEvent, minimap: MinimapVM) {
   const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  const tileX = ((event.clientX - box.left) / box.width) * minimap.w;
-  const tileY = ((event.clientY - box.top) / box.height) * minimap.h;
-  ui.actions.minimapJump(tileX, tileY);
+  ui.actions.minimapJump({
+    x: ((event.clientX - box.left) / box.width) * minimap.w,
+    y: ((event.clientY - box.top) / box.height) * minimap.h,
+  });
 }
 
 export function Minimap({ minimap, view }: { minimap: MinimapVM; view: UIState['minimapView'] }) {

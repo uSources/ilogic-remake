@@ -9,6 +9,7 @@ import { effectiveStandingOrder } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { ViewOptions } from '../../ui/mapView';
+import { posOf } from '../../core/geom';
 
 type Overlay<K extends keyof ViewOptions> = NonNullable<ViewOptions[K]>;
 
@@ -31,10 +32,10 @@ export function captureBars(s: GameState, vis: Grid<boolean>): Overlay<'captures
 export function orderMarks(s: GameState, showsLine: (unit: Unit) => boolean): Overlay<'orders'> {
   const multiTurn = s.units
     .filter((unit) => isPlayer(unit) && unit.travelTo && onMap(unit))
-    .map((unit) => ({ from: { x: unit.x, y: unit.y }, to: unit.travelTo! }));
+    .map((unit) => ({ from: posOf(unit), to: unit.travelTo! }));
   const withTarget = s.units.flatMap((unit) => {
     const order = isPlayer(unit) && onMap(unit) ? effectiveStandingOrder(s, unit) : undefined;
-    return order ? [{ from: { x: unit.x, y: unit.y }, to: order.at, kind: order.kind, line: showsLine(unit) }] : [];
+    return order ? [{ from: posOf(unit), to: order.at, kind: order.kind, line: showsLine(unit) }] : [];
   });
   return [...multiTurn, ...withTarget];
 }
@@ -70,6 +71,6 @@ export function escortMarks(s: GameState, hidden: ReadonlySet<number>): { goal: 
   if (objective?.kind !== 'escort') return { goal: null, vip: null };
   const vip = unitById(s, objective.uid);
   const shownAt = vip && vip.carrier !== null ? (unitById(s, vip.carrier) ?? vip) : vip;
-  const vipPos = shownAt && !hidden.has(shownAt.uid) ? { x: shownAt.x, y: shownAt.y } : null;
+  const vipPos = shownAt && !hidden.has(shownAt.uid) ? posOf(shownAt) : null;
   return { goal: objective.to, vip: vipPos };
 }

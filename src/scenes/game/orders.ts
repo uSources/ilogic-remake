@@ -22,6 +22,7 @@ import type { MapView } from '../../ui/mapView';
 import { ACTION_RUNNERS, type ActionRunHost } from './actionRunners';
 import type { GroupSelection } from './groupSelection';
 import type { Intent, MoveUndo, Phase } from './types';
+import { posOf } from '../../core/geom';
 
 /** De donde se abrio el menu de ordenes de una casilla (adonde vuelve al cancelar). */
 export type OrderFrom = 'move' | 'unitMenu' | 'map';
@@ -171,10 +172,10 @@ export class Orders {
     const ctx = this.ctx(at);
     const ids = ctx ? menuActions(ctx).map((action) => action.id) : [];
     if (!ids.length) return false;
-    this.menu = { at: { x: at.x, y: at.y }, uids: uidsOf(who.units), ids, from: who.from };
+    this.menu = { at: posOf(at), uids: uidsOf(who.units), ids, from: who.from };
     h.selection.multi = false;
     h.stopInspect();
-    h.view.cursor = { x: at.x, y: at.y };
+    h.view.cursor = posOf(at);
     h.menuSel = 0;
     h.phase = 'orderMenu';
     h.refresh();
@@ -208,7 +209,7 @@ export class Orders {
     if (!units.length) return null;
     const unitHere = at ? unitAt(s, at) : undefined;
     const enemyHere = !!unitHere && !isPlayer(unitHere) && unitHere.carrier === null && h.visible(unitHere);
-    const ctx: ActionCtx = { s, units, at: at ? { x: at.x, y: at.y } : null, enemyHere };
+    const ctx: ActionCtx = { s, units, at: at ? posOf(at) : null, enemyHere };
     const isSelectedUnit = h.phase === 'move' && h.sel && units.length === 1 && units[0]!.uid === h.sel.uid;
     if (at && isSelectedUnit) Object.assign(ctx, this.movingIntent(h.sel, at));
     return ctx;

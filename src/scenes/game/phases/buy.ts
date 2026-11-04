@@ -8,6 +8,7 @@ import { abilitiesVM, buyBlockedText, unitStatsText } from '../../../ui/hudModel
 import { unitIconKey } from '../../../ui/sprites';
 import type { MenuModel } from '../menuModel';
 import type { PhaseHandler, PhaseHost } from './phase';
+import { posOf } from '../../../core/geom';
 
 /** La primera opcion del menu es «Cancelar»; las unidades van detras. */
 const CANCEL_ROW = 0;
@@ -30,7 +31,7 @@ export const buyPhase: PhaseHandler = {
     if (!option) return;
     if (option.blocked) return showToast(buyBlockedText(h.state, option.blocked));
     const unit = spawn(h.state, building, option.type);
-    if (unit) void h.play([{ kind: 'spawn', uid: unit.uid, at: { x: building.x, y: building.y } }]).then(() => h.afterAction());
+    if (unit) void h.play([{ kind: 'spawn', uid: unit.uid, at: posOf(building) }]).then(() => h.afterAction());
   },
   back: (h) => h.toMap(),
   menu: (input) => {

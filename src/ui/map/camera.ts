@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { Pos } from '../../core/model';
-import { isInside, type GridSize } from '../../core/util/grid';
+import { Grid, type GridBounds } from '../../core/util/grid';
 import { dpr } from '../../display';
 import type { Anchor } from '../../hud/store';
 import { TILE } from '../../layout';
@@ -39,7 +39,7 @@ export class MapCamera {
   level: number;
   private lastDpr = dpr();
   /** Tamaño del mapa que se enseña (lo pone `showMap` al construir el terreno de una partida). */
-  private map: GridSize = { width: 0, height: 0 };
+  private map: GridBounds = Grid.filled({ width: 0, height: 0 }, 0);
 
   constructor(readonly cam: Phaser.Cameras.Scene2D.Camera) {
     cam.setRoundPixels(true);
@@ -60,8 +60,8 @@ export class MapCamera {
   }
 
   /** El mapa que se enseña ahora: sus casillas y sus limites. */
-  showMap(size: GridSize): void {
-    this.map = { width: size.width, height: size.height };
+  showMap(map: GridBounds): void {
+    this.map = map;
     this.updateBounds();
   }
 
@@ -97,7 +97,7 @@ export class MapCamera {
     const world = this.cam.getWorldPoint(sx, sy);
     const x = Math.floor(world.x / TILE);
     const y = Math.floor(world.y / TILE);
-    return isInside(this.map, { x, y }) ? { x, y } : null;
+    return this.map.contains({ x, y }) ? { x, y } : null;
   }
 
   /** Esquinas de un recuadro de pantalla en coordenadas de mundo (arriba a la izquierda y abajo a la derecha). */

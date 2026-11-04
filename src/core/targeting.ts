@@ -2,7 +2,7 @@
  * A donde apuntar con la unidad elegida: desde que casilla atacar a un objetivo y que casilla del
  * alcance acerca mas a un destino. Logica pura, sin interfaz: la usa la escena y se puede probar.
  */
-import { manhattan, samePos } from './geom';
+import { manhattan, samePos, posOf } from './geom';
 import { isRanged } from './abilities';
 import { canDamage, inAttackRange, tileProtection } from './rules/combat';
 import { reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
@@ -18,10 +18,10 @@ export function bestAttackTile(s: GameState, unit: Unit, target: Unit, range: Mo
   if (!unit.canFire || !canDamage(s, unit, target)) return null;
   const reaches = (from: Pos) => inAttackRange(s, unit.type, from, target);
   // Las que no pueden mover y disparar solo atacan desde donde estan.
-  if (isRanged(s, unit.type)) return reaches(unit) ? { x: unit.x, y: unit.y } : null;
+  if (isRanged(s, unit.type)) return reaches(unit) ? posOf(unit) : null;
 
   const candidates: Pos[] = [];
-  if (reaches(unit)) candidates.push({ x: unit.x, y: unit.y });
+  if (reaches(unit)) candidates.push(posOf(unit));
   candidates.push(...reachableTiles(range).filter(reaches));
   const onTrail = candidates.find((tile) => samePos(tile, end));
   if (onTrail) return onTrail;

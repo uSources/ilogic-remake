@@ -5,7 +5,7 @@
 import { movementOf, tablesOf, terrainMoveCost } from '../gameContent';
 import { type MoveType } from '../data';
 import { isRanged, zoneOfControl } from '../abilities';
-import { manhattan, neighbors4, posKey, samePos } from '../geom';
+import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
 import { createLayer, mapGrid, terrainAt } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isEnemyOf, isOnMap } from '../util/predicates';
@@ -103,7 +103,7 @@ export function moveRange(s: GameState, unit: Unit): MoveRange {
   // Dijkstra sencillo: los costes son pequeños (1 a 3) y el alcance tambien.
   const cheapest = board.createLayer(Infinity);
   cheapest.set(unit, 0);
-  const open: Pos[] = [{ x: unit.x, y: unit.y }];
+  const open: Pos[] = [posOf(unit)];
   while (open.length) {
     const current = takeCheapest(open, cheapest);
     const costHere = cheapest.at(current);
@@ -197,7 +197,7 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
     path.unshift(step);
     step = range.prev.at(step);
   }
-  path.unshift({ x: from.x, y: from.y });
+  path.unshift(posOf(from));
   return path;
 }
 
@@ -322,7 +322,7 @@ export function approachPath(s: GameState, unit: Unit, target: Pos, range = move
 
   const best = minBy(neighbors4(range.steps, target).filter(canStepInFrom), stepsTo);
   if (!best) return null;
-  return samePos(best, unit) ? [{ x: unit.x, y: unit.y }] : pathTo(range, unit, best);
+  return samePos(best, unit) ? [posOf(unit)] : pathTo(range, unit, best);
 }
 
 /** Evento de mover (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */

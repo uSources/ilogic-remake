@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Grid, isInside } from '@core/util/grid';
+import { Grid } from '@core/util/grid';
 import { compareKeys, maxBy, minBy } from '@core/util/pick';
 
 describe('rejillas', () => {
@@ -31,7 +31,8 @@ describe('rejillas', () => {
     expect(grid.contains({ x: 2, y: 1 })).toBe(true);
     expect(grid.contains({ x: 3, y: 0 })).toBe(false);
     expect(grid.contains({ x: 0, y: -1 })).toBe(false);
-    expect(isInside({ width: 3, height: 2 }, { x: 1, y: 2 })).toBe(false);
+    expect(grid.contains({ x: 1, y: 2 })).toBe(false);
+    expect(grid.atClamped({ x: -4, y: 9 })).toBe(grid.at({ x: 0, y: 1 }));
     const layer = grid.createLayer(true);
     expect([layer.width, layer.height, layer.at({ x: 2, y: 1 })]).toEqual([3, 2, true]);
   });

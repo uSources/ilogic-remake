@@ -7,7 +7,7 @@
 import Phaser from 'phaser';
 import { effectiveStandingOrder, renameSquad } from '../core/squads';
 import { tablesOf } from '../core/gameContent';
-import { samePos } from '../core/geom';
+import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
 import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption } from '../core/rules';
@@ -250,7 +250,7 @@ export class GameScene extends Phaser.Scene {
   /** Cursor y camara sobre la Base del jugador. */
   private centerOnHq(): void {
     const hq = this.s.buildings.find((building) => building.owner === 0 && building.type === tablesOf(this.s).HQ) ?? { x: 0, y: 0 };
-    this.view.cursor = { x: hq.x, y: hq.y };
+    this.view.cursor = posOf(hq);
     this.view.centerOn(hq, true);
   }
 
@@ -362,9 +362,9 @@ export class GameScene extends Phaser.Scene {
       openGameMenu: () => {
         if (ready()) this.openGameMenu();
       },
-      minimapJump: (x: number, y: number) => {
+      minimapJump: (at: Pos) => {
         if (this.ended) return;
-        this.cameras.main.centerOn(x * TILE, y * TILE);
+        this.cameras.main.centerOn(at.x * TILE, at.y * TILE);
         this.refreshHud();
       },
       toggleMinimap: () => ui.set({ minimapOn: !ui.get().minimapOn }),
@@ -398,7 +398,7 @@ export class GameScene extends Phaser.Scene {
     const unit = unitById(this.s, uid);
     if (!unit) return;
     this.abandonSelection();
-    this.view.cursor = { x: unit.x, y: unit.y };
+    this.view.cursor = posOf(unit);
     this.view.ensureVisible(unit, FOLLOW_MARGIN);
     this.moves.select(unit);
   }
@@ -558,7 +558,7 @@ export class GameScene extends Phaser.Scene {
     const here = unitAt(this.s, this.view.cursor);
     const hereIndex = here ? idle.findIndex((unit) => unit.uid === here.uid) : -1;
     const next = idle[(hereIndex + 1) % idle.length]!;
-    this.view.cursor = { x: next.x, y: next.y };
+    this.view.cursor = posOf(next);
     this.view.ensureVisible(next, FOLLOW_MARGIN);
     this.cursorMoved();
   }
@@ -946,7 +946,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private anchor(kind: BubbleKind, p: Pos): Anchor {
-    this.anchorAt[kind] = { x: p.x, y: p.y };
+    this.anchorAt[kind] = posOf(p);
     return this.view.tileRectCss(p);
   }
 

@@ -10,7 +10,7 @@ import type Phaser from 'phaser';
 import { MoveType } from '../../core/data';
 import { movementOf, tablesOf } from '../../core/gameContent';
 import { abilityArea, generalOf } from '../../core/generals';
-import { squareArea } from '../../core/geom';
+import { squareArea, posOf } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { unitAt, unitById } from '../../core/rules';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
@@ -625,7 +625,7 @@ const animateAbility: Animator<'ability'> = async (stage, event) => {
     ...event.hits.map((hit) => abilityHit(stage, hit)),
     ...(event.heals ?? []).map((heal) => abilityHeal(stage, heal)),
     // Dinero: la cantidad, bajo el nombre de la habilidad.
-    ...(event.funds ? [floatText(stage.scene, stage.view, { x: c.x, y: c.y }, `+${fmtNum(event.funds)}`, PAL_CSS.gold)] : []),
+    ...(event.funds ? [floatText(stage.scene, stage.view, posOf(c), `+${fmtNum(event.funds)}`, PAL_CSS.gold)] : []),
   ]);
 };
 

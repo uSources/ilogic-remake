@@ -7,6 +7,7 @@ import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
 import type { Building, GameEvent, GameState, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
+import { posOf } from '../geom';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
@@ -94,6 +95,6 @@ export function capture(s: GameState, unit: Unit): CaptureResult | null {
 
 /** Evento de captura (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
 export function captureEvent(unit: Unit, building: Building, result: { left: number; total: number }): GameEvent {
-  const at = { x: building.x, y: building.y };
+  const at = posOf(building);
   return { kind: 'capture', uid: unit.uid, at, owner: building.owner, left: result.left, total: result.total };
 }

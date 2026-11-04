@@ -5,7 +5,7 @@
  */
 
 import { cloneState, tablesOf, weightsOf } from '../gameContent';
-import { manhattan, samePos, seededRng } from '../geom';
+import { manhattan, samePos, seededRng, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
@@ -186,18 +186,18 @@ function recordIntent(intents: Map<number, StandingOrderIntent>, event: GameEven
       const intent = intents.get(event.uid);
       if (!intent) return;
       // Un camino que sigue a otro empieza donde acabo el anterior: esa casilla no se repite.
-      intent.path = intent.path.length ? [...intent.path, ...event.path.slice(1)] : event.path.map((pos) => ({ x: pos.x, y: pos.y }));
+      intent.path = intent.path.length ? [...intent.path, ...event.path.slice(1)] : event.path.map((pos) => posOf(pos));
       if (event.kind === 'merge') intent.merge = true;
       return;
     }
     case 'attack': {
       const intent = intents.get(event.attacker);
-      if (intent && !intent.attack) intent.attack = { x: event.target.x, y: event.target.y };
+      if (intent && !intent.attack) intent.attack = posOf(event.target);
       return;
     }
     case 'capture': {
       const intent = intents.get(event.uid);
-      if (intent) intent.capture = { x: event.at.x, y: event.at.y };
+      if (intent) intent.capture = posOf(event.at);
       return;
     }
     default:

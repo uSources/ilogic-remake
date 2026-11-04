@@ -5,7 +5,7 @@ import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
-import { posKey } from '@core/geom';
+import { posKey, posOf } from '@core/geom';
 import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
@@ -30,7 +30,7 @@ function plan(s: GameState, u: Unit): MovePlan {
     range,
     merge: new Map(mergeTargets(s, u, range).map((o) => [posKey(o), o.uid])),
     load: new Map(loadTargets(s, u, range).map((o) => [posKey(o), o.uid])),
-    trail: [{ x: u.x, y: u.y }],
+    trail: [posOf(u)],
   };
 }
 

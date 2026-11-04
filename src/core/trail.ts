@@ -4,7 +4,7 @@
  */
 
 import { movementOf } from './gameContent';
-import { manhattan, samePos } from './geom';
+import { manhattan, samePos, posOf } from './geom';
 import { moveCost, pathCost, pathTo, type MoveRange } from './rules/movement';
 import { canWalk } from './rules/queries';
 import type { Grid } from './util/grid';
@@ -16,7 +16,7 @@ import type { GameState, Pos, Unit } from './model';
  * el mismo si no se llega). `block` = casillas por las que no puede pasar (enemigos a la vista).
  */
 export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: Grid<boolean>, trail: Pos[], hovered: Pos): Pos[] {
-  const current = trail.length ? trail : [{ x: unit.x, y: unit.y }];
+  const current = trail.length ? trail : [posOf(unit)];
   const backIndex = current.findIndex((step) => samePos(step, hovered));
   if (backIndex >= 0) return current.slice(0, backIndex + 1);
   const end = current[current.length - 1]!;
@@ -26,7 +26,7 @@ export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: G
     canWalk(s, hovered, movement) &&
     !block.at(hovered) &&
     pathCost(s, movement, current) + moveCost(s, movement, hovered) <= range.maxSteps;
-  if (canExtend) return [...current, { x: hovered.x, y: hovered.y }];
+  if (canExtend) return [...current, posOf(hovered)];
   // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
   return range.prev.at(hovered) ? pathTo(range, unit, hovered) : trail;
 }

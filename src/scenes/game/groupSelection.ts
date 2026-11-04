@@ -15,6 +15,7 @@ import { showToast } from '../../hud/store';
 import { t } from '../../settings';
 import type { MapView } from '../../ui/mapView';
 import type { Phase } from './types';
+import { posOf } from '../../core/geom';
 
 /** Lo que la seleccion necesita de la escena. */
 export interface SelectionHost {
@@ -136,13 +137,13 @@ export class GroupSelection {
   }
 
   private cameraTo(unit: Unit): void {
-    this.h.view.cursor = { x: unit.x, y: unit.y };
+    this.h.view.cursor = posOf(unit);
     this.h.view.centerOn(unit);
     this.h.cursorMoved();
   }
 
   private moveCursorTo(p: Pos): void {
-    this.h.view.cursor = { x: p.x, y: p.y };
+    this.h.view.cursor = posOf(p);
     this.h.view.ensureVisible(p, FOLLOW_MARGIN);
   }
 

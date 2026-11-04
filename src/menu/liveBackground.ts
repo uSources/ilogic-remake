@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
 import { rulesWith } from '../core/data';
 import { seededRng } from '../core/geom';
-import { createLayer } from '../core/mapGrid';
+import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
 import { endRound, outcome } from '../core/rules';
 import type { GameEvent, GameState, Pos, Team } from '../core/model';
@@ -104,8 +104,9 @@ export class LiveBackground {
     const s = this.game;
     if (!s) return;
     const camera = this.scene.cameras.main;
-    const mapWidth = s.map.length * TILE;
-    const mapHeight = s.map[0]!.length * TILE;
+    const map = mapGrid(s);
+    const mapWidth = map.width * TILE;
+    const mapHeight = map.height * TILE;
     const viewWidth = camera.width / camera.zoom;
     const viewHeight = camera.height / camera.zoom;
     camera.setBounds(

@@ -4,7 +4,7 @@
  */
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
-import { manhattan, samePos } from '../../core/geom';
+import { manhattan, samePos, posOf } from '../../core/geom';
 import { closestStep } from '../../core/targeting';
 import {
   attackEvent,
@@ -280,7 +280,7 @@ export class UnitMoves {
     unit.y = undo.y;
     unit.canFire = undo.canFire;
     unit.canMove = true;
-    h.view.cursor = { x: unit.x, y: unit.y };
+    h.view.cursor = posOf(unit);
     this.select(unit);
   }
 

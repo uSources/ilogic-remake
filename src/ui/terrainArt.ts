@@ -1,6 +1,9 @@
 import type Phaser from 'phaser';
 import { TerrainType, THEME_NAMES } from '../core/data';
+import { mapGrid } from '../core/mapGrid';
 import type { GameState, Pos } from '../core/model';
+import { buildingAt } from '../core/rules';
+import { Grid } from '../core/util/grid';
 import { hasImage, imageFrame } from '../atlas';
 import { TILE } from '../layout';
 import { WANG_SETS } from './wangSets';
@@ -42,7 +45,9 @@ const DECOR: Record<number, [string, number]> = {
 const FORESTS: number[] = [TerrainType.WOODS, TerrainType.SNOW_WOOD];
 
 /** Numero fijo por casilla (la misma variante cada vez que se dibuja el mapa). */
-const cellHash = (x: number, y: number): number => ((x * 73856093) ^ (y * 19349663)) >>> 0;
+const cellHash = (pos: Pos): number => ((pos.x * 73856093) ^ (pos.y * 19349663)) >>> 0;
+/** La casilla a (dx, dy) de `pos`. */
+const offset = (pos: Pos, dx: number, dy: number): Pos => ({ x: pos.x + dx, y: pos.y + dy });
 
 /**
  * Mascara de costa de una casilla de agua segun sus vecinos de tierra (`isLandAt(dx, dy)`): lados
@@ -113,20 +118,12 @@ interface TerrainCanvas {
   readonly textures: Phaser.Textures.TextureManager;
   readonly s: GameState;
   readonly ctx: CanvasRenderingContext2D;
-  /** Tamaño del mapa en casillas. */
-  readonly width: number;
-  readonly height: number;
+  /** El terreno de la partida (`mapGrid(s)`): su tamaño y sus casillas. */
+  readonly map: Grid<number>;
 }
 
 /** Columnas de las laminas blob (tools/art/build_blob.py). */
 const BLOB_COLS = 8;
-
-/** Terreno de una casilla; fuera del mapa, el de la casilla del borde mas cercana. */
-function clampedTerrain(s: GameState, x: number, y: number): number {
-  const width = s.map.length;
-  const height = s.map[0]!.length;
-  return s.map[Math.min(width - 1, Math.max(0, x))]![Math.min(height - 1, Math.max(0, y))]!;
-}
 
 /** Copia una casilla (TILE x TILE) de una imagen cargada al lienzo (respeta su sitio dentro del atlas). */
 function drawTile(canvas: TerrainCanvas, key: string, sourceX: number, sourceY: number, x: number, y: number): void {
@@ -134,31 +131,34 @@ function drawTile(canvas: TerrainCanvas, key: string, sourceX: number, sourceY: 
   canvas.ctx.drawImage(frame.source.image as CanvasImageSource, frame.cutX + sourceX, frame.cutY + sourceY, TILE, TILE, x, y, TILE, TILE);
 }
 
-/** Copia la pieza numero `index` de una lamina de `columns` columnas en la casilla (x, y). */
-function drawSheetTile(canvas: TerrainCanvas, key: string, index: number, columns: number, x: number, y: number): void {
-  drawTile(canvas, key, (index % columns) * TILE, Math.floor(index / columns) * TILE, x * TILE, y * TILE);
+/** Copia la pieza numero `index` de una lamina de `columns` columnas en la casilla `pos`. */
+function drawSheetTile(canvas: TerrainCanvas, key: string, index: number, columns: number, pos: Pos): void {
+  drawTile(canvas, key, (index % columns) * TILE, Math.floor(index / columns) * TILE, pos.x * TILE, pos.y * TILE);
 }
 
 /**
- * Pieza Wang de la esquina (x, y) de la rejilla doble: que casillas de las cuatro que la rodean
- * cuentan como "arriba" (NO 8, NE 4, SO 2, SE 1).
+ * Pieza Wang de la esquina `corner` de la rejilla doble (la de arriba a la izquierda de la casilla
+ * con ese numero): que casillas de las cuatro que la rodean cuentan como "arriba" (NO 8, NE 4, SO 2,
+ * SE 1). Fuera del mapa cuenta el terreno de la casilla del borde mas cercana.
  */
-function wangCorners(s: GameState, x: number, y: number, isUp: (terrain: number) => boolean): number {
-  const at = (cx: number, cy: number) => isUp(clampedTerrain(s, cx, cy));
-  return (at(x - 1, y - 1) ? 8 : 0) | (at(x, y - 1) ? 4 : 0) | (at(x - 1, y) ? 2 : 0) | (at(x, y) ? 1 : 0);
+function wangCorners(map: Grid<number>, corner: Pos, isUp: (terrain: number) => boolean): number {
+  const at = (dx: number, dy: number) => isUp(map.atClamped(offset(corner, dx, dy)));
+  return (at(-1, -1) ? 8 : 0) | (at(0, -1) ? 4 : 0) | (at(-1, 0) ? 2 : 0) | (at(0, 0) ? 1 : 0);
 }
+
+/** Las esquinas de la rejilla doble: una mas que casillas en cada lado. */
+const cornerGrid = (map: Grid<number>): Grid<null> => Grid.filled({ width: map.width + 1, height: map.height + 1 }, null);
 
 /** Recorre las piezas de la rejilla doble con el juego Wang `set`; `drawEmpty`: tambien las que no tienen nada "arriba". */
 function paintWangPass(canvas: TerrainCanvas, set: string, isUp: (terrain: number) => boolean, drawEmpty: boolean): void {
   const frames = WANG_SETS[set];
   if (!frames || !hasImage(canvas.textures, `wang/${set}`)) return;
   const half = TILE / 2;
-  for (let x = 0; x <= canvas.width; x++)
-    for (let y = 0; y <= canvas.height; y++) {
-      const corners = wangCorners(canvas.s, x, y, isUp);
-      if (!corners && !drawEmpty) continue;
-      drawTile(canvas, `wang/${set}`, frames[corners]! * TILE, 0, x * TILE - half, y * TILE - half);
-    }
+  for (const { pos: corner } of cornerGrid(canvas.map).cells()) {
+    const corners = wangCorners(canvas.map, corner, isUp);
+    if (!corners && !drawEmpty) continue;
+    drawTile(canvas, `wang/${set}`, frames[corners]! * TILE, 0, corner.x * TILE - half, corner.y * TILE - half);
+  }
 }
 
 /**
@@ -175,32 +175,29 @@ function openLandCorners(isLandAt: (dx: number, dy: number) => boolean): number 
 }
 
 /** Hay algo encima que tapa la esquina (montaña, bosque o edificio): la tierra se pinta entera. */
-const isCovered = (s: GameState, x: number, y: number): boolean =>
-  objectBase(s, { x, y }) !== null || s.buildings.some((building) => building.x === x && building.y === y);
+const isCovered = (s: GameState, pos: Pos): boolean => objectBase(s, pos) !== null || buildingAt(s, pos) !== undefined;
 
 /** Coloca las piezas de la lamina blob (tools/art/build_blob.py) segun los vecinos de cada casilla. */
 function paintBlobPass(canvas: TerrainCanvas, set: string, isUp: (terrain: number) => boolean): void {
   const sheet = BLOB_SETS[set];
   const key = `blob/${set}`;
   if (!sheet || !hasImage(canvas.textures, key)) return;
-  const { s, width, height } = canvas;
-  const isLand = (x: number, y: number) => x >= 0 && y >= 0 && x < width && y < height && isUp(clampedTerrain(s, x, y));
-  for (let x = 0; x < width; x++)
-    for (let y = 0; y < height; y++) {
-      // Fuera del mapa cuenta como lo de la casilla (sin orilla contra el borde).
-      const isLandAt = (dx: number, dy: number) => {
-        const nx = x + dx;
-        const ny = y + dy;
-        return nx < 0 || ny < 0 || nx >= width || ny >= height ? isLand(x, y) : isLand(nx, ny);
-      };
-      if (isLand(x, y)) {
-        const corners = isCovered(s, x, y) ? 0 : openLandCorners(isLandAt);
-        drawSheetTile(canvas, key, sheet.land[corners]!, BLOB_COLS, x, y);
-        continue;
-      }
-      const piece = sheet.water[coastMask(isLandAt)];
-      if (piece !== undefined) drawSheetTile(canvas, key, piece, BLOB_COLS, x, y);
+  const { s, map } = canvas;
+  for (const { pos, value: terrain } of map.cells()) {
+    const isLand = isUp(terrain);
+    // Fuera del mapa cuenta como lo de la casilla (sin orilla contra el borde).
+    const isLandAt = (dx: number, dy: number) => {
+      const neighbour = offset(pos, dx, dy);
+      return map.contains(neighbour) ? isUp(map.at(neighbour)) : isLand;
+    };
+    if (isLand) {
+      const corners = isCovered(s, pos) ? 0 : openLandCorners(isLandAt);
+      drawSheetTile(canvas, key, sheet.land[corners]!, BLOB_COLS, pos);
+      continue;
     }
+    const piece = sheet.water[coastMask(isLandAt)];
+    if (piece !== undefined) drawSheetTile(canvas, key, piece, BLOB_COLS, pos);
+  }
 }
 
 /** Borde organico entre dos aguas: pieza de la lamina org_<set> segun la casilla y sus 8 vecinos. */
@@ -208,33 +205,31 @@ function paintOrganicPass(canvas: TerrainCanvas, set: string, isUp: (terrain: nu
   const pieces = ORG_SHEETS[set];
   const key = `blob/org_${set}`;
   if (!pieces || !hasImage(canvas.textures, key)) return;
-  const isUpAt = (x: number, y: number) => isUp(clampedTerrain(canvas.s, x, y));
-  for (let x = 0; x < canvas.width; x++)
-    for (let y = 0; y < canvas.height; y++) {
-      const piece = pieces[neighbourKey(x, y, isUpAt)]!;
-      if (piece >= 0) drawSheetTile(canvas, key, piece, SHEET_COLS, x, y);
-    }
+  const isUpAt = (pos: Pos) => isUp(canvas.map.atClamped(pos));
+  for (const { pos } of canvas.map.cells()) {
+    const piece = pieces[neighbourKey(pos, isUpAt)]!;
+    if (piece >= 0) drawSheetTile(canvas, key, piece, SHEET_COLS, pos);
+  }
 }
 
 /** Bosques con el juego Wang (solo si no hay arboles sueltos, que van como sprites). */
 function paintWangForests(canvas: TerrainCanvas): void {
-  const { s } = canvas;
-  for (const overlay of overlaySets(s.theme)) {
+  const terrains = [...canvas.map.cells()].map((cell) => cell.value);
+  for (const overlay of overlaySets(canvas.s.theme)) {
     const isForest = (terrain: number) => overlay.cells.includes(terrain);
-    if (s.map.some((column) => column.some(isForest))) paintWangPass(canvas, overlay.set, isForest, false);
+    if (terrains.some(isForest)) paintWangPass(canvas, overlay.set, isForest, false);
   }
 }
 
 /** Decorados sueltos (flores, cactus, muñeco de nieve), con una variante fija por casilla. */
 function paintDecor(canvas: TerrainCanvas): void {
-  for (let x = 0; x < canvas.width; x++)
-    for (let y = 0; y < canvas.height; y++) {
-      const decor = DECOR[canvas.s.map[x]![y]!];
-      if (!decor) continue;
-      const [base, variants] = decor;
-      const key = `${base}_${cellHash(x, y) % variants}`;
-      if (hasImage(canvas.textures, key)) drawTile(canvas, key, 0, 0, x * TILE, y * TILE);
-    }
+  for (const { pos, value: terrain } of canvas.map.cells()) {
+    const decor = DECOR[terrain];
+    if (!decor) continue;
+    const [base, variants] = decor;
+    const key = `${base}_${cellHash(pos) % variants}`;
+    if (hasImage(canvas.textures, key)) drawTile(canvas, key, 0, 0, pos.x * TILE, pos.y * TILE);
+  }
 }
 
 /** Arboles sueltos de Retro Diffusion en el atlas: los bosques van como sprites y no con el juego Wang. */
@@ -242,14 +237,13 @@ const hasTreeSprites = (textures: Phaser.Textures.TextureManager): boolean => ha
 
 /** Pinta el terreno entero del mapa en un lienzo (una sola vez por partida). */
 export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameState): HTMLCanvasElement {
-  const width = s.map.length;
-  const height = s.map[0]!.length;
+  const map = mapGrid(s);
   const element = document.createElement('canvas');
-  element.width = width * TILE;
-  element.height = height * TILE;
+  element.width = map.width * TILE;
+  element.height = map.height * TILE;
   const ctx = element.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
-  const canvas: TerrainCanvas = { textures, s, ctx, width, height };
+  const canvas: TerrainCanvas = { textures, s, ctx, map };
   const [deepSet, waterSet, landSet] = groundSets(s.theme);
   // Suelo por niveles: todo agua profunda y encima cada nivel con su borde.
   paintWangPass(canvas, deepSet, () => false, true);
@@ -268,15 +262,14 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
 export function terrainObjects(textures: Phaser.Textures.TextureManager, s: GameState): { key: string; x: number; y: number }[] {
   const objects: { key: string; x: number; y: number }[] = [];
   const hasTrees = hasTreeSprites(textures);
-  // Fila a fila (y por fuera): la capa de los edificios los ordena por fila.
-  for (let y = 0; y < s.map[0]!.length; y++)
-    for (let x = 0; x < s.map.length; x++) {
-      const key = objectKey(s, { x, y });
-      if (!key || !hasImage(textures, key)) continue;
-      if (!hasTrees && key.startsWith('flat/tree_')) continue;
-      objects.push({ key, x, y });
-    }
-  return objects;
+  for (const { pos } of mapGrid(s).cells()) {
+    const key = objectKey(s, pos);
+    if (!key || !hasImage(textures, key)) continue;
+    if (!hasTrees && key.startsWith('flat/tree_')) continue;
+    objects.push({ key, ...pos });
+  }
+  // Fila a fila (y por fuera, x dentro): la capa de los edificios los ordena por fila.
+  return objects.sort((a, b) => a.y - b.y);
 }
 
 // ---------------------------------------------------------------------------
@@ -285,17 +278,18 @@ export function terrainObjects(textures: Phaser.Textures.TextureManager, s: Game
 // ---------------------------------------------------------------------------
 
 /** Clave de 9 bits de una casilla: ella (256) y sus vecinos N1 E2 S4 W8 NE16 SE32 SW64 NW128. */
-export function neighbourKey(x: number, y: number, on: (x: number, y: number) => boolean): number {
+export function neighbourKey(pos: Pos, on: (pos: Pos) => boolean): number {
+  const at = (dx: number, dy: number) => on(offset(pos, dx, dy));
   return (
-    (on(x, y) ? 256 : 0) |
-    (on(x, y - 1) ? 1 : 0) |
-    (on(x + 1, y) ? 2 : 0) |
-    (on(x, y + 1) ? 4 : 0) |
-    (on(x - 1, y) ? 8 : 0) |
-    (on(x + 1, y - 1) ? 16 : 0) |
-    (on(x + 1, y + 1) ? 32 : 0) |
-    (on(x - 1, y + 1) ? 64 : 0) |
-    (on(x - 1, y - 1) ? 128 : 0)
+    (at(0, 0) ? 256 : 0) |
+    (at(0, -1) ? 1 : 0) |
+    (at(1, 0) ? 2 : 0) |
+    (at(0, 1) ? 4 : 0) |
+    (at(-1, 0) ? 8 : 0) |
+    (at(1, -1) ? 16 : 0) |
+    (at(1, 1) ? 32 : 0) |
+    (at(-1, 1) ? 64 : 0) |
+    (at(-1, -1) ? 128 : 0)
   );
 }
 
@@ -314,28 +308,25 @@ const WATER_FRAMES = 12;
 
 /** Casillas con agua animada: olas y brillos en el agua, y espuma donde el agua toca tierra. */
 export function waterAnimCells(s: GameState): AnimCell[] {
-  const width = s.map.length;
-  const height = s.map[0]!.length;
-  /** Fuera del mapa: null (ni tierra ni agua). */
-  const isLand = (x: number, y: number) => (x < 0 || y < 0 || x >= width || y >= height ? null : isLandTerrain(clampedTerrain(s, x, y)));
+  const map = mapGrid(s);
+  /** Fuera del mapa cuenta como agua (sin espuma contra el borde). */
+  const isLandAt = (pos: Pos) => map.contains(pos) && isLandTerrain(map.at(pos));
   const shoreSet = groundSets(s.theme)[2];
   const shoreRows = SHORE_ROWS[shoreSet] ?? {};
   const cells: AnimCell[] = [];
-  for (let x = 0; x < width; x++)
-    for (let y = 0; y < height; y++) {
-      if (isLand(x, y)) continue;
-      const hash = cellHash(x, y);
-      const terrain = clampedTerrain(s, x, y);
-      // El hielo no tiene olas, pero si espuma en la orilla.
-      if (terrain !== TerrainType.ICE) {
-        const rows = terrain === TerrainType.DEEP_WATER ? WATER_ROWS.deep : WATER_ROWS.water;
-        cells.push({ x, y, key: 'anim/water', row: rows[hash % rows.length]!, phase: hash % WATER_FRAMES });
-      }
-      // Espuma: mascara de costa igual que la de la lamina blob (fuera del mapa cuenta como agua).
-      const coast = coastMask((dx, dy) => isLand(x + dx, y + dy) ?? false);
-      const row = shoreRows[coast];
-      if (coast && row !== undefined) cells.push({ x, y, key: `anim/shore_${shoreSet}`, row, phase: 0 });
+  for (const { pos, value: terrain } of map.cells()) {
+    if (isLandTerrain(terrain)) continue;
+    const hash = cellHash(pos);
+    // El hielo no tiene olas, pero si espuma en la orilla.
+    if (terrain !== TerrainType.ICE) {
+      const rows = terrain === TerrainType.DEEP_WATER ? WATER_ROWS.deep : WATER_ROWS.water;
+      cells.push({ ...pos, key: 'anim/water', row: rows[hash % rows.length]!, phase: hash % WATER_FRAMES });
     }
+    // Espuma: mascara de costa igual que la de la lamina blob.
+    const coast = coastMask((dx, dy) => isLandAt(offset(pos, dx, dy)));
+    const row = shoreRows[coast];
+    if (coast && row !== undefined) cells.push({ ...pos, key: `anim/shore_${shoreSet}`, row, phase: 0 });
+  }
   return cells;
 }
 
@@ -345,9 +336,15 @@ let treesLoaded = false;
 /** Variantes de cada sprite de terreno (tools/art/rd_terrain.py). */
 const OBJ_VARIANTS: Record<string, number> = { mount_grass: 4, mount_snow: 4, mount_mesa: 4, tree_grass: 4, tree_snow: 2 };
 
+/** El terreno de la casilla (undefined fuera del mapa). */
+function terrainOn(s: GameState, tile: Pos): number | undefined {
+  const map = mapGrid(s);
+  return map.contains(tile) ? map.at(tile) : undefined;
+}
+
 /** Nombre base del sprite de la casilla (montaña o bosque), sin variante. */
 function objectBase(s: GameState, tile: Pos): string | null {
-  const terrain = s.map[tile.x]?.[tile.y];
+  const terrain = terrainOn(s, tile);
   if (terrain === TerrainType.WOODS) return s.theme === SNOWY ? 'tree_snow' : 'tree_grass';
   if (terrain === TerrainType.SNOW_WOOD) return 'tree_snow';
   const mountain = mountainKind(s, tile);
@@ -355,17 +352,17 @@ function objectBase(s: GameState, tile: Pos): string | null {
 }
 
 /** Numero fijo por casilla para elegir la variante de su sprite (otro distinto del de los decorados). */
-const objectHash = (x: number, y: number): number => ((x * 2654435761) ^ (y * 40503)) >>> 0;
+const objectHash = (pos: Pos): number => ((pos.x * 2654435761) ^ (pos.y * 40503)) >>> 0;
 
 /** Sprite de la casilla con su variante fija (la misma en cada dibujo). */
 function objectKey(s: GameState, tile: Pos, prefix = ''): string | null {
   const base = objectBase(s, tile);
   if (!base) return null;
-  return `flat/${prefix}${base}_${objectHash(tile.x, tile.y) % OBJ_VARIANTS[base]!}`;
+  return `flat/${prefix}${base}_${objectHash(tile) % OBJ_VARIANTS[base]!}`;
 }
 
 function mountainKind(s: GameState, tile: Pos): 'grass' | 'snow' | 'mesa' | null {
-  const terrain = s.map[tile.x]?.[tile.y];
+  const terrain = terrainOn(s, tile);
   if (terrain === TerrainType.GRASS_CLIFF) return s.theme === SNOWY ? 'snow' : 'grass';
   if (terrain === TerrainType.SNOW_CLIFF) return 'snow';
   if (terrain === TerrainType.SAND_CLIFF) return 'mesa';
@@ -374,7 +371,7 @@ function mountainKind(s: GameState, tile: Pos): 'grass' | 'snow' | 'mesa' | null
 
 /** Primer plano que tapa los pies de una unidad en esa casilla (null si no hay). */
 export function frontKey(s: GameState, tile: Pos): string | null {
-  const terrain = s.map[tile.x]?.[tile.y];
+  const terrain = terrainOn(s, tile);
   // Bosque pintado con el juego Wang (sin arboles sueltos): su primer plano es una pieza Wang.
   if (terrain !== undefined && FORESTS.includes(terrain) && !treesLoaded) {
     const isSnowForest = terrain === TerrainType.SNOW_WOOD || s.theme === SNOWY;

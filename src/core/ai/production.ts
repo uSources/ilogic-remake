@@ -6,6 +6,7 @@ import { tablesOf, weightsOf } from '../gameContent';
 import { buildingIncome, buyOptions, spawn, upkeepOf, type BuyOption } from '../rules/economy';
 import { teamUnits, unitAt } from '../rules/queries';
 import type { Building, GameEvent, GameState, Rng, Team, Unit } from '../model';
+import { posOf } from '../geom';
 
 /** Es de un tipo que no combate ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
 const isSupportType = (s: GameState, type: number): boolean => !!tablesOf(s).UNIT_SUPPORT[type];
@@ -98,6 +99,6 @@ export function* produce(s: GameState, me: Team, rng: Rng): Generator<GameEvent>
     if (purchase === 'save') break;
     if (!purchase) continue;
     const unit = spawn(s, building, purchase.type);
-    if (unit) yield { kind: 'spawn', uid: unit.uid, at: { x: building.x, y: building.y } };
+    if (unit) yield { kind: 'spawn', uid: unit.uid, at: posOf(building) };
   }
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { manhattan, seededRng } from '@core/geom';
+import { manhattan, seededRng, posOf } from '@core/geom';
 import { capture, newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
@@ -69,7 +69,7 @@ describe('ordenes con destino', () => {
     expect(s.buildings[2]!.owner).toBe(0);
     expect(done).toContain(u.uid);
     expect(u.standingOrder).toBeUndefined();
-    expect({ x: u.x, y: u.y }).toEqual({ x: 12, y: 5 });
+    expect(posOf(u)).toEqual({ x: 12, y: 5 });
   });
 
   it('capturar aqui no se desvia hacia otro edificio mas cercano', () => {
@@ -448,7 +448,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     cancelStandingOrder(s, [a]);
     expect(effectiveStandingOrder(s, a)?.kind).toBe('attack');
     cancelStandingOrder(s, [b]);
-    expect(b.standingOrder).toEqual({ kind: 'defend', at: { x: b.x, y: b.y } });
+    expect(b.standingOrder).toEqual({ kind: 'defend', at: posOf(b) });
     cancelStandingOrder(s, [a, b, t]);
     expect(q.standingOrder).toBeUndefined();
     expect([a, b, t].map((u) => effectiveStandingOrder(s, u))).toEqual([undefined, undefined, undefined]);

@@ -26,7 +26,7 @@ function drawZone(
   edgeAlpha: number,
   fillIf: (pos: Pos) => boolean = () => true,
 ): void {
-  const at = (x: number, y: number) => zone.contains({ x, y }) && zone.at({ x, y });
+  const at = (pos: Pos) => zone.contains(pos) && zone.at(pos);
   g.fillStyle(color, fillAlpha);
   zone.forEach((inZone, pos) => {
     if (inZone && fillIf(pos)) g.fillRect(pos.x * TILE, pos.y * TILE, TILE, TILE);
@@ -36,10 +36,10 @@ function drawZone(
     if (!inZone) return;
     const px = x * TILE,
       py = y * TILE;
-    if (!at(x, y - 1)) g.fillRect(px, py, TILE, ZONE_EDGE);
-    if (!at(x, y + 1)) g.fillRect(px, py + TILE - ZONE_EDGE, TILE, ZONE_EDGE);
-    if (!at(x - 1, y)) g.fillRect(px, py, ZONE_EDGE, TILE);
-    if (!at(x + 1, y)) g.fillRect(px + TILE - ZONE_EDGE, py, ZONE_EDGE, TILE);
+    if (!at({ x, y: y - 1 })) g.fillRect(px, py, TILE, ZONE_EDGE);
+    if (!at({ x, y: y + 1 })) g.fillRect(px, py + TILE - ZONE_EDGE, TILE, ZONE_EDGE);
+    if (!at({ x: x - 1, y })) g.fillRect(px, py, ZONE_EDGE, TILE);
+    if (!at({ x: x + 1, y })) g.fillRect(px + TILE - ZONE_EDGE, py, ZONE_EDGE, TILE);
   });
 }
 

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { neighbors4, posKey, rangePos, rangeSize, squareArea } from '@core/geom';
+import { Grid } from '@core/util/grid';
 
 /** Un mapa de 32x32, como el original. */
-const MAP = { width: 32, height: 32 };
+const MAP = Grid.filled({ width: 32, height: 32 }, 0);
 
 describe('geometria', () => {
   it('rangeSize coincide con el original', () => {
@@ -41,11 +42,11 @@ describe('geometria', () => {
   });
   it('fuera del mapa devuelve null', () => {
     expect(rangePos(MAP, { x: 0, y: 0 }, 4)).toBeNull();
-    expect(rangePos({ width: 10, height: 10 }, { x: 9, y: 9 }, 1)).toBeNull();
+    expect(rangePos(Grid.filled({ width: 10, height: 10 }, 0), { x: 9, y: 9 }, 1)).toBeNull();
   });
   it('las vecinas dependen del tamaño del mapa que se pasa', () => {
     expect(neighbors4(MAP, { x: 9, y: 9 })).toHaveLength(4);
-    expect(neighbors4({ width: 10, height: 10 }, { x: 9, y: 9 })).toEqual([
+    expect(neighbors4(Grid.filled({ width: 10, height: 10 }, 0), { x: 9, y: 9 })).toEqual([
       { x: 9, y: 8 },
       { x: 8, y: 9 },
     ]);

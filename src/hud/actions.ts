@@ -7,6 +7,8 @@
  * Convencion de nombres: `<sitio>Hover(i)` = el raton pasa por la opcion i (la elige sin pulsarla),
  * `<sitio>Pick(i)` = se pulsa, `<sitio>Set(i, k)` = boton de segmento k de la fila i.
  */
+import type { Pos } from '../core/model';
+
 export interface UIActions {
   // --- Menu principal (Inicio, Nueva partida, Campaña, Opciones) ---
   mainMenuPick(i: number): void;
@@ -49,7 +51,8 @@ export interface UIActions {
 
   // --- Minimapa ---
   toggleMinimap(): void;
-  minimapJump(x: number, y: number): void;
+  /** Centrar la camara en un punto del mapa, en casillas (con decimales: donde se pulso dentro de la casilla). */
+  minimapJump(at: Pos): void;
 
   // --- General ---
   /** Usar una habilidad del general (las de area pasan a elegir casilla). */

@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { hasImage, imageFrame } from '../atlas';
+import type { Pos } from '../core/model';
 import type { Grid } from '../core/util/grid';
 import { TILE } from '../layout';
 import { FOG_SHEET, SHEET_COLS } from './sheets';
@@ -24,23 +25,14 @@ export function composeFog(vis: Grid<boolean>, textures: Phaser.Textures.Texture
   const f = imageFrame(textures, 'blob/fog');
   const img = f.source.image as CanvasImageSource;
   // Fuera del mapa cuenta como la casilla mas cercana.
-  const hid = (x: number, y: number) => !vis.at({ x: Math.min(W - 1, Math.max(0, x)), y: Math.min(H - 1, Math.max(0, y)) });
-  for (let x = 0; x < W; x++)
-    for (let y = 0; y < H; y++) {
-      const i = FOG_SHEET[neighbourKey(x, y, hid)]!;
-      if (i < 0) continue;
-      ctx.drawImage(
-        img,
-        f.cutX + (i % SHEET_COLS) * TILE,
-        f.cutY + Math.floor(i / SHEET_COLS) * TILE,
-        TILE,
-        TILE,
-        x * TILE,
-        y * TILE,
-        TILE,
-        TILE,
-      );
-    }
+  const hid = (pos: Pos) => !vis.atClamped(pos);
+  for (const { pos } of vis.cells()) {
+    const piece = FOG_SHEET[neighbourKey(pos, hid)]!;
+    if (piece < 0) continue;
+    const sourceX = f.cutX + (piece % SHEET_COLS) * TILE;
+    const sourceY = f.cutY + Math.floor(piece / SHEET_COLS) * TILE;
+    ctx.drawImage(img, sourceX, sourceY, TILE, TILE, pos.x * TILE, pos.y * TILE, TILE, TILE);
+  }
   return cv;
 }
 
