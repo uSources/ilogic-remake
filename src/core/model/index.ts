@@ -3,7 +3,7 @@
  * abajo del nucleo: todo lo demas (contenido, reglas, IA, guardado) la importa y ella no importa nada.
  */
 export type { Pos } from './geometry';
-export { TEAMS, type Team } from './team';
+export type { Team } from './team';
 export type { Unit } from './unit';
 export type { Building, ControlPoint } from './building';
 export type { StandingOrder, StandingOrderKind } from './standingOrder';

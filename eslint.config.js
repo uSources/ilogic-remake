@@ -59,6 +59,15 @@ export default tseslint.config(
         'error',
         { patterns: [{ group: ['../*', 'phaser', 'preact'], message: 'src/core/model no depende de nada: solo tipos de partida.' }] },
       ],
+      // Solo tipos: las constantes y funciones van fuera del modelo (p. ej. TEAMS en util/predicates.ts).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportNamedDeclaration > :matches(VariableDeclaration, FunctionDeclaration, ClassDeclaration)',
+          message: 'src/core/model solo tiene tipos.',
+        },
+        { selector: 'TSEnumDeclaration', message: 'src/core/model solo tiene tipos (sin enum).' },
+      ],
     },
   },
   {

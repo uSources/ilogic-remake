@@ -11,6 +11,8 @@ import type { GameState, Team, Unit } from '../model';
 export const PLAYER: Team = 0;
 /** El bando de la IA. */
 export const AI_TEAM: Team = 1;
+/** Los dos bandos, en orden (para recorrerlos sin escribir `[0, 1] as const`). */
+export const TEAMS: readonly Team[] = [PLAYER, AI_TEAM];
 
 /** El bando es el del jugador. */
 export function isPlayer(team: Team | null): boolean {
