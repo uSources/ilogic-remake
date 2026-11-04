@@ -4,7 +4,7 @@
  */
 import { inBounds } from '../../core/geom';
 import { abilityArea, abilityBlock, areaTiles, generalOf, useAbility } from '../../core/generals';
-import type { GameEvent, GameState, Pos } from '../../core/types';
+import type { GameEvent, GameState, Pos } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
 import type { Phase } from './types';

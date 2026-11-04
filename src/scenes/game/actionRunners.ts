@@ -4,7 +4,7 @@
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
 import { cancelCommand, disbandSquad, formSquad, leaveSquad, pruneSquads, squadById, SQUAD_NAME_MAX } from '../../core/squads';
-import type { CommandKind, GameState, Pos, Unit } from '../../core/types';
+import type { CommandKind, GameState, Pos, Unit } from '../../core/model';
 import { exactSquad, type ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
 import { t } from '../../settings';

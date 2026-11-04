@@ -5,7 +5,7 @@ import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
 import { CLEAR, advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { seededRng } from '@core/geom';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,

@@ -28,7 +28,7 @@ import {
   wait,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import type { GameEvent, GameState, Rng, Unit } from '@core/types';
+import type { GameEvent, GameState, Rng, Unit } from '@core/model';
 
 /** Una letra por terreno (minuscula = suelo; mayuscula = obstaculo o agua). */
 const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {

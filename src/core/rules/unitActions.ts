@@ -4,7 +4,7 @@
 import { UNIT } from '../data';
 import { effectiveCommand } from '../squads';
 import { canFight, isCapturer, isPlayer } from '../util/predicates';
-import type { GameState, Unit } from '../types';
+import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
 import { attackTargets } from './combat';
 import { cargoUnits } from './queries';

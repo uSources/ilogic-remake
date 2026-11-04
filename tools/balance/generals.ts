@@ -17,7 +17,7 @@ import { newGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome, score } from '@core/rules';
-import type { GameEvent, GameState } from '@core/types';
+import type { GameEvent, GameState } from '@core/model';
 
 const arg = (name: string, def: string): string => {
   const i = process.argv.indexOf(`--${name}`);

@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../atlas';
-import type { Pos } from '../core/types';
+import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { fxRect, fxText, FX_TEXT, sleep, STEPPED, tween, type FxHost } from './fxKit';
 import { tileCenter } from './map/geometry';

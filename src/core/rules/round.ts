@@ -4,7 +4,7 @@
 import { BUILDING, HEALER, MAX_FUNDS, MAX_LIFE, RULES } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
-import { TEAMS, type Building, type GameState, type Team, type Unit } from '../types';
+import { TEAMS, type Building, type GameState, type Team, type Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';

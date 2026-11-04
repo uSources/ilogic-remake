@@ -4,7 +4,7 @@
 import { HQ, RULES } from '../data';
 import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
-import type { Building, GameEvent, GameState, Unit } from '../types';
+import type { Building, GameEvent, GameState, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 
 /** Puntos de captura de un edificio con las reglas actuales. */

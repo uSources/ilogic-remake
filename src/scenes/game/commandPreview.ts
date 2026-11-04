@@ -3,7 +3,7 @@
  * la partida que pueda cambiarla (unidades, edificios, dia); mover el cursor solo cambia cuales se dibujan.
  */
 import { previewCommands, type CommandIntent } from '../../core/ai';
-import type { GameState } from '../../core/types';
+import type { GameState } from '../../core/model';
 
 export class CommandPreview {
   /** Prevision y la firma de la partida con la que se calculo. */

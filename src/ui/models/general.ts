@@ -1,5 +1,5 @@
 import { abilityBlock, chargeStars, generalOf, type AbilityBlock } from '../../core/generals';
-import type { GameState, Team } from '../../core/types';
+import type { GameState, Team } from '../../core/model';
 import type { GeneralVM } from '../../hud/store';
 import { settings, t, type TextKey } from '../../settings';
 

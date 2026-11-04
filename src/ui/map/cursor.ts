@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
-import type { Pos } from '../../core/types';
+import type { Pos } from '../../core/model';
 import { TILE } from '../../layout';
 import { PAL } from '../palette';
 import { stepOf, type AnimatedLayer, type MapClock, type MapLayer } from './layer';

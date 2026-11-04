@@ -1,7 +1,7 @@
 /** Fase 'buy': el menu de compra de una fabrica propia. */
 import { RULES, UNIT } from '../../../core/data';
 import { buyOptions, spawn, type BuyOption } from '../../../core/rules';
-import type { Building } from '../../../core/types';
+import type { Building } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { buildingLabel, fmtNum, t, unitLabel } from '../../../settings';
 import { abilitiesVM, buyBlockedText, unitStatsText } from '../../../ui/hudModels';

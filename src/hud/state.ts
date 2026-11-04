@@ -1,4 +1,4 @@
-import type { GameStats } from '../core/stats';
+import type { GameStats } from '../core/model';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';

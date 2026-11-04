@@ -7,7 +7,7 @@ import type Phaser from 'phaser';
 import { unitById } from '../../core/rules';
 import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
 import { minBy } from '../../core/util/pick';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import type { GroupMode } from '../../controls/commands';
 import { DOUBLE_MS } from '../../controls/pointer';
 import { EMPTY, sameSelection, type Selection } from '../../controls/selection';

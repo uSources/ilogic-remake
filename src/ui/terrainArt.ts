@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { TerrainType, THEME_NAMES } from '../core/data';
-import type { GameState } from '../core/types';
+import type { GameState } from '../core/model';
 import { hasImage, imageFrame } from '../atlas';
 import { TILE } from '../layout';
 import { WANG_SETS } from './wangSets';

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { MAP_H, MAP_W } from '../../core/data';
-import type { Pos } from '../../core/types';
+import type { Pos } from '../../core/model';
 import { dpr } from '../../display';
 import type { Anchor } from '../../hud/store';
 import { TILE } from '../../layout';

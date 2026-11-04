@@ -4,7 +4,7 @@ import { DEFAULT_RULES, useRules } from '../core/data';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { endRound, outcome } from '../core/rules';
-import type { GameEvent, GameState, Pos, Team } from '../core/types';
+import type { GameEvent, GameState, Pos, Team } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';

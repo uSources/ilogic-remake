@@ -4,7 +4,7 @@
  */
 import type { MenuCommand } from '../controls/menu';
 import { MISSIONS } from '../core/missions';
-import type { GameState } from '../core/types';
+import type { GameState } from '../core/model';
 import { completedMissions, missionUnlocked, nextMissionIndex } from '../campaign';
 import { ui, type MarkVM, type UIActions } from '../hud/store';
 import { WEB_URL } from '../layout';

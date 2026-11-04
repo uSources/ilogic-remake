@@ -5,7 +5,7 @@
 import type Phaser from 'phaser';
 import { seededRng } from '../../core/geom';
 import { attackEvent, moveEvent, moveRange, moveUnit } from '../../core/rules';
-import type { GameEvent, GameState } from '../../core/types';
+import type { GameEvent, GameState } from '../../core/model';
 import { LAB_TARGET, labRange, type LabAction, type LabOptions } from '../../lab';
 import { TILE } from '../../layout';
 import type { MapView } from '../../ui/mapView';

@@ -4,7 +4,6 @@
  * y sin modificar el estado al guardar.
  */
 import {
-  type RulesConfig,
   BUILDING_TYPES,
   MAP_H,
   MAP_MAX,
@@ -20,7 +19,7 @@ import {
 import { generalDef } from './generals';
 import { sanitizeStats } from './stats';
 import { assignKeys, liftCommand } from './squads';
-import type { GameState, Pos, Unit } from './types';
+import type { GameState, Pos, RulesConfig, Unit } from './model';
 
 const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
 

@@ -7,7 +7,7 @@ import { HQ, UNIT } from '../data';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
-import type { Building, GameEvent, GameState, Rng, Unit } from '../types';
+import type { Building, GameEvent, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { advance, captureHere, randomMove, retreat, tryAttack, tryCapture } from './tactics';
 

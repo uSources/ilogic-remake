@@ -7,7 +7,7 @@ import { samePos } from '../geom';
 import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
 import { visibility } from '../rules/visibility';
-import type { GameEvent, GameState, Pos, Team, Unit } from '../types';
+import type { GameEvent, GameState, Pos, Team, Unit } from '../model';
 import { cellAt, setCell } from '../util/grid';
 import { minBy } from '../util/pick';
 

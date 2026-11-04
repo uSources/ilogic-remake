@@ -24,7 +24,7 @@ import {
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
-import type { GameEvent, GameState, Pos, Unit } from '../../core/types';
+import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, unitLabel, weatherLabel } from '../../settings';
 import { randomSeed } from '../../setup';

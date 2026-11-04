@@ -11,7 +11,7 @@ import { Movement, UNIT } from '../../core/data';
 import { inBounds } from '../../core/geom';
 import { canWalk, unitAt, unitById, wait } from '../../core/rules';
 import { cancelCommand, commandBlock, giveCommand, pruneSquads } from '../../core/squads';
-import type { CommandKind, GameEvent, GameState, Pos, Unit } from '../../core/types';
+import type { CommandKind, GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';

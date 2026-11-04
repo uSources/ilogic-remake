@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
 import { rank, unhealable } from '../../core/rules';
 import { effectiveCommand, isDetached } from '../../core/squads';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { cellAt } from '../../core/util/grid';
 import { TILE } from '../../layout';
 import { addLifeTextures, lifeKey } from '../lifeDigits';

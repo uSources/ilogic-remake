@@ -18,7 +18,7 @@ import { AI, DEFAULT_RULES, UNIT, useRules } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
-import type { GameEvent, GameState, Rng, Team } from '@core/types';
+import type { GameEvent, GameState, Rng, Team } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;

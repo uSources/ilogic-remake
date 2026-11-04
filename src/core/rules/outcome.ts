@@ -3,7 +3,7 @@
  */
 import { HQ, RULES, UNIT } from '../data';
 import { AI_TEAM, PLAYER } from '../util/predicates';
-import type { Building, GameState, Objective, Outcome, Pos, Team } from '../types';
+import type { Building, GameState, Objective, Outcome, Pos, Team } from '../model';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;

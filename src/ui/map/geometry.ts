@@ -1,5 +1,5 @@
 import { MAP_H, MAP_W } from '../../core/data';
-import type { Pos } from '../../core/types';
+import type { Pos } from '../../core/model';
 import { TILE } from '../../layout';
 
 /**

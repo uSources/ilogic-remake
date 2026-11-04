@@ -4,7 +4,7 @@
 import { CAN_CARRY, MAX_LIFE, Movement } from '../data';
 import { manhattan, neighbors4, samePos } from '../geom';
 import { isOnMap } from '../util/predicates';
-import type { GameState, Pos, Unit } from '../types';
+import type { GameState, Pos, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { removeUnit } from './lifecycle';
 import { ambushed, approachPath, moveRange, walkPath, type MovePath } from './movement';

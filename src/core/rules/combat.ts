@@ -9,7 +9,7 @@ import { chargeFromCombat, generalHitFactor } from '../generals';
 import { cellAt } from '../util/grid';
 import { canFight, isAlive, isEnemyOf, isOnMap } from '../util/predicates';
 import { weatherHit } from '../weather';
-import type { CombatInfo, GameEventOf, GameState, Pos, Rng, Team, Unit } from '../types';
+import type { CombatInfo, GameEventOf, GameState, Pos, Rng, Team, Unit } from '../model';
 import { removeDead } from './lifecycle';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';

@@ -5,7 +5,7 @@
  */
 import { extendTrail } from '../../core/orders';
 import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { intentAt, trailTo, type MovePlan } from './intent';
 import { key, type Intent, type MoveUndo } from './types';
 

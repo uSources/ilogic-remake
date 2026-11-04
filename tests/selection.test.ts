@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY, boxSelect, clickSelect, pruneSelection, sameSelection } from '../src/controls/selection';
-import type { Unit } from '@core/types';
+import type { Unit } from '@core/model';
 
 /** [CAMBIO] Seleccion como en los juegos de estrategia en tiempo real (controls/selection.ts). */
 const u = (uid: number, type = 0) => ({ uid, type }) as Unit;

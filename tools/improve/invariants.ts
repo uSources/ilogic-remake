@@ -6,7 +6,7 @@
 import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, UNIT, UNIT_TYPES, Movement } from '@core/data';
 import { commandUsed } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 
 export function checkInvariants(s: GameState): string[] {
   const errs: string[] = [];

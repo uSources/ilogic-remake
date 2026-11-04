@@ -28,7 +28,7 @@ import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, unitAt } from './rules/queries';
 import { cellAt, cells, setCell, type Grid } from './util/grid';
-import type { GameState, Pos, Rng, Team } from './types';
+import type { GameState, Pos, Rng, Team } from './model';
 
 const WALK = MoveType.FOOT;
 const PLAYER: Team = 0;

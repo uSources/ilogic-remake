@@ -52,6 +52,16 @@ export default tseslint.config(
     },
   },
   {
+    // El modelo es la capa de abajo del nucleo: solo tipos, sin depender de nada (ni del contenido).
+    files: ['src/core/model/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['../*', 'phaser', 'preact'], message: 'src/core/model no depende de nada: solo tipos de partida.' }] },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs', 'tools/**/*.ts', 'tests/**/*.ts'],
     ...tseslint.configs.disableTypeChecked,
   },

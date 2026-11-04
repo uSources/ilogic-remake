@@ -1,4 +1,5 @@
-import { DEFAULT_RULES, type RulesConfig } from '@core/data';
+import { DEFAULT_RULES } from '@core/data';
+import type { RulesConfig } from '@core/model';
 
 /** Reglas "basicas" para tests: los interruptores de reglas apagados (como variante de equilibrio). */
 export const PLAIN_RULES: RulesConfig = {

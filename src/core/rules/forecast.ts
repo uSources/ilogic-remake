@@ -5,7 +5,7 @@ import { RULES, UNIT } from '../data';
 import { diamond, grid } from '../geom';
 import { cellAt, setCell } from '../util/grid';
 import { canFight, isOnMap } from '../util/predicates';
-import type { GameState, Team, Unit } from '../types';
+import type { GameState, Team, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
 import { visibility } from './visibility';

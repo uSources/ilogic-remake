@@ -4,7 +4,7 @@
  */
 import { RULES } from '../data';
 import { isOnMap } from '../util/predicates';
-import type { ControlPoint, GameState, Pos, Team } from '../types';
+import type { ControlPoint, GameState, Pos, Team } from '../model';
 
 /** Lo que han dado los puntos de control en una ronda (ver RoundReport.control). */
 export interface ControlReport {

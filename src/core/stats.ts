@@ -1,18 +1,6 @@
 import { UNIT } from './data';
 import { AI_TEAM, PLAYER, opponentOf } from './util/predicates';
-import type { GameEvent, GameState, Team } from './types';
-
-/** Estadisticas de la partida, por bando [jugador, IA] (para la pantalla final). */
-export interface GameStats {
-  built: [number, number];
-  spent: [number, number];
-  /** Unidades perdidas (destruidas o estrelladas). */
-  lost: [number, number];
-  /** Edificios ganados o neutralizados. */
-  captured: [number, number];
-  /** Valor del ejercito de cada bando al empezar cada dia (para la grafica final). */
-  army?: [number, number][];
-}
+import type { GameEvent, GameState, GameStats, Team } from './model';
 
 /** Valor de un ejercito: coste de cada unidad por su vida. */
 export function armyValue(s: GameState, team: Team): number {

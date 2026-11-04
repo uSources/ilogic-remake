@@ -13,7 +13,7 @@
  */
 import { RULES, WEATHER, WEATHER_TYPES, type MoveType } from './data';
 import { seededRng } from './geom';
-import type { GameState, Rng, WeatherState } from './types';
+import type { GameState, Rng, WeatherState } from './model';
 
 /** Despejado: el clima neutro (el primero de weather.json). */
 export const CLEAR = 0;

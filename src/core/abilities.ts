@@ -16,7 +16,7 @@ import { RULES, UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
 import { grid, manhattan, neighbors4 } from './geom';
 import { cellAt, setCell } from './util/grid';
 import { isAlive, isEnemyOf, isOnMap } from './util/predicates';
-import type { GameState, Unit } from './types';
+import type { GameState, Unit } from './model';
 
 type AbilityOf<K extends AbilityDef['kind']> = Extract<AbilityDef, { kind: K }>;
 

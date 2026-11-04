@@ -7,7 +7,7 @@ import type Phaser from 'phaser';
 import { Movement, UNIT, UNIT_NAMES } from '../../core/data';
 import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import { cellAt } from '../../core/util/grid';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
 import type { LabOptions } from '../../lab';
 import { t, unitLabel } from '../../settings';

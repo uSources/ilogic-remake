@@ -3,7 +3,7 @@
  */
 import { MAX_LIFE, UNIT } from '../data';
 import { isAlive } from '../util/predicates';
-import type { GameState, Team, Unit } from '../types';
+import type { GameState, Team, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { unitById } from './queries';
 

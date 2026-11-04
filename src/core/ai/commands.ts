@@ -1,5 +1,5 @@
 /**
- * [CAMBIO] Ordenes con destino del jugador (ver Command en types.ts): las cumple la misma IA que el
+ * [CAMBIO] Ordenes con destino del jugador (ver Command en model/orders.ts): las cumple la misma IA que el
  * enemigo al terminar el turno (assistTurn), o al darlas (commandNow), y se pueden prever sin tocar
  * la partida (previewCommands, para las flechas de intencion).
  */
@@ -10,7 +10,7 @@ import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
 import { effectiveCommand, finishCommand } from '../squads';
-import type { CommandKind, GameEvent, GameState, Pos, Rng, Team, Unit } from '../types';
+import type { CommandKind, GameEvent, GameState, Pos, Rng, Team, Unit } from '../model';
 import { cellAt } from '../util/grid';
 import { aiCtx, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { commandOrder, commandStep, formation, formationFrom } from './formation';
@@ -35,7 +35,7 @@ export function* commandNow(s: GameState, uid: number, rng: Rng = Math.random, t
 }
 
 /**
- * [CAMBIO] Turno de una unidad de `team` con orden con destino (ver Command en types.ts).
+ * [CAMBIO] Turno de una unidad de `team` con orden con destino (ver Command en model/orders.ts).
  * Devuelve true si la orden se ha cumplido (y la quita: la unidad se queda esperando).
  */
 export function* commandTurn(s: GameState, uid: number, rng: Rng, team: Team = 0): Generator<GameEvent, boolean> {

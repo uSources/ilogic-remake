@@ -10,7 +10,7 @@ import { moveCost, pathCost, pathTo, reachableTiles, reachableTilesWithCost, typ
 import { canWalk } from './rules/queries';
 import { cellAt } from './util/grid';
 import { minBy } from './util/pick';
-import type { GameState, Pos, Unit } from './types';
+import type { GameState, Pos, Unit } from './model';
 
 /**
  * Mejor casilla desde la que `unit` puede atacar a `target` con su alcance `range`: la de `end`

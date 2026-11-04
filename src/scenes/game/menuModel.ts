@@ -4,7 +4,7 @@
  * esta en la entrada de su fase en PHASES (`menu`).
  */
 import type { BuyOption } from '../../core/rules';
-import type { Building, GameState, Pos, Unit } from '../../core/types';
+import type { Building, GameState, Pos, Unit } from '../../core/model';
 import type { ActionCtx, ActionId } from '../../controls/actions';
 import type { MenuItemVM, MenuVM } from '../../hud/store';
 import { PHASES } from './phases';

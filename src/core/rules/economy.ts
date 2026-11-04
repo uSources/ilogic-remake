@@ -3,7 +3,7 @@
  * (Building.Spawn).
  */
 import { BUILDING, RULES, SPAWNER, UNIT, UNIT_TYPES, Movement } from '../data';
-import type { Building, GameState, Team, Unit } from '../types';
+import type { Building, GameState, Team, Unit } from '../model';
 import { newUnit } from './lifecycle';
 import { isWalkable, teamUnits, unitAt } from './queries';
 

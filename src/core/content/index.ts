@@ -27,7 +27,6 @@ import { buildUnitTables, validateUnits } from './units';
 import { buildWeatherTables, validateWeather, type WeatherDef } from './weather';
 
 export * from './types';
-export type { RulesConfig } from './rules';
 export type { AiWeights } from './ai';
 export type { WeatherDef } from './weather';
 export type { GeneralAbilityDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';

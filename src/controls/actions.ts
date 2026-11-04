@@ -15,7 +15,7 @@
 import { UNIT } from '../core/data';
 import { buildingAt } from '../core/rules';
 import { commandChoices, effectiveCommand, squadUnits } from '../core/squads';
-import type { GameState, Pos, Unit } from '../core/types';
+import type { GameState, Pos, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
 /** Puntero del raton que anuncia lo que hara el clic derecho (ver ui/cursors.ts). */

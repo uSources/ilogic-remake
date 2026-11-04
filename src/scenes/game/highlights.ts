@@ -4,7 +4,7 @@
  * entrada de PHASES (`highlights`).
  */
 import type { MoveRange } from '../../core/rules';
-import type { GameState, Pos } from '../../core/types';
+import type { GameState, Pos } from '../../core/model';
 import type { HighlightKind } from '../../ui/mapView';
 import { PHASES } from './phases';
 import { noHighlights } from './phases/phase';

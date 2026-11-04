@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { Pos } from '../../core/types';
+import type { Pos } from '../../core/model';
 import { TILE } from '../../layout';
 import { PAL } from '../palette';
 import { cornerBrackets, fillRects } from '../pixelDraw';

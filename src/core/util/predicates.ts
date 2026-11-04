@@ -4,7 +4,7 @@
  * sueltos (docs/ESTILO.md, regla 4). Sin efectos.
  */
 import { UNIT } from '../data';
-import type { Team, Unit } from '../types';
+import type { Team, Unit } from '../model';
 
 /** El bando del jugador (el 1 es la IA, ver Team). */
 export const PLAYER: Team = 0;

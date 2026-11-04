@@ -1,5 +1,5 @@
 import { MAP_H, MAP_W, RULES } from '../../core/data';
-import type { GameState, Pos } from '../../core/types';
+import type { GameState, Pos } from '../../core/model';
 import type { MinimapVM } from '../../hud/store';
 
 /** Minimapa (`palette`: color de cada terreno, ver terrainPalette): colores del terreno, niebla, edificios (dueño solo si se ve) y unidades visibles. */

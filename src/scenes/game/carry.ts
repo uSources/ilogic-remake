@@ -6,7 +6,7 @@ import type Phaser from 'phaser';
 import { Movement } from '../../core/data';
 import { samePos } from '../../core/geom';
 import { canWalk, unitAt, unitById } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { TILE } from '../../layout';
 import { reducedMotion } from '../../ui/fx';
 import type { MapView } from '../../ui/mapView';

@@ -8,7 +8,7 @@ import { revealsAll } from '../generals';
 import { cellAt, setCell } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { weatherVision } from '../weather';
-import type { GameState, Pos, Team, Unit } from '../types';
+import type { GameState, Pos, Team, Unit } from '../model';
 
 /** Radio de vision de una unidad. [CAMBIO] El clima puede quitar vision (nunca por debajo de 1 si ve). */
 export function visionOf(s: GameState, unit: Unit): number {

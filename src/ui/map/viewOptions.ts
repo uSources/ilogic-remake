@@ -1,4 +1,4 @@
-import type { CommandKind, Pos } from '../../core/types';
+import type { CommandKind, Pos } from '../../core/model';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group' | 'squad';
 

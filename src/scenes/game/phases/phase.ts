@@ -5,7 +5,7 @@
  * la escena no cambia.
  */
 import { unitById, type BuyOption } from '../../../core/rules';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../../../core/types';
+import type { Building, GameEvent, GameState, Pos, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
 import type { HighlightKind, MapView } from '../../../ui/mapView';
 import type { GeneralAbilities } from '../abilities';

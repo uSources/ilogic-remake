@@ -12,7 +12,7 @@ import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
 import { serialize } from '@core/save';
-import type { GameState, Team } from '@core/types';
+import type { GameState, Team } from '@core/model';
 import { checkInvariants } from './invariants';
 import { randomTurn } from './randomPlayer';
 

@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
-import type { CommandKind } from '../../core/types';
+import type { CommandKind } from '../../core/model';
 import { TILE } from '../../layout';
 import { PAL, PAL_MAP } from '../palette';
 

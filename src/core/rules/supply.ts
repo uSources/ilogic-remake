@@ -3,7 +3,7 @@
  */
 import { MAX_LIFE, UNIT_HEALS } from '../data';
 import { neighbors4 } from '../geom';
-import type { GameState, Unit } from '../types';
+import type { GameState, Unit } from '../model';
 import { unitAt } from './queries';
 
 /** Vida que `supplier` le cura a `patient` cada vez (units.json, "heals"). */

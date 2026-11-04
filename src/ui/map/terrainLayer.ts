@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { addSheetFrames, ATLAS, hasImage, sheetFrame } from '../../atlas';
-import type { GameState } from '../../core/types';
+import type { GameState } from '../../core/model';
 import { TILE } from '../../layout';
 import { ANIM_FRAMES } from '../sheets';
 import { shoreKeys, terrainKey } from '../sprites';

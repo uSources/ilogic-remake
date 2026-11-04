@@ -20,7 +20,7 @@ import {
   wait,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
-import type { GameEvent, GameState, Pos, Unit } from '../../core/types';
+import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { settings, t } from '../../settings';
 import type { MapView } from '../../ui/mapView';

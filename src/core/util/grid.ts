@@ -2,7 +2,7 @@
  * Rejillas del mapa (una casilla por posicion: terreno, distancias, alcance...). Ayudas para leer y
  * recorrer sin escribir `grid[x]![y]!` ni dos bucles anidados cada vez (docs/ESTILO.md, regla 5).
  */
-import type { Pos } from '../types';
+import type { Pos } from '../model';
 
 /** Una rejilla del mapa: `grid[x][y]`. */
 export type Grid<T> = T[][];

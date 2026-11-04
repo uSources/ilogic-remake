@@ -9,10 +9,11 @@
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
-import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, type RulesConfig, Movement } from './data';
+import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, Movement } from './data';
+import type { RulesConfig } from './model';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
-import type { GameState, Team } from './types';
+import type { GameState, Team } from './model';
 
 type Text = { es: string; en: string };
 type BuildingName = (typeof BUILDING_NAMES)[number];

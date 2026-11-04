@@ -11,7 +11,7 @@ import { MoveType, Movement, UNIT_ART } from '../../core/data';
 import { abilityArea, areaTiles, generalOf } from '../../core/generals';
 import { inBounds } from '../../core/geom';
 import { unitAt, unitById } from '../../core/rules';
-import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/types';
+import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';
 import { fmtNum, settings, t } from '../../settings';

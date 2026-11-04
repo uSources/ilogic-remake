@@ -10,7 +10,7 @@
  * - Recuadro: las de dentro (con Mayusculas o Ctrl, se añaden a las que habia).
  * - Clic en vacio: no queda ninguna (con Mayusculas, no cambia nada).
  */
-import type { Unit } from '../core/types';
+import type { Unit } from '../core/model';
 
 export type Selection = ReadonlySet<number>;
 

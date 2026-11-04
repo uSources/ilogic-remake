@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { GameState } from './core/types';
+import type { GameState } from './core/model';
 import { UNIT_NAMES } from './core/data';
 import { defaultLab } from './lab';
 import { ui, type UIState } from './hud/store';

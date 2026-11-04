@@ -16,8 +16,8 @@ import { newGeneral } from '@core/generals';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
 import { formSquad, giveCommand } from '@core/squads';
-import type { RulesConfig } from '@core/content';
-import type { GameState, Team } from '@core/types';
+import type { RulesConfig } from '@core/model';
+import type { GameState, Team } from '@core/model';
 
 const MAX_DAYS = 30;
 

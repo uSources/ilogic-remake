@@ -1,5 +1,5 @@
 import { HQ, MAP_H, MAP_W, setMapSize } from '../core/data';
-import type { GameState, Team } from '../core/types';
+import type { GameState, Team } from '../core/model';
 import { cells } from '../core/util/grid';
 import { PAL_CSS } from '../ui/palette';
 

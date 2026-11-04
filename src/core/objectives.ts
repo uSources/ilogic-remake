@@ -1,13 +1,13 @@
 /**
  * Objetivos de mision, uno por entrada: como se escribe en la mision, que se comprueba al cargarla,
  * cuando se gana o se pierde y cuanto falta. Un objetivo nuevo es una entrada en `OBJECTIVES` (y su
- * frase en `campaign.ts`); el tipo de la partida esta en `Objective` (`types.ts`).
+ * frase en `campaign.ts`); el tipo de la partida esta en `Objective` (`model/objective.ts`).
  *
  * Los resultados son los mismos que `objectiveOutcome`/`objectiveProgress` de `rules/outcome.ts`
  * (lo comprueba `tests/objectives.test.ts`), que todavia tiene su propia copia.
  */
 import { BUILDING_NAMES } from './data';
-import type { GameState, Objective, Outcome, Pos } from './types';
+import type { GameState, Objective, Outcome, Pos } from './model';
 
 type BuildingName = (typeof BUILDING_NAMES)[number];
 

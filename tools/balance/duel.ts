@@ -5,7 +5,7 @@
 import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
 import { grid, seededRng } from '@core/geom';
 import { attack, inAttackRange, newUnit } from '@core/rules';
-import type { GameState, Unit } from '@core/types';
+import type { GameState, Unit } from '@core/model';
 
 export interface DuelCell {
   attacker: string;

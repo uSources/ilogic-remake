@@ -2,13 +2,14 @@
  * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
  * laboratorio, una mision o un mapa nuevo. Pone las reglas de esa partida (useRules). Sin Phaser.
  */
-import { DEFAULT_RULES, useRules, type RulesConfig } from '../../core/data';
+import { DEFAULT_RULES, useRules } from '../../core/data';
+import type { RulesConfig } from '../../core/model';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
 import { generateGame } from '../../core/mapgen';
 import { buildMission, missionById, missionRules } from '../../core/missions';
 import { deserialize } from '../../core/save';
-import type { GameSetup, GameState } from '../../core/types';
+import type { GameSetup, GameState } from '../../core/model';
 import { ensureWeather } from '../../core/weather';
 import { defaultLab, labState, type LabOptions } from '../../lab';
 import { randomSeed } from '../../setup';

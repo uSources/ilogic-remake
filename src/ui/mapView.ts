@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { GameState, Pos } from '../core/types';
+import type { GameState, Pos } from '../core/model';
 import type { Anchor } from '../hud/store';
 import { settings } from '../settings';
 import { MapCamera, type ScreenBox } from './map/camera';

@@ -5,7 +5,7 @@ import { DEFAULT_RULES, HQ, setMapSize, useRules } from '@core/data';
 import { buildMission, missionRules, MISSIONS } from '@core/missions';
 import { measureObjective, objectiveOutcome } from '@core/objectives';
 import { objectiveProgress, outcome } from '@core/rules';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 
 afterEach(() => {
   setMapSize(32);

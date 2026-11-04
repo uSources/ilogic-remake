@@ -1,6 +1,6 @@
 import { samePos } from '../../core/geom';
 import { effectiveCommand, isDetached, squadInFormation } from '../../core/squads';
-import type { CommandKind, GameState } from '../../core/types';
+import type { CommandKind, GameState } from '../../core/model';
 import type { SquadVM } from '../../hud/store';
 import { t } from '../../settings';
 

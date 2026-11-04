@@ -3,7 +3,7 @@ import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/cont
 import { DEFAULT_RULES, HQ, useRules } from '@core/data';
 import { newUnit } from '@core/rules';
 import { formSquad, giveCommand } from '@core/squads';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
 /** [CAMBIO] Registro de acciones: clic derecho inteligente, menu completo y cursor (controls/actions.ts). */

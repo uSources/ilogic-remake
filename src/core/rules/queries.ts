@@ -6,7 +6,7 @@ import { Movement, type MoveType } from '../data';
 import { grid, inBounds } from '../geom';
 import { cellAt, setCell } from '../util/grid';
 import { isOnMap } from '../util/predicates';
-import type { Building, GameState, Team, Unit } from '../types';
+import type { Building, GameState, Team, Unit } from '../model';
 
 export function unitById(s: GameState, uid: number | null): Unit | undefined {
   return uid === null ? undefined : s.units.find((unit) => unit.uid === uid);

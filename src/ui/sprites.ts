@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { BUILDING_NAMES, BUILDING_TERRAIN_PREFIX, MAP_H, MAP_W, TERRAIN, TERRAIN_NAMES, UNIT_ART, UNIT_TERRAIN_PREFIX } from '../core/data';
-import type { Building, GameState, Unit } from '../core/types';
+import type { Building, GameState, Unit } from '../core/model';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
 

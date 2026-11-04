@@ -3,7 +3,7 @@
  * (`record`) y le pide el panel en cada refresco (`panel`).
  */
 import { missionById } from '../../core/missions';
-import type { GameEvent, GameState } from '../../core/types';
+import type { GameEvent, GameState } from '../../core/model';
 import { objectiveStatus, objectiveText, TUTORIAL } from '../../campaign';
 import type { UIState } from '../../hud/store';
 import { settings } from '../../settings';

@@ -5,7 +5,7 @@ import { seededRng } from '@core/geom';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
 import { giveCommand } from '@core/squads';
-import type { GameState, Pos } from '@core/types';
+import type { GameState, Pos } from '@core/model';
 import { blankState } from './helpers';
 
 /** [CAMBIO] Flechas de intencion: previewCommands dice lo que hara cada orden al terminar el turno. */

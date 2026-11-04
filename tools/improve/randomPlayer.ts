@@ -26,7 +26,7 @@ import {
   unloadTiles,
   wait,
 } from '@core/rules';
-import type { GameState, Rng, Team, Unit } from '@core/types';
+import type { GameState, Rng, Team, Unit } from '@core/model';
 
 const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng() * xs.length)];
 

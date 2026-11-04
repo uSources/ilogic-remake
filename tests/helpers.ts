@@ -1,5 +1,5 @@
 import { grid } from '@core/geom';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 
 /** Partida vacia toda de hierba, para tests de reglas. */
 export function blankState(): GameState {

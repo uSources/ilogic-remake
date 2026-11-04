@@ -5,7 +5,7 @@
 import { manhattan, samePos } from './geom';
 import { buildingAt } from './rules/queries';
 import { isAlive, isCapturer, isPlayer } from './util/predicates';
-import type { Command, CommandKind, GameState, Pos, Squad, Unit } from './types';
+import type { Command, CommandKind, GameState, Pos, Squad, Unit } from './model';
 
 /** Nombres que se van dando a las escuadras nuevas (el jugador los puede cambiar). */
 export const SQUAD_NAMES = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Eco', 'Fox', 'Golf', 'Hotel', 'India', 'Juliet'] as const;

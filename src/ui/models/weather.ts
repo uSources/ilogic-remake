@@ -1,5 +1,5 @@
 import { RULES, WEATHER } from '../../core/data';
-import type { GameState } from '../../core/types';
+import type { GameState } from '../../core/model';
 import { forecast, weatherNow } from '../../core/weather';
 import type { WeatherVM } from '../../hud/store';
 import { t, weatherLabel, type TextKey } from '../../settings';

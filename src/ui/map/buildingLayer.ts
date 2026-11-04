@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
-import type { Building, GameState } from '../../core/types';
+import type { Building, GameState } from '../../core/model';
 import { cellAt } from '../../core/util/grid';
 import { buildingKey } from '../sprites';
 import type { MapLayer } from './layer';

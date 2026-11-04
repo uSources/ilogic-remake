@@ -7,7 +7,7 @@ import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { moveRange } from '../rules/movement';
 import { teamUnits } from '../rules/queries';
-import type { GameState, Team, Unit } from '../types';
+import type { GameState, Team, Unit } from '../model';
 import { needsRepair, strikeReach, visibleFoes } from './context';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */

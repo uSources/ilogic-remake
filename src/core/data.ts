@@ -3,9 +3,10 @@
 // src/core/content/*.json (ver docs/CONTENIDO.md) y aqui se convierten en las tablas de siempre.
 // Correcciones respecto al original: tabla "poder" (filas 0, 8 y 17 desalineadas),
 // fila 18 de "unitHeals" (faltaba) y fila 2 de PROBS_PER_ADJ (sobraba un valor).
-import { loadContent, MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef, type RulesConfig } from './content';
+import { loadContent, MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef } from './content';
+import type { RulesConfig } from './model';
 
-export { MoveType, TerrainType, TERRAIN_NAMES, type AbilityDef, type RulesConfig };
+export { MoveType, TerrainType, TERRAIN_NAMES, type AbilityDef };
 
 const { content, tables: T } = loadContent();
 

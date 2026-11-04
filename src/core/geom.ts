@@ -1,5 +1,5 @@
 import { MAP_H, MAP_W } from './data';
-import type { Pos, Rng } from './types';
+import type { Pos, Rng } from './model';
 
 /** Utilidades geometricas (Auxiliar.java). Todos los rangos son rombos (distancia Manhattan). */
 

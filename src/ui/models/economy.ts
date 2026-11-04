@@ -1,6 +1,6 @@
 import { MAX_FUNDS, RULES, UNIT } from '../../core/data';
 import { buildingIncome, commandUsed, score, upkeepOf, type BuyOption } from '../../core/rules';
-import type { GameState, Team } from '../../core/types';
+import type { GameState, Team } from '../../core/model';
 import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../../hud/store';
 import { buildingLabel, t, unitLabel } from '../../settings';
 

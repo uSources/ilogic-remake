@@ -7,7 +7,7 @@
 import { HQ, setMapSize, UNIT, UNIT_NAMES } from './core/data';
 import { grid } from './core/geom';
 import { newUnit } from './core/rules';
-import type { GameState } from './core/types';
+import type { GameState } from './core/model';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];

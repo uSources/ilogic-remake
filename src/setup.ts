@@ -1,7 +1,8 @@
 /**
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
-import { DEFAULT_RULES, GENERALS, type RulesConfig } from './core/data';
+import { DEFAULT_RULES, GENERALS } from './core/data';
+import type { RulesConfig } from './core/model';
 import { fmtNum, settings } from './settings';
 
 export interface NewGameOptions {

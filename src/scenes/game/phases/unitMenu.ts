@@ -18,7 +18,7 @@ import {
   wait,
 } from '../../../core/rules';
 import { cancelCommand, keepCapturing } from '../../../core/squads';
-import type { CommandKind, Unit } from '../../../core/types';
+import type { CommandKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, unitLabel, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';

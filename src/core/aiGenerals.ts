@@ -14,7 +14,7 @@ import type { GeneralEffect } from './content';
 import { AI, RULES, UNIT } from './data';
 import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
 import { visibility } from './rules/visibility';
-import type { GameEvent, GameState, Pos, Team } from './types';
+import type { GameEvent, GameState, Pos, Team } from './model';
 import { cellAt } from './util/grid';
 import { maxBy } from './util/pick';
 

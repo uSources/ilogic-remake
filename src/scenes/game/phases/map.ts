@@ -6,7 +6,7 @@ import { UNIT } from '../../../core/data';
 import { buildingAt, canBuyAt, moveRange, reachableTiles, unitAt, unitById, unitThreat } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import { cellAt, cells } from '../../../core/util/grid';
-import type { Pos, Unit } from '../../../core/types';
+import type { Pos, Unit } from '../../../core/model';
 import { clickSelect } from '../../../controls/selection';
 import type { HighlightInput, Highlights } from '../highlights';
 import { key } from '../types';

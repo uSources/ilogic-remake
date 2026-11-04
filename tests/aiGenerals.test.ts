@@ -3,7 +3,7 @@ import { aiGeneral, bestAreaTarget, chooseAbility } from '@core/aiGenerals';
 import { AI, DEFAULT_RULES, UNIT_NAMES, useRules } from '@core/data';
 import { generalDef, newGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
 const T = (n: string) => UNIT_NAMES.indexOf(n);

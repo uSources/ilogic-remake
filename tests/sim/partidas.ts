@@ -4,7 +4,7 @@ import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 
 /**
  * Partidas simuladas, repartidas en varios ficheros (ia-*.test.ts) para que vitest las ejecute en

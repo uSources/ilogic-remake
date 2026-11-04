@@ -15,7 +15,7 @@ import {
   tileProtection,
   unitAt,
 } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { effectiveCommand, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
 import { buildingLabel, t, terrainLabel, unitLabel } from '../../settings';

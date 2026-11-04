@@ -14,7 +14,7 @@
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { GENERALS, MAX_LIFE, UNIT, UNIT_NAMES } from './data';
 import { isOnMap } from './util/predicates';
-import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './types';
+import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
 export const generalDef = (id: string): GeneralDef | undefined => GENERALS.find((g) => g.id === id);
 

@@ -24,7 +24,7 @@
 import { aiGeneral } from './aiGenerals';
 import { teamUnits } from './rules/queries';
 import { wait } from './rules/unitActions';
-import type { GameEvent, GameState, Rng, Team } from './types';
+import type { GameEvent, GameState, Rng, Team } from './model';
 import { aiCtx } from './ai/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';

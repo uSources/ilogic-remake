@@ -4,7 +4,7 @@ import { BUILDING, UNIT, UNIT_TYPES } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endReason, endRound, outcome } from '@core/rules';
-import type { GameState, Team } from '@core/types';
+import type { GameState, Team } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
 

@@ -5,7 +5,7 @@ import { abilityBlock, chargeStars, generalHitFactor, newGeneral, useAbility } f
 import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
 const T = (n: string) => UNIT_NAMES.indexOf(n);

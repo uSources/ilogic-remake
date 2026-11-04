@@ -13,7 +13,7 @@ import { buildingAt, unitAt } from '../rules/queries';
 import { merge, mergeTargets } from '../rules/transport';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
-import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../types';
+import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../model';
 import { cellAt } from '../util/grid';
 import { maxBy, minBy } from '../util/pick';
 import { bestMoveToward, doMove, repairsHere, stepsFrom, strikeReach, visibleFoes, type AiCtx } from './context';

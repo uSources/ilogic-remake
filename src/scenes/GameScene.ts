@@ -11,7 +11,7 @@ import { grid, samePos } from '../core/geom';
 import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../core/types';
+import type { Building, GameEvent, GameState, Pos, Unit } from '../core/model';
 import {
   resetActions,
   showBanner,

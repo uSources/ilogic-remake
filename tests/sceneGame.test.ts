@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_RULES, HQ, UNIT_NAMES, useRules } from '@core/data';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
-import type { GameState, Unit } from '@core/types';
+import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';

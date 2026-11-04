@@ -6,7 +6,7 @@ import { UNIT } from '../../core/data';
 import { inBounds, samePos } from '../../core/geom';
 import { bestAttackTile } from '../../core/orders';
 import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { cellAt } from '../../core/util/grid';
 import { key, type Intent } from './types';
 

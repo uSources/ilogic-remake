@@ -5,7 +5,7 @@ import { grid, manhattan, seededRng } from '@core/geom';
 import { generateGame, placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
 /** [CAMBIO] Puntos de control: zonas que dan dinero cada ronda a su dueño si no estan disputadas. */

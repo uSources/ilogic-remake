@@ -10,7 +10,7 @@
  */
 import type Phaser from 'phaser';
 import { Movement, MoveType, UNIT } from '../core/data';
-import type { Pos } from '../core/types';
+import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost, type FxTimeline } from './fxKit';

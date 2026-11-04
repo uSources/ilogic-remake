@@ -4,7 +4,7 @@
 import { AI, RULES, UNIT, UNIT_SUPPORT } from '../data';
 import { buildingIncome, buyOptions, spawn, upkeepOf, type BuyOption } from '../rules/economy';
 import { teamUnits, unitAt } from '../rules/queries';
-import type { Building, GameEvent, GameState, Rng, Team, Unit } from '../types';
+import type { Building, GameEvent, GameState, Rng, Team, Unit } from '../model';
 
 /** Tipos que no combaten ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
 const SUPPORT_TYPES = new Set<number>(UNIT_SUPPORT.flatMap((isSupport, type) => (isSupport ? [type] : [])));

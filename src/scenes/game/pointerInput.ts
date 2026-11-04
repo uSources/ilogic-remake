@@ -6,7 +6,7 @@
 import type Phaser from 'phaser';
 import { samePos } from '../../core/geom';
 import { buildingAt, canBuyAt, unitAt } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { smartAction, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import type { PointerTarget, TapInfo } from '../../controls/pointer';
 import { boxSelect, clickSelect, type Selection } from '../../controls/selection';

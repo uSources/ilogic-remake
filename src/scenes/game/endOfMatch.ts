@@ -7,7 +7,7 @@ import { HQ, MAP_H, MAP_W } from '../../core/data';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { score } from '../../core/rules';
 import { sampleArmy, stats } from '../../core/stats';
-import type { GameState, Pos, Team } from '../../core/types';
+import type { GameState, Pos, Team } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
 import { ui, type UIState } from '../../hud/store';

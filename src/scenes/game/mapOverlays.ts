@@ -8,7 +8,7 @@ import { RULES } from '../../core/data';
 import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
 import { effectiveCommand } from '../../core/squads';
 import { cellAt } from '../../core/util/grid';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
 import type { ViewOptions } from '../../ui/mapView';
 
 type Overlay<K extends keyof ViewOptions> = NonNullable<ViewOptions[K]>;

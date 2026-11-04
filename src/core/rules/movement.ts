@@ -9,7 +9,7 @@ import { cellAt, cells, setCell } from '../util/grid';
 import { isEnemyOf, isOnMap } from '../util/predicates';
 import { minBy } from '../util/pick';
 import { weatherMove } from '../weather';
-import type { GameEvent, GameState, Pos, Unit } from '../types';
+import type { GameEvent, GameState, Pos, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { canWalk, isWalkable, occupancy } from './queries';
 import { visibility } from './visibility';

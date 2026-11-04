@@ -3,7 +3,7 @@
  */
 import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
-import type { GameEvent, GameState, Objective } from './core/types';
+import type { GameEvent, GameState, Objective } from './core/model';
 import { buildingLabel, settings } from './settings';
 
 const STORAGE_KEY = 'ilogic.campaign';

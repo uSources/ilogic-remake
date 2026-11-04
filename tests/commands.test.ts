@@ -25,7 +25,7 @@ import {
   squadInFormation,
   squadUnits,
 } from '@core/squads';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
 import { blankState } from './helpers';
 

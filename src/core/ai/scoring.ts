@@ -7,7 +7,7 @@ import { AI, HQ, RULES, UNIT } from '../data';
 import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
-import type { Building, GameState, Pos, Unit } from '../types';
+import type { Building, GameState, Pos, Unit } from '../model';
 import type { AiCtx } from './context';
 
 /** Un ataque que se esta valorando, con lo que comparten todos los terminos. */

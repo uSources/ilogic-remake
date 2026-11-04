@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { RULES } from '../../core/data';
 import { bountyFor, combatForecast, flanked } from '../../core/rules';
-import type { CombatInfo, GameEvent, GameState, Pos, Unit } from '../../core/types';
+import type { CombatInfo, GameEvent, GameState, Pos, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
 import { unitLabel } from '../../settings';
 import { unitKey } from '../sprites';

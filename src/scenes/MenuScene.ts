@@ -8,7 +8,7 @@ import { ATLAS } from '../atlas';
 import { useRules } from '../core/data';
 import { missionRules, type MissionDef } from '../core/missions';
 import { deserialize } from '../core/save';
-import type { GameState } from '../core/types';
+import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
