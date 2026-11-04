@@ -50,12 +50,17 @@ return gotCloser ? best.pos : null;
 7. **Depender de poco.** Cada modulo pide una interfaz pequena con lo que usa (`...Host`), no la
    escena ni el estado entero. El nucleo (`src/core`) no importa nada de fuera.
 8. **Funciones puras donde se pueda.** Calcular y aplicar por separado: primero se decide (puro, con
-   test), despues se cambia el estado o se dibuja.
+   test), despues se cambia el estado o se dibuja. Una funcion con nombre de consulta (`statsOf`,
+   `captureProgress`) nunca escribe en la partida.
 9. **Tipos que cuentan la verdad.** Uniones con nombre (`'attack' | 'capture'`) en vez de `string`;
    `null` solo cuando "no hay" es un caso real, y entonces se trata arriba (regla 3).
 10. **Comentarios del porque, no del que.** Si un comentario explica que hace el codigo, se reescribe
     el codigo. Se comenta la razon, la regla del juego original o la trampa que se evita.
 11. **Identificadores en ingles, comentarios y textos en castellano** (como hasta ahora).
+12. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
+    `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
+    modulo que se cambian al empezar una partida, y el contenido (`data.ts`) no se toca: esta congelado.
+    Las casillas se pasan como `Pos`, no como `x, y` sueltos.
 
 ## Al cambiar codigo que ya existe
 

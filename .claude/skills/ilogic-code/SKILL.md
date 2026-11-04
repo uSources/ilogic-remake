@@ -50,7 +50,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 ## Convenciones
 
 - **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
-  `core/content/*.json` (ver `docs/CONTENIDO.md`); `core/data.ts` los convierte en las tablas (`UNIT`,
+  `core/content/*.json` (ver `docs/CONTENIDO.md`); `core/data.ts` los convierte en las tablas, congeladas (`UNIT`,
   `POWER`, `BUILDING`, `TERRAIN`, `Movement`, `DEFAULT_RULES`, `AI`). El codigo no compara nombres de
   unidades (`'Tank'`): si necesita saber algo de una, es un campo del JSON.
 - **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `Movement.of(u.type)`,
@@ -59,6 +59,10 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
+- **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
+  tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
+  en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
+  `generateGame(rng, { rules })`).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
   `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en

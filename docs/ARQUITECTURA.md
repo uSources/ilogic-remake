@@ -41,9 +41,29 @@ flowchart TB
 
 ### El nucleo por dentro
 
-`rules.ts` y `ai.ts` son fachadas: reexportan lo publico de sus modulos, uno por tema, y desde
-fuera de `src/core` se importa siempre de ellas (`'../core/rules'`, `'@core/ai'`). Dentro de core,
-mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclos.
+`rules.ts`, `ai.ts` y `squads.ts` son fachadas: reexportan lo publico de sus modulos, uno por tema, y
+desde fuera de `src/core` se importa siempre de ellas (`'../core/rules'`, `'@core/ai'`). Dentro de
+core, mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclos.
+
+Las piezas de abajo, que usa todo lo demas:
+
+| Pieza | Que va |
+|---|---|
+| `model/` | los tipos de la partida (`GameState`, `Unit`, `Building`, `GameEvent`, `StandingOrder`, `Squad`, `RulesConfig`...). Solo tipos, no importa nada (ESLint lo vigila) |
+| `content/` + `data.ts` | el contenido (JSON validados) y sus tablas. Entra por `content/active.ts` y `data.ts` lo congela: no cambia nunca mientras se juega (ver docs/CONTENIDO.md) |
+| `util/grid.ts` | `Grid<T>`: rejilla con `at`, `set`, `contains`, `forEach`, `cells`, `createLayer`, `width`/`height` |
+| `mapGrid.ts` | el mapa de una partida como rejilla: `mapGrid(s)`, `terrainAt`, `isOnBoard`, `createLayer(s, fill)` |
+| `geom.ts` | rombos (`diamond`, `neighbors4`, que reciben el tamaño), `squareArea`, `posKey`, `seededRng` |
+
+**El estado es la unica fuente de la partida**: las reglas van en `s.rules` (obligatorias) y el tamaño
+del mapa en `s.map`; no hay variables de modulo con la partida en curso. Las consultas no la cambian
+(`statsOf`, `captureProgress`); lo que la cambia lo dice en el nombre (mover, atacar, `recordEvent`...).
+
+`src/core/squads/` (escuadras y ordenes permanentes del jugador): `queries` (unidades de una
+escuadra), `naming` (nombres y teclas de grupo), `standingOrders` (la orden de la escuadra y la propia
+de cada unidad) y `membership` (formar, meter, sacar, deshacer). Las cumple la IA al acabar el turno
+(`ai/standingOrders.ts`). `targeting.ts` y `trail.ts`: desde donde atacar y el camino trazado con el
+cursor, para la escena.
 
 `src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
 
@@ -235,7 +255,7 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | Modulo | Que hace | Phaser |
 |---|---|---|
 | `types.ts` | `Phase`, `Intent`, constantes, `GameStartData` | no |
-| `matchSetup.ts` | con que partida se empieza (guardada, preparada, laboratorio, mision o mapa nuevo) | no |
+| `matchSetup.ts` | con que partida se empieza (guardada, preparada, laboratorio, mision o mapa nuevo); cada una trae sus reglas en `state.rules` y la escena no las toca | no |
 | `phases/` | que hace cada fase del turno del jugador: una entrada de `PHASES` por fase (ver abajo) | solo tipos |
 | `moveSession.ts`, `unitMoves.ts` | la unidad elegida (alcance, camino, deshacer) y moverla: soltar, atacar, unirse, ordenes de varios turnos, mover en grupo, Ctrl+Z | solo tipos |
 | `mapOverlays.ts` | lo que se dibuja encima del mapa: capturas, ordenes, intenciones, puntos de control, escolta | no |
