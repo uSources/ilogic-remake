@@ -30,20 +30,20 @@ export function contentContext(unitIds: Set<string>, buildingIds: Set<string>): 
 }
 
 /** Tablas que usan las reglas (recien construidas: luego se congelan). El contenido tiene que estar validado. */
-export function buildTables(c: Content) {
-  const ctx = contentContext(new Set(c.units.map((unit) => unit.id)), new Set(c.buildings.map((building) => building.id)));
+export function buildTables(files: Content) {
+  const ctx = contentContext(new Set(files.units.map((unit) => unit.id)), new Set(files.buildings.map((building) => building.id)));
   return {
     ...buildUnitTables(
-      c.units,
+      files.units,
       ctx,
-      c.buildings.map((building) => building.id),
+      files.buildings.map((building) => building.id),
     ),
-    ...buildBuildingTables(c.buildings, ctx),
-    ...buildTerrainTables(c.terrain),
-    DEFAULT_RULES: { ...c.rules.defaults },
-    MAX_FUNDS: c.rules.maxFunds,
-    AI: buildAiWeights(c.ai),
-    ...buildWeatherTables(c.weather),
+    ...buildBuildingTables(files.buildings, ctx),
+    ...buildTerrainTables(files.terrain),
+    DEFAULT_RULES: { ...files.rules.defaults },
+    MAX_FUNDS: files.rules.maxFunds,
+    AI: buildAiWeights(files.ai),
+    ...buildWeatherTables(files.weather),
   };
 }
 

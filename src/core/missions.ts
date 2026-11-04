@@ -63,12 +63,12 @@ export function terrainOf(letter: string, theme: number): number {
 }
 
 /** Terreno de una casilla del mapa en texto (filas = y). */
-const missionTerrainAt = (m: MissionDef, pos: Pos) => terrainOf(m.map[pos.y]![pos.x]!, m.theme);
+const missionTerrainAt = (mission: MissionDef, pos: Pos) => terrainOf(mission.map[pos.y]![pos.x]!, mission.theme);
 
 /** El mapa en texto (filas = y) como rejilla de terreno `map[x][y]`. */
-function terrainGrid(m: MissionDef): number[][] {
-  const size = m.map.length;
-  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => missionTerrainAt(m, { x, y })));
+function terrainGrid(mission: MissionDef): number[][] {
+  const size = mission.map.length;
+  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => missionTerrainAt(mission, { x, y })));
 }
 
 /** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
@@ -81,46 +81,46 @@ function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
 }
 
 /** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
-export function buildMission(m: MissionDef, content: GameContent): GameState {
+export function buildMission(mission: MissionDef, content: GameContent): GameState {
   const s = newGameState({
-    map: terrainGrid(m),
-    rules: missionRules(m, content),
+    map: terrainGrid(mission),
+    rules: missionRules(mission, content),
     content,
-    theme: m.theme,
-    funds: [m.funds[0], m.funds[1]],
+    theme: mission.theme,
+    funds: [mission.funds[0], mission.funds[1]],
   });
-  for (const [type, owner, x, y] of m.buildings) s.buildings.push({ type: tablesOf(s).BUILDING_NAMES.indexOf(type), owner, x, y });
-  const unitUids = placeUnits(s, m.units);
-  s.mission = { id: m.id, objective: objectiveFromMission(m.objective, unitUids, content.tables) };
+  for (const [type, owner, x, y] of mission.buildings) s.buildings.push({ type: tablesOf(s).BUILDING_NAMES.indexOf(type), owner, x, y });
+  const unitUids = placeUnits(s, mission.units);
+  s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, unitUids, content.tables) };
   return s;
 }
 
 /** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
-export const missionRules = (m: MissionDef, content: GameContent): RulesConfig =>
-  rulesWith(content, { commandPoints: null, upkeep: 0, weather: false, initialFunds: m.funds[0], ...m.rules });
+export const missionRules = (mission: MissionDef, content: GameContent): RulesConfig =>
+  rulesWith(content, { commandPoints: null, upkeep: 0, weather: false, initialFunds: mission.funds[0], ...mission.rules });
 
-function buildingProblems(m: MissionDef, tables: ContentTables): string[] {
+function buildingProblems(mission: MissionDef, tables: ContentTables): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
-  for (const [type, , x, y] of m.buildings) {
+  for (const [type, , x, y] of mission.buildings) {
     if (!tables.BUILDING_NAMES.includes(type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
-    if (!tables.TERRAIN.canbuild[missionTerrainAt(m, { x, y })]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
+    if (!tables.TERRAIN.canbuild[missionTerrainAt(mission, { x, y })]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
     if (taken.has(posKey({ x, y }))) problems.push(`dos edificios en (${x},${y})`);
     taken.add(posKey({ x, y }));
   }
   return problems;
 }
 
-function unitProblems(m: MissionDef, tables: ContentTables): string[] {
+function unitProblems(mission: MissionDef, tables: ContentTables): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
-  for (const [name, , x, y] of m.units) {
+  for (const [name, , x, y] of mission.units) {
     const type = tables.UNIT_NAMES.indexOf(name);
     if (type < 0) {
       problems.push(`unidad "${name}" no existe (src/core/content/units.json)`);
       continue;
     }
-    if (!walkableFor(tables, tables.UNIT.movtype[type]!, missionTerrainAt(m, { x, y })))
+    if (!walkableFor(tables, tables.UNIT.movtype[type]!, missionTerrainAt(mission, { x, y })))
       problems.push(`${name} en (${x},${y}) no puede estar en ese terreno`);
     if (taken.has(posKey({ x, y }))) problems.push(`dos unidades en (${x},${y})`);
     taken.add(posKey({ x, y }));
@@ -128,20 +128,20 @@ function unitProblems(m: MissionDef, tables: ContentTables): string[] {
   return problems;
 }
 
-function missingBases(m: MissionDef, tables: ContentTables): string[] {
-  const hasBase = (team: Team) => m.buildings.some(([type, owner]) => type === tables.BUILDING_NAMES[tables.HQ] && owner === team);
+function missingBases(mission: MissionDef, tables: ContentTables): string[] {
+  const hasBase = (team: Team) => mission.buildings.some(([type, owner]) => type === tables.BUILDING_NAMES[tables.HQ] && owner === team);
   return ([0, 1] as const).filter((team) => !hasBase(team)).map((team) => `falta la Base del bando ${team}`);
 }
 
 /** Comprobaciones de un mapa de mision con ese contenido (para los tests). Devuelve los problemas encontrados. */
-export function checkMission(m: MissionDef, content: GameContent): string[] {
-  const size = m.map.length;
+export function checkMission(mission: MissionDef, content: GameContent): string[] {
+  const size = mission.map.length;
   return [
-    ...(m.map.some((row) => row.length !== size) ? ['el mapa no es cuadrado'] : []),
-    ...buildingProblems(m, content.tables),
-    ...unitProblems(m, content.tables),
-    ...missingBases(m, content.tables),
-    ...objectiveProblems(m.objective, { unitCount: m.units.length, mapSize: size }),
+    ...(mission.map.some((row) => row.length !== size) ? ['el mapa no es cuadrado'] : []),
+    ...buildingProblems(mission, content.tables),
+    ...unitProblems(mission, content.tables),
+    ...missingBases(mission, content.tables),
+    ...objectiveProblems(mission.objective, { unitCount: mission.units.length, mapSize: size }),
   ];
 }
 

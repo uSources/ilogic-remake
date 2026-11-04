@@ -48,7 +48,7 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
  */
 function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
   const damageTo = (shooterUid: number) => damage.get(shooterUid)!.get(foe.uid)!;
-  const candidates = [...free].filter((uid) => damage.get(uid)!.has(foe.uid)).sort((a, b) => damageTo(b) - damageTo(a));
+  const candidates = [...free].filter((uid) => damage.get(uid)!.has(foe.uid)).sort((first, second) => damageTo(second) - damageTo(first));
   let total = 0;
   const squad: number[] = [];
   for (const uid of candidates) {
@@ -86,7 +86,7 @@ export function planFire(s: GameState, me: Team): FirePlan {
     foes,
   );
   const free = new Set(damage.keys());
-  const mostValuableFirst = [...foes].sort((a, b) => remainingValue(s, b) - remainingValue(s, a));
+  const mostValuableFirst = [...foes].sort((firstUnit, secondUnit) => remainingValue(s, secondUnit) - remainingValue(s, firstUnit));
   for (const foe of mostValuableFirst) {
     const squad = squadToDestroy(s, foe, free, damage);
     if (!squad) continue;
@@ -96,6 +96,8 @@ export function planFire(s: GameState, me: Team): FirePlan {
     }
   }
   // sort es estable: dentro de cada grupo se conserva el orden de siempre.
-  const order = [...mine].sort((a, b) => playRank(s, a, plan) - playRank(s, b, plan)).map((unit) => unit.uid);
+  const order = [...mine]
+    .sort((firstUnit, secondUnit) => playRank(s, firstUnit, plan) - playRank(s, secondUnit, plan))
+    .map((unit) => unit.uid);
   return { plan, order };
 }

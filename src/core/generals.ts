@@ -76,7 +76,7 @@ export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, t
 export const revealsAll = (s: GameState, team: Team): boolean => !!s.generals?.[team]?.reveal;
 
 /** Estrellas enteras de la barra. */
-export const chargeStars = (g: GeneralState): number => Math.floor(g.charge + 1e-9);
+export const chargeStars = (generalState: GeneralState): number => Math.floor(generalState.charge + 1e-9);
 
 export type AbilityBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target';
 

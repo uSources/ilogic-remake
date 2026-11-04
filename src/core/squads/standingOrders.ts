@@ -17,7 +17,8 @@ export const STANDING_ORDER_KINDS = Object.keys(STANDING_ORDER_NAMES) as readonl
 /** El valor es un tipo de orden permanente. */
 export const isStandingOrderKind = (value: unknown): value is StandingOrderKind => STANDING_ORDER_KINDS.some((kind) => kind === value);
 
-export const sameStandingOrder = (a: StandingOrder, b: StandingOrder): boolean => a.kind === b.kind && samePos(a.at, b.at);
+export const sameStandingOrder = (firstStandingOrder: StandingOrder, secondStandingOrder: StandingOrder): boolean =>
+  firstStandingOrder.kind === secondStandingOrder.kind && samePos(firstStandingOrder.at, secondStandingOrder.at);
 
 const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
   kind: standingOrder.kind,

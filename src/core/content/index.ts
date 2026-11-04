@@ -50,18 +50,18 @@ export function readContentFiles(): Content {
 }
 
 /** Comprueba todo el contenido y devuelve todos los errores (vacio si esta bien). */
-export function validateContent(c: Content): string[] {
+export function validateContent(files: Content): string[] {
   const check = new Checker();
-  const lists = { units: c.units, buildings: c.buildings, terrain: c.terrain };
+  const lists = { units: files.units, buildings: files.buildings, terrain: files.terrain };
   for (const [name, list] of Object.entries(lists)) if (!Array.isArray(list)) return [`${name}.json: tiene que tener una lista "${name}"`];
-  const ctx = contentContext(uniqueIds(check, 'unidad', c.units), uniqueIds(check, 'edificio', c.buildings));
-  validateUnits(c.units, ctx, check);
-  validateBuildings(c.buildings, ctx, check);
-  validateTerrain(c.terrain, TERRAIN_NAMES, check);
-  validateRules(c.rules, check);
-  validateAi(c.ai, check);
-  validateWeather(c.weather, check);
-  validateGenerals(c.generals, ctx.unitIds, check);
+  const ctx = contentContext(uniqueIds(check, 'unidad', files.units), uniqueIds(check, 'edificio', files.buildings));
+  validateUnits(files.units, ctx, check);
+  validateBuildings(files.buildings, ctx, check);
+  validateTerrain(files.terrain, TERRAIN_NAMES, check);
+  validateRules(files.rules, check);
+  validateAi(files.ai, check);
+  validateWeather(files.weather, check);
+  validateGenerals(files.generals, ctx.unitIds, check);
   return check.errors;
 }
 

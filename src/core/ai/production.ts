@@ -48,7 +48,9 @@ function productionOrder(s: GameState, rng: Rng, limited: boolean): Building[] {
       return [building, top >= BIG_UNIT ? BIG_UNIT + rng() : top / BIG_UNIT];
     }),
   );
-  return limited ? [...s.buildings].sort((a, b) => priority.get(b)! - priority.get(a)!) : s.buildings;
+  return limited
+    ? [...s.buildings].sort((firstBuilding, secondBuilding) => priority.get(secondBuilding)! - priority.get(firstBuilding)!)
+    : s.buildings;
 }
 
 /** Lo que gana el bando cada turno: ingresos de sus edificios menos el mantenimiento de sus unidades. */

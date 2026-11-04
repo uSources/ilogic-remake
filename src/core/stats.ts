@@ -67,12 +67,14 @@ const MAX_ARMY_SAMPLES = 5000;
 
 /** Un par [jugador, IA] de enteros no negativos. */
 function isCountPair(value: unknown): value is [number, number] {
-  return Array.isArray(value) && value.length === 2 && value.every((n) => typeof n === 'number' && Number.isInteger(n) && n >= 0);
+  return (
+    Array.isArray(value) && value.length === 2 && value.every((count) => typeof count === 'number' && Number.isInteger(count) && count >= 0)
+  );
 }
 
 /** Valida las estadisticas leidas de una partida guardada (las antiguas no las tienen). */
-export function sanitizeStats(v: unknown): GameStats {
-  const saved = (v ?? {}) as Partial<GameStats>;
+export function sanitizeStats(value: unknown): GameStats {
+  const saved = (value ?? {}) as Partial<GameStats>;
   if (!(isCountPair(saved.built) && isCountPair(saved.spent) && isCountPair(saved.lost) && isCountPair(saved.captured)))
     return emptyStats();
   const clean: GameStats = { built: saved.built, spent: saved.spent, lost: saved.lost, captured: saved.captured };

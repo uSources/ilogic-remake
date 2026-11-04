@@ -39,7 +39,7 @@ export function standingOrderPlayOrder(s: GameState, units: readonly Unit[]): Un
     const group = units.filter((other) => other === unit || (!placed.has(other) && sameFormation(s, unit, other)));
     const remaining = new Map(group.map((member) => [member, remainingOf(s, member)]));
     const speed = (member: Unit) => tablesOf(s).UNIT.mover[member.type]!;
-    group.sort((a, b) => remaining.get(b)! - remaining.get(a)! || speed(a) - speed(b));
+    group.sort((firstUnit, secondUnit) => remaining.get(secondUnit)! - remaining.get(firstUnit)! || speed(firstUnit) - speed(secondUnit));
     for (const member of group) placed.add(member);
     ordered.push(...group);
   }
@@ -122,4 +122,5 @@ export function standingOrderStep(s: GameState, ai: AiCtx, unit: Unit, at: Pos, 
 }
 
 /** En formacion solo dispara desde donde no se adelanta a su escuadra (o desde donde esta). */
-export const formationFrom = (f: Formation | null) => (f ? (pos: Pos) => f.remaining.at(pos) >= f.minRemaining : undefined);
+export const formationFrom = (formation: Formation | null) =>
+  formation ? (pos: Pos) => formation.remaining.at(pos) >= formation.minRemaining : undefined;

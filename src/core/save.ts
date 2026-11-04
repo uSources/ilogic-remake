@@ -19,10 +19,11 @@ import type { GameState, Pos, RulesConfig, SavedGameState, StandingOrder, Unit }
 
 export type { SaveContext } from './saveMigrations';
 
-const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
+const isInt = (value: unknown, min: number, max: number): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 
 /** Bando valido (0 jugador, 1 IA). */
-const isTeam = (v: unknown): boolean => v === 0 || v === 1;
+const isTeam = (value: unknown): boolean => value === 0 || value === 1;
 /** Ultimo tema de mapa (Plains..Snowy, ver GameState.theme). */
 const MAX_THEME = THEME_NAMES.length - 1;
 /** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
@@ -95,7 +96,7 @@ function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unkno
 function readMap(s: GameState): boolean {
   if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
   if (s.map[0].length !== s.map.length) return false;
-  const isTerrain = (t: unknown) => isInt(t, 0, TERRAIN_TYPES - 1);
+  const isTerrain = (value: unknown) => isInt(value, 0, TERRAIN_TYPES - 1);
   return s.map.every((column) => Array.isArray(column) && column.length === s.map.length && column.every(isTerrain));
 }
 
@@ -249,7 +250,7 @@ function cleanGenerals(s: GameState): void {
 }
 
 /** Un tanto por uno (0..1). */
-const isFraction = (v: unknown): boolean => typeof v === 'number' && v >= 0 && v <= 1;
+const isFraction = (value: unknown): boolean => typeof value === 'number' && value >= 0 && value <= 1;
 
 /** Las reglas que tiene toda partida guardada (desde la primera version) son validas. */
 function hasValidCoreRules(rules: Partial<RulesConfig>): boolean {

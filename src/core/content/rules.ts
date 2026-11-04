@@ -37,19 +37,19 @@ const RULE_KINDS: Record<keyof RulesConfig, Kind> = {
   controlRadius: 'int',
 };
 
-export function validateRules(r: RulesFile, check: Checker): void {
-  const s = check.scope('rules.json');
-  const d = (r?.defaults ?? {}) as unknown as Record<string, unknown>;
-  for (const [k, kind] of Object.entries<Kind>(RULE_KINDS)) {
-    const v = d[k];
-    const f = `defaults.${k}`;
-    if (kind === 'bool') s.bool(f, v);
-    else if (kind === 'int') s.num(f, v, { min: 0, int: true });
-    else if (kind === 'number') s.num(f, v, { min: 0 });
-    else if (kind === 'fraction') s.num(f, v, { min: 0, max: 1 });
-    else if (v !== null)
-      s.num(`${f} (o null)`, v, kind === 'days' || kind === 'points' ? { min: 1, max: 1e4, int: true } : { min: 0, max: 1 });
+export function validateRules(file: RulesFile, check: Checker): void {
+  const scope = check.scope('rules.json');
+  const defaults = (file?.defaults ?? {}) as unknown as Record<string, unknown>;
+  for (const [rule, kind] of Object.entries<Kind>(RULE_KINDS)) {
+    const value = defaults[rule];
+    const field = `defaults.${rule}`;
+    if (kind === 'bool') scope.bool(field, value);
+    else if (kind === 'int') scope.num(field, value, { min: 0, int: true });
+    else if (kind === 'number') scope.num(field, value, { min: 0 });
+    else if (kind === 'fraction') scope.num(field, value, { min: 0, max: 1 });
+    else if (value !== null)
+      scope.num(`${field} (o null)`, value, kind === 'days' || kind === 'points' ? { min: 1, max: 1e4, int: true } : { min: 0, max: 1 });
   }
-  for (const k of Object.keys(d)) s.expect(k in RULE_KINDS, `regla desconocida "${k}"`);
-  s.num('maxFunds', r?.maxFunds, { min: 1, int: true });
+  for (const rule of Object.keys(defaults)) scope.expect(rule in RULE_KINDS, `regla desconocida "${rule}"`);
+  scope.num('maxFunds', file?.maxFunds, { min: 1, int: true });
 }
