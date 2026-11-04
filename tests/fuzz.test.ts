@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, setMapSize, useRules } from '@core/data';
+import { DEFAULT_RULES, useRules } from '@core/data';
 import { capture, moveUnit, newUnit, captureProgress, endRound } from '@core/rules';
 import { fuzzGame } from '../tools/improve/fuzz';
 import { blankState } from './helpers';
 
 afterEach(() => {
-  setMapSize(32);
   useRules(DEFAULT_RULES);
 });
 

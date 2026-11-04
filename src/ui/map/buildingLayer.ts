@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
 import type { Building, GameState } from '../../core/model';
-import { cellAt } from '../../core/util/grid';
+import type { Grid } from '../../core/util/grid';
 import { buildingKey } from '../sprites';
 import type { MapLayer } from './layer';
 import { fitToTile, tileFoot, tileImage } from './tileImage';
@@ -23,8 +23,8 @@ export class BuildingLayer implements MapLayer {
     this.object.add(image);
   }
 
-  sync(s: GameState, vis: boolean[][]): void {
-    s.buildings.forEach((building, i) => this.syncBuilding(s, building, i, cellAt(vis, building)));
+  sync(s: GameState, vis: Grid<boolean>): void {
+    s.buildings.forEach((building, i) => this.syncBuilding(s, building, i, vis.at(building)));
     this.sort();
   }
 

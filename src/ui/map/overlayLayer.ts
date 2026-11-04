@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
 import { TILE } from '../../layout';
 import { PAL_MAP } from '../palette';
-import { forEachTile } from './geometry';
 import { captureBars, highlights } from './highlights';
 import type { MapLayer, OverlayContext, OverlayPainter } from './layer';
 import { intents, orderLines, pathArrow } from './orders';
@@ -12,8 +11,8 @@ import { attackZone, controlZones, dangerCorners, threatZone } from './zones';
 const classicFog: OverlayPainter = (g, opts, ctx) => {
   if (ctx.newArt) return;
   g.fillStyle(PAL_MAP.fog, 0.5);
-  forEachTile((x, y) => {
-    if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+  opts.vis.forEach((isVisible, { x, y }) => {
+    if (!isVisible) g.fillRect(x * TILE, y * TILE, TILE, TILE);
   });
 };
 

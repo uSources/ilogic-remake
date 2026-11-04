@@ -4,8 +4,8 @@
  * sin tener que jugar. Se abre con `#lab` en la direccion o con `ilogicDebug.lab()`.
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
-import { HQ, setMapSize, UNIT, UNIT_NAMES } from './core/data';
-import { grid } from './core/geom';
+import { HQ, UNIT, UNIT_NAMES } from './core/data';
+import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
 import type { GameState } from './core/model';
 
@@ -42,10 +42,9 @@ export const labRange = (type: number): number => Math.max(1, UNIT.minalc[type]!
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
 export function labState(o: LabOptions, action: LabAction | null): GameState {
-  setMapSize(LAB_SIZE, LAB_SIZE);
   const s: GameState = {
     version: 1,
-    map: grid(0),
+    map: blankMap(LAB_SIZE),
     theme: 0,
     funds: [0, 0],
     units: [],

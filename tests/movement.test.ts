@@ -19,8 +19,8 @@ describe('movimiento: pasar entre aliados', () => {
     const a = newUnit(s, TANK, 0, 2, 5);
     newUnit(s, TANK, 0, 3, 5);
     const r = moveRange(s, a);
-    expect(r.steps[3]![5]).toBe(0); // ocupada por el aliado
-    expect(r.steps[4]![5]).toBe(2); // pero se llega a la siguiente
+    expect(r.steps.at({ x: 3, y: 5 })).toBe(0); // ocupada por el aliado
+    expect(r.steps.at({ x: 4, y: 5 })).toBe(2); // pero se llega a la siguiente
   });
 
   it('con los interruptores apagados el aliado bloquea', () => {
@@ -29,7 +29,7 @@ describe('movimiento: pasar entre aliados', () => {
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
     const a = newUnit(s, TANK, 0, 2, 5);
     newUnit(s, TANK, 0, 3, 5);
-    expect(moveRange(s, a).steps[4]![5]).toBe(0);
+    expect(moveRange(s, a).steps.at({ x: 4, y: 5 })).toBe(0);
   });
 });
 
@@ -48,9 +48,9 @@ describe('movimiento: emboscadas en la niebla', () => {
     const s = corridor();
     newUnit(s, TANK, 0, 2, 5);
     const e = newUnit(s, SOLDIER, 1, 6, 5);
-    expect(visibility(s, 0)[e.x]![e.y]).toBe(false);
+    expect(visibility(s, 0).at(e)).toBe(false);
     newUnit(s, SOLDIER, 0, 5, 5);
-    expect(visibility(s, 0)[e.x]![e.y]).toBe(true);
+    expect(visibility(s, 0).at(e)).toBe(true);
   });
 
   it('el alcance no delata a un enemigo escondido', () => {
@@ -58,8 +58,8 @@ describe('movimiento: emboscadas en la niebla', () => {
     const a = newUnit(s, TANK, 0, 2, 5);
     newUnit(s, SOLDIER, 1, 6, 5);
     const r = moveRange(s, a);
-    expect(r.steps[6]![5]).toBe(4);
-    expect(r.steps[7]![5]).toBe(5);
+    expect(r.steps.at({ x: 6, y: 5 })).toBe(4);
+    expect(r.steps.at({ x: 7, y: 5 })).toBe(5);
   });
 
   it('al chocar con el enemigo escondido, se para antes y pierde el turno', () => {
@@ -113,7 +113,7 @@ describe('movimiento: emboscadas en la niebla', () => {
     const s = corridor();
     newUnit(s, TANK, 0, 2, 5);
     const e = newUnit(s, SOLDIER, 1, 6, 5);
-    expect(visibility(s, 0)[e.x]![e.y]).toBe(true);
+    expect(visibility(s, 0).at(e)).toBe(true);
   });
 });
 
@@ -174,13 +174,13 @@ describe('movimiento: coste del terreno', () => {
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
     const tank = newUnit(s, TANK, 0, 5, 5);
     const r = moveRange(s, tank);
-    expect(r.steps[6]![5]).toBe(2);
-    expect(r.steps[7]![5]).toBe(4);
-    expect(r.steps[8]![5]).toBe(5);
-    expect(r.steps[9]![5]).toBe(0); // 6 > movimiento 5
+    expect(r.steps.at({ x: 6, y: 5 })).toBe(2);
+    expect(r.steps.at({ x: 7, y: 5 })).toBe(4);
+    expect(r.steps.at({ x: 8, y: 5 })).toBe(5);
+    expect(r.steps.at({ x: 9, y: 5 })).toBe(0); // 6 > movimiento 5
     moveUnit(s, tank, { x: 8, y: 5 }, r);
     const sol = newUnit(s, SOLDIER, 0, 5, 5);
-    expect(moveRange(s, sol).steps[7]![5]).toBe(2);
+    expect(moveRange(s, sol).steps.at({ x: 7, y: 5 })).toBe(2);
   });
 
   it('prefiere rodear por llanura si sale mas barato', () => {
@@ -188,10 +188,10 @@ describe('movimiento: coste del terreno', () => {
     s.map[6]![5] = 2;
     const tank = newUnit(s, TANK, 0, 5, 5);
     const r = moveRange(s, tank);
-    expect(r.steps[7]![5]).toBe(3); // por el bosque costaria 3 tambien (2+1)
+    expect(r.steps.at({ x: 7, y: 5 })).toBe(3); // por el bosque costaria 3 tambien (2+1)
     s.map[6]![5] = 13; // bosque nevado: 3 para vehiculos
     const r2 = moveRange(s, tank);
-    expect(r2.steps[7]![5]).toBe(4); // rodeando: abajo, derecha, derecha, arriba
+    expect(r2.steps.at({ x: 7, y: 5 })).toBe(4); // rodeando: abajo, derecha, derecha, arriba
   });
 
   it('con los interruptores apagados todo cuesta 1', () => {
@@ -199,7 +199,7 @@ describe('movimiento: coste del terreno', () => {
     const s = blankState();
     s.map[6]![5] = 2;
     const tank = newUnit(s, TANK, 0, 5, 5);
-    expect(moveRange(s, tank).steps[6]![5]).toBe(1);
+    expect(moveRange(s, tank).steps.at({ x: 6, y: 5 })).toBe(1);
   });
 });
 

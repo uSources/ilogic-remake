@@ -1,24 +1,39 @@
 import { describe, expect, it } from 'vitest';
-import { cellAt, cells, setCell } from '@core/util/grid';
+import { Grid, isInside } from '@core/util/grid';
 import { compareKeys, maxBy, minBy } from '@core/util/pick';
 
 describe('rejillas', () => {
   it('lee y escribe por posicion', () => {
-    const grid = [
+    const grid = Grid.wrap([
       [1, 2],
       [3, 4],
-    ];
-    setCell(grid, { x: 1, y: 0 }, 9);
-    expect(cellAt(grid, { x: 1, y: 0 })).toBe(9);
-    expect(cellAt(grid, { x: 0, y: 1 })).toBe(2);
+    ]);
+    grid.set({ x: 1, y: 0 }, 9);
+    expect(grid.at({ x: 1, y: 0 })).toBe(9);
+    expect(grid.at({ x: 0, y: 1 })).toBe(2);
+    expect(grid.columns[1]![0]).toBe(9); // wrap no copia: escribe en las columnas de siempre
   });
 
   it('recorre columna a columna, como los bucles de siempre', () => {
-    const grid = [
+    const grid = Grid.wrap([
       ['a', 'b'],
       ['c', 'd'],
-    ];
-    expect([...cells(grid)].map(({ pos, value }) => `${pos.x}${pos.y}${value}`)).toEqual(['00a', '01b', '10c', '11d']);
+    ]);
+    expect([...grid.cells()].map(({ pos, value }) => `${pos.x}${pos.y}${value}`)).toEqual(['00a', '01b', '10c', '11d']);
+    const visited: string[] = [];
+    grid.forEach((value, pos) => visited.push(`${pos.x}${pos.y}${value}`));
+    expect(visited).toEqual(['00a', '01b', '10c', '11d']);
+  });
+
+  it('sabe su tamaño, si una casilla cae dentro y crea capas del mismo tamaño', () => {
+    const grid = Grid.filled({ width: 3, height: 2 }, 0);
+    expect([grid.width, grid.height]).toEqual([3, 2]);
+    expect(grid.contains({ x: 2, y: 1 })).toBe(true);
+    expect(grid.contains({ x: 3, y: 0 })).toBe(false);
+    expect(grid.contains({ x: 0, y: -1 })).toBe(false);
+    expect(isInside({ width: 3, height: 2 }, { x: 1, y: 2 })).toBe(false);
+    const layer = grid.createLayer(true);
+    expect([layer.width, layer.height, layer.at({ x: 2, y: 1 })]).toEqual([3, 2, true]);
   });
 });
 

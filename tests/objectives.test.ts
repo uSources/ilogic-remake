@@ -1,14 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { objectiveStatus, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
-import { DEFAULT_RULES, HQ, setMapSize, useRules } from '@core/data';
+import { DEFAULT_RULES, HQ, useRules } from '@core/data';
 import { buildMission, missionRules, MISSIONS } from '@core/missions';
 import { measureObjective, objectiveOutcome } from '@core/objectives';
 import { objectiveProgress, outcome } from '@core/rules';
 import type { GameState } from '@core/model';
 
 afterEach(() => {
-  setMapSize(32);
   useRules(DEFAULT_RULES);
   settings.lang = 'es';
 });

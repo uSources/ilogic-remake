@@ -15,7 +15,6 @@ import { AI, RULES, UNIT } from './data';
 import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
 import { visibility } from './rules/visibility';
 import type { GameEvent, GameState, Pos, Team } from './model';
-import { cellAt } from './util/grid';
 import { maxBy } from './util/pick';
 
 export interface AbilityChoice {
@@ -58,7 +57,7 @@ export function bestAreaTarget(
 ): { target: Pos; value: number } | null {
   const visible = visibility(s, team);
   // Nunca a ciegas en la niebla, y nada que ya no pueda bajar de minLife.
-  const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && cellAt(visible, unit));
+  const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && visible.at(unit));
   const lifeTaken = (life: number) => Math.max(0, Math.min(damage, life - minLife));
   const valueAt = (center: Pos): number => {
     const area = new Set(areaTiles(center, radius).map(tileKey));

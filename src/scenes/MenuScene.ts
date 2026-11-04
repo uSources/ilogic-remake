@@ -16,7 +16,6 @@ import { HomeScreen, type HomeHost } from '../menu/homeScreen';
 import { LiveBackground } from '../menu/liveBackground';
 import { OptionsPanel } from '../menu/optionsPanel';
 import { isTypingCode, SetupScreen, type SetupHost } from '../menu/setupScreen';
-import { keepMapSize } from '../menu/thumb';
 import { playMusic } from '../music';
 import { checkNotes, closeNotes, notesCommand, notesOpen } from '../patchNotes';
 import { rulesFor } from '../setup';
@@ -84,7 +83,7 @@ export class MenuScene extends Phaser.Scene {
     this.createBackground();
 
     const raw = readSave();
-    this.save = raw ? keepMapSize(() => deserialize(raw)) : null;
+    this.save = raw ? deserialize(raw) : null;
     this.setup.loadOptions();
     this.home.focus = this.save ? 'continue' : 'quick';
     this.optionsPanel = new OptionsPanel(

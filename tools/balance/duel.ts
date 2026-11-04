@@ -3,7 +3,8 @@
  * (attack() de core/rules.ts, asi que incluye contraataque o menos azar si las reglas lo tienen).
  */
 import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
-import { grid, seededRng } from '@core/geom';
+import { seededRng } from '@core/geom';
+import { blankMap } from '@core/mapGrid';
 import { attack, inAttackRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
 
@@ -21,8 +22,11 @@ export interface DuelCell {
   firstStrikeWins: number | null;
 }
 
+/** Lado del campo de los duelos (solo se usan unas casillas del medio). */
+const DUEL_MAP_SIZE = 32;
+
 function arena(terrain: number): GameState {
-  const map = grid(terrain);
+  const map = blankMap(DUEL_MAP_SIZE, terrain);
   return { version: 1, map, theme: 0, funds: [0, 0], units: [], buildings: [], nextUid: 1, day: 1 };
 }
 

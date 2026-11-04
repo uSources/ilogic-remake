@@ -117,18 +117,11 @@ export const MAPGEN = {
 } as const;
 
 // ---- Reglas generales ----
-/** Tamaño del mapa en casillas. 32x32 como el original; la pantalla de nueva partida permite otros. */
-export let MAP_W = 32;
-export let MAP_H = 32;
-/** Tamaños de mapa admitidos. */
+/** Tamaños de mapa admitidos en los mapas al azar (el tamaño de cada partida sale de su `map`). */
 export const MAP_SIZES = [20, 32, 40] as const;
 /** Tamaños admitidos en mapas hechos a mano (misiones, editor). */
 export const MAP_MIN = 10,
   MAP_MAX = 48;
-export function setMapSize(w: number, h: number = w): void {
-  MAP_W = w;
-  MAP_H = h;
-}
 export const MAX_LIFE = 100;
 
 /** Reglas por defecto (rules.json). [CAMBIO] El modo "reglas de 2013" se ha quitado. */

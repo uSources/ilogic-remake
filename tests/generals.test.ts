@@ -87,12 +87,12 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     newUnit(s, T('Soldier'), 0, 1, 1);
     s.generals![0]!.charge = 2;
-    expect(visibility(s, 0)[15]![15]).toBe(false);
+    expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(false);
     useAbility(s, 0, 'recon');
-    expect(visibility(s, 0)[15]![15]).toBe(true);
-    expect(visibility(s, 1)[15]![15]).toBe(false); // el enemigo no
+    expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(true);
+    expect(visibility(s, 1).at({ x: 15, y: 15 })).toBe(false); // el enemigo no
     endRound(s);
-    expect(visibility(s, 0)[15]![15]).toBe(false);
+    expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(false);
   });
 
   it('sin general no pasa nada', () => {

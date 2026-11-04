@@ -96,10 +96,10 @@ describe('habilidades: zona de control', () => {
     newUnit(s, Z, 1, 10, 10);
     const u = newUnit(s, TANK, 0, 10, 13);
     const r = moveRange(s, u);
-    expect(r.steps[10]![11]).toBeGreaterThan(0); // entra en la zona
-    expect(r.steps[11]![10]).toBeGreaterThan(0); // otra casilla de la zona, entrando por fuera
+    expect(r.steps.at({ x: 10, y: 11 })).toBeGreaterThan(0); // entra en la zona
+    expect(r.steps.at({ x: 11, y: 10 })).toBeGreaterThan(0); // otra casilla de la zona, entrando por fuera
     // (11, 9) esta a 5 pasos, pero todos los caminos cortos pasan por la zona.
-    expect(r.steps[11]![9]).toBe(0);
+    expect(r.steps.at({ x: 11, y: 9 })).toBe(0);
     const through = [
       { x: 10, y: 13 },
       { x: 11, y: 13 },
@@ -111,14 +111,14 @@ describe('habilidades: zona de control', () => {
     expect(validPath(s, u, through, r)).toBe(false);
     expect(moveUnit(s, u, { x: 10, y: 11 }, r)).not.toBeNull();
     useRules({ ...DEFAULT_RULES, fog: false, terrainCost: false, veterancy: false, abilities: false });
-    expect(moveRange(s, newUnit(s, TANK, 0, 10, 13)).steps[11]![9]).toBeGreaterThan(0);
+    expect(moveRange(s, newUnit(s, TANK, 0, 10, 13)).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
   });
 
   it('desde dentro de la zona se puede salir el turno siguiente', () => {
     const s = blankState();
     newUnit(s, Z, 1, 10, 10);
     const u = newUnit(s, TANK, 0, 10, 11);
-    expect(moveRange(s, u).steps[10]![14]).toBeGreaterThan(0);
+    expect(moveRange(s, u).steps.at({ x: 10, y: 14 })).toBeGreaterThan(0);
   });
 
   it('no para a los movimientos que no estan en stops (aviones)', () => {
@@ -126,7 +126,7 @@ describe('habilidades: zona de control', () => {
     const s = blankState();
     newUnit(s, Z, 1, 10, 10);
     const u = newUnit(s, PLANE, 0, 10, 13);
-    expect(moveRange(s, u).steps[11]![10]).toBeGreaterThan(0);
+    expect(moveRange(s, u).steps.at({ x: 11, y: 10 })).toBeGreaterThan(0);
   });
 
   it('con niebla solo cuenta si se ve', () => {
@@ -136,9 +136,9 @@ describe('habilidades: zona de control', () => {
     newUnit(s, Z, 1, 5, 8);
     const u = newUnit(s, TANK, 0, 5, 5);
     // (4, 9) solo se alcanza pasando por su zona: sin verla, el alcance no la delata.
-    expect(moveRange(s, u).steps[4]![9]).toBeGreaterThan(0);
+    expect(moveRange(s, u).steps.at({ x: 4, y: 9 })).toBeGreaterThan(0);
     newUnit(s, TANK, 0, 6, 8); // un aliado al lado la descubre
-    expect(moveRange(s, u).steps[4]![9]).toBe(0);
+    expect(moveRange(s, u).steps.at({ x: 4, y: 9 })).toBe(0);
   });
 });
 
@@ -205,9 +205,9 @@ describe('habilidades: explorador (scout)', () => {
     const s = blankState();
     s.map[10]![14] = TerrainType.WOODS;
     const scout = newUnit(s, withAbility('scout'), 0, 10, 10);
-    expect(visibility(s, 0)[10]![14]).toBe(true); // a 4 casillas, dentro de su vision
+    expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision
     scout.type = plain((t) => UNIT.vision[t]! >= UNIT.vision[withAbility('scout')]!);
-    expect(visibility(s, 0)[10]![14]).toBe(false);
+    expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(false);
   });
 });
 

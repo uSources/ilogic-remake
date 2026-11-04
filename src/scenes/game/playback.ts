@@ -9,7 +9,7 @@
 import type Phaser from 'phaser';
 import { MoveType, Movement, UNIT_ART } from '../../core/data';
 import { abilityArea, areaTiles, generalOf } from '../../core/generals';
-import { inBounds } from '../../core/geom';
+import { isOnBoard } from '../../core/mapGrid';
 import { unitAt, unitById } from '../../core/rules';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
@@ -600,7 +600,7 @@ async function abilityHeal(stage: EventStage, heal: { uid: number; amount: numbe
 
 /** Toda el area de la habilidad se ilumina en rojo y la camara tiembla. */
 function flashArea(stage: EventStage, target: Pos, radius: number): void {
-  for (const p of areaTiles(target, radius)) if (inBounds(p.x, p.y)) void tileFlash(stage.scene, stage.view, p, PAL.red);
+  for (const p of areaTiles(target, radius)) if (isOnBoard(stage.state, p)) void tileFlash(stage.scene, stage.view, p, PAL.red);
   stage.scene.cameras.main.shake(220, 0.006);
 }
 

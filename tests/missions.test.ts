@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { HQ, DEFAULT_RULES, setMapSize, useRules, Movement } from '@core/data';
-import { grid, seededRng } from '@core/geom';
+import { HQ, DEFAULT_RULES, useRules, Movement } from '@core/data';
+import { seededRng } from '@core/geom';
+import { createLayer } from '@core/mapGrid';
 import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 
 afterEach(() => {
-  setMapSize(32);
   useRules(DEFAULT_RULES);
 });
 
@@ -18,12 +18,12 @@ describe('misiones', () => {
     const s = buildMission(m);
     const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
     const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
-    expect(groundDistance(s, hq0, 0, grid(false))[hq1.x]![hq1.y], 'a pie de base a base').toBeGreaterThan(0);
+    expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
     expect(outcome(s)).toBe('playing');
     const obj = s.mission!.objective;
     if (obj.kind === 'escort') {
       const vip = s.units.find((u) => u.uid === obj.uid)!;
-      expect(groundDistance(s, vip, Movement.of(vip.type), grid(false))[obj.to.x]![obj.to.y], 'el convoy puede llegar').toBeGreaterThan(0);
+      expect(groundDistance(s, vip, Movement.of(vip.type), createLayer(s, false)).at(obj.to), 'el convoy puede llegar').toBeGreaterThan(0);
     }
     // Guardar y cargar conserva la mision.
     expect(deserialize(serialize(s))!.mission).toEqual(s.mission);

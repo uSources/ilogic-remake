@@ -8,7 +8,7 @@ import { isRanged } from './abilities';
 import { canDamage, inAttackRange, tileProtection } from './rules/combat';
 import { moveCost, pathCost, pathTo, reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
 import { canWalk } from './rules/queries';
-import { cellAt } from './util/grid';
+import type { Grid } from './util/grid';
 import { minBy } from './util/pick';
 import type { GameState, Pos, Unit } from './model';
 
@@ -43,7 +43,7 @@ export function closestStep(unit: Unit, goal: Pos, range: MoveRange): Pos | null
  * la casilla de al lado y cabe en el movimiento, se alarga; si no, el camino mas corto hasta alli (o
  * el mismo si no se llega). `block` = casillas por las que no puede pasar (enemigos a la vista).
  */
-export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: boolean[][], trail: Pos[], hovered: Pos): Pos[] {
+export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: Grid<boolean>, trail: Pos[], hovered: Pos): Pos[] {
   const current = trail.length ? trail : [{ x: unit.x, y: unit.y }];
   const backIndex = current.findIndex((step) => samePos(step, hovered));
   if (backIndex >= 0) return current.slice(0, backIndex + 1);
@@ -52,9 +52,9 @@ export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: b
   const canExtend =
     manhattan(end, hovered) === 1 &&
     canWalk(s, hovered.x, hovered.y, movement) &&
-    !cellAt(block, hovered) &&
+    !block.at(hovered) &&
     pathCost(s, movement, current) + moveCost(s, movement, hovered.x, hovered.y) <= range.maxSteps;
   if (canExtend) return [...current, { x: hovered.x, y: hovered.y }];
   // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
-  return cellAt(range.prev, hovered) ? pathTo(range, unit, hovered) : trail;
+  return range.prev.at(hovered) ? pathTo(range, unit, hovered) : trail;
 }

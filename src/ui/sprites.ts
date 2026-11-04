@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { BUILDING_NAMES, BUILDING_TERRAIN_PREFIX, MAP_H, MAP_W, TERRAIN, TERRAIN_NAMES, UNIT_ART, UNIT_TERRAIN_PREFIX } from '../core/data';
+import { BUILDING_NAMES, BUILDING_TERRAIN_PREFIX, TERRAIN, TERRAIN_NAMES, UNIT_ART, UNIT_TERRAIN_PREFIX } from '../core/data';
+import { isOnBoard, terrainAt } from '../core/mapGrid';
 import type { Building, GameState, Unit } from '../core/model';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
@@ -24,7 +25,7 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
 
 export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, u: Unit): string | null {
   const side = u.team === 1 ? 'r_' : u.active ? 'b_' : 'i_';
-  const terrain = UNIT_TERRAIN_PREFIX[u.type]![s.map[u.x]![u.y]!]!;
+  const terrain = UNIT_TERRAIN_PREFIX[u.type]![terrainAt(s, u)]!;
   const name = UNIT_ART[u.type]!;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
   if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
@@ -38,7 +39,7 @@ export function unitIconKey(type: number, available: boolean): string {
 
 export function buildingKey(textures: Phaser.Textures.TextureManager, s: GameState, b: Building, visible: boolean): string | null {
   const side = visible && b.owner === 0 ? 'b_' : visible && b.owner === 1 ? 'r_' : '';
-  const terrain = BUILDING_TERRAIN_PREFIX[b.type]![s.map[b.x]![b.y]!]!;
+  const terrain = BUILDING_TERRAIN_PREFIX[b.type]![terrainAt(s, b)]!;
   const name = BUILDING_NAMES[b.type]!;
   // Dibujo nuevo (estilo plano).
   if (settings.terrainArt === 'new') {
@@ -55,12 +56,12 @@ export function terrainKey(t: number): string {
 
 function isLand(s: GameState, x: number, y: number): boolean {
   // Fuera del mapa cuenta como agua: no hay orilla en los bordes.
-  return x >= 0 && x < MAP_W && y >= 0 && y < MAP_H && !TERRAIN.iswater[s.map[x]![y]!];
+  return isOnBoard(s, { x, y }) && !TERRAIN.iswater[terrainAt(s, { x, y })]!;
 }
 
 /** Orillas de una casilla de agua: c_<tema>_<mascara> y esquinas 16..19. */
 export function shoreKeys(s: GameState, x: number, y: number): string[] {
-  if (!TERRAIN.iswater[s.map[x]![y]!]) return [];
+  if (!TERRAIN.iswater[terrainAt(s, { x, y })]) return [];
   const mask =
     (isLand(s, x, y + 1) ? 8 : 0) | (isLand(s, x - 1, y) ? 4 : 0) | (isLand(s, x, y - 1) ? 2 : 0) | (isLand(s, x + 1, y) ? 1 : 0);
   const t = s.theme;

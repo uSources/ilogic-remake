@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BUILDING_NAMES, DEFAULT_RULES, HQ, MAX_FUNDS, UNIT, UNIT_NAMES, useRules } from '@core/data';
-import { grid } from '@core/geom';
+import { createLayer } from '@core/mapGrid';
 import { attackEvent, endRound, newUnit, score } from '@core/rules';
 import { settings } from '../src/settings';
 import {
@@ -36,11 +36,11 @@ describe('datos de la interfaz', () => {
     const s = blankState();
     newUnit(s, T('Tank'), 1, 4, 4);
     s.buildings.push({ type: HQ, owner: 1, x: 4, y: 4, capture: null });
-    const fog = grid(false);
+    const fog = createLayer(s, false);
     const hidden = tileVM(textures, s, { x: 4, y: 4 }, { vis: fog, hidden: new Set() });
     expect(hidden.unit).toBeUndefined();
     expect(hidden.building?.owner).toBe('unknown');
-    const seen = tileVM(textures, s, { x: 4, y: 4 }, { vis: grid(true), hidden: new Set() });
+    const seen = tileVM(textures, s, { x: 4, y: 4 }, { vis: createLayer(s, true), hidden: new Set() });
     expect(seen.unit?.team).toBe(1);
     expect(seen.building?.owner).toBe('enemy');
     expect(seen.terrain.defense).toBeGreaterThan(0);
@@ -49,9 +49,9 @@ describe('datos de la interfaz', () => {
   it('ficha: la unidad que se esta moviendo sale aunque su sprite este oculto', () => {
     const s = blankState();
     const u = newUnit(s, T('Soldier'), 0, 2, 2);
-    const vm = tileVM(textures, s, { x: 2, y: 2 }, { vis: grid(true), hidden: new Set([u.uid]), selected: u });
+    const vm = tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([u.uid]), selected: u });
     expect(vm.unit?.name).toBeTruthy();
-    expect(tileVM(textures, s, { x: 2, y: 2 }, { vis: grid(true), hidden: new Set([u.uid]) }).unit).toBeUndefined();
+    expect(tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([u.uid]) }).unit).toBeUndefined();
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {
@@ -68,8 +68,8 @@ describe('datos de la interfaz', () => {
     const s = blankState();
     const mine = newUnit(s, T('Soldier'), 0, 1, 1);
     newUnit(s, T('Soldier'), 1, 9, 9);
-    const vis = grid(false);
-    vis[1]![1] = true;
+    const vis = createLayer(s, false);
+    vis.set({ x: 1, y: 1 }, true);
     expect(minimapVM([], s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
     expect(minimapVM([], s, vis, new Set([mine.uid])).units).toEqual([]);
   });

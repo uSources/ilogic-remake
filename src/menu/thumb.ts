@@ -1,18 +1,7 @@
-import { HQ, MAP_H, MAP_W, setMapSize } from '../core/data';
+import { HQ } from '../core/data';
+import { mapGrid } from '../core/mapGrid';
 import type { GameState, Team } from '../core/model';
-import { cells } from '../core/util/grid';
 import { PAL_CSS } from '../ui/palette';
-
-/** Ejecuta algo que cambia el tamaño del mapa global (crear o leer otra partida) y lo deja como estaba. */
-export function keepMapSize<T>(fn: () => T): T {
-  const width = MAP_W;
-  const height = MAP_H;
-  try {
-    return fn();
-  } finally {
-    setMapSize(width, height);
-  }
-}
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
@@ -36,7 +25,7 @@ interface ThumbOptions {
 }
 
 function drawTerrain(ctx: CanvasRenderingContext2D, s: GameState, palette: number[], px: number): void {
-  for (const { pos, value } of cells(s.map)) {
+  for (const { pos, value } of mapGrid(s).cells()) {
     ctx.fillStyle = hex(palette[value] ?? FALLBACK_TERRAIN);
     ctx.fillRect(pos.x * px, pos.y * px, px, px);
   }
@@ -67,11 +56,11 @@ function drawUnits(ctx: CanvasRenderingContext2D, s: GameState, px: number, whic
  * (las bases mas grandes) y, si se pide, las unidades.
  */
 export function mapThumb(s: GameState, palette: number[], options: ThumbOptions = {}): string {
-  const mapSize = s.map.length;
-  const px = options.px ?? defaultTileSize(mapSize);
+  const map = mapGrid(s);
+  const px = options.px ?? defaultTileSize(map.width);
   const canvas = document.createElement('canvas');
-  canvas.width = mapSize * px;
-  canvas.height = s.map[0]!.length * px;
+  canvas.width = map.width * px;
+  canvas.height = map.height * px;
   const ctx = canvas.getContext('2d')!;
   drawTerrain(ctx, s, palette, px);
   drawBuildings(ctx, s, px);

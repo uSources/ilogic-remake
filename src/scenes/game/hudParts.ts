@@ -6,7 +6,7 @@
 import type Phaser from 'phaser';
 import { Movement, UNIT, UNIT_NAMES } from '../../core/data';
 import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
-import { cellAt } from '../../core/util/grid';
+import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
 import type { LabOptions } from '../../lab';
@@ -62,7 +62,7 @@ export function moveTipFor(
     c: Pos;
     intentAt: (p: Pos) => Intent;
     trailTo: (dest: Pos) => Pos[];
-    danger: boolean[][] | null;
+    danger: Grid<boolean> | null;
     anchor: (p: Pos) => Anchor;
   },
 ): MoveTipVM | null {
@@ -76,14 +76,14 @@ export function moveTipFor(
   const anchor = o.anchor(cursor);
   if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
   const isMove = intent.kind === 'move';
-  const used = isMove ? pathCost(s, Movement.of(unit.type), o.trailTo(intent.to)) : cellAt(range.steps, cursor) || 1;
+  const used = isMove ? pathCost(s, Movement.of(unit.type), o.trailTo(intent.to)) : range.steps.at(cursor) || 1;
   return {
     anchor,
     action: moveTipAction(intent),
     used,
     max: range.maxSteps,
     stars: isMove ? defenseStars(s, cursor) : undefined,
-    danger: isMove && !!o.danger?.[cursor.x]?.[cursor.y],
+    danger: isMove && !!o.danger?.at(cursor),
   };
 }
 

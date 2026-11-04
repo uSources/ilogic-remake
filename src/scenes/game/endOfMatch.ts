@@ -3,7 +3,8 @@
  * pantalla con el resumen y sus botones (volver a jugar, siguiente mision, menu...).
  */
 import type Phaser from 'phaser';
-import { HQ, MAP_H, MAP_W } from '../../core/data';
+import { HQ } from '../../core/data';
+import { mapGrid } from '../../core/mapGrid';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { score } from '../../core/rules';
 import { sampleArmy, stats } from '../../core/stats';
@@ -62,7 +63,8 @@ export function endFocus(s: GameState, won: boolean, reason: EndReason, lastAt: 
   if (endedByAMove && lastAt) return lastAt;
   const hq = hqOf(0) ?? hqOf(1);
   if (!won && hq) return hq;
-  return lastAt ?? hq ?? { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
+  const map = mapGrid(s);
+  return lastAt ?? hq ?? { x: Math.floor(map.width / 2), y: Math.floor(map.height / 2) };
 }
 
 /** Lo que el final necesita de la escena. */

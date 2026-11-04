@@ -95,8 +95,8 @@ describe('clima: efectos', () => {
     expect(visionOf(s, tank)).toBe(UNIT.vision[TANK]! - 2);
     expect(visionOf(s, blocker)).toBe(UNIT.vision[BLOCKER]);
     const vis = visibility(s, 0);
-    expect(vis[10 + UNIT.vision[TANK]! - 2]![10]).toBe(true);
-    expect(vis[10 + UNIT.vision[TANK]! - 1]![10]).toBe(false);
+    expect(vis.at({ x: 10 + UNIT.vision[TANK]! - 2, y: 10 })).toBe(true);
+    expect(vis.at({ x: 10 + UNIT.vision[TANK]! - 1, y: 10 })).toBe(false);
   });
 
   it('el movimiento nunca baja de 1', () => {

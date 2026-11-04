@@ -3,8 +3,8 @@
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
 import { Movement, type MoveType } from '../data';
-import { grid, inBounds } from '../geom';
-import { cellAt, setCell } from '../util/grid';
+import { createLayer, isOnBoard, terrainAt } from '../mapGrid';
+import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import type { Building, GameState, Team, Unit } from '../model';
 
@@ -22,19 +22,19 @@ export function buildingAt(s: GameState, x: number, y: number): Building | undef
 }
 
 /** Mapa de ocupacion: true donde hay una unidad no transportada. */
-export function occupancy(s: GameState): boolean[][] {
-  const occupied = grid(false);
-  for (const unit of s.units) if (isOnMap(unit)) setCell(occupied, unit, true);
+export function occupancy(s: GameState): Grid<boolean> {
+  const occupied = createLayer(s, false);
+  for (const unit of s.units) if (isOnMap(unit)) occupied.set(unit, true);
   return occupied;
 }
 
 export function canWalk(s: GameState, x: number, y: number, moveType: MoveType): boolean {
-  return inBounds(x, y) && Movement.canWalk(moveType, cellAt(s.map, { x, y }));
+  return isOnBoard(s, { x, y }) && Movement.canWalk(moveType, terrainAt(s, { x, y }));
 }
 
 /** Transitable y libre de unidades (amigas o enemigas: no se puede atravesar a nadie). */
 export function isWalkable(s: GameState, x: number, y: number, moveType: MoveType, occ = occupancy(s)): boolean {
-  return canWalk(s, x, y, moveType) && !cellAt(occ, { x, y });
+  return canWalk(s, x, y, moveType) && !occ.at({ x, y });
 }
 
 export function teamUnits(s: GameState, team: Team): Unit[] {

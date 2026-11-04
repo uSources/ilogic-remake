@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { HQ, MAP_W, DEFAULT_RULES, UNIT, setMapSize, useRules } from '@core/data';
-import { grid, seededRng } from '@core/geom';
+import { HQ, DEFAULT_RULES, UNIT, useRules } from '@core/data';
+import { seededRng } from '@core/geom';
+import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
 import { generateGame } from '@core/mapgen';
 import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -9,7 +10,6 @@ import { codeToSeed, seedToCode } from '../src/setup';
 import { blankState } from './helpers';
 
 afterEach(() => {
-  setMapSize(32);
   useRules(DEFAULT_RULES);
 });
 
@@ -18,10 +18,10 @@ describe('nueva partida: tamaños de mapa', () => {
     for (let seed = 1; seed <= 15; seed++) {
       const s = generateGame(seededRng(seed), { size });
       expect(s.map.length).toBe(size);
-      expect(MAP_W).toBe(size);
+      expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
       const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
-      expect(groundDistance(s, hq0, 0, grid(false))[hq1.x]![hq1.y]).toBeGreaterThan(0);
+      expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
       const neutral = s.buildings.filter((b) => b.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
       for (const b of s.buildings) expect(b.x < size && b.y < size).toBe(true);
@@ -47,12 +47,11 @@ describe('nueva partida: tamaños de mapa', () => {
     const s = generateGame(seededRng(7), { size: 40 });
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
-    setMapSize(32);
     const c = deserialize(json)!;
     expect(c).not.toBeNull();
-    expect(MAP_W).toBe(40);
+    expect([mapGrid(c).width, mapGrid(c).height]).toEqual([40, 40]);
     expect(c.setup).toEqual({ seed: 7, size: 40, theme: null });
-    expect(deserialize(JSON.stringify({ ...JSON.parse(json), map: grid(0).slice(0, 25) }))).toBeNull();
+    expect(deserialize(JSON.stringify({ ...JSON.parse(json), map: blankMap(32).slice(0, 25) }))).toBeNull();
   });
 });
 

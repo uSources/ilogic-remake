@@ -8,7 +8,7 @@
 import type Phaser from 'phaser';
 import { commandNow, commandOrder } from '../../core/ai';
 import { Movement, UNIT } from '../../core/data';
-import { inBounds } from '../../core/geom';
+import { isOnBoard } from '../../core/mapGrid';
 import { canWalk, unitAt, unitById, wait } from '../../core/rules';
 import { cancelCommand, commandBlock, giveCommand, pruneSquads } from '../../core/squads';
 import type { CommandKind, GameEvent, GameState, Pos, Unit } from '../../core/model';
@@ -166,7 +166,7 @@ export class Orders {
   openMenu(at: Pos): boolean {
     const h = this.h;
     const who = this.subjects();
-    if (!who || !inBounds(at.x, at.y)) return false;
+    if (!who || !isOnBoard(h.state, at)) return false;
     const ctx = this.ctx(at);
     const ids = ctx ? menuActions(ctx).map((action) => action.id) : [];
     if (!ids.length) return false;

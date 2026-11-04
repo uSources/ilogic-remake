@@ -8,7 +8,7 @@ import type { ObjectiveKind } from '../core/objectives';
 import { bestDays, completedMissions, missionUnlocked, nextMissionIndex, objectiveText } from '../campaign';
 import { ui, type CampaignItemVM, type UIActions } from '../hud/store';
 import { settings, t, type TextKey } from '../settings';
-import { keepMapSize, mapThumb } from './thumb';
+import { mapThumb } from './thumb';
 
 export interface CampaignHost {
   readonly palette: number[];
@@ -57,7 +57,7 @@ export class CampaignScreen {
   missionThumb(index: number): string {
     const cached = this.thumbs.get(index);
     if (cached) return cached;
-    const s = keepMapSize(() => buildMission(MISSIONS[index]!));
+    const s = buildMission(MISSIONS[index]!);
     const thumb = mapThumb(s, this.host.palette, { units: true, px: MISSION_THUMB_PX });
     this.thumbs.set(index, thumb);
     return thumb;

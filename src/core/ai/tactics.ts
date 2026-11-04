@@ -5,6 +5,7 @@
  */
 import { AI, HQ, UNIT } from '../data';
 import { diamond, manhattan, samePos } from '../geom';
+import { mapGrid } from '../mapGrid';
 import { canCapture, capture, captureEvent } from '../rules/capture';
 import { attackEvent, canDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { teamsInZone } from '../rules/control';
@@ -14,7 +15,6 @@ import { merge, mergeTargets } from '../rules/transport';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
 import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../model';
-import { cellAt } from '../util/grid';
 import { maxBy, minBy } from '../util/pick';
 import { bestMoveToward, doMove, repairsHere, stepsFrom, strikeReach, visibleFoes, type AiCtx } from './context';
 import { attackScore, unitValue } from './scoring';
@@ -166,13 +166,13 @@ function captureGoal(s: GameState, ai: AiCtx, unit: Unit): Pos | null {
   const steps = stepsFrom(s, ai, unit);
   const isCapturable = (tile: Pos): boolean => {
     const building = buildingAt(s, tile.x, tile.y);
-    if (!building || building.owner === ai.me || !cellAt(visible, tile)) return false;
+    if (!building || building.owner === ai.me || !visible.at(tile)) return false;
     const occupant = unitAt(s, tile.x, tile.y);
     if (occupant && occupant.team === ai.me) return false;
     return steps(tile) < Infinity;
   };
   const headStart = (tile: Pos): number => (buildingAt(s, tile.x, tile.y)!.type === HQ ? HQ_CAPTURE_HEAD_START : 0);
-  const candidates = [...diamond(unit, 1, AI.MAXCAPTDIST)].filter(isCapturable);
+  const candidates = [...diamond(mapGrid(s), unit, 1, AI.MAXCAPTDIST)].filter(isCapturable);
   return minBy(candidates, (tile) => steps(tile) - headStart(tile));
 }
 
@@ -215,16 +215,16 @@ function advanceGoals(s: GameState, ai: AiCtx, unit: Unit): Pos[] {
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
   if (UNIT.cancapt[unit.type]) return [...s.buildings.filter((building) => building.owner !== ai.me), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
-    other.team !== ai.me && other.carrier === null && cellAt(visible, other) && canDamage(unit, other);
+    other.team !== ai.me && other.carrier === null && visible.at(other) && canDamage(unit, other);
   const isEnemyHq = (building: Building): boolean => building.owner !== ai.me && building.owner !== null && building.type === HQ;
   return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
 }
 
 /** Pasos hasta `goal` o, si no se puede llegar a esa casilla (ocupada), hasta su vecina mas cercana. */
-function stepsToGoalOrNextToIt(steps: (pos: Pos) => number, goal: Pos): number {
+function stepsToGoalOrNextToIt(s: GameState, steps: (pos: Pos) => number, goal: Pos): number {
   const toGoal = steps(goal);
   if (toGoal < Infinity) return toGoal;
-  return Math.min(...[...diamond(goal, 1, 1)].map(steps));
+  return Math.min(...[...diamond(mapGrid(s), goal, 1, 1)].map(steps));
 }
 
 /**
@@ -235,7 +235,7 @@ function stepsToGoalOrNextToIt(steps: (pos: Pos) => number, goal: Pos): number {
 export function* advance(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   const steps = stepsFrom(s, ai, unit);
   const reachableGoals = advanceGoals(s, ai, unit)
-    .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(steps, goal) }))
+    .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(s, steps, goal) }))
     .filter((option) => option.steps < Infinity);
   const nearest = minBy(reachableGoals, (option) => option.steps - advanceHeadStart(s, unit, option.goal));
   if (!nearest) return false;

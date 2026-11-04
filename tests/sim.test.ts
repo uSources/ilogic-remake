@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { HQ, MAP_W } from '@core/data';
+import { HQ } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, groundDistance, outcome } from '@core/rules';
-import { grid } from '@core/geom';
+import { createLayer } from '@core/mapGrid';
 import { checkInvariants } from './sim/partidas';
 
 describe('generador de mapas', () => {
@@ -15,12 +15,12 @@ describe('generador de mapas', () => {
       const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
       expect(hq1, `seed ${seed}`).toBeTruthy();
-      expect(groundDistance(s, hq0, 0, grid(false))[hq1.x]![hq1.y]).toBeGreaterThan(0);
+      expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
       expect(s.units.filter((u) => u.team === 0)).toHaveLength(3);
       expect(s.units.filter((u) => u.team === 1)).toHaveLength(3);
       const neutral = s.buildings.filter((b) => b.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(20);
-      expect(s.map).toHaveLength(MAP_W);
+      expect(s.map).toHaveLength(32);
       expect(new Set(s.buildings.map((b) => `${b.x},${b.y}`)).size).toBe(s.buildings.length);
       checkInvariants(s);
     }

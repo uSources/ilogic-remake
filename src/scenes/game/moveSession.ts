@@ -6,6 +6,7 @@
 import { extendTrail } from '../../core/orders';
 import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
+import type { Grid } from '../../core/util/grid';
 import { intentAt, trailTo, type MovePlan } from './intent';
 import { key, type Intent, type MoveUndo } from './types';
 
@@ -21,11 +22,11 @@ export class MoveSession {
   /** Camino que se esta trazando, de la unidad al cursor (incluye la casilla de salida). */
   trail: Pos[] = [];
   /** Casillas que le cierran el paso (enemigos que se ven). */
-  private block: boolean[][] | null = null;
+  private block: Grid<boolean> | null = null;
   /** Casillas que el enemigo visible puede atacar el turno siguiente. */
-  danger: boolean[][] | null = null;
+  danger: Grid<boolean> | null = null;
   /** Adonde podria atacar desde lo que alcanza. */
-  attackZone: boolean[][] | null = null;
+  attackZone: Grid<boolean> | null = null;
   /** Donde estaba antes de moverla este turno (para "Atras" en su menu). */
   undo: MoveUndo | null = null;
   /** Enemigos a los que puede atacar ahora (fase 'attack', "x,y" → uid). */

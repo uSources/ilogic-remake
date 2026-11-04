@@ -25,7 +25,7 @@ import {
   type PresetId,
 } from '../setup';
 import { navGrid } from './nav';
-import { keepMapSize, mapThumb } from './thumb';
+import { mapThumb } from './thumb';
 
 export interface SetupHost {
   readonly palette: number[];
@@ -182,7 +182,7 @@ export class SetupScreen {
 
   private refreshPreview(): void {
     const { size, theme } = this.options;
-    const s = keepMapSize(() => generateGame(seededRng(this.seed), { size, theme }));
+    const s = generateGame(seededRng(this.seed), { size, theme });
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
     const themeName = THEME_NAMES[settings.lang === 'es' ? 'es' : 'en'][s.theme] ?? '';
     const buildings = settings.lang === 'es' ? 'edificios' : 'buildings';

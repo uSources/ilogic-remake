@@ -13,8 +13,9 @@
  */
 import { MOVEMENTS } from './content';
 import { RULES, UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
-import { grid, manhattan, neighbors4 } from './geom';
-import { cellAt, setCell } from './util/grid';
+import { manhattan, neighbors4 } from './geom';
+import { createLayer } from './mapGrid';
+import type { Grid } from './util/grid';
 import { isAlive, isEnemyOf, isOnMap } from './util/predicates';
 import type { GameState, Unit } from './model';
 
@@ -88,16 +89,16 @@ export function auraFactor(s: GameState, defender: Unit): number {
  * enemigo con la habilidad que para a su tipo de movimiento. `visible` (opcional): solo cuentan los
  * enemigos que se ven, como en passMap.
  */
-export function zoneOfControl(s: GameState, unit: Unit, visible?: boolean[][] | null): boolean[][] {
-  const mustStop = grid(false);
+export function zoneOfControl(s: GameState, unit: Unit, visible?: Grid<boolean> | null): Grid<boolean> {
+  const mustStop = createLayer(s, false);
   if (!RULES.abilities) return mustStop;
   const movement = MOVEMENTS[UNIT.movtype[unit.type]!];
   for (const enemy of s.units) {
     if (!isEnemyOf(enemy, unit) || !isFieldUnit(enemy)) continue;
-    if (visible && !cellAt(visible, enemy)) continue;
+    if (visible && !visible.at(enemy)) continue;
     const zone = abilityOf(enemy.type, 'zoneOfControl');
     if (!zone?.stops.includes(movement)) continue;
-    for (const tile of neighbors4(enemy)) setCell(mustStop, tile, true);
+    for (const tile of neighbors4(mustStop, enemy)) mustStop.set(tile, true);
   }
   return mustStop;
 }

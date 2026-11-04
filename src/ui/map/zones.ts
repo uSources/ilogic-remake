@@ -1,10 +1,12 @@
 import type Phaser from 'phaser';
 import { hasImage } from '../../atlas';
-import { MAP_H, MAP_W } from '../../core/data';
 import { TILE } from '../../layout';
 import { PAL, PAL_MAP } from '../palette';
 import { fillRects } from '../pixelDraw';
-import { forEachTile, inMap, parseTileKey } from './geometry';
+import { posKey } from '../../core/geom';
+import type { Pos } from '../../core/model';
+import type { Grid } from '../../core/util/grid';
+import { parseTileKey } from './geometry';
 import type { OverlayPainter } from './layer';
 
 /** Grueso del borde de una zona (amenaza, alcance) y del de puntos de un punto de control. */
@@ -18,20 +20,20 @@ const DOT_STEP = 4;
  */
 function drawZone(
   g: Phaser.GameObjects.Graphics,
-  zone: boolean[][],
+  zone: Grid<boolean>,
   color: number,
   fillAlpha: number,
   edgeAlpha: number,
-  fillIf: (x: number, y: number) => boolean = () => true,
+  fillIf: (pos: Pos) => boolean = () => true,
 ): void {
-  const at = (x: number, y: number) => inMap(x, y) && zone[x]![y]!;
+  const at = (x: number, y: number) => zone.contains({ x, y }) && zone.at({ x, y });
   g.fillStyle(color, fillAlpha);
-  forEachTile((x, y) => {
-    if (zone[x]![y] && fillIf(x, y)) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+  zone.forEach((inZone, pos) => {
+    if (inZone && fillIf(pos)) g.fillRect(pos.x * TILE, pos.y * TILE, TILE, TILE);
   });
   g.fillStyle(color, edgeAlpha);
-  forEachTile((x, y) => {
-    if (!zone[x]![y]) return;
+  zone.forEach((inZone, { x, y }) => {
+    if (!inZone) return;
     const px = x * TILE,
       py = y * TILE;
     if (!at(x, y - 1)) g.fillRect(px, py, TILE, ZONE_EDGE);
@@ -50,8 +52,8 @@ export const controlZones: OverlayPainter = (g, opts, ctx) => {
   for (const c of opts.controlPoints ?? []) {
     const x0 = Math.max(0, c.x - c.r) * TILE,
       y0 = Math.max(0, c.y - c.r) * TILE,
-      x1 = Math.min(MAP_W, c.x + c.r + 1) * TILE,
-      y1 = Math.min(MAP_H, c.y + c.r + 1) * TILE;
+      x1 = Math.min(opts.vis.width, c.x + c.r + 1) * TILE,
+      y1 = Math.min(opts.vis.height, c.y + c.r + 1) * TILE;
     const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : PAL_MAP.neutral;
     g.fillStyle(color, 0.16);
     g.fillRect(x0, y0, x1 - x0, y1 - y0);
@@ -88,7 +90,7 @@ export const threatZone: OverlayPainter = (g, opts) => {
 
 /** Alcance de ataque al mover: relleno rojo tenue fuera del movimiento y borde de la zona. */
 export const attackZone: OverlayPainter = (g, opts) => {
-  if (opts.attackZone) drawZone(g, opts.attackZone, PAL.red, 0.14, 0.85, (x, y) => !opts.highlights.has(`${x},${y}`));
+  if (opts.attackZone) drawZone(g, opts.attackZone, PAL.red, 0.14, 0.85, (pos) => !opts.highlights.has(posKey(pos)));
 };
 
 /** Destinos peligrosos (el enemigo visible podria atacar ahi): esquina roja arriba a la derecha. */
@@ -98,7 +100,7 @@ export const dangerCorners: OverlayPainter = (g, opts) => {
   for (const [k, kind] of opts.highlights) {
     if (kind !== 'move') continue;
     const [x, y] = parseTileKey(k);
-    if (!dg[x]![y]) continue;
+    if (!dg.at({ x, y })) continue;
     const px = x * TILE + TILE - 9,
       py = y * TILE + 3;
     fillRects(g, PAL.ink, 0.8, [[px - 1, py - 1, 8, 8]]);

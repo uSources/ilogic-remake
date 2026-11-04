@@ -93,7 +93,7 @@ describe('previewCommands', () => {
     const clean = previewCommands(s);
     // A 7 casillas: el tanque (vision 6) no lo ve, pero llegaria a dispararle (mueve 5, alcance 2).
     const hidden = newUnit(s, SOLDIER, 1, 12, 5);
-    expect(visibility(s, 0)[12]![5]).toBe(false);
+    expect(visibility(s, 0).at({ x: 12, y: 5 })).toBe(false);
     const withHidden = previewCommands(s);
     expect(withHidden).toEqual(clean);
     expect(withHidden.get(u.uid)!.attack).toBeUndefined();

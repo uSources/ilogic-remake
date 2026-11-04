@@ -58,7 +58,7 @@ export interface CommitOptions {
 function visibleEnemyUids(s: GameState): string {
   const vis = visibility(s, 0);
   return s.units
-    .filter((unit) => unit.team === 1 && unit.carrier === null && vis[unit.x]![unit.y])
+    .filter((unit) => unit.team === 1 && unit.carrier === null && vis.at(unit))
     .map((unit) => unit.uid)
     .sort((a, b) => a - b)
     .join(',');

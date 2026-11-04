@@ -49,7 +49,7 @@ describe('ayudas de reglas', () => {
     const r = moveRange(s, u);
     const tiles = reachableTiles(r);
     expect(tiles.length).toBeGreaterThan(0);
-    expect(tiles.every((p) => r.steps[p.x]![p.y]! > 0)).toBe(true);
+    expect(tiles.every((p) => r.steps.at(p) > 0)).toBe(true);
     expect(tiles.some((p) => p.x === 10 && p.y === 10)).toBe(false);
     const sorted = [...tiles].sort((a, b) => a.x - b.x || a.y - b.y);
     expect(tiles).toEqual(sorted);
@@ -67,8 +67,8 @@ describe('ayudas de reglas', () => {
     // La artilleria (no mueve y dispara) ataca solo desde donde esta, a distancia.
     const art = newUnit(s, ARTILLERY, 0, 20, 20);
     const z = attackZone(s, art, moveRange(s, art))!;
-    expect(z[20]![20]).toBe(false);
-    expect(z[20]![20 + UNIT.alcance[ARTILLERY]!]).toBe(true);
+    expect(z.at({ x: 20, y: 20 })).toBe(false);
+    expect(z.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {

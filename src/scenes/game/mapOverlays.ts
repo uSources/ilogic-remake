@@ -7,7 +7,7 @@ import type { CommandIntent } from '../../core/ai';
 import { RULES } from '../../core/data';
 import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
 import { effectiveCommand } from '../../core/squads';
-import { cellAt } from '../../core/util/grid';
+import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { ViewOptions } from '../../ui/mapView';
 
@@ -17,10 +17,10 @@ const isPlayer = (unit: Unit) => unit.team === 0;
 const onMap = (unit: Unit) => unit.carrier === null;
 
 /** Capturas a medias que el jugador ve (o de sus propios edificios). */
-export function captureBars(s: GameState, vis: boolean[][]): Overlay<'captures'> {
+export function captureBars(s: GameState, vis: Grid<boolean>): Overlay<'captures'> {
   return s.buildings.flatMap((building) => {
     const progress = captureProgress(s, building);
-    if (!progress || !(cellAt(vis, building) || building.owner === 0)) return [];
+    if (!progress || !(vis.at(building) || building.owner === 0)) return [];
     return [{ x: building.x, y: building.y, left: progress.left, total: capturePointsOf(building), team: progress.team }];
   });
 }
@@ -41,12 +41,12 @@ export function orderMarks(s: GameState, showsLine: (unit: Unit) => boolean): Ov
 }
 
 /** Lo que hara al terminar el turno cada una de estas unidades con orden (si se mueve, ataca o captura). */
-export function intentLines(shown: readonly Unit[], preview: ReadonlyMap<number, CommandIntent>, vis: boolean[][]): Overlay<'intents'> {
+export function intentLines(shown: readonly Unit[], preview: ReadonlyMap<number, CommandIntent>, vis: Grid<boolean>): Overlay<'intents'> {
   return shown.flatMap((unit) => {
     const intent = preview.get(unit.uid);
     if (!intent) return [];
     // Por si acaso: nunca se marca un objetivo que el jugador no ve.
-    const attack = intent.attack && cellAt(vis, intent.attack) ? intent.attack : undefined;
+    const attack = intent.attack && vis.at(intent.attack) ? intent.attack : undefined;
     const doesSomething = intent.path.length > 1 || attack || intent.capture;
     return doesSomething ? [{ path: intent.path, attack, capture: intent.capture }] : [];
   });

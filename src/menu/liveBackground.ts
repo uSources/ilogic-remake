@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
 import { DEFAULT_RULES, useRules } from '../core/data';
 import { seededRng } from '../core/geom';
+import { createLayer } from '../core/mapGrid';
 import { generateGame } from '../core/mapgen';
 import { endRound, outcome } from '../core/rules';
 import type { GameEvent, GameState, Pos, Team } from '../core/model';
@@ -117,7 +118,7 @@ export class LiveBackground {
   private render(): void {
     const s = this.game;
     if (!s || !this.view) return;
-    const visible = Array.from({ length: s.map.length }, () => Array<boolean>(s.map.length).fill(true));
+    const visible = createLayer(s, true);
     this.view.render(s, { vis: visible, highlights: new Map(), hidden: new Set() });
     this.view.placeCursor(false);
   }

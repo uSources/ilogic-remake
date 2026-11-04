@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { DEFAULT_RULES, HQ, MoveType, RULES, useRules } from '@core/data';
-import { grid, manhattan, seededRng } from '@core/geom';
+import { manhattan, seededRng } from '@core/geom';
+import { createLayer } from '@core/mapGrid';
 import { generateGame, placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -90,13 +91,13 @@ describe('puntos de control', () => {
       total += pts.length;
       expect(pts.length).toBeLessThanOrEqual(RULES.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((b) => b.type === HQ && b.owner === team)!;
-      const da = groundDistance(s, hq(0), MoveType.FOOT, grid(false));
-      const db = groundDistance(s, hq(1), MoveType.FOOT, grid(false));
+      const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
+      const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
       for (const p of pts) {
         expect(p.owner).toBeNull();
         expect(s.buildings.some((b) => b.x === p.x && b.y === p.y)).toBe(false);
         // Casi a la misma distancia de las dos Bases (las salidas estan junto a ellas).
-        expect(Math.abs(da[p.x]![p.y]! - db[p.x]![p.y]!)).toBeLessThanOrEqual(8);
+        expect(Math.abs(da.at(p) - db.at(p))).toBeLessThanOrEqual(8);
       }
       // Las zonas no se tocan.
       for (const a of pts) for (const b of pts) if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * RULES.controlRadius);

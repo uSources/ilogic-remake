@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { GameState, Pos } from '../core/model';
+import { mapGrid } from '../core/mapGrid';
 import type { Anchor } from '../hud/store';
 import { settings } from '../settings';
 import { MapCamera, type ScreenBox } from './map/camera';
@@ -169,6 +170,7 @@ export class MapView {
 
   /** Terreno y orillas: solo al empezar la partida (el terreno no cambia). */
   buildTerrain(s: GameState): void {
+    this.camera.showMap(mapGrid(s));
     this.terrain.build(s, this.newArt());
   }
 

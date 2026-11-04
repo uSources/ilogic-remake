@@ -1,10 +1,12 @@
 import type { CommandKind, Pos } from '../../core/model';
+import type { Grid } from '../../core/util/grid';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group' | 'squad';
 
 /** Lo que la escena quiere ver sobre el mapa en cada `MapView.render`. */
 export interface ViewOptions {
-  vis: boolean[][];
+  /** Casillas que se ven (una rejilla del tamaño del mapa). */
+  vis: Grid<boolean>;
   highlights: Map<string, HighlightKind>;
   hidden: Set<number>;
   /** Camino previsto (de la unidad al cursor). */
@@ -12,10 +14,10 @@ export interface ViewOptions {
   /** Al soltar en el final del camino se ataca: la flecha va en rojo. */
   pathAttack?: boolean;
   /** Casillas que el enemigo puede atacar en su proximo turno (tecla T). */
-  threat?: boolean[][] | null;
+  threat?: Grid<boolean> | null;
   /** Al mover: todo lo que la unidad podria atacar (borde rojo) y destinos peligrosos (marca roja). */
-  attackZone?: boolean[][] | null;
-  danger?: boolean[][] | null;
+  attackZone?: Grid<boolean> | null;
+  danger?: Grid<boolean> | null;
   /**
    * Ordenes de varios turnos: linea de puntos hasta el destino y banderita. [CAMBIO] Las ordenes con
    * destino llevan su tipo (color de la bandera) y la linea solo si `line` (unidad o escuadra señalada).

@@ -8,7 +8,7 @@ import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
 import { visibility } from '../rules/visibility';
 import type { GameEvent, GameState, Pos, Team, Unit } from '../model';
-import { cellAt, setCell } from '../util/grid';
+import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
 /**
@@ -39,14 +39,14 @@ export function aiCtx(me: Team): AiCtx {
  * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
  * detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): boolean[][] {
+export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
   if (ai.group && RULES.passAllies) {
     const visible = visibility(s, ai.me);
-    const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !cellAt(visible, other));
-    for (const other of s.units) if (letsPass(other)) setCell(occupied, other, false);
+    const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !visible.at(other));
+    for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
   }
-  setCell(occupied, unit, false);
+  occupied.set(unit, false);
   return occupied;
 }
 
@@ -58,7 +58,7 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): boolean[]
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
   const steps = groundDistance(s, from, Movement.of(unit.type), occupancyWithout(s, ai, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
-  return (pos) => cellAt(steps, pos) || Infinity;
+  return (pos) => steps.at(pos) || Infinity;
 }
 
 /**
@@ -69,7 +69,7 @@ export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit)
  */
 export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
-  if (!avoidDest && cellAt(range.steps, dest) > 0) return dest;
+  if (!avoidDest && range.steps.at(dest) > 0) return dest;
   const stepsToDest = stepsFrom(s, ai, unit, dest);
   const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
   const best = minBy(options, stepsToDest);
@@ -91,7 +91,7 @@ export const strikeReach = (unit: Unit): number => UNIT.mover[unit.type]! + UNIT
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me)): Unit[] {
-  return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && cellAt(visible, other));
+  return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && visible.at(other));
 }
 
 /** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */

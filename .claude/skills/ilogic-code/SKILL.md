@@ -42,7 +42,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 Todo codigo nuevo o tocado sigue `docs/ESTILO.md` (con un ejemplo de antes y despues). En corto:
 nombres completos (`unit`, `distanceToGoal`; no `u`, `d`, `c`), una funcion por idea (unas 25
 lineas, 2 niveles de anidacion), salir pronto con `return`, nada de numeros ni condiciones magicas,
-recorrer y elegir con las piezas comunes (`cellAt`/`cells` de `core/util/grid.ts`, `minBy`/`maxBy`
+recorrer y elegir con las piezas comunes (`Grid<T>` de `core/util/grid.ts` con `at`/`set`/`forEach`/`cells`, `minBy`/`maxBy`
 de `core/util/pick.ts`, `reachableTilesWithCost`, `distancesIgnoringUnits`) en vez de bucles a mano,
 lo que crece como lista de datos y no como `switch`, cada modulo pide solo lo que usa, y comentarios
 del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar lo mismo antes y despues.
@@ -69,8 +69,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   ronda = entrada en `ROUND_PHASES`; habilidad nueva = su efecto en `abilities.ts`. La IA no tiene
   variables globales: lo del turno va en `AiCtx`. Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
-- Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `cellAt(grid, pos)` en vez de
-  `grid[x]![y]!`; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
+- Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de
+  `grid[x]![y]!`. El tamaño del mapa sale siempre del estado (`mapGrid(s)`, `createLayer(s, fill)`,
+  `isOnBoard(s, pos)` de `core/mapGrid.ts`): no hay tamaño global; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
   esperando a pasar.
 - `switch` sobre uniones: con todos los casos o con `default:` explicito (lo pide el lint).
 - Las reglas cambiadas respecto al juego de 2013 llevan `[CAMBIO]` en un comentario con el porque.

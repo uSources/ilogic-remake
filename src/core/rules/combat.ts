@@ -6,7 +6,7 @@ import { BUILDING, MAX_FUNDS, POWER, RULES, TERRAIN, UNIT } from '../data';
 import { coverAgainst, defenseFactor, isRanged } from '../abilities';
 import { manhattan } from '../geom';
 import { chargeFromCombat, generalHitFactor } from '../generals';
-import { cellAt } from '../util/grid';
+import { terrainAt } from '../mapGrid';
 import { canFight, isAlive, isEnemyOf, isOnMap } from '../util/predicates';
 import { weatherHit } from '../weather';
 import type { CombatInfo, GameEventOf, GameState, Pos, Rng, Team, Unit } from '../model';
@@ -53,7 +53,7 @@ export function attackTargets(s: GameState, attacker: Unit, visible = visibility
       isEnemyOf(target, attacker) &&
       isOnMap(target) &&
       isAlive(target) &&
-      cellAt(visible, target) &&
+      visible.at(target) &&
       canDamage(attacker, target) &&
       inAttackRange(attacker.type, attacker, target),
   );
@@ -67,7 +67,7 @@ export function attackTargets(s: GameState, attacker: Unit, visible = visibility
  */
 export function tileProtection(s: GameState, pos: Pos): number {
   const building = buildingAt(s, pos.x, pos.y);
-  const terrainProtection = TERRAIN.protection[cellAt(s.map, pos)]!;
+  const terrainProtection = TERRAIN.protection[terrainAt(s, pos)]!;
   return terrainProtection * (building ? BUILDING.protection[building.type]! : 1);
 }
 

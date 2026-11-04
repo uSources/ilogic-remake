@@ -3,7 +3,6 @@ import { ATLAS, hasImage } from '../../atlas';
 import { rank, unhealable } from '../../core/rules';
 import { effectiveCommand, isDetached } from '../../core/squads';
 import type { GameState, Pos, Unit } from '../../core/model';
-import { cellAt } from '../../core/util/grid';
 import { TILE } from '../../layout';
 import { addLifeTextures, lifeKey } from '../lifeDigits';
 import { PAL, PAL_MAP } from '../palette';
@@ -83,7 +82,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   sync(s: GameState, opts: ViewOptions, newArt: boolean): void {
     const seen = new Set<number>();
     for (const unit of s.units) {
-      if (unit.carrier !== null || opts.hidden.has(unit.uid) || !cellAt(opts.vis, unit)) continue;
+      if (unit.carrier !== null || opts.hidden.has(unit.uid) || !opts.vis.at(unit)) continue;
       const key = unitKey(this.scene.textures, s, unit);
       if (!key) continue;
       seen.add(unit.uid);

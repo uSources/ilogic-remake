@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { MAP_H, MAP_W } from '../../core/data';
 import type { Pos } from '../../core/model';
+import { isInside, type GridSize } from '../../core/util/grid';
 import { dpr } from '../../display';
 import type { Anchor } from '../../hud/store';
 import { TILE } from '../../layout';
 import { reducedMotion } from '../motion';
-import { inMap, tileCenter } from './geometry';
+import { tileCenter } from './geometry';
 
 /** Margen en pixeles CSS que se puede desplazar mas alla del mapa (para que no quede bajo la interfaz). */
 const EDGE_CSS = 110;
@@ -38,6 +38,8 @@ export class MapCamera {
   /** Pixeles fisicos por pixel del dibujo (zoom entero de la camara). */
   level: number;
   private lastDpr = dpr();
+  /** Tamaño del mapa que se enseña (lo pone `showMap` al construir el terreno de una partida). */
+  private map: GridSize = { width: 0, height: 0 };
 
   constructor(readonly cam: Phaser.Cameras.Scene2D.Camera) {
     cam.setRoundPixels(true);
@@ -55,6 +57,12 @@ export class MapCamera {
   private clampLevel(level: number): number {
     const ratio = dpr();
     return Phaser.Math.Clamp(level, Math.max(1, Math.round(ratio)), Math.max(MAX_SCALE, Math.round(MAX_SCALE * ratio)));
+  }
+
+  /** El mapa que se enseña ahora: sus casillas y sus limites. */
+  showMap(size: GridSize): void {
+    this.map = { width: size.width, height: size.height };
+    this.updateBounds();
   }
 
   /** Pone el zoom actual en la camara y recalcula los limites. */
@@ -89,7 +97,7 @@ export class MapCamera {
     const world = this.cam.getWorldPoint(sx, sy);
     const x = Math.floor(world.x / TILE);
     const y = Math.floor(world.y / TILE);
-    return inMap(x, y) ? { x, y } : null;
+    return isInside(this.map, { x, y }) ? { x, y } : null;
   }
 
   /** Esquinas de un recuadro de pantalla en coordenadas de mundo (arriba a la izquierda y abajo a la derecha). */
@@ -152,8 +160,8 @@ export class MapCamera {
   updateBounds(): void {
     const edgeCss = Math.min(EDGE_CSS, Math.round((this.cam.width / dpr()) * EDGE_MAX_FRACTION));
     const margin = (edgeCss * dpr()) / this.cam.zoom;
-    const mapWidth = MAP_W * TILE;
-    const mapHeight = MAP_H * TILE;
+    const mapWidth = this.map.width * TILE;
+    const mapHeight = this.map.height * TILE;
     const viewWidth = this.cam.width / this.cam.zoom;
     const viewHeight = this.cam.height / this.cam.zoom;
     const boundsWidth = Math.max(mapWidth + 2 * margin, viewWidth);

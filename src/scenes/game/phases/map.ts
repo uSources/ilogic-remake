@@ -5,7 +5,6 @@
 import { UNIT } from '../../../core/data';
 import { buildingAt, canBuyAt, moveRange, reachableTiles, unitAt, unitById, unitThreat } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
-import { cellAt, cells } from '../../../core/util/grid';
 import type { Pos, Unit } from '../../../core/model';
 import { clickSelect } from '../../../controls/selection';
 import type { HighlightInput, Highlights } from '../highlights';
@@ -90,9 +89,9 @@ function inspectMarks(input: HighlightInput, uid: number): Highlights {
   const range = moveRange(input.s, { ...unit, active: true, canMove: true });
   const threat = unitThreat(input.s, unit);
   const canMove = UNIT.mover[unit.type]! > 0;
-  for (const { pos, value: steps } of cells(range.steps)) {
+  for (const { pos, value: steps } of range.steps.cells()) {
     if (canMove && steps > 0) marks.tiles.set(key(pos), 'reach');
-    else if (cellAt(threat, pos)) marks.tiles.set(key(pos), 'attack');
+    else if (threat.at(pos)) marks.tiles.set(key(pos), 'attack');
   }
   return marks;
 }

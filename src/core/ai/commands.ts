@@ -11,7 +11,6 @@ import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
 import { effectiveCommand, finishCommand } from '../squads';
 import type { CommandKind, GameEvent, GameState, Pos, Rng, Team, Unit } from '../model';
-import { cellAt } from '../util/grid';
 import { aiCtx, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { commandOrder, commandStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
@@ -112,7 +111,7 @@ function* attackCommand(turn: CommandTurnContext): Generator<GameEvent, boolean>
   wait(unit);
   const visible = visibility(s, ai.me);
   const isNear = inGuardZone(at);
-  const enemiesLeft = s.units.some((other) => other.team !== ai.me && other.carrier === null && cellAt(visible, other) && isNear(other));
+  const enemiesLeft = s.units.some((other) => other.team !== ai.me && other.carrier === null && visible.at(other) && isNear(other));
   return !enemiesLeft;
 }
 
@@ -170,7 +169,7 @@ export function previewCommands(s: GameState, team: Team = 0, seed = PREVIEW_SEE
 function withoutHiddenEnemies(s: GameState, team: Team): GameState {
   const copy = structuredClone(s);
   const visible = visibility(copy, team);
-  const isHiddenEnemy = (unit: Unit) => unit.team !== team && unit.carrier === null && !cellAt(visible, unit);
+  const isHiddenEnemy = (unit: Unit) => unit.team !== team && unit.carrier === null && !visible.at(unit);
   const hidden = new Set(copy.units.filter(isHiddenEnemy).map((unit) => unit.uid));
   const isCarriedByHidden = (unit: Unit) => unit.carrier !== null && hidden.has(unit.carrier);
   if (hidden.size) copy.units = copy.units.filter((unit) => !hidden.has(unit.uid) && !isCarriedByHidden(unit));

@@ -187,9 +187,9 @@ export class Session {
           const c = BUILDING_CHAR[b.type]!;
           cell = b.owner === null ? `*${c} ` : ` ${b.owner === 0 ? c : c.toLowerCase()} `;
         }
-        if (u && u.carrier === null && (u.team === 0 || vis[x]![y]))
+        if (u && u.carrier === null && (u.team === 0 || vis.at({ x, y })))
           cell = (u.team === 0 ? '+' : '-') + String(u.uid).padStart(2, '0').slice(-2);
-        else if (!vis[x]![y] && !b) cell = ' ? ';
+        else if (!vis.at({ x, y }) && !b) cell = ' ? ';
         row += cell;
       }
       rows.push(row);
@@ -199,7 +199,7 @@ export class Session {
 
   units(team: number | null): string {
     const vis = visibility(this.s, 0);
-    const list = this.s.units.filter((u) => (team === null || u.team === team) && (u.team === 0 || vis[u.x]![u.y]));
+    const list = this.s.units.filter((u) => (team === null || u.team === team) && (u.team === 0 || vis.at(u)));
     if (!list.length) return '(ninguna)';
     return list
       .map((u) => {

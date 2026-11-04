@@ -92,7 +92,7 @@ describe('reglas nuevas: combate', () => {
   it('sin niebla se ve todo el mapa', () => {
     const s = blankState();
     RULES.fog = false;
-    expect(visibility(s, 0).every((col) => col.every(Boolean))).toBe(true);
+    expect([...visibility(s, 0).cells()].every((cell) => cell.value)).toBe(true);
   });
 });
 

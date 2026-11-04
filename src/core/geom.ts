@@ -1,19 +1,45 @@
-import { MAP_H, MAP_W } from './data';
+/**
+ * Utilidades geometricas (Auxiliar.java). Los rangos son rombos (distancia Manhattan) y las areas,
+ * cuadrados. Lo que depende de los bordes del mapa recibe su tamaño (`GridSize`: el mapa de la
+ * partida, `mapGrid(s)`, o cualquier capa del mismo tamaño).
+ */
 import type { Pos, Rng } from './model';
-
-/** Utilidades geometricas (Auxiliar.java). Todos los rangos son rombos (distancia Manhattan). */
-
-export function inBounds(x: number, y: number): boolean {
-  return x >= 0 && x < MAP_W && y >= 0 && y < MAP_H;
-}
+import { isInside, type GridSize } from './util/grid';
 
 export function manhattan(a: Pos, b: Pos): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
 
+export function samePos(a: Pos, b: Pos): boolean {
+  return a.x === b.x && a.y === b.y;
+}
+
+/** Clave de texto de una casilla, para conjuntos y mapas (`"3,7"`). */
+export function posKey(pos: Pos): string {
+  return `${pos.x},${pos.y}`;
+}
+
 /** Numero de casillas a distancia <= radius: 2r(r+1)+1 (0 si radius < 0). */
 export function rangeSize(radius: number): number {
   return radius < 0 ? 0 : 2 * radius * (radius + 1) + 1;
+}
+
+/** Casilla numero `indexInRing` del anillo `ring` (> 0) alrededor de `center`, dentro del mapa o no. */
+function ringPos(center: Pos, ring: number, indexInRing: number): Pos {
+  // Cada anillo tiene 4 lados de `ring` casillas: de abajo a la derecha, a arriba, a la izquierda y vuelta.
+  const side = Math.floor(indexInRing / ring);
+  const offset = indexInRing % ring;
+  const { x, y } = center;
+  switch (side) {
+    case 0:
+      return { x: x + offset, y: y + ring - offset };
+    case 1:
+      return { x: x + ring - offset, y: y - offset };
+    case 2:
+      return { x: x - offset, y: y + offset - ring };
+    default:
+      return { x: x - ring + offset, y: y + offset };
+  }
 }
 
 /**
@@ -22,58 +48,37 @@ export function rangeSize(radius: number): number {
  * y gira en sentido antihorario en pantalla (abajo, derecha, arriba, izquierda...).
  * Devuelve null si cae fuera del mapa. El orden importa para la IA y el generador.
  */
-export function rangePos(center: Pos, index: number): Pos | null {
-  if (index < 0 || !inBounds(center.x, center.y)) return null;
+export function rangePos(size: GridSize, center: Pos, index: number): Pos | null {
+  if (index < 0 || !isInside(size, center)) return null;
   if (index === 0) return { x: center.x, y: center.y };
   let ring = 1;
   while (rangeSize(ring) <= index) ring++;
-  // Cada anillo tiene 4 lados de `ring` casillas: de abajo a la derecha, a arriba, a la izquierda y vuelta.
-  const indexInRing = index - rangeSize(ring - 1);
-  const side = Math.floor(indexInRing / ring);
-  const offset = indexInRing % ring;
-  const { x, y } = center;
-  let pos: Pos;
-  switch (side) {
-    case 0:
-      pos = { x: x + offset, y: y + ring - offset };
-      break;
-    case 1:
-      pos = { x: x + ring - offset, y: y - offset };
-      break;
-    case 2:
-      pos = { x: x - offset, y: y + offset - ring };
-      break;
-    default:
-      pos = { x: x - ring + offset, y: y + offset };
-  }
-  return inBounds(pos.x, pos.y) ? pos : null;
+  const pos = ringPos(center, ring, index - rangeSize(ring - 1));
+  return isInside(size, pos) ? pos : null;
 }
 
 /** Las 4 vecinas ortogonales dentro del mapa, en el orden del original: abajo, derecha, arriba, izquierda. */
-export function neighbors4(p: Pos): Pos[] {
-  const neighbors: Pos[] = [];
+export function neighbors4(size: GridSize, pos: Pos): Pos[] {
   // Los indices 1 a 4 del rombo son el primer anillo, en el orden del original.
-  for (let i = 1; i <= 4; i++) {
-    const neighbor = rangePos(p, i);
-    if (neighbor) neighbors.push(neighbor);
-  }
-  return neighbors;
+  return [1, 2, 3, 4].map((index) => rangePos(size, pos, index)).filter((neighbor): neighbor is Pos => neighbor !== null);
 }
 
 /** Recorre las casillas a distancia entre minRadius y maxRadius (ambas incluidas) en orden de rombo. */
-export function* diamond(center: Pos, minRadius: number, maxRadius: number): Generator<Pos> {
+export function* diamond(size: GridSize, center: Pos, minRadius: number, maxRadius: number): Generator<Pos> {
   for (let i = rangeSize(minRadius - 1); i < rangeSize(maxRadius); i++) {
-    const pos = rangePos(center, i);
+    const pos = rangePos(size, center, i);
     if (pos) yield pos;
   }
 }
 
-export function grid<T>(fill: T): T[][] {
-  return Array.from({ length: MAP_W }, () => Array<T>(MAP_H).fill(fill));
-}
-
-export function samePos(a: Pos, b: Pos): boolean {
-  return a.x === b.x && a.y === b.y;
+/**
+ * Casillas del cuadrado de lado 2*radius+1 alrededor de `center` (columna a columna), dentro del mapa
+ * o no: quien llama filtra si hace falta. Areas de habilidades y zonas de los puntos de control.
+ */
+export function squareArea(center: Pos, radius: number): Pos[] {
+  const tiles: Pos[] = [];
+  for (let dx = -radius; dx <= radius; dx++) for (let dy = -radius; dy <= radius; dy++) tiles.push({ x: center.x + dx, y: center.y + dy });
+  return tiles;
 }
 
 /** PRNG con semilla (mulberry32) para tests y partidas reproducibles. */

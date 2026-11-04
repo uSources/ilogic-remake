@@ -9,7 +9,7 @@
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
-import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, Movement } from './data';
+import { BUILDING_NAMES, HQ, DEFAULT_RULES, TERRAIN, UNIT_NAMES, Movement } from './data';
 import type { RulesConfig } from './model';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
@@ -76,8 +76,6 @@ function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
 
 /** Crea la partida de una mision (con las reglas ya puestas por quien llama: ver `missionRules`). */
 export function buildMission(m: MissionDef): GameState {
-  const size = m.map.length;
-  setMapSize(size, size);
   const s: GameState = {
     version: 1,
     map: terrainGrid(m),

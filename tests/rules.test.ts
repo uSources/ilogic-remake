@@ -36,17 +36,17 @@ describe('movimiento', () => {
     const u = newUnit(s, SOLDIER, 0, 10, 10);
     newUnit(s, SOLDIER, 1, 11, 10); // bloquea a la derecha
     const r = moveRange(s, u);
-    expect(r.steps[10]![13]).toBe(3);
-    expect(r.steps[11]![10]).toBe(0); // ocupada
-    expect(r.steps[12]![11]).toBe(3); // rodeando por abajo
-    expect(r.steps[12]![10]).toBe(0); // necesitaria 4 pasos
-    expect(r.steps[10]![14]).toBe(0);
+    expect(r.steps.at({ x: 10, y: 13 })).toBe(3);
+    expect(r.steps.at({ x: 11, y: 10 })).toBe(0); // ocupada
+    expect(r.steps.at({ x: 12, y: 11 })).toBe(3); // rodeando por abajo
+    expect(r.steps.at({ x: 12, y: 10 })).toBe(0); // necesitaria 4 pasos
+    expect(r.steps.at({ x: 10, y: 14 })).toBe(0);
   });
   it('el agua no la pisan los vehiculos', () => {
     const s = blankState();
     s.map[11]![10] = 1; // Water
     const t = newUnit(s, TANK, 0, 10, 10);
-    expect(moveRange(s, t).steps[11]![10]).toBe(0);
+    expect(moveRange(s, t).steps.at({ x: 11, y: 10 })).toBe(0);
     moveUnit(s, t, { x: 10, y: 14 });
     expect(t.canMove).toBe(false);
   });
@@ -205,11 +205,11 @@ describe('prevision y amenaza', () => {
     newUnit(s, 0, 0, 10, 10); // vision 4 del jugador
     newUnit(s, 1, 1, 12, 10); // tanque enemigo visible: mover 5 + alcance 2
     const th = threatMap(s, 1, 0);
-    expect(th[12]![17]).toBe(true); // 7 abajo
-    expect(th[12]![18]).toBe(false);
+    expect(th.at({ x: 12, y: 17 })).toBe(true); // 7 abajo
+    expect(th.at({ x: 12, y: 18 })).toBe(false);
     const s2 = blankState();
     newUnit(s2, 0, 0, 0, 0);
     newUnit(s2, 1, 1, 20, 20); // fuera de vision
-    expect(threatMap(s2, 1, 0).flat().some(Boolean)).toBe(false);
+    expect([...threatMap(s2, 1, 0).cells()].some((cell) => cell.value)).toBe(false);
   });
 });

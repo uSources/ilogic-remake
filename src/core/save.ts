@@ -3,20 +3,10 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import {
-  BUILDING_TYPES,
-  MAP_H,
-  MAP_MAX,
-  MAP_MIN,
-  MAP_W,
-  setMapSize,
-  MAX_LIFE,
-  TERRAIN_TYPES,
-  UNIT,
-  UNIT_TYPES,
-  WEATHER_TYPES,
-} from './data';
+import { BUILDING_TYPES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES } from './data';
 import { generalDef } from './generals';
+import { mapGrid } from './mapGrid';
+import { isInside, type GridSize } from './util/grid';
 import { sanitizeStats } from './stats';
 import { assignKeys, liftCommand } from './squads';
 import type { GameState, Pos, RulesConfig, Unit } from './model';
@@ -32,10 +22,12 @@ const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
 const MAX_UID = Number.MAX_SAFE_INTEGER;
 
-const isMapPos = (p: unknown): boolean => !!p && isInt((p as Pos).x, 0, MAP_W - 1) && isInt((p as Pos).y, 0, MAP_H - 1);
+/** Una casilla bien formada y dentro del mapa de la partida que se lee. */
+const isMapPos = (size: GridSize, p: unknown): boolean =>
+  !!p && isInt((p as Pos).x, 0, 1e6) && isInt((p as Pos).y, 0, 1e6) && isInside(size, p as Pos);
 /** Una orden con destino bien formada (Unit.command o Squad.command). */
-const isCommand = (c: unknown): boolean =>
-  !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos((c as { at: unknown }).at);
+const isCommand = (size: GridSize, c: unknown): boolean =>
+  !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos(size, (c as { at: unknown }).at);
 
 export function serialize(s: GameState): string {
   return JSON.stringify(s);
@@ -49,7 +41,7 @@ export function deserialize(json: string): GameState | null {
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...s.units.map((unit) => unit.uid)) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
   if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
-  if (s.mission !== undefined && !isValidMission(s.mission)) return null;
+  if (s.mission !== undefined && !isValidMission(s, s.mission)) return null;
   // Lo opcional que esta roto se quita y la partida sigue sin ello.
   cleanSetup(s);
   cleanWeather(s);
@@ -73,13 +65,12 @@ function parseState(json: string): GameState | null {
   return s.version === 1 ? s : null;
 }
 
-/** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado (y se pone en uso). */
+/** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */
 function readMap(s: GameState): boolean {
   if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
   if (s.map[0].length !== s.map.length) return false;
-  setMapSize(s.map.length, s.map[0].length);
   const isTerrain = (t: unknown) => isInt(t, 0, TERRAIN_TYPES - 1);
-  return s.map.every((column) => Array.isArray(column) && column.length === MAP_H && column.every(isTerrain));
+  return s.map.every((column) => Array.isArray(column) && column.length === s.map.length && column.every(isTerrain));
 }
 
 function hasValidBasics(s: GameState): boolean {
@@ -94,19 +85,19 @@ function readUnits(s: GameState): boolean {
   for (const unit of s.units) {
     if (!isInt(unit.uid, 1, MAX_UID) || uids.has(unit.uid)) return false;
     uids.add(unit.uid);
-    if (!isValidUnit(unit)) return false;
-    cleanUnit(unit);
+    if (!isValidUnit(s, unit)) return false;
+    cleanUnit(s, unit);
   }
   return true;
 }
 
-function isValidUnit(unit: Unit): boolean {
+function isValidUnit(s: GameState, unit: Unit): boolean {
   if (!isInt(unit.type, 0, UNIT_TYPES - 1) || !isTeam(unit.team)) return false;
-  if (!isMapPos(unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
+  if (!isMapPos(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
   return Array.isArray(unit.cargo) && unit.cargo.length === UNIT.maxcarry[unit.type];
 }
 
-function cleanUnit(unit: Unit): void {
+function cleanUnit(s: GameState, unit: Unit): void {
   // [CAMBIO] Las partidas guardadas antes de quitar combustible y municion los traen: se ignoran.
   delete (unit as Partial<Record<'fuel' | 'ammo', unknown>>).fuel;
   delete (unit as Partial<Record<'fuel' | 'ammo', unknown>>).ammo;
@@ -115,9 +106,9 @@ function cleanUnit(unit: Unit): void {
   unit.canFire = !!unit.canFire;
   if (unit.kills !== undefined && !isInt(unit.kills, 0, MAX_COUNT)) delete unit.kills;
   if (unit.hitDay !== undefined && !isInt(unit.hitDay, 0, MAX_COUNT)) delete unit.hitDay;
-  if (unit.command !== undefined && !isCommand(unit.command)) delete unit.command;
+  if (unit.command !== undefined && !isCommand(mapGrid(s), unit.command)) delete unit.command;
   if (unit.squad !== undefined && !isInt(unit.squad, 1, MAX_COUNT)) delete unit.squad;
-  if (unit.order !== undefined && !isMapPos(unit.order)) delete unit.order;
+  if (unit.order !== undefined && !isMapPos(mapGrid(s), unit.order)) delete unit.order;
 }
 
 /** Cada pasajero esta en la lista de su transporte y cada transporte lleva a quien dice. */
@@ -130,7 +121,7 @@ function hasConsistentCargo(s: GameState): boolean {
 
 function readBuildings(s: GameState): boolean {
   for (const building of s.buildings) {
-    if (!isInt(building.type, 0, BUILDING_TYPES - 1) || !isMapPos(building)) return false;
+    if (!isInt(building.type, 0, BUILDING_TYPES - 1) || !isMapPos(mapGrid(s), building)) return false;
     if (building.owner !== null && !isTeam(building.owner)) return false;
     // Una captura a medias rota se olvida (el edificio sigue).
     const progress = building.capture;
@@ -140,7 +131,7 @@ function readBuildings(s: GameState): boolean {
   return true;
 }
 
-function isValidMission(mission: GameState['mission']): boolean {
+function isValidMission(s: GameState, mission: GameState['mission']): boolean {
   const objective = mission?.objective as Record<string, unknown> | undefined;
   if (!mission || typeof mission.id !== 'string' || !objective) return false;
   const hasDays = isInt(objective.days, 1, 10000);
@@ -153,7 +144,7 @@ function isValidMission(mission: GameState['mission']): boolean {
     case 'capture':
       return hasDays && isInt(objective.count, 1, 1000) && (objective.type === null || isInt(objective.type, 0, BUILDING_TYPES - 1));
     case 'escort':
-      return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(objective.to);
+      return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(mapGrid(s), objective.to);
     default:
       return false;
   }
@@ -185,7 +176,7 @@ function cleanSquads(s: GameState): void {
     if (!Array.isArray(s.squads) || !s.squads.every(isValidSquad)) delete s.squads;
     for (const squad of s.squads ?? []) {
       // [CAMBIO] Orden y tecla de la escuadra: si estan rotas, se quitan (la escuadra sigue).
-      if (squad.command !== undefined && !isCommand(squad.command)) delete squad.command;
+      if (squad.command !== undefined && !isCommand(mapGrid(s), squad.command)) delete squad.command;
       if (squad.key !== undefined && !isInt(squad.key, 1, 9)) delete squad.key;
     }
   }
@@ -209,7 +200,7 @@ function cleanControlPoints(s: GameState): void {
   if (s.controlPoints === undefined) return;
   const ok =
     Array.isArray(s.controlPoints) &&
-    s.controlPoints.every((point) => point && isMapPos(point) && (point.owner === null || isTeam(point.owner)));
+    s.controlPoints.every((point) => point && isMapPos(mapGrid(s), point) && (point.owner === null || isTeam(point.owner)));
   if (!ok) delete s.controlPoints;
 }
 

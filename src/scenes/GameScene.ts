@@ -6,8 +6,10 @@
  */
 import Phaser from 'phaser';
 import { effectiveCommand, renameSquad } from '../core/squads';
-import { HQ, MAP_H, MAP_W, RULES } from '../core/data';
-import { grid, samePos } from '../core/geom';
+import { HQ, RULES } from '../core/data';
+import { samePos } from '../core/geom';
+import { createLayer, isOnBoard } from '../core/mapGrid';
+import { Grid } from '../core/util/grid';
 import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
@@ -69,6 +71,8 @@ export type { GameStartData } from './game/types';
 const NO_TILES: ReadonlyMap<string, number> = new Map();
 /** Casillas de margen al llevar la camara a una unidad. */
 const FOLLOW_MARGIN = 3;
+/** Antes de empezar la partida no se ve nada (la vision de verdad la pone `refresh`). */
+const NOTHING_SEEN: Grid<boolean> = Grid.filled({ width: 0, height: 0 }, false);
 /** Fases con el panel de lo elegido (varias unidades) a la vista. */
 const SELECTION_PANEL_PHASES: Phase[] = ['map', 'groupMenu', 'orderMenu', 'target'];
 /** Bocadillos que van junto a una casilla (y se recolocan al mover la camara). */
@@ -96,7 +100,7 @@ export class GameScene extends Phaser.Scene {
   private lastAt: Pos | null = null;
 
   // --- Lo que se ve -----------------------------------------------------------
-  private vis: boolean[][] = [];
+  private vis: Grid<boolean> = NOTHING_SEEN;
   /** Unidades que no se dibujan (la que se esta arrastrando o animando). */
   private hidden = new Set<number>();
   /** Lluvia, nieve... sobre el mapa. */
@@ -179,7 +183,7 @@ export class GameScene extends Phaser.Scene {
   private resetMatch(): void {
     this.match++;
     this.phase = 'map';
-    this.vis = [];
+    this.vis = NOTHING_SEEN;
     this.hidden = new Set();
     this.moves.reset();
     this.buyAt = null;
@@ -541,8 +545,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private moveCursorTo(p: Pos, follow: boolean): void {
-    const isInside = p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H;
-    if (!isInside || samePos(p, this.view.cursor)) return;
+    if (!isOnBoard(this.s, p) || samePos(p, this.view.cursor)) return;
     this.view.cursor = { ...p };
     if (follow) this.view.ensureVisible(p, FOLLOW_MARGIN);
     this.cursorMoved();
@@ -709,7 +712,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private visibleToPlayer(p: Pos): boolean {
-    return !!this.vis[p.x]?.[p.y];
+    return this.vis.contains(p) && this.vis.at(p);
   }
 
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
@@ -737,7 +740,7 @@ export class GameScene extends Phaser.Scene {
     // [CAMBIO] Puntero del raton segun lo que haria el clic derecho donde esta el cursor.
     if (this.gestures.inside) this.orders.updatePointer(this.phase === 'busy' ? null : this.view.cursor);
     // Al acabar se descubre todo el mapa.
-    this.vis = this.ended ? grid(true) : visibility(this.s, 0);
+    this.vis = this.ended ? createLayer(this.s, true) : visibility(this.s, 0);
     this.view.pruneScorch(this.s.day);
     this.view.render(this.s, this.viewOptions());
     this.view.placeCursor(this.phase !== 'busy');

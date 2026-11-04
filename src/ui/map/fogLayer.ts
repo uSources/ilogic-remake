@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { composeFog, visKey } from '../fog';
 import type { MapLayer } from './layer';
+import type { Grid } from '../../core/util/grid';
 
 /**
  * Niebla de guerra del dibujo nuevo: un lienzo con borde organico (ui/fog.ts) que solo se repinta
@@ -22,12 +23,12 @@ export class FogLayer implements MapLayer {
   }
 
   /** Enseña la niebla nueva (y la repinta si ha cambiado lo que se ve) o la esconde con el dibujo de 2013. */
-  sync(vis: boolean[][], newArt: boolean): void {
+  sync(vis: Grid<boolean>, newArt: boolean): void {
     this.object.setVisible(newArt);
     if (newArt) this.update(vis);
   }
 
-  private update(vis: boolean[][]): void {
+  private update(vis: Grid<boolean>): void {
     const sig = visKey(vis);
     if (sig === this.sig && this.img) return;
     this.sig = sig;

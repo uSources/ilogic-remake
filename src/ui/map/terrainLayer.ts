@@ -6,7 +6,7 @@ import { ANIM_FRAMES } from '../sheets';
 import { shoreKeys, terrainKey } from '../sprites';
 import { paintTerrain, terrainObjects, waterAnimCells, type AnimCell } from '../terrainArt';
 import type { BuildingLayer } from './buildingLayer';
-import { forEachTile } from './geometry';
+import { mapGrid } from '../../core/mapGrid';
 import { stepOf, type AnimatedLayer, type MapClock, type MapLayer } from './layer';
 import { tileImage } from './tileImage';
 
@@ -69,8 +69,8 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
 
   private buildClassic(s: GameState): void {
     const objs: Phaser.GameObjects.GameObject[] = [];
-    forEachTile((x, y) => {
-      objs.push(tileImage(this.scene, terrainKey(s.map[x]![y]!), x, y));
+    mapGrid(s).forEach((terrain, { x, y }) => {
+      objs.push(tileImage(this.scene, terrainKey(terrain), x, y));
       for (const k of shoreKeys(s, x, y)) {
         if (hasImage(this.scene.textures, k))
           objs.push(

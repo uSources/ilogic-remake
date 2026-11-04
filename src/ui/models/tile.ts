@@ -15,7 +15,9 @@ import {
   tileProtection,
   unitAt,
 } from '../../core/rules';
+import { terrainAt } from '../../core/mapGrid';
 import type { GameState, Pos, Unit } from '../../core/model';
+import type { Grid } from '../../core/util/grid';
 import { effectiveCommand, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
 import { buildingLabel, t, terrainLabel, unitLabel } from '../../settings';
@@ -92,11 +94,11 @@ export function tileVM(
   textures: Phaser.Textures.TextureManager,
   s: GameState,
   p: Pos,
-  view: { vis: boolean[][]; hidden: ReadonlySet<number>; selected?: Unit | null },
+  view: { vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },
 ): TileVM {
-  const terr = s.map[p.x]![p.y]!;
+  const terr = terrainAt(s, p);
   const b = buildingAt(s, p.x, p.y);
-  const vis = view.vis[p.x]![p.y]!;
+  const vis = view.vis.at(p);
   const info: TileVM = {
     terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - tileProtection(s, p)) * 100) },
   };
@@ -120,7 +122,7 @@ export function tileVM(
   // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
   const cp = s.controlPoints?.find((c) => inControlZone(c, p));
   if (cp) {
-    const inside = s.units.filter((u) => u.carrier === null && inControlZone(cp, u) && (u.team === 0 || !!view.vis[u.x]?.[u.y]));
+    const inside = s.units.filter((u) => u.carrier === null && inControlZone(cp, u) && (u.team === 0 || view.vis.at(u)));
     info.point = {
       owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral',
       income: RULES.controlIncome,

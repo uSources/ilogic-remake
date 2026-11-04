@@ -2,7 +2,7 @@
  * Habilidades del general del jugador desde su panel: las de area pasan a elegir casilla (fase
  * 'target'); el resto se usan ya. La animacion esta en playback.ts (evento 'ability').
  */
-import { inBounds } from '../../core/geom';
+import { isOnBoard } from '../../core/mapGrid';
 import { abilityArea, abilityBlock, areaTiles, generalOf, useAbility } from '../../core/generals';
 import type { GameEvent, GameState, Pos } from '../../core/model';
 import { showToast } from '../../hud/store';
@@ -47,7 +47,7 @@ export class GeneralAbilities {
     const ability = this.targeting ? this.abilityById(this.targeting) : undefined;
     const radius = ability ? abilityArea(ability) : null;
     if (radius === null) return [];
-    return areaTiles(c, radius).filter((p) => inBounds(p.x, p.y));
+    return areaTiles(c, radius).filter((p) => isOnBoard(this.h.state, p));
   }
 
   /** Habilidad del general del jugador con ese id (undefined si no tiene general o no la tiene). */

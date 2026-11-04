@@ -3,11 +3,11 @@
  * puras (sin Phaser): reciben el plan de movimiento de la escena (tests/sceneIntent.test.ts).
  */
 import { UNIT } from '../../core/data';
-import { inBounds, samePos } from '../../core/geom';
+import { samePos } from '../../core/geom';
+import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/orders';
 import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
-import { cellAt } from '../../core/util/grid';
 import { key, type Intent } from './types';
 
 /** La unidad que se esta moviendo y lo que se calculo al elegirla. */
@@ -23,7 +23,7 @@ export interface MovePlan {
 
 /** Que pasaria al soltar (o pulsar) la unidad elegida en `tile`. `visible`: la casilla se ve. */
 export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible: (p: Pos) => boolean): Intent {
-  if (!plan || !inBounds(tile.x, tile.y)) return { kind: 'none' };
+  if (!plan || !isOnBoard(s, tile)) return { kind: 'none' };
   const unit = plan.unit;
   if (samePos(tile, unit)) return { kind: 'stay' };
   const mergeUid = plan.merge.get(key(tile));
@@ -42,7 +42,7 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
 }
 
 /** La unidad puede terminar su movimiento en esa casilla este turno. */
-const isReachable = (range: MoveRange, tile: Pos) => cellAt(range.steps, tile) > 0;
+const isReachable = (range: MoveRange, tile: Pos) => range.steps.at(tile) > 0;
 
 /** Mejor casilla desde la que atacar a `target` (ver bestAttackTile). */
 export function attackFrom(s: GameState, plan: MovePlan, target: Unit): Pos | null {

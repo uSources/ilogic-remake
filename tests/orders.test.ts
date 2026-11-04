@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '@core/data';
-import { grid } from '@core/geom';
+import { createLayer } from '@core/mapGrid';
 import { bestAttackTile, closestStep, extendTrail } from '@core/orders';
 import { moveRange, newUnit, pathCost } from '@core/rules';
 import { blankState } from './helpers';
@@ -54,7 +54,7 @@ describe('ordenes del jugador', () => {
     const s = blankState();
     const u = newUnit(s, type('Soldier'), 0, 5, 5);
     const r = moveRange(s, u);
-    const block = grid(false);
+    const block = createLayer(s, false);
     let trail = extendTrail(s, u, r, block, [], { x: 6, y: 5 });
     expect(trail).toEqual([
       { x: 5, y: 5 },
