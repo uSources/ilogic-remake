@@ -185,7 +185,7 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         moveCursorTo: nop,
         commit: async () => {},
         groupMove: async () => {},
-        giveOrder: async () => {},
+        giveTravel: async () => {},
         clearUndo: nop,
         afterAction: nop,
         checkEnd: () => false,

@@ -15,6 +15,7 @@ import { contentOf, tablesOf } from './gameContent';
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
+import { mapGrid } from './mapGrid';
 import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
@@ -135,7 +136,7 @@ const ABILITY_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata).
   areaDamage: ({ s, team, effect, target, out }) => {
-    const inArea = new Set(squareArea(target!, effect.radius).map(posKey));
+    const inArea = new Set(squareArea(mapGrid(s), target!, effect.radius).map(posKey));
     for (const unit of s.units) {
       if (unit.team === team || !isOnMap(unit) || !inArea.has(posKey(unit))) continue;
       const damage = Math.max(0, Math.min(effect.damage, unit.life - effect.minLife));

@@ -27,8 +27,8 @@ export interface CarryHost {
   updateTrail(t: Pos): void;
   intentAt(t: Pos): Intent;
   refresh(): void;
-  /** Orden de varios turnos hasta `goal`. */
-  giveOrder(u: Unit, goal: Pos): Promise<void>;
+  /** Viaje de varios turnos hasta `goal` (travelTo). */
+  giveTravel(u: Unit, goal: Pos): Promise<void>;
   /** Confirmar el movimiento en una casilla (ver UnitMoves.commit). */
   commit(t: Pos, opts: { drop?: boolean; wait?: boolean }): Promise<void>;
 }
@@ -137,7 +137,7 @@ export class Carry {
     const intent: Intent = tile ? h.intentAt(tile) : { kind: 'none' };
     if (tile && h.sel && intent.kind === 'none' && carried.held && this.canReachSomeday(h.sel, tile)) {
       destroyImages(carried);
-      return void h.giveOrder(h.sel, tile);
+      return void h.giveTravel(h.sel, tile);
     }
     if (!tile || intent.kind === 'none' || intent.kind === 'stay') {
       void this.snapBack(carried);

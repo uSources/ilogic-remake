@@ -27,8 +27,8 @@ export interface ActionRunHost {
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
   commit(at: Pos, opts: { drop?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
-  /** Orden de varios turnos para la unidad elegida. */
-  giveOrder(unit: Unit, goal: Pos): Promise<void>;
+  /** Viaje de varios turnos (travelTo) para la unidad elegida. */
+  giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Orden con destino sin casilla: ahora se elige en el mapa (fase 'target'). */
   pickOrderTarget(kind: StandingOrderKind, units: Unit[], fromUnitMenu: boolean): void;
   /** Orden con destino en `at`: se da y las que pueden la empiezan ya. */
@@ -130,7 +130,7 @@ export const ACTION_RUNNERS: { readonly [Id in ActionId]: ActionRunner } = {
   go: {
     queueAs: 'defend',
     run: (action, host) => {
-      if (action.at && action.moving) return host.giveOrder(action.moving, action.at);
+      if (action.at && action.moving) return host.giveTravel(action.moving, action.at);
     },
   },
   orderToAttack: { run: orderWithTarget('attack') },

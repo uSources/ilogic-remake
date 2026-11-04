@@ -12,7 +12,7 @@ import { tablesOf } from '../../core/gameContent';
 import { movementOf } from '../../core/rules';
 import { abilityArea, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
-import { isOnBoard } from '../../core/mapGrid';
+import { mapGrid } from '../../core/mapGrid';
 import { unitAt, unitById } from '../../core/rules';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
@@ -617,7 +617,7 @@ async function abilityHeal(stage: EventStage, heal: { uid: number; amount: numbe
 
 /** Toda el area de la habilidad se ilumina en rojo y la camara tiembla. */
 function flashArea(stage: EventStage, target: Pos, radius: number): void {
-  for (const p of squareArea(target, radius)) if (isOnBoard(stage.state, p)) void tileFlash(stage.scene, stage.view, p, PAL.red);
+  for (const p of squareArea(mapGrid(stage.state), target, radius)) void tileFlash(stage.scene, stage.view, p, PAL.red);
   stage.scene.cameras.main.shake(220, 0.006);
 }
 

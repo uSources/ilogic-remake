@@ -44,10 +44,6 @@ const isWater = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.iswater[t
 const canBuildOn = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.canbuild[terrain]!;
 const isWalkable = (s: GameState, terrain: number) => canMoveOn(s, WALK, terrain);
 
-/** Casillas del cuadrado de lado 2*radius+1 alrededor de `center` que caen dentro del mapa. */
-const squareAround = (board: GridBounds, center: Pos, radius: number): Pos[] =>
-  squareArea(center, radius).filter((pos) => board.contains(pos));
-
 // ---------------------------------------------------------------------------------------------
 // Terreno
 // ---------------------------------------------------------------------------------------------
@@ -101,9 +97,9 @@ function growTerrain(s: GameState, origin: Pos, theme: number, rng: Rng): number
 
 /** Agua con tierra a los dos lados (en horizontal o en vertical, sin salir del borde). */
 function isNarrowWater(s: GameState, map: Grid<number>, { x, y }: Pos): boolean {
-  const isLand = (pos: Pos) => !isWater(s, map.at(pos));
-  const isNarrowAcross = x > 0 && x < map.width - 1 && isLand({ x: x - 1, y }) && isLand({ x: x + 1, y });
-  const isNarrowAlong = y > 0 && y < map.height - 1 && isLand({ x, y: y - 1 }) && isLand({ x, y: y + 1 });
+  const isLand = (pos: Pos) => map.contains(pos) && !isWater(s, map.at(pos));
+  const isNarrowAcross = isLand({ x: x - 1, y }) && isLand({ x: x + 1, y });
+  const isNarrowAlong = isLand({ x, y: y - 1 }) && isLand({ x, y: y + 1 });
   return isNarrowAcross || isNarrowAlong;
 }
 
@@ -123,7 +119,7 @@ function addShallowWater(s: GameState, map: Grid<number>): number {
 function addIce(s: GameState, map: Grid<number>): number {
   const isSolidLand = (pos: Pos) => !isWater(s, map.at(pos)) && map.at(pos) !== TerrainType.ICE;
   const toIce = [...map.cells()]
-    .filter(({ pos, value }) => isWater(s, value) && squareAround(map, pos, 1).some(isSolidLand))
+    .filter(({ pos, value }) => isWater(s, value) && squareArea(map, pos, 1).some(isSolidLand))
     .map(({ pos }) => pos);
   for (const pos of toIce) map.set(pos, TerrainType.ICE);
   return toIce.length;
@@ -131,7 +127,7 @@ function addIce(s: GameState, map: Grid<number>): number {
 
 /** Agua rodeada de agua (3x3) -> agua profunda. */
 function addDeepWater(s: GameState, map: Grid<number>): void {
-  const isAllWater = (pos: Pos) => squareAround(map, pos, 1).every((around) => isWater(s, map.at(around)));
+  const isAllWater = (pos: Pos) => squareArea(map, pos, 1).every((around) => isWater(s, map.at(around)));
   const deep = [...map.cells()].filter(({ pos }) => isAllWater(pos)).map(({ pos }) => pos);
   for (const pos of deep) map.set(pos, TerrainType.DEEP_WATER);
 }
@@ -270,7 +266,7 @@ const CONTROL_SCORE_NOISE = 1.5;
 const MAX_CONTROL_SCORE = 4;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
-  const zone = squareAround(mapGrid(s), center, s.rules.controlRadius);
+  const zone = squareArea(mapGrid(s), center, s.rules.controlRadius);
   return zone.filter((pos) => isWalkable(s, terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 

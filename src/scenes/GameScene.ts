@@ -1083,7 +1083,7 @@ export class GameScene extends Phaser.Scene {
       moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
       commit: (tile, opts) => this.moves.commit(tile, opts),
       groupMove: (goal) => this.moves.groupMove(goal),
-      giveOrder: (unit, goal) => this.moves.giveOrder(unit, goal),
+      giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
       clearUndo: () => this.moves.clearUndo(),
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
@@ -1136,7 +1136,7 @@ export class GameScene extends Phaser.Scene {
       updateTrail: (tile) => this.moves.followCursor(tile),
       intentAt: (tile) => this.moves.intentAt(tile),
       refresh: () => this.refresh(),
-      giveOrder: (unit, goal) => this.moves.giveOrder(unit, goal),
+      giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
       commit: (tile, opts) => this.moves.commit(tile, opts),
     });
   }

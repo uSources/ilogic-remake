@@ -44,8 +44,8 @@ export const orders: Translation<typeof es> = {
   detachedMany: 'detached',
   detachedHint: 'On their own with another order; once done they rejoin the squad',
   groupMoveHint: 'Move: pick the destination',
-  orderArrives: 'A unit with an order can reach it this turn: move it yourself, with its full movement',
-  orderSet: 'Order given: it will advance on its own every turn (move it yourself to cancel)',
-  orderUnreachable: 'It cannot get there',
+  travelArrives: 'A unit with an order can reach it this turn: move it yourself, with its full movement',
+  travelSet: 'Order given: it will advance on its own every turn (move it yourself to cancel)',
+  travelUnreachable: 'It cannot get there',
   groupSelected: 'units selected: click where to go; right-click for an order (Esc to cancel)',
 };

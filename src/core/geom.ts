@@ -77,12 +77,16 @@ export function* diamond(board: GridBounds, center: Pos, minRadius: number, maxR
 }
 
 /**
- * Casillas del cuadrado de lado 2*radius+1 alrededor de `center` (columna a columna), dentro del mapa
- * o no: quien llama filtra si hace falta. Areas de habilidades y zonas de los puntos de control.
+ * Casillas del cuadrado de lado 2*radius+1 alrededor de `center` (columna a columna) que caen dentro
+ * de `board`. Areas de habilidades, zonas de los puntos de control y alrededores en el generador.
  */
-export function squareArea(center: Pos, radius: number): Pos[] {
+export function squareArea(board: GridBounds, center: Pos, radius: number): Pos[] {
   const tiles: Pos[] = [];
-  for (let dx = -radius; dx <= radius; dx++) for (let dy = -radius; dy <= radius; dy++) tiles.push({ x: center.x + dx, y: center.y + dy });
+  for (let dx = -radius; dx <= radius; dx++)
+    for (let dy = -radius; dy <= radius; dy++) {
+      const tile = { x: center.x + dx, y: center.y + dy };
+      if (board.contains(tile)) tiles.push(tile);
+    }
   return tiles;
 }
 

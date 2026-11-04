@@ -178,7 +178,7 @@ export class TurnFlow {
     this.backToPlayer(saved);
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
     this.showReport(report, ordersDone);
-    await this.runOrders();
+    await this.runTravels();
   }
 
   /** La partida sigue: no se ha cambiado por otra ni acaba de terminar (si termina, empieza el final). */
@@ -283,31 +283,31 @@ export class TurnFlow {
     this.backToPlayer(saved);
   }
 
-  /** Al empezar el turno: las unidades con orden avanzan solas (y pueden seguir actuando despues). */
-  async runOrders(): Promise<void> {
+  /** Al empezar el turno: las unidades de viaje (travelTo) avanzan solas (y pueden seguir actuando despues). */
+  async runTravels(): Promise<void> {
     const host = this.host;
     const movers = host.state.units.filter((unit) => isReadyOwnUnit(unit) && unit.travelTo);
     const arrived: Unit[] = [];
     const match = host.match;
     for (const unit of movers) {
       if (match !== host.match) return;
-      if (await this.followOrder(unit)) arrived.push(unit);
+      if (await this.advanceTravel(unit)) arrived.push(unit);
     }
     const firstArrived = arrived[0];
     if (firstArrived) {
       host.view.cursor = posOf(firstArrived);
       host.view.ensureVisible(firstArrived, ARRIVED_MARGIN);
-      showToast(t('orderArrives'));
+      showToast(t('travelArrives'));
     }
     if (movers.length) host.refresh();
   }
 
   /**
-   * Un turno de camino hacia el destino de la orden, que se cumple al llegar o si le tienden una
+   * Un turno de camino hacia el destino del viaje, que acaba al llegar o si le tienden una
    * emboscada. Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno
    * en las ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
    */
-  private async followOrder(unit: Unit): Promise<boolean> {
+  private async advanceTravel(unit: Unit): Promise<boolean> {
     const host = this.host;
     const goal = unit.travelTo!;
     if (samePos(unit, goal)) {

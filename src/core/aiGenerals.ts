@@ -15,6 +15,7 @@ import type { GeneralEffect } from './content';
 
 import { applies, chargeStars, generalOf, useAbility } from './generals';
 import { posKey, squareArea } from './geom';
+import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
 import type { GameEvent, GameState, Pos, Team } from './model';
 import { maxBy } from './util/pick';
@@ -35,11 +36,11 @@ interface ValuedTarget {
 const lifeValue = (s: GameState, life: number, type: number): number => (life * tablesOf(s).UNIT.cost[type]!) / 100;
 
 /** Las casillas en las que se puede centrar un area de `radius` que toque a alguno de `enemies`, sin repetir. */
-function areaCentersTouching(enemies: readonly Pos[], radius: number): Pos[] {
+function areaCentersTouching(s: GameState, enemies: readonly Pos[], radius: number): Pos[] {
   const seen = new Set<string>();
   const centers: Pos[] = [];
   for (const enemy of enemies)
-    for (const center of squareArea(enemy, radius)) {
+    for (const center of squareArea(mapGrid(s), enemy, radius)) {
       if (seen.has(posKey(center))) continue;
       seen.add(posKey(center));
       centers.push(center);
@@ -60,10 +61,10 @@ export function bestAreaTarget(
   const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && visible.at(unit));
   const lifeTaken = (life: number) => Math.max(0, Math.min(damage, life - minLife));
   const valueAt = (center: Pos): number => {
-    const area = new Set(squareArea(center, radius).map(posKey));
+    const area = new Set(squareArea(mapGrid(s), center, radius).map(posKey));
     return enemies.reduce((total, enemy) => total + (area.has(posKey(enemy)) ? lifeValue(s, lifeTaken(enemy.life), enemy.type) : 0), 0);
   };
-  const options = areaCentersTouching(enemies, radius).map((target) => ({ target, value: valueAt(target) }));
+  const options = areaCentersTouching(s, enemies, radius).map((target) => ({ target, value: valueAt(target) }));
   return maxBy(options, (option) => option.value);
 }
 

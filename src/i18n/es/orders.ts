@@ -42,8 +42,8 @@ export const orders = {
   detachedMany: 'destacadas',
   detachedHint: 'Van por su cuenta con otra orden; al cumplirla vuelven con la escuadra',
   groupMoveHint: 'Mover: elige el destino',
-  orderArrives: 'Una unidad con orden ya llega este turno: muévela tú, con todo su movimiento',
-  orderSet: 'Orden dada: irá avanzando sola cada turno (muévela tú para cancelarla)',
-  orderUnreachable: 'No puede llegar ahí',
+  travelArrives: 'Una unidad con orden ya llega este turno: muévela tú, con todo su movimiento',
+  travelSet: 'Orden dada: irá avanzando sola cada turno (muévela tú para cancelarla)',
+  travelUnreachable: 'No puede llegar ahí',
   groupSelected: 'unidades elegidas: pulsa adónde ir; clic derecho para una orden (Esc para cancelar)',
 };

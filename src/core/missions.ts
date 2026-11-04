@@ -9,10 +9,10 @@
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
-import type { ContentTables, GameContent } from './content';
+import { walkableFor, type ContentTables, type GameContent } from './content';
 import { rulesWith } from './data';
 import { tablesOf } from './gameContent';
-import { walkableFor } from './content';
+import { deepFreeze } from './util/freeze';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
 import type { GameState, Pos, RulesConfig, Team } from './model';
@@ -145,7 +145,8 @@ export function checkMission(m: MissionDef, content: GameContent): string[] {
   ];
 }
 
-export const MISSIONS: MissionDef[] = [
+/** Las misiones de la campaña, congeladas: nadie las cambia mientras se juega. */
+export const MISSIONS: readonly MissionDef[] = deepFreeze([
   {
     id: 'tutorial',
     tutorial: true,
@@ -481,6 +482,6 @@ export const MISSIONS: MissionDef[] = [
     funds: [8000, 14000],
     objective: { kind: 'hq' },
   },
-];
+]);
 
 export const missionById = (id: string): MissionDef | undefined => MISSIONS.find((mission) => mission.id === id);

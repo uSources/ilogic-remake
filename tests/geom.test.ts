@@ -52,8 +52,9 @@ describe('geometria', () => {
     ]);
   });
   it('area cuadrada y clave de casilla', () => {
-    expect(squareArea({ x: 0, y: 0 }, 1)).toHaveLength(9);
-    expect(squareArea({ x: 5, y: 5 }, 0)).toEqual([{ x: 5, y: 5 }]);
+    expect(squareArea(MAP, { x: 5, y: 5 }, 1)).toHaveLength(9);
+    expect(squareArea(MAP, { x: 0, y: 0 }, 1)).toHaveLength(4); // la esquina: solo lo de dentro
+    expect(squareArea(MAP, { x: 5, y: 5 }, 0)).toEqual([{ x: 5, y: 5 }]);
     expect(posKey({ x: 3, y: 7 })).toBe('3,7');
   });
 });

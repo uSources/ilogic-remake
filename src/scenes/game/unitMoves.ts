@@ -217,19 +217,19 @@ export class UnitMoves {
     h.openUnitMenu();
   }
 
-  /** Orden de varios turnos: la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
-  async giveOrder(unit: Unit, goal: Pos): Promise<void> {
+  /** Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
+  async giveTravel(unit: Unit, goal: Pos): Promise<void> {
     const h = this.h;
     delete unit.standingOrder;
     const range = this.session?.range ?? moveRange(h.state, unit);
     const dest = stepToward(h.state, unit, goal, range);
     if (!dest) {
-      showToast(t('orderUnreachable'));
+      showToast(t('travelUnreachable'));
       return h.toMap();
     }
     this.clearUndo();
-    unit.travelTo = { ...goal };
-    showToast(t('orderSet'));
+    unit.travelTo = posOf(goal);
+    showToast(t('travelSet'));
     const ghost = unitKey(h.scene.textures, h.state, unit);
     const path = moveUnit(h.state, unit, dest, range);
     if (this.session) this.session.range = null;

@@ -72,7 +72,7 @@ export interface OrderHost {
   moveCursorTo(p: Pos, follow: boolean): void;
   commit(t: Pos, opts?: { drop?: boolean; wait?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
-  giveOrder(u: Unit, goal: Pos): Promise<void>;
+  giveTravel(u: Unit, goal: Pos): Promise<void>;
   clearUndo(): void;
   afterAction(): void;
   checkEnd(): boolean;
@@ -97,7 +97,7 @@ export class Orders {
       moveCursorTo: (p, follow) => h.moveCursorTo(p, follow),
       commit: (at, opts) => h.commit(at, opts),
       groupMove: (goal) => h.groupMove(goal),
-      giveOrder: (unit, goal) => h.giveOrder(unit, goal),
+      giveTravel: (unit, goal) => h.giveTravel(unit, goal),
       pickOrderTarget: (kind, units, fromUnitMenu) => this.start(kind, units, fromUnitMenu),
       placeOrder: (kind, units, fromUnitMenu, at) => {
         this.ordering = { kind, uids: uidsOf(units), single: fromUnitMenu };
