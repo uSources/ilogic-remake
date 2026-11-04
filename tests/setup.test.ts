@@ -41,6 +41,13 @@ describe('nueva partida: tamaños de mapa', () => {
     expect(codeToSeed('ZZZZZZZZ')).toBeNull();
   });
 
+  it('una partida guardada se carga con sus propias reglas, no con las de siempre', () => {
+    const rules = { ...DEFAULT_RULES, counterattack: false, fog: false, upkeep: 0.25 };
+    const s = generateGame(seededRng(3), { size: 20, rules });
+    expect(s.rules).toEqual(rules);
+    expect(deserialize(serialize(s))!.rules).toEqual(rules);
+  });
+
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
     const s = generateGame(seededRng(7), { size: 40 });
     s.setup = { seed: 7, size: 40, theme: null };

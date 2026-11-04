@@ -5,6 +5,7 @@
  */
 import { BUILDING_TYPES, DEFAULT_RULES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES } from './data';
 import { generalDef } from './generals';
+import { missionById, missionRules } from './missions';
 import { mapGrid } from './mapGrid';
 import { isInside, type GridSize } from './util/grid';
 import { sanitizeStats } from './stats';
@@ -225,6 +226,15 @@ const isOptionalBoolean = (v: unknown): boolean => v === undefined || typeof v =
 const isFraction = (v: unknown): boolean => typeof v === 'number' && v >= 0 && v <= 1;
 
 /** Las reglas guardadas son validas (las que faltan, por ser de antes, valen: ver fillMissingRules). */
+/**
+ * [CAMBIO] Partidas guardadas sin reglas. Antes las misiones no las guardaban (fallo K1: al cargar se
+ * jugaban con las de escaramuza): se recuperan las de su mision. Las demas, las de siempre.
+ */
+function rulesOfUnsavedGame(s: GameState): RulesConfig {
+  const mission = s.mission ? missionById(s.mission.id) : undefined;
+  return mission ? missionRules(mission) : { ...DEFAULT_RULES };
+}
+
 function isValidRules(rules: Partial<RulesConfig>): boolean {
   const optionalSwitches = [
     rules.veterancy,
@@ -280,11 +290,14 @@ function fillMissingRules(rules: Partial<RulesConfig>): void {
   rules.controlRadius ??= 0;
 }
 
-/** Las reglas de la partida: las guardadas (completadas) o, en las de antes de guardarlas, las de siempre. */
+/**
+ * Las reglas de la partida, que viajan con ella: las guardadas (completadas con las que no existian
+ * al guardarla) o, si no se guardaron, las suyas: las de su mision o las de siempre.
+ */
 function readRules(s: GameState): boolean {
   const saved = s.rules as Partial<RulesConfig> | undefined;
   if (saved === undefined) {
-    s.rules = { ...DEFAULT_RULES };
+    s.rules = rulesOfUnsavedGame(s);
     return true;
   }
   if (!isValidRules(saved)) return false;

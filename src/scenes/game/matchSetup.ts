@@ -3,7 +3,6 @@
  * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
 import { DEFAULT_RULES } from '../../core/data';
-import type { RulesConfig } from '../../core/model';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
 import { generateGame } from '../../core/mapgen';
@@ -36,7 +35,7 @@ export function startMatch(data: GameStartData): MatchStart {
   const loaded = saved ?? given;
   const corruptSave = (data.mode === 'load' || data.mode === 'state') && !loaded;
   if (corruptSave) deleteSave();
-  const state = lab ? labMatch(lab) : loaded ? withCurrentRules(loaded) : (missionMatch(data) ?? newMatch(data));
+  const state = lab ? labMatch(lab) : loaded ? loaded : (missionMatch(data) ?? newMatch(data));
   ensureWeather(state);
   return { state, lab, fromSave: !!saved, corruptSave };
 }
@@ -48,28 +47,6 @@ function readSavedGame(): GameState | null {
 
 function labMatch(lab: LabOptions): GameState {
   return labState(lab, lab.play);
-}
-
-/**
- * Solo se guardan los ajustes de la partida; las reglas son siempre las actuales (las partidas
- * antiguas con las reglas de 2013 pasan a jugarse con estas).
- */
-function withCurrentRules(state: GameState): GameState {
-  state.rules = { ...DEFAULT_RULES, ...savedSettings(state.rules) };
-  return state;
-}
-
-function savedSettings(rules: RulesConfig): Partial<RulesConfig> {
-  return {
-    initialFunds: rules.initialFunds,
-    maxUnits: rules.maxUnits,
-    incomeScale: rules.incomeScale,
-    fog: rules.fog,
-    dayLimit: rules.dayLimit,
-    commandPoints: rules.commandPoints,
-    upkeep: rules.upkeep,
-    weather: rules.weather ?? DEFAULT_RULES.weather,
-  };
 }
 
 function missionMatch(data: GameStartData): GameState | null {
