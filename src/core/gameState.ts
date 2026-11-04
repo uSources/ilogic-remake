@@ -3,14 +3,13 @@
  * generador de mapas, las misiones, el laboratorio, las herramientas y los tests.
  */
 import type { GameContent } from './content';
-import { withContent } from './gameContent';
 import type { GameState, RulesConfig } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */
 export interface NewGameStateOptions {
   /** Terreno `map[x][y]`: su tamaño es el de la partida. */
   map: number[][];
-  rules: RulesConfig;
+  rules: Readonly<RulesConfig>;
   /** Contenido con el que se juega (unidades, edificios, terreno...): `defaultContent()` o una variante. */
   content: GameContent;
   /** Tema del mapa (0 = llanura). */
@@ -22,7 +21,7 @@ export interface NewGameStateOptions {
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido. */
 export function newGameState(options: NewGameStateOptions): GameState {
   const { map, rules } = options;
-  const s: GameState = {
+  return {
     version: 1,
     map,
     theme: options.theme ?? 0,
@@ -31,7 +30,8 @@ export function newGameState(options: NewGameStateOptions): GameState {
     buildings: [],
     nextUid: 1,
     day: 1,
-    rules,
+    // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
+    rules: { ...rules },
+    content: options.content,
   };
-  return withContent(s, options.content);
 }

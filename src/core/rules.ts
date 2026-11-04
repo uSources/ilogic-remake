@@ -25,7 +25,20 @@
  * | `round` | fin de ronda |
  * | `outcome` | victoria, derrota, objetivos de mision |
  */
-export { unitById, unitAt, buildingAt, occupancy, canWalk, isWalkable, teamUnits, freeSlot, cargoUnits } from './rules/queries';
+export {
+  unitById,
+  unitAt,
+  buildingAt,
+  occupancy,
+  canWalk,
+  isWalkable,
+  teamUnits,
+  freeSlot,
+  cargoUnits,
+  movementOf,
+  canMoveOn,
+  terrainMoveCost,
+} from './rules/queries';
 export { visionOf, visibility } from './rules/visibility';
 export {
   capturePointsOf,

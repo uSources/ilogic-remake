@@ -16,6 +16,7 @@ import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';
 import { endRound, outcome } from '@core/rules';
+import { serialize } from '@core/save';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState, RulesConfig, Team } from '@core/model';
 
@@ -80,7 +81,7 @@ function playScenario(scenario: Scenario): string {
       if (isOver()) break;
     }
     endRound(s);
-    record(s);
+    hash.update(serialize(s));
   }
   record(outcome(s));
   return hash.digest('hex').slice(0, 16);

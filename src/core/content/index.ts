@@ -28,6 +28,7 @@ import { buildUnitTables, validateUnits } from './units';
 import { buildWeatherTables, validateWeather, type WeatherDef } from './weather';
 
 export * from './types';
+export { moveCostFor, walkableFor } from './movement';
 export type { AiWeights } from './ai';
 export type { WeatherDef } from './weather';
 export type { GeneralAbilityDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';
@@ -109,6 +110,12 @@ export type ContentTables = ReturnType<typeof buildTables>;
 export interface GameContent {
   readonly files: Content;
   readonly tables: ContentTables;
+}
+
+declare module '../model/state' {
+  /** El contenido de una partida (`GameState.content`) es un GameContent. */
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- solo le da su forma
+  interface MatchContent extends GameContent {}
 }
 
 /** Lee, valida y convierte el contenido (congelado). Si algo esta mal, lanza un error que dice que. */

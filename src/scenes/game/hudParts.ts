@@ -6,7 +6,7 @@
 import { posKey } from '../../core/geom';
 import type Phaser from 'phaser';
 import { defaultContent } from '../../core/content/default';
-import { movementOf } from '../../core/gameContent';
+import { movementOf } from '../../core/rules';
 import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';

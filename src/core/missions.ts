@@ -11,7 +11,8 @@
  */
 import type { ContentTables, GameContent } from './content';
 import { rulesWith } from './data';
-import { tablesOf, walkableFor } from './gameContent';
+import { tablesOf } from './gameContent';
+import { walkableFor } from './content';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
 import type { GameState, Pos, RulesConfig, Team } from './model';

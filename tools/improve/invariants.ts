@@ -5,7 +5,8 @@
  */
 import { saveContext } from '@core/defaultGames';
 import { MAX_LIFE } from '@core/data';
-import { canMoveOn, contentOf, movementOf, tablesOf } from '@core/gameContent';
+import { contentOf, tablesOf } from '@core/gameContent';
+import { canMoveOn, movementOf } from '@core/rules';
 import { posKey } from '@core/geom';
 import { mapGrid, terrainAt } from '@core/mapGrid';
 import { commandUsed } from '@core/rules';

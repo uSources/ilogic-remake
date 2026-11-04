@@ -3,7 +3,8 @@
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
-import { movementOf, tablesOf, weightsOf } from '../gameContent';
+import { tablesOf, weightsOf } from '../gameContent';
+import { movementOf } from '../rules/queries';
 import { samePos } from '../geom';
 import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';

@@ -3,7 +3,8 @@
  * (Building.Spawn).
  */
 
-import { movementOf, tablesOf } from '../gameContent';
+import { tablesOf } from '../gameContent';
+import { movementOf } from './queries';
 import type { Building, GameState, Team, Unit } from '../model';
 import { newUnit } from './lifecycle';
 import { isWalkable, teamUnits, unitAt } from './queries';

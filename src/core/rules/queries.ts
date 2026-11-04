@@ -2,13 +2,29 @@
  * Consultas basicas sobre el estado: que hay en una casilla, por donde se puede andar, de quien es
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
-import { canMoveOn } from '../gameContent';
+import { moveCostFor, walkableFor } from '../content';
 import { type MoveType } from '../data';
+import { tablesOf } from '../gameContent';
 import { createLayer, isOnBoard, terrainAt } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { samePos } from '../geom';
 import type { Building, GameState, Pos, Team, Unit } from '../model';
+
+/** Tipo de movimiento de un tipo de unidad. */
+export function movementOf(s: GameState, unitType: number): MoveType {
+  return tablesOf(s).UNIT.movtype[unitType]!;
+}
+
+/** Ese tipo de movimiento puede pasar por ese terreno. */
+export function canMoveOn(s: GameState, moveType: MoveType, terrain: number): boolean {
+  return walkableFor(tablesOf(s), moveType, terrain);
+}
+
+/** Lo que le cuesta a ese tipo de movimiento entrar en ese terreno (solo cuenta con la regla terrainCost). */
+export function terrainMoveCost(s: GameState, moveType: MoveType, terrain: number): number {
+  return moveCostFor(tablesOf(s), moveType, terrain);
+}
 
 export function unitById(s: GameState, uid: number | null): Unit | undefined {
   return uid === null ? undefined : s.units.find((unit) => unit.uid === uid);

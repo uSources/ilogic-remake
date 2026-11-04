@@ -7,7 +7,15 @@ import type { GameStats } from './stats';
 import type { Unit } from './unit';
 import type { WeatherState } from './weather';
 
-/** Una partida. Todo es serializable a JSON (para guardar). */
+/**
+ * El contenido con el que se juega una partida (unidades, edificios, terreno...). Su forma la pone
+ * content/index.ts (`GameContent`) ampliando esta interfaz con `declare module`: asi el modelo nombra
+ * el campo sin depender del contenido.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- la completa content/index.ts
+export interface MatchContent {}
+
+/** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   version: 1;
   /** Terreno: map[x][y] = indice 0..14 (ver TERRAIN_NAMES). El tamaño del mapa sale de aqui. */
@@ -42,7 +50,15 @@ export interface GameState {
    * nadie, sigue siendo de quien era y paga.
    */
   controlPoints?: ControlPoint[];
+  /**
+   * Contenido con el que se juega. No se guarda: `serialize` escribe el resto (`SavedGameState`) y lo
+   * ponen `newGameState` y `deserialize`. Copiar la partida con `cloneState` (lo comparte).
+   */
+  readonly content: MatchContent;
 }
+
+/** Lo que se guarda de una partida: todo menos su contenido. */
+export type SavedGameState = Omit<GameState, 'content'>;
 
 /** Opciones de una partida nueva que no son reglas: mapa. */
 export interface GameSetup {

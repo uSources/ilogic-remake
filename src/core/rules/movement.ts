@@ -2,7 +2,8 @@
  * Movimiento y caminos: alcance de cada unidad, caminos trazados, emboscadas, distancia por tierra
  * y el evento de mover.
  */
-import { movementOf, tablesOf, terrainMoveCost } from '../gameContent';
+import { tablesOf } from '../gameContent';
+import { movementOf, terrainMoveCost } from './queries';
 import { type MoveType } from '../data';
 import { isRanged, zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';

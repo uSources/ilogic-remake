@@ -8,7 +8,8 @@
  */
 import type Phaser from 'phaser';
 import { MoveType } from '../../core/data';
-import { movementOf, tablesOf } from '../../core/gameContent';
+import { tablesOf } from '../../core/gameContent';
+import { movementOf } from '../../core/rules';
 import { abilityArea, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';

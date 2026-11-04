@@ -9,14 +9,14 @@
  * El orden de los pasos y de las llamadas a `rng` dentro de cada uno es parte del resultado: con la
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
-import { canMoveOn, movementOf, tablesOf } from './gameContent';
+import { tablesOf } from './gameContent';
 import { MAPGEN, PROBS_PER_ADJ, TERRAIN_TYPES, TILE_BASE_PROBS, TerrainType, MoveType } from './data';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
 import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';
 import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
-import { buildingAt, unitAt } from './rules/queries';
+import { buildingAt, canMoveOn, movementOf, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
 import type { GameContent } from './content';
 import type { GameState, Pos, Rng, RulesConfig, Team } from './model';
@@ -37,7 +37,7 @@ const BUILDING_PICK_TRIES = 100;
 const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP_SIDE * ORIGINAL_MAP_SIDE);
 
 function emptyState(size: number, opts: NewMapOptions): GameState {
-  return newGameState({ map: blankMap(size), rules: { ...opts.rules }, content: opts.content });
+  return newGameState({ map: blankMap(size), rules: opts.rules, content: opts.content });
 }
 
 const isWater = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.iswater[terrain]!;

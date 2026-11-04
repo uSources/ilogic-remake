@@ -7,7 +7,7 @@
  */
 import type Phaser from 'phaser';
 import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
-import { movementOf } from '../../core/gameContent';
+import { movementOf } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { canWalk, unitAt, unitById, wait } from '../../core/rules';

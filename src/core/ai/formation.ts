@@ -5,7 +5,8 @@
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
 
-import { movementOf, tablesOf, weightsOf } from '../gameContent';
+import { tablesOf, weightsOf } from '../gameContent';
+import { movementOf } from '../rules/queries';
 import { manhattan } from '../geom';
 import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
 import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders';

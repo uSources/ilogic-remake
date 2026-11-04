@@ -14,5 +14,5 @@ export type { Objective, Outcome } from './objective';
 export type { CombatInfo, GameEvent, GameEventKind, GameEventOf } from './events';
 export type { RulesConfig } from './rules';
 export type { GameStats } from './stats';
-export type { GameSetup, GameState } from './state';
+export type { GameSetup, GameState, MatchContent, SavedGameState } from './state';
 export type { Rng } from './random';

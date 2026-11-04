@@ -5,7 +5,7 @@ import { buildTables, validateContent, type Content } from '@core/content';
 import { MOVEMENTS, MoveType } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { TERRAIN_NAMES, TerrainType } from '@core/data';
-import { walkableFor } from '@core/gameContent';
+import { walkableFor } from '@core/content';
 
 const { UNIT, UNIT_NAMES, UNIT_ART, BUILDING_NAMES, MOVE_COST } = defaultContent().tables;
 

@@ -255,7 +255,7 @@ describe('escuadras', () => {
     const back = deserialize(old, saveContext())!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
     expect(back.units.find((unit) => unit.uid === b.uid)!.standingOrder).toEqual({ kind: 'defend', at: { x: 6, y: 5 } });
-    expect(JSON.stringify(back)).not.toContain('"command"');
+    expect(serialize(back)).not.toContain('"command"');
     expect(q.id).toBe(back.squads![0]!.id);
   });
 

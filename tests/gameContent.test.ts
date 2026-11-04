@@ -9,7 +9,7 @@ import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { buyOptions, endRound } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import type { GameEvent, GameState } from '@core/model';
+import type { GameEvent, GameState, SavedGameState } from '@core/model';
 
 /** Contenido del juego con los tanques al doble de precio (como una variante de equilibrio). */
 function expensiveTanks(): GameContent {
@@ -63,8 +63,17 @@ describe('contenido de cada partida', () => {
     expect(contentOf(cloneState(s))).toBe(variant);
   });
 
-  it('una partida sin contenido lo dice al usarla (no juega con uno escondido)', () => {
-    const bare = JSON.parse(serialize(newMatch(defaultContent()))) as GameState;
-    expect(() => tablesOf(bare)).toThrow(/sin contenido/);
+  it('el contenido es un campo de la partida: sin el no compila, y serialize no lo escribe', () => {
+    const s = newMatch(defaultContent());
+    const saved = JSON.parse(serialize(s)) as SavedGameState;
+    expect(saved).not.toHaveProperty('content');
+    expect(Object.keys(saved)).toEqual(Object.keys(s).filter((key) => key !== 'content'));
+    // @ts-expect-error lo guardado no es una partida: le falta su contenido
+    const bare: GameState = saved;
+    expect(bare).toBe(saved);
+    // Una copia a mano lo conserva (es un campo normal) y cloneState lo comparte sin copiarlo.
+    expect({ ...s }.content).toBe(s.content);
+    expect(cloneState(s).content).toBe(s.content);
+    expect(cloneState(s)).not.toBe(s);
   });
 });

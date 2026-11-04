@@ -1,7 +1,8 @@
 /**
  * Union de unidades iguales y transporte (subir y bajar pasajeros).
  */
-import { movementOf, tablesOf } from '../gameContent';
+import { tablesOf } from '../gameContent';
+import { movementOf } from './queries';
 import { MAX_LIFE } from '../data';
 import { manhattan, neighbors4, samePos, posOf } from '../geom';
 import { mapGrid } from '../mapGrid';

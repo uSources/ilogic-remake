@@ -3,7 +3,7 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { tablesOf, withContent } from './gameContent';
+import { savedPart, tablesOf } from './gameContent';
 import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, rulesWith } from './data';
 import { generalDef } from './generals';
 import { mapGrid } from './mapGrid';
@@ -12,7 +12,7 @@ import { sanitizeStats } from './stats';
 import { assignKeys } from './squads/naming';
 import { liftStandingOrder } from './squads/standingOrders';
 import { MIGRATIONS, type SaveContext } from './saveMigrations';
-import type { GameState, Pos, RulesConfig, Unit } from './model';
+import type { GameState, Pos, RulesConfig, SavedGameState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
 
@@ -35,7 +35,7 @@ const isStandingOrder = (board: GridBounds, c: unknown): boolean =>
   !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos(board, (c as { at: unknown }).at);
 
 export function serialize(s: GameState): string {
-  return JSON.stringify(s);
+  return JSON.stringify(savedPart(s));
 }
 
 /**
@@ -70,10 +70,12 @@ function parseState(json: string, context: SaveContext): GameState | null {
     return null;
   }
   if (typeof raw !== 'object' || raw === null) return null;
-  const s = raw as GameState;
-  if (s.version !== 1) return null;
+  const saved = raw as SavedGameState;
+  if (saved.version !== 1) return null;
+  // El contenido no se guarda: es el de quien lee (si el JSON trae un "content", se ignora).
+  const s: GameState = { ...saved, content: context.content };
   for (const migration of MIGRATIONS) migration.apply(s, context);
-  return withContent(s, context.content);
+  return s;
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */

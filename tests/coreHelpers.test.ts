@@ -105,7 +105,7 @@ describe('partidas guardadas', () => {
 
   it('ida y vuelta sin perder nada', () => {
     const s = sample();
-    expect(deserialize(serialize(s), saveContext())).toEqual(JSON.parse(serialize(s)));
+    expect(serialize(deserialize(serialize(s), saveContext())!)).toBe(serialize(s));
   });
 
   it.each([
