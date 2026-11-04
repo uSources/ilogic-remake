@@ -9,7 +9,8 @@ import { missionById, missionRules } from './missions';
 import { mapGrid } from './mapGrid';
 import { isInside, type GridSize } from './util/grid';
 import { sanitizeStats } from './stats';
-import { assignKeys, liftStandingOrder } from './squads';
+import { assignKeys } from './squads/naming';
+import { liftStandingOrder } from './squads/standingOrders';
 import type { GameState, Pos, RulesConfig, StandingOrder, Unit } from './model';
 
 const isInt = (v: unknown, min: number, max: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;

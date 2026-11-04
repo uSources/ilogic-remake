@@ -7,7 +7,7 @@
 import { AI, UNIT, Movement } from '../data';
 import { manhattan } from '../geom';
 import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
-import { effectiveStandingOrder, sameFormation } from '../squads';
+import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders';
 import type { GameState, Pos, Unit } from '../model';
 import { compareKeys, maxBy, minBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';

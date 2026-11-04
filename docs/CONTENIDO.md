@@ -227,7 +227,7 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
   (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
   las cumple la misma IA que el enemigo (`assistTurn`/`standingOrderTurn` en `src/core/ai/standingOrders.ts`); escuadras
-  y ordenes estan en `src/core/squads.ts`.
+  y ordenes estan en `src/core/squads/` (fachada `squads.ts`).
 
 Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas tablas por nombre:
 `--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60

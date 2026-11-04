@@ -9,7 +9,7 @@ import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
-import { effectiveStandingOrder, finishStandingOrder } from '../squads';
+import { effectiveStandingOrder, finishStandingOrder } from '../squads/standingOrders';
 import type { StandingOrderKind, GameEvent, GameState, Pos, Rng, Team, Unit } from '../model';
 import { aiCtx, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';

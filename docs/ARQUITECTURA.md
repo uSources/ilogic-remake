@@ -289,7 +289,7 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   seleccion nueva (`clickSelect`, `boxSelect`); la escena solo la aplica (`applySelection`: una unidad
   que puede actuar queda elegida para moverla; varias forman el grupo, con aro a los pies). Los
   grupos con numero son escuadras con `Squad.key` (`setGroup`, `addToGroup`, `squadByKey` en
-  `core/squads.ts`), y las teclas son la orden `group {n, mode}`.
+  `core/squads/`), y las teclas son la orden `group {n, mode}`.
 - **Raton**: arrastrar con el izquierdo desde una casilla sin unidad propia es recuadro; con el
   derecho o la rueda, mueve el mapa; el derecho sin arrastrar es clic derecho (al soltar). El doble
   clic lo cuenta `PointerGestures` (`TapInfo.count`).

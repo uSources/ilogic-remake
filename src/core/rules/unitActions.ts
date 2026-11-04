@@ -2,7 +2,7 @@
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
 import { UNIT } from '../data';
-import { effectiveStandingOrder } from '../squads';
+import { effectiveStandingOrder } from '../squads/standingOrders';
 import { canFight, isCapturer, isPlayer } from '../util/predicates';
 import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
