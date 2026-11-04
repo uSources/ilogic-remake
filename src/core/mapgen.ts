@@ -77,19 +77,15 @@ function growTerrain(s: GameState, origin: Pos, theme: number, rng: Rng): number
   const map = mapGrid(s);
   const generated = map.createLayer(false);
   // Casilla de origen: solo probabilidad base.
-  map.set(
-    origin,
-    rollTerrain(rng, (terrain) => TILE_BASE_PROBS[theme]![terrain]!),
-  );
+  const originTerrain = rollTerrain(rng, (terrain) => TILE_BASE_PROBS[theme]![terrain]!);
+  map.set(origin, originTerrain);
   let walkable = 0;
   for (let ring = 1; ; ring++) {
     const ringTiles = [...diamond(map, origin, ring, ring)];
     if (ringTiles.length === 0) return walkable;
     for (const pos of ringTiles) {
-      map.set(
-        pos,
-        rollTerrain(rng, (terrain) => terrainChance(map, generated, pos, terrain, theme)),
-      );
+      const rolled = rollTerrain(rng, (terrain) => terrainChance(map, generated, pos, terrain, theme));
+      map.set(pos, rolled);
       generated.set(pos, true);
       if (isWalkable(s, map.at(pos))) walkable++;
     }
