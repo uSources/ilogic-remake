@@ -201,6 +201,11 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 - **Un efecto** (animacion de un momento): una funcion en `fx.ts` o `combatFx.ts` que recibe la escena
   y un `FxHost` (la `MapView`). Las piezas comunes estan en `fxKit.ts` (`sleep`, `tween`, `fxRect`,
   `fxText`) y el dibujo de pixeles en `pixelDraw.ts` (`cornerBrackets`, `frameRect`, `fillRects`).
+  Los de combate reciben un `FxTimeline` (escena + velocidad de las animaciones) y escriben sus
+  esperas a velocidad normal: `timeline.wait(70)`.
+- **La animacion de un `GameEvent` nuevo**: su entrada en `ANIMATORS` (`scenes/game/playback.ts`),
+  una funcion `Animator<'tipo'>` que recibe el `EventStage` (escena, partida, esperas a la velocidad
+  elegida). Sin ella no compila.
 - Colores: `PAL` (los de `hud.css`) y `PAL_MAP` (solo del mapa) en `ui/palette.ts`.
 
 ## Decisiones (y por que)

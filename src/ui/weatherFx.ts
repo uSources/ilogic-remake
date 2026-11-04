@@ -68,10 +68,10 @@ export const STYLES: Record<string, Style> = {
   },
 };
 
-/** Particula nueva en (x, y) de la vista; `r` (0..1) varia su velocidad y su largo. */
-export function spawnParticle(s: Style, x: number, y: number, r: number): Particle {
-  const k = 0.7 + r * 0.6;
-  return { x, y, vx: s.wind * k, vy: s.fall * k, len: s.len * k };
+/** Particula nueva en (x, y) de la vista; `random` (0..1) varia su velocidad y su largo. */
+export function spawnParticle(style: Style, x: number, y: number, random: number): Particle {
+  const variation = 0.7 + random * 0.6;
+  return { x, y, vx: style.wind * variation, vy: style.fall * variation, len: style.len * variation };
 }
 
 /**
@@ -80,11 +80,30 @@ export function spawnParticle(s: Style, x: number, y: number, r: number): Partic
  * altura. Antes volvia siempre por arriba, y con la arena (casi todo viento, casi nada de caida)
  * todas las rayas acababan en una franja en lo alto de la pantalla.
  */
-export function stepParticle(p: Particle, s: Style, dt: number, wobble: number, rnd: () => number): void {
+export function stepParticle(p: Particle, style: Style, dt: number, wobble: number, rnd: () => number): void {
   p.x += (p.vx + wobble) * dt;
   p.y += p.vy * dt;
-  if (p.x > 1.15) Object.assign(p, spawnParticle(s, -0.15 + rnd() * 0.1, rnd() * 1.1 - 0.05, rnd()));
-  else if (p.y > 1.05) Object.assign(p, spawnParticle(s, rnd() * 1.2 - 0.1, -0.05, rnd()));
+  if (p.x > 1.15) Object.assign(p, spawnParticle(style, -0.15 + rnd() * 0.1, rnd() * 1.1 - 0.05, rnd()));
+  else if (p.y > 1.05) Object.assign(p, spawnParticle(style, rnd() * 1.2 - 0.1, -0.05, rnd()));
+}
+
+/** Paso mas largo que se simula (si el juego se para, las particulas no dan un salto enorme). */
+const MAX_STEP_MS = 100;
+/** Las nubes de polvo van a esta parte de la velocidad de las rayas. */
+const DUST_SPEED = 0.45;
+/** Tamaño de cada capa de una nube de polvo respecto a la mayor. */
+const DUST_LAYERS = [1, 0.72, 0.45];
+
+/** Lo que comparten los dibujos de un fotograma del clima. */
+interface WeatherFrame {
+  readonly g: Phaser.GameObjects.Graphics;
+  readonly style: Style;
+  /** Lo que ve la camara, en coordenadas de mundo. */
+  readonly view: Phaser.Geom.Rectangle;
+  /** Un pixel de pantalla en unidades de mundo (los tamaños no crecen con el zoom). */
+  readonly screenPixel: number;
+  /** Segundos desde el fotograma anterior. */
+  readonly dt: number;
 }
 
 export class WeatherFx {
@@ -115,48 +134,68 @@ export class WeatherFx {
   }
 
   update(deltaMs: number): void {
-    const s = this.style;
-    if (!s) return;
-    const cam = this.scene.cameras.main;
-    const v = cam.worldView;
-    const px = 1 / cam.zoom; // un pixel de pantalla en unidades de mundo
+    const style = this.style;
+    if (!style) return;
+    const camera = this.scene.cameras.main;
+    const view = camera.worldView;
     const g = this.g;
     g.clear();
-    g.fillStyle(s.veil, s.veilAlpha);
-    g.fillRect(v.x, v.y, v.width, v.height);
+    g.fillStyle(style.veil, style.veilAlpha);
+    g.fillRect(view.x, view.y, view.width, view.height);
     if (reducedMotion()) return;
-    const dt = Math.min(deltaMs, 100) / 1000;
+    const frame: WeatherFrame = {
+      g,
+      style,
+      view,
+      screenPixel: 1 / camera.zoom,
+      dt: Math.min(deltaMs, MAX_STEP_MS) / 1000,
+    };
+    if (style.dust) this.drawDust(frame, style.dust);
+    this.drawParticles(frame);
+    this.drawLightning(frame);
+  }
+
+  /**
+   * Nubes de polvo: manchas grandes y suaves, mas lentas que las rayas (van detras de ellas).
+   * Tres capas cada vez mas pequeñas: el borde queda suave, en escalones (como el pixel art).
+   */
+  private drawDust({ g, style, view, screenPixel, dt }: WeatherFrame, dust: NonNullable<Style['dust']>): void {
+    g.fillStyle(dust.color, dust.alpha / 3);
+    for (const cloud of this.dust) {
+      stepParticle(cloud, style, dt * DUST_SPEED, 0, Math.random);
+      const width = dust.size * (cloud.len / style.len) * screenPixel;
+      for (const layer of DUST_LAYERS) {
+        g.fillEllipse(view.x + cloud.x * view.width, view.y + cloud.y * view.height, width * layer, width * layer * 0.45);
+      }
+    }
+  }
+
+  /** Gotas, copos o rayas de arena; la nieve se mece un poco de lado a lado. */
+  private drawParticles({ g, style, view, screenPixel, dt }: WeatherFrame): void {
     const wobble = this.id === 'Snow' ? Math.sin(this.scene.time.now / 700) * 0.03 : 0;
-    if (s.dust) {
-      // Nubes de polvo: manchas grandes y suaves, mas lentas que las rayas (van detras de ellas).
-      // Tres capas cada vez mas pequeñas: el borde queda suave, en escalones (como el pixel art).
-      g.fillStyle(s.dust.color, s.dust.alpha / 3);
-      for (const d of this.dust) {
-        stepParticle(d, s, dt * 0.45, 0, Math.random);
-        const w = s.dust.size * (d.len / s.len) * px;
-        for (const k of [1, 0.72, 0.45]) g.fillEllipse(v.x + d.x * v.width, v.y + d.y * v.height, w * k, w * k * 0.45);
-      }
-    }
-    g.lineStyle(Math.max(1, (s.dust ? 2 : 1.5) * px), s.color, s.alpha);
-    g.fillStyle(s.color, s.alpha);
+    g.lineStyle(Math.max(1, (style.dust ? 2 : 1.5) * screenPixel), style.color, style.alpha);
+    g.fillStyle(style.color, style.alpha);
     for (const p of this.particles) {
-      stepParticle(p, s, dt, wobble, Math.random);
-      const wx = v.x + p.x * v.width;
-      const wy = v.y + p.y * v.height;
-      if (s.shape === 'flake') {
-        g.fillRect(wx, wy, 3 * px, 3 * px);
-      } else {
-        // La raya va en la direccion del movimiento.
-        const sp = Math.hypot(p.vx, p.vy) || 1;
-        g.lineBetween(wx, wy, wx - (p.vx / sp) * p.len * px, wy - (p.vy / sp) * p.len * px);
+      stepParticle(p, style, dt, wobble, Math.random);
+      const x = view.x + p.x * view.width;
+      const y = view.y + p.y * view.height;
+      if (style.shape === 'flake') {
+        g.fillRect(x, y, 3 * screenPixel, 3 * screenPixel);
+        continue;
       }
+      // La raya va en la direccion del movimiento.
+      const speed = Math.hypot(p.vx, p.vy) || 1;
+      g.lineBetween(x, y, x - (p.vx / speed) * p.len * screenPixel, y - (p.vy / speed) * p.len * screenPixel);
     }
-    if (s.lightning && Math.random() < s.lightning * dt) this.flash = 1;
-    if (this.flash > 0) {
-      g.fillStyle(PAL.white, 0.35 * this.flash);
-      g.fillRect(v.x, v.y, v.width, v.height);
-      this.flash = Math.max(0, this.flash - dt * 4);
-    }
+  }
+
+  /** Relampago al azar (tormenta): un destello blanco que se apaga en un cuarto de segundo. */
+  private drawLightning({ g, style, view, dt }: WeatherFrame): void {
+    if (style.lightning && Math.random() < style.lightning * dt) this.flash = 1;
+    if (this.flash <= 0) return;
+    g.fillStyle(PAL.white, 0.35 * this.flash);
+    g.fillRect(view.x, view.y, view.width, view.height);
+    this.flash = Math.max(0, this.flash - dt * 4);
   }
 
   destroy(): void {

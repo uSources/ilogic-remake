@@ -82,61 +82,82 @@ export interface UnitMarkObjects {
 }
 
 /** Redibuja las marcas de una unidad. `markArt`: estan las marcas dibujadas (ui/mk_*). */
-export function drawUnitMarks(textures: Phaser.Textures.TextureManager, o: UnitMarkObjects, m: UnitMarkState, markArt: boolean): void {
-  const { rank: r, noHeal, cargo, cmd, detached } = m;
-  const g = o.stars;
+export function drawUnitMarks(
+  textures: Phaser.Textures.TextureManager,
+  objects: UnitMarkObjects,
+  marks: UnitMarkState,
+  markArt: boolean,
+): void {
+  const { noHeal, cargo, cmd, detached } = marks;
+  const g = objects.stars;
   g.clear();
   const cmdKey = cmd ? `ui/cmd_${cmd}` : null;
-  const cmdArt = !!cmdKey && hasImage(textures, cmdKey);
-  o.cmd.setVisible(cmdArt);
+  const hasCmdArt = !!cmdKey && hasImage(textures, cmdKey);
+  objects.cmd.setVisible(hasCmdArt);
   // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
-  if (cmdArt) o.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo && !markArt ? BADGE : 0, 0);
-  if (markArt) {
-    // Abajo a la izquierda: sin cura y carga (10x10); arriba a la derecha: una estrella (8x8) por rango.
-    const list: [string, number, number][] = [];
-    if (noHeal) list.push(['ui/mk_noheal', 0, TILE - BADGE]);
-    if (cargo) list.push(['ui/mk_cargo', noHeal ? BADGE : 0, TILE - BADGE]);
-    for (let i = 0; i < r; i++) list.push(['ui/mk_star', TILE - STAR - i * STAR_STEP, 0]);
-    o.badges.forEach((b, i) => {
-      const mk = list[i];
-      b.setVisible(!!mk);
-      if (mk) b.setTexture(ATLAS, mk[0]).setPosition(mk[1], mk[2]);
-    });
-  } else o.badges.forEach((b) => b.setVisible(false));
-  if (cmd && detached) {
-    // Destacada: raya naranja bajo la placa de la orden (va por su cuenta y luego vuelve).
-    const x = cargo && !markArt ? (cmdArt ? BADGE : 12) : cmdArt ? 0 : 1;
-    g.fillStyle(PAL.ink, 1);
-    g.fillRect(x, cmdArt ? CMD_ICON : 10, cmdArt ? CMD_ICON : 9, 3);
-    g.fillStyle(PAL_MAP.amber, 1);
-    g.fillRect(x + 1, cmdArt ? CMD_ICON + 1 : 11, cmdArt ? CMD_ICON - 2 : 7, 1);
-  }
-  if (cmd && !cmdArt) {
-    // Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado.
-    const x = cargo ? 12 : 1,
-      y = 1;
-    g.fillStyle(PAL.ink, 1);
-    g.fillRect(x, y, 9, 9);
-    g.fillStyle(PAL_MAP.plaque, 1);
-    g.fillRect(x + 1, y + 1, 7, 7);
-    g.fillStyle(PAL.white, 1);
-    for (const [dx, dy] of MISSION_GLYPH[cmd]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
-  }
-  if (noHeal && !markArt) {
-    // Señal de prohibido pequeña: cuadrado rojo con una raya blanca.
-    const x = 1,
-      y = TILE - 8;
-    g.fillStyle(PAL.ink, 1);
-    g.fillRect(x, y, 7, 7);
-    g.fillStyle(PAL.red, 1);
-    g.fillRect(x + 1, y + 1, 5, 5);
-    g.fillStyle(PAL.white, 1);
-    g.fillRect(x + 2, y + 3, 3, 1);
-  }
-  // Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro.
-  for (let i = 0; i < (markArt ? 0 : r); i++) {
-    const x = TILE - 5 - i * 5,
-      y = 1;
+  if (hasCmdArt) objects.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo && !markArt ? BADGE : 0, 0);
+  if (markArt) placeDrawnBadges(objects.badges, marks);
+  else objects.badges.forEach((badge) => badge.setVisible(false));
+  if (cmd && detached) drawDetachedStripe(g, cargo && !markArt, hasCmdArt);
+  if (cmd && !hasCmdArt) drawCommandPlaque(g, cmd, cargo);
+  if (noHeal && !markArt) drawNoHealSign(g);
+  if (!markArt) drawPixelStars(g, marks.rank);
+}
+
+/** Abajo a la izquierda: sin cura y carga (10x10); arriba a la derecha: una estrella (8x8) por rango. */
+function placeDrawnBadges(badges: Phaser.GameObjects.Image[], { rank, noHeal, cargo }: UnitMarkState): void {
+  const placed: { key: string; x: number; y: number }[] = [];
+  if (noHeal) placed.push({ key: 'ui/mk_noheal', x: 0, y: TILE - BADGE });
+  if (cargo) placed.push({ key: 'ui/mk_cargo', x: noHeal ? BADGE : 0, y: TILE - BADGE });
+  for (let i = 0; i < rank; i++) placed.push({ key: 'ui/mk_star', x: TILE - STAR - i * STAR_STEP, y: 0 });
+  badges.forEach((badge, i) => {
+    const mark = placed[i];
+    badge.setVisible(!!mark);
+    if (mark) badge.setTexture(ATLAS, mark.key).setPosition(mark.x, mark.y);
+  });
+}
+
+/**
+ * Destacada: raya naranja bajo la placa de la orden (va por su cuenta y luego vuelve).
+ * `besidePixelCargo`: hay marca de carga de pixeles a la izquierda; `hasCmdArt`: el icono es dibujado.
+ */
+function drawDetachedStripe(g: Phaser.GameObjects.Graphics, besidePixelCargo: boolean, hasCmdArt: boolean): void {
+  const x = besidePixelCargo ? (hasCmdArt ? BADGE : 12) : hasCmdArt ? 0 : 1;
+  g.fillStyle(PAL.ink, 1);
+  g.fillRect(x, hasCmdArt ? CMD_ICON : 10, hasCmdArt ? CMD_ICON : 9, 3);
+  g.fillStyle(PAL_MAP.amber, 1);
+  g.fillRect(x + 1, hasCmdArt ? CMD_ICON + 1 : 11, hasCmdArt ? CMD_ICON - 2 : 7, 1);
+}
+
+/** Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado. */
+function drawCommandPlaque(g: Phaser.GameObjects.Graphics, cmd: CommandKind, cargo: boolean): void {
+  const x = cargo ? 12 : 1;
+  const y = 1;
+  g.fillStyle(PAL.ink, 1);
+  g.fillRect(x, y, 9, 9);
+  g.fillStyle(PAL_MAP.plaque, 1);
+  g.fillRect(x + 1, y + 1, 7, 7);
+  g.fillStyle(PAL.white, 1);
+  for (const [dx, dy] of MISSION_GLYPH[cmd]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
+}
+
+/** Señal de prohibido pequeña (sin cura): cuadrado rojo con una raya blanca, abajo a la izquierda. */
+function drawNoHealSign(g: Phaser.GameObjects.Graphics): void {
+  const x = 1;
+  const y = TILE - 8;
+  g.fillStyle(PAL.ink, 1);
+  g.fillRect(x, y, 7, 7);
+  g.fillStyle(PAL.red, 1);
+  g.fillRect(x + 1, y + 1, 5, 5);
+  g.fillStyle(PAL.white, 1);
+  g.fillRect(x + 2, y + 3, 3, 1);
+}
+
+/** Una "estrella" pixel por rango: rombo dorado de 3x3 con borde oscuro, de derecha a izquierda. */
+function drawPixelStars(g: Phaser.GameObjects.Graphics, rank: number): void {
+  for (let i = 0; i < rank; i++) {
+    const x = TILE - 5 - i * 5;
+    const y = 1;
     g.fillStyle(PAL.ink, 1);
     g.fillRect(x - 1, y, 5, 5);
     g.fillStyle(PAL.gold, 1);

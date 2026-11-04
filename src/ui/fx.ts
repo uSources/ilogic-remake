@@ -47,20 +47,21 @@ export function burst(
   const duration = opts.duration ?? BURST_MS;
   const jobs: Promise<void>[] = [];
   for (let i = 0; i < opts.count; i++) {
-    const a = (i / opts.count) * Math.PI * 2 + Math.random() * 0.6;
-    const r = opts.radius * (0.55 + Math.random() * 0.45);
+    // Repartidos alrededor, con algo de azar en el angulo, la distancia y el tamaño.
+    const angle = (i / opts.count) * Math.PI * 2 + Math.random() * 0.6;
+    const distance = opts.radius * (0.55 + Math.random() * 0.45);
     const color = opts.colors[i % opts.colors.length]!;
-    const s = Math.random() < 0.3 ? size + 1 : size;
-    const sq = fxRect(scene, view, at.x, at.y, s, s, color);
+    const squareSize = Math.random() < 0.3 ? size + 1 : size;
+    const square = fxRect(scene, view, at.x, at.y, squareSize, squareSize, color);
     jobs.push(
       tween(scene, {
-        targets: sq,
-        x: Math.round(at.x + Math.cos(a) * r),
-        y: Math.round(at.y + Math.sin(a) * r),
+        targets: square,
+        x: Math.round(at.x + Math.cos(angle) * distance),
+        y: Math.round(at.y + Math.sin(angle) * distance),
         alpha: { from: 1, to: 0.15 },
         duration,
         ...STEPPED,
-      }).then(() => sq.destroy()),
+      }).then(() => square.destroy()),
     );
   }
   return Promise.all(jobs).then(() => undefined);
@@ -69,13 +70,12 @@ export function burst(
 /** Fotogramas de una animacion dibujada (ui/anim_<name>_<n> del atlas); 0 si no esta. */
 const animFrames = new Map<string, number>();
 export function animFrameCount(scene: Phaser.Scene, name: string): number {
-  let n = animFrames.get(name);
-  if (n === undefined) {
-    n = 0;
-    while (hasImage(scene.textures, `ui/anim_${name}_${n}`)) n++;
-    animFrames.set(name, n);
-  }
-  return n;
+  const known = animFrames.get(name);
+  if (known !== undefined) return known;
+  let count = 0;
+  while (hasImage(scene.textures, `ui/anim_${name}_${count}`)) count++;
+  animFrames.set(name, count);
+  return count;
 }
 
 /**
@@ -89,17 +89,17 @@ export async function playAnim(
   name: string,
   opts: { frameMs: number; scale?: number },
 ): Promise<void> {
-  const n = animFrameCount(scene, name);
-  if (!n) return;
-  const img = scene.add.image(Math.round(at.x), Math.round(at.y), ATLAS, `ui/anim_${name}_0`).setOrigin(0.5);
-  if (opts.scale) img.setScale(opts.scale);
-  view.addFx(img);
-  for (let i = 1; i < n; i++) {
+  const frames = animFrameCount(scene, name);
+  if (!frames) return;
+  const image = scene.add.image(Math.round(at.x), Math.round(at.y), ATLAS, `ui/anim_${name}_0`).setOrigin(0.5);
+  if (opts.scale) image.setScale(opts.scale);
+  view.addFx(image);
+  for (let i = 1; i < frames; i++) {
     await sleep(scene, opts.frameMs);
-    img.setFrame(`ui/anim_${name}_${i}`);
+    image.setFrame(`ui/anim_${name}_${i}`);
   }
   await sleep(scene, opts.frameMs);
-  img.destroy();
+  image.destroy();
 }
 
 /** Texto que sube a saltos y desaparece (daño, curacion, captura...). */
@@ -111,11 +111,12 @@ export function floatText(
   color: string,
   delay = 0,
 ): Promise<void> {
-  const t = fxText(scene, view, Math.round(at.x), Math.round(at.y), text, color, FX_TEXT.float).setAlpha(0);
-  return tween(scene, { targets: t, alpha: 1, duration: 1, delay })
-    .then(() => tween(scene, { targets: t, y: Math.round(at.y) - FLOAT_RISE, duration: FLOAT_RISE_MS, ...STEPPED }))
-    .then(() => tween(scene, { targets: t, alpha: 0, duration: FLOAT_FADE_MS, ...STEPPED }))
-    .then(() => t.destroy());
+  const label = fxText(scene, view, Math.round(at.x), Math.round(at.y), text, color, FX_TEXT.float).setAlpha(0);
+  // Aparece de golpe tras `delay` (un tween de 1 ms, para contar el retraso con el reloj de la escena).
+  return tween(scene, { targets: label, alpha: 1, duration: 1, delay })
+    .then(() => tween(scene, { targets: label, y: Math.round(at.y) - FLOAT_RISE, duration: FLOAT_RISE_MS, ...STEPPED }))
+    .then(() => tween(scene, { targets: label, alpha: 0, duration: FLOAT_FADE_MS, ...STEPPED }))
+    .then(() => label.destroy());
 }
 
 /** Parpadeo (visible/invisible) un numero de veces. */
@@ -131,21 +132,22 @@ export async function blink(scene: Phaser.Scene, obj: Phaser.GameObjects.Compone
 export function tileFlash(scene: Phaser.Scene, view: FxHost, p: Pos, color: number): Promise<void> {
   const g = scene.add.graphics();
   view.addFx(g);
-  let i = 0;
+  let step = 0;
+  // Un paso mas que FLASH_STEPS: el ultimo solo borra el marco y acaba.
   return new Promise((resolve) => {
-    const ev = scene.time.addEvent({
+    const timer = scene.time.addEvent({
       delay: FLASH_STEP_MS,
       repeat: FLASH_STEPS,
       callback: () => {
         g.clear();
-        if (i < FLASH_STEPS) {
-          const d = i * FLASH_SPREAD;
-          g.fillStyle(color, 1 - i / FLASH_STEPS);
-          const w = TILE + 2 * d;
-          frameRect(g, p.x * TILE - d, p.y * TILE - d, w, w, 2);
+        if (step < FLASH_STEPS) {
+          const spread = step * FLASH_SPREAD;
+          g.fillStyle(color, 1 - step / FLASH_STEPS);
+          const size = TILE + 2 * spread;
+          frameRect(g, p.x * TILE - spread, p.y * TILE - spread, size, size, 2);
         }
-        i++;
-        if (ev.getRepeatCount() === 0) {
+        step++;
+        if (timer.getRepeatCount() === 0) {
           g.destroy();
           resolve();
         }
@@ -160,14 +162,14 @@ export async function lunge(
   obj: Phaser.GameObjects.Components.Transform,
   toward: { dx: number; dy: number },
 ): Promise<void> {
-  const len = Math.hypot(toward.dx, toward.dy) || 1;
-  const ox = obj.x,
-    oy = obj.y;
-  obj.x = ox + Math.round((toward.dx / len) * LUNGE_PX);
-  obj.y = oy + Math.round((toward.dy / len) * LUNGE_PX);
+  const length = Math.hypot(toward.dx, toward.dy) || 1;
+  const restX = obj.x;
+  const restY = obj.y;
+  obj.x = restX + Math.round((toward.dx / length) * LUNGE_PX);
+  obj.y = restY + Math.round((toward.dy / length) * LUNGE_PX);
   await sleep(scene, LUNGE_MS);
-  obj.x = ox;
-  obj.y = oy;
+  obj.x = restX;
+  obj.y = restY;
 }
 
 /**
@@ -175,27 +177,29 @@ export async function lunge(
  * recta de cuadraditos. A distancia: un proyectil en parabola que deja estela. `ms` = duracion.
  */
 export async function shot(scene: Phaser.Scene, view: FxHost, from: Pos, to: Pos, color: number, ms = 260): Promise<void> {
-  const a = center(from),
-    b = center(to);
-  const dist = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-  const ranged = dist > 1;
-  const steps = Math.max(4, Math.min(12, dist * 3));
-  const lift = ranged ? Math.min(48, 10 + dist * 8) : 0;
-  const head = fxRect(scene, view, a.x, a.y, ranged ? 6 : 4, ranged ? 6 : 4, PAL.white);
+  const start = center(from);
+  const end = center(to);
+  const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+  const isRanged = distance > 1;
+  const steps = Math.max(4, Math.min(12, distance * 3));
+  const lift = isRanged ? Math.min(48, 10 + distance * 8) : 0;
+  const headSize = isRanged ? 6 : 4;
+  const dotSize = isRanged ? 4 : 3;
+  const head = fxRect(scene, view, start.x, start.y, headSize, headSize, PAL.white);
   const trail: Phaser.GameObjects.Rectangle[] = [];
   for (let i = 1; i <= steps; i++) {
-    const k = i / steps;
-    const x = Math.round(a.x + (b.x - a.x) * k);
-    const y = Math.round(a.y + (b.y - a.y) * k - lift * 4 * k * (1 - k));
+    const progress = i / steps;
+    const x = Math.round(start.x + (end.x - start.x) * progress);
+    const y = Math.round(start.y + (end.y - start.y) * progress - lift * 4 * progress * (1 - progress));
     head.setPosition(x, y);
-    const dot = fxRect(scene, view, x, y, ranged ? 4 : 3, ranged ? 4 : 3, color).setAlpha(0.9);
+    const dot = fxRect(scene, view, x, y, dotSize, dotSize, color).setAlpha(0.9);
     trail.push(dot);
     // La estela se apaga por detras.
-    trail.forEach((d, j) => d.setAlpha(Math.max(0, 0.9 - (trail.length - 1 - j) * 0.22)));
+    trail.forEach((trailDot, j) => trailDot.setAlpha(Math.max(0, 0.9 - (trail.length - 1 - j) * 0.22)));
     await sleep(scene, ms / steps);
   }
   head.destroy();
-  trail.forEach((d) => d.destroy());
+  trail.forEach((trailDot) => trailDot.destroy());
 }
 
 /** Mira que se cierra sobre una casilla (esquinas): marca el objetivo antes del disparo. */
@@ -204,10 +208,10 @@ export async function targetMark(scene: Phaser.Scene, view: FxHost, p: Pos, colo
   view.addFx(g);
   for (let i = 0; i <= FLASH_STEPS; i++) {
     g.clear();
-    const d = (FLASH_STEPS - i) * FLASH_SPREAD;
-    const w = TILE + 2 * d;
+    const spread = (FLASH_STEPS - i) * FLASH_SPREAD;
+    const size = TILE + 2 * spread;
     g.fillStyle(color, 1);
-    cornerBrackets(g, p.x * TILE - d, p.y * TILE - d, w, w, TARGET_CORNER, 2);
+    cornerBrackets(g, p.x * TILE - spread, p.y * TILE - spread, size, size, TARGET_CORNER, 2);
     await sleep(scene, ms / FLASH_STEPS);
   }
   // Se queda puesta un momento y se apaga.
@@ -228,30 +232,31 @@ export async function lifeBar(
   color: number,
   hold = 380,
 ): Promise<void> {
-  const W = TILE - 4,
-    H = 5;
-  const x = p.x * TILE + 2,
-    y = p.y * TILE - 8;
+  const width = TILE - 4;
+  const height = 5;
+  const x = p.x * TILE + 2;
+  const y = p.y * TILE - 8;
   const g = scene.add.graphics();
   view.addFx(g);
-  const draw = (life: number, lost: number) => {
+  /** `life`: lo que queda (color del bando); `fading`: hasta donde llega aun lo perdido (blanco). */
+  const draw = (life: number, fading: number) => {
     g.clear();
     g.fillStyle(PAL.ink, 1);
-    g.fillRect(x - 1, y - 1, W + 2, H + 2);
-    const lw = Math.round((W * Math.max(0, life)) / 100);
-    const pw = Math.round((W * Math.max(0, lost)) / 100);
+    g.fillRect(x - 1, y - 1, width + 2, height + 2);
+    const lifeWidth = Math.round((width * Math.max(0, life)) / 100);
+    const fadingWidth = Math.round((width * Math.max(0, fading)) / 100);
     g.fillStyle(color, 1);
-    g.fillRect(x, y, lw, H);
+    g.fillRect(x, y, lifeWidth, height);
     g.fillStyle(PAL.white, 1);
-    g.fillRect(x + lw, y, Math.max(0, pw - lw), H);
+    g.fillRect(x + lifeWidth, y, Math.max(0, fadingWidth - lifeWidth), height);
   };
   draw(before, before);
   await sleep(scene, 120);
   draw(after, before);
   await sleep(scene, 160);
-  const steps = 5;
-  for (let i = 1; i <= steps; i++) {
-    draw(after, before + ((after - before) * i) / steps);
+  const drainSteps = 5;
+  for (let i = 1; i <= drainSteps; i++) {
+    draw(after, before + ((after - before) * i) / drainSteps);
     await sleep(scene, 50);
   }
   await sleep(scene, hold);
