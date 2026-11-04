@@ -4,7 +4,7 @@
  * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
  */
 import { aiTurn } from '@core/ai';
-import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, GENERALS } from '@core/data';
+import { BUILDING_NAMES, TERRAIN_NAMES, UNIT_NAMES, GENERALS, rulesWith } from '@core/data';
 import { posKey, seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
@@ -80,7 +80,7 @@ export class Session {
       if (!m) throw new Error(`No existe la mision "${opts.mission}"`);
       this.s = buildMission(m);
     } else {
-      const rules = { ...DEFAULT_RULES, fog: opts.fog ?? false };
+      const rules = rulesWith({ fog: opts.fog ?? false });
       this.s = generateGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, rules });
       const pick = (id: string | undefined) => {
         if (!id) return null;

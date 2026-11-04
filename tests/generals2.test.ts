@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chooseAbility } from '@core/aiGenerals';
-import { AI, DEFAULT_RULES, GENERALS, UNIT_NAMES } from '@core/data';
+import { AI, GENERALS, UNIT_NAMES, rulesWith } from '@core/data';
 import { generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { newUnit } from '@core/rules';
 import { blankState } from './helpers';
@@ -10,7 +10,7 @@ const T = (n: string) => UNIT_NAMES.indexOf(n);
 const def = (id: string) => GENERALS.find((g) => g.id === id)!;
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = { ...DEFAULT_RULES, fog: false, weather: false };
+const TEST_RULES = rulesWith({ fog: false, weather: false });
 
 describe('Roca: reparar', () => {
   it('sus unidades recuperan vida, sin pasar de 100; las del enemigo no', () => {

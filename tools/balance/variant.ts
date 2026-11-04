@@ -20,7 +20,7 @@
  * Una variante no cambia el contenido en uso (esta congelado): `buildVariant` construye otro, con sus
  * reglas, y runner.ts lo juega en hilos que cargan el nucleo con ese contenido.
  */
-import { DEFAULT_RULES } from '@core/data';
+import { rulesWith } from '@core/data';
 import { MOVEMENTS, TERRAIN_NAMES, type GameContent } from '@core/content';
 import { ACTIVE_CONTENT } from '@core/content/active';
 import type { RulesConfig } from '@core/model';
@@ -131,7 +131,7 @@ function targets(content: GameContent, tables: Record<string, Table>, path: stri
  */
 export function buildVariant(v: Variant, base: GameContent = ACTIVE_CONTENT): VariantSetup {
   const content = structuredClone(base);
-  const rules: RulesConfig = { ...DEFAULT_RULES };
+  const rules: RulesConfig = rulesWith();
   const tables = editableTables(content, rules);
   const changes: VariantChange[] = [];
   for (const [path, value] of Object.entries(v.set ?? {})) {

@@ -1,7 +1,7 @@
 /**
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
-import { DEFAULT_RULES, GENERALS } from './core/data';
+import { GENERALS, rulesWith } from './core/data';
 import type { RulesConfig } from './core/model';
 import { fmtNum, settings } from './settings';
 
@@ -109,8 +109,7 @@ export function saveOptions(options: NewGameOptions): void {
 
 /** Reglas de la partida a partir de las opciones. */
 export function rulesFor(options: NewGameOptions): RulesConfig {
-  return {
-    ...DEFAULT_RULES,
+  return rulesWith({
     fog: options.fog,
     weather: options.weather,
     initialFunds: options.funds,
@@ -118,7 +117,7 @@ export function rulesFor(options: NewGameOptions): RulesConfig {
     dayLimit: options.dayLimit,
     commandPoints: options.command,
     upkeep: options.upkeep,
-  };
+  });
 }
 
 /** Codigo de mapa: la semilla en base 36, en mayusculas (p. ej. "K3F9A2"). */

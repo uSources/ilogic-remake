@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn, assistTurn, previewStandingOrders } from '@core/ai';
-import { DEFAULT_RULES, HQ } from '@core/data';
+import { HQ, rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
@@ -96,7 +96,7 @@ describe('previewStandingOrders', () => {
     expect(withHidden).toEqual(clean);
     expect(withHidden.get(u.uid)!.attack).toBeUndefined();
     // Sin niebla si lo ve, y la prevision si lo marca (la prueba de arriba no es casualidad).
-    s.rules = { ...DEFAULT_RULES, fog: false };
+    s.rules = rulesWith({ fog: false });
     expect(previewStandingOrders(s).get(u.uid)!.attack).toEqual({ x: hidden.x, y: hidden.y });
   });
 

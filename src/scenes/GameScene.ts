@@ -851,7 +851,7 @@ export class GameScene extends Phaser.Scene {
       buildings: s.buildings.filter((building) => building.owner === 0).length,
       day: s.day,
       dayLimit: s.rules.dayLimit,
-      matchRules: s.rules,
+      helpRules: s.rules,
       weather,
       turn: this.enemyPlaying ? 'enemy' : 'player',
       busy,

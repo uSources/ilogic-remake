@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readContentFiles, validateContent } from '@core/content';
-import { DEFAULT_RULES, GENERALS, UNIT, UNIT_NAMES } from '@core/data';
+import { GENERALS, UNIT, UNIT_NAMES, rulesWith } from '@core/data';
 import { abilityBlock, chargeStars, generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
@@ -17,7 +17,7 @@ function withBrisa(): GameState {
 }
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = { ...DEFAULT_RULES, fog: true, weather: false };
+const TEST_RULES = rulesWith({ fog: true, weather: false });
 
 describe('generales: datos', () => {
   it('generals.json es valido y Brisa existe', () => {

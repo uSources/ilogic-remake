@@ -1,9 +1,8 @@
-import { DEFAULT_RULES } from '@core/data';
+import { rulesWith } from '@core/data';
 import type { RulesConfig } from '@core/model';
 
 /** Reglas "basicas" para tests: los interruptores de reglas apagados (como variante de equilibrio). */
-export const PLAIN_RULES: RulesConfig = {
-  ...DEFAULT_RULES,
+export const PLAIN_RULES: RulesConfig = rulesWith({
   counterattack: false,
   damageSpread: null,
   hqCapturePoints: 20,
@@ -20,4 +19,4 @@ export const PLAIN_RULES: RulesConfig = {
   upkeep: 0,
   weather: false,
   controlPoints: 0,
-};
+});

@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
-import { AI, UNIT } from '@core/data';
+import { AI, UNIT, rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
@@ -33,7 +33,7 @@ function strength(s: GameState, t: Team): number {
 /** Una partida; devuelve el bando ganador (o null si empate). */
 export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
   const rng = seededRng(seed);
-  const s = generateGame(rng, { size });
+  const s = generateGame(rng, { size, rules: rulesWith() });
   while (outcome(s) === 'playing' && s.day <= maxDays) {
     for (const t of [0, 1] as Team[]) {
       for (const _ of brains[t](s, rng, t)) if (outcome(s) !== 'playing') break;

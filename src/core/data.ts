@@ -131,6 +131,11 @@ export const MAX_LIFE = 100;
  * con los cambios de su modo o de su mision). [CAMBIO] El modo "reglas de 2013" se ha quitado.
  */
 export const DEFAULT_RULES: Readonly<RulesConfig> = Object.freeze({ ...T.DEFAULT_RULES });
+
+/** Las reglas de siempre con estos cambios: la unica forma de escribir unas reglas nuevas. */
+export function rulesWith(overrides: Partial<RulesConfig> = {}): RulesConfig {
+  return { ...DEFAULT_RULES, ...overrides };
+}
 /** Dinero maximo de un bando (rules.json). */
 export const MAX_FUNDS = T.MAX_FUNDS;
 /**

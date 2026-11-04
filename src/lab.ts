@@ -4,7 +4,8 @@
  * sin tener que jugar. Se abre con `#lab` en la direccion o con `ilogicDebug.lab()`.
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
-import { DEFAULT_RULES, HQ, UNIT, UNIT_NAMES } from './core/data';
+import { HQ, UNIT, UNIT_NAMES, rulesWith } from './core/data';
+import { newGameState } from './core/gameState';
 import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
 import type { GameState, RulesConfig } from './core/model';
@@ -39,7 +40,7 @@ export const labRange = (type: number): number => Math.max(1, UNIT.minalc[type]!
 
 /** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
 export function labRules(action: LabAction | null): RulesConfig {
-  return { ...DEFAULT_RULES, fog: false, weather: false, counterattack: action !== 'attack' };
+  return rulesWith({ fog: false, weather: false, counterattack: action !== 'attack' });
 }
 
 /**
@@ -47,20 +48,11 @@ export function labRules(action: LabAction | null): RulesConfig {
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
 export function labState(o: LabOptions, action: LabAction | null): GameState {
-  const s: GameState = {
-    version: 1,
-    map: blankMap(LAB_SIZE),
-    theme: 0,
-    funds: [0, 0],
-    units: [],
-    buildings: [
-      { type: HQ, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
-      { type: HQ, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
-    ],
-    nextUid: 1,
-    day: 1,
-    rules: labRules(action),
-  };
+  const s = newGameState({ map: blankMap(LAB_SIZE), rules: labRules(action), funds: [0, 0] });
+  s.buildings.push(
+    { type: HQ, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
+    { type: HQ, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
+  );
   const near = action !== null && action !== 'move';
   const from = near ? { x: LAB_TARGET.x - labRange(o.attacker), y: LAB_TARGET.y } : LAB_FROM;
   newUnit(s, o.attacker, 0, from);

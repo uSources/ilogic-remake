@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTENT, DEFAULT_RULES, THEME_NAMES, UNIT, WEATHER, WEATHER_TYPES } from '@core/data';
+import { CONTENT, DEFAULT_RULES, THEME_NAMES, UNIT, WEATHER, WEATHER_TYPES, rulesWith } from '@core/data';
 import { validateContent } from '@core/content';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
@@ -107,7 +107,7 @@ describe('clima: efectos', () => {
 
   it('con la regla quitada no hay clima aunque el estado lo tenga', () => {
     const s = withWeather(STORM);
-    s.rules = { ...DEFAULT_RULES, weather: false };
+    s.rules = rulesWith({ weather: false });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(weatherNow(s)).toBe(CLEAR);
     expect(maxSteps(s, tank)).toBe(UNIT.mover[TANK]);
@@ -172,7 +172,7 @@ describe('clima: como cambia', () => {
 
   it('se guarda con la partida y un clima roto se descarta al cargar', () => {
     const s = withWeather(RAIN);
-    s.rules = { ...DEFAULT_RULES };
+    s.rules = rulesWith();
     expect(deserialize(serialize(s))!.weather).toEqual(s.weather);
     const broken = JSON.parse(serialize(s)) as GameState;
     broken.weather = { kind: WEATHER_TYPES + 5, left: 1, next: 0 };

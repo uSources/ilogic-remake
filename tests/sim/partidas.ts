@@ -1,3 +1,4 @@
+import { rulesWith } from '@core/data';
 import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
@@ -29,7 +30,7 @@ export function checkInvariants(s: GameState): void {
 export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
-    const s = generateGame(rng);
+    const s = generateGame(rng, { rules: rulesWith() });
     while (outcome(s) === 'playing' && s.day <= 60) {
       for (const team of [0, 1] as const) {
         for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;

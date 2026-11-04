@@ -33,7 +33,7 @@ export function Hud() {
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && <EndScreen end={s.end} />}
       {s.options && <Options options={s.options} />}
-      {s.help && <Help rules={s.screen === 'game' ? s.matchRules : null} />}
+      {s.help && s.helpRules && <Help rules={s.helpRules} />}
       {s.rename && <RenameSquad rename={s.rename} />}
       {s.notes && <PatchNotes notes={s.notes} />}
       {s.toast && <Toast key={s.toast.id} toast={s.toast} />}

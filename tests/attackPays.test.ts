@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING, DEFAULT_RULES, HEALER, UNIT } from '@core/data';
+import { BUILDING, HEALER, UNIT, rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -85,7 +85,7 @@ describe('sin cura bajo fuego', () => {
 
   it('quien recibe un ataque ese dia no se cura en su ciudad', () => {
     const { s, a, d } = setup();
-    s.rules = { ...DEFAULT_RULES, noHealUnderFire: true };
+    s.rules = rulesWith({ noHealUnderFire: true });
     attackFull(s, a, d, seededRng(1));
     const hurt = d.life;
     expect(hurt).toBeLessThan(100);
@@ -100,7 +100,7 @@ describe('sin cura bajo fuego', () => {
 
   it('sin la regla se cura como siempre', () => {
     const { s, a, d } = setup();
-    s.rules = { ...DEFAULT_RULES, noHealUnderFire: false };
+    s.rules = rulesWith({ noHealUnderFire: false });
     attackFull(s, a, d, seededRng(1));
     const hurt = d.life;
     endRound(s);

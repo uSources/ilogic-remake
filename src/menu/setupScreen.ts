@@ -23,6 +23,7 @@ import {
   type ChoiceKey,
   type NewGameOptions,
   type PresetId,
+  rulesFor,
 } from '../setup';
 import { navGrid } from './nav';
 import { mapThumb } from './thumb';
@@ -182,7 +183,7 @@ export class SetupScreen {
 
   private refreshPreview(): void {
     const { size, theme } = this.options;
-    const s = generateGame(seededRng(this.seed), { size, theme });
+    const s = generateGame(seededRng(this.seed), { size, theme, rules: rulesFor(this.options) });
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
     const themeName = THEME_NAMES[settings.lang === 'es' ? 'es' : 'en'][s.theme] ?? '';
     const buildings = settings.lang === 'es' ? 'edificios' : 'buildings';

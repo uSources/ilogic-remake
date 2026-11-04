@@ -19,8 +19,8 @@ export interface PlayOptions {
   swapSides?: boolean;
   /** Lado del mapa (32 por defecto). */
   size?: number;
-  /** Reglas de la partida (las de siempre si no se dicen). */
-  rules?: RulesConfig;
+  /** Reglas de la partida. */
+  rules: RulesConfig;
 }
 
 /** Por tipo de unidad y bando. */

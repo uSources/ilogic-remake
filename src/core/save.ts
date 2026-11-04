@@ -3,7 +3,7 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { BUILDING_TYPES, DEFAULT_RULES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES } from './data';
+import { BUILDING_TYPES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES, rulesWith } from './data';
 import { generalDef } from './generals';
 import { missionById, missionRules } from './missions';
 import { mapGrid } from './mapGrid';
@@ -243,7 +243,7 @@ const isFraction = (v: unknown): boolean => typeof v === 'number' && v >= 0 && v
  */
 function rulesOfUnsavedGame(s: GameState): RulesConfig {
   const mission = s.mission ? missionById(s.mission.id) : undefined;
-  return mission ? missionRules(mission) : { ...DEFAULT_RULES };
+  return mission ? missionRules(mission) : rulesWith();
 }
 
 function isValidRules(rules: Partial<RulesConfig>): boolean {

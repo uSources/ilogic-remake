@@ -3,6 +3,7 @@
  * en `src/menu/` con su `...Host`), las opciones, las notas y la ayuda. Detras, una partida IA contra
  * IA o la imagen original.
  */
+import { rulesWith } from '../core/data';
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
 import type { MissionDef } from '../core/missions';
@@ -96,7 +97,8 @@ export class MenuScene extends Phaser.Scene {
     );
 
     Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions());
-    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null });
+    // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
+    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null, helpRules: rulesWith() });
     this.home.publish();
     if (data?.open === 'setup') this.openSetup();
 

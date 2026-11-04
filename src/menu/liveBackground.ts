@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { DEFAULT_RULES } from '../core/data';
+import { rulesWith } from '../core/data';
 import { seededRng } from '../core/geom';
 import { createLayer } from '../core/mapGrid';
 import { generateGame } from '../core/mapgen';
@@ -16,7 +16,7 @@ import { PAL, PAL_CSS } from '../ui/palette';
 const AI_SEED_MIX = 0x5bd1e995;
 const MAP_SIZE = 32;
 /** La partida de fondo se juega sin niebla: se ve todo lo que pasa. */
-const BACKGROUND_RULES = { ...DEFAULT_RULES, fog: false };
+const BACKGROUND_RULES = rulesWith({ fog: false });
 /** La partida de fondo se corta a los 45 dias y empieza otra. */
 const MAX_DAYS = 45;
 const FIRST_PAUSE_MS = 600;

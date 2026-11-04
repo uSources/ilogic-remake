@@ -4,6 +4,7 @@
  */
 import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
 import { seededRng } from '@core/geom';
+import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import { attack, inAttackRange, newUnit } from '@core/rules';
 import type { GameState, RulesConfig, Unit } from '@core/model';
@@ -26,8 +27,7 @@ export interface DuelCell {
 const DUEL_MAP_SIZE = 32;
 
 function arena(terrain: number, rules: RulesConfig): GameState {
-  const map = blankMap(DUEL_MAP_SIZE, terrain);
-  return { version: 1, map, theme: 0, funds: [0, 0], units: [], buildings: [], nextUid: 1, day: 1, rules };
+  return newGameState({ map: blankMap(DUEL_MAP_SIZE, terrain), rules, funds: [0, 0] });
 }
 
 function place(s: GameState, a: Unit, b: Unit): void {

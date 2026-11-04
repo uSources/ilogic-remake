@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { HQ, DEFAULT_RULES, UNIT } from '@core/data';
+import { HQ, UNIT, rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
 import { generateGame } from '@core/mapgen';
@@ -14,7 +14,7 @@ afterEach(() => {});
 describe('nueva partida: tamaños de mapa', () => {
   it.each([20, 32, 40])('mapas de %i: bases conectadas y edificios en proporcion', (size) => {
     for (let seed = 1; seed <= 15; seed++) {
-      const s = generateGame(seededRng(seed), { size });
+      const s = generateGame(seededRng(seed), { size, rules: rulesWith() });
       expect(s.map.length).toBe(size);
       expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
@@ -27,8 +27,8 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('el mismo codigo da el mismo mapa; el tema se puede elegir', () => {
-    const a = generateGame(seededRng(1234), { size: 20, theme: 4 });
-    const b = generateGame(seededRng(1234), { size: 20, theme: 4 });
+    const a = generateGame(seededRng(1234), { size: 20, theme: 4, rules: rulesWith() });
+    const b = generateGame(seededRng(1234), { size: 20, theme: 4, rules: rulesWith() });
     expect(serialize(a)).toBe(serialize(b));
     expect(a.theme).toBe(4);
   });
@@ -42,14 +42,14 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('una partida guardada se carga con sus propias reglas, no con las de siempre', () => {
-    const rules = { ...DEFAULT_RULES, counterattack: false, fog: false, upkeep: 0.25 };
+    const rules = rulesWith({ counterattack: false, fog: false, upkeep: 0.25 });
     const s = generateGame(seededRng(3), { size: 20, rules });
     expect(s.rules).toEqual(rules);
     expect(deserialize(serialize(s))!.rules).toEqual(rules);
   });
 
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
-    const s = generateGame(seededRng(7), { size: 40 });
+    const s = generateGame(seededRng(7), { size: 40, rules: rulesWith() });
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
     const c = deserialize(json)!;
@@ -62,7 +62,7 @@ describe('nueva partida: tamaños de mapa', () => {
 
 describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
-    const s = blankState({ ...DEFAULT_RULES, dayLimit: 10 });
+    const s = blankState(rulesWith({ dayLimit: 10 }));
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
     newUnit(s, 1, 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;
@@ -77,7 +77,7 @@ describe('limite de dias', () => {
 
 describe('repetir el turno enemigo', () => {
   it('la IA juega igual desde el mismo estado y la misma semilla', () => {
-    const s = generateGame(seededRng(3));
+    const s = generateGame(seededRng(3), { rules: rulesWith() });
     for (let i = 0; i < 4; i++) for (const _ of aiTurn(s, seededRng(i), 1));
     const before = serialize(s);
     const ev1 = [...aiTurn(s, seededRng(42), 1)];

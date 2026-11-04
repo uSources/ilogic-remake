@@ -9,9 +9,10 @@
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
-import { BUILDING_NAMES, HQ, DEFAULT_RULES, TERRAIN, UNIT_NAMES, Movement } from './data';
+import { BUILDING_NAMES, HQ, TERRAIN, UNIT_NAMES, Movement, rulesWith } from './data';
 import type { RulesConfig } from './model';
 import { posKey } from './geom';
+import { newGameState } from './gameState';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
 import type { GameState, Team } from './model';
@@ -77,17 +78,7 @@ function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
 
 /** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
 export function buildMission(m: MissionDef): GameState {
-  const s: GameState = {
-    version: 1,
-    map: terrainGrid(m),
-    theme: m.theme,
-    funds: [m.funds[0], m.funds[1]],
-    units: [],
-    buildings: [],
-    nextUid: 1,
-    day: 1,
-    rules: missionRules(m),
-  };
+  const s = newGameState({ map: terrainGrid(m), rules: missionRules(m), theme: m.theme, funds: [m.funds[0], m.funds[1]] });
   for (const [type, owner, x, y] of m.buildings) s.buildings.push({ type: BUILDING_NAMES.indexOf(type), owner, x, y });
   const unitUids = placeUnits(s, m.units);
   s.mission = { id: m.id, objective: objectiveFromMission(m.objective, unitUids) };
@@ -95,14 +86,8 @@ export function buildMission(m: MissionDef): GameState {
 }
 
 /** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
-export const missionRules = (m: MissionDef): RulesConfig => ({
-  ...DEFAULT_RULES,
-  commandPoints: null,
-  upkeep: 0,
-  weather: false,
-  initialFunds: m.funds[0],
-  ...m.rules,
-});
+export const missionRules = (m: MissionDef): RulesConfig =>
+  rulesWith({ commandPoints: null, upkeep: 0, weather: false, initialFunds: m.funds[0], ...m.rules });
 
 function buildingProblems(m: MissionDef): string[] {
   const problems: string[] = [];

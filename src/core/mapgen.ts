@@ -9,8 +9,9 @@
  * El orden de los pasos y de las llamadas a `rng` dentro de cada uno es parte del resultado: con la
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
-import { DEFAULT_RULES, MAPGEN, PROBS_PER_ADJ, TERRAIN, TERRAIN_TYPES, TILE_BASE_PROBS, Movement, TerrainType, MoveType } from './data';
+import { MAPGEN, PROBS_PER_ADJ, TERRAIN, TERRAIN_TYPES, TILE_BASE_PROBS, Movement, TerrainType, MoveType } from './data';
 import { diamond, manhattan, squareArea } from './geom';
+import { newGameState } from './gameState';
 import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';
 import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
@@ -33,18 +34,8 @@ const BUILDING_PICK_TRIES = 100;
 /** Superficie del mapa respecto al original de 32x32 (para escalar cuantos edificios hay). */
 const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP_SIDE * ORIGINAL_MAP_SIDE);
 
-function emptyState(size: number, rules: RulesConfig): GameState {
-  return {
-    version: 1,
-    map: blankMap(size),
-    theme: 0,
-    funds: [rules.initialFunds, rules.initialFunds],
-    units: [],
-    buildings: [],
-    nextUid: 1,
-    day: 1,
-    rules: { ...rules },
-  };
+function emptyState(size: number, rules: Readonly<RulesConfig>): GameState {
+  return newGameState({ map: blankMap(size), rules: { ...rules } });
 }
 
 const isWater = (terrain: number) => TERRAIN.iswater[terrain]!;
@@ -432,20 +423,20 @@ const MAP_STEPS: readonly MapStep[] = [
 export interface NewMapOptions {
   size?: number;
   theme?: number | null;
-  rules?: Readonly<RulesConfig>;
+  rules: Readonly<RulesConfig>;
 }
 
 /**
- * Genera una partida nueva con mapa aleatorio y las reglas dadas (las de siempre si no se dicen). Si
- * un paso falla, se empieza otro mapa desde el principio.
+ * Genera una partida nueva con mapa aleatorio y las reglas dadas. Si un paso falla, se empieza otro
+ * mapa desde el principio.
  */
-export function generateGame(rng: Rng = Math.random, opts: NewMapOptions = {}): GameState {
+export function generateGame(rng: Rng, opts: NewMapOptions): GameState {
   const size = opts.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
   const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };
   for (let attempt = 0; ; attempt++) {
     const draft: MapDraft = {
-      s: emptyState(size, opts.rules ?? DEFAULT_RULES),
+      s: emptyState(size, opts.rules),
       rng,
       origin,
       attempt,

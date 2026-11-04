@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, POWER, UNIT } from '@core/data';
+import { POWER, UNIT, rulesWith } from '@core/data';
 import {
   HIT_MODIFIERS,
   ROUND_PHASES,
@@ -17,7 +17,7 @@ import { blankState } from './helpers';
 
 /** Puntos de extension y ayudas compartidas del nucleo: modificadores del acierto, pasos del fin de ronda, origenes de tiro. */
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = { ...DEFAULT_RULES, fog: false };
+const TEST_RULES = rulesWith({ fog: false });
 
 const fighter = (): number => UNIT.canfight.findIndex((f, t) => !!f && POWER[t]!.some((p) => p > 0));
 
@@ -41,7 +41,7 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
   });
 
   it('con las reglas apagadas cada modificador vale 1', () => {
-    const s = blankState({ ...DEFAULT_RULES, fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false });
+    const s = blankState(rulesWith({ fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false }));
     const t = fighter();
     const a = newUnit(s, t, 0, { x: 2, y: 2 });
     const d = newUnit(s, t, 1, { x: 3, y: 2 });

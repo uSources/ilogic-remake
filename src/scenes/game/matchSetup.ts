@@ -2,7 +2,7 @@
  * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
  * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
-import { DEFAULT_RULES } from '../../core/data';
+import { rulesWith } from '../../core/data';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
 import { generateGame } from '../../core/mapgen';
@@ -58,7 +58,7 @@ function missionMatch(data: GameStartData): GameState | null {
 /** Mapa al azar (o el de `setup`), con los generales elegidos. */
 function newMatch(data: GameStartData): GameState {
   const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
-  const rules = { ...DEFAULT_RULES, ...data.rules };
+  const rules = rulesWith(data.rules);
   const state = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, rules });
   state.setup = setup;
   const player = newGeneral(data.general);

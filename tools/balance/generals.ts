@@ -12,7 +12,7 @@
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
 import { aiTurn } from '@core/ai';
-import { GENERALS } from '@core/data';
+import { GENERALS, rulesWith } from '@core/data';
 import { newGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
@@ -35,7 +35,7 @@ const gen = (id: string) => (id === 'none' ? null : newGeneral(id));
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
 function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: 0 | 1 | -1; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = generateGame(rng);
+  const s: GameState = generateGame(rng, { rules: rulesWith() });
   s.generals = [gen(g0), gen(g1)];
   while (outcome(s) === 'playing' && s.day <= 60) {
     for (const team of [0, 1] as const) {

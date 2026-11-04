@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { DEFAULT_RULES, HQ, MoveType } from '@core/data';
+import { DEFAULT_RULES, HQ, MoveType, rulesWith } from '@core/data';
 import { manhattan, seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
 import { generateGame, placeControlPoints } from '@core/mapgen';
@@ -84,7 +84,7 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = generateGame(seededRng(seed * 7919));
+      const s = generateGame(seededRng(seed * 7919), { rules: rulesWith() });
       const pts = s.controlPoints ?? [];
       total += pts.length;
       expect(pts.length).toBeLessThanOrEqual(DEFAULT_RULES.controlPoints);

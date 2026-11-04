@@ -99,8 +99,8 @@ export interface UIState {
   } | null;
   /** Limite de dias de la partida (null = sin limite). */
   dayLimit: number | null;
-  /** Reglas de la partida en curso (para la ayuda; null fuera de una partida). */
-  matchRules: RulesConfig | null;
+  /** Reglas que cuenta la ayuda: las de la partida en curso, o en el menu las de una partida nueva (null hasta que la escena las pone). */
+  helpRules: RulesConfig | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
   minimap: MinimapVM | null;
   /** Parte del mapa que se ve, en casillas. */
@@ -171,7 +171,7 @@ export const initialState: UIState = {
   hint: '',
   end: null,
   dayLimit: null,
-  matchRules: null,
+  helpRules: null,
   report: null,
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },

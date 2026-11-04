@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, POWER, UNIT, UNIT_NAMES } from '@core/data';
+import { DEFAULT_RULES, POWER, UNIT, UNIT_NAMES, rulesWith } from '@core/data';
 import { PLAIN_RULES } from './plainRules';
 import { duelMatrix } from '../tools/balance/duel';
 import { playGame } from '../tools/balance/play';
@@ -55,8 +55,8 @@ describe('herramienta de equilibrio: variantes', () => {
 
 describe('herramienta de equilibrio: partidas y duelos', () => {
   it('la misma semilla da la misma partida', () => {
-    const a = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'] });
-    const b = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'] });
+    const a = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith() });
+    const b = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith() });
     expect(a).toEqual(b);
     expect(a.samples.length).toBeGreaterThan(5);
     expect(a.units[0]!.reduce((n, t) => n + t.bought, 0)).toBeGreaterThan(0);

@@ -8,7 +8,7 @@ import { ui } from '../store';
 const KEYBOARD_COLUMN = 1;
 
 /** Ayuda ("Cómo se juega"): objetivo, colores del mapa y controles (textos en src/i18n/<idioma>/help.ts). */
-export function Help({ rules }: { rules: Readonly<RulesConfig> | null }) {
+export function Help({ rules }: { rules: Readonly<RulesConfig> }) {
   const help = helpText(rules);
   return (
     <Veil kind="help-veil" onClose={() => ui.actions.closeHelp()}>

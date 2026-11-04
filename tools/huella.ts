@@ -10,7 +10,7 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { DEFAULT_RULES, GENERALS } from '@core/data';
+import { GENERALS, rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';
 import { generateGame } from '@core/mapgen';
@@ -60,7 +60,7 @@ function orderPlayerSquad(s: GameState): void {
 
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
-  const s = generateGame(rng, { size: scenario.size, rules: { ...DEFAULT_RULES, ...scenario.rules } });
+  const s = generateGame(rng, { size: scenario.size, rules: rulesWith(scenario.rules) });
   if (scenario.withGenerals) s.generals = [newGeneral(GENERALS[0]?.id), newGeneral(GENERALS[1]?.id)];
   if (scenario.withSquad) orderPlayerSquad(s);
 
