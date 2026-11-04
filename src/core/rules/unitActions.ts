@@ -27,10 +27,10 @@ export interface UnitActions {
   /** Volver atras sin hacer nada: solo si aun no se ha movido. */
   back: boolean;
   /** [CAMBIO] Ordenes con destino (se elige la casilla despues) y quitar la que tenga. */
-  cmdAttack: boolean;
-  cmdCapture: boolean;
-  cmdDefend: boolean;
-  cmdCancel: boolean;
+  orderToAttack: boolean;
+  orderToCapture: boolean;
+  orderToDefend: boolean;
+  cancelOrder: boolean;
   delete: boolean;
 }
 
@@ -50,11 +50,11 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     supply: canSupply(s, unit),
     wait: true,
     back: unit.canMove,
-    cmdAttack: isMine && canFight(s, unit),
-    cmdCapture: isMine && isCapturer(s, unit),
-    cmdDefend: isMine && canFight(s, unit),
+    orderToAttack: isMine && canFight(s, unit),
+    orderToCapture: isMine && isCapturer(s, unit),
+    orderToDefend: isMine && canFight(s, unit),
     // Orden propia o de su escuadra.
-    cmdCancel: !!effectiveStandingOrder(s, unit),
+    cancelOrder: !!effectiveStandingOrder(s, unit),
     delete: true,
   };
 }

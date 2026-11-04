@@ -50,7 +50,7 @@ import { forecastFor, hintText, labPanel, moveTipFor, playerIncome, selectionPan
 import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } from './game/mapOverlays';
 import { startMatch } from './game/matchSetup';
 import { TutorialTracker } from './game/tutorial';
-import { CommandPreview } from './game/commandPreview';
+import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
 import { EndOfMatch, setEndFilter, type EndHost } from './game/endOfMatch';
@@ -112,7 +112,7 @@ export class GameScene extends Phaser.Scene {
   /** Unidad cuyo alcance se esta mostrando (Enter o clic derecho sobre ella). */
   private inspectUid: number | null = null;
   /** Prevision de las ordenes (previewStandingOrders), recalculada solo si cambia la partida. */
-  private preview = new CommandPreview();
+  private standingOrderPreview = new StandingOrderPreview();
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
   /** Casilla junto a la que va cada bocadillo (para recolocarlos al mover la camara sin rehacerlos). */
   private anchorAt: Partial<Record<BubbleKind, Pos>> = {};
@@ -203,7 +203,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.turns.reset();
     this.inspectUid = null;
-    this.preview.reset();
+    this.standingOrderPreview.reset();
     this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
     this.gestures.reset();
     this.tutorial.reset();
@@ -681,13 +681,13 @@ export class GameScene extends Phaser.Scene {
   // =========================================================================
 
   /** La orden que cumple la unidad (la suya o la de su escuadra). */
-  private commandOf(unit: Unit) {
+  private standingOrderOf(unit: Unit) {
     return effectiveStandingOrder(this.s, unit);
   }
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
   private idleUnits(): Unit[] {
-    return this.s.units.filter((unit) => isPlayer(unit) && unit.active && unit.carrier === null && !this.commandOf(unit));
+    return this.s.units.filter((unit) => isPlayer(unit) && unit.active && unit.carrier === null && !this.standingOrderOf(unit));
   }
 
   /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
@@ -807,10 +807,12 @@ export class GameScene extends Phaser.Scene {
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): ViewOptions['intents'] {
     if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
-    const withStandingOrder = this.s.units.filter((unit) => isPlayer(unit) && this.commandOf(unit) && unit.active && unit.carrier === null);
+    const withStandingOrder = this.s.units.filter(
+      (unit) => isPlayer(unit) && this.standingOrderOf(unit) && unit.active && unit.carrier === null,
+    );
     const shown = withStandingOrder.filter((unit) => this.intents || this.showsOrderLine(unit));
     if (!shown.length) return [];
-    return intentLines(shown, this.preview.get(this.s), this.vis);
+    return intentLines(shown, this.standingOrderPreview.get(this.s), this.vis);
   }
 
   private publishMinimap(): void {
@@ -842,7 +844,7 @@ export class GameScene extends Phaser.Scene {
     ui.set({
       funds: s.funds[0],
       income: playerIncome(s),
-      command: s.rules.commandPoints === null ? null : { used: commandUsed(s, 0), max: s.rules.commandPoints },
+      commandPoints: s.rules.commandPoints === null ? null : { used: commandUsed(s, 0), max: s.rules.commandPoints },
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
       lab: labPanel(this.lab),
@@ -864,7 +866,7 @@ export class GameScene extends Phaser.Scene {
       multi: this.selection.multi || this.selection.group.size ? this.selection.group.size : null,
       selection: this.selectionVM(),
       endTurn: { pending: this.turns.pendingUnits().length, armed: this.turns.endArmed() },
-      anyCommand: s.units.some((unit) => isPlayer(unit) && !!this.commandOf(unit)),
+      anyStandingOrder: s.units.some((unit) => isPlayer(unit) && !!this.standingOrderOf(unit)),
       hint: this.hint(busy),
       mission: this.tutorial.panel(s, this.phase),
     });

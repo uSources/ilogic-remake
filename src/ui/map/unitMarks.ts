@@ -64,20 +64,20 @@ export interface UnitMarkState {
   noHeal: boolean;
   cargo: boolean;
   /** Orden que cumple (la suya o la de su escuadra). */
-  cmd: StandingOrderKind | null;
+  order: StandingOrderKind | null;
   /** Va destacada de su escuadra. */
   detached: boolean;
 }
 
 /** Firma de las marcas: si no cambia, no se redibujan. Rango x 16 + 1 sin cura + 2 carga + 4 x orden + 100 destacada. */
 export const markSignature = (m: UnitMarkState): number =>
-  m.rank * 16 + (m.noHeal ? 1 : 0) + (m.cargo ? 2 : 0) + (m.cmd ? MISSION_KEY[m.cmd] * 4 : 0) + (m.detached ? 100 : 0);
+  m.rank * 16 + (m.noHeal ? 1 : 0) + (m.cargo ? 2 : 0) + (m.order ? MISSION_KEY[m.order] * 4 : 0) + (m.detached ? 100 : 0);
 
 /** Objetos de una unidad donde van sus marcas. */
 export interface UnitMarkObjects {
   /** Marcas de pixeles (cuando falta el dibujo). */
   stars: Phaser.GameObjects.Graphics;
-  cmd: Phaser.GameObjects.Image;
+  order: Phaser.GameObjects.Image;
   badges: Phaser.GameObjects.Image[];
 }
 
@@ -88,18 +88,18 @@ export function drawUnitMarks(
   marks: UnitMarkState,
   markArt: boolean,
 ): void {
-  const { noHeal, cargo, cmd, detached } = marks;
+  const { noHeal, cargo, order, detached } = marks;
   const g = objects.stars;
   g.clear();
-  const cmdKey = cmd ? `ui/cmd_${cmd}` : null;
-  const hasCmdArt = !!cmdKey && hasImage(textures, cmdKey);
-  objects.cmd.setVisible(hasCmdArt);
+  const orderIcon = order ? `ui/cmd_${order}` : null;
+  const hasOrderArt = !!orderIcon && hasImage(textures, orderIcon);
+  objects.order.setVisible(hasOrderArt);
   // Icono de 16x16 arriba a la izquierda (a la derecha de la marca de carga si la lleva).
-  if (hasCmdArt) objects.cmd.setTexture(ATLAS, cmdKey).setPosition(cargo && !markArt ? BADGE : 0, 0);
+  if (hasOrderArt) objects.order.setTexture(ATLAS, orderIcon).setPosition(cargo && !markArt ? BADGE : 0, 0);
   if (markArt) placeDrawnBadges(objects.badges, marks);
   else objects.badges.forEach((badge) => badge.setVisible(false));
-  if (cmd && detached) drawDetachedStripe(g, cargo && !markArt, hasCmdArt);
-  if (cmd && !hasCmdArt) drawCommandPlaque(g, cmd, cargo);
+  if (order && detached) drawDetachedStripe(g, cargo && !markArt, hasOrderArt);
+  if (order && !hasOrderArt) drawOrderPlaque(g, order, cargo);
   if (noHeal && !markArt) drawNoHealSign(g);
   if (!markArt) drawPixelStars(g, marks.rank);
 }
@@ -119,18 +119,18 @@ function placeDrawnBadges(badges: Phaser.GameObjects.Image[], { rank, noHeal, ca
 
 /**
  * Destacada: raya naranja bajo la placa de la orden (va por su cuenta y luego vuelve).
- * `besidePixelCargo`: hay marca de carga de pixeles a la izquierda; `hasCmdArt`: el icono es dibujado.
+ * `besidePixelCargo`: hay marca de carga de pixeles a la izquierda; `hasOrderArt`: el icono es dibujado.
  */
-function drawDetachedStripe(g: Phaser.GameObjects.Graphics, besidePixelCargo: boolean, hasCmdArt: boolean): void {
-  const x = besidePixelCargo ? (hasCmdArt ? BADGE : 12) : hasCmdArt ? 0 : 1;
+function drawDetachedStripe(g: Phaser.GameObjects.Graphics, besidePixelCargo: boolean, hasOrderArt: boolean): void {
+  const x = besidePixelCargo ? (hasOrderArt ? BADGE : 12) : hasOrderArt ? 0 : 1;
   g.fillStyle(PAL.ink, 1);
-  g.fillRect(x, hasCmdArt ? CMD_ICON : 10, hasCmdArt ? CMD_ICON : 9, 3);
+  g.fillRect(x, hasOrderArt ? CMD_ICON : 10, hasOrderArt ? CMD_ICON : 9, 3);
   g.fillStyle(PAL_MAP.amber, 1);
-  g.fillRect(x + 1, hasCmdArt ? CMD_ICON + 1 : 11, hasCmdArt ? CMD_ICON - 2 : 7, 1);
+  g.fillRect(x + 1, hasOrderArt ? CMD_ICON + 1 : 11, hasOrderArt ? CMD_ICON - 2 : 7, 1);
 }
 
 /** Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado. */
-function drawCommandPlaque(g: Phaser.GameObjects.Graphics, cmd: StandingOrderKind, cargo: boolean): void {
+function drawOrderPlaque(g: Phaser.GameObjects.Graphics, order: StandingOrderKind, cargo: boolean): void {
   const x = cargo ? 12 : 1;
   const y = 1;
   g.fillStyle(PAL.ink, 1);
@@ -138,7 +138,7 @@ function drawCommandPlaque(g: Phaser.GameObjects.Graphics, cmd: StandingOrderKin
   g.fillStyle(PAL_MAP.plaque, 1);
   g.fillRect(x + 1, y + 1, 7, 7);
   g.fillStyle(PAL.white, 1);
-  for (const [dx, dy] of MISSION_GLYPH[cmd]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
+  for (const [dx, dy] of MISSION_GLYPH[order]) g.fillRect(x + 3 + dx, y + 2 + dy, 1, 1);
 }
 
 /** Señal de prohibido pequeña (sin cura): cuadrado rojo con una raya blanca, abajo a la izquierda. */

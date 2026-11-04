@@ -33,8 +33,8 @@ export function orderMarks(s: GameState, showsLine: (unit: Unit) => boolean): Ov
     .filter((unit) => isPlayer(unit) && unit.travelTo && onMap(unit))
     .map((unit) => ({ from: { x: unit.x, y: unit.y }, to: unit.travelTo! }));
   const withTarget = s.units.flatMap((unit) => {
-    const command = isPlayer(unit) && onMap(unit) ? effectiveStandingOrder(s, unit) : undefined;
-    return command ? [{ from: { x: unit.x, y: unit.y }, to: command.at, kind: command.kind, line: showsLine(unit) }] : [];
+    const order = isPlayer(unit) && onMap(unit) ? effectiveStandingOrder(s, unit) : undefined;
+    return order ? [{ from: { x: unit.x, y: unit.y }, to: order.at, kind: order.kind, line: showsLine(unit) }] : [];
   });
   return [...multiTurn, ...withTarget];
 }

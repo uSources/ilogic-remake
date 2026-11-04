@@ -50,7 +50,7 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
     net: income - upkeep,
     next: Math.min(afterIncome - paid, MAX_FUNDS),
     shortfall: paid < upkeep ? paid : null,
-    command:
+    commandPoints:
       s.rules.commandPoints === null
         ? null
         : { lines: tally(units, unitLabel, (t) => UNIT.command[t]!), used: commandUsed(s, team), max: s.rules.commandPoints },

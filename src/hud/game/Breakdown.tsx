@@ -59,18 +59,18 @@ function UpkeepSection({ upkeep }: { upkeep: NonNullable<EconomyVM['upkeep']> })
   );
 }
 
-function CommandSection({ command }: { command: NonNullable<EconomyVM['command']> }) {
-  const free = Math.max(0, command.max - command.used);
+function CommandSection({ points }: { points: NonNullable<EconomyVM['commandPoints']> }) {
+  const free = Math.max(0, points.max - points.used);
   return (
     <>
       <h4>{t('ecoCommand')}</h4>
-      <BreakdownRows lines={command.lines} sign="" empty={t('ecoNoUnits')} />
+      <BreakdownRows lines={points.lines} sign="" empty={t('ecoNoUnits')} />
       <div class="row total">
         <span class="l note">
           {free} {t('ecoFree')}
         </span>
         <span class="v num">
-          {command.used}/{command.max}
+          {points.used}/{points.max}
         </span>
       </div>
     </>
@@ -96,7 +96,7 @@ export function EconomyPanel({ economy }: { economy: EconomyVM }) {
           {t('ecoShortfall')} {fmtNum(economy.shortfall)}
         </div>
       )}
-      {economy.command && <CommandSection command={economy.command} />}
+      {economy.commandPoints && <CommandSection points={economy.commandPoints} />}
     </div>
   );
 }

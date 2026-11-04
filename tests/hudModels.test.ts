@@ -188,8 +188,8 @@ describe('desglose de la barra de arriba', () => {
     const next = e.next;
     endRound(s);
     expect(s.funds[0]).toBe(next); // lo que dice el desglose es lo que pasa
-    expect(e.command!.used).toBe(UNIT.command[T('Tank')]! + 2 * UNIT.command[T('Soldier')]!);
-    expect(e.command!.lines.reduce((n, l) => n + l.amount, 0)).toBe(e.command!.used);
+    expect(e.commandPoints!.used).toBe(UNIT.command[T('Tank')]! + 2 * UNIT.command[T('Soldier')]!);
+    expect(e.commandPoints!.lines.reduce((n, l) => n + l.amount, 0)).toBe(e.commandPoints!.used);
   });
 
   it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
@@ -209,7 +209,7 @@ describe('desglose de la barra de arriba', () => {
     s.funds[0] = MAX_FUNDS;
     const e = economyVM(s, 0);
     expect(e.upkeep).toBeNull();
-    expect(e.command).toBeNull();
+    expect(e.commandPoints).toBeNull();
     expect(e.next).toBe(MAX_FUNDS);
   });
 

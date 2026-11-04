@@ -43,23 +43,23 @@ describe('acciones con un grupo', () => {
     const units = [newUnit(s, TANK, 0, { x: 3, y: 2 })];
     const c: ActionCtx = { s, units: [units[0]!, newUnit(s, TANK, 0, { x: 4, y: 2 })], at: { x: 6, y: 6 }, enemyHere: false };
     expect(smartAction(c)?.id).toBe('move');
-    expect(ids(c)).not.toContain('cmdCapture');
+    expect(ids(c)).not.toContain('orderToCapture');
   });
 
   it('menu completo: ordenes de la casilla, formar escuadra; con escuadra, cambiar nombre y deshacer', () => {
     const { s, units, ctx } = grp();
-    expect(ids(ctx(6, 6))).toEqual(['capture', 'cmdAttack', 'cmdCapture', 'cmdDefend', 'squadForm']);
+    expect(ids(ctx(6, 6))).toEqual(['capture', 'orderToAttack', 'orderToCapture', 'orderToDefend', 'squadForm']);
     formSquad(s, units);
-    expect(ids(ctx(9, 3))).toEqual(['move', 'cmdAttack', 'cmdDefend', 'squadRename', 'squadDisband']);
+    expect(ids(ctx(9, 3))).toEqual(['move', 'orderToAttack', 'orderToDefend', 'squadRename', 'squadDisband']);
     giveStandingOrder(s, units, 'defend', { x: 9, y: 3 });
-    expect(ids(ctx(9, 3))).toContain('cmdCancel');
+    expect(ids(ctx(9, 3))).toContain('cancelOrder');
   });
 
   it('parte de una escuadra: sacar de la escuadra; sin casilla, solo lo que no la necesita', () => {
     const { s, units } = grp();
     formSquad(s, units);
     const c: ActionCtx = { s, units: [units[0]!], at: null, enemyHere: false };
-    expect(ids(c)).toEqual(['cmdAttack', 'cmdCapture', 'cmdDefend', 'squadLeave']);
+    expect(ids(c)).toEqual(['orderToAttack', 'orderToCapture', 'orderToDefend', 'squadLeave']);
     expect(smartAction(c)).toBeNull();
     expect(cursorFor(c)).toBe('default');
   });
@@ -80,6 +80,6 @@ describe('acciones con una sola unidad elegida (la escena dice que pasa en la ca
     expect(smartAction(c({ intent: 'none' }))).toBeNull();
     expect(cursorFor(c({ intent: 'none' }))).toBe('forbidden');
     // Un enemigo fuera de alcance: no ataca ahora, pero el menu ofrece la orden.
-    expect(ids(c({ intent: 'none', enemyHere: true }))).toEqual(['cmdAttack', 'cmdDefend']);
+    expect(ids(c({ intent: 'none', enemyHere: true }))).toEqual(['orderToAttack', 'orderToDefend']);
   });
 });

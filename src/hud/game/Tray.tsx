@@ -70,14 +70,14 @@ export function Tray({
   idle,
   threat,
   intents,
-  anyCommand,
+  anyStandingOrder,
   squads,
   multi,
 }: {
   idle: IdleVM[];
   threat: boolean;
   intents: boolean;
-  anyCommand: boolean;
+  anyStandingOrder: boolean;
   squads: SquadVM[];
   multi: number | null;
 }) {
@@ -114,7 +114,7 @@ export function Tray({
         short={t('threatShort')}
         onClick={() => actions.toggleThreat()}
       />
-      {anyCommand && (
+      {anyStandingOrder && (
         <ToggleButton
           cls="threat intents"
           on={intents}

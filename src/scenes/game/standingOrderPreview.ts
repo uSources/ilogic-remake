@@ -5,7 +5,7 @@
 import { previewStandingOrders, type StandingOrderIntent } from '../../core/ai';
 import type { GameState } from '../../core/model';
 
-export class CommandPreview {
+export class StandingOrderPreview {
   /** Prevision y la firma de la partida con la que se calculo. */
   private cache: { sig: string; map: Map<number, StandingOrderIntent> } | null = null;
 

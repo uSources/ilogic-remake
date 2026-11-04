@@ -33,7 +33,9 @@ const SIDE_PANELS: GamePanel[] = [
   {
     id: 'tray',
     render: (s) =>
-      canAct(s) && <Tray idle={s.idle} threat={s.threat} intents={s.intents} anyCommand={s.anyCommand} squads={s.squads} multi={s.multi} />,
+      canAct(s) && (
+        <Tray idle={s.idle} threat={s.threat} intents={s.intents} anyStandingOrder={s.anyStandingOrder} squads={s.squads} multi={s.multi} />
+      ),
   },
 ];
 

@@ -38,7 +38,7 @@ interface UnitSprite {
   /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
   stars: Phaser.GameObjects.Graphics;
   /** [CAMBIO] Icono de la mision en automatico (ui/cmd_<tipo>); si falta, placa con letra en `stars`. */
-  cmd: Phaser.GameObjects.Image;
+  order: Phaser.GameObjects.Image;
   /** [CAMBIO] Marcas dibujadas (ui/mk_*): sin cura, carga y hasta 3 estrellas; si faltan, van en `stars`. */
   badges: Phaser.GameObjects.Image[];
   /** Firma de lo dibujado en las marcas (`markSignature`). */
@@ -72,11 +72,11 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const stars = add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
-    const cmd = add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
+    const order = add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
     const badges = Array.from({ length: BADGE_SLOTS }, () => add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
-    const root = add.container(0, 0, [img, front, life, cargo, stars, cmd, ...badges]);
+    const root = add.container(0, 0, [img, front, life, cargo, stars, order, ...badges]);
     this.object.add(root);
-    return { root, img, front, life, cargo, stars, cmd, badges, marksDrawn: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, team: 0 };
   }
 
   sync(s: GameState, opts: ViewOptions, newArt: boolean): void {
@@ -149,7 +149,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
       noHeal: unit.life < 100 && unhealable(s, unit),
       cargo: hasCargo,
       // [CAMBIO] Ayudante: la orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
-      cmd: effectiveStandingOrder(s, unit)?.kind ?? null,
+      order: effectiveStandingOrder(s, unit)?.kind ?? null,
       detached: isDetached(s, unit),
     };
     const signature = markSignature(marks);

@@ -50,10 +50,10 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (h: PhaseHost, unit: 
     wait(unit);
     h.afterAction();
   },
-  cmdAttack: (h, unit) => startOrder(h, unit, 'attack'),
-  cmdCapture: (h, unit) => startOrder(h, unit, 'capture'),
-  cmdDefend: (h, unit) => startOrder(h, unit, 'defend'),
-  cmdCancel: (h, unit) => {
+  orderToAttack: (h, unit) => startOrder(h, unit, 'attack'),
+  orderToCapture: (h, unit) => startOrder(h, unit, 'capture'),
+  orderToDefend: (h, unit) => startOrder(h, unit, 'defend'),
+  cancelOrder: (h, unit) => {
     cancelStandingOrder(h.state, [unit]);
     showToast(t('orderCancelled'));
     h.enter('unitMenu');

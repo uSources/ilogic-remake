@@ -187,10 +187,10 @@ describe('ordenes con destino', () => {
     const s = world();
     const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const tank = newUnit(s, TANK, 0, { x: 6, y: 6 });
-    expect(unitActions(s, sol)).toMatchObject({ cmdAttack: true, cmdCapture: true, cmdDefend: true, cmdCancel: false });
-    expect(unitActions(s, tank).cmdCapture).toBe(false);
+    expect(unitActions(s, sol)).toMatchObject({ orderToAttack: true, orderToCapture: true, orderToDefend: true, cancelOrder: false });
+    expect(unitActions(s, tank).orderToCapture).toBe(false);
     giveStandingOrder(s, [tank], 'defend', { x: 6, y: 6 });
-    expect(unitActions(s, tank).cmdCancel).toBe(true);
+    expect(unitActions(s, tank).cancelOrder).toBe(true);
   });
 });
 

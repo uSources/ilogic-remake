@@ -261,7 +261,7 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | `mapOverlays.ts` | lo que se dibuja encima del mapa: capturas, ordenes, intenciones, puntos de control, escolta | no |
 | `intent.ts` | que pasa al soltar la unidad elegida y por que camino (`MovePlan`) | no |
 | `highlights.ts`, `menuModel.ts`, `hudParts.ts` | casillas marcadas, menu de bocadillo, prevision, panel de lo elegido, ayuda | no |
-| `tutorial.ts`, `commandPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
+| `tutorial.ts`, `standingOrderPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
 | `input.ts` | enganche del teclado y los punteros a `src/controls` (`InputTarget`) | si |
 | `pointerInput.ts` | lo que hace cada gesto en la partida (`PointerTarget`) | solo tipos |
 | `groupSelection.ts` | grupo, «Elegir varias», escuadras, teclas de grupo | solo tipos |

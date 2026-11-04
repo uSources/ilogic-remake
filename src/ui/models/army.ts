@@ -7,7 +7,7 @@ import { t } from '../../settings';
 /** Tus unidades: nombre de las ordenes y escuadras de la bandeja. */
 
 /** [CAMBIO] Nombre de una orden con destino ("Atacar aquí"...). */
-export const commandLabel = (k: StandingOrderKind): string =>
+export const standingOrderLabel = (k: StandingOrderKind): string =>
   t(k === 'capture' ? 'orderCapture' : k === 'defend' ? 'orderDefend' : 'orderAttack');
 
 /**
@@ -29,7 +29,15 @@ export function squadsVM(s: GameState): SquadVM[] {
       const formation = squadInFormation(s, q.id);
       const kind = q.standingOrder?.kind ?? (same ? first.kind : formation ? 'capture' : null);
       const detached = units.filter((u) => isDetached(s, u)).length;
-      return { id: q.id, name: q.name, key: q.key, count: units.length, order: kind ? commandLabel(kind) : null, formation, detached };
+      return {
+        id: q.id,
+        name: q.name,
+        key: q.key,
+        count: units.length,
+        order: kind ? standingOrderLabel(kind) : null,
+        formation,
+        detached,
+      };
     })
     .filter((q) => q.count > 0)
     .sort((a, b) => (a.key ?? 99) - (b.key ?? 99));

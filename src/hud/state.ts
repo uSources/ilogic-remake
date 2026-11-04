@@ -38,7 +38,7 @@ export interface UIState {
   /** Ingresos por dia ya restado el mantenimiento (puede ser negativo). */
   income: number;
   /** Puntos de mando usados y maximos (null = regla desactivada). */
-  command: { used: number; max: number } | null;
+  commandPoints: { used: number; max: number } | null;
   /** Desglose de dinero y mando (al pasar por encima del dinero). */
   economy: EconomyVM | null;
   /** Desglose del dia (al pasar por encima del dia). */
@@ -77,7 +77,7 @@ export interface UIState {
   threat: boolean;
   /** [CAMBIO] Se ven las intenciones de todas las unidades con orden (tecla V) y si hay alguna con orden. */
   intents: boolean;
-  anyCommand: boolean;
+  anyStandingOrder: boolean;
   toast: { text: string; id: number } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
@@ -145,7 +145,7 @@ export const initialState: UIState = {
   enemyGeneral: null,
   dayInfo: null,
   income: 0,
-  command: null,
+  commandPoints: null,
   buildings: 0,
   day: 1,
   turn: 'player',
@@ -164,7 +164,7 @@ export const initialState: UIState = {
   rename: null,
   threat: false,
   intents: false,
-  anyCommand: false,
+  anyStandingOrder: false,
   toast: null,
   banner: null,
   weather: null,

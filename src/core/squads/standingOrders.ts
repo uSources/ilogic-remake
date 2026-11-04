@@ -169,11 +169,11 @@ export function atStandingOrder(s: GameState, unit: Unit): boolean {
  */
 export function sameFormation(s: GameState, a: Unit, b: Unit): boolean {
   if (a.squad === undefined || a.squad !== b.squad || a.team !== b.team) return false;
-  const commandA = effectiveStandingOrder(s, a);
-  const commandB = effectiveStandingOrder(s, b);
-  if (!commandA || !commandB) return false;
+  const orderA = effectiveStandingOrder(s, a);
+  const orderB = effectiveStandingOrder(s, b);
+  if (!orderA || !orderB) return false;
   const holds = (standingOrder: StandingOrder) => standingOrder.kind === 'defend';
-  return holds(commandA) === holds(commandB) && samePos(commandA.at, commandB.at);
+  return holds(orderA) === holds(orderB) && samePos(orderA.at, orderB.at);
 }
 
 /** [CAMBIO] La escuadra entera (dos o mas unidades) lleva la misma orden: avanza en formacion. */

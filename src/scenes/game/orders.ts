@@ -17,7 +17,7 @@ import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind 
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
 import { cursorCss } from '../../ui/cursors';
-import { commandLabel } from '../../ui/hudModels';
+import { standingOrderLabel } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { ACTION_RUNNERS, type ActionRunHost } from './actionRunners';
 import type { GroupSelection } from './groupSelection';
@@ -247,7 +247,7 @@ export class Orders {
     const h = this.h;
     if (standingOrderBlock(h.state, kind, at, units)) return;
     giveStandingOrder(h.state, units, kind, at);
-    showToast(`${commandLabel(kind)} · ${units.length}`);
+    showToast(`${standingOrderLabel(kind)} · ${units.length}`);
     if (moving) h.toMap();
     h.refresh();
   }
@@ -275,7 +275,7 @@ export class Orders {
     h.toMap();
     showToast(t('orderGiven'));
     const canStartNow = units.filter((unit) => unit.active && unit.canMove && unit.carrier === null);
-    if (canStartNow.length) await this.playCommands(canStartNow);
+    if (canStartNow.length) await this.playStandingOrders(canStartNow);
     else h.afterAction();
   }
 
@@ -293,7 +293,7 @@ export class Orders {
   }
 
   /** Las unidades empiezan ya su orden (animado); luego esperan. */
-  private async playCommands(units: Unit[]): Promise<void> {
+  private async playStandingOrders(units: Unit[]): Promise<void> {
     const h = this.h;
     const match = h.match;
     h.phase = 'busy';

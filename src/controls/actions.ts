@@ -28,10 +28,10 @@ export type ActionId =
   | 'load'
   | 'move'
   | 'go'
-  | 'cmdAttack'
-  | 'cmdCapture'
-  | 'cmdDefend'
-  | 'cmdCancel'
+  | 'orderToAttack'
+  | 'orderToCapture'
+  | 'orderToDefend'
+  | 'cancelOrder'
   | 'squadForm'
   | 'squadLeave'
   | 'squadRename'
@@ -136,12 +136,12 @@ export const ACTIONS: readonly ActionDef[] = [
         : isGroup(ctx) && !!ctx.at && !ctx.enemyHere && !hasBuildingToCapture(ctx),
   }),
   onTile({ id: 'go', label: 'goThere', cursor: 'go', ok: (ctx) => isMoving(ctx) && ctx.intent === 'none' && !!ctx.farOk }),
-  inMenu({ id: 'cmdAttack', label: 'cmdAttack', cursor: 'attack', ok: (ctx) => canOrder(ctx, 'attack') }),
-  inMenu({ id: 'cmdCapture', label: 'cmdCapture', cursor: 'capture', ok: (ctx) => canOrder(ctx, 'capture') }),
-  inMenu({ id: 'cmdDefend', label: 'cmdDefend', cursor: 'move', ok: (ctx) => canOrder(ctx, 'defend') }),
+  inMenu({ id: 'orderToAttack', label: 'orderToAttack', cursor: 'attack', ok: (ctx) => canOrder(ctx, 'attack') }),
+  inMenu({ id: 'orderToCapture', label: 'orderToCapture', cursor: 'capture', ok: (ctx) => canOrder(ctx, 'capture') }),
+  inMenu({ id: 'orderToDefend', label: 'orderToDefend', cursor: 'move', ok: (ctx) => canOrder(ctx, 'defend') }),
   inMenu({
-    id: 'cmdCancel',
-    label: 'cmdCancel',
+    id: 'cancelOrder',
+    label: 'cancelOrder',
     cursor: 'default',
     ok: (ctx) => ctx.units.some((unit) => !!effectiveStandingOrder(ctx.s, unit)),
   }),
