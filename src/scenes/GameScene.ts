@@ -39,7 +39,7 @@ import { WeatherFx } from '../ui/weatherFx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { PointerGestures } from '../controls/pointer';
-import { CLOSES_HELP, type GameCommand } from '../controls/commands';
+import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
@@ -420,7 +420,7 @@ export class GameScene extends Phaser.Scene {
    * Cumplir una orden del jugador, venga del teclado o de otro mando (ver src/controls). Es lo unico
    * que un mando necesita de la escena.
    */
-  command(cmd: GameCommand): void {
+  command(cmd: InputCommand): void {
     // Escribiendo el nombre de una escuadra: el teclado es del cuadro de texto.
     if (ui.get().rename) return;
     if (ui.get().help) {
@@ -438,7 +438,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Una orden en el mapa o en un menu de bocadillo (ni animando ni con la ayuda abierta). */
-  private mapCommand(cmd: GameCommand): void {
+  private mapCommand(cmd: InputCommand): void {
     switch (cmd.kind) {
       case 'cursor':
         return this.direction(cmd.dx, cmd.dy);

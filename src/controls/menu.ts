@@ -3,7 +3,7 @@ import type { KeyInput } from './keyboard';
 
 /**
  * Ordenes en los menus (inicio, partida nueva, campaña, opciones, notas de parche, ayuda, fin de
- * partida), sin importar de donde vienen. Igual que GameCommand en el mapa: cada mando las produce y
+ * partida), sin importar de donde vienen. Igual que InputCommand en el mapa: cada mando las produce y
  * la escena (o el panel) las cumple con `menu(cmd)`.
  */
 export type MenuCommand =
@@ -21,7 +21,7 @@ export type MenuCommand =
   | { kind: 'reroll' };
 
 /**
- * Donde esta el foco de los mandos. 'map': el mapa (ordenes GameCommand); el resto son menus
+ * Donde esta el foco de los mandos. 'map': el mapa (ordenes InputCommand); el resto son menus
  * (MenuCommand) y cada uno tiene sus teclas. Las escenas lo dicen con `controlContext()`.
  */
 export type MenuContext = 'help' | 'notes' | 'options' | 'home' | 'setup' | 'typing' | 'campaign' | 'end';

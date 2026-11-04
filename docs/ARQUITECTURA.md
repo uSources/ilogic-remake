@@ -240,7 +240,7 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | `intent.ts` | que pasa al soltar la unidad elegida y por que camino (`MovePlan`) | no |
 | `highlights.ts`, `menuModel.ts`, `hudParts.ts` | casillas marcadas, menu de bocadillo, prevision, panel de lo elegido, ayuda | no |
 | `tutorial.ts`, `commandPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
-| `input.ts` | enganche del teclado y los punteros a `src/controls` (`CommandTarget`) | si |
+| `input.ts` | enganche del teclado y los punteros a `src/controls` (`InputTarget`) | si |
 | `pointerInput.ts` | lo que hace cada gesto en la partida (`PointerTarget`) | solo tipos |
 | `groupSelection.ts` | grupo, «Elegir varias», escuadras, teclas de grupo | solo tipos |
 | `carry.ts` | coger, arrastrar y soltar una unidad | si |
@@ -273,11 +273,11 @@ puras, sin Phaser, con tests) traduce lo que pulsa el jugador a **ordenes**, y l
 
 | Orden | Donde vale | Quien la cumple |
 |---|---|---|
-| `GameCommand` (`commands.ts`): cursor, aceptar, atras, deshacer, fin de turno, zoom... | el mapa y sus menus de bocadillo | `GameScene.command(cmd)` |
+| `InputCommand` (`inputCommands.ts`): cursor, aceptar, atras, deshacer, fin de turno, zoom... | el mapa y sus menus de bocadillo | `GameScene.command(cmd)` |
 | `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda, fin de partida | `MenuScene.menu(cmd)`, `GameScene.menu(cmd)` (que pasan a `OptionsPanel.command`, `notesCommand`...) |
 | gestos de `PointerGestures` (`pointer.ts`) | raton y dedos en la partida, incluido desplazar el mapa por el borde (`tick`, cada fotograma) | `pointerTarget()` de `scenes/game/pointerInput.ts` |
 
-Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `GameCommand`) o el menu
+Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `InputCommand`) o el menu
 abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
 
 - **Teclado**: `keyCommand(e)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(e, ctx)` (tabla
@@ -311,7 +311,7 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
 
 Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 
-1. Tablas puras de botones → ordenes, p. ej. `padCommand(button): GameCommand | null` (A = aceptar,
+1. Tablas puras de botones → ordenes, p. ej. `padCommand(button): InputCommand | null` (A = aceptar,
    B = cancelar, cruceta = cursor, Start = opciones, LB/RB = zoom...) y
    `padMenuCommand(button, ctx): MenuCommand | null` (cruceta = mover, A = `ok`, B = `back`). La
    repeticion al mantener la cruceta se decide aqui (`ok` lleva `repeat`, como el teclado). Con tests.
@@ -321,7 +321,7 @@ Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 3. Phaser necesita `input: { gamepad: true }` en la configuracion del juego (`main.ts`).
 4. La ayuda (`helpText.ts`) explica los botones.
 
-El cursor del mapa y los menus de bocadillo ya funcionan solo con ordenes `GameCommand`, asi que un
+El cursor del mapa y los menus de bocadillo ya funcionan solo con ordenes `InputCommand`, asi que un
 mando puede jugar una partida entera sin raton.
 
 ## Donde mirar

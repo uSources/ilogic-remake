@@ -1,20 +1,20 @@
 /**
  * Enganche de los mandos a la partida: teclado y punteros de Phaser → adaptadores de src/controls.
  * Aqui no se decide nada: el teclado pasa a ordenes (keyCommand / menuKeyCommand) y los punteros a
- * PointerGestures, que decide el gesto. Quien las cumple es un `CommandTarget` (GameScene).
+ * PointerGestures, que decide el gesto. Quien las cumple es un `InputTarget` (GameScene).
  */
 import Phaser from 'phaser';
-import type { GameCommand } from '../../controls/commands';
+import type { InputCommand } from '../../controls/inputCommands';
 import { keyCommand } from '../../controls/keyboard';
 import { menuKeyCommand, type ControlContext, type MenuCommand } from '../../controls/menu';
 import type { PointerGestures, PointerIn } from '../../controls/pointer';
 
 /** Lo unico que un mando necesita de la escena (ver docs/ARQUITECTURA.md, "Mandos"). */
-export interface CommandTarget {
+export interface InputTarget {
   /** Donde esta el foco: el mapa ('map') o un menu propio. */
   controlContext(): ControlContext;
   menu(cmd: MenuCommand): void;
-  command(cmd: GameCommand): void;
+  command(cmd: InputCommand): void;
 }
 
 /** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
@@ -34,8 +34,8 @@ export function pointerIn(p: Phaser.Input.Pointer, right: boolean, middle = fals
   };
 }
 
-/** Adaptador de teclado: en el mapa, ordenes GameCommand; en la pantalla final y opciones, MenuCommand. */
-export function onKey(e: KeyboardEvent, target: CommandTarget): void {
+/** Adaptador de teclado: en el mapa, ordenes InputCommand; en la pantalla final y opciones, MenuCommand. */
+export function onKey(e: KeyboardEvent, target: InputTarget): void {
   const ctx = target.controlContext();
   if (ctx !== 'map') {
     const cmd = menuKeyCommand(e, ctx);
@@ -50,7 +50,7 @@ export function onKey(e: KeyboardEvent, target: CommandTarget): void {
 }
 
 /** Engancha el teclado y los punteros de la escena a los adaptadores. */
-export function bindInput(scene: Phaser.Scene, target: CommandTarget, gestures: PointerGestures): void {
+export function bindInput(scene: Phaser.Scene, target: InputTarget, gestures: PointerGestures): void {
   scene.input.mouse?.disableContextMenu();
   // Dos dedos a la vez para pellizcar (zoom).
   if (scene.input.manager.pointersTotal < 3) scene.input.addPointer(1);
