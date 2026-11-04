@@ -1,4 +1,4 @@
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import type { RulesConfig } from '@core/model';
 import { defaultContent } from '@core/content/default';
 

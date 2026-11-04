@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { readContentFiles, validateContent } from '@core/content';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { abilityBlock, chargeStars, generalHitFactor, newGeneral, useAbility } from '@core/generals';

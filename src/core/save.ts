@@ -4,7 +4,8 @@
  * y sin modificar el estado al guardar.
  */
 import { savedPart, tablesOf } from './gameContent';
-import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, THEME_NAMES } from './data';
+import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
+import { TERRAIN_TYPES, THEME_NAMES } from './content';
 import { generalDef } from './generals';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
@@ -28,7 +29,7 @@ const MAX_UID = Number.MAX_SAFE_INTEGER;
 
 /** Una casilla bien formada y dentro del mapa de la partida que se lee. */
 const isMapPos = (board: GridBounds, p: unknown): boolean =>
-  !!p && isInt((p as Pos).x, 0, 1e6) && isInt((p as Pos).y, 0, 1e6) && board.contains(p as Pos);
+  !!p && Number.isInteger((p as Pos).x) && Number.isInteger((p as Pos).y) && board.contains(p as Pos);
 /** Una orden con destino bien formada (Unit.standingOrder o Squad.standingOrder). */
 const isStandingOrder = (board: GridBounds, c: unknown): boolean =>
   !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos(board, (c as { at: unknown }).at);

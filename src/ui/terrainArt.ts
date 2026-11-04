@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { TerrainType, THEME_NAMES } from '../core/data';
+import { TerrainType, THEME_NAMES } from '../core/content';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState, Pos } from '../core/model';
 import { buildingAt } from '../core/rules';

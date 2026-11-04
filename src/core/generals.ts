@@ -11,7 +11,7 @@
  *
  * Este modulo no importa rules.ts (rules.ts lo importa a el).
  */
-import { contentOf, tablesOf } from './gameContent';
+import { tablesOf } from './gameContent';
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
@@ -19,7 +19,7 @@ import { mapGrid } from './mapGrid';
 import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
-export const generalDef = (s: GameState, id: string): GeneralDef | undefined => contentOf(s).files.generals.find((g) => g.id === id);
+export const generalDef = (s: GameState, id: string): GeneralDef | undefined => s.content.files.generals.find((g) => g.id === id);
 
 /** General de un bando con sus datos (null si no tiene). */
 export function generalOf(s: GameState, team: Team): { state: GeneralState; def: GeneralDef } | null {

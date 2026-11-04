@@ -1,6 +1,6 @@
 // Vuelca un mapa generado (terreno y tema) en JSON, para probar los graficos fuera del juego.
 // Uso: npx tsx tools/art/dump-map.ts <semilla> <tamaño> [tema]
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { seededRng } from '@core/geom';
 import { createGame } from '@core/defaultGames';
 import { defaultContent } from '@core/content/default';

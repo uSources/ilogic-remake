@@ -7,7 +7,7 @@
  * un evento nuevo trae su propia funcion en vez de abrir un `switch`.
  */
 import type Phaser from 'phaser';
-import { MoveType } from '../../core/data';
+import { MoveType } from '../../core/content';
 import { tablesOf } from '../../core/gameContent';
 import { movementOf } from '../../core/rules';
 import { abilityArea, generalOf } from '../../core/generals';

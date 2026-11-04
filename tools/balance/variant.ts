@@ -20,7 +20,7 @@
  * Una variante no cambia el contenido del juego (esta congelado): `buildVariant` construye otro, con
  * sus reglas, y runner.ts se lo pasa a las partidas que juega en hilos.
  */
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { MOVEMENTS, TERRAIN_NAMES, type GameContent } from '@core/content';
 import { deepFreeze } from '@core/util/freeze';
 import type { RulesConfig } from '@core/model';

@@ -2,9 +2,8 @@
  * Tipos y constantes que comparten GameScene y sus modulos (src/scenes/game). Sin Phaser: se pueden
  * importar desde los tests.
  */
-import type { RulesConfig } from '../../core/model';
 import type { UnitActions } from '../../core/rules';
-import type { GameSetup, Pos, Unit } from '../../core/model';
+import type { GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -53,10 +52,8 @@ export type Intent =
   | { kind: 'load'; target: Unit };
 
 /** Donde estaba la unidad antes de moverla (para "Atras" en su menu). */
-export interface MoveUndo {
+export interface MoveUndo extends Pos {
   uid: number;
-  x: number;
-  y: number;
   canFire: boolean;
 }
 

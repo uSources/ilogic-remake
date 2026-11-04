@@ -78,7 +78,10 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ group: ['../*', 'phaser', 'preact'], message: 'src/core/model no depende de nada: solo tipos de partida.' }] },
+        {
+          // Nada de fuera de model/: ni otras carpetas (../), ni alias (@core/...), ni paquetes.
+          patterns: [{ regex: '^(?!\\./)', message: 'src/core/model no depende de nada: solo tipos de partida (importa solo de ./).' }],
+        },
       ],
       // Solo tipos: las constantes y funciones van fuera del modelo (p. ej. TEAMS en util/predicates.ts).
       'no-restricted-syntax': [

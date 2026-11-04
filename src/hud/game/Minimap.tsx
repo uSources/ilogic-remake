@@ -3,6 +3,7 @@ import { t } from '../../settings';
 import type { UIState } from '../state';
 import { ui } from '../store';
 import type { MinimapVM } from '../vm/minimap';
+import type { Pos } from '../../core/model';
 
 /** Minimapa: 4 px por casilla, niebla oscurecida, edificios y unidades de colores. */
 
@@ -24,23 +25,23 @@ type Painter = CanvasRenderingContext2D;
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 const ownerColor = (owner: Team | null) => (owner === null ? NEUTRAL_COLOR : TEAM_COLOR[owner]);
 
-function fillTile(painter: Painter, x: number, y: number) {
-  painter.fillRect(x * TILE_PX, y * TILE_PX, TILE_PX, TILE_PX);
+function fillTile(painter: Painter, tile: Pos) {
+  painter.fillRect(tile.x * TILE_PX, tile.y * TILE_PX, TILE_PX, TILE_PX);
 }
 
 /** Una casilla con marco oscuro de 1 px y `color` dentro. */
-function fillOutlinedTile(painter: Painter, x: number, y: number, color: string) {
+function fillOutlinedTile(painter: Painter, tile: Pos, color: string) {
   painter.fillStyle = OUTLINE;
-  fillTile(painter, x, y);
+  fillTile(painter, tile);
   painter.fillStyle = color;
-  painter.fillRect(x * TILE_PX + 1, y * TILE_PX + 1, TILE_PX - 2, TILE_PX - 2);
+  painter.fillRect(tile.x * TILE_PX + 1, tile.y * TILE_PX + 1, TILE_PX - 2, TILE_PX - 2);
 }
 
 function drawTerrain(painter: Painter, minimap: MinimapVM) {
   for (let y = 0; y < minimap.h; y++)
     for (let x = 0; x < minimap.w; x++) {
       painter.fillStyle = hex(minimap.terrain[y * minimap.w + x] ?? 0);
-      fillTile(painter, x, y);
+      fillTile(painter, { x, y });
     }
 }
 
@@ -49,7 +50,7 @@ function drawFog(painter: Painter, minimap: MinimapVM) {
   for (let x = 0; x < minimap.w; x++)
     for (let y = 0; y < minimap.h; y++) {
       const isVisible = minimap.fog[x]?.[y];
-      if (!isVisible) fillTile(painter, x, y);
+      if (!isVisible) fillTile(painter, { x, y });
     }
 }
 
@@ -70,9 +71,9 @@ function drawControlPoints(painter: Painter, minimap: MinimapVM) {
 function drawMinimap(painter: Painter, minimap: MinimapVM) {
   drawTerrain(painter, minimap);
   drawFog(painter, minimap);
-  for (const building of minimap.buildings) fillOutlinedTile(painter, building.x, building.y, ownerColor(building.owner));
+  for (const building of minimap.buildings) fillOutlinedTile(painter, building, ownerColor(building.owner));
   drawControlPoints(painter, minimap);
-  for (const unit of minimap.units) fillOutlinedTile(painter, unit.x, unit.y, UNIT_COLOR[unit.team]);
+  for (const unit of minimap.units) fillOutlinedTile(painter, unit, UNIT_COLOR[unit.team]);
 }
 
 /** Lleva la camara a la casilla bajo el puntero. */

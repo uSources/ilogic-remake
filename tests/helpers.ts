@@ -1,5 +1,5 @@
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import type { GameState, RulesConfig } from '@core/model';

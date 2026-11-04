@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { armyLimit, buyOptions, commandUsed, endRound, newUnit, spawn, upkeepOf } from '@core/rules';
 import { blankState } from './helpers';

@@ -1,9 +1,9 @@
 import type Phaser from 'phaser';
 import { abilitiesOf } from '../../core/abilities';
-import { MoveType, type AbilityDef } from '../../core/data';
+import { MoveType, type AbilityDef } from '../../core/content';
 import { tablesOf } from '../../core/gameContent';
-import { canMoveOn } from '../../core/rules';
 import {
+  canMoveOn,
   inControlZone,
   buildingAt,
   buildingIncome,

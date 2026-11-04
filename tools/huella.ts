@@ -10,7 +10,7 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';

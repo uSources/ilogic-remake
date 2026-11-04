@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { createGame } from '@core/defaultGames';

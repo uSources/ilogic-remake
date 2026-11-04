@@ -2,7 +2,7 @@
  * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
  * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
-import { rulesWith } from '../../core/data';
+import { rulesWith } from '../../core/rulesConfig';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
 import { defaultContent } from '../../core/content/default';

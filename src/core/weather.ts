@@ -12,7 +12,7 @@
  * y el jugador lo sufren igual.
  */
 import { tablesOf } from './gameContent';
-import { type MoveType } from './data';
+import type { MoveType } from './content';
 import { seededRng } from './geom';
 import type { GameState, Rng, WeatherState } from './model';
 

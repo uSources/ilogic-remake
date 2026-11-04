@@ -5,7 +5,7 @@
  */
 import { saveContext } from '@core/defaultGames';
 import { MAX_LIFE } from '@core/data';
-import { contentOf, tablesOf } from '@core/gameContent';
+import { tablesOf } from '@core/gameContent';
 import { canMoveOn, movementOf } from '@core/rules';
 import { posKey } from '@core/geom';
 import { mapGrid, terrainAt } from '@core/mapGrid';
@@ -68,7 +68,7 @@ export function checkInvariants(s: GameState): string[] {
   }
   if (s.nextUid <= Math.max(0, ...uids)) errs.push(`nextUid ${s.nextUid} no es mayor que los uid usados`);
   // Guardar y cargar no pierde nada.
-  const back = deserialize(serialize(s), saveContext(contentOf(s)));
+  const back = deserialize(serialize(s), saveContext(s.content));
   if (!back) errs.push('la partida no se puede volver a cargar (deserialize la rechaza)');
   else if (serialize(back) !== serialize(s)) errs.push('guardar y cargar cambia la partida');
   return errs;

@@ -5,7 +5,7 @@ import type { GameState, Squad, Unit } from '../model';
 /** Solo las del jugador: las escuadras y las ordenes con destino son suyas (la IA decide sola). */
 export const playerUnits = (units: readonly Unit[]): Unit[] => units.filter((unit) => isPlayer(unit.team));
 
-/** Unidades vivas de una escuadra. */
+/** Unidades de una escuadra (las que caen se quitan de la partida: no hay que filtrarlas). */
 export function squadUnits(s: GameState, id: number): Unit[] {
   return s.units.filter((unit) => unit.squad === id);
 }

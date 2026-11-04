@@ -13,7 +13,7 @@
  */
 import { tablesOf } from './gameContent';
 import { MOVEMENTS } from './content';
-import { type AbilityDef } from './data';
+import type { AbilityDef } from './content';
 import { manhattan, neighbors4 } from './geom';
 import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';

@@ -5,7 +5,7 @@
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
 import { defaultContent } from './core/content/default';
-import { rulesWith } from './core/data';
+import { rulesWith } from './core/rulesConfig';
 import { tablesOf } from './core/gameContent';
 import { newGameState } from './core/gameState';
 import { blankMap } from './core/mapGrid';

@@ -2,14 +2,13 @@ import type { Pos } from './geometry';
 import type { StandingOrder } from './standingOrder';
 import type { Team } from './team';
 
-export interface Unit {
+/** Una unidad en su casilla (x, y), o dentro de un transporte (carrier). */
+export interface Unit extends Pos {
   /** Identificador estable (no cambia al morir otras unidades ni al guardar). */
   uid: number;
   /** Tipo 0..18 (ver UNIT_NAMES). */
   type: number;
   team: Team;
-  x: number;
-  y: number;
   /** Puede actuar este turno. */
   active: boolean;
   /** Aun no se ha movido este turno. */

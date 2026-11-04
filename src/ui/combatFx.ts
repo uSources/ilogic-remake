@@ -9,7 +9,7 @@
  * animaciones.
  */
 import type Phaser from 'phaser';
-import { MoveType } from '../core/data';
+import { MoveType } from '../core/content';
 import { tablesOf } from '../core/gameContent';
 import type { GameState } from '../core/model';
 import type { Pos } from '../core/model';

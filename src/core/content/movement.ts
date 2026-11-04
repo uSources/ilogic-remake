@@ -1,5 +1,5 @@
 /** Por donde pasa cada tipo de movimiento y cuanto le cuesta, segun unas tablas de contenido. */
-import type { ContentTables } from './index';
+import type { ContentTables } from './tables';
 import type { MoveType } from './types';
 
 /** Ese tipo de movimiento puede pasar por ese terreno. */

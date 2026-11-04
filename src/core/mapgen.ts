@@ -10,7 +10,8 @@
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
 import { tablesOf } from './gameContent';
-import { MAPGEN, PROBS_PER_ADJ, TERRAIN_TYPES, TILE_BASE_PROBS, TerrainType, MoveType } from './data';
+import { MAPGEN, PROBS_PER_ADJ, TILE_BASE_PROBS } from './mapgenTables';
+import { TERRAIN_TYPES, TerrainType, MoveType } from './content';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
 import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';

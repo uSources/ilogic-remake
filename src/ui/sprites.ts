@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { TERRAIN_NAMES } from '../core/data';
+import { TERRAIN_NAMES } from '../core/content';
 import { tablesOf } from '../core/gameContent';
 import { isOnBoard, terrainAt } from '../core/mapGrid';
 import type { Building, GameState, Pos, Unit } from '../core/model';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';

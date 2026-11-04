@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { abilitiesOf, abilityOf, auraFactor } from '@core/abilities';
-import { MoveType, TerrainType, type AbilityDef, rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { walkableFor } from '@core/content';
+import { walkableFor, MoveType, TerrainType, type AbilityDef } from '@core/content';
 import { validateContent, type Content } from '@core/content';
 import { captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
 import { settings } from '../src/settings';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chooseAbility } from '@core/aiGenerals';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { newUnit } from '@core/rules';

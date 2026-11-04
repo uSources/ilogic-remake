@@ -25,7 +25,7 @@ import {
   type PresetId,
   ruleChangesFor,
 } from '../setup';
-import { rulesWith } from '../core/data';
+import { rulesWith } from '../core/rulesConfig';
 import { navGrid } from './nav';
 import { mapThumb } from './thumb';
 

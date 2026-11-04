@@ -19,7 +19,7 @@ const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
 /** La orden tal como la cumple esta unidad: con "capturar", las que no pueden capturar van de escolta (atacar). */
 export function forUnit(s: GameState, unit: Unit, standingOrder: StandingOrder): StandingOrder {
   const kind = standingOrder.kind === 'capture' && !isCapturer(s, unit) ? 'attack' : standingOrder.kind;
-  return { kind, at: posOf(standingOrder.at) };
+  return { ...copyStandingOrder(standingOrder), kind };
 }
 
 /**
@@ -27,7 +27,7 @@ export function forUnit(s: GameState, unit: Unit, standingOrder: StandingOrder):
  * escuadra (adaptada: escolta en una captura). undefined = no tiene orden.
  */
 export function effectiveStandingOrder(s: GameState, unit: Unit): StandingOrder | undefined {
-  // Llevada a mano a una casilla lejana (Unit.order): eso manda mientras dura.
+  // Llevada a mano a una casilla lejana (Unit.travelTo): eso manda mientras dura.
   if (unit.travelTo) return undefined;
   if (unit.standingOrder) return unit.standingOrder;
   const squadOrder = squadById(s, unit.squad)?.standingOrder;
@@ -94,9 +94,9 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
  */
 export function giveStandingOrder(s: GameState, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
   const mine = playerUnits(units);
-  const standingOrder: StandingOrder = { kind, at: posOf(at) };
+  const standingOrder = copyStandingOrder({ kind, at });
   const whole = wholeSquads(s, mine);
-  for (const id of whole) squadById(s, id)!.standingOrder = { ...standingOrder, at: { ...standingOrder.at } };
+  for (const id of whole) squadById(s, id)!.standingOrder = copyStandingOrder(standingOrder);
   for (const unit of mine) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else giveOwnStandingOrder(s, unit, standingOrder);

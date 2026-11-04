@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { TERRAIN_TYPES } from '../core/data';
+import { TERRAIN_TYPES } from '../core/content';
 import { terrainKey } from './sprites';
 import { drawFrame, hasImage } from '../atlas';
 

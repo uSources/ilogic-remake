@@ -1,4 +1,4 @@
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';

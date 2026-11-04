@@ -10,7 +10,7 @@
  * Objetivos: uno por entrada en `objectives.ts`.
  */
 import { walkableFor, type ContentTables, type GameContent } from './content';
-import { rulesWith } from './data';
+import { rulesWith } from './rulesConfig';
 import { tablesOf } from './gameContent';
 import { deepFreeze } from './util/freeze';
 import { newGameState } from './gameState';

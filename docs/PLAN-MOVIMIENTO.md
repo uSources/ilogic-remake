@@ -83,7 +83,7 @@ Hoy mover son tres pasos: pulsar la unidad, pulsar el destino y elegir en un men
   - los vehículos, 2 en bosque y en arena;
   - las orugas, 2 en nieve;
   - los aviones, 1 en todo.
-- Una tabla `MOVE_COST[tipoMovimiento][terreno]` en `data.ts` que la herramienta de equilibrio puede cambiar.
+- Una tabla `MOVE_COST[tipoMovimiento][terreno]` en el contenido (`tables.MOVE_COST`, de terrain.json) que la herramienta de equilibrio puede cambiar.
 - **El combustible se gasta según el coste**, no por casillas.
 - **La ficha del terreno enseña cuánto cuesta entrar** para la unidad elegida.
 - Va con las reglas nuevas; las clásicas siguen con coste 1.

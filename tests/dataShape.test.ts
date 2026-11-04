@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { TERRAIN_TYPES } from '@core/data';
+import { TERRAIN_TYPES } from '@core/content';
 import { unitLabel, settings } from '../src/settings';
 
 /**

@@ -6,7 +6,6 @@
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
-import { contentOf } from '../../core/gameContent';
 import { samePos, seededRng, posOf } from '../../core/geom';
 import {
   buildingAt,
@@ -260,7 +259,7 @@ export class TurnFlow {
     host.toMap();
     const saved = this.saveCamera();
     const after = serialize(host.state);
-    const before = deserialize(last.before, saveContext(contentOf(host.state)));
+    const before = deserialize(last.before, saveContext(host.state.content));
     if (!before) return;
     host.state = before;
     this.replaying = true;
@@ -277,7 +276,7 @@ export class TurnFlow {
       await host.play([event]);
       if (match !== host.match || host.ended) return;
     }
-    host.state = deserialize(after, saveContext(contentOf(host.state)))!;
+    host.state = deserialize(after, saveContext(host.state.content))!;
     this.replaying = false;
     this.enemyPlaying = false;
     this.backToPlayer(saved);

@@ -5,15 +5,11 @@
  *
  * No se guarda (es el del juego, o el de la herramienta que la crea): `serialize` escribe solo lo
  * guardado (`SavedGameState`) y lo ponen quien crea la partida (`newGameState`) y quien la lee
- * (`deserialize`). Para copiar una partida, `cloneState` (comparte el contenido, que esta congelado).
+ * (`deserialize`). Se lee como `s.content` (o sus atajos `tablesOf`, `weightsOf`). Para copiar una
+ * partida, `cloneState` (comparte el contenido, que esta congelado).
  */
-import type { ContentTables, GameContent } from './content';
+import type { ContentTables } from './content';
 import type { GameState, SavedGameState } from './model';
-
-/** El contenido con el que se juega la partida. */
-export function contentOf(s: GameState): GameContent {
-  return s.content;
-}
 
 /** Las tablas del contenido de la partida (UNIT, POWER, TERRAIN...). */
 export function tablesOf(s: GameState): ContentTables {

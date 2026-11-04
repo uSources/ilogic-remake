@@ -9,7 +9,7 @@
  * las reglas de cada mision. Asi save.ts no depende del catalogo de misiones.
  */
 import type { GameContent } from './content';
-import { rulesWith } from './data';
+import { rulesWith } from './rulesConfig';
 import type { GameState, RulesConfig } from './model';
 import { liftStandingOrder } from './squads/standingOrders';
 

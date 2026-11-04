@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { THEME_NAMES, rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { validateContent } from '@core/content';
+import { validateContent, THEME_NAMES } from '@core/content';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
 import { CLEAR, advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';

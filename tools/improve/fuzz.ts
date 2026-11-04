@@ -7,7 +7,7 @@
  *   npm run fuzz -- --repro 1234                  repetir una partida concreta con todo el detalle
  */
 import { aiTurn } from '@core/ai';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { seededRng } from '@core/geom';
 import { createGame } from '@core/defaultGames';
 import { endRound, outcome } from '@core/rules';

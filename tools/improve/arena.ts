@@ -15,7 +15,7 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { createGame } from '@core/defaultGames';
 import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';

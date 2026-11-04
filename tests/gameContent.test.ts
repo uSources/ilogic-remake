@@ -3,8 +3,8 @@ import { saveContext } from '@core/defaultGames';
 import { aiTurn } from '@core/ai';
 import { loadContent, readContentFiles, type GameContent } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/data';
-import { cloneState, contentOf, tablesOf } from '@core/gameContent';
+import { rulesWith } from '@core/rulesConfig';
+import { cloneState, tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { buyOptions, endRound } from '@core/rules';
@@ -51,16 +51,16 @@ describe('contenido de cada partida', () => {
     expect(normalEvents).toEqual(alone);
     expect(expensiveEvents).not.toEqual(normalEvents);
     expect(tablesOf(normal).UNIT.cost[TANK]).toBe(defaultContent().tables.UNIT.cost[TANK]);
-    expect(contentOf(expensive)).toBe(variant);
+    expect(expensive.content).toBe(variant);
   });
 
   it('el contenido no se guarda: lo da quien lee la partida, y las copias lo conservan', () => {
     const variant = expensiveTanks();
     const s = newMatch(variant);
     expect(serialize(s)).not.toContain('tables');
-    expect(contentOf(deserialize(serialize(s), saveContext(variant))!)).toBe(variant);
-    expect(contentOf(deserialize(serialize(s), saveContext(defaultContent()))!)).toBe(defaultContent());
-    expect(contentOf(cloneState(s))).toBe(variant);
+    expect(deserialize(serialize(s), saveContext(variant))!.content).toBe(variant);
+    expect(deserialize(serialize(s), saveContext(defaultContent()))!.content).toBe(defaultContent());
+    expect(cloneState(s).content).toBe(variant);
   });
 
   it('el contenido es un campo de la partida: sin el no compila, y serialize no lo escribe', () => {

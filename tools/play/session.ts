@@ -5,7 +5,8 @@
  */
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { TERRAIN_NAMES, rulesWith } from '@core/data';
+import { TERRAIN_NAMES } from '@core/content';
+import { rulesWith } from '@core/rulesConfig';
 import { createGame, loadGame } from '@core/defaultGames';
 import { tablesOf } from '@core/gameContent';
 import { posKey, samePos, seededRng } from '@core/geom';

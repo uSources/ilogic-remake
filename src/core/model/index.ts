@@ -1,5 +1,5 @@
 /**
- * Modelo de datos de una partida: solo tipos (y la lista de bandos), sin dependencias. Es la capa de
+ * Modelo de datos de una partida: solo tipos, sin dependencias. Es la capa de
  * abajo del nucleo: todo lo demas (contenido, reglas, IA, guardado) la importa y ella no importa nada.
  */
 export type { Pos } from './geometry';

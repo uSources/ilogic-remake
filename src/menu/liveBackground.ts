@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
 import { defaultContent } from '../core/content/default';
-import { rulesWith } from '../core/data';
+import { rulesWith } from '../core/rulesConfig';
 import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';

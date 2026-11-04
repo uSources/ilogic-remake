@@ -52,7 +52,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
   `core/content/*.json` (ver `docs/CONTENIDO.md`). El contenido va con cada partida: se lee con
   `tablesOf(s)` (`UNIT`, `POWER`, `BUILDING`, `TERRAIN`...), `weightsOf(s)` (pesos de la IA) y
-  `contentOf(s)` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
+  `s.content` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
   etiquetas), `defaultContent()`. El codigo no compara nombres de unidades (`'Tank'`): si necesita
   saber algo de una, es un campo del JSON.
 - **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `movementOf(s, u.type)`,

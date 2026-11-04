@@ -147,7 +147,8 @@ src/
                y reutilizar, por ejemplo, en un servidor para partidas online.
     content/     Unidades, edificios, terreno, reglas e IA en JSON + su validacion: ver docs/CONTENIDO.md
     model/       Modelo de datos de la partida (GameState, Unit, Building, GameEvent...), sin dependencias
-    data.ts      Temas, generador de mapas, reglas por defecto (DEFAULT_RULES, rulesWith)
+    rulesConfig.ts  rulesWith(contenido, cambios): las reglas de una partida
+    data.ts      Constantes que no son contenido (tamaños de mapa, vida); mapgenTables.ts: tablas del generador
     gameContent.ts  El contenido de cada partida (tablesOf, weightsOf, contentOf); gameState.ts: newGameState
     defaultGames.ts Partidas con el contenido del juego (createGame, loadGame, saveContext)
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)

@@ -20,7 +20,6 @@ import {
   visibility,
   wait,
 } from '../../core/rules';
-import { contentOf } from '../../core/gameContent';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { showToast } from '../../hud/store';
@@ -288,7 +287,7 @@ export class UnitMoves {
   undoLast(): void {
     const previous = this.undoStack.pop();
     if (!previous) return showToast(t('nothingToUndo'));
-    const restored = deserialize(previous, saveContext(contentOf(this.h.state)));
+    const restored = deserialize(previous, saveContext(this.h.state.content));
     if (!restored) return;
     this.h.state = restored;
     this.h.toMap();

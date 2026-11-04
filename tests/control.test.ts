@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { MoveType, rulesWith } from '@core/data';
+import { MoveType } from '@core/content';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { manhattan, seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';

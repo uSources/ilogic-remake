@@ -4,7 +4,7 @@
  * IA o la imagen original.
  */
 import { defaultContent } from '../core/content/default';
-import { rulesWith } from '../core/data';
+import { rulesWith } from '../core/rulesConfig';
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
 import type { MissionDef } from '../core/missions';

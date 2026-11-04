@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiGeneral, bestAreaTarget, chooseAbility } from '@core/aiGenerals';
-import { rulesWith } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { generalDef, newGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';
