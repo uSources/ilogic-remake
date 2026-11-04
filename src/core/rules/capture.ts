@@ -26,24 +26,22 @@ function isStillCapturing(s: GameState, building: Building, progress: CapturePro
 
 /**
  * Captura a medias de un edificio, si sigue siendo valida (la unidad que la hacia sigue encima).
- * Si no, se borra.
+ * Solo consulta: la que ya no vale la borra `dropStaleCaptures`.
  */
 export function captureProgress(s: GameState, building: Building): CaptureProgress | null {
   const progress = building.capture;
-  if (!progress) return null;
-  if (isStillCapturing(s, building, progress)) return progress;
-  building.capture = null;
-  return null;
+  return progress && isStillCapturing(s, building, progress) ? progress : null;
 }
 
 /**
  * [CAMBIO] Una captura a medias se pierde en cuanto la unidad que capturaba se va o muere. Antes solo
  * se borraba al consultarla (captureProgress), asi que en las partidas sin pantalla (IA contra IA,
  * equilibrio) una unidad podia irse y volver sin perderla. Lo encontro el cazador de fallos
- * (npm run fuzz). Se llama al mover, unir, subir a un transporte y al quitar muertos.
+ * (npm run fuzz). Se llama al mover, unir, subir a un transporte, al quitar muertos y al acabar la
+ * ronda, y es el unico sitio que la borra (captureProgress solo consulta).
  */
 export function dropStaleCaptures(s: GameState): void {
-  for (const building of s.buildings) if (building.capture) captureProgress(s, building);
+  for (const building of s.buildings) if (building.capture && !captureProgress(s, building)) building.capture = null;
 }
 
 /** Se puede capturar el edificio de debajo (neutral o enemigo). */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/geom';
-import { attackEvent, attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
+import { attackEvent, attackFull, capture, captureProgress, combatForecast, dropStaleCaptures, newUnit, visibility } from '@core/rules';
 import { blankState } from './helpers';
 
 const SOLDIER = 0,
@@ -126,6 +126,9 @@ describe('reglas nuevas: captura por puntos', () => {
     expect(captureProgress(s, s.buildings[0]!)?.left).toBe(10);
     u.x = 4;
     expect(captureProgress(s, s.buildings[0]!)).toBeNull();
+    expect(s.buildings[0]!.capture).not.toBeNull(); // consultar no la borra...
+    dropStaleCaptures(s); // ...la borra el paso que sigue a cada movimiento
+    expect(s.buildings[0]!.capture).toBeNull();
     u.x = 3;
     u.active = true;
     expect(capture(s, u)!.left).toBe(10);

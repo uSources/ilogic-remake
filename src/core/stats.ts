@@ -11,7 +11,7 @@ export function armyValue(s: GameState, team: Team): number {
 
 /** Apunta el valor de los dos ejercitos del dia actual (una muestra por dia). */
 export function sampleArmy(s: GameState): void {
-  const samples = (stats(s).army ??= []);
+  const samples = (statsToRecord(s).army ??= []);
   const today: [number, number] = [armyValue(s, PLAYER), armyValue(s, AI_TEAM)];
   const dayIndex = Math.max(0, s.day - 1);
   if (dayIndex < samples.length) {
@@ -25,14 +25,20 @@ export function sampleArmy(s: GameState): void {
 
 export const emptyStats = (): GameStats => ({ built: [0, 0], spent: [0, 0], lost: [0, 0], captured: [0, 0] });
 
-export function stats(s: GameState): GameStats {
-  if (!s.stats) s.stats = emptyStats();
+/** Las estadisticas de la partida, para leerlas (vacias si aun no hay; no cambia la partida). */
+export function statsOf(s: GameState): Readonly<GameStats> {
+  return s.stats ?? emptyStats();
+}
+
+/** Las estadisticas en las que apuntan los que cambian la partida (se crean la primera vez). */
+function statsToRecord(s: GameState): GameStats {
+  s.stats ??= emptyStats();
   return s.stats;
 }
 
 /** Apunta un evento ya aplicado al estado. `team` = bando que lo ha hecho. */
 export function recordEvent(s: GameState, event: GameEvent, team: Team): void {
-  const counts = stats(s);
+  const counts = statsToRecord(s);
   switch (event.kind) {
     case 'attack':
       if (event.killed) counts.lost[opponentOf(team)]++;

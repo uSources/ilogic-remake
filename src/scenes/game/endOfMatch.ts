@@ -7,7 +7,7 @@ import { HQ } from '../../core/data';
 import { mapGrid } from '../../core/mapGrid';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { score } from '../../core/rules';
-import { sampleArmy, stats } from '../../core/stats';
+import { sampleArmy, statsOf } from '../../core/stats';
 import type { GameState, Pos, Team } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
@@ -159,7 +159,7 @@ export class EndOfMatch {
     const s = this.host.state;
     this.buttons = endButtonsFor(mission, won);
     this.selected = 0;
-    const matchStats = stats(s);
+    const matchStats = statsOf(s);
     ui.set({
       screen: 'end',
       end: {
