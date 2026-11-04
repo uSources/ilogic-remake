@@ -22,7 +22,6 @@
  */
 import { rulesWith } from '@core/data';
 import { MOVEMENTS, TERRAIN_NAMES, type GameContent } from '@core/content';
-import { defaultContent } from '@core/content/default';
 import { deepFreeze } from '@core/util/freeze';
 import type { RulesConfig } from '@core/model';
 
@@ -154,13 +153,13 @@ function applySetting(
 }
 
 /**
- * Construye el contenido y las reglas de una variante a partir de `base` (el contenido del juego si
- * no se dice otro) y de las reglas de siempre, sin tocar ninguno de los dos. El contenido sale
+ * Construye el contenido y las reglas de una variante a partir de `base` (normalmente
+ * `defaultContent()`) y de sus reglas de siempre, sin tocar ninguno de los dos. El contenido sale
  * congelado, como el del juego: se juega tal cual.
  */
-export function buildVariant(variant: Variant, base: GameContent = defaultContent()): VariantSetup {
+export function buildVariant(variant: Variant, base: GameContent): VariantSetup {
   const content = structuredClone(base);
-  const rules: RulesConfig = rulesWith();
+  const rules: RulesConfig = rulesWith(base);
   const tables = editableTables(content, rules);
   const changes: VariantChange[] = [];
   for (const [path, value] of Object.entries(variant.set ?? {})) applySetting(content, tables, path, value, changes);

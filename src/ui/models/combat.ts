@@ -48,6 +48,7 @@ export function forecastVM(
  * Devuelve null para eventos antiguos sin datos de combate.
  */
 export function combatVM(
+  s: GameState,
   ev: Extract<GameEvent, { kind: 'attack' }>,
   stage: CombatVM['stage'],
   icons: { attacker: string | null; defender: string | null },
@@ -68,7 +69,7 @@ export function combatVM(
     const life = Math.max(0, before - (hurt ?? 0));
     return {
       icon: known ? (atk ? icons.attacker : icons.defender) : null,
-      name: known ? unitLabel(atk ? c.attackerType : c.defenderType) : '???',
+      name: known ? unitLabel(s.content, atk ? c.attackerType : c.defenderType) : '???',
       team: atk ? c.attackerTeam : defTeam,
       role,
       rank: known ? (atk ? c.attackerRank : c.defenderRank) : 0,

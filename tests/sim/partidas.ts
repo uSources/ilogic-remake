@@ -6,6 +6,7 @@ import { createGame, saveContext } from '@core/defaultGames';
 import { endRound, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
+import { defaultContent } from '@core/content/default';
 
 /**
  * Partidas simuladas, repartidas en varios ficheros (ia-*.test.ts) para que vitest las ejecute en
@@ -30,7 +31,7 @@ export function checkInvariants(s: GameState): void {
 export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
-    const s = createGame(rng, { rules: rulesWith() });
+    const s = createGame(rng, { rules: rulesWith(defaultContent()) });
     while (outcome(s) === 'playing' && s.day <= 60) {
       for (const team of [0, 1] as const) {
         for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;
@@ -39,7 +40,7 @@ export function aiVsAi(from: number, to: number): void {
       endRound(s);
       checkInvariants(s);
       if (s.day % 10 === 0) {
-        const copy = deserialize(serialize(s), saveContext());
+        const copy = deserialize(serialize(s), saveContext(defaultContent()));
         expect(copy).not.toBeNull();
         expect(serialize(copy!)).toBe(serialize(s));
       }

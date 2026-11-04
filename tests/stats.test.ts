@@ -29,10 +29,10 @@ describe('estadisticas', () => {
   it('se guardan con la partida y las antiguas cargan sin ellas', () => {
     const s = blankState();
     s.stats = { built: [4, 0], spent: [0, 0], lost: [0, 0], captured: [0, 0] };
-    expect(deserialize(serialize(s), saveContext())!.stats!.built).toEqual([4, 0]);
+    expect(deserialize(serialize(s), saveContext(defaultContent()))!.stats!.built).toEqual([4, 0]);
     const old = blankState();
-    expect(deserialize(serialize(old), saveContext())!.stats).toBeUndefined();
+    expect(deserialize(serialize(old), saveContext(defaultContent()))!.stats).toBeUndefined();
     const bad = { ...blankState(), stats: { built: 'x' } };
-    expect(deserialize(JSON.stringify(bad), saveContext())!.stats!.lost).toEqual([0, 0]);
+    expect(deserialize(JSON.stringify(bad), saveContext(defaultContent()))!.stats!.lost).toEqual([0, 0]);
   });
 });

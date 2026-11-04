@@ -13,7 +13,7 @@ const T = (n: string) => UNIT_NAMES.indexOf(n);
 const def = (id: string) => defaultContent().files.generals.find((g) => g.id === id)!;
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith({ fog: false, weather: false });
+const TEST_RULES = rulesWith(defaultContent(), { fog: false, weather: false });
 
 describe('Roca: reparar', () => {
   it('sus unidades recuperan vida, sin pasar de 100; las del enemigo no', () => {

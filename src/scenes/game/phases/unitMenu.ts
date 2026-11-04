@@ -141,7 +141,7 @@ function unitMenuModel(input: MenuInput): MenuModel {
     // "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas).
     hint: action === 'capture' && unit ? captureHintText(input.s, unit) : undefined,
   }));
-  return { kind: 'unit', title: unit ? unitLabel(unit.type) : undefined, items, at: unit ?? input.cursor };
+  return { kind: 'unit', title: unit ? unitLabel(input.s.content, unit.type) : undefined, items, at: unit ?? input.cursor };
 }
 
 export const attackPhase: PhaseHandler = {
@@ -185,7 +185,13 @@ function cargoMenuModel(input: MenuInput): MenuModel {
     const id = `c${index}`;
     if (!passenger) return { id, label: t('empty'), icon: null, disabled: true };
     const hasRoom = unloadTiles(input.s, carrier!, passenger).length > 0;
-    return { id, label: unitLabel(passenger.type), icon: unitIconKey(passenger.type, true), hint: `${passenger.life}`, disabled: !hasRoom };
+    return {
+      id,
+      label: unitLabel(input.s.content, passenger.type),
+      icon: unitIconKey(input.s, passenger.type, true),
+      hint: `${passenger.life}`,
+      disabled: !hasRoom,
+    };
   });
   const items: MenuItemVM[] = [{ id: 'back', label: t('back'), icon: null }, ...passengerItems];
   return { kind: 'cargo', title: t('unload'), items, at: carrier ?? input.cursor };

@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
 import { abilitiesOf } from '../../core/abilities';
 import { MoveType, type AbilityDef } from '../../core/data';
-import { defaultContent } from '../../core/content/default';
 import { tablesOf } from '../../core/gameContent';
 import { canMoveOn } from '../../core/rules';
 import {
@@ -30,8 +29,8 @@ import { standingOrderLabel } from './army';
 /** Fichas de abajo: la casilla (terreno, edificio, punto de control) y la unidad que hay en ella. */
 
 /** Datos de la ficha de una unidad con su icono: movimiento, alcance y vision. */
-export function unitStatChips(type: number): StatChipVM[] {
-  const UNIT = defaultContent().tables.UNIT;
+export function unitStatChips(s: GameState, type: number): StatChipVM[] {
+  const UNIT = tablesOf(s).UNIT;
   const range = UNIT.alcance[type]! === 0 ? '—' : `${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return [
     { icon: 'ui/movimiento', text: String(UNIT.mover[type]), title: t('move') },
@@ -41,8 +40,8 @@ export function unitStatChips(type: number): StatChipVM[] {
 }
 
 /** "Mov 3 · Alcance 1–1" */
-export function unitStatsText(type: number): string {
-  const UNIT = defaultContent().tables.UNIT;
+export function unitStatsText(s: GameState, type: number): string {
+  const UNIT = tablesOf(s).UNIT;
   const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return `${t('move')} ${UNIT.mover[type]} · ${range}`;
 }
@@ -105,7 +104,7 @@ export function tileVM(
   const b = buildingAt(s, p);
   const vis = view.vis.at(p);
   const info: TileVM = {
-    terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - tileProtection(s, p)) * 100) },
+    terrain: { key: terrainKey(terr), name: terrainLabel(s.content, terr), defense: Math.round((1 - tileProtection(s, p)) * 100) },
   };
   if (s.rules.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
@@ -115,7 +114,7 @@ export function tileVM(
   if (b) {
     const known = vis || b.owner === 0;
     info.building = {
-      name: buildingLabel(b.type),
+      name: buildingLabel(s.content, b.type),
       owner: !known ? 'unknown' : b.owner === 0 ? 'you' : b.owner === 1 ? 'enemy' : 'neutral',
       income: buildingIncome(s, b.type),
       icon: buildingKey(textures, s, b, vis),
@@ -140,15 +139,15 @@ export function tileVM(
   const shown = u && vis && !view.hidden.has(u.uid) ? u : sel && sel.x === p.x && sel.y === p.y ? sel : undefined;
   if (shown) {
     const T = shown.type;
-    const cargo = cargoUnits(s, shown).map((c) => unitLabel(c.type));
+    const cargo = cargoUnits(s, shown).map((c) => unitLabel(s.content, c.type));
     info.unit = {
       icon: unitKey(textures, s, { ...shown, active: shown.team === 1 || shown.active }),
-      name: unitLabel(T),
+      name: unitLabel(s.content, T),
       rank: s.rules.veterancy ? rank(shown) : 0,
       team: shown.team,
       life: shown.life,
-      stats: unitStatsText(T),
-      chips: unitStatChips(T),
+      stats: unitStatsText(s, T),
+      chips: unitStatChips(s, T),
       abilities: abilitiesVM(s, T),
       cargo: tablesOf(s).UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),

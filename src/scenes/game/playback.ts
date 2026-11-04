@@ -391,11 +391,11 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
 const teamColor = (team: number) => (team === 0 ? PAL.blue : PAL.red);
 
 /** Enseña el panel de combate (abajo) en un momento del combate, si el jugador lo ve. */
-function showCombatPanel(battle: Battle, stage: 'start' | 'hit' | 'counter'): void {
+function showCombatPanel(s: GameState, battle: Battle, moment: 'start' | 'hit' | 'counter'): void {
   if (!battle.isSeen) return;
   const icons = { attacker: battle.attackerKey, defender: battle.victimKey };
   const seen = { attacker: battle.isAttackerSeen, defender: true };
-  const panel = combatVM(battle.event, stage, icons, seen, battle.panelId);
+  const panel = combatVM(s, battle.event, moment, icons, seen, battle.panelId);
   if (panel) ui.set({ combat: panel });
 }
 
@@ -408,7 +408,7 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
   const battle = describeBattle(stage, event);
   if (battle.isSeen) {
     await aimAndFire(stage, battle);
-    showCombatPanel(battle, 'hit');
+    showCombatPanel(stage.state, battle, 'hit');
     await hitEffects(stage, {
       uid: battle.victimUid,
       at: event.target,
@@ -429,13 +429,20 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
 /** Apuntar y disparar: los dos se miran, la mira se cierra sobre el objetivo y sale el disparo. */
 async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   const { event, attackerPos, attackerSprite } = battle;
-  showCombatPanel(battle, 'start');
+  showCombatPanel(stage.state, battle, 'start');
   await stage.lookAt(event.target);
   if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.target);
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
   void targetMark(stage.scene, stage.view, event.target, teamColor(battle.attackerTeam), stage.combatMs(150));
   if (attackerSprite && attackerPos && battle.isAttackerSeen) {
-    await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.timeline);
+    await fire(
+      stage,
+      attackerSprite,
+      attackerPos,
+      event.target,
+      shotKind(stage.state, battle.attackerType, battle.defenderType),
+      battle.timeline,
+    );
   } else await stage.wait(stage.combatMs(150));
 }
 
@@ -449,9 +456,16 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   void tag(battle.timeline, stage.view, event.target, t('fxCounter'), PAL_CSS.gold);
   await stage.wait(stage.combatMs(80));
   if (defenderSprite) {
-    await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.timeline);
+    await fire(
+      stage,
+      defenderSprite,
+      event.target,
+      attackerPos,
+      shotKind(stage.state, battle.defenderType, battle.attackerType),
+      battle.timeline,
+    );
   }
-  showCombatPanel(battle, 'counter');
+  showCombatPanel(stage.state, battle, 'counter');
   await hitEffects(stage, {
     uid: event.attacker,
     at: attackerPos,

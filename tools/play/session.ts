@@ -83,7 +83,7 @@ export class Session {
       if (!m) throw new Error(`No existe la mision "${opts.mission}"`);
       this.s = buildMission(m, defaultContent());
     } else {
-      const rules = rulesWith({ fog: opts.fog ?? false });
+      const rules = rulesWith(defaultContent(), { fog: opts.fog ?? false });
       this.s = createGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, rules });
       const pick = (id: string | undefined) => {
         if (!id) return null;

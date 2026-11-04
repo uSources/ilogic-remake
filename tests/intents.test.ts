@@ -99,7 +99,7 @@ describe('previewStandingOrders', () => {
     expect(withHidden).toEqual(clean);
     expect(withHidden.get(u.uid)!.attack).toBeUndefined();
     // Sin niebla si lo ve, y la prevision si lo marca (la prueba de arriba no es casualidad).
-    s.rules = rulesWith({ fog: false });
+    s.rules = rulesWith(defaultContent(), { fog: false });
     expect(previewStandingOrders(s).get(u.uid)!.attack).toEqual(posOf(hidden));
   });
 

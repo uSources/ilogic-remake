@@ -3,6 +3,29 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
+/** El nucleo no depende de Phaser, ni del DOM, ni de la interfaz. */
+const CORE_IS_PURE = [
+  { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
+  {
+    group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
+    message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
+  },
+];
+/** El contenido del juego solo lo eligen estos dos: el resto del nucleo usa el de la partida. */
+const DEFAULT_CONTENT_FILES = ['src/core/defaultGames.ts', 'src/core/content/default.ts'];
+const NO_DEFAULT_CONTENT = {
+  group: [
+    './defaultGames',
+    '../defaultGames',
+    '../../defaultGames',
+    './content/default',
+    '../content/default',
+    '../../content/default',
+    './default',
+  ],
+  message: 'El nucleo usa el contenido de la partida (tablesOf(s)); el del juego solo lo eligen defaultGames.ts y quien crea la partida.',
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -33,21 +56,19 @@ export default tseslint.config(
     },
   },
   {
-    // La logica del juego es TypeScript puro: sin Phaser, sin DOM, sin interfaz.
+    // La logica del juego es TypeScript puro: sin Phaser, sin DOM, sin interfaz. Y no elige contenido:
+    // lo recibe con la partida (solo defaultGames.ts y content/default.ts conocen el del juego).
     files: ['src/core/**/*.ts'],
+    ignores: DEFAULT_CONTENT_FILES,
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
-            {
-              group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
-              message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT] }],
+      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
+    },
+  },
+  {
+    files: DEFAULT_CONTENT_FILES,
+    rules: {
+      'no-restricted-imports': ['error', { patterns: CORE_IS_PURE }],
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
     },
   },
@@ -71,22 +92,16 @@ export default tseslint.config(
     },
   },
   {
-    // Leer partidas no depende del catalogo de misiones ni del contenido del juego: los da quien lee (SaveContext).
+    // Leer partidas no depende del catalogo de misiones: lo da quien lee (SaveContext).
     files: ['src/core/save.ts', 'src/core/saveMigrations.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
-            { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
-            {
-              group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
-              message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
-            },
-            {
-              group: ['./missions', './content/default', './defaultGames'],
-              message: 'save.ts recibe las misiones y el contenido en SaveContext.',
-            },
+            ...CORE_IS_PURE,
+            NO_DEFAULT_CONTENT,
+            { group: ['./missions'], message: 'save.ts recibe las reglas de las misiones en SaveContext.' },
           ],
         },
       ],

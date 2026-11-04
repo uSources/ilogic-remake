@@ -21,7 +21,7 @@ function expensiveTanks(): GameContent {
 const TANK = defaultContent().tables.UNIT_NAMES.indexOf('Tank');
 
 function newMatch(content: GameContent): GameState {
-  return generateGame(seededRng(7), { size: 20, rules: rulesWith({ fog: false }), content });
+  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content });
 }
 
 /** Juega `days` rondas IA contra IA de cada partida, alternando un turno de cada una. */
@@ -59,7 +59,7 @@ describe('contenido de cada partida', () => {
     const s = newMatch(variant);
     expect(serialize(s)).not.toContain('tables');
     expect(contentOf(deserialize(serialize(s), saveContext(variant))!)).toBe(variant);
-    expect(contentOf(deserialize(serialize(s), saveContext())!)).toBe(defaultContent());
+    expect(contentOf(deserialize(serialize(s), saveContext(defaultContent()))!)).toBe(defaultContent());
     expect(contentOf(cloneState(s))).toBe(variant);
   });
 

@@ -29,14 +29,17 @@ const b = arg('b', 'none');
 const maps = Number(arg('maps', '40'));
 const from = Number(arg('from', '1'));
 const json = process.argv.includes('--json');
-const known = new Set(defaultContent().files.generals.map((general) => general.id));
-for (const id of [a, b]) if (id !== 'none' && !known.has(id)) throw new Error(`General "${id}" no existe (${[...known].join(', ')}, none)`);
+/** Los generales pedidos existen en el contenido del juego (si no, para antes de jugar). */
+function checkGeneralIds(ids: string[]): void {
+  const known = new Set(defaultContent().files.generals.map((general) => general.id));
+  for (const id of ids) if (id !== 'none' && !known.has(id)) throw new Error(`General "${id}" no existe (${[...known].join(', ')}, none)`);
+}
 const gen = (s: GameState, id: string) => (id === 'none' ? null : newGeneral(s, id));
 
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
 function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: 0 | 1 | -1; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createGame(rng, { rules: rulesWith() });
+  const s: GameState = createGame(rng, { rules: rulesWith(defaultContent()) });
   s.generals = [gen(s, g0), gen(s, g1)];
   while (outcome(s) === 'playing' && s.day <= 60) {
     for (const team of [0, 1] as const) {
@@ -54,6 +57,7 @@ function play(seed: number, g0: string, g1: string, uses: Map<string, number>): 
   return { winner: d > 0 ? 0 : d < 0 ? 1 : -1, byScore: true };
 }
 
+checkGeneralIds([a, b]);
 let winsA = 0,
   winsB = 0,
   draws = 0,

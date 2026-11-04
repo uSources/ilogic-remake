@@ -5,6 +5,7 @@ import { PLAIN_RULES } from './plainRules';
 import { load, merge, moveRange, moveUnit, validPath, visibility } from '@core/rules';
 import { newUnit } from '@core/rules';
 import { blankState } from './helpers';
+import { defaultContent } from '@core/content/default';
 
 const SOLDIER = 0,
   TANK = 1,
@@ -209,11 +210,11 @@ describe('movimiento: ordenes de varios turnos', () => {
     const step = stepToward(s, tank, goal)!;
     expect(step).toEqual({ x: 7, y: 2 });
     tank.travelTo = goal;
-    expect(deserialize(serialize(s), saveContext())!.units[0]!.travelTo).toEqual(goal);
+    expect(deserialize(serialize(s), saveContext(defaultContent()))!.units[0]!.travelTo).toEqual(goal);
     // Las guardadas antes de llamarlo travelTo lo traen como `order` (MIGRATIONS).
     const old = serialize(s).replace('"travelTo"', '"order"');
     expect(old).toContain('"order"');
-    expect(deserialize(old, saveContext())!.units[0]!.travelTo).toEqual(goal);
+    expect(deserialize(old, saveContext(defaultContent()))!.units[0]!.travelTo).toEqual(goal);
     // Un destino al que no se puede llegar (agua para un tanque): null.
     s.map[25]![25] = 1;
     expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();

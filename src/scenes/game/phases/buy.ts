@@ -40,7 +40,7 @@ export const buyPhase: PhaseHandler = {
     const model: MenuModel = { kind: 'buy', items, at: input.cursor };
     if (!building) return model;
     const subtitle = `${t('funds')}: ${fmtNum(input.s.funds[0])}`;
-    return { ...model, at: building, title: buildingLabel(building.type), subtitle };
+    return { ...model, at: building, title: buildingLabel(input.s.content, building.type), subtitle };
   },
 };
 
@@ -48,9 +48,9 @@ export const buyPhase: PhaseHandler = {
 function buyItem(s: GameState, option: BuyOption): MenuItemVM {
   return {
     id: `buy${option.type}`,
-    label: unitLabel(option.type),
+    label: unitLabel(s.content, option.type),
     hint: `${option.cost}`,
-    icon: unitIconKey(option.type, option.affordable),
+    icon: unitIconKey(s, option.type, option.affordable),
     disabled: !option.affordable,
     detail: buyDetail(s, option),
   };
@@ -64,5 +64,5 @@ function buyDetail(s: GameState, option: BuyOption): string {
     .map((ability) => ` · ${ability.name}`)
     .join('');
   const blocked = option.blocked ? ` · ${buyBlockedText(s, option.blocked)}` : '';
-  return `${unitStatsText(type)} · ${t('vision')} ${UNIT.vision[type]}${command}${abilities}${blocked}`;
+  return `${unitStatsText(s, type)} · ${t('vision')} ${UNIT.vision[type]}${command}${abilities}${blocked}`;
 }

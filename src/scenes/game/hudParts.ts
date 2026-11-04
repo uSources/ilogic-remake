@@ -5,7 +5,6 @@
  */
 import { posKey } from '../../core/geom';
 import type Phaser from 'phaser';
-import { defaultContent } from '../../core/content/default';
 import { movementOf } from '../../core/rules';
 import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
@@ -16,6 +15,7 @@ import { t, unitLabel } from '../../settings';
 import { forecastVM } from '../../ui/hudModels';
 import { unitKey } from '../../ui/sprites';
 import { type Intent, type Phase } from './types';
+import { tablesOf } from '../../core/gameContent';
 
 /** Prevision del combate con la unidad elegida, si el cursor esta sobre un enemigo atacable. */
 export function forecastFor(
@@ -103,11 +103,11 @@ export function selectionPanel(textures: Phaser.Textures.TextureManager, s: Game
     units: list.map((unit) => ({
       uid: unit.uid,
       icon: unitKey(textures, s, unit),
-      name: unitLabel(unit.type),
+      name: unitLabel(s.content, unit.type),
       life: unit.life,
       current: unit.x === c.x && unit.y === c.y,
     })),
-    types: [...countByType].map(([type, count]) => ({ name: unitLabel(type), count })),
+    types: [...countByType].map(([type, count]) => ({ name: unitLabel(s.content, type), count })),
   };
 }
 
@@ -118,11 +118,11 @@ export function playerIncome(s: GameState): number {
 }
 
 /** Panel del laboratorio de animaciones (null en una partida normal). */
-export function labPanel(lab: LabOptions | null): UIState['lab'] {
+export function labPanel(s: GameState, lab: LabOptions | null): UIState['lab'] {
   if (!lab) return null;
-  const { UNIT, UNIT_NAMES } = defaultContent().tables;
+  const { UNIT, UNIT_NAMES } = tablesOf(s);
   return {
-    units: UNIT_NAMES.map((_, type) => unitLabel(type)),
+    units: UNIT_NAMES.map((_, type) => unitLabel(s.content, type)),
     attacker: lab.attacker,
     defender: lab.defender,
     slow: lab.slow,

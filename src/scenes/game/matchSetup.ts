@@ -58,7 +58,7 @@ function missionMatch(data: GameStartData): GameState | null {
 /** Mapa al azar (o el de `setup`), con los generales elegidos. */
 function newMatch(data: GameStartData): GameState {
   const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
-  const rules = rulesWith(data.rules);
+  const rules = rulesWith(defaultContent(), data.rules);
   const state = createGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, rules });
   state.setup = setup;
   const player = newGeneral(state, data.general);

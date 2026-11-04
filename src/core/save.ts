@@ -317,7 +317,7 @@ function fillMissingRules(rules: Partial<RulesConfig>): void {
 function readRules(s: GameState): boolean {
   const saved = s.rules as Partial<RulesConfig> | undefined;
   if (saved === undefined) {
-    s.rules = rulesWith();
+    s.rules = rulesWith(s.content);
     return true;
   }
   if (!isValidRules(saved)) return false;

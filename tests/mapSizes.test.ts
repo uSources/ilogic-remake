@@ -13,7 +13,12 @@ const TANK = defaultContent().tables.UNIT_NAMES.indexOf('Tank');
 
 /** Partida vacia de ese lado, con niebla: el tanque del jugador abajo a la derecha y el de la IA arriba a la izquierda. */
 function cornerMatch(size: number): GameState {
-  const s = newGameState({ map: blankMap(size), rules: rulesWith({ fog: true }), content: defaultContent(), funds: [0, 0] });
+  const s = newGameState({
+    map: blankMap(size),
+    rules: rulesWith(defaultContent(), { fog: true }),
+    content: defaultContent(),
+    funds: [0, 0],
+  });
   newUnit(s, TANK, 0, { x: size - 1, y: size - 1 });
   newUnit(s, TANK, 1, { x: 0, y: 0 });
   return s;
@@ -51,7 +56,7 @@ describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', ()
       }
       return events;
     };
-    const newMatch = (size: number) => createGame(seededRng(size), { size, rules: rulesWith() });
+    const newMatch = (size: number) => createGame(seededRng(size), { size, rules: rulesWith(defaultContent()) });
     const together = play([newMatch(20), newMatch(40)], 5);
     expect(together[0]).toEqual(play([newMatch(20)], 5)[0]);
     expect(together[1]).toEqual(play([newMatch(40)], 5)[0]);

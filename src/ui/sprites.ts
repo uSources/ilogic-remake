@@ -1,6 +1,5 @@
 import type Phaser from 'phaser';
 import { TERRAIN_NAMES } from '../core/data';
-import { defaultContent } from '../core/content/default';
 import { tablesOf } from '../core/gameContent';
 import { isOnBoard, terrainAt } from '../core/mapGrid';
 import type { Building, GameState, Pos, Unit } from '../core/model';
@@ -35,8 +34,8 @@ export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, 
   return firstExisting(textures, [side + terrain + name, side + name, (u.team === 1 ? 'r_' : 'b_') + name]);
 }
 
-export function unitIconKey(type: number, available: boolean): string {
-  const k = (available ? 'b_' : 'i_') + defaultContent().tables.UNIT_ART[type]!;
+export function unitIconKey(s: GameState, type: number, available: boolean): string {
+  const k = (available ? 'b_' : 'i_') + tablesOf(s).UNIT_ART[type]!;
   return settings.terrainArt === 'new' ? `u/${k}` : k;
 }
 

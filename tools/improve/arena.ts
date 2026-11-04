@@ -36,7 +36,7 @@ function strength(s: GameState, t: Team): number {
 /** Una partida; devuelve el bando ganador (o null si empate). */
 export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
   const rng = seededRng(seed);
-  const s = createGame(rng, { size, rules: rulesWith() });
+  const s = createGame(rng, { size, rules: rulesWith(defaultContent()) });
   while (outcome(s) === 'playing' && s.day <= maxDays) {
     for (const t of [0, 1] as Team[]) {
       for (const _ of brains[t](s, rng, t)) if (outcome(s) !== 'playing') break;

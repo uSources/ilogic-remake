@@ -13,7 +13,7 @@ const { HQ } = defaultContent().tables;
 describe('generador de mapas', () => {
   it('100 mapas: ambas bases, conectadas por tierra, con unidades y neutrales', () => {
     for (let seed = 1; seed <= 100; seed++) {
-      const s = createGame(seededRng(seed), { rules: rulesWith() });
+      const s = createGame(seededRng(seed), { rules: rulesWith(defaultContent()) });
       const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
       const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
@@ -38,7 +38,7 @@ describe('partidas simuladas', () => {
     const days: number[] = [];
     for (let seed = 1; seed <= 20; seed++) {
       const rng = seededRng(seed * 104729);
-      const s = createGame(rng, { rules: rulesWith() });
+      const s = createGame(rng, { rules: rulesWith(defaultContent()) });
       while (outcome(s) === 'playing' && s.day <= 60) {
         for (const _ of aiTurn(s, rng, 1)) if (outcome(s) !== 'playing') break;
         endRound(s);

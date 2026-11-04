@@ -56,8 +56,8 @@ describe('datos de la interfaz', () => {
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {
-    expect(unitStatsText(T('Soldier'))).toMatch(/\d.*·/);
-    expect(unitStatsText(T('Transport'))).not.toMatch(/–/);
+    expect(unitStatsText(blankState(), T('Soldier'))).toMatch(/\d.*·/);
+    expect(unitStatsText(blankState(), T('Transport'))).not.toMatch(/–/);
     const s = blankState();
     const u = newUnit(s, T('Soldier'), 0, { x: 3, y: 3 });
     expect(captureHintText(s, u)).toBeUndefined();
@@ -80,11 +80,11 @@ describe('clima en la barra de arriba', () => {
   const W = (id: string) => WEATHER.ids.indexOf(id);
 
   it('resume los efectos de cada clima', () => {
-    expect(weatherEffectsText(W('Clear'))).toBe('Sin efectos');
-    expect(weatherEffectsText(W('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
-    expect(weatherEffectsText(W('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
+    expect(weatherEffectsText(blankState(), W('Clear'))).toBe('Sin efectos');
+    expect(weatherEffectsText(blankState(), W('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
+    expect(weatherEffectsText(blankState(), W('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
     settings.lang = 'en';
-    expect(weatherEffectsText(W('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
+    expect(weatherEffectsText(blankState(), W('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
   });
 
   it('enseña el clima de hoy y el pronostico solo si cambia mañana', () => {
@@ -96,7 +96,7 @@ describe('clima en la barra de arriba', () => {
   });
 
   it('sin la regla no hay indicador', () => {
-    expect(weatherVM(blankState(rulesWith({ weather: false })))).toBeNull();
+    expect(weatherVM(blankState(rulesWith(defaultContent(), { weather: false })))).toBeNull();
   });
 });
 
@@ -109,18 +109,18 @@ describe('panel de combate', () => {
     const enemy = newUnit(s, T('Tank'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, T('Tank'), 0, { x: 10, y: 11 });
     const ev = attackEvent(s, enemy, mine, () => 0.5);
-    const start = combatVM(ev, 'start', icons, both)!;
+    const start = combatVM(blankState(), ev, 'start', icons, both)!;
     expect(start.left.team).toBe(0);
     expect(start.left.role).toBe('defender');
     expect(start.right.role).toBe('attacker');
     expect(start.left.life).toBe(100);
     expect(start.left.hurt).toBeNull();
-    const hit = combatVM(ev, 'hit', icons, both)!;
+    const hit = combatVM(blankState(), ev, 'hit', icons, both)!;
     expect(hit.left.life).toBe(100 - ev.damage);
     expect(hit.left.hurt).toBe(ev.damage);
     expect(hit.right.life).toBe(100);
     expect(hit.counter).toBe(true);
-    const counter = combatVM(ev, 'counter', icons, both)!;
+    const counter = combatVM(blankState(), ev, 'counter', icons, both)!;
     expect(counter.right.life).toBe(100 - ev.counter!);
     expect(counter.right.hurt).toBe(ev.counter);
   });
@@ -130,7 +130,7 @@ describe('panel de combate', () => {
     const art = newUnit(s, T('Artillery'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, T('Soldier'), 0, { x: 10, y: 13 });
     const ev = attackEvent(s, art, mine, () => 0.5);
-    const vm = combatVM(ev, 'hit', icons, { attacker: false, defender: true })!;
+    const vm = combatVM(blankState(), ev, 'hit', icons, { attacker: false, defender: true })!;
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
     expect(vm.left.icon).toBe('d');
     expect(vm.counter).toBe(false);
@@ -142,6 +142,7 @@ describe('panel de combate', () => {
     const d = newUnit(s, T('Soldier'), 1, { x: 10, y: 11 });
     d.life = 1;
     const vm = combatVM(
+      blankState(),
       attackEvent(s, a, d, () => 0.5),
       'hit',
       icons,
@@ -152,7 +153,9 @@ describe('panel de combate', () => {
   });
 
   it('eventos antiguos sin datos: sin panel', () => {
-    expect(combatVM({ kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both)).toBeNull();
+    expect(
+      combatVM(blankState(), { kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both),
+    ).toBeNull();
   });
 });
 
@@ -173,7 +176,7 @@ describe('desglose de la barra de arriba', () => {
 
   it('ingresos por tipo de edificio y mantenimiento por tipo de unidad, con las cuentas de endRound', () => {
     const s = army();
-    s.rules = rulesWith({ upkeep: 0.1, commandPoints: 30 });
+    s.rules = rulesWith(defaultContent(), { upkeep: 0.1, commandPoints: 30 });
     const e = economyVM(s, 0);
     expect(e.income.lines.map((l) => [l.label, l.count])).toEqual([
       ['Ciudad', 2],
@@ -194,7 +197,7 @@ describe('desglose de la barra de arriba', () => {
 
   it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
     const s = army();
-    s.rules = rulesWith({ upkeep: 1 });
+    s.rules = rulesWith(defaultContent(), { upkeep: 1 });
     s.funds[0] = 0;
     s.buildings = s.buildings.filter((b) => b.owner !== 0);
     const e = economyVM(s, 0);
@@ -205,7 +208,7 @@ describe('desglose de la barra de arriba', () => {
 
   it('sin las reglas de mantenimiento y mando no salen esos apartados; el tope de dinero cuenta', () => {
     const s = army();
-    s.rules = rulesWith({ upkeep: 0, commandPoints: null });
+    s.rules = rulesWith(defaultContent(), { upkeep: 0, commandPoints: null });
     s.funds[0] = MAX_FUNDS;
     const e = economyVM(s, 0);
     expect(e.upkeep).toBeNull();
@@ -216,9 +219,9 @@ describe('desglose de la barra de arriba', () => {
   it('dia: lo que queda y los puntos solo con limite de dias', () => {
     const s = army();
     s.day = 18;
-    s.rules = rulesWith({ dayLimit: null });
+    s.rules = rulesWith(defaultContent(), { dayLimit: null });
     expect(dayInfoVM(s)).toEqual({ day: 18, limit: null, left: null, score: null });
-    s.rules = rulesWith({ dayLimit: 20 });
+    s.rules = rulesWith(defaultContent(), { dayLimit: 20 });
     expect(dayInfoVM(s)).toEqual({ day: 18, limit: 20, left: 3, score: [score(s, 0), score(s, 1)] });
   });
 });

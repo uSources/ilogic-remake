@@ -34,7 +34,7 @@ describe('tablas de datos', () => {
   it('cada unidad tiene nombre en español e ingles y alguien la fabrica', () => {
     for (const lang of ['es', 'en'] as const) {
       settings.lang = lang;
-      for (let i = 0; i < U; i++) expect(unitLabel(i), `${D.UNIT_NAMES[i]} (${lang})`).not.toBe('?');
+      for (let i = 0; i < U; i++) expect(unitLabel(defaultContent(), i), `${D.UNIT_NAMES[i]} (${lang})`).not.toBe('?');
     }
     settings.lang = 'es';
     for (let i = 0; i < U; i++) expect(D.SPAWNER[i]!.some(Boolean), `${D.UNIT_NAMES[i]} no se puede comprar`).toBe(true);

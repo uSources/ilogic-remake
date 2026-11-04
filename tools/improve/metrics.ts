@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { buildReport, DEFAULT_TARGETS, type Report } from '../balance/report';
 import { runGames } from '../balance/runner';
 import { buildVariant } from '../balance/variant';
+import { defaultContent } from '@core/content/default';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const OUT = `${ROOT}improve/metrics/`;
@@ -147,7 +148,7 @@ async function main(): Promise<void> {
   const threads = Math.max(1, Math.min(cpus().length, games));
   const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, i) => 1 + i);
   const variant = { name, set: {} };
-  const setup = buildVariant(variant);
+  const setup = buildVariant(variant, defaultContent());
   const a = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
   const b = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
   const report = buildReport(

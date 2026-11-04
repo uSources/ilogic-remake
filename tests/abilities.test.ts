@@ -24,7 +24,7 @@ const melee = (t: number) => UNIT.minalc[t]! === 0 && UNIT.canfight[t]!;
 const moves = (mt: MoveType) => (t: number) => UNIT.movtype[t]! === mt && UNIT.mover[t]! >= 4;
 
 /** Reglas de estos tests: sin niebla, coste de terreno ni veterania, que cambiarian las cuentas. */
-const TEST_RULES = rulesWith({ fog: false, terrainCost: false, veterancy: false });
+const TEST_RULES = rulesWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
 
 beforeEach(() => {
   settings.lang = 'es';
@@ -125,7 +125,7 @@ describe('habilidades: zona de control', () => {
   });
 
   it('con niebla solo cuenta si se ve', () => {
-    const s = blankState(rulesWith({ terrainCost: false }));
+    const s = blankState(rulesWith(defaultContent(), { terrainCost: false }));
     s.map[5]![8] = TerrainType.WOODS; // el bosque la esconde salvo desde al lado
     newUnit(s, Z, 1, { x: 5, y: 8 });
     const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
@@ -196,7 +196,7 @@ describe('habilidades: interfaz', () => {
 
 describe('habilidades: explorador (scout)', () => {
   it('ve dentro del bosque en todo su radio; otra unidad solo desde al lado', () => {
-    const s = blankState(rulesWith({ fog: true, forestHides: true, weather: false }));
+    const s = blankState(rulesWith(defaultContent(), { fog: true, forestHides: true, weather: false }));
     s.map[10]![14] = TerrainType.WOODS;
     const scout = newUnit(s, withAbility('scout'), 0, { x: 10, y: 10 });
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision

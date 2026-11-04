@@ -13,7 +13,7 @@ const T = (n: string) => UNIT_NAMES.indexOf(n);
 
 /** La IA (bando 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {
-  const s = blankState(rulesWith({ fog, weather: false }));
+  const s = blankState(rulesWith(defaultContent(), { fog, weather: false }));
   s.generals = [null, newGeneral(s, 'Brisa')];
   s.generals[1]!.charge = charge;
   newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });
@@ -39,7 +39,7 @@ describe('la IA usa a su general', () => {
 
   it('no gasta la carga en algo que vale poco', () => {
     // Con Roca: su reparacion no gasta la barra entera, asi que puede esperar a que valga la pena.
-    const s = blankState(rulesWith({ weather: false }));
+    const s = blankState(rulesWith(defaultContent(), { weather: false }));
     s.generals = [null, newGeneral(s, 'Roca')];
     s.generals[1]!.charge = generalDef(s, 'Roca')!.abilities[0]!.cost;
     newUnit(s, T('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor

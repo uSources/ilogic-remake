@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { DEFAULT_RULES, MoveType, rulesWith } from '@core/data';
+import { MoveType, rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
 import { manhattan, seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
@@ -37,8 +37,8 @@ describe('puntos de control', () => {
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(r.held).toEqual([1, 1]);
     expect(r.contested).toBe(0);
-    expect(r.income).toEqual([DEFAULT_RULES.controlIncome, DEFAULT_RULES.controlIncome]);
-    expect(s.funds[0]).toBe(before + DEFAULT_RULES.controlIncome);
+    expect(r.income).toEqual([defaultContent().tables.DEFAULT_RULES.controlIncome, defaultContent().tables.DEFAULT_RULES.controlIncome]);
+    expect(s.funds[0]).toBe(before + defaultContent().tables.DEFAULT_RULES.controlIncome);
     u.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
@@ -77,7 +77,7 @@ describe('puntos de control', () => {
     newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const r = endRound(s);
     expect(r.control?.held).toEqual([1, 1]);
-    expect(r.income[0]).toBeGreaterThanOrEqual(DEFAULT_RULES.controlIncome);
+    expect(r.income[0]).toBeGreaterThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlIncome);
   });
 
   it('sin puntos no hay nada en el informe', () => {
@@ -88,10 +88,10 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = createGame(seededRng(seed * 7919), { rules: rulesWith() });
+      const s = createGame(seededRng(seed * 7919), { rules: rulesWith(defaultContent()) });
       const pts = s.controlPoints ?? [];
       total += pts.length;
-      expect(pts.length).toBeLessThanOrEqual(DEFAULT_RULES.controlPoints);
+      expect(pts.length).toBeLessThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((b) => b.type === HQ && b.owner === team)!;
       const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
       const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
@@ -103,7 +103,8 @@ describe('puntos de control', () => {
       }
       // Las zonas no se tocan.
       for (const a of pts)
-        for (const b of pts) if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * DEFAULT_RULES.controlRadius);
+        for (const b of pts)
+          if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().tables.DEFAULT_RULES.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });
@@ -126,14 +127,14 @@ describe('puntos de control', () => {
 
   it('se guardan con la partida; las partidas antiguas siguen sin ellos', () => {
     const s = withPoints();
-    const back = deserialize(serialize(s), saveContext())!;
+    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
     expect(back.controlPoints).toEqual(s.controlPoints);
     const raw = JSON.parse(serialize(s)) as { rules: Record<string, unknown>; controlPoints: unknown };
     delete raw.rules.controlPoints;
     delete raw.rules.controlIncome;
     delete raw.rules.controlRadius;
     raw.controlPoints = [{ x: -1, y: 2, owner: 0 }];
-    const old = deserialize(JSON.stringify(raw), saveContext())!;
+    const old = deserialize(JSON.stringify(raw), saveContext(defaultContent()))!;
     expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0, controlRadius: 0 });
     expect(old.controlPoints).toBeUndefined();
   });

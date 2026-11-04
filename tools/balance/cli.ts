@@ -18,6 +18,7 @@ import type { Policy } from './play';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
 import { buildVariant, type Variant } from './variant';
 import { runDuels, runGames } from './runner';
+import { defaultContent } from '@core/content/default';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 const REPORTS = join(ROOT, 'balance/reports');
@@ -87,7 +88,7 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
   const policies: [Policy, Policy] = vs === 'passive' ? ['passive', 'ai'] : ['ai', 'ai'];
   const threads = Math.max(1, Math.min(a.num('threads', cpus().length), games));
   const seeds = Array.from({ length: games }, (_, i) => seed0 + i);
-  const setup = buildVariant(variant); // aqui se valida: una ruta o un valor mal escrito para antes de jugar
+  const setup = buildVariant(variant, defaultContent()); // aqui se valida: una ruta o un valor mal escrito para antes de jugar
   const changes = setup.changes;
   console.log(`Variante "${variant.name}": ${changes.length} cambios. ${games} partidas, ${threads} hilos...`);
   const records = await runGames(
@@ -135,7 +136,11 @@ async function main(): Promise<void> {
     case 'duel': {
       const variant = loadVariant(a);
       const terrain = a.one('terrain', 'Grass')!;
-      const cells = await runDuels(buildVariant(variant), { trials: a.num('trials', 300), terrain, seed: a.num('seed', 1) });
+      const cells = await runDuels(buildVariant(variant, defaultContent()), {
+        trials: a.num('trials', 300),
+        terrain,
+        seed: a.num('seed', 1),
+      });
       const path = save(`duelos-${variant.name}-${terrain}`, duelMarkdown(cells, terrain));
       console.log(`Duelos: ${path}`);
       return;

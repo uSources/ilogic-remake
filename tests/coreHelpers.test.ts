@@ -105,7 +105,7 @@ describe('partidas guardadas', () => {
 
   it('ida y vuelta sin perder nada', () => {
     const s = sample();
-    expect(serialize(deserialize(serialize(s), saveContext())!)).toBe(serialize(s));
+    expect(serialize(deserialize(serialize(s), saveContext(defaultContent()))!)).toBe(serialize(s));
   });
 
   it.each([
@@ -165,7 +165,7 @@ describe('partidas guardadas', () => {
       () => serialize({ ...sample(), mission: { id: 'x', objective: { kind: 'survive', days: 0 } } as never }),
     ],
   ])('rechaza: %s', (_name, make) => {
-    expect(deserialize(make(), saveContext())).toBeNull();
+    expect(deserialize(make(), saveContext(defaultContent()))).toBeNull();
   });
 
   it('corrige lo que se puede corregir (uid siguiente, dia) e ignora el combustible de las antiguas', () => {
@@ -173,7 +173,7 @@ describe('partidas guardadas', () => {
     Object.assign(s.units[0]!, { fuel: 1e9, ammo: 3 }); // partida guardada antes de quitarlos
     s.nextUid = 0;
     s.day = -3;
-    const back = deserialize(serialize(s), saveContext())!;
+    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
     expect(back.units[0]).not.toHaveProperty('fuel');
     expect(back.units[0]).not.toHaveProperty('ammo');
     expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((u) => u.uid)));

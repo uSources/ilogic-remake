@@ -847,7 +847,7 @@ export class GameScene extends Phaser.Scene {
       commandPoints: s.rules.commandPoints === null ? null : { used: commandUsed(s, 0), max: s.rules.commandPoints },
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
-      lab: labPanel(this.lab),
+      lab: labPanel(this.s, this.lab),
       general: generalVM(s, 0, this.phase === 'target' ? this.abilities.targeting : null),
       enemyGeneral: generalVM(s, 1, null),
       buildings: s.buildings.filter((building) => building.owner === 0).length,
@@ -875,7 +875,11 @@ export class GameScene extends Phaser.Scene {
 
   /** Bandeja de unidades sin mover. */
   private idleList(): IdleVM[] {
-    return this.idleUnits().map((unit) => ({ uid: unit.uid, icon: unitKey(this.textures, this.s, unit), name: unitLabel(unit.type) }));
+    return this.idleUnits().map((unit) => ({
+      uid: unit.uid,
+      icon: unitKey(this.textures, this.s, unit),
+      name: unitLabel(this.s.content, unit.type),
+    }));
   }
 
   private hint(busy: boolean): string {

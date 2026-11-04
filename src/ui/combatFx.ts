@@ -10,7 +10,8 @@
  */
 import type Phaser from 'phaser';
 import { MoveType } from '../core/data';
-import { defaultContent } from '../core/content/default';
+import { tablesOf } from '../core/gameContent';
+import type { GameState } from '../core/model';
 import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
@@ -35,8 +36,8 @@ export type ShotKind = 'arc' | 'missile' | 'bomb' | 'tracer' | 'bullets' | 'shel
 /** Alcance desde el que un arma a distancia lanza misiles en vez de proyectiles en parabola. */
 const MISSILE_RANGE = 6;
 
-export function shotKind(attackerType: number, defenderType: number): ShotKind {
-  const { UNIT } = defaultContent().tables;
+export function shotKind(s: GameState, attackerType: number, defenderType: number): ShotKind {
+  const { UNIT } = tablesOf(s);
   const isRangedWeapon = UNIT.minalc[attackerType]! > 0;
   if (isRangedWeapon) return UNIT.alcance[attackerType]! >= MISSILE_RANGE ? 'missile' : 'arc';
   const movement = UNIT.movtype[attackerType];

@@ -89,7 +89,7 @@ describe('sin cura bajo fuego', () => {
 
   it('quien recibe un ataque ese dia no se cura en su ciudad', () => {
     const { s, a, d } = setup();
-    s.rules = rulesWith({ noHealUnderFire: true });
+    s.rules = rulesWith(defaultContent(), { noHealUnderFire: true });
     attackFull(s, a, d, seededRng(1));
     const hurt = d.life;
     expect(hurt).toBeLessThan(100);
@@ -104,7 +104,7 @@ describe('sin cura bajo fuego', () => {
 
   it('sin la regla se cura como siempre', () => {
     const { s, a, d } = setup();
-    s.rules = rulesWith({ noHealUnderFire: false });
+    s.rules = rulesWith(defaultContent(), { noHealUnderFire: false });
     attackFull(s, a, d, seededRng(1));
     const hurt = d.life;
     endRound(s);
@@ -117,7 +117,7 @@ describe('partidas guardadas', () => {
     const s = blankState();
     const old = JSON.parse(serialize(s)) as { rules: Record<string, unknown> };
     for (const k of ['vetBonus', 'bounty', 'flankBonus', 'noHealUnderFire']) delete old.rules[k];
-    const back = deserialize(JSON.stringify(old), saveContext());
+    const back = deserialize(JSON.stringify(old), saveContext(defaultContent()));
     expect(back?.rules).toMatchObject({ vetBonus: 0.05, bounty: 0, flankBonus: 0, noHealUnderFire: false });
   });
 });

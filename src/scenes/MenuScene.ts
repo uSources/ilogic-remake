@@ -3,6 +3,7 @@
  * en `src/menu/` con su `...Host`), las opciones, las notas y la ayuda. Detras, una partida IA contra
  * IA o la imagen original.
  */
+import { defaultContent } from '../core/content/default';
 import { rulesWith } from '../core/data';
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
@@ -18,7 +19,7 @@ import { OptionsPanel } from '../menu/optionsPanel';
 import { isTypingCode, SetupScreen, type SetupHost } from '../menu/setupScreen';
 import { playMusic } from '../music';
 import { checkNotes, closeNotes, notesCommand, notesOpen } from '../patchNotes';
-import { rulesFor } from '../setup';
+import { ruleChangesFor } from '../setup';
 import { settings } from '../settings';
 import { readSave } from '../storage';
 import { terrainPalette } from '../ui/terrainColors';
@@ -98,7 +99,7 @@ export class MenuScene extends Phaser.Scene {
 
     Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions());
     // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
-    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null, helpRules: rulesWith() });
+    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null, helpRules: rulesWith(defaultContent()) });
     this.home.publish();
     if (data?.open === 'setup') this.openSetup();
 
@@ -189,7 +190,7 @@ export class MenuScene extends Phaser.Scene {
     const options = this.setup.options;
     this.scene.start('Game', {
       mode: 'new',
-      rules: rulesFor(options),
+      rules: ruleChangesFor(options),
       setup: { seed, size: options.size, theme: options.theme },
       general: options.general,
       enemyGeneral: options.enemyGeneral,

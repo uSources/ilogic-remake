@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { defaultContent } from '../core/content/default';
+import { TERRAIN_TYPES } from '../core/data';
 import { terrainKey } from './sprites';
 import { drawFrame, hasImage } from '../atlas';
 
@@ -12,7 +12,7 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): number
   const cv = document.createElement('canvas');
   cv.width = cv.height = 8;
   const ctx = cv.getContext('2d', { willReadFrequently: true })!;
-  for (let i = 0; i < defaultContent().tables.TERRAIN.protection.length; i++) {
+  for (let i = 0; i < TERRAIN_TYPES; i++) {
     let color = 0x3a7a3a;
     const key = terrainKey(i);
     if (hasImage(textures, key)) {

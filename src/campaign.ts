@@ -6,6 +6,7 @@ import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
 import type { GameEvent, GameState, Objective } from './core/model';
 import { buildingLabel, settings } from './settings';
+import type { GameContent } from './core/content';
 
 const STORAGE_KEY = 'ilogic.campaign';
 
@@ -70,11 +71,11 @@ export function nextMissionIndex(done = completedMissions()): number {
 const es = () => settings.lang === 'es';
 
 /** Frase de cada objetivo, para la pantalla de campaña y el panel de la partida. */
-const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { kind: K }>) => string } = {
+const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { kind: K }>, content: GameContent) => string } = {
   hq: () => (es() ? 'Conquista la Base enemiga.' : 'Take the enemy HQ.'),
   survive: ({ days }) => (es() ? `Aguanta hasta el final del día ${days}.` : `Hold out until the end of day ${days}.`),
-  capture: ({ count, type, days }) => {
-    const what = type === null ? (es() ? 'edificios' : 'buildings') : buildingLabel(type).toLowerCase() + (es() ? 'es' : 's');
+  capture: ({ count, type, days }, content) => {
+    const what = type === null ? (es() ? 'edificios' : 'buildings') : buildingLabel(content, type).toLowerCase() + (es() ? 'es' : 's');
     return es() ? `Ten ${count} ${what} antes de que acabe el día ${days}.` : `Own ${count} ${what} before day ${days} ends.`;
   },
   destroy: ({ days }) =>
@@ -89,22 +90,26 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { k
 const NO_UNIT_UIDS: readonly number[] = [];
 
 /** El objetivo de la partida si la hay; si no, el de la mision; si no hay ninguna, conquistar la Base. */
-function objectiveToDescribe(m: MissionDef | null, s?: GameState): Objective {
+function objectiveToDescribe(m: MissionDef | null, content: GameContent, s?: GameState): Objective {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
-  if (m) return objectiveFromMission(m.objective, NO_UNIT_UIDS, defaultContent().tables);
+  if (m) return objectiveFromMission(m.objective, NO_UNIT_UIDS, content.tables);
   return { kind: 'hq' };
 }
 
-function describeObjective(objective: Objective): string {
+function describeObjective(objective: Objective, content: GameContent): string {
   // TypeScript no sabe que la entrada de cada tipo recibe ese mismo tipo de objetivo.
-  const describe = OBJECTIVE_TEXT[objective.kind] as (objective: Objective) => string;
-  return describe(objective);
+  const describe = OBJECTIVE_TEXT[objective.kind] as (objective: Objective, content: GameContent) => string;
+  return describe(objective, content);
 }
 
-/** Objetivo en una frase (para la pantalla de campaña y el panel de la partida). */
+/**
+ * Objetivo en una frase (para la pantalla de campaña y el panel de la partida). Con partida, con su
+ * contenido; en el menu de campaña, antes de jugar, con el del juego.
+ */
 export function objectiveText(m: MissionDef | null, s?: GameState): string {
-  return describeObjective(objectiveToDescribe(m, s));
+  const content = s?.content ?? defaultContent();
+  return describeObjective(objectiveToDescribe(m, content, s), content);
 }
 
 /** Progreso en corto: "3/6", "día 4 de 8"... */

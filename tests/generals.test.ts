@@ -22,7 +22,7 @@ function withBrisa(): GameState {
 }
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith({ fog: true, weather: false });
+const TEST_RULES = rulesWith(defaultContent(), { fog: true, weather: false });
 
 describe('generales: datos', () => {
   it('generals.json es valido y Brisa existe', () => {
@@ -111,14 +111,14 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 3.5;
-    const back = deserialize(serialize(s), saveContext())!;
+    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
     expect(back.generals).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);
     const bad = JSON.parse(serialize(s));
     bad.generals = [
       { id: 'Nadie', charge: 99 },
       { id: 'Brisa', charge: 99 },
     ];
-    expect(deserialize(JSON.stringify(bad), saveContext())!.generals).toEqual([
+    expect(deserialize(JSON.stringify(bad), saveContext(defaultContent()))!.generals).toEqual([
       null,
       { id: 'Brisa', charge: 6, used: false, reveal: false },
     ]);

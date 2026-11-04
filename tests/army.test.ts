@@ -12,7 +12,7 @@ const CITY = 0,
   FACTORY = 2;
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith({ commandPoints: 10, upkeep: 0.1 });
+const TEST_RULES = rulesWith(defaultContent(), { commandPoints: 10, upkeep: 0.1 });
 
 describe('puntos de mando', () => {
   it('cada unidad ocupa los puntos de su tipo', () => {
@@ -42,7 +42,7 @@ describe('puntos de mando', () => {
   });
 
   it('sin la regla solo cuenta el limite de unidades', () => {
-    const s = blankState(rulesWith({ commandPoints: null, maxUnits: 2 }));
+    const s = blankState(rulesWith(defaultContent(), { commandPoints: null, maxUnits: 2 }));
     newUnit(s, TANK, 0, { x: 1, y: 1 });
     expect(armyLimit(s, 0, TANK)).toBeNull();
     newUnit(s, TANK, 0, { x: 2, y: 2 });
@@ -70,7 +70,7 @@ describe('mantenimiento', () => {
   });
 
   it('con mantenimiento 0 no se cobra nada', () => {
-    const s = blankState(rulesWith({ upkeep: 0 }));
+    const s = blankState(rulesWith(defaultContent(), { upkeep: 0 }));
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(upkeepOf(s, 0)).toBe(0);
     expect(endRound(s).upkeep).toEqual([0, 0]);

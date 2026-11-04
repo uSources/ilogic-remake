@@ -82,7 +82,13 @@ function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
 
 /** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
 export function buildMission(m: MissionDef, content: GameContent): GameState {
-  const s = newGameState({ map: terrainGrid(m), rules: missionRules(m), content, theme: m.theme, funds: [m.funds[0], m.funds[1]] });
+  const s = newGameState({
+    map: terrainGrid(m),
+    rules: missionRules(m, content),
+    content,
+    theme: m.theme,
+    funds: [m.funds[0], m.funds[1]],
+  });
   for (const [type, owner, x, y] of m.buildings) s.buildings.push({ type: tablesOf(s).BUILDING_NAMES.indexOf(type), owner, x, y });
   const unitUids = placeUnits(s, m.units);
   s.mission = { id: m.id, objective: objectiveFromMission(m.objective, unitUids, content.tables) };
@@ -90,8 +96,8 @@ export function buildMission(m: MissionDef, content: GameContent): GameState {
 }
 
 /** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
-export const missionRules = (m: MissionDef): RulesConfig =>
-  rulesWith({ commandPoints: null, upkeep: 0, weather: false, initialFunds: m.funds[0], ...m.rules });
+export const missionRules = (m: MissionDef, content: GameContent): RulesConfig =>
+  rulesWith(content, { commandPoints: null, upkeep: 0, weather: false, initialFunds: m.funds[0], ...m.rules });
 
 function buildingProblems(m: MissionDef, tables: ContentTables): string[] {
   const problems: string[] = [];

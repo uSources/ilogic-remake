@@ -2,8 +2,7 @@
 // Unidades, edificios, terreno, clima, generales y pesos de la IA NO estan aqui: son el contenido
 // (src/core/content/*.json, ver docs/CONTENIDO.md), que cada partida lleva consigo (core/gameContent.ts).
 // Correcciones respecto al original: fila 2 de PROBS_PER_ADJ (sobraba un valor).
-import { MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef } from './content';
-import rulesFile from './content/rules.json';
+import { MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef, type GameContent } from './content';
 import type { RulesConfig } from './model';
 
 export { MoveType, TerrainType, TERRAIN_NAMES, type AbilityDef };
@@ -51,12 +50,10 @@ export const MAP_MIN = 10,
 export const MAX_LIFE = 100;
 
 /**
- * Reglas por defecto (rules.json, que valida loadContent), congeladas: cada partida lleva las suyas en
- * `s.rules`. [CAMBIO] El modo "reglas de 2013" se ha quitado.
+ * Las reglas por defecto de ese contenido (rules.json, validado por loadContent:
+ * `content.tables.DEFAULT_RULES`) con estos cambios: la unica forma de escribir unas reglas nuevas.
+ * Cada partida lleva las suyas en `s.rules`. [CAMBIO] El modo "reglas de 2013" se ha quitado.
  */
-export const DEFAULT_RULES: Readonly<RulesConfig> = Object.freeze({ ...(rulesFile.defaults as RulesConfig) });
-
-/** Las reglas de siempre con estos cambios: la unica forma de escribir unas reglas nuevas. */
-export function rulesWith(overrides: Partial<RulesConfig> = {}): RulesConfig {
-  return { ...DEFAULT_RULES, ...overrides };
+export function rulesWith(content: GameContent, overrides: Partial<RulesConfig> = {}): RulesConfig {
+  return { ...content.tables.DEFAULT_RULES, ...overrides };
 }

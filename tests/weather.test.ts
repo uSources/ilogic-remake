@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { DEFAULT_RULES, THEME_NAMES, rulesWith } from '@core/data';
+import { THEME_NAMES, rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
 import { validateContent } from '@core/content';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
 import { CLEAR, advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { seededRng } from '@core/geom';
-import type { GameState } from '@core/model';
+import type { GameState, RulesConfig } from '@core/model';
 import { blankState } from './helpers';
 
 const { UNIT, WEATHER } = defaultContent().tables;
@@ -111,7 +111,7 @@ describe('clima: efectos', () => {
 
   it('con la regla quitada no hay clima aunque el estado lo tenga', () => {
     const s = withWeather(STORM);
-    s.rules = rulesWith({ weather: false });
+    s.rules = rulesWith(defaultContent(), { weather: false });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(weatherNow(s)).toBe(CLEAR);
     expect(maxSteps(s, tank)).toBe(UNIT.mover[TANK]);
@@ -176,17 +176,17 @@ describe('clima: como cambia', () => {
 
   it('se guarda con la partida y un clima roto se descarta al cargar', () => {
     const s = withWeather(RAIN);
-    s.rules = rulesWith();
-    expect(deserialize(serialize(s), saveContext())!.weather).toEqual(s.weather);
+    s.rules = rulesWith(defaultContent());
+    expect(deserialize(serialize(s), saveContext(defaultContent()))!.weather).toEqual(s.weather);
     const broken = JSON.parse(serialize(s)) as GameState;
     broken.weather = { kind: WEATHER.ids.length + 5, left: 1, next: 0 };
-    expect(deserialize(JSON.stringify(broken), saveContext())!.weather).toBeUndefined();
+    expect(deserialize(JSON.stringify(broken), saveContext(defaultContent()))!.weather).toBeUndefined();
   });
 
   it('las partidas guardadas sin la regla se siguen jugando sin clima', () => {
     const s = blankState();
-    const { weather: _, ...old } = DEFAULT_RULES;
-    s.rules = old as typeof DEFAULT_RULES;
-    expect(deserialize(serialize(s), saveContext())!.rules!.weather).toBe(false);
+    const { weather: _, ...old } = defaultContent().tables.DEFAULT_RULES;
+    s.rules = old as RulesConfig;
+    expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules!.weather).toBe(false);
   });
 });

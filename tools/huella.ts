@@ -10,7 +10,6 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/data';
 import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
@@ -19,6 +18,7 @@ import { endRound, outcome } from '@core/rules';
 import { serialize } from '@core/save';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState, RulesConfig, Team } from '@core/model';
+import { defaultContent } from '@core/content/default';
 
 const MAX_DAYS = 30;
 
@@ -62,8 +62,8 @@ function orderPlayerSquad(s: GameState): void {
 
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
-  const s = createGame(rng, { size: scenario.size, rules: rulesWith(scenario.rules) });
-  const generals = defaultContent().files.generals;
+  const s = createGame(rng, { size: scenario.size, rules: rulesWith(defaultContent(), scenario.rules) });
+  const generals = s.content.files.generals;
   if (scenario.withGenerals) s.generals = [newGeneral(s, generals[0]?.id), newGeneral(s, generals[1]?.id)];
   if (scenario.withSquad) orderPlayerSquad(s);
 

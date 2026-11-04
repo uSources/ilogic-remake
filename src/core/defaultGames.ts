@@ -16,20 +16,20 @@ export function createGame(rng: Rng, options: Omit<NewMapOptions, 'content'>): G
 }
 
 /**
- * Como lee el juego sus partidas: con `content` (el del juego si no se dice otro) y las reglas de las
- * misiones del juego.
+ * Como lee el juego sus partidas: con `content` y las reglas de las misiones del juego (con ese
+ * contenido).
  */
-export function saveContext(content: GameContent = defaultContent()): SaveContext {
+export function saveContext(content: GameContent): SaveContext {
   return {
     content,
     missionRules: (id) => {
       const mission = missionById(id);
-      return mission ? missionRules(mission) : undefined;
+      return mission ? missionRules(mission, content) : undefined;
     },
   };
 }
 
 /** Lee una partida guardada con el contenido del juego (null si el fichero no es valido). */
 export function loadGame(json: string): GameState | null {
-  return deserialize(json, saveContext());
+  return deserialize(json, saveContext(defaultContent()));
 }

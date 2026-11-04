@@ -42,10 +42,26 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
   const paid = Math.min(upkeep, afterIncome);
   const { UNIT, MAX_FUNDS } = tablesOf(s);
   return {
-    income: { lines: tally(owned, buildingLabel, (type) => buildingIncome(s, type)), total: income, scale: s.rules.incomeScale },
+    income: {
+      lines: tally(
+        owned,
+        (type) => buildingLabel(s.content, type),
+        (type) => buildingIncome(s, type),
+      ),
+      total: income,
+      scale: s.rules.incomeScale,
+    },
     upkeep:
       s.rules.upkeep > 0
-        ? { lines: tally(units, unitLabel, (t) => Math.round(UNIT.cost[t]! * s.rules.upkeep)), total: upkeep, rate: s.rules.upkeep }
+        ? {
+            lines: tally(
+              units,
+              (type) => unitLabel(s.content, type),
+              (t) => Math.round(UNIT.cost[t]! * s.rules.upkeep),
+            ),
+            total: upkeep,
+            rate: s.rules.upkeep,
+          }
         : null,
     net: income - upkeep,
     next: Math.min(afterIncome - paid, MAX_FUNDS),
@@ -53,7 +69,15 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
     commandPoints:
       s.rules.commandPoints === null
         ? null
-        : { lines: tally(units, unitLabel, (t) => UNIT.command[t]!), used: commandUsed(s, team), max: s.rules.commandPoints },
+        : {
+            lines: tally(
+              units,
+              (type) => unitLabel(s.content, type),
+              (t) => UNIT.command[t]!,
+            ),
+            used: commandUsed(s, team),
+            max: s.rules.commandPoints,
+          },
   };
 }
 

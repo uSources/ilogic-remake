@@ -42,7 +42,7 @@ export const labRange = (s: GameState, type: number): number => Math.max(1, tabl
 
 /** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
 export function labRules(action: LabAction | null): RulesConfig {
-  return rulesWith({ fog: false, weather: false, counterattack: action !== 'attack' });
+  return rulesWith(defaultContent(), { fog: false, weather: false, counterattack: action !== 'attack' });
 }
 
 /**
