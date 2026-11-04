@@ -1,4 +1,3 @@
-import { RULES } from '../../core/data';
 import { mapGrid } from '../../core/mapGrid';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos } from '../../core/model';
@@ -19,6 +18,6 @@ export function minimapVM(pal: readonly number[], s: GameState, vis: Grid<boolea
     units: s.units
       .filter((u) => u.carrier === null && !hidden.has(u.uid) && (u.team === 0 || seen(u)))
       .map((u) => ({ x: u.x, y: u.y, team: u.team })),
-    ...(s.controlPoints ? { points: s.controlPoints.map((c) => ({ x: c.x, y: c.y, owner: c.owner, r: RULES.controlRadius })) } : {}),
+    ...(s.controlPoints ? { points: s.controlPoints.map((c) => ({ x: c.x, y: c.y, owner: c.owner, r: s.rules.controlRadius })) } : {}),
   };
 }

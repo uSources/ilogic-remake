@@ -1,7 +1,7 @@
 /**
  * Prevision de combate y zona de amenaza (para la interfaz y la IA). Solo consultas: no cambian nada.
  */
-import { RULES, UNIT } from '../data';
+import { UNIT } from '../data';
 import { diamond } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
@@ -25,7 +25,7 @@ export interface CombatForecast {
   counter: { expected: number; low: number; high: number; killChance: number; lifeAfter: number } | null;
 }
 
-/** Puntos con los que se muestrea el reparto del daño con RULES.damageSpread. */
+/** Puntos con los que se muestrea el reparto del daño con la regla damageSpread. */
 const SPREAD_SAMPLES = 401;
 /** Percentiles del margen probable que se enseña (5 % y 95 %). */
 const LOW_PERCENTILE = 0.05;
@@ -34,10 +34,10 @@ const HIGH_PERCENTILE = 0.95;
 const EPSILON = 1e-9;
 
 /** Distribucion del daño: dist[k] = P(daño = k), sin tope. */
-export function damageDistribution(life: number, chance: number): number[] {
+export function damageDistribution(s: GameState, life: number, chance: number): number[] {
   const shots = Math.max(0, life);
   const p = Math.min(1, Math.max(0, chance));
-  return RULES.damageSpread === null ? shotsDistribution(shots, p) : spreadDistribution(shots * p, RULES.damageSpread);
+  return s.rules.damageSpread === null ? shotsDistribution(shots, p) : spreadDistribution(shots * p, s.rules.damageSpread);
 }
 
 /** Original: `shots` disparos que aciertan cada uno con probabilidad `p` (binomial). */
@@ -101,7 +101,7 @@ function counterDistribution(s: GameState, attacker: Unit, defender: Unit, attac
   for (let damage = 0; damage < attackDist.length; damage++) {
     const lifeLeft = defender.life - Math.min(damage, defender.life);
     if (lifeLeft <= 0 || !attackDist[damage]) continue;
-    const counterDist = damageDistribution(lifeLeft, counterChance);
+    const counterDist = damageDistribution(s, lifeLeft, counterChance);
     for (let j = 0; j < counterDist.length; j++) total[j] = (total[j] ?? 0) + attackDist[damage]! * counterDist[j]!;
   }
   fillHoles(total);
@@ -111,11 +111,11 @@ function counterDistribution(s: GameState, attacker: Unit, defender: Unit, attac
 }
 
 export function combatForecast(s: GameState, attacker: Unit, defender: Unit): CombatForecast {
-  const attackDist = damageDistribution(attacker.life, hitChance(s, attacker, defender));
+  const attackDist = damageDistribution(s, attacker.life, hitChance(s, attacker, defender));
   const main = summarize(attackDist, defender.life);
   const expected = Math.round(main.expected);
   let counter: CombatForecast['counter'] = null;
-  if (canCounter(defender, attacker)) {
+  if (canCounter(s, defender, attacker)) {
     const back = summarize(counterDistribution(s, attacker, defender, attackDist), attacker.life);
     const counterExpected = Math.round(back.expected);
     counter = {

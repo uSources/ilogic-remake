@@ -2,7 +2,7 @@
  * Movimiento y caminos: alcance de cada unidad, caminos trazados, emboscadas, distancia por tierra
  * y el evento de mover.
  */
-import { RULES, UNIT, Movement, type MoveType } from '../data';
+import { UNIT, Movement, type MoveType } from '../data';
 import { isRanged, zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos } from '../geom';
 import { createLayer, mapGrid, terrainAt } from '../mapGrid';
@@ -51,14 +51,14 @@ export interface PassMap {
 export function passMap(s: GameState, unit: Unit): PassMap {
   const block = createLayer(s, false);
   const taken = createLayer(s, false);
-  const visible = RULES.ambush ? visibility(s, unit.team) : null;
+  const visible = s.rules.ambush ? visibility(s, unit.team) : null;
   // [CAMBIO] Zona de control (habilidades): casillas en las que hay que pararse.
   const stop = zoneOfControl(s, unit, visible);
   for (const other of s.units) {
     if (!isOnMap(other) || other.uid === unit.uid) continue;
     if (!isEnemyOf(other, unit)) {
       taken.set(other, true);
-      if (!RULES.passAllies) block.set(other, true);
+      if (!s.rules.passAllies) block.set(other, true);
     } else if (!visible || visible.at(other)) {
       taken.set(other, true);
       block.set(other, true);
@@ -69,7 +69,7 @@ export function passMap(s: GameState, unit: Unit): PassMap {
 
 /** Lo que cuesta entrar en una casilla (1 con las reglas clasicas). */
 export function moveCost(s: GameState, moveType: MoveType, pos: Pos): number {
-  return RULES.terrainCost ? Movement.cost(moveType, terrainAt(s, pos)) : 1;
+  return s.rules.terrainCost ? Movement.cost(moveType, terrainAt(s, pos)) : 1;
 }
 
 /** Coste de recorrer un camino (sin contar la casilla de salida). */

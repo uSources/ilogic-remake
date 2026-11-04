@@ -1,7 +1,7 @@
 /**
  * Fin de ronda (ciclojuego, fase 2): reactivar unidades, cobrar, curar, mantenimiento, dia y clima.
  */
-import { BUILDING, HEALER, MAX_FUNDS, MAX_LIFE, RULES } from '../data';
+import { BUILDING, HEALER, MAX_FUNDS, MAX_LIFE } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
 import { TEAMS, type Building, type GameState, type Team, type Unit } from '../model';
@@ -24,7 +24,7 @@ export interface RoundReport {
 
 /** [CAMBIO] La unidad no se curara al acabar el dia: ha recibido un ataque hoy (regla noHealUnderFire). */
 export function unhealable(s: GameState, unit: Unit): boolean {
-  return RULES.noHealUnderFire && unit.hitDay === s.day;
+  return s.rules.noHealUnderFire && unit.hitDay === s.day;
 }
 
 /** Un paso del fin de ronda: cambia el estado y apunta en el informe lo que la interfaz enseña. */
@@ -63,8 +63,8 @@ function healOnBuilding(s: GameState, building: Building, report: RoundReport): 
 function collectAndHeal(s: GameState, report: RoundReport): void {
   for (const building of s.buildings) {
     if (building.owner === null) continue;
-    s.funds[building.owner] += buildingIncome(building.type);
-    report.income[building.owner] += buildingIncome(building.type);
+    s.funds[building.owner] += buildingIncome(s, building.type);
+    report.income[building.owner] += buildingIncome(s, building.type);
     healOnBuilding(s, building, report);
   }
 }

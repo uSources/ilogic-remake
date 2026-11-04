@@ -1,7 +1,7 @@
 /** Hilo de trabajo: aplica la variante y juega un lote de partidas. */
 import { parentPort, workerData } from 'node:worker_threads';
 import { playGame, type Policy } from './play';
-import { applyVariant, type Variant } from './variant';
+import { applyVariant, variantRules, type Variant } from './variant';
 
 const data = workerData as {
   variant: Variant;
@@ -13,6 +13,7 @@ const data = workerData as {
   size?: number;
 };
 applyVariant(data.variant);
+const rules = variantRules(data.variant);
 for (const seed of data.seeds) {
   const rec = playGame({
     seed,
@@ -21,6 +22,7 @@ for (const seed of data.seeds) {
     firstTeam: data.firstTeam,
     swapSides: data.swapSides,
     size: data.size,
+    rules,
   });
   parentPort!.postMessage(rec);
 }

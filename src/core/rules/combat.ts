@@ -2,7 +2,7 @@
  * Combate: alcance, proteccion del terreno, probabilidad de acierto, veterania, contraataque, botin
  * y el ataque en si (con su evento).
  */
-import { BUILDING, MAX_FUNDS, POWER, RULES, TERRAIN, UNIT } from '../data';
+import { BUILDING, MAX_FUNDS, POWER, TERRAIN, UNIT } from '../data';
 import { coverAgainst, defenseFactor, isRanged } from '../abilities';
 import { manhattan } from '../geom';
 import { chargeFromCombat, generalHitFactor } from '../generals';
@@ -91,14 +91,14 @@ export interface HitModifier {
 }
 
 /** [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca. */
-function veterancyFactor(_s: GameState, attacker: Unit, defender: Unit): number {
-  if (!RULES.veterancy) return 1;
-  return (1 + RULES.vetBonus * rank(attacker)) * (1 - RULES.vetBonus * rank(defender));
+function veterancyFactor(s: GameState, attacker: Unit, defender: Unit): number {
+  if (!s.rules.veterancy) return 1;
+  return (1 + s.rules.vetBonus * rank(attacker)) * (1 - s.rules.vetBonus * rank(defender));
 }
 
 /** [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil. */
 function flankFactor(s: GameState, _attacker: Unit, defender: Unit): number {
-  return flanked(s, defender) ? 1 + RULES.flankBonus : 1;
+  return flanked(s, defender) ? 1 + s.rules.flankBonus : 1;
 }
 
 /**
@@ -122,7 +122,7 @@ export const HIT_MODIFIERS: readonly HitModifier[] = [
 
 /** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). Puede pasar de 1. */
 export function hitChance(s: GameState, attacker: Unit, defender: Unit): number {
-  let chance = POWER[attacker.type]![defender.type]! * coverAgainst(attacker.type, tileProtection(s, defender));
+  let chance = POWER[attacker.type]![defender.type]! * coverAgainst(s, attacker.type, tileProtection(s, defender));
   for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, attacker, defender);
   return chance;
 }
@@ -139,12 +139,12 @@ export const RANK_KILLS = [1, 3, 6] as const;
 
 /** [CAMBIO] La unidad ya ha recibido un ataque hoy y la regla de flanqueo esta puesta. */
 export function flanked(s: GameState, defender: Unit): boolean {
-  return RULES.flankBonus > 0 && defender.hitDay === s.day;
+  return s.rules.flankBonus > 0 && defender.hitDay === s.day;
 }
 
 /** [CAMBIO] Botin por destruir una unidad de ese tipo (0 sin la regla). */
-export function bountyFor(type: number): number {
-  return Math.round(UNIT.cost[type]! * RULES.bounty);
+export function bountyFor(s: GameState, type: number): number {
+  return Math.round(UNIT.cost[type]! * s.rules.bounty);
 }
 
 /** Rango de veterania de una unidad: 0 a 3. */
@@ -177,31 +177,31 @@ const NO_ATTACK: Readonly<AttackResult> = { damage: 0, killed: false, counter: 0
 /**
  * Daño de un ataque de una unidad con `life` puntos de vida que acierta con probabilidad `chance`.
  * Original: cada punto de vida es un disparo que acierta con probabilidad `chance`.
- * [CAMBIO] con RULES.damageSpread: el daño esperado (life x chance) +- ese tanto por uno.
+ * [CAMBIO] con la regla damageSpread: el daño esperado (life x chance) +- ese tanto por uno.
  */
-function rollDamage(life: number, chance: number, rng: Rng): number {
-  if (RULES.damageSpread === null) {
+function rollDamage(s: GameState, life: number, chance: number, rng: Rng): number {
+  if (s.rules.damageSpread === null) {
     let hits = 0;
     for (let shot = 0; shot < life; shot++) if (rng() < chance) hits++;
     return hits;
   }
   const expected = life * chance;
-  const spread = (rng() * 2 - 1) * RULES.damageSpread;
+  const spread = (rng() * 2 - 1) * s.rules.damageSpread;
   return Math.max(0, Math.round(expected * (1 + spread)));
 }
 
 /** Daño que hace `attacker` a `defender` en una tirada (sin pasar de la vida que le queda). */
 function strike(s: GameState, attacker: Unit, defender: Unit, rng: Rng): number {
-  return Math.min(defender.life, rollDamage(attacker.life, cappedHitChance(s, attacker, defender), rng));
+  return Math.min(defender.life, rollDamage(s, attacker.life, cappedHitChance(s, attacker, defender), rng));
 }
 
 /**
- * [CAMBIO] Contraataque (RULES.counterattack): el defensor que sobrevive responde si es una
+ * [CAMBIO] Contraataque (s.rules.counterattack): el defensor que sobrevive responde si es una
  * unidad de cuerpo a cuerpo, el atacante tambien lo es y lo tiene a su alcance.
  * La artilleria y demas unidades a distancia ni contraatacan ni reciben contraataque.
  */
-export function canCounter(defender: Unit, attacker: Unit): boolean {
-  if (!RULES.counterattack || !isAlive(defender)) return false;
+export function canCounter(s: GameState, defender: Unit, attacker: Unit): boolean {
+  if (!s.rules.counterattack || !isAlive(defender)) return false;
   if (isRanged(defender.type) || isRanged(attacker.type)) return false;
   return canDamage(defender, attacker) && inAttackRange(defender.type, defender, attacker);
 }
@@ -230,7 +230,7 @@ function payBounty(s: GameState, attacker: Unit, defender: Unit, result: AttackR
   const winner: Team | null = result.killed ? attacker.team : result.attackerKilled ? defender.team : null;
   if (winner === null) return;
   const lostType = result.killed ? defender.type : attacker.type;
-  result.bounty = bountyFor(lostType);
+  result.bounty = bountyFor(s, lostType);
   s.funds[winner] = Math.min(MAX_FUNDS, s.funds[winner] + result.bounty);
 }
 
@@ -243,7 +243,7 @@ export function attackFull(s: GameState, attacker: Unit, defender: Unit, rng: Rn
   defender.hitDay = s.day;
   endTurnAfterAttack(attacker);
 
-  const counter = canCounter(defender, attacker) ? strike(s, defender, attacker, rng) : 0;
+  const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, rng) : 0;
   attacker.life -= counter;
 
   chargeFromCombat(s, attacker, defender, damage, counter);
@@ -271,7 +271,7 @@ function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatI
     attackerRank: rank(attacker),
     defenderRank: rank(defender),
     hit: cappedHitChance(s, attacker, defender),
-    counterHit: canCounter(defender, attacker) ? cappedHitChance(s, defender, attacker) : null,
+    counterHit: canCounter(s, defender, attacker) ? cappedHitChance(s, defender, attacker) : null,
   };
 }
 

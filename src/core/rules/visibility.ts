@@ -1,7 +1,7 @@
 /**
  * Vision y niebla: que casillas ve cada bando.
  */
-import { BUILDING, HIDING_TERRAIN, RULES, UNIT } from '../data';
+import { BUILDING, HIDING_TERRAIN, UNIT } from '../data';
 import { seesIntoCover } from '../abilities';
 import { diamond, manhattan } from '../geom';
 import { revealsAll } from '../generals';
@@ -19,13 +19,13 @@ export function visionOf(s: GameState, unit: Unit): number {
 
 /** [CAMBIO] Reglas nuevas: el bosque esconde a quien esta dentro (solo se ve desde al lado). */
 function hidesInside(s: GameState, pos: Pos): boolean {
-  return RULES.forestHides && HIDING_TERRAIN.includes(terrainAt(s, pos));
+  return s.rules.forestHides && HIDING_TERRAIN.includes(terrainAt(s, pos));
 }
 
 /** Casillas que ve una unidad: su rombo de vision, menos el bosque que no tenga al lado. */
 function markSeenByUnit(s: GameState, unit: Unit, visible: Grid<boolean>): void {
   // [CAMBIO] Habilidad scout (Jeep): ve dentro del bosque en todo su radio.
-  const isScout = seesIntoCover(unit.type);
+  const isScout = seesIntoCover(s, unit.type);
   for (const pos of diamond(visible, unit, 0, visionOf(s, unit))) {
     if (isScout || !hidesInside(s, pos) || manhattan(unit, pos) <= 1) visible.set(pos, true);
   }
@@ -34,7 +34,7 @@ function markSeenByUnit(s: GameState, unit: Unit, visible: Grid<boolean>): void 
 /** Casillas visibles para un bando: rombo de vision de sus unidades + casillas de sus edificios. */
 export function visibility(s: GameState, team: Team): Grid<boolean> {
   // [CAMBIO] partida sin niebla, o el general ha usado reconocimiento: se ve todo.
-  if (!RULES.fog || revealsAll(s, team)) return createLayer(s, true);
+  if (!s.rules.fog || revealsAll(s, team)) return createLayer(s, true);
   const visible = createLayer(s, false);
   for (const unit of s.units) if (unit.team === team && isOnMap(unit)) markSeenByUnit(s, unit, visible);
   for (const building of s.buildings) {

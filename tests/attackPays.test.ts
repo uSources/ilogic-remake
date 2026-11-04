@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING, DEFAULT_RULES, HEALER, RULES, UNIT, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { BUILDING, DEFAULT_RULES, HEALER, UNIT } from '@core/data';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -13,12 +13,9 @@ const SOLDIER = 0,
   TANK = 1,
   CITY = 0;
 
-beforeEach(() => useRules(DEFAULT_RULES));
-
 describe('botin', () => {
   it('quien destruye cobra parte del precio de lo destruido', () => {
-    useRules({ bounty: 0.25 });
-    const s = blankState();
+    const s = blankState({ bounty: 0.25 });
     const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     d.life = 1;
@@ -31,8 +28,7 @@ describe('botin', () => {
   });
 
   it('si cae el atacante en el contraataque, cobra el defensor', () => {
-    useRules({ bounty: 0.25 });
-    const s = blankState();
+    const s = blankState({ bounty: 0.25 });
     const a = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     a.life = 1;
@@ -42,8 +38,7 @@ describe('botin', () => {
   });
 
   it('sin la regla, ni dinero ni campo en el evento', () => {
-    useRules({ bounty: 0 });
-    const s = blankState();
+    const s = blankState({ bounty: 0 });
     const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     d.life = 1;
@@ -55,8 +50,7 @@ describe('botin', () => {
 
 describe('flanqueo', () => {
   it('la segunda unidad que ataca a la misma ese dia acierta mas', () => {
-    useRules({ flankBonus: 0.15, counterattack: false });
-    const s = blankState();
+    const s = blankState({ flankBonus: 0.15, counterattack: false });
     const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const b = newUnit(s, TANK, 0, { x: 11, y: 11 });
     const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
@@ -69,8 +63,7 @@ describe('flanqueo', () => {
   });
 
   it('sin la regla no cambia nada', () => {
-    useRules({ flankBonus: 0 });
-    const s = blankState();
+    const s = blankState({ flankBonus: 0 });
     const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     const fresh = hitChance(s, a, d);
@@ -91,8 +84,8 @@ describe('sin cura bajo fuego', () => {
   };
 
   it('quien recibe un ataque ese dia no se cura en su ciudad', () => {
-    useRules({ noHealUnderFire: true });
     const { s, a, d } = setup();
+    s.rules = { ...DEFAULT_RULES, noHealUnderFire: true };
     attackFull(s, a, d, seededRng(1));
     const hurt = d.life;
     expect(hurt).toBeLessThan(100);
@@ -106,8 +99,8 @@ describe('sin cura bajo fuego', () => {
   });
 
   it('sin la regla se cura como siempre', () => {
-    useRules({ noHealUnderFire: false });
     const { s, a, d } = setup();
+    s.rules = { ...DEFAULT_RULES, noHealUnderFire: false };
     attackFull(s, a, d, seededRng(1));
     const hurt = d.life;
     endRound(s);
@@ -118,7 +111,6 @@ describe('sin cura bajo fuego', () => {
 describe('partidas guardadas', () => {
   it('las de antes de estas reglas se cargan como se jugaban', () => {
     const s = blankState();
-    s.rules = { ...RULES };
     const old = JSON.parse(serialize(s)) as { rules: Record<string, unknown> };
     for (const k of ['vetBonus', 'bounty', 'flankBonus', 'noHealUnderFire']) delete old.rules[k];
     const back = deserialize(JSON.stringify(old));

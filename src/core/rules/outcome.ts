@@ -1,7 +1,7 @@
 /**
  * Victoria y derrota: Base, limite de dias, puntos y objetivos de mision.
  */
-import { HQ, RULES, UNIT } from '../data';
+import { HQ, UNIT } from '../data';
 import { AI_TEAM, PLAYER } from '../util/predicates';
 import type { Building, GameState, Objective, Outcome, Pos, Team } from '../model';
 
@@ -29,7 +29,7 @@ export function score(s: GameState, team: Team): number {
 }
 
 /** El limite de dias (si lo hay) ya se ha cumplido. */
-export const dayLimitReached = (s: GameState): boolean => RULES.dayLimit !== null && s.day > RULES.dayLimit;
+export const dayLimitReached = (s: GameState): boolean => s.rules.dayLimit !== null && s.day > s.rules.dayLimit;
 
 /** Al acabar el ultimo dia: mas puntos; si empatan, mas edificios; si tambien, pierde el jugador. */
 function dayLimitOutcome(s: GameState): Outcome {

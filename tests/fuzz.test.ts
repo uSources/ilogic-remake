@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, useRules } from '@core/data';
+
 import { capture, moveUnit, newUnit, captureProgress, endRound } from '@core/rules';
 import { fuzzGame } from '../tools/improve/fuzz';
 import { blankState } from './helpers';
 
-afterEach(() => {
-  useRules(DEFAULT_RULES);
-});
+afterEach(() => {});
 
 describe('cazador de fallos', () => {
   // Pocas partidas para que el test sea rapido; npm run fuzz juega cientos.
@@ -16,7 +14,6 @@ describe('cazador de fallos', () => {
   });
 
   it('una captura a medias se pierde al irse la unidad, aunque vuelva (fallo encontrado por el fuzz)', () => {
-    useRules(DEFAULT_RULES);
     const s = blankState();
     const u = newUnit(s, 0, 0, { x: 5, y: 5 });
     const b = { type: 0, owner: 1 as const, x: 5, y: 5, capture: null };

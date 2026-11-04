@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, POWER, UNIT, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_RULES, POWER, UNIT } from '@core/data';
 import {
   HIT_MODIFIERS,
   ROUND_PHASES,
@@ -16,7 +16,8 @@ import { coverAgainst } from '@core/abilities';
 import { blankState } from './helpers';
 
 /** Puntos de extension y ayudas compartidas del nucleo: modificadores del acierto, pasos del fin de ronda, origenes de tiro. */
-beforeEach(() => useRules({ ...DEFAULT_RULES, fog: false }));
+/** Reglas de las partidas de estos tests. */
+const TEST_RULES = { ...DEFAULT_RULES, fog: false };
 
 const fighter = (): number => UNIT.canfight.findIndex((f, t) => !!f && POWER[t]!.some((p) => p > 0));
 
@@ -27,21 +28,20 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
   });
 
   it('hitChance es el poder por la proteccion por cada modificador, en orden', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     const t = fighter();
     const def = POWER[t]!.findIndex((p) => p > 0);
     const a = newUnit(s, t, 0, { x: 2, y: 2 });
     const d = newUnit(s, def, 1, { x: 3, y: 2 });
     d.hitDay = s.day; // flanqueado
     a.kills = 3; // veterano
-    let p = POWER[t]![def]! * coverAgainst(t, tileProtection(s, d));
+    let p = POWER[t]![def]! * coverAgainst(s, t, tileProtection(s, d));
     for (const m of HIT_MODIFIERS) p *= m.factor(s, a, d);
     expect(hitChance(s, a, d)).toBe(p);
   });
 
   it('con las reglas apagadas cada modificador vale 1', () => {
-    useRules({ ...DEFAULT_RULES, fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false });
-    const s = blankState();
+    const s = blankState({ ...DEFAULT_RULES, fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false });
     const t = fighter();
     const a = newUnit(s, t, 0, { x: 2, y: 2 });
     const d = newUnit(s, t, 1, { x: 3, y: 2 });
@@ -58,7 +58,7 @@ describe('pasos del fin de ronda (ROUND_PHASES)', () => {
   });
 
   it('endRound los recorre todos: reactiva unidades y pasa el dia', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     const u = newUnit(s, fighter(), 0, { x: 1, y: 1 }, false);
     const r = endRound(s);
     expect(s.day).toBe(2);
@@ -69,7 +69,7 @@ describe('pasos del fin de ronda (ROUND_PHASES)', () => {
 
 describe('ayudas de combate compartidas', () => {
   it('fireOrigins: donde esta y, si puede mover y disparar, lo que alcanza', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     const melee = UNIT.canfight.findIndex((f, t) => !!f && UNIT.minalc[t] === 0 && UNIT.mover[t]! > 0);
     const ranged = UNIT.canfight.findIndex((f, t) => !!f && UNIT.minalc[t]! > 0);
     const m = newUnit(s, melee, 0, { x: 5, y: 5 });
@@ -82,7 +82,7 @@ describe('ayudas de combate compartidas', () => {
   });
 
   it('canDamage: lucha y su poder contra ese tipo es mayor que 0', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     const t = fighter();
     const a = newUnit(s, t, 0, { x: 1, y: 1 });
     for (let d = 0; d < POWER[t]!.length; d++) expect(canDamage(a, newUnit(s, d, 1, { x: 2, y: 1 }))).toBe(POWER[t]![d]! > 0);

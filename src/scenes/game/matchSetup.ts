@@ -1,13 +1,13 @@
 /**
  * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
- * laboratorio, una mision o un mapa nuevo. Pone las reglas de esa partida (useRules). Sin Phaser.
+ * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
-import { DEFAULT_RULES, useRules } from '../../core/data';
+import { DEFAULT_RULES } from '../../core/data';
 import type { RulesConfig } from '../../core/model';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
 import { generateGame } from '../../core/mapgen';
-import { buildMission, missionById, missionRules } from '../../core/missions';
+import { buildMission, missionById } from '../../core/missions';
 import { deserialize } from '../../core/save';
 import type { GameSetup, GameState } from '../../core/model';
 import { ensureWeather } from '../../core/weather';
@@ -47,8 +47,6 @@ function readSavedGame(): GameState | null {
 }
 
 function labMatch(lab: LabOptions): GameState {
-  // Contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde).
-  useRules({ ...DEFAULT_RULES, fog: false, weather: false, counterattack: lab.play !== 'attack' });
   return labState(lab, lab.play);
 }
 
@@ -57,8 +55,7 @@ function labMatch(lab: LabOptions): GameState {
  * antiguas con las reglas de 2013 pasan a jugarse con estas).
  */
 function withCurrentRules(state: GameState): GameState {
-  state.rules = { ...DEFAULT_RULES, ...(state.rules ? savedSettings(state.rules) : {}) };
-  useRules(state.rules);
+  state.rules = { ...DEFAULT_RULES, ...savedSettings(state.rules) };
   return state;
 }
 
@@ -78,15 +75,14 @@ function savedSettings(rules: RulesConfig): Partial<RulesConfig> {
 function missionMatch(data: GameStartData): GameState | null {
   const mission = data.mode === 'mission' && data.mission ? missionById(data.mission) : undefined;
   if (!mission) return null;
-  useRules(missionRules(mission));
   return buildMission(mission);
 }
 
 /** Mapa al azar (o el de `setup`), con los generales elegidos. */
 function newMatch(data: GameStartData): GameState {
-  useRules(data.rules ?? DEFAULT_RULES);
   const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
-  const state = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
+  const rules = { ...DEFAULT_RULES, ...data.rules };
+  const state = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, rules });
   state.setup = setup;
   const player = newGeneral(data.general);
   const enemy = newGeneral(data.enemyGeneral);

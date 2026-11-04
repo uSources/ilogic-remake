@@ -6,7 +6,7 @@
  */
 import Phaser from 'phaser';
 import { effectiveCommand, renameSquad } from '../core/squads';
-import { HQ, RULES } from '../core/data';
+import { HQ } from '../core/data';
 import { samePos } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
@@ -842,7 +842,7 @@ export class GameScene extends Phaser.Scene {
     ui.set({
       funds: s.funds[0],
       income: playerIncome(s),
-      command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
+      command: s.rules.commandPoints === null ? null : { used: commandUsed(s, 0), max: s.rules.commandPoints },
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
       lab: labPanel(this.lab),
@@ -850,7 +850,8 @@ export class GameScene extends Phaser.Scene {
       enemyGeneral: generalVM(s, 1, null),
       buildings: s.buildings.filter((building) => building.owner === 0).length,
       day: s.day,
-      dayLimit: RULES.dayLimit,
+      dayLimit: s.rules.dayLimit,
+      matchRules: s.rules,
       weather,
       turn: this.enemyPlaying ? 'enemy' : 'player',
       busy,

@@ -10,14 +10,13 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { DEFAULT_RULES, GENERALS, useRules } from '@core/data';
+import { DEFAULT_RULES, GENERALS } from '@core/data';
 import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
 import { formSquad, giveCommand } from '@core/squads';
-import type { RulesConfig } from '@core/model';
-import type { GameState, Team } from '@core/model';
+import type { GameState, RulesConfig, Team } from '@core/model';
 
 const MAX_DAYS = 30;
 
@@ -60,9 +59,8 @@ function orderPlayerSquad(s: GameState): void {
 }
 
 function playScenario(scenario: Scenario): string {
-  useRules({ ...DEFAULT_RULES, ...scenario.rules });
   const rng = seededRng(scenario.seed);
-  const s = generateGame(rng, { size: scenario.size });
+  const s = generateGame(rng, { size: scenario.size, rules: { ...DEFAULT_RULES, ...scenario.rules } });
   if (scenario.withGenerals) s.generals = [newGeneral(GENERALS[0]?.id), newGeneral(GENERALS[1]?.id)];
   if (scenario.withSquad) orderPlayerSquad(s);
 
@@ -96,5 +94,4 @@ for (const scenario of scenarios()) {
       `${fingerprint}  semilla ${scenario.seed}, mapa ${scenario.size}, ${JSON.stringify(scenario.rules)}${scenario.withGenerals ? ', generales' : ''}${scenario.withSquad ? ', escuadra' : ''}`,
     );
 }
-useRules(DEFAULT_RULES);
 console.log(`huella total: ${total.digest('hex').slice(0, 16)}`);

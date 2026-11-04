@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { aiTurn, assistTurn, previewCommands } from '@core/ai';
-import { DEFAULT_RULES, HQ, useRules } from '@core/data';
+import { DEFAULT_RULES, HQ } from '@core/data';
 import { seededRng } from '@core/geom';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
@@ -12,8 +12,6 @@ import { blankState } from './helpers';
 const SOLDIER = 0,
   TANK = 1,
   CITY = 0;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 function world(): GameState {
   const s = blankState();
@@ -98,7 +96,7 @@ describe('previewCommands', () => {
     expect(withHidden).toEqual(clean);
     expect(withHidden.get(u.uid)!.attack).toBeUndefined();
     // Sin niebla si lo ve, y la prevision si lo marca (la prueba de arriba no es casualidad).
-    useRules({ ...DEFAULT_RULES, fog: false });
+    s.rules = { ...DEFAULT_RULES, fog: false };
     expect(previewCommands(s).get(u.uid)!.attack).toEqual({ x: hidden.x, y: hidden.y });
   });
 

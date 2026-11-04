@@ -74,7 +74,7 @@ function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
   });
 }
 
-/** Crea la partida de una mision (con las reglas ya puestas por quien llama: ver `missionRules`). */
+/** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
 export function buildMission(m: MissionDef): GameState {
   const s: GameState = {
     version: 1,
@@ -85,6 +85,7 @@ export function buildMission(m: MissionDef): GameState {
     buildings: [],
     nextUid: 1,
     day: 1,
+    rules: missionRules(m),
   };
   for (const [type, owner, x, y] of m.buildings) s.buildings.push({ type: BUILDING_NAMES.indexOf(type), owner, x, y });
   const unitUids = placeUnits(s, m.units);

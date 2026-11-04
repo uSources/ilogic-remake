@@ -4,11 +4,11 @@
  * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
  */
 import { aiTurn } from '@core/ai';
-import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, useRules, GENERALS } from '@core/data';
+import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, GENERALS } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
-import { buildMission, missionById, missionRules } from '@core/missions';
+import { buildMission, missionById } from '@core/missions';
 import {
   attackFull,
   attackTargets,
@@ -74,16 +74,14 @@ export class Session {
     if (opts.state) {
       const s = deserialize(opts.state);
       if (!s) throw new Error('Partida guardada no valida');
-      useRules({ ...DEFAULT_RULES, ...(s.rules ?? {}) });
       this.s = s;
     } else if (opts.mission) {
       const m = missionById(opts.mission);
       if (!m) throw new Error(`No existe la mision "${opts.mission}"`);
-      useRules(missionRules(m));
       this.s = buildMission(m);
     } else {
-      useRules({ ...DEFAULT_RULES, fog: opts.fog ?? false });
-      this.s = generateGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null });
+      const rules = { ...DEFAULT_RULES, fog: opts.fog ?? false };
+      this.s = generateGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, rules });
       const pick = (id: string | undefined) => {
         if (!id) return null;
         const g = newGeneral(id);

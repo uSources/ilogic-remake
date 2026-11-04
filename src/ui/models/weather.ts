@@ -1,4 +1,4 @@
-import { RULES, WEATHER } from '../../core/data';
+import { WEATHER } from '../../core/data';
 import type { GameState } from '../../core/model';
 import { forecast, weatherNow } from '../../core/weather';
 import type { WeatherVM } from '../../hud/store';
@@ -31,7 +31,7 @@ const cap = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
 
 /** Indicador del clima (null si la partida se juega sin clima). */
 export function weatherVM(s: GameState): WeatherVM | null {
-  if (!RULES.weather) return null;
+  if (!s.rules.weather) return null;
   const kind = weatherNow(s);
   const next = forecast(s);
   return {

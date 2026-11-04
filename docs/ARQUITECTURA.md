@@ -158,8 +158,10 @@ sequenceDiagram
   pasado. Por eso el turno enemigo se puede repetir (semilla guardada) y acelerar sin cambiar nada.
 - Todo el azar pasa por un `Rng` con semilla: la misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` lo vigila).
-- `RULES`, `MAP_W` y `MAP_H` son globales del modulo `data.ts` y cambian al empezar una partida
-  (`useRules`, `setMapSize`). El menu usa `keepMapSize` para no pisar el tamaño al generar miniaturas.
+- **Nada de estado global de partida**: las reglas van en `s.rules` (obligatorias; `DEFAULT_RULES` esta
+  congelado y cada partida lleva su copia, con los cambios de su modo, mision o laboratorio) y el tamaño
+  del mapa sale de `s.map` (`mapGrid(s)`, `createLayer(s, fill)`, `isOnBoard(s, pos)` en `core/mapGrid.ts`).
+  Asi dos partidas a la vez (la de la pantalla y la miniatura del menu, una prevision, un servidor) no se pisan.
 
 ## Graficos
 

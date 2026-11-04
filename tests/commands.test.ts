@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { assistTurn, commandNow, commandOrder } from '@core/ai';
-import { DEFAULT_RULES, HQ, useRules } from '@core/data';
+import { HQ } from '@core/data';
 import { manhattan, seededRng } from '@core/geom';
 import { capture, newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -35,8 +35,6 @@ const SOLDIER = 0,
   CAR = 3,
   CITY = 0,
   FACTORY = 2;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 /** Partida con las dos Bases y una ciudad neutral lejos. */
 function world(): GameState {

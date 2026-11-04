@@ -124,19 +124,11 @@ export const MAP_MIN = 10,
   MAP_MAX = 48;
 export const MAX_LIFE = 100;
 
-/** Reglas por defecto (rules.json). [CAMBIO] El modo "reglas de 2013" se ha quitado. */
-export const DEFAULT_RULES: Readonly<RulesConfig> = T.DEFAULT_RULES;
-
 /**
- * Reglas en uso. Las cambian la partida al empezar o cargarse (useRules) y las variantes
- * de la herramienta de equilibrio.
+ * Reglas por defecto (rules.json), congeladas: cada partida lleva las suyas en `s.rules` (una copia,
+ * con los cambios de su modo o de su mision). [CAMBIO] El modo "reglas de 2013" se ha quitado.
  */
-export const RULES: RulesConfig = { ...DEFAULT_RULES };
-
-export function useRules(r: Partial<RulesConfig>): void {
-  Object.assign(RULES, DEFAULT_RULES, r);
-  delete (RULES as Partial<RulesConfig> & { capture?: unknown }).capture;
-}
+export const DEFAULT_RULES: Readonly<RulesConfig> = Object.freeze({ ...T.DEFAULT_RULES });
 /** Dinero maximo de un bando (rules.json). */
 export const MAX_FUNDS = T.MAX_FUNDS;
 /**

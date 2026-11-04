@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING, DEFAULT_RULES, HQ, TERRAIN, UNIT, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { BUILDING, HQ, TERRAIN, UNIT } from '@core/data';
 import {
   attackZone,
   captureEvent,
@@ -20,8 +20,6 @@ const SOLDIER = 0,
   ARTILLERY = 2,
   TRANSPORT = 7;
 const WOODS = 2;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('ayudas de reglas', () => {
   it('proteccion de casilla: terreno por edificio, y estrellas de 0 a 4', () => {

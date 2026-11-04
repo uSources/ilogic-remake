@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { DEFAULT_RULES, useRules } from '../core/data';
+import { DEFAULT_RULES } from '../core/data';
 import { seededRng } from '../core/geom';
 import { createLayer } from '../core/mapGrid';
 import { generateGame } from '../core/mapgen';
@@ -15,6 +15,8 @@ import { PAL, PAL_CSS } from '../ui/palette';
 /** Mezcla para que la IA del fondo no juegue con la misma semilla que el mapa. */
 const AI_SEED_MIX = 0x5bd1e995;
 const MAP_SIZE = 32;
+/** La partida de fondo se juega sin niebla: se ve todo lo que pasa. */
+const BACKGROUND_RULES = { ...DEFAULT_RULES, fog: false };
 /** La partida de fondo se corta a los 45 dias y empieza otra. */
 const MAX_DAYS = 45;
 const FIRST_PAUSE_MS = 600;
@@ -82,10 +84,9 @@ export class LiveBackground {
   }
 
   start(): void {
-    useRules({ ...DEFAULT_RULES, fog: false });
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = generateGame(seededRng(seed), { size: MAP_SIZE });
+    this.game = generateGame(seededRng(seed), { size: MAP_SIZE, rules: BACKGROUND_RULES });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
     const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };

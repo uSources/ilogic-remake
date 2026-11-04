@@ -1,7 +1,7 @@
 /**
  * [CAMBIO] Fuego concentrado: el plan de quien remata a quien entre varias unidades, antes de mover.
  */
-import { RULES, UNIT } from '../data';
+import { UNIT } from '../data';
 import { manhattan } from '../geom';
 import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
@@ -44,7 +44,7 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
  * Los tiradores libres que destruyen a `foe` entre todos, de mas a menos dano, o null si no basta o
  * bastaria con uno solo (eso ya lo hace cada unidad por su cuenta).
  */
-function squadToDestroy(foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
+function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
   const damageTo = (shooterUid: number) => damage.get(shooterUid)!.get(foe.uid)!;
   const candidates = [...free].filter((uid) => damage.get(uid)!.has(foe.uid)).sort((a, b) => damageTo(b) - damageTo(a));
   let total = 0;
@@ -52,7 +52,7 @@ function squadToDestroy(foe: Unit, free: Set<number>, damage: DamageTable): numb
   for (const uid of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += damageTo(uid) * (squad.length ? 1 + RULES.flankBonus : 1);
+    total += damageTo(uid) * (squad.length ? 1 + s.rules.flankBonus : 1);
     squad.push(uid);
   }
   return total >= foe.life && squad.length >= 2 ? squad : null;
@@ -82,7 +82,7 @@ export function planFire(s: GameState, me: Team): FirePlan {
   const free = new Set(damage.keys());
   const mostValuableFirst = [...foes].sort((a, b) => remainingValue(b) - remainingValue(a));
   for (const foe of mostValuableFirst) {
-    const squad = squadToDestroy(foe, free, damage);
+    const squad = squadToDestroy(s, foe, free, damage);
     if (!squad) continue;
     for (const uid of squad) {
       plan.set(uid, foe.uid);

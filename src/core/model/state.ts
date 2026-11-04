@@ -23,8 +23,8 @@ export interface GameState {
   day: number;
   /** Estadisticas para la pantalla final (opcional: las partidas antiguas no las tienen). */
   stats?: GameStats;
-  /** Reglas de esta partida (las antiguas no las tienen: se juegan con las clasicas). */
-  rules?: RulesConfig;
+  /** Reglas de esta partida: la unica fuente de las reglas (no hay reglas globales). */
+  rules: RulesConfig;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
   setup?: GameSetup;
   /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */

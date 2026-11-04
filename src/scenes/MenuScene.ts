@@ -5,8 +5,7 @@
  */
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
-import { useRules } from '../core/data';
-import { missionRules, type MissionDef } from '../core/missions';
+import type { MissionDef } from '../core/missions';
 import { deserialize } from '../core/save';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
@@ -197,7 +196,6 @@ export class MenuScene extends Phaser.Scene {
 
   private startMission(mission: MissionDef): void {
     this.leaving = true;
-    useRules(missionRules(mission));
     this.scene.start('Game', { mode: 'mission', mission: mission.id });
   }
 

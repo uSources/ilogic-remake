@@ -9,14 +9,14 @@
  * El orden de los pasos y de las llamadas a `rng` dentro de cada uno es parte del resultado: con la
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
-import { RULES, MAPGEN, PROBS_PER_ADJ, TERRAIN, TERRAIN_TYPES, TILE_BASE_PROBS, Movement, TerrainType, MoveType } from './data';
+import { DEFAULT_RULES, MAPGEN, PROBS_PER_ADJ, TERRAIN, TERRAIN_TYPES, TILE_BASE_PROBS, Movement, TerrainType, MoveType } from './data';
 import { diamond, manhattan, squareArea } from './geom';
 import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';
 import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, unitAt } from './rules/queries';
 import { isInside, type Grid, type GridSize } from './util/grid';
-import type { GameState, Pos, Rng, Team } from './model';
+import type { GameState, Pos, Rng, RulesConfig, Team } from './model';
 
 const WALK = MoveType.FOOT;
 const PLAYER: Team = 0;
@@ -33,17 +33,17 @@ const BUILDING_PICK_TRIES = 100;
 /** Superficie del mapa respecto al original de 32x32 (para escalar cuantos edificios hay). */
 const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP_SIDE * ORIGINAL_MAP_SIDE);
 
-function emptyState(size: number): GameState {
+function emptyState(size: number, rules: RulesConfig): GameState {
   return {
     version: 1,
     map: blankMap(size),
     theme: 0,
-    funds: [RULES.initialFunds, RULES.initialFunds],
+    funds: [rules.initialFunds, rules.initialFunds],
     units: [],
     buildings: [],
     nextUid: 1,
     day: 1,
-    rules: { ...RULES },
+    rules: { ...rules },
   };
 }
 
@@ -274,7 +274,7 @@ const CONTROL_SCORE_NOISE = 1.5;
 const MAX_CONTROL_SCORE = 4;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
-  const zone = squareAround(mapGrid(s), center, RULES.controlRadius);
+  const zone = squareAround(mapGrid(s), center, s.rules.controlRadius);
   return zone.filter((pos) => isWalkable(terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 
@@ -287,12 +287,12 @@ function isControlSpot(s: GameState, pos: Pos, toPlayer: number, toEnemy: number
 }
 
 /**
- * [CAMBIO] Puntos de control (RULES.controlPoints): zonas de tierra, con el centro igual de lejos (a
+ * [CAMBIO] Puntos de control (regla controlPoints): zonas de tierra, con el centro igual de lejos (a
  * pie) de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
  * medio del mapa. Si no caben todos, pone los que pueda.
  */
 export function placeControlPoints(s: GameState, a: Pos, b: Pos, rng: Rng): void {
-  const wanted = RULES.controlPoints;
+  const wanted = s.rules.controlPoints;
   if (wanted <= 0) return;
   const fromA = groundDistance(s, a, WALK, createLayer(s, false));
   const fromB = groundDistance(s, b, WALK, createLayer(s, false));
@@ -305,7 +305,7 @@ export function placeControlPoints(s: GameState, a: Pos, b: Pos, rng: Rng): void
     candidates.push({ pos, score: Math.abs(toA - toB) + rng() * CONTROL_SCORE_NOISE });
   }
   candidates.sort((first, second) => first.score - second.score);
-  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * RULES.controlRadius;
+  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.rules.controlRadius;
   const chosen: Pos[] = [];
   for (const candidate of candidates) {
     if (chosen.length >= wanted || candidate.score > MAX_CONTROL_SCORE) break;
@@ -428,13 +428,31 @@ const MAP_STEPS: readonly MapStep[] = [
   },
 ];
 
-/** Genera una partida nueva con mapa aleatorio. Si un paso falla, se empieza otro mapa desde el principio. */
-export function generateGame(rng: Rng = Math.random, opts: { size?: number; theme?: number | null } = {}): GameState {
+/** Como se quiere el mapa al azar: lado, tema (null = al azar) y reglas de la partida. */
+export interface NewMapOptions {
+  size?: number;
+  theme?: number | null;
+  rules?: Readonly<RulesConfig>;
+}
+
+/**
+ * Genera una partida nueva con mapa aleatorio y las reglas dadas (las de siempre si no se dicen). Si
+ * un paso falla, se empieza otro mapa desde el principio.
+ */
+export function generateGame(rng: Rng = Math.random, opts: NewMapOptions = {}): GameState {
   const size = opts.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
   const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };
   for (let attempt = 0; ; attempt++) {
-    const draft: MapDraft = { s: emptyState(size), rng, origin, attempt, forcedTheme: opts.theme ?? null, landTiles: 0, spawns: null };
+    const draft: MapDraft = {
+      s: emptyState(size, opts.rules ?? DEFAULT_RULES),
+      rng,
+      origin,
+      attempt,
+      forcedTheme: opts.theme ?? null,
+      landTiles: 0,
+      spawns: null,
+    };
     if (MAP_STEPS.every((step) => step.run(draft))) return draft.s;
   }
 }

@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { abilitiesOf } from '../../core/abilities';
-import { RULES, UNIT, Movement, MoveType, type AbilityDef } from '../../core/data';
+import { UNIT, Movement, MoveType, type AbilityDef } from '../../core/data';
 import {
   inControlZone,
   buildingAt,
@@ -73,8 +73,8 @@ export function abilityVM(a: AbilityDef): AbilityVM {
 }
 
 /** Habilidades de un tipo de unidad que cuentan en esta partida (vacio con la regla apagada). */
-export function abilitiesVM(type: number): AbilityVM[] {
-  return abilitiesOf(type).map(abilityVM);
+export function abilitiesVM(s: GameState, type: number): AbilityVM[] {
+  return abilitiesOf(s, type).map(abilityVM);
 }
 
 /** "20→10": puntos del edificio de debajo antes y despues de capturar este turno. */
@@ -82,8 +82,8 @@ export function captureHintText(s: GameState, u: Unit): string | undefined {
   const b = buildingAt(s, u);
   if (!b) return undefined;
   const cp = captureProgress(s, b);
-  const now = cp && cp.uid === u.uid ? cp.left : capturePointsOf(b);
-  return `${now}→${Math.max(0, now - captureStrength(u))}`;
+  const now = cp && cp.uid === u.uid ? cp.left : capturePointsOf(s, b);
+  return `${now}→${Math.max(0, now - captureStrength(s, u))}`;
 }
 
 /**
@@ -102,7 +102,7 @@ export function tileVM(
   const info: TileVM = {
     terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - tileProtection(s, p)) * 100) },
   };
-  if (RULES.terrainCost) {
+  if (s.rules.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
     const cost = (mt: MoveType) => (Movement.canWalk(mt, terr) ? moveCost(s, mt, p) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
@@ -112,20 +112,20 @@ export function tileVM(
     info.building = {
       name: buildingLabel(b.type),
       owner: !known ? 'unknown' : b.owner === 0 ? 'you' : b.owner === 1 ? 'enemy' : 'neutral',
-      income: buildingIncome(b.type),
+      income: buildingIncome(s, b.type),
       icon: buildingKey(textures, s, b, vis),
     };
     const cp = captureProgress(s, b);
-    if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(b), team: cp.team };
+    if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(s, b), team: cp.team };
   }
   // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
   // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
-  const cp = s.controlPoints?.find((c) => inControlZone(c, p));
+  const cp = s.controlPoints?.find((c) => inControlZone(s, c, p));
   if (cp) {
-    const inside = s.units.filter((u) => u.carrier === null && inControlZone(cp, u) && (u.team === 0 || view.vis.at(u)));
+    const inside = s.units.filter((u) => u.carrier === null && inControlZone(s, cp, u) && (u.team === 0 || view.vis.at(u)));
     info.point = {
       owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral',
-      income: RULES.controlIncome,
+      income: s.rules.controlIncome,
       contested: inside.some((u) => u.team === 0) && inside.some((u) => u.team === 1),
       icon: `ui/zona_${cp.owner === 0 ? 'b' : cp.owner === 1 ? 'r' : 'i'}`,
     };
@@ -139,12 +139,12 @@ export function tileVM(
     info.unit = {
       icon: unitKey(textures, s, { ...shown, active: shown.team === 1 || shown.active }),
       name: unitLabel(T),
-      rank: RULES.veterancy ? rank(shown) : 0,
+      rank: s.rules.veterancy ? rank(shown) : 0,
       team: shown.team,
       life: shown.life,
       stats: unitStatsText(T),
       chips: unitStatChips(T),
-      abilities: abilitiesVM(T),
+      abilities: abilitiesVM(s, T),
       cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
       ...(shown.team === 0 && effectiveCommand(s, shown) ? { order: commandLabel(effectiveCommand(s, shown)!.kind) } : {}),

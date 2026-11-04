@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, useRules } from '@core/data';
 import { playGame } from '../tools/balance/play';
 
 /**
@@ -9,7 +8,6 @@ import { playGame } from '../tools/balance/play';
  */
 describe('IA: partidas de referencia', () => {
   it.each([1, 2, 3])('semilla %i', (seed) => {
-    useRules(DEFAULT_RULES);
     const g = playGame({ seed, maxDays: 25, policies: ['ai', 'ai'], size: 20 });
     const last = g.samples[g.samples.length - 1];
     expect({ winner: g.winner, reason: g.reason, days: g.days, events: g.events, last }).toMatchSnapshot();

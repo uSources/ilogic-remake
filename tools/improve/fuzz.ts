@@ -7,7 +7,7 @@
  *   npm run fuzz -- --repro 1234                  repetir una partida concreta con todo el detalle
  */
 import { aiTurn } from '@core/ai';
-import { DEFAULT_RULES, useRules } from '@core/data';
+import { DEFAULT_RULES } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
@@ -28,9 +28,9 @@ export interface FuzzFailure {
 
 /** Una partida: cada bando juega al azar o con la IA (sorteado por turno). Devuelve el fallo o null. */
 export function fuzzGame(seed: number, opts: { size?: number; days?: number; log?: (l: string) => void } = {}): FuzzFailure | null {
-  useRules({ ...DEFAULT_RULES, fog: seed % 3 === 0 });
   const rng = seededRng(seed);
-  const s: GameState = generateGame(rng, { size: opts.size ?? 20 });
+  const rules = { ...DEFAULT_RULES, fog: seed % 3 === 0 };
+  const s: GameState = generateGame(rng, { size: opts.size ?? 20, rules });
   let before = serialize(s);
   let fail: FuzzFailure | null = null;
   const check = (team: Team, action: string) => {

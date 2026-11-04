@@ -1,7 +1,7 @@
 /** Fase 'buy': el menu de compra de una fabrica propia. */
-import { RULES, UNIT } from '../../../core/data';
+import { UNIT } from '../../../core/data';
 import { buyOptions, spawn, type BuyOption } from '../../../core/rules';
-import type { Building } from '../../../core/model';
+import type { Building, GameState } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { buildingLabel, fmtNum, t, unitLabel } from '../../../settings';
 import { abilitiesVM, buyBlockedText, unitStatsText } from '../../../ui/hudModels';
@@ -28,14 +28,14 @@ export const buyPhase: PhaseHandler = {
     if (h.menuSel === CANCEL_ROW || !building) return h.toMap();
     const option = h.buyOptions[h.menuSel - 1];
     if (!option) return;
-    if (option.blocked) return showToast(buyBlockedText(option.blocked));
+    if (option.blocked) return showToast(buyBlockedText(h.state, option.blocked));
     const unit = spawn(h.state, building, option.type);
     if (unit) void h.play([{ kind: 'spawn', uid: unit.uid, at: { x: building.x, y: building.y } }]).then(() => h.afterAction());
   },
   back: (h) => h.toMap(),
   menu: (input) => {
     const building = input.building;
-    const items: MenuItemVM[] = [{ id: 'cancel', label: t('cancel'), icon: null }, ...input.buy.map(buyItem)];
+    const items: MenuItemVM[] = [{ id: 'cancel', label: t('cancel'), icon: null }, ...input.buy.map((option) => buyItem(input.s, option))];
     const model: MenuModel = { kind: 'buy', items, at: input.cursor };
     if (!building) return model;
     const subtitle = `${t('funds')}: ${fmtNum(input.s.funds[0])}`;
@@ -44,23 +44,23 @@ export const buyPhase: PhaseHandler = {
 };
 
 /** Una unidad que se puede comprar: precio y, al señalarla, sus datos (y por que no, si no se puede). */
-function buyItem(option: BuyOption): MenuItemVM {
+function buyItem(s: GameState, option: BuyOption): MenuItemVM {
   return {
     id: `buy${option.type}`,
     label: unitLabel(option.type),
     hint: `${option.cost}`,
     icon: unitIconKey(option.type, option.affordable),
     disabled: !option.affordable,
-    detail: buyDetail(option),
+    detail: buyDetail(s, option),
   };
 }
 
-function buyDetail(option: BuyOption): string {
+function buyDetail(s: GameState, option: BuyOption): string {
   const type = option.type;
-  const command = RULES.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[type]}`;
-  const abilities = abilitiesVM(type)
+  const command = s.rules.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[type]}`;
+  const abilities = abilitiesVM(s, type)
     .map((ability) => ` · ${ability.name}`)
     .join('');
-  const blocked = option.blocked ? ` · ${buyBlockedText(option.blocked)}` : '';
+  const blocked = option.blocked ? ` · ${buyBlockedText(s, option.blocked)}` : '';
   return `${unitStatsText(type)} · ${t('vision')} ${UNIT.vision[type]}${command}${abilities}${blocked}`;
 }

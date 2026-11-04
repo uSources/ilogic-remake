@@ -2,7 +2,7 @@
  * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
-import { AI, BUILDING, HEALER, RULES, UNIT, Movement } from '../data';
+import { AI, BUILDING, HEALER, UNIT, Movement } from '../data';
 import { samePos } from '../geom';
 import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
@@ -41,7 +41,7 @@ export function aiCtx(me: Team): AiCtx {
  */
 export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
-  if (ai.group && RULES.passAllies) {
+  if (ai.group && s.rules.passAllies) {
     const visible = visibility(s, ai.me);
     const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !visible.at(other));
     for (const other of s.units) if (letsPass(other)) occupied.set(other, false);

@@ -4,7 +4,6 @@
  * mision. Funciones puras: la escena las junta en las ViewOptions de MapView.render.
  */
 import type { CommandIntent } from '../../core/ai';
-import { RULES } from '../../core/data';
 import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
 import { effectiveCommand } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
@@ -21,7 +20,7 @@ export function captureBars(s: GameState, vis: Grid<boolean>): Overlay<'captures
   return s.buildings.flatMap((building) => {
     const progress = captureProgress(s, building);
     if (!progress || !(vis.at(building) || building.owner === 0)) return [];
-    return [{ x: building.x, y: building.y, left: progress.left, total: capturePointsOf(building), team: progress.team }];
+    return [{ x: building.x, y: building.y, left: progress.left, total: capturePointsOf(s, building), team: progress.team }];
   });
 }
 
@@ -55,9 +54,9 @@ export function intentLines(shown: readonly Unit[], preview: ReadonlyMap<number,
 /** [CAMBIO] Puntos de control: disputado solo si se ven unidades de los dos bandos dentro. */
 export function controlPointMarks(s: GameState, visible: (p: Pos) => boolean): ViewOptions['controlPoints'] {
   return s.controlPoints?.map((point) => {
-    const inside = s.units.filter((unit) => onMap(unit) && inControlZone(point, unit) && (isPlayer(unit) || visible(unit)));
+    const inside = s.units.filter((unit) => onMap(unit) && inControlZone(s, point, unit) && (isPlayer(unit) || visible(unit)));
     const contested = inside.some((unit) => unit.team === 0) && inside.some((unit) => unit.team === 1);
-    return { ...point, r: RULES.controlRadius, contested };
+    return { ...point, r: s.rules.controlRadius, contested };
   });
 }
 

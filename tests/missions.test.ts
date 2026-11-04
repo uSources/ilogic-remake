@@ -1,21 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { HQ, DEFAULT_RULES, useRules, Movement } from '@core/data';
+import { HQ, DEFAULT_RULES, Movement } from '@core/data';
 import { seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
 import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 
-afterEach(() => {
-  useRules(DEFAULT_RULES);
-});
+afterEach(() => {});
 
 describe('misiones', () => {
   it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: mapa valido y bases conectadas', (_id, m) => {
     expect(checkMission(m)).toEqual([]);
-    useRules(missionRules(m));
     const s = buildMission(m);
+    s.rules = { ...DEFAULT_RULES, ...missionRules(m) };
     const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
     const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
     expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
@@ -30,8 +28,8 @@ describe('misiones', () => {
   });
 
   it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: se juega IA contra IA sin errores', (_id, m) => {
-    useRules(missionRules(m));
     const s = buildMission(m);
+    s.rules = { ...DEFAULT_RULES, ...missionRules(m) };
     const rng = seededRng(5);
     for (let d = 0; d < 20 && outcome(s) === 'playing'; d++) {
       for (const team of [0, 1] as const) {
@@ -45,7 +43,6 @@ describe('misiones', () => {
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
     const byId = (id: string) => MISSIONS.find((m) => m.id === id)!;
-    useRules(missionRules(byId('hold')));
     const hold = buildMission(byId('hold'));
     hold.day = 9;
     expect(outcome(hold)).toBe('won');

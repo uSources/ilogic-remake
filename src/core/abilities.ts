@@ -12,7 +12,7 @@
  * Este modulo no importa rules/ (las reglas lo importan a el).
  */
 import { MOVEMENTS } from './content';
-import { RULES, UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
+import { UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
 import { manhattan, neighbors4 } from './geom';
 import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';
@@ -22,24 +22,24 @@ import type { GameState, Unit } from './model';
 type AbilityOf<K extends AbilityDef['kind']> = Extract<AbilityDef, { kind: K }>;
 
 /** Habilidad `kind` de un tipo de unidad, si la tiene y la regla esta activa. */
-export function abilityOf<K extends AbilityDef['kind']>(type: number, kind: K): AbilityOf<K> | undefined {
-  if (!RULES.abilities) return undefined;
+export function abilityOf<K extends AbilityDef['kind']>(s: GameState, type: number, kind: K): AbilityOf<K> | undefined {
+  if (!s.rules.abilities) return undefined;
   return UNIT_ABILITIES[type]?.find((ability): ability is AbilityOf<K> => ability.kind === kind);
 }
 
-/** Habilidades de un tipo de unidad que cuentan con las reglas actuales (para enseñarlas). */
-export function abilitiesOf(type: number): readonly AbilityDef[] {
-  return RULES.abilities ? (UNIT_ABILITIES[type] ?? []) : [];
+/** Habilidades de un tipo de unidad que cuentan con las reglas de la partida (para enseñarlas). */
+export function abilitiesOf(s: GameState, type: number): readonly AbilityDef[] {
+  return s.rules.abilities ? (UNIT_ABILITIES[type] ?? []) : [];
 }
 
 /** Ve dentro del terreno que esconde (bosque) en todo su radio de vision (scout). */
-export function seesIntoCover(type: number): boolean {
-  return !!abilityOf(type, 'scout');
+export function seesIntoCover(s: GameState, type: number): boolean {
+  return !!abilityOf(s, type, 'scout');
 }
 
 /** Multiplicador de lo que resta al capturar (quickCapture). 1 = nada. */
-export function captureFactor(type: number): number {
-  return abilityOf(type, 'quickCapture')?.factor ?? 1;
+export function captureFactor(s: GameState, type: number): number {
+  return abilityOf(s, type, 'quickCapture')?.factor ?? 1;
 }
 
 /** Ataca a distancia (no puede disparar a la casilla de al lado). */
@@ -51,8 +51,8 @@ export function isRanged(type: number): boolean {
  * Proteccion de la casilla que le queda al objetivo frente a `attackerType` (piercing): 1 = sin
  * proteccion. `protection` es la de tileProtection.
  */
-export function coverAgainst(attackerType: number, protection: number): number {
-  const piercing = abilityOf(attackerType, 'piercing');
+export function coverAgainst(s: GameState, attackerType: number, protection: number): number {
+  const piercing = abilityOf(s, attackerType, 'piercing');
   return piercing ? protection + (1 - protection) * piercing.ignoreCover : protection;
 }
 
@@ -61,9 +61,9 @@ export function coverAgainst(attackerType: number, protection: number): number {
  * sus aliados (guard, aura). 1 = nada.
  */
 export function defenseFactor(s: GameState, attacker: Unit, defender: Unit): number {
-  if (!RULES.abilities) return 1;
+  if (!s.rules.abilities) return 1;
   let factor = 1;
-  const guard = abilityOf(defender.type, 'guard');
+  const guard = abilityOf(s, defender.type, 'guard');
   if (guard && isRanged(attacker.type)) factor *= guard.factor;
   factor *= auraFactor(s, defender);
   return factor;
@@ -74,11 +74,11 @@ const isFieldUnit = (unit: Unit): boolean => isOnMap(unit) && isAlive(unit);
 
 /** Mejor aura de las unidades propias cercanas a `defender` (1 si no hay ninguna). */
 export function auraFactor(s: GameState, defender: Unit): number {
-  if (!RULES.abilities) return 1;
+  if (!s.rules.abilities) return 1;
   let best = 1;
   for (const ally of s.units) {
     if (ally.uid === defender.uid || isEnemyOf(ally, defender) || !isFieldUnit(ally)) continue;
-    const aura = abilityOf(ally.type, 'aura');
+    const aura = abilityOf(s, ally.type, 'aura');
     if (aura && manhattan(ally, defender) <= aura.radius) best = Math.min(best, aura.defense);
   }
   return best;
@@ -91,12 +91,12 @@ export function auraFactor(s: GameState, defender: Unit): number {
  */
 export function zoneOfControl(s: GameState, unit: Unit, visible?: Grid<boolean> | null): Grid<boolean> {
   const mustStop = createLayer(s, false);
-  if (!RULES.abilities) return mustStop;
+  if (!s.rules.abilities) return mustStop;
   const movement = MOVEMENTS[UNIT.movtype[unit.type]!];
   for (const enemy of s.units) {
     if (!isEnemyOf(enemy, unit) || !isFieldUnit(enemy)) continue;
     if (visible && !visible.at(enemy)) continue;
-    const zone = abilityOf(enemy.type, 'zoneOfControl');
+    const zone = abilityOf(s, enemy.type, 'zoneOfControl');
     if (!zone?.stops.includes(movement)) continue;
     for (const tile of neighbors4(mustStop, enemy)) mustStop.set(tile, true);
   }

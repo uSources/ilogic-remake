@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { chooseAbility } from '@core/aiGenerals';
-import { AI, DEFAULT_RULES, GENERALS, UNIT_NAMES, useRules } from '@core/data';
+import { AI, DEFAULT_RULES, GENERALS, UNIT_NAMES } from '@core/data';
 import { generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { newUnit } from '@core/rules';
 import { blankState } from './helpers';
@@ -9,11 +9,12 @@ import { blankState } from './helpers';
 const T = (n: string) => UNIT_NAMES.indexOf(n);
 const def = (id: string) => GENERALS.find((g) => g.id === id)!;
 
-beforeEach(() => useRules({ ...DEFAULT_RULES, fog: false, weather: false }));
+/** Reglas de las partidas de estos tests. */
+const TEST_RULES = { ...DEFAULT_RULES, fog: false, weather: false };
 
 describe('Roca: reparar', () => {
   it('sus unidades recuperan vida, sin pasar de 100; las del enemigo no', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.generals = [newGeneral('Roca'), null];
     s.generals[0]!.charge = 6;
     const amount = (def('Roca').abilities[0]!.effect as { amount: number }).amount;
@@ -35,7 +36,7 @@ describe('Roca: reparar', () => {
   });
 
   it('sus vehiculos reciben algo menos de daño', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.generals = [newGeneral('Roca'), null];
     const tank = newUnit(s, T('Tank'), 0, { x: 3, y: 3 });
     const soldier = newUnit(s, T('Soldier'), 0, { x: 5, y: 5 });
@@ -45,7 +46,7 @@ describe('Roca: reparar', () => {
   });
 
   it('la IA repara cuando vale la pena, y no con el ejercito entero', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.generals = [null, newGeneral('Roca')];
     s.generals[1]!.charge = def('Roca').abilities[0]!.cost;
     const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, T('Tank'), 1, { x: x, y: 3 }));
@@ -59,7 +60,7 @@ describe('Roca: reparar', () => {
 
 describe('Ambar: suministros', () => {
   it('da el dinero al momento', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.generals = [newGeneral('Ambar'), null];
     s.generals[0]!.charge = 6;
     const amount = (def('Ambar').abilities.find((a) => a.id === 'supplies')!.effect as { amount: number }).amount;
@@ -70,7 +71,7 @@ describe('Ambar: suministros', () => {
   });
 
   it('sus tropas de tierra aciertan mas; los aviones no', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.generals = [newGeneral('Ambar'), null];
     const target = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
     expect(generalHitFactor(s, newUnit(s, T('Soldier'), 0, { x: 5, y: 5 }), target)).toBeGreaterThan(1);
@@ -78,7 +79,7 @@ describe('Ambar: suministros', () => {
   });
 
   it('la IA valora el dinero por lo que es', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.generals = [null, newGeneral('Ambar')];
     s.generals[1]!.charge = 4;
     newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });

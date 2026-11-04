@@ -17,21 +17,9 @@
  * Tablas: UNIT, POWER, BUILDING, TERRAIN, MOVE_COST ("MOVE_COST.vehicle.Woods"), RULES, AI. Las filas/columnas se pueden
  * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
  */
-import {
-  DEFAULT_RULES,
-  useRules,
-  AI,
-  BUILDING,
-  BUILDING_NAMES,
-  POWER,
-  RULES,
-  TERRAIN,
-  TERRAIN_NAMES,
-  UNIT,
-  UNIT_NAMES,
-  Movement,
-} from '@core/data';
+import { DEFAULT_RULES, AI, BUILDING, BUILDING_NAMES, POWER, TERRAIN, TERRAIN_NAMES, UNIT, UNIT_NAMES, Movement } from '@core/data';
 import { MOVEMENTS } from '@core/content';
+import type { RulesConfig } from '@core/model';
 
 export interface Variant {
   name: string;
@@ -45,7 +33,6 @@ const TABLES: Record<string, Table> = {
   POWER: POWER as unknown as unknown[],
   BUILDING,
   TERRAIN,
-  RULES: RULES as unknown as Record<string, unknown>,
   AI,
   MOVE_COST: Movement.COST as unknown as unknown[],
 };
@@ -132,9 +119,13 @@ export function restore(snap: string): void {
 
 /** Aplica una variante a las tablas (modifica los datos globales del juego). Devuelve los cambios hechos. */
 export function applyVariant(v: Variant): { path: string; from: unknown; to: unknown }[] {
-  useRules(DEFAULT_RULES);
   const changes: { path: string; from: unknown; to: unknown }[] = [];
   for (const [path, value] of Object.entries(v.set ?? {})) {
+    if (isRulePath(path)) {
+      const key = rulePathKey(path);
+      changes.push({ path, from: DEFAULT_RULES[key], to: applyValue(DEFAULT_RULES[key], value) });
+      continue;
+    }
     for (const [container, key] of targets(path)) {
       const from = container[key];
       const to = applyValue(from, value);
@@ -144,6 +135,26 @@ export function applyVariant(v: Variant): { path: string; from: unknown; to: unk
     }
   }
   return changes;
+}
+
+const RULES_PREFIX = 'RULES.';
+const isRulePath = (path: string): boolean => path.startsWith(RULES_PREFIX);
+
+function rulePathKey(path: string): keyof RulesConfig {
+  const key = path.slice(RULES_PREFIX.length);
+  if (!(key in DEFAULT_RULES)) throw new Error(`"${key}" no existe en RULES`);
+  return key as keyof RulesConfig;
+}
+
+/** Las reglas con las que se juega la variante: las de siempre con sus cambios de `RULES.*`. */
+export function variantRules(v: Variant): RulesConfig {
+  const rules: Record<string, unknown> = { ...DEFAULT_RULES };
+  for (const [path, value] of Object.entries(v.set ?? {})) {
+    if (!isRulePath(path)) continue;
+    const key = rulePathKey(path);
+    rules[key] = applyValue(rules[key], value);
+  }
+  return rules as unknown as RulesConfig;
 }
 
 export const BASELINE: Variant = { name: 'actual' };

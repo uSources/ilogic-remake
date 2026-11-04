@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import { duelMatrix } from './duel';
 import type { Policy } from './play';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
-import { applyVariant, restore, snapshot, type Variant } from './variant';
+import { applyVariant, restore, snapshot, variantRules, type Variant } from './variant';
 import { runGames } from './runner';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
@@ -102,7 +102,9 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
     a.num('size', 32),
   );
   const terrain = a.one('terrain', 'Grass')!;
-  const duel = a.one('no-duel') ? undefined : { terrain, cells: duelMatrix({ trials: 200, terrain, seed: seed0 }) };
+  const duel = a.one('no-duel')
+    ? undefined
+    : { terrain, cells: duelMatrix({ trials: 200, terrain, seed: seed0, rules: variantRules(variant) }) };
   const report = buildReport(
     records,
     { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') },
@@ -137,7 +139,7 @@ async function main(): Promise<void> {
       const variant = loadVariant(a);
       applyVariant(variant);
       const terrain = a.one('terrain', 'Grass')!;
-      const cells = duelMatrix({ trials: a.num('trials', 300), terrain, seed: a.num('seed', 1) });
+      const cells = duelMatrix({ trials: a.num('trials', 300), terrain, seed: a.num('seed', 1), rules: variantRules(variant) });
       const path = save(`duelos-${variant.name}-${terrain}`, duelMarkdown(cells, terrain));
       console.log(`Duelos: ${path}`);
       return;

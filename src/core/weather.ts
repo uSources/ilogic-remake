@@ -11,7 +11,7 @@
  * Todo sale de la semilla del mapa y del dia: la misma partida tiene siempre el mismo tiempo, y la IA
  * y el jugador lo sufren igual.
  */
-import { RULES, WEATHER, WEATHER_TYPES, type MoveType } from './data';
+import { WEATHER, WEATHER_TYPES, type MoveType } from './data';
 import { seededRng } from './geom';
 import type { GameState, Rng, WeatherState } from './model';
 
@@ -20,7 +20,7 @@ export const CLEAR = 0;
 
 /** Clima de la partida ahora mismo (despejado si la regla esta quitada). */
 export function weatherNow(s: GameState): number {
-  return RULES.weather && s.weather ? s.weather.kind : CLEAR;
+  return s.rules.weather && s.weather ? s.weather.kind : CLEAR;
 }
 
 /** Cambio de movimiento por el clima para un tipo de movimiento. */
@@ -66,7 +66,7 @@ export function rollDays(kind: number, rng: Rng): number {
 
 /** Pone el clima del principio (despejado) si la partida aun no lo tiene. */
 export function ensureWeather(s: GameState): void {
-  if (!RULES.weather || s.weather) return;
+  if (!s.rules.weather || s.weather) return;
   const rng = dayRng(s);
   s.weather = { kind: CLEAR, left: rollDays(CLEAR, rng), next: rollWeather(s.theme, rng) };
 }
@@ -82,7 +82,7 @@ export interface WeatherChange {
  * pronostico y se decide el siguiente. Devuelve el cambio, o null si sigue igual.
  */
 export function advanceWeather(s: GameState): WeatherChange | null {
-  if (!RULES.weather) return null;
+  if (!s.rules.weather) return null;
   if (!s.weather) {
     ensureWeather(s);
     return null;
@@ -100,6 +100,6 @@ export function advanceWeather(s: GameState): WeatherChange | null {
 
 /** Pronostico: el clima que entra al empezar la ronda siguiente, o null si mañana sigue igual. */
 export function forecast(s: GameState): number | null {
-  if (!RULES.weather || !s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
+  if (!s.rules.weather || !s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
   return s.weather.next;
 }

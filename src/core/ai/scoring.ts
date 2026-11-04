@@ -3,7 +3,7 @@
  * El valor de un ataque es la suma de ATTACK_SCORE_TERMS: una razon nueva para preferir (o evitar)
  * un ataque es una entrada mas en la lista.
  */
-import { AI, HQ, RULES, UNIT } from '../data';
+import { AI, HQ, UNIT } from '../data';
 import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
@@ -43,7 +43,7 @@ const evictionWeight = (attack: AttackPlan): number => Math.max(0.5, attack.dama
 /** Lo que devolveria el objetivo al contraatacar, con la vida que le queda, en valor del atacante. */
 function counterattackLoss({ s, attacker, target, damage }: AttackPlan): number {
   const survivor = { ...target, life: Math.max(1, Math.round(target.life - damage)) };
-  if (!canCounter(survivor, attacker)) return 0;
+  if (!canCounter(s, survivor, attacker)) return 0;
   return expectedDamage(s, survivor, attacker) * unitValue(attacker.type);
 }
 
@@ -60,12 +60,12 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
   {
     // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
     id: 'kill',
-    value: (attack) => (kills(attack) ? (AI.KILLBONUS + 100 * RULES.bounty) * unitValue(attack.target.type) : 0),
+    value: (attack) => (kills(attack) ? (AI.KILLBONUS + 100 * attack.s.rules.bounty) * unitValue(attack.target.type) : 0),
   },
   {
     // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
     id: 'counterattack',
-    value: (attack) => (RULES.counterattack && !kills(attack) ? -counterattackLoss(attack) : 0),
+    value: (attack) => (attack.s.rules.counterattack && !kills(attack) ? -counterattackLoss(attack) : 0),
   },
   {
     // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.

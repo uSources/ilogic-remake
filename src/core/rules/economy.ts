@@ -2,7 +2,7 @@
  * Economia y ejercito: ingresos, mantenimiento, limite de unidades y puntos de mando, y compra
  * (Building.Spawn).
  */
-import { BUILDING, RULES, SPAWNER, UNIT, UNIT_TYPES, Movement } from '../data';
+import { BUILDING, SPAWNER, UNIT, UNIT_TYPES, Movement } from '../data';
 import type { Building, GameState, Team, Unit } from '../model';
 import { newUnit } from './lifecycle';
 import { isWalkable, teamUnits, unitAt } from './queries';
@@ -20,9 +20,9 @@ export function commandUsed(s: GameState, team: Team): number {
 /** Por que no cabe una unidad mas de ese tipo en el bando (null = cabe). */
 export type ArmyLimit = 'units' | 'command';
 export function armyLimit(s: GameState, team: Team, type: number): ArmyLimit | null {
-  if (teamUnits(s, team).length >= RULES.maxUnits) return 'units';
-  if (RULES.commandPoints === null) return null;
-  return commandUsed(s, team) + UNIT.command[type]! > RULES.commandPoints ? 'command' : null;
+  if (teamUnits(s, team).length >= s.rules.maxUnits) return 'units';
+  if (s.rules.commandPoints === null) return null;
+  return commandUsed(s, team) + UNIT.command[type]! > s.rules.commandPoints ? 'command' : null;
 }
 
 /**
@@ -30,14 +30,14 @@ export function armyLimit(s: GameState, team: Team, type: number): ArmyLimit | n
  * unidades, redondeado a 100. Frena la acumulacion de ejercitos enormes (el original no lo tenia).
  */
 export function upkeepOf(s: GameState, team: Team): number {
-  if (RULES.upkeep <= 0) return 0;
+  if (s.rules.upkeep <= 0) return 0;
   const armyCost = teamUnits(s, team).reduce((total, unit) => total + UNIT.cost[unit.type]!, 0);
-  return roundToMoneyStep(armyCost * RULES.upkeep);
+  return roundToMoneyStep(armyCost * s.rules.upkeep);
 }
 
-/** Ingresos de un edificio por ronda con las reglas actuales (multiplos de 100). */
-export function buildingIncome(type: number): number {
-  return roundToMoneyStep(BUILDING.earning[type]! * RULES.incomeScale);
+/** Ingresos de un edificio por ronda con las reglas de la partida (multiplos de 100). */
+export function buildingIncome(s: GameState, type: number): number {
+  return roundToMoneyStep(BUILDING.earning[type]! * s.rules.incomeScale);
 }
 
 export interface BuyOption {

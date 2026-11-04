@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, UNIT, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_RULES, UNIT } from '@core/data';
 import { armyLimit, buyOptions, commandUsed, endRound, newUnit, spawn, upkeepOf } from '@core/rules';
 import { blankState } from './helpers';
 
@@ -8,11 +8,12 @@ const SOLDIER = 0,
 const CITY = 0,
   FACTORY = 2;
 
-beforeEach(() => useRules({ ...DEFAULT_RULES, commandPoints: 10, upkeep: 0.1 }));
+/** Reglas de las partidas de estos tests. */
+const TEST_RULES = { ...DEFAULT_RULES, commandPoints: 10, upkeep: 0.1 };
 
 describe('puntos de mando', () => {
   it('cada unidad ocupa los puntos de su tipo', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     newUnit(s, TANK, 0, { x: 2, y: 2 });
     newUnit(s, TANK, 1, { x: 3, y: 3 });
@@ -20,7 +21,7 @@ describe('puntos de mando', () => {
   });
 
   it('no se puede comprar si la unidad no cabe, aunque haya dinero', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.funds[0] = 100000;
     const f = { type: FACTORY, owner: 0 as const, x: 4, y: 4 };
     s.buildings.push(f);
@@ -38,8 +39,7 @@ describe('puntos de mando', () => {
   });
 
   it('sin la regla solo cuenta el limite de unidades', () => {
-    useRules({ ...DEFAULT_RULES, commandPoints: null, maxUnits: 2 });
-    const s = blankState();
+    const s = blankState({ ...DEFAULT_RULES, commandPoints: null, maxUnits: 2 });
     newUnit(s, TANK, 0, { x: 1, y: 1 });
     expect(armyLimit(s, 0, TANK)).toBeNull();
     newUnit(s, TANK, 0, { x: 2, y: 2 });
@@ -49,7 +49,7 @@ describe('puntos de mando', () => {
 
 describe('mantenimiento', () => {
   it('se paga el 10 % del precio de las unidades despues de cobrar', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     s.funds = [0, 0];
     s.buildings.push({ type: CITY, owner: 0, x: 1, y: 1 }); // 1000 por ronda
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500
@@ -67,8 +67,7 @@ describe('mantenimiento', () => {
   });
 
   it('con mantenimiento 0 no se cobra nada', () => {
-    useRules({ ...DEFAULT_RULES, upkeep: 0 });
-    const s = blankState();
+    const s = blankState({ ...DEFAULT_RULES, upkeep: 0 });
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(upkeepOf(s, 0)).toBe(0);
     expect(endRound(s).upkeep).toEqual([0, 0]);

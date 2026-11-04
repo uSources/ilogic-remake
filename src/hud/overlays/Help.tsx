@@ -1,3 +1,4 @@
+import type { RulesConfig } from '../../core/model';
 import { Button } from '../common/buttons';
 import { Veil } from '../common/Veil';
 import { helpText } from '../helpText';
@@ -7,8 +8,8 @@ import { ui } from '../store';
 const KEYBOARD_COLUMN = 1;
 
 /** Ayuda ("Cómo se juega"): objetivo, colores del mapa y controles (textos en src/i18n/<idioma>/help.ts). */
-export function Help() {
-  const help = helpText();
+export function Help({ rules }: { rules: Readonly<RulesConfig> | null }) {
+  const help = helpText(rules);
   return (
     <Veil kind="help-veil" onClose={() => ui.actions.closeHelp()}>
       <div class="px help" role="dialog" aria-label={help.title}>

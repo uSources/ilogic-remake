@@ -1,21 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { objectiveStatus, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
-import { DEFAULT_RULES, HQ, useRules } from '@core/data';
-import { buildMission, missionRules, MISSIONS } from '@core/missions';
+import { HQ } from '@core/data';
+import { buildMission, MISSIONS } from '@core/missions';
 import { measureObjective, objectiveOutcome } from '@core/objectives';
 import { objectiveProgress, outcome } from '@core/rules';
 import type { GameState } from '@core/model';
 
 afterEach(() => {
-  useRules(DEFAULT_RULES);
   settings.lang = 'es';
 });
 
 /** Partidas de cada mision en momentos distintos: al empezar, al acabar el plazo, sin enemigos, con todo capturado... */
 function statesOf(id: string): GameState[] {
   const mission = MISSIONS.find((candidate) => candidate.id === id)!;
-  useRules(missionRules(mission));
   const fresh = () => buildMission(mission);
   const lastDay = (s: GameState) => ('days' in s.mission!.objective ? s.mission!.objective.days : 20);
   const states: GameState[] = [];
@@ -73,7 +71,6 @@ describe('objetivos de mision', () => {
 
   it('textos del objetivo y del progreso, como antes', () => {
     const texts = MISSIONS.map((mission) => {
-      useRules(missionRules(mission));
       const s = buildMission(mission);
       return [objectiveText(mission), objectiveText(mission, s), objectiveText(null, s), objectiveStatus(s)];
     });

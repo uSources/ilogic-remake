@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readContentFiles, validateContent } from '@core/content';
-import { DEFAULT_RULES, GENERALS, UNIT, UNIT_NAMES, useRules } from '@core/data';
+import { DEFAULT_RULES, GENERALS, UNIT, UNIT_NAMES } from '@core/data';
 import { abilityBlock, chargeStars, generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
@@ -11,12 +11,13 @@ import { blankState } from './helpers';
 const T = (n: string) => UNIT_NAMES.indexOf(n);
 
 function withBrisa(): GameState {
-  const s = blankState();
+  const s = blankState(TEST_RULES);
   s.generals = [newGeneral('Brisa'), null];
   return s;
 }
 
-beforeEach(() => useRules({ ...DEFAULT_RULES, fog: true, weather: false }));
+/** Reglas de las partidas de estos tests. */
+const TEST_RULES = { ...DEFAULT_RULES, fog: true, weather: false };
 
 describe('generales: datos', () => {
   it('generals.json es valido y Brisa existe', () => {
@@ -96,7 +97,7 @@ describe('generales: reglas', () => {
   });
 
   it('sin general no pasa nada', () => {
-    const s = blankState();
+    const s = blankState(TEST_RULES);
     expect(abilityBlock(s, 0, 'airstrike', { x: 1, y: 1 })).toBe('noGeneral');
     expect(useAbility(s, 0, 'airstrike', { x: 1, y: 1 })).toBeNull();
   });

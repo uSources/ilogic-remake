@@ -1,4 +1,4 @@
-import type { GameStats } from '../core/model';
+import type { GameStats, RulesConfig } from '../core/model';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
@@ -99,6 +99,8 @@ export interface UIState {
   } | null;
   /** Limite de dias de la partida (null = sin limite). */
   dayLimit: number | null;
+  /** Reglas de la partida en curso (para la ayuda; null fuera de una partida). */
+  matchRules: RulesConfig | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
   minimap: MinimapVM | null;
   /** Parte del mapa que se ve, en casillas. */
@@ -169,6 +171,7 @@ export const initialState: UIState = {
   hint: '',
   end: null,
   dayLimit: null,
+  matchRules: null,
   report: null,
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },

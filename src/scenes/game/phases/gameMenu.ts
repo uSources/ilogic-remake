@@ -1,5 +1,4 @@
 /** Fase 'gameMenu': el menu de pausa (seguir, terminar turno, guardar, repetir, opciones...). */
-import { RULES } from '../../../core/data';
 import { missionById } from '../../../core/missions';
 import { objectiveText } from '../../../campaign';
 import { showToast, type MenuItemVM } from '../../../hud/store';
@@ -98,7 +97,7 @@ function gameMenuModel(input: MenuInput): MenuModel {
     danger: choice === 'quit' || choice === 'surrender',
     disabled: choice === 'replay' && !input.canReplay,
   }));
-  const dayLimit = RULES.dayLimit ? ` / ${RULES.dayLimit}` : '';
+  const dayLimit = s.rules.dayLimit ? ` / ${s.rules.dayLimit}` : '';
   // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
   const subtitle = s.setup ? `${t('mapCode')}: ${seedToCode(s.setup.seed)} · ${s.setup.size}×${s.setup.size}` : undefined;
   const mission = s.mission ? missionById(s.mission.id) : undefined;

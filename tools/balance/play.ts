@@ -4,7 +4,7 @@ import { BUILDING, UNIT, UNIT_TYPES } from '@core/data';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endReason, endRound, outcome } from '@core/rules';
-import type { GameState, Team } from '@core/model';
+import type { GameState, RulesConfig, Team } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
 
@@ -19,6 +19,8 @@ export interface PlayOptions {
   swapSides?: boolean;
   /** Lado del mapa (32 por defecto). */
   size?: number;
+  /** Reglas de la partida (las de siempre si no se dicen). */
+  rules?: RulesConfig;
 }
 
 /** Por tipo de unidad y bando. */
@@ -83,7 +85,7 @@ function sample(s: GameState): DaySample {
 
 export function playGame(opts: PlayOptions): GameRecord {
   const rng = seededRng(opts.seed);
-  const s = generateGame(rng, { size: opts.size ?? 32 });
+  const s = generateGame(rng, { size: opts.size ?? 32, rules: opts.rules });
   if (opts.swapSides) {
     for (const u of s.units) u.team = (1 - u.team) as Team;
     for (const b of s.buildings) if (b.owner !== null) b.owner = (1 - b.owner) as Team;

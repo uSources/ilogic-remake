@@ -112,7 +112,7 @@ export function selectionPanel(textures: Phaser.Textures.TextureManager, s: Game
 /** Ingresos del jugador por turno: lo que dan sus edificios menos el mantenimiento de su ejercito. */
 export function playerIncome(s: GameState): number {
   const owned = s.buildings.filter((building) => building.owner === 0);
-  return owned.reduce((sum, building) => sum + buildingIncome(building.type), 0) - upkeepOf(s, 0);
+  return owned.reduce((sum, building) => sum + buildingIncome(s, building.type), 0) - upkeepOf(s, 0);
 }
 
 /** Panel del laboratorio de animaciones (null en una partida normal). */

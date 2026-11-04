@@ -3,7 +3,7 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { BUILDING_TYPES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES } from './data';
+import { BUILDING_TYPES, DEFAULT_RULES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES } from './data';
 import { generalDef } from './generals';
 import { mapGrid } from './mapGrid';
 import { isInside, type GridSize } from './util/grid';
@@ -48,7 +48,7 @@ export function deserialize(json: string): GameState | null {
   cleanSquads(s);
   cleanControlPoints(s);
   cleanGenerals(s);
-  if (s.rules !== undefined && !readRules(s.rules)) return null;
+  if (!readRules(s)) return null;
   return s;
 }
 
@@ -280,8 +280,14 @@ function fillMissingRules(rules: Partial<RulesConfig>): void {
   rules.controlRadius ??= 0;
 }
 
-function readRules(rules: Partial<RulesConfig>): boolean {
-  if (!isValidRules(rules)) return false;
-  fillMissingRules(rules);
+/** Las reglas de la partida: las guardadas (completadas) o, en las de antes de guardarlas, las de siempre. */
+function readRules(s: GameState): boolean {
+  const saved = s.rules as Partial<RulesConfig> | undefined;
+  if (saved === undefined) {
+    s.rules = { ...DEFAULT_RULES };
+    return true;
+  }
+  if (!isValidRules(saved)) return false;
+  fillMissingRules(saved);
   return true;
 }

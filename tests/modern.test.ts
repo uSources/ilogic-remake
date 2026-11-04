@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, RULES, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, capture, captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
 import { blankState } from './helpers';
@@ -7,8 +7,6 @@ import { blankState } from './helpers';
 const SOLDIER = 0,
   TANK = 1,
   ARTILLERY = 2;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('reglas nuevas: combate', () => {
   it('el defensor que sobrevive contraataca y gasta municion', () => {
@@ -91,7 +89,7 @@ describe('reglas nuevas: combate', () => {
 
   it('sin niebla se ve todo el mapa', () => {
     const s = blankState();
-    RULES.fog = false;
+    s.rules.fog = false;
     expect([...visibility(s, 0).cells()].every((cell) => cell.value)).toBe(true);
   });
 });
@@ -148,8 +146,8 @@ describe('reglas nuevas: veterania', () => {
     expect(a.kills).toBe(1);
     expect(rank(a)).toBe(1);
     const c = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    expect(hitChance(s, a, c)).toBeCloseTo(base * (1 + RULES.vetBonus));
-    expect(hitChance(s, c, a)).toBeCloseTo(base * (1 - RULES.vetBonus));
+    expect(hitChance(s, a, c)).toBeCloseTo(base * (1 + s.rules.vetBonus));
+    expect(hitChance(s, c, a)).toBeCloseTo(base * (1 - s.rules.vetBonus));
     a.kills = 6;
     expect(rank(a)).toBe(3);
     const d = newUnit(s, TANK, 0, { x: 2, y: 3 });
@@ -161,8 +159,7 @@ describe('reglas nuevas: veterania', () => {
 
   it('sin veterania las bajas no cuentan', async () => {
     const { hitChance } = await import('@core/rules');
-    useRules({ veterancy: false });
-    const s = blankState();
+    const s = blankState({ veterancy: false });
     const a = newUnit(s, TANK, 0, { x: 3, y: 3 });
     const b = newUnit(s, TANK, 1, { x: 4, y: 3 });
     const base = hitChance(s, a, b);

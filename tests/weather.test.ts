@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { CONTENT, DEFAULT_RULES, THEME_NAMES, UNIT, WEATHER, WEATHER_TYPES, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { CONTENT, DEFAULT_RULES, THEME_NAMES, UNIT, WEATHER, WEATHER_TYPES } from '@core/data';
 import { validateContent } from '@core/content';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
@@ -25,8 +25,6 @@ function withWeather(k: number): GameState {
   s.weather = { kind: k, left: 3, next: CLEAR };
   return s;
 }
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('clima: contenido', () => {
   it('weather.json es valido y el primero es el despejado', () => {
@@ -108,8 +106,8 @@ describe('clima: efectos', () => {
   });
 
   it('con la regla quitada no hay clima aunque el estado lo tenga', () => {
-    useRules({ ...DEFAULT_RULES, weather: false });
     const s = withWeather(STORM);
+    s.rules = { ...DEFAULT_RULES, weather: false };
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(weatherNow(s)).toBe(CLEAR);
     expect(maxSteps(s, tank)).toBe(UNIT.mover[TANK]);

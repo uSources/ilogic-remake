@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { DEFAULT_RULES, HQ, MoveType, RULES, useRules } from '@core/data';
+import { DEFAULT_RULES, HQ, MoveType } from '@core/data';
 import { manhattan, seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
 import { generateGame, placeControlPoints } from '@core/mapgen';
@@ -12,8 +12,6 @@ import { blankState } from './helpers';
 /** [CAMBIO] Puntos de control: zonas que dan dinero cada ronda a su dueño si no estan disputadas. */
 const SOLDIER = 0,
   TANK = 1;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 function withPoints(): GameState {
   const s = blankState();
@@ -35,8 +33,8 @@ describe('puntos de control', () => {
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(r.held).toEqual([1, 1]);
     expect(r.contested).toBe(0);
-    expect(r.income).toEqual([RULES.controlIncome, RULES.controlIncome]);
-    expect(s.funds[0]).toBe(before + RULES.controlIncome);
+    expect(r.income).toEqual([DEFAULT_RULES.controlIncome, DEFAULT_RULES.controlIncome]);
+    expect(s.funds[0]).toBe(before + DEFAULT_RULES.controlIncome);
     u.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
@@ -66,8 +64,8 @@ describe('puntos de control', () => {
     newUnit(s, TANK, 0, { x: 12, y: 12 });
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBeNull();
-    expect(inControlZone({ x: 10, y: 10 }, { x: 11, y: 11 })).toBe(true);
-    expect(inControlZone({ x: 10, y: 10 }, { x: 12, y: 10 })).toBe(false);
+    expect(inControlZone(s, { x: 10, y: 10 }, { x: 11, y: 11 })).toBe(true);
+    expect(inControlZone(s, { x: 10, y: 10 }, { x: 12, y: 10 })).toBe(false);
   });
 
   it('endRound suma su dinero a los ingresos del informe', () => {
@@ -75,7 +73,7 @@ describe('puntos de control', () => {
     newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const r = endRound(s);
     expect(r.control?.held).toEqual([1, 1]);
-    expect(r.income[0]).toBeGreaterThanOrEqual(RULES.controlIncome);
+    expect(r.income[0]).toBeGreaterThanOrEqual(DEFAULT_RULES.controlIncome);
   });
 
   it('sin puntos no hay nada en el informe', () => {
@@ -89,7 +87,7 @@ describe('puntos de control', () => {
       const s = generateGame(seededRng(seed * 7919));
       const pts = s.controlPoints ?? [];
       total += pts.length;
-      expect(pts.length).toBeLessThanOrEqual(RULES.controlPoints);
+      expect(pts.length).toBeLessThanOrEqual(DEFAULT_RULES.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((b) => b.type === HQ && b.owner === team)!;
       const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
       const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
@@ -100,14 +98,14 @@ describe('puntos de control', () => {
         expect(Math.abs(da.at(p) - db.at(p))).toBeLessThanOrEqual(8);
       }
       // Las zonas no se tocan.
-      for (const a of pts) for (const b of pts) if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * RULES.controlRadius);
+      for (const a of pts)
+        for (const b of pts) if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * DEFAULT_RULES.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });
 
   it('con la regla a 0 no se ponen', () => {
-    useRules({ controlPoints: 0 });
-    const s = blankState();
+    const s = blankState({ controlPoints: 0 });
     placeControlPoints(s, { x: 0, y: 0 }, { x: 19, y: 19 }, seededRng(1));
     expect(s.controlPoints).toBeUndefined();
   });
@@ -124,7 +122,6 @@ describe('puntos de control', () => {
 
   it('se guardan con la partida; las partidas antiguas siguen sin ellos', () => {
     const s = withPoints();
-    s.rules = { ...RULES };
     const back = deserialize(serialize(s))!;
     expect(back.controlPoints).toEqual(s.controlPoints);
     const raw = JSON.parse(serialize(s)) as { rules: Record<string, unknown>; controlPoints: unknown };

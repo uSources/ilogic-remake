@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { HQ, DEFAULT_RULES, UNIT, useRules } from '@core/data';
+import { HQ, DEFAULT_RULES, UNIT } from '@core/data';
 import { seededRng } from '@core/geom';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
 import { generateGame } from '@core/mapgen';
@@ -9,9 +9,7 @@ import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
 import { blankState } from './helpers';
 
-afterEach(() => {
-  useRules(DEFAULT_RULES);
-});
+afterEach(() => {});
 
 describe('nueva partida: tamaños de mapa', () => {
   it.each([20, 32, 40])('mapas de %i: bases conectadas y edificios en proporcion', (size) => {
@@ -57,8 +55,7 @@ describe('nueva partida: tamaños de mapa', () => {
 
 describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
-    useRules({ ...DEFAULT_RULES, dayLimit: 10 });
-    const s = blankState();
+    const s = blankState({ ...DEFAULT_RULES, dayLimit: 10 });
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
     newUnit(s, 1, 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;

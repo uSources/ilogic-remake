@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, UNIT, UNIT_NAMES, useRules, Movement } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { UNIT, UNIT_NAMES, Movement } from '@core/data';
 import { createLayer } from '@core/mapGrid';
 import { bestAttackTile, closestStep, extendTrail } from '@core/orders';
 import { moveRange, newUnit, pathCost } from '@core/rules';
@@ -7,8 +7,6 @@ import { blankState } from './helpers';
 
 const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
 const WOODS = 2;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('ordenes del jugador', () => {
   it('atacar: prefiere la casilla donde acaba el camino trazado', () => {

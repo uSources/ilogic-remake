@@ -4,10 +4,10 @@
  * sin tener que jugar. Se abre con `#lab` en la direccion o con `ilogicDebug.lab()`.
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
-import { HQ, UNIT, UNIT_NAMES } from './core/data';
+import { DEFAULT_RULES, HQ, UNIT, UNIT_NAMES } from './core/data';
 import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
-import type { GameState } from './core/model';
+import type { GameState, RulesConfig } from './core/model';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];
@@ -37,6 +37,11 @@ export const defaultLab = (): LabOptions => ({
 /** Distancia desde la que ataca la propia: la casilla de al lado o su alcance minimo. */
 export const labRange = (type: number): number => Math.max(1, UNIT.minalc[type]! + 1);
 
+/** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
+export function labRules(action: LabAction | null): RulesConfig {
+  return { ...DEFAULT_RULES, fog: false, weather: false, counterattack: action !== 'attack' };
+}
+
 /**
  * Partida del laboratorio: todo hierba, una Base por bando en las esquinas (si no, la partida
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
@@ -54,6 +59,7 @@ export function labState(o: LabOptions, action: LabAction | null): GameState {
     ],
     nextUid: 1,
     day: 1,
+    rules: labRules(action),
   };
   const near = action !== null && action !== 'move';
   const from = near ? { x: LAB_TARGET.x - labRange(o.attacker), y: LAB_TARGET.y } : LAB_FROM;

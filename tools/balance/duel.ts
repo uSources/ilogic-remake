@@ -6,7 +6,7 @@ import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
 import { seededRng } from '@core/geom';
 import { blankMap } from '@core/mapGrid';
 import { attack, inAttackRange, newUnit } from '@core/rules';
-import type { GameState, Unit } from '@core/model';
+import type { GameState, RulesConfig, Unit } from '@core/model';
 
 export interface DuelCell {
   attacker: string;
@@ -25,9 +25,9 @@ export interface DuelCell {
 /** Lado del campo de los duelos (solo se usan unas casillas del medio). */
 const DUEL_MAP_SIZE = 32;
 
-function arena(terrain: number): GameState {
+function arena(terrain: number, rules: RulesConfig): GameState {
   const map = blankMap(DUEL_MAP_SIZE, terrain);
-  return { version: 1, map, theme: 0, funds: [0, 0], units: [], buildings: [], nextUid: 1, day: 1 };
+  return { version: 1, map, theme: 0, funds: [0, 0], units: [], buildings: [], nextUid: 1, day: 1, rules };
 }
 
 function place(s: GameState, a: Unit, b: Unit): void {
@@ -44,7 +44,7 @@ const fresh = (u: Unit) => {
   u.active = u.canMove = u.canFire = true;
 };
 
-export function duelMatrix(opts: { trials: number; terrain: string; seed: number }): DuelCell[] {
+export function duelMatrix(opts: { trials: number; terrain: string; seed: number; rules: RulesConfig }): DuelCell[] {
   const t = Math.max(0, TERRAIN_NAMES.indexOf(opts.terrain as (typeof TERRAIN_NAMES)[number]));
   const rng = seededRng(opts.seed);
   const cells: DuelCell[] = [];
@@ -56,7 +56,7 @@ export function duelMatrix(opts: { trials: number; terrain: string; seed: number
         counter = 0,
         kills = 0;
       for (let i = 0; i < opts.trials; i++) {
-        const s = arena(t);
+        const s = arena(t, opts.rules);
         const a = newUnit(s, A, 0, { x: 0, y: 0 });
         const b = newUnit(s, B, 1, { x: 0, y: 0 });
         place(s, a, b);
@@ -72,7 +72,7 @@ export function duelMatrix(opts: { trials: number; terrain: string; seed: number
         let wins = 0,
           decided = 0;
         for (let i = 0; i < opts.trials; i++) {
-          const s = arena(t);
+          const s = arena(t, opts.rules);
           const a = newUnit(s, A, 0, { x: 0, y: 0 });
           const b = newUnit(s, B, 1, { x: 0, y: 0 });
           place(s, a, b);

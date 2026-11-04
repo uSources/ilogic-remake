@@ -11,7 +11,7 @@
  * tipo de efecto nuevo es una entrada en EFFECT_VALUES.
  */
 import type { GeneralEffect } from './content';
-import { AI, RULES, UNIT } from './data';
+import { AI, UNIT } from './data';
 import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
 import { visibility } from './rules/visibility';
 import type { GameEvent, GameState, Pos, Team } from './model';
@@ -75,7 +75,7 @@ const EFFECT_VALUES: EffectValues = {
   // El mejor cuadrado sobre los enemigos que ve.
   areaDamage: (s, team, effect) => bestAreaTarget(s, team, effect.radius, effect.damage, effect.minLife),
   // Un valor fijo pequeño, y solo con niebla (sin ella ya lo ve todo).
-  reveal: () => (RULES.fog ? { target: null, value: AI.REVEALVALUE } : null),
+  reveal: (s) => (s.rules.fog ? { target: null, value: AI.REVEALVALUE } : null),
   // La vida que recuperarian sus unidades (lo que ya esta entero no cuenta).
   heal: (s, team, effect) => {
     const healed = (life: number) => Math.min(effect.amount, 100 - life);

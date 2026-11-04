@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
-import { DEFAULT_RULES, HQ, useRules } from '@core/data';
+import { HQ } from '@core/data';
 import { newUnit } from '@core/rules';
 import { formSquad, giveCommand } from '@core/squads';
 import type { GameState } from '@core/model';
@@ -10,8 +10,6 @@ import { blankState } from './helpers';
 const SOLDIER = 0,
   TANK = 1,
   CITY = 0;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 function world(): GameState {
   const s = blankState();
