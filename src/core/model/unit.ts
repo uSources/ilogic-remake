@@ -29,8 +29,11 @@ export interface Unit {
   standingOrder?: StandingOrder;
   /** [CAMBIO] Escuadra a la que pertenece (id de GameState.squads). */
   squad?: number;
-  /** [CAMBIO] Orden de varios turnos: casilla a la que va avanzando sola al empezar cada turno. */
-  order?: Pos;
+  /**
+   * [CAMBIO] Viaje de varios turnos: casilla a la que va avanzando sola al empezar cada turno (sin
+   * atacar ni capturar; para eso, `standingOrder`). Antes se guardaba como `order`.
+   */
+  travelTo?: Pos;
   /** uid del transporte que la lleva, o null. */
   carrier: number | null;
   /** uids de las unidades que lleva (una entrada por plaza, null = libre). */

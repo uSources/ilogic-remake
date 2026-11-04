@@ -116,7 +116,7 @@ function cleanUnit(s: GameState, unit: Unit): void {
   if (unit.hitDay !== undefined && !isInt(unit.hitDay, 0, MAX_COUNT)) delete unit.hitDay;
   if (unit.standingOrder !== undefined && !isStandingOrder(mapGrid(s), unit.standingOrder)) delete unit.standingOrder;
   if (unit.squad !== undefined && !isInt(unit.squad, 1, MAX_COUNT)) delete unit.squad;
-  if (unit.order !== undefined && !isMapPos(mapGrid(s), unit.order)) delete unit.order;
+  if (unit.travelTo !== undefined && !isMapPos(mapGrid(s), unit.travelTo)) delete unit.travelTo;
 }
 
 /** Cada pasajero esta en la lista de su transporte y cada transporte lleva a quien dice. */

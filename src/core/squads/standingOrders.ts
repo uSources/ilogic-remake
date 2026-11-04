@@ -28,7 +28,7 @@ export function forUnit(s: GameState, unit: Unit, standingOrder: StandingOrder):
  */
 export function effectiveStandingOrder(s: GameState, unit: Unit): StandingOrder | undefined {
   // Llevada a mano a una casilla lejana (Unit.order): eso manda mientras dura.
-  if (unit.order) return undefined;
+  if (unit.travelTo) return undefined;
   if (unit.standingOrder) return unit.standingOrder;
   const squadOrder = squadById(s, unit.squad)?.standingOrder;
   return squadOrder ? forUnit(s, unit, squadOrder) : undefined;
@@ -100,7 +100,7 @@ export function giveStandingOrder(s: GameState, units: readonly Unit[], kind: St
   for (const unit of mine) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else giveOwnStandingOrder(s, unit, standingOrder);
-    delete unit.order;
+    delete unit.travelTo;
   }
   return mine.length;
 }

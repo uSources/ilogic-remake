@@ -57,6 +57,13 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
   {
+    // [CAMBIO] El viaje de varios turnos de una unidad se guardaba como `order`, que se confundia con las ordenes permanentes.
+    name: 'order pasa a travelTo',
+    apply: (s) => {
+      for (const unit of listOf(s.units)) renameField(unit, 'order', 'travelTo');
+    },
+  },
+  {
     // [CAMBIO] Fallo K1: las misiones se juegan con sus reglas. Las guardadas antes del arreglo no las
     // llevaban (o llevaban las de escaramuza): una partida de una mision conocida usa siempre las suyas.
     name: 'las misiones se juegan con sus reglas',

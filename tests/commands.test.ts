@@ -487,7 +487,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
   it('llevada a mano a una casilla lejana (orden de varios turnos): eso manda mientras dura', () => {
     const { s, a, b, t } = squadWorld();
     giveStandingOrder(s, [a, b, t], 'attack', { x: 15, y: 15 });
-    a.order = { x: 0, y: 9 };
+    a.travelTo = { x: 0, y: 9 };
     expect(effectiveStandingOrder(s, a)).toBeUndefined();
   });
 });

@@ -33,7 +33,7 @@ export class CommandPreview {
         u.cargo,
         u.standingOrder,
         u.squad,
-        u.order,
+        u.travelTo,
       ]),
       s.squads?.map((q) => [q.id, q.standingOrder]),
       s.buildings.map((b) => [b.owner, b.capture]),

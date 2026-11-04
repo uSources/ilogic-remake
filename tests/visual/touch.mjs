@@ -179,8 +179,8 @@ async function scenarios(page, cdp, name) {
   await drag(page, cdp, await at(page, SOLDIER.x, SOLDIER.y), far);
   const s3 = await unit(page, s0.uid);
   check(
-    s3?.x === SOLDIER.x && s3?.y === SOLDIER.y && !s3?.order,
-    `arrastre rapido lejos: vuelve, sin orden (${JSON.stringify([s3?.x, s3?.y, s3?.order, far])})`,
+    s3?.x === SOLDIER.x && s3?.y === SOLDIER.y && !s3?.travelTo,
+    `arrastre rapido lejos: vuelve, sin orden (${JSON.stringify([s3?.x, s3?.y, s3?.travelTo, far])})`,
   );
 
   // Orden con un gesto: con la unidad elegida, mantener pulsado el destino abre el menu de ordenes.

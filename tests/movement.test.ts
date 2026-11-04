@@ -200,7 +200,7 @@ describe('movimiento: coste del terreno', () => {
 });
 
 describe('movimiento: ordenes de varios turnos', () => {
-  it('stepToward acerca la unidad al destino y la orden se guarda con la partida', async () => {
+  it('stepToward acerca la unidad al destino y el viaje se guarda con la partida', async () => {
     const { stepToward } = await import('@core/rules');
     const { deserialize, serialize } = await import('@core/save');
     const s = blankState();
@@ -208,8 +208,12 @@ describe('movimiento: ordenes de varios turnos', () => {
     const goal = { x: 20, y: 2 };
     const step = stepToward(s, tank, goal)!;
     expect(step).toEqual({ x: 7, y: 2 });
-    tank.order = goal;
-    expect(deserialize(serialize(s), saveContext())!.units[0]!.order).toEqual(goal);
+    tank.travelTo = goal;
+    expect(deserialize(serialize(s), saveContext())!.units[0]!.travelTo).toEqual(goal);
+    // Las guardadas antes de llamarlo travelTo lo traen como `order` (MIGRATIONS).
+    const old = serialize(s).replace('"travelTo"', '"order"');
+    expect(old).toContain('"order"');
+    expect(deserialize(old, saveContext())!.units[0]!.travelTo).toEqual(goal);
     // Un destino al que no se puede llegar (agua para un tanque): null.
     s.map[25]![25] = 1;
     expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();

@@ -286,7 +286,7 @@ export class TurnFlow {
   /** Al empezar el turno: las unidades con orden avanzan solas (y pueden seguir actuando despues). */
   async runOrders(): Promise<void> {
     const host = this.host;
-    const movers = host.state.units.filter((unit) => isReadyOwnUnit(unit) && unit.order);
+    const movers = host.state.units.filter((unit) => isReadyOwnUnit(unit) && unit.travelTo);
     const arrived: Unit[] = [];
     const match = host.match;
     for (const unit of movers) {
@@ -309,14 +309,14 @@ export class TurnFlow {
    */
   private async followOrder(unit: Unit): Promise<boolean> {
     const host = this.host;
-    const goal = unit.order!;
+    const goal = unit.travelTo!;
     if (samePos(unit, goal)) {
-      delete unit.order;
+      delete unit.travelTo;
       return false;
     }
     const range = moveRange(host.state, unit);
     if (canReach(range, goal)) {
-      delete unit.order;
+      delete unit.travelTo;
       return true;
     }
     const destination = stepToward(host.state, unit, goal, range);
@@ -324,7 +324,7 @@ export class TurnFlow {
     const path = moveUnit(host.state, unit, destination, range);
     if (!path) return false;
     await host.play([moveEvent(unit.uid, path)]);
-    if (samePos(unit, goal) || path.ambush) delete unit.order;
+    if (samePos(unit, goal) || path.ambush) delete unit.travelTo;
     return false;
   }
 

@@ -137,7 +137,7 @@ export class UnitMoves {
     const unit = session.unit;
     const intent = this.intentAt(tile);
     // Moverla a mano cancela su orden de varios turnos.
-    if (intent.kind !== 'none' && intent.kind !== 'stay') delete unit.order;
+    if (intent.kind !== 'none' && intent.kind !== 'stay') delete unit.travelTo;
     switch (intent.kind) {
       case 'none':
         return this.h.toMap();
@@ -228,13 +228,13 @@ export class UnitMoves {
       return h.toMap();
     }
     this.clearUndo();
-    unit.order = { ...goal };
+    unit.travelTo = { ...goal };
     showToast(t('orderSet'));
     const ghost = unitKey(h.scene.textures, h.state, unit);
     const path = moveUnit(h.state, unit, dest, range);
     if (this.session) this.session.range = null;
     if (path) await h.play([moveEvent(unit.uid, path)], ghost);
-    if (samePos(unit, goal) || path?.ambush) delete unit.order;
+    if (samePos(unit, goal) || path?.ambush) delete unit.travelTo;
     h.toMap();
   }
 
@@ -252,7 +252,7 @@ export class UnitMoves {
       const range = moveRange(h.state, unit);
       const best = closestStep(unit, goal, range);
       if (!best) continue;
-      delete unit.order;
+      delete unit.travelTo;
       const path = moveUnit(h.state, unit, best, range);
       if (path) await h.play([moveEvent(unit.uid, path)]);
       if (h.ended) return;

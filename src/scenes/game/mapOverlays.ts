@@ -30,8 +30,8 @@ export function captureBars(s: GameState, vis: Grid<boolean>): Overlay<'captures
  */
 export function orderMarks(s: GameState, showsLine: (unit: Unit) => boolean): Overlay<'orders'> {
   const multiTurn = s.units
-    .filter((unit) => isPlayer(unit) && unit.order && onMap(unit))
-    .map((unit) => ({ from: { x: unit.x, y: unit.y }, to: unit.order! }));
+    .filter((unit) => isPlayer(unit) && unit.travelTo && onMap(unit))
+    .map((unit) => ({ from: { x: unit.x, y: unit.y }, to: unit.travelTo! }));
   const withTarget = s.units.flatMap((unit) => {
     const command = isPlayer(unit) && onMap(unit) ? effectiveStandingOrder(s, unit) : undefined;
     return command ? [{ from: { x: unit.x, y: unit.y }, to: command.at, kind: command.kind, line: showsLine(unit) }] : [];
