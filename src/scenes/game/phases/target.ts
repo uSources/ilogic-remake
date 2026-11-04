@@ -2,7 +2,8 @@
  * Fase 'target': elegir una casilla en el mapa para una orden con destino (Orders.ordering) o para
  * la habilidad del general que se apunta (GeneralAbilities.targeting).
  */
-import { key } from '../types';
+
+import { posKey } from '../../../core/geom';
 import { markTiles, markUnits, type PhaseHandler } from './phase';
 
 export const targetPhase: PhaseHandler = {
@@ -20,6 +21,6 @@ export const targetPhase: PhaseHandler = {
   },
   highlights: (input) => {
     if (input.orderingUids) return markUnits(input.s, input.orderingUids);
-    return markTiles(input.targetArea(input.cursor).map(key), 'attack');
+    return markTiles(input.targetArea(input.cursor).map(posKey), 'attack');
   },
 };

@@ -3,15 +3,16 @@
  * trazado, peligro, de donde venia (para deshacer) y los objetivos de su menu (atacar, descargar).
  * Vive desde que se elige la unidad hasta que se vuelve al mapa. Sin Phaser.
  */
+import { posKey } from '../../core/geom';
 import { extendTrail } from '../../core/trail';
 import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
 import { intentAt, trailTo, type MovePlan } from './intent';
-import { key, type Intent, type MoveUndo } from './types';
+import { type Intent, type MoveUndo } from './types';
 
 /** Mapa de casillas → uid de la unidad que hay en ella. */
-const byTile = (units: readonly Unit[]) => new Map(units.map((unit) => [key(unit), unit.uid]));
+const byTile = (units: readonly Unit[]) => new Map(units.map((unit) => [posKey(unit), unit.uid]));
 
 export class MoveSession {
   /** Alcance de la unidad (null: ya se ha movido, o no se puede mover). */

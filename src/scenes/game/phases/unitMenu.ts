@@ -3,6 +3,7 @@
  * algunas de ellas, elegir a quien atacar ('attack') y a quien descargar y donde ('unloadPick',
  * 'unloadTile').
  */
+import { posKey } from '../../../core/geom';
 import {
   attackEvent,
   attackTargets,
@@ -24,7 +25,7 @@ import { t, unitLabel, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
 import type { MenuInput, MenuModel } from '../menuModel';
-import { ACTION_ORDER, key, type ActionKey } from '../types';
+import { ACTION_ORDER, type ActionKey } from '../types';
 import { markTiles, type PhaseHandler, type PhaseHost } from './phase';
 
 /** En el menu de carga, la primera opcion es «Atras»; los pasajeros van detras. */
@@ -68,7 +69,7 @@ function startOrder(h: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
 
 function pickAttackTarget(h: PhaseHost, unit: Unit): void {
   const targets = attackTargets(h.state, unit);
-  h.moves.session!.attackTargets = new Map(targets.map((target) => [key(target), target.uid]));
+  h.moves.session!.attackTargets = new Map(targets.map((target) => [posKey(target), target.uid]));
   h.phase = 'attack';
   const first = targets[0];
   if (first) {
@@ -147,7 +148,7 @@ export const attackPhase: PhaseHandler = {
   accept: (h) => {
     const unit = h.moves.selected;
     const cursor = h.view.cursor;
-    const targetUid = h.moves.session?.attackTargets.get(key(cursor));
+    const targetUid = h.moves.session?.attackTargets.get(posKey(cursor));
     if (!unit || targetUid === undefined) return h.enter('unitMenu');
     const target = unitById(h.state, targetUid)!;
     void h.play([attackEvent(h.state, unit, target, Math.random)]).then(() => h.afterAction());
@@ -167,7 +168,7 @@ export const unloadPickPhase: PhaseHandler = {
     const tiles = unloadTiles(h.state, carrier, passenger);
     if (!tiles.length) return;
     session.passenger = passenger;
-    session.unloadTiles = new Set(tiles.map(key));
+    session.unloadTiles = new Set(tiles.map(posKey));
     h.phase = 'unloadTile';
     h.view.cursor = { ...tiles[0]! };
     h.refresh();
@@ -195,7 +196,7 @@ export const unloadTilePhase: PhaseHandler = {
     const session = h.moves.session;
     if (!session?.passenger) return;
     const cursor = h.view.cursor;
-    if (!session.unloadTiles.has(key(cursor))) {
+    if (!session.unloadTiles.has(posKey(cursor))) {
       h.phase = 'unloadPick';
       return h.refresh();
     }

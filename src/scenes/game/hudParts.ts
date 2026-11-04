@@ -3,6 +3,7 @@
  * mover, panel de lo elegido, panel del laboratorio y la linea de ayuda. Sin efectos: la escena junta
  * el resultado y lo publica con ui.set (las fichas en si se calculan en ui/hudModels.ts).
  */
+import { posKey } from '../../core/geom';
 import type Phaser from 'phaser';
 import { Movement, UNIT, UNIT_NAMES } from '../../core/data';
 import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
@@ -13,7 +14,7 @@ import type { LabOptions } from '../../lab';
 import { t, unitLabel } from '../../settings';
 import { forecastVM } from '../../ui/hudModels';
 import { unitKey } from '../../ui/sprites';
-import { key, type Intent, type Phase } from './types';
+import { type Intent, type Phase } from './types';
 
 /** Prevision del combate con la unidad elegida, si el cursor esta sobre un enemigo atacable. */
 export function forecastFor(
@@ -48,7 +49,7 @@ function fightFromHere(
   targets: ReadonlyMap<string, number>,
   cursor: Pos,
 ): { attackerAt: Unit; target: Unit } | null {
-  const uid = targets.get(key(cursor));
+  const uid = targets.get(posKey(cursor));
   const target = uid !== undefined ? unitById(s, uid) : undefined;
   return target ? { attackerAt: attacker, target } : null;
 }

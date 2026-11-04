@@ -12,7 +12,8 @@
  */
 import type { GeneralEffect } from './content';
 import { AI, UNIT } from './data';
-import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
+import { applies, chargeStars, generalOf, useAbility } from './generals';
+import { posKey, squareArea } from './geom';
 import { visibility } from './rules/visibility';
 import type { GameEvent, GameState, Pos, Team } from './model';
 import { maxBy } from './util/pick';
@@ -32,16 +33,14 @@ interface ValuedTarget {
 /** Lo que vale quitar `life` puntos de vida a una unidad de ese tipo (precio × vida / 100). */
 const lifeValue = (life: number, type: number): number => (life * UNIT.cost[type]!) / 100;
 
-const tileKey = (pos: Pos): string => `${pos.x},${pos.y}`;
-
 /** Las casillas en las que se puede centrar un area de `radius` que toque a alguno de `enemies`, sin repetir. */
 function areaCentersTouching(enemies: readonly Pos[], radius: number): Pos[] {
   const seen = new Set<string>();
   const centers: Pos[] = [];
   for (const enemy of enemies)
-    for (const center of areaTiles(enemy, radius)) {
-      if (seen.has(tileKey(center))) continue;
-      seen.add(tileKey(center));
+    for (const center of squareArea(enemy, radius)) {
+      if (seen.has(posKey(center))) continue;
+      seen.add(posKey(center));
       centers.push(center);
     }
   return centers;
@@ -60,8 +59,8 @@ export function bestAreaTarget(
   const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && visible.at(unit));
   const lifeTaken = (life: number) => Math.max(0, Math.min(damage, life - minLife));
   const valueAt = (center: Pos): number => {
-    const area = new Set(areaTiles(center, radius).map(tileKey));
-    return enemies.reduce((total, enemy) => total + (area.has(tileKey(enemy)) ? lifeValue(lifeTaken(enemy.life), enemy.type) : 0), 0);
+    const area = new Set(squareArea(center, radius).map(posKey));
+    return enemies.reduce((total, enemy) => total + (area.has(posKey(enemy)) ? lifeValue(lifeTaken(enemy.life), enemy.type) : 0), 0);
   };
   const options = areaCentersTouching(enemies, radius).map((target) => ({ target, value: valueAt(target) }));
   return maxBy(options, (option) => option.value);

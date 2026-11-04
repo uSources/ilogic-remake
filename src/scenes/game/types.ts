@@ -60,8 +60,6 @@ export interface MoveUndo {
   canFire: boolean;
 }
 
-/** Clave de una casilla en los mapas y conjuntos de casillas ("x,y"). */
-export const key = (p: Pos) => `${p.x},${p.y}`;
 /** Fases en las que el cursor sigue al puntero. */
 export const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
 /** Fases con un menu de bocadillo abierto. */

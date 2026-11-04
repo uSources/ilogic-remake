@@ -60,7 +60,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     run: stepOffEnemyHq,
   },
   {
-    // Debil o sin combustible: a curarse antes de que la destruyan.
+    // Debil: a curarse antes de que la destruyan.
     id: 'retreat',
     when: ({ unit }) => needsRepair(unit),
     run: ({ s, ai, unit, range }) => retreat(s, ai, unit, range),

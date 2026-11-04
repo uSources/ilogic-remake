@@ -3,12 +3,12 @@
  * puras (sin Phaser): reciben el plan de movimiento de la escena (tests/sceneIntent.test.ts).
  */
 import { UNIT } from '../../core/data';
-import { samePos } from '../../core/geom';
+import { posKey, samePos } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/targeting';
 import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
-import { key, type Intent } from './types';
+import { type Intent } from './types';
 
 /** La unidad que se esta moviendo y lo que se calculo al elegirla. */
 export interface MovePlan {
@@ -26,9 +26,9 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   if (!plan || !isOnBoard(s, tile)) return { kind: 'none' };
   const unit = plan.unit;
   if (samePos(tile, unit)) return { kind: 'stay' };
-  const mergeUid = plan.merge.get(key(tile));
+  const mergeUid = plan.merge.get(posKey(tile));
   if (mergeUid !== undefined) return { kind: 'merge', target: unitById(s, mergeUid)! };
-  const loadUid = plan.load.get(key(tile));
+  const loadUid = plan.load.get(posKey(tile));
   if (loadUid !== undefined) return { kind: 'load', target: unitById(s, loadUid)! };
   const other = unitAt(s, tile);
   if (other && other.team !== unit.team && other.carrier === null && visible(other)) {

@@ -1,6 +1,7 @@
 /**
  * Reglas del juego (portadas de Ilogic.java, Unit.java y Building.java).
- * Funciones puras sobre GameState: consultan o modifican el estado, sin nada de Phaser.
+ * Funciones sobre GameState, sin nada de Phaser: las consultas no cambian nada; las acciones (mover,
+ * atacar, capturar...) cambian el estado y lo dicen en su nombre.
  * Las desviaciones respecto al original estan marcadas con [CAMBIO].
  *
  * Este fichero solo reune lo publico de los modulos de `rules/` (uno por tema) para que se pueda

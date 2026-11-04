@@ -13,6 +13,7 @@
  */
 import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { GENERALS, MAX_LIFE, UNIT, UNIT_NAMES } from './data';
+import { posKey, squareArea } from './geom';
 import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
@@ -87,13 +88,6 @@ export function abilityBlock(s: GameState, team: Team, abilityId: string, target
   return null;
 }
 
-/** Casillas de un area cuadrada de radio `r` alrededor de `c` (dentro del mapa o no: el que llama filtra). */
-export function areaTiles(center: Pos, radius: number): Pos[] {
-  const tiles: Pos[] = [];
-  for (let dx = -radius; dx <= radius; dx++) for (let dy = -radius; dy <= radius; dy++) tiles.push({ x: center.x + dx, y: center.y + dy });
-  return tiles;
-}
-
 /** Radio del area de una habilidad (null si no es de area). */
 export function abilityArea(ability: GeneralAbilityDef): number | null {
   return ability.effect.kind === 'areaDamage' ? ability.effect.radius : null;
@@ -140,9 +134,9 @@ const ABILITY_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata).
   areaDamage: ({ s, team, effect, target, out }) => {
-    const inArea = new Set(areaTiles(target!, effect.radius).map((pos) => `${pos.x},${pos.y}`));
+    const inArea = new Set(squareArea(target!, effect.radius).map(posKey));
     for (const unit of s.units) {
-      if (unit.team === team || !isOnMap(unit) || !inArea.has(`${unit.x},${unit.y}`)) continue;
+      if (unit.team === team || !isOnMap(unit) || !inArea.has(posKey(unit))) continue;
       const damage = Math.max(0, Math.min(effect.damage, unit.life - effect.minLife));
       if (damage <= 0) continue;
       unit.life -= damage;

@@ -2,13 +2,14 @@
  * Fase 'map': el cursor libre por el mapa. Aceptar elige una unidad propia, abre la compra en una
  * fabrica, enseña el alcance de otra unidad o abre el menu de pausa; con un grupo elegido, lo mueve.
  */
+import { posKey } from '../../../core/geom';
 import { UNIT } from '../../../core/data';
 import { buildingAt, canBuyAt, moveRange, reachableTiles, unitAt, unitById, unitThreat } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import type { Pos, Unit } from '../../../core/model';
 import { clickSelect } from '../../../controls/selection';
 import type { HighlightInput, Highlights } from '../highlights';
-import { key } from '../types';
+
 import { openBuy } from './buy';
 import { markUnits, noHighlights, type PhaseHandler, type PhaseHost } from './phase';
 
@@ -71,12 +72,12 @@ function hoverMarks(input: HighlightInput): Highlights {
   const unit = unitAt(input.s, input.cursor);
   if (!unit || !isPlayer(unit) || input.enemyPlaying) return marks;
   if (unit.active && unit.canMove && unit.carrier === null) {
-    for (const tile of reachableTiles(moveRange(input.s, unit))) marks.tiles.set(key(tile), 'hover');
+    for (const tile of reachableTiles(moveRange(input.s, unit))) marks.tiles.set(posKey(tile), 'hover');
   }
   // [CAMBIO] Señalando una unidad de escuadra: se marcan sus compañeras.
   if (unit.squad === undefined) return marks;
   for (const mate of squadUnits(input.s, unit.squad))
-    if (mate.uid !== unit.uid && mate.carrier === null) marks.tiles.set(key(mate), 'squad');
+    if (mate.uid !== unit.uid && mate.carrier === null) marks.tiles.set(posKey(mate), 'squad');
   return marks;
 }
 
@@ -90,8 +91,8 @@ function inspectMarks(input: HighlightInput, uid: number): Highlights {
   const threat = unitThreat(input.s, unit);
   const canMove = UNIT.mover[unit.type]! > 0;
   for (const { pos, value: steps } of range.steps.cells()) {
-    if (canMove && steps > 0) marks.tiles.set(key(pos), 'reach');
-    else if (threat.at(pos)) marks.tiles.set(key(pos), 'attack');
+    if (canMove && steps > 0) marks.tiles.set(posKey(pos), 'reach');
+    else if (threat.at(pos)) marks.tiles.set(posKey(pos), 'attack');
   }
   return marks;
 }

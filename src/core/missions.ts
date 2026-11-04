@@ -11,6 +11,7 @@
  */
 import { BUILDING_NAMES, HQ, DEFAULT_RULES, TERRAIN, UNIT_NAMES, Movement } from './data';
 import type { RulesConfig } from './model';
+import { posKey } from './geom';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
 import type { GameState, Team } from './model';
@@ -103,16 +104,14 @@ export const missionRules = (m: MissionDef): RulesConfig => ({
   ...m.rules,
 });
 
-const posKey = (x: number, y: number) => `${x},${y}`;
-
 function buildingProblems(m: MissionDef): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
   for (const [type, , x, y] of m.buildings) {
     if (!BUILDING_NAMES.includes(type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
     if (!TERRAIN.canbuild[terrainAt(m, x, y)]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
-    if (taken.has(posKey(x, y))) problems.push(`dos edificios en (${x},${y})`);
-    taken.add(posKey(x, y));
+    if (taken.has(posKey({ x, y }))) problems.push(`dos edificios en (${x},${y})`);
+    taken.add(posKey({ x, y }));
   }
   return problems;
 }
@@ -127,8 +126,8 @@ function unitProblems(m: MissionDef): string[] {
       continue;
     }
     if (!Movement.canWalk(Movement.of(type), terrainAt(m, x, y))) problems.push(`${name} en (${x},${y}) no puede estar en ese terreno`);
-    if (taken.has(posKey(x, y))) problems.push(`dos unidades en (${x},${y})`);
-    taken.add(posKey(x, y));
+    if (taken.has(posKey({ x, y }))) problems.push(`dos unidades en (${x},${y})`);
+    taken.add(posKey({ x, y }));
   }
   return problems;
 }

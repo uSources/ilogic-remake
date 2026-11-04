@@ -52,12 +52,11 @@ export function canCapture(s: GameState, unit: Unit): boolean {
 }
 
 /**
- * Captura instantanea (Unit.Capture): neutral -> propio; enemigo -> neutral.
- * Quitar un edificio enemigo cuesta dos capturas. Neutralizar la Base enemiga gana la partida.
- * [CAMBIO] el original tambien dejaba "capturar" (neutralizar) un edificio propio.
+ * Lo que ha hecho una captura (ver capture). [CAMBIO] el original tambien dejaba "capturar"
+ * (neutralizar) un edificio propio.
  */
 export interface CaptureResult {
-  /** El edificio ha cambiado de dueño (o ha quedado neutral, en las reglas de 2013). */
+  /** El edificio ha pasado a ser de quien capturaba. */
   done: boolean;
   /** Puntos que le quedan (0 si ha terminado). */
   left: number;
@@ -71,10 +70,10 @@ function pointsLeftBefore(s: GameState, building: Building, unit: Unit, total: n
 }
 
 /**
- * Capturar el edificio de debajo.
- * Reglas de 2013: al instante; uno enemigo pasa primero a neutral y luego a tuyo.
- * [CAMBIO] Reglas nuevas: cada turno resta la vida/10 de la unidad a sus puntos (20, la Base 30);
- * al llegar a 0 pasa a ser tuyo directamente. Si la unidad se va o muere, se pierde lo avanzado.
+ * Capturar el edificio de debajo. [CAMBIO] En 2013 era al instante (uno enemigo pasaba primero a
+ * neutral); ahora cada turno resta la vida/10 de la unidad a sus puntos (capturePoints, la Base
+ * hqCapturePoints) y al llegar a 0 pasa a ser suyo directamente. Si la unidad se va o muere, se
+ * pierde lo avanzado (dropStaleCaptures). Tomar la Base enemiga gana la partida.
  */
 export function capture(s: GameState, unit: Unit): CaptureResult | null {
   if (!canCapture(s, unit)) return null;

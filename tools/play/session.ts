@@ -5,7 +5,7 @@
  */
 import { aiTurn } from '@core/ai';
 import { BUILDING_NAMES, DEFAULT_RULES, TERRAIN_NAMES, UNIT_NAMES, GENERALS } from '@core/data';
-import { seededRng } from '@core/geom';
+import { posKey, seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
@@ -213,10 +213,7 @@ export class Session {
     const tiles = reachableTiles(r);
     return [
       `${u.uid} ${UNIT_NAMES[u.type]} en (${u.x},${u.y}), vida ${u.life}, ${u.active ? 'puede actuar' : 'ya ha actuado'}`,
-      `puede ir a ${tiles.length} casillas: ${tiles
-        .slice(0, 40)
-        .map((p) => `${p.x},${p.y}`)
-        .join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
+      `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
       `objetivos desde aqui: ${targets.length ? targets.map((t) => `${t.uid} ${UNIT_NAMES[t.type]} (${t.x},${t.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, u) ? 'puede capturar el edificio de debajo' : '',
     ]

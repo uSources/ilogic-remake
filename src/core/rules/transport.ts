@@ -34,7 +34,7 @@ export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit
 
 /**
  * Union (Unit.Merge): la unidad se mueve hasta la otra y se funden.
- * La vida se suma (tope 100). [CAMBIO] combustible y municion: se queda el mayor de los dos.
+ * La vida se suma (tope 100) y se queda la experiencia de la mas veterana.
  * Devuelve el camino recorrido.
  */
 export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {

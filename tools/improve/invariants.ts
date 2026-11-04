@@ -4,6 +4,7 @@
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
 import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, UNIT, UNIT_TYPES, Movement } from '@core/data';
+import { posKey } from '@core/geom';
 import { commandUsed } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
@@ -23,7 +24,7 @@ export function checkInvariants(s: GameState): string[] {
     if (!(u.life > 0 && u.life <= MAX_LIFE)) errs.push(`${id}: vida ${u.life} fuera de 1..${MAX_LIFE}`);
     if (u.cargo.length !== UNIT.maxcarry[u.type]) errs.push(`${id}: carga de tamaño ${u.cargo.length}`);
     if (u.carrier === null) {
-      const k = `${u.x},${u.y}`;
+      const k = posKey(u);
       if (where.has(k)) errs.push(`${id}: comparte casilla (${k}) con la unidad ${where.get(k)}`);
       where.set(k, u.uid);
       const mt = Movement.of(u.type);
@@ -51,7 +52,7 @@ export function checkInvariants(s: GameState): string[] {
   }
   const bpos = new Set<string>();
   for (const b of s.buildings) {
-    const k = `${b.x},${b.y}`;
+    const k = posKey(b);
     if (bpos.has(k)) errs.push(`dos edificios en (${k})`);
     bpos.add(k);
     if (!(b.type >= 0 && b.type < BUILDING_TYPES)) errs.push(`edificio en (${k}): tipo ${b.type}`);

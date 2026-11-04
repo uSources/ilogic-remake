@@ -3,7 +3,8 @@
  * 'target'); el resto se usan ya. La animacion esta en playback.ts (evento 'ability').
  */
 import { isOnBoard } from '../../core/mapGrid';
-import { abilityArea, abilityBlock, areaTiles, generalOf, useAbility } from '../../core/generals';
+import { abilityArea, abilityBlock, generalOf, useAbility } from '../../core/generals';
+import { squareArea } from '../../core/geom';
 import type { GameEvent, GameState, Pos } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
@@ -47,7 +48,7 @@ export class GeneralAbilities {
     const ability = this.targeting ? this.abilityById(this.targeting) : undefined;
     const radius = ability ? abilityArea(ability) : null;
     if (radius === null) return [];
-    return areaTiles(c, radius).filter((p) => isOnBoard(this.h.state, p));
+    return squareArea(c, radius).filter((p) => isOnBoard(this.h.state, p));
   }
 
   /** Habilidad del general del jugador con ese id (undefined si no tiene general o no la tiene). */

@@ -1,6 +1,6 @@
 /**
  * Inteligencia artificial del rival (IA.java), con sus fallos corregidos.
- * Cada unidad decide sola, en orden: retirarse (si esta debil o sin combustible),
+ * Cada unidad decide sola, en orden: retirarse (si esta debil),
  * atacar, capturar, avanzar hacia edificios ajenos y, si nada de eso, moverse al azar.
  * [CAMBIO] Antes de mover reparte un plan de fuego concentrado (planFire) entre varias unidades.
  * Al final fabrica unidades en sus edificios.
