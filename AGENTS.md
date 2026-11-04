@@ -31,7 +31,7 @@ npm run huella              # huella del comportamiento: igual antes y despues d
   idea, salir pronto, nada magico, piezas comunes (`core/util/`) en vez de bucles a mano, lo que crece como lista
   de datos, comentarios del porque. Al reescribir, `npm run huella` tiene que dar lo mismo.
 - `src/core` es logica pura: sin Phaser, DOM ni interfaz (lo comprueba ESLint). Logica nueva → core + test.
-- Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/data.ts`; textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
+- Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/data.ts` (el contenido se lee de cada partida: `tablesOf(s)`); textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
 - No editar a mano lo generado: `public/assets/atlas/`, `src/assetList.ts`, `src/atlasPages.ts`,
   `src/ui/{wangSets,blobSets,sheets}.ts` → `npm run assets`.
 - Probar en el navegador solo por `file://` (`dist-single/ilogic.html`); nunca `vite preview` ni servidores.

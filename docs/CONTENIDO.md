@@ -24,8 +24,9 @@ Contenido del juego no valido (src/core/content):
 - unidad Sniper: builtAt nombra "Castle", que no existe
 ```
 
-Despues `src/core/data.ts` lo convierte en las tablas por numero que usan las reglas (`UNIT`, `POWER`,
-`SPAWNER`...), las mismas que habia antes: el resto del codigo no cambia.
+Despues `loadContent` (src/core/content/index.ts) lo convierte en las tablas por numero que usan las
+reglas (`UNIT`, `POWER`, `SPAWNER`...), que cada partida lee con `tablesOf(s)`: el resto del codigo no
+cambia.
 
 ## Cambiar una unidad
 
@@ -154,8 +155,9 @@ misiones): se cambian sus numeros, no se añaden ni se quitan.
 | `buildable`, `water` | Para el generador de mapas: se puede poner un edificio, cuenta como agua |
 | `movement` | Coste de entrar por tipo: `{ "foot": 1, "vehicle": 2, "air": 1, "amphibious": null }`; `null` = no se puede pasar |
 
-En el codigo se consulta con tipos legibles: `Movement.of(u.type)` (tipo de una unidad),
-`Movement.canWalk(MoveType.VEHICLE, TerrainType.WOODS)`, `Movement.cost(mt, terreno)`.
+En el codigo se consulta con tipos legibles y por la partida: `movementOf(s, u.type)` (tipo de una
+unidad), `canMoveOn(s, MoveType.VEHICLE, TerrainType.WOODS)`, `terrainMoveCost(s, mt, terreno)`
+(core/gameContent.ts).
 
 ## Clima
 
@@ -238,12 +240,19 @@ Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas t
 `src/core/content/` tiene un modulo por parte (`units.ts`, `buildings.ts`, `terrain.ts`, `rules.ts`,
 `ai.ts`), cada uno con su `validate*` y su `build*`; comparten `check.ts` (mensajes de error) y
 `types.ts` (`UnitDef`, `MoveType`, `TerrainType`...). `index.ts` solo los junta: lee los JSON, valida
-todo a la vez y construye las tablas que reexporta `data.ts` (`UNIT`, `POWER`, `TERRAIN`, `Movement`,
-`DEFAULT_RULES`, `AI`...). Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
+todo a la vez y construye las tablas (`UNIT`, `POWER`, `TERRAIN`, `MOVE_COST`, `AI`...). Una parte
+nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 
-El contenido en uso entra por un solo sitio, `content/active.ts` (`ACTIVE_CONTENT`, un `GameContent`:
-ficheros y tablas), y `data.ts` lo **congela**: nadie lo puede cambiar mientras se juega. Una variante
-de `npm run balance` no toca esas tablas: `buildVariant` (tools/balance/variant.ts) construye otro
-`GameContent` con sus cambios y otras reglas, y cada hilo de la herramienta carga el nucleo con ese
-contenido (`tools/balance/contentHook.mjs` sustituye `content/active.ts` al cargarlo).
+**El contenido es un valor que lleva cada partida**, no un modulo: `loadContent(ficheros)` da un
+`GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `deserialize` lo unen a la partida
+(sin guardarlo: va en una propiedad que no se enumera). Las reglas y la IA lo leen por la partida:
+`tablesOf(s).UNIT`, `weightsOf(s).KILLBONUS`, `contentOf(s).files.generals`. Nada lee el contenido al
+importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
+que se pide), y lo usan `createGame`/`loadGame` (core/defaultGames.ts), la interfaz y las
+herramientas.
+
+Una variante de `npm run balance` no toca el contenido del juego: `buildVariant`
+(tools/balance/variant.ts) construye otro `GameContent` con sus cambios y otras reglas, y los hilos se
+lo pasan a cada partida (`playGame`, `duelMatrix`). Dos contenidos se pueden jugar a la vez en el mismo
+proceso (tests/gameContent.test.ts).
 

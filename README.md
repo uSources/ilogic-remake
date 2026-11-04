@@ -147,14 +147,16 @@ src/
                y reutilizar, por ejemplo, en un servidor para partidas online.
     content/     Unidades, edificios, terreno, reglas e IA en JSON + su validacion: ver docs/CONTENIDO.md
     model/       Modelo de datos de la partida (GameState, Unit, Building, GameEvent...), sin dependencias
-    data.ts      Tablas congeladas sacadas de content/ (UNIT, POWER, Movement...) y el generador de mapas
+    data.ts      Temas, generador de mapas, reglas por defecto (DEFAULT_RULES, rulesWith)
+    gameContent.ts  El contenido de cada partida (tablesOf, weightsOf, contentOf); gameState.ts: newGameState
+    defaultGames.ts Partidas con el contenido del juego (createGame, loadGame, saveContext)
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
     targeting.ts Desde donde atacar y que casilla acerca mas; trail.ts: el camino trazado con el cursor
     ai.ts        Inteligencia artificial (fachada de ai/: un generador que va devolviendo cada accion)
     mapgen.ts    Generador de mapas aleatorios
-    save.ts      Guardar / cargar en JSON
+    save.ts      Guardar / cargar en JSON (saveMigrations.ts: MIGRATIONS para partidas antiguas)
     geom.ts      Rombos, distancias, numeros aleatorios con semilla
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
   ui/          Dibujo del mapa (mapView y sus capas en ui/map: sprites persistentes, zoom entero) y nombres de imagenes (sprites)

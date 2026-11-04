@@ -9,7 +9,7 @@ tomaron las decisiones que no conviene deshacer sin pensarlo.
 flowchart TB
   subgraph core["src/core — TypeScript puro (sin Phaser, sin DOM)"]
     model["model/<br/>tipos de la partida (sin dependencias)"]
-    data["data.ts<br/>tablas congeladas de content/*.json:<br/>unidades, edificios, terreno, reglas, IA"]
+    data["content/ + gameContent.ts<br/>contenido congelado de content/*.json,<br/>unido a cada partida (tablesOf)"]
     rules["rules.ts + rules/<br/>mover, atacar, capturar, comprar, fin de ronda"]
     orders["targeting.ts / trail.ts<br/>a donde apuntar y camino trazado"]
     squads["squads.ts + squads/<br/>escuadras y ordenes permanentes"]
@@ -49,14 +49,21 @@ Las piezas de abajo, que usa todo lo demas:
 
 | Pieza | Que va |
 |---|---|
-| `model/` | los tipos de la partida (`GameState`, `Unit`, `Building`, `GameEvent`, `StandingOrder`, `Squad`, `RulesConfig`...). Solo tipos, no importa nada (ESLint lo vigila) |
-| `content/` + `data.ts` | el contenido (JSON validados) y sus tablas. Entra por `content/active.ts` y `data.ts` lo congela: no cambia nunca mientras se juega (ver docs/CONTENIDO.md) |
-| `util/grid.ts` | `Grid<T>`: rejilla con `at`, `set`, `contains`, `forEach`, `cells`, `createLayer`, `width`/`height` |
+| `model/` | los tipos de la partida (`GameState`, `Unit`, `Building`, `GameEvent`, `StandingOrder`, `Squad`, `RulesConfig`...). Solo tipos: no importa nada ni exporta constantes o funciones (ESLint lo vigila) |
+| `content/` | el contenido (JSON validados) y sus tablas: `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego (`defaultContent()`, perezoso). Ver docs/CONTENIDO.md |
+| `gameContent.ts` | el contenido de cada partida: lo ponen `newGameState` y `deserialize`, se lee con `tablesOf(s)`, `weightsOf(s)`, `contentOf(s)`, `movementOf(s, tipo)`, `canMoveOn`; `cloneState(s)` copia la partida con el suyo |
+| `gameState.ts` | `newGameState({ map, rules, content, theme?, funds? })`: el unico sitio que escribe la forma de una partida nueva (mapgen, misiones, laboratorio, duelos, tests) |
+| `data.ts` | lo que no es contenido: temas, generador de mapas, `MAX_LIFE`, `DEFAULT_RULES` y `rulesWith(cambios)` (las reglas de siempre con cambios; nunca `{ ...DEFAULT_RULES, ... }`) |
+| `defaultGames.ts` | partidas con el contenido del juego: `createGame(rng, opciones)`, `loadGame(json)` y `saveContext()` (lo que usa la web) |
+| `save.ts` + `saveMigrations.ts` | guardar y leer. `deserialize(json, contexto)`: el `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo); `MIGRATIONS`, la lista de pasos para leer partidas antiguas |
+| `util/grid.ts` | `Grid<T>`: rejilla con `at`, `atClamped`, `set`, `contains`, `forEach`, `cells`, `createLayer`, `width`/`height`; `GridBounds` (tamaño y `contains`) para lo que solo mira los bordes |
 | `mapGrid.ts` | el mapa de una partida como rejilla: `mapGrid(s)`, `terrainAt`, `isOnBoard`, `createLayer(s, fill)` |
-| `geom.ts` | rombos (`diamond`, `neighbors4`, que reciben el tamaño), `squareArea`, `posKey`, `seededRng` |
+| `geom.ts` | `posOf` (copia la casilla de una unidad o edificio), rombos (`diamond`, `neighbors4`, que reciben los bordes), `squareArea`, `posKey`, `seededRng` |
 
-**El estado es la unica fuente de la partida**: las reglas van en `s.rules` (obligatorias) y el tamaño
-del mapa en `s.map`; no hay variables de modulo con la partida en curso. Las consultas no la cambian
+**El estado es la unica fuente de la partida**: las reglas van en `s.rules` (obligatorias), el tamaño
+del mapa en `s.map` y el contenido va unido a la partida (`tablesOf(s)`); no hay variables de modulo
+con la partida en curso, y dos partidas con otro tamaño, otras reglas u otro contenido se juegan a la
+vez en el mismo proceso (tests/gameContent.test.ts, tests/mapSizes.test.ts). Las consultas no la cambian
 (`statsOf`, `captureProgress`); lo que la cambia lo dice en el nombre (mover, atacar, `recordEvent`...).
 
 `src/core/squads/` (escuadras y ordenes permanentes del jugador): `queries` (unidades de una
@@ -108,7 +115,7 @@ y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su previ
 ### Herramientas
 
 `tools/` (equilibrio, automejora, partida por texto, contenido) solo usa el nucleo, importado por su
-alias: `import { UNIT } from '@core/data'` (definido en `tsconfig.json` "paths" y en
+alias: `import { createGame } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (escenas, interfaz, ajustes) o Phaser/Preact, y que los tests importen el nucleo por ruta relativa.
 

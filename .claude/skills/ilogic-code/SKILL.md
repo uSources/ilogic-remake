@@ -50,11 +50,13 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 ## Convenciones
 
 - **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
-  `core/content/*.json` (ver `docs/CONTENIDO.md`); `core/data.ts` los convierte en las tablas, congeladas (`UNIT`,
-  `POWER`, `BUILDING`, `TERRAIN`, `Movement`, `DEFAULT_RULES`, `AI`). El codigo no compara nombres de
-  unidades (`'Tank'`): si necesita saber algo de una, es un campo del JSON.
-- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `Movement.of(u.type)`,
-  `Movement.canWalk(mt, t)`, `Movement.cost(mt, t)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
+  `core/content/*.json` (ver `docs/CONTENIDO.md`). El contenido va con cada partida: se lee con
+  `tablesOf(s)` (`UNIT`, `POWER`, `BUILDING`, `TERRAIN`...), `weightsOf(s)` (pesos de la IA) y
+  `contentOf(s)` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
+  etiquetas), `defaultContent()`. El codigo no compara nombres de unidades (`'Tank'`): si necesita
+  saber algo de una, es un campo del JSON.
+- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `movementOf(s, u.type)`,
+  `canMoveOn(s, mt, t)`, `terrainMoveCost(s, mt, t)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
@@ -62,7 +64,13 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
-  `generateGame(rng, { rules })`).
+  `createGame(rng, { rules })`). Reglas con cambios: `rulesWith({ fog: false })` (nunca
+  `{ ...DEFAULT_RULES, ... }`). Partida nueva: `newGameState({ map, rules, content })`, el unico sitio
+  que escribe su forma. Leer una guardada: `loadGame(json)` o `deserialize(json, saveContext(contenido))`;
+  un cambio en lo que se guarda lleva su paso en `MIGRATIONS` (core/saveMigrations.ts).
+- **Casillas como `Pos`**: firmas con `pos: Pos`, no `(x, y)`; copiar la casilla de una unidad o
+  edificio con `posOf(unit)`; los bordes, con `mapGrid(s).contains(pos)`, `isOnBoard(s, pos)` o
+  `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
   `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en

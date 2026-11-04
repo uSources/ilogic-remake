@@ -9,7 +9,7 @@ explica en un comentario.
 Antes (funciona, pero hay que descifrarlo):
 
 ```ts
-const dist = groundDistance(s, goal, Movement.of(u.type), grid(false));
+const dist = groundDistance(s, goal, UNIT.movtype[u.type]!, grid(false));
 const here = samePos(u, goal) ? 0 : dist[u.x]![u.y]! || Infinity;
 let best: Pos | null = null;
 let bestD = here;
@@ -59,8 +59,10 @@ return gotCloser ? best.pos : null;
 11. **Identificadores en ingles, comentarios y textos en castellano** (como hasta ahora).
 12. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
     `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
-    modulo que se cambian al empezar una partida, y el contenido (`data.ts`) no se toca: esta congelado.
-    Las casillas se pasan como `Pos`, no como `x, y` sueltos.
+    modulo que se cambian al empezar una partida. El contenido va con la partida (`tablesOf(s)`,
+    `weightsOf(s)`) y esta congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
+    `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
+    `posOf(unit)`.
 
 ## Al cambiar codigo que ya existe
 
