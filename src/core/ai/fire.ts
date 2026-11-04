@@ -18,51 +18,78 @@ export interface FirePlan {
   order: number[];
 }
 
+/** uid del tirador -> (uid del objetivo -> dano esperado). Solo objetivos a los que llega este turno. */
+type DamageTable = Map<number, Map<number, number>>;
+
+/** Puede disparar este turno y no tiene que irse a curar. */
+const isShooter = (unit: Unit): boolean => unit.carrier === null && unit.canFire && UNIT.canfight[unit.type]! && !needsRepair(unit);
+
+/** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
+function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {
+  const table: DamageTable = new Map();
+  for (const shooter of shooters) {
+    const reach = strikeReach(shooter);
+    const nearby = foes.filter((foe) => manhattan(shooter, foe) <= reach && canDamage(shooter, foe));
+    if (!nearby.length) continue;
+    const origins = fireOrigins(shooter, isRanged(shooter.type) ? null : moveRange(s, shooter));
+    const damageByTarget = new Map<number, number>();
+    for (const foe of nearby)
+      if (origins.some((from) => inAttackRange(shooter.type, from, foe))) damageByTarget.set(foe.uid, expectedDamage(s, shooter, foe));
+    if (damageByTarget.size) table.set(shooter.uid, damageByTarget);
+  }
+  return table;
+}
+
+/**
+ * Los tiradores libres que destruyen a `foe` entre todos, de mas a menos dano, o null si no basta o
+ * bastaria con uno solo (eso ya lo hace cada unidad por su cuenta).
+ */
+function squadToDestroy(foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
+  const damageTo = (shooterUid: number) => damage.get(shooterUid)!.get(foe.uid)!;
+  const candidates = [...free].filter((uid) => damage.get(uid)!.has(foe.uid)).sort((a, b) => damageTo(b) - damageTo(a));
+  let total = 0;
+  const squad: number[] = [];
+  for (const uid of candidates) {
+    if (total >= foe.life) break;
+    // Despues del primero, el objetivo ya esta flanqueado.
+    total += damageTo(uid) * (squad.length ? 1 + RULES.flankBonus : 1);
+    squad.push(uid);
+  }
+  return total >= foe.life && squad.length >= 2 ? squad : null;
+}
+
+/** Lo que vale quitar a un enemigo: su precio por la vida que le queda (los mas valiosos, primero). */
+const remainingValue = (unit: Unit): number => UNIT.cost[unit.type]! * unit.life;
+
+/** Turno de juego: primero las del plan a distancia (no se mueven y dejan al objetivo flanqueado), luego las del plan, luego el resto. */
+function playRank(unit: Unit, plan: Map<number, number>): number {
+  if (!plan.has(unit.uid)) return 2;
+  return isRanged(unit.type) ? 0 : 1;
+}
+
 /**
  * [CAMBIO] Fuego concentrado: antes de mover, busca enemigos visibles que se pueden destruir este
  * turno sumando el dano esperado de varias unidades propias (las que siguen ya disparan con el
  * flanqueo) y reparte a quien dispara a cada uno, empezando por el que mas vale. Devuelve el plan y
- * el orden de juego: primero las del plan (las de distancia antes, no se mueven y dejan al objetivo
- * flanqueado), despues el resto en el orden de siempre.
+ * el orden de juego: primero las del plan (las de distancia antes), despues el resto en el orden de
+ * siempre.
  */
 export function planFire(s: GameState, me: Team): FirePlan {
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
   const foes = visibleFoes(s, me);
-  const shooters = mine.filter((u) => u.carrier === null && u.canFire && UNIT.canfight[u.type] && !needsRepair(u));
-  // Dano esperado de cada unidad contra cada objetivo al que llega este turno.
-  const dmg = new Map<number, Map<number, number>>();
-  for (const u of shooters) {
-    const reach = strikeReach(u);
-    const near = foes.filter((t) => manhattan(u, t) <= reach && canDamage(u, t));
-    if (!near.length) continue;
-    const froms = fireOrigins(u, isRanged(u.type) ? null : moveRange(s, u));
-    const m = new Map<number, number>();
-    for (const t of near) if (froms.some((f) => inAttackRange(u.type, f, t))) m.set(t.uid, expectedDamage(s, u, t));
-    if (m.size) dmg.set(u.uid, m);
-  }
-  const free = new Set(dmg.keys());
-  const byValue = [...foes].sort((a, b) => UNIT.cost[b.type]! * b.life - UNIT.cost[a.type]! * a.life);
-  for (const t of byValue) {
-    const can = [...free].filter((id) => dmg.get(id)!.has(t.uid)).sort((a, b) => dmg.get(b)!.get(t.uid)! - dmg.get(a)!.get(t.uid)!);
-    let sum = 0;
-    const team: number[] = [];
-    for (const id of can) {
-      if (sum >= t.life) break;
-      // Despues del primero, el objetivo ya esta flanqueado.
-      sum += dmg.get(id)!.get(t.uid)! * (team.length ? 1 + RULES.flankBonus : 1);
-      team.push(id);
-    }
-    if (sum < t.life || team.length < 2) continue;
-    for (const id of team) {
-      plan.set(id, t.uid);
-      free.delete(id);
+  const damage = damageTable(s, mine.filter(isShooter), foes);
+  const free = new Set(damage.keys());
+  const mostValuableFirst = [...foes].sort((a, b) => remainingValue(b) - remainingValue(a));
+  for (const foe of mostValuableFirst) {
+    const squad = squadToDestroy(foe, free, damage);
+    if (!squad) continue;
+    for (const uid of squad) {
+      plan.set(uid, foe.uid);
+      free.delete(uid);
     }
   }
-  const key = (u: Unit, i: number) => (plan.has(u.uid) ? (isRanged(u.type) ? 0 : 1) : 2) * 10000 + i;
-  const order = mine
-    .map((u, i) => ({ uid: u.uid, k: key(u, i) }))
-    .sort((a, b) => a.k - b.k)
-    .map((o) => o.uid);
+  // sort es estable: dentro de cada grupo se conserva el orden de siempre.
+  const order = [...mine].sort((a, b) => playRank(a, plan) - playRank(b, plan)).map((unit) => unit.uid);
   return { plan, order };
 }

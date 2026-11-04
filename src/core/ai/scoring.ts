@@ -1,31 +1,102 @@
 /**
  * Cuanto vale para la IA cada cosa que puede hacer: de momento, cada ataque posible.
+ * El valor de un ataque es la suma de ATTACK_SCORE_TERMS: una razon nueva para preferir (o evitar)
+ * un ataque es una entrada mas en la lista.
  */
 import { AI, HQ, RULES, UNIT } from '../data';
 import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
-import type { GameState, Pos, Unit } from '../types';
+import type { Building, GameState, Pos, Unit } from '../types';
 import type { AiCtx } from './context';
 
-/** Valor de un ataque: dano esperado ponderado por el precio del objetivo, y extra si lo mata. */
-export function attackScore(s: GameState, ctx: AiCtx, u: Unit, t: Unit, from: Pos = u): number {
-  const atk = { ...u, x: from.x, y: from.y };
-  const dmg = expectedDamage(s, atk, t);
-  const value = UNIT.cost[t.type]! / AI.COSTSCALE;
-  // [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
-  let score = dmg * value + (dmg >= t.life ? (AI.KILLBONUS + 100 * RULES.bounty) * value : 0);
-  // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
-  if (RULES.counterattack && dmg < t.life) {
-    const left = { ...t, life: Math.max(1, Math.round(t.life - dmg)) };
-    if (canCounter(left, atk)) score -= expectedDamage(s, left, atk) * (UNIT.cost[u.type]! / AI.COSTSCALE);
-  }
-  // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.
-  const tb = buildingAt(s, t.x, t.y);
-  if (tb && tb.type === HQ && tb.owner === t.team) score += AI.HQDEFENDER * Math.max(0.5, dmg / AI.BONUSDAMAGE);
-  // Echar a quien esta capturando un edificio propio (sobre todo la Base).
-  const b = buildingAt(s, t.x, t.y);
-  if (b && b.owner === ctx.me && captureProgress(s, b))
-    score += (b.type === HQ ? AI.STOPCAPTUREHQ : AI.STOPCAPTURE) * Math.max(0.5, dmg / AI.BONUSDAMAGE);
-  return score;
+/** Un ataque que se esta valorando, con lo que comparten todos los terminos. */
+export interface AttackPlan {
+  s: GameState;
+  ai: AiCtx;
+  /** El atacante, ya colocado en la casilla desde la que dispara. */
+  attacker: Unit;
+  target: Unit;
+  /** Vida que se espera quitar. */
+  damage: number;
+  /** Edificio bajo el objetivo, si lo hay. */
+  targetBuilding: Building | undefined;
+}
+
+/** Una razon con nombre que suma (o resta) al valor de un ataque. */
+export interface AttackScoreTerm {
+  id: string;
+  value(attack: AttackPlan): number;
+}
+
+/** Lo que vale una unidad de ese tipo en la escala de la IA (su precio, escalado). */
+export const unitValue = (type: number): number => UNIT.cost[type]! / AI.COSTSCALE;
+
+const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
+
+/**
+ * Cuanto pesa echar a alguien segun el dano que le hace: nunca menos de la mitad, para que se
+ * intente aunque el golpe sea flojo.
+ */
+const evictionWeight = (attack: AttackPlan): number => Math.max(0.5, attack.damage / AI.BONUSDAMAGE);
+
+/** Lo que devolveria el objetivo al contraatacar, con la vida que le queda, en valor del atacante. */
+function counterattackLoss({ s, attacker, target, damage }: AttackPlan): number {
+  const survivor = { ...target, life: Math.max(1, Math.round(target.life - damage)) };
+  if (!canCounter(survivor, attacker)) return 0;
+  return expectedDamage(s, survivor, attacker) * unitValue(attacker.type);
+}
+
+/**
+ * Terminos del valor de un ataque, en este orden (se suman de arriba abajo: cambiar el orden
+ * cambia el redondeo y con el las decisiones de la IA).
+ */
+export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
+  {
+    // Dano esperado ponderado por el precio del objetivo.
+    id: 'damage',
+    value: (attack) => attack.damage * unitValue(attack.target.type),
+  },
+  {
+    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
+    id: 'kill',
+    value: (attack) => (kills(attack) ? (AI.KILLBONUS + 100 * RULES.bounty) * unitValue(attack.target.type) : 0),
+  },
+  {
+    // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
+    id: 'counterattack',
+    value: (attack) => (RULES.counterattack && !kills(attack) ? -counterattackLoss(attack) : 0),
+  },
+  {
+    // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.
+    id: 'hqDefender',
+    value: (attack) => {
+      const building = attack.targetBuilding;
+      const defendsOwnHq = !!building && building.type === HQ && building.owner === attack.target.team;
+      return defendsOwnHq ? AI.HQDEFENDER * evictionWeight(attack) : 0;
+    },
+  },
+  {
+    // Echar a quien esta capturando un edificio propio (sobre todo la Base).
+    id: 'stopCapture',
+    value: (attack) => {
+      const building = attack.targetBuilding;
+      if (!building || building.owner !== attack.ai.me || !captureProgress(attack.s, building)) return 0;
+      return (building.type === HQ ? AI.STOPCAPTUREHQ : AI.STOPCAPTURE) * evictionWeight(attack);
+    },
+  },
+];
+
+/** Valor de que `attacker` dispare a `target` desde `from` (por defecto, desde donde esta). */
+export function attackScore(s: GameState, ai: AiCtx, attacker: Unit, target: Unit, from: Pos = attacker): number {
+  const attackerThere = { ...attacker, x: from.x, y: from.y };
+  const attack: AttackPlan = {
+    s,
+    ai,
+    attacker: attackerThere,
+    target,
+    damage: expectedDamage(s, attackerThere, target),
+    targetBuilding: buildingAt(s, target.x, target.y),
+  };
+  return ATTACK_SCORE_TERMS.reduce((score, term) => score + term.value(attack), 0);
 }

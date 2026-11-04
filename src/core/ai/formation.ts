@@ -5,24 +5,24 @@
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
 import { AI, UNIT, Movement } from '../data';
-import { grid, manhattan, samePos } from '../geom';
-import { groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
+import { manhattan } from '../geom';
+import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
 import { effectiveCommand, sameFormation } from '../squads';
 import type { GameState, Pos, Unit } from '../types';
+import { compareKeys, maxBy, minBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
 
 /** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
-const remainingMap = (s: GameState, u: Unit, at: Pos): number[][] => groundDistance(s, at, Movement.of(u.type), grid(false));
-/** Lo que queda desde `p` (Infinity si no llega). */
-const remainingAt = (rem: number[][], at: Pos, p: Pos): number => (samePos(p, at) ? 0 : rem[p.x]![p.y]! || Infinity);
-const remainingOf = (s: GameState, u: Unit): number => {
-  const at = effectiveCommand(s, u)!.at;
-  return remainingAt(remainingMap(s, u, at), at, u);
-};
+const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, Movement.of(unit.type));
+
+/** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega). */
+const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, effectiveCommand(s, unit)!.at).at(unit);
 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
-function formationMates(s: GameState, u: Unit): Unit[] {
-  return s.units.filter((o) => o !== u && o.carrier === null && o.life > 0 && !needsRepair(o) && sameFormation(s, u, o));
+function formationMates(s: GameState, unit: Unit): Unit[] {
+  return s.units.filter(
+    (other) => other !== unit && other.carrier === null && other.life > 0 && !needsRepair(other) && sameFormation(s, unit, other),
+  );
 }
 
 /**
@@ -30,80 +30,90 @@ function formationMates(s: GameState, u: Unit): Unit[] {
  * retrasadas y, a igualdad, las mas lentas; las demas, en su orden de siempre.
  */
 export function commandOrder(s: GameState, units: readonly Unit[]): Unit[] {
-  const out: Unit[] = [];
+  const ordered: Unit[] = [];
   const placed = new Set<Unit>();
-  for (const u of units) {
-    if (placed.has(u)) continue;
-    const group = units.filter((o) => o === u || (!placed.has(o) && sameFormation(s, u, o)));
-    const key = new Map(group.map((o) => [o, remainingOf(s, o)]));
-    group.sort((a, b) => key.get(b)! - key.get(a)! || UNIT.mover[a.type]! - UNIT.mover[b.type]!);
-    for (const o of group) placed.add(o);
-    out.push(...group);
+  for (const unit of units) {
+    if (placed.has(unit)) continue;
+    const group = units.filter((other) => other === unit || (!placed.has(other) && sameFormation(s, unit, other)));
+    const remaining = new Map(group.map((member) => [member, remainingOf(s, member)]));
+    const speed = (member: Unit) => UNIT.mover[member.type]!;
+    group.sort((a, b) => remaining.get(b)! - remaining.get(a)! || speed(a) - speed(b));
+    for (const member of group) placed.add(member);
+    ordered.push(...group);
   }
-  return out;
+  return ordered;
 }
 
 export interface Formation {
   /** Lo que le queda a la unidad desde cada casilla. */
-  rem: number[][];
+  remaining: DistanceMap;
   /** No puede acabar mas cerca del destino que esto. */
-  minRem: number;
+  minRemaining: number;
   /** La compañera mas retrasada: a igualdad, se coloca cerca de ella. */
   rear: Unit;
 }
 
-/** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
-export function formation(s: GameState, ctx: AiCtx, u: Unit): Formation | null {
-  const c = effectiveCommand(s, u);
-  if (!c || needsRepair(u)) return null;
-  const at = c.at;
-  // Las que aun no han jugado este turno cuentan donde podrian acabar (si no, la mas lenta, que
-  // juega primero, esperaria a una rapida que va igual de retrasada).
-  const mates = formationMates(s, u)
-    .map((o) => {
-      const d = remainingOf(s, o);
-      return { o, d, next: o.active && o.canMove ? Math.max(0, d - UNIT.mover[o.type]!) : d };
+/** Una compañera de formacion: lo que le queda ahora y donde podria quedarse al acabar este turno. */
+interface MateProgress {
+  unit: Unit;
+  remaining: number;
+  /** Lo que le quedaria si aun no ha jugado y avanza todo lo que puede este turno. */
+  afterThisTurn: number;
+}
+
+/**
+ * Las compañeras que llegan al destino, con lo que les queda. Las que aun no han jugado este turno
+ * cuentan donde podrian acabar (si no, la mas lenta, que juega primero, esperaria a una rapida que va
+ * igual de retrasada).
+ */
+function matesProgress(s: GameState, unit: Unit): MateProgress[] {
+  return formationMates(s, unit)
+    .map((mate) => {
+      const remaining = remainingOf(s, mate);
+      const canStillMove = mate.active && mate.canMove;
+      return { unit: mate, remaining, afterThisTurn: canStillMove ? Math.max(0, remaining - UNIT.mover[mate.type]!) : remaining };
     })
-    .filter((m) => m.d < Infinity);
+    .filter((mate) => mate.remaining < Infinity);
+}
+
+/** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
+export function formation(s: GameState, ai: AiCtx, unit: Unit): Formation | null {
+  const command = effectiveCommand(s, unit);
+  if (!command || needsRepair(unit)) return null;
+  const mates = matesProgress(s, unit);
   if (!mates.length) return null;
-  const rem = remainingMap(s, u, at);
-  const mine = remainingAt(rem, at, u);
+  const remaining = remainingMap(s, unit, command.at);
+  const mine = remaining.at(unit);
   if (mine === Infinity) return null; // no llega por tierra: como siempre
-  const rearMate = mates.reduce((a, b) => (b.next > a.next ? b : a));
-  const behind = mates.reduce((a, b) => (b.d > a.d ? b : a));
-  const rear = mine > behind.d ? { o: u, d: mine } : behind;
+  const rearAfterThisTurn = maxBy(mates, (mate) => mate.afterThisTurn)!;
+  const furthestBehind = maxBy(mates, (mate) => mate.remaining)!;
+  const rear = mine > furthestBehind.remaining ? { unit, remaining: mine } : furthestBehind;
   // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
-  if (rear.d <= strikeReach(rear.o)) return null;
-  const reach = strikeReach(rear.o);
-  if (visibleFoes(s, ctx.me).some((t) => manhattan(t, rear.o) <= reach)) return null;
-  return { rem, minRem: rearMate.next - AI.SQUADSPREAD, rear: rearMate.o };
+  const rearReach = strikeReach(rear.unit);
+  if (rear.remaining <= rearReach) return null;
+  if (visibleFoes(s, ai.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
+  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - AI.SQUADSPREAD, rear: rearAfterThisTurn.unit };
 }
 
 /**
  * Casilla a la que avanzar sin pasarse del limite de la formacion: lo mas cerca del destino que se
  * pueda y, a igualdad, junto a la mas retrasada. null = mejor quedarse (ya va por delante).
  */
-function formationMove(u: Unit, at: Pos, range: MoveRange, f: Formation): Pos | null {
-  let best: Pos | null = null;
-  let bestR = remainingAt(f.rem, at, u);
-  let bestA = manhattan(u, f.rear);
-  for (const p of reachableTiles(range)) {
-    const r = remainingAt(f.rem, at, p);
-    if (r < f.minRem || r === Infinity) continue;
-    const a = manhattan(p, f.rear);
-    if (r < bestR || (r === bestR && a < bestA)) {
-      best = p;
-      bestR = r;
-      bestA = a;
-    }
-  }
-  return best;
+function formationMove(unit: Unit, range: MoveRange, f: Formation): Pos | null {
+  const progress = (pos: Pos) => [f.remaining.at(pos), manhattan(pos, f.rear)];
+  const keepsFormation = (pos: Pos) => {
+    const remaining = f.remaining.at(pos);
+    return remaining >= f.minRemaining && remaining !== Infinity;
+  };
+  const best = minBy(reachableTiles(range).filter(keepsFormation), progress);
+  const isBetterThanStaying = best !== null && compareKeys(progress(best), progress(unit)) < 0;
+  return isBetterThanStaying ? best : null;
 }
 
 /** Hacia el destino de su orden: en formacion si va con su escuadra, si no como siempre. */
-export function commandStep(s: GameState, ctx: AiCtx, u: Unit, at: Pos, range: MoveRange, f: Formation | null): Pos | null {
-  return f ? formationMove(u, at, range, f) : bestMoveToward(s, ctx, u, at, range);
+export function commandStep(s: GameState, ai: AiCtx, unit: Unit, at: Pos, range: MoveRange, f: Formation | null): Pos | null {
+  return f ? formationMove(unit, range, f) : bestMoveToward(s, ai, unit, at, range);
 }
 
 /** En formacion solo dispara desde donde no se adelanta a su escuadra (o desde donde esta). */
-export const formationFrom = (at: Pos, f: Formation | null) => (f ? (p: Pos) => remainingAt(f.rem, at, p) >= f.minRem : undefined);
+export const formationFrom = (f: Formation | null) => (f ? (pos: Pos) => f.remaining.at(pos) >= f.minRemaining : undefined);
