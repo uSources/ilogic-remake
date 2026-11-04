@@ -191,7 +191,7 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
-  const isSeen = event.path.some((p) => stage.visible(p));
+  const isSeen = event.path.some((pos) => stage.visible(pos));
   if (!isSeen || stage.fastForward) return;
   const texture = ghostKey ?? moverTexture(stage, event);
   if (!texture) return;
@@ -214,7 +214,7 @@ async function showAmbush(stage: EventStage, ambusher: Pos, stoppedAt: Pos, show
 }
 
 /** Punto donde se apoya una unidad en una casilla (centro abajo, como sus sprites). */
-const feetOf = (p: Pos) => ({ x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE });
+const feetOf = (pos: Pos) => ({ x: pos.x * TILE + TILE / 2, y: (pos.y + 1) * TILE });
 
 /** Duracion de cada paso respecto a `stepMs`: arranca y frena suave; un solo paso, algo mas lento. */
 const SINGLE_STEP_PACE = 1.25;
@@ -255,8 +255,8 @@ function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Ima
  */
 async function animatePath(stage: EventStage, uid: number, textureKey: string, path: Pos[], showWholePath = true): Promise<void> {
   const view = stage.view;
-  const isShown = (p: Pos) => showWholePath || stage.visible(p);
-  const visiblePart = showWholePath ? path : path.filter((p) => stage.visible(p));
+  const isShown = (pos: Pos) => showWholePath || stage.visible(pos);
+  const visiblePart = showWholePath ? path : path.filter((pos) => stage.visible(pos));
   await stage.lookAt(visiblePart[visiblePart.length - 1] ?? path[path.length - 1]!);
   stage.hidden.add(uid);
   stage.refresh();
@@ -626,7 +626,7 @@ const animateAbility: Animator<'ability'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward) return;
   const general = generalOf(stage.state, event.team)?.def;
-  const ability = general?.abilities.find((a) => a.id === event.ability);
+  const ability = general?.abilities.find((candidate) => candidate.id === event.ability);
   const name = ability?.name[settings.lang] ?? event.ability;
   // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
   if (event.team !== 0) showToast(`${t('enemy')} · ${general?.name[settings.lang] ?? event.general}: ${name}`);

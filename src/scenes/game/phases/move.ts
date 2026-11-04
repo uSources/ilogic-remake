@@ -5,8 +5,8 @@ import { reachableTiles } from '../../../core/rules';
 import { noHighlights, type PhaseHandler } from './phase';
 
 export const movePhase: PhaseHandler = {
-  accept: (h) => void h.moves.commit(h.view.cursor),
-  back: (h) => h.toMap(),
+  accept: (host) => void host.moves.commit(host.view.cursor),
+  back: (host) => host.toMap(),
   highlights: (input) => {
     const marks = noHighlights();
     if (!input.range) return marks;

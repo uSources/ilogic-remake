@@ -20,7 +20,7 @@ import { blankState } from './helpers';
 
 const { UNIT_NAMES, HQ } = defaultContent().tables;
 
-const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
+const type = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
 const seeAll = () => true;
 
 function plan(s: GameState, u: Unit): MovePlan {
@@ -28,8 +28,8 @@ function plan(s: GameState, u: Unit): MovePlan {
   return {
     unit: u,
     range,
-    merge: new Map(mergeTargets(s, u, range).map((o) => [posKey(o), o.uid])),
-    load: new Map(loadTargets(s, u, range).map((o) => [posKey(o), o.uid])),
+    merge: new Map(mergeTargets(s, u, range).map((unit) => [posKey(unit), unit.uid])),
+    load: new Map(loadTargets(s, u, range).map((unit) => [posKey(unit), unit.uid])),
     trail: [posOf(u)],
   };
 }
@@ -144,7 +144,7 @@ describe('escena: puente a los modulos (game/host.ts)', () => {
   it('los campos se leen y escriben cada vez en el sitio de origen', () => {
     const origin = { phase: 'map', n: 1 };
     const h = live<{ phase: string; readonly n: number; bump(): void }>({
-      phase: { get: () => origin.phase, set: (v) => (origin.phase = v) },
+      phase: { get: () => origin.phase, set: (value) => (origin.phase = value) },
       n: { get: () => origin.n },
       bump: () => {
         origin.n++;
@@ -168,7 +168,7 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         scene: { get: () => null as never },
         view: { get: () => null as never },
         state: { get: () => s },
-        phase: { get: () => st.phase, set: (v) => (st.phase = v) },
+        phase: { get: () => st.phase, set: (kind) => (st.phase = kind) },
         menuSel: { get: () => 0 },
         match: { get: () => 1 },
         sel: { get: () => st.sel },
@@ -202,7 +202,7 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
     const { st, selection, orders } = setup(s);
     expect(orders.subjects()).toBeNull();
     selection.group = new Set([a.uid, b.uid]);
-    expect(orders.subjects()?.units.map((u) => u.uid)).toEqual([a.uid, b.uid]);
+    expect(orders.subjects()?.units.map((unit) => unit.uid)).toEqual([a.uid, b.uid]);
     st.phase = 'move';
     st.sel = a;
     expect(orders.subjects()).toEqual({ units: [a], from: 'move' });

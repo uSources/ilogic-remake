@@ -13,15 +13,15 @@ const { UNIT, UNIT_ABILITIES, POWER } = defaultContent().tables;
 
 /** Primera unidad que tiene la habilidad `kind` (el test no depende de cual sea). */
 const withAbility = (kind: AbilityDef['kind']): number => {
-  const i = UNIT_ABILITIES.findIndex((l) => l.some((a) => a.kind === kind));
+  const i = UNIT_ABILITIES.findIndex((line) => line.some((ability) => ability.kind === kind));
   if (i < 0) throw new Error(`ninguna unidad tiene ${kind}`);
   return i;
 };
 /** Primera unidad que cumple `f` y no tiene habilidades. */
-const plain = (f: (t: number) => boolean): number => UNIT_ABILITIES.findIndex((l, t) => l.length === 0 && f(t));
-const ranged = (t: number) => UNIT.minalc[t]! > 0 && UNIT.canfight[t]!;
-const melee = (t: number) => UNIT.minalc[t]! === 0 && UNIT.canfight[t]!;
-const moves = (mt: MoveType) => (t: number) => UNIT.movtype[t]! === mt && UNIT.mover[t]! >= 4;
+const plain = (callback: (t: number) => boolean): number => UNIT_ABILITIES.findIndex((line, type) => line.length === 0 && callback(type));
+const ranged = (type: number) => UNIT.minalc[type]! > 0 && UNIT.canfight[type]!;
+const melee = (type: number) => UNIT.minalc[type]! === 0 && UNIT.canfight[type]!;
+const moves = (mt: MoveType) => (type: number) => UNIT.movtype[type]! === mt && UNIT.mover[type]! >= 4;
 
 /** Reglas de estos tests: sin niebla, coste de terreno ni veterania, que cambiarian las cuentas. */
 const TEST_RULES = rulesWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
@@ -32,9 +32,9 @@ beforeEach(() => {
 
 describe('habilidades: contenido', () => {
   const clone = (): Content => structuredClone(defaultContent().files) as Content;
-  const unitWith = (c: Content, abilities: unknown) => {
-    c.units[0]!.abilities = abilities as AbilityDef[];
-    return validateContent(c);
+  const unitWith = (content: Content, abilities: unknown) => {
+    content.units[0]!.abilities = abilities as AbilityDef[];
+    return validateContent(content);
   };
 
   it('las cuatro clases estan en alguna unidad', () => {
@@ -69,8 +69,8 @@ describe('habilidades: escudo (guard)', () => {
     const s = blankState(TEST_RULES);
     const G = withAbility('guard');
     const factor = abilityOf(s, G, 'guard')!.factor;
-    const R = plain((t) => ranged(t) && POWER[t]![G]! > 0);
-    const M = plain((t) => melee(t) && POWER[t]![G]! > 0);
+    const R = plain((type) => ranged(type) && POWER[type]![G]! > 0);
+    const M = plain((type) => melee(type) && POWER[type]![G]! > 0);
     const def = newUnit(s, G, 1, { x: 10, y: 10 });
     const far = newUnit(s, R, 0, { x: 10, y: 10 - (UNIT.minalc[R]! + 1) });
     const near = newUnit(s, M, 0, { x: 9, y: 10 });
@@ -138,7 +138,7 @@ describe('habilidades: zona de control', () => {
 
 describe('habilidades: apoyo (aura)', () => {
   const A = withAbility('aura');
-  const { radius, defense } = UNIT_ABILITIES[A]!.find((a) => a.kind === 'aura') as Extract<AbilityDef, { kind: 'aura' }>;
+  const { radius, defense } = UNIT_ABILITIES[A]!.find((ability) => ability.kind === 'aura') as Extract<AbilityDef, { kind: 'aura' }>;
   const M = plain(melee);
 
   it('protege a las propias cercanas, no a si misma ni a las enemigas', () => {
@@ -168,8 +168,8 @@ describe('habilidades: perforante (piercing)', () => {
     const s = blankState(TEST_RULES);
     const P = withAbility('piercing');
     const ignore = abilityOf(s, P, 'piercing')!.ignoreCover;
-    const target = plain((t) => POWER[P]![t]! > 0 && walkableFor(defaultContent().tables, UNIT.movtype[t]!, TerrainType.WOODS));
-    const other = plain((t) => melee(t) && POWER[t]![target]! > 0);
+    const target = plain((type) => POWER[P]![type]! > 0 && walkableFor(defaultContent().tables, UNIT.movtype[type]!, TerrainType.WOODS));
+    const other = plain((type) => melee(type) && POWER[type]![target]! > 0);
     s.map[10]![10] = TerrainType.WOODS;
     const def = newUnit(s, target, 1, { x: 10, y: 10 });
     const atk = newUnit(s, P, 0, { x: 10, y: 10 - (UNIT.minalc[P]! + 1) });
@@ -200,7 +200,7 @@ describe('habilidades: explorador (scout)', () => {
     s.map[10]![14] = TerrainType.WOODS;
     const scout = newUnit(s, withAbility('scout'), 0, { x: 10, y: 10 });
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision
-    scout.type = plain((t) => UNIT.vision[t]! >= UNIT.vision[withAbility('scout')]!);
+    scout.type = plain((type) => UNIT.vision[type]! >= UNIT.vision[withAbility('scout')]!);
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(false);
   });
 });

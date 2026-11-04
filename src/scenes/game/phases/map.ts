@@ -19,19 +19,19 @@ const isPlayer = (unit: Unit) => unit.team === 0;
 const TOGGLE_ONE = { shift: true, ctrl: false, count: 1 };
 
 export const mapPhase: PhaseHandler = {
-  accept: (h) => {
-    const cursor = h.view.cursor;
-    const own = unitAt(h.state, cursor);
-    const picks = h.selection;
+  accept: (host) => {
+    const cursor = host.view.cursor;
+    const own = unitAt(host.state, cursor);
+    const picks = host.selection;
     // [CAMBIO] "Elegir varias" con el teclado: Enter sobre una unidad propia la añade o la quita.
     if (picks.multi && own && picks.selectable(own)) return picks.apply(clickSelect(picks.selection(), own, TOGGLE_ONE, () => []));
-    if (picks.group.size && !picks.multi) return acceptWithGroup(h, cursor, own);
-    acceptMapTile(h, cursor);
+    if (picks.group.size && !picks.multi) return acceptWithGroup(host, cursor, own);
+    acceptMapTile(host, cursor);
   },
-  back: (h) => {
-    if (h.inspectUid === null) return h.enter('gameMenu');
-    h.inspectUid = null;
-    h.refresh();
+  back: (host) => {
+    if (host.inspectUid === null) return host.enter('gameMenu');
+    host.inspectUid = null;
+    host.refresh();
   },
   highlights: (input) => {
     if (input.group.size) return markUnits(input.s, input.group);

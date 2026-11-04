@@ -167,7 +167,7 @@ export class GroupSelection {
   pickedInOrder(): Unit[] {
     return this.groupUnits()
       .filter((unit) => this.selectable(unit))
-      .sort((a, b) => a.type - b.type || a.uid - b.uid);
+      .sort((firstUnit, secondUnit) => firstUnit.type - secondUnit.type || firstUnit.uid - secondUnit.uid);
   }
 
   /** [CAMBIO] Tab con varias elegidas: llevar el cursor a la siguiente (su ficha se ve abajo). */

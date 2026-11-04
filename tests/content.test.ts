@@ -9,7 +9,7 @@ import { walkableFor } from '@core/content';
 const { UNIT, UNIT_NAMES, UNIT_ART, BUILDING_NAMES, MOVE_COST } = defaultContent().tables;
 
 const clone = (): Content => structuredClone(defaultContent().files) as Content;
-const errsOf = (c: Content) => validateContent(c);
+const errsOf = (content: Content) => validateContent(content);
 
 describe('contenido (src/core/content/*.json)', () => {
   it('el contenido del juego es valido', () => {
@@ -60,10 +60,10 @@ describe('contenido (src/core/content/*.json)', () => {
     const errs = errsOf(c);
     expect(errs).toContain('unidad Soldier: attack.hitChance nombra "Dragon", que no existe');
     expect(errs).toContain('unidad Tank: builtAt nombra "Castle", que no existe');
-    expect(errs.some((e) => e.includes('id repetido'))).toBe(true);
-    expect(errs.some((e) => e.includes('name.en'))).toBe(true);
-    expect(errs.some((e) => e.includes('attack.range'))).toBe(true);
-    expect(errs.some((e) => e.includes('"hq": true'))).toBe(true);
+    expect(errs.some((error) => error.includes('id repetido'))).toBe(true);
+    expect(errs.some((error) => error.includes('name.en'))).toBe(true);
+    expect(errs.some((error) => error.includes('attack.range'))).toBe(true);
+    expect(errs.some((error) => error.includes('"hq": true'))).toBe(true);
   });
 
   it('una unidad nueva al final entra en todas las tablas', () => {
@@ -106,14 +106,14 @@ describe('contenido (src/core/content/*.json)', () => {
     const errs = errsOf(c);
     expect(errs).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
     expect(errs).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
-    expect(errs.some((e) => e.startsWith('terrain.json: tienen que estar los 15 terrenos'))).toBe(true);
+    expect(errs.some((error) => error.startsWith('terrain.json: tienen que estar los 15 terrenos'))).toBe(true);
     expect(errs).toContain('rules.json: defaults.fog tiene que ser true o false');
     expect(errs).toContain('rules.json: regla desconocida "magic"');
-    expect(errs.some((e) => e.startsWith('ai.json: KILLBONUS'))).toBe(true);
+    expect(errs.some((error) => error.startsWith('ai.json: KILLBONUS'))).toBe(true);
   });
 
   it('MoveType y TerrainType coinciden con las listas de los JSON', () => {
-    MOVEMENTS.forEach((m, i) => expect(MoveType[m.toUpperCase() as keyof typeof MoveType]).toBe(i));
+    MOVEMENTS.forEach((kind, i) => expect(MoveType[kind.toUpperCase() as keyof typeof MoveType]).toBe(i));
     expect(TERRAIN_NAMES[TerrainType.WOODS]).toBe('Woods');
     expect(TERRAIN_NAMES[TerrainType.SHALLOW_WATER]).toBe('SWater');
     expect(TERRAIN_NAMES[TerrainType.ICE]).toBe('Ice');

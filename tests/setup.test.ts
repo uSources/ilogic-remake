@@ -20,10 +20,10 @@ describe('nueva partida: tamaños de mapa', () => {
       const s = createGame(seededRng(seed), { size });
       expect(s.map.length).toBe(size);
       expect(mapGrid(s).height).toBe(size);
-      const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
-      const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
+      const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
+      const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
       expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
-      const neutral = s.buildings.filter((b) => b.owner === null).length;
+      const neutral = s.buildings.filter((building) => building.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
       for (const b of s.buildings) expect(b.x < size && b.y < size).toBe(true);
     }

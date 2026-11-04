@@ -8,16 +8,29 @@ export function minimapVM(pal: readonly number[], s: GameState, vis: Grid<boolea
   const map = mapGrid(s);
   const terrain: number[] = [];
   for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) terrain.push(pal[map.at({ x, y })] ?? 0x3a7a3a);
-  const seen = (p: Pos) => vis.contains(p) && vis.at(p);
+  const seen = (pos: Pos) => vis.contains(pos) && vis.at(pos);
   return {
     w: map.width,
     h: map.height,
     terrain,
     fog: vis.columns.map((column) => column.slice()),
-    buildings: s.buildings.map((b) => ({ x: b.x, y: b.y, owner: b.owner === 0 || seen(b) ? b.owner : null })),
+    buildings: s.buildings.map((building) => ({
+      x: building.x,
+      y: building.y,
+      owner: building.owner === 0 || seen(building) ? building.owner : null,
+    })),
     units: s.units
-      .filter((u) => u.carrier === null && !hidden.has(u.uid) && (u.team === 0 || seen(u)))
-      .map((u) => ({ x: u.x, y: u.y, team: u.team })),
-    ...(s.controlPoints ? { points: s.controlPoints.map((c) => ({ x: c.x, y: c.y, owner: c.owner, r: s.rules.controlRadius })) } : {}),
+      .filter((unit) => unit.carrier === null && !hidden.has(unit.uid) && (unit.team === 0 || seen(unit)))
+      .map((unit) => ({ x: unit.x, y: unit.y, team: unit.team })),
+    ...(s.controlPoints
+      ? {
+          points: s.controlPoints.map((controlPoint) => ({
+            x: controlPoint.x,
+            y: controlPoint.y,
+            owner: controlPoint.owner,
+            r: s.rules.controlRadius,
+          })),
+        }
+      : {}),
   };
 }

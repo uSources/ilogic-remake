@@ -32,7 +32,7 @@ const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng
 
 /** Juega el turno de `team` al azar. Llama a `after` tras cada accion (para comprobar invariantes). */
 export function randomTurn(s: GameState, rng: Rng, team: Team, after: (what: string) => void): void {
-  const order = teamUnits(s, team).map((u) => u.uid);
+  const order = teamUnits(s, team).map((unit) => unit.uid);
   for (const uid of order) {
     const u = s.units.find((x) => x.uid === uid);
     if (!u || !u.active || u.carrier !== null) continue;

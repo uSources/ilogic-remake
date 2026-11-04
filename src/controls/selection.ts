@@ -54,4 +54,5 @@ export function pruneSelection(current: Selection, canSelect: (uid: number) => b
   return next.length === current.size ? current : new Set(next);
 }
 
-export const sameSelection = (a: Selection, b: Selection): boolean => a.size === b.size && [...a].every((id) => b.has(id));
+export const sameSelection = (firstSelection: Selection, secondSelection: Selection): boolean =>
+  firstSelection.size === secondSelection.size && [...firstSelection].every((id) => secondSelection.has(id));

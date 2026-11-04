@@ -116,7 +116,7 @@ export function saveSettings(): void {
 }
 
 /** Numero con separador de miles del idioma del juego (1.000 / 1,000). */
-export const fmtNum = (n: number): string => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
+export const fmtNum = (value: number): string => value.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
 
 /** Texto de la interfaz en el idioma elegido (los textos, por tema, en src/i18n/). */
 export function t(key: TextKey): string {

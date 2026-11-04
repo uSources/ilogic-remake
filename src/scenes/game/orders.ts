@@ -94,7 +94,7 @@ export class Orders {
       get state() {
         return h.state;
       },
-      moveCursorTo: (p, follow) => h.moveCursorTo(p, follow),
+      moveCursorTo: (pos, follow) => h.moveCursorTo(pos, follow),
       commit: (at, opts) => h.commit(at, opts),
       groupMove: (goal) => h.groupMove(goal),
       giveTravel: (unit, goal) => h.giveTravel(unit, goal),

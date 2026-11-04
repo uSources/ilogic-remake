@@ -64,7 +64,7 @@ describe('combate', () => {
     const s = blankState(TEST_RULES);
     const t = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const e = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    expect(attackTargets(s, t).map((u) => u.uid)).toEqual([e.uid]);
+    expect(attackTargets(s, t).map((unit) => unit.uid)).toEqual([e.uid]);
     const dmg = attack(s, t, e, seededRng(1));
     expect(dmg).toBeGreaterThan(30);
     expect(dmg).toBeLessThan(70); // esperado 50
@@ -87,7 +87,7 @@ describe('combate', () => {
     tr.life = 1;
     const t = newUnit(s, TANK, 0, { x: 10, y: 10 });
     attack(s, t, tr, () => 0);
-    expect(s.units.map((u) => u.uid)).toEqual([t.uid]);
+    expect(s.units.map((unit) => unit.uid)).toEqual([t.uid]);
   });
 });
 

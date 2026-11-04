@@ -100,17 +100,17 @@ export function requiredArtKeys(): string[] {
   );
   return [
     ...terrainArtKeys(),
-    ...Object.keys(BLOB_SETS).map((k) => `blob/${k}`),
-    ...Object.keys(ORG_SHEETS).map((k) => `blob/org_${k}`),
+    ...Object.keys(BLOB_SETS).map((key) => `blob/${key}`),
+    ...Object.keys(ORG_SHEETS).map((key) => `blob/org_${key}`),
     'blob/fog',
     'anim/water',
-    ...Object.keys(SHORE_ROWS).map((k) => `anim/shore_${k}`),
+    ...Object.keys(SHORE_ROWS).map((key) => `anim/shore_${key}`),
     ...objs,
   ];
 }
 
 export function terrainArtReady(textures: Phaser.Textures.TextureManager): boolean {
-  return terrainArtKeys().every((k) => hasImage(textures, k));
+  return terrainArtKeys().every((key) => hasImage(textures, key));
 }
 
 /** El lienzo del terreno y lo que necesitan las pasadas que lo pintan. */
@@ -269,7 +269,7 @@ export function terrainObjects(textures: Phaser.Textures.TextureManager, s: Game
     objects.push({ key, ...pos });
   }
   // Fila a fila (y por fuera, x dentro): la capa de los edificios los ordena por fila.
-  return objects.sort((a, b) => a.y - b.y);
+  return objects.sort((first, second) => first.y - second.y);
 }
 
 // ---------------------------------------------------------------------------

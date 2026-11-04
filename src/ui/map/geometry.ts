@@ -7,7 +7,7 @@ import { TILE } from '../../layout';
  */
 
 /** Centro de una casilla en pixeles de mundo. */
-export const tileCenter = (p: Pos): { x: number; y: number } => ({ x: p.x * TILE + TILE / 2, y: p.y * TILE + TILE / 2 });
+export const tileCenter = (pos: Pos): { x: number; y: number } => ({ x: pos.x * TILE + TILE / 2, y: pos.y * TILE + TILE / 2 });
 
 /** Casilla de una clave "x,y" (las de `ViewOptions.highlights`). */
-export const parseTileKey = (k: string): [number, number] => k.split(',').map(Number) as [number, number];
+export const parseTileKey = (key: string): [number, number] => key.split(',').map(Number) as [number, number];

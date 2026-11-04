@@ -70,8 +70,12 @@ export interface UnitMarkState {
 }
 
 /** Firma de las marcas: si no cambia, no se redibujan. Rango x 16 + 1 sin cura + 2 carga + 4 x orden + 100 destacada. */
-export const markSignature = (m: UnitMarkState): number =>
-  m.rank * 16 + (m.noHeal ? 1 : 0) + (m.cargo ? 2 : 0) + (m.order ? MISSION_KEY[m.order] * 4 : 0) + (m.detached ? 100 : 0);
+export const markSignature = (unitMarkState: UnitMarkState): number =>
+  unitMarkState.rank * 16 +
+  (unitMarkState.noHeal ? 1 : 0) +
+  (unitMarkState.cargo ? 2 : 0) +
+  (unitMarkState.order ? MISSION_KEY[unitMarkState.order] * 4 : 0) +
+  (unitMarkState.detached ? 100 : 0);
 
 /** Objetos de una unidad donde van sus marcas. */
 export interface UnitMarkObjects {

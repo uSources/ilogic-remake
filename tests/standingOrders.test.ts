@@ -202,7 +202,7 @@ describe('escuadras', () => {
     const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     const q1 = formSquad(s, [a, b, enemy])!;
     expect(q1.name).toBe('Alfa');
-    expect(squadUnits(s, q1.id).map((u) => u.uid)).toEqual([a.uid, b.uid]);
+    expect(squadUnits(s, q1.id).map((unit) => unit.uid)).toEqual([a.uid, b.uid]);
     expect(enemy.squad).toBeUndefined();
     const c = newUnit(s, SOLDIER, 0, { x: 6, y: 6 });
     expect(formSquad(s, [c])!.name).toBe('Bravo');
@@ -212,7 +212,7 @@ describe('escuadras', () => {
     expect(renameSquad(s, q1.id, '   ')).toBe(false);
     disbandSquad(s, q1.id);
     expect(a.squad).toBeUndefined();
-    expect(s.squads!.map((q) => q.name)).toEqual(['Bravo']);
+    expect(s.squads!.map((squad) => squad.name)).toEqual(['Bravo']);
   });
 
   it('pasar una unidad a otra escuadra vacia la vieja, que desaparece', () => {
@@ -220,7 +220,7 @@ describe('escuadras', () => {
     const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     formSquad(s, [a]);
     formSquad(s, [a], 'Nueva');
-    expect(s.squads!.map((q) => q.name)).toEqual(['Nueva']);
+    expect(s.squads!.map((squad) => squad.name)).toEqual(['Nueva']);
   });
 
   it('una escuadra cuyas unidades caen desaparece', () => {
@@ -273,7 +273,7 @@ describe('escuadras', () => {
 
 describe('escuadras en formacion', () => {
   /** Casillas que le quedan hasta el destino (todo hierba: en linea recta). */
-  const left = (u: { x: number; y: number }, at: { x: number; y: number }) => Math.abs(u.x - at.x) + Math.abs(u.y - at.y);
+  const left = (unit: { x: number; y: number }, at: { x: number; y: number }) => Math.abs(unit.x - at.x) + Math.abs(unit.y - at.y);
   const SPREAD = 2; // AI.SQUADSPREAD en ai.json
 
   it('el jeep no deja atras al soldado: van juntos hacia un destino lejano', () => {
@@ -297,7 +297,7 @@ describe('escuadras en formacion', () => {
     const lone = newUnit(s, CAR, 0, { x: 9, y: 9 });
     formSquad(s, [car, sol]);
     giveStandingOrder(s, [car, sol, lone], 'attack', { x: 18, y: 5 });
-    expect(standingOrderPlayOrder(s, [car, lone, sol]).map((u) => u.uid)).toEqual([sol.uid, car.uid, lone.uid]);
+    expect(standingOrderPlayOrder(s, [car, lone, sol]).map((unit) => unit.uid)).toEqual([sol.uid, car.uid, lone.uid]);
   });
 
   it('la mas lenta no espera a la rapida: avanza todo lo que puede', () => {
@@ -398,10 +398,10 @@ describe('orden de la escuadra y unidades destacadas', () => {
     const { s, a, b, t, q } = squadWorld();
     giveStandingOrder(s, [a, b, t], 'capture', { x: 12, y: 5 });
     expect(q.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
-    expect([a, b, t].map((u) => u.standingOrder)).toEqual([undefined, undefined, undefined]);
+    expect([a, b, t].map((unit) => unit.standingOrder)).toEqual([undefined, undefined, undefined]);
     expect(effectiveStandingOrder(s, a)?.kind).toBe('capture');
     expect(effectiveStandingOrder(s, t)?.kind).toBe('attack');
-    expect([a, b, t].some((u) => isDetached(s, u))).toBe(false);
+    expect([a, b, t].some((unit) => isDetached(s, unit))).toBe(false);
   });
 
   it('a una sola: va destacada con su orden, las demas siguen la de la escuadra', () => {
@@ -451,7 +451,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     expect(b.standingOrder).toEqual({ kind: 'defend', at: posOf(b) });
     cancelStandingOrder(s, [a, b, t]);
     expect(q.standingOrder).toBeUndefined();
-    expect([a, b, t].map((u) => effectiveStandingOrder(s, u))).toEqual([undefined, undefined, undefined]);
+    expect([a, b, t].map((unit) => effectiveStandingOrder(s, unit))).toEqual([undefined, undefined, undefined]);
   });
 
   it('atacar: la orden de la escuadra se cumple cuando han llegado todas las que la siguen', () => {
@@ -480,7 +480,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     for (const u of [a, b, t]) u.standingOrder = { kind: u === t ? 'attack' : 'capture', at: { x: 12, y: 5 } };
     const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
-    expect(back.units.every((u) => u.standingOrder === undefined)).toBe(true);
+    expect(back.units.every((unit) => unit.standingOrder === undefined)).toBe(true);
     expect(q.id).toBe(back.squads![0]!.id);
   });
 
@@ -510,7 +510,7 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     setGroup(s, [b, c], 2);
     expect(
       squadUnits(s, q.id)
-        .map((u) => u.uid)
+        .map((unit) => unit.uid)
         .sort(),
     ).toEqual([b.uid, c.uid].sort());
     expect(a.squad).toBeUndefined();
@@ -527,7 +527,7 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     addToGroup(s, [c, b], 1);
     expect(squadUnits(s, q1.id).length).toBe(3);
     // La escuadra 2 se ha quedado vacia: desaparece y su tecla queda libre.
-    expect(s.squads!.some((q) => q.id === q2.id)).toBe(false);
+    expect(s.squads!.some((squad) => squad.id === q2.id)).toBe(false);
     expect(squadByKey(s, 2)).toBeUndefined();
   });
 
@@ -539,9 +539,9 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     formSquad(s, [b]);
     for (const q of s.squads!) delete q.key;
     const back = deserialize(serialize(s), saveContext(defaultContent()))!;
-    expect(back.squads!.map((q) => q.key)).toEqual([1, 2]);
+    expect(back.squads!.map((squad) => squad.key)).toEqual([1, 2]);
     s.squads![0]!.key = 4;
     s.squads![1]!.key = 4;
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.squads!.map((q) => q.key)).toEqual([4, 1]);
+    expect(deserialize(serialize(s), saveContext(defaultContent()))!.squads!.map((squad) => squad.key)).toEqual([4, 1]);
   });
 });

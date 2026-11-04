@@ -47,7 +47,7 @@ export function unitStatsText(s: GameState, type: number): string {
   return `${t('move')} ${UNIT.mover[type]} · ${range}`;
 }
 
-const pct = (f: number): string => String(Math.round(f * 100));
+const pct = (factor: number): string => String(Math.round(factor * 100));
 
 /** Nombre y explicacion de una habilidad, con sus numeros. */
 export function abilityVM(a: DeepReadonly<AbilityDef>): AbilityVM {
@@ -57,7 +57,7 @@ export function abilityVM(a: DeepReadonly<AbilityDef>): AbilityVM {
     case 'zoneOfControl':
       return {
         name: t('ability_zoneOfControl'),
-        desc: t('ability_zoneOfControl_desc').replace('{m}', a.stops.map((m) => t(`move_${m}`)).join(', ')),
+        desc: t('ability_zoneOfControl_desc').replace('{m}', a.stops.map((kind) => t(`move_${kind}`)).join(', ')),
       };
     case 'aura':
       return {
@@ -125,13 +125,13 @@ export function tileVM(
   }
   // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
   // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
-  const cp = s.controlPoints?.find((c) => inControlZone(s, c, p));
+  const cp = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, p));
   if (cp) {
-    const inside = s.units.filter((u) => u.carrier === null && inControlZone(s, cp, u) && (u.team === 0 || view.vis.at(u)));
+    const inside = s.units.filter((unit) => unit.carrier === null && inControlZone(s, cp, unit) && (unit.team === 0 || view.vis.at(unit)));
     info.point = {
       owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral',
       income: s.rules.controlIncome,
-      contested: inside.some((u) => u.team === 0) && inside.some((u) => u.team === 1),
+      contested: inside.some((unit) => unit.team === 0) && inside.some((unit) => unit.team === 1),
       icon: `ui/zona_${cp.owner === 0 ? 'b' : cp.owner === 1 ? 'r' : 'i'}`,
     };
   }
@@ -140,7 +140,7 @@ export function tileVM(
   const shown = u && vis && !view.hidden.has(u.uid) ? u : sel && sel.x === p.x && sel.y === p.y ? sel : undefined;
   if (shown) {
     const T = shown.type;
-    const cargo = cargoUnits(s, shown).map((c) => unitLabel(s.content, c.type));
+    const cargo = cargoUnits(s, shown).map((unit) => unitLabel(s.content, unit.type));
     info.unit = {
       icon: unitKey(textures, s, { ...shown, active: shown.team === 1 || shown.active }),
       name: unitLabel(s.content, T),

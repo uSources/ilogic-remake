@@ -221,7 +221,8 @@ export async function hitFlash(
   sprite: Phaser.GameObjects.Container | Phaser.GameObjects.Image | null,
 ): Promise<void> {
   if (!sprite) return;
-  const main = 'list' in sprite ? sprite.list.find((o): o is Phaser.GameObjects.Image => 'setTintFill' in o) : sprite;
+  const main =
+    'list' in sprite ? sprite.list.find((gameObject): gameObject is Phaser.GameObjects.Image => 'setTintFill' in gameObject) : sprite;
   if (!main) return;
   main.setTint(PAL.white).setTintMode(TINT_FILL);
   await timeline.wait(70);

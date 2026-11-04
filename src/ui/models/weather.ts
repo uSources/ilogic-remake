@@ -9,7 +9,7 @@ import { t, weatherLabel, type TextKey } from '../../settings';
 /** Nombre de cada tipo de movimiento, en el orden de MoveType. */
 const MOVE_TYPE_KEYS: readonly TextKey[] = ['mtFoot', 'mtVehicle', 'mtAir', 'mtAmphibious'];
 
-const signed = (n: number): string => (n > 0 ? `+${n}` : `−${-n}`);
+const signed = (value: number): string => (value > 0 ? `+${value}` : `−${-value}`);
 
 /** Efectos de un clima en corto: "Vehículos −1 mov. · Visión −1 · Puntería −10 %". */
 export function weatherEffectsText(s: GameState, kind: number): string {
@@ -17,8 +17,8 @@ export function weatherEffectsText(s: GameState, kind: number): string {
   const parts: string[] = [];
   // Tipos de movimiento con el mismo cambio, juntos: "Infantería/Vehículos −1 mov."
   const byDelta = new Map<number, string[]>();
-  WEATHER.move[kind]!.forEach((d, mt) => {
-    if (d !== 0) byDelta.set(d, [...(byDelta.get(d) ?? []), t(MOVE_TYPE_KEYS[mt]!)]);
+  WEATHER.move[kind]!.forEach((delta, mt) => {
+    if (delta !== 0) byDelta.set(delta, [...(byDelta.get(delta) ?? []), t(MOVE_TYPE_KEYS[mt]!)]);
   });
   for (const [d, names] of byDelta) parts.push(`${names.join('/')} ${signed(d)} ${t('weatherMoveShort')}`);
   const vision = WEATHER.vision[kind]!;

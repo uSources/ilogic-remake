@@ -38,9 +38,9 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyG'], command: { kind: 'order', order: 'defend' } },
   { codes: ['KeyX'], command: { kind: 'order', order: 'cancel' } },
   // [CAMBIO] Grupos: Ctrl+n lo hace, Mayusculas+n añade, n elige (dos veces: la camara va alli).
-  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'set' }, ctrl: true })),
-  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'add' }, shift: true })),
-  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'select' } })),
+  ...DIGITS.map((digit): KeyBinding => ({ codes: [`Digit${digit}`], command: { kind: 'group', n: digit, mode: 'set' }, ctrl: true })),
+  ...DIGITS.map((digit): KeyBinding => ({ codes: [`Digit${digit}`], command: { kind: 'group', n: digit, mode: 'add' }, shift: true })),
+  ...DIGITS.map((digit): KeyBinding => ({ codes: [`Digit${digit}`], command: { kind: 'group', n: digit, mode: 'select' } })),
   { codes: ['Equal', 'NumpadAdd'], command: { kind: 'zoom', dir: 1 } },
   { codes: ['Minus', 'NumpadSubtract'], command: { kind: 'zoom', dir: -1 } },
   { codes: ['KeyH'], command: { kind: 'help' } },

@@ -96,7 +96,7 @@ export class MapView {
       this.fx,
       this.cursorView,
     ];
-    this.root.add(stack.map((l) => ('object' in l ? l.object : l)));
+    this.root.add(stack.map((line) => ('object' in line ? line.object : line)));
     this.animated = [this.terrain, this.cursorView, this.marks, this.units];
     this.cam.setBackgroundColor(PAL_CSS.ink);
     this.camera.apply();

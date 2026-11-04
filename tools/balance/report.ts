@@ -85,12 +85,12 @@ export interface Report {
 }
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
-const quant = (xs: number[], q: number) => {
+const quant = (xs: number[], fraction: number) => {
   if (!xs.length) return 0;
-  const a = [...xs].sort((p, r) => p - r);
-  return a[Math.min(a.length - 1, Math.floor(q * a.length))]!;
+  const a = [...xs].sort((first, second) => first - second);
+  return a[Math.min(a.length - 1, Math.floor(fraction * a.length))]!;
 };
-const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+const mean = (xs: number[]) => (xs.length ? xs.reduce((sum, value) => sum + value, 0) / xs.length : 0);
 const roundTo = (x: number, step: number) => Math.round(x / step) * step;
 
 export function buildReport(
@@ -108,11 +108,11 @@ export function buildReport(
     if (r.winner !== null) wins[r.winner]++;
     reasons[r.reason] = (reasons[r.reason] ?? 0) + 1;
   }
-  const finished = records.filter((r) => r.winner !== null);
-  const days = finished.map((r) => r.days);
+  const finished = records.filter((record) => record.winner !== null);
+  const days = finished.map((record) => record.days);
 
   // Fuerza de un bando: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
-  const strength = (smp: GameRecord['samples'][number], t: 0 | 1) => smp.army[t] + smp.buildings[t] * 1500 + smp.funds[t] * 0.5;
+  const strength = (smp: GameRecord['samples'][number], team: 0 | 1) => smp.army[team] + smp.buildings[team] * 1500 + smp.funds[team] * 0.5;
   // Ganador "efectivo": el real, o en las partidas sin terminar quien va claramente por delante.
   const adjudicated: [number, number] = [0, 0];
   let even = 0;
@@ -148,7 +148,7 @@ export function buildReport(
     return { day, leaderWins: count ? leaderWins / count : null, games: count };
   });
 
-  const d10 = records.map((r) => r.samples.find((x) => x.day === 10)).filter((x) => !!x);
+  const d10 = records.map((record) => record.samples.find((x) => x.day === 10)).filter((x) => !!x);
   const economy = {
     day10Buildings: d10.length ? ([mean(d10.map((x) => x.buildings[0])), mean(d10.map((x) => x.buildings[1]))] as [number, number]) : null,
     day10Army: d10.length ? ([mean(d10.map((x) => x.army[0])), mean(d10.map((x) => x.army[1]))] as [number, number]) : null,
@@ -156,7 +156,10 @@ export function buildReport(
   };
 
   // Unidades (los dos bandos juntos).
-  const totalBought = records.reduce((a, r) => a + r.units.flat().reduce((x, t) => x + t.bought, 0), 0);
+  const totalBought = records.reduce(
+    (amount, record) => amount + record.units.flat().reduce((count, unitTally) => count + unitTally.bought, 0),
+    0,
+  );
   const { UNIT: unitStats, UNIT_NAMES } = content.tables;
   const units: UnitRow[] = [];
   for (let T = 0; T < UNIT_NAMES.length; T++) {
@@ -216,7 +219,7 @@ export function buildReport(
   if (mirror && sb5 !== null && sb5 > targets.snowball5)
     flags.push(`Bola de nieve: quien va por delante el dia 5 gana el ${pct(sb5)} de las veces.`);
 
-  const effs = units.filter((u) => u.efficiency !== null).map((u) => u.efficiency!);
+  const effs = units.filter((unitRow) => unitRow.efficiency !== null).map((unitRow) => unitRow.efficiency!);
   const medEff = quant(effs, 0.5);
   for (const u of mirror ? units : []) {
     const T = UNIT_NAMES.indexOf(u.type);
@@ -243,17 +246,17 @@ export function buildReport(
 
   let duelSummary: Report['duel'];
   if (duel) {
-    const fs = duel.cells.filter((c) => c.firstStrikeWins !== null && c.attacker === c.defender);
-    const firstStrikeMean = fs.length ? mean(fs.map((c) => c.firstStrikeWins!)) : null;
+    const fs = duel.cells.filter((cell) => cell.firstStrikeWins !== null && cell.attacker === cell.defender);
+    const firstStrikeMean = fs.length ? mean(fs.map((cell) => cell.firstStrikeWins!)) : null;
     // Ventaja de atacar primero en un intercambio entre iguales: daño hecho / daño recibido.
-    const same = duel.cells.filter((c) => c.attacker === c.defender && c.damage > 0);
-    const ratios = same.map((c) => c.damage / Math.max(c.counter, 0.5));
+    const same = duel.cells.filter((cell) => cell.attacker === cell.defender && cell.damage > 0);
+    const ratios = same.map((cell) => cell.damage / Math.max(cell.counter, 0.5));
     const exchangeRatio = ratios.length ? quant(ratios, 0.5) : null;
     if (exchangeRatio !== null && exchangeRatio > targets.exchangeRatio)
       flags.push(
         `Atacar primero sale muy a cuenta: entre unidades iguales se hace ${exchangeRatio > 50 ? 'todo el' : exchangeRatio.toFixed(1) + ' veces mas'} daño del que se recibe.`,
       );
-    const worst = [...duel.cells].sort((a, b) => b.valuePer1000 - a.valuePer1000).slice(0, 8);
+    const worst = [...duel.cells].sort((firstCell, secondCell) => secondCell.valuePer1000 - firstCell.valuePer1000).slice(0, 8);
     duelSummary = { terrain: duel.terrain, firstStrikeMean, exchangeRatio, worst };
   }
 
@@ -297,7 +300,7 @@ export function reportMarkdown(r: Report): string {
     L.push('');
   }
   L.push('## Avisos', '');
-  L.push(...(r.flags.length ? r.flags.map((f) => `- ${f}`) : ['- Nada fuera de los objetivos.']), '');
+  L.push(...(r.flags.length ? r.flags.map((flag) => `- ${flag}`) : ['- Nada fuera de los objetivos.']), '');
   if (r.suggestions.length) {
     L.push('## Ajustes propuestos', '', 'Para probarlos: `npm run balance -- tune` o una variante con estos valores.', '');
     for (const s of r.suggestions) L.push(`- \`${s.path}\`: ${s.from} → **${s.to}** (${s.why})`);
@@ -330,7 +333,7 @@ export function reportMarkdown(r: Report): string {
     '| Unidad | Coste | Compradas | % compras | Eficiencia | Sobreviven | Bajas causadas | Capturas |',
     '|---|---:|---:|---:|---:|---:|---:|---:|',
   );
-  for (const u of [...r.units].sort((a, b) => b.bought - a.bought))
+  for (const u of [...r.units].sort((firstUnitRow, secondUnitRow) => secondUnitRow.bought - firstUnitRow.bought))
     L.push(
       `| ${u.label} | ${u.cost} | ${u.bought} | ${(u.share * 100).toFixed(1)} | ${u.efficiency === null ? '—' : u.efficiency.toFixed(2)} | ${u.survival === null ? '—' : pct(u.survival)} | ${u.kills} | ${u.captures} |`,
     );
@@ -379,19 +382,19 @@ export function compareMarkdown(a: Report, b: Report): string {
     L.push(`| ${label} | ${x === null ? '—' : fmt(x)} | ${y === null ? '—' : fmt(y)} | ${d === null ? '' : (d > 0 ? '+' : '') + fmt(d)} |`);
   };
   L.push('| | antes | despues | cambio |', '|---|---:|---:|---:|');
-  const p = (v: number) => `${Math.round(v * 100)} %`;
+  const p = (value: number) => `${Math.round(value * 100)} %`;
   row('Victorias bando 0', a.outcome.winRate[0], b.outcome.winRate[0], p);
   row('Victorias bando 1', a.outcome.winRate[1], b.outcome.winRate[1], p);
   row('Sin terminar', a.outcome.unfinished / a.games, b.outcome.unfinished / b.games, p);
-  row('Dias (mediana)', a.outcome.days.median, b.outcome.days.median, (v) => `${v}`);
+  row('Dias (mediana)', a.outcome.days.median, b.outcome.days.median, (value) => `${value}`);
   row('Bola de nieve dia 5', a.snowball[0]!.leaderWins, b.snowball[0]!.leaderWins, p);
   if (a.duel || b.duel)
-    row('Daño hecho / devuelto (iguales)', a.duel?.exchangeRatio ?? null, b.duel?.exchangeRatio ?? null, (v) =>
-      v > 50 ? '∞' : v.toFixed(1),
+    row('Daño hecho / devuelto (iguales)', a.duel?.exchangeRatio ?? null, b.duel?.exchangeRatio ?? null, (value) =>
+      value > 50 ? '∞' : value.toFixed(1),
     );
   L.push('', '## Unidades', '', '| Unidad | Coste | Compras (antes → despues) | Eficiencia (antes → despues) |', '|---|---|---|---|');
   for (const ua of a.units) {
-    const ub = b.units.find((u) => u.type === ua.type)!;
+    const ub = b.units.find((unitRow) => unitRow.type === ua.type)!;
     const e = (x: number | null) => (x === null ? '—' : x.toFixed(2));
     L.push(
       `| ${ua.label} | ${ua.cost}${ub.cost !== ua.cost ? ` → ${ub.cost}` : ''} | ${ua.bought} → ${ub.bought} | ${e(ua.efficiency)} → ${e(ub.efficiency)} |`,
@@ -403,6 +406,6 @@ export function compareMarkdown(a: Report, b: Report): string {
 
 /** Media de unidades en el mapa por bando ese dia (null si las muestras no lo tienen). */
 function unitsOnDay(records: readonly GameRecord[], day: number): number | null {
-  const d = records.map((r) => r.samples.find((x) => x.day === day)?.units).filter((x) => !!x);
-  return d.length ? mean(d.map((u) => (u[0] + u[1]) / 2)) : null;
+  const d = records.map((record) => record.samples.find((x) => x.day === day)?.units).filter((x) => !!x);
+  return d.length ? mean(d.map((unit) => (unit[0] + unit[1]) / 2)) : null;
 }

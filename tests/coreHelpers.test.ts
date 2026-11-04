@@ -50,9 +50,9 @@ describe('ayudas de reglas', () => {
     const r = moveRange(s, u);
     const tiles = reachableTiles(r);
     expect(tiles.length).toBeGreaterThan(0);
-    expect(tiles.every((p) => r.steps.at(p) > 0)).toBe(true);
-    expect(tiles.some((p) => p.x === 10 && p.y === 10)).toBe(false);
-    const sorted = [...tiles].sort((a, b) => a.x - b.x || a.y - b.y);
+    expect(tiles.every((pos) => r.steps.at(pos) > 0)).toBe(true);
+    expect(tiles.some((pos) => pos.x === 10 && pos.y === 10)).toBe(false);
+    const sorted = [...tiles].sort((firstPos, secondPos) => firstPos.x - secondPos.x || firstPos.y - secondPos.y);
     expect(tiles).toEqual(sorted);
   });
 
@@ -176,7 +176,7 @@ describe('partidas guardadas', () => {
     const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
     expect(back.units[0]).not.toHaveProperty('fuel');
     expect(back.units[0]).not.toHaveProperty('ammo');
-    expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((u) => u.uid)));
+    expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((unit) => unit.uid)));
     expect(back.day).toBe(1);
   });
 });

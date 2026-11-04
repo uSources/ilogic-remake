@@ -90,10 +90,10 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { k
 const NO_UNIT_UIDS: readonly number[] = [];
 
 /** El objetivo de la partida si la hay; si no, el de la mision; si no hay ninguna, conquistar la Base. */
-function objectiveToDescribe(m: MissionDef | null, content: GameContent, s?: GameState): Objective {
+function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): Objective {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
-  if (m) return objectiveFromMission(m.objective, NO_UNIT_UIDS, content.tables);
+  if (mission) return objectiveFromMission(mission.objective, NO_UNIT_UIDS, content.tables);
   return { kind: 'hq' };
 }
 
@@ -107,9 +107,9 @@ function describeObjective(objective: Objective, content: GameContent): string {
  * Objetivo en una frase (para la pantalla de campaña y el panel de la partida). Con partida, con su
  * contenido; en el menu de campaña, antes de jugar, con el del juego.
  */
-export function objectiveText(m: MissionDef | null, s?: GameState): string {
+export function objectiveText(mission: MissionDef | null, s?: GameState): string {
   const content = s?.content ?? defaultContent();
-  return describeObjective(objectiveToDescribe(m, content, s), content);
+  return describeObjective(objectiveToDescribe(mission, content, s), content);
 }
 
 /** Progreso en corto: "3/6", "día 4 de 8"... */

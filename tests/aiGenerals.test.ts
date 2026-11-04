@@ -9,7 +9,7 @@ import { blankState } from './helpers';
 
 const { UNIT_NAMES, AI } = defaultContent().tables;
 
-const T = (n: string) => UNIT_NAMES.indexOf(n);
+const T = (name: string) => UNIT_NAMES.indexOf(name);
 
 /** La IA (bando 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {

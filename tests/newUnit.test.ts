@@ -30,7 +30,7 @@ describe('npm run unit -- new', () => {
   });
 
   it('no toca el contenido original', () => {
-    expect(defaultContent().files.units.some((u) => u.id === 'Sniper')).toBe(false);
+    expect(defaultContent().files.units.some((unit) => unit.id === 'Sniper')).toBe(false);
     expect(defaultContent().files.units[0]!.attack!.hitChance.Sniper).toBeUndefined();
   });
 

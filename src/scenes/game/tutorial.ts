@@ -47,7 +47,7 @@ export class TutorialTracker {
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
   private advance(s: GameState, phase: Phase): void {
-    if (this.step === 0 && this.events.length === 0) this.ownedAtStart = s.buildings.filter((b) => b.owner === 0).length;
+    if (this.step === 0 && this.events.length === 0) this.ownedAtStart = s.buildings.filter((building) => building.owner === 0).length;
     for (let guard = 0; guard < TUTORIAL.length; guard++) {
       const st = TUTORIAL[this.step];
       if (!st || !st.done({ s, phase, events: this.events, ownedAtStart: this.ownedAtStart })) return;

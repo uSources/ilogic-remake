@@ -55,7 +55,7 @@ export function trailTo(plan: MovePlan, dest: Pos): Pos[] {
   const end = trail[trail.length - 1];
   if (end && samePos(end, dest) && samePos(trail[0]!, plan.unit)) return trail;
   // El destino esta a mitad del camino trazado: hasta ahi.
-  const destIndex = trail.findIndex((p) => samePos(p, dest));
+  const destIndex = trail.findIndex((pos) => samePos(pos, dest));
   if (destIndex > 0) return trail.slice(0, destIndex + 1);
   return pathTo(plan.range, plan.unit, dest);
 }

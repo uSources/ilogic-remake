@@ -205,12 +205,12 @@ export class Session {
 
   units(team: number | null): string {
     const vis = visibility(this.s, 0);
-    const list = this.s.units.filter((u) => (team === null || u.team === team) && (u.team === 0 || vis.at(u)));
+    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === 0 || vis.at(unit)));
     if (!list.length) return '(ninguna)';
     return list
-      .map((u) => {
-        const st = [u.active ? '' : 'usada'].filter(Boolean).join(' ');
-        return `${String(u.uid).padStart(3)} ${u.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[u.type]!.padEnd(13)} (${u.x},${u.y}) vida ${u.life} ${st}`;
+      .map((unit) => {
+        const st = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
+        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[unit.type]!.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${st}`;
       })
       .join('\n');
   }
@@ -222,7 +222,7 @@ export class Session {
     return [
       `${u.uid} ${tablesOf(this.s).UNIT_NAMES[u.type]} en (${u.x},${u.y}), vida ${u.life}, ${u.active ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
-      `objetivos desde aqui: ${targets.length ? targets.map((t) => `${t.uid} ${tablesOf(this.s).UNIT_NAMES[t.type]} (${t.x},${t.y})`).join(', ') : 'ninguno'}`,
+      `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, u) ? 'puede capturar el edificio de debajo' : '',
     ]
       .filter(Boolean)
@@ -252,11 +252,11 @@ export class Session {
   private buy(at: Pos, name: string): string {
     const b = buildingAt(this.s, at);
     if (!b || b.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
-    const type = tablesOf(this.s).UNIT_NAMES.findIndex((n) => n.toLowerCase() === name.toLowerCase());
+    const type = tablesOf(this.s).UNIT_NAMES.findIndex((unitName) => unitName.toLowerCase() === name.toLowerCase());
     const opts = buyOptions(this.s, b);
     if (!opts.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[b.type]} no fabrica unidades`);
     if (type < 0)
-      return `error: tipo desconocido. Aqui se puede: ${opts.map((o) => `${tablesOf(this.s).UNIT_NAMES[o.type]} (${o.cost})`).join(', ')}`;
+      return `error: tipo desconocido. Aqui se puede: ${opts.map((buyOption) => `${tablesOf(this.s).UNIT_NAMES[buyOption.type]} (${buyOption.cost})`).join(', ')}`;
     const u = spawn(this.s, b, type);
     if (!u) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
     return `comprada ${u.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
@@ -266,7 +266,7 @@ export class Session {
   private power(id: string, target: { x: number; y: number } | null): string {
     const g = generalOf(this.s, 0);
     if (!g) throw new UsageError('no tienes general (--general Brisa)');
-    const list = g.def.abilities.map((a) => `${a.id} (${a.cost})`).join(', ');
+    const list = g.def.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
     if (!id)
       return `${g.def.id}: carga ${g.state.charge.toFixed(1)}/${g.def.charge.max}${g.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
     const block = abilityBlock(this.s, 0, id, target);
@@ -288,15 +288,15 @@ export class Session {
 
   status(): string {
     const s = this.s;
-    const own = (t: number) => s.buildings.filter((b) => b.owner === t).length;
+    const own = (team: number) => s.buildings.filter((building) => building.owner === team).length;
     return [
       `dia ${s.day} · dinero ${s.funds[0]} (enemigo ${s.funds[1]}) · edificios ${own(0)} contra ${own(1)}`,
       ...(s.generals?.[0] ? [`general ${s.generals[0].id}: carga ${s.generals[0].charge.toFixed(1)}`] : []),
-      `unidades ${s.units.filter((u) => u.team === 0).length} contra ${s.units.filter((u) => u.team === 1).length} · resultado: ${outcome(s)}`,
+      `unidades ${s.units.filter((unit) => unit.team === 0).length} contra ${s.units.filter((unit) => unit.team === 1).length} · resultado: ${outcome(s)}`,
       `sin usar: ${
         s.units
-          .filter((u) => u.team === 0 && u.active && u.carrier === null)
-          .map((u) => u.uid)
+          .filter((unit) => unit.team === 0 && unit.active && unit.carrier === null)
+          .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,
     ].join('\n');
@@ -326,7 +326,7 @@ function describe(s: GameState, ev: GameEvent): string {
     case 'wait':
       return `${name(ev.uid)} espera`;
     case 'ability':
-      return `general ${ev.general} usa ${ev.ability}${ev.target ? ` en (${ev.target.x},${ev.target.y})` : ''}${ev.hits.length ? `: ${ev.hits.map((h) => `${name(h.uid)} -${h.damage}`).join(', ')}` : ''}`;
+      return `general ${ev.general} usa ${ev.ability}${ev.target ? ` en (${ev.target.x},${ev.target.y})` : ''}${ev.hits.length ? `: ${ev.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
   }
 }
 

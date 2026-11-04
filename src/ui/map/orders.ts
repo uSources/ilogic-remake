@@ -29,7 +29,7 @@ const INTENT_ARROW = { color: PAL_MAP.intent, alpha: 0.6, border: 0.4 };
 const TARGET_CORNER = 7;
 
 /** Ordenes de varios turnos: puntos cada 8 px (primero en horizontal, luego en vertical) y banderita. */
-export const orderLines: OverlayPainter = (g, opts, ctx) => {
+export const orderLines: OverlayPainter = (graphics, opts, ctx) => {
   // El banderin dibujado (ui/flag_cmd_*) va en map/flagLayer.ts; este de pixeles solo si falta en el atlas.
   const orderArt = hasImage(ctx.textures, 'ui/flag_cmd_go');
   for (const order of opts.orders ?? []) {
@@ -37,11 +37,11 @@ export const orderLines: OverlayPainter = (g, opts, ctx) => {
     const to = tileCenter(order.to);
     const color = order.kind ? COMMAND_FLAG[order.kind] : PAL.gold;
     if (!order.kind || order.line) {
-      g.fillStyle(color, 0.9);
-      for (let x = Math.min(from.x, to.x); x <= Math.max(from.x, to.x); x += ORDER_DOT_STEP) g.fillRect(x - 1, from.y - 1, 3, 3);
-      for (let y = Math.min(from.y, to.y); y <= Math.max(from.y, to.y); y += ORDER_DOT_STEP) g.fillRect(to.x - 1, y - 1, 3, 3);
+      graphics.fillStyle(color, 0.9);
+      for (let x = Math.min(from.x, to.x); x <= Math.max(from.x, to.x); x += ORDER_DOT_STEP) graphics.fillRect(x - 1, from.y - 1, 3, 3);
+      for (let y = Math.min(from.y, to.y); y <= Math.max(from.y, to.y); y += ORDER_DOT_STEP) graphics.fillRect(to.x - 1, y - 1, 3, 3);
     }
-    if (!orderArt) drawPixelFlag(g, to, color);
+    if (!orderArt) drawPixelFlag(graphics, to, color);
   }
 };
 
@@ -57,11 +57,11 @@ function drawPixelFlag(g: Phaser.GameObjects.Graphics, foot: { x: number; y: num
 }
 
 /** [CAMBIO] Intenciones de las ordenes con destino: lo que hara cada unidad al terminar el turno. */
-export const intents: OverlayPainter = (g, opts) => {
+export const intents: OverlayPainter = (graphics, opts) => {
   for (const intent of opts.intents ?? []) {
-    if (intent.path.length > 1) drawArrow(g, intent.path, INTENT_ARROW.color, INTENT_ARROW.alpha, INTENT_ARROW.border);
-    if (intent.attack) drawTargetMark(g, intent.attack, PAL.red);
-    if (intent.capture) drawTargetMark(g, intent.capture, PAL.gold);
+    if (intent.path.length > 1) drawArrow(graphics, intent.path, INTENT_ARROW.color, INTENT_ARROW.alpha, INTENT_ARROW.border);
+    if (intent.attack) drawTargetMark(graphics, intent.attack, PAL.red);
+    if (intent.capture) drawTargetMark(graphics, intent.capture, PAL.gold);
   }
 };
 
@@ -69,10 +69,10 @@ export const intents: OverlayPainter = (g, opts) => {
  * Camino previsto: flecha pixel (tramos de 4 px con borde oscuro y punta), como en Advance Wars.
  * [CAMBIO] Si al soltar ahi se ataca, la flecha va en rojo.
  */
-export const pathArrow: OverlayPainter = (g, opts) => {
+export const pathArrow: OverlayPainter = (graphics, opts) => {
   const path = opts.path;
   if (path && path.length > 1)
-    drawArrow(g, path, opts.pathAttack ? PATH_ARROW.attack : PATH_ARROW.color, PATH_ARROW.alpha, PATH_ARROW.border);
+    drawArrow(graphics, path, opts.pathAttack ? PATH_ARROW.attack : PATH_ARROW.color, PATH_ARROW.alpha, PATH_ARROW.border);
 };
 
 /** Direccion de un paso: -1, 0 o 1 en cada eje. */

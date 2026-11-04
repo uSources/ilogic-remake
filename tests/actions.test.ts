@@ -18,7 +18,7 @@ function world(): GameState {
   s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 19, y: 19 }, { type: CITY, owner: null, x: 6, y: 6 });
   return s;
 }
-const ids = (c: ActionCtx) => menuActions(c).map((a) => a.id);
+const ids = (ctx: ActionCtx) => menuActions(ctx).map((actionDef) => actionDef.id);
 
 describe('acciones con un grupo', () => {
   function grp() {
@@ -69,7 +69,7 @@ describe('acciones con una sola unidad elegida (la escena dice que pasa en la ca
   it('cada intencion da su accion y su cursor; fuera de alcance, ir alli; si no, prohibido', () => {
     const s = world();
     const u = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    const c = (o: Partial<ActionCtx>): ActionCtx => ({ s, units: [u], at: { x: 5, y: 5 }, enemyHere: false, intent: 'none', ...o });
+    const c = (ctx: Partial<ActionCtx>): ActionCtx => ({ s, units: [u], at: { x: 5, y: 5 }, enemyHere: false, intent: 'none', ...ctx });
     expect(smartAction(c({ intent: 'attack', enemyHere: true }))?.id).toBe('attack');
     expect(smartAction(c({ intent: 'move', intentCapture: true }))?.id).toBe('capture');
     expect(smartAction(c({ intent: 'move' }))?.id).toBe('move');

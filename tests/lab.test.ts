@@ -5,13 +5,13 @@ import { defaultLab, LAB_FROM, LAB_TARGET, labRange, labState } from '../src/lab
 
 const { UNIT_NAMES } = defaultContent().tables;
 
-const T = (n: string) => UNIT_NAMES.indexOf(n);
+const T = (name: string) => UNIT_NAMES.indexOf(name);
 
 describe('laboratorio de animaciones', () => {
   it('para mover, la propia empieza lejos; para atacar, ya a su distancia de tiro', () => {
     const o = defaultLab();
     const moving = labState(o, 'move');
-    expect(moving.units.map((u) => [u.team, u.x, u.y])).toEqual([
+    expect(moving.units.map((unit) => [unit.team, unit.x, unit.y])).toEqual([
       [0, LAB_FROM.x, LAB_FROM.y],
       [1, LAB_TARGET.x, LAB_TARGET.y],
     ]);

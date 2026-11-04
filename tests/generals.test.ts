@@ -13,7 +13,7 @@ import { blankState } from './helpers';
 
 const { UNIT, UNIT_NAMES } = defaultContent().tables;
 
-const T = (n: string) => UNIT_NAMES.indexOf(n);
+const T = (name: string) => UNIT_NAMES.indexOf(name);
 
 function withBrisa(): GameState {
   const s = blankState(TEST_RULES);
@@ -27,7 +27,7 @@ const TEST_RULES = rulesWith(defaultContent(), { fog: true, weather: false });
 describe('generales: datos', () => {
   it('generals.json es valido y Brisa existe', () => {
     expect(validateContent(readContentFiles())).toEqual([]);
-    expect(defaultContent().files.generals.map((g) => g.id)).toContain('Brisa');
+    expect(defaultContent().files.generals.map((general) => general.id)).toContain('Brisa');
   });
 
   it('explica lo que esta mal', () => {
@@ -38,8 +38,8 @@ describe('generales: datos', () => {
     (g.abilities[1]!.effect as { kind: string }).kind = 'nuke';
     const errs = validateContent(c);
     expect(errs).toContain('general Brisa: passive.attack.units nombra "Dragon", que no existe');
-    expect(errs.some((e) => e.includes('habilidad recon: cost'))).toBe(true);
-    expect(errs.some((e) => e.includes('effect.kind "nuke" no existe'))).toBe(true);
+    expect(errs.some((error) => error.includes('habilidad recon: cost'))).toBe(true);
+    expect(errs.some((error) => error.includes('effect.kind "nuke" no existe'))).toBe(true);
   });
 });
 

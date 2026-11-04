@@ -80,7 +80,7 @@ describe('movimiento: emboscadas en la niebla', () => {
     const path = moveUnit(s, a, { x: 7, y: 5 }, moveRange(s, a))!;
     expect(path.ambush).toEqual({ x: 6, y: 5 });
     expect(a.x).toBe(5);
-    s.units.find((u) => u.team === 0 && u.type === SOLDIER)!.x = 5;
+    s.units.find((unit) => unit.team === 0 && unit.type === SOLDIER)!.x = 5;
     a.x = 2;
     a.active = a.canMove = true;
     const p2 = moveUnit(s, a, { x: 7, y: 5 }, moveRange(s, a));

@@ -4,10 +4,10 @@ import type { Unit } from '@core/model';
 
 /** [CAMBIO] Seleccion como en los juegos de estrategia en tiempo real (controls/selection.ts). */
 const u = (uid: number, type = 0) => ({ uid, type }) as Unit;
-const ids = (s: ReadonlySet<number>) => [...s].sort((a, b) => a - b);
+const ids = (s: ReadonlySet<number>) => [...s].sort((first, second) => first - second);
 const plain = { shift: false, ctrl: false, count: 1 };
 const tanks = [u(1, 1), u(2, 1), u(5, 1)];
-const sameType = (h: Unit) => (h.type === 1 ? tanks : [h]);
+const sameType = (unit: Unit) => (unit.type === 1 ? tanks : [unit]);
 
 describe('seleccion', () => {
   it('clic en una unidad: solo esa; en vacio: ninguna', () => {

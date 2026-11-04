@@ -49,9 +49,9 @@ export class DecalLayer implements MapLayer {
 
   /** Quita las marcas de hace mas de un dia. */
   prune(day: number): void {
-    this.scorches = this.scorches.filter((m) => {
-      if (day - m.day < SCORCH_DAYS) return true;
-      m.g.destroy();
+    this.scorches = this.scorches.filter((scorch) => {
+      if (day - scorch.day < SCORCH_DAYS) return true;
+      scorch.g.destroy();
       return false;
     });
   }

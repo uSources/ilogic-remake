@@ -41,7 +41,7 @@ export function fuzzGame(seed: number, opts: { size?: number; days?: number; log
   if (initial.length) return { seed, day: 1, team: 0, action: 'mapa recien generado', errors: initial, before };
   while (outcome(s) === 'playing' && s.day <= (opts.days ?? 30) && !fail) {
     for (const team of [0, 1] as Team[]) {
-      if (rng() < 0.5) randomTurn(s, rng, team, (a) => check(team, a));
+      if (rng() < 0.5) randomTurn(s, rng, team, (action) => check(team, action));
       else for (const ev of aiTurn(s, rng, team)) check(team, `IA ${ev.kind} ${JSON.stringify(ev).slice(0, 80)}`);
       if (fail) return fail;
     }
@@ -53,16 +53,16 @@ export function fuzzGame(seed: number, opts: { size?: number; days?: number; log
 
 function main(): void {
   const args = process.argv.slice(2);
-  const num = (name: string, d: number) => {
+  const num = (name: string, fallback: number) => {
     const i = args.indexOf(`--${name}`);
-    return i >= 0 ? Number(args[i + 1]) : d;
+    return i >= 0 ? Number(args[i + 1]) : fallback;
   };
   const size = num('size', 20),
     days = num('days', 30);
   const repro = args.indexOf('--repro');
   if (repro >= 0) {
     const seed = Number(args[repro + 1]);
-    const f = fuzzGame(seed, { size, days, log: (l) => console.log(l) });
+    const f = fuzzGame(seed, { size, days, log: (line) => console.log(line) });
     console.log(f ? `\nFALLO: ${f.errors.join('; ')}` : '\nsin fallos');
     process.exit(f ? 1 : 0);
   }

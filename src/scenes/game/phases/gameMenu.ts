@@ -74,17 +74,17 @@ export class GameMenuChoices {
 }
 
 export const gameMenuPhase: PhaseHandler = {
-  enter: (h) => {
-    if (h.phase !== 'map' && h.phase !== 'gameMenu') h.abandonSelection();
-    h.menuSel = 0;
-    h.phase = 'gameMenu';
-    h.refresh();
+  enter: (host) => {
+    if (host.phase !== 'map' && host.phase !== 'gameMenu') host.abandonSelection();
+    host.menuSel = 0;
+    host.phase = 'gameMenu';
+    host.refresh();
   },
-  accept: (h) => {
-    const choice = GAME_MENU[h.menuSel];
-    if (choice) h.gameMenu.choose(choice);
+  accept: (host) => {
+    const choice = GAME_MENU[host.menuSel];
+    if (choice) host.gameMenu.choose(choice);
   },
-  back: (h) => h.toMap(),
+  back: (host) => host.toMap(),
   menu: gameMenuModel,
 };
 

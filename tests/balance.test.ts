@@ -92,12 +92,12 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
     const b = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(defaultContent()), content: defaultContent() });
     expect(a).toEqual(b);
     expect(a.samples.length).toBeGreaterThan(5);
-    expect(a.units[0]!.reduce((n, t) => n + t.bought, 0)).toBeGreaterThan(0);
+    expect(a.units[0]!.reduce((sum, unitTally) => sum + unitTally.bought, 0)).toBeGreaterThan(0);
   });
 
   it('duelos: sin contraataque el defensor no devuelve daño; con el, si', () => {
     const classic = duelMatrix({ trials: 20, terrain: 'Grass', seed: 1, rules: PLAIN_RULES, content: defaultContent() }).find(
-      (c) => c.attacker === 'Tank' && c.defender === 'Tank',
+      (cell) => cell.attacker === 'Tank' && cell.defender === 'Tank',
     )!;
     expect(classic.damage).toBeGreaterThan(0);
     expect(classic.counter).toBe(0);
@@ -107,7 +107,7 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
       seed: 1,
       rules: defaultContent().tables.DEFAULT_RULES,
       content: defaultContent(),
-    }).find((c) => c.attacker === 'Tank' && c.defender === 'Tank')!;
+    }).find((cell) => cell.attacker === 'Tank' && cell.defender === 'Tank')!;
     expect(modern.counter).toBeGreaterThan(0);
     // La artilleria no recibe contraataque.
     const art = duelMatrix({
@@ -116,7 +116,7 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
       seed: 1,
       rules: defaultContent().tables.DEFAULT_RULES,
       content: defaultContent(),
-    }).find((c) => c.attacker === 'Artillery' && c.defender === 'Tank')!;
+    }).find((cell) => cell.attacker === 'Artillery' && cell.defender === 'Tank')!;
     expect(art.counter).toBe(0);
   });
 });
@@ -134,7 +134,7 @@ describe('herramienta de equilibrio: cada hilo juega con el contenido de su vari
   it('los duelos tambien', async () => {
     const tankVsTank = async (set: Record<string, number>) =>
       (await runDuels(buildVariant({ name: 'v', set }, defaultContent()), { trials: 20, terrain: 'Grass', seed: 1 })).find(
-        (c) => c.attacker === 'Tank' && c.defender === 'Tank',
+        (cell) => cell.attacker === 'Tank' && cell.defender === 'Tank',
       );
     expect((await tankVsTank({}))!.damage).toBeGreaterThan(0);
     // Sin poder de tanque contra tanque, ese duelo ni se juega.

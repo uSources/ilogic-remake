@@ -8,11 +8,11 @@ import type { ViewOptions } from './viewOptions';
 import { attackZone, controlZones, dangerCorners, threatZone } from './zones';
 
 /** Niebla del dibujo de 2013: velo oscuro por casilla que no se ve (la nueva va en map/fogLayer.ts). */
-const classicFog: OverlayPainter = (g, opts, ctx) => {
+const classicFog: OverlayPainter = (graphics, opts, ctx) => {
   if (ctx.newArt) return;
-  g.fillStyle(PAL_MAP.fog, 0.5);
+  graphics.fillStyle(PAL_MAP.fog, 0.5);
   opts.vis.forEach((isVisible, { x, y }) => {
-    if (!isVisible) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+    if (!isVisible) graphics.fillRect(x * TILE, y * TILE, TILE, TILE);
   });
 };
 

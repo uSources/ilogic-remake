@@ -26,7 +26,7 @@ const textures = {
   get: () => ({ has: () => true }),
   getFrame: () => null,
 } as unknown as Phaser.Textures.TextureManager;
-const T = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
+const T = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
 
 beforeEach(() => {
   settings.lang = 'es';
@@ -160,7 +160,7 @@ describe('panel de combate', () => {
 });
 
 describe('desglose de la barra de arriba', () => {
-  const B = (n: string) => BUILDING_NAMES.indexOf(n);
+  const B = (name: string) => BUILDING_NAMES.indexOf(name);
   const army = () => {
     const s = blankState();
     s.funds = [5000, 5000];
@@ -178,28 +178,28 @@ describe('desglose de la barra de arriba', () => {
     const s = army();
     s.rules = rulesWith(defaultContent(), { upkeep: 0.1, commandPoints: 30 });
     const e = economyVM(s, 0);
-    expect(e.income.lines.map((l) => [l.label, l.count])).toEqual([
+    expect(e.income.lines.map((line) => [line.label, line.count])).toEqual([
       ['Ciudad', 2],
       ['Fábrica', 1],
       ['Pozo de petróleo', 1],
     ]);
-    expect(e.income.total).toBe(e.income.lines.reduce((n, l) => n + l.amount, 0));
-    expect(e.upkeep!.lines.find((l) => l.label === 'Soldado')!.count).toBe(2);
+    expect(e.income.total).toBe(e.income.lines.reduce((sum, line) => sum + line.amount, 0));
+    expect(e.upkeep!.lines.find((line) => line.label === 'Soldado')!.count).toBe(2);
     // El enemigo no cuenta
-    expect(e.upkeep!.lines.some((l) => l.label === 'Bombardero')).toBe(false);
+    expect(e.upkeep!.lines.some((line) => line.label === 'Bombardero')).toBe(false);
     expect(e.net).toBe(e.income.total - e.upkeep!.total);
     const next = e.next;
     endRound(s);
     expect(s.funds[0]).toBe(next); // lo que dice el desglose es lo que pasa
     expect(e.commandPoints!.used).toBe(UNIT.command[T('Tank')]! + 2 * UNIT.command[T('Soldier')]!);
-    expect(e.commandPoints!.lines.reduce((n, l) => n + l.amount, 0)).toBe(e.commandPoints!.used);
+    expect(e.commandPoints!.lines.reduce((sum, line) => sum + line.amount, 0)).toBe(e.commandPoints!.used);
   });
 
   it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
     const s = army();
     s.rules = rulesWith(defaultContent(), { upkeep: 1 });
     s.funds[0] = 0;
-    s.buildings = s.buildings.filter((b) => b.owner !== 0);
+    s.buildings = s.buildings.filter((building) => building.owner !== 0);
     const e = economyVM(s, 0);
     expect(e.income.total).toBe(0);
     expect(e.shortfall).toBe(0);

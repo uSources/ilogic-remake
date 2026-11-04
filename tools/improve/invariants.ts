@@ -36,18 +36,19 @@ export function checkInvariants(s: GameState): string[] {
   }
   for (const u of s.units) {
     if (u.carrier !== null) {
-      const c = s.units.find((v) => v.uid === u.carrier);
+      const c = s.units.find((unit) => unit.uid === u.carrier);
       if (!c) errs.push(`unidad ${u.uid}: su transporte ${u.carrier} no existe`);
       else if (!c.cargo.includes(u.uid)) errs.push(`unidad ${u.uid}: el transporte ${c.uid} no la lleva`);
       else if (c.team !== u.team) errs.push(`unidad ${u.uid}: va en un transporte enemigo`);
     }
     for (const c of u.cargo)
-      if (c !== null && s.units.find((v) => v.uid === c)?.carrier !== u.uid) errs.push(`unidad ${u.uid}: lleva a ${c} que no va dentro`);
+      if (c !== null && s.units.find((unit) => unit.uid === c)?.carrier !== u.uid)
+        errs.push(`unidad ${u.uid}: lleva a ${c} que no va dentro`);
   }
   for (const t of [0, 1] as const) {
     const f = s.funds[t];
     if (!(Number.isInteger(f) && f >= 0 && f <= MAX_FUNDS)) errs.push(`dinero del bando ${t}: ${f}`);
-    const n = s.units.filter((u) => u.team === t).length;
+    const n = s.units.filter((unit) => unit.team === t).length;
     if (n > s.rules.maxUnits) errs.push(`bando ${t}: ${n} unidades, el limite es ${s.rules.maxUnits}`);
     const cp = commandUsed(s, t);
     if (s.rules.commandPoints !== null && cp > s.rules.commandPoints)
@@ -60,7 +61,7 @@ export function checkInvariants(s: GameState): string[] {
     bpos.add(k);
     if (!(b.type >= 0 && b.type < BUILDING_NAMES.length)) errs.push(`edificio en (${k}): tipo ${b.type}`);
     if (b.capture) {
-      const cu = s.units.find((u) => u.uid === b.capture!.uid);
+      const cu = s.units.find((unit) => unit.uid === b.capture!.uid);
       if (b.capture.left <= 0) errs.push(`edificio en (${k}): captura con ${b.capture.left} puntos`);
       if (cu && (cu.x !== b.x || cu.y !== b.y) && cu.carrier === null)
         errs.push(`edificio en (${k}): lo captura la unidad ${cu.uid}, que no esta encima`);

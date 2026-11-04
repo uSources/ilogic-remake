@@ -20,16 +20,16 @@ export function generalVM(s: GameState, team: Team, targeting: string | null): G
     max: g.def.charge.max,
     fraction: stars >= g.def.charge.max ? 0 : g.state.charge - stars,
     targeting,
-    abilities: g.def.abilities.map((a) => {
+    abilities: g.def.abilities.map((ability) => {
       // 'target' solo dice que falta elegir casilla: se puede usar.
-      const block = abilityBlock(s, team, a.id, { x: 0, y: 0 });
+      const block = abilityBlock(s, team, ability.id, { x: 0, y: 0 });
       const text = block ? BLOCK_TEXT[block] : undefined;
       return {
-        id: a.id,
-        icon: `ui/ab_${a.id}`,
-        name: a.name[lang],
-        description: a.description[lang],
-        cost: a.cost,
+        id: ability.id,
+        icon: `ui/ab_${ability.id}`,
+        name: ability.name[lang],
+        description: ability.description[lang],
+        cost: ability.cost,
         ready: block === null,
         reason: text ? t(text) : null,
       };

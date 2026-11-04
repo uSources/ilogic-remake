@@ -83,9 +83,9 @@ export function score(r: Report, size: number): Metrics {
     s5 === null ? 1 : (0.95 - s5) / 0.25,
     s5 === null ? '-' : `${Math.round(s5 * 100)} %`,
   );
-  const bought = r.units.map((u) => u.bought).filter((b) => b > 0);
-  const total = bought.reduce((a, b) => a + b, 0);
-  const H = -bought.reduce((a, b) => a + (b / total) * Math.log(b / total), 0);
+  const bought = r.units.map((unitRow) => unitRow.bought).filter((count) => count > 0);
+  const total = bought.reduce((sum, count) => sum + count, 0);
+  const H = -bought.reduce((sum, count) => sum + (count / total) * Math.log(count / total), 0);
   const variety = r.units.length > 1 ? H / Math.log(r.units.length) : 0;
   add('variedad', 'Variedad de unidades compradas', 15, variety / 0.85, `${Math.round(variety * 100)} % de la variedad maxima`);
   // Rendimiento de cada unidad (valor destruido por coste) respecto a la mediana: dentro de la banda
@@ -93,15 +93,15 @@ export function score(r: Report, size: number): Metrics {
   // banda = 0). Asi acercar una unidad a la banda suma aunque aun no entre, y una que roza el borde no
   // hace saltar la nota.
   const [blo, bhi] = DEFAULT_TARGETS.efficiencyBand;
-  const effs = r.units.map((u) => u.efficiency).filter((e): e is number => e !== null);
-  const med2 = [...effs].sort((a, b) => a - b)[Math.floor(effs.length / 2)] ?? 1;
-  const fit = (e: number) => {
-    const x = Math.log(e / med2);
+  const effs = r.units.map((unitRow) => unitRow.efficiency).filter((entry): entry is number => entry !== null);
+  const med2 = [...effs].sort((first, second) => first - second)[Math.floor(effs.length / 2)] ?? 1;
+  const fit = (value: number) => {
+    const x = Math.log(value / med2);
     const out = x > Math.log(bhi) ? x - Math.log(bhi) : x < Math.log(blo) ? Math.log(blo) - x : 0;
     return clamp01(1 - out / Math.log(2));
   };
-  const inBand = effs.filter((e) => e >= med2 * blo && e <= med2 * bhi).length;
-  const priceFit = effs.length ? effs.reduce((a, e) => a + fit(e), 0) / effs.length : 1;
+  const inBand = effs.filter((value) => value >= med2 * blo && value <= med2 * bhi).length;
+  const priceFit = effs.length ? effs.reduce((amount, value) => amount + fit(value), 0) / effs.length : 1;
   add(
     'precios',
     'Unidades que rinden lo que cuestan',
@@ -114,7 +114,7 @@ export function score(r: Report, size: number): Metrics {
     date: new Date().toISOString().slice(0, 10),
     games: r.games,
     size,
-    total: Math.round(parts.reduce((a, p) => a + p.score, 0) * 10) / 10,
+    total: Math.round(parts.reduce((amount, part) => amount + part.score, 0) * 10) / 10,
     parts,
     flags: r.flags,
     units: r.units,
@@ -122,11 +122,13 @@ export function score(r: Report, size: number): Metrics {
 }
 
 export function metricsMarkdown(m: Metrics, base?: Metrics | null): string {
-  const delta = (id: string, v: number) => {
-    const b = base?.parts.find((p) => p.id === id)?.score;
-    return b === undefined ? '' : ` (${v - b >= 0 ? '+' : ''}${(v - b).toFixed(1)})`;
+  const delta = (id: string, value: number) => {
+    const b = base?.parts.find((part) => part.id === id)?.score;
+    return b === undefined ? '' : ` (${value - b >= 0 ? '+' : ''}${(value - b).toFixed(1)})`;
   };
-  const rows = m.parts.map((p) => `| ${p.label} | ${p.value} | ${p.score} / ${p.max}${delta(p.id, p.score)} |`).join('\n');
+  const rows = m.parts
+    .map((part) => `| ${part.label} | ${part.value} | ${part.score} / ${part.max}${delta(part.id, part.score)} |`)
+    .join('\n');
   const tot = base ? ` (linea base ${base.total}, ${m.total - base.total >= 0 ? '+' : ''}${(m.total - base.total).toFixed(1)})` : '';
   return `# Nota del juego: ${m.total} / 100${tot}
 
@@ -136,12 +138,12 @@ ${m.games} partidas IA contra IA en mapas de ${m.size}x${m.size} (mitad con los 
 |---|---|---|
 ${rows}
 
-${m.flags.length ? `Avisos del informe de equilibrio:\n${m.flags.map((f) => `- ${f}`).join('\n')}\n` : ''}`;
+${m.flags.length ? `Avisos del informe de equilibrio:\n${m.flags.map((flag) => `- ${flag}`).join('\n')}\n` : ''}`;
 }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const opt = (k: string) => (args.includes(`--${k}`) ? args[args.indexOf(`--${k}`) + 1] : undefined);
+  const opt = (key: string) => (args.includes(`--${key}`) ? args[args.indexOf(`--${key}`) + 1] : undefined);
   const games = Number(opt('games') ?? 120);
   const size = Number(opt('size') ?? 32);
   const name = opt('name') ?? 'actual';

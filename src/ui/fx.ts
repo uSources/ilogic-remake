@@ -195,7 +195,7 @@ export async function shot(scene: Phaser.Scene, view: FxHost, from: Pos, to: Pos
     const dot = fxRect(scene, view, x, y, dotSize, dotSize, color).setAlpha(0.9);
     trail.push(dot);
     // La estela se apaga por detras.
-    trail.forEach((trailDot, j) => trailDot.setAlpha(Math.max(0, 0.9 - (trail.length - 1 - j) * 0.22)));
+    trail.forEach((trailDot, index) => trailDot.setAlpha(Math.max(0, 0.9 - (trail.length - 1 - index) * 0.22)));
     await sleep(scene, ms / steps);
   }
   head.destroy();

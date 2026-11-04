@@ -24,16 +24,16 @@ export function openBuy(h: PhaseHost, building: Building): void {
 }
 
 export const buyPhase: PhaseHandler = {
-  accept: (h) => {
-    const building = h.buyAt;
-    if (h.menuSel === CANCEL_ROW || !building) return h.toMap();
-    const option = h.buyOptions[h.menuSel - 1];
+  accept: (host) => {
+    const building = host.buyAt;
+    if (host.menuSel === CANCEL_ROW || !building) return host.toMap();
+    const option = host.buyOptions[host.menuSel - 1];
     if (!option) return;
-    if (option.blocked) return showToast(buyBlockedText(h.state, option.blocked));
-    const unit = spawn(h.state, building, option.type);
-    if (unit) void h.play([{ kind: 'spawn', uid: unit.uid, at: posOf(building) }]).then(() => h.afterAction());
+    if (option.blocked) return showToast(buyBlockedText(host.state, option.blocked));
+    const unit = spawn(host.state, building, option.type);
+    if (unit) void host.play([{ kind: 'spawn', uid: unit.uid, at: posOf(building) }]).then(() => host.afterAction());
   },
-  back: (h) => h.toMap(),
+  back: (host) => host.toMap(),
   menu: (input) => {
     const building = input.building;
     const items: MenuItemVM[] = [{ id: 'cancel', label: t('cancel'), icon: null }, ...input.buy.map((option) => buyItem(input.s, option))];

@@ -23,7 +23,7 @@ function tally(types: number[], label: (t: number) => string, each: (t: number) 
   for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
   return [...counts]
     .map(([t, count]) => ({ label: label(t), count, amount: count * each(t) }))
-    .sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label));
+    .sort((first, second) => second.amount - first.amount || first.label.localeCompare(second.label));
 }
 
 /**
@@ -33,9 +33,9 @@ function tally(types: number[], label: (t: number) => string, each: (t: number) 
  * es el que se cobra, redondeado a 100).
  */
 export function economyVM(s: GameState, team: Team): EconomyVM {
-  const owned = s.buildings.filter((b) => b.owner === team).map((b) => b.type);
-  const units = s.units.filter((u) => u.team === team).map((u) => u.type);
-  const income = owned.reduce((n, t) => n + buildingIncome(s, t), 0);
+  const owned = s.buildings.filter((building) => building.owner === team).map((building) => building.type);
+  const units = s.units.filter((unit) => unit.team === team).map((unit) => unit.type);
+  const income = owned.reduce((sum, type) => sum + buildingIncome(s, type), 0);
   const upkeep = upkeepOf(s, team);
   // endRound cobra primero y despues paga lo que pueda del mantenimiento.
   const afterIncome = s.funds[team] + income;
@@ -57,7 +57,7 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
             lines: tally(
               units,
               (type) => unitLabel(s.content, type),
-              (t) => Math.round(UNIT.cost[t]! * s.rules.upkeep),
+              (type) => Math.round(UNIT.cost[type]! * s.rules.upkeep),
             ),
             total: upkeep,
             rate: s.rules.upkeep,
@@ -73,7 +73,7 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
             lines: tally(
               units,
               (type) => unitLabel(s.content, type),
-              (t) => UNIT.command[t]!,
+              (type) => UNIT.command[type]!,
             ),
             used: commandUsed(s, team),
             max: s.rules.commandPoints,

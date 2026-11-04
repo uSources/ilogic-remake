@@ -132,7 +132,7 @@ export function playGame(opts: PlayOptions): GameRecord {
             }
           }
           // Contraataque (si las reglas lo tienen): vida perdida por el atacante.
-          const after = s.units.find((u) => u.uid === ev.attacker);
+          const after = s.units.find((unit) => unit.uid === ev.attacker);
           if (atk) {
             const lost = atk.life - (after?.life ?? 0);
             if (lost > 0 && victim) {

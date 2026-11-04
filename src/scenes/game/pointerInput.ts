@@ -72,7 +72,7 @@ const TOGGLE_ONE = { shift: true, ctrl: false, count: 1 };
 const isPlayer = (unit: Unit) => unit.team === 0;
 
 /** Una unidad que el jugador puede ver en el mapa (suya, o enemiga a la vista). */
-const isVisibleOnMap = (h: PointerHost, unit: Unit) => unit.carrier === null && (isPlayer(unit) || h.visible(unit));
+const isVisibleOnMap = (pointerHost: PointerHost, unit: Unit) => unit.carrier === null && (isPlayer(unit) || pointerHost.visible(unit));
 
 /** Añadir o quitar `unit` de lo elegido, como un clic con Mayusculas. */
 function toggleInSelection(picks: GroupSelection, unit: Unit | null): void {

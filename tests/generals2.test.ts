@@ -9,8 +9,8 @@ import { blankState } from './helpers';
 const { UNIT_NAMES, AI } = defaultContent().tables;
 
 /** Roca (reparar) y Ambar (dinero): los efectos heal y funds, y como los valora la IA. */
-const T = (n: string) => UNIT_NAMES.indexOf(n);
-const def = (id: string) => defaultContent().files.generals.find((g) => g.id === id)!;
+const T = (name: string) => UNIT_NAMES.indexOf(name);
+const def = (id: string) => defaultContent().files.generals.find((general) => general.id === id)!;
 
 /** Reglas de las partidas de estos tests. */
 const TEST_RULES = rulesWith(defaultContent(), { fog: false, weather: false });
@@ -66,7 +66,7 @@ describe('Ambar: suministros', () => {
     const s = blankState(TEST_RULES);
     s.generals = [newGeneral(s, 'Ambar'), null];
     s.generals[0]!.charge = 6;
-    const amount = (def('Ambar').abilities.find((a) => a.id === 'supplies')!.effect as { amount: number }).amount;
+    const amount = (def('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount;
     const before = s.funds[0];
     const ev = useAbility(s, 0, 'supplies')!;
     expect(s.funds[0]).toBe(before + amount);
@@ -88,6 +88,6 @@ describe('Ambar: suministros', () => {
     newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });
     const c = chooseAbility(s, 1)!;
     expect(c.ability).toBe('supplies');
-    expect(c.value).toBe((def('Ambar').abilities.find((a) => a.id === 'supplies')!.effect as { amount: number }).amount);
+    expect(c.value).toBe((def('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount);
   });
 });

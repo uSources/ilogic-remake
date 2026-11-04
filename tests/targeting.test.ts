@@ -8,7 +8,7 @@ import { blankState } from './helpers';
 
 const { UNIT, UNIT_NAMES } = defaultContent().tables;
 
-const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
+const type = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
 const WOODS = 2;
 
 describe('ordenes del jugador', () => {

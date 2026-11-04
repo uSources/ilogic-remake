@@ -36,29 +36,29 @@ const FIRST_PASSENGER_ROW = 1;
 const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (h: PhaseHost, unit: Unit) => void } = {
   attack: pickAttackTarget,
   capture: captureHere,
-  unload: (h) => {
-    h.menuSel = FIRST_PASSENGER_ROW;
-    h.phase = 'unloadPick';
-    h.refresh();
+  unload: (host) => {
+    host.menuSel = FIRST_PASSENGER_ROW;
+    host.phase = 'unloadPick';
+    host.refresh();
   },
-  supply: (h, unit) => {
-    h.moves.clearUndo();
-    supply(h.state, unit);
-    h.afterAction();
+  supply: (host, unit) => {
+    host.moves.clearUndo();
+    supply(host.state, unit);
+    host.afterAction();
   },
-  wait: (h, unit) => {
+  wait: (host, unit) => {
     wait(unit);
-    h.afterAction();
+    host.afterAction();
   },
-  orderToAttack: (h, unit) => startOrder(h, unit, 'attack'),
-  orderToCapture: (h, unit) => startOrder(h, unit, 'capture'),
-  orderToDefend: (h, unit) => startOrder(h, unit, 'defend'),
-  cancelOrder: (h, unit) => {
-    cancelStandingOrder(h.state, [unit]);
+  orderToAttack: (host, unit) => startOrder(host, unit, 'attack'),
+  orderToCapture: (host, unit) => startOrder(host, unit, 'capture'),
+  orderToDefend: (host, unit) => startOrder(host, unit, 'defend'),
+  cancelOrder: (host, unit) => {
+    cancelStandingOrder(host.state, [unit]);
     showToast(t('orderCancelled'));
-    h.enter('unitMenu');
+    host.enter('unitMenu');
   },
-  back: (h) => h.moves.undoMove(),
+  back: (host) => host.moves.undoMove(),
   delete: deleteUnit,
 };
 
@@ -101,26 +101,26 @@ function deleteUnit(h: PhaseHost, unit: Unit): void {
 }
 
 export const unitMenuPhase: PhaseHandler = {
-  enter: (h) => {
-    const unit = h.moves.selected;
-    if (!unit) return h.toMap();
-    const can = unitActions(h.state, unit);
+  enter: (host) => {
+    const unit = host.moves.selected;
+    if (!unit) return host.toMap();
+    const can = unitActions(host.state, unit);
     // [CAMBIO] "Atras" siempre: deshace el movimiento (en el original no se podia).
     can.back = true;
-    h.unitOptions = ACTION_ORDER.filter((action) => can[action]);
+    host.unitOptions = ACTION_ORDER.filter((action) => can[action]);
     // Encima de un edificio que se puede capturar, lo normal es capturar.
-    h.menuSel = Math.max(0, h.unitOptions.indexOf('capture'));
-    h.deleteArmed = false;
-    h.phase = 'unitMenu';
-    h.view.cursor = posOf(unit);
-    h.refresh();
+    host.menuSel = Math.max(0, host.unitOptions.indexOf('capture'));
+    host.deleteArmed = false;
+    host.phase = 'unitMenu';
+    host.view.cursor = posOf(unit);
+    host.refresh();
   },
-  accept: (h) => {
-    const unit = h.moves.selected;
-    const action = h.unitOptions[h.menuSel];
-    if (unit && action) UNIT_MENU_ACTIONS[action](h, unit);
+  accept: (host) => {
+    const unit = host.moves.selected;
+    const action = host.unitOptions[host.menuSel];
+    if (unit && action) UNIT_MENU_ACTIONS[action](host, unit);
   },
-  back: (h) => h.moves.undoMove(),
+  back: (host) => host.moves.undoMove(),
   menu: unitMenuModel,
 };
 
@@ -145,35 +145,35 @@ function unitMenuModel(input: MenuInput): MenuModel {
 }
 
 export const attackPhase: PhaseHandler = {
-  accept: (h) => {
-    const unit = h.moves.selected;
-    const cursor = h.view.cursor;
-    const targetUid = h.moves.session?.attackTargets.get(posKey(cursor));
-    if (!unit || targetUid === undefined) return h.enter('unitMenu');
-    const target = unitById(h.state, targetUid)!;
-    void h.play([attackEvent(h.state, unit, target, Math.random)]).then(() => h.afterAction());
+  accept: (host) => {
+    const unit = host.moves.selected;
+    const cursor = host.view.cursor;
+    const targetUid = host.moves.session?.attackTargets.get(posKey(cursor));
+    if (!unit || targetUid === undefined) return host.enter('unitMenu');
+    const target = unitById(host.state, targetUid)!;
+    void host.play([attackEvent(host.state, unit, target, Math.random)]).then(() => host.afterAction());
   },
-  back: (h) => h.enter('unitMenu'),
+  back: (host) => host.enter('unitMenu'),
   highlights: (input) => markTiles(input.attack.keys(), 'attack'),
 };
 
 export const unloadPickPhase: PhaseHandler = {
-  accept: (h) => {
-    if (h.menuSel === BACK_ROW) return h.enter('unitMenu');
-    const session = h.moves.session;
+  accept: (host) => {
+    if (host.menuSel === BACK_ROW) return host.enter('unitMenu');
+    const session = host.moves.session;
     if (!session) return;
     const carrier = session.unit;
-    const passenger = unitById(h.state, carrier.cargo[h.menuSel - FIRST_PASSENGER_ROW] ?? null);
+    const passenger = unitById(host.state, carrier.cargo[host.menuSel - FIRST_PASSENGER_ROW] ?? null);
     if (!passenger) return;
-    const tiles = unloadTiles(h.state, carrier, passenger);
+    const tiles = unloadTiles(host.state, carrier, passenger);
     if (!tiles.length) return;
     session.passenger = passenger;
     session.unloadTiles = new Set(tiles.map(posKey));
-    h.phase = 'unloadTile';
-    h.view.cursor = { ...tiles[0]! };
-    h.refresh();
+    host.phase = 'unloadTile';
+    host.view.cursor = { ...tiles[0]! };
+    host.refresh();
   },
-  back: (h) => h.enter('unitMenu'),
+  back: (host) => host.enter('unitMenu'),
   menu: cargoMenuModel,
 };
 
@@ -198,22 +198,22 @@ function cargoMenuModel(input: MenuInput): MenuModel {
 }
 
 export const unloadTilePhase: PhaseHandler = {
-  accept: (h) => {
-    const session = h.moves.session;
+  accept: (host) => {
+    const session = host.moves.session;
     if (!session?.passenger) return;
-    const cursor = h.view.cursor;
+    const cursor = host.view.cursor;
     if (!session.unloadTiles.has(posKey(cursor))) {
-      h.phase = 'unloadPick';
-      return h.refresh();
+      host.phase = 'unloadPick';
+      return host.refresh();
     }
-    if (!unload(h.state, session.unit, session.passenger, cursor)) return;
-    h.moves.clearUndo();
-    h.afterAction();
+    if (!unload(host.state, session.unit, session.passenger, cursor)) return;
+    host.moves.clearUndo();
+    host.afterAction();
   },
-  back: (h) => {
-    h.phase = 'unloadPick';
-    h.menuSel = BACK_ROW;
-    h.refresh();
+  back: (host) => {
+    host.phase = 'unloadPick';
+    host.menuSel = BACK_ROW;
+    host.refresh();
   },
   highlights: (input) => markTiles(input.unload, 'unload'),
 };

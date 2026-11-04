@@ -13,16 +13,16 @@ import { savedByVersion1 } from './helpers';
 const { UNIT, HQ } = defaultContent().tables;
 
 describe('misiones', () => {
-  it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: mapa valido y bases conectadas', (_id, m) => {
-    expect(checkMission(m, defaultContent())).toEqual([]);
-    const s = buildMission(m, defaultContent());
-    const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
-    const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
+  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: mapa valido y bases conectadas', (_id, mission) => {
+    expect(checkMission(mission, defaultContent())).toEqual([]);
+    const s = buildMission(mission, defaultContent());
+    const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
+    const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
     expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
     expect(outcome(s)).toBe('playing');
     const obj = s.mission!.objective;
     if (obj.kind === 'escort') {
-      const vip = s.units.find((u) => u.uid === obj.uid)!;
+      const vip = s.units.find((unit) => unit.uid === obj.uid)!;
       expect(groundDistance(s, vip, UNIT.movtype[vip.type]!, createLayer(s, false)).at(obj.to), 'el convoy puede llegar').toBeGreaterThan(
         0,
       );
@@ -31,31 +31,34 @@ describe('misiones', () => {
     expect(deserialize(serialize(s), saveContext(defaultContent()))!.mission).toEqual(s.mission);
   });
 
-  it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: guardada y cargada sigue con sus reglas (fallo K1)', (_id, m) => {
-    const s = buildMission(m, defaultContent());
-    expect(s.rules).toEqual(missionRules(m, defaultContent()));
-    expect(s.rules).not.toEqual(defaultContent().tables.DEFAULT_RULES); // sin mantenimiento, ni puntos de mando, ni clima
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules).toEqual(missionRules(m, defaultContent()));
-    // Las guardadas antes del arreglo (version 1) a veces no llevaban reglas: se recuperan las de su mision.
-    const old = JSON.parse(serialize(s)) as { rules?: unknown };
-    delete old.rules;
-    expect(deserialize(savedByVersion1(JSON.stringify(old)), saveContext(defaultContent()))!.rules).toEqual(
-      missionRules(m, defaultContent()),
-    );
-    // Una guardada despues sin reglas esta rota.
-    expect(deserialize(JSON.stringify(old), saveContext(defaultContent()))).toBeNull();
-  });
+  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))(
+    '%s: guardada y cargada sigue con sus reglas (fallo K1)',
+    (_id, mission) => {
+      const s = buildMission(mission, defaultContent());
+      expect(s.rules).toEqual(missionRules(mission, defaultContent()));
+      expect(s.rules).not.toEqual(defaultContent().tables.DEFAULT_RULES); // sin mantenimiento, ni puntos de mando, ni clima
+      expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules).toEqual(missionRules(mission, defaultContent()));
+      // Las guardadas antes del arreglo (version 1) a veces no llevaban reglas: se recuperan las de su mision.
+      const old = JSON.parse(serialize(s)) as { rules?: unknown };
+      delete old.rules;
+      expect(deserialize(savedByVersion1(JSON.stringify(old)), saveContext(defaultContent()))!.rules).toEqual(
+        missionRules(mission, defaultContent()),
+      );
+      // Una guardada despues sin reglas esta rota.
+      expect(deserialize(JSON.stringify(old), saveContext(defaultContent()))).toBeNull();
+    },
+  );
 
-  it.each(MISSIONS.map((m) => [m.id, m] as const))(
+  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))(
     '%s: guardada con las reglas de escaramuza, se juega con las suyas (fallo K1)',
-    (_id, m) => {
+    (_id, mission) => {
       // Las guardadas con el fallo (version 1) llevaban las reglas de siempre: no se distinguen de unas
       // elegidas, asi que una mision conocida de antes del arreglo se juega con las suyas.
-      const saved = JSON.parse(serialize(buildMission(m, defaultContent()))) as { rules: unknown };
+      const saved = JSON.parse(serialize(buildMission(mission, defaultContent()))) as { rules: unknown };
       saved.rules = rulesWith(defaultContent());
       expect(saved.rules).toEqual(defaultContent().tables.DEFAULT_RULES);
       expect(deserialize(savedByVersion1(JSON.stringify(saved)), saveContext(defaultContent()))!.rules).toEqual(
-        missionRules(m, defaultContent()),
+        missionRules(mission, defaultContent()),
       );
     },
   );
@@ -85,8 +88,8 @@ describe('misiones', () => {
     );
   });
 
-  it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: se juega IA contra IA sin errores', (_id, m) => {
-    const s = buildMission(m, defaultContent());
+  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
+    const s = buildMission(mission, defaultContent());
     const rng = seededRng(5);
     for (let d = 0; d < 20 && outcome(s) === 'playing'; d++) {
       for (const team of [0, 1] as const) {
@@ -99,7 +102,7 @@ describe('misiones', () => {
   });
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
-    const byId = (id: string) => MISSIONS.find((m) => m.id === id)!;
+    const byId = (id: string) => MISSIONS.find((mission) => mission.id === id)!;
     const hold = buildMission(byId('hold'), defaultContent());
     hold.day = 9;
     expect(outcome(hold)).toBe('won');
@@ -112,17 +115,17 @@ describe('misiones', () => {
     expect(outcome(bh2)).toBe('lost');
 
     const cl = buildMission(byId('cleanup'), defaultContent());
-    cl.units = cl.units.filter((u) => u.team === 0);
+    cl.units = cl.units.filter((unit) => unit.team === 0);
     expect(outcome(cl)).toBe('won');
 
     const es = buildMission(byId('escort'), defaultContent());
     const obj = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
-    const vip = es.units.find((u) => u.uid === obj.uid)!;
+    const vip = es.units.find((unit) => unit.uid === obj.uid)!;
     expect(outcome(es)).toBe('playing');
     vip.x = obj.to.x;
     vip.y = obj.to.y;
     expect(outcome(es)).toBe('won');
-    es.units = es.units.filter((u) => u.uid !== obj.uid);
+    es.units = es.units.filter((unit) => unit.uid !== obj.uid);
     expect(outcome(es)).toBe('lost');
   });
 });

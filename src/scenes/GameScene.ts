@@ -764,7 +764,7 @@ export class GameScene extends Phaser.Scene {
       danger: isMoving ? (session?.danger ?? null) : null,
       intents: this.intentsToDraw(),
       captures: captureBars(this.s, this.vis),
-      controlPoints: controlPointMarks(this.s, (p) => this.visibleToPlayer(p)),
+      controlPoints: controlPointMarks(this.s, (pos) => this.visibleToPlayer(pos)),
       ...escortMarks(this.s, this.hidden),
     };
   }
@@ -782,11 +782,11 @@ export class GameScene extends Phaser.Scene {
       unload: session?.unloadTiles ?? new Set(),
       orderMenuUids: this.orders.menu?.uids ?? null,
       orderingUids: this.orders.ordering?.uids ?? null,
-      targetArea: (c) => this.abilities.area(c),
+      targetArea: (pos) => this.abilities.area(pos),
       group: this.selection.group,
       inspectUid: this.inspectUid,
       enemyPlaying: this.enemyPlaying,
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
     });
     if (marks.inspectGone) this.inspectUid = null;
     return marks.tiles;
@@ -897,9 +897,9 @@ export class GameScene extends Phaser.Scene {
       phase: this.phase,
       sel: this.moves.selected,
       c: cursor,
-      intentAt: (p) => this.moves.intentAt(p),
+      intentAt: (pos) => this.moves.intentAt(pos),
       attackSet: this.moves.session?.attackTargets ?? NO_TILES,
-      anchor: (p) => this.anchor('forecast', p),
+      anchor: (pos) => this.anchor('forecast', pos),
     });
   }
 
@@ -909,10 +909,10 @@ export class GameScene extends Phaser.Scene {
       sel: this.moves.selected,
       range: this.moves.session?.range ?? null,
       c: cursor,
-      intentAt: (p) => this.moves.intentAt(p),
+      intentAt: (pos) => this.moves.intentAt(pos),
       trailTo: (dest) => this.moves.trailTo(dest),
       danger: this.moves.session?.danger ?? null,
-      anchor: (p) => this.anchor('moveTip', p),
+      anchor: (pos) => this.anchor('moveTip', pos),
     });
   }
 
@@ -986,32 +986,32 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       menuSel: rw(
         () => this.menuSel,
-        (v) => (this.menuSel = v),
+        (value) => (this.menuSel = value),
       ),
       menuItems: { get: () => this.menuItems },
       inspectUid: rw(
         () => this.inspectUid,
-        (v) => (this.inspectUid = v),
+        (value) => (this.inspectUid = value),
       ),
       unitOptions: rw(
         () => this.unitOptions,
-        (v) => (this.unitOptions = v),
+        (value) => (this.unitOptions = value),
       ),
       deleteArmed: rw(
         () => this.deleteArmed,
-        (v) => (this.deleteArmed = v),
+        (flag) => (this.deleteArmed = flag),
       ),
       buyAt: rw(
         () => this.buyAt,
-        (v) => (this.buyAt = v),
+        (building) => (this.buyAt = building),
       ),
       buyOptions: rw(
         () => this.buyOptions,
-        (v) => (this.buyOptions = v),
+        (value) => (this.buyOptions = value),
       ),
       moves: { get: () => this.moves },
       selection: { get: () => this.selection },
@@ -1024,7 +1024,7 @@ export class GameScene extends Phaser.Scene {
       afterAction: () => this.afterAction(),
       abandonSelection: () => this.abandonSelection(),
       inspect: (unit) => this.inspect(unit),
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       play: (events) => this.playEvents(events),
     });
   }
@@ -1035,15 +1035,15 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: rw(
         () => this.s,
-        (v) => (this.s = v),
+        (state) => (this.s = state),
       ),
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       ended: { get: () => this.ended },
       selection: { get: () => this.selection },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       play: (events, ghostKey) => this.playEvents(events, ghostKey),
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
@@ -1060,11 +1060,11 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       menuSel: rw(
         () => this.menuSel,
-        (v) => (this.menuSel = v),
+        (value) => (this.menuSel = value),
       ),
       match: { get: () => this.match },
       sel: { get: () => this.moves.selected },
@@ -1074,13 +1074,13 @@ export class GameScene extends Phaser.Scene {
       stopInspect: () => {
         this.inspectUid = null;
       },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       intentAt: (tile) => this.moves.intentAt(tile),
       toMap: () => this.toMap(),
       back: () => this.back(),
       refresh: () => this.refresh(),
       selectUnit: (unit) => this.moves.select(unit),
-      moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
+      moveCursorTo: (pos, follow) => this.moveCursorTo(pos, follow),
       commit: (tile, opts) => this.moves.commit(tile, opts),
       groupMove: (goal) => this.moves.groupMove(goal),
       giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
@@ -1153,14 +1153,14 @@ export class GameScene extends Phaser.Scene {
       lastCommit: { get: () => this.moves.lastCommit },
       inspectUid: rw(
         () => this.inspectUid,
-        (v) => (this.inspectUid = v),
+        (value) => (this.inspectUid = value),
       ),
       selection: { get: () => this.selection },
       carry: { get: () => this.carry },
       skipAnimations: () => {
         this.fastForward = true;
       },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       intentAt: (tile) => this.moves.intentAt(tile),
       actionCtx: (at) => this.orders.ctx(at),
       runAction: (id, at, opts) => this.orders.run(id, at, opts),
@@ -1172,7 +1172,7 @@ export class GameScene extends Phaser.Scene {
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
       cursorMoved: () => this.cursorMoved(),
-      moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
+      moveCursorTo: (pos, follow) => this.moveCursorTo(pos, follow),
       setPointer: (kind) => this.orders.setPointer(kind),
       updatePointer: (tile) => this.orders.updatePointer(tile),
       commit: (tile, opts) => this.moves.commit(tile, opts),
@@ -1188,7 +1188,7 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       abandonSelection: () => this.abandonSelection(),
       toMap: () => this.toMap(),
@@ -1204,16 +1204,16 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       fastForward: rw(
         () => this.fastForward,
-        (v) => (this.fastForward = v),
+        (flag) => (this.fastForward = flag),
       ),
       enemyPlaying: { get: () => this.enemyPlaying },
       replaying: { get: () => this.turns.replaying },
       hidden: { get: () => this.hidden },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
       noteEvent: (event) => this.noteEvent(event),
@@ -1226,22 +1226,22 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: rw(
         () => this.s,
-        (v) => (this.s = v),
+        (state) => (this.s = state),
       ),
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       match: { get: () => this.match },
       ended: { get: () => this.ended },
       lab: { get: () => !!this.lab },
       fastForward: rw(
         () => this.fastForward,
-        (v) => (this.fastForward = v),
+        (flag) => (this.fastForward = flag),
       ),
       inputLockUntil: rw(
         () => this.inputLockUntil,
-        (v) => (this.inputLockUntil = v),
+        (value) => (this.inputLockUntil = value),
       ),
       play: (events) => this.playEvents(events),
       wait: (ms) => this.player.wait(ms),
@@ -1251,7 +1251,7 @@ export class GameScene extends Phaser.Scene {
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       idleUnits: () => this.idleUnits(),
       markSaved: () => {
         this.savedThisGame = true;

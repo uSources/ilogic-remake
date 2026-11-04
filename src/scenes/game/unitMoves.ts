@@ -61,7 +61,7 @@ function visibleEnemyUids(s: GameState): string {
   return s.units
     .filter((unit) => unit.team === 1 && unit.carrier === null && vis.at(unit))
     .map((unit) => unit.uid)
-    .sort((a, b) => a - b)
+    .sort((first, second) => first - second)
     .join(',');
 }
 
@@ -118,7 +118,7 @@ export class UnitMoves {
 
   /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */
   intentAt(tile: Pos): Intent {
-    return this.session ? this.session.intentAt(this.h.state, tile, (p) => this.h.visible(p)) : { kind: 'none' };
+    return this.session ? this.session.intentAt(this.h.state, tile, (pos) => this.h.visible(pos)) : { kind: 'none' };
   }
 
   /** Camino de la unidad elegida hasta `dest` (ver MoveSession.trailTo). */
@@ -244,7 +244,7 @@ export class UnitMoves {
     const closestFirst = [...h.selection.group]
       .map((uid) => unitById(h.state, uid))
       .filter((unit): unit is Unit => !!unit && unit.active && unit.canMove && unit.carrier === null)
-      .sort((a, b) => manhattan(a, goal) - manhattan(b, goal));
+      .sort((firstUnit, secondUnit) => manhattan(firstUnit, goal) - manhattan(secondUnit, goal));
     // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
     this.clearUndo();
     for (const unit of closestFirst) {

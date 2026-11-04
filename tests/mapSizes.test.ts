@@ -29,7 +29,11 @@ function measure(s: GameState) {
   const board = mapGrid(s);
   const seen = visibility(s, 0);
   const tiles = reachableTiles(moveRange(s, s.units[0]!));
-  return { size: [board.width, board.height], seen: [seen.width, seen.height, [...seen.cells()].filter((c) => c.value).length], tiles };
+  return {
+    size: [board.width, board.height],
+    seen: [seen.width, seen.height, [...seen.cells()].filter((gridCell) => gridCell.value).length],
+    tiles,
+  };
 }
 
 describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', () => {

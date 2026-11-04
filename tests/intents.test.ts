@@ -27,7 +27,7 @@ function playOrders(s: GameState, seed = 99): void {
   Array.from(assistTurn(s, seededRng(seed)));
 }
 
-const last = (p: Pos[]): Pos | undefined => p[p.length - 1];
+const last = (path: Pos[]): Pos | undefined => path[path.length - 1];
 
 describe('previewStandingOrders', () => {
   it('capturar: prevé el camino hasta el edificio y la captura, y el turno real hace eso', () => {

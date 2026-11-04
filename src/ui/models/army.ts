@@ -7,8 +7,8 @@ import { t } from '../../settings';
 /** Tus unidades: nombre de las ordenes y escuadras de la bandeja. */
 
 /** [CAMBIO] Nombre de una orden con destino ("Atacar aquí"...). */
-export const standingOrderLabel = (k: StandingOrderKind): string =>
-  t(k === 'capture' ? 'orderCapture' : k === 'defend' ? 'orderDefend' : 'orderAttack');
+export const standingOrderLabel = (kind: StandingOrderKind): string =>
+  t(kind === 'capture' ? 'orderCapture' : kind === 'defend' ? 'orderDefend' : 'orderAttack');
 
 /**
  * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades, su orden (la de la
@@ -17,28 +17,28 @@ export const standingOrderLabel = (k: StandingOrderKind): string =>
  */
 export function squadsVM(s: GameState): SquadVM[] {
   return (s.squads ?? [])
-    .map((q) => {
-      const units = s.units.filter((u) => u.squad === q.id);
+    .map((listed) => {
+      const units = s.units.filter((unit) => unit.squad === listed.id);
       const first = units[0] && effectiveStandingOrder(s, units[0]);
       const same =
         !!first &&
-        units.every((u) => {
-          const c = effectiveStandingOrder(s, u);
+        units.every((unit) => {
+          const c = effectiveStandingOrder(s, unit);
           return c?.kind === first.kind && samePos(c.at, first.at);
         });
-      const formation = squadInFormation(s, q.id);
-      const kind = q.standingOrder?.kind ?? (same ? first.kind : formation ? 'capture' : null);
-      const detached = units.filter((u) => isDetached(s, u)).length;
+      const formation = squadInFormation(s, listed.id);
+      const kind = listed.standingOrder?.kind ?? (same ? first.kind : formation ? 'capture' : null);
+      const detached = units.filter((unit) => isDetached(s, unit)).length;
       return {
-        id: q.id,
-        name: q.name,
-        key: q.key,
+        id: listed.id,
+        name: listed.name,
+        key: listed.key,
         count: units.length,
         order: kind ? standingOrderLabel(kind) : null,
         formation,
         detached,
       };
     })
-    .filter((q) => q.count > 0)
-    .sort((a, b) => (a.key ?? 99) - (b.key ?? 99));
+    .filter((squad) => squad.count > 0)
+    .sort((first, second) => (first.key ?? 99) - (second.key ?? 99));
 }

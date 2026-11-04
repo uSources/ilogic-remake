@@ -57,7 +57,7 @@ describe('elegir el mejor', () => {
   });
 
   it('maxBy se queda con el primero si empatan', () => {
-    expect(maxBy([1, 3, 3, 2], (n) => n)).toBe(3);
+    expect(maxBy([1, 3, 3, 2], (value) => value)).toBe(3);
     expect(maxBy(['x', 'yy', 'zz'], (word) => word.length)).toBe('yy');
   });
 });

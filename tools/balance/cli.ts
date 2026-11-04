@@ -35,8 +35,8 @@ function args(argv: string[]) {
       (out[key] ??= []).push(v);
     } else pos.push(a);
   }
-  const one = (k: string, d?: string) => out[k]?.[out[k]!.length - 1] ?? d;
-  return { pos, all: (k: string) => out[k] ?? [], one, num: (k: string, d: number) => Number(one(k, String(d))) };
+  const one = (key: string, fallback?: string) => out[key]?.[out[key]!.length - 1] ?? fallback;
+  return { pos, all: (key: string) => out[key] ?? [], one, num: (key: string, fallback: number) => Number(one(key, String(fallback))) };
 }
 
 function parseValue(v: string): number | string | boolean | null {
@@ -148,7 +148,8 @@ async function main(): Promise<void> {
     case 'compare': {
       const [x, y] = a.pos;
       if (!x || !y) throw new Error('Uso: compare <informe-antes> <informe-despues>');
-      const read = (n: string) => JSON.parse(readFileSync(n.endsWith('.json') ? n : join(REPORTS, `${n}.json`), 'utf8')) as Report;
+      const read = (name: string) =>
+        JSON.parse(readFileSync(name.endsWith('.json') ? name : join(REPORTS, `${name}.json`), 'utf8')) as Report;
       const md = compareMarkdown(read(x), read(y));
       console.log(md);
       save(`comparar-${x}-vs-${y}`.replace(/\.json/g, ''), md);
@@ -160,7 +161,7 @@ async function main(): Promise<void> {
       if (!a.one('name')) variant.name = `${variant.name}-ajustada`;
       const iterations = a.num('iterations', 3);
       let best = await evaluate(variant, a);
-      const score = (r: Report) => r.flags.length + r.suggestions.length * 0.5;
+      const score = (report: Report) => report.flags.length + report.suggestions.length * 0.5;
       console.log(`Punto de partida: ${best.flags.length} avisos, ${best.suggestions.length} propuestas`);
       for (let i = 1; i <= iterations && best.suggestions.length; i++) {
         const next: Variant = { ...variant, set: { ...variant.set } };
@@ -190,7 +191,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error(e instanceof Error ? e.message : e);
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

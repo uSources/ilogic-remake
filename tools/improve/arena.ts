@@ -28,8 +28,8 @@ type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
 
 function strength(s: GameState, t: Team): number {
   const { UNIT } = tablesOf(s);
-  const army = s.units.filter((u) => u.team === t).reduce((a, u) => a + (UNIT.cost[u.type]! * u.life) / 100, 0);
-  return army + s.buildings.filter((b) => b.owner === t).length * 1500 + s.funds[t] * 0.5;
+  const army = s.units.filter((unit) => unit.team === t).reduce((amount, unit) => amount + (UNIT.cost[unit.type]! * unit.life) / 100, 0);
+  return army + s.buildings.filter((building) => building.owner === t).length * 1500 + s.funds[t] * 0.5;
 }
 
 /** Una partida; devuelve el bando ganador (o null si empate). */
@@ -89,8 +89,8 @@ function aiFiles(): string[] {
   return [
     'ai.ts',
     ...readdirSync(`${ROOT}src/core/ai`)
-      .filter((f) => f.endsWith('.ts'))
-      .map((f) => `ai/${f}`),
+      .filter((file) => file.endsWith('.ts'))
+      .map((file) => `ai/${file}`),
   ];
 }
 
@@ -102,9 +102,9 @@ function aiFiles(): string[] {
 export function snapshotSource(rel: string, src: string, copied: ReadonlySet<string>): string {
   const dir = posix.dirname(rel);
   const weights = dir === '.' ? './weights' : posix.relative(dir, 'weights');
-  const out = src.replace(/from '(\.{1,2}\/[^']+)'/g, (m, spec: string) => {
+  const out = src.replace(/from '(\.{1,2}\/[^']+)'/g, (match, spec: string) => {
     const target = posix.normalize(posix.join(dir, spec));
-    return copied.has(`${target}.ts`) ? m : `from '@core/${target}'`;
+    return copied.has(`${target}.ts`) ? match : `from '@core/${target}'`;
   });
   // import { weightsOf, X } from '@core/gameContent' -> import { X } from '@core/gameContent' + import { weightsOf } from './weights'
   return out.replace(/import \{([^}]*)\} from '@core\/gameContent';/, (whole, names: string) => {
@@ -143,7 +143,7 @@ function snapshot(): void {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.includes('--snapshot')) return snapshot();
-  const opt = (k: string, d: number) => (args.includes(`--${k}`) ? Number(args[args.indexOf(`--${k}`) + 1]) : d);
+  const opt = (key: string, fallback: number) => (args.includes(`--${key}`) ? Number(args[args.indexOf(`--${key}`) + 1]) : fallback);
   if (!existsSync(`${BASE_DIR}ai.ts`)) {
     console.log('No hay IA de referencia: npm run arena -- --snapshot');
     process.exit(1);

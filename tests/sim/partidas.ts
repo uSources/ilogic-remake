@@ -21,7 +21,7 @@ export function checkInvariants(s: GameState): void {
       expect(seen.has(k), `dos unidades en ${k}`).toBe(false);
       seen.add(k);
     } else {
-      expect(s.units.find((t) => t.uid === u.carrier)?.cargo).toContain(u.uid);
+      expect(s.units.find((unit) => unit.uid === u.carrier)?.cargo).toContain(u.uid);
     }
   }
 }

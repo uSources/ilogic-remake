@@ -53,7 +53,7 @@ export interface IlogicDebug {
   freeze(on?: boolean): void;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function until(cond: () => boolean, timeoutMs: number, what: string): Promise<void> {
   const end = Date.now() + timeoutMs;
@@ -66,8 +66,8 @@ async function until(cond: () => boolean, timeoutMs: number, what: string): Prom
 export function installDebug(game: Phaser.Game): void {
   const scene = (key: string) => game.scene.getScene(key);
   const gameScene = () => {
-    const g = scene('Game') as GameScene | null;
-    return g?.sys.isActive() ? g : null;
+    const found = scene('Game') as GameScene | null;
+    return found?.sys.isActive() ? found : null;
   };
   const activeScene = () => game.scene.getScenes(true)[0] ?? null;
 
@@ -113,13 +113,13 @@ export function installDebug(game: Phaser.Game): void {
       await sleep(50);
     },
     state() {
-      const g = gameScene();
-      return g ? (JSON.parse(g.debugSnapshot().state) as SavedGameState) : null;
+      const running = gameScene();
+      return running ? (JSON.parse(running.debugSnapshot().state) as SavedGameState) : null;
     },
     game() {
-      const g = gameScene();
-      if (!g) return null;
-      const { phase, busy, ended, day, cursor } = g.debugSnapshot();
+      const running = gameScene();
+      if (!running) return null;
+      const { phase, busy, ended, day, cursor } = running.debugSnapshot();
       return { phase, busy, ended, day, cursor };
     },
     idle: (timeoutMs = 60000) => until(() => !gameScene()?.debugSnapshot().busy, timeoutMs, 'turno del jugador'),

@@ -51,9 +51,9 @@ function scenarios(): Scenario[] {
 
 /** El jugador junta sus tres primeras unidades en una escuadra y la manda a atacar la base enemiga. */
 function orderPlayerSquad(s: GameState): void {
-  const target = s.buildings.find((b) => b.owner === 1);
+  const target = s.buildings.find((building) => building.owner === 1);
   if (!target) return;
-  const squadUnits = s.units.filter((u) => u.team === 0 && u.squad === undefined).slice(0, 3);
+  const squadUnits = s.units.filter((unit) => unit.team === 0 && unit.squad === undefined).slice(0, 3);
   if (squadUnits.length < 2 || !formSquad(s, squadUnits)) return;
   giveStandingOrder(s, squadUnits, 'attack', target);
 }

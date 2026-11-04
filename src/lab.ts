@@ -49,7 +49,7 @@ export function labRules(action: LabAction | null): RulesConfig {
  * Partida del laboratorio: todo hierba, una Base por bando en las esquinas (si no, la partida
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
-export function labState(o: LabOptions, action: LabAction | null): GameState {
+export function labState(options: LabOptions, action: LabAction | null): GameState {
   const s = newGameState({ map: blankMap(LAB_SIZE), rules: labRules(action), content: defaultContent(), funds: [0, 0] });
   const hq = tablesOf(s).HQ;
   s.buildings.push(
@@ -57,9 +57,9 @@ export function labState(o: LabOptions, action: LabAction | null): GameState {
     { type: hq, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
   );
   const near = action !== null && action !== 'move';
-  const from = near ? { x: LAB_TARGET.x - labRange(s, o.attacker), y: LAB_TARGET.y } : LAB_FROM;
-  newUnit(s, o.attacker, 0, from);
-  const d = newUnit(s, o.defender, 1, LAB_TARGET);
-  if (action === 'kill') d.life = 15;
+  const from = near ? { x: LAB_TARGET.x - labRange(s, options.attacker), y: LAB_TARGET.y } : LAB_FROM;
+  newUnit(s, options.attacker, 0, from);
+  const defender = newUnit(s, options.defender, 1, LAB_TARGET);
+  if (action === 'kill') defender.life = 15;
   return s;
 }

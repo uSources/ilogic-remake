@@ -38,8 +38,8 @@ export function startLab(h: LabHost, o: LabOptions): void {
 
 async function runLab(h: LabHost, action: LabAction): Promise<void> {
   const s = h.state;
-  const me = s.units.find((u) => u.team === 0);
-  const foe = s.units.find((u) => u.team === 1);
+  const me = s.units.find((unit) => unit.team === 0);
+  const foe = s.units.find((unit) => unit.team === 1);
   if (!me || !foe) return;
   if (action === 'move') {
     const range = moveRange(s, me);

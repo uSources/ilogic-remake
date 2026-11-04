@@ -31,13 +31,13 @@ describe('puntos de mando', () => {
     newUnit(s, TANK, 0, { x: 1, y: 1 });
     newUnit(s, TANK, 0, { x: 2, y: 2 }); // 8 de 10
     expect(armyLimit(s, 0, TANK)).toBe('command');
-    expect(buyOptions(s, f).find((o) => o.type === TANK)?.blocked).toBe('command');
+    expect(buyOptions(s, f).find((buyOption) => buyOption.type === TANK)?.blocked).toBe('command');
     expect(spawn(s, f, TANK)).toBeNull();
     expect(s.funds[0]).toBe(100000);
     // Lo pequeño si cabe.
     const city = { type: CITY, owner: 0 as const, x: 6, y: 6 };
     s.buildings.push(city);
-    expect(buyOptions(s, city).find((o) => o.type === SOLDIER)?.affordable).toBe(true);
+    expect(buyOptions(s, city).find((buyOption) => buyOption.type === SOLDIER)?.affordable).toBe(true);
     expect(spawn(s, city, SOLDIER)).not.toBeNull();
   });
 

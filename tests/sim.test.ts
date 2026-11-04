@@ -13,17 +13,17 @@ describe('generador de mapas', () => {
   it('100 mapas: ambas bases, conectadas por tierra, con unidades y neutrales', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const s = createGame(seededRng(seed), {});
-      const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
-      const hq1 = s.buildings.find((b) => b.owner === 1 && b.type === HQ)!;
+      const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
+      const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
       expect(hq1, `seed ${seed}`).toBeTruthy();
       expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
-      expect(s.units.filter((u) => u.team === 0)).toHaveLength(3);
-      expect(s.units.filter((u) => u.team === 1)).toHaveLength(3);
-      const neutral = s.buildings.filter((b) => b.owner === null).length;
+      expect(s.units.filter((unit) => unit.team === 0)).toHaveLength(3);
+      expect(s.units.filter((unit) => unit.team === 1)).toHaveLength(3);
+      const neutral = s.buildings.filter((building) => building.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(20);
       expect(s.map).toHaveLength(32);
-      expect(new Set(s.buildings.map((b) => `${b.x},${b.y}`)).size).toBe(s.buildings.length);
+      expect(new Set(s.buildings.map((building) => `${building.x},${building.y}`)).size).toBe(s.buildings.length);
       checkInvariants(s);
     }
   });

@@ -92,12 +92,12 @@ describe('puntos de control', () => {
       const pts = s.controlPoints ?? [];
       total += pts.length;
       expect(pts.length).toBeLessThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlPoints);
-      const hq = (team: 0 | 1) => s.buildings.find((b) => b.type === HQ && b.owner === team)!;
+      const hq = (team: 0 | 1) => s.buildings.find((building) => building.type === HQ && building.owner === team)!;
       const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
       const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
       for (const p of pts) {
         expect(p.owner).toBeNull();
-        expect(s.buildings.some((b) => b.x === p.x && b.y === p.y)).toBe(false);
+        expect(s.buildings.some((building) => building.x === p.x && building.y === p.y)).toBe(false);
         // Casi a la misma distancia de las dos Bases (las salidas estan junto a ellas).
         expect(Math.abs(da.at(p) - db.at(p))).toBeLessThanOrEqual(8);
       }

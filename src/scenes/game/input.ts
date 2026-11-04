@@ -56,17 +56,19 @@ export function bindInput(scene: Phaser.Scene, target: InputTarget, gestures: Po
   if (scene.input.manager.pointersTotal < 3) scene.input.addPointer(1);
   // Que el navegador no use estas teclas (Tab cambia el foco, Espacio desplaza la pagina...).
   scene.input.keyboard!.addCapture('TAB,SPACE,UP,DOWN,LEFT,RIGHT,BACKSPACE');
-  scene.input.keyboard!.on('keydown', (e: KeyboardEvent) => onKey(e, target));
+  scene.input.keyboard!.on('keydown', (event: KeyboardEvent) => onKey(event, target));
   // Raton y dedos: el adaptador decide el gesto; GameScene.pointerTarget() dice que hace en la partida.
   const g = gestures;
   const pin = pointerIn;
-  scene.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => g.move(pin(p, false)));
-  scene.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => g.down(pin(p, p.rightButtonDown(), p.middleButtonDown())));
-  scene.input.on(Phaser.Input.Events.POINTER_UP, (p: Phaser.Input.Pointer) =>
-    g.up(pin(p, p.rightButtonReleased(), p.middleButtonReleased())),
+  scene.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => g.move(pin(pointer, false)));
+  scene.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) =>
+    g.down(pin(pointer, pointer.rightButtonDown(), pointer.middleButtonDown())),
+  );
+  scene.input.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) =>
+    g.up(pin(pointer, pointer.rightButtonReleased(), pointer.middleButtonReleased())),
   );
   scene.input.on(Phaser.Input.Events.GAME_OUT, () => g.leave());
-  scene.input.on(Phaser.Input.Events.POINTER_WHEEL, (p: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) =>
-    g.wheel(dy, p.x, p.y),
+  scene.input.on(Phaser.Input.Events.POINTER_WHEEL, (pointer: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) =>
+    g.wheel(dy, pointer.x, pointer.y),
   );
 }

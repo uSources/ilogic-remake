@@ -41,8 +41,8 @@ function place(s: GameState, a: Unit, b: Unit): void {
   s.units = [a, b];
 }
 
-const fresh = (u: Unit) => {
-  u.active = u.canMove = u.canFire = true;
+const fresh = (unit: Unit) => {
+  unit.active = unit.canMove = unit.canFire = true;
 };
 
 /** Cuantos duelos por pareja, en que terreno, con que semilla y con que reglas. */
