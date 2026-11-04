@@ -107,7 +107,7 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
 | Tipo de lo que enseña cada panel | `vm/<panel>.ts` (`TileVM` en `vm/tile.ts`...) |
 | Calculo de esos datos a partir de la partida (puro, con test) | `src/ui/models/<panel>.ts`, reexportado en `src/ui/hudModels.ts` |
 | Raiz: pantalla en curso, dialogos y avisos | `Hud.tsx` |
-| Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` |
+| Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
 | Pantallas del menu, pausa y final | `menus/*.tsx` |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
 | Piezas compartidas | `common/`: `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
@@ -115,7 +115,7 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
 
 - **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,
   la funcion que lo calcula en `ui/models/` (con test), el componente en `game/` (o `menus/`,
-  `overlays/`), su sitio en `GameHud.tsx` (o `Hud.tsx`), sus acciones en `actions.ts` con su valor
+  `overlays/`), su entrada en `GAME_PANELS` de `GameHud.tsx` (o `Hud.tsx`), sus acciones en `actions.ts` con su valor
   por defecto en `DEFAULT_ACTIONS`, y su hoja al final de `hud.css`.
 - **Botones**: siempre `Button` (o `Btn` en los menus), que no se queda con el foco: Enter y las
   flechas son del juego (lo lleva la escena con el teclado). Solo el cuadro del nombre de escuadra
@@ -124,6 +124,10 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
   en ese orden, que es el de la cascada. Por eso hay alguna mezclada (`base/narrow.css`,
   `legacy.css`): mover reglas de sitio puede cambiar quien gana. Lo nuevo va al final; los colores son
   variables de `styles/base/base.css` (los mismos que `ui/palette.ts`).
+- **Textos**: `t('clave')` (de `settings.ts`) busca en `src/i18n/`, un fichero por tema en `es/` y su
+  traduccion con el mismo nombre en `en/` (tipada con `Translation`: si falta una clave, no
+  compila). Un texto nuevo va al tema que toca en `es/` y luego en `en/`; las claves no se repiten
+  entre temas (`tests/i18n.test.ts`).
 - Los textos salen de `t('clave')` al pintar: por eso los componentes no se memorizan (`memo`), un
   cambio de idioma o de escala tiene que repintarlos aunque sus datos no cambien.
 

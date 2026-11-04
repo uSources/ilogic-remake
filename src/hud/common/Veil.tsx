@@ -6,13 +6,13 @@ import type { ComponentChildren } from 'preact';
  * - `veil` (opciones, pausa): cierra con el clic completo.
  */
 export function Veil({ kind, onClose, children }: { kind: 'help-veil' | 'veil'; onClose: () => void; children: ComponentChildren }) {
-  const outside = (e: Event) => e.target === e.currentTarget && onClose();
+  const closeIfOutside = (event: Event) => event.target === event.currentTarget && onClose();
   return kind === 'veil' ? (
-    <div class="veil" onClick={outside}>
+    <div class="veil" onClick={closeIfOutside}>
       {children}
     </div>
   ) : (
-    <div class="help-veil" onPointerDown={outside}>
+    <div class="help-veil" onPointerDown={closeIfOutside}>
       {children}
     </div>
   );

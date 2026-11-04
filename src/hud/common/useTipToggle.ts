@@ -4,6 +4,6 @@ import { useState } from 'preact/compat';
 export function useTipToggle(): [boolean, () => void, (e: PointerEvent) => void] {
   const [open, setOpen] = useState(false);
   // Salir con el raton lo cierra; con el dedo no (el navegador "sale" al levantarlo, justo tras abrirlo).
-  const leave = (e: PointerEvent) => e.pointerType === 'mouse' && setOpen(false);
-  return [open, () => setOpen((o) => !o), leave];
+  const leave = (event: PointerEvent) => event.pointerType === 'mouse' && setOpen(false);
+  return [open, () => setOpen((isOpen) => !isOpen), leave];
 }

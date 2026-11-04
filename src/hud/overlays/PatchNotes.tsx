@@ -1,44 +1,56 @@
 import type { ComponentChildren } from 'preact';
 import { closeNotes, openLink, selectNote } from '../../patchNotes';
 import type { Block, Inline } from '../../patchNotes/markdown';
-import { settings, t } from '../../settings';
+import { settings, t, type TextKey } from '../../settings';
 import { Button } from '../common/buttons';
 import { Veil } from '../common/Veil';
 import type { NotesVM } from '../vm/notes';
 
-function fmtDate(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(`${iso}T12:00:00`);
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleDateString(settings.lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+type NoteVersion = NotesVM['items'][number];
+
+/** Aviso de abajo segun de donde salen las notas (con conexion no hace falta decir nada). */
+const STATUS_TEXT: Record<NotesVM['status'], TextKey | null> = {
+  loading: 'notesLoading',
+  offline: 'notesOffline',
+  cached: 'notesCached',
+  online: null,
+};
+
+/** "3 nov 2026" en el idioma del juego; si la fecha no se entiende, tal cual. */
+function formatDate(isoDate: string): string {
+  if (!isoDate) return '';
+  // A mediodia, para que ningun huso horario la pase al dia de antes o de despues.
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  return date.toLocaleDateString(settings.lang === 'es' ? 'es-ES' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function Inl({ c }: { c: Inline[] }) {
+/** Texto con formato dentro de un parrafo (negrita, cursiva, codigo, enlaces). */
+function InlineText({ parts }: { parts: Inline[] }) {
   return (
     <>
-      {c.map((x): ComponentChildren => {
-        switch (x.t) {
+      {parts.map((part): ComponentChildren => {
+        switch (part.t) {
           case 'text':
-            return x.v;
+            return part.v;
           case 'strong':
             return (
               <strong>
-                <Inl c={x.c} />
+                <InlineText parts={part.c} />
               </strong>
             );
           case 'em':
             return (
               <em>
-                <Inl c={x.c} />
+                <InlineText parts={part.c} />
               </em>
             );
           case 'code':
-            return <code>{x.v}</code>;
+            return <code>{part.v}</code>;
           case 'link':
             return (
-              <a href={x.href} target="_blank" rel="noopener noreferrer">
-                <Inl c={x.c} />
+              <a href={part.href} target="_blank" rel="noopener noreferrer">
+                <InlineText parts={part.c} />
               </a>
             );
         }
@@ -47,60 +59,113 @@ function Inl({ c }: { c: Inline[] }) {
   );
 }
 
+function List({ block }: { block: Extract<Block, { t: 'list' }> }) {
+  const Tag = block.ordered ? 'ol' : 'ul';
+  return (
+    <Tag>
+      {block.items.map((item) => (
+        <li class={item.depth ? 'sub' : ''}>
+          <InlineText parts={item.c} />
+        </li>
+      ))}
+    </Tag>
+  );
+}
+
+/** Las notas de una version, ya pasadas de Markdown a bloques (src/patchNotes/markdown.ts). */
 function Blocks({ blocks }: { blocks: Block[] }) {
   return (
     <>
-      {blocks.map((b): ComponentChildren => {
-        switch (b.t) {
+      {blocks.map((block): ComponentChildren => {
+        switch (block.t) {
           case 'h':
-            return b.level <= 2 ? (
+            return block.level <= 2 ? (
               <h3>
-                <Inl c={b.c} />
+                <InlineText parts={block.c} />
               </h3>
             ) : (
               <h4>
-                <Inl c={b.c} />
+                <InlineText parts={block.c} />
               </h4>
             );
           case 'p':
             return (
               <p>
-                <Inl c={b.c} />
+                <InlineText parts={block.c} />
               </p>
             );
           case 'quote':
             return (
               <blockquote>
-                <Inl c={b.c} />
+                <InlineText parts={block.c} />
               </blockquote>
             );
           case 'code':
-            return <pre>{b.v}</pre>;
+            return <pre>{block.v}</pre>;
           case 'hr':
             return <hr />;
-          case 'list': {
-            const Tag = b.ordered ? 'ol' : 'ul';
-            return (
-              <Tag>
-                {b.items.map((it) => (
-                  <li class={it.depth ? 'sub' : ''}>
-                    <Inl c={it.c} />
-                  </li>
-                ))}
-              </Tag>
-            );
-          }
+          case 'list':
+            return <List block={block} />;
         }
       })}
     </>
   );
 }
 
+/** "Hay una versión nueva: v1.2 (tienes la v1.1)" con su boton de descarga. */
+function UpdateBanner({ update, current }: { update: NonNullable<NotesVM['update']>; current: string }) {
+  return (
+    <div class="notes-update">
+      <span>
+        {t('notesUpdate')} <b>v{update.version}</b>{' '}
+        <span class="muted">
+          ({t('notesYouHave')} v{current})
+        </span>
+      </span>
+      <Button class="px-btn" onClick={() => openLink(update.url)}>
+        {t('notesDownload')}
+      </Button>
+    </div>
+  );
+}
+
+function VersionButton({ version, index, isSelected }: { version: NoteVersion; index: number; isSelected: boolean }) {
+  return (
+    <Button
+      role="option"
+      aria-selected={isSelected}
+      class={`notes-ver ${isSelected ? 'sel' : ''}`}
+      onClick={() => selectNote(index)}
+      scrollTo={isSelected}
+    >
+      <span class="nv-top">
+        <span class="nv-num">v{version.version}</span>
+        {version.isNew && <span class="nv-tag new">{t('notesNew')}</span>}
+        {version.current && <span class="nv-tag">{t('notesCurrent')}</span>}
+        {version.prerelease && <span class="nv-tag">beta</span>}
+      </span>
+      {version.title && <span class="nv-title">{version.title}</span>}
+      {version.date && <span class="nv-date">{formatDate(version.date)}</span>}
+    </Button>
+  );
+}
+
+function VersionHeader({ version }: { version: NoteVersion }) {
+  return (
+    <div class="nt-head">
+      <span class="big">
+        v{version.version}
+        {version.title ? ` · ${version.title}` : ''}
+      </span>
+      {version.date && <span class="muted small">{formatDate(version.date)}</span>}
+    </div>
+  );
+}
+
 /** Panel de novedades: lista de versiones a la izquierda y las notas de la elegida. */
-export function PatchNotes({ n }: { n: NotesVM }) {
-  const it = n.items[n.selected];
-  const status =
-    n.status === 'loading' ? t('notesLoading') : n.status === 'offline' ? t('notesOffline') : n.status === 'cached' ? t('notesCached') : '';
+export function PatchNotes({ notes }: { notes: NotesVM }) {
+  const selected = notes.items[notes.selected];
+  const statusKey = STATUS_TEXT[notes.status];
   return (
     <Veil kind="help-veil" onClose={closeNotes}>
       <div class="px notes" role="dialog" aria-label={t('news')}>
@@ -110,58 +175,22 @@ export function PatchNotes({ n }: { n: NotesVM }) {
             {t('close')} <span class="key">Esc</span>
           </Button>
         </div>
-        {n.update && (
-          <div class="notes-update">
-            <span>
-              {t('notesUpdate')} <b>v{n.update.version}</b>{' '}
-              <span class="muted">
-                ({t('notesYouHave')} v{n.current})
-              </span>
-            </span>
-            <Button class="px-btn" onClick={() => openLink(n.update!.url)}>
-              {t('notesDownload')}
-            </Button>
-          </div>
-        )}
+        {notes.update && <UpdateBanner update={notes.update} current={notes.current} />}
         <div class="notes-body">
           <div class="notes-list" role="listbox">
-            {n.items.map((x, i) => (
-              <Button
-                key={x.version}
-                role="option"
-                aria-selected={i === n.selected}
-                class={`notes-ver ${i === n.selected ? 'sel' : ''}`}
-                onClick={() => selectNote(i)}
-                scrollTo={i === n.selected}
-              >
-                <span class="nv-top">
-                  <span class="nv-num">v{x.version}</span>
-                  {x.isNew && <span class="nv-tag new">{t('notesNew')}</span>}
-                  {x.current && <span class="nv-tag">{t('notesCurrent')}</span>}
-                  {x.prerelease && <span class="nv-tag">beta</span>}
-                </span>
-                {x.title && <span class="nv-title">{x.title}</span>}
-                {x.date && <span class="nv-date">{fmtDate(x.date)}</span>}
-              </Button>
+            {notes.items.map((version, i) => (
+              <VersionButton key={version.version} version={version} index={i} isSelected={i === notes.selected} />
             ))}
-            {!n.items.length && <p class="muted">{t('notesEmpty')}</p>}
+            {!notes.items.length && <p class="muted">{t('notesEmpty')}</p>}
           </div>
           <article class="notes-text">
-            {it && (
-              <div class="nt-head">
-                <span class="big">
-                  v{it.version}
-                  {it.title ? ` · ${it.title}` : ''}
-                </span>
-                {it.date && <span class="muted small">{fmtDate(it.date)}</span>}
-              </div>
-            )}
-            <Blocks blocks={n.blocks} />
+            {selected && <VersionHeader version={selected} />}
+            <Blocks blocks={notes.blocks} />
           </article>
         </div>
         <div class="notes-foot">
-          <span class="muted small">{status}</span>
-          <Button class="link" onClick={() => openLink(n.url ?? n.repoUrl)}>
+          <span class="muted small">{statusKey ? t(statusKey) : ''}</span>
+          <Button class="link" onClick={() => openLink(notes.url ?? notes.repoUrl)}>
             {t('notesOnGithub')} ↗
           </Button>
         </div>

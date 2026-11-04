@@ -31,16 +31,18 @@ export interface UnitVM {
   detached?: boolean;
 }
 
+export interface BuildingVM {
+  icon: string | null;
+  name: string;
+  owner: 'you' | 'enemy' | 'neutral' | 'unknown';
+  income: number;
+  /** Captura a medias: puntos que quedan, total y quien captura. */
+  capture?: { left: number; total: number; team: 0 | 1 };
+}
+
 export interface TileVM {
   terrain: { key: string; name: string; defense: number; cost?: { foot: number | null; vehicle: number | null } };
-  building?: {
-    icon: string | null;
-    name: string;
-    owner: 'you' | 'enemy' | 'neutral' | 'unknown';
-    income: number;
-    /** Captura a medias: puntos que quedan, total y quien captura. */
-    capture?: { left: number; total: number; team: 0 | 1 };
-  };
+  building?: BuildingVM;
   unit?: UnitVM;
   /** [CAMBIO] Punto de control en la casilla: de quien es y lo que da por ronda. */
   point?: { owner: 'you' | 'enemy' | 'neutral'; income: number; contested: boolean; icon: string };

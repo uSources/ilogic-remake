@@ -97,27 +97,30 @@ export const ui = {
       scheduled = true;
       queueMicrotask(() => {
         scheduled = false;
-        listeners.forEach((l) => l());
+        listeners.forEach((listener) => listener());
       });
     }
   },
-  subscribe(l: Listener): () => void {
-    listeners.add(l);
-    return () => listeners.delete(l);
+  subscribe(listener: Listener): () => void {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
   },
   actions: { ...DEFAULT_ACTIONS },
 };
 
-let toastId = 0;
+/** Un numero nuevo para cada aviso, resumen o cartel: con el de `key`, uno nuevo vuelve a empezar su animacion. */
+let lastNoticeId = 0;
+const nextNoticeId = () => ++lastNoticeId;
+
 export function showToast(text: string): void {
-  ui.set({ toast: { text, id: ++toastId } });
+  ui.set({ toast: { text, id: nextNoticeId() } });
 }
 export function showReport(title: string, lines: ReportLineVM[]): void {
-  ui.set({ report: { title, lines, id: ++toastId } });
+  ui.set({ report: { title, lines, id: nextNoticeId() } });
 }
 
 export function showBanner(small: string, big: string, tone: 'blue' | 'red'): void {
-  ui.set({ banner: { small, big, tone, id: ++toastId } });
+  ui.set({ banner: { small, big, tone, id: nextNoticeId() } });
 }
 
 /** Quita las acciones que registro una escena (se llama al cerrarla: nada de botones que actuen sobre una escena cerrada). */
