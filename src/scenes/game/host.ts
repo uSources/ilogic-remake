@@ -10,13 +10,18 @@ export type Live<T> = {
 };
 
 export function live<T extends object>(spec: Live<T>): T {
-  const o = {};
-  for (const [k, v] of Object.entries(spec as Record<string, unknown>)) {
-    if (typeof v === 'function') Object.defineProperty(o, k, { value: v, enumerable: true });
+  const host = {};
+  for (const [name, member] of Object.entries(spec as Record<string, unknown>)) {
+    if (typeof member === 'function') Object.defineProperty(host, name, { value: member, enumerable: true });
     else {
-      const a = v as { get: () => unknown; set?: (x: unknown) => void };
-      Object.defineProperty(o, k, { get: a.get, set: a.set, enumerable: true });
+      const field = member as { get: () => unknown; set?: (value: unknown) => void };
+      Object.defineProperty(host, name, { get: field.get, set: field.set, enumerable: true });
     }
   }
-  return o as T;
+  return host as T;
+}
+
+/** Un campo que el modulo lee y cambia: `phase: rw(() => this.phase, (v) => (this.phase = v))`. */
+export function rw<T>(get: () => T, set: (value: T) => void): { get: () => T; set: (value: T) => void } {
+  return { get, set };
 }

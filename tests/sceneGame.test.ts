@@ -10,7 +10,11 @@ import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
-import type { Phase } from '../src/scenes/game/types';
+import { MENU_PHASES, type Phase } from '../src/scenes/game/types';
+import { PHASES } from '../src/scenes/game/phases';
+import { hasMenu } from '../src/scenes/game/menuModel';
+import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
+import { ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { blankState } from './helpers';
 
@@ -212,5 +216,27 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
     selection.group = new Set([a.uid]);
     expect(orders.ctx({ x: 8, y: 5 })?.enemyHere).toBe(true);
     expect(orders.ctx({ x: 9, y: 5 })?.enemyHere).toBe(false);
+  });
+
+  it('cada accion se cumple con su entrada del registro: formar escuadra con el grupo', async () => {
+    const s = blankState();
+    const a = newUnit(s, type('Soldier'), 0, 5, 5);
+    const b = newUnit(s, type('Soldier'), 0, 6, 5);
+    const { selection, orders } = setup(s);
+    selection.group = new Set([a.uid, b.uid]);
+    await orders.run('squadForm', null);
+    expect(a.squad).toBeDefined();
+    expect(b.squad).toBe(a.squad);
+  });
+});
+
+describe('escena: tabla de fases (game/phases)', () => {
+  it('hay una entrada por fase, y las que tienen menu de bocadillo son las de MENU_PHASES', () => {
+    const phases = Object.keys(PHASES) as Phase[];
+    expect(phases.filter(hasMenu)).toEqual(MENU_PHASES);
+  });
+
+  it('cada accion del registro (controls/actions.ts) tiene quien la cumpla', () => {
+    expect(ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
   });
 });

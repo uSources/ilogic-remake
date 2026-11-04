@@ -2,7 +2,7 @@
  * Habilidades del general del jugador desde su panel: las de area pasan a elegir casilla (fase
  * 'target'); el resto se usan ya. La animacion esta en playback.ts (evento 'ability').
  */
-import { MAP_H, MAP_W } from '../../core/data';
+import { inBounds } from '../../core/geom';
 import { abilityArea, abilityBlock, areaTiles, generalOf, useAbility } from '../../core/generals';
 import type { GameEvent, GameState, Pos } from '../../core/types';
 import { showToast } from '../../hud/store';
@@ -28,9 +28,7 @@ export class GeneralAbilities {
   /** Habilidad elegida en el panel: las de area pasan a elegir casilla; el resto se usan ya. */
   async start(id: string): Promise<void> {
     const h = this.h;
-    const g = generalOf(h.state, 0);
-    const a = g?.def.abilities.find((x) => x.id === id);
-    if (!g || !a) return;
+    if (!this.abilityById(id)) return;
     const block = abilityBlock(h.state, 0, id);
     if (block === 'target') {
       h.abandonSelection();
@@ -40,16 +38,21 @@ export class GeneralAbilities {
     }
     if (block) return showToast(t(block === 'used' ? 'genUsed' : 'genCharge'));
     if (h.phase === 'target') h.toMap();
-    const ev = useAbility(h.state, 0, id);
-    if (ev) await h.play([ev]);
+    const event = useAbility(h.state, 0, id);
+    if (event) await h.play([event]);
   }
 
   /** Casillas que tocaria la habilidad que se apunta si se lanza en `c` (dentro del mapa). */
   area(c: Pos): Pos[] {
-    const a = this.targeting ? generalOf(this.h.state, 0)?.def.abilities.find((x) => x.id === this.targeting) : undefined;
-    const r = a ? abilityArea(a) : null;
-    if (r === null) return [];
-    return areaTiles(c, r).filter((p) => p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H);
+    const ability = this.targeting ? this.abilityById(this.targeting) : undefined;
+    const radius = ability ? abilityArea(ability) : null;
+    if (radius === null) return [];
+    return areaTiles(c, radius).filter((p) => inBounds(p.x, p.y));
+  }
+
+  /** Habilidad del general del jugador con ese id (undefined si no tiene general o no la tiene). */
+  private abilityById(id: string) {
+    return generalOf(this.h.state, 0)?.def.abilities.find((ability) => ability.id === id);
   }
 
   /** Lanzar la habilidad que se apunta en `c`. */
@@ -57,8 +60,8 @@ export class GeneralAbilities {
     const h = this.h;
     const id = this.targeting;
     if (!id) return h.toMap();
-    const ev = useAbility(h.state, 0, id, c);
+    const event = useAbility(h.state, 0, id, c);
     h.toMap();
-    if (ev) await h.play([ev]);
+    if (event) await h.play([event]);
   }
 }
