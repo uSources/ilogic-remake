@@ -5,7 +5,7 @@ import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState } from './helpers';
+import { blankState, savedByVersion1 } from './helpers';
 
 const { UNIT, HEALER, BUILDING } = defaultContent().tables;
 
@@ -117,7 +117,7 @@ describe('partidas guardadas', () => {
     const s = blankState();
     const old = JSON.parse(serialize(s)) as { rules: Record<string, unknown> };
     for (const k of ['vetBonus', 'bounty', 'flankBonus', 'noHealUnderFire']) delete old.rules[k];
-    const back = deserialize(JSON.stringify(old), saveContext(defaultContent()));
+    const back = deserialize(savedByVersion1(JSON.stringify(old)), saveContext(defaultContent()));
     expect(back?.rules).toMatchObject({ vetBonus: 0.05, bounty: 0, flankBonus: 0, noHealUnderFire: false });
   });
 });

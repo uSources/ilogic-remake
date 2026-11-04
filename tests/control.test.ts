@@ -9,7 +9,7 @@ import { placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, savedByVersion1 } from './helpers';
 
 const { HQ } = defaultContent().tables;
 
@@ -134,7 +134,7 @@ describe('puntos de control', () => {
     delete raw.rules.controlIncome;
     delete raw.rules.controlRadius;
     raw.controlPoints = [{ x: -1, y: 2, owner: 0 }];
-    const old = deserialize(JSON.stringify(raw), saveContext(defaultContent()))!;
+    const old = deserialize(savedByVersion1(JSON.stringify(raw)), saveContext(defaultContent()))!;
     expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0, controlRadius: 0 });
     expect(old.controlPoints).toBeUndefined();
   });

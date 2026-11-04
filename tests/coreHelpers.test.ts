@@ -14,7 +14,7 @@ import {
 } from '@core/rules';
 import type { MovePath } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState } from './helpers';
+import { blankState, savedByVersion1 } from './helpers';
 
 const { UNIT, BUILDING, HQ, TERRAIN } = defaultContent().tables;
 
@@ -110,7 +110,7 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 2 as 1 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 3 as 2 })],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',
@@ -173,7 +173,7 @@ describe('partidas guardadas', () => {
     Object.assign(s.units[0]!, { fuel: 1e9, ammo: 3 }); // partida guardada antes de quitarlos
     s.nextUid = 0;
     s.day = -3;
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
+    const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
     expect(back.units[0]).not.toHaveProperty('fuel');
     expect(back.units[0]).not.toHaveProperty('ammo');
     expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((u) => u.uid)));

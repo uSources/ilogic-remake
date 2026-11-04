@@ -28,7 +28,7 @@ import {
 } from '@core/squads';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { blankState } from './helpers';
+import { blankState, savedByVersion1 } from './helpers';
 
 const { HQ } = defaultContent().tables;
 
@@ -251,7 +251,7 @@ describe('escuadras', () => {
     const q = formSquad(s, [a])!;
     giveStandingOrder(s, [a], 'attack', { x: 12, y: 5 });
     giveStandingOrder(s, [b], 'defend', { x: 6, y: 5 });
-    const old = serialize(s).replaceAll('"standingOrder":', '"command":');
+    const old = savedByVersion1(serialize(s).replaceAll('"standingOrder":', '"command":'));
     const back = deserialize(old, saveContext(defaultContent()))!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
     expect(back.units.find((unit) => unit.uid === b.uid)!.standingOrder).toEqual({ kind: 'defend', at: { x: 6, y: 5 } });
@@ -478,7 +478,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
   it('una partida de antes (orden copiada en cada unidad) carga con la orden en la escuadra', () => {
     const { s, a, b, t, q } = squadWorld();
     for (const u of [a, b, t]) u.standingOrder = { kind: u === t ? 'attack' : 'capture', at: { x: 12, y: 5 } };
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
+    const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
     expect(back.units.every((u) => u.standingOrder === undefined)).toBe(true);
     expect(q.id).toBe(back.squads![0]!.id);

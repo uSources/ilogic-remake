@@ -8,7 +8,7 @@ import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf
 import { CLEAR, advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { seededRng } from '@core/geom';
 import type { GameState, RulesConfig } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, savedByVersion1 } from './helpers';
 
 const { UNIT, WEATHER } = defaultContent().tables;
 
@@ -187,6 +187,6 @@ describe('clima: como cambia', () => {
     const s = blankState();
     const { weather: _, ...old } = defaultContent().tables.DEFAULT_RULES;
     s.rules = old as RulesConfig;
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules!.weather).toBe(false);
+    expect(deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!.rules.weather).toBe(false);
   });
 });

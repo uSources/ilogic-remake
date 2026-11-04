@@ -17,7 +17,8 @@ export interface MatchContent {}
 
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
-  version: 1;
+  /** Version del formato guardado (SAVE_VERSION en saveMigrations.ts). */
+  version: 2;
   /** Terreno: map[x][y] = indice 0..14 (ver TERRAIN_NAMES). El tamaño del mapa sale de aqui. */
   map: number[][];
   /** Tema del mapa 0..4 (Plains, Desert, Forest, Swamp, Snowy): elige las imagenes de orilla. */

@@ -4,14 +4,13 @@
  * y sin modificar el estado al guardar.
  */
 import { savedPart, tablesOf } from './gameContent';
-import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, rulesWith } from './data';
+import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES } from './data';
 import { generalDef } from './generals';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
 import { sanitizeStats } from './stats';
 import { assignKeys } from './squads/naming';
-import { liftStandingOrder } from './squads/standingOrders';
-import { MIGRATIONS, type SaveContext } from './saveMigrations';
+import { migrate, SAVE_VERSION, type SaveContext } from './saveMigrations';
 import type { GameState, Pos, RulesConfig, SavedGameState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
@@ -44,8 +43,10 @@ export function serialize(s: GameState): string {
  * (MIGRATIONS, en saveMigrations.ts). Devuelve null si el fichero no es valido.
  */
 export function deserialize(json: string, context: SaveContext): GameState | null {
-  const s = parseState(json, context);
-  if (!s || !readMap(s) || !hasValidBasics(s)) return null;
+  const parsed = parseState(json, context);
+  if (!parsed) return null;
+  const { s, savedVersion } = parsed;
+  if (!readMap(s) || !hasValidBasics(s)) return null;
   if (!readUnits(s) || !hasConsistentCargo(s) || !readBuildings(s)) return null;
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...s.units.map((unit) => unit.uid)) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
@@ -57,12 +58,17 @@ export function deserialize(json: string, context: SaveContext): GameState | nul
   cleanSquads(s);
   cleanControlPoints(s);
   cleanGenerals(s);
-  if (!readRules(s)) return null;
+  if (!hasValidRules(s)) return null;
+  migrate(s, savedVersion, 'checked', context);
+  s.version = SAVE_VERSION;
   return s;
 }
 
-/** El JSON, si es un objeto con la version que se sabe leer. */
-function parseState(json: string, context: SaveContext): GameState | null {
+/**
+ * El JSON, si es un objeto con una version del formato que se sabe leer, con el contenido de quien lo
+ * lee y los pasos de MIGRATIONS que van sobre el JSON tal cual.
+ */
+function parseState(json: string, context: SaveContext): { s: GameState; savedVersion: number } | null {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -70,12 +76,12 @@ function parseState(json: string, context: SaveContext): GameState | null {
     return null;
   }
   if (typeof raw !== 'object' || raw === null) return null;
-  const saved = raw as SavedGameState;
-  if (saved.version !== 1) return null;
+  const savedVersion = (raw as { version?: unknown }).version;
+  if (!isInt(savedVersion, 1, SAVE_VERSION)) return null;
   // El contenido no se guarda: es el de quien lee (si el JSON trae un "content", se ignora).
-  const s: GameState = { ...saved, content: context.content };
-  for (const migration of MIGRATIONS) migration.apply(s, context);
-  return s;
+  const s: GameState = { ...(raw as SavedGameState), content: context.content };
+  migrate(s, savedVersion, 'read', context);
+  return { s, savedVersion };
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */
@@ -198,8 +204,6 @@ function cleanSquads(s: GameState): void {
     }
   }
   for (const unit of s.units) if (unit.squad !== undefined && !s.squads?.some((squad) => squad.id === unit.squad)) delete unit.squad;
-  // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
-  for (const squad of s.squads ?? []) if (!squad.standingOrder) liftStandingOrder(s, squad);
   dropRepeatedKeys(s);
   assignKeys(s);
 }
@@ -237,7 +241,6 @@ function cleanGenerals(s: GameState): void {
   }) as GameState['generals'];
 }
 
-const isOptionalBoolean = (v: unknown): boolean => v === undefined || typeof v === 'boolean';
 /** Un tanto por uno (0..1). */
 const isFraction = (v: unknown): boolean => typeof v === 'number' && v >= 0 && v <= 1;
 
@@ -259,7 +262,7 @@ function hasValidCoreRules(rules: Partial<RulesConfig>): boolean {
   );
 }
 
-/** Las reglas que se añadieron despues: si estan, son validas (si faltan, ver fillMissingRules). */
+/** Las reglas que se añadieron despues (en las partidas antiguas las pone MIGRATIONS) son validas. */
 function hasValidLaterRules(rules: Partial<RulesConfig>): boolean {
   const switches = [
     rules.veterancy,
@@ -271,56 +274,26 @@ function hasValidLaterRules(rules: Partial<RulesConfig>): boolean {
     rules.abilities,
     rules.noHealUnderFire,
   ];
-  const isOptional = (value: unknown, isValid: (value: unknown) => boolean) => value === undefined || isValid(value);
   return (
-    switches.every(isOptionalBoolean) &&
-    isOptional(rules.commandPoints, (points) => points === null || isInt(points, 1, 10000)) &&
-    [rules.upkeep, rules.vetBonus, rules.bounty, rules.flankBonus].every((value) => isOptional(value, isFraction)) &&
-    isOptional(rules.controlPoints, (count) => isInt(count, 0, 6)) &&
-    isOptional(rules.controlIncome, (income) => isInt(income, 0, 1e6)) &&
-    isOptional(rules.controlRadius, (radius) => isInt(radius, 0, 3))
+    switches.every((value) => typeof value === 'boolean') &&
+    (rules.commandPoints === null || isInt(rules.commandPoints, 1, 10000)) &&
+    [rules.upkeep, rules.vetBonus, rules.bounty, rules.flankBonus].every(isFraction) &&
+    isInt(rules.controlPoints, 0, 6) &&
+    isInt(rules.controlIncome, 0, 1e6) &&
+    isInt(rules.controlRadius, 0, 3)
   );
 }
 
-/** Las reglas guardadas son validas (las que faltan, por ser de antes, valen: ver fillMissingRules). */
+/** Las reglas guardadas son validas y estan todas. */
 function isValidRules(rules: Partial<RulesConfig>): boolean {
   return hasValidCoreRules(rules) && hasValidLaterRules(rules);
 }
 
-/** Reglas que no existian cuando se guardo la partida: como se jugaba entonces. */
-function fillMissingRules(rules: Partial<RulesConfig>): void {
-  rules.veterancy ??= false;
-  rules.passAllies ??= false;
-  rules.ambush ??= false;
-  rules.forestHides ??= false;
-  rules.terrainCost ??= false;
-  rules.weather ??= false;
-  rules.abilities ??= false;
-  rules.commandPoints ??= null;
-  rules.upkeep ??= 0;
-  // Partidas de antes del botin y el flanqueo.
-  rules.vetBonus ??= 0.05;
-  rules.bounty ??= 0;
-  rules.flankBonus ??= 0;
-  rules.noHealUnderFire ??= false;
-  // Partidas de antes de los puntos de control: sin ellos.
-  rules.controlPoints ??= 0;
-  rules.controlIncome ??= 0;
-  rules.controlRadius ??= 0;
-}
-
 /**
- * Las reglas de la partida, que viajan con ella: las guardadas (completadas con las que no existian
- * al guardarla) o, en una escaramuza guardada antes de que se guardaran, las de siempre. (Las de una
- * mision ya las ha puesto su paso de MIGRATIONS.)
+ * Las reglas de la partida, que viajan con ella. Las de las partidas antiguas (sin reglas, sin las
+ * que se añadieron despues, misiones con las de escaramuza) ya las ha puesto al dia MIGRATIONS.
  */
-function readRules(s: GameState): boolean {
+function hasValidRules(s: GameState): boolean {
   const saved = s.rules as Partial<RulesConfig> | undefined;
-  if (saved === undefined) {
-    s.rules = rulesWith(s.content);
-    return true;
-  }
-  if (!isValidRules(saved)) return false;
-  fillMissingRules(saved);
-  return true;
+  return saved !== undefined && isValidRules(saved);
 }

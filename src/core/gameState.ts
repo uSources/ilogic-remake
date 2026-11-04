@@ -3,6 +3,7 @@
  * generador de mapas, las misiones, el laboratorio, las herramientas y los tests.
  */
 import type { GameContent } from './content';
+import { SAVE_VERSION } from './saveMigrations';
 import type { GameState, RulesConfig } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */
@@ -22,7 +23,7 @@ export interface NewGameStateOptions {
 export function newGameState(options: NewGameStateOptions): GameState {
   const { map, rules } = options;
   return {
-    version: 1,
+    version: SAVE_VERSION,
     map,
     theme: options.theme ?? 0,
     funds: options.funds ?? [rules.initialFunds, rules.initialFunds],
