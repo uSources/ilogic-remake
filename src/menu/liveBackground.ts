@@ -11,6 +11,38 @@ import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } fro
 import { MapView } from '../ui/mapView';
 import { PAL, PAL_CSS } from '../ui/palette';
 
+/** Mezcla para que la IA del fondo no juegue con la misma semilla que el mapa. */
+const AI_SEED_MIX = 0x5bd1e995;
+const MAP_SIZE = 32;
+/** La partida de fondo se corta a los 45 dias y empieza otra. */
+const MAX_DAYS = 45;
+const FIRST_PAUSE_MS = 600;
+const BETWEEN_TURNS_MS = 400;
+const AFTER_WAIT_MS = 30;
+const AFTER_ACTION_MS = 220;
+const STEP_MS = 90;
+const CAMERA_PAN_MS = 1100;
+/** Por debajo de este ancho la pantalla es estrecha: las tarjetas tapan menos y la accion va al centro. */
+const NARROW_SCREEN = 900;
+
+type AnimatedEvent = Extract<GameEvent, { kind: 'move' | 'merge' | 'load' | 'attack' | 'capture' | 'spawn' }>;
+
+/** Punto en pantalla (pixeles de la camara) de una casilla del mapa. */
+function screenPosition(camera: Phaser.Cameras.Scene2D.Camera, world: Pos): Pos {
+  return { x: (world.x - camera.worldView.x) * camera.zoom, y: (world.y - camera.worldView.y) * camera.zoom };
+}
+
+/**
+ * La accion ya se ve sin tapar: en pantalla, lejos de arriba y abajo y, en pantalla ancha, en un
+ * lateral (el centro lo tapan las tarjetas).
+ */
+function isInVisibleBand(screen: Pos, width: number, height: number): boolean {
+  const isNarrow = width < NARROW_SCREEN;
+  const isInHeight = screen.y > height * 0.12 && screen.y < height * 0.88;
+  const isInWidth = isNarrow ? screen.x > width * 0.1 && screen.x < width * 0.9 : screen.x < width * 0.3 || screen.x > width * 0.7;
+  return isInHeight && isInWidth && screen.x > 0 && screen.x < width;
+}
+
 /**
  * Fondo del menu: una partida IA contra IA en directo, sin niebla. Cada accion se anima y la camara
  * la sigue por un lateral (el centro lo tapan las tarjetas). Al acabar una partida empieza otra.
@@ -51,12 +83,12 @@ export class LiveBackground {
   start(): void {
     useRules({ ...DEFAULT_RULES, fog: false });
     const seed = randomSeed();
-    this.rng = seededRng(seed ^ 0x5bd1e995);
-    this.game = generateGame(seededRng(seed), { size: 32 });
+    this.rng = seededRng(seed ^ AI_SEED_MIX);
+    this.game = generateGame(seededRng(seed), { size: MAP_SIZE });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
-    const hq = this.game.buildings.find((b) => b.owner === 0) ?? { x: 16, y: 16 };
-    this.view.centerOn(hq, true);
+    const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+    this.view.centerOn(playerBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
     this.team = 0;
@@ -69,125 +101,137 @@ export class LiveBackground {
   tightBounds(): void {
     const s = this.game;
     if (!s) return;
-    const cam = this.scene.cameras.main;
-    const mw = s.map.length * TILE,
-      mh = s.map[0]!.length * TILE;
-    const vw = cam.width / cam.zoom,
-      vh = cam.height / cam.zoom;
-    cam.setBounds(Math.min(0, (mw - vw) / 2), Math.min(0, (mh - vh) / 2), Math.max(mw, vw), Math.max(mh, vh));
+    const camera = this.scene.cameras.main;
+    const mapWidth = s.map.length * TILE;
+    const mapHeight = s.map[0]!.length * TILE;
+    const viewWidth = camera.width / camera.zoom;
+    const viewHeight = camera.height / camera.zoom;
+    camera.setBounds(
+      Math.min(0, (mapWidth - viewWidth) / 2),
+      Math.min(0, (mapHeight - viewHeight) / 2),
+      Math.max(mapWidth, viewWidth),
+      Math.max(mapHeight, viewHeight),
+    );
   }
 
   private render(): void {
     const s = this.game;
     if (!s || !this.view) return;
-    const vis = Array.from({ length: s.map.length }, () => Array<boolean>(s.map.length).fill(true));
-    this.view.render(s, { vis, highlights: new Map(), hidden: new Set() });
+    const visible = Array.from({ length: s.map.length }, () => Array<boolean>(s.map.length).fill(true));
+    this.view.render(s, { vis: visible, highlights: new Map(), hidden: new Set() });
     this.view.placeCursor(false);
   }
 
   /** Bucle de la partida de fondo: cada accion de la IA se anima y la camara la sigue. */
   private async loop(): Promise<void> {
     const token = ++this.token;
-    const alive = () => token === this.token && !!this.game && this.scene.scene.isActive();
-    await this.pause(600);
-    while (alive()) {
-      const s = this.game!;
-      const r = this.events!.next();
-      if (r.done) {
-        if (this.team === 0) this.team = 1;
-        else {
-          endRound(s);
-          this.team = 0;
-        }
-        if (outcome(s) !== 'playing' || s.day > 45) {
-          this.start();
-          continue;
-        }
-        this.events = aiTurn(s, this.rng, this.team);
-        await this.pause(400);
+    const isAlive = () => token === this.token && !!this.game && this.scene.scene.isActive();
+    await this.pause(FIRST_PAUSE_MS);
+    while (isAlive()) {
+      const next = this.events!.next();
+      if (next.done) {
+        await this.nextTurn(this.game!);
         continue;
       }
-      await this.animate(r.value);
-      if (!alive()) return;
+      await this.animate(next.value);
+      if (!isAlive()) return;
       this.render();
-      await this.pause(r.value.kind === 'wait' ? 30 : 220);
+      await this.pause(next.value.kind === 'wait' ? AFTER_WAIT_MS : AFTER_ACTION_MS);
     }
   }
 
+  /** Turno del otro bando (y fin de ronda tras la IA roja); si la partida ha acabado, otra nueva. */
+  private async nextTurn(s: GameState): Promise<void> {
+    if (this.team === 0) this.team = 1;
+    else {
+      endRound(s);
+      this.team = 0;
+    }
+    if (outcome(s) !== 'playing' || s.day > MAX_DAYS) return this.start();
+    this.events = aiTurn(s, this.rng, this.team);
+    await this.pause(BETWEEN_TURNS_MS);
+  }
+
   private pause(ms: number): Promise<void> {
-    return new Promise((res) => this.scene.time.delayedCall(ms, res));
+    return new Promise((resolve) => this.scene.time.delayedCall(ms, resolve));
   }
 
   /**
    * Lleva la camara (despacio) para que la accion se vea en un lateral de la pantalla: el centro lo
    * tapan las tarjetas del menu.
    */
-  private async follow(p: Pos): Promise<void> {
-    const cam = this.scene.cameras.main;
-    const c = center(p);
-    const z = cam.zoom;
-    const W = cam.width,
-      H = cam.height;
-    const sx = (c.x - cam.worldView.x) * z,
-      sy = (c.y - cam.worldView.y) * z;
-    const side = W < 900 ? 0.5 : 0.16;
-    const inBand =
-      sy > H * 0.12 && sy < H * 0.88 && (W < 900 ? sx > W * 0.1 && sx < W * 0.9 : sx < W * 0.3 || sx > W * 0.7) && sx > 0 && sx < W;
-    if (inBand) return;
-    const tx = sx < W / 2 ? W * side : W * (1 - side);
-    const midX = c.x + (W / 2 - tx) / z;
-    const ms = 1100;
+  private async follow(tile: Pos): Promise<void> {
+    const camera = this.scene.cameras.main;
+    const world = center(tile);
+    const { width, height } = camera;
+    const screen = screenPosition(camera, world);
+    if (isInVisibleBand(screen, width, height)) return;
+    const side = width < NARROW_SCREEN ? 0.5 : 0.16;
+    const targetX = screen.x < width / 2 ? width * side : width * (1 - side);
+    const centerX = world.x + (width / 2 - targetX) / camera.zoom;
     if (reducedMotion()) {
-      cam.centerOn(midX, c.y);
+      camera.centerOn(centerX, world.y);
       return;
     }
-    cam.pan(midX, c.y, ms, 'Sine.easeInOut', true);
-    await this.pause(ms);
+    camera.pan(centerX, world.y, CAMERA_PAN_MS, 'Sine.easeInOut', true);
+    await this.pause(CAMERA_PAN_MS);
   }
 
-  private async animate(ev: GameEvent): Promise<void> {
-    const view = this.view!;
-    switch (ev.kind) {
+  private animate(event: GameEvent): Promise<void> {
+    switch (event.kind) {
       case 'move':
       case 'merge':
-      case 'load': {
-        const sp = view.unitSprite(ev.uid);
-        if (!sp || ev.path.length < 2) return;
-        await this.follow(ev.path[ev.path.length - 1]!);
-        for (const p of ev.path.slice(1)) {
-          await new Promise<void>((res) =>
-            this.scene.tweens.add({ targets: sp, x: p.x * TILE, y: p.y * TILE, duration: 90, onComplete: () => res() }),
-          );
-        }
-        return;
-      }
-      case 'attack': {
-        await this.follow(ev.target);
-        const sp = view.unitSprite(ev.attacker);
-        const s = this.game!;
-        const atk = s.units.find((u) => u.uid === ev.attacker);
-        if (sp && atk) await lunge(this.scene, sp, { dx: Math.sign(ev.target.x - atk.x), dy: Math.sign(ev.target.y - atk.y) });
-        const c = center(ev.target);
-        void burst(this.scene, view, c, {
-          colors: ev.killed ? COLORS.smoke : COLORS.fire,
-          count: ev.killed ? 16 : 10,
-          radius: ev.killed ? 26 : 18,
-        });
-        await floatText(this.scene, view, { x: c.x, y: c.y - 6 }, `-${ev.damage}`, PAL_CSS.redSoft);
-        return;
-      }
+      case 'load':
+        return this.animateMove(event);
+      case 'attack':
+        return this.animateAttack(event);
       case 'capture':
-        await this.follow(ev.at);
-        void burst(this.scene, view, center(ev.at), { colors: COLORS.gold, count: 12, radius: 22 });
-        await tileFlash(this.scene, view, ev.at, PAL.gold);
-        return;
+        return this.animateCapture(event);
       case 'spawn':
-        await this.follow(ev.at);
-        this.render();
-        await tileFlash(this.scene, view, ev.at, 0xffffff);
-        return;
+        return this.animateSpawn(event);
       default:
-        break;
+        return Promise.resolve();
     }
+  }
+
+  /** La unidad recorre su camino casilla a casilla. */
+  private async animateMove(event: Extract<AnimatedEvent, { kind: 'move' | 'merge' | 'load' }>): Promise<void> {
+    const sprite = this.view!.unitSprite(event.uid);
+    if (!sprite || event.path.length < 2) return;
+    await this.follow(event.path[event.path.length - 1]!);
+    for (const step of event.path.slice(1))
+      await new Promise<void>((resolve) =>
+        this.scene.tweens.add({ targets: sprite, x: step.x * TILE, y: step.y * TILE, duration: STEP_MS, onComplete: () => resolve() }),
+      );
+  }
+
+  private async animateAttack(event: Extract<AnimatedEvent, { kind: 'attack' }>): Promise<void> {
+    const view = this.view!;
+    await this.follow(event.target);
+    const sprite = view.unitSprite(event.attacker);
+    const attacker = this.game!.units.find((unit) => unit.uid === event.attacker);
+    if (sprite && attacker)
+      await lunge(this.scene, sprite, { dx: Math.sign(event.target.x - attacker.x), dy: Math.sign(event.target.y - attacker.y) });
+    const hitPoint = center(event.target);
+    void burst(this.scene, view, hitPoint, {
+      colors: event.killed ? COLORS.smoke : COLORS.fire,
+      count: event.killed ? 16 : 10,
+      radius: event.killed ? 26 : 18,
+    });
+    await floatText(this.scene, view, { x: hitPoint.x, y: hitPoint.y - 6 }, `-${event.damage}`, PAL_CSS.redSoft);
+  }
+
+  private async animateCapture(event: Extract<AnimatedEvent, { kind: 'capture' }>): Promise<void> {
+    const view = this.view!;
+    await this.follow(event.at);
+    void burst(this.scene, view, center(event.at), { colors: COLORS.gold, count: 12, radius: 22 });
+    await tileFlash(this.scene, view, event.at, PAL.gold);
+  }
+
+  private async animateSpawn(event: Extract<AnimatedEvent, { kind: 'spawn' }>): Promise<void> {
+    const view = this.view!;
+    await this.follow(event.at);
+    this.render();
+    await tileFlash(this.scene, view, event.at, 0xffffff);
   }
 }

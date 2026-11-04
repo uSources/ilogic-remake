@@ -32,14 +32,14 @@ export interface MenuBinding {
   command: MenuCommand;
 }
 
-const mv = (dx: -1 | 0 | 1, dy: -1 | 0 | 1): MenuCommand => ({ kind: 'move', dx, dy });
+const move = (dx: -1 | 0 | 1, dy: -1 | 0 | 1): MenuCommand => ({ kind: 'move', dx, dy });
 
 /** Flechas/WASD/teclado numerico, Enter/Espacio y Esc/Retroceso: lo comun a casi todos los menus. */
 export const MENU_KEYS: readonly MenuBinding[] = [
-  { codes: KEY_UP, command: mv(0, -1) },
-  { codes: KEY_DOWN, command: mv(0, 1) },
-  { codes: KEY_LEFT, command: mv(-1, 0) },
-  { codes: KEY_RIGHT, command: mv(1, 0) },
+  { codes: KEY_UP, command: move(0, -1) },
+  { codes: KEY_DOWN, command: move(0, 1) },
+  { codes: KEY_LEFT, command: move(-1, 0) },
+  { codes: KEY_RIGHT, command: move(1, 0) },
   { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
   { codes: KEY_BACK, command: { kind: 'back' } },
 ];
@@ -63,27 +63,27 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   typing: [
     { codes: ['Enter', 'NumpadEnter'], command: { kind: 'ok', repeat: false } },
     { codes: ['Escape'], command: { kind: 'back' } },
-    { codes: ['ArrowUp'], command: mv(0, -1) },
-    { codes: ['ArrowDown'], command: mv(0, 1) },
+    { codes: ['ArrowUp'], command: move(0, -1) },
+    { codes: ['ArrowDown'], command: move(0, 1) },
   ],
   campaign: MENU_KEYS,
   // Fin de partida: una fila de botones; Tab pasa al siguiente y Esc vuelve al menu.
   end: [
-    { codes: ['ArrowLeft', 'KeyA'], command: mv(-1, 0) },
-    { codes: ['ArrowUp', 'KeyW'], command: mv(0, -1) },
-    { codes: ['ArrowRight', 'KeyD', 'Tab'], command: mv(1, 0) },
-    { codes: ['ArrowDown', 'KeyS'], command: mv(0, 1) },
+    { codes: ['ArrowLeft', 'KeyA'], command: move(-1, 0) },
+    { codes: ['ArrowUp', 'KeyW'], command: move(0, -1) },
+    { codes: ['ArrowRight', 'KeyD', 'Tab'], command: move(1, 0) },
+    { codes: ['ArrowDown', 'KeyS'], command: move(0, 1) },
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
     { codes: ['Escape'], command: { kind: 'back' } },
   ],
 };
 
 /** La orden de una pulsacion en un menu, o null si en ese menu la tecla no hace nada. */
-export function menuKeyCommand(e: Pick<KeyInput, 'code' | 'repeat'>, ctx: MenuContext): MenuCommand | null {
-  const b = MENU_BINDINGS[ctx].find((k) => k.codes.includes(e.code));
-  if (!b) return null;
-  if (b.command.kind === 'ok') return { kind: 'ok', repeat: e.repeat };
-  return b.command;
+export function menuKeyCommand(key: Pick<KeyInput, 'code' | 'repeat'>, context: MenuContext): MenuCommand | null {
+  const binding = MENU_BINDINGS[context].find((candidate) => candidate.codes.includes(key.code));
+  if (!binding) return null;
+  if (binding.command.kind === 'ok') return { kind: 'ok', repeat: key.repeat };
+  return binding.command;
 }
 
 /** Paso en una lista de una sola dimension: izquierda o arriba es -1, derecha o abajo es +1. */
