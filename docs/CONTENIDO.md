@@ -237,11 +237,20 @@ Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas t
 
 ## Como esta hecho
 
-`src/core/content/` tiene un modulo por parte (`units.ts`, `buildings.ts`, `terrain.ts`, `rules.ts`,
-`ai.ts`), cada uno con su `validate*` y su `build*`; comparten `check.ts` (mensajes de error) y
-`types.ts` (`UnitDef`, `MoveType`, `TerrainType`...). `index.ts` solo los junta: lee los JSON, valida
-todo a la vez y construye las tablas (`UNIT`, `POWER`, `TERRAIN`, `MOVE_COST`, `AI`...). Una parte
-nueva = un JSON, su esquema y su modulo, sin tocar las demas.
+`src/core/content/` tiene un modulo por parte, cada uno con su `validate*` y, si da tablas, su
+`build*`: `units.ts`, `buildings.ts`, `terrain.ts`, `rules.ts`, `ai.ts`, `weather.ts` y `generals.ts`
+(este solo valida: los generales se leen tal cual, `s.content.files.generals`). Comparten `check.ts`
+(mensajes de error) y `types.ts` (`UnitDef`, `MoveType`, `TerrainType`, `TERRAIN_NAMES`,
+`THEME_NAMES`...). El resto:
+
+| Modulo | Que hace |
+|---|---|
+| `index.ts` | lee los JSON (`readContentFiles`), los valida todos a la vez (`validateContent`) y los carga: `loadContent(ficheros)` valida, construye las tablas y da el `GameContent` congelado |
+| `tables.ts` | la forma de los ficheros (`Content`), `buildTables` (UNIT, POWER, TERRAIN, CAN_WALK, MOVE_COST, AI...), `ContentTables` (de solo lectura) y `contentContext` (lo que las partes necesitan saber de las demas) |
+| `movement.ts` | por donde pasa y cuanto le cuesta cada tipo de movimiento con unas tablas (`walkableFor`, `moveCostFor`); con una partida, `movementOf`/`canMoveOn`/`terrainMoveCost` de rules/queries |
+| `default.ts` | `defaultContent()`: el contenido del juego, cargado la primera vez que se pide |
+
+Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 
 **El contenido es un valor que lleva cada partida**, no un modulo: `loadContent(ficheros)` da un
 `GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `deserialize` lo ponen en el campo
