@@ -68,7 +68,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content })`, el unico sitio
   que escribe su forma; el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)` o `deserialize(json, saveContext(contenido))`; un cambio en lo que se guarda sube
-  `SAVE_VERSION` y lleva su paso en `MIGRATIONS` (core/saveMigrations.ts).
+  `SAVE_VERSION` (core/saveVersion.ts, y el tipo de `GameState.version`) y lleva su paso en `MIGRATIONS`
+  (core/saveMigrations.ts).
 - **Casillas como `Pos`**: firmas con `pos: Pos`, no `(x, y)`; copiar la casilla de una unidad o
   edificio con `posOf(unit)`; los bordes, con `mapGrid(s).contains(pos)`, `isOnBoard(s, pos)` o
   `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).

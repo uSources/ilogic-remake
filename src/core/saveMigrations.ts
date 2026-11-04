@@ -1,6 +1,6 @@
 /**
  * Leer partidas guardadas por versiones anteriores del juego. Cada partida guarda la version de su
- * formato (`GameState.version`, ahora SAVE_VERSION); MIGRATIONS es la lista de pasos que la ponen al
+ * formato (`GameState.version`, ahora SAVE_VERSION de saveVersion.ts); MIGRATIONS es la lista de pasos que la ponen al
  * dia. Cada paso dice que cambio, por que y hasta que version hace falta, y si va sobre el JSON tal
  * cual (antes de comprobarlo) o sobre la partida ya comprobada. Ninguno se quita mientras pueda haber
  * partidas guardadas asi.
@@ -10,14 +10,10 @@
  */
 import type { GameContent } from './content';
 import { rulesWith } from './rulesConfig';
-import type { GameState, RulesConfig } from './model';
-import { liftStandingOrder } from './squads/standingOrders';
-
-/**
- * Version del formato de las partidas guardadas. 1: hasta el arreglo de K1 (las misiones podian
- * llevar las reglas de escaramuza). 2: desde entonces (las reglas guardadas son las de la partida).
- */
-export const SAVE_VERSION = 2;
+import type { GameState, RulesConfig, Squad, StandingOrder, Unit } from './model';
+import { sameStandingOrder } from './squads/standingOrders';
+import { squadUnits } from './squads/queries';
+import { isCapturer, isObject } from './util/predicates';
 
 /** Lo que pone quien lee una partida (ver defaultGames.ts para el del juego). */
 export interface SaveContext {
@@ -51,7 +47,6 @@ export type SaveMigration = ReadMigration | CheckedMigration;
 
 /** Lo que el JSON trae como lista (o una vacia si no lo es: entonces deserialize lo rechazara). */
 const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? (value as unknown[]) : []);
-const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 /** Pasa el campo `from` a `to` (si no estaba ya) y lo quita. */
 function renameField(holder: unknown, from: string, to: string): void {
@@ -81,6 +76,27 @@ const RULES_ADDED_LATER: Partial<RulesConfig> = {
   controlIncome: 0,
   controlRadius: 0,
 };
+
+/** La orden de una unidad de una escuadra como la seguia en el formato 1: con capturar, escolta. */
+function format1OrderFor(s: GameState, unit: Unit, order: StandingOrder): StandingOrder {
+  return { kind: order.kind === 'capture' && !isCapturer(s, unit) ? 'attack' : order.kind, at: { x: order.at.x, y: order.at.y } };
+}
+
+/**
+ * En el formato 1 la escuadra no tenia orden: la llevaba copiada cada unidad. Si todas llevan la
+ * misma (la de capturar manda; las que no pueden capturar, de escolta), pasa a la escuadra. Copia
+ * fija de como era entonces: no cambia aunque cambien las ordenes de ahora.
+ */
+function liftFormat1Order(s: GameState, squad: Squad): void {
+  const units = squadUnits(s, squad.id);
+  const orders = units.map((unit) => unit.standingOrder);
+  if (!units.length || orders.some((order) => !order)) return;
+  const lead = units.find((unit) => unit.standingOrder!.kind === 'capture') ?? units[0]!;
+  const order = lead.standingOrder!;
+  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, format1OrderFor(s, unit, order)))) return;
+  squad.standingOrder = { kind: order.kind, at: { x: order.at.x, y: order.at.y } };
+  for (const unit of units) delete unit.standingOrder;
+}
 
 /** Los pasos, del mas antiguo al mas nuevo. */
 export const MIGRATIONS: readonly SaveMigration[] = [
@@ -152,7 +168,7 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     upToVersion: 1,
     stage: 'checked',
     apply: (s) => {
-      for (const squad of s.squads ?? []) if (!squad.standingOrder) liftStandingOrder(s, squad);
+      for (const squad of s.squads ?? []) if (!squad.standingOrder) liftFormat1Order(s, squad);
     },
   },
 ];

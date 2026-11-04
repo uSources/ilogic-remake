@@ -3,7 +3,7 @@
  * generador de mapas, las misiones, el laboratorio, las herramientas y los tests.
  */
 import type { GameContent } from './content';
-import { SAVE_VERSION } from './saveMigrations';
+import { SAVE_VERSION } from './saveVersion';
 import type { GameState, RulesConfig } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */

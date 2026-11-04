@@ -23,9 +23,9 @@ import { validateBuildings } from './buildings';
 import { Checker, uniqueIds } from './check';
 import { validateGenerals, type GeneralDef } from './generals';
 import { validateRules } from './rules';
-import { buildTables, type Content, type ContentTables } from './tables';
+import { buildTables, contentContext, type Content, type ContentTables } from './tables';
 import { validateTerrain } from './terrain';
-import { TERRAIN_NAMES, type BuildingDef, type ContentContext, type TerrainDef, type UnitDef } from './types';
+import { TERRAIN_NAMES, type BuildingDef, type TerrainDef, type UnitDef } from './types';
 import { validateUnits } from './units';
 import { validateWeather, type WeatherDef } from './weather';
 
@@ -54,11 +54,7 @@ export function validateContent(c: Content): string[] {
   const check = new Checker();
   const lists = { units: c.units, buildings: c.buildings, terrain: c.terrain };
   for (const [name, list] of Object.entries(lists)) if (!Array.isArray(list)) return [`${name}.json: tiene que tener una lista "${name}"`];
-  const ctx: ContentContext = {
-    unitIds: uniqueIds(check, 'unidad', c.units),
-    buildingIds: uniqueIds(check, 'edificio', c.buildings),
-    terrainNames: TERRAIN_NAMES,
-  };
+  const ctx = contentContext(uniqueIds(check, 'unidad', c.units), uniqueIds(check, 'edificio', c.buildings));
   validateUnits(c.units, ctx, check);
   validateBuildings(c.buildings, ctx, check);
   validateTerrain(c.terrain, TERRAIN_NAMES, check);

@@ -42,6 +42,11 @@ export class Grid<T> implements GridBounds {
     this.height = columns[0]?.length ?? 0;
   }
 
+  /** La casilla cabe en una rejilla de ese tamaño (sin crear la rejilla). */
+  static fits(size: GridSize, pos: Pos): boolean {
+    return isInside(size, pos);
+  }
+
   /** Rejilla nueva de ese tamaño con todas las casillas a `fill`. */
   static filled<T>(size: GridSize, fill: T): Grid<T> {
     return new Grid(Array.from({ length: size.width }, () => Array<T>(size.height).fill(fill)));

@@ -9,6 +9,7 @@
 
 import type { ContentTables } from './content';
 import type { GameState, Objective, Outcome, Pos } from './model';
+import { samePos } from './geom';
 import { Grid } from './util/grid';
 
 /** Nombre interno de un edificio (buildings.json). */
@@ -78,7 +79,7 @@ function positionOf(s: GameState, uid: number): Pos | undefined {
   return s.units.find((candidate) => candidate.uid === unit.carrier) ?? unit;
 }
 
-const isInsideMap = (pos: Pos, mapSize: number) => Grid.filled({ width: mapSize, height: mapSize }, false).contains(pos);
+const isInsideMap = (pos: Pos, mapSize: number) => Grid.fits({ width: mapSize, height: mapSize }, pos);
 
 const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
   hq: {
@@ -120,7 +121,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     outcome: (s, objective) => {
       const at = positionOf(s, objective.uid);
       if (!at) return 'lost';
-      return wonOrLostByDays(s, objective, at.x === objective.to.x && at.y === objective.to.y);
+      return wonOrLostByDays(s, objective, samePos(at, objective.to));
     },
     progress: () => null,
   },

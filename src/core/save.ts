@@ -11,8 +11,11 @@ import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
 import { sanitizeStats } from './stats';
 import { assignKeys } from './squads/naming';
-import { migrateChecked, migrateRead, SAVE_VERSION, type SaveContext } from './saveMigrations';
-import type { GameState, Pos, RulesConfig, SavedGameState, Unit } from './model';
+import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations';
+import { SAVE_VERSION } from './saveVersion';
+import { isStandingOrderKind } from './squads/standingOrders';
+import { isObject } from './util/predicates';
+import type { GameState, Pos, RulesConfig, SavedGameState, StandingOrder, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
 
@@ -27,12 +30,13 @@ const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
 const MAX_UID = Number.MAX_SAFE_INTEGER;
 
+/** Una casilla bien formada (x e y enteros). */
+const isPos = (value: unknown): value is Pos => isObject(value) && Number.isInteger(value.x) && Number.isInteger(value.y);
 /** Una casilla bien formada y dentro del mapa de la partida que se lee. */
-const isMapPos = (board: GridBounds, p: unknown): boolean =>
-  !!p && Number.isInteger((p as Pos).x) && Number.isInteger((p as Pos).y) && board.contains(p as Pos);
+const isMapPos = (board: GridBounds, value: unknown): value is Pos => isPos(value) && board.contains(value);
 /** Una orden con destino bien formada (Unit.standingOrder o Squad.standingOrder). */
-const isStandingOrder = (board: GridBounds, c: unknown): boolean =>
-  !!c && ['attack', 'capture', 'defend'].includes((c as { kind: string }).kind) && isMapPos(board, (c as { at: unknown }).at);
+const isStandingOrder = (board: GridBounds, value: unknown): value is StandingOrder =>
+  isObject(value) && isStandingOrderKind(value.kind) && isMapPos(board, value.at);
 
 export function serialize(s: GameState): string {
   return JSON.stringify(savedPart(s));
@@ -84,8 +88,7 @@ function parseObject(json: string): Record<string, unknown> | null {
  * tocan. Lo de dentro lo comprueba deserialize despues, campo a campo.
  */
 function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unknown> & SavedGameState {
-  const isObject = (value: unknown) => typeof value === 'object' && value !== null;
-  return raw.version === SAVE_VERSION && [raw.map, raw.funds, raw.units, raw.buildings].every(Array.isArray) && isObject(raw.rules);
+  return [raw.map, raw.funds, raw.units, raw.buildings].every(Array.isArray) && isObject(raw.rules);
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */

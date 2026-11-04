@@ -4,7 +4,8 @@ import { defaultContent } from '@core/content/default';
 import { loadGame, saveContext } from '@core/defaultGames';
 import { missionById, missionRules } from '@core/missions';
 import { serialize } from '@core/save';
-import { MIGRATIONS, migrateChecked, migrateRead, SAVE_VERSION } from '@core/saveMigrations';
+import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
+import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import { newUnit } from '@core/rules';
 import { blankState } from './helpers';
@@ -16,7 +17,8 @@ import { blankState } from './helpers';
  *   30 dias), una escuadra con orden (`command`), una unidad con orden propia y otra de viaje (`order`);
  * - mission-no-rules-v1: la mision bridgehead recien empezada (main no le ponia reglas);
  * - mission-skirmish-rules-v1: la misma, cargada y vuelta a guardar con las reglas de escaramuza que le
- *   ponia la escena de main al cargar (el fallo K1).
+ *   ponia la escena de main al cargar (el fallo K1);
+ * - squad-unit-orders-v1: una escuadra sin orden cuyas dos unidades llevan la misma (dada a cada una).
  */
 const fixture = (name: string) => readFileSync(`tests/fixtures/saves/${name}.json`, 'utf8');
 
@@ -36,6 +38,13 @@ describe('partidas guardadas con el formato 1 (de origin/main)', () => {
     expect(saved).toContain(`"version":${SAVE_VERSION}`);
     // Lo que se vuelve a guardar ya es del formato nuevo y se lee igual.
     expect(serialize(loadGame(saved)!)).toBe(saved);
+  });
+
+  it('escuadra sin orden cuyas unidades llevan la misma: la orden pasa a la escuadra', () => {
+    const s = loadGame(fixture('squad-unit-orders-v1'))!;
+    const squad = s.squads![0]!;
+    expect(squad.standingOrder).toEqual({ kind: 'attack', at: { x: 18, y: 13 } });
+    for (const unit of s.units.filter((candidate) => candidate.squad === squad.id)) expect(unit.standingOrder).toBeUndefined();
   });
 
   it.each(['mission-no-rules-v1', 'mission-skirmish-rules-v1'])('%s: la mision se juega con sus reglas (K1)', (name) => {

@@ -9,6 +9,14 @@ import { isAlive, isCapturer, isPlayer } from '../util/predicates';
 import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, Unit } from '../model';
 import { playerUnits, squadById, squadUnits } from './queries';
 
+/** Que dice cada tipo de orden permanente (el Record obliga a tenerlos todos). */
+const STANDING_ORDER_NAMES: Record<StandingOrderKind, string> = { attack: 'atacar', capture: 'capturar', defend: 'defender' };
+/** Los tipos de orden permanente que hay (para comprobar los que vienen de fuera, como una partida guardada). */
+export const STANDING_ORDER_KINDS = Object.keys(STANDING_ORDER_NAMES) as readonly StandingOrderKind[];
+
+/** El valor es un tipo de orden permanente. */
+export const isStandingOrderKind = (value: unknown): value is StandingOrderKind => STANDING_ORDER_KINDS.some((kind) => kind === value);
+
 export const sameStandingOrder = (a: StandingOrder, b: StandingOrder): boolean => a.kind === b.kind && samePos(a.at, b.at);
 
 const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
