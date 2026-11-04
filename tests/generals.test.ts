@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readContentFiles, validateContent } from '@core/content';
-import { GENERALS, UNIT, UNIT_NAMES, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { cloneState } from '@core/gameContent';
 import { abilityBlock, chargeStars, generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
@@ -8,11 +10,13 @@ import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { blankState } from './helpers';
 
+const { UNIT, UNIT_NAMES } = defaultContent().tables;
+
 const T = (n: string) => UNIT_NAMES.indexOf(n);
 
 function withBrisa(): GameState {
   const s = blankState(TEST_RULES);
-  s.generals = [newGeneral('Brisa'), null];
+  s.generals = [newGeneral(s, 'Brisa'), null];
   return s;
 }
 
@@ -22,7 +26,7 @@ const TEST_RULES = rulesWith({ fog: true, weather: false });
 describe('generales: datos', () => {
   it('generals.json es valido y Brisa existe', () => {
     expect(validateContent(readContentFiles())).toEqual([]);
-    expect(GENERALS.map((g) => g.id)).toContain('Brisa');
+    expect(defaultContent().files.generals.map((g) => g.id)).toContain('Brisa');
   });
 
   it('explica lo que esta mal', () => {
@@ -46,7 +50,7 @@ describe('generales: reglas', () => {
     const target = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
     expect(generalHitFactor(s, plane, target)).toBeCloseTo(1.1);
     expect(generalHitFactor(s, tank, target)).toBe(1);
-    const without = structuredClone(s);
+    const without = cloneState(s);
     without.generals = undefined;
     expect(hitChance(s, plane, target)).toBeCloseTo(hitChance(without, plane, target) * 1.1);
   });
@@ -106,13 +110,16 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 3.5;
-    const back = deserialize(serialize(s))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.generals).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);
     const bad = JSON.parse(serialize(s));
     bad.generals = [
       { id: 'Nadie', charge: 99 },
       { id: 'Brisa', charge: 99 },
     ];
-    expect(deserialize(JSON.stringify(bad))!.generals).toEqual([null, { id: 'Brisa', charge: 6, used: false, reveal: false }]);
+    expect(deserialize(JSON.stringify(bad), defaultContent())!.generals).toEqual([
+      null,
+      { id: 'Brisa', charge: 6, used: false, reveal: false },
+    ]);
   });
 });

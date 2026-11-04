@@ -2,7 +2,8 @@
  * Movimiento y caminos: alcance de cada unidad, caminos trazados, emboscadas, distancia por tierra
  * y el evento de mover.
  */
-import { UNIT, Movement, type MoveType } from '../data';
+import { movementOf, tablesOf, terrainMoveCost } from '../gameContent';
+import { type MoveType } from '../data';
 import { isRanged, zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos } from '../geom';
 import { createLayer, mapGrid, terrainAt } from '../mapGrid';
@@ -28,9 +29,9 @@ export interface MoveRange {
  * [CAMBIO] El clima puede quitar movimiento (nunca por debajo de 1 si la unidad se mueve).
  */
 export function maxSteps(s: GameState, unit: Unit): number {
-  const base = UNIT.mover[unit.type]!;
+  const base = tablesOf(s).UNIT.mover[unit.type]!;
   if (base <= 0) return base;
-  return Math.max(1, base + weatherMove(s, Movement.of(unit.type)));
+  return Math.max(1, base + weatherMove(s, movementOf(s, unit.type)));
 }
 
 /** Lo que dice passMap de cada casilla para una unidad. */
@@ -69,7 +70,7 @@ export function passMap(s: GameState, unit: Unit): PassMap {
 
 /** Lo que cuesta entrar en una casilla (1 con las reglas clasicas). */
 export function moveCost(s: GameState, moveType: MoveType, pos: Pos): number {
-  return s.rules.terrainCost ? Movement.cost(moveType, terrainAt(s, pos)) : 1;
+  return s.rules.terrainCost ? terrainMoveCost(s, moveType, terrainAt(s, pos)) : 1;
 }
 
 /** Coste de recorrer un camino (sin contar la casilla de salida). */
@@ -95,7 +96,7 @@ export function moveRange(s: GameState, unit: Unit): MoveRange {
   const steps = board.createLayer(0);
   const prev = board.createLayer<Pos | null>(null);
   const max = maxSteps(s, unit);
-  const movement = Movement.of(unit.type);
+  const movement = movementOf(s, unit.type);
   const { block, taken, stop } = passMap(s, unit);
   const canEnter = (tile: Pos) => canWalk(s, tile, movement) && !block.at(tile) && !samePos(tile, unit);
 
@@ -205,7 +206,7 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
  * casillas del alcance (o de paso), sin repetir, no supera el movimiento y termina en un destino libre.
  */
 export function validPath(s: GameState, unit: Unit, path: Pos[], range: MoveRange): boolean {
-  const movement = Movement.of(unit.type);
+  const movement = movementOf(s, unit.type);
   if (path.length < 2 || !samePos(path[0]!, unit) || pathCost(s, movement, path) > range.maxSteps) return false;
   const end = path[path.length - 1]!;
   if (!canReach(range, end)) return false;
@@ -215,7 +216,7 @@ export function validPath(s: GameState, unit: Unit, path: Pos[], range: MoveRang
 /** Cada paso del camino es a una vecina por la que se puede pasar, sin volver atras ni pararse antes de tiempo. */
 function validSteps(s: GameState, unit: Unit, path: Pos[]): boolean {
   const { block, stop } = passMap(s, unit);
-  const movement = Movement.of(unit.type);
+  const movement = movementOf(s, unit.type);
   const visited = new Set<string>();
   for (let i = 1; i < path.length; i++) {
     const from = path[i - 1]!;
@@ -275,7 +276,7 @@ export function distancesIgnoringUnits(s: GameState, goal: Pos, movement: MoveTy
  * null si no se puede llegar nunca o ninguna casilla acerca mas que quedarse donde esta.
  */
 export function stepToward(s: GameState, unit: Unit, goal: Pos, range = moveRange(s, unit)): Pos | null {
-  const movement = Movement.of(unit.type);
+  const movement = movementOf(s, unit.type);
   if (!canWalk(s, goal, movement)) return null;
 
   const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
@@ -302,7 +303,7 @@ export function moveUnit(s: GameState, unit: Unit, dest: Pos, range = moveRange(
   unit.y = dest.y;
   unit.canMove = false;
   // Las unidades a distancia no pueden mover y disparar en el mismo turno.
-  if (isRanged(unit.type)) unit.canFire = false;
+  if (isRanged(s, unit.type)) unit.canFire = false;
   dropStaleCaptures(s);
   return path;
 }
@@ -315,7 +316,7 @@ export function moveUnit(s: GameState, unit: Unit, dest: Pos, range = moveRange(
  */
 export function approachPath(s: GameState, unit: Unit, target: Pos, range = moveRange(s, unit)): Pos[] | null {
   if (!unit.canMove && manhattan(unit, target) !== 1) return null;
-  const lastStepCost = moveCost(s, Movement.of(unit.type), target);
+  const lastStepCost = moveCost(s, movementOf(s, unit.type), target);
   const stepsTo = (tile: Pos) => (samePos(tile, unit) ? 0 : range.steps.at(tile));
   const canStepInFrom = (tile: Pos) => samePos(tile, unit) || (stepsTo(tile) > 0 && stepsTo(tile) + lastStepCost <= range.maxSteps);
 

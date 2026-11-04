@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { POWER, UNIT, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import {
   HIT_MODIFIERS,
   ROUND_PHASES,
@@ -14,6 +15,8 @@ import {
 } from '@core/rules';
 import { coverAgainst } from '@core/abilities';
 import { blankState } from './helpers';
+
+const { UNIT, POWER } = defaultContent().tables;
 
 /** Puntos de extension y ayudas compartidas del nucleo: modificadores del acierto, pasos del fin de ronda, origenes de tiro. */
 /** Reglas de las partidas de estos tests. */
@@ -75,18 +78,18 @@ describe('ayudas de combate compartidas', () => {
     const m = newUnit(s, melee, 0, { x: 5, y: 5 });
     const r = newUnit(s, ranged, 0, { x: 9, y: 9 });
     const range = moveRange(s, m);
-    expect(fireOrigins(m, range)).toEqual([{ x: 5, y: 5 }, ...reachableTiles(range)]);
-    expect(fireOrigins(m, null)).toEqual([{ x: 5, y: 5 }]);
-    expect(fireOrigins(m, range, () => false)).toEqual([{ x: 5, y: 5 }]);
-    expect(fireOrigins(r, moveRange(s, r))).toEqual([{ x: 9, y: 9 }]);
+    expect(fireOrigins(s, m, range)).toEqual([{ x: 5, y: 5 }, ...reachableTiles(range)]);
+    expect(fireOrigins(s, m, null)).toEqual([{ x: 5, y: 5 }]);
+    expect(fireOrigins(s, m, range, () => false)).toEqual([{ x: 5, y: 5 }]);
+    expect(fireOrigins(s, r, moveRange(s, r))).toEqual([{ x: 9, y: 9 }]);
   });
 
   it('canDamage: lucha y su poder contra ese tipo es mayor que 0', () => {
     const s = blankState(TEST_RULES);
     const t = fighter();
     const a = newUnit(s, t, 0, { x: 1, y: 1 });
-    for (let d = 0; d < POWER[t]!.length; d++) expect(canDamage(a, newUnit(s, d, 1, { x: 2, y: 1 }))).toBe(POWER[t]![d]! > 0);
+    for (let d = 0; d < POWER[t]!.length; d++) expect(canDamage(s, a, newUnit(s, d, 1, { x: 2, y: 1 }))).toBe(POWER[t]![d]! > 0);
     const pacifist = UNIT.canfight.findIndex((f) => !f);
-    if (pacifist >= 0) expect(canDamage(newUnit(s, pacifist, 0, { x: 3, y: 3 }), a)).toBe(false);
+    if (pacifist >= 0) expect(canDamage(s, newUnit(s, pacifist, 0, { x: 3, y: 3 }), a)).toBe(false);
   });
 });

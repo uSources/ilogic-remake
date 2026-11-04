@@ -2,7 +2,8 @@
  * El camino que el jugador traza con el cursor al mover una unidad: se alarga casilla a casilla, se
  * recorta al volver sobre el y salta al mas corto si se pasa. Logica pura, sin interfaz.
  */
-import { Movement } from './data';
+
+import { movementOf } from './gameContent';
 import { manhattan, samePos } from './geom';
 import { moveCost, pathCost, pathTo, type MoveRange } from './rules/movement';
 import { canWalk } from './rules/queries';
@@ -19,7 +20,7 @@ export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: G
   const backIndex = current.findIndex((step) => samePos(step, hovered));
   if (backIndex >= 0) return current.slice(0, backIndex + 1);
   const end = current[current.length - 1]!;
-  const movement = Movement.of(unit.type);
+  const movement = movementOf(s, unit.type);
   const canExtend =
     manhattan(end, hovered) === 1 &&
     canWalk(s, hovered, movement) &&

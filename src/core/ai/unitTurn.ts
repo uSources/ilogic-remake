@@ -3,7 +3,8 @@
  * primero que la usa. Un papel nuevo (por ejemplo, artilleria que guarda la distancia) es una
  * entrada mas en UNIT_BEHAVIOURS, en su sitio de la lista.
  */
-import { HQ, UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
@@ -28,7 +29,8 @@ export interface UnitBehaviour {
   run(turn: UnitTurnContext): Generator<GameEvent, boolean>;
 }
 
-const isEnemyHq = (building: Building, ai: AiCtx): boolean => building.type === HQ && building.owner !== ai.me && building.owner !== null;
+const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean =>
+  building.type === tablesOf(s).HQ && building.owner !== ai.me && building.owner !== null;
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range, rng }: UnitTurnContext): Generator<GameEvent, boolean> {
@@ -55,14 +57,14 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     id: 'stepOffEnemyHq',
     when: ({ s, ai, unit }) => {
       const building = buildingAt(s, unit);
-      return !!building && isEnemyHq(building, ai) && !UNIT.cancapt[unit.type];
+      return !!building && isEnemyHq(s, building, ai) && !tablesOf(s).UNIT.cancapt[unit.type];
     },
     run: stepOffEnemyHq,
   },
   {
     // Debil: a curarse antes de que la destruyan.
     id: 'retreat',
-    when: ({ unit }) => needsRepair(unit),
+    when: ({ s, unit }) => needsRepair(s, unit),
     run: ({ s, ai, unit, range }) => retreat(s, ai, unit, range),
   },
   {

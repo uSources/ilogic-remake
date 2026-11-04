@@ -67,7 +67,7 @@ function joinSquad(s: GameState, squad: Squad, units: readonly Unit[]): Squad {
     leaveSquad(s, unit);
     unit.squad = squad.id;
     // Si ya hacia justo lo de la escuadra, la sigue (no va destacada).
-    if (unit.standingOrder && squad.standingOrder && sameStandingOrder(unit.standingOrder, forUnit(unit, squad.standingOrder)))
+    if (unit.standingOrder && squad.standingOrder && sameStandingOrder(unit.standingOrder, forUnit(s, unit, squad.standingOrder)))
       delete unit.standingOrder;
   }
   pruneSquads(s);
@@ -79,7 +79,7 @@ export function leaveSquad(s: GameState, unit: Unit): void {
   if (unit.squad === undefined) return;
   if (!unit.standingOrder) {
     const squadOrder = squadById(s, unit.squad)?.standingOrder;
-    if (squadOrder) unit.standingOrder = forUnit(unit, squadOrder);
+    if (squadOrder) unit.standingOrder = forUnit(s, unit, squadOrder);
   }
   delete unit.squad;
 }

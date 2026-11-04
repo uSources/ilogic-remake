@@ -1,4 +1,4 @@
-import { MAX_FUNDS, UNIT } from '../../core/data';
+import { tablesOf } from '../../core/gameContent';
 import { buildingIncome, commandUsed, score, upkeepOf, type BuyOption } from '../../core/rules';
 import type { GameState, Team } from '../../core/model';
 import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../../hud/store';
@@ -40,6 +40,7 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
   // endRound cobra primero y despues paga lo que pueda del mantenimiento.
   const afterIncome = s.funds[team] + income;
   const paid = Math.min(upkeep, afterIncome);
+  const { UNIT, MAX_FUNDS } = tablesOf(s);
   return {
     income: { lines: tally(owned, buildingLabel, (type) => buildingIncome(s, type)), total: income, scale: s.rules.incomeScale },
     upkeep:

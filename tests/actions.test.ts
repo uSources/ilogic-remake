@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
-import { HQ } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { newUnit } from '@core/rules';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState } from '@core/model';
 import { blankState } from './helpers';
+
+const { HQ } = defaultContent().tables;
 
 /** [CAMBIO] Registro de acciones: clic derecho inteligente, menu completo y cursor (controls/actions.ts). */
 const SOLDIER = 0,

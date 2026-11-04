@@ -10,10 +10,11 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { GENERALS, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { rulesWith } from '@core/data';
+import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';
-import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState, RulesConfig, Team } from '@core/model';
@@ -60,8 +61,9 @@ function orderPlayerSquad(s: GameState): void {
 
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
-  const s = generateGame(rng, { size: scenario.size, rules: rulesWith(scenario.rules) });
-  if (scenario.withGenerals) s.generals = [newGeneral(GENERALS[0]?.id), newGeneral(GENERALS[1]?.id)];
+  const s = createGame(rng, { size: scenario.size, rules: rulesWith(scenario.rules) });
+  const generals = defaultContent().files.generals;
+  if (scenario.withGenerals) s.generals = [newGeneral(s, generals[0]?.id), newGeneral(s, generals[1]?.id)];
   if (scenario.withSquad) orderPlayerSquad(s);
 
   const hash = createHash('sha256');

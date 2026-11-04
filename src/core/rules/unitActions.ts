@@ -1,7 +1,8 @@
 /**
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
-import { UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { effectiveStandingOrder } from '../squads/standingOrders';
 import { canFight, isCapturer, isPlayer } from '../util/predicates';
 import type { GameState, Unit } from '../model';
@@ -35,7 +36,7 @@ export interface UnitActions {
 
 /** Algun pasajero se puede bajar a una casilla de al lado. */
 function canUnloadSomeone(s: GameState, transport: Unit): boolean {
-  if (UNIT.maxcarry[transport.type]! <= 0) return false;
+  if (tablesOf(s).UNIT.maxcarry[transport.type]! <= 0) return false;
   return cargoUnits(s, transport).some((passenger) => unloadTiles(s, transport, passenger).length > 0);
 }
 
@@ -49,9 +50,9 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     supply: canSupply(s, unit),
     wait: true,
     back: unit.canMove,
-    cmdAttack: isMine && canFight(unit),
-    cmdCapture: isMine && isCapturer(unit),
-    cmdDefend: isMine && canFight(unit),
+    cmdAttack: isMine && canFight(s, unit),
+    cmdCapture: isMine && isCapturer(s, unit),
+    cmdDefend: isMine && canFight(s, unit),
     // Orden propia o de su escuadra.
     cmdCancel: !!effectiveStandingOrder(s, unit),
     delete: true,

@@ -3,7 +3,7 @@
  * pantalla con el resumen y sus botones (volver a jugar, siguiente mision, menu...).
  */
 import type Phaser from 'phaser';
-import { HQ } from '../../core/data';
+import { tablesOf } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { score } from '../../core/rules';
@@ -56,7 +56,7 @@ export function endButtonsFor(mission: MissionDef | undefined, won: boolean): En
 
 /** Donde mirar al acabar. `lastAt`: ultima casilla con un combate o una captura. */
 export function endFocus(s: GameState, won: boolean, reason: EndReason, lastAt: Pos | null): Pos {
-  const hqOf = (team: Team) => s.buildings.find((building) => building.type === HQ && building.owner === team);
+  const hqOf = (team: Team) => s.buildings.find((building) => building.type === tablesOf(s).HQ && building.owner === team);
   const objective = s.mission?.objective;
   if (reason === 'objective' && objective?.kind === 'escort') return objective.to;
   const endedByAMove = reason === 'hq' || reason === 'wipeout' || reason === 'objective';

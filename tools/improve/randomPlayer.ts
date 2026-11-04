@@ -3,7 +3,7 @@
  * abastecer, comprar). No juega bien: sirve para recorrer combinaciones raras que la IA nunca prueba.
  * Usa solo las funciones publicas de las reglas, como la interfaz del juego.
  */
-import { UNIT } from '@core/data';
+import { canFight } from '@core/util/predicates';
 import {
   attackFull,
   attackTargets,
@@ -69,7 +69,7 @@ function act(s: GameState, rng: Rng, u: Unit, after: (what: string) => void): vo
     if (at && unload(s, u, p, at)) after(`${u.uid} baja a ${p.uid} en (${at.x},${at.y})`);
   }
   if (!s.units.includes(u) || !u.active) return;
-  const t = UNIT.canfight[u.type] && u.canFire ? pick(rng, attackTargets(s, u)) : undefined;
+  const t = canFight(s, u) && u.canFire ? pick(rng, attackTargets(s, u)) : undefined;
   if (t && rng() < 0.8) {
     attackFull(s, u, t, rng);
     if (s.units.includes(u)) wait(u);

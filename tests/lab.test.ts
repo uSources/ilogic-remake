@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { UNIT_NAMES } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { outcome } from '@core/rules';
 import { defaultLab, LAB_FROM, LAB_TARGET, labRange, labState } from '../src/lab';
+
+const { UNIT_NAMES } = defaultContent().tables;
 
 const T = (n: string) => UNIT_NAMES.indexOf(n);
 
@@ -14,8 +16,8 @@ describe('laboratorio de animaciones', () => {
       [1, LAB_TARGET.x, LAB_TARGET.y],
     ]);
     const art = labState({ ...o, attacker: T('Artillery') }, 'attack');
-    expect(LAB_TARGET.x - art.units[0]!.x).toBe(labRange(T('Artillery')));
-    expect(labRange(T('Artillery'))).toBeGreaterThan(1);
+    expect(LAB_TARGET.x - art.units[0]!.x).toBe(labRange(art, T('Artillery')));
+    expect(labRange(art, T('Artillery'))).toBeGreaterThan(1);
   });
 
   it('destruir: la enemiga empieza con poca vida; la partida no se acaba sola', () => {

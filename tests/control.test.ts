@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { DEFAULT_RULES, HQ, MoveType, rulesWith } from '@core/data';
+import { DEFAULT_RULES, MoveType, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { manhattan, seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
-import { generateGame, placeControlPoints } from '@core/mapgen';
+import { createGame } from '@core/defaultGames';
+import { placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { blankState } from './helpers';
+
+const { HQ } = defaultContent().tables;
 
 /** [CAMBIO] Puntos de control: zonas que dan dinero cada ronda a su dueño si no estan disputadas. */
 const SOLDIER = 0,
@@ -84,7 +88,7 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = generateGame(seededRng(seed * 7919), { rules: rulesWith() });
+      const s = createGame(seededRng(seed * 7919), { rules: rulesWith() });
       const pts = s.controlPoints ?? [];
       total += pts.length;
       expect(pts.length).toBeLessThanOrEqual(DEFAULT_RULES.controlPoints);
@@ -122,14 +126,14 @@ describe('puntos de control', () => {
 
   it('se guardan con la partida; las partidas antiguas siguen sin ellos', () => {
     const s = withPoints();
-    const back = deserialize(serialize(s))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.controlPoints).toEqual(s.controlPoints);
     const raw = JSON.parse(serialize(s)) as { rules: Record<string, unknown>; controlPoints: unknown };
     delete raw.rules.controlPoints;
     delete raw.rules.controlIncome;
     delete raw.rules.controlRadius;
     raw.controlPoints = [{ x: -1, y: 2, owner: 0 }];
-    const old = deserialize(JSON.stringify(raw))!;
+    const old = deserialize(JSON.stringify(raw), defaultContent())!;
     expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0, controlRadius: 0 });
     expect(old.controlPoints).toBeUndefined();
   });

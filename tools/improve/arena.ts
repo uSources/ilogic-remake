@@ -14,9 +14,11 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
-import { AI, UNIT, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { rulesWith } from '@core/data';
+import { createGame } from '@core/defaultGames';
+import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
-import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
 import type { GameEvent, GameState, Rng, Team } from '@core/model';
 
@@ -26,6 +28,7 @@ const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
 
 function strength(s: GameState, t: Team): number {
+  const { UNIT } = tablesOf(s);
   const army = s.units.filter((u) => u.team === t).reduce((a, u) => a + (UNIT.cost[u.type]! * u.life) / 100, 0);
   return army + s.buildings.filter((b) => b.owner === t).length * 1500 + s.funds[t] * 0.5;
 }
@@ -33,7 +36,7 @@ function strength(s: GameState, t: Team): number {
 /** Una partida; devuelve el bando ganador (o null si empate). */
 export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
   const rng = seededRng(seed);
-  const s = generateGame(rng, { size, rules: rulesWith() });
+  const s = createGame(rng, { size, rules: rulesWith() });
   while (outcome(s) === 'playing' && s.day <= maxDays) {
     for (const t of [0, 1] as Team[]) {
       for (const _ of brains[t](s, rng, t)) if (outcome(s) !== 'playing') break;
@@ -94,7 +97,8 @@ function aiFiles(): string[] {
 
 /**
  * Prepara un fichero de la IA para la copia: los imports de fuera de la IA pasan a '@core/...' y
- * los pesos (AI de data) salen de weights.ts, congelados al hacer la copia.
+ * los pesos (`weightsOf` de gameContent) salen de weights.ts, congelados al hacer la copia: la IA de
+ * referencia juega siempre con los pesos que tenia, aunque la partida lleve otros.
  */
 export function snapshotSource(rel: string, src: string, copied: ReadonlySet<string>): string {
   const dir = posix.dirname(rel);
@@ -103,20 +107,20 @@ export function snapshotSource(rel: string, src: string, copied: ReadonlySet<str
     const target = posix.normalize(posix.join(dir, spec));
     return copied.has(`${target}.ts`) ? m : `from '@core/${target}'`;
   });
-  // import { AI, X } from '@core/data' -> import { X } from '@core/data' + import { AI } from './weights'
-  return out.replace(/import \{([^}]*)\} from '@core\/data';/, (m, names: string) => {
+  // import { weightsOf, X } from '@core/gameContent' -> import { X } from '@core/gameContent' + import { weightsOf } from './weights'
+  return out.replace(/import \{([^}]*)\} from '@core\/gameContent';/, (whole, names: string) => {
     const list = names
       .split(',')
-      .map((n) => n.trim())
+      .map((name) => name.trim())
       .filter(Boolean);
-    if (!list.includes('AI')) return m;
-    const rest = list.filter((n) => n !== 'AI');
-    const own = `import { AI } from '${weights}';`;
-    return rest.length ? `import { ${rest.join(', ')} } from '@core/data';\n${own}` : own;
+    if (!list.includes('weightsOf')) return whole;
+    const rest = list.filter((name) => name !== 'weightsOf');
+    const own = `import { weightsOf } from '${weights}';`;
+    return rest.length ? `import { ${rest.join(', ')} } from '@core/gameContent';\n${own}` : own;
   });
 }
 
-/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (data.AI) congelados. */
+/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (los de ai.json) congelados. */
 function snapshot(): void {
   rmSync(`${BASE_DIR}ai`, { recursive: true, force: true });
   mkdirSync(`${BASE_DIR}ai`, { recursive: true });
@@ -129,7 +133,10 @@ function snapshot(): void {
   }
   writeFileSync(
     `${BASE_DIR}weights.ts`,
-    `// Pesos de data.AI al guardar la IA de referencia (${day}). No editar.\nexport const AI = ${JSON.stringify(AI)} as const;\n`,
+    `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar.\n` +
+      `const AI = ${JSON.stringify(defaultContent().tables.AI)} as const;\n` +
+      `/** La IA de referencia juega con estos pesos, sea cual sea el contenido de la partida. */\n` +
+      `export const weightsOf = (_s: unknown): typeof AI => AI;\n`,
   );
   console.log(`IA actual guardada como referencia en improve/ai-baseline/ (${files.length} ficheros)`);
 }

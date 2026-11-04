@@ -3,8 +3,9 @@
  * transporte, si puede luchar o capturar. Con nombre en vez de `team === 0` o `UNIT.canfight[...]`
  * sueltos (docs/ESTILO.md, regla 4). Sin efectos.
  */
-import { UNIT } from '../data';
-import type { Team, Unit } from '../model';
+
+import { tablesOf } from '../gameContent';
+import type { GameState, Team, Unit } from '../model';
 
 /** El bando del jugador (el 1 es la IA, ver Team). */
 export const PLAYER: Team = 0;
@@ -37,14 +38,14 @@ export function isAlive(unit: Pick<Unit, 'life'>): boolean {
 }
 
 /** Su tipo puede atacar (units.json, "attack"). No mira si ya ha disparado este turno. */
-export function canFight(unit: Pick<Unit, 'type'>): boolean {
-  return !!UNIT.canfight[unit.type];
+export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
+  return !!tablesOf(s).UNIT.canfight[unit.type];
 }
 
 /**
  * Su tipo puede capturar edificios (units.json, "captures"). No mira si hay un edificio debajo: eso
  * es `canCapture` de rules/capture.ts.
  */
-export function isCapturer(unit: Pick<Unit, 'type'>): boolean {
-  return !!UNIT.cancapt[unit.type];
+export function isCapturer(s: GameState, unit: Pick<Unit, 'type'>): boolean {
+  return !!tablesOf(s).UNIT.cancapt[unit.type];
 }

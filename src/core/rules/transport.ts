@@ -1,7 +1,8 @@
 /**
  * Union de unidades iguales y transporte (subir y bajar pasajeros).
  */
-import { CAN_CARRY, MAX_LIFE, Movement } from '../data';
+import { movementOf, tablesOf } from '../gameContent';
+import { MAX_LIFE } from '../data';
 import { manhattan, neighbors4, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { isOnMap } from '../util/predicates';
@@ -54,8 +55,8 @@ export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
 }
 
 /** El transporte puede llevar a la unidad (del mismo bando y de un tipo que lleva). */
-const canCarry = (transport: Unit, passenger: Unit): boolean =>
-  transport.team === passenger.team && !!CAN_CARRY[transport.type]![passenger.type];
+const canCarry = (s: GameState, transport: Unit, passenger: Unit): boolean =>
+  transport.team === passenger.team && !!tablesOf(s).CAN_CARRY[transport.type]![passenger.type];
 
 /** Transportes a los que puede subir. [CAMBIO] el original usaba el movimiento del transporte. */
 export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)): Unit[] {
@@ -63,7 +64,7 @@ export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)
     (transport) =>
       transport.uid !== unit.uid &&
       isOnMap(transport) &&
-      canCarry(transport, unit) &&
+      canCarry(s, transport, unit) &&
       freeSlot(transport) !== -1 &&
       approachPath(s, unit, transport, range) !== null,
   );
@@ -71,7 +72,7 @@ export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)
 
 /** Subir a un transporte (Unit.Load): la unidad se mueve hasta el y queda dentro. */
 export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null {
-  if (!unit.active || !canCarry(transport, unit) || !isOnMap(unit)) return null;
+  if (!unit.active || !canCarry(s, transport, unit) || !isOnMap(unit)) return null;
   const slot = freeSlot(transport);
   if (slot === -1) return null;
   const path = approachPath(s, unit, transport);
@@ -90,7 +91,7 @@ export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null
 
 /** Casillas donde se puede bajar a un pasajero: vecinas transitables y libres. */
 export function unloadTiles(s: GameState, transport: Unit, passenger: Unit): Pos[] {
-  const movement = Movement.of(passenger.type);
+  const movement = movementOf(s, passenger.type);
   const occupied = occupancy(s);
   return neighbors4(mapGrid(s), transport).filter((pos) => isWalkable(s, pos, movement, occupied));
 }

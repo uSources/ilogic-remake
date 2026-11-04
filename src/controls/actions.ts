@@ -12,7 +12,7 @@
  * pasa aqui lo que solo ella sabe (que significa ir a esa casilla con la unidad elegida: `intent`).
  * Añadir una accion es una entrada en ACTIONS y otra en ACTION_RUNNERS; los mandos no cambian.
  */
-import { UNIT } from '../core/data';
+import { canFight, isCapturer } from '../core/util/predicates';
 import { buildingAt } from '../core/rules';
 import { standingOrderChoices, effectiveStandingOrder, squadUnits } from '../core/squads';
 import type { GameState, Pos, Unit } from '../core/model';
@@ -80,14 +80,14 @@ const inMenu = (entry: ActionEntry): ActionDef => ({ ...entry, smart: false, nee
 const movingUnit = (ctx: ActionCtx): Unit | null => (ctx.units.length === 1 && ctx.intent !== undefined ? ctx.units[0]! : null);
 const isMoving = (ctx: ActionCtx) => movingUnit(ctx) !== null;
 const isGroup = (ctx: ActionCtx) => !isMoving(ctx) && ctx.units.length > 0;
-const anyCanCapture = (units: readonly Unit[]) => units.some((unit) => UNIT.cancapt[unit.type]);
-const anyCanFight = (units: readonly Unit[]) => units.some((unit) => UNIT.canfight[unit.type]);
+const anyCanCapture = (ctx: ActionCtx) => ctx.units.some((unit) => isCapturer(ctx.s, unit));
+const anyCanFight = (ctx: ActionCtx) => ctx.units.some((unit) => canFight(ctx.s, unit));
 
 /** La casilla tiene un edificio que no es del jugador y alguna de estas unidades puede capturar. */
 function hasBuildingToCapture(ctx: ActionCtx): boolean {
   if (!ctx.at) return false;
   const building = buildingAt(ctx.s, ctx.at);
-  return !!building && building.owner !== 0 && anyCanCapture(ctx.units);
+  return !!building && building.owner !== 0 && anyCanCapture(ctx);
 }
 
 /** Escuadra que forman exactamente estas unidades (o null). */
@@ -102,7 +102,7 @@ const isWholeSquad = (ctx: ActionCtx) => exactSquad(ctx.s, ctx.units) !== null;
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
 function canOrder(ctx: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
   if (ctx.at) return standingOrderChoices(ctx.s, ctx.at, ctx.units, ctx.enemyHere).includes(kind);
-  return kind === 'capture' ? anyCanCapture(ctx.units) : anyCanFight(ctx.units);
+  return kind === 'capture' ? anyCanCapture(ctx) : anyCanFight(ctx);
 }
 
 /**
@@ -115,7 +115,7 @@ export const ACTIONS: readonly ActionDef[] = [
     id: 'attack',
     label: 'attack',
     cursor: 'attack',
-    ok: (ctx) => (isMoving(ctx) ? ctx.intent === 'attack' : isGroup(ctx) && ctx.enemyHere && anyCanFight(ctx.units)),
+    ok: (ctx) => (isMoving(ctx) ? ctx.intent === 'attack' : isGroup(ctx) && ctx.enemyHere && anyCanFight(ctx)),
   }),
   onTile({
     id: 'capture',

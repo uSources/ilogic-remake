@@ -7,7 +7,8 @@
  */
 import type Phaser from 'phaser';
 import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
-import { Movement, UNIT } from '../../core/data';
+import { movementOf } from '../../core/gameContent';
+import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { canWalk, unitAt, unitById, wait } from '../../core/rules';
 import { cancelStandingOrder, standingOrderBlock, giveStandingOrder, pruneSquads } from '../../core/squads';
@@ -133,7 +134,7 @@ export class Orders {
     const who = this.subjects();
     if (!who) return showToast(t('groupNone'));
     if (order === 'cancel') return this.cancelOrdersOf(who.units);
-    if (order === 'capture' && !who.units.some((unit) => UNIT.cancapt[unit.type])) return showToast(t('orderNoCapturer'));
+    if (order === 'capture' && !who.units.some((unit) => isCapturer(h.state, unit))) return showToast(t('orderNoCapturer'));
     if (h.phase === 'groupMenu') h.phase = 'map';
     this.start(order, who.units, who.from !== 'map');
   }
@@ -217,7 +218,7 @@ export class Orders {
   private movingIntent(unit: Unit, at: Pos): Pick<ActionCtx, 'intent' | 'intentCapture' | 'farOk'> {
     const s = this.h.state;
     const intent = this.h.intentAt(at);
-    const isFreeWalkable = !unitAt(s, at) && canWalk(s, at, Movement.of(unit.type));
+    const isFreeWalkable = !unitAt(s, at) && canWalk(s, at, movementOf(s, unit.type));
     return {
       intent: intent.kind,
       intentCapture: intent.kind === 'move' && intent.capture,

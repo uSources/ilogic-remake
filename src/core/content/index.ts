@@ -9,6 +9,7 @@
  * El ORDEN de las listas de unidades y edificios es el numero de tipo que guardan las partidas: las
  * nuevas van siempre al final, nunca en medio, y no se borran.
  */
+import { deepFreeze } from '../util/freeze';
 import aiFile from './ai.json';
 import buildingsFile from './buildings.json';
 import generalsFile from './generals.json';
@@ -75,7 +76,7 @@ export function validateContent(c: Content): string[] {
   return check.errors;
 }
 
-/** Tablas que usan las reglas (las de data.ts). El contenido tiene que estar validado. */
+/** Tablas que usan las reglas. El contenido tiene que estar validado. */
 export function buildTables(c: Content) {
   const ctx: ContentContext = {
     unitIds: new Set(c.units.map((u) => u.id)),
@@ -97,21 +98,22 @@ export function buildTables(c: Content) {
   };
 }
 
-/** Las tablas que usan las reglas (las de data.ts), construidas a partir de los ficheros. */
+/** Las tablas que usan las reglas, construidas a partir de los ficheros. */
 export type ContentTables = ReturnType<typeof buildTables>;
 
 /**
- * El contenido de una partida: los ficheros tal cual (nombres, notas...) y sus tablas. Son datos
- * (se pueden pasar como JSON a otro hilo) y, una vez en uso, no cambian (data.ts los congela).
+ * El contenido de una partida: los ficheros tal cual (nombres, notas, generales...) y sus tablas. Son
+ * datos (se pueden pasar como JSON a otro hilo) y estan congelados: nadie los cambia mientras se juega.
+ * Cada partida lleva el suyo (ver core/gameContent.ts).
  */
 export interface GameContent {
-  content: Content;
-  tables: ContentTables;
+  readonly files: Content;
+  readonly tables: ContentTables;
 }
 
-/** Lee, valida y convierte el contenido. Si algo esta mal, el juego no arranca y dice que. */
-export function loadContent(c: Content = readContentFiles()): GameContent {
+/** Lee, valida y convierte el contenido (congelado). Si algo esta mal, lanza un error que dice que. */
+export function loadContent(c: Content): GameContent {
   const errs = validateContent(c);
   if (errs.length) throw new Error(`Contenido del juego no valido (src/core/content):\n- ${errs.join('\n- ')}`);
-  return { content: c, tables: buildTables(c) };
+  return deepFreeze({ files: structuredClone(c), tables: buildTables(c) });
 }

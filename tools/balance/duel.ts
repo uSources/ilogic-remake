@@ -2,7 +2,8 @@
  * Laboratorio de duelos: una unidad contra otra, sin mapa ni IA, usando las reglas reales
  * (attack() de core/rules.ts, asi que incluye contraataque o menos azar si las reglas lo tienen).
  */
-import { POWER, TERRAIN_NAMES, UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
+import { TERRAIN_NAMES, type GameContent } from '@core/content';
+import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
@@ -26,13 +27,13 @@ export interface DuelCell {
 /** Lado del campo de los duelos (solo se usan unas casillas del medio). */
 const DUEL_MAP_SIZE = 32;
 
-function arena(terrain: number, rules: RulesConfig): GameState {
-  return newGameState({ map: blankMap(DUEL_MAP_SIZE, terrain), rules, funds: [0, 0] });
+function arena(terrain: number, opts: DuelOptions): GameState {
+  return newGameState({ map: blankMap(DUEL_MAP_SIZE, terrain), rules: opts.rules, content: opts.content, funds: [0, 0] });
 }
 
 function place(s: GameState, a: Unit, b: Unit): void {
   // A distancia minima a la que A puede atacar a B.
-  const d = UNIT.minalc[a.type]! + 1;
+  const d = tablesOf(s).UNIT.minalc[a.type]! + 1;
   a.x = 10;
   a.y = 10;
   b.x = 10 + d;
@@ -50,21 +51,25 @@ export interface DuelOptions {
   terrain: string;
   seed: number;
   rules: RulesConfig;
+  /** Contenido de las unidades que se enfrentan (el de una variante, o el del juego). */
+  content: GameContent;
 }
 
 export function duelMatrix(opts: DuelOptions): DuelCell[] {
   const t = Math.max(0, TERRAIN_NAMES.indexOf(opts.terrain as (typeof TERRAIN_NAMES)[number]));
   const rng = seededRng(opts.seed);
+  const { UNIT, POWER, UNIT_NAMES } = opts.content.tables;
+  const unitTypes = UNIT_NAMES.length;
   const cells: DuelCell[] = [];
-  for (let A = 0; A < UNIT_TYPES; A++) {
+  for (let A = 0; A < unitTypes; A++) {
     if (!UNIT.canfight[A] || UNIT.alcance[A] === 0) continue;
-    for (let B = 0; B < UNIT_TYPES; B++) {
+    for (let B = 0; B < unitTypes; B++) {
       if (!(POWER[A]![B]! > 0)) continue;
       let dmg = 0,
         counter = 0,
         kills = 0;
       for (let i = 0; i < opts.trials; i++) {
-        const s = arena(t, opts.rules);
+        const s = arena(t, opts);
         const a = newUnit(s, A, 0, { x: 0, y: 0 });
         const b = newUnit(s, B, 1, { x: 0, y: 0 });
         place(s, a, b);
@@ -80,11 +85,11 @@ export function duelMatrix(opts: DuelOptions): DuelCell[] {
         let wins = 0,
           decided = 0;
         for (let i = 0; i < opts.trials; i++) {
-          const s = arena(t, opts.rules);
+          const s = arena(t, opts);
           const a = newUnit(s, A, 0, { x: 0, y: 0 });
           const b = newUnit(s, B, 1, { x: 0, y: 0 });
           place(s, a, b);
-          if (!inAttackRange(B, b, a)) break; // B no llega a A a esa distancia: no hay duelo mutuo
+          if (!inAttackRange(s, B, b, a)) break; // B no llega a A a esa distancia: no hay duelo mutuo
           for (let round = 0; round < 40; round++) {
             const [x, y] = round % 2 === 0 ? [a, b] : [b, a];
             if (!s.units.includes(x) || !s.units.includes(y)) break;

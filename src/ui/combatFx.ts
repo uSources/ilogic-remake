@@ -9,7 +9,8 @@
  * animaciones.
  */
 import type Phaser from 'phaser';
-import { Movement, MoveType, UNIT } from '../core/data';
+import { MoveType } from '../core/data';
+import { defaultContent } from '../core/content/default';
 import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
@@ -35,10 +36,11 @@ export type ShotKind = 'arc' | 'missile' | 'bomb' | 'tracer' | 'bullets' | 'shel
 const MISSILE_RANGE = 6;
 
 export function shotKind(attackerType: number, defenderType: number): ShotKind {
+  const { UNIT } = defaultContent().tables;
   const isRangedWeapon = UNIT.minalc[attackerType]! > 0;
   if (isRangedWeapon) return UNIT.alcance[attackerType]! >= MISSILE_RANGE ? 'missile' : 'arc';
-  const movement = Movement.of(attackerType);
-  if (movement === MoveType.AIR) return Movement.of(defenderType) === MoveType.AIR ? 'tracer' : 'bomb';
+  const movement = UNIT.movtype[attackerType];
+  if (movement === MoveType.AIR) return UNIT.movtype[defenderType] === MoveType.AIR ? 'tracer' : 'bomb';
   return movement === MoveType.FOOT ? 'bullets' : 'shell';
 }
 

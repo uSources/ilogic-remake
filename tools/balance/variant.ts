@@ -17,12 +17,13 @@
  * Tablas: UNIT, POWER, BUILDING, TERRAIN, MOVE_COST ("MOVE_COST.vehicle.Woods"), RULES, AI. Las filas/columnas se pueden
  * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
  *
- * Una variante no cambia el contenido en uso (esta congelado): `buildVariant` construye otro, con sus
- * reglas, y runner.ts lo juega en hilos que cargan el nucleo con ese contenido.
+ * Una variante no cambia el contenido del juego (esta congelado): `buildVariant` construye otro, con
+ * sus reglas, y runner.ts se lo pasa a las partidas que juega en hilos.
  */
 import { rulesWith } from '@core/data';
 import { MOVEMENTS, TERRAIN_NAMES, type GameContent } from '@core/content';
-import { ACTIVE_CONTENT } from '@core/content/active';
+import { defaultContent } from '@core/content/default';
+import { deepFreeze } from '@core/util/freeze';
 import type { RulesConfig } from '@core/model';
 
 export interface Variant {
@@ -72,78 +73,98 @@ function namesFor(content: GameContent, table: string, depth: number): readonly 
   return null;
 }
 
-function index(key: string, names: readonly string[] | null, length: number): number[] {
-  if (key === '*') return Array.from({ length }, (_, i) => i);
+/** Los indices que nombra `key` en una lista de `length` filas: "*" (todas), un numero o un nombre. */
+function indicesFor(key: string, names: readonly string[] | null, length: number): number[] {
+  if (key === '*') return Array.from({ length }, (_, index) => index);
   if (/^\d+$/.test(key)) return [Number(key)];
-  const i = names?.indexOf(key) ?? -1;
-  if (i < 0) throw new Error(`Nombre desconocido "${key}" (validos: ${names?.join(', ')})`);
-  return [i];
+  const index = names?.indexOf(key) ?? -1;
+  if (index < 0) throw new Error(`Nombre desconocido "${key}" (validos: ${names?.join(', ')})`);
+  return [index];
 }
 
-function applyValue(old: unknown, v: number | string | boolean | null): unknown {
-  if (typeof v === 'string' && typeof old === 'number') {
-    const m = v.match(/^([x*+-])\s*(-?\d*\.?\d+)$/);
-    if (!m) throw new Error(`Valor "${v}" no valido: usa un numero, "x1.1", "+500" o "-0.05"`);
-    const n = Number(m[2]);
-    const out = m[1] === 'x' || m[1] === '*' ? old * n : m[1] === '+' ? old + n : old - n;
-    // Precios e ingresos: enteros redondeados a 100.
-    return Number.isInteger(old) && Math.abs(old) >= 100 ? Math.round(out / 100) * 100 : Math.round(out * 1e6) / 1e6;
-  }
-  return v;
+/** "x1.1", "+500" o "-0.05" aplicado a `old`. */
+function applyChange(old: number, change: string): number {
+  const match = change.match(/^([x*+-])\s*(-?\d*\.?\d+)$/);
+  if (!match) throw new Error(`Valor "${change}" no valido: usa un numero, "x1.1", "+500" o "-0.05"`);
+  const amount = Number(match[2]);
+  const operator = match[1];
+  if (operator === 'x' || operator === '*') return old * amount;
+  return operator === '+' ? old + amount : old - amount;
 }
 
-/** Resuelve "UNIT.cost.Tank" en [contenedor, clave] dentro de `tables` (puede haber varias con "*"). */
-function targets(content: GameContent, tables: Record<string, Table>, path: string): Slot[] {
-  const [tableName, ...rest] = path.split('.');
-  const table = tables[tableName!];
-  if (!table) throw new Error(`Tabla desconocida "${tableName}" (validas: ${Object.keys(tables).join(', ')})`);
-  let level: Slot[] = [];
-  // Primer nivel: en POWER es la fila (unidad); en el resto, el campo.
-  let current: unknown[] = [table];
-  for (let d = 0; d < rest.length; d++) {
-    const key = rest[d]!;
-    const next: unknown[] = [];
-    level = [];
-    for (const c of current) {
-      if (Array.isArray(c)) {
-        for (const i of index(key, namesFor(content, tableName!, d), c.length)) {
-          level.push([c as unknown as Record<number, unknown>, i]);
-          next.push(c[i]);
-        }
-      } else if (c && typeof c === 'object') {
-        if (!(key in c)) throw new Error(`"${key}" no existe en ${tableName}`);
-        level.push([c as Record<string, unknown>, key]);
-        next.push((c as Record<string, unknown>)[key]);
-      } else throw new Error(`Ruta demasiado larga: ${path}`);
+/** Precios e ingresos (enteros de 100 o mas): redondeados a 100; el resto, a 6 decimales. */
+function roundLike(old: number, value: number): number {
+  const isMoney = Number.isInteger(old) && Math.abs(old) >= 100;
+  return isMoney ? Math.round(value / 100) * 100 : Math.round(value * 1e6) / 1e6;
+}
+
+/** El valor nuevo de una casilla: el dado, o el cambio relativo ("x1.1"...) si la casilla es un numero. */
+function newValue(old: unknown, value: number | string | boolean | null): unknown {
+  if (typeof value !== 'string' || typeof old !== 'number') return value;
+  return roundLike(old, applyChange(old, value));
+}
+
+/** Las casillas de un nivel de la ruta: `key` dentro de cada contenedor del nivel anterior. */
+function slotsOneLevelDown(containers: unknown[], key: string, names: readonly string[] | null, tableName: string): Slot[] {
+  return containers.flatMap((container): Slot[] => {
+    if (Array.isArray(container)) {
+      return indicesFor(key, names, container.length).map((index): Slot => [container as unknown as Record<number, unknown>, index]);
     }
-    current = next;
+    if (container && typeof container === 'object') {
+      if (!(key in container)) throw new Error(`"${key}" no existe en ${tableName}`);
+      return [[container as Record<string, unknown>, key]];
+    }
+    throw new Error(`Ruta demasiado larga: ${tableName}.${key}`);
+  });
+}
+
+/** Resuelve "UNIT.cost.Tank" en las casillas [contenedor, clave] de `tables` (puede haber varias con "*"). */
+function targets(content: GameContent, tables: Record<string, Table>, path: string): Slot[] {
+  const [tableName = '', ...keys] = path.split('.');
+  const table = tables[tableName];
+  if (!table) throw new Error(`Tabla desconocida "${tableName}" (validas: ${Object.keys(tables).join(', ')})`);
+  // Primer nivel: en POWER es la fila (unidad); en el resto, el campo.
+  let slots: Slot[] = [];
+  let containers: unknown[] = [table];
+  keys.forEach((key, depth) => {
+    slots = slotsOneLevelDown(containers, key, namesFor(content, tableName, depth), tableName);
+    containers = slots.map(([container, slotKey]) => container[slotKey]);
+  });
+  if (!slots.length) throw new Error(`Ruta incompleta: ${path}`);
+  if (containers.some((value) => typeof value === 'object' && value !== null))
+    throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
+  return slots;
+}
+
+/** Cambia las casillas de `path` y apunta cada cambio en `changes`. */
+function applySetting(
+  content: GameContent,
+  tables: Record<string, Table>,
+  path: string,
+  value: number | string | boolean | null,
+  changes: VariantChange[],
+): void {
+  for (const [container, key] of targets(content, tables, path)) {
+    const from = container[key];
+    const to = newValue(from, value);
+    if (typeof from !== typeof to && from !== null && to !== null) throw new Error(`"${path}": se esperaba ${typeof from}`);
+    container[key] = to;
+    changes.push({ path: `${path}${path.includes('*') ? `[${key}]` : ''}`, from, to });
   }
-  if (!level.length) throw new Error(`Ruta incompleta: ${path}`);
-  for (const [container, key] of level)
-    if (typeof container[key] === 'object' && container[key] !== null)
-      throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
-  return level;
 }
 
 /**
- * Construye el contenido y las reglas de una variante a partir de `base` (el contenido en uso) y de
- * las reglas de siempre, sin tocar ninguno de los dos.
+ * Construye el contenido y las reglas de una variante a partir de `base` (el contenido del juego si
+ * no se dice otro) y de las reglas de siempre, sin tocar ninguno de los dos. El contenido sale
+ * congelado, como el del juego: se juega tal cual.
  */
-export function buildVariant(v: Variant, base: GameContent = ACTIVE_CONTENT): VariantSetup {
+export function buildVariant(variant: Variant, base: GameContent = defaultContent()): VariantSetup {
   const content = structuredClone(base);
   const rules: RulesConfig = rulesWith();
   const tables = editableTables(content, rules);
   const changes: VariantChange[] = [];
-  for (const [path, value] of Object.entries(v.set ?? {})) {
-    for (const [container, key] of targets(content, tables, path)) {
-      const from = container[key];
-      const to = applyValue(from, value);
-      if (typeof from !== typeof to && from !== null && to !== null) throw new Error(`"${path}": se esperaba ${typeof from}`);
-      container[key] = to;
-      changes.push({ path: `${path}${path.includes('*') ? `[${key}]` : ''}`, from, to });
-    }
-  }
-  return { name: v.name, content, rules, changes };
+  for (const [path, value] of Object.entries(variant.set ?? {})) applySetting(content, tables, path, value, changes);
+  return { name: variant.name, content: deepFreeze(content), rules: Object.freeze(rules), changes };
 }
 
 export const BASELINE: Variant = { name: 'actual' };

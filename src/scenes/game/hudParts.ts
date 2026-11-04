@@ -5,7 +5,8 @@
  */
 import { posKey } from '../../core/geom';
 import type Phaser from 'phaser';
-import { Movement, UNIT, UNIT_NAMES } from '../../core/data';
+import { defaultContent } from '../../core/content/default';
+import { movementOf } from '../../core/gameContent';
 import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';
@@ -77,7 +78,7 @@ export function moveTipFor(
   const anchor = o.anchor(cursor);
   if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
   const isMove = intent.kind === 'move';
-  const used = isMove ? pathCost(s, Movement.of(unit.type), o.trailTo(intent.to)) : range.steps.at(cursor) || 1;
+  const used = isMove ? pathCost(s, movementOf(s, unit.type), o.trailTo(intent.to)) : range.steps.at(cursor) || 1;
   return {
     anchor,
     action: moveTipAction(intent),
@@ -119,6 +120,7 @@ export function playerIncome(s: GameState): number {
 /** Panel del laboratorio de animaciones (null en una partida normal). */
 export function labPanel(lab: LabOptions | null): UIState['lab'] {
   if (!lab) return null;
+  const { UNIT, UNIT_NAMES } = defaultContent().tables;
   return {
     units: UNIT_NAMES.map((_, type) => unitLabel(type)),
     attacker: lab.attacker,

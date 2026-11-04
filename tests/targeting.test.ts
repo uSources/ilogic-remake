@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { UNIT, UNIT_NAMES, Movement } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
 import { bestAttackTile, closestStep } from '@core/targeting';
 import { extendTrail } from '@core/trail';
 import { moveRange, newUnit, pathCost } from '@core/rules';
 import { blankState } from './helpers';
+
+const { UNIT, UNIT_NAMES } = defaultContent().tables;
 
 const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
 const WOODS = 2;
@@ -68,7 +70,7 @@ describe('ordenes del jugador', () => {
     ]);
     const jump = extendTrail(s, u, r, block, trail, { x: 5, y: 8 });
     expect(jump[jump.length - 1]).toEqual({ x: 5, y: 8 });
-    expect(pathCost(s, Movement.of(u.type), jump)).toBeLessThanOrEqual(r.maxSteps);
+    expect(pathCost(s, UNIT.movtype[u.type]!, jump)).toBeLessThanOrEqual(r.maxSteps);
     // Fuera de alcance: se queda como estaba.
     expect(extendTrail(s, u, r, block, trail, { x: 30, y: 30 })).toBe(trail);
   });

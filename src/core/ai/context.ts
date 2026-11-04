@@ -2,7 +2,8 @@
  * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
-import { AI, BUILDING, HEALER, UNIT, Movement } from '../data';
+
+import { movementOf, tablesOf, weightsOf } from '../gameContent';
 import { samePos } from '../geom';
 import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
@@ -56,7 +57,7 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, Movement.of(unit.type), occupancyWithout(s, ai, unit));
+  const steps = groundDistance(s, from, movementOf(s, unit.type), occupancyWithout(s, ai, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
   return (pos) => steps.at(pos) || Infinity;
 }
@@ -87,7 +88,7 @@ export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveR
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (unit: Unit): number => UNIT.mover[unit.type]! + UNIT.alcance[unit.type]!;
+export const strikeReach = (s: GameState, unit: Unit): number => tablesOf(s).UNIT.mover[unit.type]! + tablesOf(s).UNIT.alcance[unit.type]!;
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me)): Unit[] {
@@ -98,10 +99,15 @@ export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me))
 export const canAct = (unit: Unit): boolean => unit.active && unit.carrier === null && unit.life > 0;
 
 /** Necesita volver a curarse a un edificio. */
-export const needsRepair = (unit: Unit): boolean => unit.life < AI.LIFETOBACK;
+export const needsRepair = (s: GameState, unit: Unit): boolean => unit.life < weightsOf(s).LIFETOBACK;
 
 /** En esa casilla hay un edificio propio que repara a la unidad. */
 export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {
   const building = buildingAt(s, pos);
-  return !!building && building.owner === unit.team && HEALER[unit.type]![building.type]! && BUILDING.heals[building.type]! > 0;
+  return (
+    !!building &&
+    building.owner === unit.team &&
+    tablesOf(s).HEALER[unit.type]![building.type]! &&
+    tablesOf(s).BUILDING.heals[building.type]! > 0
+  );
 }

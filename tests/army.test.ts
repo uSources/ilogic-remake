@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { UNIT, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { armyLimit, buyOptions, commandUsed, endRound, newUnit, spawn, upkeepOf } from '@core/rules';
 import { blankState } from './helpers';
+
+const { UNIT } = defaultContent().tables;
 
 const SOLDIER = 0,
   TANK = 1;

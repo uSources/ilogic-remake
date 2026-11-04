@@ -3,7 +3,8 @@
  * la misma IA que el enemigo al terminar el turno (assistTurn), o al darlas (startStandingOrder), y se
  * pueden prever sin tocar la partida (previewStandingOrders, para las flechas de intencion).
  */
-import { AI, UNIT } from '../data';
+
+import { cloneState, tablesOf, weightsOf } from '../gameContent';
 import { manhattan, samePos, seededRng } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
@@ -67,7 +68,7 @@ function* shootFromHereOrWait({ s, ai, unit, rng }: StandingOrderTurnContext): G
 function* captureOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, boolean> {
   const { s, ai, unit, at } = turn;
   const building = buildingAt(s, at);
-  if (!building || building.owner === ai.me || !UNIT.cancapt[unit.type]) return true;
+  if (!building || building.owner === ai.me || !tablesOf(s).UNIT.cancapt[unit.type]) return true;
   if (samePos(unit, at)) {
     yield* captureHere(s, unit);
     wait(unit);
@@ -83,14 +84,14 @@ function* captureOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent,
 }
 
 /** Esta en la zona que guarda la orden (a AI.GUARDRADIUS o menos del destino). */
-const inGuardZone = (at: Pos) => (pos: Pos) => manhattan(pos, at) <= AI.GUARDRADIUS;
+const inGuardZone = (s: GameState, at: Pos) => (pos: Pos) => manhattan(pos, at) <= weightsOf(s).GUARDRADIUS;
 
 /** Defender: disparar a lo que entre en la zona y, si no, colocarse junto al destino. Nunca se cumple sola. */
 function* defendOrderTurn({ s, ai, unit, at, rng }: StandingOrderTurnContext): Generator<GameEvent, boolean> {
   const range = moveRange(s, unit);
-  if (needsRepair(unit) && (yield* retreat(s, ai, unit, range))) return false;
+  if (needsRepair(s, unit) && (yield* retreat(s, ai, unit, range))) return false;
   const squadFormation = formation(s, ai, unit);
-  if (yield* tryAttack(s, ai, unit, range, rng, { zone: inGuardZone(at), from: formationFrom(squadFormation) })) return false;
+  if (yield* tryAttack(s, ai, unit, range, rng, { zone: inGuardZone(s, at), from: formationFrom(squadFormation) })) return false;
   if (manhattan(unit, at) > 1) yield* doMove(s, unit, standingOrderStep(s, ai, unit, at, range, squadFormation), range);
   wait(unit);
   return false;
@@ -100,7 +101,7 @@ function* defendOrderTurn({ s, ai, unit, at, rng }: StandingOrderTurnContext): G
 function* attackOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, boolean> {
   const { s, ai, unit, at, rng } = turn;
   const range = moveRange(s, unit);
-  if (needsRepair(unit) && (yield* retreat(s, ai, unit, range))) return false;
+  if (needsRepair(s, unit) && (yield* retreat(s, ai, unit, range))) return false;
   const squadFormation = formation(s, ai, unit);
   if (yield* tryAttack(s, ai, unit, range, rng, { chase: false, from: formationFrom(squadFormation) })) return false;
   if (manhattan(unit, at) > 1) {
@@ -111,7 +112,7 @@ function* attackOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, 
   // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.
   wait(unit);
   const visible = visibility(s, ai.me);
-  const isNear = inGuardZone(at);
+  const isNear = inGuardZone(s, at);
   const enemiesLeft = s.units.some((other) => other.team !== ai.me && other.carrier === null && visible.at(other) && isNear(other));
   return !enemiesLeft;
 }
@@ -168,7 +169,7 @@ export function previewStandingOrders(s: GameState, team: Team = 0, seed = PREVI
 
 /** Copia de la partida sin los enemigos que `team` no ve (ni lo que llevan dentro). */
 function withoutHiddenEnemies(s: GameState, team: Team): GameState {
-  const copy = structuredClone(s);
+  const copy = cloneState(s);
   const visible = visibility(copy, team);
   const isHiddenEnemy = (unit: Unit) => unit.team !== team && unit.carrier === null && !visible.at(unit);
   const hidden = new Set(copy.units.filter(isHiddenEnemy).map((unit) => unit.uid));

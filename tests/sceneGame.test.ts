@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HQ, UNIT_NAMES } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
@@ -17,6 +17,8 @@ import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { blankState } from './helpers';
+
+const { UNIT_NAMES, HQ } = defaultContent().tables;
 
 const type = (n: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(n);
 const seeAll = () => true;

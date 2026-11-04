@@ -1,6 +1,7 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
 import { aiTurn } from '@core/ai';
-import { BUILDING, UNIT, UNIT_TYPES } from '@core/data';
+import type { GameContent } from '@core/content';
+import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endReason, endRound, outcome } from '@core/rules';
@@ -21,6 +22,8 @@ export interface PlayOptions {
   size?: number;
   /** Reglas de la partida. */
   rules: RulesConfig;
+  /** Contenido con el que se juega (el de una variante, o el del juego). */
+  content: GameContent;
 }
 
 /** Por tipo de unidad y bando. */
@@ -72,6 +75,7 @@ const emptyTally = (): UnitTally => ({
 });
 
 function sample(s: GameState): DaySample {
+  const { UNIT } = tablesOf(s);
   const army: [number, number] = [0, 0];
   const units: [number, number] = [0, 0];
   for (const u of s.units) {
@@ -85,12 +89,13 @@ function sample(s: GameState): DaySample {
 
 export function playGame(opts: PlayOptions): GameRecord {
   const rng = seededRng(opts.seed);
-  const s = generateGame(rng, { size: opts.size ?? 32, rules: opts.rules });
+  const s = generateGame(rng, { size: opts.size ?? 32, rules: opts.rules, content: opts.content });
+  const { UNIT, UNIT_NAMES } = tablesOf(s);
   if (opts.swapSides) {
     for (const u of s.units) u.team = (1 - u.team) as Team;
     for (const b of s.buildings) if (b.owner !== null) b.owner = (1 - b.owner) as Team;
   }
-  const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: UNIT_TYPES }, emptyTally));
+  const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: UNIT_NAMES.length }, emptyTally));
   const samples: DaySample[] = [sample(s)];
   // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
   const known = new Map<number, { type: number; team: Team; x: number; y: number; life: number }>();
@@ -169,6 +174,5 @@ export function playGame(opts: PlayOptions): GameRecord {
     reason = endReason(s) ?? 'timeout';
   }
   if (result === 'playing') samples.push(sample(s));
-  void BUILDING;
   return { seed: opts.seed, winner, reason, days: s.day, samples, units, events };
 }

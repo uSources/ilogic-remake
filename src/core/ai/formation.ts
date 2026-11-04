@@ -4,7 +4,8 @@
  * AI.SQUADSPREAD casillas a la mas retrasada (por tierra hasta el destino), salvo para atacar a algo a
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
-import { AI, UNIT, Movement } from '../data';
+
+import { movementOf, tablesOf, weightsOf } from '../gameContent';
 import { manhattan } from '../geom';
 import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
 import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders';
@@ -13,7 +14,7 @@ import { compareKeys, maxBy, minBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
 
 /** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
-const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, Movement.of(unit.type));
+const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, movementOf(s, unit.type));
 
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega). */
 const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, effectiveStandingOrder(s, unit)!.at).at(unit);
@@ -21,7 +22,7 @@ const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
 function formationMates(s: GameState, unit: Unit): Unit[] {
   return s.units.filter(
-    (other) => other !== unit && other.carrier === null && other.life > 0 && !needsRepair(other) && sameFormation(s, unit, other),
+    (other) => other !== unit && other.carrier === null && other.life > 0 && !needsRepair(s, other) && sameFormation(s, unit, other),
   );
 }
 
@@ -36,7 +37,7 @@ export function standingOrderPlayOrder(s: GameState, units: readonly Unit[]): Un
     if (placed.has(unit)) continue;
     const group = units.filter((other) => other === unit || (!placed.has(other) && sameFormation(s, unit, other)));
     const remaining = new Map(group.map((member) => [member, remainingOf(s, member)]));
-    const speed = (member: Unit) => UNIT.mover[member.type]!;
+    const speed = (member: Unit) => tablesOf(s).UNIT.mover[member.type]!;
     group.sort((a, b) => remaining.get(b)! - remaining.get(a)! || speed(a) - speed(b));
     for (const member of group) placed.add(member);
     ordered.push(...group);
@@ -71,7 +72,11 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
     .map((mate) => {
       const remaining = remainingOf(s, mate);
       const canStillMove = mate.active && mate.canMove;
-      return { unit: mate, remaining, afterThisTurn: canStillMove ? Math.max(0, remaining - UNIT.mover[mate.type]!) : remaining };
+      return {
+        unit: mate,
+        remaining,
+        afterThisTurn: canStillMove ? Math.max(0, remaining - tablesOf(s).UNIT.mover[mate.type]!) : remaining,
+      };
     })
     .filter((mate) => mate.remaining < Infinity);
 }
@@ -79,7 +84,7 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
 /** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
 export function formation(s: GameState, ai: AiCtx, unit: Unit): Formation | null {
   const standingOrder = effectiveStandingOrder(s, unit);
-  if (!standingOrder || needsRepair(unit)) return null;
+  if (!standingOrder || needsRepair(s, unit)) return null;
   const mates = matesProgress(s, unit);
   if (!mates.length) return null;
   const remaining = remainingMap(s, unit, standingOrder.at);
@@ -89,10 +94,10 @@ export function formation(s: GameState, ai: AiCtx, unit: Unit): Formation | null
   const furthestBehind = maxBy(mates, (mate) => mate.remaining)!;
   const rear = mine > furthestBehind.remaining ? { unit, remaining: mine } : furthestBehind;
   // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
-  const rearReach = strikeReach(rear.unit);
+  const rearReach = strikeReach(s, rear.unit);
   if (rear.remaining <= rearReach) return null;
   if (visibleFoes(s, ai.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
-  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - AI.SQUADSPREAD, rear: rearAfterThisTurn.unit };
+  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - weightsOf(s).SQUADSPREAD, rear: rearAfterThisTurn.unit };
 }
 
 /**

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { UNIT, UNIT_TYPES } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { blankState } from './helpers';
 import { AI_TEAM, PLAYER, canFight, isAlive, isCapturer, isEnemyOf, isOnMap, isPlayer, opponentOf } from '@core/util/predicates';
+
+const { UNIT, UNIT_NAMES } = defaultContent().tables;
 
 describe('preguntas con nombre', () => {
   it('bandos: jugador, rival y enemigos', () => {
@@ -21,9 +24,10 @@ describe('preguntas con nombre', () => {
   });
 
   it('luchar y capturar leen las tablas de units.json', () => {
-    for (let type = 0; type < UNIT_TYPES; type++) {
-      expect(canFight({ type })).toBe(!!UNIT.canfight[type]);
-      expect(isCapturer({ type })).toBe(!!UNIT.cancapt[type]);
+    const s = blankState();
+    for (let type = 0; type < UNIT_NAMES.length; type++) {
+      expect(canFight(s, { type })).toBe(!!UNIT.canfight[type]);
+      expect(isCapturer(s, { type })).toBe(!!UNIT.cancapt[type]);
     }
   });
 });

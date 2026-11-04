@@ -2,8 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ATLAS_PAGES, LOOSE_IMAGES } from '../src/atlasPages';
 import { IMAGE_KEYS } from '../src/assetList';
-import { BUILDING_NAMES, HQ, UNIT_ART, UNIT_NAMES } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { requiredArtKeys } from '../src/ui/terrainArt';
+
+const { UNIT_NAMES, UNIT_ART, BUILDING_NAMES, HQ } = defaultContent().tables;
 
 /** Comprueba que los graficos compilados (npm run assets) estan completos. */
 const frames = new Map<string, { w: number; h: number }>();

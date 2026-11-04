@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HQ, UNIT } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/geom';
 import {
@@ -179,6 +179,8 @@ describe('compra y fin de ronda', () => {
 });
 
 import { combatForecast, threatMap } from '@core/rules';
+
+const { UNIT, HQ } = defaultContent().tables;
 
 describe('prevision y amenaza', () => {
   it('prevision de tanque contra tanque coherente', () => {

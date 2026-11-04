@@ -1,5 +1,5 @@
 /** Fase 'buy': el menu de compra de una fabrica propia. */
-import { UNIT } from '../../../core/data';
+import { tablesOf } from '../../../core/gameContent';
 import { buyOptions, spawn, type BuyOption } from '../../../core/rules';
 import type { Building, GameState } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
@@ -57,6 +57,7 @@ function buyItem(s: GameState, option: BuyOption): MenuItemVM {
 
 function buyDetail(s: GameState, option: BuyOption): string {
   const type = option.type;
+  const UNIT = tablesOf(s).UNIT;
   const command = s.rules.commandPoints === null ? '' : ` · ${t('commandShort')} ${UNIT.command[type]}`;
   const abilities = abilitiesVM(s, type)
     .map((ability) => ` · ${ability.name}`)

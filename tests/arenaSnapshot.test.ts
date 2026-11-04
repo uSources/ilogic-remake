@@ -16,10 +16,12 @@ describe('arena: copia de la IA', () => {
     );
   });
 
-  it('los pesos AI salen de weights.ts (congelados)', () => {
-    expect(snapshotSource('ai/context.ts', "import { AI, RULES, UNIT } from '../data';\n", copied)).toBe(
-      "import { RULES, UNIT } from '@core/data';\nimport { AI } from '../weights';\n",
+  it('los pesos (weightsOf) salen de weights.ts (congelados)', () => {
+    expect(snapshotSource('ai/context.ts', "import { movementOf, tablesOf, weightsOf } from '../gameContent';\n", copied)).toBe(
+      "import { movementOf, tablesOf } from '@core/gameContent';\nimport { weightsOf } from '../weights';\n",
     );
-    expect(snapshotSource('ai.ts', "import { AI } from './data';\n", copied)).toBe("import { AI } from './weights';\n");
+    expect(snapshotSource('ai.ts', "import { weightsOf } from './gameContent';\n", copied)).toBe(
+      "import { weightsOf } from './weights';\n",
+    );
   });
 });

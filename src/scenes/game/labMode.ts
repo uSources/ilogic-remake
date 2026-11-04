@@ -43,7 +43,7 @@ async function runLab(h: LabHost, action: LabAction): Promise<void> {
   if (!me || !foe) return;
   if (action === 'move') {
     const range = moveRange(s, me);
-    const dest = { x: LAB_TARGET.x - labRange(me.type), y: LAB_TARGET.y };
+    const dest = { x: LAB_TARGET.x - labRange(s, me.type), y: LAB_TARGET.y };
     const path = moveUnit(s, me, dest, range);
     if (path) await h.play([moveEvent(me.uid, path)]);
     return;

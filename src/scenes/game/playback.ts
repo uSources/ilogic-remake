@@ -7,7 +7,8 @@
  * un evento nuevo trae su propia funcion en vez de abrir un `switch`.
  */
 import type Phaser from 'phaser';
-import { MoveType, Movement, UNIT_ART } from '../../core/data';
+import { MoveType } from '../../core/data';
+import { movementOf, tablesOf } from '../../core/gameContent';
 import { abilityArea, generalOf } from '../../core/generals';
 import { squareArea } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
@@ -185,7 +186,7 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const start = event.path[0]!;
   if (mover) return unitKey(stage.scene.textures, s, { ...mover, x: start.x, y: start.y, active: true });
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (roja si no se sabe).
-  return 'r_' + UNIT_ART[unitEntered(s, event)?.type ?? 0];
+  return 'r_' + tablesOf(s).UNIT_ART[unitEntered(s, event)?.type ?? 0];
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
@@ -243,7 +244,7 @@ function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Ima
   // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
   const mover = unitById(stage.state, uid);
   const team = mover?.team ?? (stage.enemyPlaying ? 1 : 0);
-  const moveType = mover ? Movement.of(mover.type) : null;
+  const moveType = mover ? movementOf(stage.state, mover.type) : null;
   return { image, team, hops: moveType === MoveType.FOOT, raisesDust: moveType !== MoveType.FOOT && moveType !== MoveType.AIR };
 }
 

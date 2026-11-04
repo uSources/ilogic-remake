@@ -6,7 +6,7 @@
  */
 import Phaser from 'phaser';
 import { effectiveStandingOrder, renameSquad } from '../core/squads';
-import { HQ } from '../core/data';
+import { tablesOf } from '../core/gameContent';
 import { samePos } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
@@ -249,7 +249,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Cursor y camara sobre la Base del jugador. */
   private centerOnHq(): void {
-    const hq = this.s.buildings.find((building) => building.owner === 0 && building.type === HQ) ?? { x: 0, y: 0 };
+    const hq = this.s.buildings.find((building) => building.owner === 0 && building.type === tablesOf(this.s).HQ) ?? { x: 0, y: 0 };
     this.view.cursor = { x: hq.x, y: hq.y };
     this.view.centerOn(hq, true);
   }

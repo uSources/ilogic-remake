@@ -1,7 +1,8 @@
 /**
  * [CAMBIO] Fuego concentrado: el plan de quien remata a quien entre varias unidades, antes de mover.
  */
-import { UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { manhattan } from '../geom';
 import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
@@ -22,19 +23,20 @@ export interface FirePlan {
 type DamageTable = Map<number, Map<number, number>>;
 
 /** Puede disparar este turno y no tiene que irse a curar. */
-const isShooter = (unit: Unit): boolean => unit.carrier === null && unit.canFire && UNIT.canfight[unit.type]! && !needsRepair(unit);
+const isShooter = (s: GameState, unit: Unit): boolean =>
+  unit.carrier === null && unit.canFire && tablesOf(s).UNIT.canfight[unit.type]! && !needsRepair(s, unit);
 
 /** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
 function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {
   const table: DamageTable = new Map();
   for (const shooter of shooters) {
-    const reach = strikeReach(shooter);
-    const nearby = foes.filter((foe) => manhattan(shooter, foe) <= reach && canDamage(shooter, foe));
+    const reach = strikeReach(s, shooter);
+    const nearby = foes.filter((foe) => manhattan(shooter, foe) <= reach && canDamage(s, shooter, foe));
     if (!nearby.length) continue;
-    const origins = fireOrigins(shooter, isRanged(shooter.type) ? null : moveRange(s, shooter));
+    const origins = fireOrigins(s, shooter, isRanged(s, shooter.type) ? null : moveRange(s, shooter));
     const damageByTarget = new Map<number, number>();
     for (const foe of nearby)
-      if (origins.some((from) => inAttackRange(shooter.type, from, foe))) damageByTarget.set(foe.uid, expectedDamage(s, shooter, foe));
+      if (origins.some((from) => inAttackRange(s, shooter.type, from, foe))) damageByTarget.set(foe.uid, expectedDamage(s, shooter, foe));
     if (damageByTarget.size) table.set(shooter.uid, damageByTarget);
   }
   return table;
@@ -59,12 +61,12 @@ function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: Dama
 }
 
 /** Lo que vale quitar a un enemigo: su precio por la vida que le queda (los mas valiosos, primero). */
-const remainingValue = (unit: Unit): number => UNIT.cost[unit.type]! * unit.life;
+const remainingValue = (s: GameState, unit: Unit): number => tablesOf(s).UNIT.cost[unit.type]! * unit.life;
 
 /** Turno de juego: primero las del plan a distancia (no se mueven y dejan al objetivo flanqueado), luego las del plan, luego el resto. */
-function playRank(unit: Unit, plan: Map<number, number>): number {
+function playRank(s: GameState, unit: Unit, plan: Map<number, number>): number {
   if (!plan.has(unit.uid)) return 2;
-  return isRanged(unit.type) ? 0 : 1;
+  return isRanged(s, unit.type) ? 0 : 1;
 }
 
 /**
@@ -78,9 +80,13 @@ export function planFire(s: GameState, me: Team): FirePlan {
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
   const foes = visibleFoes(s, me);
-  const damage = damageTable(s, mine.filter(isShooter), foes);
+  const damage = damageTable(
+    s,
+    mine.filter((unit) => isShooter(s, unit)),
+    foes,
+  );
   const free = new Set(damage.keys());
-  const mostValuableFirst = [...foes].sort((a, b) => remainingValue(b) - remainingValue(a));
+  const mostValuableFirst = [...foes].sort((a, b) => remainingValue(s, b) - remainingValue(s, a));
   for (const foe of mostValuableFirst) {
     const squad = squadToDestroy(s, foe, free, damage);
     if (!squad) continue;
@@ -90,6 +96,6 @@ export function planFire(s: GameState, me: Team): FirePlan {
     }
   }
   // sort es estable: dentro de cada grupo se conserva el orden de siempre.
-  const order = [...mine].sort((a, b) => playRank(a, plan) - playRank(b, plan)).map((unit) => unit.uid);
+  const order = [...mine].sort((a, b) => playRank(s, a, plan) - playRank(s, b, plan)).map((unit) => unit.uid);
   return { plan, order };
 }

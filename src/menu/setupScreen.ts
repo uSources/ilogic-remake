@@ -3,7 +3,7 @@
  * mapa y la vista previa del mapa que se jugara. Pide a la escena lo poco que usa (`SetupHost`).
  */
 import type { MenuCommand } from '../controls/menu';
-import { GENERALS } from '../core/data';
+import { defaultContent } from '../core/content/default';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
@@ -146,9 +146,9 @@ export class SetupScreen {
         preset: options.preset,
         presets: PRESET_IDS.map(presetVM),
         groups: this.customGroups(),
-        general: GENERALS.length ? this.generalRow('general', 'optGeneral') : null,
-        enemyGeneral: GENERALS.length ? this.generalRow('enemyGeneral', 'optEnemyGeneral') : null,
-        generalNote: GENERALS.find((general) => general.id === options.general)?.description[settings.lang] ?? '',
+        general: hasGenerals() ? this.generalRow('general', 'optGeneral') : null,
+        enemyGeneral: hasGenerals() ? this.generalRow('enemyGeneral', 'optEnemyGeneral') : null,
+        generalNote: defaultContent().files.generals.find((general) => general.id === options.general)?.description[settings.lang] ?? '',
         code: this.code,
         codeError: this.codeError,
         mapCode: seedToCode(this.seed),
@@ -183,7 +183,7 @@ export class SetupScreen {
 
   private refreshPreview(): void {
     const { size, theme } = this.options;
-    const s = generateGame(seededRng(this.seed), { size, theme, rules: rulesFor(this.options) });
+    const s = generateGame(seededRng(this.seed), { size, theme, rules: rulesFor(this.options), content: defaultContent() });
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
     const themeName = THEME_NAMES[settings.lang === 'es' ? 'es' : 'en'][s.theme] ?? '';
     const buildings = settings.lang === 'es' ? 'edificios' : 'buildings';
@@ -284,7 +284,7 @@ export class SetupScreen {
 
   private rows(): string[][] {
     const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`)];
-    if (GENERALS.length) rows.push([`${OPTION_PREFIX}general`], [`${OPTION_PREFIX}enemyGeneral`]);
+    if (hasGenerals()) rows.push([`${OPTION_PREFIX}general`], [`${OPTION_PREFIX}enemyGeneral`]);
     if (this.options.preset === 'custom')
       for (const group of CUSTOM_GROUPS) for (const { k: key } of group.keys) rows.push([`${OPTION_PREFIX}${key}`]);
     rows.push(['code', 'reroll']);
@@ -309,3 +309,5 @@ export class SetupScreen {
     this.publish();
   }
 }
+
+const hasGenerals = (): boolean => defaultContent().files.generals.length > 0;

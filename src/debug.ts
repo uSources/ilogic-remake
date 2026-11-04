@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { GameState } from './core/model';
-import { UNIT_NAMES } from './core/data';
+import { defaultContent } from './core/content/default';
 import { defaultLab } from './lab';
 import { ui, type UIState } from './hud/store';
 import type { GameScene, GameStartData } from './scenes/GameScene';
@@ -98,7 +98,7 @@ export function installDebug(game: Phaser.Game): void {
     async lab(opts = {}) {
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
-      const type = (name: string | undefined, def: number) => (name ? Math.max(0, UNIT_NAMES.indexOf(name)) : def);
+      const type = (name: string | undefined, def: number) => (name ? Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf(name)) : def);
       const base = defaultLab();
       from.scene.start('Game', {
         mode: 'lab',

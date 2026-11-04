@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING_NAMES, HQ, MAX_FUNDS, UNIT, UNIT_NAMES, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
 import { attackEvent, endRound, newUnit, score } from '@core/rules';
 import { settings } from '../src/settings';
@@ -15,8 +16,9 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { WEATHER } from '@core/data';
 import { blankState } from './helpers';
+
+const { UNIT, UNIT_NAMES, BUILDING_NAMES, HQ, MAX_FUNDS, WEATHER } = defaultContent().tables;
 
 /** Texturas de mentira: todas las imagenes "existen" (las fichas solo usan sus nombres). */
 const textures = {

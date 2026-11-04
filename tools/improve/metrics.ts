@@ -154,7 +154,7 @@ async function main(): Promise<void> {
     [...a, ...b],
     { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' },
     DEFAULT_TARGETS,
-    setup.content.tables.UNIT,
+    setup.content.tables,
   );
   const m = score(report, size);
   const base = existsSync(BASELINE) ? (JSON.parse(readFileSync(BASELINE, 'utf8')) as Metrics) : null;

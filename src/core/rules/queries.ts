@@ -2,7 +2,8 @@
  * Consultas basicas sobre el estado: que hay en una casilla, por donde se puede andar, de quien es
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
-import { Movement, type MoveType } from '../data';
+import { canMoveOn } from '../gameContent';
+import { type MoveType } from '../data';
 import { createLayer, isOnBoard, terrainAt } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
@@ -30,7 +31,7 @@ export function occupancy(s: GameState): Grid<boolean> {
 }
 
 export function canWalk(s: GameState, pos: Pos, moveType: MoveType): boolean {
-  return isOnBoard(s, pos) && Movement.canWalk(moveType, terrainAt(s, pos));
+  return isOnBoard(s, pos) && canMoveOn(s, moveType, terrainAt(s, pos));
 }
 
 /** Transitable y libre de unidades (amigas o enemigas: no se puede atravesar a nadie). */

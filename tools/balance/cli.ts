@@ -106,7 +106,7 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
     records,
     { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') },
     targetsFrom(a),
-    setup.content.tables.UNIT,
+    setup.content.tables,
     duel,
   );
   return report;

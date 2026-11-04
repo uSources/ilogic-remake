@@ -5,9 +5,9 @@
 import { rulesWith } from '../../core/data';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
-import { generateGame } from '../../core/mapgen';
+import { defaultContent } from '../../core/content/default';
+import { createGame, loadGame } from '../../core/defaultGames';
 import { buildMission, missionById } from '../../core/missions';
-import { deserialize } from '../../core/save';
 import type { GameSetup, GameState } from '../../core/model';
 import { ensureWeather } from '../../core/weather';
 import { defaultLab, labState, type LabOptions } from '../../lab';
@@ -31,7 +31,7 @@ const DEFAULT_MAP_SIZE = 32;
 export function startMatch(data: GameStartData): MatchStart {
   const lab = data.mode === 'lab' ? (data.lab ?? defaultLab()) : null;
   const saved = data.mode === 'load' ? readSavedGame() : null;
-  const given = data.mode === 'state' && data.state ? deserialize(data.state) : null;
+  const given = data.mode === 'state' && data.state ? loadGame(data.state) : null;
   const loaded = saved ?? given;
   const corruptSave = (data.mode === 'load' || data.mode === 'state') && !loaded;
   if (corruptSave) deleteSave();
@@ -42,7 +42,7 @@ export function startMatch(data: GameStartData): MatchStart {
 
 function readSavedGame(): GameState | null {
   const raw = readSave();
-  return raw ? deserialize(raw) : null;
+  return raw ? loadGame(raw) : null;
 }
 
 function labMatch(lab: LabOptions): GameState {
@@ -52,17 +52,17 @@ function labMatch(lab: LabOptions): GameState {
 function missionMatch(data: GameStartData): GameState | null {
   const mission = data.mode === 'mission' && data.mission ? missionById(data.mission) : undefined;
   if (!mission) return null;
-  return buildMission(mission);
+  return buildMission(mission, defaultContent());
 }
 
 /** Mapa al azar (o el de `setup`), con los generales elegidos. */
 function newMatch(data: GameStartData): GameState {
   const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
   const rules = rulesWith(data.rules);
-  const state = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, rules });
+  const state = createGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, rules });
   state.setup = setup;
-  const player = newGeneral(data.general);
-  const enemy = newGeneral(data.enemyGeneral);
+  const player = newGeneral(state, data.general);
+  const enemy = newGeneral(state, data.enemyGeneral);
   if (player || enemy) state.generals = [player, enemy];
   return state;
 }

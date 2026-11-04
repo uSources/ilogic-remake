@@ -5,7 +5,8 @@
  */
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
-import { WEATHER } from '../../core/data';
+import { defaultContent } from '../../core/content/default';
+import { contentOf } from '../../core/gameContent';
 import { samePos, seededRng } from '../../core/geom';
 import {
   buildingAt,
@@ -258,7 +259,7 @@ export class TurnFlow {
     host.toMap();
     const saved = this.saveCamera();
     const after = serialize(host.state);
-    const before = deserialize(last.before);
+    const before = deserialize(last.before, contentOf(host.state));
     if (!before) return;
     host.state = before;
     this.replaying = true;
@@ -275,7 +276,7 @@ export class TurnFlow {
       await host.play([event]);
       if (match !== host.match || host.ended) return;
     }
-    host.state = deserialize(after)!;
+    host.state = deserialize(after, contentOf(host.state))!;
     this.replaying = false;
     this.enemyPlaying = false;
     this.backToPlayer(saved);
@@ -380,7 +381,12 @@ function roundReportLines(report: RoundReport, ordersDone: string[]): ReportLine
   }
   if (weather) {
     const to = weather.to;
-    lines.push({ icon: '', weather: WEATHER.ids[to]!, text: `${weatherLabel(to)}: ${weatherEffectsText(to)}`, tone: 'plain' });
+    lines.push({
+      icon: '',
+      weather: defaultContent().tables.WEATHER.ids[to]!,
+      text: `${weatherLabel(to)}: ${weatherEffectsText(to)}`,
+      tone: 'plain',
+    });
   }
   return lines;
 }

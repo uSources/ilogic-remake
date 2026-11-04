@@ -9,7 +9,8 @@
  * El orden de los pasos y de las llamadas a `rng` dentro de cada uno es parte del resultado: con la
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
-import { MAPGEN, PROBS_PER_ADJ, TERRAIN, TERRAIN_TYPES, TILE_BASE_PROBS, Movement, TerrainType, MoveType } from './data';
+import { canMoveOn, movementOf, tablesOf } from './gameContent';
+import { MAPGEN, PROBS_PER_ADJ, TERRAIN_TYPES, TILE_BASE_PROBS, TerrainType, MoveType } from './data';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
 import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';
@@ -17,6 +18,7 @@ import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, unitAt } from './rules/queries';
 import { isInside, type Grid, type GridSize } from './util/grid';
+import type { GameContent } from './content';
 import type { GameState, Pos, Rng, RulesConfig, Team } from './model';
 
 const WALK = MoveType.FOOT;
@@ -34,13 +36,13 @@ const BUILDING_PICK_TRIES = 100;
 /** Superficie del mapa respecto al original de 32x32 (para escalar cuantos edificios hay). */
 const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP_SIDE * ORIGINAL_MAP_SIDE);
 
-function emptyState(size: number, rules: Readonly<RulesConfig>): GameState {
-  return newGameState({ map: blankMap(size), rules: { ...rules } });
+function emptyState(size: number, opts: NewMapOptions): GameState {
+  return newGameState({ map: blankMap(size), rules: { ...opts.rules }, content: opts.content });
 }
 
-const isWater = (terrain: number) => TERRAIN.iswater[terrain]!;
-const canBuildOn = (terrain: number) => TERRAIN.canbuild[terrain]!;
-const isWalkable = (terrain: number) => Movement.canWalk(WALK, terrain);
+const isWater = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.iswater[terrain]!;
+const canBuildOn = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.canbuild[terrain]!;
+const isWalkable = (s: GameState, terrain: number) => canMoveOn(s, WALK, terrain);
 
 /** Casillas del cuadrado de lado 2*radius+1 alrededor de `center` que caen dentro del mapa. */
 const squareAround = (size: GridSize, center: Pos, radius: number): Pos[] =>
@@ -92,25 +94,25 @@ function growTerrain(s: GameState, origin: Pos, theme: number, rng: Rng): number
         rollTerrain(rng, (terrain) => terrainChance(map, generated, pos, terrain, theme)),
       );
       generated.set(pos, true);
-      if (isWalkable(map.at(pos))) walkable++;
+      if (isWalkable(s, map.at(pos))) walkable++;
     }
   }
 }
 
 /** Agua con tierra a los dos lados (en horizontal o en vertical, sin salir del borde). */
-function isNarrowWater(map: Grid<number>, { x, y }: Pos): boolean {
-  const isLand = (pos: Pos) => !isWater(map.at(pos));
+function isNarrowWater(s: GameState, map: Grid<number>, { x, y }: Pos): boolean {
+  const isLand = (pos: Pos) => !isWater(s, map.at(pos));
   const isNarrowAcross = x > 0 && x < map.width - 1 && isLand({ x: x - 1, y }) && isLand({ x: x + 1, y });
   const isNarrowAlong = y > 0 && y < map.height - 1 && isLand({ x, y: y - 1 }) && isLand({ x, y: y + 1 });
   return isNarrowAcross || isNarrowAlong;
 }
 
 /** Agua estrecha -> agua poco profunda. Devuelve cuantas casillas cambian. */
-function addShallowWater(map: Grid<number>): number {
+function addShallowWater(s: GameState, map: Grid<number>): number {
   let changed = 0;
   // Va cambiando segun recorre: una casilla ya cambiada cuenta como tierra para las siguientes.
   for (const { pos, value } of map.cells()) {
-    if (value !== TerrainType.WATER || !isNarrowWater(map, pos)) continue;
+    if (value !== TerrainType.WATER || !isNarrowWater(s, map, pos)) continue;
     map.set(pos, TerrainType.SHALLOW_WATER);
     changed++;
   }
@@ -118,18 +120,18 @@ function addShallowWater(map: Grid<number>): number {
 }
 
 /** Agua junto a tierra (incluidas diagonales) -> hielo. [CAMBIO] cuenta una vez por casilla. */
-function addIce(map: Grid<number>): number {
-  const isSolidLand = (pos: Pos) => !isWater(map.at(pos)) && map.at(pos) !== TerrainType.ICE;
+function addIce(s: GameState, map: Grid<number>): number {
+  const isSolidLand = (pos: Pos) => !isWater(s, map.at(pos)) && map.at(pos) !== TerrainType.ICE;
   const toIce = [...map.cells()]
-    .filter(({ pos, value }) => isWater(value) && squareAround(map, pos, 1).some(isSolidLand))
+    .filter(({ pos, value }) => isWater(s, value) && squareAround(map, pos, 1).some(isSolidLand))
     .map(({ pos }) => pos);
   for (const pos of toIce) map.set(pos, TerrainType.ICE);
   return toIce.length;
 }
 
 /** Agua rodeada de agua (3x3) -> agua profunda. */
-function addDeepWater(map: Grid<number>): void {
-  const isAllWater = (pos: Pos) => squareAround(map, pos, 1).every((around) => isWater(map.at(around)));
+function addDeepWater(s: GameState, map: Grid<number>): void {
+  const isAllWater = (pos: Pos) => squareAround(map, pos, 1).every((around) => isWater(s, map.at(around)));
   const deep = [...map.cells()].filter(({ pos }) => isAllWater(pos)).map(({ pos }) => pos);
   for (const pos of deep) map.set(pos, TerrainType.DEEP_WATER);
 }
@@ -141,7 +143,10 @@ function addDeepWater(map: Grid<number>): void {
 /** Hay bastante sitio para edificios y unidades en la zona de inicio alrededor de `pos`. */
 function hasRoomToStart(s: GameState, pos: Pos): boolean {
   const zone = spawnZone(s, pos).map((tile) => terrainAt(s, tile));
-  return zone.filter(canBuildOn).length >= MAPGEN.MINBCAP && zone.filter(isWalkable).length >= MAPGEN.MINUCAP;
+  return (
+    zone.filter((terrain) => canBuildOn(s, terrain)).length >= MAPGEN.MINBCAP &&
+    zone.filter((terrain) => isWalkable(s, terrain)).length >= MAPGEN.MINUCAP
+  );
 }
 
 /** Casillas del mapa columna a columna; con `fromTheEnd`, empezando por la esquina opuesta. */
@@ -154,7 +159,7 @@ function* scanOrder(size: GridSize, fromTheEnd: boolean): Generator<Pos> {
 /** Zona de inicio (RandomMap.getSpawn): la primera casilla a pie con bastante sitio alrededor. */
 function findSpawn(s: GameState, fromTheEnd: boolean, accept: (pos: Pos) => boolean): Pos | null {
   for (const pos of scanOrder(mapGrid(s), fromTheEnd))
-    if (isWalkable(terrainAt(s, pos)) && hasRoomToStart(s, pos) && accept(pos)) return pos;
+    if (isWalkable(s, terrainAt(s, pos)) && hasRoomToStart(s, pos) && accept(pos)) return pos;
   return null;
 }
 
@@ -187,8 +192,8 @@ const spawnZone = (s: GameState, spawn: Pos) => [...diamond(mapGrid(s), spawn, 0
 /** Unidades iniciales: Soldier, Soldier, Artillery cerca del centro de la zona. */
 function placeStartingUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): void {
   MAPGEN.INITUS.forEach((type, index) => {
-    const movement = Movement.of(type);
-    const free = spawnZone(s, spawn).filter((pos) => Movement.canWalk(movement, terrainAt(s, pos)) && !unitAt(s, pos));
+    const movement = movementOf(s, type);
+    const free = spawnZone(s, spawn).filter((pos) => canMoveOn(s, movement, terrainAt(s, pos)) && !unitAt(s, pos));
     // Con la probabilidad corregida (INITUS.length); si no sale ninguna, la ultima libre.
     const chosen = sampleInOrder(free, MAPGEN.INITUS.length - index, rng, (left) => left - 1) ?? free.at(-1);
     if (chosen) newUnit(s, type, team, chosen, true);
@@ -199,7 +204,7 @@ function placeStartingUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): voi
 function placeStartingBuildings(s: GameState, spawn: Pos, team: Team, rng: Rng): boolean {
   const total = MAPGEN.INITBS.length;
   for (let index = 0; index < total; index++) {
-    const free = spawnZone(s, spawn).filter((pos) => canBuildOn(terrainAt(s, pos)) && !buildingAt(s, pos));
+    const free = spawnZone(s, spawn).filter((pos) => canBuildOn(s, terrainAt(s, pos)) && !buildingAt(s, pos));
     if (!free.length) return false;
     // El original recorre el rombo dando vueltas; equivale a elegir con prob. creciente.
     let chosen: Pos | null = null;
@@ -230,7 +235,7 @@ function placeNeutralBuildings(s: GameState, rng: Rng): void {
   const available = map.createLayer(false);
   let availableCount = 0;
   for (const { pos, value } of map.cells())
-    if (canBuildOn(value) && !buildingAt(s, pos)) {
+    if (canBuildOn(s, value) && !buildingAt(s, pos)) {
       available.set(pos, true);
       availableCount++;
     }
@@ -266,13 +271,13 @@ const MAX_CONTROL_SCORE = 4;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
   const zone = squareAround(mapGrid(s), center, s.rules.controlRadius);
-  return zone.filter((pos) => isWalkable(terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
+  return zone.filter((pos) => isWalkable(s, terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 
 /** Casilla libre de tierra, alcanzable desde las dos salidas y no pegada a ninguna. */
 function isControlSpot(s: GameState, pos: Pos, toPlayer: number, toEnemy: number, span: number): boolean {
   if (!toPlayer || !toEnemy) return false;
-  if (!isWalkable(terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
+  if (!isWalkable(s, terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
   if (Math.min(toPlayer, toEnemy) < span * MIN_CONTROL_SPAWN_SHARE) return false;
   return isMostlyLand(s, pos);
 }
@@ -344,9 +349,9 @@ function chooseTheme(draft: MapDraft): boolean {
 function shapeWater(s: GameState): number {
   let newLand = 0;
   const map = mapGrid(s);
-  if (MAPGEN.isSWater[s.theme]) newLand += addShallowWater(map);
-  if (MAPGEN.isIce[s.theme]) newLand += addIce(map);
-  addDeepWater(map);
+  if (MAPGEN.isSWater[s.theme]) newLand += addShallowWater(s, map);
+  if (MAPGEN.isIce[s.theme]) newLand += addIce(s, map);
+  addDeepWater(s, map);
   return newLand;
 }
 
@@ -424,6 +429,8 @@ export interface NewMapOptions {
   size?: number;
   theme?: number | null;
   rules: Readonly<RulesConfig>;
+  /** Contenido de la partida (unidades, edificios, terreno...). */
+  content: GameContent;
 }
 
 /**
@@ -436,7 +443,7 @@ export function generateGame(rng: Rng, opts: NewMapOptions): GameState {
   const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };
   for (let attempt = 0; ; attempt++) {
     const draft: MapDraft = {
-      s: emptyState(size, opts.rules),
+      s: emptyState(size, opts),
       rng,
       origin,
       attempt,

@@ -1,7 +1,8 @@
 /**
  * Prevision de combate y zona de amenaza (para la interfaz y la IA). Solo consultas: no cambian nada.
  */
-import { UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { diamond } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
@@ -155,14 +156,14 @@ export function threatMap(s: GameState, team: Team, viewer: Team): Grid<boolean>
  * Las unidades a distancia no pueden mover y disparar: solo cuentan desde donde estan.
  */
 export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = createLayer(s, false), range?: MoveRange): Grid<boolean> {
-  if (!canFight(unit)) return out;
-  const minRange = UNIT.minalc[unit.type]!;
-  const maxRange = UNIT.alcance[unit.type]!;
+  if (!canFight(s, unit)) return out;
+  const minRange = tablesOf(s).UNIT.minalc[unit.type]!;
+  const maxRange = tablesOf(s).UNIT.alcance[unit.type]!;
   if (maxRange === 0) return out;
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen (como si fuera su turno).
   const canMoveAndFire = minRange === 0;
   const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, active: true, canMove: true })) : null;
-  for (const origin of fireOrigins(unit, moveReach)) {
+  for (const origin of fireOrigins(s, unit, moveReach)) {
     for (const pos of diamond(out, origin, minRange + 1, maxRange)) out.set(pos, true);
   }
   return out;
@@ -170,6 +171,6 @@ export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = create
 
 /** Lo que la unidad puede atacar este turno con su alcance de movimiento `range` (null si no puede disparar). */
 export function attackZone(s: GameState, unit: Unit, range: MoveRange): Grid<boolean> | null {
-  if (!canFight(unit) || UNIT.alcance[unit.type]! === 0 || !unit.canFire) return null;
+  if (!canFight(s, unit) || tablesOf(s).UNIT.alcance[unit.type]! === 0 || !unit.canFire) return null;
   return unitThreat(s, unit, createLayer(s, false), range);
 }

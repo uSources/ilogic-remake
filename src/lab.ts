@@ -4,7 +4,9 @@
  * sin tener que jugar. Se abre con `#lab` en la direccion o con `ilogicDebug.lab()`.
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
-import { HQ, UNIT, UNIT_NAMES, rulesWith } from './core/data';
+import { defaultContent } from './core/content/default';
+import { rulesWith } from './core/data';
+import { tablesOf } from './core/gameContent';
 import { newGameState } from './core/gameState';
 import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
@@ -29,14 +31,14 @@ export const LAB_FROM = { x: 3, y: 6 };
 export const LAB_TARGET = { x: 7, y: 6 };
 
 export const defaultLab = (): LabOptions => ({
-  attacker: Math.max(0, UNIT_NAMES.indexOf('Tank')),
-  defender: Math.max(0, UNIT_NAMES.indexOf('Tank')),
+  attacker: Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf('Tank')),
+  defender: Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf('Tank')),
   slow: false,
   play: null,
 });
 
 /** Distancia desde la que ataca la propia: la casilla de al lado o su alcance minimo. */
-export const labRange = (type: number): number => Math.max(1, UNIT.minalc[type]! + 1);
+export const labRange = (s: GameState, type: number): number => Math.max(1, tablesOf(s).UNIT.minalc[type]! + 1);
 
 /** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
 export function labRules(action: LabAction | null): RulesConfig {
@@ -48,13 +50,14 @@ export function labRules(action: LabAction | null): RulesConfig {
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
 export function labState(o: LabOptions, action: LabAction | null): GameState {
-  const s = newGameState({ map: blankMap(LAB_SIZE), rules: labRules(action), funds: [0, 0] });
+  const s = newGameState({ map: blankMap(LAB_SIZE), rules: labRules(action), content: defaultContent(), funds: [0, 0] });
+  const hq = tablesOf(s).HQ;
   s.buildings.push(
-    { type: HQ, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
-    { type: HQ, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
+    { type: hq, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
+    { type: hq, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
   );
   const near = action !== null && action !== 'move';
-  const from = near ? { x: LAB_TARGET.x - labRange(o.attacker), y: LAB_TARGET.y } : LAB_FROM;
+  const from = near ? { x: LAB_TARGET.x - labRange(s, o.attacker), y: LAB_TARGET.y } : LAB_FROM;
   newUnit(s, o.attacker, 0, from);
   const d = newUnit(s, o.defender, 1, LAB_TARGET);
   if (action === 'kill') d.life = 15;

@@ -1,3 +1,3 @@
-import { CONTENT } from '@core/data';
+import { defaultContent } from '@core/content/default';
 
-export const unitLabelEs = (t: number): string => CONTENT.units[t]?.name.es ?? String(t);
+export const unitLabelEs = (t: number): string => defaultContent().files.units[t]?.name.es ?? String(t);

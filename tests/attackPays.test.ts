@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING, HEALER, UNIT, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { blankState } from './helpers';
+
+const { UNIT, HEALER, BUILDING } = defaultContent().tables;
 
 /**
  * [CAMBIO] Reglas para que atacar salga a cuenta: botin, flanqueo y sin cura bajo fuego
@@ -113,7 +116,7 @@ describe('partidas guardadas', () => {
     const s = blankState();
     const old = JSON.parse(serialize(s)) as { rules: Record<string, unknown> };
     for (const k of ['vetBonus', 'bounty', 'flankBonus', 'noHealUnderFire']) delete old.rules[k];
-    const back = deserialize(JSON.stringify(old));
+    const back = deserialize(JSON.stringify(old), defaultContent());
     expect(back?.rules).toMatchObject({ vetBonus: 0.05, bounty: 0, flankBonus: 0, noHealUnderFire: false });
   });
 });

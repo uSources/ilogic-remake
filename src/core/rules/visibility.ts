@@ -1,7 +1,8 @@
 /**
  * Vision y niebla: que casillas ve cada bando.
  */
-import { BUILDING, HIDING_TERRAIN, UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { seesIntoCover } from '../abilities';
 import { diamond, manhattan } from '../geom';
 import { revealsAll } from '../generals';
@@ -13,13 +14,13 @@ import type { GameState, Pos, Team, Unit } from '../model';
 
 /** Radio de vision de una unidad. [CAMBIO] El clima puede quitar vision (nunca por debajo de 1 si ve). */
 export function visionOf(s: GameState, unit: Unit): number {
-  const base = UNIT.vision[unit.type]!;
+  const base = tablesOf(s).UNIT.vision[unit.type]!;
   return base > 0 ? Math.max(1, base + weatherVision(s)) : base;
 }
 
 /** [CAMBIO] Reglas nuevas: el bosque esconde a quien esta dentro (solo se ve desde al lado). */
 function hidesInside(s: GameState, pos: Pos): boolean {
-  return s.rules.forestHides && HIDING_TERRAIN.includes(terrainAt(s, pos));
+  return s.rules.forestHides && tablesOf(s).HIDING_TERRAIN.includes(terrainAt(s, pos));
 }
 
 /** Casillas que ve una unidad: su rombo de vision, menos el bosque que no tenga al lado. */
@@ -39,7 +40,7 @@ export function visibility(s: GameState, team: Team): Grid<boolean> {
   for (const unit of s.units) if (unit.team === team && isOnMap(unit)) markSeenByUnit(s, unit, visible);
   for (const building of s.buildings) {
     if (building.owner !== team) continue;
-    for (const pos of diamond(visible, building, 0, BUILDING.vision[building.type]!)) visible.set(pos, true);
+    for (const pos of diamond(visible, building, 0, tablesOf(s).BUILDING.vision[building.type]!)) visible.set(pos, true);
   }
   return visible;
 }

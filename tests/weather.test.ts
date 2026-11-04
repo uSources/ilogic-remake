@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTENT, DEFAULT_RULES, THEME_NAMES, UNIT, WEATHER, WEATHER_TYPES, rulesWith } from '@core/data';
+import { DEFAULT_RULES, THEME_NAMES, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { validateContent } from '@core/content';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
@@ -7,6 +8,8 @@ import { CLEAR, advanceWeather, ensureWeather, forecast, rollWeather, weatherNow
 import { seededRng } from '@core/geom';
 import type { GameState } from '@core/model';
 import { blankState } from './helpers';
+
+const { UNIT, WEATHER } = defaultContent().tables;
 
 const SOLDIER = 0,
   TANK = 1,
@@ -28,19 +31,19 @@ function withWeather(k: number): GameState {
 
 describe('clima: contenido', () => {
   it('weather.json es valido y el primero es el despejado', () => {
-    expect(validateContent(CONTENT)).toEqual([]);
+    expect(validateContent(defaultContent().files)).toEqual([]);
     expect(WEATHER.ids[CLEAR]).toBe('Clear');
     for (const id of ['Rain', 'Snow', 'Storm', 'Sandstorm']) expect(kind(id)).toBeGreaterThan(0);
   });
 
   it('dice que esta mal si el primer clima no es neutro', () => {
-    const bad = structuredClone(CONTENT);
+    const bad = structuredClone(defaultContent().files);
     bad.weather[0]!.vision = -1;
     expect(validateContent(bad).join()).toMatch(/primer clima es el neutro/);
   });
 
   it('dice que esta mal un tipo de movimiento que no existe', () => {
-    const bad = structuredClone(CONTENT);
+    const bad = structuredClone(defaultContent().files);
     (bad.weather[1]!.move as Record<string, number>).boat = -1;
     expect(validateContent(bad).join()).toMatch(/move nombra el movimiento "boat"/);
   });
@@ -157,7 +160,7 @@ describe('clima: como cambia', () => {
     const rng = seededRng(5);
     for (let theme = 0; theme < THEME_NAMES.length; theme++) {
       for (let i = 0; i < 300; i++) {
-        const k = rollWeather(theme, rng);
+        const k = rollWeather(blankState(), theme, rng);
         expect(WEATHER.chance[theme]![k]).toBeGreaterThan(0);
         if (THEME_NAMES[theme] !== 'Desert') expect(k).not.toBe(SANDSTORM);
       }
@@ -167,22 +170,22 @@ describe('clima: como cambia', () => {
   it('el mismo mal tiempo no se repite seguido: despeja', () => {
     const always = () => 0.999; // el ultimo con peso del tema
     const theme = THEME_NAMES.indexOf('Desert');
-    expect(rollWeather(theme, always, SANDSTORM)).toBe(CLEAR);
+    expect(rollWeather(blankState(), theme, always, SANDSTORM)).toBe(CLEAR);
   });
 
   it('se guarda con la partida y un clima roto se descarta al cargar', () => {
     const s = withWeather(RAIN);
     s.rules = rulesWith();
-    expect(deserialize(serialize(s))!.weather).toEqual(s.weather);
+    expect(deserialize(serialize(s), defaultContent())!.weather).toEqual(s.weather);
     const broken = JSON.parse(serialize(s)) as GameState;
-    broken.weather = { kind: WEATHER_TYPES + 5, left: 1, next: 0 };
-    expect(deserialize(JSON.stringify(broken))!.weather).toBeUndefined();
+    broken.weather = { kind: WEATHER.ids.length + 5, left: 1, next: 0 };
+    expect(deserialize(JSON.stringify(broken), defaultContent())!.weather).toBeUndefined();
   });
 
   it('las partidas guardadas sin la regla se siguen jugando sin clima', () => {
     const s = blankState();
     const { weather: _, ...old } = DEFAULT_RULES;
     s.rules = old as typeof DEFAULT_RULES;
-    expect(deserialize(serialize(s))!.rules!.weather).toBe(false);
+    expect(deserialize(serialize(s), defaultContent())!.rules!.weather).toBe(false);
   });
 });

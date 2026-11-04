@@ -1,7 +1,8 @@
 /**
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
-import { GENERALS, rulesWith } from './core/data';
+import { defaultContent } from './core/content/default';
+import { rulesWith } from './core/data';
 import type { RulesConfig } from './core/model';
 import { fmtNum, settings } from './settings';
 
@@ -71,11 +72,19 @@ export const CHOICES = {
   dayLimit: [null, 20, 30, 40, 60] as const,
   command: [null, 20, 30, 40] as const,
   upkeep: [0, 0.05, 0.1, 0.15] as const,
-  /** Sin general o uno de generals.json. */
-  general: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
-  enemyGeneral: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
+  /** Sin general o uno de generals.json (se leen al pedirlos, no al cargar el modulo). */
+  get general(): readonly (string | null)[] {
+    return generalChoices();
+  },
+  get enemyGeneral(): readonly (string | null)[] {
+    return generalChoices();
+  },
 };
 export type ChoiceKey = keyof typeof CHOICES;
+
+function generalChoices(): (string | null)[] {
+  return [null, ...defaultContent().files.generals.map((general) => general.id)];
+}
 
 const STORAGE_KEY = 'ilogic.newgame';
 
@@ -161,7 +170,7 @@ function sizeLabel(value: unknown): string {
 }
 
 function generalLabel(value: unknown): string {
-  const general = GENERALS.find((candidate) => candidate.id === value);
+  const general = defaultContent().files.generals.find((candidate) => candidate.id === value);
   if (!general) return isSpanish() ? 'Sin general' : 'No general';
   return `${general.name[settings.lang]} · ${general.title[settings.lang]}`;
 }

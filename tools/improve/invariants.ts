@@ -3,13 +3,16 @@
  * Las comprueba el cazador de fallos (fuzz.ts) despues de cada accion. Si una falla, es un fallo del
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
-import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, UNIT, UNIT_TYPES, Movement } from '@core/data';
+import { MAX_LIFE } from '@core/data';
+import { canMoveOn, contentOf, movementOf, tablesOf } from '@core/gameContent';
 import { posKey } from '@core/geom';
+import { terrainAt } from '@core/mapGrid';
 import { commandUsed } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 
 export function checkInvariants(s: GameState): string[] {
+  const { UNIT, UNIT_NAMES, BUILDING_NAMES, MAX_FUNDS } = tablesOf(s);
   const errs: string[] = [];
   const W = s.map.length,
     H = s.map[0]!.length;
@@ -19,7 +22,7 @@ export function checkInvariants(s: GameState): string[] {
     const id = `unidad ${u.uid}`;
     if (uids.has(u.uid)) errs.push(`${id}: uid repetido`);
     uids.add(u.uid);
-    if (!(u.type >= 0 && u.type < UNIT_TYPES)) errs.push(`${id}: tipo ${u.type} no existe`);
+    if (!(u.type >= 0 && u.type < UNIT_NAMES.length)) errs.push(`${id}: tipo ${u.type} no existe`);
     if (u.x < 0 || u.y < 0 || u.x >= W || u.y >= H) errs.push(`${id}: fuera del mapa (${u.x},${u.y})`);
     if (!(u.life > 0 && u.life <= MAX_LIFE)) errs.push(`${id}: vida ${u.life} fuera de 1..${MAX_LIFE}`);
     if (u.cargo.length !== UNIT.maxcarry[u.type]) errs.push(`${id}: carga de tamaño ${u.cargo.length}`);
@@ -27,8 +30,7 @@ export function checkInvariants(s: GameState): string[] {
       const k = posKey(u);
       if (where.has(k)) errs.push(`${id}: comparte casilla (${k}) con la unidad ${where.get(k)}`);
       where.set(k, u.uid);
-      const mt = Movement.of(u.type);
-      if (!Movement.canWalk(mt, s.map[u.x]![u.y]!)) errs.push(`${id}: en un terreno por el que no puede ir (${u.x},${u.y})`);
+      if (!canMoveOn(s, movementOf(s, u.type), terrainAt(s, u))) errs.push(`${id}: en un terreno por el que no puede ir (${u.x},${u.y})`);
     }
   }
   for (const u of s.units) {
@@ -55,7 +57,7 @@ export function checkInvariants(s: GameState): string[] {
     const k = posKey(b);
     if (bpos.has(k)) errs.push(`dos edificios en (${k})`);
     bpos.add(k);
-    if (!(b.type >= 0 && b.type < BUILDING_TYPES)) errs.push(`edificio en (${k}): tipo ${b.type}`);
+    if (!(b.type >= 0 && b.type < BUILDING_NAMES.length)) errs.push(`edificio en (${k}): tipo ${b.type}`);
     if (b.capture) {
       const cu = s.units.find((u) => u.uid === b.capture!.uid);
       if (b.capture.left <= 0) errs.push(`edificio en (${k}): captura con ${b.capture.left} puntos`);
@@ -65,7 +67,7 @@ export function checkInvariants(s: GameState): string[] {
   }
   if (s.nextUid <= Math.max(0, ...uids)) errs.push(`nextUid ${s.nextUid} no es mayor que los uid usados`);
   // Guardar y cargar no pierde nada.
-  const back = deserialize(serialize(s));
+  const back = deserialize(serialize(s), contentOf(s));
   if (!back) errs.push('la partida no se puede volver a cargar (deserialize la rechaza)');
   else if (serialize(back) !== serialize(s)) errs.push('guardar y cargar cambia la partida');
   return errs;

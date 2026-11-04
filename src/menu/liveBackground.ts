@@ -3,7 +3,7 @@ import { aiTurn } from '../core/ai';
 import { rulesWith } from '../core/data';
 import { seededRng } from '../core/geom';
 import { createLayer } from '../core/mapGrid';
-import { generateGame } from '../core/mapgen';
+import { createGame } from '../core/defaultGames';
 import { endRound, outcome } from '../core/rules';
 import type { GameEvent, GameState, Pos, Team } from '../core/model';
 import { TILE } from '../layout';
@@ -86,7 +86,7 @@ export class LiveBackground {
   start(): void {
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = generateGame(seededRng(seed), { size: MAP_SIZE, rules: BACKGROUND_RULES });
+    this.game = createGame(seededRng(seed), { size: MAP_SIZE, rules: BACKGROUND_RULES });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
     const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };

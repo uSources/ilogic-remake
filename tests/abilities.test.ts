@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { abilitiesOf, abilityOf, auraFactor } from '@core/abilities';
-import { CONTENT, MoveType, Movement, POWER, TerrainType, UNIT, UNIT_ABILITIES, type AbilityDef, rulesWith } from '@core/data';
+import { MoveType, TerrainType, type AbilityDef, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { walkableFor } from '@core/gameContent';
 import { validateContent, type Content } from '@core/content';
 import { captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
 import { blankState } from './helpers';
+
+const { UNIT, UNIT_ABILITIES, POWER } = defaultContent().tables;
 
 /** Primera unidad que tiene la habilidad `kind` (el test no depende de cual sea). */
 const withAbility = (kind: AbilityDef['kind']): number => {
@@ -17,7 +21,7 @@ const withAbility = (kind: AbilityDef['kind']): number => {
 const plain = (f: (t: number) => boolean): number => UNIT_ABILITIES.findIndex((l, t) => l.length === 0 && f(t));
 const ranged = (t: number) => UNIT.minalc[t]! > 0 && UNIT.canfight[t]!;
 const melee = (t: number) => UNIT.minalc[t]! === 0 && UNIT.canfight[t]!;
-const moves = (mt: MoveType) => (t: number) => Movement.of(t) === mt && UNIT.mover[t]! >= 4;
+const moves = (mt: MoveType) => (t: number) => UNIT.movtype[t]! === mt && UNIT.mover[t]! >= 4;
 
 /** Reglas de estos tests: sin niebla, coste de terreno ni veterania, que cambiarian las cuentas. */
 const TEST_RULES = rulesWith({ fog: false, terrainCost: false, veterancy: false });
@@ -27,7 +31,7 @@ beforeEach(() => {
 });
 
 describe('habilidades: contenido', () => {
-  const clone = (): Content => structuredClone(CONTENT) as Content;
+  const clone = (): Content => structuredClone(defaultContent().files) as Content;
   const unitWith = (c: Content, abilities: unknown) => {
     c.units[0]!.abilities = abilities as AbilityDef[];
     return validateContent(c);
@@ -164,7 +168,7 @@ describe('habilidades: perforante (piercing)', () => {
     const s = blankState(TEST_RULES);
     const P = withAbility('piercing');
     const ignore = abilityOf(s, P, 'piercing')!.ignoreCover;
-    const target = plain((t) => POWER[P]![t]! > 0 && Movement.canWalk(Movement.of(t), TerrainType.WOODS));
+    const target = plain((t) => POWER[P]![t]! > 0 && walkableFor(defaultContent().tables, UNIT.movtype[t]!, TerrainType.WOODS));
     const other = plain((t) => melee(t) && POWER[t]![target]! > 0);
     s.map[10]![10] = TerrainType.WOODS;
     const def = newUnit(s, target, 1, { x: 10, y: 10 });

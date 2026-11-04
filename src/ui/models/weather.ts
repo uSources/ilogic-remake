@@ -1,4 +1,5 @@
-import { WEATHER } from '../../core/data';
+import { defaultContent } from '../../core/content/default';
+import { tablesOf } from '../../core/gameContent';
 import type { GameState } from '../../core/model';
 import { forecast, weatherNow } from '../../core/weather';
 import type { WeatherVM } from '../../hud/store';
@@ -13,6 +14,7 @@ const signed = (n: number): string => (n > 0 ? `+${n}` : `−${-n}`);
 
 /** Efectos de un clima en corto: "Vehículos −1 mov. · Visión −1 · Puntería −10 %". */
 export function weatherEffectsText(kind: number): string {
+  const WEATHER = defaultContent().tables.WEATHER;
   const parts: string[] = [];
   // Tipos de movimiento con el mismo cambio, juntos: "Infantería/Vehículos −1 mov."
   const byDelta = new Map<number, string[]>();
@@ -35,7 +37,7 @@ export function weatherVM(s: GameState): WeatherVM | null {
   const kind = weatherNow(s);
   const next = forecast(s);
   return {
-    id: WEATHER.ids[kind]!,
+    id: tablesOf(s).WEATHER.ids[kind]!,
     name: weatherLabel(kind),
     effects: weatherEffectsText(kind),
     next: next === null ? null : weatherLabel(next),

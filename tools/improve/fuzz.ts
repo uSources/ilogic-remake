@@ -9,7 +9,7 @@
 import { aiTurn } from '@core/ai';
 import { rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
-import { generateGame } from '@core/mapgen';
+import { createGame } from '@core/defaultGames';
 import { endRound, outcome } from '@core/rules';
 import { serialize } from '@core/save';
 import type { GameState, Team } from '@core/model';
@@ -30,7 +30,7 @@ export interface FuzzFailure {
 export function fuzzGame(seed: number, opts: { size?: number; days?: number; log?: (l: string) => void } = {}): FuzzFailure | null {
   const rng = seededRng(seed);
   const rules = rulesWith({ fog: seed % 3 === 0 });
-  const s: GameState = generateGame(rng, { size: opts.size ?? 20, rules });
+  const s: GameState = createGame(rng, { size: opts.size ?? 20, rules });
   let before = serialize(s);
   let fail: FuzzFailure | null = null;
   const check = (team: Team, action: string) => {

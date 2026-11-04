@@ -1,6 +1,8 @@
 import type Phaser from 'phaser';
 import { abilitiesOf } from '../../core/abilities';
-import { UNIT, Movement, MoveType, type AbilityDef } from '../../core/data';
+import { MoveType, type AbilityDef } from '../../core/data';
+import { defaultContent } from '../../core/content/default';
+import { canMoveOn, tablesOf } from '../../core/gameContent';
 import {
   inControlZone,
   buildingAt,
@@ -28,6 +30,7 @@ import { commandLabel } from './army';
 
 /** Datos de la ficha de una unidad con su icono: movimiento, alcance y vision. */
 export function unitStatChips(type: number): StatChipVM[] {
+  const UNIT = defaultContent().tables.UNIT;
   const range = UNIT.alcance[type]! === 0 ? '—' : `${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return [
     { icon: 'ui/movimiento', text: String(UNIT.mover[type]), title: t('move') },
@@ -38,6 +41,7 @@ export function unitStatChips(type: number): StatChipVM[] {
 
 /** "Mov 3 · Alcance 1–1" */
 export function unitStatsText(type: number): string {
+  const UNIT = defaultContent().tables.UNIT;
   const range = UNIT.alcance[type]! === 0 ? t('noAttack') : `${t('range')} ${UNIT.minalc[type]! + 1}–${UNIT.alcance[type]}`;
   return `${t('move')} ${UNIT.mover[type]} · ${range}`;
 }
@@ -104,7 +108,7 @@ export function tileVM(
   };
   if (s.rules.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (mt: MoveType) => (Movement.canWalk(mt, terr) ? moveCost(s, mt, p) : null);
+    const cost = (mt: MoveType) => (canMoveOn(s, mt, terr) ? moveCost(s, mt, p) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
   if (b) {
@@ -145,7 +149,7 @@ export function tileVM(
       stats: unitStatsText(T),
       chips: unitStatChips(T),
       abilities: abilitiesVM(s, T),
-      cargo: UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
+      cargo: tablesOf(s).UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
       ...(shown.team === 0 && effectiveStandingOrder(s, shown) ? { order: commandLabel(effectiveStandingOrder(s, shown)!.kind) } : {}),
       ...(shown.team === 0 && isDetached(s, shown) ? { detached: true } : {}),

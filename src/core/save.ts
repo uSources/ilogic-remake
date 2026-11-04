@@ -3,7 +3,9 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { BUILDING_TYPES, MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, UNIT, UNIT_TYPES, WEATHER_TYPES, rulesWith } from './data';
+import type { GameContent } from './content';
+import { tablesOf, withContent } from './gameContent';
+import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, rulesWith } from './data';
 import { generalDef } from './generals';
 import { missionById, missionRules } from './missions';
 import { mapGrid } from './mapGrid';
@@ -43,9 +45,12 @@ export function serialize(s: GameState): string {
   return JSON.stringify(s);
 }
 
-/** Lee una partida guardada. Devuelve null si el contenido no es valido. */
-export function deserialize(json: string): GameState | null {
-  const s = parseState(json);
+/**
+ * Lee una partida guardada y la juega con `content` (el contenido no se guarda). Devuelve null si el
+ * fichero no es valido.
+ */
+export function deserialize(json: string, content: GameContent): GameState | null {
+  const s = parseState(json, content);
   if (!s || !readMap(s) || !hasValidBasics(s)) return null;
   if (!readUnits(s) || !hasConsistentCargo(s) || !readBuildings(s)) return null;
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...s.units.map((unit) => unit.uid)) + 1);
@@ -63,7 +68,7 @@ export function deserialize(json: string): GameState | null {
 }
 
 /** El JSON, si es un objeto con la version que se sabe leer. */
-function parseState(json: string): GameState | null {
+function parseState(json: string, content: GameContent): GameState | null {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -72,7 +77,7 @@ function parseState(json: string): GameState | null {
   }
   if (typeof raw !== 'object' || raw === null) return null;
   const s = raw as GameState;
-  return s.version === 1 ? s : null;
+  return s.version === 1 ? withContent(s, content) : null;
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */
@@ -102,9 +107,9 @@ function readUnits(s: GameState): boolean {
 }
 
 function isValidUnit(s: GameState, unit: Unit): boolean {
-  if (!isInt(unit.type, 0, UNIT_TYPES - 1) || !isTeam(unit.team)) return false;
+  if (!isInt(unit.type, 0, tablesOf(s).UNIT_NAMES.length - 1) || !isTeam(unit.team)) return false;
   if (!isMapPos(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
-  return Array.isArray(unit.cargo) && unit.cargo.length === UNIT.maxcarry[unit.type];
+  return Array.isArray(unit.cargo) && unit.cargo.length === tablesOf(s).UNIT.maxcarry[unit.type];
 }
 
 function cleanUnit(s: GameState, unit: Unit): void {
@@ -132,7 +137,7 @@ function hasConsistentCargo(s: GameState): boolean {
 
 function readBuildings(s: GameState): boolean {
   for (const building of s.buildings) {
-    if (!isInt(building.type, 0, BUILDING_TYPES - 1) || !isMapPos(mapGrid(s), building)) return false;
+    if (!isInt(building.type, 0, tablesOf(s).BUILDING_NAMES.length - 1) || !isMapPos(mapGrid(s), building)) return false;
     if (building.owner !== null && !isTeam(building.owner)) return false;
     // Una captura a medias rota se olvida (el edificio sigue).
     const progress = building.capture;
@@ -153,7 +158,11 @@ function isValidMission(s: GameState, mission: GameState['mission']): boolean {
     case 'destroy':
       return hasDays;
     case 'capture':
-      return hasDays && isInt(objective.count, 1, 1000) && (objective.type === null || isInt(objective.type, 0, BUILDING_TYPES - 1));
+      return (
+        hasDays &&
+        isInt(objective.count, 1, 1000) &&
+        (objective.type === null || isInt(objective.type, 0, tablesOf(s).BUILDING_NAMES.length - 1))
+      );
     case 'escort':
       return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(mapGrid(s), objective.to);
     default:
@@ -174,7 +183,10 @@ function cleanWeather(s: GameState): void {
   if (s.weather === undefined) return;
   const weather = s.weather;
   const ok =
-    !!weather && isInt(weather.kind, 0, WEATHER_TYPES - 1) && isInt(weather.next, 0, WEATHER_TYPES - 1) && isInt(weather.left, 0, 1000);
+    !!weather &&
+    isInt(weather.kind, 0, tablesOf(s).WEATHER.ids.length - 1) &&
+    isInt(weather.next, 0, tablesOf(s).WEATHER.ids.length - 1) &&
+    isInt(weather.left, 0, 1000);
   if (!ok) delete s.weather;
 }
 
@@ -224,7 +236,7 @@ function cleanGenerals(s: GameState): void {
     return;
   }
   s.generals = s.generals.map((saved) => {
-    const def = saved ? generalDef(saved.id) : undefined;
+    const def = saved ? generalDef(s, saved.id) : undefined;
     if (!saved || !def) return null;
     const hasCharge = typeof saved.charge === 'number' && Number.isFinite(saved.charge);
     const charge = hasCharge ? Math.max(0, Math.min(saved.charge, def.charge.max)) : 0;

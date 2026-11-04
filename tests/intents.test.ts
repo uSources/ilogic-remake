@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn, assistTurn, previewStandingOrders } from '@core/ai';
-import { HQ, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads';
 import type { GameState, Pos } from '@core/model';
 import { blankState } from './helpers';
+
+const { HQ } = defaultContent().tables;
 
 /** [CAMBIO] Flechas de intencion: previewStandingOrders dice lo que hara cada orden al terminar el turno. */
 const SOLDIER = 0,

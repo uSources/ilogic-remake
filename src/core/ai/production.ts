@@ -1,13 +1,14 @@
 /**
  * Que fabrica la IA en sus edificios al final de su turno.
  */
-import { AI, UNIT, UNIT_SUPPORT } from '../data';
+
+import { tablesOf, weightsOf } from '../gameContent';
 import { buildingIncome, buyOptions, spawn, upkeepOf, type BuyOption } from '../rules/economy';
 import { teamUnits, unitAt } from '../rules/queries';
 import type { Building, GameEvent, GameState, Rng, Team, Unit } from '../model';
 
-/** Tipos que no combaten ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
-const SUPPORT_TYPES = new Set<number>(UNIT_SUPPORT.flatMap((isSupport, type) => (isSupport ? [type] : [])));
+/** Es de un tipo que no combate ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
+const isSupportType = (s: GameState, type: number): boolean => !!tablesOf(s).UNIT_SUPPORT[type];
 
 /** Elige uno al azar con probabilidad proporcional a su peso. */
 export function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: Rng): T {
@@ -58,11 +59,11 @@ function netIncome(s: GameState, me: Team): number {
 /** Lo que se plantea comprar en el edificio: lo que cabe (o se paga) sin repetir unidades de apoyo, e infanteria si faltan. */
 function purchaseOptions(s: GameState, building: Building, mine: Unit[], limited: boolean): BuyOption[] {
   const fits = (option: BuyOption) => (limited ? option.blocked === undefined || option.blocked === 'funds' : option.affordable);
-  const repeatsSupport = (option: BuyOption) => SUPPORT_TYPES.has(option.type) && mine.some((unit) => unit.type === option.type);
+  const repeatsSupport = (option: BuyOption) => isSupportType(s, option.type) && mine.some((unit) => unit.type === option.type);
   const options = buyOptions(s, building).filter((option) => fits(option) && !repeatsSupport(option));
-  const capturers = mine.filter((unit) => UNIT.cancapt[unit.type]).length;
-  const isAffordableCapturer = (option: BuyOption) => UNIT.cancapt[option.type] && option.affordable;
-  if (capturers < AI.MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
+  const capturers = mine.filter((unit) => tablesOf(s).UNIT.cancapt[unit.type]).length;
+  const isAffordableCapturer = (option: BuyOption) => tablesOf(s).UNIT.cancapt[option.type] && option.affordable;
+  if (capturers < weightsOf(s).MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
   return options;
 }
 

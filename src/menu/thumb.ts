@@ -1,4 +1,4 @@
-import { HQ } from '../core/data';
+import { tablesOf } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState, Team } from '../core/model';
 import { PAL_CSS } from '../ui/palette';
@@ -34,7 +34,7 @@ function drawTerrain(ctx: CanvasRenderingContext2D, s: GameState, palette: numbe
 /** Cada edificio, con el color de su dueño y un borde oscuro; las bases, una casilla mas grandes. */
 function drawBuildings(ctx: CanvasRenderingContext2D, s: GameState, px: number): void {
   for (const building of s.buildings) {
-    const pad = building.type === HQ ? -1 : 0;
+    const pad = building.type === tablesOf(s).HQ ? -1 : 0;
     ctx.fillStyle = PAL_CSS.ink;
     ctx.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
     ctx.fillStyle = ownerColor(building.owner);

@@ -1,14 +1,16 @@
 /**
  * Victoria y derrota: Base, limite de dias, puntos y objetivos de mision.
  */
-import { HQ, UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { AI_TEAM, PLAYER } from '../util/predicates';
 import type { Building, GameState, Objective, Outcome, Pos, Team } from '../model';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;
 
-const hasHQ = (s: GameState, team: Team): boolean => s.buildings.some((building) => building.owner === team && building.type === HQ);
+const hasHQ = (s: GameState, team: Team): boolean =>
+  s.buildings.some((building) => building.owner === team && building.type === tablesOf(s).HQ);
 
 const buildingsOf = (s: GameState, team: Team): Building[] => s.buildings.filter((building) => building.owner === team);
 
@@ -23,7 +25,7 @@ function defeated(s: GameState, team: Team): boolean {
  */
 export function score(s: GameState, team: Team): number {
   let total = 0;
-  for (const unit of s.units) if (unit.team === team) total += (UNIT.cost[unit.type]! * unit.life) / 100;
+  for (const unit of s.units) if (unit.team === team) total += (tablesOf(s).UNIT.cost[unit.type]! * unit.life) / 100;
   for (const building of s.buildings) if (building.owner === team) total += BUILDING_SCORE;
   return Math.round(total);
 }

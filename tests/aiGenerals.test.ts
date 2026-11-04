@@ -1,17 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { aiGeneral, bestAreaTarget, chooseAbility } from '@core/aiGenerals';
-import { AI, UNIT_NAMES, rulesWith } from '@core/data';
+import { rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { generalDef, newGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';
 import type { GameState } from '@core/model';
 import { blankState } from './helpers';
+
+const { UNIT_NAMES, AI } = defaultContent().tables;
 
 const T = (n: string) => UNIT_NAMES.indexOf(n);
 
 /** La IA (bando 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {
   const s = blankState(rulesWith({ fog, weather: false }));
-  s.generals = [null, newGeneral('Brisa')];
+  s.generals = [null, newGeneral(s, 'Brisa')];
   s.generals[1]!.charge = charge;
   newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });
   return s;
@@ -37,8 +40,8 @@ describe('la IA usa a su general', () => {
   it('no gasta la carga en algo que vale poco', () => {
     // Con Roca: su reparacion no gasta la barra entera, asi que puede esperar a que valga la pena.
     const s = blankState(rulesWith({ weather: false }));
-    s.generals = [null, newGeneral('Roca')];
-    s.generals[1]!.charge = generalDef('Roca')!.abilities[0]!.cost;
+    s.generals = [null, newGeneral(s, 'Roca')];
+    s.generals[1]!.charge = generalDef(s, 'Roca')!.abilities[0]!.cost;
     newUnit(s, T('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor
     expect(chooseAbility(s, 1)).toBeNull();
   });

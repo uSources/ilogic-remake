@@ -3,7 +3,7 @@
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
-import { CONTENT, TERRAIN_CONTENT } from './core/data';
+import { defaultContent } from './core/content/default';
 import { TEXTS, type TextKey } from './i18n';
 
 export type { TextKey };
@@ -124,7 +124,7 @@ export function t(key: TextKey): string {
 }
 
 /** Nombres de unidades, edificios y terrenos: los de src/core/content/*.json. */
-export const unitLabel = (type: number): string => CONTENT.units[type]?.name[settings.lang] ?? '?';
-export const buildingLabel = (type: number): string => CONTENT.buildings[type]?.name[settings.lang] ?? '?';
-export const weatherLabel = (kind: number): string => CONTENT.weather[kind]?.name[settings.lang] ?? '?';
-export const terrainLabel = (type: number): string => TERRAIN_CONTENT[type]?.name[settings.lang] ?? '?';
+export const unitLabel = (type: number): string => defaultContent().files.units[type]?.name[settings.lang] ?? '?';
+export const buildingLabel = (type: number): string => defaultContent().files.buildings[type]?.name[settings.lang] ?? '?';
+export const weatherLabel = (kind: number): string => defaultContent().files.weather[kind]?.name[settings.lang] ?? '?';
+export const terrainLabel = (type: number): string => defaultContent().files.terrain[type]?.name[settings.lang] ?? '?';

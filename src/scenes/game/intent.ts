@@ -2,7 +2,7 @@
  * Mover la unidad elegida: que pasaria al soltarla en una casilla y por que camino iria. Funciones
  * puras (sin Phaser): reciben el plan de movimiento de la escena (tests/sceneIntent.test.ts).
  */
-import { UNIT } from '../../core/data';
+import { isCapturer } from '../../core/util/predicates';
 import { posKey, samePos } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/targeting';
@@ -37,7 +37,7 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   }
   if (!isReachable(plan.range, tile)) return { kind: 'none' };
   const building = buildingAt(s, tile);
-  const isCapture = !!building && building.owner !== unit.team && !!UNIT.cancapt[unit.type];
+  const isCapture = !!building && building.owner !== unit.team && isCapturer(s, unit);
   return { kind: 'move', to: { x: tile.x, y: tile.y }, capture: isCapture };
 }
 

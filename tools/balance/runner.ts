@@ -1,6 +1,6 @@
 /**
- * Juega variantes en hilos (lo usan npm run balance y npm run metrics). Cada hilo carga el nucleo con
- * el contenido de la variante (worker.ts): el de este proceso no cambia nunca.
+ * Juega variantes en hilos (lo usan npm run balance y npm run metrics). Cada hilo recibe el contenido
+ * y las reglas de la variante y se los da a cada partida (worker.ts).
  */
 import { Worker } from 'node:worker_threads';
 import type { GameContent } from '@core/content';
@@ -11,7 +11,8 @@ import type { VariantSetup } from './variant';
 
 /** Lo que hace un hilo, con el contenido y las reglas de la variante. */
 export type WorkerJob = { content: GameContent; rules: RulesConfig } & (
-  { kind: 'games'; seeds: number[]; game: Omit<PlayOptions, 'seed' | 'rules'> } | { kind: 'duels'; duel: Omit<DuelOptions, 'rules'> }
+  | { kind: 'games'; seeds: number[]; game: Omit<PlayOptions, 'seed' | 'rules' | 'content'> }
+  | { kind: 'duels'; duel: Omit<DuelOptions, 'rules' | 'content'> }
 );
 
 /** Lanza un hilo con un trabajo y pasa cada mensaje que devuelve a `onMessage`. */
@@ -57,7 +58,7 @@ export async function runGames(
 }
 
 /** La tabla de duelos (duel.ts) con el contenido y las reglas de la variante. */
-export async function runDuels(setup: VariantSetup, duel: Omit<DuelOptions, 'rules'>): Promise<DuelCell[]> {
+export async function runDuels(setup: VariantSetup, duel: Omit<DuelOptions, 'rules' | 'content'>): Promise<DuelCell[]> {
   let cells: DuelCell[] = [];
   await runWorker<DuelCell[]>({ content: setup.content, rules: setup.rules, kind: 'duels', duel }, (result) => (cells = result));
   return cells;

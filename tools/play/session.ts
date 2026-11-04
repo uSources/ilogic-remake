@@ -4,9 +4,11 @@
  * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
  */
 import { aiTurn } from '@core/ai';
-import { BUILDING_NAMES, TERRAIN_NAMES, UNIT_NAMES, GENERALS, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { TERRAIN_NAMES, rulesWith } from '@core/data';
+import { createGame, loadGame } from '@core/defaultGames';
+import { tablesOf } from '@core/gameContent';
 import { posKey, seededRng } from '@core/geom';
-import { generateGame } from '@core/mapgen';
 import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
@@ -27,7 +29,7 @@ import {
   visibility,
   wait,
 } from '@core/rules';
-import { deserialize, serialize } from '@core/save';
+import { serialize } from '@core/save';
 import type { GameEvent, GameState, Rng, Unit } from '@core/model';
 
 /** Una letra por terreno (minuscula = suelo; mayuscula = obstaculo o agua). */
@@ -72,20 +74,25 @@ export class Session {
     const seed = opts.seed ?? 1;
     this.rng = seededRng(seed ^ 0x9e3779b9);
     if (opts.state) {
-      const s = deserialize(opts.state);
+      const s = loadGame(opts.state);
       if (!s) throw new Error('Partida guardada no valida');
       this.s = s;
     } else if (opts.mission) {
       const m = missionById(opts.mission);
       if (!m) throw new Error(`No existe la mision "${opts.mission}"`);
-      this.s = buildMission(m);
+      this.s = buildMission(m, defaultContent());
     } else {
       const rules = rulesWith({ fog: opts.fog ?? false });
-      this.s = generateGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, rules });
+      this.s = createGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, rules });
       const pick = (id: string | undefined) => {
         if (!id) return null;
-        const g = newGeneral(id);
-        if (!g) throw new Error(`No existe el general "${id}" (${GENERALS.map((x) => x.id).join(', ')})`);
+        const g = newGeneral(this.s, id);
+        if (!g)
+          throw new Error(
+            `No existe el general "${id}" (${defaultContent()
+              .files.generals.map((general) => general.id)
+              .join(', ')})`,
+          );
         return g;
       };
       const [g, e] = [pick(opts.general), pick(opts.enemyGeneral)];
@@ -192,7 +199,7 @@ export class Session {
       }
       rows.push(row);
     }
-    return `${rows.join('\n')}\n${LEGEND}`;
+    return `${rows.join('\n')}\n${legend(this.s)}`;
   }
 
   units(team: number | null): string {
@@ -202,7 +209,7 @@ export class Session {
     return list
       .map((u) => {
         const st = [u.active ? '' : 'usada'].filter(Boolean).join(' ');
-        return `${String(u.uid).padStart(3)} ${u.team === 0 ? 'tuya   ' : 'enemiga'} ${UNIT_NAMES[u.type]!.padEnd(13)} (${u.x},${u.y}) vida ${u.life} ${st}`;
+        return `${String(u.uid).padStart(3)} ${u.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[u.type]!.padEnd(13)} (${u.x},${u.y}) vida ${u.life} ${st}`;
       })
       .join('\n');
   }
@@ -212,9 +219,9 @@ export class Session {
     const targets = attackTargets(this.s, u);
     const tiles = reachableTiles(r);
     return [
-      `${u.uid} ${UNIT_NAMES[u.type]} en (${u.x},${u.y}), vida ${u.life}, ${u.active ? 'puede actuar' : 'ya ha actuado'}`,
+      `${u.uid} ${tablesOf(this.s).UNIT_NAMES[u.type]} en (${u.x},${u.y}), vida ${u.life}, ${u.active ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
-      `objetivos desde aqui: ${targets.length ? targets.map((t) => `${t.uid} ${UNIT_NAMES[t.type]} (${t.x},${t.y})`).join(', ') : 'ninguno'}`,
+      `objetivos desde aqui: ${targets.length ? targets.map((t) => `${t.uid} ${tablesOf(this.s).UNIT_NAMES[t.type]} (${t.x},${t.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, u) ? 'puede capturar el edificio de debajo' : '',
     ]
       .filter(Boolean)
@@ -244,13 +251,14 @@ export class Session {
   private buy(x: number, y: number, name: string): string {
     const b = buildingAt(this.s, { x, y });
     if (!b || b.owner !== 0) throw new UsageError(`no tienes un edificio en (${x},${y})`);
-    const type = UNIT_NAMES.findIndex((n) => n.toLowerCase() === name.toLowerCase());
+    const type = tablesOf(this.s).UNIT_NAMES.findIndex((n) => n.toLowerCase() === name.toLowerCase());
     const opts = buyOptions(this.s, b);
-    if (!opts.length) throw new UsageError(`${BUILDING_NAMES[b.type]} no fabrica unidades`);
-    if (type < 0) return `error: tipo desconocido. Aqui se puede: ${opts.map((o) => `${UNIT_NAMES[o.type]} (${o.cost})`).join(', ')}`;
+    if (!opts.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[b.type]} no fabrica unidades`);
+    if (type < 0)
+      return `error: tipo desconocido. Aqui se puede: ${opts.map((o) => `${tablesOf(this.s).UNIT_NAMES[o.type]} (${o.cost})`).join(', ')}`;
     const u = spawn(this.s, b, type);
     if (!u) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
-    return `comprada ${u.uid} ${UNIT_NAMES[type]} en (${x},${y}); quedan ${this.s.funds[0]}`;
+    return `comprada ${u.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${x},${y}); quedan ${this.s.funds[0]}`;
   }
 
   /** Usar una habilidad del general (sin id: lista de habilidades y carga). */
@@ -299,7 +307,7 @@ class UsageError extends Error {}
 function describe(s: GameState, ev: GameEvent): string {
   const name = (uid: number) => {
     const u = unitById(s, uid);
-    return u ? `${uid} ${UNIT_NAMES[u.type]}` : `${uid}`;
+    return u ? `${uid} ${tablesOf(s).UNIT_NAMES[u.type]}` : `${uid}`;
   };
   switch (ev.kind) {
     case 'move':
@@ -321,10 +329,10 @@ function describe(s: GameState, ev: GameEvent): string {
   }
 }
 
-const LEGEND = `+NN unidad tuya · -NN enemiga · ? no se ve
+const legend = (s: GameState): string => `+NN unidad tuya · -NN enemiga · ? no se ve
 Terreno: . hierba , flores f bosque ^ acantilado : arena c cactus M meseta _ nieve o muñeco t pinos % roca nevada i hielo ~ agua - poco profunda = profunda
 Edificios: C ciudad O petroleo F fabrica S fortaleza A aeropuerto B base (mayuscula tuyo, minuscula enemigo, * neutral)
-Edificios de tipo: ${BUILDING_NAMES.join(', ')}`;
+Edificios de tipo: ${tablesOf(s).BUILDING_NAMES.join(', ')}`;
 
 const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   map                      mapa en texto

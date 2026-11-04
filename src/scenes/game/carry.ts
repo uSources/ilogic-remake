@@ -3,7 +3,7 @@
  * puntero con el camino trazado y, al soltarla, se mueve, ataca, se une... o vuelve a su sitio.
  */
 import type Phaser from 'phaser';
-import { Movement } from '../../core/data';
+import { movementOf } from '../../core/gameContent';
 import { samePos } from '../../core/geom';
 import { canWalk, unitAt, unitById } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
@@ -151,7 +151,7 @@ export class Carry {
   /** Soltar lejos, fuera del alcance, en una casilla a la que se puede llegar algun dia: orden de varios turnos. */
   private canReachSomeday(unit: Unit, tile: Pos): boolean {
     const s = this.h.state;
-    return !unitAt(s, tile) && canWalk(s, tile, Movement.of(unit.type));
+    return !unitAt(s, tile) && canWalk(s, tile, movementOf(s, unit.type));
   }
 
   cancel(): void {

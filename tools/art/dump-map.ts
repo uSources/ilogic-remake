@@ -2,10 +2,10 @@
 // Uso: npx tsx tools/art/dump-map.ts <semilla> <tamaño> [tema]
 import { rulesWith } from '@core/data';
 import { seededRng } from '@core/geom';
-import { generateGame } from '@core/mapgen';
+import { createGame } from '@core/defaultGames';
 
 const [seed = '1', size = '24', theme] = process.argv.slice(2);
-const s = generateGame(seededRng(Number(seed)), {
+const s = createGame(seededRng(Number(seed)), {
   size: Number(size),
   theme: theme === undefined ? null : Number(theme),
   rules: rulesWith(),

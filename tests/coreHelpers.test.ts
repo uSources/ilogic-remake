@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING, HQ, TERRAIN, UNIT } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import {
   attackZone,
   captureEvent,
@@ -14,6 +14,8 @@ import {
 import type { MovePath } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { blankState } from './helpers';
+
+const { UNIT, BUILDING, HQ, TERRAIN } = defaultContent().tables;
 
 const SOLDIER = 0,
   TANK = 1,
@@ -102,7 +104,7 @@ describe('partidas guardadas', () => {
 
   it('ida y vuelta sin perder nada', () => {
     const s = sample();
-    expect(deserialize(serialize(s))).toEqual(JSON.parse(serialize(s)));
+    expect(deserialize(serialize(s), defaultContent())).toEqual(JSON.parse(serialize(s)));
   });
 
   it.each([
@@ -162,7 +164,7 @@ describe('partidas guardadas', () => {
       () => serialize({ ...sample(), mission: { id: 'x', objective: { kind: 'survive', days: 0 } } as never }),
     ],
   ])('rechaza: %s', (_name, make) => {
-    expect(deserialize(make())).toBeNull();
+    expect(deserialize(make(), defaultContent())).toBeNull();
   });
 
   it('corrige lo que se puede corregir (uid siguiente, dia) e ignora el combustible de las antiguas', () => {
@@ -170,7 +172,7 @@ describe('partidas guardadas', () => {
     Object.assign(s.units[0]!, { fuel: 1e9, ammo: 3 }); // partida guardada antes de quitarlos
     s.nextUid = 0;
     s.day = -3;
-    const back = deserialize(serialize(s))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.units[0]).not.toHaveProperty('fuel');
     expect(back.units[0]).not.toHaveProperty('ammo');
     expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((u) => u.uid)));

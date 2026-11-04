@@ -1,7 +1,8 @@
 /**
  * Fin de ronda (ciclojuego, fase 2): reactivar unidades, cobrar, curar, mantenimiento, dia y clima.
  */
-import { BUILDING, HEALER, MAX_FUNDS, MAX_LIFE } from '../data';
+import { tablesOf } from '../gameContent';
+import { MAX_LIFE } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
 import { TEAMS, type Building, type GameState, type Team, type Unit } from '../model';
@@ -46,7 +47,7 @@ function refreshUnits(s: GameState): void {
 /** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */
 function patientOn(s: GameState, building: Building): Unit | null {
   const unit = unitAt(s, building);
-  if (!unit || unit.team !== building.owner || !HEALER[unit.type]![building.type]) return null;
+  if (!unit || unit.team !== building.owner || !tablesOf(s).HEALER[unit.type]![building.type]) return null;
   // [CAMBIO] Sin cura bajo fuego: quien ha recibido un ataque hoy no se recupera esta noche.
   return unhealable(s, unit) ? null : unit;
 }
@@ -55,7 +56,7 @@ function healOnBuilding(s: GameState, building: Building, report: RoundReport): 
   const patient = patientOn(s, building);
   if (!patient) return;
   const before = patient.life;
-  patient.life = Math.min(MAX_LIFE, patient.life + BUILDING.heals[building.type]!);
+  patient.life = Math.min(MAX_LIFE, patient.life + tablesOf(s).BUILDING.heals[building.type]!);
   if (patient.life > before) report.healed.push({ uid: patient.uid, team: patient.team, amount: patient.life - before });
 }
 
@@ -87,7 +88,7 @@ function payUpkeep(s: GameState, report: RoundReport): void {
 
 /** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
 function nextDay(s: GameState): void {
-  s.funds = [Math.min(s.funds[0], MAX_FUNDS), Math.min(s.funds[1], MAX_FUNDS)];
+  s.funds = [Math.min(s.funds[0], tablesOf(s).MAX_FUNDS), Math.min(s.funds[1], tablesOf(s).MAX_FUNDS)];
   s.day++;
 }
 

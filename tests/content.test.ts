@@ -3,9 +3,13 @@ import buildingsFile from '@core/content/buildings.json';
 import unitsFile from '@core/content/units.json';
 import { buildTables, validateContent, type Content } from '@core/content';
 import { MOVEMENTS, MoveType } from '@core/content';
-import { CONTENT, Movement, TERRAIN_NAMES, TerrainType, UNIT_ART, UNIT_NAMES, BUILDING_NAMES } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { TERRAIN_NAMES, TerrainType } from '@core/data';
+import { walkableFor } from '@core/gameContent';
 
-const clone = (): Content => structuredClone(CONTENT) as Content;
+const { UNIT, UNIT_NAMES, UNIT_ART, BUILDING_NAMES, MOVE_COST } = defaultContent().tables;
+
+const clone = (): Content => structuredClone(defaultContent().files) as Content;
 const errsOf = (c: Content) => validateContent(c);
 
 describe('contenido (src/core/content/*.json)', () => {
@@ -117,12 +121,12 @@ describe('contenido (src/core/content/*.json)', () => {
     expect(Object.keys(TerrainType)).toHaveLength(TERRAIN_NAMES.length);
   });
 
-  it('Movement: tipos legibles sobre las tablas de terrain.json', () => {
+  it('movimiento: tipos legibles sobre las tablas de terrain.json', () => {
     const tank = UNIT_NAMES.indexOf('Tank');
-    expect(Movement.of(tank)).toBe(MoveType.VEHICLE);
-    expect(Movement.canWalk(MoveType.VEHICLE, TerrainType.WATER)).toBe(false);
-    expect(Movement.canWalk(MoveType.AIR, TerrainType.DEEP_WATER)).toBe(true);
-    expect(Movement.cost(MoveType.VEHICLE, TerrainType.WOODS)).toBe(2);
+    expect(UNIT.movtype[tank]!).toBe(MoveType.VEHICLE);
+    expect(walkableFor(defaultContent().tables, MoveType.VEHICLE, TerrainType.WATER)).toBe(false);
+    expect(walkableFor(defaultContent().tables, MoveType.AIR, TerrainType.DEEP_WATER)).toBe(true);
+    expect(MOVE_COST[MoveType.VEHICLE]![TerrainType.WOODS]).toBe(2);
   });
 
   it('art: una unidad sin dibujo usa el de otra', () => {

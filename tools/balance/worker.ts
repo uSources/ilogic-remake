@@ -1,19 +1,17 @@
 /**
- * Hilo de trabajo: carga el nucleo con el contenido de la variante (contentHook.mjs) y hace su
- * trabajo: un lote de partidas o la tabla de duelos. Nada del nucleo se importa antes de registrar
- * el enganche: si no, el hilo jugaria con el contenido de siempre.
+ * Hilo de trabajo: un lote de partidas o la tabla de duelos, con el contenido y las reglas de la
+ * variante que le pasa runner.ts (cada partida lleva el suyo: el nucleo no tiene uno global).
  */
-import { register } from 'node:module';
 import { parentPort, workerData } from 'node:worker_threads';
+import { duelMatrix } from './duel';
+import { playGame } from './play';
 import type { WorkerJob } from './runner';
 
 const job = workerData as WorkerJob;
-register('./contentHook.mjs', import.meta.url, { data: job.content });
+const { content, rules } = job;
 
 if (job.kind === 'games') {
-  const { playGame } = await import('./play');
-  for (const seed of job.seeds) parentPort!.postMessage(playGame({ ...job.game, seed, rules: job.rules }));
+  for (const seed of job.seeds) parentPort!.postMessage(playGame({ ...job.game, seed, rules, content }));
 } else {
-  const { duelMatrix } = await import('./duel');
-  parentPort!.postMessage(duelMatrix({ ...job.duel, rules: job.rules }));
+  parentPort!.postMessage(duelMatrix({ ...job.duel, rules, content }));
 }

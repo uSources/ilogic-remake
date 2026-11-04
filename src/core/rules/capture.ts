@@ -1,7 +1,8 @@
 /**
  * Captura de edificios: puntos, capturas a medias y el evento que las cuenta.
  */
-import { HQ } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
 import type { Building, GameEvent, GameState, Unit } from '../model';
@@ -9,7 +10,7 @@ import { buildingAt, unitAt } from './queries';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
-  return building.type === HQ ? s.rules.hqCapturePoints : s.rules.capturePoints;
+  return building.type === tablesOf(s).HQ ? s.rules.hqCapturePoints : s.rules.capturePoints;
 }
 
 /** Lo que resta una unidad al capturar: su vida / 10 (y mas con la habilidad quickCapture). */
@@ -46,7 +47,7 @@ export function dropStaleCaptures(s: GameState): void {
 
 /** Se puede capturar el edificio de debajo (neutral o enemigo). */
 export function canCapture(s: GameState, unit: Unit): boolean {
-  if (!unit.active || !isCapturer(unit)) return false;
+  if (!unit.active || !isCapturer(s, unit)) return false;
   const building = buildingAt(s, unit);
   return !!building && building.owner !== unit.team;
 }

@@ -11,8 +11,9 @@
  *
  * Este modulo no importa rules/ (las reglas lo importan a el).
  */
+import { tablesOf } from './gameContent';
 import { MOVEMENTS } from './content';
-import { UNIT, UNIT_ABILITIES, type AbilityDef } from './data';
+import { type AbilityDef } from './data';
 import { manhattan, neighbors4 } from './geom';
 import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';
@@ -24,12 +25,12 @@ type AbilityOf<K extends AbilityDef['kind']> = Extract<AbilityDef, { kind: K }>;
 /** Habilidad `kind` de un tipo de unidad, si la tiene y la regla esta activa. */
 export function abilityOf<K extends AbilityDef['kind']>(s: GameState, type: number, kind: K): AbilityOf<K> | undefined {
   if (!s.rules.abilities) return undefined;
-  return UNIT_ABILITIES[type]?.find((ability): ability is AbilityOf<K> => ability.kind === kind);
+  return tablesOf(s).UNIT_ABILITIES[type]?.find((ability): ability is AbilityOf<K> => ability.kind === kind);
 }
 
 /** Habilidades de un tipo de unidad que cuentan con las reglas de la partida (para enseñarlas). */
 export function abilitiesOf(s: GameState, type: number): readonly AbilityDef[] {
-  return s.rules.abilities ? (UNIT_ABILITIES[type] ?? []) : [];
+  return s.rules.abilities ? (tablesOf(s).UNIT_ABILITIES[type] ?? []) : [];
 }
 
 /** Ve dentro del terreno que esconde (bosque) en todo su radio de vision (scout). */
@@ -43,8 +44,8 @@ export function captureFactor(s: GameState, type: number): number {
 }
 
 /** Ataca a distancia (no puede disparar a la casilla de al lado). */
-export function isRanged(type: number): boolean {
-  return UNIT.minalc[type]! > 0;
+export function isRanged(s: GameState, type: number): boolean {
+  return tablesOf(s).UNIT.minalc[type]! > 0;
 }
 
 /**
@@ -64,7 +65,7 @@ export function defenseFactor(s: GameState, attacker: Unit, defender: Unit): num
   if (!s.rules.abilities) return 1;
   let factor = 1;
   const guard = abilityOf(s, defender.type, 'guard');
-  if (guard && isRanged(attacker.type)) factor *= guard.factor;
+  if (guard && isRanged(s, attacker.type)) factor *= guard.factor;
   factor *= auraFactor(s, defender);
   return factor;
 }
@@ -92,7 +93,7 @@ export function auraFactor(s: GameState, defender: Unit): number {
 export function zoneOfControl(s: GameState, unit: Unit, visible?: Grid<boolean> | null): Grid<boolean> {
   const mustStop = createLayer(s, false);
   if (!s.rules.abilities) return mustStop;
-  const movement = MOVEMENTS[UNIT.movtype[unit.type]!];
+  const movement = MOVEMENTS[tablesOf(s).UNIT.movtype[unit.type]!];
   for (const enemy of s.units) {
     if (!isEnemyOf(enemy, unit) || !isFieldUnit(enemy)) continue;
     if (visible && !visible.at(enemy)) continue;

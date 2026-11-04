@@ -1,6 +1,7 @@
 /**
  * Campaña: progreso guardado, textos de objetivos y consejos del tutorial.
  */
+import { defaultContent } from './core/content/default';
 import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
 import type { GameEvent, GameState, Objective } from './core/model';
@@ -91,7 +92,7 @@ const NO_UNIT_UIDS: readonly number[] = [];
 function objectiveToDescribe(m: MissionDef | null, s?: GameState): Objective {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
-  if (m) return objectiveFromMission(m.objective, NO_UNIT_UIDS);
+  if (m) return objectiveFromMission(m.objective, NO_UNIT_UIDS, defaultContent().tables);
   return { kind: 'hq' };
 }
 

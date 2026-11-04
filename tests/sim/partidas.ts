@@ -1,8 +1,9 @@
+import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/data';
 import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
-import { generateGame } from '@core/mapgen';
+import { createGame } from '@core/defaultGames';
 import { endRound, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
@@ -30,7 +31,7 @@ export function checkInvariants(s: GameState): void {
 export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
-    const s = generateGame(rng, { rules: rulesWith() });
+    const s = createGame(rng, { rules: rulesWith() });
     while (outcome(s) === 'playing' && s.day <= 60) {
       for (const team of [0, 1] as const) {
         for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;
@@ -39,7 +40,7 @@ export function aiVsAi(from: number, to: number): void {
       endRound(s);
       checkInvariants(s);
       if (s.day % 10 === 0) {
-        const copy = deserialize(serialize(s));
+        const copy = deserialize(serialize(s), defaultContent());
         expect(copy).not.toBeNull();
         expect(serialize(copy!)).toBe(serialize(s));
       }

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, POWER, UNIT, UNIT_NAMES, rulesWith } from '@core/data';
+import { DEFAULT_RULES, rulesWith } from '@core/data';
+import { defaultContent } from '@core/content/default';
 import { PLAIN_RULES } from './plainRules';
 import { duelMatrix } from '../tools/balance/duel';
 import { playGame } from '../tools/balance/play';
 import { runDuels, runGames } from '../tools/balance/runner';
 import { buildVariant } from '../tools/balance/variant';
+
+const { UNIT, UNIT_NAMES, POWER } = defaultContent().tables;
 
 const TANK = UNIT_NAMES.indexOf('Tank');
 const SOLDIER = UNIT_NAMES.indexOf('Soldier');
@@ -55,25 +58,25 @@ describe('herramienta de equilibrio: variantes', () => {
 
 describe('herramienta de equilibrio: partidas y duelos', () => {
   it('la misma semilla da la misma partida', () => {
-    const a = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith() });
-    const b = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith() });
+    const a = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(), content: defaultContent() });
+    const b = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(), content: defaultContent() });
     expect(a).toEqual(b);
     expect(a.samples.length).toBeGreaterThan(5);
     expect(a.units[0]!.reduce((n, t) => n + t.bought, 0)).toBeGreaterThan(0);
   });
 
   it('duelos: sin contraataque el defensor no devuelve daño; con el, si', () => {
-    const classic = duelMatrix({ trials: 20, terrain: 'Grass', seed: 1, rules: PLAIN_RULES }).find(
+    const classic = duelMatrix({ trials: 20, terrain: 'Grass', seed: 1, rules: PLAIN_RULES, content: defaultContent() }).find(
       (c) => c.attacker === 'Tank' && c.defender === 'Tank',
     )!;
     expect(classic.damage).toBeGreaterThan(0);
     expect(classic.counter).toBe(0);
-    const modern = duelMatrix({ trials: 20, terrain: 'Grass', seed: 1, rules: DEFAULT_RULES }).find(
+    const modern = duelMatrix({ trials: 20, terrain: 'Grass', seed: 1, rules: DEFAULT_RULES, content: defaultContent() }).find(
       (c) => c.attacker === 'Tank' && c.defender === 'Tank',
     )!;
     expect(modern.counter).toBeGreaterThan(0);
     // La artilleria no recibe contraataque.
-    const art = duelMatrix({ trials: 5, terrain: 'Grass', seed: 1, rules: DEFAULT_RULES }).find(
+    const art = duelMatrix({ trials: 5, terrain: 'Grass', seed: 1, rules: DEFAULT_RULES, content: defaultContent() }).find(
       (c) => c.attacker === 'Artillery' && c.defender === 'Tank',
     )!;
     expect(art.counter).toBe(0);

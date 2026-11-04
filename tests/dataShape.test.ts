@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import * as D from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { TERRAIN_TYPES } from '@core/data';
 import { unitLabel, settings } from '../src/settings';
 
 /**
@@ -7,9 +8,10 @@ import { unitLabel, settings } from '../src/settings';
  * crecer a la vez (skill nueva-unidad). Este test dice cual falta.
  */
 describe('tablas de datos', () => {
-  const U = D.UNIT_TYPES,
-    B = D.BUILDING_TYPES,
-    T = D.TERRAIN_TYPES;
+  const D = defaultContent().tables;
+  const U = D.UNIT_NAMES.length,
+    B = D.BUILDING_NAMES.length,
+    T = TERRAIN_TYPES;
 
   it.each(Object.entries(D.UNIT))('UNIT.%s tiene un valor por unidad', (_k, arr) => {
     expect((arr as readonly unknown[]).length).toBe(U);

@@ -17,8 +17,8 @@ const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
 });
 
 /** La orden tal como la cumple esta unidad: con "capturar", las que no pueden capturar van de escolta (atacar). */
-export function forUnit(unit: Unit, standingOrder: StandingOrder): StandingOrder {
-  const kind = standingOrder.kind === 'capture' && !isCapturer(unit) ? 'attack' : standingOrder.kind;
+export function forUnit(s: GameState, unit: Unit, standingOrder: StandingOrder): StandingOrder {
+  const kind = standingOrder.kind === 'capture' && !isCapturer(s, unit) ? 'attack' : standingOrder.kind;
   return { kind, at: { x: standingOrder.at.x, y: standingOrder.at.y } };
 }
 
@@ -31,13 +31,13 @@ export function effectiveStandingOrder(s: GameState, unit: Unit): StandingOrder 
   if (unit.order) return undefined;
   if (unit.standingOrder) return unit.standingOrder;
   const squadOrder = squadById(s, unit.squad)?.standingOrder;
-  return squadOrder ? forUnit(unit, squadOrder) : undefined;
+  return squadOrder ? forUnit(s, unit, squadOrder) : undefined;
 }
 
 /** [CAMBIO] Va por su cuenta: es de una escuadra con orden y lleva otra propia distinta. */
 export function isDetached(s: GameState, unit: Unit): boolean {
   const squadOrder = squadById(s, unit.squad)?.standingOrder;
-  return !!unit.standingOrder && !!squadOrder && !sameStandingOrder(unit.standingOrder, forUnit(unit, squadOrder));
+  return !!unit.standingOrder && !!squadOrder && !sameStandingOrder(unit.standingOrder, forUnit(s, unit, squadOrder));
 }
 
 /** Unidades del jugador de esa escuadra que siguen su orden (no destacadas). */
@@ -61,7 +61,7 @@ export function standingOrderBlock(
   if (kind !== 'capture') return null;
   const building = buildingAt(s, at);
   if (!building || isPlayer(building.owner)) return 'noBuilding';
-  if (!units.some((unit) => isCapturer(unit))) return 'noCapturer';
+  if (!units.some((unit) => isCapturer(s, unit))) return 'noCapturer';
   return null;
 }
 
@@ -81,9 +81,9 @@ export function standingOrderChoices(s: GameState, at: Pos, units: readonly Unit
 
 /** La unidad se queda con la orden como propia, salvo que sea justo la de su escuadra (entonces la sigue). */
 function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingOrder): void {
-  unit.standingOrder = forUnit(unit, standingOrder);
+  unit.standingOrder = forUnit(s, unit, standingOrder);
   const squadOrder = squadById(s, unit.squad)?.standingOrder;
-  if (squadOrder && sameStandingOrder(unit.standingOrder, forUnit(unit, squadOrder))) delete unit.standingOrder;
+  if (squadOrder && sameStandingOrder(unit.standingOrder, forUnit(s, unit, squadOrder))) delete unit.standingOrder;
 }
 
 /**
@@ -193,7 +193,7 @@ export function liftStandingOrder(s: GameState, squad: Squad): void {
   // La de capturar manda: las demas van de escolta con "atacar" al mismo sitio.
   const lead = units.find((unit) => unit.standingOrder!.kind === 'capture') ?? units[0]!;
   const standingOrder = lead.standingOrder!;
-  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, forUnit(unit, standingOrder)))) return;
+  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, forUnit(s, unit, standingOrder)))) return;
   squad.standingOrder = copyStandingOrder(standingOrder);
   for (const unit of units) delete unit.standingOrder;
 }

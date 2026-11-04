@@ -15,10 +15,10 @@ import type { GameState, Pos, Unit } from './model';
  * luego la mas cercana a la unidad. Null si no puede atacarle.
  */
 export function bestAttackTile(s: GameState, unit: Unit, target: Unit, range: MoveRange, end: Pos = unit): Pos | null {
-  if (!unit.canFire || !canDamage(unit, target)) return null;
-  const reaches = (from: Pos) => inAttackRange(unit.type, from, target);
+  if (!unit.canFire || !canDamage(s, unit, target)) return null;
+  const reaches = (from: Pos) => inAttackRange(s, unit.type, from, target);
   // Las que no pueden mover y disparar solo atacan desde donde estan.
-  if (isRanged(unit.type)) return reaches(unit) ? { x: unit.x, y: unit.y } : null;
+  if (isRanged(s, unit.type)) return reaches(unit) ? { x: unit.x, y: unit.y } : null;
 
   const candidates: Pos[] = [];
   if (reaches(unit)) candidates.push({ x: unit.x, y: unit.y });

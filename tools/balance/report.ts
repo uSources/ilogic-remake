@@ -1,5 +1,4 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
-import { UNIT_NAMES, UNIT_TYPES } from '@core/data';
 import type { ContentTables } from '@core/content';
 import { unitLabelEs } from './names';
 import type { DuelCell } from './duel';
@@ -98,8 +97,8 @@ export function buildReport(
   records: GameRecord[],
   meta: { name: string; variant: Variant; changes: Report['changes']; maxDays: number; seeds: [number, number]; policies: string },
   targets: Targets,
-  /** Estadisticas de las unidades con las que se ha jugado (las de la variante). */
-  unitStats: ContentTables['UNIT'],
+  /** Tablas del contenido con el que se ha jugado (el de la variante). */
+  tables: ContentTables,
   duel?: { terrain: string; cells: DuelCell[] },
 ): Report {
   const n = records.length;
@@ -158,8 +157,9 @@ export function buildReport(
 
   // Unidades (los dos bandos juntos).
   const totalBought = records.reduce((a, r) => a + r.units.flat().reduce((x, t) => x + t.bought, 0), 0);
+  const { UNIT: unitStats, UNIT_NAMES } = tables;
   const units: UnitRow[] = [];
-  for (let T = 0; T < UNIT_TYPES; T++) {
+  for (let T = 0; T < UNIT_NAMES.length; T++) {
     let bought = 0,
       spent = 0,
       valueDealt = 0,
@@ -219,7 +219,7 @@ export function buildReport(
   const effs = units.filter((u) => u.efficiency !== null).map((u) => u.efficiency!);
   const medEff = quant(effs, 0.5);
   for (const u of mirror ? units : []) {
-    const T = UNIT_NAMES.indexOf(u.type as (typeof UNIT_NAMES)[number]);
+    const T = UNIT_NAMES.indexOf(u.type);
     if (u.efficiency !== null && medEff > 0) {
       const ratio = u.efficiency / medEff;
       if (ratio > targets.efficiencyBand[1] || ratio < targets.efficiencyBand[0]) {
