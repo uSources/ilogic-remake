@@ -5,14 +5,29 @@
  */
 import type { GameContent } from './content';
 import { defaultContent } from './content/default';
-import { generateGame, type NewMapOptions } from './mapgen';
+import { generateGame } from './mapgen';
 import { missionById, missionRules } from './missions';
-import type { GameState, Rng } from './model';
+import type { GameState, RulesConfig, Rng } from './model';
+import { rulesWith } from './rulesConfig';
 import { deserialize, type SaveContext } from './save';
 
-/** Mapa al azar con el contenido del juego. */
-export function createGame(rng: Rng, options: Omit<NewMapOptions, 'content'>): GameState {
-  return generateGame(rng, { ...options, content: defaultContent() });
+/** Lo que se elige de una partida nueva con el contenido del juego. */
+export interface CreateGameOptions {
+  /** Lado del mapa (32 si no se dice). */
+  size?: number;
+  /** Tema del mapa, o null (o nada) para uno al azar. */
+  theme?: number | null;
+  /** Cambios a las reglas por defecto de ese contenido (sin cambios, las de siempre). */
+  ruleChanges?: Partial<RulesConfig>;
+}
+
+/**
+ * Mapa al azar con el contenido del juego. Las reglas salen del mismo contenido
+ * (`rulesWith(contenido, ruleChanges)`): el contenido y las reglas no pueden ser de dos sitios.
+ */
+export function createGame(rng: Rng, { size, theme, ruleChanges = {} }: CreateGameOptions): GameState {
+  const content = defaultContent();
+  return generateGame(rng, { size, theme, rules: rulesWith(content, ruleChanges), content });
 }
 
 /**

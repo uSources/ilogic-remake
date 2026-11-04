@@ -17,7 +17,7 @@ afterEach(() => {});
 describe('nueva partida: tamaños de mapa', () => {
   it.each([20, 32, 40])('mapas de %i: bases conectadas y edificios en proporcion', (size) => {
     for (let seed = 1; seed <= 15; seed++) {
-      const s = createGame(seededRng(seed), { size, rules: rulesWith(defaultContent()) });
+      const s = createGame(seededRng(seed), { size });
       expect(s.map.length).toBe(size);
       expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((b) => b.owner === 0 && b.type === HQ)!;
@@ -30,8 +30,8 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('el mismo codigo da el mismo mapa; el tema se puede elegir', () => {
-    const a = createGame(seededRng(1234), { size: 20, theme: 4, rules: rulesWith(defaultContent()) });
-    const b = createGame(seededRng(1234), { size: 20, theme: 4, rules: rulesWith(defaultContent()) });
+    const a = createGame(seededRng(1234), { size: 20, theme: 4 });
+    const b = createGame(seededRng(1234), { size: 20, theme: 4 });
     expect(serialize(a)).toBe(serialize(b));
     expect(a.theme).toBe(4);
   });
@@ -45,14 +45,15 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('una partida guardada se carga con sus propias reglas, no con las de siempre', () => {
-    const rules = rulesWith(defaultContent(), { counterattack: false, fog: false, upkeep: 0.25 });
-    const s = createGame(seededRng(3), { size: 20, rules });
+    const ruleChanges = { counterattack: false, fog: false, upkeep: 0.25 };
+    const rules = rulesWith(defaultContent(), ruleChanges);
+    const s = createGame(seededRng(3), { size: 20, ruleChanges });
     expect(s.rules).toEqual(rules);
     expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules).toEqual(rules);
   });
 
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
-    const s = createGame(seededRng(7), { size: 40, rules: rulesWith(defaultContent()) });
+    const s = createGame(seededRng(7), { size: 40 });
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
     const c = deserialize(json, saveContext(defaultContent()))!;
@@ -80,7 +81,7 @@ describe('limite de dias', () => {
 
 describe('repetir el turno enemigo', () => {
   it('la IA juega igual desde el mismo estado y la misma semilla', () => {
-    const s = createGame(seededRng(3), { rules: rulesWith(defaultContent()) });
+    const s = createGame(seededRng(3), {});
     for (let i = 0; i < 4; i++) for (const _ of aiTurn(s, seededRng(i), 1));
     const before = serialize(s);
     const ev1 = [...aiTurn(s, seededRng(42), 1)];

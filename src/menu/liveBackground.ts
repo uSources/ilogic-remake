@@ -1,7 +1,5 @@
 import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { defaultContent } from '../core/content/default';
-import { rulesWith } from '../core/rulesConfig';
 import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
@@ -87,7 +85,7 @@ export class LiveBackground {
   start(): void {
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = createGame(seededRng(seed), { size: MAP_SIZE, rules: rulesWith(defaultContent(), BACKGROUND_RULE_CHANGES) });
+    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
     const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };

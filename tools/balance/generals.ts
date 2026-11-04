@@ -13,7 +13,6 @@
  */
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
 import { createGame } from '@core/defaultGames';
 import { newGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
@@ -39,7 +38,7 @@ const gen = (s: GameState, id: string) => (id === 'none' ? null : newGeneral(s, 
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
 function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: 0 | 1 | -1; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createGame(rng, { rules: rulesWith(defaultContent()) });
+  const s: GameState = createGame(rng, {});
   s.generals = [gen(s, g0), gen(s, g1)];
   while (outcome(s) === 'playing' && s.day <= 60) {
     for (const team of [0, 1] as const) {

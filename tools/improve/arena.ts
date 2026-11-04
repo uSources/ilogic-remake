@@ -15,7 +15,6 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
 import { createGame } from '@core/defaultGames';
 import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
@@ -36,7 +35,7 @@ function strength(s: GameState, t: Team): number {
 /** Una partida; devuelve el bando ganador (o null si empate). */
 export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
   const rng = seededRng(seed);
-  const s = createGame(rng, { size, rules: rulesWith(defaultContent()) });
+  const s = createGame(rng, { size });
   while (outcome(s) === 'playing' && s.day <= maxDays) {
     for (const t of [0, 1] as Team[]) {
       for (const _ of brains[t](s, rng, t)) if (outcome(s) !== 'playing') break;

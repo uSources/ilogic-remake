@@ -6,7 +6,6 @@
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { TERRAIN_NAMES } from '@core/content';
-import { rulesWith } from '@core/rulesConfig';
 import { createGame, loadGame } from '@core/defaultGames';
 import { tablesOf } from '@core/gameContent';
 import { posKey, samePos, seededRng } from '@core/geom';
@@ -84,8 +83,7 @@ export class Session {
       if (!m) throw new Error(`No existe la mision "${opts.mission}"`);
       this.s = buildMission(m, defaultContent());
     } else {
-      const rules = rulesWith(defaultContent(), { fog: opts.fog ?? false });
-      this.s = createGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, rules });
+      this.s = createGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, ruleChanges: { fog: opts.fog ?? false } });
       const pick = (id: string | undefined) => {
         if (!id) return null;
         const g = newGeneral(this.s, id);
