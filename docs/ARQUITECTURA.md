@@ -8,9 +8,11 @@ tomaron las decisiones que no conviene deshacer sin pensarlo.
 ```mermaid
 flowchart TB
   subgraph core["src/core — TypeScript puro (sin Phaser, sin DOM)"]
-    data["data.ts<br/>tablas de content/*.json:<br/>unidades, edificios, terreno, reglas, IA"]
+    model["model/<br/>tipos de la partida (sin dependencias)"]
+    data["data.ts<br/>tablas congeladas de content/*.json:<br/>unidades, edificios, terreno, reglas, IA"]
     rules["rules.ts + rules/<br/>mover, atacar, capturar, comprar, fin de ronda"]
-    orders["orders.ts<br/>ayudas para ordenes del jugador"]
+    orders["targeting.ts / trail.ts<br/>a donde apuntar y camino trazado"]
+    squads["squads.ts + squads/<br/>escuadras y ordenes permanentes"]
     ai["ai.ts + ai/<br/>IA (generador de eventos)"]
     gen["mapgen.ts / missions.ts"]
     save["save.ts / stats.ts"]
@@ -26,7 +28,7 @@ flowchart TB
   subgraph hud["src/hud — interfaz HTML (Preact)"]
     store["store.ts<br/>estado de la interfaz"] --> comps["Hud.tsx → game/ · menus/ · overlays/"]
   end
-  game --> rules & ai & orders
+  game --> rules & ai & orders & squads
   game --> mapView & fx & hudModels
   game -- "ui.set(...)" --> store
   comps -- "ui.actions.*" --> game

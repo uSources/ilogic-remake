@@ -27,7 +27,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   `src/core/ai/`, un modulo por tema (mapa en `docs/ARQUITECTURA.md`, "El nucleo por dentro").
   Fuera de core se importa de la fachada; dentro, del modulo concreto, sin crear ciclos.
 - `src/core` **no** importa Phaser, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
-  Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/orders.ts`).
+  Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/targeting.ts`).
 - Las escenas no leen teclas ni botones de un mando: un adaptador de `src/controls` los traduce a
   `InputCommand` (mapa) o `MenuCommand` (menus) y la escena los cumple (`command` / `menu`, segun
   `controlContext()`). Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").

@@ -4,7 +4,7 @@
  */
 import type Phaser from 'phaser';
 import { manhattan, samePos } from '../../core/geom';
-import { closestStep } from '../../core/orders';
+import { closestStep } from '../../core/targeting';
 import {
   attackEvent,
   canCapture,

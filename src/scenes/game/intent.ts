@@ -5,7 +5,7 @@
 import { UNIT } from '../../core/data';
 import { samePos } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
-import { bestAttackTile } from '../../core/orders';
+import { bestAttackTile } from '../../core/targeting';
 import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { key, type Intent } from './types';

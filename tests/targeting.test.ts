@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { UNIT, UNIT_NAMES, Movement } from '@core/data';
 import { createLayer } from '@core/mapGrid';
-import { bestAttackTile, closestStep, extendTrail } from '@core/orders';
+import { bestAttackTile, closestStep } from '@core/targeting';
+import { extendTrail } from '@core/trail';
 import { moveRange, newUnit, pathCost } from '@core/rules';
 import { blankState } from './helpers';
 

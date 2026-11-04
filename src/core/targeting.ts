@@ -1,14 +1,11 @@
 /**
- * Ayudas para las ordenes del jugador (mover, atacar, mover en grupo): que casilla elegir y si una
- * orden es arriesgada. Logica pura, sin interfaz: la usa GameScene y se puede probar.
+ * A donde apuntar con la unidad elegida: desde que casilla atacar a un objetivo y que casilla del
+ * alcance acerca mas a un destino. Logica pura, sin interfaz: la usa la escena y se puede probar.
  */
-import { Movement } from './data';
 import { manhattan, samePos } from './geom';
 import { isRanged } from './abilities';
 import { canDamage, inAttackRange, tileProtection } from './rules/combat';
-import { moveCost, pathCost, pathTo, reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
-import { canWalk } from './rules/queries';
-import type { Grid } from './util/grid';
+import { reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
 import { minBy } from './util/pick';
 import type { GameState, Pos, Unit } from './model';
 
@@ -36,25 +33,4 @@ export function closestStep(unit: Unit, goal: Pos, range: MoveRange): Pos | null
   const distanceNow = manhattan(unit, goal);
   const closer = reachableTilesWithCost(range).filter((tile) => manhattan(tile.pos, goal) < distanceNow);
   return minBy(closer, (tile) => [manhattan(tile.pos, goal), tile.cost])?.pos ?? null;
-}
-
-/**
- * Camino que se traza al pasar el cursor por `hovered`: si vuelve sobre el camino, se recorta; si es
- * la casilla de al lado y cabe en el movimiento, se alarga; si no, el camino mas corto hasta alli (o
- * el mismo si no se llega). `block` = casillas por las que no puede pasar (enemigos a la vista).
- */
-export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: Grid<boolean>, trail: Pos[], hovered: Pos): Pos[] {
-  const current = trail.length ? trail : [{ x: unit.x, y: unit.y }];
-  const backIndex = current.findIndex((step) => samePos(step, hovered));
-  if (backIndex >= 0) return current.slice(0, backIndex + 1);
-  const end = current[current.length - 1]!;
-  const movement = Movement.of(unit.type);
-  const canExtend =
-    manhattan(end, hovered) === 1 &&
-    canWalk(s, hovered, movement) &&
-    !block.at(hovered) &&
-    pathCost(s, movement, current) + moveCost(s, movement, hovered) <= range.maxSteps;
-  if (canExtend) return [...current, { x: hovered.x, y: hovered.y }];
-  // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
-  return range.prev.at(hovered) ? pathTo(range, unit, hovered) : trail;
 }

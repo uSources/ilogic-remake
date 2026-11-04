@@ -3,7 +3,7 @@
  * trazado, peligro, de donde venia (para deshacer) y los objetivos de su menu (atacar, descargar).
  * Vive desde que se elige la unidad hasta que se vuelve al mapa. Sin Phaser.
  */
-import { extendTrail } from '../../core/orders';
+import { extendTrail } from '../../core/trail';
 import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
