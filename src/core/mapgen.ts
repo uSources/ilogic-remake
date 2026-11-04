@@ -197,10 +197,10 @@ const spawnZone = (s: GameState, spawn: Pos) => [...diamond(mapGrid(s), spawn, 0
 function placeStartingUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): void {
   MAPGEN.INITUS.forEach((type, index) => {
     const movement = Movement.of(type);
-    const free = spawnZone(s, spawn).filter((pos) => Movement.canWalk(movement, terrainAt(s, pos)) && !unitAt(s, pos.x, pos.y));
+    const free = spawnZone(s, spawn).filter((pos) => Movement.canWalk(movement, terrainAt(s, pos)) && !unitAt(s, pos));
     // Con la probabilidad corregida (INITUS.length); si no sale ninguna, la ultima libre.
     const chosen = sampleInOrder(free, MAPGEN.INITUS.length - index, rng, (left) => left - 1) ?? free.at(-1);
-    if (chosen) newUnit(s, type, team, chosen.x, chosen.y, true);
+    if (chosen) newUnit(s, type, team, chosen, true);
   });
 }
 
@@ -208,7 +208,7 @@ function placeStartingUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): voi
 function placeStartingBuildings(s: GameState, spawn: Pos, team: Team, rng: Rng): boolean {
   const total = MAPGEN.INITBS.length;
   for (let index = 0; index < total; index++) {
-    const free = spawnZone(s, spawn).filter((pos) => canBuildOn(terrainAt(s, pos)) && !buildingAt(s, pos.x, pos.y));
+    const free = spawnZone(s, spawn).filter((pos) => canBuildOn(terrainAt(s, pos)) && !buildingAt(s, pos));
     if (!free.length) return false;
     // El original recorre el rombo dando vueltas; equivale a elegir con prob. creciente.
     let chosen: Pos | null = null;
@@ -239,7 +239,7 @@ function placeNeutralBuildings(s: GameState, rng: Rng): void {
   const available = map.createLayer(false);
   let availableCount = 0;
   for (const { pos, value } of map.cells())
-    if (canBuildOn(value) && !buildingAt(s, pos.x, pos.y)) {
+    if (canBuildOn(value) && !buildingAt(s, pos)) {
       available.set(pos, true);
       availableCount++;
     }
@@ -281,7 +281,7 @@ function isMostlyLand(s: GameState, center: Pos): boolean {
 /** Casilla libre de tierra, alcanzable desde las dos salidas y no pegada a ninguna. */
 function isControlSpot(s: GameState, pos: Pos, toPlayer: number, toEnemy: number, span: number): boolean {
   if (!toPlayer || !toEnemy) return false;
-  if (!isWalkable(terrainAt(s, pos)) || buildingAt(s, pos.x, pos.y) || unitAt(s, pos.x, pos.y)) return false;
+  if (!isWalkable(terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
   if (Math.min(toPlayer, toEnemy) < span * MIN_CONTROL_SPAWN_SHARE) return false;
   return isMostlyLand(s, pos);
 }

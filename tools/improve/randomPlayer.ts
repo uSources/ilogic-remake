@@ -39,7 +39,7 @@ export function randomTurn(s: GameState, rng: Rng, team: Team, after: (what: str
     act(s, rng, u, after);
   }
   for (const b of s.buildings) {
-    if (b.owner !== team || unitAt(s, b.x, b.y) || rng() < 0.4) continue;
+    if (b.owner !== team || unitAt(s, b) || rng() < 0.4) continue;
     const o = pick(
       rng,
       buyOptions(s, b).filter((x) => x.affordable),

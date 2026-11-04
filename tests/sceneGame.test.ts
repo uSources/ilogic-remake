@@ -37,7 +37,7 @@ function plan(s: GameState, u: Unit): MovePlan {
 describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => {
   it('en su casilla se queda; en una alcanzable se mueve; fuera del alcance, nada', () => {
     const s = blankState();
-    const u = newUnit(s, type('Soldier'), 0, 5, 5);
+    const u = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
     const p = plan(s, u);
     expect(intentAt(s, p, { x: 5, y: 5 }, seeAll)).toEqual({ kind: 'stay' });
     expect(intentAt(s, p, { x: 6, y: 5 }, seeAll)).toEqual({ kind: 'move', to: { x: 6, y: 5 }, capture: false });
@@ -47,8 +47,8 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
 
   it('un enemigo visible se ataca desde una casilla al lado; uno que no se ve, no', () => {
     const s = blankState();
-    const u = newUnit(s, type('Soldier'), 0, 5, 5);
-    newUnit(s, type('Soldier'), 1, 7, 5);
+    const u = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    newUnit(s, type('Soldier'), 1, { x: 7, y: 5 });
     const p = plan(s, u);
     const it = intentAt(s, p, { x: 7, y: 5 }, seeAll);
     expect(it.kind).toBe('attack');
@@ -57,7 +57,7 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
 
   it('el camino sigue el trazado si acaba en el destino, y si no el mas corto', () => {
     const s = blankState();
-    const u = newUnit(s, type('Soldier'), 0, 5, 5);
+    const u = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
     const p = {
       ...plan(s, u),
       trail: [
@@ -98,8 +98,8 @@ describe('escena: casillas marcadas (game/highlights.ts)', () => {
 
   it('al mover, el alcance; con un grupo, el aro de cada unidad', () => {
     const s = blankState();
-    const u = newUnit(s, type('Soldier'), 0, 5, 5);
-    const o = newUnit(s, type('Soldier'), 0, 9, 9);
+    const u = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    const o = newUnit(s, type('Soldier'), 0, { x: 9, y: 9 });
     const moving = computeHighlights({ ...base(s), phase: 'move', range: moveRange(s, u) });
     expect(moving.tiles.get('6,5')).toBe('move');
     const grouped = computeHighlights({ ...base(s), group: new Set([u.uid, o.uid]) });
@@ -197,8 +197,8 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
 
   it('moviendo, a la unidad elegida; en el mapa, al grupo; sin nada, a nadie', () => {
     const s = blankState();
-    const a = newUnit(s, type('Soldier'), 0, 5, 5);
-    const b = newUnit(s, type('Soldier'), 0, 6, 5);
+    const a = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    const b = newUnit(s, type('Soldier'), 0, { x: 6, y: 5 });
     const { st, selection, orders } = setup(s);
     expect(orders.subjects()).toBeNull();
     selection.group = new Set([a.uid, b.uid]);
@@ -210,8 +210,8 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
 
   it('el contexto de las acciones dice si en la casilla hay un enemigo que se ve', () => {
     const s = blankState();
-    const a = newUnit(s, type('Soldier'), 0, 5, 5);
-    newUnit(s, type('Soldier'), 1, 8, 5);
+    const a = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    newUnit(s, type('Soldier'), 1, { x: 8, y: 5 });
     const { selection, orders } = setup(s);
     selection.group = new Set([a.uid]);
     expect(orders.ctx({ x: 8, y: 5 })?.enemyHere).toBe(true);
@@ -220,8 +220,8 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
 
   it('cada accion se cumple con su entrada del registro: formar escuadra con el grupo', async () => {
     const s = blankState();
-    const a = newUnit(s, type('Soldier'), 0, 5, 5);
-    const b = newUnit(s, type('Soldier'), 0, 6, 5);
+    const a = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    const b = newUnit(s, type('Soldier'), 0, { x: 6, y: 5 });
     const { selection, orders } = setup(s);
     selection.group = new Set([a.uid, b.uid]);
     await orders.run('squadForm', null);

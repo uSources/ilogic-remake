@@ -51,15 +51,15 @@ describe('clima: contenido', () => {
 describe('clima: efectos', () => {
   it('despejado no cambia nada', () => {
     const s = withWeather(CLEAR);
-    const tank = newUnit(s, TANK, 0, 5, 5);
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(maxSteps(s, tank)).toBe(UNIT.mover[TANK]);
     expect(visionOf(s, tank)).toBe(UNIT.vision[TANK]);
   });
 
   it('la lluvia frena a los vehiculos pero no a la infanteria', () => {
     const s = withWeather(RAIN);
-    const tank = newUnit(s, TANK, 0, 5, 5);
-    const soldier = newUnit(s, SOLDIER, 0, 15, 15);
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 15, y: 15 });
     expect(maxSteps(s, tank)).toBe(UNIT.mover[TANK]! - 1);
     expect(maxSteps(s, soldier)).toBe(UNIT.mover[SOLDIER]);
     expect(moveRange(s, tank).maxSteps).toBe(UNIT.mover[TANK]! - 1);
@@ -67,8 +67,8 @@ describe('clima: efectos', () => {
 
   it('la nevada frena a todo lo que va por tierra, no a los aviones', () => {
     const s = withWeather(SNOW);
-    const soldier = newUnit(s, SOLDIER, 0, 5, 5);
-    const plane = newUnit(s, LFIGHTER, 0, 15, 15);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const plane = newUnit(s, LFIGHTER, 0, { x: 15, y: 15 });
     expect(maxSteps(s, soldier)).toBe(UNIT.mover[SOLDIER]! - 1);
     expect(maxSteps(s, plane)).toBe(UNIT.mover[LFIGHTER]);
   });
@@ -77,9 +77,9 @@ describe('clima: efectos', () => {
     const clear = withWeather(CLEAR);
     const storm = withWeather(STORM);
     for (const s of [clear, storm]) {
-      newUnit(s, TANK, 0, 5, 5);
-      newUnit(s, SOLDIER, 1, 6, 5);
-      newUnit(s, LFIGHTER, 0, 15, 15);
+      newUnit(s, TANK, 0, { x: 5, y: 5 });
+      newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
+      newUnit(s, LFIGHTER, 0, { x: 15, y: 15 });
     }
     expect(maxSteps(storm, storm.units[2]!)).toBe(UNIT.mover[LFIGHTER]! - 2);
     const pc = hitChance(clear, clear.units[0]!, clear.units[1]!);
@@ -90,8 +90,8 @@ describe('clima: efectos', () => {
 
   it('el mal tiempo quita vision, nunca por debajo de 1 (ni da vision a quien no ve)', () => {
     const s = withWeather(STORM);
-    const tank = newUnit(s, TANK, 0, 10, 10);
-    const blocker = newUnit(s, BLOCKER, 0, 20, 20);
+    const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const blocker = newUnit(s, BLOCKER, 0, { x: 20, y: 20 });
     expect(visionOf(s, tank)).toBe(UNIT.vision[TANK]! - 2);
     expect(visionOf(s, blocker)).toBe(UNIT.vision[BLOCKER]);
     const vis = visibility(s, 0);
@@ -102,7 +102,7 @@ describe('clima: efectos', () => {
   it('el movimiento nunca baja de 1', () => {
     const s = withWeather(SNOW);
     for (let t = 0; t < UNIT.mover.length; t++) {
-      const u = newUnit(s, t, 0, t, 0);
+      const u = newUnit(s, t, 0, { x: t, y: 0 });
       if (UNIT.mover[t]! > 0) expect(maxSteps(s, u)).toBeGreaterThanOrEqual(1);
     }
   });
@@ -110,7 +110,7 @@ describe('clima: efectos', () => {
   it('con la regla quitada no hay clima aunque el estado lo tenga', () => {
     useRules({ ...DEFAULT_RULES, weather: false });
     const s = withWeather(STORM);
-    const tank = newUnit(s, TANK, 0, 5, 5);
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(weatherNow(s)).toBe(CLEAR);
     expect(maxSteps(s, tank)).toBe(UNIT.mover[TANK]);
     expect(advanceWeather(s)).toBeNull();

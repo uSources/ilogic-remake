@@ -57,8 +57,8 @@ export function labState(o: LabOptions, action: LabAction | null): GameState {
   };
   const near = action !== null && action !== 'move';
   const from = near ? { x: LAB_TARGET.x - labRange(o.attacker), y: LAB_TARGET.y } : LAB_FROM;
-  newUnit(s, o.attacker, 0, from.x, from.y);
-  const d = newUnit(s, o.defender, 1, LAB_TARGET.x, LAB_TARGET.y);
+  newUnit(s, o.attacker, 0, from);
+  const d = newUnit(s, o.defender, 1, LAB_TARGET);
   if (action === 'kill') d.life = 15;
   return s;
 }

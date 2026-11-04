@@ -30,8 +30,8 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
     const s = blankState();
     const t = fighter();
     const def = POWER[t]!.findIndex((p) => p > 0);
-    const a = newUnit(s, t, 0, 2, 2);
-    const d = newUnit(s, def, 1, 3, 2);
+    const a = newUnit(s, t, 0, { x: 2, y: 2 });
+    const d = newUnit(s, def, 1, { x: 3, y: 2 });
     d.hitDay = s.day; // flanqueado
     a.kills = 3; // veterano
     let p = POWER[t]![def]! * coverAgainst(t, tileProtection(s, d));
@@ -43,8 +43,8 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
     useRules({ ...DEFAULT_RULES, fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false });
     const s = blankState();
     const t = fighter();
-    const a = newUnit(s, t, 0, 2, 2);
-    const d = newUnit(s, t, 1, 3, 2);
+    const a = newUnit(s, t, 0, { x: 2, y: 2 });
+    const d = newUnit(s, t, 1, { x: 3, y: 2 });
     for (const m of HIT_MODIFIERS) expect(m.factor(s, a, d), m.id).toBe(1);
   });
 });
@@ -59,7 +59,7 @@ describe('pasos del fin de ronda (ROUND_PHASES)', () => {
 
   it('endRound los recorre todos: reactiva unidades y pasa el dia', () => {
     const s = blankState();
-    const u = newUnit(s, fighter(), 0, 1, 1, false);
+    const u = newUnit(s, fighter(), 0, { x: 1, y: 1 }, false);
     const r = endRound(s);
     expect(s.day).toBe(2);
     expect(u.active && u.canMove && u.canFire).toBe(true);
@@ -72,8 +72,8 @@ describe('ayudas de combate compartidas', () => {
     const s = blankState();
     const melee = UNIT.canfight.findIndex((f, t) => !!f && UNIT.minalc[t] === 0 && UNIT.mover[t]! > 0);
     const ranged = UNIT.canfight.findIndex((f, t) => !!f && UNIT.minalc[t]! > 0);
-    const m = newUnit(s, melee, 0, 5, 5);
-    const r = newUnit(s, ranged, 0, 9, 9);
+    const m = newUnit(s, melee, 0, { x: 5, y: 5 });
+    const r = newUnit(s, ranged, 0, { x: 9, y: 9 });
     const range = moveRange(s, m);
     expect(fireOrigins(m, range)).toEqual([{ x: 5, y: 5 }, ...reachableTiles(range)]);
     expect(fireOrigins(m, null)).toEqual([{ x: 5, y: 5 }]);
@@ -84,9 +84,9 @@ describe('ayudas de combate compartidas', () => {
   it('canDamage: lucha y su poder contra ese tipo es mayor que 0', () => {
     const s = blankState();
     const t = fighter();
-    const a = newUnit(s, t, 0, 1, 1);
-    for (let d = 0; d < POWER[t]!.length; d++) expect(canDamage(a, newUnit(s, d, 1, 2, 1))).toBe(POWER[t]![d]! > 0);
+    const a = newUnit(s, t, 0, { x: 1, y: 1 });
+    for (let d = 0; d < POWER[t]!.length; d++) expect(canDamage(a, newUnit(s, d, 1, { x: 2, y: 1 }))).toBe(POWER[t]![d]! > 0);
     const pacifist = UNIT.canfight.findIndex((f) => !f);
-    if (pacifist >= 0) expect(canDamage(newUnit(s, pacifist, 0, 3, 3), a)).toBe(false);
+    if (pacifist >= 0) expect(canDamage(newUnit(s, pacifist, 0, { x: 3, y: 3 }), a)).toBe(false);
   });
 });

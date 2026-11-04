@@ -19,8 +19,8 @@ describe('botin', () => {
   it('quien destruye cobra parte del precio de lo destruido', () => {
     useRules({ bounty: 0.25 });
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, SOLDIER, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     d.life = 1;
     const before = s.funds[0];
     const ev = attackEvent(s, a, d, seededRng(1));
@@ -33,8 +33,8 @@ describe('botin', () => {
   it('si cae el atacante en el contraataque, cobra el defensor', () => {
     useRules({ bounty: 0.25 });
     const s = blankState();
-    const a = newUnit(s, SOLDIER, 0, 10, 10);
-    const d = newUnit(s, TANK, 1, 10, 11);
+    const a = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     a.life = 1;
     const r = attackFull(s, a, d, seededRng(1));
     expect(r.attackerKilled).toBe(true);
@@ -44,8 +44,8 @@ describe('botin', () => {
   it('sin la regla, ni dinero ni campo en el evento', () => {
     useRules({ bounty: 0 });
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, SOLDIER, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     d.life = 1;
     const ev = attackEvent(s, a, d, seededRng(1));
     expect(ev.bounty).toBeUndefined();
@@ -57,9 +57,9 @@ describe('flanqueo', () => {
   it('la segunda unidad que ataca a la misma ese dia acierta mas', () => {
     useRules({ flankBonus: 0.15, counterattack: false });
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const b = newUnit(s, TANK, 0, 11, 11);
-    const d = newUnit(s, TANK, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const b = newUnit(s, TANK, 0, { x: 11, y: 11 });
+    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     const fresh = hitChance(s, b, d);
     attackFull(s, a, d, seededRng(1));
     expect(hitChance(s, b, d)).toBeCloseTo(fresh * 1.15);
@@ -71,8 +71,8 @@ describe('flanqueo', () => {
   it('sin la regla no cambia nada', () => {
     useRules({ flankBonus: 0 });
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, TANK, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     const fresh = hitChance(s, a, d);
     d.hitDay = s.day;
     expect(hitChance(s, a, d)).toBe(fresh);
@@ -83,8 +83,8 @@ describe('sin cura bajo fuego', () => {
   const setup = () => {
     const s = blankState();
     s.buildings.push({ type: CITY, owner: 1, x: 10, y: 11 });
-    const a = newUnit(s, SOLDIER, 0, 10, 10);
-    const d = newUnit(s, SOLDIER, 1, 10, 11);
+    const a = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     // Un soldado se cura en una ciudad propia.
     expect(HEALER[SOLDIER]![CITY]).toBe(true);
     return { s, a, d };

@@ -208,7 +208,7 @@ export class TurnFlow {
   private async playAutoCaptures(match: number): Promise<boolean> {
     const host = this.host;
     for (const unit of this.autoCapturers()) {
-      const building = buildingAt(host.state, unit.x, unit.y)!;
+      const building = buildingAt(host.state, unit)!;
       const result = capture(host.state, unit);
       if (result) await host.play([captureEvent(unit, building, result)]);
       if (!this.continues(match)) return false;
@@ -313,7 +313,7 @@ export class TurnFlow {
       return false;
     }
     const range = moveRange(host.state, unit);
-    if (canReach(range, goal.x, goal.y)) {
+    if (canReach(range, goal)) {
       delete unit.order;
       return true;
     }

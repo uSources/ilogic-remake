@@ -96,7 +96,7 @@ export function attackScore(s: GameState, ai: AiCtx, attacker: Unit, target: Uni
     attacker: attackerThere,
     target,
     damage: expectedDamage(s, attackerThere, target),
-    targetBuilding: buildingAt(s, target.x, target.y),
+    targetBuilding: buildingAt(s, target),
   };
   return ATTACK_SCORE_TERMS.reduce((score, term) => score + term.value(attack), 0);
 }

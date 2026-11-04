@@ -66,7 +66,7 @@ export function attackTargets(s: GameState, attacker: Unit, visible = visibility
  * de que acierten a quien esta en ella. 1 = sin proteccion.
  */
 export function tileProtection(s: GameState, pos: Pos): number {
-  const building = buildingAt(s, pos.x, pos.y);
+  const building = buildingAt(s, pos);
   const terrainProtection = TERRAIN.protection[terrainAt(s, pos)]!;
   return terrainProtection * (building ? BUILDING.protection[building.type]! : 1);
 }

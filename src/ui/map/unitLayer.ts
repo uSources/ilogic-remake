@@ -116,7 +116,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     sprite.root.setPosition(unit.x * TILE, unit.y * TILE);
     sprite.team = unit.team;
     sprite.img.setFlipX(faceFlip(unit.team, this.facingOf(unit.uid, unit.team)));
-    this.updateTerrainFront(sprite, newArt ? frontKey(s, unit.x, unit.y) : null);
+    this.updateTerrainFront(sprite, newArt ? frontKey(s, unit) : null);
     updateLifeDigit(sprite, unit.life);
     this.updateMarks(sprite, unit, s);
     sprite.idle = unit.team === 0 && unit.active;

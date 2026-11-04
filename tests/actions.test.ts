@@ -23,7 +23,7 @@ const ids = (c: ActionCtx) => menuActions(c).map((a) => a.id);
 describe('acciones con un grupo', () => {
   function grp() {
     const s = world();
-    const units = [newUnit(s, SOLDIER, 0, 2, 2), newUnit(s, TANK, 0, 3, 2)];
+    const units = [newUnit(s, SOLDIER, 0, { x: 2, y: 2 }), newUnit(s, TANK, 0, { x: 3, y: 2 })];
     const ctx = (x: number, y: number, enemyHere = false): ActionCtx => ({ s, units, at: { x, y }, enemyHere });
     return { s, units, ctx };
   }
@@ -40,8 +40,8 @@ describe('acciones con un grupo', () => {
 
   it('sin unidades que puedan capturar, el edificio no se ofrece para capturar', () => {
     const s = world();
-    const units = [newUnit(s, TANK, 0, 3, 2)];
-    const c: ActionCtx = { s, units: [units[0]!, newUnit(s, TANK, 0, 4, 2)], at: { x: 6, y: 6 }, enemyHere: false };
+    const units = [newUnit(s, TANK, 0, { x: 3, y: 2 })];
+    const c: ActionCtx = { s, units: [units[0]!, newUnit(s, TANK, 0, { x: 4, y: 2 })], at: { x: 6, y: 6 }, enemyHere: false };
     expect(smartAction(c)?.id).toBe('move');
     expect(ids(c)).not.toContain('cmdCapture');
   });
@@ -68,7 +68,7 @@ describe('acciones con un grupo', () => {
 describe('acciones con una sola unidad elegida (la escena dice que pasa en la casilla)', () => {
   it('cada intencion da su accion y su cursor; fuera de alcance, ir alli; si no, prohibido', () => {
     const s = world();
-    const u = newUnit(s, SOLDIER, 0, 2, 2);
+    const u = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const c = (o: Partial<ActionCtx>): ActionCtx => ({ s, units: [u], at: { x: 5, y: 5 }, enemyHere: false, intent: 'none', ...o });
     expect(smartAction(c({ intent: 'attack', enemyHere: true }))?.id).toBe('attack');
     expect(smartAction(c({ intent: 'move', intentCapture: true }))?.id).toBe('capture');

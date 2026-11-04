@@ -55,7 +55,7 @@ interface CommandTurnContext {
 type CommandTurn = (turn: CommandTurnContext) => Generator<GameEvent, boolean>;
 
 /** Ya es suyo el edificio de la casilla. */
-const ownsBuildingAt = (s: GameState, ai: AiCtx, at: Pos): boolean => buildingAt(s, at.x, at.y)?.owner === ai.me;
+const ownsBuildingAt = (s: GameState, ai: AiCtx, at: Pos): boolean => buildingAt(s, at)?.owner === ai.me;
 
 /** Dispara sin moverse a lo que tenga a tiro; si no hay nada, espera. */
 function* shootFromHereOrWait({ s, ai, unit, rng }: CommandTurnContext): Generator<GameEvent> {
@@ -65,7 +65,7 @@ function* shootFromHereOrWait({ s, ai, unit, rng }: CommandTurnContext): Generat
 /** Capturar: ir al edificio (en formacion) y capturarlo; por el camino, disparar sin desviarse. */
 function* captureCommand(turn: CommandTurnContext): Generator<GameEvent, boolean> {
   const { s, ai, unit, at } = turn;
-  const building = buildingAt(s, at.x, at.y);
+  const building = buildingAt(s, at);
   if (!building || building.owner === ai.me || !UNIT.cancapt[unit.type]) return true;
   if (samePos(unit, at)) {
     yield* captureHere(s, unit);

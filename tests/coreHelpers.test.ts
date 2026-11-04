@@ -45,7 +45,7 @@ describe('ayudas de reglas', () => {
 
   it('casillas alcanzables = las de paso > 0, en orden de columnas', () => {
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, 10, 10);
+    const u = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const r = moveRange(s, u);
     const tiles = reachableTiles(r);
     expect(tiles.length).toBeGreaterThan(0);
@@ -57,15 +57,15 @@ describe('ayudas de reglas', () => {
 
   it('zona de ataque: la de la amenaza con el alcance dado; nada si no puede disparar', () => {
     const s = blankState();
-    const tank = newUnit(s, TANK, 0, 10, 10);
+    const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const r = moveRange(s, tank);
     expect(attackZone(s, tank, r)).toEqual(unitThreat(s, tank, undefined, r));
     tank.canFire = false;
     expect(attackZone(s, tank, r)).toBeNull();
-    const truck = newUnit(s, TRANSPORT, 0, 2, 2);
+    const truck = newUnit(s, TRANSPORT, 0, { x: 2, y: 2 });
     expect(attackZone(s, truck, moveRange(s, truck))).toBeNull();
     // La artilleria (no mueve y dispara) ataca solo desde donde esta, a distancia.
-    const art = newUnit(s, ARTILLERY, 0, 20, 20);
+    const art = newUnit(s, ARTILLERY, 0, { x: 20, y: 20 });
     const z = attackZone(s, art, moveRange(s, art))!;
     expect(z.at({ x: 20, y: 20 })).toBe(false);
     expect(z.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
@@ -80,7 +80,7 @@ describe('ayudas de reglas', () => {
     path.ambush = { x: 3, y: 1 };
     expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, 4, 4);
+    const u = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
     const b = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
     expect(captureEvent(u, b, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
@@ -96,8 +96,8 @@ describe('ayudas de reglas', () => {
 describe('partidas guardadas', () => {
   const sample = () => {
     const s = blankState();
-    newUnit(s, SOLDIER, 0, 3, 3);
-    newUnit(s, TANK, 1, 30, 30);
+    newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
+    newUnit(s, TANK, 1, { x: 30, y: 30 });
     s.buildings.push({ type: HQ, owner: 0, x: 1, y: 1, capture: null });
     return s;
   };

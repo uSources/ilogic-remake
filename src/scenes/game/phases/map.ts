@@ -20,7 +20,7 @@ const TOGGLE_ONE = { shift: true, ctrl: false, count: 1 };
 export const mapPhase: PhaseHandler = {
   accept: (h) => {
     const cursor = h.view.cursor;
-    const own = unitAt(h.state, cursor.x, cursor.y);
+    const own = unitAt(h.state, cursor);
     const picks = h.selection;
     // [CAMBIO] "Elegir varias" con el teclado: Enter sobre una unidad propia la añade o la quita.
     if (picks.multi && own && picks.selectable(own)) return picks.apply(clickSelect(picks.selection(), own, TOGGLE_ONE, () => []));
@@ -51,7 +51,7 @@ function acceptWithGroup(h: PhaseHost, cursor: Pos, own: Unit | undefined): void
 
 /** Aceptar en una casilla del mapa sin grupo elegido (tambien un toque del dedo, ver pointerInput.ts). */
 export function acceptMapTile(h: PhaseHost, tile: Pos): void {
-  const unit = unitAt(h.state, tile.x, tile.y);
+  const unit = unitAt(h.state, tile);
   if (h.inspectUid !== null) {
     // Segunda pulsacion: cerrar el alcance (o señalar otra unidad).
     const isSameUnit = unit?.uid === h.inspectUid;
@@ -59,7 +59,7 @@ export function acceptMapTile(h: PhaseHost, tile: Pos): void {
     if (isSameUnit || !unit) return h.refresh();
   }
   if (unit && isPlayer(unit) && unit.active) return h.moves.select(unit);
-  const building = buildingAt(h.state, tile.x, tile.y);
+  const building = buildingAt(h.state, tile);
   if (building && building.owner === 0 && canBuyAt(h.state, building)) return openBuy(h, building);
   if (unit && unit.carrier === null && (isPlayer(unit) || h.visible(unit))) return h.inspect(unit);
   h.enter('gameMenu');
@@ -68,7 +68,7 @@ export function acceptMapTile(h: PhaseHost, tile: Pos): void {
 /** Solo pasando por encima de una unidad propia: su alcance en tenue y sus compañeras de escuadra. */
 function hoverMarks(input: HighlightInput): Highlights {
   const marks = noHighlights();
-  const unit = unitAt(input.s, input.cursor.x, input.cursor.y);
+  const unit = unitAt(input.s, input.cursor);
   if (!unit || !isPlayer(unit) || input.enemyPlaying) return marks;
   if (unit.active && unit.canMove && unit.carrier === null) {
     for (const tile of reachableTiles(moveRange(input.s, unit))) marks.tiles.set(key(tile), 'hover');

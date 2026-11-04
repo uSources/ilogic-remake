@@ -18,7 +18,7 @@ describe('cazador de fallos', () => {
   it('una captura a medias se pierde al irse la unidad, aunque vuelva (fallo encontrado por el fuzz)', () => {
     useRules(DEFAULT_RULES);
     const s = blankState();
-    const u = newUnit(s, 0, 0, 5, 5);
+    const u = newUnit(s, 0, 0, { x: 5, y: 5 });
     const b = { type: 0, owner: 1 as const, x: 5, y: 5, capture: null };
     s.buildings.push(b);
     expect(capture(s, u)).toBeTruthy();

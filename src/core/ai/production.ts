@@ -90,7 +90,7 @@ export function* produce(s: GameState, me: Team, rng: Rng): Generator<GameEvent>
   const income = netIncome(s, me);
   for (const building of order) {
     const mine = teamUnits(s, me);
-    if (building.owner !== me || mine.length >= RULES.maxUnits || unitAt(s, building.x, building.y)) continue;
+    if (building.owner !== me || mine.length >= RULES.maxUnits || unitAt(s, building)) continue;
     const options = purchaseOptions(s, building, mine, limited);
     if (!options.length) continue;
     const purchase = choosePurchase(options, s.funds[me] + income, rng);

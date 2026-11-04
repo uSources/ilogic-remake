@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { TerrainType, THEME_NAMES } from '../core/data';
-import type { GameState } from '../core/model';
+import type { GameState, Pos } from '../core/model';
 import { hasImage, imageFrame } from '../atlas';
 import { TILE } from '../layout';
 import { WANG_SETS } from './wangSets';
@@ -176,7 +176,7 @@ function openLandCorners(isLandAt: (dx: number, dy: number) => boolean): number 
 
 /** Hay algo encima que tapa la esquina (montaña, bosque o edificio): la tierra se pinta entera. */
 const isCovered = (s: GameState, x: number, y: number): boolean =>
-  objectBase(s, x, y) !== null || s.buildings.some((building) => building.x === x && building.y === y);
+  objectBase(s, { x, y }) !== null || s.buildings.some((building) => building.x === x && building.y === y);
 
 /** Coloca las piezas de la lamina blob (tools/art/build_blob.py) segun los vecinos de cada casilla. */
 function paintBlobPass(canvas: TerrainCanvas, set: string, isUp: (terrain: number) => boolean): void {
@@ -271,7 +271,7 @@ export function terrainObjects(textures: Phaser.Textures.TextureManager, s: Game
   // Fila a fila (y por fuera): la capa de los edificios los ordena por fila.
   for (let y = 0; y < s.map[0]!.length; y++)
     for (let x = 0; x < s.map.length; x++) {
-      const key = objectKey(s, x, y);
+      const key = objectKey(s, { x, y });
       if (!key || !hasImage(textures, key)) continue;
       if (!hasTrees && key.startsWith('flat/tree_')) continue;
       objects.push({ key, x, y });
@@ -346,11 +346,11 @@ let treesLoaded = false;
 const OBJ_VARIANTS: Record<string, number> = { mount_grass: 4, mount_snow: 4, mount_mesa: 4, tree_grass: 4, tree_snow: 2 };
 
 /** Nombre base del sprite de la casilla (montaña o bosque), sin variante. */
-function objectBase(s: GameState, x: number, y: number): string | null {
-  const terrain = s.map[x]?.[y];
+function objectBase(s: GameState, tile: Pos): string | null {
+  const terrain = s.map[tile.x]?.[tile.y];
   if (terrain === TerrainType.WOODS) return s.theme === SNOWY ? 'tree_snow' : 'tree_grass';
   if (terrain === TerrainType.SNOW_WOOD) return 'tree_snow';
-  const mountain = mountainKind(s, x, y);
+  const mountain = mountainKind(s, tile);
   return mountain ? `mount_${mountain}` : null;
 }
 
@@ -358,14 +358,14 @@ function objectBase(s: GameState, x: number, y: number): string | null {
 const objectHash = (x: number, y: number): number => ((x * 2654435761) ^ (y * 40503)) >>> 0;
 
 /** Sprite de la casilla con su variante fija (la misma en cada dibujo). */
-function objectKey(s: GameState, x: number, y: number, prefix = ''): string | null {
-  const base = objectBase(s, x, y);
+function objectKey(s: GameState, tile: Pos, prefix = ''): string | null {
+  const base = objectBase(s, tile);
   if (!base) return null;
-  return `flat/${prefix}${base}_${objectHash(x, y) % OBJ_VARIANTS[base]!}`;
+  return `flat/${prefix}${base}_${objectHash(tile.x, tile.y) % OBJ_VARIANTS[base]!}`;
 }
 
-function mountainKind(s: GameState, x: number, y: number): 'grass' | 'snow' | 'mesa' | null {
-  const terrain = s.map[x]?.[y];
+function mountainKind(s: GameState, tile: Pos): 'grass' | 'snow' | 'mesa' | null {
+  const terrain = s.map[tile.x]?.[tile.y];
   if (terrain === TerrainType.GRASS_CLIFF) return s.theme === SNOWY ? 'snow' : 'grass';
   if (terrain === TerrainType.SNOW_CLIFF) return 'snow';
   if (terrain === TerrainType.SAND_CLIFF) return 'mesa';
@@ -373,12 +373,12 @@ function mountainKind(s: GameState, x: number, y: number): 'grass' | 'snow' | 'm
 }
 
 /** Primer plano que tapa los pies de una unidad en esa casilla (null si no hay). */
-export function frontKey(s: GameState, x: number, y: number): string | null {
-  const terrain = s.map[x]?.[y];
+export function frontKey(s: GameState, tile: Pos): string | null {
+  const terrain = s.map[tile.x]?.[tile.y];
   // Bosque pintado con el juego Wang (sin arboles sueltos): su primer plano es una pieza Wang.
   if (terrain !== undefined && FORESTS.includes(terrain) && !treesLoaded) {
     const isSnowForest = terrain === TerrainType.SNOW_WOOD || s.theme === SNOWY;
     return isSnowForest ? 'wang/front_snow_forest' : 'wang/front_grass_forest';
   }
-  return objectKey(s, x, y, 'front_');
+  return objectKey(s, tile, 'front_');
 }

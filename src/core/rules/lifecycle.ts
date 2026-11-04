@@ -3,17 +3,17 @@
  */
 import { MAX_LIFE, UNIT } from '../data';
 import { isAlive } from '../util/predicates';
-import type { GameState, Team, Unit } from '../model';
+import type { GameState, Pos, Team, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { unitById } from './queries';
 
-export function newUnit(s: GameState, type: number, team: Team, x: number, y: number, active = true): Unit {
+export function newUnit(s: GameState, type: number, team: Team, at: Pos, active = true): Unit {
   const unit: Unit = {
     uid: s.nextUid++,
     type,
     team,
-    x,
-    y,
+    x: at.x,
+    y: at.y,
     active,
     canMove: active,
     canFire: active,

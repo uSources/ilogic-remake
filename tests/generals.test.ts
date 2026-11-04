@@ -40,9 +40,9 @@ describe('generales: datos', () => {
 describe('generales: reglas', () => {
   it('ventaja fija: los aviones de Brisa aciertan +10 %, el resto igual', () => {
     const s = withBrisa();
-    const plane = newUnit(s, T('Fighter'), 0, 5, 5);
-    const tank = newUnit(s, T('Tank'), 0, 6, 6);
-    const target = newUnit(s, T('Tank'), 1, 5, 6);
+    const plane = newUnit(s, T('Fighter'), 0, { x: 5, y: 5 });
+    const tank = newUnit(s, T('Tank'), 0, { x: 6, y: 6 });
+    const target = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
     expect(generalHitFactor(s, plane, target)).toBeCloseTo(1.1);
     expect(generalHitFactor(s, tank, target)).toBe(1);
     const without = structuredClone(s);
@@ -52,8 +52,8 @@ describe('generales: reglas', () => {
 
   it('la barra se carga con el daño hecho y recibido', () => {
     const s = withBrisa();
-    const a = newUnit(s, T('Tank'), 0, 5, 5);
-    const d = newUnit(s, T('Tank'), 1, 5, 6);
+    const a = newUnit(s, T('Tank'), 0, { x: 5, y: 5 });
+    const d = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
     const r = attackFull(s, a, d, seededRng(3));
     const value = ((r.damage + r.counter) * UNIT.cost[T('Tank')]!) / 100;
     expect(s.generals![0]!.charge).toBeCloseTo(value / 6000);
@@ -62,11 +62,11 @@ describe('generales: reglas', () => {
   it('ataque aereo: 3x3, solo enemigos, no mata, gasta carga y una vez por turno', () => {
     const s = withBrisa();
     s.generals![0]!.charge = 6;
-    const e1 = newUnit(s, T('Tank'), 1, 10, 10);
-    const e2 = newUnit(s, T('Soldier'), 1, 11, 11);
+    const e1 = newUnit(s, T('Tank'), 1, { x: 10, y: 10 });
+    const e2 = newUnit(s, T('Soldier'), 1, { x: 11, y: 11 });
     e2.life = 25;
-    const far = newUnit(s, T('Tank'), 1, 12, 10);
-    const mine = newUnit(s, T('Tank'), 0, 9, 9);
+    const far = newUnit(s, T('Tank'), 1, { x: 12, y: 10 });
+    const mine = newUnit(s, T('Tank'), 0, { x: 9, y: 9 });
     expect(abilityBlock(s, 0, 'airstrike')).toBe('target');
     const ev = useAbility(s, 0, 'airstrike', { x: 10, y: 10 })!;
     expect(e1.life).toBe(80);
@@ -85,7 +85,7 @@ describe('generales: reglas', () => {
 
   it('reconocimiento: ve todo el mapa hasta que acaba la ronda', () => {
     const s = withBrisa();
-    newUnit(s, T('Soldier'), 0, 1, 1);
+    newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 2;
     expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(false);
     useAbility(s, 0, 'recon');
@@ -103,7 +103,7 @@ describe('generales: reglas', () => {
 
   it('se guarda y se carga; un general que no existe se quita', () => {
     const s = withBrisa();
-    newUnit(s, T('Soldier'), 0, 1, 1);
+    newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 3.5;
     const back = deserialize(serialize(s))!;
     expect(back.generals).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);

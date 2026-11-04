@@ -366,7 +366,7 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const isAttackerSeen = !!attackerPos && stage.visible(attackerPos);
   const info = event.combat;
   const attackerTeam = info?.attackerTeam ?? unitById(s, event.attacker)?.team ?? (stage.enemyPlaying ? 1 : 0);
-  const victim = unitAt(s, event.target.x, event.target.y);
+  const victim = unitAt(s, event.target);
   return {
     event,
     isSeen,
@@ -513,7 +513,7 @@ const MISS_COLOR = '#cfe8ff';
  */
 async function hitEffects(stage: EventStage, hit: HitTarget): Promise<void> {
   const { scene, view } = stage;
-  const survivor = unitAt(stage.state, hit.at.x, hit.at.y);
+  const survivor = unitAt(stage.state, hit.at);
   const sprite = survivor ? view.unitSprite(survivor.uid) : fallenCopy(stage, hit);
   void hitFlash(hit.timeline, sprite);
   const isHit = hit.damage > 0;

@@ -79,7 +79,7 @@ export function abilitiesVM(type: number): AbilityVM[] {
 
 /** "20→10": puntos del edificio de debajo antes y despues de capturar este turno. */
 export function captureHintText(s: GameState, u: Unit): string | undefined {
-  const b = buildingAt(s, u.x, u.y);
+  const b = buildingAt(s, u);
   if (!b) return undefined;
   const cp = captureProgress(s, b);
   const now = cp && cp.uid === u.uid ? cp.left : capturePointsOf(b);
@@ -97,14 +97,14 @@ export function tileVM(
   view: { vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },
 ): TileVM {
   const terr = terrainAt(s, p);
-  const b = buildingAt(s, p.x, p.y);
+  const b = buildingAt(s, p);
   const vis = view.vis.at(p);
   const info: TileVM = {
     terrain: { key: terrainKey(terr), name: terrainLabel(terr), defense: Math.round((1 - tileProtection(s, p)) * 100) },
   };
   if (RULES.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (mt: MoveType) => (Movement.canWalk(mt, terr) ? moveCost(s, mt, p.x, p.y) : null);
+    const cost = (mt: MoveType) => (Movement.canWalk(mt, terr) ? moveCost(s, mt, p) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
   if (b) {
@@ -130,7 +130,7 @@ export function tileVM(
       icon: `ui/zona_${cp.owner === 0 ? 'b' : cp.owner === 1 ? 'r' : 'i'}`,
     };
   }
-  const u = unitAt(s, p.x, p.y);
+  const u = unitAt(s, p);
   const sel = view.selected;
   const shown = u && vis && !view.hidden.has(u.uid) ? u : sel && sel.x === p.x && sel.y === p.y ? sel : undefined;
   if (shown) {

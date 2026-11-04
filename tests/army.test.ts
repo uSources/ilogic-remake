@@ -13,9 +13,9 @@ beforeEach(() => useRules({ ...DEFAULT_RULES, commandPoints: 10, upkeep: 0.1 }))
 describe('puntos de mando', () => {
   it('cada unidad ocupa los puntos de su tipo', () => {
     const s = blankState();
-    newUnit(s, SOLDIER, 0, 1, 1);
-    newUnit(s, TANK, 0, 2, 2);
-    newUnit(s, TANK, 1, 3, 3);
+    newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
+    newUnit(s, TANK, 0, { x: 2, y: 2 });
+    newUnit(s, TANK, 1, { x: 3, y: 3 });
     expect(commandUsed(s, 0)).toBe(UNIT.command[SOLDIER]! + UNIT.command[TANK]!);
   });
 
@@ -24,8 +24,8 @@ describe('puntos de mando', () => {
     s.funds[0] = 100000;
     const f = { type: FACTORY, owner: 0 as const, x: 4, y: 4 };
     s.buildings.push(f);
-    newUnit(s, TANK, 0, 1, 1);
-    newUnit(s, TANK, 0, 2, 2); // 8 de 10
+    newUnit(s, TANK, 0, { x: 1, y: 1 });
+    newUnit(s, TANK, 0, { x: 2, y: 2 }); // 8 de 10
     expect(armyLimit(s, 0, TANK)).toBe('command');
     expect(buyOptions(s, f).find((o) => o.type === TANK)?.blocked).toBe('command');
     expect(spawn(s, f, TANK)).toBeNull();
@@ -40,9 +40,9 @@ describe('puntos de mando', () => {
   it('sin la regla solo cuenta el limite de unidades', () => {
     useRules({ ...DEFAULT_RULES, commandPoints: null, maxUnits: 2 });
     const s = blankState();
-    newUnit(s, TANK, 0, 1, 1);
+    newUnit(s, TANK, 0, { x: 1, y: 1 });
     expect(armyLimit(s, 0, TANK)).toBeNull();
-    newUnit(s, TANK, 0, 2, 2);
+    newUnit(s, TANK, 0, { x: 2, y: 2 });
     expect(armyLimit(s, 0, SOLDIER)).toBe('units');
   });
 });
@@ -52,8 +52,8 @@ describe('mantenimiento', () => {
     const s = blankState();
     s.funds = [0, 0];
     s.buildings.push({ type: CITY, owner: 0, x: 1, y: 1 }); // 1000 por ronda
-    newUnit(s, SOLDIER, 0, 5, 5); // 1500
-    newUnit(s, TANK, 0, 6, 6); // 12000
+    newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500
+    newUnit(s, TANK, 0, { x: 6, y: 6 }); // 12000
     expect(upkeepOf(s, 0)).toBe(1400); // 1350 redondeado a 100
     const r = endRound(s);
     expect(r.income[0]).toBe(1000);
@@ -69,7 +69,7 @@ describe('mantenimiento', () => {
   it('con mantenimiento 0 no se cobra nada', () => {
     useRules({ ...DEFAULT_RULES, upkeep: 0 });
     const s = blankState();
-    newUnit(s, TANK, 0, 6, 6);
+    newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(upkeepOf(s, 0)).toBe(0);
     expect(endRound(s).upkeep).toEqual([0, 0]);
   });

@@ -80,7 +80,7 @@ function pickAttackTarget(h: PhaseHost, unit: Unit): void {
 
 /** Capturar el edificio en el que esta. */
 function captureHere(h: PhaseHost, unit: Unit): void {
-  const building = buildingAt(h.state, unit.x, unit.y);
+  const building = buildingAt(h.state, unit);
   const result = capture(h.state, unit);
   // [CAMBIO] Si a mitad de captura, que la acabe aunque tuviera otra orden (destacada).
   keepCapturing(h.state, unit);

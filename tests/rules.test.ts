@@ -33,8 +33,8 @@ beforeEach(() => useRules(PLAIN_RULES));
 describe('movimiento', () => {
   it('un soldado mueve 3 casillas en rombo y las unidades bloquean', () => {
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, 10, 10);
-    newUnit(s, SOLDIER, 1, 11, 10); // bloquea a la derecha
+    const u = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    newUnit(s, SOLDIER, 1, { x: 11, y: 10 }); // bloquea a la derecha
     const r = moveRange(s, u);
     expect(r.steps.at({ x: 10, y: 13 })).toBe(3);
     expect(r.steps.at({ x: 11, y: 10 })).toBe(0); // ocupada
@@ -45,14 +45,14 @@ describe('movimiento', () => {
   it('el agua no la pisan los vehiculos', () => {
     const s = blankState();
     s.map[11]![10] = 1; // Water
-    const t = newUnit(s, TANK, 0, 10, 10);
+    const t = newUnit(s, TANK, 0, { x: 10, y: 10 });
     expect(moveRange(s, t).steps.at({ x: 11, y: 10 })).toBe(0);
     moveUnit(s, t, { x: 10, y: 14 });
     expect(t.canMove).toBe(false);
   });
   it('la artilleria no puede disparar despues de moverse', () => {
     const s = blankState();
-    const a = newUnit(s, ARTILLERY, 0, 10, 10);
+    const a = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
     moveUnit(s, a, { x: 10, y: 11 });
     expect(a.canFire).toBe(false);
   });
@@ -61,8 +61,8 @@ describe('movimiento', () => {
 describe('combate', () => {
   it('el dano es binomial y no hay contraataque', () => {
     const s = blankState();
-    const t = newUnit(s, TANK, 0, 10, 10);
-    const e = newUnit(s, TANK, 1, 10, 11);
+    const t = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const e = newUnit(s, TANK, 1, { x: 10, y: 11 });
     expect(attackTargets(s, t).map((u) => u.uid)).toEqual([e.uid]);
     const dmg = attack(s, t, e, seededRng(1));
     expect(dmg).toBeGreaterThan(30);
@@ -73,18 +73,18 @@ describe('combate', () => {
   });
   it('los soldados ya no matan tanques ligeros de un golpe (tabla corregida)', () => {
     const s = blankState();
-    const so = newUnit(s, SOLDIER, 0, 10, 10);
-    const lt = newUnit(s, 4, 1, 10, 11);
+    const so = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    const lt = newUnit(s, 4, 1, { x: 10, y: 11 });
     attack(s, so, lt, seededRng(3));
     expect(lt.life).toBeGreaterThan(60);
   });
   it('una unidad muerta desaparece con su carga', () => {
     const s = blankState();
-    const tr = newUnit(s, TRANSPORT, 1, 10, 11);
-    const p = newUnit(s, SOLDIER, 1, 10, 12);
+    const tr = newUnit(s, TRANSPORT, 1, { x: 10, y: 11 });
+    const p = newUnit(s, SOLDIER, 1, { x: 10, y: 12 });
     load(s, p, tr);
     tr.life = 1;
-    const t = newUnit(s, TANK, 0, 10, 10);
+    const t = newUnit(s, TANK, 0, { x: 10, y: 10 });
     attack(s, t, tr, () => 0);
     expect(s.units.map((u) => u.uid)).toEqual([t.uid]);
   });
@@ -96,13 +96,13 @@ describe('captura y victoria', () => {
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 });
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
     s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
-    const a = newUnit(s, SOLDIER, 0, 3, 3);
+    const a = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     expect(capture(s, a)?.done).toBe(false);
     a.active = true;
     expect(capture(s, a)?.done).toBe(true);
     expect(s.buildings[2]!.owner).toBe(0);
     expect(outcome(s)).toBe('playing');
-    const b = newUnit(s, SOLDIER, 0, 5, 5);
+    const b = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     capture(s, b);
     b.active = true;
     capture(s, b);
@@ -114,8 +114,8 @@ describe('captura y victoria', () => {
 describe('union y transporte', () => {
   it('unir suma vidas (tope 100) y la unidad se mueve hasta la otra', () => {
     const s = blankState();
-    const a = newUnit(s, SOLDIER, 0, 10, 10);
-    const b = newUnit(s, SOLDIER, 0, 12, 10);
+    const a = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    const b = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
     a.life = 40;
     b.life = 30;
     const path = merge(s, a, b)!;
@@ -125,8 +125,8 @@ describe('union y transporte', () => {
   });
   it('subir y bajar del transporte', () => {
     const s = blankState();
-    const tr = newUnit(s, TRANSPORT, 0, 10, 10);
-    const p = newUnit(s, SOLDIER, 0, 12, 10);
+    const tr = newUnit(s, TRANSPORT, 0, { x: 10, y: 10 });
+    const p = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
     expect(load(s, p, tr)).not.toBeNull();
     expect(p.carrier).toBe(tr.uid);
     tr.active = true;
@@ -151,9 +151,9 @@ describe('compra y fin de ronda', () => {
   it('ingresos y curacion; los aviones ya no caen', () => {
     const s = blankState();
     s.buildings.push({ type: 0, owner: 0, x: 1, y: 1 }); // City
-    const so = newUnit(s, SOLDIER, 0, 1, 1);
+    const so = newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     so.life = 50;
-    const flying = newUnit(s, LFIGHTER, 0, 8, 8);
+    const flying = newUnit(s, LFIGHTER, 0, { x: 8, y: 8 });
     for (let i = 0; i < 60; i++) endRound(s);
     expect(s.units).toContain(flying);
     expect(so.life).toBe(100);
@@ -163,9 +163,9 @@ describe('compra y fin de ronda', () => {
   });
   it('Suministros repara a los vehiculos de al lado, no a la infanteria', () => {
     const s = blankState();
-    const sup = newUnit(s, SUPPLIER, 0, 5, 5);
-    const t = newUnit(s, TANK, 0, 5, 6);
-    const so = newUnit(s, SOLDIER, 0, 4, 5);
+    const sup = newUnit(s, SUPPLIER, 0, { x: 5, y: 5 });
+    const t = newUnit(s, TANK, 0, { x: 5, y: 6 });
+    const so = newUnit(s, SOLDIER, 0, { x: 4, y: 5 });
     so.life = 40;
     expect(unitActions(s, sup).supply).toBe(false); // el tanque esta entero y al soldado no le cura
     t.life = 50;
@@ -182,9 +182,9 @@ import { combatForecast, threatMap } from '@core/rules';
 describe('prevision y amenaza', () => {
   it('prevision de tanque contra tanque coherente', () => {
     const s = blankState();
-    const a = newUnit(s, 1, 0, 10, 10);
+    const a = newUnit(s, 1, 0, { x: 10, y: 10 });
     a.life = 80;
-    const d = newUnit(s, 1, 1, 10, 12);
+    const d = newUnit(s, 1, 1, { x: 10, y: 12 });
     d.life = 60;
     const f = combatForecast(s, a, d);
     expect(f.expected).toBe(40);
@@ -195,21 +195,21 @@ describe('prevision y amenaza', () => {
   });
   it('probabilidad de destruir alta si el defensor esta casi muerto', () => {
     const s = blankState();
-    const a = newUnit(s, 1, 0, 10, 10);
-    const d = newUnit(s, 0, 1, 10, 11);
+    const a = newUnit(s, 1, 0, { x: 10, y: 10 });
+    const d = newUnit(s, 0, 1, { x: 10, y: 11 });
     d.life = 10;
     expect(combatForecast(s, a, d).killChance).toBeGreaterThan(0.99);
   });
   it('amenaza: tanque enemigo visible cubre mover + alcance; invisible no cuenta', () => {
     const s = blankState();
-    newUnit(s, 0, 0, 10, 10); // vision 4 del jugador
-    newUnit(s, 1, 1, 12, 10); // tanque enemigo visible: mover 5 + alcance 2
+    newUnit(s, 0, 0, { x: 10, y: 10 }); // vision 4 del jugador
+    newUnit(s, 1, 1, { x: 12, y: 10 }); // tanque enemigo visible: mover 5 + alcance 2
     const th = threatMap(s, 1, 0);
     expect(th.at({ x: 12, y: 17 })).toBe(true); // 7 abajo
     expect(th.at({ x: 12, y: 18 })).toBe(false);
     const s2 = blankState();
-    newUnit(s2, 0, 0, 0, 0);
-    newUnit(s2, 1, 1, 20, 20); // fuera de vision
+    newUnit(s2, 0, 0, { x: 0, y: 0 });
+    newUnit(s2, 1, 1, { x: 20, y: 20 }); // fuera de vision
     expect([...threatMap(s2, 1, 0).cells()].some((cell) => cell.value)).toBe(false);
   });
 });

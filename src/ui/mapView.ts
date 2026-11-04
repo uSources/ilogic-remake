@@ -237,7 +237,7 @@ export class MapView {
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
   ghost(key: string, p: Pos): Phaser.GameObjects.Image {
     // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
-    const img = tileImage(this.scene, key, p.x, p.y);
+    const img = tileImage(this.scene, key, p);
     this.fx.add(img);
     return img;
   }

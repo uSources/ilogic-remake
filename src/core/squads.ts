@@ -223,7 +223,7 @@ function wholeSquads(s: GameState, units: readonly Unit[]): Set<number> {
 /** Por que no se puede dar esa orden ahi (null = se puede). */
 export function commandBlock(s: GameState, kind: CommandKind, at: Pos, units: readonly Unit[]): 'noBuilding' | 'noCapturer' | null {
   if (kind !== 'capture') return null;
-  const building = buildingAt(s, at.x, at.y);
+  const building = buildingAt(s, at);
   if (!building || isPlayer(building.owner)) return 'noBuilding';
   if (!units.some((unit) => isCapturer(unit))) return 'noCapturer';
   return null;
@@ -287,7 +287,7 @@ export function cancelCommand(s: GameState, units: readonly Unit[]): void {
 /** La orden de la escuadra ya esta cumplida: edificio tomado, o todas las que la siguen han llegado. */
 function squadCommandDone(s: GameState, squad: Squad, command: Command): boolean {
   if (command.kind === 'capture') {
-    const building = buildingAt(s, command.at.x, command.at.y);
+    const building = buildingAt(s, command.at);
     return !building || isPlayer(building.owner);
   }
   return followers(s, squad).every((unit) => !isAlive(unit) || atCommand(s, unit));
@@ -314,7 +314,7 @@ export function finishCommand(s: GameState, unit: Unit): void {
  * medias. En una escuadra queda destacada y, con el edificio tomado, vuelve a la orden de la escuadra.
  */
 export function keepCapturing(s: GameState, unit: Unit): void {
-  const building = buildingAt(s, unit.x, unit.y);
+  const building = buildingAt(s, unit);
   const command = effectiveCommand(s, unit);
   if (!isPlayer(unit.team) || !building || isPlayer(building.owner) || !command) return;
   if (command.kind === 'capture' && samePos(command.at, unit)) return;

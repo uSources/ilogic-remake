@@ -180,8 +180,8 @@ export class Session {
     for (let y = 0; y < H; y++) {
       let row = String(y).padStart(3) + ' ';
       for (let x = 0; x < W; x++) {
-        const u = unitAt(s, x, y);
-        const b = buildingAt(s, x, y);
+        const u = unitAt(s, { x, y });
+        const b = buildingAt(s, { x, y });
         let cell = ' ' + TERRAIN_CHAR[TERRAIN_NAMES[s.map[x]![y]!]!] + ' ';
         if (b) {
           const c = BUILDING_CHAR[b.type]!;
@@ -247,7 +247,7 @@ export class Session {
   }
 
   private buy(x: number, y: number, name: string): string {
-    const b = buildingAt(this.s, x, y);
+    const b = buildingAt(this.s, { x, y });
     if (!b || b.owner !== 0) throw new UsageError(`no tienes un edificio en (${x},${y})`);
     const type = UNIT_NAMES.findIndex((n) => n.toLowerCase() === name.toLowerCase());
     const opts = buyOptions(this.s, b);

@@ -92,7 +92,7 @@ export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null
 export function unloadTiles(s: GameState, transport: Unit, passenger: Unit): Pos[] {
   const movement = Movement.of(passenger.type);
   const occupied = occupancy(s);
-  return neighbors4(mapGrid(s), transport).filter((pos) => isWalkable(s, pos.x, pos.y, movement, occupied));
+  return neighbors4(mapGrid(s), transport).filter((pos) => isWalkable(s, pos, movement, occupied));
 }
 
 /** Bajar a un pasajero (Unit.Unload). El pasajero y el transporte quedan sin poder actuar. */

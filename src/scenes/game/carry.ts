@@ -151,7 +151,7 @@ export class Carry {
   /** Soltar lejos, fuera del alcance, en una casilla a la que se puede llegar algun dia: orden de varios turnos. */
   private canReachSomeday(unit: Unit, tile: Pos): boolean {
     const s = this.h.state;
-    return !unitAt(s, tile.x, tile.y) && canWalk(s, tile.x, tile.y, Movement.of(unit.type));
+    return !unitAt(s, tile) && canWalk(s, tile, Movement.of(unit.type));
   }
 
   cancel(): void {

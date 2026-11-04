@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { BUILDING_NAMES, BUILDING_TERRAIN_PREFIX, TERRAIN, TERRAIN_NAMES, UNIT_ART, UNIT_TERRAIN_PREFIX } from '../core/data';
 import { isOnBoard, terrainAt } from '../core/mapGrid';
-import type { Building, GameState, Unit } from '../core/model';
+import type { Building, GameState, Pos, Unit } from '../core/model';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
 
@@ -54,22 +54,23 @@ export function terrainKey(t: number): string {
   return TERRAIN_NAMES[t]!;
 }
 
-function isLand(s: GameState, x: number, y: number): boolean {
-  // Fuera del mapa cuenta como agua: no hay orilla en los bordes.
-  return isOnBoard(s, { x, y }) && !TERRAIN.iswater[terrainAt(s, { x, y })]!;
+/** La casilla a (dx, dy) de `tile` es tierra. Fuera del mapa cuenta como agua: no hay orilla en los bordes. */
+function isLandBeside(s: GameState, tile: Pos, dx: number, dy: number): boolean {
+  const pos = { x: tile.x + dx, y: tile.y + dy };
+  return isOnBoard(s, pos) && !TERRAIN.iswater[terrainAt(s, pos)];
 }
 
 /** Orillas de una casilla de agua: c_<tema>_<mascara> y esquinas 16..19. */
-export function shoreKeys(s: GameState, x: number, y: number): string[] {
-  if (!TERRAIN.iswater[terrainAt(s, { x, y })]) return [];
-  const mask =
-    (isLand(s, x, y + 1) ? 8 : 0) | (isLand(s, x - 1, y) ? 4 : 0) | (isLand(s, x, y - 1) ? 2 : 0) | (isLand(s, x + 1, y) ? 1 : 0);
+export function shoreKeys(s: GameState, tile: Pos): string[] {
+  if (!TERRAIN.iswater[terrainAt(s, tile)]) return [];
+  const isLand = (dx: number, dy: number) => isLandBeside(s, tile, dx, dy);
+  const mask = (isLand(0, 1) ? 8 : 0) | (isLand(-1, 0) ? 4 : 0) | (isLand(0, -1) ? 2 : 0) | (isLand(1, 0) ? 1 : 0);
   const t = s.theme;
   const keys: string[] = [];
   if (mask) keys.push(`c_${t}_${mask}`);
-  if (isLand(s, x - 1, y - 1) && (mask & 6) === 0) keys.push(`c_${t}_16`);
-  if (isLand(s, x + 1, y - 1) && (mask & 3) === 0) keys.push(`c_${t}_17`);
-  if (isLand(s, x + 1, y + 1) && (mask & 9) === 0) keys.push(`c_${t}_18`);
-  if (isLand(s, x - 1, y + 1) && (mask & 12) === 0) keys.push(`c_${t}_19`);
+  if (isLand(-1, -1) && (mask & 6) === 0) keys.push(`c_${t}_16`);
+  if (isLand(1, -1) && (mask & 3) === 0) keys.push(`c_${t}_17`);
+  if (isLand(1, 1) && (mask & 9) === 0) keys.push(`c_${t}_18`);
+  if (isLand(-1, 1) && (mask & 12) === 0) keys.push(`c_${t}_19`);
   return keys;
 }

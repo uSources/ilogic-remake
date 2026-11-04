@@ -555,7 +555,7 @@ export class GameScene extends Phaser.Scene {
   private nextIdle(): void {
     const idle = this.idleUnits();
     if (!idle.length) return;
-    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    const here = unitAt(this.s, this.view.cursor);
     const hereIndex = here ? idle.findIndex((unit) => unit.uid === here.uid) : -1;
     const next = idle[(hereIndex + 1) % idle.length]!;
     this.view.cursor = { x: next.x, y: next.y };
@@ -693,7 +693,7 @@ export class GameScene extends Phaser.Scene {
   /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
   private showsOrderLine(unit: Unit): boolean {
     if (this.orders.ordering?.uids.includes(unit.uid) || this.selection.group.has(unit.uid)) return true;
-    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    const here = unitAt(this.s, this.view.cursor);
     const isSameSquad = here?.squad !== undefined && here.squad === unit.squad;
     return !!here && (here.uid === unit.uid || isSameSquad);
   }

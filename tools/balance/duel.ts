@@ -57,8 +57,8 @@ export function duelMatrix(opts: { trials: number; terrain: string; seed: number
         kills = 0;
       for (let i = 0; i < opts.trials; i++) {
         const s = arena(t);
-        const a = newUnit(s, A, 0, 0, 0);
-        const b = newUnit(s, B, 1, 0, 0);
+        const a = newUnit(s, A, 0, { x: 0, y: 0 });
+        const b = newUnit(s, B, 1, { x: 0, y: 0 });
         place(s, a, b);
         const lifeA = a.life;
         dmg += attack(s, a, b, rng);
@@ -73,8 +73,8 @@ export function duelMatrix(opts: { trials: number; terrain: string; seed: number
           decided = 0;
         for (let i = 0; i < opts.trials; i++) {
           const s = arena(t);
-          const a = newUnit(s, A, 0, 0, 0);
-          const b = newUnit(s, B, 1, 0, 0);
+          const a = newUnit(s, A, 0, { x: 0, y: 0 });
+          const b = newUnit(s, B, 1, { x: 0, y: 0 });
           place(s, a, b);
           if (!inAttackRange(B, b, a)) break; // B no llega a A a esa distancia: no hay duelo mutuo
           for (let round = 0; round < 40; round++) {

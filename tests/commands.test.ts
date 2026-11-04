@@ -62,7 +62,7 @@ function turns(s: GameState, n: number): number[] {
 describe('ordenes con destino', () => {
   it('capturar aqui: va al edificio, lo captura y se queda quieta esperando', () => {
     const s = world();
-    const u = newUnit(s, SOLDIER, 0, 5, 5);
+    const u = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'capture', { x: 12, y: 5 });
     const done = turns(s, 8);
     expect(s.buildings[2]!.owner).toBe(0);
@@ -74,7 +74,7 @@ describe('ordenes con destino', () => {
   it('capturar aqui no se desvia hacia otro edificio mas cercano', () => {
     const s = world();
     s.buildings.push({ type: CITY, owner: null, x: 5, y: 6 });
-    const u = newUnit(s, SOLDIER, 0, 5, 5);
+    const u = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'capture', { x: 12, y: 5 });
     turns(s, 1);
     expect(u.x).toBeGreaterThan(5);
@@ -83,9 +83,9 @@ describe('ordenes con destino', () => {
 
   it('atacar aqui: dispara a lo que encuentra por el camino y no persigue a los que se alejan', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
-    const onWay = newUnit(s, SOLDIER, 1, 7, 5);
-    const far = newUnit(s, SOLDIER, 1, 5, 12); // a la vista pero fuera de tiro y fuera del camino
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const onWay = newUnit(s, SOLDIER, 1, { x: 7, y: 5 });
+    const far = newUnit(s, SOLDIER, 1, { x: 5, y: 12 }); // a la vista pero fuera de tiro y fuera del camino
     giveCommand(s, [u], 'attack', { x: 15, y: 5 });
     turns(s, 1);
     expect(onWay.life).toBeLessThan(100);
@@ -94,7 +94,7 @@ describe('ordenes con destino', () => {
 
   it('atacar aqui: al llegar sin enemigos cerca, la orden se cumple', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'attack', { x: 9, y: 5 });
     const done = turns(s, 3);
     expect(done).toContain(u.uid);
@@ -104,12 +104,12 @@ describe('ordenes con destino', () => {
 
   it('defender aqui: va a la casilla, ataca a quien se acerca y no se cumple nunca', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'defend', { x: 8, y: 5 });
     turns(s, 2);
     expect(Math.abs(u.x - 8) + Math.abs(u.y - 5)).toBeLessThanOrEqual(1);
-    const near = newUnit(s, SOLDIER, 1, 8, 7);
-    const far = newUnit(s, SOLDIER, 1, 8, 13);
+    const near = newUnit(s, SOLDIER, 1, { x: 8, y: 7 });
+    const far = newUnit(s, SOLDIER, 1, { x: 8, y: 13 });
     turns(s, 1);
     expect(near.life).toBeLessThan(100);
     expect(far.life).toBe(100);
@@ -118,8 +118,8 @@ describe('ordenes con destino', () => {
 
   it('con capturar, las que no capturan escoltan atacando hacia alli', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 5, 5);
-    const b = newUnit(s, TANK, 0, 5, 6);
+    const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const b = newUnit(s, TANK, 0, { x: 5, y: 6 });
     expect(giveCommand(s, [a, b], 'capture', { x: 12, y: 5 })).toBe(2);
     expect(a.command?.kind).toBe('capture');
     expect(b.command).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
@@ -127,8 +127,8 @@ describe('ordenes con destino', () => {
 
   it('capturar solo se puede en edificios que no son tuyos y con alguien que capture', () => {
     const s = world();
-    const t = newUnit(s, TANK, 0, 5, 5);
-    const sol = newUnit(s, SOLDIER, 0, 5, 6);
+    const t = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
     expect(commandBlock(s, 'capture', { x: 3, y: 3 }, [sol])).toBe('noBuilding');
     expect(commandBlock(s, 'capture', { x: 0, y: 0 }, [sol])).toBe('noBuilding');
     expect(commandBlock(s, 'capture', { x: 12, y: 5 }, [t])).toBe('noCapturer');
@@ -138,9 +138,9 @@ describe('ordenes con destino', () => {
 
   it('ordenes que se ofrecen en una casilla (gesto en el mapa): atacar primero si hay enemigo, capturar si se puede', () => {
     const s = world();
-    const t = newUnit(s, TANK, 0, 5, 5);
-    const sol = newUnit(s, SOLDIER, 0, 5, 6);
-    const foe = newUnit(s, SOLDIER, 1, 9, 9);
+    const t = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
+    const foe = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     // Casilla vacia: atacar o defender.
     expect(commandChoices(s, { x: 3, y: 3 }, [sol], false)).toEqual(['attack', 'defend']);
     // Ciudad neutral: capturar va primero, pero solo si alguna puede capturar.
@@ -161,8 +161,8 @@ describe('ordenes con destino', () => {
     const s = world();
     s.buildings.push({ type: FACTORY, owner: 0, x: 4, y: 4 });
     s.funds = [50000, 5000];
-    const free = newUnit(s, SOLDIER, 0, 3, 3);
-    const used = newUnit(s, SOLDIER, 0, 8, 8);
+    const free = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
+    const used = newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
     giveCommand(s, [used], 'attack', { x: 15, y: 15 });
     Object.assign(used, { active: false, canMove: false });
     const evs = Array.from(assistTurn(s, seededRng(1)));
@@ -174,7 +174,7 @@ describe('ordenes con destino', () => {
 
   it('commandNow la pone en marcha ya; cancelar la deja esperando', () => {
     const s = world();
-    const u = newUnit(s, SOLDIER, 0, 5, 5);
+    const u = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'capture', { x: 12, y: 5 });
     Array.from(commandNow(s, u.uid, seededRng(1)));
     expect(u.x).toBeGreaterThan(5);
@@ -184,8 +184,8 @@ describe('ordenes con destino', () => {
 
   it('el menu ofrece las ordenes que puede cumplir y cancelar si tiene una', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 5, 5);
-    const tank = newUnit(s, TANK, 0, 6, 6);
+    const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const tank = newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(unitActions(s, sol)).toMatchObject({ cmdAttack: true, cmdCapture: true, cmdDefend: true, cmdCancel: false });
     expect(unitActions(s, tank).cmdCapture).toBe(false);
     giveCommand(s, [tank], 'defend', { x: 6, y: 6 });
@@ -196,14 +196,14 @@ describe('ordenes con destino', () => {
 describe('escuadras', () => {
   it('se forman con nombre libre, se renombran y se deshacen', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 5, 5);
-    const b = newUnit(s, TANK, 0, 5, 6);
-    const enemy = newUnit(s, SOLDIER, 1, 9, 9);
+    const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const b = newUnit(s, TANK, 0, { x: 5, y: 6 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     const q1 = formSquad(s, [a, b, enemy])!;
     expect(q1.name).toBe('Alfa');
     expect(squadUnits(s, q1.id).map((u) => u.uid)).toEqual([a.uid, b.uid]);
     expect(enemy.squad).toBeUndefined();
-    const c = newUnit(s, SOLDIER, 0, 6, 6);
+    const c = newUnit(s, SOLDIER, 0, { x: 6, y: 6 });
     expect(formSquad(s, [c])!.name).toBe('Bravo');
     expect(renameSquad(s, q1.id, '  Los   de   la   colina larga  ')).toBe(true);
     expect(s.squads![0]!.name).toBe('Los de la coli');
@@ -216,7 +216,7 @@ describe('escuadras', () => {
 
   it('pasar una unidad a otra escuadra vacia la vieja, que desaparece', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 5, 5);
+    const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     formSquad(s, [a]);
     formSquad(s, [a], 'Nueva');
     expect(s.squads!.map((q) => q.name)).toEqual(['Nueva']);
@@ -224,7 +224,7 @@ describe('escuadras', () => {
 
   it('una escuadra cuyas unidades caen desaparece', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 5, 5);
+    const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     formSquad(s, [a]);
     s.units = [];
     pruneSquads(s);
@@ -233,7 +233,7 @@ describe('escuadras', () => {
 
   it('las ordenes y las escuadras se guardan con la partida', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 5, 5);
+    const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const q = formSquad(s, [a], 'Lobos')!;
     giveCommand(s, [a], 'capture', { x: 12, y: 5 });
     const back = deserialize(serialize(s))!;
@@ -245,7 +245,7 @@ describe('escuadras', () => {
 
   it('una orden o escuadra rota se ignora al cargar', () => {
     const s = world();
-    newUnit(s, SOLDIER, 0, 5, 5);
+    newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const raw = JSON.parse(serialize(s)) as { units: Record<string, unknown>[]; squads?: unknown };
     raw.units[0]!.command = { kind: 'bailar', at: { x: 1, y: 1 } };
     raw.units[0]!.squad = 7;
@@ -262,8 +262,8 @@ describe('escuadras en formacion', () => {
 
   it('el jeep no deja atras al soldado: van juntos hacia un destino lejano', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 1, 5);
-    const car = newUnit(s, CAR, 0, 1, 6);
+    const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
     formSquad(s, [car, sol]);
     const at = { x: 18, y: 5 };
     giveCommand(s, [car, sol], 'attack', at);
@@ -276,9 +276,9 @@ describe('escuadras en formacion', () => {
 
   it('juegan primero las mas retrasadas y lentas', () => {
     const s = world();
-    const car = newUnit(s, CAR, 0, 3, 6); // le queda lo mismo que al soldado: va antes el lento
-    const sol = newUnit(s, SOLDIER, 0, 2, 5);
-    const lone = newUnit(s, CAR, 0, 9, 9);
+    const car = newUnit(s, CAR, 0, { x: 3, y: 6 }); // le queda lo mismo que al soldado: va antes el lento
+    const sol = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
+    const lone = newUnit(s, CAR, 0, { x: 9, y: 9 });
     formSquad(s, [car, sol]);
     giveCommand(s, [car, sol, lone], 'attack', { x: 18, y: 5 });
     expect(commandOrder(s, [car, lone, sol]).map((u) => u.uid)).toEqual([sol.uid, car.uid, lone.uid]);
@@ -286,8 +286,8 @@ describe('escuadras en formacion', () => {
 
   it('la mas lenta no espera a la rapida: avanza todo lo que puede', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 2, 5);
-    const car = newUnit(s, CAR, 0, 3, 6); // les queda lo mismo
+    const sol = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 3, y: 6 }); // les queda lo mismo
     formSquad(s, [car, sol]);
     const at = { x: 18, y: 5 };
     giveCommand(s, [car, sol], 'attack', at);
@@ -298,9 +298,9 @@ describe('escuadras en formacion', () => {
 
   it('el jeep no se lanza solo a por un enemigo lejano: lo espera con la escuadra', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 1, 5);
-    const car = newUnit(s, CAR, 0, 1, 6);
-    const enemy = newUnit(s, SOLDIER, 1, 9, 6); // al alcance del jeep, lejos del soldado
+    const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 6 }); // al alcance del jeep, lejos del soldado
     formSquad(s, [car, sol]);
     const at = { x: 18, y: 5 };
     giveCommand(s, [car, sol], 'attack', at);
@@ -311,9 +311,9 @@ describe('escuadras en formacion', () => {
 
   it('con un enemigo a tiro sin dejar atras a la escuadra, el jeep ataca', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 1, 5);
-    const car = newUnit(s, CAR, 0, 1, 6);
-    const enemy = newUnit(s, SOLDIER, 1, 7, 6);
+    const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 7, y: 6 });
     formSquad(s, [car, sol]);
     giveCommand(s, [car, sol], 'attack', { x: 18, y: 5 });
     turns(s, 1);
@@ -322,8 +322,8 @@ describe('escuadras en formacion', () => {
 
   it('cerca del destino la formacion se suelta y cada una va a lo suyo', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 10, 5);
-    const car = newUnit(s, CAR, 0, 10, 6);
+    const sol = newUnit(s, SOLDIER, 0, { x: 10, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 10, y: 6 });
     formSquad(s, [car, sol]);
     const at = { x: 14, y: 6 };
     giveCommand(s, [car, sol], 'attack', at);
@@ -333,16 +333,16 @@ describe('escuadras en formacion', () => {
 
   it('sin escuadra, o con ordenes distintas, cada una va a su ritmo', () => {
     const s = world();
-    const sol = newUnit(s, SOLDIER, 0, 1, 5);
-    const car = newUnit(s, CAR, 0, 1, 6);
+    const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
     const at = { x: 18, y: 6 };
     giveCommand(s, [car, sol], 'attack', at);
     turns(s, 1);
     expect(left(car, at)).toBe(17 - 7);
 
     const s2 = world();
-    const sol2 = newUnit(s2, SOLDIER, 0, 1, 5);
-    const car2 = newUnit(s2, CAR, 0, 1, 6);
+    const sol2 = newUnit(s2, SOLDIER, 0, { x: 1, y: 5 });
+    const car2 = newUnit(s2, CAR, 0, { x: 1, y: 6 });
     formSquad(s2, [car2, sol2]);
     giveCommand(s2, [sol2], 'attack', { x: 18, y: 5 });
     giveCommand(s2, [car2], 'attack', at);
@@ -354,8 +354,8 @@ describe('escuadras en formacion', () => {
   it('capturar con escolta tambien va en formacion', () => {
     const s = world();
     s.buildings.push({ type: CITY, owner: null, x: 18, y: 5 });
-    const sol = newUnit(s, SOLDIER, 0, 1, 5);
-    const car = newUnit(s, CAR, 0, 1, 6);
+    const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
+    const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
     const q = formSquad(s, [car, sol])!;
     const at = { x: 18, y: 5 };
     giveCommand(s, [car, sol], 'capture', at);
@@ -371,9 +371,9 @@ describe('orden de la escuadra y unidades destacadas', () => {
   function squadWorld() {
     const s = world();
     s.buildings.push({ type: CITY, owner: null, x: 3, y: 5 });
-    const a = newUnit(s, SOLDIER, 0, 2, 5);
-    const b = newUnit(s, SOLDIER, 0, 2, 6);
-    const t = newUnit(s, TANK, 0, 1, 6);
+    const a = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
+    const b = newUnit(s, SOLDIER, 0, { x: 2, y: 6 });
+    const t = newUnit(s, TANK, 0, { x: 1, y: 6 });
     const q = formSquad(s, [a, b, t])!;
     return { s, a, b, t, q };
   }
@@ -479,7 +479,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
 describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
   it('cada escuadra nueva toma la primera tecla libre; Ctrl+3 forma «Charlie» con la tecla 3', () => {
     const s = world();
-    const [a, b, c] = [newUnit(s, SOLDIER, 0, 1, 1), newUnit(s, SOLDIER, 0, 1, 2), newUnit(s, TANK, 0, 1, 3)];
+    const [a, b, c] = [newUnit(s, SOLDIER, 0, { x: 1, y: 1 }), newUnit(s, SOLDIER, 0, { x: 1, y: 2 }), newUnit(s, TANK, 0, { x: 1, y: 3 })];
     expect(formSquad(s, [a])!.key).toBe(1);
     const q = setGroup(s, [b, c], 3)!;
     expect(q).toMatchObject({ key: 3, name: 'Charlie' });
@@ -488,7 +488,7 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
 
   it('Ctrl+n otra vez: el grupo se queda solo con las nuevas (las demas salen con lo que hacian)', () => {
     const s = world();
-    const [a, b, c] = [newUnit(s, SOLDIER, 0, 1, 1), newUnit(s, SOLDIER, 0, 1, 2), newUnit(s, TANK, 0, 1, 3)];
+    const [a, b, c] = [newUnit(s, SOLDIER, 0, { x: 1, y: 1 }), newUnit(s, SOLDIER, 0, { x: 1, y: 2 }), newUnit(s, TANK, 0, { x: 1, y: 3 })];
     const q = setGroup(s, [a, b], 2)!;
     giveCommand(s, [a, b], 'attack', { x: 15, y: 15 });
     setGroup(s, [b, c], 2);
@@ -505,7 +505,7 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
 
   it('Mayusculas+n añade al grupo (o lo forma si no existe); sale de su escuadra anterior', () => {
     const s = world();
-    const [a, b, c] = [newUnit(s, SOLDIER, 0, 1, 1), newUnit(s, SOLDIER, 0, 1, 2), newUnit(s, TANK, 0, 1, 3)];
+    const [a, b, c] = [newUnit(s, SOLDIER, 0, { x: 1, y: 1 }), newUnit(s, SOLDIER, 0, { x: 1, y: 2 }), newUnit(s, TANK, 0, { x: 1, y: 3 })];
     const q1 = setGroup(s, [a], 1)!;
     const q2 = addToGroup(s, [b], 2)!;
     addToGroup(s, [c, b], 1);
@@ -517,8 +517,8 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
 
   it('las partidas de antes dan tecla a sus escuadras al cargar, sin repetir', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 1, 1),
-      b = newUnit(s, SOLDIER, 0, 1, 2);
+    const a = newUnit(s, SOLDIER, 0, { x: 1, y: 1 }),
+      b = newUnit(s, SOLDIER, 0, { x: 1, y: 2 });
     formSquad(s, [a]);
     formSquad(s, [b]);
     for (const q of s.squads!) delete q.key;

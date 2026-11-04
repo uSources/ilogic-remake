@@ -41,7 +41,7 @@ function* mergeWithMate(s: GameState, unit: Unit, range: MoveRange): Generator<G
 /** El edificio propio libre que la repara al que menos pasos hay (null si no llega a ninguno). */
 function nearestRepairBuilding(s: GameState, ai: AiCtx, unit: Unit): Building | null {
   const steps = stepsFrom(s, ai, unit);
-  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building.x, building.y) && steps(building) < Infinity);
+  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps(building) < Infinity);
   return minBy(repairShops, steps);
 }
 
@@ -49,7 +49,7 @@ function nearestRepairBuilding(s: GameState, ai: AiCtx, unit: Unit): Building | 
 export function* retreat(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   if (yield* mergeWithMate(s, unit, range)) return true;
   // [CAMBIO] Si ya esta en un edificio que la repara, se queda (antes se marchaba a otro).
-  if (repairsHere(s, unit, unit.x, unit.y)) {
+  if (repairsHere(s, unit, unit)) {
     wait(unit);
     return true;
   }
@@ -153,7 +153,7 @@ export function* tryAttack(
 /** Capturar el edificio de debajo y avisar a la interfaz. */
 export function* captureHere(s: GameState, unit: Unit): Generator<GameEvent, boolean> {
   if (!canCapture(s, unit)) return false;
-  const building = buildingAt(s, unit.x, unit.y)!;
+  const building = buildingAt(s, unit)!;
   const result = capture(s, unit);
   if (!result) return false;
   yield captureEvent(unit, building, result);
@@ -165,13 +165,13 @@ function captureGoal(s: GameState, ai: AiCtx, unit: Unit): Pos | null {
   const visible = visibility(s, ai.me);
   const steps = stepsFrom(s, ai, unit);
   const isCapturable = (tile: Pos): boolean => {
-    const building = buildingAt(s, tile.x, tile.y);
+    const building = buildingAt(s, tile);
     if (!building || building.owner === ai.me || !visible.at(tile)) return false;
-    const occupant = unitAt(s, tile.x, tile.y);
+    const occupant = unitAt(s, tile);
     if (occupant && occupant.team === ai.me) return false;
     return steps(tile) < Infinity;
   };
-  const headStart = (tile: Pos): number => (buildingAt(s, tile.x, tile.y)!.type === HQ ? HQ_CAPTURE_HEAD_START : 0);
+  const headStart = (tile: Pos): number => (buildingAt(s, tile)!.type === HQ ? HQ_CAPTURE_HEAD_START : 0);
   const candidates = [...diamond(mapGrid(s), unit, 1, AI.MAXCAPTDIST)].filter(isCapturable);
   return minBy(candidates, (tile) => steps(tile) - headStart(tile));
 }
@@ -198,7 +198,7 @@ export function* tryCapture(s: GameState, ai: AiCtx, unit: Unit, range: MoveRang
 function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
   if (s.controlPoints?.some((point) => samePos(point, goal))) return AI.CONTROLPOINT;
-  const building = buildingAt(s, goal.x, goal.y);
+  const building = buildingAt(s, goal);
   if (!building || !UNIT.cancapt[unit.type] || building.owner === null) return 0;
   return building.type === HQ ? AI.CAPTUREHQ : AI.CAPTUREOWNED;
 }
@@ -210,8 +210,7 @@ function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
  */
 function advanceGoals(s: GameState, ai: AiCtx, unit: Unit): Pos[] {
   const visible = visibility(s, ai.me);
-  const isOpenPoint = (point: ControlPoint): boolean =>
-    (point.owner !== ai.me || teamsInZone(s, point).size > 1) && !unitAt(s, point.x, point.y);
+  const isOpenPoint = (point: ControlPoint): boolean => (point.owner !== ai.me || teamsInZone(s, point).size > 1) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
   if (UNIT.cancapt[unit.type]) return [...s.buildings.filter((building) => building.owner !== ai.me), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
@@ -241,7 +240,7 @@ export function* advance(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange):
   if (!nearest) return false;
   const goal = nearest.goal;
   // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).
-  const wouldBlock = !UNIT.cancapt[unit.type] && !!buildingAt(s, goal.x, goal.y);
+  const wouldBlock = !UNIT.cancapt[unit.type] && !!buildingAt(s, goal);
   const destination = bestMoveToward(s, ai, unit, goal, range, wouldBlock);
   if (!destination) return false;
   yield* doMove(s, unit, destination, range);

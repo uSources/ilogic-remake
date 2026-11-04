@@ -34,7 +34,7 @@ beforeEach(() => {
 describe('datos de la interfaz', () => {
   it('ficha de casilla: la unidad enemiga solo si se ve; el edificio sin dueño si no se ve', () => {
     const s = blankState();
-    newUnit(s, T('Tank'), 1, 4, 4);
+    newUnit(s, T('Tank'), 1, { x: 4, y: 4 });
     s.buildings.push({ type: HQ, owner: 1, x: 4, y: 4, capture: null });
     const fog = createLayer(s, false);
     const hidden = tileVM(textures, s, { x: 4, y: 4 }, { vis: fog, hidden: new Set() });
@@ -48,7 +48,7 @@ describe('datos de la interfaz', () => {
 
   it('ficha: la unidad que se esta moviendo sale aunque su sprite este oculto', () => {
     const s = blankState();
-    const u = newUnit(s, T('Soldier'), 0, 2, 2);
+    const u = newUnit(s, T('Soldier'), 0, { x: 2, y: 2 });
     const vm = tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([u.uid]), selected: u });
     expect(vm.unit?.name).toBeTruthy();
     expect(tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([u.uid]) }).unit).toBeUndefined();
@@ -58,7 +58,7 @@ describe('datos de la interfaz', () => {
     expect(unitStatsText(T('Soldier'))).toMatch(/\d.*·/);
     expect(unitStatsText(T('Transport'))).not.toMatch(/–/);
     const s = blankState();
-    const u = newUnit(s, T('Soldier'), 0, 3, 3);
+    const u = newUnit(s, T('Soldier'), 0, { x: 3, y: 3 });
     expect(captureHintText(s, u)).toBeUndefined();
     s.buildings.push({ type: 0, owner: 1, x: 3, y: 3, capture: null });
     expect(captureHintText(s, u)).toMatch(/^\d+→\d+$/);
@@ -66,8 +66,8 @@ describe('datos de la interfaz', () => {
 
   it('minimapa: oculta las unidades enemigas que no se ven y las que se estan animando', () => {
     const s = blankState();
-    const mine = newUnit(s, T('Soldier'), 0, 1, 1);
-    newUnit(s, T('Soldier'), 1, 9, 9);
+    const mine = newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
+    newUnit(s, T('Soldier'), 1, { x: 9, y: 9 });
     const vis = createLayer(s, false);
     vis.set({ x: 1, y: 1 }, true);
     expect(minimapVM([], s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
@@ -106,8 +106,8 @@ describe('panel de combate', () => {
 
   it('las vidas bajan por etapas y tu unidad sale a la izquierda', () => {
     const s = blankState();
-    const enemy = newUnit(s, T('Tank'), 1, 10, 10);
-    const mine = newUnit(s, T('Tank'), 0, 10, 11);
+    const enemy = newUnit(s, T('Tank'), 1, { x: 10, y: 10 });
+    const mine = newUnit(s, T('Tank'), 0, { x: 10, y: 11 });
     const ev = attackEvent(s, enemy, mine, () => 0.5);
     const start = combatVM(ev, 'start', icons, both)!;
     expect(start.left.team).toBe(0);
@@ -127,8 +127,8 @@ describe('panel de combate', () => {
 
   it('una unidad en la niebla no se delata', () => {
     const s = blankState();
-    const art = newUnit(s, T('Artillery'), 1, 10, 10);
-    const mine = newUnit(s, T('Soldier'), 0, 10, 13);
+    const art = newUnit(s, T('Artillery'), 1, { x: 10, y: 10 });
+    const mine = newUnit(s, T('Soldier'), 0, { x: 10, y: 13 });
     const ev = attackEvent(s, art, mine, () => 0.5);
     const vm = combatVM(ev, 'hit', icons, { attacker: false, defender: true })!;
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
@@ -138,8 +138,8 @@ describe('panel de combate', () => {
 
   it('marca la unidad destruida', () => {
     const s = blankState();
-    const a = newUnit(s, T('Tank'), 0, 10, 10);
-    const d = newUnit(s, T('Soldier'), 1, 10, 11);
+    const a = newUnit(s, T('Tank'), 0, { x: 10, y: 10 });
+    const d = newUnit(s, T('Soldier'), 1, { x: 10, y: 11 });
     d.life = 1;
     const vm = combatVM(
       attackEvent(s, a, d, () => 0.5),
@@ -164,10 +164,10 @@ describe('desglose de la barra de arriba', () => {
     for (const [i, b] of ['City', 'City', 'Factory', 'Oil'].entries())
       s.buildings.push({ type: B(b), owner: 0, x: 1 + i, y: 1, capture: null });
     s.buildings.push({ type: B('City'), owner: 1, x: 9, y: 9, capture: null });
-    newUnit(s, T('Tank'), 0, 5, 5);
-    newUnit(s, T('Soldier'), 0, 6, 5);
-    newUnit(s, T('Soldier'), 0, 7, 5);
-    newUnit(s, T('Bomber'), 1, 9, 8);
+    newUnit(s, T('Tank'), 0, { x: 5, y: 5 });
+    newUnit(s, T('Soldier'), 0, { x: 6, y: 5 });
+    newUnit(s, T('Soldier'), 0, { x: 7, y: 5 });
+    newUnit(s, T('Bomber'), 1, { x: 9, y: 8 });
     return s;
   };
 

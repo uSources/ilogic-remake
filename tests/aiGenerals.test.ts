@@ -14,7 +14,7 @@ function aiBrisa(charge: number, fog = false): GameState {
   const s = blankState();
   s.generals = [null, newGeneral('Brisa')];
   s.generals[1]!.charge = charge;
-  newUnit(s, T('Soldier'), 1, 10, 10);
+  newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });
   return s;
 }
 
@@ -23,9 +23,9 @@ beforeEach(() => useRules({ ...DEFAULT_RULES, weather: false }));
 describe('la IA usa a su general', () => {
   it('ataque aereo donde mas valor quita (dos tanques juntos mejor que uno solo)', () => {
     const s = aiBrisa(6);
-    newUnit(s, T('Tank'), 0, 3, 3);
-    newUnit(s, T('Tank'), 0, 14, 14);
-    newUnit(s, T('Tank'), 0, 15, 15);
+    newUnit(s, T('Tank'), 0, { x: 3, y: 3 });
+    newUnit(s, T('Tank'), 0, { x: 14, y: 14 });
+    newUnit(s, T('Tank'), 0, { x: 15, y: 15 });
     const best = bestAreaTarget(s, 1, 1, 30, 10)!;
     expect(best.value).toBeGreaterThan(7000);
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
@@ -43,7 +43,7 @@ describe('la IA usa a su general', () => {
     const s = blankState();
     s.generals = [null, newGeneral('Roca')];
     s.generals[1]!.charge = generalDef('Roca')!.abilities[0]!.cost;
-    newUnit(s, T('Tank'), 1, 3, 3).life = 98; // 2 de vida de un tanque: poco valor
+    newUnit(s, T('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor
     expect(chooseAbility(s, 1)).toBeNull();
   });
 
@@ -56,14 +56,14 @@ describe('la IA usa a su general', () => {
 
   it('no bombardea a ciegas: solo enemigos que ve', () => {
     const s = aiBrisa(5, true);
-    newUnit(s, T('Tank'), 0, 25, 25); // lejos, en la niebla
-    newUnit(s, T('Tank'), 0, 26, 25);
+    newUnit(s, T('Tank'), 0, { x: 25, y: 25 }); // lejos, en la niebla
+    newUnit(s, T('Tank'), 0, { x: 26, y: 25 });
     expect(bestAreaTarget(s, 1, 1, 30, 10)).toBeNull();
   });
 
   it('sin general, o ya usada este turno, no hace nada', () => {
     const s = aiBrisa(6);
-    newUnit(s, T('Tank'), 0, 11, 11);
+    newUnit(s, T('Tank'), 0, { x: 11, y: 11 });
     s.generals![1]!.used = true;
     expect([...aiGeneral(s, 1)]).toEqual([]);
     s.generals = undefined;

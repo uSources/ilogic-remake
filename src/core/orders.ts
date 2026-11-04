@@ -51,9 +51,9 @@ export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: G
   const movement = Movement.of(unit.type);
   const canExtend =
     manhattan(end, hovered) === 1 &&
-    canWalk(s, hovered.x, hovered.y, movement) &&
+    canWalk(s, hovered, movement) &&
     !block.at(hovered) &&
-    pathCost(s, movement, current) + moveCost(s, movement, hovered.x, hovered.y) <= range.maxSteps;
+    pathCost(s, movement, current) + moveCost(s, movement, hovered) <= range.maxSteps;
   if (canExtend) return [...current, { x: hovered.x, y: hovered.y }];
   // Se ha saltado casillas o pasado del movimiento: el camino mas corto hasta ahi (si se llega).
   return range.prev.at(hovered) ? pathTo(range, unit, hovered) : trail;

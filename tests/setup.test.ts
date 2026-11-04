@@ -60,7 +60,7 @@ describe('limite de dias', () => {
     useRules({ ...DEFAULT_RULES, dayLimit: 10 });
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
-    newUnit(s, 1, 0, 1, 1); // tanque: vale su precio
+    newUnit(s, 1, 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;
     expect(outcome(s)).toBe('playing');
     s.day = 11;

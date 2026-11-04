@@ -86,7 +86,7 @@ const anyCanFight = (units: readonly Unit[]) => units.some((unit) => UNIT.canfig
 /** La casilla tiene un edificio que no es del jugador y alguna de estas unidades puede capturar. */
 function hasBuildingToCapture(ctx: ActionCtx): boolean {
   if (!ctx.at) return false;
-  const building = buildingAt(ctx.s, ctx.at.x, ctx.at.y);
+  const building = buildingAt(ctx.s, ctx.at);
   return !!building && building.owner !== 0 && anyCanCapture(ctx.units);
 }
 

@@ -13,8 +13,8 @@ beforeEach(() => useRules(DEFAULT_RULES));
 describe('reglas nuevas: combate', () => {
   it('el defensor que sobrevive contraataca y gasta municion', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, TANK, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     const r = attackFull(s, a, d, seededRng(2));
     expect(r.damage).toBeGreaterThan(0);
     expect(r.killed).toBe(false);
@@ -26,19 +26,19 @@ describe('reglas nuevas: combate', () => {
 
   it('la artilleria ni contraataca ni recibe contraataque', () => {
     const s = blankState();
-    const art = newUnit(s, ARTILLERY, 0, 10, 10);
-    const t = newUnit(s, TANK, 1, 10, 13);
+    const art = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
+    const t = newUnit(s, TANK, 1, { x: 10, y: 13 });
     expect(attackFull(s, art, t, seededRng(1)).counter).toBe(0);
     const s2 = blankState();
-    const t2 = newUnit(s2, TANK, 0, 10, 10);
-    const art2 = newUnit(s2, ARTILLERY, 1, 10, 11);
+    const t2 = newUnit(s2, TANK, 0, { x: 10, y: 10 });
+    const art2 = newUnit(s2, ARTILLERY, 1, { x: 10, y: 11 });
     expect(attackFull(s2, t2, art2, seededRng(1)).counter).toBe(0);
   });
 
   it('el evento de ataque guarda como estaban las unidades antes del combate', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, TANK, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     d.life = 80;
     const ev = attackEvent(s, a, d, seededRng(2));
     expect(ev.combat).toMatchObject({ attackerType: TANK, defenderType: TANK, attackerTeam: 0, attackerLife: 100, defenderLife: 80 });
@@ -52,23 +52,23 @@ describe('reglas nuevas: combate', () => {
 
   it('sin contraataque si el defensor cae o es de distancia', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, SOLDIER, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     d.life = 1;
     const ev = attackEvent(s, a, d, seededRng(1));
     expect(ev.killed).toBe(true);
     expect(ev.combat!.counterHit).toBeNull();
     const s2 = blankState();
-    const art = newUnit(s2, ARTILLERY, 0, 10, 10);
-    const t = newUnit(s2, TANK, 1, 10, 13);
+    const art = newUnit(s2, ARTILLERY, 0, { x: 10, y: 10 });
+    const t = newUnit(s2, TANK, 1, { x: 10, y: 13 });
     expect(attackEvent(s2, art, t, seededRng(1)).combat!.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {
     for (let seed = 1; seed < 40; seed++) {
       const s = blankState();
-      const a = newUnit(s, TANK, 0, 10, 10);
-      const d = newUnit(s, SOLDIER, 1, 10, 11);
+      const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+      const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
       d.life = 100;
       const f = combatForecast(s, a, d);
       const r = attackFull(s, a, d, seededRng(seed));
@@ -79,8 +79,8 @@ describe('reglas nuevas: combate', () => {
 
   it('la prevision incluye el contraataque', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 10, 10);
-    const d = newUnit(s, TANK, 1, 10, 11);
+    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
     const f = combatForecast(s, a, d);
     expect(f.counter).not.toBeNull();
     expect(f.counter!.expected).toBeGreaterThan(0);
@@ -101,7 +101,7 @@ describe('reglas nuevas: captura por puntos', () => {
   it('una ciudad cuesta 2 turnos a una unidad entera y pasa directamente a ser tuya', () => {
     const s = blankState();
     s.buildings.push({ type: 0, owner: 1, x: 3, y: 3 });
-    const u = newUnit(s, SOLDIER, 0, 3, 3);
+    const u = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     const r1 = capture(s, u)!;
     expect(r1).toEqual({ done: false, left: 10, total: 20 });
     expect(s.buildings[0]!.owner).toBe(1);
@@ -115,7 +115,7 @@ describe('reglas nuevas: captura por puntos', () => {
   it('una unidad herida captura mas despacio; la Base tiene 30 puntos', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 1, x: 3, y: 3 });
-    const u = newUnit(s, SOLDIER, 0, 3, 3);
+    const u = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     u.life = 45;
     expect(capture(s, u)!.left).toBe(25);
   });
@@ -123,7 +123,7 @@ describe('reglas nuevas: captura por puntos', () => {
   it('si la unidad se va, se pierde lo avanzado', () => {
     const s = blankState();
     s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
-    const u = newUnit(s, SOLDIER, 0, 3, 3);
+    const u = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     capture(s, u);
     expect(captureProgress(s, s.buildings[0]!)?.left).toBe(10);
     u.x = 4;
@@ -138,8 +138,8 @@ describe('reglas nuevas: veterania', () => {
   it('sube de rango al destruir y mejora acierto y defensa', async () => {
     const { hitChance, rank, attackFull, merge } = await import('@core/rules');
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 3, 3);
-    const b = newUnit(s, TANK, 1, 4, 3);
+    const a = newUnit(s, TANK, 0, { x: 3, y: 3 });
+    const b = newUnit(s, TANK, 1, { x: 4, y: 3 });
     const base = hitChance(s, a, b);
     expect(rank(a)).toBe(0);
     b.life = 1;
@@ -147,12 +147,12 @@ describe('reglas nuevas: veterania', () => {
     expect(r.killed).toBe(true);
     expect(a.kills).toBe(1);
     expect(rank(a)).toBe(1);
-    const c = newUnit(s, TANK, 1, 4, 3);
+    const c = newUnit(s, TANK, 1, { x: 4, y: 3 });
     expect(hitChance(s, a, c)).toBeCloseTo(base * (1 + RULES.vetBonus));
     expect(hitChance(s, c, a)).toBeCloseTo(base * (1 - RULES.vetBonus));
     a.kills = 6;
     expect(rank(a)).toBe(3);
-    const d = newUnit(s, TANK, 0, 2, 3);
+    const d = newUnit(s, TANK, 0, { x: 2, y: 3 });
     a.active = true;
     d.active = true;
     merge(s, d, a);
@@ -163,8 +163,8 @@ describe('reglas nuevas: veterania', () => {
     const { hitChance } = await import('@core/rules');
     useRules({ veterancy: false });
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 3, 3);
-    const b = newUnit(s, TANK, 1, 4, 3);
+    const a = newUnit(s, TANK, 0, { x: 3, y: 3 });
+    const b = newUnit(s, TANK, 1, { x: 4, y: 3 });
     const base = hitChance(s, a, b);
     a.kills = 6;
     expect(hitChance(s, a, b)).toBe(base);

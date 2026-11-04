@@ -32,7 +32,7 @@ const isEnemyHq = (building: Building, ai: AiCtx): boolean => building.type === 
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range, rng }: UnitTurnContext): Generator<GameEvent, boolean> {
-  const hq = buildingAt(s, unit.x, unit.y)!;
+  const hq = buildingAt(s, unit)!;
   const destination = bestMoveToward(s, ai, unit, hq, range, true);
   if (!destination) return false;
   yield* doMove(s, unit, destination, range);
@@ -47,14 +47,14 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
     // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
     id: 'finishCapture',
-    when: ({ s, unit }) => buildingAt(s, unit.x, unit.y) !== undefined,
+    when: ({ s, unit }) => buildingAt(s, unit) !== undefined,
     run: ({ s, unit }) => captureHere(s, unit),
   },
   {
     // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
     id: 'stepOffEnemyHq',
     when: ({ s, ai, unit }) => {
-      const building = buildingAt(s, unit.x, unit.y);
+      const building = buildingAt(s, unit);
       return !!building && isEnemyHq(building, ai) && !UNIT.cancapt[unit.type];
     },
     run: stepOffEnemyHq,

@@ -19,7 +19,7 @@ function canSupplyTo(supplier: Unit, patient: Unit): boolean {
 /** Aliadas de al lado a las que `supplier` puede reparar ahora, en el orden de las vecinas. */
 function patientsOf(s: GameState, supplier: Unit): Unit[] {
   return neighbors4(mapGrid(s), supplier)
-    .map((pos) => unitAt(s, pos.x, pos.y))
+    .map((pos) => unitAt(s, pos))
     .filter((other): other is Unit => !!other && other.team === supplier.team && canSupplyTo(supplier, other));
 }
 

@@ -205,7 +205,7 @@ export class Orders {
     const s = h.state;
     const units = this.chosenUnits();
     if (!units.length) return null;
-    const unitHere = at ? unitAt(s, at.x, at.y) : undefined;
+    const unitHere = at ? unitAt(s, at) : undefined;
     const enemyHere = !!unitHere && !isPlayer(unitHere) && unitHere.carrier === null && h.visible(unitHere);
     const ctx: ActionCtx = { s, units, at: at ? { x: at.x, y: at.y } : null, enemyHere };
     const isSelectedUnit = h.phase === 'move' && h.sel && units.length === 1 && units[0]!.uid === h.sel.uid;
@@ -217,7 +217,7 @@ export class Orders {
   private movingIntent(unit: Unit, at: Pos): Pick<ActionCtx, 'intent' | 'intentCapture' | 'farOk'> {
     const s = this.h.state;
     const intent = this.h.intentAt(at);
-    const isFreeWalkable = !unitAt(s, at.x, at.y) && canWalk(s, at.x, at.y, Movement.of(unit.type));
+    const isFreeWalkable = !unitAt(s, at) && canWalk(s, at, Movement.of(unit.type));
     return {
       intent: intent.kind,
       intentCapture: intent.kind === 'move' && intent.capture,

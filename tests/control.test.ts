@@ -29,7 +29,7 @@ describe('puntos de control', () => {
   it('con unidades de un solo bando en la zona es suyo y paga; vacio sigue pagando a su dueño', () => {
     const s = withPoints();
     // En la zona (radio 1) aunque no en el centro.
-    const u = newUnit(s, SOLDIER, 0, 11, 9);
+    const u = newUnit(s, SOLDIER, 0, { x: 11, y: 9 });
     const before = s.funds[0];
     const r = controlRound(s)!;
     expect(s.controlPoints![0]!.owner).toBe(0);
@@ -44,8 +44,8 @@ describe('puntos de control', () => {
 
   it('disputado (unidades de los dos bandos dentro): no paga a nadie ni cambia de dueño', () => {
     const s = withPoints();
-    newUnit(s, TANK, 0, 4, 14);
-    newUnit(s, SOLDIER, 1, 6, 15);
+    newUnit(s, TANK, 0, { x: 4, y: 14 });
+    newUnit(s, SOLDIER, 1, { x: 6, y: 15 });
     const funds = [...s.funds];
     const r = controlRound(s)!;
     expect(r.contested).toBe(1);
@@ -56,14 +56,14 @@ describe('puntos de control', () => {
 
   it('el enemigo se lo queda echando a todos los del otro bando de la zona', () => {
     const s = withPoints();
-    newUnit(s, TANK, 0, 5, 13);
+    newUnit(s, TANK, 0, { x: 5, y: 13 });
     controlRound(s);
     expect(s.controlPoints![1]!.owner).toBe(0);
   });
 
   it('una unidad fuera de la zona no cuenta', () => {
     const s = withPoints();
-    newUnit(s, TANK, 0, 12, 12);
+    newUnit(s, TANK, 0, { x: 12, y: 12 });
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBeNull();
     expect(inControlZone({ x: 10, y: 10 }, { x: 11, y: 11 })).toBe(true);
@@ -72,7 +72,7 @@ describe('puntos de control', () => {
 
   it('endRound suma su dinero a los ingresos del informe', () => {
     const s = withPoints();
-    newUnit(s, SOLDIER, 0, 10, 10);
+    newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const r = endRound(s);
     expect(r.control?.held).toEqual([1, 1]);
     expect(r.income[0]).toBeGreaterThanOrEqual(RULES.controlIncome);
@@ -116,7 +116,7 @@ describe('puntos de control', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 19, y: 19 });
     s.controlPoints = [{ x: 14, y: 12, owner: 0 }];
-    const t = newUnit(s, TANK, 1, 18, 12);
+    const t = newUnit(s, TANK, 1, { x: 18, y: 12 });
     const d0 = manhattan(t, s.controlPoints[0]!);
     Array.from(aiTurn(s, seededRng(1), 1));
     expect(manhattan(t, s.controlPoints[0]!)).toBeLessThan(d0);

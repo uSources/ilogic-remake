@@ -72,7 +72,7 @@ export function buyOptions(s: GameState, building: Building): BuyOption[] {
 
 /** El edificio puede fabricar ahora (es de alguien, fabrica algo y la casilla esta libre). */
 export function canBuyAt(s: GameState, building: Building): boolean {
-  return building.owner !== null && buyOptions(s, building).length > 0 && !unitAt(s, building.x, building.y);
+  return building.owner !== null && buyOptions(s, building).length > 0 && !unitAt(s, building);
 }
 
 /** Fabrica una unidad: nace sin poder actuar hasta la ronda siguiente. */
@@ -80,7 +80,7 @@ export function spawn(s: GameState, building: Building, type: number): Unit | nu
   if (building.owner === null || !builds(building, type)) return null;
   const team = building.owner;
   if (buyBlock(s, team, type)) return null;
-  if (!isWalkable(s, building.x, building.y, Movement.of(type))) return null;
+  if (!isWalkable(s, building, Movement.of(type))) return null;
   s.funds[team] -= UNIT.cost[type]!;
-  return newUnit(s, type, team, building.x, building.y, false);
+  return newUnit(s, type, team, building, false);
 }

@@ -8,7 +8,7 @@ import { blankState } from './helpers';
 describe('estadisticas', () => {
   it('cuenta compras, bajas y capturas por bando', () => {
     const s = blankState();
-    const u = newUnit(s, 1, 0, 3, 3);
+    const u = newUnit(s, 1, 0, { x: 3, y: 3 });
     s.units.push(u);
     recordEvent(s, { kind: 'spawn', uid: u.uid, at: { x: 3, y: 3 } }, 0);
     recordEvent(s, { kind: 'attack', attacker: u.uid, target: { x: 4, y: 3 }, damage: 50, killed: true }, 0);

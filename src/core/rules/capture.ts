@@ -20,7 +20,7 @@ export type CaptureProgress = NonNullable<Building['capture']>;
 
 /** La captura a medias sigue valiendo: la misma unidad sigue encima y el edificio aun no es suyo. */
 function isStillCapturing(s: GameState, building: Building, progress: CaptureProgress): boolean {
-  const unitHere = unitAt(s, building.x, building.y);
+  const unitHere = unitAt(s, building);
   return !!unitHere && unitHere.uid === progress.uid && unitHere.team === progress.team && building.owner !== progress.team;
 }
 
@@ -49,7 +49,7 @@ export function dropStaleCaptures(s: GameState): void {
 /** Se puede capturar el edificio de debajo (neutral o enemigo). */
 export function canCapture(s: GameState, unit: Unit): boolean {
   if (!unit.active || !isCapturer(unit)) return false;
-  const building = buildingAt(s, unit.x, unit.y);
+  const building = buildingAt(s, unit);
   return !!building && building.owner !== unit.team;
 }
 
@@ -80,7 +80,7 @@ function pointsLeftBefore(s: GameState, building: Building, unit: Unit, total: n
  */
 export function capture(s: GameState, unit: Unit): CaptureResult | null {
   if (!canCapture(s, unit)) return null;
-  const building = buildingAt(s, unit.x, unit.y)!;
+  const building = buildingAt(s, unit)!;
   unit.active = false;
   unit.canMove = false;
   const total = capturePointsOf(building);

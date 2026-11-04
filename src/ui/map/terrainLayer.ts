@@ -60,7 +60,7 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
     }
     this.waterFrame = -1;
     for (const o of terrainObjects(tex, s)) {
-      const img = tileImage(this.scene, o.key, o.x, o.y);
+      const img = tileImage(this.scene, o.key, o);
       this.props.push(img);
       this.buildings.addProp(img);
     }
@@ -70,8 +70,8 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
   private buildClassic(s: GameState): void {
     const objs: Phaser.GameObjects.GameObject[] = [];
     mapGrid(s).forEach((terrain, { x, y }) => {
-      objs.push(tileImage(this.scene, terrainKey(terrain), x, y));
-      for (const k of shoreKeys(s, x, y)) {
+      objs.push(tileImage(this.scene, terrainKey(terrain), { x, y }));
+      for (const k of shoreKeys(s, { x, y })) {
         if (hasImage(this.scene.textures, k))
           objs.push(
             this.scene.add

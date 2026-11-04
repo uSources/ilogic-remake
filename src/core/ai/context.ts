@@ -101,7 +101,7 @@ export const canAct = (unit: Unit): boolean => unit.active && unit.carrier === n
 export const needsRepair = (unit: Unit): boolean => unit.life < AI.LIFETOBACK;
 
 /** En esa casilla hay un edificio propio que repara a la unidad. */
-export function repairsHere(s: GameState, unit: Unit, x: number, y: number): boolean {
-  const building = buildingAt(s, x, y);
+export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {
+  const building = buildingAt(s, pos);
   return !!building && building.owner === unit.team && HEALER[unit.type]![building.type]! && BUILDING.heals[building.type]! > 0;
 }

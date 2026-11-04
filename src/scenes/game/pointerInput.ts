@@ -129,7 +129,7 @@ export function pointerTarget(h: PointerHost): PointerTarget {
 
 /** ¿Se coge la unidad de esta casilla? Una propia que se puede mover (en el mapa, o la que esta elegida). */
 function pickableUnitAt(h: PointerHost, tile: Pos | null): number | null {
-  const unit = tile ? unitAt(h.state, tile.x, tile.y) : undefined;
+  const unit = tile ? unitAt(h.state, tile) : undefined;
   if (!unit || !isPlayer(unit) || !unit.active || !unit.canMove || unit.carrier !== null) return null;
   const isSelectedOrFree = h.phase === 'map' || (h.phase === 'move' && h.sel?.uid === unit.uid);
   return isSelectedOrFree ? unit.uid : null;
@@ -144,7 +144,7 @@ function rightClick(h: PointerHost, tile: Pos | null, mods: { alt: boolean; shif
   if (tile && !isOnSelected && canAct) return smartRightClick(h, tile, mods);
   if (tile && !isOnSelected && h.openOrderMenu(tile)) return;
   // Clic derecho sobre una unidad en el mapa: ver su alcance (si no, atras).
-  const unit = tile && h.phase === 'map' ? unitAt(h.state, tile.x, tile.y) : undefined;
+  const unit = tile && h.phase === 'map' ? unitAt(h.state, tile) : undefined;
   if (unit && isVisibleOnMap(h, unit) && unit.uid !== h.inspectUid) return h.inspect(unit);
   h.back();
 }
@@ -181,7 +181,7 @@ function boxEnd(h: PointerHost, box: { x0: number; y0: number; x1: number; y1: n
 function toggleAtScreen(h: PointerHost, x: number, y: number): void {
   const picks = h.selection;
   const tile = h.view.tileAtScreen(x, y);
-  const unit = tile ? unitAt(h.state, tile.x, tile.y) : undefined;
+  const unit = tile ? unitAt(h.state, tile) : undefined;
   if (tile) h.moveCursorTo(tile, false);
   toggleInSelection(picks, unit && picks.selectable(unit) ? unit : null);
 }
@@ -197,7 +197,7 @@ function longPress(h: PointerHost, tile: Pos | null): boolean {
   if (!tile) return true;
   navigator.vibrate?.(LONG_PRESS_VIBRATION_MS);
   h.view.cursor = { ...tile };
-  const unit = unitAt(h.state, tile.x, tile.y);
+  const unit = unitAt(h.state, tile);
   if (unit && isVisibleOnMap(h, unit)) h.inspect(unit);
   else h.cursorMoved();
   return true;
@@ -256,7 +256,7 @@ function moveGroupTo(h: PointerHost, tile: Pos): void {
 
 /** [CAMBIO] "Elegir varias" (para el dedo, sin recuadro): tocar una unidad propia la añade o la quita. */
 function toggleOwnAt(h: PointerHost, tile: Pos): boolean {
-  const own = unitAt(h.state, tile.x, tile.y);
+  const own = unitAt(h.state, tile);
   if (!own || !h.selection.selectable(own)) return false;
   h.moveCursorTo(tile, false);
   toggleInSelection(h.selection, own);
@@ -271,7 +271,7 @@ function toggleOwnAt(h: PointerHost, tile: Pos): boolean {
 function selectClick(h: PointerHost, tile: Pos, info: TapInfo): boolean {
   if (h.phase !== 'map' && h.phase !== 'move') return false;
   const picks = h.selection;
-  const here = unitAt(h.state, tile.x, tile.y);
+  const here = unitAt(h.state, tile);
   const hit = here && picks.selectable(here) ? here : null;
   const hasModifier = info.shift || info.ctrl || info.count >= 2;
   const isGrouping = info.shift || info.ctrl || (info.count >= 2 && !!hit) || picks.group.size > 0;
@@ -294,10 +294,10 @@ function clickPicksAnother(h: PointerHost, tile: Pos, hit: Unit | null, hasModif
 
 /** Un toque con el dedo en el mapa (fases map y move). */
 function touchTap(h: PointerHost, tile: Pos): void {
-  const unit = unitAt(h.state, tile.x, tile.y);
+  const unit = unitAt(h.state, tile);
   const own = unit && isPlayer(unit) && unit.active && unit.carrier === null ? unit : null;
   if (h.phase === 'move') return touchTapMoving(h, tile, own);
-  const building = buildingAt(h.state, tile.x, tile.y);
+  const building = buildingAt(h.state, tile);
   const act = mapTap({
     ownActive: !!own,
     buyHere: !unit && !!building && building.owner === 0 && canBuyAt(h.state, building),

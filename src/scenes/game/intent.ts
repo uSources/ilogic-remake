@@ -30,13 +30,13 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   if (mergeUid !== undefined) return { kind: 'merge', target: unitById(s, mergeUid)! };
   const loadUid = plan.load.get(key(tile));
   if (loadUid !== undefined) return { kind: 'load', target: unitById(s, loadUid)! };
-  const other = unitAt(s, tile.x, tile.y);
+  const other = unitAt(s, tile);
   if (other && other.team !== unit.team && other.carrier === null && visible(other)) {
     const from = attackFrom(s, plan, other);
     return from ? { kind: 'attack', from, target: other } : { kind: 'none' };
   }
   if (!isReachable(plan.range, tile)) return { kind: 'none' };
-  const building = buildingAt(s, tile.x, tile.y);
+  const building = buildingAt(s, tile);
   const isCapture = !!building && building.owner !== unit.team && !!UNIT.cancapt[unit.type];
   return { kind: 'move', to: { x: tile.x, y: tile.y }, capture: isCapture };
 }

@@ -16,8 +16,8 @@ describe('movimiento: pasar entre aliados', () => {
     const s = blankState();
     // Pasillo de agua: solo se puede ir en linea recta.
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
-    const a = newUnit(s, TANK, 0, 2, 5);
-    newUnit(s, TANK, 0, 3, 5);
+    const a = newUnit(s, TANK, 0, { x: 2, y: 5 });
+    newUnit(s, TANK, 0, { x: 3, y: 5 });
     const r = moveRange(s, a);
     expect(r.steps.at({ x: 3, y: 5 })).toBe(0); // ocupada por el aliado
     expect(r.steps.at({ x: 4, y: 5 })).toBe(2); // pero se llega a la siguiente
@@ -27,8 +27,8 @@ describe('movimiento: pasar entre aliados', () => {
     useRules(PLAIN_RULES);
     const s = blankState();
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
-    const a = newUnit(s, TANK, 0, 2, 5);
-    newUnit(s, TANK, 0, 3, 5);
+    const a = newUnit(s, TANK, 0, { x: 2, y: 5 });
+    newUnit(s, TANK, 0, { x: 3, y: 5 });
     expect(moveRange(s, a).steps.at({ x: 4, y: 5 })).toBe(0);
   });
 });
@@ -46,17 +46,17 @@ describe('movimiento: emboscadas en la niebla', () => {
 
   it('el bosque esconde a quien esta dentro salvo desde al lado', () => {
     const s = corridor();
-    newUnit(s, TANK, 0, 2, 5);
-    const e = newUnit(s, SOLDIER, 1, 6, 5);
+    newUnit(s, TANK, 0, { x: 2, y: 5 });
+    const e = newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     expect(visibility(s, 0).at(e)).toBe(false);
-    newUnit(s, SOLDIER, 0, 5, 5);
+    newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(visibility(s, 0).at(e)).toBe(true);
   });
 
   it('el alcance no delata a un enemigo escondido', () => {
     const s = corridor();
-    const a = newUnit(s, TANK, 0, 2, 5);
-    newUnit(s, SOLDIER, 1, 6, 5);
+    const a = newUnit(s, TANK, 0, { x: 2, y: 5 });
+    newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     const r = moveRange(s, a);
     expect(r.steps.at({ x: 6, y: 5 })).toBe(4);
     expect(r.steps.at({ x: 7, y: 5 })).toBe(5);
@@ -64,8 +64,8 @@ describe('movimiento: emboscadas en la niebla', () => {
 
   it('al chocar con el enemigo escondido, se para antes y pierde el turno', () => {
     const s = corridor();
-    const a = newUnit(s, TANK, 0, 2, 5);
-    newUnit(s, SOLDIER, 1, 6, 5);
+    const a = newUnit(s, TANK, 0, { x: 2, y: 5 });
+    newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     const path = moveUnit(s, a, { x: 7, y: 5 }, moveRange(s, a))!;
     expect(path.ambush).toEqual({ x: 6, y: 5 });
     expect(a.x).toBe(5);
@@ -75,9 +75,9 @@ describe('movimiento: emboscadas en la niebla', () => {
 
   it('si la casilla anterior a la emboscada es de un aliado, se para en la de antes', () => {
     const s = corridor();
-    const a = newUnit(s, TANK, 0, 2, 5);
-    newUnit(s, SOLDIER, 0, 4, 5);
-    newUnit(s, SOLDIER, 1, 6, 5);
+    const a = newUnit(s, TANK, 0, { x: 2, y: 5 });
+    newUnit(s, SOLDIER, 0, { x: 4, y: 5 });
+    newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     // Con el soldado propio en (4,5) el bosque de (6,5) sigue sin verse desde (4,5): distancia 2.
     const path = moveUnit(s, a, { x: 7, y: 5 }, moveRange(s, a))!;
     expect(path.ambush).toEqual({ x: 6, y: 5 });
@@ -94,9 +94,9 @@ describe('movimiento: emboscadas en la niebla', () => {
     const s = corridor();
     s.map[6]![5] = 0;
     s.map[4]![5] = 2;
-    const a = newUnit(s, TANK, 0, 1, 5);
-    newUnit(s, SOLDIER, 1, 4, 5);
-    const target = newUnit(s, TANK, 0, 6, 5);
+    const a = newUnit(s, TANK, 0, { x: 1, y: 5 });
+    newUnit(s, SOLDIER, 1, { x: 4, y: 5 });
+    const target = newUnit(s, TANK, 0, { x: 6, y: 5 });
     a.life = 40;
     target.life = 50;
     const p = merge(s, a, target);
@@ -111,8 +111,8 @@ describe('movimiento: emboscadas en la niebla', () => {
   it('con los interruptores apagados no hay bosque que esconda ni emboscadas', () => {
     useRules(PLAIN_RULES);
     const s = corridor();
-    newUnit(s, TANK, 0, 2, 5);
-    const e = newUnit(s, SOLDIER, 1, 6, 5);
+    newUnit(s, TANK, 0, { x: 2, y: 5 });
+    const e = newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     expect(visibility(s, 0).at(e)).toBe(true);
   });
 });
@@ -120,7 +120,7 @@ describe('movimiento: emboscadas en la niebla', () => {
 describe('movimiento: camino trazado a mano', () => {
   it('se acepta un camino valido distinto del mas corto y se gasta su longitud', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 5, 5);
+    const a = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const r = moveRange(s, a);
     const via = [
       { x: 5, y: 5 },
@@ -136,7 +136,7 @@ describe('movimiento: camino trazado a mano', () => {
 
   it('caminos no validos: saltos, repetir casilla o pasarse de movimiento', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, 5, 5);
+    const a = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const r = moveRange(s, a);
     expect(
       validPath(
@@ -172,21 +172,21 @@ describe('movimiento: coste del terreno', () => {
     const s = blankState();
     for (let x = 6; x <= 7; x++) s.map[x]![5] = 2; // dos casillas de bosque
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 1;
-    const tank = newUnit(s, TANK, 0, 5, 5);
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const r = moveRange(s, tank);
     expect(r.steps.at({ x: 6, y: 5 })).toBe(2);
     expect(r.steps.at({ x: 7, y: 5 })).toBe(4);
     expect(r.steps.at({ x: 8, y: 5 })).toBe(5);
     expect(r.steps.at({ x: 9, y: 5 })).toBe(0); // 6 > movimiento 5
     moveUnit(s, tank, { x: 8, y: 5 }, r);
-    const sol = newUnit(s, SOLDIER, 0, 5, 5);
+    const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(moveRange(s, sol).steps.at({ x: 7, y: 5 })).toBe(2);
   });
 
   it('prefiere rodear por llanura si sale mas barato', () => {
     const s = blankState();
     s.map[6]![5] = 2;
-    const tank = newUnit(s, TANK, 0, 5, 5);
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const r = moveRange(s, tank);
     expect(r.steps.at({ x: 7, y: 5 })).toBe(3); // por el bosque costaria 3 tambien (2+1)
     s.map[6]![5] = 13; // bosque nevado: 3 para vehiculos
@@ -198,7 +198,7 @@ describe('movimiento: coste del terreno', () => {
     useRules(PLAIN_RULES);
     const s = blankState();
     s.map[6]![5] = 2;
-    const tank = newUnit(s, TANK, 0, 5, 5);
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(moveRange(s, tank).steps.at({ x: 6, y: 5 })).toBe(1);
   });
 });
@@ -208,7 +208,7 @@ describe('movimiento: ordenes de varios turnos', () => {
     const { stepToward } = await import('@core/rules');
     const { deserialize, serialize } = await import('@core/save');
     const s = blankState();
-    const tank = newUnit(s, TANK, 0, 2, 2);
+    const tank = newUnit(s, TANK, 0, { x: 2, y: 2 });
     const goal = { x: 20, y: 2 };
     const step = stepToward(s, tank, goal)!;
     expect(step).toEqual({ x: 7, y: 2 });

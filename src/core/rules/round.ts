@@ -45,7 +45,7 @@ function refreshUnits(s: GameState): void {
 
 /** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */
 function patientOn(s: GameState, building: Building): Unit | null {
-  const unit = unitAt(s, building.x, building.y);
+  const unit = unitAt(s, building);
   if (!unit || unit.team !== building.owner || !HEALER[unit.type]![building.type]) return null;
   // [CAMBIO] Sin cura bajo fuego: quien ha recibido un ataque hoy no se recupera esta noche.
   return unhealable(s, unit) ? null : unit;

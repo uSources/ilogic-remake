@@ -17,11 +17,11 @@ describe('Roca: reparar', () => {
     s.generals = [newGeneral('Roca'), null];
     s.generals[0]!.charge = 6;
     const amount = (def('Roca').abilities[0]!.effect as { amount: number }).amount;
-    const hurt = newUnit(s, T('Tank'), 0, 3, 3);
+    const hurt = newUnit(s, T('Tank'), 0, { x: 3, y: 3 });
     hurt.life = 50;
-    const almost = newUnit(s, T('Soldier'), 0, 4, 4);
+    const almost = newUnit(s, T('Soldier'), 0, { x: 4, y: 4 });
     almost.life = 100 - Math.floor(amount / 2);
-    const enemy = newUnit(s, T('Tank'), 1, 8, 8);
+    const enemy = newUnit(s, T('Tank'), 1, { x: 8, y: 8 });
     enemy.life = 50;
     const ev = useAbility(s, 0, 'repair')!;
     expect(hurt.life).toBe(50 + amount);
@@ -37,9 +37,9 @@ describe('Roca: reparar', () => {
   it('sus vehiculos reciben algo menos de daño', () => {
     const s = blankState();
     s.generals = [newGeneral('Roca'), null];
-    const tank = newUnit(s, T('Tank'), 0, 3, 3);
-    const soldier = newUnit(s, T('Soldier'), 0, 5, 5);
-    const atk = newUnit(s, T('Tank'), 1, 3, 4);
+    const tank = newUnit(s, T('Tank'), 0, { x: 3, y: 3 });
+    const soldier = newUnit(s, T('Soldier'), 0, { x: 5, y: 5 });
+    const atk = newUnit(s, T('Tank'), 1, { x: 3, y: 4 });
     expect(generalHitFactor(s, atk, tank)).toBeLessThan(1);
     expect(generalHitFactor(s, atk, soldier)).toBe(1);
   });
@@ -48,7 +48,7 @@ describe('Roca: reparar', () => {
     const s = blankState();
     s.generals = [null, newGeneral('Roca')];
     s.generals[1]!.charge = def('Roca').abilities[0]!.cost;
-    const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, T('Tank'), 1, x, 3));
+    const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, T('Tank'), 1, { x: x, y: 3 }));
     expect(chooseAbility(s, 1)).toBeNull(); // todos enteros: no vale nada
     for (const t of tanks) t.life = 40;
     const c = chooseAbility(s, 1)!;
@@ -72,16 +72,16 @@ describe('Ambar: suministros', () => {
   it('sus tropas de tierra aciertan mas; los aviones no', () => {
     const s = blankState();
     s.generals = [newGeneral('Ambar'), null];
-    const target = newUnit(s, T('Tank'), 1, 5, 6);
-    expect(generalHitFactor(s, newUnit(s, T('Soldier'), 0, 5, 5), target)).toBeGreaterThan(1);
-    expect(generalHitFactor(s, newUnit(s, T('Fighter'), 0, 6, 6), target)).toBe(1);
+    const target = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
+    expect(generalHitFactor(s, newUnit(s, T('Soldier'), 0, { x: 5, y: 5 }), target)).toBeGreaterThan(1);
+    expect(generalHitFactor(s, newUnit(s, T('Fighter'), 0, { x: 6, y: 6 }), target)).toBe(1);
   });
 
   it('la IA valora el dinero por lo que es', () => {
     const s = blankState();
     s.generals = [null, newGeneral('Ambar')];
     s.generals[1]!.charge = 4;
-    newUnit(s, T('Soldier'), 1, 10, 10);
+    newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });
     const c = chooseAbility(s, 1)!;
     expect(c.ability).toBe('supplies');
     expect(c.value).toBe((def('Ambar').abilities.find((a) => a.id === 'supplies')!.effect as { amount: number }).amount);

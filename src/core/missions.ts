@@ -68,7 +68,7 @@ function terrainGrid(m: MissionDef): number[][] {
 /** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
 function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
   return units.map(([type, team, x, y, life]) => {
-    const unit = newUnit(s, UNIT_NAMES.indexOf(type), team, x, y);
+    const unit = newUnit(s, UNIT_NAMES.indexOf(type), team, { x, y });
     if (life) unit.life = life;
     return unit.uid;
   });

@@ -31,7 +31,7 @@ const last = (p: Pos[]): Pos | undefined => p[p.length - 1];
 describe('previewCommands', () => {
   it('capturar: prevé el camino hasta el edificio y la captura, y el turno real hace eso', () => {
     const s = world();
-    const u = newUnit(s, SOLDIER, 0, 9, 5);
+    const u = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
     giveCommand(s, [u], 'capture', { x: 12, y: 5 });
     const it = previewCommands(s).get(u.uid)!;
     expect(it.path[0]).toEqual({ x: 9, y: 5 });
@@ -45,8 +45,8 @@ describe('previewCommands', () => {
 
   it('atacar: prevé a quien dispara y desde donde, y el turno real hace eso', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
-    const foe = newUnit(s, SOLDIER, 1, 9, 5);
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const foe = newUnit(s, SOLDIER, 1, { x: 9, y: 5 });
     giveCommand(s, [u], 'attack', { x: 15, y: 5 });
     const it = previewCommands(s).get(u.uid)!;
     expect(it.attack).toEqual({ x: 9, y: 5 });
@@ -58,16 +58,16 @@ describe('previewCommands', () => {
 
   it('una unidad sin nada que hacer este turno no tiene camino ni objetivo', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'defend', { x: 5, y: 6 });
     expect(previewCommands(s).get(u.uid)).toEqual({ path: [] });
   });
 
   it('no cambia la partida y siempre da lo mismo', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, 9, 5);
-    const b = newUnit(s, TANK, 0, 5, 5);
-    newUnit(s, SOLDIER, 1, 9, 7);
+    const a = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
+    const b = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    newUnit(s, SOLDIER, 1, { x: 9, y: 7 });
     giveCommand(s, [a], 'capture', { x: 12, y: 5 });
     giveCommand(s, [b], 'attack', { x: 15, y: 5 });
     const before = serialize(s);
@@ -79,8 +79,8 @@ describe('previewCommands', () => {
 
   it('las unidades ya usadas o sin orden no salen', () => {
     const s = world();
-    const used = newUnit(s, TANK, 0, 5, 5);
-    newUnit(s, TANK, 0, 6, 6);
+    const used = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    newUnit(s, TANK, 0, { x: 6, y: 6 });
     giveCommand(s, [used], 'attack', { x: 15, y: 5 });
     Object.assign(used, { active: false, canMove: false });
     expect(previewCommands(s).size).toBe(0);
@@ -88,11 +88,11 @@ describe('previewCommands', () => {
 
   it('no delata enemigos escondidos: la prevision es la misma que si no estuvieran', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, 5, 5);
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
     giveCommand(s, [u], 'attack', { x: 15, y: 5 });
     const clean = previewCommands(s);
     // A 7 casillas: el tanque (vision 6) no lo ve, pero llegaria a dispararle (mueve 5, alcance 2).
-    const hidden = newUnit(s, SOLDIER, 1, 12, 5);
+    const hidden = newUnit(s, SOLDIER, 1, { x: 12, y: 5 });
     expect(visibility(s, 0).at({ x: 12, y: 5 })).toBe(false);
     const withHidden = previewCommands(s);
     expect(withHidden).toEqual(clean);
@@ -105,10 +105,10 @@ describe('previewCommands', () => {
   it('calcularla a mitad del turno de la IA no cambia lo que hace la IA', () => {
     const make = () => {
       const s = world();
-      const mine = newUnit(s, TANK, 0, 2, 2);
+      const mine = newUnit(s, TANK, 0, { x: 2, y: 2 });
       giveCommand(s, [mine], 'attack', { x: 15, y: 15 });
-      newUnit(s, SOLDIER, 1, 14, 6);
-      newUnit(s, TANK, 1, 16, 16);
+      newUnit(s, SOLDIER, 1, { x: 14, y: 6 });
+      newUnit(s, TANK, 1, { x: 16, y: 16 });
       return s;
     };
     const a = make();

@@ -76,9 +76,9 @@ describe('habilidades: escudo (guard)', () => {
     const R = plain((t) => ranged(t) && POWER[t]![G]! > 0);
     const M = plain((t) => melee(t) && POWER[t]![G]! > 0);
     const s = blankState();
-    const def = newUnit(s, G, 1, 10, 10);
-    const far = newUnit(s, R, 0, 10, 10 - (UNIT.minalc[R]! + 1));
-    const near = newUnit(s, M, 0, 9, 10);
+    const def = newUnit(s, G, 1, { x: 10, y: 10 });
+    const far = newUnit(s, R, 0, { x: 10, y: 10 - (UNIT.minalc[R]! + 1) });
+    const near = newUnit(s, M, 0, { x: 9, y: 10 });
     expect(hitChance(s, far, def)).toBeCloseTo(POWER[R]![G]! * factor);
     expect(hitChance(s, near, def)).toBeCloseTo(POWER[M]![G]!);
     useRules({ ...DEFAULT_RULES, abilities: false, veterancy: false });
@@ -93,8 +93,8 @@ describe('habilidades: zona de control', () => {
 
   it('quien entra al lado se para: no sigue desde ahi', () => {
     const s = blankState();
-    newUnit(s, Z, 1, 10, 10);
-    const u = newUnit(s, TANK, 0, 10, 13);
+    newUnit(s, Z, 1, { x: 10, y: 10 });
+    const u = newUnit(s, TANK, 0, { x: 10, y: 13 });
     const r = moveRange(s, u);
     expect(r.steps.at({ x: 10, y: 11 })).toBeGreaterThan(0); // entra en la zona
     expect(r.steps.at({ x: 11, y: 10 })).toBeGreaterThan(0); // otra casilla de la zona, entrando por fuera
@@ -111,21 +111,21 @@ describe('habilidades: zona de control', () => {
     expect(validPath(s, u, through, r)).toBe(false);
     expect(moveUnit(s, u, { x: 10, y: 11 }, r)).not.toBeNull();
     useRules({ ...DEFAULT_RULES, fog: false, terrainCost: false, veterancy: false, abilities: false });
-    expect(moveRange(s, newUnit(s, TANK, 0, 10, 13)).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
+    expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
   });
 
   it('desde dentro de la zona se puede salir el turno siguiente', () => {
     const s = blankState();
-    newUnit(s, Z, 1, 10, 10);
-    const u = newUnit(s, TANK, 0, 10, 11);
+    newUnit(s, Z, 1, { x: 10, y: 10 });
+    const u = newUnit(s, TANK, 0, { x: 10, y: 11 });
     expect(moveRange(s, u).steps.at({ x: 10, y: 14 })).toBeGreaterThan(0);
   });
 
   it('no para a los movimientos que no estan en stops (aviones)', () => {
     expect(abilityOf(Z, 'zoneOfControl')!.stops).not.toContain('air');
     const s = blankState();
-    newUnit(s, Z, 1, 10, 10);
-    const u = newUnit(s, PLANE, 0, 10, 13);
+    newUnit(s, Z, 1, { x: 10, y: 10 });
+    const u = newUnit(s, PLANE, 0, { x: 10, y: 13 });
     expect(moveRange(s, u).steps.at({ x: 11, y: 10 })).toBeGreaterThan(0);
   });
 
@@ -133,11 +133,11 @@ describe('habilidades: zona de control', () => {
     useRules({ ...DEFAULT_RULES, terrainCost: false });
     const s = blankState();
     s.map[5]![8] = TerrainType.WOODS; // el bosque la esconde salvo desde al lado
-    newUnit(s, Z, 1, 5, 8);
-    const u = newUnit(s, TANK, 0, 5, 5);
+    newUnit(s, Z, 1, { x: 5, y: 8 });
+    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
     // (4, 9) solo se alcanza pasando por su zona: sin verla, el alcance no la delata.
     expect(moveRange(s, u).steps.at({ x: 4, y: 9 })).toBeGreaterThan(0);
-    newUnit(s, TANK, 0, 6, 8); // un aliado al lado la descubre
+    newUnit(s, TANK, 0, { x: 6, y: 8 }); // un aliado al lado la descubre
     expect(moveRange(s, u).steps.at({ x: 4, y: 9 })).toBe(0);
   });
 });
@@ -149,10 +149,10 @@ describe('habilidades: apoyo (aura)', () => {
 
   it('protege a las propias cercanas, no a si misma ni a las enemigas', () => {
     const s = blankState();
-    const sup = newUnit(s, A, 0, 10, 10);
-    const ally = newUnit(s, M, 0, 10 + radius, 10);
-    const far = newUnit(s, M, 0, 10 + radius + 1, 10);
-    const foe = newUnit(s, M, 1, 10, 10 - radius);
+    const sup = newUnit(s, A, 0, { x: 10, y: 10 });
+    const ally = newUnit(s, M, 0, { x: 10 + radius, y: 10 });
+    const far = newUnit(s, M, 0, { x: 10 + radius + 1, y: 10 });
+    const foe = newUnit(s, M, 1, { x: 10, y: 10 - radius });
     expect(auraFactor(s, ally)).toBe(defense);
     expect(auraFactor(s, far)).toBe(1);
     expect(auraFactor(s, sup)).toBe(1);
@@ -162,9 +162,9 @@ describe('habilidades: apoyo (aura)', () => {
 
   it('no se suma con otra aura', () => {
     const s = blankState();
-    newUnit(s, A, 0, 10, 10);
-    newUnit(s, A, 0, 12, 10);
-    const ally = newUnit(s, M, 0, 11, 10);
+    newUnit(s, A, 0, { x: 10, y: 10 });
+    newUnit(s, A, 0, { x: 12, y: 10 });
+    const ally = newUnit(s, M, 0, { x: 11, y: 10 });
     expect(auraFactor(s, ally)).toBe(defense);
   });
 });
@@ -177,9 +177,9 @@ describe('habilidades: perforante (piercing)', () => {
     const other = plain((t) => melee(t) && POWER[t]![target]! > 0);
     const s = blankState();
     s.map[10]![10] = TerrainType.WOODS;
-    const def = newUnit(s, target, 1, 10, 10);
-    const atk = newUnit(s, P, 0, 10, 10 - (UNIT.minalc[P]! + 1));
-    const cmp = newUnit(s, other, 0, 9, 10);
+    const def = newUnit(s, target, 1, { x: 10, y: 10 });
+    const atk = newUnit(s, P, 0, { x: 10, y: 10 - (UNIT.minalc[P]! + 1) });
+    const cmp = newUnit(s, other, 0, { x: 9, y: 10 });
     const cover = tileProtection(s, def);
     expect(cover).toBeLessThan(1);
     expect(hitChance(s, atk, def)).toBeCloseTo(POWER[P]![target]! * (cover + (1 - cover) * ignore));
@@ -204,7 +204,7 @@ describe('habilidades: explorador (scout)', () => {
     useRules({ ...DEFAULT_RULES, fog: true, forestHides: true, weather: false });
     const s = blankState();
     s.map[10]![14] = TerrainType.WOODS;
-    const scout = newUnit(s, withAbility('scout'), 0, 10, 10);
+    const scout = newUnit(s, withAbility('scout'), 0, { x: 10, y: 10 });
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision
     scout.type = plain((t) => UNIT.vision[t]! >= UNIT.vision[withAbility('scout')]!);
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(false);
@@ -214,7 +214,7 @@ describe('habilidades: explorador (scout)', () => {
 describe('habilidades: captura rapida (quickCapture)', () => {
   it('resta un 50 % mas al capturar que una unidad igual sin la habilidad', () => {
     const s = blankState();
-    const fast = newUnit(s, withAbility('quickCapture'), 0, 5, 5);
+    const fast = newUnit(s, withAbility('quickCapture'), 0, { x: 5, y: 5 });
     const factor = (abilityOf(fast.type, 'quickCapture') as { factor: number }).factor;
     expect(captureStrength(fast)).toBe(Math.ceil(10 * factor));
     fast.life = 40;

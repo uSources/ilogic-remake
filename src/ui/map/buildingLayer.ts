@@ -37,7 +37,7 @@ export class BuildingLayer implements MapLayer {
       return;
     }
     if (!existing) {
-      const image = tileImage(this.scene, key, building.x, building.y);
+      const image = tileImage(this.scene, key, building);
       this.buildings[index] = image;
       this.object.add(image);
       image.setVisible(true);
@@ -49,7 +49,7 @@ export class BuildingLayer implements MapLayer {
     if (existing.texture.key !== key) {
       existing.setTexture(ATLAS, key);
       fitToTile(existing);
-      const foot = tileFoot(building.x, building.y);
+      const foot = tileFoot(building);
       existing.setPosition(foot.x, foot.y);
     }
     existing.setVisible(true);
