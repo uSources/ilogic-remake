@@ -1,16 +1,16 @@
 /**
- * Juega variantes en hilos (lo usan npm run balance y npm run metrics). Cada hilo recibe el contenido
- * y las reglas de la variante y se los da a cada partida (worker.ts).
+ * Juega variantes en hilos (lo usan npm run balance y npm run metrics). Cada hilo recibe los ficheros
+ * de contenido de la variante, los carga (loadContent: valida y congela) y juega con ese contenido y
+ * sus reglas (worker.ts).
  */
 import { Worker } from 'node:worker_threads';
-import type { GameContent } from '@core/content';
-import type { RulesConfig } from '@core/model';
+import type { Content } from '@core/content';
 import type { DuelCell, DuelOptions } from './duel';
 import type { GameRecord, PlayOptions, Policy } from './play';
 import type { VariantSetup } from './variant';
 
-/** Lo que hace un hilo, con el contenido y las reglas de la variante. */
-export type WorkerJob = { content: GameContent; rules: RulesConfig } & (
+/** Lo que hace un hilo, con los ficheros de contenido de la variante. */
+export type WorkerJob = { files: Content } & (
   | { kind: 'games'; seeds: number[]; game: Omit<PlayOptions, 'seed' | 'rules' | 'content'> }
   | { kind: 'duels'; duel: Omit<DuelOptions, 'rules' | 'content'> }
 );
@@ -47,7 +47,7 @@ export async function runGames(
   const jobs = chunks
     .filter((chunk) => chunk.length)
     .map((chunk) =>
-      runWorker<GameRecord>({ content: setup.content, rules: setup.rules, kind: 'games', seeds: chunk, game }, (record) => {
+      runWorker<GameRecord>({ files: setup.content.files, kind: 'games', seeds: chunk, game }, (record) => {
         records.push(record);
         progress();
       }),
@@ -60,6 +60,6 @@ export async function runGames(
 /** La tabla de duelos (duel.ts) con el contenido y las reglas de la variante. */
 export async function runDuels(setup: VariantSetup, duel: Omit<DuelOptions, 'rules' | 'content'>): Promise<DuelCell[]> {
   let cells: DuelCell[] = [];
-  await runWorker<DuelCell[]>({ content: setup.content, rules: setup.rules, kind: 'duels', duel }, (result) => (cells = result));
+  await runWorker<DuelCell[]>({ files: setup.content.files, kind: 'duels', duel }, (result) => (cells = result));
   return cells;
 }

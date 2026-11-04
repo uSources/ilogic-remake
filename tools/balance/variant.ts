@@ -1,5 +1,5 @@
 /**
- * Variantes de equilibrio: cambios a las tablas de datos y reglas, descritos en JSON.
+ * Variantes de equilibrio: cambios al contenido (los ficheros de src/core/content) descritos en JSON.
  *
  * {
  *   "name": "tanques-baratos",
@@ -10,20 +10,24 @@
  *     "POWER.Tank.Soldier": "+0.05",    // sumar
  *     "BUILDING.earning.City": 800,
  *     "TERRAIN.protection.Woods": 0.8,
- *     "RULES.counterattack": true
+ *     "MOVE_COST.vehicle.Woods": 3,
+ *     "RULES.counterattack": true,
+ *     "AI.KILLBONUS": 60
  *   }
  * }
  *
- * Tablas: UNIT, POWER, BUILDING, TERRAIN, MOVE_COST ("MOVE_COST.vehicle.Woods"), RULES, AI. Las filas/columnas se pueden
- * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
+ * Las rutas usan los nombres de las tablas de siempre, pero cada una nombra un campo de los ficheros
+ * (FILE_PATHS): `UNIT.cost.Tank` es el `cost` del Tank en units.json, `POWER.Tank.Soldier` su
+ * `attack.hitChance.Soldier`, `MOVE_COST.vehicle.Woods` el `movement.vehicle` de Woods en
+ * terrain.json, `RULES.fog` `defaults.fog` en rules.json... Las filas se nombran por id, por indice o
+ * con `*` (todas).
  *
- * Una variante no cambia el contenido del juego (esta congelado): `buildVariant` construye otro, con
- * sus reglas, y runner.ts se lo pasa a las partidas que juega en hilos.
+ * Una variante no cambia el contenido del juego: `buildVariant` aplica los cambios a una copia de los
+ * ficheros y la carga con `loadContent`, que la valida (un valor imposible para antes de jugar),
+ * reconstruye todas las tablas y la congela. Sus reglas son las de ese contenido:
+ * `rulesWith(variante.content)`.
  */
-import { rulesWith } from '@core/rulesConfig';
-import { MOVEMENTS, TERRAIN_NAMES, type GameContent } from '@core/content';
-import { deepFreeze } from '@core/util/freeze';
-import type { RulesConfig } from '@core/model';
+import { loadContent, MOVEMENTS, type Content, type GameContent } from '@core/content';
 
 export interface Variant {
   name: string;
@@ -38,47 +42,97 @@ export interface VariantChange {
   to: unknown;
 }
 
-/** Una variante lista para jugar: su contenido (otro, no el de siempre), sus reglas y lo que cambia. */
+/** Una variante lista para jugar: su contenido (otro, no el de siempre) y lo que cambia. */
 export interface VariantSetup {
   name: string;
   content: GameContent;
-  rules: RulesConfig;
   changes: VariantChange[];
 }
 
-type Table = Record<string, unknown> | unknown[];
-type Slot = [Record<string | number, unknown>, string | number];
+type Value = number | string | boolean | null;
+type Holder = Record<string, unknown>;
+/** Una casilla de los ficheros: el objeto que la tiene y su clave. */
+type Slot = { holder: Holder; key: string; label: string };
 
-/** Las tablas que se pueden cambiar, sobre una copia del contenido y de las reglas. */
-function editableTables(content: GameContent, rules: RulesConfig): Record<string, Table> {
-  const tables = content.tables;
-  return {
-    UNIT: tables.UNIT,
-    POWER: tables.POWER as unknown as unknown[],
-    BUILDING: tables.BUILDING,
-    TERRAIN: tables.TERRAIN,
-    AI: tables.AI,
-    MOVE_COST: tables.MOVE_COST as unknown as unknown[],
-    RULES: rules as unknown as Record<string, unknown>,
-  };
+/** Los elementos de una lista de los ficheros que nombra `key`: "*" (todos), un indice o un id. */
+function pick<T extends { id: string }>(list: readonly T[], key: string, what: string): T[] {
+  if (key === '*') return [...list];
+  if (/^\d+$/.test(key)) {
+    const item = list[Number(key)];
+    if (!item) throw new Error(`No hay ${what} numero ${key}`);
+    return [item];
+  }
+  const item = list.find((candidate) => candidate.id === key);
+  if (!item) throw new Error(`Nombre desconocido "${key}" (validos: ${list.map((candidate) => candidate.id).join(', ')})`);
+  return [item];
 }
 
-/** Que nombres valen para los indices de cada tabla/campo. */
-function namesFor(content: GameContent, table: string, depth: number): readonly string[] | null {
-  if (table === 'UNIT' || table === 'POWER') return content.tables.UNIT_NAMES;
-  if (table === 'BUILDING') return content.tables.BUILDING_NAMES;
-  if (table === 'MOVE_COST') return depth === 0 ? MOVEMENTS : TERRAIN_NAMES;
-  if (table === 'TERRAIN') return TERRAIN_NAMES;
-  return null;
+/** Campos de cada unidad que se pueden cambiar como `UNIT.<campo>.<unidad>`, y su nombre en units.json. */
+const UNIT_FIELDS: Record<string, string> = { cost: 'cost', command: 'command', mover: 'move', vision: 'vision' };
+const BUILDING_FIELDS = ['earning', 'heals', 'protection', 'vision'];
+const TERRAIN_FIELDS: Record<string, string> = { protection: 'protection', canbuild: 'buildable', iswater: 'water' };
+
+function fieldOf(fields: Record<string, string> | string[], name: string | undefined, table: string): string {
+  const map = Array.isArray(fields) ? Object.fromEntries(fields.map((field) => [field, field])) : fields;
+  const field = name === undefined ? undefined : map[name];
+  if (!field) throw new Error(`"${name}" no existe en ${table} (validos: ${Object.keys(map).join(', ')})`);
+  return field;
 }
 
-/** Los indices que nombra `key` en una lista de `length` filas: "*" (todas), un numero o un nombre. */
-function indicesFor(key: string, names: readonly string[] | null, length: number): number[] {
-  if (key === '*') return Array.from({ length }, (_, index) => index);
-  if (/^\d+$/.test(key)) return [Number(key)];
-  const index = names?.indexOf(key) ?? -1;
-  if (index < 0) throw new Error(`Nombre desconocido "${key}" (validos: ${names?.join(', ')})`);
-  return [index];
+const slotsOf = (items: readonly { id: string }[], key: (item: { id: string }) => Slot): Slot[] => items.map(key);
+const asHolder = (value: unknown): Holder => value as Holder;
+
+/** Cada tabla de las rutas y que casillas de los ficheros nombra. */
+const FILE_PATHS: Record<string, (files: Content, keys: string[]) => Slot[]> = {
+  UNIT: (files, [field, unit = '']) => {
+    const name = fieldOf(UNIT_FIELDS, field, 'UNIT');
+    return slotsOf(pick(files.units, unit, 'unidad'), (u) => ({ holder: asHolder(u), key: name, label: u.id }));
+  },
+  POWER: (files, [attacker = '', defender = '']) =>
+    pick(files.units, attacker, 'unidad').flatMap((unit) => {
+      if (!unit.attack) throw new Error(`${unit.id} no ataca: no tiene POWER`);
+      const hitChance = unit.attack.hitChance;
+      return pick(files.units, defender, 'unidad').map((target) => ({
+        holder: asHolder(hitChance),
+        key: target.id,
+        label: `${unit.id}.${target.id}`,
+      }));
+    }),
+  BUILDING: (files, [field, building = '']) => {
+    const name = fieldOf(BUILDING_FIELDS, field, 'BUILDING');
+    return slotsOf(pick(files.buildings, building, 'edificio'), (b) => ({ holder: asHolder(b), key: name, label: b.id }));
+  },
+  TERRAIN: (files, [field, terrain = '']) => {
+    const name = fieldOf(TERRAIN_FIELDS, field, 'TERRAIN');
+    return slotsOf(pick(files.terrain, terrain, 'terreno'), (t) => ({ holder: asHolder(t), key: name, label: t.id }));
+  },
+  MOVE_COST: (files, [movement = '', terrain = '']) => {
+    const movements = movement === '*' ? [...MOVEMENTS] : [fieldOf([...MOVEMENTS], movement, 'MOVE_COST')];
+    return pick(files.terrain, terrain, 'terreno').flatMap((t) =>
+      movements.map((m) => ({ holder: asHolder(t.movement), key: m, label: `${m}.${t.id}` })),
+    );
+  },
+  RULES: (files, [rule = '']) => {
+    if (!(rule in files.rules.defaults)) throw new Error(`"${rule}" no existe en RULES`);
+    return [{ holder: asHolder(files.rules.defaults), key: rule, label: rule }];
+  },
+  AI: (files, [weight = '']) => {
+    if (!(weight in files.ai)) throw new Error(`"${weight}" no existe en AI`);
+    return [{ holder: files.ai, key: weight, label: weight }];
+  },
+};
+
+/** Cuantas claves lleva una ruta de cada tabla despues de su nombre ("UNIT.cost.Tank": 2). */
+const KEY_COUNT: Record<string, number> = { UNIT: 2, POWER: 2, BUILDING: 2, TERRAIN: 2, MOVE_COST: 2, RULES: 1, AI: 1 };
+
+/** Las casillas de los ficheros que nombra una ruta ("UNIT.cost.Tank"). */
+function slotsFor(files: Content, path: string): Slot[] {
+  const [table = '', ...keys] = path.split('.');
+  const slots = FILE_PATHS[table];
+  if (!slots) throw new Error(`Tabla desconocida "${table}" (validas: ${Object.keys(FILE_PATHS).join(', ')})`);
+  if (keys.length < KEY_COUNT[table]!) throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
+  if (keys.length > KEY_COUNT[table]!) throw new Error(`Ruta demasiado larga: ${path}`);
+  return slots(files, keys);
 }
 
 /** "x1.1", "+500" o "-0.05" aplicado a `old`. */
@@ -98,72 +152,34 @@ function roundLike(old: number, value: number): number {
 }
 
 /** El valor nuevo de una casilla: el dado, o el cambio relativo ("x1.1"...) si la casilla es un numero. */
-function newValue(old: unknown, value: number | string | boolean | null): unknown {
+function newValue(old: unknown, value: Value): unknown {
   if (typeof value !== 'string' || typeof old !== 'number') return value;
   return roundLike(old, applyChange(old, value));
 }
 
-/** Las casillas de un nivel de la ruta: `key` dentro de cada contenedor del nivel anterior. */
-function slotsOneLevelDown(containers: unknown[], key: string, names: readonly string[] | null, tableName: string): Slot[] {
-  return containers.flatMap((container): Slot[] => {
-    if (Array.isArray(container)) {
-      return indicesFor(key, names, container.length).map((index): Slot => [container as unknown as Record<number, unknown>, index]);
-    }
-    if (container && typeof container === 'object') {
-      if (!(key in container)) throw new Error(`"${key}" no existe en ${tableName}`);
-      return [[container as Record<string, unknown>, key]];
-    }
-    throw new Error(`Ruta demasiado larga: ${tableName}.${key}`);
-  });
-}
-
-/** Resuelve "UNIT.cost.Tank" en las casillas [contenedor, clave] de `tables` (puede haber varias con "*"). */
-function targets(content: GameContent, tables: Record<string, Table>, path: string): Slot[] {
-  const [tableName = '', ...keys] = path.split('.');
-  const table = tables[tableName];
-  if (!table) throw new Error(`Tabla desconocida "${tableName}" (validas: ${Object.keys(tables).join(', ')})`);
-  // Primer nivel: en POWER es la fila (unidad); en el resto, el campo.
-  let slots: Slot[] = [];
-  let containers: unknown[] = [table];
-  keys.forEach((key, depth) => {
-    slots = slotsOneLevelDown(containers, key, namesFor(content, tableName, depth), tableName);
-    containers = slots.map(([container, slotKey]) => container[slotKey]);
-  });
-  if (!slots.length) throw new Error(`Ruta incompleta: ${path}`);
-  if (containers.some((value) => typeof value === 'object' && value !== null))
-    throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
-  return slots;
-}
-
-/** Cambia las casillas de `path` y apunta cada cambio en `changes`. */
-function applySetting(
-  content: GameContent,
-  tables: Record<string, Table>,
-  path: string,
-  value: number | string | boolean | null,
-  changes: VariantChange[],
-): void {
-  for (const [container, key] of targets(content, tables, path)) {
-    const from = container[key];
+/** Cambia en `files` las casillas de `path` y apunta cada cambio en `changes`. */
+function applySetting(files: Content, path: string, value: Value, changes: VariantChange[]): void {
+  for (const { holder, key, label } of slotsFor(files, path)) {
+    // Un acierto que no esta en el fichero vale 0.
+    const from = holder[key] ?? (path.startsWith('POWER.') ? 0 : undefined);
+    if (typeof from === 'object' && from !== null) throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
     const to = newValue(from, value);
     if (typeof from !== typeof to && from !== null && to !== null) throw new Error(`"${path}": se esperaba ${typeof from}`);
-    container[key] = to;
-    changes.push({ path: `${path}${path.includes('*') ? `[${key}]` : ''}`, from, to });
+    holder[key] = to;
+    changes.push({ path: `${path}${path.includes('*') ? `[${label}]` : ''}`, from, to });
   }
 }
 
 /**
- * Construye el contenido y las reglas de una variante a partir de `base` (normalmente
- * `defaultContent()`) y de sus reglas de siempre, sin tocar ninguno de los dos. El contenido sale
- * congelado, como el del juego: se juega tal cual.
+ * El contenido de una variante: los cambios sobre una copia de los ficheros de `base` (normalmente
+ * `defaultContent()`), cargada con loadContent (valida, reconstruye las tablas y congela). `base` no
+ * cambia.
  */
 export function buildVariant(variant: Variant, base: GameContent): VariantSetup {
-  const content = structuredClone(base);
-  const rules: RulesConfig = rulesWith(base);
-  const tables = editableTables(content, rules);
+  const files = structuredClone(base.files);
   const changes: VariantChange[] = [];
-  for (const [path, value] of Object.entries(variant.set ?? {})) applySetting(content, tables, path, value, changes);
-  return { name: variant.name, content: deepFreeze(content), rules: Object.freeze(rules), changes };
+  for (const [path, value] of Object.entries(variant.set ?? {})) applySetting(files, path, value, changes);
+  return { name: variant.name, content: loadContent(files), changes };
 }
 
 export const BASELINE: Variant = { name: 'actual' };

@@ -253,7 +253,9 @@ que se pide), y lo usan `createGame`/`loadGame` (core/defaultGames.ts), la inter
 herramientas.
 
 Una variante de `npm run balance` no toca el contenido del juego: `buildVariant`
-(tools/balance/variant.ts) construye otro `GameContent` con sus cambios y otras reglas, y los hilos se
-lo pasan a cada partida (`playGame`, `duelMatrix`). Dos contenidos se pueden jugar a la vez en el mismo
+(tools/balance/variant.ts) aplica sus cambios a una copia de los ficheros y la carga con
+`loadContent`, como el juego (se valida, se rehacen todas las tablas y se congela). Sus reglas son las
+de ese contenido (`rulesWith(variante.content)`). Los hilos reciben los ficheros, los cargan y se los
+pasan a cada partida (`playGame`, `duelMatrix`). Dos contenidos se pueden jugar a la vez en el mismo
 proceso (tests/gameContent.test.ts).
 

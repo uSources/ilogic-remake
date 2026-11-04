@@ -1,3 +1,4 @@
-import { defaultContent } from '@core/content/default';
+import type { GameContent } from '@core/content';
 
-export const unitLabelEs = (t: number): string => defaultContent().files.units[t]?.name.es ?? String(t);
+/** Nombre en español de un tipo de unidad del contenido con el que se ha jugado (el de la variante). */
+export const unitLabelEs = (content: GameContent, type: number): string => content.files.units[type]?.name.es ?? String(type);

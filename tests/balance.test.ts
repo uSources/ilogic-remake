@@ -33,7 +33,7 @@ describe('herramienta de equilibrio: variantes', () => {
     expect(tables.UNIT.cost[TANK]).toBe(18000);
     expect(tables.UNIT.mover[0]).toBe(4);
     expect(tables.POWER[TANK]![SOLDIER]).toBeCloseTo(POWER[TANK]![SOLDIER]! + 0.1);
-    expect(setup.rules).toMatchObject({
+    expect(rulesWith(setup.content)).toMatchObject({
       counterattack: false,
       fog: false,
       initialFunds: defaultContent().tables.DEFAULT_RULES.initialFunds * 2,
@@ -52,6 +52,29 @@ describe('herramienta de equilibrio: variantes', () => {
     expect(() => {
       (UNIT.cost as number[])[TANK] = 1;
     }).toThrow(TypeError);
+  });
+
+  it('cambia los ficheros y los vuelve a cargar: ficheros, tablas y reglas cuadran', () => {
+    const setup = buildVariant(
+      { name: 'v', set: { 'UNIT.cost.Tank': 9000, 'MOVE_COST.vehicle.Woods': null, 'RULES.upkeep': 0.2, 'AI.KILLBONUS': 7 } },
+      defaultContent(),
+    );
+    const { files, tables } = setup.content;
+    const woods = files.terrain.findIndex((terrain) => terrain.id === 'Woods');
+    expect(files.units[TANK]!.cost).toBe(9000);
+    expect(tables.UNIT.cost[TANK]).toBe(9000);
+    // Las tablas que salen de otras (CAN_WALK de movement) tambien se rehacen.
+    expect(files.terrain[woods]!.movement.vehicle).toBeNull();
+    expect(tables.CAN_WALK[1]![woods]).toBe(false);
+    expect(defaultContent().tables.CAN_WALK[1]![woods]).toBe(true);
+    expect(rulesWith(setup.content).upkeep).toBe(0.2);
+    expect(tables.AI.KILLBONUS).toBe(7);
+    expect(Object.isFrozen(files.units[TANK])).toBe(true);
+  });
+
+  it('un valor que el contenido no admite para antes de jugar (lo valida loadContent)', () => {
+    expect(() => buildVariant({ name: 'x', set: { 'UNIT.cost.Tank': -5 } }, defaultContent())).toThrow(/cost/);
+    expect(() => buildVariant({ name: 'x', set: { 'RULES.upkeep': 'x100' } }, defaultContent())).toThrow(/upkeep/);
   });
 
   it('avisa de rutas o valores no validos', () => {

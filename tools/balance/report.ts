@@ -1,5 +1,5 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
-import type { ContentTables } from '@core/content';
+import type { GameContent } from '@core/content';
 import { unitLabelEs } from './names';
 import type { DuelCell } from './duel';
 import type { GameRecord } from './play';
@@ -97,8 +97,8 @@ export function buildReport(
   records: GameRecord[],
   meta: { name: string; variant: Variant; changes: Report['changes']; maxDays: number; seeds: [number, number]; policies: string },
   targets: Targets,
-  /** Tablas del contenido con el que se ha jugado (el de la variante). */
-  tables: ContentTables,
+  /** Contenido con el que se ha jugado (el de la variante): sus tablas y sus nombres. */
+  content: GameContent,
   duel?: { terrain: string; cells: DuelCell[] },
 ): Report {
   const n = records.length;
@@ -157,7 +157,7 @@ export function buildReport(
 
   // Unidades (los dos bandos juntos).
   const totalBought = records.reduce((a, r) => a + r.units.flat().reduce((x, t) => x + t.bought, 0), 0);
-  const { UNIT: unitStats, UNIT_NAMES } = tables;
+  const { UNIT: unitStats, UNIT_NAMES } = content.tables;
   const units: UnitRow[] = [];
   for (let T = 0; T < UNIT_NAMES.length; T++) {
     let bought = 0,
@@ -181,7 +181,7 @@ export function buildReport(
     const fights = unitStats.canfight[T] && unitStats.alcance[T]! > 0;
     units.push({
       type: UNIT_NAMES[T]!,
-      label: unitLabelEs(T),
+      label: unitLabelEs(content, T),
       cost: unitStats.cost[T]!,
       bought,
       share: totalBought ? bought / totalBought : 0,
