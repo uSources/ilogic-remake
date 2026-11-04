@@ -209,8 +209,8 @@ async function scenarios(page, cdp, name) {
   await page.evaluate(() => window.ilogicDebug.idle());
   const s4 = await unit(page, s0.uid);
   check(
-    s4?.command?.kind === 'defend' && s4.command.at.x === SOLDIER.x + 4 && (await phase(page)) === 'map',
-    `tocar «Defender allí» da la orden (${JSON.stringify(s4?.command)})`,
+    s4?.standingOrder?.kind === 'defend' && s4.standingOrder.at.x === SOLDIER.x + 4 && (await phase(page)) === 'map',
+    `tocar «Defender allí» da la orden (${JSON.stringify(s4?.standingOrder)})`,
   );
   // Mantener pulsada la propia unidad elegida la sigue cogiendo (no abre ordenes).
   await start(page);
@@ -218,7 +218,7 @@ async function scenarios(page, cdp, name) {
   await tap(page, SOLDIER.x, SOLDIER.y);
   await drag(page, cdp, await at(page, SOLDIER.x, SOLDIER.y), await at(page, SOLDIER.x + 1, SOLDIER.y), 320);
   const s5 = await unit(page, s0.uid);
-  check(s5?.x === SOLDIER.x + 1 && !s5?.command, 'mantener y arrastrar la unidad elegida la sigue moviendo');
+  check(s5?.x === SOLDIER.x + 1 && !s5?.standingOrder, 'mantener y arrastrar la unidad elegida la sigue moviendo');
 
   // Arrastrar desde una casilla vacia: mueve el mapa.
   await start(page);
