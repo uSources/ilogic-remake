@@ -44,7 +44,15 @@ const fresh = (u: Unit) => {
   u.active = u.canMove = u.canFire = true;
 };
 
-export function duelMatrix(opts: { trials: number; terrain: string; seed: number; rules: RulesConfig }): DuelCell[] {
+/** Cuantos duelos por pareja, en que terreno, con que semilla y con que reglas. */
+export interface DuelOptions {
+  trials: number;
+  terrain: string;
+  seed: number;
+  rules: RulesConfig;
+}
+
+export function duelMatrix(opts: DuelOptions): DuelCell[] {
   const t = Math.max(0, TERRAIN_NAMES.indexOf(opts.terrain as (typeof TERRAIN_NAMES)[number]));
   const rng = seededRng(opts.seed);
   const cells: DuelCell[] = [];

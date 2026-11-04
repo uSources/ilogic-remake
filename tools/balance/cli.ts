@@ -14,11 +14,10 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
-import { duelMatrix } from './duel';
 import type { Policy } from './play';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
-import { applyVariant, restore, snapshot, variantRules, type Variant } from './variant';
-import { runGames } from './runner';
+import { buildVariant, type Variant } from './variant';
+import { runDuels, runGames } from './runner';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 const REPORTS = join(ROOT, 'balance/reports');
@@ -88,11 +87,11 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
   const policies: [Policy, Policy] = vs === 'passive' ? ['passive', 'ai'] : ['ai', 'ai'];
   const threads = Math.max(1, Math.min(a.num('threads', cpus().length), games));
   const seeds = Array.from({ length: games }, (_, i) => seed0 + i);
-  const snap = snapshot();
-  const changes = applyVariant(variant); // en este hilo: para el informe, los duelos y la validacion
+  const setup = buildVariant(variant); // aqui se valida: una ruta o un valor mal escrito para antes de jugar
+  const changes = setup.changes;
   console.log(`Variante "${variant.name}": ${changes.length} cambios. ${games} partidas, ${threads} hilos...`);
   const records = await runGames(
-    variant,
+    setup,
     seeds,
     maxDays,
     policies,
@@ -102,16 +101,14 @@ async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<R
     a.num('size', 32),
   );
   const terrain = a.one('terrain', 'Grass')!;
-  const duel = a.one('no-duel')
-    ? undefined
-    : { terrain, cells: duelMatrix({ trials: 200, terrain, seed: seed0, rules: variantRules(variant) }) };
+  const duel = a.one('no-duel') ? undefined : { terrain, cells: await runDuels(setup, { trials: 200, terrain, seed: seed0 }) };
   const report = buildReport(
     records,
     { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') },
     targetsFrom(a),
+    setup.content.tables.UNIT,
     duel,
   );
-  restore(snap);
   return report;
 }
 
@@ -137,9 +134,8 @@ async function main(): Promise<void> {
     }
     case 'duel': {
       const variant = loadVariant(a);
-      applyVariant(variant);
       const terrain = a.one('terrain', 'Grass')!;
-      const cells = duelMatrix({ trials: a.num('trials', 300), terrain, seed: a.num('seed', 1), rules: variantRules(variant) });
+      const cells = await runDuels(buildVariant(variant), { trials: a.num('trials', 300), terrain, seed: a.num('seed', 1) });
       const path = save(`duelos-${variant.name}-${terrain}`, duelMarkdown(cells, terrain));
       console.log(`Duelos: ${path}`);
       return;

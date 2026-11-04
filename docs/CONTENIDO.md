@@ -241,3 +241,9 @@ Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas t
 todo a la vez y construye las tablas que reexporta `data.ts` (`UNIT`, `POWER`, `TERRAIN`, `Movement`,
 `DEFAULT_RULES`, `AI`...). Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 
+El contenido en uso entra por un solo sitio, `content/active.ts` (`ACTIVE_CONTENT`, un `GameContent`:
+ficheros y tablas), y `data.ts` lo **congela**: nadie lo puede cambiar mientras se juega. Una variante
+de `npm run balance` no toca esas tablas: `buildVariant` (tools/balance/variant.ts) construye otro
+`GameContent` con sus cambios y otras reglas, y cada hilo de la herramienta carga el nucleo con ese
+contenido (`tools/balance/contentHook.mjs` sustituye `content/active.ts` al cargarlo).
+

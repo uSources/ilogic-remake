@@ -3,12 +3,15 @@
 // src/core/content/*.json (ver docs/CONTENIDO.md) y aqui se convierten en las tablas de siempre.
 // Correcciones respecto al original: tabla "poder" (filas 0, 8 y 17 desalineadas),
 // fila 18 de "unitHeals" (faltaba) y fila 2 de PROBS_PER_ADJ (sobraba un valor).
-import { loadContent, MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef } from './content';
+import { MoveType, TERRAIN_NAMES, TerrainType, type AbilityDef } from './content';
+import { ACTIVE_CONTENT } from './content/active';
 import type { RulesConfig } from './model';
+import { deepFreeze } from './util/freeze';
 
 export { MoveType, TerrainType, TERRAIN_NAMES, type AbilityDef };
 
-const { content, tables: T } = loadContent();
+/** El contenido en uso, congelado: las tablas de abajo no se pueden cambiar (ver content/active.ts). */
+const { content, tables: T } = deepFreeze(ACTIVE_CONTENT);
 
 /** Contenido tal y como esta en los JSON (nombres, notas, pistas para la IA...). */
 export const CONTENT = content;
@@ -25,8 +28,8 @@ export const UNIT_NAMES: readonly string[] = T.UNIT_NAMES;
 export const UNIT_TYPES = UNIT_NAMES.length;
 
 /**
- * Estadisticas por tipo de unidad (indice = UNIT_NAMES). Se pueden cambiar en memoria (las variantes de
- * tools/balance lo hacen); para cambiarlas de verdad, units.json.
+ * Estadisticas por tipo de unidad (indice = UNIT_NAMES). Para cambiarlas, units.json (o una variante de
+ * `npm run balance`, que juega con otro contenido).
  */
 export const UNIT = T.UNIT;
 
@@ -37,7 +40,7 @@ export const SPAWNER: readonly (readonly boolean[])[] = T.SPAWNER;
 /** [transporte][unidad]: puede llevarla (transport.carries) */
 export const CAN_CARRY: readonly (readonly boolean[])[] = T.CAN_CARRY;
 /** [atacante][defensor]: probabilidad de acierto por punto de vida (attack.hitChance) */
-export const POWER: number[][] = T.POWER;
+export const POWER: readonly (readonly number[])[] = T.POWER;
 /** [unidad][terreno]: prefijo de la imagen de 2013 (classicSprite) */
 export const UNIT_TERRAIN_PREFIX: readonly (readonly string[])[] = T.UNIT_TERRAIN_PREFIX;
 /** [unidad][unidad]: vida que le cura con la orden de reparar, al lado (heals) */
@@ -74,16 +77,15 @@ export const HIDING_TERRAIN: readonly number[] = T.HIDING_TERRAIN;
  *   Movement.canWalk(MoveType.VEHICLE, t)  se puede pasar
  *   Movement.cost(mt, TerrainType.WOODS)   coste de entrar (solo cuenta con la regla terrainCost)
  *
- * CAN_WALK y COST son las tablas [MoveType][terreno] (terrain.json, "movement"); se pueden cambiar en
- * memoria para probar variantes.
+ * CAN_WALK y COST son las tablas [MoveType][terreno] (terrain.json, "movement").
  */
-export const Movement = {
+export const Movement = Object.freeze({
   CAN_WALK: T.CAN_WALK,
   COST: T.MOVE_COST,
   of: (unitType: number): MoveType => UNIT.movtype[unitType]!,
   canWalk: (moveType: MoveType, terrain: number): boolean => Movement.CAN_WALK[moveType]?.[terrain] ?? false,
   cost: (moveType: MoveType, terrain: number): number => Movement.COST[moveType]?.[terrain] ?? 1,
-};
+});
 
 // ---- Generador de mapas (RandomMap) ----
 export { THEME_NAMES } from './content';

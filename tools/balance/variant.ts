@@ -16,9 +16,13 @@
  *
  * Tablas: UNIT, POWER, BUILDING, TERRAIN, MOVE_COST ("MOVE_COST.vehicle.Woods"), RULES, AI. Las filas/columnas se pueden
  * nombrar con los nombres internos (UNIT_NAMES, BUILDING_NAMES, TERRAIN_NAMES) o con su indice.
+ *
+ * Una variante no cambia el contenido en uso (esta congelado): `buildVariant` construye otro, con sus
+ * reglas, y runner.ts lo juega en hilos que cargan el nucleo con ese contenido.
  */
-import { DEFAULT_RULES, AI, BUILDING, BUILDING_NAMES, POWER, TERRAIN, TERRAIN_NAMES, UNIT, UNIT_NAMES, Movement } from '@core/data';
-import { MOVEMENTS } from '@core/content';
+import { DEFAULT_RULES } from '@core/data';
+import { MOVEMENTS, TERRAIN_NAMES, type GameContent } from '@core/content';
+import { ACTIVE_CONTENT } from '@core/content/active';
 import type { RulesConfig } from '@core/model';
 
 export interface Variant {
@@ -27,22 +31,44 @@ export interface Variant {
   set?: Record<string, number | string | boolean | null>;
 }
 
+/** Un valor cambiado por la variante (para el informe). */
+export interface VariantChange {
+  path: string;
+  from: unknown;
+  to: unknown;
+}
+
+/** Una variante lista para jugar: su contenido (otro, no el de siempre), sus reglas y lo que cambia. */
+export interface VariantSetup {
+  name: string;
+  content: GameContent;
+  rules: RulesConfig;
+  changes: VariantChange[];
+}
+
 type Table = Record<string, unknown> | unknown[];
-const TABLES: Record<string, Table> = {
-  UNIT,
-  POWER: POWER as unknown as unknown[],
-  BUILDING,
-  TERRAIN,
-  AI,
-  MOVE_COST: Movement.COST as unknown as unknown[],
-};
+type Slot = [Record<string | number, unknown>, string | number];
+
+/** Las tablas que se pueden cambiar, sobre una copia del contenido y de las reglas. */
+function editableTables(content: GameContent, rules: RulesConfig): Record<string, Table> {
+  const tables = content.tables;
+  return {
+    UNIT: tables.UNIT,
+    POWER: tables.POWER as unknown as unknown[],
+    BUILDING: tables.BUILDING,
+    TERRAIN: tables.TERRAIN,
+    AI: tables.AI,
+    MOVE_COST: tables.MOVE_COST as unknown as unknown[],
+    RULES: rules as unknown as Record<string, unknown>,
+  };
+}
 
 /** Que nombres valen para los indices de cada tabla/campo. */
-function namesFor(table: string, depth: number): readonly string[] | null {
-  if (table === 'UNIT' || table === 'POWER') return UNIT_NAMES;
-  if (table === 'BUILDING') return BUILDING_NAMES;
+function namesFor(content: GameContent, table: string, depth: number): readonly string[] | null {
+  if (table === 'UNIT' || table === 'POWER') return content.tables.UNIT_NAMES;
+  if (table === 'BUILDING') return content.tables.BUILDING_NAMES;
   if (table === 'MOVE_COST') return depth === 0 ? MOVEMENTS : TERRAIN_NAMES;
-  if (table === 'TERRAIN') return depth === 1 ? TERRAIN_NAMES : TERRAIN_NAMES;
+  if (table === 'TERRAIN') return TERRAIN_NAMES;
   return null;
 }
 
@@ -66,12 +92,12 @@ function applyValue(old: unknown, v: number | string | boolean | null): unknown 
   return v;
 }
 
-/** Resuelve "UNIT.cost.Tank" en [contenedor, clave] (puede haber varias con "*"). */
-function targets(path: string): [Record<string | number, unknown>, string | number][] {
+/** Resuelve "UNIT.cost.Tank" en [contenedor, clave] dentro de `tables` (puede haber varias con "*"). */
+function targets(content: GameContent, tables: Record<string, Table>, path: string): Slot[] {
   const [tableName, ...rest] = path.split('.');
-  const table = TABLES[tableName!];
-  if (!table) throw new Error(`Tabla desconocida "${tableName}" (validas: ${Object.keys(TABLES).join(', ')})`);
-  let level: [Record<string | number, unknown>, string | number][] = [];
+  const table = tables[tableName!];
+  if (!table) throw new Error(`Tabla desconocida "${tableName}" (validas: ${Object.keys(tables).join(', ')})`);
+  let level: Slot[] = [];
   // Primer nivel: en POWER es la fila (unidad); en el resto, el campo.
   let current: unknown[] = [table];
   for (let d = 0; d < rest.length; d++) {
@@ -80,8 +106,7 @@ function targets(path: string): [Record<string | number, unknown>, string | numb
     level = [];
     for (const c of current) {
       if (Array.isArray(c)) {
-        const names = tableName === 'TERRAIN' && d === 2 ? TERRAIN_NAMES : namesFor(tableName!, d);
-        for (const i of index(key, names, c.length)) {
+        for (const i of index(key, namesFor(content, tableName!, d), c.length)) {
           level.push([c as unknown as Record<number, unknown>, i]);
           next.push(c[i]);
         }
@@ -94,39 +119,23 @@ function targets(path: string): [Record<string | number, unknown>, string | numb
     current = next;
   }
   if (!level.length) throw new Error(`Ruta incompleta: ${path}`);
-  for (const [, , v] of level.map(([c, k]) => [c, k, c[k]] as const))
-    if (typeof v === 'object' && v !== null) throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
+  for (const [container, key] of level)
+    if (typeof container[key] === 'object' && container[key] !== null)
+      throw new Error(`"${path}" apunta a una tabla entera; indica la casilla`);
   return level;
 }
 
-/** Copia profunda de todas las tablas, para restaurarlas despues. */
-export function snapshot(): string {
-  return JSON.stringify(TABLES);
-}
-
-export function restore(snap: string): void {
-  const data = JSON.parse(snap) as Record<string, unknown>;
-  const copyInto = (dst: Record<string | number, unknown>, src: Record<string | number, unknown>) => {
-    for (const k of Object.keys(src)) {
-      const v = src[k];
-      if (v && typeof v === 'object' && dst[k] && typeof dst[k] === 'object')
-        copyInto(dst[k] as Record<string, unknown>, v as Record<string, unknown>);
-      else dst[k] = v;
-    }
-  };
-  for (const name of Object.keys(TABLES)) copyInto(TABLES[name] as Record<string, unknown>, data[name] as Record<string, unknown>);
-}
-
-/** Aplica una variante a las tablas (modifica los datos globales del juego). Devuelve los cambios hechos. */
-export function applyVariant(v: Variant): { path: string; from: unknown; to: unknown }[] {
-  const changes: { path: string; from: unknown; to: unknown }[] = [];
+/**
+ * Construye el contenido y las reglas de una variante a partir de `base` (el contenido en uso) y de
+ * las reglas de siempre, sin tocar ninguno de los dos.
+ */
+export function buildVariant(v: Variant, base: GameContent = ACTIVE_CONTENT): VariantSetup {
+  const content = structuredClone(base);
+  const rules: RulesConfig = { ...DEFAULT_RULES };
+  const tables = editableTables(content, rules);
+  const changes: VariantChange[] = [];
   for (const [path, value] of Object.entries(v.set ?? {})) {
-    if (isRulePath(path)) {
-      const key = rulePathKey(path);
-      changes.push({ path, from: DEFAULT_RULES[key], to: applyValue(DEFAULT_RULES[key], value) });
-      continue;
-    }
-    for (const [container, key] of targets(path)) {
+    for (const [container, key] of targets(content, tables, path)) {
       const from = container[key];
       const to = applyValue(from, value);
       if (typeof from !== typeof to && from !== null && to !== null) throw new Error(`"${path}": se esperaba ${typeof from}`);
@@ -134,27 +143,7 @@ export function applyVariant(v: Variant): { path: string; from: unknown; to: unk
       changes.push({ path: `${path}${path.includes('*') ? `[${key}]` : ''}`, from, to });
     }
   }
-  return changes;
-}
-
-const RULES_PREFIX = 'RULES.';
-const isRulePath = (path: string): boolean => path.startsWith(RULES_PREFIX);
-
-function rulePathKey(path: string): keyof RulesConfig {
-  const key = path.slice(RULES_PREFIX.length);
-  if (!(key in DEFAULT_RULES)) throw new Error(`"${key}" no existe en RULES`);
-  return key as keyof RulesConfig;
-}
-
-/** Las reglas con las que se juega la variante: las de siempre con sus cambios de `RULES.*`. */
-export function variantRules(v: Variant): RulesConfig {
-  const rules: Record<string, unknown> = { ...DEFAULT_RULES };
-  for (const [path, value] of Object.entries(v.set ?? {})) {
-    if (!isRulePath(path)) continue;
-    const key = rulePathKey(path);
-    rules[key] = applyValue(rules[key], value);
-  }
-  return rules as unknown as RulesConfig;
+  return { name: v.name, content, rules, changes };
 }
 
 export const BASELINE: Variant = { name: 'actual' };

@@ -1,5 +1,6 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
-import { UNIT, UNIT_NAMES, UNIT_TYPES } from '@core/data';
+import { UNIT_NAMES, UNIT_TYPES } from '@core/data';
+import type { ContentTables } from '@core/content';
 import { unitLabelEs } from './names';
 import type { DuelCell } from './duel';
 import type { GameRecord } from './play';
@@ -97,6 +98,8 @@ export function buildReport(
   records: GameRecord[],
   meta: { name: string; variant: Variant; changes: Report['changes']; maxDays: number; seeds: [number, number]; policies: string },
   targets: Targets,
+  /** Estadisticas de las unidades con las que se ha jugado (las de la variante). */
+  unitStats: ContentTables['UNIT'],
   duel?: { terrain: string; cells: DuelCell[] },
 ): Report {
   const n = records.length;
@@ -175,11 +178,11 @@ export function buildReport(
         deaths += t.deaths;
         captures += t.captures;
       }
-    const fights = UNIT.canfight[T] && UNIT.alcance[T]! > 0;
+    const fights = unitStats.canfight[T] && unitStats.alcance[T]! > 0;
     units.push({
       type: UNIT_NAMES[T]!,
       label: unitLabelEs(T),
-      cost: UNIT.cost[T]!,
+      cost: unitStats.cost[T]!,
       bought,
       share: totalBought ? bought / totalBought : 0,
       spent,
@@ -232,7 +235,7 @@ export function buildReport(
           });
       }
     }
-    if (UNIT.canfight[T] && totalBought > 200 && u.share < 0.005)
+    if (unitStats.canfight[T] && totalBought > 200 && u.share < 0.005)
       flags.push(
         `${u.label}: casi nadie la compra (${(u.share * 100).toFixed(1)} % de las compras). Ojo: la IA elige compras con sus propias reglas.`,
       );

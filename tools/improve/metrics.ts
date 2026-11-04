@@ -14,6 +14,7 @@ import { cpus } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { buildReport, DEFAULT_TARGETS, type Report } from '../balance/report';
 import { runGames } from '../balance/runner';
+import { buildVariant } from '../balance/variant';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const OUT = `${ROOT}improve/metrics/`;
@@ -146,12 +147,14 @@ async function main(): Promise<void> {
   const threads = Math.max(1, Math.min(cpus().length, games));
   const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, i) => 1 + i);
   const variant = { name, set: {} };
-  const a = await runGames(variant, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
-  const b = await runGames(variant, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
+  const setup = buildVariant(variant);
+  const a = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
+  const b = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
   const report = buildReport(
     [...a, ...b],
     { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' },
     DEFAULT_TARGETS,
+    setup.content.tables.UNIT,
   );
   const m = score(report, size);
   const base = existsSync(BASELINE) ? (JSON.parse(readFileSync(BASELINE, 'utf8')) as Metrics) : null;

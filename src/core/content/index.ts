@@ -97,8 +97,20 @@ export function buildTables(c: Content) {
   };
 }
 
+/** Las tablas que usan las reglas (las de data.ts), construidas a partir de los ficheros. */
+export type ContentTables = ReturnType<typeof buildTables>;
+
+/**
+ * El contenido de una partida: los ficheros tal cual (nombres, notas...) y sus tablas. Son datos
+ * (se pueden pasar como JSON a otro hilo) y, una vez en uso, no cambian (data.ts los congela).
+ */
+export interface GameContent {
+  content: Content;
+  tables: ContentTables;
+}
+
 /** Lee, valida y convierte el contenido. Si algo esta mal, el juego no arranca y dice que. */
-export function loadContent(c: Content = readContentFiles()) {
+export function loadContent(c: Content = readContentFiles()): GameContent {
   const errs = validateContent(c);
   if (errs.length) throw new Error(`Contenido del juego no valido (src/core/content):\n- ${errs.join('\n- ')}`);
   return { content: c, tables: buildTables(c) };
