@@ -11,7 +11,7 @@ import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
 import { sanitizeStats } from './stats';
 import { assignKeys } from './squads/naming';
-import { migrate, SAVE_VERSION, type SaveContext } from './saveMigrations';
+import { migrateChecked, migrateRead, SAVE_VERSION, type SaveContext } from './saveMigrations';
 import type { GameState, Pos, RulesConfig, SavedGameState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
@@ -44,9 +44,14 @@ export function serialize(s: GameState): string {
  * (MIGRATIONS, en saveMigrations.ts). Devuelve null si el fichero no es valido.
  */
 export function deserialize(json: string, context: SaveContext): GameState | null {
-  const parsed = parseState(json, context);
-  if (!parsed) return null;
-  const { s, savedVersion } = parsed;
+  const raw = parseObject(json);
+  const savedVersion = raw?.version;
+  if (!raw || !isInt(savedVersion, 1, SAVE_VERSION)) return null;
+  migrateRead(raw, savedVersion, context);
+  raw.version = SAVE_VERSION;
+  if (!hasGameShape(raw)) return null;
+  // El contenido no se guarda: es el de quien lee (si el JSON trae un "content", se pisa).
+  const s: GameState = { ...raw, content: context.content };
   if (!readMap(s) || !hasValidBasics(s)) return null;
   if (!readUnits(s) || !hasConsistentCargo(s) || !readBuildings(s)) return null;
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...s.units.map((unit) => unit.uid)) + 1);
@@ -60,29 +65,27 @@ export function deserialize(json: string, context: SaveContext): GameState | nul
   cleanControlPoints(s);
   cleanGenerals(s);
   if (!hasValidRules(s)) return null;
-  migrate(s, savedVersion, 'checked', context);
-  s.version = SAVE_VERSION;
+  migrateChecked(s, savedVersion, context);
   return s;
 }
 
-/**
- * El JSON, si es un objeto con una version del formato que se sabe leer, con el contenido de quien lo
- * lee y los pasos de MIGRATIONS que van sobre el JSON tal cual.
- */
-function parseState(json: string, context: SaveContext): { s: GameState; savedVersion: number } | null {
-  let raw: unknown;
+/** El JSON, si es un objeto (sin comprobar nada mas). */
+function parseObject(json: string): Record<string, unknown> | null {
   try {
-    raw = JSON.parse(json);
+    const raw: unknown = JSON.parse(json);
+    return typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
   } catch {
     return null;
   }
-  if (typeof raw !== 'object' || raw === null) return null;
-  const savedVersion = (raw as { version?: unknown }).version;
-  if (!isInt(savedVersion, 1, SAVE_VERSION)) return null;
-  // El contenido no se guarda: es el de quien lee (si el JSON trae un "content", se ignora).
-  const s: GameState = { ...(raw as SavedGameState), content: context.content };
-  migrate(s, savedVersion, 'read', context);
-  return { s, savedVersion };
+}
+
+/**
+ * Lo de arriba del JSON (ya al dia) tiene la forma de una partida guardada: listas y objetos donde
+ * tocan. Lo de dentro lo comprueba deserialize despues, campo a campo.
+ */
+function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unknown> & SavedGameState {
+  const isObject = (value: unknown) => typeof value === 'object' && value !== null;
+  return raw.version === SAVE_VERSION && [raw.map, raw.funds, raw.units, raw.buildings].every(Array.isArray) && isObject(raw.rules);
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */

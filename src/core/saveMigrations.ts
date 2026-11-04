@@ -27,19 +27,27 @@ export interface SaveContext {
   missionRules(id: string): RulesConfig | undefined;
 }
 
-/** Un paso para leer partidas antiguas. */
-export interface SaveMigration {
+interface MigrationInfo {
   /** Que cambia, en pocas palabras (para quien lea la lista). */
   readonly name: string;
   /** Lo necesitan las partidas guardadas con esta version del formato o una anterior. */
   readonly upToVersion: number;
-  /**
-   * 'read': sobre el JSON tal cual, antes de comprobarlo (puede venir roto: lo comprueba deserialize
-   * despues). 'checked': sobre la partida ya comprobada.
-   */
-  readonly stage: 'read' | 'checked';
+}
+
+/** Un paso sobre el JSON tal cual, antes de comprobarlo: puede venir roto (lo comprueba deserialize despues). */
+export interface ReadMigration extends MigrationInfo {
+  readonly stage: 'read';
+  apply(raw: Record<string, unknown>, context: SaveContext): void;
+}
+
+/** Un paso sobre la partida ya comprobada. */
+export interface CheckedMigration extends MigrationInfo {
+  readonly stage: 'checked';
   apply(s: GameState, context: SaveContext): void;
 }
+
+/** Un paso para leer partidas antiguas. */
+export type SaveMigration = ReadMigration | CheckedMigration;
 
 /** Lo que el JSON trae como lista (o una vacia si no lo es: entonces deserialize lo rechazara). */
 const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? (value as unknown[]) : []);
@@ -81,8 +89,8 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'unidades sin combustible ni municion',
     upToVersion: 1,
     stage: 'read',
-    apply: (s) => {
-      for (const unit of listOf(s.units)) {
+    apply: (raw) => {
+      for (const unit of listOf(raw.units)) {
         if (!isObject(unit)) continue;
         delete unit.fuel;
         delete unit.ammo;
@@ -94,8 +102,8 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'command pasa a standingOrder',
     upToVersion: 1,
     stage: 'read',
-    apply: (s) => {
-      for (const holder of [...listOf(s.units), ...listOf(s.squads)]) renameField(holder, 'command', 'standingOrder');
+    apply: (raw) => {
+      for (const holder of [...listOf(raw.units), ...listOf(raw.squads)]) renameField(holder, 'command', 'standingOrder');
     },
   },
   {
@@ -103,8 +111,8 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'order pasa a travelTo',
     upToVersion: 1,
     stage: 'read',
-    apply: (s) => {
-      for (const unit of listOf(s.units)) renameField(unit, 'order', 'travelTo');
+    apply: (raw) => {
+      for (const unit of listOf(raw.units)) renameField(unit, 'order', 'travelTo');
     },
   },
   {
@@ -113,10 +121,10 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'las misiones antiguas se juegan con sus reglas',
     upToVersion: 1,
     stage: 'read',
-    apply: (s, context) => {
-      const id = isObject(s.mission) ? s.mission.id : undefined;
+    apply: (raw, context) => {
+      const id = isObject(raw.mission) ? raw.mission.id : undefined;
       const rules = typeof id === 'string' ? context.missionRules(id) : undefined;
-      if (rules) s.rules = rules;
+      if (rules) raw.rules = rules;
     },
   },
   {
@@ -124,16 +132,16 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'partidas sin reglas: las de siempre',
     upToVersion: 1,
     stage: 'read',
-    apply: (s, context) => {
-      if ((s as { rules?: unknown }).rules === undefined) s.rules = rulesWith(context.content);
+    apply: (raw, context) => {
+      if (raw.rules === undefined) raw.rules = rulesWith(context.content);
     },
   },
   {
     name: 'reglas que se añadieron despues: como se jugaba entonces',
     upToVersion: 1,
     stage: 'read',
-    apply: (s) => {
-      const rules: unknown = s.rules;
+    apply: (raw) => {
+      const rules = raw.rules;
       if (!isObject(rules)) return;
       for (const [rule, value] of Object.entries(RULES_ADDED_LATER)) rules[rule] ??= value;
     },
@@ -149,9 +157,14 @@ export const MIGRATIONS: readonly SaveMigration[] = [
   },
 ];
 
-/** Aplica a una partida guardada con la version `savedVersion` los pasos de esa etapa que necesita. */
-export function migrate(s: GameState, savedVersion: number, stage: SaveMigration['stage'], context: SaveContext): void {
-  for (const migration of MIGRATIONS) {
-    if (migration.stage === stage && savedVersion <= migration.upToVersion) migration.apply(s, context);
-  }
+const needs = (migration: SaveMigration, savedVersion: number) => savedVersion <= migration.upToVersion;
+
+/** Aplica al JSON de una partida guardada con la version `savedVersion` los pasos de la etapa 'read' que necesita. */
+export function migrateRead(raw: Record<string, unknown>, savedVersion: number, context: SaveContext): void {
+  for (const migration of MIGRATIONS) if (migration.stage === 'read' && needs(migration, savedVersion)) migration.apply(raw, context);
+}
+
+/** Aplica a la partida ya comprobada los pasos de la etapa 'checked' que necesita. */
+export function migrateChecked(s: GameState, savedVersion: number, context: SaveContext): void {
+  for (const migration of MIGRATIONS) if (migration.stage === 'checked' && needs(migration, savedVersion)) migration.apply(s, context);
 }
