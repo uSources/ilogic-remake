@@ -104,7 +104,7 @@ export class HomeScreen {
       funds: save.funds[0],
       size: mapGrid(save).width,
       mission,
-      limit: save.rules?.dayLimit ?? null,
+      limit: save.rules.dayLimit,
     };
   }
 
