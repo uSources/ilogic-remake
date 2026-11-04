@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { saveContext } from '@core/defaultGames';
 import { aiTurn } from '@core/ai';
-import { DEFAULT_RULES } from '@core/data';
+import { DEFAULT_RULES, rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
@@ -26,18 +27,37 @@ describe('misiones', () => {
       );
     }
     // Guardar y cargar conserva la mision.
-    expect(deserialize(serialize(s), defaultContent())!.mission).toEqual(s.mission);
+    expect(deserialize(serialize(s), saveContext())!.mission).toEqual(s.mission);
   });
 
   it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: guardada y cargada sigue con sus reglas (fallo K1)', (_id, m) => {
     const s = buildMission(m, defaultContent());
     expect(s.rules).toEqual(missionRules(m));
     expect(s.rules).not.toEqual(DEFAULT_RULES); // sin mantenimiento, ni puntos de mando, ni clima
-    expect(deserialize(serialize(s), defaultContent())!.rules).toEqual(missionRules(m));
+    expect(deserialize(serialize(s), saveContext())!.rules).toEqual(missionRules(m));
     // Las guardadas antes del arreglo no llevaban reglas: se recuperan las de su mision.
     const old = JSON.parse(serialize(s)) as { rules?: unknown };
     delete old.rules;
-    expect(deserialize(JSON.stringify(old), defaultContent())!.rules).toEqual(missionRules(m));
+    expect(deserialize(JSON.stringify(old), saveContext())!.rules).toEqual(missionRules(m));
+  });
+
+  it.each(MISSIONS.map((m) => [m.id, m] as const))(
+    '%s: guardada con las reglas de escaramuza, se juega con las suyas (fallo K1)',
+    (_id, m) => {
+      // Las guardadas con el fallo llevaban las reglas de siempre: no se distinguen de unas elegidas,
+      // asi que una mision conocida se juega siempre con las suyas.
+      const saved = JSON.parse(serialize(buildMission(m, defaultContent()))) as { rules: unknown };
+      saved.rules = rulesWith();
+      expect(saved.rules).toEqual(DEFAULT_RULES);
+      expect(deserialize(JSON.stringify(saved), saveContext())!.rules).toEqual(missionRules(m));
+    },
+  );
+
+  it('una mision que ya no existe se carga con las reglas que guardo', () => {
+    const saved = JSON.parse(serialize(buildMission(MISSIONS[0]!, defaultContent()))) as { mission: { id: string }; rules: unknown };
+    saved.mission.id = 'ya-no-existe';
+    saved.rules = rulesWith({ fog: true, upkeep: 0.1 });
+    expect(deserialize(JSON.stringify(saved), saveContext())!.rules).toEqual(rulesWith({ fog: true, upkeep: 0.1 }));
   });
 
   it.each(MISSIONS.map((m) => [m.id, m] as const))('%s: se juega IA contra IA sin errores', (_id, m) => {

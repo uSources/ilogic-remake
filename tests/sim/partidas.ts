@@ -1,9 +1,8 @@
-import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/data';
 import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
-import { createGame } from '@core/defaultGames';
+import { createGame, saveContext } from '@core/defaultGames';
 import { endRound, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
@@ -40,7 +39,7 @@ export function aiVsAi(from: number, to: number): void {
       endRound(s);
       checkInvariants(s);
       if (s.day % 10 === 0) {
-        const copy = deserialize(serialize(s), defaultContent());
+        const copy = deserialize(serialize(s), saveContext());
         expect(copy).not.toBeNull();
         expect(serialize(copy!)).toBe(serialize(s));
       }

@@ -4,7 +4,7 @@ import { rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
-import { createGame } from '@core/defaultGames';
+import { createGame, saveContext } from '@core/defaultGames';
 import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
@@ -48,18 +48,18 @@ describe('nueva partida: tamaños de mapa', () => {
     const rules = rulesWith({ counterattack: false, fog: false, upkeep: 0.25 });
     const s = createGame(seededRng(3), { size: 20, rules });
     expect(s.rules).toEqual(rules);
-    expect(deserialize(serialize(s), defaultContent())!.rules).toEqual(rules);
+    expect(deserialize(serialize(s), saveContext())!.rules).toEqual(rules);
   });
 
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
     const s = createGame(seededRng(7), { size: 40, rules: rulesWith() });
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
-    const c = deserialize(json, defaultContent())!;
+    const c = deserialize(json, saveContext())!;
     expect(c).not.toBeNull();
     expect([mapGrid(c).width, mapGrid(c).height]).toEqual([40, 40]);
     expect(c.setup).toEqual({ seed: 7, size: 40, theme: null });
-    expect(deserialize(JSON.stringify({ ...JSON.parse(json), map: blankMap(32).slice(0, 25) }), defaultContent())).toBeNull();
+    expect(deserialize(JSON.stringify({ ...JSON.parse(json), map: blankMap(32).slice(0, 25) }), saveContext())).toBeNull();
   });
 });
 
@@ -85,7 +85,7 @@ describe('repetir el turno enemigo', () => {
     const before = serialize(s);
     const ev1 = [...aiTurn(s, seededRng(42), 1)];
     const after = serialize(s);
-    const copy = deserialize(before, defaultContent())!;
+    const copy = deserialize(before, saveContext())!;
     const ev2 = [...aiTurn(copy, seededRng(42), 1)];
     expect(ev2).toEqual(ev1);
     expect(serialize(copy)).toBe(after);

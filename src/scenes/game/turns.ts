@@ -3,6 +3,7 @@
  * paso, el final de la ronda (ingresos, curar) y la vuelta al jugador. Tambien repetir el ultimo turno
  * enemigo (misma semilla) y avanzar las ordenes de varios turnos al empezar el propio.
  */
+import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
 import { defaultContent } from '../../core/content/default';
@@ -259,7 +260,7 @@ export class TurnFlow {
     host.toMap();
     const saved = this.saveCamera();
     const after = serialize(host.state);
-    const before = deserialize(last.before, contentOf(host.state));
+    const before = deserialize(last.before, saveContext(contentOf(host.state)));
     if (!before) return;
     host.state = before;
     this.replaying = true;
@@ -276,7 +277,7 @@ export class TurnFlow {
       await host.play([event]);
       if (match !== host.match || host.ended) return;
     }
-    host.state = deserialize(after, contentOf(host.state))!;
+    host.state = deserialize(after, saveContext(contentOf(host.state)))!;
     this.replaying = false;
     this.enemyPlaying = false;
     this.backToPlayer(saved);

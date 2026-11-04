@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { saveContext } from '@core/defaultGames';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { manhattan, seededRng } from '@core/geom';
@@ -236,7 +237,7 @@ describe('escuadras', () => {
     const a = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const q = formSquad(s, [a], 'Lobos')!;
     giveStandingOrder(s, [a], 'capture', { x: 12, y: 5 });
-    const back = deserialize(serialize(s), defaultContent())!;
+    const back = deserialize(serialize(s), saveContext())!;
     // Toda la escuadra: la orden es de la escuadra, no de la unidad.
     expect(back.squads).toEqual([{ id: q.id, name: 'Lobos', key: 1, standingOrder: { kind: 'capture', at: { x: 12, y: 5 } } }]);
     expect(back.units[0]).toMatchObject({ squad: q.id });
@@ -251,7 +252,7 @@ describe('escuadras', () => {
     giveStandingOrder(s, [a], 'attack', { x: 12, y: 5 });
     giveStandingOrder(s, [b], 'defend', { x: 6, y: 5 });
     const old = serialize(s).replaceAll('"standingOrder":', '"command":');
-    const back = deserialize(old, defaultContent())!;
+    const back = deserialize(old, saveContext())!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
     expect(back.units.find((unit) => unit.uid === b.uid)!.standingOrder).toEqual({ kind: 'defend', at: { x: 6, y: 5 } });
     expect(JSON.stringify(back)).not.toContain('"command"');
@@ -264,7 +265,7 @@ describe('escuadras', () => {
     const raw = JSON.parse(serialize(s)) as { units: Record<string, unknown>[]; squads?: unknown };
     raw.units[0]!.standingOrder = { kind: 'bailar', at: { x: 1, y: 1 } };
     raw.units[0]!.squad = 7;
-    const back = deserialize(JSON.stringify(raw), defaultContent())!;
+    const back = deserialize(JSON.stringify(raw), saveContext())!;
     expect(back.units[0]!.standingOrder).toBeUndefined();
     expect(back.units[0]!.squad).toBeUndefined();
   });
@@ -477,7 +478,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
   it('una partida de antes (orden copiada en cada unidad) carga con la orden en la escuadra', () => {
     const { s, a, b, t, q } = squadWorld();
     for (const u of [a, b, t]) u.standingOrder = { kind: u === t ? 'attack' : 'capture', at: { x: 12, y: 5 } };
-    const back = deserialize(serialize(s), defaultContent())!;
+    const back = deserialize(serialize(s), saveContext())!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
     expect(back.units.every((u) => u.standingOrder === undefined)).toBe(true);
     expect(q.id).toBe(back.squads![0]!.id);
@@ -537,10 +538,10 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     formSquad(s, [a]);
     formSquad(s, [b]);
     for (const q of s.squads!) delete q.key;
-    const back = deserialize(serialize(s), defaultContent())!;
+    const back = deserialize(serialize(s), saveContext())!;
     expect(back.squads!.map((q) => q.key)).toEqual([1, 2]);
     s.squads![0]!.key = 4;
     s.squads![1]!.key = 4;
-    expect(deserialize(serialize(s), defaultContent())!.squads!.map((q) => q.key)).toEqual([4, 1]);
+    expect(deserialize(serialize(s), saveContext())!.squads!.map((q) => q.key)).toEqual([4, 1]);
   });
 });

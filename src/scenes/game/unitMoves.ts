@@ -2,6 +2,7 @@
  * Mover las unidades del jugador: elegir una (MoveSession), soltarla en una casilla (mover, atacar,
  * unirse, subir), ordenes de varios turnos, mover un grupo y deshacer (Atras en su menu y Ctrl+Z).
  */
+import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { manhattan, samePos } from '../../core/geom';
 import { closestStep } from '../../core/targeting';
@@ -287,7 +288,7 @@ export class UnitMoves {
   undoLast(): void {
     const previous = this.undoStack.pop();
     if (!previous) return showToast(t('nothingToUndo'));
-    const restored = deserialize(previous, contentOf(this.h.state));
+    const restored = deserialize(previous, saveContext(contentOf(this.h.state)));
     if (!restored) return;
     this.h.state = restored;
     this.h.toMap();

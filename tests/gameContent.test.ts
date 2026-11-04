@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { saveContext } from '@core/defaultGames';
 import { aiTurn } from '@core/ai';
 import { loadContent, readContentFiles, type GameContent } from '@core/content';
 import { defaultContent } from '@core/content/default';
@@ -57,8 +58,8 @@ describe('contenido de cada partida', () => {
     const variant = expensiveTanks();
     const s = newMatch(variant);
     expect(serialize(s)).not.toContain('tables');
-    expect(contentOf(deserialize(serialize(s), variant)!)).toBe(variant);
-    expect(contentOf(deserialize(serialize(s), defaultContent())!)).toBe(defaultContent());
+    expect(contentOf(deserialize(serialize(s), saveContext(variant))!)).toBe(variant);
+    expect(contentOf(deserialize(serialize(s), saveContext())!)).toBe(defaultContent());
     expect(contentOf(cloneState(s))).toBe(variant);
   });
 

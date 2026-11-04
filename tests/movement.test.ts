@@ -1,4 +1,4 @@
-import { defaultContent } from '@core/content/default';
+import { saveContext } from '@core/defaultGames';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_RULES } from './plainRules';
@@ -209,7 +209,7 @@ describe('movimiento: ordenes de varios turnos', () => {
     const step = stepToward(s, tank, goal)!;
     expect(step).toEqual({ x: 7, y: 2 });
     tank.order = goal;
-    expect(deserialize(serialize(s), defaultContent())!.units[0]!.order).toEqual(goal);
+    expect(deserialize(serialize(s), saveContext())!.units[0]!.order).toEqual(goal);
     // Un destino al que no se puede llegar (agua para un tanque): null.
     s.map[25]![25] = 1;
     expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();

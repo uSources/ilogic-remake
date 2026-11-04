@@ -4,7 +4,7 @@ import { DEFAULT_RULES, MoveType, rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
 import { manhattan, seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
-import { createGame } from '@core/defaultGames';
+import { createGame, saveContext } from '@core/defaultGames';
 import { placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -126,14 +126,14 @@ describe('puntos de control', () => {
 
   it('se guardan con la partida; las partidas antiguas siguen sin ellos', () => {
     const s = withPoints();
-    const back = deserialize(serialize(s), defaultContent())!;
+    const back = deserialize(serialize(s), saveContext())!;
     expect(back.controlPoints).toEqual(s.controlPoints);
     const raw = JSON.parse(serialize(s)) as { rules: Record<string, unknown>; controlPoints: unknown };
     delete raw.rules.controlPoints;
     delete raw.rules.controlIncome;
     delete raw.rules.controlRadius;
     raw.controlPoints = [{ x: -1, y: 2, owner: 0 }];
-    const old = deserialize(JSON.stringify(raw), defaultContent())!;
+    const old = deserialize(JSON.stringify(raw), saveContext())!;
     expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0, controlRadius: 0 });
     expect(old.controlPoints).toBeUndefined();
   });

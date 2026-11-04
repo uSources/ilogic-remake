@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { saveContext } from '@core/defaultGames';
 import { readContentFiles, validateContent } from '@core/content';
 import { rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
@@ -110,14 +111,14 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 3.5;
-    const back = deserialize(serialize(s), defaultContent())!;
+    const back = deserialize(serialize(s), saveContext())!;
     expect(back.generals).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);
     const bad = JSON.parse(serialize(s));
     bad.generals = [
       { id: 'Nadie', charge: 99 },
       { id: 'Brisa', charge: 99 },
     ];
-    expect(deserialize(JSON.stringify(bad), defaultContent())!.generals).toEqual([
+    expect(deserialize(JSON.stringify(bad), saveContext())!.generals).toEqual([
       null,
       { id: 'Brisa', charge: 6, used: false, reveal: false },
     ]);

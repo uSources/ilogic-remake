@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { saveContext } from '@core/defaultGames';
 import { rulesWith } from '@core/data';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
@@ -116,7 +117,7 @@ describe('partidas guardadas', () => {
     const s = blankState();
     const old = JSON.parse(serialize(s)) as { rules: Record<string, unknown> };
     for (const k of ['vetBonus', 'bounty', 'flankBonus', 'noHealUnderFire']) delete old.rules[k];
-    const back = deserialize(JSON.stringify(old), defaultContent());
+    const back = deserialize(JSON.stringify(old), saveContext());
     expect(back?.rules).toMatchObject({ vetBonus: 0.05, bounty: 0, flankBonus: 0, noHealUnderFire: false });
   });
 });

@@ -62,6 +62,28 @@ export default tseslint.config(
     },
   },
   {
+    // Leer partidas no depende del catalogo de misiones ni del contenido del juego: los da quien lee (SaveContext).
+    files: ['src/core/save.ts', 'src/core/saveMigrations.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
+            {
+              group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
+              message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
+            },
+            {
+              group: ['./missions', './content/default', './defaultGames'],
+              message: 'save.ts recibe las misiones y el contenido en SaveContext.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs', 'tools/**/*.ts', 'tests/**/*.ts'],
     ...tseslint.configs.disableTypeChecked,
   },
