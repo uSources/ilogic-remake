@@ -51,14 +51,14 @@ Las piezas de abajo, que usa todo lo demas:
 |---|---|
 | `model/` | los tipos de la partida (`GameState`, `Unit`, `Building`, `GameEvent`, `StandingOrder`, `Squad`, `RulesConfig`...). Solo tipos: no importa nada ni exporta constantes o funciones (ESLint lo vigila) |
 | `content/` | el contenido (JSON validados) y sus tablas: `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego (`defaultContent()`, perezoso). Ver docs/CONTENIDO.md |
-| `gameContent.ts` | el contenido de cada partida: lo ponen `newGameState` y `deserialize`, se lee con `tablesOf(s)`, `weightsOf(s)`, `contentOf(s)`, `movementOf(s, tipo)`, `canMoveOn`; `cloneState(s)` copia la partida con el suyo |
+| `gameContent.ts` | el contenido de cada partida es un campo, `GameState.content` (en el modelo se llama `MatchContent` y content/index.ts le da la forma de `GameContent`): lo ponen `newGameState` y `deserialize`, no se guarda (`serialize` escribe `SavedGameState`) y se lee con `tablesOf(s)`, `weightsOf(s)`, `contentOf(s)`; `cloneState(s)` copia la partida y comparte el contenido. Las consultas de movimiento (`movementOf`, `canMoveOn`, `terrainMoveCost`) estan en `rules/queries` |
 | `gameState.ts` | `newGameState({ map, rules, content, theme?, funds? })`: el unico sitio que escribe la forma de una partida nueva (mapgen, misiones, laboratorio, duelos, tests) |
-| `data.ts` | lo que no es contenido: temas, generador de mapas, `MAX_LIFE`, `DEFAULT_RULES` y `rulesWith(cambios)` (las reglas de siempre con cambios; nunca `{ ...DEFAULT_RULES, ... }`) |
-| `defaultGames.ts` | partidas con el contenido del juego: `createGame(rng, opciones)`, `loadGame(json)` y `saveContext()` (lo que usa la web) |
-| `save.ts` + `saveMigrations.ts` | guardar y leer. `deserialize(json, contexto)`: el `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo); `MIGRATIONS`, la lista de pasos para leer partidas antiguas |
+| `data.ts` | lo que no es contenido: temas, generador de mapas, `MAX_LIFE` y `rulesWith(contenido, cambios)` (las reglas por defecto de ese contenido, `tables.DEFAULT_RULES`, con cambios; nunca `{ ...reglas, ... }` a mano) |
+| `defaultGames.ts` | partidas con el contenido del juego: `createGame(rng, opciones)`, `loadGame(json)` y `saveContext(contenido)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del juego (ESLint) |
+| `save.ts` + `saveMigrations.ts` | guardar y leer. `deserialize(json, contexto)`: el `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo). Cada partida guarda la version de su formato (`SAVE_VERSION`, ahora 2); `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones anteriores, cada uno con hasta que version hace falta y si va antes o despues de comprobar la partida |
 | `util/grid.ts` | `Grid<T>`: rejilla con `at`, `atClamped`, `set`, `contains`, `forEach`, `cells`, `createLayer`, `width`/`height`; `GridBounds` (tamaño y `contains`) para lo que solo mira los bordes |
 | `mapGrid.ts` | el mapa de una partida como rejilla: `mapGrid(s)`, `terrainAt`, `isOnBoard`, `createLayer(s, fill)` |
-| `geom.ts` | `posOf` (copia la casilla de una unidad o edificio), rombos (`diamond`, `neighbors4`, que reciben los bordes), `squareArea`, `posKey`, `seededRng` |
+| `geom.ts` | `posOf` (copia la casilla de una unidad o edificio), rombos (`diamond`, `neighbors4`) y cuadrados (`squareArea`), que reciben los bordes y solo dan casillas de dentro, `posKey`, `seededRng` |
 
 **El estado es la unica fuente de la partida**: las reglas van en `s.rules` (obligatorias), el tamaño
 del mapa en `s.map` y el contenido va unido a la partida (`tablesOf(s)`); no hay variables de modulo

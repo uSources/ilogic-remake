@@ -64,10 +64,11 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
-  `createGame(rng, { rules })`). Reglas con cambios: `rulesWith({ fog: false })` (nunca
-  `{ ...DEFAULT_RULES, ... }`). Partida nueva: `newGameState({ map, rules, content })`, el unico sitio
-  que escribe su forma. Leer una guardada: `loadGame(json)` o `deserialize(json, saveContext(contenido))`;
-  un cambio en lo que se guarda lleva su paso en `MIGRATIONS` (core/saveMigrations.ts).
+  `createGame(rng, { rules })`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
+  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content })`, el unico sitio
+  que escribe su forma; el contenido es el campo `s.content` (no se guarda). Leer una guardada:
+  `loadGame(json)` o `deserialize(json, saveContext(contenido))`; un cambio en lo que se guarda sube
+  `SAVE_VERSION` y lleva su paso en `MIGRATIONS` (core/saveMigrations.ts).
 - **Casillas como `Pos`**: firmas con `pos: Pos`, no `(x, y)`; copiar la casilla de una unidad o
   edificio con `posOf(unit)`; los bordes, con `mapGrid(s).contains(pos)`, `isOnBoard(s, pos)` o
   `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).

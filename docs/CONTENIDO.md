@@ -244,9 +244,10 @@ todo a la vez y construye las tablas (`UNIT`, `POWER`, `TERRAIN`, `MOVE_COST`, `
 nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 
 **El contenido es un valor que lleva cada partida**, no un modulo: `loadContent(ficheros)` da un
-`GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `deserialize` lo unen a la partida
-(sin guardarlo: va en una propiedad que no se enumera). Las reglas y la IA lo leen por la partida:
-`tablesOf(s).UNIT`, `weightsOf(s).KILLBONUS`, `contentOf(s).files.generals`. Nada lee el contenido al
+`GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `deserialize` lo ponen en el campo
+`GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
+`tablesOf(s).UNIT`, `weightsOf(s).KILLBONUS`, `contentOf(s).files.generals`; las reglas por defecto,
+`rulesWith(contenido, cambios)`; los nombres en pantalla, `unitLabel(s.content, tipo)`. Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
 que se pide), y lo usan `createGame`/`loadGame` (core/defaultGames.ts), la interfaz y las
 herramientas.

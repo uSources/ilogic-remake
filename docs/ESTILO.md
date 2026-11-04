@@ -25,7 +25,7 @@ for (let x = 0; x < range.steps.length; x++)
 Despues (se lee como lo que hace):
 
 ```ts
-const distanceToGoal = distanceMap(s, goal, movement);
+const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
 const best = minBy(reachableTiles(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
 const gotCloser = best && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);
 return gotCloser ? best.pos : null;

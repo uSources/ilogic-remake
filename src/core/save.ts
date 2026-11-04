@@ -4,7 +4,7 @@
  * y sin modificar el estado al guardar.
  */
 import { savedPart, tablesOf } from './gameContent';
-import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES } from './data';
+import { MAP_MAX, MAP_MIN, MAX_LIFE, TERRAIN_TYPES, THEME_NAMES } from './data';
 import { generalDef } from './generals';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
@@ -20,7 +20,7 @@ const isInt = (v: unknown, min: number, max: number): v is number => typeof v ==
 /** Bando valido (0 jugador, 1 IA). */
 const isTeam = (v: unknown): boolean => v === 0 || v === 1;
 /** Ultimo tema de mapa (Plains..Snowy, ver GameState.theme). */
-const MAX_THEME = 4;
+const MAX_THEME = THEME_NAMES.length - 1;
 /** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
 const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;

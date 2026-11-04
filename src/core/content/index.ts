@@ -4,7 +4,8 @@
  *
  * Cada parte tiene su modulo con `validate*` y `build*` (units.ts, buildings.ts...); aqui solo se
  * leen los ficheros, se validan todos juntos (para dar todos los errores a la vez) y se construyen las
- * tablas que reexporta data.ts.
+ * tablas. `loadContent` da el resultado, un GameContent congelado, que cada partida lleva en
+ * `GameState.content` (se lee con tablesOf(s): ver gameContent.ts).
  *
  * El ORDEN de las listas de unidades y edificios es el numero de tipo que guardan las partidas: las
  * nuevas van siempre al final, nunca en medio, y no se borran.

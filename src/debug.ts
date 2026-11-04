@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { GameState } from './core/model';
+import type { SavedGameState } from './core/model';
 import { defaultContent } from './core/content/default';
 import { defaultLab } from './lab';
 import { ui, type UIState } from './hud/store';
@@ -24,7 +24,7 @@ export interface IlogicDebug {
   /**
    * Empieza una partida y espera a que se pueda jugar. Con `seed` (y opcionalmente `size` 20/32/40,
    * `theme` 0..4, `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
-   * GameState, ver `state()`); con `mission` una mision de la campaña.
+   * partida guardada (SavedGameState), ver `state()`); con `mission` una mision de la campaña.
    */
   startGame(opts: {
     seed?: number;
@@ -36,13 +36,13 @@ export interface IlogicDebug {
     /** General del jugador y de la IA (id de generals.json). */
     general?: string | null;
     enemyGeneral?: string | null;
-    state?: GameState | string;
+    state?: SavedGameState | string;
     mission?: string;
   }): Promise<void>;
   /** Laboratorio de animaciones (src/lab.ts): unidades por nombre, camara lenta y accion a reproducir. */
   lab(opts?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
   /** Partida en curso (copia) o null fuera de la partida. */
-  state(): GameState | null;
+  state(): SavedGameState | null;
   /** Fase de la partida ('map', 'move', 'attack', 'busy'...), dia y si ha terminado. */
   game(): { phase: string; busy: boolean; ended: boolean; day: number; cursor: { x: number; y: number } } | null;
   /** Espera a que la partida acepte ordenes (fin de animaciones y del turno enemigo). */
@@ -114,7 +114,7 @@ export function installDebug(game: Phaser.Game): void {
     },
     state() {
       const g = gameScene();
-      return g ? (JSON.parse(g.debugSnapshot().state) as GameState) : null;
+      return g ? (JSON.parse(g.debugSnapshot().state) as SavedGameState) : null;
     },
     game() {
       const g = gameScene();
