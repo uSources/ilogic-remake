@@ -173,13 +173,15 @@ export function finishStandingOrder(s: GameState, unit: Unit): void {
  * [CAMBIO] Has empezado a mano una captura con esta unidad: si llevaba una orden (suya o de su
  * escuadra) que no es capturar este edificio, ahora lo es, para que el turno siguiente no lo deje a
  * medias. En una escuadra queda destacada y, con el edificio tomado, vuelve a la orden de la escuadra.
+ * Devuelve la orden nueva (para su suceso), o null si no ha cambiado nada.
  */
-export function keepCapturing(s: GameState, unit: Unit): void {
+export function keepCapturing(s: GameState, unit: Unit): StandingOrder | null {
   const building = buildingAt(s, unit);
   const standingOrder = effectiveStandingOrder(s, unit);
-  if (!building || !standingOrder || isOwnedOrMissing(s, unit.team, unit)) return;
-  if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return;
+  if (!building || !standingOrder || isOwnedOrMissing(s, unit.team, unit)) return null;
+  if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return null;
   unit.standingOrder = { kind: 'capture', at: posOf(unit) };
+  return copyStandingOrder(unit.standingOrder);
 }
 
 /** Ya ha llegado a la zona de su orden (a 1 casilla o menos). */

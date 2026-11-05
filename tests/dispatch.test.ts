@@ -139,6 +139,19 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     ]);
   });
 
+  it('capturar a mano con otra orden la cambia a capturar ese edificio, y lo cuenta', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 9, y: 9 } } });
+    const events = act(s, 0, { kind: 'capture', uid: soldier.uid });
+    expect(events.map((event) => event.kind)).toEqual(['capture', 'standingOrder']);
+    expect(events[1]).toEqual({ kind: 'standingOrder', actor: 0, uids: [soldier.uid], order: { kind: 'capture', at: { x: 5, y: 5 } } });
+    // Sin orden, o ya capturando este edificio, no cambia nada: solo la captura.
+    endRound(s);
+    expect(act(s, 0, { kind: 'capture', uid: soldier.uid }).map((event) => event.kind)).toEqual(['capture']);
+  });
+
   it('un viaje y una orden permanente se quitan el uno al otro, cada uno con su suceso', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
