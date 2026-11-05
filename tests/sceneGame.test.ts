@@ -15,7 +15,7 @@ import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { viewerOf } from '../src/scenes/game/matchSetup';
 import { isPlayableOnOneScreen } from '@core/teams';
 import { checkPlayedByAi } from '../src/scenes/game/turns';
@@ -157,7 +157,7 @@ describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   });
 
   it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
-    const s = blankState();
+    const s = withoutHeadquarters(blankState());
     s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
     expect(endFocus(s, 0, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
     expect(endFocus(s, 0, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });

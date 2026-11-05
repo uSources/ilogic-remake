@@ -5,7 +5,7 @@ import { seededRng } from '@core/util/random';
 import { captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
 import { dropStaleCaptures } from '@core/rules/capture';
 import type { GameState, Unit } from '@core/model';
-import { act, blankState, diceFrom, unitTypeNamed, fight } from './helpers';
+import { act, blankState, diceFrom, unitTypeNamed, fight, placedBuildings } from './helpers';
 
 /** Captura con la unidad (por dispatch) y da lo que dice su suceso: puntos que quedan y totales. */
 function capture(s: GameState, unit: Unit) {
@@ -119,12 +119,12 @@ describe('reglas nuevas: captura por puntos', () => {
     const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     const r1 = capture(s, unit);
     expect(r1).toEqual({ done: false, left: 10, total: 20 });
-    expect(s.buildings[0]!.owner).toBe(1);
+    expect(placedBuildings(s)[0]!.owner).toBe(1);
     unit.turnState = 'ready';
     const r2 = capture(s, unit);
     expect(r2.done).toBe(true);
-    expect(s.buildings[0]!.owner).toBe(0);
-    expect(s.buildings[0]!.capture).toBeNull();
+    expect(placedBuildings(s)[0]!.owner).toBe(0);
+    expect(placedBuildings(s)[0]!.capture).toBeNull();
   });
 
   it('una unidad herida captura mas despacio; la Base tiene 30 puntos', () => {
@@ -140,12 +140,12 @@ describe('reglas nuevas: captura por puntos', () => {
     s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
     const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     capture(s, unit);
-    expect(captureProgress(s, s.buildings[0]!)?.left).toBe(10);
+    expect(captureProgress(s, placedBuildings(s)[0]!)?.left).toBe(10);
     unit.x = 4;
-    expect(captureProgress(s, s.buildings[0]!)).toBeNull();
-    expect(s.buildings[0]!.capture).not.toBeNull(); // consultar no la borra...
+    expect(captureProgress(s, placedBuildings(s)[0]!)).toBeNull();
+    expect(placedBuildings(s)[0]!.capture).not.toBeNull(); // consultar no la borra...
     dropStaleCaptures(s); // ...la borra la invariante que repasa dispatch tras cada accion
-    expect(s.buildings[0]!.capture).toBeNull();
+    expect(placedBuildings(s)[0]!.capture).toBeNull();
     unit.x = 3;
     unit.turnState = 'ready';
     expect(capture(s, unit).left).toBe(10);

@@ -22,7 +22,7 @@ import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup
 import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { act, blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
+import { act, blankState, savedByVersion1, unitTypeNamed, hqId, placedBuildings } from './helpers';
 import { teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -61,7 +61,7 @@ describe('ordenes con destino', () => {
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
     const done = turns(s, 8);
-    expect(s.buildings[2]!.owner).toBe(0);
+    expect(placedBuildings(s)[2]!.owner).toBe(0);
     expect(done).toContain(unit.uid);
     expect(unit.standingOrder).toBeUndefined();
     expect(posOf(unit)).toEqual({ x: 12, y: 5 });
@@ -74,7 +74,7 @@ describe('ordenes con destino', () => {
     giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
     turns(s, 1);
     expect(unit.x).toBeGreaterThan(5);
-    expect(s.buildings[3]!.capture ?? null).toBeNull();
+    expect(placedBuildings(s)[3]!.capture ?? null).toBeNull();
   });
 
   it('atacar aqui: dispara a lo que encuentra por el camino y no persigue a los que se alejan', () => {
@@ -421,7 +421,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
     giveStandingOrder(s, 0, [firstSoldier], 'capture', { x: 3, y: 5 });
     turns(s, 4);
-    expect(s.buildings[3]!.owner).toBe(0);
+    expect(placedBuildings(s)[3]!.owner).toBe(0);
     expect(firstSoldier.standingOrder).toBeUndefined();
     expect(effectiveStandingOrder(s, firstSoldier)).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
   });
@@ -436,7 +436,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     expect(isDetached(s, firstSoldier)).toBe(true);
     for (const unit of s.units) Object.assign(unit, { turnState: 'ready' });
     turns(s, 2);
-    expect(s.buildings[3]!.owner).toBe(0);
+    expect(placedBuildings(s)[3]!.owner).toBe(0);
     expect(effectiveStandingOrder(s, firstSoldier)?.kind).toBe('attack');
   });
 

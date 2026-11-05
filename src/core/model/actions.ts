@@ -53,6 +53,8 @@ export type ActionRejection =
   | 'badAction'
   /** Quien la manda no es un equipo de la partida. */
   | 'notATeam'
+  /** El equipo ya ha perdido (ver isDefeated): no juega mas. */
+  | 'defeated'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */
   | 'missing'
   /** Es de otro equipo. */

@@ -3,7 +3,7 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { armyLimit, buyOptions, commandUsed, newUnit, upkeepOf } from '@core/rules';
 import { dispatch } from '@core/actions';
-import { blankState, unitTypeNamed, endRoundReport } from './helpers';
+import { blankState, unitTypeNamed, endRoundReport, withoutHeadquarters } from './helpers';
 import { teamState } from '@core/teams';
 
 const SOLDIER = unitTypeNamed('Soldier'),
@@ -52,7 +52,7 @@ describe('puntos de mando', () => {
 
 describe('mantenimiento', () => {
   it('se paga el 10 % del precio de las unidades despues de cobrar', () => {
-    const s = blankState(TEST_RULES);
+    const s = withoutHeadquarters(blankState(TEST_RULES));
     for (const team of s.teams) team.funds = 0;
     s.buildings.push({ type: CITY, owner: 0, x: 1, y: 1 }); // 1000 por ronda
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500

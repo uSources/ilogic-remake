@@ -4,7 +4,7 @@ import { seededRng } from '@core/util/random';
 import { attackTargets, endRound, moveRange, newUnit, outcome, combatForecast, threatMap, canStillFire, canStillMove } from '@core/rules';
 import { availableActions, dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
-import { act, blankState, diceFrom, hqId, unitTypeNamed, fight, endRoundReport } from './helpers';
+import { act, blankState, diceFrom, hqId, unitTypeNamed, fight, endRoundReport, withoutHeadquarters, placedBuildings } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -84,7 +84,8 @@ describe('combate', () => {
 
 describe('captura y victoria', () => {
   it('capturar por puntos en dos turnos; capturar la Base enemiga gana', () => {
-    const s = blankState(TEST_RULES);
+    // Las Bases son las de este test (la del equipo 0 tambien, para poder mandar acciones).
+    const s = withoutHeadquarters(blankState(TEST_RULES));
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 });
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
     s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
@@ -93,13 +94,13 @@ describe('captura y victoria', () => {
     expect(capture(soldier.uid)).toMatchObject({ kind: 'capture', left: 10 });
     soldier.turnState = 'ready';
     expect(capture(soldier.uid)).toMatchObject({ kind: 'capture', left: 0 });
-    expect(s.buildings[2]!.owner).toBe(0);
+    expect(placedBuildings(s)[2]!.owner).toBe(0);
     expect(outcome(s, 0)).toBe('playing');
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     capture(otherSoldier.uid);
     otherSoldier.turnState = 'ready';
     capture(otherSoldier.uid);
-    expect(s.buildings[1]!.owner).toBe(0);
+    expect(placedBuildings(s)[1]!.owner).toBe(0);
     expect(outcome(s, 0)).toBe('won');
   });
 });
@@ -142,7 +143,7 @@ describe('compra y fin de ronda', () => {
     expect(teamState(s, 0).funds).toBe(5000 - unitTypeNamed('Car').cost); // el Jeep: lo que cueste ahora
   });
   it('ingresos y curacion; los aviones ya no caen', () => {
-    const s = blankState(TEST_RULES);
+    const s = withoutHeadquarters(blankState(TEST_RULES));
     s.buildings.push({ type: 'City', owner: 0, x: 1, y: 1 }); // City
     const so = newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     so.life = 50;

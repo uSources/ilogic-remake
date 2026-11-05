@@ -67,7 +67,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 
 - `dispatch` pasa las comprobaciones comunes (`ACTION_GUARDS`, `actions/guards.ts`: la primera, que
   tenga la forma de una accion, `isGameAction` con `ACTION_SHAPES` de `actions/shape.ts`, o
-  `'badAction'`; que la mande un equipo de la partida; el turno, cuando la partida sepa de quien es, fase 4), el `validate` de la
+  `'badAction'`; que la mande un equipo de la partida; que ese equipo no haya perdido, `'defeated'`;
+  el turno, cuando la partida sepa de quien es, fase 4), el `validate` de la
   accion, su `apply` (con los dados de la partida, `diceOf(s)`) y despues las `INVARIANTS`
   (`actions/invariants.ts`: fuera los muertos, las capturas cuya unidad se ha ido, las escuadras
   vacias, el dinero por encima del maximo, el movimiento que ya no se puede deshacer). Cada

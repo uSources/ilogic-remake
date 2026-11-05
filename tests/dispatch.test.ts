@@ -16,7 +16,7 @@ import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
 import type { GameAction, GameState } from '@core/model';
-import { act, blankState, unitTypeNamed } from './helpers';
+import { act, blankState, unitTypeNamed, placedBuildings } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 
 const SOLDIER = unitTypeNamed('Soldier');
@@ -131,7 +131,15 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
     expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
-    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team']);
+    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team', 'standing']);
+  });
+
+  it('un equipo que ya ha perdido (sin Base) no manda acciones', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    expect(isValidAction(s, 0, { kind: 'wait', uid: soldier.uid })).toBe(true);
+    s.buildings = s.buildings.filter((building) => building.owner !== 0);
+    expectRejected(s, 0, { kind: 'wait', uid: soldier.uid }, 'defeated');
   });
 
   it('una accion sin la forma de GameAction se rechaza con badAction, sin TypeError', () => {
@@ -173,10 +181,10 @@ describe('INVARIANTS: lo que dispatch deja en orden tras cada accion', () => {
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'capture', uid: soldier.uid });
-    expect(s.buildings[0]!.capture).not.toBeNull();
+    expect(placedBuildings(s)[0]!.capture).not.toBeNull();
     endRound(s);
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 6 } });
-    expect(s.buildings[0]!.capture).toBeNull();
+    expect(placedBuildings(s)[0]!.capture).toBeNull();
 
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const victim = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
@@ -275,13 +283,13 @@ describe('deshacer no pierde la captura a medias (K2)', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'capture', uid: soldier.uid });
     endRound(s);
-    const progress = s.buildings[0]!.capture;
+    const progress = placedBuildings(s)[0]!.capture;
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
-    expect(s.buildings[0]!.capture).toBeNull();
+    expect(placedBuildings(s)[0]!.capture).toBeNull();
     act(s, 0, { kind: 'undoMove', uid: soldier.uid });
-    expect(s.buildings[0]!.capture).toEqual(progress);
+    expect(placedBuildings(s)[0]!.capture).toEqual(progress);
     // Y se puede guardar y cargar a mitad de deshacer.
-    expect(loadGame(serialize(s))!.buildings[0]!.capture).toEqual(progress);
+    expect(placedBuildings(loadGame(serialize(s))!)[0]!.capture).toEqual(progress);
   });
 
   it('un ultimo movimiento roto en una partida guardada se quita', () => {

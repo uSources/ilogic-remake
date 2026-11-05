@@ -4,12 +4,13 @@ import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
-import type { Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
+import type { Building, Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
 import { aiTurn } from '@core/ai';
 import { dispatch, resolveAttack, restoreInvariants } from '@core/actions';
 import { seededRng } from '@core/util/random';
 import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
+import { samePos } from '@core/geom';
 
 /** Lado del mapa de las partidas de prueba (como el original). */
 export const BLANK_SIZE = 32;
@@ -22,7 +23,6 @@ export function savedByVersion1(json: string): string {
   return json.replace(`"version":${SAVE_VERSION}`, '"version":1');
 }
 
-/** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
 /** El equipo `team` hace la accion (por dispatch, como en el juego) y tiene que valer: sus sucesos. */
 export function act(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
   const result = dispatch(s, team, action);
@@ -67,16 +67,43 @@ const PERSON_VS_AI: TeamSetup[] = [
   { controller: 'ai', funds: BLANK_FUNDS },
 ];
 
-/** Una partida vacia (todo llano, sin unidades ni edificios) con esas reglas y esos equipos. */
+/**
+ * Una partida vacia (todo llano, sin unidades y sin mas edificios que una Base por equipo, ver
+ * blankHeadquarters) con esas reglas y esos equipos.
+ */
 export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
-  return newGameState({
+  const s = newGameState({
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
     teams,
     diceSeed: BLANK_DICE_SEED,
   });
+  teams.forEach((_, team) => s.buildings.push({ type: hqId(), owner: team, ...blankHeadquarters(team), capture: null }));
+  return s;
 }
+
+/**
+ * Donde esta la Base de cada equipo en `blankState`: en la ultima fila, lejos de donde ponen sus
+ * unidades los tests. Sin Base un equipo ha perdido (isDefeated) y no puede mandar acciones.
+ */
+export const blankHeadquarters = (team: TeamId): Pos => ({ x: BLANK_SIZE - 1 - team, y: BLANK_SIZE - 1 });
+
+/**
+ * Quita las Bases de `blankState`: para los tests de dinero o de puntos que ponen sus propios
+ * edificios. Sin Base, el equipo ya no puede mandar acciones (ha perdido).
+ */
+export function withoutHeadquarters(s: GameState): GameState {
+  s.buildings = placedBuildings(s);
+  return s;
+}
+
+/** Los edificios que ha puesto el test (sin las Bases de `blankState`). */
+export const placedBuildings = (s: GameState): Building[] =>
+  s.buildings.filter((building) => building.type !== hqId() || !isBlankHeadquarters(building));
+
+const isBlankHeadquarters = (building: Building): boolean =>
+  building.owner !== null && samePos(building, blankHeadquarters(building.owner));
 
 /** Un tipo de unidad del contenido del juego, por su id ('Tank'). */
 export const unitTypeNamed = (id: string): UnitType => entryOf(defaultContent().units, id, 'unidad');

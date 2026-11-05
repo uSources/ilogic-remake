@@ -47,7 +47,7 @@ import {
 } from '@core/teams';
 import type { GameEvent, GameState } from '@core/model';
 import { checkInvariants } from './sim/partidas';
-import { blankState, hqId, unitTypeNamed, endRoundReport } from './helpers';
+import { blankState, hqId, unitTypeNamed, endRoundReport, withoutHeadquarters } from './helpers';
 
 const HQ = hqId();
 const SOLDIER = unitTypeNamed('Soldier');
@@ -63,7 +63,7 @@ const TWO_VS_TWO: TeamSetup[] = [
 
 /** Hasta cuatro equipos, cada uno con una Base en una esquina y dos unidades, con niebla. */
 function fourCorners(teams: readonly TeamSetup[] = TWO_VS_TWO): GameState {
-  const s = blankState({ fog: true, weather: false }, teams);
+  const s = withoutHeadquarters(blankState({ fog: true, weather: false }, teams));
   const corners = [
     { x: 1, y: 1 },
     { x: 30, y: 1 },
