@@ -21,7 +21,8 @@ export interface GeneralCharge {
 }
 
 /** Lo que le ha pasado a una escuadra. */
-export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded';
+/** 'removed': se ha quedado sin unidades y ya no existe (lo cuenta la invariante, sin actor). */
+export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded' | 'removed';
 
 /**
  * Lo que acaba de pasar, completo: quien lo hizo (`actor`), a quien (uids) y lo que hace falta para
@@ -71,7 +72,7 @@ export type GameEvent =
   /** La unidad ha cumplido la orden que seguia. */
   | { kind: 'standingOrderDone'; actor: TeamId; uid: number }
   /** Una escuadra formada, cambiada o deshecha: como queda (`uids`, las suyas ahora; vacio si ya no existe). */
-  | { kind: 'squad'; actor: TeamId; squad: number; change: SquadChange; uids: number[]; name: string; key?: number }
+  | { kind: 'squad'; actor: TeamId | null; squad: number; change: SquadChange; uids: number[]; name: string; key?: number }
   | {
       kind: 'power';
       actor: TeamId;
@@ -91,6 +92,8 @@ export type GameEvent =
    * ya no existe).
    */
   | { kind: 'cargoLost'; actor: null; transport: number; team: TeamId; passengers: number[] }
+  /** Al acabar una accion o la ronda: una captura a medias que se pierde (su unidad se ha ido o ha caido). */
+  | { kind: 'captureDropped'; actor: null; at: Pos; uid: number; team: TeamId }
   /** Al acabar una accion o la ronda: el dinero de un equipo que pasaba del maximo y se ha perdido. */
   | { kind: 'fundsCapped'; actor: null; team: TeamId; lost: number }
   /** Fin de ronda: lo que cobra un equipo por sus edificios o por sus puntos de control. */

@@ -6,7 +6,6 @@
  * es una entrada mas aqui.
  */
 import { pruneSquads } from '../squads/membership';
-import { quietly } from '../util/quietly';
 import { dropStaleCaptures } from './capture';
 import { capFunds } from './funds';
 import { removeDead } from './lifecycle';
@@ -35,9 +34,9 @@ export const INVARIANTS: readonly Invariant[] = [
   // Las unidades sin vida no siguen en el mapa (ni lo que llevaran dentro).
   { id: 'dead', restore: removeDead },
   // Una captura a medias solo vale mientras su unidad sigue encima.
-  { id: 'captures', restore: quietly(dropStaleCaptures) },
+  { id: 'captures', restore: dropStaleCaptures },
   // Una escuadra sin unidades desaparece (y nadie se queda apuntado a una que no existe).
-  { id: 'squads', restore: quietly(pruneSquads) },
+  { id: 'squads', restore: pruneSquads },
   // Lo que pase del maximo de dinero se pierde (botin, poderes...: venga de donde venga).
   { id: 'funds', restore: capFunds },
   // Lo que se puede deshacer es de una unidad que se acaba de mover (si cae, o vuelve a estar lista

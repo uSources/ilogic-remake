@@ -3,7 +3,7 @@
 exports[`IA: partidas de referencia > semilla 1 1`] = `
 {
   "days": 26,
-  "events": 792,
+  "events": 795,
   "last": {
     "army": [
       30615,

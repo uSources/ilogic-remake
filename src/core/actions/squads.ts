@@ -36,6 +36,15 @@ function squadEvent(s: GameState, team: TeamId, squad: Squad, change: SquadChang
   };
 }
 
+/**
+ * La escuadra que deja una accion ya comprobada (validate pide al menos una unidad del equipo). Si
+ * no la hay, es un fallo del registro, como en checkedUnit.
+ */
+function checkedSquad(squad: Squad | null): Squad {
+  if (!squad) throw new Error('Una accion de escuadra ya comprobada no ha dejado escuadra');
+  return squad;
+}
+
 /** Las escuadras distintas de estas unidades, en el orden en que salen. */
 function squadsOf(s: GameState, units: readonly Unit[]): Squad[] {
   const ids = [...new Set(units.flatMap((unit) => (unit.squad === undefined ? [] : [unit.squad])))];
@@ -47,22 +56,25 @@ export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'add
     formSquad: {
       validate: (s, team, action) => groupProblem(s, team, action.uids, action.key),
       apply: (s, team, action) => {
-        const squad = formSquad(s, team, checkedUnits(s, action.uids), action.name, action.key)!;
-        return [squadEvent(s, team, squad, 'formed')];
+        const removed: GameEvent[] = [];
+        const squad = checkedSquad(formSquad(s, team, checkedUnits(s, action.uids), action.name, action.key, removed));
+        return [squadEvent(s, team, squad, 'formed'), ...removed];
       },
     },
     setGroup: {
       validate: (s, team, action) => groupProblem(s, team, action.uids, action.key),
       apply: (s, team, action) => {
-        const squad = setGroup(s, team, checkedUnits(s, action.uids), action.key)!;
-        return [squadEvent(s, team, squad, 'grouped')];
+        const removed: GameEvent[] = [];
+        const squad = checkedSquad(setGroup(s, team, checkedUnits(s, action.uids), action.key, removed));
+        return [squadEvent(s, team, squad, 'grouped'), ...removed];
       },
     },
     addToGroup: {
       validate: (s, team, action) => groupProblem(s, team, action.uids, action.key),
       apply: (s, team, action) => {
-        const squad = addToGroup(s, team, checkedUnits(s, action.uids), action.key)!;
-        return [squadEvent(s, team, squad, 'grouped')];
+        const removed: GameEvent[] = [];
+        const squad = checkedSquad(addToGroup(s, team, checkedUnits(s, action.uids), action.key, removed));
+        return [squadEvent(s, team, squad, 'grouped'), ...removed];
       },
     },
     leaveSquad: {

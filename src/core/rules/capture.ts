@@ -41,12 +41,19 @@ export function captureProgress(s: GameState, building: Building): CaptureProgre
  * [CAMBIO] Una captura a medias se pierde en cuanto la unidad que capturaba se va o muere. Antes solo
  * se borraba al consultarla (captureProgress), asi que en las partidas sin pantalla (IA contra IA,
  * equilibrio) una unidad podia irse y volver sin perderla. Lo encontro el cazador de fallos
- * (npm run fuzz). Es una de las INVARIANTS (rules/invariants.ts), que `dispatch` repasa despues de
- * cada accion, y el primer paso del fin de ronda; es el unico sitio que la borra (captureProgress
- * solo consulta).
+ * (npm run fuzz). Es una de las INVARIANTS (rules/invariants.ts), que repasan `dispatch` despues de
+ * cada accion y `endRound`; es el unico sitio que la borra (captureProgress solo consulta). Devuelve
+ * un suceso 'captureDropped' por cada una.
  */
-export function dropStaleCaptures(s: GameState): void {
-  for (const building of s.buildings) if (building.capture && !captureProgress(s, building)) building.capture = null;
+export function dropStaleCaptures(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const building of s.buildings) {
+    const progress = building.capture;
+    if (!progress || captureProgress(s, building)) continue;
+    building.capture = null;
+    events.push({ kind: 'captureDropped', actor: null, at: posOf(building), uid: progress.uid, team: progress.team });
+  }
+  return events;
 }
 
 /** Se puede capturar el edificio de debajo (neutral o enemigo: los de la propia alianza, no). */

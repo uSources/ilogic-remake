@@ -109,7 +109,8 @@ o null en los del fin de ronda), a quien (uids), tipos y casillas. El ataque nom
 uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`), el botin y la carga que
 gana cada general (`charge`); la compra, el tipo y el equipo; la captura, siempre los puntos que
 quedan. Lo que dejan en orden las `INVARIANTS` tambien se cuenta, detras de los de la accion y sin
-actor: `cargoLost` (los pasajeros de un transporte que cae) y `fundsCapped` (el dinero que pasaba del
+actor: `cargoLost` (los pasajeros de un transporte que cae), `captureDropped` (una captura a medias
+cuya unidad se ha ido), la escuadra que se queda vacia (`squad` con `change: 'removed'`) y `fundsCapped` (el dinero que pasaba del
 maximo; botin, poderes e ingresos se cuentan enteros y lo perdido va aqui, porque el tope se aplica
 al acabar la accion o la ronda, no al cobrar). Con ellos se anima (`ANIMATORS`), se cuentan las
 estadisticas (`recordEvent`, por el `actor`) y se resume el fin de ronda (`roundReport(s, events)`:

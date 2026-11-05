@@ -316,6 +316,27 @@ describe('sucesos completos', () => {
     expect(teamState(s, 0).funds).toBe(s.content.maxFunds);
   });
 
+  it('la captura a medias que se pierde y la escuadra que se queda vacia tienen suceso', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
+    act(s, 0, { kind: 'capture', uid: soldier.uid });
+    endRound(s);
+    expect(act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 6 } })).toContainEqual({
+      kind: 'captureDropped',
+      actor: null,
+      at: { x: 5, y: 5 },
+      uid: soldier.uid,
+      team: 0,
+    });
+    const [formed] = act(s, 0, { kind: 'formSquad', uids: [other.uid] });
+    const squad = formed?.kind === 'squad' ? formed.squad : -1;
+    expect(act(s, 0, { kind: 'formSquad', uids: [other.uid] })).toContainEqual(
+      expect.objectContaining({ kind: 'squad', actor: null, squad, change: 'removed', uids: [] }),
+    );
+  });
+
   it('el fin de ronda da sus sucesos sin actor, y su resumen sale de ellos', () => {
     const s = blankState(PLAIN_RULES);
     s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
