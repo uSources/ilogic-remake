@@ -55,7 +55,7 @@ Las piezas de abajo, que usa todo lo demas:
 | `gameContent.ts` | el contenido de cada partida es un campo, `GameState.content` (en el modelo se llama `MatchContent` y content/index.ts le da la forma de `GameContent`): lo ponen `newGameState` y `deserialize`, no se guarda (`serialize` escribe `SavedGameState`) y se lee como `s.content` o con los atajos que dan el tipo resuelto de lo que hay en la partida: `unitTypeOf(s, unit)`, `buildingTypeOf`, `isHq`, `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (y `findUnitType`/`findBuildingType` para lo que viene de fuera). Las partidas guardan ids (`unit.type = 'Tank'`), nunca el puesto en el fichero; `cloneState(s)` copia la partida y comparte el contenido |
 | `gameState.ts` | `newGameState({ map, rules, content, teams, theme? })`: el unico sitio que escribe la forma de una partida nueva (mapgen, misiones, laboratorio, duelos, tests). Quien la crea dice sus equipos (`teams: duel('human', 'ai')` o una lista de `TeamSetup`) |
 | `rulesConfig.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto de ese contenido (`content.defaultRules`) con cambios; nunca `{ ...reglas, ... }` a mano |
-| `teams.ts` | los equipos de la partida (`GameState.teams`, ver "Equipos" abajo): `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`, `enemiesOf`/`alliesOf`, `teamsControlledBy`, `playerTeam`, `perTeam`, `duel`, `newTeams` |
+| `teams.ts` | los equipos de la partida (`GameState.teams`, ver "Equipos" abajo): `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`, `enemiesOf`/`alliesOf`, `teamsControlledBy`, `isAiControlled`, `isPlayableOnOneScreen`, `playerTeam`, `perTeam`, `duel`/`duelTeams`, `newTeams` |
 | `data.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`). Las tablas del generador de mapas (`mapgen.json`) y los temas (`themes.json`: letras de los mapas en texto, probabilidades de terreno) son contenido; `MoveType` (`'foot'`, `'vehicle'`...) esta en `content/types.ts` |
 | `defaultGames.ts` | partidas con el contenido del juego: `createGame(rng, opciones)`, `loadGame(json)` y `saveContext(contenido)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del juego (ESLint) |
 | `save.ts` + `saveMigrations.ts` | guardar y leer. `deserialize(json, contexto)`: el `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo). Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 3, atada al tipo de `GameState.version`); `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones anteriores, cada uno con hasta que version hace falta y si va sobre el JSON tal cual ('read') o sobre la partida comprobada ('checked'). Cada paso hace lo de entonces con su propia copia fija (no llama al codigo de ahora: de fuera solo lee el `SaveContext`, p. ej. la lista de unidades de su contenido). Los del formato 1: nombres viejos de campos, reglas que faltaban, pasar a la escuadra la orden comun de sus unidades. Los de los formatos 1 y 2: 'tipos por id en vez de por numero' (unidades, edificios, terreno, tema, clima y objetivo de captura; el terreno y los temas con su orden de entonces, `FORMAT_2_TERRAIN`/`FORMAT_2_THEMES`) y 'bandos fijos pasan a equipos' (los pares [jugador, IA] de dinero, generales y estadisticas pasan a `teams`; las escuadras y la mision eran del equipo 0). Se prueban con partidas guardadas de verdad por main (`tests/fixtures/saves/*-v1.json`, `*-v2.json`) |
@@ -90,7 +90,7 @@ cursor, para la escena.
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
 | `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`) |
 | `outcome` | victoria y derrota de cada equipo (`outcome(s, team)`, `isMatchOver`), puntos del limite de dias por alianza, objetivos de mision |
-| `turnOrder` | quien juega y en que orden (`turnTakers`, `turnsAfter`, `takesTurn`: los derrotados ya no) |
+| `turnOrder` | quien juega y en que orden (`turnTakers`, `othersAfter`, `turnsAfter`, `takesTurn`: los derrotados ya no) |
 
 `src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
@@ -129,9 +129,11 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   `formSquad(s, team, units)`, `visibility(s, team)`, `outcome(s, team)`), sin valor por defecto.
 - Los informes de la ronda (`RoundReport`, `ControlReport`) llevan una lista por equipo (`perTeam`).
 - Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan:
-  el orden de los turnos esta en el nucleo (`rules/turnOrder.ts`: `turnTakers`, `turnsAfter`,
-  `takesTurn`) y lo usan la escena, el fondo del menu, `npm run play`, la huella, la arena y las
-  partidas de prueba. Lo que le queda en el mapa a un derrotado se queda a proposito y el fin de
+  el orden de los turnos esta en el nucleo (`rules/turnOrder.ts`). `turnTakers(s)` da una ronda
+  entera (la huella, la arena, el fuzz, `npm run generals` y las partidas de prueba);
+  `othersAfter(s, team)`, lo que viene tras el turno de un equipo: los turnos de los demas y el fin de
+  ronda en su sitio (la escena, `npm run play` y el fondo del menu). Los dos miran quien sigue en pie
+  al llegar a cada equipo; `npm run balance` juega sus dos lados en el orden pedido con `takesTurn`. Lo que le queda en el mapa a un derrotado se queda a proposito y el fin de
   ronda lo trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los demas. La
   partida termina (`isMatchOver`) cuando solo queda en pie una alianza, o cuando ya se ha decidido
   para los que quedan (objetivo de la mision, limite de dias: gana la alianza con mas puntos). Con 3
@@ -145,10 +147,11 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   por su orden en la partida y saltandose los derrotados (`turns.ts`). La interfaz no sabe de
   numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`, `'enemy'` y
   `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
-- **Limite hasta la fase 4**: en una pantalla juega una sola persona. Una partida con mas de un
-  equipo `'human'` no se puede empezar (`viewerOf` lo dice); una guardada o preparada asi cuenta como
-  dañada (`startMatch`: se borra y se empieza otra) y, si otro equipo que no es la IA llegara a su
-  turno, `turns.ts` falla con un error en vez de jugarlo por el (`checkPlayedByAi`). Una partida sin
+- **Limite hasta la fase 4**: en una pantalla juega una sola persona (`isPlayableOnOneScreen`, en
+  teams.ts). El menu no ofrece continuar una partida guardada que no lo cumpla; `startMatch` la trata
+  como dañada (con `load` borra el guardado; una preparada por depuracion, `state`, no lo toca) y
+  empieza otra; `viewerOf` falla con una asi. Si otro equipo que no es de la IA (`isAiControlled`)
+  llegara a su turno, `turns.ts` (`checkPlayedByAi`) y `npm run play` fallan en vez de jugarlo por el. Una partida sin
   personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y ese lo juega la
   persona aunque guarde `controller: 'ai'` (las reglas no miran el controller).
 - El turno en la barra de arriba es el del equipo que juega, por lado (`turn: Side`): tu turno, el
