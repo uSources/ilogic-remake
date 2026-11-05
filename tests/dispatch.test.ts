@@ -195,6 +195,21 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const other = newUnit(s, SOLDIER, 0, { x: 15, y: 15 });
     act(s, 0, { kind: 'travel', uid: other.uid, to: { x: 15, y: 30 } });
     expect(act(s, 0, { kind: 'move', uid: other.uid, to: { x: 15, y: 17 } })[0]).toEqual(cancelled(other.uid));
+    const [first, second] = [newUnit(s, SOLDIER, 0, { x: 20, y: 5 }), newUnit(s, SOLDIER, 0, { x: 21, y: 5 })];
+    second.life = 50;
+    act(s, 0, { kind: 'travel', uid: first.uid, to: { x: 20, y: 25 } });
+    expect(act(s, 0, { kind: 'merge', uid: first.uid, into: second.uid })[0]).toEqual(cancelled(first.uid));
+  });
+
+  it('atacar despues del paso del viaje no lo acaba (ya se ha movido solo); sin moverse, si', () => {
+    const s = blankState(PLAIN_RULES);
+    const tank = newUnit(s, TANK, 0, { x: 2, y: 10 });
+    act(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 30, y: 10 } });
+    act(s, 0, { kind: 'travelStep', uid: tank.uid });
+    const enemy = newUnit(s, SOLDIER, 1, { x: tank.x + 1, y: tank.y });
+    const events = act(s, 0, { kind: 'attack', uid: tank.uid, target: enemy.uid });
+    expect(events.some((event) => event.kind === 'travel')).toBe(false);
+    expect(tank.travelTo).toEqual({ x: 30, y: 10 });
   });
 
   it('un viaje: solo desde el mapa, a otra casilla que pueda pisar y hacia la que pueda ir ya', () => {
@@ -203,13 +218,14 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const transport = newUnit(s, TRANSPORT, 0, { x: 6, y: 5 });
     s.map[20]![20] = 'DWater';
     expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 20 } }, 'unreachable');
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 5, y: 5 } }, 'unreachable');
+    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 5, y: 5 } }, 'withinReach');
+    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 5, y: 6 } }, 'withinReach');
     expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 99, y: 0 } }, 'offBoard');
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 21 } });
     act(s, 0, { kind: 'load', uid: soldier.uid, into: transport.uid });
     expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 21 } }, 'transported');
-    // Ya no viaja (subir lo acabo): quitarle el viaje no cuenta nada.
-    expect(act(s, 0, { kind: 'travel', uid: soldier.uid, to: null })).toEqual([]);
+    // Ya no viaja (subir lo acabo): no hay viaje que quitar.
+    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: null }, 'noTravel');
   });
 
   it('una unidad que no lucha no ataca (noFighter), aunque le quede turno', () => {

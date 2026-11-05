@@ -78,7 +78,8 @@ export type GameEvent =
   /** Deshecho el ultimo movimiento: la unidad vuelve a `to`. */
   | { kind: 'undoMove'; actor: TeamId; uid: number; to: Pos }
   /** Viaje de varios turnos hacia `to` (null: ya no viaja). */
-  | { kind: 'travel'; actor: TeamId; uid: number; to: Pos | null; end?: TravelEnd }
+  /** Un viaje que empieza (`to`, su destino) o que acaba (`to: null`, y por que). */
+  | ({ kind: 'travel'; actor: TeamId; uid: number } & ({ to: Pos } | { to: null; end: TravelEnd }))
   /** Orden permanente dada a estas unidades (null: se la quitan). */
   | { kind: 'standingOrder'; actor: TeamId; uids: number[]; order: StandingOrder | null }
   /** La unidad ha cumplido la orden que seguia. */

@@ -84,8 +84,8 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
   travel: {
     validate: (s, team, action) => {
       const goal = action.to;
-      // Dejar de viajar se puede siempre; empezar, solo en el mapa y hacia donde pueda ir ya (travelProblem).
-      if (!goal) return ownUnitProblem(s, team, action.uid);
+      // Dejar de viajar, si viaja; empezar, solo en el mapa y hacia donde pueda ir ya (travelProblem).
+      if (!goal) return ownUnitProblem(s, team, action.uid, (unit) => (unit.travelTo ? null : 'noTravel'));
       return ownUnitOnMapProblem(s, team, action.uid, (unit) => travelProblem(s, unit, goal));
     },
     apply: (s, team, action) => {

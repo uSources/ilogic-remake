@@ -72,8 +72,10 @@ export type ActionRejection =
   | 'unreachable'
   /** Deshacer: no es su ultimo movimiento, o ya ha hecho algo despues. */
   | 'nothingToUndo'
-  /** Un paso de viaje para una unidad que no viaja. */
+  /** Un paso de viaje, o quitar el viaje, a una unidad que no viaja. */
   | 'noTravel'
+  /** Un viaje a donde ya llega este turno (o donde ya esta): para eso se mueve. */
+  | 'withinReach'
   /** Deshacer: el movimiento descubrio enemigos (con niebla, volver atras seria mirar gratis). */
   | 'revealed'
   /** El objetivo no se puede atacar: no es enemigo, no se ve, esta lejos o no le hace nada. */

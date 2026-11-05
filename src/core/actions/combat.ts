@@ -4,7 +4,7 @@ import { chargeFromCombat } from '../generals';
 import { attackProblem, bountyFor, canCounter, combatInfoBefore, strike } from '../rules/combat';
 import { unitById } from '../rules/queries';
 import { endTravel } from '../rules/travel';
-import { spendUnit } from '../rules/unitTurn';
+import { canStillMove, spendUnit } from '../rules/unitTurn';
 import { earn } from '../rules/funds';
 import { isAlive } from '../util/predicates';
 import type { Dice, GameEventOf, GameState, TeamId, Unit } from '../model';
@@ -74,8 +74,9 @@ export const COMBAT_ACTIONS: Pick<ActionRegistry, 'attack'> = {
     },
     apply: (s, team, action, dice) => {
       const attacker = checkedUnit(s, action.uid);
-      // Atacar a mano (tambien sin moverse) acaba su viaje, como mover.
-      const cancelled = endTravel(team, attacker);
+      // Atacar sin haberse movido es mandarla a mano: acaba su viaje, como mover. Si ya ha dado el
+      // paso del viaje este turno, atacar desde alli no lo acaba (como en main).
+      const cancelled = canStillMove(attacker) ? endTravel(team, attacker) : [];
       return [...cancelled, resolveAttack(s, attacker, checkedUnit(s, action.target), dice)];
     },
   },

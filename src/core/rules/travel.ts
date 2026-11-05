@@ -27,18 +27,20 @@ export function travelStepOf(s: GameState, unit: Unit, goal: Pos): TravelStep | 
 }
 
 /**
- * Por que no puede empezar ahora un viaje hacia `goal` (null = puede): una casilla del mapa, que no
- * sea donde esta, que pueda pisar y hacia la que pueda dar ya un paso.
+ * Por que no puede empezar ahora un viaje hacia `goal` (null = puede): una casilla del mapa que
+ * pueda pisar, a la que no llegue ya este turno (ni sea donde esta: 'withinReach', para eso se
+ * mueve) y hacia la que pueda dar ya un paso.
  */
 export function travelProblem(s: GameState, unit: Unit, goal: Pos): ActionRejection | null {
   if (!isOnBoard(s, goal)) return 'offBoard';
-  if (samePos(unit, goal) || !canWalk(s, goal, movementOf(s, unit))) return 'unreachable';
+  if (!canWalk(s, goal, movementOf(s, unit))) return 'unreachable';
   const step = travelStepOf(s, unit, goal);
-  return step && !step.arrives ? null : 'unreachable';
+  if (!step) return 'unreachable';
+  return step.arrives ? 'withinReach' : null;
 }
 
 /** El suceso de que el viaje de la unidad acaba, y por que. */
-export const travelEndEvent = (team: TeamId, unit: Unit, end: TravelEnd): GameEvent => ({
+const travelEndEvent = (team: TeamId, unit: Unit, end: TravelEnd): GameEvent => ({
   kind: 'travel',
   actor: team,
   uid: unit.uid,
