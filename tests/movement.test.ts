@@ -3,7 +3,7 @@ import { saveContext } from '@core/defaultGames';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_RULES } from './plainRules';
-import { load, merge, moveRange, moveUnit, validPath, visibility, newUnit } from '@core/rules';
+import { load, merge, moveRange, moveUnit, pathTo, validPath, visibility, newUnit } from '@core/rules';
 import { blankState, savedByVersion1, unitTypeNamed } from './helpers';
 import { defaultContent } from '@core/content/default';
 
@@ -217,5 +217,17 @@ describe('movimiento: ordenes de varios turnos', () => {
     // Un destino al que no se puede llegar (agua para un tanque): null.
     s.map[25]![25] = 'Water';
     expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();
+  });
+});
+
+describe('movimiento: el camino es de casillas, no de lo que hay en ellas', () => {
+  it('pathTo da casillas nuevas, aunque el destino sea un edificio', () => {
+    const s = blankState(PLAIN_RULES);
+    const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    const building = { type: 'City', owner: null, x: 4, y: 2, capture: null };
+    s.buildings.push(building);
+    const path = pathTo(moveRange(s, tank), tank, building);
+    expect(path.at(-1)).toEqual({ x: 4, y: 2 });
+    expect(path.at(-1)).not.toBe(building);
   });
 });

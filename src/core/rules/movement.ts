@@ -193,7 +193,7 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
   const path: Pos[] = [];
   let step: Pos | null = dest;
   while (step && !samePos(step, from)) {
-    path.unshift(step);
+    path.unshift(posOf(step));
     step = range.prev.at(step);
   }
   path.unshift(posOf(from));
