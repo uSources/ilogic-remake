@@ -128,16 +128,21 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   Las funciones que hacen algo por un equipo lo reciben siempre (`aiTurn(s, rng, team)`,
   `formSquad(s, team, units)`, `visibility(s, team)`, `outcome(s, team)`), sin valor por defecto.
 - Los informes de la ronda (`RoundReport`, `ControlReport`) llevan una lista por equipo (`perTeam`).
-- Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan:
-  el orden de los turnos esta en el nucleo (`rules/turnOrder.ts`). `turnTakers(s)` da una ronda
-  entera (la huella, la arena, el fuzz, `npm run generals` y las partidas de prueba);
-  `othersAfter(s, team)`, lo que viene tras el turno de un equipo: los turnos de los demas y el fin de
-  ronda en su sitio (la escena, `npm run play` y el fondo del menu). Los dos miran quien sigue en pie
-  al llegar a cada equipo; `npm run balance` juega sus dos lados en el orden pedido con `takesTurn`. Lo que le queda en el mapa a un derrotado se queda a proposito y el fin de
-  ronda lo trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los demas. La
-  partida termina (`isMatchOver`) cuando solo queda en pie una alianza, o cuando ya se ha decidido
-  para los que quedan (objetivo de la mision, limite de dias: gana la alianza con mas puntos). Con 3
-  o mas equipos, que caiga uno no la acaba.
+- Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan.
+  El orden de los turnos esta en el nucleo (`rules/turnOrder.ts`), en dos formas que miran quien
+  sigue en pie al llegar a cada equipo:
+  - `turnTakers(s)`, una ronda entera: la huella, la arena, el fuzz, `npm run generals` y las
+    partidas de prueba;
+  - `othersAfter(s, team)`, lo que viene tras el turno de un equipo (los turnos de los demas y el
+    fin de ronda en su sitio): la escena, `npm run play` y el fondo del menu.
+
+  `npm run balance` juega sus dos lados en el orden pedido con `takesTurn`, y los tests que juegan
+  dos partidas a la vez, turno a turno (`playInterleaved` en tests/helpers.ts), van por `teamIds` y
+  `takesTurn`. Lo que le queda en el mapa a un derrotado se queda a proposito y el fin de ronda lo
+  trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los demas.
+- La partida termina (`isMatchOver`) cuando solo queda en pie una alianza, o cuando ya se ha
+  decidido para los que quedan (objetivo de la mision, limite de dias: gana la alianza con mas
+  puntos). Con 3 o mas equipos, que caiga uno no la acaba.
 - Hace falta al menos dos alianzas (`newTeams` y `deserialize` no aceptan menos).
 - Las reglas no miran el `controller`: solo dice quien decide (la escena, la IA). Las ordenes con
   destino se le pueden dar a cualquier equipo.
@@ -148,12 +153,14 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`, `'enemy'` y
   `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
 - **Limite hasta la fase 4**: en una pantalla juega una sola persona (`isPlayableOnOneScreen`, en
-  teams.ts). El menu no ofrece continuar una partida guardada que no lo cumpla; `startMatch` la trata
-  como dañada (con `load` borra el guardado; una preparada por depuracion, `state`, no lo toca) y
-  empieza otra; `viewerOf` falla con una asi. Si otro equipo que no es de la IA (`isAiControlled`)
-  llegara a su turno, `turns.ts` (`checkPlayedByAi`) y `npm run play` fallan en vez de jugarlo por el. Una partida sin
-  personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y ese lo juega la
-  persona aunque guarde `controller: 'ai'` (las reglas no miran el controller).
+  teams.ts).
+  - El menu no ofrece continuar una partida guardada que no lo cumpla.
+  - `startMatch` la trata como dañada y empieza otra: con `load` borra el guardado; una preparada
+    por depuracion (`state`) no lo toca. `viewerOf` falla con una asi.
+  - Si otro equipo que no es de la IA llegara a su turno, la escena (`checkPlayedByAi`) y
+    `npm run play` fallan en vez de jugarlo por el (`notAiControlledReason`, en teams.ts).
+  - Una partida sin personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y
+    ese lo juega la persona aunque guarde `controller: 'ai'` (las reglas no miran el controller).
 - El turno en la barra de arriba es el del equipo que juega, por lado (`turn: Side`): tu turno, el
   de un aliado (en azul) o el de un enemigo (en rojo).
 - Los mapas al azar valen para 2 o mas equipos (`generateGame` busca una salida por equipo, cada una

@@ -47,13 +47,14 @@ export function playDuel(seed: number, brains: [Brain, Brain], size: number, max
   const rng = seededRng(seed);
   const s = createGame(rng, { size, teams: duel('ai', 'ai') });
   const [first, second] = duelTeams(s);
-  const brainOf = new Map<TeamId, Brain>([
-    [first, brains[0]],
-    [second, brains[1]],
-  ]);
+  const brainOf = (team: TeamId): Brain => {
+    if (team === first) return brains[0];
+    if (team === second) return brains[1];
+    throw new Error(`La arena es de dos equipos: no hay IA para el equipo ${team}`);
+  };
   while (!isMatchOver(s) && s.day <= maxDays) {
     for (const team of turnTakers(s)) {
-      for (const _ of brainOf.get(team)!(s, rng, team)) if (isMatchOver(s)) break;
+      for (const _ of brainOf(team)(s, rng, team)) if (isMatchOver(s)) break;
       if (isMatchOver(s)) break;
     }
     if (isMatchOver(s)) break;

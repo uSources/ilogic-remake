@@ -1,15 +1,14 @@
-import { unitTypeNamed } from './helpers';
+import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
-import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
 import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { blankMap, mapGrid } from '@core/mapGrid';
 import { newGameState } from '@core/gameState';
-import { endRound, moveRange, newUnit, reachableTiles, takesTurn, visibility } from '@core/rules';
-import { duel, teamIds } from '@core/teams';
-import type { GameEvent, GameState } from '@core/model';
+import { moveRange, newUnit, reachableTiles, visibility } from '@core/rules';
+import { duel } from '@core/teams';
+import type { GameState } from '@core/model';
 
 const TANK = unitTypeNamed('Tank');
 
@@ -56,18 +55,7 @@ describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', ()
   });
 
   it('dos partidas IA contra IA de 20 y de 40 jugadas a la vez hacen lo mismo que por separado', () => {
-    const play = (games: GameState[], days: number) => {
-      const rngs = games.map(() => seededRng(3));
-      const events: GameEvent[][] = games.map(() => []);
-      for (let day = 0; day < days; day++) {
-        for (const team of teamIds(games[0]!))
-          games.forEach((s, i) => {
-            if (takesTurn(s, team)) events[i]!.push(...aiTurn(s, rngs[i]!, team));
-          });
-        games.forEach((s) => endRound(s));
-      }
-      return events;
-    };
+    const play = (games: GameState[], days: number) => playInterleaved(games, days, 3);
     const newMatch = (size: number) => createGame(seededRng(size), { size, teams: duel('ai', 'ai') });
     const together = play([newMatch(20), newMatch(40)], 5);
     expect(together[0]).toEqual(play([newMatch(20)], 5)[0]);

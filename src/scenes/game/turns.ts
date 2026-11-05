@@ -30,7 +30,7 @@ import {
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
-import { isAiControlled, isHostile, teamState } from '../../core/teams';
+import { isHostile, notAiControlledReason } from '../../core/teams';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
@@ -108,8 +108,8 @@ function unitWithSquad(s: GameState, unit: Unit): string {
  * una sola; varias, fase 4) y se dice en vez de jugarlo por ella.
  */
 export function checkPlayedByAi(s: GameState, team: TeamId): void {
-  if (!isAiControlled(s, team))
-    throw new Error(`El equipo ${team} lo juega '${teamState(s, team).controller}': en esta pantalla solo juega una persona`);
+  const reason = notAiControlledReason(s, team);
+  if (reason) throw new Error(reason);
 }
 
 export class TurnFlow {
@@ -266,7 +266,8 @@ export class TurnFlow {
 
   /**
    * Los turnos de los demas equipos, por su orden en la partida, con el fin de ronda entre el ultimo
-   * y el primero (`othersAfter`, del nucleo: un equipo ya derrotado no juega). Devuelve el informe de la ronda, o null si `playTeam` dice que hay que parar.
+   * y el primero (`othersAfter`, del nucleo: un equipo ya derrotado no juega). Devuelve el informe
+   * de la ronda, o null si `playTeam` dice que hay que parar.
    */
   private async playRoundOfOthers(
     playTeam: (team: TeamId) => Promise<boolean>,

@@ -1,17 +1,16 @@
-import { unitTypeNamed } from './helpers';
+import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { aiTurn } from '@core/ai';
 import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
 import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
-import { buyOptions, endRound, takesTurn } from '@core/rules';
-import { duel, teamIds } from '@core/teams';
+import { buyOptions } from '@core/rules';
+import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
-import type { GameEvent, GameState, SavedGameState } from '@core/model';
+import type { GameState, SavedGameState } from '@core/model';
 
 /** Contenido del juego con los tanques al doble de precio (como una variante de equilibrio). */
 function expensiveTanks(): GameContent {
@@ -26,20 +25,6 @@ function newMatch(content: GameContent): GameState {
   return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content, teams: duel('ai', 'ai') });
 }
 
-/** Juega `days` rondas IA contra IA de cada partida, alternando un turno de cada una. */
-function playInterleaved(games: GameState[], days: number): GameEvent[][] {
-  const rngs = games.map(() => seededRng(11));
-  const events: GameEvent[][] = games.map(() => []);
-  for (let day = 0; day < days; day++) {
-    for (const team of teamIds(games[0]!))
-      games.forEach((s, i) => {
-        if (takesTurn(s, team)) events[i]!.push(...aiTurn(s, rngs[i]!, team));
-      });
-    games.forEach((s) => endRound(s));
-  }
-  return events;
-}
-
 describe('contenido de cada partida', () => {
   it('dos partidas con contenidos distintos se juegan a la vez en el mismo proceso', () => {
     const variant = expensiveTanks();
@@ -51,9 +36,9 @@ describe('contenido de cada partida', () => {
     const tankCost = (s: GameState) => buyOptions(s, factory(s)).find((option) => option.unitType.id === 'Tank')!.cost;
     expect(tankCost(expensive)).toBe(2 * tankCost(normal));
 
-    const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6);
+    const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6, 11);
     // Jugar las dos a la vez no cambia ninguna: la normal hace lo mismo que jugada sola.
-    const [alone] = playInterleaved([newMatch(defaultContent())], 6);
+    const [alone] = playInterleaved([newMatch(defaultContent())], 6, 11);
     expect(normalEvents).toEqual(alone);
     expect(expensiveEvents).not.toEqual(normalEvents);
     expect(entryOf(normal.content.units, 'Tank', 'unidad').cost).toBe(TANK.cost);

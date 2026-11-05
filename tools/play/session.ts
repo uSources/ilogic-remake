@@ -5,7 +5,7 @@
  * terminar el turno, en orden.
  */
 import { aiTurn } from '@core/ai';
-import { duel, duelTeams, isAiControlled, playerTeam, teamIds, teamState } from '@core/teams';
+import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
@@ -298,9 +298,10 @@ export class Session {
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
     if (aiForMe) for (const event of aiTurn(this.s, this.rng, this.me)) out.push(`tu IA: ${describe(this.s, event)}`);
+    // othersAfter pasa siempre una vez por el fin de ronda: ahi se sabe lo cobrado.
     let income = 0;
     for (const step of othersAfter(this.s, this.me)) {
-      if (step.kind === 'roundEnd') income = endRound(this.s).income[this.me] ?? 0;
+      if (step.kind === 'roundEnd') income = teamValue(endRound(this.s).income, this.me);
       else this.playOther(step.team, out);
     }
     out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
@@ -311,8 +312,8 @@ export class Session {
 
   /** El turno de otro equipo, que tiene que ser de la IA (aqui juega una sola persona). */
   private playOther(team: TeamId, out: string[]): void {
-    if (!isAiControlled(this.s, team))
-      throw new UsageError(`el equipo ${team} lo juega '${teamState(this.s, team).controller}': aqui solo juega una persona`);
+    const reason = notAiControlledReason(this.s, team);
+    if (reason) throw new UsageError(reason);
     for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
   }
 

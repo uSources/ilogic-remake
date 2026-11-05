@@ -4,7 +4,7 @@ import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
 import { endRound, isMatchOver, othersAfter } from '../core/rules';
-import { duel, teamIds } from '../core/teams';
+import { duel, playerTeam } from '../core/teams';
 import type { GameEvent, GameState, Pos, TeamId } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
@@ -47,10 +47,10 @@ function isInVisibleBand(screen: Pos, width: number, height: number): boolean {
 }
 
 /**
- * El siguiente equipo que juega tras `team` (othersAfter), con el fin de ronda si toca por el camino;
- * null si no queda ninguno.
+ * Avanza al siguiente equipo que juega tras `team` (othersAfter): si por el camino acaba la ronda,
+ * la cierra (endRound). Devuelve ese equipo, o null si no queda ninguno.
  */
-function nextTeam(s: GameState, team: TeamId): TeamId | null {
+function advanceToNextTeam(s: GameState, team: TeamId): TeamId | null {
   for (const step of othersAfter(s, team)) {
     if (step.kind === 'team') return step.team;
     endRound(s);
@@ -102,7 +102,7 @@ export class LiveBackground {
     this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
-    const first = teamIds(this.game)[0]!;
+    const first = playerTeam(this.game);
     const firstBuilding = this.game.buildings.find((building) => building.owner === first) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
     this.view.centerOn(firstBuilding, true);
     this.tightBounds();
@@ -135,7 +135,7 @@ export class LiveBackground {
     const s = this.game;
     if (!s || !this.view) return;
     const visible = createLayer(s, true);
-    this.view.render(s, { viewer: teamIds(s)[0]!, vis: visible, highlights: new Map(), hidden: new Set() });
+    this.view.render(s, { viewer: playerTeam(s), vis: visible, highlights: new Map(), hidden: new Set() });
     this.view.placeCursor(false);
   }
 
@@ -162,7 +162,7 @@ export class LiveBackground {
    * acabado, otra nueva.
    */
   private async nextTurn(s: GameState): Promise<void> {
-    const next = this.team === null ? null : nextTeam(s, this.team);
+    const next = this.team === null ? null : advanceToNextTeam(s, this.team);
     if (next === null || isMatchOver(s) || s.day > MAX_DAYS) return this.start();
     this.team = next;
     this.events = aiTurn(s, this.rng, next);

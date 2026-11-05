@@ -3,9 +3,12 @@ import { defaultContent } from '@core/content/default';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
-import type { TeamSetup } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
-import type { GameState, RulesConfig } from '@core/model';
+import type { GameEvent, GameState, RulesConfig } from '@core/model';
+import { aiTurn } from '@core/ai';
+import { seededRng } from '@core/geom';
+import { endRound, takesTurn } from '@core/rules';
+import { teamIds, type TeamSetup } from '@core/teams';
 
 /** Lado del mapa de las partidas de prueba (como el original). */
 export const BLANK_SIZE = 32;
@@ -49,3 +52,21 @@ export const terrainNamed = (id: string): TerrainType => entryOf(defaultContent(
 
 /** El id del cuartel general del contenido del juego (lo que guarda `Building.type`). */
 export const hqId = (): string => defaultContent().hq.id;
+
+/**
+ * Juega `days` rondas IA contra IA de cada partida a la vez, turno a turno (un turno de cada una por
+ * equipo), cada una con su azar de semilla `seed`: para ver que dos partidas en el mismo proceso no
+ * se mezclan. Los equipos que han perdido no juegan (takesTurn). Devuelve los eventos de cada una.
+ */
+export function playInterleaved(games: readonly GameState[], days: number, seed: number): GameEvent[][] {
+  const rngs = games.map(() => seededRng(seed));
+  const events: GameEvent[][] = games.map(() => []);
+  for (let day = 0; day < days; day++) {
+    for (const team of teamIds(games[0]!))
+      games.forEach((s, i) => {
+        if (takesTurn(s, team)) events[i]!.push(...aiTurn(s, rngs[i]!, team));
+      });
+    games.forEach((s) => endRound(s));
+  }
+  return events;
+}
