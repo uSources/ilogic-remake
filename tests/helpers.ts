@@ -3,6 +3,7 @@ import { defaultContent } from '@core/content/default';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
+import type { TeamSetup } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
 import type { GameState, RulesConfig } from '@core/model';
 
@@ -18,12 +19,24 @@ export function savedByVersion1(json: string): string {
 }
 
 /** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
-export function blankState(rules: Partial<RulesConfig> = {}): GameState {
+/** Dinero de cada equipo en las partidas de prueba. */
+export const BLANK_FUNDS = 5000;
+
+/** Los equipos de una partida de prueba normal: el 0 lo juega una persona y el 1, la IA; enemigos. */
+export const PLAYER = 0;
+export const ENEMY = 1;
+const PERSON_VS_AI: TeamSetup[] = [
+  { controller: 'human', funds: BLANK_FUNDS },
+  { controller: 'ai', funds: BLANK_FUNDS },
+];
+
+/** Una partida vacia (todo llano, sin unidades ni edificios) con esas reglas y esos equipos. */
+export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
   return newGameState({
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
-    funds: [5000, 5000],
+    teams,
   });
 }
 

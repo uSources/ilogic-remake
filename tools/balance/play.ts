@@ -3,19 +3,27 @@ import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
-import { endReason, endRound, outcome } from '@core/rules';
+import { endReason, endRound, isMatchOver, outcome } from '@core/rules';
+import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
-import type { GameState, RulesConfig, Team, Unit } from '@core/model';
+import type { GameState, RulesConfig, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
+
+/**
+ * Los dos equipos de una partida de equilibrio: el primero (0) y el segundo (1) del mapa al azar.
+ * Las tablas del informe van por estos dos lados.
+ */
+export type Side = 0 | 1;
+const SIDES: readonly Side[] = [0, 1];
 
 export interface PlayOptions {
   seed: number;
   maxDays: number;
   /** Quien juega cada bando. 'passive' no hace nada (para medir a la IA). */
   policies: [Policy, Policy];
-  /** Bando que mueve primero en cada ronda (en el juego, siempre el 0: el jugador). */
-  firstTeam?: Team;
+  /** Equipo que mueve primero en cada ronda (en el juego, el de la persona: el primero). */
+  firstTeam?: Side;
   /** Intercambiar los bandos en el mapa generado (para ver si el mapa favorece a un lado). */
   swapSides?: boolean;
   /** Lado del mapa (32 por defecto). */
@@ -54,7 +62,7 @@ export interface DaySample {
 
 export interface GameRecord {
   seed: number;
-  winner: Team | null;
+  winner: Side | null;
   reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'timeout';
   days: number;
   samples: DaySample[];
@@ -78,26 +86,31 @@ const emptyTally = (): UnitTally => ({
 const typeIndex = (s: GameState, unit: Pick<Unit, 'type'>): number => s.content.units.list.indexOf(unitTypeOf(s, unit));
 const costOf = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost;
 
+/** Un valor por lado: [primero, segundo]. */
+const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(0), valueOf(1)];
+
 function sample(s: GameState): DaySample {
-  const army: [number, number] = [0, 0];
-  const units: [number, number] = [0, 0];
-  for (const unit of s.units) {
-    army[unit.team] += (costOf(s, unit) * unit.life) / 100;
-    units[unit.team]++;
-  }
-  const buildings: [number, number] = [0, 0];
-  for (const building of s.buildings) if (building.owner !== null) buildings[building.owner]++;
-  return { day: s.day, funds: [s.funds[0], s.funds[1]], buildings, army: [Math.round(army[0]), Math.round(army[1])], units };
+  const unitsOf = (side: Side) => s.units.filter((unit) => unit.team === side);
+  const army = (side: Side) => Math.round(unitsOf(side).reduce((total, unit) => total + (costOf(s, unit) * unit.life) / 100, 0));
+  const buildings = (side: Side) => s.buildings.filter((building) => building.owner === side).length;
+  return {
+    day: s.day,
+    funds: bySide((side) => teamState(s, side).funds),
+    buildings: bySide(buildings),
+    army: bySide(army),
+    units: bySide((side) => unitsOf(side).length),
+  };
 }
 
 export function playGame(options: PlayOptions): GameRecord {
   const rng = seededRng(options.seed);
-  const s = generateGame(rng, { size: options.size ?? 32, rules: options.rules, content: options.content });
+  const s = generateGame(rng, { size: options.size ?? 32, rules: options.rules, content: options.content, teams: duel('ai', 'ai') });
+  const otherSide = (team: TeamId): TeamId => 1 - team;
   if (options.swapSides) {
-    for (const unit of s.units) unit.team = (1 - unit.team) as Team;
-    for (const building of s.buildings) if (building.owner !== null) building.owner = (1 - building.owner) as Team;
+    for (const unit of s.units) unit.team = otherSide(unit.team);
+    for (const building of s.buildings) if (building.owner !== null) building.owner = otherSide(building.owner);
   }
-  const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: s.content.units.list.length }, emptyTally));
+  const units: UnitTally[][] = SIDES.map(() => Array.from({ length: s.content.units.list.length }, emptyTally));
   const samples: DaySample[] = [sample(s)];
   // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
   const known = new Map<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>();
@@ -109,9 +122,9 @@ export function playGame(options: PlayOptions): GameRecord {
   let events = 0;
   let reason: GameRecord['reason'] = 'timeout';
 
-  const finished = () => outcome(s) !== 'playing';
+  const finished = () => isMatchOver(s);
   while (!finished() && s.day <= options.maxDays) {
-    for (const team of (options.firstTeam === 1 ? [1, 0] : [0, 1]) as Team[]) {
+    for (const team of options.firstTeam === 1 ? [...SIDES].reverse() : SIDES) {
       if (options.policies[team] === 'passive') continue;
       for (const event of aiTurn(s, rng, team)) {
         events++;
@@ -171,11 +184,11 @@ export function playGame(options: PlayOptions): GameRecord {
     samples.push(sample(s));
   }
 
-  const result = outcome(s);
-  let winner: Team | null = null;
+  const result = outcome(s, 0);
+  let winner: Side | null = null;
   if (result !== 'playing') {
     winner = result === 'won' ? 0 : 1;
-    reason = endReason(s) ?? 'timeout';
+    reason = endReason(s, 0) ?? 'timeout';
   }
   if (result === 'playing') samples.push(sample(s));
   return { seed: options.seed, winner, reason, days: s.day, samples, units, events };

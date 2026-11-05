@@ -8,6 +8,7 @@ import { isCapturer } from '../util/predicates';
 import type { Building, GameEvent, GameState, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
+import { isHostile } from '../teams';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
@@ -46,11 +47,11 @@ export function dropStaleCaptures(s: GameState): void {
   for (const building of s.buildings) if (building.capture && !captureProgress(s, building)) building.capture = null;
 }
 
-/** Se puede capturar el edificio de debajo (neutral o enemigo). */
+/** Se puede capturar el edificio de debajo (neutral o enemigo: los de la propia alianza, no). */
 export function canCapture(s: GameState, unit: Unit): boolean {
   if (!unit.active || !isCapturer(s, unit)) return false;
   const building = buildingAt(s, unit);
-  return !!building && building.owner !== unit.team;
+  return !!building && (building.owner === null || isHostile(s, building.owner, unit.team));
 }
 
 /**

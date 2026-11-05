@@ -8,10 +8,11 @@ import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isRanged } from '../abilities';
 import { canFight, isOnMap } from '../util/predicates';
-import type { GameState, Team, Unit } from '../model';
+import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
 import { visibility } from './visibility';
+import { isHostile } from '../teams';
 
 export interface CombatForecast {
   /** Dano mas probable (media). */
@@ -139,14 +140,14 @@ export function combatForecast(s: GameState, attacker: Unit, defender: Unit): Co
 }
 
 /**
- * Casillas que el bando `team` podria atacar en su proximo turno (moverse y disparar):
- * solo cuenta las unidades de ese bando que `viewer` ve.
+ * Casillas que los enemigos de `viewer` podrian atacar en su proximo turno (moverse y disparar):
+ * solo cuentan las unidades enemigas que `viewer` ve.
  */
-export function threatMap(s: GameState, team: Team, viewer: Team): Grid<boolean> {
+export function threatMap(s: GameState, viewer: TeamId): Grid<boolean> {
   const threatened = createLayer(s, false);
   const visible = visibility(s, viewer);
   for (const unit of s.units) {
-    if (unit.team !== team || !isOnMap(unit) || !visible.at(unit)) continue;
+    if (!isHostile(s, unit.team, viewer) || !isOnMap(unit) || !visible.at(unit)) continue;
     unitThreat(s, unit, threatened);
   }
   return threatened;

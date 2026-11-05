@@ -11,6 +11,7 @@ import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missio
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { savedByVersion1, hqId } from './helpers';
+import { teamIds } from '@core/teams';
 
 const HQ = hqId();
 
@@ -21,7 +22,7 @@ describe('misiones', () => {
     const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
     expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
-    expect(outcome(s)).toBe('playing');
+    expect(outcome(s, 0)).toBe('playing');
     const objective = s.mission!.objective;
     if (objective.kind === 'escort') {
       const vip = s.units.find((unit) => unit.uid === objective.uid)!;
@@ -70,7 +71,7 @@ describe('misiones', () => {
     const mission = MISSIONS[0]!;
     const changeFunds = () => {
       // @ts-expect-error las misiones no se pueden cambiar
-      mission.funds[0] = 1;
+      mission.teams[0]!.funds = 1;
     };
     const moveUnit = () => {
       // @ts-expect-error ni lo de dentro
@@ -107,41 +108,41 @@ describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
     const s = buildMission(mission, defaultContent());
     const rng = seededRng(5);
-    for (let day = 0; day < 20 && outcome(s) === 'playing'; day++) {
-      for (const team of [0, 1] as const) {
-        for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;
-        if (outcome(s) !== 'playing') break;
+    for (let day = 0; day < 20 && outcome(s, 0) === 'playing'; day++) {
+      for (const team of teamIds(s)) {
+        for (const _ of aiTurn(s, rng, team)) if (outcome(s, 0) !== 'playing') break;
+        if (outcome(s, 0) !== 'playing') break;
       }
       endRound(s);
     }
-    expect(['playing', 'won', 'lost']).toContain(outcome(s));
+    expect(['playing', 'won', 'lost']).toContain(outcome(s, 0));
   });
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
     const byId = (id: string) => MISSIONS.find((mission) => mission.id === id)!;
     const hold = buildMission(byId('hold'), defaultContent());
     hold.day = 9;
-    expect(outcome(hold)).toBe('won');
+    expect(outcome(hold, 0)).toBe('won');
 
     const bh = buildMission(byId('bridgehead'), defaultContent());
     for (const building of bh.buildings) if (building.type === 'City' && building.owner === null) building.owner = 0;
-    expect(outcome(bh)).toBe('won');
+    expect(outcome(bh, 0)).toBe('won');
     const bh2 = buildMission(byId('bridgehead'), defaultContent());
     bh2.day = 15;
-    expect(outcome(bh2)).toBe('lost');
+    expect(outcome(bh2, 0)).toBe('lost');
 
     const cl = buildMission(byId('cleanup'), defaultContent());
     cl.units = cl.units.filter((unit) => unit.team === 0);
-    expect(outcome(cl)).toBe('won');
+    expect(outcome(cl, 0)).toBe('won');
 
     const es = buildMission(byId('escort'), defaultContent());
     const objective = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
     const vip = es.units.find((unit) => unit.uid === objective.uid)!;
-    expect(outcome(es)).toBe('playing');
+    expect(outcome(es, 0)).toBe('playing');
     vip.x = objective.to.x;
     vip.y = objective.to.y;
-    expect(outcome(es)).toBe('won');
+    expect(outcome(es, 0)).toBe('won');
     es.units = es.units.filter((unit) => unit.uid !== objective.uid);
-    expect(outcome(es)).toBe('lost');
+    expect(outcome(es, 0)).toBe('lost');
   });
 });

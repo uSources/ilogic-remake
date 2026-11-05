@@ -1,15 +1,17 @@
 /**
  * Partida por texto: las reglas del juego sin graficos, para probar cambios de reglas o de IA en
  * segundos (la usan los agentes de IA y los tests). Cada orden es una linea; la respuesta, texto.
- * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
+ * Juega el equipo de la persona (el primero que lleva una persona: "tu"); los demas los mueve la IA al
+ * terminar el turno, en orden.
  */
 import { aiTurn } from '@core/ai';
+import { duel, teamIds, teamsControlledBy, teamState } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
 import { posKey, samePos, seededRng } from '@core/geom';
 import { mapGrid } from '@core/mapGrid';
-import { powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
+import { appointGeneral, powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
   attackFull,
@@ -30,7 +32,7 @@ import {
   wait,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import type { GameEvent, GameState, Pos, Rng, Unit } from '@core/model';
+import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -70,6 +72,14 @@ export interface SessionOptions {
 export class Session {
   s: GameState;
   private rng: Rng;
+  /** El equipo que se juega con las ordenes (el de la persona). */
+  private get me(): TeamId {
+    return teamsControlledBy(this.s, 'human')[0] ?? this.s.teams[0]!.id;
+  }
+  /** Los equipos que mueve la IA al terminar el turno, en orden. */
+  private get others(): TeamId[] {
+    return teamIds(this.s).filter((team) => team !== this.me);
+  }
 
   constructor(options: SessionOptions = {}) {
     const seed = options.seed ?? 1;
@@ -87,20 +97,21 @@ export class Session {
         size: options.size ?? 20,
         theme: options.theme ?? null,
         ruleChanges: { fog: options.fog ?? false },
+        teams: duel('human', 'ai'),
       });
-      const pick = (id: string | undefined) => {
-        if (!id) return null;
-        const general = newGeneral(this.s, id);
-        if (!general)
+      const pick = (team: TeamId, id: string | undefined) => {
+        if (!id) return;
+        if (!newGeneral(this.s, id))
           throw new Error(
             `No existe el general "${id}" (${defaultContent()
-              .files.generals.map((general) => general.id)
+              .generals.list.map((general) => general.id)
               .join(', ')})`,
           );
-        return general;
+        appointGeneral(this.s, team, id);
       };
-      const [general, enemyGeneral] = [pick(options.general), pick(options.enemyGeneral)];
-      if (general || enemyGeneral) this.s.generals = [general, enemyGeneral];
+      const [mine, enemy] = teamIds(this.s);
+      pick(mine!, options.general);
+      pick(enemy!, options.enemyGeneral);
     }
   }
 
@@ -195,10 +206,10 @@ export class Session {
         let cell = ' ' + (TERRAIN_CHAR[terrainAt(s, { x, y }).id] ?? '?') + ' ';
         if (building) {
           const char = BUILDING_CHAR[buildingTypeOf(s, building).id] ?? '?';
-          cell = building.owner === null ? `*${char} ` : ` ${building.owner === 0 ? char : char.toLowerCase()} `;
+          cell = building.owner === null ? `*${char} ` : ` ${building.owner === this.me ? char : char.toLowerCase()} `;
         }
-        if (unit && unit.carrier === null && (unit.team === 0 || vis.at({ x, y })))
-          cell = (unit.team === 0 ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
+        if (unit && unit.carrier === null && (unit.team === this.me || vis.at({ x, y })))
+          cell = (unit.team === this.me ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
         else if (!vis.at({ x, y }) && !building) cell = ' ? ';
         row += cell;
       }
@@ -208,13 +219,13 @@ export class Session {
   }
 
   units(team: number | null): string {
-    const vis = visibility(this.s, 0);
-    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === 0 || vis.at(unit)));
+    const vis = visibility(this.s, this.me);
+    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === this.me || vis.at(unit)));
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
         const usedTag = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
-        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
+        return `${String(unit.uid).padStart(3)} ${unit.team === this.me ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
   }
@@ -255,51 +266,56 @@ export class Session {
 
   private buy(at: Pos, name: string): string {
     const building = buildingAt(this.s, at);
-    if (!building || building.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
+    if (!building || building.owner !== this.me) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
     const unitType = this.s.content.units.list.find((candidate) => candidate.id.toLowerCase() === name.toLowerCase());
     const options = buyOptions(this.s, building);
     if (!options.length) throw new UsageError(`${buildingTypeOf(this.s, building).id} no fabrica unidades`);
     if (!unitType)
       return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${buyOption.unitType.id} (${buyOption.cost})`).join(', ')}`;
     const unit = spawn(this.s, building, unitType);
-    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
-    return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
+    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${teamState(this.s, this.me).funds})`);
+    return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
   }
 
   /** Usar un poder del general (sin id: lista de poderes y carga). */
   private power(id: string, target: { x: number; y: number } | null): string {
-    const general = generalOf(this.s, 0);
+    const general = generalOf(this.s, this.me);
     if (!general) throw new UsageError('no tienes general (--general Brisa)');
     const list = general.definition.powers.map((power) => `${power.id} (${power.cost})`).join(', ');
     if (!id)
       return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
-    const block = powerBlock(this.s, 0, id, target);
+    const block = powerBlock(this.s, this.me, id, target);
     if (block) throw new UsageError(`no se puede usar ${id}: ${block} (poderes: ${list})`);
-    return describe(this.s, usePower(this.s, 0, id, target)!);
+    return describe(this.s, usePower(this.s, this.me, id, target)!);
   }
 
   /** Fin del turno propio (o la IA juega por ti con `ai`), turno enemigo y fin de ronda. */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
-    if (aiForMe) for (const event of aiTurn(this.s, this.rng, 0)) out.push(`tu IA: ${describe(this.s, event)}`);
-    for (const event of aiTurn(this.s, this.rng, 1)) out.push(`enemigo: ${describe(this.s, event)}`);
+    if (aiForMe) for (const event of aiTurn(this.s, this.rng, this.me)) out.push(`tu IA: ${describe(this.s, event)}`);
+    for (const team of this.others)
+      for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
     const round = endRound(this.s);
-    out.push(`--- dia ${this.s.day}: +${round.income[0]} de ingresos, dinero ${this.s.funds[0]}`);
-    const result = outcome(this.s);
+    out.push(`--- dia ${this.s.day}: +${round.income[this.me]} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
+    const result = outcome(this.s, this.me);
     if (result !== 'playing') out.push(`FIN: ${result}`);
     return out.join('\n');
   }
 
   status(): string {
     const s = this.s;
-    const own = (team: number) => s.buildings.filter((building) => building.owner === team).length;
+    const me = this.me;
+    const own = (team: TeamId) => s.buildings.filter((building) => building.owner === team).length;
+    const unitsOf = (team: TeamId) => s.units.filter((unit) => unit.team === team).length;
+    const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
+    const general = teamState(s, me).general;
     return [
-      `dia ${s.day} · dinero ${s.funds[0]} (enemigo ${s.funds[1]}) · edificios ${own(0)} contra ${own(1)}`,
-      ...(s.generals?.[0] ? [`general ${s.generals[0].id}: carga ${s.generals[0].charge.toFixed(1)}`] : []),
-      `unidades ${s.units.filter((unit) => unit.team === 0).length} contra ${s.units.filter((unit) => unit.team === 1).length} · resultado: ${outcome(s)}`,
+      `dia ${s.day} · dinero ${teamState(s, me).funds} (otros ${others((team) => teamState(s, team).funds)}) · edificios ${own(me)} contra ${others(own)}`,
+      ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
+      `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${outcome(s, me)}`,
       `sin usar: ${
         s.units
-          .filter((unit) => unit.team === 0 && unit.active && unit.carrier === null)
+          .filter((unit) => unit.team === me && unit.active && unit.carrier === null)
           .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,

@@ -4,7 +4,7 @@ import type { UIState } from '../state';
 import { ui } from '../store';
 
 type EndVM = NonNullable<UIState['end']>;
-/** Un valor por bando: [tuyo, del enemigo]. */
+/** Un valor por lado: [tuyo, de tus enemigos] (ver BySide). */
 type PerSide = readonly [number, number];
 
 const CHART_WIDTH = 300;
@@ -14,7 +14,7 @@ const CHART_PADDING = 4;
 const CHART_GRID = [0.25, 0.5, 0.75];
 
 /**
- * Camino SVG de un bando en escalones (estilo pixel): de un dia al siguiente, primero en
+ * Camino SVG de un lado en escalones (estilo pixel): de un dia al siguiente, primero en
  * horizontal y luego en vertical.
  */
 function stepPath(data: PerSide[], side: 0 | 1): string {

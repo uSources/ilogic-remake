@@ -1,32 +1,16 @@
 /**
- * Preguntas cortas que se repiten por todo el nucleo: de que bando es una unidad, si va dentro de un
- * transporte, si puede luchar o capturar. Con nombre en vez de `team === 0` o `unitTypeOf(s, unit).attack !== null`
- * sueltos (docs/ESTILO.md, regla 4). Sin efectos.
+ * Preguntas cortas que se repiten por todo el nucleo: si dos unidades son enemigas, si va dentro de un
+ * transporte, si puede luchar o capturar. Con nombre en vez de `a.team !== b.team` o
+ * `unitTypeOf(s, unit).attack !== null` sueltos (docs/ESTILO.md, regla 4). Sin efectos.
  */
 
 import { unitTypeOf } from '../gameContent';
-import type { GameState, Team, Unit } from '../model';
+import type { GameState, Unit } from '../model';
+import { isHostile } from '../teams';
 
-/** El bando del jugador (el 1 es la IA, ver Team). */
-export const PLAYER: Team = 0;
-/** El bando de la IA. */
-export const AI_TEAM: Team = 1;
-/** Los dos bandos, en orden (para recorrerlos sin escribir `[0, 1] as const`). */
-export const TEAMS: readonly Team[] = [PLAYER, AI_TEAM];
-
-/** El bando es el del jugador. */
-export function isPlayer(team: Team | null): boolean {
-  return team === PLAYER;
-}
-
-/** El otro bando. */
-export function opponentOf(team: Team): Team {
-  return team === PLAYER ? AI_TEAM : PLAYER;
-}
-
-/** Son de bandos distintos. */
-export function isEnemyOf(first: { team: Team }, second: { team: Team }): boolean {
-  return first.team !== second.team;
+/** Las dos son de equipos enemigos (alianzas distintas: ver teams.ts). */
+export function areEnemies(s: GameState, first: Pick<Unit, 'team'>, second: Pick<Unit, 'team'>): boolean {
+  return isHostile(s, first.team, second.team);
 }
 
 /** Esta en el mapa, no dentro de un transporte (los pasajeros no ocupan casilla ni luchan). */

@@ -161,6 +161,42 @@ function format2TypesToIds(raw: Record<string, unknown>, content: GameContent): 
   if (isObject(objective) && objective.kind === 'capture') fieldToId(objective, 'type', ids(content.buildings.list));
 }
 
+/*
+ * Paso del formato 2: habia dos bandos fijos, el 0 (el jugador) y el 1 (la IA), con su dinero, sus
+ * generales y sus estadisticas en pares [jugador, IA], y las escuadras y la mision eran del jugador.
+ */
+
+/** Los dos bandos del formato 2: quien jugaba cada uno. */
+const FORMAT_2_CONTROLLERS = ['human', 'ai'] as const;
+
+/** El valor del bando `team` de un par [jugador, IA] del formato 2 (0 si no esta). */
+const ofPair = (pair: unknown, team: number): unknown => (Array.isArray(pair) ? (pair as unknown[])[team] : undefined) ?? 0;
+
+/** Las estadisticas del formato 2 (pares por bando y un par por dia) de un bando. */
+function format2StatsOf(stats: unknown, team: number): Record<string, unknown> {
+  const saved = isObject(stats) ? stats : {};
+  const army = listOf(saved.army).map((day) => ofPair(day, team));
+  return {
+    built: ofPair(saved.built, team),
+    spent: ofPair(saved.spent, team),
+    lost: ofPair(saved.lost, team),
+    captured: ofPair(saved.captured, team),
+    army,
+  };
+}
+
+/** Los dos bandos del formato 2 como equipos: dinero, general y estadisticas de cada uno. */
+function format2Teams(raw: Record<string, unknown>): Record<string, unknown>[] {
+  return FORMAT_2_CONTROLLERS.map((controller, id) => ({
+    id,
+    alliance: id,
+    controller,
+    funds: ofPair(raw.funds, id),
+    general: (Array.isArray(raw.generals) ? (raw.generals as unknown[])[id] : null) ?? null,
+    stats: format2StatsOf(raw.stats, id),
+  }));
+}
+
 /** Los pasos, del mas antiguo al mas nuevo. */
 export const MIGRATIONS: readonly SaveMigration[] = [
   {
@@ -231,6 +267,21 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     upToVersion: 2,
     stage: 'read',
     apply: (raw, context) => format2TypesToIds(raw, context.content),
+  },
+  {
+    // Hasta el formato 2, "0 = jugador, 1 = IA" con pares por bando; desde el 3, equipos (GameState.teams).
+    name: 'bandos fijos pasan a equipos',
+    upToVersion: 2,
+    stage: 'read',
+    apply: (raw) => {
+      if (raw.teams !== undefined) return;
+      raw.teams = format2Teams(raw);
+      delete raw.funds;
+      delete raw.generals;
+      delete raw.stats;
+      for (const squad of listOf(raw.squads)) if (isObject(squad)) squad.team = 0;
+      if (isObject(raw.mission)) raw.mission.team = 0;
+    },
   },
   {
     // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.

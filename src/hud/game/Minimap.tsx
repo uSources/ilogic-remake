@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'preact/compat';
 import { t } from '../../settings';
 import type { UIState } from '../state';
 import { ui } from '../store';
+import type { OwnerSide, Side } from '../vm/common';
 import type { MinimapVM } from '../vm/minimap';
 import type { Pos } from '../../core/model';
 
@@ -13,17 +14,17 @@ const FOG_SHADE = 'rgba(5,8,12,0.45)';
 const OUTLINE = '#0b1220';
 const NEUTRAL_COLOR = '#c9d2e3';
 const CONTROL_POINT_BORDER = '#ffd34d';
-const TEAM_COLOR = ['#3aa8ff', '#ff4d45'] as const;
-/** Las unidades, mas claras que los edificios del mismo bando. */
-const UNIT_COLOR = ['#8fd0ff', '#ff8a80'] as const;
+/** Lo suyo y lo aliado en azul, lo enemigo en rojo. */
+const SIDE_COLOR: Record<Side, string> = { own: '#3aa8ff', ally: '#3aa8ff', enemy: '#ff4d45' };
+/** Las unidades, mas claras que los edificios del mismo lado. */
+const UNIT_COLOR: Record<Side, string> = { own: '#8fd0ff', ally: '#8fd0ff', enemy: '#ff8a80' };
 /** Boton principal del raton en `PointerEvent.buttons`. */
 const PRIMARY_BUTTON = 1;
 
-type Team = 0 | 1;
 type Painter = CanvasRenderingContext2D;
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
-const ownerColor = (owner: Team | null) => (owner === null ? NEUTRAL_COLOR : TEAM_COLOR[owner]);
+const ownerColor = (owner: OwnerSide) => (owner === 'neutral' ? NEUTRAL_COLOR : SIDE_COLOR[owner]);
 
 function fillTile(painter: Painter, tile: Pos) {
   painter.fillRect(tile.x * TILE_PX, tile.y * TILE_PX, TILE_PX, TILE_PX);
@@ -73,7 +74,7 @@ function drawMinimap(painter: Painter, minimap: MinimapVM) {
   drawFog(painter, minimap);
   for (const building of minimap.buildings) fillOutlinedTile(painter, building, ownerColor(building.owner));
   drawControlPoints(painter, minimap);
-  for (const unit of minimap.units) fillOutlinedTile(painter, unit, UNIT_COLOR[unit.team]);
+  for (const unit of minimap.units) fillOutlinedTile(painter, unit, UNIT_COLOR[unit.side]);
 }
 
 /** Lleva la camara a la casilla bajo el puntero. */

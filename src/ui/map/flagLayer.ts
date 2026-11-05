@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
 import { TILE } from '../../layout';
+import { sideLetter } from '../sides';
 import type { MapLayer } from './layer';
 import type { ViewOptions } from './viewOptions';
 
@@ -54,7 +55,7 @@ export class FlagLayer implements MapLayer {
     const tex = this.scene.textures;
     // Un banderin por punto de control, del color de su dueño (gris si no es de nadie), en la casilla central.
     this.control.sync(hasImage(tex, 'ui/flag_b') ? (opts.controlPoints ?? []) : [], (img, c) => {
-      img.setTexture(ATLAS, `ui/flag_${c.owner === 0 ? 'b' : c.owner === 1 ? 'r' : 'i'}`);
+      img.setTexture(ATLAS, `ui/flag_${sideLetter(c.owner)}`);
       img.setPosition(c.x * TILE + TILE / 2, (c.y + 1) * TILE - CONTROL_FLAG_LIFT);
     });
     // Banderin del color de la orden en el destino (dorado si solo es "ir alli"); el mastil en el centro.

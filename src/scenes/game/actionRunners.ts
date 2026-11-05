@@ -4,7 +4,7 @@
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
 import { cancelStandingOrder, disbandSquad, formSquad, leaveSquad, pruneSquads, squadById, SQUAD_NAME_MAX } from '../../core/squads';
-import type { StandingOrderKind, GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
 import { exactSquad, type ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
 import { t } from '../../settings';
@@ -23,6 +23,8 @@ export interface ActionRun {
 /** Lo que las acciones necesitan para cumplirse (se lo da Orders). */
 export interface ActionRunHost {
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   moveCursorTo(pos: Pos, follow: boolean): void;
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
   commit(at: Pos, options: { drop?: boolean }): Promise<void>;
@@ -77,9 +79,9 @@ function orderWithTarget(kind: StandingOrderKind) {
 }
 
 /** Accion inmediata sobre la partida (quitar ordenes, escuadras): se hace, y se cierra el menu. */
-function instant(change: (s: GameState, units: Unit[]) => void) {
+function instant(change: (s: GameState, units: Unit[], team: TeamId) => void) {
   return (action: ActionRun, host: ActionRunHost) => {
-    change(host.state, action.units);
+    change(host.state, action.units, host.viewer);
     host.finish();
   };
 }
@@ -89,8 +91,8 @@ function cancelOrders(s: GameState, units: Unit[]): void {
   showToast(t('orderCancelled'));
 }
 
-function announceNewSquad(s: GameState, units: Unit[]): void {
-  const squad = formSquad(s, units);
+function announceNewSquad(s: GameState, units: Unit[], team: TeamId): void {
+  const squad = formSquad(s, team, units);
   if (!squad) return;
   const keyHint = squad.key ? ` · ${t('squadKeyHint')} ${squad.key}` : '';
   showToast(`${t('squadFormed')}: ${squad.name}${keyHint}`);

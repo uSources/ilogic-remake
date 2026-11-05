@@ -9,6 +9,7 @@ import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { buyOptions, endRound } from '@core/rules';
+import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
 import type { GameEvent, GameState, SavedGameState } from '@core/model';
 
@@ -22,7 +23,7 @@ function expensiveTanks(): GameContent {
 const TANK = unitTypeNamed('Tank');
 
 function newMatch(content: GameContent): GameState {
-  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content });
+  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content, teams: duel('ai', 'ai') });
 }
 
 /** Juega `days` rondas IA contra IA de cada partida, alternando un turno de cada una. */

@@ -13,7 +13,7 @@ import { movementOf, unitAt, unitById } from '../../core/rules';
 import { powerArea, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
-import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
+import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';
 import { fmtNum, settings, t } from '../../settings';
@@ -35,6 +35,7 @@ import { FxTimeline } from '../../ui/fxKit';
 import { baseFacing, faceFlip, type MapView } from '../../ui/mapView';
 import { combatVM } from '../../ui/hudModels';
 import { PAL, PAL_CSS } from '../../ui/palette';
+import { sideColor, sideOf, type Side } from '../../ui/sides';
 import { unitKey } from '../../ui/sprites';
 import { STEP_MS, type Phase } from './types';
 
@@ -44,11 +45,15 @@ export interface PlaybackHost {
   readonly view: MapView;
   /** La partida (cambia al deshacer o al repetir el turno enemigo: se lee cada vez). */
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   phase: Phase;
   /** Saltarse las animaciones (Enter durante el turno enemigo, velocidad instantanea). */
   fastForward: boolean;
   readonly enemyPlaying: boolean;
   readonly replaying: boolean;
+  /** El equipo que esta jugando (el que hace lo que se anima). */
+  readonly acting: TeamId;
   /** Unidades que no se dibujan (las que se estan animando aparte). */
   readonly hidden: Set<number>;
   /** El jugador ve esa casilla. */
@@ -64,9 +69,13 @@ export interface EventStage {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   /** Se pueden saltar a media animacion (Enter): leerlo despues de cada espera. */
   readonly fastForward: boolean;
   readonly enemyPlaying: boolean;
+  /** El equipo que esta jugando (el que hace lo que se anima). */
+  readonly acting: TeamId;
   /** Unidades que no se dibujan (las que se estan animando aparte). */
   readonly hidden: Set<number>;
   visible(pos: Pos): boolean;
@@ -99,6 +108,12 @@ export class EventPlayer implements EventStage {
   }
   get state(): GameState {
     return this.host.state;
+  }
+  get viewer(): TeamId {
+    return this.host.viewer;
+  }
+  get acting(): TeamId {
+    return this.host.acting;
   }
   get view(): MapView {
     return this.host.view;
@@ -184,7 +199,7 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const s = stage.state;
   const mover = unitById(s, event.uid);
   const start = event.path[0]!;
-  if (mover) return unitKey(stage.scene.textures, s, { ...mover, x: start.x, y: start.y, active: true });
+  if (mover) return unitKey(stage.scene.textures, s, { ...mover, x: start.x, y: start.y, active: true }, stage.viewer);
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (roja si no se sabe).
   const entered = unitEntered(s, event);
   return 'r_' + (entered ? unitTypeOf(s, entered) : s.content.units.list[0]!).art;
@@ -195,9 +210,9 @@ const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKe
   if (!isSeen || stage.fastForward) return;
   const texture = ghostKey ?? moverTexture(stage, event);
   if (!texture) return;
-  // La IA solo se ve donde hay vision (no se delatan sus unidades en la niebla).
+  // Lo de los demas equipos solo se ve donde hay vision (no se delatan sus unidades en la niebla).
   const mover = unitById(stage.state, event.uid) ?? unitEntered(stage.state, event);
-  const showWholePath = mover?.team === 0;
+  const showWholePath = mover?.team === stage.viewer;
   await animatePath(stage, event.uid, texture, event.path, showWholePath);
   if (event.kind === 'move' && event.ambush && !stage.fastForward) {
     await showAmbush(stage, event.ambush, event.path[event.path.length - 1]!, showWholePath);
@@ -234,7 +249,8 @@ function stepPace(index: number, last: number): { pace: number; ease: string } {
 /** Lo que hace falta para mover el dibujo de una unidad casilla a casilla. */
 interface Walker {
   readonly image: Phaser.GameObjects.Image;
-  readonly team: Team;
+  /** Su lado para el que mira (hacia donde mira el dibujo al principio). */
+  readonly side: Side;
   /** La infanteria da un saltito por casilla. */
   readonly hops: boolean;
   /** Los vehiculos de tierra levantan polvo al arrancar de cada casilla. */
@@ -244,9 +260,9 @@ interface Walker {
 function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Image): Walker {
   // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
   const mover = unitById(stage.state, uid);
-  const team = mover?.team ?? (stage.enemyPlaying ? 1 : 0);
+  const side = sideOf(stage.state, stage.viewer, mover?.team ?? stage.acting);
   const moveType = mover ? movementOf(stage.state, mover) : null;
-  return { image, team, hops: moveType === MoveType.FOOT, raisesDust: moveType !== MoveType.FOOT && moveType !== MoveType.AIR };
+  return { image, side, hops: moveType === MoveType.FOOT, raisesDust: moveType !== MoveType.FOOT && moveType !== MoveType.AIR };
 }
 
 /**
@@ -264,8 +280,8 @@ async function animatePath(stage: EventStage, uid: number, textureKey: string, p
   const image = view.ghost(textureKey, path[0]!);
   image.setVisible(isShown(path[0]!));
   const walker = walkerFor(stage, uid, image);
-  let facing = view.facingOf(uid, walker.team);
-  image.setFlipX(faceFlip(walker.team, facing));
+  let facing = view.facingOf(uid, walker.side);
+  image.setFlipX(faceFlip(walker.side, facing));
   for (let i = 1; i < path.length; i++) {
     const to = path[i]!;
     // Por la niebla sin verse: salta a la casilla sin animar.
@@ -277,7 +293,7 @@ async function animatePath(stage: EventStage, uid: number, textureKey: string, p
     const direction = facingToward(from, to);
     if (direction) {
       facing = direction;
-      image.setFlipX(faceFlip(walker.team, direction));
+      image.setFlipX(faceFlip(walker.side, direction));
     }
     await walkStep(stage, walker, from, to, stepPace(i, path.length - 1));
     image.setVisible(isShown(to));
@@ -346,8 +362,9 @@ interface Battle {
   readonly attackerPos: Pos | null;
   readonly attackerKey: string | null;
   readonly isAttackerSeen: boolean;
-  readonly attackerTeam: Team;
-  readonly defenderTeam: Team;
+  /** El lado de cada uno para el que mira (colores y hacia donde miran). */
+  readonly attackerSide: Side;
+  readonly defenderSide: Side;
   readonly attackerType: UnitType;
   readonly defenderType: UnitType;
   /** Reloj de los efectos, a la velocidad de las animaciones (Opciones). */
@@ -372,8 +389,10 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const attackerKey = attackerPos ? stage.view.unitKeyAt(attackerPos) : null;
   const isAttackerSeen = !!attackerPos && stage.visible(attackerPos);
   const info = event.combat;
-  const attackerTeam = info?.attackerTeam ?? unitById(s, event.attacker)?.team ?? (stage.enemyPlaying ? 1 : 0);
+  const attackerTeam = info?.attackerTeam ?? unitById(s, event.attacker)?.team ?? stage.acting;
   const victim = unitAt(s, event.target);
+  const defenderTeam = info?.defenderTeam ?? victim?.team;
+  const defenderSide = defenderTeam === undefined ? 'enemy' : sideOf(s, stage.viewer, defenderTeam);
   return {
     event,
     isSeen,
@@ -383,8 +402,8 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
     attackerPos,
     attackerKey,
     isAttackerSeen,
-    attackerTeam,
-    defenderTeam: (1 - attackerTeam) as Team,
+    attackerSide: sideOf(s, stage.viewer, attackerTeam),
+    defenderSide,
     attackerType: typeShown(s, info?.attackerType ?? unitById(s, event.attacker)?.type),
     defenderType: typeShown(s, info?.defenderType ?? victim?.type),
     timeline: new FxTimeline(stage.scene, stage.combatMs(SPEED_REFERENCE_MS) / SPEED_REFERENCE_MS),
@@ -392,14 +411,12 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   };
 }
 
-const teamColor = (team: number) => (team === 0 ? PAL.blue : PAL.red);
-
 /** Enseña el panel de combate (abajo) en un momento del combate, si el jugador lo ve. */
-function showCombatPanel(s: GameState, battle: Battle, moment: 'start' | 'hit' | 'counter'): void {
+function showCombatPanel(s: GameState, viewer: TeamId, battle: Battle, moment: 'start' | 'hit' | 'counter'): void {
   if (!battle.isSeen) return;
   const icons = { attacker: battle.attackerKey, defender: battle.victimKey };
   const seen = { attacker: battle.isAttackerSeen, defender: true };
-  const panel = combatVM(s, battle.event, moment, icons, seen, battle.panelId);
+  const panel = combatVM(s, viewer, battle.event, moment, icons, seen, battle.panelId);
   if (panel) ui.set({ combat: panel });
 }
 
@@ -412,14 +429,14 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
   const battle = describeBattle(stage, event);
   if (battle.isSeen) {
     await aimAndFire(stage, battle);
-    showCombatPanel(stage.state, battle, 'hit');
+    showCombatPanel(stage.state, stage.viewer, battle, 'hit');
     await hitEffects(stage, {
       uid: battle.victimUid,
       at: event.target,
       damage: event.damage,
       killed: event.killed,
       drawnKey: battle.victimKey,
-      team: battle.defenderTeam,
+      side: battle.defenderSide,
       lifeBefore: event.combat?.defenderLife ?? null,
       timeline: battle.timeline,
     });
@@ -433,11 +450,11 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
 /** Apuntar y disparar: los dos se miran, la mira se cierra sobre el objetivo y sale el disparo. */
 async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   const { event, attackerPos, attackerSprite } = battle;
-  showCombatPanel(stage.state, battle, 'start');
+  showCombatPanel(stage.state, stage.viewer, battle, 'start');
   await stage.lookAt(event.target);
   if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.target);
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
-  void targetMark(stage.scene, stage.view, event.target, teamColor(battle.attackerTeam), stage.combatMs(150));
+  void targetMark(stage.scene, stage.view, event.target, sideColor(battle.attackerSide), stage.combatMs(150));
   if (attackerSprite && attackerPos && battle.isAttackerSeen) {
     await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.timeline);
   } else await stage.wait(stage.combatMs(150));
@@ -455,14 +472,14 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   if (defenderSprite) {
     await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.timeline);
   }
-  showCombatPanel(stage.state, battle, 'counter');
+  showCombatPanel(stage.state, stage.viewer, battle, 'counter');
   await hitEffects(stage, {
     uid: event.attacker,
     at: attackerPos,
     damage: event.counter,
     killed: !!event.attackerKilled,
     drawnKey: battle.attackerKey,
-    team: battle.attackerTeam,
+    side: battle.attackerSide,
     lifeBefore: event.combat?.attackerLife ?? null,
     timeline: battle.timeline,
   });
@@ -506,7 +523,7 @@ interface HitTarget {
   readonly killed: boolean;
   /** Su dibujo antes del golpe (si cae ya no esta en el estado). */
   readonly drawnKey: string | null;
-  readonly team: Team;
+  readonly side: Side;
   readonly lifeBefore: number | null;
   readonly timeline: FxTimeline;
 }
@@ -527,13 +544,13 @@ async function hitEffects(stage: EventStage, hit: HitTarget): Promise<void> {
   void popNumber(hit.timeline, view, hit.at, isHit ? `-${hit.damage}` : t('fxMiss'), isHit ? PAL_CSS.red : MISS_COLOR);
   // La barra sigue bajando mientras pasa lo siguiente (no se espera).
   if (hit.lifeBefore !== null) {
-    void lifeBar(scene, view, hit.at, hit.lifeBefore, hit.lifeBefore - hit.damage, teamColor(hit.team), stage.combatMs(220));
+    void lifeBar(scene, view, hit.at, hit.lifeBefore, hit.lifeBefore - hit.damage, sideColor(hit.side), stage.combatMs(220));
   }
   await impact(hit.timeline, view, hit.at, hit.killed);
   if (hit.killed) {
     if (sprite && !survivor) sprite.destroy();
     view.scorch(hit.at, stage.state.day);
-    await debris(hit.timeline, view, hit.at, hit.team);
+    await debris(hit.timeline, view, hit.at, hit.side);
   }
   stage.refresh();
 }
@@ -542,8 +559,8 @@ async function hitEffects(stage: EventStage, hit: HitTarget): Promise<void> {
 function fallenCopy(stage: EventStage, hit: HitTarget): Phaser.GameObjects.Image | null {
   if (!hit.killed || !hit.drawnKey) return null;
   const copy = stage.view.ghost(hit.drawnKey, hit.at);
-  const facing = hit.uid !== null ? stage.view.facingOf(hit.uid, hit.team) : baseFacing(hit.team);
-  return copy.setFlipX(faceFlip(hit.team, facing));
+  const facing = hit.uid !== null ? stage.view.facingOf(hit.uid, hit.side) : baseFacing(hit.side);
+  return copy.setFlipX(faceFlip(hit.side, facing));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -585,10 +602,10 @@ const animateSpawn: Animator<'spawn'> = async (stage, event) => {
   ]);
 };
 
-/** Se ve lo que le pasa a esa unidad: las propias siempre, las enemigas si estan a la vista. */
+/** Se ve lo que le pasa a esa unidad: las propias siempre, las demas si estan a la vista. */
 function seenUnit(stage: EventStage, uid: number): Unit | null {
   const unit = unitById(stage.state, uid);
-  if (!unit || (unit.team !== 0 && !stage.visible(unit))) return null;
+  if (!unit || (unit.team !== stage.viewer && !stage.visible(unit))) return null;
   return unit;
 }
 
@@ -624,8 +641,9 @@ const animatePower: Animator<'power'> = async (stage, event) => {
   const general = generalOf(stage.state, event.team)?.definition;
   const power = general?.powers.find((candidate) => candidate.id === event.power);
   const name = power?.name[settings.lang] ?? event.power;
-  // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
-  if (event.team !== 0) showToast(`${t('enemy')} · ${general?.name[settings.lang] ?? event.general}: ${name}`);
+  // Los demas equipos avisan siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
+  const side = sideOf(stage.state, stage.viewer, event.team);
+  if (side !== 'own') showToast(`${t(side)} · ${general?.name[settings.lang] ?? event.general}: ${name}`);
   const at = event.target ?? stage.view.cursor;
   if (event.target) await stage.lookAt(event.target);
   const centerPoint = center(at);

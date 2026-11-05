@@ -3,6 +3,7 @@ import type { Translation } from '../translation';
 
 export const turn: Translation<typeof es> = {
   enemyTurn: 'ENEMY TURN',
+  allyTurn: 'ALLY TURN',
   yourTurn: 'YOUR TURN',
   saved: 'Game saved',
   confirmQuit: 'Press Esc again to quit to the menu',

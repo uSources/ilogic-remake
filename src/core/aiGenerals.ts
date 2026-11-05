@@ -10,6 +10,7 @@
  * Generico por tipo de efecto: un general nuevo con efectos que ya existen no necesita tocar esto; un
  * tipo de efecto nuevo es una entrada en EFFECT_VALUES.
  */
+import { isHostile } from './teams';
 import { unitTypeOf, weightsOf } from './gameContent';
 import type { GeneralEffect as GeneralEffectDef } from './content';
 import type { DeepReadonly } from './util/freeze';
@@ -17,7 +18,7 @@ import { applies, chargeStars, generalOf, usePower } from './generals';
 import { posKey, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
-import type { GameEvent, GameState, Pos, Team, Unit } from './model';
+import type { GameEvent, GameState, Pos, TeamId, Unit } from './model';
 import { maxBy } from './util/pick';
 
 /** Un efecto de general tal como esta en el contenido (de solo lectura). */
@@ -54,14 +55,16 @@ function areaCentersTouching(s: GameState, enemies: readonly Pos[], radius: numb
 /** Mejor casilla para un daño en area: la que mas valor quita a enemigos que se ven. */
 export function bestAreaTarget(
   s: GameState,
-  team: Team,
+  team: TeamId,
   radius: number,
   damage: number,
   minLife: number,
 ): { target: Pos; value: number } | null {
   const visible = visibility(s, team);
   // Nunca a ciegas en la niebla, y nada que ya no pueda bajar de minLife.
-  const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && visible.at(unit));
+  const enemies = s.units.filter(
+    (unit) => isHostile(s, unit.team, team) && unit.carrier === null && unit.life > minLife && visible.at(unit),
+  );
   const lifeTaken = (life: number) => Math.max(0, Math.min(damage, life - minLife));
   const valueAt = (center: Pos): number => {
     const area = new Set(squareArea(mapGrid(s), center, radius).map(posKey));
@@ -72,7 +75,7 @@ export function bestAreaTarget(
 }
 
 /** Como se valora un tipo de efecto: donde apuntarlo y cuanto vale, o null si no tiene sentido ahora. */
-type EffectValue<E extends GeneralEffect> = (s: GameState, team: Team, effect: E) => ValuedTarget | null;
+type EffectValue<E extends GeneralEffect> = (s: GameState, team: TeamId, effect: E) => ValuedTarget | null;
 type EffectValues = { [Kind in GeneralEffect['kind']]: EffectValue<Extract<GeneralEffect, { kind: Kind }>> };
 
 const EFFECT_VALUES: EffectValues = {
@@ -93,12 +96,12 @@ const EFFECT_VALUES: EffectValues = {
   funds: (_s, _team, effect) => ({ target: null, value: effect.amount }),
 };
 
-function valueEffect<E extends GeneralEffect>(s: GameState, team: Team, effect: E): ValuedTarget | null {
+function valueEffect<E extends GeneralEffect>(s: GameState, team: TeamId, effect: E): ValuedTarget | null {
   return (EFFECT_VALUES[effect.kind] as EffectValue<E>)(s, team, effect);
 }
 
 /** Que poder usaria ahora la IA (null = ninguna, guarda la carga). */
-export function choosePower(s: GameState, team: Team): PowerChoice | null {
+export function choosePower(s: GameState, team: TeamId): PowerChoice | null {
   const general = generalOf(s, team);
   if (!general || general.state.used) return null;
   const stars = chargeStars(general.state);
@@ -115,7 +118,7 @@ export function choosePower(s: GameState, team: Team): PowerChoice | null {
 }
 
 /** Turno del general de la IA: como mucho un poder. */
-export function* aiGeneral(s: GameState, team: Team): Generator<GameEvent> {
+export function* aiGeneral(s: GameState, team: TeamId): Generator<GameEvent> {
   const choice = choosePower(s, team);
   if (!choice) return;
   const event = usePower(s, team, choice.power, choice.target);

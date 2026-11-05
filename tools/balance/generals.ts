@@ -11,12 +11,13 @@
  *
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
+import { duel, teamIds } from '@core/teams';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { newGeneral } from '@core/generals';
+import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
-import { endRound, outcome, score } from '@core/rules';
+import { endRound, isMatchOver, outcome, score } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
 
 const arg = (name: string, fallback: string): string => {
@@ -33,24 +34,23 @@ function checkGeneralIds(ids: string[]): void {
   const known = new Set(defaultContent().files.generals.map((general) => general.id));
   for (const id of ids) if (id !== 'none' && !known.has(id)) throw new Error(`General "${id}" no existe (${[...known].join(', ')}, none)`);
 }
-const gen = (s: GameState, id: string) => (id === 'none' ? null : newGeneral(s, id));
 
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
 function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: 0 | 1 | -1; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createGame(rng, {});
-  s.generals = [gen(s, g0), gen(s, g1)];
-  while (outcome(s) === 'playing' && s.day <= 60) {
-    for (const team of [0, 1] as const) {
+  const s: GameState = createGame(rng, { teams: duel('ai', 'ai') });
+  [g0, g1].forEach((id, team) => appointGeneral(s, team, id === 'none' ? null : id));
+  while (!isMatchOver(s) && s.day <= 60) {
+    for (const team of teamIds(s)) {
       for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {
         if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);
-        if (outcome(s) !== 'playing') break;
+        if (isMatchOver(s)) break;
       }
-      if (outcome(s) !== 'playing') break;
+      if (isMatchOver(s)) break;
     }
     endRound(s);
   }
-  const result = outcome(s);
+  const result = outcome(s, 0);
   if (result !== 'playing') return { winner: result === 'won' ? 0 : 1, byScore: false };
   const scoreGap = score(s, 0) - score(s, 1);
   return { winner: scoreGap > 0 ? 0 : scoreGap < 0 ? 1 : -1, byScore: true };

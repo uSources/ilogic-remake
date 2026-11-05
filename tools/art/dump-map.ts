@@ -2,10 +2,12 @@
 // Uso: npx tsx tools/art/dump-map.ts <semilla> <tamaño> [tema]
 import { seededRng } from '@core/geom';
 import { createGame } from '@core/defaultGames';
+import { duel } from '@core/teams';
 
 const [seed = '1', size = '24', theme] = process.argv.slice(2);
 const s = createGame(seededRng(Number(seed)), {
   size: Number(size),
   theme: theme ?? null,
+  teams: duel('human', 'ai'),
 });
 process.stdout.write(JSON.stringify({ theme: s.theme, map: s.map, buildings: s.buildings }));

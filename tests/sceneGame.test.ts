@@ -79,6 +79,7 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
 describe('escena: casillas marcadas (game/highlights.ts)', () => {
   const base = (s: GameState): HighlightInput => ({
     s,
+    viewer: 0,
     phase: 'map',
     cursor: { x: 0, y: 0 },
     range: null,
@@ -134,8 +135,8 @@ describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
-    expect(endFocus(s, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
-    expect(endFocus(s, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
+    expect(endFocus(s, 0, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+    expect(endFocus(s, 0, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
   });
 });
 
@@ -161,12 +162,13 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
   function setup(s: GameState) {
     const state = { phase: 'map' as Phase, selected: null as Unit | null };
     const nop = () => {};
-    const selection = new GroupSelection({ state: s, phase: 'map', selected: null } as unknown as SelectionHost);
+    const selection = new GroupSelection({ state: s, viewer: 0, phase: 'map', selected: null } as unknown as SelectionHost);
     const orders = new Orders(
       live<OrderHost>({
         scene: { get: () => null as never },
         view: { get: () => null as never },
         state: { get: () => s },
+        viewer: { get: () => 0 },
         phase: { get: () => state.phase, set: (kind) => (state.phase = kind) },
         menuSel: { get: () => 0 },
         match: { get: () => 1 },

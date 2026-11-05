@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outcome } from '@core/rules';
+import { isMatchOver } from '@core/rules';
 import { defaultLab, LAB_FROM, LAB_TARGET, labRange, labState } from '../src/lab';
 
 describe('laboratorio de animaciones', () => {
@@ -18,6 +18,6 @@ describe('laboratorio de animaciones', () => {
   it('destruir: la enemiga empieza con poca vida; la partida no se acaba sola', () => {
     const s = labState(defaultLab(), 'kill');
     expect(s.units[1]!.life).toBeLessThan(30);
-    expect(outcome(s)).toBe('playing');
+    expect(isMatchOver(s)).toBe(false);
   });
 });

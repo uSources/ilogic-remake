@@ -5,7 +5,8 @@
 import type Phaser from 'phaser';
 import { seededRng } from '../../core/geom';
 import { attackEvent, moveEvent, moveRange, moveUnit } from '../../core/rules';
-import type { GameEvent, GameState } from '../../core/model';
+import type { GameEvent, GameState, TeamId } from '../../core/model';
+import { isHostile } from '../../core/teams';
 import { LAB_TARGET, labRange, type LabAction, type LabOptions } from '../../lab';
 import { TILE } from '../../layout';
 import type { MapView } from '../../ui/mapView';
@@ -16,6 +17,8 @@ export interface LabHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   refresh(): void;
   play(events: GameEvent[]): Promise<void>;
 }
@@ -38,8 +41,8 @@ export function startLab(host: LabHost, options: LabOptions): void {
 
 async function runLab(host: LabHost, action: LabAction): Promise<void> {
   const s = host.state;
-  const me = s.units.find((unit) => unit.team === 0);
-  const foe = s.units.find((unit) => unit.team === 1);
+  const me = s.units.find((unit) => unit.team === host.viewer);
+  const foe = s.units.find((unit) => isHostile(s, host.viewer, unit.team));
   if (!me || !foe) return;
   if (action === 'move') {
     const range = moveRange(s, me);

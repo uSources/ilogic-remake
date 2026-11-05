@@ -4,12 +4,13 @@
  * Los usan el turno de la IA (unitTurn) y las ordenes del jugador (standingOrderTurn).
  */
 
+import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
 import { unitTypeOf, isHq, weightsOf } from '../gameContent';
 import { diamond, manhattan, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canCapture, capture, captureEvent } from '../rules/capture';
 import { attackEvent, canDamage, fireOrigins, inAttackRange } from '../rules/combat';
-import { teamsInZone } from '../rules/control';
+import { isContested } from '../rules/control';
 import { moveEvent, reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
 import { merge, mergeTargets } from '../rules/transport';
@@ -167,9 +168,9 @@ function captureGoal(s: GameState, ai: AiCtx, unit: Unit): Pos | null {
   const steps = stepsFrom(s, ai, unit);
   const isCapturable = (tile: Pos): boolean => {
     const building = buildingAt(s, tile);
-    if (!building || building.owner === ai.me || !visible.at(tile)) return false;
+    if (!building || isAlliedOwner(s, building.owner, ai.me) || !visible.at(tile)) return false;
     const occupant = unitAt(s, tile);
-    if (occupant && occupant.team === ai.me) return false;
+    if (occupant && areAllied(s, occupant.team, ai.me)) return false;
     return steps(tile) < Infinity;
   };
   const headStart = (tile: Pos): number => (isHq(s, buildingAt(s, tile)!) ? HQ_CAPTURE_HEAD_START : 0);
@@ -211,12 +212,13 @@ function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
  */
 function advanceGoals(s: GameState, ai: AiCtx, unit: Unit): Pos[] {
   const visible = visibility(s, ai.me);
-  const isOpenPoint = (point: ControlPoint): boolean => (point.owner !== ai.me || teamsInZone(s, point).size > 1) && !unitAt(s, point);
+  const isOpenPoint = (point: ControlPoint): boolean =>
+    (!isAlliedOwner(s, point.owner, ai.me) || isContested(s, point)) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
-  if (unitTypeOf(s, unit).canCapture) return [...s.buildings.filter((building) => building.owner !== ai.me), ...points];
+  if (unitTypeOf(s, unit).canCapture) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
-    other.team !== ai.me && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
-  const isEnemyHq = (building: Building): boolean => building.owner !== ai.me && building.owner !== null && isHq(s, building);
+    isHostile(s, other.team, ai.me) && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
+  const isEnemyHq = (building: Building): boolean => isHostileOwner(s, building.owner, ai.me) && isHq(s, building);
   return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
 }
 

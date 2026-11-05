@@ -4,7 +4,7 @@
  * entrada de PHASES (`highlights`).
  */
 import type { MoveRange } from '../../core/rules';
-import type { GameState, Pos } from '../../core/model';
+import type { GameState, Pos, TeamId } from '../../core/model';
 import type { HighlightKind } from '../../ui/mapView';
 import { PHASES } from './phases';
 import { noHighlights } from './phases/phase';
@@ -12,6 +12,8 @@ import type { Phase } from './types';
 
 export interface HighlightInput {
   s: GameState;
+  /** El equipo que mira (sus unidades se eligen; las demas solo se ven si estan a la vista). */
+  viewer: TeamId;
   phase: Phase;
   cursor: Pos;
   /** Alcance de la unidad que se mueve, y adonde se puede unir o subir. */

@@ -6,6 +6,7 @@ export const cards: Translation<typeof es> = {
   neutral: 'Neutral',
   you: 'Yours',
   enemy: 'Enemy',
+  ally: 'Ally',
   defense: 'Defense',
   income: 'Income',
   move: 'Move',

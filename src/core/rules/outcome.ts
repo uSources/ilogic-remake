@@ -1,28 +1,32 @@
 /**
- * Victoria y derrota: Base, limite de dias, puntos y objetivos de mision.
+ * Victoria y derrota de cada equipo: Base, limite de dias, puntos y objetivo de la mision (este, en
+ * objectives.ts). Todo se mide para un equipo: gana quien deja sin nada a todos sus enemigos.
  */
 
 import { unitTypeOf, isHq } from '../gameContent';
-import { AI_TEAM, PLAYER } from '../util/predicates';
-import type { Building, GameState, Objective, Outcome, Pos, Team } from '../model';
+import { measureObjective, objectiveOutcome, type ObjectiveProgress } from '../objectives';
+import { alliesOf, areAllied, enemiesOf } from '../teams';
+import { maxBy } from '../util/pick';
+import type { Building, GameState, Outcome, TeamId } from '../model';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;
 
-const hasHQ = (s: GameState, team: Team): boolean => s.buildings.some((building) => building.owner === team && isHq(s, building));
+const hasHQ = (s: GameState, team: TeamId): boolean => s.buildings.some((building) => building.owner === team && isHq(s, building));
 
-const buildingsOf = (s: GameState, team: Team): Building[] => s.buildings.filter((building) => building.owner === team);
+const buildingsOf = (s: GameState, team: TeamId): Building[] => s.buildings.filter((building) => building.owner === team);
 
-function defeated(s: GameState, team: Team): boolean {
+/** El equipo ha perdido su Base o se ha quedado sin unidades ni edificios. */
+export function isDefeated(s: GameState, team: TeamId): boolean {
   const hasAnything = s.units.some((unit) => unit.team === team) || buildingsOf(s, team).length > 0;
   return !hasHQ(s, team) || !hasAnything;
 }
 
 /**
- * Puntos de un bando para el limite de dias: valor de su ejercito (coste x vida/100)
+ * Puntos de un equipo para el limite de dias: valor de su ejercito (coste x vida/100)
  * mas 1000 por cada edificio.
  */
-export function score(s: GameState, team: Team): number {
+export function score(s: GameState, team: TeamId): number {
   let total = 0;
   for (const unit of s.units) if (unit.team === team) total += (unitTypeOf(s, unit).cost * unit.life) / 100;
   for (const building of s.buildings) if (building.owner === team) total += BUILDING_SCORE;
@@ -32,85 +36,69 @@ export function score(s: GameState, team: Team): number {
 /** El limite de dias (si lo hay) ya se ha cumplido. */
 export const dayLimitReached = (s: GameState): boolean => s.rules.dayLimit !== null && s.day > s.rules.dayLimit;
 
-/** Al acabar el ultimo dia: mas puntos; si empatan, mas edificios; si tambien, pierde el jugador. */
-function dayLimitOutcome(s: GameState): Outcome {
-  const playerScore = score(s, PLAYER);
-  const aiScore = score(s, AI_TEAM);
-  if (playerScore !== aiScore) return playerScore > aiScore ? 'won' : 'lost';
-  return buildingsOf(s, PLAYER).length > buildingsOf(s, AI_TEAM).length ? 'won' : 'lost';
+/** Lo que suma una alianza (la de `team`): sus puntos y sus edificios. */
+function allianceStanding(s: GameState, team: TeamId): { points: number; buildings: number } {
+  const allies = alliesOf(s, team);
+  const sum = (count: (ally: TeamId) => number) => allies.reduce((total, ally) => total + count(ally), 0);
+  return { points: sum((ally) => score(s, ally)), buildings: sum((ally) => buildingsOf(s, ally).length) };
+}
+
+/** Los puntos de la alianza de `team` (los suyos y los de sus aliados), para el limite de dias. */
+export const allianceScore = (s: GameState, team: TeamId): number => allianceStanding(s, team).points;
+
+/** Los puntos de la mejor alianza enemiga de `team` (0 si no tiene enemigos). */
+export const rivalScore = (s: GameState, team: TeamId): number =>
+  Math.max(0, ...enemiesOf(s, team).map((enemy) => allianceScore(s, enemy)));
+
+/**
+ * Al acabar el ultimo dia: gana la alianza con mas puntos; si empata con la mejor enemiga, la de mas
+ * edificios; si tambien, pierde `team` (en 2013, el jugador).
+ */
+function dayLimitOutcome(s: GameState, team: TeamId): Outcome {
+  const mine = allianceStanding(s, team);
+  const rivals = enemiesOf(s, team).map((enemy) => allianceStanding(s, enemy));
+  const best = maxBy(rivals, (rival) => [rival.points, rival.buildings]) ?? { points: -Infinity, buildings: -Infinity };
+  if (mine.points !== best.points) return mine.points > best.points ? 'won' : 'lost';
+  return mine.buildings > best.buildings ? 'won' : 'lost';
+}
+
+/** Resultado del objetivo de la mision para `team`: el de su dueño, o el contrario si es su enemigo. */
+function missionOutcome(s: GameState, team: TeamId, mission: NonNullable<GameState['mission']>): Outcome {
+  const forOwner = objectiveOutcome(s, mission.team, mission.objective);
+  if (areAllied(s, team, mission.team) || forOwner === 'playing') return forOwner;
+  return forOwner === 'won' ? 'lost' : 'won';
 }
 
 /**
- * Se gana neutralizando la Base enemiga (o si el enemigo se queda sin nada). Si ambas, se pierde.
- * [CAMBIO] Con limite de dias, al acabar el ultimo gana quien tenga mas puntos (empate: mas edificios;
- * si tambien empatan, pierde el jugador).
+ * Como va la partida para `team`: pierde si se queda sin Base (o sin nada); gana si les pasa a todos
+ * sus enemigos. Si las dos cosas, pierde. [CAMBIO] Con limite de dias, al acabar el ultimo gana la
+ * alianza con mas puntos (empate: mas edificios; si tambien empatan, pierde).
  */
-export function outcome(s: GameState): Outcome {
-  if (defeated(s, PLAYER)) return 'lost';
-  if (defeated(s, AI_TEAM)) return 'won';
-  const objective = s.mission?.objective;
-  if (objective && objective.kind !== 'hq') return objectiveOutcome(s, objective);
-  if (dayLimitReached(s)) return dayLimitOutcome(s);
+export function outcome(s: GameState, team: TeamId): Outcome {
+  if (isDefeated(s, team)) return 'lost';
+  if (enemiesOf(s, team).every((enemy) => isDefeated(s, enemy))) return 'won';
+  if (s.mission && s.mission.objective.kind !== 'hq') return missionOutcome(s, team, s.mission);
+  if (dayLimitReached(s)) return dayLimitOutcome(s, team);
   return 'playing';
 }
 
-/** Edificios del jugador que cuentan para un objetivo de capturar. */
-function capturedForObjective(s: GameState, objective: Extract<Objective, { kind: 'capture' }>): number {
-  return buildingsOf(s, PLAYER).filter((building) => objective.type === null || building.type === objective.type).length;
+/** La partida ha terminado (para alguno de sus equipos). */
+export const isMatchOver = (s: GameState): boolean => s.teams.some((team) => outcome(s, team.id) !== 'playing');
+
+/** Progreso del objetivo de la mision para su equipo, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
+export function objectiveProgress(s: GameState): ObjectiveProgress | null {
+  const mission = s.mission;
+  if (!mission || mission.objective.kind === 'hq') return null;
+  return measureObjective(s, mission.team, mission.objective);
 }
 
-const aiUnitCount = (s: GameState): number => s.units.filter((unit) => unit.team === AI_TEAM).length;
-
-/** Donde esta la unidad escoltada: dentro de un transporte cuenta donde este el transporte. */
-function escortPosition(s: GameState, uid: number): Pos | null {
-  const escorted = s.units.find((unit) => unit.uid === uid);
-  if (!escorted) return null;
-  if (escorted.carrier === null) return escorted;
-  return s.units.find((unit) => unit.uid === escorted.carrier) ?? escorted;
-}
-
-/** Resultado de una mision con objetivo especial (la derrota por perder la Base ya se ha mirado). */
-function objectiveOutcome(s: GameState, objective: Exclude<Objective, { kind: 'hq' }>): Outcome {
-  const isLate = s.day > objective.days;
-  const wonOrWait = (isDone: boolean): Outcome => (isDone ? 'won' : isLate ? 'lost' : 'playing');
-  switch (objective.kind) {
-    case 'survive':
-      return isLate ? 'won' : 'playing';
-    case 'capture':
-      return wonOrWait(capturedForObjective(s, objective) >= objective.count);
-    case 'destroy':
-      return wonOrWait(aiUnitCount(s) === 0);
-    case 'escort': {
-      const at = escortPosition(s, objective.uid);
-      if (!at) return 'lost';
-      return wonOrWait(at.x === objective.to.x && at.y === objective.to.y);
-    }
-  }
-}
-
-/** Progreso del objetivo de la mision, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
-export function objectiveProgress(s: GameState): { done: number; total: number } | null {
-  const objective = s.mission?.objective;
-  if (!objective || objective.kind === 'hq') return null;
-  switch (objective.kind) {
-    case 'survive':
-      return { done: Math.min(s.day - 1, objective.days), total: objective.days };
-    case 'capture':
-      return { done: capturedForObjective(s, objective), total: objective.count };
-    case 'destroy':
-      return { done: 0, total: aiUnitCount(s) };
-    case 'escort':
-      return null;
-  }
-}
-
-/** Por que ha terminado la partida. */
-export function endReason(s: GameState): 'hq' | 'wipeout' | 'days' | 'objective' | null {
-  const result = outcome(s);
+/** Por que ha terminado la partida para `team` (null si sigue). */
+export function endReason(s: GameState, team: TeamId): 'hq' | 'wipeout' | 'days' | 'objective' | null {
+  const result = outcome(s, team);
   if (result === 'playing') return null;
-  const loser: Team = result === 'won' ? AI_TEAM : PLAYER;
-  if (!hasHQ(s, loser)) return 'hq';
-  if (defeated(s, loser)) return 'wipeout';
+  const losers = result === 'lost' ? [team] : enemiesOf(s, team);
+  if (losers.some((loser) => !hasHQ(s, loser))) return 'hq';
+  if (losers.some((loser) => isDefeated(s, loser))) return 'wipeout';
   if (s.mission && s.mission.objective.kind !== 'hq') return 'objective';
   return 'days';
 }

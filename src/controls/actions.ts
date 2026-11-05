@@ -14,8 +14,9 @@
  */
 import { canFight, isCapturer } from '../core/util/predicates';
 import { buildingAt } from '../core/rules';
+import { isAlliedOwner } from '../core/teams';
 import { standingOrderChoices, effectiveStandingOrder, squadUnits } from '../core/squads';
-import type { GameState, Pos, Unit } from '../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
 /** Puntero del raton que anuncia lo que hara el clic derecho (ver ui/cursors.ts). */
@@ -40,6 +41,8 @@ export type ActionId =
 /** Lo que hace falta para decidir que acciones valen. */
 export interface ActionCtx {
   s: GameState;
+  /** El equipo de quien elige (el que se ve en pantalla). */
+  viewer: TeamId;
   /** Lo elegido (unidades propias). */
   units: readonly Unit[];
   /** La casilla (null: menu sin casilla, desde la bandeja; las ordenes piden despues el destino). */
@@ -88,7 +91,7 @@ const anyCanFight = (context: ActionCtx) => context.units.some((unit) => canFigh
 function hasBuildingToCapture(context: ActionCtx): boolean {
   if (!context.at) return false;
   const building = buildingAt(context.s, context.at);
-  return !!building && building.owner !== 0 && anyCanCapture(context);
+  return !!building && !isAlliedOwner(context.s, building.owner, context.viewer) && anyCanCapture(context);
 }
 
 /** Escuadra que forman exactamente estas unidades (o null). */
@@ -102,7 +105,7 @@ const isWholeSquad = (context: ActionCtx) => exactSquad(context.s, context.units
 
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
 function canOrder(context: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
-  if (context.at) return standingOrderChoices(context.s, context.at, context.units, context.enemyHere).includes(kind);
+  if (context.at) return standingOrderChoices(context.s, context.viewer, context.at, context.units, context.enemyHere).includes(kind);
   return kind === 'capture' ? anyCanCapture(context) : anyCanFight(context);
 }
 

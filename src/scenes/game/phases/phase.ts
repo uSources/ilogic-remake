@@ -6,7 +6,7 @@
  */
 import { posKey } from '../../../core/geom';
 import { unitById, type BuyOption } from '../../../core/rules';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../../../core/model';
+import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
 import type { HighlightKind, MapView } from '../../../ui/mapView';
 import type { GeneralPowers } from '../powers';
@@ -21,6 +21,8 @@ import type { GameMenuChoices } from './gameMenu';
 /** Lo que las fases necesitan de la escena. */
 export interface PhaseHost {
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   readonly view: MapView;
   phase: Phase;
   /** Opcion señalada del menu de bocadillo, y las opciones que se enseñan. */

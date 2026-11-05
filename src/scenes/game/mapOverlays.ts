@@ -7,34 +7,35 @@ import type { StandingOrderIntent } from '../../core/ai';
 import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
 import { effectiveStandingOrder } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
+import { isAlliedOwner, isHostile } from '../../core/teams';
+import { ownerSideOf, sideOf } from '../../ui/sides';
 import type { ViewOptions } from '../../ui/mapView';
 import { posOf } from '../../core/geom';
 
 type Overlay<K extends keyof ViewOptions> = NonNullable<ViewOptions[K]>;
 
-const isPlayer = (unit: Unit) => unit.team === 0;
 const onMap = (unit: Unit) => unit.carrier === null;
 
-/** Capturas a medias que el jugador ve (o de sus propios edificios). */
-export function captureBars(s: GameState, vis: Grid<boolean>): Overlay<'captures'> {
+/** Capturas a medias que ve el equipo que mira (o de edificios de su alianza). */
+export function captureBars(s: GameState, viewer: TeamId, vis: Grid<boolean>): Overlay<'captures'> {
   return s.buildings.flatMap((building) => {
     const progress = captureProgress(s, building);
-    if (!progress || !(vis.at(building) || building.owner === 0)) return [];
-    return [{ x: building.x, y: building.y, left: progress.left, total: capturePointsOf(s, building), team: progress.team }];
+    if (!progress || !(vis.at(building) || isAlliedOwner(s, building.owner, viewer))) return [];
+    const total = capturePointsOf(s, building);
+    return [{ x: building.x, y: building.y, left: progress.left, total, side: sideOf(s, viewer, progress.team) }];
   });
 }
 
 /**
- * Ordenes del jugador: las de varios turnos (linea hasta el destino) y, [CAMBIO], las ordenes con
- * destino (bandera siempre; linea solo si `showsLine`: la unidad señalada y su escuadra).
+ * Ordenes del equipo que mira: las de varios turnos (linea hasta el destino) y, [CAMBIO], las ordenes
+ * con destino (bandera siempre; linea solo si `showsLine`: la unidad señalada y su escuadra).
  */
-export function orderMarks(s: GameState, showsLine: (unit: Unit) => boolean): Overlay<'orders'> {
-  const multiTurn = s.units
-    .filter((unit) => isPlayer(unit) && unit.travelTo && onMap(unit))
-    .map((unit) => ({ from: posOf(unit), to: unit.travelTo! }));
+export function orderMarks(s: GameState, viewer: TeamId, showsLine: (unit: Unit) => boolean): Overlay<'orders'> {
+  const isOwn = (unit: Unit) => unit.team === viewer && onMap(unit);
+  const multiTurn = s.units.filter((unit) => isOwn(unit) && unit.travelTo).map((unit) => ({ from: posOf(unit), to: unit.travelTo! }));
   const withTarget = s.units.flatMap((unit) => {
-    const order = isPlayer(unit) && onMap(unit) ? effectiveStandingOrder(s, unit) : undefined;
+    const order = isOwn(unit) ? effectiveStandingOrder(s, unit) : undefined;
     return order ? [{ from: posOf(unit), to: order.at, kind: order.kind, line: showsLine(unit) }] : [];
   });
   return [...multiTurn, ...withTarget];
@@ -56,12 +57,15 @@ export function intentLines(
   });
 }
 
-/** [CAMBIO] Puntos de control: disputado solo si se ven unidades de los dos bandos dentro. */
-export function controlPointMarks(s: GameState, visible: (pos: Pos) => boolean): ViewOptions['controlPoints'] {
+/**
+ * [CAMBIO] Puntos de control, con el color del dueño para el equipo que mira: disputado solo si se
+ * ven dentro unidades de alianzas enemigas.
+ */
+export function controlPointMarks(s: GameState, viewer: TeamId, visible: (pos: Pos) => boolean): ViewOptions['controlPoints'] {
   return s.controlPoints?.map((point) => {
-    const inside = s.units.filter((unit) => onMap(unit) && inControlZone(s, point, unit) && (isPlayer(unit) || visible(unit)));
-    const contested = inside.some((unit) => unit.team === 0) && inside.some((unit) => unit.team === 1);
-    return { ...point, r: s.rules.controlRadius, contested };
+    const inside = s.units.filter((unit) => onMap(unit) && inControlZone(s, point, unit) && (unit.team === viewer || visible(unit)));
+    const contested = inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team)));
+    return { x: point.x, y: point.y, owner: ownerSideOf(s, viewer, point.owner), r: s.rules.controlRadius, contested };
   });
 }
 

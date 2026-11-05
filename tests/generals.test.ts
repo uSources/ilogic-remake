@@ -4,18 +4,19 @@ import { readContentFiles, validateContent } from '@core/content';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
-import { powerBlock, chargeStars, generalHitFactor, newGeneral, usePower } from '@core/generals';
+import { powerBlock, chargeStars, generalHitFactor, appointGeneral, usePower } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { blankState, unitTypeNamed } from './helpers';
+import { teamState } from '@core/teams';
 
 const unitType = unitTypeNamed;
 
 function withBrisa(): GameState {
   const s = blankState(TEST_RULES);
-  s.generals = [newGeneral(s, 'Brisa'), null];
+  appointGeneral(s, 0, 'Brisa');
   return s;
 }
 
@@ -50,7 +51,7 @@ describe('generales: reglas', () => {
     expect(generalHitFactor(s, plane, target)).toBeCloseTo(1.1);
     expect(generalHitFactor(s, tank, target)).toBe(1);
     const without = cloneState(s);
-    without.generals = undefined;
+    for (const team of without.teams) team.general = null;
     expect(hitChance(s, plane, target)).toBeCloseTo(hitChance(without, plane, target) * 1.1);
   });
 
@@ -60,12 +61,12 @@ describe('generales: reglas', () => {
     const defender = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
     const result = attackFull(s, attacker, defender, seededRng(3));
     const value = ((result.damage + result.counter) * unitType('Tank').cost) / 100;
-    expect(s.generals![0]!.charge).toBeCloseTo(value / 6000);
+    expect(teamState(s, 0).general!.charge).toBeCloseTo(value / 6000);
   });
 
   it('ataque aereo: 3x3, solo enemigos, no mata, gasta carga y una vez por turno', () => {
     const s = withBrisa();
-    s.generals![0]!.charge = 6;
+    teamState(s, 0).general!.charge = 6;
     const e1 = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
     const e2 = newUnit(s, unitType('Soldier'), 1, { x: 11, y: 11 });
     e2.life = 25;
@@ -81,7 +82,7 @@ describe('generales: reglas', () => {
       { uid: e1.uid, damage: 20 },
       { uid: e2.uid, damage: 15 },
     ]);
-    expect(chargeStars(s.generals![0]!)).toBe(0); // cuesta la barra entera (6)
+    expect(chargeStars(teamState(s, 0).general!)).toBe(0); // cuesta la barra entera (6)
     expect(powerBlock(s, 0, 'recon')).toBe('used');
     endRound(s);
     expect(powerBlock(s, 0, 'recon')).toBe('charge'); // nuevo turno, pero sin estrellas no llega
@@ -90,7 +91,7 @@ describe('generales: reglas', () => {
   it('reconocimiento: ve todo el mapa hasta que acaba la ronda', () => {
     const s = withBrisa();
     newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
-    s.generals![0]!.charge = 2;
+    teamState(s, 0).general!.charge = 2;
     expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(false);
     usePower(s, 0, 'recon');
     expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(true);
@@ -108,17 +109,13 @@ describe('generales: reglas', () => {
   it('se guarda y se carga; un general que no existe se quita', () => {
     const s = withBrisa();
     newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
-    s.generals![0]!.charge = 3.5;
+    teamState(s, 0).general!.charge = 3.5;
     const back = deserialize(serialize(s), saveContext(defaultContent()))!;
-    expect(back.generals).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);
-    const bad = JSON.parse(serialize(s));
-    bad.generals = [
-      { id: 'Nadie', charge: 99 },
-      { id: 'Brisa', charge: 99 },
-    ];
-    expect(deserialize(JSON.stringify(bad), saveContext(defaultContent()))!.generals).toEqual([
-      null,
-      { id: 'Brisa', charge: 6, used: false, reveal: false },
-    ]);
+    expect(back.teams.map((team) => team.general)).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);
+    const bad = JSON.parse(serialize(s)) as { teams: { general: unknown }[] };
+    bad.teams[0]!.general = { id: 'Nadie', charge: 99 };
+    bad.teams[1]!.general = { id: 'Brisa', charge: 99 };
+    const read = deserialize(JSON.stringify(bad), saveContext(defaultContent()))!;
+    expect(read.teams.map((team) => team.general)).toEqual([null, { id: 'Brisa', charge: 6, used: false, reveal: false }]);
   });
 });

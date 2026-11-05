@@ -10,6 +10,7 @@ import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
+import { duel, teamState } from '@core/teams';
 
 const HQ = hqId();
 
@@ -32,13 +33,13 @@ describe('puntos de control', () => {
     const s = withPoints();
     // En la zona (radio 1) aunque no en el centro.
     const unit = newUnit(s, SOLDIER, 0, { x: 11, y: 9 });
-    const before = s.funds[0];
+    const before = teamState(s, 0).funds;
     const control = controlRound(s)!;
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(control.held).toEqual([1, 1]);
     expect(control.contested).toBe(0);
     expect(control.income).toEqual([defaultContent().defaultRules.controlIncome, defaultContent().defaultRules.controlIncome]);
-    expect(s.funds[0]).toBe(before + defaultContent().defaultRules.controlIncome);
+    expect(teamState(s, 0).funds).toBe(before + defaultContent().defaultRules.controlIncome);
     unit.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
@@ -48,12 +49,12 @@ describe('puntos de control', () => {
     const s = withPoints();
     newUnit(s, TANK, 0, { x: 4, y: 14 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 15 });
-    const funds = [...s.funds];
+    const funds = s.teams.map((team) => team.funds);
     const control = controlRound(s)!;
     expect(control.contested).toBe(1);
     expect(s.controlPoints![1]!.owner).toBe(1);
     expect(control.held).toEqual([0, 0]);
-    expect(s.funds).toEqual(funds);
+    expect(s.teams.map((team) => team.funds)).toEqual(funds);
   });
 
   it('el enemigo se lo queda echando a todos los del otro bando de la zona', () => {
@@ -88,7 +89,7 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = createGame(seededRng(seed * 7919), {});
+      const s = createGame(seededRng(seed * 7919), { teams: duel('human', 'ai') });
       const points = s.controlPoints ?? [];
       total += points.length;
       expect(points.length).toBeLessThanOrEqual(defaultContent().defaultRules.controlPoints);

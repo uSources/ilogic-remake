@@ -11,7 +11,8 @@ import { movementOf, canWalk, unitAt, unitById, wait } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { cancelStandingOrder, standingOrderBlock, giveStandingOrder, pruneSquads } from '../../core/squads';
-import type { StandingOrderKind, GameEvent, GameState, Pos, Unit } from '../../core/model';
+import type { GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
+import { isHostile } from '../../core/teams';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
@@ -50,6 +51,8 @@ export interface OrderHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   phase: Phase;
   /** Opcion señalada del menu de bocadillo. */
   menuSel: number;
@@ -78,7 +81,6 @@ export interface OrderHost {
   play(events: GameEvent[]): Promise<void>;
 }
 
-const isPlayer = (unit: Unit) => unit.team === 0;
 const uidsOf = (units: readonly Unit[]) => units.map((unit) => unit.uid);
 
 export class Orders {
@@ -92,6 +94,9 @@ export class Orders {
     this.runHost = {
       get state() {
         return host.state;
+      },
+      get viewer() {
+        return host.viewer;
       },
       moveCursorTo: (pos, follow) => host.moveCursorTo(pos, follow),
       commit: (at, options) => host.commit(at, options),
@@ -113,7 +118,8 @@ export class Orders {
   subjects(): { units: Unit[]; from: OrderFrom } | null {
     const host = this.host;
     const withSelectedUnit = host.phase === 'move' || host.phase === 'unitMenu';
-    if (withSelectedUnit && host.selected && isPlayer(host.selected)) return { units: [host.selected], from: host.phase as OrderFrom };
+    if (withSelectedUnit && host.selected && host.selected.team === host.viewer)
+      return { units: [host.selected], from: host.phase as OrderFrom };
     const withGroup = host.phase === 'map' || host.phase === 'groupMenu';
     if (!withGroup || !host.selection.group.size) return null;
     const units = host.selection.groupUnits();
@@ -207,8 +213,8 @@ export class Orders {
     const units = this.chosenUnits();
     if (!units.length) return null;
     const unitHere = at ? unitAt(s, at) : undefined;
-    const enemyHere = !!unitHere && !isPlayer(unitHere) && unitHere.carrier === null && host.visible(unitHere);
-    const context: ActionCtx = { s, units, at: at ? posOf(at) : null, enemyHere };
+    const enemyHere = !!unitHere && isHostile(s, host.viewer, unitHere.team) && unitHere.carrier === null && host.visible(unitHere);
+    const context: ActionCtx = { s, viewer: host.viewer, units, at: at ? posOf(at) : null, enemyHere };
     const isSelectedUnit = host.phase === 'move' && host.selected && units.length === 1 && units[0]!.uid === host.selected.uid;
     if (at && isSelectedUnit) Object.assign(context, this.movingIntent(host.selected, at));
     return context;
@@ -245,8 +251,8 @@ export class Orders {
   /** Orden sin gastar el turno: se cumple al terminarlo. */
   private queue(kind: StandingOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
     const host = this.host;
-    if (standingOrderBlock(host.state, kind, at, units)) return;
-    giveStandingOrder(host.state, units, kind, at);
+    if (standingOrderBlock(host.state, host.viewer, kind, at, units)) return;
+    giveStandingOrder(host.state, host.viewer, units, kind, at);
     showToast(`${standingOrderLabel(kind)} · ${units.length}`);
     if (moving) host.toMap();
     host.refresh();
@@ -265,10 +271,10 @@ export class Orders {
     const ordering = this.ordering;
     if (!ordering) return host.toMap();
     const units = ordering.uids.map((uid) => unitById(s, uid)).filter((unit): unit is Unit => !!unit);
-    const block = standingOrderBlock(s, ordering.kind, at, units);
+    const block = standingOrderBlock(s, host.viewer, ordering.kind, at, units);
     if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
     this.ordering = null;
-    giveStandingOrder(s, units, ordering.kind, at);
+    giveStandingOrder(s, host.viewer, units, ordering.kind, at);
     if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);
     host.clearUndo();
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
@@ -300,7 +306,7 @@ export class Orders {
     host.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
     for (const unit of standingOrderPlayOrder(host.state, units)) {
-      for (const event of startStandingOrder(host.state, unit.uid, Math.random)) {
+      for (const event of startStandingOrder(host.state, unit.uid, Math.random, host.viewer)) {
         await host.play([event]);
         if (match !== host.match || host.checkEnd()) return;
       }

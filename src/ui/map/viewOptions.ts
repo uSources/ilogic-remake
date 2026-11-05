@@ -1,10 +1,13 @@
-import type { StandingOrderKind, Pos } from '../../core/model';
+import type { StandingOrderKind, Pos, TeamId } from '../../core/model';
+import type { OwnerSide, Side } from '../sides';
 import type { Grid } from '../../core/util/grid';
 
 export type HighlightKind = 'move' | 'merge' | 'load' | 'attack' | 'unload' | 'reach' | 'hover' | 'group' | 'squad';
 
 /** Lo que la escena quiere ver sobre el mapa en cada `MapView.render`. */
 export interface ViewOptions {
+  /** El equipo que mira: lo suyo y lo aliado se pinta en azul y lo enemigo en rojo. */
+  viewer: TeamId;
   /** Casillas que se ven (una rejilla del tamaño del mapa). */
   vis: Grid<boolean>;
   highlights: Map<string, HighlightKind>;
@@ -30,9 +33,9 @@ export interface ViewOptions {
   vip?: Pos | null;
   /**
    * [CAMBIO] Puntos de control: zona teñida del color de su dueño, con borde y banderin en el centro.
-   * `r` = casillas alrededor del centro; `contested` = se ven unidades de los dos bandos dentro.
+   * `r` = casillas alrededor del centro; `contested` = se ven dentro unidades de alianzas enemigas.
    */
-  controlPoints?: { x: number; y: number; owner: 0 | 1 | null; r: number; contested: boolean }[];
+  controlPoints?: { x: number; y: number; owner: OwnerSide; r: number; contested: boolean }[];
   /** Capturas a medias que se ven (barra encima del edificio). */
-  captures?: { x: number; y: number; left: number; total: number; team: 0 | 1 }[];
+  captures?: { x: number; y: number; left: number; total: number; side: Side }[];
 }

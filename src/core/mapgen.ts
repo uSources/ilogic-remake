@@ -13,16 +13,17 @@ import { terrainAt, themeOf } from './gameContent';
 import { entryOf, MoveType, type GameContent, type MapgenSettings, type TerrainType, type Theme } from './content';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
+import type { TeamSetup } from './teams';
 import { blankMap, createLayer, mapGrid } from './mapGrid';
 import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
-import type { GameState, Pos, Rng, RulesConfig, Team } from './model';
+import type { GameState, Pos, Rng, RulesConfig, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
-const PLAYER: Team = 0;
-const ENEMY: Team = 1;
+/** Zonas de salida que busca el generador: una por equipo. */
+const START_ZONES = 2;
 /** Lado del mapa del original, con el que estan medidos los numeros de mapgen.json. */
 const ORIGINAL_MAP_SIDE = 32;
 /** Distancia minima entre las dos bases en un mapa de 32; se escala con el lado del mapa. */
@@ -41,7 +42,7 @@ const settingsOf = (s: GameState): MapgenSettings => s.content.mapgen;
 function emptyState(size: number, options: NewMapOptions): GameState {
   // El terreno de partida no importa: el generador pone todas las casillas.
   const plain = options.content.plainTerrain.id;
-  return newGameState({ map: blankMap(size, plain), rules: options.rules, content: options.content });
+  return newGameState({ map: blankMap(size, plain), rules: options.rules, content: options.content, teams: options.teams });
 }
 
 const isWalkable = (terrain: TerrainType) => canMoveOn(WALK, terrain);
@@ -195,7 +196,7 @@ function sampleInOrder(candidates: readonly Pos[], wanted: number, rng: Rng, nex
 const spawnZone = (s: GameState, spawn: Pos) => [...diamond(mapGrid(s), spawn, 0, settingsOf(s).spawnRadius)];
 
 /** Unidades iniciales (mapgen.json, "startingUnits") cerca del centro de la zona. */
-function placeStartingUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): void {
+function placeStartingUnits(s: GameState, spawn: Pos, team: TeamId, rng: Rng): void {
   const starting = settingsOf(s).startingUnits;
   starting.forEach((id, index) => {
     const unitType = entryOf(s.content.units, id, 'unidad');
@@ -207,7 +208,7 @@ function placeStartingUnits(s: GameState, spawn: Pos, team: Team, rng: Rng): voi
 }
 
 /** Edificios iniciales (mapgen.json, "startingBuildings") en la zona de inicio. Falla si no caben. */
-function placeStartingBuildings(s: GameState, spawn: Pos, team: Team, rng: Rng): boolean {
+function placeStartingBuildings(s: GameState, spawn: Pos, team: TeamId, rng: Rng): boolean {
   const starting = settingsOf(s).startingBuildings;
   const total = starting.length;
   for (let index = 0; index < total; index++) {
@@ -303,18 +304,18 @@ function isControlSpot(s: GameState, pos: Pos, toPlayer: number, toEnemy: number
  * pie) de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
  * medio del mapa. Si no caben todos, pone los que pueda.
  */
-export function placeControlPoints(s: GameState, playerBase: Pos, enemyBase: Pos, rng: Rng): void {
+export function placeControlPoints(s: GameState, firstBase: Pos, secondBase: Pos, rng: Rng): void {
   const wanted = s.rules.controlPoints;
   if (wanted <= 0) return;
-  const fromPlayer = groundDistance(s, playerBase, WALK, createLayer(s, false));
-  const fromEnemy = groundDistance(s, enemyBase, WALK, createLayer(s, false));
-  const span = fromPlayer.at(enemyBase) || manhattan(playerBase, enemyBase);
+  const fromFirst = groundDistance(s, firstBase, WALK, createLayer(s, false));
+  const fromSecond = groundDistance(s, secondBase, WALK, createLayer(s, false));
+  const span = fromFirst.at(secondBase) || manhattan(firstBase, secondBase);
   const candidates: { pos: Pos; score: number }[] = [];
-  for (const { pos, value: toPlayer } of fromPlayer.cells()) {
-    const toEnemy = fromEnemy.at(pos);
-    if (!isControlSpot(s, pos, toPlayer, toEnemy, span)) continue;
+  for (const { pos, value: toFirst } of fromFirst.cells()) {
+    const toSecond = fromSecond.at(pos);
+    if (!isControlSpot(s, pos, toFirst, toSecond, span)) continue;
     // Lo justo: misma distancia a las dos salidas.
-    candidates.push({ pos, score: Math.abs(toPlayer - toEnemy) + rng() * CONTROL_SCORE_NOISE });
+    candidates.push({ pos, score: Math.abs(toFirst - toSecond) + rng() * CONTROL_SCORE_NOISE });
   }
   candidates.sort((first, second) => first.score - second.score);
   const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.rules.controlRadius;
@@ -339,8 +340,8 @@ interface MapDraft {
   forcedTheme: Theme | null;
   /** Casillas a pie del terreno, mas las de agua que se vuelven transitables. */
   landTiles: number;
-  /** Zonas de inicio del jugador y de la IA, cuando ya se han buscado. */
-  spawns: { player: Pos; enemy: Pos } | null;
+  /** Zona de inicio de cada equipo (por numero de equipo), cuando ya se han buscado. */
+  spawns: Pos[] | null;
 }
 
 interface MapStep {
@@ -349,7 +350,7 @@ interface MapStep {
   run: (draft: MapDraft) => boolean;
 }
 
-function spawnsOf(draft: MapDraft): { player: Pos; enemy: Pos } {
+function spawnsOf(draft: MapDraft): Pos[] {
   if (!draft.spawns) throw new Error('Paso de mapa fuera de orden: aun no hay zonas de inicio');
   return draft.spawns;
 }
@@ -390,8 +391,7 @@ function findStartZones(draft: MapDraft): boolean {
   if (!first) return false;
   const second = findSecondSpawn(draft.s, first);
   if (!second) return false;
-  const [player, enemy] = draft.rng() < 0.5 ? [first, second] : [second, first];
-  draft.spawns = { player, enemy };
+  draft.spawns = draft.rng() < 0.5 ? [first, second] : [second, first];
   return true;
 }
 
@@ -415,16 +415,13 @@ const MAP_STEPS: readonly MapStep[] = [
   {
     name: 'edificios iniciales',
     run: (draft) => {
-      const { player, enemy } = spawnsOf(draft);
-      return placeStartingBuildings(draft.s, player, PLAYER, draft.rng) && placeStartingBuildings(draft.s, enemy, ENEMY, draft.rng);
+      return spawnsOf(draft).every((spawn, team) => placeStartingBuildings(draft.s, spawn, team, draft.rng));
     },
   },
   {
     name: 'unidades iniciales',
     run: (draft) => {
-      const { player, enemy } = spawnsOf(draft);
-      placeStartingUnits(draft.s, player, PLAYER, draft.rng);
-      placeStartingUnits(draft.s, enemy, ENEMY, draft.rng);
+      spawnsOf(draft).forEach((spawn, team) => placeStartingUnits(draft.s, spawn, team, draft.rng));
       return true;
     },
   },
@@ -438,8 +435,8 @@ const MAP_STEPS: readonly MapStep[] = [
   {
     name: 'puntos de control',
     run: (draft) => {
-      const { player, enemy } = spawnsOf(draft);
-      placeControlPoints(draft.s, player, enemy, draft.rng);
+      const [first, second] = spawnsOf(draft);
+      placeControlPoints(draft.s, first!, second!, draft.rng);
       return true;
     },
   },
@@ -453,6 +450,8 @@ export interface NewMapOptions {
   rules: Readonly<RulesConfig>;
   /** Contenido de la partida (unidades, edificios, terreno...). */
   content: GameContent;
+  /** Los equipos (el generador hace una salida para cada uno: tienen que ser dos). */
+  teams: readonly TeamSetup[];
 }
 
 /**
@@ -460,6 +459,8 @@ export interface NewMapOptions {
  * mapa desde el principio.
  */
 export function generateGame(rng: Rng, options: NewMapOptions): GameState {
+  if (options.teams.length !== START_ZONES)
+    throw new Error(`Los mapas al azar son para ${START_ZONES} equipos (hay ${options.teams.length})`);
   const size = options.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
   const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };

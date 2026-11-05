@@ -1,5 +1,5 @@
 /**
- * Vision y niebla: que casillas ve cada bando.
+ * Vision y niebla: que casillas ve cada equipo. Los aliados comparten lo que ven.
  */
 
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
@@ -9,8 +9,9 @@ import { revealsAll } from '../generals';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
+import { alliesOf } from '../teams';
 import { weatherVision } from '../weather';
-import type { GameState, Pos, Team, Unit } from '../model';
+import type { GameState, Pos, TeamId, Unit } from '../model';
 
 /** Radio de vision de una unidad. [CAMBIO] El clima puede quitar vision (nunca por debajo de 1 si ve). */
 export function visionOf(s: GameState, unit: Unit): number {
@@ -32,14 +33,19 @@ function markSeenByUnit(s: GameState, unit: Unit, visible: Grid<boolean>): void 
   }
 }
 
-/** Casillas visibles para un bando: rombo de vision de sus unidades + casillas de sus edificios. */
-export function visibility(s: GameState, team: Team): Grid<boolean> {
-  // [CAMBIO] partida sin niebla, o el general ha usado reconocimiento: se ve todo.
-  if (!s.rules.fog || revealsAll(s, team)) return createLayer(s, true);
+/**
+ * Casillas visibles para un equipo: rombo de vision de sus unidades y las de sus aliados, y casillas
+ * de sus edificios y los de sus aliados.
+ */
+export function visibility(s: GameState, team: TeamId): Grid<boolean> {
+  const allies = alliesOf(s, team);
+  const isAlly = (other: TeamId | null) => other !== null && allies.includes(other);
+  // [CAMBIO] partida sin niebla, o un general de la alianza ha usado reconocimiento: se ve todo.
+  if (!s.rules.fog || allies.some((ally) => revealsAll(s, ally))) return createLayer(s, true);
   const visible = createLayer(s, false);
-  for (const unit of s.units) if (unit.team === team && isOnMap(unit)) markSeenByUnit(s, unit, visible);
+  for (const unit of s.units) if (isAlly(unit.team) && isOnMap(unit)) markSeenByUnit(s, unit, visible);
   for (const building of s.buildings) {
-    if (building.owner !== team) continue;
+    if (!isAlly(building.owner)) continue;
     for (const pos of diamond(visible, building, 0, buildingTypeOf(s, building).vision)) visible.set(pos, true);
   }
   return visible;

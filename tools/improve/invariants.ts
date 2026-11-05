@@ -45,14 +45,13 @@ export function checkInvariants(s: GameState): string[] {
       if (passengerUid !== null && s.units.find((other) => other.uid === passengerUid)?.carrier !== unit.uid)
         errors.push(`unidad ${unit.uid}: lleva a ${passengerUid} que no va dentro`);
   }
-  for (const team of [0, 1] as const) {
-    const funds = s.funds[team];
-    if (!(Number.isInteger(funds) && funds >= 0 && funds <= s.content.maxFunds)) errors.push(`dinero del bando ${team}: ${funds}`);
+  for (const { id: team, funds } of s.teams) {
+    if (!(Number.isInteger(funds) && funds >= 0 && funds <= s.content.maxFunds)) errors.push(`dinero del equipo ${team}: ${funds}`);
     const count = s.units.filter((unit) => unit.team === team).length;
-    if (count > s.rules.maxUnits) errors.push(`bando ${team}: ${count} unidades, el limite es ${s.rules.maxUnits}`);
+    if (count > s.rules.maxUnits) errors.push(`equipo ${team}: ${count} unidades, el limite es ${s.rules.maxUnits}`);
     const commandPoints = commandUsed(s, team);
     if (s.rules.commandPoints !== null && commandPoints > s.rules.commandPoints)
-      errors.push(`bando ${team}: ${commandPoints} puntos de mando, el limite es ${s.rules.commandPoints}`);
+      errors.push(`equipo ${team}: ${commandPoints} puntos de mando, el limite es ${s.rules.commandPoints}`);
   }
   const bpos = new Set<string>();
   for (const building of s.buildings) {

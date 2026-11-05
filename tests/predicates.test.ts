@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { blankState } from './helpers';
-import { AI_TEAM, PLAYER, canFight, isAlive, isCapturer, isEnemyOf, isOnMap, isPlayer, opponentOf } from '@core/util/predicates';
+import { areEnemies, canFight, isAlive, isCapturer, isOnMap } from '@core/util/predicates';
 
 describe('preguntas con nombre', () => {
-  it('bandos: jugador, rival y enemigos', () => {
-    expect(isPlayer(PLAYER)).toBe(true);
-    expect(isPlayer(AI_TEAM)).toBe(false);
-    expect(isPlayer(null)).toBe(false);
-    expect(opponentOf(PLAYER)).toBe(AI_TEAM);
-    expect(opponentOf(AI_TEAM)).toBe(PLAYER);
-    expect(isEnemyOf({ team: 0 }, { team: 1 })).toBe(true);
-    expect(isEnemyOf({ team: 1 }, { team: 1 })).toBe(false);
+  it('enemigos: de alianzas distintas (ningun numero de equipo es especial)', () => {
+    const s = blankState({}, [
+      { controller: 'ai', alliance: 0 },
+      { controller: 'human', alliance: 1 },
+      { controller: 'ai', alliance: 0 },
+    ]);
+    expect(areEnemies(s, { team: 0 }, { team: 1 })).toBe(true);
+    expect(areEnemies(s, { team: 1 }, { team: 1 })).toBe(false);
+    expect(areEnemies(s, { team: 0 }, { team: 2 })).toBe(false);
+    expect(areEnemies(s, { team: 2 }, { team: 1 })).toBe(true);
   });
 
   it('en el mapa y con vida', () => {

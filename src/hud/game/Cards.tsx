@@ -1,12 +1,12 @@
 import { imgUrl } from '../../assets';
-import { fmtNum, t } from '../../settings';
+import { fmtNum, t, type TextKey } from '../../settings';
 import { FoldMark, useFold } from '../common/fold';
 import { stars } from '../common/format';
 import { Icon } from '../common/Icon';
+import type { OwnerSide, Side } from '../vm/common';
 import type { BuildingVM, TileVM, UnitVM } from '../vm/tile';
 
-type Owner = 'you' | 'enemy' | 'neutral' | 'unknown';
-type Team = UnitVM['team'];
+type Owner = OwnerSide | 'unknown';
 
 const LIFE_BLOCKS = 10;
 const LIFE_PER_BLOCK = 10;
@@ -16,17 +16,20 @@ const LOW_LIFE = 30;
 const DEFENSE_PER_STAR = 10;
 const MAX_DEFENSE_STARS = 4;
 
-const isMine = (team: Team) => team === 0;
+/** Lo suyo y lo aliado van en azul; lo enemigo, en rojo. */
+const isFriendly = (side: Owner) => side === 'own' || side === 'ally';
+
+/** Texto de cada lado ('Tuyo', 'Aliado', 'Enemigo'...). */
+const SIDE_TEXT: Record<Owner, TextKey> = { own: 'you', ally: 'ally', enemy: 'enemy', neutral: 'neutral', unknown: 'unknown' };
 
 /** Color y nombre del dueño de un edificio o de un punto de control. */
-const ownerColor = (owner: Owner) => (owner === 'you' ? 'var(--blue)' : owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)');
-/** Los textos se llaman como el dueño ('you', 'enemy', 'neutral', 'unknown'). */
-const ownerText = (owner: Owner) => t(owner);
+const ownerColor = (owner: Owner) => (isFriendly(owner) ? 'var(--blue)' : owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)');
+const ownerText = (owner: Owner) => t(SIDE_TEXT[owner]);
 
 /** Vida en 10 bloques (dorados con 30 o menos). */
-function Blocks({ life, team }: { life: number; team: Team }) {
+function Blocks({ life, side }: { life: number; side: Side }) {
   const filled = Math.ceil(Math.max(0, life) / LIFE_PER_BLOCK);
-  const teamColor = isMine(team) ? 'var(--blue)' : 'var(--red)';
+  const teamColor = isFriendly(side) ? 'var(--blue)' : 'var(--red)';
   const fill = life <= LOW_LIFE ? 'var(--gold)' : teamColor;
   return (
     <div class="blocks" aria-hidden="true">
@@ -111,15 +114,13 @@ function UnitCard({ unit, folded = false }: { unit: UnitVM; folded?: boolean }) 
         <Icon k={unit.icon} alt={unit.name} cls="px-icon portrait" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <UnitName unit={unit} />
-          <span style={{ fontSize: 13, color: isMine(unit.team) ? 'var(--blue)' : 'var(--red-soft)' }}>
-            {isMine(unit.team) ? t('you') : t('enemy')}
-          </span>
+          <span style={{ fontSize: 13, color: ownerColor(unit.side) }}>{ownerText(unit.side)}</span>
           {!folded && <UnitStats unit={unit} />}
         </div>
       </div>
       <div class="meter" title={t('hp')}>
         <Icon k="ui/vida" alt={t('hp')} />
-        <Blocks life={unit.life} team={unit.team} />
+        <Blocks life={unit.life} side={unit.side} />
         <span class="v">{unit.life}</span>
       </div>
       {!folded && <UnitNotes unit={unit} />}
@@ -174,7 +175,7 @@ function CaptureBar({ capture }: { capture: NonNullable<BuildingVM['capture']> }
     <div class="capbar" title={`${t('captureLeft')}: ${capture.left}/${capture.total}`}>
       <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
       <div class="blocks">
-        <span style={{ flex: capture.total - capture.left, background: isMine(capture.team) ? 'var(--blue)' : 'var(--red)' }} />
+        <span style={{ flex: capture.total - capture.left, background: isFriendly(capture.side) ? 'var(--blue)' : 'var(--red)' }} />
         <span style={{ flex: capture.left }} />
       </div>
       <span class="num" style={{ fontSize: 12 }}>

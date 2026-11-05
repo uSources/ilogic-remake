@@ -3,6 +3,7 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { armyLimit, buyOptions, commandUsed, endRound, newUnit, spawn, upkeepOf } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
+import { teamState } from '@core/teams';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank');
@@ -23,7 +24,7 @@ describe('puntos de mando', () => {
 
   it('no se puede comprar si la unidad no cabe, aunque haya dinero', () => {
     const s = blankState(TEST_RULES);
-    s.funds[0] = 100000;
+    teamState(s, 0).funds = 100000;
     const factory = { type: FACTORY, owner: 0 as const, x: 4, y: 4 };
     s.buildings.push(factory);
     newUnit(s, TANK, 0, { x: 1, y: 1 });
@@ -31,7 +32,7 @@ describe('puntos de mando', () => {
     expect(armyLimit(s, 0, TANK)).toBe('command');
     expect(buyOptions(s, factory).find((buyOption) => buyOption.unitType === TANK)?.blocked).toBe('command');
     expect(spawn(s, factory, TANK)).toBeNull();
-    expect(s.funds[0]).toBe(100000);
+    expect(teamState(s, 0).funds).toBe(100000);
     // Lo pequeño si cabe.
     const city = { type: CITY, owner: 0 as const, x: 6, y: 6 };
     s.buildings.push(city);
@@ -51,7 +52,7 @@ describe('puntos de mando', () => {
 describe('mantenimiento', () => {
   it('se paga el 10 % del precio de las unidades despues de cobrar', () => {
     const s = blankState(TEST_RULES);
-    s.funds = [0, 0];
+    for (const team of s.teams) team.funds = 0;
     s.buildings.push({ type: CITY, owner: 0, x: 1, y: 1 }); // 1000 por ronda
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500
     newUnit(s, TANK, 0, { x: 6, y: 6 }); // 12000
@@ -60,11 +61,11 @@ describe('mantenimiento', () => {
     expect(round.income[0]).toBe(1000);
     // No llega: se paga lo que hay y no pasa nada mas.
     expect(round.upkeep[0]).toBe(1000);
-    expect(s.funds[0]).toBe(0);
+    expect(teamState(s, 0).funds).toBe(0);
     expect(s.units).toHaveLength(2);
-    s.funds[0] = 5000;
+    teamState(s, 0).funds = 5000;
     expect(endRound(s).upkeep[0]).toBe(1400);
-    expect(s.funds[0]).toBe(5000 + 1000 - 1400);
+    expect(teamState(s, 0).funds).toBe(5000 + 1000 - 1400);
   });
 
   it('con mantenimiento 0 no se cobra nada', () => {

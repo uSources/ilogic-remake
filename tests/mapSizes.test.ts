@@ -8,6 +8,7 @@ import { seededRng } from '@core/geom';
 import { blankMap, mapGrid } from '@core/mapGrid';
 import { newGameState } from '@core/gameState';
 import { endRound, moveRange, newUnit, reachableTiles, visibility } from '@core/rules';
+import { duel } from '@core/teams';
 import type { GameEvent, GameState } from '@core/model';
 
 const TANK = unitTypeNamed('Tank');
@@ -18,7 +19,10 @@ function cornerMatch(size: number): GameState {
     map: blankMap(size, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), { fog: true }),
     content: defaultContent(),
-    funds: [0, 0],
+    teams: [
+      { controller: 'human', funds: 0 },
+      { controller: 'ai', funds: 0 },
+    ],
   });
   newUnit(s, TANK, 0, { x: size - 1, y: size - 1 });
   newUnit(s, TANK, 1, { x: 0, y: 0 });
@@ -61,7 +65,7 @@ describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', ()
       }
       return events;
     };
-    const newMatch = (size: number) => createGame(seededRng(size), { size });
+    const newMatch = (size: number) => createGame(seededRng(size), { size, teams: duel('ai', 'ai') });
     const together = play([newMatch(20), newMatch(40)], 5);
     expect(together[0]).toEqual(play([newMatch(20)], 5)[0]);
     expect(together[1]).toEqual(play([newMatch(40)], 5)[0]);

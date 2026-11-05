@@ -9,6 +9,7 @@ import { generateGame } from './mapgen';
 import { missionById, missionRules } from './missions';
 import type { GameState, RulesConfig, Rng } from './model';
 import { rulesWith } from './rulesConfig';
+import type { TeamSetup } from './teams';
 import { deserialize, type SaveContext } from './save';
 
 /** Lo que se elige de una partida nueva con el contenido del juego. */
@@ -19,16 +20,18 @@ export interface CreateGameOptions {
   theme?: string | null;
   /** Cambios a las reglas por defecto de ese contenido (sin cambios, las de siempre). */
   ruleChanges?: Partial<RulesConfig>;
+  /** Los equipos: quien juega cada uno (p. ej. `duel('human', 'ai')`). */
+  teams: readonly TeamSetup[];
 }
 
 /**
  * Mapa al azar con el contenido del juego. Las reglas salen del mismo contenido
  * (`rulesWith(contenido, ruleChanges)`): el contenido y las reglas no pueden ser de dos sitios.
  */
-export function createGame(rng: Rng, { size, theme, ruleChanges = {} }: CreateGameOptions): GameState {
+export function createGame(rng: Rng, { size, theme, ruleChanges = {}, teams }: CreateGameOptions): GameState {
   const content = defaultContent();
   const chosenTheme = theme === null || theme === undefined ? null : entryOf(content.themes, theme, 'tema');
-  return generateGame(rng, { size, theme: chosenTheme, rules: rulesWith(content, ruleChanges), content });
+  return generateGame(rng, { size, theme: chosenTheme, rules: rulesWith(content, ruleChanges), content, teams });
 }
 
 /**

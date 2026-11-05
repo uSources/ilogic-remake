@@ -7,8 +7,11 @@ import { createLayer } from '@core/mapGrid';
 import { attackEvent, endRound, newUnit, score } from '@core/rules';
 import { settings } from '../src/settings';
 import {
+  armyChartVM,
   captureHintText,
   combatVM,
+  endScoreVM,
+  endStatsVM,
   dayInfoVM,
   economyVM,
   minimapVM,
@@ -18,6 +21,8 @@ import {
   weatherVM,
 } from '../src/ui/hudModels';
 import { blankState, unitTypeNamed, hqId } from './helpers';
+import { ownerSideOf, sideOf } from '../src/ui/sides';
+import { teamState } from '@core/teams';
 
 const HQ = hqId();
 const MAX_FUNDS = defaultContent().maxFunds;
@@ -40,11 +45,11 @@ describe('datos de la interfaz', () => {
     newUnit(s, unitType('Tank'), 1, { x: 4, y: 4 });
     s.buildings.push({ type: HQ, owner: 1, x: 4, y: 4, capture: null });
     const fog = createLayer(s, false);
-    const hidden = tileVM(textures, s, { x: 4, y: 4 }, { vis: fog, hidden: new Set() });
+    const hidden = tileVM(textures, s, { x: 4, y: 4 }, { viewer: 0, vis: fog, hidden: new Set() });
     expect(hidden.unit).toBeUndefined();
     expect(hidden.building?.owner).toBe('unknown');
-    const seen = tileVM(textures, s, { x: 4, y: 4 }, { vis: createLayer(s, true), hidden: new Set() });
-    expect(seen.unit?.team).toBe(1);
+    const seen = tileVM(textures, s, { x: 4, y: 4 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set() });
+    expect(seen.unit?.side).toBe('enemy');
     expect(seen.building?.owner).toBe('enemy');
     expect(seen.terrain.defense).toBeGreaterThan(0);
   });
@@ -52,9 +57,9 @@ describe('datos de la interfaz', () => {
   it('ficha: la unidad que se esta moviendo sale aunque su sprite este oculto', () => {
     const s = blankState();
     const unit = newUnit(s, unitType('Soldier'), 0, { x: 2, y: 2 });
-    const vm = tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([unit.uid]), selected: unit });
+    const vm = tileVM(textures, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]), selected: unit });
     expect(vm.unit?.name).toBeTruthy();
-    expect(tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([unit.uid]) }).unit).toBeUndefined();
+    expect(tileVM(textures, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]) }).unit).toBeUndefined();
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {
@@ -73,8 +78,8 @@ describe('datos de la interfaz', () => {
     newUnit(s, unitType('Soldier'), 1, { x: 9, y: 9 });
     const vis = createLayer(s, false);
     vis.set({ x: 1, y: 1 }, true);
-    expect(minimapVM({}, s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
-    expect(minimapVM({}, s, vis, new Set([mine.uid])).units).toEqual([]);
+    expect(minimapVM({}, s, { viewer: 0, vis, hidden: new Set() }).units).toEqual([{ x: 1, y: 1, side: 'own' }]);
+    expect(minimapVM({}, s, { viewer: 0, vis, hidden: new Set([mine.uid]) }).units).toEqual([]);
   });
 });
 
@@ -111,18 +116,18 @@ describe('panel de combate', () => {
     const enemy = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 10, y: 11 });
     const event = attackEvent(s, enemy, mine, () => 0.5);
-    const start = combatVM(blankState(), event, 'start', icons, both)!;
-    expect(start.left.team).toBe(0);
+    const start = combatVM(blankState(), 0, event, 'start', icons, both)!;
+    expect(start.left.side).toBe('own');
     expect(start.left.role).toBe('defender');
     expect(start.right.role).toBe('attacker');
     expect(start.left.life).toBe(100);
     expect(start.left.hurt).toBeNull();
-    const hit = combatVM(blankState(), event, 'hit', icons, both)!;
+    const hit = combatVM(blankState(), 0, event, 'hit', icons, both)!;
     expect(hit.left.life).toBe(100 - event.damage);
     expect(hit.left.hurt).toBe(event.damage);
     expect(hit.right.life).toBe(100);
     expect(hit.counter).toBe(true);
-    const counter = combatVM(blankState(), event, 'counter', icons, both)!;
+    const counter = combatVM(blankState(), 0, event, 'counter', icons, both)!;
     expect(counter.right.life).toBe(100 - event.counter!);
     expect(counter.right.hurt).toBe(event.counter);
   });
@@ -132,7 +137,7 @@ describe('panel de combate', () => {
     const art = newUnit(s, unitType('Artillery'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Soldier'), 0, { x: 10, y: 13 });
     const event = attackEvent(s, art, mine, () => 0.5);
-    const vm = combatVM(blankState(), event, 'hit', icons, { attacker: false, defender: true })!;
+    const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true })!;
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
     expect(vm.left.icon).toBe('d');
     expect(vm.counter).toBe(false);
@@ -145,6 +150,7 @@ describe('panel de combate', () => {
     defender.life = 1;
     const vm = combatVM(
       blankState(),
+      0,
       attackEvent(s, attacker, defender, () => 0.5),
       'hit',
       icons,
@@ -156,7 +162,7 @@ describe('panel de combate', () => {
 
   it('eventos antiguos sin datos: sin panel', () => {
     expect(
-      combatVM(blankState(), { kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both),
+      combatVM(blankState(), 0, { kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both),
     ).toBeNull();
   });
 });
@@ -164,7 +170,7 @@ describe('panel de combate', () => {
 describe('desglose de la barra de arriba', () => {
   const army = () => {
     const s = blankState();
-    s.funds = [5000, 5000];
+    for (const team of s.teams) team.funds = 5000;
     for (const [index, buildingName] of ['City', 'City', 'Factory', 'Oil'].entries())
       s.buildings.push({ type: buildingName, owner: 0, x: 1 + index, y: 1, capture: null });
     s.buildings.push({ type: 'City', owner: 1, x: 9, y: 9, capture: null });
@@ -191,7 +197,7 @@ describe('desglose de la barra de arriba', () => {
     expect(economy.net).toBe(economy.income.total - economy.upkeep!.total);
     const next = economy.next;
     endRound(s);
-    expect(s.funds[0]).toBe(next); // lo que dice el desglose es lo que pasa
+    expect(teamState(s, 0).funds).toBe(next); // lo que dice el desglose es lo que pasa
     expect(economy.commandPoints!.used).toBe(unitType('Tank').command + 2 * unitType('Soldier').command);
     expect(economy.commandPoints!.lines.reduce((sum, line) => sum + line.amount, 0)).toBe(economy.commandPoints!.used);
   });
@@ -199,7 +205,7 @@ describe('desglose de la barra de arriba', () => {
   it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
     const s = army();
     s.rules = rulesWith(defaultContent(), { upkeep: 1 });
-    s.funds[0] = 0;
+    teamState(s, 0).funds = 0;
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
     const economy = economyVM(s, 0);
     expect(economy.income.total).toBe(0);
@@ -210,7 +216,7 @@ describe('desglose de la barra de arriba', () => {
   it('sin las reglas de mantenimiento y mando no salen esos apartados; el tope de dinero cuenta', () => {
     const s = army();
     s.rules = rulesWith(defaultContent(), { upkeep: 0, commandPoints: null });
-    s.funds[0] = MAX_FUNDS;
+    teamState(s, 0).funds = MAX_FUNDS;
     const economy = economyVM(s, 0);
     expect(economy.upkeep).toBeNull();
     expect(economy.commandPoints).toBeNull();
@@ -221,8 +227,55 @@ describe('desglose de la barra de arriba', () => {
     const s = army();
     s.day = 18;
     s.rules = rulesWith(defaultContent(), { dayLimit: null });
-    expect(dayInfoVM(s)).toEqual({ day: 18, limit: null, left: null, score: null });
+    expect(dayInfoVM(s, 0)).toEqual({ day: 18, limit: null, left: null, score: null });
     s.rules = rulesWith(defaultContent(), { dayLimit: 20 });
-    expect(dayInfoVM(s)).toEqual({ day: 18, limit: 20, left: 3, score: [score(s, 0), score(s, 1)] });
+    expect(dayInfoVM(s, 0)).toEqual({ day: 18, limit: 20, left: 3, score: [score(s, 0), score(s, 1)] });
+  });
+});
+
+describe('lados para quien mira (con mas de dos equipos)', () => {
+  /** Tres equipos: el 1 (la persona) y el 2 aliados contra el 0. */
+  const threeTeams = () =>
+    blankState({}, [
+      { controller: 'ai', alliance: 0 },
+      { controller: 'human', alliance: 1 },
+      { controller: 'ai', alliance: 1 },
+    ]);
+
+  it('lo propio, lo aliado y lo enemigo salen de las alianzas, no del numero de equipo', () => {
+    const s = threeTeams();
+    expect([0, 1, 2].map((team) => sideOf(s, 1, team))).toEqual(['enemy', 'own', 'ally']);
+    expect(ownerSideOf(s, 1, null)).toBe('neutral');
+    expect(ownerSideOf(s, 0, 2)).toBe('enemy');
+  });
+
+  it('fichas y minimapa: una unidad aliada se ve como aliada; un edificio aliado se sabe de quien es en la niebla', () => {
+    const s = threeTeams();
+    newUnit(s, unitType('Tank'), 2, { x: 4, y: 4 });
+    s.buildings.push({ type: 'City', owner: 2, x: 9, y: 9, capture: null });
+    const all = createLayer(s, true);
+    expect(tileVM(textures, s, { x: 4, y: 4 }, { viewer: 1, vis: all, hidden: new Set() }).unit?.side).toBe('ally');
+    const fog = createLayer(s, false);
+    expect(tileVM(textures, s, { x: 9, y: 9 }, { viewer: 1, vis: fog, hidden: new Set() }).building?.owner).toBe('ally');
+    expect(tileVM(textures, s, { x: 9, y: 9 }, { viewer: 0, vis: fog, hidden: new Set() }).building?.owner).toBe('unknown');
+    expect(minimapVM({}, s, { viewer: 1, vis: all, hidden: new Set() }).units).toEqual([{ x: 4, y: 4, side: 'ally' }]);
+  });
+
+  it('pantalla final: lo de quien mira contra lo de todos sus enemigos juntos', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.teams.forEach((team, id) => {
+      team.stats.built = id + 1;
+      team.stats.army = [100 * (id + 1), 200 * (id + 1)];
+    });
+    expect(endStatsVM(s, 0).built).toEqual([1, 5]);
+    expect(endStatsVM(s, 2).built).toEqual([3, 3]);
+    expect(armyChartVM(s, 0)).toEqual([
+      [100, 500],
+      [200, 1000],
+    ]);
+    s.buildings.push({ type: 'City', owner: 1, x: 1, y: 1, capture: null }, { type: 'City', owner: 2, x: 3, y: 1, capture: null });
+    s.buildings.push({ type: 'City', owner: 2, x: 5, y: 1, capture: null });
+    // Puntos: los de la mejor alianza enemiga (la que decide quien gana), no la suma.
+    expect(endScoreVM(s, 0)).toEqual([0, score(s, 2)]);
   });
 });

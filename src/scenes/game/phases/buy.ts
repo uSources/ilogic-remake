@@ -2,6 +2,7 @@
 import { buildingTypeOf } from '../../../core/gameContent';
 import { buyOptions, spawn, type BuyOption } from '../../../core/rules';
 import type { Building, GameState } from '../../../core/model';
+import { teamState } from '../../../core/teams';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { nameOf, fmtNum, t } from '../../../settings';
 import { abilitiesVM, buyBlockedText, unitStatsText } from '../../../ui/hudModels';
@@ -39,7 +40,7 @@ export const buyPhase: PhaseHandler = {
     const items: MenuItemVM[] = [{ id: 'cancel', label: t('cancel'), icon: null }, ...input.buy.map((option) => buyItem(input.s, option))];
     const model: MenuModel = { kind: 'buy', items, at: input.cursor };
     if (!building) return model;
-    const subtitle = `${t('funds')}: ${fmtNum(input.s.funds[0])}`;
+    const subtitle = `${t('funds')}: ${fmtNum(teamState(input.s, input.viewer).funds)}`;
     return { ...model, at: building, title: nameOf(buildingTypeOf(input.s, building)), subtitle };
   },
 };

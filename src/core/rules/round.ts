@@ -5,22 +5,23 @@ import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
-import type { Building, GameState, Team, Unit } from '../model';
-import { TEAMS } from '../util/predicates';
+import type { Building, GameState, TeamId, Unit } from '../model';
+import { perTeam, teamIds, teamState } from '../teams';
 import { dropStaleCaptures } from './capture';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
 import { unitAt } from './queries';
 
 export interface RoundReport {
-  income: [number, number];
-  /** Mantenimiento pagado por cada bando (si no llega el dinero, se paga lo que hay). */
-  upkeep: [number, number];
-  /** Unidades curadas en un edificio propio (uid, bando, vida recuperada). */
-  healed: { uid: number; team: Team; amount: number }[];
+  /** Lo que ha cobrado cada equipo, por numero de equipo. */
+  income: number[];
+  /** Mantenimiento pagado por cada equipo (si no llega el dinero, se paga lo que hay). */
+  upkeep: number[];
+  /** Unidades curadas en un edificio propio (uid, equipo, vida recuperada). */
+  healed: { uid: number; team: TeamId; amount: number }[];
   /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
   weather?: WeatherChange | null;
-  /** [CAMBIO] Puntos de control: dinero que ha dado a cada bando (ya sumado en income), cuantos le han pagado y cuantos estan disputados. */
+  /** [CAMBIO] Puntos de control: dinero que ha dado a cada equipo (ya sumado en income), cuantos le han pagado y cuantos estan disputados. */
   control?: ControlReport;
 }
 
@@ -65,8 +66,9 @@ function healOnBuilding(s: GameState, building: Building, report: RoundReport): 
 function collectAndHeal(s: GameState, report: RoundReport): void {
   for (const building of s.buildings) {
     if (building.owner === null) continue;
-    s.funds[building.owner] += buildingIncome(s, buildingTypeOf(s, building));
-    report.income[building.owner] += buildingIncome(s, buildingTypeOf(s, building));
+    const income = buildingIncome(s, buildingTypeOf(s, building));
+    teamState(s, building.owner).funds += income;
+    report.income[building.owner]! += income;
     healOnBuilding(s, building, report);
   }
 }
@@ -75,21 +77,21 @@ function payControlPoints(s: GameState, report: RoundReport): void {
   const control = controlRound(s);
   if (!control) return;
   report.control = control;
-  for (const team of TEAMS) report.income[team] += control.income[team];
+  for (const team of teamIds(s)) report.income[team]! += control.income[team]!;
 }
 
 /** [CAMBIO] Mantenimiento. Sin dinero no hay castigo: se paga lo que haya. */
 function payUpkeep(s: GameState, report: RoundReport): void {
-  for (const team of TEAMS) {
-    const paid = Math.min(upkeepOf(s, team), s.funds[team]);
-    s.funds[team] -= paid;
-    report.upkeep[team] = paid;
+  for (const team of s.teams) {
+    const paid = Math.min(upkeepOf(s, team.id), team.funds);
+    team.funds -= paid;
+    report.upkeep[team.id] = paid;
   }
 }
 
 /** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
 function nextDay(s: GameState): void {
-  s.funds = [Math.min(s.funds[0], s.content.maxFunds), Math.min(s.funds[1], s.content.maxFunds)];
+  for (const team of s.teams) team.funds = Math.min(team.funds, s.content.maxFunds);
   s.day++;
 }
 
@@ -127,7 +129,7 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
  * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */
 export function endRound(s: GameState): RoundReport {
-  const report: RoundReport = { income: [0, 0], upkeep: [0, 0], healed: [] };
+  const report: RoundReport = { income: perTeam(s, () => 0), upkeep: perTeam(s, () => 0), healed: [] };
   for (const phase of ROUND_PHASES) phase.run(s, report);
   return report;
 }

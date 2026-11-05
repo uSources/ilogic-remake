@@ -8,7 +8,7 @@ import type Phaser from 'phaser';
 import { unitById } from '../../core/rules';
 import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
 import { minBy } from '../../core/util/pick';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { GroupMode } from '../../controls/inputCommands';
 import { DOUBLE_MS } from '../../controls/pointer';
 import { EMPTY, sameSelection, type Selection } from '../../controls/selection';
@@ -23,6 +23,8 @@ export interface SelectionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   readonly phase: Phase;
   /** La unidad elegida para moverla (o en su menu). */
   readonly selected: Unit | null;
@@ -65,7 +67,7 @@ export class GroupSelection {
 
   /** Se puede elegir para un grupo: propia, viva y en el mapa (aunque ya se haya movido: para ordenes). */
   selectable(unit: Unit): boolean {
-    return unit.team === 0 && unit.carrier === null && unit.life > 0;
+    return unit.team === this.host.viewer && unit.carrier === null && unit.life > 0;
   }
 
   /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */
@@ -153,13 +155,13 @@ export class GroupSelection {
     const host = this.host;
     if (!this.canPickGroups()) return;
     if (mode === 'select') {
-      const squad = squadByKey(host.state, group);
+      const squad = squadByKey(host.state, host.viewer, group);
       if (squad) this.pickSquad(squad.id);
       return;
     }
     const units = this.units();
     if (!units.length) return showToast(t('groupNone'));
-    const squad = mode === 'set' ? setGroup(host.state, units, group) : addToGroup(host.state, units, group);
+    const squad = mode === 'set' ? setGroup(host.state, host.viewer, units, group) : addToGroup(host.state, host.viewer, units, group);
     if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${group} · ${squad.name}`);
     host.refresh();
   }

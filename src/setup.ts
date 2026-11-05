@@ -16,7 +16,7 @@ export interface NewGameOptions {
   funds: number;
   income: number;
   dayLimit: number | null;
-  /** Puntos de mando por bando (null = sin limite de puntos). */
+  /** Puntos de mando por equipo (null = sin limite de puntos). */
   command: number | null;
   /** Mantenimiento por ronda, tanto por uno del precio de las unidades. */
   upkeep: number;

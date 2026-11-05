@@ -1,4 +1,5 @@
 import { hqId } from './helpers';
+import { duel } from '@core/teams';
 import { MoveType } from '@core/content';
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
@@ -13,7 +14,7 @@ const HQ = hqId();
 describe('generador de mapas', () => {
   it('100 mapas: ambas bases, conectadas por tierra, con unidades y neutrales', () => {
     for (let seed = 1; seed <= 100; seed++) {
-      const s = createGame(seededRng(seed), {});
+      const s = createGame(seededRng(seed), { teams: duel('human', 'ai') });
       const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
@@ -38,12 +39,12 @@ describe('partidas simuladas', () => {
     const days: number[] = [];
     for (let seed = 1; seed <= 20; seed++) {
       const rng = seededRng(seed * 104729);
-      const s = createGame(rng, {});
-      while (outcome(s) === 'playing' && s.day <= 60) {
-        for (const _ of aiTurn(s, rng, 1)) if (outcome(s) !== 'playing') break;
+      const s = createGame(rng, { teams: duel('human', 'ai') });
+      while (outcome(s, 0) === 'playing' && s.day <= 60) {
+        for (const _ of aiTurn(s, rng, 1)) if (outcome(s, 0) !== 'playing') break;
         endRound(s);
       }
-      if (outcome(s) === 'lost') {
+      if (outcome(s, 0) === 'lost') {
         won++;
         days.push(s.day);
       }

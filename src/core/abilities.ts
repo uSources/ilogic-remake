@@ -17,7 +17,7 @@ import type { DeepReadonly } from './util/freeze';
 import { manhattan, neighbors4 } from './geom';
 import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';
-import { isAlive, isEnemyOf, isOnMap } from './util/predicates';
+import { isAlive, areEnemies, isOnMap } from './util/predicates';
 import type { GameState, Unit } from './model';
 
 type AbilityOf<K extends AbilityDef['kind']> = DeepReadonly<Extract<AbilityDef, { kind: K }>>;
@@ -84,7 +84,7 @@ export function auraFactor(s: GameState, defender: Unit): number {
   if (!s.rules.abilities) return 1;
   let best = 1;
   for (const ally of s.units) {
-    if (ally.uid === defender.uid || isEnemyOf(ally, defender) || !isFieldUnit(ally)) continue;
+    if (ally.uid === defender.uid || areEnemies(s, ally, defender) || !isFieldUnit(ally)) continue;
     const aura = abilityOfUnit(s, ally, 'aura');
     if (aura && manhattan(ally, defender) <= aura.radius) best = Math.min(best, aura.defense);
   }
@@ -101,7 +101,7 @@ export function zoneOfControl(s: GameState, unit: Unit, visible?: Grid<boolean> 
   if (!s.rules.abilities) return mustStop;
   const movement = unitTypeOf(s, unit).movement;
   for (const enemy of s.units) {
-    if (!isEnemyOf(enemy, unit) || !isFieldUnit(enemy)) continue;
+    if (!areEnemies(s, enemy, unit) || !isFieldUnit(enemy)) continue;
     if (visible && !visible.at(enemy)) continue;
     const zone = abilityOfUnit(s, enemy, 'zoneOfControl');
     if (!zone?.stops.includes(movement)) continue;

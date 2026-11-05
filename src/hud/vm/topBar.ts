@@ -28,7 +28,7 @@ export interface DayInfoVM {
   limit: number | null;
   /** Dias que quedan contando el de hoy (null sin limite). */
   left: number | null;
-  /** Puntos de cada bando si la partida acabase ahora (solo con limite de dias). */
+  /** Puntos de la alianza propia y de la mejor enemiga si la partida acabase ahora (solo con limite de dias). */
   score: [number, number] | null;
 }
 

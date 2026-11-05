@@ -4,6 +4,7 @@
  */
 import type { GameContent } from './content';
 import { SAVE_VERSION } from './saveVersion';
+import { newTeams, type TeamSetup } from './teams';
 import type { GameState, RulesConfig } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */
@@ -15,8 +16,8 @@ export interface NewGameStateOptions {
   content: GameContent;
   /** Tema del mapa (id de themes.json; si no, el primero). */
   theme?: string;
-  /** Dinero de cada bando al empezar (si no, `rules.initialFunds` para los dos). */
-  funds?: [number, number];
+  /** Los equipos, en orden (quien los juega, su alianza y su dinero): no hay equipos por defecto. */
+  teams: readonly TeamSetup[];
 }
 
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido. */
@@ -26,7 +27,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
     version: SAVE_VERSION,
     map,
     theme: options.theme ?? options.content.themes.list[0]!.id,
-    funds: options.funds ?? [rules.initialFunds, rules.initialFunds],
+    teams: newTeams(options.teams, rules.initialFunds),
     units: [],
     buildings: [],
     nextUid: 1,

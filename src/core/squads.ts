@@ -11,7 +11,7 @@
  * | `membership` | formar, meter y sacar unidades, grupos por tecla, renombrar y deshacer |
  */
 export { squadUnits, squadById } from './squads/queries';
-export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, assignKeys } from './squads/naming';
+export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, squadsOfTeam, assignKeys } from './squads/naming';
 export {
   effectiveStandingOrder,
   isDetached,

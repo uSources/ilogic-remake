@@ -1,8 +1,9 @@
 import type Phaser from 'phaser';
 import { hasImage } from '../../atlas';
 import { TILE } from '../../layout';
-import { PAL, PAL_MAP } from '../palette';
+import { PAL } from '../palette';
 import { fillRects } from '../pixelDraw';
+import { sideColor } from '../sides';
 import { posKey } from '../../core/geom';
 import type { Pos } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
@@ -54,7 +55,7 @@ export const controlZones: OverlayPainter = (graphics, options, context) => {
       y0 = Math.max(0, point.y - point.r) * TILE,
       x1 = Math.min(options.vis.width, point.x + point.r + 1) * TILE,
       y1 = Math.min(options.vis.height, point.y + point.r + 1) * TILE;
-    const color = point.owner === 0 ? PAL.blue : point.owner === 1 ? PAL.red : PAL_MAP.neutral;
+    const color = sideColor(point.owner);
     graphics.fillStyle(color, 0.16);
     graphics.fillRect(x0, y0, x1 - x0, y1 - y0);
     for (let i = 0; i < Math.max(x1 - x0, y1 - y0); i += DOT_STEP) {

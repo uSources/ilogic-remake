@@ -8,7 +8,7 @@ import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { moveRange } from '../rules/movement';
 import { teamUnits } from '../rules/queries';
-import type { GameState, Team, Unit } from '../model';
+import type { GameState, TeamId, Unit } from '../model';
 import { needsRepair, strikeReach, visibleFoes } from './context';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
@@ -76,7 +76,7 @@ function playRank(s: GameState, unit: Unit, plan: Map<number, number>): number {
  * el orden de juego: primero las del plan (las de distancia antes), despues el resto en el orden de
  * siempre.
  */
-export function planFire(s: GameState, me: Team): FirePlan {
+export function planFire(s: GameState, me: TeamId): FirePlan {
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
   const foes = visibleFoes(s, me);

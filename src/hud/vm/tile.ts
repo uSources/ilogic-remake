@@ -1,4 +1,4 @@
-import type { StatChipVM } from './common';
+import type { OwnerSide, Side, StatChipVM } from './common';
 
 /** Fichas de abajo: la casilla señalada (terreno, edificio, punto de control) y su unidad. */
 
@@ -13,7 +13,7 @@ export interface UnitVM {
   rank?: number;
   icon: string | null;
   name: string;
-  team: 0 | 1;
+  side: Side;
   life: number;
   stats: string;
   /** Movimiento, alcance y vision con su icono (ficha de la unidad). */
@@ -34,10 +34,11 @@ export interface UnitVM {
 export interface BuildingVM {
   icon: string | null;
   name: string;
-  owner: 'you' | 'enemy' | 'neutral' | 'unknown';
+  /** De quien es ('unknown' si no se ve y no es de quien mira). */
+  owner: OwnerSide | 'unknown';
   income: number;
   /** Captura a medias: puntos que quedan, total y quien captura. */
-  capture?: { left: number; total: number; team: 0 | 1 };
+  capture?: { left: number; total: number; side: Side };
 }
 
 export interface TileVM {
@@ -45,5 +46,5 @@ export interface TileVM {
   building?: BuildingVM;
   unit?: UnitVM;
   /** [CAMBIO] Punto de control en la casilla: de quien es y lo que da por ronda. */
-  point?: { owner: 'you' | 'enemy' | 'neutral'; income: number; contested: boolean; icon: string };
+  point?: { owner: OwnerSide; income: number; contested: boolean; icon: string };
 }

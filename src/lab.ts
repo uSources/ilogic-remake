@@ -58,13 +58,21 @@ export function labRules(action: LabAction | null): RulesConfig {
 }
 
 /**
- * Partida del laboratorio: todo hierba, una Base por bando en las esquinas (si no, la partida
+ * Partida del laboratorio: todo hierba, una Base por equipo en las esquinas (si no, la partida
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
 export function labState(options: LabOptions, action: LabAction | null): GameState {
   const content = defaultContent();
   const map = blankMap(LAB_SIZE, content.plainTerrain.id);
-  const s = newGameState({ map, rules: labRules(action), content, funds: [0, 0] });
+  const s = newGameState({
+    map,
+    rules: labRules(action),
+    content,
+    teams: [
+      { controller: 'human', funds: 0 },
+      { controller: 'ai', funds: 0 },
+    ],
+  });
   const hq = content.hq.id;
   s.buildings.push(
     { type: hq, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },

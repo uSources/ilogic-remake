@@ -7,7 +7,8 @@
  *   M  acantilado                                     *  flores (o escarcha)
  *   ~  agua    ,  agua poco profunda    =  agua profunda    i  hielo
  *   P  bosque nevado    N  acantilado nevado
- * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
+ * Equipos: `teams`, en orden (el 0 lo juega la persona en todas). Edificios: [tipo, dueño (numero de
+ * equipo, null neutral), x, y]. Unidades: [tipo, equipo, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
 import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
@@ -16,9 +17,10 @@ import { rulesWith } from './rulesConfig';
 import { deepFreeze, type DeepReadonly } from './util/freeze';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
-import type { GameState, Pos, RulesConfig, Team } from './model';
+import type { GameState, Pos, RulesConfig, TeamId } from './model';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
+import type { TeamSetup } from './teams';
 import { canMoveOn } from './rules/queries';
 
 type Text = { es: string; en: string };
@@ -26,8 +28,10 @@ type Text = { es: string; en: string };
 type BuildingName = string;
 /** Nombre interno de una unidad (units.json). */
 type UnitName = string;
-type MissionBuilding = [type: BuildingName, owner: Team | null, x: number, y: number];
-type MissionUnit = [type: UnitName, team: Team, x: number, y: number, life?: number];
+type MissionBuilding = [type: BuildingName, owner: TeamId | null, x: number, y: number];
+type MissionUnit = [type: UnitName, team: TeamId, x: number, y: number, life?: number];
+/** Un equipo de la mision: quien lo juega y con cuanto dinero empieza. */
+type MissionTeam = TeamSetup & { funds: number };
 
 /** Una mision tal como se escribe aqui abajo (MISSION_DEFS). */
 interface MissionSource {
@@ -39,7 +43,9 @@ interface MissionSource {
   map: string[];
   buildings: MissionBuilding[];
   units: MissionUnit[];
-  funds: [number, number];
+  /** Los equipos, en orden (su puesto es el numero de equipo de edificios y unidades), y su dinero. */
+  teams: MissionTeam[];
+  /** El objetivo es del equipo que juega una persona (para los demas, perder si lo cumple). */
   objective: MissionObjective;
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
   rules?: Partial<RulesConfig>;
@@ -89,18 +95,34 @@ export function buildMission(mission: MissionDef, content: GameContent): GameSta
     rules: missionRules(mission, content),
     content,
     theme: missionTheme(content, mission).id,
-    funds: [mission.funds[0], mission.funds[1]],
+    teams: mission.teams,
   });
   for (const [type, owner, x, y] of mission.buildings)
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
   const unitUids = placeUnits(s, mission.units);
-  s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, unitUids, content) };
+  s.mission = { id: mission.id, team: missionTeam(mission), objective: objectiveFromMission(mission.objective, unitUids, content) };
   return s;
 }
 
-/** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
+/** El equipo que juega la mision: el que lleva una persona (el dueño de su objetivo). */
+export function missionTeam(mission: MissionDef): TeamId {
+  const team = mission.teams.findIndex((candidate) => candidate.controller === 'human');
+  if (team < 0) throw new Error(`La mision ${mission.id} no tiene ningun equipo para una persona`);
+  return team;
+}
+
+/**
+ * Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los
+ * pida). El dinero inicial de las reglas es el del equipo que la juega.
+ */
 export const missionRules = (mission: MissionDef, content: GameContent): RulesConfig =>
-  rulesWith(content, { commandPoints: null, upkeep: 0, weather: false, initialFunds: mission.funds[0], ...mission.rules });
+  rulesWith(content, {
+    commandPoints: null,
+    upkeep: 0,
+    weather: false,
+    initialFunds: mission.teams[missionTeam(mission)]!.funds,
+    ...mission.rules,
+  });
 
 function buildingProblems(mission: MissionDef, content: GameContent): string[] {
   const problems: string[] = [];
@@ -132,8 +154,16 @@ function unitProblems(mission: MissionDef, content: GameContent): string[] {
 }
 
 function missingBases(mission: MissionDef, content: GameContent): string[] {
-  const hasBase = (team: Team) => mission.buildings.some(([type, owner]) => type === content.hq.id && owner === team);
-  return ([0, 1] as const).filter((team) => !hasBase(team)).map((team) => `falta la Base del bando ${team}`);
+  const hasBase = (team: TeamId) => mission.buildings.some(([type, owner]) => type === content.hq.id && owner === team);
+  const teams = mission.teams.map((_, team) => team);
+  return teams.filter((team) => !hasBase(team)).map((team) => `falta la Base del equipo ${team}`);
+}
+
+/** Edificios y unidades de equipos que la mision no tiene. */
+function unknownTeams(mission: MissionDef): string[] {
+  const isTeam = (team: TeamId | null) => team === null || (team >= 0 && team < mission.teams.length);
+  const owners = [...mission.buildings.map(([, owner]) => owner), ...mission.units.map(([, team]) => team)];
+  return owners.filter((owner) => !isTeam(owner)).map((owner) => `el equipo ${owner} no esta en "teams"`);
 }
 
 /** Comprobaciones de un mapa de mision con ese contenido (para los tests). Devuelve los problemas encontrados. */
@@ -145,6 +175,8 @@ export function checkMission(mission: MissionDef, content: GameContent): string[
     ...buildingProblems(mission, content),
     ...unitProblems(mission, content),
     ...missingBases(mission, content),
+    ...unknownTeams(mission),
+    ...(mission.teams.some((team) => team.controller === 'human') ? [] : ['ningun equipo es de una persona']),
     ...objectiveProblems(mission.objective, { unitCount: mission.units.length, mapSize: size }),
   ];
 }
@@ -192,7 +224,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Soldier', 0, 1, 12],
       ['Soldier', 1, 10, 5, 50],
     ],
-    funds: [6000, 0],
+    teams: [
+      { controller: 'human', funds: 6000 },
+      { controller: 'ai', funds: 0 },
+    ],
     objective: { kind: 'hq' },
   },
   {
@@ -250,7 +285,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Soldier', 1, 12, 4],
       ['Tank', 1, 16, 4],
     ],
-    funds: [4000, 6000],
+    teams: [
+      { controller: 'human', funds: 4000 },
+      { controller: 'ai', funds: 6000 },
+    ],
     objective: { kind: 'capture', count: 6, type: 'City', days: 14 },
   },
   {
@@ -313,7 +351,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Artillery', 1, 16, 4],
       ['Artillery', 1, 18, 6],
     ],
-    funds: [6000, 15000],
+    teams: [
+      { controller: 'human', funds: 6000 },
+      { controller: 'ai', funds: 15000 },
+    ],
     objective: { kind: 'survive', days: 8 },
   },
   {
@@ -369,7 +410,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Artillery', 1, 15, 6],
       ['LTank', 1, 16, 9],
     ],
-    funds: [5000, 8000],
+    teams: [
+      { controller: 'human', funds: 5000 },
+      { controller: 'ai', funds: 8000 },
+    ],
     objective: { kind: 'escort', vip: 0, to: { x: 18, y: 2 }, days: 12 },
   },
   {
@@ -423,7 +467,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['LTank', 1, 17, 13],
       ['Soldier', 1, 10, 15],
     ],
-    funds: [10000, 0],
+    teams: [
+      { controller: 'human', funds: 10000 },
+      { controller: 'ai', funds: 0 },
+    ],
     objective: { kind: 'destroy', days: 10 },
   },
   {
@@ -482,7 +529,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Soldier', 1, 14, 4],
       ['Tank', 1, 16, 2],
     ],
-    funds: [8000, 14000],
+    teams: [
+      { controller: 'human', funds: 8000 },
+      { controller: 'ai', funds: 14000 },
+    ],
     objective: { kind: 'hq' },
   },
 ];

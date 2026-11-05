@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
-import type { Building, GameState } from '../../core/model';
+import type { Building, GameState, TeamId } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
 import { buildingKey } from '../sprites';
 import type { MapLayer } from './layer';
@@ -23,14 +23,14 @@ export class BuildingLayer implements MapLayer {
     this.object.add(image);
   }
 
-  sync(s: GameState, vis: Grid<boolean>): void {
-    s.buildings.forEach((building, i) => this.syncBuilding(s, building, i, vis.at(building)));
+  sync(s: GameState, vis: Grid<boolean>, viewer: TeamId): void {
+    s.buildings.forEach((building, i) => this.syncBuilding(s, building, i, vis.at(building), viewer));
     this.sort();
   }
 
   /** Pone al dia el sprite numero `index` (lo crea la primera vez; lo esconde si no tiene dibujo). */
-  private syncBuilding(s: GameState, building: Building, index: number, isVisible: boolean): void {
-    const key = buildingKey(this.scene.textures, s, building, isVisible);
+  private syncBuilding(s: GameState, building: Building, index: number, isVisible: boolean, viewer: TeamId): void {
+    const key = buildingKey(this.scene.textures, s, building, isVisible, viewer);
     const existing = this.buildings[index];
     if (!key) {
       existing?.setVisible(false);

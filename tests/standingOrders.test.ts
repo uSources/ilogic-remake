@@ -29,6 +29,7 @@ import {
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
 import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
+import { teamState } from '@core/teams';
 
 const HQ = hqId();
 
@@ -50,7 +51,7 @@ function world(): GameState {
 function turns(s: GameState, rounds: number): number[] {
   const done: number[] = [];
   for (let i = 0; i < rounds; i++) {
-    const it = assistTurn(s, seededRng(i + 1));
+    const it = assistTurn(s, seededRng(i + 1), 0);
     let step = it.next();
     while (!step.done) step = it.next();
     done.push(...step.value);
@@ -64,7 +65,7 @@ describe('ordenes con destino', () => {
   it('capturar aqui: va al edificio, lo captura y se queda quieta esperando', () => {
     const s = world();
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [unit], 'capture', { x: 12, y: 5 });
+    giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
     const done = turns(s, 8);
     expect(s.buildings[2]!.owner).toBe(0);
     expect(done).toContain(unit.uid);
@@ -76,7 +77,7 @@ describe('ordenes con destino', () => {
     const s = world();
     s.buildings.push({ type: CITY, owner: null, x: 5, y: 6 });
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [unit], 'capture', { x: 12, y: 5 });
+    giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
     turns(s, 1);
     expect(unit.x).toBeGreaterThan(5);
     expect(s.buildings[3]!.capture ?? null).toBeNull();
@@ -87,7 +88,7 @@ describe('ordenes con destino', () => {
     const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const onWay = newUnit(s, SOLDIER, 1, { x: 7, y: 5 });
     const far = newUnit(s, SOLDIER, 1, { x: 5, y: 12 }); // a la vista pero fuera de tiro y fuera del camino
-    giveStandingOrder(s, [unit], 'attack', { x: 15, y: 5 });
+    giveStandingOrder(s, 0, [unit], 'attack', { x: 15, y: 5 });
     turns(s, 1);
     expect(onWay.life).toBeLessThan(100);
     expect(far.life).toBe(100);
@@ -96,7 +97,7 @@ describe('ordenes con destino', () => {
   it('atacar aqui: al llegar sin enemigos cerca, la orden se cumple', () => {
     const s = world();
     const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [unit], 'attack', { x: 9, y: 5 });
+    giveStandingOrder(s, 0, [unit], 'attack', { x: 9, y: 5 });
     const done = turns(s, 3);
     expect(done).toContain(unit.uid);
     expect(unit.standingOrder).toBeUndefined();
@@ -106,7 +107,7 @@ describe('ordenes con destino', () => {
   it('defender aqui: va a la casilla, ataca a quien se acerca y no se cumple nunca', () => {
     const s = world();
     const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [unit], 'defend', { x: 8, y: 5 });
+    giveStandingOrder(s, 0, [unit], 'defend', { x: 8, y: 5 });
     turns(s, 2);
     expect(Math.abs(unit.x - 8) + Math.abs(unit.y - 5)).toBeLessThanOrEqual(1);
     const near = newUnit(s, SOLDIER, 1, { x: 8, y: 7 });
@@ -121,7 +122,7 @@ describe('ordenes con destino', () => {
     const s = world();
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 6 });
-    expect(giveStandingOrder(s, [soldier, tank], 'capture', { x: 12, y: 5 })).toBe(2);
+    expect(giveStandingOrder(s, 0, [soldier, tank], 'capture', { x: 12, y: 5 })).toBe(2);
     expect(soldier.standingOrder?.kind).toBe('capture');
     expect(tank.standingOrder).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
   });
@@ -130,11 +131,11 @@ describe('ordenes con destino', () => {
     const s = world();
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
-    expect(standingOrderBlock(s, 'capture', { x: 3, y: 3 }, [sol])).toBe('noBuilding');
-    expect(standingOrderBlock(s, 'capture', { x: 0, y: 0 }, [sol])).toBe('noBuilding');
-    expect(standingOrderBlock(s, 'capture', { x: 12, y: 5 }, [tank])).toBe('noCapturer');
-    expect(standingOrderBlock(s, 'capture', { x: 12, y: 5 }, [tank, sol])).toBeNull();
-    expect(standingOrderBlock(s, 'attack', { x: 3, y: 3 }, [tank])).toBeNull();
+    expect(standingOrderBlock(s, 0, 'capture', { x: 3, y: 3 }, [sol])).toBe('noBuilding');
+    expect(standingOrderBlock(s, 0, 'capture', { x: 0, y: 0 }, [sol])).toBe('noBuilding');
+    expect(standingOrderBlock(s, 0, 'capture', { x: 12, y: 5 }, [tank])).toBe('noCapturer');
+    expect(standingOrderBlock(s, 0, 'capture', { x: 12, y: 5 }, [tank, sol])).toBeNull();
+    expect(standingOrderBlock(s, 0, 'attack', { x: 3, y: 3 }, [tank])).toBeNull();
   });
 
   it('ordenes que se ofrecen en una casilla (gesto en el mapa): atacar primero si hay enemigo, capturar si se puede', () => {
@@ -143,41 +144,42 @@ describe('ordenes con destino', () => {
     const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
     const foe = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     // Casilla vacia: atacar o defender.
-    expect(standingOrderChoices(s, { x: 3, y: 3 }, [sol], false)).toEqual(['attack', 'defend']);
+    expect(standingOrderChoices(s, 0, { x: 3, y: 3 }, [sol], false)).toEqual(['attack', 'defend']);
     // Ciudad neutral: capturar va primero, pero solo si alguna puede capturar.
-    expect(standingOrderChoices(s, { x: 12, y: 5 }, [sol], false)).toEqual(['capture', 'attack', 'defend']);
-    expect(standingOrderChoices(s, { x: 12, y: 5 }, [tank], false)).toEqual(['attack', 'defend']);
-    expect(standingOrderChoices(s, { x: 12, y: 5 }, [tank, sol], false)).toEqual(['capture', 'attack', 'defend']);
+    expect(standingOrderChoices(s, 0, { x: 12, y: 5 }, [sol], false)).toEqual(['capture', 'attack', 'defend']);
+    expect(standingOrderChoices(s, 0, { x: 12, y: 5 }, [tank], false)).toEqual(['attack', 'defend']);
+    expect(standingOrderChoices(s, 0, { x: 12, y: 5 }, [tank, sol], false)).toEqual(['capture', 'attack', 'defend']);
     // Edificio propio: no se captura.
-    expect(standingOrderChoices(s, { x: 0, y: 0 }, [sol], false)).toEqual(['attack', 'defend']);
+    expect(standingOrderChoices(s, 0, { x: 0, y: 0 }, [sol], false)).toEqual(['attack', 'defend']);
     // Enemigo visible: atacar primero (tambien sobre un edificio que se puede capturar).
-    expect(standingOrderChoices(s, foe, [sol], true)).toEqual(['attack', 'defend']);
-    expect(standingOrderChoices(s, { x: 19, y: 19 }, [sol], true)).toEqual(['attack', 'capture', 'defend']);
+    expect(standingOrderChoices(s, 0, foe, [sol], true)).toEqual(['attack', 'defend']);
+    expect(standingOrderChoices(s, 0, { x: 19, y: 19 }, [sol], true)).toEqual(['attack', 'capture', 'defend']);
     // Sin unidades propias no hay nada que ofrecer.
-    expect(standingOrderChoices(s, { x: 3, y: 3 }, [foe], false)).toEqual([]);
-    expect(standingOrderChoices(s, { x: 3, y: 3 }, [], false)).toEqual([]);
+    expect(standingOrderChoices(s, 0, { x: 3, y: 3 }, [foe], false)).toEqual([]);
+    expect(standingOrderChoices(s, 0, { x: 3, y: 3 }, [], false)).toEqual([]);
   });
 
   it('solo juegan las que tienen orden y siguen sin usar; nunca compra', () => {
     const s = world();
     s.buildings.push({ type: FACTORY, owner: 0, x: 4, y: 4 });
-    s.funds = [50000, 5000];
+    teamState(s, 0).funds = 50000;
+    teamState(s, 1).funds = 5000;
     const free = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     const used = newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
-    giveStandingOrder(s, [used], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 15 });
     Object.assign(used, { active: false, canMove: false });
-    const evs = Array.from(assistTurn(s, seededRng(1)));
+    const evs = Array.from(assistTurn(s, seededRng(1), 0));
     expect(evs).toEqual([]);
     expect(free).toMatchObject({ x: 3, y: 3, active: true });
     expect(used).toMatchObject({ x: 8, y: 8 });
-    expect(s.funds[0]).toBe(50000);
+    expect(teamState(s, 0).funds).toBe(50000);
   });
 
   it('startStandingOrder la pone en marcha ya; cancelar la deja esperando', () => {
     const s = world();
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [unit], 'capture', { x: 12, y: 5 });
-    Array.from(startStandingOrder(s, unit.uid, seededRng(1)));
+    giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
+    Array.from(startStandingOrder(s, unit.uid, seededRng(1), 0));
     expect(unit.x).toBeGreaterThan(5);
     cancelStandingOrder(s, [unit]);
     expect(unit.standingOrder).toBeUndefined();
@@ -189,7 +191,7 @@ describe('ordenes con destino', () => {
     const tank = newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(unitActions(s, sol)).toMatchObject({ orderToAttack: true, orderToCapture: true, orderToDefend: true, cancelOrder: false });
     expect(unitActions(s, tank).orderToCapture).toBe(false);
-    giveStandingOrder(s, [tank], 'defend', { x: 6, y: 6 });
+    giveStandingOrder(s, 0, [tank], 'defend', { x: 6, y: 6 });
     expect(unitActions(s, tank).cancelOrder).toBe(true);
   });
 });
@@ -200,12 +202,12 @@ describe('escuadras', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 6 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
-    const q1 = formSquad(s, [soldier, tank, enemy])!;
+    const q1 = formSquad(s, 0, [soldier, tank, enemy])!;
     expect(q1.name).toBe('Alfa');
     expect(squadUnits(s, q1.id).map((unit) => unit.uid)).toEqual([soldier.uid, tank.uid]);
     expect(enemy.squad).toBeUndefined();
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 6, y: 6 });
-    expect(formSquad(s, [otherSoldier])!.name).toBe('Bravo');
+    expect(formSquad(s, 0, [otherSoldier])!.name).toBe('Bravo');
     expect(renameSquad(s, q1.id, '  Los   de   la   colina larga  ')).toBe(true);
     expect(s.squads![0]!.name).toBe('Los de la coli');
     expect(s.squads![0]!.name.length).toBeLessThanOrEqual(SQUAD_NAME_MAX);
@@ -218,15 +220,15 @@ describe('escuadras', () => {
   it('pasar una unidad a otra escuadra vacia la vieja, que desaparece', () => {
     const s = world();
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    formSquad(s, [soldier]);
-    formSquad(s, [soldier], 'Nueva');
+    formSquad(s, 0, [soldier]);
+    formSquad(s, 0, [soldier], 'Nueva');
     expect(s.squads!.map((squad) => squad.name)).toEqual(['Nueva']);
   });
 
   it('una escuadra cuyas unidades caen desaparece', () => {
     const s = world();
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    formSquad(s, [soldier]);
+    formSquad(s, 0, [soldier]);
     s.units = [];
     pruneSquads(s);
     expect(s.squads).toBeUndefined();
@@ -235,11 +237,13 @@ describe('escuadras', () => {
   it('las ordenes y las escuadras se guardan con la partida', () => {
     const s = world();
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    const squad = formSquad(s, [soldier], 'Lobos')!;
-    giveStandingOrder(s, [soldier], 'capture', { x: 12, y: 5 });
+    const squad = formSquad(s, 0, [soldier], 'Lobos')!;
+    giveStandingOrder(s, 0, [soldier], 'capture', { x: 12, y: 5 });
     const back = deserialize(serialize(s), saveContext(defaultContent()))!;
     // Toda la escuadra: la orden es de la escuadra, no de la unidad.
-    expect(back.squads).toEqual([{ id: squad.id, name: 'Lobos', key: 1, standingOrder: { kind: 'capture', at: { x: 12, y: 5 } } }]);
+    expect(back.squads).toEqual([
+      { id: squad.id, team: 0, name: 'Lobos', key: 1, standingOrder: { kind: 'capture', at: { x: 12, y: 5 } } },
+    ]);
     expect(back.units[0]).toMatchObject({ squad: squad.id });
     expect(back.units[0]!.standingOrder).toBeUndefined();
   });
@@ -248,9 +252,9 @@ describe('escuadras', () => {
     const s = world();
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 6, y: 5 });
-    const squad = formSquad(s, [soldier])!;
-    giveStandingOrder(s, [soldier], 'attack', { x: 12, y: 5 });
-    giveStandingOrder(s, [otherSoldier], 'defend', { x: 6, y: 5 });
+    const squad = formSquad(s, 0, [soldier])!;
+    giveStandingOrder(s, 0, [soldier], 'attack', { x: 12, y: 5 });
+    giveStandingOrder(s, 0, [otherSoldier], 'defend', { x: 6, y: 5 });
     const old = savedByVersion1(serialize(s).replaceAll('"standingOrder":', '"command":'));
     const back = deserialize(old, saveContext(defaultContent()))!;
     expect(back.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
@@ -280,9 +284,9 @@ describe('escuadras en formacion', () => {
     const s = world();
     const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
-    formSquad(s, [car, sol]);
+    formSquad(s, 0, [car, sol]);
     const at = { x: 18, y: 5 };
-    giveStandingOrder(s, [car, sol], 'attack', at);
+    giveStandingOrder(s, 0, [car, sol], 'attack', at);
     expect(squadInFormation(s, sol.squad!)).toBe(true);
     turns(s, 2);
     expect(left(sol, at)).toBe(17 - 6); // el soldado va a su ritmo (3 por turno)
@@ -295,8 +299,8 @@ describe('escuadras en formacion', () => {
     const car = newUnit(s, CAR, 0, { x: 3, y: 6 }); // le queda lo mismo que al soldado: va antes el lento
     const sol = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
     const lone = newUnit(s, CAR, 0, { x: 9, y: 9 });
-    formSquad(s, [car, sol]);
-    giveStandingOrder(s, [car, sol, lone], 'attack', { x: 18, y: 5 });
+    formSquad(s, 0, [car, sol]);
+    giveStandingOrder(s, 0, [car, sol, lone], 'attack', { x: 18, y: 5 });
     expect(standingOrderPlayOrder(s, [car, lone, sol]).map((unit) => unit.uid)).toEqual([sol.uid, car.uid, lone.uid]);
   });
 
@@ -304,9 +308,9 @@ describe('escuadras en formacion', () => {
     const s = world();
     const sol = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 3, y: 6 }); // les queda lo mismo
-    formSquad(s, [car, sol]);
+    formSquad(s, 0, [car, sol]);
     const at = { x: 18, y: 5 };
-    giveStandingOrder(s, [car, sol], 'attack', at);
+    giveStandingOrder(s, 0, [car, sol], 'attack', at);
     turns(s, 1);
     expect(left(sol, at)).toBe(16 - 3);
     expect(left(car, at)).toBe(16 - 3 - SPREAD);
@@ -317,9 +321,9 @@ describe('escuadras en formacion', () => {
     const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 6 }); // al alcance del jeep, lejos del soldado
-    formSquad(s, [car, sol]);
+    formSquad(s, 0, [car, sol]);
     const at = { x: 18, y: 5 };
-    giveStandingOrder(s, [car, sol], 'attack', at);
+    giveStandingOrder(s, 0, [car, sol], 'attack', at);
     turns(s, 1);
     expect(enemy.life).toBe(100);
     expect(left(car, at)).toBeGreaterThanOrEqual(left(sol, at) - SPREAD);
@@ -330,8 +334,8 @@ describe('escuadras en formacion', () => {
     const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 7, y: 6 });
-    formSquad(s, [car, sol]);
-    giveStandingOrder(s, [car, sol], 'attack', { x: 18, y: 5 });
+    formSquad(s, 0, [car, sol]);
+    giveStandingOrder(s, 0, [car, sol], 'attack', { x: 18, y: 5 });
     turns(s, 1);
     expect(enemy.life).toBeLessThan(100);
   });
@@ -340,9 +344,9 @@ describe('escuadras en formacion', () => {
     const s = world();
     const sol = newUnit(s, SOLDIER, 0, { x: 10, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 10, y: 6 });
-    formSquad(s, [car, sol]);
+    formSquad(s, 0, [car, sol]);
     const at = { x: 14, y: 6 };
-    giveStandingOrder(s, [car, sol], 'attack', at);
+    giveStandingOrder(s, 0, [car, sol], 'attack', at);
     turns(s, 1);
     expect(left(car, at)).toBeLessThanOrEqual(1);
   });
@@ -352,16 +356,16 @@ describe('escuadras en formacion', () => {
     const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
     const at = { x: 18, y: 6 };
-    giveStandingOrder(s, [car, sol], 'attack', at);
+    giveStandingOrder(s, 0, [car, sol], 'attack', at);
     turns(s, 1);
     expect(left(car, at)).toBe(17 - 7);
 
     const other = world();
     const sol2 = newUnit(other, SOLDIER, 0, { x: 1, y: 5 });
     const car2 = newUnit(other, CAR, 0, { x: 1, y: 6 });
-    formSquad(other, [car2, sol2]);
-    giveStandingOrder(other, [sol2], 'attack', { x: 18, y: 5 });
-    giveStandingOrder(other, [car2], 'attack', at);
+    formSquad(other, 0, [car2, sol2]);
+    giveStandingOrder(other, 0, [sol2], 'attack', { x: 18, y: 5 });
+    giveStandingOrder(other, 0, [car2], 'attack', at);
     expect(sameFormation(other, car2, sol2)).toBe(false);
     turns(other, 1);
     expect(left(car2, at)).toBe(17 - 7);
@@ -372,9 +376,9 @@ describe('escuadras en formacion', () => {
     s.buildings.push({ type: CITY, owner: null, x: 18, y: 5 });
     const sol = newUnit(s, SOLDIER, 0, { x: 1, y: 5 });
     const car = newUnit(s, CAR, 0, { x: 1, y: 6 });
-    const squad = formSquad(s, [car, sol])!;
+    const squad = formSquad(s, 0, [car, sol])!;
     const at = { x: 18, y: 5 };
-    giveStandingOrder(s, [car, sol], 'capture', at);
+    giveStandingOrder(s, 0, [car, sol], 'capture', at);
     expect(effectiveStandingOrder(s, car)?.kind).toBe('attack');
     expect(squadInFormation(s, squad.id)).toBe(true);
     turns(s, 2);
@@ -390,13 +394,13 @@ describe('orden de la escuadra y unidades destacadas', () => {
     const firstSoldier = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
     const secondSoldier = newUnit(s, SOLDIER, 0, { x: 2, y: 6 });
     const tank = newUnit(s, TANK, 0, { x: 1, y: 6 });
-    const squad = formSquad(s, [firstSoldier, secondSoldier, tank])!;
+    const squad = formSquad(s, 0, [firstSoldier, secondSoldier, tank])!;
     return { s, firstSoldier, secondSoldier, tank, squad };
   }
 
   it('a toda la escuadra: la orden es de la escuadra y la siguen todas (escolta incluida)', () => {
     const { s, firstSoldier, secondSoldier, tank, squad } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'capture', { x: 12, y: 5 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'capture', { x: 12, y: 5 });
     expect(squad.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
     expect([firstSoldier, secondSoldier, tank].map((unit) => unit.standingOrder)).toEqual([undefined, undefined, undefined]);
     expect(effectiveStandingOrder(s, firstSoldier)?.kind).toBe('capture');
@@ -406,21 +410,21 @@ describe('orden de la escuadra y unidades destacadas', () => {
 
   it('a una sola: va destacada con su orden, las demas siguen la de la escuadra', () => {
     const { s, firstSoldier, secondSoldier, tank, squad } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
-    giveStandingOrder(s, [firstSoldier], 'capture', { x: 3, y: 5 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [firstSoldier], 'capture', { x: 3, y: 5 });
     expect(squad.standingOrder?.kind).toBe('attack');
     expect(isDetached(s, firstSoldier)).toBe(true);
     expect(effectiveStandingOrder(s, secondSoldier)?.kind).toBe('attack');
     expect(squadsVM(s)[0]).toMatchObject({ detached: 1 });
     // Darle justo la orden de la escuadra la devuelve con ella.
-    giveStandingOrder(s, [firstSoldier], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [firstSoldier], 'attack', { x: 15, y: 15 });
     expect(firstSoldier.standingOrder).toBeUndefined();
   });
 
   it('la destacada cumple su captura y despues vuelve a la orden de la escuadra', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
-    giveStandingOrder(s, [firstSoldier], 'capture', { x: 3, y: 5 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [firstSoldier], 'capture', { x: 3, y: 5 });
     turns(s, 4);
     expect(s.buildings[3]!.owner).toBe(0);
     expect(firstSoldier.standingOrder).toBeUndefined();
@@ -429,7 +433,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
 
   it('capturar a mano a mitad de una orden: sigue capturando el turno siguiente (no se va)', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
     firstSoldier.x = 3; // ya encima de la ciudad
     capture(s, firstSoldier);
     keepCapturing(s, firstSoldier);
@@ -443,8 +447,8 @@ describe('orden de la escuadra y unidades destacadas', () => {
 
   it('quitar la orden: a la escuadra entera se la quita; a una destacada la devuelve; a otra la para donde esta', () => {
     const { s, firstSoldier, secondSoldier, tank, squad } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
-    giveStandingOrder(s, [firstSoldier], 'capture', { x: 3, y: 5 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [firstSoldier], 'capture', { x: 3, y: 5 });
     cancelStandingOrder(s, [firstSoldier]);
     expect(effectiveStandingOrder(s, firstSoldier)?.kind).toBe('attack');
     cancelStandingOrder(s, [secondSoldier]);
@@ -456,7 +460,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
 
   it('atacar: la orden de la escuadra se cumple cuando han llegado todas las que la siguen', () => {
     const { s, firstSoldier, secondSoldier, tank, squad } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 2, y: 6 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 2, y: 6 });
     firstSoldier.x = 9; // lejos
     finishStandingOrder(s, secondSoldier);
     expect(squad.standingOrder).toBeDefined();
@@ -467,8 +471,8 @@ describe('orden de la escuadra y unidades destacadas', () => {
 
   it('salir de una escuadra (otra escuadra o disolverla): se lleva lo que estaba haciendo', () => {
     const { s, firstSoldier, secondSoldier, tank, squad } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
-    formSquad(s, [tank]);
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
+    formSquad(s, 0, [tank]);
     expect(tank.squad).not.toBe(squad.id);
     expect(effectiveStandingOrder(s, tank)).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
     disbandSquad(s, squad.id);
@@ -487,7 +491,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
 
   it('llevada a mano a una casilla lejana (orden de varios turnos): eso manda mientras dura', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
-    giveStandingOrder(s, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
+    giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
     firstSoldier.travelTo = { x: 0, y: 9 };
     expect(effectiveStandingOrder(s, firstSoldier)).toBeUndefined();
   });
@@ -501,10 +505,10 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
       newUnit(s, SOLDIER, 0, { x: 1, y: 2 }),
       newUnit(s, TANK, 0, { x: 1, y: 3 }),
     ];
-    expect(formSquad(s, [first])!.key).toBe(1);
-    const squad = setGroup(s, [second, third], 3)!;
+    expect(formSquad(s, 0, [first])!.key).toBe(1);
+    const squad = setGroup(s, 0, [second, third], 3)!;
     expect(squad).toMatchObject({ key: 3, name: 'Charlie' });
-    expect(squadByKey(s, 3)).toBe(squad);
+    expect(squadByKey(s, 0, 3)).toBe(squad);
   });
 
   it('Ctrl+n otra vez: el grupo se queda solo con las nuevas (las demas salen con lo que hacian)', () => {
@@ -514,9 +518,9 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
       newUnit(s, SOLDIER, 0, { x: 1, y: 2 }),
       newUnit(s, TANK, 0, { x: 1, y: 3 }),
     ];
-    const squad = setGroup(s, [first, second], 2)!;
-    giveStandingOrder(s, [first, second], 'attack', { x: 15, y: 15 });
-    setGroup(s, [second, third], 2);
+    const squad = setGroup(s, 0, [first, second], 2)!;
+    giveStandingOrder(s, 0, [first, second], 'attack', { x: 15, y: 15 });
+    setGroup(s, 0, [second, third], 2);
     expect(
       squadUnits(s, squad.id)
         .map((unit) => unit.uid)
@@ -535,21 +539,21 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
       newUnit(s, SOLDIER, 0, { x: 1, y: 2 }),
       newUnit(s, TANK, 0, { x: 1, y: 3 }),
     ];
-    const q1 = setGroup(s, [first], 1)!;
-    const q2 = addToGroup(s, [second], 2)!;
-    addToGroup(s, [third, second], 1);
+    const q1 = setGroup(s, 0, [first], 1)!;
+    const q2 = addToGroup(s, 0, [second], 2)!;
+    addToGroup(s, 0, [third, second], 1);
     expect(squadUnits(s, q1.id).length).toBe(3);
     // La escuadra 2 se ha quedado vacia: desaparece y su tecla queda libre.
     expect(s.squads!.some((squad) => squad.id === q2.id)).toBe(false);
-    expect(squadByKey(s, 2)).toBeUndefined();
+    expect(squadByKey(s, 0, 2)).toBeUndefined();
   });
 
   it('las partidas de antes dan tecla a sus escuadras al cargar, sin repetir', () => {
     const s = world();
     const first = newUnit(s, SOLDIER, 0, { x: 1, y: 1 }),
       second = newUnit(s, SOLDIER, 0, { x: 1, y: 2 });
-    formSquad(s, [first]);
-    formSquad(s, [second]);
+    formSquad(s, 0, [first]);
+    formSquad(s, 0, [second]);
     for (const squad of s.squads!) delete squad.key;
     const back = deserialize(serialize(s), saveContext(defaultContent()))!;
     expect(back.squads!.map((squad) => squad.key)).toEqual([1, 2]);

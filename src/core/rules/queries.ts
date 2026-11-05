@@ -8,7 +8,7 @@ import { createLayer, isOnBoard } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { samePos } from '../geom';
-import type { Building, GameState, Pos, Team, Unit } from '../model';
+import type { Building, GameState, Pos, TeamId, Unit } from '../model';
 
 /** Tipo de movimiento de una unidad. */
 export function movementOf(s: GameState, unit: Pick<Unit, 'type'>): MoveType {
@@ -57,7 +57,7 @@ export function isWalkable(s: GameState, pos: Pos, moveType: MoveType, occ = occ
   return canWalk(s, pos, moveType) && !occ.at(pos);
 }
 
-export function teamUnits(s: GameState, team: Team): Unit[] {
+export function teamUnits(s: GameState, team: TeamId): Unit[] {
   return s.units.filter((unit) => unit.team === team);
 }
 

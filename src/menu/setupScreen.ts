@@ -8,6 +8,7 @@ import { defaultContent } from '../core/content/default';
 import { entryOf } from '../core/content';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
+import { duel } from '../core/teams';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
 import { nameOf, settings, t, type TextKey } from '../settings';
 import type { TerrainPalette } from '../ui/terrainColors';
@@ -191,6 +192,7 @@ export class SetupScreen {
       theme: theme === null ? null : entryOf(defaultContent().themes, theme, 'tema'),
       rules: rulesWith(defaultContent(), ruleChangesFor(this.options)),
       content: defaultContent(),
+      teams: duel('human', 'ai'),
     });
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
     const themeName = nameOf(themeOf(s));

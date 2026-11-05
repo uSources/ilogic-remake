@@ -9,6 +9,7 @@
 export { standingOrderLabel, squadsVM } from './models/army';
 export { combatVM, forecastVM } from './models/combat';
 export { buyBlockedText, dayInfoVM, economyVM } from './models/economy';
+export { armyChartVM, endScoreVM, endStatsVM } from './models/end';
 export { generalVM } from './models/general';
 export { minimapVM } from './models/minimap';
 export { abilitiesVM, abilityVM, captureHintText, tileVM, unitStatChips, unitStatsText } from './models/tile';

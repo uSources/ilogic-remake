@@ -4,6 +4,7 @@
  * entrada mas en UNIT_BEHAVIOURS, en su sitio de la lista.
  */
 
+import { isHostileOwner } from '../teams';
 import { unitTypeOf, isHq } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
@@ -29,8 +30,7 @@ export interface UnitBehaviour {
   run(turn: UnitTurnContext): Generator<GameEvent, boolean>;
 }
 
-const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean =>
-  isHq(s, building) && building.owner !== ai.me && building.owner !== null;
+const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean => isHq(s, building) && isHostileOwner(s, building.owner, ai.me);
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range, rng }: UnitTurnContext): Generator<GameEvent, boolean> {

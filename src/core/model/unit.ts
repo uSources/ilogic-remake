@@ -1,6 +1,6 @@
 import type { Pos } from './geometry';
 import type { StandingOrder } from './standingOrder';
-import type { Team } from './team';
+import type { TeamId } from './team';
 
 /** Una unidad en su casilla (x, y), o dentro de un transporte (carrier). */
 export interface Unit extends Pos {
@@ -8,7 +8,7 @@ export interface Unit extends Pos {
   uid: number;
   /** Tipo de unidad: su id en units.json (ver unitTypeOf). */
   type: string;
-  team: Team;
+  team: TeamId;
   /** Puede actuar este turno. */
   active: boolean;
   /** Aun no se ha movido este turno. */

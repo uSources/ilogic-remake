@@ -1,4 +1,4 @@
-/** General de un bando (ver core/generals.ts). */
+/** General de un equipo (ver core/generals.ts). */
 export interface GeneralState {
   /** id de generals.json. */
   id: string;

@@ -1,7 +1,8 @@
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
-import { buildingIncome, commandUsed, score, upkeepOf, type BuyOption } from '../../core/rules';
+import { allianceScore, buildingIncome, commandUsed, rivalScore, upkeepOf, type BuyOption } from '../../core/rules';
+import { teamState } from '../../core/teams';
 import type { Texts } from '../../core/content';
-import type { GameState, Team } from '../../core/model';
+import type { GameState, TeamId } from '../../core/model';
 import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../../hud/store';
 import { nameOf, t } from '../../settings';
 
@@ -31,18 +32,18 @@ function tally<T extends Named>(types: readonly T[], each: (type: T) => number):
 }
 
 /**
- * Desglose del dinero de un bando: ingresos por tipo de edificio, mantenimiento por tipo de unidad,
+ * Desglose del dinero de un equipo: ingresos por tipo de edificio, mantenimiento por tipo de unidad,
  * lo que queda por dia, con cuanto se empieza el proximo turno y los puntos de mando por tipo. Mismas
  * cuentas que endRound (las cifras de cada fila de mantenimiento son su parte sin redondear; el total
  * es el que se cobra, redondeado a 100).
  */
-export function economyVM(s: GameState, team: Team): EconomyVM {
+export function economyVM(s: GameState, team: TeamId): EconomyVM {
   const owned = s.buildings.filter((building) => building.owner === team).map((building) => buildingTypeOf(s, building));
   const units = s.units.filter((unit) => unit.team === team).map((unit) => unitTypeOf(s, unit));
   const income = owned.reduce((sum, buildingType) => sum + buildingIncome(s, buildingType), 0);
   const upkeep = upkeepOf(s, team);
   // endRound cobra primero y despues paga lo que pueda del mantenimiento.
-  const afterIncome = s.funds[team] + income;
+  const afterIncome = teamState(s, team).funds + income;
   const paid = Math.min(upkeep, afterIncome);
   return {
     income: {
@@ -72,13 +73,16 @@ export function economyVM(s: GameState, team: Team): EconomyVM {
   };
 }
 
-/** Desglose del dia: limite, dias que quedan y puntos si se acabase ahora. */
-export function dayInfoVM(s: GameState): DayInfoVM {
+/**
+ * Desglose del dia para el equipo que mira: limite, dias que quedan y puntos si se acabase ahora (los
+ * de su alianza y los de la mejor alianza enemiga).
+ */
+export function dayInfoVM(s: GameState, viewer: TeamId): DayInfoVM {
   const limit = s.rules.dayLimit;
   return {
     day: s.day,
     limit,
     left: limit === null ? null : Math.max(0, limit - s.day + 1),
-    score: limit === null ? null : [score(s, 0), score(s, 1)],
+    score: limit === null ? null : [allianceScore(s, viewer), rivalScore(s, viewer)],
   };
 }

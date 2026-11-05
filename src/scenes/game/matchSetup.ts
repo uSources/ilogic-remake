@@ -2,12 +2,13 @@
  * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
  * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
-import { newGeneral } from '../../core/generals';
+import { appointGeneral } from '../../core/generals';
+import { duel, playerTeam, teamIds } from '../../core/teams';
 import { seededRng } from '../../core/geom';
 import { defaultContent } from '../../core/content/default';
 import { createGame, loadGame } from '../../core/defaultGames';
 import { buildMission, missionById } from '../../core/missions';
-import type { GameSetup, GameState } from '../../core/model';
+import type { GameSetup, GameState, TeamId } from '../../core/model';
 import { ensureWeather } from '../../core/weather';
 import { defaultLab, labState, type LabOptions } from '../../lab';
 import { randomSeed } from '../../setup';
@@ -16,6 +17,8 @@ import type { GameStartData } from './types';
 
 export interface MatchStart {
   state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira: niebla, colores, mandos). */
+  viewer: TeamId;
   /** Laboratorio de animaciones (null en una partida normal). */
   lab: LabOptions | null;
   /** Viene del guardado (al terminarla se borra). */
@@ -36,7 +39,7 @@ export function startMatch(data: GameStartData): MatchStart {
   if (corruptSave) deleteSave();
   const state = lab ? labMatch(lab) : loaded ? loaded : (missionMatch(data) ?? newMatch(data));
   ensureWeather(state);
-  return { state, lab, fromSave: !!saved, corruptSave };
+  return { state, viewer: playerTeam(state), lab, fromSave: !!saved, corruptSave };
 }
 
 function readSavedGame(): GameState | null {
@@ -54,13 +57,21 @@ function missionMatch(data: GameStartData): GameState | null {
   return buildMission(mission, defaultContent());
 }
 
-/** Mapa al azar (o el de `setup`), con los generales elegidos. */
+/**
+ * Mapa al azar (o el de `setup`): una persona contra la IA, con los generales elegidos (el de la
+ * persona y el de su enemigo).
+ */
 function newMatch(data: GameStartData): GameState {
   const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
-  const state = createGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, ruleChanges: data.rules });
+  const state = createGame(seededRng(setup.seed), {
+    size: setup.size,
+    theme: setup.theme,
+    ruleChanges: data.rules,
+    teams: duel('human', 'ai'),
+  });
   state.setup = setup;
-  const player = newGeneral(state, data.general);
-  const enemy = newGeneral(state, data.enemyGeneral);
-  if (player || enemy) state.generals = [player, enemy];
+  const [person, enemy] = teamIds(state);
+  appointGeneral(state, person!, data.general);
+  appointGeneral(state, enemy!, data.enemyGeneral);
   return state;
 }

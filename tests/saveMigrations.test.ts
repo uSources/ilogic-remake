@@ -7,8 +7,9 @@ import { serialize } from '@core/save';
 import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad, giveStandingOrder } from '@core/squads';
-import { newUnit } from '@core/rules';
+import { newUnit, outcome } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
+import { isHostile } from '@core/teams';
 
 /**
  * Partidas guardadas de verdad con el formato 1: las genero el codigo de origin/main (ac92f17) con
@@ -37,6 +38,8 @@ describe('partidas guardadas con el formato 1 (de origin/main)', () => {
     expect(saved).not.toContain('"order"');
     expect(saved).toContain(`"version":${SAVE_VERSION}`);
     expect(s.units.every((unit) => typeof unit.type === 'string')).toBe(true);
+    expect(s.teams.map((team) => team.controller)).toEqual(['human', 'ai']);
+    expect(s.squads![0]!.team).toBe(0);
     // Lo que se vuelve a guardar ya es del formato nuevo y se lee igual.
     expect(serialize(loadGame(saved)!)).toBe(saved);
   });
@@ -76,16 +79,41 @@ describe('partidas guardadas con el formato 2 (de origin/main)', () => {
     expect(s.setup).toEqual({ seed: 3, size: 20, theme: 'Swamp' });
     expect(s.weather).toMatchObject({ kind: 'Rain', next: 'Clear' });
     expect(s.buildings.filter((building) => building.type === 'Base')).toHaveLength(2);
-    expect(s.generals!.map((general) => general?.id)).toEqual(['Brisa', 'Roca']);
+    expect(s.teams.map((team) => team.general?.id)).toEqual(['Brisa', 'Roca']);
     expect(s.units.some((unit) => unit.carrier !== null)).toBe(true);
     expect(s.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 0, y: 2 } });
     const saved = serialize(s);
     expect(serialize(loadGame(saved)!)).toBe(saved);
   });
 
+  it('escaramuza: los dos bandos fijos pasan a dos equipos enemigos con su dinero y sus estadisticas', () => {
+    const raw = JSON.parse(fixture('skirmish-v2')) as {
+      funds: [number, number];
+      stats: { built: [number, number]; lost: [number, number]; army: [number, number][] };
+    };
+    const s = loadGame(fixture('skirmish-v2'))!;
+    expect(s.teams.map((team) => [team.id, team.alliance, team.controller])).toEqual([
+      [0, 0, 'human'],
+      [1, 1, 'ai'],
+    ]);
+    expect(s.teams.map((team) => team.funds)).toEqual(raw.funds);
+    expect(s.teams.map((team) => team.stats.built)).toEqual(raw.stats.built);
+    expect(s.teams.map((team) => team.stats.lost)).toEqual(raw.stats.lost);
+    expect(s.teams[1]!.stats.army).toEqual(raw.stats.army.map((day) => day[1]));
+    expect(s.squads!.every((squad) => squad.team === 0)).toBe(true);
+    expect(isHostile(s, 0, 1)).toBe(true);
+    const saved = JSON.parse(serialize(s)) as Record<string, unknown>;
+    expect(saved).not.toHaveProperty('funds');
+    expect(saved).not.toHaveProperty('generals');
+    expect(saved).not.toHaveProperty('stats');
+  });
+
   it('mision: el tipo del objetivo de captura y la captura a medias', () => {
     const s = loadGame(fixture('mission-capture-v2'))!;
     expect(s.mission!.objective).toEqual({ kind: 'capture', count: 6, type: 'City', days: 14 });
+    // La mision era del jugador (el bando 0): ahora lo dice ella.
+    expect(s.mission!.team).toBe(0);
+    expect(outcome(s, 0)).toBe('playing');
     expect(s.theme).toBe('Plains');
     expect(s.buildings.some((building) => building.capture)).toBe(true);
     expect(s.rules).toEqual(missionRules(missionById('bridgehead')!, defaultContent()));
@@ -121,10 +149,10 @@ describe('MIGRATIONS', () => {
     const world = () => {
       const s = blankState();
       const units = [newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 }), newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 2 })];
-      const squad = formSquad(s, units)!;
+      const squad = formSquad(s, 0, units)!;
       // Partida de antes de que la escuadra tuviera orden: la llevaba copiada cada unidad.
-      giveStandingOrder(s, [units[0]!], 'defend', { x: 5, y: 5 });
-      giveStandingOrder(s, [units[1]!], 'defend', { x: 5, y: 5 });
+      giveStandingOrder(s, 0, [units[0]!], 'defend', { x: 5, y: 5 });
+      giveStandingOrder(s, 0, [units[1]!], 'defend', { x: 5, y: 5 });
       return { s, squad };
     };
     const context = saveContext(defaultContent());

@@ -9,7 +9,7 @@ import { isRanged, zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
 import { createLayer, mapGrid } from '../mapGrid';
 import type { Grid } from '../util/grid';
-import { isEnemyOf, isOnMap } from '../util/predicates';
+import { areEnemies, isOnMap } from '../util/predicates';
 import { minBy } from '../util/pick';
 import { weatherMove } from '../weather';
 import type { GameEvent, GameState, Pos, Unit } from '../model';
@@ -46,7 +46,7 @@ export interface PassMap {
 
 /**
  * Que casillas bloquean el paso a `unit` y en cuales no puede terminar.
- * [CAMBIO] Reglas nuevas: se atraviesan las unidades propias, y los enemigos que el bando de `unit`
+ * [CAMBIO] Reglas nuevas: se atraviesan las unidades propias, y los enemigos que el equipo de `unit`
  * no ve no cuentan (asi el alcance no delata donde estan; al moverse, emboscada).
  */
 export function passMap(s: GameState, unit: Unit): PassMap {
@@ -57,7 +57,7 @@ export function passMap(s: GameState, unit: Unit): PassMap {
   const stop = zoneOfControl(s, unit, visible);
   for (const other of s.units) {
     if (!isOnMap(other) || other.uid === unit.uid) continue;
-    if (!isEnemyOf(other, unit)) {
+    if (!areEnemies(s, other, unit)) {
       taken.set(other, true);
       if (!s.rules.passAllies) block.set(other, true);
     } else if (!visible || visible.at(other)) {
@@ -149,12 +149,12 @@ export function reachableTilesWithCost(range: MoveRange): ReachableTile[] {
 /** Camino de un movimiento; si ha habido emboscada, donde estaba el enemigo escondido. */
 export type MovePath = Pos[] & { ambush?: Pos };
 
-/** Hay una unidad del otro bando en la casilla (escondida o no: al pisarla se descubre). */
+/** Hay una unidad del otro equipo en la casilla (escondida o no: al pisarla se descubre). */
 function enemyAt(s: GameState, unit: Unit, pos: Pos): boolean {
-  return s.units.some((other) => isOnMap(other) && isEnemyOf(other, unit) && samePos(other, pos));
+  return s.units.some((other) => isOnMap(other) && areEnemies(s, other, unit) && samePos(other, pos));
 }
 
-/** Hay otra unidad (de cualquier bando) en la casilla: ahi no se puede quedar parada. */
+/** Hay otra unidad (de cualquier equipo) en la casilla: ahi no se puede quedar parada. */
 function someoneElseAt(s: GameState, unit: Unit, pos: Pos): boolean {
   return s.units.some((other) => isOnMap(other) && other.uid !== unit.uid && samePos(other, pos));
 }

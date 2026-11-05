@@ -1,4 +1,5 @@
-import type { GameStats, RulesConfig } from '../core/model';
+import type { RulesConfig } from '../core/model';
+import type { EndStatsVM } from './vm/end';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
@@ -84,12 +85,13 @@ export interface UIState {
   end: {
     won: boolean;
     day: number;
-    stats: GameStats | null;
+    /** Lo de quien mira y lo de todos sus enemigos juntos: [suyo, enemigos]. */
+    stats: EndStatsVM | null;
     reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
     score: [number, number] | null;
-    /** Valor de los ejercitos dia a dia [jugador, IA]. */
+    /** Valor de los ejercitos dia a dia [suyo, enemigos]. */
     chart: [number, number][] | null;
     /** Mision: mejor marca en dias y si se acaba de batir. */
     best: number | null;

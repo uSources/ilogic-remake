@@ -6,6 +6,7 @@ import type { TerrainPalette } from '../ui/terrainColors';
 import type { MenuCommand } from '../controls/menu';
 import { MISSIONS } from '../core/missions';
 import { mapGrid } from '../core/mapGrid';
+import { playerTeam, teamState } from '../core/teams';
 import type { GameState } from '../core/model';
 import { completedMissions, missionUnlocked, nextMissionIndex } from '../campaign';
 import { ui, type MarkVM, type UIActions } from '../hud/store';
@@ -102,7 +103,7 @@ export class HomeScreen {
     return {
       thumb: mapThumb(save, this.host.palette, { units: 'own' }),
       day: save.day,
-      funds: save.funds[0],
+      funds: teamState(save, playerTeam(save)).funds,
       size: mapGrid(save).width,
       mission,
       limit: save.rules.dayLimit,

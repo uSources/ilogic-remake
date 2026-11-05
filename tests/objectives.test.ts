@@ -66,9 +66,9 @@ function isAnyoneDefeated(s: GameState): boolean {
 describe('objetivos de mision', () => {
   it.each(MISSIONS.map((mission) => [mission.id] as const))('%s: mismo resultado y progreso que las reglas', (id) => {
     for (const s of statesOf(id)) {
-      const objective = s.mission!.objective;
-      expect(measureObjective(s, objective)).toEqual(objectiveProgress(s));
-      if (objective.kind !== 'hq' && !isAnyoneDefeated(s)) expect(objectiveOutcome(s, objective)).toBe(outcome(s));
+      const { objective, team } = s.mission!;
+      expect(measureObjective(s, team, objective)).toEqual(objectiveProgress(s));
+      if (objective.kind !== 'hq' && !isAnyoneDefeated(s)) expect(objectiveOutcome(s, team, objective)).toBe(outcome(s, team));
     }
   });
 

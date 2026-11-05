@@ -6,6 +6,7 @@ import { findEntry, type GameContent, type TerrainType, type UnitType } from '@c
 
 import { seededRng } from '@core/geom';
 import { newGameState } from '@core/gameState';
+import { duel } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
 import { attack, inAttackRange, newUnit } from '@core/rules';
 import type { GameState, RulesConfig, Unit } from '@core/model';
@@ -29,7 +30,12 @@ const DUEL_MAP_SIZE = 32;
 
 function arena(terrain: TerrainType, options: DuelOptions): GameState {
   const map = blankMap(DUEL_MAP_SIZE, terrain.id);
-  return newGameState({ map, rules: options.rules, content: options.content, funds: [0, 0] });
+  return newGameState({
+    map,
+    rules: options.rules,
+    content: options.content,
+    teams: duel('ai', 'ai').map((team) => ({ ...team, funds: 0 })),
+  });
 }
 
 function place(s: GameState, attackerType: UnitType, attacker: Unit, defender: Unit): void {

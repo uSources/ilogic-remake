@@ -7,9 +7,10 @@ import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
 import { coverAgainst, defenseFactor, isRanged } from '../abilities';
 import { manhattan, posOf } from '../geom';
 import { chargeFromCombat, generalHitFactor } from '../generals';
-import { canFight, isAlive, isEnemyOf, isOnMap } from '../util/predicates';
+import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
+import { teamState } from '../teams';
 import { weatherHit } from '../weather';
-import type { CombatInfo, GameEventOf, GameState, Pos, Rng, Team, Unit } from '../model';
+import type { CombatInfo, GameEventOf, GameState, Pos, Rng, TeamId, Unit } from '../model';
 import { removeDead } from './lifecycle';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
@@ -54,7 +55,7 @@ export function attackTargets(s: GameState, attacker: Unit, visible = visibility
   if (!attacker.canFire || !canFight(s, attacker)) return [];
   return s.units.filter(
     (target) =>
-      isEnemyOf(target, attacker) &&
+      areEnemies(s, target, attacker) &&
       isOnMap(target) &&
       isAlive(target) &&
       visible.at(target) &&
@@ -120,7 +121,7 @@ export const HIT_MODIFIERS: readonly HitModifier[] = [
   { id: 'flank', factor: flankFactor },
   // La ventaja fija de cada general (ataque de uno, defensa del otro).
   { id: 'generals', factor: generalHitFactor },
-  // Con lluvia o tormenta se apunta peor (igual para los dos bandos).
+  // Con lluvia o tormenta se apunta peor (igual para los dos equipos).
   { id: 'weather', factor: (s) => weatherHit(s) },
 ];
 
@@ -212,7 +213,7 @@ export function canCounter(s: GameState, defender: Unit, attacker: Unit): boolea
 
 /** Puede atacar a `defender` ahora mismo: es enemigo, le queda disparo y lo tiene a tiro. */
 function canAttackNow(s: GameState, attacker: Unit, defender: Unit): boolean {
-  if (!isEnemyOf(attacker, defender) || !attacker.canFire || !canFight(s, attacker)) return false;
+  if (!areEnemies(s, attacker, defender) || !attacker.canFire || !canFight(s, attacker)) return false;
   return inAttackRange(s, attacker, attacker, defender);
 }
 
@@ -231,10 +232,11 @@ function countKills(attacker: Unit, defender: Unit, result: AttackResult): void 
 
 /** [CAMBIO] Botin: quien destruye cobra parte del precio de lo destruido (atacar sale a cuenta). */
 function payBounty(s: GameState, attacker: Unit, defender: Unit, result: AttackResult): void {
-  const winner: Team | null = result.killed ? attacker.team : result.attackerKilled ? defender.team : null;
+  const winner: TeamId | null = result.killed ? attacker.team : result.attackerKilled ? defender.team : null;
   if (winner === null) return;
   result.bounty = bountyFor(s, result.killed ? defender : attacker);
-  s.funds[winner] = Math.min(s.content.maxFunds, s.funds[winner] + result.bounty);
+  const winnerTeam = teamState(s, winner);
+  winnerTeam.funds = Math.min(s.content.maxFunds, winnerTeam.funds + result.bounty);
 }
 
 /** Ataque completo: daño, y contraataque si las reglas lo tienen. */
@@ -269,6 +271,7 @@ function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatI
     attackerType: attacker.type,
     defenderType: defender.type,
     attackerTeam: attacker.team,
+    defenderTeam: defender.team,
     attackerLife: attacker.life,
     defenderLife: defender.life,
     attackerRank: rank(attacker),
@@ -280,7 +283,7 @@ function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatI
 
 /**
  * Ataque completo como evento para la interfaz (jugador e IA). Ademas del resultado lleva lo que
- * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, bandos,
+ * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, equipos,
  * vidas de antes, rangos y probabilidad de acierto de cada lado (ver CombatInfo).
  */
 export function attackEvent(s: GameState, attacker: Unit, defender: Unit, rng: Rng): GameEventOf<'attack'> {

@@ -17,7 +17,7 @@ export interface GeneralPowerVM {
 
 /** Panel del general del jugador (null = juega sin general). */
 export interface GeneralVM {
-  /** Clave del retrato en el atlas (ui/gen_<b|r>_<id>), con el color de su bando; puede no existir. */
+  /** Clave del retrato en el atlas (ui/gen_<b|r>_<id>), con el color de su lado para quien mira; puede no existir. */
   face: string;
   name: string;
   title: string;

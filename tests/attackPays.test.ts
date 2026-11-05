@@ -6,6 +6,7 @@ import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { blankState, savedByVersion1, unitTypeNamed, buildingTypeNamed } from './helpers';
+import { teamState } from '@core/teams';
 
 /**
  * [CAMBIO] Reglas para que atacar salga a cuenta: botin, flanqueo y sin cura bajo fuego
@@ -21,12 +22,12 @@ describe('botin', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const before = s.funds[0];
+    const before = teamState(s, 0).funds;
     const event = attackEvent(s, attacker, defender, seededRng(1));
     expect(event.killed).toBe(true);
     expect(event.bounty).toBe(Math.round(SOLDIER.cost * 0.25));
-    expect(s.funds[0]).toBe(before + event.bounty!);
-    expect(s.funds[1]).toBe(5000);
+    expect(teamState(s, 0).funds).toBe(before + event.bounty!);
+    expect(teamState(s, 1).funds).toBe(5000);
   });
 
   it('si cae el atacante en el contraataque, cobra el defensor', () => {
@@ -36,7 +37,7 @@ describe('botin', () => {
     attacker.life = 1;
     const result = attackFull(s, attacker, defender, seededRng(1));
     expect(result.attackerKilled).toBe(true);
-    expect(s.funds[1]).toBe(5000 + Math.round(SOLDIER.cost * 0.25));
+    expect(teamState(s, 1).funds).toBe(5000 + Math.round(SOLDIER.cost * 0.25));
   });
 
   it('sin la regla, ni dinero ni campo en el evento', () => {
@@ -46,7 +47,7 @@ describe('botin', () => {
     defender.life = 1;
     const event = attackEvent(s, attacker, defender, seededRng(1));
     expect(event.bounty).toBeUndefined();
-    expect(s.funds).toEqual([5000, 5000]);
+    expect(s.teams.map((team) => team.funds)).toEqual([5000, 5000]);
   });
 });
 

@@ -3,13 +3,15 @@
  * cuando se gana o se pierde y cuanto falta. Un objetivo nuevo es una entrada en `OBJECTIVES` (y su
  * frase en `campaign.ts`); el tipo de la partida esta en `Objective` (`model/objective.ts`).
  *
- * Los resultados son los mismos que `objectiveOutcome`/`objectiveProgress` de `rules/outcome.ts`
- * (lo comprueba `tests/objectives.test.ts`), que todavia tiene su propia copia.
+ * Un objetivo es de un equipo (el que juega la mision, `GameState.mission.team`): el resultado y el
+ * progreso se miden para ese equipo. Para sus enemigos el resultado es el contrario
+ * (`outcome` de rules/outcome.ts).
  */
 
 import { entryOf, type GameContent } from './content';
 
-import type { GameState, Objective, Outcome, Pos } from './model';
+import type { GameState, Objective, Outcome, Pos, TeamId } from './model';
+import { isHostile } from './teams';
 import { samePos } from './geom';
 import { Grid } from './util/grid';
 
@@ -47,13 +49,10 @@ interface ObjectiveRules<K extends ObjectiveKind> {
   fromMission(written: InMission<K>, unitUids: readonly number[], content: GameContent): InGame<K>;
   /** Problemas del objetivo en el mapa de la mision (para los tests). */
   problems(written: InMission<K>, layout: MissionLayout): string[];
-  /** Resultado de la partida por el objetivo (perder la Base ya se ha mirado antes). */
-  outcome(s: GameState, objective: InGame<K>): Outcome;
-  progress(s: GameState, objective: InGame<K>): ObjectiveProgress | null;
+  /** Resultado de la partida para el equipo `team`, dueño del objetivo (perder la Base ya se ha mirado antes). */
+  outcome(s: GameState, team: TeamId, objective: InGame<K>): Outcome;
+  progress(s: GameState, team: TeamId, objective: InGame<K>): ObjectiveProgress | null;
 }
-
-const PLAYER = 0;
-const ENEMY = 1;
 
 const noProblems = (): string[] => [];
 
@@ -66,11 +65,13 @@ function wonOrLostByDays(s: GameState, objective: { days: number }, isDone: bool
   return isPastLastDay(s, objective) ? 'lost' : 'playing';
 }
 
-function ownedBuildingsOfType(s: GameState, type: string | null): number {
-  return s.buildings.filter((building) => building.owner === PLAYER && (type === null || building.type === type)).length;
+/** Edificios del equipo de ese tipo (o de cualquiera). */
+function ownedBuildingsOfType(s: GameState, team: TeamId, type: string | null): number {
+  return s.buildings.filter((building) => building.owner === team && (type === null || building.type === type)).length;
 }
 
-const enemyUnitCount = (s: GameState) => s.units.filter((unit) => unit.team === ENEMY).length;
+/** Unidades de los enemigos del equipo. */
+const enemyUnitCount = (s: GameState, team: TeamId) => s.units.filter((unit) => isHostile(s, unit.team, team)).length;
 
 /** Donde esta la unidad: dentro de un transporte, donde este el transporte. */
 function positionOf(s: GameState, uid: number): Pos | undefined {
@@ -91,8 +92,8 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
   survive: {
     fromMission: (written) => written,
     problems: noProblems,
-    outcome: (s, objective) => (isPastLastDay(s, objective) ? 'won' : 'playing'),
-    progress: (s, objective) => ({ done: Math.min(s.day - 1, objective.days), total: objective.days }),
+    outcome: (s, _team, objective) => (isPastLastDay(s, objective) ? 'won' : 'playing'),
+    progress: (s, _team, objective) => ({ done: Math.min(s.day - 1, objective.days), total: objective.days }),
   },
   capture: {
     fromMission: (written, _unitUids, content) => ({
@@ -102,14 +103,14 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
       days: written.days,
     }),
     problems: noProblems,
-    outcome: (s, objective) => wonOrLostByDays(s, objective, ownedBuildingsOfType(s, objective.type) >= objective.count),
-    progress: (s, objective) => ({ done: ownedBuildingsOfType(s, objective.type), total: objective.count }),
+    outcome: (s, team, objective) => wonOrLostByDays(s, objective, ownedBuildingsOfType(s, team, objective.type) >= objective.count),
+    progress: (s, team, objective) => ({ done: ownedBuildingsOfType(s, team, objective.type), total: objective.count }),
   },
   destroy: {
     fromMission: (written) => written,
     problems: noProblems,
-    outcome: (s, objective) => wonOrLostByDays(s, objective, enemyUnitCount(s) === 0),
-    progress: (s) => ({ done: 0, total: enemyUnitCount(s) }),
+    outcome: (s, team, objective) => wonOrLostByDays(s, objective, enemyUnitCount(s, team) === 0),
+    progress: (s, team) => ({ done: 0, total: enemyUnitCount(s, team) }),
   },
   escort: {
     fromMission: (written, unitUids) => ({ kind: 'escort', uid: unitUids[written.vip]!, to: written.to, days: written.days }),
@@ -119,7 +120,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
         ? []
         : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
     ],
-    outcome: (s, objective) => {
+    outcome: (s, _team, objective) => {
       const at = positionOf(s, objective.uid);
       if (!at) return 'lost';
       return wonOrLostByDays(s, objective, samePos(at, objective.to));
@@ -138,7 +139,10 @@ export const objectiveFromMission = (written: MissionObjective, unitUids: readon
 export const objectiveProblems = (written: MissionObjective, layout: MissionLayout): string[] =>
   rulesOf(written.kind).problems(written, layout);
 
-export const objectiveOutcome = (s: GameState, objective: Objective): Outcome => rulesOf(objective.kind).outcome(s, objective);
+/** Resultado de la partida para `team`, el dueño del objetivo. */
+export const objectiveOutcome = (s: GameState, team: TeamId, objective: Objective): Outcome =>
+  rulesOf(objective.kind).outcome(s, team, objective);
 
-export const measureObjective = (s: GameState, objective: Objective): ObjectiveProgress | null =>
-  rulesOf(objective.kind).progress(s, objective);
+/** Cuanto le falta a `team`, el dueño del objetivo (null si no se cuenta). */
+export const measureObjective = (s: GameState, team: TeamId, objective: Objective): ObjectiveProgress | null =>
+  rulesOf(objective.kind).progress(s, team, objective);

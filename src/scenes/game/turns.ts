@@ -1,7 +1,9 @@
 /**
- * Fin del turno del jugador y turno de la IA: ordenes pendientes, capturas automaticas, la IA paso a
- * paso, el final de la ronda (ingresos, curar) y la vuelta al jugador. Tambien repetir el ultimo turno
- * enemigo (misma semilla) y avanzar las ordenes de varios turnos al empezar el propio.
+ * Fin del turno del jugador y turnos de los demas equipos: ordenes pendientes, capturas automaticas,
+ * cada equipo de la IA paso a paso (por su orden en la partida), el final de la ronda (ingresos,
+ * curar) y la vuelta al jugador. Tambien repetir los ultimos turnos ajenos (misma semilla) y avanzar
+ * las ordenes de varios turnos al empezar el propio. En esta pantalla juega una persona (el equipo que
+ * mira, `viewer`): a los demas equipos los lleva la IA.
  */
 import { unitTypeOf } from '../../core/gameContent';
 import { saveContext } from '../../core/defaultGames';
@@ -25,7 +27,8 @@ import {
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
-import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
+import { isHostile, teamIds } from '../../core/teams';
+import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
 import { randomSeed } from '../../setup';
@@ -49,6 +52,8 @@ export interface TurnHost {
   readonly view: MapView;
   /** La partida (repetir el turno enemigo la cambia por la de antes y la vuelve a poner). */
   state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   phase: Phase;
   readonly match: number;
   readonly ended: boolean;
@@ -86,8 +91,18 @@ const ARRIVED_MARGIN = 3;
 const HEAL_TEXT_DELAY_MS = 1100;
 const HEAL_TEXT_STAGGER_MS = 90;
 
-/** Una unidad propia que aun puede actuar este turno (y no va dentro de un transporte). */
-const isReadyOwnUnit = (unit: Unit): boolean => unit.team === 0 && unit.active && unit.canMove && unit.carrier === null;
+/** Una unidad de `team` que aun puede actuar este turno (y no va dentro de un transporte). */
+const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && unit.active && unit.canMove && unit.carrier === null;
+
+/**
+ * El orden de los demas equipos tras el turno de `viewer`: los que juegan aun en esta ronda (los de
+ * despues) y, tras el fin de ronda, los de la siguiente que van antes que el.
+ */
+export function turnsAfter(s: GameState, viewer: TeamId): { thisRound: TeamId[]; nextRound: TeamId[] } {
+  const order = teamIds(s);
+  const at = order.indexOf(viewer);
+  return { thisRound: order.slice(at + 1), nextRound: order.slice(0, at) };
+}
 
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
@@ -96,13 +111,15 @@ function unitWithSquad(s: GameState, unit: Unit): string {
 }
 
 export class TurnFlow {
-  /** Esta jugando (o repitiendose) el turno enemigo. */
+  /** Esta jugando (o repitiendose) el turno de otro equipo. */
   enemyPlaying = false;
-  /** Se esta repitiendo el ultimo turno enemigo (no cuenta en estadisticas ni tutorial). */
+  /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en estadisticas ni tutorial). */
   replaying = false;
-  /** Estado antes del ultimo turno enemigo y semilla con la que se jugo (para repetirlo). */
+  /** Estado antes de los ultimos turnos ajenos y semilla con la que se jugaron (para repetirlos). */
   private lastEnemy: { before: string; seed: number } | null = null;
   private endArmedAt = NOT_ARMED;
+  /** El equipo al que le toca ahora si no es el que mira (null: el turno es suyo). */
+  private otherTeam: TeamId | null = null;
 
   constructor(private readonly host: TurnHost) {}
 
@@ -112,6 +129,12 @@ export class TurnFlow {
     this.replaying = false;
     this.lastEnemy = null;
     this.endArmedAt = NOT_ARMED;
+    this.otherTeam = null;
+  }
+
+  /** El equipo que esta jugando ahora (el que hace lo que se anima). */
+  get acting(): TeamId {
+    return this.otherTeam ?? this.host.viewer;
   }
 
   /** Hay un turno enemigo que repetir. */
@@ -122,7 +145,7 @@ export class TurnFlow {
   /** Unidades sin usar encima de un edificio que pueden capturar: capturan solas al terminar el turno. */
   autoCapturers(): Unit[] {
     const s = this.host.state;
-    return s.units.filter((unit) => isReadyOwnUnit(unit) && canCapture(s, unit));
+    return s.units.filter((unit) => isReadyUnitOf(this.host.viewer, unit) && canCapture(s, unit));
   }
 
   /** Unidades sin mover que no hacen nada solas al terminar (las que capturan solas no cuentan). */
@@ -156,8 +179,9 @@ export class TurnFlow {
   }
 
   /**
-   * Fin del turno propio y turno de la IA: ordenes y capturas pendientes, la IA, el final de la ronda
-   * y la vuelta al jugador. Despues de cada animacion se para si la partida ha cambiado o terminado.
+   * Fin del turno propio y turnos de los demas: ordenes y capturas pendientes, la IA de cada equipo,
+   * el final de la ronda y la vuelta al jugador. Despues de cada animacion se para si la partida ha
+   * cambiado o terminado.
    */
   async enemyTurn(): Promise<void> {
     const host = this.host;
@@ -171,9 +195,8 @@ export class TurnFlow {
     if (!ordersDone) return;
     pruneSquads(host.state);
     if (!(await this.playAutoCaptures(match))) return;
-    if (!(await this.playAiTurn(match))) return;
-    const report = this.closeRound();
-    if (host.checkEnd()) return;
+    const report = await this.playOtherTeams(match);
+    if (!report || host.checkEnd()) return;
     this.backToPlayer(saved);
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
     this.showReport(report, ordersDone);
@@ -191,7 +214,7 @@ export class TurnFlow {
    */
   private async playStandingOrders(match: number): Promise<string[] | null> {
     const host = this.host;
-    const orders = assistTurn(host.state, Math.random);
+    const orders = assistTurn(host.state, Math.random, host.viewer);
     let step = orders.next();
     while (!step.done) {
       await host.play([step.value]);
@@ -217,23 +240,42 @@ export class TurnFlow {
     return true;
   }
 
-  /** El turno de la IA, con una semilla propia para poder repetirlo igual (menu > Repetir turno enemigo). */
-  private async playAiTurn(match: number): Promise<boolean> {
+  /**
+   * Los turnos de los demas equipos y el final de la ronda (entre el ultimo equipo y el primero), con
+   * una semilla propia para poder repetirlos igual (menu > Repetir turno enemigo). Devuelve el informe
+   * de la ronda, o null si la partida ha cambiado o terminado.
+   */
+  private async playOtherTeams(match: number): Promise<RoundReport | null> {
     const host = this.host;
+    const before = serialize(host.state);
+    const seed = randomSeed();
+    const rng = seededRng(seed);
+    const { thisRound, nextRound } = turnsAfter(host.state, host.viewer);
     this.enemyPlaying = true;
+    for (const team of thisRound) if (!(await this.playTeam(team, rng, match))) return null;
+    const report = this.closeRound();
+    for (const team of nextRound) if (!this.continues(match) || !(await this.playTeam(team, rng, match))) return null;
+    this.otherTeam = null;
+    this.enemyPlaying = false;
+    this.lastEnemy = { before, seed };
+    return report;
+  }
+
+  /** El turno de la IA de otro equipo, con su aviso (rojo si es enemigo, azul si es aliado). */
+  private async playTeam(team: TeamId, rng: Rng, match: number): Promise<boolean> {
+    const host = this.host;
+    this.otherTeam = team;
     // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
     host.fastForward = settings.speedEnemy === 'instant';
     host.refresh();
-    showBanner(`${t('day')} ${host.state.day}`, t('enemyTurn'), 'red');
+    const hostile = isHostile(host.state, host.viewer, team);
+    showBanner(`${t('day')} ${host.state.day}`, t(hostile ? 'enemyTurn' : 'allyTurn'), hostile ? 'red' : 'blue');
     await host.wait(host.fastForward ? ENEMY_BANNER_FAST_MS : ENEMY_BANNER_MS);
     if (match !== host.match) return false;
-    const before = serialize(host.state);
-    const seed = randomSeed();
-    for (const event of aiTurn(host.state, seededRng(seed))) {
+    for (const event of aiTurn(host.state, rng, team)) {
       await host.play([event]);
       if (!this.continues(match)) return false;
     }
-    this.lastEnemy = { before, seed };
     return true;
   }
 
@@ -243,12 +285,11 @@ export class TurnFlow {
     const report = endRound(host.state);
     sampleArmy(host.state);
     if (settings.autosave && writeSave(serialize(host.state))) host.markSaved();
-    this.enemyPlaying = false;
     return report;
   }
 
   /**
-   * Volver a ver el ultimo turno enemigo: se restaura el estado de antes y se vuelve a jugar con
+   * Volver a ver los ultimos turnos ajenos: se restaura el estado de antes y se vuelven a jugar con
    * la misma semilla (la IA y los combates son deterministas con ella); al acabar se deja todo
    * exactamente como estaba.
    */
@@ -271,12 +312,22 @@ export class TurnFlow {
     const match = host.match;
     await host.wait(ENEMY_BANNER_MS);
     // Al repetir no se comprueba el final (ya se sabe como acabo): solo si se cambia de partida.
-    for (const event of aiTurn(host.state, seededRng(last.seed))) {
-      if (match !== host.match) return;
-      await host.play([event]);
-      if (match !== host.match || host.ended) return;
-    }
+    const rng = seededRng(last.seed);
+    const { thisRound, nextRound } = turnsAfter(host.state, host.viewer);
+    const replayTeam = async (team: TeamId): Promise<boolean> => {
+      this.otherTeam = team;
+      for (const event of aiTurn(host.state, rng, team)) {
+        if (match !== host.match) return false;
+        await host.play([event]);
+        if (match !== host.match || host.ended) return false;
+      }
+      return true;
+    };
+    for (const team of thisRound) if (!(await replayTeam(team))) return;
+    endRound(host.state);
+    for (const team of nextRound) if (!(await replayTeam(team))) return;
     host.state = deserialize(after, saveContext(host.state.content))!;
+    this.otherTeam = null;
     this.replaying = false;
     this.enemyPlaying = false;
     this.backToPlayer(saved);
@@ -285,7 +336,7 @@ export class TurnFlow {
   /** Al empezar el turno: las unidades de viaje (travelTo) avanzan solas (y pueden seguir actuando despues). */
   async runTravels(): Promise<void> {
     const host = this.host;
-    const movers = host.state.units.filter((unit) => isReadyOwnUnit(unit) && unit.travelTo);
+    const movers = host.state.units.filter((unit) => isReadyUnitOf(host.viewer, unit) && unit.travelTo);
     const arrived: Unit[] = [];
     const match = host.match;
     for (const unit of movers) {
@@ -348,9 +399,9 @@ export class TurnFlow {
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
   private showReport(report: RoundReport, ordersDone: string[] = []): void {
     const host = this.host;
-    showReport(`${t('day')} ${host.state.day}`, roundReportLines(report, ordersDone));
+    showReport(`${t('day')} ${host.state.day}`, roundReportLines(report, host.viewer, ordersDone));
     if (host.fastForward) return;
-    ownHealed(report).forEach((healed, i) => {
+    healedOf(report, host.viewer).forEach((healed, i) => {
       const unit = unitById(host.state, healed.uid);
       if (!unit || unit.carrier !== null || !host.visible(unit)) return;
       const centerPoint = center(unit);
@@ -360,19 +411,22 @@ export class TurnFlow {
   }
 }
 
-const ownHealed = (report: RoundReport) => report.healed.filter((healed) => healed.team === 0);
+const healedOf = (report: RoundReport, team: TeamId) => report.healed.filter((healed) => healed.team === team);
 
-/** Las lineas del resumen de la ronda. `ordersDone`: unidades que cumplieron su orden. */
-function roundReportLines(report: RoundReport, ordersDone: string[]): ReportLineVM[] {
-  const { control, income, upkeep, weather } = report;
-  const healed = ownHealed(report);
-  const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(income[0])} ${t('reportIncome')}`, tone: 'gold' }];
+/** Las lineas del resumen de la ronda para el equipo `team`. `ordersDone`: unidades que cumplieron su orden. */
+function roundReportLines(report: RoundReport, team: TeamId, ordersDone: string[]): ReportLineVM[] {
+  const { control, weather } = report;
+  const income = report.income[team] ?? 0;
+  const upkeep = report.upkeep[team] ?? 0;
+  const held = control?.held[team] ?? 0;
+  const healed = healedOf(report, team);
+  const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(income)} ${t('reportIncome')}`, tone: 'gold' }];
   // [CAMBIO] Parte de los ingresos que viene de los puntos de control.
-  if (control && control.held[0] > 0) {
-    lines.push({ icon: 'ui/dinero', text: `+${fmtNum(control.income[0])} ${t('reportControl')} (${control.held[0]})`, tone: 'gold' });
+  if (control && held > 0) {
+    lines.push({ icon: 'ui/dinero', text: `+${fmtNum(control.income[team] ?? 0)} ${t('reportControl')} (${held})`, tone: 'gold' });
   }
   if (control && control.contested > 0) lines.push({ icon: '', text: `${t('reportContested')}: ${control.contested}`, tone: 'plain' });
-  if (upkeep[0] > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(upkeep[0])} ${t('reportUpkeep')}`, tone: 'red' });
+  if (upkeep > 0) lines.push({ icon: 'ui/dinero', text: `−${fmtNum(upkeep)} ${t('reportUpkeep')}`, tone: 'red' });
   // [CAMBIO] Unidades que cumplieron su orden al terminar el turno anterior (ahora esperan otra).
   if (ordersDone.length) lines.push({ icon: '', text: `${t('orderDone')}: ${ordersDone.join(', ')}`, tone: 'plain' });
   if (healed.length) {

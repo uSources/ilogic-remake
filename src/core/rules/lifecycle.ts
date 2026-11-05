@@ -5,11 +5,11 @@ import type { UnitType } from '../content';
 
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
-import type { GameState, Pos, Team, Unit } from '../model';
+import type { GameState, Pos, TeamId, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { unitById } from './queries';
 
-export function newUnit(s: GameState, unitType: UnitType, team: Team, at: Pos, active = true): Unit {
+export function newUnit(s: GameState, unitType: UnitType, team: TeamId, at: Pos, active = true): Unit {
   const unit: Unit = {
     uid: s.nextUid++,
     type: unitType.id,

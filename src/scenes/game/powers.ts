@@ -5,7 +5,7 @@
 import { mapGrid } from '../../core/mapGrid';
 import { powerArea, powerBlock, generalOf, usePower } from '../../core/generals';
 import { squareArea } from '../../core/geom';
-import type { GameEvent, GameState, Pos } from '../../core/model';
+import type { GameEvent, GameState, Pos, TeamId } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
 import type { Phase } from './types';
@@ -13,6 +13,8 @@ import type { Phase } from './types';
 /** Lo que los poderes necesitan de la escena. */
 export interface PowerHost {
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   phase: Phase;
   abandonSelection(): void;
   toMap(): void;
@@ -39,7 +41,7 @@ export class GeneralPowers {
     }
     if (block) return showToast(t(block === 'used' ? 'genUsed' : 'genCharge'));
     if (host.phase === 'target') host.toMap();
-    const event = usePower(host.state, 0, id);
+    const event = usePower(host.state, host.viewer, id);
     if (event) await host.play([event]);
   }
 
@@ -53,7 +55,7 @@ export class GeneralPowers {
 
   /** Poder del general del jugador con ese id (undefined si no tiene general o no la tiene). */
   private powerById(id: string) {
-    return generalOf(this.host.state, 0)?.definition.powers.find((power) => power.id === id);
+    return generalOf(this.host.state, this.host.viewer)?.definition.powers.find((power) => power.id === id);
   }
 
   /** Lanzar el poder que se apunta en `c`. */
@@ -61,7 +63,7 @@ export class GeneralPowers {
     const host = this.host;
     const id = this.targeting;
     if (!id) return host.toMap();
-    const event = usePower(host.state, 0, id, target);
+    const event = usePower(host.state, host.viewer, id, target);
     host.toMap();
     if (event) await host.play([event]);
   }

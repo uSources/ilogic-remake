@@ -18,11 +18,13 @@ import {
   tileProtection,
   unitAt,
 } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
+import { isHostile } from '../../core/teams';
 import type { Grid } from '../../core/util/grid';
 import { effectiveStandingOrder, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
 import { nameOf, t } from '../../settings';
+import { isFriendly, ownerSideOf, sideLetter, sideOf } from '../sides';
 import { buildingKey, terrainKey, unitKey } from '../sprites';
 import { standingOrderLabel } from './army';
 
@@ -92,18 +94,19 @@ export function captureHintText(s: GameState, unit: Unit): string | undefined {
 }
 
 /**
- * Ficha de la casilla `p`: terreno, edificio y unidad (si se ve). `selected` es la unidad que se esta
- * moviendo, que se enseña aunque su sprite este oculto.
+ * Ficha de la casilla `p` para el equipo que mira (`view.viewer`): terreno, edificio y unidad (si se
+ * ve). `selected` es la unidad que se esta moviendo, que se enseña aunque su sprite este oculto.
  */
 export function tileVM(
   textures: Phaser.Textures.TextureManager,
   s: GameState,
   pos: Pos,
-  view: { vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },
+  view: { viewer: TeamId; vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },
 ): TileVM {
   const terr = terrainAt(s, pos);
   const building = buildingAt(s, pos);
   const vis = view.vis.at(pos);
+  const viewer = view.viewer;
   const info: TileVM = {
     terrain: { key: terrainKey(terr), name: nameOf(terr), defense: Math.round((1 - tileProtection(s, pos)) * 100) },
   };
@@ -113,28 +116,32 @@ export function tileVM(
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
   if (building) {
-    const known = vis || building.owner === 0;
+    const owner = ownerSideOf(s, viewer, building.owner);
+    const known = vis || isFriendly(owner);
+    const capture = captureProgress(s, building);
     info.building = {
       name: nameOf(buildingTypeOf(s, building)),
-      owner: !known ? 'unknown' : building.owner === 0 ? 'you' : building.owner === 1 ? 'enemy' : 'neutral',
+      owner: known ? owner : 'unknown',
       income: buildingIncome(s, buildingTypeOf(s, building)),
-      icon: buildingKey(textures, s, building, vis),
+      icon: buildingKey(textures, s, building, vis, viewer),
+      ...(capture && known
+        ? { capture: { left: capture.left, total: capturePointsOf(s, building), side: sideOf(s, viewer, capture.team) } }
+        : {}),
     };
-    const capture = captureProgress(s, building);
-    if (capture && known) info.building.capture = { left: capture.left, total: capturePointsOf(s, building), team: capture.team };
   }
   // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
-  // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
+  // Disputada solo si se ven dentro unidades de alianzas enemigas (no delata a los escondidos).
   const controlPoint = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, pos));
   if (controlPoint) {
     const inside = s.units.filter(
-      (unit) => unit.carrier === null && inControlZone(s, controlPoint, unit) && (unit.team === 0 || view.vis.at(unit)),
+      (unit) => unit.carrier === null && inControlZone(s, controlPoint, unit) && (unit.team === viewer || view.vis.at(unit)),
     );
+    const owner = ownerSideOf(s, viewer, controlPoint.owner);
     info.point = {
-      owner: controlPoint.owner === 0 ? 'you' : controlPoint.owner === 1 ? 'enemy' : 'neutral',
+      owner,
       income: s.rules.controlIncome,
-      contested: inside.some((unit) => unit.team === 0) && inside.some((unit) => unit.team === 1),
-      icon: `ui/zona_${controlPoint.owner === 0 ? 'b' : controlPoint.owner === 1 ? 'r' : 'i'}`,
+      contested: inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team))),
+      icon: `ui/zona_${sideLetter(owner)}`,
     };
   }
   const unit = unitAt(s, pos);
@@ -144,22 +151,22 @@ export function tileVM(
   if (shown) {
     const shownType = unitTypeOf(s, shown);
     const cargo = cargoUnits(s, shown).map((unit) => nameOf(unitTypeOf(s, unit)));
+    const side = sideOf(s, viewer, shown.team);
+    const own = side === 'own';
     info.unit = {
-      icon: unitKey(textures, s, { ...shown, active: shown.team === 1 || shown.active }),
+      icon: unitKey(textures, s, { ...shown, active: !own || shown.active }, viewer),
       name: nameOf(shownType),
       rank: s.rules.veterancy ? rank(shown) : 0,
-      team: shown.team,
+      side,
       life: shown.life,
       stats: unitStatsText(shownType),
       chips: unitStatChips(shownType),
       abilities: abilitiesVM(s, shownType),
       cargo: shownType.cargoSlots > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(shown.team === 0 && effectiveStandingOrder(s, shown)
-        ? { order: standingOrderLabel(effectiveStandingOrder(s, shown)!.kind) }
-        : {}),
-      ...(shown.team === 0 && isDetached(s, shown) ? { detached: true } : {}),
-      ...(shown.team === 0 && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
+      ...(own && effectiveStandingOrder(s, shown) ? { order: standingOrderLabel(effectiveStandingOrder(s, shown)!.kind) } : {}),
+      ...(own && isDetached(s, shown) ? { detached: true } : {}),
+      ...(own && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
     };
   }
   return info;

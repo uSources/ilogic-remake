@@ -21,11 +21,11 @@ function endTurn(unit: Unit): void {
   unit.canMove = false;
 }
 
-/** Dos unidades se pueden unir: distintas, del mismo tipo y bando. */
+/** Dos unidades se pueden unir: distintas, del mismo tipo y equipo. */
 const canMergeWith = (unit: Unit, target: Unit): boolean =>
   target.uid !== unit.uid && target.type === unit.type && target.team === unit.team;
 
-/** Unidades del mismo tipo y bando con las que se puede unir este turno. */
+/** Unidades del mismo tipo y equipo con las que se puede unir este turno. */
 export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit)): Unit[] {
   return s.units.filter(
     (target) =>
@@ -54,7 +54,7 @@ export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
   return path;
 }
 
-/** El transporte puede llevar a la unidad (del mismo bando y de un tipo que lleva). */
+/** El transporte puede llevar a la unidad (del mismo equipo y de un tipo que lleva). */
 const canCarry = (s: GameState, transport: Unit, passenger: Unit): boolean =>
   transport.team === passenger.team && unitTypeOf(s, transport).carries.includes(unitTypeOf(s, passenger).id);
 

@@ -9,7 +9,7 @@ import { posKey } from '../../core/geom';
 import type Phaser from 'phaser';
 import { movementOf, buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
 import type { LabOptions } from '../../lab';
 import { t, nameOf } from '../../settings';
@@ -22,6 +22,8 @@ export function forecastFor(
   textures: Phaser.Textures.TextureManager,
   s: GameState,
   options: {
+    /** El equipo que mira (los colores de los retratos). */
+    viewer: TeamId;
     phase: Phase;
     selected: Unit | null;
     c: Pos;
@@ -37,7 +39,7 @@ export function forecastFor(
       ? fightFromMove(attacker, options.intentAt(options.c))
       : fightFromHere(s, attacker, options.attackSet, options.c);
   if (!fight) return null;
-  return forecastVM(textures, s, attacker, fight.attackerAt, fight.target, options.anchor(fight.target));
+  return forecastVM(textures, s, options.viewer, attacker, fight.attackerAt, fight.target, options.anchor(fight.target));
 }
 
 /** Al mover: si el cursor esta sobre un enemigo atacable, desde la casilla desde la que se atacaria. */
@@ -99,13 +101,19 @@ function moveTipAction(intent: Intent): string {
 }
 
 /** [CAMBIO] Panel de lo elegido (dos o mas unidades): retratos en orden y cuantas hay de cada tipo. */
-export function selectionPanel(textures: Phaser.Textures.TextureManager, s: GameState, list: Unit[], cursor: Pos): SelectionVM {
+export function selectionPanel(
+  textures: Phaser.Textures.TextureManager,
+  s: GameState,
+  viewer: TeamId,
+  list: Unit[],
+  cursor: Pos,
+): SelectionVM {
   const countByType = new Map<UnitType, number>();
   for (const unitType of list.map((unit) => unitTypeOf(s, unit))) countByType.set(unitType, (countByType.get(unitType) ?? 0) + 1);
   return {
     units: list.map((unit) => ({
       uid: unit.uid,
-      icon: unitKey(textures, s, unit),
+      icon: unitKey(textures, s, unit, viewer),
       name: nameOf(unitTypeOf(s, unit)),
       life: unit.life,
       current: unit.x === cursor.x && unit.y === cursor.y,
@@ -114,10 +122,10 @@ export function selectionPanel(textures: Phaser.Textures.TextureManager, s: Game
   };
 }
 
-/** Ingresos del jugador por turno: lo que dan sus edificios menos el mantenimiento de su ejercito. */
-export function playerIncome(s: GameState): number {
-  const owned = s.buildings.filter((building) => building.owner === 0);
-  return owned.reduce((sum, building) => sum + buildingIncome(s, buildingTypeOf(s, building)), 0) - upkeepOf(s, 0);
+/** Ingresos de un equipo por turno: lo que dan sus edificios menos el mantenimiento de su ejercito. */
+export function teamIncome(s: GameState, team: TeamId): number {
+  const owned = s.buildings.filter((building) => building.owner === team);
+  return owned.reduce((sum, building) => sum + buildingIncome(s, buildingTypeOf(s, building)), 0) - upkeepOf(s, team);
 }
 
 /** Panel del laboratorio de animaciones (null en una partida normal). */

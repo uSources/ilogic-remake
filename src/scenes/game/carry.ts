@@ -5,7 +5,7 @@
 import type Phaser from 'phaser';
 import { movementOf, canWalk, unitAt, unitById } from '../../core/rules';
 import { samePos, posOf } from '../../core/geom';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { TILE } from '../../layout';
 import { reducedMotion } from '../../ui/fx';
 import type { MapView } from '../../ui/mapView';
@@ -17,6 +17,8 @@ export interface CarryHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   readonly phase: Phase;
   readonly selected: Unit | null;
   /** Unidades que no se dibujan (la cogida va en su propia imagen). */
@@ -87,7 +89,7 @@ export class Carry {
     if (!unit || !unit.active || !unit.canMove) return false;
     if (host.phase !== 'move' || host.selected?.uid !== unit.uid) this.selectToMove(unit);
     if (touch) navigator.vibrate?.(PICK_VIBRATION_MS);
-    const textureKey = unitKey(host.scene.textures, host.state, unit);
+    const textureKey = unitKey(host.scene.textures, host.state, unit, host.viewer);
     if (!textureKey) return true;
     const foot = footOf(unit);
     const shadow = host.scene.add.rectangle(foot.x, foot.y, SHADOW.width, SHADOW.height, SHADOW.color, SHADOW.alpha);

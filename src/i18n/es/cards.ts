@@ -4,6 +4,7 @@ export const cards = {
   neutral: 'Neutral',
   you: 'Tuyo',
   enemy: 'Enemigo',
+  ally: 'Aliado',
   defense: 'Defensa',
   income: 'Ingresos',
   move: 'Mov',

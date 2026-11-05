@@ -3,8 +3,9 @@ import { aiTurn } from '../core/ai';
 import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
-import { endRound, outcome } from '../core/rules';
-import type { GameEvent, GameState, Pos, Team } from '../core/model';
+import { endRound, isMatchOver } from '../core/rules';
+import { duel, teamIds } from '../core/teams';
+import type { GameEvent, GameState, Pos } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
@@ -54,7 +55,8 @@ export class LiveBackground {
   private game: GameState | null = null;
   private view: MapView | null = null;
   private events: Generator<GameEvent> | null = null;
-  private team: Team = 0;
+  /** A quien le toca, por su orden en la partida (los equipos juegan uno tras otro). */
+  private turn = 0;
   private rng = seededRng(1);
   /** Cambia al empezar o parar: el bucle anterior se da cuenta y termina. */
   private token = 0;
@@ -85,15 +87,16 @@ export class LiveBackground {
   start(): void {
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES });
+    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
-    const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
-    this.view.centerOn(playerBuilding, true);
+    const first = teamIds(this.game)[0]!;
+    const firstBuilding = this.game.buildings.find((building) => building.owner === first) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+    this.view.centerOn(firstBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
-    this.team = 0;
-    this.events = aiTurn(this.game, this.rng, 0);
+    this.turn = 0;
+    this.events = aiTurn(this.game, this.rng, first);
     this.render();
     void this.loop();
   }
@@ -120,7 +123,7 @@ export class LiveBackground {
     const s = this.game;
     if (!s || !this.view) return;
     const visible = createLayer(s, true);
-    this.view.render(s, { vis: visible, highlights: new Map(), hidden: new Set() });
+    this.view.render(s, { viewer: teamIds(s)[0]!, vis: visible, highlights: new Map(), hidden: new Set() });
     this.view.placeCursor(false);
   }
 
@@ -142,15 +145,13 @@ export class LiveBackground {
     }
   }
 
-  /** Turno del otro bando (y fin de ronda tras la IA roja); si la partida ha acabado, otra nueva. */
+  /** Turno del siguiente equipo (y fin de ronda tras el ultimo); si la partida ha acabado, otra nueva. */
   private async nextTurn(s: GameState): Promise<void> {
-    if (this.team === 0) this.team = 1;
-    else {
-      endRound(s);
-      this.team = 0;
-    }
-    if (outcome(s) !== 'playing' || s.day > MAX_DAYS) return this.start();
-    this.events = aiTurn(s, this.rng, this.team);
+    const order = teamIds(s);
+    this.turn = (this.turn + 1) % order.length;
+    if (this.turn === 0) endRound(s);
+    if (isMatchOver(s) || s.day > MAX_DAYS) return this.start();
+    this.events = aiTurn(s, this.rng, order[this.turn]!);
     await this.pause(BETWEEN_TURNS_MS);
   }
 

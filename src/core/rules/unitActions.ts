@@ -4,7 +4,8 @@
 
 import { unitTypeOf } from '../gameContent';
 import { effectiveStandingOrder } from '../squads/standingOrders';
-import { canFight, isCapturer, isPlayer } from '../util/predicates';
+import { canFight, isCapturer } from '../util/predicates';
+import { teamState } from '../teams';
 import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
 import { attackTargets } from './combat';
@@ -41,8 +42,8 @@ function canUnloadSomeone(s: GameState, transport: Unit): boolean {
 }
 
 export function unitActions(s: GameState, unit: Unit): UnitActions {
-  // Las ordenes con destino son solo del jugador: la IA decide sola cada turno.
-  const isMine = isPlayer(unit.team);
+  // Las ordenes con destino son de los equipos que juega una persona: la IA decide sola cada turno.
+  const isMine = teamState(s, unit.team).controller === 'human';
   return {
     attack: attackTargets(s, unit).length > 0,
     capture: canCapture(s, unit),

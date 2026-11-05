@@ -1,10 +1,10 @@
 /** Reglas y parametros de una partida (se guardan con ella). Los valores por defecto, en rules.json. */
 export interface RulesConfig {
-  /** Dinero inicial de cada bando. */
+  /** Dinero inicial de cada equipo. */
   initialFunds: number;
-  /** Unidades maximas por bando. */
+  /** Unidades maximas por equipo. */
   maxUnits: number;
-  /** [CAMBIO] Puntos de mando por bando: cada unidad ocupa los de su `command` (null = sin limite de puntos). */
+  /** [CAMBIO] Puntos de mando por equipo: cada unidad ocupa los de su `command` (null = sin limite de puntos). */
   commandPoints: number | null;
   /** [CAMBIO] Mantenimiento: cada ronda se paga este tanto por uno del precio de cada unidad (0 = sin mantenimiento). */
   upkeep: number;

@@ -1,5 +1,5 @@
 import type { Pos } from './geometry';
-import type { Team } from './team';
+import type { TeamId } from './team';
 
 /** Lo que acaba de pasar, para que la interfaz lo anime. Lo usan el jugador y la IA. */
 export type GameEvent =
@@ -17,14 +17,14 @@ export type GameEvent =
       /** Datos para enseñar el combate (ver attackEvent). Los eventos antiguos no lo tienen. */
       combat?: CombatInfo;
     }
-  | { kind: 'capture'; uid: number; at: Pos; owner: Team | null; left?: number; total?: number }
+  | { kind: 'capture'; uid: number; at: Pos; owner: TeamId | null; left?: number; total?: number }
   | { kind: 'merge'; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; uid: number; into: number; path: Pos[] }
   | { kind: 'spawn'; uid: number; at: Pos }
   | { kind: 'wait'; uid: number }
   | {
       kind: 'power';
-      team: Team;
+      team: TeamId;
       general: string;
       power: string;
       /** Casilla elegida (poderes de area). */
@@ -50,7 +50,8 @@ export interface CombatInfo {
   /** Tipos de unidad (id de units.json). */
   attackerType: string;
   defenderType: string;
-  attackerTeam: Team;
+  attackerTeam: TeamId;
+  defenderTeam: TeamId;
   /** Vida antes del combate. */
   attackerLife: number;
   defenderLife: number;

@@ -13,7 +13,8 @@ import type { ReportLineVM } from './vm/notices';
 
 export type { UIActions } from './actions';
 export type { UIState } from './state';
-export type { Anchor, StatChipVM } from './vm/common';
+export type { Anchor, OwnerSide, Side, StatChipVM } from './vm/common';
+export type { BySide, EndStatsVM } from './vm/end';
 export type { IdleVM, MoveTipVM, PickedVM, SelectionVM, SquadVM } from './vm/army';
 export type { CombatSideVM, CombatVM, ForecastVM } from './vm/combat';
 export type { GeneralPowerVM, GeneralVM } from './vm/general';

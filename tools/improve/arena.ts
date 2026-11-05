@@ -10,6 +10,7 @@
  * Las partidas que no terminan se dan a quien tiene clara ventaja (ejercito + edificios + dinero,
  * al menos un 15 % mas); si no, empate.
  */
+import { duel, teamState } from '@core/teams';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,34 +19,34 @@ import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
 import { unitTypeOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
-import { endRound, outcome } from '@core/rules';
-import type { GameEvent, GameState, Rng, Team } from '@core/model';
+import { endRound, isMatchOver, outcome } from '@core/rules';
+import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
-type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
+type Brain = (s: GameState, rng: Rng, team: TeamId) => Generator<GameEvent>;
 
-function strength(s: GameState, team: Team): number {
+function strength(s: GameState, team: TeamId): number {
   const army = s.units
     .filter((unit) => unit.team === team)
     .reduce((amount, unit) => amount + (unitTypeOf(s, unit).cost * unit.life) / 100, 0);
-  return army + s.buildings.filter((building) => building.owner === team).length * 1500 + s.funds[team] * 0.5;
+  return army + s.buildings.filter((building) => building.owner === team).length * 1500 + teamState(s, team).funds * 0.5;
 }
 
 /** Una partida; devuelve el bando ganador (o null si empate). */
-export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
+export function playDuel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): TeamId | null {
   const rng = seededRng(seed);
-  const s = createGame(rng, { size });
-  while (outcome(s) === 'playing' && s.day <= maxDays) {
-    for (const team of [0, 1] as Team[]) {
-      for (const _ of brains[team](s, rng, team)) if (outcome(s) !== 'playing') break;
-      if (outcome(s) !== 'playing') break;
+  const s = createGame(rng, { size, teams: duel('ai', 'ai') });
+  while (!isMatchOver(s) && s.day <= maxDays) {
+    for (const [team, brain] of brains.entries()) {
+      for (const _ of brain(s, rng, team)) if (isMatchOver(s)) break;
+      if (isMatchOver(s)) break;
     }
-    if (outcome(s) !== 'playing') break;
+    if (isMatchOver(s)) break;
     endRound(s);
   }
-  const result = outcome(s);
+  const result = outcome(s, 0);
   if (result === 'won') return 0;
   if (result === 'lost') return 1;
   const playerStrength = strength(s, 0),
@@ -71,7 +72,7 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
   for (let i = 0; i < games; i++) {
     const seed = 1 + Math.floor(i / 2);
     const swapped = i % 2 === 1; // mismo mapa, bandos cambiados
-    const winner = duel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
+    const winner = playDuel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
     if (winner === null) draws++;
     else if ((winner === 0) !== swapped) wins++;
     else losses++;

@@ -19,6 +19,7 @@ import {
   combatForecast,
   threatMap,
 } from '@core/rules';
+import { teamState } from '@core/teams';
 import { blankState, unitTypeNamed, hqId } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
@@ -103,13 +104,13 @@ describe('captura y victoria', () => {
     soldier.active = true;
     expect(capture(s, soldier)?.done).toBe(true);
     expect(s.buildings[2]!.owner).toBe(0);
-    expect(outcome(s)).toBe('playing');
+    expect(outcome(s, 0)).toBe('playing');
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     capture(s, otherSoldier);
     otherSoldier.active = true;
     capture(s, otherSoldier);
     expect(s.buildings[1]!.owner).toBe(0);
-    expect(outcome(s)).toBe('won');
+    expect(outcome(s, 0)).toBe('won');
   });
 });
 
@@ -145,10 +146,10 @@ describe('compra y fin de ronda', () => {
     const s = blankState(TEST_RULES);
     s.buildings.push({ type: 'Factory', owner: 0, x: 4, y: 4 });
     expect(spawn(s, s.buildings[0]!, TANK)).toBeNull();
-    expect(s.funds[0]).toBe(5000);
+    expect(teamState(s, 0).funds).toBe(5000);
     const car = spawn(s, s.buildings[0]!, unitTypeNamed('Car'))!;
     expect(car.active).toBe(false);
-    expect(s.funds[0]).toBe(5000 - unitTypeNamed('Car').cost); // el Jeep: lo que cueste ahora
+    expect(teamState(s, 0).funds).toBe(5000 - unitTypeNamed('Car').cost); // el Jeep: lo que cueste ahora
   });
   it('ingresos y curacion; los aviones ya no caen', () => {
     const s = blankState(TEST_RULES);
@@ -206,12 +207,12 @@ describe('prevision y amenaza', () => {
     const s = blankState(TEST_RULES);
     newUnit(s, unitTypeNamed('Soldier'), 0, { x: 10, y: 10 }); // vision 4 del jugador
     newUnit(s, unitTypeNamed('Tank'), 1, { x: 12, y: 10 }); // tanque enemigo visible: mover 5 + alcance 2
-    const th = threatMap(s, 1, 0);
+    const th = threatMap(s, 0);
     expect(th.at({ x: 12, y: 17 })).toBe(true); // 7 abajo
     expect(th.at({ x: 12, y: 18 })).toBe(false);
     const other = blankState(TEST_RULES);
     newUnit(other, unitTypeNamed('Soldier'), 0, { x: 0, y: 0 });
     newUnit(other, unitTypeNamed('Tank'), 1, { x: 20, y: 20 }); // fuera de vision
-    expect([...threatMap(other, 1, 0).cells()].some((cell) => cell.value)).toBe(false);
+    expect([...threatMap(other, 0).cells()].some((cell) => cell.value)).toBe(false);
   });
 });

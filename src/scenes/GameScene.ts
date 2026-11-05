@@ -13,7 +13,9 @@ import { Grid } from '../core/util/grid';
 import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../core/model';
+import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
+import { enemiesOf, teamState } from '../core/teams';
+import { generalOf } from '../core/generals';
 import {
   resetActions,
   showBanner,
@@ -46,7 +48,7 @@ import type { LabAction, LabOptions } from '../lab';
 import { GAME_MENU, MENU_PHASES, type ActionKey, type GameStartData, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
-import { forecastFor, hintText, labPanel, moveTipFor, playerIncome, selectionPanel } from './game/hudParts';
+import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
 import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } from './game/mapOverlays';
 import { startMatch } from './game/matchSetup';
 import { TutorialTracker } from './game/tutorial';
@@ -78,11 +80,11 @@ const SELECTION_PANEL_PHASES: Phase[] = ['map', 'groupMenu', 'orderMenu', 'targe
 /** Bocadillos que van junto a una casilla (y se recolocan al mover la camara). */
 type BubbleKind = 'menu' | 'forecast' | 'moveTip';
 
-const isPlayer = (unit: Unit) => unit.team === 0;
-
 export class GameScene extends Phaser.Scene {
   // --- La partida -----------------------------------------------------------
   private s!: GameState;
+  /** El equipo que juega la persona en esta pantalla: el que mira (niebla, colores, mandos). */
+  private viewer!: TeamId;
   private view!: MapView;
   private phase: Phase = 'map';
   /** Partida en curso: cambia en cada init() y al cerrar la escena; las esperas asincronas la comprueban. */
@@ -216,6 +218,7 @@ export class GameScene extends Phaser.Scene {
     this.resetMatch();
     const start = startMatch(data);
     this.s = start.state;
+    this.viewer = start.viewer;
     this.lab = start.lab;
     this.fromSave = start.fromSave;
     this.corruptSave = start.corruptSave;
@@ -249,7 +252,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Cursor y camara sobre la Base del jugador. */
   private centerOnHq(): void {
-    const hq = this.s.buildings.find((building) => building.owner === 0 && isHq(this.s, building)) ?? { x: 0, y: 0 };
+    const hq = this.s.buildings.find((building) => building.owner === this.viewer && isHq(this.s, building)) ?? { x: 0, y: 0 };
     this.view.cursor = posOf(hq);
     this.view.centerOn(hq, true);
   }
@@ -644,9 +647,9 @@ export class GameScene extends Phaser.Scene {
 
   private checkEnd(): boolean {
     if (this.lab) return false;
-    const result = outcome(this.s);
+    const result = outcome(this.s, this.viewer);
     if (result === 'playing') return false;
-    void this.endScreen.finish(result === 'won', endReason(this.s));
+    void this.endScreen.finish(result === 'won', endReason(this.s, this.viewer));
     return true;
   }
 
@@ -680,6 +683,11 @@ export class GameScene extends Phaser.Scene {
   // Unidades del jugador
   // =========================================================================
 
+  /** La unidad es del equipo que mira. */
+  private isOwn(unit: Unit): boolean {
+    return unit.team === this.viewer;
+  }
+
   /** La orden que cumple la unidad (la suya o la de su escuadra). */
   private standingOrderOf(unit: Unit) {
     return effectiveStandingOrder(this.s, unit);
@@ -687,7 +695,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
   private idleUnits(): Unit[] {
-    return this.s.units.filter((unit) => isPlayer(unit) && unit.active && unit.carrier === null && !this.standingOrderOf(unit));
+    return this.s.units.filter((unit) => this.isOwn(unit) && unit.active && unit.carrier === null && !this.standingOrderOf(unit));
   }
 
   /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
@@ -726,7 +734,7 @@ export class GameScene extends Phaser.Scene {
     const replaying = this.turns.replaying;
     // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
     if (isPlayerTurn && event.kind !== 'move') this.moves.clearUndo();
-    if (!replaying) recordEvent(this.s, event, isPlayerTurn ? 0 : 1);
+    if (!replaying) recordEvent(this.s, event, this.turns.acting);
     if (!replaying && isPlayerTurn) this.tutorial.record(event);
     if (event.kind === 'attack') this.lastAt = { ...event.target };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };
@@ -740,7 +748,7 @@ export class GameScene extends Phaser.Scene {
     // [CAMBIO] Puntero del raton segun lo que haria el clic derecho donde esta el cursor.
     if (this.gestures.inside) this.orders.updatePointer(this.phase === 'busy' ? null : this.view.cursor);
     // Al acabar se descubre todo el mapa.
-    this.vis = this.ended ? createLayer(this.s, true) : visibility(this.s, 0);
+    this.vis = this.ended ? createLayer(this.s, true) : visibility(this.s, this.viewer);
     this.view.pruneScorch(this.s.day);
     this.view.render(this.s, this.viewOptions());
     this.view.placeCursor(this.phase !== 'busy');
@@ -751,8 +759,9 @@ export class GameScene extends Phaser.Scene {
   private viewOptions(): ViewOptions {
     const isMoving = this.phase === 'move';
     const session = this.moves.session;
-    const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, 1, 0) : null;
+    const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, this.viewer) : null;
     return {
+      viewer: this.viewer,
       vis: this.vis,
       highlights: this.highlights(),
       hidden: this.hidden,
@@ -760,11 +769,11 @@ export class GameScene extends Phaser.Scene {
       pathAttack: isMoving && this.moves.intentAt(this.view.cursor).kind === 'attack',
       threat,
       attackZone: isMoving ? (session?.attackZone ?? null) : null,
-      orders: orderMarks(this.s, (unit) => this.showsOrderLine(unit)),
+      orders: orderMarks(this.s, this.viewer, (unit) => this.showsOrderLine(unit)),
       danger: isMoving ? (session?.danger ?? null) : null,
       intents: this.intentsToDraw(),
-      captures: captureBars(this.s, this.vis),
-      controlPoints: controlPointMarks(this.s, (pos) => this.visibleToPlayer(pos)),
+      captures: captureBars(this.s, this.viewer, this.vis),
+      controlPoints: controlPointMarks(this.s, this.viewer, (pos) => this.visibleToPlayer(pos)),
       ...escortMarks(this.s, this.hidden),
     };
   }
@@ -773,6 +782,7 @@ export class GameScene extends Phaser.Scene {
     const session = this.moves.session;
     const marks = computeHighlights({
       s: this.s,
+      viewer: this.viewer,
       phase: this.phase,
       cursor: this.view.cursor,
       range: session?.range ?? null,
@@ -808,15 +818,15 @@ export class GameScene extends Phaser.Scene {
   private intentsToDraw(): ViewOptions['intents'] {
     if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
     const withStandingOrder = this.s.units.filter(
-      (unit) => isPlayer(unit) && this.standingOrderOf(unit) && unit.active && unit.carrier === null,
+      (unit) => this.isOwn(unit) && this.standingOrderOf(unit) && unit.active && unit.carrier === null,
     );
     const shown = withStandingOrder.filter((unit) => this.intents || this.showsOrderLine(unit));
     if (!shown.length) return [];
-    return intentLines(shown, this.standingOrderPreview.get(this.s), this.vis);
+    return intentLines(shown, this.standingOrderPreview.get(this.s, this.viewer), this.vis);
   }
 
   private publishMinimap(): void {
-    ui.set({ minimap: minimapVM(terrainPalette(this.textures), this.s, this.vis, this.hidden) });
+    ui.set({ minimap: minimapVM(terrainPalette(this.textures), this.s, { viewer: this.viewer, vis: this.vis, hidden: this.hidden }) });
   }
 
   /** Solo cambia el cursor: no hace falta redibujar unidades, salvo el camino previsto. */
@@ -841,16 +851,18 @@ export class GameScene extends Phaser.Scene {
     const busy = this.phase === 'busy';
     const weather = weatherVM(s);
     this.weatherFx?.set(weather?.id ?? null);
+    const viewer = this.viewer;
+    const enemyWithGeneral = enemiesOf(s, viewer).find((enemy) => generalOf(s, enemy));
     ui.set({
-      funds: s.funds[0],
-      income: playerIncome(s),
-      commandPoints: s.rules.commandPoints === null ? null : { used: commandUsed(s, 0), max: s.rules.commandPoints },
-      economy: economyVM(s, 0),
-      dayInfo: dayInfoVM(s),
+      funds: teamState(s, viewer).funds,
+      income: teamIncome(s, viewer),
+      commandPoints: s.rules.commandPoints === null ? null : { used: commandUsed(s, viewer), max: s.rules.commandPoints },
+      economy: economyVM(s, viewer),
+      dayInfo: dayInfoVM(s, viewer),
       lab: labPanel(this.s, this.lab),
-      general: generalVM(s, 0, this.phase === 'target' ? this.powers.targeting : null),
-      enemyGeneral: generalVM(s, 1, null),
-      buildings: s.buildings.filter((building) => building.owner === 0).length,
+      general: generalVM(s, viewer, viewer, this.phase === 'target' ? this.powers.targeting : null),
+      enemyGeneral: enemyWithGeneral === undefined ? null : generalVM(s, viewer, enemyWithGeneral, null),
+      buildings: s.buildings.filter((building) => building.owner === viewer).length,
       day: s.day,
       dayLimit: s.rules.dayLimit,
       helpRules: s.rules,
@@ -866,7 +878,7 @@ export class GameScene extends Phaser.Scene {
       multi: this.selection.multi || this.selection.group.size ? this.selection.group.size : null,
       selection: this.selectionVM(),
       endTurn: { pending: this.turns.pendingUnits().length, armed: this.turns.endArmed() },
-      anyStandingOrder: s.units.some((unit) => isPlayer(unit) && !!this.standingOrderOf(unit)),
+      anyStandingOrder: s.units.some((unit) => this.isOwn(unit) && !!this.standingOrderOf(unit)),
       hint: this.hint(busy),
       mission: this.tutorial.panel(s, this.phase),
     });
@@ -877,7 +889,7 @@ export class GameScene extends Phaser.Scene {
   private idleList(): IdleVM[] {
     return this.idleUnits().map((unit) => ({
       uid: unit.uid,
-      icon: unitKey(this.textures, this.s, unit),
+      icon: unitKey(this.textures, this.s, unit, this.viewer),
       name: nameOf(unitTypeOf(this.s, unit)),
     }));
   }
@@ -894,6 +906,7 @@ export class GameScene extends Phaser.Scene {
 
   private forecast(cursor: Pos): ForecastVM | null {
     return forecastFor(this.textures, this.s, {
+      viewer: this.viewer,
       phase: this.phase,
       selected: this.moves.selected,
       c: cursor,
@@ -918,13 +931,14 @@ export class GameScene extends Phaser.Scene {
 
   private tileInfo(pos: Pos): TileVM {
     const selected = this.phase !== 'map' ? this.moves.selected : null;
-    return tileVM(this.textures, this.s, pos, { vis: this.vis, hidden: this.hidden, selected });
+    return tileVM(this.textures, this.s, pos, { viewer: this.viewer, vis: this.vis, hidden: this.hidden, selected });
   }
 
   /** Menu de bocadillo de la fase actual. */
   private buildMenu(): MenuVM {
     const { kind, title, subtitle, info, items, at } = menuModel({
       s: this.s,
+      viewer: this.viewer,
       phase: this.phase,
       cursor: this.view.cursor,
       selected: this.moves.selected,
@@ -946,7 +960,7 @@ export class GameScene extends Phaser.Scene {
     if (picks.group.size < 2 || !SELECTION_PANEL_PHASES.includes(this.phase) || this.enemyPlaying) return null;
     const list = picks.pickedInOrder();
     if (list.length < 2) return null;
-    return selectionPanel(this.textures, this.s, list, this.view.cursor);
+    return selectionPanel(this.textures, this.s, this.viewer, list, this.view.cursor);
   }
 
   private anchor(kind: BubbleKind, pos: Pos): Anchor {
@@ -983,6 +997,7 @@ export class GameScene extends Phaser.Scene {
   private makePhaseHost(): PhaseHost {
     return live<PhaseHost>({
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       view: { get: () => this.view },
       phase: rw(
         () => this.phase,
@@ -1037,6 +1052,7 @@ export class GameScene extends Phaser.Scene {
         () => this.s,
         (state) => (this.s = state),
       ),
+      viewer: { get: () => this.viewer },
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1058,6 +1074,7 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1111,6 +1128,7 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       phase: { get: () => this.phase },
       selected: { get: () => this.moves.selected },
       toMap: () => this.toMap(),
@@ -1128,6 +1146,7 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       phase: { get: () => this.phase },
       selected: { get: () => this.moves.selected },
       hidden: { get: () => this.hidden },
@@ -1146,6 +1165,7 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       phase: { get: () => this.phase },
       ended: { get: () => this.ended },
       selected: { get: () => this.moves.selected },
@@ -1186,6 +1206,7 @@ export class GameScene extends Phaser.Scene {
   private powerHost(): PowerHost {
     return live<PowerHost>({
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1202,6 +1223,8 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
+      acting: { get: () => this.turns.acting },
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1228,6 +1251,7 @@ export class GameScene extends Phaser.Scene {
         () => this.s,
         (state) => (this.s = state),
       ),
+      viewer: { get: () => this.viewer },
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1264,6 +1288,7 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       match: { get: () => this.match },
       ended: { get: () => this.ended },
       lastAt: { get: () => this.lastAt },
@@ -1278,6 +1303,7 @@ export class GameScene extends Phaser.Scene {
       scene: { get: () => this },
       view: { get: () => this.view },
       state: { get: () => this.s },
+      viewer: { get: () => this.viewer },
       refresh: () => this.refresh(),
       play: (events) => this.playEvents(events),
     });
