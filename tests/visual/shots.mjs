@@ -75,7 +75,7 @@ const SCENES = {
       const d = window.ilogicDebug;
       await d.startGame({ seed: 7, size: 20, theme: 'Plains', general: 'Brisa' });
       const s = d.state();
-      s.generals[0].charge = 6;
+      s.teams[0].general.charge = 6;
       await d.startGame({ state: s });
     });
     await p.click('.gp-ab:has-text("Ataque aéreo")');

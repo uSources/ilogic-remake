@@ -123,7 +123,7 @@ async function squadTab(page) {
     const s = window.ilogicDebug.state();
     const mine = s.units.filter((u) => u.team === 0);
     for (const u of mine) u.squad = 1;
-    s.squads = [{ id: 1, name: 'Alfa' }];
+    s.squads = [{ id: 1, team: 0, name: 'Alfa' }];
     await window.ilogicDebug.startGame({ state: s });
     return mine.map((u) => u.uid);
   });
@@ -149,7 +149,7 @@ async function groupKeys(page) {
     const s = window.ilogicDebug.state();
     const mine = s.units.filter((u) => u.team === 0);
     for (const u of mine) u.squad = 1;
-    s.squads = [{ id: 1, name: 'Alfa' }];
+    s.squads = [{ id: 1, team: 0, name: 'Alfa' }];
     await window.ilogicDebug.startGame({ state: s });
   });
   const n = await page.evaluate(() => window.ilogicDebug.state().units.filter((u) => u.team === 0).length);

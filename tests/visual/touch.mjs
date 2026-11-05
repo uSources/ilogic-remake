@@ -59,7 +59,7 @@ async function start(page, enemy = false) {
     // El pozo de petroleo propio de (0,10) pasa a ser una fabrica en (11,12).
     Object.assign(
       s.buildings.find((building) => building.x === 0 && building.y === 10),
-      { x: 11, y: 12, type: 2 },
+      { x: 11, y: 12, type: 'Factory' },
     );
     if (enemy) s.units.push({ ...me, uid: s.nextUid++, team: 1, x: 7, y: 12, cargo: [], carrier: null });
     return s;
