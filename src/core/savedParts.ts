@@ -50,8 +50,16 @@ const isTeam = (frame: SaveFrame, value: unknown): boolean => isInt(value, 0, fr
 /** Los objetos de una lista del JSON (lo que no lo es, fuera). */
 const objectsIn = (value: unknown): Saved[] => (Array.isArray(value) ? value.filter(isObject) : []);
 
+/** Las listas de una partida guardada que ya tiene su forma (hasGameShape); lo de dentro, sin mirar. */
+export interface SavedLists {
+  map: unknown[];
+  teams: unknown[];
+  units: unknown[];
+  buildings: unknown[];
+}
+
 /** Lo de arriba tiene la forma de una partida: listas y objetos donde tocan. Lo de dentro se mira despues. */
-export function hasGameShape(saved: SavedGame): boolean {
+export function hasGameShape(saved: SavedGame): saved is SavedGame & SavedLists {
   return [saved.map, saved.teams, saved.units, saved.buildings].every(Array.isArray) && isObject(saved.rules);
 }
 
@@ -131,7 +139,8 @@ export function hasValidUnits(frame: SaveFrame, units: unknown[]): boolean {
 }
 
 /** Cada pasajero esta en la lista de su transporte y cada transporte lleva a quien dice. */
-export function hasConsistentCargo(units: readonly Saved[]): boolean {
+export function hasConsistentCargo(list: readonly unknown[]): boolean {
+  const units = list.filter(isObject);
   const byUid = new Map(units.map((unit) => [unit.uid, unit]));
   const cargoOf = (uid: unknown): unknown[] => {
     const carrier = byUid.get(uid);

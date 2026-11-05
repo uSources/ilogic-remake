@@ -94,14 +94,6 @@ function parseObject(json: string): SavedGame | null {
   }
 }
 
-/** Las listas de una partida que ya tiene su forma (hasGameShape). */
-interface SavedLists {
-  map: unknown;
-  teams: unknown[];
-  units: Record<string, unknown>[];
-  buildings: unknown[];
-}
-
 /**
  * Comprueba la partida parte a parte, en orden (cada una necesita las de antes: los equipos el
  * contenido, las unidades el mapa y los equipos...), y limpia lo opcional que este roto. Devuelve el
@@ -109,7 +101,7 @@ interface SavedLists {
  */
 function gameProblem(saved: SavedGame, content: GameContent): SaveError | null {
   if (!hasGameShape(saved)) return 'badShape';
-  const { map, teams, units, buildings } = saved as unknown as SavedLists;
+  const { map, teams, units, buildings } = saved;
   if (!isValidMap(map, content)) return 'badMap';
   if (!isEntryId(content.themes, saved.theme)) return 'badTheme';
   if (!isRandomState(saved.dice)) return 'badDice';
