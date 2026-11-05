@@ -1,9 +1,9 @@
 /**
- * [CAMBIO] La IA usa a su general (ver core/generals.ts). Una habilidad por turno, al empezarlo, antes
+ * [CAMBIO] La IA usa a su general (ver core/generals.ts). Un poder por turno, al empezarlo, antes
  * de mover: asi un ataque aereo debilita a quien luego puede rematar, y el reconocimiento le deja
  * ver antes de decidir.
  *
- * Cada habilidad se valora en "valor" (precio × vida que quita / 100, como el resto de la IA), segun
+ * Cada poder se valora en "valor" (precio × vida que quita / 100, como el resto de la IA), segun
  * su tipo de efecto (EFFECT_VALUES). Se usa la de mas valor si llega a AI.GENERALMINVALUE. Con la
  * barra llena se usa cualquiera que valga algo, para no desperdiciar la carga que seguiria ganando.
  *
@@ -13,7 +13,7 @@
 import { unitTypeOf, weightsOf } from './gameContent';
 import type { GeneralEffect as GeneralEffectDef } from './content';
 import type { DeepReadonly } from './util/freeze';
-import { applies, chargeStars, generalOf, useAbility } from './generals';
+import { applies, chargeStars, generalOf, usePower } from './generals';
 import { posKey, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
@@ -23,13 +23,13 @@ import { maxBy } from './util/pick';
 /** Un efecto de general tal como esta en el contenido (de solo lectura). */
 type GeneralEffect = DeepReadonly<GeneralEffectDef>;
 
-export interface AbilityChoice {
-  ability: string;
+export interface PowerChoice {
+  power: string;
   target: Pos | null;
   value: number;
 }
 
-/** Donde apuntar una habilidad y cuanto vale usarla ahi. */
+/** Donde apuntar un poder y cuanto vale usarla ahi. */
 interface ValuedTarget {
   target: Pos | null;
   value: number;
@@ -97,16 +97,16 @@ function valueEffect<E extends GeneralEffect>(s: GameState, team: Team, effect: 
   return (EFFECT_VALUES[effect.kind] as EffectValue<E>)(s, team, effect);
 }
 
-/** Que habilidad usaria ahora la IA (null = ninguna, guarda la carga). */
-export function chooseAbility(s: GameState, team: Team): AbilityChoice | null {
+/** Que poder usaria ahora la IA (null = ninguna, guarda la carga). */
+export function choosePower(s: GameState, team: Team): PowerChoice | null {
   const general = generalOf(s, team);
   if (!general || general.state.used) return null;
   const stars = chargeStars(general.state);
-  const choices: AbilityChoice[] = [];
-  for (const ability of general.definition.abilities) {
-    if (ability.cost > stars) continue;
-    const valued = valueEffect(s, team, ability.effect);
-    if (valued) choices.push({ ability: ability.id, ...valued });
+  const choices: PowerChoice[] = [];
+  for (const power of general.definition.powers) {
+    if (power.cost > stars) continue;
+    const valued = valueEffect(s, team, power.effect);
+    if (valued) choices.push({ power: power.id, ...valued });
   }
   const best = maxBy(choices, (choice) => choice.value);
   if (!best) return null;
@@ -114,10 +114,10 @@ export function chooseAbility(s: GameState, team: Team): AbilityChoice | null {
   return best.value >= weightsOf(s).GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
 }
 
-/** Turno del general de la IA: como mucho una habilidad. */
+/** Turno del general de la IA: como mucho un poder. */
 export function* aiGeneral(s: GameState, team: Team): Generator<GameEvent> {
-  const choice = chooseAbility(s, team);
+  const choice = choosePower(s, team);
   if (!choice) return;
-  const event = useAbility(s, team, choice.ability, choice.target);
+  const event = usePower(s, team, choice.power, choice.target);
   if (event) yield event;
 }

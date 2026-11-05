@@ -54,7 +54,7 @@ import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
 import { EndOfMatch, setEndFilter, type EndHost } from './game/endOfMatch';
-import { GeneralAbilities, type AbilityHost } from './game/abilities';
+import { GeneralPowers, type PowerHost } from './game/powers';
 import { restartLab, startLab, type LabHost } from './game/labMode';
 import { live, rw } from './game/host';
 import { bindInput, pointerIn } from './game/input';
@@ -143,8 +143,8 @@ export class GameScene extends Phaser.Scene {
   private carry = new Carry(this.carryHost());
   /** Lo que hace cada opcion del menu de pausa (game/phases/gameMenu.ts). */
   private gameMenu = new GameMenuChoices(this.gameMenuHost());
-  /** Habilidades del general del jugador (game/abilities.ts). */
-  private abilities = new GeneralAbilities(this.abilityHost());
+  /** Poderes del general del jugador (game/powers.ts). */
+  private powers = new GeneralPowers(this.powerHost());
   /** Animar los eventos de las reglas (game/playback.ts). */
   private player = new EventPlayer(this.playbackHost());
   /** Fin de turno, turno de la IA y su repeticion (game/turns.ts). */
@@ -353,10 +353,10 @@ export class GameScene extends Phaser.Scene {
         ui.set({ rename: null });
         this.refresh();
       },
-      useAbility: (id: string) => {
-        if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.abilities.start(id);
+      usePower: (id: string) => {
+        if (ready() && (this.phase === 'map' || this.phase === 'target')) void this.powers.start(id);
       },
-      cancelAbility: () => {
+      cancelPower: () => {
         if (this.phase === 'target') this.toMap();
       },
       openGameMenu: () => {
@@ -612,7 +612,7 @@ export class GameScene extends Phaser.Scene {
   /** Vuelta al mapa: sin unidad elegida, orden a medio dar ni menu abierto. */
   private toMap(): void {
     this.phase = 'map';
-    this.abilities.targeting = null;
+    this.powers.targeting = null;
     this.orders.ordering = null;
     this.orders.menu = null;
     this.inspectUid = null;
@@ -782,7 +782,7 @@ export class GameScene extends Phaser.Scene {
       unload: session?.unloadTiles ?? new Set(),
       orderMenuUids: this.orders.menu?.uids ?? null,
       orderingUids: this.orders.ordering?.uids ?? null,
-      targetArea: (pos) => this.abilities.area(pos),
+      targetArea: (pos) => this.powers.area(pos),
       group: this.selection.group,
       inspectUid: this.inspectUid,
       enemyPlaying: this.enemyPlaying,
@@ -848,7 +848,7 @@ export class GameScene extends Phaser.Scene {
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
       lab: labPanel(this.s, this.lab),
-      general: generalVM(s, 0, this.phase === 'target' ? this.abilities.targeting : null),
+      general: generalVM(s, 0, this.phase === 'target' ? this.powers.targeting : null),
       enemyGeneral: generalVM(s, 1, null),
       buildings: s.buildings.filter((building) => building.owner === 0).length,
       day: s.day,
@@ -1016,7 +1016,7 @@ export class GameScene extends Phaser.Scene {
       moves: { get: () => this.moves },
       selection: { get: () => this.selection },
       orders: { get: () => this.orders },
-      abilities: { get: () => this.abilities },
+      powers: { get: () => this.powers },
       gameMenu: { get: () => this.gameMenu },
       enter: (phase) => this.enterPhase(phase),
       toMap: () => this.toMap(),
@@ -1183,8 +1183,8 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private abilityHost(): AbilityHost {
-    return live<AbilityHost>({
+  private powerHost(): PowerHost {
+    return live<PowerHost>({
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,

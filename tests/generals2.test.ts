@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { chooseAbility } from '@core/aiGenerals';
+import { choosePower } from '@core/aiGenerals';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { generalHitFactor, newGeneral, useAbility } from '@core/generals';
+import { generalHitFactor, newGeneral, usePower } from '@core/generals';
 import { newUnit } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 
@@ -20,14 +20,14 @@ describe('Roca: reparar', () => {
     const s = blankState(TEST_RULES);
     s.generals = [newGeneral(s, 'Roca'), null];
     s.generals[0]!.charge = 6;
-    const amount = (generalDefinition('Roca').abilities[0]!.effect as { amount: number }).amount;
+    const amount = (generalDefinition('Roca').powers[0]!.effect as { amount: number }).amount;
     const hurt = newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     hurt.life = 50;
     const almost = newUnit(s, unitType('Soldier'), 0, { x: 4, y: 4 });
     almost.life = 100 - Math.floor(amount / 2);
     const enemy = newUnit(s, unitType('Tank'), 1, { x: 8, y: 8 });
     enemy.life = 50;
-    const event = useAbility(s, 0, 'repair')!;
+    const event = usePower(s, 0, 'repair')!;
     expect(hurt.life).toBe(50 + amount);
     expect(almost.life).toBe(100);
     expect(enemy.life).toBe(50);
@@ -51,12 +51,12 @@ describe('Roca: reparar', () => {
   it('la IA repara cuando vale la pena, y no con el ejercito entero', () => {
     const s = blankState(TEST_RULES);
     s.generals = [null, newGeneral(s, 'Roca')];
-    s.generals[1]!.charge = generalDefinition('Roca').abilities[0]!.cost;
+    s.generals[1]!.charge = generalDefinition('Roca').powers[0]!.cost;
     const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, unitType('Tank'), 1, { x: x, y: 3 }));
-    expect(chooseAbility(s, 1)).toBeNull(); // todos enteros: no vale nada
+    expect(choosePower(s, 1)).toBeNull(); // todos enteros: no vale nada
     for (const tank of tanks) tank.life = 40;
-    const choice = chooseAbility(s, 1)!;
-    expect(choice.ability).toBe('repair');
+    const choice = choosePower(s, 1)!;
+    expect(choice.power).toBe('repair');
     expect(choice.value).toBeGreaterThanOrEqual(AI.GENERALMINVALUE);
   });
 });
@@ -66,9 +66,9 @@ describe('Ambar: suministros', () => {
     const s = blankState(TEST_RULES);
     s.generals = [newGeneral(s, 'Ambar'), null];
     s.generals[0]!.charge = 6;
-    const amount = (generalDefinition('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount;
+    const amount = (generalDefinition('Ambar').powers.find((power) => power.id === 'supplies')!.effect as { amount: number }).amount;
     const before = s.funds[0];
-    const event = useAbility(s, 0, 'supplies')!;
+    const event = usePower(s, 0, 'supplies')!;
     expect(s.funds[0]).toBe(before + amount);
     expect(event.funds).toBe(amount);
   });
@@ -86,10 +86,10 @@ describe('Ambar: suministros', () => {
     s.generals = [null, newGeneral(s, 'Ambar')];
     s.generals[1]!.charge = 4;
     newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
-    const choice = chooseAbility(s, 1)!;
-    expect(choice.ability).toBe('supplies');
+    const choice = choosePower(s, 1)!;
+    expect(choice.power).toBe('supplies');
     expect(choice.value).toBe(
-      (generalDefinition('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount,
+      (generalDefinition('Ambar').powers.find((power) => power.id === 'supplies')!.effect as { amount: number }).amount,
     );
   });
 });

@@ -23,11 +23,11 @@ export type GameEvent =
   | { kind: 'spawn'; uid: number; at: Pos }
   | { kind: 'wait'; uid: number }
   | {
-      kind: 'ability';
+      kind: 'power';
       team: Team;
       general: string;
-      ability: string;
-      /** Casilla elegida (habilidades de area). */
+      power: string;
+      /** Casilla elegida (poderes de area). */
       target?: Pos;
       /** Unidades tocadas y vida que han perdido. */
       hits: { uid: number; damage: number }[];

@@ -4,7 +4,7 @@ import { readContentFiles, validateContent } from '@core/content';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
-import { abilityBlock, chargeStars, generalHitFactor, newGeneral, useAbility } from '@core/generals';
+import { powerBlock, chargeStars, generalHitFactor, newGeneral, usePower } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -32,11 +32,11 @@ describe('generales: datos', () => {
     const files = structuredClone(readContentFiles());
     const general = files.generals[0]!;
     general.passive.push({ kind: 'attack', factor: 1.2, units: ['Dragon'] });
-    general.abilities[0]!.cost = 99;
-    (general.abilities[1]!.effect as { kind: string }).kind = 'nuke';
+    general.powers[0]!.cost = 99;
+    (general.powers[1]!.effect as { kind: string }).kind = 'nuke';
     const errors = validateContent(files);
     expect(errors).toContain('general Brisa: passive.attack.units nombra "Dragon", que no existe');
-    expect(errors.some((error) => error.includes('habilidad recon: cost'))).toBe(true);
+    expect(errors.some((error) => error.includes('poder recon: cost'))).toBe(true);
     expect(errors.some((error) => error.includes('effect.kind "nuke" no existe'))).toBe(true);
   });
 });
@@ -71,8 +71,8 @@ describe('generales: reglas', () => {
     e2.life = 25;
     const far = newUnit(s, unitType('Tank'), 1, { x: 12, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 9, y: 9 });
-    expect(abilityBlock(s, 0, 'airstrike')).toBe('target');
-    const event = useAbility(s, 0, 'airstrike', { x: 10, y: 10 })!;
+    expect(powerBlock(s, 0, 'airstrike')).toBe('target');
+    const event = usePower(s, 0, 'airstrike', { x: 10, y: 10 })!;
     expect(e1.life).toBe(80);
     expect(e2.life).toBe(10); // no baja de minLife
     expect(far.life).toBe(100); // fuera del cuadrado
@@ -82,9 +82,9 @@ describe('generales: reglas', () => {
       { uid: e2.uid, damage: 15 },
     ]);
     expect(chargeStars(s.generals![0]!)).toBe(0); // cuesta la barra entera (6)
-    expect(abilityBlock(s, 0, 'recon')).toBe('used');
+    expect(powerBlock(s, 0, 'recon')).toBe('used');
     endRound(s);
-    expect(abilityBlock(s, 0, 'recon')).toBe('charge'); // nuevo turno, pero sin estrellas no llega
+    expect(powerBlock(s, 0, 'recon')).toBe('charge'); // nuevo turno, pero sin estrellas no llega
   });
 
   it('reconocimiento: ve todo el mapa hasta que acaba la ronda', () => {
@@ -92,7 +92,7 @@ describe('generales: reglas', () => {
     newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 2;
     expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(false);
-    useAbility(s, 0, 'recon');
+    usePower(s, 0, 'recon');
     expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(true);
     expect(visibility(s, 1).at({ x: 15, y: 15 })).toBe(false); // el enemigo no
     endRound(s);
@@ -101,8 +101,8 @@ describe('generales: reglas', () => {
 
   it('sin general no pasa nada', () => {
     const s = blankState(TEST_RULES);
-    expect(abilityBlock(s, 0, 'airstrike', { x: 1, y: 1 })).toBe('noGeneral');
-    expect(useAbility(s, 0, 'airstrike', { x: 1, y: 1 })).toBeNull();
+    expect(powerBlock(s, 0, 'airstrike', { x: 1, y: 1 })).toBe('noGeneral');
+    expect(usePower(s, 0, 'airstrike', { x: 1, y: 1 })).toBeNull();
   });
 
   it('se guarda y se carga; un general que no existe se quita', () => {

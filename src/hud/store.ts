@@ -16,7 +16,7 @@ export type { UIState } from './state';
 export type { Anchor, StatChipVM } from './vm/common';
 export type { IdleVM, MoveTipVM, PickedVM, SelectionVM, SquadVM } from './vm/army';
 export type { CombatSideVM, CombatVM, ForecastVM } from './vm/combat';
-export type { GeneralAbilityVM, GeneralVM } from './vm/general';
+export type { GeneralPowerVM, GeneralVM } from './vm/general';
 export type { LabVM } from './vm/lab';
 export type {
   CampaignItemVM,
@@ -43,8 +43,8 @@ const DEFAULT_ACTIONS: UIActions = {
   labPlay: noop,
   labSet: noop,
   labExit: noop,
-  useAbility: noop,
-  cancelAbility: noop,
+  usePower: noop,
+  cancelPower: noop,
   mainMenuPick: noop,
   mainMenuHover: noop,
   menuPick: noop,

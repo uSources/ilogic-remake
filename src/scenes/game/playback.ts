@@ -1,6 +1,6 @@
 /**
  * Animar lo que ya ha pasado: las reglas cambian el estado y devuelven eventos (GameEvent) y aqui
- * solo se cuentan (moverse, combatir, capturar, comprar, habilidades del general). Lo usan el turno
+ * solo se cuentan (moverse, combatir, capturar, comprar, poderes del general). Lo usan el turno
  * del jugador, el de la IA, su repeticion y el laboratorio.
  *
  * Cada tipo de evento tiene su animacion en `ANIMATORS` (una entrada por tipo, lo exige el tipo):
@@ -10,7 +10,7 @@ import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { MoveType, type UnitType } from '../../core/content';
 import { movementOf, unitAt, unitById } from '../../core/rules';
-import { abilityArea, generalOf } from '../../core/generals';
+import { powerArea, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
@@ -547,7 +547,7 @@ function fallenCopy(stage: EventStage, hit: HitTarget): Phaser.GameObjects.Image
 }
 
 // ---------------------------------------------------------------------------------------------
-// Captura, compra y habilidades
+// Captura, compra y poderes
 // ---------------------------------------------------------------------------------------------
 
 const CAPTURE_PARTIAL_COLOR = '#fff1a8';
@@ -592,8 +592,8 @@ function seenUnit(stage: EventStage, uid: number): Unit | null {
   return unit;
 }
 
-/** Una unidad tocada por la habilidad: explota y enseña lo que pierde. */
-async function abilityHit(stage: EventStage, hit: { uid: number; damage: number }): Promise<void> {
+/** Una unidad tocada por el poder: explota y enseña lo que pierde. */
+async function powerHit(stage: EventStage, hit: { uid: number; damage: number }): Promise<void> {
   const unit = seenUnit(stage, hit.uid);
   if (!unit) return;
   const centerPoint = center(unit);
@@ -603,7 +603,7 @@ async function abilityHit(stage: EventStage, hit: { uid: number; damage: number 
 }
 
 /** Curar: "+N" en verde sobre cada unidad que recupera vida. */
-async function abilityHeal(stage: EventStage, heal: { uid: number; amount: number }): Promise<void> {
+async function powerHeal(stage: EventStage, heal: { uid: number; amount: number }): Promise<void> {
   const unit = seenUnit(stage, heal.uid);
   if (!unit) return;
   const centerPoint = center(unit);
@@ -611,31 +611,31 @@ async function abilityHeal(stage: EventStage, heal: { uid: number; amount: numbe
   await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, `+${heal.amount}`, PAL_CSS.green);
 }
 
-/** Toda el area de la habilidad se ilumina en rojo y la camara tiembla. */
+/** Toda el area de el poder se ilumina en rojo y la camara tiembla. */
 function flashArea(stage: EventStage, target: Pos, radius: number): void {
   for (const pos of squareArea(mapGrid(stage.state), target, radius)) void tileFlash(stage.scene, stage.view, pos, PAL.red);
   stage.scene.cameras.main.shake(220, 0.006);
 }
 
-/** Animacion de una habilidad: el area se ilumina y cada unidad tocada explota y enseña lo que pierde. */
-const animateAbility: Animator<'ability'> = async (stage, event) => {
+/** Animacion de un poder: el area se ilumina y cada unidad tocada explota y enseña lo que pierde. */
+const animatePower: Animator<'power'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward) return;
   const general = generalOf(stage.state, event.team)?.definition;
-  const ability = general?.abilities.find((candidate) => candidate.id === event.ability);
-  const name = ability?.name[settings.lang] ?? event.ability;
+  const power = general?.powers.find((candidate) => candidate.id === event.power);
+  const name = power?.name[settings.lang] ?? event.power;
   // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
   if (event.team !== 0) showToast(`${t('enemy')} · ${general?.name[settings.lang] ?? event.general}: ${name}`);
   const at = event.target ?? stage.view.cursor;
   if (event.target) await stage.lookAt(event.target);
   const centerPoint = center(at);
   void floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 18 }, name, PAL_CSS.gold);
-  const radius = ability ? abilityArea(ability) : null;
+  const radius = power ? powerArea(power) : null;
   if (event.target && radius !== null) flashArea(stage, event.target, radius);
   await Promise.all([
-    ...event.hits.map((hit) => abilityHit(stage, hit)),
-    ...(event.heals ?? []).map((heal) => abilityHeal(stage, heal)),
-    // Dinero: la cantidad, bajo el nombre de la habilidad.
+    ...event.hits.map((hit) => powerHit(stage, hit)),
+    ...(event.heals ?? []).map((heal) => powerHeal(stage, heal)),
+    // Dinero: la cantidad, bajo el nombre de el poder.
     ...(event.funds ? [floatText(stage.scene, stage.view, posOf(centerPoint), `+${fmtNum(event.funds)}`, PAL_CSS.gold)] : []),
   ]);
 };
@@ -651,7 +651,7 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   attack: animateAttack,
   capture: animateCapture,
   spawn: animateSpawn,
-  ability: animateAbility,
+  power: animatePower,
   wait: noAnimation,
 };
 

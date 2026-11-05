@@ -52,7 +52,7 @@
 .gp-charge i.part {
   background: linear-gradient(to right, #b8932a var(--fill), var(--lo) var(--fill));
 }
-.gp-abilities {
+.gp-powers {
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -55,10 +55,10 @@ export interface UIActions {
   minimapJump(at: Pos): void;
 
   // --- General ---
-  /** Usar una habilidad del general (las de area pasan a elegir casilla). */
-  useAbility(id: string): void;
-  /** Dejar de apuntar una habilidad. */
-  cancelAbility(): void;
+  /** Usar un poder del general (los de area pasan a elegir casilla). */
+  usePower(id: string): void;
+  /** Dejar de apuntar un poder. */
+  cancelPower(): void;
 
   // --- Final de la partida y ayuda ---
   endContinue(): void;

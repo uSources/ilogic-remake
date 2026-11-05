@@ -9,7 +9,7 @@ import { unitById, type BuyOption } from '../../../core/rules';
 import type { Building, GameEvent, GameState, Pos, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
 import type { HighlightKind, MapView } from '../../../ui/mapView';
-import type { GeneralAbilities } from '../abilities';
+import type { GeneralPowers } from '../powers';
 import type { GroupSelection } from '../groupSelection';
 import type { HighlightInput, Highlights } from '../highlights';
 import type { MenuInput, MenuModel } from '../menuModel';
@@ -38,7 +38,7 @@ export interface PhaseHost {
   readonly moves: UnitMoves;
   readonly selection: GroupSelection;
   readonly orders: Orders;
-  readonly abilities: GeneralAbilities;
+  readonly powers: GeneralPowers;
   readonly gameMenu: GameMenuChoices;
   /** Entrar en una fase que prepara algo al entrar (su `enter`: abrir su menu...). */
   enter(phase: Phase): void;

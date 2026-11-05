@@ -24,7 +24,7 @@ export interface HighlightInput {
   orderMenuUids: readonly number[] | null;
   /** Unidades a las que se esta dando una orden con destino (fase 'target'). */
   orderingUids: readonly number[] | null;
-  /** Area de la habilidad del general que se apunta en `c`. */
+  /** Area del poder del general que se apunta en `c`. */
   targetArea: (target: Pos) => Pos[];
   group: ReadonlySet<number>;
   inspectUid: number | null;

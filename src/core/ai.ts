@@ -37,7 +37,7 @@ export type { AiCtx } from './ai/context';
 /** Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound). */
 export function* aiTurn(s: GameState, rng: Rng, team: Team = 1): Generator<GameEvent> {
   const ai = aiCtx(team);
-  // [CAMBIO] Primero el general (una habilidad, si merece la pena): ver aiGenerals.ts.
+  // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ai.me);
   const { plan, order } = planFire(s, ai.me);
   ai.plan = plan;

@@ -1,6 +1,6 @@
 /**
  * Generales (generals.json): cada uno tiene una ventaja fija (`passive`), una barra de carga que se
- * llena con el combate y habilidades que la gastan. Las reglas estan en core/generals.ts; aqui solo
+ * llena con el combate y poderes que la gastan. Las reglas estan en core/generals.ts; aqui solo
  * la forma de los datos y su validacion. Ver docs/CONTENIDO.md, "Generales".
  */
 import { type Checker } from './check';
@@ -20,7 +20,7 @@ export interface UnitFilter {
 export type GeneralModifier = ({ kind: 'attack' } | { kind: 'defense' }) & UnitFilter & { factor: number };
 
 /**
- * Lo que hace una habilidad:
+ * Lo que hace un poder:
  * - reveal: el general ve todo el mapa hasta que acaba la ronda.
  * - areaDamage: quita `damage` de vida a las unidades enemigas en un cuadrado de lado 2*radius+1
  *   alrededor de la casilla que se elija; nunca las deja por debajo de `minLife` (no mata).
@@ -33,7 +33,7 @@ export type GeneralEffect =
   | ({ kind: 'heal'; amount: number } & UnitFilter)
   | { kind: 'funds'; amount: number };
 
-export interface GeneralAbilityDef {
+export interface GeneralPowerDef {
   id: string;
   name: Texts;
   description: Texts;
@@ -52,7 +52,7 @@ export interface GeneralDef {
   passive: GeneralModifier[];
   /** Barra: `max` estrellas; se gana 1 por cada `per` de valor (precio × vida perdida / 100) que se hace o se recibe. */
   charge: { max: number; per: number };
-  abilities: GeneralAbilityDef[];
+  powers: GeneralPowerDef[];
   notes?: string;
 }
 
@@ -78,13 +78,13 @@ export function validateGenerals(list: readonly GeneralDef[], unitIds: ReadonlyS
         for (const mv of m?.movement ?? []) s.known(`passive.${m.kind}.movement`, mv, MOVEMENTS);
         for (const u of m?.units ?? []) s.known(`passive.${m.kind}.units`, u, unitIds);
       }
-    const abilityIds = new Set<string>();
-    if (s.expect(Array.isArray(g?.abilities) && g.abilities.length > 0, 'abilities: al menos una habilidad'))
-      for (const a of g.abilities) {
-        const sa = check.scope(`general ${g?.id} · habilidad ${typeof a?.id === 'string' ? a.id : '?'}`);
+    const powerIds = new Set<string>();
+    if (s.expect(Array.isArray(g?.powers) && g.powers.length > 0, 'powers: al menos un poder'))
+      for (const a of g.powers) {
+        const sa = check.scope(`general ${g?.id} · poder ${typeof a?.id === 'string' ? a.id : '?'}`);
         if (sa.id(a?.id)) {
-          sa.expect(!abilityIds.has(a.id), 'id repetido');
-          abilityIds.add(a.id);
+          sa.expect(!powerIds.has(a.id), 'id repetido');
+          powerIds.add(a.id);
         }
         sa.texts('name', a?.name);
         sa.texts('description', a?.description);

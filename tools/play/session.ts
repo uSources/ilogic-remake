@@ -9,7 +9,7 @@ import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
 import { posKey, samePos, seededRng } from '@core/geom';
 import { mapGrid } from '@core/mapGrid';
-import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
+import { powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
   attackFull,
@@ -265,16 +265,16 @@ export class Session {
     return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
   }
 
-  /** Usar una habilidad del general (sin id: lista de habilidades y carga). */
+  /** Usar un poder del general (sin id: lista de poderes y carga). */
   private power(id: string, target: { x: number; y: number } | null): string {
     const general = generalOf(this.s, 0);
     if (!general) throw new UsageError('no tienes general (--general Brisa)');
-    const list = general.definition.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
+    const list = general.definition.powers.map((power) => `${power.id} (${power.cost})`).join(', ');
     if (!id)
-      return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
-    const block = abilityBlock(this.s, 0, id, target);
-    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (habilidades: ${list})`);
-    return describe(this.s, useAbility(this.s, 0, id, target)!);
+      return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
+    const block = powerBlock(this.s, 0, id, target);
+    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (poderes: ${list})`);
+    return describe(this.s, usePower(this.s, 0, id, target)!);
   }
 
   /** Fin del turno propio (o la IA juega por ti con `ai`), turno enemigo y fin de ronda. */
@@ -328,8 +328,8 @@ function describe(s: GameState, event: GameEvent): string {
       return `${name(event.uid)} sube a ${name(event.into)}`;
     case 'wait':
       return `${name(event.uid)} espera`;
-    case 'ability':
-      return `general ${event.general} usa ${event.ability}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+    case 'power':
+      return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
   }
 }
 
@@ -347,7 +347,7 @@ const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   capture <id>             capturar el edificio de debajo
   wait <id>                terminar con la unidad
   buy <x> <y> <Tipo>       comprar en un edificio tuyo (Soldier, Tank...; sin tipo, lista)
-  power [id] [x y]         habilidad del general (con --general; sin id, carga y lista)
+  power [id] [x y]         poder del general (con --general; sin id, carga y lista)
   end                      fin de turno: juega la IA enemiga y empieza el dia siguiente
   ai                       la IA juega tu turno y el enemigo el suyo
   status                   dia, dinero, edificios y unidades

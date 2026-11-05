@@ -4,8 +4,8 @@ export interface GeneralState {
   id: string;
   /** Carga de la barra, en estrellas (puede tener decimales; se enseña redondeada hacia abajo). */
   charge: number;
-  /** Ya ha usado una habilidad este turno (una por turno). */
+  /** Ya ha usado un poder este turno (uno por turno). */
   used: boolean;
-  /** Ve todo el mapa hasta que acabe la ronda (habilidad reveal). */
+  /** Ve todo el mapa hasta que acabe la ronda (poder reveal). */
   reveal: boolean;
 }

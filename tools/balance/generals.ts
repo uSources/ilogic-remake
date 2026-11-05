@@ -2,7 +2,7 @@
  * Cuanto aporta un general: la IA con el general A contra la IA con B (o sin general) en los mismos
  * mapas, dos partidas por mapa con los bandos cambiados. La IA a menudo no acaba la partida: al dia
  * 60 gana quien tenga mas puntos (como con limite de dias: ejercito + 1000 por edificio). Cuenta
- * victorias (y cuantas fueron por puntos), empates y cuantas veces usa cada habilidad.
+ * victorias (y cuantas fueron por puntos), empates y cuantas veces usa cada poder.
  *
  *   npm run generals -- --a Roca                 Roca contra sin general, 40 mapas (80 partidas)
  *   npm run generals -- --a Roca --b Brisa       Roca contra Brisa
@@ -43,8 +43,7 @@ function play(seed: number, g0: string, g1: string, uses: Map<string, number>): 
   while (outcome(s) === 'playing' && s.day <= 60) {
     for (const team of [0, 1] as const) {
       for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {
-        if (event.kind === 'ability')
-          uses.set(`${event.general}.${event.ability}`, (uses.get(`${event.general}.${event.ability}`) ?? 0) + 1);
+        if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);
         if (outcome(s) !== 'playing') break;
       }
       if (outcome(s) !== 'playing') break;
@@ -83,5 +82,5 @@ if (json) {
   console.log(`${challenger} contra ${rival}: ${games} partidas en ${maps} mapas (desde ${from})`);
   console.log(`  gana ${challenger}: ${winsA}, gana ${rival}: ${winsB}, empates: ${draws} (${byScore} decididas por puntos al dia 60)`);
   console.log(`  ${challenger} se lleva el ${Math.round(winRate * 100)} % (±${Math.round(margin * 100)})`);
-  for (const [ability, count] of uses) console.log(`  ${ability}: ${count} veces (${(count / games).toFixed(1)} por partida)`);
+  for (const [power, count] of uses) console.log(`  ${power}: ${count} veces (${(count / games).toFixed(1)} por partida)`);
 }

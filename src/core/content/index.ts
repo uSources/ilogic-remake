@@ -41,7 +41,7 @@ export type { TerrainType } from './terrain';
 export type { TerrainChance, Theme, ThemeDef, ThemeGenerator } from './themes';
 export type { UnitAttack, UnitType } from './units';
 export type { WeatherDef, WeatherType } from './weather';
-export type { GeneralAbilityDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';
+export type { GeneralPowerDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';
 
 /** Lee los ficheros JSON del juego (sin validar). */
 export function readContentFiles(): Content {

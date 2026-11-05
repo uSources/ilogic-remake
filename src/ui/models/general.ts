@@ -1,11 +1,11 @@
-import { abilityBlock, chargeStars, generalOf, type AbilityBlock } from '../../core/generals';
+import { powerBlock, chargeStars, generalOf, type PowerBlock } from '../../core/generals';
 import type { GameState, Team } from '../../core/model';
 import type { GeneralVM } from '../../hud/store';
 import { settings, t, type TextKey } from '../../settings';
 
-const BLOCK_TEXT: Partial<Record<AbilityBlock, TextKey>> = { used: 'genUsed', charge: 'genCharge' };
+const BLOCK_TEXT: Partial<Record<PowerBlock, TextKey>> = { used: 'genUsed', charge: 'genCharge' };
 
-/** Panel del general de un bando (null si no tiene). `targeting`: habilidad que se esta apuntando. */
+/** Panel del general de un bando (null si no tiene). `targeting`: poder que se esta apuntando. */
 export function generalVM(s: GameState, team: Team, targeting: string | null): GeneralVM | null {
   const general = generalOf(s, team);
   if (!general) return null;
@@ -20,16 +20,16 @@ export function generalVM(s: GameState, team: Team, targeting: string | null): G
     max: general.definition.charge.max,
     fraction: stars >= general.definition.charge.max ? 0 : general.state.charge - stars,
     targeting,
-    abilities: general.definition.abilities.map((ability) => {
+    powers: general.definition.powers.map((power) => {
       // 'target' solo dice que falta elegir casilla: se puede usar.
-      const block = abilityBlock(s, team, ability.id, { x: 0, y: 0 });
+      const block = powerBlock(s, team, power.id, { x: 0, y: 0 });
       const text = block ? BLOCK_TEXT[block] : undefined;
       return {
-        id: ability.id,
-        icon: `ui/ab_${ability.id}`,
-        name: ability.name[lang],
-        description: ability.description[lang],
-        cost: ability.cost,
+        id: power.id,
+        icon: `ui/ab_${power.id}`,
+        name: power.name[lang],
+        description: power.description[lang],
+        cost: power.cost,
         ready: block === null,
         reason: text ? t(text) : null,
       };

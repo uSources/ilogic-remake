@@ -1,6 +1,6 @@
 /**
  * Fase 'target': elegir una casilla en el mapa para una orden con destino (Orders.ordering) o para
- * la habilidad del general que se apunta (GeneralAbilities.targeting).
+ * el poder del general que se apunta (GeneralPowers.targeting).
  */
 
 import { posKey } from '../../../core/geom';
@@ -10,7 +10,7 @@ export const targetPhase: PhaseHandler = {
   accept: (host) => {
     const cursor = host.view.cursor;
     if (host.orders.ordering) return void host.orders.place(cursor);
-    void host.abilities.fire(cursor);
+    void host.powers.fire(cursor);
   },
   back: (host) => {
     const fromUnitMenu = !!host.orders.ordering?.single;

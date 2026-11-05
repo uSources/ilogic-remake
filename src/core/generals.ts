@@ -6,14 +6,14 @@
  *   contra ellas (defense). hitChance la aplica, asi que la prevision y la IA la ven sin saberlo;
  * - una barra de carga: gana una estrella por cada `charge.per` de valor (precio × vida / 100) que
  *   hace o recibe en combate;
- * - habilidades que gastan carga, una por turno: ver todo el mapa (reveal), daño en un area
+ * - poderes que gastan carga, una por turno: ver todo el mapa (reveal), daño en un area
  *   (areaDamage, nunca mata), curar a sus unidades (heal) o conseguir dinero (funds).
  *
  * Este modulo no importa rules.ts (rules.ts lo importa a el).
  */
 import { unitTypeOf } from './gameContent';
 import type { DeepReadonly } from './util/freeze';
-import { findEntry, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
+import { findEntry, type GeneralPowerDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
 import { mapGrid } from './mapGrid';
@@ -72,54 +72,54 @@ export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, t
   addCharge(s, defender.team, defenderValueLost + attackerValueLost);
 }
 
-/** El bando ve todo el mapa (habilidad reveal activa). */
+/** El bando ve todo el mapa (poder reveal activa). */
 export const revealsAll = (s: GameState, team: Team): boolean => !!s.generals?.[team]?.reveal;
 
 /** Estrellas enteras de la barra. */
 export const chargeStars = (generalState: GeneralState): number => Math.floor(generalState.charge + 1e-9);
 
-export type AbilityBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target';
+export type PowerBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target';
 
-/** Por que no se puede usar ahora una habilidad (null = se puede). `target` hace falta en las de area. */
-export function abilityBlock(s: GameState, team: Team, abilityId: string, target?: Pos | null): AbilityBlock | null {
+/** Por que no se puede usar ahora un poder (null = se puede). `target` hace falta en los de area. */
+export function powerBlock(s: GameState, team: Team, powerId: string, target?: Pos | null): PowerBlock | null {
   const general = generalOf(s, team);
   if (!general) return 'noGeneral';
-  const ability = general.definition.abilities.find((candidate) => candidate.id === abilityId);
-  if (!ability) return 'unknown';
+  const power = general.definition.powers.find((candidate) => candidate.id === powerId);
+  if (!power) return 'unknown';
   if (general.state.used) return 'used';
-  if (chargeStars(general.state) < ability.cost) return 'charge';
-  if (ability.effect.kind === 'areaDamage' && !target) return 'target';
+  if (chargeStars(general.state) < power.cost) return 'charge';
+  if (power.effect.kind === 'areaDamage' && !target) return 'target';
   return null;
 }
 
-/** Radio del area de una habilidad (null si no es de area). */
-export function abilityArea(ability: DeepReadonly<GeneralAbilityDef>): number | null {
-  return ability.effect.kind === 'areaDamage' ? ability.effect.radius : null;
+/** Radio del area de un poder (null si no es de area). */
+export function powerArea(power: DeepReadonly<GeneralPowerDef>): number | null {
+  return power.effect.kind === 'areaDamage' ? power.effect.radius : null;
 }
 
-/** Lo que ha hecho una habilidad, para su evento. */
-interface AbilityEffects {
+/** Lo que ha hecho un poder, para su evento. */
+interface PowerEffects {
   hits: { uid: number; damage: number }[];
   heals: { uid: number; amount: number }[];
   funds: number;
 }
 
-/** Lo que necesita el efecto de una habilidad para aplicarse. */
+/** Lo que necesita el efecto de un poder para aplicarse. */
 interface EffectContext<K extends GeneralEffect['kind']> {
   s: GameState;
   team: Team;
   general: GeneralState;
   effect: Extract<DeepReadonly<GeneralEffect>, { kind: K }>;
-  /** Casilla elegida (solo en las de area, que no se pueden usar sin ella: ver abilityBlock). */
+  /** Casilla elegida (solo en los de area, que no se pueden usar sin ella: ver powerBlock). */
   target: Pos | null | undefined;
-  out: AbilityEffects;
+  out: PowerEffects;
 }
 
 /**
- * Que hace cada clase de habilidad (generals.json, "effect.kind"). Una clase nueva es una entrada
+ * Que hace cada clase de poder (generals.json, "effect.kind"). Una clase nueva es una entrada
  * mas aqui (y su forma en content/generals.ts).
  */
-const ABILITY_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>) => void } = {
+const POWER_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>) => void } = {
   reveal: ({ general }) => {
     general.reveal = true;
   },
@@ -150,26 +150,26 @@ const ABILITY_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K
 };
 
 function applyEffect<K extends GeneralEffect['kind']>(context: EffectContext<K>): void {
-  (ABILITY_EFFECTS[context.effect.kind] as (context: EffectContext<K>) => void)(context);
+  (POWER_EFFECTS[context.effect.kind] as (context: EffectContext<K>) => void)(context);
 }
 
 /**
- * Usa una habilidad: gasta la carga, la marca como usada este turno y aplica el efecto.
- * Devuelve el evento para animarlo, o null si no se puede (ver abilityBlock).
+ * Usa un poder: gasta la carga, la marca como usado este turno y aplica el efecto.
+ * Devuelve el evento para animarlo, o null si no se puede (ver powerBlock).
  */
-export function useAbility(s: GameState, team: Team, abilityId: string, target?: Pos | null): GameEventOf<'ability'> | null {
-  if (abilityBlock(s, team, abilityId, target)) return null;
+export function usePower(s: GameState, team: Team, powerId: string, target?: Pos | null): GameEventOf<'power'> | null {
+  if (powerBlock(s, team, powerId, target)) return null;
   const general = generalOf(s, team)!;
-  const ability = general.definition.abilities.find((candidate) => candidate.id === abilityId)!;
-  general.state.charge = Math.max(0, general.state.charge - ability.cost);
+  const power = general.definition.powers.find((candidate) => candidate.id === powerId)!;
+  general.state.charge = Math.max(0, general.state.charge - power.cost);
   general.state.used = true;
-  const out: AbilityEffects = { hits: [], heals: [], funds: 0 };
-  applyEffect({ s, team, general: general.state, effect: ability.effect, target, out });
+  const out: PowerEffects = { hits: [], heals: [], funds: 0 };
+  applyEffect({ s, team, general: general.state, effect: power.effect, target, out });
   return {
-    kind: 'ability',
+    kind: 'power',
     team,
     general: general.definition.id,
-    ability: ability.id,
+    power: power.id,
     ...(target ? { target: posOf(target) } : {}),
     hits: out.hits,
     ...(out.heals.length ? { heals: out.heals } : {}),
@@ -177,7 +177,7 @@ export function useAbility(s: GameState, team: Team, abilityId: string, target?:
   };
 }
 
-/** Al acabar la ronda: se puede volver a usar una habilidad y se acaba el reconocimiento. */
+/** Al acabar la ronda: se puede volver a usar un poder y se acaba el reconocimiento. */
 export function generalsNewRound(s: GameState): void {
   for (const general of s.generals ?? []) {
     if (!general) continue;

@@ -107,7 +107,7 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
   { id: 'captures', run: (s) => dropStaleCaptures(s) },
   // Las unidades vuelven a poder actuar en la ronda nueva.
   { id: 'refresh', run: refreshUnits },
-  // Los generales pueden volver a usar una habilidad y se acaba el reconocimiento.
+  // Los generales pueden volver a usar un poder y se acaba el reconocimiento.
   { id: 'generals', run: (s) => generalsNewRound(s) },
   // Ingresos de los edificios y cura de las unidades propias encima.
   { id: 'buildings', run: collectAndHeal },
