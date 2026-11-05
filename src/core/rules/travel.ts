@@ -1,7 +1,8 @@
 /**
  * Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»): a donde se puede viajar, el paso de cada
- * turno y como acaba. Las acciones 'travel' y 'travelStep' (actions/movement.ts) los usan, y las que
- * mueven a mano (mover, unirse, subir, atacar) acaban el viaje con `endTravel`.
+ * turno y como acaba. Las acciones 'travel' y 'travelStep' (actions/movement.ts) los usan; las que
+ * la mueven a mano (mover, unirse, subir y atacar si aun no se ha movido) y dar una orden permanente
+ * acaban el viaje con `endTravel`.
  */
 import { samePos } from '../geom';
 import type { ActionRejection, GameEvent, GameState, Pos, TeamId, TravelEnd, Unit } from '../model';
@@ -50,7 +51,8 @@ const travelEndEvent = (team: TeamId, unit: Unit, end: TravelEnd): GameEvent => 
 
 /**
  * Acaba el viaje de la unidad, si lo llevaba (ya no viaja): su suceso, o ninguno. Lo usan las acciones
- * que la mueven a mano ('cancelled') y el paso del viaje (al llegar o con emboscada).
+ * que la mueven a mano ('cancelled'), dar una orden permanente ('ordered', giveStandingOrder) y el
+ * paso del viaje (al llegar o con emboscada).
  */
 export function endTravel(team: TeamId, unit: Unit, end: TravelEnd = 'cancelled'): GameEvent[] {
   if (!unit.travelTo) return [];

@@ -209,20 +209,25 @@ describe('partida guardada con el formato 4', () => {
     expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
   });
 
-  it('los contadores (nextUid, nextSquadId) solo valen enteros validos: 1e300, Infinity o 3,5, no', () => {
+  /** La partida del formato 4 con `nextUid` y `nextSquadId` escritos a mano (como un fichero roto). */
+  const withCounters = (written: string) => {
     const s = loadGame(fixture('skirmish-v4'))!;
-    const highestUid = Math.max(...s.units.map((unit) => unit.uid));
-    const json = serialize(s);
-    // Infinity no cabe en JSON (sale null): se escribe a mano, como lo haria un fichero roto.
-    for (const broken of ['1e300', '3.5', 'Infinity', 'null', '-4']) {
-      const raw = json.replace(/"nextUid":\d+/, `"nextUid":${broken}`).replace(/"nextSquadId":\d+/, `"nextSquadId":${broken}`);
-      const back = readSave(raw, saveContext(s.content));
-      if (broken === 'Infinity') {
-        expect(back.ok).toBe(false);
-        continue;
-      }
-      expect(back.ok && [back.state.nextUid, back.state.nextSquadId]).toEqual([highestUid + 1, 3]);
+    const json = serialize(s)
+      .replace(/"nextUid":\d+/, `"nextUid":${written}`)
+      .replace(/"nextSquadId":\d+/, `"nextSquadId":${written}`);
+    return { s, read: readSave(json, saveContext(s.content)) };
+  };
+
+  it('los contadores rotos (1e300, 3,5, -4, null) se arreglan: el mayor que hay + 1', () => {
+    for (const broken of ['1e300', '3.5', '-4', 'null']) {
+      const { s, read } = withCounters(broken);
+      const highestUid = Math.max(...s.units.map((unit) => unit.uid));
+      expect(read.ok && [read.state.nextUid, read.state.nextSquadId]).toEqual([highestUid + 1, 3]);
     }
+  });
+
+  it('con Infinity el fichero no es JSON: no se lee', () => {
+    expect(withCounters('Infinity').read).toEqual({ ok: false, error: 'notJson' });
   });
 });
 

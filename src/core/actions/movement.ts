@@ -92,6 +92,8 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const unit = checkedUnit(s, action.uid);
       if (!action.to) return endTravel(team, unit);
       // Un viaje manda sobre la orden permanente propia que llevara: es lo ultimo que se le ha dicho.
+      // Solo la propia se quita (y se cuenta): la de su escuadra sigue siendo de la escuadra, y
+      // mientras viaja no la sigue (effectiveStandingOrder: el viaje manda), asi que no cambia nada.
       const orderDropped = unit.standingOrder ? [standingOrderDroppedEvent(team, unit)] : [];
       delete unit.standingOrder;
       unit.travelTo = posOf(action.to);

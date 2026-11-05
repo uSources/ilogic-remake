@@ -94,25 +94,27 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
   siguiente (solo 'move' la deja abierta: `keepsUndoWindow` en su entrada del registro; el paso de
   un viaje no, para que no sea un movimiento gratis; dispatch la cierra tras las demas con
-  `closeUndoWindow`, de `rules/lastMove.ts`, donde esta tambien por que no se puede deshacer) o hasta que su unidad deja de estar recien movida (la invariante
-  `undoWindow`: el fin de ronda, si cae). Si al moverse descubrio enemigos
-  (`lastMove.revealed`), no se deshace (`'revealed'`): con niebla seria mirar gratis. «Atras» del
-  menu de la unidad solo manda `undoMove` (y avisa si el nucleo dice `'revealed'`). Ctrl+Z todavia
-  no: guarda en la escena una pila de partidas enteras de antes de cada movimiento, solo apunta una
-  si `undoMove` valdria en ese momento, y la vacia con cualquier suceso fuera de `KEEPS_UNDO`
-  (`GameScene.ts`); al deshacer, vuelve a esa copia. Juntar los dos en un solo deshacer del nucleo es
-  de la fase 4.
+  `closeUndoWindow`, de `rules/lastMove.ts`, donde esta tambien por que no se puede deshacer) o
+  hasta que su unidad deja de estar recien movida (la invariante `undoWindow`: el fin de ronda, si
+  cae). Si al moverse descubrio enemigos (`lastMove.revealed`), no se deshace (`'revealed'`): con
+  niebla seria mirar gratis. «Atras» del menu de la unidad solo manda `undoMove` (y avisa si el
+  nucleo dice `'revealed'`). Ctrl+Z todavia no: guarda en la escena una pila de partidas enteras de
+  antes de cada movimiento, solo apunta una si `undoMove` valdria en ese momento, y la vacia con
+  cualquier suceso fuera de `KEEPS_UNDO` (`GameScene.ts`); al deshacer, vuelve a esa copia. Juntar
+  los dos en un solo deshacer del nucleo es de la fase 4.
 - Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»; reglas en `rules/travel.ts`): 'travel'
   pone el destino (una casilla que la unidad pueda pisar, a la que no llegue ya este turno
   —`'withinReach'`: para eso se mueve— y hacia la que pueda dar ya un paso: `travelProblem`) o lo
-  quita (`'noTravel'` si no viajaba), y 'travelStep' da el paso de cada turno, hacia la casilla del alcance
-  que mas acerca (`travelStepOf`). Si ya esta en el destino o llega este turno, el viaje acaba sin
-  moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); una emboscada por
-  el camino tambien lo acaba. Moverla a mano ('move', 'load', 'merge', y 'attack' sin haberse movido
-  aun) lo acaba con `endTravel`; capturar, esperar o atacar despues del paso del viaje, no. Un viaje y una orden permanente se quitan el uno al otro, y
-  cada uno lo cuenta (el viaje que acaba con `end: 'ordered'`; la orden, con `order: null`). Cada fin tiene su suceso 'travel' con `to: null` y por que
-  (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o 'ambush'), y la escena avisa «llega» solo con
-  'withinReach'. La escena solo manda 'travel' y 'travelStep' (al dar la orden y al empezar el turno).
+  quita (`'noTravel'` si no viajaba), y 'travelStep' da el paso de cada turno, hacia la casilla del
+  alcance que mas acerca (`travelStepOf`). Si ya esta en el destino o llega este turno, el viaje
+  acaba sin moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); una
+  emboscada por el camino tambien lo acaba. Moverla a mano ('move', 'load', 'merge', y 'attack' sin
+  haberse movido aun) lo acaba con `endTravel`; capturar, esperar o atacar despues del paso del
+  viaje, no. Un viaje y una orden permanente se quitan el uno al otro, y cada uno lo cuenta (el
+  viaje que acaba con `end: 'ordered'`; la orden, con `order: null`). Cada fin tiene su suceso
+  'travel' con `to: null` y por que (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o
+  'ambush'), y la escena avisa «llega» solo con 'withinReach'. La escena solo manda 'travel' y
+  'travelStep' (al dar la orden y al empezar el turno).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
