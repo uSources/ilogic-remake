@@ -41,12 +41,3 @@ export function freeKey(s: GameState, team: TeamId): number | undefined {
 export function squadByKey(s: GameState, team: TeamId, key: number): Squad | undefined {
   return squadsOfTeam(s, team).find((squad) => squad.key === key);
 }
-
-/** Da tecla a las escuadras que no tienen (partidas de antes, o cuando se libera una): la primera libre de su equipo. */
-export function assignKeys(s: GameState): void {
-  for (const squad of s.squads ?? []) {
-    if (squad.key !== undefined) continue;
-    const key = freeKey(s, squad.team);
-    if (key !== undefined) squad.key = key;
-  }
-}

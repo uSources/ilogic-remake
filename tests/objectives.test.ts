@@ -6,6 +6,7 @@ import { buildMission, MISSIONS } from '@core/missions';
 import { isValidObjective, measureObjective, objectiveOutcome } from '@core/objectives';
 import { isDefeated, objectiveProgress, outcome } from '@core/rules';
 import { teamIds } from '@core/teams';
+import { mapGrid } from '@core/mapGrid';
 import type { GameState } from '@core/model';
 import { BLANK_DICE_SEED } from './helpers';
 
@@ -106,12 +107,13 @@ describe('objetivos de mision', () => {
 describe('objetivo de una partida guardada: cada tipo comprueba sus campos', () => {
   it('isValidObjective', () => {
     const s = buildMission(MISSIONS[0]!, defaultContent(), BLANK_DICE_SEED);
-    expect(isValidObjective(s, { kind: 'hq' })).toBe(true);
-    expect(isValidObjective(s, { kind: 'survive', days: 5 })).toBe(true);
-    expect(isValidObjective(s, { kind: 'survive', days: 0 })).toBe(false);
-    expect(isValidObjective(s, { kind: 'capture', count: 3, type: 'City', days: 9 })).toBe(true);
-    expect(isValidObjective(s, { kind: 'capture', count: 3, type: 'Castle', days: 9 })).toBe(false);
-    expect(isValidObjective(s, { kind: 'escort', uid: 1, to: { x: -1, y: 0 }, days: 9 })).toBe(false);
-    expect(isValidObjective(s, { kind: 'conquer' })).toBe(false);
+    const where = { content: s.content, board: mapGrid(s) };
+    expect(isValidObjective(where, { kind: 'hq' })).toBe(true);
+    expect(isValidObjective(where, { kind: 'survive', days: 5 })).toBe(true);
+    expect(isValidObjective(where, { kind: 'survive', days: 0 })).toBe(false);
+    expect(isValidObjective(where, { kind: 'capture', count: 3, type: 'City', days: 9 })).toBe(true);
+    expect(isValidObjective(where, { kind: 'capture', count: 3, type: 'Castle', days: 9 })).toBe(false);
+    expect(isValidObjective(where, { kind: 'escort', uid: 1, to: { x: -1, y: 0 }, days: 9 })).toBe(false);
+    expect(isValidObjective(where, { kind: 'conquer' })).toBe(false);
   });
 });

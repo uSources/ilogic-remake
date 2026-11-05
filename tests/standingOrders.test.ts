@@ -6,6 +6,7 @@ import { manhattan, posOf } from '@core/geom';
 import { newUnit } from '@core/rules';
 import { availableActions } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
+import { SAVE_VERSION } from '@core/saveVersion';
 import {
   SQUAD_NAME_MAX,
   squadByKey,
@@ -542,17 +543,20 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     expect(squadByKey(s, 0, 2)).toBeUndefined();
   });
 
-  it('las partidas de antes dan tecla a sus escuadras al cargar, sin repetir', () => {
+  it('las partidas de antes (formato 3) dan tecla a sus escuadras al cargar, sin repetir', () => {
     const s = world();
     const first = newUnit(s, SOLDIER, 0, { x: 1, y: 1 }),
       second = newUnit(s, SOLDIER, 0, { x: 1, y: 2 });
     formSquad(s, 0, [first]);
     formSquad(s, 0, [second]);
     for (const squad of s.squads!) delete squad.key;
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
-    expect(back.squads!.map((squad) => squad.key)).toEqual([1, 2]);
+    const asFormat3 = () => serialize(s).replace(`"version":${SAVE_VERSION}`, '"version":3');
+    const keysAfterLoading = (json: string) => deserialize(json, saveContext(defaultContent()))!.squads!.map((squad) => squad.key);
+    expect(keysAfterLoading(asFormat3())).toEqual([1, 2]);
     s.squads![0]!.key = 4;
     s.squads![1]!.key = 4;
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.squads!.map((squad) => squad.key)).toEqual([4, 1]);
+    expect(keysAfterLoading(asFormat3())).toEqual([4, 1]);
+    // Desde el formato 4 leer no cambia las escuadras: una tecla repetida se queda sin tecla.
+    expect(keysAfterLoading(serialize(s))).toEqual([4, undefined]);
   });
 });

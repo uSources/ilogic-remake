@@ -251,6 +251,34 @@ function format3TurnState(unit: Record<string, unknown>): string {
   return unit.canMove ? 'ready' : 'moved';
 }
 
+/*
+ * Paso del formato 3: al leer una partida se le daban teclas de grupo a las escuadras que no tenian
+ * (o la tenian repetida en su equipo): la primera libre de su equipo, en orden. Desde el 4 leer no
+ * cambia las escuadras; las partidas de antes se ponen asi una vez, con esta copia fija.
+ */
+
+/** Teclas de grupo que habia en el formato 3 (1-9). */
+const FORMAT_3_SQUAD_KEYS = 9;
+
+/** Las escuadras del formato 3 sin tecla repetida en su equipo, y con la primera libre las que no tienen. */
+function format3SquadKeys(raw: Record<string, unknown>): void {
+  const squads = listOf(raw.squads).filter(isObject);
+  const taken = new Set<string>();
+  const keyOf = (squad: Record<string, unknown>, key: unknown) => `${String(squad.team)}:${String(key)}`;
+  const isKey = (key: unknown) => typeof key === 'number' && Number.isInteger(key) && key >= 1 && key <= FORMAT_3_SQUAD_KEYS;
+  for (const squad of squads) {
+    if (isKey(squad.key) && !taken.has(keyOf(squad, squad.key))) taken.add(keyOf(squad, squad.key));
+    else delete squad.key;
+  }
+  for (const squad of squads) {
+    if (squad.key !== undefined) continue;
+    const free = Array.from({ length: FORMAT_3_SQUAD_KEYS }, (_, index) => index + 1).find((key) => !taken.has(keyOf(squad, key)));
+    if (free === undefined) continue;
+    squad.key = free;
+    taken.add(keyOf(squad, free));
+  }
+}
+
 /** Los pasos, del mas antiguo al mas nuevo. */
 export const MIGRATIONS: readonly SaveMigration[] = [
   {
@@ -336,6 +364,13 @@ export const MIGRATIONS: readonly SaveMigration[] = [
       for (const squad of listOf(raw.squads)) if (isObject(squad)) squad.team = 0;
       if (isObject(raw.mission)) raw.mission.team = 0;
     },
+  },
+  {
+    // Hasta el formato 3 leer una partida daba tecla a sus escuadras; desde el 4, leer no las cambia.
+    name: 'teclas de grupo de las escuadras',
+    upToVersion: 3,
+    stage: 'read',
+    apply: (raw) => format3SquadKeys(raw),
   },
   {
     // Hasta el formato 3 los dados no iban en la partida; desde el 4, `dice` (ver core/dice.ts).
