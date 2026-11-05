@@ -16,8 +16,8 @@ npm run balance -- duel --terrain Woods                             # unidad con
 ```
 
 Como leerlo y decidir:
-- Victorias por bando cerca del 50 % (el bando 0 mueve primero; el mapa se sortea). Mirar tambien
-  `--swap` (bandos cambiados en el mismo mapa) para descartar ventaja del mapa.
+- Victorias por equipo cerca del 50 % (el equipo 0 mueve primero; el mapa se sortea). Mirar tambien
+  `--swap` (equipos cambiados en el mismo mapa) para descartar ventaja del mapa.
 - Por unidad: compradas, valor destruido / valor perdido. Una unidad que nadie compra o que gana
   siempre es la candidata. Cambiar **una cosa cada vez** y comparar con la linea base.
 - Partidas que acaban por limite de dias = demasiado defensivo.

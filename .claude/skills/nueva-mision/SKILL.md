@@ -10,14 +10,17 @@ congelada, en orden: cada una se desbloquea al pasar la anterior). Una mision es
 solo lectura):
 
 - `id` (unico, no cambiarlo despues: el progreso guardado lo usa), `title` y `brief` en `{ es, en }`.
-- `theme` 0..4 (llanura, desierto, bosque, pantano, nieve).
-- `map`: lineas de texto, cuadrado. Caracteres: `.` suelo, `T` bosque, `M` montaña/acantilado,
-  `*` decorado (flores, cactus, muñeco segun tema), `~` agua, `,` agua poco profunda, `=` profunda,
-  `i` hielo, `P` pinos nevados, `N` roca nevada. (`TERRAIN_BY_THEME`/`TERRAIN_IN_ANY_THEME` en src/core/missions.ts.)
-- `buildings`: `[tipo, dueño (0 tu, 1 enemigo, null neutral), x, y]`. Cada bando necesita su `Base`.
-- `units`: `[tipo, bando, x, y, vida?]`.
-- `funds`: `[tuyo, enemigo]`. `rules`: cambios a las reglas (niebla, limite de dias...).
-- `objective`: `hq` | `survive` (dias) | `capture` (cuantos, tipo o null, dias) | `destroy` (dias) |
+- `theme`: id de un tema de `src/core/content/themes.json` (`'Plains'`, `'Desert'`, `'Forest'`,
+  `'Swamp'`, `'Snowy'`).
+- `map`: lineas de texto, cuadrado. Las letras que dependen del tema las da su `mapLetters`
+  (themes.json: `.` suelo, `T` bosque, `M` montaña/acantilado, `*` decorado); las demas, el
+  `mapLetter` de cada terreno (terrain.json: `~` agua, `,` poco profunda, `=` profunda, `i` hielo,
+  `P` pinos nevados, `N` roca nevada). Lo resuelve `terrainOf` (src/core/missions.ts).
+- `teams`: los equipos en orden, `{ controller: 'human' | 'ai', funds, alliance? }`; su puesto es el
+  numero de equipo de `buildings` y `units`. Hoy las misiones son una persona (el 0) contra la IA.
+- `buildings`: `[tipo, dueño (numero de equipo o null neutral), x, y]`. Cada equipo necesita su `Base`.
+- `units`: `[tipo, equipo, x, y, vida?]`. `rules`: cambios a las reglas (niebla, limite de dias...).
+- `objective` (del equipo de la persona: `mission.team` en la partida): `hq` | `survive` (dias) | `capture` (cuantos, tipo o null, dias) | `destroy` (dias) |
   `escort` (indice de la unidad en `units`, destino, dias).
 
 Comprobar:

@@ -137,7 +137,8 @@ Se definen en ficheros de configuracion, sin tocar codigo: `src/core/content/uni
 movimiento, daño contra cada unidad, quien la fabrica...), `buildings.json`, `terrain.json` (defensa y
 coste de movimiento), `rules.json` (reglas por defecto) y `ai.json` (pesos de la IA). El editor los
 autocompleta con su esquema y el juego dice que esta mal si hay un error. Para una unidad nueva:
-`npm run unit -- new <Id> --like <Parecida>`. Guia: [docs/CONTENIDO.md](docs/CONTENIDO.md).
+`npm run unit -- new <Id> --like <Parecida>`. Los temas de mapa y el generador de mapas al azar
+estan en `themes.json` y `mapgen.json`. Guia: [docs/CONTENIDO.md](docs/CONTENIDO.md).
 
 ## Estructura
 
@@ -145,11 +146,13 @@ autocompleta con su esquema y el juego dice que esta mal si hay un error. Para u
 src/
   core/        Logica del juego en TypeScript puro (sin Phaser): se puede probar con tests
                y reutilizar, por ejemplo, en un servidor para partidas online.
-    content/     Unidades, edificios, terreno, reglas e IA en JSON + su validacion: ver docs/CONTENIDO.md
+    content/     Unidades, edificios, terreno, temas, mapas al azar, reglas e IA en JSON + su validacion
+                 y sus tipos resueltos (UnitType, TerrainType...): ver docs/CONTENIDO.md
     model/       Modelo de datos de la partida (GameState, Unit, Building, GameEvent...), sin dependencias
     rulesConfig.ts  rulesWith(contenido, cambios): las reglas de una partida
-    data.ts      Constantes que no son contenido (tamaños de mapa, vida); mapgenTables.ts: tablas del generador
-    gameContent.ts  El contenido de cada partida (tablesOf, weightsOf, contentOf); gameState.ts: newGameState
+    data.ts      Constantes que no son contenido (tamaños de mapa, vida)
+    gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
+    teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)
     defaultGames.ts Partidas con el contenido del juego (createGame, loadGame, saveContext)
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)

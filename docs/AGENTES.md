@@ -40,7 +40,7 @@ npm run play -- --seed 7          # interactivo (help)
 ```
 
 Mapa en texto con coordenadas; `+01` unidades propias, `-04` enemigas; `end` hace jugar a la IA y
-pasa el dia; `ai` juega los dos bandos; `state` da el JSON de la partida (se puede abrir en el juego
+pasa el dia; `ai` juega los dos equipos; `state` da el JSON de la partida (se puede abrir en el juego
 con la API de depuracion). Si una orden falla, la linea empieza por `error:` y el programa sale con 1.
 
 ## API de depuracion en el navegador (`window.ilogicDebug`)

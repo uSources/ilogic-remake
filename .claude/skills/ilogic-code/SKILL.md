@@ -50,14 +50,22 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 
 ## Convenciones
 
-- **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
-  `core/content/*.json` (ver `docs/CONTENIDO.md`). El contenido va con cada partida: se lee con
-  `tablesOf(s)` (`UNIT`, `POWER`, `BUILDING`, `TERRAIN`...), `weightsOf(s)` (pesos de la IA) y
+- **Datos, no numeros sueltos**: unidades, edificios, terreno, temas, generador de mapas, reglas por
+  defecto y pesos de la IA en `core/content/*.json` (ver `docs/CONTENIDO.md`). El contenido va con
+  cada partida, ya resuelto en tipos con nombre: `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, b)`,
+  `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (pesos de la IA) y
   `s.content` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
-  etiquetas), `defaultContent()`. El codigo no compara nombres de unidades (`'Tank'`): si necesita
-  saber algo de una, es un campo del JSON.
-- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `movementOf(s, unit.type)`,
-  `canMoveOn(s, moveType, terrain)`, `terrainMoveCost(s, moveType, terrain)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
+  etiquetas), `defaultContent()`. Un tipo se busca por su id en su catalogo (`entryOf(content.units,
+  id, 'unidad')`). El codigo no compara nombres de unidades (`'Tank'`) ni de temas: si necesita saber
+  algo de uno, es un campo del JSON.
+- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT` (`'foot'`), `movementOf(s, unit)`,
+  `canMoveOn(moveType, terrain)`, `terrainMoveCost(moveType, terrain)`; las partidas guardan ids
+  (`unit.type = 'Tank'`, `s.theme = 'Plains'`), nunca el puesto en el fichero.
+- **Equipos, no bandos**: ningun numero de equipo es especial (ni `team === 0` ni `team = 0` por
+  defecto). Enemigo es `isHostile(s, a, b)` (otra alianza); lo de cada equipo, `teamState(s, team)`
+  (dinero, general, estadisticas); quien lo juega, su `controller`. Lo que actua por un equipo lo
+  recibe (`aiTurn(s, rng, team)`, `formSquad(s, team, units)`, `outcome(s, team)`). En la escena, el
+  equipo que mira es `viewer` y la interfaz pinta por lado (`ui/sides.ts`). Ver `docs/ARQUITECTURA.md`, "Equipos".
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
@@ -66,8 +74,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
   `createGame(rng, { rules })`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
-  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content })`, el unico sitio
-  que escribe su forma; el contenido es el campo `s.content` (no se guarda). Leer una guardada:
+  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, teams })`, el unico sitio
+  que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)` o `deserialize(json, saveContext(contenido))`; un cambio en lo que se guarda sube
   `SAVE_VERSION` (core/saveVersion.ts, y el tipo de `GameState.version`) y lleva su paso en `MIGRATIONS`
   (core/saveMigrations.ts).
@@ -81,7 +89,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
   "Vista del mapa").
 - **Extender sin abrir funciones grandes**: acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
-  ronda = entrada en `ROUND_PHASES`; habilidad nueva = su efecto en `abilities.ts`. La IA no tiene
+  ronda = entrada en `ROUND_PHASES`; habilidad de unidad nueva = su efecto en `abilities.ts`; efecto
+  nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`). La IA no tiene
   variables globales: lo del turno va en `AiCtx`. Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de

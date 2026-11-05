@@ -16,8 +16,9 @@ describe('contenido (src/core/content/*.json)', () => {
     expect(errsOf(clone())).toEqual([]);
   });
 
-  // Las partidas guardadas y los codigos de mapa guardan el tipo por numero: lo que ya existe no se
-  // puede mover ni borrar. Si este test falla, la unidad nueva no va al final de la lista.
+  // Las partidas guardan el id del tipo (no su puesto), pero el orden es el de los menus y el de los
+  // empates de la IA (tests/aiGolden.test.ts), y una partida con un tipo borrado ya no se lee: lo que
+  // ya existe no se mueve ni se borra. Si este test falla, la unidad nueva no va al final de la lista.
   it('el orden de siempre se mantiene (las nuevas van al final)', () => {
     const units2013 = [
       'Soldier',
