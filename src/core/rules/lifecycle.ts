@@ -2,7 +2,7 @@
  * Unidades: crear y eliminar (con sus pasajeros) y limpiar las que se quedan sin vida.
  */
 import type { UnitType } from '../content';
-import { keyOf } from '../gameContent';
+
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
 import type { GameState, Pos, Team, Unit } from '../model';
@@ -12,7 +12,7 @@ import { unitById } from './queries';
 export function newUnit(s: GameState, unitType: UnitType, team: Team, at: Pos, active = true): Unit {
   const unit: Unit = {
     uid: s.nextUid++,
-    type: keyOf(s.content.units, unitType),
+    type: unitType.id,
     team,
     x: at.x,
     y: at.y,

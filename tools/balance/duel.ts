@@ -3,7 +3,7 @@
  * (attack() de core/rules.ts, asi que incluye contraataque o menos azar si las reglas lo tienen).
  */
 import { findEntry, type GameContent, type TerrainType, type UnitType } from '@core/content';
-import { keyOf } from '@core/gameContent';
+
 import { seededRng } from '@core/geom';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
@@ -28,7 +28,7 @@ export interface DuelCell {
 const DUEL_MAP_SIZE = 32;
 
 function arena(terrain: TerrainType, options: DuelOptions): GameState {
-  const map = blankMap(DUEL_MAP_SIZE, keyOf(options.content.terrain, terrain));
+  const map = blankMap(DUEL_MAP_SIZE, terrain.id);
   return newGameState({ map, rules: options.rules, content: options.content, funds: [0, 0] });
 }
 

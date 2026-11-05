@@ -6,8 +6,8 @@ import type { Team } from './team';
 export interface Unit extends Pos {
   /** Identificador estable (no cambia al morir otras unidades ni al guardar). */
   uid: number;
-  /** Tipo 0..18 (ver UNIT_NAMES). */
-  type: number;
+  /** Tipo de unidad: su id en units.json (ver unitTypeOf). */
+  type: string;
   team: Team;
   /** Puede actuar este turno. */
   active: boolean;

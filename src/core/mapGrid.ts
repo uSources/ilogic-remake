@@ -9,7 +9,7 @@ import { Grid } from './util/grid';
 type WithMap = Pick<GameState, 'map'>;
 
 /** El terreno de la partida como rejilla (sin copiarlo). Su `width`/`height` es el tamaño del mapa. */
-export function mapGrid(s: WithMap): Grid<number> {
+export function mapGrid(s: WithMap): Grid<string> {
   return Grid.wrap(s.map);
 }
 
@@ -23,7 +23,7 @@ export function createLayer<T>(s: WithMap, fill: T): Grid<T> {
   return mapGrid(s).createLayer(fill);
 }
 
-/** Terreno nuevo de `size` casillas de lado, todo de `terrain` (su clave: keyOf). */
+/** Terreno nuevo de `size` casillas de lado, todo de `terrain` (id de terrain.json). */
 export function blankMap(size: number, terrain: GameState['map'][number][number]): GameState['map'] {
   return Grid.filled({ width: size, height: size }, terrain).columns;
 }

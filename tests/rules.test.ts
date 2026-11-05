@@ -19,7 +19,7 @@ import {
   combatForecast,
   threatMap,
 } from '@core/rules';
-import { blankState, unitTypeNamed, hqKey } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -46,7 +46,7 @@ describe('movimiento', () => {
   });
   it('el agua no la pisan los vehiculos', () => {
     const s = blankState(TEST_RULES);
-    s.map[11]![10] = 1; // Water
+    s.map[11]![10] = 'Water'; // Water
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     expect(moveRange(s, tank).steps.at({ x: 11, y: 10 })).toBe(0);
     moveUnit(s, tank, { x: 10, y: 14 });
@@ -97,7 +97,7 @@ describe('captura y victoria', () => {
     const s = blankState(TEST_RULES);
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 });
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
-    s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
+    s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
     const soldier = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     expect(capture(s, soldier)?.done).toBe(false);
     soldier.active = true;
@@ -143,7 +143,7 @@ describe('union y transporte', () => {
 describe('compra y fin de ronda', () => {
   it('fondos insuficientes: no compra', () => {
     const s = blankState(TEST_RULES);
-    s.buildings.push({ type: 2, owner: 0, x: 4, y: 4 });
+    s.buildings.push({ type: 'Factory', owner: 0, x: 4, y: 4 });
     expect(spawn(s, s.buildings[0]!, TANK)).toBeNull();
     expect(s.funds[0]).toBe(5000);
     const car = spawn(s, s.buildings[0]!, unitTypeNamed('Car'))!;
@@ -152,7 +152,7 @@ describe('compra y fin de ronda', () => {
   });
   it('ingresos y curacion; los aviones ya no caen', () => {
     const s = blankState(TEST_RULES);
-    s.buildings.push({ type: 0, owner: 0, x: 1, y: 1 }); // City
+    s.buildings.push({ type: 'City', owner: 0, x: 1, y: 1 }); // City
     const so = newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     so.life = 50;
     const flying = newUnit(s, LFIGHTER, 0, { x: 8, y: 8 });
@@ -179,7 +179,7 @@ describe('compra y fin de ronda', () => {
   });
 });
 
-const HQ = hqKey();
+const HQ = hqId();
 
 describe('prevision y amenaza', () => {
   it('prevision de tanque contra tanque coherente', () => {

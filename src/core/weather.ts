@@ -11,7 +11,7 @@
  * Todo sale de la semilla del mapa y del dia: la misma partida tiene siempre el mismo tiempo, y la IA
  * y el jugador lo sufren igual.
  */
-import { themeOf, weatherTypeOf, keyOf } from './gameContent';
+import { themeOf, weatherTypeOf } from './gameContent';
 import type { MoveType, Theme, WeatherType } from './content';
 import { seededRng } from './geom';
 import type { GameState, Rng, WeatherState } from './model';
@@ -66,15 +66,12 @@ export function rollDays(weather: WeatherType, rng: Rng): number {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-/** Como guarda la partida un clima (WeatherState). */
-const weatherKey = (s: GameState, weather: WeatherType) => keyOf(s.content.weather, weather);
-
 /** Pone el clima del principio (despejado) si la partida aun no lo tiene. */
 export function ensureWeather(s: GameState): void {
   if (!s.rules.weather || s.weather) return;
   const rng = dayRng(s);
   const clear = s.content.clearWeather;
-  s.weather = { kind: weatherKey(s, clear), left: rollDays(clear, rng), next: weatherKey(s, rollWeather(s, themeOf(s), rng)) };
+  s.weather = { kind: clear.id, left: rollDays(clear, rng), next: rollWeather(s, themeOf(s), rng).id };
 }
 
 /** Lo que ha cambiado el clima al empezar la ronda (para el resumen y la interfaz). */
@@ -101,7 +98,7 @@ export function advanceWeather(s: GameState): WeatherChange | null {
   const to = weatherTypeOf(s, weather.next);
   weather.kind = weather.next;
   weather.left = rollDays(to, rng);
-  weather.next = weatherKey(s, rollWeather(s, themeOf(s), rng, to));
+  weather.next = rollWeather(s, themeOf(s), rng, to).id;
   return from === to ? null : { from, to };
 }
 

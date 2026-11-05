@@ -24,13 +24,14 @@ export interface IlogicDebug {
   ui(): UIState;
   /**
    * Empieza una partida y espera a que se pueda jugar. Con `seed` (y opcionalmente `size` 20/32/40,
-   * `theme` 0..4, `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
+   * `theme` ('Plains'...'Snowy'), `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
    * partida guardada (SavedGameState), ver `state()`); con `mission` una mision de la campaña.
    */
   startGame(options: {
     seed?: number;
     size?: number;
-    theme?: number | null;
+    /** Tema (id de themes.json: 'Plains', 'Snowy'...) o null al azar. */
+    theme?: string | null;
     fog?: boolean;
     /** Limite de dias (por defecto, sin limite). */
     dayLimit?: number | null;

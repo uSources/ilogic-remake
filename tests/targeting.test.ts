@@ -7,7 +7,7 @@ import { moveRange, newUnit, pathCost } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 
 const type = unitTypeNamed;
-const WOODS = 2;
+const WOODS = 'Woods';
 
 describe('ordenes del jugador', () => {
   it('atacar: prefiere la casilla donde acaba el camino trazado', () => {

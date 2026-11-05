@@ -1,4 +1,4 @@
-import { unitTypeNamed, terrainKey } from './helpers';
+import { unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
@@ -15,7 +15,7 @@ const TANK = unitTypeNamed('Tank');
 /** Partida vacia de ese lado, con niebla: el tanque del jugador abajo a la derecha y el de la IA arriba a la izquierda. */
 function cornerMatch(size: number): GameState {
   const s = newGameState({
-    map: blankMap(size, terrainKey(defaultContent().plainTerrain)),
+    map: blankMap(size, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), { fog: true }),
     content: defaultContent(),
     funds: [0, 0],

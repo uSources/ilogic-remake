@@ -3,7 +3,7 @@
  * no prueban variantes. Quien juega con otro contenido (el equilibrado) llama a generateGame y a
  * deserialize dandoselo.
  */
-import type { GameContent } from './content';
+import { entryOf, type GameContent } from './content';
 import { defaultContent } from './content/default';
 import { generateGame } from './mapgen';
 import { missionById, missionRules } from './missions';
@@ -15,8 +15,8 @@ import { deserialize, type SaveContext } from './save';
 export interface CreateGameOptions {
   /** Lado del mapa (32 si no se dice). */
   size?: number;
-  /** Tema del mapa, o null (o nada) para uno al azar. */
-  theme?: number | null;
+  /** Tema del mapa (id de themes.json), o null (o nada) para uno al azar. */
+  theme?: string | null;
   /** Cambios a las reglas por defecto de ese contenido (sin cambios, las de siempre). */
   ruleChanges?: Partial<RulesConfig>;
 }
@@ -27,7 +27,7 @@ export interface CreateGameOptions {
  */
 export function createGame(rng: Rng, { size, theme, ruleChanges = {} }: CreateGameOptions): GameState {
   const content = defaultContent();
-  const chosenTheme = theme === null || theme === undefined ? null : content.themes.list[theme]!;
+  const chosenTheme = theme === null || theme === undefined ? null : entryOf(content.themes, theme, 'tema');
   return generateGame(rng, { size, theme: chosenTheme, rules: rulesWith(content, ruleChanges), content });
 }
 

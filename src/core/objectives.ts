@@ -8,7 +8,7 @@
  */
 
 import { entryOf, type GameContent } from './content';
-import { keyOf } from './gameContent';
+
 import type { GameState, Objective, Outcome, Pos } from './model';
 import { samePos } from './geom';
 import { Grid } from './util/grid';
@@ -66,7 +66,7 @@ function wonOrLostByDays(s: GameState, objective: { days: number }, isDone: bool
   return isPastLastDay(s, objective) ? 'lost' : 'playing';
 }
 
-function ownedBuildingsOfType(s: GameState, type: number | null): number {
+function ownedBuildingsOfType(s: GameState, type: string | null): number {
   return s.buildings.filter((building) => building.owner === PLAYER && (type === null || building.type === type)).length;
 }
 
@@ -98,7 +98,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     fromMission: (written, _unitUids, content) => ({
       kind: 'capture',
       count: written.count,
-      type: written.type === null ? null : keyOf(content.buildings, entryOf(content.buildings, written.type, 'edificio')),
+      type: written.type === null ? null : entryOf(content.buildings, written.type, 'edificio').id,
       days: written.days,
     }),
     problems: noProblems,

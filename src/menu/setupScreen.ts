@@ -5,6 +5,7 @@
 import { themeOf } from '../core/gameContent';
 import type { MenuCommand } from '../controls/menu';
 import { defaultContent } from '../core/content/default';
+import { entryOf } from '../core/content';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
@@ -187,7 +188,7 @@ export class SetupScreen {
     const { size, theme } = this.options;
     const s = generateGame(seededRng(this.seed), {
       size,
-      theme: theme === null ? null : defaultContent().themes.list[theme]!,
+      theme: theme === null ? null : entryOf(defaultContent().themes, theme, 'tema'),
       rules: rulesWith(defaultContent(), ruleChangesFor(this.options)),
       content: defaultContent(),
     });

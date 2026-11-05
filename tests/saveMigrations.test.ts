@@ -36,6 +36,7 @@ describe('partidas guardadas con el formato 1 (de origin/main)', () => {
     expect(saved).not.toContain('"command"');
     expect(saved).not.toContain('"order"');
     expect(saved).toContain(`"version":${SAVE_VERSION}`);
+    expect(s.units.every((unit) => typeof unit.type === 'string')).toBe(true);
     // Lo que se vuelve a guardar ya es del formato nuevo y se lee igual.
     expect(serialize(loadGame(saved)!)).toBe(saved);
   });
@@ -52,6 +53,48 @@ describe('partidas guardadas con el formato 1 (de origin/main)', () => {
     const mission = missionById(s.mission!.id)!;
     expect(s.rules).toEqual(missionRules(mission, defaultContent()));
     expect(s.rules).not.toEqual(defaultContent().defaultRules);
+  });
+});
+
+/**
+ * Partidas guardadas de verdad con el formato 2 (tipos por numero): las genero el codigo de
+ * origin/main (8671268) con createGame/buildMission, aiTurn, endRound y serialize, sin tocarlas a mano:
+ * - skirmish-v2: 13 dias de IA contra IA en pantano (tema 3) con lluvia, generales (Brisa y Roca),
+ *   puntos de control, estadisticas, una escuadra con orden y un soldado dentro de un transporte;
+ * - mission-capture-v2: la mision bridgehead (capturar 6 ciudades: `type: 0`) jugada 2 dias, con una
+ *   captura a medias.
+ */
+describe('partidas guardadas con el formato 2 (de origin/main)', () => {
+  it('escaramuza: unidades, edificios, terreno, tema y clima pasan de numero a id', () => {
+    const raw = JSON.parse(fixture('skirmish-v2')) as { units: { type: number }[]; map: number[][] };
+    const s = loadGame(fixture('skirmish-v2'))!;
+    expect(s.version).toBe(SAVE_VERSION);
+    const ids = defaultContent().units.list.map((unitType) => unitType.id);
+    expect(s.units.map((unit) => unit.type)).toEqual(raw.units.map((unit) => ids[unit.type]));
+    expect(s.map[0]![0]).toBe(defaultContent().terrain.list[raw.map[0]![0]!]!.id);
+    expect(s.theme).toBe('Swamp');
+    expect(s.setup).toEqual({ seed: 3, size: 20, theme: 'Swamp' });
+    expect(s.weather).toMatchObject({ kind: 'Rain', next: 'Clear' });
+    expect(s.buildings.filter((building) => building.type === 'Base')).toHaveLength(2);
+    expect(s.generals!.map((general) => general?.id)).toEqual(['Brisa', 'Roca']);
+    expect(s.units.some((unit) => unit.carrier !== null)).toBe(true);
+    expect(s.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 0, y: 2 } });
+    const saved = serialize(s);
+    expect(serialize(loadGame(saved)!)).toBe(saved);
+  });
+
+  it('mision: el tipo del objetivo de captura y la captura a medias', () => {
+    const s = loadGame(fixture('mission-capture-v2'))!;
+    expect(s.mission!.objective).toEqual({ kind: 'capture', count: 6, type: 'City', days: 14 });
+    expect(s.theme).toBe('Plains');
+    expect(s.buildings.some((building) => building.capture)).toBe(true);
+    expect(s.rules).toEqual(missionRules(missionById('bridgehead')!, defaultContent()));
+  });
+
+  it('un numero de tipo que no existe no se convierte: la partida no se lee', () => {
+    const raw = JSON.parse(fixture('skirmish-v2')) as { units: { type: number }[] };
+    raw.units[0]!.type = 99;
+    expect(loadGame(JSON.stringify(raw))).toBeNull();
   });
 });
 

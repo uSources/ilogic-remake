@@ -5,7 +5,7 @@ import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, savedByVersion1, unitTypeNamed, buildingKey, buildingTypeNamed } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, buildingTypeNamed } from './helpers';
 
 /**
  * [CAMBIO] Reglas para que atacar salga a cuenta: botin, flanqueo y sin cura bajo fuego
@@ -13,7 +13,7 @@ import { blankState, savedByVersion1, unitTypeNamed, buildingKey, buildingTypeNa
  */
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
-  CITY = buildingKey('City');
+  CITY = 'City';
 
 describe('botin', () => {
   it('quien destruye cobra parte del precio de lo destruido', () => {

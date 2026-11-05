@@ -47,8 +47,9 @@ export type GameEventOf<K extends GameEventKind> = Extract<GameEvent, { kind: K 
  * (panel de combate, barras de vida) aunque una de las dos haya caido.
  */
 export interface CombatInfo {
-  attackerType: number;
-  defenderType: number;
+  /** Tipos de unidad (id de units.json). */
+  attackerType: string;
+  defenderType: string;
   attackerTeam: Team;
   /** Vida antes del combate. */
   attackerLife: number;

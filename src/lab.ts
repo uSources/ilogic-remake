@@ -10,7 +10,7 @@ import { newGameState } from './core/gameState';
 import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
 import { entryOf, MoveType, type GameContent, type UnitType } from './core/content';
-import { unitTypeOf, keyOf } from './core/gameContent';
+import { unitTypeOf } from './core/gameContent';
 import { maxBy } from './core/util/pick';
 import type { GameState, RulesConfig, Unit } from './core/model';
 
@@ -63,9 +63,9 @@ export function labRules(action: LabAction | null): RulesConfig {
  */
 export function labState(options: LabOptions, action: LabAction | null): GameState {
   const content = defaultContent();
-  const map = blankMap(LAB_SIZE, keyOf(content.terrain, content.plainTerrain));
+  const map = blankMap(LAB_SIZE, content.plainTerrain.id);
   const s = newGameState({ map, rules: labRules(action), content, funds: [0, 0] });
-  const hq = keyOf(content.buildings, content.hq);
+  const hq = content.hq.id;
   s.buildings.push(
     { type: hq, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
     { type: hq, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },

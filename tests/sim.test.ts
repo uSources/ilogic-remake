@@ -1,5 +1,5 @@
+import { hqId } from './helpers';
 import { MoveType } from '@core/content';
-import { hqKey } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
@@ -8,7 +8,7 @@ import { endRound, groundDistance, outcome } from '@core/rules';
 import { createLayer } from '@core/mapGrid';
 import { checkInvariants } from './sim/partidas';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 describe('generador de mapas', () => {
   it('100 mapas: ambas bases, conectadas por tierra, con unidades y neutrales', () => {

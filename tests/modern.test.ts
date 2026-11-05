@@ -1,3 +1,4 @@
+import { defaultContent } from '@core/content/default';
 import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/geom';
@@ -101,10 +102,10 @@ describe('reglas nuevas: combate', () => {
 });
 
 describe('reglas nuevas: captura por puntos', () => {
-  const HQ = 5;
+  const HQ = defaultContent().hq.id;
   it('una ciudad cuesta 2 turnos a una unidad entera y pasa directamente a ser tuya', () => {
     const s = blankState();
-    s.buildings.push({ type: 0, owner: 1, x: 3, y: 3 });
+    s.buildings.push({ type: 'City', owner: 1, x: 3, y: 3 });
     const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     const r1 = capture(s, unit)!;
     expect(r1).toEqual({ done: false, left: 10, total: 20 });
@@ -126,7 +127,7 @@ describe('reglas nuevas: captura por puntos', () => {
 
   it('si la unidad se va, se pierde lo avanzado', () => {
     const s = blankState();
-    s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
+    s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
     const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     capture(s, unit);
     expect(captureProgress(s, s.buildings[0]!)?.left).toBe(10);

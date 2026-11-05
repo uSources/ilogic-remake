@@ -3,14 +3,14 @@ import { abilitiesOf, abilityOf, auraFactor } from '@core/abilities';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
-import { keyOf, unitTypeOf } from '@core/gameContent';
+import { unitTypeOf } from '@core/gameContent';
 import { canMoveOn, captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
-import { blankState, terrainKey, terrainNamed } from './helpers';
+import { blankState, terrainNamed } from './helpers';
 
 const UNIT_TYPES = defaultContent().units.list;
-const WOODS = terrainKey(terrainNamed('Woods'));
+const WOODS = 'Woods';
 
 /** Primer tipo de unidad que tiene la habilidad `kind` (el test no depende de cual sea). */
 const withAbility = (kind: AbilityDef['kind']): UnitType => {
@@ -205,10 +205,7 @@ describe('habilidades: explorador (scout)', () => {
     s.map[10]![14] = WOODS;
     const scout = newUnit(s, withAbility('scout'), 0, { x: 10, y: 10 });
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision
-    scout.type = keyOf(
-      defaultContent().units,
-      plain((type) => type.vision >= withAbility('scout').vision),
-    );
+    scout.type = plain((type) => type.vision >= withAbility('scout').vision).id;
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(false);
   });
 });

@@ -3,6 +3,7 @@
  * unidad elegida para moverla o un grupo (recuadro, «Elegir varias», escuadra o tecla de grupo), el
  * panel de lo elegido y las teclas de grupo con numero.
  */
+import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { unitById } from '../../core/rules';
 import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
@@ -163,11 +164,16 @@ export class GroupSelection {
     host.refresh();
   }
 
+  /** Puesto del tipo de la unidad en units.json (el orden del panel). */
+  private typeOrder(unit: Unit): number {
+    return this.host.state.content.units.list.indexOf(unitTypeOf(this.host.state, unit));
+  }
+
   /** [CAMBIO] Las elegidas en el orden del panel: por tipo y, dentro, como estan en la partida. */
   pickedInOrder(): Unit[] {
     return this.groupUnits()
       .filter((unit) => this.selectable(unit))
-      .sort((firstUnit, secondUnit) => firstUnit.type - secondUnit.type || firstUnit.uid - secondUnit.uid);
+      .sort((firstUnit, secondUnit) => this.typeOrder(firstUnit) - this.typeOrder(secondUnit) || firstUnit.uid - secondUnit.uid);
   }
 
   /** [CAMBIO] Tab con varias elegidas: llevar el cursor a la siguiente (su ficha se ve abajo). */

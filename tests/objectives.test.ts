@@ -1,4 +1,4 @@
-import { hqKey } from './helpers';
+import { hqId } from './helpers';
 import { afterEach, describe, expect, it } from 'vitest';
 import { objectiveStatus, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
@@ -8,7 +8,7 @@ import { measureObjective, objectiveOutcome } from '@core/objectives';
 import { objectiveProgress, outcome } from '@core/rules';
 import type { GameState } from '@core/model';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 afterEach(() => {
   settings.lang = 'es';

@@ -12,7 +12,7 @@
  */
 import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
 import { rulesWith } from './rulesConfig';
-import { keyOf } from './gameContent';
+
 import { deepFreeze, type DeepReadonly } from './util/freeze';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
@@ -69,7 +69,7 @@ const missionTerrainAt = (content: GameContent, mission: MissionDef, pos: Pos) =
 /** El mapa en texto (filas = y) como rejilla de terreno `map[x][y]`. */
 function terrainGrid(content: GameContent, mission: MissionDef): GameState['map'] {
   const size = mission.map.length;
-  const terrainKey = (pos: Pos) => keyOf(content.terrain, missionTerrainAt(content, mission, pos));
+  const terrainKey = (pos: Pos) => missionTerrainAt(content, mission, pos).id;
   return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => terrainKey({ x, y })));
 }
 
@@ -88,11 +88,11 @@ export function buildMission(mission: MissionDef, content: GameContent): GameSta
     map: terrainGrid(content, mission),
     rules: missionRules(mission, content),
     content,
-    theme: keyOf(content.themes, missionTheme(content, mission)),
+    theme: missionTheme(content, mission).id,
     funds: [mission.funds[0], mission.funds[1]],
   });
   for (const [type, owner, x, y] of mission.buildings)
-    s.buildings.push({ type: keyOf(content.buildings, entryOf(content.buildings, type, 'edificio')), owner, x, y });
+    s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
   const unitUids = placeUnits(s, mission.units);
   s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, unitUids, content) };
   return s;

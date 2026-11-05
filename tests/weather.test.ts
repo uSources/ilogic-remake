@@ -3,7 +3,7 @@ import { saveContext } from '@core/defaultGames';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { entryOf, validateContent, type Content, type WeatherType } from '@core/content';
-import { keyOf } from '@core/gameContent';
+
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
@@ -21,7 +21,7 @@ const SOLDIER = unitTypeNamed('Soldier'),
   LFIGHTER = unitTypeNamed('LFighter');
 const kind = (id: string): WeatherType => entryOf(WEATHER, id, 'clima');
 /** Lo que guarda la partida de un clima (WeatherState.kind y next). */
-const keyOfWeather = (weather: WeatherType) => keyOf(WEATHER, weather);
+const keyOfWeather = (weather: WeatherType) => weather.id;
 const CLEAR = defaultContent().clearWeather,
   RAIN = kind('Rain'),
   SNOW = kind('Snow'),
@@ -31,7 +31,7 @@ const CLEAR = defaultContent().clearWeather,
 /** Partida de prueba con el clima `weather` puesto (dura varios dias). */
 function withWeather(weather: WeatherType): GameState {
   const s = blankState();
-  s.setup = { seed: 1234, size: 32, theme: 0 };
+  s.setup = { seed: 1234, size: 32, theme: 'Plains' };
   s.weather = { kind: keyOfWeather(weather), left: 3, next: keyOfWeather(CLEAR) };
   return s;
 }
@@ -129,7 +129,7 @@ describe('clima: efectos', () => {
 describe('clima: como cambia', () => {
   it('empieza despejado y con pronostico', () => {
     const s = blankState();
-    s.setup = { seed: 7, size: 32, theme: 0 };
+    s.setup = { seed: 7, size: 32, theme: 'Plains' };
     ensureWeather(s);
     expect(s.weather!.kind).toBe(keyOfWeather(CLEAR));
     expect(s.weather!.left).toBeGreaterThanOrEqual(CLEAR.days[0]);
@@ -150,7 +150,7 @@ describe('clima: como cambia', () => {
   it('es determinista: la misma semilla da el mismo tiempo', () => {
     const run = () => {
       const s = blankState();
-      s.setup = { seed: 99, size: 32, theme: 3 };
+      s.setup = { seed: 99, size: 32, theme: 'Swamp' };
       ensureWeather(s);
       const seen: WeatherType[] = [];
       for (let day = 0; day < 40; day++) {
@@ -186,7 +186,7 @@ describe('clima: como cambia', () => {
     s.rules = rulesWith(defaultContent());
     expect(deserialize(serialize(s), saveContext(defaultContent()))!.weather).toEqual(s.weather);
     const broken = JSON.parse(serialize(s)) as GameState;
-    broken.weather = { kind: WEATHER.list.length + 5, left: 1, next: 0 };
+    broken.weather = { kind: 'Meteorites', left: 1, next: CLEAR.id };
     expect(deserialize(JSON.stringify(broken), saveContext(defaultContent()))!.weather).toBeUndefined();
   });
 

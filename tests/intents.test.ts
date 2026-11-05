@@ -7,14 +7,14 @@ import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads';
 import type { GameState, Pos } from '@core/model';
-import { blankState, unitTypeNamed, hqKey } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 /** [CAMBIO] Flechas de intencion: previewStandingOrders dice lo que hara cada orden al terminar el turno. */
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
-  CITY = 0;
+  CITY = 'City';
 
 function world(): GameState {
   const s = blankState();

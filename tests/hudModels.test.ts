@@ -17,10 +17,9 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { blankState, unitTypeNamed, hqKey } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const BUILDING_NAMES = defaultContent().buildings.list.map((buildingType) => buildingType.id);
-const HQ = hqKey();
+const HQ = hqId();
 const MAX_FUNDS = defaultContent().maxFunds;
 
 /** Texturas de mentira: todas las imagenes "existen" (las fichas solo usan sus nombres). */
@@ -64,7 +63,7 @@ describe('datos de la interfaz', () => {
     const s = blankState();
     const unit = newUnit(s, unitType('Soldier'), 0, { x: 3, y: 3 });
     expect(captureHintText(s, unit)).toBeUndefined();
-    s.buildings.push({ type: 0, owner: 1, x: 3, y: 3, capture: null });
+    s.buildings.push({ type: 'City', owner: 1, x: 3, y: 3, capture: null });
     expect(captureHintText(s, unit)).toMatch(/^\d+→\d+$/);
   });
 
@@ -80,7 +79,6 @@ describe('datos de la interfaz', () => {
 });
 
 describe('clima en la barra de arriba', () => {
-  const weatherIndex = (id: string) => defaultContent().weather.list.findIndex((weather) => weather.id === id);
   const weatherNamed = (id: string) => entryOf(defaultContent().weather, id, 'clima');
 
   it('resume los efectos de cada clima', () => {
@@ -93,7 +91,7 @@ describe('clima en la barra de arriba', () => {
 
   it('enseña el clima de hoy y el pronostico solo si cambia mañana', () => {
     const s = blankState();
-    s.weather = { kind: weatherIndex('Rain'), left: 2, next: weatherIndex('Clear') };
+    s.weather = { kind: 'Rain', left: 2, next: 'Clear' };
     expect(weatherVM(s)).toMatchObject({ id: 'Rain', name: 'Lluvia', next: null });
     s.weather.left = 1;
     expect(weatherVM(s)!.next).toBe('Despejado');
@@ -164,13 +162,12 @@ describe('panel de combate', () => {
 });
 
 describe('desglose de la barra de arriba', () => {
-  const buildingType = (name: string) => BUILDING_NAMES.indexOf(name);
   const army = () => {
     const s = blankState();
     s.funds = [5000, 5000];
     for (const [index, buildingName] of ['City', 'City', 'Factory', 'Oil'].entries())
-      s.buildings.push({ type: buildingType(buildingName), owner: 0, x: 1 + index, y: 1, capture: null });
-    s.buildings.push({ type: buildingType('City'), owner: 1, x: 9, y: 9, capture: null });
+      s.buildings.push({ type: buildingName, owner: 0, x: 1 + index, y: 1, capture: null });
+    s.buildings.push({ type: 'City', owner: 1, x: 9, y: 9, capture: null });
     newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
     newUnit(s, unitType('Soldier'), 0, { x: 6, y: 5 });
     newUnit(s, unitType('Soldier'), 0, { x: 7, y: 5 });

@@ -9,7 +9,7 @@
  * El orden de los pasos y de las llamadas a `rng` dentro de cada uno es parte del resultado: con la
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
-import { keyOf, terrainAt, themeOf } from './gameContent';
+import { terrainAt, themeOf } from './gameContent';
 import { entryOf, MoveType, type GameContent, type MapgenSettings, type TerrainType, type Theme } from './content';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
@@ -40,12 +40,11 @@ const settingsOf = (s: GameState): MapgenSettings => s.content.mapgen;
 
 function emptyState(size: number, options: NewMapOptions): GameState {
   // El terreno de partida no importa: el generador pone todas las casillas.
-  const plain = keyOf(options.content.terrain, options.content.plainTerrain);
+  const plain = options.content.plainTerrain.id;
   return newGameState({ map: blankMap(size, plain), rules: options.rules, content: options.content });
 }
 
 const isWalkable = (terrain: TerrainType) => canMoveOn(WALK, terrain);
-const terrainKey = (s: GameState, terrain: TerrainType) => keyOf(s.content.terrain, terrain);
 /** El terreno de un id de themes.json (validado al cargar el contenido). */
 const terrainNamed = (s: GameState, id: string): TerrainType => entryOf(s.content.terrain, id, 'terreno');
 
@@ -89,20 +88,14 @@ function growTerrain(s: GameState, origin: Pos, theme: Theme, rng: Rng): number 
   const terrains = s.content.terrain.list;
   const generated = map.createLayer(false);
   // Casilla de origen: solo probabilidad base.
-  map.set(
-    origin,
-    terrainKey(
-      s,
-      rollTerrain(terrains, rng, (terrain) => chanceIn(theme, terrain).base),
-    ),
-  );
+  map.set(origin, rollTerrain(terrains, rng, (terrain) => chanceIn(theme, terrain).base).id);
   let walkable = 0;
   for (let ring = 1; ; ring++) {
     const ringTiles = [...diamond(map, origin, ring, ring)];
     if (ringTiles.length === 0) return walkable;
     for (const pos of ringTiles) {
       const rolled = rollTerrain(terrains, rng, (terrain) => terrainChance(s, generated, pos, terrain, theme));
-      map.set(pos, terrainKey(s, rolled));
+      map.set(pos, rolled.id);
       generated.set(pos, true);
       if (isWalkable(rolled)) walkable++;
     }
@@ -123,7 +116,7 @@ function narrowWater(s: GameState, open: TerrainType, narrow: TerrainType): numb
   // Va cambiando segun recorre: una casilla ya cambiada cuenta como tierra para las siguientes.
   for (const { pos } of mapGrid(s).cells()) {
     if (terrainAt(s, pos) !== open || !isNarrowWater(s, pos)) continue;
-    mapGrid(s).set(pos, terrainKey(s, narrow));
+    mapGrid(s).set(pos, narrow.id);
     changed++;
   }
   return changed;
@@ -136,7 +129,7 @@ function freezeShores(s: GameState, shore: TerrainType): number {
   const toFreeze = [...map.cells()]
     .filter(({ pos }) => terrainAt(s, pos).isWater && squareArea(map, pos, 1).some(isSolidLand))
     .map(({ pos }) => pos);
-  for (const pos of toFreeze) map.set(pos, terrainKey(s, shore));
+  for (const pos of toFreeze) map.set(pos, shore.id);
   return toFreeze.length;
 }
 
@@ -145,7 +138,7 @@ function deepenWater(s: GameState, deep: TerrainType): void {
   const map = mapGrid(s);
   const isAllWater = (pos: Pos) => squareArea(map, pos, 1).every((around) => terrainAt(s, around).isWater);
   const toDeepen = [...map.cells()].filter(({ pos }) => isAllWater(pos)).map(({ pos }) => pos);
-  for (const pos of toDeepen) map.set(pos, terrainKey(s, deep));
+  for (const pos of toDeepen) map.set(pos, deep.id);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -226,7 +219,7 @@ function placeStartingBuildings(s: GameState, spawn: Pos, team: Team, rng: Rng):
       chosen = sampleInOrder(free, total - index, rng, (left) => Math.max(1, left - 1));
     chosen ??= free[0]!;
     const buildingType = entryOf(s.content.buildings, starting[index]!, 'edificio');
-    s.buildings.push({ type: keyOf(s.content.buildings, buildingType), owner: team, x: chosen.x, y: chosen.y });
+    s.buildings.push({ type: buildingType.id, owner: team, x: chosen.x, y: chosen.y });
   }
   return true;
 }
@@ -262,7 +255,7 @@ function placeNeutralBuildings(s: GameState, rng: Rng): void {
       availableCount++;
     }
   toPlace.forEach((count, index) => {
-    const type = keyOf(s.content.buildings, s.content.buildings.list[index]!);
+    const type = s.content.buildings.list[index]!.id;
     let missing = count;
     let remaining = availableCount;
     for (const { pos, value: isAvailable } of available.cells()) {
@@ -365,7 +358,7 @@ function spawnsOf(draft: MapDraft): { player: Pos; enemy: Pos } {
 function chooseTheme(draft: MapDraft): boolean {
   const themes = draft.s.content.themes;
   const randomTheme = themes.list[Math.floor(draft.rng() * themes.list.length)]!;
-  draft.s.theme = keyOf(themes, draft.forcedTheme ?? randomTheme);
+  draft.s.theme = (draft.forcedTheme ?? randomTheme).id;
   return true;
 }
 

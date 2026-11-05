@@ -8,13 +8,13 @@ import type { GameState, RulesConfig } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */
 export interface NewGameStateOptions {
-  /** Terreno `map[x][y]`: su tamaño es el de la partida. */
-  map: number[][];
+  /** Terreno `map[x][y]` (ids de terrain.json): su tamaño es el de la partida. */
+  map: GameState['map'];
   rules: Readonly<RulesConfig>;
   /** Contenido con el que se juega (unidades, edificios, terreno...): `defaultContent()` o una variante. */
   content: GameContent;
-  /** Tema del mapa (0 = llanura). */
-  theme?: number;
+  /** Tema del mapa (id de themes.json; si no, el primero). */
+  theme?: string;
   /** Dinero de cada bando al empezar (si no, `rules.initialFunds` para los dos). */
   funds?: [number, number];
 }
@@ -25,7 +25,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
   return {
     version: SAVE_VERSION,
     map,
-    theme: options.theme ?? 0,
+    theme: options.theme ?? options.content.themes.list[0]!.id,
     funds: options.funds ?? [rules.initialFunds, rules.initialFunds],
     units: [],
     buildings: [],

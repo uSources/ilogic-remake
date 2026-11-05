@@ -18,11 +18,11 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 2;
-  /** Terreno: map[x][y] = indice 0..14 (ver TERRAIN_NAMES). El tamaño del mapa sale de aqui. */
-  map: number[][];
-  /** Tema del mapa 0..4 (Plains, Desert, Forest, Swamp, Snowy): elige las imagenes de orilla. */
-  theme: number;
+  version: 3;
+  /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
+  map: string[][];
+  /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
+  theme: string;
   /** Fondos por bando: [jugador, IA]. */
   funds: [number, number];
   units: Unit[];
@@ -67,6 +67,6 @@ export interface GameSetup {
   seed: number;
   /** Lado del mapa en casillas (20, 32 o 40). */
   size: number;
-  /** Tema elegido (0..4) o null si fue al azar. */
-  theme: number | null;
+  /** Tema elegido (id de themes.json) o null si fue al azar. */
+  theme: string | null;
 }

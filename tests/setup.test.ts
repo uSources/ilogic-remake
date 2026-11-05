@@ -9,9 +9,9 @@ import { createGame, saveContext } from '@core/defaultGames';
 import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
-import { blankState, hqKey, terrainKey, unitTypeNamed } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 afterEach(() => {});
 
@@ -31,10 +31,10 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('el mismo codigo da el mismo mapa; el tema se puede elegir', () => {
-    const first = createGame(seededRng(1234), { size: 20, theme: 4 });
-    const second = createGame(seededRng(1234), { size: 20, theme: 4 });
+    const first = createGame(seededRng(1234), { size: 20, theme: 'Snowy' });
+    const second = createGame(seededRng(1234), { size: 20, theme: 'Snowy' });
     expect(serialize(first)).toBe(serialize(second));
-    expect(first.theme).toBe(4);
+    expect(first.theme).toBe('Snowy');
   });
 
   it('codigos de mapa: ida y vuelta, y codigos no validos', () => {
@@ -63,7 +63,7 @@ describe('nueva partida: tamaños de mapa', () => {
     expect(loaded.setup).toEqual({ seed: 7, size: 40, theme: null });
     expect(
       deserialize(
-        JSON.stringify({ ...JSON.parse(json), map: blankMap(32, terrainKey(defaultContent().plainTerrain)).slice(0, 25) }),
+        JSON.stringify({ ...JSON.parse(json), map: blankMap(32, defaultContent().plainTerrain.id).slice(0, 25) }),
         saveContext(defaultContent()),
       ),
     ).toBeNull();
@@ -73,7 +73,7 @@ describe('nueva partida: tamaños de mapa', () => {
 describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
     const s = blankState(rulesWith(defaultContent(), { dayLimit: 10 }));
-    s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
+    s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 'City', owner: 1, x: 5, y: 5 });
     newUnit(s, unitTypeNamed('Tank'), 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;
     expect(outcome(s)).toBe('playing');

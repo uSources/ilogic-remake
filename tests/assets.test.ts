@@ -1,4 +1,4 @@
-import { hqKey } from './helpers';
+import { hqId } from './helpers';
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ATLAS_PAGES, LOOSE_IMAGES } from '../src/atlasPages';
@@ -8,7 +8,7 @@ import { requiredArtKeys } from '../src/ui/terrainArt';
 
 const UNIT_NAMES = defaultContent().units.list.map((unitType) => unitType.id);
 const BUILDING_NAMES = defaultContent().buildings.list.map((buildingType) => buildingType.id);
-const HQ = hqKey();
+const HQ = hqId();
 const UNIT_ART = defaultContent().units.list.map((unitType) => unitType.art);
 
 /** Comprueba que los graficos compilados (npm run assets) estan completos. */
@@ -33,7 +33,7 @@ describe('graficos compilados', () => {
     const need = [
       // Las que tienen "art" en units.json se pintan con el dibujo de otra mientras no tengan el suyo.
       ...UNIT_ART.flatMap((name) => ['b', 'i', 'r'].map((s) => `u/${s}_${name}`)),
-      ...BUILDING_NAMES.flatMap((name, i) => (i === HQ ? ['b', 'r'] : ['b', 'r', 'n']).map((s) => `flat/bld_${s}_${name}`)),
+      ...BUILDING_NAMES.flatMap((name) => (name === HQ ? ['b', 'r'] : ['b', 'r', 'n']).map((s) => `flat/bld_${s}_${name}`)),
     ];
     expect(need.filter((key) => !frames.has(key))).toEqual([]);
   });

@@ -56,7 +56,8 @@ const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', F
 export interface SessionOptions {
   seed?: number;
   size?: number;
-  theme?: number | null;
+  /** Tema (id de themes.json: Plains, Desert, Forest, Swamp, Snowy) o null al azar. */
+  theme?: string | null;
   fog?: boolean;
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */

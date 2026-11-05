@@ -6,6 +6,6 @@ import { createGame } from '@core/defaultGames';
 const [seed = '1', size = '24', theme] = process.argv.slice(2);
 const s = createGame(seededRng(Number(seed)), {
   size: Number(size),
-  theme: theme === undefined ? null : Number(theme),
+  theme: theme ?? null,
 });
 process.stdout.write(JSON.stringify({ theme: s.theme, map: s.map, buildings: s.buildings }));

@@ -3,14 +3,14 @@ import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/cont
 import { newUnit } from '@core/rules';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState } from '@core/model';
-import { blankState, unitTypeNamed, hqKey } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 /** [CAMBIO] Registro de acciones: clic derecho inteligente, menu completo y cursor (controls/actions.ts). */
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
-  CITY = 0;
+  CITY = 'City';
 
 function world(): GameState {
   const s = blankState();

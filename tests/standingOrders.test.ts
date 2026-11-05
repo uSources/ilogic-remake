@@ -28,16 +28,16 @@ import {
 } from '@core/squads';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { blankState, savedByVersion1, unitTypeNamed, hqKey } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 /** [CAMBIO] Ordenes con destino estilo RTS y escuadras con nombre. */
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
   CAR = unitTypeNamed('Car'),
-  CITY = 0,
-  FACTORY = 2;
+  CITY = 'City',
+  FACTORY = 'Factory';
 
 /** Partida con las dos Bases y una ciudad neutral lejos. */
 function world(): GameState {

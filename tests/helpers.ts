@@ -1,6 +1,6 @@
 import { entryOf, type BuildingType, type TerrainType, type UnitType } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { keyOf } from '@core/gameContent';
+import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
@@ -9,18 +9,18 @@ import type { GameState, RulesConfig } from '@core/model';
 /** Lado del mapa de las partidas de prueba (como el original). */
 export const BLANK_SIZE = 32;
 
-/** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
 /**
- * Una partida guardada como la guardaban las versiones de antes del formato 2 (`version: 1`): para
- * probar que MIGRATIONS las sigue leyendo.
+ * Una partida guardada que dice ser del formato 1 (`version: 1`): para probar que MIGRATIONS hace con
+ * ella lo de entonces (los pasos de los tipos por numero dejan los ids como estan).
  */
 export function savedByVersion1(json: string): string {
-  return json.replace('"version":2', '"version":1');
+  return json.replace(`"version":${SAVE_VERSION}`, '"version":1');
 }
 
+/** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
 export function blankState(rules: Partial<RulesConfig> = {}): GameState {
   return newGameState({
-    map: blankMap(BLANK_SIZE, terrainKey(defaultContent().plainTerrain)),
+    map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
     funds: [5000, 5000],
@@ -34,9 +34,5 @@ export const buildingTypeNamed = (id: string): BuildingType => entryOf(defaultCo
 /** Un terreno del contenido del juego, por su id ('Woods'). */
 export const terrainNamed = (id: string): TerrainType => entryOf(defaultContent().terrain, id, 'terreno');
 
-/** Lo que guarda una partida en `Building.type` para ese tipo (`buildingKey('City')`). */
-export const buildingKey = (id: string): number => keyOf(defaultContent().buildings, buildingTypeNamed(id));
-/** Lo que guarda una partida en `Building.type` para el cuartel general. */
-export const hqKey = (): number => keyOf(defaultContent().buildings, defaultContent().hq);
-/** Lo que guarda una partida en `map[x][y]` para ese terreno. */
-export const terrainKey = (terrain: TerrainType): number => keyOf(defaultContent().terrain, terrain);
+/** El id del cuartel general del contenido del juego (lo que guarda `Building.type`). */
+export const hqId = (): string => defaultContent().hq.id;

@@ -6,8 +6,8 @@ import { blankState, unitTypeNamed } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank');
-const CITY = 0,
-  FACTORY = 2;
+const CITY = 'City',
+  FACTORY = 'Factory';
 
 /** Reglas de las partidas de estos tests. */
 const TEST_RULES = rulesWith(defaultContent(), { commandPoints: 10, upkeep: 0.1 });

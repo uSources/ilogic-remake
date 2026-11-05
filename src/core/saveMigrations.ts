@@ -8,7 +8,7 @@
  * Lo que la partida no guarda lo da quien la lee (SaveContext): el contenido con el que se juega y
  * las reglas de cada mision. Asi save.ts no depende del catalogo de misiones.
  */
-import type { GameContent } from './content';
+import { findEntry, type GameContent } from './content';
 import { rulesWith } from './rulesConfig';
 import type { GameState, Pos, RulesConfig, Squad, StandingOrder, StandingOrderKind, Unit } from './model';
 import { isObject } from './util/predicates';
@@ -87,7 +87,7 @@ const sameOrderV1 = (first: StandingOrder, second: StandingOrder): boolean => fi
 
 /** La orden de una unidad de una escuadra como la seguia en el formato 1: con capturar, escolta si no captura. */
 function format1KindFor(content: GameContent, unit: Unit, kind: StandingOrderKind): StandingOrderKind {
-  const capturesV1 = !!content.units.list[unit.type]?.canCapture;
+  const capturesV1 = !!findEntry(content.units, unit.type)?.canCapture;
   return kind === 'capture' && !capturesV1 ? 'attack' : kind;
 }
 
@@ -104,6 +104,61 @@ function liftFormat1Order(s: GameState, content: GameContent, squad: Squad): voi
   if (!units.every(followsOrder)) return;
   squad.standingOrder = { kind: order.kind, at: { x: order.at.x, y: order.at.y } };
   for (const unit of units) delete unit.standingOrder;
+}
+
+/*
+ * Paso del formato 2: los tipos iban por su numero. Unidades, edificios y climas, el puesto en su
+ * fichero del contenido con el que se lee la partida (las listas solo crecen por el final: ver
+ * docs/CONTENIDO.md); terrenos y temas eran listas fijas en el codigo: su copia de entonces.
+ */
+
+/** Los terrenos del formato 2, en su orden (eran TERRAIN_NAMES). */
+const FORMAT_2_TERRAIN: readonly string[] = [
+  'Grass',
+  'Water',
+  'Woods',
+  'Sand',
+  'Cactus',
+  'SandCliff',
+  'Flowers',
+  'GrassCliff',
+  'SWater',
+  'DWater',
+  'Snow',
+  'Frosty',
+  'SnowCliff',
+  'SnowWood',
+  'Ice',
+];
+/** Los temas del formato 2, en su orden (eran THEME_NAMES). */
+const FORMAT_2_THEMES: readonly string[] = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'];
+
+/** El id que tenia el numero `value` en la lista `ids`; si no es uno de sus numeros, tal cual (lo rechaza deserialize). */
+const idAt = (ids: readonly string[], value: unknown): unknown =>
+  typeof value === 'number' && ids[value] !== undefined ? ids[value] : value;
+
+/** Cambia el campo `field` de `holder` (si es un objeto) del numero de `ids` a su id. */
+function fieldToId(holder: unknown, field: string, ids: readonly string[]): void {
+  if (isObject(holder) && field in holder) holder[field] = idAt(ids, holder[field]);
+}
+
+/** El terreno del mapa, columna a columna, del numero al id. */
+const columnToIds = (column: unknown): unknown =>
+  Array.isArray(column) ? listOf(column).map((terrain) => idAt(FORMAT_2_TERRAIN, terrain)) : column;
+const mapToIds = (map: unknown): unknown => (Array.isArray(map) ? listOf(map).map(columnToIds) : map);
+
+/** Unidades, edificios, terreno, tema, clima y objetivo de captura por id. */
+function format2TypesToIds(raw: Record<string, unknown>, content: GameContent): void {
+  const ids = (list: readonly { id: string }[]) => list.map((entry) => entry.id);
+  for (const unit of listOf(raw.units)) fieldToId(unit, 'type', ids(content.units.list));
+  for (const building of listOf(raw.buildings)) fieldToId(building, 'type', ids(content.buildings.list));
+  raw.map = mapToIds(raw.map);
+  fieldToId(raw, 'theme', FORMAT_2_THEMES);
+  fieldToId(raw.setup, 'theme', FORMAT_2_THEMES);
+  fieldToId(raw.weather, 'kind', ids(content.weather.list));
+  fieldToId(raw.weather, 'next', ids(content.weather.list));
+  const objective = isObject(raw.mission) ? raw.mission.objective : undefined;
+  if (isObject(objective) && objective.kind === 'capture') fieldToId(objective, 'type', ids(content.buildings.list));
 }
 
 /** Los pasos, del mas antiguo al mas nuevo. */
@@ -169,6 +224,13 @@ export const MIGRATIONS: readonly SaveMigration[] = [
       if (!isObject(rules)) return;
       for (const [rule, value] of Object.entries(RULES_ADDED_LATER)) rules[rule] ??= value;
     },
+  },
+  {
+    // Hasta el formato 2 los tipos se guardaban por numero; desde el 3, por id (no dependen del orden).
+    name: 'tipos por id en vez de por numero',
+    upToVersion: 2,
+    stage: 'read',
+    apply: (raw, context) => format2TypesToIds(raw, context.content),
   },
   {
     // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.

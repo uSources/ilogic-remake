@@ -9,9 +9,9 @@ import { placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, savedByVersion1, unitTypeNamed, hqKey } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 /** [CAMBIO] Puntos de control: zonas que dan dinero cada ronda a su dueño si no estan disputadas. */
 const SOLDIER = unitTypeNamed('Soldier'),

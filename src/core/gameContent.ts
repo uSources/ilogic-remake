@@ -9,17 +9,27 @@
  * que hay en la partida (`unitTypeOf(s, unit).cost`). Para copiar una partida, `cloneState` (comparte
  * el contenido, que esta congelado).
  */
-import type { AiWeights, BuildingType, Catalog, Identified, TerrainType, Theme, UnitType, WeatherType } from './content';
+import {
+  entryOf,
+  findEntry,
+  type AiWeights,
+  type BuildingType,
+  type TerrainType,
+  type Theme,
+  type UnitType,
+  type WeatherType,
+} from './content';
+import { mapGrid } from './mapGrid';
 import type { Building, GameState, Pos, SavedGameState, Unit } from './model';
 
 /** El tipo de una unidad, si el contenido de la partida lo tiene (para lo que viene de fuera). */
 export function findUnitType(s: GameState, unit: Pick<Unit, 'type'>): UnitType | undefined {
-  return s.content.units.list[unit.type];
+  return findEntry(s.content.units, unit.type);
 }
 
 /** El tipo de un edificio, si el contenido de la partida lo tiene. */
 export function findBuildingType(s: GameState, building: Pick<Building, 'type'>): BuildingType | undefined {
-  return s.content.buildings.list[building.type];
+  return findEntry(s.content.buildings, building.type);
 }
 
 /** El tipo de una unidad (o de lo que lleve su tipo: una prevision, un evento). */
@@ -43,22 +53,17 @@ export function isHq(s: GameState, building: Pick<Building, 'type'>): boolean {
 
 /** El terreno de una casilla (tiene que estar dentro del mapa). */
 export function terrainAt(s: GameState, pos: Pos): TerrainType {
-  return s.content.terrain.list[s.map[pos.x]![pos.y]!]!;
+  return entryOf(s.content.terrain, mapGrid(s).at(pos), 'terreno');
 }
 
 /** El tema del mapa de la partida. */
 export function themeOf(s: GameState): Theme {
-  return s.content.themes.list[s.theme]!;
+  return entryOf(s.content.themes, s.theme, 'tema');
 }
 
-/** Un clima de la partida por su clave guardada (WeatherState.kind y next). */
-export function weatherTypeOf(s: GameState, kind: number): WeatherType {
-  return s.content.weather.list[kind]!;
-}
-
-/** La clave con la que la partida guarda un tipo de su contenido (en Unit.type, Building.type...). */
-export function keyOf<T extends Identified>(catalog: Catalog<T>, entry: T): number {
-  return catalog.list.indexOf(entry);
+/** Un clima de la partida por su id (WeatherState.kind y next). */
+export function weatherTypeOf(s: GameState, kind: string): WeatherType {
+  return entryOf(s.content.weather, kind, 'clima');
 }
 
 /** Los pesos de la IA de la partida (ai.json). */

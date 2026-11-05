@@ -6,7 +6,7 @@ import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
 import type { GameEvent, GameState, Objective } from './core/model';
 import { nameOf, settings } from './settings';
-import type { GameContent } from './core/content';
+import { entryOf, type GameContent } from './core/content';
 
 const STORAGE_KEY = 'ilogic.campaign';
 
@@ -76,7 +76,11 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { k
   survive: ({ days }) => (es() ? `Aguanta hasta el final del día ${days}.` : `Hold out until the end of day ${days}.`),
   capture: ({ count, type, days }, content) => {
     const what =
-      type === null ? (es() ? 'edificios' : 'buildings') : nameOf(content.buildings.list[type]!).toLowerCase() + (es() ? 'es' : 's');
+      type === null
+        ? es()
+          ? 'edificios'
+          : 'buildings'
+        : nameOf(entryOf(content.buildings, type, 'edificio')).toLowerCase() + (es() ? 'es' : 's');
     return es() ? `Ten ${count} ${what} antes de que acabe el día ${days}.` : `Own ${count} ${what} before day ${days} ends.`;
   },
   destroy: ({ days }) =>

@@ -15,9 +15,9 @@ import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { blankState, unitTypeNamed, hqKey } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 const type = unitTypeNamed;
 const seeAll = () => true;

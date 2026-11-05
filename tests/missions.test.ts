@@ -10,9 +10,9 @@ import { createLayer } from '@core/mapGrid';
 import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { savedByVersion1, hqKey } from './helpers';
+import { savedByVersion1, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: mapa valido y bases conectadas', (_id, mission) => {
@@ -124,7 +124,7 @@ describe('misiones', () => {
     expect(outcome(hold)).toBe('won');
 
     const bh = buildMission(byId('bridgehead'), defaultContent());
-    for (const building of bh.buildings) if (building.type === 0 && building.owner === null) building.owner = 0;
+    for (const building of bh.buildings) if (building.type === 'City' && building.owner === null) building.owner = 0;
     expect(outcome(bh)).toBe('won');
     const bh2 = buildMission(byId('bridgehead'), defaultContent());
     bh2.day = 15;

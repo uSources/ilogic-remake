@@ -51,7 +51,7 @@ async function open(browser, viewport) {
  * `enemy`: ademas, un soldado enemigo al lado (7,12).
  */
 async function start(page, enemy = false) {
-  await page.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false }));
+  await page.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false }));
   const st = await page.evaluate((enemy) => {
     const s = window.ilogicDebug.state();
     const me = s.units.find((unit) => unit.x === 0 && unit.y === 7);

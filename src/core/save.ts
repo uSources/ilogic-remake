@@ -6,6 +6,7 @@
 import { unitTypeOf, savedPart } from './gameContent';
 import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
 import { generalDef } from './generals';
+import { findEntry, type Catalog, type Identified } from './content';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
 import { sanitizeStats } from './stats';
@@ -17,6 +18,9 @@ import { isObject } from './util/predicates';
 import type { GameState, Pos, RulesConfig, SavedGameState, StandingOrder, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
+
+/** Un id de ese catalogo del contenido de la partida. */
+const isIdIn = (catalog: Catalog<Identified>, value: unknown): value is string => typeof value === 'string' && !!findEntry(catalog, value);
 
 const isInt = (value: unknown, min: number, max: number): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
@@ -93,12 +97,12 @@ function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unkno
 function readMap(s: GameState): boolean {
   if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
   if (s.map[0].length !== s.map.length) return false;
-  const isTerrain = (value: unknown) => isInt(value, 0, s.content.terrain.list.length - 1);
+  const isTerrain = (value: unknown) => isIdIn(s.content.terrain, value);
   return s.map.every((column) => Array.isArray(column) && column.length === s.map.length && column.every(isTerrain));
 }
 
 function hasValidBasics(s: GameState): boolean {
-  if (!isInt(s.theme, 0, s.content.themes.list.length - 1) || !Array.isArray(s.funds) || s.funds.length !== 2) return false;
+  if (!isIdIn(s.content.themes, s.theme) || !Array.isArray(s.funds) || s.funds.length !== 2) return false;
   if (!s.funds.every((funds) => isInt(funds, 0, MAX_SAVED_FUNDS))) return false;
   return Array.isArray(s.units) && Array.isArray(s.buildings);
 }
@@ -116,7 +120,7 @@ function readUnits(s: GameState): boolean {
 }
 
 function isValidUnit(s: GameState, unit: Unit): boolean {
-  if (!isInt(unit.type, 0, s.content.units.list.length - 1) || !isTeam(unit.team)) return false;
+  if (!isIdIn(s.content.units, unit.type) || !isTeam(unit.team)) return false;
   if (!isMapPos(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
   return Array.isArray(unit.cargo) && unit.cargo.length === unitTypeOf(s, unit).cargoSlots;
 }
@@ -142,7 +146,7 @@ function hasConsistentCargo(s: GameState): boolean {
 
 function readBuildings(s: GameState): boolean {
   for (const building of s.buildings) {
-    if (!isInt(building.type, 0, s.content.buildings.list.length - 1) || !isMapPos(mapGrid(s), building)) return false;
+    if (!isIdIn(s.content.buildings, building.type) || !isMapPos(mapGrid(s), building)) return false;
     if (building.owner !== null && !isTeam(building.owner)) return false;
     // Una captura a medias rota se olvida (el edificio sigue).
     const progress = building.capture;
@@ -163,11 +167,7 @@ function isValidMission(s: GameState, mission: GameState['mission']): boolean {
     case 'destroy':
       return hasDays;
     case 'capture':
-      return (
-        hasDays &&
-        isInt(objective.count, 1, 1000) &&
-        (objective.type === null || isInt(objective.type, 0, s.content.buildings.list.length - 1))
-      );
+      return hasDays && isInt(objective.count, 1, 1000) && (objective.type === null || isIdIn(s.content.buildings, objective.type));
     case 'escort':
       return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(mapGrid(s), objective.to);
     default:
@@ -182,7 +182,7 @@ function cleanSetup(s: GameState): void {
     !!setup &&
     isInt(setup.seed, 0, 2 ** 32) &&
     setup.size === s.map.length &&
-    (setup.theme === null || isInt(setup.theme, 0, s.content.themes.list.length - 1));
+    (setup.theme === null || isIdIn(s.content.themes, setup.theme));
   if (!ok) delete s.setup;
 }
 
@@ -191,10 +191,7 @@ function cleanWeather(s: GameState): void {
   if (s.weather === undefined) return;
   const weather = s.weather;
   const ok =
-    !!weather &&
-    isInt(weather.kind, 0, s.content.weather.list.length - 1) &&
-    isInt(weather.next, 0, s.content.weather.list.length - 1) &&
-    isInt(weather.left, 0, 1000);
+    !!weather && isIdIn(s.content.weather, weather.kind) && isIdIn(s.content.weather, weather.next) && isInt(weather.left, 0, 1000);
   if (!ok) delete s.weather;
 }
 

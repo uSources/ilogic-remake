@@ -23,9 +23,9 @@ describe('preguntas con nombre', () => {
 
   it('luchar y capturar leen las tablas de units.json', () => {
     const s = blankState();
-    defaultContent().units.list.forEach((unitType, type) => {
-      expect(canFight(s, { type })).toBe(unitType.attack !== null);
-      expect(isCapturer(s, { type })).toBe(unitType.canCapture);
+    defaultContent().units.list.forEach((unitType) => {
+      expect(canFight(s, { type: unitType.id })).toBe(unitType.attack !== null);
+      expect(isCapturer(s, { type: unitType.id })).toBe(unitType.canCapture);
     });
   });
 });

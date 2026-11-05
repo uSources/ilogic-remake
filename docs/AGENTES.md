@@ -50,7 +50,7 @@ Desde Playwright (`page.evaluate`) o la consola:
 ```js
 await ilogicDebug.ready();                                  // espera al menu
 ilogicDebug.freeze();                                       // sin animaciones (capturas comparables)
-await ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false });
+await ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false });
 await ilogicDebug.startGame({ mission: 'tutorial' });
 await ilogicDebug.startGame({ state: jsonDeUnaPartida });  // p. ej. el de `npm run play ... state`
 ilogicDebug.game();    // { phase, busy, ended, day, cursor }

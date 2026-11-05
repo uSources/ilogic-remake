@@ -14,15 +14,15 @@ import {
   type MovePath,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, savedByVersion1, unitTypeNamed, hqKey, terrainKey, terrainNamed } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, terrainNamed, hqId } from './helpers';
 
-const HQ = hqKey();
+const HQ = hqId();
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
   ARTILLERY = unitTypeNamed('Artillery'),
   TRANSPORT = unitTypeNamed('Transport');
-const WOODS = terrainKey(terrainNamed('Woods'));
+const WOODS = 'Woods';
 
 describe('ayudas de reglas', () => {
   it('proteccion de casilla: terreno por edificio, y estrellas de 0 a 4', () => {
@@ -82,7 +82,7 @@ describe('ayudas de reglas', () => {
     expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
-    const building = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
+    const building = { type: 'City', owner: 1 as const, x: 4, y: 4, capture: null };
     expect(captureEvent(unit, building, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
       uid: unit.uid,
@@ -110,13 +110,13 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 3 as 2 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 4 as 3 })],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',
       () => {
         const s = sample();
-        s.map[0]![0] = 999;
+        s.map[0]![0] = 'Lava';
         return serialize(s);
       },
     ],
@@ -156,7 +156,7 @@ describe('partidas guardadas', () => {
       'edificio de tipo desconocido',
       () => {
         const s = sample();
-        s.buildings[0]!.type = 99;
+        s.buildings[0]!.type = 'Castle';
         return serialize(s);
       },
     ],

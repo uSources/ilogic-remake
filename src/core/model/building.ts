@@ -3,8 +3,8 @@ import type { Team } from './team';
 
 /** Un edificio en su casilla (x, y). */
 export interface Building extends Pos {
-  /** Tipo 0..5 (ver BUILDING_NAMES). */
-  type: number;
+  /** Tipo de edificio: su id en buildings.json (ver buildingTypeOf). */
+  type: string;
   /** Bando propietario, o null si es neutral. */
   owner: Team | null;
   /**
