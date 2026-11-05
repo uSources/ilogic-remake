@@ -6,7 +6,7 @@
  * las escenas y los tests los siguen importando de '../ui/hudModels'.
  */
 
-export { commandLabel, squadsVM } from './models/army';
+export { standingOrderLabel, squadsVM } from './models/army';
 export { combatVM, forecastVM } from './models/combat';
 export { buyBlockedText, dayInfoVM, economyVM } from './models/economy';
 export { generalVM } from './models/general';

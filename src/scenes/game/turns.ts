@@ -3,10 +3,10 @@
  * paso, el final de la ronda (ingresos, curar) y la vuelta al jugador. Tambien repetir el ultimo turno
  * enemigo (misma semilla) y avanzar las ordenes de varios turnos al empezar el propio.
  */
+import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
-import { WEATHER } from '../../core/data';
-import { samePos, seededRng } from '../../core/geom';
+import { samePos, seededRng, posOf } from '../../core/geom';
 import {
   buildingAt,
   canCapture,
@@ -24,7 +24,7 @@ import {
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
-import type { GameEvent, GameState, Pos, Unit } from '../../core/types';
+import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, unitLabel, weatherLabel } from '../../settings';
 import { randomSeed } from '../../setup';
@@ -34,6 +34,7 @@ import { weatherEffectsText } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { PAL_CSS } from '../../ui/palette';
 import { CONFIRM_MS, INPUT_LOCK_MS, type Phase } from './types';
+import { tablesOf } from '../../core/gameContent';
 
 /** Donde estaba mirando el jugador antes del turno enemigo. */
 interface SavedCamera {
@@ -65,7 +66,7 @@ export interface TurnHost {
   toMap(): void;
   refresh(): void;
   refreshHud(): void;
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   /** Unidades propias sin mover y sin orden. */
   idleUnits(): Unit[];
   /** Se ha guardado esta partida (al acabar se borra el guardado). */
@@ -91,7 +92,7 @@ const isReadyOwnUnit = (unit: Unit): boolean => unit.team === 0 && unit.active &
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
   const squad = squadById(s, unit.squad);
-  return unitLabel(unit.type) + (squad ? ` (${squad.name})` : '');
+  return unitLabel(s.content, unit.type) + (squad ? ` (${squad.name})` : '');
 }
 
 export class TurnFlow {
@@ -176,7 +177,7 @@ export class TurnFlow {
     this.backToPlayer(saved);
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
     this.showReport(report, ordersDone);
-    await this.runOrders();
+    await this.runTravels();
   }
 
   /** La partida sigue: no se ha cambiado por otra ni acaba de terminar (si termina, empieza el final). */
@@ -208,7 +209,7 @@ export class TurnFlow {
   private async playAutoCaptures(match: number): Promise<boolean> {
     const host = this.host;
     for (const unit of this.autoCapturers()) {
-      const building = buildingAt(host.state, unit.x, unit.y)!;
+      const building = buildingAt(host.state, unit)!;
       const result = capture(host.state, unit);
       if (result) await host.play([captureEvent(unit, building, result)]);
       if (!this.continues(match)) return false;
@@ -258,7 +259,7 @@ export class TurnFlow {
     host.toMap();
     const saved = this.saveCamera();
     const after = serialize(host.state);
-    const before = deserialize(last.before);
+    const before = deserialize(last.before, saveContext(host.state.content));
     if (!before) return;
     host.state = before;
     this.replaying = true;
@@ -275,46 +276,46 @@ export class TurnFlow {
       await host.play([event]);
       if (match !== host.match || host.ended) return;
     }
-    host.state = deserialize(after)!;
+    host.state = deserialize(after, saveContext(host.state.content))!;
     this.replaying = false;
     this.enemyPlaying = false;
     this.backToPlayer(saved);
   }
 
-  /** Al empezar el turno: las unidades con orden avanzan solas (y pueden seguir actuando despues). */
-  async runOrders(): Promise<void> {
+  /** Al empezar el turno: las unidades de viaje (travelTo) avanzan solas (y pueden seguir actuando despues). */
+  async runTravels(): Promise<void> {
     const host = this.host;
-    const movers = host.state.units.filter((unit) => isReadyOwnUnit(unit) && unit.order);
+    const movers = host.state.units.filter((unit) => isReadyOwnUnit(unit) && unit.travelTo);
     const arrived: Unit[] = [];
     const match = host.match;
     for (const unit of movers) {
       if (match !== host.match) return;
-      if (await this.followOrder(unit)) arrived.push(unit);
+      if (await this.advanceTravel(unit)) arrived.push(unit);
     }
     const firstArrived = arrived[0];
     if (firstArrived) {
-      host.view.cursor = { x: firstArrived.x, y: firstArrived.y };
+      host.view.cursor = posOf(firstArrived);
       host.view.ensureVisible(firstArrived, ARRIVED_MARGIN);
-      showToast(t('orderArrives'));
+      showToast(t('travelArrives'));
     }
     if (movers.length) host.refresh();
   }
 
   /**
-   * Un turno de camino hacia el destino de la orden, que se cumple al llegar o si le tienden una
+   * Un turno de camino hacia el destino del viaje, que acaba al llegar o si le tienden una
    * emboscada. Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno
    * en las ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
    */
-  private async followOrder(unit: Unit): Promise<boolean> {
+  private async advanceTravel(unit: Unit): Promise<boolean> {
     const host = this.host;
-    const goal = unit.order!;
+    const goal = unit.travelTo!;
     if (samePos(unit, goal)) {
-      delete unit.order;
+      delete unit.travelTo;
       return false;
     }
     const range = moveRange(host.state, unit);
-    if (canReach(range, goal.x, goal.y)) {
-      delete unit.order;
+    if (canReach(range, goal)) {
+      delete unit.travelTo;
       return true;
     }
     const destination = stepToward(host.state, unit, goal, range);
@@ -322,7 +323,7 @@ export class TurnFlow {
     const path = moveUnit(host.state, unit, destination, range);
     if (!path) return false;
     await host.play([moveEvent(unit.uid, path)]);
-    if (samePos(unit, goal) || path.ambush) delete unit.order;
+    if (samePos(unit, goal) || path.ambush) delete unit.travelTo;
     return false;
   }
 
@@ -347,14 +348,14 @@ export class TurnFlow {
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
   private showReport(report: RoundReport, ordersDone: string[] = []): void {
     const host = this.host;
-    showReport(`${t('day')} ${host.state.day}`, roundReportLines(report, ordersDone));
+    showReport(`${t('day')} ${host.state.day}`, roundReportLines(host.state, report, ordersDone));
     if (host.fastForward) return;
     ownHealed(report).forEach((healed, i) => {
       const unit = unitById(host.state, healed.uid);
       if (!unit || unit.carrier !== null || !host.visible(unit)) return;
-      const c = center(unit);
+      const centerPoint = center(unit);
       const delay = HEAL_TEXT_DELAY_MS + i * HEAL_TEXT_STAGGER_MS;
-      void floatText(host.scene, host.view, { x: c.x, y: c.y - 6 }, `+${healed.amount}`, PAL_CSS.green, delay);
+      void floatText(host.scene, host.view, { x: centerPoint.x, y: centerPoint.y - 6 }, `+${healed.amount}`, PAL_CSS.green, delay);
     });
   }
 }
@@ -362,7 +363,7 @@ export class TurnFlow {
 const ownHealed = (report: RoundReport) => report.healed.filter((healed) => healed.team === 0);
 
 /** Las lineas del resumen de la ronda. `ordersDone`: unidades que cumplieron su orden. */
-function roundReportLines(report: RoundReport, ordersDone: string[]): ReportLineVM[] {
+function roundReportLines(s: GameState, report: RoundReport, ordersDone: string[]): ReportLineVM[] {
   const { control, income, upkeep, weather } = report;
   const healed = ownHealed(report);
   const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(income[0])} ${t('reportIncome')}`, tone: 'gold' }];
@@ -380,7 +381,12 @@ function roundReportLines(report: RoundReport, ordersDone: string[]): ReportLine
   }
   if (weather) {
     const to = weather.to;
-    lines.push({ icon: '', weather: WEATHER.ids[to]!, text: `${weatherLabel(to)}: ${weatherEffectsText(to)}`, tone: 'plain' });
+    lines.push({
+      icon: '',
+      weather: tablesOf(s).WEATHER.ids[to]!,
+      text: `${weatherLabel(s.content, to)}: ${weatherEffectsText(s, to)}`,
+      tone: 'plain',
+    });
   }
   return lines;
 }

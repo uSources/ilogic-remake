@@ -3,14 +3,16 @@
  * trazado, peligro, de donde venia (para deshacer) y los objetivos de su menu (atacar, descargar).
  * Vive desde que se elige la unidad hasta que se vuelve al mapa. Sin Phaser.
  */
-import { extendTrail } from '../../core/orders';
+import { posKey, posOf } from '../../core/geom';
+import { extendTrail } from '../../core/trail';
 import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/types';
+import type { GameState, Pos, Unit } from '../../core/model';
+import type { Grid } from '../../core/util/grid';
 import { intentAt, trailTo, type MovePlan } from './intent';
-import { key, type Intent, type MoveUndo } from './types';
+import { type Intent, type MoveUndo } from './types';
 
 /** Mapa de casillas → uid de la unidad que hay en ella. */
-const byTile = (units: readonly Unit[]) => new Map(units.map((unit) => [key(unit), unit.uid]));
+const byTile = (units: readonly Unit[]) => new Map(units.map((unit) => [posKey(unit), unit.uid]));
 
 export class MoveSession {
   /** Alcance de la unidad (null: ya se ha movido, o no se puede mover). */
@@ -21,11 +23,11 @@ export class MoveSession {
   /** Camino que se esta trazando, de la unidad al cursor (incluye la casilla de salida). */
   trail: Pos[] = [];
   /** Casillas que le cierran el paso (enemigos que se ven). */
-  private block: boolean[][] | null = null;
+  private block: Grid<boolean> | null = null;
   /** Casillas que el enemigo visible puede atacar el turno siguiente. */
-  danger: boolean[][] | null = null;
+  danger: Grid<boolean> | null = null;
   /** Adonde podria atacar desde lo que alcanza. */
-  attackZone: boolean[][] | null = null;
+  attackZone: Grid<boolean> | null = null;
   /** Donde estaba antes de moverla este turno (para "Atras" en su menu). */
   undo: MoveUndo | null = null;
   /** Enemigos a los que puede atacar ahora (fase 'attack', "x,y" → uid). */
@@ -48,7 +50,7 @@ export class MoveSession {
     session.range = range;
     session.merge = byTile(mergeTargets(s, unit, range));
     session.load = byTile(loadTargets(s, unit, range));
-    session.trail = [{ x: unit.x, y: unit.y }];
+    session.trail = [posOf(unit)];
     session.block = passMap(s, unit).block;
     session.danger = threatMap(s, 1, 0);
     session.attackZone = attackZone(s, unit, range);
@@ -62,7 +64,7 @@ export class MoveSession {
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad en una casilla. */
-  intentAt(s: GameState, tile: Pos, visible: (p: Pos) => boolean): Intent {
+  intentAt(s: GameState, tile: Pos, visible: (pos: Pos) => boolean): Intent {
     return intentAt(s, this.plan(), tile, visible);
   }
 

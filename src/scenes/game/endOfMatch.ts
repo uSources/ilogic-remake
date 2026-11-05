@@ -3,11 +3,12 @@
  * pantalla con el resumen y sus botones (volver a jugar, siguiente mision, menu...).
  */
 import type Phaser from 'phaser';
-import { HQ, MAP_H, MAP_W } from '../../core/data';
+import { tablesOf } from '../../core/gameContent';
+import { mapGrid } from '../../core/mapGrid';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { score } from '../../core/rules';
-import { sampleArmy, stats } from '../../core/stats';
-import type { GameState, Pos, Team } from '../../core/types';
+import { sampleArmy, statsOf } from '../../core/stats';
+import type { GameState, Pos, Team } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
 import { ui, type UIState } from '../../hud/store';
@@ -36,11 +37,11 @@ const SMOKE_EVERY_MS = 650;
 const CONFETTI_COLORS = [PAL.gold, 0xfff1a8, PAL.blue, 0x8fd0ff, 0xffffff];
 
 /** Filtro CSS del lienzo del juego (gris al perder). */
-export function setEndFilter(f: string | null): void {
-  const el = document.getElementById('game');
-  if (!el) return;
-  el.style.transition = f ? 'filter 1.2s steps(6)' : '';
-  el.style.filter = f ?? '';
+export function setEndFilter(filter: string | null): void {
+  const gameElement = document.getElementById('game');
+  if (!gameElement) return;
+  gameElement.style.transition = filter ? 'filter 1.2s steps(6)' : '';
+  gameElement.style.filter = filter ?? '';
 }
 
 /** Mision que va detras de esta (ninguna si es la ultima). */
@@ -55,14 +56,15 @@ export function endButtonsFor(mission: MissionDef | undefined, won: boolean): En
 
 /** Donde mirar al acabar. `lastAt`: ultima casilla con un combate o una captura. */
 export function endFocus(s: GameState, won: boolean, reason: EndReason, lastAt: Pos | null): Pos {
-  const hqOf = (team: Team) => s.buildings.find((building) => building.type === HQ && building.owner === team);
+  const hqOf = (team: Team) => s.buildings.find((building) => building.type === tablesOf(s).HQ && building.owner === team);
   const objective = s.mission?.objective;
   if (reason === 'objective' && objective?.kind === 'escort') return objective.to;
   const endedByAMove = reason === 'hq' || reason === 'wipeout' || reason === 'objective';
   if (endedByAMove && lastAt) return lastAt;
   const hq = hqOf(0) ?? hqOf(1);
   if (!won && hq) return hq;
-  return lastAt ?? hq ?? { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
+  const map = mapGrid(s);
+  return lastAt ?? hq ?? { x: Math.floor(map.width / 2), y: Math.floor(map.height / 2) };
 }
 
 /** Lo que el final necesita de la escena. */
@@ -122,8 +124,8 @@ export class EndOfMatch {
     const host = this.host;
     await host.wait(BEFORE_PAN_MS);
     if (match !== host.match) return false;
-    const c = center(focus);
-    host.scene.cameras.main.pan(c.x, c.y, reducedMotion() ? 0 : PAN_MS, 'Sine.easeInOut', true);
+    const centerPoint = center(focus);
+    host.scene.cameras.main.pan(centerPoint.x, centerPoint.y, reducedMotion() ? 0 : PAN_MS, 'Sine.easeInOut', true);
     await host.wait(reducedMotion() ? AFTER_PAN_REDUCED_MS : AFTER_PAN_MS);
     return match === host.match;
   }
@@ -131,24 +133,24 @@ export class EndOfMatch {
   /** Confeti al ganar; al perder, el mapa en gris y humo. Se repite (salvo con "reducir movimiento"). */
   private celebrate(won: boolean, focus: Pos): void {
     const { scene, view } = this.host;
-    const c = center(focus);
+    const centerPoint = center(focus);
     if (won) void tileFlash(scene, view, focus, PAL.gold);
     else setEndFilter(DEFEAT_FILTER);
-    const puff = won ? () => this.confetti(c) : () => this.smoke(c);
+    const puff = won ? () => this.confetti(centerPoint) : () => this.smoke(centerPoint);
     puff();
     if (reducedMotion()) return;
     this.celebration = scene.time.addEvent({ delay: won ? CONFETTI_EVERY_MS : SMOKE_EVERY_MS, loop: true, callback: puff });
   }
 
   /** Un estallido de confeti en un sitio al azar alrededor de la jugada. */
-  private confetti(c: { x: number; y: number }): void {
-    const at = { x: c.x + (Math.random() - 0.5) * TILE * 8, y: c.y + (Math.random() - 0.5) * TILE * 5 };
+  private confetti(pos: { x: number; y: number }): void {
+    const at = { x: pos.x + (Math.random() - 0.5) * TILE * 8, y: pos.y + (Math.random() - 0.5) * TILE * 5 };
     void burst(this.host.scene, this.host.view, at, { colors: CONFETTI_COLORS, count: 14, radius: 30, duration: 900 });
   }
 
   /** Una columna de humo sobre la jugada. */
-  private smoke(c: { x: number; y: number }): void {
-    const at = { x: c.x + (Math.random() - 0.5) * TILE, y: c.y - TILE / 2 };
+  private smoke(pos: { x: number; y: number }): void {
+    const at = { x: pos.x + (Math.random() - 0.5) * TILE, y: pos.y - TILE / 2 };
     void burst(this.host.scene, this.host.view, at, { colors: COLORS.smoke, count: 8, radius: 26, size: 6, duration: 1400 });
   }
 
@@ -157,7 +159,7 @@ export class EndOfMatch {
     const s = this.host.state;
     this.buttons = endButtonsFor(mission, won);
     this.selected = 0;
-    const matchStats = stats(s);
+    const matchStats = statsOf(s);
     ui.set({
       screen: 'end',
       end: {
@@ -175,11 +177,11 @@ export class EndOfMatch {
       },
     });
     Object.assign(ui.actions, {
-      endHover: (i: number) => {
-        this.selected = i;
+      endHover: (index: number) => {
+        this.selected = index;
         this.publishSelected();
       },
-      endPick: (i: number) => this.pick(i),
+      endPick: (index: number) => this.pick(index),
     });
   }
 
@@ -189,21 +191,21 @@ export class EndOfMatch {
   }
 
   /** Menu de fin de partida: una fila de botones. */
-  command(cmd: MenuCommand): void {
+  command(command: MenuCommand): void {
     if (ui.get().screen !== 'end') return;
-    const step = listStep(cmd);
+    const step = listStep(command);
     if (step) {
       const count = this.buttons.length;
       this.selected = (this.selected + step + count) % count;
       this.publishSelected();
       return;
     }
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.pick(this.selected);
-    if (cmd.kind === 'back') return this.pick(this.buttons.indexOf('menu'));
+    if (command.kind === 'ok' && !command.repeat) return this.pick(this.selected);
+    if (command.kind === 'back') return this.pick(this.buttons.indexOf('menu'));
   }
 
-  private pick(i: number): void {
-    const id = this.buttons[i];
+  private pick(index: number): void {
+    const id = this.buttons[index];
     if (!id || ui.get().screen !== 'end') return;
     this.celebration?.remove(false);
     this.celebration = null;

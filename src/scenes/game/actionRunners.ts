@@ -3,8 +3,8 @@
  * en controls/actions.ts (puro, sin escena); aqui, que pasa en la partida. El tipo de ACTION_RUNNERS
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
-import { cancelCommand, disbandSquad, formSquad, leaveSquad, pruneSquads, squadById, SQUAD_NAME_MAX } from '../../core/squads';
-import type { CommandKind, GameState, Pos, Unit } from '../../core/types';
+import { cancelStandingOrder, disbandSquad, formSquad, leaveSquad, pruneSquads, squadById, SQUAD_NAME_MAX } from '../../core/squads';
+import type { StandingOrderKind, GameState, Pos, Unit } from '../../core/model';
 import { exactSquad, type ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
 import { t } from '../../settings';
@@ -23,16 +23,16 @@ export interface ActionRun {
 /** Lo que las acciones necesitan para cumplirse (se lo da Orders). */
 export interface ActionRunHost {
   readonly state: GameState;
-  moveCursorTo(p: Pos, follow: boolean): void;
+  moveCursorTo(pos: Pos, follow: boolean): void;
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
-  commit(at: Pos, opts: { drop?: boolean }): Promise<void>;
+  commit(at: Pos, options: { drop?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
-  /** Orden de varios turnos para la unidad elegida. */
-  giveOrder(unit: Unit, goal: Pos): Promise<void>;
+  /** Viaje de varios turnos (travelTo) para la unidad elegida. */
+  giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Orden con destino sin casilla: ahora se elige en el mapa (fase 'target'). */
-  pickOrderTarget(kind: CommandKind, units: Unit[], fromUnitMenu: boolean): void;
+  pickOrderTarget(kind: StandingOrderKind, units: Unit[], fromUnitMenu: boolean): void;
   /** Orden con destino en `at`: se da y las que pueden la empiezan ya. */
-  placeOrder(kind: CommandKind, units: Unit[], fromUnitMenu: boolean, at: Pos): Promise<void>;
+  placeOrder(kind: StandingOrderKind, units: Unit[], fromUnitMenu: boolean, at: Pos): Promise<void>;
   /** La accion ya esta hecha: cerrar el menu del que salio y redibujar. */
   finish(): void;
 }
@@ -42,14 +42,14 @@ export interface ActionRunner {
    * Con Mayusculas + clic derecho la accion no se hace ahora: queda como esta orden, que se cumple al
    * terminar el turno. Sin ella, la accion no se puede dejar para despues.
    */
-  queueAs?: CommandKind;
+  queueAs?: StandingOrderKind;
   run(action: ActionRun, host: ActionRunHost): void | Promise<void>;
 }
 
 /** Soltar la unidad elegida en la casilla, como al arrastrarla hasta alli. */
-function commitMoving(action: ActionRun, host: ActionRunHost, opts: { drop?: boolean } = {}): Promise<void> {
+function commitMoving(action: ActionRun, host: ActionRunHost, options: { drop?: boolean } = {}): Promise<void> {
   host.moveCursorTo(action.at!, false);
-  return host.commit(action.at!, opts);
+  return host.commit(action.at!, options);
 }
 
 /** Atacar o capturar en la casilla: la unidad elegida va; un grupo recibe la orden y la empieza ya. */
@@ -68,7 +68,7 @@ function joinTile(action: ActionRun, host: ActionRunHost) {
 }
 
 /** Orden con destino desde un menu: sin casilla, se pide despues; con ella, se da ya. */
-function orderWithTarget(kind: CommandKind) {
+function orderWithTarget(kind: StandingOrderKind) {
   return (action: ActionRun, host: ActionRunHost) => {
     const fromUnitMenu = action.fromUnitMenu ?? !!action.moving;
     if (!action.at) return host.pickOrderTarget(kind, action.units, fromUnitMenu);
@@ -85,7 +85,7 @@ function instant(change: (s: GameState, units: Unit[]) => void) {
 }
 
 function cancelOrders(s: GameState, units: Unit[]): void {
-  cancelCommand(s, units);
+  cancelStandingOrder(s, units);
   showToast(t('orderCancelled'));
 }
 
@@ -130,13 +130,13 @@ export const ACTION_RUNNERS: { readonly [Id in ActionId]: ActionRunner } = {
   go: {
     queueAs: 'defend',
     run: (action, host) => {
-      if (action.at && action.moving) return host.giveOrder(action.moving, action.at);
+      if (action.at && action.moving) return host.giveTravel(action.moving, action.at);
     },
   },
-  cmdAttack: { run: orderWithTarget('attack') },
-  cmdCapture: { run: orderWithTarget('capture') },
-  cmdDefend: { run: orderWithTarget('defend') },
-  cmdCancel: { run: instant(cancelOrders) },
+  orderToAttack: { run: orderWithTarget('attack') },
+  orderToCapture: { run: orderWithTarget('capture') },
+  orderToDefend: { run: orderWithTarget('defend') },
+  cancelOrder: { run: instant(cancelOrders) },
   squadForm: { run: instant(announceNewSquad) },
   squadLeave: { run: instant(leaveSquads) },
   squadRename: { run: instant(askSquadName) },

@@ -26,6 +26,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Motorizado** 3500 → 2500, **Jeep** 5000 → 4000 y **Tanque anfibio** 15000 → 11000: rendían menos de la mitad de lo que costaban.
 - **Caza ligero** 12000 → 15000: rendía casi el doble de lo que costaba.
 
+### Arreglos
+- Las **partidas guardadas** se cargan con las reglas con las que se jugaban (niebla, clima, mantenimiento, puntos de mando...), y las de una **misión**, siempre con las de esa misión. Antes una misión guardada podía seguir con las reglas de una partida rápida.
+
 <!-- en -->
 
 ### Gameplay
@@ -44,6 +47,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Balance
 - **Motor trooper** 3500 → 2500, **Jeep** 5000 → 4000 and **Amphibious tank** 15000 → 11000: they were worth less than half their price.
 - **Light fighter** 12000 → 15000: it was worth almost twice its price.
+
+### Fixes
+- **Saved games** load with the rules they were played with (fog, weather, upkeep, command points...), and a **mission** always with that mission's rules. Before, a saved mission could carry on with quick-game rules.
 
 ## [0.7.1] - 2026-10-31 — Polvo en los ojos
 

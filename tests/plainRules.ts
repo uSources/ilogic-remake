@@ -1,8 +1,9 @@
-import { DEFAULT_RULES, type RulesConfig } from '@core/data';
+import { rulesWith } from '@core/rulesConfig';
+import type { RulesConfig } from '@core/model';
+import { defaultContent } from '@core/content/default';
 
 /** Reglas "basicas" para tests: los interruptores de reglas apagados (como variante de equilibrio). */
-export const PLAIN_RULES: RulesConfig = {
-  ...DEFAULT_RULES,
+export const PLAIN_RULES: RulesConfig = rulesWith(defaultContent(), {
   counterattack: false,
   damageSpread: null,
   hqCapturePoints: 20,
@@ -19,4 +20,4 @@ export const PLAIN_RULES: RulesConfig = {
   upkeep: 0,
   weather: false,
   controlPoints: 0,
-};
+});

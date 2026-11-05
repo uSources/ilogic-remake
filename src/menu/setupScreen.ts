@@ -3,7 +3,7 @@
  * mapa y la vista previa del mapa que se jugara. Pide a la escena lo poco que usa (`SetupHost`).
  */
 import type { MenuCommand } from '../controls/menu';
-import { GENERALS } from '../core/data';
+import { defaultContent } from '../core/content/default';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
@@ -23,9 +23,11 @@ import {
   type ChoiceKey,
   type NewGameOptions,
   type PresetId,
+  ruleChangesFor,
 } from '../setup';
+import { rulesWith } from '../core/rulesConfig';
 import { navGrid } from './nav';
-import { keepMapSize, mapThumb } from './thumb';
+import { mapThumb } from './thumb';
 
 export interface SetupHost {
   readonly palette: number[];
@@ -145,9 +147,9 @@ export class SetupScreen {
         preset: options.preset,
         presets: PRESET_IDS.map(presetVM),
         groups: this.customGroups(),
-        general: GENERALS.length ? this.generalRow('general', 'optGeneral') : null,
-        enemyGeneral: GENERALS.length ? this.generalRow('enemyGeneral', 'optEnemyGeneral') : null,
-        generalNote: GENERALS.find((general) => general.id === options.general)?.description[settings.lang] ?? '',
+        general: hasGenerals() ? this.generalRow('general', 'optGeneral') : null,
+        enemyGeneral: hasGenerals() ? this.generalRow('enemyGeneral', 'optEnemyGeneral') : null,
+        generalNote: defaultContent().files.generals.find((general) => general.id === options.general)?.description[settings.lang] ?? '',
         code: this.code,
         codeError: this.codeError,
         mapCode: seedToCode(this.seed),
@@ -157,32 +159,37 @@ export class SetupScreen {
     });
   }
 
-  command(cmd: MenuCommand): void {
-    const dx = cmd.kind === 'move' ? cmd.dx : 0;
+  command(command: MenuCommand): void {
+    const dx = command.kind === 'move' ? command.dx : 0;
     // A los lados, en una opcion, se cambia su valor.
     if (dx && this.focus.startsWith(OPTION_PREFIX)) return this.stepChoice(this.focus, dx);
-    if (cmd.kind === 'move') return this.moveFocus(cmd.dx, cmd.dy);
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.pick();
-    if (cmd.kind === 'reroll') {
+    if (command.kind === 'move') return this.moveFocus(command.dx, command.dy);
+    if (command.kind === 'ok' && !command.repeat) return this.pick();
+    if (command.kind === 'reroll') {
       this.focus = 'reroll';
       return this.pick();
     }
-    if (cmd.kind === 'back') this.host.toHome();
+    if (command.kind === 'back') this.host.toHome();
   }
 
   /** Escribiendo el codigo: Enter empieza; Esc o arriba/abajo salen del cuadro (MENU_BINDINGS.typing). */
-  typingCommand(cmd: MenuCommand): void {
-    if (cmd.kind === 'ok') return this.start();
-    if (cmd.kind !== 'back' && !(cmd.kind === 'move' && cmd.dy)) return;
+  typingCommand(command: MenuCommand): void {
+    if (command.kind === 'ok') return this.start();
+    if (command.kind !== 'back' && !(command.kind === 'move' && command.dy)) return;
     (document.activeElement as HTMLElement).blur();
-    if (cmd.kind === 'move') this.moveFocus(0, cmd.dy);
+    if (command.kind === 'move') this.moveFocus(0, command.dy);
   }
 
   // --- Vista previa y codigo -------------------------------------------------------------------
 
   private refreshPreview(): void {
     const { size, theme } = this.options;
-    const s = keepMapSize(() => generateGame(seededRng(this.seed), { size, theme }));
+    const s = generateGame(seededRng(this.seed), {
+      size,
+      theme,
+      rules: rulesWith(defaultContent(), ruleChangesFor(this.options)),
+      content: defaultContent(),
+    });
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
     const themeName = THEME_NAMES[settings.lang === 'es' ? 'es' : 'en'][s.theme] ?? '';
     const buildings = settings.lang === 'es' ? 'edificios' : 'buildings';
@@ -283,7 +290,7 @@ export class SetupScreen {
 
   private rows(): string[][] {
     const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`)];
-    if (GENERALS.length) rows.push([`${OPTION_PREFIX}general`], [`${OPTION_PREFIX}enemyGeneral`]);
+    if (hasGenerals()) rows.push([`${OPTION_PREFIX}general`], [`${OPTION_PREFIX}enemyGeneral`]);
     if (this.options.preset === 'custom')
       for (const group of CUSTOM_GROUPS) for (const { k: key } of group.keys) rows.push([`${OPTION_PREFIX}${key}`]);
     rows.push(['code', 'reroll']);
@@ -308,3 +315,5 @@ export class SetupScreen {
     this.publish();
   }
 }
+
+const hasGenerals = (): boolean => defaultContent().files.generals.length > 0;

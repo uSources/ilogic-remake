@@ -4,8 +4,9 @@
  * pasa al entrar, su menu de bocadillo y las casillas que marca. Una fase nueva es una entrada nueva;
  * la escena no cambia.
  */
+import { posKey } from '../../../core/geom';
 import { unitById, type BuyOption } from '../../../core/rules';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../../../core/types';
+import type { Building, GameEvent, GameState, Pos, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
 import type { HighlightKind, MapView } from '../../../ui/mapView';
 import type { GeneralAbilities } from '../abilities';
@@ -13,7 +14,7 @@ import type { GroupSelection } from '../groupSelection';
 import type { HighlightInput, Highlights } from '../highlights';
 import type { MenuInput, MenuModel } from '../menuModel';
 import type { Orders } from '../orders';
-import { key, type ActionKey, type Phase } from '../types';
+import { type ActionKey, type Phase } from '../types';
 import type { UnitMoves } from '../unitMoves';
 import type { GameMenuChoices } from './gameMenu';
 
@@ -49,17 +50,17 @@ export interface PhaseHost {
   abandonSelection(): void;
   /** Enseñar el alcance de una unidad (enemiga, o propia ya usada). */
   inspect(unit: Unit): void;
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   play(events: GameEvent[]): Promise<void>;
 }
 
 export interface PhaseHandler {
   /** Al entrar en la fase: prepara lo que enseña (su menu...) y la pone. */
-  enter?(h: PhaseHost): void;
+  enter?(host: PhaseHost): void;
   /** Aceptar (Enter, clic, toque) en la casilla del cursor o la opcion señalada. */
-  accept(h: PhaseHost): void;
+  accept(host: PhaseHost): void;
   /** Atras (Esc, clic derecho, clic fuera del menu). */
-  back(h: PhaseHost): void;
+  back(host: PhaseHost): void;
   /** Su menu de bocadillo, si tiene. Puro: sale de lo elegido. */
   menu?(input: MenuInput): MenuModel;
   /** Casillas que marca en el mapa. Puro. */
@@ -81,7 +82,7 @@ export function markUnits(s: GameState, uids: Iterable<number>): Highlights {
   const marks = noHighlights();
   for (const uid of uids) {
     const unit = unitById(s, uid);
-    if (unit) marks.tiles.set(key(unit), 'group');
+    if (unit) marks.tiles.set(posKey(unit), 'group');
   }
   return marks;
 }

@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { MAP_H, MAP_W } from '../../core/data';
-import type { Pos } from '../../core/types';
+import type { Pos } from '../../core/model';
+import { Grid, type GridBounds } from '../../core/util/grid';
 import { dpr } from '../../display';
 import type { Anchor } from '../../hud/store';
 import { TILE } from '../../layout';
 import { reducedMotion } from '../motion';
-import { inMap, tileCenter } from './geometry';
+import { tileCenter } from './geometry';
 
 /** Margen en pixeles CSS que se puede desplazar mas alla del mapa (para que no quede bajo la interfaz). */
 const EDGE_CSS = 110;
@@ -38,16 +38,18 @@ export class MapCamera {
   /** Pixeles fisicos por pixel del dibujo (zoom entero de la camara). */
   level: number;
   private lastDpr = dpr();
+  /** Tamaño del mapa que se enseña (lo pone `showMap` al construir el terreno de una partida). */
+  private map: GridBounds = Grid.filled({ width: 0, height: 0 }, 0);
 
-  constructor(readonly cam: Phaser.Cameras.Scene2D.Camera) {
-    cam.setRoundPixels(true);
+  constructor(readonly camera: Phaser.Cameras.Scene2D.Camera) {
+    camera.setRoundPixels(true);
     this.level = this.defaultLevel();
   }
 
   /** Pixeles fisicos por pixel del dibujo al empezar (ver START_SCALE). */
   private defaultLevel(): number {
     const ratio = dpr();
-    const cssWidth = this.cam.width / ratio;
+    const cssWidth = this.camera.width / ratio;
     const target = cssWidth < MOBILE_CSS_W ? START_SCALE.mobile : START_SCALE.desktop;
     return this.clampLevel(Math.round(target * ratio));
   }
@@ -57,28 +59,34 @@ export class MapCamera {
     return Phaser.Math.Clamp(level, Math.max(1, Math.round(ratio)), Math.max(MAX_SCALE, Math.round(MAX_SCALE * ratio)));
   }
 
+  /** El mapa que se enseña ahora: sus casillas y sus limites. */
+  showMap(map: GridBounds): void {
+    this.map = map;
+    this.updateBounds();
+  }
+
   /** Pone el zoom actual en la camara y recalcula los limites. */
   apply(): void {
-    this.cam.setZoom(this.level);
+    this.camera.setZoom(this.level);
     this.updateBounds();
   }
 
   /** Posicion en pantalla (pixeles del lienzo) del centro de una casilla. */
-  screenOf(p: Pos): { x: number; y: number } {
-    const view = this.cam.worldView;
-    const c = tileCenter(p);
-    return { x: (c.x - view.x) * this.cam.zoom, y: (c.y - view.y) * this.cam.zoom };
+  screenOf(pos: Pos): { x: number; y: number } {
+    const view = this.camera.worldView;
+    const centerPoint = tileCenter(pos);
+    return { x: (centerPoint.x - view.x) * this.camera.zoom, y: (centerPoint.y - view.y) * this.camera.zoom };
   }
 
   /** Rectangulo de una casilla en pixeles CSS de la ventana (para colocar la interfaz HTML). */
-  tileRectCss(p: Pos): Anchor {
+  tileRectCss(pos: Pos): Anchor {
     // worldView solo se actualiza al dibujar: recalcularlo por si la camara acaba de moverse.
-    this.cam.preRender();
-    const view = this.cam.worldView;
-    const cssPerPixel = this.cam.zoom / dpr();
+    this.camera.preRender();
+    const view = this.camera.worldView;
+    const cssPerPixel = this.camera.zoom / dpr();
     return {
-      x: (p.x * TILE - view.x) * cssPerPixel,
-      y: (p.y * TILE - view.y) * cssPerPixel,
+      x: (pos.x * TILE - view.x) * cssPerPixel,
+      y: (pos.y * TILE - view.y) * cssPerPixel,
       w: TILE * cssPerPixel,
       h: TILE * cssPerPixel,
     };
@@ -86,45 +94,50 @@ export class MapCamera {
 
   /** Casilla bajo un punto de la pantalla (null si cae fuera del mapa). */
   tileAtScreen(sx: number, sy: number): Pos | null {
-    const world = this.cam.getWorldPoint(sx, sy);
+    const world = this.camera.getWorldPoint(sx, sy);
     const x = Math.floor(world.x / TILE);
     const y = Math.floor(world.y / TILE);
-    return inMap(x, y) ? { x, y } : null;
+    return this.map.contains({ x, y }) ? { x, y } : null;
   }
 
   /** Esquinas de un recuadro de pantalla en coordenadas de mundo (arriba a la izquierda y abajo a la derecha). */
-  worldBox(r: ScreenBox): { a: Phaser.Math.Vector2; b: Phaser.Math.Vector2 } {
-    const a = this.cam.getWorldPoint(Math.min(r.x0, r.x1), Math.min(r.y0, r.y1));
-    const b = this.cam.getWorldPoint(Math.max(r.x0, r.x1), Math.max(r.y0, r.y1));
-    return { a, b };
+  worldBox(box: ScreenBox): { topLeft: Phaser.Math.Vector2; bottomRight: Phaser.Math.Vector2 } {
+    const topLeft = this.camera.getWorldPoint(Math.min(box.x0, box.x1), Math.min(box.y0, box.y1));
+    const bottomRight = this.camera.getWorldPoint(Math.max(box.x0, box.x1), Math.max(box.y0, box.y1));
+    return { topLeft, bottomRight };
   }
 
   /** Casillas dentro de un recuadro de pantalla. */
-  tilesInBox(r: ScreenBox): ScreenBox {
-    const { a, b } = this.worldBox(r);
-    return { x0: Math.floor(a.x / TILE), y0: Math.floor(a.y / TILE), x1: Math.floor(b.x / TILE), y1: Math.floor(b.y / TILE) };
+  tilesInBox(box: ScreenBox): ScreenBox {
+    const { topLeft, bottomRight } = this.worldBox(box);
+    return {
+      x0: Math.floor(topLeft.x / TILE),
+      y0: Math.floor(topLeft.y / TILE),
+      x1: Math.floor(bottomRight.x / TILE),
+      y1: Math.floor(bottomRight.y / TILE),
+    };
   }
 
   /** Lleva el centro de la vista a (wx, wy): de golpe, o deslizandose en `ms`. */
   private moveTo(wx: number, wy: number, instant: boolean, ms: number): void {
-    if (instant || reducedMotion()) this.cam.centerOn(wx, wy);
-    else this.cam.pan(wx, wy, ms, PAN_EASE, true);
+    if (instant || reducedMotion()) this.camera.centerOn(wx, wy);
+    else this.camera.pan(wx, wy, ms, PAN_EASE, true);
   }
 
-  centerOn(p: Pos, instant = false): void {
-    const c = tileCenter(p);
-    this.moveTo(c.x, c.y, instant, PAN_MS);
+  centerOn(pos: Pos, instant = false): void {
+    const centerPoint = tileCenter(pos);
+    this.moveTo(centerPoint.x, centerPoint.y, instant, PAN_MS);
   }
 
   /** Desplaza la camara lo justo para que la casilla quede dentro con un margen (en casillas). */
-  ensureVisible(p: Pos, margin = 2, instant = false): void {
-    const view = this.cam.worldView;
+  ensureVisible(pos: Pos, margin = 2, instant = false): void {
+    const view = this.camera.worldView;
     // El margen no puede ser mayor que media vista (pantallas pequeñas o mucho zoom).
     const marginPx = Math.min(margin * TILE, Math.max(0, view.width / 2 - TILE), Math.max(0, view.height / 2 - TILE));
     let centerX = view.centerX;
     let centerY = view.centerY;
-    const left = p.x * TILE;
-    const top = p.y * TILE;
+    const left = pos.x * TILE;
+    const top = pos.y * TILE;
     if (left < view.x + marginPx) centerX -= view.x + marginPx - left;
     if (left + TILE > view.right - marginPx) centerX += left + TILE - (view.right - marginPx);
     if (top < view.y + marginPx) centerY -= view.y + marginPx - top;
@@ -133,38 +146,38 @@ export class MapCamera {
     this.moveTo(centerX, centerY, instant, NUDGE_MS);
   }
 
-  isOnScreen(p: Pos, margin = 1): boolean {
-    const view = this.cam.worldView;
+  isOnScreen(pos: Pos, margin = 1): boolean {
+    const view = this.camera.worldView;
     const marginPx = margin * TILE;
     return (
-      p.x * TILE >= view.x + marginPx &&
-      (p.x + 1) * TILE <= view.right - marginPx &&
-      p.y * TILE >= view.y + marginPx &&
-      (p.y + 1) * TILE <= view.bottom - marginPx
+      pos.x * TILE >= view.x + marginPx &&
+      (pos.x + 1) * TILE <= view.right - marginPx &&
+      pos.y * TILE >= view.y + marginPx &&
+      (pos.y + 1) * TILE <= view.bottom - marginPx
     );
   }
 
   scrollBy(dx: number, dy: number): void {
-    this.cam.setScroll(this.cam.scrollX + dx / this.cam.zoom, this.cam.scrollY + dy / this.cam.zoom);
+    this.camera.setScroll(this.camera.scrollX + dx / this.camera.zoom, this.camera.scrollY + dy / this.camera.zoom);
   }
 
   /** Limites de la camara: el mapa con un margen; si cabe entero en la vista, centrado. */
   updateBounds(): void {
-    const edgeCss = Math.min(EDGE_CSS, Math.round((this.cam.width / dpr()) * EDGE_MAX_FRACTION));
-    const margin = (edgeCss * dpr()) / this.cam.zoom;
-    const mapWidth = MAP_W * TILE;
-    const mapHeight = MAP_H * TILE;
-    const viewWidth = this.cam.width / this.cam.zoom;
-    const viewHeight = this.cam.height / this.cam.zoom;
+    const edgeCss = Math.min(EDGE_CSS, Math.round((this.camera.width / dpr()) * EDGE_MAX_FRACTION));
+    const margin = (edgeCss * dpr()) / this.camera.zoom;
+    const mapWidth = this.map.width * TILE;
+    const mapHeight = this.map.height * TILE;
+    const viewWidth = this.camera.width / this.camera.zoom;
+    const viewHeight = this.camera.height / this.camera.zoom;
     const boundsWidth = Math.max(mapWidth + 2 * margin, viewWidth);
     const boundsHeight = Math.max(mapHeight + 2 * margin, viewHeight);
-    this.cam.setBounds(mapWidth / 2 - boundsWidth / 2, mapHeight / 2 - boundsHeight / 2, boundsWidth, boundsHeight);
+    this.camera.setBounds(mapWidth / 2 - boundsWidth / 2, mapHeight / 2 - boundsHeight / 2, boundsWidth, boundsHeight);
   }
 
   /** La ventana ha cambiado de tamaño: mantener el mismo punto en el centro. */
-  resize(w: number, h: number): void {
-    const mid = { x: this.cam.midPoint.x, y: this.cam.midPoint.y };
-    this.cam.setSize(w, h);
+  resize(width: number, height: number): void {
+    const mid = { x: this.camera.midPoint.x, y: this.camera.midPoint.y };
+    this.camera.setSize(width, height);
     // Si cambia la densidad (otra pantalla, zoom del navegador), mantener el tamaño de casilla en CSS.
     const ratio = dpr();
     if (ratio !== this.lastDpr) {
@@ -173,18 +186,18 @@ export class MapCamera {
     }
     this.level = this.clampLevel(this.level);
     this.apply();
-    this.cam.centerOn(mid.x, mid.y);
+    this.camera.centerOn(mid.x, mid.y);
   }
 
   /** Zoom entero por pasos alrededor de un punto de la pantalla. */
-  zoomStep(dir: 1 | -1, sx: number, sy: number): void {
-    const next = this.clampLevel(this.level + dir);
+  zoomStep(direction: 1 | -1, sx: number, sy: number): void {
+    const next = this.clampLevel(this.level + direction);
     if (next === this.level) return;
-    const before = this.cam.getWorldPoint(sx, sy);
+    const before = this.camera.getWorldPoint(sx, sy);
     this.level = next;
     this.apply();
-    this.cam.preRender();
-    const after = this.cam.getWorldPoint(sx, sy);
-    this.cam.setScroll(this.cam.scrollX + before.x - after.x, this.cam.scrollY + before.y - after.y);
+    this.camera.preRender();
+    const after = this.camera.getWorldPoint(sx, sy);
+    this.camera.setScroll(this.camera.scrollX + before.x - after.x, this.camera.scrollY + before.y - after.y);
   }
 }

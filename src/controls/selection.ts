@@ -10,7 +10,7 @@
  * - Recuadro: las de dentro (con Mayusculas o Ctrl, se añaden a las que habia).
  * - Clic en vacio: no queda ninguna (con Mayusculas, no cambia nada).
  */
-import type { Unit } from '../core/types';
+import type { Unit } from '../core/model';
 
 export type Selection = ReadonlySet<number>;
 
@@ -54,4 +54,5 @@ export function pruneSelection(current: Selection, canSelect: (uid: number) => b
   return next.length === current.size ? current : new Set(next);
 }
 
-export const sameSelection = (a: Selection, b: Selection): boolean => a.size === b.size && [...a].every((id) => b.has(id));
+export const sameSelection = (firstSelection: Selection, secondSelection: Selection): boolean =>
+  firstSelection.size === secondSelection.size && [...firstSelection].every((id) => secondSelection.has(id));

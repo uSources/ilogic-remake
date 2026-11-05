@@ -24,8 +24,9 @@ Contenido del juego no valido (src/core/content):
 - unidad Sniper: builtAt nombra "Castle", que no existe
 ```
 
-Despues `src/core/data.ts` lo convierte en las tablas por numero que usan las reglas (`UNIT`, `POWER`,
-`SPAWNER`...), las mismas que habia antes: el resto del codigo no cambia.
+Despues `loadContent` (src/core/content/index.ts) lo convierte en las tablas por numero que usan las
+reglas (`UNIT`, `POWER`, `SPAWNER`...), que cada partida lee con `tablesOf(s)`: el resto del codigo no
+cambia.
 
 ## Cambiar una unidad
 
@@ -138,7 +139,7 @@ Una clase nueva: añadirla a `ABILITY_KINDS` y `AbilityDef` (`core/content/types
 | `vision` | Radio de vision |
 
 Un edificio nuevo necesita ademas graficos (`public/assets/b/`) y que el generador de mapas sepa
-colocarlo (`MAPGEN` en `data.ts`).
+colocarlo (`MAPGEN` en `mapgenTables.ts`).
 
 Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mientras no tenga el propio.
 
@@ -154,8 +155,9 @@ misiones): se cambian sus numeros, no se añaden ni se quitan.
 | `buildable`, `water` | Para el generador de mapas: se puede poner un edificio, cuenta como agua |
 | `movement` | Coste de entrar por tipo: `{ "foot": 1, "vehicle": 2, "air": 1, "amphibious": null }`; `null` = no se puede pasar |
 
-En el codigo se consulta con tipos legibles: `Movement.of(u.type)` (tipo de una unidad),
-`Movement.canWalk(MoveType.VEHICLE, TerrainType.WOODS)`, `Movement.cost(mt, terreno)`.
+En el codigo se consulta con tipos legibles y por la partida: `movementOf(s, u.type)` (tipo de una
+unidad), `canMoveOn(s, MoveType.VEHICLE, TerrainType.WOODS)`, `terrainMoveCost(s, mt, terreno)`
+(core/gameContent.ts).
 
 ## Clima
 
@@ -226,8 +228,8 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
   `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
   (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
-  las cumple la misma IA que el enemigo (`assistTurn`/`commandTurn` en `src/core/ai/commands.ts`); escuadras
-  y ordenes estan en `src/core/squads.ts`.
+  las cumple la misma IA que el enemigo (`assistTurn`/`standingOrderTurn` en `src/core/ai/standingOrders.ts`); escuadras
+  y ordenes estan en `src/core/squads/` (fachada `squads.ts`).
 
 Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas tablas por nombre:
 `--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60
@@ -235,9 +237,34 @@ Para probar sin tocar ficheros, las variantes de equilibrio aceptan las mismas t
 
 ## Como esta hecho
 
-`src/core/content/` tiene un modulo por parte (`units.ts`, `buildings.ts`, `terrain.ts`, `rules.ts`,
-`ai.ts`), cada uno con su `validate*` y su `build*`; comparten `check.ts` (mensajes de error) y
-`types.ts` (`UnitDef`, `MoveType`, `TerrainType`...). `index.ts` solo los junta: lee los JSON, valida
-todo a la vez y construye las tablas que reexporta `data.ts` (`UNIT`, `POWER`, `TERRAIN`, `Movement`,
-`DEFAULT_RULES`, `AI`...). Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
+`src/core/content/` tiene un modulo por parte, cada uno con su `validate*` y, si da tablas, su
+`build*`: `units.ts`, `buildings.ts`, `terrain.ts`, `rules.ts`, `ai.ts`, `weather.ts` y `generals.ts`
+(este solo valida: los generales se leen tal cual, `s.content.files.generals`). Comparten `check.ts`
+(mensajes de error) y `types.ts` (`UnitDef`, `MoveType`, `TerrainType`, `TERRAIN_NAMES`,
+`THEME_NAMES`...). El resto:
+
+| Modulo | Que hace |
+|---|---|
+| `index.ts` | lee los JSON (`readContentFiles`), los valida todos a la vez (`validateContent`) y los carga: `loadContent(ficheros)` valida, construye las tablas y da el `GameContent` congelado |
+| `tables.ts` | la forma de los ficheros (`Content`), `buildTables` (UNIT, POWER, TERRAIN, CAN_WALK, MOVE_COST, AI...), `ContentTables` (de solo lectura) y `contentContext` (lo que las partes necesitan saber de las demas) |
+| `movement.ts` | por donde pasa y cuanto le cuesta cada tipo de movimiento con unas tablas (`walkableFor`, `moveCostFor`); con una partida, `movementOf`/`canMoveOn`/`terrainMoveCost` de rules/queries |
+| `default.ts` | `defaultContent()`: el contenido del juego, cargado la primera vez que se pide |
+
+Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
+
+**El contenido es un valor que lleva cada partida**, no un modulo: `loadContent(ficheros)` da un
+`GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `deserialize` lo ponen en el campo
+`GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
+`tablesOf(s).UNIT`, `weightsOf(s).KILLBONUS`, `s.content.files.generals`; las reglas por defecto,
+`rulesWith(contenido, cambios)`; los nombres en pantalla, `unitLabel(s.content, tipo)`. Nada lee el contenido al
+importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
+que se pide), y lo usan `createGame`/`loadGame` (core/defaultGames.ts), la interfaz y las
+herramientas.
+
+Una variante de `npm run balance` no toca el contenido del juego: `buildVariant`
+(tools/balance/variant.ts) aplica sus cambios a una copia de los ficheros y la carga con
+`loadContent`, como el juego (se valida, se rehacen todas las tablas y se congela). Sus reglas son las
+de ese contenido (`rulesWith(variante.content)`). Los hilos reciben los ficheros, los cargan y se los
+pasan a cada partida (`playGame`, `duelMatrix`). Dos contenidos se pueden jugar a la vez en el mismo
+proceso (tests/gameContent.test.ts).
 

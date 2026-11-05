@@ -2,17 +2,18 @@
  * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
-import { AI, BUILDING, HEALER, RULES, UNIT, Movement } from '../data';
+
+import { tablesOf, weightsOf } from '../gameContent';
+import { movementOf, buildingAt, occupancy } from '../rules/queries';
 import { samePos } from '../geom';
-import { buildingAt, occupancy } from '../rules/queries';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
 import { visibility } from '../rules/visibility';
-import type { GameEvent, GameState, Pos, Team, Unit } from '../types';
-import { cellAt, setCell } from '../util/grid';
+import type { GameEvent, GameState, Pos, Team, Unit } from '../model';
+import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
 /**
- * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, commandNow) y se pasa a cada
+ * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
  * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan.
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).
  */
@@ -21,7 +22,7 @@ export interface AiCtx {
   readonly me: Team;
   /**
    * [CAMBIO] Juego en grupo: solo en el turno de la IA enemiga (aiTurn). Las ordenes del jugador
-   * (commandTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
+   * (standingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
    */
   group: boolean;
   /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
@@ -39,14 +40,14 @@ export function aiCtx(me: Team): AiCtx {
  * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
  * detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): boolean[][] {
+export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
-  if (ai.group && RULES.passAllies) {
+  if (ai.group && s.rules.passAllies) {
     const visible = visibility(s, ai.me);
-    const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !cellAt(visible, other));
-    for (const other of s.units) if (letsPass(other)) setCell(occupied, other, false);
+    const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !visible.at(other));
+    for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
   }
-  setCell(occupied, unit, false);
+  occupied.set(unit, false);
   return occupied;
 }
 
@@ -56,9 +57,9 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): boolean[]
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, Movement.of(unit.type), occupancyWithout(s, ai, unit));
+  const steps = groundDistance(s, from, movementOf(s, unit.type), occupancyWithout(s, ai, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
-  return (pos) => cellAt(steps, pos) || Infinity;
+  return (pos) => steps.at(pos) || Infinity;
 }
 
 /**
@@ -69,7 +70,7 @@ export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit)
  */
 export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
-  if (!avoidDest && cellAt(range.steps, dest) > 0) return dest;
+  if (!avoidDest && range.steps.at(dest) > 0) return dest;
   const stepsToDest = stepsFrom(s, ai, unit, dest);
   const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
   const best = minBy(options, stepsToDest);
@@ -87,21 +88,26 @@ export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveR
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (unit: Unit): number => UNIT.mover[unit.type]! + UNIT.alcance[unit.type]!;
+export const strikeReach = (s: GameState, unit: Unit): number => tablesOf(s).UNIT.mover[unit.type]! + tablesOf(s).UNIT.alcance[unit.type]!;
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me)): Unit[] {
-  return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && cellAt(visible, other));
+  return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && visible.at(other));
 }
 
 /** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */
 export const canAct = (unit: Unit): boolean => unit.active && unit.carrier === null && unit.life > 0;
 
 /** Necesita volver a curarse a un edificio. */
-export const needsRepair = (unit: Unit): boolean => unit.life < AI.LIFETOBACK;
+export const needsRepair = (s: GameState, unit: Unit): boolean => unit.life < weightsOf(s).LIFETOBACK;
 
 /** En esa casilla hay un edificio propio que repara a la unidad. */
-export function repairsHere(s: GameState, unit: Unit, x: number, y: number): boolean {
-  const building = buildingAt(s, x, y);
-  return !!building && building.owner === unit.team && HEALER[unit.type]![building.type]! && BUILDING.heals[building.type]! > 0;
+export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {
+  const building = buildingAt(s, pos);
+  return (
+    !!building &&
+    building.owner === unit.team &&
+    tablesOf(s).HEALER[unit.type]![building.type]! &&
+    tablesOf(s).BUILDING.heals[building.type]! > 0
+  );
 }

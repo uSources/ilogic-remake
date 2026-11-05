@@ -4,10 +4,15 @@
  * sin tener que jugar. Se abre con `#lab` en la direccion o con `ilogicDebug.lab()`.
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
-import { HQ, setMapSize, UNIT, UNIT_NAMES } from './core/data';
-import { grid } from './core/geom';
+import { defaultContent } from './core/content/default';
+import { rulesWith } from './core/rulesConfig';
+import { tablesOf } from './core/gameContent';
+import { newGameState } from './core/gameState';
+import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
-import type { GameState } from './core/types';
+import { MoveType, type ContentTables } from './core/content';
+import { maxBy } from './core/util/pick';
+import type { GameState, RulesConfig } from './core/model';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];
@@ -27,39 +32,47 @@ export const LAB_SIZE = 12;
 export const LAB_FROM = { x: 3, y: 6 };
 export const LAB_TARGET = { x: 7, y: 6 };
 
+/**
+ * La unidad de siempre del laboratorio, sacada del contenido (no de su nombre): el vehiculo de cuerpo
+ * a cuerpo mas caro (con el contenido del juego, el tanque).
+ */
+function heaviestMeleeVehicle(tables: ContentTables): number {
+  const { UNIT } = tables;
+  const types = UNIT.cost.map((_, type) => type);
+  const isMeleeVehicle = (type: number) => UNIT.canfight[type] && UNIT.minalc[type] === 0 && UNIT.movtype[type] === MoveType.VEHICLE;
+  return maxBy(types.filter(isMeleeVehicle), (type) => UNIT.cost[type]!) ?? 0;
+}
+
 export const defaultLab = (): LabOptions => ({
-  attacker: Math.max(0, UNIT_NAMES.indexOf('Tank')),
-  defender: Math.max(0, UNIT_NAMES.indexOf('Tank')),
+  attacker: heaviestMeleeVehicle(defaultContent().tables),
+  defender: heaviestMeleeVehicle(defaultContent().tables),
   slow: false,
   play: null,
 });
 
 /** Distancia desde la que ataca la propia: la casilla de al lado o su alcance minimo. */
-export const labRange = (type: number): number => Math.max(1, UNIT.minalc[type]! + 1);
+export const labRange = (s: GameState, type: number): number => Math.max(1, tablesOf(s).UNIT.minalc[type]! + 1);
+
+/** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
+export function labRules(action: LabAction | null): RulesConfig {
+  return rulesWith(defaultContent(), { fog: false, weather: false, counterattack: action !== 'attack' });
+}
 
 /**
  * Partida del laboratorio: todo hierba, una Base por bando en las esquinas (si no, la partida
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
-export function labState(o: LabOptions, action: LabAction | null): GameState {
-  setMapSize(LAB_SIZE, LAB_SIZE);
-  const s: GameState = {
-    version: 1,
-    map: grid(0),
-    theme: 0,
-    funds: [0, 0],
-    units: [],
-    buildings: [
-      { type: HQ, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
-      { type: HQ, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
-    ],
-    nextUid: 1,
-    day: 1,
-  };
+export function labState(options: LabOptions, action: LabAction | null): GameState {
+  const s = newGameState({ map: blankMap(LAB_SIZE), rules: labRules(action), content: defaultContent(), funds: [0, 0] });
+  const hq = tablesOf(s).HQ;
+  s.buildings.push(
+    { type: hq, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
+    { type: hq, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
+  );
   const near = action !== null && action !== 'move';
-  const from = near ? { x: LAB_TARGET.x - labRange(o.attacker), y: LAB_TARGET.y } : LAB_FROM;
-  newUnit(s, o.attacker, 0, from.x, from.y);
-  const d = newUnit(s, o.defender, 1, LAB_TARGET.x, LAB_TARGET.y);
-  if (action === 'kill') d.life = 15;
+  const from = near ? { x: LAB_TARGET.x - labRange(s, options.attacker), y: LAB_TARGET.y } : LAB_FROM;
+  newUnit(s, options.attacker, 0, from);
+  const defender = newUnit(s, options.defender, 1, LAB_TARGET);
+  if (action === 'kill') defender.life = 15;
   return s;
 }

@@ -1,10 +1,11 @@
 /**
- * Ordenes del jugador en el mapa, sin importar de donde vienen. Cada mando (teclado, y mas adelante
- * raton, dedo o un gamepad) es un adaptador que traduce lo suyo a estas ordenes, y GameScene solo
- * sabe cumplirlas (GameScene.command). Asi un mando nuevo es un fichero nuevo en src/controls, sin
- * tocar la escena.
+ * Ordenes de la entrada del jugador en el mapa (`InputCommand`), sin importar de donde vienen. No son
+ * las ordenes permanentes de las unidades (`StandingOrder`) ni las acciones del juego: es lo que pide el
+ * mando. Cada mando (teclado, y mas adelante raton, dedo o un gamepad) es un adaptador que traduce lo
+ * suyo a estas ordenes, y GameScene solo sabe cumplirlas (GameScene.command). Asi un mando nuevo es un
+ * fichero nuevo en src/controls, sin tocar la escena.
  */
-export type GameCommand =
+export type InputCommand =
   /** Mover el cursor una casilla (o elegir en un menu, con dy). */
   | { kind: 'cursor'; dx: -1 | 0 | 1; dy: -1 | 0 | 1 }
   /** Aceptar. `wait`: al mover, mover y esperar sin abrir el menu. */
@@ -42,7 +43,7 @@ export type GameCommand =
 
 export type GroupMode = 'select' | 'set' | 'add';
 
-export type CommandKind = GameCommand['kind'];
+export type InputCommandKind = InputCommand['kind'];
 
 /** Ordenes que cierran la ayuda si esta abierta (cualquier otra se ignora mientras tanto). */
-export const CLOSES_HELP: readonly CommandKind[] = ['cancel', 'stepBack', 'help', 'accept'];
+export const CLOSES_HELP: readonly InputCommandKind[] = ['cancel', 'stepBack', 'help', 'accept'];

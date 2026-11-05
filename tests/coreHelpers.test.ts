@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { BUILDING, DEFAULT_RULES, HQ, TERRAIN, UNIT, useRules } from '@core/data';
+import { describe, expect, it } from 'vitest';
+import { saveContext } from '@core/defaultGames';
+import { defaultContent } from '@core/content/default';
 import {
   attackZone,
   captureEvent,
@@ -10,18 +11,18 @@ import {
   reachableTiles,
   tileProtection,
   unitThreat,
+  type MovePath,
 } from '@core/rules';
-import type { MovePath } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState } from './helpers';
+import { blankState, savedByVersion1 } from './helpers';
+
+const { UNIT, BUILDING, HQ, TERRAIN } = defaultContent().tables;
 
 const SOLDIER = 0,
   TANK = 1,
   ARTILLERY = 2,
   TRANSPORT = 7;
 const WOODS = 2;
-
-beforeEach(() => useRules(DEFAULT_RULES));
 
 describe('ayudas de reglas', () => {
   it('proteccion de casilla: terreno por edificio, y estrellas de 0 a 4', () => {
@@ -31,44 +32,44 @@ describe('ayudas de reglas', () => {
     expect(tileProtection(s, { x: 0, y: 0 })).toBe(TERRAIN.protection[0]);
     expect(tileProtection(s, { x: 3, y: 3 })).toBe(TERRAIN.protection[WOODS]);
     expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(TERRAIN.protection[0]! * BUILDING.protection[HQ]!);
-    for (const p of [
+    for (const pos of [
       { x: 0, y: 0 },
       { x: 3, y: 3 },
       { x: 5, y: 5 },
     ]) {
-      const st = defenseStars(s, p);
-      expect(st).toBeGreaterThanOrEqual(0);
-      expect(st).toBeLessThanOrEqual(4);
+      const stars = defenseStars(s, pos);
+      expect(stars).toBeGreaterThanOrEqual(0);
+      expect(stars).toBeLessThanOrEqual(4);
     }
     expect(defenseStars(s, { x: 5, y: 5 })).toBeGreaterThanOrEqual(defenseStars(s, { x: 0, y: 0 }));
   });
 
   it('casillas alcanzables = las de paso > 0, en orden de columnas', () => {
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, 10, 10);
-    const r = moveRange(s, u);
-    const tiles = reachableTiles(r);
+    const unit = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    const range = moveRange(s, unit);
+    const tiles = reachableTiles(range);
     expect(tiles.length).toBeGreaterThan(0);
-    expect(tiles.every((p) => r.steps[p.x]![p.y]! > 0)).toBe(true);
-    expect(tiles.some((p) => p.x === 10 && p.y === 10)).toBe(false);
-    const sorted = [...tiles].sort((a, b) => a.x - b.x || a.y - b.y);
+    expect(tiles.every((pos) => range.steps.at(pos) > 0)).toBe(true);
+    expect(tiles.some((pos) => pos.x === 10 && pos.y === 10)).toBe(false);
+    const sorted = [...tiles].sort((firstPos, secondPos) => firstPos.x - secondPos.x || firstPos.y - secondPos.y);
     expect(tiles).toEqual(sorted);
   });
 
   it('zona de ataque: la de la amenaza con el alcance dado; nada si no puede disparar', () => {
     const s = blankState();
-    const tank = newUnit(s, TANK, 0, 10, 10);
-    const r = moveRange(s, tank);
-    expect(attackZone(s, tank, r)).toEqual(unitThreat(s, tank, undefined, r));
+    const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const range = moveRange(s, tank);
+    expect(attackZone(s, tank, range)).toEqual(unitThreat(s, tank, undefined, range));
     tank.canFire = false;
-    expect(attackZone(s, tank, r)).toBeNull();
-    const truck = newUnit(s, TRANSPORT, 0, 2, 2);
+    expect(attackZone(s, tank, range)).toBeNull();
+    const truck = newUnit(s, TRANSPORT, 0, { x: 2, y: 2 });
     expect(attackZone(s, truck, moveRange(s, truck))).toBeNull();
     // La artilleria (no mueve y dispara) ataca solo desde donde esta, a distancia.
-    const art = newUnit(s, ARTILLERY, 0, 20, 20);
-    const z = attackZone(s, art, moveRange(s, art))!;
-    expect(z[20]![20]).toBe(false);
-    expect(z[20]![20 + UNIT.alcance[ARTILLERY]!]).toBe(true);
+    const art = newUnit(s, ARTILLERY, 0, { x: 20, y: 20 });
+    const zone = attackZone(s, art, moveRange(s, art))!;
+    expect(zone.at({ x: 20, y: 20 })).toBe(false);
+    expect(zone.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {
@@ -80,11 +81,11 @@ describe('ayudas de reglas', () => {
     path.ambush = { x: 3, y: 1 };
     expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, 4, 4);
-    const b = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
-    expect(captureEvent(u, b, { left: 10, total: 20 })).toEqual({
+    const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
+    const building = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
+    expect(captureEvent(unit, building, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
-      uid: u.uid,
+      uid: unit.uid,
       at: { x: 4, y: 4 },
       owner: 1,
       left: 10,
@@ -96,20 +97,20 @@ describe('ayudas de reglas', () => {
 describe('partidas guardadas', () => {
   const sample = () => {
     const s = blankState();
-    newUnit(s, SOLDIER, 0, 3, 3);
-    newUnit(s, TANK, 1, 30, 30);
+    newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
+    newUnit(s, TANK, 1, { x: 30, y: 30 });
     s.buildings.push({ type: HQ, owner: 0, x: 1, y: 1, capture: null });
     return s;
   };
 
   it('ida y vuelta sin perder nada', () => {
     const s = sample();
-    expect(deserialize(serialize(s))).toEqual(JSON.parse(serialize(s)));
+    expect(serialize(deserialize(serialize(s), saveContext(defaultContent()))!)).toBe(serialize(s));
   });
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 2 as 1 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 3 as 2 })],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',
@@ -164,7 +165,7 @@ describe('partidas guardadas', () => {
       () => serialize({ ...sample(), mission: { id: 'x', objective: { kind: 'survive', days: 0 } } as never }),
     ],
   ])('rechaza: %s', (_name, make) => {
-    expect(deserialize(make())).toBeNull();
+    expect(deserialize(make(), saveContext(defaultContent()))).toBeNull();
   });
 
   it('corrige lo que se puede corregir (uid siguiente, dia) e ignora el combustible de las antiguas', () => {
@@ -172,10 +173,10 @@ describe('partidas guardadas', () => {
     Object.assign(s.units[0]!, { fuel: 1e9, ammo: 3 }); // partida guardada antes de quitarlos
     s.nextUid = 0;
     s.day = -3;
-    const back = deserialize(serialize(s))!;
+    const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
     expect(back.units[0]).not.toHaveProperty('fuel');
     expect(back.units[0]).not.toHaveProperty('ammo');
-    expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((u) => u.uid)));
+    expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((unit) => unit.uid)));
     expect(back.day).toBe(1);
   });
 });

@@ -14,41 +14,42 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
-import { AI, DEFAULT_RULES, UNIT, useRules } from '@core/data';
+import { defaultContent } from '@core/content/default';
+import { createGame } from '@core/defaultGames';
+import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
-import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
-import type { GameEvent, GameState, Rng, Team } from '@core/types';
+import type { GameEvent, GameState, Rng, Team } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
 type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
 
-function strength(s: GameState, t: Team): number {
-  const army = s.units.filter((u) => u.team === t).reduce((a, u) => a + (UNIT.cost[u.type]! * u.life) / 100, 0);
-  return army + s.buildings.filter((b) => b.owner === t).length * 1500 + s.funds[t] * 0.5;
+function strength(s: GameState, team: Team): number {
+  const { UNIT } = tablesOf(s);
+  const army = s.units.filter((unit) => unit.team === team).reduce((amount, unit) => amount + (UNIT.cost[unit.type]! * unit.life) / 100, 0);
+  return army + s.buildings.filter((building) => building.owner === team).length * 1500 + s.funds[team] * 0.5;
 }
 
 /** Una partida; devuelve el bando ganador (o null si empate). */
 export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
-  useRules(DEFAULT_RULES);
   const rng = seededRng(seed);
-  const s = generateGame(rng, { size });
+  const s = createGame(rng, { size });
   while (outcome(s) === 'playing' && s.day <= maxDays) {
-    for (const t of [0, 1] as Team[]) {
-      for (const _ of brains[t](s, rng, t)) if (outcome(s) !== 'playing') break;
+    for (const team of [0, 1] as Team[]) {
+      for (const _ of brains[team](s, rng, team)) if (outcome(s) !== 'playing') break;
       if (outcome(s) !== 'playing') break;
     }
     if (outcome(s) !== 'playing') break;
     endRound(s);
   }
-  const o = outcome(s);
-  if (o === 'won') return 0;
-  if (o === 'lost') return 1;
-  const a = strength(s, 0),
-    b = strength(s, 1);
-  return Math.max(a, b) >= 1.15 * Math.min(a, b) ? (a > b ? 0 : 1) : null;
+  const result = outcome(s);
+  if (result === 'won') return 0;
+  if (result === 'lost') return 1;
+  const playerStrength = strength(s, 0),
+    aiStrength = strength(s, 1);
+  return Math.max(playerStrength, aiStrength) >= 1.15 * Math.min(playerStrength, aiStrength) ? (playerStrength > aiStrength ? 0 : 1) : null;
 }
 
 export interface ArenaResult {
@@ -69,14 +70,14 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
   for (let i = 0; i < games; i++) {
     const seed = 1 + Math.floor(i / 2);
     const swapped = i % 2 === 1; // mismo mapa, bandos cambiados
-    const w = duel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
-    if (w === null) draws++;
-    else if ((w === 0) !== swapped) wins++;
+    const winner = duel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
+    if (winner === null) draws++;
+    else if ((winner === 0) !== swapped) wins++;
     else losses++;
   }
-  const n = wins + losses;
-  const rate = n ? wins / n : 0.5;
-  const se = n ? 1.96 * Math.sqrt((rate * (1 - rate)) / n) : 0.5;
+  const played = wins + losses;
+  const rate = played ? wins / played : 0.5;
+  const se = played ? 1.96 * Math.sqrt((rate * (1 - rate)) / played) : 0.5;
   return { games, wins, losses, draws, rate, low: Math.max(0, rate - se), high: Math.min(1, rate + se) };
 }
 
@@ -88,36 +89,37 @@ function aiFiles(): string[] {
   return [
     'ai.ts',
     ...readdirSync(`${ROOT}src/core/ai`)
-      .filter((f) => f.endsWith('.ts'))
-      .map((f) => `ai/${f}`),
+      .filter((file) => file.endsWith('.ts'))
+      .map((file) => `ai/${file}`),
   ];
 }
 
 /**
  * Prepara un fichero de la IA para la copia: los imports de fuera de la IA pasan a '@core/...' y
- * los pesos (AI de data) salen de weights.ts, congelados al hacer la copia.
+ * los pesos (`weightsOf` de gameContent) salen de weights.ts, congelados al hacer la copia: la IA de
+ * referencia juega siempre con los pesos que tenia, aunque la partida lleve otros.
  */
-export function snapshotSource(rel: string, src: string, copied: ReadonlySet<string>): string {
-  const dir = posix.dirname(rel);
-  const weights = dir === '.' ? './weights' : posix.relative(dir, 'weights');
-  const out = src.replace(/from '(\.{1,2}\/[^']+)'/g, (m, spec: string) => {
-    const target = posix.normalize(posix.join(dir, spec));
-    return copied.has(`${target}.ts`) ? m : `from '@core/${target}'`;
+export function snapshotSource(rel: string, source: string, copied: ReadonlySet<string>): string {
+  const directory = posix.dirname(rel);
+  const weights = directory === '.' ? './weights' : posix.relative(directory, 'weights');
+  const out = source.replace(/from '(\.{1,2}\/[^']+)'/g, (match, spec: string) => {
+    const target = posix.normalize(posix.join(directory, spec));
+    return copied.has(`${target}.ts`) ? match : `from '@core/${target}'`;
   });
-  // import { AI, X } from '@core/data' -> import { X } from '@core/data' + import { AI } from './weights'
-  return out.replace(/import \{([^}]*)\} from '@core\/data';/, (m, names: string) => {
+  // import { weightsOf, X } from '@core/gameContent' -> import { X } from '@core/gameContent' + import { weightsOf } from './weights'
+  return out.replace(/import \{([^}]*)\} from '@core\/gameContent';/, (whole, names: string) => {
     const list = names
       .split(',')
-      .map((n) => n.trim())
+      .map((name) => name.trim())
       .filter(Boolean);
-    if (!list.includes('AI')) return m;
-    const rest = list.filter((n) => n !== 'AI');
-    const own = `import { AI } from '${weights}';`;
-    return rest.length ? `import { ${rest.join(', ')} } from '@core/data';\n${own}` : own;
+    if (!list.includes('weightsOf')) return whole;
+    const rest = list.filter((name) => name !== 'weightsOf');
+    const own = `import { weightsOf } from '${weights}';`;
+    return rest.length ? `import { ${rest.join(', ')} } from '@core/gameContent';\n${own}` : own;
   });
 }
 
-/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (data.AI) congelados. */
+/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (los de ai.json) congelados. */
 function snapshot(): void {
   rmSync(`${BASE_DIR}ai`, { recursive: true, force: true });
   mkdirSync(`${BASE_DIR}ai`, { recursive: true });
@@ -125,12 +127,15 @@ function snapshot(): void {
   const copied = new Set(files);
   const day = new Date().toISOString().slice(0, 10);
   for (const rel of files) {
-    const src = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
-    writeFileSync(`${BASE_DIR}${rel}`, `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar.\n${src}`);
+    const source = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
+    writeFileSync(`${BASE_DIR}${rel}`, `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar.\n${source}`);
   }
   writeFileSync(
     `${BASE_DIR}weights.ts`,
-    `// Pesos de data.AI al guardar la IA de referencia (${day}). No editar.\nexport const AI = ${JSON.stringify(AI)} as const;\n`,
+    `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar.\n` +
+      `const AI = ${JSON.stringify(defaultContent().tables.AI)} as const;\n` +
+      `/** La IA de referencia juega con estos pesos, sea cual sea el contenido de la partida. */\n` +
+      `export const weightsOf = (_s: unknown): typeof AI => AI;\n`,
   );
   console.log(`IA actual guardada como referencia en improve/ai-baseline/ (${files.length} ficheros)`);
 }
@@ -138,7 +143,7 @@ function snapshot(): void {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.includes('--snapshot')) return snapshot();
-  const opt = (k: string, d: number) => (args.includes(`--${k}`) ? Number(args[args.indexOf(`--${k}`) + 1]) : d);
+  const opt = (key: string, fallback: number) => (args.includes(`--${key}`) ? Number(args[args.indexOf(`--${key}`) + 1]) : fallback);
   if (!existsSync(`${BASE_DIR}ai.ts`)) {
     console.log('No hay IA de referencia: npm run arena -- --snapshot');
     process.exit(1);
@@ -148,16 +153,16 @@ async function main(): Promise<void> {
     size = opt('size', 20),
     days = opt('days', 40);
   const t0 = Date.now();
-  const r = arena(aiTurn, base.aiTurn, games, size, days);
+  const result = arena(aiTurn, base.aiTurn, games, size, days);
   const pct = (x: number) => `${Math.round(x * 100)} %`;
   console.log(
-    `IA actual contra la de referencia: ${r.wins} ganadas, ${r.losses} perdidas, ${r.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
+    `IA actual contra la de referencia: ${result.wins} ganadas, ${result.losses} perdidas, ${result.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
   );
-  console.log(`Gana el ${pct(r.rate)} de las decididas (95 %: ${pct(r.low)}-${pct(r.high)})`);
+  console.log(`Gana el ${pct(result.rate)} de las decididas (95 %: ${pct(result.low)}-${pct(result.high)})`);
   const verdict =
-    r.low > 0.5
+    result.low > 0.5
       ? 'MEJOR: la IA actual gana claramente'
-      : r.high < 0.5
+      : result.high < 0.5
         ? 'PEOR: la IA actual pierde claramente'
         : 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)';
   console.log(verdict);

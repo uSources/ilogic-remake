@@ -3,13 +3,16 @@
  * transporte, si puede luchar o capturar. Con nombre en vez de `team === 0` o `UNIT.canfight[...]`
  * sueltos (docs/ESTILO.md, regla 4). Sin efectos.
  */
-import { UNIT } from '../data';
-import type { Team, Unit } from '../types';
+
+import { tablesOf } from '../gameContent';
+import type { GameState, Team, Unit } from '../model';
 
 /** El bando del jugador (el 1 es la IA, ver Team). */
 export const PLAYER: Team = 0;
 /** El bando de la IA. */
 export const AI_TEAM: Team = 1;
+/** Los dos bandos, en orden (para recorrerlos sin escribir `[0, 1] as const`). */
+export const TEAMS: readonly Team[] = [PLAYER, AI_TEAM];
 
 /** El bando es el del jugador. */
 export function isPlayer(team: Team | null): boolean {
@@ -22,8 +25,8 @@ export function opponentOf(team: Team): Team {
 }
 
 /** Son de bandos distintos. */
-export function isEnemyOf(a: { team: Team }, b: { team: Team }): boolean {
-  return a.team !== b.team;
+export function isEnemyOf(first: { team: Team }, second: { team: Team }): boolean {
+  return first.team !== second.team;
 }
 
 /** Esta en el mapa, no dentro de un transporte (los pasajeros no ocupan casilla ni luchan). */
@@ -37,14 +40,17 @@ export function isAlive(unit: Pick<Unit, 'life'>): boolean {
 }
 
 /** Su tipo puede atacar (units.json, "attack"). No mira si ya ha disparado este turno. */
-export function canFight(unit: Pick<Unit, 'type'>): boolean {
-  return !!UNIT.canfight[unit.type];
+export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
+  return !!tablesOf(s).UNIT.canfight[unit.type];
 }
 
 /**
  * Su tipo puede capturar edificios (units.json, "captures"). No mira si hay un edificio debajo: eso
  * es `canCapture` de rules/capture.ts.
  */
-export function isCapturer(unit: Pick<Unit, 'type'>): boolean {
-  return !!UNIT.cancapt[unit.type];
+export function isCapturer(s: GameState, unit: Pick<Unit, 'type'>): boolean {
+  return !!tablesOf(s).UNIT.cancapt[unit.type];
 }
+
+/** Un objeto (no null) del que se pueden leer campos: para comprobar datos que vienen de fuera (JSON). */
+export const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;

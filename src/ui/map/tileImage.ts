@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
+import type { Pos } from '../../core/model';
 import { TILE } from '../../layout';
 
 /**
@@ -14,10 +15,10 @@ export function fitToTile<T extends Phaser.GameObjects.Image>(img: T): T {
 }
 
 /** Pie de una casilla en pixeles de mundo (donde va el origen de sus dibujos). */
-export const tileFoot = (x: number, y: number): { x: number; y: number } => ({ x: x * TILE + TILE / 2, y: (y + 1) * TILE });
+export const tileFoot = (tile: Pos): { x: number; y: number } => ({ x: tile.x * TILE + TILE / 2, y: (tile.y + 1) * TILE });
 
-/** Imagen del atlas con el pie en el de la casilla (x, y). */
-export function tileImage(scene: Phaser.Scene, key: string, x: number, y: number): Phaser.GameObjects.Image {
-  const foot = tileFoot(x, y);
+/** Imagen del atlas con el pie en el de la casilla `tile`. */
+export function tileImage(scene: Phaser.Scene, key: string, tile: Pos): Phaser.GameObjects.Image {
+  const foot = tileFoot(tile);
   return fitToTile(scene.add.image(foot.x, foot.y, ATLAS, key).setOrigin(0.5, 1));
 }

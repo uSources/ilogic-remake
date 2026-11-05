@@ -3,12 +3,13 @@
  * de la elegida. Pide a la escena lo poco que usa (`CampaignHost`).
  */
 import { listStep, type MenuCommand } from '../controls/menu';
+import { defaultContent } from '../core/content/default';
 import { buildMission, MISSIONS, type MissionDef } from '../core/missions';
 import type { ObjectiveKind } from '../core/objectives';
 import { bestDays, completedMissions, missionUnlocked, nextMissionIndex, objectiveText } from '../campaign';
 import { ui, type CampaignItemVM, type UIActions } from '../hud/store';
 import { settings, t, type TextKey } from '../settings';
-import { keepMapSize, mapThumb } from './thumb';
+import { mapThumb } from './thumb';
 
 export interface CampaignHost {
   readonly palette: number[];
@@ -57,7 +58,7 @@ export class CampaignScreen {
   missionThumb(index: number): string {
     const cached = this.thumbs.get(index);
     if (cached) return cached;
-    const s = keepMapSize(() => buildMission(MISSIONS[index]!));
+    const s = buildMission(MISSIONS[index]!, defaultContent());
     const thumb = mapThumb(s, this.host.palette, { units: true, px: MISSION_THUMB_PX });
     this.thumbs.set(index, thumb);
     return thumb;
@@ -86,14 +87,14 @@ export class CampaignScreen {
     ui.set({ campaign: { items, selected: this.selected, brief: selected.brief[lang], objective: objectiveText(selected) } });
   }
 
-  command(cmd: MenuCommand): void {
-    const step = listStep(cmd);
+  command(command: MenuCommand): void {
+    const step = listStep(command);
     if (step) {
       this.selected = (this.selected + step + MISSIONS.length) % MISSIONS.length;
       return this.publish();
     }
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.startSelected();
-    if (cmd.kind === 'back') this.host.toHome();
+    if (command.kind === 'ok' && !command.repeat) return this.startSelected();
+    if (command.kind === 'back') this.host.toHome();
   }
 
   private startSelected(): void {

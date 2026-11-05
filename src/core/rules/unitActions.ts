@@ -1,10 +1,11 @@
 /**
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
-import { UNIT } from '../data';
-import { effectiveCommand } from '../squads';
+
+import { tablesOf } from '../gameContent';
+import { effectiveStandingOrder } from '../squads/standingOrders';
 import { canFight, isCapturer, isPlayer } from '../util/predicates';
-import type { GameState, Unit } from '../types';
+import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
 import { attackTargets } from './combat';
 import { cargoUnits } from './queries';
@@ -26,16 +27,16 @@ export interface UnitActions {
   /** Volver atras sin hacer nada: solo si aun no se ha movido. */
   back: boolean;
   /** [CAMBIO] Ordenes con destino (se elige la casilla despues) y quitar la que tenga. */
-  cmdAttack: boolean;
-  cmdCapture: boolean;
-  cmdDefend: boolean;
-  cmdCancel: boolean;
+  orderToAttack: boolean;
+  orderToCapture: boolean;
+  orderToDefend: boolean;
+  cancelOrder: boolean;
   delete: boolean;
 }
 
 /** Algun pasajero se puede bajar a una casilla de al lado. */
 function canUnloadSomeone(s: GameState, transport: Unit): boolean {
-  if (UNIT.maxcarry[transport.type]! <= 0) return false;
+  if (tablesOf(s).UNIT.maxcarry[transport.type]! <= 0) return false;
   return cargoUnits(s, transport).some((passenger) => unloadTiles(s, transport, passenger).length > 0);
 }
 
@@ -49,11 +50,11 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     supply: canSupply(s, unit),
     wait: true,
     back: unit.canMove,
-    cmdAttack: isMine && canFight(unit),
-    cmdCapture: isMine && isCapturer(unit),
-    cmdDefend: isMine && canFight(unit),
+    orderToAttack: isMine && canFight(s, unit),
+    orderToCapture: isMine && isCapturer(s, unit),
+    orderToDefend: isMine && canFight(s, unit),
     // Orden propia o de su escuadra.
-    cmdCancel: !!effectiveCommand(s, unit),
+    cancelOrder: !!effectiveStandingOrder(s, unit),
     delete: true,
   };
 }

@@ -10,12 +10,12 @@ import { DayPanel, EconomyPanel } from './Breakdown';
 import { canAct, isPlayerTurn } from './turn';
 
 /** " · 12/40" con el icono de mando (solo con la regla de puntos de mando). */
-function CommandPoints({ command }: { command: NonNullable<UIState['command']> }) {
+function CommandPoints({ points }: { points: NonNullable<UIState['commandPoints']> }) {
   return (
     <span class="cmd" title={t('commandShort')}>
       {' · '}
       <Icon k="ui/mando" alt={t('commandShort')} cls="px-icon ico-sm" />
-      {command.used}/{command.max}
+      {points.used}/{points.max}
     </span>
   );
 }
@@ -31,7 +31,7 @@ function Funds({ s }: { s: UIState }) {
         <div class="sub">
           {s.income < 0 ? '−' : '+'}
           {fmtNum(Math.abs(s.income))} {t('perDay')} · {s.buildings} {t('buildingsN')}
-          {s.command ? <CommandPoints command={s.command} /> : null}
+          {s.commandPoints ? <CommandPoints points={s.commandPoints} /> : null}
         </div>
       </div>
       {s.economy && <EconomyPanel economy={s.economy} />}

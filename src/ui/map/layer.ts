@@ -40,4 +40,4 @@ export interface OverlayContext {
 }
 
 /** Dibuja una cosa de la capa de resaltados (map/overlayLayer.ts): se borra y se rehace entera en cada `render`. */
-export type OverlayPainter = (g: Phaser.GameObjects.Graphics, opts: ViewOptions, ctx: OverlayContext) => void;
+export type OverlayPainter = (graphics: Phaser.GameObjects.Graphics, options: ViewOptions, context: OverlayContext) => void;

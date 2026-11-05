@@ -4,7 +4,8 @@
  */
 import type { MenuCommand } from '../controls/menu';
 import { MISSIONS } from '../core/missions';
-import type { GameState } from '../core/types';
+import { mapGrid } from '../core/mapGrid';
+import type { GameState } from '../core/model';
 import { completedMissions, missionUnlocked, nextMissionIndex } from '../campaign';
 import { ui, type MarkVM, type UIActions } from '../hud/store';
 import { WEB_URL } from '../layout';
@@ -78,12 +79,12 @@ export class HomeScreen {
     });
   }
 
-  command(cmd: MenuCommand): void {
-    if (ui.get().home.credits && (cmd.kind === 'back' || cmd.kind === 'ok')) return this.setCredits(false);
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.pick();
-    if (cmd.kind === 'options') return this.host.openOptions();
-    if (cmd.kind !== 'move') return;
-    this.focus = navGrid(this.rows(), this.focus, cmd.dx, cmd.dy);
+  command(command: MenuCommand): void {
+    if (ui.get().home.credits && (command.kind === 'back' || command.kind === 'ok')) return this.setCredits(false);
+    if (command.kind === 'ok' && !command.repeat) return this.pick();
+    if (command.kind === 'options') return this.host.openOptions();
+    if (command.kind !== 'move') return;
+    this.focus = navGrid(this.rows(), this.focus, command.dx, command.dy);
     this.publish();
   }
 
@@ -101,9 +102,9 @@ export class HomeScreen {
       thumb: mapThumb(save, this.host.palette, { units: 'own' }),
       day: save.day,
       funds: save.funds[0],
-      size: save.map.length,
+      size: mapGrid(save).width,
       mission,
-      limit: save.rules?.dayLimit ?? null,
+      limit: save.rules.dayLimit,
     };
   }
 

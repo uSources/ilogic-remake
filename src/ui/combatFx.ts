@@ -9,8 +9,9 @@
  * animaciones.
  */
 import type Phaser from 'phaser';
-import { Movement, MoveType, UNIT } from '../core/data';
-import type { Pos } from '../core/types';
+import { MoveType } from '../core/content';
+import { tablesOf } from '../core/gameContent';
+import type { GameState, Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost, type FxTimeline } from './fxKit';
@@ -34,11 +35,12 @@ export type ShotKind = 'arc' | 'missile' | 'bomb' | 'tracer' | 'bullets' | 'shel
 /** Alcance desde el que un arma a distancia lanza misiles en vez de proyectiles en parabola. */
 const MISSILE_RANGE = 6;
 
-export function shotKind(attackerType: number, defenderType: number): ShotKind {
+export function shotKind(s: GameState, attackerType: number, defenderType: number): ShotKind {
+  const { UNIT } = tablesOf(s);
   const isRangedWeapon = UNIT.minalc[attackerType]! > 0;
   if (isRangedWeapon) return UNIT.alcance[attackerType]! >= MISSILE_RANGE ? 'missile' : 'arc';
-  const movement = Movement.of(attackerType);
-  if (movement === MoveType.AIR) return Movement.of(defenderType) === MoveType.AIR ? 'tracer' : 'bomb';
+  const movement = UNIT.movtype[attackerType];
+  if (movement === MoveType.AIR) return UNIT.movtype[defenderType] === MoveType.AIR ? 'tracer' : 'bomb';
   return movement === MoveType.FOOT ? 'bullets' : 'shell';
 }
 
@@ -47,10 +49,10 @@ type Point = { x: number; y: number };
 
 /** Punta del arma: delante de la unidad, a media altura. */
 function muzzle(from: Pos, to: Pos): Point {
-  const c = center(from);
+  const centerPoint = center(from);
   const sideways = Math.sign(to.x - from.x) || 0;
   const upDown = Math.sign(to.y - from.y) || 0;
-  return { x: c.x + sideways * 13, y: c.y - 3 + upDown * 8 };
+  return { x: centerPoint.x + sideways * 13, y: centerPoint.y - 3 + upDown * 8 };
 }
 
 /** Retroceso al disparar: la unidad se echa hacia atras y vuelve (en dos saltos). */
@@ -87,7 +89,7 @@ export async function muzzleFlash(timeline: FxTimeline, view: FxHost, from: Pos,
  */
 async function fly(
   scene: Phaser.Scene,
-  obj: Phaser.GameObjects.Rectangle,
+  target: Phaser.GameObjects.Rectangle,
   from: Point,
   to: Point,
   ms: number,
@@ -99,7 +101,7 @@ async function fly(
     const progress = i / steps;
     const x = from.x + (to.x - from.x) * progress;
     const y = from.y + (to.y - from.y) * progress - lift * 4 * progress * (1 - progress);
-    obj.setPosition(Math.round(x), Math.round(y));
+    target.setPosition(Math.round(x), Math.round(y));
     onStep?.(x, y, progress);
     await sleep(scene, ms / steps);
   }
@@ -172,9 +174,9 @@ async function shootMissile(shot: Shot): Promise<void> {
 /** Dos bombas que caen desde encima del objetivo, una detras de otra. */
 async function dropBombs(shot: Shot): Promise<void> {
   const { timeline, view, to } = shot;
-  const drops = [0, 1].map(async (i) => {
-    await timeline.wait(i * 70);
-    const top = { x: to.x + (i ? 5 : -5), y: to.y - 46 };
+  const drops = [0, 1].map(async (side) => {
+    await timeline.wait(side * 70);
+    const top = { x: to.x + (side ? 5 : -5), y: to.y - 46 };
     const bomb = rect(timeline.scene, view, top.x, top.y, 4, 6, PAL.ink);
     await fly(timeline.scene, bomb, top, { x: top.x, y: to.y }, timeline.ms(170));
     bomb.destroy();
@@ -218,7 +220,8 @@ export async function hitFlash(
   sprite: Phaser.GameObjects.Container | Phaser.GameObjects.Image | null,
 ): Promise<void> {
   if (!sprite) return;
-  const main = 'list' in sprite ? sprite.list.find((o): o is Phaser.GameObjects.Image => 'setTintFill' in o) : sprite;
+  const main =
+    'list' in sprite ? sprite.list.find((gameObject): gameObject is Phaser.GameObjects.Image => 'setTintFill' in gameObject) : sprite;
   if (!main) return;
   main.setTint(PAL.white).setTintMode(TINT_FILL);
   await timeline.wait(70);
@@ -229,33 +232,33 @@ export async function hitFlash(
 const RING_DOTS = 12;
 
 /** Anillo de cuadraditos que se abre (la explosion si no hay una dibujada en el atlas). */
-async function explosionRing(timeline: FxTimeline, view: FxHost, c: Point, killed: boolean): Promise<void> {
-  const g = timeline.scene.add.graphics();
-  view.addFx(g);
+async function explosionRing(timeline: FxTimeline, view: FxHost, point: Point, killed: boolean): Promise<void> {
+  const graphics = timeline.scene.add.graphics();
+  view.addFx(graphics);
   const radii = killed ? [5, 10, 15, 19] : [4, 8, 12];
   for (const [i, radius] of radii.entries()) {
-    g.clear();
-    g.fillStyle(i === 0 ? PAL.white : i < 2 ? PAL.gold : PAL_MAP.orange, 1 - i / (radii.length + 1));
+    graphics.clear();
+    graphics.fillStyle(i === 0 ? PAL.white : i < 2 ? PAL.gold : PAL_MAP.orange, 1 - i / (radii.length + 1));
     for (let dot = 0; dot < RING_DOTS; dot++) {
       const angle = (dot / RING_DOTS) * Math.PI * 2;
-      g.fillRect(Math.round(c.x + Math.cos(angle) * radius) - 2, Math.round(c.y + Math.sin(angle) * radius) - 2, 4, 4);
+      graphics.fillRect(Math.round(point.x + Math.cos(angle) * radius) - 2, Math.round(point.y + Math.sin(angle) * radius) - 2, 4, 4);
     }
-    if (i === 0) g.fillRect(c.x - 5, c.y - 5, 10, 10);
+    if (i === 0) graphics.fillRect(point.x - 5, point.y - 5, 10, 10);
     await timeline.wait(55);
   }
-  g.destroy();
+  graphics.destroy();
 }
 
 /** Explosion del impacto: la dibujada (ui/anim_boom_*) o un anillo de cuadraditos, y chispas. Mas grande si cae. */
 export async function impact(timeline: FxTimeline, view: FxHost, at: Pos, killed: boolean): Promise<void> {
   const scene = timeline.scene;
-  const c = center(at);
+  const centerPoint = center(at);
   if (!reducedMotion()) scene.cameras.main.shake(killed ? 200 : 100, killed ? 0.006 : 0.003);
   const isDrawn = animFrameCount(scene, 'boom') > 0;
   const sparks = isDrawn ? (killed ? 8 : 5) : killed ? 12 : 8;
   await Promise.all([
-    isDrawn ? playAnim(scene, view, c, 'boom', { frameMs: timeline.ms(65) }) : explosionRing(timeline, view, c, killed),
-    burst(scene, view, c, {
+    isDrawn ? playAnim(scene, view, centerPoint, 'boom', { frameMs: timeline.ms(65) }) : explosionRing(timeline, view, centerPoint, killed),
+    burst(scene, view, centerPoint, {
       colors: COLORS.fire,
       count: sparks,
       radius: killed ? 22 : 15,
@@ -267,8 +270,8 @@ export async function impact(timeline: FxTimeline, view: FxHost, at: Pos, killed
 
 /** Numero que salta: aparece grande, se encoge a su tamaño, sube un poco y se va. No hay que esperarlo entero. */
 export function popNumber(timeline: FxTimeline, view: FxHost, at: Pos, text: string, color: string): Promise<void> {
-  const c = center(at);
-  const label = fxText(timeline.scene, view, c.x, c.y - 16, text, color, FX_TEXT.pop).setScale(1.6);
+  const centerPoint = center(at);
+  const label = fxText(timeline.scene, view, centerPoint.x, centerPoint.y - 16, text, color, FX_TEXT.pop).setScale(1.6);
   return (async () => {
     await timeline.wait(50);
     label.setScale(1.25);
@@ -276,7 +279,7 @@ export function popNumber(timeline: FxTimeline, view: FxHost, at: Pos, text: str
     label.setScale(1);
     await timeline.wait(380);
     for (let i = 1; i <= 4; i++) {
-      label.setY(c.y - 16 - i * 3).setAlpha(1 - i / 5);
+      label.setY(centerPoint.y - 16 - i * 3).setAlpha(1 - i / 5);
       await timeline.wait(45);
     }
     label.destroy();
@@ -285,8 +288,8 @@ export function popNumber(timeline: FxTimeline, view: FxHost, at: Pos, text: str
 
 /** Etiqueta pequeña sobre una unidad (p. ej. "Contraataque"): no tapa el combate. */
 export function tag(timeline: FxTimeline, view: FxHost, at: Pos, text: string, color: string): Promise<void> {
-  const c = center(at);
-  const label = fxText(timeline.scene, view, c.x, at.y * TILE - 2, text, color, FX_TEXT.tag);
+  const centerPoint = center(at);
+  const label = fxText(timeline.scene, view, centerPoint.x, at.y * TILE - 2, text, color, FX_TEXT.tag);
   return timeline.wait(650).then(() => label.destroy());
 }
 
@@ -296,23 +299,28 @@ const DEBRIS_FRAMES = 9;
 /** Restos al caer una unidad: trozos del color de su bando que saltan y caen, y una columna de humo. */
 export async function debris(timeline: FxTimeline, view: FxHost, at: Pos, team: number): Promise<void> {
   const scene = timeline.scene;
-  const c = center(at);
+  const centerPoint = center(at);
   const colors = [team === 0 ? PAL.blue : PAL.red, PAL_MAP.smoke, PAL.ink, PAL_MAP.smokeDark];
   const pieces = Array.from({ length: 10 }, (_, i) => {
     const size = i % 3 ? 3 : 4;
-    const piece = rect(scene, view, c.x, c.y, size, size, colors[i % colors.length]!);
+    const piece = rect(scene, view, centerPoint.x, centerPoint.y, size, size, colors[i % colors.length]!);
     const speedX = (i / 10 - 0.5) * 2.6 + (Math.random() - 0.5) * 0.4;
     const speedY = -1.6 - Math.random() * 1.2;
     return { piece, speedX, speedY };
   });
-  const smoke = Array.from({ length: 5 }, (_, i) => rect(scene, view, c.x + (i - 2) * 3, c.y + 4, 5, 5, PAL_MAP.smoke, 0.8));
+  const smoke = Array.from({ length: 5 }, (_, i) =>
+    rect(scene, view, centerPoint.x + (i - 2) * 3, centerPoint.y + 4, 5, 5, PAL_MAP.smoke, 0.8),
+  );
   for (let frame = 1; frame <= DEBRIS_FRAMES; frame++) {
     for (const { piece, speedX, speedY } of pieces) {
       // Tiro parabolico: sale disparado y la gravedad lo hace caer.
-      piece.setPosition(Math.round(c.x + speedX * frame * 3), Math.round(c.y + speedY * frame * 3 + 0.5 * 0.9 * frame * frame));
+      piece.setPosition(
+        Math.round(centerPoint.x + speedX * frame * 3),
+        Math.round(centerPoint.y + speedY * frame * 3 + 0.5 * 0.9 * frame * frame),
+      );
       piece.setAlpha(1 - frame / 11);
     }
-    smoke.forEach((puff, i) => puff.setPosition(puff.x, Math.round(c.y + 4 - frame * (2 + i * 0.4))).setAlpha(0.8 - frame / 11));
+    smoke.forEach((puff, i) => puff.setPosition(puff.x, Math.round(centerPoint.y + 4 - frame * (2 + i * 0.4))).setAlpha(0.8 - frame / 11));
     await timeline.wait(45);
   }
   pieces.forEach(({ piece }) => piece.destroy());

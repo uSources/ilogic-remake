@@ -9,7 +9,7 @@ explica en un comentario.
 Antes (funciona, pero hay que descifrarlo):
 
 ```ts
-const dist = groundDistance(s, goal, Movement.of(u.type), grid(false));
+const dist = groundDistance(s, goal, UNIT.movtype[u.type]!, grid(false));
 const here = samePos(u, goal) ? 0 : dist[u.x]![u.y]! || Infinity;
 let best: Pos | null = null;
 let bestD = here;
@@ -25,7 +25,7 @@ for (let x = 0; x < range.steps.length; x++)
 Despues (se lee como lo que hace):
 
 ```ts
-const distanceToGoal = distanceMap(s, goal, movement);
+const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
 const best = minBy(reachableTiles(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
 const gotCloser = best && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);
 return gotCloser ? best.pos : null;
@@ -50,12 +50,19 @@ return gotCloser ? best.pos : null;
 7. **Depender de poco.** Cada modulo pide una interfaz pequena con lo que usa (`...Host`), no la
    escena ni el estado entero. El nucleo (`src/core`) no importa nada de fuera.
 8. **Funciones puras donde se pueda.** Calcular y aplicar por separado: primero se decide (puro, con
-   test), despues se cambia el estado o se dibuja.
+   test), despues se cambia el estado o se dibuja. Una funcion con nombre de consulta (`statsOf`,
+   `captureProgress`) nunca escribe en la partida.
 9. **Tipos que cuentan la verdad.** Uniones con nombre (`'attack' | 'capture'`) en vez de `string`;
    `null` solo cuando "no hay" es un caso real, y entonces se trata arriba (regla 3).
 10. **Comentarios del porque, no del que.** Si un comentario explica que hace el codigo, se reescribe
     el codigo. Se comenta la razon, la regla del juego original o la trampa que se evita.
 11. **Identificadores en ingles, comentarios y textos en castellano** (como hasta ahora).
+12. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
+    `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
+    modulo que se cambian al empezar una partida. El contenido va con la partida (`tablesOf(s)`,
+    `weightsOf(s)`) y esta congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
+    `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
+    `posOf(unit)`.
 
 ## Al cambiar codigo que ya existe
 

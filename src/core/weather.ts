@@ -11,26 +11,27 @@
  * Todo sale de la semilla del mapa y del dia: la misma partida tiene siempre el mismo tiempo, y la IA
  * y el jugador lo sufren igual.
  */
-import { RULES, WEATHER, WEATHER_TYPES, type MoveType } from './data';
+import { tablesOf } from './gameContent';
+import type { MoveType } from './content';
 import { seededRng } from './geom';
-import type { GameState, Rng, WeatherState } from './types';
+import type { GameState, Rng, WeatherState } from './model';
 
 /** Despejado: el clima neutro (el primero de weather.json). */
 export const CLEAR = 0;
 
 /** Clima de la partida ahora mismo (despejado si la regla esta quitada). */
 export function weatherNow(s: GameState): number {
-  return RULES.weather && s.weather ? s.weather.kind : CLEAR;
+  return s.rules.weather && s.weather ? s.weather.kind : CLEAR;
 }
 
 /** Cambio de movimiento por el clima para un tipo de movimiento. */
-export const weatherMove = (s: GameState, movement: MoveType): number => WEATHER.move[weatherNow(s)]![movement] ?? 0;
+export const weatherMove = (s: GameState, movement: MoveType): number => tablesOf(s).WEATHER.move[weatherNow(s)]![movement] ?? 0;
 
 /** Cambio del radio de vision de las unidades por el clima. */
-export const weatherVision = (s: GameState): number => WEATHER.vision[weatherNow(s)]!;
+export const weatherVision = (s: GameState): number => tablesOf(s).WEATHER.vision[weatherNow(s)]!;
 
 /** Multiplicador de la probabilidad de acierto por el clima. */
-export const weatherHit = (s: GameState): number => WEATHER.hitChance[weatherNow(s)]!;
+export const weatherHit = (s: GameState): number => tablesOf(s).WEATHER.hitChance[weatherNow(s)]!;
 
 /** Numero aleatorio del dia: depende solo de la semilla del mapa y del dia. */
 function dayRng(s: GameState): Rng {
@@ -41,8 +42,8 @@ function dayRng(s: GameState): Rng {
 }
 
 /** Elige un clima segun los pesos del tema; si sale el mismo mal tiempo que hay, despeja. */
-export function rollWeather(theme: number, rng: Rng, current = CLEAR): number {
-  const kind = pickWeighted(WEATHER.chance[theme] ?? WEATHER.chance[0]!, rng);
+export function rollWeather(s: GameState, theme: number, rng: Rng, current = CLEAR): number {
+  const kind = pickWeighted(tablesOf(s).WEATHER.chance[theme] ?? tablesOf(s).WEATHER.chance[0]!, rng);
   // El mismo mal tiempo dos veces seguidas se haria eterno: despeja.
   return kind === current && kind !== CLEAR ? CLEAR : kind;
 }
@@ -51,7 +52,7 @@ export function rollWeather(theme: number, rng: Rng, current = CLEAR): number {
 function pickWeighted(weights: readonly number[], rng: Rng): number {
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   let roll = rng() * total;
-  for (let kind = 0; kind < WEATHER_TYPES; kind++) {
+  for (let kind = 0; kind < weights.length; kind++) {
     roll -= weights[kind]!;
     if (roll < 0) return kind;
   }
@@ -59,16 +60,16 @@ function pickWeighted(weights: readonly number[], rng: Rng): number {
 }
 
 /** Dias que dura un clima. */
-export function rollDays(kind: number, rng: Rng): number {
-  const [min, max] = WEATHER.days[kind]!;
+export function rollDays(s: GameState, kind: number, rng: Rng): number {
+  const [min, max] = tablesOf(s).WEATHER.days[kind]!;
   return min + Math.floor(rng() * (max - min + 1));
 }
 
 /** Pone el clima del principio (despejado) si la partida aun no lo tiene. */
 export function ensureWeather(s: GameState): void {
-  if (!RULES.weather || s.weather) return;
+  if (!s.rules.weather || s.weather) return;
   const rng = dayRng(s);
-  s.weather = { kind: CLEAR, left: rollDays(CLEAR, rng), next: rollWeather(s.theme, rng) };
+  s.weather = { kind: CLEAR, left: rollDays(s, CLEAR, rng), next: rollWeather(s, s.theme, rng) };
 }
 
 /** Lo que ha cambiado el clima al empezar la ronda (para el resumen y la interfaz). */
@@ -82,7 +83,7 @@ export interface WeatherChange {
  * pronostico y se decide el siguiente. Devuelve el cambio, o null si sigue igual.
  */
 export function advanceWeather(s: GameState): WeatherChange | null {
-  if (!RULES.weather) return null;
+  if (!s.rules.weather) return null;
   if (!s.weather) {
     ensureWeather(s);
     return null;
@@ -93,13 +94,13 @@ export function advanceWeather(s: GameState): WeatherChange | null {
   const rng = dayRng(s);
   const from = weather.kind;
   weather.kind = weather.next;
-  weather.left = rollDays(weather.kind, rng);
-  weather.next = rollWeather(s.theme, rng, weather.kind);
+  weather.left = rollDays(s, weather.kind, rng);
+  weather.next = rollWeather(s, s.theme, rng, weather.kind);
   return from === weather.kind ? null : { from, to: weather.kind };
 }
 
 /** Pronostico: el clima que entra al empezar la ronda siguiente, o null si mañana sigue igual. */
 export function forecast(s: GameState): number | null {
-  if (!RULES.weather || !s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
+  if (!s.rules.weather || !s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
   return s.weather.next;
 }

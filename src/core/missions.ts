@@ -9,18 +9,26 @@
  * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
-import { BUILDING_NAMES, HQ, DEFAULT_RULES, setMapSize, TERRAIN, UNIT_NAMES, type RulesConfig, Movement } from './data';
+import { walkableFor, type ContentTables, type GameContent } from './content';
+import { rulesWith } from './rulesConfig';
+import { tablesOf } from './gameContent';
+import { deepFreeze, type DeepReadonly } from './util/freeze';
+import { newGameState } from './gameState';
+import { posKey } from './geom';
+import type { GameState, Pos, RulesConfig, Team } from './model';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
-import type { GameState, Team } from './types';
 
 type Text = { es: string; en: string };
-type BuildingName = (typeof BUILDING_NAMES)[number];
-type UnitName = (typeof UNIT_NAMES)[number];
+/** Nombre interno de un edificio (buildings.json). */
+type BuildingName = string;
+/** Nombre interno de una unidad (units.json). */
+type UnitName = string;
 type MissionBuilding = [type: BuildingName, owner: Team | null, x: number, y: number];
 type MissionUnit = [type: UnitName, team: Team, x: number, y: number, life?: number];
 
-export interface MissionDef {
+/** Una mision tal como se escribe aqui abajo (MISSION_DEFS). */
+interface MissionSource {
   id: string;
   title: Text;
   brief: Text;
@@ -36,17 +44,19 @@ export interface MissionDef {
   /** Consejos paso a paso (solo el tutorial). */
   tutorial?: boolean;
 }
+/** Una mision de la campaña: de solo lectura (MISSIONS esta congelada). */
+export type MissionDef = DeepReadonly<MissionSource>;
 
 /** Letras cuyo terreno depende del tema, en el orden de los temas. */
-const TERRAIN_BY_THEME: Record<string, number[]> = {
+const TERRAIN_BY_THEME: DeepReadonly<Record<string, number[]>> = deepFreeze({
   // tema:      llanura desierto bosque pantano nieve
   '.': [0, 3, 0, 0, 10],
   T: [2, 4, 2, 2, 13],
   M: [7, 5, 7, 7, 12],
   '*': [6, 3, 6, 6, 11],
-};
+});
 /** Letras con el mismo terreno en todos los temas. */
-const TERRAIN_IN_ANY_THEME: Record<string, number> = { '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 };
+const TERRAIN_IN_ANY_THEME: Readonly<Record<string, number>> = Object.freeze({ '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 });
 
 export function terrainOf(letter: string, theme: number): number {
   if (letter in TERRAIN_IN_ANY_THEME) return TERRAIN_IN_ANY_THEME[letter]!;
@@ -55,102 +65,90 @@ export function terrainOf(letter: string, theme: number): number {
   return byTheme[theme]!;
 }
 
-/** Terreno de la casilla (x, y) del mapa en texto. */
-const terrainAt = (m: MissionDef, x: number, y: number) => terrainOf(m.map[y]![x]!, m.theme);
+/** Terreno de una casilla del mapa en texto (filas = y). */
+const missionTerrainAt = (mission: MissionDef, pos: Pos) => terrainOf(mission.map[pos.y]![pos.x]!, mission.theme);
 
 /** El mapa en texto (filas = y) como rejilla de terreno `map[x][y]`. */
-function terrainGrid(m: MissionDef): number[][] {
-  const size = m.map.length;
-  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => terrainAt(m, x, y)));
+function terrainGrid(mission: MissionDef): number[][] {
+  const size = mission.map.length;
+  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => missionTerrainAt(mission, { x, y })));
 }
 
 /** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
-function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
+function placeUnits(s: GameState, units: MissionDef['units']): number[] {
   return units.map(([type, team, x, y, life]) => {
-    const unit = newUnit(s, UNIT_NAMES.indexOf(type), team, x, y);
+    const unit = newUnit(s, tablesOf(s).UNIT_NAMES.indexOf(type), team, { x, y });
     if (life) unit.life = life;
     return unit.uid;
   });
 }
 
-/** Crea la partida de una mision (con las reglas ya puestas por quien llama: ver `missionRules`). */
-export function buildMission(m: MissionDef): GameState {
-  const size = m.map.length;
-  setMapSize(size, size);
-  const s: GameState = {
-    version: 1,
-    map: terrainGrid(m),
-    theme: m.theme,
-    funds: [m.funds[0], m.funds[1]],
-    units: [],
-    buildings: [],
-    nextUid: 1,
-    day: 1,
-  };
-  for (const [type, owner, x, y] of m.buildings) s.buildings.push({ type: BUILDING_NAMES.indexOf(type), owner, x, y });
-  const unitUids = placeUnits(s, m.units);
-  s.mission = { id: m.id, objective: objectiveFromMission(m.objective, unitUids) };
+/** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
+export function buildMission(mission: MissionDef, content: GameContent): GameState {
+  const s = newGameState({
+    map: terrainGrid(mission),
+    rules: missionRules(mission, content),
+    content,
+    theme: mission.theme,
+    funds: [mission.funds[0], mission.funds[1]],
+  });
+  for (const [type, owner, x, y] of mission.buildings) s.buildings.push({ type: tablesOf(s).BUILDING_NAMES.indexOf(type), owner, x, y });
+  const unitUids = placeUnits(s, mission.units);
+  s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, unitUids, content.tables) };
   return s;
 }
 
 /** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
-export const missionRules = (m: MissionDef): RulesConfig => ({
-  ...DEFAULT_RULES,
-  commandPoints: null,
-  upkeep: 0,
-  weather: false,
-  initialFunds: m.funds[0],
-  ...m.rules,
-});
+export const missionRules = (mission: MissionDef, content: GameContent): RulesConfig =>
+  rulesWith(content, { commandPoints: null, upkeep: 0, weather: false, initialFunds: mission.funds[0], ...mission.rules });
 
-const posKey = (x: number, y: number) => `${x},${y}`;
-
-function buildingProblems(m: MissionDef): string[] {
+function buildingProblems(mission: MissionDef, tables: ContentTables): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
-  for (const [type, , x, y] of m.buildings) {
-    if (!BUILDING_NAMES.includes(type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
-    if (!TERRAIN.canbuild[terrainAt(m, x, y)]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
-    if (taken.has(posKey(x, y))) problems.push(`dos edificios en (${x},${y})`);
-    taken.add(posKey(x, y));
+  for (const [type, , x, y] of mission.buildings) {
+    if (!tables.BUILDING_NAMES.includes(type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
+    if (!tables.TERRAIN.canbuild[missionTerrainAt(mission, { x, y })]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
+    if (taken.has(posKey({ x, y }))) problems.push(`dos edificios en (${x},${y})`);
+    taken.add(posKey({ x, y }));
   }
   return problems;
 }
 
-function unitProblems(m: MissionDef): string[] {
+function unitProblems(mission: MissionDef, tables: ContentTables): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
-  for (const [name, , x, y] of m.units) {
-    const type = UNIT_NAMES.indexOf(name);
+  for (const [name, , x, y] of mission.units) {
+    const type = tables.UNIT_NAMES.indexOf(name);
     if (type < 0) {
       problems.push(`unidad "${name}" no existe (src/core/content/units.json)`);
       continue;
     }
-    if (!Movement.canWalk(Movement.of(type), terrainAt(m, x, y))) problems.push(`${name} en (${x},${y}) no puede estar en ese terreno`);
-    if (taken.has(posKey(x, y))) problems.push(`dos unidades en (${x},${y})`);
-    taken.add(posKey(x, y));
+    if (!walkableFor(tables, tables.UNIT.movtype[type]!, missionTerrainAt(mission, { x, y })))
+      problems.push(`${name} en (${x},${y}) no puede estar en ese terreno`);
+    if (taken.has(posKey({ x, y }))) problems.push(`dos unidades en (${x},${y})`);
+    taken.add(posKey({ x, y }));
   }
   return problems;
 }
 
-function missingBases(m: MissionDef): string[] {
-  const hasBase = (team: Team) => m.buildings.some(([type, owner]) => type === BUILDING_NAMES[HQ] && owner === team);
+function missingBases(mission: MissionDef, tables: ContentTables): string[] {
+  const hasBase = (team: Team) => mission.buildings.some(([type, owner]) => type === tables.BUILDING_NAMES[tables.HQ] && owner === team);
   return ([0, 1] as const).filter((team) => !hasBase(team)).map((team) => `falta la Base del bando ${team}`);
 }
 
-/** Comprobaciones de un mapa de mision (para los tests). Devuelve los problemas encontrados. */
-export function checkMission(m: MissionDef): string[] {
-  const size = m.map.length;
+/** Comprobaciones de un mapa de mision con ese contenido (para los tests). Devuelve los problemas encontrados. */
+export function checkMission(mission: MissionDef, content: GameContent): string[] {
+  const size = mission.map.length;
   return [
-    ...(m.map.some((row) => row.length !== size) ? ['el mapa no es cuadrado'] : []),
-    ...buildingProblems(m),
-    ...unitProblems(m),
-    ...missingBases(m),
-    ...objectiveProblems(m.objective, { unitCount: m.units.length, mapSize: size }),
+    ...(mission.map.some((row) => row.length !== size) ? ['el mapa no es cuadrado'] : []),
+    ...buildingProblems(mission, content.tables),
+    ...unitProblems(mission, content.tables),
+    ...missingBases(mission, content.tables),
+    ...objectiveProblems(mission.objective, { unitCount: mission.units.length, mapSize: size }),
   ];
 }
 
-export const MISSIONS: MissionDef[] = [
+const MISSION_DEFS: MissionSource[] = [
   {
     id: 'tutorial',
     tutorial: true,
@@ -259,7 +257,7 @@ export const MISSIONS: MissionDef[] = [
     title: { es: 'Resistir', en: 'Hold the line' },
     brief: {
       es: 'Un ejército mucho mayor viene hacia tu Base. Aguanta hasta el final del día 8. Aprovecha el terreno y el contraataque: no salgas a buscarlos.',
-      en: 'A much larger army is marching on your HQ. Hold out until the end of day 8. Use the terrain and counterattacks: let them come to you.',
+      en: 'A much larger army is marching on your tablesOf(s).HQ. Hold out until the end of day 8. Use the terrain and counterattacks: let them come to you.',
     },
     theme: 1,
     map: [
@@ -432,7 +430,7 @@ export const MISSIONS: MissionDef[] = [
     title: { es: 'Asalto final', en: 'Final assault' },
     brief: {
       es: 'El enemigo tiene más dinero y se ha atrincherado tras los pantanos. Conquista su Base.',
-      en: 'The enemy has more money and has dug in behind the swamps. Take their HQ.',
+      en: 'The enemy has more money and has dug in behind the swamps. Take their tablesOf(s).HQ.',
     },
     theme: 3,
     map: [
@@ -487,5 +485,7 @@ export const MISSIONS: MissionDef[] = [
     objective: { kind: 'hq' },
   },
 ];
+/** Las misiones de la campaña, congeladas: nadie las cambia mientras se juega (ni el tipo deja). */
+export const MISSIONS: readonly MissionDef[] = deepFreeze(MISSION_DEFS);
 
 export const missionById = (id: string): MissionDef | undefined => MISSIONS.find((mission) => mission.id === id);

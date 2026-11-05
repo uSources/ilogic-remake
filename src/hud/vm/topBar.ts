@@ -19,7 +19,7 @@ export interface EconomyVM {
   /** El mantenimiento no se puede pagar entero: se paga solo esto. */
   shortfall: number | null;
   /** null = regla de puntos de mando apagada. */
-  command: { lines: BreakdownLineVM[]; used: number; max: number } | null;
+  commandPoints: { lines: BreakdownLineVM[]; used: number; max: number } | null;
 }
 
 /** Desglose del dia al pasar por encima. */

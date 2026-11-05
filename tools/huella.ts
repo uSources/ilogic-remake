@@ -10,14 +10,13 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { DEFAULT_RULES, GENERALS, useRules } from '@core/data';
+import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { newGeneral } from '@core/generals';
-import { generateGame } from '@core/mapgen';
 import { endRound, outcome } from '@core/rules';
-import { formSquad, giveCommand } from '@core/squads';
-import type { RulesConfig } from '@core/content';
-import type { GameState, Team } from '@core/types';
+import { serialize } from '@core/save';
+import { formSquad, giveStandingOrder } from '@core/squads';
+import type { GameState, RulesConfig, Team } from '@core/model';
 
 const MAX_DAYS = 30;
 
@@ -52,18 +51,18 @@ function scenarios(): Scenario[] {
 
 /** El jugador junta sus tres primeras unidades en una escuadra y la manda a atacar la base enemiga. */
 function orderPlayerSquad(s: GameState): void {
-  const target = s.buildings.find((b) => b.owner === 1);
+  const target = s.buildings.find((building) => building.owner === 1);
   if (!target) return;
-  const squadUnits = s.units.filter((u) => u.team === 0 && u.squad === undefined).slice(0, 3);
+  const squadUnits = s.units.filter((unit) => unit.team === 0 && unit.squad === undefined).slice(0, 3);
   if (squadUnits.length < 2 || !formSquad(s, squadUnits)) return;
-  giveCommand(s, squadUnits, 'attack', target);
+  giveStandingOrder(s, squadUnits, 'attack', target);
 }
 
 function playScenario(scenario: Scenario): string {
-  useRules({ ...DEFAULT_RULES, ...scenario.rules });
   const rng = seededRng(scenario.seed);
-  const s = generateGame(rng, { size: scenario.size });
-  if (scenario.withGenerals) s.generals = [newGeneral(GENERALS[0]?.id), newGeneral(GENERALS[1]?.id)];
+  const s = createGame(rng, { size: scenario.size, ruleChanges: scenario.rules });
+  const generals = s.content.files.generals;
+  if (scenario.withGenerals) s.generals = [newGeneral(s, generals[0]?.id), newGeneral(s, generals[1]?.id)];
   if (scenario.withSquad) orderPlayerSquad(s);
 
   const hash = createHash('sha256');
@@ -80,7 +79,7 @@ function playScenario(scenario: Scenario): string {
       if (isOver()) break;
     }
     endRound(s);
-    record(s);
+    hash.update(serialize(s));
   }
   record(outcome(s));
   return hash.digest('hex').slice(0, 16);
@@ -96,5 +95,4 @@ for (const scenario of scenarios()) {
       `${fingerprint}  semilla ${scenario.seed}, mapa ${scenario.size}, ${JSON.stringify(scenario.rules)}${scenario.withGenerals ? ', generales' : ''}${scenario.withSquad ? ', escuadra' : ''}`,
     );
 }
-useRules(DEFAULT_RULES);
 console.log(`huella total: ${total.digest('hex').slice(0, 16)}`);

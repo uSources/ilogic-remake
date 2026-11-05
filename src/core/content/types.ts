@@ -38,6 +38,8 @@ export const TERRAIN_NAMES = [
   'SnowWood',
   'Ice',
 ] as const;
+/** Numero de terrenos (lista fija: TERRAIN_NAMES). */
+export const TERRAIN_TYPES = TERRAIN_NAMES.length;
 
 export const TerrainType = {
   GRASS: 0,

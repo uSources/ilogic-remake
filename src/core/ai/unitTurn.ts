@@ -3,11 +3,12 @@
  * primero que la usa. Un papel nuevo (por ejemplo, artilleria que guarda la distancia) es una
  * entrada mas en UNIT_BEHAVIOURS, en su sitio de la lista.
  */
-import { HQ, UNIT } from '../data';
+
+import { tablesOf } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
-import type { Building, GameEvent, GameState, Rng, Unit } from '../types';
+import type { Building, GameEvent, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, needsRepair, type AiCtx } from './context';
 import { advance, captureHere, randomMove, retreat, tryAttack, tryCapture } from './tactics';
 
@@ -28,11 +29,12 @@ export interface UnitBehaviour {
   run(turn: UnitTurnContext): Generator<GameEvent, boolean>;
 }
 
-const isEnemyHq = (building: Building, ai: AiCtx): boolean => building.type === HQ && building.owner !== ai.me && building.owner !== null;
+const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean =>
+  building.type === tablesOf(s).HQ && building.owner !== ai.me && building.owner !== null;
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range, rng }: UnitTurnContext): Generator<GameEvent, boolean> {
-  const hq = buildingAt(s, unit.x, unit.y)!;
+  const hq = buildingAt(s, unit)!;
   const destination = bestMoveToward(s, ai, unit, hq, range, true);
   if (!destination) return false;
   yield* doMove(s, unit, destination, range);
@@ -47,22 +49,22 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
     // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
     id: 'finishCapture',
-    when: ({ s, unit }) => buildingAt(s, unit.x, unit.y) !== undefined,
+    when: ({ s, unit }) => buildingAt(s, unit) !== undefined,
     run: ({ s, unit }) => captureHere(s, unit),
   },
   {
     // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
     id: 'stepOffEnemyHq',
     when: ({ s, ai, unit }) => {
-      const building = buildingAt(s, unit.x, unit.y);
-      return !!building && isEnemyHq(building, ai) && !UNIT.cancapt[unit.type];
+      const building = buildingAt(s, unit);
+      return !!building && isEnemyHq(s, building, ai) && !tablesOf(s).UNIT.cancapt[unit.type];
     },
     run: stepOffEnemyHq,
   },
   {
-    // Debil o sin combustible: a curarse antes de que la destruyan.
+    // Debil: a curarse antes de que la destruyan.
     id: 'retreat',
-    when: ({ unit }) => needsRepair(unit),
+    when: ({ s, unit }) => needsRepair(s, unit),
     run: ({ s, ai, unit, range }) => retreat(s, ai, unit, range),
   },
   {

@@ -2,9 +2,8 @@
  * [CAMBIO] Puntos de control (ver GameState.controlPoints): zonas que dan dinero cada ronda a quien
  * las tiene sin disputa.
  */
-import { RULES } from '../data';
 import { isOnMap } from '../util/predicates';
-import type { ControlPoint, GameState, Pos, Team } from '../types';
+import type { ControlPoint, GameState, Pos, Team } from '../model';
 
 /** Lo que han dado los puntos de control en una ronda (ver RoundReport.control). */
 export interface ControlReport {
@@ -16,14 +15,14 @@ export interface ControlReport {
   contested: number;
 }
 
-/** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de RULES.controlRadius). */
-export function inControlZone(center: Pos, pos: Pos): boolean {
-  return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= RULES.controlRadius;
+/** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de rules.controlRadius). */
+export function inControlZone(s: GameState, center: Pos, pos: Pos): boolean {
+  return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= s.rules.controlRadius;
 }
 
 /** [CAMBIO] Bandos con unidades dentro de la zona de un punto de control. */
 export function teamsInZone(s: GameState, center: Pos): Set<Team> {
-  return new Set(s.units.filter((unit) => isOnMap(unit) && inControlZone(center, unit)).map((unit) => unit.team));
+  return new Set(s.units.filter((unit) => isOnMap(unit) && inControlZone(s, center, unit)).map((unit) => unit.team));
 }
 
 /**
@@ -52,8 +51,8 @@ export function controlRound(s: GameState): ControlReport | undefined {
     }
     if (owner === null) continue;
     report.held[owner]++;
-    report.income[owner] += RULES.controlIncome;
-    s.funds[owner] += RULES.controlIncome;
+    report.income[owner] += s.rules.controlIncome;
+    s.funds[owner] += s.rules.controlIncome;
   }
   return report;
 }

@@ -18,18 +18,19 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 | `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
 | `src/scenes/game/` | Modulos de `GameScene` (animar eventos, turno enemigo, final, seleccion, ordenes, modelos del HUD...). Cada uno recibe de la escena una interfaz `...Host` pequeña (con `live()`, `host.ts`); lo puro, con test | todo |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
-| `src/controls/` | Ordenes del jugador (`GameCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras, sin Phaser | menu (teclas compartidas) |
+| `src/controls/` | Ordenes del jugador (`InputCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras, sin Phaser | menu (teclas compartidas) |
 | `src/controls/pointer.ts` | Adaptador de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, coger y soltar, recuadro, pulsacion larga, pellizco, rueda). Sin Phaser | `scenes/game/pointerInput.ts` implementa `PointerTarget` |
 | `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
 
 - `src/core/rules.ts` y `src/core/ai.ts` son fachadas: el codigo esta en `src/core/rules/` y
   `src/core/ai/`, un modulo por tema (mapa en `docs/ARQUITECTURA.md`, "El nucleo por dentro").
-  Fuera de core se importa de la fachada; dentro, del modulo concreto, sin crear ciclos.
+  Fuera de core se importa de la fachada; dentro, del modulo concreto, sin crear ciclos. Un import
+  por modulo, con los tipos dentro (`import { a, type B }`; lo vigila ESLint).
 - `src/core` **no** importa Phaser, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
-  Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/orders.ts`).
+  Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/targeting.ts`).
 - Las escenas no leen teclas ni botones de un mando: un adaptador de `src/controls` los traduce a
-  `GameCommand` (mapa) o `MenuCommand` (menus) y la escena los cumple (`command` / `menu`, segun
+  `InputCommand` (mapa) o `MenuCommand` (menus) y la escena los cumple (`command` / `menu`, segun
   `controlContext()`). Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
 - Las escenas no calculan lo que enseña la interfaz a mano: usan funciones puras de `ui/hudModels.ts`
   y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store. Como se añade un
@@ -42,7 +43,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 Todo codigo nuevo o tocado sigue `docs/ESTILO.md` (con un ejemplo de antes y despues). En corto:
 nombres completos (`unit`, `distanceToGoal`; no `u`, `d`, `c`), una funcion por idea (unas 25
 lineas, 2 niveles de anidacion), salir pronto con `return`, nada de numeros ni condiciones magicas,
-recorrer y elegir con las piezas comunes (`cellAt`/`cells` de `core/util/grid.ts`, `minBy`/`maxBy`
+recorrer y elegir con las piezas comunes (`Grid<T>` de `core/util/grid.ts` con `at`/`set`/`forEach`/`cells`, `minBy`/`maxBy`
 de `core/util/pick.ts`, `reachableTilesWithCost`, `distancesIgnoringUnits`) en vez de bucles a mano,
 lo que crece como lista de datos y no como `switch`, cada modulo pide solo lo que usa, y comentarios
 del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar lo mismo antes y despues.
@@ -50,15 +51,29 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 ## Convenciones
 
 - **Datos, no numeros sueltos**: unidades, edificios, terreno, reglas por defecto y pesos de la IA en
-  `core/content/*.json` (ver `docs/CONTENIDO.md`); `core/data.ts` los convierte en las tablas (`UNIT`,
-  `POWER`, `BUILDING`, `TERRAIN`, `Movement`, `DEFAULT_RULES`, `AI`). El codigo no compara nombres de
-  unidades (`'Tank'`): si necesita saber algo de una, es un campo del JSON.
-- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `Movement.of(u.type)`,
-  `Movement.canWalk(mt, t)`, `Movement.cost(mt, t)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
+  `core/content/*.json` (ver `docs/CONTENIDO.md`). El contenido va con cada partida: se lee con
+  `tablesOf(s)` (`UNIT`, `POWER`, `BUILDING`, `TERRAIN`...), `weightsOf(s)` (pesos de la IA) y
+  `s.content` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
+  etiquetas), `defaultContent()`. El codigo no compara nombres de unidades (`'Tank'`): si necesita
+  saber algo de una, es un campo del JSON.
+- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `movementOf(s, unit.type)`,
+  `canMoveOn(s, moveType, terrain)`, `terrainMoveCost(s, moveType, terrain)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
+- **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
+  tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
+  en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
+  `createGame(rng, { rules })`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
+  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content })`, el unico sitio
+  que escribe su forma; el contenido es el campo `s.content` (no se guarda). Leer una guardada:
+  `loadGame(json)` o `deserialize(json, saveContext(contenido))`; un cambio en lo que se guarda sube
+  `SAVE_VERSION` (core/saveVersion.ts, y el tipo de `GameState.version`) y lleva su paso en `MIGRATIONS`
+  (core/saveMigrations.ts).
+- **Casillas como `Pos`**: firmas con `pos: Pos`, no `(x, y)`; copiar la casilla de una unidad o
+  edificio con `posOf(unit)`; los bordes, con `mapGrid(s).contains(pos)`, `isOnBoard(s, pos)` o
+  `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
   `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en
@@ -69,8 +84,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   ronda = entrada en `ROUND_PHASES`; habilidad nueva = su efecto en `abilities.ts`. La IA no tiene
   variables globales: lo del turno va en `AiCtx`. Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
-- Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `cellAt(grid, pos)` en vez de
-  `grid[x]![y]!`; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
+- Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de
+  `grid[x]![y]!`. El tamaño del mapa sale siempre del estado (`mapGrid(s)`, `createLayer(s, fill)`,
+  `isOnBoard(s, pos)` de `core/mapGrid.ts`): no hay tamaño global; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
   esperando a pasar.
 - `switch` sobre uniones: con todos los casos o con `default:` explicito (lo pide el lint).
 - Las reglas cambiadas respecto al juego de 2013 llevan `[CAMBIO]` en un comentario con el porque.

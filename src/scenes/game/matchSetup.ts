@@ -1,14 +1,13 @@
 /**
  * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
- * laboratorio, una mision o un mapa nuevo. Pone las reglas de esa partida (useRules). Sin Phaser.
+ * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
-import { DEFAULT_RULES, useRules, type RulesConfig } from '../../core/data';
 import { newGeneral } from '../../core/generals';
 import { seededRng } from '../../core/geom';
-import { generateGame } from '../../core/mapgen';
-import { buildMission, missionById, missionRules } from '../../core/missions';
-import { deserialize } from '../../core/save';
-import type { GameSetup, GameState } from '../../core/types';
+import { defaultContent } from '../../core/content/default';
+import { createGame, loadGame } from '../../core/defaultGames';
+import { buildMission, missionById } from '../../core/missions';
+import type { GameSetup, GameState } from '../../core/model';
 import { ensureWeather } from '../../core/weather';
 import { defaultLab, labState, type LabOptions } from '../../lab';
 import { randomSeed } from '../../setup';
@@ -31,64 +30,37 @@ const DEFAULT_MAP_SIZE = 32;
 export function startMatch(data: GameStartData): MatchStart {
   const lab = data.mode === 'lab' ? (data.lab ?? defaultLab()) : null;
   const saved = data.mode === 'load' ? readSavedGame() : null;
-  const given = data.mode === 'state' && data.state ? deserialize(data.state) : null;
+  const given = data.mode === 'state' && data.state ? loadGame(data.state) : null;
   const loaded = saved ?? given;
   const corruptSave = (data.mode === 'load' || data.mode === 'state') && !loaded;
   if (corruptSave) deleteSave();
-  const state = lab ? labMatch(lab) : loaded ? withCurrentRules(loaded) : (missionMatch(data) ?? newMatch(data));
+  const state = lab ? labMatch(lab) : loaded ? loaded : (missionMatch(data) ?? newMatch(data));
   ensureWeather(state);
   return { state, lab, fromSave: !!saved, corruptSave };
 }
 
 function readSavedGame(): GameState | null {
   const raw = readSave();
-  return raw ? deserialize(raw) : null;
+  return raw ? loadGame(raw) : null;
 }
 
 function labMatch(lab: LabOptions): GameState {
-  // Contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde).
-  useRules({ ...DEFAULT_RULES, fog: false, weather: false, counterattack: lab.play !== 'attack' });
   return labState(lab, lab.play);
-}
-
-/**
- * Solo se guardan los ajustes de la partida; las reglas son siempre las actuales (las partidas
- * antiguas con las reglas de 2013 pasan a jugarse con estas).
- */
-function withCurrentRules(state: GameState): GameState {
-  state.rules = { ...DEFAULT_RULES, ...(state.rules ? savedSettings(state.rules) : {}) };
-  useRules(state.rules);
-  return state;
-}
-
-function savedSettings(rules: RulesConfig): Partial<RulesConfig> {
-  return {
-    initialFunds: rules.initialFunds,
-    maxUnits: rules.maxUnits,
-    incomeScale: rules.incomeScale,
-    fog: rules.fog,
-    dayLimit: rules.dayLimit,
-    commandPoints: rules.commandPoints,
-    upkeep: rules.upkeep,
-    weather: rules.weather ?? DEFAULT_RULES.weather,
-  };
 }
 
 function missionMatch(data: GameStartData): GameState | null {
   const mission = data.mode === 'mission' && data.mission ? missionById(data.mission) : undefined;
   if (!mission) return null;
-  useRules(missionRules(mission));
-  return buildMission(mission);
+  return buildMission(mission, defaultContent());
 }
 
 /** Mapa al azar (o el de `setup`), con los generales elegidos. */
 function newMatch(data: GameStartData): GameState {
-  useRules(data.rules ?? DEFAULT_RULES);
   const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
-  const state = generateGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme });
+  const state = createGame(seededRng(setup.seed), { size: setup.size, theme: setup.theme, ruleChanges: data.rules });
   state.setup = setup;
-  const player = newGeneral(data.general);
-  const enemy = newGeneral(data.enemyGeneral);
+  const player = newGeneral(state, data.general);
+  const enemy = newGeneral(state, data.enemyGeneral);
   if (player || enemy) state.generals = [player, enemy];
   return state;
 }

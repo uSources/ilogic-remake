@@ -1,10 +1,10 @@
 import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { DEFAULT_RULES, useRules } from '../core/data';
 import { seededRng } from '../core/geom';
-import { generateGame } from '../core/mapgen';
+import { createLayer, mapGrid } from '../core/mapGrid';
+import { createGame } from '../core/defaultGames';
 import { endRound, outcome } from '../core/rules';
-import type { GameEvent, GameState, Pos, Team } from '../core/types';
+import type { GameEvent, GameState, Pos, Team } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
@@ -14,6 +14,8 @@ import { PAL, PAL_CSS } from '../ui/palette';
 /** Mezcla para que la IA del fondo no juegue con la misma semilla que el mapa. */
 const AI_SEED_MIX = 0x5bd1e995;
 const MAP_SIZE = 32;
+/** La partida de fondo se juega sin niebla: se ve todo lo que pasa. */
+const BACKGROUND_RULE_CHANGES = { fog: false };
 /** La partida de fondo se corta a los 45 dias y empieza otra. */
 const MAX_DAYS = 45;
 const FIRST_PAUSE_MS = 600;
@@ -81,10 +83,9 @@ export class LiveBackground {
   }
 
   start(): void {
-    useRules({ ...DEFAULT_RULES, fog: false });
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = generateGame(seededRng(seed), { size: MAP_SIZE });
+    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
     const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
@@ -102,8 +103,9 @@ export class LiveBackground {
     const s = this.game;
     if (!s) return;
     const camera = this.scene.cameras.main;
-    const mapWidth = s.map.length * TILE;
-    const mapHeight = s.map[0]!.length * TILE;
+    const map = mapGrid(s);
+    const mapWidth = map.width * TILE;
+    const mapHeight = map.height * TILE;
     const viewWidth = camera.width / camera.zoom;
     const viewHeight = camera.height / camera.zoom;
     camera.setBounds(
@@ -117,7 +119,7 @@ export class LiveBackground {
   private render(): void {
     const s = this.game;
     if (!s || !this.view) return;
-    const visible = Array.from({ length: s.map.length }, () => Array<boolean>(s.map.length).fill(true));
+    const visible = createLayer(s, true);
     this.view.render(s, { vis: visible, highlights: new Map(), hidden: new Set() });
     this.view.placeCursor(false);
   }

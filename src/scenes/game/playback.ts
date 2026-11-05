@@ -7,11 +7,13 @@
  * un evento nuevo trae su propia funcion en vez de abrir un `switch`.
  */
 import type Phaser from 'phaser';
-import { MoveType, Movement, UNIT_ART } from '../../core/data';
-import { abilityArea, areaTiles, generalOf } from '../../core/generals';
-import { inBounds } from '../../core/geom';
-import { unitAt, unitById } from '../../core/rules';
-import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/types';
+import { MoveType } from '../../core/content';
+import { tablesOf } from '../../core/gameContent';
+import { movementOf, unitAt, unitById } from '../../core/rules';
+import { abilityArea, generalOf } from '../../core/generals';
+import { squareArea, posOf } from '../../core/geom';
+import { mapGrid } from '../../core/mapGrid';
+import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';
 import { fmtNum, settings, t } from '../../settings';
@@ -50,7 +52,7 @@ export interface PlaybackHost {
   /** Unidades que no se dibujan (las que se estan animando aparte). */
   readonly hidden: Set<number>;
   /** El jugador ve esa casilla. */
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   refresh(): void;
   refreshHud(): void;
   /** Cada evento, antes de animarlo (deshacer, estadisticas, tutorial, ultima jugada). */
@@ -67,11 +69,11 @@ export interface EventStage {
   readonly enemyPlaying: boolean;
   /** Unidades que no se dibujan (las que se estan animando aparte). */
   readonly hidden: Set<number>;
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   refresh(): void;
   refreshHud(): void;
   wait(ms: number): Promise<void>;
-  lookAt(p: Pos): Promise<void>;
+  lookAt(pos: Pos): Promise<void>;
   stepMs(): number;
   combatMs(ms: number): number;
 }
@@ -110,8 +112,8 @@ export class EventPlayer implements EventStage {
   get hidden(): Set<number> {
     return this.host.hidden;
   }
-  visible(p: Pos): boolean {
-    return this.host.visible(p);
+  visible(pos: Pos): boolean {
+    return this.host.visible(pos);
   }
   refresh(): void {
     this.host.refresh();
@@ -140,9 +142,9 @@ export class EventPlayer implements EventStage {
   }
 
   /** Lleva la camara a una casilla si no se ve bien, y espera a que llegue. */
-  async lookAt(p: Pos): Promise<void> {
-    if (!this.visible(p) || this.view.isOnScreen(p, ON_SCREEN_MARGIN)) return;
-    this.view.ensureVisible(p, LOOK_AT_MARGIN);
+  async lookAt(pos: Pos): Promise<void> {
+    if (!this.visible(pos) || this.view.isOnScreen(pos, ON_SCREEN_MARGIN)) return;
+    this.view.ensureVisible(pos, LOOK_AT_MARGIN);
     await this.wait(this.fastForward ? 0 : LOOK_AT_MS);
   }
 
@@ -184,11 +186,11 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const start = event.path[0]!;
   if (mover) return unitKey(stage.scene.textures, s, { ...mover, x: start.x, y: start.y, active: true });
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (roja si no se sabe).
-  return 'r_' + UNIT_ART[unitEntered(s, event)?.type ?? 0];
+  return 'r_' + tablesOf(s).UNIT_ART[unitEntered(s, event)?.type ?? 0];
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
-  const isSeen = event.path.some((p) => stage.visible(p));
+  const isSeen = event.path.some((pos) => stage.visible(pos));
   if (!isSeen || stage.fastForward) return;
   const texture = ghostKey ?? moverTexture(stage, event);
   if (!texture) return;
@@ -205,13 +207,13 @@ const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKe
 async function showAmbush(stage: EventStage, ambusher: Pos, stoppedAt: Pos, showWholePath: boolean): Promise<void> {
   stage.refresh();
   if (!showWholePath && !stage.visible(stoppedAt)) return;
-  const c = center(stoppedAt);
+  const centerPoint = center(stoppedAt);
   void tileFlash(stage.scene, stage.view, ambusher, PAL.red);
-  await floatText(stage.scene, stage.view, { x: c.x, y: c.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
+  await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
 }
 
 /** Punto donde se apoya una unidad en una casilla (centro abajo, como sus sprites). */
-const feetOf = (p: Pos) => ({ x: p.x * TILE + TILE / 2, y: (p.y + 1) * TILE });
+const feetOf = (pos: Pos) => ({ x: pos.x * TILE + TILE / 2, y: (pos.y + 1) * TILE });
 
 /** Duracion de cada paso respecto a `stepMs`: arranca y frena suave; un solo paso, algo mas lento. */
 const SINGLE_STEP_PACE = 1.25;
@@ -242,7 +244,7 @@ function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Ima
   // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
   const mover = unitById(stage.state, uid);
   const team = mover?.team ?? (stage.enemyPlaying ? 1 : 0);
-  const moveType = mover ? Movement.of(mover.type) : null;
+  const moveType = mover ? movementOf(stage.state, mover.type) : null;
   return { image, team, hops: moveType === MoveType.FOOT, raisesDust: moveType !== MoveType.FOOT && moveType !== MoveType.AIR };
 }
 
@@ -252,8 +254,8 @@ function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Ima
  */
 async function animatePath(stage: EventStage, uid: number, textureKey: string, path: Pos[], showWholePath = true): Promise<void> {
   const view = stage.view;
-  const isShown = (p: Pos) => showWholePath || stage.visible(p);
-  const visiblePart = showWholePath ? path : path.filter((p) => stage.visible(p));
+  const isShown = (pos: Pos) => showWholePath || stage.visible(pos);
+  const visiblePart = showWholePath ? path : path.filter((pos) => stage.visible(pos));
   await stage.lookAt(visiblePart[visiblePart.length - 1] ?? path[path.length - 1]!);
   stage.hidden.add(uid);
   stage.refresh();
@@ -366,7 +368,7 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const isAttackerSeen = !!attackerPos && stage.visible(attackerPos);
   const info = event.combat;
   const attackerTeam = info?.attackerTeam ?? unitById(s, event.attacker)?.team ?? (stage.enemyPlaying ? 1 : 0);
-  const victim = unitAt(s, event.target.x, event.target.y);
+  const victim = unitAt(s, event.target);
   return {
     event,
     isSeen,
@@ -388,11 +390,11 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
 const teamColor = (team: number) => (team === 0 ? PAL.blue : PAL.red);
 
 /** Enseña el panel de combate (abajo) en un momento del combate, si el jugador lo ve. */
-function showCombatPanel(battle: Battle, stage: 'start' | 'hit' | 'counter'): void {
+function showCombatPanel(s: GameState, battle: Battle, moment: 'start' | 'hit' | 'counter'): void {
   if (!battle.isSeen) return;
   const icons = { attacker: battle.attackerKey, defender: battle.victimKey };
   const seen = { attacker: battle.isAttackerSeen, defender: true };
-  const panel = combatVM(battle.event, stage, icons, seen, battle.panelId);
+  const panel = combatVM(s, battle.event, moment, icons, seen, battle.panelId);
   if (panel) ui.set({ combat: panel });
 }
 
@@ -405,7 +407,7 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
   const battle = describeBattle(stage, event);
   if (battle.isSeen) {
     await aimAndFire(stage, battle);
-    showCombatPanel(battle, 'hit');
+    showCombatPanel(stage.state, battle, 'hit');
     await hitEffects(stage, {
       uid: battle.victimUid,
       at: event.target,
@@ -426,13 +428,20 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
 /** Apuntar y disparar: los dos se miran, la mira se cierra sobre el objetivo y sale el disparo. */
 async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   const { event, attackerPos, attackerSprite } = battle;
-  showCombatPanel(battle, 'start');
+  showCombatPanel(stage.state, battle, 'start');
   await stage.lookAt(event.target);
   if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.target);
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
   void targetMark(stage.scene, stage.view, event.target, teamColor(battle.attackerTeam), stage.combatMs(150));
   if (attackerSprite && attackerPos && battle.isAttackerSeen) {
-    await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.timeline);
+    await fire(
+      stage,
+      attackerSprite,
+      attackerPos,
+      event.target,
+      shotKind(stage.state, battle.attackerType, battle.defenderType),
+      battle.timeline,
+    );
   } else await stage.wait(stage.combatMs(150));
 }
 
@@ -446,9 +455,16 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   void tag(battle.timeline, stage.view, event.target, t('fxCounter'), PAL_CSS.gold);
   await stage.wait(stage.combatMs(80));
   if (defenderSprite) {
-    await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.timeline);
+    await fire(
+      stage,
+      defenderSprite,
+      event.target,
+      attackerPos,
+      shotKind(stage.state, battle.defenderType, battle.attackerType),
+      battle.timeline,
+    );
   }
-  showCombatPanel(battle, 'counter');
+  showCombatPanel(stage.state, battle, 'counter');
   await hitEffects(stage, {
     uid: event.attacker,
     at: attackerPos,
@@ -466,8 +482,8 @@ function showBounty(stage: EventStage, battle: Battle): void {
   const { event } = battle;
   const lootAt = event.killed ? event.target : event.attackerKilled ? battle.attackerPos : null;
   if (!event.bounty || !lootAt || stage.fastForward || !stage.visible(lootAt)) return;
-  const c = center(lootAt);
-  void floatText(stage.scene, stage.view, { x: c.x, y: c.y - 16 }, `+${fmtNum(event.bounty)}`, PAL_CSS.gold);
+  const centerPoint = center(lootAt);
+  void floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 16 }, `+${fmtNum(event.bounty)}`, PAL_CSS.gold);
   stage.refreshHud();
 }
 
@@ -513,7 +529,7 @@ const MISS_COLOR = '#cfe8ff';
  */
 async function hitEffects(stage: EventStage, hit: HitTarget): Promise<void> {
   const { scene, view } = stage;
-  const survivor = unitAt(stage.state, hit.at.x, hit.at.y);
+  const survivor = unitAt(stage.state, hit.at);
   const sprite = survivor ? view.unitSprite(survivor.uid) : fallenCopy(stage, hit);
   void hitFlash(hit.timeline, sprite);
   const isHit = hit.damage > 0;
@@ -550,12 +566,18 @@ const animateCapture: Animator<'capture'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward || !stage.visible(event.at)) return;
   await stage.lookAt(event.at);
-  const c = center(event.at);
-  void burst(stage.scene, stage.view, c, { colors: COLORS.gold, count: 12, radius: 22 });
+  const centerPoint = center(event.at);
+  void burst(stage.scene, stage.view, centerPoint, { colors: COLORS.gold, count: 12, radius: 22 });
   void tileFlash(stage.scene, stage.view, event.at, PAL.gold);
   const isPartial = event.left !== undefined && event.left > 0;
   const label = isPartial ? `${event.left}/${event.total}` : event.owner === null ? t('fxNeutral') : t('fxCaptured');
-  await floatText(stage.scene, stage.view, { x: c.x, y: c.y - 6 }, label, isPartial ? CAPTURE_PARTIAL_COLOR : CAPTURE_DONE_COLOR);
+  await floatText(
+    stage.scene,
+    stage.view,
+    { x: centerPoint.x, y: centerPoint.y - 6 },
+    label,
+    isPartial ? CAPTURE_PARTIAL_COLOR : CAPTURE_DONE_COLOR,
+  );
 };
 
 /** Compra: humo a los pies, la casilla destella y la unidad nueva parpadea. */
@@ -583,24 +605,24 @@ function seenUnit(stage: EventStage, uid: number): Unit | null {
 async function abilityHit(stage: EventStage, hit: { uid: number; damage: number }): Promise<void> {
   const unit = seenUnit(stage, hit.uid);
   if (!unit) return;
-  const c = center(unit);
-  void playAnim(stage.scene, stage.view, c, 'boom', { frameMs: 65 });
-  void burst(stage.scene, stage.view, c, { colors: COLORS.fire, count: 14, radius: 20 });
-  await floatText(stage.scene, stage.view, { x: c.x, y: c.y - 6 }, `-${hit.damage}`, PAL_CSS.redSoft);
+  const centerPoint = center(unit);
+  void playAnim(stage.scene, stage.view, centerPoint, 'boom', { frameMs: 65 });
+  void burst(stage.scene, stage.view, centerPoint, { colors: COLORS.fire, count: 14, radius: 20 });
+  await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, `-${hit.damage}`, PAL_CSS.redSoft);
 }
 
 /** Curar: "+N" en verde sobre cada unidad que recupera vida. */
 async function abilityHeal(stage: EventStage, heal: { uid: number; amount: number }): Promise<void> {
   const unit = seenUnit(stage, heal.uid);
   if (!unit) return;
-  const c = center(unit);
-  void burst(stage.scene, stage.view, c, { colors: COLORS.heal, count: 10, radius: 16 });
-  await floatText(stage.scene, stage.view, { x: c.x, y: c.y - 6 }, `+${heal.amount}`, PAL_CSS.green);
+  const centerPoint = center(unit);
+  void burst(stage.scene, stage.view, centerPoint, { colors: COLORS.heal, count: 10, radius: 16 });
+  await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, `+${heal.amount}`, PAL_CSS.green);
 }
 
 /** Toda el area de la habilidad se ilumina en rojo y la camara tiembla. */
 function flashArea(stage: EventStage, target: Pos, radius: number): void {
-  for (const p of areaTiles(target, radius)) if (inBounds(p.x, p.y)) void tileFlash(stage.scene, stage.view, p, PAL.red);
+  for (const pos of squareArea(mapGrid(stage.state), target, radius)) void tileFlash(stage.scene, stage.view, pos, PAL.red);
   stage.scene.cameras.main.shake(220, 0.006);
 }
 
@@ -608,22 +630,22 @@ function flashArea(stage: EventStage, target: Pos, radius: number): void {
 const animateAbility: Animator<'ability'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward) return;
-  const general = generalOf(stage.state, event.team)?.def;
-  const ability = general?.abilities.find((a) => a.id === event.ability);
+  const general = generalOf(stage.state, event.team)?.definition;
+  const ability = general?.abilities.find((candidate) => candidate.id === event.ability);
   const name = ability?.name[settings.lang] ?? event.ability;
   // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
   if (event.team !== 0) showToast(`${t('enemy')} · ${general?.name[settings.lang] ?? event.general}: ${name}`);
   const at = event.target ?? stage.view.cursor;
   if (event.target) await stage.lookAt(event.target);
-  const c = center(at);
-  void floatText(stage.scene, stage.view, { x: c.x, y: c.y - 18 }, name, PAL_CSS.gold);
+  const centerPoint = center(at);
+  void floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 18 }, name, PAL_CSS.gold);
   const radius = ability ? abilityArea(ability) : null;
   if (event.target && radius !== null) flashArea(stage, event.target, radius);
   await Promise.all([
     ...event.hits.map((hit) => abilityHit(stage, hit)),
     ...(event.heals ?? []).map((heal) => abilityHeal(stage, heal)),
     // Dinero: la cantidad, bajo el nombre de la habilidad.
-    ...(event.funds ? [floatText(stage.scene, stage.view, { x: c.x, y: c.y }, `+${fmtNum(event.funds)}`, PAL_CSS.gold)] : []),
+    ...(event.funds ? [floatText(stage.scene, stage.view, posOf(centerPoint), `+${fmtNum(event.funds)}`, PAL_CSS.gold)] : []),
   ]);
 };
 

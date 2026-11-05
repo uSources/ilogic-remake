@@ -1,9 +1,8 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
 import { rank, unhealable } from '../../core/rules';
-import { effectiveCommand, isDetached } from '../../core/squads';
-import type { GameState, Pos, Unit } from '../../core/types';
-import { cellAt } from '../../core/util/grid';
+import { effectiveStandingOrder, isDetached } from '../../core/squads';
+import type { GameState, Pos, Unit } from '../../core/model';
 import { TILE } from '../../layout';
 import { addLifeTextures, lifeKey } from '../lifeDigits';
 import { PAL, PAL_MAP } from '../palette';
@@ -18,7 +17,7 @@ import type { ViewOptions } from './viewOptions';
 export type Facing = 'left' | 'right';
 export const baseFacing = (team: number): Facing => (team === 1 ? 'left' : 'right');
 /** Hay que voltear el dibujo para que mire a `dir`. */
-export const faceFlip = (team: number, dir: Facing): boolean => dir !== baseFacing(team);
+export const faceFlip = (team: number, facing: Facing): boolean => facing !== baseFacing(team);
 
 /** Unidad propia sin usar: sube y baja 1 pixel cada BOB_MS (animacion de espera). */
 const BOB_MS = 500;
@@ -39,7 +38,7 @@ interface UnitSprite {
   /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
   stars: Phaser.GameObjects.Graphics;
   /** [CAMBIO] Icono de la mision en automatico (ui/cmd_<tipo>); si falta, placa con letra en `stars`. */
-  cmd: Phaser.GameObjects.Image;
+  order: Phaser.GameObjects.Image;
   /** [CAMBIO] Marcas dibujadas (ui/mk_*): sin cura, carga y hasta 3 estrellas; si faltan, van en `stars`. */
   badges: Phaser.GameObjects.Image[];
   /** Firma de lo dibujado en las marcas (`markSignature`). */
@@ -73,17 +72,17 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const stars = add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
-    const cmd = add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
+    const order = add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
     const badges = Array.from({ length: BADGE_SLOTS }, () => add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
-    const root = add.container(0, 0, [img, front, life, cargo, stars, cmd, ...badges]);
+    const root = add.container(0, 0, [img, front, life, cargo, stars, order, ...badges]);
     this.object.add(root);
-    return { root, img, front, life, cargo, stars, cmd, badges, marksDrawn: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, team: 0 };
   }
 
-  sync(s: GameState, opts: ViewOptions, newArt: boolean): void {
+  sync(s: GameState, options: ViewOptions, newArt: boolean): void {
     const seen = new Set<number>();
     for (const unit of s.units) {
-      if (unit.carrier !== null || opts.hidden.has(unit.uid) || !cellAt(opts.vis, unit)) continue;
+      if (unit.carrier !== null || options.hidden.has(unit.uid) || !options.vis.at(unit)) continue;
       const key = unitKey(this.scene.textures, s, unit);
       if (!key) continue;
       seen.add(unit.uid);
@@ -117,7 +116,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     sprite.root.setPosition(unit.x * TILE, unit.y * TILE);
     sprite.team = unit.team;
     sprite.img.setFlipX(faceFlip(unit.team, this.facingOf(unit.uid, unit.team)));
-    this.updateTerrainFront(sprite, newArt ? frontKey(s, unit.x, unit.y) : null);
+    this.updateTerrainFront(sprite, newArt ? frontKey(s, unit) : null);
     updateLifeDigit(sprite, unit.life);
     this.updateMarks(sprite, unit, s);
     sprite.idle = unit.team === 0 && unit.active;
@@ -150,7 +149,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
       noHeal: unit.life < 100 && unhealable(s, unit),
       cargo: hasCargo,
       // [CAMBIO] Ayudante: la orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
-      cmd: effectiveCommand(s, unit)?.kind ?? null,
+      order: effectiveStandingOrder(s, unit)?.kind ?? null,
       detached: isDetached(s, unit),
     };
     const signature = markSignature(marks);
@@ -168,10 +167,10 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
-  face(uid: number, dir: Facing): void {
-    this.facing.set(uid, dir);
+  face(uid: number, facing: Facing): void {
+    this.facing.set(uid, facing);
     const sprite = this.units.get(uid);
-    if (sprite) sprite.img.setFlipX(faceFlip(sprite.team, dir));
+    if (sprite) sprite.img.setFlipX(faceFlip(sprite.team, facing));
   }
 
   facingOf(uid: number, team: 0 | 1): Facing {
@@ -184,8 +183,8 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   }
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
-  keyAt(p: Pos): string | null {
-    for (const { root, key } of this.units.values()) if (root.x === p.x * TILE && root.y === p.y * TILE && root.visible) return key;
+  keyAt(pos: Pos): string | null {
+    for (const { root, key } of this.units.values()) if (root.x === pos.x * TILE && root.y === pos.y * TILE && root.visible) return key;
     return null;
   }
 }

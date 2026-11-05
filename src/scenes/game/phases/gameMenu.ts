@@ -1,5 +1,4 @@
 /** Fase 'gameMenu': el menu de pausa (seguir, terminar turno, guardar, repetir, opciones...). */
-import { RULES } from '../../../core/data';
 import { missionById } from '../../../core/missions';
 import { objectiveText } from '../../../campaign';
 import { showToast, type MenuItemVM } from '../../../hud/store';
@@ -32,7 +31,7 @@ const MENU_KEY_HINT: Partial<Record<GameMenuKey, string>> = { endTurn: 'E', resu
 export class GameMenuChoices {
   private armedAt: Partial<Record<'surrender' | 'quit', number>> = {};
 
-  constructor(private readonly h: GameMenuHost) {}
+  constructor(private readonly host: GameMenuHost) {}
 
   /** Partida nueva. */
   reset(): void {
@@ -40,34 +39,34 @@ export class GameMenuChoices {
   }
 
   choose(choice: GameMenuKey): void {
-    const h = this.h;
+    const host = this.host;
     switch (choice) {
       case 'options':
-        return h.openOptions();
+        return host.openOptions();
       case 'resume':
-        return h.toMap();
+        return host.toMap();
       case 'help':
-        h.toMap();
-        return h.showHelp();
+        host.toMap();
+        return host.showHelp();
       case 'save':
-        if (h.saveGame()) showToast(t('saved'));
-        return h.toMap();
+        if (host.saveGame()) showToast(t('saved'));
+        return host.toMap();
       case 'endTurn':
-        return h.endTurn();
+        return host.endTurn();
       case 'replay':
-        if (!h.canReplay) return showToast(t('noReplay'));
-        return h.replayEnemyTurn();
+        if (!host.canReplay) return showToast(t('noReplay'));
+        return host.replayEnemyTurn();
       case 'surrender':
-        return this.confirmTwice('surrender', 'confirmSurrender', () => h.surrender());
+        return this.confirmTwice('surrender', 'confirmSurrender', () => host.surrender());
       case 'quit':
         // [CAMBIO] en el original Esc abandonaba la partida al instante, sin confirmar.
-        return this.confirmTwice('quit', 'confirmQuit', () => h.quitToMenu());
+        return this.confirmTwice('quit', 'confirmQuit', () => host.quitToMenu());
     }
   }
 
   /** La primera pulsacion avisa; la segunda, si llega a tiempo, lo hace. */
   private confirmTwice(choice: 'surrender' | 'quit', warning: TextKey, run: () => void): void {
-    const now = this.h.now;
+    const now = this.host.now;
     if (now - (this.armedAt[choice] ?? -Infinity) < CONFIRM_MS) return run();
     this.armedAt[choice] = now;
     showToast(t(warning));
@@ -75,17 +74,17 @@ export class GameMenuChoices {
 }
 
 export const gameMenuPhase: PhaseHandler = {
-  enter: (h) => {
-    if (h.phase !== 'map' && h.phase !== 'gameMenu') h.abandonSelection();
-    h.menuSel = 0;
-    h.phase = 'gameMenu';
-    h.refresh();
+  enter: (host) => {
+    if (host.phase !== 'map' && host.phase !== 'gameMenu') host.abandonSelection();
+    host.menuSel = 0;
+    host.phase = 'gameMenu';
+    host.refresh();
   },
-  accept: (h) => {
-    const choice = GAME_MENU[h.menuSel];
-    if (choice) h.gameMenu.choose(choice);
+  accept: (host) => {
+    const choice = GAME_MENU[host.menuSel];
+    if (choice) host.gameMenu.choose(choice);
   },
-  back: (h) => h.toMap(),
+  back: (host) => host.toMap(),
   menu: gameMenuModel,
 };
 
@@ -98,7 +97,7 @@ function gameMenuModel(input: MenuInput): MenuModel {
     danger: choice === 'quit' || choice === 'surrender',
     disabled: choice === 'replay' && !input.canReplay,
   }));
-  const dayLimit = RULES.dayLimit ? ` / ${RULES.dayLimit}` : '';
+  const dayLimit = s.rules.dayLimit ? ` / ${s.rules.dayLimit}` : '';
   // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
   const subtitle = s.setup ? `${t('mapCode')}: ${seedToCode(s.setup.seed)} · ${s.setup.size}×${s.setup.size}` : undefined;
   const mission = s.mission ? missionById(s.mission.id) : undefined;

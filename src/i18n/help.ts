@@ -1,5 +1,5 @@
 /** Forma de la ayuda ("Cómo se juega") y piezas para escribir sus frases en cada idioma. */
-import type { RulesConfig } from '../core/content/rules';
+import type { RulesConfig } from '../core/model';
 
 /** Un color del mapa y lo que quiere decir. */
 export type MapColor = readonly [color: string, meaning: string];

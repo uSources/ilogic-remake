@@ -3,6 +3,29 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
+/** El nucleo no depende de Phaser, ni del DOM, ni de la interfaz. */
+const CORE_IS_PURE = [
+  { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
+  {
+    group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
+    message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
+  },
+];
+/** El contenido del juego solo lo eligen estos dos: el resto del nucleo usa el de la partida. */
+const DEFAULT_CONTENT_FILES = ['src/core/defaultGames.ts', 'src/core/content/default.ts'];
+const NO_DEFAULT_CONTENT = {
+  group: [
+    './defaultGames',
+    '../defaultGames',
+    '../../defaultGames',
+    './content/default',
+    '../content/default',
+    '../../content/default',
+    './default',
+  ],
+  message: 'El nucleo usa el contenido de la partida (tablesOf(s)); el del juego solo lo eligen defaultGames.ts y quien crea la partida.',
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -24,6 +47,8 @@ export default tseslint.config(
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       'prefer-const': 'error',
       'no-var': 'error',
+      // Un import por modulo (los tipos van dentro, con `type`).
+      'no-duplicate-imports': 'error',
       curly: ['error', 'multi-line'],
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
@@ -33,22 +58,58 @@ export default tseslint.config(
     },
   },
   {
-    // La logica del juego es TypeScript puro: sin Phaser, sin DOM, sin interfaz.
+    // La logica del juego es TypeScript puro: sin Phaser, sin DOM, sin interfaz. Y no elige contenido:
+    // lo recibe con la partida (solo defaultGames.ts y content/default.ts conocen el del juego).
     files: ['src/core/**/*.ts'],
+    ignores: DEFAULT_CONTENT_FILES,
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT] }],
+      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
+    },
+  },
+  {
+    files: DEFAULT_CONTENT_FILES,
+    rules: {
+      'no-restricted-imports': ['error', { patterns: CORE_IS_PURE }],
+      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
+    },
+  },
+  {
+    // El modelo es la capa de abajo del nucleo: solo tipos, sin depender de nada (ni del contenido).
+    files: ['src/core/model/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          // Nada de fuera de model/: ni otras carpetas (../), ni alias (@core/...), ni paquetes.
+          patterns: [{ regex: '^(?!\\./)', message: 'src/core/model no depende de nada: solo tipos de partida (importa solo de ./).' }],
+        },
+      ],
+      // Solo tipos: las constantes y funciones van fuera del modelo (p. ej. TEAMS en util/predicates.ts).
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportNamedDeclaration > :matches(VariableDeclaration, FunctionDeclaration, ClassDeclaration)',
+          message: 'src/core/model solo tiene tipos.',
+        },
+        { selector: 'TSEnumDeclaration', message: 'src/core/model solo tiene tipos (sin enum).' },
+      ],
+    },
+  },
+  {
+    // Leer partidas no depende del catalogo de misiones: lo da quien lee (SaveContext).
+    files: ['src/core/save.ts', 'src/core/saveMigrations.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
-            { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
-            {
-              group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
-              message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
-            },
+            ...CORE_IS_PURE,
+            NO_DEFAULT_CONTENT,
+            { group: ['./missions'], message: 'save.ts recibe las reglas de las misiones en SaveContext.' },
           ],
         },
       ],
-      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
     },
   },
   {

@@ -14,11 +14,11 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
-import { duelMatrix } from './duel';
 import type { Policy } from './play';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
-import { applyVariant, restore, snapshot, type Variant } from './variant';
-import { runGames } from './runner';
+import { buildVariant, type Variant } from './variant';
+import { runDuels, runGames } from './runner';
+import { defaultContent } from '@core/content/default';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 const REPORTS = join(ROOT, 'balance/reports');
@@ -28,144 +28,148 @@ function args(argv: string[]) {
   const out: Record<string, string[]> = {};
   const pos: string[] = [];
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a.startsWith('--')) {
-      const key = a.slice(2);
-      const v = argv[i + 1] && !argv[i + 1]!.startsWith('--') ? argv[++i]! : 'true';
-      (out[key] ??= []).push(v);
-    } else pos.push(a);
+    const arg = argv[i]!;
+    if (arg.startsWith('--')) {
+      const key = arg.slice(2);
+      const value = argv[i + 1] && !argv[i + 1]!.startsWith('--') ? argv[++i]! : 'true';
+      (out[key] ??= []).push(value);
+    } else pos.push(arg);
   }
-  const one = (k: string, d?: string) => out[k]?.[out[k]!.length - 1] ?? d;
-  return { pos, all: (k: string) => out[k] ?? [], one, num: (k: string, d: number) => Number(one(k, String(d))) };
+  const one = (key: string, fallback?: string) => out[key]?.[out[key]!.length - 1] ?? fallback;
+  return { pos, all: (key: string) => out[key] ?? [], one, num: (key: string, fallback: number) => Number(one(key, String(fallback))) };
 }
 
-function parseValue(v: string): number | string | boolean | null {
-  if (v === 'true') return true;
-  if (v === 'false') return false;
-  if (v === 'null') return null;
-  if (/^-?\d*\.?\d+$/.test(v)) return Number(v);
-  return v;
+function parseValue(text: string): number | string | boolean | null {
+  if (text === 'true') return true;
+  if (text === 'false') return false;
+  if (text === 'null') return null;
+  if (/^-?\d*\.?\d+$/.test(text)) return Number(text);
+  return text;
 }
 
-function loadVariant(a: ReturnType<typeof args>): Variant {
-  let v: Variant = { name: 'actual', set: {} };
-  const file = a.one('variant');
+function loadVariant(parsed: ReturnType<typeof args>): Variant {
+  let variant: Variant = { name: 'actual', set: {} };
+  const file = parsed.one('variant');
   if (file) {
     const path = existsSync(file) ? file : join(VARIANTS, file.endsWith('.json') ? file : `${file}.json`);
-    v = JSON.parse(readFileSync(path, 'utf8')) as Variant;
-    v.set ??= {};
+    variant = JSON.parse(readFileSync(path, 'utf8')) as Variant;
+    variant.set ??= {};
   }
-  for (const kv of a.all('set')) {
-    const i = kv.indexOf('=');
-    if (i < 0) throw new Error(`--set necesita ruta=valor: ${kv}`);
-    v.set![kv.slice(0, i)] = parseValue(kv.slice(i + 1));
+  for (const setting of parsed.all('set')) {
+    const separator = setting.indexOf('=');
+    if (separator < 0) throw new Error(`--set necesita ruta=valor: ${setting}`);
+    variant.set![setting.slice(0, separator)] = parseValue(setting.slice(separator + 1));
   }
-  if (a.one('name')) v.name = a.one('name')!;
-  else if (a.all('set').length && !file) v.name = 'prueba';
-  return v;
+  if (parsed.one('name')) variant.name = parsed.one('name')!;
+  else if (parsed.all('set').length && !file) variant.name = 'prueba';
+  return variant;
 }
 
-function targetsFrom(a: ReturnType<typeof args>): Targets {
-  const t = { ...DEFAULT_TARGETS };
-  const d = a.one('target-days');
-  if (d) t.days = d.split('-').map(Number) as [number, number];
-  return t;
+function targetsFrom(parsed: ReturnType<typeof args>): Targets {
+  const targets = { ...DEFAULT_TARGETS };
+  const days = parsed.one('target-days');
+  if (days) targets.days = days.split('-').map(Number) as [number, number];
+  return targets;
 }
 
-function save(name: string, md: string, json?: unknown): string {
+function save(name: string, markdown: string, json?: unknown): string {
   mkdirSync(REPORTS, { recursive: true });
   const base = join(REPORTS, name.replace(/[^\w.-]+/g, '-'));
-  writeFileSync(`${base}.md`, md);
+  writeFileSync(`${base}.md`, markdown);
   if (json !== undefined) writeFileSync(`${base}.json`, JSON.stringify(json, null, 1));
   return `${base}.md`;
 }
 
-async function evaluate(variant: Variant, a: ReturnType<typeof args>): Promise<Report> {
-  const games = a.num('games', 200);
-  const seed0 = a.num('seed', 1);
-  const maxDays = a.num('days', 60);
-  const vs = a.one('vs', 'ai') as Policy;
+async function evaluate(variant: Variant, parsed: ReturnType<typeof args>): Promise<Report> {
+  const games = parsed.num('games', 200);
+  const seed0 = parsed.num('seed', 1);
+  const maxDays = parsed.num('days', 60);
+  const vs = parsed.one('vs', 'ai') as Policy;
   const policies: [Policy, Policy] = vs === 'passive' ? ['passive', 'ai'] : ['ai', 'ai'];
-  const threads = Math.max(1, Math.min(a.num('threads', cpus().length), games));
+  const threads = Math.max(1, Math.min(parsed.num('threads', cpus().length), games));
   const seeds = Array.from({ length: games }, (_, i) => seed0 + i);
-  const snap = snapshot();
-  const changes = applyVariant(variant); // en este hilo: para el informe, los duelos y la validacion
+  const setup = buildVariant(variant, defaultContent()); // aqui se valida: una ruta o un valor mal escrito para antes de jugar
+  const changes = setup.changes;
   console.log(`Variante "${variant.name}": ${changes.length} cambios. ${games} partidas, ${threads} hilos...`);
   const records = await runGames(
-    variant,
+    setup,
     seeds,
     maxDays,
     policies,
     threads,
-    a.one('first') === '1' ? 1 : 0,
-    a.one('swap') === 'true',
-    a.num('size', 32),
+    parsed.one('first') === '1' ? 1 : 0,
+    parsed.one('swap') === 'true',
+    parsed.num('size', 32),
   );
-  const terrain = a.one('terrain', 'Grass')!;
-  const duel = a.one('no-duel') ? undefined : { terrain, cells: duelMatrix({ trials: 200, terrain, seed: seed0 }) };
+  const terrain = parsed.one('terrain', 'Grass')!;
+  const duel = parsed.one('no-duel') ? undefined : { terrain, cells: await runDuels(setup, { trials: 200, terrain, seed: seed0 }) };
   const report = buildReport(
     records,
     { name: variant.name, variant, changes, maxDays, seeds: [seeds[0]!, seeds[seeds.length - 1]!], policies: policies.join(' vs ') },
-    targetsFrom(a),
+    targetsFrom(parsed),
+    setup.content,
     duel,
   );
-  restore(snap);
   return report;
 }
 
-function printSummary(r: Report, path: string): void {
-  const o = r.outcome;
+function printSummary(report: Report, path: string): void {
+  const outcome = report.outcome;
   console.log(
-    `\n${r.name}: victorias ${o.wins[0]}/${o.wins[1]}, sin terminar ${o.unfinished} (ventaja ${o.adjudicated[0]}/${o.adjudicated[1]}, igualadas ${o.even}), dias mediana ${o.days.median} (${o.days.p10}-${o.days.p90})`,
+    `\n${report.name}: victorias ${outcome.wins[0]}/${outcome.wins[1]}, sin terminar ${outcome.unfinished} (ventaja ${outcome.adjudicated[0]}/${outcome.adjudicated[1]}, igualadas ${outcome.even}), dias mediana ${outcome.days.median} (${outcome.days.p10}-${outcome.days.p90})`,
   );
-  for (const f of r.flags) console.log(`  ! ${f}`);
-  for (const s of r.suggestions) console.log(`  → ${s.path}: ${s.from} → ${s.to} (${s.why})`);
+  for (const flag of report.flags) console.log(`  ! ${flag}`);
+  for (const s of report.suggestions) console.log(`  → ${s.path}: ${s.from} → ${s.to} (${s.why})`);
   console.log(`Informe: ${path}`);
 }
 
 async function main(): Promise<void> {
-  const [cmd = 'help', ...rest] = process.argv.slice(2);
-  const a = args(rest);
-  switch (cmd) {
+  const [command = 'help', ...rest] = process.argv.slice(2);
+  const parsed = args(rest);
+  switch (command) {
     case 'run': {
-      const variant = loadVariant(a);
-      const r = await evaluate(variant, a);
-      printSummary(r, save(r.name, reportMarkdown(r), r));
+      const variant = loadVariant(parsed);
+      const report = await evaluate(variant, parsed);
+      printSummary(report, save(report.name, reportMarkdown(report), report));
       return;
     }
     case 'duel': {
-      const variant = loadVariant(a);
-      applyVariant(variant);
-      const terrain = a.one('terrain', 'Grass')!;
-      const cells = duelMatrix({ trials: a.num('trials', 300), terrain, seed: a.num('seed', 1) });
+      const variant = loadVariant(parsed);
+      const terrain = parsed.one('terrain', 'Grass')!;
+      const cells = await runDuels(buildVariant(variant, defaultContent()), {
+        trials: parsed.num('trials', 300),
+        terrain,
+        seed: parsed.num('seed', 1),
+      });
       const path = save(`duelos-${variant.name}-${terrain}`, duelMarkdown(cells, terrain));
       console.log(`Duelos: ${path}`);
       return;
     }
     case 'compare': {
-      const [x, y] = a.pos;
-      if (!x || !y) throw new Error('Uso: compare <informe-antes> <informe-despues>');
-      const read = (n: string) => JSON.parse(readFileSync(n.endsWith('.json') ? n : join(REPORTS, `${n}.json`), 'utf8')) as Report;
-      const md = compareMarkdown(read(x), read(y));
-      console.log(md);
-      save(`comparar-${x}-vs-${y}`.replace(/\.json/g, ''), md);
+      const [before, after] = parsed.pos;
+      if (!before || !after) throw new Error('Uso: compare <informe-antes> <informe-despues>');
+      const read = (name: string) =>
+        JSON.parse(readFileSync(name.endsWith('.json') ? name : join(REPORTS, `${name}.json`), 'utf8')) as Report;
+      const markdown = compareMarkdown(read(before), read(after));
+      console.log(markdown);
+      save(`comparar-${before}-vs-${after}`.replace(/\.json/g, ''), markdown);
       return;
     }
     case 'tune': {
       // Ajuste automatico de precios: aplica las propuestas, vuelve a jugar y se queda con lo que mejore.
-      let variant = loadVariant(a);
-      if (!a.one('name')) variant.name = `${variant.name}-ajustada`;
-      const iterations = a.num('iterations', 3);
-      let best = await evaluate(variant, a);
-      const score = (r: Report) => r.flags.length + r.suggestions.length * 0.5;
+      let variant = loadVariant(parsed);
+      if (!parsed.one('name')) variant.name = `${variant.name}-ajustada`;
+      const iterations = parsed.num('iterations', 3);
+      let best = await evaluate(variant, parsed);
+      const score = (report: Report) => report.flags.length + report.suggestions.length * 0.5;
       console.log(`Punto de partida: ${best.flags.length} avisos, ${best.suggestions.length} propuestas`);
       for (let i = 1; i <= iterations && best.suggestions.length; i++) {
         const next: Variant = { ...variant, set: { ...variant.set } };
         for (const s of best.suggestions) next.set![s.path] = s.to;
-        const r = await evaluate(next, a);
-        console.log(`Ronda ${i}: ${r.flags.length} avisos, ${r.suggestions.length} propuestas`);
-        if (score(r) <= score(best)) {
-          best = r;
+        const report = await evaluate(next, parsed);
+        console.log(`Ronda ${i}: ${report.flags.length} avisos, ${report.suggestions.length} propuestas`);
+        if (score(report) <= score(best)) {
+          best = report;
           variant = next;
         } else {
           console.log('  No mejora: me quedo con la anterior.');
@@ -187,7 +191,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error(e instanceof Error ? e.message : e);
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

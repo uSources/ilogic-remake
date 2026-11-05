@@ -1,12 +1,12 @@
 import type Phaser from 'phaser';
 import { addSheetFrames, ATLAS, hasImage, sheetFrame } from '../../atlas';
-import type { GameState } from '../../core/types';
+import type { GameState } from '../../core/model';
 import { TILE } from '../../layout';
 import { ANIM_FRAMES } from '../sheets';
 import { shoreKeys, terrainKey } from '../sprites';
 import { paintTerrain, terrainObjects, waterAnimCells, type AnimCell } from '../terrainArt';
 import type { BuildingLayer } from './buildingLayer';
-import { forEachTile } from './geometry';
+import { mapGrid } from '../../core/mapGrid';
 import { stepOf, type AnimatedLayer, type MapClock, type MapLayer } from './layer';
 import { tileImage } from './tileImage';
 
@@ -39,28 +39,28 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
   build(s: GameState, newArt: boolean): void {
     this.object.removeAll(true);
     this.waterAnim = [];
-    for (const o of this.props) o.destroy();
+    for (const prop of this.props) prop.destroy();
     this.props = [];
     if (newArt) this.buildNew(s);
     else this.buildClassic(s);
   }
 
   private buildNew(s: GameState): void {
-    const tex = this.scene.textures;
+    const textures = this.scene.textures;
     // Terreno nuevo: pintado una vez en un lienzo.
-    if (tex.exists(this.bakeKey)) tex.remove(this.bakeKey);
-    tex.addCanvas(this.bakeKey, paintTerrain(tex, s));
+    if (textures.exists(this.bakeKey)) textures.remove(this.bakeKey);
+    textures.addCanvas(this.bakeKey, paintTerrain(textures, s));
     this.object.add(this.scene.add.image(0, 0, this.bakeKey).setOrigin(0));
     // Agua animada: piezas precompiladas, una por casilla; en tick() solo se cambia el fotograma.
     for (const cell of waterAnimCells(s)) {
-      addSheetFrames(tex, cell.key, ANIM_FRAMES, TILE);
+      addSheetFrames(textures, cell.key, ANIM_FRAMES, TILE);
       const img = this.scene.add.image(cell.x * TILE, cell.y * TILE, ATLAS, sheetFrame(cell.key, cell.row, 0)).setOrigin(0);
       this.waterAnim.push({ img, cell });
       this.object.add(img);
     }
     this.waterFrame = -1;
-    for (const o of terrainObjects(tex, s)) {
-      const img = tileImage(this.scene, o.key, o.x, o.y);
+    for (const prop of terrainObjects(textures, s)) {
+      const img = tileImage(this.scene, prop.key, prop);
       this.props.push(img);
       this.buildings.addProp(img);
     }
@@ -69,13 +69,13 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
 
   private buildClassic(s: GameState): void {
     const objs: Phaser.GameObjects.GameObject[] = [];
-    forEachTile((x, y) => {
-      objs.push(tileImage(this.scene, terrainKey(s.map[x]![y]!), x, y));
-      for (const k of shoreKeys(s, x, y)) {
-        if (hasImage(this.scene.textures, k))
+    mapGrid(s).forEach((terrain, { x, y }) => {
+      objs.push(tileImage(this.scene, terrainKey(terrain), { x, y }));
+      for (const key of shoreKeys(s, { x, y })) {
+        if (hasImage(this.scene.textures, key))
           objs.push(
             this.scene.add
-              .image(x * TILE, y * TILE, ATLAS, k)
+              .image(x * TILE, y * TILE, ATLAS, key)
               .setOrigin(0)
               .setDisplaySize(TILE, TILE),
           );
@@ -87,15 +87,15 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
   /** Agua animada: cambia de fotograma cada WATER_FRAME_MS (cada casilla con su desfase). */
   tick(clock: MapClock): void {
     if (!this.waterAnim.length) return;
-    const f = stepOf(clock, WATER_FRAME_MS, ANIM_FRAMES);
-    if (f === this.waterFrame) return;
-    this.waterFrame = f;
-    for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (f + cell.phase) % ANIM_FRAMES));
+    const frame = stepOf(clock, WATER_FRAME_MS, ANIM_FRAMES);
+    if (frame === this.waterFrame) return;
+    this.waterFrame = frame;
+    for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (frame + cell.phase) % ANIM_FRAMES));
   }
 
   /** Suelta el lienzo del terreno (los objetos los destruye la escena al cerrarse). */
   destroy(): void {
-    const tex = this.scene.textures;
-    if (tex.exists(this.bakeKey)) tex.remove(this.bakeKey);
+    const textures = this.scene.textures;
+    if (textures.exists(this.bakeKey)) textures.remove(this.bakeKey);
   }
 }

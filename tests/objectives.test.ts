@@ -1,23 +1,22 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { objectiveStatus, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
-import { DEFAULT_RULES, HQ, setMapSize, useRules } from '@core/data';
-import { buildMission, missionRules, MISSIONS } from '@core/missions';
+import { defaultContent } from '@core/content/default';
+import { buildMission, MISSIONS } from '@core/missions';
 import { measureObjective, objectiveOutcome } from '@core/objectives';
 import { objectiveProgress, outcome } from '@core/rules';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
+
+const { HQ } = defaultContent().tables;
 
 afterEach(() => {
-  setMapSize(32);
-  useRules(DEFAULT_RULES);
   settings.lang = 'es';
 });
 
 /** Partidas de cada mision en momentos distintos: al empezar, al acabar el plazo, sin enemigos, con todo capturado... */
 function statesOf(id: string): GameState[] {
   const mission = MISSIONS.find((candidate) => candidate.id === id)!;
-  useRules(missionRules(mission));
-  const fresh = () => buildMission(mission);
+  const fresh = () => buildMission(mission, defaultContent());
   const lastDay = (s: GameState) => ('days' in s.mission!.objective ? s.mission!.objective.days : 20);
   const states: GameState[] = [];
   const atStart = fresh();
@@ -64,7 +63,7 @@ function isAnyoneDefeated(s: GameState): boolean {
 }
 
 describe('objetivos de mision', () => {
-  it.each(MISSIONS.map((m) => [m.id] as const))('%s: mismo resultado y progreso que las reglas', (id) => {
+  it.each(MISSIONS.map((mission) => [mission.id] as const))('%s: mismo resultado y progreso que las reglas', (id) => {
     for (const s of statesOf(id)) {
       const objective = s.mission!.objective;
       expect(measureObjective(s, objective)).toEqual(objectiveProgress(s));
@@ -74,14 +73,13 @@ describe('objetivos de mision', () => {
 
   it('textos del objetivo y del progreso, como antes', () => {
     const texts = MISSIONS.map((mission) => {
-      useRules(missionRules(mission));
-      const s = buildMission(mission);
+      const s = buildMission(mission, defaultContent());
       return [objectiveText(mission), objectiveText(mission, s), objectiveText(null, s), objectiveStatus(s)];
     });
     expect(objectiveText(null)).toBe('Conquista la Base enemiga.');
     settings.lang = 'en';
     expect(objectiveText(MISSIONS[1]!)).toBe('Own 6 citys before day 14 ends.');
-    expect(objectiveStatus(buildMission(MISSIONS[4]!))).toBe('Left: 8 · Day 1 of 10');
+    expect(objectiveStatus(buildMission(MISSIONS[4]!, defaultContent()))).toBe('Left: 8 · Day 1 of 10');
     settings.lang = 'es';
     expect(texts).toEqual([
       ['Conquista la Base enemiga.', 'Conquista la Base enemiga.', 'Conquista la Base enemiga.', null],

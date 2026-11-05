@@ -1,10 +1,11 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
 import { aiTurn } from '@core/ai';
-import { BUILDING, UNIT, UNIT_TYPES } from '@core/data';
+import type { GameContent } from '@core/content';
+import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { endReason, endRound, outcome } from '@core/rules';
-import type { GameState, Team } from '@core/types';
+import type { GameState, RulesConfig, Team } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
 
@@ -19,6 +20,10 @@ export interface PlayOptions {
   swapSides?: boolean;
   /** Lado del mapa (32 por defecto). */
   size?: number;
+  /** Reglas de la partida. */
+  rules: RulesConfig;
+  /** Contenido con el que se juega (el de una variante, o el del juego). */
+  content: GameContent;
 }
 
 /** Por tipo de unidad y bando. */
@@ -70,84 +75,88 @@ const emptyTally = (): UnitTally => ({
 });
 
 function sample(s: GameState): DaySample {
+  const { UNIT } = tablesOf(s);
   const army: [number, number] = [0, 0];
   const units: [number, number] = [0, 0];
-  for (const u of s.units) {
-    army[u.team] += (UNIT.cost[u.type]! * u.life) / 100;
-    units[u.team]++;
+  for (const unit of s.units) {
+    army[unit.team] += (UNIT.cost[unit.type]! * unit.life) / 100;
+    units[unit.team]++;
   }
   const buildings: [number, number] = [0, 0];
-  for (const b of s.buildings) if (b.owner !== null) buildings[b.owner]++;
+  for (const building of s.buildings) if (building.owner !== null) buildings[building.owner]++;
   return { day: s.day, funds: [s.funds[0], s.funds[1]], buildings, army: [Math.round(army[0]), Math.round(army[1])], units };
 }
 
-export function playGame(opts: PlayOptions): GameRecord {
-  const rng = seededRng(opts.seed);
-  const s = generateGame(rng, { size: opts.size ?? 32 });
-  if (opts.swapSides) {
-    for (const u of s.units) u.team = (1 - u.team) as Team;
-    for (const b of s.buildings) if (b.owner !== null) b.owner = (1 - b.owner) as Team;
+export function playGame(options: PlayOptions): GameRecord {
+  const rng = seededRng(options.seed);
+  const s = generateGame(rng, { size: options.size ?? 32, rules: options.rules, content: options.content });
+  const { UNIT, UNIT_NAMES } = tablesOf(s);
+  if (options.swapSides) {
+    for (const unit of s.units) unit.team = (1 - unit.team) as Team;
+    for (const building of s.buildings) if (building.owner !== null) building.owner = (1 - building.owner) as Team;
   }
-  const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: UNIT_TYPES }, emptyTally));
+  const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: UNIT_NAMES.length }, emptyTally));
   const samples: DaySample[] = [sample(s)];
   // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
   const known = new Map<number, { type: number; team: Team; x: number; y: number; life: number }>();
   const remember = () => {
     known.clear();
-    for (const u of s.units) known.set(u.uid, { type: u.type, team: u.team, x: u.x, y: u.y, life: u.life });
+    for (const unit of s.units) known.set(unit.uid, { type: unit.type, team: unit.team, x: unit.x, y: unit.y, life: unit.life });
   };
   remember();
   let events = 0;
   let reason: GameRecord['reason'] = 'timeout';
 
   const finished = () => outcome(s) !== 'playing';
-  while (!finished() && s.day <= opts.maxDays) {
-    for (const team of (opts.firstTeam === 1 ? [1, 0] : [0, 1]) as Team[]) {
-      if (opts.policies[team] === 'passive') continue;
-      for (const ev of aiTurn(s, rng, team)) {
+  while (!finished() && s.day <= options.maxDays) {
+    for (const team of (options.firstTeam === 1 ? [1, 0] : [0, 1]) as Team[]) {
+      if (options.policies[team] === 'passive') continue;
+      for (const event of aiTurn(s, rng, team)) {
         events++;
-        if (ev.kind === 'attack') {
-          const atk = known.get(ev.attacker);
-          const victim = [...known.entries()].find(([, k]) => k.x === ev.target.x && k.y === ev.target.y && k.team !== team);
-          if (atk) {
-            const t = units[team]![atk.type]!;
-            t.attacks++;
-            t.damageDealt += ev.damage;
+        if (event.kind === 'attack') {
+          const attacker = known.get(event.attacker);
+          const victim = [...known.entries()].find(
+            ([, info]) => info.x === event.target.x && info.y === event.target.y && info.team !== team,
+          );
+          if (attacker) {
+            const tally = units[team]![attacker.type]!;
+            tally.attacks++;
+            tally.damageDealt += event.damage;
             if (victim) {
-              const [, v] = victim;
-              t.valueDealt += (ev.damage * UNIT.cost[v.type]!) / 100;
-              const vt = units[v.team]![v.type]!;
-              vt.valueLost += (ev.damage * UNIT.cost[v.type]!) / 100;
-              if (ev.killed) {
-                t.kills++;
+              const [, victimInfo] = victim;
+              tally.valueDealt += (event.damage * UNIT.cost[victimInfo.type]!) / 100;
+              const vt = units[victimInfo.team]![victimInfo.type]!;
+              vt.valueLost += (event.damage * UNIT.cost[victimInfo.type]!) / 100;
+              if (event.killed) {
+                tally.kills++;
                 vt.deaths++;
               }
             }
           }
           // Contraataque (si las reglas lo tienen): vida perdida por el atacante.
-          const after = s.units.find((u) => u.uid === ev.attacker);
-          if (atk) {
-            const lost = atk.life - (after?.life ?? 0);
+          const after = s.units.find((unit) => unit.uid === event.attacker);
+          if (attacker) {
+            const lost = attacker.life - (after?.life ?? 0);
             if (lost > 0 && victim) {
-              const [, v] = victim;
-              units[v.team]![v.type]!.damageDealt += lost;
-              units[v.team]![v.type]!.valueDealt += (lost * UNIT.cost[atk.type]!) / 100;
-              units[team]![atk.type]!.valueLost += (lost * UNIT.cost[atk.type]!) / 100;
+              const [, victimInfo] = victim;
+              units[victimInfo.team]![victimInfo.type]!.damageDealt += lost;
+              units[victimInfo.team]![victimInfo.type]!.valueDealt += (lost * UNIT.cost[attacker.type]!) / 100;
+              units[team]![attacker.type]!.valueLost += (lost * UNIT.cost[attacker.type]!) / 100;
               if (!after) {
-                units[v.team]![v.type]!.kills++;
-                units[team]![atk.type]!.deaths++;
+                units[victimInfo.team]![victimInfo.type]!.kills++;
+                units[team]![attacker.type]!.deaths++;
               }
             }
           }
-        } else if (ev.kind === 'spawn') {
-          const u = s.units.find((x) => x.uid === ev.uid);
-          if (u) {
-            units[team]![u.type]!.bought++;
-            units[team]![u.type]!.spent += UNIT.cost[u.type]!;
+        } else if (event.kind === 'spawn') {
+          const unit = s.units.find((candidate) => candidate.uid === event.uid);
+          if (unit) {
+            units[team]![unit.type]!.bought++;
+            units[team]![unit.type]!.spent += UNIT.cost[unit.type]!;
           }
-        } else if (ev.kind === 'capture') {
-          const u = s.units.find((x) => x.uid === ev.uid);
-          if (u) units[team]![u.type]!.captures++;
+        } else if (event.kind === 'capture') {
+          const unit = s.units.find((candidate) => candidate.uid === event.uid);
+          if (unit) units[team]![unit.type]!.captures++;
         }
         remember();
         if (finished()) break;
@@ -167,6 +176,5 @@ export function playGame(opts: PlayOptions): GameRecord {
     reason = endReason(s) ?? 'timeout';
   }
   if (result === 'playing') samples.push(sample(s));
-  void BUILDING;
-  return { seed: opts.seed, winner, reason, days: s.day, samples, units, events };
+  return { seed: options.seed, winner, reason, days: s.day, samples, units, events };
 }

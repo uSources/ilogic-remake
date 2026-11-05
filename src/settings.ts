@@ -3,7 +3,7 @@
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
-import { CONTENT, TERRAIN_CONTENT } from './core/data';
+import type { GameContent } from './core/content';
 import { TEXTS, type TextKey } from './i18n';
 
 export type { TextKey };
@@ -116,7 +116,7 @@ export function saveSettings(): void {
 }
 
 /** Numero con separador de miles del idioma del juego (1.000 / 1,000). */
-export const fmtNum = (n: number): string => n.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
+export const fmtNum = (value: number): string => value.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
 
 /** Texto de la interfaz en el idioma elegido (los textos, por tema, en src/i18n/). */
 export function t(key: TextKey): string {
@@ -124,7 +124,8 @@ export function t(key: TextKey): string {
 }
 
 /** Nombres de unidades, edificios y terrenos: los de src/core/content/*.json. */
-export const unitLabel = (type: number): string => CONTENT.units[type]?.name[settings.lang] ?? '?';
-export const buildingLabel = (type: number): string => CONTENT.buildings[type]?.name[settings.lang] ?? '?';
-export const weatherLabel = (kind: number): string => CONTENT.weather[kind]?.name[settings.lang] ?? '?';
-export const terrainLabel = (type: number): string => TERRAIN_CONTENT[type]?.name[settings.lang] ?? '?';
+/** Nombres en el idioma elegido, sacados del contenido de la partida (`s.content`). */
+export const unitLabel = (content: GameContent, type: number): string => content.files.units[type]?.name[settings.lang] ?? '?';
+export const buildingLabel = (content: GameContent, type: number): string => content.files.buildings[type]?.name[settings.lang] ?? '?';
+export const weatherLabel = (content: GameContent, kind: number): string => content.files.weather[kind]?.name[settings.lang] ?? '?';
+export const terrainLabel = (content: GameContent, type: number): string => content.files.terrain[type]?.name[settings.lang] ?? '?';

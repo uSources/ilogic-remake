@@ -1,19 +1,50 @@
-import { MAP_H, MAP_W } from './data';
-import type { Pos, Rng } from './types';
+/**
+ * Utilidades geometricas (Auxiliar.java). Los rangos son rombos (distancia Manhattan) y las areas,
+ * cuadrados. Lo que depende de los bordes del mapa los recibe (`GridBounds`: el mapa de la
+ * partida, `mapGrid(s)`, o cualquier capa del mismo tamaño).
+ */
+import type { Pos, Rng } from './model';
+import type { GridBounds } from './util/grid';
 
-/** Utilidades geometricas (Auxiliar.java). Todos los rangos son rombos (distancia Manhattan). */
-
-export function inBounds(x: number, y: number): boolean {
-  return x >= 0 && x < MAP_W && y >= 0 && y < MAP_H;
+export function manhattan(first: Pos, second: Pos): number {
+  return Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
 }
 
-export function manhattan(a: Pos, b: Pos): number {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+/** La casilla de algo que esta en una (unidad, edificio, punto del camino): un Pos nuevo, sin sus otros campos. */
+export function posOf(thing: Pos): Pos {
+  return { x: thing.x, y: thing.y };
+}
+
+export function samePos(first: Pos, second: Pos): boolean {
+  return first.x === second.x && first.y === second.y;
+}
+
+/** Clave de texto de una casilla, para conjuntos y mapas (`"3,7"`). */
+export function posKey(pos: Pos): string {
+  return `${pos.x},${pos.y}`;
 }
 
 /** Numero de casillas a distancia <= radius: 2r(r+1)+1 (0 si radius < 0). */
 export function rangeSize(radius: number): number {
   return radius < 0 ? 0 : 2 * radius * (radius + 1) + 1;
+}
+
+/** Casilla numero `indexInRing` del anillo `ring` (> 0) alrededor de `center`, dentro del mapa o no. */
+function ringPos(center: Pos, ring: number, indexInRing: number): Pos {
+  // Cada anillo tiene 4 lados de `ring` casillas: de abajo a la derecha, a arriba, a la izquierda y vuelta.
+  const side = Math.floor(indexInRing / ring);
+  const offset = indexInRing % ring;
+  const { x, y } = center;
+  switch (side) {
+    case 0:
+      return { x: x + offset, y: y + ring - offset };
+    case 1:
+      return { x: x + ring - offset, y: y - offset };
+    case 2:
+      return { x: x - offset, y: y + offset - ring };
+    default:
+      return { x: x - ring + offset, y: y + offset };
+  }
 }
 
 /**
@@ -22,68 +53,51 @@ export function rangeSize(radius: number): number {
  * y gira en sentido antihorario en pantalla (abajo, derecha, arriba, izquierda...).
  * Devuelve null si cae fuera del mapa. El orden importa para la IA y el generador.
  */
-export function rangePos(center: Pos, index: number): Pos | null {
-  if (index < 0 || !inBounds(center.x, center.y)) return null;
-  if (index === 0) return { x: center.x, y: center.y };
+export function rangePos(board: GridBounds, center: Pos, index: number): Pos | null {
+  if (index < 0 || !board.contains(center)) return null;
+  if (index === 0) return posOf(center);
   let ring = 1;
   while (rangeSize(ring) <= index) ring++;
-  // Cada anillo tiene 4 lados de `ring` casillas: de abajo a la derecha, a arriba, a la izquierda y vuelta.
-  const indexInRing = index - rangeSize(ring - 1);
-  const side = Math.floor(indexInRing / ring);
-  const offset = indexInRing % ring;
-  const { x, y } = center;
-  let pos: Pos;
-  switch (side) {
-    case 0:
-      pos = { x: x + offset, y: y + ring - offset };
-      break;
-    case 1:
-      pos = { x: x + ring - offset, y: y - offset };
-      break;
-    case 2:
-      pos = { x: x - offset, y: y + offset - ring };
-      break;
-    default:
-      pos = { x: x - ring + offset, y: y + offset };
-  }
-  return inBounds(pos.x, pos.y) ? pos : null;
+  const pos = ringPos(center, ring, index - rangeSize(ring - 1));
+  return board.contains(pos) ? pos : null;
 }
 
 /** Las 4 vecinas ortogonales dentro del mapa, en el orden del original: abajo, derecha, arriba, izquierda. */
-export function neighbors4(p: Pos): Pos[] {
-  const neighbors: Pos[] = [];
+export function neighbors4(board: GridBounds, pos: Pos): Pos[] {
   // Los indices 1 a 4 del rombo son el primer anillo, en el orden del original.
-  for (let i = 1; i <= 4; i++) {
-    const neighbor = rangePos(p, i);
-    if (neighbor) neighbors.push(neighbor);
-  }
-  return neighbors;
+  return [1, 2, 3, 4].map((index) => rangePos(board, pos, index)).filter((neighbor): neighbor is Pos => neighbor !== null);
 }
 
 /** Recorre las casillas a distancia entre minRadius y maxRadius (ambas incluidas) en orden de rombo. */
-export function* diamond(center: Pos, minRadius: number, maxRadius: number): Generator<Pos> {
+export function* diamond(board: GridBounds, center: Pos, minRadius: number, maxRadius: number): Generator<Pos> {
   for (let i = rangeSize(minRadius - 1); i < rangeSize(maxRadius); i++) {
-    const pos = rangePos(center, i);
+    const pos = rangePos(board, center, i);
     if (pos) yield pos;
   }
 }
 
-export function grid<T>(fill: T): T[][] {
-  return Array.from({ length: MAP_W }, () => Array<T>(MAP_H).fill(fill));
-}
-
-export function samePos(a: Pos, b: Pos): boolean {
-  return a.x === b.x && a.y === b.y;
+/**
+ * Casillas del cuadrado de lado 2*radius+1 alrededor de `center` (columna a columna) que caen dentro
+ * de `board`. Areas de habilidades, zonas de los puntos de control y alrededores en el generador.
+ */
+export function squareArea(board: GridBounds, center: Pos, radius: number): Pos[] {
+  const tiles: Pos[] = [];
+  for (let dx = -radius; dx <= radius; dx++)
+    for (let dy = -radius; dy <= radius; dy++) {
+      const tile = { x: center.x + dx, y: center.y + dy };
+      if (board.contains(tile)) tiles.push(tile);
+    }
+  return tiles;
 }
 
 /** PRNG con semilla (mulberry32) para tests y partidas reproducibles. */
 export function seededRng(seed: number): Rng {
-  let a = seed >>> 0;
+  let seedState = seed >>> 0;
   return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    seedState = (seedState + 0x6d2b79f5) >>> 0;
+    let mixed = seedState;
+    mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
   };
 }

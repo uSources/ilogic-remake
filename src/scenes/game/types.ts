@@ -2,9 +2,8 @@
  * Tipos y constantes que comparten GameScene y sus modulos (src/scenes/game). Sin Phaser: se pueden
  * importar desde los tests.
  */
-import type { RulesConfig } from '../../core/data';
 import type { UnitActions } from '../../core/rules';
-import type { GameSetup, Pos, Unit } from '../../core/types';
+import type { GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -24,10 +23,10 @@ export const ACTION_ORDER: ActionKey[] = [
   'unload',
   'supply',
   'wait',
-  'cmdAttack',
-  'cmdCapture',
-  'cmdDefend',
-  'cmdCancel',
+  'orderToAttack',
+  'orderToCapture',
+  'orderToDefend',
+  'cancelOrder',
   'back',
   'delete',
 ];
@@ -53,15 +52,11 @@ export type Intent =
   | { kind: 'load'; target: Unit };
 
 /** Donde estaba la unidad antes de moverla (para "Atras" en su menu). */
-export interface MoveUndo {
+export interface MoveUndo extends Pos {
   uid: number;
-  x: number;
-  y: number;
   canFire: boolean;
 }
 
-/** Clave de una casilla en los mapas y conjuntos de casillas ("x,y"). */
-export const key = (p: Pos) => `${p.x},${p.y}`;
 /** Fases en las que el cursor sigue al puntero. */
 export const CURSOR_PHASES: Phase[] = ['map', 'move', 'attack', 'unloadTile', 'target'];
 /** Fases con un menu de bocadillo abierto. */

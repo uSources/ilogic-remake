@@ -1,7 +1,8 @@
 /**
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
-import { DEFAULT_RULES, GENERALS, type RulesConfig } from './core/data';
+import { defaultContent } from './core/content/default';
+import type { RulesConfig } from './core/model';
 import { fmtNum, settings } from './settings';
 
 export interface NewGameOptions {
@@ -70,11 +71,19 @@ export const CHOICES = {
   dayLimit: [null, 20, 30, 40, 60] as const,
   command: [null, 20, 30, 40] as const,
   upkeep: [0, 0.05, 0.1, 0.15] as const,
-  /** Sin general o uno de generals.json. */
-  general: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
-  enemyGeneral: [null, ...GENERALS.map((g) => g.id)] as readonly (string | null)[],
+  /** Sin general o uno de generals.json (se leen al pedirlos, no al cargar el modulo). */
+  get general(): readonly (string | null)[] {
+    return generalChoices();
+  },
+  get enemyGeneral(): readonly (string | null)[] {
+    return generalChoices();
+  },
 };
 export type ChoiceKey = keyof typeof CHOICES;
+
+function generalChoices(): (string | null)[] {
+  return [null, ...defaultContent().files.generals.map((general) => general.id)];
+}
 
 const STORAGE_KEY = 'ilogic.newgame';
 
@@ -106,10 +115,9 @@ export function saveOptions(options: NewGameOptions): void {
   }
 }
 
-/** Reglas de la partida a partir de las opciones. */
-export function rulesFor(options: NewGameOptions): RulesConfig {
+/** Lo que las opciones cambian de las reglas de siempre (`rulesWith(contenido, ruleChangesFor(opciones))`). */
+export function ruleChangesFor(options: NewGameOptions): Partial<RulesConfig> {
   return {
-    ...DEFAULT_RULES,
     fog: options.fog,
     weather: options.weather,
     initialFunds: options.funds,
@@ -161,7 +169,7 @@ function sizeLabel(value: unknown): string {
 }
 
 function generalLabel(value: unknown): string {
-  const general = GENERALS.find((candidate) => candidate.id === value);
+  const general = defaultContent().files.generals.find((candidate) => candidate.id === value);
   if (!general) return isSpanish() ? 'Sin general' : 'No general';
   return `${general.name[settings.lang]} · ${general.title[settings.lang]}`;
 }

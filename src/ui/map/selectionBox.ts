@@ -8,7 +8,7 @@ import type { MapCamera, ScreenBox } from './camera';
  * primera vez que hace falta, en la capa de efectos (por encima de las unidades).
  */
 export class SelectionBox {
-  private g: Phaser.GameObjects.Graphics | null = null;
+  private graphics: Phaser.GameObjects.Graphics | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -17,21 +17,23 @@ export class SelectionBox {
   ) {}
 
   /** Recuadro en pixeles de pantalla del lienzo, o null para quitarlo. */
-  set(r: ScreenBox | null): void {
-    if (!r) {
-      this.g?.clear();
+  set(box: ScreenBox | null): void {
+    if (!box) {
+      this.graphics?.clear();
       return;
     }
-    if (!this.g) {
-      this.g = this.scene.add.graphics();
-      this.parent.add(this.g);
+    if (!this.graphics) {
+      this.graphics = this.scene.add.graphics();
+      this.parent.add(this.graphics);
     }
-    const { a, b } = this.camera.worldBox(r);
-    const g = this.g;
-    g.clear();
-    g.fillStyle(PAL.gold, 0.12);
-    g.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
-    g.fillStyle(PAL.gold, 0.9);
-    frameRect(g, a.x, a.y, b.x - a.x, b.y - a.y);
+    const { topLeft, bottomRight } = this.camera.worldBox(box);
+    const width = bottomRight.x - topLeft.x;
+    const height = bottomRight.y - topLeft.y;
+    const graphics = this.graphics;
+    graphics.clear();
+    graphics.fillStyle(PAL.gold, 0.12);
+    graphics.fillRect(topLeft.x, topLeft.y, width, height);
+    graphics.fillStyle(PAL.gold, 0.9);
+    frameRect(graphics, topLeft.x, topLeft.y, width, height);
   }
 }

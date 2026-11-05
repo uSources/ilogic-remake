@@ -10,13 +10,18 @@
  * Generico por tipo de efecto: un general nuevo con efectos que ya existen no necesita tocar esto; un
  * tipo de efecto nuevo es una entrada en EFFECT_VALUES.
  */
-import type { GeneralEffect } from './content';
-import { AI, RULES, UNIT } from './data';
-import { applies, areaTiles, chargeStars, generalOf, useAbility } from './generals';
+import { tablesOf, weightsOf } from './gameContent';
+import type { GeneralEffect as GeneralEffectDef } from './content';
+import type { DeepReadonly } from './util/freeze';
+import { applies, chargeStars, generalOf, useAbility } from './generals';
+import { posKey, squareArea } from './geom';
+import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
-import type { GameEvent, GameState, Pos, Team } from './types';
-import { cellAt } from './util/grid';
+import type { GameEvent, GameState, Pos, Team } from './model';
 import { maxBy } from './util/pick';
+
+/** Un efecto de general tal como esta en el contenido (de solo lectura). */
+type GeneralEffect = DeepReadonly<GeneralEffectDef>;
 
 export interface AbilityChoice {
   ability: string;
@@ -31,18 +36,16 @@ interface ValuedTarget {
 }
 
 /** Lo que vale quitar `life` puntos de vida a una unidad de ese tipo (precio × vida / 100). */
-const lifeValue = (life: number, type: number): number => (life * UNIT.cost[type]!) / 100;
-
-const tileKey = (pos: Pos): string => `${pos.x},${pos.y}`;
+const lifeValue = (s: GameState, life: number, type: number): number => (life * tablesOf(s).UNIT.cost[type]!) / 100;
 
 /** Las casillas en las que se puede centrar un area de `radius` que toque a alguno de `enemies`, sin repetir. */
-function areaCentersTouching(enemies: readonly Pos[], radius: number): Pos[] {
+function areaCentersTouching(s: GameState, enemies: readonly Pos[], radius: number): Pos[] {
   const seen = new Set<string>();
   const centers: Pos[] = [];
   for (const enemy of enemies)
-    for (const center of areaTiles(enemy, radius)) {
-      if (seen.has(tileKey(center))) continue;
-      seen.add(tileKey(center));
+    for (const center of squareArea(mapGrid(s), enemy, radius)) {
+      if (seen.has(posKey(center))) continue;
+      seen.add(posKey(center));
       centers.push(center);
     }
   return centers;
@@ -58,13 +61,13 @@ export function bestAreaTarget(
 ): { target: Pos; value: number } | null {
   const visible = visibility(s, team);
   // Nunca a ciegas en la niebla, y nada que ya no pueda bajar de minLife.
-  const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && cellAt(visible, unit));
+  const enemies = s.units.filter((unit) => unit.team !== team && unit.carrier === null && unit.life > minLife && visible.at(unit));
   const lifeTaken = (life: number) => Math.max(0, Math.min(damage, life - minLife));
   const valueAt = (center: Pos): number => {
-    const area = new Set(areaTiles(center, radius).map(tileKey));
-    return enemies.reduce((total, enemy) => total + (area.has(tileKey(enemy)) ? lifeValue(lifeTaken(enemy.life), enemy.type) : 0), 0);
+    const area = new Set(squareArea(mapGrid(s), center, radius).map(posKey));
+    return enemies.reduce((total, enemy) => total + (area.has(posKey(enemy)) ? lifeValue(s, lifeTaken(enemy.life), enemy.type) : 0), 0);
   };
-  const options = areaCentersTouching(enemies, radius).map((target) => ({ target, value: valueAt(target) }));
+  const options = areaCentersTouching(s, enemies, radius).map((target) => ({ target, value: valueAt(target) }));
   return maxBy(options, (option) => option.value);
 }
 
@@ -76,12 +79,12 @@ const EFFECT_VALUES: EffectValues = {
   // El mejor cuadrado sobre los enemigos que ve.
   areaDamage: (s, team, effect) => bestAreaTarget(s, team, effect.radius, effect.damage, effect.minLife),
   // Un valor fijo pequeño, y solo con niebla (sin ella ya lo ve todo).
-  reveal: () => (RULES.fog ? { target: null, value: AI.REVEALVALUE } : null),
+  reveal: (s) => (s.rules.fog ? { target: null, value: weightsOf(s).REVEALVALUE } : null),
   // La vida que recuperarian sus unidades (lo que ya esta entero no cuenta).
   heal: (s, team, effect) => {
     const healed = (life: number) => Math.min(effect.amount, 100 - life);
     const value = s.units.reduce(
-      (total, unit) => total + (unit.team === team && applies(effect, unit.type) ? lifeValue(healed(unit.life), unit.type) : 0),
+      (total, unit) => total + (unit.team === team && applies(s, effect, unit.type) ? lifeValue(s, healed(unit.life), unit.type) : 0),
       0,
     );
     return { target: null, value };
@@ -100,15 +103,15 @@ export function chooseAbility(s: GameState, team: Team): AbilityChoice | null {
   if (!general || general.state.used) return null;
   const stars = chargeStars(general.state);
   const choices: AbilityChoice[] = [];
-  for (const ability of general.def.abilities) {
+  for (const ability of general.definition.abilities) {
     if (ability.cost > stars) continue;
     const valued = valueEffect(s, team, ability.effect);
     if (valued) choices.push({ ability: ability.id, ...valued });
   }
   const best = maxBy(choices, (choice) => choice.value);
   if (!best) return null;
-  const isChargeFull = stars >= general.def.charge.max;
-  return best.value >= AI.GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
+  const isChargeFull = stars >= general.definition.charge.max;
+  return best.value >= weightsOf(s).GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
 }
 
 /** Turno del general de la IA: como mucho una habilidad. */

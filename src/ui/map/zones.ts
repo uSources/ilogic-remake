@@ -1,10 +1,12 @@
 import type Phaser from 'phaser';
 import { hasImage } from '../../atlas';
-import { MAP_H, MAP_W } from '../../core/data';
 import { TILE } from '../../layout';
 import { PAL, PAL_MAP } from '../palette';
 import { fillRects } from '../pixelDraw';
-import { forEachTile, inMap, parseTileKey } from './geometry';
+import { posKey } from '../../core/geom';
+import type { Pos } from '../../core/model';
+import type { Grid } from '../../core/util/grid';
+import { parseTileKey } from './geometry';
 import type { OverlayPainter } from './layer';
 
 /** Grueso del borde de una zona (amenaza, alcance) y del de puntos de un punto de control. */
@@ -17,27 +19,27 @@ const DOT_STEP = 4;
  * sin rellenar algunas casillas de la zona (el borde se dibuja igual).
  */
 function drawZone(
-  g: Phaser.GameObjects.Graphics,
-  zone: boolean[][],
+  graphics: Phaser.GameObjects.Graphics,
+  zone: Grid<boolean>,
   color: number,
   fillAlpha: number,
   edgeAlpha: number,
-  fillIf: (x: number, y: number) => boolean = () => true,
+  fillIf: (pos: Pos) => boolean = () => true,
 ): void {
-  const at = (x: number, y: number) => inMap(x, y) && zone[x]![y]!;
-  g.fillStyle(color, fillAlpha);
-  forEachTile((x, y) => {
-    if (zone[x]![y] && fillIf(x, y)) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+  const at = (pos: Pos) => zone.contains(pos) && zone.at(pos);
+  graphics.fillStyle(color, fillAlpha);
+  zone.forEach((inZone, pos) => {
+    if (inZone && fillIf(pos)) graphics.fillRect(pos.x * TILE, pos.y * TILE, TILE, TILE);
   });
-  g.fillStyle(color, edgeAlpha);
-  forEachTile((x, y) => {
-    if (!zone[x]![y]) return;
+  graphics.fillStyle(color, edgeAlpha);
+  zone.forEach((inZone, { x, y }) => {
+    if (!inZone) return;
     const px = x * TILE,
       py = y * TILE;
-    if (!at(x, y - 1)) g.fillRect(px, py, TILE, ZONE_EDGE);
-    if (!at(x, y + 1)) g.fillRect(px, py + TILE - ZONE_EDGE, TILE, ZONE_EDGE);
-    if (!at(x - 1, y)) g.fillRect(px, py, ZONE_EDGE, TILE);
-    if (!at(x + 1, y)) g.fillRect(px + TILE - ZONE_EDGE, py, ZONE_EDGE, TILE);
+    if (!at({ x, y: y - 1 })) graphics.fillRect(px, py, TILE, ZONE_EDGE);
+    if (!at({ x, y: y + 1 })) graphics.fillRect(px, py + TILE - ZONE_EDGE, TILE, ZONE_EDGE);
+    if (!at({ x: x - 1, y })) graphics.fillRect(px, py, ZONE_EDGE, TILE);
+    if (!at({ x: x + 1, y })) graphics.fillRect(px + TILE - ZONE_EDGE, py, ZONE_EDGE, TILE);
   });
 }
 
@@ -45,69 +47,69 @@ function drawZone(
  * [CAMBIO] Puntos de control: la zona teñida del color de su dueño (gris si no es de nadie), con
  * borde de puntos, y un banderin en el centro. Disputada: borde de rayas rojas y doradas.
  */
-export const controlZones: OverlayPainter = (g, opts, ctx) => {
-  const flagArt = hasImage(ctx.textures, 'ui/flag_b');
-  for (const c of opts.controlPoints ?? []) {
-    const x0 = Math.max(0, c.x - c.r) * TILE,
-      y0 = Math.max(0, c.y - c.r) * TILE,
-      x1 = Math.min(MAP_W, c.x + c.r + 1) * TILE,
-      y1 = Math.min(MAP_H, c.y + c.r + 1) * TILE;
-    const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : PAL_MAP.neutral;
-    g.fillStyle(color, 0.16);
-    g.fillRect(x0, y0, x1 - x0, y1 - y0);
+export const controlZones: OverlayPainter = (graphics, options, context) => {
+  const flagArt = hasImage(context.textures, 'ui/flag_b');
+  for (const point of options.controlPoints ?? []) {
+    const x0 = Math.max(0, point.x - point.r) * TILE,
+      y0 = Math.max(0, point.y - point.r) * TILE,
+      x1 = Math.min(options.vis.width, point.x + point.r + 1) * TILE,
+      y1 = Math.min(options.vis.height, point.y + point.r + 1) * TILE;
+    const color = point.owner === 0 ? PAL.blue : point.owner === 1 ? PAL.red : PAL_MAP.neutral;
+    graphics.fillStyle(color, 0.16);
+    graphics.fillRect(x0, y0, x1 - x0, y1 - y0);
     for (let i = 0; i < Math.max(x1 - x0, y1 - y0); i += DOT_STEP) {
-      g.fillStyle(c.contested ? (i % (2 * DOT_STEP) ? PAL.gold : PAL.red) : color, 0.95);
+      graphics.fillStyle(point.contested ? (i % (2 * DOT_STEP) ? PAL.gold : PAL.red) : color, 0.95);
       if (x0 + i < x1) {
-        g.fillRect(x0 + i, y0, ZONE_EDGE, ZONE_EDGE);
-        g.fillRect(x0 + i, y1 - ZONE_EDGE, ZONE_EDGE, ZONE_EDGE);
+        graphics.fillRect(x0 + i, y0, ZONE_EDGE, ZONE_EDGE);
+        graphics.fillRect(x0 + i, y1 - ZONE_EDGE, ZONE_EDGE, ZONE_EDGE);
       }
       if (y0 + i < y1) {
-        g.fillRect(x0, y0 + i, ZONE_EDGE, ZONE_EDGE);
-        g.fillRect(x1 - ZONE_EDGE, y0 + i, ZONE_EDGE, ZONE_EDGE);
+        graphics.fillRect(x0, y0 + i, ZONE_EDGE, ZONE_EDGE);
+        graphics.fillRect(x1 - ZONE_EDGE, y0 + i, ZONE_EDGE, ZONE_EDGE);
       }
     }
     // El banderin dibujado (ui/flag_*) va en map/flagLayer.ts; este de pixeles solo si falta en el atlas.
     if (flagArt) continue;
     // Mastil y banderin triangular con borde oscuro, arriba a la izquierda de la casilla central.
-    const x = c.x * TILE,
-      y = c.y * TILE;
-    fillRects(g, PAL.ink, 1, [
+    const x = point.x * TILE,
+      y = point.y * TILE;
+    fillRects(graphics, PAL.ink, 1, [
       [x + 3, y + 3, 3, 14],
       [x + 5, y + 3, 9, 8],
     ]);
-    fillRects(g, PAL.white, 1, [[x + 4, y + 4, 1, 12]]);
-    g.fillStyle(c.contested ? PAL.gold : color, 1);
-    for (let r = 0; r < 6; r++) g.fillRect(x + 6, y + 4 + r, 7 - Math.abs(r - 2.5) * 2, 1);
+    fillRects(graphics, PAL.white, 1, [[x + 4, y + 4, 1, 12]]);
+    graphics.fillStyle(point.contested ? PAL.gold : color, 1);
+    for (let row = 0; row < 6; row++) graphics.fillRect(x + 6, y + 4 + row, 7 - Math.abs(row - 2.5) * 2, 1);
   }
 };
 
 /** Zona de amenaza enemiga (tecla T): relleno rojo suave y borde de 2 px por fuera de la zona. */
-export const threatZone: OverlayPainter = (g, opts) => {
-  if (opts.threat) drawZone(g, opts.threat, PAL.red, 0.2, 0.9);
+export const threatZone: OverlayPainter = (graphics, options) => {
+  if (options.threat) drawZone(graphics, options.threat, PAL.red, 0.2, 0.9);
 };
 
 /** Alcance de ataque al mover: relleno rojo tenue fuera del movimiento y borde de la zona. */
-export const attackZone: OverlayPainter = (g, opts) => {
-  if (opts.attackZone) drawZone(g, opts.attackZone, PAL.red, 0.14, 0.85, (x, y) => !opts.highlights.has(`${x},${y}`));
+export const attackZone: OverlayPainter = (graphics, options) => {
+  if (options.attackZone) drawZone(graphics, options.attackZone, PAL.red, 0.14, 0.85, (pos) => !options.highlights.has(posKey(pos)));
 };
 
 /** Destinos peligrosos (el enemigo visible podria atacar ahi): esquina roja arriba a la derecha. */
-export const dangerCorners: OverlayPainter = (g, opts) => {
-  const dg = opts.danger;
+export const dangerCorners: OverlayPainter = (graphics, options) => {
+  const dg = options.danger;
   if (!dg) return;
-  for (const [k, kind] of opts.highlights) {
+  for (const [key, kind] of options.highlights) {
     if (kind !== 'move') continue;
-    const [x, y] = parseTileKey(k);
-    if (!dg[x]![y]) continue;
+    const [x, y] = parseTileKey(key);
+    if (!dg.at({ x, y })) continue;
     const px = x * TILE + TILE - 9,
       py = y * TILE + 3;
-    fillRects(g, PAL.ink, 0.8, [[px - 1, py - 1, 8, 8]]);
-    g.fillStyle(PAL.red, 1);
+    fillRects(graphics, PAL.ink, 0.8, [[px - 1, py - 1, 8, 8]]);
+    graphics.fillStyle(PAL.red, 1);
     for (let i = 0; i < 6; i++) {
-      g.fillRect(px + i, py, 6 - i, 1);
-      g.fillRect(px + i, py + i, 1, 1);
+      graphics.fillRect(px + i, py, 6 - i, 1);
+      graphics.fillRect(px + i, py + i, 1, 1);
     }
-    g.fillRect(px, py, 6, 2);
-    g.fillRect(px + 4, py, 2, 6);
+    graphics.fillRect(px, py, 6, 2);
+    graphics.fillRect(px + 4, py, 2, 6);
   }
 };

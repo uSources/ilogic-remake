@@ -5,14 +5,15 @@ description: Use when adding or editing a campaign mission in Ilogic (map, units
 
 # Añadir una mision
 
-Las misiones estan en `src/core/missions.ts` (`MISSIONS`, en orden: cada una se desbloquea al pasar la
-anterior). Una mision es un `MissionDef`:
+Las misiones estan en `src/core/missions.ts` (se escriben en `MISSION_DEFS`; `MISSIONS` es esa lista
+congelada, en orden: cada una se desbloquea al pasar la anterior). Una mision es un `MissionDef` (de
+solo lectura):
 
 - `id` (unico, no cambiarlo despues: el progreso guardado lo usa), `title` y `brief` en `{ es, en }`.
 - `theme` 0..4 (llanura, desierto, bosque, pantano, nieve).
 - `map`: lineas de texto, cuadrado. Caracteres: `.` suelo, `T` bosque, `M` montaña/acantilado,
   `*` decorado (flores, cactus, muñeco segun tema), `~` agua, `,` agua poco profunda, `=` profunda,
-  `i` hielo, `P` pinos nevados, `N` roca nevada. (`GENERIC`/`FIXED` en el mismo fichero.)
+  `i` hielo, `P` pinos nevados, `N` roca nevada. (`TERRAIN_BY_THEME`/`TERRAIN_IN_ANY_THEME` en src/core/missions.ts.)
 - `buildings`: `[tipo, dueño (0 tu, 1 enemigo, null neutral), x, y]`. Cada bando necesita su `Base`.
 - `units`: `[tipo, bando, x, y, vida?]`.
 - `funds`: `[tuyo, enemigo]`. `rules`: cambios a las reglas (niebla, limite de dias...).

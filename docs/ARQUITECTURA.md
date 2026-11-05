@@ -8,9 +8,11 @@ tomaron las decisiones que no conviene deshacer sin pensarlo.
 ```mermaid
 flowchart TB
   subgraph core["src/core — TypeScript puro (sin Phaser, sin DOM)"]
-    data["data.ts<br/>tablas de content/*.json:<br/>unidades, edificios, terreno, reglas, IA"]
+    model["model/<br/>tipos de la partida (sin dependencias)"]
+    data["content/ + gameContent.ts<br/>contenido congelado de content/*.json,<br/>unido a cada partida (tablesOf)"]
     rules["rules.ts + rules/<br/>mover, atacar, capturar, comprar, fin de ronda"]
-    orders["orders.ts<br/>ayudas para ordenes del jugador"]
+    orders["targeting.ts / trail.ts<br/>a donde apuntar y camino trazado"]
+    squads["squads.ts + squads/<br/>escuadras y ordenes permanentes"]
     ai["ai.ts + ai/<br/>IA (generador de eventos)"]
     gen["mapgen.ts / missions.ts"]
     save["save.ts / stats.ts"]
@@ -26,7 +28,7 @@ flowchart TB
   subgraph hud["src/hud — interfaz HTML (Preact)"]
     store["store.ts<br/>estado de la interfaz"] --> comps["Hud.tsx → game/ · menus/ · overlays/"]
   end
-  game --> rules & ai & orders
+  game --> rules & ai & orders & squads
   game --> mapView & fx & hudModels
   game -- "ui.set(...)" --> store
   comps -- "ui.actions.*" --> game
@@ -39,9 +41,37 @@ flowchart TB
 
 ### El nucleo por dentro
 
-`rules.ts` y `ai.ts` son fachadas: reexportan lo publico de sus modulos, uno por tema, y desde
-fuera de `src/core` se importa siempre de ellas (`'../core/rules'`, `'@core/ai'`). Dentro de core,
-mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclos.
+`rules.ts`, `ai.ts` y `squads.ts` son fachadas: reexportan lo publico de sus modulos, uno por tema, y
+desde fuera de `src/core` se importa siempre de ellas (`'../core/rules'`, `'@core/ai'`). Dentro de
+core, mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclos.
+
+Las piezas de abajo, que usa todo lo demas:
+
+| Pieza | Que va |
+|---|---|
+| `model/` | los tipos de la partida (`GameState`, `Unit`, `Building`, `GameEvent`, `StandingOrder`, `Squad`, `RulesConfig`...). Solo tipos: no importa nada ni exporta constantes o funciones (ESLint lo vigila) |
+| `content/` | el contenido (JSON validados) y sus tablas: `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego (`defaultContent()`, perezoso). Ver docs/CONTENIDO.md |
+| `gameContent.ts` | el contenido de cada partida es un campo, `GameState.content` (en el modelo se llama `MatchContent` y content/index.ts le da la forma de `GameContent`): lo ponen `newGameState` y `deserialize`, no se guarda (`serialize` escribe `SavedGameState`) y se lee como `s.content`, con los atajos `tablesOf(s)` y `weightsOf(s)`; `cloneState(s)` copia la partida y comparte el contenido |
+| `gameState.ts` | `newGameState({ map, rules, content, theme?, funds? })`: el unico sitio que escribe la forma de una partida nueva (mapgen, misiones, laboratorio, duelos, tests) |
+| `rulesConfig.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto de ese contenido (`tables.DEFAULT_RULES`) con cambios; nunca `{ ...reglas, ... }` a mano |
+| `data.ts`, `mapgenTables.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`); tablas del generador de mapas del original (`MAPGEN`, `TILE_BASE_PROBS`, `PROBS_PER_ADJ`). Los nombres de terrenos y temas, `MoveType`/`TerrainType`, estan en `content/` |
+| `defaultGames.ts` | partidas con el contenido del juego: `createGame(rng, opciones)`, `loadGame(json)` y `saveContext(contenido)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del juego (ESLint) |
+| `save.ts` + `saveMigrations.ts` | guardar y leer. `deserialize(json, contexto)`: el `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo). Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 2, atada al tipo de `GameState.version`); `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones anteriores, cada uno con hasta que version hace falta y si va sobre el JSON tal cual ('read') o sobre la partida comprobada ('checked'). Todos son para el formato 1 y hacen lo de entonces con su propia copia fija (no llaman al codigo de ahora: de fuera solo leen el `SaveContext`, p. ej. que tipos capturan en su contenido); entre ellos, pasar a la escuadra la orden comun de sus unidades: al leer, eso solo pasa con partidas del formato 1 |
+| `util/grid.ts` | `Grid<T>`: rejilla con `at`, `atClamped`, `set`, `contains`, `forEach`, `cells`, `createLayer`, `width`/`height`; `GridBounds` (tamaño y `contains`) para lo que solo mira los bordes |
+| `mapGrid.ts` | el mapa de una partida como rejilla: `mapGrid(s)`, `terrainAt`, `isOnBoard`, `createLayer(s, fill)` |
+| `geom.ts` | `posOf` (copia la casilla de una unidad o edificio), rombos (`diamond`, `neighbors4`) y cuadrados (`squareArea`), que reciben los bordes y solo dan casillas de dentro, `posKey`, `seededRng` |
+
+**El estado es la unica fuente de la partida**: las reglas van en `s.rules` (obligatorias), el tamaño
+del mapa en `s.map` y el contenido va unido a la partida (`tablesOf(s)`); no hay variables de modulo
+con la partida en curso, y dos partidas con otro tamaño, otras reglas u otro contenido se juegan a la
+vez en el mismo proceso (tests/gameContent.test.ts, tests/mapSizes.test.ts). Las consultas no la cambian
+(`statsOf`, `captureProgress`); lo que la cambia lo dice en el nombre (mover, atacar, `recordEvent`...).
+
+`src/core/squads/` (escuadras y ordenes permanentes del jugador): `queries` (unidades de una
+escuadra), `naming` (nombres y teclas de grupo), `standingOrders` (la orden de la escuadra y la propia
+de cada unidad) y `membership` (formar, meter, sacar, deshacer). Las cumple la IA al acabar el turno
+(`ai/standingOrders.ts`). `targeting.ts` y `trail.ts`: desde donde atacar y el camino trazado con el
+cursor, para la escena.
 
 `src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
 
@@ -62,10 +92,10 @@ mejor del modulo concreto (`'./rules/movement'`): menos acoplamiento y sin ciclo
 `src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
 (prioridades de cada unidad), `production` (que fabrica), `formation` (escuadras que avanzan juntas)
-y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
+y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
 
 - **Sin estado global en la IA**: el bando que juega, el modo grupo y el plan de fuego van en un
-  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `commandNow`) y se pasa a cada
+  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `startStandingOrder`) y se pasa a cada
   paso. Dos turnos, o una prevision en medio de uno, no se mezclan (lo necesitara un PvP o un
   servidor con varias partidas).
 - **Puntos de extension**:
@@ -78,15 +108,15 @@ y `commands` (ordenes con destino del jugador y su prevision). `ai.ts` tiene `ai
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`), en su sitio de la lista; `run` devuelve si ha usado la
     unidad y suele llamar a un paso de `ai/tactics.ts`;
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
-    (`ai/scoring.ts`); un tipo de orden del jugador, una entrada en `COMMAND_TURNS`
-    (`ai/commands.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
+    (`ai/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
+    `STANDING_ORDER_TURNS` (`ai/standingOrders.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
 - La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
   IA entra solo en la referencia.
 
 ### Herramientas
 
 `tools/` (equilibrio, automejora, partida por texto, contenido) solo usa el nucleo, importado por su
-alias: `import { UNIT } from '@core/data'` (definido en `tsconfig.json` "paths" y en
+alias: `import { createGame } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (escenas, interfaz, ajustes) o Phaser/Preact, y que los tests importen el nucleo por ruta relativa.
 
@@ -158,8 +188,10 @@ sequenceDiagram
   pasado. Por eso el turno enemigo se puede repetir (semilla guardada) y acelerar sin cambiar nada.
 - Todo el azar pasa por un `Rng` con semilla: la misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` lo vigila).
-- `RULES`, `MAP_W` y `MAP_H` son globales del modulo `data.ts` y cambian al empezar una partida
-  (`useRules`, `setMapSize`). El menu usa `keepMapSize` para no pisar el tamaño al generar miniaturas.
+- **Nada de estado global de partida**: las reglas van en `s.rules` (obligatorias; `DEFAULT_RULES` esta
+  congelado y cada partida lleva su copia, con los cambios de su modo, mision o laboratorio) y el tamaño
+  del mapa sale de `s.map` (`mapGrid(s)`, `createLayer(s, fill)`, `isOnBoard(s, pos)` en `core/mapGrid.ts`).
+  Asi dos partidas a la vez (la de la pantalla y la miniatura del menu, una prevision, un servidor) no se pisan.
 
 ## Graficos
 
@@ -171,7 +203,7 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 ## Vista del mapa
 
 `MapView` (`src/ui/mapView.ts`) es solo la fachada que usan la escena, el menu y las pruebas: crea las
-capas de `src/ui/map/`, las apila en un contenedor y les reparte `render(s, opts)` y `tick(time)`.
+capas de `src/ui/map/`, las apila en un contenedor y les reparte `render(s, options)` y `tick(time)`.
 Cada capa hace una cosa:
 
 | Capa (de abajo arriba) | Fichero | Que dibuja |
@@ -192,7 +224,7 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 `map/viewOptions.ts` (los reexporta `mapView.ts`, igual que `Facing`, `baseFacing` y `faceFlip`).
 
 - **Una marca nueva sobre el mapa** (zona, marco, flecha, barra): una funcion `OverlayPainter`
-  (`(g, opts, ctx) => void`) en `OVERLAYS` (`map/overlayLayer.ts`), en su sitio del orden, y el
+  (`(graphics, options, context) => void`) en `OVERLAYS` (`map/overlayLayer.ts`), en su sitio del orden, y el
   dato que necesite en `ViewOptions`. Hoy: niebla de 2013, puntos de control, amenaza, resaltados,
   capturas, alcance, peligro, ordenes, intenciones y camino (`map/zones.ts`, `map/highlights.ts`,
   `map/orders.ts`).
@@ -231,14 +263,14 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | Modulo | Que hace | Phaser |
 |---|---|---|
 | `types.ts` | `Phase`, `Intent`, constantes, `GameStartData` | no |
-| `matchSetup.ts` | con que partida se empieza (guardada, preparada, laboratorio, mision o mapa nuevo) | no |
+| `matchSetup.ts` | con que partida se empieza (guardada, preparada, laboratorio, mision o mapa nuevo); cada una trae sus reglas en `state.rules` y la escena no las toca | no |
 | `phases/` | que hace cada fase del turno del jugador: una entrada de `PHASES` por fase (ver abajo) | solo tipos |
 | `moveSession.ts`, `unitMoves.ts` | la unidad elegida (alcance, camino, deshacer) y moverla: soltar, atacar, unirse, ordenes de varios turnos, mover en grupo, Ctrl+Z | solo tipos |
 | `mapOverlays.ts` | lo que se dibuja encima del mapa: capturas, ordenes, intenciones, puntos de control, escolta | no |
 | `intent.ts` | que pasa al soltar la unidad elegida y por que camino (`MovePlan`) | no |
 | `highlights.ts`, `menuModel.ts`, `hudParts.ts` | casillas marcadas, menu de bocadillo, prevision, panel de lo elegido, ayuda | no |
-| `tutorial.ts`, `commandPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
-| `input.ts` | enganche del teclado y los punteros a `src/controls` (`CommandTarget`) | si |
+| `tutorial.ts`, `standingOrderPreview.ts` | panel de mision y pasos del tutorial; prevision de ordenes con cache | no |
+| `input.ts` | enganche del teclado y los punteros a `src/controls` (`InputTarget`) | si |
 | `pointerInput.ts` | lo que hace cada gesto en la partida (`PointerTarget`) | solo tipos |
 | `groupSelection.ts` | grupo, «Elegir varias», escuadras, teclas de grupo | solo tipos |
 | `carry.ts` | coger, arrastrar y soltar una unidad | si |
@@ -271,14 +303,14 @@ puras, sin Phaser, con tests) traduce lo que pulsa el jugador a **ordenes**, y l
 
 | Orden | Donde vale | Quien la cumple |
 |---|---|---|
-| `GameCommand` (`commands.ts`): cursor, aceptar, atras, deshacer, fin de turno, zoom... | el mapa y sus menus de bocadillo | `GameScene.command(cmd)` |
+| `InputCommand` (`inputCommands.ts`): cursor, aceptar, atras, deshacer, fin de turno, zoom... | el mapa y sus menus de bocadillo | `GameScene.command(cmd)` |
 | `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda, fin de partida | `MenuScene.menu(cmd)`, `GameScene.menu(cmd)` (que pasan a `OptionsPanel.command`, `notesCommand`...) |
 | gestos de `PointerGestures` (`pointer.ts`) | raton y dedos en la partida, incluido desplazar el mapa por el borde (`tick`, cada fotograma) | `pointerTarget()` de `scenes/game/pointerInput.ts` |
 
-Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `GameCommand`) o el menu
+Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `InputCommand`) o el menu
 abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
 
-- **Teclado**: `keyCommand(e)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(e, ctx)` (tabla
+- **Teclado**: `keyCommand(key)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(key, context)` (tabla
   `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas.
 - **Raton y dedos**: la escena traduce el `Phaser.Input.Pointer` a `PointerIn` (`pointerIn`) y llama a
   `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
@@ -287,7 +319,7 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   seleccion nueva (`clickSelect`, `boxSelect`); la escena solo la aplica (`applySelection`: una unidad
   que puede actuar queda elegida para moverla; varias forman el grupo, con aro a los pies). Los
   grupos con numero son escuadras con `Squad.key` (`setGroup`, `addToGroup`, `squadByKey` en
-  `core/squads.ts`), y las teclas son la orden `group {n, mode}`.
+  `core/squads/`), y las teclas son la orden `group {n, mode}`.
 - **Raton**: arrastrar con el izquierdo desde una casilla sin unidad propia es recuadro; con el
   derecho o la rueda, mueve el mapa; el derecho sin arrastrar es clic derecho (al soltar). El doble
   clic lo cuenta `PointerGestures` (`TapInfo.count`).
@@ -309,17 +341,17 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
 
 Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 
-1. Tablas puras de botones → ordenes, p. ej. `padCommand(button): GameCommand | null` (A = aceptar,
+1. Tablas puras de botones → ordenes, p. ej. `padCommand(button): InputCommand | null` (A = aceptar,
    B = cancelar, cruceta = cursor, Start = opciones, LB/RB = zoom...) y
-   `padMenuCommand(button, ctx): MenuCommand | null` (cruceta = mover, A = `ok`, B = `back`). La
+   `padMenuCommand(button, context): MenuCommand | null` (cruceta = mover, A = `ok`, B = `back`). La
    repeticion al mantener la cruceta se decide aqui (`ok` lleva `repeat`, como el teclado). Con tests.
 2. En la escena, solo el enganche: leer los botones recien pulsados (`this.input.gamepad`, o la API
    `navigator.getGamepads()` en `update()`) y, segun `controlContext()`, llamar a
-   `this.command(padCommand(b))` o a `this.menu(padMenuCommand(b, ctx))`. Nada mas de la escena cambia.
+   `this.command(padCommand(button))` o a `this.menu(padMenuCommand(button, context))`. Nada mas de la escena cambia.
 3. Phaser necesita `input: { gamepad: true }` en la configuracion del juego (`main.ts`).
 4. La ayuda (`helpText.ts`) explica los botones.
 
-El cursor del mapa y los menus de bocadillo ya funcionan solo con ordenes `GameCommand`, asi que un
+El cursor del mapa y los menus de bocadillo ya funcionan solo con ordenes `InputCommand`, asi que un
 mando puede jugar una partida entera sin raton.
 
 ## Donde mirar

@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
-import type { GameState } from './core/types';
-import { UNIT_NAMES } from './core/data';
+import type { SavedGameState } from './core/model';
+import { defaultContent } from './core/content/default';
 import { defaultLab } from './lab';
 import { ui, type UIState } from './hud/store';
 import type { GameScene, GameStartData } from './scenes/GameScene';
@@ -24,9 +24,9 @@ export interface IlogicDebug {
   /**
    * Empieza una partida y espera a que se pueda jugar. Con `seed` (y opcionalmente `size` 20/32/40,
    * `theme` 0..4, `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
-   * GameState, ver `state()`); con `mission` una mision de la campaña.
+   * partida guardada (SavedGameState), ver `state()`); con `mission` una mision de la campaña.
    */
-  startGame(opts: {
+  startGame(options: {
     seed?: number;
     size?: number;
     theme?: number | null;
@@ -36,13 +36,13 @@ export interface IlogicDebug {
     /** General del jugador y de la IA (id de generals.json). */
     general?: string | null;
     enemyGeneral?: string | null;
-    state?: GameState | string;
+    state?: SavedGameState | string;
     mission?: string;
   }): Promise<void>;
   /** Laboratorio de animaciones (src/lab.ts): unidades por nombre, camara lenta y accion a reproducir. */
-  lab(opts?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
+  lab(options?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
   /** Partida en curso (copia) o null fuera de la partida. */
-  state(): GameState | null;
+  state(): SavedGameState | null;
   /** Fase de la partida ('map', 'move', 'attack', 'busy'...), dia y si ha terminado. */
   game(): { phase: string; busy: boolean; ended: boolean; day: number; cursor: { x: number; y: number } } | null;
   /** Espera a que la partida acepte ordenes (fin de animaciones y del turno enemigo). */
@@ -53,7 +53,7 @@ export interface IlogicDebug {
   freeze(on?: boolean): void;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function until(cond: () => boolean, timeoutMs: number, what: string): Promise<void> {
   const end = Date.now() + timeoutMs;
@@ -66,8 +66,8 @@ async function until(cond: () => boolean, timeoutMs: number, what: string): Prom
 export function installDebug(game: Phaser.Game): void {
   const scene = (key: string) => game.scene.getScene(key);
   const gameScene = () => {
-    const g = scene('Game') as GameScene | null;
-    return g?.sys.isActive() ? g : null;
+    const found = scene('Game') as GameScene | null;
+    return found?.sys.isActive() ? found : null;
   };
   const activeScene = () => game.scene.getScenes(true)[0] ?? null;
 
@@ -76,18 +76,18 @@ export function installDebug(game: Phaser.Game): void {
     ready: (timeoutMs = 30000) => until(() => !!scene('Menu')?.sys.isActive() && ui.get().screen === 'menu', timeoutMs, 'menu'),
     screen: () => ui.get().screen,
     ui: () => structuredClone(ui.get()),
-    async startGame(opts) {
+    async startGame(options) {
       const data: GameStartData =
-        opts.state !== undefined
-          ? { mode: 'state', state: typeof opts.state === 'string' ? opts.state : JSON.stringify(opts.state) }
-          : opts.mission
-            ? { mode: 'mission', mission: opts.mission }
+        options.state !== undefined
+          ? { mode: 'state', state: typeof options.state === 'string' ? options.state : JSON.stringify(options.state) }
+          : options.mission
+            ? { mode: 'mission', mission: options.mission }
             : {
                 mode: 'new',
-                rules: { fog: opts.fog ?? false, dayLimit: opts.dayLimit ?? null },
-                setup: { seed: opts.seed ?? 1, size: opts.size ?? 20, theme: opts.theme ?? null },
-                general: opts.general ?? null,
-                enemyGeneral: opts.enemyGeneral ?? null,
+                rules: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
+                setup: { seed: options.seed ?? 1, size: options.size ?? 20, theme: options.theme ?? null },
+                general: options.general ?? null,
+                enemyGeneral: options.enemyGeneral ?? null,
               };
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
@@ -95,31 +95,32 @@ export function installDebug(game: Phaser.Game): void {
       await until(() => !!gameScene()?.debugSnapshot, 20000, 'partida');
       await sleep(50);
     },
-    async lab(opts = {}) {
+    async lab(options = {}) {
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
-      const type = (name: string | undefined, def: number) => (name ? Math.max(0, UNIT_NAMES.indexOf(name)) : def);
+      const type = (name: string | undefined, fallback: number) =>
+        name ? Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf(name)) : fallback;
       const base = defaultLab();
       from.scene.start('Game', {
         mode: 'lab',
         lab: {
-          attacker: type(opts.attacker, base.attacker),
-          defender: type(opts.defender, base.defender),
-          slow: !!opts.slow,
-          play: opts.play ?? null,
+          attacker: type(options.attacker, base.attacker),
+          defender: type(options.defender, base.defender),
+          slow: !!options.slow,
+          play: options.play ?? null,
         },
       });
       await until(() => !!gameScene()?.debugSnapshot, 20000, 'laboratorio');
       await sleep(50);
     },
     state() {
-      const g = gameScene();
-      return g ? (JSON.parse(g.debugSnapshot().state) as GameState) : null;
+      const running = gameScene();
+      return running ? (JSON.parse(running.debugSnapshot().state) as SavedGameState) : null;
     },
     game() {
-      const g = gameScene();
-      if (!g) return null;
-      const { phase, busy, ended, day, cursor } = g.debugSnapshot();
+      const running = gameScene();
+      if (!running) return null;
+      const { phase, busy, ended, day, cursor } = running.debugSnapshot();
       return { phase, busy, ended, day, cursor };
     },
     idle: (timeoutMs = 60000) => until(() => !gameScene()?.debugSnapshot().busy, timeoutMs, 'turno del jugador'),

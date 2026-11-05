@@ -1,4 +1,4 @@
-import type { RulesConfig } from '../../core/content/rules';
+import type { RulesConfig } from '../../core/model';
 import { controlZoneSide, joinSentences, percent, type HelpTexts } from '../help';
 
 const capture = (rules: RulesConfig) =>

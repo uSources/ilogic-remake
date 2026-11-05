@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
 import { TILE } from '../../layout';
 import { PAL_MAP } from '../palette';
-import { forEachTile } from './geometry';
 import { captureBars, highlights } from './highlights';
 import type { MapLayer, OverlayContext, OverlayPainter } from './layer';
 import { intents, orderLines, pathArrow } from './orders';
@@ -9,11 +8,11 @@ import type { ViewOptions } from './viewOptions';
 import { attackZone, controlZones, dangerCorners, threatZone } from './zones';
 
 /** Niebla del dibujo de 2013: velo oscuro por casilla que no se ve (la nueva va en map/fogLayer.ts). */
-const classicFog: OverlayPainter = (g, opts, ctx) => {
-  if (ctx.newArt) return;
-  g.fillStyle(PAL_MAP.fog, 0.5);
-  forEachTile((x, y) => {
-    if (!opts.vis[x]![y]) g.fillRect(x * TILE, y * TILE, TILE, TILE);
+const classicFog: OverlayPainter = (graphics, options, context) => {
+  if (context.newArt) return;
+  graphics.fillStyle(PAL_MAP.fog, 0.5);
+  options.vis.forEach((isVisible, { x, y }) => {
+    if (!isVisible) graphics.fillRect(x * TILE, y * TILE, TILE, TILE);
   });
 };
 
@@ -45,9 +44,9 @@ export class OverlayLayer implements MapLayer {
     this.object = scene.add.graphics();
   }
 
-  draw(opts: ViewOptions, ctx: OverlayContext): void {
-    const g = this.object;
-    g.clear();
-    for (const paint of this.painters) paint(g, opts, ctx);
+  draw(options: ViewOptions, context: OverlayContext): void {
+    const graphics = this.object;
+    graphics.clear();
+    for (const paint of this.painters) paint(graphics, options, context);
   }
 }

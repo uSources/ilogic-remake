@@ -5,13 +5,15 @@
  * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
-import { effectiveCommand, renameSquad } from '../core/squads';
-import { HQ, MAP_H, MAP_W, RULES } from '../core/data';
-import { grid, samePos } from '../core/geom';
+import { effectiveStandingOrder, renameSquad } from '../core/squads';
+import { tablesOf } from '../core/gameContent';
+import { samePos, posOf } from '../core/geom';
+import { createLayer, isOnBoard } from '../core/mapGrid';
+import { Grid } from '../core/util/grid';
 import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../core/types';
+import type { Building, GameEvent, GameState, Pos, Unit } from '../core/model';
 import {
   resetActions,
   showBanner,
@@ -37,7 +39,7 @@ import { WeatherFx } from '../ui/weatherFx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
 import { PointerGestures } from '../controls/pointer';
-import { CLOSES_HELP, type GameCommand } from '../controls/commands';
+import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
@@ -48,7 +50,7 @@ import { forecastFor, hintText, labPanel, moveTipFor, playerIncome, selectionPan
 import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } from './game/mapOverlays';
 import { startMatch } from './game/matchSetup';
 import { TutorialTracker } from './game/tutorial';
-import { CommandPreview } from './game/commandPreview';
+import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
 import { EndOfMatch, setEndFilter, type EndHost } from './game/endOfMatch';
@@ -69,6 +71,8 @@ export type { GameStartData } from './game/types';
 const NO_TILES: ReadonlyMap<string, number> = new Map();
 /** Casillas de margen al llevar la camara a una unidad. */
 const FOLLOW_MARGIN = 3;
+/** Antes de empezar la partida no se ve nada (la vision de verdad la pone `refresh`). */
+const NOTHING_SEEN: Grid<boolean> = Grid.filled({ width: 0, height: 0 }, false);
 /** Fases con el panel de lo elegido (varias unidades) a la vista. */
 const SELECTION_PANEL_PHASES: Phase[] = ['map', 'groupMenu', 'orderMenu', 'target'];
 /** Bocadillos que van junto a una casilla (y se recolocan al mover la camara). */
@@ -96,7 +100,7 @@ export class GameScene extends Phaser.Scene {
   private lastAt: Pos | null = null;
 
   // --- Lo que se ve -----------------------------------------------------------
-  private vis: boolean[][] = [];
+  private vis: Grid<boolean> = NOTHING_SEEN;
   /** Unidades que no se dibujan (la que se esta arrastrando o animando). */
   private hidden = new Set<number>();
   /** Lluvia, nieve... sobre el mapa. */
@@ -107,8 +111,8 @@ export class GameScene extends Phaser.Scene {
   private intents = false;
   /** Unidad cuyo alcance se esta mostrando (Enter o clic derecho sobre ella). */
   private inspectUid: number | null = null;
-  /** Prevision de las ordenes (previewCommands), recalculada solo si cambia la partida. */
-  private preview = new CommandPreview();
+  /** Prevision de las ordenes (previewStandingOrders), recalculada solo si cambia la partida. */
+  private standingOrderPreview = new StandingOrderPreview();
   private lastScroll = { x: NaN, y: NaN, zoom: NaN };
   /** Casilla junto a la que va cada bocadillo (para recolocarlos al mover la camara sin rehacerlos). */
   private anchorAt: Partial<Record<BubbleKind, Pos>> = {};
@@ -179,7 +183,7 @@ export class GameScene extends Phaser.Scene {
   private resetMatch(): void {
     this.match++;
     this.phase = 'map';
-    this.vis = [];
+    this.vis = NOTHING_SEEN;
     this.hidden = new Set();
     this.moves.reset();
     this.buyAt = null;
@@ -199,7 +203,7 @@ export class GameScene extends Phaser.Scene {
     this.ended = false;
     this.turns.reset();
     this.inspectUid = null;
-    this.preview.reset();
+    this.standingOrderPreview.reset();
     this.lastScroll = { x: NaN, y: NaN, zoom: NaN };
     this.gestures.reset();
     this.tutorial.reset();
@@ -245,8 +249,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Cursor y camara sobre la Base del jugador. */
   private centerOnHq(): void {
-    const hq = this.s.buildings.find((building) => building.owner === 0 && building.type === HQ) ?? { x: 0, y: 0 };
-    this.view.cursor = { x: hq.x, y: hq.y };
+    const hq = this.s.buildings.find((building) => building.owner === 0 && building.type === tablesOf(this.s).HQ) ?? { x: 0, y: 0 };
+    this.view.cursor = posOf(hq);
     this.view.centerOn(hq, true);
   }
 
@@ -358,9 +362,9 @@ export class GameScene extends Phaser.Scene {
       openGameMenu: () => {
         if (ready()) this.openGameMenu();
       },
-      minimapJump: (x: number, y: number) => {
+      minimapJump: (at: Pos) => {
         if (this.ended) return;
-        this.cameras.main.centerOn(x * TILE, y * TILE);
+        this.cameras.main.centerOn(at.x * TILE, at.y * TILE);
         this.refreshHud();
       },
       toggleMinimap: () => ui.set({ minimapOn: !ui.get().minimapOn }),
@@ -394,7 +398,7 @@ export class GameScene extends Phaser.Scene {
     const unit = unitById(this.s, uid);
     if (!unit) return;
     this.abandonSelection();
-    this.view.cursor = { x: unit.x, y: unit.y };
+    this.view.cursor = posOf(unit);
     this.view.ensureVisible(unit, FOLLOW_MARGIN);
     this.moves.select(unit);
   }
@@ -407,40 +411,40 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Cumplir una orden de menu (pantalla final u opciones), venga del mando que venga. */
-  menu(cmd: MenuCommand): void {
-    if (this.ended) return this.endScreen.command(cmd);
-    if (this.optionsPanel.isOpen) this.optionsPanel.command(cmd);
+  menu(command: MenuCommand): void {
+    if (this.ended) return this.endScreen.command(command);
+    if (this.optionsPanel.isOpen) this.optionsPanel.command(command);
   }
 
   /**
    * Cumplir una orden del jugador, venga del teclado o de otro mando (ver src/controls). Es lo unico
    * que un mando necesita de la escena.
    */
-  command(cmd: GameCommand): void {
+  command(command: InputCommand): void {
     // Escribiendo el nombre de una escuadra: el teclado es del cuadro de texto.
     if (ui.get().rename) return;
     if (ui.get().help) {
-      if (CLOSES_HELP.includes(cmd.kind)) ui.set({ help: false });
+      if (CLOSES_HELP.includes(command.kind)) ui.set({ help: false });
       return;
     }
-    if (cmd.kind === 'help') return ui.set({ help: true });
-    if (cmd.kind === 'options') return this.openOptions();
+    if (command.kind === 'help') return ui.set({ help: true });
+    if (command.kind === 'options') return this.openOptions();
     if (this.phase === 'busy') {
       // Durante el turno enemigo, aceptar acelera las animaciones.
-      if (cmd.kind === 'accept') this.fastForward = true;
+      if (command.kind === 'accept') this.fastForward = true;
       return;
     }
-    this.mapCommand(cmd);
+    this.mapCommand(command);
   }
 
   /** Una orden en el mapa o en un menu de bocadillo (ni animando ni con la ayuda abierta). */
-  private mapCommand(cmd: GameCommand): void {
-    switch (cmd.kind) {
+  private mapCommand(command: InputCommand): void {
+    switch (command.kind) {
       case 'cursor':
-        return this.direction(cmd.dx, cmd.dy);
+        return this.direction(command.dx, command.dy);
       case 'accept':
         if (this.time.now < this.inputLockUntil) return;
-        if (this.phase === 'move') return void this.moves.commit(this.view.cursor, { wait: cmd.wait });
+        if (this.phase === 'move') return void this.moves.commit(this.view.cursor, { wait: command.wait });
         return this.accept();
       case 'stepBack':
         return this.stepBack();
@@ -461,14 +465,14 @@ export class GameScene extends Phaser.Scene {
       case 'nextUnit':
         return this.nextUnit();
       case 'order':
-        return this.orders.orderKey(cmd.order);
+        return this.orders.orderKey(command.order);
       case 'group':
         // [CAMBIO] 1-9 elige el grupo (dos veces: la camara va alli); Ctrl lo hace; Mayusculas añade.
-        return this.selection.groupKey(cmd.n, cmd.mode);
+        return this.selection.groupKey(command.n, command.mode);
       case 'orderHere':
         return this.orderHere();
       case 'zoom':
-        this.zoomKey(cmd.dir);
+        this.zoomKey(command.dir);
         return this.refreshHud();
       default:
         return;
@@ -520,9 +524,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Zoom con teclado: alrededor del cursor, y que siga a la vista. */
-  private zoomKey(dir: 1 | -1): void {
+  private zoomKey(direction: 1 | -1): void {
     const cursorOnScreen = this.view.screenOf(this.view.cursor);
-    this.view.zoomStep(dir, cursorOnScreen.x, cursorOnScreen.y);
+    this.view.zoomStep(direction, cursorOnScreen.x, cursorOnScreen.y);
     this.view.ensureVisible(this.view.cursor, 2, true);
   }
 
@@ -540,11 +544,10 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  private moveCursorTo(p: Pos, follow: boolean): void {
-    const isInside = p.x >= 0 && p.y >= 0 && p.x < MAP_W && p.y < MAP_H;
-    if (!isInside || samePos(p, this.view.cursor)) return;
-    this.view.cursor = { ...p };
-    if (follow) this.view.ensureVisible(p, FOLLOW_MARGIN);
+  private moveCursorTo(pos: Pos, follow: boolean): void {
+    if (!isOnBoard(this.s, pos) || samePos(pos, this.view.cursor)) return;
+    this.view.cursor = { ...pos };
+    if (follow) this.view.ensureVisible(pos, FOLLOW_MARGIN);
     this.cursorMoved();
   }
 
@@ -552,10 +555,10 @@ export class GameScene extends Phaser.Scene {
   private nextIdle(): void {
     const idle = this.idleUnits();
     if (!idle.length) return;
-    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    const here = unitAt(this.s, this.view.cursor);
     const hereIndex = here ? idle.findIndex((unit) => unit.uid === here.uid) : -1;
     const next = idle[(hereIndex + 1) % idle.length]!;
-    this.view.cursor = { x: next.x, y: next.y };
+    this.view.cursor = posOf(next);
     this.view.ensureVisible(next, FOLLOW_MARGIN);
     this.cursorMoved();
   }
@@ -678,19 +681,19 @@ export class GameScene extends Phaser.Scene {
   // =========================================================================
 
   /** La orden que cumple la unidad (la suya o la de su escuadra). */
-  private commandOf(unit: Unit) {
-    return effectiveCommand(this.s, unit);
+  private standingOrderOf(unit: Unit) {
+    return effectiveStandingOrder(this.s, unit);
   }
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
   private idleUnits(): Unit[] {
-    return this.s.units.filter((unit) => isPlayer(unit) && unit.active && unit.carrier === null && !this.commandOf(unit));
+    return this.s.units.filter((unit) => isPlayer(unit) && unit.active && unit.carrier === null && !this.standingOrderOf(unit));
   }
 
   /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
   private showsOrderLine(unit: Unit): boolean {
     if (this.orders.ordering?.uids.includes(unit.uid) || this.selection.group.has(unit.uid)) return true;
-    const here = unitAt(this.s, this.view.cursor.x, this.view.cursor.y);
+    const here = unitAt(this.s, this.view.cursor);
     const isSameSquad = here?.squad !== undefined && here.squad === unit.squad;
     return !!here && (here.uid === unit.uid || isSameSquad);
   }
@@ -708,8 +711,8 @@ export class GameScene extends Phaser.Scene {
     return this.turns.enemyPlaying;
   }
 
-  private visibleToPlayer(p: Pos): boolean {
-    return !!this.vis[p.x]?.[p.y];
+  private visibleToPlayer(pos: Pos): boolean {
+    return this.vis.contains(pos) && this.vis.at(pos);
   }
 
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
@@ -737,7 +740,7 @@ export class GameScene extends Phaser.Scene {
     // [CAMBIO] Puntero del raton segun lo que haria el clic derecho donde esta el cursor.
     if (this.gestures.inside) this.orders.updatePointer(this.phase === 'busy' ? null : this.view.cursor);
     // Al acabar se descubre todo el mapa.
-    this.vis = this.ended ? grid(true) : visibility(this.s, 0);
+    this.vis = this.ended ? createLayer(this.s, true) : visibility(this.s, 0);
     this.view.pruneScorch(this.s.day);
     this.view.render(this.s, this.viewOptions());
     this.view.placeCursor(this.phase !== 'busy');
@@ -761,7 +764,7 @@ export class GameScene extends Phaser.Scene {
       danger: isMoving ? (session?.danger ?? null) : null,
       intents: this.intentsToDraw(),
       captures: captureBars(this.s, this.vis),
-      controlPoints: controlPointMarks(this.s, (p) => this.visibleToPlayer(p)),
+      controlPoints: controlPointMarks(this.s, (pos) => this.visibleToPlayer(pos)),
       ...escortMarks(this.s, this.hidden),
     };
   }
@@ -779,11 +782,11 @@ export class GameScene extends Phaser.Scene {
       unload: session?.unloadTiles ?? new Set(),
       orderMenuUids: this.orders.menu?.uids ?? null,
       orderingUids: this.orders.ordering?.uids ?? null,
-      targetArea: (c) => this.abilities.area(c),
+      targetArea: (pos) => this.abilities.area(pos),
       group: this.selection.group,
       inspectUid: this.inspectUid,
       enemyPlaying: this.enemyPlaying,
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
     });
     if (marks.inspectGone) this.inspectUid = null;
     return marks.tiles;
@@ -804,10 +807,12 @@ export class GameScene extends Phaser.Scene {
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): ViewOptions['intents'] {
     if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
-    const withCommand = this.s.units.filter((unit) => isPlayer(unit) && this.commandOf(unit) && unit.active && unit.carrier === null);
-    const shown = withCommand.filter((unit) => this.intents || this.showsOrderLine(unit));
+    const withStandingOrder = this.s.units.filter(
+      (unit) => isPlayer(unit) && this.standingOrderOf(unit) && unit.active && unit.carrier === null,
+    );
+    const shown = withStandingOrder.filter((unit) => this.intents || this.showsOrderLine(unit));
     if (!shown.length) return [];
-    return intentLines(shown, this.preview.get(this.s), this.vis);
+    return intentLines(shown, this.standingOrderPreview.get(this.s), this.vis);
   }
 
   private publishMinimap(): void {
@@ -839,15 +844,16 @@ export class GameScene extends Phaser.Scene {
     ui.set({
       funds: s.funds[0],
       income: playerIncome(s),
-      command: RULES.commandPoints === null ? null : { used: commandUsed(s, 0), max: RULES.commandPoints },
+      commandPoints: s.rules.commandPoints === null ? null : { used: commandUsed(s, 0), max: s.rules.commandPoints },
       economy: economyVM(s, 0),
       dayInfo: dayInfoVM(s),
-      lab: labPanel(this.lab),
+      lab: labPanel(this.s, this.lab),
       general: generalVM(s, 0, this.phase === 'target' ? this.abilities.targeting : null),
       enemyGeneral: generalVM(s, 1, null),
       buildings: s.buildings.filter((building) => building.owner === 0).length,
       day: s.day,
-      dayLimit: RULES.dayLimit,
+      dayLimit: s.rules.dayLimit,
+      helpRules: s.rules,
       weather,
       turn: this.enemyPlaying ? 'enemy' : 'player',
       busy,
@@ -860,7 +866,7 @@ export class GameScene extends Phaser.Scene {
       multi: this.selection.multi || this.selection.group.size ? this.selection.group.size : null,
       selection: this.selectionVM(),
       endTurn: { pending: this.turns.pendingUnits().length, armed: this.turns.endArmed() },
-      anyCommand: s.units.some((unit) => isPlayer(unit) && !!this.commandOf(unit)),
+      anyStandingOrder: s.units.some((unit) => isPlayer(unit) && !!this.standingOrderOf(unit)),
       hint: this.hint(busy),
       mission: this.tutorial.panel(s, this.phase),
     });
@@ -869,7 +875,11 @@ export class GameScene extends Phaser.Scene {
 
   /** Bandeja de unidades sin mover. */
   private idleList(): IdleVM[] {
-    return this.idleUnits().map((unit) => ({ uid: unit.uid, icon: unitKey(this.textures, this.s, unit), name: unitLabel(unit.type) }));
+    return this.idleUnits().map((unit) => ({
+      uid: unit.uid,
+      icon: unitKey(this.textures, this.s, unit),
+      name: unitLabel(this.s.content, unit.type),
+    }));
   }
 
   private hint(busy: boolean): string {
@@ -885,30 +895,30 @@ export class GameScene extends Phaser.Scene {
   private forecast(cursor: Pos): ForecastVM | null {
     return forecastFor(this.textures, this.s, {
       phase: this.phase,
-      sel: this.moves.selected,
+      selected: this.moves.selected,
       c: cursor,
-      intentAt: (p) => this.moves.intentAt(p),
+      intentAt: (pos) => this.moves.intentAt(pos),
       attackSet: this.moves.session?.attackTargets ?? NO_TILES,
-      anchor: (p) => this.anchor('forecast', p),
+      anchor: (pos) => this.anchor('forecast', pos),
     });
   }
 
   /** Bocadillo junto al cursor al mover (ver moveTipFor). */
   private moveTip(cursor: Pos): MoveTipVM | null {
     return moveTipFor(this.s, {
-      sel: this.moves.selected,
+      selected: this.moves.selected,
       range: this.moves.session?.range ?? null,
       c: cursor,
-      intentAt: (p) => this.moves.intentAt(p),
+      intentAt: (pos) => this.moves.intentAt(pos),
       trailTo: (dest) => this.moves.trailTo(dest),
       danger: this.moves.session?.danger ?? null,
-      anchor: (p) => this.anchor('moveTip', p),
+      anchor: (pos) => this.anchor('moveTip', pos),
     });
   }
 
-  private tileInfo(p: Pos): TileVM {
+  private tileInfo(pos: Pos): TileVM {
     const selected = this.phase !== 'map' ? this.moves.selected : null;
-    return tileVM(this.textures, this.s, p, { vis: this.vis, hidden: this.hidden, selected });
+    return tileVM(this.textures, this.s, pos, { vis: this.vis, hidden: this.hidden, selected });
   }
 
   /** Menu de bocadillo de la fase actual. */
@@ -917,7 +927,7 @@ export class GameScene extends Phaser.Scene {
       s: this.s,
       phase: this.phase,
       cursor: this.view.cursor,
-      sel: this.moves.selected,
+      selected: this.moves.selected,
       actions: this.unitOptions,
       building: this.buyAt,
       buy: this.buyOptions,
@@ -939,9 +949,9 @@ export class GameScene extends Phaser.Scene {
     return selectionPanel(this.textures, this.s, list, this.view.cursor);
   }
 
-  private anchor(kind: BubbleKind, p: Pos): Anchor {
-    this.anchorAt[kind] = { x: p.x, y: p.y };
-    return this.view.tileRectCss(p);
+  private anchor(kind: BubbleKind, pos: Pos): Anchor {
+    this.anchorAt[kind] = posOf(pos);
+    return this.view.tileRectCss(pos);
   }
 
   /**
@@ -976,32 +986,32 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       menuSel: rw(
         () => this.menuSel,
-        (v) => (this.menuSel = v),
+        (value) => (this.menuSel = value),
       ),
       menuItems: { get: () => this.menuItems },
       inspectUid: rw(
         () => this.inspectUid,
-        (v) => (this.inspectUid = v),
+        (value) => (this.inspectUid = value),
       ),
       unitOptions: rw(
         () => this.unitOptions,
-        (v) => (this.unitOptions = v),
+        (value) => (this.unitOptions = value),
       ),
       deleteArmed: rw(
         () => this.deleteArmed,
-        (v) => (this.deleteArmed = v),
+        (flag) => (this.deleteArmed = flag),
       ),
       buyAt: rw(
         () => this.buyAt,
-        (v) => (this.buyAt = v),
+        (building) => (this.buyAt = building),
       ),
       buyOptions: rw(
         () => this.buyOptions,
-        (v) => (this.buyOptions = v),
+        (value) => (this.buyOptions = value),
       ),
       moves: { get: () => this.moves },
       selection: { get: () => this.selection },
@@ -1014,7 +1024,7 @@ export class GameScene extends Phaser.Scene {
       afterAction: () => this.afterAction(),
       abandonSelection: () => this.abandonSelection(),
       inspect: (unit) => this.inspect(unit),
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       play: (events) => this.playEvents(events),
     });
   }
@@ -1025,15 +1035,15 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: rw(
         () => this.s,
-        (v) => (this.s = v),
+        (state) => (this.s = state),
       ),
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       ended: { get: () => this.ended },
       selection: { get: () => this.selection },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       play: (events, ghostKey) => this.playEvents(events, ghostKey),
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
@@ -1050,30 +1060,30 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       menuSel: rw(
         () => this.menuSel,
-        (v) => (this.menuSel = v),
+        (value) => (this.menuSel = value),
       ),
       match: { get: () => this.match },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       undo: { get: () => this.moves.session?.undo ?? null },
       selection: { get: () => this.selection },
       menuPick: () => this.menuItems[this.menuSel]?.id,
       stopInspect: () => {
         this.inspectUid = null;
       },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       intentAt: (tile) => this.moves.intentAt(tile),
       toMap: () => this.toMap(),
       back: () => this.back(),
       refresh: () => this.refresh(),
       selectUnit: (unit) => this.moves.select(unit),
-      moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
-      commit: (tile, opts) => this.moves.commit(tile, opts),
+      moveCursorTo: (pos, follow) => this.moveCursorTo(pos, follow),
+      commit: (tile, options) => this.moves.commit(tile, options),
       groupMove: (goal) => this.moves.groupMove(goal),
-      giveOrder: (unit, goal) => this.moves.giveOrder(unit, goal),
+      giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
       clearUndo: () => this.moves.clearUndo(),
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
@@ -1102,7 +1112,7 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: { get: () => this.s },
       phase: { get: () => this.phase },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       toMap: () => this.toMap(),
       selectUnit: (unit) => this.moves.select(unit),
       stopInspect: () => {
@@ -1119,15 +1129,15 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: { get: () => this.s },
       phase: { get: () => this.phase },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       hidden: { get: () => this.hidden },
       toMap: () => this.toMap(),
       selectUnit: (unit) => this.moves.select(unit),
       updateTrail: (tile) => this.moves.followCursor(tile),
       intentAt: (tile) => this.moves.intentAt(tile),
       refresh: () => this.refresh(),
-      giveOrder: (unit, goal) => this.moves.giveOrder(unit, goal),
-      commit: (tile, opts) => this.moves.commit(tile, opts),
+      giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
+      commit: (tile, options) => this.moves.commit(tile, options),
     });
   }
 
@@ -1138,22 +1148,22 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: { get: () => this.phase },
       ended: { get: () => this.ended },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       inputLockUntil: { get: () => this.inputLockUntil },
       lastCommit: { get: () => this.moves.lastCommit },
       inspectUid: rw(
         () => this.inspectUid,
-        (v) => (this.inspectUid = v),
+        (value) => (this.inspectUid = value),
       ),
       selection: { get: () => this.selection },
       carry: { get: () => this.carry },
       skipAnimations: () => {
         this.fastForward = true;
       },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       intentAt: (tile) => this.moves.intentAt(tile),
       actionCtx: (at) => this.orders.ctx(at),
-      runAction: (id, at, opts) => this.orders.run(id, at, opts),
+      runAction: (id, at, options) => this.orders.run(id, at, options),
       openOrderMenu: (at) => this.orders.openMenu(at),
       inspect: (unit) => this.inspect(unit),
       accept: () => this.accept(),
@@ -1162,10 +1172,10 @@ export class GameScene extends Phaser.Scene {
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
       cursorMoved: () => this.cursorMoved(),
-      moveCursorTo: (p, follow) => this.moveCursorTo(p, follow),
+      moveCursorTo: (pos, follow) => this.moveCursorTo(pos, follow),
       setPointer: (kind) => this.orders.setPointer(kind),
       updatePointer: (tile) => this.orders.updatePointer(tile),
-      commit: (tile, opts) => this.moves.commit(tile, opts),
+      commit: (tile, options) => this.moves.commit(tile, options),
       waitSelected: () => this.moves.waitSelected(),
       groupMove: (goal) => this.moves.groupMove(goal),
       selectUnit: (unit) => this.moves.select(unit),
@@ -1178,7 +1188,7 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       abandonSelection: () => this.abandonSelection(),
       toMap: () => this.toMap(),
@@ -1194,16 +1204,16 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       fastForward: rw(
         () => this.fastForward,
-        (v) => (this.fastForward = v),
+        (flag) => (this.fastForward = flag),
       ),
       enemyPlaying: { get: () => this.enemyPlaying },
       replaying: { get: () => this.turns.replaying },
       hidden: { get: () => this.hidden },
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
       noteEvent: (event) => this.noteEvent(event),
@@ -1216,22 +1226,22 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: rw(
         () => this.s,
-        (v) => (this.s = v),
+        (state) => (this.s = state),
       ),
       phase: rw(
         () => this.phase,
-        (v) => (this.phase = v),
+        (kind) => (this.phase = kind),
       ),
       match: { get: () => this.match },
       ended: { get: () => this.ended },
       lab: { get: () => !!this.lab },
       fastForward: rw(
         () => this.fastForward,
-        (v) => (this.fastForward = v),
+        (flag) => (this.fastForward = flag),
       ),
       inputLockUntil: rw(
         () => this.inputLockUntil,
-        (v) => (this.inputLockUntil = v),
+        (value) => (this.inputLockUntil = value),
       ),
       play: (events) => this.playEvents(events),
       wait: (ms) => this.player.wait(ms),
@@ -1241,7 +1251,7 @@ export class GameScene extends Phaser.Scene {
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
-      visible: (p) => this.visibleToPlayer(p),
+      visible: (pos) => this.visibleToPlayer(pos),
       idleUnits: () => this.idleUnits(),
       markSaved: () => {
         this.savedThisGame = true;

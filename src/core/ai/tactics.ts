@@ -1,10 +1,12 @@
 /**
  * Lo que puede hacer la IA con una unidad, paso a paso: retirarse a curarse, atacar (o acercarse),
  * capturar, avanzar y moverse al azar. Cada paso devuelve true si ha usado la unidad.
- * Los usan el turno de la IA (unitTurn) y las ordenes del jugador (commandTurn).
+ * Los usan el turno de la IA (unitTurn) y las ordenes del jugador (standingOrderTurn).
  */
-import { AI, HQ, UNIT } from '../data';
+
+import { tablesOf, weightsOf } from '../gameContent';
 import { diamond, manhattan, samePos } from '../geom';
+import { mapGrid } from '../mapGrid';
 import { canCapture, capture, captureEvent } from '../rules/capture';
 import { attackEvent, canDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { teamsInZone } from '../rules/control';
@@ -13,8 +15,7 @@ import { buildingAt, unitAt } from '../rules/queries';
 import { merge, mergeTargets } from '../rules/transport';
 import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
-import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../types';
-import { cellAt } from '../util/grid';
+import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
 import { bestMoveToward, doMove, repairsHere, stepsFrom, strikeReach, visibleFoes, type AiCtx } from './context';
 import { attackScore, unitValue } from './scoring';
@@ -28,7 +29,7 @@ const HQ_CAPTURE_HEAD_START = 4;
 
 /** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de AI.MAXMERGELIFE. */
 function* mergeWithMate(s: GameState, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
-  const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= AI.MAXMERGELIFE);
+  const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= weightsOf(s).MAXMERGELIFE);
   const nearest = minBy(mates, (mate) => manhattan(unit, mate));
   if (!nearest) return false;
   const path = merge(s, unit, nearest);
@@ -41,7 +42,7 @@ function* mergeWithMate(s: GameState, unit: Unit, range: MoveRange): Generator<G
 /** El edificio propio libre que la repara al que menos pasos hay (null si no llega a ninguno). */
 function nearestRepairBuilding(s: GameState, ai: AiCtx, unit: Unit): Building | null {
   const steps = stepsFrom(s, ai, unit);
-  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building.x, building.y) && steps(building) < Infinity);
+  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps(building) < Infinity);
   return minBy(repairShops, steps);
 }
 
@@ -49,7 +50,7 @@ function nearestRepairBuilding(s: GameState, ai: AiCtx, unit: Unit): Building | 
 export function* retreat(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   if (yield* mergeWithMate(s, unit, range)) return true;
   // [CAMBIO] Si ya esta en un edificio que la repara, se queda (antes se marchaba a otro).
-  if (repairsHere(s, unit, unit.x, unit.y)) {
+  if (repairsHere(s, unit, unit)) {
     wait(unit);
     return true;
   }
@@ -69,11 +70,11 @@ export function* retreat(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange):
  * `chase: false` no persigue a nadie fuera de tiro y `stay` solo dispara desde donde esta.
  */
 export interface AttackOpts {
-  zone?: (t: Unit) => boolean;
+  zone?: (unit: Unit) => boolean;
   chase?: boolean;
   stay?: boolean;
   /** Casillas desde las que puede disparar si se mueve (formacion: sin adelantarse a su escuadra). */
-  from?: (p: Pos) => boolean;
+  from?: (pos: Pos) => boolean;
 }
 
 /** Un disparo posible: desde donde, a quien y cuanto vale. */
@@ -88,7 +89,7 @@ function shotScore(s: GameState, ai: AiCtx, unit: Unit, target: Unit, from: Pos)
   const score = attackScore(s, ai, unit, target, from);
   // [CAMBIO] Fuego concentrado: el objetivo del plan del turno vale mas (lo rematan entre varias).
   const isPlannedTarget = ai.group && ai.plan.get(unit.uid) === target.uid;
-  return isPlannedTarget ? score + AI.FOCUSFIRE * unitValue(target.type) : score;
+  return isPlannedTarget ? score + weightsOf(s).FOCUSFIRE * unitValue(s, target.type) : score;
 }
 
 /**
@@ -99,7 +100,7 @@ function shotScore(s: GameState, ai: AiCtx, unit: Unit, target: Unit, from: Pos)
 function bestShot(s: GameState, ai: AiCtx, unit: Unit, enemies: Unit[], origins: Pos[]): Shot | null {
   const shots = enemies.flatMap((target) =>
     origins
-      .filter((from) => inAttackRange(unit.type, from, target))
+      .filter((from) => inAttackRange(s, unit.type, from, target))
       .map((from) => ({ from, target, score: shotScore(s, ai, unit, target, from) })),
   );
   return maxBy(
@@ -111,7 +112,7 @@ function bestShot(s: GameState, ai: AiCtx, unit: Unit, enemies: Unit[], origins:
 /** Nadie a tiro este turno: acercarse al enemigo visible mas cercano al que pueda danar. */
 function* chaseNearest(s: GameState, ai: AiCtx, unit: Unit, enemies: Unit[], range: MoveRange): Generator<GameEvent, boolean> {
   const prey = minBy(
-    enemies.filter((enemy) => canDamage(unit, enemy)),
+    enemies.filter((enemy) => canDamage(s, unit, enemy)),
     (enemy) => manhattan(unit, enemy),
   );
   if (!prey) return false;
@@ -127,16 +128,16 @@ export function* tryAttack(
   unit: Unit,
   range: MoveRange,
   rng: Rng,
-  opts: AttackOpts = {},
+  options: AttackOpts = {},
 ): Generator<GameEvent, boolean> {
-  const { zone, chase = true, stay = false, from: allowedOrigin } = opts;
+  const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
-  if (!UNIT.canfight[unit.type] || !unit.canFire) return false;
-  const reach = strikeReach(unit);
+  if (!tablesOf(s).UNIT.canfight[unit.type] || !unit.canFire) return false;
+  const reach = strikeReach(s, unit);
   const enemies = visibleFoes(s, ai.me).filter((enemy) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy)));
   if (!enemies.length) return false;
 
-  const shot = bestShot(s, ai, unit, enemies, fireOrigins(unit, stay ? null : range, allowedOrigin));
+  const shot = bestShot(s, ai, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
   if (shot) {
     const ambushed = yield* doMove(s, unit, samePos(shot.from, unit) ? null : shot.from, range);
     if (!ambushed) yield attackEvent(s, unit, shot.target, rng);
@@ -153,7 +154,7 @@ export function* tryAttack(
 /** Capturar el edificio de debajo y avisar a la interfaz. */
 export function* captureHere(s: GameState, unit: Unit): Generator<GameEvent, boolean> {
   if (!canCapture(s, unit)) return false;
-  const building = buildingAt(s, unit.x, unit.y)!;
+  const building = buildingAt(s, unit)!;
   const result = capture(s, unit);
   if (!result) return false;
   yield captureEvent(unit, building, result);
@@ -165,20 +166,20 @@ function captureGoal(s: GameState, ai: AiCtx, unit: Unit): Pos | null {
   const visible = visibility(s, ai.me);
   const steps = stepsFrom(s, ai, unit);
   const isCapturable = (tile: Pos): boolean => {
-    const building = buildingAt(s, tile.x, tile.y);
-    if (!building || building.owner === ai.me || !cellAt(visible, tile)) return false;
-    const occupant = unitAt(s, tile.x, tile.y);
+    const building = buildingAt(s, tile);
+    if (!building || building.owner === ai.me || !visible.at(tile)) return false;
+    const occupant = unitAt(s, tile);
     if (occupant && occupant.team === ai.me) return false;
     return steps(tile) < Infinity;
   };
-  const headStart = (tile: Pos): number => (buildingAt(s, tile.x, tile.y)!.type === HQ ? HQ_CAPTURE_HEAD_START : 0);
-  const candidates = [...diamond(unit, 1, AI.MAXCAPTDIST)].filter(isCapturable);
+  const headStart = (tile: Pos): number => (buildingAt(s, tile)!.type === tablesOf(s).HQ ? HQ_CAPTURE_HEAD_START : 0);
+  const candidates = [...diamond(mapGrid(s), unit, 1, weightsOf(s).MAXCAPTDIST)].filter(isCapturable);
   return minBy(candidates, (tile) => steps(tile) - headStart(tile));
 }
 
 /** Capturar lo de debajo o ir a capturar el edificio ajeno mas cercano (solo las que capturan). */
 export function* tryCapture(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
-  if (!UNIT.cancapt[unit.type]) return false;
+  if (!tablesOf(s).UNIT.cancapt[unit.type]) return false;
   if (yield* captureHere(s, unit)) return true;
   const goal = captureGoal(s, ai, unit);
   if (!goal) return false;
@@ -197,10 +198,10 @@ export function* tryCapture(s: GameState, ai: AiCtx, unit: Unit, range: MoveRang
  */
 function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
-  if (s.controlPoints?.some((point) => samePos(point, goal))) return AI.CONTROLPOINT;
-  const building = buildingAt(s, goal.x, goal.y);
-  if (!building || !UNIT.cancapt[unit.type] || building.owner === null) return 0;
-  return building.type === HQ ? AI.CAPTUREHQ : AI.CAPTUREOWNED;
+  if (s.controlPoints?.some((point) => samePos(point, goal))) return weightsOf(s).CONTROLPOINT;
+  const building = buildingAt(s, goal);
+  if (!building || !tablesOf(s).UNIT.cancapt[unit.type] || building.owner === null) return 0;
+  return building.type === tablesOf(s).HQ ? weightsOf(s).CAPTUREHQ : weightsOf(s).CAPTUREOWNED;
 }
 
 /**
@@ -210,21 +211,21 @@ function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
  */
 function advanceGoals(s: GameState, ai: AiCtx, unit: Unit): Pos[] {
   const visible = visibility(s, ai.me);
-  const isOpenPoint = (point: ControlPoint): boolean =>
-    (point.owner !== ai.me || teamsInZone(s, point).size > 1) && !unitAt(s, point.x, point.y);
+  const isOpenPoint = (point: ControlPoint): boolean => (point.owner !== ai.me || teamsInZone(s, point).size > 1) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
-  if (UNIT.cancapt[unit.type]) return [...s.buildings.filter((building) => building.owner !== ai.me), ...points];
+  if (tablesOf(s).UNIT.cancapt[unit.type]) return [...s.buildings.filter((building) => building.owner !== ai.me), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
-    other.team !== ai.me && other.carrier === null && cellAt(visible, other) && canDamage(unit, other);
-  const isEnemyHq = (building: Building): boolean => building.owner !== ai.me && building.owner !== null && building.type === HQ;
+    other.team !== ai.me && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
+  const isEnemyHq = (building: Building): boolean =>
+    building.owner !== ai.me && building.owner !== null && building.type === tablesOf(s).HQ;
   return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
 }
 
 /** Pasos hasta `goal` o, si no se puede llegar a esa casilla (ocupada), hasta su vecina mas cercana. */
-function stepsToGoalOrNextToIt(steps: (pos: Pos) => number, goal: Pos): number {
+function stepsToGoalOrNextToIt(s: GameState, steps: (pos: Pos) => number, goal: Pos): number {
   const toGoal = steps(goal);
   if (toGoal < Infinity) return toGoal;
-  return Math.min(...[...diamond(goal, 1, 1)].map(steps));
+  return Math.min(...[...diamond(mapGrid(s), goal, 1, 1)].map(steps));
 }
 
 /**
@@ -235,13 +236,13 @@ function stepsToGoalOrNextToIt(steps: (pos: Pos) => number, goal: Pos): number {
 export function* advance(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
   const steps = stepsFrom(s, ai, unit);
   const reachableGoals = advanceGoals(s, ai, unit)
-    .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(steps, goal) }))
+    .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(s, steps, goal) }))
     .filter((option) => option.steps < Infinity);
   const nearest = minBy(reachableGoals, (option) => option.steps - advanceHeadStart(s, unit, option.goal));
   if (!nearest) return false;
   const goal = nearest.goal;
   // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).
-  const wouldBlock = !UNIT.cancapt[unit.type] && !!buildingAt(s, goal.x, goal.y);
+  const wouldBlock = !tablesOf(s).UNIT.cancapt[unit.type] && !!buildingAt(s, goal);
   const destination = bestMoveToward(s, ai, unit, goal, range, wouldBlock);
   if (!destination) return false;
   yield* doMove(s, unit, destination, range);

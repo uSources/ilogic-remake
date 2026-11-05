@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import type { GameState, Pos } from '../core/types';
+import type { GameState, Pos } from '../core/model';
+import { mapGrid } from '../core/mapGrid';
 import type { Anchor } from '../hud/store';
 import { settings } from '../settings';
 import { MapCamera, type ScreenBox } from './map/camera';
@@ -39,7 +40,7 @@ export class MapView {
   /** Marco rojo: eligiendo objetivo de ataque. */
   cursorAttack = false;
   /** La camara de la escena (las pruebas de tests/visual la leen). */
-  readonly cam: Phaser.Cameras.Scene2D.Camera;
+  readonly mainCamera: Phaser.Cameras.Scene2D.Camera;
 
   private readonly root: Phaser.GameObjects.Container;
   private readonly camera: MapCamera;
@@ -68,8 +69,8 @@ export class MapView {
 
   constructor(private readonly scene: Phaser.Scene) {
     MapView.count++;
-    this.cam = scene.cameras.main;
-    this.camera = new MapCamera(this.cam);
+    this.mainCamera = scene.cameras.main;
+    this.camera = new MapCamera(this.mainCamera);
     this.root = scene.add.container(0, 0);
     this.buildings = new BuildingLayer(scene);
     this.terrain = new TerrainLayer(scene, `terrainBake${MapView.count}`, this.buildings);
@@ -95,9 +96,9 @@ export class MapView {
       this.fx,
       this.cursorView,
     ];
-    this.root.add(stack.map((l) => ('object' in l ? l.object : l)));
+    this.root.add(stack.map((line) => ('object' in line ? line.object : line)));
     this.animated = [this.terrain, this.cursorView, this.marks, this.units];
-    this.cam.setBackgroundColor(PAL_CSS.ink);
+    this.mainCamera.setBackgroundColor(PAL_CSS.ink);
     this.camera.apply();
   }
 
@@ -109,13 +110,13 @@ export class MapView {
   }
 
   /** Posicion en pantalla (pixeles del lienzo) del centro de una casilla. */
-  screenOf(p: Pos): { x: number; y: number } {
-    return this.camera.screenOf(p);
+  screenOf(pos: Pos): { x: number; y: number } {
+    return this.camera.screenOf(pos);
   }
 
   /** Rectangulo de una casilla en pixeles CSS de la ventana (para colocar la interfaz HTML). */
-  tileRectCss(p: Pos): Anchor {
-    return this.camera.tileRectCss(p);
+  tileRectCss(pos: Pos): Anchor {
+    return this.camera.tileRectCss(pos);
   }
 
   /** Casilla bajo un punto de la pantalla (null si cae fuera del mapa). */
@@ -123,17 +124,17 @@ export class MapView {
     return this.camera.tileAtScreen(sx, sy);
   }
 
-  centerOn(p: Pos, instant = false): void {
-    this.camera.centerOn(p, instant);
+  centerOn(pos: Pos, instant = false): void {
+    this.camera.centerOn(pos, instant);
   }
 
   /** Desplaza la camara lo justo para que la casilla quede dentro con un margen (en casillas). */
-  ensureVisible(p: Pos, margin = 2, instant = false): void {
-    this.camera.ensureVisible(p, margin, instant);
+  ensureVisible(pos: Pos, margin = 2, instant = false): void {
+    this.camera.ensureVisible(pos, margin, instant);
   }
 
-  isOnScreen(p: Pos, margin = 1): boolean {
-    return this.camera.isOnScreen(p, margin);
+  isOnScreen(pos: Pos, margin = 1): boolean {
+    return this.camera.isOnScreen(pos, margin);
   }
 
   scrollBy(dx: number, dy: number): void {
@@ -146,18 +147,18 @@ export class MapView {
   }
 
   /** La ventana ha cambiado de tamaño: mantener el mismo punto en el centro. */
-  resize(w: number, h: number): void {
-    this.camera.resize(w, h);
+  resize(width: number, height: number): void {
+    this.camera.resize(width, height);
   }
 
   /** Zoom entero por pasos alrededor de un punto de la pantalla. */
-  zoomStep(dir: 1 | -1, sx: number, sy: number): void {
-    this.camera.zoomStep(dir, sx, sy);
+  zoomStep(direction: 1 | -1, sx: number, sy: number): void {
+    this.camera.zoomStep(direction, sx, sy);
   }
 
   /** Casillas dentro de un recuadro de pantalla. */
-  tilesInBox(r: ScreenBox): ScreenBox {
-    return this.camera.tilesInBox(r);
+  tilesInBox(box: ScreenBox): ScreenBox {
+    return this.camera.tilesInBox(box);
   }
 
   // --- Dibujado --------------------------------------------------------------
@@ -169,18 +170,19 @@ export class MapView {
 
   /** Terreno y orillas: solo al empezar la partida (el terreno no cambia). */
   buildTerrain(s: GameState): void {
+    this.camera.showMap(mapGrid(s));
     this.terrain.build(s, this.newArt());
   }
 
   /** Pone al dia edificios, unidades, niebla y resaltados. */
-  render(s: GameState, opts: ViewOptions): void {
+  render(s: GameState, options: ViewOptions): void {
     const newArt = this.newArt();
-    this.buildings.sync(s, opts.vis);
-    this.units.sync(s, opts, newArt);
-    this.fog.sync(opts.vis, newArt);
-    this.flags.sync(opts);
-    this.overlay.draw(opts, { textures: this.scene.textures, newArt });
-    this.marks.set(opts);
+    this.buildings.sync(s, options.vis);
+    this.units.sync(s, options, newArt);
+    this.fog.sync(options.vis, newArt);
+    this.flags.sync(options);
+    this.overlay.draw(options, { textures: this.scene.textures, newArt });
+    this.marks.set(options);
     this.placeCursor();
   }
 
@@ -191,8 +193,8 @@ export class MapView {
   }
 
   /** Recuadro de seleccion (en pixeles de pantalla del lienzo), o null para quitarlo. */
-  setBox(r: ScreenBox | null): void {
-    this.box.set(r);
+  setBox(box: ScreenBox | null): void {
+    this.box.set(box);
   }
 
   placeCursor(visible = true): void {
@@ -214,13 +216,13 @@ export class MapView {
   }
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
-  unitKeyAt(p: Pos): string | null {
-    return this.units.keyAt(p);
+  unitKeyAt(pos: Pos): string | null {
+    return this.units.keyAt(pos);
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
-  face(uid: number, dir: Facing): void {
-    this.units.face(uid, dir);
+  face(uid: number, facing: Facing): void {
+    this.units.face(uid, facing);
   }
 
   facingOf(uid: number, team: 0 | 1): Facing {
@@ -228,21 +230,21 @@ export class MapView {
   }
 
   /** Objeto temporal para animaciones (coordenadas de mundo). */
-  addFx(obj: Phaser.GameObjects.GameObject): void {
-    this.fx.add(obj);
+  addFx(effect: Phaser.GameObjects.GameObject): void {
+    this.fx.add(effect);
   }
 
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
-  ghost(key: string, p: Pos): Phaser.GameObjects.Image {
+  ghost(key: string, pos: Pos): Phaser.GameObjects.Image {
     // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
-    const img = tileImage(this.scene, key, p.x, p.y);
+    const img = tileImage(this.scene, key, pos);
     this.fx.add(img);
     return img;
   }
 
   /** Marca de quemado bajo las unidades: dura hasta el turno siguiente (ver pruneScorch). */
-  scorch(p: Pos, day: number): void {
-    this.decals.scorch(p, day);
+  scorch(pos: Pos, day: number): void {
+    this.decals.scorch(pos, day);
   }
 
   /** Quita las marcas de hace mas de un dia. */

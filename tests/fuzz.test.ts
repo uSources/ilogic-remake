@@ -1,34 +1,30 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_RULES, setMapSize, useRules } from '@core/data';
+
 import { capture, moveUnit, newUnit, captureProgress, endRound } from '@core/rules';
 import { fuzzGame } from '../tools/improve/fuzz';
 import { blankState } from './helpers';
 
-afterEach(() => {
-  setMapSize(32);
-  useRules(DEFAULT_RULES);
-});
+afterEach(() => {});
 
 describe('cazador de fallos', () => {
   // Pocas partidas para que el test sea rapido; npm run fuzz juega cientos.
   it.each([11, 22, 33, 44, 55, 66])('partida %i: ningun invariante roto', (seed) => {
-    const f = fuzzGame(seed, { size: 20, days: 12 });
-    expect(f ? `dia ${f.day} tras "${f.action}": ${f.errors.join('; ')}` : null).toBeNull();
+    const failure = fuzzGame(seed, { size: 20, days: 12 });
+    expect(failure ? `dia ${failure.day} tras "${failure.action}": ${failure.errors.join('; ')}` : null).toBeNull();
   });
 
   it('una captura a medias se pierde al irse la unidad, aunque vuelva (fallo encontrado por el fuzz)', () => {
-    useRules(DEFAULT_RULES);
     const s = blankState();
-    const u = newUnit(s, 0, 0, 5, 5);
-    const b = { type: 0, owner: 1 as const, x: 5, y: 5, capture: null };
-    s.buildings.push(b);
-    expect(capture(s, u)).toBeTruthy();
-    expect(b.capture).toBeTruthy();
+    const unit = newUnit(s, 0, 0, { x: 5, y: 5 });
+    const building = { type: 0, owner: 1 as const, x: 5, y: 5, capture: null };
+    s.buildings.push(building);
+    expect(capture(s, unit)).toBeTruthy();
+    expect(building.capture).toBeTruthy();
     endRound(s);
-    moveUnit(s, u, { x: 6, y: 5 });
-    expect(b.capture).toBeNull();
+    moveUnit(s, unit, { x: 6, y: 5 });
+    expect(building.capture).toBeNull();
     endRound(s);
-    moveUnit(s, u, { x: 5, y: 5 });
-    expect(captureProgress(s, b)).toBeNull();
+    moveUnit(s, unit, { x: 5, y: 5 });
+    expect(captureProgress(s, building)).toBeNull();
   });
 });

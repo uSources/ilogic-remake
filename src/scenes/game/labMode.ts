@@ -5,7 +5,7 @@
 import type Phaser from 'phaser';
 import { seededRng } from '../../core/geom';
 import { attackEvent, moveEvent, moveRange, moveUnit } from '../../core/rules';
-import type { GameEvent, GameState } from '../../core/types';
+import type { GameEvent, GameState } from '../../core/model';
 import { LAB_TARGET, labRange, type LabAction, type LabOptions } from '../../lab';
 import { TILE } from '../../layout';
 import type { MapView } from '../../ui/mapView';
@@ -21,37 +21,37 @@ export interface LabHost {
 }
 
 /** Prepara la camara y, si se pide, lanza la accion al poco de empezar. */
-export function startLab(h: LabHost, o: LabOptions): void {
-  const sc = h.scene;
+export function startLab(host: LabHost, options: LabOptions): void {
+  const scene = host.scene;
   // Camara lenta: todo lo que va por tweens y temporizadores de la escena.
-  const scale = o.slow ? 0.25 : 1;
-  sc.tweens.timeScale = scale;
-  sc.time.timeScale = scale;
-  h.view.cursor = { ...LAB_TARGET };
+  const scale = options.slow ? 0.25 : 1;
+  scene.tweens.timeScale = scale;
+  scene.time.timeScale = scale;
+  host.view.cursor = { ...LAB_TARGET };
   // Mas cerca que en una partida: se ven bien los efectos. Centrado entre las dos unidades.
-  const cam = sc.cameras.main;
-  for (let i = 0; i < 2; i++) h.view.zoomStep(1, cam.width / 2, cam.height / 2);
-  cam.centerOn((LAB_TARGET.x - 1) * TILE, (LAB_TARGET.y + 0.5) * TILE);
-  h.refresh();
-  if (o.play) sc.time.delayedCall(450, () => void runLab(h, o.play!));
+  const camera = scene.cameras.main;
+  for (let i = 0; i < 2; i++) host.view.zoomStep(1, camera.width / 2, camera.height / 2);
+  camera.centerOn((LAB_TARGET.x - 1) * TILE, (LAB_TARGET.y + 0.5) * TILE);
+  host.refresh();
+  if (options.play) scene.time.delayedCall(450, () => void runLab(host, options.play!));
 }
 
-async function runLab(h: LabHost, action: LabAction): Promise<void> {
-  const s = h.state;
-  const me = s.units.find((u) => u.team === 0);
-  const foe = s.units.find((u) => u.team === 1);
+async function runLab(host: LabHost, action: LabAction): Promise<void> {
+  const s = host.state;
+  const me = s.units.find((unit) => unit.team === 0);
+  const foe = s.units.find((unit) => unit.team === 1);
   if (!me || !foe) return;
   if (action === 'move') {
     const range = moveRange(s, me);
-    const dest = { x: LAB_TARGET.x - labRange(me.type), y: LAB_TARGET.y };
+    const dest = { x: LAB_TARGET.x - labRange(s, me.type), y: LAB_TARGET.y };
     const path = moveUnit(s, me, dest, range);
-    if (path) await h.play([moveEvent(me.uid, path)]);
+    if (path) await host.play([moveEvent(me.uid, path)]);
     return;
   }
-  await h.play([attackEvent(s, me, foe, seededRng(3))]);
+  await host.play([attackEvent(s, me, foe, seededRng(3))]);
 }
 
 /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */
-export function restartLab(sc: Phaser.Scene, o: LabOptions): void {
-  sc.scene.start('Game', { mode: 'lab', lab: o } satisfies GameStartData);
+export function restartLab(scene: Phaser.Scene, options: LabOptions): void {
+  scene.scene.start('Game', { mode: 'lab', lab: options } satisfies GameStartData);
 }

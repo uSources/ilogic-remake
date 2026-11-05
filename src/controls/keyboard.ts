@@ -1,5 +1,5 @@
 import { KEY_DOWN, KEY_LEFT, KEY_OK, KEY_RIGHT, KEY_UP } from '../menu/nav';
-import type { GameCommand } from './commands';
+import type { InputCommand } from './inputCommands';
 
 /**
  * Adaptador de teclado: teclas (KeyboardEvent.code) → ordenes del juego. La tabla es la unica fuente
@@ -7,7 +7,7 @@ import type { GameCommand } from './commands';
  */
 export interface KeyBinding {
   codes: readonly string[];
-  command: GameCommand;
+  command: InputCommand;
   /** Solo con Ctrl (o Cmd en Mac). */
   ctrl?: boolean;
   /** [CAMBIO] Solo con Mayusculas (sin esto, Mayusculas da igual: Mayusculas + Enter es aceptar). */
@@ -38,9 +38,9 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
   { codes: ['KeyG'], command: { kind: 'order', order: 'defend' } },
   { codes: ['KeyX'], command: { kind: 'order', order: 'cancel' } },
   // [CAMBIO] Grupos: Ctrl+n lo hace, Mayusculas+n añade, n elige (dos veces: la camara va alli).
-  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'set' }, ctrl: true })),
-  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'add' }, shift: true })),
-  ...DIGITS.map((n): KeyBinding => ({ codes: [`Digit${n}`], command: { kind: 'group', n, mode: 'select' } })),
+  ...DIGITS.map((digit): KeyBinding => ({ codes: [`Digit${digit}`], command: { kind: 'group', n: digit, mode: 'set' }, ctrl: true })),
+  ...DIGITS.map((digit): KeyBinding => ({ codes: [`Digit${digit}`], command: { kind: 'group', n: digit, mode: 'add' }, shift: true })),
+  ...DIGITS.map((digit): KeyBinding => ({ codes: [`Digit${digit}`], command: { kind: 'group', n: digit, mode: 'select' } })),
   { codes: ['Equal', 'NumpadAdd'], command: { kind: 'zoom', dir: 1 } },
   { codes: ['Minus', 'NumpadSubtract'], command: { kind: 'zoom', dir: -1 } },
   { codes: ['KeyH'], command: { kind: 'help' } },
@@ -51,7 +51,7 @@ export const KEY_BINDINGS: readonly KeyBinding[] = [
 export type KeyInput = Pick<KeyboardEvent, 'code' | 'shiftKey' | 'ctrlKey' | 'metaKey' | 'repeat'>;
 
 /** La orden de una pulsacion, o null si la tecla no hace nada en el mapa. */
-export function keyCommand(key: KeyInput): GameCommand | null {
+export function keyCommand(key: KeyInput): InputCommand | null {
   const isCtrl = key.ctrlKey || key.metaKey;
   const matches = (binding: KeyBinding) =>
     binding.codes.includes(key.code) && !!binding.ctrl === isCtrl && (!binding.shift || key.shiftKey);

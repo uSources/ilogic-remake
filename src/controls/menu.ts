@@ -3,7 +3,7 @@ import type { KeyInput } from './keyboard';
 
 /**
  * Ordenes en los menus (inicio, partida nueva, campaña, opciones, notas de parche, ayuda, fin de
- * partida), sin importar de donde vienen. Igual que GameCommand en el mapa: cada mando las produce y
+ * partida), sin importar de donde vienen. Igual que InputCommand en el mapa: cada mando las produce y
  * la escena (o el panel) las cumple con `menu(cmd)`.
  */
 export type MenuCommand =
@@ -21,7 +21,7 @@ export type MenuCommand =
   | { kind: 'reroll' };
 
 /**
- * Donde esta el foco de los mandos. 'map': el mapa (ordenes GameCommand); el resto son menus
+ * Donde esta el foco de los mandos. 'map': el mapa (ordenes InputCommand); el resto son menus
  * (MenuCommand) y cada uno tiene sus teclas. Las escenas lo dicen con `controlContext()`.
  */
 export type MenuContext = 'help' | 'notes' | 'options' | 'home' | 'setup' | 'typing' | 'campaign' | 'end';
@@ -87,7 +87,7 @@ export function menuKeyCommand(key: Pick<KeyInput, 'code' | 'repeat'>, context: 
 }
 
 /** Paso en una lista de una sola dimension: izquierda o arriba es -1, derecha o abajo es +1. */
-export function listStep(cmd: MenuCommand): -1 | 0 | 1 {
-  if (cmd.kind !== 'move') return 0;
-  return cmd.dx || cmd.dy;
+export function listStep(command: MenuCommand): -1 | 0 | 1 {
+  if (command.kind !== 'move') return 0;
+  return command.dx || command.dy;
 }

@@ -1,13 +1,15 @@
 /**
  * Que fabrica la IA en sus edificios al final de su turno.
  */
-import { AI, RULES, UNIT, UNIT_SUPPORT } from '../data';
+
+import { tablesOf, weightsOf } from '../gameContent';
 import { buildingIncome, buyOptions, spawn, upkeepOf, type BuyOption } from '../rules/economy';
 import { teamUnits, unitAt } from '../rules/queries';
-import type { Building, GameEvent, GameState, Rng, Team, Unit } from '../types';
+import type { Building, GameEvent, GameState, Rng, Team, Unit } from '../model';
+import { posOf } from '../geom';
 
-/** Tipos que no combaten ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
-const SUPPORT_TYPES = new Set<number>(UNIT_SUPPORT.flatMap((isSupport, type) => (isSupport ? [type] : [])));
+/** Es de un tipo que no combate ("ai": { "support": true } en units.json): como mucho uno de cada a la vez. */
+const isSupportType = (s: GameState, type: number): boolean => !!tablesOf(s).UNIT_SUPPORT[type];
 
 /** Elige uno al azar con probabilidad proporcional a su peso. */
 export function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: Rng): T {
@@ -46,23 +48,25 @@ function productionOrder(s: GameState, rng: Rng, limited: boolean): Building[] {
       return [building, top >= BIG_UNIT ? BIG_UNIT + rng() : top / BIG_UNIT];
     }),
   );
-  return limited ? [...s.buildings].sort((a, b) => priority.get(b)! - priority.get(a)!) : s.buildings;
+  return limited
+    ? [...s.buildings].sort((firstBuilding, secondBuilding) => priority.get(secondBuilding)! - priority.get(firstBuilding)!)
+    : s.buildings;
 }
 
 /** Lo que gana el bando cada turno: ingresos de sus edificios menos el mantenimiento de sus unidades. */
 function netIncome(s: GameState, me: Team): number {
-  const income = s.buildings.reduce((total, building) => total + (building.owner === me ? buildingIncome(building.type) : 0), 0);
+  const income = s.buildings.reduce((total, building) => total + (building.owner === me ? buildingIncome(s, building.type) : 0), 0);
   return income - upkeepOf(s, me);
 }
 
 /** Lo que se plantea comprar en el edificio: lo que cabe (o se paga) sin repetir unidades de apoyo, e infanteria si faltan. */
 function purchaseOptions(s: GameState, building: Building, mine: Unit[], limited: boolean): BuyOption[] {
   const fits = (option: BuyOption) => (limited ? option.blocked === undefined || option.blocked === 'funds' : option.affordable);
-  const repeatsSupport = (option: BuyOption) => SUPPORT_TYPES.has(option.type) && mine.some((unit) => unit.type === option.type);
+  const repeatsSupport = (option: BuyOption) => isSupportType(s, option.type) && mine.some((unit) => unit.type === option.type);
   const options = buyOptions(s, building).filter((option) => fits(option) && !repeatsSupport(option));
-  const capturers = mine.filter((unit) => UNIT.cancapt[unit.type]).length;
-  const isAffordableCapturer = (option: BuyOption) => UNIT.cancapt[option.type] && option.affordable;
-  if (capturers < AI.MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
+  const capturers = mine.filter((unit) => tablesOf(s).UNIT.cancapt[unit.type]).length;
+  const isAffordableCapturer = (option: BuyOption) => tablesOf(s).UNIT.cancapt[option.type] && option.affordable;
+  if (capturers < weightsOf(s).MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
   return options;
 }
 
@@ -85,18 +89,18 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
  * por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
  */
 export function* produce(s: GameState, me: Team, rng: Rng): Generator<GameEvent> {
-  const limited = RULES.commandPoints !== null;
+  const limited = s.rules.commandPoints !== null;
   const order = productionOrder(s, rng, limited);
   const income = netIncome(s, me);
   for (const building of order) {
     const mine = teamUnits(s, me);
-    if (building.owner !== me || mine.length >= RULES.maxUnits || unitAt(s, building.x, building.y)) continue;
+    if (building.owner !== me || mine.length >= s.rules.maxUnits || unitAt(s, building)) continue;
     const options = purchaseOptions(s, building, mine, limited);
     if (!options.length) continue;
     const purchase = choosePurchase(options, s.funds[me] + income, rng);
     if (purchase === 'save') break;
     if (!purchase) continue;
     const unit = spawn(s, building, purchase.type);
-    if (unit) yield { kind: 'spawn', uid: unit.uid, at: { x: building.x, y: building.y } };
+    if (unit) yield { kind: 'spawn', uid: unit.uid, at: posOf(building) };
   }
 }

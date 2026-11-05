@@ -2,39 +2,56 @@
  * Consultas basicas sobre el estado: que hay en una casilla, por donde se puede andar, de quien es
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
-import { Movement, type MoveType } from '../data';
-import { grid, inBounds } from '../geom';
-import { cellAt, setCell } from '../util/grid';
+import { moveCostFor, walkableFor, type MoveType } from '../content';
+import { tablesOf } from '../gameContent';
+import { createLayer, isOnBoard, terrainAt } from '../mapGrid';
+import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
-import type { Building, GameState, Team, Unit } from '../types';
+import { samePos } from '../geom';
+import type { Building, GameState, Pos, Team, Unit } from '../model';
+
+/** Tipo de movimiento de un tipo de unidad. */
+export function movementOf(s: GameState, unitType: number): MoveType {
+  return tablesOf(s).UNIT.movtype[unitType]!;
+}
+
+/** Ese tipo de movimiento puede pasar por ese terreno. */
+export function canMoveOn(s: GameState, moveType: MoveType, terrain: number): boolean {
+  return walkableFor(tablesOf(s), moveType, terrain);
+}
+
+/** Lo que le cuesta a ese tipo de movimiento entrar en ese terreno (solo cuenta con la regla terrainCost). */
+export function terrainMoveCost(s: GameState, moveType: MoveType, terrain: number): number {
+  return moveCostFor(tablesOf(s), moveType, terrain);
+}
 
 export function unitById(s: GameState, uid: number | null): Unit | undefined {
   return uid === null ? undefined : s.units.find((unit) => unit.uid === uid);
 }
 
 /** Unidad (no transportada) en una casilla. */
-export function unitAt(s: GameState, x: number, y: number): Unit | undefined {
-  return s.units.find((unit) => isOnMap(unit) && unit.x === x && unit.y === y);
+export function unitAt(s: GameState, pos: Pos): Unit | undefined {
+  return s.units.find((unit) => isOnMap(unit) && samePos(unit, pos));
 }
 
-export function buildingAt(s: GameState, x: number, y: number): Building | undefined {
-  return s.buildings.find((building) => building.x === x && building.y === y);
+export function buildingAt(s: GameState, pos: Pos): Building | undefined {
+  return s.buildings.find((building) => samePos(building, pos));
 }
 
 /** Mapa de ocupacion: true donde hay una unidad no transportada. */
-export function occupancy(s: GameState): boolean[][] {
-  const occupied = grid(false);
-  for (const unit of s.units) if (isOnMap(unit)) setCell(occupied, unit, true);
+export function occupancy(s: GameState): Grid<boolean> {
+  const occupied = createLayer(s, false);
+  for (const unit of s.units) if (isOnMap(unit)) occupied.set(unit, true);
   return occupied;
 }
 
-export function canWalk(s: GameState, x: number, y: number, moveType: MoveType): boolean {
-  return inBounds(x, y) && Movement.canWalk(moveType, cellAt(s.map, { x, y }));
+export function canWalk(s: GameState, pos: Pos, moveType: MoveType): boolean {
+  return isOnBoard(s, pos) && canMoveOn(s, moveType, terrainAt(s, pos));
 }
 
 /** Transitable y libre de unidades (amigas o enemigas: no se puede atravesar a nadie). */
-export function isWalkable(s: GameState, x: number, y: number, moveType: MoveType, occ = occupancy(s)): boolean {
-  return canWalk(s, x, y, moveType) && !cellAt(occ, { x, y });
+export function isWalkable(s: GameState, pos: Pos, moveType: MoveType, occ = occupancy(s)): boolean {
+  return canWalk(s, pos, moveType) && !occ.at(pos);
 }
 
 export function teamUnits(s: GameState, team: Team): Unit[] {

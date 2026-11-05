@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
-import type { Pos } from '../../core/types';
+import type { Pos } from '../../core/model';
 import { TILE } from '../../layout';
 import { PAL } from '../palette';
 import { stepOf, type AnimatedLayer, type MapClock, type MapLayer } from './layer';
@@ -31,16 +31,16 @@ export class MapCursor implements MapLayer, AnimatedLayer {
     this.layout(GAP_STILL);
   }
 
-  place(p: Pos, visible: boolean): void {
-    this.object.setPosition(p.x * TILE, p.y * TILE).setVisible(visible);
+  place(pos: Pos, visible: boolean): void {
+    this.object.setPosition(pos.x * TILE, pos.y * TILE).setVisible(visible);
   }
 
   /** Coloca las esquinas `gap` pixeles por fuera de la casilla. */
   private layout(gap: number): void {
     if (gap === this.gap) return;
     this.gap = gap;
-    const c = this.corners[0]!.width;
-    const far = TILE - c + gap;
+    const cornerSize = this.corners[0]!.width;
+    const far = TILE - cornerSize + gap;
     const pos = [
       [-gap, -gap],
       [far, -gap],

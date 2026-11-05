@@ -3,12 +3,13 @@
  * en `src/menu/` con su `...Host`), las opciones, las notas y la ayuda. Detras, una partida IA contra
  * IA o la imagen original.
  */
+import { defaultContent } from '../core/content/default';
+import { rulesWith } from '../core/rulesConfig';
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
-import { useRules } from '../core/data';
-import { missionRules, type MissionDef } from '../core/missions';
-import { deserialize } from '../core/save';
-import type { GameState } from '../core/types';
+import type { MissionDef } from '../core/missions';
+import { loadGame } from '../core/defaultGames';
+import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
@@ -16,10 +17,9 @@ import { HomeScreen, type HomeHost } from '../menu/homeScreen';
 import { LiveBackground } from '../menu/liveBackground';
 import { OptionsPanel } from '../menu/optionsPanel';
 import { isTypingCode, SetupScreen, type SetupHost } from '../menu/setupScreen';
-import { keepMapSize } from '../menu/thumb';
 import { playMusic } from '../music';
 import { checkNotes, closeNotes, notesCommand, notesOpen } from '../patchNotes';
-import { rulesFor } from '../setup';
+import { ruleChangesFor } from '../setup';
 import { settings } from '../settings';
 import { readSave } from '../storage';
 import { terrainPalette } from '../ui/terrainColors';
@@ -84,7 +84,7 @@ export class MenuScene extends Phaser.Scene {
     this.createBackground();
 
     const raw = readSave();
-    this.save = raw ? keepMapSize(() => deserialize(raw)) : null;
+    this.save = raw ? loadGame(raw) : null;
     this.setup.loadOptions();
     this.home.focus = this.save ? 'continue' : 'quick';
     this.optionsPanel = new OptionsPanel(
@@ -98,7 +98,8 @@ export class MenuScene extends Phaser.Scene {
     );
 
     Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions());
-    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null });
+    // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
+    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null, helpRules: rulesWith(defaultContent()) });
     this.home.publish();
     if (data?.open === 'setup') this.openSetup();
 
@@ -123,18 +124,18 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /** Cumplir una orden de menu, venga del mando que venga. */
-  menu(cmd: MenuCommand): void {
+  menu(command: MenuCommand): void {
     if (this.leaving) return;
-    if (ui.get().help) return this.helpCommand(cmd);
-    if (notesOpen()) return notesCommand(cmd);
-    if (this.optionsPanel.isOpen) return this.optionsPanel.command(cmd);
-    if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(cmd) : this.setup.command(cmd);
-    if (this.mode === 'campaign') return this.campaign.command(cmd);
-    this.home.command(cmd);
+    if (ui.get().help) return this.helpCommand(command);
+    if (notesOpen()) return notesCommand(command);
+    if (this.optionsPanel.isOpen) return this.optionsPanel.command(command);
+    if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(command) : this.setup.command(command);
+    if (this.mode === 'campaign') return this.campaign.command(command);
+    this.home.command(command);
   }
 
-  private helpCommand(cmd: MenuCommand): void {
-    if (cmd.kind === 'back' || cmd.kind === 'ok' || cmd.kind === 'help') ui.set({ help: false });
+  private helpCommand(command: MenuCommand): void {
+    if (command.kind === 'back' || command.kind === 'ok' || command.kind === 'help') ui.set({ help: false });
   }
 
   /** Adaptador de teclado: la tecla, en el menu que tiene el foco, es una orden MenuCommand. */
@@ -148,8 +149,8 @@ export class MenuScene extends Phaser.Scene {
 
   private onKey(event: KeyboardEvent): void {
     if (this.leaving) return;
-    const cmd = menuKeyCommand(event, this.controlContext());
-    if (cmd) this.menu(cmd);
+    const command = menuKeyCommand(event, this.controlContext());
+    if (command) this.menu(command);
   }
 
   private publishAll(): void {
@@ -189,7 +190,7 @@ export class MenuScene extends Phaser.Scene {
     const options = this.setup.options;
     this.scene.start('Game', {
       mode: 'new',
-      rules: rulesFor(options),
+      rules: ruleChangesFor(options),
       setup: { seed, size: options.size, theme: options.theme },
       general: options.general,
       enemyGeneral: options.enemyGeneral,
@@ -198,7 +199,6 @@ export class MenuScene extends Phaser.Scene {
 
   private startMission(mission: MissionDef): void {
     this.leaving = true;
-    useRules(missionRules(mission));
     this.scene.start('Game', { mode: 'mission', mission: mission.id });
   }
 

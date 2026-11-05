@@ -1,26 +1,22 @@
-/** Hilo de trabajo: aplica la variante y juega un lote de partidas. */
+/**
+ * Hilo de trabajo: un lote de partidas o la tabla de duelos con el contenido de la variante (los
+ * ficheros que le pasa runner.ts, cargados aqui) y sus reglas (cada partida lleva el suyo: el nucleo
+ * no tiene uno global).
+ */
 import { parentPort, workerData } from 'node:worker_threads';
-import { playGame, type Policy } from './play';
-import { applyVariant, type Variant } from './variant';
+import { loadContent } from '@core/content';
+import { rulesWith } from '@core/rulesConfig';
+import { duelMatrix } from './duel';
+import { playGame } from './play';
+import type { WorkerJob } from './runner';
 
-const data = workerData as {
-  variant: Variant;
-  seeds: number[];
-  maxDays: number;
-  policies: [Policy, Policy];
-  firstTeam?: 0 | 1;
-  swapSides?: boolean;
-  size?: number;
-};
-applyVariant(data.variant);
-for (const seed of data.seeds) {
-  const rec = playGame({
-    seed,
-    maxDays: data.maxDays,
-    policies: data.policies,
-    firstTeam: data.firstTeam,
-    swapSides: data.swapSides,
-    size: data.size,
-  });
-  parentPort!.postMessage(rec);
+const job = workerData as WorkerJob;
+// Los ficheros se vuelven a cargar en el hilo: validados, con todas sus tablas y congelados.
+const content = loadContent(job.files);
+const rules = rulesWith(content);
+
+if (job.kind === 'games') {
+  for (const seed of job.seeds) parentPort!.postMessage(playGame({ ...job.game, seed, rules, content }));
+} else {
+  parentPort!.postMessage(duelMatrix({ ...job.duel, rules, content }));
 }

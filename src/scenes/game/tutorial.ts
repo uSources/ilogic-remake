@@ -3,7 +3,7 @@
  * (`record`) y le pide el panel en cada refresco (`panel`).
  */
 import { missionById } from '../../core/missions';
-import type { GameEvent, GameState } from '../../core/types';
+import type { GameEvent, GameState } from '../../core/model';
 import { objectiveStatus, objectiveText, TUTORIAL } from '../../campaign';
 import type { UIState } from '../../hud/store';
 import { settings } from '../../settings';
@@ -23,34 +23,34 @@ export class TutorialTracker {
   }
 
   /** Un evento del jugador (no del enemigo ni de una repeticion). */
-  record(ev: GameEvent): void {
-    this.events.push(ev);
+  record(event: GameEvent): void {
+    this.events.push(event);
   }
 
   /** Titulo, objetivo y, en el tutorial, el consejo del paso actual (null si no es una mision). */
   panel(s: GameState, phase: Phase): UIState['mission'] {
     const id = s.mission?.id;
-    const m = id ? missionById(id) : undefined;
-    if (!m) return null;
+    const mission = id ? missionById(id) : undefined;
+    if (!mission) return null;
     let tip: string | null = null;
     let step: string | null = null;
-    if (m.tutorial) {
+    if (mission.tutorial) {
       this.advance(s, phase);
-      const st = TUTORIAL[this.step];
-      if (st) {
-        tip = st.text[settings.lang];
+      const tutorialStep = TUTORIAL[this.step];
+      if (tutorialStep) {
+        tip = tutorialStep.text[settings.lang];
         step = `${this.step + 1}/${TUTORIAL.length}`;
       }
     }
-    return { title: m.title[settings.lang], objective: objectiveText(m, s), status: objectiveStatus(s), tip, step };
+    return { title: mission.title[settings.lang], objective: objectiveText(mission, s), status: objectiveStatus(s), tip, step };
   }
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
   private advance(s: GameState, phase: Phase): void {
-    if (this.step === 0 && this.events.length === 0) this.ownedAtStart = s.buildings.filter((b) => b.owner === 0).length;
+    if (this.step === 0 && this.events.length === 0) this.ownedAtStart = s.buildings.filter((building) => building.owner === 0).length;
     for (let guard = 0; guard < TUTORIAL.length; guard++) {
-      const st = TUTORIAL[this.step];
-      if (!st || !st.done({ s, phase, events: this.events, ownedAtStart: this.ownedAtStart })) return;
+      const tutorialStep = TUTORIAL[this.step];
+      if (!tutorialStep || !tutorialStep.done({ s, phase, events: this.events, ownedAtStart: this.ownedAtStart })) return;
       this.step++;
       this.events = [];
     }

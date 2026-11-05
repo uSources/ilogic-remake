@@ -1,18 +1,7 @@
-import { HQ, MAP_H, MAP_W, setMapSize } from '../core/data';
-import type { GameState, Team } from '../core/types';
-import { cells } from '../core/util/grid';
+import { tablesOf } from '../core/gameContent';
+import { mapGrid } from '../core/mapGrid';
+import type { GameState, Team } from '../core/model';
 import { PAL_CSS } from '../ui/palette';
-
-/** Ejecuta algo que cambia el tamaño del mapa global (crear o leer otra partida) y lo deja como estaba. */
-export function keepMapSize<T>(fn: () => T): T {
-  const width = MAP_W;
-  const height = MAP_H;
-  try {
-    return fn();
-  } finally {
-    setMapSize(width, height);
-  }
-}
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
@@ -35,30 +24,30 @@ interface ThumbOptions {
   px?: number;
 }
 
-function drawTerrain(ctx: CanvasRenderingContext2D, s: GameState, palette: number[], px: number): void {
-  for (const { pos, value } of cells(s.map)) {
-    ctx.fillStyle = hex(palette[value] ?? FALLBACK_TERRAIN);
-    ctx.fillRect(pos.x * px, pos.y * px, px, px);
+function drawTerrain(context: CanvasRenderingContext2D, s: GameState, palette: number[], px: number): void {
+  for (const { pos, value } of mapGrid(s).cells()) {
+    context.fillStyle = hex(palette[value] ?? FALLBACK_TERRAIN);
+    context.fillRect(pos.x * px, pos.y * px, px, px);
   }
 }
 
 /** Cada edificio, con el color de su dueño y un borde oscuro; las bases, una casilla mas grandes. */
-function drawBuildings(ctx: CanvasRenderingContext2D, s: GameState, px: number): void {
+function drawBuildings(context: CanvasRenderingContext2D, s: GameState, px: number): void {
   for (const building of s.buildings) {
-    const pad = building.type === HQ ? -1 : 0;
-    ctx.fillStyle = PAL_CSS.ink;
-    ctx.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
-    ctx.fillStyle = ownerColor(building.owner);
-    ctx.fillRect(building.x * px + pad, building.y * px + pad, px - 2 * pad, px - 2 * pad);
+    const pad = building.type === tablesOf(s).HQ ? -1 : 0;
+    context.fillStyle = PAL_CSS.ink;
+    context.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
+    context.fillStyle = ownerColor(building.owner);
+    context.fillRect(building.x * px + pad, building.y * px + pad, px - 2 * pad, px - 2 * pad);
   }
 }
 
-function drawUnits(ctx: CanvasRenderingContext2D, s: GameState, px: number, which: true | 'own'): void {
+function drawUnits(context: CanvasRenderingContext2D, s: GameState, px: number, which: true | 'own'): void {
   const size = Math.max(1, px - 2);
   for (const unit of s.units) {
     if (unit.carrier !== null || (which === 'own' && unit.team !== 0)) continue;
-    ctx.fillStyle = unit.team === 0 ? PLAYER_UNIT_COLOR : ENEMY_UNIT_COLOR;
-    ctx.fillRect(unit.x * px + 1, unit.y * px + 1, size, size);
+    context.fillStyle = unit.team === 0 ? PLAYER_UNIT_COLOR : ENEMY_UNIT_COLOR;
+    context.fillRect(unit.x * px + 1, unit.y * px + 1, size, size);
   }
 }
 
@@ -67,14 +56,14 @@ function drawUnits(ctx: CanvasRenderingContext2D, s: GameState, px: number, whic
  * (las bases mas grandes) y, si se pide, las unidades.
  */
 export function mapThumb(s: GameState, palette: number[], options: ThumbOptions = {}): string {
-  const mapSize = s.map.length;
-  const px = options.px ?? defaultTileSize(mapSize);
+  const map = mapGrid(s);
+  const px = options.px ?? defaultTileSize(map.width);
   const canvas = document.createElement('canvas');
-  canvas.width = mapSize * px;
-  canvas.height = s.map[0]!.length * px;
-  const ctx = canvas.getContext('2d')!;
-  drawTerrain(ctx, s, palette, px);
-  drawBuildings(ctx, s, px);
-  if (options.units) drawUnits(ctx, s, px, options.units);
+  canvas.width = map.width * px;
+  canvas.height = map.height * px;
+  const context = canvas.getContext('2d')!;
+  drawTerrain(context, s, palette, px);
+  drawBuildings(context, s, px);
+  if (options.units) drawUnits(context, s, px, options.units);
   return canvas.toDataURL();
 }

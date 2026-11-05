@@ -12,10 +12,10 @@
  * pasa aqui lo que solo ella sabe (que significa ir a esa casilla con la unidad elegida: `intent`).
  * Añadir una accion es una entrada en ACTIONS y otra en ACTION_RUNNERS; los mandos no cambian.
  */
-import { UNIT } from '../core/data';
+import { canFight, isCapturer } from '../core/util/predicates';
 import { buildingAt } from '../core/rules';
-import { commandChoices, effectiveCommand, squadUnits } from '../core/squads';
-import type { GameState, Pos, Unit } from '../core/types';
+import { standingOrderChoices, effectiveStandingOrder, squadUnits } from '../core/squads';
+import type { GameState, Pos, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
 /** Puntero del raton que anuncia lo que hara el clic derecho (ver ui/cursors.ts). */
@@ -28,10 +28,10 @@ export type ActionId =
   | 'load'
   | 'move'
   | 'go'
-  | 'cmdAttack'
-  | 'cmdCapture'
-  | 'cmdDefend'
-  | 'cmdCancel'
+  | 'orderToAttack'
+  | 'orderToCapture'
+  | 'orderToDefend'
+  | 'cancelOrder'
   | 'squadForm'
   | 'squadLeave'
   | 'squadRename'
@@ -65,7 +65,7 @@ export interface ActionDef {
   smart: boolean;
   /** Pide una casilla (sin ella, el menu de la bandeja la pide despues). */
   needsTile: boolean;
-  ok(ctx: ActionCtx): boolean;
+  ok(context: ActionCtx): boolean;
 }
 
 type ActionEntry = Pick<ActionDef, 'id' | 'label' | 'cursor' | 'ok'>;
@@ -77,17 +77,18 @@ const onTile = (entry: ActionEntry): ActionDef => ({ ...entry, smart: true, need
 const inMenu = (entry: ActionEntry): ActionDef => ({ ...entry, smart: false, needsTile: false });
 
 /** La unica unidad elegida, si se esta moviendo (la escena ha dicho que pasaria en la casilla). */
-const movingUnit = (ctx: ActionCtx): Unit | null => (ctx.units.length === 1 && ctx.intent !== undefined ? ctx.units[0]! : null);
-const isMoving = (ctx: ActionCtx) => movingUnit(ctx) !== null;
-const isGroup = (ctx: ActionCtx) => !isMoving(ctx) && ctx.units.length > 0;
-const anyCanCapture = (units: readonly Unit[]) => units.some((unit) => UNIT.cancapt[unit.type]);
-const anyCanFight = (units: readonly Unit[]) => units.some((unit) => UNIT.canfight[unit.type]);
+const movingUnit = (context: ActionCtx): Unit | null =>
+  context.units.length === 1 && context.intent !== undefined ? context.units[0]! : null;
+const isMoving = (context: ActionCtx) => movingUnit(context) !== null;
+const isGroup = (context: ActionCtx) => !isMoving(context) && context.units.length > 0;
+const anyCanCapture = (context: ActionCtx) => context.units.some((unit) => isCapturer(context.s, unit));
+const anyCanFight = (context: ActionCtx) => context.units.some((unit) => canFight(context.s, unit));
 
 /** La casilla tiene un edificio que no es del jugador y alguna de estas unidades puede capturar. */
-function hasBuildingToCapture(ctx: ActionCtx): boolean {
-  if (!ctx.at) return false;
-  const building = buildingAt(ctx.s, ctx.at.x, ctx.at.y);
-  return !!building && building.owner !== 0 && anyCanCapture(ctx.units);
+function hasBuildingToCapture(context: ActionCtx): boolean {
+  if (!context.at) return false;
+  const building = buildingAt(context.s, context.at);
+  return !!building && building.owner !== 0 && anyCanCapture(context);
 }
 
 /** Escuadra que forman exactamente estas unidades (o null). */
@@ -97,12 +98,12 @@ export function exactSquad(s: GameState, units: readonly Unit[]): number | null 
   return squadUnits(s, id).length === units.length ? id : null;
 }
 
-const isWholeSquad = (ctx: ActionCtx) => exactSquad(ctx.s, ctx.units) !== null;
+const isWholeSquad = (context: ActionCtx) => exactSquad(context.s, context.units) !== null;
 
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
-function canOrder(ctx: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
-  if (ctx.at) return commandChoices(ctx.s, ctx.at, ctx.units, ctx.enemyHere).includes(kind);
-  return kind === 'capture' ? anyCanCapture(ctx.units) : anyCanFight(ctx.units);
+function canOrder(context: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
+  if (context.at) return standingOrderChoices(context.s, context.at, context.units, context.enemyHere).includes(kind);
+  return kind === 'capture' ? anyCanCapture(context) : anyCanFight(context);
 }
 
 /**
@@ -115,65 +116,67 @@ export const ACTIONS: readonly ActionDef[] = [
     id: 'attack',
     label: 'attack',
     cursor: 'attack',
-    ok: (ctx) => (isMoving(ctx) ? ctx.intent === 'attack' : isGroup(ctx) && ctx.enemyHere && anyCanFight(ctx.units)),
+    ok: (context) => (isMoving(context) ? context.intent === 'attack' : isGroup(context) && context.enemyHere && anyCanFight(context)),
   }),
   onTile({
     id: 'capture',
     label: 'capture',
     cursor: 'capture',
-    ok: (ctx) =>
-      isMoving(ctx) ? ctx.intent === 'move' && !!ctx.intentCapture : isGroup(ctx) && !ctx.enemyHere && hasBuildingToCapture(ctx),
+    ok: (context) =>
+      isMoving(context)
+        ? context.intent === 'move' && !!context.intentCapture
+        : isGroup(context) && !context.enemyHere && hasBuildingToCapture(context),
   }),
-  onTile({ id: 'merge', label: 'actMerge', cursor: 'merge', ok: (ctx) => isMoving(ctx) && ctx.intent === 'merge' }),
-  onTile({ id: 'load', label: 'actLoad', cursor: 'load', ok: (ctx) => isMoving(ctx) && ctx.intent === 'load' }),
+  onTile({ id: 'merge', label: 'actMerge', cursor: 'merge', ok: (context) => isMoving(context) && context.intent === 'merge' }),
+  onTile({ id: 'load', label: 'actLoad', cursor: 'load', ok: (context) => isMoving(context) && context.intent === 'load' }),
   onTile({
     id: 'move',
     label: 'actMove',
     cursor: 'move',
-    ok: (ctx) =>
-      isMoving(ctx)
-        ? ctx.intent === 'move' && !ctx.intentCapture
-        : isGroup(ctx) && !!ctx.at && !ctx.enemyHere && !hasBuildingToCapture(ctx),
+    ok: (context) =>
+      isMoving(context)
+        ? context.intent === 'move' && !context.intentCapture
+        : isGroup(context) && !!context.at && !context.enemyHere && !hasBuildingToCapture(context),
   }),
-  onTile({ id: 'go', label: 'goThere', cursor: 'go', ok: (ctx) => isMoving(ctx) && ctx.intent === 'none' && !!ctx.farOk }),
-  inMenu({ id: 'cmdAttack', label: 'cmdAttack', cursor: 'attack', ok: (ctx) => canOrder(ctx, 'attack') }),
-  inMenu({ id: 'cmdCapture', label: 'cmdCapture', cursor: 'capture', ok: (ctx) => canOrder(ctx, 'capture') }),
-  inMenu({ id: 'cmdDefend', label: 'cmdDefend', cursor: 'move', ok: (ctx) => canOrder(ctx, 'defend') }),
+  onTile({ id: 'go', label: 'goThere', cursor: 'go', ok: (context) => isMoving(context) && context.intent === 'none' && !!context.farOk }),
+  inMenu({ id: 'orderToAttack', label: 'orderToAttack', cursor: 'attack', ok: (context) => canOrder(context, 'attack') }),
+  inMenu({ id: 'orderToCapture', label: 'orderToCapture', cursor: 'capture', ok: (context) => canOrder(context, 'capture') }),
+  inMenu({ id: 'orderToDefend', label: 'orderToDefend', cursor: 'move', ok: (context) => canOrder(context, 'defend') }),
   inMenu({
-    id: 'cmdCancel',
-    label: 'cmdCancel',
+    id: 'cancelOrder',
+    label: 'cancelOrder',
     cursor: 'default',
-    ok: (ctx) => ctx.units.some((unit) => !!effectiveCommand(ctx.s, unit)),
+    ok: (context) => context.units.some((unit) => !!effectiveStandingOrder(context.s, unit)),
   }),
-  inMenu({ id: 'squadForm', label: 'squadForm', cursor: 'default', ok: (ctx) => ctx.units.length > 1 && !isWholeSquad(ctx) }),
+  inMenu({ id: 'squadForm', label: 'squadForm', cursor: 'default', ok: (context) => context.units.length > 1 && !isWholeSquad(context) }),
   inMenu({
     id: 'squadLeave',
     label: 'squadLeave',
     cursor: 'default',
-    ok: (ctx) => ctx.units.some((unit) => unit.squad !== undefined) && !isWholeSquad(ctx),
+    ok: (context) => context.units.some((unit) => unit.squad !== undefined) && !isWholeSquad(context),
   }),
   inMenu({ id: 'squadRename', label: 'squadRename', cursor: 'default', ok: isWholeSquad }),
   inMenu({ id: 'squadDisband', label: 'squadDisband', cursor: 'default', ok: isWholeSquad }),
 ];
 
-const isValid = (ctx: ActionCtx, action: ActionDef) => (!action.needsTile || ctx.at !== null) && action.ok(ctx);
+const isValid = (context: ActionCtx, action: ActionDef) => (!action.needsTile || context.at !== null) && action.ok(context);
 
 /** Lo que hace el clic derecho en esa casilla (null: nada, la escena hace lo de siempre). */
-export function smartAction(ctx: ActionCtx): ActionDef | null {
-  if (!ctx.units.length || !ctx.at) return null;
-  return ACTIONS.find((action) => action.smart && isValid(ctx, action)) ?? null;
+export function smartAction(context: ActionCtx): ActionDef | null {
+  if (!context.units.length || !context.at) return null;
+  return ACTIONS.find((action) => action.smart && isValid(context, action)) ?? null;
 }
 
 /** El menu completo: todas las acciones que valen, en orden. */
-export function menuActions(ctx: ActionCtx): ActionDef[] {
-  if (!ctx.units.length) return [];
-  return ACTIONS.filter((action) => isValid(ctx, action));
+export function menuActions(context: ActionCtx): ActionDef[] {
+  if (!context.units.length) return [];
+  return ACTIONS.filter((action) => isValid(context, action));
 }
 
 /** Puntero del raton en esa casilla: el de la accion del clic derecho, o prohibido si no hay ninguna. */
-export function cursorFor(ctx: ActionCtx): CursorKind {
-  if (!ctx.units.length || !ctx.at) return 'default';
-  return smartAction(ctx)?.cursor ?? 'forbidden';
+export function cursorFor(context: ActionCtx): CursorKind {
+  if (!context.units.length || !context.at) return 'default';
+  return smartAction(context)?.cursor ?? 'forbidden';
 }
 
 export const actionById = (id: string): ActionDef | undefined => ACTIONS.find((action) => action.id === id);

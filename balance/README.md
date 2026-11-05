@@ -32,16 +32,18 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
 }
 ```
 
-- **Tablas:**
-  - `UNIT`: coste, movimiento, visión, alcance, combustible, munición…
-  - `POWER`: probabilidad de acierto atacante → defensor.
-  - `BUILDING`: ingresos, curación, protección.
-  - `TERRAIN`: protección…
-  - `RULES`: dinero inicial, límite de unidades, contraataque, azar del daño, modo de captura.
-  - `AI`: umbrales de la IA.
+- **Rutas:** usan los nombres de las tablas de siempre, pero cambian los ficheros de `src/core/content/`;
+  la variante se carga como el contenido del juego (`loadContent`: se valida, se rehacen todas las
+  tablas y se congela), así que un valor imposible para antes de jugar.
+  - `UNIT.<cost|command|mover|vision>.<unidad>`: campos de `units.json` (`mover` es `move`).
+  - `POWER.<atacante>.<defensor>`: probabilidad de acierto (`attack.hitChance`).
+  - `BUILDING.<earning|heals|protection|vision>.<edificio>`.
+  - `TERRAIN.<protection|canbuild|iswater>.<terreno>` y `MOVE_COST.<movimiento>.<terreno>` (`movement` de `terrain.json`; `null` = no se puede pasar).
+  - `RULES.<regla>`: las reglas por defecto de `rules.json` (la variante se juega con `rulesWith(su contenido)`).
+  - `AI.<peso>`: pesos de `ai.json`.
 - **Casillas:** se nombran con los nombres internos (`Tank`, `City`, `Woods`…), con su índice o con `*` para todas.
 - **Valores:** un número fijo, `"x1.1"` (multiplicar), `"+500"` o `"-0.05"`. Precios e ingresos se redondean a 100.
-- **Reglas nuevas:** se añaden a `RULES`, en `src/core/data.ts`, y quedan disponibles para las variantes sin tocar la herramienta.
+- **Reglas nuevas:** se añaden a `rules.json` (y a `RulesConfig`) y quedan disponibles para las variantes sin tocar la herramienta.
 
 ## Qué mide
 

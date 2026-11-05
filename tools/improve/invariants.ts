@@ -3,69 +3,74 @@
  * Las comprueba el cazador de fallos (fuzz.ts) despues de cada accion. Si una falla, es un fallo del
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
-import { BUILDING_TYPES, MAX_FUNDS, MAX_LIFE, RULES, UNIT, UNIT_TYPES, Movement } from '@core/data';
-import { commandUsed } from '@core/rules';
+import { saveContext } from '@core/defaultGames';
+import { MAX_LIFE } from '@core/data';
+import { tablesOf } from '@core/gameContent';
+import { canMoveOn, movementOf, commandUsed } from '@core/rules';
+import { posKey } from '@core/geom';
+import { mapGrid, terrainAt } from '@core/mapGrid';
 import { deserialize, serialize } from '@core/save';
-import type { GameState } from '@core/types';
+import type { GameState } from '@core/model';
 
 export function checkInvariants(s: GameState): string[] {
-  const errs: string[] = [];
-  const W = s.map.length,
-    H = s.map[0]!.length;
+  const { UNIT, UNIT_NAMES, BUILDING_NAMES, MAX_FUNDS } = tablesOf(s);
+  const errors: string[] = [];
+  const map = mapGrid(s);
   const where = new Map<string, number>();
   const uids = new Set<number>();
-  for (const u of s.units) {
-    const id = `unidad ${u.uid}`;
-    if (uids.has(u.uid)) errs.push(`${id}: uid repetido`);
-    uids.add(u.uid);
-    if (!(u.type >= 0 && u.type < UNIT_TYPES)) errs.push(`${id}: tipo ${u.type} no existe`);
-    if (u.x < 0 || u.y < 0 || u.x >= W || u.y >= H) errs.push(`${id}: fuera del mapa (${u.x},${u.y})`);
-    if (!(u.life > 0 && u.life <= MAX_LIFE)) errs.push(`${id}: vida ${u.life} fuera de 1..${MAX_LIFE}`);
-    if (u.cargo.length !== UNIT.maxcarry[u.type]) errs.push(`${id}: carga de tamaño ${u.cargo.length}`);
-    if (u.carrier === null) {
-      const k = `${u.x},${u.y}`;
-      if (where.has(k)) errs.push(`${id}: comparte casilla (${k}) con la unidad ${where.get(k)}`);
-      where.set(k, u.uid);
-      const mt = Movement.of(u.type);
-      if (!Movement.canWalk(mt, s.map[u.x]![u.y]!)) errs.push(`${id}: en un terreno por el que no puede ir (${u.x},${u.y})`);
+  for (const unit of s.units) {
+    const id = `unidad ${unit.uid}`;
+    if (uids.has(unit.uid)) errors.push(`${id}: uid repetido`);
+    uids.add(unit.uid);
+    if (!(unit.type >= 0 && unit.type < UNIT_NAMES.length)) errors.push(`${id}: tipo ${unit.type} no existe`);
+    if (!map.contains(unit)) errors.push(`${id}: fuera del mapa (${unit.x},${unit.y})`);
+    if (!(unit.life > 0 && unit.life <= MAX_LIFE)) errors.push(`${id}: vida ${unit.life} fuera de 1..${MAX_LIFE}`);
+    if (unit.cargo.length !== UNIT.maxcarry[unit.type]) errors.push(`${id}: carga de tamaño ${unit.cargo.length}`);
+    if (unit.carrier === null) {
+      const key = posKey(unit);
+      if (where.has(key)) errors.push(`${id}: comparte casilla (${key}) con la unidad ${where.get(key)}`);
+      where.set(key, unit.uid);
+      if (!canMoveOn(s, movementOf(s, unit.type), terrainAt(s, unit)))
+        errors.push(`${id}: en un terreno por el que no puede ir (${unit.x},${unit.y})`);
     }
   }
-  for (const u of s.units) {
-    if (u.carrier !== null) {
-      const c = s.units.find((v) => v.uid === u.carrier);
-      if (!c) errs.push(`unidad ${u.uid}: su transporte ${u.carrier} no existe`);
-      else if (!c.cargo.includes(u.uid)) errs.push(`unidad ${u.uid}: el transporte ${c.uid} no la lleva`);
-      else if (c.team !== u.team) errs.push(`unidad ${u.uid}: va en un transporte enemigo`);
+  for (const unit of s.units) {
+    if (unit.carrier !== null) {
+      const carrier = s.units.find((other) => other.uid === unit.carrier);
+      if (!carrier) errors.push(`unidad ${unit.uid}: su transporte ${unit.carrier} no existe`);
+      else if (!carrier.cargo.includes(unit.uid)) errors.push(`unidad ${unit.uid}: el transporte ${carrier.uid} no la lleva`);
+      else if (carrier.team !== unit.team) errors.push(`unidad ${unit.uid}: va en un transporte enemigo`);
     }
-    for (const c of u.cargo)
-      if (c !== null && s.units.find((v) => v.uid === c)?.carrier !== u.uid) errs.push(`unidad ${u.uid}: lleva a ${c} que no va dentro`);
+    for (const passengerUid of unit.cargo)
+      if (passengerUid !== null && s.units.find((other) => other.uid === passengerUid)?.carrier !== unit.uid)
+        errors.push(`unidad ${unit.uid}: lleva a ${passengerUid} que no va dentro`);
   }
-  for (const t of [0, 1] as const) {
-    const f = s.funds[t];
-    if (!(Number.isInteger(f) && f >= 0 && f <= MAX_FUNDS)) errs.push(`dinero del bando ${t}: ${f}`);
-    const n = s.units.filter((u) => u.team === t).length;
-    if (n > RULES.maxUnits) errs.push(`bando ${t}: ${n} unidades, el limite es ${RULES.maxUnits}`);
-    const cp = commandUsed(s, t);
-    if (RULES.commandPoints !== null && cp > RULES.commandPoints)
-      errs.push(`bando ${t}: ${cp} puntos de mando, el limite es ${RULES.commandPoints}`);
+  for (const team of [0, 1] as const) {
+    const funds = s.funds[team];
+    if (!(Number.isInteger(funds) && funds >= 0 && funds <= MAX_FUNDS)) errors.push(`dinero del bando ${team}: ${funds}`);
+    const count = s.units.filter((unit) => unit.team === team).length;
+    if (count > s.rules.maxUnits) errors.push(`bando ${team}: ${count} unidades, el limite es ${s.rules.maxUnits}`);
+    const commandPoints = commandUsed(s, team);
+    if (s.rules.commandPoints !== null && commandPoints > s.rules.commandPoints)
+      errors.push(`bando ${team}: ${commandPoints} puntos de mando, el limite es ${s.rules.commandPoints}`);
   }
   const bpos = new Set<string>();
-  for (const b of s.buildings) {
-    const k = `${b.x},${b.y}`;
-    if (bpos.has(k)) errs.push(`dos edificios en (${k})`);
-    bpos.add(k);
-    if (!(b.type >= 0 && b.type < BUILDING_TYPES)) errs.push(`edificio en (${k}): tipo ${b.type}`);
-    if (b.capture) {
-      const cu = s.units.find((u) => u.uid === b.capture!.uid);
-      if (b.capture.left <= 0) errs.push(`edificio en (${k}): captura con ${b.capture.left} puntos`);
-      if (cu && (cu.x !== b.x || cu.y !== b.y) && cu.carrier === null)
-        errs.push(`edificio en (${k}): lo captura la unidad ${cu.uid}, que no esta encima`);
+  for (const building of s.buildings) {
+    const key = posKey(building);
+    if (bpos.has(key)) errors.push(`dos edificios en (${key})`);
+    bpos.add(key);
+    if (!(building.type >= 0 && building.type < BUILDING_NAMES.length)) errors.push(`edificio en (${key}): tipo ${building.type}`);
+    if (building.capture) {
+      const capturer = s.units.find((unit) => unit.uid === building.capture!.uid);
+      if (building.capture.left <= 0) errors.push(`edificio en (${key}): captura con ${building.capture.left} puntos`);
+      if (capturer && (capturer.x !== building.x || capturer.y !== building.y) && capturer.carrier === null)
+        errors.push(`edificio en (${key}): lo captura la unidad ${capturer.uid}, que no esta encima`);
     }
   }
-  if (s.nextUid <= Math.max(0, ...uids)) errs.push(`nextUid ${s.nextUid} no es mayor que los uid usados`);
+  if (s.nextUid <= Math.max(0, ...uids)) errors.push(`nextUid ${s.nextUid} no es mayor que los uid usados`);
   // Guardar y cargar no pierde nada.
-  const back = deserialize(serialize(s));
-  if (!back) errs.push('la partida no se puede volver a cargar (deserialize la rechaza)');
-  else if (serialize(back) !== serialize(s)) errs.push('guardar y cargar cambia la partida');
-  return errs;
+  const back = deserialize(serialize(s), saveContext(s.content));
+  if (!back) errors.push('la partida no se puede volver a cargar (deserialize la rechaza)');
+  else if (serialize(back) !== serialize(s)) errors.push('guardar y cargar cambia la partida');
+  return errors;
 }

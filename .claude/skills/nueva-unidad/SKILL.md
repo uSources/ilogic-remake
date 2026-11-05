@@ -6,8 +6,8 @@ description: Use when adding a new unit or building type to Ilogic or changing w
 # Añadir o cambiar una unidad (o un edificio)
 
 Todo lo de una unidad esta en **`src/core/content/units.json`** (edificios: `buildings.json`). No hay que
-tocar codigo: `src/core/content/index.ts` lo valida y `src/core/data.ts` lo convierte en las tablas por
-indice (`UNIT`, `POWER`, `SPAWNER`...). Guia completa con ejemplo: `docs/CONTENIDO.md`.
+tocar codigo: `src/core/content/index.ts` lo valida y lo convierte en las tablas por indice (`UNIT`,
+`POWER`, `SPAWNER`...), que el codigo lee de cada partida con `tablesOf(s)`. Guia completa con ejemplo: `docs/CONTENIDO.md`.
 
 **El orden de la lista es el numero de tipo** que guardan las partidas: la nueva va **al final**. Nunca
 insertar en medio, reordenar ni borrar (`tests/content.test.ts` lo vigila). El `id` de una existente

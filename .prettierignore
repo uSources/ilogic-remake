@@ -14,3 +14,5 @@ src/ui/sheets.ts
 improve/ai-baseline
 improve/metrics
 improve/baseline.json
+# Partidas guardadas tal cual las escribio el juego (no se formatean)
+tests/fixtures/saves
