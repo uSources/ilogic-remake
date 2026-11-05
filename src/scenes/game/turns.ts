@@ -23,15 +23,14 @@ import {
   moveRange,
   moveUnit,
   stepToward,
-  takesTurn,
-  turnsAfter,
+  othersAfter,
   unitById,
   type RoundReport,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
-import { isHostile, teamState } from '../../core/teams';
+import { isAiControlled, isHostile, teamState } from '../../core/teams';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
@@ -109,8 +108,8 @@ function unitWithSquad(s: GameState, unit: Unit): string {
  * una sola; varias, fase 4) y se dice en vez de jugarlo por ella.
  */
 export function checkPlayedByAi(s: GameState, team: TeamId): void {
-  const controller = teamState(s, team).controller;
-  if (controller !== 'ai') throw new Error(`El equipo ${team} lo juega '${controller}': en esta pantalla solo juega una persona`);
+  if (!isAiControlled(s, team))
+    throw new Error(`El equipo ${team} lo juega '${teamState(s, team).controller}': en esta pantalla solo juega una persona`);
 }
 
 export class TurnFlow {
@@ -267,19 +266,17 @@ export class TurnFlow {
 
   /**
    * Los turnos de los demas equipos, por su orden en la partida, con el fin de ronda entre el ultimo
-   * y el primero (`turnsAfter`). Un equipo ya derrotado no juega (con 3 o mas, la partida sigue sin
-   * el). Devuelve el informe de la ronda, o null si `playTeam` dice que hay que parar.
+   * y el primero (`othersAfter`, del nucleo: un equipo ya derrotado no juega). Devuelve el informe de la ronda, o null si `playTeam` dice que hay que parar.
    */
   private async playRoundOfOthers(
     playTeam: (team: TeamId) => Promise<boolean>,
     closeRound: () => RoundReport,
   ): Promise<RoundReport | null> {
-    const host = this.host;
-    const { thisRound, nextRound } = turnsAfter(host.state, host.viewer);
-    const playIfStanding = (team: TeamId) => (takesTurn(host.state, team) ? playTeam(team) : Promise.resolve(true));
-    for (const team of thisRound) if (!(await playIfStanding(team))) return null;
-    const report = closeRound();
-    for (const team of nextRound) if (!(await playIfStanding(team))) return null;
+    let report: RoundReport | null = null;
+    for (const step of othersAfter(this.host.state, this.host.viewer)) {
+      if (step.kind === 'roundEnd') report = closeRound();
+      else if (!(await playTeam(step.team))) return null;
+    }
     return report;
   }
 

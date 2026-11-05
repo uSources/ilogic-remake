@@ -9,6 +9,7 @@ import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
 import type { MissionDef } from '../core/missions';
 import { loadGame } from '../core/defaultGames';
+import { isPlayableOnOneScreen } from '../core/teams';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
@@ -84,7 +85,9 @@ export class MenuScene extends Phaser.Scene {
     this.createBackground();
 
     const raw = readSave();
-    this.save = raw ? loadGame(raw) : null;
+    const save = raw ? loadGame(raw) : null;
+    // Solo se ofrece continuar una partida que se puede jugar aqui (una persona: isPlayableOnOneScreen).
+    this.save = save && isPlayableOnOneScreen(save) ? save : null;
     this.setup.loadOptions();
     this.home.focus = this.save ? 'continue' : 'quick';
     this.optionsPanel = new OptionsPanel(

@@ -13,7 +13,7 @@ import { entryOf, MoveType, type GameContent, type UnitType } from './core/conte
 import { unitTypeOf } from './core/gameContent';
 import { maxBy } from './core/util/pick';
 import type { GameState, RulesConfig, Unit } from './core/model';
-import { teamIds } from './core/teams';
+import { duelTeams } from './core/teams';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];
@@ -75,16 +75,16 @@ export function labState(options: LabOptions, action: LabAction | null): GameSta
     ],
   });
   const hq = content.hq.id;
-  const [person, enemy] = teamIds(s);
+  const [person, enemy] = duelTeams(s);
   s.buildings.push(
-    { type: hq, owner: person!, x: 0, y: LAB_SIZE - 1, capture: null },
-    { type: hq, owner: enemy!, x: LAB_SIZE - 1, y: 0, capture: null },
+    { type: hq, owner: person, x: 0, y: LAB_SIZE - 1, capture: null },
+    { type: hq, owner: enemy, x: LAB_SIZE - 1, y: 0, capture: null },
   );
   const attackerType = entryOf(content.units, options.attacker, 'unidad');
   const near = action !== null && action !== 'move';
   const from = near ? { x: LAB_TARGET.x - (attackerType.attack?.minRange ?? 1), y: LAB_TARGET.y } : LAB_FROM;
-  newUnit(s, attackerType, person!, from);
-  const defender = newUnit(s, entryOf(content.units, options.defender, 'unidad'), enemy!, LAB_TARGET);
+  newUnit(s, attackerType, person, from);
+  const defender = newUnit(s, entryOf(content.units, options.defender, 'unidad'), enemy, LAB_TARGET);
   if (action === 'kill') defender.life = 15;
   return s;
 }

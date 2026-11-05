@@ -3,7 +3,7 @@
  * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
 import { appointGeneral } from '../../core/generals';
-import { duel, playerTeam, teamIds, teamsControlledBy } from '../../core/teams';
+import { duel, duelTeams, isPlayableOnOneScreen, playerTeam, teamsControlledBy } from '../../core/teams';
 import { seededRng } from '../../core/geom';
 import { defaultContent } from '../../core/content/default';
 import { createGame, loadGame } from '../../core/defaultGames';
@@ -32,24 +32,22 @@ const DEFAULT_MAP_SIZE = 32;
 
 export function startMatch(data: GameStartData): MatchStart {
   const lab = data.mode === 'lab' ? (data.lab ?? defaultLab()) : null;
-  const saved = playableHere(data.mode === 'load' ? readSavedGame() : null);
-  const given = playableHere(data.mode === 'state' && data.state ? loadGame(data.state) : null);
+  const saved = onlyIfPlayable(data.mode === 'load' ? readSavedGame() : null);
+  const given = onlyIfPlayable(data.mode === 'state' && data.state ? loadGame(data.state) : null);
   const loaded = saved ?? given;
   const corruptSave = (data.mode === 'load' || data.mode === 'state') && !loaded;
-  if (corruptSave) deleteSave();
+  // Solo se borra el guardado si lo que no se ha podido abrir era el guardado (no una partida de depuracion).
+  if (corruptSave && data.mode === 'load') deleteSave();
   const state = lab ? labMatch(lab) : loaded ? loaded : (missionMatch(data) ?? newMatch(data));
   ensureWeather(state);
   return { state, viewer: viewerOf(state), lab, fromSave: !!saved, corruptSave };
 }
 
-/** En esta pantalla juega una sola persona: una partida con mas equipos de personas no se puede jugar aqui. */
-export const isPlayableHere = (state: GameState): boolean => teamsControlledBy(state, 'human').length <= 1;
-
 /**
- * Una partida guardada o preparada que no se puede jugar en esta pantalla (varias personas: fase 4)
- * cuenta como dañada: no se abre, se borra el guardado y se empieza otra.
+ * La partida leida, o null si no se puede jugar en una pantalla (varias personas: fase 4,
+ * isPlayableOnOneScreen): entonces cuenta como dañada y se empieza otra.
  */
-const playableHere = (state: GameState | null): GameState | null => (state && isPlayableHere(state) ? state : null);
+const onlyIfPlayable = (state: GameState | null): GameState | null => (state && isPlayableOnOneScreen(state) ? state : null);
 
 /**
  * El equipo que mira la pantalla: el de la persona. En esta pantalla juega una sola persona; una
@@ -59,8 +57,8 @@ const playableHere = (state: GameState | null): GameState | null => (state && is
  * miran el controller y los demas siguen siendo de la IA.
  */
 export function viewerOf(state: GameState): TeamId {
-  const people = teamsControlledBy(state, 'human');
-  if (people.length > 1) throw new Error(`La partida tiene ${people.length} equipos de personas: en esta pantalla solo juega una`);
+  if (!isPlayableOnOneScreen(state))
+    throw new Error(`La partida tiene ${teamsControlledBy(state, 'human').length} equipos de personas: en esta pantalla solo juega una`);
   return playerTeam(state);
 }
 
@@ -92,8 +90,8 @@ function newMatch(data: GameStartData): GameState {
     teams: duel('human', 'ai'),
   });
   state.setup = setup;
-  const [person, enemy] = teamIds(state);
-  appointGeneral(state, person!, data.general);
-  appointGeneral(state, enemy!, data.enemyGeneral);
+  const [person, enemy] = duelTeams(state);
+  appointGeneral(state, person, data.general);
+  appointGeneral(state, enemy, data.enemyGeneral);
   return state;
 }

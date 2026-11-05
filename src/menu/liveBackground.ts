@@ -3,9 +3,9 @@ import { aiTurn } from '../core/ai';
 import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
-import { endRound, isMatchOver, takesTurn } from '../core/rules';
+import { endRound, isMatchOver, othersAfter } from '../core/rules';
 import { duel, teamIds } from '../core/teams';
-import type { GameEvent, GameState, Pos } from '../core/model';
+import type { GameEvent, GameState, Pos, TeamId } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
@@ -47,6 +47,18 @@ function isInVisibleBand(screen: Pos, width: number, height: number): boolean {
 }
 
 /**
+ * El siguiente equipo que juega tras `team` (othersAfter), con el fin de ronda si toca por el camino;
+ * null si no queda ninguno.
+ */
+function nextTeam(s: GameState, team: TeamId): TeamId | null {
+  for (const step of othersAfter(s, team)) {
+    if (step.kind === 'team') return step.team;
+    endRound(s);
+  }
+  return null;
+}
+
+/**
  * Fondo del menu: una partida IA contra IA en directo, sin niebla. Cada accion se anima y la camara
  * la sigue por un lateral (el centro lo tapan las tarjetas). Al acabar una partida empieza otra.
  * La escena llama a start() al crearse, a tick() en update() y a destroy() al cerrarse.
@@ -55,8 +67,8 @@ export class LiveBackground {
   private game: GameState | null = null;
   private view: MapView | null = null;
   private events: Generator<GameEvent> | null = null;
-  /** A quien le toca, por su orden en la partida (los equipos juegan uno tras otro). */
-  private turn = 0;
+  /** El equipo al que le toca (null sin partida). */
+  private team: TeamId | null = null;
   private rng = seededRng(1);
   /** Cambia al empezar o parar: el bucle anterior se da cuenta y termina. */
   private token = 0;
@@ -95,7 +107,7 @@ export class LiveBackground {
     this.view.centerOn(firstBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
-    this.turn = 0;
+    this.team = first;
     this.events = aiTurn(this.game, this.rng, first);
     this.render();
     void this.loop();
@@ -150,13 +162,10 @@ export class LiveBackground {
    * acabado, otra nueva.
    */
   private async nextTurn(s: GameState): Promise<void> {
-    const order = teamIds(s);
-    do {
-      this.turn = (this.turn + 1) % order.length;
-      if (this.turn === 0) endRound(s);
-    } while (!takesTurn(s, order[this.turn]!) && !isMatchOver(s));
-    if (isMatchOver(s) || s.day > MAX_DAYS) return this.start();
-    this.events = aiTurn(s, this.rng, order[this.turn]!);
+    const next = this.team === null ? null : nextTeam(s, this.team);
+    if (next === null || isMatchOver(s) || s.day > MAX_DAYS) return this.start();
+    this.team = next;
+    this.events = aiTurn(s, this.rng, next);
     await this.pause(BETWEEN_TURNS_MS);
   }
 
