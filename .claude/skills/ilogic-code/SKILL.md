@@ -56,8 +56,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `s.content` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
   etiquetas), `defaultContent()`. El codigo no compara nombres de unidades (`'Tank'`): si necesita
   saber algo de una, es un campo del JSON.
-- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `movementOf(s, u.type)`,
-  `canMoveOn(s, mt, t)`, `terrainMoveCost(s, mt, t)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
+- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT`, `TerrainType.WOODS`, `movementOf(s, unit.type)`,
+  `canMoveOn(s, moveType, terrain)`, `terrainMoveCost(s, moveType, terrain)` (nada de `UNIT.movtype[...]` ni `0` para "a pie").
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
