@@ -92,8 +92,9 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   unidad en otra casilla tambien lo dice el nucleo (`targetProblem`, `canCaptureAt`).
 - Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
-  siguiente (solo 'move' la deja abierta: `keepsUndoWindow` en su entrada del registro; dispatch la
-  cierra tras las demas) o hasta que su unidad deja de estar recien movida (la invariante
+  siguiente (solo las que mueven la dejan abierta: `keepsUndoWindow` en su entrada del registro;
+  dispatch la cierra tras las demas con `closeUndoWindow`, de `rules/lastMove.ts`, donde esta tambien
+  por que no se puede deshacer) o hasta que su unidad deja de estar recien movida (la invariante
   `undoWindow`: el fin de ronda, si cae). Si al moverse descubrio enemigos
   (`lastMove.revealed`), no se deshace (`'revealed'`): con niebla seria mirar gratis. «Atras» del
   menu de la unidad solo manda `undoMove` (y avisa si el nucleo dice `'revealed'`). Ctrl+Z todavia
@@ -101,6 +102,12 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   si `undoMove` valdria en ese momento, y la vacia con cualquier suceso fuera de `KEEPS_UNDO`
   (`GameScene.ts`); al deshacer, vuelve a esa copia. Juntar los dos en un solo deshacer del nucleo es
   de la fase 4.
+- Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»): 'travel' pone o quita el destino (solo
+  a una casilla que la unidad pueda pisar) y 'travelStep' da el paso de cada turno, hacia la casilla
+  del alcance que mas acerca (`stepToward`). Si ya llega este turno, el viaje acaba sin moverla (el
+  ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); al llegar o con una emboscada,
+  tambien acaba. Moverla a mano ('move') lo cancela. Cada fin de viaje tiene su suceso 'travel' con
+  `to: null`. La escena solo manda 'travelStep' al empezar el turno y al dar la orden.
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en

@@ -11,21 +11,9 @@ import { unitTypeOf } from '../../core/gameContent';
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
-import { samePos, posOf } from '../../core/geom';
+import { posOf } from '../../core/geom';
 import { seededRng } from '../../core/util/random';
-import {
-  canCapture,
-  canReach,
-  endRound,
-  roundReport,
-  endsInAmbush,
-  moveRange,
-  stepToward,
-  othersAfter,
-  unitById,
-  type RoundReport,
-  canStillMove,
-} from '../../core/rules';
+import { canCapture, endRound, roundReport, othersAfter, unitById, type RoundReport, canStillMove } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import { squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
@@ -381,29 +369,16 @@ export class TurnFlow {
   }
 
   /**
-   * Un turno de camino hacia el destino del viaje, que acaba al llegar o si le tienden una
-   * emboscada. Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno
-   * en las ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
+   * El paso de este turno del viaje (la accion 'travelStep': el nucleo decide hasta donde y cuando
+   * acaba). Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno en las
+   * ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
    */
   private async advanceTravel(unit: Unit): Promise<boolean> {
     const host = this.host;
-    const goal = unit.travelTo!;
-    const stopTravel = () => host.act({ kind: 'travel', uid: unit.uid, to: null });
-    if (samePos(unit, goal)) {
-      stopTravel();
-      return false;
-    }
-    const range = moveRange(host.state, unit);
-    if (canReach(range, goal)) {
-      stopTravel();
-      return true;
-    }
-    const destination = stepToward(host.state, unit, goal, range);
-    if (!destination) return false;
-    const moved = host.act({ kind: 'move', uid: unit.uid, to: destination });
-    if (!moved) return false;
-    await host.play(moved);
-    if (samePos(unit, goal) || endsInAmbush(moved)) stopTravel();
+    const events = host.act({ kind: 'travelStep', uid: unit.uid });
+    if (!events) return false;
+    if (!events.some((event) => event.kind === 'move')) return true;
+    await host.play(events);
     return false;
   }
 

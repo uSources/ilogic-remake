@@ -103,6 +103,30 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expect(canCaptureAt(s, tank, { x: 9, y: 9 })).toBe(false);
   });
 
+  it('un viaje avanza con travelStep: se acerca, acaba al llegar y moverla a mano lo cancela', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    expectRejected(s, 0, { kind: 'travelStep', uid: soldier.uid }, 'noTravel');
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    const [step] = act(s, 0, { kind: 'travelStep', uid: soldier.uid });
+    expect(step?.kind).toBe('move');
+    expect(soldier.y).toBeGreaterThan(2);
+    expect(soldier.travelTo).toEqual({ x: 2, y: 20 });
+    // Si ya llega este turno, el viaje acaba sin moverla: el ultimo trozo lo hace quien juega.
+    endRound(s);
+    soldier.y = 19;
+    expect(act(s, 0, { kind: 'travelStep', uid: soldier.uid })).toEqual([{ kind: 'travel', actor: 0, uid: soldier.uid, to: null }]);
+    expect([soldier.y, soldier.travelTo]).toEqual([19, undefined]);
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 30 } });
+    expect(act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 20 } })[0]).toEqual({
+      kind: 'travel',
+      actor: 0,
+      uid: soldier.uid,
+      to: null,
+    });
+    expect(soldier.travelTo).toBeUndefined();
+  });
+
   it('un viaje: solo desde el mapa y hacia una casilla que la unidad pueda pisar', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });

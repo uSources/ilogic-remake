@@ -9,7 +9,7 @@ import { pruneSquads, squadRemovedEvent } from '../squads/membership';
 import { dropStaleCaptures } from './capture';
 import { capFunds } from './funds';
 import { removeDead } from './lifecycle';
-import { unitById } from './queries';
+import { dropStaleLastMove } from './lastMove';
 import type { GameEvent, GameState } from '../model';
 
 export interface Invariant {
@@ -20,13 +20,6 @@ export interface Invariant {
    * ha cambiado (pasajeros que caen, dinero perdido por el tope), que van detras de los de la accion.
    */
   restore(s: GameState): GameEvent[];
-}
-
-/** El ultimo movimiento solo se puede deshacer mientras su unidad sigue ahi y no ha hecho nada mas. */
-function dropStaleLastMove(s: GameState): GameEvent[] {
-  const lastMove = s.lastMove;
-  if (lastMove && unitById(s, lastMove.uid)?.turnState !== 'moved') delete s.lastMove;
-  return [];
 }
 
 /** En orden: quitar una unidad puede dejar una captura sin nadie o una escuadra vacia. */

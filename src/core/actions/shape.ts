@@ -47,6 +47,7 @@ export const ACTION_SHAPES: { readonly [K in GameActionKind]: ShapeOf<K> } = {
   buy: { at: isPos, unitType: isText },
   usePower: { power: isText, target: isPosOrNull },
   travel: { uid: isUid, to: isPosOrNull },
+  travelStep: unitOnly,
   giveStandingOrder: { uids: isUidList, order: isStandingOrder },
   cancelStandingOrder: unitList,
   finishStandingOrder: unitOnly,

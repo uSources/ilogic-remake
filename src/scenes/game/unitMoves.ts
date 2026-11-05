@@ -6,7 +6,7 @@ import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { actionProblem, availableActions, groupMoveOrder, groupMoveStep, isValidAction, type UnitMenuOption } from '../../core/actions';
 import { samePos, posOf } from '../../core/geom';
-import { canCapture, canStillMove, endsInAmbush, moveRange, stepToward, unitById } from '../../core/rules';
+import { canCapture, canStillMove, endsInAmbush, unitById } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showToast } from '../../hud/store';
@@ -116,7 +116,6 @@ export class UnitMoves {
     if (!session?.range || this.host.phase !== 'move') return;
     const unit = session.unit;
     const intent = this.intentAt(tile);
-    if (intent.kind !== 'none' && intent.kind !== 'stay') this.stopTravelByHand(unit);
     switch (intent.kind) {
       case 'none':
         return this.host.toMap();
@@ -186,22 +185,25 @@ export class UnitMoves {
     host.openUnitMenu();
   }
 
-  /** Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
+  /**
+   * Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al
+   * empezar ('travelStep': hasta donde, y cuando acaba, lo dice el nucleo).
+   */
   async giveTravel(unit: Unit, goal: Pos): Promise<void> {
     const host = this.host;
-    const dest = stepToward(host.state, unit, goal, this.session?.range ?? moveRange(host.state, unit));
-    if (!dest) {
+    this.clearUndo();
+    host.act({ kind: 'travel', uid: unit.uid, to: goal });
+    const step = { kind: 'travelStep', uid: unit.uid } as const;
+    if (!isValidAction(host.state, host.viewer, step)) {
+      host.act({ kind: 'travel', uid: unit.uid, to: null });
       showToast(t('travelUnreachable'));
       return host.toMap();
     }
-    this.clearUndo();
-    host.act({ kind: 'travel', uid: unit.uid, to: goal });
     showToast(t('travelSet'));
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
-    const moved = host.act({ kind: 'move', uid: unit.uid, to: dest });
+    const moved = host.act(step);
     if (this.session) this.session.range = null;
     if (moved) await host.play(moved, ghost);
-    if (samePos(unit, goal) || (moved && endsInAmbush(moved))) host.act({ kind: 'travel', uid: unit.uid, to: null });
     host.toMap();
   }
 
@@ -216,16 +218,10 @@ export class UnitMoves {
       // Cada paso con el mapa como lo han dejado las de antes.
       const step = groupMoveStep(host.state, unit, goal);
       if (!step) continue;
-      this.stopTravelByHand(unit);
       await host.perform(step);
       if (host.ended) return;
     }
     host.toMap();
-  }
-
-  /** Moverla a mano cancela su viaje de varios turnos (travelTo). */
-  private stopTravelByHand(unit: Unit): void {
-    if (unit.travelTo) this.host.act({ kind: 'travel', uid: unit.uid, to: null });
   }
 
   waitSelected(): void {

@@ -9,7 +9,7 @@ import { diceOf } from '../dice';
 import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 import { guardProblem } from './guards';
 import { restoreInvariants } from '../rules/invariants';
-import { closeUndoWindow } from './movement';
+import { closeUndoWindow } from '../rules/lastMove';
 import { ACTIONS } from './registry';
 import type { ActionDefinition } from './types';
 

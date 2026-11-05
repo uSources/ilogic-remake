@@ -29,6 +29,11 @@ export type GameAction =
   | { kind: 'usePower'; power: string; target: Pos | null }
   /** Viaje de varios turnos hacia `to` (null: dejar de viajar). */
   | { kind: 'travel'; uid: number; to: Pos | null }
+  /**
+   * El paso de este turno del viaje de la unidad: hacia su destino lo que pueda; si ya llega este
+   * turno, el viaje acaba sin moverla (el ultimo trozo lo hace quien juega).
+   */
+  | { kind: 'travelStep'; uid: number }
   | { kind: 'giveStandingOrder'; uids: number[]; order: StandingOrder }
   | { kind: 'cancelStandingOrder'; uids: number[] }
   /** La unidad ha cumplido la orden que seguia (la decide quien la cumple: ver ai/standingOrders.ts). */
@@ -67,6 +72,8 @@ export type ActionRejection =
   | 'unreachable'
   /** Deshacer: no es su ultimo movimiento, o ya ha hecho algo despues. */
   | 'nothingToUndo'
+  /** Un paso de viaje para una unidad que no viaja. */
+  | 'noTravel'
   /** Deshacer: el movimiento descubrio enemigos (con niebla, volver atras seria mirar gratis). */
   | 'revealed'
   /** El objetivo no se puede atacar: no es enemigo, no se ve, esta lejos o no le hace nada. */

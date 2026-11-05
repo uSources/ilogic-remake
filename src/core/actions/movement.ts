@@ -1,12 +1,13 @@
 /** Acciones de moverse: ir a una casilla este turno y el viaje de varios turnos. */
 import { isOnBoard } from '../mapGrid';
-import { posOf } from '../geom';
-import { followPath, moveEvent, plannedPath } from '../rules/movement';
-import { buildingAt, canWalk, movementOf, unitAt } from '../rules/queries';
+import { posOf, samePos } from '../geom';
+import { canReach, followPath, moveEvent, moveRange, plannedPath, stepToward, type MovePath } from '../rules/movement';
+import { buildingAt, canWalk, movementOf } from '../rules/queries';
 import { captureProgress } from '../rules/capture';
+import { checkedLastMove, closeUndoWindow, openUndoWindow, undoWindowProblem } from '../rules/lastMove';
 import { readyUnit } from '../rules/unitTurn';
 import { visibleEnemies } from '../rules/visibility';
-import type { ActionRejection, GameState, LastMove, TeamId, Unit } from '../model';
+import type { GameEvent, GameState, LastMove, Pos, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit, ownUnitOnMapProblem, ownUnitProblem } from './checks';
 import type { ActionRegistry } from './types';
 
@@ -17,48 +18,64 @@ function ownCaptureHere(s: GameState, unit: Unit): LastMove['capture'] {
   return progress && progress.uid === unit.uid ? { ...progress } : null;
 }
 
+/** El camino de una accion de mover ya comprobada (si no lo hay, es un fallo del registro). */
+function checkedPath(path: Pos[] | null): Pos[] {
+  if (!path) throw new Error('Un movimiento ya comprobado sin camino');
+  return path;
+}
+
 /**
- * Por que no se puede deshacer ahora el movimiento de `uid`: tiene que ser lo ultimo hecho, no haber
- * descubierto a nadie y su casilla seguir libre.
+ * La unidad recorre el camino y lo deja apuntado para deshacerlo (con la captura que pierde al irse
+ * y si ha descubierto a alguien). Con emboscada no hay vuelta atras: ya ha gastado su turno.
  */
-function undoProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
-  return actorProblem(s, team, uid, (unit) => {
-    const lastMove = s.lastMove;
-    if (!lastMove || lastMove.uid !== uid || unit.turnState !== 'moved') return 'nothingToUndo';
-    if (lastMove.revealed) return 'revealed';
-    return unitAt(s, lastMove.from) ? 'occupied' : null;
-  });
+function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[]): MovePath {
+  const from = posOf(unit);
+  const capture = ownCaptureHere(s, unit);
+  const seenBefore = visibleEnemies(s, team);
+  const walked = followPath(s, unit, path);
+  const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
+  if (walked.ambush) closeUndoWindow(s);
+  else openUndoWindow(s, { uid: unit.uid, from, capture, revealed });
+  return walked;
 }
 
-/** Ya no se puede deshacer el ultimo movimiento (ver ActionDefinition.keepsUndoWindow). */
-export function closeUndoWindow(s: GameState): void {
-  delete s.lastMove;
+/** El suceso de que la unidad deja de viajar (llega, la paran o se le quita el viaje). */
+const travelEnds = (team: TeamId, unit: Unit): GameEvent => ({ kind: 'travel', actor: team, uid: unit.uid, to: null });
+
+/**
+ * El paso de este turno de un viaje de varios turnos (travelTo): si ya esta o llega este turno, el
+ * viaje acaba sin moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); si
+ * no, la casilla del alcance que mas acerca (stepToward). Null si no hay viaje o no se acerca.
+ */
+function travelStepOf(s: GameState, unit: Unit): { goal: Pos; step: Pos[] | 'arrives' } | null {
+  const goal = unit.travelTo;
+  if (!goal) return null;
+  const range = moveRange(s, unit);
+  if (samePos(unit, goal) || canReach(range, goal)) return { goal, step: 'arrives' };
+  const dest = stepToward(s, unit, goal, range);
+  const path = dest && plannedPath(s, unit, dest);
+  return path ? { goal, step: path } : null;
 }
 
-export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'travel'> = {
+export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'travel' | 'travelStep'> = {
   move: {
     keepsUndoWindow: true,
     validate: (s, team, action) =>
       actorProblem(s, team, action.uid, (unit) => (plannedPath(s, unit, action.to, action.path) ? null : 'unreachable')),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      const from = posOf(unit);
-      const capture = ownCaptureHere(s, unit);
-      const path = plannedPath(s, unit, action.to, action.path)!;
-      const seenBefore = visibleEnemies(s, team);
-      const walked = followPath(s, unit, path);
-      const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
-      // Con emboscada no hay vuelta atras: la unidad ya ha gastado su turno.
-      if (walked.ambush) closeUndoWindow(s);
-      else s.lastMove = { uid: unit.uid, from, capture, revealed };
-      return [moveEvent(team, unit.uid, walked)];
+      // Moverla a mano cancela su viaje de varios turnos.
+      const cancelled = unit.travelTo ? [travelEnds(team, unit)] : [];
+      delete unit.travelTo;
+      const walked = walkRemembering(s, team, unit, checkedPath(plannedPath(s, unit, action.to, action.path)));
+      return [...cancelled, moveEvent(team, unit.uid, walked)];
     },
   },
   undoMove: {
-    validate: (s, team, action) => undoProblem(s, team, action.uid),
+    validate: (s, team, action) => actorProblem(s, team, action.uid, (unit) => undoWindowProblem(s, unit)),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      const { from, capture } = s.lastMove!;
+      const { from, capture } = checkedLastMove(s);
       unit.x = from.x;
       unit.y = from.y;
       readyUnit(unit);
@@ -78,15 +95,38 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
     },
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      const travelled = { kind: 'travel', actor: team, uid: unit.uid, to: action.to && posOf(action.to) } as const;
       if (!action.to) {
         delete unit.travelTo;
-        return [travelled];
+        return [travelEnds(team, unit)];
       }
       // Un viaje manda sobre la orden permanente que llevara: es lo ultimo que se le ha dicho.
       delete unit.standingOrder;
       unit.travelTo = posOf(action.to);
-      return [travelled];
+      return [{ kind: 'travel', actor: team, uid: unit.uid, to: posOf(action.to) }];
+    },
+  },
+  travelStep: {
+    // Como mover: se puede deshacer justo despues.
+    keepsUndoWindow: true,
+    validate: (s, team, action) =>
+      actorProblem(s, team, action.uid, (unit) => {
+        if (!unit.travelTo) return 'noTravel';
+        return travelStepOf(s, unit) ? null : 'unreachable';
+      }),
+    apply: (s, team, action) => {
+      const unit = checkedUnit(s, action.uid);
+      const travel = travelStepOf(s, unit);
+      if (!travel) throw new Error('Un paso de viaje ya comprobado sin paso');
+      if (travel.step === 'arrives') {
+        delete unit.travelTo;
+        return [travelEnds(team, unit)];
+      }
+      const walked = walkRemembering(s, team, unit, travel.step);
+      const events = [moveEvent(team, unit.uid, walked)];
+      // Llega, o una emboscada la para: el viaje acaba.
+      if (!samePos(unit, travel.goal) && !walked.ambush) return events;
+      delete unit.travelTo;
+      return [...events, travelEnds(team, unit)];
     },
   },
 };
