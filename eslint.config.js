@@ -53,11 +53,22 @@ const CORE_FACADES_ONLY = [
   },
 ];
 
-/** El banco de pruebas (core/sandbox.ts: combate sin comprobar) es de las herramientas y los tests, no del juego. */
+/**
+ * El banco de pruebas (core/sandbox.ts: combate sin comprobar) es de las herramientas y los tests, no
+ * del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
+ */
 const SANDBOX_IS_NOT_THE_GAME = {
-  group: ['**/core/sandbox', '@core/sandbox', './sandbox', '../sandbox', '../../sandbox'],
+  regex: '(^|/)sandbox(\\.ts)?$',
   message: 'core/sandbox.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
 };
+/** El combate sin comprobar (`resolveAttack`) solo lo usan la accion 'attack' (su propio modulo) y sandbox.ts. */
+const UNCHECKED_ATTACK_ONLY_IN_SANDBOX = {
+  regex: '(^|/)actions/combat(\\.ts)?$|^\\./combat(\\.ts)?$',
+  importNames: ['resolveAttack'],
+  message: "resolveAttack no comprueba nada: el juego ataca con la accion 'attack' (dispatch); fuera de una partida, core/sandbox.ts.",
+};
+/** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
+const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
 
 export default tseslint.config(
   {
@@ -96,14 +107,14 @@ export default tseslint.config(
     files: ['src/core/**/*.ts'],
     ignores: DEFAULT_CONTENT_FILES,
     rules: {
-      'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT, SANDBOX_IS_NOT_THE_GAME] }],
+      'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT] }],
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
     },
   },
   {
     files: DEFAULT_CONTENT_FILES,
     rules: {
-      'no-restricted-imports': ['error', { patterns: CORE_IS_PURE }],
+      'no-restricted-imports': ['error', { patterns: CORE_LIMITS }],
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
     },
   },
@@ -137,13 +148,18 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            ...CORE_IS_PURE,
+            ...CORE_LIMITS,
             NO_DEFAULT_CONTENT,
             { group: ['./missions'], message: 'save.ts recibe las reglas de las misiones en SaveContext.' },
           ],
         },
       ],
     },
+  },
+  {
+    // El banco de pruebas es el unico sitio del nucleo que usa el combate sin comprobar.
+    files: ['src/core/sandbox.ts'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT] }] },
   },
   {
     files: ['**/*.js', '**/*.mjs', 'tools/**/*.ts', 'tests/**/*.ts'],
