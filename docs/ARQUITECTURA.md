@@ -261,6 +261,9 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 alias: `import { createGame } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (escenas, interfaz, ajustes) o Phaser/Preact, y que los tests importen el nucleo por ruta relativa.
+Lo que mide una regla fuera de una partida de verdad, sin comprobar nada (el combate suelto del
+laboratorio de duelos y de los tests: `uncheckedAttack`), esta en `core/sandbox.ts`, y ESLint prohibe
+que lo importe el juego (`src/`, tambien el nucleo): solo `tools/` y `tests/`.
 
 Es el paso previo a un monorepo: si algun dia hace falta (un servidor para partidas online que use el
 nucleo, una herramienta con dependencias propias, publicar el nucleo), `src/core` pasa a ser el paquete

@@ -1,6 +1,6 @@
 /**
  * Laboratorio de duelos: una unidad contra otra, sin mapa ni IA, usando las reglas reales
- * (resolveAttack de core/actions.ts, el combate de la accion 'attack': incluye contraataque o menos
+ * (uncheckedAttack de core/sandbox.ts, el combate de la accion 'attack': incluye contraataque o menos
  * azar si las reglas lo tienen).
  */
 import { findEntry, type GameContent, type TerrainType, type UnitType } from '@core/content';
@@ -10,8 +10,8 @@ import { diceOf } from '@core/dice';
 import { newGameState } from '@core/gameState';
 import { duel, duelTeams } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
-import { inAttackRange, newUnit, restoreInvariants } from '@core/rules';
-import { resolveAttack } from '@core/actions';
+import { inAttackRange, newUnit } from '@core/rules';
+import { uncheckedAttack } from '@core/sandbox';
 import type { GameState, Rng, RulesConfig, Unit } from '@core/model';
 
 export interface DuelCell {
@@ -83,8 +83,7 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
         const defender = newUnit(s, defenderType, defenderTeam, { x: 0, y: 0 });
         place(s, attackerType, attacker, defender);
         const lifeA = attacker.life;
-        dmg += resolveAttack(s, attacker, defender, diceOf(s)).damage;
-        restoreInvariants(s);
+        dmg += uncheckedAttack(s, attacker, defender, diceOf(s)).damage;
         counter += lifeA - (s.units.includes(attacker) ? attacker.life : 0);
         if (!s.units.includes(defender)) kills++;
       }
@@ -104,8 +103,7 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
           for (let round = 0; round < 40; round++) {
             const [shooter, target] = round % 2 === 0 ? [attacker, defender] : [defender, attacker];
             if (!s.units.includes(shooter) || !s.units.includes(target)) break;
-            resolveAttack(s, shooter, target, diceOf(s));
-            restoreInvariants(s);
+            uncheckedAttack(s, shooter, target, diceOf(s));
           }
           const aAlive = s.units.includes(attacker),
             bAlive = s.units.includes(defender);

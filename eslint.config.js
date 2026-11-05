@@ -53,6 +53,12 @@ const CORE_FACADES_ONLY = [
   },
 ];
 
+/** El banco de pruebas (core/sandbox.ts: combate sin comprobar) es de las herramientas y los tests, no del juego. */
+const SANDBOX_IS_NOT_THE_GAME = {
+  group: ['**/core/sandbox', '@core/sandbox', './sandbox', '../sandbox', '../../sandbox'],
+  message: 'core/sandbox.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -90,7 +96,7 @@ export default tseslint.config(
     files: ['src/core/**/*.ts'],
     ignores: DEFAULT_CONTENT_FILES,
     rules: {
-      'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT] }],
+      'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT, SANDBOX_IS_NOT_THE_GAME] }],
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
     },
   },
@@ -146,7 +152,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['src/core/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: CORE_FACADES_ONLY }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, SANDBOX_IS_NOT_THE_GAME] }] },
   },
   {
     // Las herramientas solo usan el nucleo, y por su alias: asi se podrian separar en su propio paquete

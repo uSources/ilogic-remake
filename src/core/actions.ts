@@ -34,11 +34,6 @@ export {
   type SelectionOption,
   type UnitMenuOption,
 } from './actions/menu';
-/**
- * El combate de la accion 'attack' sin comprobar nada: solo para medirlo fuera de una partida (el
- * laboratorio de duelos de tools/balance, los tests del combate). Quien juega usa `dispatch`.
- */
-export { resolveAttack } from './actions/combat';
 export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
 export type { ActionDefinition, ActionRegistry } from './actions/types';

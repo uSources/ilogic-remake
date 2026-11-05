@@ -6,9 +6,10 @@ import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import type { Building, Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
 import { aiTurn } from '@core/ai';
-import { dispatch, resolveAttack } from '@core/actions';
+import { dispatch } from '@core/actions';
+import { uncheckedAttack } from '@core/sandbox';
 import { seededRng } from '@core/util/random';
-import { endRound, restoreInvariants, roundReport, takesTurn, type RoundReport } from '@core/rules';
+import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
 
@@ -35,9 +36,7 @@ export function act(s: GameState, team: TeamId, action: GameAction): GameEvent[]
  * combate): el de la accion 'attack', y despues se quitan las que caen, como hace dispatch.
  */
 export function fight(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
-  const event = resolveAttack(s, attacker, defender, dice);
-  restoreInvariants(s);
-  return event;
+  return uncheckedAttack(s, attacker, defender, dice);
 }
 
 /** El equipo usa un poder de su general por dispatch: el suceso, o null si no se puede. */
