@@ -1,13 +1,14 @@
+import { terrainAt } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos } from '../../core/model';
 import type { MinimapVM } from '../../hud/store';
 
-/** Minimapa (`palette`: color de cada terreno, ver terrainPalette): colores del terreno, niebla, edificios (dueño solo si se ve) y unidades visibles. */
-export function minimapVM(pal: readonly number[], s: GameState, vis: Grid<boolean>, hidden: ReadonlySet<number>): MinimapVM {
+/** Minimapa (`pal`: color de cada terreno por id, ver terrainPalette): colores del terreno, niebla, edificios (dueño solo si se ve) y unidades visibles. */
+export function minimapVM(pal: Readonly<Record<string, number>>, s: GameState, vis: Grid<boolean>, hidden: ReadonlySet<number>): MinimapVM {
   const map = mapGrid(s);
   const terrain: number[] = [];
-  for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) terrain.push(pal[map.at({ x, y })] ?? 0x3a7a3a);
+  for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) terrain.push(pal[terrainAt(s, { x, y }).id] ?? 0x3a7a3a);
   const seen = (pos: Pos) => vis.contains(pos) && vis.at(pos);
   return {
     w: map.width,

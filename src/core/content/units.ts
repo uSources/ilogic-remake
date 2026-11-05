@@ -1,6 +1,7 @@
-/** Unidades (units.json): validacion y tablas por indice (UNIT, POWER, SPAWNER...). */
-import { type Checker, type Scope, checkSprites, spriteRow } from './check';
-import { ABILITY_KINDS, MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type UnitDef } from './types';
+/** Unidades (units.json): validacion y su tipo resuelto (`UnitType`). */
+import type { DeepReadonly } from '../util/freeze';
+import { type Checker, type Scope, checkSprites } from './check';
+import { ABILITY_KINDS, MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type Texts, type UnitDef } from './types';
 
 const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
 
@@ -39,7 +40,7 @@ export function validateUnits(units: readonly UnitDef[], ctx: ContentContext, ch
       s.num(`heals.${t}`, h, { min: 0, max: 100, int: true });
     }
     if (u?.art !== undefined && s.known('art', u.art, ctx.unitIds)) s.expect(u.art !== u.id, 'art no puede ser ella misma');
-    checkSprites(s, u?.classicSprite, ctx.terrainNames);
+    checkSprites(s, u?.classicSprite, ctx.terrainIds);
     if (u?.abilities !== undefined) validateAbilities(s, u.abilities, u);
   }
 }
@@ -80,35 +81,73 @@ function validateAbilities(s: Scope, list: unknown, u: UnitDef): void {
   }
 }
 
-export function buildUnitTables(units: readonly UnitDef[], ctx: ContentContext, buildingNames: readonly string[]) {
-  const ids = units.map((u) => u.id);
-  const byUnit = <T>(f: (u: UnitDef) => T): T[] => units.map(f);
-  const unitRow = (list: readonly string[] | undefined) => ids.map((id) => !!list?.includes(id));
-  const buildingRow = (list: readonly string[]) => buildingNames.map((id) => list.includes(id));
-  return {
-    UNIT_NAMES: ids,
-    UNIT: {
-      cost: byUnit((u) => u.cost),
-      command: byUnit((u) => u.command),
-      mover: byUnit((u) => u.move),
-      vision: byUnit((u) => u.vision),
-      alcance: byUnit((u) => u.attack?.range[1] ?? 0),
-      minalc: byUnit((u) => (u.attack ? u.attack.range[0] - 1 : 0)),
-      movtype: byUnit((u) => MOVEMENTS.indexOf(u.movement) as MoveType),
-      maxcarry: byUnit((u) => u.transport?.slots ?? 0),
-      cancapt: byUnit((u) => u.captures),
-      canfight: byUnit((u) => u.attack !== null),
-    },
-    HEALER: byUnit((u) => buildingRow(u.repairedAt)),
-    SPAWNER: byUnit((u) => buildingRow(u.builtAt)),
-    CAN_CARRY: byUnit((u) => unitRow(u.transport?.carries)),
-    POWER: byUnit((u) => ids.map((id) => u.attack?.hitChance[id] ?? 0)),
-    UNIT_HEALS: byUnit((u) => ids.map((id) => u.heals?.[id] ?? 0)),
-    UNIT_TERRAIN_PREFIX: byUnit((u) => spriteRow(u.classicSprite, ctx.terrainNames)),
-    UNIT_SUPPORT: byUnit((u) => !!u.ai?.support),
-    /** Habilidades de cada unidad (lista vacia si no tiene). */
-    UNIT_ABILITIES: byUnit((u): readonly AbilityDef[] => u.abilities ?? []),
-    /** Nombre de las imagenes de cada unidad (el suyo, o el de `art` mientras no tenga dibujo). */
-    UNIT_ART: byUnit((u) => u.art ?? u.id),
-  };
+/** Ataque de un tipo de unidad: a que distancias dispara y con que acierto contra cada tipo. */
+export interface UnitAttack {
+  /** Distancia minima de tiro (1 = la casilla de al lado). */
+  readonly minRange: number;
+  readonly maxRange: number;
+  /** Probabilidad de acierto de cada punto de vida contra cada tipo, por id (si no esta, 0: no le puede atacar). */
+  readonly hitChance: Readonly<Record<string, number>>;
+}
+
+/** Un tipo de unidad, resuelto al cargar el contenido (units.json). */
+export interface UnitType {
+  readonly id: string;
+  readonly name: Texts;
+  readonly cost: number;
+  /** Puntos de mando que ocupa (regla commandPoints). */
+  readonly command: number;
+  /** Casillas que puede mover por turno. */
+  readonly move: number;
+  readonly vision: number;
+  readonly movement: MoveType;
+  readonly canCapture: boolean;
+  /** null = no ataca. */
+  readonly attack: UnitAttack | null;
+  /** Plazas de transporte (0 = no lleva a nadie) y tipos que puede llevar, por id. */
+  readonly cargoSlots: number;
+  readonly carries: readonly string[];
+  /** Edificios que la fabrican y edificios propios que la curan al empezar la ronda, por id. */
+  readonly builtAt: readonly string[];
+  readonly repairedAt: readonly string[];
+  /** Vida que cura con la orden de reparar a cada tipo de al lado, por id (si no esta, 0). */
+  readonly heals: Readonly<Record<string, number>>;
+  /** Habilidades pasivas (regla abilities): ver AbilityDef. */
+  readonly abilities: readonly DeepReadonly<AbilityDef>[];
+  /** Pista para la IA: no combate (compra como mucho una a la vez). */
+  readonly isSupport: boolean;
+  /** Nombre de sus imagenes (el suyo, o el de `art` mientras no tenga dibujo propio). */
+  readonly art: string;
+  /** Graficos de 2013: prefijo de la imagen segun el terreno, por id de terreno (si no esta, ''). */
+  readonly classicSprite: Readonly<Record<string, string>>;
+}
+
+function attackOf(definition: UnitDef): UnitAttack | null {
+  if (!definition.attack) return null;
+  const [minRange, maxRange] = definition.attack.range;
+  return { minRange, maxRange, hitChance: { ...definition.attack.hitChance } };
+}
+
+/** Los tipos de unidad del fichero (validado), en su orden. */
+export function buildUnitTypes(units: readonly UnitDef[]): UnitType[] {
+  return units.map((definition) => ({
+    id: definition.id,
+    name: definition.name,
+    cost: definition.cost,
+    command: definition.command,
+    move: definition.move,
+    vision: definition.vision,
+    movement: definition.movement,
+    canCapture: definition.captures,
+    attack: attackOf(definition),
+    cargoSlots: definition.transport?.slots ?? 0,
+    carries: definition.transport?.carries ?? [],
+    builtAt: definition.builtAt,
+    repairedAt: definition.repairedAt,
+    heals: { ...definition.heals },
+    abilities: definition.abilities ?? [],
+    isSupport: !!definition.ai?.support,
+    art: definition.art ?? definition.id,
+    classicSprite: { ...definition.classicSprite },
+  }));
 }

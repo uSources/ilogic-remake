@@ -4,7 +4,7 @@
  * entrada mas en UNIT_BEHAVIOURS, en su sitio de la lista.
  */
 
-import { tablesOf } from '../gameContent';
+import { unitTypeOf, isHq } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
 import { wait } from '../rules/unitActions';
@@ -30,7 +30,7 @@ export interface UnitBehaviour {
 }
 
 const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean =>
-  building.type === tablesOf(s).HQ && building.owner !== ai.me && building.owner !== null;
+  isHq(s, building) && building.owner !== ai.me && building.owner !== null;
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range, rng }: UnitTurnContext): Generator<GameEvent, boolean> {
@@ -57,7 +57,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     id: 'stepOffEnemyHq',
     when: ({ s, ai, unit }) => {
       const building = buildingAt(s, unit);
-      return !!building && isEnemyHq(s, building, ai) && !tablesOf(s).UNIT.cancapt[unit.type];
+      return !!building && isEnemyHq(s, building, ai) && !unitTypeOf(s, unit).canCapture;
     },
     run: stepOffEnemyHq,
   },

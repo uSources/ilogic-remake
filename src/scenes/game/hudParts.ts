@@ -3,6 +3,8 @@
  * mover, panel de lo elegido, panel del laboratorio y la linea de ayuda. Sin efectos: la escena junta
  * el resultado y lo publica con ui.set (las fichas en si se calculan en ui/hudModels.ts).
  */
+import { entryOf, type UnitType } from '../../core/content';
+import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
 import { posKey } from '../../core/geom';
 import type Phaser from 'phaser';
 import { movementOf, buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
@@ -10,11 +12,10 @@ import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
 import type { LabOptions } from '../../lab';
-import { t, unitLabel } from '../../settings';
+import { t, nameOf } from '../../settings';
 import { forecastVM } from '../../ui/hudModels';
 import { unitKey } from '../../ui/sprites';
 import { type Intent, type Phase } from './types';
-import { tablesOf } from '../../core/gameContent';
 
 /** Prevision del combate con la unidad elegida, si el cursor esta sobre un enemigo atacable. */
 export function forecastFor(
@@ -80,7 +81,7 @@ export function moveTipFor(
   const anchor = options.anchor(cursor);
   if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
   const isMove = intent.kind === 'move';
-  const used = isMove ? pathCost(s, movementOf(s, unit.type), options.trailTo(intent.to)) : range.steps.at(cursor) || 1;
+  const used = isMove ? pathCost(s, movementOf(s, unit), options.trailTo(intent.to)) : range.steps.at(cursor) || 1;
   return {
     anchor,
     action: moveTipAction(intent),
@@ -99,36 +100,35 @@ function moveTipAction(intent: Intent): string {
 
 /** [CAMBIO] Panel de lo elegido (dos o mas unidades): retratos en orden y cuantas hay de cada tipo. */
 export function selectionPanel(textures: Phaser.Textures.TextureManager, s: GameState, list: Unit[], cursor: Pos): SelectionVM {
-  const countByType = new Map<number, number>();
-  for (const unit of list) countByType.set(unit.type, (countByType.get(unit.type) ?? 0) + 1);
+  const countByType = new Map<UnitType, number>();
+  for (const unitType of list.map((unit) => unitTypeOf(s, unit))) countByType.set(unitType, (countByType.get(unitType) ?? 0) + 1);
   return {
     units: list.map((unit) => ({
       uid: unit.uid,
       icon: unitKey(textures, s, unit),
-      name: unitLabel(s.content, unit.type),
+      name: nameOf(unitTypeOf(s, unit)),
       life: unit.life,
       current: unit.x === cursor.x && unit.y === cursor.y,
     })),
-    types: [...countByType].map(([type, count]) => ({ name: unitLabel(s.content, type), count })),
+    types: [...countByType].map(([unitType, count]) => ({ name: nameOf(unitType), count })),
   };
 }
 
 /** Ingresos del jugador por turno: lo que dan sus edificios menos el mantenimiento de su ejercito. */
 export function playerIncome(s: GameState): number {
   const owned = s.buildings.filter((building) => building.owner === 0);
-  return owned.reduce((sum, building) => sum + buildingIncome(s, building.type), 0) - upkeepOf(s, 0);
+  return owned.reduce((sum, building) => sum + buildingIncome(s, buildingTypeOf(s, building)), 0) - upkeepOf(s, 0);
 }
 
 /** Panel del laboratorio de animaciones (null en una partida normal). */
 export function labPanel(s: GameState, lab: LabOptions | null): UIState['lab'] {
   if (!lab) return null;
-  const { UNIT, UNIT_NAMES } = tablesOf(s);
   return {
-    units: UNIT_NAMES.map((_, type) => unitLabel(s.content, type)),
+    units: s.content.units.list.map((unitType) => ({ id: unitType.id, name: nameOf(unitType) })),
     attacker: lab.attacker,
     defender: lab.defender,
     slow: lab.slow,
-    canAttack: !!UNIT.canfight[lab.attacker],
+    canAttack: entryOf(s.content.units, lab.attacker, 'unidad').attack !== null,
   };
 }
 

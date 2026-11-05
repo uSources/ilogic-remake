@@ -27,7 +27,8 @@ export interface CreateGameOptions {
  */
 export function createGame(rng: Rng, { size, theme, ruleChanges = {} }: CreateGameOptions): GameState {
   const content = defaultContent();
-  return generateGame(rng, { size, theme, rules: rulesWith(content, ruleChanges), content });
+  const chosenTheme = theme === null || theme === undefined ? null : content.themes.list[theme]!;
+  return generateGame(rng, { size, theme: chosenTheme, rules: rulesWith(content, ruleChanges), content });
 }
 
 /**

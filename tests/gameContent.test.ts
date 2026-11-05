@@ -1,10 +1,11 @@
+import { unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { aiTurn } from '@core/ai';
-import { loadContent, readContentFiles, type GameContent } from '@core/content';
+import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
-import { cloneState, tablesOf } from '@core/gameContent';
+import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
 import { buyOptions, endRound } from '@core/rules';
@@ -18,7 +19,7 @@ function expensiveTanks(): GameContent {
   return loadContent({ ...files, units });
 }
 
-const TANK = defaultContent().tables.UNIT_NAMES.indexOf('Tank');
+const TANK = unitTypeNamed('Tank');
 
 function newMatch(content: GameContent): GameState {
   return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content });
@@ -40,9 +41,10 @@ describe('contenido de cada partida', () => {
     const variant = expensiveTanks();
     const normal = newMatch(defaultContent());
     const expensive = newMatch(variant);
-    const factory = (s: GameState) => s.buildings.find((building) => buyOptions(s, building).some((option) => option.type === TANK))!;
+    const factory = (s: GameState) =>
+      s.buildings.find((building) => buyOptions(s, building).some((option) => option.unitType.id === 'Tank'))!;
 
-    const tankCost = (s: GameState) => buyOptions(s, factory(s)).find((option) => option.type === TANK)!.cost;
+    const tankCost = (s: GameState) => buyOptions(s, factory(s)).find((option) => option.unitType.id === 'Tank')!.cost;
     expect(tankCost(expensive)).toBe(2 * tankCost(normal));
 
     const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6);
@@ -50,7 +52,7 @@ describe('contenido de cada partida', () => {
     const [alone] = playInterleaved([newMatch(defaultContent())], 6);
     expect(normalEvents).toEqual(alone);
     expect(expensiveEvents).not.toEqual(normalEvents);
-    expect(tablesOf(normal).UNIT.cost[TANK]).toBe(defaultContent().tables.UNIT.cost[TANK]);
+    expect(entryOf(normal.content.units, 'Tank', 'unidad').cost).toBe(TANK.cost);
     expect(expensive.content).toBe(variant);
   });
 
@@ -67,7 +69,7 @@ describe('contenido de cada partida', () => {
     const s = newMatch(defaultContent());
     const write = () => {
       // @ts-expect-error las tablas del contenido no se pueden cambiar
-      s.content.tables.UNIT.cost[0] = 1;
+      s.content.tables.unitTypeNamed('Soldier').cost = 1;
     };
     const rename = () => {
       // @ts-expect-error ni los ficheros

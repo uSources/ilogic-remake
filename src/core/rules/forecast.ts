@@ -2,10 +2,11 @@
  * Prevision de combate y zona de amenaza (para la interfaz y la IA). Solo consultas: no cambian nada.
  */
 
-import { tablesOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { diamond } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
+import { isRanged } from '../abilities';
 import { canFight, isOnMap } from '../util/predicates';
 import type { GameState, Team, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
@@ -156,21 +157,19 @@ export function threatMap(s: GameState, team: Team, viewer: Team): Grid<boolean>
  * Las unidades a distancia no pueden mover y disparar: solo cuentan desde donde estan.
  */
 export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = createLayer(s, false), range?: MoveRange): Grid<boolean> {
-  if (!canFight(s, unit)) return out;
-  const minRange = tablesOf(s).UNIT.minalc[unit.type]!;
-  const maxRange = tablesOf(s).UNIT.alcance[unit.type]!;
-  if (maxRange === 0) return out;
+  const attack = unitTypeOf(s, unit).attack;
+  if (!attack) return out;
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen (como si fuera su turno).
-  const canMoveAndFire = minRange === 0;
+  const canMoveAndFire = !isRanged(s, unit);
   const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, active: true, canMove: true })) : null;
   for (const origin of fireOrigins(s, unit, moveReach)) {
-    for (const pos of diamond(out, origin, minRange + 1, maxRange)) out.set(pos, true);
+    for (const pos of diamond(out, origin, attack.minRange, attack.maxRange)) out.set(pos, true);
   }
   return out;
 }
 
 /** Lo que la unidad puede atacar este turno con su alcance de movimiento `range` (null si no puede disparar). */
 export function attackZone(s: GameState, unit: Unit, range: MoveRange): Grid<boolean> | null {
-  if (!canFight(s, unit) || tablesOf(s).UNIT.alcance[unit.type]! === 0 || !unit.canFire) return null;
+  if (!canFight(s, unit) || !unit.canFire) return null;
   return unitThreat(s, unit, createLayer(s, false), range);
 }

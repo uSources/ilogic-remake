@@ -1,10 +1,10 @@
 /**
  * Preguntas cortas que se repiten por todo el nucleo: de que bando es una unidad, si va dentro de un
- * transporte, si puede luchar o capturar. Con nombre en vez de `team === 0` o `UNIT.canfight[...]`
+ * transporte, si puede luchar o capturar. Con nombre en vez de `team === 0` o `unitTypeOf(s, unit).attack !== null`
  * sueltos (docs/ESTILO.md, regla 4). Sin efectos.
  */
 
-import { tablesOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import type { GameState, Team, Unit } from '../model';
 
 /** El bando del jugador (el 1 es la IA, ver Team). */
@@ -41,7 +41,7 @@ export function isAlive(unit: Pick<Unit, 'life'>): boolean {
 
 /** Su tipo puede atacar (units.json, "attack"). No mira si ya ha disparado este turno. */
 export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
-  return !!tablesOf(s).UNIT.canfight[unit.type];
+  return unitTypeOf(s, unit).attack !== null;
 }
 
 /**
@@ -49,7 +49,7 @@ export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
  * es `canCapture` de rules/capture.ts.
  */
 export function isCapturer(s: GameState, unit: Pick<Unit, 'type'>): boolean {
-  return !!tablesOf(s).UNIT.cancapt[unit.type];
+  return unitTypeOf(s, unit).canCapture;
 }
 
 /** Un objeto (no null) del que se pueden leer campos: para comprobar datos que vienen de fuera (JSON). */

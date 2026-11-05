@@ -6,59 +6,15 @@ export interface Texts {
   en: string;
 }
 
-/** Tipos de movimiento: el numero es el indice de las tablas (Movement.CAN_WALK[tipo][terreno]). */
-export const MoveType = { FOOT: 0, VEHICLE: 1, AIR: 2, AMPHIBIOUS: 3 } as const;
+/**
+ * Tipos de movimiento: por donde pasa una unidad y cuanto le cuesta cada terreno (terrain.json,
+ * "movement"). Es el nombre que se escribe en los JSON.
+ */
+export const MoveType = { FOOT: 'foot', VEHICLE: 'vehicle', AIR: 'air', AMPHIBIOUS: 'amphibious' } as const;
 export type MoveType = (typeof MoveType)[keyof typeof MoveType];
 
-/** Nombre de cada tipo de movimiento en los JSON, en el orden de MoveType. */
-export const MOVEMENTS = ['foot', 'vehicle', 'air', 'amphibious'] as const;
-export type MovementName = (typeof MOVEMENTS)[number];
-
-/**
- * Terrenos. Lista fija: el numero es el que guardan mapas y partidas, y lo usan el arte, el generador
- * de mapas y las misiones. terrain.json solo cambia sus numeros.
- */
-/** Temas de mapa (el numero es GameState.theme): cambian el generador, las orillas y el clima. */
-export const THEME_NAMES = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'] as const;
-
-export const TERRAIN_NAMES = [
-  'Grass',
-  'Water',
-  'Woods',
-  'Sand',
-  'Cactus',
-  'SandCliff',
-  'Flowers',
-  'GrassCliff',
-  'SWater',
-  'DWater',
-  'Snow',
-  'Frosty',
-  'SnowCliff',
-  'SnowWood',
-  'Ice',
-] as const;
-/** Numero de terrenos (lista fija: TERRAIN_NAMES). */
-export const TERRAIN_TYPES = TERRAIN_NAMES.length;
-
-export const TerrainType = {
-  GRASS: 0,
-  WATER: 1,
-  WOODS: 2,
-  SAND: 3,
-  CACTUS: 4,
-  SAND_CLIFF: 5,
-  FLOWERS: 6,
-  GRASS_CLIFF: 7,
-  SHALLOW_WATER: 8,
-  DEEP_WATER: 9,
-  SNOW: 10,
-  FROSTY: 11,
-  SNOW_CLIFF: 12,
-  SNOW_WOOD: 13,
-  ICE: 14,
-} as const;
-export type TerrainType = (typeof TerrainType)[keyof typeof TerrainType];
+/** Todos los tipos de movimiento, en el orden de MoveType. */
+export const MOVEMENTS: readonly MoveType[] = Object.values(MoveType);
 
 /** Clases de habilidad que entiende el juego. Cada una tiene sus numeros en el JSON. */
 export const ABILITY_KINDS = ['guard', 'zoneOfControl', 'aura', 'piercing', 'scout', 'quickCapture'] as const;
@@ -77,7 +33,7 @@ export type AbilityKind = (typeof ABILITY_KINDS)[number];
  */
 export type AbilityDef =
   | { kind: 'guard'; factor: number }
-  | { kind: 'zoneOfControl'; stops: MovementName[] }
+  | { kind: 'zoneOfControl'; stops: MoveType[] }
   | { kind: 'aura'; radius: number; defense: number }
   | { kind: 'piercing'; ignoreCover: number }
   | { kind: 'scout' }
@@ -94,7 +50,7 @@ export interface UnitDef {
   move: number;
   /** Radio de vision (rombo). */
   vision: number;
-  movement: MovementName;
+  movement: MoveType;
   captures: boolean;
   /**
    * null = no ataca. `range`: distancias desde/hasta (1 = casilla de al lado; [2, 5] = artilleria).
@@ -144,12 +100,15 @@ export interface TerrainDef {
   buildable: boolean;
   water: boolean;
   /** Coste de entrar por tipo de movimiento; null = no se puede pasar. */
-  movement: Record<MovementName, number | null>;
+  movement: Record<MoveType, number | null>;
+  /** Letra del terreno en los mapas en texto de las misiones si no depende del tema (themes.json, "mapLetters"). */
+  mapLetter?: string;
 }
 
 /** Lo que cada parte del contenido puede consultar de las demas al validarse (ids conocidos). */
 export interface ContentContext {
   unitIds: ReadonlySet<string>;
   buildingIds: ReadonlySet<string>;
-  terrainNames: readonly string[];
+  terrainIds: ReadonlySet<string>;
+  themeIds: ReadonlySet<string>;
 }

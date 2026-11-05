@@ -46,7 +46,7 @@ artilleria:
 ```
 
 Si el cambio es de equilibrio, medirlo antes (skill `equilibrar`): se puede probar sin tocar el fichero
-con `npm run balance -- run --set UNIT.cost.Tank=10000 --set POWER.Tank.Artillery=0.7`.
+con `npm run balance -- run --set UNIT.cost.Tank=10000 --set HIT_CHANCE.Tank.Artillery=0.7`.
 
 ## Añadir una unidad
 

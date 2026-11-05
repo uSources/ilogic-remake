@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { defaultContent } from '@core/content/default';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
@@ -16,11 +15,11 @@ import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed, hqKey } from './helpers';
 
-const { UNIT_NAMES, HQ } = defaultContent().tables;
+const HQ = hqKey();
 
-const type = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
+const type = unitTypeNamed;
 const seeAll = () => true;
 
 function plan(s: GameState, unit: Unit): MovePlan {

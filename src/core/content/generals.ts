@@ -4,11 +4,11 @@
  * la forma de los datos y su validacion. Ver docs/CONTENIDO.md, "Generales".
  */
 import { type Checker } from './check';
-import { MOVEMENTS, type MovementName, type Texts } from './types';
+import { MOVEMENTS, type MoveType, type Texts } from './types';
 
 /** A que unidades afecta una ventaja o un efecto: por tipo de movimiento y/o por id (sin nada = a todas). */
 export interface UnitFilter {
-  movement?: MovementName[];
+  movement?: MoveType[];
   units?: string[];
 }
 

@@ -3,7 +3,7 @@
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
-import { tablesOf, weightsOf } from '../gameContent';
+import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt, occupancy } from '../rules/queries';
 import { samePos } from '../geom';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
@@ -57,7 +57,7 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit.type), occupancyWithout(s, ai, unit));
+  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, ai, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
   return (pos) => steps.at(pos) || Infinity;
 }
@@ -88,7 +88,7 @@ export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveR
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (s: GameState, unit: Unit): number => tablesOf(s).UNIT.mover[unit.type]! + tablesOf(s).UNIT.alcance[unit.type]!;
+export const strikeReach = (s: GameState, unit: Unit): number => unitTypeOf(s, unit).move + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me)): Unit[] {
@@ -107,7 +107,7 @@ export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {
   return (
     !!building &&
     building.owner === unit.team &&
-    tablesOf(s).HEALER[unit.type]![building.type]! &&
-    tablesOf(s).BUILDING.heals[building.type]! > 0
+    unitTypeOf(s, unit).repairedAt.includes(buildingTypeOf(s, building).id) &&
+    buildingTypeOf(s, building).heals > 0
   );
 }

@@ -9,11 +9,9 @@ import { seededRng } from '@core/geom';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
-const { UNIT, UNIT_NAMES } = defaultContent().tables;
-
-const unitType = (name: string) => UNIT_NAMES.indexOf(name);
+const unitType = unitTypeNamed;
 
 function withBrisa(): GameState {
   const s = blankState(TEST_RULES);
@@ -61,7 +59,7 @@ describe('generales: reglas', () => {
     const attacker = newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
     const defender = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
     const result = attackFull(s, attacker, defender, seededRng(3));
-    const value = ((result.damage + result.counter) * UNIT.cost[unitType('Tank')]!) / 100;
+    const value = ((result.damage + result.counter) * unitType('Tank').cost) / 100;
     expect(s.generals![0]!.charge).toBeCloseTo(value / 6000);
   });
 

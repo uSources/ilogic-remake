@@ -13,11 +13,11 @@ function UnitSelect({ lab, side, busy }: { lab: LabVM; side: Side; busy: boolean
       class="lab-select"
       value={lab[side]}
       disabled={busy}
-      onChange={(event) => ui.actions.labSet({ [side]: Number(event.currentTarget.value) })}
+      onChange={(event) => ui.actions.labSet({ [side]: event.currentTarget.value })}
     >
-      {lab.units.map((unitName, i) => (
-        <option key={i} value={i}>
-          {unitName}
+      {lab.units.map((unit) => (
+        <option key={unit.id} value={unit.id}>
+          {unit.name}
         </option>
       ))}
     </select>

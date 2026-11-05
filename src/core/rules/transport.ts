@@ -1,7 +1,7 @@
 /**
  * Union de unidades iguales y transporte (subir y bajar pasajeros).
  */
-import { tablesOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { movementOf, freeSlot, isWalkable, occupancy } from './queries';
 import { MAX_LIFE } from '../data';
 import { manhattan, neighbors4, samePos, posOf } from '../geom';
@@ -56,7 +56,7 @@ export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
 
 /** El transporte puede llevar a la unidad (del mismo bando y de un tipo que lleva). */
 const canCarry = (s: GameState, transport: Unit, passenger: Unit): boolean =>
-  transport.team === passenger.team && !!tablesOf(s).CAN_CARRY[transport.type]![passenger.type];
+  transport.team === passenger.team && unitTypeOf(s, transport).carries.includes(unitTypeOf(s, passenger).id);
 
 /** Transportes a los que puede subir. [CAMBIO] el original usaba el movimiento del transporte. */
 export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)): Unit[] {
@@ -91,7 +91,7 @@ export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null
 
 /** Casillas donde se puede bajar a un pasajero: vecinas transitables y libres. */
 export function unloadTiles(s: GameState, transport: Unit, passenger: Unit): Pos[] {
-  const movement = movementOf(s, passenger.type);
+  const movement = movementOf(s, passenger);
   const occupied = occupancy(s);
   return neighbors4(mapGrid(s), transport).filter((pos) => isWalkable(s, pos, movement, occupied));
 }

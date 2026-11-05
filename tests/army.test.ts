@@ -2,12 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { armyLimit, buyOptions, commandUsed, endRound, newUnit, spawn, upkeepOf } from '@core/rules';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
-const { UNIT } = defaultContent().tables;
-
-const SOLDIER = 0,
-  TANK = 1;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank');
 const CITY = 0,
   FACTORY = 2;
 
@@ -20,7 +18,7 @@ describe('puntos de mando', () => {
     newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     newUnit(s, TANK, 0, { x: 2, y: 2 });
     newUnit(s, TANK, 1, { x: 3, y: 3 });
-    expect(commandUsed(s, 0)).toBe(UNIT.command[SOLDIER]! + UNIT.command[TANK]!);
+    expect(commandUsed(s, 0)).toBe(SOLDIER.command + TANK.command);
   });
 
   it('no se puede comprar si la unidad no cabe, aunque haya dinero', () => {
@@ -31,13 +29,13 @@ describe('puntos de mando', () => {
     newUnit(s, TANK, 0, { x: 1, y: 1 });
     newUnit(s, TANK, 0, { x: 2, y: 2 }); // 8 de 10
     expect(armyLimit(s, 0, TANK)).toBe('command');
-    expect(buyOptions(s, factory).find((buyOption) => buyOption.type === TANK)?.blocked).toBe('command');
+    expect(buyOptions(s, factory).find((buyOption) => buyOption.unitType === TANK)?.blocked).toBe('command');
     expect(spawn(s, factory, TANK)).toBeNull();
     expect(s.funds[0]).toBe(100000);
     // Lo pequeño si cabe.
     const city = { type: CITY, owner: 0 as const, x: 6, y: 6 };
     s.buildings.push(city);
-    expect(buyOptions(s, city).find((buyOption) => buyOption.type === SOLDIER)?.affordable).toBe(true);
+    expect(buyOptions(s, city).find((buyOption) => buyOption.unitType === SOLDIER)?.affordable).toBe(true);
     expect(spawn(s, city, SOLDIER)).not.toBeNull();
   });
 

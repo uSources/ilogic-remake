@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
-import { defaultContent } from '@core/content/default';
 import { newUnit } from '@core/rules';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed, hqKey } from './helpers';
 
-const { HQ } = defaultContent().tables;
+const HQ = hqKey();
 
 /** [CAMBIO] Registro de acciones: clic derecho inteligente, menu completo y cursor (controls/actions.ts). */
-const SOLDIER = 0,
-  TANK = 1,
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
   CITY = 0;
 
 function world(): GameState {

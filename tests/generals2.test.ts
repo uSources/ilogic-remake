@@ -4,12 +4,12 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, newGeneral, useAbility } from '@core/generals';
 import { newUnit } from '@core/rules';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
-const { UNIT_NAMES, AI } = defaultContent().tables;
+const AI = defaultContent().ai;
 
 /** Roca (reparar) y Ambar (dinero): los efectos heal y funds, y como los valora la IA. */
-const unitType = (name: string) => UNIT_NAMES.indexOf(name);
+const unitType = unitTypeNamed;
 const generalDefinition = (id: string) => defaultContent().files.generals.find((general) => general.id === id)!;
 
 /** Reglas de las partidas de estos tests. */

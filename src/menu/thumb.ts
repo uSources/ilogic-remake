@@ -1,7 +1,8 @@
-import { tablesOf } from '../core/gameContent';
+import { isHq, terrainAt } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState, Team } from '../core/model';
 import { PAL_CSS } from '../ui/palette';
+import type { TerrainPalette } from '../ui/terrainColors';
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
@@ -24,9 +25,9 @@ interface ThumbOptions {
   px?: number;
 }
 
-function drawTerrain(context: CanvasRenderingContext2D, s: GameState, palette: number[], px: number): void {
-  for (const { pos, value } of mapGrid(s).cells()) {
-    context.fillStyle = hex(palette[value] ?? FALLBACK_TERRAIN);
+function drawTerrain(context: CanvasRenderingContext2D, s: GameState, palette: TerrainPalette, px: number): void {
+  for (const { pos } of mapGrid(s).cells()) {
+    context.fillStyle = hex(palette[terrainAt(s, pos).id] ?? FALLBACK_TERRAIN);
     context.fillRect(pos.x * px, pos.y * px, px, px);
   }
 }
@@ -34,7 +35,7 @@ function drawTerrain(context: CanvasRenderingContext2D, s: GameState, palette: n
 /** Cada edificio, con el color de su dueño y un borde oscuro; las bases, una casilla mas grandes. */
 function drawBuildings(context: CanvasRenderingContext2D, s: GameState, px: number): void {
   for (const building of s.buildings) {
-    const pad = building.type === tablesOf(s).HQ ? -1 : 0;
+    const pad = isHq(s, building) ? -1 : 0;
     context.fillStyle = PAL_CSS.ink;
     context.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
     context.fillStyle = ownerColor(building.owner);
@@ -55,7 +56,7 @@ function drawUnits(context: CanvasRenderingContext2D, s: GameState, px: number, 
  * Miniatura de un mapa (como imagen) para las tarjetas: terreno, edificios con el color de su dueño
  * (las bases mas grandes) y, si se pide, las unidades.
  */
-export function mapThumb(s: GameState, palette: number[], options: ThumbOptions = {}): string {
+export function mapThumb(s: GameState, palette: TerrainPalette, options: ThumbOptions = {}): string {
   const map = mapGrid(s);
   const px = options.px ?? defaultTileSize(map.width);
   const canvas = document.createElement('canvas');

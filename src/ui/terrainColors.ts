@@ -1,20 +1,24 @@
 import type Phaser from 'phaser';
-import { TERRAIN_TYPES } from '../core/content';
+import { defaultContent } from '../core/content/default';
 import { terrainKey } from './sprites';
 import { drawFrame, hasImage } from '../atlas';
 
-let cache: number[] | null = null;
+/** Color medio de cada terreno, por id de terreno (terrain.json). */
+export type TerrainPalette = Readonly<Record<string, number>>;
 
-/** Color medio de cada imagen de terreno (para minimapas y miniaturas). */
-export function terrainPalette(textures: Phaser.Textures.TextureManager): number[] {
+let cache: TerrainPalette | null = null;
+
+/** Color medio de cada imagen de terreno del juego (para minimapas y miniaturas). */
+export function terrainPalette(textures: Phaser.Textures.TextureManager): TerrainPalette {
   if (cache) return cache;
-  const out: number[] = [];
+  const out: Record<string, number> = {};
   const cv = document.createElement('canvas');
   cv.width = cv.height = 8;
   const context = cv.getContext('2d', { willReadFrequently: true })!;
-  for (let i = 0; i < TERRAIN_TYPES; i++) {
+  const terrains = defaultContent().terrain.list;
+  for (const terrain of terrains) {
     let color = 0x3a7a3a;
-    const key = terrainKey(i);
+    const key = terrainKey(terrain);
     if (hasImage(textures, key)) {
       context.clearRect(0, 0, 8, 8);
       drawFrame(context, textures, key, 0, 0, 8, 8);
@@ -32,9 +36,9 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): number
         }
       if (count) color = (Math.round(red / count) << 16) | (Math.round(green / count) << 8) | Math.round(blue / count);
     }
-    out.push(color);
+    out[terrain.id] = color;
   }
   // Solo se guarda si ya estaban cargadas las imagenes.
-  if (hasImage(textures, terrainKey(0))) cache = out;
+  if (hasImage(textures, terrainKey(terrains[0]!))) cache = out;
   return out;
 }

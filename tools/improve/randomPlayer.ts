@@ -44,7 +44,7 @@ export function randomTurn(s: GameState, rng: Rng, team: Team, after: (what: str
       rng,
       buyOptions(s, building).filter((candidate) => candidate.affordable),
     );
-    if (option && spawn(s, building, option.type)) after(`compra ${option.type} en (${building.x},${building.y})`);
+    if (option && spawn(s, building, option.unitType)) after(`compra ${option.unitType.id} en (${building.x},${building.y})`);
   }
 }
 

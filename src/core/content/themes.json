@@ -1,0 +1,202 @@
+{
+  "$schema": "./themes.schema.json",
+  "themes": [
+    {
+      "id": "Plains",
+      "name": {
+        "es": "Llanura",
+        "en": "Plains"
+      },
+      "mapLetters": {
+        ".": "Grass",
+        "T": "Woods",
+        "M": "GrassCliff",
+        "*": "Flowers"
+      },
+      "generator": {
+        "terrainChance": {
+          "Grass": {
+            "base": 0.05,
+            "perNeighbour": 0.2
+          },
+          "Water": {
+            "base": 0.005,
+            "perNeighbour": 0.3
+          },
+          "Woods": {
+            "base": 0.05,
+            "perNeighbour": 0.03
+          },
+          "Flowers": {
+            "base": 0.03,
+            "perNeighbour": 0.01
+          },
+          "GrassCliff": {
+            "base": 0.02,
+            "perNeighbour": -0.05
+          }
+        },
+        "openWater": "Water",
+        "narrowWater": "SWater",
+        "shoreWater": null,
+        "deepWater": "DWater"
+      }
+    },
+    {
+      "id": "Desert",
+      "name": {
+        "es": "Desierto",
+        "en": "Desert"
+      },
+      "mapLetters": {
+        ".": "Sand",
+        "T": "Cactus",
+        "M": "SandCliff",
+        "*": "Sand"
+      },
+      "generator": {
+        "terrainChance": {
+          "Water": {
+            "base": 0.005,
+            "perNeighbour": 0.3
+          },
+          "Sand": {
+            "base": 0.05,
+            "perNeighbour": 0.2
+          },
+          "Cactus": {
+            "base": 0.03,
+            "perNeighbour": -0.05
+          },
+          "SandCliff": {
+            "base": 0.03,
+            "perNeighbour": -0.05
+          }
+        },
+        "openWater": "Water",
+        "narrowWater": "SWater",
+        "shoreWater": null,
+        "deepWater": "DWater"
+      }
+    },
+    {
+      "id": "Forest",
+      "name": {
+        "es": "Bosque",
+        "en": "Forest"
+      },
+      "mapLetters": {
+        ".": "Grass",
+        "T": "Woods",
+        "M": "GrassCliff",
+        "*": "Flowers"
+      },
+      "generator": {
+        "terrainChance": {
+          "Grass": {
+            "base": 0.05,
+            "perNeighbour": 0.1
+          },
+          "Water": {
+            "base": 0.005,
+            "perNeighbour": 0.3
+          },
+          "Woods": {
+            "base": 0.1,
+            "perNeighbour": 0.15
+          },
+          "Flowers": {
+            "base": 0.01,
+            "perNeighbour": 0.005
+          },
+          "GrassCliff": {
+            "base": 0.02,
+            "perNeighbour": -0.05
+          }
+        },
+        "openWater": "Water",
+        "narrowWater": "SWater",
+        "shoreWater": null,
+        "deepWater": "DWater"
+      }
+    },
+    {
+      "id": "Swamp",
+      "name": {
+        "es": "Pantano",
+        "en": "Swamp"
+      },
+      "mapLetters": {
+        ".": "Grass",
+        "T": "Woods",
+        "M": "GrassCliff",
+        "*": "Flowers"
+      },
+      "generator": {
+        "terrainChance": {
+          "Grass": {
+            "base": 0.05,
+            "perNeighbour": 0.05
+          },
+          "Water": {
+            "base": 0.03,
+            "perNeighbour": 0.12
+          },
+          "Woods": {
+            "base": 0.05,
+            "perNeighbour": 0.02
+          },
+          "GrassCliff": {
+            "base": 0.01,
+            "perNeighbour": -0.05
+          }
+        },
+        "openWater": "Water",
+        "narrowWater": "SWater",
+        "shoreWater": null,
+        "deepWater": "DWater"
+      }
+    },
+    {
+      "id": "Snowy",
+      "name": {
+        "es": "Nieve",
+        "en": "Snow"
+      },
+      "mapLetters": {
+        ".": "Snow",
+        "T": "SnowWood",
+        "M": "SnowCliff",
+        "*": "Frosty"
+      },
+      "generator": {
+        "terrainChance": {
+          "Water": {
+            "base": 0.005,
+            "perNeighbour": 0.3
+          },
+          "Snow": {
+            "base": 0.05,
+            "perNeighbour": 0.2
+          },
+          "Frosty": {
+            "base": 0.015,
+            "perNeighbour": -0.05
+          },
+          "SnowCliff": {
+            "base": 0.02,
+            "perNeighbour": -0.05
+          },
+          "SnowWood": {
+            "base": 0.05,
+            "perNeighbour": 0.03
+          }
+        },
+        "openWater": "Water",
+        "narrowWater": null,
+        "shoreWater": "Ice",
+        "deepWater": "DWater"
+      }
+    }
+  ]
+}

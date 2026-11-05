@@ -6,11 +6,11 @@ import { duelMatrix } from '../tools/balance/duel';
 import { playGame } from '../tools/balance/play';
 import { runDuels, runGames } from '../tools/balance/runner';
 import { buildVariant } from '../tools/balance/variant';
+import { entryOf, type GameContent } from '@core/content';
 
-const { UNIT, UNIT_NAMES, POWER } = defaultContent().tables;
-
-const TANK = UNIT_NAMES.indexOf('Tank');
-const SOLDIER = UNIT_NAMES.indexOf('Soldier');
+const TANK_INDEX = defaultContent().units.list.findIndex((unitType) => unitType.id === 'Tank');
+const tankOf = (content: GameContent) => entryOf(content.units, 'Tank', 'unidad');
+const TANK = tankOf(defaultContent());
 
 describe('herramienta de equilibrio: variantes', () => {
   it('construye otro contenido y otras reglas por nombre, indice, comodin y operaciones', () => {
@@ -20,8 +20,8 @@ describe('herramienta de equilibrio: variantes', () => {
         set: {
           'RULES.counterattack': false,
           'UNIT.cost.Tank': 9000,
-          'UNIT.mover.0': 4,
-          'POWER.Tank.Soldier': '+0.1',
+          'UNIT.move.0': 4,
+          'HIT_CHANCE.Tank.Soldier': '+0.1',
           'UNIT.cost.*': 'x2',
           'RULES.fog': false,
           'RULES.initialFunds': 'x2',
@@ -29,28 +29,28 @@ describe('herramienta de equilibrio: variantes', () => {
       },
       defaultContent(),
     );
-    const tables = setup.content.tables;
-    expect(tables.UNIT.cost[TANK]).toBe(18000);
-    expect(tables.UNIT.mover[0]).toBe(4);
-    expect(tables.POWER[TANK]![SOLDIER]).toBeCloseTo(POWER[TANK]![SOLDIER]! + 0.1);
+    const variant = setup.content;
+    expect(tankOf(variant).cost).toBe(18000);
+    expect(variant.units.list[0]!.move).toBe(4);
+    expect(tankOf(variant).attack!.hitChance.Soldier).toBeCloseTo(TANK.attack!.hitChance.Soldier! + 0.1);
     expect(rulesWith(setup.content)).toMatchObject({
       counterattack: false,
       fog: false,
-      initialFunds: defaultContent().tables.DEFAULT_RULES.initialFunds * 2,
+      initialFunds: defaultContent().defaultRules.initialFunds * 2,
     });
     expect(setup.changes.length).toBeGreaterThan(20);
   });
 
   it('el contenido y las reglas en uso no cambian: estan congelados', () => {
-    const tankCost = UNIT.cost[TANK];
+    const tankCost = TANK.cost;
     buildVariant({ name: 't', set: { 'UNIT.cost.Tank': 1, 'RULES.fog': false } }, defaultContent());
-    expect(UNIT.cost[TANK]).toBe(tankCost);
-    expect(defaultContent().tables.DEFAULT_RULES.fog).toBe(true);
-    expect(Object.isFrozen(UNIT.cost)).toBe(true);
-    expect(Object.isFrozen(POWER[TANK])).toBe(true);
-    expect(Object.isFrozen(defaultContent().tables.DEFAULT_RULES)).toBe(true);
+    expect(TANK.cost).toBe(tankCost);
+    expect(defaultContent().defaultRules.fog).toBe(true);
+    expect(Object.isFrozen(TANK)).toBe(true);
+    expect(Object.isFrozen(TANK.attack!.hitChance)).toBe(true);
+    expect(Object.isFrozen(defaultContent().defaultRules)).toBe(true);
     expect(() => {
-      (UNIT.cost as number[])[TANK] = 1;
+      (TANK as { cost: number }).cost = 1;
     }).toThrow(TypeError);
   });
 
@@ -59,17 +59,17 @@ describe('herramienta de equilibrio: variantes', () => {
       { name: 'v', set: { 'UNIT.cost.Tank': 9000, 'MOVE_COST.vehicle.Woods': null, 'RULES.upkeep': 0.2, 'AI.KILLBONUS': 7 } },
       defaultContent(),
     );
-    const { files, tables } = setup.content;
-    const woods = files.terrain.findIndex((terrain) => terrain.id === 'Woods');
-    expect(files.units[TANK]!.cost).toBe(9000);
-    expect(tables.UNIT.cost[TANK]).toBe(9000);
-    // Las tablas que salen de otras (CAN_WALK de movement) tambien se rehacen.
-    expect(files.terrain[woods]!.movement.vehicle).toBeNull();
-    expect(tables.CAN_WALK[1]![woods]).toBe(false);
-    expect(defaultContent().tables.CAN_WALK[1]![woods]).toBe(true);
+    const variant = setup.content;
+    const woodsOf = (content: GameContent) => entryOf(content.terrain, 'Woods', 'terreno');
+    expect(variant.files.units[TANK_INDEX]!.cost).toBe(9000);
+    expect(tankOf(variant).cost).toBe(9000);
+    // Los tipos resueltos (el terreno con su coste por movimiento) tambien se rehacen.
+    expect(variant.files.terrain.find((terrain) => terrain.id === 'Woods')!.movement.vehicle).toBeNull();
+    expect(woodsOf(variant).moveCost.vehicle).toBeNull();
+    expect(woodsOf(defaultContent()).moveCost.vehicle).not.toBeNull();
     expect(rulesWith(setup.content).upkeep).toBe(0.2);
-    expect(tables.AI.KILLBONUS).toBe(7);
-    expect(Object.isFrozen(files.units[TANK])).toBe(true);
+    expect(variant.ai.KILLBONUS).toBe(7);
+    expect(Object.isFrozen(variant.files.units[TANK_INDEX])).toBe(true);
   });
 
   it('un valor que el contenido no admite para antes de jugar (lo valida loadContent)', () => {
@@ -105,7 +105,7 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
       trials: 20,
       terrain: 'Grass',
       seed: 1,
-      rules: defaultContent().tables.DEFAULT_RULES,
+      rules: defaultContent().defaultRules,
       content: defaultContent(),
     }).find((cell) => cell.attacker === 'Tank' && cell.defender === 'Tank')!;
     expect(modern.counter).toBeGreaterThan(0);
@@ -114,7 +114,7 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
       trials: 5,
       terrain: 'Grass',
       seed: 1,
-      rules: defaultContent().tables.DEFAULT_RULES,
+      rules: defaultContent().defaultRules,
       content: defaultContent(),
     }).find((cell) => cell.attacker === 'Artillery' && cell.defender === 'Tank')!;
     expect(art.counter).toBe(0);
@@ -138,6 +138,6 @@ describe('herramienta de equilibrio: cada hilo juega con el contenido de su vari
       );
     expect((await tankVsTank({}))!.damage).toBeGreaterThan(0);
     // Sin poder de tanque contra tanque, ese duelo ni se juega.
-    expect(await tankVsTank({ 'POWER.Tank.Tank': 0 })).toBeUndefined();
+    expect(await tankVsTank({ 'HIT_CHANCE.Tank.Tank': 0 })).toBeUndefined();
   }, 30_000);
 });

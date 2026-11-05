@@ -1,13 +1,14 @@
+import { MoveType } from '@core/content';
+import { hqKey } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { createGame } from '@core/defaultGames';
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { createLayer } from '@core/mapGrid';
 import { checkInvariants } from './sim/partidas';
 
-const { HQ } = defaultContent().tables;
+const HQ = hqKey();
 
 describe('generador de mapas', () => {
   it('100 mapas: ambas bases, conectadas por tierra, con unidades y neutrales', () => {
@@ -17,7 +18,7 @@ describe('generador de mapas', () => {
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
       expect(hq1, `seed ${seed}`).toBeTruthy();
-      expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
+      expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
       expect(s.units.filter((unit) => unit.team === 0)).toHaveLength(3);
       expect(s.units.filter((unit) => unit.team === 1)).toHaveLength(3);
       const neutral = s.buildings.filter((building) => building.owner === null).length;

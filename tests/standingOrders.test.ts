@@ -28,14 +28,14 @@ import {
 } from '@core/squads';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { blankState, savedByVersion1 } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, hqKey } from './helpers';
 
-const { HQ } = defaultContent().tables;
+const HQ = hqKey();
 
 /** [CAMBIO] Ordenes con destino estilo RTS y escuadras con nombre. */
-const SOLDIER = 0,
-  TANK = 1,
-  CAR = 3,
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  CAR = unitTypeNamed('Car'),
   CITY = 0,
   FACTORY = 2;
 

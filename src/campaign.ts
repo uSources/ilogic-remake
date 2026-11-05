@@ -5,7 +5,7 @@ import { defaultContent } from './core/content/default';
 import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
 import type { GameEvent, GameState, Objective } from './core/model';
-import { buildingLabel, settings } from './settings';
+import { nameOf, settings } from './settings';
 import type { GameContent } from './core/content';
 
 const STORAGE_KEY = 'ilogic.campaign';
@@ -75,7 +75,8 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { k
   hq: () => (es() ? 'Conquista la Base enemiga.' : 'Take the enemy HQ.'),
   survive: ({ days }) => (es() ? `Aguanta hasta el final del día ${days}.` : `Hold out until the end of day ${days}.`),
   capture: ({ count, type, days }, content) => {
-    const what = type === null ? (es() ? 'edificios' : 'buildings') : buildingLabel(content, type).toLowerCase() + (es() ? 'es' : 's');
+    const what =
+      type === null ? (es() ? 'edificios' : 'buildings') : nameOf(content.buildings.list[type]!).toLowerCase() + (es() ? 'es' : 's');
     return es() ? `Ten ${count} ${what} antes de que acabe el día ${days}.` : `Own ${count} ${what} before day ${days} ends.`;
   },
   destroy: ({ days }) =>
@@ -93,7 +94,7 @@ const NO_UNIT_UIDS: readonly number[] = [];
 function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): Objective {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
-  if (mission) return objectiveFromMission(mission.objective, NO_UNIT_UIDS, content.tables);
+  if (mission) return objectiveFromMission(mission.objective, NO_UNIT_UIDS, content);
   return { kind: 'hq' };
 }
 

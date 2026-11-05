@@ -5,11 +5,11 @@ import { defaultContent } from '@core/content/default';
 import { generalDef, newGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';
 import type { GameState } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
-const { UNIT_NAMES, AI } = defaultContent().tables;
+const AI = defaultContent().ai;
 
-const unitType = (name: string) => UNIT_NAMES.indexOf(name);
+const unitType = unitTypeNamed;
 
 /** La IA (bando 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {

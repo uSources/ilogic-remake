@@ -7,7 +7,7 @@
  *   "set": {
  *     "UNIT.cost.Tank": 10000,          // valor fijo (por nombre o indice)
  *     "UNIT.cost.*": "x1.1",            // multiplicar todas
- *     "POWER.Tank.Soldier": "+0.05",    // sumar
+ *     "HIT_CHANCE.Tank.Soldier": "+0.05", // sumar
  *     "BUILDING.earning.City": 800,
  *     "TERRAIN.protection.Woods": 0.8,
  *     "MOVE_COST.vehicle.Woods": 3,
@@ -16,15 +16,15 @@
  *   }
  * }
  *
- * Las rutas usan los nombres de las tablas de siempre, pero cada una nombra un campo de los ficheros
- * (TABLE_PATHS): `UNIT.cost.Tank` es el `cost` del Tank en units.json, `POWER.Tank.Soldier` su
+ * Cada ruta nombra un campo de los ficheros (TABLE_PATHS), con el mismo nombre que en el JSON:
+ * `UNIT.cost.Tank` es el `cost` del Tank en units.json, `HIT_CHANCE.Tank.Soldier` su
  * `attack.hitChance.Soldier`, `MOVE_COST.vehicle.Woods` el `movement.vehicle` de Woods en
  * terrain.json, `RULES.fog` `defaults.fog` en rules.json... Las filas se nombran por id, por indice o
  * con `*` (todas).
  *
  * Una variante no cambia el contenido del juego: `buildVariant` aplica los cambios a una copia de los
  * ficheros y la carga con `loadContent`, que la valida (un valor imposible para antes de jugar),
- * reconstruye todas las tablas y la congela. Sus reglas son las de ese contenido:
+ * resuelve todos los tipos y la congela. Sus reglas son las de ese contenido:
  * `rulesWith(variante.content)`.
  */
 import { loadContent, MOVEMENTS, type Content, type GameContent } from '@core/content';
@@ -68,16 +68,14 @@ function pick<T extends { id: string }>(list: readonly T[], key: string, what: s
   return [item];
 }
 
-/** Campos de cada unidad que se pueden cambiar como `UNIT.<campo>.<unidad>`, y su nombre en units.json. */
-const UNIT_FIELDS: Record<string, string> = { cost: 'cost', command: 'command', mover: 'move', vision: 'vision' };
+/** Campos de cada unidad que se pueden cambiar como `UNIT.<campo>.<unidad>` (los de units.json). */
+const UNIT_FIELDS = ['cost', 'command', 'move', 'vision'];
 const BUILDING_FIELDS = ['earning', 'heals', 'protection', 'vision'];
-const TERRAIN_FIELDS: Record<string, string> = { protection: 'protection', canbuild: 'buildable', iswater: 'water' };
+const TERRAIN_FIELDS = ['protection', 'buildable', 'water'];
 
-function fieldOf(fields: Record<string, string> | string[], name: string | undefined, table: string): string {
-  const map = Array.isArray(fields) ? Object.fromEntries(fields.map((field) => [field, field])) : fields;
-  const field = name === undefined ? undefined : map[name];
-  if (!field) throw new Error(`"${name}" no existe en ${table} (validos: ${Object.keys(map).join(', ')})`);
-  return field;
+function fieldOf(fields: readonly string[], name: string | undefined, table: string): string {
+  if (name === undefined || !fields.includes(name)) throw new Error(`"${name}" no existe en ${table} (validos: ${fields.join(', ')})`);
+  return name;
 }
 
 const slotsOf = (items: readonly { id: string }[], key: (item: { id: string }) => Slot): Slot[] => items.map(key);
@@ -100,12 +98,12 @@ const TABLE_PATHS: Record<string, TablePath> = {
       return slotsOf(pick(files.units, unitKey, 'unidad'), (unit) => ({ holder: asHolder(unit), key: name, label: unit.id }));
     },
   },
-  POWER: {
+  HIT_CHANCE: {
     keys: 2,
     missingValue: 0,
     slots: (files, [attackerKey = '', defenderKey = '']) =>
       pick(files.units, attackerKey, 'unidad').flatMap((attacker) => {
-        if (!attacker.attack) throw new Error(`${attacker.id} no ataca: no tiene POWER`);
+        if (!attacker.attack) throw new Error(`${attacker.id} no ataca: no tiene HIT_CHANCE`);
         const hitChance = asHolder(attacker.attack.hitChance);
         return pick(files.units, defenderKey, 'unidad').map((defender) => ({
           holder: hitChance,
@@ -139,7 +137,7 @@ const TABLE_PATHS: Record<string, TablePath> = {
   MOVE_COST: {
     keys: 2,
     slots: (files, [movementKey = '', terrainKey = '']) => {
-      const movements = movementKey === '*' ? [...MOVEMENTS] : [fieldOf([...MOVEMENTS], movementKey, 'MOVE_COST')];
+      const movements = movementKey === '*' ? [...MOVEMENTS] : [fieldOf(MOVEMENTS, movementKey, 'MOVE_COST')];
       return pick(files.terrain, terrainKey, 'terreno').flatMap((terrain) =>
         movements.map((movement) => ({ holder: asHolder(terrain.movement), key: movement, label: `${movement}.${terrain.id}` })),
       );

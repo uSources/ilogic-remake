@@ -7,7 +7,8 @@
  * (lo comprueba `tests/objectives.test.ts`), que todavia tiene su propia copia.
  */
 
-import type { ContentTables } from './content';
+import { entryOf, type GameContent } from './content';
+import { keyOf } from './gameContent';
 import type { GameState, Objective, Outcome, Pos } from './model';
 import { samePos } from './geom';
 import { Grid } from './util/grid';
@@ -43,7 +44,7 @@ type InGame<K extends ObjectiveKind> = Extract<Objective, { kind: K }>;
 
 interface ObjectiveRules<K extends ObjectiveKind> {
   /** De como se escribe en la mision a como queda en la partida (`unitUids[i]` es la unidad `i`). */
-  fromMission(written: InMission<K>, unitUids: readonly number[], tables: ContentTables): InGame<K>;
+  fromMission(written: InMission<K>, unitUids: readonly number[], content: GameContent): InGame<K>;
   /** Problemas del objetivo en el mapa de la mision (para los tests). */
   problems(written: InMission<K>, layout: MissionLayout): string[];
   /** Resultado de la partida por el objetivo (perder la Base ya se ha mirado antes). */
@@ -94,10 +95,10 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     progress: (s, objective) => ({ done: Math.min(s.day - 1, objective.days), total: objective.days }),
   },
   capture: {
-    fromMission: (written, _unitUids, tables) => ({
+    fromMission: (written, _unitUids, content) => ({
       kind: 'capture',
       count: written.count,
-      type: written.type === null ? null : tables.BUILDING_NAMES.indexOf(written.type),
+      type: written.type === null ? null : keyOf(content.buildings, entryOf(content.buildings, written.type, 'edificio')),
       days: written.days,
     }),
     problems: noProblems,
@@ -131,8 +132,8 @@ function rulesOf<K extends ObjectiveKind>(kind: K): ObjectiveRules<K> {
   return OBJECTIVES[kind];
 }
 
-export const objectiveFromMission = (written: MissionObjective, unitUids: readonly number[], tables: ContentTables): Objective =>
-  rulesOf(written.kind).fromMission(written, unitUids, tables);
+export const objectiveFromMission = (written: MissionObjective, unitUids: readonly number[], content: GameContent): Objective =>
+  rulesOf(written.kind).fromMission(written, unitUids, content);
 
 export const objectiveProblems = (written: MissionObjective, layout: MissionLayout): string[] =>
   rulesOf(written.kind).problems(written, layout);

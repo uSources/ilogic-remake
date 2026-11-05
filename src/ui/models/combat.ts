@@ -1,8 +1,9 @@
+import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { bountyFor, combatForecast, flanked } from '../../core/rules';
 import type { CombatInfo, GameEvent, GameState, Pos, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
-import { unitLabel } from '../../settings';
+import { nameOf } from '../../settings';
 import { unitKey } from '../sprites';
 
 /** Combate: prevision antes de atacar y panel mientras se anima un ataque. */
@@ -28,7 +29,7 @@ export function forecastVM(
     killChance: forecast.killChance,
     anchor,
     flank: flanked(s, target) ? s.rules.flankBonus : 0,
-    bounty: bountyFor(s, target.type),
+    bounty: bountyFor(s, target),
     counter: forecast.counter
       ? {
           low: forecast.counter.low,
@@ -69,7 +70,7 @@ export function combatVM(
     const life = Math.max(0, before - (hurt ?? 0));
     return {
       icon: known ? (isAttacker ? icons.attacker : icons.defender) : null,
-      name: known ? unitLabel(s.content, isAttacker ? combat.attackerType : combat.defenderType) : '???',
+      name: known ? nameOf(unitTypeOf(s, { type: isAttacker ? combat.attackerType : combat.defenderType })) : '???',
       team: isAttacker ? combat.attackerTeam : defTeam,
       role,
       rank: known ? (isAttacker ? combat.attackerRank : combat.defenderRank) : 0,

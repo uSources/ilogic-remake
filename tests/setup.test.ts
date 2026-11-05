@@ -1,3 +1,4 @@
+import { MoveType } from '@core/content';
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
@@ -8,9 +9,9 @@ import { createGame, saveContext } from '@core/defaultGames';
 import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
-import { blankState } from './helpers';
+import { blankState, hqKey, terrainKey, unitTypeNamed } from './helpers';
 
-const { UNIT, HQ } = defaultContent().tables;
+const HQ = hqKey();
 
 afterEach(() => {});
 
@@ -22,7 +23,7 @@ describe('nueva partida: tamaños de mapa', () => {
       expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-      expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
+      expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
       const neutral = s.buildings.filter((building) => building.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
       for (const building of s.buildings) expect(building.x < size && building.y < size).toBe(true);
@@ -60,7 +61,12 @@ describe('nueva partida: tamaños de mapa', () => {
     expect(loaded).not.toBeNull();
     expect([mapGrid(loaded).width, mapGrid(loaded).height]).toEqual([40, 40]);
     expect(loaded.setup).toEqual({ seed: 7, size: 40, theme: null });
-    expect(deserialize(JSON.stringify({ ...JSON.parse(json), map: blankMap(32).slice(0, 25) }), saveContext(defaultContent()))).toBeNull();
+    expect(
+      deserialize(
+        JSON.stringify({ ...JSON.parse(json), map: blankMap(32, terrainKey(defaultContent().plainTerrain)).slice(0, 25) }),
+        saveContext(defaultContent()),
+      ),
+    ).toBeNull();
   });
 });
 
@@ -68,11 +74,11 @@ describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
     const s = blankState(rulesWith(defaultContent(), { dayLimit: 10 }));
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 0, owner: 1, x: 5, y: 5 });
-    newUnit(s, 1, 0, { x: 1, y: 1 }); // tanque: vale su precio
+    newUnit(s, unitTypeNamed('Tank'), 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;
     expect(outcome(s)).toBe('playing');
     s.day = 11;
-    expect(score(s, 0)).toBe(UNIT.cost[1]! + 1000); // tanque entero + su Base
+    expect(score(s, 0)).toBe(unitTypeNamed('Tank').cost + 1000); // tanque entero + su Base
     expect(score(s, 1)).toBe(2000);
     expect(outcome(s)).toBe('won');
     expect(endReason(s)).toBe('days');

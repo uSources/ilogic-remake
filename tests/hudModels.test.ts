@@ -1,3 +1,4 @@
+import { entryOf } from '@core/content';
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/rulesConfig';
@@ -16,9 +17,11 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed, hqKey } from './helpers';
 
-const { UNIT, UNIT_NAMES, BUILDING_NAMES, HQ, MAX_FUNDS, WEATHER } = defaultContent().tables;
+const BUILDING_NAMES = defaultContent().buildings.list.map((buildingType) => buildingType.id);
+const HQ = hqKey();
+const MAX_FUNDS = defaultContent().maxFunds;
 
 /** Texturas de mentira: todas las imagenes "existen" (las fichas solo usan sus nombres). */
 const textures = {
@@ -26,7 +29,7 @@ const textures = {
   get: () => ({ has: () => true }),
   getFrame: () => null,
 } as unknown as Phaser.Textures.TextureManager;
-const unitType = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
+const unitType = unitTypeNamed;
 
 beforeEach(() => {
   settings.lang = 'es';
@@ -56,8 +59,8 @@ describe('datos de la interfaz', () => {
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {
-    expect(unitStatsText(blankState(), unitType('Soldier'))).toMatch(/\d.*·/);
-    expect(unitStatsText(blankState(), unitType('Transport'))).not.toMatch(/–/);
+    expect(unitStatsText(unitType('Soldier'))).toMatch(/\d.*·/);
+    expect(unitStatsText(unitType('Transport'))).not.toMatch(/–/);
     const s = blankState();
     const unit = newUnit(s, unitType('Soldier'), 0, { x: 3, y: 3 });
     expect(captureHintText(s, unit)).toBeUndefined();
@@ -71,20 +74,21 @@ describe('datos de la interfaz', () => {
     newUnit(s, unitType('Soldier'), 1, { x: 9, y: 9 });
     const vis = createLayer(s, false);
     vis.set({ x: 1, y: 1 }, true);
-    expect(minimapVM([], s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
-    expect(minimapVM([], s, vis, new Set([mine.uid])).units).toEqual([]);
+    expect(minimapVM({}, s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
+    expect(minimapVM({}, s, vis, new Set([mine.uid])).units).toEqual([]);
   });
 });
 
 describe('clima en la barra de arriba', () => {
-  const weatherIndex = (id: string) => WEATHER.ids.indexOf(id);
+  const weatherIndex = (id: string) => defaultContent().weather.list.findIndex((weather) => weather.id === id);
+  const weatherNamed = (id: string) => entryOf(defaultContent().weather, id, 'clima');
 
   it('resume los efectos de cada clima', () => {
-    expect(weatherEffectsText(blankState(), weatherIndex('Clear'))).toBe('Sin efectos');
-    expect(weatherEffectsText(blankState(), weatherIndex('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
-    expect(weatherEffectsText(blankState(), weatherIndex('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
+    expect(weatherEffectsText(weatherNamed('Clear'))).toBe('Sin efectos');
+    expect(weatherEffectsText(weatherNamed('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
+    expect(weatherEffectsText(weatherNamed('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
     settings.lang = 'en';
-    expect(weatherEffectsText(blankState(), weatherIndex('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
+    expect(weatherEffectsText(weatherNamed('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
   });
 
   it('enseña el clima de hoy y el pronostico solo si cambia mañana', () => {
@@ -191,7 +195,7 @@ describe('desglose de la barra de arriba', () => {
     const next = economy.next;
     endRound(s);
     expect(s.funds[0]).toBe(next); // lo que dice el desglose es lo que pasa
-    expect(economy.commandPoints!.used).toBe(UNIT.command[unitType('Tank')]! + 2 * UNIT.command[unitType('Soldier')]!);
+    expect(economy.commandPoints!.used).toBe(unitType('Tank').command + 2 * unitType('Soldier').command);
     expect(economy.commandPoints!.lines.reduce((sum, line) => sum + line.amount, 0)).toBe(economy.commandPoints!.used);
   });
 

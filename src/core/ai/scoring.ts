@@ -4,7 +4,7 @@
  * un ataque es una entrada mas en la lista.
  */
 
-import { tablesOf, weightsOf } from '../gameContent';
+import { unitTypeOf, isHq, weightsOf } from '../gameContent';
 import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
@@ -31,7 +31,7 @@ export interface AttackScoreTerm {
 }
 
 /** Lo que vale una unidad de ese tipo en la escala de la IA (su precio, escalado). */
-export const unitValue = (s: GameState, type: number): number => tablesOf(s).UNIT.cost[type]! / weightsOf(s).COSTSCALE;
+export const unitValue = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost / weightsOf(s).COSTSCALE;
 
 const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
 
@@ -45,7 +45,7 @@ const evictionWeight = (attack: AttackPlan): number => Math.max(0.5, attack.dama
 function counterattackLoss({ s, attacker, target, damage }: AttackPlan): number {
   const survivor = { ...target, life: Math.max(1, Math.round(target.life - damage)) };
   if (!canCounter(s, survivor, attacker)) return 0;
-  return expectedDamage(s, survivor, attacker) * unitValue(s, attacker.type);
+  return expectedDamage(s, survivor, attacker) * unitValue(s, attacker);
 }
 
 /**
@@ -56,13 +56,13 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
   {
     // Dano esperado ponderado por el precio del objetivo.
     id: 'damage',
-    value: (attack) => attack.damage * unitValue(attack.s, attack.target.type),
+    value: (attack) => attack.damage * unitValue(attack.s, attack.target),
   },
   {
     // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
     id: 'kill',
     value: (attack) =>
-      kills(attack) ? (weightsOf(attack.s).KILLBONUS + 100 * attack.s.rules.bounty) * unitValue(attack.s, attack.target.type) : 0,
+      kills(attack) ? (weightsOf(attack.s).KILLBONUS + 100 * attack.s.rules.bounty) * unitValue(attack.s, attack.target) : 0,
   },
   {
     // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
@@ -74,7 +74,7 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     id: 'hqDefender',
     value: (attack) => {
       const building = attack.targetBuilding;
-      const defendsOwnHq = !!building && building.type === tablesOf(attack.s).HQ && building.owner === attack.target.team;
+      const defendsOwnHq = !!building && isHq(attack.s, building) && building.owner === attack.target.team;
       return defendsOwnHq ? weightsOf(attack.s).HQDEFENDER * evictionWeight(attack) : 0;
     },
   },
@@ -84,10 +84,7 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     value: (attack) => {
       const building = attack.targetBuilding;
       if (!building || building.owner !== attack.ai.me || !captureProgress(attack.s, building)) return 0;
-      return (
-        (building.type === tablesOf(attack.s).HQ ? weightsOf(attack.s).STOPCAPTUREHQ : weightsOf(attack.s).STOPCAPTURE) *
-        evictionWeight(attack)
-      );
+      return (isHq(attack.s, building) ? weightsOf(attack.s).STOPCAPTUREHQ : weightsOf(attack.s).STOPCAPTURE) * evictionWeight(attack);
     },
   },
 ];

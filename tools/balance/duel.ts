@@ -2,8 +2,8 @@
  * Laboratorio de duelos: una unidad contra otra, sin mapa ni IA, usando las reglas reales
  * (attack() de core/rules.ts, asi que incluye contraataque o menos azar si las reglas lo tienen).
  */
-import { TERRAIN_NAMES, type GameContent } from '@core/content';
-import { tablesOf } from '@core/gameContent';
+import { findEntry, type GameContent, type TerrainType, type UnitType } from '@core/content';
+import { keyOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
@@ -27,13 +27,14 @@ export interface DuelCell {
 /** Lado del campo de los duelos (solo se usan unas casillas del medio). */
 const DUEL_MAP_SIZE = 32;
 
-function arena(terrain: number, options: DuelOptions): GameState {
-  return newGameState({ map: blankMap(DUEL_MAP_SIZE, terrain), rules: options.rules, content: options.content, funds: [0, 0] });
+function arena(terrain: TerrainType, options: DuelOptions): GameState {
+  const map = blankMap(DUEL_MAP_SIZE, keyOf(options.content.terrain, terrain));
+  return newGameState({ map, rules: options.rules, content: options.content, funds: [0, 0] });
 }
 
-function place(s: GameState, attacker: Unit, defender: Unit): void {
+function place(s: GameState, attackerType: UnitType, attacker: Unit, defender: Unit): void {
   // A distancia minima a la que A puede atacar a B.
-  const distance = tablesOf(s).UNIT.minalc[attacker.type]! + 1;
+  const distance = attackerType.attack?.minRange ?? 1;
   attacker.x = 10;
   attacker.y = 10;
   defender.x = 10 + distance;
@@ -56,15 +57,15 @@ export interface DuelOptions {
 }
 
 export function duelMatrix(options: DuelOptions): DuelCell[] {
-  const terrain = Math.max(0, TERRAIN_NAMES.indexOf(options.terrain as (typeof TERRAIN_NAMES)[number]));
+  const { content } = options;
+  const terrain = findEntry(content.terrain, options.terrain) ?? content.plainTerrain;
   const rng = seededRng(options.seed);
-  const { UNIT, POWER, UNIT_NAMES } = options.content.tables;
-  const unitTypes = UNIT_NAMES.length;
+  const hitChance = (attacker: UnitType, defender: UnitType) => attacker.attack?.hitChance[defender.id] ?? 0;
   const cells: DuelCell[] = [];
-  for (let attackerType = 0; attackerType < unitTypes; attackerType++) {
-    if (!UNIT.canfight[attackerType] || UNIT.alcance[attackerType] === 0) continue;
-    for (let defenderType = 0; defenderType < unitTypes; defenderType++) {
-      if (!(POWER[attackerType]![defenderType]! > 0)) continue;
+  for (const attackerType of content.units.list) {
+    if (!attackerType.attack) continue;
+    for (const defenderType of content.units.list) {
+      if (!(hitChance(attackerType, defenderType) > 0)) continue;
       let dmg = 0,
         counter = 0,
         kills = 0;
@@ -72,7 +73,7 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
         const s = arena(terrain, options);
         const attacker = newUnit(s, attackerType, 0, { x: 0, y: 0 });
         const defender = newUnit(s, defenderType, 1, { x: 0, y: 0 });
-        place(s, attacker, defender);
+        place(s, attackerType, attacker, defender);
         const lifeA = attacker.life;
         dmg += attack(s, attacker, defender, rng);
         counter += lifeA - (s.units.includes(attacker) ? attacker.life : 0);
@@ -80,7 +81,7 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
       }
       // Duelo a muerte: se alternan ataques mientras ambos sigan vivos y se alcancen.
       let first: number | null = null;
-      const mutual = POWER[defenderType]![attackerType]! > 0 && UNIT.canfight[defenderType] && UNIT.alcance[defenderType]! > 0;
+      const mutual = hitChance(defenderType, attackerType) > 0 && defenderType.attack !== null;
       if (mutual) {
         let wins = 0,
           decided = 0;
@@ -88,8 +89,8 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
           const s = arena(terrain, options);
           const attacker = newUnit(s, attackerType, 0, { x: 0, y: 0 });
           const defender = newUnit(s, defenderType, 1, { x: 0, y: 0 });
-          place(s, attacker, defender);
-          if (!inAttackRange(s, defenderType, defender, attacker)) break; // B no llega a A a esa distancia: no hay duelo mutuo
+          place(s, attackerType, attacker, defender);
+          if (!inAttackRange(s, defender, defender, attacker)) break; // B no llega a A a esa distancia: no hay duelo mutuo
           for (let round = 0; round < 40; round++) {
             const [shooter, target] = round % 2 === 0 ? [attacker, defender] : [defender, attacker];
             if (!s.units.includes(shooter) || !s.units.includes(target)) break;
@@ -107,12 +108,12 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
       }
       const trials = options.trials;
       cells.push({
-        attacker: UNIT_NAMES[attackerType]!,
-        defender: UNIT_NAMES[defenderType]!,
+        attacker: attackerType.id,
+        defender: defenderType.id,
         damage: dmg / trials,
         counter: counter / trials,
         killChance: kills / trials,
-        valuePer1000: (((dmg / trials) * UNIT.cost[defenderType]!) / 100 / UNIT.cost[attackerType]!) * 1000,
+        valuePer1000: (((dmg / trials) * defenderType.cost) / 100 / attackerType.cost) * 1000,
         firstStrikeWins: first,
       });
     }

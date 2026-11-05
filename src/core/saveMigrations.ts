@@ -87,7 +87,7 @@ const sameOrderV1 = (first: StandingOrder, second: StandingOrder): boolean => fi
 
 /** La orden de una unidad de una escuadra como la seguia en el formato 1: con capturar, escolta si no captura. */
 function format1KindFor(content: GameContent, unit: Unit, kind: StandingOrderKind): StandingOrderKind {
-  const capturesV1 = !!content.tables.UNIT.cancapt[unit.type];
+  const capturesV1 = !!content.units.list[unit.type]?.canCapture;
   return kind === 'capture' && !capturesV1 ? 'attack' : kind;
 }
 

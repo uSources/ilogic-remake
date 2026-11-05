@@ -26,7 +26,7 @@ Al aplicar un cambio:
 1. Cambiar el valor en `src/core/content/`: `units.json` (precio, daño `attack.hitChance`, movimiento),
    `buildings.json` (ingresos, proteccion), `terrain.json` (defensa, coste de movimiento), `rules.json`,
    `ai.json`. Para probar sin tocar ficheros, una variante (`--set UNIT.cost.Tank=9500`,
-   `POWER.Soldier.Tank=0.2`, `MOVE_COST.vehicle.Woods=3`, `AI.KILLBONUS=60`) o `balance/variants/`.
+   `HIT_CHANCE.Soldier.Tank=0.2`, `MOVE_COST.vehicle.Woods=3`, `AI.KILLBONUS=60`) o `balance/variants/`.
 2. `npx vitest run -u tests/aiGolden.test.ts` (cambian las partidas de referencia, es lo esperado).
 3. Guardar el informe que lo justifica en `balance/reports/` y apuntarlo en `docs/BALANCE.md`.
 4. Si cambia algo que el jugador nota, al CHANGELOG.

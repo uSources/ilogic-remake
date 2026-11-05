@@ -11,17 +11,16 @@
  *
  * Este modulo no importa rules.ts (rules.ts lo importa a el).
  */
-import { tablesOf } from './gameContent';
+import { unitTypeOf } from './gameContent';
 import type { DeepReadonly } from './util/freeze';
-import { MOVEMENTS, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
+import { findEntry, type GeneralAbilityDef, type GeneralDef, type GeneralEffect, type UnitFilter } from './content';
 import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
 import { mapGrid } from './mapGrid';
 import { isOnMap } from './util/predicates';
 import type { GameEventOf, GameState, GeneralState, Pos, Team, Unit } from './model';
 
-export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined =>
-  s.content.files.generals.find((general) => general.id === id);
+export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 
 /** General de un bando con sus datos (null si no tiene). */
 export function generalOf(s: GameState, team: Team): { state: GeneralState; definition: DeepReadonly<GeneralDef> } | null {
@@ -35,10 +34,11 @@ export function newGeneral(s: GameState, id: string | null | undefined): General
   return id && generalDef(s, id) ? { id, charge: 0, used: false, reveal: false } : null;
 }
 
-/** La unidad de tipo `type` entra en el filtro (sin filtro, todas). */
-export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, type: number): boolean {
-  if (filter.movement && !filter.movement.includes(MOVEMENTS[tablesOf(s).UNIT.movtype[type]!])) return false;
-  if (filter.units && !filter.units.includes(tablesOf(s).UNIT_NAMES[type]!)) return false;
+/** El tipo de la unidad entra en el filtro (sin filtro, todas). */
+export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, unit: Pick<Unit, 'type'>): boolean {
+  const unitType = unitTypeOf(s, unit);
+  if (filter.movement && !filter.movement.includes(unitType.movement)) return false;
+  if (filter.units && !filter.units.includes(unitType.id)) return false;
   return true;
 }
 
@@ -47,10 +47,10 @@ export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): 
   let factor = 1;
   const attackerGeneral = generalOf(s, attacker.team);
   for (const passive of attackerGeneral?.definition.passive ?? [])
-    if (passive.kind === 'attack' && applies(s, passive, attacker.type)) factor *= passive.factor;
+    if (passive.kind === 'attack' && applies(s, passive, attacker)) factor *= passive.factor;
   const defenderGeneral = generalOf(s, defender.team);
   for (const passive of defenderGeneral?.definition.passive ?? [])
-    if (passive.kind === 'defense' && applies(s, passive, defender.type)) factor *= passive.factor;
+    if (passive.kind === 'defense' && applies(s, passive, defender)) factor *= passive.factor;
   return factor;
 }
 
@@ -66,8 +66,8 @@ function addCharge(s: GameState, team: Team, value: number): void {
  * `toDefender`/`toAttacker`: vida que ha perdido cada uno.
  */
 export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): void {
-  const defenderValueLost = (toDefender * tablesOf(s).UNIT.cost[defender.type]!) / 100;
-  const attackerValueLost = (toAttacker * tablesOf(s).UNIT.cost[attacker.type]!) / 100;
+  const defenderValueLost = (toDefender * unitTypeOf(s, defender).cost) / 100;
+  const attackerValueLost = (toAttacker * unitTypeOf(s, attacker).cost) / 100;
   addCharge(s, attacker.team, defenderValueLost + attackerValueLost);
   addCharge(s, defender.team, defenderValueLost + attackerValueLost);
 }
@@ -125,7 +125,7 @@ const ABILITY_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K
   },
   heal: ({ s, team, effect, out }) => {
     for (const unit of s.units) {
-      if (unit.team !== team || !applies(s, effect, unit.type)) continue;
+      if (unit.team !== team || !applies(s, effect, unit)) continue;
       const amount = Math.min(effect.amount, MAX_LIFE - unit.life);
       if (amount <= 0) continue;
       unit.life += amount;

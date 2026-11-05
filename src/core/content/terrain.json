@@ -33,7 +33,8 @@
         "vehicle": null,
         "air": 1,
         "amphibious": 1
-      }
+      },
+      "mapLetter": "~"
     },
     {
       "id": "Woods",
@@ -152,7 +153,8 @@
         "vehicle": null,
         "air": 1,
         "amphibious": 1
-      }
+      },
+      "mapLetter": ","
     },
     {
       "id": "DWater",
@@ -169,7 +171,8 @@
         "vehicle": null,
         "air": 1,
         "amphibious": 2
-      }
+      },
+      "mapLetter": "="
     },
     {
       "id": "Snow",
@@ -220,7 +223,8 @@
         "vehicle": null,
         "air": 1,
         "amphibious": null
-      }
+      },
+      "mapLetter": "N"
     },
     {
       "id": "SnowWood",
@@ -237,7 +241,8 @@
         "vehicle": 3,
         "air": 1,
         "amphibious": 3
-      }
+      },
+      "mapLetter": "P"
     },
     {
       "id": "Ice",
@@ -254,7 +259,8 @@
         "vehicle": null,
         "air": 1,
         "amphibious": null
-      }
+      },
+      "mapLetter": "i"
     }
   ]
 }

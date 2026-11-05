@@ -1,14 +1,12 @@
+import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
-import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
 import { bestAttackTile, closestStep } from '@core/targeting';
 import { extendTrail } from '@core/trail';
 import { moveRange, newUnit, pathCost } from '@core/rules';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
-const { UNIT, UNIT_NAMES } = defaultContent().tables;
-
-const type = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
+const type = unitTypeNamed;
 const WOODS = 2;
 
 describe('ordenes del jugador', () => {
@@ -34,7 +32,7 @@ describe('ordenes del jugador', () => {
     const s = blankState();
     const art = newUnit(s, type('Artillery'), 0, { x: 10, y: 10 });
     const near = newUnit(s, type('Soldier'), 1, { x: 11, y: 10 });
-    const far = newUnit(s, type('Soldier'), 1, { x: 10, y: 10 + UNIT.alcance[type('Artillery')]! });
+    const far = newUnit(s, type('Soldier'), 1, { x: 10, y: 10 + type('Artillery').attack!.maxRange });
     const range = moveRange(s, art);
     expect(bestAttackTile(s, art, near, range)).toBeNull();
     expect(bestAttackTile(s, art, far, range)).toEqual({ x: 10, y: 10 });
@@ -47,7 +45,7 @@ describe('ordenes del jugador', () => {
     const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
     const range = moveRange(s, unit);
     const step = closestStep(unit, { x: 20, y: 5 }, range)!;
-    expect(step).toEqual({ x: 5 + UNIT.mover[unit.type]!, y: 5 });
+    expect(step).toEqual({ x: 5 + unitTypeOf(s, unit).move, y: 5 });
     expect(closestStep(unit, { x: 5, y: 5 }, range)).toBeNull();
   });
 
@@ -70,7 +68,7 @@ describe('ordenes del jugador', () => {
     ]);
     const jump = extendTrail(s, unit, range, block, trail, { x: 5, y: 8 });
     expect(jump[jump.length - 1]).toEqual({ x: 5, y: 8 });
-    expect(pathCost(s, UNIT.movtype[unit.type]!, jump)).toBeLessThanOrEqual(range.maxSteps);
+    expect(pathCost(s, unitTypeOf(s, unit).movement, jump)).toBeLessThanOrEqual(range.maxSteps);
     // Fuera de alcance: se queda como estaba.
     expect(extendTrail(s, unit, range, block, trail, { x: 30, y: 30 })).toBe(trail);
   });

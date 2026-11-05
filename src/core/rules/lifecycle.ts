@@ -1,17 +1,18 @@
 /**
  * Unidades: crear y eliminar (con sus pasajeros) y limpiar las que se quedan sin vida.
  */
-import { tablesOf } from '../gameContent';
+import type { UnitType } from '../content';
+import { keyOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
 import type { GameState, Pos, Team, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { unitById } from './queries';
 
-export function newUnit(s: GameState, type: number, team: Team, at: Pos, active = true): Unit {
+export function newUnit(s: GameState, unitType: UnitType, team: Team, at: Pos, active = true): Unit {
   const unit: Unit = {
     uid: s.nextUid++,
-    type,
+    type: keyOf(s.content.units, unitType),
     team,
     x: at.x,
     y: at.y,
@@ -20,7 +21,7 @@ export function newUnit(s: GameState, type: number, team: Team, at: Pos, active 
     canFire: active,
     life: MAX_LIFE,
     carrier: null,
-    cargo: Array<number | null>(tablesOf(s).UNIT.maxcarry[type]!).fill(null),
+    cargo: Array<number | null>(unitType.cargoSlots).fill(null),
   };
   s.units.push(unit);
   return unit;

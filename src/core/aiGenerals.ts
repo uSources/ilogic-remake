@@ -10,14 +10,14 @@
  * Generico por tipo de efecto: un general nuevo con efectos que ya existen no necesita tocar esto; un
  * tipo de efecto nuevo es una entrada en EFFECT_VALUES.
  */
-import { tablesOf, weightsOf } from './gameContent';
+import { unitTypeOf, weightsOf } from './gameContent';
 import type { GeneralEffect as GeneralEffectDef } from './content';
 import type { DeepReadonly } from './util/freeze';
 import { applies, chargeStars, generalOf, useAbility } from './generals';
 import { posKey, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
-import type { GameEvent, GameState, Pos, Team } from './model';
+import type { GameEvent, GameState, Pos, Team, Unit } from './model';
 import { maxBy } from './util/pick';
 
 /** Un efecto de general tal como esta en el contenido (de solo lectura). */
@@ -36,7 +36,7 @@ interface ValuedTarget {
 }
 
 /** Lo que vale quitar `life` puntos de vida a una unidad de ese tipo (precio × vida / 100). */
-const lifeValue = (s: GameState, life: number, type: number): number => (life * tablesOf(s).UNIT.cost[type]!) / 100;
+const lifeValue = (s: GameState, life: number, unit: Pick<Unit, 'type'>): number => (life * unitTypeOf(s, unit).cost) / 100;
 
 /** Las casillas en las que se puede centrar un area de `radius` que toque a alguno de `enemies`, sin repetir. */
 function areaCentersTouching(s: GameState, enemies: readonly Pos[], radius: number): Pos[] {
@@ -65,7 +65,7 @@ export function bestAreaTarget(
   const lifeTaken = (life: number) => Math.max(0, Math.min(damage, life - minLife));
   const valueAt = (center: Pos): number => {
     const area = new Set(squareArea(mapGrid(s), center, radius).map(posKey));
-    return enemies.reduce((total, enemy) => total + (area.has(posKey(enemy)) ? lifeValue(s, lifeTaken(enemy.life), enemy.type) : 0), 0);
+    return enemies.reduce((total, enemy) => total + (area.has(posKey(enemy)) ? lifeValue(s, lifeTaken(enemy.life), enemy) : 0), 0);
   };
   const options = areaCentersTouching(s, enemies, radius).map((target) => ({ target, value: valueAt(target) }));
   return maxBy(options, (option) => option.value);
@@ -84,7 +84,7 @@ const EFFECT_VALUES: EffectValues = {
   heal: (s, team, effect) => {
     const healed = (life: number) => Math.min(effect.amount, 100 - life);
     const value = s.units.reduce(
-      (total, unit) => total + (unit.team === team && applies(s, effect, unit.type) ? lifeValue(s, healed(unit.life), unit.type) : 0),
+      (total, unit) => total + (unit.team === team && applies(s, effect, unit) ? lifeValue(s, healed(unit.life), unit) : 0),
       0,
     );
     return { target: null, value };

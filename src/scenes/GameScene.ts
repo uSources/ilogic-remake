@@ -6,7 +6,7 @@
  */
 import Phaser from 'phaser';
 import { effectiveStandingOrder, renameSquad } from '../core/squads';
-import { tablesOf } from '../core/gameContent';
+import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
@@ -32,7 +32,7 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { settings, t, unitLabel } from '../settings';
+import { settings, t, nameOf } from '../settings';
 import { deleteSave, writeSave } from '../storage';
 import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
@@ -249,7 +249,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Cursor y camara sobre la Base del jugador. */
   private centerOnHq(): void {
-    const hq = this.s.buildings.find((building) => building.owner === 0 && building.type === tablesOf(this.s).HQ) ?? { x: 0, y: 0 };
+    const hq = this.s.buildings.find((building) => building.owner === 0 && isHq(this.s, building)) ?? { x: 0, y: 0 };
     this.view.cursor = posOf(hq);
     this.view.centerOn(hq, true);
   }
@@ -878,7 +878,7 @@ export class GameScene extends Phaser.Scene {
     return this.idleUnits().map((unit) => ({
       uid: unit.uid,
       icon: unitKey(this.textures, this.s, unit),
-      name: unitLabel(this.s.content, unit.type),
+      name: nameOf(unitTypeOf(this.s, unit)),
     }));
   }
 

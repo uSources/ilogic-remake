@@ -4,7 +4,7 @@
  * pueden prever sin tocar la partida (previewStandingOrders, para las flechas de intencion).
  */
 
-import { cloneState, tablesOf, weightsOf } from '../gameContent';
+import { unitTypeOf, weightsOf, cloneState } from '../gameContent';
 import { manhattan, samePos, seededRng, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
@@ -68,7 +68,7 @@ function* shootFromHereOrWait({ s, ai, unit, rng }: StandingOrderTurnContext): G
 function* captureOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, boolean> {
   const { s, ai, unit, at } = turn;
   const building = buildingAt(s, at);
-  if (!building || building.owner === ai.me || !tablesOf(s).UNIT.cancapt[unit.type]) return true;
+  if (!building || building.owner === ai.me || !unitTypeOf(s, unit).canCapture) return true;
   if (samePos(unit, at)) {
     yield* captureHere(s, unit);
     wait(unit);

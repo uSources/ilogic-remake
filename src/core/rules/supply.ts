@@ -1,7 +1,7 @@
 /**
  * Abastecimiento: reparar a las unidades aliadas de al lado (Suministros).
  */
-import { tablesOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import { neighbors4 } from '../geom';
 import { mapGrid } from '../mapGrid';
@@ -10,7 +10,7 @@ import { unitAt } from './queries';
 
 /** Vida que `supplier` le cura a `patient` cada vez (units.json, "heals"). */
 function healAmount(s: GameState, supplier: Unit, patient: Unit): number {
-  return tablesOf(s).UNIT_HEALS[supplier.type]![patient.type]!;
+  return unitTypeOf(s, supplier).heals[unitTypeOf(s, patient).id] ?? 0;
 }
 
 function canSupplyTo(s: GameState, supplier: Unit, patient: Unit): boolean {

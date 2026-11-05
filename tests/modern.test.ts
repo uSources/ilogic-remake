@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, capture, captureProgress, combatForecast, dropStaleCaptures, newUnit, visibility } from '@core/rules';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
-const SOLDIER = 0,
-  TANK = 1,
-  ARTILLERY = 2;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  ARTILLERY = unitTypeNamed('Artillery');
 
 describe('reglas nuevas: combate', () => {
   it('el defensor que sobrevive contraataca y gasta municion', () => {
@@ -39,7 +39,13 @@ describe('reglas nuevas: combate', () => {
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
     defender.life = 80;
     const event = attackEvent(s, attacker, defender, seededRng(2));
-    expect(event.combat).toMatchObject({ attackerType: TANK, defenderType: TANK, attackerTeam: 0, attackerLife: 100, defenderLife: 80 });
+    expect(event.combat).toMatchObject({
+      attackerType: attacker.type,
+      defenderType: defender.type,
+      attackerTeam: 0,
+      attackerLife: 100,
+      defenderLife: 80,
+    });
     expect(event.target).toEqual({ x: 10, y: 11 });
     expect(event.combat!.hit).toBeGreaterThan(0);
     expect(event.combat!.counterHit).not.toBeNull();

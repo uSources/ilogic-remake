@@ -5,9 +5,8 @@
  */
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { TERRAIN_NAMES } from '@core/content';
+import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
-import { tablesOf } from '@core/gameContent';
 import { posKey, samePos, seededRng } from '@core/geom';
 import { mapGrid } from '@core/mapGrid';
 import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
@@ -33,8 +32,8 @@ import {
 import { serialize } from '@core/save';
 import type { GameEvent, GameState, Pos, Rng, Unit } from '@core/model';
 
-/** Una letra por terreno (minuscula = suelo; mayuscula = obstaculo o agua). */
-const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {
+/** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
+const TERRAIN_CHAR: Readonly<Record<string, string>> = {
   Grass: '.',
   Flowers: ',',
   Woods: 'f',
@@ -52,7 +51,7 @@ const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {
   DWater: '=',
 };
 /** Edificios: inicial (mayuscula = tuyo, minuscula = enemigo, * delante = neutral). */
-const BUILDING_CHAR = ['C', 'O', 'F', 'S', 'A', 'B'];
+const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', Factory: 'F', Stronghold: 'S', Airport: 'A', Base: 'B' };
 
 export interface SessionOptions {
   seed?: number;
@@ -192,9 +191,9 @@ export class Session {
       for (let x = 0; x < width; x++) {
         const unit = unitAt(s, { x, y });
         const building = buildingAt(s, { x, y });
-        let cell = ' ' + TERRAIN_CHAR[TERRAIN_NAMES[map.at({ x, y })]!] + ' ';
+        let cell = ' ' + (TERRAIN_CHAR[terrainAt(s, { x, y }).id] ?? '?') + ' ';
         if (building) {
-          const char = BUILDING_CHAR[building.type]!;
+          const char = BUILDING_CHAR[buildingTypeOf(s, building).id] ?? '?';
           cell = building.owner === null ? `*${char} ` : ` ${building.owner === 0 ? char : char.toLowerCase()} `;
         }
         if (unit && unit.carrier === null && (unit.team === 0 || vis.at({ x, y })))
@@ -214,7 +213,7 @@ export class Session {
     return list
       .map((unit) => {
         const usedTag = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
-        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[unit.type]!.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
+        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
   }
@@ -224,9 +223,9 @@ export class Session {
     const targets = attackTargets(this.s, unit);
     const tiles = reachableTiles(range);
     return [
-      `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
+      `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
-      `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
+      `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${unitTypeOf(this.s, unit).id} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
     ]
       .filter(Boolean)
@@ -256,14 +255,14 @@ export class Session {
   private buy(at: Pos, name: string): string {
     const building = buildingAt(this.s, at);
     if (!building || building.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
-    const type = tablesOf(this.s).UNIT_NAMES.findIndex((unitName) => unitName.toLowerCase() === name.toLowerCase());
+    const unitType = this.s.content.units.list.find((candidate) => candidate.id.toLowerCase() === name.toLowerCase());
     const options = buyOptions(this.s, building);
-    if (!options.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[building.type]} no fabrica unidades`);
-    if (type < 0)
-      return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${tablesOf(this.s).UNIT_NAMES[buyOption.type]} (${buyOption.cost})`).join(', ')}`;
-    const unit = spawn(this.s, building, type);
+    if (!options.length) throw new UsageError(`${buildingTypeOf(this.s, building).id} no fabrica unidades`);
+    if (!unitType)
+      return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${buyOption.unitType.id} (${buyOption.cost})`).join(', ')}`;
+    const unit = spawn(this.s, building, unitType);
     if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
-    return `comprada ${unit.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
+    return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
   }
 
   /** Usar una habilidad del general (sin id: lista de habilidades y carga). */
@@ -312,7 +311,7 @@ class UsageError extends Error {}
 function describe(s: GameState, event: GameEvent): string {
   const name = (uid: number) => {
     const unit = unitById(s, uid);
-    return unit ? `${uid} ${tablesOf(s).UNIT_NAMES[unit.type]}` : `${uid}`;
+    return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
   };
   switch (event.kind) {
     case 'move':
@@ -337,7 +336,7 @@ function describe(s: GameState, event: GameEvent): string {
 const legend = (s: GameState): string => `+NN unidad tuya · -NN enemiga · ? no se ve
 Terreno: . hierba , flores f bosque ^ acantilado : arena c cactus M meseta _ nieve o muñeco t pinos % roca nevada i hielo ~ agua - poco profunda = profunda
 Edificios: C ciudad O petroleo F fabrica S fortaleza A aeropuerto B base (mayuscula tuyo, minuscula enemigo, * neutral)
-Edificios de tipo: ${tablesOf(s).BUILDING_NAMES.join(', ')}`;
+Edificios de tipo: ${s.content.buildings.list.map((building) => building.id).join(', ')}`;
 
 const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   map                      mapa en texto

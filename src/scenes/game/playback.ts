@@ -6,9 +6,9 @@
  * Cada tipo de evento tiene su animacion en `ANIMATORS` (una entrada por tipo, lo exige el tipo):
  * un evento nuevo trae su propia funcion en vez de abrir un `switch`.
  */
+import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { MoveType } from '../../core/content';
-import { tablesOf } from '../../core/gameContent';
+import { MoveType, type UnitType } from '../../core/content';
 import { movementOf, unitAt, unitById } from '../../core/rules';
 import { abilityArea, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
@@ -186,7 +186,8 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const start = event.path[0]!;
   if (mover) return unitKey(stage.scene.textures, s, { ...mover, x: start.x, y: start.y, active: true });
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (roja si no se sabe).
-  return 'r_' + tablesOf(s).UNIT_ART[unitEntered(s, event)?.type ?? 0];
+  const entered = unitEntered(s, event);
+  return 'r_' + (entered ? unitTypeOf(s, entered) : s.content.units.list[0]!).art;
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
@@ -244,7 +245,7 @@ function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Ima
   // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
   const mover = unitById(stage.state, uid);
   const team = mover?.team ?? (stage.enemyPlaying ? 1 : 0);
-  const moveType = mover ? movementOf(stage.state, mover.type) : null;
+  const moveType = mover ? movementOf(stage.state, mover) : null;
   return { image, team, hops: moveType === MoveType.FOOT, raisesDust: moveType !== MoveType.FOOT && moveType !== MoveType.AIR };
 }
 
@@ -347,8 +348,8 @@ interface Battle {
   readonly isAttackerSeen: boolean;
   readonly attackerTeam: Team;
   readonly defenderTeam: Team;
-  readonly attackerType: number;
-  readonly defenderType: number;
+  readonly attackerType: UnitType;
+  readonly defenderType: UnitType;
   /** Reloj de los efectos, a la velocidad de las animaciones (Opciones). */
   readonly timeline: FxTimeline;
   /** Identifica este combate en el panel (para que no se mezcle con el anterior). */
@@ -357,6 +358,10 @@ interface Battle {
 
 /** Un efecto de combate de 1000 ms a la velocidad elegida, en segundos: el factor del reloj de combatFx. */
 const SPEED_REFERENCE_MS = 1000;
+
+/** El tipo de una unidad del combate; si ya no se sabe (un evento sin `combat`), el primero del contenido. */
+const typeShown = (s: GameState, type: Unit['type'] | undefined): UnitType =>
+  type === undefined ? s.content.units.list[0]! : unitTypeOf(s, { type });
 
 function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const s = stage.state;
@@ -380,8 +385,8 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
     isAttackerSeen,
     attackerTeam,
     defenderTeam: (1 - attackerTeam) as Team,
-    attackerType: info?.attackerType ?? unitById(s, event.attacker)?.type ?? 0,
-    defenderType: info?.defenderType ?? victim?.type ?? 0,
+    attackerType: typeShown(s, info?.attackerType ?? unitById(s, event.attacker)?.type),
+    defenderType: typeShown(s, info?.defenderType ?? victim?.type),
     timeline: new FxTimeline(stage.scene, stage.combatMs(SPEED_REFERENCE_MS) / SPEED_REFERENCE_MS),
     panelId: Date.now(),
   };
@@ -434,14 +439,7 @@ async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
   void targetMark(stage.scene, stage.view, event.target, teamColor(battle.attackerTeam), stage.combatMs(150));
   if (attackerSprite && attackerPos && battle.isAttackerSeen) {
-    await fire(
-      stage,
-      attackerSprite,
-      attackerPos,
-      event.target,
-      shotKind(stage.state, battle.attackerType, battle.defenderType),
-      battle.timeline,
-    );
+    await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.timeline);
   } else await stage.wait(stage.combatMs(150));
 }
 
@@ -455,14 +453,7 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   void tag(battle.timeline, stage.view, event.target, t('fxCounter'), PAL_CSS.gold);
   await stage.wait(stage.combatMs(80));
   if (defenderSprite) {
-    await fire(
-      stage,
-      defenderSprite,
-      event.target,
-      attackerPos,
-      shotKind(stage.state, battle.defenderType, battle.attackerType),
-      battle.timeline,
-    );
+    await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.timeline);
   }
   showCombatPanel(stage.state, battle, 'counter');
   await hitEffects(stage, {

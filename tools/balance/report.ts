@@ -1,6 +1,5 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
 import type { GameContent } from '@core/content';
-import { unitLabelEs } from './names';
 import type { DuelCell } from './duel';
 import type { GameRecord } from './play';
 import type { Variant } from './variant';
@@ -165,9 +164,8 @@ export function buildReport(
     (amount, record) => amount + record.units.flat().reduce((count, unitTally) => count + unitTally.bought, 0),
     0,
   );
-  const { UNIT: unitStats, UNIT_NAMES } = content.tables;
   const units: UnitRow[] = [];
-  for (let type = 0; type < UNIT_NAMES.length; type++) {
+  content.units.list.forEach((unitType, type) => {
     let bought = 0,
       spent = 0,
       valueDealt = 0,
@@ -186,11 +184,11 @@ export function buildReport(
         deaths += tally.deaths;
         captures += tally.captures;
       }
-    const fights = unitStats.canfight[type] && unitStats.alcance[type]! > 0;
+    const fights = unitType.attack !== null;
     units.push({
-      type: UNIT_NAMES[type]!,
-      label: unitLabelEs(content, type),
-      cost: unitStats.cost[type]!,
+      type: unitType.id,
+      label: unitType.name.es,
+      cost: unitType.cost,
       bought,
       share: totalBought ? bought / totalBought : 0,
       spent,
@@ -201,7 +199,7 @@ export function buildReport(
       kills,
       captures,
     });
-  }
+  });
 
   // Avisos y propuestas.
   const flags: string[] = [];
@@ -227,7 +225,6 @@ export function buildReport(
   const efficiencies = units.filter((unitRow) => unitRow.efficiency !== null).map((unitRow) => unitRow.efficiency!);
   const medEff = quant(efficiencies, 0.5);
   for (const row of mirror ? units : []) {
-    const type = UNIT_NAMES.indexOf(row.type);
     if (row.efficiency !== null && medEff > 0) {
       const ratio = row.efficiency / medEff;
       if (ratio > targets.efficiencyBand[1] || ratio < targets.efficiencyBand[0]) {
@@ -243,7 +240,7 @@ export function buildReport(
           });
       }
     }
-    if (unitStats.canfight[type] && totalBought > 200 && row.share < 0.005)
+    if (content.units.byId[row.type]?.attack && totalBought > 200 && row.share < 0.005)
       flags.push(
         `${row.label}: casi nadie la compra (${(row.share * 100).toFixed(1)} % de las compras). Ojo: la IA elige compras con sus propias reglas.`,
       );

@@ -3,6 +3,7 @@
  * paso, el final de la ronda (ingresos, curar) y la vuelta al jugador. Tambien repetir el ultimo turno
  * enemigo (misma semilla) y avanzar las ordenes de varios turnos al empezar el propio.
  */
+import { unitTypeOf } from '../../core/gameContent';
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
@@ -26,7 +27,7 @@ import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
 import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
-import { fmtNum, settings, t, unitLabel, weatherLabel } from '../../settings';
+import { fmtNum, settings, t, nameOf } from '../../settings';
 import { randomSeed } from '../../setup';
 import { writeSave } from '../../storage';
 import { center, floatText } from '../../ui/fx';
@@ -34,7 +35,6 @@ import { weatherEffectsText } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { PAL_CSS } from '../../ui/palette';
 import { CONFIRM_MS, INPUT_LOCK_MS, type Phase } from './types';
-import { tablesOf } from '../../core/gameContent';
 
 /** Donde estaba mirando el jugador antes del turno enemigo. */
 interface SavedCamera {
@@ -92,7 +92,7 @@ const isReadyOwnUnit = (unit: Unit): boolean => unit.team === 0 && unit.active &
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
   const squad = squadById(s, unit.squad);
-  return unitLabel(s.content, unit.type) + (squad ? ` (${squad.name})` : '');
+  return nameOf(unitTypeOf(s, unit)) + (squad ? ` (${squad.name})` : '');
 }
 
 export class TurnFlow {
@@ -348,7 +348,7 @@ export class TurnFlow {
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
   private showReport(report: RoundReport, ordersDone: string[] = []): void {
     const host = this.host;
-    showReport(`${t('day')} ${host.state.day}`, roundReportLines(host.state, report, ordersDone));
+    showReport(`${t('day')} ${host.state.day}`, roundReportLines(report, ordersDone));
     if (host.fastForward) return;
     ownHealed(report).forEach((healed, i) => {
       const unit = unitById(host.state, healed.uid);
@@ -363,7 +363,7 @@ export class TurnFlow {
 const ownHealed = (report: RoundReport) => report.healed.filter((healed) => healed.team === 0);
 
 /** Las lineas del resumen de la ronda. `ordersDone`: unidades que cumplieron su orden. */
-function roundReportLines(s: GameState, report: RoundReport, ordersDone: string[]): ReportLineVM[] {
+function roundReportLines(report: RoundReport, ordersDone: string[]): ReportLineVM[] {
   const { control, income, upkeep, weather } = report;
   const healed = ownHealed(report);
   const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(income[0])} ${t('reportIncome')}`, tone: 'gold' }];
@@ -383,8 +383,8 @@ function roundReportLines(s: GameState, report: RoundReport, ordersDone: string[
     const to = weather.to;
     lines.push({
       icon: '',
-      weather: tablesOf(s).WEATHER.ids[to]!,
-      text: `${weatherLabel(s.content, to)}: ${weatherEffectsText(s, to)}`,
+      weather: to.id,
+      text: `${nameOf(to)}: ${weatherEffectsText(to)}`,
       tone: 'plain',
     });
   }

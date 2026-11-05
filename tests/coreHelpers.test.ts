@@ -14,24 +14,24 @@ import {
   type MovePath,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, savedByVersion1 } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, hqKey, terrainKey, terrainNamed } from './helpers';
 
-const { UNIT, BUILDING, HQ, TERRAIN } = defaultContent().tables;
+const HQ = hqKey();
 
-const SOLDIER = 0,
-  TANK = 1,
-  ARTILLERY = 2,
-  TRANSPORT = 7;
-const WOODS = 2;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  ARTILLERY = unitTypeNamed('Artillery'),
+  TRANSPORT = unitTypeNamed('Transport');
+const WOODS = terrainKey(terrainNamed('Woods'));
 
 describe('ayudas de reglas', () => {
   it('proteccion de casilla: terreno por edificio, y estrellas de 0 a 4', () => {
     const s = blankState();
     s.map[3]![3] = WOODS;
     s.buildings.push({ type: HQ, owner: 0, x: 5, y: 5, capture: null });
-    expect(tileProtection(s, { x: 0, y: 0 })).toBe(TERRAIN.protection[0]);
-    expect(tileProtection(s, { x: 3, y: 3 })).toBe(TERRAIN.protection[WOODS]);
-    expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(TERRAIN.protection[0]! * BUILDING.protection[HQ]!);
+    expect(tileProtection(s, { x: 0, y: 0 })).toBe(defaultContent().plainTerrain.protection);
+    expect(tileProtection(s, { x: 3, y: 3 })).toBe(terrainNamed('Woods').protection);
+    expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(defaultContent().plainTerrain.protection * defaultContent().hq.protection);
     for (const pos of [
       { x: 0, y: 0 },
       { x: 3, y: 3 },
@@ -69,7 +69,7 @@ describe('ayudas de reglas', () => {
     const art = newUnit(s, ARTILLERY, 0, { x: 20, y: 20 });
     const zone = attackZone(s, art, moveRange(s, art))!;
     expect(zone.at({ x: 20, y: 20 })).toBe(false);
-    expect(zone.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
+    expect(zone.at({ x: 20, y: 20 + ARTILLERY.attack!.maxRange })).toBe(true);
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {

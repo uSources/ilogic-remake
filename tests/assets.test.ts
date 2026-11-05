@@ -1,3 +1,4 @@
+import { hqKey } from './helpers';
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ATLAS_PAGES, LOOSE_IMAGES } from '../src/atlasPages';
@@ -5,7 +6,10 @@ import { IMAGE_KEYS } from '../src/assetList';
 import { defaultContent } from '@core/content/default';
 import { requiredArtKeys } from '../src/ui/terrainArt';
 
-const { UNIT_NAMES, UNIT_ART, BUILDING_NAMES, HQ } = defaultContent().tables;
+const UNIT_NAMES = defaultContent().units.list.map((unitType) => unitType.id);
+const BUILDING_NAMES = defaultContent().buildings.list.map((buildingType) => buildingType.id);
+const HQ = hqKey();
+const UNIT_ART = defaultContent().units.list.map((unitType) => unitType.art);
 
 /** Comprueba que los graficos compilados (npm run assets) estan completos. */
 const frames = new Map<string, { w: number; h: number }>();

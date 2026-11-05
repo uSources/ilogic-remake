@@ -2,27 +2,30 @@
  * Consultas basicas sobre el estado: que hay en una casilla, por donde se puede andar, de quien es
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
-import { moveCostFor, walkableFor, type MoveType } from '../content';
-import { tablesOf } from '../gameContent';
-import { createLayer, isOnBoard, terrainAt } from '../mapGrid';
+import type { MoveType, TerrainType } from '../content';
+import { unitTypeOf, terrainAt } from '../gameContent';
+import { createLayer, isOnBoard } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { samePos } from '../geom';
 import type { Building, GameState, Pos, Team, Unit } from '../model';
 
-/** Tipo de movimiento de un tipo de unidad. */
-export function movementOf(s: GameState, unitType: number): MoveType {
-  return tablesOf(s).UNIT.movtype[unitType]!;
+/** Tipo de movimiento de una unidad. */
+export function movementOf(s: GameState, unit: Pick<Unit, 'type'>): MoveType {
+  return unitTypeOf(s, unit).movement;
 }
 
 /** Ese tipo de movimiento puede pasar por ese terreno. */
-export function canMoveOn(s: GameState, moveType: MoveType, terrain: number): boolean {
-  return walkableFor(tablesOf(s), moveType, terrain);
+export function canMoveOn(moveType: MoveType, terrain: TerrainType): boolean {
+  return terrain.moveCost[moveType] !== null;
 }
 
-/** Lo que le cuesta a ese tipo de movimiento entrar en ese terreno (solo cuenta con la regla terrainCost). */
-export function terrainMoveCost(s: GameState, moveType: MoveType, terrain: number): number {
-  return moveCostFor(tablesOf(s), moveType, terrain);
+/**
+ * Lo que le cuesta a ese tipo de movimiento entrar en ese terreno (solo cuenta con la regla
+ * terrainCost). Donde no se puede pasar cuenta 1, como siempre (no se llega a pagar).
+ */
+export function terrainMoveCost(moveType: MoveType, terrain: TerrainType): number {
+  return terrain.moveCost[moveType] ?? 1;
 }
 
 export function unitById(s: GameState, uid: number | null): Unit | undefined {
@@ -46,7 +49,7 @@ export function occupancy(s: GameState): Grid<boolean> {
 }
 
 export function canWalk(s: GameState, pos: Pos, moveType: MoveType): boolean {
-  return isOnBoard(s, pos) && canMoveOn(s, moveType, terrainAt(s, pos));
+  return isOnBoard(s, pos) && canMoveOn(moveType, terrainAt(s, pos));
 }
 
 /** Transitable y libre de unidades (amigas o enemigas: no se puede atravesar a nadie). */

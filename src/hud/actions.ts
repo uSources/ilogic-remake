@@ -68,6 +68,6 @@ export interface UIActions {
 
   // --- Laboratorio de animaciones: reproducir una accion, cambiar opciones, salir ---
   labPlay(action: 'move' | 'attack' | 'counter' | 'kill'): void;
-  labSet(patch: { attacker?: number; defender?: number; slow?: boolean }): void;
+  labSet(patch: { attacker?: string; defender?: string; slow?: boolean }): void;
   labExit(): void;
 }

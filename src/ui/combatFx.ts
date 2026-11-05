@@ -9,9 +9,8 @@
  * animaciones.
  */
 import type Phaser from 'phaser';
-import { MoveType } from '../core/content';
-import { tablesOf } from '../core/gameContent';
-import type { GameState, Pos } from '../core/model';
+import { MoveType, type UnitType } from '../core/content';
+import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost, type FxTimeline } from './fxKit';
@@ -35,12 +34,12 @@ export type ShotKind = 'arc' | 'missile' | 'bomb' | 'tracer' | 'bullets' | 'shel
 /** Alcance desde el que un arma a distancia lanza misiles en vez de proyectiles en parabola. */
 const MISSILE_RANGE = 6;
 
-export function shotKind(s: GameState, attackerType: number, defenderType: number): ShotKind {
-  const { UNIT } = tablesOf(s);
-  const isRangedWeapon = UNIT.minalc[attackerType]! > 0;
-  if (isRangedWeapon) return UNIT.alcance[attackerType]! >= MISSILE_RANGE ? 'missile' : 'arc';
-  const movement = UNIT.movtype[attackerType];
-  if (movement === MoveType.AIR) return UNIT.movtype[defenderType] === MoveType.AIR ? 'tracer' : 'bomb';
+export function shotKind(attackerType: UnitType, defenderType: UnitType): ShotKind {
+  const attack = attackerType.attack;
+  const isRangedWeapon = !!attack && attack.minRange > 1;
+  if (isRangedWeapon) return attack.maxRange >= MISSILE_RANGE ? 'missile' : 'arc';
+  const movement = attackerType.movement;
+  if (movement === MoveType.AIR) return defenderType.movement === MoveType.AIR ? 'tracer' : 'bomb';
   return movement === MoveType.FOOT ? 'bullets' : 'shell';
 }
 

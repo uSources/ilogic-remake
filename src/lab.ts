@@ -6,21 +6,21 @@
  */
 import { defaultContent } from './core/content/default';
 import { rulesWith } from './core/rulesConfig';
-import { tablesOf } from './core/gameContent';
 import { newGameState } from './core/gameState';
 import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
-import { MoveType, type ContentTables } from './core/content';
+import { entryOf, MoveType, type GameContent, type UnitType } from './core/content';
+import { unitTypeOf, keyOf } from './core/gameContent';
 import { maxBy } from './core/util/pick';
-import type { GameState, RulesConfig } from './core/model';
+import type { GameState, RulesConfig, Unit } from './core/model';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];
 
 export interface LabOptions {
-  /** Tipo de la unidad propia y de la enemiga (indices de UNIT_NAMES). */
-  attacker: number;
-  defender: number;
+  /** Tipo de la unidad propia y de la enemiga (id de units.json). */
+  attacker: string;
+  defender: string;
   /** Camara lenta (a un cuarto de la velocidad). */
   slow: boolean;
   /** Accion que se reproduce al empezar (null = ninguna). */
@@ -36,22 +36,21 @@ export const LAB_TARGET = { x: 7, y: 6 };
  * La unidad de siempre del laboratorio, sacada del contenido (no de su nombre): el vehiculo de cuerpo
  * a cuerpo mas caro (con el contenido del juego, el tanque).
  */
-function heaviestMeleeVehicle(tables: ContentTables): number {
-  const { UNIT } = tables;
-  const types = UNIT.cost.map((_, type) => type);
-  const isMeleeVehicle = (type: number) => UNIT.canfight[type] && UNIT.minalc[type] === 0 && UNIT.movtype[type] === MoveType.VEHICLE;
-  return maxBy(types.filter(isMeleeVehicle), (type) => UNIT.cost[type]!) ?? 0;
+function heaviestMeleeVehicle(content: GameContent): string {
+  const isMeleeVehicle = (unitType: UnitType) => unitType.attack?.minRange === 1 && unitType.movement === MoveType.VEHICLE;
+  const heaviest = maxBy(content.units.list.filter(isMeleeVehicle), (unitType) => unitType.cost) ?? content.units.list[0]!;
+  return heaviest.id;
 }
 
 export const defaultLab = (): LabOptions => ({
-  attacker: heaviestMeleeVehicle(defaultContent().tables),
-  defender: heaviestMeleeVehicle(defaultContent().tables),
+  attacker: heaviestMeleeVehicle(defaultContent()),
+  defender: heaviestMeleeVehicle(defaultContent()),
   slow: false,
   play: null,
 });
 
-/** Distancia desde la que ataca la propia: la casilla de al lado o su alcance minimo. */
-export const labRange = (s: GameState, type: number): number => Math.max(1, tablesOf(s).UNIT.minalc[type]! + 1);
+/** Distancia desde la que ataca la propia: su alcance minimo (la casilla de al lado si no ataca). */
+export const labRange = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).attack?.minRange ?? 1;
 
 /** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
 export function labRules(action: LabAction | null): RulesConfig {
@@ -63,16 +62,19 @@ export function labRules(action: LabAction | null): RulesConfig {
  * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
 export function labState(options: LabOptions, action: LabAction | null): GameState {
-  const s = newGameState({ map: blankMap(LAB_SIZE), rules: labRules(action), content: defaultContent(), funds: [0, 0] });
-  const hq = tablesOf(s).HQ;
+  const content = defaultContent();
+  const map = blankMap(LAB_SIZE, keyOf(content.terrain, content.plainTerrain));
+  const s = newGameState({ map, rules: labRules(action), content, funds: [0, 0] });
+  const hq = keyOf(content.buildings, content.hq);
   s.buildings.push(
     { type: hq, owner: 0, x: 0, y: LAB_SIZE - 1, capture: null },
     { type: hq, owner: 1, x: LAB_SIZE - 1, y: 0, capture: null },
   );
+  const attackerType = entryOf(content.units, options.attacker, 'unidad');
   const near = action !== null && action !== 'move';
-  const from = near ? { x: LAB_TARGET.x - labRange(s, options.attacker), y: LAB_TARGET.y } : LAB_FROM;
-  newUnit(s, options.attacker, 0, from);
-  const defender = newUnit(s, options.defender, 1, LAB_TARGET);
+  const from = near ? { x: LAB_TARGET.x - (attackerType.attack?.minRange ?? 1), y: LAB_TARGET.y } : LAB_FROM;
+  newUnit(s, attackerType, 0, from);
+  const defender = newUnit(s, entryOf(content.units, options.defender, 'unidad'), 1, LAB_TARGET);
   if (action === 'kill') defender.life = 15;
   return s;
 }

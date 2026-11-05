@@ -8,7 +8,7 @@ import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import { newUnit } from '@core/rules';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
 
 /**
  * Partidas guardadas de verdad con el formato 1: las genero el codigo de origin/main (ac92f17) con
@@ -51,7 +51,7 @@ describe('partidas guardadas con el formato 1 (de origin/main)', () => {
     const s = loadGame(fixture(name))!;
     const mission = missionById(s.mission!.id)!;
     expect(s.rules).toEqual(missionRules(mission, defaultContent()));
-    expect(s.rules).not.toEqual(defaultContent().tables.DEFAULT_RULES);
+    expect(s.rules).not.toEqual(defaultContent().defaultRules);
   });
 });
 
@@ -71,13 +71,13 @@ describe('MIGRATIONS', () => {
     migrateRead(old, 1, context);
     expect(old.units).toEqual([{ uid: 1, standingOrder: { kind: 'attack', at: { x: 1, y: 1 } }, travelTo: { x: 2, y: 2 } }]);
     // Sin reglas: las de siempre de ese contenido.
-    expect(old.rules).toEqual(defaultContent().tables.DEFAULT_RULES);
+    expect(old.rules).toEqual(defaultContent().defaultRules);
   });
 
   it('los pasos sobre la partida comprobada van aparte y tambien miran la version', () => {
     const world = () => {
       const s = blankState();
-      const units = [newUnit(s, 0, 0, { x: 2, y: 2 }), newUnit(s, 0, 0, { x: 3, y: 2 })];
+      const units = [newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 }), newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 2 })];
       const squad = formSquad(s, units)!;
       // Partida de antes de que la escuadra tuviera orden: la llevaba copiada cada unidad.
       giveStandingOrder(s, [units[0]!], 'defend', { x: 5, y: 5 });

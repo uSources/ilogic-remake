@@ -1,11 +1,11 @@
-import { tablesOf } from './gameContent';
+import { unitTypeOf } from './gameContent';
 import { AI_TEAM, PLAYER, opponentOf } from './util/predicates';
 import type { GameEvent, GameState, GameStats, Team } from './model';
 
 /** Valor de un ejercito: coste de cada unidad por su vida. */
 export function armyValue(s: GameState, team: Team): number {
   let value = 0;
-  for (const unit of s.units) if (unit.team === team) value += (tablesOf(s).UNIT.cost[unit.type]! * unit.life) / 100;
+  for (const unit of s.units) if (unit.team === team) value += (unitTypeOf(s, unit).cost * unit.life) / 100;
   return Math.round(value);
 }
 
@@ -52,7 +52,7 @@ export function recordEvent(s: GameState, event: GameEvent, team: Team): void {
       const built = s.units.find((unit) => unit.uid === event.uid);
       if (built) {
         counts.built[team]++;
-        counts.spent[team] += tablesOf(s).UNIT.cost[built.type]!;
+        counts.spent[team] += unitTypeOf(s, built).cost;
       }
       break;
     }

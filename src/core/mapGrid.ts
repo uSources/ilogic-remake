@@ -13,11 +13,6 @@ export function mapGrid(s: WithMap): Grid<number> {
   return Grid.wrap(s.map);
 }
 
-/** Terreno de una casilla (tiene que estar dentro del mapa). */
-export function terrainAt(s: WithMap, pos: Pos): number {
-  return mapGrid(s).at(pos);
-}
-
 /** La casilla esta dentro del mapa de la partida. */
 export function isOnBoard(s: WithMap, pos: Pos): boolean {
   return mapGrid(s).contains(pos);
@@ -28,7 +23,7 @@ export function createLayer<T>(s: WithMap, fill: T): Grid<T> {
   return mapGrid(s).createLayer(fill);
 }
 
-/** Terreno nuevo de `size` casillas de lado, todo de `terrain` (lo rellenan el generador o las misiones). */
-export function blankMap(size: number, terrain = 0): number[][] {
+/** Terreno nuevo de `size` casillas de lado, todo de `terrain` (su clave: keyOf). */
+export function blankMap(size: number, terrain: GameState['map'][number][number]): GameState['map'] {
   return Grid.filled({ width: size, height: size }, terrain).columns;
 }

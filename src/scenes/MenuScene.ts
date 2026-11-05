@@ -22,7 +22,7 @@ import { checkNotes, closeNotes, notesCommand, notesOpen } from '../patchNotes';
 import { ruleChangesFor } from '../setup';
 import { settings } from '../settings';
 import { readSave } from '../storage';
-import { terrainPalette } from '../ui/terrainColors';
+import { terrainPalette, type TerrainPalette } from '../ui/terrainColors';
 import { live } from './game/host';
 
 type Mode = 'home' | 'setup' | 'campaign';
@@ -37,7 +37,7 @@ export class MenuScene extends Phaser.Scene {
   private leaving = false;
   private save: GameState | null = null;
   private optionsPanel!: OptionsPanel;
-  private palette: number[] = [];
+  private palette: TerrainPalette = {};
   private liveBackground: LiveBackground | null = null;
 
   private readonly home = new HomeScreen(

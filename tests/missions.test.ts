@@ -1,3 +1,5 @@
+import { MoveType } from '@core/content';
+import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { aiTurn } from '@core/ai';
@@ -8,9 +10,9 @@ import { createLayer } from '@core/mapGrid';
 import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { savedByVersion1 } from './helpers';
+import { savedByVersion1, hqKey } from './helpers';
 
-const { UNIT, HQ } = defaultContent().tables;
+const HQ = hqKey();
 
 describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: mapa valido y bases conectadas', (_id, mission) => {
@@ -18,13 +20,13 @@ describe('misiones', () => {
     const s = buildMission(mission, defaultContent());
     const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-    expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
+    expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
     expect(outcome(s)).toBe('playing');
     const objective = s.mission!.objective;
     if (objective.kind === 'escort') {
       const vip = s.units.find((unit) => unit.uid === objective.uid)!;
       expect(
-        groundDistance(s, vip, UNIT.movtype[vip.type]!, createLayer(s, false)).at(objective.to),
+        groundDistance(s, vip, unitTypeOf(s, vip).movement, createLayer(s, false)).at(objective.to),
         'el convoy puede llegar',
       ).toBeGreaterThan(0);
     }
@@ -37,7 +39,7 @@ describe('misiones', () => {
     (_id, mission) => {
       const s = buildMission(mission, defaultContent());
       expect(s.rules).toEqual(missionRules(mission, defaultContent()));
-      expect(s.rules).not.toEqual(defaultContent().tables.DEFAULT_RULES); // sin mantenimiento, ni puntos de mando, ni clima
+      expect(s.rules).not.toEqual(defaultContent().defaultRules); // sin mantenimiento, ni puntos de mando, ni clima
       expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules).toEqual(missionRules(mission, defaultContent()));
       // Las guardadas antes del arreglo (version 1) a veces no llevaban reglas: se recuperan las de su mision.
       const old = JSON.parse(serialize(s)) as { rules?: unknown };
@@ -57,7 +59,7 @@ describe('misiones', () => {
       // elegidas, asi que una mision conocida de antes del arreglo se juega con las suyas.
       const saved = JSON.parse(serialize(buildMission(mission, defaultContent()))) as { rules: unknown };
       saved.rules = rulesWith(defaultContent());
-      expect(saved.rules).toEqual(defaultContent().tables.DEFAULT_RULES);
+      expect(saved.rules).toEqual(defaultContent().defaultRules);
       expect(deserialize(savedByVersion1(JSON.stringify(saved)), saveContext(defaultContent()))!.rules).toEqual(
         missionRules(mission, defaultContent()),
       );

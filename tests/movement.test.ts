@@ -1,14 +1,15 @@
+import { unitTypeOf } from '@core/gameContent';
 import { saveContext } from '@core/defaultGames';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_RULES } from './plainRules';
 import { load, merge, moveRange, moveUnit, validPath, visibility, newUnit } from '@core/rules';
-import { blankState, savedByVersion1 } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed } from './helpers';
 import { defaultContent } from '@core/content/default';
 
-const SOLDIER = 0,
-  TANK = 1,
-  TRANSPORT = 7;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  TRANSPORT = unitTypeNamed('Transport');
 
 describe('movimiento: pasar entre aliados', () => {
   it('se atraviesa a un aliado pero no se puede terminar encima', () => {
@@ -79,7 +80,7 @@ describe('movimiento: emboscadas en la niebla', () => {
     const path = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank))!;
     expect(path.ambush).toEqual({ x: 6, y: 5 });
     expect(tank.x).toBe(5);
-    s.units.find((unit) => unit.team === 0 && unit.type === SOLDIER)!.x = 5;
+    s.units.find((unit) => unit.team === 0 && unitTypeOf(s, unit) === SOLDIER)!.x = 5;
     tank.x = 2;
     tank.active = tank.canMove = true;
     const p2 = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank));

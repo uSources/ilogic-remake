@@ -218,7 +218,7 @@ export class Orders {
   private movingIntent(unit: Unit, at: Pos): Pick<ActionCtx, 'intent' | 'intentCapture' | 'farOk'> {
     const s = this.host.state;
     const intent = this.host.intentAt(at);
-    const isFreeWalkable = !unitAt(s, at) && canWalk(s, at, movementOf(s, unit.type));
+    const isFreeWalkable = !unitAt(s, at) && canWalk(s, at, movementOf(s, unit));
     return {
       intent: intent.kind,
       intentCapture: intent.kind === 'move' && intent.capture,

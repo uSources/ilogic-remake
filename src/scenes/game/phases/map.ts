@@ -3,7 +3,7 @@
  * fabrica, enseña el alcance de otra unidad o abre el menu de pausa; con un grupo elegido, lo mueve.
  */
 import { posKey } from '../../../core/geom';
-import { tablesOf } from '../../../core/gameContent';
+import { unitTypeOf } from '../../../core/gameContent';
 import { buildingAt, canBuyAt, moveRange, reachableTiles, unitAt, unitById, unitThreat } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import type { Pos, Unit } from '../../../core/model';
@@ -89,7 +89,7 @@ function inspectMarks(input: HighlightInput, uid: number): Highlights {
   // Como si fuera su turno: aunque ya se haya movido, se ve hasta donde llegaria.
   const range = moveRange(input.s, { ...unit, active: true, canMove: true });
   const threat = unitThreat(input.s, unit);
-  const canMove = tablesOf(input.s).UNIT.mover[unit.type]! > 0;
+  const canMove = unitTypeOf(input.s, unit).move > 0;
   for (const { pos, value: steps } of range.steps.cells()) {
     if (canMove && steps > 0) marks.tiles.set(posKey(pos), 'reach');
     else if (threat.at(pos)) marks.tiles.set(posKey(pos), 'attack');

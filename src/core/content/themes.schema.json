@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Temas de mapa de Ilogic",
+  "description": "Cada tema: como crece el terreno en el generador de mapas (probabilidades del original de 2013), que hace con el agua y que terreno es cada letra de los mapas de las misiones. Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "required": ["themes"],
+  "additionalProperties": false,
+  "definitions": {
+    "terrain": { "type": "string", "description": "id de un terreno de terrain.json." }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "themes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "mapLetters", "generator"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^\\w+$", "description": "Nombre interno (lo guardan las partidas y las misiones)." },
+          "name": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": { "es": { "type": "string", "minLength": 1 }, "en": { "type": "string", "minLength": 1 } },
+            "description": "Nombre que ve el jugador."
+          },
+          "mapLetters": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/definitions/terrain" },
+            "description": "Letras de los mapas en texto que dependen del tema (\".\" suelo, \"T\" bosque...). Las demas, terrain.json \"mapLetter\"."
+          },
+          "generator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["terrainChance", "openWater", "narrowWater", "shoreWater", "deepWater"],
+            "properties": {
+              "terrainChance": {
+                "type": "object",
+                "description": "Probabilidad de cada terreno: base y lo que suma cada vecina igual ya generada (los que no estan, 0).",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["base", "perNeighbour"],
+                  "properties": {
+                    "base": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "perNeighbour": { "type": "number", "minimum": -1, "maximum": 1 }
+                  }
+                }
+              },
+              "openWater": { "$ref": "#/definitions/terrain", "description": "El agua que sale al crecer el terreno." },
+              "narrowWater": { "type": ["string", "null"], "description": "En lo que se convierte el agua estrecha (null = no cambia)." },
+              "shoreWater": {
+                "type": ["string", "null"],
+                "description": "En lo que se convierte el agua junto a tierra (null = no cambia)."
+              },
+              "deepWater": { "$ref": "#/definitions/terrain", "description": "En lo que se convierte el agua rodeada de agua." }
+            }
+          }
+        }
+      }
+    }
+  }
+}

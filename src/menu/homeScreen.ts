@@ -2,6 +2,7 @@
  * Pantalla de inicio del menu: tarjetas (Continuar, Partida rapida, Personalizada, Campaña) y la fila
  * de abajo (Novedades, Ayuda, Opciones, Creditos, Web). Pide a la escena lo poco que usa (`HomeHost`).
  */
+import type { TerrainPalette } from '../ui/terrainColors';
 import type { MenuCommand } from '../controls/menu';
 import { MISSIONS } from '../core/missions';
 import { mapGrid } from '../core/mapGrid';
@@ -18,7 +19,7 @@ import { mapThumb } from './thumb';
 export interface HomeHost {
   /** La partida guardada, si la hay (tarjeta Continuar). */
   readonly save: GameState | null;
-  readonly palette: number[];
+  readonly palette: TerrainPalette;
   readonly options: NewGameOptions;
   /** Ya se esta saliendo del menu: no hacer caso de mas ordenes. */
   readonly leaving: boolean;

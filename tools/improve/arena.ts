@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { tablesOf } from '@core/gameContent';
+import { unitTypeOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { endRound, outcome } from '@core/rules';
 import type { GameEvent, GameState, Rng, Team } from '@core/model';
@@ -27,8 +27,9 @@ const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
 
 function strength(s: GameState, team: Team): number {
-  const { UNIT } = tablesOf(s);
-  const army = s.units.filter((unit) => unit.team === team).reduce((amount, unit) => amount + (UNIT.cost[unit.type]! * unit.life) / 100, 0);
+  const army = s.units
+    .filter((unit) => unit.team === team)
+    .reduce((amount, unit) => amount + (unitTypeOf(s, unit).cost * unit.life) / 100, 0);
   return army + s.buildings.filter((building) => building.owner === team).length * 1500 + s.funds[team] * 0.5;
 }
 
@@ -133,7 +134,7 @@ function snapshot(): void {
   writeFileSync(
     `${BASE_DIR}weights.ts`,
     `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar.\n` +
-      `const AI = ${JSON.stringify(defaultContent().tables.AI)} as const;\n` +
+      `const AI = ${JSON.stringify(defaultContent().ai)} as const;\n` +
       `/** La IA de referencia juega con estos pesos, sea cual sea el contenido de la partida. */\n` +
       `export const weightsOf = (_s: unknown): typeof AI => AI;\n`,
   );

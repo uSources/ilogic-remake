@@ -3,7 +3,7 @@
  */
 import { defaultContent } from './core/content/default';
 import type { RulesConfig } from './core/model';
-import { fmtNum, settings } from './settings';
+import { fmtNum, nameOf, settings } from './settings';
 
 export interface NewGameOptions {
   size: number;
@@ -148,12 +148,6 @@ export function codeToSeed(code: string): number | null {
 
 export const randomSeed = (): number => Math.floor(Math.random() * MAX_SEED) >>> 0;
 
-/** Nombre de cada tema de graficos del mapa, en el orden de los temas. */
-export const THEME_NAMES = {
-  es: ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'],
-  en: ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'],
-};
-
 const SMALL_SIZE = 20;
 const LARGE_SIZE = 40;
 
@@ -177,7 +171,7 @@ function generalLabel(value: unknown): string {
 /** Texto de cada valor de cada opcion, para la pantalla. */
 const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
   size: sizeLabel,
-  theme: (value) => (value === null ? (isSpanish() ? 'Al azar' : 'Random') : THEME_NAMES[isSpanish() ? 'es' : 'en'][value as number]!),
+  theme: (value) => (value === null ? (isSpanish() ? 'Al azar' : 'Random') : nameOf(defaultContent().themes.list[value as number]!)),
   fog: onOff,
   weather: onOff,
   funds: (value) => fmtNum(value as number),

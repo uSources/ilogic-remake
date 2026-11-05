@@ -3,9 +3,8 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { savedPart, tablesOf } from './gameContent';
+import { unitTypeOf, savedPart } from './gameContent';
 import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
-import { TERRAIN_TYPES, THEME_NAMES } from './content';
 import { generalDef } from './generals';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
@@ -24,8 +23,6 @@ const isInt = (value: unknown, min: number, max: number): value is number =>
 
 /** Bando valido (0 jugador, 1 IA). */
 const isTeam = (value: unknown): boolean => value === 0 || value === 1;
-/** Ultimo tema de mapa (Plains..Snowy, ver GameState.theme). */
-const MAX_THEME = THEME_NAMES.length - 1;
 /** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
 const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
@@ -96,12 +93,12 @@ function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unkno
 function readMap(s: GameState): boolean {
   if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
   if (s.map[0].length !== s.map.length) return false;
-  const isTerrain = (value: unknown) => isInt(value, 0, TERRAIN_TYPES - 1);
+  const isTerrain = (value: unknown) => isInt(value, 0, s.content.terrain.list.length - 1);
   return s.map.every((column) => Array.isArray(column) && column.length === s.map.length && column.every(isTerrain));
 }
 
 function hasValidBasics(s: GameState): boolean {
-  if (!isInt(s.theme, 0, MAX_THEME) || !Array.isArray(s.funds) || s.funds.length !== 2) return false;
+  if (!isInt(s.theme, 0, s.content.themes.list.length - 1) || !Array.isArray(s.funds) || s.funds.length !== 2) return false;
   if (!s.funds.every((funds) => isInt(funds, 0, MAX_SAVED_FUNDS))) return false;
   return Array.isArray(s.units) && Array.isArray(s.buildings);
 }
@@ -119,9 +116,9 @@ function readUnits(s: GameState): boolean {
 }
 
 function isValidUnit(s: GameState, unit: Unit): boolean {
-  if (!isInt(unit.type, 0, tablesOf(s).UNIT_NAMES.length - 1) || !isTeam(unit.team)) return false;
+  if (!isInt(unit.type, 0, s.content.units.list.length - 1) || !isTeam(unit.team)) return false;
   if (!isMapPos(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
-  return Array.isArray(unit.cargo) && unit.cargo.length === tablesOf(s).UNIT.maxcarry[unit.type];
+  return Array.isArray(unit.cargo) && unit.cargo.length === unitTypeOf(s, unit).cargoSlots;
 }
 
 function cleanUnit(s: GameState, unit: Unit): void {
@@ -145,7 +142,7 @@ function hasConsistentCargo(s: GameState): boolean {
 
 function readBuildings(s: GameState): boolean {
   for (const building of s.buildings) {
-    if (!isInt(building.type, 0, tablesOf(s).BUILDING_NAMES.length - 1) || !isMapPos(mapGrid(s), building)) return false;
+    if (!isInt(building.type, 0, s.content.buildings.list.length - 1) || !isMapPos(mapGrid(s), building)) return false;
     if (building.owner !== null && !isTeam(building.owner)) return false;
     // Una captura a medias rota se olvida (el edificio sigue).
     const progress = building.capture;
@@ -169,7 +166,7 @@ function isValidMission(s: GameState, mission: GameState['mission']): boolean {
       return (
         hasDays &&
         isInt(objective.count, 1, 1000) &&
-        (objective.type === null || isInt(objective.type, 0, tablesOf(s).BUILDING_NAMES.length - 1))
+        (objective.type === null || isInt(objective.type, 0, s.content.buildings.list.length - 1))
       );
     case 'escort':
       return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(mapGrid(s), objective.to);
@@ -182,7 +179,10 @@ function cleanSetup(s: GameState): void {
   if (s.setup === undefined) return;
   const setup = s.setup;
   const ok =
-    !!setup && isInt(setup.seed, 0, 2 ** 32) && setup.size === s.map.length && (setup.theme === null || isInt(setup.theme, 0, MAX_THEME));
+    !!setup &&
+    isInt(setup.seed, 0, 2 ** 32) &&
+    setup.size === s.map.length &&
+    (setup.theme === null || isInt(setup.theme, 0, s.content.themes.list.length - 1));
   if (!ok) delete s.setup;
 }
 
@@ -192,8 +192,8 @@ function cleanWeather(s: GameState): void {
   const weather = s.weather;
   const ok =
     !!weather &&
-    isInt(weather.kind, 0, tablesOf(s).WEATHER.ids.length - 1) &&
-    isInt(weather.next, 0, tablesOf(s).WEATHER.ids.length - 1) &&
+    isInt(weather.kind, 0, s.content.weather.list.length - 1) &&
+    isInt(weather.next, 0, s.content.weather.list.length - 1) &&
     isInt(weather.left, 0, 1000);
   if (!ok) delete s.weather;
 }

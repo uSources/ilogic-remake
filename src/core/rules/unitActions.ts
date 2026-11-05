@@ -2,7 +2,7 @@
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
 
-import { tablesOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { effectiveStandingOrder } from '../squads/standingOrders';
 import { canFight, isCapturer, isPlayer } from '../util/predicates';
 import type { GameState, Unit } from '../model';
@@ -36,7 +36,7 @@ export interface UnitActions {
 
 /** Algun pasajero se puede bajar a una casilla de al lado. */
 function canUnloadSomeone(s: GameState, transport: Unit): boolean {
-  if (tablesOf(s).UNIT.maxcarry[transport.type]! <= 0) return false;
+  if (unitTypeOf(s, transport).cargoSlots <= 0) return false;
   return cargoUnits(s, transport).some((passenger) => unloadTiles(s, transport, passenger).length > 0);
 }
 

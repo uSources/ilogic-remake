@@ -4,20 +4,18 @@ import { defaultContent } from '@core/content/default';
 import { newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { recordEvent, statsOf } from '@core/stats';
-import { blankState } from './helpers';
-
-const { UNIT } = defaultContent().tables;
+import { blankState, unitTypeNamed } from './helpers';
 
 describe('estadisticas', () => {
   it('cuenta compras, bajas y capturas por bando', () => {
     const s = blankState();
-    const unit = newUnit(s, 1, 0, { x: 3, y: 3 });
+    const unit = newUnit(s, unitTypeNamed('Tank'), 0, { x: 3, y: 3 });
     s.units.push(unit);
     recordEvent(s, { kind: 'spawn', uid: unit.uid, at: { x: 3, y: 3 } }, 0);
     recordEvent(s, { kind: 'attack', attacker: unit.uid, target: { x: 4, y: 3 }, damage: 50, killed: true }, 0);
     recordEvent(s, { kind: 'attack', attacker: unit.uid, target: { x: 4, y: 3 }, damage: 10, killed: false }, 0);
     recordEvent(s, { kind: 'capture', uid: unit.uid, at: { x: 3, y: 3 }, owner: null }, 1);
-    expect(statsOf(s)).toEqual({ built: [1, 0], spent: [UNIT.cost[1], 0], lost: [0, 1], captured: [0, 1] });
+    expect(statsOf(s)).toEqual({ built: [1, 0], spent: [unitTypeNamed('Tank').cost, 0], lost: [0, 1], captured: [0, 1] });
   });
 
   it('leerlas no cambia la partida', () => {

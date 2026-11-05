@@ -24,7 +24,7 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
   "set": {
     "UNIT.cost.Tank": 10000,
     "UNIT.cost.*": "x1.1",
-    "POWER.Tank.Soldier": "+0.05",
+    "HIT_CHANCE.Tank.Soldier": "+0.05",
     "BUILDING.earning.City": 800,
     "TERRAIN.protection.Woods": 0.8,
     "RULES.initialFunds": 8000
@@ -32,13 +32,13 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
 }
 ```
 
-- **Rutas:** usan los nombres de las tablas de siempre, pero cambian los ficheros de `src/core/content/`;
-  la variante se carga como el contenido del juego (`loadContent`: se valida, se rehacen todas las
-  tablas y se congela), así que un valor imposible para antes de jugar.
-  - `UNIT.<cost|command|mover|vision>.<unidad>`: campos de `units.json` (`mover` es `move`).
-  - `POWER.<atacante>.<defensor>`: probabilidad de acierto (`attack.hitChance`).
+- **Rutas:** cada una nombra un campo de los ficheros de `src/core/content/`, con su nombre en el JSON;
+  la variante se carga como el contenido del juego (`loadContent`: se valida, se resuelven todos los
+  tipos y se congela), así que un valor imposible para antes de jugar.
+  - `UNIT.<cost|command|move|vision>.<unidad>`: campos de `units.json`.
+  - `HIT_CHANCE.<atacante>.<defensor>`: probabilidad de acierto (`attack.hitChance`).
   - `BUILDING.<earning|heals|protection|vision>.<edificio>`.
-  - `TERRAIN.<protection|canbuild|iswater>.<terreno>` y `MOVE_COST.<movimiento>.<terreno>` (`movement` de `terrain.json`; `null` = no se puede pasar).
+  - `TERRAIN.<protection|buildable|water>.<terreno>` y `MOVE_COST.<movimiento>.<terreno>` (`movement` de `terrain.json`; `null` = no se puede pasar).
   - `RULES.<regla>`: las reglas por defecto de `rules.json` (la variante se juega con `rulesWith(su contenido)`).
   - `AI.<peso>`: pesos de `ai.json`.
 - **Casillas:** se nombran con los nombres internos (`Tank`, `City`, `Woods`…), con su índice o con `*` para todas.
