@@ -84,7 +84,7 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
         place(s, attackerType, attacker, defender);
         const lifeA = attacker.life;
         dmg += resolveAttack(s, attacker, defender, diceOf(s)).damage;
-        restoreInvariants(s);
+        restoreInvariants(s, null);
         counter += lifeA - (s.units.includes(attacker) ? attacker.life : 0);
         if (!s.units.includes(defender)) kills++;
       }
@@ -105,7 +105,7 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
             const [shooter, target] = round % 2 === 0 ? [attacker, defender] : [defender, attacker];
             if (!s.units.includes(shooter) || !s.units.includes(target)) break;
             resolveAttack(s, shooter, target, diceOf(s));
-            restoreInvariants(s);
+            restoreInvariants(s, null);
           }
           const aAlive = s.units.includes(attacker),
             bAlive = s.units.includes(defender);

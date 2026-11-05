@@ -69,7 +69,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   equipo de la partida; el turno, cuando la partida sepa de quien es, fase 4), el `validate` de la
   accion, su `apply` (con los dados de la partida, `diceOf(s)`) y despues las `INVARIANTS`
   (`actions/invariants.ts`: fuera los muertos, las capturas cuya unidad se ha ido, las escuadras
-  vacias, el dinero por encima del maximo).
+  vacias, el dinero por encima del maximo, el movimiento que ya no se puede deshacer). Cada
+  invariante ve la accion que se acaba de hacer; `dispatch` no sabe de ninguna accion en concreto.
 - `ACTIONS` (`actions/registry.ts`) tiene una entrada por accion (el tipo obliga), cada una en el
   modulo de su tema (`movement`, `combat`, `capture`, `transport`, `units`, `economy`, `powers`,
   `standingOrders`, `squads`). `validate(s, team, action)` lo calcula todo desde la partida (alcance,
@@ -82,7 +83,7 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   mismo.
 - Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
-  siguiente o el fin de ronda.
+  siguiente (la invariante `undoWindow`) o el fin de ronda.
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`), su suceso en `GameEvent`

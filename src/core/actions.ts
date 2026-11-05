@@ -23,7 +23,7 @@
  * | `registry` | `ACTIONS`: todas las entradas |
  * | `dispatch` | `dispatch`, `actionProblem`, `isValidAction` |
  */
-export { dispatch, actionProblem, isValidAction, applyAction } from './actions/dispatch';
+export { dispatch, actionProblem, isValidAction } from './actions/dispatch';
 export { ACTIONS } from './actions/registry';
 export { availableActions, canGiveStandingOrder, UNIT_MENU, type UnitMenuOption } from './actions/menu';
 /**

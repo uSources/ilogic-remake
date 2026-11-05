@@ -36,7 +36,7 @@ export function act(s: GameState, team: TeamId, action: GameAction): GameEvent[]
  */
 export function fight(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
   const event = resolveAttack(s, attacker, defender, dice);
-  restoreInvariants(s);
+  restoreInvariants(s, null);
   return event;
 }
 

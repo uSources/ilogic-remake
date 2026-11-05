@@ -39,7 +39,8 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const path = plannedPath(s, unit, action.to, action.path)!;
       const walked = followPath(s, unit, path);
       // Con emboscada no hay vuelta atras: la unidad ya ha gastado su turno.
-      if (!walked.ambush) s.lastMove = { uid: unit.uid, from, capture };
+      if (walked.ambush) delete s.lastMove;
+      else s.lastMove = { uid: unit.uid, from, capture };
       return [moveEvent(team, unit.uid, walked)];
     },
   },

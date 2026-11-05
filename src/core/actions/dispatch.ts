@@ -25,13 +25,10 @@ export function actionProblem(s: GameState, team: TeamId, action: GameAction): A
 /** La accion vale ahora para el equipo `team`. */
 export const isValidAction = (s: GameState, team: TeamId, action: GameAction): boolean => actionProblem(s, team, action) === null;
 
-/** Hace la accion ya comprobada y deja la partida en orden. Solo para dispatch y para los tests de una regla. */
-export function applyAction(s: GameState, team: TeamId, action: GameAction, dice: Dice): GameEvent[] {
-  const lastMoveBefore = s.lastMove;
+/** Hace la accion ya comprobada (su `apply`) y deja la partida en orden (INVARIANTS). */
+function applyAction(s: GameState, team: TeamId, action: GameAction, dice: Dice): GameEvent[] {
   const events = definitionOf(action).apply(s, team, action, dice);
-  // Un movimiento solo se deshace justo despues: si la accion no ha dejado uno nuevo, el de antes se olvida.
-  if (s.lastMove === lastMoveBefore) delete s.lastMove;
-  restoreInvariants(s);
+  restoreInvariants(s, action);
   return events;
 }
 
