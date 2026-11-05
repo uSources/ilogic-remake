@@ -131,8 +131,11 @@ por uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`), 
 que gana cada general (`charge`); la compra, el tipo y el equipo; la captura, siempre los puntos que
 quedan. Lo que dejan en orden las `INVARIANTS` tambien se cuenta, detras de los de la accion y sin
 actor: `cargoLost` (los pasajeros de un transporte que cae; tambien al retirarlo), `captureDropped`
-(una captura a medias cuya unidad se ha ido), la escuadra que se queda vacia (`squad` con `change:
-'removed'`; cada escuadra que desaparece tiene un solo suceso: ver `SquadChange`) y
+(una captura a medias cuya unidad se ha ido), la escuadra que se queda vacia y `fundsCapped`. Cada
+escuadra que desaparece tiene un solo suceso (`SquadChange`): 'disbanded' si su equipo la deshace,
+o `squad` con `change: 'removed'` si se queda vacia; si la vacia una accion (salir, formar otra con
+sus unidades), lleva el equipo de esa accion como actor y va antes que el 'formed' o 'grouped'; si
+la vacia la partida (caen sus unidades), la cuenta la invariante sin actor. Y
 `fundsCapped` (el dinero que pasaba del maximo; botin, poderes e ingresos se cuentan enteros y lo
 perdido va aqui, porque el tope se aplica al acabar la accion o la ronda, no al cobrar). Con ellos
 se anima (`ANIMATORS`), se cuentan las estadisticas (`recordEvent`, por el `actor`) y se resume el
@@ -169,9 +172,11 @@ que la prepara, y lo dice en el nombre (`recordEvent`, `newUnit`...).
 
 `src/core/squads/` (escuadras y ordenes permanentes del jugador): `queries` (unidades de una
 escuadra), `naming` (nombres y teclas de grupo), `standingOrders` (la orden de la escuadra y la propia
-de cada unidad) y `membership` (formar, meter, sacar, deshacer): las piezas con las que se hacen las
-acciones de escuadras y ordenes (`actions/squads.ts`, `actions/standingOrders.ts`); la fachada
-`squads.ts` solo da las consultas. Las cumple la IA al acabar el turno (`ai/standingOrders.ts`). `targeting.ts` y `trail.ts`: desde donde atacar y el camino trazado con el
+de cada unidad), `membership` (formar, meter, sacar, deshacer; no hace sucesos) y `events` (el suceso
+de una escuadra, `squadEvent`): las piezas con las que se hacen las acciones de escuadras y ordenes
+(`actions/squads.ts`, `actions/standingOrders.ts`); la fachada `squads.ts` solo da las consultas.
+Las cumple la IA al acabar el turno (`ai/standingOrders.ts`). `targeting.ts` y `trail.ts`: desde
+donde atacar (con la regla del ataque, `attackProblem` con `from`) y el camino trazado con el
 cursor, para la escena.
 
 `src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
@@ -179,11 +184,14 @@ cursor, para la escena.
 | Modulo | Que va |
 |---|---|
 | `queries` | que hay en una casilla, por donde se anda (`canMoveOn`, `movementOf`), unidades de un equipo, pasajeros |
-| `unitTurn` | el turno de cada unidad (`Unit.turnState`: `'ready'`, `'moved'`, `'done'`): `canStillAct`, `canStillMove`, `canStillFire` (una de distancia movida ya no dispara), y la unica forma de cambiarlo (`markMoved`, `spendUnit`, `readyUnit`) |
+| `unitTurn` | el turno de cada unidad (`Unit.turnState`: `'ready'`, `'moved'`, `'done'`): `canStillAct`, `canStillMove`, `canStillFire` (una de distancia movida ya no dispara), `canActNow`/`canMoveNow` (lo mismo y en el mapa), y la unica forma de cambiarlo (`markMoved`, `spendUnit`, `readyUnit`) |
 | `funds` | el dinero: `earn`, `pay` (paga lo que haya) y `capFunds` (lo que pase del maximo se pierde al acabar cada accion y cada ronda) |
-| `visibility` | vision y niebla (la de toda la alianza) |
+| `visibility` | vision y niebla (la de toda la alianza); lo que ve un equipo como `Sight` (`sightOf`), enemigos a la vista (`isVisibleFoe`, `visibleEnemies`, `visibleFoeAt`) y que unidades se le enseñan (`isShownTo`) |
 | `capture` | puntos de captura, capturas a medias (`captureProgress`, solo consulta; `dropStaleCaptures`, una de las INVARIANTS), capturar y su suceso |
-| `lifecycle` | crear, quitar y limpiar unidades |
+| `lifecycle` | crear, quitar y limpiar unidades (`removeWithCargo`, con su `cargoLost`) |
+| `lastMove` | la ventana para deshacer el ultimo movimiento: abrirla, cerrarla, por que no se puede (`undoWindowProblem`) y su invariante |
+| `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
+| `invariants` | `INVARIANTS` y `restoreInvariants`: lo que se deja en orden tras cada accion y cada ronda, con sus sucesos |
 | `movement` | alcance (`moveRange`), caminos (`plannedPath`: por donde iria, calculado desde la partida), emboscadas, recorrer un camino (`followPath`), distancia por tierra, el suceso de mover |
 | `combat` | alcance de tiro y objetivos (`attackProblem`, `attackTargets`), proteccion, acierto (`HIT_MODIFIERS`), veterania, contraataque, botin, la tirada (`strike`) |
 | `forecast` | prevision de combate y zona de amenaza |

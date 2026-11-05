@@ -10,6 +10,7 @@
  * | `queries` | unidades de una escuadra, escuadra por id, la escuadra justa de unas unidades |
  * | `naming` | nombres y teclas de grupo (1-9) |
  * | `standingOrders` | la orden de la escuadra y la propia de cada unidad: dar, quitar, cumplir, formacion |
+ * | `events` | el suceso de una escuadra (`squadEvent`) |
  * | `membership` | formar, meter y sacar unidades, grupos por tecla, renombrar y deshacer |
  */
 export { squadUnits, squadById, exactSquad } from './squads/queries';

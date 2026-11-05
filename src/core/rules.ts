@@ -26,6 +26,8 @@
  * | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
+ * | `lastMove` | la ventana para deshacer el ultimo movimiento |
+ * | `travel` | viajes de varios turnos |
  * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
  * | `outcome` | victoria, derrota, objetivos de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
