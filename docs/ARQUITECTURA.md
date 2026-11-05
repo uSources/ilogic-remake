@@ -90,6 +90,7 @@ cursor, para la escena.
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
 | `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`) |
 | `outcome` | victoria y derrota de cada equipo (`outcome(s, team)`, `isMatchOver`), puntos del limite de dias por alianza, objetivos de mision |
+| `turnOrder` | quien juega y en que orden (`turnTakers`, `turnsAfter`, `takesTurn`: los derrotados ya no) |
 
 `src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
@@ -127,7 +128,11 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   Las funciones que hacen algo por un equipo lo reciben siempre (`aiTurn(s, rng, team)`,
   `formSquad(s, team, units)`, `visibility(s, team)`, `outcome(s, team)`), sin valor por defecto.
 - Los informes de la ronda (`RoundReport`, `ControlReport`) llevan una lista por equipo (`perTeam`).
-- Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan. La
+- Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan:
+  el orden de los turnos esta en el nucleo (`rules/turnOrder.ts`: `turnTakers`, `turnsAfter`,
+  `takesTurn`) y lo usan la escena, el fondo del menu, `npm run play`, la huella, la arena y las
+  partidas de prueba. Lo que le queda en el mapa a un derrotado se queda a proposito y el fin de
+  ronda lo trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los demas. La
   partida termina (`isMatchOver`) cuando solo queda en pie una alianza, o cuando ya se ha decidido
   para los que quedan (objetivo de la mision, limite de dias: gana la alianza con mas puntos). Con 3
   o mas equipos, que caiga uno no la acaba.
@@ -141,8 +146,13 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`, `'enemy'` y
   `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
 - **Limite hasta la fase 4**: en una pantalla juega una sola persona. Una partida con mas de un
-  equipo `'human'` no se puede empezar (`viewerOf` lo dice) y, si otro equipo que no es la IA llegara
-  a su turno, `turns.ts` falla con un error en vez de jugarlo por el.
+  equipo `'human'` no se puede empezar (`viewerOf` lo dice); una guardada o preparada asi cuenta como
+  dañada (`startMatch`: se borra y se empieza otra) y, si otro equipo que no es la IA llegara a su
+  turno, `turns.ts` falla con un error en vez de jugarlo por el (`checkPlayedByAi`). Una partida sin
+  personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y ese lo juega la
+  persona aunque guarde `controller: 'ai'` (las reglas no miran el controller).
+- El turno en la barra de arriba es el del equipo que juega, por lado (`turn: Side`): tu turno, el
+  de un aliado (en azul) o el de un enemigo (en rojo).
 - Los mapas al azar valen para 2 o mas equipos (`generateGame` busca una salida por equipo, cada una
   lejos de las anteriores); la pantalla de nueva partida y las misiones son de dos (`duel`). Las
   reglas, la IA, el guardado y la escena ya valen para mas (tests/teams.test.ts: 4 equipos en 2

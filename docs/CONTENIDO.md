@@ -150,9 +150,9 @@ Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mient
 
 ## Terreno
 
-`terrain.json` tiene los 15 terrenos. **El suelo llano** es el que lleva `"plain": true` (exactamente
-uno: el de los mapas vacios del laboratorio, los duelos y las pruebas). Se cambian sus numeros; uno nuevo necesita su arte
-(`terrainArt.ts`) y salir en algun tema (`themes.json`).
+`terrain.json` tiene los 15 terrenos. **El suelo llano** es el que lleva `"plain": true`
+(exactamente uno: el de los mapas vacios del laboratorio, los duelos y las pruebas). Se cambian sus
+numeros; uno nuevo necesita su arte (`terrainArt.ts`) y salir en algun tema (`themes.json`).
 
 | Campo | Que es |
 |---|---|
