@@ -6,7 +6,7 @@
 import { unitTypeOf, savedPart } from './gameContent';
 import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
 import { generalDef } from './generals';
-import { findEntry, type Catalog, type Identified } from './content';
+import { isEntryId } from './content';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
 import { sanitizeTeamStats } from './stats';
@@ -16,17 +16,14 @@ import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations'
 import { SAVE_VERSION } from './saveVersion';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { isObject } from './util/predicates';
+import { isInt, isPosOn } from './util/validation';
+import { isValidRules } from './rulesSchema';
+import { isValidObjective } from './objectives';
 import { isRandomState } from './util/random';
 import { isUnitTurnState } from './rules/unitTurn';
-import type { GameState, GeneralState, Pos, RulesConfig, SavedGameState, StandingOrder, TeamId, TeamState, Unit } from './model';
+import type { GameState, GeneralState, SavedGameState, StandingOrder, TeamId, TeamState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
-
-/** Un id de ese catalogo del contenido de la partida. */
-const isIdIn = (catalog: Catalog<Identified>, value: unknown): value is string => typeof value === 'string' && !!findEntry(catalog, value);
-
-const isInt = (value: unknown, min: number, max: number): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 
 /** Un equipo de la partida que se lee (su numero en GameState.teams). */
 const isTeam = (s: GameState, value: unknown): boolean => isInt(value, 0, s.teams.length - 1);
@@ -37,13 +34,9 @@ const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
 const MAX_UID = Number.MAX_SAFE_INTEGER;
 
-/** Una casilla bien formada (x e y enteros). */
-const isPos = (value: unknown): value is Pos => isObject(value) && Number.isInteger(value.x) && Number.isInteger(value.y);
-/** Una casilla bien formada y dentro del mapa de la partida que se lee. */
-const isMapPos = (board: GridBounds, value: unknown): value is Pos => isPos(value) && board.contains(value);
 /** Una orden con destino bien formada (Unit.standingOrder o Squad.standingOrder). */
 const isStandingOrder = (board: GridBounds, value: unknown): value is StandingOrder =>
-  isObject(value) && isStandingOrderKind(value.kind) && isMapPos(board, value.at);
+  isObject(value) && isStandingOrderKind(value.kind) && isPosOn(board, value.at);
 
 export function serialize(s: GameState): string {
   return JSON.stringify(savedPart(s));
@@ -101,12 +94,12 @@ function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unkno
 function readMap(s: GameState): boolean {
   if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
   if (s.map[0].length !== s.map.length) return false;
-  const isTerrain = (value: unknown) => isIdIn(s.content.terrain, value);
+  const isTerrain = (value: unknown) => isEntryId(s.content.terrain, value);
   return s.map.every((column) => Array.isArray(column) && column.length === s.map.length && column.every(isTerrain));
 }
 
 function hasValidBasics(s: GameState): boolean {
-  return isIdIn(s.content.themes, s.theme) && Array.isArray(s.units) && Array.isArray(s.buildings) && isRandomState(s.dice);
+  return isEntryId(s.content.themes, s.theme) && Array.isArray(s.units) && Array.isArray(s.buildings) && isRandomState(s.dice);
 }
 
 /** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */
@@ -137,8 +130,8 @@ function readUnits(s: GameState): boolean {
 }
 
 function isValidUnit(s: GameState, unit: Unit): boolean {
-  if (!isIdIn(s.content.units, unit.type) || !isTeam(s, unit.team)) return false;
-  if (!isMapPos(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
+  if (!isEntryId(s.content.units, unit.type) || !isTeam(s, unit.team)) return false;
+  if (!isPosOn(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
   return Array.isArray(unit.cargo) && unit.cargo.length === unitTypeOf(s, unit).cargoSlots;
 }
 
@@ -149,7 +142,7 @@ function cleanUnit(s: GameState, unit: Unit): void {
   if (unit.hitDay !== undefined && !isInt(unit.hitDay, 0, MAX_COUNT)) delete unit.hitDay;
   if (unit.standingOrder !== undefined && !isStandingOrder(mapGrid(s), unit.standingOrder)) delete unit.standingOrder;
   if (unit.squad !== undefined && !isInt(unit.squad, 1, MAX_COUNT)) delete unit.squad;
-  if (unit.travelTo !== undefined && !isMapPos(mapGrid(s), unit.travelTo)) delete unit.travelTo;
+  if (unit.travelTo !== undefined && !isPosOn(mapGrid(s), unit.travelTo)) delete unit.travelTo;
 }
 
 /** Cada pasajero esta en la lista de su transporte y cada transporte lleva a quien dice. */
@@ -162,7 +155,7 @@ function hasConsistentCargo(s: GameState): boolean {
 
 function readBuildings(s: GameState): boolean {
   for (const building of s.buildings) {
-    if (!isIdIn(s.content.buildings, building.type) || !isMapPos(mapGrid(s), building)) return false;
+    if (!isEntryId(s.content.buildings, building.type) || !isPosOn(mapGrid(s), building)) return false;
     if (building.owner !== null && !isTeam(s, building.owner)) return false;
     // Una captura a medias rota se olvida (el edificio sigue).
     const progress = building.capture;
@@ -172,23 +165,9 @@ function readBuildings(s: GameState): boolean {
   return true;
 }
 
+/** La mision: su id, el equipo que la juega y su objetivo (cada tipo de objetivo comprueba sus campos). */
 function isValidMission(s: GameState, mission: GameState['mission']): boolean {
-  const objective = mission?.objective as Record<string, unknown> | undefined;
-  if (!mission || typeof mission.id !== 'string' || !isTeam(s, mission.team) || !objective) return false;
-  const hasDays = isInt(objective.days, 1, 10000);
-  switch (objective.kind) {
-    case 'hq':
-      return true;
-    case 'survive':
-    case 'destroy':
-      return hasDays;
-    case 'capture':
-      return hasDays && isInt(objective.count, 1, 1000) && (objective.type === null || isIdIn(s.content.buildings, objective.type));
-    case 'escort':
-      return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(mapGrid(s), objective.to);
-    default:
-      return false;
-  }
+  return isObject(mission) && typeof mission.id === 'string' && isTeam(s, mission.team) && isValidObjective(s, mission.objective);
 }
 
 function cleanSetup(s: GameState): void {
@@ -198,7 +177,7 @@ function cleanSetup(s: GameState): void {
     !!setup &&
     isInt(setup.seed, 0, 2 ** 32) &&
     setup.size === s.map.length &&
-    (setup.theme === null || isIdIn(s.content.themes, setup.theme));
+    (setup.theme === null || isEntryId(s.content.themes, setup.theme));
   if (!ok) delete s.setup;
 }
 
@@ -207,7 +186,7 @@ function cleanWeather(s: GameState): void {
   if (s.weather === undefined) return;
   const weather = s.weather;
   const ok =
-    !!weather && isIdIn(s.content.weather, weather.kind) && isIdIn(s.content.weather, weather.next) && isInt(weather.left, 0, 1000);
+    !!weather && isEntryId(s.content.weather, weather.kind) && isEntryId(s.content.weather, weather.next) && isInt(weather.left, 0, 1000);
   if (!ok) delete s.weather;
 }
 
@@ -256,7 +235,7 @@ function cleanLastMove(s: GameState): void {
   const isValid =
     isObject(lastMove) &&
     isInt(lastMove.uid, 1, MAX_UID) &&
-    isMapPos(mapGrid(s), lastMove.from) &&
+    isPosOn(mapGrid(s), lastMove.from) &&
     (lastMove.capture === null || isCaptureOf(s, lastMove.capture));
   if (!isValid) delete s.lastMove;
 }
@@ -265,7 +244,7 @@ function cleanControlPoints(s: GameState): void {
   if (s.controlPoints === undefined) return;
   const ok =
     Array.isArray(s.controlPoints) &&
-    s.controlPoints.every((point) => point && isMapPos(mapGrid(s), point) && (point.owner === null || isTeam(s, point.owner)));
+    s.controlPoints.every((point) => point && isPosOn(mapGrid(s), point) && (point.owner === null || isTeam(s, point.owner)));
   if (!ok) delete s.controlPoints;
 }
 
@@ -278,59 +257,10 @@ function cleanGeneral(s: GameState, saved: GeneralState | null): GeneralState | 
   return { id: saved.id, charge, used: !!saved.used, reveal: !!saved.reveal };
 }
 
-/** Un tanto por uno (0..1). */
-const isFraction = (value: unknown): boolean => typeof value === 'number' && value >= 0 && value <= 1;
-
-/** Las reglas que tiene toda partida guardada (desde la primera version) son validas. */
-function hasValidCoreRules(rules: Partial<RulesConfig>): boolean {
-  const incomeScale = rules.incomeScale;
-  return (
-    isInt(rules.initialFunds, 0, MAX_SAVED_FUNDS) &&
-    isInt(rules.maxUnits, 1, 200) &&
-    typeof rules.counterattack === 'boolean' &&
-    (rules.damageSpread === null || isFraction(rules.damageSpread)) &&
-    isInt(rules.capturePoints, 1, 1000) &&
-    isInt(rules.hqCapturePoints, 1, 1000) &&
-    typeof incomeScale === 'number' &&
-    incomeScale >= 0 &&
-    incomeScale <= 10 &&
-    typeof rules.fog === 'boolean' &&
-    (rules.dayLimit === null || isInt(rules.dayLimit, 1, 10000))
-  );
-}
-
-/** Las reglas que se añadieron despues (en las partidas antiguas las pone MIGRATIONS) son validas. */
-function hasValidLaterRules(rules: Partial<RulesConfig>): boolean {
-  const switches = [
-    rules.veterancy,
-    rules.passAllies,
-    rules.ambush,
-    rules.forestHides,
-    rules.terrainCost,
-    rules.weather,
-    rules.abilities,
-    rules.noHealUnderFire,
-  ];
-  return (
-    switches.every((value) => typeof value === 'boolean') &&
-    (rules.commandPoints === null || isInt(rules.commandPoints, 1, 10000)) &&
-    [rules.upkeep, rules.vetBonus, rules.bounty, rules.flankBonus].every(isFraction) &&
-    isInt(rules.controlPoints, 0, 6) &&
-    isInt(rules.controlIncome, 0, 1e6) &&
-    isInt(rules.controlRadius, 0, 3)
-  );
-}
-
-/** Las reglas guardadas son validas y estan todas. */
-function isValidRules(rules: Partial<RulesConfig>): boolean {
-  return hasValidCoreRules(rules) && hasValidLaterRules(rules);
-}
-
 /**
  * Las reglas de la partida, que viajan con ella. Las de las partidas antiguas (sin reglas, sin las
  * que se añadieron despues, misiones con las de escaramuza) ya las ha puesto al dia MIGRATIONS.
  */
 function hasValidRules(s: GameState): boolean {
-  const saved = s.rules as Partial<RulesConfig> | undefined;
-  return saved !== undefined && isValidRules(saved);
+  return isValidRules(s.rules);
 }

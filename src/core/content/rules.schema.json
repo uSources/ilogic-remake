@@ -41,132 +41,134 @@
       ],
       "properties": {
         "initialFunds": {
+          "description": "Dinero inicial de cada equipo.",
           "type": "integer",
           "minimum": 0,
-          "description": "Dinero inicial de cada equipo."
+          "maximum": 1000000000
         },
         "maxUnits": {
+          "description": "Unidades maximas por equipo.",
           "type": "integer",
-          "minimum": 0,
-          "description": "Unidades maximas por equipo."
+          "minimum": 1,
+          "maximum": 200
         },
         "commandPoints": {
+          "description": "Puntos de mando por equipo: cada unidad ocupa los de su campo command (null = sin limite de puntos).",
           "type": ["integer", "null"],
           "minimum": 1,
-          "description": "Puntos de mando por equipo: cada unidad ocupa los de su campo command (null = sin limite de puntos)."
+          "maximum": 10000
         },
         "upkeep": {
+          "description": "Mantenimiento: cada ronda se paga este tanto por uno del precio de cada unidad (0 = sin mantenimiento).",
           "type": "number",
           "minimum": 0,
-          "maximum": 1,
-          "description": "Mantenimiento: cada ronda se paga este tanto por uno del precio de cada unidad (0 = sin mantenimiento)."
+          "maximum": 1
         },
         "counterattack": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "El defensor que sobrevive responde al ataque."
+          "description": "El defensor que sobrevive responde al ataque.",
+          "type": "boolean"
         },
         "damageSpread": {
+          "description": "null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %).",
           "type": ["number", "null"],
           "minimum": 0,
-          "description": "null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %)."
+          "maximum": 1
         },
         "capturePoints": {
+          "description": "Puntos de captura de un edificio.",
           "type": "integer",
-          "minimum": 0,
-          "description": "Puntos de captura de un edificio."
+          "minimum": 1,
+          "maximum": 1000
         },
         "hqCapturePoints": {
+          "description": "Puntos de captura de la Base.",
           "type": "integer",
-          "minimum": 0,
-          "description": "Puntos de captura de la Base."
+          "minimum": 1,
+          "maximum": 1000
         },
         "incomeScale": {
+          "description": "Multiplicador de los ingresos de los edificios.",
           "type": "number",
           "minimum": 0,
-          "description": "Multiplicador de los ingresos de los edificios."
+          "maximum": 10
         },
         "fog": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "Niebla de guerra."
+          "description": "Niebla de guerra.",
+          "type": "boolean"
         },
         "dayLimit": {
+          "description": "Limite de dias (null = sin limite): al acabar gana quien tenga mas puntos.",
           "type": ["integer", "null"],
-          "minimum": 0,
-          "description": "Limite de dias (null = sin limite): al acabar gana quien tenga mas puntos."
+          "minimum": 1,
+          "maximum": 10000
         },
         "veterancy": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "Las unidades que destruyen enemigos suben de rango (+acierto, +defensa)."
+          "description": "Las unidades que destruyen enemigos suben de rango (+acierto, +defensa).",
+          "type": "boolean"
         },
         "vetBonus": {
+          "description": "Acierto que gana cada rango de veterania (y defensa), en tanto por uno.",
           "type": "number",
           "minimum": 0,
-          "maximum": 1,
-          "description": "Acierto que gana cada rango de veterania (y defensa), en tanto por uno."
+          "maximum": 1
         },
         "bounty": {
+          "description": "Botin: al destruir una unidad se cobra este tanto por uno de su precio (0 = sin botin).",
           "type": "number",
           "minimum": 0,
-          "maximum": 1,
-          "description": "Botin: al destruir una unidad se cobra este tanto por uno de su precio (0 = sin botin)."
+          "maximum": 1
         },
         "flankBonus": {
+          "description": "Flanqueo: acierto extra contra una unidad que ya ha recibido un ataque ese dia (0 = sin flanqueo).",
           "type": "number",
           "minimum": 0,
-          "maximum": 1,
-          "description": "Flanqueo: acierto extra contra una unidad que ya ha recibido un ataque ese dia (0 = sin flanqueo)."
+          "maximum": 1
         },
         "noHealUnderFire": {
-          "type": "boolean",
-          "description": "Una unidad que ha recibido un ataque ese dia no se cura en los edificios al acabarlo."
+          "description": "Una unidad que ha recibido un ataque ese dia no se cura en los edificios al acabarlo.",
+          "type": "boolean"
         },
         "passAllies": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "Se puede pasar por casillas de unidades propias (sin terminar en ellas)."
+          "description": "Se puede pasar por casillas de unidades propias (sin terminar en ellas).",
+          "type": "boolean"
         },
         "ambush": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "Emboscadas: si el camino choca con un enemigo que no se veia, se para."
+          "description": "Emboscadas: si el camino choca con un enemigo que no se veia, se para.",
+          "type": "boolean"
         },
         "forestHides": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "Con niebla, los terrenos con hides solo se ven desde una casilla vecina."
+          "description": "Con niebla, los terrenos con hides solo se ven desde una casilla vecina.",
+          "type": "boolean"
         },
         "terrainCost": {
-          "type": "boolean",
-          "minimum": 0,
-          "description": "Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1)."
+          "description": "Cada terreno cuesta lo que diga terrain.json (si no, todo cuesta 1).",
+          "type": "boolean"
         },
         "weather": {
-          "type": "boolean",
-          "description": "Clima que cambia cada pocos dias (weather.json): vision, movimiento y punteria."
+          "description": "Clima que cambia cada pocos dias (weather.json): vision, movimiento y punteria.",
+          "type": "boolean"
         },
         "abilities": {
-          "type": "boolean",
-          "description": "Habilidades de las unidades (units.json, \"abilities\"): escudo, zona de control, aura, perforante."
+          "description": "Habilidades de las unidades (units.json, \"abilities\"): escudo, zona de control, aura, perforante.",
+          "type": "boolean"
         },
         "controlPoints": {
+          "description": "Puntos de control en los mapas al azar (0 = ninguno): zonas que dan dinero cada ronda a su dueño, solo si no hay unidades de los dos equipos dentro.",
           "type": "integer",
           "minimum": 0,
-          "maximum": 6,
-          "description": "Puntos de control en los mapas al azar (0 = ninguno): zonas que dan dinero cada ronda a su dueño, solo si no hay unidades de los dos equipos dentro."
+          "maximum": 6
         },
         "controlIncome": {
+          "description": "Dinero que da cada punto de control por ronda.",
           "type": "integer",
           "minimum": 0,
-          "description": "Dinero que da cada punto de control por ronda."
+          "maximum": 1000000
         },
         "controlRadius": {
+          "description": "Tamaño de la zona de cada punto de control: casillas alrededor del centro (1 = zona de 3x3).",
           "type": "integer",
           "minimum": 0,
-          "maximum": 3,
-          "description": "Tamaño de la zona de cada punto de control: casillas alrededor del centro (1 = zona de 3x3)."
+          "maximum": 3
         }
       }
     },

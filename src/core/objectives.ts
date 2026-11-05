@@ -8,7 +8,10 @@
  * (`outcome` de rules/outcome.ts).
  */
 
-import { entryOf, type GameContent } from './content';
+import { entryOf, isEntryId, type GameContent } from './content';
+import { mapGrid } from './mapGrid';
+import { isObject } from './util/predicates';
+import { isInt, isPosOn } from './util/validation';
 
 import type { GameState, Objective, Outcome, Pos, TeamId } from './model';
 import { isHostile } from './teams';
@@ -49,12 +52,21 @@ interface ObjectiveRules<K extends ObjectiveKind> {
   fromMission(written: InMission<K>, unitUids: readonly number[], content: GameContent): InGame<K>;
   /** Problemas del objetivo en el mapa de la mision (para los tests). */
   problems(written: InMission<K>, layout: MissionLayout): string[];
+  /** El objetivo de una partida guardada (lo de su `kind` ya esta mirado) tiene bien sus campos. */
+  isValid(s: GameState, saved: Record<string, unknown>): boolean;
   /** Resultado de la partida para el equipo `team`, dueño del objetivo (perder la Base ya se ha mirado antes). */
   outcome(s: GameState, team: TeamId, objective: InGame<K>): Outcome;
   progress(s: GameState, team: TeamId, objective: InGame<K>): ObjectiveProgress | null;
 }
 
 const noProblems = (): string[] => [];
+
+/** Dias que se aceptan en el objetivo de una partida guardada (mas es un fichero roto). */
+const MAX_OBJECTIVE_DAYS = 10000;
+/** Edificios que se aceptan en un objetivo de capturar. */
+const MAX_OBJECTIVE_COUNT = 1000;
+
+const hasDays = (saved: Record<string, unknown>): boolean => isInt(saved.days, 1, MAX_OBJECTIVE_DAYS);
 
 /** Pasado el ultimo dia del objetivo. */
 const isPastLastDay = (s: GameState, objective: { days: number }) => s.day > objective.days;
@@ -85,6 +97,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
   hq: {
     fromMission: (written) => written,
     problems: noProblems,
+    isValid: () => true,
     // La Base se mira en `outcome()` para todas las partidas, con objetivo o sin el.
     outcome: () => 'playing',
     progress: () => null,
@@ -92,6 +105,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
   survive: {
     fromMission: (written) => written,
     problems: noProblems,
+    isValid: (_s, saved) => hasDays(saved),
     outcome: (s, _team, objective) => (isPastLastDay(s, objective) ? 'won' : 'playing'),
     progress: (s, _team, objective) => ({ done: Math.min(s.day - 1, objective.days), total: objective.days }),
   },
@@ -103,12 +117,15 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
       days: written.days,
     }),
     problems: noProblems,
+    isValid: (s, saved) =>
+      hasDays(saved) && isInt(saved.count, 1, MAX_OBJECTIVE_COUNT) && (saved.type === null || isEntryId(s.content.buildings, saved.type)),
     outcome: (s, team, objective) => wonOrLostByDays(s, objective, ownedBuildingsOfType(s, team, objective.type) >= objective.count),
     progress: (s, team, objective) => ({ done: ownedBuildingsOfType(s, team, objective.type), total: objective.count }),
   },
   destroy: {
     fromMission: (written) => written,
     problems: noProblems,
+    isValid: (_s, saved) => hasDays(saved),
     outcome: (s, team, objective) => wonOrLostByDays(s, objective, enemyUnitCount(s, team) === 0),
     progress: (s, team) => ({ done: 0, total: enemyUnitCount(s, team) }),
   },
@@ -120,6 +137,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
         ? []
         : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
     ],
+    isValid: (s, saved) => hasDays(saved) && isInt(saved.uid, 1, Number.MAX_SAFE_INTEGER) && isPosOn(mapGrid(s), saved.to),
     outcome: (s, _team, objective) => {
       const at = positionOf(s, objective.uid);
       if (!at) return 'lost';
@@ -131,6 +149,14 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
 
 function rulesOf<K extends ObjectiveKind>(kind: K): ObjectiveRules<K> {
   return OBJECTIVES[kind];
+}
+
+/** Los tipos de objetivo que hay (para comprobar los que vienen de fuera). */
+const isObjectiveKind = (value: unknown): value is ObjectiveKind => typeof value === 'string' && Object.hasOwn(OBJECTIVES, value);
+
+/** El objetivo de una partida guardada es uno de los que hay y tiene bien sus campos. */
+export function isValidObjective(s: GameState, value: unknown): value is Objective {
+  return isObject(value) && isObjectiveKind(value.kind) && OBJECTIVES[value.kind].isValid(s, value);
 }
 
 export const objectiveFromMission = (written: MissionObjective, unitUids: readonly number[], content: GameContent): Objective =>

@@ -3,7 +3,7 @@ import { objectiveStatus, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
 import { defaultContent } from '@core/content/default';
 import { buildMission, MISSIONS } from '@core/missions';
-import { measureObjective, objectiveOutcome } from '@core/objectives';
+import { isValidObjective, measureObjective, objectiveOutcome } from '@core/objectives';
 import { isDefeated, objectiveProgress, outcome } from '@core/rules';
 import { teamIds } from '@core/teams';
 import type { GameState } from '@core/model';
@@ -100,5 +100,18 @@ describe('objetivos de mision', () => {
       ],
       ['Conquista la Base enemiga.', 'Conquista la Base enemiga.', 'Conquista la Base enemiga.', null],
     ]);
+  });
+});
+
+describe('objetivo de una partida guardada: cada tipo comprueba sus campos', () => {
+  it('isValidObjective', () => {
+    const s = buildMission(MISSIONS[0]!, defaultContent(), BLANK_DICE_SEED);
+    expect(isValidObjective(s, { kind: 'hq' })).toBe(true);
+    expect(isValidObjective(s, { kind: 'survive', days: 5 })).toBe(true);
+    expect(isValidObjective(s, { kind: 'survive', days: 0 })).toBe(false);
+    expect(isValidObjective(s, { kind: 'capture', count: 3, type: 'City', days: 9 })).toBe(true);
+    expect(isValidObjective(s, { kind: 'capture', count: 3, type: 'Castle', days: 9 })).toBe(false);
+    expect(isValidObjective(s, { kind: 'escort', uid: 1, to: { x: -1, y: 0 }, days: 9 })).toBe(false);
+    expect(isValidObjective(s, { kind: 'conquer' })).toBe(false);
   });
 });

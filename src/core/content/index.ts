@@ -32,7 +32,7 @@ import { validateUnits } from './units';
 import { validateWeather, type WeatherDef } from './weather';
 
 export * from './types';
-export { catalogOf, entryOf, findEntry, type Catalog, type Identified } from './catalog';
+export { catalogOf, entryOf, findEntry, isEntryId, type Catalog, type Identified } from './catalog';
 export type { Content } from './resolve';
 export type { AiWeights } from './ai';
 export type { BuildingType } from './buildings';
