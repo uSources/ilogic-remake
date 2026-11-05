@@ -33,12 +33,12 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
   it('hitChance es el poder por la proteccion por cada modificador, en orden', () => {
     const s = blankState(TEST_RULES);
     const fighterType = fighter();
-    const def = POWER[fighterType]!.findIndex((chance) => chance > 0);
+    const defenderType = POWER[fighterType]!.findIndex((chance) => chance > 0);
     const attacker = newUnit(s, fighterType, 0, { x: 2, y: 2 });
-    const defender = newUnit(s, def, 1, { x: 3, y: 2 });
+    const defender = newUnit(s, defenderType, 1, { x: 3, y: 2 });
     defender.hitDay = s.day; // flanqueado
     attacker.kills = 3; // veterano
-    let chance = POWER[fighterType]![def]! * coverAgainst(s, fighterType, tileProtection(s, defender));
+    let chance = POWER[fighterType]![defenderType]! * coverAgainst(s, fighterType, tileProtection(s, defender));
     for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, attacker, defender);
     expect(hitChance(s, attacker, defender)).toBe(chance);
   });

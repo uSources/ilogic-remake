@@ -32,20 +32,20 @@ export class FogLayer implements MapLayer {
     const sig = visKey(vis);
     if (sig === this.sig && this.img) return;
     this.sig = sig;
-    const tex = this.scene.textures;
-    this.canvas = composeFog(vis, tex, this.canvas ?? undefined);
+    const textures = this.scene.textures;
+    this.canvas = composeFog(vis, textures, this.canvas ?? undefined);
     if (!this.img) {
-      if (tex.exists(this.bakeKey)) tex.remove(this.bakeKey);
-      tex.addCanvas(this.bakeKey, this.canvas);
+      if (textures.exists(this.bakeKey)) textures.remove(this.bakeKey);
+      textures.addCanvas(this.bakeKey, this.canvas);
       this.img = this.scene.add.image(0, 0, this.bakeKey).setOrigin(0);
       this.object.addAt(this.img, 0);
-    } else (tex.get(this.bakeKey) as Phaser.Textures.CanvasTexture).refresh();
+    } else (textures.get(this.bakeKey) as Phaser.Textures.CanvasTexture).refresh();
   }
 
   /** Suelta el lienzo (los objetos los destruye la escena al cerrarse). */
   destroy(): void {
-    const tex = this.scene.textures;
-    if (tex.exists(this.bakeKey)) tex.remove(this.bakeKey);
+    const textures = this.scene.textures;
+    if (textures.exists(this.bakeKey)) textures.remove(this.bakeKey);
     this.canvas = null;
     this.img = null;
   }

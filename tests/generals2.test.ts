@@ -10,7 +10,7 @@ const { UNIT_NAMES, AI } = defaultContent().tables;
 
 /** Roca (reparar) y Ambar (dinero): los efectos heal y funds, y como los valora la IA. */
 const unitType = (name: string) => UNIT_NAMES.indexOf(name);
-const def = (id: string) => defaultContent().files.generals.find((general) => general.id === id)!;
+const generalDefinition = (id: string) => defaultContent().files.generals.find((general) => general.id === id)!;
 
 /** Reglas de las partidas de estos tests. */
 const TEST_RULES = rulesWith(defaultContent(), { fog: false, weather: false });
@@ -20,22 +20,22 @@ describe('Roca: reparar', () => {
     const s = blankState(TEST_RULES);
     s.generals = [newGeneral(s, 'Roca'), null];
     s.generals[0]!.charge = 6;
-    const amount = (def('Roca').abilities[0]!.effect as { amount: number }).amount;
+    const amount = (generalDefinition('Roca').abilities[0]!.effect as { amount: number }).amount;
     const hurt = newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     hurt.life = 50;
     const almost = newUnit(s, unitType('Soldier'), 0, { x: 4, y: 4 });
     almost.life = 100 - Math.floor(amount / 2);
     const enemy = newUnit(s, unitType('Tank'), 1, { x: 8, y: 8 });
     enemy.life = 50;
-    const ev = useAbility(s, 0, 'repair')!;
+    const event = useAbility(s, 0, 'repair')!;
     expect(hurt.life).toBe(50 + amount);
     expect(almost.life).toBe(100);
     expect(enemy.life).toBe(50);
-    expect(ev.heals).toEqual([
+    expect(event.heals).toEqual([
       { uid: hurt.uid, amount },
       { uid: almost.uid, amount: Math.floor(amount / 2) },
     ]);
-    expect(ev.hits).toEqual([]);
+    expect(event.hits).toEqual([]);
   });
 
   it('sus vehiculos reciben algo menos de daño', () => {
@@ -43,15 +43,15 @@ describe('Roca: reparar', () => {
     s.generals = [newGeneral(s, 'Roca'), null];
     const tank = newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     const soldier = newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 });
-    const atk = newUnit(s, unitType('Tank'), 1, { x: 3, y: 4 });
-    expect(generalHitFactor(s, atk, tank)).toBeLessThan(1);
-    expect(generalHitFactor(s, atk, soldier)).toBe(1);
+    const attacker = newUnit(s, unitType('Tank'), 1, { x: 3, y: 4 });
+    expect(generalHitFactor(s, attacker, tank)).toBeLessThan(1);
+    expect(generalHitFactor(s, attacker, soldier)).toBe(1);
   });
 
   it('la IA repara cuando vale la pena, y no con el ejercito entero', () => {
     const s = blankState(TEST_RULES);
     s.generals = [null, newGeneral(s, 'Roca')];
-    s.generals[1]!.charge = def('Roca').abilities[0]!.cost;
+    s.generals[1]!.charge = generalDefinition('Roca').abilities[0]!.cost;
     const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, unitType('Tank'), 1, { x: x, y: 3 }));
     expect(chooseAbility(s, 1)).toBeNull(); // todos enteros: no vale nada
     for (const tank of tanks) tank.life = 40;
@@ -66,11 +66,11 @@ describe('Ambar: suministros', () => {
     const s = blankState(TEST_RULES);
     s.generals = [newGeneral(s, 'Ambar'), null];
     s.generals[0]!.charge = 6;
-    const amount = (def('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount;
+    const amount = (generalDefinition('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount;
     const before = s.funds[0];
-    const ev = useAbility(s, 0, 'supplies')!;
+    const event = useAbility(s, 0, 'supplies')!;
     expect(s.funds[0]).toBe(before + amount);
-    expect(ev.funds).toBe(amount);
+    expect(event.funds).toBe(amount);
   });
 
   it('sus tropas de tierra aciertan mas; los aviones no', () => {
@@ -88,6 +88,8 @@ describe('Ambar: suministros', () => {
     newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
     const choice = chooseAbility(s, 1)!;
     expect(choice.ability).toBe('supplies');
-    expect(choice.value).toBe((def('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount);
+    expect(choice.value).toBe(
+      (generalDefinition('Ambar').abilities.find((ability) => ability.id === 'supplies')!.effect as { amount: number }).amount,
+    );
   });
 });

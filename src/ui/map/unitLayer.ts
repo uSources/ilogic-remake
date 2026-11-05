@@ -17,7 +17,7 @@ import type { ViewOptions } from './viewOptions';
 export type Facing = 'left' | 'right';
 export const baseFacing = (team: number): Facing => (team === 1 ? 'left' : 'right');
 /** Hay que voltear el dibujo para que mire a `dir`. */
-export const faceFlip = (team: number, dir: Facing): boolean => dir !== baseFacing(team);
+export const faceFlip = (team: number, facing: Facing): boolean => facing !== baseFacing(team);
 
 /** Unidad propia sin usar: sube y baja 1 pixel cada BOB_MS (animacion de espera). */
 const BOB_MS = 500;
@@ -79,10 +79,10 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, team: 0 };
   }
 
-  sync(s: GameState, opts: ViewOptions, newArt: boolean): void {
+  sync(s: GameState, options: ViewOptions, newArt: boolean): void {
     const seen = new Set<number>();
     for (const unit of s.units) {
-      if (unit.carrier !== null || opts.hidden.has(unit.uid) || !opts.vis.at(unit)) continue;
+      if (unit.carrier !== null || options.hidden.has(unit.uid) || !options.vis.at(unit)) continue;
       const key = unitKey(this.scene.textures, s, unit);
       if (!key) continue;
       seen.add(unit.uid);
@@ -167,10 +167,10 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
-  face(uid: number, dir: Facing): void {
-    this.facing.set(uid, dir);
+  face(uid: number, facing: Facing): void {
+    this.facing.set(uid, facing);
     const sprite = this.units.get(uid);
-    if (sprite) sprite.img.setFlipX(faceFlip(sprite.team, dir));
+    if (sprite) sprite.img.setFlipX(faceFlip(sprite.team, facing));
   }
 
   facingOf(uid: number, team: 0 | 1): Facing {

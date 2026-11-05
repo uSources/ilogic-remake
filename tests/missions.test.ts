@@ -20,12 +20,13 @@ describe('misiones', () => {
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
     expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
     expect(outcome(s)).toBe('playing');
-    const obj = s.mission!.objective;
-    if (obj.kind === 'escort') {
-      const vip = s.units.find((unit) => unit.uid === obj.uid)!;
-      expect(groundDistance(s, vip, UNIT.movtype[vip.type]!, createLayer(s, false)).at(obj.to), 'el convoy puede llegar').toBeGreaterThan(
-        0,
-      );
+    const objective = s.mission!.objective;
+    if (objective.kind === 'escort') {
+      const vip = s.units.find((unit) => unit.uid === objective.uid)!;
+      expect(
+        groundDistance(s, vip, UNIT.movtype[vip.type]!, createLayer(s, false)).at(objective.to),
+        'el convoy puede llegar',
+      ).toBeGreaterThan(0);
     }
     // Guardar y cargar conserva la mision.
     expect(deserialize(serialize(s), saveContext(defaultContent()))!.mission).toEqual(s.mission);
@@ -132,13 +133,13 @@ describe('misiones', () => {
     expect(outcome(cl)).toBe('won');
 
     const es = buildMission(byId('escort'), defaultContent());
-    const obj = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
-    const vip = es.units.find((unit) => unit.uid === obj.uid)!;
+    const objective = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
+    const vip = es.units.find((unit) => unit.uid === objective.uid)!;
     expect(outcome(es)).toBe('playing');
-    vip.x = obj.to.x;
-    vip.y = obj.to.y;
+    vip.x = objective.to.x;
+    vip.y = objective.to.y;
     expect(outcome(es)).toBe('won');
-    es.units = es.units.filter((unit) => unit.uid !== obj.uid);
+    es.units = es.units.filter((unit) => unit.uid !== objective.uid);
     expect(outcome(es)).toBe('lost');
   });
 });

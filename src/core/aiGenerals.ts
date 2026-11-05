@@ -103,14 +103,14 @@ export function chooseAbility(s: GameState, team: Team): AbilityChoice | null {
   if (!general || general.state.used) return null;
   const stars = chargeStars(general.state);
   const choices: AbilityChoice[] = [];
-  for (const ability of general.def.abilities) {
+  for (const ability of general.definition.abilities) {
     if (ability.cost > stars) continue;
     const valued = valueEffect(s, team, ability.effect);
     if (valued) choices.push({ ability: ability.id, ...valued });
   }
   const best = maxBy(choices, (choice) => choice.value);
   if (!best) return null;
-  const isChargeFull = stars >= general.def.charge.max;
+  const isChargeFull = stars >= general.definition.charge.max;
   return best.value >= weightsOf(s).GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
 }
 

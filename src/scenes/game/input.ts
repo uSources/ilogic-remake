@@ -13,8 +13,8 @@ import type { PointerGestures, PointerIn } from '../../controls/pointer';
 export interface InputTarget {
   /** Donde esta el foco: el mapa ('map') o un menu propio. */
   controlContext(): ControlContext;
-  menu(cmd: MenuCommand): void;
-  command(cmd: InputCommand): void;
+  menu(command: MenuCommand): void;
+  command(command: InputCommand): void;
 }
 
 /** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
@@ -36,17 +36,17 @@ export function pointerIn(pointer: Phaser.Input.Pointer, right: boolean, middle 
 
 /** Adaptador de teclado: en el mapa, ordenes InputCommand; en la pantalla final y opciones, MenuCommand. */
 export function onKey(keyEvent: KeyboardEvent, target: InputTarget): void {
-  const ctx = target.controlContext();
-  if (ctx !== 'map') {
-    const cmd = menuKeyCommand(keyEvent, ctx);
-    if (cmd) target.menu(cmd);
+  const context = target.controlContext();
+  if (context !== 'map') {
+    const command = menuKeyCommand(keyEvent, context);
+    if (command) target.menu(command);
     return;
   }
-  const cmd = keyCommand(keyEvent);
-  if (!cmd) return;
+  const command = keyCommand(keyEvent);
+  if (!command) return;
   // Ctrl+numero cambia de pestaña en algunos navegadores: aqui es hacer un grupo.
-  if (cmd.kind === 'accept' || (cmd.kind === 'group' && cmd.mode !== 'select')) keyEvent.preventDefault();
-  target.command(cmd);
+  if (command.kind === 'accept' || (command.kind === 'group' && command.mode !== 'select')) keyEvent.preventDefault();
+  target.command(command);
 }
 
 /** Engancha el teclado y los punteros de la escena a los adaptadores. */

@@ -31,14 +31,14 @@ export function contentContext(unitIds: Set<string>, buildingIds: Set<string>): 
 
 /** Tablas que usan las reglas (recien construidas: luego se congelan). El contenido tiene que estar validado. */
 export function buildTables(files: Content) {
-  const ctx = contentContext(new Set(files.units.map((unit) => unit.id)), new Set(files.buildings.map((building) => building.id)));
+  const context = contentContext(new Set(files.units.map((unit) => unit.id)), new Set(files.buildings.map((building) => building.id)));
   return {
     ...buildUnitTables(
       files.units,
-      ctx,
+      context,
       files.buildings.map((building) => building.id),
     ),
-    ...buildBuildingTables(files.buildings, ctx),
+    ...buildBuildingTables(files.buildings, context),
     ...buildTerrainTables(files.terrain),
     DEFAULT_RULES: { ...files.rules.defaults },
     MAX_FUNDS: files.rules.maxFunds,

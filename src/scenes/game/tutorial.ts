@@ -23,8 +23,8 @@ export class TutorialTracker {
   }
 
   /** Un evento del jugador (no del enemigo ni de una repeticion). */
-  record(ev: GameEvent): void {
-    this.events.push(ev);
+  record(event: GameEvent): void {
+    this.events.push(event);
   }
 
   /** Titulo, objetivo y, en el tutorial, el consejo del paso actual (null si no es una mision). */
@@ -36,9 +36,9 @@ export class TutorialTracker {
     let step: string | null = null;
     if (mission.tutorial) {
       this.advance(s, phase);
-      const st = TUTORIAL[this.step];
-      if (st) {
-        tip = st.text[settings.lang];
+      const tutorialStep = TUTORIAL[this.step];
+      if (tutorialStep) {
+        tip = tutorialStep.text[settings.lang];
         step = `${this.step + 1}/${TUTORIAL.length}`;
       }
     }
@@ -49,8 +49,8 @@ export class TutorialTracker {
   private advance(s: GameState, phase: Phase): void {
     if (this.step === 0 && this.events.length === 0) this.ownedAtStart = s.buildings.filter((building) => building.owner === 0).length;
     for (let guard = 0; guard < TUTORIAL.length; guard++) {
-      const st = TUTORIAL[this.step];
-      if (!st || !st.done({ s, phase, events: this.events, ownedAtStart: this.ownedAtStart })) return;
+      const tutorialStep = TUTORIAL[this.step];
+      if (!tutorialStep || !tutorialStep.done({ s, phase, events: this.events, ownedAtStart: this.ownedAtStart })) return;
       this.step++;
       this.events = [];
     }

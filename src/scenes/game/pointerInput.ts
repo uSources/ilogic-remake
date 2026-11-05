@@ -26,7 +26,7 @@ export interface PointerHost {
   readonly phase: Phase;
   readonly ended: boolean;
   /** La unidad elegida para moverla (o en su menu). */
-  readonly sel: Unit | null;
+  readonly selected: Unit | null;
   /** Ignorar clics hasta este instante (tras el turno enemigo). */
   readonly inputLockUntil: number;
   /** Ultimo movimiento confirmado (para el doble clic: mover y esperar). */
@@ -40,7 +40,7 @@ export interface PointerHost {
   visible(pos: Pos): boolean;
   intentAt(tile: Pos): Intent;
   actionCtx(at: Pos | null): ActionCtx | null;
-  runAction(id: ActionId, at: Pos | null, opts: { queue: boolean }): Promise<void>;
+  runAction(id: ActionId, at: Pos | null, options: { queue: boolean }): Promise<void>;
   openOrderMenu(at: Pos): boolean;
   inspect(unit: Unit): void;
   accept(): void;
@@ -52,7 +52,7 @@ export interface PointerHost {
   moveCursorTo(pos: Pos, follow: boolean): void;
   setPointer(kind: CursorKind): void;
   updatePointer(tile: Pos | null): void;
-  commit(tile: Pos, opts?: { drop?: boolean; wait?: boolean }): Promise<void>;
+  commit(tile: Pos, options?: { drop?: boolean; wait?: boolean }): Promise<void>;
   waitSelected(): void;
   groupMove(goal: Pos): Promise<void>;
   selectUnit(unit: Unit): void;
@@ -81,8 +81,8 @@ function toggleInSelection(picks: GroupSelection, unit: Unit | null): void {
 
 export function pointerTarget(host: PointerHost): PointerTarget {
   return {
-    later: (ms, fn) => {
-      const event = host.scene.time.delayedCall(ms, fn);
+    later: (ms, callback) => {
+      const event = host.scene.time.delayedCall(ms, callback);
       return { cancel: () => event.remove(false) };
     },
     ended: () => host.ended,
@@ -110,8 +110,8 @@ export function pointerTarget(host: PointerHost): PointerTarget {
     edgeScrollable: () => !MENU_PHASES.includes(host.phase),
     // Sin rehacer el HUD: update() recoloca los bocadillos si la camara se ha movido.
     edgeScroll: (dx, dy) => host.view.scrollBy(dx, dy),
-    zoomAt: (dir, x, y, wheel) => {
-      host.view.zoomStep(dir, x, y);
+    zoomAt: (direction, x, y, wheel) => {
+      host.view.zoomStep(direction, x, y);
       // La rueda llega muchas veces seguidas: el HUD, una vez al final del fotograma.
       if (wheel) host.scene.time.delayedCall(0, () => host.refreshHud());
       else host.refreshHud();
@@ -131,7 +131,7 @@ export function pointerTarget(host: PointerHost): PointerTarget {
 function pickableUnitAt(host: PointerHost, tile: Pos | null): number | null {
   const unit = tile ? unitAt(host.state, tile) : undefined;
   if (!unit || !isPlayer(unit) || !unit.active || !unit.canMove || unit.carrier !== null) return null;
-  const isSelectedOrFree = host.phase === 'map' || (host.phase === 'move' && host.sel?.uid === unit.uid);
+  const isSelectedOrFree = host.phase === 'map' || (host.phase === 'move' && host.selected?.uid === unit.uid);
   return isSelectedOrFree ? unit.uid : null;
 }
 
@@ -139,7 +139,7 @@ function pickableUnitAt(host: PointerHost, tile: Pos | null): number | null {
 function rightClick(host: PointerHost, tile: Pos | null, mods: { alt: boolean; shift: boolean }): void {
   if (host.carry.active) return host.carry.cancel();
   // Sobre la propia unidad elegida sigue siendo atras.
-  const isOnSelected = !!tile && !!host.sel && host.phase !== 'map' && samePos(tile, host.sel);
+  const isOnSelected = !!tile && !!host.selected && host.phase !== 'map' && samePos(tile, host.selected);
   const canAct = (host.phase === 'map' || host.phase === 'move') && host.selection.units().length > 0;
   if (tile && !isOnSelected && canAct) return smartRightClick(host, tile, mods);
   if (tile && !isOnSelected && host.openOrderMenu(tile)) return;
@@ -155,8 +155,8 @@ function rightClick(host: PointerHost, tile: Pos | null, mods: { alt: boolean; s
  */
 function smartRightClick(host: PointerHost, tile: Pos, mods: { alt: boolean; shift: boolean }): void {
   if (mods.alt) return void host.openOrderMenu(tile);
-  const ctx = host.actionCtx(tile);
-  const action = ctx && smartAction(ctx);
+  const context = host.actionCtx(tile);
+  const action = context && smartAction(context);
   if (action) return void host.runAction(action.id, tile, { queue: mods.shift });
   if (host.openOrderMenu(tile)) return;
   showToast(t('smartNone'));
@@ -244,7 +244,7 @@ function pointerTap(host: PointerHost, x: number, y: number, info: TapInfo): voi
 /** Doble clic en el destino recien alcanzado (con el menu de la unidad abierto). */
 function isDoubleClickOnMoved(host: PointerHost, tile: Pos): boolean {
   const last = host.lastCommit;
-  if (host.phase !== 'unitMenu' || !host.sel || !samePos(tile, host.sel) || !last) return false;
+  if (host.phase !== 'unitMenu' || !host.selected || !samePos(tile, host.selected) || !last) return false;
   return host.scene.time.now - last.time < MOVE_AND_WAIT_MS;
 }
 
@@ -286,9 +286,9 @@ function selectClick(host: PointerHost, tile: Pos, info: TapInfo): boolean {
 
 /** Moviendo una unidad: ¿el clic cambia lo elegido, o es "ir alli" (atacar, unirse...)? */
 function clickPicksAnother(host: PointerHost, tile: Pos, hit: Unit | null, hasModifier: boolean, isGrouping: boolean): boolean {
-  if (!host.sel || !hit) return false;
+  if (!host.selected || !hit) return false;
   // Sobre la propia elegida, un clic normal sigue siendo "quedarse aqui" (menu de acciones).
-  if (hit.uid === host.sel.uid && !hasModifier) return false;
+  if (hit.uid === host.selected.uid && !hasModifier) return false;
   return isGrouping || host.intentAt(tile).kind === 'none';
 }
 
@@ -320,7 +320,7 @@ function touchTapMoving(host: PointerHost, tile: Pos, own: Unit | null): void {
   const act = moveTap({
     intent: intent.kind,
     atCursor: samePos(tile, host.view.cursor),
-    otherOwnActive: !!own && own.uid !== host.sel?.uid,
+    otherOwnActive: !!own && own.uid !== host.selected?.uid,
   });
   switch (act) {
     case 'commit':

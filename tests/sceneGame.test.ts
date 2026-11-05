@@ -160,18 +160,18 @@ describe('escena: puente a los modulos (game/host.ts)', () => {
 describe('escena: a quien va una orden (game/orders.ts)', () => {
   /** Ordenes con una escena de mentira: solo la partida, la fase, la unidad elegida y el grupo. */
   function setup(s: GameState) {
-    const st = { phase: 'map' as Phase, sel: null as Unit | null };
+    const state = { phase: 'map' as Phase, selected: null as Unit | null };
     const nop = () => {};
-    const selection = new GroupSelection({ state: s, phase: 'map', sel: null } as unknown as SelectionHost);
+    const selection = new GroupSelection({ state: s, phase: 'map', selected: null } as unknown as SelectionHost);
     const orders = new Orders(
       live<OrderHost>({
         scene: { get: () => null as never },
         view: { get: () => null as never },
         state: { get: () => s },
-        phase: { get: () => st.phase, set: (kind) => (st.phase = kind) },
+        phase: { get: () => state.phase, set: (kind) => (state.phase = kind) },
         menuSel: { get: () => 0 },
         match: { get: () => 1 },
-        sel: { get: () => st.sel },
+        selected: { get: () => state.selected },
         undo: { get: () => null },
         selection: { get: () => selection },
         menuPick: () => undefined,
@@ -192,19 +192,19 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         play: async () => {},
       }),
     );
-    return { st, selection, orders };
+    return { st: state, selection, orders };
   }
 
   it('moviendo, a la unidad elegida; en el mapa, al grupo; sin nada, a nadie', () => {
     const s = blankState();
     const soldier = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
     const otherSoldier = newUnit(s, type('Soldier'), 0, { x: 6, y: 5 });
-    const { st, selection, orders } = setup(s);
+    const { st: state, selection, orders } = setup(s);
     expect(orders.subjects()).toBeNull();
     selection.group = new Set([soldier.uid, otherSoldier.uid]);
     expect(orders.subjects()?.units.map((unit) => unit.uid)).toEqual([soldier.uid, otherSoldier.uid]);
-    st.phase = 'move';
-    st.sel = soldier;
+    state.phase = 'move';
+    state.selected = soldier;
     expect(orders.subjects()).toEqual({ units: [soldier], from: 'move' });
   });
 

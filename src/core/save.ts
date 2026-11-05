@@ -241,10 +241,10 @@ function cleanGenerals(s: GameState): void {
     return;
   }
   s.generals = s.generals.map((saved) => {
-    const def = saved ? generalDef(s, saved.id) : undefined;
-    if (!saved || !def) return null;
+    const definition = saved ? generalDef(s, saved.id) : undefined;
+    if (!saved || !definition) return null;
     const hasCharge = typeof saved.charge === 'number' && Number.isFinite(saved.charge);
-    const charge = hasCharge ? Math.max(0, Math.min(saved.charge, def.charge.max)) : 0;
+    const charge = hasCharge ? Math.max(0, Math.min(saved.charge, definition.charge.max)) : 0;
     return { id: saved.id, charge, used: !!saved.used, reveal: !!saved.reveal };
   }) as GameState['generals'];
 }

@@ -87,14 +87,14 @@ export class CampaignScreen {
     ui.set({ campaign: { items, selected: this.selected, brief: selected.brief[lang], objective: objectiveText(selected) } });
   }
 
-  command(cmd: MenuCommand): void {
-    const step = listStep(cmd);
+  command(command: MenuCommand): void {
+    const step = listStep(command);
     if (step) {
       this.selected = (this.selected + step + MISSIONS.length) % MISSIONS.length;
       return this.publish();
     }
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.startSelected();
-    if (cmd.kind === 'back') this.host.toHome();
+    if (command.kind === 'ok' && !command.repeat) return this.startSelected();
+    if (command.kind === 'back') this.host.toHome();
   }
 
   private startSelected(): void {

@@ -128,9 +128,9 @@ export function* tryAttack(
   unit: Unit,
   range: MoveRange,
   rng: Rng,
-  opts: AttackOpts = {},
+  options: AttackOpts = {},
 ): Generator<GameEvent, boolean> {
-  const { zone, chase = true, stay = false, from: allowedOrigin } = opts;
+  const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!tablesOf(s).UNIT.canfight[unit.type] || !unit.canFire) return false;
   const reach = strikeReach(s, unit);

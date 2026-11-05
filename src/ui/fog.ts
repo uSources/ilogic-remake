@@ -18,9 +18,9 @@ export function composeFog(vis: Grid<boolean>, textures: Phaser.Textures.Texture
     cv.width = width * TILE;
     cv.height = height * TILE;
   }
-  const ctx = cv.getContext('2d')!;
-  ctx.imageSmoothingEnabled = false;
-  ctx.clearRect(0, 0, cv.width, cv.height);
+  const context = cv.getContext('2d')!;
+  context.imageSmoothingEnabled = false;
+  context.clearRect(0, 0, cv.width, cv.height);
   if (!hasImage(textures, 'blob/fog')) return cv;
   const frame = imageFrame(textures, 'blob/fog');
   const img = frame.source.image as CanvasImageSource;
@@ -31,7 +31,7 @@ export function composeFog(vis: Grid<boolean>, textures: Phaser.Textures.Texture
     if (piece < 0) continue;
     const sourceX = frame.cutX + (piece % SHEET_COLS) * TILE;
     const sourceY = frame.cutY + Math.floor(piece / SHEET_COLS) * TILE;
-    ctx.drawImage(img, sourceX, sourceY, TILE, TILE, pos.x * TILE, pos.y * TILE, TILE, TILE);
+    context.drawImage(img, sourceX, sourceY, TILE, TILE, pos.x * TILE, pos.y * TILE, TILE, TILE);
   }
   return cv;
 }

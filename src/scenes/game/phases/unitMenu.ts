@@ -133,7 +133,7 @@ export function captureNow(host: PhaseHost): void {
 }
 
 function unitMenuModel(input: MenuInput): MenuModel {
-  const unit = input.sel;
+  const unit = input.selected;
   const items: MenuItemVM[] = input.actions.map((action) => ({
     id: action,
     label: t(action as TextKey),
@@ -179,7 +179,7 @@ export const unloadPickPhase: PhaseHandler = {
 
 /** Menu de carga: los pasajeros (desactivados si no hay donde dejarlos). */
 function cargoMenuModel(input: MenuInput): MenuModel {
-  const carrier = input.sel;
+  const carrier = input.selected;
   const cargo = carrier ? carrier.cargo.map((uid) => unitById(input.s, uid)) : [];
   const passengerItems = cargo.map((passenger, index): MenuItemVM => {
     const id = `c${index}`;

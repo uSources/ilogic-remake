@@ -54,14 +54,14 @@ export function validateContent(files: Content): string[] {
   const check = new Checker();
   const lists = { units: files.units, buildings: files.buildings, terrain: files.terrain };
   for (const [name, list] of Object.entries(lists)) if (!Array.isArray(list)) return [`${name}.json: tiene que tener una lista "${name}"`];
-  const ctx = contentContext(uniqueIds(check, 'unidad', files.units), uniqueIds(check, 'edificio', files.buildings));
-  validateUnits(files.units, ctx, check);
-  validateBuildings(files.buildings, ctx, check);
+  const context = contentContext(uniqueIds(check, 'unidad', files.units), uniqueIds(check, 'edificio', files.buildings));
+  validateUnits(files.units, context, check);
+  validateBuildings(files.buildings, context, check);
   validateTerrain(files.terrain, TERRAIN_NAMES, check);
   validateRules(files.rules, check);
   validateAi(files.ai, check);
   validateWeather(files.weather, check);
-  validateGenerals(files.generals, ctx.unitIds, check);
+  validateGenerals(files.generals, context.unitIds, check);
   return check.errors;
 }
 
@@ -85,7 +85,7 @@ declare module '../model/state' {
 export function loadContent(source: DeepReadonly<Content>): GameContent {
   // Una copia propia: quien la da puede seguir cambiando la suya.
   const files = mutableCopy<Content>(source);
-  const errs = validateContent(files);
-  if (errs.length) throw new Error(`Contenido del juego no valido (src/core/content):\n- ${errs.join('\n- ')}`);
+  const errors = validateContent(files);
+  if (errors.length) throw new Error(`Contenido del juego no valido (src/core/content):\n- ${errors.join('\n- ')}`);
   return deepFreeze({ files, tables: buildTables(files) });
 }

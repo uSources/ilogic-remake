@@ -21,7 +21,7 @@ const plain = (callback: (type: number) => boolean): number =>
   UNIT_ABILITIES.findIndex((line, type) => line.length === 0 && callback(type));
 const ranged = (type: number) => UNIT.minalc[type]! > 0 && UNIT.canfight[type]!;
 const melee = (type: number) => UNIT.minalc[type]! === 0 && UNIT.canfight[type]!;
-const moves = (mt: MoveType) => (type: number) => UNIT.movtype[type]! === mt && UNIT.mover[type]! >= 4;
+const moves = (moveType: MoveType) => (type: number) => UNIT.movtype[type]! === moveType && UNIT.mover[type]! >= 4;
 
 /** Reglas de estos tests: sin niebla, coste de terreno ni veterania, que cambiarian las cuentas. */
 const TEST_RULES = rulesWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
@@ -71,13 +71,13 @@ describe('habilidades: escudo (guard)', () => {
     const factor = abilityOf(s, guardType, 'guard')!.factor;
     const rangedType = plain((type) => ranged(type) && POWER[type]![guardType]! > 0);
     const meleeType = plain((type) => melee(type) && POWER[type]![guardType]! > 0);
-    const def = newUnit(s, guardType, 1, { x: 10, y: 10 });
+    const defender = newUnit(s, guardType, 1, { x: 10, y: 10 });
     const far = newUnit(s, rangedType, 0, { x: 10, y: 10 - (UNIT.minalc[rangedType]! + 1) });
     const near = newUnit(s, meleeType, 0, { x: 9, y: 10 });
-    expect(hitChance(s, far, def)).toBeCloseTo(POWER[rangedType]![guardType]! * factor);
-    expect(hitChance(s, near, def)).toBeCloseTo(POWER[meleeType]![guardType]!);
+    expect(hitChance(s, far, defender)).toBeCloseTo(POWER[rangedType]![guardType]! * factor);
+    expect(hitChance(s, near, defender)).toBeCloseTo(POWER[meleeType]![guardType]!);
     s.rules = { ...TEST_RULES, abilities: false };
-    expect(hitChance(s, far, def)).toBeCloseTo(POWER[rangedType]![guardType]!);
+    expect(hitChance(s, far, defender)).toBeCloseTo(POWER[rangedType]![guardType]!);
   });
 });
 
@@ -173,13 +173,13 @@ describe('habilidades: perforante (piercing)', () => {
     );
     const other = plain((type) => melee(type) && POWER[type]![target]! > 0);
     s.map[10]![10] = TerrainType.WOODS;
-    const def = newUnit(s, target, 1, { x: 10, y: 10 });
-    const atk = newUnit(s, piercingType, 0, { x: 10, y: 10 - (UNIT.minalc[piercingType]! + 1) });
+    const defender = newUnit(s, target, 1, { x: 10, y: 10 });
+    const attacker = newUnit(s, piercingType, 0, { x: 10, y: 10 - (UNIT.minalc[piercingType]! + 1) });
     const cmp = newUnit(s, other, 0, { x: 9, y: 10 });
-    const cover = tileProtection(s, def);
+    const cover = tileProtection(s, defender);
     expect(cover).toBeLessThan(1);
-    expect(hitChance(s, atk, def)).toBeCloseTo(POWER[piercingType]![target]! * (cover + (1 - cover) * ignore));
-    expect(hitChance(s, cmp, def)).toBeCloseTo(POWER[other]![target]! * cover);
+    expect(hitChance(s, attacker, defender)).toBeCloseTo(POWER[piercingType]![target]! * (cover + (1 - cover) * ignore));
+    expect(hitChance(s, cmp, defender)).toBeCloseTo(POWER[other]![target]! * cover);
   });
 });
 

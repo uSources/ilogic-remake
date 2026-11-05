@@ -19,9 +19,9 @@ import { seededRng } from '@core/geom';
 import { endRound, outcome, score } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
 
-const arg = (name: string, def: string): string => {
+const arg = (name: string, fallback: string): string => {
   const index = process.argv.indexOf(`--${name}`);
-  return index >= 0 && process.argv[index + 1] ? process.argv[index + 1]! : def;
+  return index >= 0 && process.argv[index + 1] ? process.argv[index + 1]! : fallback;
 };
 const challenger = arg('a', '');
 const rival = arg('b', 'none');
@@ -42,8 +42,9 @@ function play(seed: number, g0: string, g1: string, uses: Map<string, number>): 
   s.generals = [gen(s, g0), gen(s, g1)];
   while (outcome(s) === 'playing' && s.day <= 60) {
     for (const team of [0, 1] as const) {
-      for (const ev of aiTurn(s, rng, team) as Iterable<GameEvent>) {
-        if (ev.kind === 'ability') uses.set(`${ev.general}.${ev.ability}`, (uses.get(`${ev.general}.${ev.ability}`) ?? 0) + 1);
+      for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {
+        if (event.kind === 'ability')
+          uses.set(`${event.general}.${event.ability}`, (uses.get(`${event.general}.${event.ability}`) ?? 0) + 1);
         if (outcome(s) !== 'playing') break;
       }
       if (outcome(s) !== 'playing') break;

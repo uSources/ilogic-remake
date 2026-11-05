@@ -12,15 +12,15 @@ export function generalVM(s: GameState, team: Team, targeting: string | null): G
   const lang = settings.lang;
   const stars = chargeStars(general.state);
   return {
-    face: `ui/gen_${team === 0 ? 'b' : 'r'}_${general.def.id}`,
-    name: general.def.name[lang],
-    title: general.def.title[lang],
-    description: general.def.description[lang],
+    face: `ui/gen_${team === 0 ? 'b' : 'r'}_${general.definition.id}`,
+    name: general.definition.name[lang],
+    title: general.definition.title[lang],
+    description: general.definition.description[lang],
     stars,
-    max: general.def.charge.max,
-    fraction: stars >= general.def.charge.max ? 0 : general.state.charge - stars,
+    max: general.definition.charge.max,
+    fraction: stars >= general.definition.charge.max ? 0 : general.state.charge - stars,
     targeting,
-    abilities: general.def.abilities.map((ability) => {
+    abilities: general.definition.abilities.map((ability) => {
       // 'target' solo dice que falta elegir casilla: se puede usar.
       const block = abilityBlock(s, team, ability.id, { x: 0, y: 0 });
       const text = block ? BLOCK_TEXT[block] : undefined;

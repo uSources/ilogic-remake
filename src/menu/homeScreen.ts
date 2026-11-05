@@ -79,12 +79,12 @@ export class HomeScreen {
     });
   }
 
-  command(cmd: MenuCommand): void {
-    if (ui.get().home.credits && (cmd.kind === 'back' || cmd.kind === 'ok')) return this.setCredits(false);
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.pick();
-    if (cmd.kind === 'options') return this.host.openOptions();
-    if (cmd.kind !== 'move') return;
-    this.focus = navGrid(this.rows(), this.focus, cmd.dx, cmd.dy);
+  command(command: MenuCommand): void {
+    if (ui.get().home.credits && (command.kind === 'back' || command.kind === 'ok')) return this.setCredits(false);
+    if (command.kind === 'ok' && !command.repeat) return this.pick();
+    if (command.kind === 'options') return this.host.openOptions();
+    if (command.kind !== 'move') return;
+    this.focus = navGrid(this.rows(), this.focus, command.dx, command.dy);
     this.publish();
   }
 

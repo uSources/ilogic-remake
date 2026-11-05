@@ -47,13 +47,13 @@ function drawZone(
  * [CAMBIO] Puntos de control: la zona teñida del color de su dueño (gris si no es de nadie), con
  * borde de puntos, y un banderin en el centro. Disputada: borde de rayas rojas y doradas.
  */
-export const controlZones: OverlayPainter = (graphics, opts, ctx) => {
-  const flagArt = hasImage(ctx.textures, 'ui/flag_b');
-  for (const point of opts.controlPoints ?? []) {
+export const controlZones: OverlayPainter = (graphics, options, context) => {
+  const flagArt = hasImage(context.textures, 'ui/flag_b');
+  for (const point of options.controlPoints ?? []) {
     const x0 = Math.max(0, point.x - point.r) * TILE,
       y0 = Math.max(0, point.y - point.r) * TILE,
-      x1 = Math.min(opts.vis.width, point.x + point.r + 1) * TILE,
-      y1 = Math.min(opts.vis.height, point.y + point.r + 1) * TILE;
+      x1 = Math.min(options.vis.width, point.x + point.r + 1) * TILE,
+      y1 = Math.min(options.vis.height, point.y + point.r + 1) * TILE;
     const color = point.owner === 0 ? PAL.blue : point.owner === 1 ? PAL.red : PAL_MAP.neutral;
     graphics.fillStyle(color, 0.16);
     graphics.fillRect(x0, y0, x1 - x0, y1 - y0);
@@ -84,20 +84,20 @@ export const controlZones: OverlayPainter = (graphics, opts, ctx) => {
 };
 
 /** Zona de amenaza enemiga (tecla T): relleno rojo suave y borde de 2 px por fuera de la zona. */
-export const threatZone: OverlayPainter = (graphics, opts) => {
-  if (opts.threat) drawZone(graphics, opts.threat, PAL.red, 0.2, 0.9);
+export const threatZone: OverlayPainter = (graphics, options) => {
+  if (options.threat) drawZone(graphics, options.threat, PAL.red, 0.2, 0.9);
 };
 
 /** Alcance de ataque al mover: relleno rojo tenue fuera del movimiento y borde de la zona. */
-export const attackZone: OverlayPainter = (graphics, opts) => {
-  if (opts.attackZone) drawZone(graphics, opts.attackZone, PAL.red, 0.14, 0.85, (pos) => !opts.highlights.has(posKey(pos)));
+export const attackZone: OverlayPainter = (graphics, options) => {
+  if (options.attackZone) drawZone(graphics, options.attackZone, PAL.red, 0.14, 0.85, (pos) => !options.highlights.has(posKey(pos)));
 };
 
 /** Destinos peligrosos (el enemigo visible podria atacar ahi): esquina roja arriba a la derecha. */
-export const dangerCorners: OverlayPainter = (graphics, opts) => {
-  const dg = opts.danger;
+export const dangerCorners: OverlayPainter = (graphics, options) => {
+  const dg = options.danger;
   if (!dg) return;
-  for (const [key, kind] of opts.highlights) {
+  for (const [key, kind] of options.highlights) {
     if (kind !== 'move') continue;
     const [x, y] = parseTileKey(key);
     if (!dg.at({ x, y })) continue;

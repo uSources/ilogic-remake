@@ -89,7 +89,7 @@ export async function muzzleFlash(timeline: FxTimeline, view: FxHost, from: Pos,
  */
 async function fly(
   scene: Phaser.Scene,
-  obj: Phaser.GameObjects.Rectangle,
+  target: Phaser.GameObjects.Rectangle,
   from: Point,
   to: Point,
   ms: number,
@@ -101,7 +101,7 @@ async function fly(
     const progress = i / steps;
     const x = from.x + (to.x - from.x) * progress;
     const y = from.y + (to.y - from.y) * progress - lift * 4 * progress * (1 - progress);
-    obj.setPosition(Math.round(x), Math.round(y));
+    target.setPosition(Math.round(x), Math.round(y));
     onStep?.(x, y, progress);
     await sleep(scene, ms / steps);
   }

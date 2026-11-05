@@ -27,8 +27,8 @@ export interface DuelCell {
 /** Lado del campo de los duelos (solo se usan unas casillas del medio). */
 const DUEL_MAP_SIZE = 32;
 
-function arena(terrain: number, opts: DuelOptions): GameState {
-  return newGameState({ map: blankMap(DUEL_MAP_SIZE, terrain), rules: opts.rules, content: opts.content, funds: [0, 0] });
+function arena(terrain: number, options: DuelOptions): GameState {
+  return newGameState({ map: blankMap(DUEL_MAP_SIZE, terrain), rules: options.rules, content: options.content, funds: [0, 0] });
 }
 
 function place(s: GameState, attacker: Unit, defender: Unit): void {
@@ -55,10 +55,10 @@ export interface DuelOptions {
   content: GameContent;
 }
 
-export function duelMatrix(opts: DuelOptions): DuelCell[] {
-  const terrain = Math.max(0, TERRAIN_NAMES.indexOf(opts.terrain as (typeof TERRAIN_NAMES)[number]));
-  const rng = seededRng(opts.seed);
-  const { UNIT, POWER, UNIT_NAMES } = opts.content.tables;
+export function duelMatrix(options: DuelOptions): DuelCell[] {
+  const terrain = Math.max(0, TERRAIN_NAMES.indexOf(options.terrain as (typeof TERRAIN_NAMES)[number]));
+  const rng = seededRng(options.seed);
+  const { UNIT, POWER, UNIT_NAMES } = options.content.tables;
   const unitTypes = UNIT_NAMES.length;
   const cells: DuelCell[] = [];
   for (let attackerType = 0; attackerType < unitTypes; attackerType++) {
@@ -68,8 +68,8 @@ export function duelMatrix(opts: DuelOptions): DuelCell[] {
       let dmg = 0,
         counter = 0,
         kills = 0;
-      for (let i = 0; i < opts.trials; i++) {
-        const s = arena(terrain, opts);
+      for (let i = 0; i < options.trials; i++) {
+        const s = arena(terrain, options);
         const attacker = newUnit(s, attackerType, 0, { x: 0, y: 0 });
         const defender = newUnit(s, defenderType, 1, { x: 0, y: 0 });
         place(s, attacker, defender);
@@ -84,8 +84,8 @@ export function duelMatrix(opts: DuelOptions): DuelCell[] {
       if (mutual) {
         let wins = 0,
           decided = 0;
-        for (let i = 0; i < opts.trials; i++) {
-          const s = arena(terrain, opts);
+        for (let i = 0; i < options.trials; i++) {
+          const s = arena(terrain, options);
           const attacker = newUnit(s, attackerType, 0, { x: 0, y: 0 });
           const defender = newUnit(s, defenderType, 1, { x: 0, y: 0 });
           place(s, attacker, defender);
@@ -105,7 +105,7 @@ export function duelMatrix(opts: DuelOptions): DuelCell[] {
         }
         first = decided ? wins / decided : null;
       }
-      const trials = opts.trials;
+      const trials = options.trials;
       cells.push({
         attacker: UNIT_NAMES[attackerType]!,
         defender: UNIT_NAMES[defenderType]!,

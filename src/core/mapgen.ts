@@ -36,8 +36,8 @@ const BUILDING_PICK_TRIES = 100;
 /** Superficie del mapa respecto al original de 32x32 (para escalar cuantos edificios hay). */
 const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP_SIDE * ORIGINAL_MAP_SIDE);
 
-function emptyState(size: number, opts: NewMapOptions): GameState {
-  return newGameState({ map: blankMap(size), rules: opts.rules, content: opts.content });
+function emptyState(size: number, options: NewMapOptions): GameState {
+  return newGameState({ map: blankMap(size), rules: options.rules, content: options.content });
 }
 
 const isWater = (s: GameState, terrain: number) => tablesOf(s).TERRAIN.iswater[terrain]!;
@@ -429,17 +429,17 @@ export interface NewMapOptions {
  * Genera una partida nueva con mapa aleatorio y las reglas dadas. Si un paso falla, se empieza otro
  * mapa desde el principio.
  */
-export function generateGame(rng: Rng, opts: NewMapOptions): GameState {
-  const size = opts.size ?? ORIGINAL_MAP_SIDE;
+export function generateGame(rng: Rng, options: NewMapOptions): GameState {
+  const size = options.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
   const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };
   for (let attempt = 0; ; attempt++) {
     const draft: MapDraft = {
-      s: emptyState(size, opts),
+      s: emptyState(size, options),
       rng,
       origin,
       attempt,
-      forcedTheme: opts.theme ?? null,
+      forcedTheme: options.theme ?? null,
       landTiles: 0,
       spawns: null,
     };

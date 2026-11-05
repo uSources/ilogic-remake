@@ -36,10 +36,10 @@ describe('generales: datos', () => {
     general.passive.push({ kind: 'attack', factor: 1.2, units: ['Dragon'] });
     general.abilities[0]!.cost = 99;
     (general.abilities[1]!.effect as { kind: string }).kind = 'nuke';
-    const errs = validateContent(files);
-    expect(errs).toContain('general Brisa: passive.attack.units nombra "Dragon", que no existe');
-    expect(errs.some((error) => error.includes('habilidad recon: cost'))).toBe(true);
-    expect(errs.some((error) => error.includes('effect.kind "nuke" no existe'))).toBe(true);
+    const errors = validateContent(files);
+    expect(errors).toContain('general Brisa: passive.attack.units nombra "Dragon", que no existe');
+    expect(errors.some((error) => error.includes('habilidad recon: cost'))).toBe(true);
+    expect(errors.some((error) => error.includes('effect.kind "nuke" no existe'))).toBe(true);
   });
 });
 
@@ -74,12 +74,12 @@ describe('generales: reglas', () => {
     const far = newUnit(s, unitType('Tank'), 1, { x: 12, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 9, y: 9 });
     expect(abilityBlock(s, 0, 'airstrike')).toBe('target');
-    const ev = useAbility(s, 0, 'airstrike', { x: 10, y: 10 })!;
+    const event = useAbility(s, 0, 'airstrike', { x: 10, y: 10 })!;
     expect(e1.life).toBe(80);
     expect(e2.life).toBe(10); // no baja de minLife
     expect(far.life).toBe(100); // fuera del cuadrado
     expect(mine.life).toBe(100); // las propias no
-    expect(ev.hits).toEqual([
+    expect(event.hits).toEqual([
       { uid: e1.uid, damage: 20 },
       { uid: e2.uid, damage: 15 },
     ]);

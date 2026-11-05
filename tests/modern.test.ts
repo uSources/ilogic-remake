@@ -27,10 +27,10 @@ describe('reglas nuevas: combate', () => {
     const art = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
     const tank = newUnit(s, TANK, 1, { x: 10, y: 13 });
     expect(attackFull(s, art, tank, seededRng(1)).counter).toBe(0);
-    const s2 = blankState();
-    const t2 = newUnit(s2, TANK, 0, { x: 10, y: 10 });
-    const art2 = newUnit(s2, ARTILLERY, 1, { x: 10, y: 11 });
-    expect(attackFull(s2, t2, art2, seededRng(1)).counter).toBe(0);
+    const other = blankState();
+    const t2 = newUnit(other, TANK, 0, { x: 10, y: 10 });
+    const art2 = newUnit(other, ARTILLERY, 1, { x: 10, y: 11 });
+    expect(attackFull(other, t2, art2, seededRng(1)).counter).toBe(0);
   });
 
   it('el evento de ataque guarda como estaban las unidades antes del combate', () => {
@@ -38,14 +38,14 @@ describe('reglas nuevas: combate', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
     defender.life = 80;
-    const ev = attackEvent(s, attacker, defender, seededRng(2));
-    expect(ev.combat).toMatchObject({ attackerType: TANK, defenderType: TANK, attackerTeam: 0, attackerLife: 100, defenderLife: 80 });
-    expect(ev.target).toEqual({ x: 10, y: 11 });
-    expect(ev.combat!.hit).toBeGreaterThan(0);
-    expect(ev.combat!.counterHit).not.toBeNull();
+    const event = attackEvent(s, attacker, defender, seededRng(2));
+    expect(event.combat).toMatchObject({ attackerType: TANK, defenderType: TANK, attackerTeam: 0, attackerLife: 100, defenderLife: 80 });
+    expect(event.target).toEqual({ x: 10, y: 11 });
+    expect(event.combat!.hit).toBeGreaterThan(0);
+    expect(event.combat!.counterHit).not.toBeNull();
     // Las vidas de despues salen de las de antes menos el daño.
-    expect(defender.life).toBe(80 - ev.damage);
-    expect(attacker.life).toBe(100 - ev.counter!);
+    expect(defender.life).toBe(80 - event.damage);
+    expect(attacker.life).toBe(100 - event.counter!);
   });
 
   it('sin contraataque si el defensor cae o es de distancia', () => {
@@ -53,13 +53,13 @@ describe('reglas nuevas: combate', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const ev = attackEvent(s, attacker, defender, seededRng(1));
-    expect(ev.killed).toBe(true);
-    expect(ev.combat!.counterHit).toBeNull();
-    const s2 = blankState();
-    const art = newUnit(s2, ARTILLERY, 0, { x: 10, y: 10 });
-    const tank = newUnit(s2, TANK, 1, { x: 10, y: 13 });
-    expect(attackEvent(s2, art, tank, seededRng(1)).combat!.counterHit).toBeNull();
+    const event = attackEvent(s, attacker, defender, seededRng(1));
+    expect(event.killed).toBe(true);
+    expect(event.combat!.counterHit).toBeNull();
+    const other = blankState();
+    const art = newUnit(other, ARTILLERY, 0, { x: 10, y: 10 });
+    const tank = newUnit(other, TANK, 1, { x: 10, y: 13 });
+    expect(attackEvent(other, art, tank, seededRng(1)).combat!.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {

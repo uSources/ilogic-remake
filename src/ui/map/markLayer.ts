@@ -39,10 +39,10 @@ export class MarkLayer implements MapLayer, AnimatedLayer {
   }
 
   /** Toma lo que hay que marcar y lo dibuja en el primer paso. */
-  set(opts: ViewOptions): void {
-    this.goal = opts.goal ?? null;
-    this.vip = opts.vip ?? null;
-    this.rings = [...opts.highlights].filter(([, key]) => key === 'group').map(([key]) => parseTileKey(key));
+  set(options: ViewOptions): void {
+    this.goal = options.goal ?? null;
+    this.vip = options.vip ?? null;
+    this.rings = [...options.highlights].filter(([, key]) => key === 'group').map(([key]) => parseTileKey(key));
     this.draw(0);
   }
 

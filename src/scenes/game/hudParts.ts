@@ -22,14 +22,14 @@ export function forecastFor(
   s: GameState,
   options: {
     phase: Phase;
-    sel: Unit | null;
+    selected: Unit | null;
     c: Pos;
     intentAt: (pos: Pos) => Intent;
     attackSet: ReadonlyMap<string, number>;
     anchor: (pos: Pos) => Anchor;
   },
 ): ForecastVM | null {
-  const attacker = options.sel;
+  const attacker = options.selected;
   if (!attacker) return null;
   const fight =
     options.phase === 'move'
@@ -61,7 +61,7 @@ function fightFromHere(
 export function moveTipFor(
   s: GameState,
   options: {
-    sel: Unit | null;
+    selected: Unit | null;
     range: MoveRange | null;
     c: Pos;
     intentAt: (pos: Pos) => Intent;
@@ -70,7 +70,7 @@ export function moveTipFor(
     anchor: (pos: Pos) => Anchor;
   },
 ): MoveTipVM | null {
-  const unit = options.sel;
+  const unit = options.selected;
   const range = options.range;
   const cursor = options.c;
   if (!unit || !range) return null;

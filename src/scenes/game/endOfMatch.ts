@@ -38,10 +38,10 @@ const CONFETTI_COLORS = [PAL.gold, 0xfff1a8, PAL.blue, 0x8fd0ff, 0xffffff];
 
 /** Filtro CSS del lienzo del juego (gris al perder). */
 export function setEndFilter(filter: string | null): void {
-  const el = document.getElementById('game');
-  if (!el) return;
-  el.style.transition = filter ? 'filter 1.2s steps(6)' : '';
-  el.style.filter = filter ?? '';
+  const gameElement = document.getElementById('game');
+  if (!gameElement) return;
+  gameElement.style.transition = filter ? 'filter 1.2s steps(6)' : '';
+  gameElement.style.filter = filter ?? '';
 }
 
 /** Mision que va detras de esta (ninguna si es la ultima). */
@@ -191,17 +191,17 @@ export class EndOfMatch {
   }
 
   /** Menu de fin de partida: una fila de botones. */
-  command(cmd: MenuCommand): void {
+  command(command: MenuCommand): void {
     if (ui.get().screen !== 'end') return;
-    const step = listStep(cmd);
+    const step = listStep(command);
     if (step) {
       const count = this.buttons.length;
       this.selected = (this.selected + step + count) % count;
       this.publishSelected();
       return;
     }
-    if (cmd.kind === 'ok' && !cmd.repeat) return this.pick(this.selected);
-    if (cmd.kind === 'back') return this.pick(this.buttons.indexOf('menu'));
+    if (command.kind === 'ok' && !command.repeat) return this.pick(this.selected);
+    if (command.kind === 'back') return this.pick(this.buttons.indexOf('menu'));
   }
 
   private pick(index: number): void {

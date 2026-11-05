@@ -43,51 +43,51 @@ export function damageDistribution(s: GameState, life: number, chance: number): 
 
 /** Original: `shots` disparos que aciertan cada uno con probabilidad `p` (binomial). */
 function shotsDistribution(shots: number, chance: number): number[] {
-  let dist = [1];
+  let distribution = [1];
   for (let shot = 0; shot < shots; shot++) {
-    const next = Array<number>(dist.length + 1).fill(0);
-    for (let hits = 0; hits < dist.length; hits++) {
-      next[hits]! += dist[hits]! * (1 - chance);
-      next[hits + 1]! += dist[hits]! * chance;
+    const next = Array<number>(distribution.length + 1).fill(0);
+    for (let hits = 0; hits < distribution.length; hits++) {
+      next[hits]! += distribution[hits]! * (1 - chance);
+      next[hits + 1]! += distribution[hits]! * chance;
     }
-    dist = next;
+    distribution = next;
   }
-  return dist;
+  return distribution;
 }
 
 /** [CAMBIO] Daño esperado +- `spread`, uniforme: se muestrea con SPREAD_SAMPLES puntos repartidos. */
 function spreadDistribution(expected: number, spread: number): number[] {
-  const dist: number[] = [];
+  const distribution: number[] = [];
   for (let i = 0; i < SPREAD_SAMPLES; i++) {
     const offset = (i / (SPREAD_SAMPLES - 1)) * 2 - 1;
     const damage = Math.max(0, Math.round(expected * (1 + offset * spread)));
-    dist[damage] = (dist[damage] ?? 0) + 1 / SPREAD_SAMPLES;
+    distribution[damage] = (distribution[damage] ?? 0) + 1 / SPREAD_SAMPLES;
   }
-  return fillHoles(dist);
+  return fillHoles(distribution);
 }
 
 /** Pone 0 en los huecos de un reparto (los daños que no salen nunca). */
-function fillHoles(dist: number[]): number[] {
-  for (let k = 0; k < dist.length; k++) dist[k] ??= 0;
-  return dist;
+function fillHoles(distribution: number[]): number[] {
+  for (let k = 0; k < distribution.length; k++) distribution[k] ??= 0;
+  return distribution;
 }
 
 /** Media, probabilidad de matar y margen probable de un reparto de daño, sin pasar de `cap` (la vida). */
-function summarize(dist: number[], cap: number) {
+function summarize(distribution: number[], cap: number) {
   let expected = 0;
   let killChance = 0;
   let accumulated = 0;
   let low = -1;
   let high = -1;
-  for (let amount = 0; amount < dist.length; amount++) {
+  for (let amount = 0; amount < distribution.length; amount++) {
     const damage = Math.min(amount, cap);
-    expected += damage * dist[amount]!;
-    if (amount >= cap) killChance += dist[amount]!;
-    accumulated += dist[amount]!;
+    expected += damage * distribution[amount]!;
+    if (amount >= cap) killChance += distribution[amount]!;
+    accumulated += distribution[amount]!;
     if (low < 0 && accumulated >= LOW_PERCENTILE - EPSILON) low = damage;
     if (high < 0 && accumulated >= HIGH_PERCENTILE - EPSILON) high = damage;
   }
-  if (high < 0) high = Math.min(dist.length - 1, cap);
+  if (high < 0) high = Math.min(distribution.length - 1, cap);
   if (low < 0) low = 0;
   return { expected, killChance, low, high };
 }

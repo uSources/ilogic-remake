@@ -11,14 +11,14 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): number
   const out: number[] = [];
   const cv = document.createElement('canvas');
   cv.width = cv.height = 8;
-  const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+  const context = cv.getContext('2d', { willReadFrequently: true })!;
   for (let i = 0; i < TERRAIN_TYPES; i++) {
     let color = 0x3a7a3a;
     const key = terrainKey(i);
     if (hasImage(textures, key)) {
-      ctx.clearRect(0, 0, 8, 8);
-      drawFrame(ctx, textures, key, 0, 0, 8, 8);
-      const pixels = ctx.getImageData(0, 0, 8, 8).data;
+      context.clearRect(0, 0, 8, 8);
+      drawFrame(context, textures, key, 0, 0, 8, 8);
+      const pixels = context.getImageData(0, 0, 8, 8).data;
       let red = 0,
         green = 0,
         blue = 0,

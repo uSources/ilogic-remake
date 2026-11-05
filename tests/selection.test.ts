@@ -16,10 +16,10 @@ describe('seleccion', () => {
   });
 
   it('Mayusculas + clic añade o quita; en vacio no cambia nada', () => {
-    const cur = new Set([7, 8]);
-    expect(ids(clickSelect(cur, unitWith(3), { ...plain, shift: true }, sameType))).toEqual([3, 7, 8]);
-    expect(ids(clickSelect(cur, unitWith(8), { ...plain, shift: true }, sameType))).toEqual([7]);
-    expect(clickSelect(cur, null, { ...plain, shift: true }, sameType)).toBe(cur);
+    const current = new Set([7, 8]);
+    expect(ids(clickSelect(current, unitWith(3), { ...plain, shift: true }, sameType))).toEqual([3, 7, 8]);
+    expect(ids(clickSelect(current, unitWith(8), { ...plain, shift: true }, sameType))).toEqual([7]);
+    expect(clickSelect(current, null, { ...plain, shift: true }, sameType)).toBe(current);
   });
 
   it('doble clic o Ctrl + clic: todas las de ese tipo en pantalla (con Mayusculas se suman)', () => {
@@ -35,9 +35,9 @@ describe('seleccion', () => {
   });
 
   it('quitar las que ya no valen y comparar', () => {
-    const cur = new Set([1, 2, 3]);
-    expect(pruneSelection(cur, () => true)).toBe(cur);
-    expect(ids(pruneSelection(cur, (id) => id !== 2))).toEqual([1, 3]);
+    const current = new Set([1, 2, 3]);
+    expect(pruneSelection(current, () => true)).toBe(current);
+    expect(ids(pruneSelection(current, (id) => id !== 2))).toEqual([1, 3]);
     expect(sameSelection(new Set([1, 2]), new Set([2, 1]))).toBe(true);
     expect(sameSelection(new Set([1, 2]), new Set([1]))).toBe(false);
   });

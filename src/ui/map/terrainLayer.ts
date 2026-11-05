@@ -46,20 +46,20 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
   }
 
   private buildNew(s: GameState): void {
-    const tex = this.scene.textures;
+    const textures = this.scene.textures;
     // Terreno nuevo: pintado una vez en un lienzo.
-    if (tex.exists(this.bakeKey)) tex.remove(this.bakeKey);
-    tex.addCanvas(this.bakeKey, paintTerrain(tex, s));
+    if (textures.exists(this.bakeKey)) textures.remove(this.bakeKey);
+    textures.addCanvas(this.bakeKey, paintTerrain(textures, s));
     this.object.add(this.scene.add.image(0, 0, this.bakeKey).setOrigin(0));
     // Agua animada: piezas precompiladas, una por casilla; en tick() solo se cambia el fotograma.
     for (const cell of waterAnimCells(s)) {
-      addSheetFrames(tex, cell.key, ANIM_FRAMES, TILE);
+      addSheetFrames(textures, cell.key, ANIM_FRAMES, TILE);
       const img = this.scene.add.image(cell.x * TILE, cell.y * TILE, ATLAS, sheetFrame(cell.key, cell.row, 0)).setOrigin(0);
       this.waterAnim.push({ img, cell });
       this.object.add(img);
     }
     this.waterFrame = -1;
-    for (const prop of terrainObjects(tex, s)) {
+    for (const prop of terrainObjects(textures, s)) {
       const img = tileImage(this.scene, prop.key, prop);
       this.props.push(img);
       this.buildings.addProp(img);
@@ -95,7 +95,7 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
 
   /** Suelta el lienzo del terreno (los objetos los destruye la escena al cerrarse). */
   destroy(): void {
-    const tex = this.scene.textures;
-    if (tex.exists(this.bakeKey)) tex.remove(this.bakeKey);
+    const textures = this.scene.textures;
+    if (textures.exists(this.bakeKey)) textures.remove(this.bakeKey);
   }
 }

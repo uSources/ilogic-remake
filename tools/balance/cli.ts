@@ -55,10 +55,10 @@ function loadVariant(parsed: ReturnType<typeof args>): Variant {
     variant = JSON.parse(readFileSync(path, 'utf8')) as Variant;
     variant.set ??= {};
   }
-  for (const kv of parsed.all('set')) {
-    const separator = kv.indexOf('=');
-    if (separator < 0) throw new Error(`--set necesita ruta=valor: ${kv}`);
-    variant.set![kv.slice(0, separator)] = parseValue(kv.slice(separator + 1));
+  for (const setting of parsed.all('set')) {
+    const separator = setting.indexOf('=');
+    if (separator < 0) throw new Error(`--set necesita ruta=valor: ${setting}`);
+    variant.set![setting.slice(0, separator)] = parseValue(setting.slice(separator + 1));
   }
   if (parsed.one('name')) variant.name = parsed.one('name')!;
   else if (parsed.all('set').length && !file) variant.name = 'prueba';
@@ -72,10 +72,10 @@ function targetsFrom(parsed: ReturnType<typeof args>): Targets {
   return targets;
 }
 
-function save(name: string, md: string, json?: unknown): string {
+function save(name: string, markdown: string, json?: unknown): string {
   mkdirSync(REPORTS, { recursive: true });
   const base = join(REPORTS, name.replace(/[^\w.-]+/g, '-'));
-  writeFileSync(`${base}.md`, md);
+  writeFileSync(`${base}.md`, markdown);
   if (json !== undefined) writeFileSync(`${base}.json`, JSON.stringify(json, null, 1));
   return `${base}.md`;
 }
@@ -124,9 +124,9 @@ function printSummary(report: Report, path: string): void {
 }
 
 async function main(): Promise<void> {
-  const [cmd = 'help', ...rest] = process.argv.slice(2);
+  const [command = 'help', ...rest] = process.argv.slice(2);
   const parsed = args(rest);
-  switch (cmd) {
+  switch (command) {
     case 'run': {
       const variant = loadVariant(parsed);
       const report = await evaluate(variant, parsed);
@@ -150,9 +150,9 @@ async function main(): Promise<void> {
       if (!before || !after) throw new Error('Uso: compare <informe-antes> <informe-despues>');
       const read = (name: string) =>
         JSON.parse(readFileSync(name.endsWith('.json') ? name : join(REPORTS, `${name}.json`), 'utf8')) as Report;
-      const md = compareMarkdown(read(before), read(after));
-      console.log(md);
-      save(`comparar-${before}-vs-${after}`.replace(/\.json/g, ''), md);
+      const markdown = compareMarkdown(read(before), read(after));
+      console.log(markdown);
+      save(`comparar-${before}-vs-${after}`.replace(/\.json/g, ''), markdown);
       return;
     }
     case 'tune': {

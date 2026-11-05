@@ -630,7 +630,7 @@ function flashArea(stage: EventStage, target: Pos, radius: number): void {
 const animateAbility: Animator<'ability'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward) return;
-  const general = generalOf(stage.state, event.team)?.def;
+  const general = generalOf(stage.state, event.team)?.definition;
   const ability = general?.abilities.find((candidate) => candidate.id === event.ability);
   const name = ability?.name[settings.lang] ?? event.ability;
   // El enemigo avisa siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.

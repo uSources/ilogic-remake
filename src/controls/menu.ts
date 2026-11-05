@@ -87,7 +87,7 @@ export function menuKeyCommand(key: Pick<KeyInput, 'code' | 'repeat'>, context: 
 }
 
 /** Paso en una lista de una sola dimension: izquierda o arriba es -1, derecha o abajo es +1. */
-export function listStep(cmd: MenuCommand): -1 | 0 | 1 {
-  if (cmd.kind !== 'move') return 0;
-  return cmd.dx || cmd.dy;
+export function listStep(command: MenuCommand): -1 | 0 | 1 {
+  if (command.kind !== 'move') return 0;
+  return command.dx || command.dy;
 }

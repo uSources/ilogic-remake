@@ -77,18 +77,18 @@ describe('combate', () => {
   it('los soldados ya no matan tanques ligeros de un golpe (tabla corregida)', () => {
     const s = blankState(TEST_RULES);
     const so = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
-    const lt = newUnit(s, 4, 1, { x: 10, y: 11 });
-    attack(s, so, lt, seededRng(3));
-    expect(lt.life).toBeGreaterThan(60);
+    const lightTank = newUnit(s, 4, 1, { x: 10, y: 11 });
+    attack(s, so, lightTank, seededRng(3));
+    expect(lightTank.life).toBeGreaterThan(60);
   });
   it('una unidad muerta desaparece con su carga', () => {
     const s = blankState(TEST_RULES);
-    const tr = newUnit(s, TRANSPORT, 1, { x: 10, y: 11 });
+    const transport = newUnit(s, TRANSPORT, 1, { x: 10, y: 11 });
     const passenger = newUnit(s, SOLDIER, 1, { x: 10, y: 12 });
-    load(s, passenger, tr);
-    tr.life = 1;
+    load(s, passenger, transport);
+    transport.life = 1;
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    attack(s, tank, tr, () => 0);
+    attack(s, tank, transport, () => 0);
     expect(s.units.map((unit) => unit.uid)).toEqual([tank.uid]);
   });
 });
@@ -128,13 +128,13 @@ describe('union y transporte', () => {
   });
   it('subir y bajar del transporte', () => {
     const s = blankState(TEST_RULES);
-    const tr = newUnit(s, TRANSPORT, 0, { x: 10, y: 10 });
+    const transport = newUnit(s, TRANSPORT, 0, { x: 10, y: 10 });
     const passenger = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
-    expect(load(s, passenger, tr)).not.toBeNull();
-    expect(passenger.carrier).toBe(tr.uid);
-    tr.active = true;
-    expect(unitActions(s, tr).unload).toBe(true);
-    expect(unload(s, tr, passenger, { x: 10, y: 11 })).toBe(true);
+    expect(load(s, passenger, transport)).not.toBeNull();
+    expect(passenger.carrier).toBe(transport.uid);
+    transport.active = true;
+    expect(unitActions(s, transport).unload).toBe(true);
+    expect(unload(s, transport, passenger, { x: 10, y: 11 })).toBe(true);
     expect(passenger.carrier).toBeNull();
     expect(passenger.x).toBe(10);
     expect(passenger.y).toBe(11);
@@ -210,9 +210,9 @@ describe('prevision y amenaza', () => {
     const th = threatMap(s, 1, 0);
     expect(th.at({ x: 12, y: 17 })).toBe(true); // 7 abajo
     expect(th.at({ x: 12, y: 18 })).toBe(false);
-    const s2 = blankState(TEST_RULES);
-    newUnit(s2, 0, 0, { x: 0, y: 0 });
-    newUnit(s2, 1, 1, { x: 20, y: 20 }); // fuera de vision
-    expect([...threatMap(s2, 1, 0).cells()].some((cell) => cell.value)).toBe(false);
+    const other = blankState(TEST_RULES);
+    newUnit(other, 0, 0, { x: 0, y: 0 });
+    newUnit(other, 1, 1, { x: 20, y: 20 }); // fuera de vision
+    expect([...threatMap(other, 1, 0).cells()].some((cell) => cell.value)).toBe(false);
   });
 });

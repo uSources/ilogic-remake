@@ -356,14 +356,14 @@ describe('escuadras en formacion', () => {
     turns(s, 1);
     expect(left(car, at)).toBe(17 - 7);
 
-    const s2 = world();
-    const sol2 = newUnit(s2, SOLDIER, 0, { x: 1, y: 5 });
-    const car2 = newUnit(s2, CAR, 0, { x: 1, y: 6 });
-    formSquad(s2, [car2, sol2]);
-    giveStandingOrder(s2, [sol2], 'attack', { x: 18, y: 5 });
-    giveStandingOrder(s2, [car2], 'attack', at);
-    expect(sameFormation(s2, car2, sol2)).toBe(false);
-    turns(s2, 1);
+    const other = world();
+    const sol2 = newUnit(other, SOLDIER, 0, { x: 1, y: 5 });
+    const car2 = newUnit(other, CAR, 0, { x: 1, y: 6 });
+    formSquad(other, [car2, sol2]);
+    giveStandingOrder(other, [sol2], 'attack', { x: 18, y: 5 });
+    giveStandingOrder(other, [car2], 'attack', at);
+    expect(sameFormation(other, car2, sol2)).toBe(false);
+    turns(other, 1);
     expect(left(car2, at)).toBe(17 - 7);
   });
 

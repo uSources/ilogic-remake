@@ -55,13 +55,13 @@ describe('contenido (src/core/content/*.json)', () => {
     files.units[3]!.name = { es: 'Jeep', en: '' };
     files.units[4]!.attack!.range = [3, 2];
     files.buildings[0]!.hq = true;
-    const errs = errsOf(files);
-    expect(errs).toContain('unidad Soldier: attack.hitChance nombra "Dragon", que no existe');
-    expect(errs).toContain('unidad Tank: builtAt nombra "Castle", que no existe');
-    expect(errs.some((error) => error.includes('id repetido'))).toBe(true);
-    expect(errs.some((error) => error.includes('name.en'))).toBe(true);
-    expect(errs.some((error) => error.includes('attack.range'))).toBe(true);
-    expect(errs.some((error) => error.includes('"hq": true'))).toBe(true);
+    const errors = errsOf(files);
+    expect(errors).toContain('unidad Soldier: attack.hitChance nombra "Dragon", que no existe');
+    expect(errors).toContain('unidad Tank: builtAt nombra "Castle", que no existe');
+    expect(errors.some((error) => error.includes('id repetido'))).toBe(true);
+    expect(errors.some((error) => error.includes('name.en'))).toBe(true);
+    expect(errors.some((error) => error.includes('attack.range'))).toBe(true);
+    expect(errors.some((error) => error.includes('"hq": true'))).toBe(true);
   });
 
   it('una unidad nueva al final entra en todas las tablas', () => {
@@ -101,13 +101,13 @@ describe('contenido (src/core/content/*.json)', () => {
     (files.rules.defaults as unknown as Record<string, unknown>).fog = 'si';
     (files.rules.defaults as unknown as Record<string, unknown>).magic = true;
     files.ai.KILLBONUS = -1;
-    const errs = errsOf(files);
-    expect(errs).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
-    expect(errs).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
-    expect(errs.some((error) => error.startsWith('terrain.json: tienen que estar los 15 terrenos'))).toBe(true);
-    expect(errs).toContain('rules.json: defaults.fog tiene que ser true o false');
-    expect(errs).toContain('rules.json: regla desconocida "magic"');
-    expect(errs.some((error) => error.startsWith('ai.json: KILLBONUS'))).toBe(true);
+    const errors = errsOf(files);
+    expect(errors).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
+    expect(errors).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
+    expect(errors.some((error) => error.startsWith('terrain.json: tienen que estar los 15 terrenos'))).toBe(true);
+    expect(errors).toContain('rules.json: defaults.fog tiene que ser true o false');
+    expect(errors).toContain('rules.json: regla desconocida "magic"');
+    expect(errors.some((error) => error.startsWith('ai.json: KILLBONUS'))).toBe(true);
   });
 
   it('MoveType y TerrainType coinciden con las listas de los JSON', () => {

@@ -86,8 +86,8 @@ export function abilitiesVM(s: GameState, type: number): AbilityVM[] {
 export function captureHintText(s: GameState, unit: Unit): string | undefined {
   const building = buildingAt(s, unit);
   if (!building) return undefined;
-  const cp = captureProgress(s, building);
-  const now = cp && cp.uid === unit.uid ? cp.left : capturePointsOf(s, building);
+  const capture = captureProgress(s, building);
+  const now = capture && capture.uid === unit.uid ? capture.left : capturePointsOf(s, building);
   return `${now}→${Math.max(0, now - captureStrength(s, unit))}`;
 }
 
@@ -109,7 +109,7 @@ export function tileVM(
   };
   if (s.rules.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (mt: MoveType) => (canMoveOn(s, mt, terr) ? moveCost(s, mt, pos) : null);
+    const cost = (moveType: MoveType) => (canMoveOn(s, moveType, terr) ? moveCost(s, moveType, pos) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
   if (building) {
@@ -120,24 +120,27 @@ export function tileVM(
       income: buildingIncome(s, building.type),
       icon: buildingKey(textures, s, building, vis),
     };
-    const cp = captureProgress(s, building);
-    if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(s, building), team: cp.team };
+    const capture = captureProgress(s, building);
+    if (capture && known) info.building.capture = { left: capture.left, total: capturePointsOf(s, building), team: capture.team };
   }
   // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
   // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
-  const cp = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, pos));
-  if (cp) {
-    const inside = s.units.filter((unit) => unit.carrier === null && inControlZone(s, cp, unit) && (unit.team === 0 || view.vis.at(unit)));
+  const controlPoint = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, pos));
+  if (controlPoint) {
+    const inside = s.units.filter(
+      (unit) => unit.carrier === null && inControlZone(s, controlPoint, unit) && (unit.team === 0 || view.vis.at(unit)),
+    );
     info.point = {
-      owner: cp.owner === 0 ? 'you' : cp.owner === 1 ? 'enemy' : 'neutral',
+      owner: controlPoint.owner === 0 ? 'you' : controlPoint.owner === 1 ? 'enemy' : 'neutral',
       income: s.rules.controlIncome,
       contested: inside.some((unit) => unit.team === 0) && inside.some((unit) => unit.team === 1),
-      icon: `ui/zona_${cp.owner === 0 ? 'b' : cp.owner === 1 ? 'r' : 'i'}`,
+      icon: `ui/zona_${controlPoint.owner === 0 ? 'b' : controlPoint.owner === 1 ? 'r' : 'i'}`,
     };
   }
   const unit = unitAt(s, pos);
-  const sel = view.selected;
-  const shown = unit && vis && !view.hidden.has(unit.uid) ? unit : sel && sel.x === pos.x && sel.y === pos.y ? sel : undefined;
+  const selected = view.selected;
+  const shown =
+    unit && vis && !view.hidden.has(unit.uid) ? unit : selected && selected.x === pos.x && selected.y === pos.y ? selected : undefined;
   if (shown) {
     const shownType = shown.type;
     const cargo = cargoUnits(s, shown).map((unit) => unitLabel(s.content, unit.type));

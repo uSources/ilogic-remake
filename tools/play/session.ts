@@ -71,19 +71,23 @@ export class Session {
   s: GameState;
   private rng: Rng;
 
-  constructor(opts: SessionOptions = {}) {
-    const seed = opts.seed ?? 1;
+  constructor(options: SessionOptions = {}) {
+    const seed = options.seed ?? 1;
     this.rng = seededRng(seed ^ 0x9e3779b9);
-    if (opts.state) {
-      const s = loadGame(opts.state);
+    if (options.state) {
+      const s = loadGame(options.state);
       if (!s) throw new Error('Partida guardada no valida');
       this.s = s;
-    } else if (opts.mission) {
-      const mission = missionById(opts.mission);
-      if (!mission) throw new Error(`No existe la mision "${opts.mission}"`);
+    } else if (options.mission) {
+      const mission = missionById(options.mission);
+      if (!mission) throw new Error(`No existe la mision "${options.mission}"`);
       this.s = buildMission(mission, defaultContent());
     } else {
-      this.s = createGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, ruleChanges: { fog: opts.fog ?? false } });
+      this.s = createGame(seededRng(seed), {
+        size: options.size ?? 20,
+        theme: options.theme ?? null,
+        ruleChanges: { fog: options.fog ?? false },
+      });
       const pick = (id: string | undefined) => {
         if (!id) return null;
         const general = newGeneral(this.s, id);
@@ -95,21 +99,21 @@ export class Session {
           );
         return general;
       };
-      const [general, enemyGeneral] = [pick(opts.general), pick(opts.enemyGeneral)];
+      const [general, enemyGeneral] = [pick(options.general), pick(options.enemyGeneral)];
       if (general || enemyGeneral) this.s.generals = [general, enemyGeneral];
     }
   }
 
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
   run(line: string): string {
-    const [cmd = '', ...words] = line.trim().split(/\s+/);
+    const [command = '', ...words] = line.trim().split(/\s+/);
     const numberAt = (position: number) => {
       const value = Number(words[position]);
       if (!Number.isInteger(value)) throw new UsageError(`falta un numero en la posicion ${position + 1}`);
       return value;
     };
     try {
-      switch (cmd.toLowerCase()) {
+      switch (command.toLowerCase()) {
         case '':
         case '#':
           return '';
@@ -157,7 +161,7 @@ export class Session {
         case 'json':
           return serialize(this.s);
         default:
-          return `error: orden desconocida "${cmd}" (help para ver las ordenes)`;
+          return `error: orden desconocida "${command}" (help para ver las ordenes)`;
       }
     } catch (error) {
       if (error instanceof UsageError) return `error: ${error.message}`;
@@ -209,8 +213,8 @@ export class Session {
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
-        const st = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
-        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[unit.type]!.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${st}`;
+        const usedTag = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
+        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[unit.type]!.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
   }
@@ -253,10 +257,10 @@ export class Session {
     const building = buildingAt(this.s, at);
     if (!building || building.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
     const type = tablesOf(this.s).UNIT_NAMES.findIndex((unitName) => unitName.toLowerCase() === name.toLowerCase());
-    const opts = buyOptions(this.s, building);
-    if (!opts.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[building.type]} no fabrica unidades`);
+    const options = buyOptions(this.s, building);
+    if (!options.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[building.type]} no fabrica unidades`);
     if (type < 0)
-      return `error: tipo desconocido. Aqui se puede: ${opts.map((buyOption) => `${tablesOf(this.s).UNIT_NAMES[buyOption.type]} (${buyOption.cost})`).join(', ')}`;
+      return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${tablesOf(this.s).UNIT_NAMES[buyOption.type]} (${buyOption.cost})`).join(', ')}`;
     const unit = spawn(this.s, building, type);
     if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
     return `comprada ${unit.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
@@ -266,9 +270,9 @@ export class Session {
   private power(id: string, target: { x: number; y: number } | null): string {
     const general = generalOf(this.s, 0);
     if (!general) throw new UsageError('no tienes general (--general Brisa)');
-    const list = general.def.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
+    const list = general.definition.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
     if (!id)
-      return `${general.def.id}: carga ${general.state.charge.toFixed(1)}/${general.def.charge.max}${general.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
+      return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
     const block = abilityBlock(this.s, 0, id, target);
     if (block) throw new UsageError(`no se puede usar ${id}: ${block} (habilidades: ${list})`);
     return describe(this.s, useAbility(this.s, 0, id, target)!);
@@ -277,8 +281,8 @@ export class Session {
   /** Fin del turno propio (o la IA juega por ti con `ai`), turno enemigo y fin de ronda. */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
-    if (aiForMe) for (const ev of aiTurn(this.s, this.rng, 0)) out.push(`tu IA: ${describe(this.s, ev)}`);
-    for (const ev of aiTurn(this.s, this.rng, 1)) out.push(`enemigo: ${describe(this.s, ev)}`);
+    if (aiForMe) for (const event of aiTurn(this.s, this.rng, 0)) out.push(`tu IA: ${describe(this.s, event)}`);
+    for (const event of aiTurn(this.s, this.rng, 1)) out.push(`enemigo: ${describe(this.s, event)}`);
     const round = endRound(this.s);
     out.push(`--- dia ${this.s.day}: +${round.income[0]} de ingresos, dinero ${this.s.funds[0]}`);
     const result = outcome(this.s);
@@ -305,28 +309,28 @@ export class Session {
 
 class UsageError extends Error {}
 
-function describe(s: GameState, ev: GameEvent): string {
+function describe(s: GameState, event: GameEvent): string {
   const name = (uid: number) => {
     const unit = unitById(s, uid);
     return unit ? `${uid} ${tablesOf(s).UNIT_NAMES[unit.type]}` : `${uid}`;
   };
-  switch (ev.kind) {
+  switch (event.kind) {
     case 'move':
-      return `${name(ev.uid)} mueve a (${ev.path[ev.path.length - 1]!.x},${ev.path[ev.path.length - 1]!.y})${ev.ambush ? ' (emboscada)' : ''}`;
+      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.ambush ? ' (emboscada)' : ''}`;
     case 'attack':
-      return `${name(ev.attacker)} ataca (${ev.target.x},${ev.target.y}): daño ${ev.damage}${ev.killed ? ', destruida' : ''}`;
+      return `${name(event.attacker)} ataca (${event.target.x},${event.target.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
     case 'capture':
-      return `${name(ev.uid)} captura (${ev.at.x},${ev.at.y})${ev.left ? `, quedan ${ev.left}` : ''}`;
+      return `${name(event.uid)} captura (${event.at.x},${event.at.y})${event.left ? `, quedan ${event.left}` : ''}`;
     case 'spawn':
-      return `compra ${name(ev.uid)} en (${ev.at.x},${ev.at.y})`;
+      return `compra ${name(event.uid)} en (${event.at.x},${event.at.y})`;
     case 'merge':
-      return `${name(ev.uid)} se une a ${name(ev.into)}`;
+      return `${name(event.uid)} se une a ${name(event.into)}`;
     case 'load':
-      return `${name(ev.uid)} sube a ${name(ev.into)}`;
+      return `${name(event.uid)} sube a ${name(event.into)}`;
     case 'wait':
-      return `${name(ev.uid)} espera`;
+      return `${name(event.uid)} espera`;
     case 'ability':
-      return `general ${ev.general} usa ${ev.ability}${ev.target ? ` en (${ev.target.x},${ev.target.y})` : ''}${ev.hits.length ? `: ${ev.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+      return `general ${event.general} usa ${event.ability}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
   }
 }
 

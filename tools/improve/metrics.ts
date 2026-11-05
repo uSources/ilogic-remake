@@ -75,13 +75,13 @@ export function score(report: Report, size: number): Metrics {
   add('duracion', `Duracion (mediana entre ${lo} y ${hi} dias)`, 15, 1 - off / 10, `${med} dias`);
   const unfinished = outcome.unfinished / Math.max(1, report.games);
   add('decididas', 'Partidas que terminan', 15, 1 - unfinished / 0.3, `${Math.round(unfinished * 100)} % sin terminar`);
-  const s5 = report.snowball.find((point) => point.day === 5)?.leaderWins ?? null;
+  const day5 = report.snowball.find((point) => point.day === 5)?.leaderWins ?? null;
   add(
     'remontadas',
     'Se puede remontar (quien va delante el dia 5 no gana siempre)',
     15,
-    s5 === null ? 1 : (0.95 - s5) / 0.25,
-    s5 === null ? '-' : `${Math.round(s5 * 100)} %`,
+    day5 === null ? 1 : (0.95 - day5) / 0.25,
+    day5 === null ? '-' : `${Math.round(day5 * 100)} %`,
   );
   const bought = report.units.map((unitRow) => unitRow.bought).filter((count) => count > 0);
   const total = bought.reduce((sum, count) => sum + count, 0);
@@ -92,22 +92,22 @@ export function score(report: Report, size: number): Metrics {
   // cuenta entero; fuera, cada vez menos segun lo lejos (en escala logaritmica: 2x por encima de la
   // banda = 0). Asi acercar una unidad a la banda suma aunque aun no entre, y una que roza el borde no
   // hace saltar la nota.
-  const [blo, bhi] = DEFAULT_TARGETS.efficiencyBand;
-  const effs = report.units.map((unitRow) => unitRow.efficiency).filter((entry): entry is number => entry !== null);
-  const med2 = [...effs].sort((first, second) => first - second)[Math.floor(effs.length / 2)] ?? 1;
+  const [bandLow, bandHigh] = DEFAULT_TARGETS.efficiencyBand;
+  const efficiencies = report.units.map((unitRow) => unitRow.efficiency).filter((entry): entry is number => entry !== null);
+  const median = [...efficiencies].sort((first, second) => first - second)[Math.floor(efficiencies.length / 2)] ?? 1;
   const fit = (value: number) => {
-    const x = Math.log(value / med2);
-    const out = x > Math.log(bhi) ? x - Math.log(bhi) : x < Math.log(blo) ? Math.log(blo) - x : 0;
+    const x = Math.log(value / median);
+    const out = x > Math.log(bandHigh) ? x - Math.log(bandHigh) : x < Math.log(bandLow) ? Math.log(bandLow) - x : 0;
     return clamp01(1 - out / Math.log(2));
   };
-  const inBand = effs.filter((value) => value >= med2 * blo && value <= med2 * bhi).length;
-  const priceFit = effs.length ? effs.reduce((amount, value) => amount + fit(value), 0) / effs.length : 1;
+  const inBand = efficiencies.filter((value) => value >= median * bandLow && value <= median * bandHigh).length;
+  const priceFit = efficiencies.length ? efficiencies.reduce((amount, value) => amount + fit(value), 0) / efficiencies.length : 1;
   add(
     'precios',
     'Unidades que rinden lo que cuestan',
     15,
     priceFit,
-    `${inBand} de ${effs.length} en la banda, ajuste ${Math.round(priceFit * 100)} %`,
+    `${inBand} de ${efficiencies.length} en la banda, ajuste ${Math.round(priceFit * 100)} %`,
   );
   return {
     name: report.name,
@@ -165,9 +165,9 @@ async function main(): Promise<void> {
   const base = existsSync(BASELINE) ? (JSON.parse(readFileSync(BASELINE, 'utf8')) as Metrics) : null;
   mkdirSync(OUT, { recursive: true });
   writeFileSync(`${OUT}${name}.json`, JSON.stringify(metrics, null, 1));
-  const md = metricsMarkdown(metrics, base && base.games === metrics.games && base.size === metrics.size ? base : null);
-  writeFileSync(`${OUT}${name}.md`, md);
-  console.log(md);
+  const markdown = metricsMarkdown(metrics, base && base.games === metrics.games && base.size === metrics.size ? base : null);
+  writeFileSync(`${OUT}${name}.md`, markdown);
+  console.log(markdown);
   if (args.includes('--save-baseline')) {
     writeFileSync(BASELINE, JSON.stringify(metrics, null, 1));
     console.log('Guardado como linea base (improve/baseline.json).');

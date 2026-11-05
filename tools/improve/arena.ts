@@ -99,11 +99,11 @@ function aiFiles(): string[] {
  * los pesos (`weightsOf` de gameContent) salen de weights.ts, congelados al hacer la copia: la IA de
  * referencia juega siempre con los pesos que tenia, aunque la partida lleve otros.
  */
-export function snapshotSource(rel: string, src: string, copied: ReadonlySet<string>): string {
-  const dir = posix.dirname(rel);
-  const weights = dir === '.' ? './weights' : posix.relative(dir, 'weights');
-  const out = src.replace(/from '(\.{1,2}\/[^']+)'/g, (match, spec: string) => {
-    const target = posix.normalize(posix.join(dir, spec));
+export function snapshotSource(rel: string, source: string, copied: ReadonlySet<string>): string {
+  const directory = posix.dirname(rel);
+  const weights = directory === '.' ? './weights' : posix.relative(directory, 'weights');
+  const out = source.replace(/from '(\.{1,2}\/[^']+)'/g, (match, spec: string) => {
+    const target = posix.normalize(posix.join(directory, spec));
     return copied.has(`${target}.ts`) ? match : `from '@core/${target}'`;
   });
   // import { weightsOf, X } from '@core/gameContent' -> import { X } from '@core/gameContent' + import { weightsOf } from './weights'
@@ -127,8 +127,8 @@ function snapshot(): void {
   const copied = new Set(files);
   const day = new Date().toISOString().slice(0, 10);
   for (const rel of files) {
-    const src = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
-    writeFileSync(`${BASE_DIR}${rel}`, `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar.\n${src}`);
+    const source = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
+    writeFileSync(`${BASE_DIR}${rel}`, `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar.\n${source}`);
   }
   writeFileSync(
     `${BASE_DIR}weights.ts`,

@@ -29,10 +29,10 @@ const INTENT_ARROW = { color: PAL_MAP.intent, alpha: 0.6, border: 0.4 };
 const TARGET_CORNER = 7;
 
 /** Ordenes de varios turnos: puntos cada 8 px (primero en horizontal, luego en vertical) y banderita. */
-export const orderLines: OverlayPainter = (graphics, opts, ctx) => {
+export const orderLines: OverlayPainter = (graphics, options, context) => {
   // El banderin dibujado (ui/flag_cmd_*) va en map/flagLayer.ts; este de pixeles solo si falta en el atlas.
-  const orderArt = hasImage(ctx.textures, 'ui/flag_cmd_go');
-  for (const order of opts.orders ?? []) {
+  const orderArt = hasImage(context.textures, 'ui/flag_cmd_go');
+  for (const order of options.orders ?? []) {
     const from = tileCenter(order.from);
     const to = tileCenter(order.to);
     const color = order.kind ? COMMAND_FLAG[order.kind] : PAL.gold;
@@ -57,8 +57,8 @@ function drawPixelFlag(graphics: Phaser.GameObjects.Graphics, foot: { x: number;
 }
 
 /** [CAMBIO] Intenciones de las ordenes con destino: lo que hara cada unidad al terminar el turno. */
-export const intents: OverlayPainter = (graphics, opts) => {
-  for (const intent of opts.intents ?? []) {
+export const intents: OverlayPainter = (graphics, options) => {
+  for (const intent of options.intents ?? []) {
     if (intent.path.length > 1) drawArrow(graphics, intent.path, INTENT_ARROW.color, INTENT_ARROW.alpha, INTENT_ARROW.border);
     if (intent.attack) drawTargetMark(graphics, intent.attack, PAL.red);
     if (intent.capture) drawTargetMark(graphics, intent.capture, PAL.gold);
@@ -69,10 +69,10 @@ export const intents: OverlayPainter = (graphics, opts) => {
  * Camino previsto: flecha pixel (tramos de 4 px con borde oscuro y punta), como en Advance Wars.
  * [CAMBIO] Si al soltar ahi se ataca, la flecha va en rojo.
  */
-export const pathArrow: OverlayPainter = (graphics, opts) => {
-  const path = opts.path;
+export const pathArrow: OverlayPainter = (graphics, options) => {
+  const path = options.path;
   if (path && path.length > 1)
-    drawArrow(graphics, path, opts.pathAttack ? PATH_ARROW.attack : PATH_ARROW.color, PATH_ARROW.alpha, PATH_ARROW.border);
+    drawArrow(graphics, path, options.pathAttack ? PATH_ARROW.attack : PATH_ARROW.color, PATH_ARROW.alpha, PATH_ARROW.border);
 };
 
 /** Direccion de un paso: -1, 0 o 1 en cada eje. */

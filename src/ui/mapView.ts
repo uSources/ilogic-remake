@@ -40,7 +40,7 @@ export class MapView {
   /** Marco rojo: eligiendo objetivo de ataque. */
   cursorAttack = false;
   /** La camara de la escena (las pruebas de tests/visual la leen). */
-  readonly cam: Phaser.Cameras.Scene2D.Camera;
+  readonly mainCamera: Phaser.Cameras.Scene2D.Camera;
 
   private readonly root: Phaser.GameObjects.Container;
   private readonly camera: MapCamera;
@@ -69,8 +69,8 @@ export class MapView {
 
   constructor(private readonly scene: Phaser.Scene) {
     MapView.count++;
-    this.cam = scene.cameras.main;
-    this.camera = new MapCamera(this.cam);
+    this.mainCamera = scene.cameras.main;
+    this.camera = new MapCamera(this.mainCamera);
     this.root = scene.add.container(0, 0);
     this.buildings = new BuildingLayer(scene);
     this.terrain = new TerrainLayer(scene, `terrainBake${MapView.count}`, this.buildings);
@@ -98,7 +98,7 @@ export class MapView {
     ];
     this.root.add(stack.map((line) => ('object' in line ? line.object : line)));
     this.animated = [this.terrain, this.cursorView, this.marks, this.units];
-    this.cam.setBackgroundColor(PAL_CSS.ink);
+    this.mainCamera.setBackgroundColor(PAL_CSS.ink);
     this.camera.apply();
   }
 
@@ -152,8 +152,8 @@ export class MapView {
   }
 
   /** Zoom entero por pasos alrededor de un punto de la pantalla. */
-  zoomStep(dir: 1 | -1, sx: number, sy: number): void {
-    this.camera.zoomStep(dir, sx, sy);
+  zoomStep(direction: 1 | -1, sx: number, sy: number): void {
+    this.camera.zoomStep(direction, sx, sy);
   }
 
   /** Casillas dentro de un recuadro de pantalla. */
@@ -175,14 +175,14 @@ export class MapView {
   }
 
   /** Pone al dia edificios, unidades, niebla y resaltados. */
-  render(s: GameState, opts: ViewOptions): void {
+  render(s: GameState, options: ViewOptions): void {
     const newArt = this.newArt();
-    this.buildings.sync(s, opts.vis);
-    this.units.sync(s, opts, newArt);
-    this.fog.sync(opts.vis, newArt);
-    this.flags.sync(opts);
-    this.overlay.draw(opts, { textures: this.scene.textures, newArt });
-    this.marks.set(opts);
+    this.buildings.sync(s, options.vis);
+    this.units.sync(s, options, newArt);
+    this.fog.sync(options.vis, newArt);
+    this.flags.sync(options);
+    this.overlay.draw(options, { textures: this.scene.textures, newArt });
+    this.marks.set(options);
     this.placeCursor();
   }
 
@@ -221,8 +221,8 @@ export class MapView {
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
-  face(uid: number, dir: Facing): void {
-    this.units.face(uid, dir);
+  face(uid: number, facing: Facing): void {
+    this.units.face(uid, facing);
   }
 
   facingOf(uid: number, team: 0 | 1): Facing {
@@ -230,8 +230,8 @@ export class MapView {
   }
 
   /** Objeto temporal para animaciones (coordenadas de mundo). */
-  addFx(obj: Phaser.GameObjects.GameObject): void {
-    this.fx.add(obj);
+  addFx(effect: Phaser.GameObjects.GameObject): void {
+    this.fx.add(effect);
   }
 
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */

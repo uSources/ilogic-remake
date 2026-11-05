@@ -124,18 +124,18 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /** Cumplir una orden de menu, venga del mando que venga. */
-  menu(cmd: MenuCommand): void {
+  menu(command: MenuCommand): void {
     if (this.leaving) return;
-    if (ui.get().help) return this.helpCommand(cmd);
-    if (notesOpen()) return notesCommand(cmd);
-    if (this.optionsPanel.isOpen) return this.optionsPanel.command(cmd);
-    if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(cmd) : this.setup.command(cmd);
-    if (this.mode === 'campaign') return this.campaign.command(cmd);
-    this.home.command(cmd);
+    if (ui.get().help) return this.helpCommand(command);
+    if (notesOpen()) return notesCommand(command);
+    if (this.optionsPanel.isOpen) return this.optionsPanel.command(command);
+    if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(command) : this.setup.command(command);
+    if (this.mode === 'campaign') return this.campaign.command(command);
+    this.home.command(command);
   }
 
-  private helpCommand(cmd: MenuCommand): void {
-    if (cmd.kind === 'back' || cmd.kind === 'ok' || cmd.kind === 'help') ui.set({ help: false });
+  private helpCommand(command: MenuCommand): void {
+    if (command.kind === 'back' || command.kind === 'ok' || command.kind === 'help') ui.set({ help: false });
   }
 
   /** Adaptador de teclado: la tecla, en el menu que tiene el foco, es una orden MenuCommand. */
@@ -149,8 +149,8 @@ export class MenuScene extends Phaser.Scene {
 
   private onKey(event: KeyboardEvent): void {
     if (this.leaving) return;
-    const cmd = menuKeyCommand(event, this.controlContext());
-    if (cmd) this.menu(cmd);
+    const command = menuKeyCommand(event, this.controlContext());
+    if (command) this.menu(command);
   }
 
   private publishAll(): void {

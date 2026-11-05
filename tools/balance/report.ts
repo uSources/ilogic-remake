@@ -112,7 +112,8 @@ export function buildReport(
   const days = finished.map((record) => record.days);
 
   // Fuerza de un bando: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
-  const strength = (smp: GameRecord['samples'][number], team: 0 | 1) => smp.army[team] + smp.buildings[team] * 1500 + smp.funds[team] * 0.5;
+  const strength = (sample: GameRecord['samples'][number], team: 0 | 1) =>
+    sample.army[team] + sample.buildings[team] * 1500 + sample.funds[team] * 0.5;
   // Ganador "efectivo": el real, o en las partidas sin terminar quien va claramente por delante.
   const adjudicated: [number, number] = [0, 0];
   let even = 0;
@@ -137,10 +138,10 @@ export function buildReport(
     let leaderWins = 0,
       count = 0;
     for (const [record, winner] of effWinner) {
-      const smp = record.samples.find((sample) => sample.day === day);
-      if (!smp || record.days <= day) continue;
-      const playerStrength = strength(smp, 0),
-        aiStrength = strength(smp, 1);
+      const sample = record.samples.find((sample) => sample.day === day);
+      if (!sample || record.days <= day) continue;
+      const playerStrength = strength(sample, 0),
+        aiStrength = strength(sample, 1);
       if (Math.abs(playerStrength - aiStrength) < 1) continue;
       count++;
       if ((playerStrength > aiStrength ? 0 : 1) === winner) leaderWins++;
@@ -148,13 +149,13 @@ export function buildReport(
     return { day, leaderWins: count ? leaderWins / count : null, games: count };
   });
 
-  const d10 = records.map((record) => record.samples.find((sample) => sample.day === 10)).filter((sample) => !!sample);
+  const day10 = records.map((record) => record.samples.find((sample) => sample.day === 10)).filter((sample) => !!sample);
   const economy = {
-    day10Buildings: d10.length
-      ? ([mean(d10.map((sample) => sample.buildings[0])), mean(d10.map((sample) => sample.buildings[1]))] as [number, number])
+    day10Buildings: day10.length
+      ? ([mean(day10.map((sample) => sample.buildings[0])), mean(day10.map((sample) => sample.buildings[1]))] as [number, number])
       : null,
-    day10Army: d10.length
-      ? ([mean(d10.map((sample) => sample.army[0])), mean(d10.map((sample) => sample.army[1]))] as [number, number])
+    day10Army: day10.length
+      ? ([mean(day10.map((sample) => sample.army[0])), mean(day10.map((sample) => sample.army[1]))] as [number, number])
       : null,
     unitsOnMap: unitsOnDay(records, 10) === null ? null : { day10: unitsOnDay(records, 10)!, day20: unitsOnDay(records, 20) ?? 0 },
   };
@@ -223,8 +224,8 @@ export function buildReport(
   if (mirror && sb5 !== null && sb5 > targets.snowball5)
     flags.push(`Bola de nieve: quien va por delante el dia 5 gana el ${pct(sb5)} de las veces.`);
 
-  const effs = units.filter((unitRow) => unitRow.efficiency !== null).map((unitRow) => unitRow.efficiency!);
-  const medEff = quant(effs, 0.5);
+  const efficiencies = units.filter((unitRow) => unitRow.efficiency !== null).map((unitRow) => unitRow.efficiency!);
+  const medEff = quant(efficiencies, 0.5);
   for (const row of mirror ? units : []) {
     const type = UNIT_NAMES.indexOf(row.type);
     if (row.efficiency !== null && medEff > 0) {
@@ -250,8 +251,8 @@ export function buildReport(
 
   let duelSummary: Report['duel'];
   if (duel) {
-    const fs = duel.cells.filter((cell) => cell.firstStrikeWins !== null && cell.attacker === cell.defender);
-    const firstStrikeMean = fs.length ? mean(fs.map((cell) => cell.firstStrikeWins!)) : null;
+    const firstStrikes = duel.cells.filter((cell) => cell.firstStrikeWins !== null && cell.attacker === cell.defender);
+    const firstStrikeMean = firstStrikes.length ? mean(firstStrikes.map((cell) => cell.firstStrikeWins!)) : null;
     // Ventaja de atacar primero en un intercambio entre iguales: daño hecho / daño recibido.
     const same = duel.cells.filter((cell) => cell.attacker === cell.defender && cell.damage > 0);
     const ratios = same.map((cell) => cell.damage / Math.max(cell.counter, 0.5));
@@ -403,11 +404,11 @@ export function compareMarkdown(before: Report, after: Report): string {
       value > 50 ? '∞' : value.toFixed(1),
     );
   lines.push('', '## Unidades', '', '| Unidad | Coste | Compras (antes → despues) | Eficiencia (antes → despues) |', '|---|---|---|---|');
-  for (const ua of before.units) {
-    const ub = after.units.find((unitRow) => unitRow.type === ua.type)!;
+  for (const rowBefore of before.units) {
+    const rowAfter = after.units.find((unitRow) => unitRow.type === rowBefore.type)!;
     const twoDecimals = (value: number | null) => (value === null ? '—' : value.toFixed(2));
     lines.push(
-      `| ${ua.label} | ${ua.cost}${ub.cost !== ua.cost ? ` → ${ub.cost}` : ''} | ${ua.bought} → ${ub.bought} | ${twoDecimals(ua.efficiency)} → ${twoDecimals(ub.efficiency)} |`,
+      `| ${rowBefore.label} | ${rowBefore.cost}${rowAfter.cost !== rowBefore.cost ? ` → ${rowAfter.cost}` : ''} | ${rowBefore.bought} → ${rowAfter.bought} | ${twoDecimals(rowBefore.efficiency)} → ${twoDecimals(rowAfter.efficiency)} |`,
     );
   }
   lines.push('', `Avisos antes: ${before.flags.length}, despues: ${after.flags.length}.`, '');

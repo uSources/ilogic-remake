@@ -55,7 +55,7 @@ export interface OrderHost {
   menuSel: number;
   readonly match: number;
   /** La unidad elegida para moverla (o en su menu). */
-  readonly sel: Unit | null;
+  readonly selected: Unit | null;
   /** Donde estaba la unidad elegida antes de moverla este turno. */
   readonly undo: MoveUndo | null;
   readonly selection: GroupSelection;
@@ -69,7 +69,7 @@ export interface OrderHost {
   refresh(): void;
   selectUnit(unit: Unit): void;
   moveCursorTo(pos: Pos, follow: boolean): void;
-  commit(tile: Pos, opts?: { drop?: boolean; wait?: boolean }): Promise<void>;
+  commit(tile: Pos, options?: { drop?: boolean; wait?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
   clearUndo(): void;
@@ -94,7 +94,7 @@ export class Orders {
         return host.state;
       },
       moveCursorTo: (pos, follow) => host.moveCursorTo(pos, follow),
-      commit: (at, opts) => host.commit(at, opts),
+      commit: (at, options) => host.commit(at, options),
       groupMove: (goal) => host.groupMove(goal),
       giveTravel: (unit, goal) => host.giveTravel(unit, goal),
       pickOrderTarget: (kind, units, fromUnitMenu) => this.start(kind, units, fromUnitMenu),
@@ -113,7 +113,7 @@ export class Orders {
   subjects(): { units: Unit[]; from: OrderFrom } | null {
     const host = this.host;
     const withSelectedUnit = host.phase === 'move' || host.phase === 'unitMenu';
-    if (withSelectedUnit && host.sel && isPlayer(host.sel)) return { units: [host.sel], from: host.phase as OrderFrom };
+    if (withSelectedUnit && host.selected && isPlayer(host.selected)) return { units: [host.selected], from: host.phase as OrderFrom };
     const withGroup = host.phase === 'map' || host.phase === 'groupMenu';
     if (!withGroup || !host.selection.group.size) return null;
     const units = host.selection.groupUnits();
@@ -168,8 +168,8 @@ export class Orders {
     const host = this.host;
     const who = this.subjects();
     if (!who || !isOnBoard(host.state, at)) return false;
-    const ctx = this.ctx(at);
-    const ids = ctx ? menuActions(ctx).map((action) => action.id) : [];
+    const context = this.ctx(at);
+    const ids = context ? menuActions(context).map((action) => action.id) : [];
     if (!ids.length) return false;
     this.menu = { at: posOf(at), uids: uidsOf(who.units), ids, from: who.from };
     host.selection.multi = false;
@@ -195,8 +195,8 @@ export class Orders {
   /** Vuelve a la fase de la que salio el menu, que es donde la accion tiene sentido. */
   private returnTo(from: OrderFrom): void {
     const host = this.host;
-    if (from === 'move' && host.sel) host.selectUnit(host.sel);
-    else if (from === 'unitMenu' && host.sel) host.phase = 'unitMenu';
+    if (from === 'move' && host.selected) host.selectUnit(host.selected);
+    else if (from === 'unitMenu' && host.selected) host.phase = 'unitMenu';
     else host.phase = 'map';
   }
 
@@ -208,10 +208,10 @@ export class Orders {
     if (!units.length) return null;
     const unitHere = at ? unitAt(s, at) : undefined;
     const enemyHere = !!unitHere && !isPlayer(unitHere) && unitHere.carrier === null && host.visible(unitHere);
-    const ctx: ActionCtx = { s, units, at: at ? posOf(at) : null, enemyHere };
-    const isSelectedUnit = host.phase === 'move' && host.sel && units.length === 1 && units[0]!.uid === host.sel.uid;
-    if (at && isSelectedUnit) Object.assign(ctx, this.movingIntent(host.sel, at));
-    return ctx;
+    const context: ActionCtx = { s, units, at: at ? posOf(at) : null, enemyHere };
+    const isSelectedUnit = host.phase === 'move' && host.selected && units.length === 1 && units[0]!.uid === host.selected.uid;
+    if (at && isSelectedUnit) Object.assign(context, this.movingIntent(host.selected, at));
+    return context;
   }
 
   /** Lo que la escena sabe de soltar la unidad elegida en `at` (ver ActionCtx.intent). */
@@ -232,14 +232,14 @@ export class Orders {
    * el turno) sin mover nada ahora. `single`: viene del menu de una unidad elegida (la orden respeta
    * lo ya movido, ver place).
    */
-  async run(id: ActionId, at: Pos | null, opts: { queue: boolean; single?: boolean } = { queue: false }): Promise<void> {
+  async run(id: ActionId, at: Pos | null, options: { queue: boolean; single?: boolean } = { queue: false }): Promise<void> {
     const host = this.host;
     const units = this.chosenUnits();
     if (!units.length) return;
-    const moving = host.phase === 'move' && host.sel && units.length === 1 ? host.sel : null;
+    const moving = host.phase === 'move' && host.selected && units.length === 1 ? host.selected : null;
     const runner = ACTION_RUNNERS[id];
-    if (opts.queue && at && runner.queueAs) return this.queue(runner.queueAs, units, at, moving);
-    return runner.run({ units, at, moving, fromUnitMenu: opts.single }, this.runHost);
+    if (options.queue && at && runner.queueAs) return this.queue(runner.queueAs, units, at, moving);
+    return runner.run({ units, at, moving, fromUnitMenu: options.single }, this.runHost);
   }
 
   /** Orden sin gastar el turno: se cumple al terminarlo. */
@@ -314,8 +314,8 @@ export class Orders {
   updatePointer(tile: Pos | null): void {
     const host = this.host;
     if (!tile || (host.phase !== 'map' && host.phase !== 'move')) return this.setPointer('default');
-    const ctx = host.selection.units().length ? this.ctx(tile) : null;
-    this.setPointer(ctx ? cursorFor(ctx) : 'default');
+    const context = host.selection.units().length ? this.ctx(tile) : null;
+    this.setPointer(context ? cursorFor(context) : 'default');
   }
 
   setPointer(kind: CursorKind): void {

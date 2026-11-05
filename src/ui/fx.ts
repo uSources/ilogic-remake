@@ -41,16 +41,16 @@ export function burst(
   scene: Phaser.Scene,
   view: FxHost,
   at: { x: number; y: number },
-  opts: { colors: number[]; count: number; radius: number; size?: number; duration?: number },
+  options: { colors: number[]; count: number; radius: number; size?: number; duration?: number },
 ): Promise<void> {
-  const size = opts.size ?? BURST_SIZE;
-  const duration = opts.duration ?? BURST_MS;
+  const size = options.size ?? BURST_SIZE;
+  const duration = options.duration ?? BURST_MS;
   const jobs: Promise<void>[] = [];
-  for (let i = 0; i < opts.count; i++) {
+  for (let i = 0; i < options.count; i++) {
     // Repartidos alrededor, con algo de azar en el angulo, la distancia y el tamaño.
-    const angle = (i / opts.count) * Math.PI * 2 + Math.random() * 0.6;
-    const distance = opts.radius * (0.55 + Math.random() * 0.45);
-    const color = opts.colors[i % opts.colors.length]!;
+    const angle = (i / options.count) * Math.PI * 2 + Math.random() * 0.6;
+    const distance = options.radius * (0.55 + Math.random() * 0.45);
+    const color = options.colors[i % options.colors.length]!;
     const squareSize = Math.random() < 0.3 ? size + 1 : size;
     const square = fxRect(scene, view, at.x, at.y, squareSize, squareSize, color);
     jobs.push(
@@ -87,18 +87,18 @@ export async function playAnim(
   view: FxHost,
   at: { x: number; y: number },
   name: string,
-  opts: { frameMs: number; scale?: number },
+  options: { frameMs: number; scale?: number },
 ): Promise<void> {
   const frames = animFrameCount(scene, name);
   if (!frames) return;
   const image = scene.add.image(Math.round(at.x), Math.round(at.y), ATLAS, `ui/anim_${name}_0`).setOrigin(0.5);
-  if (opts.scale) image.setScale(opts.scale);
+  if (options.scale) image.setScale(options.scale);
   view.addFx(image);
   for (let i = 1; i < frames; i++) {
-    await sleep(scene, opts.frameMs);
+    await sleep(scene, options.frameMs);
     image.setFrame(`ui/anim_${name}_${i}`);
   }
-  await sleep(scene, opts.frameMs);
+  await sleep(scene, options.frameMs);
   image.destroy();
 }
 
@@ -120,12 +120,12 @@ export function floatText(
 }
 
 /** Parpadeo (visible/invisible) un numero de veces. */
-export async function blink(scene: Phaser.Scene, obj: Phaser.GameObjects.Components.Visible, times: number, ms = 70): Promise<void> {
+export async function blink(scene: Phaser.Scene, target: Phaser.GameObjects.Components.Visible, times: number, ms = 70): Promise<void> {
   for (let i = 0; i < times * 2; i++) {
-    obj.setVisible(i % 2 === 0);
+    target.setVisible(i % 2 === 0);
     await sleep(scene, ms);
   }
-  obj.setVisible(true);
+  target.setVisible(true);
 }
 
 /** Destello cuadrado de una casilla (marco que se abre). */
@@ -159,17 +159,17 @@ export function tileFlash(scene: Phaser.Scene, view: FxHost, pos: Pos, color: nu
 /** Pequeño empujon de una imagen hacia un punto y vuelta (ataque). */
 export async function lunge(
   scene: Phaser.Scene,
-  obj: Phaser.GameObjects.Components.Transform,
+  target: Phaser.GameObjects.Components.Transform,
   toward: { dx: number; dy: number },
 ): Promise<void> {
   const length = Math.hypot(toward.dx, toward.dy) || 1;
-  const restX = obj.x;
-  const restY = obj.y;
-  obj.x = restX + Math.round((toward.dx / length) * LUNGE_PX);
-  obj.y = restY + Math.round((toward.dy / length) * LUNGE_PX);
+  const restX = target.x;
+  const restY = target.y;
+  target.x = restX + Math.round((toward.dx / length) * LUNGE_PX);
+  target.y = restY + Math.round((toward.dy / length) * LUNGE_PX);
   await sleep(scene, LUNGE_MS);
-  obj.x = restX;
-  obj.y = restY;
+  target.x = restX;
+  target.y = restY;
 }
 
 /**

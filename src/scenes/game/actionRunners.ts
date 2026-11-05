@@ -25,7 +25,7 @@ export interface ActionRunHost {
   readonly state: GameState;
   moveCursorTo(pos: Pos, follow: boolean): void;
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
-  commit(at: Pos, opts: { drop?: boolean }): Promise<void>;
+  commit(at: Pos, options: { drop?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
   /** Viaje de varios turnos (travelTo) para la unidad elegida. */
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
@@ -47,9 +47,9 @@ export interface ActionRunner {
 }
 
 /** Soltar la unidad elegida en la casilla, como al arrastrarla hasta alli. */
-function commitMoving(action: ActionRun, host: ActionRunHost, opts: { drop?: boolean } = {}): Promise<void> {
+function commitMoving(action: ActionRun, host: ActionRunHost, options: { drop?: boolean } = {}): Promise<void> {
   host.moveCursorTo(action.at!, false);
-  return host.commit(action.at!, opts);
+  return host.commit(action.at!, options);
 }
 
 /** Atacar o capturar en la casilla: la unidad elegida va; un grupo recibe la orden y la empieza ya. */

@@ -24,30 +24,30 @@ interface ThumbOptions {
   px?: number;
 }
 
-function drawTerrain(ctx: CanvasRenderingContext2D, s: GameState, palette: number[], px: number): void {
+function drawTerrain(context: CanvasRenderingContext2D, s: GameState, palette: number[], px: number): void {
   for (const { pos, value } of mapGrid(s).cells()) {
-    ctx.fillStyle = hex(palette[value] ?? FALLBACK_TERRAIN);
-    ctx.fillRect(pos.x * px, pos.y * px, px, px);
+    context.fillStyle = hex(palette[value] ?? FALLBACK_TERRAIN);
+    context.fillRect(pos.x * px, pos.y * px, px, px);
   }
 }
 
 /** Cada edificio, con el color de su dueño y un borde oscuro; las bases, una casilla mas grandes. */
-function drawBuildings(ctx: CanvasRenderingContext2D, s: GameState, px: number): void {
+function drawBuildings(context: CanvasRenderingContext2D, s: GameState, px: number): void {
   for (const building of s.buildings) {
     const pad = building.type === tablesOf(s).HQ ? -1 : 0;
-    ctx.fillStyle = PAL_CSS.ink;
-    ctx.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
-    ctx.fillStyle = ownerColor(building.owner);
-    ctx.fillRect(building.x * px + pad, building.y * px + pad, px - 2 * pad, px - 2 * pad);
+    context.fillStyle = PAL_CSS.ink;
+    context.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
+    context.fillStyle = ownerColor(building.owner);
+    context.fillRect(building.x * px + pad, building.y * px + pad, px - 2 * pad, px - 2 * pad);
   }
 }
 
-function drawUnits(ctx: CanvasRenderingContext2D, s: GameState, px: number, which: true | 'own'): void {
+function drawUnits(context: CanvasRenderingContext2D, s: GameState, px: number, which: true | 'own'): void {
   const size = Math.max(1, px - 2);
   for (const unit of s.units) {
     if (unit.carrier !== null || (which === 'own' && unit.team !== 0)) continue;
-    ctx.fillStyle = unit.team === 0 ? PLAYER_UNIT_COLOR : ENEMY_UNIT_COLOR;
-    ctx.fillRect(unit.x * px + 1, unit.y * px + 1, size, size);
+    context.fillStyle = unit.team === 0 ? PLAYER_UNIT_COLOR : ENEMY_UNIT_COLOR;
+    context.fillRect(unit.x * px + 1, unit.y * px + 1, size, size);
   }
 }
 
@@ -61,9 +61,9 @@ export function mapThumb(s: GameState, palette: number[], options: ThumbOptions 
   const canvas = document.createElement('canvas');
   canvas.width = map.width * px;
   canvas.height = map.height * px;
-  const ctx = canvas.getContext('2d')!;
-  drawTerrain(ctx, s, palette, px);
-  drawBuildings(ctx, s, px);
-  if (options.units) drawUnits(ctx, s, px, options.units);
+  const context = canvas.getContext('2d')!;
+  drawTerrain(context, s, palette, px);
+  drawBuildings(context, s, px);
+  if (options.units) drawUnits(context, s, px, options.units);
   return canvas.toDataURL();
 }

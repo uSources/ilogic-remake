@@ -92,21 +92,21 @@ describe('puntos de control', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
       const s = createGame(seededRng(seed * 7919), {});
-      const pts = s.controlPoints ?? [];
-      total += pts.length;
-      expect(pts.length).toBeLessThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlPoints);
+      const points = s.controlPoints ?? [];
+      total += points.length;
+      expect(points.length).toBeLessThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((building) => building.type === HQ && building.owner === team)!;
       const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
       const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
-      for (const point of pts) {
+      for (const point of points) {
         expect(point.owner).toBeNull();
         expect(s.buildings.some((building) => building.x === point.x && building.y === point.y)).toBe(false);
         // Casi a la misma distancia de las dos Bases (las salidas estan junto a ellas).
         expect(Math.abs(da.at(point) - db.at(point))).toBeLessThanOrEqual(8);
       }
       // Las zonas no se tocan.
-      for (const firstPoint of pts)
-        for (const secondPoint of pts)
+      for (const firstPoint of points)
+        for (const secondPoint of points)
           if (firstPoint !== secondPoint)
             expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().tables.DEFAULT_RULES.controlRadius);
     }

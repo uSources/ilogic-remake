@@ -8,10 +8,10 @@ import type { ViewOptions } from './viewOptions';
 import { attackZone, controlZones, dangerCorners, threatZone } from './zones';
 
 /** Niebla del dibujo de 2013: velo oscuro por casilla que no se ve (la nueva va en map/fogLayer.ts). */
-const classicFog: OverlayPainter = (graphics, opts, ctx) => {
-  if (ctx.newArt) return;
+const classicFog: OverlayPainter = (graphics, options, context) => {
+  if (context.newArt) return;
   graphics.fillStyle(PAL_MAP.fog, 0.5);
-  opts.vis.forEach((isVisible, { x, y }) => {
+  options.vis.forEach((isVisible, { x, y }) => {
     if (!isVisible) graphics.fillRect(x * TILE, y * TILE, TILE, TILE);
   });
 };
@@ -44,9 +44,9 @@ export class OverlayLayer implements MapLayer {
     this.object = scene.add.graphics();
   }
 
-  draw(opts: ViewOptions, ctx: OverlayContext): void {
+  draw(options: ViewOptions, context: OverlayContext): void {
     const graphics = this.object;
     graphics.clear();
-    for (const paint of this.painters) paint(graphics, opts, ctx);
+    for (const paint of this.painters) paint(graphics, options, context);
   }
 }

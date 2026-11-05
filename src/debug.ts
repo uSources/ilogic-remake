@@ -26,7 +26,7 @@ export interface IlogicDebug {
    * `theme` 0..4, `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
    * partida guardada (SavedGameState), ver `state()`); con `mission` una mision de la campaña.
    */
-  startGame(opts: {
+  startGame(options: {
     seed?: number;
     size?: number;
     theme?: number | null;
@@ -40,7 +40,7 @@ export interface IlogicDebug {
     mission?: string;
   }): Promise<void>;
   /** Laboratorio de animaciones (src/lab.ts): unidades por nombre, camara lenta y accion a reproducir. */
-  lab(opts?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
+  lab(options?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
   /** Partida en curso (copia) o null fuera de la partida. */
   state(): SavedGameState | null;
   /** Fase de la partida ('map', 'move', 'attack', 'busy'...), dia y si ha terminado. */
@@ -76,18 +76,18 @@ export function installDebug(game: Phaser.Game): void {
     ready: (timeoutMs = 30000) => until(() => !!scene('Menu')?.sys.isActive() && ui.get().screen === 'menu', timeoutMs, 'menu'),
     screen: () => ui.get().screen,
     ui: () => structuredClone(ui.get()),
-    async startGame(opts) {
+    async startGame(options) {
       const data: GameStartData =
-        opts.state !== undefined
-          ? { mode: 'state', state: typeof opts.state === 'string' ? opts.state : JSON.stringify(opts.state) }
-          : opts.mission
-            ? { mode: 'mission', mission: opts.mission }
+        options.state !== undefined
+          ? { mode: 'state', state: typeof options.state === 'string' ? options.state : JSON.stringify(options.state) }
+          : options.mission
+            ? { mode: 'mission', mission: options.mission }
             : {
                 mode: 'new',
-                rules: { fog: opts.fog ?? false, dayLimit: opts.dayLimit ?? null },
-                setup: { seed: opts.seed ?? 1, size: opts.size ?? 20, theme: opts.theme ?? null },
-                general: opts.general ?? null,
-                enemyGeneral: opts.enemyGeneral ?? null,
+                rules: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
+                setup: { seed: options.seed ?? 1, size: options.size ?? 20, theme: options.theme ?? null },
+                general: options.general ?? null,
+                enemyGeneral: options.enemyGeneral ?? null,
               };
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
@@ -95,18 +95,19 @@ export function installDebug(game: Phaser.Game): void {
       await until(() => !!gameScene()?.debugSnapshot, 20000, 'partida');
       await sleep(50);
     },
-    async lab(opts = {}) {
+    async lab(options = {}) {
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
-      const type = (name: string | undefined, def: number) => (name ? Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf(name)) : def);
+      const type = (name: string | undefined, fallback: number) =>
+        name ? Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf(name)) : fallback;
       const base = defaultLab();
       from.scene.start('Game', {
         mode: 'lab',
         lab: {
-          attacker: type(opts.attacker, base.attacker),
-          defender: type(opts.defender, base.defender),
-          slow: !!opts.slow,
-          play: opts.play ?? null,
+          attacker: type(options.attacker, base.attacker),
+          defender: type(options.defender, base.defender),
+          slow: !!options.slow,
+          play: options.play ?? null,
         },
       });
       await until(() => !!gameScene()?.debugSnapshot, 20000, 'laboratorio');

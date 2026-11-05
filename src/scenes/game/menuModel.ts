@@ -15,7 +15,7 @@ export interface MenuInput {
   phase: Phase;
   cursor: Pos;
   /** Unidad elegida (menu de la unidad, carga). */
-  sel: Unit | null;
+  selected: Unit | null;
   /** Opciones del menu de la unidad, ya ordenadas. */
   actions: readonly ActionKey[];
   /** Fabrica de la compra y lo que se puede comprar en ella. */

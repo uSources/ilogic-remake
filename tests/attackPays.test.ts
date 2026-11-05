@@ -24,10 +24,10 @@ describe('botin', () => {
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
     const before = s.funds[0];
-    const ev = attackEvent(s, attacker, defender, seededRng(1));
-    expect(ev.killed).toBe(true);
-    expect(ev.bounty).toBe(Math.round(UNIT.cost[SOLDIER]! * 0.25));
-    expect(s.funds[0]).toBe(before + ev.bounty!);
+    const event = attackEvent(s, attacker, defender, seededRng(1));
+    expect(event.killed).toBe(true);
+    expect(event.bounty).toBe(Math.round(UNIT.cost[SOLDIER]! * 0.25));
+    expect(s.funds[0]).toBe(before + event.bounty!);
     expect(s.funds[1]).toBe(5000);
   });
 
@@ -46,8 +46,8 @@ describe('botin', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const ev = attackEvent(s, attacker, defender, seededRng(1));
-    expect(ev.bounty).toBeUndefined();
+    const event = attackEvent(s, attacker, defender, seededRng(1));
+    expect(event.bounty).toBeUndefined();
     expect(s.funds).toEqual([5000, 5000]);
   });
 });

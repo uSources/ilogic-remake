@@ -130,7 +130,7 @@ export class UnitMoves {
    * Confirmar el movimiento en una casilla (soltar, clic o Enter). `drop`: se ha soltado arrastrando,
    * y entonces se hace directamente lo logico (capturar, esperar si no hay nada mas...). `wait`: mover y esperar.
    */
-  async commit(tile: Pos, opts: CommitOptions = {}): Promise<void> {
+  async commit(tile: Pos, options: CommitOptions = {}): Promise<void> {
     const session = this.session;
     if (!session?.range || this.host.phase !== 'move') return;
     const unit = session.unit;
@@ -141,21 +141,21 @@ export class UnitMoves {
       case 'none':
         return this.host.toMap();
       case 'stay':
-        return this.stayHere(unit, opts);
+        return this.stayHere(unit, options);
       case 'merge':
       case 'load':
         return this.joinUnit(unit, intent.kind, intent.target);
       case 'attack':
         return this.moveAndAttack(session, intent.from, intent.target);
       case 'move':
-        return this.moveTo(session, intent.to, intent.capture, opts);
+        return this.moveTo(session, intent.to, intent.capture, options);
     }
   }
 
   /** Soltarla en su sitio: su menu (o esperar, o capturar si se ha soltado encima de un edificio). */
-  private stayHere(unit: Unit, opts: CommitOptions): void {
-    if (opts.wait) return this.waitSelected();
-    if (opts.drop && canCapture(this.host.state, unit)) return this.host.captureNow();
+  private stayHere(unit: Unit, options: CommitOptions): void {
+    if (options.wait) return this.waitSelected();
+    if (options.drop && canCapture(this.host.state, unit)) return this.host.captureNow();
     this.host.openUnitMenu();
   }
 
@@ -190,7 +190,7 @@ export class UnitMoves {
     host.afterAction();
   }
 
-  private async moveTo(session: MoveSession, to: Pos, isCapture: boolean, opts: CommitOptions): Promise<void> {
+  private async moveTo(session: MoveSession, to: Pos, isCapture: boolean, options: CommitOptions): Promise<void> {
     const host = this.host;
     const unit = session.unit;
     const ghost = unitKey(host.scene.textures, host.state, unit);
@@ -209,9 +209,9 @@ export class UnitMoves {
     if (visibleEnemyUids(host.state) === seenBefore) this.undoStack.push(before);
     else this.clearUndo();
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
-    if (opts.wait) return this.waitSelected();
-    if (opts.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();
-    if (opts.drop && settings.autoWait && hasNothingElseToDo(host.state, unit)) return this.waitSelected();
+    if (options.wait) return this.waitSelected();
+    if (options.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();
+    if (options.drop && settings.autoWait && hasNothingElseToDo(host.state, unit)) return this.waitSelected();
     session.undo = snapshot;
     host.openUnitMenu();
   }

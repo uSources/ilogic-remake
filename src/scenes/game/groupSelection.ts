@@ -24,7 +24,7 @@ export interface SelectionHost {
   readonly state: GameState;
   readonly phase: Phase;
   /** La unidad elegida para moverla (o en su menu). */
-  readonly sel: Unit | null;
+  readonly selected: Unit | null;
   toMap(): void;
   selectUnit(unit: Unit): void;
   /** Deja de enseñar el alcance de una unidad señalada. */
@@ -70,8 +70,8 @@ export class GroupSelection {
   /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */
   selection(): Selection {
     if (this.group.size) return this.group;
-    const { sel, phase } = this.host;
-    return sel && (phase === 'move' || phase === 'unitMenu') ? new Set([sel.uid]) : EMPTY;
+    const { selected, phase } = this.host;
+    return selected && (phase === 'move' || phase === 'unitMenu') ? new Set([selected.uid]) : EMPTY;
   }
 
   units(): Unit[] {

@@ -49,33 +49,33 @@ export function forecastVM(
  */
 export function combatVM(
   s: GameState,
-  ev: Extract<GameEvent, { kind: 'attack' }>,
+  event: Extract<GameEvent, { kind: 'attack' }>,
   stage: CombatVM['stage'],
   icons: { attacker: string | null; defender: string | null },
   seen: { attacker: boolean; defender: boolean },
   id = 0,
 ): CombatVM | null {
-  const combat: CombatInfo | undefined = ev.combat;
+  const combat: CombatInfo | undefined = event.combat;
   if (!combat) return null;
-  const counter = ev.counter ?? 0;
+  const counter = event.counter ?? 0;
   const defTeam = (1 - combat.attackerTeam) as 0 | 1;
   const hitDone = stage !== 'start';
   const counterDone = stage === 'counter';
   const side = (role: CombatSideVM['role']): CombatSideVM => {
-    const atk = role === 'attacker';
-    const known = atk ? seen.attacker : seen.defender;
-    const before = atk ? combat.attackerLife : combat.defenderLife;
-    const hurt = atk ? (counterDone ? counter : null) : hitDone ? ev.damage : null;
+    const isAttacker = role === 'attacker';
+    const known = isAttacker ? seen.attacker : seen.defender;
+    const before = isAttacker ? combat.attackerLife : combat.defenderLife;
+    const hurt = isAttacker ? (counterDone ? counter : null) : hitDone ? event.damage : null;
     const life = Math.max(0, before - (hurt ?? 0));
     return {
-      icon: known ? (atk ? icons.attacker : icons.defender) : null,
-      name: known ? unitLabel(s.content, atk ? combat.attackerType : combat.defenderType) : '???',
-      team: atk ? combat.attackerTeam : defTeam,
+      icon: known ? (isAttacker ? icons.attacker : icons.defender) : null,
+      name: known ? unitLabel(s.content, isAttacker ? combat.attackerType : combat.defenderType) : '???',
+      team: isAttacker ? combat.attackerTeam : defTeam,
       role,
-      rank: known ? (atk ? combat.attackerRank : combat.defenderRank) : 0,
+      rank: known ? (isAttacker ? combat.attackerRank : combat.defenderRank) : 0,
       life,
       lifeBefore: before,
-      hit: known ? (atk ? combat.hit : combat.counterHit) : null,
+      hit: known ? (isAttacker ? combat.hit : combat.counterHit) : null,
       hurt,
       ko: hurt !== null && life <= 0,
     };

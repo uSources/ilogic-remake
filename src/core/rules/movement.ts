@@ -94,7 +94,7 @@ function takeCheapest(open: Pos[], cheapest: Grid<number>): Pos {
 export function moveRange(s: GameState, unit: Unit): MoveRange {
   const board = mapGrid(s);
   const steps = board.createLayer(0);
-  const prev = board.createLayer<Pos | null>(null);
+  const cameFrom = board.createLayer<Pos | null>(null);
   const max = maxSteps(s, unit);
   const movement = movementOf(s, unit.type);
   const { block, taken, stop } = passMap(s, unit);
@@ -115,12 +115,12 @@ export function moveRange(s: GameState, unit: Unit): MoveRange {
       // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
       if (isFirstVisit && !stop.at(next)) open.push(next);
       cheapest.set(next, cost);
-      prev.set(next, current);
+      cameFrom.set(next, current);
       // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
       steps.set(next, taken.at(next) ? 0 : cost);
     }
   }
-  return { steps, prev, maxSteps: max };
+  return { steps, prev: cameFrom, maxSteps: max };
 }
 
 /** Se puede terminar el movimiento en `pos` con este alcance. */

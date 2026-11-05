@@ -13,8 +13,8 @@ describe('tablas de datos', () => {
     buildingCount = tables.BUILDING_NAMES.length,
     terrainCount = TERRAIN_TYPES;
 
-  it.each(Object.entries(tables.UNIT))('UNIT.%s tiene un valor por unidad', (_k, arr) => {
-    expect((arr as readonly unknown[]).length).toBe(unitCount);
+  it.each(Object.entries(tables.UNIT))('UNIT.%s tiene un valor por unidad', (_k, row) => {
+    expect((row as readonly unknown[]).length).toBe(unitCount);
   });
 
   it.each([

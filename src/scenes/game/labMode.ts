@@ -22,18 +22,18 @@ export interface LabHost {
 
 /** Prepara la camara y, si se pide, lanza la accion al poco de empezar. */
 export function startLab(host: LabHost, options: LabOptions): void {
-  const sc = host.scene;
+  const scene = host.scene;
   // Camara lenta: todo lo que va por tweens y temporizadores de la escena.
   const scale = options.slow ? 0.25 : 1;
-  sc.tweens.timeScale = scale;
-  sc.time.timeScale = scale;
+  scene.tweens.timeScale = scale;
+  scene.time.timeScale = scale;
   host.view.cursor = { ...LAB_TARGET };
   // Mas cerca que en una partida: se ven bien los efectos. Centrado entre las dos unidades.
-  const cam = sc.cameras.main;
-  for (let i = 0; i < 2; i++) host.view.zoomStep(1, cam.width / 2, cam.height / 2);
-  cam.centerOn((LAB_TARGET.x - 1) * TILE, (LAB_TARGET.y + 0.5) * TILE);
+  const camera = scene.cameras.main;
+  for (let i = 0; i < 2; i++) host.view.zoomStep(1, camera.width / 2, camera.height / 2);
+  camera.centerOn((LAB_TARGET.x - 1) * TILE, (LAB_TARGET.y + 0.5) * TILE);
   host.refresh();
-  if (options.play) sc.time.delayedCall(450, () => void runLab(host, options.play!));
+  if (options.play) scene.time.delayedCall(450, () => void runLab(host, options.play!));
 }
 
 async function runLab(host: LabHost, action: LabAction): Promise<void> {
@@ -52,6 +52,6 @@ async function runLab(host: LabHost, action: LabAction): Promise<void> {
 }
 
 /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */
-export function restartLab(sc: Phaser.Scene, options: LabOptions): void {
-  sc.scene.start('Game', { mode: 'lab', lab: options } satisfies GameStartData);
+export function restartLab(scene: Phaser.Scene, options: LabOptions): void {
+  scene.scene.start('Game', { mode: 'lab', lab: options } satisfies GameStartData);
 }

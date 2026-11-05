@@ -17,8 +17,8 @@ export function weatherEffectsText(s: GameState, kind: number): string {
   const parts: string[] = [];
   // Tipos de movimiento con el mismo cambio, juntos: "Infantería/Vehículos −1 mov."
   const byDelta = new Map<number, string[]>();
-  WEATHER.move[kind]!.forEach((delta, mt) => {
-    if (delta !== 0) byDelta.set(delta, [...(byDelta.get(delta) ?? []), t(MOVE_TYPE_KEYS[mt]!)]);
+  WEATHER.move[kind]!.forEach((delta, moveType) => {
+    if (delta !== 0) byDelta.set(delta, [...(byDelta.get(delta) ?? []), t(MOVE_TYPE_KEYS[moveType]!)]);
   });
   for (const [delta, names] of byDelta) parts.push(`${names.join('/')} ${signed(delta)} ${t('weatherMoveShort')}`);
   const vision = WEATHER.vision[kind]!;

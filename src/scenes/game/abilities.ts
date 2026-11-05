@@ -53,7 +53,7 @@ export class GeneralAbilities {
 
   /** Habilidad del general del jugador con ese id (undefined si no tiene general o no la tiene). */
   private abilityById(id: string) {
-    return generalOf(this.host.state, 0)?.def.abilities.find((ability) => ability.id === id);
+    return generalOf(this.host.state, 0)?.definition.abilities.find((ability) => ability.id === id);
   }
 
   /** Lanzar la habilidad que se apunta en `c`. */

@@ -18,7 +18,7 @@ export interface CarryHost {
   readonly view: MapView;
   readonly state: GameState;
   readonly phase: Phase;
-  readonly sel: Unit | null;
+  readonly selected: Unit | null;
   /** Unidades que no se dibujan (la cogida va en su propia imagen). */
   readonly hidden: Set<number>;
   toMap(): void;
@@ -29,7 +29,7 @@ export interface CarryHost {
   /** Viaje de varios turnos hasta `goal` (travelTo). */
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Confirmar el movimiento en una casilla (ver UnitMoves.commit). */
-  commit(tile: Pos, opts: { drop?: boolean; wait?: boolean }): Promise<void>;
+  commit(tile: Pos, options: { drop?: boolean; wait?: boolean }): Promise<void>;
 }
 
 interface Carried {
@@ -85,7 +85,7 @@ export class Carry {
     const host = this.host;
     const unit = unitById(host.state, uid);
     if (!unit || !unit.active || !unit.canMove) return false;
-    if (host.phase !== 'move' || host.sel?.uid !== unit.uid) this.selectToMove(unit);
+    if (host.phase !== 'move' || host.selected?.uid !== unit.uid) this.selectToMove(unit);
     if (touch) navigator.vibrate?.(PICK_VIBRATION_MS);
     const textureKey = unitKey(host.scene.textures, host.state, unit);
     if (!textureKey) return true;
@@ -134,9 +134,9 @@ export class Carry {
     this.carried = null;
     host.hidden.delete(carried.uid);
     const intent: Intent = tile ? host.intentAt(tile) : { kind: 'none' };
-    if (tile && host.sel && intent.kind === 'none' && carried.held && this.canReachSomeday(host.sel, tile)) {
+    if (tile && host.selected && intent.kind === 'none' && carried.held && this.canReachSomeday(host.selected, tile)) {
       destroyImages(carried);
-      return void host.giveTravel(host.sel, tile);
+      return void host.giveTravel(host.selected, tile);
     }
     if (!tile || intent.kind === 'none' || intent.kind === 'stay') {
       void this.snapBack(carried);

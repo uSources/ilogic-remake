@@ -24,10 +24,10 @@ export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> |
   s.content.files.generals.find((general) => general.id === id);
 
 /** General de un bando con sus datos (null si no tiene). */
-export function generalOf(s: GameState, team: Team): { state: GeneralState; def: DeepReadonly<GeneralDef> } | null {
+export function generalOf(s: GameState, team: Team): { state: GeneralState; definition: DeepReadonly<GeneralDef> } | null {
   const state = s.generals?.[team];
-  const def = state ? generalDef(s, state.id) : undefined;
-  return state && def ? { state, def } : null;
+  const definition = state ? generalDef(s, state.id) : undefined;
+  return state && definition ? { state, definition } : null;
 }
 
 /** Estado inicial de un general (null si el id no existe). */
@@ -46,10 +46,10 @@ export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, type: nu
 export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): number {
   let factor = 1;
   const attackerGeneral = generalOf(s, attacker.team);
-  for (const passive of attackerGeneral?.def.passive ?? [])
+  for (const passive of attackerGeneral?.definition.passive ?? [])
     if (passive.kind === 'attack' && applies(s, passive, attacker.type)) factor *= passive.factor;
   const defenderGeneral = generalOf(s, defender.team);
-  for (const passive of defenderGeneral?.def.passive ?? [])
+  for (const passive of defenderGeneral?.definition.passive ?? [])
     if (passive.kind === 'defense' && applies(s, passive, defender.type)) factor *= passive.factor;
   return factor;
 }
@@ -58,7 +58,7 @@ export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): 
 function addCharge(s: GameState, team: Team, value: number): void {
   const general = generalOf(s, team);
   if (!general || value <= 0) return;
-  general.state.charge = Math.min(general.def.charge.max, general.state.charge + value / general.def.charge.per);
+  general.state.charge = Math.min(general.definition.charge.max, general.state.charge + value / general.definition.charge.per);
 }
 
 /**
@@ -84,7 +84,7 @@ export type AbilityBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target
 export function abilityBlock(s: GameState, team: Team, abilityId: string, target?: Pos | null): AbilityBlock | null {
   const general = generalOf(s, team);
   if (!general) return 'noGeneral';
-  const ability = general.def.abilities.find((candidate) => candidate.id === abilityId);
+  const ability = general.definition.abilities.find((candidate) => candidate.id === abilityId);
   if (!ability) return 'unknown';
   if (general.state.used) return 'used';
   if (chargeStars(general.state) < ability.cost) return 'charge';
@@ -160,7 +160,7 @@ function applyEffect<K extends GeneralEffect['kind']>(context: EffectContext<K>)
 export function useAbility(s: GameState, team: Team, abilityId: string, target?: Pos | null): GameEventOf<'ability'> | null {
   if (abilityBlock(s, team, abilityId, target)) return null;
   const general = generalOf(s, team)!;
-  const ability = general.def.abilities.find((candidate) => candidate.id === abilityId)!;
+  const ability = general.definition.abilities.find((candidate) => candidate.id === abilityId)!;
   general.state.charge = Math.max(0, general.state.charge - ability.cost);
   general.state.used = true;
   const out: AbilityEffects = { hits: [], heals: [], funds: 0 };
@@ -168,7 +168,7 @@ export function useAbility(s: GameState, team: Team, abilityId: string, target?:
   return {
     kind: 'ability',
     team,
-    general: general.def.id,
+    general: general.definition.id,
     ability: ability.id,
     ...(target ? { target: posOf(target) } : {}),
     hits: out.hits,

@@ -411,40 +411,40 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Cumplir una orden de menu (pantalla final u opciones), venga del mando que venga. */
-  menu(cmd: MenuCommand): void {
-    if (this.ended) return this.endScreen.command(cmd);
-    if (this.optionsPanel.isOpen) this.optionsPanel.command(cmd);
+  menu(command: MenuCommand): void {
+    if (this.ended) return this.endScreen.command(command);
+    if (this.optionsPanel.isOpen) this.optionsPanel.command(command);
   }
 
   /**
    * Cumplir una orden del jugador, venga del teclado o de otro mando (ver src/controls). Es lo unico
    * que un mando necesita de la escena.
    */
-  command(cmd: InputCommand): void {
+  command(command: InputCommand): void {
     // Escribiendo el nombre de una escuadra: el teclado es del cuadro de texto.
     if (ui.get().rename) return;
     if (ui.get().help) {
-      if (CLOSES_HELP.includes(cmd.kind)) ui.set({ help: false });
+      if (CLOSES_HELP.includes(command.kind)) ui.set({ help: false });
       return;
     }
-    if (cmd.kind === 'help') return ui.set({ help: true });
-    if (cmd.kind === 'options') return this.openOptions();
+    if (command.kind === 'help') return ui.set({ help: true });
+    if (command.kind === 'options') return this.openOptions();
     if (this.phase === 'busy') {
       // Durante el turno enemigo, aceptar acelera las animaciones.
-      if (cmd.kind === 'accept') this.fastForward = true;
+      if (command.kind === 'accept') this.fastForward = true;
       return;
     }
-    this.mapCommand(cmd);
+    this.mapCommand(command);
   }
 
   /** Una orden en el mapa o en un menu de bocadillo (ni animando ni con la ayuda abierta). */
-  private mapCommand(cmd: InputCommand): void {
-    switch (cmd.kind) {
+  private mapCommand(command: InputCommand): void {
+    switch (command.kind) {
       case 'cursor':
-        return this.direction(cmd.dx, cmd.dy);
+        return this.direction(command.dx, command.dy);
       case 'accept':
         if (this.time.now < this.inputLockUntil) return;
-        if (this.phase === 'move') return void this.moves.commit(this.view.cursor, { wait: cmd.wait });
+        if (this.phase === 'move') return void this.moves.commit(this.view.cursor, { wait: command.wait });
         return this.accept();
       case 'stepBack':
         return this.stepBack();
@@ -465,14 +465,14 @@ export class GameScene extends Phaser.Scene {
       case 'nextUnit':
         return this.nextUnit();
       case 'order':
-        return this.orders.orderKey(cmd.order);
+        return this.orders.orderKey(command.order);
       case 'group':
         // [CAMBIO] 1-9 elige el grupo (dos veces: la camara va alli); Ctrl lo hace; Mayusculas añade.
-        return this.selection.groupKey(cmd.n, cmd.mode);
+        return this.selection.groupKey(command.n, command.mode);
       case 'orderHere':
         return this.orderHere();
       case 'zoom':
-        this.zoomKey(cmd.dir);
+        this.zoomKey(command.dir);
         return this.refreshHud();
       default:
         return;
@@ -524,9 +524,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Zoom con teclado: alrededor del cursor, y que siga a la vista. */
-  private zoomKey(dir: 1 | -1): void {
+  private zoomKey(direction: 1 | -1): void {
     const cursorOnScreen = this.view.screenOf(this.view.cursor);
-    this.view.zoomStep(dir, cursorOnScreen.x, cursorOnScreen.y);
+    this.view.zoomStep(direction, cursorOnScreen.x, cursorOnScreen.y);
     this.view.ensureVisible(this.view.cursor, 2, true);
   }
 
@@ -895,7 +895,7 @@ export class GameScene extends Phaser.Scene {
   private forecast(cursor: Pos): ForecastVM | null {
     return forecastFor(this.textures, this.s, {
       phase: this.phase,
-      sel: this.moves.selected,
+      selected: this.moves.selected,
       c: cursor,
       intentAt: (pos) => this.moves.intentAt(pos),
       attackSet: this.moves.session?.attackTargets ?? NO_TILES,
@@ -906,7 +906,7 @@ export class GameScene extends Phaser.Scene {
   /** Bocadillo junto al cursor al mover (ver moveTipFor). */
   private moveTip(cursor: Pos): MoveTipVM | null {
     return moveTipFor(this.s, {
-      sel: this.moves.selected,
+      selected: this.moves.selected,
       range: this.moves.session?.range ?? null,
       c: cursor,
       intentAt: (pos) => this.moves.intentAt(pos),
@@ -927,7 +927,7 @@ export class GameScene extends Phaser.Scene {
       s: this.s,
       phase: this.phase,
       cursor: this.view.cursor,
-      sel: this.moves.selected,
+      selected: this.moves.selected,
       actions: this.unitOptions,
       building: this.buyAt,
       buy: this.buyOptions,
@@ -1067,7 +1067,7 @@ export class GameScene extends Phaser.Scene {
         (value) => (this.menuSel = value),
       ),
       match: { get: () => this.match },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       undo: { get: () => this.moves.session?.undo ?? null },
       selection: { get: () => this.selection },
       menuPick: () => this.menuItems[this.menuSel]?.id,
@@ -1081,7 +1081,7 @@ export class GameScene extends Phaser.Scene {
       refresh: () => this.refresh(),
       selectUnit: (unit) => this.moves.select(unit),
       moveCursorTo: (pos, follow) => this.moveCursorTo(pos, follow),
-      commit: (tile, opts) => this.moves.commit(tile, opts),
+      commit: (tile, options) => this.moves.commit(tile, options),
       groupMove: (goal) => this.moves.groupMove(goal),
       giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
       clearUndo: () => this.moves.clearUndo(),
@@ -1112,7 +1112,7 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: { get: () => this.s },
       phase: { get: () => this.phase },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       toMap: () => this.toMap(),
       selectUnit: (unit) => this.moves.select(unit),
       stopInspect: () => {
@@ -1129,7 +1129,7 @@ export class GameScene extends Phaser.Scene {
       view: { get: () => this.view },
       state: { get: () => this.s },
       phase: { get: () => this.phase },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       hidden: { get: () => this.hidden },
       toMap: () => this.toMap(),
       selectUnit: (unit) => this.moves.select(unit),
@@ -1137,7 +1137,7 @@ export class GameScene extends Phaser.Scene {
       intentAt: (tile) => this.moves.intentAt(tile),
       refresh: () => this.refresh(),
       giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
-      commit: (tile, opts) => this.moves.commit(tile, opts),
+      commit: (tile, options) => this.moves.commit(tile, options),
     });
   }
 
@@ -1148,7 +1148,7 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       phase: { get: () => this.phase },
       ended: { get: () => this.ended },
-      sel: { get: () => this.moves.selected },
+      selected: { get: () => this.moves.selected },
       inputLockUntil: { get: () => this.inputLockUntil },
       lastCommit: { get: () => this.moves.lastCommit },
       inspectUid: rw(
@@ -1163,7 +1163,7 @@ export class GameScene extends Phaser.Scene {
       visible: (pos) => this.visibleToPlayer(pos),
       intentAt: (tile) => this.moves.intentAt(tile),
       actionCtx: (at) => this.orders.ctx(at),
-      runAction: (id, at, opts) => this.orders.run(id, at, opts),
+      runAction: (id, at, options) => this.orders.run(id, at, options),
       openOrderMenu: (at) => this.orders.openMenu(at),
       inspect: (unit) => this.inspect(unit),
       accept: () => this.accept(),
@@ -1175,7 +1175,7 @@ export class GameScene extends Phaser.Scene {
       moveCursorTo: (pos, follow) => this.moveCursorTo(pos, follow),
       setPointer: (kind) => this.orders.setPointer(kind),
       updatePointer: (tile) => this.orders.updatePointer(tile),
-      commit: (tile, opts) => this.moves.commit(tile, opts),
+      commit: (tile, options) => this.moves.commit(tile, options),
       waitSelected: () => this.moves.waitSelected(),
       groupMove: (goal) => this.moves.groupMove(goal),
       selectUnit: (unit) => this.moves.select(unit),

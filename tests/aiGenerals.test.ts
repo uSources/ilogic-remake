@@ -33,8 +33,8 @@ describe('la IA usa a su general', () => {
     expect(choice.ability).toBe('airstrike');
     const evs = [...aiGeneral(s, 1)];
     expect(evs).toHaveLength(1);
-    const ev = evs[0]!;
-    expect(ev.kind === 'ability' ? ev.hits.length : 0).toBe(2);
+    const event = evs[0]!;
+    expect(event.kind === 'ability' ? event.hits.length : 0).toBe(2);
   });
 
   it('no gasta la carga en algo que vale poco', () => {

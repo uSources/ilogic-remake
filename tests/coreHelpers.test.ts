@@ -37,9 +37,9 @@ describe('ayudas de reglas', () => {
       { x: 3, y: 3 },
       { x: 5, y: 5 },
     ]) {
-      const st = defenseStars(s, pos);
-      expect(st).toBeGreaterThanOrEqual(0);
-      expect(st).toBeLessThanOrEqual(4);
+      const stars = defenseStars(s, pos);
+      expect(stars).toBeGreaterThanOrEqual(0);
+      expect(stars).toBeLessThanOrEqual(4);
     }
     expect(defenseStars(s, { x: 5, y: 5 })).toBeGreaterThanOrEqual(defenseStars(s, { x: 0, y: 0 }));
   });

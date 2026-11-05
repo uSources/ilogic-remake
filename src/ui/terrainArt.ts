@@ -241,9 +241,9 @@ export function paintTerrain(textures: Phaser.Textures.TextureManager, s: GameSt
   const element = document.createElement('canvas');
   element.width = map.width * TILE;
   element.height = map.height * TILE;
-  const ctx = element.getContext('2d')!;
-  ctx.imageSmoothingEnabled = false;
-  const canvas: TerrainCanvas = { textures, s, ctx, map };
+  const context = element.getContext('2d')!;
+  context.imageSmoothingEnabled = false;
+  const canvas: TerrainCanvas = { textures, s, ctx: context, map };
   const [deepSet, waterSet, landSet] = groundSets(s.theme);
   // Suelo por niveles: todo agua profunda y encima cada nivel con su borde.
   paintWangPass(canvas, deepSet, () => false, true);

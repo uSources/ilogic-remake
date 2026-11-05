@@ -203,7 +203,7 @@ precompiladas (costas, agua, niebla); en tiempo de juego solo se colocan. Ver RE
 ## Vista del mapa
 
 `MapView` (`src/ui/mapView.ts`) es solo la fachada que usan la escena, el menu y las pruebas: crea las
-capas de `src/ui/map/`, las apila en un contenedor y les reparte `render(s, opts)` y `tick(time)`.
+capas de `src/ui/map/`, las apila en un contenedor y les reparte `render(s, options)` y `tick(time)`.
 Cada capa hace una cosa:
 
 | Capa (de abajo arriba) | Fichero | Que dibuja |
@@ -224,7 +224,7 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 `map/viewOptions.ts` (los reexporta `mapView.ts`, igual que `Facing`, `baseFacing` y `faceFlip`).
 
 - **Una marca nueva sobre el mapa** (zona, marco, flecha, barra): una funcion `OverlayPainter`
-  (`(g, opts, ctx) => void`) en `OVERLAYS` (`map/overlayLayer.ts`), en su sitio del orden, y el
+  (`(graphics, options, context) => void`) en `OVERLAYS` (`map/overlayLayer.ts`), en su sitio del orden, y el
   dato que necesite en `ViewOptions`. Hoy: niebla de 2013, puntos de control, amenaza, resaltados,
   capturas, alcance, peligro, ordenes, intenciones y camino (`map/zones.ts`, `map/highlights.ts`,
   `map/orders.ts`).
@@ -310,7 +310,7 @@ puras, sin Phaser, con tests) traduce lo que pulsa el jugador a **ordenes**, y l
 Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `InputCommand`) o el menu
 abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
 
-- **Teclado**: `keyCommand(e)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(e, ctx)` (tabla
+- **Teclado**: `keyCommand(key)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(key, context)` (tabla
   `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas.
 - **Raton y dedos**: la escena traduce el `Phaser.Input.Pointer` a `PointerIn` (`pointerIn`) y llama a
   `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
@@ -343,11 +343,11 @@ Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 
 1. Tablas puras de botones → ordenes, p. ej. `padCommand(button): InputCommand | null` (A = aceptar,
    B = cancelar, cruceta = cursor, Start = opciones, LB/RB = zoom...) y
-   `padMenuCommand(button, ctx): MenuCommand | null` (cruceta = mover, A = `ok`, B = `back`). La
+   `padMenuCommand(button, context): MenuCommand | null` (cruceta = mover, A = `ok`, B = `back`). La
    repeticion al mantener la cruceta se decide aqui (`ok` lleva `repeat`, como el teclado). Con tests.
 2. En la escena, solo el enganche: leer los botones recien pulsados (`this.input.gamepad`, o la API
    `navigator.getGamepads()` en `update()`) y, segun `controlContext()`, llamar a
-   `this.command(padCommand(b))` o a `this.menu(padMenuCommand(b, ctx))`. Nada mas de la escena cambia.
+   `this.command(padCommand(button))` o a `this.menu(padMenuCommand(button, context))`. Nada mas de la escena cambia.
 3. Phaser necesita `input: { gamepad: true }` en la configuracion del juego (`main.ts`).
 4. La ayuda (`helpText.ts`) explica los botones.
 
