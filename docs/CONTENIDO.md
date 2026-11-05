@@ -150,8 +150,8 @@ Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mient
 
 ## Terreno
 
-`terrain.json` tiene los 15 terrenos. **El primero es el suelo llano** (el de los mapas vacios del
-laboratorio, los duelos y las pruebas). Se cambian sus numeros; uno nuevo necesita su arte
+`terrain.json` tiene los 15 terrenos. **El suelo llano** es el que lleva `"plain": true` (exactamente
+uno: el de los mapas vacios del laboratorio, los duelos y las pruebas). Se cambian sus numeros; uno nuevo necesita su arte
 (`terrainArt.ts`) y salir en algun tema (`themes.json`).
 
 | Campo | Que es |
@@ -186,7 +186,8 @@ codigo de mapa) y el mismo contenido.
 ## Clima
 
 `weather.json` tiene los climas de la regla `weather` (la clase `Climate` de 2013, que no se usaba).
-El **primero es el neutro** (despejado): con el empiezan las partidas. Las partidas guardan el `id`
+El **neutro** es el que lleva `"clear": true` (exactamente uno, sin efectos: vision 0, `move`
+vacio y acierto 1): con el empiezan las partidas. Las partidas guardan el `id`
 del clima de hoy y del de mañana.
 
 | Campo | Que es |

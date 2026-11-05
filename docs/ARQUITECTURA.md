@@ -127,16 +127,26 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   Las funciones que hacen algo por un equipo lo reciben siempre (`aiTurn(s, rng, team)`,
   `formSquad(s, team, units)`, `visibility(s, team)`, `outcome(s, team)`), sin valor por defecto.
 - Los informes de la ronda (`RoundReport`, `ControlReport`) llevan una lista por equipo (`perTeam`).
-- La partida termina cuando a un equipo le pasa algo (`isMatchOver`); gana la alianza que deja sin
-  nada a todas las enemigas, o la de mas puntos al acabar el limite de dias.
-- **La escena**: el equipo que juega la persona en la pantalla es `viewer` (`playerTeam(s)`: el
-  primero con `controller: 'human'`), y todos los `...Host` lo tienen. La niebla, la amenaza, lo que
-  se elige y lo que se ordena son del `viewer`; los demas equipos los lleva la IA, por su orden en la
-  partida (`turns.ts`). La interfaz no sabe de numeros de equipo: pinta y escribe por **lado**
-  (`ui/sides.ts`: `'own'`, `'ally'`, `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo
-  propio y aliado, rojo lo enemigo).
-- Hoy los mapas al azar y las misiones son de dos equipos (`duel`); las reglas, la IA, el guardado y
-  la escena ya valen para mas (tests/teams.test.ts: 4 equipos en 2 alianzas).
+- Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan. La
+  partida termina (`isMatchOver`) cuando solo queda en pie una alianza, o cuando ya se ha decidido
+  para los que quedan (objetivo de la mision, limite de dias: gana la alianza con mas puntos). Con 3
+  o mas equipos, que caiga uno no la acaba.
+- Hace falta al menos dos alianzas (`newTeams` y `deserialize` no aceptan menos).
+- Las reglas no miran el `controller`: solo dice quien decide (la escena, la IA). Las ordenes con
+  destino se le pueden dar a cualquier equipo.
+- **La escena**: el equipo que juega la persona en la pantalla es `viewer` (`viewerOf`, con
+  `playerTeam(s)`: el primero con `controller: 'human'`), y todos los `...Host` lo tienen. La niebla,
+  la amenaza, lo que se elige y lo que se ordena son del `viewer`; los demas equipos los lleva la IA,
+  por su orden en la partida y saltandose los derrotados (`turns.ts`). La interfaz no sabe de
+  numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`, `'enemy'` y
+  `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
+- **Limite hasta la fase 4**: en una pantalla juega una sola persona. Una partida con mas de un
+  equipo `'human'` no se puede empezar (`viewerOf` lo dice) y, si otro equipo que no es la IA llegara
+  a su turno, `turns.ts` falla con un error en vez de jugarlo por el.
+- Los mapas al azar valen para 2 o mas equipos (`generateGame` busca una salida por equipo, cada una
+  lejos de las anteriores); la pantalla de nueva partida y las misiones son de dos (`duel`). Las
+  reglas, la IA, el guardado y la escena ya valen para mas (tests/teams.test.ts: 4 equipos en 2
+  alianzas y 3 todos contra todos).
 
 ### Herramientas
 
@@ -311,7 +321,7 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
   interfaz `...Host` (como `PointerTarget` en `src/controls`). La escena se la da con `live()`
   (`host.ts`): los campos se leen en la escena cada vez, asi que el modulo ve siempre la partida y la
   fase del momento sin que la escena haga publicos sus privados.
-- **Estado**: cada modulo es dueño del suyo (la seleccion de `GroupSelection`, `enemyPlaying` de
+- **Estado**: cada modulo es dueño del suyo (la seleccion de `GroupSelection`, `othersPlaying` de
   `TurnFlow`...) y lo reinicia en `reset()`, que llama `resetMatch()`. La escena conserva accesores
   donde lo usan las pruebas (`group`, `multi`, `openGroupMenu`, `view`).
 - **Lo que no usa Phaser se prueba** en `tests/sceneGame.test.ts`.
