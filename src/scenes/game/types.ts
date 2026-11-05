@@ -64,6 +64,11 @@ export interface ActionHost {
   act(action: GameAction): GameEvent[] | null;
   /** Hace la accion y anima sus sucesos (con el dibujo `ghostKey` para la unidad que se mueve); false si no valia. */
   perform(action: GameAction, ghostKey?: string | null): Promise<boolean>;
+  /**
+   * Apunta sucesos que no salen de `act` (los turnos de la IA, las ordenes permanentes) igual que
+   * `act` apunta los suyos: estadisticas, tutorial, Ctrl+Z. Animarlos (`play`) ya no apunta nada.
+   */
+  record(events: readonly GameEvent[]): void;
 }
 
 /** Fases en las que el cursor sigue al puntero. */

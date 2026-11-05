@@ -60,8 +60,6 @@ export interface PlaybackHost {
   visible(pos: Pos): boolean;
   refresh(): void;
   refreshHud(): void;
-  /** Cada evento, antes de animarlo (deshacer, estadisticas, tutorial, ultima jugada). */
-  noteEvent(event: GameEvent): void;
 }
 
 /** Lo que puede usar la animacion de un evento: la escena, la partida y esperas a la velocidad elegida. */
@@ -172,7 +170,6 @@ export class EventPlayer implements EventStage {
     this.view.placeCursor(false);
     host.refreshHud();
     for (const event of events) {
-      host.noteEvent(event);
       await animatorFor(event)(this, event, ghostKey);
     }
     host.hidden.clear();

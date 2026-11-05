@@ -218,6 +218,7 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
           return result.ok ? result.events : null;
         },
         perform: async () => false,
+        record: nop,
         play: async () => {},
       }),
     );

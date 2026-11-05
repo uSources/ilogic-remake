@@ -30,7 +30,6 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, uni
     host.refresh();
   },
   supply: (host, unit) => {
-    host.moves.clearUndo();
     host.act({ kind: 'supply', uid: unit.uid });
     host.afterAction();
   },

@@ -217,6 +217,7 @@ export class TurnFlow {
     const orders = assistTurn(host.state, host.viewer);
     let step = orders.next();
     while (!step.done) {
+      host.record([step.value]);
       await host.play([step.value]);
       if (!this.continues(match)) return null;
       step = orders.next();
@@ -295,6 +296,7 @@ export class TurnFlow {
     await host.wait(host.fastForward ? ENEMY_BANNER_FAST_MS : ENEMY_BANNER_MS);
     if (match !== host.match) return false;
     for (const event of aiTurn(host.state, rng, team)) {
+      host.record([event]);
       await host.play([event]);
       if (!this.continues(match)) return false;
     }
@@ -352,6 +354,7 @@ export class TurnFlow {
     this.otherTeam = team;
     for (const event of aiTurn(host.state, rng, team)) {
       if (match !== host.match) return false;
+      host.record([event]);
       await host.play([event]);
       if (match !== host.match || host.ended) return false;
     }
