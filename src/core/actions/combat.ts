@@ -42,7 +42,7 @@ export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice
   spendUnit(attacker);
   const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, dice) : 0;
   attacker.life -= counter;
-  chargeFromCombat(s, attacker, defender, damage, counter);
+  const charge = chargeFromCombat(s, attacker, defender, damage, counter);
   countKills(attacker, defender);
   const bounty = payBounty(s, attacker, defender);
   const killed = !isAlive(defender);
@@ -59,6 +59,7 @@ export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice
     counter,
     attackerKilled: !isAlive(attacker),
     ...(bounty ? { bounty } : {}),
+    ...(charge.length ? { charge } : {}),
     combat,
   };
 }

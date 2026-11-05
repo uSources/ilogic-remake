@@ -14,6 +14,12 @@ export interface Healing {
   amount: number;
 }
 
+/** La carga que ha ganado el general de un equipo (en estrellas, con decimales). */
+export interface GeneralCharge {
+  team: TeamId;
+  amount: number;
+}
+
 /** Lo que le ha pasado a una escuadra. */
 export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded';
 
@@ -37,8 +43,13 @@ export type GameEvent =
       /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
       counter: number;
       attackerKilled: boolean;
-      /** [CAMBIO] Dinero cobrado por destruir una unidad (para quien la destruyo). */
+      /**
+       * [CAMBIO] Dinero cobrado por destruir una unidad (para quien la destruyo), entero: si pasa del
+       * maximo, lo que se pierde lo cuenta un suceso 'fundsCapped' de la misma accion.
+       */
       bounty?: number;
+      /** Carga que gana el general de cada equipo por el combate (solo los que la ganan). */
+      charge?: GeneralCharge[];
       /** Como estaban las dos antes del combate (ver CombatInfo). */
       combat: CombatInfo;
     }
@@ -72,9 +83,16 @@ export type GameEvent =
       hits: { uid: number; damage: number }[];
       /** Unidades propias curadas y vida que han recuperado (heal). */
       heals?: Healing[];
-      /** Dinero conseguido (funds). */
+      /** Dinero conseguido (funds), entero: lo que pase del maximo lo cuenta 'fundsCapped'. */
       funds?: number;
     }
+  /**
+   * Al acabar una accion: los pasajeros de un transporte que ha caido, que caen con el (sus uids; `transport`
+   * ya no existe).
+   */
+  | { kind: 'cargoLost'; actor: null; transport: number; team: TeamId; passengers: number[] }
+  /** Al acabar una accion o la ronda: el dinero de un equipo que pasaba del maximo y se ha perdido. */
+  | { kind: 'fundsCapped'; actor: null; team: TeamId; lost: number }
   /** Fin de ronda: lo que cobra un equipo por sus edificios o por sus puntos de control. */
   | { kind: 'income'; actor: null; team: TeamId; amount: number; source: 'buildings' | 'controlPoints' }
   /** Fin de ronda: una unidad curada en un edificio propio. */

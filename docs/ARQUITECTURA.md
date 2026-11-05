@@ -102,11 +102,15 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 Cada accion y el fin de ronda devuelven sus sucesos (`GameEvent`, `model/events.ts`), completos para
 contar lo que ha pasado sin mirar la partida: quien lo hizo (`actor`: el equipo que mando la accion,
 o null en los del fin de ronda), a quien (uids), tipos y casillas. El ataque nombra a su objetivo por
-uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`); la compra, el tipo y el
-equipo; la captura, siempre los puntos que quedan. Con ellos se anima (`ANIMATORS`), se cuentan las
+uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`), el botin y la carga que
+gana cada general (`charge`); la compra, el tipo y el equipo; la captura, siempre los puntos que
+quedan. Lo que dejan en orden las `INVARIANTS` tambien se cuenta, detras de los de la accion y sin
+actor: `cargoLost` (los pasajeros de un transporte que cae) y `fundsCapped` (el dinero que pasaba del
+maximo; botin, poderes e ingresos se cuentan enteros y lo perdido va aqui, porque el tope se aplica
+al acabar la accion o la ronda, no al cobrar). Con ellos se anima (`ANIMATORS`), se cuentan las
 estadisticas (`recordEvent`, por el `actor`) y se resume el fin de ronda (`roundReport(s, events)`:
 lo que enseña la escena). `endRound` devuelve los suyos: `income`, `heal`, `upkeep`,
-`controlPoint`, `newDay`, `weather`; cada paso de `ROUND_PHASES` da los que tiene.
+`controlPoint`, `fundsCapped`, `newDay`, `weather`; cada paso de `ROUND_PHASES` da los que tiene.
 
 Las piezas de abajo, que usa todo lo demas:
 

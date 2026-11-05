@@ -676,6 +676,9 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   standingOrder: noAnimation,
   standingOrderDone: noAnimation,
   squad: noAnimation,
+  // Los pasajeros caen con la explosion del transporte (la del ataque); el dinero perdido, en la barra.
+  cargoLost: noAnimation,
+  fundsCapped: noAnimation,
   // El fin de ronda lo cuenta su resumen (turns.ts), no una animacion por suceso.
   income: noAnimation,
   heal: noAnimation,

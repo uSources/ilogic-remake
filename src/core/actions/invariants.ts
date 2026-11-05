@@ -8,7 +8,7 @@ import { dropStaleCaptures } from '../rules/capture';
 import { capFunds } from '../rules/funds';
 import { removeDead } from '../rules/lifecycle';
 import { pruneSquads } from '../squads/membership';
-import type { GameAction, GameState } from '../model';
+import type { GameAction, GameEvent, GameState } from '../model';
 
 export interface Invariant {
   /** Nombre corto (para depurar). */
@@ -16,22 +16,33 @@ export interface Invariant {
   /**
    * Deja la partida cumpliendola (si ya la cumple, no cambia nada). `after` es la accion que se acaba
    * de hacer (null: un cambio hecho fuera de una accion, como el combate suelto de los tests).
+   * Devuelve los sucesos de lo que ha cambiado (pasajeros que caen, dinero perdido por el tope),
+   * que van detras de los de la accion.
    */
-  restore(s: GameState, after: GameAction | null): void;
+  restore(s: GameState, after: GameAction | null): GameEvent[];
 }
 
-function forgetLastMoveUnlessMoved(s: GameState, after: GameAction | null): void {
+function forgetLastMoveUnlessMoved(s: GameState, after: GameAction | null): GameEvent[] {
   if (after?.kind !== 'move') delete s.lastMove;
+  return [];
 }
+
+/** Una invariante que no cuenta nada: solo deja la partida en orden. */
+const quietly =
+  (restore: (s: GameState) => void) =>
+  (s: GameState): GameEvent[] => {
+    restore(s);
+    return [];
+  };
 
 /** En orden: quitar una unidad puede dejar una captura sin nadie o una escuadra vacia. */
 export const INVARIANTS: readonly Invariant[] = [
   // Las unidades sin vida no siguen en el mapa (ni lo que llevaran dentro).
   { id: 'dead', restore: removeDead },
   // Una captura a medias solo vale mientras su unidad sigue encima.
-  { id: 'captures', restore: dropStaleCaptures },
+  { id: 'captures', restore: quietly(dropStaleCaptures) },
   // Una escuadra sin unidades desaparece (y nadie se queda apuntado a una que no existe).
-  { id: 'squads', restore: pruneSquads },
+  { id: 'squads', restore: quietly(pruneSquads) },
   // Lo que pase del maximo de dinero se pierde (botin, poderes...: venga de donde venga).
   { id: 'funds', restore: capFunds },
   // Un movimiento solo se deshace justo despues: cualquier otra cosa lo olvida (deshacer no sirve
@@ -39,7 +50,7 @@ export const INVARIANTS: readonly Invariant[] = [
   { id: 'undoWindow', restore: forgetLastMoveUnlessMoved },
 ];
 
-/** Deja la partida cumpliendo todas las INVARIANTS despues de `after` (ver Invariant.restore). */
-export function restoreInvariants(s: GameState, after: GameAction | null): void {
-  for (const invariant of INVARIANTS) invariant.restore(s, after);
+/** Deja la partida cumpliendo todas las INVARIANTS despues de `after` (ver Invariant.restore): sus sucesos. */
+export function restoreInvariants(s: GameState, after: GameAction | null): GameEvent[] {
+  return INVARIANTS.flatMap((invariant) => invariant.restore(s, after));
 }

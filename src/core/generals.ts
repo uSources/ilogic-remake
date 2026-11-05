@@ -20,7 +20,7 @@ import { mapGrid } from './mapGrid';
 import { isHostile, teamState } from './teams';
 import { earn } from './rules/funds';
 import { isOnMap } from './util/predicates';
-import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
+import type { ActionRejection, GameEventOf, GameState, GeneralCharge, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 
@@ -69,22 +69,28 @@ export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): 
   return factor;
 }
 
-/** Suma carga a un equipo por `value` de valor hecho o recibido (sin pasar del maximo). */
-function addCharge(s: GameState, team: TeamId, value: number): void {
+/** Suma carga a un equipo por `value` de valor hecho o recibido (sin pasar del maximo). Devuelve la ganada. */
+function addCharge(s: GameState, team: TeamId, value: number): number {
   const general = generalOf(s, team);
-  if (!general || value <= 0) return;
-  general.state.charge = Math.min(general.definition.charge.max, general.state.charge + value / general.definition.charge.per);
+  if (!general || value <= 0) return 0;
+  const before = general.state.charge;
+  general.state.charge = Math.min(general.definition.charge.max, before + value / general.definition.charge.per);
+  return general.state.charge - before;
 }
 
 /**
  * Carga por un combate: los dos equipos ganan por el valor que hacen y por el que reciben.
- * `toDefender`/`toAttacker`: vida que ha perdido cada uno.
+ * `toDefender`/`toAttacker`: vida que ha perdido cada uno. Devuelve la que ha ganado cada equipo
+ * (solo los que ganan algo), para el suceso del ataque.
  */
-export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): void {
+export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): GeneralCharge[] {
   const defenderValueLost = (toDefender * unitTypeOf(s, defender).cost) / 100;
   const attackerValueLost = (toAttacker * unitTypeOf(s, attacker).cost) / 100;
-  addCharge(s, attacker.team, defenderValueLost + attackerValueLost);
-  addCharge(s, defender.team, defenderValueLost + attackerValueLost);
+  const charges = [attacker.team, defender.team].map((team) => ({
+    team,
+    amount: addCharge(s, team, defenderValueLost + attackerValueLost),
+  }));
+  return charges.filter((charge) => charge.amount > 0);
 }
 
 /** El equipo ve todo el mapa (poder reveal activa). */

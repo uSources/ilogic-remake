@@ -5,7 +5,7 @@ import type { UnitType } from '../content';
 
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
-import type { GameState, Pos, TeamId, Unit, UnitTurnState } from '../model';
+import type { GameEvent, GameState, Pos, TeamId, Unit, UnitTurnState } from '../model';
 import { unitById } from './queries';
 
 /** Una unidad nueva en `at`, sin usar (o en el punto de su turno que se diga: las compradas nacen gastadas). */
@@ -43,8 +43,16 @@ function freeSeatOf(s: GameState, passenger: Unit): void {
 
 /**
  * Limpieza (en el original, cada fotograma): fuera las unidades sin vida. Es una de las INVARIANTS
- * (actions/invariants.ts), que `dispatch` repasa despues de cada accion.
+ * (actions/invariants.ts), que `dispatch` repasa despues de cada accion. Devuelve un suceso
+ * 'cargoLost' por cada transporte que cae con alguien dentro.
  */
-export function removeDead(s: GameState): void {
-  for (const unit of [...s.units]) if (!isAlive(unit)) removeUnit(s, unit.uid);
+export function removeDead(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const unit of s.units.filter((unit) => !isAlive(unit))) {
+    const passengers = unit.cargo.filter((uid): uid is number => uid !== null);
+    // Los pasajeros caen con su transporte: que se sepa sin mirar la partida (repeticiones, estadisticas).
+    if (passengers.length) events.push({ kind: 'cargoLost', actor: null, transport: unit.uid, team: unit.team, passengers });
+    removeUnit(s, unit.uid);
+  }
+  return events;
 }

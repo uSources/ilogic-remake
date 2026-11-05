@@ -28,8 +28,7 @@ export const isValidAction = (s: GameState, team: TeamId, action: GameAction): b
 /** Hace la accion ya comprobada (su `apply`) y deja la partida en orden (INVARIANTS). */
 function applyAction(s: GameState, team: TeamId, action: GameAction, dice: Dice): GameEvent[] {
   const events = definitionOf(action).apply(s, team, action, dice);
-  restoreInvariants(s, action);
-  return events;
+  return [...events, ...restoreInvariants(s, action)];
 }
 
 /**

@@ -10,7 +10,9 @@ import {
   dispatch,
   isValidAction,
 } from '@core/actions';
-import { endRound, newUnit, roundReport } from '@core/rules';
+import { endRound, newUnit, roundReport, unitById } from '@core/rules';
+import { appointGeneral } from '@core/generals';
+import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
@@ -259,6 +261,40 @@ describe('sucesos completos', () => {
     expect(formed).toMatchObject({ kind: 'squad', actor: 0, change: 'formed', uids, name: 'Alfa', key: 1 });
     const order = { kind: 'defend', at: { x: 9, y: 9 } } as const;
     expect(act(s, 0, { kind: 'giveStandingOrder', uids, order })).toEqual([{ kind: 'standingOrder', actor: 0, uids, order }]);
+  });
+
+  it('el ataque cuenta la carga que gana cada general', () => {
+    const s = blankState(PLAIN_RULES);
+    appointGeneral(s, 0, 'Brisa');
+    const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
+    const [attack] = act(s, 0, { kind: 'attack', uid: tank.uid, target: enemy.uid });
+    expect(attack?.kind === 'attack' && attack.damage).toBeGreaterThan(0);
+    expect(attack).toMatchObject({ charge: [{ team: 0, amount: teamState(s, 0).general!.charge }] });
+  });
+
+  it('los pasajeros que caen con su transporte y el dinero que pasa del maximo tienen suceso', () => {
+    const s = blankState(PLAIN_RULES);
+    const transport = newUnit(s, TRANSPORT, 1, { x: 5, y: 5 });
+    const passenger = newUnit(s, SOLDIER, 1, { x: 5, y: 6 });
+    act(s, 1, { kind: 'load', uid: passenger.uid, into: transport.uid });
+    transport.life = 0;
+    teamState(s, 0).funds = s.content.maxFunds + 500;
+    const soldier = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
+    expect(act(s, 0, { kind: 'wait', uid: soldier.uid })).toEqual([
+      { kind: 'wait', actor: 0, uid: soldier.uid },
+      { kind: 'cargoLost', actor: null, transport: transport.uid, team: 1, passengers: [passenger.uid] },
+      { kind: 'fundsCapped', actor: null, team: 0, lost: 500 },
+    ]);
+    expect(unitById(s, passenger.uid)).toBeUndefined();
+    // Al acabar la ronda, con lo cobrado ese dia (la Base) y ya pagado el mantenimiento.
+    teamState(s, 0).funds = s.content.maxFunds;
+    const events = endRound(s);
+    const report = roundReport(s, events);
+    const lost = report.income[0]! - report.upkeep[0]!;
+    expect(lost).toBeGreaterThan(0);
+    expect(events).toContainEqual({ kind: 'fundsCapped', actor: null, team: 0, lost });
+    expect(teamState(s, 0).funds).toBe(s.content.maxFunds);
   });
 
   it('el fin de ronda da sus sucesos sin actor, y su resumen sale de ellos', () => {

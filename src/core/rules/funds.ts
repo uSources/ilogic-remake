@@ -5,22 +5,35 @@
  * el dinero (edificios, puntos de control, botin, un poder del general).
  */
 import { teamState } from '../teams';
-import type { GameState, TeamId } from '../model';
+import type { GameEvent, GameState, TeamId } from '../model';
 
-/** El equipo cobra `amount` (el tope se aplica despues: ver capFunds). */
+/**
+ * El equipo cobra `amount` (el tope se aplica despues: ver capFunds). Los sucesos cuentan lo cobrado
+ * entero; lo que se pierde por el tope lo cuenta el suceso 'fundsCapped'.
+ */
 export function earn(s: GameState, team: TeamId, amount: number): void {
   teamState(s, team).funds += amount;
 }
 
 /** El equipo paga `amount`, o lo que tenga si no le llega. Devuelve lo pagado. */
 export function pay(s: GameState, team: TeamId, amount: number): number {
-  const funds = teamState(s, team);
-  const paid = Math.min(amount, funds.funds);
-  funds.funds -= paid;
+  const state = teamState(s, team);
+  const paid = Math.min(amount, state.funds);
+  state.funds -= paid;
   return paid;
 }
 
-/** Lo que pase del maximo de dinero se pierde (es una de las INVARIANTS y el ultimo paso del dia). */
-export function capFunds(s: GameState): void {
-  for (const team of s.teams) team.funds = Math.min(team.funds, s.content.maxFunds);
+/**
+ * Lo que pase del maximo de dinero se pierde (es una de las INVARIANTS y el ultimo paso del dia).
+ * Devuelve un suceso 'fundsCapped' por cada equipo que pierde algo.
+ */
+export function capFunds(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const team of s.teams) {
+    const lost = team.funds - s.content.maxFunds;
+    if (lost <= 0) continue;
+    team.funds = s.content.maxFunds;
+    events.push({ kind: 'fundsCapped', actor: null, team: team.id, lost });
+  }
+  return events;
 }

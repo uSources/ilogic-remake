@@ -93,9 +93,9 @@ function payUpkeep(s: GameState): GameEvent[] {
 
 /** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
 function nextDay(s: GameState): GameEvent[] {
-  capFunds(s);
+  const capped = capFunds(s);
   s.day++;
-  return [{ kind: 'newDay', actor: null, day: s.day }];
+  return [...capped, { kind: 'newDay', actor: null, day: s.day }];
 }
 
 function changeWeather(s: GameState): GameEvent[] {
