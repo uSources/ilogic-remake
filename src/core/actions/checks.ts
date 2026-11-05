@@ -2,10 +2,10 @@
  * Comprobaciones que comparten las acciones: que las unidades que nombra existen, son del equipo que
  * la manda y aun pueden actuar. Cada una devuelve por que no vale (o null), para encadenarlas con `??`.
  */
-import { unitById } from '../rules/queries';
+import { buildingAt, unitById } from '../rules/queries';
 import { canStillAct } from '../rules/unitTurn';
 import { isOnMap } from '../util/predicates';
-import type { ActionRejection, GameState, TeamId, Unit } from '../model';
+import type { ActionRejection, Building, GameState, Pos, TeamId, Unit } from '../model';
 
 /** Lo que se comprueba despues con la unidad ya encontrada (por defecto, nada mas). */
 type ThenCheck = (unit: Unit) => ActionRejection | null;
@@ -59,4 +59,11 @@ export function someCheckedUnits(s: GameState, uids: readonly number[]): readonl
   const [first, ...rest] = checkedUnits(s, uids);
   if (!first) throw new Error('Una accion ya comprobada sin unidades');
   return [first, ...rest];
+}
+
+/** El edificio de `at` en una accion ya comprobada (si no esta, es un fallo del registro). */
+export function checkedBuilding(s: GameState, at: Pos): Building {
+  const building = buildingAt(s, at);
+  if (!building) throw new Error(`No hay edificio en ${at.x},${at.y} en una accion ya comprobada`);
+  return building;
 }

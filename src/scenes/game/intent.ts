@@ -25,10 +25,11 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   if (!plan || !isOnBoard(s, tile)) return { kind: 'none' };
   const unit = plan.unit;
   if (samePos(tile, unit)) return { kind: 'stay' };
-  const mergeUid = plan.merge.get(posKey(tile));
-  if (mergeUid !== undefined) return { kind: 'merge', target: unitById(s, mergeUid)! };
-  const loadUid = plan.load.get(posKey(tile));
-  if (loadUid !== undefined) return { kind: 'load', target: unitById(s, loadUid)! };
+  // Las de unirse y subir se calcularon al elegirla: si ya no estan, no se ofrecen.
+  const mergeTarget = unitById(s, plan.merge.get(posKey(tile)));
+  if (mergeTarget) return { kind: 'merge', target: mergeTarget };
+  const loadTarget = unitById(s, plan.load.get(posKey(tile)));
+  if (loadTarget) return { kind: 'load', target: loadTarget };
   const other = unitAt(s, tile);
   // Que sea un objetivo lo dice el nucleo (enemigo, a la vista, que le hace daño); desde donde, tambien.
   if (other && targetProblem(s, unit, other, visible) === null) {
