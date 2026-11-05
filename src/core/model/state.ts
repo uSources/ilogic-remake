@@ -18,7 +18,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 4;
+  version: 5;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -28,6 +28,8 @@ export interface GameState {
   units: Unit[];
   buildings: Building[];
   nextUid: number;
+  /** El numero de la siguiente escuadra: como `nextUid`, solo sube (un numero nombra siempre a la misma). */
+  nextSquadId: number;
   /** Numero de ronda (empieza en 1). */
   day: number;
   /**

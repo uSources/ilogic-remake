@@ -9,7 +9,7 @@ import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad } from '@core/squads/membership';
 import { giveStandingOrder } from '@core/squads/standingOrders';
 import { newUnit, outcome } from '@core/rules';
-import { blankState, unitTypeNamed, someUnits } from './helpers';
+import { blankState, unitTypeNamed, someUnits, act } from './helpers';
 import { isHostile } from '@core/teams';
 import { loadContent, type Content } from '@core/content';
 import { mutableCopy } from '@core/util/freeze';
@@ -179,6 +179,34 @@ describe('partida guardada con el formato 3', () => {
     const raw = JSON.parse(serialize(loadGame(fixture('skirmish-v3'))!)) as Record<string, unknown>;
     delete raw.dice;
     expect(loadGame(JSON.stringify(raw))).toBeNull();
+  });
+});
+
+/**
+ * Partida guardada de verdad con el formato 4: la genero el codigo de fc127b5 (esta rama, antes de
+ * `nextSquadId`) con 4 dias de IA contra IA y tres escuadras del jugador, la tercera ya vaciada.
+ */
+describe('partida guardada con el formato 4', () => {
+  it('sigue numerando las escuadras desde la mayor, y desde ahi ningun numero se repite', () => {
+    const json = fixture('skirmish-v4');
+    expect(JSON.parse(json)).not.toHaveProperty('nextSquadId');
+    const s = loadGame(json)!;
+    expect(s.version).toBe(SAVE_VERSION);
+    expect(s.squads?.map((squad) => squad.id)).toEqual([1, 2]);
+    expect(s.nextSquadId).toBe(3);
+    const loner = s.units.find((unit) => unit.team === 0 && unit.squad === undefined && unit.carrier === null)!;
+    act(s, 0, { kind: 'formSquad', uids: [loner.uid] });
+    act(s, 0, { kind: 'leaveSquad', uids: [loner.uid] });
+    const [formed] = act(s, 0, { kind: 'formSquad', uids: [loner.uid] });
+    expect(formed).toMatchObject({ kind: 'squad', change: 'formed', squad: 4 });
+  });
+
+  it('un nextSquadId roto o por debajo de las escuadras que hay se arregla al leer', () => {
+    const raw = JSON.parse(serialize(loadGame(fixture('skirmish-v4'))!)) as Record<string, unknown>;
+    raw.nextSquadId = 1;
+    expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
+    raw.nextSquadId = 'x';
+    expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
   });
 });
 

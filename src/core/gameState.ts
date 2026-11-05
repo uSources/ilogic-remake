@@ -33,6 +33,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
     units: [],
     buildings: [],
     nextUid: 1,
+    nextSquadId: 1,
     day: 1,
     dice: options.diceSeed >>> 0,
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.

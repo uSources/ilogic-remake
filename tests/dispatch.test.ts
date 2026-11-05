@@ -420,12 +420,13 @@ describe('sucesos completos', () => {
       team: 0,
     });
     act(s, 0, { kind: 'formSquad', uids: [other.uid] });
-    // Volver a formarla con la unica que tenia: la vieja deja de existir y la nueva reutiliza su
-    // numero, asi que el orden importa (una repeticion borraria la nueva si fuera al reves).
+    // Volver a formarla con la unica que tenia: la vieja deja de existir (antes, en orden) y la nueva
+    // lleva un numero nuevo (nextSquadId: nunca se reutiliza), con el nombre y la tecla que deja libres.
     expect(act(s, 0, { kind: 'formSquad', uids: [other.uid] })).toEqual([
       { kind: 'squad', actor: 0, squad: 1, change: 'removed', uids: [], name: 'Alfa', key: 1 },
-      { kind: 'squad', actor: 0, squad: 1, change: 'formed', uids: [other.uid], name: 'Alfa', key: 1 },
+      { kind: 'squad', actor: 0, squad: 2, change: 'formed', uids: [other.uid], name: 'Alfa', key: 1 },
     ]);
+    expect(s.nextSquadId).toBe(3);
   });
 
   it('cada escuadra que deja de existir tiene un solo suceso: disbanded (deshacerla) o removed (vaciarla)', () => {
@@ -437,10 +438,10 @@ describe('sucesos completos', () => {
     ]);
     act(s, 0, { kind: 'formSquad', uids: [first.uid, second.uid] });
     expect(act(s, 0, { kind: 'leaveSquad', uids: [first.uid] })).toEqual([
-      { kind: 'squad', actor: 0, squad: 1, change: 'left', uids: [second.uid], name: 'Alfa', key: 1 },
+      { kind: 'squad', actor: 0, squad: 2, change: 'left', uids: [second.uid], name: 'Alfa', key: 1 },
     ]);
     expect(act(s, 0, { kind: 'leaveSquad', uids: [second.uid] })).toEqual([
-      { kind: 'squad', actor: 0, squad: 1, change: 'removed', uids: [], name: 'Alfa', key: 1 },
+      { kind: 'squad', actor: 0, squad: 2, change: 'removed', uids: [], name: 'Alfa', key: 1 },
     ]);
   });
 

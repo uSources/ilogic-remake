@@ -179,12 +179,19 @@ export function isValidMission(frame: SaveFrame, mission: unknown): boolean {
   return isObject(mission) && typeof mission.id === 'string' && isTeam(frame, mission.team) && isValidObjective(frame, mission.objective);
 }
 
-/** El siguiente uid nunca repite uno de las unidades; el dia, si esta roto, es el primero. */
+/**
+ * El siguiente uid y el de la siguiente escuadra nunca repiten uno que ya este; el dia, si esta roto,
+ * es el primero.
+ */
 export function cleanCounters(saved: SavedGame): void {
   const highestUid = Math.max(0, ...objectsIn(saved.units).map((unit) => Number(unit.uid)));
   saved.nextUid = Math.max(Number(saved.nextUid) || 0, highestUid + 1);
+  saved.nextSquadId = Math.max(Number(saved.nextSquadId) || 0, highestSquadId(saved) + 1);
   if (!isInt(saved.day, 1, MAX_DAY)) saved.day = 1;
 }
+
+/** El mayor numero de escuadra de la partida guardada (0 si no hay). */
+export const highestSquadId = (saved: SavedGame): number => Math.max(0, ...objectsIn(saved.squads).map((squad) => Number(squad.id) || 0));
 
 /** Como se genero el mapa: semilla, lado (el del mapa) y tema. */
 function isValidSetup(frame: SaveFrame, setup: unknown): boolean {

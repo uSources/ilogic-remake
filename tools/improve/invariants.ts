@@ -67,6 +67,8 @@ export function checkInvariants(s: GameState): string[] {
     }
   }
   if (s.nextUid <= Math.max(0, ...uids)) errors.push(`nextUid ${s.nextUid} no es mayor que los uid usados`);
+  const squadIds = (s.squads ?? []).map((squad) => squad.id);
+  if (s.nextSquadId <= Math.max(0, ...squadIds)) errors.push(`nextSquadId ${s.nextSquadId} no es mayor que las escuadras que hay`);
   // Guardar y cargar no pierde nada.
   const back = deserialize(serialize(s), saveContext(s.content));
   if (!back) errors.push('la partida no se puede volver a cargar (deserialize la rechaza)');

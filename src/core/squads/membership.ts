@@ -48,15 +48,15 @@ export function squadRemovedEvent(squad: Squad, actor: TeamId | null): GameEvent
 /**
  * Forma una escuadra del equipo `team` con estas unidades suyas (salen de la que tuvieran; que son
  * del equipo lo comprueba la accion) y le da el primer nombre libre y la primera tecla libre del
- * equipo (o la tecla `key`, cuyo nombre de la lista prefiere: Ctrl+3 forma «Charlie»). Las escuadras
- * que se quedan vacias al salir sus unidades se quitan antes (no deben ocupar nombre, tecla ni
- * numero, que se puede volver a usar): van en `removed`.
+ * equipo (o la tecla `key`, cuyo nombre de la lista prefiere: Ctrl+3 forma «Charlie») y el numero
+ * siguiente (`nextSquadId`, que no se repite). Las escuadras que se quedan vacias al salir sus
+ * unidades se quitan antes (no deben ocupar nombre ni tecla): van en `removed`.
  */
 export function formSquad(s: GameState, team: TeamId, mine: SomeUnits, name?: string, key?: number): SquadChangeResult {
   for (const unit of mine) leaveSquad(s, unit);
   const removed = pruneSquads(s);
   const squads = s.squads ?? [];
-  const id = squads.reduce((highest, squad) => Math.max(highest, squad.id), 0) + 1;
+  const id = s.nextSquadId++;
   const teamSquads = squads.filter((squad) => squad.team === team);
   const squadKey = key ?? freeKey(teamSquads);
   const squad: Squad = {

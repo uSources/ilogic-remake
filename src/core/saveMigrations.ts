@@ -397,6 +397,16 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
   {
+    // Hasta el formato 4 el numero de una escuadra nueva era el mayor + 1 (se reutilizaba el de una
+    // que acababa de desaparecer); desde el 5, `nextSquadId`, que solo sube. Se sigue desde el mayor.
+    name: 'numero de la siguiente escuadra',
+    upToVersion: 4,
+    stage: 'read',
+    apply: (raw) => {
+      raw.nextSquadId ??= format4NextSquadId(raw);
+    },
+  },
+  {
     // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
     name: 'la orden comun de las unidades pasa a la escuadra',
     upToVersion: 1,
@@ -406,6 +416,12 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
 ];
+
+/** Formato 4: la siguiente escuadra era la del mayor numero + 1 (copia fija de lo de entonces). */
+function format4NextSquadId(raw: Record<string, unknown>): number {
+  const ids = listOf(raw.squads).map((squad) => (isObject(squad) && typeof squad.id === 'number' ? squad.id : 0));
+  return Math.max(0, ...ids) + 1;
+}
 
 const needs = (migration: SaveMigration, savedVersion: number) => savedVersion <= migration.upToVersion;
 
