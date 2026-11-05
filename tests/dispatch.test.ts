@@ -139,6 +139,15 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     ]);
   });
 
+  it('el paso de un viaje no se deshace (seria un movimiento gratis)', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'travelStep', uid: soldier.uid });
+    expect(s.lastMove).toBeUndefined();
+    expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
+  });
+
   it('una emboscada por el camino acaba el viaje', () => {
     // Un pasillo entre agua con un enemigo escondido en el bosque (reglas de siempre: niebla y emboscadas).
     const s = blankState({ terrainCost: false });
@@ -549,7 +558,7 @@ describe('lo que se manda a unas unidades elegidas sale de las acciones que vale
 describe('ventana de deshacer y menus: piezas del nucleo', () => {
   it('solo las entradas con keepsUndoWindow dejan deshacer lo de antes', () => {
     const keeping = (Object.keys(ACTIONS) as GameActionKind[]).filter((kind) => ACTIONS[kind].keepsUndoWindow);
-    expect(keeping).toEqual(['move', 'travelStep']);
+    expect(keeping).toEqual(['move']);
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });

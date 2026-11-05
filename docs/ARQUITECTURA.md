@@ -92,9 +92,9 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   unidad en otra casilla tambien lo dice el nucleo (`targetProblem`, `canCaptureAt`).
 - Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
-  siguiente (solo las que mueven la dejan abierta: `keepsUndoWindow` en su entrada del registro;
-  dispatch la cierra tras las demas con `closeUndoWindow`, de `rules/lastMove.ts`, donde esta tambien
-  por que no se puede deshacer) o hasta que su unidad deja de estar recien movida (la invariante
+  siguiente (solo 'move' la deja abierta: `keepsUndoWindow` en su entrada del registro; el paso de
+  un viaje no, para que no sea un movimiento gratis; dispatch la cierra tras las demas con
+  `closeUndoWindow`, de `rules/lastMove.ts`, donde esta tambien por que no se puede deshacer) o hasta que su unidad deja de estar recien movida (la invariante
   `undoWindow`: el fin de ronda, si cae). Si al moverse descubrio enemigos
   (`lastMove.revealed`), no se deshace (`'revealed'`): con niebla seria mirar gratis. «Atras» del
   menu de la unidad solo manda `undoMove` (y avisa si el nucleo dice `'revealed'`). Ctrl+Z todavia

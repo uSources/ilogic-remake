@@ -90,8 +90,8 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
     },
   },
   travelStep: {
-    // Como mover: se puede deshacer justo despues.
-    keepsUndoWindow: true,
+    // No se deshace (sin keepsUndoWindow): lo hace el viaje solo, al empezar el turno, y deshacerlo
+    // dejaria a la unidad lista y con su viaje (un movimiento gratis).
     validate: (s, team, action) =>
       actorProblem(s, team, action.uid, (unit) => {
         if (!unit.travelTo) return 'noTravel';
@@ -101,7 +101,7 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const unit = checkedUnit(s, action.uid);
       const step = checkedTravelStep(s, unit);
       if (step.arrives) return endTravel(team, unit, step.end);
-      const walked = walkRemembering(s, team, unit, step.path);
+      const walked = followPath(s, unit, step.path);
       // El paso nunca llega al destino (si llegara este turno, seria 'withinReach'): solo una emboscada lo acaba.
       return [moveEvent(team, unit.uid, walked), ...(walked.ambush ? endTravel(team, unit, 'ambush') : [])];
     },
