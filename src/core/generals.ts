@@ -49,6 +49,14 @@ export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, unit: Pi
   return true;
 }
 
+/**
+ * Las unidades que cura un poder de curar del equipo: las suyas del filtro, en el mapa.
+ * [CAMBIO] Fallo K5: antes curaba tambien a las que iban dentro de un transporte.
+ */
+export function healedByPower(s: GameState, team: TeamId, filter: DeepReadonly<UnitFilter>): Unit[] {
+  return s.units.filter((unit) => unit.team === team && isOnMap(unit) && applies(s, filter, unit));
+}
+
 /** Multiplicador del acierto de `attacker` contra `defender` por los generales de los dos equipos (1 = nada). */
 export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): number {
   let factor = 1;
@@ -136,8 +144,7 @@ const POWER_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>)
     general.reveal = true;
   },
   heal: ({ s, team, effect, out }) => {
-    for (const unit of s.units) {
-      if (unit.team !== team || !applies(s, effect, unit)) continue;
+    for (const unit of healedByPower(s, team, effect)) {
       const amount = Math.min(effect.amount, MAX_LIFE - unit.life);
       if (amount <= 0) continue;
       unit.life += amount;

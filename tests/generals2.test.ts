@@ -1,4 +1,4 @@
-import { usePower, blankState, unitTypeNamed } from './helpers';
+import { usePower, blankState, unitTypeNamed, act } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { choosePower } from '@core/aiGenerals';
 import { rulesWith } from '@core/rulesConfig';
@@ -37,6 +37,19 @@ describe('Roca: reparar', () => {
       { uid: almost.uid, amount: Math.floor(amount / 2) },
     ]);
     expect(event.hits).toEqual([]);
+  });
+
+  it('no cura a las que van dentro de un transporte (K5)', () => {
+    const s = blankState(TEST_RULES);
+    appointGeneral(s, 0, 'Roca');
+    teamState(s, 0).general!.charge = 6;
+    const transport = newUnit(s, unitType('Transport'), 0, { x: 3, y: 3 });
+    const passenger = newUnit(s, unitType('Soldier'), 0, { x: 3, y: 4 });
+    act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
+    passenger.life = 50;
+    const event = usePower(s, 0, 'repair')!;
+    expect(passenger.life).toBe(50);
+    expect(event.heals ?? []).not.toContainEqual(expect.objectContaining({ uid: passenger.uid }));
   });
 
   it('sus vehiculos reciben algo menos de daño', () => {

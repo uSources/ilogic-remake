@@ -14,7 +14,8 @@ import { isHostile } from './teams';
 import { unitTypeOf, weightsOf } from './gameContent';
 import type { GeneralEffect as GeneralEffectDef } from './content';
 import type { DeepReadonly } from './util/freeze';
-import { applies, chargeStars, generalOf } from './generals';
+import { chargeStars, generalOf, healedByPower } from './generals';
+import { MAX_LIFE } from './data';
 import { act, type AiCtx } from './ai/context';
 import { posKey, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
@@ -86,11 +87,8 @@ const EFFECT_VALUES: EffectValues = {
   reveal: (s) => (s.rules.fog ? { target: null, value: weightsOf(s).REVEALVALUE } : null),
   // La vida que recuperarian sus unidades (lo que ya esta entero no cuenta).
   heal: (s, team, effect) => {
-    const healed = (life: number) => Math.min(effect.amount, 100 - life);
-    const value = s.units.reduce(
-      (total, unit) => total + (unit.team === team && applies(s, effect, unit) ? lifeValue(s, healed(unit.life), unit) : 0),
-      0,
-    );
+    const healed = (life: number) => Math.min(effect.amount, MAX_LIFE - life);
+    const value = healedByPower(s, team, effect).reduce((total, unit) => total + lifeValue(s, healed(unit.life), unit), 0);
     return { target: null, value };
   },
   // El dinero que da (el valor ya es dinero).
