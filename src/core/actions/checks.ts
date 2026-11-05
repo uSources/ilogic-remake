@@ -7,21 +7,28 @@ import { canStillAct } from '../rules/unitTurn';
 import { isOnMap } from '../util/predicates';
 import type { ActionRejection, GameState, TeamId, Unit } from '../model';
 
-/** La unidad `uid` existe y es del equipo. */
-export function ownUnitProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
+/** Lo que se comprueba despues con la unidad ya encontrada (por defecto, nada mas). */
+type ThenCheck = (unit: Unit) => ActionRejection | null;
+const nothingMore: ThenCheck = () => null;
+
+/** La unidad `uid` existe y es del equipo; si es asi, sigue con `then(unit)`. */
+export function ownUnitProblem(s: GameState, team: TeamId, uid: number, then: ThenCheck = nothingMore): ActionRejection | null {
   const unit = unitById(s, uid);
   if (!unit) return 'missing';
-  return unit.team === team ? null : 'notYours';
+  return unit.team === team ? then(unit) : 'notYours';
 }
 
-/** La unidad `uid` es del equipo y esta en el mapa (no dentro de un transporte). */
-export function ownUnitOnMapProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
-  return ownUnitProblem(s, team, uid) ?? (isOnMap(unitById(s, uid)!) ? null : 'transported');
+/** La unidad `uid` es del equipo y esta en el mapa (no dentro de un transporte); despues, `then(unit)`. */
+export function ownUnitOnMapProblem(s: GameState, team: TeamId, uid: number, then: ThenCheck = nothingMore): ActionRejection | null {
+  return ownUnitProblem(s, team, uid, (unit) => (isOnMap(unit) ? then(unit) : 'transported'));
 }
 
-/** La unidad `uid` es del equipo, esta en el mapa y aun puede actuar este turno: la que hace la accion. */
-export function actorProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
-  return ownUnitOnMapProblem(s, team, uid) ?? (canStillAct(unitById(s, uid)!) ? null : 'spent');
+/**
+ * La unidad `uid` es del equipo, esta en el mapa y aun puede actuar este turno: la que hace la
+ * accion. Despues, lo propio de la accion con la unidad ya encontrada: `then(unit)`.
+ */
+export function actorProblem(s: GameState, team: TeamId, uid: number, then: ThenCheck = nothingMore): ActionRejection | null {
+  return ownUnitOnMapProblem(s, team, uid, (unit) => (canStillAct(unit) ? then(unit) : 'spent'));
 }
 
 /** Hay al menos una unidad y todas existen y son del equipo. */

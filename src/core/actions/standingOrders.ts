@@ -8,7 +8,6 @@ import {
   giveStandingOrder,
   standingOrderBlock,
 } from '../squads/standingOrders';
-import { unitById } from '../rules/queries';
 import { checkedUnit, checkedUnits, ownUnitProblem, ownUnitsProblem } from './checks';
 import type { ActionRegistry } from './types';
 
@@ -39,11 +38,8 @@ export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 
     },
   },
   finishStandingOrder: {
-    validate: (s, team, action) => {
-      const problem = ownUnitProblem(s, team, action.uid);
-      if (problem) return problem;
-      return effectiveStandingOrder(s, unitById(s, action.uid)!) ? null : 'noStandingOrder';
-    },
+    validate: (s, team, action) =>
+      ownUnitProblem(s, team, action.uid, (unit) => (effectiveStandingOrder(s, unit) ? null : 'noStandingOrder')),
     apply: (s, team, action) => {
       finishStandingOrder(s, checkedUnit(s, action.uid));
       return [{ kind: 'standingOrderDone', actor: team, uid: action.uid }];

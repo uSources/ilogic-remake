@@ -3,9 +3,8 @@ import { posOf } from '../geom';
 import { moveEvent, type MovePath } from '../rules/movement';
 import { unitById } from '../rules/queries';
 import { boardTransport, dropPassenger, loadProblem, mergeInto, mergeProblem, unloadProblem } from '../rules/transport';
-import { canStillAct } from '../rules/unitTurn';
 import type { ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
-import { actorProblem, checkedUnit, ownUnitOnMapProblem } from './checks';
+import { actorProblem, checkedUnit } from './checks';
 import type { ActionRegistry } from './types';
 
 /** Por que no vale que `uid` vaya hasta la unidad `otherUid` (que tiene que existir) y entre en ella. */
@@ -18,7 +17,7 @@ function joinProblem(
 ): ActionRejection | null {
   const other = unitById(s, otherUid);
   if (!other) return 'missing';
-  return actorProblem(s, team, uid) ?? problem(unitById(s, uid)!, other);
+  return actorProblem(s, team, uid, (unit) => problem(unit, other));
 }
 
 /** El suceso de ir hasta otra unidad y entrar en ella; con una emboscada por el camino, solo el de mover. */
@@ -42,15 +41,11 @@ export const TRANSPORT_ACTIONS: Pick<ActionRegistry, 'merge' | 'load' | 'unload'
     },
   },
   unload: {
-    validate: (s, team, action) => {
-      const problem = ownUnitOnMapProblem(s, team, action.uid);
-      if (problem) return problem;
-      const transport = unitById(s, action.uid)!;
-      const passenger = unitById(s, action.passenger);
-      if (!passenger) return 'missing';
-      if (!canStillAct(transport)) return 'spent';
-      return unloadProblem(s, transport, passenger, action.to);
-    },
+    validate: (s, team, action) =>
+      actorProblem(s, team, action.uid, (transport) => {
+        const passenger = unitById(s, action.passenger);
+        return passenger ? unloadProblem(s, transport, passenger, action.to) : 'missing';
+      }),
     apply: (s, team, action) => {
       dropPassenger(checkedUnit(s, action.uid), checkedUnit(s, action.passenger), action.to);
       return [{ kind: 'unload', actor: team, uid: action.uid, passenger: action.passenger, to: posOf(action.to) }];

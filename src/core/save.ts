@@ -13,8 +13,10 @@ import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations'
 import { SAVE_VERSION } from './saveVersion';
 import {
   boardOf,
+  cleanBuildings,
   cleanCounters,
   cleanOptionalParts,
+  cleanUnits,
   hasConsistentCargo,
   hasGameShape,
   hasValidBuildings,
@@ -71,8 +73,9 @@ export function readSave(json: string, context: SaveContext): ReadSaveResult {
   saved.version = SAVE_VERSION;
   const error = gameProblem(saved, context.content);
   if (error) return { ok: false, error };
-  // Ya comprobada parte a parte: tiene la forma de una partida. El contenido es el de quien lee.
-  const state: GameState = { ...(saved as unknown as SavedGameState), content: context.content };
+  assertCheckedGame(saved, error);
+  // El contenido es el de quien lee.
+  const state: GameState = { ...saved, content: context.content };
   migrateChecked(state, version, context);
   return { ok: true, state };
 }
@@ -110,7 +113,19 @@ function gameProblem(saved: SavedGame, content: GameContent): SaveError | null {
   if (!hasConsistentCargo(units)) return 'badCargo';
   if (!hasValidBuildings(frame, buildings)) return 'badBuildings';
   if (saved.mission !== undefined && !isValidMission(frame, saved.mission)) return 'badMission';
+  if (!isValidRules(saved.rules)) return 'badRules';
+  // Todo lo que tiene que estar, esta: lo opcional que este roto se arregla o se quita.
+  cleanUnits(frame, units);
+  cleanBuildings(frame, buildings);
   cleanCounters(saved);
   cleanOptionalParts(frame, saved);
-  return isValidRules(saved.rules) ? null : 'badRules';
+  return null;
+}
+
+/**
+ * Una partida que ha pasado `gameProblem` sin problema (comprobada y limpia) tiene la forma de
+ * `SavedGameState`: lo dice el tipo aqui, una vez. Si no, es un fallo de quien llama.
+ */
+function assertCheckedGame(_saved: SavedGame, problem: SaveError | null): asserts _saved is SavedGame & SavedGameState {
+  if (problem !== null) throw new Error(`La partida no ha pasado las comprobaciones (${problem})`);
 }

@@ -69,7 +69,7 @@ export const COMBAT_ACTIONS: Pick<ActionRegistry, 'attack'> = {
     validate: (s, team, action) => {
       const target = unitById(s, action.target);
       if (!target) return 'missing';
-      return actorProblem(s, team, action.uid) ?? attackProblem(s, unitById(s, action.uid)!, target);
+      return actorProblem(s, team, action.uid, (attacker) => attackProblem(s, attacker, target));
     },
     apply: (s, _team, action, dice) => [resolveAttack(s, checkedUnit(s, action.uid), checkedUnit(s, action.target), dice)],
   },

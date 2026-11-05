@@ -126,15 +126,19 @@ function cleanUnit(frame: SaveFrame, unit: Saved): void {
   dropIfInvalid(unit, 'travelTo', (pos) => isPosOn(frame.board, pos));
 }
 
-/** Cada unidad esta bien (y su uid no se repite); lo opcional roto se quita. */
-export function hasValidUnits(frame: SaveFrame, units: unknown[]): boolean {
+/** Cada unidad esta bien en lo que tiene que tener, y su uid no se repite. Solo mira. */
+export function hasValidUnits(frame: SaveFrame, units: readonly unknown[]): boolean {
   const uids = new Set<unknown>();
   for (const unit of units) {
     if (!isObject(unit) || !isInt(unit.uid, 1, MAX_UID) || uids.has(unit.uid) || !isValidUnit(frame, unit)) return false;
     uids.add(unit.uid);
-    cleanUnit(frame, unit);
   }
   return true;
+}
+
+/** Lo opcional roto de cada unidad se quita (despues de hasValidUnits). */
+export function cleanUnits(frame: SaveFrame, units: readonly unknown[]): void {
+  for (const unit of objectsIn(units)) cleanUnit(frame, unit);
 }
 
 /** Cada pasajero esta en la lista de su transporte y cada transporte lleva a quien dice. */
@@ -154,14 +158,21 @@ export function hasConsistentCargo(list: readonly unknown[]): boolean {
 const isCaptureProgress = (frame: SaveFrame, value: unknown): boolean =>
   isObject(value) && isTeam(frame, value.team) && isInt(value.uid, 1, MAX_UID) && isInt(value.left, 1, MAX_CAPTURE_LEFT);
 
-/** Cada edificio esta bien (tipo, casilla, dueño); una captura a medias rota se olvida (el edificio sigue). */
-export function hasValidBuildings(frame: SaveFrame, buildings: unknown[]): boolean {
-  for (const building of buildings) {
-    if (!isObject(building) || !isEntryId(frame.content.buildings, building.type) || !isPosOn(frame.board, building)) return false;
-    if (building.owner !== null && !isTeam(frame, building.owner)) return false;
+/** Cada edificio esta bien en lo que tiene que tener: tipo, casilla y dueño. Solo mira. */
+export function hasValidBuildings(frame: SaveFrame, buildings: readonly unknown[]): boolean {
+  return buildings.every(
+    (building) =>
+      isObject(building) &&
+      isEntryId(frame.content.buildings, building.type) &&
+      isPosOn(frame.board, building) &&
+      (building.owner === null || isTeam(frame, building.owner)),
+  );
+}
+
+/** Una captura a medias rota se olvida, el edificio sigue (despues de hasValidBuildings). */
+export function cleanBuildings(frame: SaveFrame, buildings: readonly unknown[]): void {
+  for (const building of objectsIn(buildings))
     if (building.capture != null && !isCaptureProgress(frame, building.capture)) building.capture = null;
-  }
-  return true;
 }
 
 /** La mision: su id, el equipo que la juega y su objetivo (cada tipo de objetivo comprueba sus campos). */

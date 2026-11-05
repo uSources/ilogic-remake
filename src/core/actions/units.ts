@@ -1,7 +1,7 @@
 /** Lo demas que hace una unidad con su turno: esperar, reparar a las de al lado y retirarla del mapa. */
 import { canSupply, repairNeighbours } from '../rules/supply';
 import { removeUnit } from '../rules/lifecycle';
-import { cargoUnits, unitById } from '../rules/queries';
+import { cargoUnits } from '../rules/queries';
 import { spendUnit } from '../rules/unitTurn';
 import { actorProblem, checkedUnit, ownUnitOnMapProblem } from './checks';
 import type { ActionRegistry } from './types';
@@ -15,7 +15,7 @@ export const UNIT_ACTIONS: Pick<ActionRegistry, 'wait' | 'supply' | 'deleteUnit'
     },
   },
   supply: {
-    validate: (s, team, action) => actorProblem(s, team, action.uid) ?? (canSupply(s, unitById(s, action.uid)!) ? null : 'nobodyToSupply'),
+    validate: (s, team, action) => actorProblem(s, team, action.uid, (unit) => (canSupply(s, unit) ? null : 'nobodyToSupply')),
     apply: (s, team, action) => {
       const repairs = repairNeighbours(s, checkedUnit(s, action.uid));
       return [{ kind: 'supply', actor: team, uid: action.uid, repairs }];

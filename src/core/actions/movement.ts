@@ -2,7 +2,7 @@
 import { isOnBoard } from '../mapGrid';
 import { posOf } from '../geom';
 import { followPath, moveEvent, plannedPath } from '../rules/movement';
-import { buildingAt, unitAt, unitById } from '../rules/queries';
+import { buildingAt, unitAt } from '../rules/queries';
 import { captureProgress } from '../rules/capture';
 import { readyUnit } from '../rules/unitTurn';
 import { visibleEnemies } from '../rules/visibility';
@@ -22,21 +22,18 @@ function ownCaptureHere(s: GameState, unit: Unit): LastMove['capture'] {
  * descubierto a nadie y su casilla seguir libre.
  */
 function undoProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
-  const problem = actorProblem(s, team, uid);
-  if (problem) return problem;
-  const lastMove = s.lastMove;
-  if (!lastMove || lastMove.uid !== uid || unitById(s, uid)!.turnState !== 'moved') return 'nothingToUndo';
-  if (lastMove.revealed) return 'revealed';
-  return unitAt(s, lastMove.from) ? 'occupied' : null;
+  return actorProblem(s, team, uid, (unit) => {
+    const lastMove = s.lastMove;
+    if (!lastMove || lastMove.uid !== uid || unit.turnState !== 'moved') return 'nothingToUndo';
+    if (lastMove.revealed) return 'revealed';
+    return unitAt(s, lastMove.from) ? 'occupied' : null;
+  });
 }
 
 export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'travel'> = {
   move: {
-    validate: (s, team, action) => {
-      const problem = actorProblem(s, team, action.uid);
-      if (problem) return problem;
-      return plannedPath(s, unitById(s, action.uid)!, action.to, action.path) ? null : 'unreachable';
-    },
+    validate: (s, team, action) =>
+      actorProblem(s, team, action.uid, (unit) => (plannedPath(s, unit, action.to, action.path) ? null : 'unreachable')),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
       const from = posOf(unit);

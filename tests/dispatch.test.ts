@@ -96,6 +96,13 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expectRejected(s, 0, { kind: 'attack', uid: fighter.uid, target: soldier.uid }, 'notTarget');
   });
 
+  it('una unidad que no lucha no ataca (noFighter), aunque le quede turno', () => {
+    const s = blankState(PLAIN_RULES);
+    const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 5, y: 6 });
+    expectRejected(s, 0, { kind: 'attack', uid: transport.uid, target: enemy.uid }, 'noFighter');
+  });
+
   it('un transporte con pasajeros no se une (los perderia)', () => {
     const s = blankState(PLAIN_RULES);
     const first = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });

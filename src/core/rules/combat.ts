@@ -56,7 +56,8 @@ export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, a
  * esta.
  */
 export function attackProblem(s: GameState, attacker: Unit, target: Unit, visible = visibility(s, attacker.team)): ActionRejection | null {
-  if (!canStillFire(s, attacker) || !canFight(s, attacker)) return 'spent';
+  if (!canFight(s, attacker)) return 'noFighter';
+  if (!canStillFire(s, attacker)) return 'spent';
   if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target) || !visible.at(target)) return 'notTarget';
   return canDamage(s, attacker, target) && inAttackRange(s, attacker, attacker, target) ? null : 'notTarget';
 }
