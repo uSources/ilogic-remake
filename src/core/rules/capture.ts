@@ -9,6 +9,7 @@ import type { Building, GameEvent, GameState, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
+import { canStillAct, spendUnit } from './unitTurn';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
@@ -49,7 +50,7 @@ export function dropStaleCaptures(s: GameState): void {
 
 /** Se puede capturar el edificio de debajo (neutral o enemigo: los de la propia alianza, no). */
 export function canCapture(s: GameState, unit: Unit): boolean {
-  if (!unit.active || !isCapturer(s, unit)) return false;
+  if (!canStillAct(unit) || !isCapturer(s, unit)) return false;
   const building = buildingAt(s, unit);
   return !!building && (building.owner === null || isHostile(s, building.owner, unit.team));
 }
@@ -81,8 +82,7 @@ function pointsLeftBefore(s: GameState, building: Building, unit: Unit, total: n
 export function capture(s: GameState, unit: Unit): CaptureResult | null {
   if (!canCapture(s, unit)) return null;
   const building = buildingAt(s, unit)!;
-  unit.active = false;
-  unit.canMove = false;
+  spendUnit(unit);
   const total = capturePointsOf(s, building);
   const left = Math.max(0, pointsLeftBefore(s, building, unit, total) - captureStrength(s, unit));
   if (left === 0) {

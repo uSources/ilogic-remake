@@ -61,7 +61,7 @@ describe('ayudas de reglas', () => {
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const range = moveRange(s, tank);
     expect(attackZone(s, tank, range)).toEqual(unitThreat(s, tank, undefined, range));
-    tank.canFire = false;
+    tank.turnState = 'done';
     expect(attackZone(s, tank, range)).toBeNull();
     const truck = newUnit(s, TRANSPORT, 0, { x: 2, y: 2 });
     expect(attackZone(s, truck, moveRange(s, truck))).toBeNull();

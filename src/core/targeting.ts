@@ -7,6 +7,7 @@ import { isRanged } from './abilities';
 import { canDamage, inAttackRange, tileProtection } from './rules/combat';
 import { reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
 import { minBy } from './util/pick';
+import { canStillFire } from './rules/unitTurn';
 import type { GameState, Pos, Unit } from './model';
 
 /**
@@ -15,7 +16,7 @@ import type { GameState, Pos, Unit } from './model';
  * luego la mas cercana a la unidad. Null si no puede atacarle.
  */
 export function bestAttackTile(s: GameState, unit: Unit, target: Unit, range: MoveRange, end: Pos = unit): Pos | null {
-  if (!unit.canFire || !canDamage(s, unit, target)) return null;
+  if (!canStillFire(s, unit) || !canDamage(s, unit, target)) return null;
   const reaches = (from: Pos) => inAttackRange(s, unit, from, target);
   // Las que no pueden mover y disparar solo atacan desde donde estan.
   if (isRanged(s, unit)) return reaches(unit) ? posOf(unit) : null;

@@ -11,6 +11,7 @@ import { dropStaleCaptures } from './capture';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
 import { unitAt } from './queries';
+import { readyUnit } from './unitTurn';
 
 export interface RoundReport {
   /** Lo que ha cobrado cada equipo, por numero de equipo. */
@@ -39,11 +40,7 @@ export interface RoundPhase {
 
 /** Todas las unidades pueden volver a moverse y disparar. */
 function refreshUnits(s: GameState): void {
-  for (const unit of s.units) {
-    unit.active = true;
-    unit.canMove = true;
-    unit.canFire = true;
-  }
+  for (const unit of s.units) readyUnit(unit);
 }
 
 /** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */

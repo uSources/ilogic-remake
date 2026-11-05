@@ -4,7 +4,7 @@
  */
 export type { Pos } from './geometry';
 export type { ControllerKind, TeamId, TeamState } from './team';
-export type { Unit } from './unit';
+export type { Unit, UnitTurnState } from './unit';
 export type { Building, ControlPoint } from './building';
 export type { StandingOrder, StandingOrderKind } from './standingOrder';
 export type { Squad } from './squad';

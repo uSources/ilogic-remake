@@ -5,20 +5,19 @@ import type { UnitType } from '../content';
 
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
-import type { GameState, Pos, TeamId, Unit } from '../model';
+import type { GameState, Pos, TeamId, Unit, UnitTurnState } from '../model';
 import { dropStaleCaptures } from './capture';
 import { unitById } from './queries';
 
-export function newUnit(s: GameState, unitType: UnitType, team: TeamId, at: Pos, active = true): Unit {
+/** Una unidad nueva en `at`, sin usar (o en el punto de su turno que se diga: las compradas nacen gastadas). */
+export function newUnit(s: GameState, unitType: UnitType, team: TeamId, at: Pos, turnState: UnitTurnState = 'ready'): Unit {
   const unit: Unit = {
     uid: s.nextUid++,
     type: unitType.id,
     team,
     x: at.x,
     y: at.y,
-    active,
-    canMove: active,
-    canFire: active,
+    turnState,
     life: MAX_LIFE,
     carrier: null,
     cargo: Array<number | null>(unitType.cargoSlots).fill(null),

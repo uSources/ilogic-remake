@@ -11,6 +11,7 @@
  * | Modulo | Que va |
  * |---|---|
  * | `queries` | que hay en una casilla, por donde se anda, unidades de un equipo, pasajeros |
+ * | `unitTurn` | el turno de cada unidad: que le queda por hacer y como se gasta |
  * | `visibility` | vision y niebla |
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
@@ -40,6 +41,16 @@ export {
   canMoveOn,
   terrainMoveCost,
 } from './rules/queries';
+export {
+  canStillAct,
+  canStillFire,
+  canStillMove,
+  isUnitTurnState,
+  markMoved,
+  readyUnit,
+  spendUnit,
+  UNIT_TURN_STATES,
+} from './rules/unitTurn';
 export { visionOf, visibility } from './rules/visibility';
 export {
   capturePointsOf,

@@ -154,7 +154,7 @@ export function tileVM(
     const side = sideOf(s, viewer, shown.team);
     const own = side === 'own';
     info.unit = {
-      icon: unitKey(textures, s, { ...shown, active: !own || shown.active }, viewer),
+      icon: unitKey(textures, s, { ...shown, turnState: own ? shown.turnState : 'ready' }, viewer),
       name: nameOf(shownType),
       rank: s.rules.veterancy ? rank(shown) : 0,
       side,

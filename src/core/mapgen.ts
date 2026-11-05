@@ -225,7 +225,7 @@ function placeStartingUnits(s: GameState, spawn: Pos, team: TeamId, rng: Rng): v
     const free = spawnZone(s, spawn).filter((pos) => canMoveOn(unitType.movement, terrainAt(s, pos)) && !unitAt(s, pos));
     // Con la probabilidad corregida (las que quedan por poner); si no sale ninguna, la ultima libre.
     const chosen = sampleInOrder(free, starting.length - index, rng, (left) => left - 1) ?? free.at(-1);
-    if (chosen) newUnit(s, unitType, team, chosen, true);
+    if (chosen) newUnit(s, unitType, team, chosen);
   });
 }
 

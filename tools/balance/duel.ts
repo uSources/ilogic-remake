@@ -9,7 +9,7 @@ import { diceOf } from '@core/dice';
 import { newGameState } from '@core/gameState';
 import { duel } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
-import { attack, inAttackRange, newUnit } from '@core/rules';
+import { attack, inAttackRange, newUnit, readyUnit } from '@core/rules';
 import type { GameState, Rng, RulesConfig, Unit } from '@core/model';
 
 export interface DuelCell {
@@ -52,7 +52,7 @@ function place(s: GameState, attackerType: UnitType, attacker: Unit, defender: U
 }
 
 const fresh = (unit: Unit) => {
-  unit.active = unit.canMove = unit.canFire = true;
+  readyUnit(unit);
 };
 
 /** Cuantos duelos por pareja, en que terreno, con que semilla y con que reglas. */

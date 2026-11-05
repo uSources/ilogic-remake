@@ -11,15 +11,10 @@ import type { GameState, Pos, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { removeUnit } from './lifecycle';
 import { ambushed, approachPath, moveRange, walkPath, type MovePath } from './movement';
+import { canStillAct, spendUnit } from './unitTurn';
 
 /** No lleva a nadie dentro (un transporte con pasajeros no se puede unir). */
 const isEmpty = (unit: Unit): boolean => unit.cargo.every((uid) => uid === null);
-
-/** Termina el turno de la unidad sin poder volver a moverse. */
-function endTurn(unit: Unit): void {
-  unit.active = false;
-  unit.canMove = false;
-}
 
 /** Dos unidades se pueden unir: distintas, del mismo tipo y equipo. */
 const canMergeWith = (unit: Unit, target: Unit): boolean =>
@@ -39,7 +34,7 @@ export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit
  * Devuelve el camino recorrido.
  */
 export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
-  if (!unit.active || !canMergeWith(unit, target)) return null;
+  if (!canStillAct(unit) || !canMergeWith(unit, target)) return null;
   const path = approachPath(s, unit, target);
   if (!path) return null;
   const walked = walkPath(s, unit, path);
@@ -47,7 +42,7 @@ export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
   target.life = Math.min(MAX_LIFE, target.life + unit.life);
   // Al unirse se queda la experiencia de la mas veterana.
   if (unit.kills || target.kills) target.kills = Math.max(unit.kills ?? 0, target.kills ?? 0);
-  endTurn(target);
+  spendUnit(target);
   path.push(posOf(target));
   removeUnit(s, unit.uid);
   dropStaleCaptures(s);
@@ -72,7 +67,7 @@ export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)
 
 /** Subir a un transporte (Unit.Load): la unidad se mueve hasta el y queda dentro. */
 export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null {
-  if (!unit.active || !canCarry(s, transport, unit) || !isOnMap(unit)) return null;
+  if (!canStillAct(unit) || !canCarry(s, transport, unit) || !isOnMap(unit)) return null;
   const slot = freeSlot(transport);
   if (slot === -1) return null;
   const path = approachPath(s, unit, transport);
@@ -84,7 +79,7 @@ export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null
   unit.carrier = transport.uid;
   unit.x = transport.x;
   unit.y = transport.y;
-  endTurn(unit);
+  spendUnit(unit);
   dropStaleCaptures(s);
   return path;
 }
@@ -104,7 +99,7 @@ export function unload(s: GameState, transport: Unit, passenger: Unit, dest: Pos
   passenger.carrier = null;
   passenger.x = dest.x;
   passenger.y = dest.y;
-  endTurn(passenger);
-  endTurn(transport);
+  spendUnit(passenger);
+  spendUnit(transport);
   return true;
 }

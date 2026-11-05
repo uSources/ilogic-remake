@@ -21,7 +21,7 @@ export function forecastVM(
 ): ForecastVM {
   const forecast = combatForecast(s, { ...attacker, x: from.x, y: from.y }, target);
   return {
-    attackerIcon: unitKey(textures, s, { ...attacker, active: true }, viewer),
+    attackerIcon: unitKey(textures, s, { ...attacker, turnState: 'ready' }, viewer),
     defenderIcon: unitKey(textures, s, target, viewer),
     low: forecast.low,
     high: forecast.high,

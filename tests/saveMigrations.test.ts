@@ -166,6 +166,14 @@ describe('partida guardada con el formato 3', () => {
     expect(s.squads?.[0]?.standingOrder?.kind).toBe('defend');
   });
 
+  it('las tres banderas del turno de cada unidad pasan a su turnState', () => {
+    const s = loadGame(fixture('skirmish-v3'))!;
+    const turnOf = (uid: number) => s.units.find((unit) => unit.uid === uid)?.turnState;
+    // La 10 ha capturado y la 2 ha esperado (active: false); la 1 se ha movido (canMove: false).
+    expect([turnOf(10), turnOf(2), turnOf(1)]).toEqual(['done', 'done', 'moved']);
+    expect(s.units.some((unit) => 'active' in unit || 'canMove' in unit || 'canFire' in unit)).toBe(false);
+  });
+
   it('una del formato 4 sin dados esta rota', () => {
     const raw = JSON.parse(serialize(loadGame(fixture('skirmish-v3'))!)) as Record<string, unknown>;
     delete raw.dice;
@@ -187,7 +195,10 @@ describe('MIGRATIONS', () => {
     expect(current).toEqual(raw());
     const old: Record<string, unknown> = raw();
     migrateRead(old, 1, context);
-    expect(old.units).toEqual([{ uid: 1, standingOrder: { kind: 'attack', at: { x: 1, y: 1 } }, travelTo: { x: 2, y: 2 } }]);
+    // Sin banderas del turno (active...): la del formato 3 la da por gastada.
+    expect(old.units).toEqual([
+      { uid: 1, standingOrder: { kind: 'attack', at: { x: 1, y: 1 } }, travelTo: { x: 2, y: 2 }, turnState: 'done' },
+    ]);
     // Sin reglas: las de siempre de ese contenido.
     expect(old.rules).toEqual(defaultContent().defaultRules);
   });

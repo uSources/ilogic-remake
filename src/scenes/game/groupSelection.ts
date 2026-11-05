@@ -5,7 +5,7 @@
  */
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { unitById } from '../../core/rules';
+import { unitById, canStillAct } from '../../core/rules';
 import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
 import { minBy } from '../../core/util/pick';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -101,7 +101,7 @@ export class GroupSelection {
     if (host.phase !== 'map') return host.refresh();
     host.stopInspect();
     const onlyOne = units.length === 1 ? units[0]! : null;
-    if (onlyOne?.active) {
+    if (onlyOne && canStillAct(onlyOne)) {
       this.group.clear();
       this.multi = false;
       return host.selectUnit(onlyOne);

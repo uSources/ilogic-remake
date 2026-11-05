@@ -20,6 +20,8 @@ import {
   unitById,
   visibility,
   wait,
+  canStillMove,
+  readyUnit,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -105,7 +107,7 @@ export class UnitMoves {
   /** Elegir una unidad: a moverla o, si ya se ha movido este turno, directamente a sus acciones. */
   select(unit: Unit): void {
     const host = this.host;
-    if (!unit.canMove) {
+    if (!canStillMove(unit)) {
       this.session = MoveSession.alreadyMoved(unit);
       return host.openUnitMenu();
     }
@@ -200,7 +202,7 @@ export class UnitMoves {
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     const before = serialize(host.state);
     const seenBefore = visibleEnemyUids(host.state, host.viewer);
-    const snapshot: MoveUndo = { uid: unit.uid, x: unit.x, y: unit.y, canFire: unit.canFire };
+    const snapshot: MoveUndo = { uid: unit.uid, x: unit.x, y: unit.y };
     const path = moveUnit(host.state, unit, to, session.range!, this.trailTo(to));
     if (!path) return;
     session.range = null;
@@ -247,7 +249,7 @@ export class UnitMoves {
     host.selection.multi = false;
     const closestFirst = [...host.selection.group]
       .map((uid) => unitById(host.state, uid))
-      .filter((unit): unit is Unit => !!unit && unit.active && unit.canMove && unit.carrier === null)
+      .filter((unit): unit is Unit => !!unit && canStillMove(unit) && unit.carrier === null)
       .sort((firstUnit, secondUnit) => manhattan(firstUnit, goal) - manhattan(secondUnit, goal));
     // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
     this.clearUndo();
@@ -281,8 +283,7 @@ export class UnitMoves {
     this.undoStack.pop();
     unit.x = undo.x;
     unit.y = undo.y;
-    unit.canFire = undo.canFire;
-    unit.canMove = true;
+    readyUnit(unit);
     host.view.cursor = posOf(unit);
     this.select(unit);
   }

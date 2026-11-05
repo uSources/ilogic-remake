@@ -15,6 +15,7 @@ import { removeDead } from './lifecycle';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { visibility } from './visibility';
+import { canStillFire, spendUnit } from './unitTurn';
 
 // ---- Alcance y objetivos ----
 
@@ -52,7 +53,7 @@ export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, a
 
 /** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap). */
 export function attackTargets(s: GameState, attacker: Unit, visible = visibility(s, attacker.team)): Unit[] {
-  if (!attacker.canFire || !canFight(s, attacker)) return [];
+  if (!canStillFire(s, attacker) || !canFight(s, attacker)) return [];
   return s.units.filter(
     (target) =>
       areEnemies(s, target, attacker) &&
@@ -213,15 +214,8 @@ export function canCounter(s: GameState, defender: Unit, attacker: Unit): boolea
 
 /** Puede atacar a `defender` ahora mismo: es enemigo, le queda disparo y lo tiene a tiro. */
 function canAttackNow(s: GameState, attacker: Unit, defender: Unit): boolean {
-  if (!areEnemies(s, attacker, defender) || !attacker.canFire || !canFight(s, attacker)) return false;
+  if (!areEnemies(s, attacker, defender) || !canStillFire(s, attacker) || !canFight(s, attacker)) return false;
   return inAttackRange(s, attacker, attacker, defender);
-}
-
-/** Atacar gasta el turno entero de la unidad. */
-function endTurnAfterAttack(attacker: Unit): void {
-  attacker.active = false;
-  attacker.canFire = false;
-  attacker.canMove = false;
 }
 
 /** Quien destruye a otra unidad gana una baja (veterania), si sigue viva. */
@@ -246,7 +240,8 @@ export function attackFull(s: GameState, attacker: Unit, defender: Unit, dice: D
   const damage = strike(s, attacker, defender, dice);
   defender.life -= damage;
   defender.hitDay = s.day;
-  endTurnAfterAttack(attacker);
+  // Atacar gasta el turno entero de la unidad.
+  spendUnit(attacker);
 
   const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, dice) : 0;
   attacker.life -= counter;

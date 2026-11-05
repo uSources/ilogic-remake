@@ -7,7 +7,7 @@
  */
 import type Phaser from 'phaser';
 import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
-import { movementOf, canWalk, unitAt, unitById, wait } from '../../core/rules';
+import { movementOf, canWalk, unitAt, unitById, wait, canStillMove, readyUnit } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { cancelStandingOrder, standingOrderBlock, giveStandingOrder, pruneSquads } from '../../core/squads';
@@ -280,7 +280,7 @@ export class Orders {
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
     host.toMap();
     showToast(t('orderGiven'));
-    const canStartNow = units.filter((unit) => unit.active && unit.canMove && unit.carrier === null);
+    const canStartNow = units.filter((unit) => canStillMove(unit) && unit.carrier === null);
     if (canStartNow.length) await this.playStandingOrders(canStartNow);
     else host.afterAction();
   }
@@ -294,8 +294,7 @@ export class Orders {
     if (!undo || undo.uid !== unit.uid) return;
     const moved = undo.x !== unit.x || undo.y !== unit.y;
     if (moved) return wait(unit);
-    unit.canMove = true;
-    unit.canFire = undo.canFire;
+    readyUnit(unit);
   }
 
   /** Las unidades empiezan ya su orden (animado); luego esperan. */

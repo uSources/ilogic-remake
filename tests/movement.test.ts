@@ -67,8 +67,7 @@ describe('movimiento: emboscadas en la niebla', () => {
     const path = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank))!;
     expect(path.ambush).toEqual({ x: 6, y: 5 });
     expect(tank.x).toBe(5);
-    expect(tank.active).toBe(false);
-    expect(tank.canFire).toBe(false);
+    expect(tank.turnState).toBe('done');
   });
 
   it('si la casilla anterior a la emboscada es de un aliado, se para en la de antes', () => {
@@ -82,7 +81,7 @@ describe('movimiento: emboscadas en la niebla', () => {
     expect(tank.x).toBe(5);
     s.units.find((unit) => unit.team === 0 && unitTypeOf(s, unit) === SOLDIER)!.x = 5;
     tank.x = 2;
-    tank.active = tank.canMove = true;
+    tank.turnState = 'ready';
     const p2 = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank));
     // Ahora el soldado propio esta al lado del bosque: el enemigo se ve y bloquea, no hay camino.
     expect(p2).toBeNull();

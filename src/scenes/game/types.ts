@@ -54,7 +54,6 @@ export type Intent =
 /** Donde estaba la unidad antes de moverla (para "Atras" en su menu). */
 export interface MoveUndo extends Pos {
   uid: number;
-  canFire: boolean;
 }
 
 /** Fases en las que el cursor sigue al puntero. */

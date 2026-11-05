@@ -5,7 +5,7 @@
 import { unitTypeOf, terrainAt } from '../gameContent';
 import { movementOf, terrainMoveCost, canWalk, isWalkable, occupancy } from './queries';
 import type { MoveType } from '../content';
-import { isRanged, zoneOfControl } from '../abilities';
+import { zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
 import { createLayer, mapGrid } from '../mapGrid';
 import type { Grid } from '../util/grid';
@@ -15,6 +15,7 @@ import { weatherMove } from '../weather';
 import type { GameEvent, GameState, Pos, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { visibility } from './visibility';
+import { canStillMove, markMoved, spendUnit } from './unitTurn';
 
 export interface MoveRange {
   /** Pasos para llegar a cada casilla (1..max); 0 = inalcanzable o casilla de origen. */
@@ -182,9 +183,7 @@ export function ambushed(s: GameState, unit: Unit, walked: MovePath): MovePath {
   const end = walked[walked.length - 1]!;
   unit.x = end.x;
   unit.y = end.y;
-  unit.active = false;
-  unit.canMove = false;
-  unit.canFire = false;
+  spendUnit(unit);
   dropStaleCaptures(s);
   return walked;
 }
@@ -294,16 +293,14 @@ function drawnPath(s: GameState, unit: Unit, dest: Pos, range: MoveRange, via?: 
 
 /** Mueve la unidad (Ilogic.Move). Devuelve el camino recorrido o null si no es valido. */
 export function moveUnit(s: GameState, unit: Unit, dest: Pos, range = moveRange(s, unit), via?: Pos[]): MovePath | null {
-  if (!unit.active || !unit.canMove || samePos(unit, dest) || !canReach(range, dest)) return null;
+  if (!canStillMove(unit) || samePos(unit, dest) || !canReach(range, dest)) return null;
   // `via`: camino trazado por el jugador (si es valido); si no, el mas corto.
   const path = drawnPath(s, unit, dest, range, via) ?? pathTo(range, unit, dest);
   const walked = walkPath(s, unit, path);
   if (walked.ambush) return ambushed(s, unit, walked);
   unit.x = dest.x;
   unit.y = dest.y;
-  unit.canMove = false;
-  // Las unidades a distancia no pueden mover y disparar en el mismo turno.
-  if (isRanged(s, unit)) unit.canFire = false;
+  markMoved(unit);
   dropStaleCaptures(s);
   return path;
 }
@@ -315,7 +312,7 @@ export function moveUnit(s: GameState, unit: Unit, dest: Pos, range = moveRange(
  * [CAMBIO] en el original la union y la carga se hacian "a distancia" sin mover a la unidad.
  */
 export function approachPath(s: GameState, unit: Unit, target: Pos, range = moveRange(s, unit)): Pos[] | null {
-  if (!unit.canMove && manhattan(unit, target) !== 1) return null;
+  if (!canStillMove(unit) && manhattan(unit, target) !== 1) return null;
   const lastStepCost = moveCost(s, movementOf(s, unit), target);
   const stepsTo = (tile: Pos) => (samePos(tile, unit) ? 0 : range.steps.at(tile));
   const canStepInFrom = (tile: Pos) => samePos(tile, unit) || (stepsTo(tile) > 0 && stepsTo(tile) + lastStepCost <= range.maxSteps);

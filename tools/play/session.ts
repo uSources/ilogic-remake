@@ -32,6 +32,7 @@ import {
   unitById,
   visibility,
   wait,
+  canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
 import { diceOf } from '@core/dice';
@@ -187,7 +188,7 @@ export class Session {
     const unit = unitById(this.s, uid);
     if (!unit) throw new UsageError(`no existe la unidad ${uid}`);
     if (unit.team !== this.me) throw new UsageError(`la unidad ${uid} no es tuya`);
-    if (needActive && !unit.active) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
+    if (needActive && !canStillAct(unit)) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
     if (unit.carrier !== null) throw new UsageError(`la unidad ${uid} va dentro de un transporte`);
     return unit;
   }
@@ -227,7 +228,7 @@ export class Session {
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
-        const usedTag = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
+        const usedTag = [canStillAct(unit) ? '' : 'usada'].filter(Boolean).join(' ');
         return `${String(unit.uid).padStart(3)} ${unit.team === this.me ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
@@ -238,7 +239,7 @@ export class Session {
     const targets = attackTargets(this.s, unit);
     const tiles = reachableTiles(range);
     return [
-      `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
+      `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${canStillAct(unit) ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
       `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${unitTypeOf(this.s, unit).id} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
@@ -332,7 +333,7 @@ export class Session {
       `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${outcome(s, me)}`,
       `sin usar: ${
         s.units
-          .filter((unit) => unit.team === me && unit.active && unit.carrier === null)
+          .filter((unit) => unit.team === me && canStillAct(unit) && unit.carrier === null)
           .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,

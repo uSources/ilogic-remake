@@ -17,6 +17,7 @@ import { SAVE_VERSION } from './saveVersion';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { isObject } from './util/predicates';
 import { isRandomState } from './util/random';
+import { isUnitTurnState } from './rules/unitTurn';
 import type { GameState, GeneralState, Pos, RulesConfig, SavedGameState, StandingOrder, TeamId, TeamState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
@@ -141,9 +142,8 @@ function isValidUnit(s: GameState, unit: Unit): boolean {
 }
 
 function cleanUnit(s: GameState, unit: Unit): void {
-  unit.active = !!unit.active;
-  unit.canMove = !!unit.canMove;
-  unit.canFire = !!unit.canFire;
+  // Un punto del turno roto: la unidad ya ha actuado (lo mas prudente; en la ronda siguiente vuelve a estar lista).
+  if (!isUnitTurnState(unit.turnState)) unit.turnState = 'done';
   if (unit.kills !== undefined && !isInt(unit.kills, 0, MAX_COUNT)) delete unit.kills;
   if (unit.hitDay !== undefined && !isInt(unit.hitDay, 0, MAX_COUNT)) delete unit.hitDay;
   if (unit.standingOrder !== undefined && !isStandingOrder(mapGrid(s), unit.standingOrder)) delete unit.standingOrder;

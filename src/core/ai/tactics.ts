@@ -16,6 +16,7 @@ import { moveEvent, reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
 import { merge, mergeTargets } from '../rules/transport';
 import { wait } from '../rules/unitActions';
+import { canStillFire } from '../rules/unitTurn';
 import { visibility } from '../rules/visibility';
 import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
@@ -127,7 +128,7 @@ function* chaseNearest(s: GameState, ai: AiCtx, unit: Unit, enemies: Unit[], ran
 export function* tryAttack(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange, options: AttackOpts = {}): Generator<GameEvent, boolean> {
   const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
-  if (!(unitTypeOf(s, unit).attack !== null) || !unit.canFire) return false;
+  if (!(unitTypeOf(s, unit).attack !== null) || !canStillFire(s, unit)) return false;
   const reach = strikeReach(s, unit);
   const enemies = visibleFoes(s, ai.me).filter((enemy) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy)));
   if (!enemies.length) return false;

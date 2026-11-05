@@ -85,7 +85,7 @@ describe('previewStandingOrders', () => {
     const used = newUnit(s, TANK, 0, { x: 5, y: 5 });
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 5 });
-    Object.assign(used, { active: false, canMove: false });
+    Object.assign(used, { turnState: 'done' });
     expect(previewStandingOrders(s, 0).size).toBe(0);
   });
 

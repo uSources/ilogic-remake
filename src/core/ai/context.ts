@@ -9,6 +9,7 @@ import { movementOf, buildingAt, occupancy } from '../rules/queries';
 import { samePos } from '../geom';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
 import { visibility } from '../rules/visibility';
+import { canStillAct } from '../rules/unitTurn';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
@@ -97,7 +98,7 @@ export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me
 }
 
 /** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */
-export const canAct = (unit: Unit): boolean => unit.active && unit.carrier === null && unit.life > 0;
+export const canAct = (unit: Unit): boolean => canStillAct(unit) && unit.carrier === null && unit.life > 0;
 
 /** Necesita volver a curarse a un edificio. */
 export const needsRepair = (s: GameState, unit: Unit): boolean => unit.life < weightsOf(s).LIFETOBACK;

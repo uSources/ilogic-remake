@@ -7,6 +7,7 @@ import { neighbors4 } from '../geom';
 import { mapGrid } from '../mapGrid';
 import type { GameState, Unit } from '../model';
 import { unitAt } from './queries';
+import { spendUnit } from './unitTurn';
 
 /** Vida que `supplier` le cura a `patient` cada vez (units.json, "heals"). */
 function healAmount(s: GameState, supplier: Unit, patient: Unit): number {
@@ -36,7 +37,6 @@ export function canSupply(s: GameState, supplier: Unit): boolean {
 export function supply(s: GameState, supplier: Unit): number {
   const patients = patientsOf(s, supplier);
   for (const patient of patients) patient.life = Math.min(MAX_LIFE, patient.life + healAmount(s, supplier, patient));
-  supplier.active = false;
-  supplier.canMove = false;
+  spendUnit(supplier);
   return patients.length;
 }

@@ -36,7 +36,7 @@ describe('ordenes del jugador', () => {
     const range = moveRange(s, art);
     expect(bestAttackTile(s, art, near, range)).toBeNull();
     expect(bestAttackTile(s, art, far, range)).toEqual({ x: 10, y: 10 });
-    art.canFire = false;
+    art.turnState = 'done';
     expect(bestAttackTile(s, art, far, range)).toBeNull();
   });
 

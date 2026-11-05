@@ -11,11 +11,11 @@ import { attackTargets } from './combat';
 import { cargoUnits } from './queries';
 import { canSupply } from './supply';
 import { unloadTiles } from './transport';
+import { canStillMove, spendUnit } from './unitTurn';
 
 /** Terminar el turno de la unidad sin hacer nada mas. */
 export function wait(unit: Unit): void {
-  unit.active = false;
-  unit.canMove = false;
+  spendUnit(unit);
 }
 
 export interface UnitActions {
@@ -48,7 +48,7 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     unload: canUnloadSomeone(s, unit),
     supply: canSupply(s, unit),
     wait: true,
-    back: unit.canMove,
+    back: canStillMove(unit),
     orderToAttack: canFight(s, unit),
     orderToCapture: isCapturer(s, unit),
     orderToDefend: canFight(s, unit),

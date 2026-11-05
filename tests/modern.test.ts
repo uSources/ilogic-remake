@@ -110,7 +110,7 @@ describe('reglas nuevas: captura por puntos', () => {
     const r1 = capture(s, unit)!;
     expect(r1).toEqual({ done: false, left: 10, total: 20 });
     expect(s.buildings[0]!.owner).toBe(1);
-    unit.active = true;
+    unit.turnState = 'ready';
     const r2 = capture(s, unit)!;
     expect(r2.done).toBe(true);
     expect(s.buildings[0]!.owner).toBe(0);
@@ -137,7 +137,7 @@ describe('reglas nuevas: captura por puntos', () => {
     dropStaleCaptures(s); // ...la borra el paso que sigue a cada movimiento
     expect(s.buildings[0]!.capture).toBeNull();
     unit.x = 3;
-    unit.active = true;
+    unit.turnState = 'ready';
     expect(capture(s, unit)!.left).toBe(10);
   });
 });
@@ -161,8 +161,8 @@ describe('reglas nuevas: veterania', () => {
     attacker.kills = 6;
     expect(rank(attacker)).toBe(3);
     const ally = newUnit(s, TANK, 0, { x: 2, y: 3 });
-    attacker.active = true;
-    ally.active = true;
+    attacker.turnState = 'ready';
+    ally.turnState = 'ready';
     merge(s, ally, attacker);
     expect(attacker.kills).toBe(6);
   });

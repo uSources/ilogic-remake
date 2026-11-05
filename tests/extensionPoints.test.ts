@@ -64,10 +64,10 @@ describe('pasos del fin de ronda (ROUND_PHASES)', () => {
 
   it('endRound los recorre todos: reactiva unidades y pasa el dia', () => {
     const s = blankState(TEST_RULES);
-    const unit = newUnit(s, fighter(), 0, { x: 1, y: 1 }, false);
+    const unit = newUnit(s, fighter(), 0, { x: 1, y: 1 }, 'done');
     const round = endRound(s);
     expect(s.day).toBe(2);
-    expect(unit.active && unit.canMove && unit.canFire).toBe(true);
+    expect(unit.turnState).toBe('ready');
     expect(round.income).toEqual([0, 0]);
   });
 });

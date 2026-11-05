@@ -12,6 +12,7 @@ import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
 import { visibility } from './visibility';
+import { canStillFire } from './unitTurn';
 import { isHostile } from '../teams';
 
 export interface CombatForecast {
@@ -162,7 +163,7 @@ export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = create
   if (!attack) return out;
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen (como si fuera su turno).
   const canMoveAndFire = !isRanged(s, unit);
-  const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, active: true, canMove: true })) : null;
+  const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, turnState: 'ready' })) : null;
   for (const origin of fireOrigins(s, unit, moveReach)) {
     for (const pos of diamond(out, origin, attack.minRange, attack.maxRange)) out.set(pos, true);
   }
@@ -171,6 +172,6 @@ export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = create
 
 /** Lo que la unidad puede atacar este turno con su alcance de movimiento `range` (null si no puede disparar). */
 export function attackZone(s: GameState, unit: Unit, range: MoveRange): Grid<boolean> | null {
-  if (!canFight(s, unit) || !unit.canFire) return null;
+  if (!canFight(s, unit) || !canStillFire(s, unit)) return null;
   return unitThreat(s, unit, createLayer(s, false), range);
 }

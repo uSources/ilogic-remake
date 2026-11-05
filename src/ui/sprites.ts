@@ -6,6 +6,7 @@ import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
 import { ownerSideOf, sideLetter, sideOf, unitSideLetter } from './sides';
+import { canStillAct } from '../core/rules';
 
 /**
  * Nombres de imagen, igual que en el original (ver docs/SPEC-INTERFAZ.md §5):
@@ -31,7 +32,7 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
 /** El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada, roja la enemiga. */
 export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, unit: Unit, viewer: TeamId): string | null {
   const unitSide = sideOf(s, viewer, unit.team);
-  const side = `${unitSideLetter(unitSide, unit.active)}_`;
+  const side = `${unitSideLetter(unitSide, canStillAct(unit))}_`;
   const unitType = unitTypeOf(s, unit);
   const terrain = unitType.classicSprite[terrainAt(s, unit).id] ?? '';
   const name = unitType.art;

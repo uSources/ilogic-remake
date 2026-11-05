@@ -27,6 +27,7 @@ import {
   othersAfter,
   unitById,
   type RoundReport,
+  canStillMove,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
@@ -96,7 +97,7 @@ const HEAL_TEXT_DELAY_MS = 1100;
 const HEAL_TEXT_STAGGER_MS = 90;
 
 /** Una unidad de `team` que aun puede actuar este turno (y no va dentro de un transporte). */
-const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && unit.active && unit.canMove && unit.carrier === null;
+const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && canStillMove(unit) && unit.carrier === null;
 
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {

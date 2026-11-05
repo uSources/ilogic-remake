@@ -18,6 +18,8 @@ import {
   unload,
   combatForecast,
   threatMap,
+  canStillFire,
+  canStillMove,
 } from '@core/rules';
 import { teamState } from '@core/teams';
 import { blankState, diceFrom, hqId, unitTypeNamed } from './helpers';
@@ -51,13 +53,13 @@ describe('movimiento', () => {
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     expect(moveRange(s, tank).steps.at({ x: 11, y: 10 })).toBe(0);
     moveUnit(s, tank, { x: 10, y: 14 });
-    expect(tank.canMove).toBe(false);
+    expect(canStillMove(tank)).toBe(false);
   });
   it('la artilleria no puede disparar despues de moverse', () => {
     const s = blankState(TEST_RULES);
     const artillery = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
     moveUnit(s, artillery, { x: 10, y: 11 });
-    expect(artillery.canFire).toBe(false);
+    expect(canStillFire(s, artillery)).toBe(false);
   });
 });
 
@@ -72,7 +74,7 @@ describe('combate', () => {
     expect(dmg).toBeLessThan(70); // esperado 50
     expect(enemy.life).toBe(100 - dmg);
     expect(tank.life).toBe(100);
-    expect(tank.active).toBe(false);
+    expect(tank.turnState).toBe('done');
   });
   it('los soldados ya no matan tanques ligeros de un golpe (tabla corregida)', () => {
     const s = blankState(TEST_RULES);
@@ -106,13 +108,13 @@ describe('captura y victoria', () => {
     s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
     const soldier = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     expect(capture(s, soldier)?.done).toBe(false);
-    soldier.active = true;
+    soldier.turnState = 'ready';
     expect(capture(s, soldier)?.done).toBe(true);
     expect(s.buildings[2]!.owner).toBe(0);
     expect(outcome(s, 0)).toBe('playing');
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     capture(s, otherSoldier);
-    otherSoldier.active = true;
+    otherSoldier.turnState = 'ready';
     capture(s, otherSoldier);
     expect(s.buildings[1]!.owner).toBe(0);
     expect(outcome(s, 0)).toBe('won');
@@ -137,7 +139,7 @@ describe('union y transporte', () => {
     const passenger = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
     expect(load(s, passenger, transport)).not.toBeNull();
     expect(passenger.carrier).toBe(transport.uid);
-    transport.active = true;
+    transport.turnState = 'ready';
     expect(unitActions(s, transport).unload).toBe(true);
     expect(unload(s, transport, passenger, { x: 10, y: 11 })).toBe(true);
     expect(passenger.carrier).toBeNull();
@@ -153,7 +155,7 @@ describe('compra y fin de ronda', () => {
     expect(spawn(s, s.buildings[0]!, TANK)).toBeNull();
     expect(teamState(s, 0).funds).toBe(5000);
     const car = spawn(s, s.buildings[0]!, unitTypeNamed('Car'))!;
-    expect(car.active).toBe(false);
+    expect(car.turnState).toBe('done');
     expect(teamState(s, 0).funds).toBe(5000 - unitTypeNamed('Car').cost); // el Jeep: lo que cueste ahora
   });
   it('ingresos y curacion; los aviones ya no caen', () => {
@@ -181,7 +183,7 @@ describe('compra y fin de ronda', () => {
     expect(supply(s, sup)).toBe(1);
     expect(tank.life).toBe(70);
     expect(so.life).toBe(40);
-    expect(sup.active).toBe(false);
+    expect(sup.turnState).toBe('done');
   });
 });
 

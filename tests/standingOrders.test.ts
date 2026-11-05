@@ -55,7 +55,7 @@ function turns(s: GameState, rounds: number): number[] {
     let step = it.next();
     while (!step.done) step = it.next();
     done.push(...step.value);
-    for (const unit of s.units) Object.assign(unit, { active: true, canMove: true, canFire: true });
+    for (const unit of s.units) Object.assign(unit, { turnState: 'ready' });
     s.day++;
   }
   return done;
@@ -167,10 +167,10 @@ describe('ordenes con destino', () => {
     const free = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     const used = newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
     giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 15 });
-    Object.assign(used, { active: false, canMove: false });
+    Object.assign(used, { turnState: 'done' });
     const evs = Array.from(assistTurn(s, 0));
     expect(evs).toEqual([]);
-    expect(free).toMatchObject({ x: 3, y: 3, active: true });
+    expect(free).toMatchObject({ x: 3, y: 3, turnState: 'ready' });
     expect(used).toMatchObject({ x: 8, y: 8 });
     expect(teamState(s, 0).funds).toBe(50000);
   });
@@ -439,7 +439,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     keepCapturing(s, firstSoldier);
     expect(firstSoldier.standingOrder).toEqual({ kind: 'capture', at: { x: 3, y: 5 } });
     expect(isDetached(s, firstSoldier)).toBe(true);
-    for (const unit of s.units) Object.assign(unit, { active: true, canMove: true, canFire: true });
+    for (const unit of s.units) Object.assign(unit, { turnState: 'ready' });
     turns(s, 2);
     expect(s.buildings[3]!.owner).toBe(0);
     expect(effectiveStandingOrder(s, firstSoldier)?.kind).toBe('attack');

@@ -240,6 +240,17 @@ function format3DiceSeed(raw: Record<string, unknown>): number {
   return (mapSeed ^ Math.imul(day, FORMAT_3_DAY_MIX)) >>> 0;
 }
 
+/*
+ * Paso del formato 3: el turno de cada unidad eran tres banderas (active, canMove, canFire). Con
+ * `active` apagado ya habia actuado; con el encendido, si aun no se habia movido estaba sin usar.
+ */
+
+/** El punto del turno de una unidad del formato 3, por sus banderas de entonces. */
+function format3TurnState(unit: Record<string, unknown>): string {
+  if (!unit.active) return 'done';
+  return unit.canMove ? 'ready' : 'moved';
+}
+
 /** Los pasos, del mas antiguo al mas nuevo. */
 export const MIGRATIONS: readonly SaveMigration[] = [
   {
@@ -333,6 +344,21 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     stage: 'read',
     apply: (raw) => {
       raw.dice ??= format3DiceSeed(raw);
+    },
+  },
+  {
+    // Hasta el formato 3, tres banderas por unidad; desde el 4, `turnState` (ver rules/unitTurn.ts).
+    name: 'banderas del turno pasan a turnState',
+    upToVersion: 3,
+    stage: 'read',
+    apply: (raw) => {
+      for (const unit of listOf(raw.units)) {
+        if (!isObject(unit) || unit.turnState !== undefined) continue;
+        unit.turnState = format3TurnState(unit);
+        delete unit.active;
+        delete unit.canMove;
+        delete unit.canFire;
+      }
     },
   },
   {

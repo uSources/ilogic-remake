@@ -83,5 +83,5 @@ export function spawn(s: GameState, building: Building, unitType: UnitType): Uni
   if (buyBlock(s, team, unitType)) return null;
   if (!isWalkable(s, building, unitType.movement)) return null;
   teamState(s, team).funds -= unitType.cost;
-  return newUnit(s, unitType, team, building, false);
+  return newUnit(s, unitType, team, building, 'done');
 }
