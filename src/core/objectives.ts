@@ -79,8 +79,6 @@ function positionOf(s: GameState, uid: number): Pos | undefined {
   return s.units.find((candidate) => candidate.uid === unit.carrier) ?? unit;
 }
 
-const isInsideMap = (pos: Pos, mapSize: number) => Grid.fits({ width: mapSize, height: mapSize }, pos);
-
 const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
   hq: {
     fromMission: (written) => written,
@@ -116,7 +114,9 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     fromMission: (written, unitUids) => ({ kind: 'escort', uid: unitUids[written.vip]!, to: written.to, days: written.days }),
     problems: (written, layout) => [
       ...(written.vip >= 0 && written.vip < layout.unitCount ? [] : [`la unidad a escoltar (${written.vip}) no esta en la lista`]),
-      ...(isInsideMap(written.to, layout.mapSize) ? [] : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
+      ...(Grid.fits({ width: layout.mapSize, height: layout.mapSize }, written.to)
+        ? []
+        : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
     ],
     outcome: (s, objective) => {
       const at = positionOf(s, objective.uid);
