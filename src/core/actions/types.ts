@@ -11,6 +11,12 @@ export interface ActionDefinition<K extends GameActionKind> {
   validate(s: GameState, team: TeamId, action: GameActionOf<K>): ActionRejection | null;
   /** La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. */
   apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice): GameEvent[];
+  /**
+   * Deja abierta la ventana para deshacer (`GameState.lastMove`): solo la accion que la abre (mover).
+   * Cualquier otra la cierra al acabar (dispatch): deshacer no sirve para mirar con una unidad y
+   * volver despues de haber hecho otra cosa.
+   */
+  readonly keepsUndoWindow?: true;
 }
 
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */

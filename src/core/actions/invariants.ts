@@ -8,22 +8,23 @@ import { dropStaleCaptures } from '../rules/capture';
 import { capFunds } from '../rules/funds';
 import { removeDead } from '../rules/lifecycle';
 import { pruneSquads } from '../squads/membership';
-import type { GameAction, GameEvent, GameState } from '../model';
+import { unitById } from '../rules/queries';
+import type { GameEvent, GameState } from '../model';
 
 export interface Invariant {
   /** Nombre corto (para depurar). */
   readonly id: string;
   /**
-   * Deja la partida cumpliendola (si ya la cumple, no cambia nada). `after` es la accion que se acaba
-   * de hacer (null: un cambio hecho fuera de una accion, como el combate suelto de los tests).
-   * Devuelve los sucesos de lo que ha cambiado (pasajeros que caen, dinero perdido por el tope),
-   * que van detras de los de la accion.
+   * Deja la partida cumpliendola (si ya la cumple, no cambia nada). Devuelve los sucesos de lo que
+   * ha cambiado (pasajeros que caen, dinero perdido por el tope), que van detras de los de la accion.
    */
-  restore(s: GameState, after: GameAction | null): GameEvent[];
+  restore(s: GameState): GameEvent[];
 }
 
-function forgetLastMoveUnlessMoved(s: GameState, after: GameAction | null): GameEvent[] {
-  if (after?.kind !== 'move') delete s.lastMove;
+/** El ultimo movimiento solo se puede deshacer mientras su unidad sigue ahi y no ha hecho nada mas. */
+function dropStaleLastMove(s: GameState): GameEvent[] {
+  const lastMove = s.lastMove;
+  if (lastMove && unitById(s, lastMove.uid)?.turnState !== 'moved') delete s.lastMove;
   return [];
 }
 
@@ -45,12 +46,12 @@ export const INVARIANTS: readonly Invariant[] = [
   { id: 'squads', restore: quietly(pruneSquads) },
   // Lo que pase del maximo de dinero se pierde (botin, poderes...: venga de donde venga).
   { id: 'funds', restore: capFunds },
-  // Un movimiento solo se deshace justo despues: cualquier otra cosa lo olvida (deshacer no sirve
-  // para mirar con una unidad y volver despues de haber hecho otra cosa). El fin de ronda tambien.
-  { id: 'undoWindow', restore: forgetLastMoveUnlessMoved },
+  // Lo que se puede deshacer es de una unidad que se acaba de mover (si cae, o vuelve a estar lista
+  // con la ronda nueva, ya no). Que cualquier otra accion lo cierre es cosa de dispatch (keepsUndoWindow).
+  { id: 'undoWindow', restore: dropStaleLastMove },
 ];
 
-/** Deja la partida cumpliendo todas las INVARIANTS despues de `after` (ver Invariant.restore): sus sucesos. */
-export function restoreInvariants(s: GameState, after: GameAction | null): GameEvent[] {
-  return INVARIANTS.flatMap((invariant) => invariant.restore(s, after));
+/** Deja la partida cumpliendo todas las INVARIANTS (ver Invariant.restore): sus sucesos. */
+export function restoreInvariants(s: GameState): GameEvent[] {
+  return INVARIANTS.flatMap((invariant) => invariant.restore(s));
 }

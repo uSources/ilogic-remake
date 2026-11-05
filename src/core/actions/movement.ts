@@ -30,8 +30,14 @@ function undoProblem(s: GameState, team: TeamId, uid: number): ActionRejection |
   });
 }
 
+/** Ya no se puede deshacer el ultimo movimiento (ver ActionDefinition.keepsUndoWindow). */
+export function closeUndoWindow(s: GameState): void {
+  delete s.lastMove;
+}
+
 export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'travel'> = {
   move: {
+    keepsUndoWindow: true,
     validate: (s, team, action) =>
       actorProblem(s, team, action.uid, (unit) => (plannedPath(s, unit, action.to, action.path) ? null : 'unreachable')),
     apply: (s, team, action) => {
@@ -43,7 +49,7 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const walked = followPath(s, unit, path);
       const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
       // Con emboscada no hay vuelta atras: la unidad ya ha gastado su turno.
-      if (walked.ambush) delete s.lastMove;
+      if (walked.ambush) closeUndoWindow(s);
       else s.lastMove = { uid: unit.uid, from, capture, revealed };
       return [moveEvent(team, unit.uid, walked)];
     },
