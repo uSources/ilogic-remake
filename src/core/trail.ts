@@ -2,10 +2,9 @@
  * El camino que el jugador traza con el cursor al mover una unidad: se alarga casilla a casilla, se
  * recorta al volver sobre el y salta al mas corto si se pasa. Logica pura, sin interfaz.
  */
-
-import { movementOf, canWalk } from './rules/queries';
 import { manhattan, samePos, posOf } from './geom';
 import { moveCost, pathCost, pathTo, type MoveRange } from './rules/movement';
+import { canWalk, movementOf } from './rules/queries';
 import type { Grid } from './util/grid';
 import type { GameState, Pos, Unit } from './model';
 
