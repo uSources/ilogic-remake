@@ -5,8 +5,9 @@ description: Use when adding or editing a campaign mission in Ilogic (map, units
 
 # Añadir una mision
 
-Las misiones estan en `src/core/missions.ts` (`MISSIONS`, en orden: cada una se desbloquea al pasar la
-anterior). Una mision es un `MissionDef`:
+Las misiones estan en `src/core/missions.ts` (se escriben en `MISSION_DEFS`; `MISSIONS` es esa lista
+congelada, en orden: cada una se desbloquea al pasar la anterior). Una mision es un `MissionDef` (de
+solo lectura):
 
 - `id` (unico, no cambiarlo despues: el progreso guardado lo usa), `title` y `brief` en `{ es, en }`.
 - `theme` 0..4 (llanura, desierto, bosque, pantano, nieve).
