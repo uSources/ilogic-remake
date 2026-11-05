@@ -8,8 +8,8 @@ import { rulesWith } from '@core/rulesConfig';
 import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
-import { buyOptions, endRound } from '@core/rules';
-import { duel } from '@core/teams';
+import { buyOptions, endRound, takesTurn } from '@core/rules';
+import { duel, teamIds } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
 import type { GameEvent, GameState, SavedGameState } from '@core/model';
 
@@ -31,7 +31,10 @@ function playInterleaved(games: GameState[], days: number): GameEvent[][] {
   const rngs = games.map(() => seededRng(11));
   const events: GameEvent[][] = games.map(() => []);
   for (let day = 0; day < days; day++) {
-    for (const team of [0, 1] as const) games.forEach((s, i) => events[i]!.push(...aiTurn(s, rngs[i]!, team)));
+    for (const team of teamIds(games[0]!))
+      games.forEach((s, i) => {
+        if (takesTurn(s, team)) events[i]!.push(...aiTurn(s, rngs[i]!, team));
+      });
     games.forEach((s) => endRound(s));
   }
   return events;

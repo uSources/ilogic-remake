@@ -127,5 +127,5 @@ export {
   objectiveProgress,
   endReason,
 } from './rules/outcome';
-export { takesTurn, turnTakers, turnsAfter } from './rules/turnOrder';
+export { othersAfter, takesTurn, turnTakers, turnsAfter, type TurnStep } from './rules/turnOrder';
 export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';

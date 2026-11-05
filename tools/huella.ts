@@ -16,8 +16,8 @@ import { appointGeneral } from '@core/generals';
 import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
 import { formSquad, giveStandingOrder } from '@core/squads';
-import { duel, enemiesOf, teamIds } from '@core/teams';
-import type { GameState, RulesConfig, TeamId } from '@core/model';
+import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
+import type { GameState, RulesConfig } from '@core/model';
 
 const MAX_DAYS = 30;
 
@@ -50,22 +50,22 @@ function scenarios(): Scenario[] {
   return list;
 }
 
-/** El equipo de la persona (el primero) en estas partidas: el que tiene escuadras con ordenes. */
-const PERSON: TeamId = 0;
-
 /** La persona junta sus tres primeras unidades en una escuadra y la manda a atacar un edificio enemigo. */
 function orderPlayerSquad(s: GameState): void {
-  const enemies = enemiesOf(s, PERSON);
+  const person = playerTeam(s);
+  const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
   if (!target) return;
-  const squadUnits = s.units.filter((unit) => unit.team === PERSON && unit.squad === undefined).slice(0, 3);
-  if (squadUnits.length < 2 || !formSquad(s, PERSON, squadUnits)) return;
-  giveStandingOrder(s, PERSON, squadUnits, 'attack', target);
+  const squadUnits = s.units.filter((unit) => unit.team === person && unit.squad === undefined).slice(0, 3);
+  if (squadUnits.length < 2 || !formSquad(s, person, squadUnits)) return;
+  giveStandingOrder(s, person, squadUnits, 'attack', target);
 }
 
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
   const s = createGame(rng, { size: scenario.size, ruleChanges: scenario.rules, teams: duel('human', 'ai') });
+  // El equipo de la persona (el primero de duel): el que tiene escuadras con ordenes.
+  const person = playerTeam(s);
   const generals = s.content.generals.list;
   if (scenario.withGenerals) for (const team of teamIds(s)) appointGeneral(s, team, generals[team]?.id);
   if (scenario.withSquad) orderPlayerSquad(s);
@@ -76,7 +76,7 @@ function playScenario(scenario: Scenario): string {
 
   while (!isOver() && s.day <= MAX_DAYS) {
     for (const team of turnTakers(s)) {
-      if (team === PERSON && scenario.withSquad) for (const event of assistTurn(s, rng, PERSON)) record(event);
+      if (team === person && scenario.withSquad) for (const event of assistTurn(s, rng, person)) record(event);
       for (const event of aiTurn(s, rng, team)) {
         record(event);
         if (isOver()) break;
@@ -86,7 +86,7 @@ function playScenario(scenario: Scenario): string {
     endRound(s);
     hash.update(serialize(s));
   }
-  record(outcome(s, PERSON));
+  record(outcome(s, person));
   return hash.digest('hex').slice(0, 16);
 }
 

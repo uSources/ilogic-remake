@@ -3,7 +3,7 @@ import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
-import { endReason, endRound, isMatchOver, outcome } from '@core/rules';
+import { endReason, endRound, isMatchOver, outcome, takesTurn } from '@core/rules';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
@@ -20,6 +20,18 @@ export type Side = 0 | 1;
 export const FIRST_SIDE: Side = 0;
 export const SECOND_SIDE: Side = 1;
 export const SIDES: readonly Side[] = [FIRST_SIDE, SECOND_SIDE];
+
+/** El lado de un equipo de estas partidas (solo hay dos: otro numero es un fallo). */
+export function sideOfTeam(team: TeamId): Side {
+  if (team === FIRST_SIDE || team === SECOND_SIDE) return team;
+  throw new Error(`Las partidas de equilibrio son de dos equipos: no hay equipo ${team}`);
+}
+
+/** El otro lado. */
+export const opponentOf = (side: Side): Side => (side === FIRST_SIDE ? SECOND_SIDE : FIRST_SIDE);
+
+/** Los lados en el orden en que juegan cada ronda, empezando por `first`. */
+const sidesFrom = (first: Side): readonly Side[] => [first, opponentOf(first)];
 
 export interface PlayOptions {
   seed: number;
@@ -90,7 +102,7 @@ const emptyTally = (): UnitTally => ({
 const costOf = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost;
 
 /** Un valor por lado: [primero, segundo]. */
-const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(0), valueOf(1)];
+const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(FIRST_SIDE), valueOf(SECOND_SIDE)];
 
 function sample(s: GameState): DaySample {
   const unitsOf = (side: Side) => s.units.filter((unit) => unit.team === side);
@@ -108,16 +120,15 @@ function sample(s: GameState): DaySample {
 export function playGame(options: PlayOptions): GameRecord {
   const rng = seededRng(options.seed);
   const s = generateGame(rng, { size: options.size ?? 32, rules: options.rules, content: options.content, teams: duel('ai', 'ai') });
-  const otherSide = (team: TeamId): TeamId => 1 - team;
   if (options.swapSides) {
-    for (const unit of s.units) unit.team = otherSide(unit.team);
-    for (const building of s.buildings) if (building.owner !== null) building.owner = otherSide(building.owner);
+    for (const unit of s.units) unit.team = opponentOf(sideOfTeam(unit.team));
+    for (const building of s.buildings) if (building.owner !== null) building.owner = opponentOf(sideOfTeam(building.owner));
   }
   const units: Record<string, UnitTally>[] = SIDES.map(() =>
     Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])),
   );
   /** Lo apuntado de ese tipo de unidad para ese lado. */
-  const tallyOf = (side: TeamId, unit: Pick<Unit, 'type'>): UnitTally => units[side]![unit.type]!;
+  const tallyOf = (side: Side, unit: Pick<Unit, 'type'>): UnitTally => units[side]![unit.type]!;
   const samples: DaySample[] = [sample(s)];
   // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
   const known = new Map<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>();
@@ -131,8 +142,9 @@ export function playGame(options: PlayOptions): GameRecord {
 
   const finished = () => isMatchOver(s);
   while (!finished() && s.day <= options.maxDays) {
-    for (const team of options.firstTeam === 1 ? [...SIDES].reverse() : SIDES) {
-      if (options.policies[team] === 'passive') continue;
+    for (const team of sidesFrom(options.firstTeam ?? FIRST_SIDE)) {
+      // Los derrotados no juegan (como en todas partes: rules/turnOrder.ts).
+      if (!takesTurn(s, team) || options.policies[team] === 'passive') continue;
       for (const event of aiTurn(s, rng, team)) {
         events++;
         if (event.kind === 'attack') {
@@ -147,7 +159,7 @@ export function playGame(options: PlayOptions): GameRecord {
             if (victim) {
               const [, victimInfo] = victim;
               tally.valueDealt += (event.damage * costOf(s, victimInfo)) / 100;
-              const vt = tallyOf(victimInfo.team, victimInfo);
+              const vt = tallyOf(sideOfTeam(victimInfo.team), victimInfo);
               vt.valueLost += (event.damage * costOf(s, victimInfo)) / 100;
               if (event.killed) {
                 tally.kills++;
@@ -161,11 +173,11 @@ export function playGame(options: PlayOptions): GameRecord {
             const lost = attacker.life - (after?.life ?? 0);
             if (lost > 0 && victim) {
               const [, victimInfo] = victim;
-              tallyOf(victimInfo.team, victimInfo).damageDealt += lost;
-              tallyOf(victimInfo.team, victimInfo).valueDealt += (lost * costOf(s, attacker)) / 100;
+              tallyOf(sideOfTeam(victimInfo.team), victimInfo).damageDealt += lost;
+              tallyOf(sideOfTeam(victimInfo.team), victimInfo).valueDealt += (lost * costOf(s, attacker)) / 100;
               tallyOf(team, attacker).valueLost += (lost * costOf(s, attacker)) / 100;
               if (!after) {
-                tallyOf(victimInfo.team, victimInfo).kills++;
+                tallyOf(sideOfTeam(victimInfo.team), victimInfo).kills++;
                 tallyOf(team, attacker).deaths++;
               }
             }

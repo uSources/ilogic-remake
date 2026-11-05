@@ -7,8 +7,8 @@ import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { blankMap, mapGrid } from '@core/mapGrid';
 import { newGameState } from '@core/gameState';
-import { endRound, moveRange, newUnit, reachableTiles, visibility } from '@core/rules';
-import { duel } from '@core/teams';
+import { endRound, moveRange, newUnit, reachableTiles, takesTurn, visibility } from '@core/rules';
+import { duel, teamIds } from '@core/teams';
 import type { GameEvent, GameState } from '@core/model';
 
 const TANK = unitTypeNamed('Tank');
@@ -60,7 +60,10 @@ describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', ()
       const rngs = games.map(() => seededRng(3));
       const events: GameEvent[][] = games.map(() => []);
       for (let day = 0; day < days; day++) {
-        for (const team of [0, 1] as const) games.forEach((s, i) => events[i]!.push(...aiTurn(s, rngs[i]!, team)));
+        for (const team of teamIds(games[0]!))
+          games.forEach((s, i) => {
+            if (takesTurn(s, team)) events[i]!.push(...aiTurn(s, rngs[i]!, team));
+          });
         games.forEach((s) => endRound(s));
       }
       return events;

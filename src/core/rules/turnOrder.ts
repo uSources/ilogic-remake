@@ -29,5 +29,22 @@ export function* turnTakers(s: GameState): Generator<TeamId> {
 export function turnsAfter(s: GameState, team: TeamId): { thisRound: TeamId[]; nextRound: TeamId[] } {
   const order = teamIds(s);
   const at = order.indexOf(team);
+  if (at < 0) throw new Error(`El equipo ${team} no esta en la partida (hay ${order.length})`);
   return { thisRound: order.slice(at + 1), nextRound: order.slice(0, at) };
+}
+
+/** Un paso de lo que viene tras el turno de un equipo: el turno de otro, o el fin de ronda. */
+export type TurnStep = { kind: 'team'; team: TeamId } | { kind: 'roundEnd' };
+
+/**
+ * Lo que viene tras el turno de `team` hasta que le vuelve a tocar: los turnos de los equipos de
+ * despues, el fin de ronda (siempre, una vez) y los de los equipos de antes. Es perezoso: cada equipo
+ * se mira al llegar a el (`takesTurn`), asi que quien cae durante un turno ya no juega. Quien lo
+ * recorre juega cada turno y hace el fin de ronda (la escena anima, las herramientas no).
+ */
+export function* othersAfter(s: GameState, team: TeamId): Generator<TurnStep> {
+  const { thisRound, nextRound } = turnsAfter(s, team);
+  for (const other of thisRound) if (takesTurn(s, other)) yield { kind: 'team', team: other };
+  yield { kind: 'roundEnd' };
+  for (const other of nextRound) if (takesTurn(s, other)) yield { kind: 'team', team: other };
 }

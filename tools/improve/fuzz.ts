@@ -6,11 +6,11 @@
  *   npm run fuzz -- --games 1000 --size 32 --days 40 --seed 5000
  *   npm run fuzz -- --repro 1234                  repetir una partida concreta con todo el detalle
  */
-import { duel, teamIds } from '@core/teams';
+import { duel } from '@core/teams';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
 import { createGame } from '@core/defaultGames';
-import { endRound, isMatchOver } from '@core/rules';
+import { endRound, isMatchOver, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
 import type { GameState, TeamId } from '@core/model';
 import { checkInvariants } from './invariants';
@@ -41,7 +41,7 @@ export function fuzzGame(seed: number, options: { size?: number; days?: number; 
   const initial = checkInvariants(s);
   if (initial.length) return { seed, day: 1, team: 0, action: 'mapa recien generado', errors: initial, before };
   while (!isMatchOver(s) && s.day <= (options.days ?? 30) && !fail) {
-    for (const team of teamIds(s)) {
+    for (const team of turnTakers(s)) {
       if (rng() < 0.5) randomTurn(s, rng, team, (action) => check(team, action));
       else for (const event of aiTurn(s, rng, team)) check(team, `IA ${event.kind} ${JSON.stringify(event).slice(0, 80)}`);
       if (fail) return fail;

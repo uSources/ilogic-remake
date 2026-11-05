@@ -11,13 +11,13 @@
  *
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
-import { duel, teamIds } from '@core/teams';
+import { duel, duelTeams } from '@core/teams';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
 import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
-import { endRound, isMatchOver, outcome, score } from '@core/rules';
+import { endRound, isMatchOver, outcome, score, turnTakers } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
 import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
 
@@ -45,11 +45,11 @@ function play(
 ): { winner: Side | 'draw'; byScore: boolean } {
   const rng = seededRng(seed * 7919);
   const s: GameState = createGame(rng, { teams: duel('ai', 'ai') });
-  const [first, second] = teamIds(s);
-  appointGeneral(s, first!, firstGeneral === 'none' ? null : firstGeneral);
-  appointGeneral(s, second!, secondGeneral === 'none' ? null : secondGeneral);
+  const [first, second] = duelTeams(s);
+  appointGeneral(s, first, firstGeneral === 'none' ? null : firstGeneral);
+  appointGeneral(s, second, secondGeneral === 'none' ? null : secondGeneral);
   while (!isMatchOver(s) && s.day <= 60) {
-    for (const team of teamIds(s)) {
+    for (const team of turnTakers(s)) {
       for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {
         if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);
         if (isMatchOver(s)) break;

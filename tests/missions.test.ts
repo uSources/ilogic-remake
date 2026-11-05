@@ -8,10 +8,9 @@ import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { createLayer } from '@core/mapGrid';
 import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
-import { endRound, groundDistance, outcome } from '@core/rules';
+import { endRound, groundDistance, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { savedByVersion1, hqId } from './helpers';
-import { teamIds } from '@core/teams';
 
 const HQ = hqId();
 
@@ -108,10 +107,10 @@ describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
     const s = buildMission(mission, defaultContent());
     const rng = seededRng(5);
-    for (let day = 0; day < 20 && outcome(s, 0) === 'playing'; day++) {
-      for (const team of teamIds(s)) {
-        for (const _ of aiTurn(s, rng, team)) if (outcome(s, 0) !== 'playing') break;
-        if (outcome(s, 0) !== 'playing') break;
+    for (let day = 0; day < 20 && !isMatchOver(s); day++) {
+      for (const team of turnTakers(s)) {
+        for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;
+        if (isMatchOver(s)) break;
       }
       endRound(s);
     }

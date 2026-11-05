@@ -17,6 +17,7 @@ import {
   newUnit,
   outcome,
   standingTeams,
+  othersAfter,
   takesTurn,
   turnTakers,
   turnsAfter,
@@ -28,6 +29,9 @@ import { deserialize, serialize } from '@core/save';
 import {
   alliesOf,
   areAllied,
+  duelTeams,
+  isAiControlled,
+  isPlayableOnOneScreen,
   enemiesOf,
   isHostile,
   isHostileOwner,
@@ -218,12 +222,37 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(takesTurn(s, 3)).toBe(true);
   });
 
+  it('lo que viene tras un turno: los de despues, el fin de ronda y los de antes, mirando quien sigue en pie', () => {
+    const s = fourCorners();
+    const steps = (team: number) => [...othersAfter(s, team)].map((step) => (step.kind === 'team' ? step.team : 'fin'));
+    expect(steps(1)).toEqual([2, 3, 'fin', 0]);
+    expect(steps(3)).toEqual(['fin', 0, 1, 2]);
+    const played: (number | string)[] = [];
+    for (const step of othersAfter(s, 0)) {
+      played.push(step.kind === 'team' ? step.team : 'fin');
+      // Durante el turno del 1 cae el 2: ya no juega.
+      if (step.kind === 'team' && step.team === 1) s.buildings = s.buildings.filter((building) => building.owner !== 2);
+    }
+    expect(played).toEqual([1, 3, 'fin']);
+    expect(() => turnsAfter(s, 9)).toThrow(/no esta en la partida/);
+  });
+
+  it('quien lo lleva y si se puede jugar en una pantalla (una persona como mucho)', () => {
+    const s = fourCorners();
+    expect(teamIds(s).map((team) => isAiControlled(s, team))).toEqual([true, true, false, true]);
+    expect(isPlayableOnOneScreen(s)).toBe(true);
+    teamState(s, 0).controller = 'human';
+    expect(isPlayableOnOneScreen(s)).toBe(false);
+    expect(() => duelTeams(s)).toThrow(/dos equipos/);
+    expect(duelTeams(blankState())).toEqual([0, 1]);
+  });
+
   it('cada IA juega su turno sin atacar a sus aliados, y la partida se guarda y se carga igual', () => {
     const s = fourCorners();
     const rng = seededRng(17);
     const attacks: { attacker: number; target: number }[] = [];
     for (let day = 0; day < 12 && !isMatchOver(s); day++) {
-      for (const team of teamIds(s)) {
+      for (const team of turnTakers(s)) {
         for (const event of aiTurn(s, rng, team)) recordAttack(s, event, team, attacks);
       }
       endRound(s);

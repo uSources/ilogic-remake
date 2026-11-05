@@ -52,6 +52,16 @@ export const isControllerKind = (value: unknown): value is ControllerKind => (CO
 export const teamsControlledBy = (s: GameState, controller: ControllerKind): TeamId[] =>
   s.teams.filter((team) => team.controller === controller).map((team) => team.id);
 
+/** El equipo lo lleva la IA del juego (los demas de una pantalla tienen que serlo: ver isPlayableOnOneScreen). */
+export const isAiControlled = (s: GameState, team: TeamId): boolean => teamState(s, team).controller === 'ai';
+
+/**
+ * Se puede jugar en una sola pantalla: como mucho un equipo de personas (el que mira; los demas los
+ * lleva la IA). Varias personas en la misma partida (por turnos o en red) es la fase 4: hasta
+ * entonces, ni el menu ofrece continuar una asi ni la escena la abre.
+ */
+export const isPlayableOnOneScreen = (s: GameState): boolean => teamsControlledBy(s, 'human').length <= 1;
+
 /**
  * El equipo de la persona: el primero que lleva una persona. Es el que mira la pantalla (niebla,
  * colores, mandos) y el de las tarjetas de la partida guardada. Si todos son de la IA (el fondo del
@@ -79,6 +89,14 @@ export interface TeamSetup {
 
 /** Dos equipos enemigos: el primero lo juega `first` y el segundo, `second` (una partida normal es humano contra IA). */
 export const duel = (first: ControllerKind, second: ControllerKind): TeamSetup[] => [{ controller: first }, { controller: second }];
+
+/** Los dos equipos de una partida de dos (la de `duel`): el primero y el segundo. Con otro numero de equipos, falla. */
+export function duelTeams(s: GameState): [first: TeamId, second: TeamId] {
+  const [first, second, ...more] = teamIds(s);
+  if (first === undefined || second === undefined || more.length)
+    throw new Error(`Se esperaba una partida de dos equipos (hay ${s.teams.length})`);
+  return [first, second];
+}
 
 export const emptyTeamStats = (): TeamStats => ({ built: 0, spent: 0, lost: 0, captured: 0, army: [] });
 
