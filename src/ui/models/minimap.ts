@@ -1,5 +1,6 @@
 import { terrainAt } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
+import { isShownTo } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId } from '../../core/model';
 import type { MinimapVM } from '../../hud/store';
@@ -29,7 +30,7 @@ export function minimapVM(
       return { x: building.x, y: building.y, owner: isFriendly(owner) || seen(building) ? owner : 'neutral' };
     }),
     units: s.units
-      .filter((unit) => unit.carrier === null && !hidden.has(unit.uid) && (unit.team === viewer || seen(unit)))
+      .filter((unit) => !hidden.has(unit.uid) && isShownTo(viewer, unit, seen))
       .map((unit) => ({ x: unit.x, y: unit.y, side: sideOf(s, viewer, unit.team) })),
     ...(s.controlPoints
       ? {

@@ -133,13 +133,14 @@ por uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`), 
 que gana cada general (`charge`); la compra, el tipo y el equipo; la captura, siempre los puntos que
 quedan. Lo que dejan en orden las `INVARIANTS` tambien se cuenta, detras de los de la accion y sin
 actor: `cargoLost` (los pasajeros de un transporte que cae; tambien al retirarlo), `captureDropped`
-(una captura a medias cuya unidad se ha ido), la escuadra que se queda vacia y `fundsCapped`. Cada
-escuadra que desaparece tiene un solo suceso (`SquadChange`): 'disbanded' si su equipo la deshace,
-o `squad` con `change: 'removed'` si se queda vacia; si la vacia una accion (salir, formar otra con
-sus unidades), lleva el equipo de esa accion como actor y va antes que el 'formed' o 'grouped'; si
-la vacia la partida (caen sus unidades), la cuenta la invariante sin actor. Y
-`fundsCapped` (el dinero que pasaba del maximo; botin, poderes e ingresos se cuentan enteros y lo
-perdido va aqui, porque el tope se aplica al acabar la accion o la ronda, no al cobrar). Con ellos
+(una captura a medias cuya unidad se ha ido), la escuadra que se queda vacia y `fundsCapped` (el
+dinero que pasaba del maximo; botin, poderes e ingresos se cuentan enteros y lo perdido va aqui,
+porque el tope se aplica al acabar la accion o la ronda, no al cobrar). Cada escuadra que desaparece
+tiene un solo suceso `squad` (`SquadChange`): `change: 'disbanded'` si su equipo la deshace, o
+`change: 'removed'` si se queda vacia; si la vacia una accion (salir, formar otra con sus unidades),
+lleva el equipo de esa accion como actor y va antes que el `formed` o `grouped`; si la vacia la
+partida (caen sus unidades), la cuenta la invariante sin actor. Los numeros de escuadra no se
+reutilizan (`nextSquadId`). Con ellos
 se anima (`ANIMATORS`), se cuentan las estadisticas (`recordEvent`, por el `actor`) y se resume el
 fin de ronda (`roundReport(s, events)`: lo que enseña la escena). `endRound` devuelve los suyos:
 `income`, `heal`, `upkeep`, `controlPoint`, `newDay`, `weather` (cada paso de `ROUND_PHASES` da los
@@ -192,9 +193,9 @@ cursor, para la escena.
 | `capture` | puntos de captura, capturas a medias (`captureProgress`, solo consulta; `dropStaleCaptures`, una de las INVARIANTS), capturar y su suceso |
 | `lifecycle` | crear, quitar y limpiar unidades (`removeWithCargo`, con su `cargoLost`) |
 | `lastMove` | la ventana para deshacer el ultimo movimiento: abrirla, cerrarla, por que no se puede (`undoWindowProblem`) y su invariante |
-| `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
 | `invariants` | `INVARIANTS` y `restoreInvariants`: lo que se deja en orden tras cada accion y cada ronda, con sus sucesos |
 | `movement` | alcance (`moveRange`), caminos (`plannedPath`: por donde iria, calculado desde la partida), emboscadas, recorrer un camino (`followPath`), distancia por tierra, el suceso de mover |
+| `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
 | `combat` | alcance de tiro y objetivos (`attackProblem`, `attackTargets`), proteccion, acierto (`HIT_MODIFIERS`), veterania, contraataque, botin, la tirada (`strike`) |
 | `forecast` | prevision de combate y zona de amenaza |
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |

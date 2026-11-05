@@ -36,12 +36,22 @@ export function mergeProblem(s: GameState, unit: Unit, target: Unit, range = mov
 }
 
 /**
+ * El camino hasta otra unidad de una union o una subida ya comprobada (mergeProblem, loadProblem).
+ * Si no lo hay, es un fallo de quien llama (como checkedUnit en las acciones).
+ */
+function checkedApproach(s: GameState, unit: Unit, other: Unit): Pos[] {
+  const path = approachPath(s, unit, other);
+  if (!path) throw new Error(`La unidad ${unit.uid} no llega a ${other.uid} en una union o subida ya comprobada`);
+  return path;
+}
+
+/**
  * Union (Unit.Merge), ya comprobada (mergeProblem): la unidad se mueve hasta la otra y se funden.
  * La vida se suma (tope 100) y se queda la experiencia de la mas veterana. Devuelve el camino
  * recorrido (si hay emboscada, se para antes y no llega a unirse: `ambush`).
  */
 export function mergeInto(s: GameState, unit: Unit, target: Unit): MovePath {
-  const path = approachPath(s, unit, target)!;
+  const path = checkedApproach(s, unit, target);
   const walked = walkPath(s, unit, path);
   if (walked.ambush) return ambushed(unit, walked);
   target.life = Math.min(MAX_LIFE, target.life + unit.life);
@@ -74,7 +84,7 @@ export function loadProblem(s: GameState, unit: Unit, transport: Unit, range = m
 
 /** Subir a un transporte (Unit.Load), ya comprobado (loadProblem): la unidad se mueve hasta el y queda dentro. */
 export function boardTransport(s: GameState, unit: Unit, transport: Unit): MovePath {
-  const path = approachPath(s, unit, transport)!;
+  const path = checkedApproach(s, unit, transport);
   const walked = walkPath(s, unit, path);
   if (walked.ambush) return ambushed(unit, walked);
   path.push(posOf(transport));

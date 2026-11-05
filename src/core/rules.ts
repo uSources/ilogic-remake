@@ -19,6 +19,7 @@
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
  * | `movement` | alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
+ * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
@@ -27,7 +28,6 @@
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
  * | `lastMove` | la ventana para deshacer el ultimo movimiento |
- * | `travel` | viajes de varios turnos |
  * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
  * | `outcome` | victoria, derrota, objetivos de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |

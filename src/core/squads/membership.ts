@@ -21,9 +21,14 @@ export interface SquadChangeResult {
  * las quitadas. Es una de las INVARIANTS (que lo cuenta con 'removed').
  */
 export function pruneSquads(s: GameState): Squad[] {
+  return removeSquads(s, (squad) => !hasUnits(s, squad));
+}
+
+/** Quita las escuadras que cumplen `isGone` (y nadie se queda apuntado a ellas). Devuelve las quitadas. */
+function removeSquads(s: GameState, isGone: (squad: Squad) => boolean): Squad[] {
   if (!s.squads) return [];
-  const removed = s.squads.filter((squad) => !hasUnits(s, squad));
-  s.squads = s.squads.filter((squad) => hasUnits(s, squad));
+  const removed = s.squads.filter(isGone);
+  s.squads = s.squads.filter((squad) => !isGone(squad));
   for (const unit of s.units) if (unit.squad !== undefined && !squadById(s, unit.squad)) delete unit.squad;
   if (!s.squads.length) delete s.squads;
   return removed;
@@ -109,6 +114,5 @@ export function renameSquad(squad: Squad, name: string): void {
  */
 export function disbandSquad(s: GameState, squad: Squad): void {
   for (const unit of squadUnits(s, squad.id)) leaveSquad(s, unit);
-  s.squads = (s.squads ?? []).filter((other) => other.id !== squad.id);
-  if (!s.squads.length) delete s.squads;
+  removeSquads(s, (other) => other.id === squad.id);
 }

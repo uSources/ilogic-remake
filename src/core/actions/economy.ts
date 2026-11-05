@@ -16,7 +16,7 @@ export const ECONOMY_ACTIONS: Pick<ActionRegistry, 'buy'> = {
       return buyProblem(s, team, building, unitType);
     },
     apply: (s, team, action) => {
-      const unit = buildUnit(s, checkedBuilding(s, action.at), entryOf(s.content.units, action.unitType, 'unidad'));
+      const unit = buildUnit(s, team, checkedBuilding(s, action.at), entryOf(s.content.units, action.unitType, 'unidad'));
       return [{ kind: 'spawn', actor: team, uid: unit.uid, unitType: unit.type, team: unit.team, at: posOf(action.at) }];
     },
   },

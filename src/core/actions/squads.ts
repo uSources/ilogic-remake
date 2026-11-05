@@ -47,14 +47,17 @@ function squadsOf(s: GameState, units: readonly Unit[]): Squad[] {
 }
 
 /**
- * Los sucesos de formar o agrupar: primero las escuadras que se han quedado vacias y ya no existen
- * (su numero se puede volver a usar justo despues), luego la que queda.
+ * Los sucesos de formar o agrupar, en orden: primero las escuadras que se han quedado vacias y ya no
+ * existen, luego la que queda (los numeros no se reutilizan: nextSquadId).
  */
 function squadChangeEvents(s: GameState, team: TeamId, result: SquadChangeResult, change: SquadChange): GameEvent[] {
   return [...result.removed.map((squad) => squadEvent(s, team, squad, 'removed')), squadEvent(s, team, result.squad, change)];
 }
 
 type GroupActionKind = 'formSquad' | 'setGroup' | 'addToGroup';
+
+/** Las unidades de una accion de formar o agrupar ya comprobada (al menos una). */
+const groupUnits = (s: GameState, action: GameActionOf<GroupActionKind>): SomeUnits => someCheckedUnits(s, action.uids);
 
 /** Formar o agrupar con estas unidades del equipo (validate ya ha visto que son suyas y que hay alguna). */
 type GroupChange<K extends GroupActionKind> = (s: GameState, team: TeamId, units: SomeUnits, action: GameActionOf<K>) => SquadChangeResult;
@@ -63,10 +66,7 @@ type GroupChange<K extends GroupActionKind> = (s: GameState, team: TeamId, units
 function groupAction<K extends GroupActionKind>(change: SquadChange, run: GroupChange<K>): ActionDefinition<K> {
   return {
     validate: (s, team, action) => groupProblem(s, team, action),
-    apply: (s, team, action) => {
-      const group: GameActionOf<GroupActionKind> = action;
-      return squadChangeEvents(s, team, run(s, team, someCheckedUnits(s, group.uids), action), change);
-    },
+    apply: (s, team, action) => squadChangeEvents(s, team, run(s, team, groupUnits(s, action), action), change),
   };
 }
 

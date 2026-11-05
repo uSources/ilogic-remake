@@ -32,7 +32,8 @@ export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | 'a
  * dice: 'disbanded' (su equipo la deshace) o 'removed' (se ha quedado sin unidades: al salir, al
  * formar otra con las suyas o al caer; `actor`, el equipo de esa accion, o null si la quita la
  * partida). 'left' y 'grouped' solo van para las que siguen existiendo. Los 'removed' de una accion
- * van antes que su 'formed': la nueva puede reutilizar el numero de la quitada.
+ * van antes que su 'formed' o 'grouped', en orden. Un numero de escuadra no se reutiliza nunca
+ * (`GameState.nextSquadId`).
  */
 export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded' | 'removed';
 

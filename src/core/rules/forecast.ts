@@ -7,13 +7,12 @@ import { diamond } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isRanged } from '../abilities';
-import { canFight, isOnMap } from '../util/predicates';
+import { canFight } from '../util/predicates';
 import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
-import { visibility } from './visibility';
+import { isVisibleFoe, sightOf } from './visibility';
 import { canStillFire } from './unitTurn';
-import { isHostile } from '../teams';
 
 export interface CombatForecast {
   /** Dano mas probable (media). */
@@ -146,11 +145,8 @@ export function combatForecast(s: GameState, attacker: Unit, defender: Unit): Co
  */
 export function threatMap(s: GameState, viewer: TeamId): Grid<boolean> {
   const threatened = createLayer(s, false);
-  const visible = visibility(s, viewer);
-  for (const unit of s.units) {
-    if (!isHostile(s, unit.team, viewer) || !isOnMap(unit) || !visible.at(unit)) continue;
-    unitThreat(s, unit, threatened);
-  }
+  const sees = sightOf(s, viewer);
+  for (const unit of s.units) if (isVisibleFoe(s, viewer, unit, sees)) unitThreat(s, unit, threatened);
   return threatened;
 }
 

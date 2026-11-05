@@ -213,14 +213,15 @@ export function squadInFormation(s: GameState, id: number): boolean {
  * juntas, o una partida guardada antes de que las escuadras tuvieran orden, sigue igual.
  */
 export function liftStandingOrder(s: GameState, squad: Squad): void {
-  const orders = squadUnits(s, squad.id).map((unit) => ({ unit, order: unit.standingOrder }));
-  const withOrder = orders.filter((entry): entry is { unit: Unit; order: StandingOrder } => !!entry.order);
-  if (!withOrder.length || withOrder.length < orders.length) return;
+  const units = squadUnits(s, squad.id);
+  const withOrder = units.flatMap((unit) => (unit.standingOrder ? [{ unit, order: unit.standingOrder }] : []));
+  const [first] = withOrder;
+  // Si alguna no lleva orden propia, la escuadra no tiene una comun.
+  if (!first || withOrder.length !== units.length) return;
   // La de capturar manda: las demas van de escolta con "atacar" al mismo sitio.
-  const lead = withOrder.find((entry) => entry.order.kind === 'capture') ?? withOrder[0];
-  if (!lead) return;
-  const standingOrder = lead.order;
-  if (!withOrder.every((entry) => sameStandingOrder(entry.order, forUnit(s, entry.unit, standingOrder)))) return;
-  squad.standingOrder = copyStandingOrder(standingOrder);
-  for (const { unit } of withOrder) delete unit.standingOrder;
+  const lead = withOrder.find((entry) => entry.order.kind === 'capture') ?? first;
+  const allAgree = withOrder.every((entry) => sameStandingOrder(entry.order, forUnit(s, entry.unit, lead.order)));
+  if (!allAgree) return;
+  squad.standingOrder = copyStandingOrder(lead.order);
+  for (const unit of units) delete unit.standingOrder;
 }

@@ -89,9 +89,11 @@ export function buyProblem(s: GameState, team: TeamId, building: Building, unitT
   return buyBlock(s, team, unitType) ?? null;
 }
 
-/** Fabrica una unidad, ya comprobado (buyProblem): se paga y nace sin poder actuar hasta la ronda siguiente. */
-export function buildUnit(s: GameState, building: Building, unitType: UnitType): Unit {
-  const team = building.owner!;
+/**
+ * El equipo `team` fabrica una unidad en su edificio, ya comprobado (buyProblem): se paga y nace sin
+ * poder actuar hasta la ronda siguiente.
+ */
+export function buildUnit(s: GameState, team: TeamId, building: Building, unitType: UnitType): Unit {
   pay(s, team, unitType.cost);
   return newUnit(s, unitType, team, building, 'done');
 }

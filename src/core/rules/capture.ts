@@ -90,13 +90,12 @@ function pointsLeftBefore(s: GameState, building: Building, unit: Unit, total: n
 }
 
 /**
- * Capturar el edificio de debajo, ya comprobado (canCapture). [CAMBIO] En 2013 era al instante (uno
+ * Capturar el edificio de debajo (`building`), ya comprobado (canCapture). [CAMBIO] En 2013 era al instante (uno
  * enemigo pasaba primero a neutral); ahora cada turno resta la vida/10 de la unidad a sus puntos
  * (capturePoints, la Base hqCapturePoints) y al llegar a 0 pasa a ser suyo directamente. Si la unidad
  * se va o muere, se pierde lo avanzado (dropStaleCaptures). Tomar la Base enemiga gana la partida.
  */
-export function advanceCapture(s: GameState, unit: Unit): CaptureResult {
-  const building = buildingAt(s, unit)!;
+export function advanceCapture(s: GameState, unit: Unit, building: Building): CaptureResult {
   spendUnit(unit);
   const total = capturePointsOf(s, building);
   const left = Math.max(0, pointsLeftBefore(s, building, unit, total) - captureStrength(s, unit));
