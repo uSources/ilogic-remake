@@ -19,7 +19,7 @@ import { posKey, squareArea, posOf } from './geom';
 import { mapGrid } from './mapGrid';
 import { isHostile, teamState } from './teams';
 import { isOnMap } from './util/predicates';
-import type { ActionRejection, GameEventOf, GameState, GeneralState, Pos, TeamId, Unit } from './model';
+import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 
@@ -111,7 +111,7 @@ export function powerArea(power: DeepReadonly<GeneralPowerDef>): number | null {
 /** Lo que ha hecho un poder, para su evento. */
 interface PowerEffects {
   hits: { uid: number; damage: number }[];
-  heals: { uid: number; amount: number }[];
+  heals: Healing[];
   funds: number;
 }
 
@@ -177,7 +177,7 @@ export function applyPower(s: GameState, team: TeamId, powerId: string, target: 
   applyEffect({ s, team, general: general.state, effect: power.effect, target, out });
   return {
     kind: 'power',
-    team,
+    actor: team,
     general: general.definition.id,
     power: power.id,
     ...(target ? { target: posOf(target) } : {}),

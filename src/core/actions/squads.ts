@@ -1,8 +1,8 @@
 /** Acciones de las escuadras: formarlas, grupos por tecla, salir, renombrar y deshacer. */
 import { addToGroup, disbandSquad, formSquad, leaveSquad, renameSquad, setGroup } from '../squads/membership';
 import { cleanSquadName, SQUAD_KEYS } from '../squads/naming';
-import { squadById } from '../squads/queries';
-import type { ActionRejection, GameState, TeamId } from '../model';
+import { squadById, squadUnits } from '../squads/queries';
+import type { ActionRejection, GameEvent, GameState, Squad, SquadChange, TeamId, Unit } from '../model';
 import { checkedUnits, ownUnitsProblem } from './checks';
 import type { ActionRegistry } from './types';
 
@@ -22,27 +22,47 @@ function ownSquadProblem(s: GameState, team: TeamId, id: number): ActionRejectio
   return squad.team === team ? null : 'notYours';
 }
 
+/** Como queda una escuadra tras cambiarla (sus unidades ahora, nombre y tecla): su suceso. */
+function squadEvent(s: GameState, team: TeamId, squad: Squad, change: SquadChange): GameEvent {
+  const uids = squadUnits(s, squad.id).map((unit) => unit.uid);
+  return {
+    kind: 'squad',
+    actor: team,
+    squad: squad.id,
+    change,
+    uids,
+    name: squad.name,
+    ...(squad.key !== undefined ? { key: squad.key } : {}),
+  };
+}
+
+/** Las escuadras distintas de estas unidades, en el orden en que salen. */
+function squadsOf(s: GameState, units: readonly Unit[]): Squad[] {
+  const ids = [...new Set(units.flatMap((unit) => (unit.squad === undefined ? [] : [unit.squad])))];
+  return ids.map((id) => squadById(s, id)).filter((squad): squad is Squad => !!squad);
+}
+
 export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'addToGroup' | 'leaveSquad' | 'renameSquad' | 'disbandSquad'> =
   {
     formSquad: {
       validate: (s, team, action) => groupProblem(s, team, action.uids, action.key),
       apply: (s, team, action) => {
-        formSquad(s, team, checkedUnits(s, action.uids), action.name, action.key);
-        return [];
+        const squad = formSquad(s, team, checkedUnits(s, action.uids), action.name, action.key)!;
+        return [squadEvent(s, team, squad, 'formed')];
       },
     },
     setGroup: {
       validate: (s, team, action) => groupProblem(s, team, action.uids, action.key),
       apply: (s, team, action) => {
-        setGroup(s, team, checkedUnits(s, action.uids), action.key);
-        return [];
+        const squad = setGroup(s, team, checkedUnits(s, action.uids), action.key)!;
+        return [squadEvent(s, team, squad, 'grouped')];
       },
     },
     addToGroup: {
       validate: (s, team, action) => groupProblem(s, team, action.uids, action.key),
       apply: (s, team, action) => {
-        addToGroup(s, team, checkedUnits(s, action.uids), action.key);
-        return [];
+        const squad = addToGroup(s, team, checkedUnits(s, action.uids), action.key)!;
+        return [squadEvent(s, team, squad, 'grouped')];
       },
     },
     leaveSquad: {
@@ -51,23 +71,26 @@ export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'add
         if (problem) return problem;
         return checkedUnits(s, action.uids).some((unit) => unit.squad !== undefined) ? null : 'notInSquad';
       },
-      apply: (s, _team, action) => {
-        for (const unit of checkedUnits(s, action.uids)) leaveSquad(s, unit);
-        return [];
+      apply: (s, team, action) => {
+        const units = checkedUnits(s, action.uids);
+        const left = squadsOf(s, units);
+        for (const unit of units) leaveSquad(s, unit);
+        return left.map((squad) => squadEvent(s, team, squad, 'left'));
       },
     },
     renameSquad: {
       validate: (s, team, action) => ownSquadProblem(s, team, action.squad) ?? (cleanSquadName(action.name) ? null : 'badName'),
-      apply: (s, _team, action) => {
+      apply: (s, team, action) => {
         renameSquad(s, action.squad, action.name);
-        return [];
+        return [squadEvent(s, team, squadById(s, action.squad)!, 'renamed')];
       },
     },
     disbandSquad: {
       validate: (s, team, action) => ownSquadProblem(s, team, action.squad),
-      apply: (s, _team, action) => {
+      apply: (s, team, action) => {
+        const squad = squadById(s, action.squad)!;
         disbandSquad(s, action.squad);
-        return [];
+        return [squadEvent(s, team, squad, 'disbanded')];
       },
     },
   };

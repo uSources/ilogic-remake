@@ -3,7 +3,7 @@
 exports[`IA: partidas de referencia > semilla 1 1`] = `
 {
   "days": 26,
-  "events": 514,
+  "events": 792,
   "last": {
     "army": [
       30615,
@@ -31,7 +31,7 @@ exports[`IA: partidas de referencia > semilla 1 1`] = `
 exports[`IA: partidas de referencia > semilla 2 1`] = `
 {
   "days": 26,
-  "events": 351,
+  "events": 503,
   "last": {
     "army": [
       12175,
@@ -59,7 +59,7 @@ exports[`IA: partidas de referencia > semilla 2 1`] = `
 exports[`IA: partidas de referencia > semilla 3 1`] = `
 {
   "days": 26,
-  "events": 474,
+  "events": 683,
   "last": {
     "army": [
       36775,

@@ -149,9 +149,8 @@ export function playGame(options: PlayOptions): GameRecord {
         events++;
         if (event.kind === 'attack') {
           const attacker = known.get(event.attacker);
-          const victim = [...known.entries()].find(
-            ([, info]) => info.x === event.target.x && info.y === event.target.y && info.team !== team,
-          );
+          const victimInfo = known.get(event.target);
+          const victim = victimInfo ? ([event.target, victimInfo] as const) : undefined;
           if (attacker) {
             const tally = tallyOf(team, attacker);
             tally.attacks++;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { armyLimit, buyOptions, commandUsed, endRound, newUnit, upkeepOf } from '@core/rules';
+import { armyLimit, buyOptions, commandUsed, newUnit, upkeepOf } from '@core/rules';
 import { dispatch } from '@core/actions';
-import { blankState, unitTypeNamed } from './helpers';
+import { blankState, unitTypeNamed, endRoundReport } from './helpers';
 import { teamState } from '@core/teams';
 
 const SOLDIER = unitTypeNamed('Soldier'),
@@ -58,14 +58,14 @@ describe('mantenimiento', () => {
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500
     newUnit(s, TANK, 0, { x: 6, y: 6 }); // 12000
     expect(upkeepOf(s, 0)).toBe(1400); // 1350 redondeado a 100
-    const round = endRound(s);
+    const round = endRoundReport(s);
     expect(round.income[0]).toBe(1000);
     // No llega: se paga lo que hay y no pasa nada mas.
     expect(round.upkeep[0]).toBe(1000);
     expect(teamState(s, 0).funds).toBe(0);
     expect(s.units).toHaveLength(2);
     teamState(s, 0).funds = 5000;
-    expect(endRound(s).upkeep[0]).toBe(1400);
+    expect(endRoundReport(s).upkeep[0]).toBe(1400);
     expect(teamState(s, 0).funds).toBe(5000 + 1000 - 1400);
   });
 
@@ -73,6 +73,6 @@ describe('mantenimiento', () => {
     const s = blankState(rulesWith(defaultContent(), { upkeep: 0 }));
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(upkeepOf(s, 0)).toBe(0);
-    expect(endRound(s).upkeep).toEqual([0, 0]);
+    expect(endRoundReport(s).upkeep).toEqual([0, 0]);
   });
 });

@@ -3,7 +3,7 @@
  * en controls/actions.ts (puro, sin escena); aqui, que pasa en la partida. El tipo de ACTION_RUNNERS
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
-import { squadById, SQUAD_NAME_MAX, squadsOfTeam } from '../../core/squads';
+import { squadById, SQUAD_NAME_MAX } from '../../core/squads';
 import type { GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
 import { exactSquad, type ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
@@ -95,17 +95,11 @@ function cancelOrders(host: ActionRunHost, units: Unit[]): void {
   showToast(t('orderCancelled'));
 }
 
-/** La escuadra mas nueva del equipo (la que acaba de formar: la de numero mas alto). */
-function newestSquad(s: GameState, team: TeamId) {
-  return squadsOfTeam(s, team).at(-1);
-}
-
 function announceNewSquad(host: ActionRunHost, units: Unit[]): void {
-  if (!host.act({ kind: 'formSquad', uids: uidsOf(units) })) return;
-  const squad = newestSquad(host.state, host.viewer);
-  if (!squad) return;
-  const keyHint = squad.key ? ` · ${t('squadKeyHint')} ${squad.key}` : '';
-  showToast(`${t('squadFormed')}: ${squad.name}${keyHint}`);
+  const formed = host.act({ kind: 'formSquad', uids: uidsOf(units) })?.find((event) => event.kind === 'squad');
+  if (formed?.kind !== 'squad') return;
+  const keyHint = formed.key ? ` · ${t('squadKeyHint')} ${formed.key}` : '';
+  showToast(`${t('squadFormed')}: ${formed.name}${keyHint}`);
 }
 
 function leaveSquads(host: ActionRunHost, units: Unit[]): void {

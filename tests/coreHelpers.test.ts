@@ -77,14 +77,15 @@ describe('ayudas de reglas', () => {
       { x: 1, y: 1 },
       { x: 2, y: 1 },
     ];
-    expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path });
+    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path });
     path.ambush = { x: 3, y: 1 };
-    expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
+    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
     const building = { type: 'City', owner: 1 as const, x: 4, y: 4, capture: null };
-    expect(captureEvent(unit, building, { left: 10, total: 20 })).toEqual({
+    expect(captureEvent(0, unit, building, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
+      actor: 0,
       uid: unit.uid,
       at: { x: 4, y: 4 },
       owner: 1,

@@ -13,9 +13,9 @@ export const ECONOMY_ACTIONS: Pick<ActionRegistry, 'buy'> = {
       if (!building || !unitType) return 'missing';
       return buyProblem(s, team, building, unitType);
     },
-    apply: (s, _team, action) => {
+    apply: (s, team, action) => {
       const unit = buildUnit(s, buildingAt(s, action.at)!, findUnitType(s, { type: action.unitType })!);
-      return [{ kind: 'spawn', uid: unit.uid, at: posOf(action.at) }];
+      return [{ kind: 'spawn', actor: team, uid: unit.uid, unitType: unit.type, team: unit.team, at: posOf(action.at) }];
     },
   },
 };

@@ -163,8 +163,8 @@ export class GroupSelection {
     if (!units.length) return showToast(t('groupNone'));
     const uids = units.map((unit) => unit.uid);
     const grouped = host.act({ kind: mode === 'set' ? 'setGroup' : 'addToGroup', uids, key: group });
-    const squad = grouped ? squadByKey(host.state, host.viewer, group) : undefined;
-    if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${group} · ${squad.name}`);
+    const squad = grouped?.find((event) => event.kind === 'squad');
+    if (squad?.kind === 'squad') showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${group} · ${squad.name}`);
     host.refresh();
   }
 

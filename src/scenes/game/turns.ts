@@ -17,6 +17,7 @@ import {
   canCapture,
   canReach,
   endRound,
+  roundReport,
   endsInAmbush,
   moveRange,
   stepToward,
@@ -303,7 +304,7 @@ export class TurnFlow {
   /** Final de la ronda: ingresos, curar, estadisticas y guardado automatico. */
   private closeRound(): RoundReport {
     const host = this.host;
-    const report = endRound(host.state);
+    const report = roundReport(host.state, endRound(host.state));
     sampleArmy(host.state);
     if (settings.autosave && writeSave(serialize(host.state))) host.markSaved();
     return report;
@@ -335,7 +336,7 @@ export class TurnFlow {
     const rng = seededRng(last.seed);
     const replayed = await this.playRoundOfOthers(
       (team) => this.replayTeam(team, rng, match),
-      () => endRound(host.state),
+      () => roundReport(host.state, endRound(host.state)),
     );
     if (!replayed) return;
     host.state = deserialize(after, saveContext(host.state.content))!;

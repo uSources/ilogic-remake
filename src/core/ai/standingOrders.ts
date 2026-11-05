@@ -197,7 +197,7 @@ function recordIntent(intents: Map<number, StandingOrderIntent>, event: GameEven
     }
     case 'attack': {
       const intent = intents.get(event.attacker);
-      if (intent && !intent.attack) intent.attack = posOf(event.target);
+      if (intent && !intent.attack) intent.attack = posOf(event.at);
       return;
     }
     case 'capture': {

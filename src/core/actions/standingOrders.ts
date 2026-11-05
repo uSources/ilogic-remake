@@ -1,4 +1,5 @@
 /** Acciones de las ordenes permanentes: darlas, quitarlas y darlas por cumplidas. */
+import { posOf } from '../geom';
 import { isOnBoard } from '../mapGrid';
 import {
   cancelStandingOrder,
@@ -21,14 +22,15 @@ export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 
     },
     apply: (s, team, action) => {
       giveStandingOrder(s, team, checkedUnits(s, action.uids), action.order.kind, action.order.at);
-      return [];
+      const order = { kind: action.order.kind, at: posOf(action.order.at) };
+      return [{ kind: 'standingOrder', actor: team, uids: [...action.uids], order }];
     },
   },
   cancelStandingOrder: {
     validate: (s, team, action) => ownUnitsProblem(s, team, action.uids),
-    apply: (s, _team, action) => {
+    apply: (s, team, action) => {
       cancelStandingOrder(s, checkedUnits(s, action.uids));
-      return [];
+      return [{ kind: 'standingOrder', actor: team, uids: [...action.uids], order: null }];
     },
   },
   finishStandingOrder: {
@@ -37,9 +39,9 @@ export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 
       if (problem) return problem;
       return effectiveStandingOrder(s, unitById(s, action.uid)!) ? null : 'noStandingOrder';
     },
-    apply: (s, _team, action) => {
+    apply: (s, team, action) => {
       finishStandingOrder(s, checkedUnit(s, action.uid));
-      return [];
+      return [{ kind: 'standingOrderDone', actor: team, uid: action.uid }];
     },
   },
 };

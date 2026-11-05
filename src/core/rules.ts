@@ -114,7 +114,7 @@ export {
   type BuyOption,
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
-export { unhealable, endRound, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
+export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export {
   score,
   allianceScore,

@@ -7,10 +7,10 @@ import { seededRng } from '@core/util/random';
 import { createLayer } from '@core/mapGrid';
 import { createGame, saveContext } from '@core/defaultGames';
 import { placeControlPoints } from '@core/mapgen';
-import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
+import { controlRound, groundDistance, inControlZone, newUnit, roundReport } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, hqId, endRoundReport } from './helpers';
 import { duel, teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -35,7 +35,7 @@ describe('puntos de control', () => {
     // En la zona (radio 1) aunque no en el centro.
     const unit = newUnit(s, SOLDIER, 0, { x: 11, y: 9 });
     const before = teamState(s, 0).funds;
-    const control = controlRound(s)!;
+    const control = roundReport(s, controlRound(s)).control!;
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(control.held).toEqual([1, 1]);
     expect(control.contested).toBe(0);
@@ -51,7 +51,7 @@ describe('puntos de control', () => {
     newUnit(s, TANK, 0, { x: 4, y: 14 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 15 });
     const funds = s.teams.map((team) => team.funds);
-    const control = controlRound(s)!;
+    const control = roundReport(s, controlRound(s)).control!;
     expect(control.contested).toBe(1);
     expect(s.controlPoints![1]!.owner).toBe(1);
     expect(control.held).toEqual([0, 0]);
@@ -77,14 +77,14 @@ describe('puntos de control', () => {
   it('endRound suma su dinero a los ingresos del informe', () => {
     const s = withPoints();
     newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
-    const round = endRound(s);
+    const round = endRoundReport(s);
     expect(round.control?.held).toEqual([1, 1]);
     expect(round.income[0]).toBeGreaterThanOrEqual(defaultContent().defaultRules.controlIncome);
   });
 
   it('sin puntos no hay nada en el informe', () => {
     const s = blankState();
-    expect(endRound(s).control).toBeUndefined();
+    expect(endRoundReport(s).control).toBeUndefined();
   });
 
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {

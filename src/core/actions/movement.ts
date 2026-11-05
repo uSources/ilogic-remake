@@ -24,25 +24,25 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       if (problem) return problem;
       return plannedPath(s, unitById(s, action.uid)!, action.to, action.path) ? null : 'unreachable';
     },
-    apply: (s, _team, action) => {
+    apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
       const from = posOf(unit);
       const path = plannedPath(s, unit, action.to, action.path)!;
       const walked = followPath(s, unit, path);
       // Con emboscada no hay vuelta atras: la unidad ya ha gastado su turno.
       if (!walked.ambush) s.lastMove = { uid: unit.uid, from };
-      return [moveEvent(unit.uid, walked)];
+      return [moveEvent(team, unit.uid, walked)];
     },
   },
   undoMove: {
     validate: (s, team, action) => undoProblem(s, team, action.uid),
-    apply: (s, _team, action) => {
+    apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
       const { from } = s.lastMove!;
       unit.x = from.x;
       unit.y = from.y;
       readyUnit(unit);
-      return [];
+      return [{ kind: 'undoMove', actor: team, uid: unit.uid, to: posOf(from) }];
     },
   },
   travel: {
@@ -50,16 +50,17 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       if (action.to && !isOnBoard(s, action.to)) return 'offBoard';
       return ownUnitProblem(s, team, action.uid);
     },
-    apply: (s, _team, action) => {
+    apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
+      const travelled = { kind: 'travel', actor: team, uid: unit.uid, to: action.to && posOf(action.to) } as const;
       if (!action.to) {
         delete unit.travelTo;
-        return [];
+        return [travelled];
       }
       // Un viaje manda sobre la orden permanente que llevara: es lo ultimo que se le ha dicho.
       delete unit.standingOrder;
       unit.travelTo = posOf(action.to);
-      return [];
+      return [travelled];
     },
   },
 };

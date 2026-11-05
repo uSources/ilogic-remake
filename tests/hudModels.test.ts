@@ -122,19 +122,19 @@ describe('panel de combate', () => {
       mine,
       diceFrom(() => 0.5),
     );
-    const start = combatVM(blankState(), 0, event, 'start', icons, both)!;
+    const start = combatVM(blankState(), 0, event, 'start', icons, both);
     expect(start.left.side).toBe('own');
     expect(start.left.role).toBe('defender');
     expect(start.right.role).toBe('attacker');
     expect(start.left.life).toBe(100);
     expect(start.left.hurt).toBeNull();
-    const hit = combatVM(blankState(), 0, event, 'hit', icons, both)!;
+    const hit = combatVM(blankState(), 0, event, 'hit', icons, both);
     expect(hit.left.life).toBe(100 - event.damage);
     expect(hit.left.hurt).toBe(event.damage);
     expect(hit.right.life).toBe(100);
     expect(hit.counter).toBe(true);
-    const counter = combatVM(blankState(), 0, event, 'counter', icons, both)!;
-    expect(counter.right.life).toBe(100 - event.counter!);
+    const counter = combatVM(blankState(), 0, event, 'counter', icons, both);
+    expect(counter.right.life).toBe(100 - event.counter);
     expect(counter.right.hurt).toBe(event.counter);
   });
 
@@ -148,7 +148,7 @@ describe('panel de combate', () => {
       mine,
       diceFrom(() => 0.5),
     );
-    const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true })!;
+    const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true });
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
     expect(vm.left.icon).toBe('d');
     expect(vm.counter).toBe(false);
@@ -174,12 +174,6 @@ describe('panel de combate', () => {
     )!;
     expect(vm.right).toMatchObject({ life: 0, ko: true });
     expect(vm.counter).toBe(false);
-  });
-
-  it('eventos antiguos sin datos: sin panel', () => {
-    expect(
-      combatVM(blankState(), 0, { kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both),
-    ).toBeNull();
   });
 });
 

@@ -12,7 +12,7 @@ import type { Grid } from '../util/grid';
 import { areEnemies, isOnMap } from '../util/predicates';
 import { minBy } from '../util/pick';
 import { weatherMove } from '../weather';
-import type { GameEvent, GameState, Pos, Unit } from '../model';
+import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { visibility } from './visibility';
 import { canStillMove, markMoved, spendUnit } from './unitTurn';
 
@@ -341,6 +341,6 @@ export function endsInAmbush(events: readonly GameEvent[]): boolean {
 }
 
 /** Evento de mover (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
-export function moveEvent(uid: number, path: MovePath): GameEvent {
-  return path.ambush ? { kind: 'move', uid, path, ambush: path.ambush } : { kind: 'move', uid, path };
+export function moveEvent(actor: TeamId, uid: number, path: MovePath): GameEvent {
+  return path.ambush ? { kind: 'move', actor, uid, path, ambush: path.ambush } : { kind: 'move', actor, uid, path };
 }

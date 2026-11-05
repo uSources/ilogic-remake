@@ -3,8 +3,9 @@
  * las tiene sin disputa.
  */
 import { isOnMap } from '../util/predicates';
-import { areAllied, perTeam, teamState } from '../teams';
-import type { ControlPoint, GameState, Pos, TeamId } from '../model';
+import { posOf } from '../geom';
+import { areAllied, perTeam, teamIds, teamState } from '../teams';
+import type { ControlPoint, GameEvent, GameState, Pos, TeamId } from '../model';
 
 /** Lo que han dado los puntos de control en una ronda (ver RoundReport.control). */
 export interface ControlReport {
@@ -46,21 +47,21 @@ function updateOwner(s: GameState, point: ControlPoint): TeamId | null | 'contes
 
 /**
  * [CAMBIO] Puntos de control al acabar la ronda (ver GameState.controlPoints): solo paga el que no
- * esta disputado, para que haya batallas por ellos. Nada si la partida no tiene.
+ * esta disputado, para que haya batallas por ellos. Un suceso por punto (de quien queda y si esta
+ * disputado) y otro por equipo con lo que cobra; nada si la partida no tiene.
  */
-export function controlRound(s: GameState): ControlReport | undefined {
-  if (!s.controlPoints?.length) return undefined;
-  const report: ControlReport = { income: perTeam(s, () => 0), held: perTeam(s, () => 0), contested: 0 };
-  for (const point of s.controlPoints) {
+export function controlRound(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  const income = perTeam(s, () => 0);
+  for (const point of s.controlPoints ?? []) {
     const owner = updateOwner(s, point);
-    if (owner === 'contested') {
-      report.contested++;
-      continue;
-    }
-    if (owner === null) continue;
-    report.held[owner]!++;
-    report.income[owner]! += s.rules.controlIncome;
+    const contested = owner === 'contested';
+    events.push({ kind: 'controlPoint', actor: null, at: posOf(point), owner: point.owner, contested });
+    if (contested || owner === null) continue;
+    income[owner]! += s.rules.controlIncome;
     teamState(s, owner).funds += s.rules.controlIncome;
   }
-  return report;
+  for (const team of teamIds(s))
+    if (income[team]) events.push({ kind: 'income', actor: null, team, amount: income[team], source: 'controlPoints' });
+  return events;
 }

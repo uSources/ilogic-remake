@@ -15,7 +15,7 @@ import {
 } from '@core/rules';
 import { dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
-import { act, blankState, diceFrom, hqId, unitTypeNamed, fight } from './helpers';
+import { act, blankState, diceFrom, hqId, unitTypeNamed, fight, endRoundReport } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -161,7 +161,7 @@ describe('compra y fin de ronda', () => {
     for (let i = 0; i < 60; i++) endRound(s);
     expect(s.units).toContain(flying);
     expect(so.life).toBe(100);
-    const round = endRound(s);
+    const round = endRoundReport(s);
     expect(round.income[0]).toBe(1000);
     expect(s.day).toBe(62);
   });

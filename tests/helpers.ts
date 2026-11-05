@@ -8,7 +8,7 @@ import type { Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, Rul
 import { aiTurn } from '@core/ai';
 import { dispatch, resolveAttack, restoreInvariants } from '@core/actions';
 import { seededRng } from '@core/util/random';
-import { endRound, takesTurn } from '@core/rules';
+import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 
 /** Lado del mapa de las partidas de prueba (como el original). */
@@ -46,6 +46,9 @@ export function usePower(s: GameState, team: TeamId, power: string, target: Pos 
   const event = result.ok ? result.events[0] : undefined;
   return event?.kind === 'power' ? event : null;
 }
+
+/** Acaba la ronda y da su resumen (el que enseña la escena: lo cobrado, pagado, curado...). */
+export const endRoundReport = (s: GameState): RoundReport => roundReport(s, endRound(s));
 
 /** Dados que tiran de un `Rng` (para probar un combate con una tirada conocida, sin los de la partida). */
 export const diceFrom = (rng: Rng): Dice => ({ roll: rng });

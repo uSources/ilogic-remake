@@ -1,6 +1,7 @@
 /**
  * Huella del comportamiento del juego: juega partidas IA contra IA con semilla fija y resume en un
- * solo codigo todo lo que pasa (cada suceso y el estado entero tras cada ronda). Sirve para
+ * solo codigo todo lo que pasa (cada suceso, tambien los del fin de ronda, y el estado entero tras
+ * cada ronda). Sirve para
  * reescribir codigo sin cambiar lo que hace: la huella de antes y la de despues tienen que ser
  * iguales. Mas estricta que tests/aiGolden.test.ts: varias reglas, tamaños, generales y escuadras
  * del jugador con ordenes.
@@ -85,7 +86,7 @@ function playScenario(scenario: Scenario): string {
       }
       if (isOver()) break;
     }
-    endRound(s);
+    for (const event of endRound(s)) record(event);
     hash.update(serialize(s));
   }
   record(outcome(s, person));

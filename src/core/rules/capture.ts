@@ -5,7 +5,7 @@
 import { isHq } from '../gameContent';
 import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
-import type { Building, GameEvent, GameState, Unit } from '../model';
+import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
@@ -95,7 +95,7 @@ export function advanceCapture(s: GameState, unit: Unit): CaptureResult {
 }
 
 /** Evento de captura (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
-export function captureEvent(unit: Unit, building: Building, result: { left: number; total: number }): GameEvent {
+export function captureEvent(actor: TeamId, unit: Unit, building: Building, result: { left: number; total: number }): GameEvent {
   const at = posOf(building);
-  return { kind: 'capture', uid: unit.uid, at, owner: building.owner, left: result.left, total: result.total };
+  return { kind: 'capture', actor, uid: unit.uid, at, owner: building.owner, left: result.left, total: result.total };
 }

@@ -14,11 +14,15 @@ describe('estadisticas', () => {
     const s = blankState();
     const unit = newUnit(s, unitTypeNamed('Tank'), 0, { x: 3, y: 3 });
     s.units.push(unit);
-    recordEvent(s, { kind: 'spawn', uid: unit.uid, at: { x: 3, y: 3 } }, 0);
+    recordEvent(s, { kind: 'spawn', actor: 0, uid: unit.uid, unitType: 'Tank', team: 0, at: { x: 3, y: 3 } });
     const combat = { attackerTeam: 0, defenderTeam: 1 } as CombatInfo;
-    recordEvent(s, { kind: 'attack', attacker: unit.uid, target: { x: 4, y: 3 }, damage: 50, killed: true, combat }, 0);
-    recordEvent(s, { kind: 'attack', attacker: unit.uid, target: { x: 4, y: 3 }, damage: 10, killed: false }, 0);
-    recordEvent(s, { kind: 'capture', uid: unit.uid, at: { x: 3, y: 3 }, owner: null }, 1);
+    const at = { x: 4, y: 3 };
+    const fight = { kind: 'attack', actor: 0, attacker: unit.uid, target: 99, at, counter: 0, attackerKilled: false, combat } as const;
+    recordEvent(s, { ...fight, damage: 50, killed: true });
+    recordEvent(s, { ...fight, damage: 10, killed: false });
+    recordEvent(s, { kind: 'capture', actor: 1, uid: unit.uid, at: { x: 3, y: 3 }, owner: 1, left: 0, total: 20 });
+    // El fin de ronda (sin actor) no cuenta.
+    recordEvent(s, { kind: 'income', actor: null, team: 0, amount: 1000, source: 'buildings' });
     expect(statsOf(s, 0)).toEqual({ built: 1, spent: unitTypeNamed('Tank').cost, lost: 0, captured: 0, army: [] });
     expect(statsOf(s, 1)).toEqual({ built: 0, spent: 0, lost: 1, captured: 1, army: [] });
   });
@@ -27,10 +31,20 @@ describe('estadisticas', () => {
     const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 3, y: 3 });
     const target = newUnit(s, unitTypeNamed('Soldier'), 2, { x: 4, y: 3 });
-    recordEvent(s, { kind: 'attack', attacker: tank.uid, target: posOf(target), damage: 10, killed: false }, 0);
-    s.units = s.units.filter((unit) => unit.uid !== target.uid);
     const combat = { attackerTeam: 0, defenderTeam: 2 } as CombatInfo;
-    recordEvent(s, { kind: 'attack', attacker: tank.uid, target: posOf(target), damage: 90, killed: true, combat }, 0);
+    const fight = {
+      kind: 'attack',
+      actor: 0,
+      attacker: tank.uid,
+      target: target.uid,
+      at: posOf(target),
+      counter: 0,
+      attackerKilled: false,
+      combat,
+    } as const;
+    recordEvent(s, { ...fight, damage: 10, killed: false });
+    s.units = s.units.filter((unit) => unit.uid !== target.uid);
+    recordEvent(s, { ...fight, damage: 90, killed: true });
     expect(s.teams.map((team) => team.stats.lost)).toEqual([0, 0, 1]);
   });
 

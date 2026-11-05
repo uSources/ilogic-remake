@@ -27,7 +27,7 @@ describe('reglas nuevas: combate', () => {
     expect(result.damage).toBeGreaterThan(0);
     expect(result.killed).toBe(false);
     expect(result.counter).toBeGreaterThan(0);
-    expect(attacker.life).toBe(100 - (result.counter ?? 0));
+    expect(attacker.life).toBe(100 - result.counter);
     // Responde con la vida que le queda: menos de lo que recibio.
     expect(result.counter).toBeLessThan(result.damage);
   });
@@ -56,9 +56,10 @@ describe('reglas nuevas: combate', () => {
       attackerLife: 100,
       defenderLife: 80,
     });
-    expect(event.target).toEqual({ x: 10, y: 11 });
-    expect(event.combat!.hit).toBeGreaterThan(0);
-    expect(event.combat!.counterHit).not.toBeNull();
+    expect(event.at).toEqual({ x: 10, y: 11 });
+    expect(event.target).toBe(defender.uid);
+    expect(event.combat.hit).toBeGreaterThan(0);
+    expect(event.combat.counterHit).not.toBeNull();
     // Las vidas de despues salen de las de antes menos el daño.
     expect(defender.life).toBe(80 - event.damage);
     expect(attacker.life).toBe(100 - event.counter!);
@@ -71,11 +72,11 @@ describe('reglas nuevas: combate', () => {
     defender.life = 1;
     const event = fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(event.killed).toBe(true);
-    expect(event.combat!.counterHit).toBeNull();
+    expect(event.combat.counterHit).toBeNull();
     const other = blankState();
     const art = newUnit(other, ARTILLERY, 0, { x: 10, y: 10 });
     const tank = newUnit(other, TANK, 1, { x: 10, y: 13 });
-    expect(fight(other, art, tank, diceFrom(seededRng(1))).combat!.counterHit).toBeNull();
+    expect(fight(other, art, tank, diceFrom(seededRng(1))).combat.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {

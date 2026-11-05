@@ -35,7 +35,7 @@ function payBounty(s: GameState, attacker: Unit, defender: Unit): number {
  */
 export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
   const combat = combatInfoBefore(s, attacker, defender);
-  const target = posOf(defender);
+  const at = posOf(defender);
   const damage = strike(s, attacker, defender, dice);
   defender.life -= damage;
   defender.hitDay = s.day;
@@ -51,8 +51,10 @@ export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice
   if (killed) combat.counterHit = null;
   return {
     kind: 'attack',
+    actor: attacker.team,
     attacker: attacker.uid,
-    target,
+    target: defender.uid,
+    at,
     damage,
     killed,
     counter,

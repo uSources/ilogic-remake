@@ -377,25 +377,21 @@ interface Battle {
 /** Un efecto de combate de 1000 ms a la velocidad elegida, en segundos: el factor del reloj de combatFx. */
 const SPEED_REFERENCE_MS = 1000;
 
-/** El tipo de una unidad del combate, o null si ya no se sabe (un evento sin `combat` de una unidad que ha caido). */
-const typeShown = (s: GameState, type: Unit['type'] | undefined): UnitType | null => (type === undefined ? null : unitTypeOf(s, { type }));
-
 /** El disparo de `shooter` contra `target`, si se saben los dos tipos. */
 const shotOf = (shooter: UnitType | null, target: UnitType | null) => (shooter && target ? shotKind(shooter, target) : null);
 
 function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const s = stage.state;
-  const isSeen = stage.visible(event.target) && !stage.fastForward;
-  const victimKey = stage.view.unitKeyAt(event.target);
+  const isSeen = stage.visible(event.at) && !stage.fastForward;
+  const victimKey = stage.view.unitKeyAt(event.at);
   const attackerSprite = stage.view.unitSprite(event.attacker);
   const attackerPos = attackerSprite ? { x: Math.round(attackerSprite.x / TILE), y: Math.round(attackerSprite.y / TILE) } : null;
   const attackerKey = attackerPos ? stage.view.unitKeyAt(attackerPos) : null;
   const isAttackerSeen = !!attackerPos && stage.visible(attackerPos);
   const info = event.combat;
-  const attackerTeam = info?.attackerTeam ?? unitById(s, event.attacker)?.team ?? stage.acting;
-  const victim = unitAt(s, event.target);
-  const defenderTeam = info?.defenderTeam ?? victim?.team;
-  const defenderSide = defenderTeam === undefined ? 'enemy' : sideOf(s, stage.viewer, defenderTeam);
+  const attackerTeam = info.attackerTeam;
+  const victim = unitAt(s, event.at);
+  const defenderSide = sideOf(s, stage.viewer, info.defenderTeam);
   return {
     event,
     isSeen,
@@ -407,8 +403,8 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
     isAttackerSeen,
     attackerSide: sideOf(s, stage.viewer, attackerTeam),
     defenderSide,
-    attackerType: typeShown(s, info?.attackerType ?? unitById(s, event.attacker)?.type),
-    defenderType: typeShown(s, info?.defenderType ?? victim?.type),
+    attackerType: unitTypeOf(s, { type: info.attackerType }),
+    defenderType: unitTypeOf(s, { type: info.defenderType }),
     timeline: new FxTimeline(stage.scene, stage.combatMs(SPEED_REFERENCE_MS) / SPEED_REFERENCE_MS),
     panelId: Date.now(),
   };
@@ -419,8 +415,7 @@ function showCombatPanel(s: GameState, viewer: TeamId, battle: Battle, moment: '
   if (!battle.isSeen) return;
   const icons = { attacker: battle.attackerKey, defender: battle.victimKey };
   const seen = { attacker: battle.isAttackerSeen, defender: true };
-  const panel = combatVM(s, viewer, battle.event, moment, icons, seen, battle.panelId);
-  if (panel) ui.set({ combat: panel });
+  ui.set({ combat: combatVM(s, viewer, battle.event, moment, icons, seen, battle.panelId) });
 }
 
 /**
@@ -435,7 +430,7 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
     showCombatPanel(stage.state, stage.viewer, battle, 'hit');
     await hitEffects(stage, {
       uid: battle.victimUid,
-      at: event.target,
+      at: event.at,
       damage: event.damage,
       killed: event.killed,
       drawnKey: battle.victimKey,
@@ -454,13 +449,13 @@ const animateAttack: Animator<'attack'> = async (stage, event) => {
 async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   const { event, attackerPos, attackerSprite } = battle;
   showCombatPanel(stage.state, stage.viewer, battle, 'start');
-  await stage.lookAt(event.target);
-  if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.target);
-  if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
-  void targetMark(stage.scene, stage.view, event.target, sideColor(battle.attackerSide), stage.combatMs(150));
+  await stage.lookAt(event.at);
+  if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.at);
+  if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.at, attackerPos);
+  void targetMark(stage.scene, stage.view, event.at, sideColor(battle.attackerSide), stage.combatMs(150));
   const shot = shotOf(battle.attackerType, battle.defenderType);
   if (attackerSprite && attackerPos && battle.isAttackerSeen && shot) {
-    await fire(stage, attackerSprite, attackerPos, event.target, shot, battle.timeline);
+    await fire(stage, attackerSprite, attackerPos, event.at, shot, battle.timeline);
   } else await stage.wait(stage.combatMs(150));
 }
 
@@ -471,10 +466,10 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   const didCounter = event.counter > 0 || !!event.attackerKilled;
   if (!didCounter || stage.fastForward || !stage.visible(attackerPos)) return;
   const defenderSprite = battle.victimUid !== null ? stage.view.unitSprite(battle.victimUid) : null;
-  void tag(battle.timeline, stage.view, event.target, t('fxCounter'), PAL_CSS.gold);
+  void tag(battle.timeline, stage.view, event.at, t('fxCounter'), PAL_CSS.gold);
   await stage.wait(stage.combatMs(80));
   const shot = shotOf(battle.defenderType, battle.attackerType);
-  if (defenderSprite && shot) await fire(stage, defenderSprite, event.target, attackerPos, shot, battle.timeline);
+  if (defenderSprite && shot) await fire(stage, defenderSprite, event.at, attackerPos, shot, battle.timeline);
   showCombatPanel(stage.state, stage.viewer, battle, 'counter');
   await hitEffects(stage, {
     uid: event.attacker,
@@ -491,7 +486,7 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
 /** [CAMBIO] Botin: quien destruye cobra parte del precio (dorado, como el dinero de Ambar). */
 function showBounty(stage: EventStage, battle: Battle): void {
   const { event } = battle;
-  const lootAt = event.killed ? event.target : event.attackerKilled ? battle.attackerPos : null;
+  const lootAt = event.killed ? event.at : event.attackerKilled ? battle.attackerPos : null;
   if (!event.bounty || !lootAt || stage.fastForward || !stage.visible(lootAt)) return;
   const centerPoint = center(lootAt);
   void floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 16 }, `+${fmtNum(event.bounty)}`, PAL_CSS.gold);
@@ -641,11 +636,12 @@ function flashArea(stage: EventStage, target: Pos, radius: number): void {
 const animatePower: Animator<'power'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward) return;
-  const general = generalOf(stage.state, event.team)?.definition;
+  const team = event.actor;
+  const general = generalOf(stage.state, team)?.definition;
   const power = general && powerOf(general, event.power);
   const name = power?.name[settings.lang] ?? event.power;
   // Los demas equipos avisan siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
-  const side = sideOf(stage.state, stage.viewer, event.team);
+  const side = sideOf(stage.state, stage.viewer, team);
   if (side !== 'own') showToast(`${t(side)} · ${general?.name[settings.lang] ?? event.general}: ${name}`);
   const at = event.target ?? stage.view.cursor;
   if (event.target) await stage.lookAt(event.target);
@@ -673,7 +669,23 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   capture: animateCapture,
   spawn: animateSpawn,
   power: animatePower,
+  // Lo que no tiene animacion propia: el mapa se vuelve a dibujar despues de cada suceso.
   wait: noAnimation,
+  unload: noAnimation,
+  supply: noAnimation,
+  remove: noAnimation,
+  undoMove: noAnimation,
+  travel: noAnimation,
+  standingOrder: noAnimation,
+  standingOrderDone: noAnimation,
+  squad: noAnimation,
+  // El fin de ronda lo cuenta su resumen (turns.ts), no una animacion por suceso.
+  income: noAnimation,
+  heal: noAnimation,
+  upkeep: noAnimation,
+  controlPoint: noAnimation,
+  newDay: noAnimation,
+  weather: noAnimation,
 };
 
 /** La animacion de un evento, con su tipo (TypeScript no lo deduce solo al indexar `ANIMATORS`). */

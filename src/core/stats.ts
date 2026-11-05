@@ -3,8 +3,8 @@
  * gastado, lo que ha perdido y capturado, y el valor de su ejercito cada dia.
  */
 import { unitTypeOf } from './gameContent';
+import { entryOf } from './content';
 import { emptyTeamStats, teamState } from './teams';
-import { isOnMap } from './util/predicates';
 import type { GameEvent, GameState, TeamId, TeamStats } from './model';
 
 /** Valor de un ejercito: coste de cada unidad por su vida. */
@@ -37,37 +37,28 @@ export function statsOf(s: GameState, team: TeamId): Readonly<TeamStats> {
   return teamState(s, team).stats;
 }
 
-/** El equipo de la unidad que estaba en `at` antes del ataque (la que ha caido ya no esta). */
-function defenderTeamOf(s: GameState, event: Extract<GameEvent, { kind: 'attack' }>): TeamId | null {
-  if (event.combat) return event.combat.defenderTeam;
-  const defender = s.units.find((unit) => isOnMap(unit) && unit.x === event.target.x && unit.y === event.target.y);
-  return defender?.team ?? null;
-}
-
-/** Apunta un evento ya aplicado al estado. `team` = equipo que lo ha hecho. */
-export function recordEvent(s: GameState, event: GameEvent, team: TeamId): void {
-  const counts = teamState(s, team).stats;
+/**
+ * Apunta un evento ya aplicado al estado en las estadisticas de quien lo ha hecho (`actor`); lo de la
+ * propia partida (el fin de ronda) no cuenta.
+ */
+export function recordEvent(s: GameState, event: GameEvent): void {
+  if (event.actor === null) return;
+  const counts = teamState(s, event.actor).stats;
   switch (event.kind) {
-    case 'attack': {
-      const defenderTeam = defenderTeamOf(s, event);
-      if (event.killed && defenderTeam !== null) teamState(s, defenderTeam).stats.lost++;
+    case 'attack':
+      if (event.killed) teamState(s, event.combat.defenderTeam).stats.lost++;
       if (event.attackerKilled) counts.lost++;
       break;
-    }
     case 'capture':
       // Con captura por puntos, solo cuenta cuando se termina.
-      if (event.left === undefined || event.left === 0) counts.captured++;
+      if (event.left === 0) counts.captured++;
       break;
-    case 'spawn': {
-      const built = s.units.find((unit) => unit.uid === event.uid);
-      if (built) {
-        counts.built++;
-        counts.spent += unitTypeOf(s, built).cost;
-      }
+    case 'spawn':
+      counts.built++;
+      counts.spent += entryOf(s.content.units, event.unitType, 'unidad').cost;
       break;
-    }
     default:
-      // Mover, unir, subir, esperar y los poderes no cuentan para las estadisticas.
+      // Mover, unir, subir, esperar, ordenes, escuadras y los poderes no cuentan para las estadisticas.
       break;
   }
 }

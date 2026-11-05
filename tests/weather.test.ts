@@ -10,7 +10,7 @@ import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf
 import { advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { seededRng } from '@core/util/random';
 import type { GameState, RulesConfig } from '@core/model';
-import { blankState, savedByVersion1, unitTypeNamed } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, endRoundReport } from './helpers';
 
 const WEATHER = defaultContent().weather;
 const THEMES = defaultContent().themes;
@@ -153,9 +153,9 @@ describe('clima: como cambia', () => {
     const s = withWeather(CLEAR);
     s.weather = { kind: keyOfWeather(CLEAR), left: 2, next: keyOfWeather(RAIN) };
     expect(forecast(s)).toBeNull();
-    expect(endRound(s).weather).toBeNull();
+    expect(endRoundReport(s).weather).toBeUndefined();
     expect(forecast(s)).toBe(RAIN);
-    const round = endRound(s);
+    const round = endRoundReport(s);
     expect(round.weather).toEqual({ from: CLEAR, to: RAIN });
     expect(weatherNow(s)).toBe(RAIN);
     expect(s.weather!.left).toBeGreaterThanOrEqual(1);

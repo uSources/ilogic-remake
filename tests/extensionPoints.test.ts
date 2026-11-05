@@ -5,7 +5,6 @@ import {
   HIT_MODIFIERS,
   ROUND_PHASES,
   canDamage,
-  endRound,
   fireOrigins,
   hitChance,
   moveRange,
@@ -15,7 +14,7 @@ import {
 } from '@core/rules';
 import { coverAgainst } from '@core/abilities';
 import type { UnitType } from '@core/content';
-import { blankState } from './helpers';
+import { blankState, endRoundReport } from './helpers';
 
 const UNIT_TYPES = defaultContent().units.list;
 const power = (attacker: UnitType, defender: UnitType) => attacker.attack?.hitChance[defender.id] ?? 0;
@@ -65,7 +64,7 @@ describe('pasos del fin de ronda (ROUND_PHASES)', () => {
   it('endRound los recorre todos: reactiva unidades y pasa el dia', () => {
     const s = blankState(TEST_RULES);
     const unit = newUnit(s, fighter(), 0, { x: 1, y: 1 }, 'done');
-    const round = endRound(s);
+    const round = endRoundReport(s);
     expect(s.day).toBe(2);
     expect(unit.turnState).toBe('ready');
     expect(round.income).toEqual([0, 0]);

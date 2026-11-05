@@ -60,7 +60,7 @@ describe('generales: reglas', () => {
     const attacker = newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
     const defender = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
     const result = fight(s, attacker, defender, diceFrom(seededRng(3)));
-    const value = ((result.damage + (result.counter ?? 0)) * unitType('Tank').cost) / 100;
+    const value = ((result.damage + result.counter) * unitType('Tank').cost) / 100;
     expect(teamState(s, 0).general!.charge).toBeCloseTo(value / 6000);
   });
 

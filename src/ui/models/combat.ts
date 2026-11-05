@@ -49,7 +49,6 @@ export function forecastVM(
  * (`viewer`: lo suyo o lo aliado va a la izquierda). `icons` son las imagenes que habia dibujadas
  * antes del combate y `seen` si ese equipo ve a cada una: una unidad en la niebla
  * sale como '???' (no se delata que unidad dispara desde donde no se ve).
- * Devuelve null para eventos antiguos sin datos de combate.
  */
 export function combatVM(
   s: GameState,
@@ -59,10 +58,9 @@ export function combatVM(
   icons: { attacker: string | null; defender: string | null },
   seen: { attacker: boolean; defender: boolean },
   id = 0,
-): CombatVM | null {
-  const combat: CombatInfo | undefined = event.combat;
-  if (!combat) return null;
-  const counter = event.counter ?? 0;
+): CombatVM {
+  const combat: CombatInfo = event.combat;
+  const counter = event.counter;
   const hitDone = stage !== 'start';
   const counterDone = stage === 'counter';
   const side = (role: CombatSideVM['role']): CombatSideVM => {

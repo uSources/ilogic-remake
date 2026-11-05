@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIONS, INVARIANTS, dispatch, isValidAction } from '@core/actions';
-import { endRound, newUnit } from '@core/rules';
+import { endRound, newUnit, roundReport } from '@core/rules';
 import { serialize } from '@core/save';
 import { formSquad } from '@core/squads/membership';
 import type { GameAction, GameState } from '@core/model';
@@ -172,5 +172,43 @@ describe('deshacer el ultimo movimiento', () => {
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 9 } });
     endRound(s);
     expect(s.lastMove).toBeUndefined();
+  });
+});
+
+describe('sucesos completos', () => {
+  it('cada accion dice quien la hizo y a quien, con uids y tipos', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
+    const [bought] = act(s, 0, { kind: 'buy', at: { x: 4, y: 4 }, unitType: 'Soldier' });
+    expect(bought).toMatchObject({ kind: 'spawn', actor: 0, unitType: 'Soldier', team: 0, at: { x: 4, y: 4 } });
+    const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
+    const [fight] = act(s, 0, { kind: 'attack', uid: tank.uid, target: enemy.uid });
+    expect(fight).toMatchObject({ kind: 'attack', actor: 0, attacker: tank.uid, target: enemy.uid, at: { x: 10, y: 11 } });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    expect(act(s, 0, { kind: 'wait', uid: soldier.uid })).toEqual([{ kind: 'wait', actor: 0, uid: soldier.uid }]);
+  });
+
+  it('las escuadras y las ordenes tambien tienen suceso', () => {
+    const s = blankState(PLAIN_RULES);
+    const uids = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }).uid, newUnit(s, SOLDIER, 0, { x: 6, y: 5 }).uid];
+    const [formed] = act(s, 0, { kind: 'formSquad', uids });
+    expect(formed).toMatchObject({ kind: 'squad', actor: 0, change: 'formed', uids, name: 'Alfa', key: 1 });
+    const order = { kind: 'defend', at: { x: 9, y: 9 } } as const;
+    expect(act(s, 0, { kind: 'giveStandingOrder', uids, order })).toEqual([{ kind: 'standingOrder', actor: 0, uids, order }]);
+  });
+
+  it('el fin de ronda da sus sucesos sin actor, y su resumen sale de ellos', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
+    soldier.life = 50;
+    const events = endRound(s);
+    expect(events.every((event) => event.actor === null)).toBe(true);
+    expect(events).toContainEqual({ kind: 'heal', actor: null, uid: soldier.uid, team: 0, amount: 30 });
+    expect(events).toContainEqual({ kind: 'newDay', actor: null, day: 2 });
+    const report = roundReport(s, events);
+    expect(report.income[0]).toBeGreaterThan(0);
+    expect(report.healed).toEqual([{ uid: soldier.uid, team: 0, amount: 30 }]);
   });
 });

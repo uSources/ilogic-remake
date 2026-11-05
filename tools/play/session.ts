@@ -20,6 +20,7 @@ import {
   buyOptions,
   canCapture,
   endRound,
+  roundReport,
   endsInAmbush,
   moveRange,
   outcome,
@@ -297,7 +298,7 @@ export class Session {
     if (!id)
       return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
     const events = this.perform({ kind: 'usePower', power: id, target }, `no se puede usar ${id} (poderes: ${list})`);
-    return events.map((event) => describe(this.s, event)).join('\n');
+    return told(this.s, events, '').join('\n');
   }
 
   /**
@@ -307,11 +308,11 @@ export class Session {
    */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
-    if (aiForMe) for (const event of aiTurn(this.s, this.rng, this.me)) out.push(`tu IA: ${describe(this.s, event)}`);
+    if (aiForMe) out.push(...told(this.s, aiTurn(this.s, this.rng, this.me), 'tu IA: '));
     // othersAfter pasa siempre una vez por el fin de ronda: ahi se sabe lo cobrado.
     let income = 0;
     for (const step of othersAfter(this.s, this.me)) {
-      if (step.kind === 'roundEnd') income = teamValue(endRound(this.s).income, this.me);
+      if (step.kind === 'roundEnd') income = teamValue(roundReport(this.s, endRound(this.s)).income, this.me);
       else this.playOther(step.team, out);
     }
     out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
@@ -324,7 +325,7 @@ export class Session {
   private playOther(team: TeamId, out: string[]): void {
     const reason = notAiControlledReason(this.s, team);
     if (reason) throw new UsageError(reason);
-    for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
+    out.push(...told(this.s, aiTurn(this.s, this.rng, team), `equipo ${team}: `));
   }
 
   status(): string {
@@ -350,7 +351,21 @@ export class Session {
 
 class UsageError extends Error {}
 
-function describe(s: GameState, event: GameEvent): string {
+/**
+ * Lo que se cuenta de unos sucesos, una linea por suceso con `prefix` delante (los que no dicen nada
+ * nuevo, como esperar o una orden cumplida, no se cuentan).
+ */
+function told(s: GameState, events: Iterable<GameEvent>, prefix: string): string[] {
+  const lines: string[] = [];
+  for (const event of events) {
+    const line = describe(s, event);
+    if (line) lines.push(prefix + line);
+  }
+  return lines;
+}
+
+/** Un suceso en una linea, o null si no merece la pena contarlo. */
+function describe(s: GameState, event: GameEvent): string | null {
   const name = (uid: number) => {
     const unit = unitById(s, uid);
     return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
@@ -359,7 +374,7 @@ function describe(s: GameState, event: GameEvent): string {
     case 'move':
       return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.ambush ? ' (emboscada)' : ''}`;
     case 'attack':
-      return `${name(event.attacker)} ataca (${event.target.x},${event.target.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
+      return `${name(event.attacker)} ataca (${event.at.x},${event.at.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
     case 'capture':
       return `${name(event.uid)} captura (${event.at.x},${event.at.y})${event.left ? `, quedan ${event.left}` : ''}`;
     case 'spawn':
@@ -368,10 +383,15 @@ function describe(s: GameState, event: GameEvent): string {
       return `${name(event.uid)} se une a ${name(event.into)}`;
     case 'load':
       return `${name(event.uid)} sube a ${name(event.into)}`;
-    case 'wait':
-      return `${name(event.uid)} espera`;
+    case 'unload':
+      return `${name(event.uid)} baja a ${name(event.passenger)} en (${event.to.x},${event.to.y})`;
+    case 'supply':
+      return `${name(event.uid)} repara a ${event.repairs.length}`;
     case 'power':
       return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+    default:
+      // Esperar, ordenes, escuadras, viajes y el fin de ronda (eso lo resume endTurn) no se cuentan.
+      return null;
   }
 }
 

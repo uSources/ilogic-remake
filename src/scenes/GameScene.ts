@@ -749,9 +749,9 @@ export class GameScene extends Phaser.Scene {
     const replaying = this.turns.replaying;
     // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
     if (isOwnTurn && event.kind !== 'move') this.moves.clearUndo();
-    if (!replaying) recordEvent(this.s, event, this.turns.acting);
+    if (!replaying) recordEvent(this.s, event);
     if (!replaying && isOwnTurn) this.tutorial.record(event);
-    if (event.kind === 'attack') this.lastAt = { ...event.target };
+    if (event.kind === 'attack') this.lastAt = { ...event.at };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };
   }
 

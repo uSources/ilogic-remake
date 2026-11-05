@@ -224,12 +224,12 @@ export class LiveBackground {
 
   private async animateAttack(event: Extract<AnimatedEvent, { kind: 'attack' }>): Promise<void> {
     const view = this.view!;
-    await this.follow(event.target);
+    await this.follow(event.at);
     const sprite = view.unitSprite(event.attacker);
     const attacker = this.game!.units.find((unit) => unit.uid === event.attacker);
     if (sprite && attacker)
-      await lunge(this.scene, sprite, { dx: Math.sign(event.target.x - attacker.x), dy: Math.sign(event.target.y - attacker.y) });
-    const hitPoint = center(event.target);
+      await lunge(this.scene, sprite, { dx: Math.sign(event.at.x - attacker.x), dy: Math.sign(event.at.y - attacker.y) });
+    const hitPoint = center(event.at);
     void burst(this.scene, view, hitPoint, {
       colors: event.killed ? COLORS.smoke : COLORS.fire,
       count: event.killed ? 16 : 10,

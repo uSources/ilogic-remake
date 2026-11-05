@@ -25,6 +25,7 @@ import {
   threatMap,
   unitById,
   visibility,
+  roundReport,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
@@ -46,7 +47,7 @@ import {
 } from '@core/teams';
 import type { GameEvent, GameState } from '@core/model';
 import { checkInvariants } from './sim/partidas';
-import { blankState, hqId, unitTypeNamed } from './helpers';
+import { blankState, hqId, unitTypeNamed, endRoundReport } from './helpers';
 
 const HQ = hqId();
 const SOLDIER = unitTypeNamed('Soldier');
@@ -168,14 +169,14 @@ describe('cuatro equipos en dos alianzas', () => {
     newUnit(s, SOLDIER, 0, { x: 20, y: 20 });
     newUnit(s, SOLDIER, 2, { x: 21, y: 20 });
     const before = s.teams.map((team) => team.funds);
-    const report = endRound(s);
+    const report = endRoundReport(s);
     expect(report.income).toHaveLength(4);
     expect(report.income[3]).toBeGreaterThan(report.income[1]!);
     expect(s.teams.map((team, id) => team.funds - before[id]!)).toEqual(perTeam(s, (team) => report.income[team]! - report.upkeep[team]!));
     // Dos aliados en la zona: no la disputan, es del primero que la tiene.
     expect(s.controlPoints[0]!.owner).toBe(0);
     newUnit(s, SOLDIER, 1, { x: 20, y: 21 });
-    expect(controlRound(s)!.contested).toBe(1);
+    expect(roundReport(s, controlRound(s)).control!.contested).toBe(1);
   });
 
   it('gana la alianza que deja sin nada a todas las enemigas', () => {
