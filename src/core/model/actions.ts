@@ -49,6 +49,8 @@ export type GameActionOf<K extends GameActionKind> = Extract<GameAction, { kind:
 
 /** Por que no vale una accion (lo dice `validate`; la partida no cambia). */
 export type ActionRejection =
+  /** Quien la manda no es un equipo de la partida. */
+  | 'notATeam'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */
   | 'missing'
   /** Es de otro equipo. */

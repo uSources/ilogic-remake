@@ -7,7 +7,8 @@
  * | Modulo | Que va |
  * |---|---|
  * | `types` | la forma de una entrada del registro (`ActionDefinition`: validate y apply) |
- * | `checks` | comprobaciones comunes: la unidad existe, es del equipo, aun puede actuar |
+ * | `guards` | lo que se mira antes de cualquier accion: que la mande un equipo de la partida (`ACTION_GUARDS`) |
+ * | `checks` | comprobaciones de las unidades de una accion: existen, son del equipo, aun pueden actuar |
  * | `movement` | mover, viaje de varios turnos |
  * | `combat` | atacar (el combate entero) |
  * | `capture` | capturar |
@@ -31,5 +32,6 @@ export { availableActions, canGiveStandingOrder, UNIT_MENU, type UnitMenuOption 
  */
 export { resolveAttack } from './actions/combat';
 export { INVARIANTS, restoreInvariants, type Invariant } from './actions/invariants';
+export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
 export type { ActionDefinition, ActionRegistry } from './actions/types';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';

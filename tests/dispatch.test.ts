@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, INVARIANTS, availableActions, canGiveStandingOrder, dispatch, isValidAction } from '@core/actions';
+import { ACTIONS, ACTION_GUARDS, INVARIANTS, availableActions, canGiveStandingOrder, dispatch, isValidAction } from '@core/actions';
 import { endRound, newUnit, roundReport } from '@core/rules';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
@@ -113,6 +113,14 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expectRejected(s, 0, { kind: 'buy', at: { x: 8, y: 8 }, unitType: 'Soldier' }, 'occupied');
     expectRejected(s, 0, { kind: 'buy', at: { x: 8, y: 8 }, unitType: 'Dragon' }, 'missing');
     expectRejected(s, 0, { kind: 'deleteUnit', uid: theirs.uid }, 'notYours');
+  });
+
+  it('antes de nada: la manda un equipo de la partida (ACTION_GUARDS)', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
+    expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
+    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['team']);
   });
 
   it('isValidAction pregunta lo mismo sin cambiar nada', () => {
