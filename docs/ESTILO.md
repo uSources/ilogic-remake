@@ -59,7 +59,12 @@ return gotCloser ? best.pos : null;
 10. **Comentarios del porque, no del que.** Si un comentario explica que hace el codigo, se reescribe
     el codigo. Se comenta la razon, la regla del juego original o la trampa que se evita.
 11. **Identificadores en ingles, comentarios y textos en castellano** (como hasta ahora).
-12. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
+12. **La partida cambia con acciones.** Fuera de `src/core/actions/`, nada cambia la partida a mano:
+    se manda una accion (`dispatch(s, team, { kind: 'move', uid, to })`) y se miran sus sucesos o su
+    `reason`. Las reglas (`rules/`, `squads/`) preguntan y calculan; lo que una accion cambia lo hace
+    su `apply`, y lo que hay que dejar en orden despues de cualquiera es una entrada en `INVARIANTS`,
+    no una llamada que cada uno tiene que acordarse de hacer.
+13. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
     `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
     modulo que se cambian al empezar una partida. El contenido va con la partida (`unitTypeOf(s, unit)`,
     `terrainAt(s, pos)`, `weightsOf(s)`), resuelto en tipos con nombre (`unitType.cost`, no columnas

@@ -14,6 +14,7 @@
  * |---|---|
  * | `queries` | que hay en una casilla, por donde se anda, unidades de un equipo, pasajeros |
  * | `unitTurn` | el turno de cada unidad: que le queda por hacer y como se gasta |
+ * | `funds` | el dinero: cobrar, pagar y el tope (lo usan las acciones y el fin de ronda; no sale de aqui) |
  * | `visibility` | vision y niebla |
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |

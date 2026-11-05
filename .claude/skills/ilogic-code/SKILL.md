@@ -35,8 +35,15 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
 - Las escenas no calculan lo que enseña la interfaz a mano: usan funciones puras de `ui/hudModels.ts`
   y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store. Como se añade un
   panel y que pieza usar (`Button`, `Popover`, `Veil`...): `docs/ARQUITECTURA.md`, "Interfaz HTML".
-- La aleatoriedad pasa siempre por un `Rng` con semilla (`seededRng`); nada de `Math.random` en core
-  salvo como valor por defecto. La IA y la generacion de mapas son deterministas con la misma semilla.
+- **La partida solo cambia con acciones**: quien juega un equipo manda una `GameAction` (datos: uids y
+  casillas) con `dispatch(s, team, action)` (`core/actions.ts`), que la comprueba (`validate`, desde
+  la partida), la hace y devuelve sus sucesos (o por que no vale). La escena lo hace con
+  `host.act(...)`/`host.perform(...)` (`ActionHost`), la IA con `act`/`doMove`/`finish`
+  (`ai/context.ts`). Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
+  modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
+- El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`), las decisiones
+  llevan su `Rng` con semilla (`seededRng`, `core/util/random.ts`); nada de `Math.random` en core.
+  La IA y la generacion de mapas son deterministas con la misma semilla.
 
 ## Estilo: que se lea a la primera
 
@@ -74,22 +81,29 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
   `createGame(rng, { rules })`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
-  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, teams })`, el unico sitio
+  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
-  `loadGame(json)` o `deserialize(json, saveContext(contenido))`; un cambio en lo que se guarda sube
+  `loadGame(json)`, o `readSave(json, saveContext(contenido))` para saber que falla (`deserialize` da
+  null); un cambio en lo que se guarda sube
   `SAVE_VERSION` (core/saveVersion.ts, y el tipo de `GameState.version`) y lleva su paso en `MIGRATIONS`
   (core/saveMigrations.ts).
 - **Casillas como `Pos`**: firmas con `pos: Pos`, no `(x, y)`; copiar la casilla de una unidad o
   edificio con `posOf(unit)`; los bordes, con `mapGrid(s).contains(pos)`, `isOnBoard(s, pos)` o
   `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).
-- **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent`, proteccion con
+- **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent` (con su `actor`), el turno de
+  una unidad con `rules/unitTurn.ts` (`canStillAct`, `canStillMove`, `canStillFire`, `spendUnit`), el
+  dinero con `earn`/`pay` (`rules/funds.ts`), las reglas validas con `RULE_SCHEMA`
+  (`core/rulesSchema.ts`), lo que viene de fuera con `util/validation.ts`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
   `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en
   el mapa, esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`,
   casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
   "Vista del mapa").
-- **Extender sin abrir funciones grandes**: acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
-  ronda = entrada en `ROUND_PHASES`; habilidad de unidad nueva = su efecto en `abilities.ts`; efecto
+- **Extender sin abrir funciones grandes**: accion nueva = su forma en `GameAction`, su suceso en
+  `GameEvent` y su entrada en `ACTIONS` (`core/actions/`; y en `UNIT_MENU` si sale en el menu de la
+  unidad, y en `ANIMATORS` de la escena); lo que se limpia tras cualquier accion = entrada en
+  `INVARIANTS`; lo que se mira antes de cualquiera = entrada en `ACTION_GUARDS`; acierto nuevo =
+  entrada en `HIT_MODIFIERS`; paso por ronda = entrada en `ROUND_PHASES` (devuelve sus sucesos); habilidad de unidad nueva = su efecto en `abilities.ts`; efecto
   nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`). La IA no tiene
   variables globales: lo del turno va en `AiCtx`. Antes de
   escribir un bucle o un literal, buscar si ya existe la ayuda.
