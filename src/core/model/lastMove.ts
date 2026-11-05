@@ -11,4 +11,6 @@ export interface LastMove {
   from: Pos;
   /** La captura a medias que llevaba en el edificio de `from` y perdio al irse (vuelve al deshacer). */
   capture: NonNullable<Building['capture']> | null;
+  /** Al moverse descubrio enemigos que antes no veia: entonces no se puede deshacer (seria mirar gratis). */
+  revealed: boolean;
 }

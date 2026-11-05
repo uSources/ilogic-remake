@@ -7,10 +7,9 @@ import type Phaser from 'phaser';
 import { availableActions, isValidAction, type UnitMenuOption } from '../../core/actions';
 import { manhattan, samePos, posOf } from '../../core/geom';
 import { closestStep } from '../../core/targeting';
-import { canCapture, canStillMove, endsInAmbush, moveRange, stepToward, unitById, visibility } from '../../core/rules';
+import { canCapture, canStillMove, endsInAmbush, moveRange, stepToward, unitById } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
-import { isHostile } from '../../core/teams';
 import { showToast } from '../../hud/store';
 import { settings, t } from '../../settings';
 import type { MapView } from '../../ui/mapView';
@@ -44,16 +43,6 @@ export interface MoveHost extends ActionHost {
 export interface CommitOptions {
   drop?: boolean;
   wait?: boolean;
-}
-
-/** Uids de los enemigos de `viewer` que ve ahora (para saber si un movimiento ha descubierto a alguien). */
-function visibleEnemyUids(s: GameState, viewer: TeamId): string {
-  const vis = visibility(s, viewer);
-  return s.units
-    .filter((unit) => isHostile(s, viewer, unit.team) && unit.carrier === null && vis.at(unit))
-    .map((unit) => unit.uid)
-    .sort((first, second) => first - second)
-    .join(',');
 }
 
 /** Lo que una unidad puede hacer despues de moverse, aparte de esperar y de las ordenes. */
@@ -181,7 +170,6 @@ export class UnitMoves {
     const unit = session.unit;
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     const before = serialize(host.state);
-    const seenBefore = visibleEnemyUids(host.state, host.viewer);
     const moved = host.act({ kind: 'move', uid: unit.uid, to, path: this.trailTo(to) });
     if (!moved) return;
     session.range = null;
@@ -190,8 +178,8 @@ export class UnitMoves {
       this.clearUndo();
       return host.afterAction();
     }
-    // Se puede deshacer si no ha descubierto a nadie.
-    if (visibleEnemyUids(host.state, host.viewer) === seenBefore) this.undoStack.push(before);
+    // Ctrl+Z vale para lo mismo que «Atras»: el nucleo dice si se puede (no si ha descubierto a alguien).
+    if (isValidAction(host.state, host.viewer, { kind: 'undoMove', uid: unit.uid })) this.undoStack.push(before);
     else this.clearUndo();
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (options.wait) return this.waitSelected();

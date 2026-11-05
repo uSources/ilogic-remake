@@ -9,7 +9,7 @@ import { revealsAll } from '../generals';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
-import { alliesOf } from '../teams';
+import { alliesOf, isHostile } from '../teams';
 import { weatherVision } from '../weather';
 import type { GameState, Pos, TeamId, Unit } from '../model';
 
@@ -49,4 +49,10 @@ export function visibility(s: GameState, team: TeamId): Grid<boolean> {
     for (const pos of diamond(visible, building, 0, buildingTypeOf(s, building).vision)) visible.set(pos, true);
   }
   return visible;
+}
+
+/** Uids de los enemigos de `team` que ve ahora en el mapa (para saber si un movimiento ha descubierto a alguien). */
+export function visibleEnemies(s: GameState, team: TeamId): Set<number> {
+  const visible = visibility(s, team);
+  return new Set(s.units.filter((unit) => isHostile(s, team, unit.team) && isOnMap(unit) && visible.at(unit)).map((unit) => unit.uid));
 }

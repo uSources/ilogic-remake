@@ -5,6 +5,7 @@ import { followPath, moveEvent, plannedPath } from '../rules/movement';
 import { buildingAt, unitAt, unitById } from '../rules/queries';
 import { captureProgress } from '../rules/capture';
 import { readyUnit } from '../rules/unitTurn';
+import { visibleEnemies } from '../rules/visibility';
 import type { ActionRejection, GameState, LastMove, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit, ownUnitProblem } from './checks';
 import type { ActionRegistry } from './types';
@@ -16,12 +17,16 @@ function ownCaptureHere(s: GameState, unit: Unit): LastMove['capture'] {
   return progress && progress.uid === unit.uid ? { ...progress } : null;
 }
 
-/** Por que no se puede deshacer ahora el movimiento de `uid`: tiene que ser lo ultimo hecho y su casilla seguir libre. */
+/**
+ * Por que no se puede deshacer ahora el movimiento de `uid`: tiene que ser lo ultimo hecho, no haber
+ * descubierto a nadie y su casilla seguir libre.
+ */
 function undoProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
   const problem = actorProblem(s, team, uid);
   if (problem) return problem;
   const lastMove = s.lastMove;
   if (!lastMove || lastMove.uid !== uid || unitById(s, uid)!.turnState !== 'moved') return 'nothingToUndo';
+  if (lastMove.revealed) return 'revealed';
   return unitAt(s, lastMove.from) ? 'occupied' : null;
 }
 
@@ -37,10 +42,12 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const from = posOf(unit);
       const capture = ownCaptureHere(s, unit);
       const path = plannedPath(s, unit, action.to, action.path)!;
+      const seenBefore = visibleEnemies(s, team);
       const walked = followPath(s, unit, path);
+      const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
       // Con emboscada no hay vuelta atras: la unidad ya ha gastado su turno.
       if (walked.ambush) delete s.lastMove;
-      else s.lastMove = { uid: unit.uid, from, capture };
+      else s.lastMove = { uid: unit.uid, from, capture, revealed };
       return [moveEvent(team, unit.uid, walked)];
     },
   },

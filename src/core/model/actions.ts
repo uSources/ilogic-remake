@@ -63,6 +63,8 @@ export type ActionRejection =
   | 'unreachable'
   /** Deshacer: no es su ultimo movimiento, o ya ha hecho algo despues. */
   | 'nothingToUndo'
+  /** Deshacer: el movimiento descubrio enemigos (con niebla, volver atras seria mirar gratis). */
+  | 'revealed'
   /** El objetivo no se puede atacar: no es enemigo, no se ve, esta lejos o no le hace nada. */
   | 'notTarget'
   | 'cannotCapture'

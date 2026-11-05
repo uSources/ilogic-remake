@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIONS, ACTION_GUARDS, INVARIANTS, availableActions, canGiveStandingOrder, dispatch, isValidAction } from '@core/actions';
 import { endRound, newUnit, roundReport } from '@core/rules';
+import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
@@ -170,6 +171,18 @@ describe('deshacer el ultimo movimiento', () => {
     expect([soldier.x, soldier.y, soldier.turnState]).toEqual([5, 5, 'ready']);
   });
 
+  it('con niebla, si el movimiento descubre enemigos no se deshace (seria mirar gratis)', () => {
+    const s = blankState({ ...PLAIN_RULES, fog: true });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 2, y: 4 + SOLDIER.vision });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 3 } });
+    expect(s.lastMove?.revealed).toBe(false);
+    act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 4 } });
+    expect(manhattan(soldier, enemy)).toBe(SOLDIER.vision);
+    expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'revealed');
+  });
+
   it('cualquier otra accion o el fin de ronda lo olvidan', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
@@ -243,7 +256,7 @@ describe('deshacer no pierde la captura a medias (K2)', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
     const raw = JSON.parse(serialize(s)) as { lastMove: { from: unknown } };
-    expect(loadGame(JSON.stringify(raw))!.lastMove).toEqual({ uid: soldier.uid, from: { x: 5, y: 5 }, capture: null });
+    expect(loadGame(JSON.stringify(raw))!.lastMove).toEqual({ uid: soldier.uid, from: { x: 5, y: 5 }, capture: null, revealed: false });
     raw.lastMove.from = { x: -1, y: 0 };
     expect(loadGame(JSON.stringify(raw))!.lastMove).toBeUndefined();
   });

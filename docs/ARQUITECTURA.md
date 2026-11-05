@@ -83,7 +83,9 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   mismo.
 - Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
-  siguiente (la invariante `undoWindow`) o el fin de ronda.
+  siguiente (la invariante `undoWindow`) o el fin de ronda. Si al moverse descubrio enemigos
+  (`lastMove.revealed`), no se deshace (`'revealed'`): con niebla seria mirar gratis. «Atras» y
+  Ctrl+Z de la escena solo preguntan al nucleo.
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`), su suceso en `GameEvent`

@@ -222,6 +222,7 @@ const isControlPoint = (frame: SaveFrame, point: unknown): boolean =>
 /** El ultimo movimiento (para deshacerlo): de una unidad, desde una casilla del mapa, con la captura que perdio. */
 function isValidLastMove(frame: SaveFrame, lastMove: unknown): boolean {
   if (!isObject(lastMove) || !isInt(lastMove.uid, 1, MAX_UID) || !isPosOn(frame.board, lastMove.from)) return false;
+  if (typeof lastMove.revealed !== 'boolean') return false;
   return lastMove.capture === null || isCaptureProgress(frame, lastMove.capture);
 }
 
