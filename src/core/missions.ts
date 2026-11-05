@@ -12,7 +12,7 @@
 import { walkableFor, type ContentTables, type GameContent } from './content';
 import { rulesWith } from './rulesConfig';
 import { tablesOf } from './gameContent';
-import { deepFreeze } from './util/freeze';
+import { deepFreeze, type DeepReadonly } from './util/freeze';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
 import type { GameState, Pos, RulesConfig, Team } from './model';
@@ -27,7 +27,8 @@ type UnitName = string;
 type MissionBuilding = [type: BuildingName, owner: Team | null, x: number, y: number];
 type MissionUnit = [type: UnitName, team: Team, x: number, y: number, life?: number];
 
-export interface MissionDef {
+/** Una mision tal como se escribe aqui abajo (MISSION_DEFS). */
+interface MissionSource {
   id: string;
   title: Text;
   brief: Text;
@@ -43,17 +44,19 @@ export interface MissionDef {
   /** Consejos paso a paso (solo el tutorial). */
   tutorial?: boolean;
 }
+/** Una mision de la campaña: de solo lectura (MISSIONS esta congelada). */
+export type MissionDef = DeepReadonly<MissionSource>;
 
 /** Letras cuyo terreno depende del tema, en el orden de los temas. */
-const TERRAIN_BY_THEME: Record<string, number[]> = {
+const TERRAIN_BY_THEME: DeepReadonly<Record<string, number[]>> = deepFreeze({
   // tema:      llanura desierto bosque pantano nieve
   '.': [0, 3, 0, 0, 10],
   T: [2, 4, 2, 2, 13],
   M: [7, 5, 7, 7, 12],
   '*': [6, 3, 6, 6, 11],
-};
+});
 /** Letras con el mismo terreno en todos los temas. */
-const TERRAIN_IN_ANY_THEME: Record<string, number> = { '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 };
+const TERRAIN_IN_ANY_THEME: Readonly<Record<string, number>> = Object.freeze({ '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 });
 
 export function terrainOf(letter: string, theme: number): number {
   if (letter in TERRAIN_IN_ANY_THEME) return TERRAIN_IN_ANY_THEME[letter]!;
@@ -72,7 +75,7 @@ function terrainGrid(mission: MissionDef): number[][] {
 }
 
 /** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
-function placeUnits(s: GameState, units: readonly MissionUnit[]): number[] {
+function placeUnits(s: GameState, units: MissionDef['units']): number[] {
   return units.map(([type, team, x, y, life]) => {
     const unit = newUnit(s, tablesOf(s).UNIT_NAMES.indexOf(type), team, { x, y });
     if (life) unit.life = life;
@@ -145,7 +148,7 @@ export function checkMission(mission: MissionDef, content: GameContent): string[
   ];
 }
 
-const MISSION_DEFS: MissionDef[] = [
+const MISSION_DEFS: MissionSource[] = [
   {
     id: 'tutorial',
     tutorial: true,
@@ -482,8 +485,7 @@ const MISSION_DEFS: MissionDef[] = [
     objective: { kind: 'hq' },
   },
 ];
-deepFreeze(MISSION_DEFS);
-/** Las misiones de la campaña, congeladas: nadie las cambia mientras se juega. */
-export const MISSIONS: readonly MissionDef[] = MISSION_DEFS;
+/** Las misiones de la campaña, congeladas: nadie las cambia mientras se juega (ni el tipo deja). */
+export const MISSIONS: readonly MissionDef[] = deepFreeze(MISSION_DEFS);
 
 export const missionById = (id: string): MissionDef | undefined => MISSIONS.find((mission) => mission.id === id);

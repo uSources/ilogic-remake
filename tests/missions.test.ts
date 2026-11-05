@@ -63,6 +63,19 @@ describe('misiones', () => {
     },
   );
 
+  it('las misiones son de solo lectura tambien en los tipos', () => {
+    const mission = MISSIONS[0]!;
+    const changeFunds = () => {
+      // @ts-expect-error las misiones no se pueden cambiar
+      mission.funds[0] = 1;
+    };
+    const moveUnit = () => {
+      // @ts-expect-error ni lo de dentro
+      mission.units[0]![2] = 0;
+    };
+    expect(changeFunds).toThrow(TypeError);
+    expect(moveUnit).toThrow(TypeError);
+  });
   it('una mision guardada despues del arreglo (version 2) se carga con las reglas que guardo', () => {
     const s = buildMission(MISSIONS[0]!, defaultContent());
     s.rules = rulesWith(defaultContent(), { fog: true, upkeep: 0.1 });
