@@ -1,4 +1,5 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
+import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
 import { endRound, mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
@@ -309,5 +310,18 @@ describe('escena: Ctrl+Z (KEEPS_UNDO)', () => {
     const events = act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
     expect(events.map((event) => event.kind)).toContain('captureDropped');
     expect(events.every((event) => KEEPS_UNDO.has(event.kind))).toBe(true);
+  });
+});
+
+describe('escena: «Atras» (game/unitMoves.ts)', () => {
+  it('avisa en vez de deshacer si el movimiento ha descubierto enemigos', () => {
+    const s = blankState({ ...PLAIN_RULES, fog: true });
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
+    newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 4 + unitTypeNamed('Soldier').vision });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 3 } });
+    expect(backWarning(s, 0, soldier)).toBeNull();
+    act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 4 } });
+    expect(backWarning(s, 0, soldier)).toBe('undoRevealed');
   });
 });

@@ -10,7 +10,7 @@ import { canCapture, canStillMove, endsInAmbush, unitById } from '../../core/rul
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showToast } from '../../hud/store';
-import { settings, t } from '../../settings';
+import { settings, t, type TextKey } from '../../settings';
 import type { MapView } from '../../ui/mapView';
 import { unitKey } from '../../ui/sprites';
 import type { GroupSelection } from './groupSelection';
@@ -50,6 +50,15 @@ const ACTIONS_AFTER_MOVING: readonly UnitMenuOption[] = ['attack', 'capture', 'u
 /** Sin nada mas que hacer tras moverse (para «Esperar sola» al soltar). */
 function hasNothingElseToDo(s: GameState, team: TeamId, unit: Unit): boolean {
   return !availableActions(s, team, unit).some((option) => ACTIONS_AFTER_MOVING.includes(option));
+}
+
+/**
+ * Lo que «Atras» tiene que avisar en vez de deshacer: con niebla, si al moverse ha descubierto a
+ * alguien ya no vuelve (seria mirar gratis) y el menu sigue abierto. null si no hay que avisar (se
+ * deshace o, si no se ha movido, se cierra el menu).
+ */
+export function backWarning(s: GameState, viewer: TeamId, unit: Unit): TextKey | null {
+  return actionProblem(s, viewer, { kind: 'undoMove', uid: unit.uid }) === 'revealed' ? 'undoRevealed' : null;
 }
 
 export class UnitMoves {
@@ -244,11 +253,9 @@ export class UnitMoves {
     const host = this.host;
     const unit = this.selected;
     if (!unit) return host.toMap();
-    const undo = { kind: 'undoMove', uid: unit.uid } as const;
-    // Con niebla, si al moverse ha descubierto a alguien ya no vuelve (seria mirar gratis): se avisa
-    // y el menu sigue abierto. Sin nada que deshacer (no se ha movido), «Atras» cierra el menu.
-    if (actionProblem(host.state, host.viewer, undo) === 'revealed') return showToast(t('undoRevealed'));
-    if (!host.act(undo)) return host.toMap();
+    const warning = backWarning(host.state, host.viewer, unit);
+    if (warning) return showToast(t(warning));
+    if (!host.act({ kind: 'undoMove', uid: unit.uid })) return host.toMap();
     this.undoStack.pop();
     host.view.cursor = posOf(unit);
     this.select(unit);

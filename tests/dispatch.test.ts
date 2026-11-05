@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, ACTION_GUARDS, availableActions, isGameAction, canDoWithSelection, dispatch, isValidAction } from '@core/actions';
+import {
+  ACTIONS,
+  ACTION_GUARDS,
+  availableActions,
+  canDoWithSelection,
+  dispatch,
+  groupMoveOrder,
+  groupMoveStep,
+  isGameAction,
+  isValidAction,
+  ORDER_OPTIONS,
+} from '@core/actions';
 import { canCaptureAt, endRound, INVARIANTS, newUnit, roundReport, targetProblem, unitById } from '@core/rules';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
@@ -7,7 +18,7 @@ import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
-import type { GameAction, GameState } from '@core/model';
+import type { GameAction, GameActionKind, GameState } from '@core/model';
 import { act, blankState, unitTypeNamed, placedBuildings, someUnits } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 
@@ -496,5 +507,51 @@ describe('lo que se manda a unas unidades elegidas sale de las acciones que vale
     expect(canDoWithSelection(s, 0, group, 'cancelOrder', null)).toBe(false);
     act(s, 0, { kind: 'giveStandingOrder', uids: group.map((unit) => unit.uid), order: { kind: 'defend', at: { x: 5, y: 5 } } });
     expect(canDoWithSelection(s, 0, group, 'cancelOrder', null)).toBe(true);
+  });
+});
+
+describe('ventana de deshacer y menus: piezas del nucleo', () => {
+  it('solo las entradas con keepsUndoWindow dejan deshacer lo de antes', () => {
+    const keeping = (Object.keys(ACTIONS) as GameActionKind[]).filter((kind) => ACTIONS[kind].keepsUndoWindow);
+    expect(keeping).toEqual(['move', 'travelStep']);
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
+    act(s, 0, { kind: 'move', uid: other.uid, to: { x: 9, y: 10 } });
+    // Otro movimiento la deja abierta (para el nuevo); cualquier otra accion la cierra.
+    expect(s.lastMove?.uid).toBe(other.uid);
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 5, y: 7 } } });
+    expect(s.lastMove).toBeUndefined();
+  });
+
+  it('mover en grupo: las mas cercanas primero, cada paso con el mapa como lo dejan las de antes', () => {
+    const s = blankState(PLAIN_RULES);
+    const far = newUnit(s, SOLDIER, 0, { x: 2, y: 10 });
+    const near = newUnit(s, SOLDIER, 0, { x: 7, y: 10 });
+    const done = newUnit(s, SOLDIER, 0, { x: 8, y: 12 }, 'done');
+    const goal = { x: 9, y: 10 };
+    expect(groupMoveOrder([far, done, near], goal)).toEqual([near, far]);
+    const first = groupMoveStep(s, near, goal)!;
+    expect(first.to).toEqual(goal);
+    act(s, 0, first);
+    // La casilla del destino ya esta ocupada: la siguiente se queda lo mas cerca que puede.
+    const second = groupMoveStep(s, far, goal)!;
+    expect(second.to).not.toEqual(goal);
+    act(s, 0, second);
+    expect(manhattan(far, goal)).toBeLessThan(7);
+  });
+
+  it('las ordenes del menu de una unidad son las de SELECTION_MENU con ella sola', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const options = availableActions(s, 0, soldier);
+    for (const kind of ['attack', 'capture', 'defend'] as const) {
+      const option = ORDER_OPTIONS[kind];
+      expect(options.includes(option)).toBe(canDoWithSelection(s, 0, [soldier], option, null));
+    }
+    expect(options.includes('cancelOrder')).toBe(canDoWithSelection(s, 0, [soldier], 'cancelOrder', null));
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 5, y: 5 } } });
+    expect(availableActions(s, 0, soldier)).toContain('cancelOrder');
   });
 });
