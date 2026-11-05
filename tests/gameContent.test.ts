@@ -5,7 +5,7 @@ import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
 import { cloneState } from '@core/gameContent';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';
 import { buyOptions } from '@core/rules';
 import { duel } from '@core/teams';

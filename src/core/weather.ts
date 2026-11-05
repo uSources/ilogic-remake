@@ -13,7 +13,7 @@
  */
 import { themeOf, weatherTypeOf } from './gameContent';
 import type { MoveType, Theme, WeatherType } from './content';
-import { seededRng } from './geom';
+import { seededRng } from './util/random';
 import type { GameState, Rng, WeatherState } from './model';
 
 /** Clima de la partida ahora mismo (despejado, `content.clearWeather`, si la regla esta quitada). */

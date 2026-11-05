@@ -224,6 +224,22 @@ function format2Teams(raw: Record<string, unknown>): Record<string, unknown>[] {
   }));
 }
 
+/*
+ * Paso del formato 3: los dados no iban en la partida (el combate del jugador tiraba de Math.random y
+ * el de la IA, de su semilla). Se les da una semilla que sale de la propia partida (la de su mapa y su
+ * dia), con una cuenta fija: la misma partida antigua tira siempre igual al cargarla.
+ */
+
+/** Mezcla del dia con la semilla del mapa (la constante de oro de 32 bits, para separar dias seguidos). */
+const FORMAT_3_DAY_MIX = 0x9e3779b1;
+
+/** La semilla de los dados de una partida del formato 3: de la de su mapa (si la tiene) y de su dia. */
+function format3DiceSeed(raw: Record<string, unknown>): number {
+  const mapSeed = isObject(raw.setup) && typeof raw.setup.seed === 'number' ? raw.setup.seed : 0;
+  const day = typeof raw.day === 'number' ? raw.day : 0;
+  return (mapSeed ^ Math.imul(day, FORMAT_3_DAY_MIX)) >>> 0;
+}
+
 /** Los pasos, del mas antiguo al mas nuevo. */
 export const MIGRATIONS: readonly SaveMigration[] = [
   {
@@ -308,6 +324,15 @@ export const MIGRATIONS: readonly SaveMigration[] = [
       delete raw.stats;
       for (const squad of listOf(raw.squads)) if (isObject(squad)) squad.team = 0;
       if (isObject(raw.mission)) raw.mission.team = 0;
+    },
+  },
+  {
+    // Hasta el formato 3 los dados no iban en la partida; desde el 4, `dice` (ver core/dice.ts).
+    name: 'dados de la partida',
+    upToVersion: 3,
+    stage: 'read',
+    apply: (raw) => {
+      raw.dice ??= format3DiceSeed(raw);
     },
   },
   {

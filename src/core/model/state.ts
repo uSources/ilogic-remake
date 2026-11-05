@@ -17,7 +17,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 3;
+  version: 4;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -29,6 +29,12 @@ export interface GameState {
   nextUid: number;
   /** Numero de ronda (empieza en 1). */
   day: number;
+  /**
+   * Estado de los dados de la partida (mulberry32: un entero sin signo de 32 bits; ver core/dice.ts).
+   * Va con la partida para que lo que salga no dependa de quien juega ni de lo que decida: la misma
+   * partida con las mismas acciones da siempre los mismos combates, se cargue o no por medio.
+   */
+  dice: number;
   /** Reglas de esta partida: la unica fuente de las reglas (no hay reglas globales). */
   rules: RulesConfig;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */

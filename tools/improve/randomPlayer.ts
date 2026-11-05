@@ -27,6 +27,7 @@ import {
   wait,
 } from '@core/rules';
 import type { GameState, Rng, TeamId, Unit } from '@core/model';
+import { diceOf } from '@core/dice';
 
 const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng() * xs.length)];
 
@@ -71,7 +72,7 @@ function act(s: GameState, rng: Rng, unit: Unit, after: (what: string) => void):
   if (!s.units.includes(unit) || !unit.active) return;
   const target = canFight(s, unit) && unit.canFire ? pick(rng, attackTargets(s, unit)) : undefined;
   if (target && rng() < 0.8) {
-    attackFull(s, unit, target, rng);
+    attackFull(s, unit, target, diceOf(s));
     if (s.units.includes(unit)) wait(unit);
     return after(`${unit.uid} ataca a ${target.uid}`);
   }

@@ -3,7 +3,7 @@
  * combaten, a camara lenta si se pide. Es una partida sin niebla ni final.
  */
 import type Phaser from 'phaser';
-import { seededRng } from '../../core/geom';
+import { diceOf } from '../../core/dice';
 import { attackEvent, moveEvent, moveRange, moveUnit } from '../../core/rules';
 import type { GameEvent, GameState, TeamId } from '../../core/model';
 import { isHostile } from '../../core/teams';
@@ -51,7 +51,7 @@ async function runLab(host: LabHost, action: LabAction): Promise<void> {
     if (path) await host.play([moveEvent(me.uid, path)]);
     return;
   }
-  await host.play([attackEvent(s, me, foe, seededRng(3))]);
+  await host.play([attackEvent(s, me, foe, diceOf(s))]);
 }
 
 /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */

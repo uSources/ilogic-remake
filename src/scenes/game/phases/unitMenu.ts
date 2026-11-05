@@ -4,6 +4,7 @@
  * 'unloadTile').
  */
 import { unitTypeOf } from '../../../core/gameContent';
+import { diceOf } from '../../../core/dice';
 import { posKey, posOf } from '../../../core/geom';
 import {
   attackEvent,
@@ -152,7 +153,7 @@ export const attackPhase: PhaseHandler = {
     const targetUid = host.moves.session?.attackTargets.get(posKey(cursor));
     if (!unit || targetUid === undefined) return host.enter('unitMenu');
     const target = unitById(host.state, targetUid)!;
-    void host.play([attackEvent(host.state, unit, target, Math.random)]).then(() => host.afterAction());
+    void host.play([attackEvent(host.state, unit, target, diceOf(host.state))]).then(() => host.afterAction());
   },
   back: (host) => host.enter('unitMenu'),
   highlights: (input) => markTiles(input.attack.keys(), 'attack'),

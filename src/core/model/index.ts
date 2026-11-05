@@ -15,4 +15,4 @@ export type { CombatInfo, GameEvent, GameEventKind, GameEventOf } from './events
 export type { RulesConfig } from './rules';
 export type { TeamStats } from './stats';
 export type { GameSetup, GameState, MatchContent, SavedGameState } from './state';
-export type { Rng } from './random';
+export type { Dice, Rng } from './random';

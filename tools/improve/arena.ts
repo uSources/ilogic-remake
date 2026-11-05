@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { armyValue } from '@core/stats';
 import type { GameEvent, GameState, Rng, TeamId } from '@core/model';

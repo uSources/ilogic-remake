@@ -6,7 +6,7 @@ import { themeOf } from '../core/gameContent';
 import type { MenuCommand } from '../controls/menu';
 import { defaultContent } from '../core/content/default';
 import { entryOf } from '../core/content';
-import { seededRng } from '../core/geom';
+import { seededRng } from '../core/util/random';
 import { generateGame } from '../core/mapgen';
 import { duel } from '../core/teams';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';

@@ -8,7 +8,7 @@ import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
 import { advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import type { GameState, RulesConfig } from '@core/model';
 import { blankState, savedByVersion1, unitTypeNamed } from './helpers';
 

@@ -16,6 +16,7 @@ import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations'
 import { SAVE_VERSION } from './saveVersion';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { isObject } from './util/predicates';
+import { isRandomState } from './util/random';
 import type { GameState, GeneralState, Pos, RulesConfig, SavedGameState, StandingOrder, TeamId, TeamState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
@@ -103,7 +104,7 @@ function readMap(s: GameState): boolean {
 }
 
 function hasValidBasics(s: GameState): boolean {
-  return isIdIn(s.content.themes, s.theme) && Array.isArray(s.units) && Array.isArray(s.buildings);
+  return isIdIn(s.content.themes, s.theme) && Array.isArray(s.units) && Array.isArray(s.buildings) && isRandomState(s.dice);
 }
 
 /** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */

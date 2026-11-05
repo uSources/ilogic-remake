@@ -20,7 +20,7 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, diceFrom, hqId, unitTypeNamed } from './helpers';
 import { ownerSideOf, sideColor, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
 import { PAL } from '../src/ui/palette';
 import { teamState } from '@core/teams';
@@ -116,7 +116,12 @@ describe('panel de combate', () => {
     const s = blankState();
     const enemy = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 10, y: 11 });
-    const event = attackEvent(s, enemy, mine, () => 0.5);
+    const event = attackEvent(
+      s,
+      enemy,
+      mine,
+      diceFrom(() => 0.5),
+    );
     const start = combatVM(blankState(), 0, event, 'start', icons, both)!;
     expect(start.left.side).toBe('own');
     expect(start.left.role).toBe('defender');
@@ -137,7 +142,12 @@ describe('panel de combate', () => {
     const s = blankState();
     const art = newUnit(s, unitType('Artillery'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Soldier'), 0, { x: 10, y: 13 });
-    const event = attackEvent(s, art, mine, () => 0.5);
+    const event = attackEvent(
+      s,
+      art,
+      mine,
+      diceFrom(() => 0.5),
+    );
     const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true })!;
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
     expect(vm.left.icon).toBe('d');
@@ -152,7 +162,12 @@ describe('panel de combate', () => {
     const vm = combatVM(
       blankState(),
       0,
-      attackEvent(s, attacker, defender, () => 0.5),
+      attackEvent(
+        s,
+        attacker,
+        defender,
+        diceFrom(() => 0.5),
+      ),
       'hit',
       icons,
       both,

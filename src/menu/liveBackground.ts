@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
-import { seededRng } from '../core/geom';
+import { seededRng } from '../core/util/random';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
 import { endRound, isMatchOver, othersAfter } from '../core/rules';

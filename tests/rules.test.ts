@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_RULES } from './plainRules';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import {
   attack,
   attackTargets,
@@ -20,7 +20,7 @@ import {
   threatMap,
 } from '@core/rules';
 import { teamState } from '@core/teams';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, diceFrom, hqId, unitTypeNamed } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -67,7 +67,7 @@ describe('combate', () => {
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const enemy = newUnit(s, TANK, 1, { x: 10, y: 11 });
     expect(attackTargets(s, tank).map((unit) => unit.uid)).toEqual([enemy.uid]);
-    const dmg = attack(s, tank, enemy, seededRng(1));
+    const dmg = attack(s, tank, enemy, diceFrom(seededRng(1)));
     expect(dmg).toBeGreaterThan(30);
     expect(dmg).toBeLessThan(70); // esperado 50
     expect(enemy.life).toBe(100 - dmg);
@@ -78,7 +78,7 @@ describe('combate', () => {
     const s = blankState(TEST_RULES);
     const so = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const lightTank = newUnit(s, unitTypeNamed('LTank'), 1, { x: 10, y: 11 });
-    attack(s, so, lightTank, seededRng(3));
+    attack(s, so, lightTank, diceFrom(seededRng(3)));
     expect(lightTank.life).toBeGreaterThan(60);
   });
   it('una unidad muerta desaparece con su carga', () => {
@@ -88,7 +88,12 @@ describe('combate', () => {
     load(s, passenger, transport);
     transport.life = 1;
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    attack(s, tank, transport, () => 0);
+    attack(
+      s,
+      tank,
+      transport,
+      diceFrom(() => 0),
+    );
     expect(s.units.map((unit) => unit.uid)).toEqual([tank.uid]);
   });
 });

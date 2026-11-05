@@ -10,6 +10,7 @@ import { diamond, manhattan, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canCapture, capture, captureEvent } from '../rules/capture';
 import { attackEvent, canDamage, fireOrigins, inAttackRange } from '../rules/combat';
+import { diceOf } from '../dice';
 import { isContested } from '../rules/control';
 import { moveEvent, reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
@@ -123,14 +124,7 @@ function* chaseNearest(s: GameState, ai: AiCtx, unit: Unit, enemies: Unit[], ran
 }
 
 /** Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano (ver AttackOpts). */
-export function* tryAttack(
-  s: GameState,
-  ai: AiCtx,
-  unit: Unit,
-  range: MoveRange,
-  rng: Rng,
-  options: AttackOpts = {},
-): Generator<GameEvent, boolean> {
+export function* tryAttack(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange, options: AttackOpts = {}): Generator<GameEvent, boolean> {
   const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!(unitTypeOf(s, unit).attack !== null) || !unit.canFire) return false;
@@ -141,7 +135,7 @@ export function* tryAttack(
   const shot = bestShot(s, ai, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
   if (shot) {
     const ambushed = yield* doMove(s, unit, samePos(shot.from, unit) ? null : shot.from, range);
-    if (!ambushed) yield attackEvent(s, unit, shot.target, rng);
+    if (!ambushed) yield attackEvent(s, unit, shot.target, diceOf(s));
     return true;
   }
   if (!chase) return false;

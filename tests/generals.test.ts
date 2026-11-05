@@ -5,11 +5,11 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { powerBlock, chargeStars, generalHitFactor, appointGeneral, usePower } from '@core/generals';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, unitTypeNamed } from './helpers';
+import { blankState, diceFrom, unitTypeNamed } from './helpers';
 import { teamState } from '@core/teams';
 
 const unitType = unitTypeNamed;
@@ -59,7 +59,7 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     const attacker = newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
     const defender = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
-    const result = attackFull(s, attacker, defender, seededRng(3));
+    const result = attackFull(s, attacker, defender, diceFrom(seededRng(3)));
     const value = ((result.damage + result.counter) * unitType('Tank').cost) / 100;
     expect(teamState(s, 0).general!.charge).toBeCloseTo(value / 6000);
   });

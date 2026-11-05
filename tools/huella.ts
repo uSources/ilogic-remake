@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
 import { createGame } from '@core/defaultGames';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
 import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
@@ -76,7 +76,7 @@ function playScenario(scenario: Scenario): string {
 
   while (!isOver() && s.day <= MAX_DAYS) {
     for (const team of turnTakers(s)) {
-      if (team === person && scenario.withSquad) for (const event of assistTurn(s, rng, person)) record(event);
+      if (team === person && scenario.withSquad) for (const event of assistTurn(s, person)) record(event);
       for (const event of aiTurn(s, rng, team)) {
         record(event);
         if (isOver()) break;

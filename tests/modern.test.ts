@@ -1,9 +1,9 @@
 import { defaultContent } from '@core/content/default';
 import { describe, expect, it } from 'vitest';
 
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { attackEvent, attackFull, capture, captureProgress, combatForecast, dropStaleCaptures, newUnit, visibility } from '@core/rules';
-import { blankState, unitTypeNamed } from './helpers';
+import { blankState, diceFrom, unitTypeNamed } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -14,7 +14,7 @@ describe('reglas nuevas: combate', () => {
     const s = blankState();
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const result = attackFull(s, attacker, defender, seededRng(2));
+    const result = attackFull(s, attacker, defender, diceFrom(seededRng(2)));
     expect(result.damage).toBeGreaterThan(0);
     expect(result.killed).toBe(false);
     expect(result.counter).toBeGreaterThan(0);
@@ -27,11 +27,11 @@ describe('reglas nuevas: combate', () => {
     const s = blankState();
     const art = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
     const tank = newUnit(s, TANK, 1, { x: 10, y: 13 });
-    expect(attackFull(s, art, tank, seededRng(1)).counter).toBe(0);
+    expect(attackFull(s, art, tank, diceFrom(seededRng(1))).counter).toBe(0);
     const other = blankState();
     const t2 = newUnit(other, TANK, 0, { x: 10, y: 10 });
     const art2 = newUnit(other, ARTILLERY, 1, { x: 10, y: 11 });
-    expect(attackFull(other, t2, art2, seededRng(1)).counter).toBe(0);
+    expect(attackFull(other, t2, art2, diceFrom(seededRng(1))).counter).toBe(0);
   });
 
   it('el evento de ataque guarda como estaban las unidades antes del combate', () => {
@@ -39,7 +39,7 @@ describe('reglas nuevas: combate', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
     defender.life = 80;
-    const event = attackEvent(s, attacker, defender, seededRng(2));
+    const event = attackEvent(s, attacker, defender, diceFrom(seededRng(2)));
     expect(event.combat).toMatchObject({
       attackerType: attacker.type,
       defenderType: defender.type,
@@ -60,13 +60,13 @@ describe('reglas nuevas: combate', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const event = attackEvent(s, attacker, defender, seededRng(1));
+    const event = attackEvent(s, attacker, defender, diceFrom(seededRng(1)));
     expect(event.killed).toBe(true);
     expect(event.combat!.counterHit).toBeNull();
     const other = blankState();
     const art = newUnit(other, ARTILLERY, 0, { x: 10, y: 10 });
     const tank = newUnit(other, TANK, 1, { x: 10, y: 13 });
-    expect(attackEvent(other, art, tank, seededRng(1)).combat!.counterHit).toBeNull();
+    expect(attackEvent(other, art, tank, diceFrom(seededRng(1))).combat!.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {
@@ -76,7 +76,7 @@ describe('reglas nuevas: combate', () => {
       const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
       defender.life = 100;
       const forecast = combatForecast(s, attacker, defender);
-      const result = attackFull(s, attacker, defender, seededRng(seed));
+      const result = attackFull(s, attacker, defender, diceFrom(seededRng(seed)));
       expect(result.damage).toBeGreaterThanOrEqual(forecast.low - 1);
       expect(result.damage).toBeLessThanOrEqual(Math.max(forecast.high, 0) + 1);
     }
@@ -151,7 +151,7 @@ describe('reglas nuevas: veterania', () => {
     const base = hitChance(s, attacker, defender);
     expect(rank(attacker)).toBe(0);
     defender.life = 1;
-    const result = attackFull(s, attacker, defender, seededRng(1));
+    const result = attackFull(s, attacker, defender, diceFrom(seededRng(1)));
     expect(result.killed).toBe(true);
     expect(attacker.kills).toBe(1);
     expect(rank(attacker)).toBe(1);

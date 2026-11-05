@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
 import { createGame, saveContext } from '@core/defaultGames';
 import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';

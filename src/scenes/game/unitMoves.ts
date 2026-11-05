@@ -3,6 +3,7 @@
  * unirse, subir), ordenes de varios turnos, mover un grupo y deshacer (Atras en su menu y Ctrl+Z).
  */
 import { saveContext } from '../../core/defaultGames';
+import { diceOf } from '../../core/dice';
 import type Phaser from 'phaser';
 import { manhattan, samePos, posOf } from '../../core/geom';
 import { closestStep } from '../../core/targeting';
@@ -189,7 +190,7 @@ export class UnitMoves {
     }
     const stillThere = unitById(host.state, target.uid);
     if (!stillThere) return host.afterAction();
-    await host.play([attackEvent(host.state, unit, stillThere, Math.random)]);
+    await host.play([attackEvent(host.state, unit, stillThere, diceOf(host.state))]);
     host.afterAction();
   }
 

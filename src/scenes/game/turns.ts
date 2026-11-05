@@ -11,7 +11,8 @@ import { unitTypeOf } from '../../core/gameContent';
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
-import { samePos, seededRng, posOf } from '../../core/geom';
+import { samePos, posOf } from '../../core/geom';
+import { seededRng } from '../../core/util/random';
 import {
   buildingAt,
   canCapture,
@@ -216,7 +217,7 @@ export class TurnFlow {
    */
   private async playStandingOrders(match: number): Promise<string[] | null> {
     const host = this.host;
-    const orders = assistTurn(host.state, Math.random, host.viewer);
+    const orders = assistTurn(host.state, host.viewer);
     let step = orders.next();
     while (!step.done) {
       await host.play([step.value]);

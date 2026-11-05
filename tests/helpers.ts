@@ -4,9 +4,9 @@ import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
-import type { GameEvent, GameState, RulesConfig } from '@core/model';
+import type { Dice, GameEvent, GameState, Rng, RulesConfig } from '@core/model';
 import { aiTurn } from '@core/ai';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { endRound, takesTurn } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 
@@ -22,6 +22,12 @@ export function savedByVersion1(json: string): string {
 }
 
 /** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
+/** Dados que tiran de un `Rng` (para probar un combate con una tirada conocida, sin los de la partida). */
+export const diceFrom = (rng: Rng): Dice => ({ roll: rng });
+
+/** Semilla de los dados de las partidas de prueba (`GameState.dice`). */
+export const BLANK_DICE_SEED = 1;
+
 /** Dinero de cada equipo en las partidas de prueba. */
 export const BLANK_FUNDS = 5000;
 
@@ -40,6 +46,7 @@ export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly Tea
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
     teams,
+    diceSeed: BLANK_DICE_SEED,
   });
 }
 

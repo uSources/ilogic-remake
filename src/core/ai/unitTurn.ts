@@ -20,6 +20,7 @@ export interface UnitTurnContext {
   unit: Unit;
   /** Alcance de la unidad al empezar su turno. */
   range: MoveRange;
+  /** Las decisiones al azar de la IA (los dados del combate son los de la partida). */
   rng: Rng;
 }
 
@@ -33,13 +34,13 @@ export interface UnitBehaviour {
 const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean => isHq(s, building) && isHostileOwner(s, building.owner, ai.me);
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
-function* stepOffEnemyHq({ s, ai, unit, range, rng }: UnitTurnContext): Generator<GameEvent, boolean> {
+function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): Generator<GameEvent, boolean> {
   const hq = buildingAt(s, unit)!;
   const destination = bestMoveToward(s, ai, unit, hq, range, true);
   if (!destination) return false;
   yield* doMove(s, unit, destination, range);
   const rangeAfterMove = moveRange(s, unit);
-  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove, rng))) wait(unit);
+  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove))) wait(unit);
   return true;
 }
 
@@ -71,7 +72,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // Atacar al mejor objetivo a tiro o acercarse al mas cercano.
     id: 'attack',
     when: () => true,
-    run: ({ s, ai, unit, range, rng }) => tryAttack(s, ai, unit, range, rng),
+    run: ({ s, ai, unit, range }) => tryAttack(s, ai, unit, range),
   },
   {
     // Las que capturan: el edificio ajeno mas cercano a la vista.

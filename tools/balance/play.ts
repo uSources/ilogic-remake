@@ -1,7 +1,7 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
 import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';
 import { endReason, endRound, isMatchOver, outcome, takesTurn } from '@core/rules';
 import { duel, teamState } from '@core/teams';

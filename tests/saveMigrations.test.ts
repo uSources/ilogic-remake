@@ -150,6 +150,29 @@ describe('partidas guardadas con el formato 2 (de origin/main)', () => {
   });
 });
 
+/**
+ * Partida guardada de verdad con el formato 3: la genero el codigo de la fase 2 (3b96611, rama
+ * nucleo/contenido-equipos) con 6 dias de IA contra IA (tema y generales, niebla y clima), una captura
+ * a medias, una unidad movida, otra que ya ha esperado y una escuadra con orden, sin tocarla a mano.
+ */
+describe('partida guardada con el formato 3', () => {
+  it('se lee, y sus dados salen de la propia partida: siempre los mismos', () => {
+    const json = fixture('skirmish-v3');
+    const s = loadGame(json)!;
+    expect(s.version).toBe(SAVE_VERSION);
+    expect(s.dice).toBe(loadGame(json)!.dice);
+    expect(Number.isInteger(s.dice)).toBe(true);
+    expect(s.buildings.some((building) => building.capture)).toBe(true);
+    expect(s.squads?.[0]?.standingOrder?.kind).toBe('defend');
+  });
+
+  it('una del formato 4 sin dados esta rota', () => {
+    const raw = JSON.parse(serialize(loadGame(fixture('skirmish-v3'))!)) as Record<string, unknown>;
+    delete raw.dice;
+    expect(loadGame(JSON.stringify(raw))).toBeNull();
+  });
+});
+
 describe('MIGRATIONS', () => {
   it('cada paso es para versiones anteriores a la actual y tiene un nombre propio', () => {
     for (const migration of MIGRATIONS) expect(migration.upToVersion).toBeLessThan(SAVE_VERSION);

@@ -4,7 +4,7 @@
  */
 import { appointGeneral } from '../../core/generals';
 import { duel, duelTeams, isPlayableOnOneScreen, playerTeam, teamsControlledBy } from '../../core/teams';
-import { seededRng } from '../../core/geom';
+import { seededRng } from '../../core/util/random';
 import { defaultContent } from '../../core/content/default';
 import { createGame, loadGame } from '../../core/defaultGames';
 import { buildMission, missionById } from '../../core/missions';
@@ -74,7 +74,7 @@ function labMatch(lab: LabOptions): GameState {
 function missionMatch(data: GameStartData): GameState | null {
   const mission = data.mode === 'mission' && data.mission ? missionById(data.mission) : undefined;
   if (!mission) return null;
-  return buildMission(mission, defaultContent());
+  return buildMission(mission, defaultContent(), randomSeed());
 }
 
 /**

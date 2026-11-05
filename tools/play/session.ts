@@ -9,7 +9,8 @@ import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState,
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
-import { posKey, samePos, seededRng } from '@core/geom';
+import { posKey, samePos } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
 import { appointGeneral, powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
@@ -33,6 +34,7 @@ import {
   wait,
 } from '@core/rules';
 import { serialize } from '@core/save';
+import { diceOf } from '@core/dice';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
@@ -92,7 +94,7 @@ export class Session {
     } else if (options.mission) {
       const mission = missionById(options.mission);
       if (!mission) throw new Error(`No existe la mision "${options.mission}"`);
-      this.s = buildMission(mission, defaultContent());
+      this.s = buildMission(mission, defaultContent(), seed);
     } else {
       this.s = createGame(seededRng(seed), {
         size: options.size ?? 20,
@@ -254,7 +256,7 @@ export class Session {
   private attack(unit: Unit, at: Pos): string {
     const target = attackTargets(this.s, unit).find((target) => samePos(target, at));
     if (!target) throw new UsageError(`la unidad ${unit.uid} no puede atacar a (${posKey(at)}) desde (${unit.x},${unit.y})`);
-    const result = attackFull(this.s, unit, target, this.rng);
+    const result = attackFull(this.s, unit, target, diceOf(this.s));
     wait(unit);
     return `daño ${result.damage}${result.killed ? ' (destruida)' : ''}${result.counter ? `, contraataque ${result.counter}${result.attackerKilled ? ' (la tuya destruida)' : ''}` : ''}`;
   }

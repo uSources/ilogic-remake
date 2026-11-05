@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { manhattan, seededRng, posOf } from '@core/geom';
+import { manhattan, posOf } from '@core/geom';
 import { capture, newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
@@ -51,7 +51,7 @@ function world(): GameState {
 function turns(s: GameState, rounds: number): number[] {
   const done: number[] = [];
   for (let i = 0; i < rounds; i++) {
-    const it = assistTurn(s, seededRng(i + 1), 0);
+    const it = assistTurn(s, 0);
     let step = it.next();
     while (!step.done) step = it.next();
     done.push(...step.value);
@@ -168,7 +168,7 @@ describe('ordenes con destino', () => {
     const used = newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
     giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 15 });
     Object.assign(used, { active: false, canMove: false });
-    const evs = Array.from(assistTurn(s, seededRng(1), 0));
+    const evs = Array.from(assistTurn(s, 0));
     expect(evs).toEqual([]);
     expect(free).toMatchObject({ x: 3, y: 3, active: true });
     expect(used).toMatchObject({ x: 8, y: 8 });
@@ -179,7 +179,7 @@ describe('ordenes con destino', () => {
     const s = world();
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
-    Array.from(startStandingOrder(s, unit.uid, seededRng(1), 0));
+    Array.from(startStandingOrder(s, unit.uid, 0));
     expect(unit.x).toBeGreaterThan(5);
     cancelStandingOrder(s, [unit]);
     expect(unit.standingOrder).toBeUndefined();

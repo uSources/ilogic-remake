@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn, assistTurn, previewStandingOrders } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { seededRng, posOf } from '@core/geom';
+import { posOf } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads';
@@ -22,9 +23,10 @@ function world(): GameState {
   return s;
 }
 
-/** Juega el turno de ordenes de verdad (otra suerte que la de la prevision). */
-function playOrders(s: GameState, seed = 99): void {
-  Array.from(assistTurn(s, seededRng(seed), 0));
+/** Juega el turno de ordenes de verdad (con los dados de la partida, otra suerte que la de la prevision). */
+function playOrders(s: GameState, diceSeed = 99): void {
+  s.dice = diceSeed;
+  Array.from(assistTurn(s, 0));
 }
 
 const last = (path: Pos[]): Pos | undefined => path[path.length - 1];

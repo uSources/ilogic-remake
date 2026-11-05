@@ -10,7 +10,7 @@ import { chargeFromCombat, generalHitFactor } from '../generals';
 import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
 import { teamState } from '../teams';
 import { weatherHit } from '../weather';
-import type { CombatInfo, GameEventOf, GameState, Pos, Rng, TeamId, Unit } from '../model';
+import type { CombatInfo, Dice, GameEventOf, GameState, Pos, TeamId, Unit } from '../model';
 import { removeDead } from './lifecycle';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
@@ -184,20 +184,20 @@ const NO_ATTACK: Readonly<AttackResult> = { damage: 0, killed: false, counter: 0
  * Original: cada punto de vida es un disparo que acierta con probabilidad `chance`.
  * [CAMBIO] con la regla damageSpread: el daño esperado (life x chance) +- ese tanto por uno.
  */
-function rollDamage(s: GameState, life: number, chance: number, rng: Rng): number {
+function rollDamage(s: GameState, life: number, chance: number, dice: Dice): number {
   if (s.rules.damageSpread === null) {
     let hits = 0;
-    for (let shot = 0; shot < life; shot++) if (rng() < chance) hits++;
+    for (let shot = 0; shot < life; shot++) if (dice.roll() < chance) hits++;
     return hits;
   }
   const expected = life * chance;
-  const spread = (rng() * 2 - 1) * s.rules.damageSpread;
+  const spread = (dice.roll() * 2 - 1) * s.rules.damageSpread;
   return Math.max(0, Math.round(expected * (1 + spread)));
 }
 
 /** Daño que hace `attacker` a `defender` en una tirada (sin pasar de la vida que le queda). */
-function strike(s: GameState, attacker: Unit, defender: Unit, rng: Rng): number {
-  return Math.min(defender.life, rollDamage(s, attacker.life, cappedHitChance(s, attacker, defender), rng));
+function strike(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
+  return Math.min(defender.life, rollDamage(s, attacker.life, cappedHitChance(s, attacker, defender), dice));
 }
 
 /**
@@ -239,16 +239,16 @@ function payBounty(s: GameState, attacker: Unit, defender: Unit, result: AttackR
   winnerTeam.funds = Math.min(s.content.maxFunds, winnerTeam.funds + result.bounty);
 }
 
-/** Ataque completo: daño, y contraataque si las reglas lo tienen. */
-export function attackFull(s: GameState, attacker: Unit, defender: Unit, rng: Rng): AttackResult {
+/** Ataque completo: daño, y contraataque si las reglas lo tienen. Los dados, los de la partida (`diceOf(s)`). */
+export function attackFull(s: GameState, attacker: Unit, defender: Unit, dice: Dice): AttackResult {
   if (!canAttackNow(s, attacker, defender)) return { ...NO_ATTACK };
 
-  const damage = strike(s, attacker, defender, rng);
+  const damage = strike(s, attacker, defender, dice);
   defender.life -= damage;
   defender.hitDay = s.day;
   endTurnAfterAttack(attacker);
 
-  const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, rng) : 0;
+  const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, dice) : 0;
   attacker.life -= counter;
 
   chargeFromCombat(s, attacker, defender, damage, counter);
@@ -286,10 +286,10 @@ function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatI
  * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, equipos,
  * vidas de antes, rangos y probabilidad de acierto de cada lado (ver CombatInfo).
  */
-export function attackEvent(s: GameState, attacker: Unit, defender: Unit, rng: Rng): GameEventOf<'attack'> {
+export function attackEvent(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
   const info = combatInfoBefore(s, attacker, defender);
   const target = posOf(defender);
-  const result = attackFull(s, attacker, defender, rng);
+  const result = attackFull(s, attacker, defender, dice);
   // Si el defensor cae no hay contraataque, aunque pudiera haberlo.
   if (result.killed) info.counterHit = null;
   return {
@@ -306,6 +306,6 @@ export function attackEvent(s: GameState, attacker: Unit, defender: Unit, rng: R
 }
 
 /** Ataca y devuelve el daño hecho (ver attackFull para el contraataque). */
-export function attack(s: GameState, attacker: Unit, defender: Unit, rng: Rng): number {
-  return attackFull(s, attacker, defender, rng).damage;
+export function attack(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
+  return attackFull(s, attacker, defender, dice).damage;
 }

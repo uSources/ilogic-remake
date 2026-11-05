@@ -18,6 +18,8 @@ export interface NewGameStateOptions {
   theme?: string;
   /** Los equipos, en orden (quien los juega, su alianza y su dinero): no hay equipos por defecto. */
   teams: readonly TeamSetup[];
+  /** Semilla de los dados de la partida (`GameState.dice`, ver core/dice.ts): quien la crea dice cual. */
+  diceSeed: number;
 }
 
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido. */
@@ -32,6 +34,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
     buildings: [],
     nextUid: 1,
     day: 1,
+    dice: options.diceSeed >>> 0,
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
     rules: { ...rules },
     content: options.content,
