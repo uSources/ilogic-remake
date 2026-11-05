@@ -5,7 +5,7 @@
 import { isHq } from '../gameContent';
 import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
-import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
+import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
@@ -56,11 +56,19 @@ export function dropStaleCaptures(s: GameState): GameEvent[] {
   return events;
 }
 
-/** Se puede capturar el edificio de debajo (neutral o enemigo: los de la propia alianza, no). */
-export function canCapture(s: GameState, unit: Unit): boolean {
-  if (!canStillAct(unit) || !isCapturer(s, unit)) return false;
-  const building = buildingAt(s, unit);
+/**
+ * La unidad podria capturar el edificio de `at` si estuviera alli (neutral o enemigo: los de la propia
+ * alianza, no). No mira si le queda turno: para lo que pasaria al llevarla alli (la escena).
+ */
+export function canCaptureAt(s: GameState, unit: Unit, at: Pos): boolean {
+  if (!isCapturer(s, unit)) return false;
+  const building = buildingAt(s, at);
   return !!building && (building.owner === null || isHostile(s, building.owner, unit.team));
+}
+
+/** Se puede capturar ya el edificio de debajo: le queda turno y podria (canCaptureAt). */
+export function canCapture(s: GameState, unit: Unit): boolean {
+  return canStillAct(unit) && canCaptureAt(s, unit, unit);
 }
 
 /**

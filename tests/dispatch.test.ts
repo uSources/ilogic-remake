@@ -9,7 +9,7 @@ import {
   dispatch,
   isValidAction,
 } from '@core/actions';
-import { endRound, INVARIANTS, newUnit, roundReport, unitById } from '@core/rules';
+import { canCaptureAt, endRound, INVARIANTS, newUnit, roundReport, targetProblem, unitById } from '@core/rules';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';
@@ -93,6 +93,23 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const fighter = newUnit(s, unitTypeNamed('Fighter'), 0, { x: 12, y: 12 });
     const soldier = newUnit(s, SOLDIER, 1, { x: 12, y: 13 });
     expectRejected(s, 0, { kind: 'attack', uid: fighter.uid, target: soldier.uid }, 'notTarget');
+  });
+
+  it('lo que pasaria en otra casilla tambien lo dice el nucleo: objetivo y captura', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 9, y: 9, capture: null }, { type: 'City', owner: 0, x: 9, y: 8, capture: null });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const tank = newUnit(s, TANK, 0, { x: 1, y: 1 });
+    const enemy = newUnit(s, SOLDIER, 1, { x: 12, y: 12 });
+    const fighter = newUnit(s, unitTypeNamed('Fighter'), 0, { x: 2, y: 2 });
+    const seesAll = () => true;
+    expect(targetProblem(s, soldier, enemy, seesAll)).toBeNull();
+    expect(targetProblem(s, soldier, enemy, () => false)).toBe('notTarget');
+    expect(targetProblem(s, fighter, enemy, seesAll)).toBe('notTarget');
+    expect(targetProblem(s, soldier, tank, seesAll)).toBe('notTarget');
+    expect(canCaptureAt(s, soldier, { x: 9, y: 9 })).toBe(true);
+    expect(canCaptureAt(s, soldier, { x: 9, y: 8 })).toBe(false);
+    expect(canCaptureAt(s, tank, { x: 9, y: 9 })).toBe(false);
   });
 
   it('un viaje: solo desde el mapa y hacia una casilla que la unidad pueda pisar', () => {

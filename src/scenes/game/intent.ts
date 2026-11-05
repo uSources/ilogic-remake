@@ -2,14 +2,12 @@
  * Mover la unidad elegida: que pasaria al soltarla en una casilla y por que camino iria. Funciones
  * puras (sin Phaser): reciben el plan de movimiento de la escena (tests/sceneIntent.test.ts).
  */
-import { isCapturer } from '../../core/util/predicates';
 import { posKey, samePos, posOf } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/targeting';
-import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
+import { canCaptureAt, pathTo, targetProblem, unitAt, unitById, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { type Intent } from './types';
-import { isAlliedOwner, isHostile } from '../../core/teams';
 
 /** La unidad que se esta moviendo y lo que se calculo al elegirla. */
 export interface MovePlan {
@@ -32,15 +30,13 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   const loadUid = plan.load.get(posKey(tile));
   if (loadUid !== undefined) return { kind: 'load', target: unitById(s, loadUid)! };
   const other = unitAt(s, tile);
-  if (other && isHostile(s, unit.team, other.team) && other.carrier === null && visible(other)) {
+  // Que sea un objetivo lo dice el nucleo (enemigo, a la vista, que le hace daño); desde donde, tambien.
+  if (other && targetProblem(s, unit, other, visible) === null) {
     const from = attackFrom(s, plan, other);
     return from ? { kind: 'attack', from, target: other } : { kind: 'none' };
   }
   if (!isReachable(plan.range, tile)) return { kind: 'none' };
-  const building = buildingAt(s, tile);
-  // Lo de un aliado no se captura (ni lo propio); lo neutral y lo enemigo, si.
-  const isCapture = !!building && !isAlliedOwner(s, building.owner, unit.team) && isCapturer(s, unit);
-  return { kind: 'move', to: posOf(tile), capture: isCapture };
+  return { kind: 'move', to: posOf(tile), capture: canCaptureAt(s, unit, tile) };
 }
 
 /** La unidad puede terminar su movimiento en esa casilla este turno. */

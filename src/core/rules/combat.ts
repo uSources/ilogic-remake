@@ -50,16 +50,35 @@ export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, a
   return origins;
 }
 
+/** Si un equipo ve una casilla: una capa de `visibility` o lo que ya sepa quien pregunta (la escena). */
+export type Sight = (pos: Pos) => boolean;
+
 /**
- * Por que `attacker` no puede atacar ahora a `target` (null = puede): le queda disparo, el objetivo es
- * un enemigo vivo en el mapa que su equipo ve (`visible`), le hace daño y lo tiene a tiro desde donde
- * esta.
+ * Por que `target` no es un objetivo para `attacker`, este donde este (null = lo es): un enemigo vivo
+ * en el mapa que su equipo ve (`sees`) y al que le hace daño. No mira distancias ni si le queda disparo.
  */
-export function attackProblem(s: GameState, attacker: Unit, target: Unit, visible = visibility(s, attacker.team)): ActionRejection | null {
+export function targetProblem(s: GameState, attacker: Unit, target: Unit, sees: Sight): ActionRejection | null {
+  if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target) || !sees(target)) return 'notTarget';
+  return canDamage(s, attacker, target) ? null : 'notTarget';
+}
+
+/**
+ * Por que `attacker` no puede atacar ahora a `target` (null = puede): lucha y le queda disparo, el
+ * objetivo lo es (targetProblem, con lo que ve su equipo: `visible`) y lo tiene a tiro desde `from`
+ * (donde esta, si no se dice).
+ */
+export function attackProblem(
+  s: GameState,
+  attacker: Unit,
+  target: Unit,
+  visible = visibility(s, attacker.team),
+  from: Pos = attacker,
+): ActionRejection | null {
   if (!canFight(s, attacker)) return 'noFighter';
   if (!canStillFire(s, attacker)) return 'spent';
-  if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target) || !visible.at(target)) return 'notTarget';
-  return canDamage(s, attacker, target) && inAttackRange(s, attacker, attacker, target) ? null : 'notTarget';
+  const problem = targetProblem(s, attacker, target, (pos) => visible.at(pos));
+  if (problem) return problem;
+  return inAttackRange(s, attacker, from, target) ? null : 'notTarget';
 }
 
 /** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap; ver attackProblem). */
