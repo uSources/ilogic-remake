@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { loadGame, saveContext } from '@core/defaultGames';
 import { missionById, missionRules } from '@core/missions';
-import { deserialize, serialize } from '@core/save';
+import { deserialize, readSave, serialize } from '@core/save';
 import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad } from '@core/squads/membership';
@@ -207,6 +207,22 @@ describe('partida guardada con el formato 4', () => {
     expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
     raw.nextSquadId = 'x';
     expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
+  });
+
+  it('los contadores (nextUid, nextSquadId) solo valen enteros validos: 1e300, Infinity o 3,5, no', () => {
+    const s = loadGame(fixture('skirmish-v4'))!;
+    const highestUid = Math.max(...s.units.map((unit) => unit.uid));
+    const json = serialize(s);
+    // Infinity no cabe en JSON (sale null): se escribe a mano, como lo haria un fichero roto.
+    for (const broken of ['1e300', '3.5', 'Infinity', 'null', '-4']) {
+      const raw = json.replace(/"nextUid":\d+/, `"nextUid":${broken}`).replace(/"nextSquadId":\d+/, `"nextSquadId":${broken}`);
+      const back = readSave(raw, saveContext(s.content));
+      if (broken === 'Infinity') {
+        expect(back.ok).toBe(false);
+        continue;
+      }
+      expect(back.ok && [back.state.nextUid, back.state.nextSquadId]).toEqual([highestUid + 1, 3]);
+    }
   });
 });
 

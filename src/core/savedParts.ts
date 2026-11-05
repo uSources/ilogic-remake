@@ -184,14 +184,17 @@ export function isValidMission(frame: SaveFrame, mission: unknown): boolean {
  * es el primero.
  */
 export function cleanCounters(saved: SavedGame): void {
-  const highestUid = Math.max(0, ...objectsIn(saved.units).map((unit) => Number(unit.uid)));
-  saved.nextUid = Math.max(Number(saved.nextUid) || 0, highestUid + 1);
-  saved.nextSquadId = Math.max(Number(saved.nextSquadId) || 0, highestSquadId(saved) + 1);
+  saved.nextUid = nextCounter(saved.nextUid, highestId(saved.units, 'uid'));
+  saved.nextSquadId = nextCounter(saved.nextSquadId, highestId(saved.squads, 'id'));
   if (!isInt(saved.day, 1, MAX_DAY)) saved.day = 1;
 }
 
-/** El mayor numero de escuadra de la partida guardada (0 si no hay). */
-export const highestSquadId = (saved: SavedGame): number => Math.max(0, ...objectsIn(saved.squads).map((squad) => Number(squad.id) || 0));
+/** El mayor numero valido (uid o id) de una lista guardada (0 si no hay ninguno). */
+const highestId = (list: unknown, field: 'uid' | 'id'): number =>
+  Math.max(0, ...objectsIn(list).flatMap((entry) => (isUid(entry[field]) ? [entry[field]] : [])));
+
+/** Un contador guardado vale si es un uid valido por encima del mayor que hay; si no, el mayor + 1. */
+const nextCounter = (saved: unknown, highest: number): number => (isUid(saved) && saved > highest ? saved : highest + 1);
 
 /** Como se genero el mapa: semilla, lado (el del mapa) y tema. */
 function isValidSetup(frame: SaveFrame, setup: unknown): boolean {
