@@ -10,7 +10,7 @@ import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { MoveType, type UnitType } from '../../core/content';
 import { movementOf, unitAt, unitById } from '../../core/rules';
-import { powerArea, generalOf } from '../../core/generals';
+import { powerArea, powerOf, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -50,7 +50,7 @@ export interface PlaybackHost {
   phase: Phase;
   /** Saltarse las animaciones (Enter durante el turno enemigo, velocidad instantanea). */
   fastForward: boolean;
-  readonly enemyPlaying: boolean;
+  readonly othersPlaying: boolean;
   readonly replaying: boolean;
   /** El equipo que esta jugando (el que hace lo que se anima). */
   readonly acting: TeamId;
@@ -73,7 +73,7 @@ export interface EventStage {
   readonly viewer: TeamId;
   /** Se pueden saltar a media animacion (Enter): leerlo despues de cada espera. */
   readonly fastForward: boolean;
-  readonly enemyPlaying: boolean;
+  readonly othersPlaying: boolean;
   /** El equipo que esta jugando (el que hace lo que se anima). */
   readonly acting: TeamId;
   /** Unidades que no se dibujan (las que se estan animando aparte). */
@@ -121,8 +121,8 @@ export class EventPlayer implements EventStage {
   get fastForward(): boolean {
     return this.host.fastForward;
   }
-  get enemyPlaying(): boolean {
-    return this.host.enemyPlaying;
+  get othersPlaying(): boolean {
+    return this.host.othersPlaying;
   }
   get hidden(): Set<number> {
     return this.host.hidden;
@@ -139,7 +139,7 @@ export class EventPlayer implements EventStage {
 
   /** Milisegundos por casilla al mover, segun la velocidad elegida (tuyas o del enemigo). */
   stepMs(): number {
-    const speed = this.host.enemyPlaying ? settings.speedEnemy : settings.speedOwn;
+    const speed = this.host.othersPlaying ? settings.speedEnemy : settings.speedOwn;
     if (speed === 'instant') return INSTANT_STEP_MS;
     return speed === 'fast' ? Math.round(STEP_MS / 2) : STEP_MS;
   }
@@ -167,7 +167,7 @@ export class EventPlayer implements EventStage {
   async play(events: GameEvent[], ghostKey?: string | null): Promise<void> {
     const host = this.host;
     const phaseBefore = host.phase;
-    if (!host.enemyPlaying && !host.replaying && settings.speedOwn === 'instant') host.fastForward = true;
+    if (!host.othersPlaying && !host.replaying && settings.speedOwn === 'instant') host.fastForward = true;
     host.phase = 'busy';
     this.view.placeCursor(false);
     host.refreshHud();
@@ -639,7 +639,7 @@ const animatePower: Animator<'power'> = async (stage, event) => {
   stage.refresh();
   if (stage.fastForward) return;
   const general = generalOf(stage.state, event.team)?.definition;
-  const power = general?.powers.find((candidate) => candidate.id === event.power);
+  const power = general && powerOf(general, event.power);
   const name = power?.name[settings.lang] ?? event.power;
   // Los demas equipos avisan siempre (aunque sea en la niebla): sabes que te han bombardeado o te ven.
   const side = sideOf(stage.state, stage.viewer, event.team);

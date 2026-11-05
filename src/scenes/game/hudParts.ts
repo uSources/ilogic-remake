@@ -141,9 +141,9 @@ export function labPanel(s: GameState, lab: LabOptions | null): UIState['lab'] {
 }
 
 /** Linea de ayuda de abajo segun la fase. */
-export function hintText(options: { busy: boolean; enemyPlaying: boolean; phase: Phase; ordering: boolean; inspecting: boolean }): string {
+export function hintText(options: { busy: boolean; othersPlaying: boolean; phase: Phase; ordering: boolean; inspecting: boolean }): string {
   // Animando lo propio no se dice nada; en el turno enemigo, como saltarlo.
-  if (options.busy) return options.enemyPlaying ? t('skip') : '';
+  if (options.busy) return options.othersPlaying ? t('skip') : '';
   if (options.phase === 'target') return options.ordering ? t('orderPick') : t('genTarget');
   if (options.phase === 'map') return options.inspecting ? t('hintInspect') : t('hintMap');
   return '';

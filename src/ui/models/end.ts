@@ -1,19 +1,23 @@
 import { allianceScore, rivalScore } from '../../core/rules';
-import { enemiesOf, teamState } from '../../core/teams';
+import { alliesOf, enemiesOf, teamState } from '../../core/teams';
 import type { GameState, TeamId, TeamStats } from '../../core/model';
-import type { BySide, EndStatsVM } from '../../hud/store';
+import type { EndStatsVM } from '../../hud/store';
+import type { BySide } from '../../hud/vm/common';
 
-/** Pantalla final: lo de quien mira contra lo de todos sus enemigos juntos. */
+/** Pantalla final: lo de la alianza de quien mira contra lo de todos sus enemigos juntos. */
 
-/** Un dato de quien mira y la suma del de sus enemigos. */
-function bySide(s: GameState, viewer: TeamId, valueOf: (team: TeamId) => number): BySide {
-  const enemies = enemiesOf(s, viewer).reduce((total, enemy) => total + valueOf(enemy), 0);
-  return [valueOf(viewer), enemies];
-}
+const sumOver = (teams: readonly TeamId[], valueOf: (team: TeamId) => number): number =>
+  teams.reduce((total, team) => total + valueOf(team), 0);
+
+/** Un dato de la alianza de quien mira y el de sus enemigos, sumados. */
+const bySide = (s: GameState, viewer: TeamId, valueOf: (team: TeamId) => number): BySide => [
+  sumOver(alliesOf(s, viewer), valueOf),
+  sumOver(enemiesOf(s, viewer), valueOf),
+];
 
 const statOf = (s: GameState, field: Exclude<keyof TeamStats, 'army'>) => (team: TeamId) => teamState(s, team).stats[field];
 
-/** Compras, gasto, bajas y capturas: [suyas, de sus enemigos]. */
+/** Compras, gasto, bajas y capturas de su alianza y de sus enemigos. */
 export function endStatsVM(s: GameState, viewer: TeamId): EndStatsVM {
   return {
     built: bySide(s, viewer, statOf(s, 'built')),
@@ -26,7 +30,7 @@ export function endStatsVM(s: GameState, viewer: TeamId): EndStatsVM {
 /** Puntos para el limite de dias: [de su alianza, de la mejor alianza enemiga] (los que deciden quien gana). */
 export const endScoreVM = (s: GameState, viewer: TeamId): BySide => [allianceScore(s, viewer), rivalScore(s, viewer)];
 
-/** Valor de los ejercitos dia a dia, [suyo, de sus enemigos] (null con menos de dos dias apuntados). */
+/** Valor de los ejercitos dia a dia, de su alianza y de sus enemigos (null con menos de dos dias apuntados). */
 export function armyChartVM(s: GameState, viewer: TeamId): BySide[] | null {
   const days = teamState(s, viewer).stats.army.length;
   if (days < 2) return null;

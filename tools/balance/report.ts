@@ -1,7 +1,7 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
 import type { GameContent } from '@core/content';
 import type { DuelCell } from './duel';
-import type { GameRecord } from './play';
+import { FIRST_SIDE, SECOND_SIDE, type GameRecord, type Side } from './play';
 import type { Variant } from './variant';
 
 export interface Targets {
@@ -110,23 +110,23 @@ export function buildReport(
   const finished = records.filter((record) => record.winner !== null);
   const days = finished.map((record) => record.days);
 
-  // Fuerza de un bando: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
-  const strength = (sample: GameRecord['samples'][number], team: 0 | 1) =>
-    sample.army[team] + sample.buildings[team] * 1500 + sample.funds[team] * 0.5;
+  // Fuerza de un lado: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
+  const strength = (sample: GameRecord['samples'][number], side: Side) =>
+    sample.army[side] + sample.buildings[side] * 1500 + sample.funds[side] * 0.5;
   // Ganador "efectivo": el real, o en las partidas sin terminar quien va claramente por delante.
   const adjudicated: [number, number] = [0, 0];
   let even = 0;
-  const effWinner = new Map<GameRecord, 0 | 1>();
+  const effWinner = new Map<GameRecord, Side>();
   for (const record of records) {
     if (record.winner !== null) {
       effWinner.set(record, record.winner);
       continue;
     }
     const last = record.samples[record.samples.length - 1]!;
-    const playerStrength = strength(last, 0),
-      aiStrength = strength(last, 1);
-    if (Math.max(playerStrength, aiStrength) >= 1.15 * Math.min(playerStrength, aiStrength)) {
-      const winner = playerStrength > aiStrength ? 0 : 1;
+    const firstStrength = strength(last, FIRST_SIDE),
+      secondStrength = strength(last, SECOND_SIDE);
+    if (Math.max(firstStrength, secondStrength) >= 1.15 * Math.min(firstStrength, secondStrength)) {
+      const winner = firstStrength > secondStrength ? FIRST_SIDE : SECOND_SIDE;
       adjudicated[winner]++;
       effWinner.set(record, winner);
     } else even++;

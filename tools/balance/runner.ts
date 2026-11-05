@@ -7,7 +7,7 @@ import { Worker } from 'node:worker_threads';
 import type { Content } from '@core/content';
 import type { DeepReadonly } from '@core/util/freeze';
 import type { DuelCell, DuelOptions } from './duel';
-import type { GameRecord, PlayOptions, Policy } from './play';
+import type { GameRecord, PlayOptions, Policy, Side } from './play';
 import type { VariantSetup } from './variant';
 
 /** Lo que hace un hilo, con los ficheros de contenido de la variante. */
@@ -32,7 +32,7 @@ export async function runGames(
   maxDays: number,
   policies: [Policy, Policy],
   threads: number,
-  firstTeam: 0 | 1 = 0,
+  firstTeam: Side,
   swapSides = false,
   size = 32,
 ): Promise<GameRecord[]> {

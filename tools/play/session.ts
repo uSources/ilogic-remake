@@ -5,7 +5,7 @@
  * terminar el turno, en orden.
  */
 import { aiTurn } from '@core/ai';
-import { duel, teamIds, teamsControlledBy, teamState } from '@core/teams';
+import { duel, playerTeam, teamIds, teamState } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
@@ -74,7 +74,7 @@ export class Session {
   private rng: Rng;
   /** El equipo que se juega con las ordenes (el de la persona). */
   private get me(): TeamId {
-    return teamsControlledBy(this.s, 'human')[0] ?? this.s.teams[0]!.id;
+    return playerTeam(this.s);
   }
   /** Los equipos que mueve la IA al terminar el turno, en orden. */
   private get others(): TeamId[] {
@@ -183,7 +183,7 @@ export class Session {
   private mine(uid: number, needActive = true): Unit {
     const unit = unitById(this.s, uid);
     if (!unit) throw new UsageError(`no existe la unidad ${uid}`);
-    if (unit.team !== 0) throw new UsageError(`la unidad ${uid} no es tuya`);
+    if (unit.team !== this.me) throw new UsageError(`la unidad ${uid} no es tuya`);
     if (needActive && !unit.active) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
     if (unit.carrier !== null) throw new UsageError(`la unidad ${uid} va dentro de un transporte`);
     return unit;
@@ -192,7 +192,7 @@ export class Session {
   /** Mapa en texto: terreno, edificios y unidades (las enemigas solo si se ven). */
   map(): string {
     const s = this.s;
-    const vis = visibility(s, 0);
+    const vis = visibility(s, this.me);
     const map = mapGrid(s);
     const width = map.width,
       height = map.height;

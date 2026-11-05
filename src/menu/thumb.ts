@@ -2,7 +2,7 @@ import { isHq, terrainAt } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState } from '../core/model';
 import { playerTeam } from '../core/teams';
-import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../ui/sides';
+import { ownerSideOf, sideOf, sidePaint } from '../ui/sides';
 import { PAL_CSS } from '../ui/palette';
 import type { TerrainPalette } from '../ui/terrainColors';
 
@@ -10,12 +10,6 @@ const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
 
 /** Color de una casilla cuyo terreno no esta en la paleta. */
 const FALLBACK_TERRAIN = 0x3a7a3a;
-const PLAYER_COLOR = '#3aa8ff';
-const NEUTRAL_COLOR = '#d6dbe6';
-const PLAYER_UNIT_COLOR = '#8fd0ff';
-const ENEMY_UNIT_COLOR = '#ff8a80';
-
-const ownerColor = (owner: OwnerSide) => (owner === 'neutral' ? NEUTRAL_COLOR : isFriendly(owner) ? PLAYER_COLOR : PAL_CSS.red);
 
 /** Pixeles por casilla segun el lado del mapa, para que todas las miniaturas midan parecido. */
 const defaultTileSize = (mapSize: number) => (mapSize <= 20 ? 6 : mapSize <= 32 ? 4 : 3);
@@ -41,7 +35,7 @@ function drawBuildings(context: CanvasRenderingContext2D, s: GameState, px: numb
     const pad = isHq(s, building) ? -1 : 0;
     context.fillStyle = PAL_CSS.ink;
     context.fillRect(building.x * px + pad - 1, building.y * px + pad - 1, px - 2 * pad + 2, px - 2 * pad + 2);
-    context.fillStyle = ownerColor(ownerSideOf(s, viewer, building.owner));
+    context.fillStyle = sidePaint(ownerSideOf(s, viewer, building.owner), 'canvas');
     context.fillRect(building.x * px + pad, building.y * px + pad, px - 2 * pad, px - 2 * pad);
   }
 }
@@ -51,7 +45,7 @@ function drawUnits(context: CanvasRenderingContext2D, s: GameState, px: number, 
   const viewer = playerTeam(s);
   for (const unit of s.units) {
     if (unit.carrier !== null || (which === 'own' && unit.team !== viewer)) continue;
-    context.fillStyle = isFriendly(sideOf(s, viewer, unit.team)) ? PLAYER_UNIT_COLOR : ENEMY_UNIT_COLOR;
+    context.fillStyle = sidePaint(sideOf(s, viewer, unit.team), 'canvasUnit');
     context.fillRect(unit.x * px + 1, unit.y * px + 1, size, size);
   }
 }

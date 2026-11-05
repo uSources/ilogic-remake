@@ -167,7 +167,7 @@ export class GameScene extends Phaser.Scene {
     return {
       state: serialize(this.s),
       phase: this.phase,
-      busy: this.phase === 'busy' || this.enemyPlaying,
+      busy: this.phase === 'busy' || this.othersPlaying,
       ended: this.ended,
       day: this.s.day,
       cursor: { ...this.view.cursor },
@@ -715,8 +715,8 @@ export class GameScene extends Phaser.Scene {
     this.selection.group = uids;
   }
 
-  private get enemyPlaying(): boolean {
-    return this.turns.enemyPlaying;
+  private get othersPlaying(): boolean {
+    return this.turns.othersPlaying;
   }
 
   private visibleToPlayer(pos: Pos): boolean {
@@ -730,12 +730,12 @@ export class GameScene extends Phaser.Scene {
 
   /** Cada evento, antes de animarlo. */
   private noteEvent(event: GameEvent): void {
-    const isPlayerTurn = !this.enemyPlaying;
+    const isOwnTurn = !this.othersPlaying;
     const replaying = this.turns.replaying;
     // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
-    if (isPlayerTurn && event.kind !== 'move') this.moves.clearUndo();
+    if (isOwnTurn && event.kind !== 'move') this.moves.clearUndo();
     if (!replaying) recordEvent(this.s, event, this.turns.acting);
-    if (!replaying && isPlayerTurn) this.tutorial.record(event);
+    if (!replaying && isOwnTurn) this.tutorial.record(event);
     if (event.kind === 'attack') this.lastAt = { ...event.target };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };
   }
@@ -759,7 +759,7 @@ export class GameScene extends Phaser.Scene {
   private viewOptions(): ViewOptions {
     const isMoving = this.phase === 'move';
     const session = this.moves.session;
-    const threat = this.threat && !this.enemyPlaying ? threatMap(this.s, this.viewer) : null;
+    const threat = this.threat && !this.othersPlaying ? threatMap(this.s, this.viewer) : null;
     return {
       viewer: this.viewer,
       vis: this.vis,
@@ -795,7 +795,7 @@ export class GameScene extends Phaser.Scene {
       targetArea: (pos) => this.powers.area(pos),
       group: this.selection.group,
       inspectUid: this.inspectUid,
-      enemyPlaying: this.enemyPlaying,
+      othersPlaying: this.othersPlaying,
       visible: (pos) => this.visibleToPlayer(pos),
     });
     if (marks.inspectGone) this.inspectUid = null;
@@ -816,7 +816,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): ViewOptions['intents'] {
-    if (this.phase !== 'map' || this.enemyPlaying || this.ended || this.lab) return [];
+    if (this.phase !== 'map' || this.othersPlaying || this.ended || this.lab) return [];
     const withStandingOrder = this.s.units.filter(
       (unit) => this.isOwn(unit) && this.standingOrderOf(unit) && unit.active && unit.carrier === null,
     );
@@ -867,7 +867,7 @@ export class GameScene extends Phaser.Scene {
       dayLimit: s.rules.dayLimit,
       helpRules: s.rules,
       weather,
-      turn: this.enemyPlaying ? 'enemy' : 'player',
+      turn: this.othersPlaying ? 'others' : 'own',
       busy,
       tile: busy ? null : this.tileInfo(cursor),
       forecast: this.phase === 'attack' || this.phase === 'move' ? this.forecast(cursor) : null,
@@ -897,7 +897,7 @@ export class GameScene extends Phaser.Scene {
   private hint(busy: boolean): string {
     return hintText({
       busy,
-      enemyPlaying: this.enemyPlaying,
+      othersPlaying: this.othersPlaying,
       phase: this.phase,
       ordering: !!this.orders.ordering,
       inspecting: this.inspectUid !== null,
@@ -957,7 +957,7 @@ export class GameScene extends Phaser.Scene {
   /** [CAMBIO] Panel de lo elegido: con dos o mas unidades, en el mapa (o eligiendo que hacer con ellas). */
   private selectionVM(): SelectionVM | null {
     const picks = this.selection;
-    if (picks.group.size < 2 || !SELECTION_PANEL_PHASES.includes(this.phase) || this.enemyPlaying) return null;
+    if (picks.group.size < 2 || !SELECTION_PANEL_PHASES.includes(this.phase) || this.othersPlaying) return null;
     const list = picks.pickedInOrder();
     if (list.length < 2) return null;
     return selectionPanel(this.textures, this.s, this.viewer, list, this.view.cursor);
@@ -1116,8 +1116,8 @@ export class GameScene extends Phaser.Scene {
       openOptions: () => this.optionsPanel.open(),
       showHelp: () => ui.set({ help: true }),
       saveGame: () => this.saveGame(),
-      endTurn: () => void this.turns.enemyTurn(),
-      replayEnemyTurn: () => void this.turns.replayEnemyTurn(),
+      endTurn: () => void this.turns.endOwnTurn(),
+      replayOthers: () => void this.turns.replayOthers(),
       surrender: () => this.surrender(),
       quitToMenu: () => this.quitToMenu(),
     });
@@ -1233,7 +1233,7 @@ export class GameScene extends Phaser.Scene {
         () => this.fastForward,
         (flag) => (this.fastForward = flag),
       ),
-      enemyPlaying: { get: () => this.enemyPlaying },
+      othersPlaying: { get: () => this.othersPlaying },
       replaying: { get: () => this.turns.replaying },
       hidden: { get: () => this.hidden },
       visible: (pos) => this.visibleToPlayer(pos),

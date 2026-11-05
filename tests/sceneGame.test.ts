@@ -54,6 +54,26 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
     expect(intentAt(s, movePlan, { x: 7, y: 5 }, () => false).kind).not.toBe('attack');
   });
 
+  it('con aliados: a un aliado no se le ataca y lo suyo no se captura; lo enemigo y lo neutral, si', () => {
+    const s = blankState({}, [
+      { controller: 'human', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+      { controller: 'ai', alliance: 0 },
+    ]);
+    const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    newUnit(s, type('Soldier'), 2, { x: 7, y: 5 });
+    s.buildings.push(
+      { type: 'City', owner: 2, x: 5, y: 6, capture: null },
+      { type: 'City', owner: 1, x: 4, y: 5, capture: null },
+      { type: 'City', owner: null, x: 5, y: 4, capture: null },
+    );
+    const movePlan = plan(s, unit);
+    expect(intentAt(s, movePlan, { x: 7, y: 5 }, seeAll).kind).not.toBe('attack');
+    expect(intentAt(s, movePlan, { x: 5, y: 6 }, seeAll)).toEqual({ kind: 'move', to: { x: 5, y: 6 }, capture: false });
+    expect(intentAt(s, movePlan, { x: 4, y: 5 }, seeAll)).toEqual({ kind: 'move', to: { x: 4, y: 5 }, capture: true });
+    expect(intentAt(s, movePlan, { x: 5, y: 4 }, seeAll)).toEqual({ kind: 'move', to: { x: 5, y: 4 }, capture: true });
+  });
+
   it('el camino sigue el trazado si acaba en el destino, y si no el mas corto', () => {
     const s = blankState();
     const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
@@ -92,7 +112,7 @@ describe('escena: casillas marcadas (game/highlights.ts)', () => {
     targetArea: () => [],
     group: new Set(),
     inspectUid: null,
-    enemyPlaying: false,
+    othersPlaying: false,
     visible: seeAll,
   });
 
@@ -117,7 +137,7 @@ describe('escena: casillas marcadas (game/highlights.ts)', () => {
 
 describe('escena: linea de ayuda (game/hudParts.ts)', () => {
   it('cambia con la fase y no dice nada mientras anima lo propio', () => {
-    const options = { busy: false, enemyPlaying: false, phase: 'map' as const, ordering: false, inspecting: false };
+    const options = { busy: false, othersPlaying: false, phase: 'map' as const, ordering: false, inspecting: false };
     expect(hintText({ ...options, busy: true })).toBe('');
     expect(hintText(options)).not.toBe(hintText({ ...options, inspecting: true }));
     expect(hintText({ ...options, phase: 'move' })).toBe('');

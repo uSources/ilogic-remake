@@ -14,7 +14,7 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
-import type { Policy } from './play';
+import { FIRST_SIDE, SECOND_SIDE, type Policy } from './play';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
 import { buildVariant, type Variant } from './variant';
 import { runDuels, runGames } from './runner';
@@ -97,7 +97,7 @@ async function evaluate(variant: Variant, parsed: ReturnType<typeof args>): Prom
     maxDays,
     policies,
     threads,
-    parsed.one('first') === '1' ? 1 : 0,
+    parsed.one('first') === '1' ? SECOND_SIDE : FIRST_SIDE,
     parsed.one('swap') === 'true',
     parsed.num('size', 32),
   );

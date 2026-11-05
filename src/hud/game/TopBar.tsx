@@ -7,7 +7,7 @@ import type { UIState } from '../state';
 import { ui } from '../store';
 import type { WeatherVM } from '../vm/topBar';
 import { DayPanel, EconomyPanel } from './Breakdown';
-import { canAct, isPlayerTurn } from './turn';
+import { canAct, isOwnTurn } from './turn';
 
 /** " · 12/40" con el icono de mando (solo con la regla de puntos de mando). */
 function CommandPoints({ points }: { points: NonNullable<UIState['commandPoints']> }) {
@@ -42,7 +42,7 @@ function Funds({ s }: { s: UIState }) {
 /** Dia (y limite), de quien es el turno y el clima; al pasar por encima o tocarlo, el desglose. */
 function Day({ s }: { s: UIState }) {
   const [isOpen, toggle, close] = useTipToggle();
-  const mine = isPlayerTurn(s);
+  const mine = isOwnTurn(s);
   return (
     <div class={`day has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
       <span class="d">

@@ -30,7 +30,7 @@ export interface HighlightInput {
   targetArea: (target: Pos) => Pos[];
   group: ReadonlySet<number>;
   inspectUid: number | null;
-  enemyPlaying: boolean;
+  othersPlaying: boolean;
   visible: (pos: Pos) => boolean;
 }
 

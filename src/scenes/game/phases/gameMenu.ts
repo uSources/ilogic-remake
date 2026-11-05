@@ -19,7 +19,7 @@ export interface GameMenuHost {
   /** Guardar la partida; false si no se ha podido. */
   saveGame(): boolean;
   endTurn(): void;
-  replayEnemyTurn(): void;
+  replayOthers(): void;
   surrender(): void;
   quitToMenu(): void;
 }
@@ -55,7 +55,7 @@ export class GameMenuChoices {
         return host.endTurn();
       case 'replay':
         if (!host.canReplay) return showToast(t('noReplay'));
-        return host.replayEnemyTurn();
+        return host.replayOthers();
       case 'surrender':
         return this.confirmTwice('surrender', 'confirmSurrender', () => host.surrender());
       case 'quit':

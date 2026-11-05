@@ -4,6 +4,7 @@ import { FoldMark, useFold } from '../common/fold';
 import { stars } from '../common/format';
 import { Icon } from '../common/Icon';
 import type { OwnerSide, Side } from '../vm/common';
+import { sidePaint } from '../../ui/sides';
 import type { BuildingVM, TileVM, UnitVM } from '../vm/tile';
 
 type Owner = OwnerSide | 'unknown';
@@ -16,21 +17,17 @@ const LOW_LIFE = 30;
 const DEFENSE_PER_STAR = 10;
 const MAX_DEFENSE_STARS = 4;
 
-/** Lo suyo y lo aliado van en azul; lo enemigo, en rojo. */
-const isFriendly = (side: Owner) => side === 'own' || side === 'ally';
-
 /** Texto de cada lado ('Tuyo', 'Aliado', 'Enemigo'...). */
 const SIDE_TEXT: Record<Owner, TextKey> = { own: 'you', ally: 'ally', enemy: 'enemy', neutral: 'neutral', unknown: 'unknown' };
 
 /** Color y nombre del dueño de un edificio o de un punto de control. */
-const ownerColor = (owner: Owner) => (isFriendly(owner) ? 'var(--blue)' : owner === 'enemy' ? 'var(--red-soft)' : 'var(--muted)');
+const ownerColor = (owner: Owner) => sidePaint(owner, 'text');
 const ownerText = (owner: Owner) => t(SIDE_TEXT[owner]);
 
 /** Vida en 10 bloques (dorados con 30 o menos). */
 function Blocks({ life, side }: { life: number; side: Side }) {
   const filled = Math.ceil(Math.max(0, life) / LIFE_PER_BLOCK);
-  const teamColor = isFriendly(side) ? 'var(--blue)' : 'var(--red)';
-  const fill = life <= LOW_LIFE ? 'var(--gold)' : teamColor;
+  const fill = life <= LOW_LIFE ? 'var(--gold)' : sidePaint(side, 'fill');
   return (
     <div class="blocks" aria-hidden="true">
       {Array.from({ length: LIFE_BLOCKS }, (_, i) => (
@@ -175,7 +172,7 @@ function CaptureBar({ capture }: { capture: NonNullable<BuildingVM['capture']> }
     <div class="capbar" title={`${t('captureLeft')}: ${capture.left}/${capture.total}`}>
       <Icon k="ui/captura" alt={t('capturing')} cls="px-icon ico" />
       <div class="blocks">
-        <span style={{ flex: capture.total - capture.left, background: isFriendly(capture.side) ? 'var(--blue)' : 'var(--red)' }} />
+        <span style={{ flex: capture.total - capture.left, background: sidePaint(capture.side, 'fill') }} />
         <span style={{ flex: capture.left }} />
       </div>
       <span class="num" style={{ fontSize: 12 }}>

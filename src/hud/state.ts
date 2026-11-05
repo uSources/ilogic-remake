@@ -1,5 +1,6 @@
 import type { RulesConfig } from '../core/model';
 import type { EndStatsVM } from './vm/end';
+import type { BySide } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
@@ -52,7 +53,7 @@ export interface UIState {
   enemyGeneral: GeneralVM | null;
   buildings: number;
   day: number;
-  turn: 'player' | 'enemy';
+  turn: 'own' | 'others';
   busy: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;
@@ -85,14 +86,15 @@ export interface UIState {
   end: {
     won: boolean;
     day: number;
-    /** Lo de quien mira y lo de todos sus enemigos juntos: [suyo, enemigos]. */
+    /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
     stats: EndStatsVM | null;
     reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
-    score: [number, number] | null;
-    /** Valor de los ejercitos dia a dia [suyo, enemigos]. */
-    chart: [number, number][] | null;
+    /** Puntos de su alianza y de la mejor enemiga. */
+    score: BySide | null;
+    /** Valor de los ejercitos dia a dia (su alianza y sus enemigos). */
+    chart: BySide[] | null;
     /** Mision: mejor marca en dias y si se acaba de batir. */
     best: number | null;
     newBest: boolean;
@@ -150,7 +152,7 @@ export const initialState: UIState = {
   commandPoints: null,
   buildings: 0,
   day: 1,
-  turn: 'player',
+  turn: 'own',
   busy: false,
   menu: null,
   forecast: null,

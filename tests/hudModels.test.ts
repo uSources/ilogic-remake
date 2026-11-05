@@ -278,4 +278,11 @@ describe('lados para quien mira (con mas de dos equipos)', () => {
     // Puntos: los de la mejor alianza enemiga (la que decide quien gana), no la suma.
     expect(endScoreVM(s, 0)).toEqual([0, score(s, 2)]);
   });
+
+  it('pantalla final con aliados: lo propio es lo de toda su alianza', () => {
+    const s = threeTeams();
+    s.teams.forEach((team, id) => (team.stats.built = id + 1));
+    expect(endStatsVM(s, 1).built).toEqual([5, 1]);
+    expect(endStatsVM(s, 0).built).toEqual([1, 5]);
+  });
 });

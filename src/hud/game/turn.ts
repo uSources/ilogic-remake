@@ -1,6 +1,6 @@
 import type { UIState } from '../state';
 
-export const isPlayerTurn = (s: UIState) => s.turn === 'player';
+export const isOwnTurn = (s: UIState) => s.turn === 'own';
 
 /** El jugador puede mandar: su turno y sin animaciones en curso. */
-export const canAct = (s: UIState) => isPlayerTurn(s) && !s.busy;
+export const canAct = (s: UIState) => isOwnTurn(s) && !s.busy;

@@ -3,7 +3,7 @@
  * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
  */
 import { appointGeneral } from '../../core/generals';
-import { duel, playerTeam, teamIds } from '../../core/teams';
+import { duel, playerTeam, teamIds, teamsControlledBy } from '../../core/teams';
 import { seededRng } from '../../core/geom';
 import { defaultContent } from '../../core/content/default';
 import { createGame, loadGame } from '../../core/defaultGames';
@@ -39,7 +39,17 @@ export function startMatch(data: GameStartData): MatchStart {
   if (corruptSave) deleteSave();
   const state = lab ? labMatch(lab) : loaded ? loaded : (missionMatch(data) ?? newMatch(data));
   ensureWeather(state);
-  return { state, viewer: playerTeam(state), lab, fromSave: !!saved, corruptSave };
+  return { state, viewer: viewerOf(state), lab, fromSave: !!saved, corruptSave };
+}
+
+/**
+ * El equipo que mira la pantalla: el de la persona. En esta pantalla juega una sola persona; una
+ * partida con varias (por turnos o en red) es la fase 4 y no se puede empezar aqui.
+ */
+export function viewerOf(state: GameState): TeamId {
+  const people = teamsControlledBy(state, 'human');
+  if (people.length > 1) throw new Error(`La partida tiene ${people.length} equipos de personas: en esta pantalla solo juega una`);
+  return playerTeam(state);
 }
 
 function readSavedGame(): GameState | null {

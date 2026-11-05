@@ -1,4 +1,5 @@
 /** Barra de arriba: desglose del dinero y del dia, y el clima. */
+import type { BySide } from './common';
 
 /** Una fila del desglose: "3 × Ciudad   +3.000". */
 export interface BreakdownLineVM {
@@ -28,8 +29,8 @@ export interface DayInfoVM {
   limit: number | null;
   /** Dias que quedan contando el de hoy (null sin limite). */
   left: number | null;
-  /** Puntos de la alianza propia y de la mejor enemiga si la partida acabase ahora (solo con limite de dias). */
-  score: [number, number] | null;
+  /** Puntos de su alianza y de la mejor alianza enemiga si la partida acabase ahora (solo con limite de dias). */
+  score: BySide | null;
 }
 
 /** Clima de la partida en la barra de arriba. */

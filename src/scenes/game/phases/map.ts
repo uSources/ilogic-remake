@@ -70,7 +70,7 @@ export function acceptMapTile(host: PhaseHost, tile: Pos): void {
 function hoverMarks(input: HighlightInput): Highlights {
   const marks = noHighlights();
   const unit = unitAt(input.s, input.cursor);
-  if (!unit || !isOwn(input.viewer, unit) || input.enemyPlaying) return marks;
+  if (!unit || !isOwn(input.viewer, unit) || input.othersPlaying) return marks;
   if (unit.active && unit.canMove && unit.carrier === null) {
     for (const tile of reachableTiles(moveRange(input.s, unit))) marks.tiles.set(posKey(tile), 'hover');
   }

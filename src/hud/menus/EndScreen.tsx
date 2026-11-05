@@ -2,10 +2,9 @@ import { fmtNum, t, type TextKey } from '../../settings';
 import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
+import { OWN, RIVALS, type BySide, type SideIndex } from '../vm/common';
 
 type EndVM = NonNullable<UIState['end']>;
-/** Un valor por lado: [tuyo, de tus enemigos] (ver BySide). */
-type PerSide = readonly [number, number];
 
 const CHART_WIDTH = 300;
 const CHART_HEIGHT = 90;
@@ -17,7 +16,7 @@ const CHART_GRID = [0.25, 0.5, 0.75];
  * Camino SVG de un lado en escalones (estilo pixel): de un dia al siguiente, primero en
  * horizontal y luego en vertical.
  */
-function stepPath(data: PerSide[], side: 0 | 1): string {
+function stepPath(data: readonly BySide[], side: SideIndex): string {
   const max = Math.max(1, ...data.flat());
   const lastDay = Math.max(1, data.length - 1);
   const x = (day: number) => Math.round(CHART_PADDING + (day / lastDay) * (CHART_WIDTH - 2 * CHART_PADDING));
@@ -26,7 +25,7 @@ function stepPath(data: PerSide[], side: 0 | 1): string {
 }
 
 /** Grafica pixel del valor de los ejercitos dia a dia. */
-function ArmyChart({ data }: { data: PerSide[] }) {
+function ArmyChart({ data }: { data: readonly BySide[] }) {
   return (
     <svg
       class="chart"
@@ -39,8 +38,8 @@ function ArmyChart({ data }: { data: PerSide[] }) {
       {CHART_GRID.map((fraction) => (
         <line x1={0} x2={CHART_WIDTH} y1={Math.round(CHART_HEIGHT * fraction)} y2={Math.round(CHART_HEIGHT * fraction)} class="grid" />
       ))}
-      <path d={stepPath(data, 1)} class="enemy" />
-      <path d={stepPath(data, 0)} class="you" />
+      <path d={stepPath(data, RIVALS)} class="enemy" />
+      <path d={stepPath(data, OWN)} class="you" />
     </svg>
   );
 }
@@ -52,7 +51,7 @@ function endTitle(end: EndVM): string {
   return end.won ? t('victory') : t('defeat');
 }
 
-function ChartSection({ chart }: { chart: PerSide[] }) {
+function ChartSection({ chart }: { chart: readonly BySide[] }) {
   return (
     <div class="end-chart">
       <span class="label">{t('endChart')}</span>
@@ -64,12 +63,12 @@ function ChartSection({ chart }: { chart: PerSide[] }) {
   );
 }
 
-function StatRow({ label, values }: { label: TextKey; values: PerSide }) {
+function StatRow({ label, values }: { label: TextKey; values: BySide }) {
   return (
     <tr>
       <td>{t(label)}</td>
-      <td class="num">{fmtNum(values[0])}</td>
-      <td class="num">{fmtNum(values[1])}</td>
+      <td class="num">{fmtNum(values[OWN])}</td>
+      <td class="num">{fmtNum(values[RIVALS])}</td>
     </tr>
   );
 }

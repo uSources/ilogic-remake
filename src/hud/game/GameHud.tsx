@@ -13,7 +13,7 @@ import { PopMenu } from './PopMenu';
 import { SelectionPanel } from './SelectionPanel';
 import { TopBar } from './TopBar';
 import { Tray } from './Tray';
-import { canAct, isPlayerTurn } from './turn';
+import { canAct, isOwnTurn } from './turn';
 
 /**
  * Un panel de la partida: lo que pinta segun el estado, o nada (null/false) si no le toca salir.
@@ -42,9 +42,9 @@ const SIDE_PANELS: GamePanel[] = [
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [
   { id: 'topBar', render: (s) => <TopBar s={s} /> },
-  { id: 'general', render: (s) => s.general && <GeneralPanel general={s.general} mine={isPlayerTurn(s)} /> },
+  { id: 'general', render: (s) => s.general && <GeneralPanel general={s.general} mine={isOwnTurn(s)} /> },
   { id: 'enemyGeneral', render: (s) => s.enemyGeneral && <EnemyGeneral general={s.enemyGeneral} /> },
-  { id: 'mission', render: (s) => s.mission && isPlayerTurn(s) && <MissionPanel mission={s.mission} /> },
+  { id: 'mission', render: (s) => s.mission && isOwnTurn(s) && <MissionPanel mission={s.mission} /> },
   { id: 'hint', render: (s) => s.hint && <div class="hintline">{s.hint}</div> },
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   { id: 'cards', render: (s) => !showsSelection(s) && canAct(s) && s.tile && <Cards tile={s.tile} /> },

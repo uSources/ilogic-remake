@@ -3,7 +3,7 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { PLAIN_RULES } from './plainRules';
 import { duelMatrix } from '../tools/balance/duel';
-import { playGame } from '../tools/balance/play';
+import { FIRST_SIDE, playGame } from '../tools/balance/play';
 import { runDuels, runGames } from '../tools/balance/runner';
 import { buildVariant } from '../tools/balance/variant';
 import { entryOf, type GameContent } from '@core/content';
@@ -124,7 +124,7 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
 describe('herramienta de equilibrio: cada hilo juega con el contenido de su variante', () => {
   it('con todo carisimo nadie compra; con el contenido de siempre, si', async () => {
     const bought = async (set: Record<string, string>) => {
-      const [game] = await runGames(buildVariant({ name: 'v', set }, defaultContent()), [5], 6, ['ai', 'ai'], 1);
+      const [game] = await runGames(buildVariant({ name: 'v', set }, defaultContent()), [5], 6, ['ai', 'ai'], 1, FIRST_SIDE);
       return game!.units.flat().reduce((total, tally) => total + tally.bought, 0);
     };
     expect(await bought({})).toBeGreaterThan(0);

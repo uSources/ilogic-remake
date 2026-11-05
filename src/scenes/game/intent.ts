@@ -9,6 +9,7 @@ import { bestAttackTile } from '../../core/targeting';
 import { buildingAt, pathTo, unitAt, unitById, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { type Intent } from './types';
+import { isAlliedOwner, isHostile } from '../../core/teams';
 
 /** La unidad que se esta moviendo y lo que se calculo al elegirla. */
 export interface MovePlan {
@@ -31,13 +32,14 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   const loadUid = plan.load.get(posKey(tile));
   if (loadUid !== undefined) return { kind: 'load', target: unitById(s, loadUid)! };
   const other = unitAt(s, tile);
-  if (other && other.team !== unit.team && other.carrier === null && visible(other)) {
+  if (other && isHostile(s, unit.team, other.team) && other.carrier === null && visible(other)) {
     const from = attackFrom(s, plan, other);
     return from ? { kind: 'attack', from, target: other } : { kind: 'none' };
   }
   if (!isReachable(plan.range, tile)) return { kind: 'none' };
   const building = buildingAt(s, tile);
-  const isCapture = !!building && building.owner !== unit.team && isCapturer(s, unit);
+  // Lo de un aliado no se captura (ni lo propio); lo neutral y lo enemigo, si.
+  const isCapture = !!building && !isAlliedOwner(s, building.owner, unit.team) && isCapturer(s, unit);
   return { kind: 'move', to: posOf(tile), capture: isCapture };
 }
 

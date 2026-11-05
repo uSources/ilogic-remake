@@ -3,7 +3,7 @@
  * 'target'); el resto se usan ya. La animacion esta en playback.ts (evento 'power').
  */
 import { mapGrid } from '../../core/mapGrid';
-import { powerArea, powerBlock, generalOf, usePower } from '../../core/generals';
+import { powerArea, powerBlock, powerOf, generalOf, usePower } from '../../core/generals';
 import { squareArea } from '../../core/geom';
 import type { GameEvent, GameState, Pos, TeamId } from '../../core/model';
 import { showToast } from '../../hud/store';
@@ -53,9 +53,10 @@ export class GeneralPowers {
     return squareArea(mapGrid(this.host.state), target, radius);
   }
 
-  /** Poder del general del jugador con ese id (undefined si no tiene general o no la tiene). */
+  /** Poder del general del que mira con ese id (undefined si no tiene general o no lo tiene). */
   private powerById(id: string) {
-    return generalOf(this.host.state, this.host.viewer)?.definition.powers.find((power) => power.id === id);
+    const general = generalOf(this.host.state, this.host.viewer)?.definition;
+    return general && powerOf(general, id);
   }
 
   /** Lanzar el poder que se apunta en `c`. */

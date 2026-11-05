@@ -19,6 +19,7 @@ import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
 import { endRound, isMatchOver, outcome, score } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
+import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
 
 const arg = (name: string, fallback: string): string => {
   const index = process.argv.indexOf(`--${name}`);
@@ -36,7 +37,7 @@ function checkGeneralIds(ids: string[]): void {
 }
 
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
-function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: 0 | 1 | -1; byScore: boolean } {
+function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: Side | 'draw'; byScore: boolean } {
   const rng = seededRng(seed * 7919);
   const s: GameState = createGame(rng, { teams: duel('ai', 'ai') });
   [g0, g1].forEach((id, team) => appointGeneral(s, team, id === 'none' ? null : id));
@@ -50,10 +51,10 @@ function play(seed: number, g0: string, g1: string, uses: Map<string, number>): 
     }
     endRound(s);
   }
-  const result = outcome(s, 0);
-  if (result !== 'playing') return { winner: result === 'won' ? 0 : 1, byScore: false };
-  const scoreGap = score(s, 0) - score(s, 1);
-  return { winner: scoreGap > 0 ? 0 : scoreGap < 0 ? 1 : -1, byScore: true };
+  const result = outcome(s, FIRST_SIDE);
+  if (result !== 'playing') return { winner: result === 'won' ? FIRST_SIDE : SECOND_SIDE, byScore: false };
+  const scoreGap = score(s, FIRST_SIDE) - score(s, SECOND_SIDE);
+  return { winner: scoreGap > 0 ? FIRST_SIDE : scoreGap < 0 ? SECOND_SIDE : 'draw', byScore: true };
 }
 
 checkGeneralIds([challenger, rival]);
@@ -64,10 +65,10 @@ let winsA = 0,
 const uses = new Map<string, number>();
 for (let mapSeed = from; mapSeed < from + maps; mapSeed++) {
   // Partida 1: A es el bando 0. Partida 2: A es el bando 1.
-  for (const aTeam of [0, 1] as const) {
-    const result = play(mapSeed, aTeam === 0 ? challenger : rival, aTeam === 0 ? rival : challenger, uses);
+  for (const aTeam of [FIRST_SIDE, SECOND_SIDE]) {
+    const result = play(mapSeed, aTeam === FIRST_SIDE ? challenger : rival, aTeam === FIRST_SIDE ? rival : challenger, uses);
     if (result.byScore) byScore++;
-    if (result.winner === -1) draws++;
+    if (result.winner === 'draw') draws++;
     else if (result.winner === aTeam) winsA++;
     else winsB++;
   }

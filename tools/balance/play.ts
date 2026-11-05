@@ -15,16 +15,19 @@ export type Policy = 'ai' | 'passive';
  * Las tablas del informe van por estos dos lados.
  */
 export type Side = 0 | 1;
-const SIDES: readonly Side[] = [0, 1];
+/** El primer equipo del mapa (el que en el juego seria la persona) y el segundo. */
+export const FIRST_SIDE: Side = 0;
+export const SECOND_SIDE: Side = 1;
+const SIDES: readonly Side[] = [FIRST_SIDE, SECOND_SIDE];
 
 export interface PlayOptions {
   seed: number;
   maxDays: number;
-  /** Quien juega cada bando. 'passive' no hace nada (para medir a la IA). */
+  /** Quien juega cada lado. 'passive' no hace nada (para medir a la IA). */
   policies: [Policy, Policy];
   /** Equipo que mueve primero en cada ronda (en el juego, el de la persona: el primero). */
   firstTeam?: Side;
-  /** Intercambiar los bandos en el mapa generado (para ver si el mapa favorece a un lado). */
+  /** Intercambiar los lados en el mapa generado (para ver si el mapa favorece a un lado). */
   swapSides?: boolean;
   /** Lado del mapa (32 por defecto). */
   size?: number;
@@ -184,11 +187,11 @@ export function playGame(options: PlayOptions): GameRecord {
     samples.push(sample(s));
   }
 
-  const result = outcome(s, 0);
+  const result = outcome(s, FIRST_SIDE);
   let winner: Side | null = null;
   if (result !== 'playing') {
-    winner = result === 'won' ? 0 : 1;
-    reason = endReason(s, 0) ?? 'timeout';
+    winner = result === 'won' ? FIRST_SIDE : SECOND_SIDE;
+    reason = endReason(s, FIRST_SIDE) ?? 'timeout';
   }
   if (result === 'playing') samples.push(sample(s));
   return { seed: options.seed, winner, reason, days: s.day, samples, units, events };

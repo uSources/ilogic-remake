@@ -21,10 +21,32 @@ export const ownerSideOf = (s: GameState, viewer: TeamId, owner: TeamId | null):
   owner === null ? 'neutral' : sideOf(s, viewer, owner);
 
 /** Se pinta con el color propio (azul): el suyo y los aliados; los enemigos van en rojo. */
-export const isFriendly = (side: OwnerSide): boolean => side === 'own' || side === 'ally';
+export const isFriendly = (side: OwnerSide | 'unknown'): boolean => side === 'own' || side === 'ally';
 
-/** Color del mapa de un lado: azul lo propio y aliado, rojo lo enemigo, gris lo de nadie. */
-export const sideColor = (side: OwnerSide): number => (side === 'neutral' ? PAL_MAP.neutral : isFriendly(side) ? PAL.blue : PAL.red);
+/** Los tres colores de lado: azul (lo propio y aliado), rojo (lo enemigo) y gris (lo de nadie o lo que no se sabe). */
+type Paint = 'friendly' | 'enemy' | 'neutral';
+const paintOf = (side: OwnerSide | 'unknown'): Paint => (isFriendly(side) ? 'friendly' : side === 'enemy' ? 'enemy' : 'neutral');
+
+/**
+ * Como se pinta cada lado en cada sitio: el unico lugar con estos colores (los de Phaser son los de
+ * palette.ts y los de CSS, las variables de hud.css). `map`: el mapa de Phaser; `canvas` y
+ * `canvasUnit`: los lienzos del minimapa y las miniaturas (edificios y, mas claras, unidades); `fill`
+ * y `text`: el CSS de las fichas (rellenos y el nombre del dueño).
+ */
+const SIDE_PAINT = {
+  friendly: { map: PAL.blue, canvas: '#3aa8ff', canvasUnit: '#8fd0ff', fill: 'var(--blue)', text: 'var(--blue)' },
+  enemy: { map: PAL.red, canvas: '#ff4d45', canvasUnit: '#ff8a80', fill: 'var(--red)', text: 'var(--red-soft)' },
+  neutral: { map: PAL_MAP.neutral, canvas: '#c9d2e3', canvasUnit: '#c9d2e3', fill: 'var(--muted)', text: 'var(--muted)' },
+} as const;
+export type PaintPlace = keyof (typeof SIDE_PAINT)['friendly'];
+
+/** El color de un lado en ese sitio (ver SIDE_PAINT). */
+export const sidePaint = <P extends PaintPlace>(side: OwnerSide | 'unknown', place: P): (typeof SIDE_PAINT)[Paint][P] =>
+  SIDE_PAINT[paintOf(side)][place];
+
+/** Color del mapa de Phaser de un lado. */
+export const sideColor = (side: OwnerSide): number => sidePaint(side, 'map');
 
 /** Letra de los dibujos por lado (`b_` azul, `r_` rojo, `i_` gris). */
-export const sideLetter = (side: OwnerSide): 'b' | 'r' | 'i' => (side === 'neutral' ? 'i' : isFriendly(side) ? 'b' : 'r');
+const SIDE_LETTER = { friendly: 'b', enemy: 'r', neutral: 'i' } as const;
+export const sideLetter = (side: OwnerSide): 'b' | 'r' | 'i' => SIDE_LETTER[paintOf(side)];
