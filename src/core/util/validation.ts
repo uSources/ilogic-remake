@@ -4,7 +4,9 @@
  */
 import type { Pos } from '../model';
 import type { GridBounds } from './grid';
-import { isObject } from './predicates';
+
+/** Un objeto (no null) del que se pueden leer campos: para comprobar datos que vienen de fuera (JSON). */
+export const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 /** Un entero entre `min` y `max` (los dos incluidos). */
 export const isInt = (value: unknown, min: number, max: number): value is number =>

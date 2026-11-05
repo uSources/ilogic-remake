@@ -4,7 +4,7 @@
  * leerlas), y rules.schema.json la copia para los editores (lo comprueba un test).
  */
 import type { RulesConfig } from './model';
-import { isObject } from './util/predicates';
+import { isObject } from './util/validation';
 
 /** Una regla: interruptor, o numero en un intervalo (entero o no, y quiza null = "sin"). */
 export type RuleSpec =

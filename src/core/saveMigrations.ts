@@ -11,7 +11,7 @@
 import { findEntry, type GameContent } from './content';
 import { rulesWith } from './rulesConfig';
 import type { GameState, Pos, RulesConfig, Squad, StandingOrder, StandingOrderKind, Unit } from './model';
-import { isObject } from './util/predicates';
+import { isObject } from './util/validation';
 
 /** Lo que pone quien lee una partida (ver defaultGames.ts para el del juego). */
 export interface SaveContext {

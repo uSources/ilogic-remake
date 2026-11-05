@@ -26,9 +26,8 @@ import {
   type SavedGame,
 } from './savedParts';
 import { isValidRules } from './rulesSchema';
-import { isObject } from './util/predicates';
+import { isInt, isObject } from './util/validation';
 import { isRandomState } from './util/random';
-import { isInt } from './util/validation';
 import type { GameState, SavedGameState } from './model';
 
 export type { SaveContext } from './saveMigrations';

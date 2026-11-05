@@ -71,6 +71,8 @@ return gotCloser ? best.pos : null;
     por numero de tipo) y congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
     `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
     `posOf(unit)`.
+14. **Sin ciclos de imports.** Si dos modulos se necesitan, lo comun baja a uno que no importa a
+    ninguno (`util/validation.ts` no sabe del contenido). Lo comprueba `tests/importCycles.test.ts`.
 
 ## Al cambiar codigo que ya existe
 

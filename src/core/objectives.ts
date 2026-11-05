@@ -9,8 +9,7 @@
  */
 
 import { entryOf, isEntryId, type GameContent } from './content';
-import { isObject } from './util/predicates';
-import { isInt, isPosOn } from './util/validation';
+import { isInt, isPosOn, isObject } from './util/validation';
 
 import type { GameState, Objective, Outcome, Pos, TeamId } from './model';
 import { isHostile } from './teams';

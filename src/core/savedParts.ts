@@ -14,8 +14,7 @@ import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
 import type { GeneralState, SavedGameState } from './model';
 import { Grid, type GridBounds } from './util/grid';
-import { isObject } from './util/predicates';
-import { isInt, isPosOn } from './util/validation';
+import { isInt, isPosOn, isObject } from './util/validation';
 
 /**
  * Una partida guardada tal como llega (ya puesta al dia por MIGRATIONS): cualquier campo puede faltar
