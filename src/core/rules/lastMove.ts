@@ -28,12 +28,6 @@ export function undoWindowProblem(s: GameState, unit: Unit): ActionRejection | n
   return unitAt(s, lastMove.from) ? 'occupied' : null;
 }
 
-/** El ultimo movimiento de un 'undoMove' ya comprobado (si no esta, es un fallo del registro). */
-export function checkedLastMove(s: GameState): LastMove {
-  if (!s.lastMove) throw new Error('Deshacer ya comprobado sin ultimo movimiento');
-  return s.lastMove;
-}
-
 /**
  * La invariante 'undoWindow': lo que se puede deshacer es de una unidad recien movida que sigue ahi
  * (si cae, o vuelve a estar lista con la ronda nueva, ya no).

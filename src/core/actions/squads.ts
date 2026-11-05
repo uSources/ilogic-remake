@@ -7,12 +7,12 @@ import {
   pruneSquads,
   renameSquad,
   setGroup,
-  squadRemovedEvent,
   type SomeUnits,
   type SquadChangeResult,
 } from '../squads/membership';
 import { cleanSquadName, SQUAD_KEYS } from '../squads/naming';
-import { squadById, squadUnits } from '../squads/queries';
+import { squadEvent } from '../squads/events';
+import { squadById } from '../squads/queries';
 import type { ActionRejection, GameActionOf, GameEvent, GameState, Squad, SquadChange, TeamId, Unit } from '../model';
 import { checkedUnits, ownUnitsProblem, someCheckedUnits } from './checks';
 import type { ActionDefinition, ActionRegistry } from './types';
@@ -20,14 +20,10 @@ import type { ActionDefinition, ActionRegistry } from './types';
 /** Una tecla de grupo (1-9). */
 const isGroupKey = (key: number): boolean => key >= 1 && key <= SQUAD_KEYS;
 
-/** Por que no vale una tecla de grupo (si la hay) para estas unidades del equipo. */
-function groupProblem(
-  s: GameState,
-  team: TeamId,
-  { uids, key }: { uids: readonly number[]; key: number | undefined },
-): ActionRejection | null {
-  if (key !== undefined && !isGroupKey(key)) return 'badKey';
-  return ownUnitsProblem(s, team, uids);
+/** Por que no vale formar o agrupar: la tecla de grupo (si la hay) y que las unidades sean del equipo. */
+function groupProblem(s: GameState, team: TeamId, action: GameActionOf<GroupActionKind>): ActionRejection | null {
+  if (action.key !== undefined && !isGroupKey(action.key)) return 'badKey';
+  return ownUnitsProblem(s, team, action.uids);
 }
 
 /** La escuadra `id` existe y es del equipo. */
@@ -35,20 +31,6 @@ function ownSquadProblem(s: GameState, team: TeamId, id: number): ActionRejectio
   const squad = squadById(s, id);
   if (!squad) return 'missing';
   return squad.team === team ? null : 'notYours';
-}
-
-/** Como queda una escuadra tras cambiarla (sus unidades ahora, nombre y tecla): su suceso. */
-function squadEvent(s: GameState, team: TeamId, squad: Squad, change: SquadChange): GameEvent {
-  const uids = squadUnits(s, squad.id).map((unit) => unit.uid);
-  return {
-    kind: 'squad',
-    actor: team,
-    squad: squad.id,
-    change,
-    uids,
-    name: squad.name,
-    ...(squad.key !== undefined ? { key: squad.key } : {}),
-  };
 }
 
 /** La escuadra `id` de una accion ya comprobada (si no esta, es un fallo del registro, como en checkedUnit). */
@@ -69,16 +51,10 @@ function squadsOf(s: GameState, units: readonly Unit[]): Squad[] {
  * (su numero se puede volver a usar justo despues), luego la que queda.
  */
 function squadChangeEvents(s: GameState, team: TeamId, result: SquadChangeResult, change: SquadChange): GameEvent[] {
-  return [...result.removed.map((squad) => squadRemovedEvent(squad, team)), squadEvent(s, team, result.squad, change)];
+  return [...result.removed.map((squad) => squadEvent(s, team, squad, 'removed')), squadEvent(s, team, result.squad, change)];
 }
 
 type GroupActionKind = 'formSquad' | 'setGroup' | 'addToGroup';
-
-/** Las unidades y la tecla de una accion de formar o agrupar (las tres las tienen). */
-const uidsAndKey = (action: GameActionOf<GroupActionKind>): { uids: readonly number[]; key: number | undefined } => ({
-  uids: action.uids,
-  key: action.key,
-});
 
 /** Formar o agrupar con estas unidades del equipo (validate ya ha visto que son suyas y que hay alguna). */
 type GroupChange<K extends GroupActionKind> = (s: GameState, team: TeamId, units: SomeUnits, action: GameActionOf<K>) => SquadChangeResult;
@@ -86,8 +62,11 @@ type GroupChange<K extends GroupActionKind> = (s: GameState, team: TeamId, units
 /** La entrada de formar o agrupar: la misma comprobacion y los mismos sucesos, con su cambio. */
 function groupAction<K extends GroupActionKind>(change: SquadChange, run: GroupChange<K>): ActionDefinition<K> {
   return {
-    validate: (s, team, action) => groupProblem(s, team, uidsAndKey(action)),
-    apply: (s, team, action) => squadChangeEvents(s, team, run(s, team, someCheckedUnits(s, uidsAndKey(action).uids), action), change),
+    validate: (s, team, action) => groupProblem(s, team, action),
+    apply: (s, team, action) => {
+      const group: GameActionOf<GroupActionKind> = action;
+      return squadChangeEvents(s, team, run(s, team, someCheckedUnits(s, group.uids), action), change);
+    },
   };
 }
 
@@ -110,7 +89,7 @@ export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'add
         const removed = pruneSquads(s);
         const stillThere = left.filter((squad) => !removed.includes(squad));
         return [
-          ...removed.map((squad) => squadRemovedEvent(squad, team)),
+          ...removed.map((squad) => squadEvent(s, team, squad, 'removed')),
           ...stillThere.map((squad) => squadEvent(s, team, squad, 'left')),
         ];
       },

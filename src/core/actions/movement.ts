@@ -4,11 +4,11 @@ import { followPath, moveEvent, plannedPath, type MovePath } from '../rules/move
 import { buildingAt } from '../rules/queries';
 import { endTravel, travelProblem, travelStepOf, type TravelStep } from '../rules/travel';
 import { captureProgress } from '../rules/capture';
-import { checkedLastMove, closeUndoWindow, openUndoWindow, undoWindowProblem } from '../rules/lastMove';
+import { closeUndoWindow, openUndoWindow, undoWindowProblem } from '../rules/lastMove';
 import { readyUnit } from '../rules/unitTurn';
 import { visibleEnemies } from '../rules/visibility';
 import type { GameState, LastMove, Pos, TeamId, Unit } from '../model';
-import { actorProblem, checkedUnit, ownUnitOnMapProblem, ownUnitProblem } from './checks';
+import { actorProblem, checkedLastMove, checkedUnit, ownUnitOnMapProblem, ownUnitProblem } from './checks';
 import type { ActionRegistry } from './types';
 
 /** La captura a medias que lleva la unidad en el edificio en el que esta (la que perderia al irse). */

@@ -1,5 +1,5 @@
 /** [CAMBIO] Quien esta en cada escuadra: formarlas, meter y sacar unidades, grupos por tecla, deshacerlas. */
-import type { GameEvent, GameState, Squad, TeamId, Unit } from '../model';
+import type { GameState, Squad, TeamId, Unit } from '../model';
 import { cleanSquadName, freeKey, freeName, squadByKey } from './naming';
 import { squadById, squadUnits } from './queries';
 import { forUnit, liftStandingOrder, sameStandingOrder } from './standingOrders';
@@ -27,22 +27,6 @@ export function pruneSquads(s: GameState): Squad[] {
   for (const unit of s.units) if (unit.squad !== undefined && !squadById(s, unit.squad)) delete unit.squad;
   if (!s.squads.length) delete s.squads;
   return removed;
-}
-
-/**
- * El suceso de una escuadra que ya no existe porque se ha quedado vacia (`actor`: el equipo cuya
- * accion la vacio, o null si la quita la partida). Ver SquadChange en model/events.ts.
- */
-export function squadRemovedEvent(squad: Squad, actor: TeamId | null): GameEvent {
-  return {
-    kind: 'squad',
-    actor,
-    squad: squad.id,
-    change: 'removed',
-    uids: [],
-    name: squad.name,
-    ...(squad.key !== undefined ? { key: squad.key } : {}),
-  };
 }
 
 /**
@@ -125,5 +109,6 @@ export function renameSquad(squad: Squad, name: string): void {
  */
 export function disbandSquad(s: GameState, squad: Squad): void {
   for (const unit of squadUnits(s, squad.id)) leaveSquad(s, unit);
-  pruneSquads(s);
+  s.squads = (s.squads ?? []).filter((other) => other.id !== squad.id);
+  if (!s.squads.length) delete s.squads;
 }
