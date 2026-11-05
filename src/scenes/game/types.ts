@@ -16,24 +16,13 @@ export type Phase =
   'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'orderMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
 /**
- * Una opcion del menu de una unidad: las que da el nucleo (availableActions) y «Atras», que siempre
- * esta (deshace el movimiento o, si no hay nada que deshacer, cierra el menu).
+ * Una opcion del menu de una unidad: las que da el nucleo (availableActions, en el orden de
+ * UNIT_MENU) y «Atras», que pone la escena: deshace el movimiento si se puede, avisa si ya no
+ * (ha descubierto enemigos) y, si no se ha movido, cierra el menu.
  */
 export type ActionKey = UnitMenuOption | 'back';
-/** Orden de las opciones del menu de una unidad. */
-export const ACTION_ORDER: ActionKey[] = [
-  'attack',
-  'capture',
-  'unload',
-  'supply',
-  'wait',
-  'orderToAttack',
-  'orderToCapture',
-  'orderToDefend',
-  'cancelOrder',
-  'back',
-  'delete',
-];
+/** «Atras» va justo antes de esta opcion (la de peligro, al final), o al final si no esta. */
+export const BACK_GOES_BEFORE: UnitMenuOption = 'delete';
 export type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 export const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 

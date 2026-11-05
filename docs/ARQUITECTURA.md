@@ -82,10 +82,14 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   piezas de `rules/` y `squads/` y devuelve los sucesos.
 - `actionProblem`/`isValidAction` preguntan lo mismo sin cambiar nada. El menu de una unidad sale de
   ahi: `UNIT_MENU` (`actions/menu.ts`) dice con que acciones se cumple cada opcion y
-  `availableActions(s, team, unit)` ofrece las que tienen alguna que vale; `canGiveStandingOrder`,
-  para las ordenes cuya casilla se elige despues. Lo que se manda a unas unidades elegidas (un
-  grupo, la bandeja) sale igual de `SELECTION_MENU` y `canDoWithSelection`; los mandos
-  (`controls/actions.ts`, `INPUT_ACTIONS`) solo preguntan ahi y añaden lo que es de la interfaz.
+  `availableActions(s, team, unit)` ofrece, en ese orden, las que tienen alguna que vale (la escena
+  solo añade «Atras», en el sitio que dice `BACK_GOES_BEFORE`). Lo que se manda a unas unidades
+  elegidas (un grupo, la bandeja) sale igual de `SELECTION_MENU` y `canDoWithSelection`; las
+  opciones que son las mismas con una sola unidad (las ordenes, quitarlas) salen de ahi tambien
+  (`ORDER_OPTIONS` dice cual es cada orden), y mover un grupo es su plan (`groupMoveOrder`,
+  `groupMoveStep`), que la escena cumple paso a paso. Los mandos (`controls/actions.ts`,
+  `INPUT_ACTIONS`) solo preguntan ahi y añaden lo que es de la interfaz. Lo que pasaria al soltar la
+  unidad en otra casilla tambien lo dice el nucleo (`targetProblem`, `canCaptureAt`).
 - Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
   siguiente (solo 'move' la deja abierta: `keepsUndoWindow` en su entrada del registro; dispatch la

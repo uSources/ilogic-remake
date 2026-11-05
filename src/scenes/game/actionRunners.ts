@@ -3,7 +3,7 @@
  * en controls/actions.ts (puro, sin escena); aqui, que pasa en la partida. El tipo de ACTION_RUNNERS
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
-import { exactSquad, squadById, SQUAD_NAME_MAX } from '../../core/squads';
+import { exactSquad, SQUAD_NAME_MAX } from '../../core/squads';
 import type { GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
 import type { ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
@@ -108,13 +108,13 @@ function leaveSquads(host: ActionRunHost, units: Unit[]): void {
 
 /** Abre el cuadro para escribir el nombre (hud/overlays/RenameSquad.tsx). */
 function askSquadName(host: ActionRunHost, units: Unit[]): void {
-  const id = exactSquad(host.state, units);
-  if (id !== null) ui.set({ rename: { id, name: squadById(host.state, id)?.name ?? '', max: SQUAD_NAME_MAX } });
+  const squad = exactSquad(host.state, units);
+  if (squad) ui.set({ rename: { id: squad.id, name: squad.name, max: SQUAD_NAME_MAX } });
 }
 
 function disbandWholeSquad(host: ActionRunHost, units: Unit[]): void {
-  const id = exactSquad(host.state, units);
-  if (id !== null) host.act({ kind: 'disbandSquad', squad: id });
+  const squad = exactSquad(host.state, units);
+  if (squad) host.act({ kind: 'disbandSquad', squad: squad.id });
 }
 
 export const ACTION_RUNNERS: { readonly [Id in ActionId]: ActionRunner } = {

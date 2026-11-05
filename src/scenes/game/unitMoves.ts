@@ -4,9 +4,8 @@
  */
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
-import { availableActions, isValidAction, type UnitMenuOption } from '../../core/actions';
-import { manhattan, samePos, posOf } from '../../core/geom';
-import { closestStep } from '../../core/targeting';
+import { actionProblem, availableActions, groupMoveOrder, groupMoveStep, isValidAction, type UnitMenuOption } from '../../core/actions';
+import { samePos, posOf } from '../../core/geom';
 import { canCapture, canStillMove, endsInAmbush, moveRange, stepToward, unitById } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -117,8 +116,7 @@ export class UnitMoves {
     if (!session?.range || this.host.phase !== 'move') return;
     const unit = session.unit;
     const intent = this.intentAt(tile);
-    // Moverla a mano cancela su orden de varios turnos.
-    if (intent.kind !== 'none' && intent.kind !== 'stay' && unit.travelTo) this.host.act({ kind: 'travel', uid: unit.uid, to: null });
+    if (intent.kind !== 'none' && intent.kind !== 'stay') this.stopTravelByHand(unit);
     switch (intent.kind) {
       case 'none':
         return this.host.toMap();
@@ -207,24 +205,27 @@ export class UnitMoves {
     host.toMap();
   }
 
-  /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
+  /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse (el plan es del nucleo). */
   async groupMove(goal: Pos): Promise<void> {
     const host = this.host;
     host.selection.multi = false;
-    const closestFirst = [...host.selection.group]
-      .map((uid) => unitById(host.state, uid))
-      .filter((unit): unit is Unit => !!unit && canStillMove(unit) && unit.carrier === null)
-      .sort((firstUnit, secondUnit) => manhattan(firstUnit, goal) - manhattan(secondUnit, goal));
+    const group = [...host.selection.group].map((uid) => unitById(host.state, uid)).filter((unit): unit is Unit => !!unit);
     // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
     this.clearUndo();
-    for (const unit of closestFirst) {
-      const best = closestStep(unit, goal, moveRange(host.state, unit));
-      if (!best) continue;
-      if (unit.travelTo) host.act({ kind: 'travel', uid: unit.uid, to: null });
-      await host.perform({ kind: 'move', uid: unit.uid, to: best });
+    for (const unit of groupMoveOrder(group, goal)) {
+      // Cada paso con el mapa como lo han dejado las de antes.
+      const step = groupMoveStep(host.state, unit, goal);
+      if (!step) continue;
+      this.stopTravelByHand(unit);
+      await host.perform(step);
       if (host.ended) return;
     }
     host.toMap();
+  }
+
+  /** Moverla a mano cancela su viaje de varios turnos (travelTo). */
+  private stopTravelByHand(unit: Unit): void {
+    if (unit.travelTo) this.host.act({ kind: 'travel', uid: unit.uid, to: null });
   }
 
   waitSelected(): void {
@@ -246,7 +247,12 @@ export class UnitMoves {
   undoMove(): void {
     const host = this.host;
     const unit = this.selected;
-    if (!unit || !host.act({ kind: 'undoMove', uid: unit.uid })) return host.toMap();
+    if (!unit) return host.toMap();
+    const undo = { kind: 'undoMove', uid: unit.uid } as const;
+    // Con niebla, si al moverse ha descubierto a alguien ya no vuelve (seria mirar gratis): se avisa
+    // y el menu sigue abierto. Sin nada que deshacer (no se ha movido), «Atras» cierra el menu.
+    if (actionProblem(host.state, host.viewer, undo) === 'revealed') return showToast(t('undoRevealed'));
+    if (!host.act(undo)) return host.toMap();
     this.undoStack.pop();
     host.view.cursor = posOf(unit);
     this.select(unit);

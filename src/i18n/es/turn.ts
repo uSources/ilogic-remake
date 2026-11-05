@@ -37,6 +37,7 @@ export const turn = {
   intentsShort: 'Órdenes',
   undone: 'Movimiento deshecho',
   nothingToUndo: 'No hay nada que deshacer',
+  undoRevealed: 'Ha descubierto enemigos: ya no puede volver',
   surrender: 'Rendirse',
   confirmSurrender: 'Pulsa otra vez para rendirte',
   replay: 'Repetir turno enemigo',

@@ -1,14 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  ACTIONS,
-  ACTION_GUARDS,
-  availableActions,
-  isGameAction,
-  canDoWithSelection,
-  canGiveStandingOrder,
-  dispatch,
-  isValidAction,
-} from '@core/actions';
+import { ACTIONS, ACTION_GUARDS, availableActions, isGameAction, canDoWithSelection, dispatch, isValidAction } from '@core/actions';
 import { canCaptureAt, endRound, INVARIANTS, newUnit, roundReport, targetProblem, unitById } from '@core/rules';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
@@ -422,8 +413,8 @@ describe('el menu de una unidad sale de las acciones que valen', () => {
     const options = availableActions(s, 0, transport);
     expect(options).toContain('unload');
     expect(options).not.toContain('orderToAttack');
-    expect(canGiveStandingOrder(s, 0, [transport], 'defend', null)).toBe(false);
-    expect(canGiveStandingOrder(s, 0, [transport, passenger], 'defend', null)).toBe(true);
+    expect(canDoWithSelection(s, 0, [transport], 'orderToDefend', null)).toBe(false);
+    expect(canDoWithSelection(s, 0, [transport, passenger], 'orderToDefend', null)).toBe(true);
   });
 });
 

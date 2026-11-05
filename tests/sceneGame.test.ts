@@ -1,3 +1,4 @@
+import { withBack } from '../src/scenes/game/phases/unitMenu';
 import { describe, expect, it } from 'vitest';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
@@ -287,5 +288,12 @@ describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
   it('el turno de otro equipo solo lo juega la IA: si es de una persona, falla', () => {
     expect(() => checkPlayedByAi(blankState(), 1)).not.toThrow();
     expect(() => checkPlayedByAi(twoPeople(), 1)).toThrow(/solo juega una persona/);
+  });
+});
+
+describe('escena: menu de la unidad (game/phases/unitMenu.ts)', () => {
+  it('las opciones son las del nucleo, en su orden, con «Atras» antes de retirar', () => {
+    expect(withBack(['attack', 'wait', 'delete'])).toEqual(['attack', 'wait', 'back', 'delete']);
+    expect(withBack(['wait'])).toEqual(['wait', 'back']);
   });
 });

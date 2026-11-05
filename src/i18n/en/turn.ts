@@ -39,6 +39,7 @@ export const turn: Translation<typeof es> = {
   intentsShort: 'Orders',
   undone: 'Move undone',
   nothingToUndo: 'Nothing to undo',
+  undoRevealed: 'It spotted enemies: it can no longer go back',
   surrender: 'Surrender',
   confirmSurrender: 'Press again to surrender',
   replay: 'Replay enemy turn',

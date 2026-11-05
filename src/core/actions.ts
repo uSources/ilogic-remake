@@ -28,7 +28,9 @@ export { ACTIONS } from './actions/registry';
 export {
   availableActions,
   canDoWithSelection,
-  canGiveStandingOrder,
+  groupMoveOrder,
+  groupMoveStep,
+  ORDER_OPTIONS,
   SELECTION_MENU,
   UNIT_MENU,
   type SelectionOption,

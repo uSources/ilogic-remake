@@ -17,7 +17,7 @@
  * ACTION_RUNNERS (y, si es una nueva, su entrada en SELECTION_MENU); los mandos no cambian.
  */
 import { exactSquad, standingOrderChoices } from '../core/squads';
-import { canDoWithSelection, type SelectionOption } from '../core/actions';
+import { canDoWithSelection, ORDER_OPTIONS, type SelectionOption } from '../core/actions';
 import type { GameState, Pos, TeamId, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
@@ -92,9 +92,6 @@ const canDo = (context: ActionCtx, option: SelectionOption): boolean =>
   canDoWithSelection(context.s, context.viewer, context.units, option, context.at);
 
 const isWholeSquad = (context: ActionCtx) => exactSquad(context.s, context.units) !== null;
-
-/** La opcion del nucleo de cada orden con destino. */
-const ORDER_OPTIONS = { attack: 'orderToAttack', capture: 'orderToCapture', defend: 'orderToDefend' } as const;
 
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que se pueden dar, sin casilla). */
 function canOrder(context: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {

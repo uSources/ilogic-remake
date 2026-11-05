@@ -6,14 +6,14 @@
 import { unitTypeOf } from '../../../core/gameContent';
 import { posKey, posOf } from '../../../core/geom';
 import { attackTargets, unitById, unloadTiles } from '../../../core/rules';
-import { availableActions } from '../../../core/actions';
+import { availableActions, type UnitMenuOption } from '../../../core/actions';
 import type { StandingOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, nameOf, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
 import type { MenuInput, MenuModel } from '../menuModel';
-import { ACTION_ORDER, type ActionKey } from '../types';
+import { BACK_GOES_BEFORE, type ActionKey } from '../types';
 import { markTiles, type PhaseHandler, type PhaseHost } from './phase';
 
 /** En el menu de carga, la primera opcion es «Atras»; los pasajeros van detras. */
@@ -48,6 +48,13 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, uni
   back: (host) => host.moves.undoMove(),
   delete: deleteUnit,
 };
+
+/** Las opciones del nucleo, en su orden, con «Atras» en su sitio (BACK_GOES_BEFORE). */
+export function withBack(options: readonly UnitMenuOption[]): ActionKey[] {
+  const at = options.indexOf(BACK_GOES_BEFORE);
+  const cut = at < 0 ? options.length : at;
+  return [...options.slice(0, cut), 'back', ...options.slice(cut)];
+}
 
 /** La orden pide despues la casilla; lo ya movido este turno se mantiene. */
 function startOrder(host: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
@@ -86,10 +93,8 @@ export const unitMenuPhase: PhaseHandler = {
   enter: (host) => {
     const unit = host.moves.selected;
     if (!unit) return host.toMap();
-    const available = new Set<ActionKey>(availableActions(host.state, host.viewer, unit));
-    // [CAMBIO] "Atras" siempre: deshace el movimiento (en el original no se podia).
-    available.add('back');
-    host.unitOptions = ACTION_ORDER.filter((action) => available.has(action));
+    // [CAMBIO] «Atras» siempre (en el original no se podia deshacer): ver ActionKey.
+    host.unitOptions = withBack(availableActions(host.state, host.viewer, unit));
     // Encima de un edificio que se puede capturar, lo normal es capturar.
     host.menuSel = Math.max(0, host.unitOptions.indexOf('capture'));
     host.deleteArmed = false;
