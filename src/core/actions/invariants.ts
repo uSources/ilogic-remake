@@ -5,6 +5,7 @@
  * deje algo que limpiar es una entrada mas aqui.
  */
 import { dropStaleCaptures } from '../rules/capture';
+import { capFunds } from '../rules/funds';
 import { removeDead } from '../rules/lifecycle';
 import { pruneSquads } from '../squads/membership';
 import type { GameState } from '../model';
@@ -24,6 +25,8 @@ export const INVARIANTS: readonly Invariant[] = [
   { id: 'captures', restore: dropStaleCaptures },
   // Una escuadra sin unidades desaparece (y nadie se queda apuntado a una que no existe).
   { id: 'squads', restore: pruneSquads },
+  // Lo que pase del maximo de dinero se pierde (botin, poderes...: venga de donde venga).
+  { id: 'funds', restore: capFunds },
 ];
 
 /** Deja la partida cumpliendo todas las INVARIANTS. */

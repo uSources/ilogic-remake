@@ -6,7 +6,8 @@ import { MAX_LIFE } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
 import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
-import { perTeam, teamIds, teamState } from '../teams';
+import { perTeam, teamIds } from '../teams';
+import { capFunds, earn, pay } from './funds';
 import { dropStaleCaptures } from './capture';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
@@ -70,7 +71,7 @@ function collectAndHeal(s: GameState): GameEvent[] {
   for (const building of s.buildings) {
     if (building.owner === null) continue;
     const earned = buildingIncome(s, buildingTypeOf(s, building));
-    teamState(s, building.owner).funds += earned;
+    earn(s, building.owner, earned);
     income[building.owner]! += earned;
     heals.push(...healOnBuilding(s, building));
   }
@@ -83,17 +84,16 @@ function collectAndHeal(s: GameState): GameEvent[] {
 /** [CAMBIO] Mantenimiento. Sin dinero no hay castigo: se paga lo que haya. */
 function payUpkeep(s: GameState): GameEvent[] {
   const events: GameEvent[] = [];
-  for (const team of s.teams) {
-    const paid = Math.min(upkeepOf(s, team.id), team.funds);
-    team.funds -= paid;
-    if (paid > 0) events.push({ kind: 'upkeep', actor: null, team: team.id, amount: paid });
+  for (const team of teamIds(s)) {
+    const paid = pay(s, team, upkeepOf(s, team));
+    if (paid > 0) events.push({ kind: 'upkeep', actor: null, team, amount: paid });
   }
   return events;
 }
 
 /** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
 function nextDay(s: GameState): GameEvent[] {
-  for (const team of s.teams) team.funds = Math.min(team.funds, s.content.maxFunds);
+  capFunds(s);
   s.day++;
   return [{ kind: 'newDay', actor: null, day: s.day }];
 }

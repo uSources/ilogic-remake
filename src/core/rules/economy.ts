@@ -9,6 +9,7 @@ import { teamState } from '../teams';
 import { isWalkable, teamUnits, unitAt } from './queries';
 import type { ActionRejection, Building, GameState, TeamId, Unit } from '../model';
 import { newUnit } from './lifecycle';
+import { pay } from './funds';
 
 /** Los ingresos y el mantenimiento se redondean a multiplos de esto. */
 const MONEY_STEP = 100;
@@ -91,6 +92,6 @@ export function buyProblem(s: GameState, team: TeamId, building: Building, unitT
 /** Fabrica una unidad, ya comprobado (buyProblem): se paga y nace sin poder actuar hasta la ronda siguiente. */
 export function buildUnit(s: GameState, building: Building, unitType: UnitType): Unit {
   const team = building.owner!;
-  teamState(s, team).funds -= unitType.cost;
+  pay(s, team, unitType.cost);
   return newUnit(s, unitType, team, building, 'done');
 }

@@ -18,6 +18,7 @@ import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
 import { mapGrid } from './mapGrid';
 import { isHostile, teamState } from './teams';
+import { earn } from './rules/funds';
 import { isOnMap } from './util/predicates';
 import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 
@@ -144,7 +145,7 @@ const POWER_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>)
     }
   },
   funds: ({ s, team, effect, out }) => {
-    teamState(s, team).funds += effect.amount;
+    earn(s, team, effect.amount);
     out.funds = effect.amount;
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata).

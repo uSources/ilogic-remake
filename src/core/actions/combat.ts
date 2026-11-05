@@ -4,7 +4,7 @@ import { chargeFromCombat } from '../generals';
 import { attackProblem, bountyFor, canCounter, combatInfoBefore, strike } from '../rules/combat';
 import { unitById } from '../rules/queries';
 import { spendUnit } from '../rules/unitTurn';
-import { teamState } from '../teams';
+import { earn } from '../rules/funds';
 import { isAlive } from '../util/predicates';
 import type { Dice, GameEventOf, GameState, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
@@ -22,8 +22,7 @@ function payBounty(s: GameState, attacker: Unit, defender: Unit): number {
   if (!loser) return 0;
   const winner: TeamId = loser === defender ? attacker.team : defender.team;
   const bounty = bountyFor(s, loser);
-  const winnerTeam = teamState(s, winner);
-  winnerTeam.funds = Math.min(s.content.maxFunds, winnerTeam.funds + bounty);
+  earn(s, winner, bounty);
   return bounty;
 }
 

@@ -4,7 +4,8 @@
  */
 import { isOnMap } from '../util/predicates';
 import { posOf } from '../geom';
-import { areAllied, perTeam, teamIds, teamState } from '../teams';
+import { areAllied, perTeam, teamIds } from '../teams';
+import { earn } from './funds';
 import type { ControlPoint, GameEvent, GameState, Pos, TeamId } from '../model';
 
 /** Lo que han dado los puntos de control en una ronda (ver RoundReport.control). */
@@ -59,7 +60,7 @@ export function controlRound(s: GameState): GameEvent[] {
     events.push({ kind: 'controlPoint', actor: null, at: posOf(point), owner: point.owner, contested });
     if (contested || owner === null) continue;
     income[owner]! += s.rules.controlIncome;
-    teamState(s, owner).funds += s.rules.controlIncome;
+    earn(s, owner, s.rules.controlIncome);
   }
   for (const team of teamIds(s))
     if (income[team]) events.push({ kind: 'income', actor: null, team, amount: income[team], source: 'controlPoints' });
