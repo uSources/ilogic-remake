@@ -6,9 +6,9 @@ import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import type { Building, Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
 import { aiTurn } from '@core/ai';
-import { dispatch, resolveAttack, restoreInvariants } from '@core/actions';
+import { dispatch, resolveAttack } from '@core/actions';
 import { seededRng } from '@core/util/random';
-import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
+import { endRound, restoreInvariants, roundReport, takesTurn, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
 

@@ -65,12 +65,14 @@ const result = dispatch(s, viewer, { kind: 'attack', uid: tank.uid, target: enem
 if (result.ok) await play(result.events); // si no, result.reason dice por que ('notTarget', 'spent'...)
 ```
 
+- Las `INVARIANTS` son de las reglas (`rules/invariants.ts`): las repasan `dispatch` despues de cada
+  accion y `endRound` al acabar la ronda, asi que ninguno de los dos copia sus pasos.
 - `dispatch` pasa las comprobaciones comunes (`ACTION_GUARDS`, `actions/guards.ts`: la primera, que
   tenga la forma de una accion, `isGameAction` con `ACTION_SHAPES` de `actions/shape.ts`, o
   `'badAction'`; que la mande un equipo de la partida; que ese equipo no haya perdido, `'defeated'`;
   el turno, cuando la partida sepa de quien es, fase 4), el `validate` de la
   accion, su `apply` (con los dados de la partida, `diceOf(s)`) y despues las `INVARIANTS`
-  (`actions/invariants.ts`: fuera los muertos, las capturas cuya unidad se ha ido, las escuadras
+  (`rules/invariants.ts`: fuera los muertos, las capturas cuya unidad se ha ido, las escuadras
   vacias, el dinero por encima del maximo, el movimiento que ya no se puede deshacer). Las
   invariantes no saben de acciones; `dispatch` tampoco: lee lo que dice la entrada del registro.
 - `ACTIONS` (`actions/registry.ts`) tiene una entrada por accion (el tipo obliga), cada una en el
@@ -112,7 +114,8 @@ maximo; botin, poderes e ingresos se cuentan enteros y lo perdido va aqui, porqu
 al acabar la accion o la ronda, no al cobrar). Con ellos se anima (`ANIMATORS`), se cuentan las
 estadisticas (`recordEvent`, por el `actor`) y se resume el fin de ronda (`roundReport(s, events)`:
 lo que enseña la escena). `endRound` devuelve los suyos: `income`, `heal`, `upkeep`,
-`controlPoint`, `fundsCapped`, `newDay`, `weather`; cada paso de `ROUND_PHASES` da los que tiene.
+`controlPoint`, `newDay`, `weather` (cada paso de `ROUND_PHASES` da los que tiene) y, al final, los
+de las `INVARIANTS`, que `endRound` tambien repasa (`fundsCapped`...).
 
 Las piezas de abajo, que usa todo lo demas:
 

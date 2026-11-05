@@ -1,14 +1,16 @@
 /**
- * Lo que tiene que ser verdad en una partida despues de cada accion. `dispatch` las repasa todas, en
- * orden, al acabar cada una: asi ninguna accion tiene que acordarse de limpiar lo que deja atras (una
- * unidad muerta, una captura cuya unidad se ha ido, una escuadra sin nadie). Una regla nueva que
- * deje algo que limpiar es una entrada mas aqui.
+ * Lo que tiene que ser verdad en una partida despues de cada accion y al acabar cada ronda.
+ * `dispatch` y `endRound` las repasan todas, en orden, al acabar: asi ninguna accion ni ningun paso
+ * de la ronda tiene que acordarse de limpiar lo que deja atras (una unidad muerta, una captura cuya
+ * unidad se ha ido, una escuadra sin nadie, dinero de mas). Una regla nueva que deje algo que limpiar
+ * es una entrada mas aqui.
  */
-import { dropStaleCaptures } from '../rules/capture';
-import { capFunds } from '../rules/funds';
-import { removeDead } from '../rules/lifecycle';
 import { pruneSquads } from '../squads/membership';
-import { unitById } from '../rules/queries';
+import { quietly } from '../util/quietly';
+import { dropStaleCaptures } from './capture';
+import { capFunds } from './funds';
+import { removeDead } from './lifecycle';
+import { unitById } from './queries';
 import type { GameEvent, GameState } from '../model';
 
 export interface Invariant {
@@ -27,14 +29,6 @@ function dropStaleLastMove(s: GameState): GameEvent[] {
   if (lastMove && unitById(s, lastMove.uid)?.turnState !== 'moved') delete s.lastMove;
   return [];
 }
-
-/** Una invariante que no cuenta nada: solo deja la partida en orden. */
-const quietly =
-  (restore: (s: GameState) => void) =>
-  (s: GameState): GameEvent[] => {
-    restore(s);
-    return [];
-  };
 
 /** En orden: quitar una unidad puede dejar una captura sin nadie o una escuadra vacia. */
 export const INVARIANTS: readonly Invariant[] = [

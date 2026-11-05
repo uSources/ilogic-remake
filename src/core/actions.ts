@@ -19,7 +19,6 @@
  * | `powers` | poderes del general |
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
- * | `invariants` | lo que se repasa despues de cada accion (`INVARIANTS`) |
  * | `menu` | los menus, sacados de las acciones que valen: el de una unidad (`availableActions`) y lo que se manda a unas elegidas (`canDoWithSelection`) |
  * | `registry` | `ACTIONS`: todas las entradas |
  * | `dispatch` | `dispatch`, `actionProblem`, `isValidAction` |
@@ -40,7 +39,6 @@ export {
  * laboratorio de duelos de tools/balance, los tests del combate). Quien juega usa `dispatch`.
  */
 export { resolveAttack } from './actions/combat';
-export { INVARIANTS, restoreInvariants, type Invariant } from './actions/invariants';
 export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
 export type { ActionDefinition, ActionRegistry } from './actions/types';

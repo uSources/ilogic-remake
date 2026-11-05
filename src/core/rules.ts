@@ -26,6 +26,7 @@
  * | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
+ * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
  * | `outcome` | victoria, derrota, objetivos de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
  */
@@ -114,6 +115,7 @@ export {
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
 export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
+export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export {
   score,
   allianceScore,

@@ -10,8 +10,8 @@ import { diceOf } from '@core/dice';
 import { newGameState } from '@core/gameState';
 import { duel, duelTeams } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
-import { inAttackRange, newUnit } from '@core/rules';
-import { resolveAttack, restoreInvariants } from '@core/actions';
+import { inAttackRange, newUnit, restoreInvariants } from '@core/rules';
+import { resolveAttack } from '@core/actions';
 import type { GameState, Rng, RulesConfig, Unit } from '@core/model';
 
 export interface DuelCell {

@@ -7,8 +7,9 @@ import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
 import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
 import { perTeam, teamIds } from '../teams';
-import { capFunds, earn, pay } from './funds';
-import { dropStaleCaptures } from './capture';
+import { earn, pay } from './funds';
+import { restoreInvariants } from './invariants';
+import { quietly } from '../util/quietly';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
 import { unitAt } from './queries';
@@ -39,10 +40,9 @@ export interface RoundPhase {
   run(s: GameState): GameEvent[];
 }
 
-/** Todas las unidades pueden volver a moverse y disparar (y ya no se deshace lo de la ronda anterior). */
+/** Todas las unidades pueden volver a moverse y disparar (lo de la ronda anterior ya no se deshace: INVARIANTS). */
 function refreshUnits(s: GameState): GameEvent[] {
   for (const unit of s.units) readyUnit(unit);
-  delete s.lastMove;
   return [];
 }
 
@@ -91,11 +91,10 @@ function payUpkeep(s: GameState): GameEvent[] {
   return events;
 }
 
-/** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
+/** Empieza el dia siguiente (lo que pase del maximo de dinero se pierde despues: INVARIANTS). */
 function nextDay(s: GameState): GameEvent[] {
-  const capped = capFunds(s);
   s.day++;
-  return [...capped, { kind: 'newDay', actor: null, day: s.day }];
+  return [{ kind: 'newDay', actor: null, day: s.day }];
 }
 
 function changeWeather(s: GameState): GameEvent[] {
@@ -103,22 +102,12 @@ function changeWeather(s: GameState): GameEvent[] {
   return change ? [{ kind: 'weather', actor: null, from: change.from.id, to: change.to.id }] : [];
 }
 
-/** Sin sucesos: un paso que solo deja la partida lista. */
-const quietly =
-  (step: (s: GameState) => void) =>
-  (s: GameState): GameEvent[] => {
-    step(s);
-    return [];
-  };
-
 /**
  * Pasos del fin de ronda, en orden. Un sistema nuevo que actua cada ronda (moral, suministro...)
  * es un paso mas aqui, en su sitio: el orden importa (p. ej. el mantenimiento se paga despues de
  * cobrar, y el clima cambia con el dia nuevo).
  */
 export const ROUND_PHASES: readonly RoundPhase[] = [
-  // Antes de nada: una captura a medias cuya unidad se ha ido no debe seguir contando.
-  { id: 'captures', run: quietly(dropStaleCaptures) },
   // Las unidades vuelven a poder actuar en la ronda nueva.
   { id: 'refresh', run: refreshUnits },
   // Los generales pueden volver a usar un poder y se acaba el reconocimiento.
@@ -129,7 +118,6 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
   { id: 'control', run: controlRound },
   // Despues de cobrar, para que se pague con lo de hoy.
   { id: 'upkeep', run: payUpkeep },
-  // El tope de dinero se aplica al final, con todo ya cobrado y pagado.
   { id: 'day', run: nextDay },
   // El clima cambia con el dia nuevo (depende de s.day).
   { id: 'weather', run: changeWeather },
@@ -141,7 +129,10 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
  * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */
 export function endRound(s: GameState): GameEvent[] {
-  return ROUND_PHASES.flatMap((phase) => phase.run(s));
+  const events = ROUND_PHASES.flatMap((phase) => phase.run(s));
+  // Al final, con todo ya cobrado y pagado, lo mismo que tras cada accion (el tope de dinero, el
+  // deshacer de la ronda que acaba, capturas cuya unidad se ha ido...).
+  return [...events, ...restoreInvariants(s)];
 }
 
 /** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound. */

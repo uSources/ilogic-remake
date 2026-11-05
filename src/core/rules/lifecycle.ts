@@ -43,7 +43,7 @@ function freeSeatOf(s: GameState, passenger: Unit): void {
 
 /**
  * Limpieza (en el original, cada fotograma): fuera las unidades sin vida. Es una de las INVARIANTS
- * (actions/invariants.ts), que `dispatch` repasa despues de cada accion. Devuelve un suceso
+ * (rules/invariants.ts), que `dispatch` repasa despues de cada accion. Devuelve un suceso
  * 'cargoLost' por cada transporte que cae con alguien dentro.
  */
 export function removeDead(s: GameState): GameEvent[] {

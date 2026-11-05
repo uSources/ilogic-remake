@@ -41,7 +41,7 @@ export function captureProgress(s: GameState, building: Building): CaptureProgre
  * [CAMBIO] Una captura a medias se pierde en cuanto la unidad que capturaba se va o muere. Antes solo
  * se borraba al consultarla (captureProgress), asi que en las partidas sin pantalla (IA contra IA,
  * equilibrio) una unidad podia irse y volver sin perderla. Lo encontro el cazador de fallos
- * (npm run fuzz). Es una de las INVARIANTS (actions/invariants.ts), que `dispatch` repasa despues de
+ * (npm run fuzz). Es una de las INVARIANTS (rules/invariants.ts), que `dispatch` repasa despues de
  * cada accion, y el primer paso del fin de ronda; es el unico sitio que la borra (captureProgress
  * solo consulta).
  */

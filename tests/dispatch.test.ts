@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIONS,
   ACTION_GUARDS,
-  INVARIANTS,
   availableActions,
   isGameAction,
   canDoWithSelection,
@@ -10,7 +9,7 @@ import {
   dispatch,
   isValidAction,
 } from '@core/actions';
-import { endRound, newUnit, roundReport, unitById } from '@core/rules';
+import { endRound, INVARIANTS, newUnit, roundReport, unitById } from '@core/rules';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';
