@@ -49,6 +49,8 @@ export type GameActionOf<K extends GameActionKind> = Extract<GameAction, { kind:
 
 /** Por que no vale una accion (lo dice `validate`; la partida no cambia). */
 export type ActionRejection =
+  /** No tiene la forma de una accion: un `kind` que no existe o un campo que no es lo que dice GameAction. */
+  | 'badAction'
   /** Quien la manda no es un equipo de la partida. */
   | 'notATeam'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */

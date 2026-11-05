@@ -7,7 +7,8 @@
  * | Modulo | Que va |
  * |---|---|
  * | `types` | la forma de una entrada del registro (`ActionDefinition`: validate y apply) |
- * | `guards` | lo que se mira antes de cualquier accion: que la mande un equipo de la partida (`ACTION_GUARDS`) |
+ * | `guards` | lo que se mira antes de cualquier accion: su forma y que la mande un equipo de la partida (`ACTION_GUARDS`) |
+ * | `shape` | la forma de cada accion (`ACTION_SHAPES`, `isGameAction`): uids enteros, casillas bien formadas |
  * | `checks` | comprobaciones de las unidades de una accion: existen, son del equipo, aun pueden actuar |
  * | `movement` | mover, viaje de varios turnos |
  * | `combat` | atacar (el combate entero) |
@@ -41,5 +42,6 @@ export {
 export { resolveAttack } from './actions/combat';
 export { INVARIANTS, restoreInvariants, type Invariant } from './actions/invariants';
 export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
+export { ACTION_SHAPES, isGameAction } from './actions/shape';
 export type { ActionDefinition, ActionRegistry } from './actions/types';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';

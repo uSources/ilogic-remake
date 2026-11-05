@@ -4,6 +4,7 @@ import {
   ACTION_GUARDS,
   INVARIANTS,
   availableActions,
+  isGameAction,
   canDoWithSelection,
   canGiveStandingOrder,
   dispatch,
@@ -130,7 +131,30 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
     expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
-    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['team']);
+    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team']);
+  });
+
+  it('una accion sin la forma de GameAction se rechaza con badAction, sin TypeError', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const broken: unknown[] = [
+      null,
+      'wait',
+      { kind: 'fly', uid: soldier.uid },
+      { kind: 'toString', uid: soldier.uid },
+      { kind: 'wait' },
+      { kind: 'wait', uid: 1.5 },
+      { kind: 'wait', uid: '1' },
+      { kind: 'move', uid: soldier.uid, to: { x: 5 } },
+      { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 }, path: [{ x: 5, y: 6.5 }] },
+      { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'patrol', at: { x: 1, y: 1 } } },
+      { kind: 'cancelStandingOrder', uids: soldier.uid },
+      { kind: 'usePower', power: 3, target: null },
+      { kind: 'renameSquad', squad: 1 },
+    ];
+    for (const action of broken) expectRejected(s, 0, action as GameAction, 'badAction');
+    expect(isGameAction({ kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } })).toBe(true);
+    expect(isGameAction({ kind: 'travel', uid: soldier.uid, to: null })).toBe(true);
   });
 
   it('isValidAction pregunta lo mismo sin cambiar nada', () => {
