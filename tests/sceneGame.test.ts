@@ -1,6 +1,6 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
 import { describe, expect, it } from 'vitest';
-import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
+import { endRound, mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
@@ -10,13 +10,14 @@ import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
-import { MENU_PHASES, type Phase } from '../src/scenes/game/types';
+import { KEEPS_UNDO, MENU_PHASES, type Phase } from '../src/scenes/game/types';
 import { PHASES } from '../src/scenes/game/phases';
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
+import { act, blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
+import { PLAIN_RULES } from './plainRules';
 import { viewerOf } from '../src/scenes/game/matchSetup';
 import { isPlayableOnOneScreen } from '@core/teams';
 import { checkPlayedByAi } from '../src/scenes/game/turns';
@@ -295,5 +296,18 @@ describe('escena: menu de la unidad (game/phases/unitMenu.ts)', () => {
   it('las opciones son las del nucleo, en su orden, con «Atras» antes de retirar', () => {
     expect(withBack(['attack', 'wait', 'delete'])).toEqual(['attack', 'wait', 'back', 'delete']);
     expect(withBack(['wait'])).toEqual(['wait', 'back']);
+  });
+});
+
+describe('escena: Ctrl+Z (KEEPS_UNDO)', () => {
+  it('irse de un edificio a medio capturar no cierra Ctrl+Z (deshacer devuelve la captura)', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 5 });
+    act(s, 0, { kind: 'capture', uid: soldier.uid });
+    endRound(s);
+    const events = act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
+    expect(events.map((event) => event.kind)).toContain('captureDropped');
+    expect(events.every((event) => KEEPS_UNDO.has(event.kind))).toBe(true);
   });
 });

@@ -47,7 +47,7 @@ import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
-import { GAME_MENU, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
+import { GAME_MENU, KEEPS_UNDO, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
@@ -73,11 +73,6 @@ export type { GameStartData } from './game/types';
 
 /** Sin casillas marcadas (sin unidad elegida). */
 const NO_TILES: ReadonlyMap<string, number> = new Map();
-/**
- * Sucesos propios despues de los que Ctrl+Z sigue valiendo: no cuentan nada nuevo de la partida ni
- * tiran dados (moverse, esperar, viajes, escuadras, ordenes). Todos los demas lo cierran.
- */
-const KEEPS_UNDO: ReadonlySet<GameEvent['kind']> = new Set(['move', 'wait', 'undoMove', 'travel', 'squad', 'standingOrder']);
 /** Casillas de margen al llevar la camara a una unidad. */
 const FOLLOW_MARGIN = 3;
 /** Antes de empezar la partida no se ve nada (la vision de verdad la pone `refresh`). */
