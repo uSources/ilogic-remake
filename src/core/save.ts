@@ -26,6 +26,7 @@ import {
   isValidTeamList,
   type SaveFrame,
   type SavedGame,
+  type SavedLists,
 } from './savedParts';
 import { isValidRules } from './rulesSchema';
 import { isInt, isObject } from './util/validation';
@@ -71,11 +72,10 @@ export function readSave(json: string, context: SaveContext): ReadSaveResult {
   if (!isInt(version, 1, SAVE_VERSION)) return { ok: false, error: 'unknownVersion' };
   migrateRead(saved, version, context);
   saved.version = SAVE_VERSION;
-  const error = gameProblem(saved, context.content);
-  if (error) return { ok: false, error };
-  assertCheckedGame(saved, error);
+  const check = checkGame(saved, context.content);
+  if (!check.ok) return check;
   // El contenido es el de quien lee.
-  const state: GameState = { ...saved, content: context.content };
+  const state: GameState = { ...cleanGame(saved, check), content: context.content };
   migrateChecked(state, version, context);
   return { ok: true, state };
 }
@@ -96,36 +96,42 @@ function parseObject(json: string): SavedGame | null {
   }
 }
 
-/**
- * Comprueba la partida parte a parte, en orden (cada una necesita las de antes: los equipos el
- * contenido, las unidades el mapa y los equipos...), y limpia lo opcional que este roto. Devuelve el
- * primer error, o null si esta bien.
- */
-function gameProblem(saved: SavedGame, content: GameContent): SaveError | null {
-  if (!hasGameShape(saved)) return 'badShape';
-  const { map, teams, units, buildings } = saved;
-  if (!isValidMap(map, content)) return 'badMap';
-  if (!isEntryId(content.themes, saved.theme)) return 'badTheme';
-  if (!isRandomState(saved.dice)) return 'badDice';
-  if (!isValidTeamList(teams, content)) return 'badTeams';
-  const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };
-  if (!hasValidUnits(frame, units)) return 'badUnits';
-  if (!hasConsistentCargo(units)) return 'badCargo';
-  if (!hasValidBuildings(frame, buildings)) return 'badBuildings';
-  if (saved.mission !== undefined && !isValidMission(frame, saved.mission)) return 'badMission';
-  if (!isValidRules(saved.rules)) return 'badRules';
-  // Todo lo que tiene que estar, esta: lo opcional que este roto se arregla o se quita.
-  cleanUnits(frame, units);
-  cleanBuildings(frame, buildings);
-  cleanCounters(saved);
-  cleanOptionalParts(frame, saved);
-  return null;
+/** Lo que se sabe de una partida guardada que ha pasado las comprobaciones: sus listas y su marco. */
+interface CheckedGame {
+  ok: true;
+  lists: SavedLists;
+  frame: SaveFrame;
 }
 
 /**
- * Una partida que ha pasado `gameProblem` sin problema (comprobada y limpia) tiene la forma de
- * `SavedGameState`: lo dice el tipo aqui, una vez. Si no, es un fallo de quien llama.
+ * Comprueba la partida parte a parte, en orden (cada una necesita las de antes: los equipos el
+ * contenido, las unidades el mapa y los equipos...). Solo mira: el primer error, o lo que hace falta
+ * para limpiarla (cleanGame).
  */
-function assertCheckedGame(_saved: SavedGame, problem: SaveError | null): asserts _saved is SavedGame & SavedGameState {
-  if (problem !== null) throw new Error(`La partida no ha pasado las comprobaciones (${problem})`);
+function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: false; error: SaveError } {
+  const fail = (error: SaveError) => ({ ok: false as const, error });
+  if (!hasGameShape(saved)) return fail('badShape');
+  const { map, teams, units, buildings } = saved;
+  if (!isValidMap(map, content)) return fail('badMap');
+  if (!isEntryId(content.themes, saved.theme)) return fail('badTheme');
+  if (!isRandomState(saved.dice)) return fail('badDice');
+  if (!isValidTeamList(teams, content)) return fail('badTeams');
+  const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };
+  if (!hasValidUnits(frame, units)) return fail('badUnits');
+  if (!hasConsistentCargo(units)) return fail('badCargo');
+  if (!hasValidBuildings(frame, buildings)) return fail('badBuildings');
+  if (saved.mission !== undefined && !isValidMission(frame, saved.mission)) return fail('badMission');
+  if (!isValidRules(saved.rules)) return fail('badRules');
+  return { ok: true, lists: { map, teams, units, buildings }, frame };
+}
+
+/** Lo opcional que este roto se arregla o se quita, en una partida que ya ha pasado checkGame. */
+function cleanGame(saved: SavedGame, { lists, frame }: CheckedGame): SavedGameState {
+  cleanUnits(frame, lists.units);
+  cleanBuildings(frame, lists.buildings);
+  cleanCounters(saved);
+  cleanOptionalParts(frame, saved);
+  // La unica afirmacion de tipo al leer: checkGame lo ha comprobado todo y lo opcional roto ya no
+  // esta, pero TypeScript no puede seguir esas comprobaciones campo a campo por el JSON.
+  return saved as unknown as SavedGameState;
 }
