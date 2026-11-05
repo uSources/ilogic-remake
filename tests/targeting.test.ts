@@ -40,6 +40,15 @@ describe('ordenes del jugador', () => {
     expect(bestAttackTile(s, art, far, range)).toBeNull();
   });
 
+  it('atacar: la misma regla que la accion (no a lo que no se ve ni con una unidad que no lucha)', () => {
+    const s = blankState();
+    const tank = newUnit(s, type('Tank'), 0, { x: 10, y: 10 });
+    const transport = newUnit(s, type('Transport'), 0, { x: 9, y: 9 });
+    const enemy = newUnit(s, type('Soldier'), 1, { x: 13, y: 10 });
+    expect(bestAttackTile(s, tank, enemy, moveRange(s, tank), tank, () => false)).toBeNull();
+    expect(bestAttackTile(s, transport, enemy, moveRange(s, transport))).toBeNull();
+  });
+
   it('mover en grupo: la casilla alcanzable mas cercana al destino', () => {
     const s = blankState();
     const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });

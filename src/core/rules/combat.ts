@@ -10,7 +10,7 @@ import { manhattan, posOf } from '../geom';
 import { generalHitFactor } from '../generals';
 import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
 import { weatherHit } from '../weather';
-import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
+import type { ActionRejection, CombatInfo, Dice, GameState, Pos, TeamId, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { visibility } from './visibility';
@@ -62,28 +62,34 @@ export function targetProblem(s: GameState, attacker: Unit, target: Unit, sees: 
   return canDamage(s, attacker, target) ? null : 'notTarget';
 }
 
+/** Lo que ve ahora el equipo `team` (sus aliados incluidos), como Sight. */
+export function sightOf(s: GameState, team: TeamId): Sight {
+  const visible = visibility(s, team);
+  return (pos) => visible.at(pos);
+}
+
 /**
- * Por que `attacker` no puede atacar ahora a `target` (null = puede): lucha y le queda disparo, el
- * objetivo lo es (targetProblem, con lo que ve su equipo: `visible`) y lo tiene a tiro desde `from`
- * (donde esta, si no se dice).
+ * Por que `attacker` no puede atacar ahora a `target` desde `from` (null = puede): lucha y le queda
+ * disparo, el objetivo lo es (targetProblem, con lo que ve su equipo: `sees`) y lo tiene a tiro desde
+ * `from` (donde esta, si no se dice: la casilla a la que iria, para elegir desde donde atacar).
  */
 export function attackProblem(
   s: GameState,
   attacker: Unit,
   target: Unit,
-  visible = visibility(s, attacker.team),
+  sees: Sight = sightOf(s, attacker.team),
   from: Pos = attacker,
 ): ActionRejection | null {
   if (!canFight(s, attacker)) return 'noFighter';
   if (!canStillFire(s, attacker)) return 'spent';
-  const problem = targetProblem(s, attacker, target, (pos) => visible.at(pos));
+  const problem = targetProblem(s, attacker, target, sees);
   if (problem) return problem;
   return inAttackRange(s, attacker, from, target) ? null : 'notTarget';
 }
 
 /** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap; ver attackProblem). */
-export function attackTargets(s: GameState, attacker: Unit, visible = visibility(s, attacker.team)): Unit[] {
-  return s.units.filter((target) => attackProblem(s, attacker, target, visible) === null);
+export function attackTargets(s: GameState, attacker: Unit, sees: Sight = sightOf(s, attacker.team)): Unit[] {
+  return s.units.filter((target) => attackProblem(s, attacker, target, sees) === null);
 }
 
 // ---- Probabilidad de acierto ----

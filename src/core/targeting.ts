@@ -4,26 +4,29 @@
  */
 import { manhattan, samePos, posOf } from './geom';
 import { isRanged } from './abilities';
-import { canDamage, inAttackRange, tileProtection } from './rules/combat';
+import { attackProblem, sightOf, tileProtection, type Sight } from './rules/combat';
 import { reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
 import { minBy } from './util/pick';
-import { canStillFire } from './rules/unitTurn';
 import type { GameState, Pos, Unit } from './model';
 
 /**
  * Mejor casilla desde la que `unit` puede atacar a `target` con su alcance `range`: la de `end`
  * (donde acaba el camino trazado) si vale; si no, la mas cercana a `end`, luego la de mas defensa y
- * luego la mas cercana a la unidad. Null si no puede atacarle.
+ * luego la mas cercana a la unidad. Null si no puede atacarle. Desde donde se puede lo dice la regla
+ * del ataque (`attackProblem` con `from`), con lo que ve su equipo (`sees`).
  */
-export function bestAttackTile(s: GameState, unit: Unit, target: Unit, range: MoveRange, end: Pos = unit): Pos | null {
-  if (!canStillFire(s, unit) || !canDamage(s, unit, target)) return null;
-  const reaches = (from: Pos) => inAttackRange(s, unit, from, target);
+export function bestAttackTile(
+  s: GameState,
+  unit: Unit,
+  target: Unit,
+  range: MoveRange,
+  end: Pos = unit,
+  sees: Sight = sightOf(s, unit.team),
+): Pos | null {
+  const canAttackFrom = (from: Pos) => attackProblem(s, unit, target, sees, from) === null;
   // Las que no pueden mover y disparar solo atacan desde donde estan.
-  if (isRanged(s, unit)) return reaches(unit) ? posOf(unit) : null;
-
-  const candidates: Pos[] = [];
-  if (reaches(unit)) candidates.push(posOf(unit));
-  candidates.push(...reachableTiles(range).filter(reaches));
+  const origins = isRanged(s, unit) ? [posOf(unit)] : [posOf(unit), ...reachableTiles(range)];
+  const candidates = origins.filter(canAttackFrom);
   const onTrail = candidates.find((tile) => samePos(tile, end));
   if (onTrail) return onTrail;
   return minBy(candidates, (tile) => [manhattan(end, tile), tileProtection(s, tile), manhattan(unit, tile)]);

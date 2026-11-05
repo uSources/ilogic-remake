@@ -32,7 +32,7 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
   const other = unitAt(s, tile);
   // Que sea un objetivo lo dice el nucleo (enemigo, a la vista, que le hace daño); desde donde, tambien.
   if (other && targetProblem(s, unit, other, visible) === null) {
-    const from = attackFrom(s, plan, other);
+    const from = attackFrom(s, plan, other, visible);
     return from ? { kind: 'attack', from, target: other } : { kind: 'none' };
   }
   if (!isReachable(plan.range, tile)) return { kind: 'none' };
@@ -42,9 +42,9 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
 /** La unidad puede terminar su movimiento en esa casilla este turno. */
 const isReachable = (range: MoveRange, tile: Pos) => range.steps.at(tile) > 0;
 
-/** Mejor casilla desde la que atacar a `target` (ver bestAttackTile). */
-export function attackFrom(s: GameState, plan: MovePlan, target: Unit): Pos | null {
-  return bestAttackTile(s, plan.unit, target, plan.range, plan.trail[plan.trail.length - 1] ?? plan.unit);
+/** Mejor casilla desde la que atacar a `target` (ver bestAttackTile), con lo que ve quien mira. */
+export function attackFrom(s: GameState, plan: MovePlan, target: Unit, visible: (pos: Pos) => boolean): Pos | null {
+  return bestAttackTile(s, plan.unit, target, plan.range, plan.trail[plan.trail.length - 1] ?? plan.unit, visible);
 }
 
 /** Camino hasta `dest`: el trazado si acaba ahi, si no el mas corto. */

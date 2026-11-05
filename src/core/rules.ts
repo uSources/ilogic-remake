@@ -89,6 +89,7 @@ export {
   attackTargets,
   attackProblem,
   targetProblem,
+  sightOf,
   type Sight,
   tileProtection,
   defenseStars,
