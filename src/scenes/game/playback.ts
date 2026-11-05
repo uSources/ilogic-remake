@@ -199,10 +199,10 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const s = stage.state;
   const mover = unitById(s, event.uid);
   const start = event.path[0]!;
-  if (mover) return unitKey(stage.scene.textures, s, { ...mover, x: start.x, y: start.y, active: true }, stage.viewer);
-  // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (roja si no se sabe).
-  const entered = unitEntered(s, event);
-  return 'r_' + (entered ? unitTypeOf(s, entered) : s.content.units.list[0]!).art;
+  // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (es de su
+  // mismo equipo y, al unirse, de su mismo tipo). Si tampoco esta, no se anima.
+  const drawn = mover ?? unitEntered(s, event);
+  return drawn ? unitKey(stage.scene.textures, s, { ...drawn, x: start.x, y: start.y, active: true }, stage.viewer) : null;
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
@@ -365,8 +365,9 @@ interface Battle {
   /** El lado de cada uno para el que mira (colores y hacia donde miran). */
   readonly attackerSide: Side;
   readonly defenderSide: Side;
-  readonly attackerType: UnitType;
-  readonly defenderType: UnitType;
+  /** El tipo de cada uno (para el disparo); null si ya no se sabe (no se dibuja el disparo). */
+  readonly attackerType: UnitType | null;
+  readonly defenderType: UnitType | null;
   /** Reloj de los efectos, a la velocidad de las animaciones (Opciones). */
   readonly timeline: FxTimeline;
   /** Identifica este combate en el panel (para que no se mezcle con el anterior). */
@@ -376,9 +377,11 @@ interface Battle {
 /** Un efecto de combate de 1000 ms a la velocidad elegida, en segundos: el factor del reloj de combatFx. */
 const SPEED_REFERENCE_MS = 1000;
 
-/** El tipo de una unidad del combate; si ya no se sabe (un evento sin `combat`), el primero del contenido. */
-const typeShown = (s: GameState, type: Unit['type'] | undefined): UnitType =>
-  type === undefined ? s.content.units.list[0]! : unitTypeOf(s, { type });
+/** El tipo de una unidad del combate, o null si ya no se sabe (un evento sin `combat` de una unidad que ha caido). */
+const typeShown = (s: GameState, type: Unit['type'] | undefined): UnitType | null => (type === undefined ? null : unitTypeOf(s, { type }));
+
+/** El disparo de `shooter` contra `target`, si se saben los dos tipos. */
+const shotOf = (shooter: UnitType | null, target: UnitType | null) => (shooter && target ? shotKind(shooter, target) : null);
 
 function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const s = stage.state;
@@ -455,8 +458,9 @@ async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.target);
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.target, attackerPos);
   void targetMark(stage.scene, stage.view, event.target, sideColor(battle.attackerSide), stage.combatMs(150));
-  if (attackerSprite && attackerPos && battle.isAttackerSeen) {
-    await fire(stage, attackerSprite, attackerPos, event.target, shotKind(battle.attackerType, battle.defenderType), battle.timeline);
+  const shot = shotOf(battle.attackerType, battle.defenderType);
+  if (attackerSprite && attackerPos && battle.isAttackerSeen && shot) {
+    await fire(stage, attackerSprite, attackerPos, event.target, shot, battle.timeline);
   } else await stage.wait(stage.combatMs(150));
 }
 
@@ -469,9 +473,8 @@ async function counterAttack(stage: EventStage, battle: Battle): Promise<void> {
   const defenderSprite = battle.victimUid !== null ? stage.view.unitSprite(battle.victimUid) : null;
   void tag(battle.timeline, stage.view, event.target, t('fxCounter'), PAL_CSS.gold);
   await stage.wait(stage.combatMs(80));
-  if (defenderSprite) {
-    await fire(stage, defenderSprite, event.target, attackerPos, shotKind(battle.defenderType, battle.attackerType), battle.timeline);
-  }
+  const shot = shotOf(battle.defenderType, battle.attackerType);
+  if (defenderSprite && shot) await fire(stage, defenderSprite, event.target, attackerPos, shot, battle.timeline);
   showCombatPanel(stage.state, stage.viewer, battle, 'counter');
   await hitEffects(stage, {
     uid: event.attacker,

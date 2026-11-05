@@ -5,7 +5,7 @@ import { isOnBoard } from '../core/mapGrid';
 import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
-import { isFriendly, ownerSideOf, sideLetter, sideOf } from './sides';
+import { ownerSideOf, sideLetter, sideOf, unitSideLetter } from './sides';
 
 /**
  * Nombres de imagen, igual que en el original (ver docs/SPEC-INTERFAZ.md §5):
@@ -30,14 +30,14 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
 
 /** El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada, roja la enemiga. */
 export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, unit: Unit, viewer: TeamId): string | null {
-  const friendly = isFriendly(sideOf(s, viewer, unit.team));
-  const side = !friendly ? 'r_' : unit.active ? 'b_' : 'i_';
+  const unitSide = sideOf(s, viewer, unit.team);
+  const side = `${unitSideLetter(unitSide, unit.active)}_`;
   const unitType = unitTypeOf(s, unit);
   const terrain = unitType.classicSprite[terrainAt(s, unit).id] ?? '';
   const name = unitType.art;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
   if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
-  return firstExisting(textures, [side + terrain + name, side + name, (friendly ? 'b_' : 'r_') + name]);
+  return firstExisting(textures, [side + terrain + name, side + name, `${unitSideLetter(unitSide, true)}_${name}`]);
 }
 
 export function unitIconKey(unitType: UnitType, available: boolean): string {

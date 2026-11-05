@@ -40,6 +40,7 @@ import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
+import { sideOf } from '../ui/sides';
 import { PointerGestures } from '../controls/pointer';
 import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
@@ -867,7 +868,7 @@ export class GameScene extends Phaser.Scene {
       dayLimit: s.rules.dayLimit,
       helpRules: s.rules,
       weather,
-      turn: this.othersPlaying ? 'others' : 'own',
+      turn: sideOf(s, viewer, this.turns.acting),
       busy,
       tile: busy ? null : this.tileInfo(cursor),
       forecast: this.phase === 'attack' || this.phase === 'move' ? this.forecast(cursor) : null,

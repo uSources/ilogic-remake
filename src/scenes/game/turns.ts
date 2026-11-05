@@ -19,18 +19,19 @@ import {
   capture,
   captureEvent,
   endRound,
-  isDefeated,
   moveEvent,
   moveRange,
   moveUnit,
   stepToward,
+  takesTurn,
+  turnsAfter,
   unitById,
   type RoundReport,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import { pruneSquads, squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
-import { isHostile, teamIds, teamState } from '../../core/teams';
+import { isHostile, teamState } from '../../core/teams';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
@@ -97,20 +98,19 @@ const HEAL_TEXT_STAGGER_MS = 90;
 /** Una unidad de `team` que aun puede actuar este turno (y no va dentro de un transporte). */
 const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && unit.active && unit.canMove && unit.carrier === null;
 
-/**
- * El orden de los demas equipos tras el turno de `viewer`: los que juegan aun en esta ronda (los de
- * despues) y, tras el fin de ronda, los de la siguiente que van antes que el.
- */
-export function turnsAfter(s: GameState, viewer: TeamId): { thisRound: TeamId[]; nextRound: TeamId[] } {
-  const order = teamIds(s);
-  const at = order.indexOf(viewer);
-  return { thisRound: order.slice(at + 1), nextRound: order.slice(0, at) };
-}
-
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
   const squad = squadById(s, unit.squad);
   return nameOf(unitTypeOf(s, unit)) + (squad ? ` (${squad.name})` : '');
+}
+
+/**
+ * El turno de otro equipo lo juega la IA: si es de una persona, es un fallo (en esta pantalla juega
+ * una sola; varias, fase 4) y se dice en vez de jugarlo por ella.
+ */
+export function checkPlayedByAi(s: GameState, team: TeamId): void {
+  const controller = teamState(s, team).controller;
+  if (controller !== 'ai') throw new Error(`El equipo ${team} lo juega '${controller}': en esta pantalla solo juega una persona`);
 }
 
 export class TurnFlow {
@@ -276,7 +276,7 @@ export class TurnFlow {
   ): Promise<RoundReport | null> {
     const host = this.host;
     const { thisRound, nextRound } = turnsAfter(host.state, host.viewer);
-    const playIfStanding = (team: TeamId) => (isDefeated(host.state, team) ? Promise.resolve(true) : playTeam(team));
+    const playIfStanding = (team: TeamId) => (takesTurn(host.state, team) ? playTeam(team) : Promise.resolve(true));
     for (const team of thisRound) if (!(await playIfStanding(team))) return null;
     const report = closeRound();
     for (const team of nextRound) if (!(await playIfStanding(team))) return null;
@@ -291,8 +291,7 @@ export class TurnFlow {
   private async playTeam(team: TeamId, rng: Rng, match: number): Promise<boolean> {
     const host = this.host;
     if (!this.continues(match)) return false;
-    const controller = teamState(host.state, team).controller;
-    if (controller !== 'ai') throw new Error(`El equipo ${team} lo juega '${controller}': en esta pantalla solo juega una persona`);
+    checkPlayedByAi(host.state, team);
     this.otherTeam = team;
     // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
     host.fastForward = settings.speedEnemy === 'instant';

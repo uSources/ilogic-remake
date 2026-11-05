@@ -21,7 +21,8 @@ import {
   weatherVM,
 } from '../src/ui/hudModels';
 import { blankState, unitTypeNamed, hqId } from './helpers';
-import { ownerSideOf, sideOf } from '../src/ui/sides';
+import { ownerSideOf, sideColor, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
+import { PAL } from '../src/ui/palette';
 import { teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -247,6 +248,18 @@ describe('lados para quien mira (con mas de dos equipos)', () => {
     expect([0, 1, 2].map((team) => sideOf(s, 1, team))).toEqual(['enemy', 'own', 'ally']);
     expect(ownerSideOf(s, 1, null)).toBe('neutral');
     expect(ownerSideOf(s, 0, 2)).toBe('enemy');
+  });
+
+  it('colores y letras de lado de un solo sitio: azul lo propio y aliado, rojo lo enemigo, gris lo de nadie', () => {
+    expect(sideColor('own')).toBe(PAL.blue);
+    expect(sideColor('ally')).toBe(PAL.blue);
+    expect(sideColor('enemy')).toBe(PAL.red);
+    expect(sidePaint('ally', 'fill')).toBe(sidePaint('own', 'fill'));
+    expect(sidePaint('unknown', 'text')).toBe(sidePaint('neutral', 'text'));
+    expect(sidePaint('enemy', 'canvas')).not.toBe(sidePaint('own', 'canvas'));
+    expect([sideLetter('own'), sideLetter('ally'), sideLetter('enemy'), sideLetter('neutral')]).toEqual(['b', 'b', 'r', 'i']);
+    // Gris solo lo propio o aliado que ya ha actuado: de un enemigo no se delata.
+    expect([unitSideLetter('own', false), unitSideLetter('ally', false), unitSideLetter('enemy', false)]).toEqual(['i', 'i', 'r']);
   });
 
   it('fichas y minimapa: una unidad aliada se ve como aliada; un edificio aliado se sabe de quien es en la niebla', () => {

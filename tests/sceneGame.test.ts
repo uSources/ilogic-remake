@@ -16,6 +16,8 @@ import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { blankState, unitTypeNamed, hqId } from './helpers';
+import { isPlayableHere, viewerOf } from '../src/scenes/game/matchSetup';
+import { checkPlayedByAi } from '../src/scenes/game/turns';
 
 const HQ = hqId();
 
@@ -259,5 +261,24 @@ describe('escena: tabla de fases (game/phases)', () => {
 
   it('cada accion del registro (controls/actions.ts) tiene quien la cumpla', () => {
     expect(ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
+  });
+});
+
+describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
+  const twoPeople = () => blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
+
+  it('una partida con dos equipos de personas no se juega aqui; con una o ninguna, si', () => {
+    expect(isPlayableHere(twoPeople())).toBe(false);
+    expect(() => viewerOf(twoPeople())).toThrow(/solo juega una/);
+    expect(isPlayableHere(blankState())).toBe(true);
+    const aiOnly = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
+    expect(isPlayableHere(aiOnly)).toBe(true);
+    expect(viewerOf(aiOnly)).toBe(0);
+    expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'human' }]))).toBe(1);
+  });
+
+  it('el turno de otro equipo solo lo juega la IA: si es de una persona, falla', () => {
+    expect(() => checkPlayedByAi(blankState(), 1)).not.toThrow();
+    expect(() => checkPlayedByAi(twoPeople(), 1)).toThrow(/solo juega una persona/);
   });
 });

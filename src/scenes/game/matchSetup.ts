@@ -32,8 +32,8 @@ const DEFAULT_MAP_SIZE = 32;
 
 export function startMatch(data: GameStartData): MatchStart {
   const lab = data.mode === 'lab' ? (data.lab ?? defaultLab()) : null;
-  const saved = data.mode === 'load' ? readSavedGame() : null;
-  const given = data.mode === 'state' && data.state ? loadGame(data.state) : null;
+  const saved = playableHere(data.mode === 'load' ? readSavedGame() : null);
+  const given = playableHere(data.mode === 'state' && data.state ? loadGame(data.state) : null);
   const loaded = saved ?? given;
   const corruptSave = (data.mode === 'load' || data.mode === 'state') && !loaded;
   if (corruptSave) deleteSave();
@@ -42,9 +42,21 @@ export function startMatch(data: GameStartData): MatchStart {
   return { state, viewer: viewerOf(state), lab, fromSave: !!saved, corruptSave };
 }
 
+/** En esta pantalla juega una sola persona: una partida con mas equipos de personas no se puede jugar aqui. */
+export const isPlayableHere = (state: GameState): boolean => teamsControlledBy(state, 'human').length <= 1;
+
+/**
+ * Una partida guardada o preparada que no se puede jugar en esta pantalla (varias personas: fase 4)
+ * cuenta como dañada: no se abre, se borra el guardado y se empieza otra.
+ */
+const playableHere = (state: GameState | null): GameState | null => (state && isPlayableHere(state) ? state : null);
+
 /**
  * El equipo que mira la pantalla: el de la persona. En esta pantalla juega una sola persona; una
- * partida con varias (por turnos o en red) es la fase 4 y no se puede empezar aqui.
+ * partida con varias (por turnos o en red) es la fase 4 y no se puede empezar aqui (startMatch no
+ * la abre). Una sin personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y
+ * ese equipo lo juega la persona en esta pantalla aunque guarde `controller: 'ai'`: las reglas no
+ * miran el controller y los demas siguen siendo de la IA.
  */
 export function viewerOf(state: GameState): TeamId {
   const people = teamsControlledBy(state, 'human');

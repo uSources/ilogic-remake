@@ -1,6 +1,6 @@
 import type { RulesConfig } from '../core/model';
 import type { EndStatsVM } from './vm/end';
-import type { BySide } from './vm/common';
+import type { BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
@@ -47,13 +47,14 @@ export interface UIState {
   dayInfo: DayInfoVM | null;
   /** Laboratorio de animaciones (null en una partida normal). */
   lab: LabVM | null;
-  /** General del jugador. */
+  /** General del equipo que mira. */
   general: GeneralVM | null;
-  /** General de la IA (solo para verlo). */
+  /** General del primer enemigo que tenga uno (solo para verlo). */
   enemyGeneral: GeneralVM | null;
   buildings: number;
   day: number;
-  turn: 'own' | 'others';
+  /** De quien es el turno, visto por quien mira: suyo, de un aliado o de un enemigo. */
+  turn: Side;
   busy: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;

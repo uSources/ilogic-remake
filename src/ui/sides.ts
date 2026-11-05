@@ -50,3 +50,9 @@ export const sideColor = (side: OwnerSide): number => sidePaint(side, 'map');
 /** Letra de los dibujos por lado (`b_` azul, `r_` rojo, `i_` gris). */
 const SIDE_LETTER = { friendly: 'b', enemy: 'r', neutral: 'i' } as const;
 export const sideLetter = (side: OwnerSide): 'b' | 'r' | 'i' => SIDE_LETTER[paintOf(side)];
+
+/**
+ * Letra del dibujo de una unidad: azul la propia y la aliada, roja la enemiga; una propia o aliada
+ * que ya ha actuado, gris (`i_`). Las enemigas no se ven grises (no se delata si han actuado).
+ */
+export const unitSideLetter = (side: Side, active: boolean): 'b' | 'r' | 'i' => (isFriendly(side) && !active ? 'i' : sideLetter(side));

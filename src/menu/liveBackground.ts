@@ -3,7 +3,7 @@ import { aiTurn } from '../core/ai';
 import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
-import { endRound, isMatchOver } from '../core/rules';
+import { endRound, isMatchOver, takesTurn } from '../core/rules';
 import { duel, teamIds } from '../core/teams';
 import type { GameEvent, GameState, Pos } from '../core/model';
 import { TILE } from '../layout';
@@ -145,11 +145,16 @@ export class LiveBackground {
     }
   }
 
-  /** Turno del siguiente equipo (y fin de ronda tras el ultimo); si la partida ha acabado, otra nueva. */
+  /**
+   * Turno del siguiente equipo que aun juega (y fin de ronda tras el ultimo); si la partida ha
+   * acabado, otra nueva.
+   */
   private async nextTurn(s: GameState): Promise<void> {
     const order = teamIds(s);
-    this.turn = (this.turn + 1) % order.length;
-    if (this.turn === 0) endRound(s);
+    do {
+      this.turn = (this.turn + 1) % order.length;
+      if (this.turn === 0) endRound(s);
+    } while (!takesTurn(s, order[this.turn]!) && !isMatchOver(s));
     if (isMatchOver(s) || s.day > MAX_DAYS) return this.start();
     this.events = aiTurn(s, this.rng, order[this.turn]!);
     await this.pause(BETWEEN_TURNS_MS);
