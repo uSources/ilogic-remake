@@ -184,7 +184,10 @@ y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su previ
     (`ai/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
     `STANDING_ORDER_TURNS` (`ai/standingOrders.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
 - La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
-  IA entra solo en la referencia.
+  IA entra solo en la referencia. La referencia (`improve/ai-baseline/`) usa el nucleo de ahora por
+  `@core/...`: `tsc` la comprueba y `tests/arenaSnapshot.test.ts` le hace jugar una partida corta,
+  asi que un cambio del nucleo que la rompa se ve en `npm run check` (se arregla con otro `--snapshot`
+  si la IA actual ya se ha aceptado, o adaptando la copia).
 
 ### Equipos
 
