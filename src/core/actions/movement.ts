@@ -2,12 +2,12 @@
 import { isOnBoard } from '../mapGrid';
 import { posOf } from '../geom';
 import { followPath, moveEvent, plannedPath } from '../rules/movement';
-import { buildingAt, unitAt } from '../rules/queries';
+import { buildingAt, canWalk, movementOf, unitAt } from '../rules/queries';
 import { captureProgress } from '../rules/capture';
 import { readyUnit } from '../rules/unitTurn';
 import { visibleEnemies } from '../rules/visibility';
 import type { ActionRejection, GameState, LastMove, TeamId, Unit } from '../model';
-import { actorProblem, checkedUnit, ownUnitProblem } from './checks';
+import { actorProblem, checkedUnit, ownUnitOnMapProblem, ownUnitProblem } from './checks';
 import type { ActionRegistry } from './types';
 
 /** La captura a medias que lleva la unidad en el edificio en el que esta (la que perderia al irse). */
@@ -64,8 +64,11 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
   },
   travel: {
     validate: (s, team, action) => {
-      if (action.to && !isOnBoard(s, action.to)) return 'offBoard';
-      return ownUnitProblem(s, team, action.uid);
+      const goal = action.to;
+      // Dejar de viajar se puede siempre; empezar, solo en el mapa y hacia donde pueda pisar.
+      if (!goal) return ownUnitProblem(s, team, action.uid);
+      if (!isOnBoard(s, goal)) return 'offBoard';
+      return ownUnitOnMapProblem(s, team, action.uid, (unit) => (canWalk(s, goal, movementOf(s, unit)) ? null : 'unreachable'));
     },
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);

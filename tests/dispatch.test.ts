@@ -96,6 +96,19 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expectRejected(s, 0, { kind: 'attack', uid: fighter.uid, target: soldier.uid }, 'notTarget');
   });
 
+  it('un viaje: solo desde el mapa y hacia una casilla que la unidad pueda pisar', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const transport = newUnit(s, TRANSPORT, 0, { x: 6, y: 5 });
+    s.map[20]![20] = 'DWater';
+    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 20 } }, 'unreachable');
+    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 99, y: 0 } }, 'offBoard');
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 21 } });
+    act(s, 0, { kind: 'load', uid: soldier.uid, into: transport.uid });
+    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 21 } }, 'transported');
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: null });
+  });
+
   it('una unidad que no lucha no ataca (noFighter), aunque le quede turno', () => {
     const s = blankState(PLAIN_RULES);
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
