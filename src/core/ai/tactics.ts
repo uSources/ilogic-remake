@@ -124,13 +124,17 @@ export function* tryAttack(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (!(unitTypeOf(s, unit).attack !== null) || !canStillFire(s, unit)) return false;
   const reach = strikeReach(s, unit);
-  const enemies = visibleFoes(s, ai.me).filter((enemy) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy)));
+  const isInReach = (enemy: Unit) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy));
+  // Solo a los que puede hacer daño: un ataque que no quita vida no vale (ver attackProblem).
+  const enemies = visibleFoes(s, ai.me).filter((enemy) => isInReach(enemy) && canDamage(s, unit, enemy));
   if (!enemies.length) return false;
 
   const shot = bestShot(s, ai, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
   if (shot) {
     const ambushed = yield* doMove(s, ai, unit, samePos(shot.from, unit) ? null : shot.from);
-    if (!ambushed) yield* act(s, ai, { kind: 'attack', uid: unit.uid, target: shot.target.uid });
+    // Desde la casilla nueva puede no verlo ya (el bosque solo se ve desde al lado): entonces espera.
+    const attacked = !ambushed && (yield* act(s, ai, { kind: 'attack', uid: unit.uid, target: shot.target.uid }));
+    if (!attacked) yield* finish(s, ai, unit);
     return true;
   }
   if (!chase) return false;

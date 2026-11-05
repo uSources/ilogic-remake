@@ -70,6 +70,18 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expectRejected(s, 0, { kind: 'attack', uid: tank.uid, target: 999 }, 'missing');
   });
 
+  it('atacar: solo a lo que se ve y a lo que se le hace daño', () => {
+    const s = blankState({ ...PLAIN_RULES, fog: true, forestHides: true });
+    // El tanque llega a 2 casillas, pero el bosque solo se ve desde al lado.
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const hidden = newUnit(s, SOLDIER, 1, { x: 7, y: 5 });
+    s.map[7]![5] = 'Woods';
+    expectRejected(s, 0, { kind: 'attack', uid: tank.uid, target: hidden.uid }, 'notTarget');
+    const fighter = newUnit(s, unitTypeNamed('Fighter'), 0, { x: 12, y: 12 });
+    const soldier = newUnit(s, SOLDIER, 1, { x: 12, y: 13 });
+    expectRejected(s, 0, { kind: 'attack', uid: fighter.uid, target: soldier.uid }, 'notTarget');
+  });
+
   it('un transporte con pasajeros no se une (los perderia)', () => {
     const s = blankState(PLAIN_RULES);
     const first = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });

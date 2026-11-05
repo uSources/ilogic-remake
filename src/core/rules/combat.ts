@@ -52,17 +52,18 @@ export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, a
 
 /**
  * Por que `attacker` no puede atacar ahora a `target` (null = puede): le queda disparo, el objetivo es
- * un enemigo vivo en el mapa y lo tiene a tiro desde donde esta.
+ * un enemigo vivo en el mapa que su equipo ve (`visible`), le hace daño y lo tiene a tiro desde donde
+ * esta.
  */
-export function attackProblem(s: GameState, attacker: Unit, target: Unit): ActionRejection | null {
+export function attackProblem(s: GameState, attacker: Unit, target: Unit, visible = visibility(s, attacker.team)): ActionRejection | null {
   if (!canStillFire(s, attacker) || !canFight(s, attacker)) return 'spent';
-  if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target)) return 'notTarget';
-  return inAttackRange(s, attacker, attacker, target) ? null : 'notTarget';
+  if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target) || !visible.at(target)) return 'notTarget';
+  return canDamage(s, attacker, target) && inAttackRange(s, attacker, attacker, target) ? null : 'notTarget';
 }
 
-/** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap; ver attackProblem) que se ven y a los que hace daño. */
+/** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap; ver attackProblem). */
 export function attackTargets(s: GameState, attacker: Unit, visible = visibility(s, attacker.team)): Unit[] {
-  return s.units.filter((target) => attackProblem(s, attacker, target) === null && visible.at(target) && canDamage(s, attacker, target));
+  return s.units.filter((target) => attackProblem(s, attacker, target, visible) === null);
 }
 
 // ---- Probabilidad de acierto ----
