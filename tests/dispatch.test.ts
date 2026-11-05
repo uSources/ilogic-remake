@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ACTIONS, INVARIANTS, dispatch, isValidAction } from '@core/actions';
 import { endRound, newUnit, roundReport } from '@core/rules';
 import { serialize } from '@core/save';
+import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
 import type { GameAction, GameState } from '@core/model';
 import { act, blankState, unitTypeNamed } from './helpers';
@@ -210,5 +211,32 @@ describe('sucesos completos', () => {
     const report = roundReport(s, events);
     expect(report.income[0]).toBeGreaterThan(0);
     expect(report.healed).toEqual([{ uid: soldier.uid, team: 0, amount: 30 }]);
+  });
+});
+
+describe('deshacer no pierde la captura a medias (K2)', () => {
+  it('al volver al edificio, la captura sigue donde estaba', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    act(s, 0, { kind: 'capture', uid: soldier.uid });
+    endRound(s);
+    const progress = s.buildings[0]!.capture;
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
+    expect(s.buildings[0]!.capture).toBeNull();
+    act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    expect(s.buildings[0]!.capture).toEqual(progress);
+    // Y se puede guardar y cargar a mitad de deshacer.
+    expect(loadGame(serialize(s))!.buildings[0]!.capture).toEqual(progress);
+  });
+
+  it('un ultimo movimiento roto en una partida guardada se quita', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
+    const raw = JSON.parse(serialize(s)) as { lastMove: { from: unknown } };
+    expect(loadGame(JSON.stringify(raw))!.lastMove).toEqual({ uid: soldier.uid, from: { x: 5, y: 5 }, capture: null });
+    raw.lastMove.from = { x: -1, y: 0 };
+    expect(loadGame(JSON.stringify(raw))!.lastMove).toBeUndefined();
   });
 });

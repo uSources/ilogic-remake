@@ -2,11 +2,19 @@
 import { isOnBoard } from '../mapGrid';
 import { posOf } from '../geom';
 import { followPath, moveEvent, plannedPath } from '../rules/movement';
-import { unitAt, unitById } from '../rules/queries';
+import { buildingAt, unitAt, unitById } from '../rules/queries';
+import { captureProgress } from '../rules/capture';
 import { readyUnit } from '../rules/unitTurn';
-import type { ActionRejection, GameState, TeamId } from '../model';
+import type { ActionRejection, GameState, LastMove, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit, ownUnitProblem } from './checks';
 import type { ActionRegistry } from './types';
+
+/** La captura a medias que lleva la unidad en el edificio en el que esta (la que perderia al irse). */
+function ownCaptureHere(s: GameState, unit: Unit): LastMove['capture'] {
+  const building = buildingAt(s, unit);
+  const progress = building && captureProgress(s, building);
+  return progress && progress.uid === unit.uid ? { ...progress } : null;
+}
 
 /** Por que no se puede deshacer ahora el movimiento de `uid`: tiene que ser lo ultimo hecho y su casilla seguir libre. */
 function undoProblem(s: GameState, team: TeamId, uid: number): ActionRejection | null {
@@ -27,10 +35,11 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
       const from = posOf(unit);
+      const capture = ownCaptureHere(s, unit);
       const path = plannedPath(s, unit, action.to, action.path)!;
       const walked = followPath(s, unit, path);
       // Con emboscada no hay vuelta atras: la unidad ya ha gastado su turno.
-      if (!walked.ambush) s.lastMove = { uid: unit.uid, from };
+      if (!walked.ambush) s.lastMove = { uid: unit.uid, from, capture };
       return [moveEvent(team, unit.uid, walked)];
     },
   },
@@ -38,10 +47,13 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
     validate: (s, team, action) => undoProblem(s, team, action.uid),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      const { from } = s.lastMove!;
+      const { from, capture } = s.lastMove!;
       unit.x = from.x;
       unit.y = from.y;
       readyUnit(unit);
+      // [CAMBIO] Fallo K2: al irse perdia la captura a medias; al volver, la recupera.
+      const building = buildingAt(s, from);
+      if (building && capture) building.capture = { ...capture };
       return [{ kind: 'undoMove', actor: team, uid: unit.uid, to: posOf(from) }];
     },
   },

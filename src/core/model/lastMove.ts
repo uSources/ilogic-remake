@@ -1,3 +1,4 @@
+import type { Building } from './building';
 import type { Pos } from './geometry';
 
 /**
@@ -8,4 +9,6 @@ import type { Pos } from './geometry';
 export interface LastMove {
   uid: number;
   from: Pos;
+  /** La captura a medias que llevaba en el edificio de `from` y perdio al irse (vuelve al deshacer). */
+  capture: NonNullable<Building['capture']> | null;
 }

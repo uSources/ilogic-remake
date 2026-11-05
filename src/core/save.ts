@@ -73,6 +73,7 @@ export function deserialize(json: string, context: SaveContext): GameState | nul
   cleanWeather(s);
   cleanSquads(s);
   cleanControlPoints(s);
+  cleanLastMove(s);
   if (!hasValidRules(s)) return null;
   migrateChecked(s, savedVersion, context);
   return s;
@@ -242,6 +243,22 @@ function dropRepeatedKeys(s: GameState): void {
     if (squad.key !== undefined && keys.has(key)) delete squad.key;
     if (squad.key !== undefined) keys.add(key);
   }
+}
+
+/** Una captura a medias bien formada de una unidad del equipo `team`. */
+const isCaptureOf = (s: GameState, value: unknown): boolean =>
+  isObject(value) && isTeam(s, value.team) && isInt(value.uid, 1, MAX_UID) && isInt(value.left, 1, 1000);
+
+/** El ultimo movimiento (para deshacerlo): si esta roto, no se puede deshacer, y la partida sigue. */
+function cleanLastMove(s: GameState): void {
+  const lastMove = s.lastMove as unknown;
+  if (lastMove === undefined) return;
+  const isValid =
+    isObject(lastMove) &&
+    isInt(lastMove.uid, 1, MAX_UID) &&
+    isMapPos(mapGrid(s), lastMove.from) &&
+    (lastMove.capture === null || isCaptureOf(s, lastMove.capture));
+  if (!isValid) delete s.lastMove;
 }
 
 function cleanControlPoints(s: GameState): void {
