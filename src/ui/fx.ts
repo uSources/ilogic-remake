@@ -129,9 +129,9 @@ export async function blink(scene: Phaser.Scene, obj: Phaser.GameObjects.Compone
 }
 
 /** Destello cuadrado de una casilla (marco que se abre). */
-export function tileFlash(scene: Phaser.Scene, view: FxHost, p: Pos, color: number): Promise<void> {
-  const g = scene.add.graphics();
-  view.addFx(g);
+export function tileFlash(scene: Phaser.Scene, view: FxHost, pos: Pos, color: number): Promise<void> {
+  const graphics = scene.add.graphics();
+  view.addFx(graphics);
   let step = 0;
   // Un paso mas que FLASH_STEPS: el ultimo solo borra el marco y acaba.
   return new Promise((resolve) => {
@@ -139,16 +139,16 @@ export function tileFlash(scene: Phaser.Scene, view: FxHost, p: Pos, color: numb
       delay: FLASH_STEP_MS,
       repeat: FLASH_STEPS,
       callback: () => {
-        g.clear();
+        graphics.clear();
         if (step < FLASH_STEPS) {
           const spread = step * FLASH_SPREAD;
-          g.fillStyle(color, 1 - step / FLASH_STEPS);
+          graphics.fillStyle(color, 1 - step / FLASH_STEPS);
           const size = TILE + 2 * spread;
-          frameRect(g, p.x * TILE - spread, p.y * TILE - spread, size, size, 2);
+          frameRect(graphics, pos.x * TILE - spread, pos.y * TILE - spread, size, size, 2);
         }
         step++;
         if (timer.getRepeatCount() === 0) {
-          g.destroy();
+          graphics.destroy();
           resolve();
         }
       },
@@ -203,20 +203,20 @@ export async function shot(scene: Phaser.Scene, view: FxHost, from: Pos, to: Pos
 }
 
 /** Mira que se cierra sobre una casilla (esquinas): marca el objetivo antes del disparo. */
-export async function targetMark(scene: Phaser.Scene, view: FxHost, p: Pos, color: number, ms = 240): Promise<void> {
-  const g = scene.add.graphics();
-  view.addFx(g);
+export async function targetMark(scene: Phaser.Scene, view: FxHost, pos: Pos, color: number, ms = 240): Promise<void> {
+  const graphics = scene.add.graphics();
+  view.addFx(graphics);
   for (let i = 0; i <= FLASH_STEPS; i++) {
-    g.clear();
+    graphics.clear();
     const spread = (FLASH_STEPS - i) * FLASH_SPREAD;
     const size = TILE + 2 * spread;
-    g.fillStyle(color, 1);
-    cornerBrackets(g, p.x * TILE - spread, p.y * TILE - spread, size, size, TARGET_CORNER, 2);
+    graphics.fillStyle(color, 1);
+    cornerBrackets(graphics, pos.x * TILE - spread, pos.y * TILE - spread, size, size, TARGET_CORNER, 2);
     await sleep(scene, ms / FLASH_STEPS);
   }
   // Se queda puesta un momento y se apaga.
   await sleep(scene, ms / 2);
-  g.destroy();
+  graphics.destroy();
 }
 
 /**
@@ -226,7 +226,7 @@ export async function targetMark(scene: Phaser.Scene, view: FxHost, p: Pos, colo
 export async function lifeBar(
   scene: Phaser.Scene,
   view: FxHost,
-  p: Pos,
+  pos: Pos,
   before: number,
   after: number,
   color: number,
@@ -234,21 +234,21 @@ export async function lifeBar(
 ): Promise<void> {
   const width = TILE - 4;
   const height = 5;
-  const x = p.x * TILE + 2;
-  const y = p.y * TILE - 8;
-  const g = scene.add.graphics();
-  view.addFx(g);
+  const x = pos.x * TILE + 2;
+  const y = pos.y * TILE - 8;
+  const graphics = scene.add.graphics();
+  view.addFx(graphics);
   /** `life`: lo que queda (color del bando); `fading`: hasta donde llega aun lo perdido (blanco). */
   const draw = (life: number, fading: number) => {
-    g.clear();
-    g.fillStyle(PAL.ink, 1);
-    g.fillRect(x - 1, y - 1, width + 2, height + 2);
+    graphics.clear();
+    graphics.fillStyle(PAL.ink, 1);
+    graphics.fillRect(x - 1, y - 1, width + 2, height + 2);
     const lifeWidth = Math.round((width * Math.max(0, life)) / 100);
     const fadingWidth = Math.round((width * Math.max(0, fading)) / 100);
-    g.fillStyle(color, 1);
-    g.fillRect(x, y, lifeWidth, height);
-    g.fillStyle(PAL.white, 1);
-    g.fillRect(x + lifeWidth, y, Math.max(0, fadingWidth - lifeWidth), height);
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(x, y, lifeWidth, height);
+    graphics.fillStyle(PAL.white, 1);
+    graphics.fillRect(x + lifeWidth, y, Math.max(0, fadingWidth - lifeWidth), height);
   };
   draw(before, before);
   await sleep(scene, 120);
@@ -260,7 +260,7 @@ export async function lifeBar(
     await sleep(scene, 50);
   }
   await sleep(scene, hold);
-  g.destroy();
+  graphics.destroy();
 }
 
 export const COLORS = {

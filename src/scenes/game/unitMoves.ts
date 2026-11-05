@@ -39,7 +39,7 @@ export interface MoveHost {
   phase: Phase;
   readonly ended: boolean;
   readonly selection: GroupSelection;
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   play(events: GameEvent[], ghostKey?: string | null): Promise<void>;
   toMap(): void;
   refresh(): void;
@@ -79,7 +79,7 @@ export class UnitMoves {
   /** Estados anteriores para deshacer movimientos sin consecuencias (Ctrl+Z). */
   private undoStack: string[] = [];
 
-  constructor(private readonly h: MoveHost) {}
+  constructor(private readonly host: MoveHost) {}
 
   /** Partida nueva. */
   reset(): void {
@@ -100,25 +100,25 @@ export class UnitMoves {
 
   /** Elegir una unidad: a moverla o, si ya se ha movido este turno, directamente a sus acciones. */
   select(unit: Unit): void {
-    const h = this.h;
+    const host = this.host;
     if (!unit.canMove) {
       this.session = MoveSession.alreadyMoved(unit);
-      return h.openUnitMenu();
+      return host.openUnitMenu();
     }
-    this.session = MoveSession.toMove(h.state, unit);
-    h.phase = 'move';
-    this.followCursor(h.view.cursor);
-    h.refresh();
+    this.session = MoveSession.toMove(host.state, unit);
+    host.phase = 'move';
+    this.followCursor(host.view.cursor);
+    host.refresh();
   }
 
   /** El cursor pasa por una casilla: el camino trazado la sigue. */
   followCursor(tile: Pos): void {
-    this.session?.followCursor(this.h.state, tile);
+    this.session?.followCursor(this.host.state, tile);
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */
   intentAt(tile: Pos): Intent {
-    return this.session ? this.session.intentAt(this.h.state, tile, (pos) => this.h.visible(pos)) : { kind: 'none' };
+    return this.session ? this.session.intentAt(this.host.state, tile, (pos) => this.host.visible(pos)) : { kind: 'none' };
   }
 
   /** Camino de la unidad elegida hasta `dest` (ver MoveSession.trailTo). */
@@ -132,14 +132,14 @@ export class UnitMoves {
    */
   async commit(tile: Pos, opts: CommitOptions = {}): Promise<void> {
     const session = this.session;
-    if (!session?.range || this.h.phase !== 'move') return;
+    if (!session?.range || this.host.phase !== 'move') return;
     const unit = session.unit;
     const intent = this.intentAt(tile);
     // Moverla a mano cancela su orden de varios turnos.
     if (intent.kind !== 'none' && intent.kind !== 'stay') delete unit.travelTo;
     switch (intent.kind) {
       case 'none':
-        return this.h.toMap();
+        return this.host.toMap();
       case 'stay':
         return this.stayHere(unit, opts);
       case 'merge':
@@ -155,113 +155,113 @@ export class UnitMoves {
   /** Soltarla en su sitio: su menu (o esperar, o capturar si se ha soltado encima de un edificio). */
   private stayHere(unit: Unit, opts: CommitOptions): void {
     if (opts.wait) return this.waitSelected();
-    if (opts.drop && canCapture(this.h.state, unit)) return this.h.captureNow();
-    this.h.openUnitMenu();
+    if (opts.drop && canCapture(this.host.state, unit)) return this.host.captureNow();
+    this.host.openUnitMenu();
   }
 
   private async joinUnit(unit: Unit, kind: 'merge' | 'load', target: Unit): Promise<void> {
-    const s = this.h.state;
-    const ghost = unitKey(this.h.scene.textures, s, unit);
+    const s = this.host.state;
+    const ghost = unitKey(this.host.scene.textures, s, unit);
     this.clearUndo();
     const path = kind === 'merge' ? merge(s, unit, target) : load(s, unit, target);
     if (path) {
       // Una emboscada por el camino lo deja en mover: no llega a unirse ni a subir.
       const event: GameEvent = path.ambush ? moveEvent(unit.uid, path) : { kind, uid: unit.uid, into: target.uid, path };
-      await this.h.play([event], ghost);
+      await this.host.play([event], ghost);
     }
-    this.h.afterAction();
+    this.host.afterAction();
   }
 
   private async moveAndAttack(session: MoveSession, from: Pos, target: Unit): Promise<void> {
-    const h = this.h;
+    const host = this.host;
     const unit = session.unit;
-    const ghost = unitKey(h.scene.textures, h.state, unit);
+    const ghost = unitKey(host.scene.textures, host.state, unit);
     this.clearUndo();
     if (!samePos(from, unit)) {
-      const path = moveUnit(h.state, unit, from, session.range!, this.trailTo(from));
-      if (!path) return h.toMap();
+      const path = moveUnit(host.state, unit, from, session.range!, this.trailTo(from));
+      if (!path) return host.toMap();
       session.range = null;
-      await h.play([moveEvent(unit.uid, path)], ghost);
-      if (path.ambush) return h.afterAction();
+      await host.play([moveEvent(unit.uid, path)], ghost);
+      if (path.ambush) return host.afterAction();
     }
-    const stillThere = unitById(h.state, target.uid);
-    if (!stillThere) return h.afterAction();
-    await h.play([attackEvent(h.state, unit, stillThere, Math.random)]);
-    h.afterAction();
+    const stillThere = unitById(host.state, target.uid);
+    if (!stillThere) return host.afterAction();
+    await host.play([attackEvent(host.state, unit, stillThere, Math.random)]);
+    host.afterAction();
   }
 
   private async moveTo(session: MoveSession, to: Pos, isCapture: boolean, opts: CommitOptions): Promise<void> {
-    const h = this.h;
+    const host = this.host;
     const unit = session.unit;
-    const ghost = unitKey(h.scene.textures, h.state, unit);
-    const before = serialize(h.state);
-    const seenBefore = visibleEnemyUids(h.state);
+    const ghost = unitKey(host.scene.textures, host.state, unit);
+    const before = serialize(host.state);
+    const seenBefore = visibleEnemyUids(host.state);
     const snapshot: MoveUndo = { uid: unit.uid, x: unit.x, y: unit.y, canFire: unit.canFire };
-    const path = moveUnit(h.state, unit, to, session.range!, this.trailTo(to));
+    const path = moveUnit(host.state, unit, to, session.range!, this.trailTo(to));
     if (!path) return;
     session.range = null;
-    await h.play([moveEvent(unit.uid, path)], ghost);
+    await host.play([moveEvent(unit.uid, path)], ghost);
     if (path.ambush) {
       this.clearUndo();
-      return h.afterAction();
+      return host.afterAction();
     }
     // Se puede deshacer si no ha descubierto a nadie.
-    if (visibleEnemyUids(h.state) === seenBefore) this.undoStack.push(before);
+    if (visibleEnemyUids(host.state) === seenBefore) this.undoStack.push(before);
     else this.clearUndo();
-    this.lastCommit = { at: { ...to }, time: h.scene.time.now };
+    this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (opts.wait) return this.waitSelected();
-    if (opts.drop && isCapture && canCapture(h.state, unit)) return h.captureNow();
-    if (opts.drop && settings.autoWait && hasNothingElseToDo(h.state, unit)) return this.waitSelected();
+    if (opts.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();
+    if (opts.drop && settings.autoWait && hasNothingElseToDo(host.state, unit)) return this.waitSelected();
     session.undo = snapshot;
-    h.openUnitMenu();
+    host.openUnitMenu();
   }
 
   /** Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
   async giveTravel(unit: Unit, goal: Pos): Promise<void> {
-    const h = this.h;
+    const host = this.host;
     delete unit.standingOrder;
-    const range = this.session?.range ?? moveRange(h.state, unit);
-    const dest = stepToward(h.state, unit, goal, range);
+    const range = this.session?.range ?? moveRange(host.state, unit);
+    const dest = stepToward(host.state, unit, goal, range);
     if (!dest) {
       showToast(t('travelUnreachable'));
-      return h.toMap();
+      return host.toMap();
     }
     this.clearUndo();
     unit.travelTo = posOf(goal);
     showToast(t('travelSet'));
-    const ghost = unitKey(h.scene.textures, h.state, unit);
-    const path = moveUnit(h.state, unit, dest, range);
+    const ghost = unitKey(host.scene.textures, host.state, unit);
+    const path = moveUnit(host.state, unit, dest, range);
     if (this.session) this.session.range = null;
-    if (path) await h.play([moveEvent(unit.uid, path)], ghost);
+    if (path) await host.play([moveEvent(unit.uid, path)], ghost);
     if (samePos(unit, goal) || path?.ambush) delete unit.travelTo;
-    h.toMap();
+    host.toMap();
   }
 
   /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
   async groupMove(goal: Pos): Promise<void> {
-    const h = this.h;
-    h.selection.multi = false;
-    const closestFirst = [...h.selection.group]
-      .map((uid) => unitById(h.state, uid))
+    const host = this.host;
+    host.selection.multi = false;
+    const closestFirst = [...host.selection.group]
+      .map((uid) => unitById(host.state, uid))
       .filter((unit): unit is Unit => !!unit && unit.active && unit.canMove && unit.carrier === null)
       .sort((firstUnit, secondUnit) => manhattan(firstUnit, goal) - manhattan(secondUnit, goal));
     // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
     this.clearUndo();
     for (const unit of closestFirst) {
-      const range = moveRange(h.state, unit);
+      const range = moveRange(host.state, unit);
       const best = closestStep(unit, goal, range);
       if (!best) continue;
       delete unit.travelTo;
-      const path = moveUnit(h.state, unit, best, range);
-      if (path) await h.play([moveEvent(unit.uid, path)]);
-      if (h.ended) return;
+      const path = moveUnit(host.state, unit, best, range);
+      if (path) await host.play([moveEvent(unit.uid, path)]);
+      if (host.ended) return;
     }
-    h.toMap();
+    host.toMap();
   }
 
   waitSelected(): void {
     if (this.selected) wait(this.selected);
-    this.h.afterAction();
+    this.host.afterAction();
   }
 
   clearUndo(): void {
@@ -270,16 +270,16 @@ export class UnitMoves {
 
   /** «Atras» en el menu de la unidad: vuelve a donde estaba antes de moverla y se puede mover otra vez. */
   undoMove(): void {
-    const h = this.h;
+    const host = this.host;
     const unit = this.selected;
     const undo = this.session?.undo;
-    if (!unit || !undo || undo.uid !== unit.uid) return h.toMap();
+    if (!unit || !undo || undo.uid !== unit.uid) return host.toMap();
     this.undoStack.pop();
     unit.x = undo.x;
     unit.y = undo.y;
     unit.canFire = undo.canFire;
     unit.canMove = true;
-    h.view.cursor = posOf(unit);
+    host.view.cursor = posOf(unit);
     this.select(unit);
   }
 
@@ -287,10 +287,10 @@ export class UnitMoves {
   undoLast(): void {
     const previous = this.undoStack.pop();
     if (!previous) return showToast(t('nothingToUndo'));
-    const restored = deserialize(previous, saveContext(this.h.state.content));
+    const restored = deserialize(previous, saveContext(this.host.state.content));
     if (!restored) return;
-    this.h.state = restored;
-    this.h.toMap();
+    this.host.state = restored;
+    this.host.toMap();
     showToast(t('undone'));
   }
 }

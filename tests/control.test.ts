@@ -31,15 +31,18 @@ describe('puntos de control', () => {
   it('con unidades de un solo bando en la zona es suyo y paga; vacio sigue pagando a su dueño', () => {
     const s = withPoints();
     // En la zona (radio 1) aunque no en el centro.
-    const u = newUnit(s, SOLDIER, 0, { x: 11, y: 9 });
+    const unit = newUnit(s, SOLDIER, 0, { x: 11, y: 9 });
     const before = s.funds[0];
-    const r = controlRound(s)!;
+    const control = controlRound(s)!;
     expect(s.controlPoints![0]!.owner).toBe(0);
-    expect(r.held).toEqual([1, 1]);
-    expect(r.contested).toBe(0);
-    expect(r.income).toEqual([defaultContent().tables.DEFAULT_RULES.controlIncome, defaultContent().tables.DEFAULT_RULES.controlIncome]);
+    expect(control.held).toEqual([1, 1]);
+    expect(control.contested).toBe(0);
+    expect(control.income).toEqual([
+      defaultContent().tables.DEFAULT_RULES.controlIncome,
+      defaultContent().tables.DEFAULT_RULES.controlIncome,
+    ]);
     expect(s.funds[0]).toBe(before + defaultContent().tables.DEFAULT_RULES.controlIncome);
-    u.x = 13; // fuera de la zona
+    unit.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
   });
@@ -49,10 +52,10 @@ describe('puntos de control', () => {
     newUnit(s, TANK, 0, { x: 4, y: 14 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 15 });
     const funds = [...s.funds];
-    const r = controlRound(s)!;
-    expect(r.contested).toBe(1);
+    const control = controlRound(s)!;
+    expect(control.contested).toBe(1);
     expect(s.controlPoints![1]!.owner).toBe(1);
-    expect(r.held).toEqual([0, 0]);
+    expect(control.held).toEqual([0, 0]);
     expect(s.funds).toEqual(funds);
   });
 
@@ -75,9 +78,9 @@ describe('puntos de control', () => {
   it('endRound suma su dinero a los ingresos del informe', () => {
     const s = withPoints();
     newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
-    const r = endRound(s);
-    expect(r.control?.held).toEqual([1, 1]);
-    expect(r.income[0]).toBeGreaterThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlIncome);
+    const round = endRound(s);
+    expect(round.control?.held).toEqual([1, 1]);
+    expect(round.income[0]).toBeGreaterThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlIncome);
   });
 
   it('sin puntos no hay nada en el informe', () => {
@@ -95,16 +98,17 @@ describe('puntos de control', () => {
       const hq = (team: 0 | 1) => s.buildings.find((building) => building.type === HQ && building.owner === team)!;
       const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
       const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
-      for (const p of pts) {
-        expect(p.owner).toBeNull();
-        expect(s.buildings.some((building) => building.x === p.x && building.y === p.y)).toBe(false);
+      for (const point of pts) {
+        expect(point.owner).toBeNull();
+        expect(s.buildings.some((building) => building.x === point.x && building.y === point.y)).toBe(false);
         // Casi a la misma distancia de las dos Bases (las salidas estan junto a ellas).
-        expect(Math.abs(da.at(p) - db.at(p))).toBeLessThanOrEqual(8);
+        expect(Math.abs(da.at(point) - db.at(point))).toBeLessThanOrEqual(8);
       }
       // Las zonas no se tocan.
-      for (const a of pts)
-        for (const b of pts)
-          if (a !== b) expect(manhattan(a, b)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().tables.DEFAULT_RULES.controlRadius);
+      for (const firstPoint of pts)
+        for (const secondPoint of pts)
+          if (firstPoint !== secondPoint)
+            expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().tables.DEFAULT_RULES.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });
@@ -119,10 +123,10 @@ describe('puntos de control', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 19, y: 19 });
     s.controlPoints = [{ x: 14, y: 12, owner: 0 }];
-    const t = newUnit(s, TANK, 1, { x: 18, y: 12 });
-    const d0 = manhattan(t, s.controlPoints[0]!);
+    const tank = newUnit(s, TANK, 1, { x: 18, y: 12 });
+    const d0 = manhattan(tank, s.controlPoints[0]!);
     Array.from(aiTurn(s, seededRng(1), 1));
-    expect(manhattan(t, s.controlPoints[0]!)).toBeLessThan(d0);
+    expect(manhattan(tank, s.controlPoints[0]!)).toBeLessThan(d0);
   });
 
   it('se guardan con la partida; las partidas antiguas siguen sin ellos', () => {

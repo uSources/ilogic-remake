@@ -19,7 +19,7 @@ const DOT_STEP = 4;
  * sin rellenar algunas casillas de la zona (el borde se dibuja igual).
  */
 function drawZone(
-  g: Phaser.GameObjects.Graphics,
+  graphics: Phaser.GameObjects.Graphics,
   zone: Grid<boolean>,
   color: number,
   fillAlpha: number,
@@ -27,19 +27,19 @@ function drawZone(
   fillIf: (pos: Pos) => boolean = () => true,
 ): void {
   const at = (pos: Pos) => zone.contains(pos) && zone.at(pos);
-  g.fillStyle(color, fillAlpha);
+  graphics.fillStyle(color, fillAlpha);
   zone.forEach((inZone, pos) => {
-    if (inZone && fillIf(pos)) g.fillRect(pos.x * TILE, pos.y * TILE, TILE, TILE);
+    if (inZone && fillIf(pos)) graphics.fillRect(pos.x * TILE, pos.y * TILE, TILE, TILE);
   });
-  g.fillStyle(color, edgeAlpha);
+  graphics.fillStyle(color, edgeAlpha);
   zone.forEach((inZone, { x, y }) => {
     if (!inZone) return;
     const px = x * TILE,
       py = y * TILE;
-    if (!at({ x, y: y - 1 })) g.fillRect(px, py, TILE, ZONE_EDGE);
-    if (!at({ x, y: y + 1 })) g.fillRect(px, py + TILE - ZONE_EDGE, TILE, ZONE_EDGE);
-    if (!at({ x: x - 1, y })) g.fillRect(px, py, ZONE_EDGE, TILE);
-    if (!at({ x: x + 1, y })) g.fillRect(px + TILE - ZONE_EDGE, py, ZONE_EDGE, TILE);
+    if (!at({ x, y: y - 1 })) graphics.fillRect(px, py, TILE, ZONE_EDGE);
+    if (!at({ x, y: y + 1 })) graphics.fillRect(px, py + TILE - ZONE_EDGE, TILE, ZONE_EDGE);
+    if (!at({ x: x - 1, y })) graphics.fillRect(px, py, ZONE_EDGE, TILE);
+    if (!at({ x: x + 1, y })) graphics.fillRect(px + TILE - ZONE_EDGE, py, ZONE_EDGE, TILE);
   });
 }
 
@@ -49,16 +49,16 @@ function drawZone(
  */
 export const controlZones: OverlayPainter = (graphics, opts, ctx) => {
   const flagArt = hasImage(ctx.textures, 'ui/flag_b');
-  for (const c of opts.controlPoints ?? []) {
-    const x0 = Math.max(0, c.x - c.r) * TILE,
-      y0 = Math.max(0, c.y - c.r) * TILE,
-      x1 = Math.min(opts.vis.width, c.x + c.r + 1) * TILE,
-      y1 = Math.min(opts.vis.height, c.y + c.r + 1) * TILE;
-    const color = c.owner === 0 ? PAL.blue : c.owner === 1 ? PAL.red : PAL_MAP.neutral;
+  for (const point of opts.controlPoints ?? []) {
+    const x0 = Math.max(0, point.x - point.r) * TILE,
+      y0 = Math.max(0, point.y - point.r) * TILE,
+      x1 = Math.min(opts.vis.width, point.x + point.r + 1) * TILE,
+      y1 = Math.min(opts.vis.height, point.y + point.r + 1) * TILE;
+    const color = point.owner === 0 ? PAL.blue : point.owner === 1 ? PAL.red : PAL_MAP.neutral;
     graphics.fillStyle(color, 0.16);
     graphics.fillRect(x0, y0, x1 - x0, y1 - y0);
     for (let i = 0; i < Math.max(x1 - x0, y1 - y0); i += DOT_STEP) {
-      graphics.fillStyle(c.contested ? (i % (2 * DOT_STEP) ? PAL.gold : PAL.red) : color, 0.95);
+      graphics.fillStyle(point.contested ? (i % (2 * DOT_STEP) ? PAL.gold : PAL.red) : color, 0.95);
       if (x0 + i < x1) {
         graphics.fillRect(x0 + i, y0, ZONE_EDGE, ZONE_EDGE);
         graphics.fillRect(x0 + i, y1 - ZONE_EDGE, ZONE_EDGE, ZONE_EDGE);
@@ -71,15 +71,15 @@ export const controlZones: OverlayPainter = (graphics, opts, ctx) => {
     // El banderin dibujado (ui/flag_*) va en map/flagLayer.ts; este de pixeles solo si falta en el atlas.
     if (flagArt) continue;
     // Mastil y banderin triangular con borde oscuro, arriba a la izquierda de la casilla central.
-    const x = c.x * TILE,
-      y = c.y * TILE;
+    const x = point.x * TILE,
+      y = point.y * TILE;
     fillRects(graphics, PAL.ink, 1, [
       [x + 3, y + 3, 3, 14],
       [x + 5, y + 3, 9, 8],
     ]);
     fillRects(graphics, PAL.white, 1, [[x + 4, y + 4, 1, 12]]);
-    graphics.fillStyle(c.contested ? PAL.gold : color, 1);
-    for (let r = 0; r < 6; r++) graphics.fillRect(x + 6, y + 4 + r, 7 - Math.abs(r - 2.5) * 2, 1);
+    graphics.fillStyle(point.contested ? PAL.gold : color, 1);
+    for (let row = 0; row < 6; row++) graphics.fillRect(x + 6, y + 4 + row, 7 - Math.abs(row - 2.5) * 2, 1);
   }
 };
 
@@ -97,9 +97,9 @@ export const attackZone: OverlayPainter = (graphics, opts) => {
 export const dangerCorners: OverlayPainter = (graphics, opts) => {
   const dg = opts.danger;
   if (!dg) return;
-  for (const [k, kind] of opts.highlights) {
+  for (const [key, kind] of opts.highlights) {
     if (kind !== 'move') continue;
-    const [x, y] = parseTileKey(k);
+    const [x, y] = parseTileKey(key);
     if (!dg.at({ x, y })) continue;
     const px = x * TILE + TILE - 9,
       py = y * TILE + 3;

@@ -7,8 +7,8 @@ import { buildingLabel, t, unitLabel } from '../../settings';
 /** Dinero y dias: por que no se puede comprar, desglose del dinero y del dia (barra de arriba). */
 
 /** Por que no se puede comprar una unidad (menu de compra y aviso). */
-export function buyBlockedText(s: GameState, b: NonNullable<BuyOption['blocked']>): string {
-  switch (b) {
+export function buyBlockedText(s: GameState, blocked: NonNullable<BuyOption['blocked']>): string {
+  switch (blocked) {
     case 'funds':
       return t('cantAfford');
     case 'units':
@@ -18,11 +18,11 @@ export function buyBlockedText(s: GameState, b: NonNullable<BuyOption['blocked']
   }
 }
 /** Cuenta por tipo y multiplica: filas "3 × Ciudad". Orden: de mas a menos cantidad. */
-function tally(types: number[], label: (t: number) => string, each: (t: number) => number): BreakdownLineVM[] {
+function tally(types: number[], label: (type: number) => string, each: (type: number) => number): BreakdownLineVM[] {
   const counts = new Map<number, number>();
-  for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
+  for (const type of types) counts.set(type, (counts.get(type) ?? 0) + 1);
   return [...counts]
-    .map(([t, count]) => ({ label: label(t), count, amount: count * each(t) }))
+    .map(([type, count]) => ({ label: label(type), count, amount: count * each(type) }))
     .sort((first, second) => second.amount - first.amount || first.label.localeCompare(second.label));
 }
 

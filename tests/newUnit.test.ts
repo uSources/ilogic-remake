@@ -7,25 +7,26 @@ import { addUnitLike } from '../tools/content/newUnit';
 describe('npm run unit -- new', () => {
   const { units, copied } = addUnitLike(mutableCopy<Content>(defaultContent().files).units, 'Sniper', 'Soldier');
   const content: Content = { ...mutableCopy<Content>(defaultContent().files), units };
-  const T = buildTables(content);
-  const sniper = T.UNIT_NAMES.indexOf('Sniper');
-  const soldier = T.UNIT_NAMES.indexOf('Soldier');
+  const tables = buildTables(content);
+  const sniper = tables.UNIT_NAMES.indexOf('Sniper');
+  const soldier = tables.UNIT_NAMES.indexOf('Soldier');
 
   it('la deja al final, valida y con el dibujo de la original', () => {
     expect(validateContent(content)).toEqual([]);
     expect(sniper).toBe(defaultContent().files.units.length);
-    expect(T.UNIT_ART[sniper]).toBe('Soldier');
-    expect(T.UNIT.cost[sniper]).toBe(T.UNIT.cost[soldier]);
+    expect(tables.UNIT_ART[sniper]).toBe('Soldier');
+    expect(tables.UNIT.cost[sniper]).toBe(tables.UNIT.cost[soldier]);
   });
 
   it('copia la columna de daño: quien ataca a la original ataca igual a la nueva', () => {
-    for (let a = 0; a < sniper; a++) expect(T.POWER[a]![sniper], T.UNIT_NAMES[a]).toBe(T.POWER[a]![soldier]);
-    expect(T.POWER[sniper]![sniper]).toBe(T.POWER[soldier]![soldier]);
+    for (let attacker = 0; attacker < sniper; attacker++)
+      expect(tables.POWER[attacker]![sniper], tables.UNIT_NAMES[attacker]).toBe(tables.POWER[attacker]![soldier]);
+    expect(tables.POWER[sniper]![sniper]).toBe(tables.POWER[soldier]![soldier]);
     expect(copied.attackers.length).toBeGreaterThan(5);
   });
 
   it('transportes y suministros la atienden como a la original', () => {
-    for (let t = 0; t < sniper; t++) expect(T.CAN_CARRY[t]![sniper]).toBe(T.CAN_CARRY[t]![soldier]);
+    for (let carrier = 0; carrier < sniper; carrier++) expect(tables.CAN_CARRY[carrier]![sniper]).toBe(tables.CAN_CARRY[carrier]![soldier]);
     expect(copied.carriers.length).toBeGreaterThan(0);
   });
 

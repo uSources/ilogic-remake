@@ -32,50 +32,50 @@ const last = (path: Pos[]): Pos | undefined => path[path.length - 1];
 describe('previewStandingOrders', () => {
   it('capturar: prevé el camino hasta el edificio y la captura, y el turno real hace eso', () => {
     const s = world();
-    const u = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
-    giveStandingOrder(s, [u], 'capture', { x: 12, y: 5 });
-    const it = previewStandingOrders(s).get(u.uid)!;
+    const unit = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
+    giveStandingOrder(s, [unit], 'capture', { x: 12, y: 5 });
+    const it = previewStandingOrders(s).get(unit.uid)!;
     expect(it.path[0]).toEqual({ x: 9, y: 5 });
     expect(last(it.path)).toEqual({ x: 12, y: 5 });
     expect(it.capture).toEqual({ x: 12, y: 5 });
     expect(it.attack).toBeUndefined();
     playOrders(s);
-    expect(posOf(u)).toEqual({ x: 12, y: 5 });
+    expect(posOf(unit)).toEqual({ x: 12, y: 5 });
     expect(s.buildings[2]!.capture?.team ?? s.buildings[2]!.owner).toBe(0);
   });
 
   it('atacar: prevé a quien dispara y desde donde, y el turno real hace eso', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const foe = newUnit(s, SOLDIER, 1, { x: 9, y: 5 });
-    giveStandingOrder(s, [u], 'attack', { x: 15, y: 5 });
-    const it = previewStandingOrders(s).get(u.uid)!;
+    giveStandingOrder(s, [unit], 'attack', { x: 15, y: 5 });
+    const it = previewStandingOrders(s).get(unit.uid)!;
     expect(it.attack).toEqual({ x: 9, y: 5 });
     const end = last(it.path) ?? { x: 5, y: 5 };
     playOrders(s);
     expect(foe.life).toBeLessThan(100);
-    expect(posOf(u)).toEqual(end);
+    expect(posOf(unit)).toEqual(end);
   });
 
   it('una unidad sin nada que hacer este turno no tiene camino ni objetivo', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [u], 'defend', { x: 5, y: 6 });
-    expect(previewStandingOrders(s).get(u.uid)).toEqual({ path: [] });
+    const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    giveStandingOrder(s, [unit], 'defend', { x: 5, y: 6 });
+    expect(previewStandingOrders(s).get(unit.uid)).toEqual({ path: [] });
   });
 
   it('no cambia la partida y siempre da lo mismo', () => {
     const s = world();
-    const a = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
-    const b = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
+    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     newUnit(s, SOLDIER, 1, { x: 9, y: 7 });
-    giveStandingOrder(s, [a], 'capture', { x: 12, y: 5 });
-    giveStandingOrder(s, [b], 'attack', { x: 15, y: 5 });
+    giveStandingOrder(s, [soldier], 'capture', { x: 12, y: 5 });
+    giveStandingOrder(s, [tank], 'attack', { x: 15, y: 5 });
     const before = serialize(s);
     const p1 = previewStandingOrders(s);
     expect(serialize(s)).toBe(before);
     expect(previewStandingOrders(s)).toEqual(p1);
-    expect([...p1.keys()].sort()).toEqual([a.uid, b.uid].sort());
+    expect([...p1.keys()].sort()).toEqual([soldier.uid, tank.uid].sort());
   });
 
   it('las unidades ya usadas o sin orden no salen', () => {
@@ -89,18 +89,18 @@ describe('previewStandingOrders', () => {
 
   it('no delata enemigos escondidos: la prevision es la misma que si no estuvieran', () => {
     const s = world();
-    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    giveStandingOrder(s, [u], 'attack', { x: 15, y: 5 });
+    const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    giveStandingOrder(s, [unit], 'attack', { x: 15, y: 5 });
     const clean = previewStandingOrders(s);
     // A 7 casillas: el tanque (vision 6) no lo ve, pero llegaria a dispararle (mueve 5, alcance 2).
     const hidden = newUnit(s, SOLDIER, 1, { x: 12, y: 5 });
     expect(visibility(s, 0).at({ x: 12, y: 5 })).toBe(false);
     const withHidden = previewStandingOrders(s);
     expect(withHidden).toEqual(clean);
-    expect(withHidden.get(u.uid)!.attack).toBeUndefined();
+    expect(withHidden.get(unit.uid)!.attack).toBeUndefined();
     // Sin niebla si lo ve, y la prevision si lo marca (la prueba de arriba no es casualidad).
     s.rules = rulesWith(defaultContent(), { fog: false });
-    expect(previewStandingOrders(s).get(u.uid)!.attack).toEqual(posOf(hidden));
+    expect(previewStandingOrders(s).get(unit.uid)!.attack).toEqual(posOf(hidden));
   });
 
   it('calcularla a mitad del turno de la IA no cambia lo que hace la IA', () => {
@@ -112,11 +112,11 @@ describe('previewStandingOrders', () => {
       newUnit(s, TANK, 1, { x: 16, y: 16 });
       return s;
     };
-    const a = make();
-    Array.from(aiTurn(a, seededRng(5), 1));
-    const b = make();
-    const it = aiTurn(b, seededRng(5), 1);
-    for (let r = it.next(); !r.done; r = it.next()) previewStandingOrders(b);
-    expect(serialize(b)).toBe(serialize(a));
+    const first = make();
+    Array.from(aiTurn(first, seededRng(5), 1));
+    const second = make();
+    const it = aiTurn(second, seededRng(5), 1);
+    for (let step = it.next(); !step.done; step = it.next()) previewStandingOrders(second);
+    expect(serialize(second)).toBe(serialize(first));
   });
 });

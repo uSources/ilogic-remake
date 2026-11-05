@@ -25,15 +25,15 @@ describe('nueva partida: tamaños de mapa', () => {
       expect(groundDistance(s, hq0, 0, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
       const neutral = s.buildings.filter((building) => building.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
-      for (const b of s.buildings) expect(b.x < size && b.y < size).toBe(true);
+      for (const building of s.buildings) expect(building.x < size && building.y < size).toBe(true);
     }
   });
 
   it('el mismo codigo da el mismo mapa; el tema se puede elegir', () => {
-    const a = createGame(seededRng(1234), { size: 20, theme: 4 });
-    const b = createGame(seededRng(1234), { size: 20, theme: 4 });
-    expect(serialize(a)).toBe(serialize(b));
-    expect(a.theme).toBe(4);
+    const first = createGame(seededRng(1234), { size: 20, theme: 4 });
+    const second = createGame(seededRng(1234), { size: 20, theme: 4 });
+    expect(serialize(first)).toBe(serialize(second));
+    expect(first.theme).toBe(4);
   });
 
   it('codigos de mapa: ida y vuelta, y codigos no validos', () => {
@@ -56,10 +56,10 @@ describe('nueva partida: tamaños de mapa', () => {
     const s = createGame(seededRng(7), { size: 40 });
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
-    const c = deserialize(json, saveContext(defaultContent()))!;
-    expect(c).not.toBeNull();
-    expect([mapGrid(c).width, mapGrid(c).height]).toEqual([40, 40]);
-    expect(c.setup).toEqual({ seed: 7, size: 40, theme: null });
+    const loaded = deserialize(json, saveContext(defaultContent()))!;
+    expect(loaded).not.toBeNull();
+    expect([mapGrid(loaded).width, mapGrid(loaded).height]).toEqual([40, 40]);
+    expect(loaded.setup).toEqual({ seed: 7, size: 40, theme: null });
     expect(deserialize(JSON.stringify({ ...JSON.parse(json), map: blankMap(32).slice(0, 25) }), saveContext(defaultContent()))).toBeNull();
   });
 });

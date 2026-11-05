@@ -9,28 +9,28 @@ import { blankState } from './helpers';
 
 const { UNIT_NAMES, AI } = defaultContent().tables;
 
-const T = (name: string) => UNIT_NAMES.indexOf(name);
+const unitType = (name: string) => UNIT_NAMES.indexOf(name);
 
 /** La IA (bando 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {
   const s = blankState(rulesWith(defaultContent(), { fog, weather: false }));
   s.generals = [null, newGeneral(s, 'Brisa')];
   s.generals[1]!.charge = charge;
-  newUnit(s, T('Soldier'), 1, { x: 10, y: 10 });
+  newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
   return s;
 }
 
 describe('la IA usa a su general', () => {
   it('ataque aereo donde mas valor quita (dos tanques juntos mejor que uno solo)', () => {
     const s = aiBrisa(6);
-    newUnit(s, T('Tank'), 0, { x: 3, y: 3 });
-    newUnit(s, T('Tank'), 0, { x: 14, y: 14 });
-    newUnit(s, T('Tank'), 0, { x: 15, y: 15 });
+    newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
+    newUnit(s, unitType('Tank'), 0, { x: 14, y: 14 });
+    newUnit(s, unitType('Tank'), 0, { x: 15, y: 15 });
     const best = bestAreaTarget(s, 1, 1, 30, 10)!;
     expect(best.value).toBeGreaterThan(7000);
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
-    const c = chooseAbility(s, 1)!;
-    expect(c.ability).toBe('airstrike');
+    const choice = chooseAbility(s, 1)!;
+    expect(choice.ability).toBe('airstrike');
     const evs = [...aiGeneral(s, 1)];
     expect(evs).toHaveLength(1);
     const ev = evs[0]!;
@@ -42,27 +42,27 @@ describe('la IA usa a su general', () => {
     const s = blankState(rulesWith(defaultContent(), { weather: false }));
     s.generals = [null, newGeneral(s, 'Roca')];
     s.generals[1]!.charge = generalDef(s, 'Roca')!.abilities[0]!.cost;
-    newUnit(s, T('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor
+    newUnit(s, unitType('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor
     expect(chooseAbility(s, 1)).toBeNull();
   });
 
   it('con la barra llena usa lo que valga algo (reconocimiento con niebla)', () => {
     const s = aiBrisa(6, true);
-    const c = chooseAbility(s, 1)!;
-    expect(c.ability).toBe('recon');
-    expect(c.value).toBe(AI.REVEALVALUE);
+    const choice = chooseAbility(s, 1)!;
+    expect(choice.ability).toBe('recon');
+    expect(choice.value).toBe(AI.REVEALVALUE);
   });
 
   it('no bombardea a ciegas: solo enemigos que ve', () => {
     const s = aiBrisa(5, true);
-    newUnit(s, T('Tank'), 0, { x: 25, y: 25 }); // lejos, en la niebla
-    newUnit(s, T('Tank'), 0, { x: 26, y: 25 });
+    newUnit(s, unitType('Tank'), 0, { x: 25, y: 25 }); // lejos, en la niebla
+    newUnit(s, unitType('Tank'), 0, { x: 26, y: 25 });
     expect(bestAreaTarget(s, 1, 1, 30, 10)).toBeNull();
   });
 
   it('sin general, o ya usada este turno, no hace nada', () => {
     const s = aiBrisa(6);
-    newUnit(s, T('Tank'), 0, { x: 11, y: 11 });
+    newUnit(s, unitType('Tank'), 0, { x: 11, y: 11 });
     s.generals![1]!.used = true;
     expect([...aiGeneral(s, 1)]).toEqual([]);
     s.generals = undefined;

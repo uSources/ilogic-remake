@@ -34,51 +34,51 @@ const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng
 export function randomTurn(s: GameState, rng: Rng, team: Team, after: (what: string) => void): void {
   const order = teamUnits(s, team).map((unit) => unit.uid);
   for (const uid of order) {
-    const u = s.units.find((x) => x.uid === uid);
-    if (!u || !u.active || u.carrier !== null) continue;
-    act(s, rng, u, after);
+    const unit = s.units.find((candidate) => candidate.uid === uid);
+    if (!unit || !unit.active || unit.carrier !== null) continue;
+    act(s, rng, unit, after);
   }
-  for (const b of s.buildings) {
-    if (b.owner !== team || unitAt(s, b) || rng() < 0.4) continue;
-    const o = pick(
+  for (const building of s.buildings) {
+    if (building.owner !== team || unitAt(s, building) || rng() < 0.4) continue;
+    const option = pick(
       rng,
-      buyOptions(s, b).filter((x) => x.affordable),
+      buyOptions(s, building).filter((candidate) => candidate.affordable),
     );
-    if (o && spawn(s, b, o.type)) after(`compra ${o.type} en (${b.x},${b.y})`);
+    if (option && spawn(s, building, option.type)) after(`compra ${option.type} en (${building.x},${building.y})`);
   }
 }
 
-function act(s: GameState, rng: Rng, u: Unit, after: (what: string) => void): void {
-  const r = moveRange(s, u);
+function act(s: GameState, rng: Rng, unit: Unit, after: (what: string) => void): void {
+  const range = moveRange(s, unit);
   const roll = rng();
   if (roll < 0.08) {
-    const t = pick(rng, mergeTargets(s, u, r));
-    if (t && merge(s, u, t)) return after(`${u.uid} se une a ${t.uid}`);
+    const target = pick(rng, mergeTargets(s, unit, range));
+    if (target && merge(s, unit, target)) return after(`${unit.uid} se une a ${target.uid}`);
   } else if (roll < 0.16) {
-    const t = pick(rng, loadTargets(s, u, r));
-    if (t && load(s, u, t)) return after(`${u.uid} sube a ${t.uid}`);
+    const target = pick(rng, loadTargets(s, unit, range));
+    if (target && load(s, unit, target)) return after(`${unit.uid} sube a ${target.uid}`);
   }
   // Mover (o quedarse) y luego hacer algo desde alli.
-  const dest = rng() < 0.85 ? pick(rng, reachableTiles(r)) : undefined;
-  if (dest && moveUnit(s, u, dest, r)) after(`${u.uid} mueve a (${dest.x},${dest.y})`);
-  if (!s.units.includes(u) || !u.active) return;
-  const passengers = cargoUnits(s, u);
+  const dest = rng() < 0.85 ? pick(rng, reachableTiles(range)) : undefined;
+  if (dest && moveUnit(s, unit, dest, range)) after(`${unit.uid} mueve a (${dest.x},${dest.y})`);
+  if (!s.units.includes(unit) || !unit.active) return;
+  const passengers = cargoUnits(s, unit);
   if (passengers.length && rng() < 0.5) {
-    const p = pick(rng, passengers)!;
-    const at = pick(rng, unloadTiles(s, u, p));
-    if (at && unload(s, u, p, at)) after(`${u.uid} baja a ${p.uid} en (${at.x},${at.y})`);
+    const passenger = pick(rng, passengers)!;
+    const at = pick(rng, unloadTiles(s, unit, passenger));
+    if (at && unload(s, unit, passenger, at)) after(`${unit.uid} baja a ${passenger.uid} en (${at.x},${at.y})`);
   }
-  if (!s.units.includes(u) || !u.active) return;
-  const t = canFight(s, u) && u.canFire ? pick(rng, attackTargets(s, u)) : undefined;
-  if (t && rng() < 0.8) {
-    attackFull(s, u, t, rng);
-    if (s.units.includes(u)) wait(u);
-    return after(`${u.uid} ataca a ${t.uid}`);
+  if (!s.units.includes(unit) || !unit.active) return;
+  const target = canFight(s, unit) && unit.canFire ? pick(rng, attackTargets(s, unit)) : undefined;
+  if (target && rng() < 0.8) {
+    attackFull(s, unit, target, rng);
+    if (s.units.includes(unit)) wait(unit);
+    return after(`${unit.uid} ataca a ${target.uid}`);
   }
-  if (canCapture(s, u) && rng() < 0.9 && capture(s, u)) return after(`${u.uid} captura`);
-  if (rng() < 0.3 && supply(s, u) > 0) after(`${u.uid} abastece`);
-  if (s.units.includes(u) && u.active) {
-    wait(u);
-    after(`${u.uid} espera`);
+  if (canCapture(s, unit) && rng() < 0.9 && capture(s, unit)) return after(`${unit.uid} captura`);
+  if (rng() < 0.3 && supply(s, unit) > 0) after(`${unit.uid} abastece`);
+  if (s.units.includes(unit) && unit.active) {
+    wait(unit);
+    after(`${unit.uid} espera`);
   }
 }

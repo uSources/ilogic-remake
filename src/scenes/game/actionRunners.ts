@@ -23,7 +23,7 @@ export interface ActionRun {
 /** Lo que las acciones necesitan para cumplirse (se lo da Orders). */
 export interface ActionRunHost {
   readonly state: GameState;
-  moveCursorTo(p: Pos, follow: boolean): void;
+  moveCursorTo(pos: Pos, follow: boolean): void;
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
   commit(at: Pos, opts: { drop?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;

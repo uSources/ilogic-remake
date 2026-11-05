@@ -50,30 +50,30 @@ export function unitStatsText(s: GameState, type: number): string {
 const pct = (factor: number): string => String(Math.round(factor * 100));
 
 /** Nombre y explicacion de una habilidad, con sus numeros. */
-export function abilityVM(a: DeepReadonly<AbilityDef>): AbilityVM {
-  switch (a.kind) {
+export function abilityVM(ability: DeepReadonly<AbilityDef>): AbilityVM {
+  switch (ability.kind) {
     case 'guard':
-      return { name: t('ability_guard'), desc: t('ability_guard_desc').replace('{n}', pct(1 - a.factor)) };
+      return { name: t('ability_guard'), desc: t('ability_guard_desc').replace('{n}', pct(1 - ability.factor)) };
     case 'zoneOfControl':
       return {
         name: t('ability_zoneOfControl'),
-        desc: t('ability_zoneOfControl_desc').replace('{m}', a.stops.map((kind) => t(`move_${kind}`)).join(', ')),
+        desc: t('ability_zoneOfControl_desc').replace('{m}', ability.stops.map((kind) => t(`move_${kind}`)).join(', ')),
       };
     case 'aura':
       return {
         name: t('ability_aura'),
         desc: t('ability_aura_desc')
-          .replace('{r}', String(a.radius))
-          .replace('{n}', pct(1 - a.defense)),
+          .replace('{r}', String(ability.radius))
+          .replace('{n}', pct(1 - ability.defense)),
       };
     case 'piercing':
-      return { name: t('ability_piercing'), desc: t('ability_piercing_desc').replace('{n}', pct(a.ignoreCover)) };
+      return { name: t('ability_piercing'), desc: t('ability_piercing_desc').replace('{n}', pct(ability.ignoreCover)) };
     case 'scout':
       return { name: t('ability_scout'), desc: t('ability_scout_desc') };
     case 'quickCapture':
-      return { name: t('ability_quickCapture'), desc: t('ability_quickCapture_desc').replace('{n}', pct(a.factor - 1)) };
+      return { name: t('ability_quickCapture'), desc: t('ability_quickCapture_desc').replace('{n}', pct(ability.factor - 1)) };
     default:
-      return a satisfies never;
+      return ability satisfies never;
   }
 }
 
@@ -83,12 +83,12 @@ export function abilitiesVM(s: GameState, type: number): AbilityVM[] {
 }
 
 /** "20→10": puntos del edificio de debajo antes y despues de capturar este turno. */
-export function captureHintText(s: GameState, u: Unit): string | undefined {
-  const b = buildingAt(s, u);
-  if (!b) return undefined;
-  const cp = captureProgress(s, b);
-  const now = cp && cp.uid === u.uid ? cp.left : capturePointsOf(s, b);
-  return `${now}→${Math.max(0, now - captureStrength(s, u))}`;
+export function captureHintText(s: GameState, unit: Unit): string | undefined {
+  const building = buildingAt(s, unit);
+  if (!building) return undefined;
+  const cp = captureProgress(s, building);
+  const now = cp && cp.uid === unit.uid ? cp.left : capturePointsOf(s, building);
+  return `${now}→${Math.max(0, now - captureStrength(s, unit))}`;
 }
 
 /**
@@ -98,34 +98,34 @@ export function captureHintText(s: GameState, u: Unit): string | undefined {
 export function tileVM(
   textures: Phaser.Textures.TextureManager,
   s: GameState,
-  p: Pos,
+  pos: Pos,
   view: { vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },
 ): TileVM {
-  const terr = terrainAt(s, p);
-  const b = buildingAt(s, p);
-  const vis = view.vis.at(p);
+  const terr = terrainAt(s, pos);
+  const building = buildingAt(s, pos);
+  const vis = view.vis.at(pos);
   const info: TileVM = {
-    terrain: { key: terrainKey(terr), name: terrainLabel(s.content, terr), defense: Math.round((1 - tileProtection(s, p)) * 100) },
+    terrain: { key: terrainKey(terr), name: terrainLabel(s.content, terr), defense: Math.round((1 - tileProtection(s, pos)) * 100) },
   };
   if (s.rules.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (mt: MoveType) => (canMoveOn(s, mt, terr) ? moveCost(s, mt, p) : null);
+    const cost = (mt: MoveType) => (canMoveOn(s, mt, terr) ? moveCost(s, mt, pos) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
-  if (b) {
-    const known = vis || b.owner === 0;
+  if (building) {
+    const known = vis || building.owner === 0;
     info.building = {
-      name: buildingLabel(s.content, b.type),
-      owner: !known ? 'unknown' : b.owner === 0 ? 'you' : b.owner === 1 ? 'enemy' : 'neutral',
-      income: buildingIncome(s, b.type),
-      icon: buildingKey(textures, s, b, vis),
+      name: buildingLabel(s.content, building.type),
+      owner: !known ? 'unknown' : building.owner === 0 ? 'you' : building.owner === 1 ? 'enemy' : 'neutral',
+      income: buildingIncome(s, building.type),
+      icon: buildingKey(textures, s, building, vis),
     };
-    const cp = captureProgress(s, b);
-    if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(s, b), team: cp.team };
+    const cp = captureProgress(s, building);
+    if (cp && known) info.building.capture = { left: cp.left, total: capturePointsOf(s, building), team: cp.team };
   }
   // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
   // Disputada solo si se ven unidades de los dos bandos dentro (no delata a los escondidos).
-  const cp = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, p));
+  const cp = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, pos));
   if (cp) {
     const inside = s.units.filter((unit) => unit.carrier === null && inControlZone(s, cp, unit) && (unit.team === 0 || view.vis.at(unit)));
     info.point = {
@@ -135,22 +135,22 @@ export function tileVM(
       icon: `ui/zona_${cp.owner === 0 ? 'b' : cp.owner === 1 ? 'r' : 'i'}`,
     };
   }
-  const u = unitAt(s, p);
+  const unit = unitAt(s, pos);
   const sel = view.selected;
-  const shown = u && vis && !view.hidden.has(u.uid) ? u : sel && sel.x === p.x && sel.y === p.y ? sel : undefined;
+  const shown = unit && vis && !view.hidden.has(unit.uid) ? unit : sel && sel.x === pos.x && sel.y === pos.y ? sel : undefined;
   if (shown) {
-    const T = shown.type;
+    const shownType = shown.type;
     const cargo = cargoUnits(s, shown).map((unit) => unitLabel(s.content, unit.type));
     info.unit = {
       icon: unitKey(textures, s, { ...shown, active: shown.team === 1 || shown.active }),
-      name: unitLabel(s.content, T),
+      name: unitLabel(s.content, shownType),
       rank: s.rules.veterancy ? rank(shown) : 0,
       team: shown.team,
       life: shown.life,
-      stats: unitStatsText(s, T),
-      chips: unitStatChips(s, T),
-      abilities: abilitiesVM(s, T),
-      cargo: tablesOf(s).UNIT.maxcarry[T]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
+      stats: unitStatsText(s, shownType),
+      chips: unitStatChips(s, shownType),
+      abilities: abilitiesVM(s, shownType),
+      cargo: tablesOf(s).UNIT.maxcarry[shownType]! > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
       ...(shown.team === 0 && effectiveStandingOrder(s, shown)
         ? { order: standingOrderLabel(effectiveStandingOrder(s, shown)!.kind) }

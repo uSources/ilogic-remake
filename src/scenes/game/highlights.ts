@@ -25,11 +25,11 @@ export interface HighlightInput {
   /** Unidades a las que se esta dando una orden con destino (fase 'target'). */
   orderingUids: readonly number[] | null;
   /** Area de la habilidad del general que se apunta en `c`. */
-  targetArea: (c: Pos) => Pos[];
+  targetArea: (target: Pos) => Pos[];
   group: ReadonlySet<number>;
   inspectUid: number | null;
   enemyPlaying: boolean;
-  visible: (p: Pos) => boolean;
+  visible: (pos: Pos) => boolean;
 }
 
 export interface Highlights {

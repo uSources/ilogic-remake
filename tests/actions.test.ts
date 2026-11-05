@@ -41,9 +41,9 @@ describe('acciones con un grupo', () => {
   it('sin unidades que puedan capturar, el edificio no se ofrece para capturar', () => {
     const s = world();
     const units = [newUnit(s, TANK, 0, { x: 3, y: 2 })];
-    const c: ActionCtx = { s, units: [units[0]!, newUnit(s, TANK, 0, { x: 4, y: 2 })], at: { x: 6, y: 6 }, enemyHere: false };
-    expect(smartAction(c)?.id).toBe('move');
-    expect(ids(c)).not.toContain('orderToCapture');
+    const ctx: ActionCtx = { s, units: [units[0]!, newUnit(s, TANK, 0, { x: 4, y: 2 })], at: { x: 6, y: 6 }, enemyHere: false };
+    expect(smartAction(ctx)?.id).toBe('move');
+    expect(ids(ctx)).not.toContain('orderToCapture');
   });
 
   it('menu completo: ordenes de la casilla, formar escuadra; con escuadra, cambiar nombre y deshacer', () => {
@@ -58,28 +58,35 @@ describe('acciones con un grupo', () => {
   it('parte de una escuadra: sacar de la escuadra; sin casilla, solo lo que no la necesita', () => {
     const { s, units } = grp();
     formSquad(s, units);
-    const c: ActionCtx = { s, units: [units[0]!], at: null, enemyHere: false };
-    expect(ids(c)).toEqual(['orderToAttack', 'orderToCapture', 'orderToDefend', 'squadLeave']);
-    expect(smartAction(c)).toBeNull();
-    expect(cursorFor(c)).toBe('default');
+    const ctx: ActionCtx = { s, units: [units[0]!], at: null, enemyHere: false };
+    expect(ids(ctx)).toEqual(['orderToAttack', 'orderToCapture', 'orderToDefend', 'squadLeave']);
+    expect(smartAction(ctx)).toBeNull();
+    expect(cursorFor(ctx)).toBe('default');
   });
 });
 
 describe('acciones con una sola unidad elegida (la escena dice que pasa en la casilla)', () => {
   it('cada intencion da su accion y su cursor; fuera de alcance, ir alli; si no, prohibido', () => {
     const s = world();
-    const u = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    const c = (ctx: Partial<ActionCtx>): ActionCtx => ({ s, units: [u], at: { x: 5, y: 5 }, enemyHere: false, intent: 'none', ...ctx });
-    expect(smartAction(c({ intent: 'attack', enemyHere: true }))?.id).toBe('attack');
-    expect(smartAction(c({ intent: 'move', intentCapture: true }))?.id).toBe('capture');
-    expect(smartAction(c({ intent: 'move' }))?.id).toBe('move');
-    expect(smartAction(c({ intent: 'merge' }))?.id).toBe('merge');
-    expect(smartAction(c({ intent: 'load' }))?.id).toBe('load');
-    expect(smartAction(c({ intent: 'none', farOk: true }))?.id).toBe('go');
-    expect(cursorFor(c({ intent: 'none', farOk: true }))).toBe('go');
-    expect(smartAction(c({ intent: 'none' }))).toBeNull();
-    expect(cursorFor(c({ intent: 'none' }))).toBe('forbidden');
+    const unit = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    const ctxWith = (ctx: Partial<ActionCtx>): ActionCtx => ({
+      s,
+      units: [unit],
+      at: { x: 5, y: 5 },
+      enemyHere: false,
+      intent: 'none',
+      ...ctx,
+    });
+    expect(smartAction(ctxWith({ intent: 'attack', enemyHere: true }))?.id).toBe('attack');
+    expect(smartAction(ctxWith({ intent: 'move', intentCapture: true }))?.id).toBe('capture');
+    expect(smartAction(ctxWith({ intent: 'move' }))?.id).toBe('move');
+    expect(smartAction(ctxWith({ intent: 'merge' }))?.id).toBe('merge');
+    expect(smartAction(ctxWith({ intent: 'load' }))?.id).toBe('load');
+    expect(smartAction(ctxWith({ intent: 'none', farOk: true }))?.id).toBe('go');
+    expect(cursorFor(ctxWith({ intent: 'none', farOk: true }))).toBe('go');
+    expect(smartAction(ctxWith({ intent: 'none' }))).toBeNull();
+    expect(cursorFor(ctxWith({ intent: 'none' }))).toBe('forbidden');
     // Un enemigo fuera de alcance: no ataca ahora, pero el menu ofrece la orden.
-    expect(ids(c({ intent: 'none', enemyHere: true }))).toEqual(['orderToAttack', 'orderToDefend']);
+    expect(ids(ctxWith({ intent: 'none', enemyHere: true }))).toEqual(['orderToAttack', 'orderToDefend']);
   });
 });

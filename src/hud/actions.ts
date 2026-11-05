@@ -11,28 +11,28 @@ import type { Pos } from '../core/model';
 
 export interface UIActions {
   // --- Menu principal (Inicio, Nueva partida, Campaña, Opciones) ---
-  mainMenuPick(i: number): void;
-  mainMenuHover(i: number): void;
+  mainMenuPick(index: number): void;
+  mainMenuHover(index: number): void;
   homeHover(id: string): void;
   homePick(id: string): void;
   setupHover(id: string): void;
   setupPick(id: string): void;
   setupSet(id: string, index: number): void;
   setupCode(text: string): void;
-  campaignHover(i: number): void;
-  campaignPick(i: number): void;
+  campaignHover(index: number): void;
+  campaignPick(index: number): void;
   campaignBack(): void;
-  optionsHover(i: number): void;
-  optionsSet(i: number, index: number): void;
+  optionsHover(index: number): void;
+  optionsSet(row: number, index: number): void;
   optionsClose(): void;
 
   // --- Menus de la partida (emergente de unidad/compra/carga y pausa) ---
-  menuPick(i: number): void;
-  menuHover(i: number): void;
+  menuPick(index: number): void;
+  menuHover(index: number): void;
   menuClose(): void;
   openGameMenu(): void;
-  pauseHover(i: number): void;
-  pausePick(i: number): void;
+  pauseHover(index: number): void;
+  pausePick(index: number): void;
   surrender(): void;
 
   // --- Barra de arriba y bandeja ---
@@ -62,8 +62,8 @@ export interface UIActions {
 
   // --- Final de la partida y ayuda ---
   endContinue(): void;
-  endHover(i: number): void;
-  endPick(i: number): void;
+  endHover(index: number): void;
+  endPick(index: number): void;
   closeHelp(): void;
 
   // --- Laboratorio de animaciones: reproducir una accion, cambiar opciones, salir ---

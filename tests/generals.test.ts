@@ -13,7 +13,7 @@ import { blankState } from './helpers';
 
 const { UNIT, UNIT_NAMES } = defaultContent().tables;
 
-const T = (name: string) => UNIT_NAMES.indexOf(name);
+const unitType = (name: string) => UNIT_NAMES.indexOf(name);
 
 function withBrisa(): GameState {
   const s = blankState(TEST_RULES);
@@ -31,12 +31,12 @@ describe('generales: datos', () => {
   });
 
   it('explica lo que esta mal', () => {
-    const c = structuredClone(readContentFiles());
-    const g = c.generals[0]!;
-    g.passive.push({ kind: 'attack', factor: 1.2, units: ['Dragon'] });
-    g.abilities[0]!.cost = 99;
-    (g.abilities[1]!.effect as { kind: string }).kind = 'nuke';
-    const errs = validateContent(c);
+    const files = structuredClone(readContentFiles());
+    const general = files.generals[0]!;
+    general.passive.push({ kind: 'attack', factor: 1.2, units: ['Dragon'] });
+    general.abilities[0]!.cost = 99;
+    (general.abilities[1]!.effect as { kind: string }).kind = 'nuke';
+    const errs = validateContent(files);
     expect(errs).toContain('general Brisa: passive.attack.units nombra "Dragon", que no existe');
     expect(errs.some((error) => error.includes('habilidad recon: cost'))).toBe(true);
     expect(errs.some((error) => error.includes('effect.kind "nuke" no existe'))).toBe(true);
@@ -46,9 +46,9 @@ describe('generales: datos', () => {
 describe('generales: reglas', () => {
   it('ventaja fija: los aviones de Brisa aciertan +10 %, el resto igual', () => {
     const s = withBrisa();
-    const plane = newUnit(s, T('Fighter'), 0, { x: 5, y: 5 });
-    const tank = newUnit(s, T('Tank'), 0, { x: 6, y: 6 });
-    const target = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
+    const plane = newUnit(s, unitType('Fighter'), 0, { x: 5, y: 5 });
+    const tank = newUnit(s, unitType('Tank'), 0, { x: 6, y: 6 });
+    const target = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
     expect(generalHitFactor(s, plane, target)).toBeCloseTo(1.1);
     expect(generalHitFactor(s, tank, target)).toBe(1);
     const without = cloneState(s);
@@ -58,21 +58,21 @@ describe('generales: reglas', () => {
 
   it('la barra se carga con el daño hecho y recibido', () => {
     const s = withBrisa();
-    const a = newUnit(s, T('Tank'), 0, { x: 5, y: 5 });
-    const d = newUnit(s, T('Tank'), 1, { x: 5, y: 6 });
-    const r = attackFull(s, a, d, seededRng(3));
-    const value = ((r.damage + r.counter) * UNIT.cost[T('Tank')]!) / 100;
+    const attacker = newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
+    const defender = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
+    const result = attackFull(s, attacker, defender, seededRng(3));
+    const value = ((result.damage + result.counter) * UNIT.cost[unitType('Tank')]!) / 100;
     expect(s.generals![0]!.charge).toBeCloseTo(value / 6000);
   });
 
   it('ataque aereo: 3x3, solo enemigos, no mata, gasta carga y una vez por turno', () => {
     const s = withBrisa();
     s.generals![0]!.charge = 6;
-    const e1 = newUnit(s, T('Tank'), 1, { x: 10, y: 10 });
-    const e2 = newUnit(s, T('Soldier'), 1, { x: 11, y: 11 });
+    const e1 = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
+    const e2 = newUnit(s, unitType('Soldier'), 1, { x: 11, y: 11 });
     e2.life = 25;
-    const far = newUnit(s, T('Tank'), 1, { x: 12, y: 10 });
-    const mine = newUnit(s, T('Tank'), 0, { x: 9, y: 9 });
+    const far = newUnit(s, unitType('Tank'), 1, { x: 12, y: 10 });
+    const mine = newUnit(s, unitType('Tank'), 0, { x: 9, y: 9 });
     expect(abilityBlock(s, 0, 'airstrike')).toBe('target');
     const ev = useAbility(s, 0, 'airstrike', { x: 10, y: 10 })!;
     expect(e1.life).toBe(80);
@@ -91,7 +91,7 @@ describe('generales: reglas', () => {
 
   it('reconocimiento: ve todo el mapa hasta que acaba la ronda', () => {
     const s = withBrisa();
-    newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
+    newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 2;
     expect(visibility(s, 0).at({ x: 15, y: 15 })).toBe(false);
     useAbility(s, 0, 'recon');
@@ -109,7 +109,7 @@ describe('generales: reglas', () => {
 
   it('se guarda y se carga; un general que no existe se quita', () => {
     const s = withBrisa();
-    newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
+    newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
     s.generals![0]!.charge = 3.5;
     const back = deserialize(serialize(s), saveContext(defaultContent()))!;
     expect(back.generals).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);

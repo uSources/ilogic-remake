@@ -13,12 +13,13 @@ const { UNIT, UNIT_ABILITIES, POWER } = defaultContent().tables;
 
 /** Primera unidad que tiene la habilidad `kind` (el test no depende de cual sea). */
 const withAbility = (kind: AbilityDef['kind']): number => {
-  const i = UNIT_ABILITIES.findIndex((line) => line.some((ability) => ability.kind === kind));
-  if (i < 0) throw new Error(`ninguna unidad tiene ${kind}`);
-  return i;
+  const index = UNIT_ABILITIES.findIndex((line) => line.some((ability) => ability.kind === kind));
+  if (index < 0) throw new Error(`ninguna unidad tiene ${kind}`);
+  return index;
 };
 /** Primera unidad que cumple `f` y no tiene habilidades. */
-const plain = (callback: (t: number) => boolean): number => UNIT_ABILITIES.findIndex((line, type) => line.length === 0 && callback(type));
+const plain = (callback: (type: number) => boolean): number =>
+  UNIT_ABILITIES.findIndex((line, type) => line.length === 0 && callback(type));
 const ranged = (type: number) => UNIT.minalc[type]! > 0 && UNIT.canfight[type]!;
 const melee = (type: number) => UNIT.minalc[type]! === 0 && UNIT.canfight[type]!;
 const moves = (mt: MoveType) => (type: number) => UNIT.movtype[type]! === mt && UNIT.mover[type]! >= 4;
@@ -38,7 +39,7 @@ describe('habilidades: contenido', () => {
   };
 
   it('las cuatro clases estan en alguna unidad', () => {
-    for (const k of ['guard', 'zoneOfControl', 'aura', 'piercing'] as const) expect(withAbility(k)).toBeGreaterThanOrEqual(0);
+    for (const kind of ['guard', 'zoneOfControl', 'aura', 'piercing'] as const) expect(withAbility(kind)).toBeGreaterThanOrEqual(0);
   });
 
   it('explica lo que esta mal', () => {
@@ -51,50 +52,50 @@ describe('habilidades: contenido', () => {
       { kind: 'guard', factor: 0.5 },
     ];
     expect(unitWith(clone(), twice).join()).toContain('repetida');
-    const c = clone();
-    c.units[0]!.attack = null;
-    expect(unitWith(c, [{ kind: 'piercing', ignoreCover: 1 }]).join()).toContain('no ataca');
+    const files = clone();
+    files.units[0]!.attack = null;
+    expect(unitWith(files, [{ kind: 'piercing', ignoreCover: 1 }]).join()).toContain('no ataca');
   });
 
   it('con la regla apagada no cuenta ninguna', () => {
     const s = blankState({ ...TEST_RULES, abilities: false });
-    const t = withAbility('guard');
-    expect(abilityOf(s, t, 'guard')).toBeUndefined();
-    expect(abilitiesOf(s, t)).toEqual([]);
+    const guardType = withAbility('guard');
+    expect(abilityOf(s, guardType, 'guard')).toBeUndefined();
+    expect(abilitiesOf(s, guardType)).toEqual([]);
   });
 });
 
 describe('habilidades: escudo (guard)', () => {
   it('los ataques a distancia aciertan menos; los de cuerpo a cuerpo igual', () => {
     const s = blankState(TEST_RULES);
-    const G = withAbility('guard');
-    const factor = abilityOf(s, G, 'guard')!.factor;
-    const R = plain((type) => ranged(type) && POWER[type]![G]! > 0);
-    const M = plain((type) => melee(type) && POWER[type]![G]! > 0);
-    const def = newUnit(s, G, 1, { x: 10, y: 10 });
-    const far = newUnit(s, R, 0, { x: 10, y: 10 - (UNIT.minalc[R]! + 1) });
-    const near = newUnit(s, M, 0, { x: 9, y: 10 });
-    expect(hitChance(s, far, def)).toBeCloseTo(POWER[R]![G]! * factor);
-    expect(hitChance(s, near, def)).toBeCloseTo(POWER[M]![G]!);
+    const guardType = withAbility('guard');
+    const factor = abilityOf(s, guardType, 'guard')!.factor;
+    const rangedType = plain((type) => ranged(type) && POWER[type]![guardType]! > 0);
+    const meleeType = plain((type) => melee(type) && POWER[type]![guardType]! > 0);
+    const def = newUnit(s, guardType, 1, { x: 10, y: 10 });
+    const far = newUnit(s, rangedType, 0, { x: 10, y: 10 - (UNIT.minalc[rangedType]! + 1) });
+    const near = newUnit(s, meleeType, 0, { x: 9, y: 10 });
+    expect(hitChance(s, far, def)).toBeCloseTo(POWER[rangedType]![guardType]! * factor);
+    expect(hitChance(s, near, def)).toBeCloseTo(POWER[meleeType]![guardType]!);
     s.rules = { ...TEST_RULES, abilities: false };
-    expect(hitChance(s, far, def)).toBeCloseTo(POWER[R]![G]!);
+    expect(hitChance(s, far, def)).toBeCloseTo(POWER[rangedType]![guardType]!);
   });
 });
 
 describe('habilidades: zona de control', () => {
-  const Z = withAbility('zoneOfControl');
+  const zoneType = withAbility('zoneOfControl');
   const TANK = plain(moves(MoveType.VEHICLE));
   const PLANE = plain(moves(MoveType.AIR));
 
   it('quien entra al lado se para: no sigue desde ahi', () => {
     const s = blankState(TEST_RULES);
-    newUnit(s, Z, 1, { x: 10, y: 10 });
-    const u = newUnit(s, TANK, 0, { x: 10, y: 13 });
-    const r = moveRange(s, u);
-    expect(r.steps.at({ x: 10, y: 11 })).toBeGreaterThan(0); // entra en la zona
-    expect(r.steps.at({ x: 11, y: 10 })).toBeGreaterThan(0); // otra casilla de la zona, entrando por fuera
+    newUnit(s, zoneType, 1, { x: 10, y: 10 });
+    const unit = newUnit(s, TANK, 0, { x: 10, y: 13 });
+    const range = moveRange(s, unit);
+    expect(range.steps.at({ x: 10, y: 11 })).toBeGreaterThan(0); // entra en la zona
+    expect(range.steps.at({ x: 11, y: 10 })).toBeGreaterThan(0); // otra casilla de la zona, entrando por fuera
     // (11, 9) esta a 5 pasos, pero todos los caminos cortos pasan por la zona.
-    expect(r.steps.at({ x: 11, y: 9 })).toBe(0);
+    expect(range.steps.at({ x: 11, y: 9 })).toBe(0);
     const through = [
       { x: 10, y: 13 },
       { x: 11, y: 13 },
@@ -103,62 +104,62 @@ describe('habilidades: zona de control', () => {
       { x: 11, y: 10 },
       { x: 11, y: 9 },
     ];
-    expect(validPath(s, u, through, r)).toBe(false);
-    expect(moveUnit(s, u, { x: 10, y: 11 }, r)).not.toBeNull();
+    expect(validPath(s, unit, through, range)).toBe(false);
+    expect(moveUnit(s, unit, { x: 10, y: 11 }, range)).not.toBeNull();
     s.rules = { ...TEST_RULES, abilities: false };
     expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
   });
 
   it('desde dentro de la zona se puede salir el turno siguiente', () => {
     const s = blankState(TEST_RULES);
-    newUnit(s, Z, 1, { x: 10, y: 10 });
-    const u = newUnit(s, TANK, 0, { x: 10, y: 11 });
-    expect(moveRange(s, u).steps.at({ x: 10, y: 14 })).toBeGreaterThan(0);
+    newUnit(s, zoneType, 1, { x: 10, y: 10 });
+    const unit = newUnit(s, TANK, 0, { x: 10, y: 11 });
+    expect(moveRange(s, unit).steps.at({ x: 10, y: 14 })).toBeGreaterThan(0);
   });
 
   it('no para a los movimientos que no estan en stops (aviones)', () => {
     const s = blankState(TEST_RULES);
-    expect(abilityOf(s, Z, 'zoneOfControl')!.stops).not.toContain('air');
-    newUnit(s, Z, 1, { x: 10, y: 10 });
-    const u = newUnit(s, PLANE, 0, { x: 10, y: 13 });
-    expect(moveRange(s, u).steps.at({ x: 11, y: 10 })).toBeGreaterThan(0);
+    expect(abilityOf(s, zoneType, 'zoneOfControl')!.stops).not.toContain('air');
+    newUnit(s, zoneType, 1, { x: 10, y: 10 });
+    const unit = newUnit(s, PLANE, 0, { x: 10, y: 13 });
+    expect(moveRange(s, unit).steps.at({ x: 11, y: 10 })).toBeGreaterThan(0);
   });
 
   it('con niebla solo cuenta si se ve', () => {
     const s = blankState(rulesWith(defaultContent(), { terrainCost: false }));
     s.map[5]![8] = TerrainType.WOODS; // el bosque la esconde salvo desde al lado
-    newUnit(s, Z, 1, { x: 5, y: 8 });
-    const u = newUnit(s, TANK, 0, { x: 5, y: 5 });
+    newUnit(s, zoneType, 1, { x: 5, y: 8 });
+    const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
     // (4, 9) solo se alcanza pasando por su zona: sin verla, el alcance no la delata.
-    expect(moveRange(s, u).steps.at({ x: 4, y: 9 })).toBeGreaterThan(0);
+    expect(moveRange(s, unit).steps.at({ x: 4, y: 9 })).toBeGreaterThan(0);
     newUnit(s, TANK, 0, { x: 6, y: 8 }); // un aliado al lado la descubre
-    expect(moveRange(s, u).steps.at({ x: 4, y: 9 })).toBe(0);
+    expect(moveRange(s, unit).steps.at({ x: 4, y: 9 })).toBe(0);
   });
 });
 
 describe('habilidades: apoyo (aura)', () => {
-  const A = withAbility('aura');
-  const { radius, defense } = UNIT_ABILITIES[A]!.find((ability) => ability.kind === 'aura') as Extract<AbilityDef, { kind: 'aura' }>;
-  const M = plain(melee);
+  const auraType = withAbility('aura');
+  const { radius, defense } = UNIT_ABILITIES[auraType]!.find((ability) => ability.kind === 'aura') as Extract<AbilityDef, { kind: 'aura' }>;
+  const meleeType = plain(melee);
 
   it('protege a las propias cercanas, no a si misma ni a las enemigas', () => {
     const s = blankState(TEST_RULES);
-    const sup = newUnit(s, A, 0, { x: 10, y: 10 });
-    const ally = newUnit(s, M, 0, { x: 10 + radius, y: 10 });
-    const far = newUnit(s, M, 0, { x: 10 + radius + 1, y: 10 });
-    const foe = newUnit(s, M, 1, { x: 10, y: 10 - radius });
+    const sup = newUnit(s, auraType, 0, { x: 10, y: 10 });
+    const ally = newUnit(s, meleeType, 0, { x: 10 + radius, y: 10 });
+    const far = newUnit(s, meleeType, 0, { x: 10 + radius + 1, y: 10 });
+    const foe = newUnit(s, meleeType, 1, { x: 10, y: 10 - radius });
     expect(auraFactor(s, ally)).toBe(defense);
     expect(auraFactor(s, far)).toBe(1);
     expect(auraFactor(s, sup)).toBe(1);
     expect(auraFactor(s, foe)).toBe(1);
-    expect(hitChance(s, foe, ally)).toBeCloseTo(POWER[M]![M]! * defense);
+    expect(hitChance(s, foe, ally)).toBeCloseTo(POWER[meleeType]![meleeType]! * defense);
   });
 
   it('no se suma con otra aura', () => {
     const s = blankState(TEST_RULES);
-    newUnit(s, A, 0, { x: 10, y: 10 });
-    newUnit(s, A, 0, { x: 12, y: 10 });
-    const ally = newUnit(s, M, 0, { x: 11, y: 10 });
+    newUnit(s, auraType, 0, { x: 10, y: 10 });
+    newUnit(s, auraType, 0, { x: 12, y: 10 });
+    const ally = newUnit(s, meleeType, 0, { x: 11, y: 10 });
     expect(auraFactor(s, ally)).toBe(defense);
   });
 });
@@ -166,17 +167,19 @@ describe('habilidades: apoyo (aura)', () => {
 describe('habilidades: perforante (piercing)', () => {
   it('ignora la proteccion del bosque', () => {
     const s = blankState(TEST_RULES);
-    const P = withAbility('piercing');
-    const ignore = abilityOf(s, P, 'piercing')!.ignoreCover;
-    const target = plain((type) => POWER[P]![type]! > 0 && walkableFor(defaultContent().tables, UNIT.movtype[type]!, TerrainType.WOODS));
+    const piercingType = withAbility('piercing');
+    const ignore = abilityOf(s, piercingType, 'piercing')!.ignoreCover;
+    const target = plain(
+      (type) => POWER[piercingType]![type]! > 0 && walkableFor(defaultContent().tables, UNIT.movtype[type]!, TerrainType.WOODS),
+    );
     const other = plain((type) => melee(type) && POWER[type]![target]! > 0);
     s.map[10]![10] = TerrainType.WOODS;
     const def = newUnit(s, target, 1, { x: 10, y: 10 });
-    const atk = newUnit(s, P, 0, { x: 10, y: 10 - (UNIT.minalc[P]! + 1) });
+    const atk = newUnit(s, piercingType, 0, { x: 10, y: 10 - (UNIT.minalc[piercingType]! + 1) });
     const cmp = newUnit(s, other, 0, { x: 9, y: 10 });
     const cover = tileProtection(s, def);
     expect(cover).toBeLessThan(1);
-    expect(hitChance(s, atk, def)).toBeCloseTo(POWER[P]![target]! * (cover + (1 - cover) * ignore));
+    expect(hitChance(s, atk, def)).toBeCloseTo(POWER[piercingType]![target]! * (cover + (1 - cover) * ignore));
     expect(hitChance(s, cmp, def)).toBeCloseTo(POWER[other]![target]! * cover);
   });
 });
@@ -184,13 +187,13 @@ describe('habilidades: perforante (piercing)', () => {
 describe('habilidades: interfaz', () => {
   it('nombre y explicacion con sus numeros, en los dos idiomas', () => {
     const s = blankState(TEST_RULES);
-    const G = withAbility('guard');
-    const pct = Math.round((1 - abilityOf(s, G, 'guard')!.factor) * 100);
-    expect(abilitiesVM(s, G)).toEqual([{ name: 'Escudo', desc: `Los ataques a distancia le aciertan un ${pct} % menos.` }]);
+    const guardType = withAbility('guard');
+    const pct = Math.round((1 - abilityOf(s, guardType, 'guard')!.factor) * 100);
+    expect(abilitiesVM(s, guardType)).toEqual([{ name: 'Escudo', desc: `Los ataques a distancia le aciertan un ${pct} % menos.` }]);
     settings.lang = 'en';
     expect(abilitiesVM(s, withAbility('zoneOfControl'))[0]!.desc).toContain('foot, vehicles');
     s.rules = { ...TEST_RULES, abilities: false };
-    expect(abilitiesVM(s, G)).toEqual([]);
+    expect(abilitiesVM(s, guardType)).toEqual([]);
   });
 });
 

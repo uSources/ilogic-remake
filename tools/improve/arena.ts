@@ -26,10 +26,10 @@ const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
 type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
 
-function strength(s: GameState, t: Team): number {
+function strength(s: GameState, team: Team): number {
   const { UNIT } = tablesOf(s);
-  const army = s.units.filter((unit) => unit.team === t).reduce((amount, unit) => amount + (UNIT.cost[unit.type]! * unit.life) / 100, 0);
-  return army + s.buildings.filter((building) => building.owner === t).length * 1500 + s.funds[t] * 0.5;
+  const army = s.units.filter((unit) => unit.team === team).reduce((amount, unit) => amount + (UNIT.cost[unit.type]! * unit.life) / 100, 0);
+  return army + s.buildings.filter((building) => building.owner === team).length * 1500 + s.funds[team] * 0.5;
 }
 
 /** Una partida; devuelve el bando ganador (o null si empate). */
@@ -37,19 +37,19 @@ export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays
   const rng = seededRng(seed);
   const s = createGame(rng, { size });
   while (outcome(s) === 'playing' && s.day <= maxDays) {
-    for (const t of [0, 1] as Team[]) {
-      for (const _ of brains[t](s, rng, t)) if (outcome(s) !== 'playing') break;
+    for (const team of [0, 1] as Team[]) {
+      for (const _ of brains[team](s, rng, team)) if (outcome(s) !== 'playing') break;
       if (outcome(s) !== 'playing') break;
     }
     if (outcome(s) !== 'playing') break;
     endRound(s);
   }
-  const o = outcome(s);
-  if (o === 'won') return 0;
-  if (o === 'lost') return 1;
-  const a = strength(s, 0),
-    b = strength(s, 1);
-  return Math.max(a, b) >= 1.15 * Math.min(a, b) ? (a > b ? 0 : 1) : null;
+  const result = outcome(s);
+  if (result === 'won') return 0;
+  if (result === 'lost') return 1;
+  const playerStrength = strength(s, 0),
+    aiStrength = strength(s, 1);
+  return Math.max(playerStrength, aiStrength) >= 1.15 * Math.min(playerStrength, aiStrength) ? (playerStrength > aiStrength ? 0 : 1) : null;
 }
 
 export interface ArenaResult {
@@ -70,14 +70,14 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
   for (let i = 0; i < games; i++) {
     const seed = 1 + Math.floor(i / 2);
     const swapped = i % 2 === 1; // mismo mapa, bandos cambiados
-    const w = duel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
-    if (w === null) draws++;
-    else if ((w === 0) !== swapped) wins++;
+    const winner = duel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
+    if (winner === null) draws++;
+    else if ((winner === 0) !== swapped) wins++;
     else losses++;
   }
-  const n = wins + losses;
-  const rate = n ? wins / n : 0.5;
-  const se = n ? 1.96 * Math.sqrt((rate * (1 - rate)) / n) : 0.5;
+  const played = wins + losses;
+  const rate = played ? wins / played : 0.5;
+  const se = played ? 1.96 * Math.sqrt((rate * (1 - rate)) / played) : 0.5;
   return { games, wins, losses, draws, rate, low: Math.max(0, rate - se), high: Math.min(1, rate + se) };
 }
 
@@ -153,16 +153,16 @@ async function main(): Promise<void> {
     size = opt('size', 20),
     days = opt('days', 40);
   const t0 = Date.now();
-  const r = arena(aiTurn, base.aiTurn, games, size, days);
+  const result = arena(aiTurn, base.aiTurn, games, size, days);
   const pct = (x: number) => `${Math.round(x * 100)} %`;
   console.log(
-    `IA actual contra la de referencia: ${r.wins} ganadas, ${r.losses} perdidas, ${r.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
+    `IA actual contra la de referencia: ${result.wins} ganadas, ${result.losses} perdidas, ${result.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
   );
-  console.log(`Gana el ${pct(r.rate)} de las decididas (95 %: ${pct(r.low)}-${pct(r.high)})`);
+  console.log(`Gana el ${pct(result.rate)} de las decididas (95 %: ${pct(result.low)}-${pct(result.high)})`);
   const verdict =
-    r.low > 0.5
+    result.low > 0.5
       ? 'MEJOR: la IA actual gana claramente'
-      : r.high < 0.5
+      : result.high < 0.5
         ? 'PEOR: la IA actual pierde claramente'
         : 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)';
   console.log(verdict);

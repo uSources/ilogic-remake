@@ -37,18 +37,18 @@ const EPSILON = 1e-9;
 /** Distribucion del daño: dist[k] = P(daño = k), sin tope. */
 export function damageDistribution(s: GameState, life: number, chance: number): number[] {
   const shots = Math.max(0, life);
-  const p = Math.min(1, Math.max(0, chance));
-  return s.rules.damageSpread === null ? shotsDistribution(shots, p) : spreadDistribution(shots * p, s.rules.damageSpread);
+  const clamped = Math.min(1, Math.max(0, chance));
+  return s.rules.damageSpread === null ? shotsDistribution(shots, clamped) : spreadDistribution(shots * clamped, s.rules.damageSpread);
 }
 
 /** Original: `shots` disparos que aciertan cada uno con probabilidad `p` (binomial). */
-function shotsDistribution(shots: number, p: number): number[] {
+function shotsDistribution(shots: number, chance: number): number[] {
   let dist = [1];
   for (let shot = 0; shot < shots; shot++) {
     const next = Array<number>(dist.length + 1).fill(0);
     for (let hits = 0; hits < dist.length; hits++) {
-      next[hits]! += dist[hits]! * (1 - p);
-      next[hits + 1]! += dist[hits]! * p;
+      next[hits]! += dist[hits]! * (1 - chance);
+      next[hits + 1]! += dist[hits]! * chance;
     }
     dist = next;
   }
@@ -79,11 +79,11 @@ function summarize(dist: number[], cap: number) {
   let accumulated = 0;
   let low = -1;
   let high = -1;
-  for (let k = 0; k < dist.length; k++) {
-    const damage = Math.min(k, cap);
-    expected += damage * dist[k]!;
-    if (k >= cap) killChance += dist[k]!;
-    accumulated += dist[k]!;
+  for (let amount = 0; amount < dist.length; amount++) {
+    const damage = Math.min(amount, cap);
+    expected += damage * dist[amount]!;
+    if (amount >= cap) killChance += dist[amount]!;
+    accumulated += dist[amount]!;
     if (low < 0 && accumulated >= LOW_PERCENTILE - EPSILON) low = damage;
     if (high < 0 && accumulated >= HIGH_PERCENTILE - EPSILON) high = damage;
   }

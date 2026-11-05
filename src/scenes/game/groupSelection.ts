@@ -26,7 +26,7 @@ export interface SelectionHost {
   /** La unidad elegida para moverla (o en su menu). */
   readonly sel: Unit | null;
   toMap(): void;
-  selectUnit(u: Unit): void;
+  selectUnit(unit: Unit): void;
   /** Deja de enseñar el alcance de una unidad señalada. */
   stopInspect(): void;
   refresh(): void;
@@ -55,7 +55,7 @@ export class GroupSelection {
   /** La señalada con Tab en el panel de lo elegido. */
   private pickedFocus: number | null = null;
 
-  constructor(private readonly h: SelectionHost) {}
+  constructor(private readonly host: SelectionHost) {}
 
   /** Partida nueva. */
   reset(): void {
@@ -70,7 +70,7 @@ export class GroupSelection {
   /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */
   selection(): Selection {
     if (this.group.size) return this.group;
-    const { sel, phase } = this.h;
+    const { sel, phase } = this.host;
     return sel && (phase === 'move' || phase === 'unitMenu') ? new Set([sel.uid]) : EMPTY;
   }
 
@@ -84,7 +84,7 @@ export class GroupSelection {
   }
 
   private existing(uids: Iterable<number>): Unit[] {
-    return [...uids].map((uid) => unitById(this.h.state, uid)).filter((unit): unit is Unit => !!unit);
+    return [...uids].map((uid) => unitById(this.host.state, uid)).filter((unit): unit is Unit => !!unit);
   }
 
   /**
@@ -92,42 +92,42 @@ export class GroupSelection {
    * normal); varias, o una ya usada, forman el grupo (aro a los pies; clic derecho las manda).
    */
   apply(next: Selection): void {
-    const h = this.h;
+    const host = this.host;
     const units = this.existing(next).filter((unit) => this.selectable(unit));
-    if (h.phase === 'move' || h.phase === 'groupMenu') h.toMap();
-    if (h.phase !== 'map') return h.refresh();
-    h.stopInspect();
+    if (host.phase === 'move' || host.phase === 'groupMenu') host.toMap();
+    if (host.phase !== 'map') return host.refresh();
+    host.stopInspect();
     const onlyOne = units.length === 1 ? units[0]! : null;
     if (onlyOne?.active) {
       this.group.clear();
       this.multi = false;
-      return h.selectUnit(onlyOne);
+      return host.selectUnit(onlyOne);
     }
     this.group = new Set(units.map((unit) => unit.uid));
-    h.refresh();
+    host.refresh();
   }
 
   /** Las elegibles del mismo tipo que se ven en pantalla (doble clic o Ctrl + clic). */
   sameTypeOnScreen(like: Unit): Unit[] {
-    const screen = this.h.scene.scale;
-    const area = this.h.view.tilesInBox({ x0: 0, y0: 0, x1: screen.width, y1: screen.height });
+    const screen = this.host.scene.scale;
+    const area = this.host.view.tilesInBox({ x0: 0, y0: 0, x1: screen.width, y1: screen.height });
     const isOnScreen = (unit: Unit) => unit.x >= area.x0 && unit.x <= area.x1 && unit.y >= area.y0 && unit.y <= area.y1;
-    return this.h.state.units.filter((unit) => unit.type === like.type && this.selectable(unit) && isOnScreen(unit));
+    return this.host.state.units.filter((unit) => unit.type === like.type && this.selectable(unit) && isOnScreen(unit));
   }
 
   /** En estas fases se puede elegir una escuadra o usar las teclas de grupo. */
   private canPickGroups(): boolean {
-    const phase = this.h.phase;
+    const phase = this.host.phase;
     return phase === 'map' || phase === 'move' || phase === 'groupMenu';
   }
 
   /** [CAMBIO] Elegir una escuadra (su boton o su tecla). Otra vez enseguida: la camara va alli. */
   pickSquad(id: number): void {
-    const h = this.h;
+    const host = this.host;
     if (!this.canPickGroups()) return;
-    const units = squadUnits(h.state, id).filter((unit) => this.selectable(unit));
+    const units = squadUnits(host.state, id).filter((unit) => this.selectable(unit));
     if (!units.length) return;
-    const now = h.scene.time.now;
+    const now = host.scene.time.now;
     const isAgain = this.lastPick?.id === id && now - this.lastPick.at <= SQUAD_AGAIN_MS;
     this.lastPick = { id, at: now };
     const uids = new Set(units.map((unit) => unit.uid));
@@ -137,30 +137,30 @@ export class GroupSelection {
   }
 
   private cameraTo(unit: Unit): void {
-    this.h.view.cursor = posOf(unit);
-    this.h.view.centerOn(unit);
-    this.h.cursorMoved();
+    this.host.view.cursor = posOf(unit);
+    this.host.view.centerOn(unit);
+    this.host.cursorMoved();
   }
 
-  private moveCursorTo(p: Pos): void {
-    this.h.view.cursor = posOf(p);
-    this.h.view.ensureVisible(p, FOLLOW_MARGIN);
+  private moveCursorTo(pos: Pos): void {
+    this.host.view.cursor = posOf(pos);
+    this.host.view.ensureVisible(pos, FOLLOW_MARGIN);
   }
 
   /** [CAMBIO] Tecla de grupo n: elegir (n), hacer el grupo con lo elegido (Ctrl+n) o añadirlo (Mayusculas+n). */
-  groupKey(n: number, mode: GroupMode): void {
-    const h = this.h;
+  groupKey(group: number, mode: GroupMode): void {
+    const host = this.host;
     if (!this.canPickGroups()) return;
     if (mode === 'select') {
-      const squad = squadByKey(h.state, n);
+      const squad = squadByKey(host.state, group);
       if (squad) this.pickSquad(squad.id);
       return;
     }
     const units = this.units();
     if (!units.length) return showToast(t('groupNone'));
-    const squad = mode === 'set' ? setGroup(h.state, units, n) : addToGroup(h.state, units, n);
-    if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${n} · ${squad.name}`);
-    h.refresh();
+    const squad = mode === 'set' ? setGroup(host.state, units, group) : addToGroup(host.state, units, group);
+    if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${group} · ${squad.name}`);
+    host.refresh();
   }
 
   /** [CAMBIO] Las elegidas en el orden del panel: por tipo y, dentro, como estan en la partida. */
@@ -178,14 +178,14 @@ export class GroupSelection {
     const next = list[(focusIndex + 1) % list.length]!;
     this.pickedFocus = next.uid;
     this.moveCursorTo(next);
-    this.h.cursorMoved();
+    this.host.cursorMoved();
   }
 
   /** [CAMBIO] Retrato del panel: solo esa unidad, quitarla (Mayusculas) o solo las de su tipo (Ctrl). */
   pickInSelection(uid: number, shift: boolean, ctrl: boolean): void {
-    const h = this.h;
-    if (h.phase !== 'map' && h.phase !== 'groupMenu') return;
-    const unit = unitById(h.state, uid);
+    const host = this.host;
+    if (host.phase !== 'map' && host.phase !== 'groupMenu') return;
+    const unit = unitById(host.state, uid);
     if (!unit || !this.group.has(uid)) return;
     if (shift) return this.apply(new Set([...this.group].filter((other) => other !== uid)));
     if (ctrl)

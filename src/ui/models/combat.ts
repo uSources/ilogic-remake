@@ -16,26 +16,26 @@ export function forecastVM(
   target: Unit,
   anchor: Anchor,
 ): ForecastVM {
-  const f = combatForecast(s, { ...attacker, x: from.x, y: from.y }, target);
+  const forecast = combatForecast(s, { ...attacker, x: from.x, y: from.y }, target);
   return {
     attackerIcon: unitKey(textures, s, { ...attacker, active: true }),
     defenderIcon: unitKey(textures, s, target),
-    low: f.low,
-    high: f.high,
-    expected: f.expected,
+    low: forecast.low,
+    high: forecast.high,
+    expected: forecast.expected,
     lifeBefore: target.life,
-    lifeAfter: f.lifeAfter,
-    killChance: f.killChance,
+    lifeAfter: forecast.lifeAfter,
+    killChance: forecast.killChance,
     anchor,
     flank: flanked(s, target) ? s.rules.flankBonus : 0,
     bounty: bountyFor(s, target.type),
-    counter: f.counter
+    counter: forecast.counter
       ? {
-          low: f.counter.low,
-          high: f.counter.high,
+          low: forecast.counter.low,
+          high: forecast.counter.high,
           lifeBefore: attacker.life,
-          lifeAfter: f.counter.lifeAfter,
-          killChance: f.counter.killChance,
+          lifeAfter: forecast.counter.lifeAfter,
+          killChance: forecast.counter.killChance,
         }
       : null,
   };
@@ -55,33 +55,39 @@ export function combatVM(
   seen: { attacker: boolean; defender: boolean },
   id = 0,
 ): CombatVM | null {
-  const c: CombatInfo | undefined = ev.combat;
-  if (!c) return null;
+  const combat: CombatInfo | undefined = ev.combat;
+  if (!combat) return null;
   const counter = ev.counter ?? 0;
-  const defTeam = (1 - c.attackerTeam) as 0 | 1;
+  const defTeam = (1 - combat.attackerTeam) as 0 | 1;
   const hitDone = stage !== 'start';
   const counterDone = stage === 'counter';
   const side = (role: CombatSideVM['role']): CombatSideVM => {
     const atk = role === 'attacker';
     const known = atk ? seen.attacker : seen.defender;
-    const before = atk ? c.attackerLife : c.defenderLife;
+    const before = atk ? combat.attackerLife : combat.defenderLife;
     const hurt = atk ? (counterDone ? counter : null) : hitDone ? ev.damage : null;
     const life = Math.max(0, before - (hurt ?? 0));
     return {
       icon: known ? (atk ? icons.attacker : icons.defender) : null,
-      name: known ? unitLabel(s.content, atk ? c.attackerType : c.defenderType) : '???',
-      team: atk ? c.attackerTeam : defTeam,
+      name: known ? unitLabel(s.content, atk ? combat.attackerType : combat.defenderType) : '???',
+      team: atk ? combat.attackerTeam : defTeam,
       role,
-      rank: known ? (atk ? c.attackerRank : c.defenderRank) : 0,
+      rank: known ? (atk ? combat.attackerRank : combat.defenderRank) : 0,
       life,
       lifeBefore: before,
-      hit: known ? (atk ? c.hit : c.counterHit) : null,
+      hit: known ? (atk ? combat.hit : combat.counterHit) : null,
       hurt,
       ko: hurt !== null && life <= 0,
     };
   };
-  const a = side('attacker');
-  const d = side('defender');
-  const playerAttacks = c.attackerTeam === 0;
-  return { id, stage, left: playerAttacks ? a : d, right: playerAttacks ? d : a, counter: c.counterHit !== null };
+  const attacker = side('attacker');
+  const defender = side('defender');
+  const playerAttacks = combat.attackerTeam === 0;
+  return {
+    id,
+    stage,
+    left: playerAttacks ? attacker : defender,
+    right: playerAttacks ? defender : attacker,
+    counter: combat.counterHit !== null,
+  };
 }

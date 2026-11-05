@@ -42,7 +42,7 @@ export class MarkLayer implements MapLayer, AnimatedLayer {
   set(opts: ViewOptions): void {
     this.goal = opts.goal ?? null;
     this.vip = opts.vip ?? null;
-    this.rings = [...opts.highlights].filter(([, k]) => k === 'group').map(([k]) => parseTileKey(k));
+    this.rings = [...opts.highlights].filter(([, key]) => key === 'group').map(([key]) => parseTileKey(key));
     this.draw(0);
   }
 
@@ -54,36 +54,36 @@ export class MarkLayer implements MapLayer, AnimatedLayer {
   }
 
   private draw(phase: number): void {
-    const g = this.object;
-    g.clear();
+    const graphics = this.object;
+    graphics.clear();
     // [CAMBIO] Elegidas: aro a los pies (la mitad de delante, por encima del dibujo de la unidad).
-    for (const [x, y] of this.rings) drawRing(g, x * TILE + TILE / 2, y * TILE + TILE - RING_LIFT);
+    for (const [x, y] of this.rings) drawRing(graphics, x * TILE + TILE / 2, y * TILE + TILE - RING_LIFT);
     if (this.goal) {
-      const d = phase ? MARK_JUMP : 0;
-      const x = this.goal.x * TILE - d,
-        y = this.goal.y * TILE - d,
-        w = TILE + 2 * d;
-      const far = w - GOAL_BACK + 1;
-      fillRects(g, PAL.ink, 0.8, [
+      const jump = phase ? MARK_JUMP : 0;
+      const x = this.goal.x * TILE - jump,
+        y = this.goal.y * TILE - jump,
+        size = TILE + 2 * jump;
+      const far = size - GOAL_BACK + 1;
+      fillRects(graphics, PAL.ink, 0.8, [
         [x - 1, y - 1, GOAL_BACK, GOAL_BACK],
         [x + far, y - 1, GOAL_BACK, GOAL_BACK],
         [x - 1, y + far, GOAL_BACK, GOAL_BACK],
         [x + far, y + far, GOAL_BACK, GOAL_BACK],
       ]);
       // Esquinas en L del cursor.
-      g.fillStyle(PAL.gold, 1);
-      cornerBrackets(g, x, y, w, w, GOAL_CORNER, GOAL_THICK);
+      graphics.fillStyle(PAL.gold, 1);
+      cornerBrackets(graphics, x, y, size, size, GOAL_CORNER, GOAL_THICK);
     }
     if (this.vip) {
       // Flecha hacia abajo de tres escalones, con borde oscuro.
       const cx = this.vip.x * TILE + TILE / 2,
         top = this.vip.y * TILE - VIP_LIFT - (phase ? MARK_JUMP : 0);
-      fillRects(g, PAL.ink, 1, [
+      fillRects(graphics, PAL.ink, 1, [
         [cx - 6, top - 1, 12, 5],
         [cx - 4, top + 4, 8, 3],
         [cx - 2, top + 7, 4, 3],
       ]);
-      fillRects(g, PAL.gold, 1, [
+      fillRects(graphics, PAL.gold, 1, [
         [cx - 5, top, 10, 3],
         [cx - 3, top + 3, 6, 2],
         [cx - 1, top + 5, 2, 3],
@@ -93,23 +93,23 @@ export class MarkLayer implements MapLayer, AnimatedLayer {
 }
 
 /** Aro de seleccion (media elipse de pixeles, la de delante) centrado en (cx, cy). */
-function drawRing(g: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
+function drawRing(graphics: Phaser.GameObjects.Graphics, cx: number, cy: number): void {
   const rx = Math.round(TILE * RING_RX),
     ry = Math.round(TILE * RING_RY);
   const dots = new Set<string>();
   // Solo la mitad de delante: la de detras quedaria tapada por la unidad.
   for (let i = 0; i <= RING_DOTS; i++) {
-    const a = (i / RING_DOTS) * Math.PI;
-    dots.add(`${Math.round(cx + Math.cos(a) * rx)},${Math.round(cy + Math.sin(a) * ry)}`);
+    const angle = (i / RING_DOTS) * Math.PI;
+    dots.add(`${Math.round(cx + Math.cos(angle) * rx)},${Math.round(cy + Math.sin(angle) * ry)}`);
   }
-  for (const [color, d] of [
+  for (const [color, offset] of [
     [PAL.ink, 1],
     [PAL.gold, 0],
   ] as const) {
-    g.fillStyle(color, 0.9);
-    for (const k of dots) {
-      const [x, y] = parseTileKey(k);
-      g.fillRect(x - 1, y - 1 + d, 2, 2);
+    graphics.fillStyle(color, 0.9);
+    for (const key of dots) {
+      const [x, y] = parseTileKey(key);
+      graphics.fillRect(x - 1, y - 1 + offset, 2, 2);
     }
   }
 }

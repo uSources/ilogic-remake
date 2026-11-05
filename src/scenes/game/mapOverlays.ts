@@ -57,7 +57,7 @@ export function intentLines(
 }
 
 /** [CAMBIO] Puntos de control: disputado solo si se ven unidades de los dos bandos dentro. */
-export function controlPointMarks(s: GameState, visible: (p: Pos) => boolean): ViewOptions['controlPoints'] {
+export function controlPointMarks(s: GameState, visible: (pos: Pos) => boolean): ViewOptions['controlPoints'] {
   return s.controlPoints?.map((point) => {
     const inside = s.units.filter((unit) => onMap(unit) && inControlZone(s, point, unit) && (isPlayer(unit) || visible(unit)));
     const contested = inside.some((unit) => unit.team === 0) && inside.some((unit) => unit.team === 1);

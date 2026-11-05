@@ -6,8 +6,8 @@
 import type { Pos, Rng } from './model';
 import type { GridBounds } from './util/grid';
 
-export function manhattan(a: Pos, b: Pos): number {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+export function manhattan(first: Pos, second: Pos): number {
+  return Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
 }
 
 /** La casilla de algo que esta en una (unidad, edificio, punto del camino): un Pos nuevo, sin sus otros campos. */
@@ -15,8 +15,8 @@ export function posOf(thing: Pos): Pos {
   return { x: thing.x, y: thing.y };
 }
 
-export function samePos(a: Pos, b: Pos): boolean {
-  return a.x === b.x && a.y === b.y;
+export function samePos(first: Pos, second: Pos): boolean {
+  return first.x === second.x && first.y === second.y;
 }
 
 /** Clave de texto de una casilla, para conjuntos y mapas (`"3,7"`). */
@@ -92,12 +92,12 @@ export function squareArea(board: GridBounds, center: Pos, radius: number): Pos[
 
 /** PRNG con semilla (mulberry32) para tests y partidas reproducibles. */
 export function seededRng(seed: number): Rng {
-  let a = seed >>> 0;
+  let seedState = seed >>> 0;
   return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    seedState = (seedState + 0x6d2b79f5) >>> 0;
+    let mixed = seedState;
+    mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
   };
 }

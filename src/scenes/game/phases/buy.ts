@@ -14,13 +14,13 @@ import { posOf } from '../../../core/geom';
 const CANCEL_ROW = 0;
 
 /** Abrir la compra en una fabrica, señalando la primera unidad que se puede pagar. */
-export function openBuy(h: PhaseHost, building: Building): void {
-  h.buyAt = building;
-  h.buyOptions = buyOptions(h.state, building);
-  const firstAffordable = h.buyOptions.findIndex((option) => option.affordable);
-  h.menuSel = firstAffordable >= 0 ? firstAffordable + 1 : CANCEL_ROW;
-  h.phase = 'buy';
-  h.refresh();
+export function openBuy(host: PhaseHost, building: Building): void {
+  host.buyAt = building;
+  host.buyOptions = buyOptions(host.state, building);
+  const firstAffordable = host.buyOptions.findIndex((option) => option.affordable);
+  host.menuSel = firstAffordable >= 0 ? firstAffordable + 1 : CANCEL_ROW;
+  host.phase = 'buy';
+  host.refresh();
 }
 
 export const buyPhase: PhaseHandler = {

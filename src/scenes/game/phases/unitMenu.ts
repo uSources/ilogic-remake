@@ -33,7 +33,7 @@ const BACK_ROW = 0;
 const FIRST_PASSENGER_ROW = 1;
 
 /** Lo que hace cada opcion del menu de la unidad (una por cada accion de unitActions). */
-const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (h: PhaseHost, unit: Unit) => void } = {
+const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, unit: Unit) => void } = {
   attack: pickAttackTarget,
   capture: captureHere,
   unload: (host) => {
@@ -63,41 +63,41 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (h: PhaseHost, unit: 
 };
 
 /** La orden pide despues la casilla; lo ya movido este turno se mantiene. */
-function startOrder(h: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
-  h.orders.start(kind, [unit], true);
+function startOrder(host: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
+  host.orders.start(kind, [unit], true);
 }
 
-function pickAttackTarget(h: PhaseHost, unit: Unit): void {
-  const targets = attackTargets(h.state, unit);
-  h.moves.session!.attackTargets = new Map(targets.map((target) => [posKey(target), target.uid]));
-  h.phase = 'attack';
+function pickAttackTarget(host: PhaseHost, unit: Unit): void {
+  const targets = attackTargets(host.state, unit);
+  host.moves.session!.attackTargets = new Map(targets.map((target) => [posKey(target), target.uid]));
+  host.phase = 'attack';
   const first = targets[0];
   if (first) {
-    h.view.cursor = posOf(first);
-    h.view.ensureVisible(first, 3);
+    host.view.cursor = posOf(first);
+    host.view.ensureVisible(first, 3);
   }
-  h.refresh();
+  host.refresh();
 }
 
 /** Capturar el edificio en el que esta. */
-function captureHere(h: PhaseHost, unit: Unit): void {
-  const building = buildingAt(h.state, unit);
-  const result = capture(h.state, unit);
+function captureHere(host: PhaseHost, unit: Unit): void {
+  const building = buildingAt(host.state, unit);
+  const result = capture(host.state, unit);
   // [CAMBIO] Si a mitad de captura, que la acabe aunque tuviera otra orden (destacada).
-  keepCapturing(h.state, unit);
-  if (building && result) void h.play([captureEvent(unit, building, result)]).then(() => h.afterAction());
-  else h.afterAction();
+  keepCapturing(host.state, unit);
+  if (building && result) void host.play([captureEvent(unit, building, result)]).then(() => host.afterAction());
+  else host.afterAction();
 }
 
 /** [CAMBIO] pedir confirmacion (en el original se borraba al instante). */
-function deleteUnit(h: PhaseHost, unit: Unit): void {
-  if (!h.deleteArmed) {
-    h.deleteArmed = true;
+function deleteUnit(host: PhaseHost, unit: Unit): void {
+  if (!host.deleteArmed) {
+    host.deleteArmed = true;
     return showToast(t('confirmDelete'));
   }
-  h.moves.clearUndo();
-  removeUnit(h.state, unit.uid);
-  h.afterAction();
+  host.moves.clearUndo();
+  removeUnit(host.state, unit.uid);
+  host.afterAction();
 }
 
 export const unitMenuPhase: PhaseHandler = {
@@ -125,11 +125,11 @@ export const unitMenuPhase: PhaseHandler = {
 };
 
 /** Al soltarla encima de un edificio que se puede tomar: como elegir «Capturar» en su menu. */
-export function captureNow(h: PhaseHost): void {
-  h.unitOptions = ['capture'];
-  h.menuSel = 0;
-  h.phase = 'unitMenu';
-  unitMenuPhase.accept(h);
+export function captureNow(host: PhaseHost): void {
+  host.unitOptions = ['capture'];
+  host.menuSel = 0;
+  host.phase = 'unitMenu';
+  unitMenuPhase.accept(host);
 }
 
 function unitMenuModel(input: MenuInput): MenuModel {

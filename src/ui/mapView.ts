@@ -110,13 +110,13 @@ export class MapView {
   }
 
   /** Posicion en pantalla (pixeles del lienzo) del centro de una casilla. */
-  screenOf(p: Pos): { x: number; y: number } {
-    return this.camera.screenOf(p);
+  screenOf(pos: Pos): { x: number; y: number } {
+    return this.camera.screenOf(pos);
   }
 
   /** Rectangulo de una casilla en pixeles CSS de la ventana (para colocar la interfaz HTML). */
-  tileRectCss(p: Pos): Anchor {
-    return this.camera.tileRectCss(p);
+  tileRectCss(pos: Pos): Anchor {
+    return this.camera.tileRectCss(pos);
   }
 
   /** Casilla bajo un punto de la pantalla (null si cae fuera del mapa). */
@@ -124,17 +124,17 @@ export class MapView {
     return this.camera.tileAtScreen(sx, sy);
   }
 
-  centerOn(p: Pos, instant = false): void {
-    this.camera.centerOn(p, instant);
+  centerOn(pos: Pos, instant = false): void {
+    this.camera.centerOn(pos, instant);
   }
 
   /** Desplaza la camara lo justo para que la casilla quede dentro con un margen (en casillas). */
-  ensureVisible(p: Pos, margin = 2, instant = false): void {
-    this.camera.ensureVisible(p, margin, instant);
+  ensureVisible(pos: Pos, margin = 2, instant = false): void {
+    this.camera.ensureVisible(pos, margin, instant);
   }
 
-  isOnScreen(p: Pos, margin = 1): boolean {
-    return this.camera.isOnScreen(p, margin);
+  isOnScreen(pos: Pos, margin = 1): boolean {
+    return this.camera.isOnScreen(pos, margin);
   }
 
   scrollBy(dx: number, dy: number): void {
@@ -147,8 +147,8 @@ export class MapView {
   }
 
   /** La ventana ha cambiado de tamaño: mantener el mismo punto en el centro. */
-  resize(w: number, h: number): void {
-    this.camera.resize(w, h);
+  resize(width: number, height: number): void {
+    this.camera.resize(width, height);
   }
 
   /** Zoom entero por pasos alrededor de un punto de la pantalla. */
@@ -157,8 +157,8 @@ export class MapView {
   }
 
   /** Casillas dentro de un recuadro de pantalla. */
-  tilesInBox(r: ScreenBox): ScreenBox {
-    return this.camera.tilesInBox(r);
+  tilesInBox(box: ScreenBox): ScreenBox {
+    return this.camera.tilesInBox(box);
   }
 
   // --- Dibujado --------------------------------------------------------------
@@ -193,8 +193,8 @@ export class MapView {
   }
 
   /** Recuadro de seleccion (en pixeles de pantalla del lienzo), o null para quitarlo. */
-  setBox(r: ScreenBox | null): void {
-    this.box.set(r);
+  setBox(box: ScreenBox | null): void {
+    this.box.set(box);
   }
 
   placeCursor(visible = true): void {
@@ -216,8 +216,8 @@ export class MapView {
   }
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
-  unitKeyAt(p: Pos): string | null {
-    return this.units.keyAt(p);
+  unitKeyAt(pos: Pos): string | null {
+    return this.units.keyAt(pos);
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
@@ -235,16 +235,16 @@ export class MapView {
   }
 
   /** Imagen de unidad para animar, colocada en una casilla (x = centro de la casilla). */
-  ghost(key: string, p: Pos): Phaser.GameObjects.Image {
+  ghost(key: string, pos: Pos): Phaser.GameObjects.Image {
     // Origen en el centro de abajo: asi se puede voltear (mirar a la izquierda) sin desplazarse.
-    const img = tileImage(this.scene, key, p);
+    const img = tileImage(this.scene, key, pos);
     this.fx.add(img);
     return img;
   }
 
   /** Marca de quemado bajo las unidades: dura hasta el turno siguiente (ver pruneScorch). */
-  scorch(p: Pos, day: number): void {
-    this.decals.scorch(p, day);
+  scorch(pos: Pos, day: number): void {
+    this.decals.scorch(pos, day);
   }
 
   /** Quita las marcas de hace mas de un dia. */

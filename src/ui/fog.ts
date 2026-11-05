@@ -11,26 +11,26 @@ import { neighbourKey } from './terrainArt';
  * precompiladas en blob/fog.png (tools/art/build_sheets.py); aqui solo se colocan segun lo que se ve.
  */
 export function composeFog(vis: Grid<boolean>, textures: Phaser.Textures.TextureManager, cv?: HTMLCanvasElement): HTMLCanvasElement {
-  const W = vis.width,
-    H = vis.height;
+  const width = vis.width,
+    height = vis.height;
   if (!cv) cv = document.createElement('canvas');
-  if (cv.width !== W * TILE || cv.height !== H * TILE) {
-    cv.width = W * TILE;
-    cv.height = H * TILE;
+  if (cv.width !== width * TILE || cv.height !== height * TILE) {
+    cv.width = width * TILE;
+    cv.height = height * TILE;
   }
   const ctx = cv.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, cv.width, cv.height);
   if (!hasImage(textures, 'blob/fog')) return cv;
-  const f = imageFrame(textures, 'blob/fog');
-  const img = f.source.image as CanvasImageSource;
+  const frame = imageFrame(textures, 'blob/fog');
+  const img = frame.source.image as CanvasImageSource;
   // Fuera del mapa cuenta como la casilla mas cercana.
   const hid = (pos: Pos) => !vis.atClamped(pos);
   for (const { pos } of vis.cells()) {
     const piece = FOG_SHEET[neighbourKey(pos, hid)]!;
     if (piece < 0) continue;
-    const sourceX = f.cutX + (piece % SHEET_COLS) * TILE;
-    const sourceY = f.cutY + Math.floor(piece / SHEET_COLS) * TILE;
+    const sourceX = frame.cutX + (piece % SHEET_COLS) * TILE;
+    const sourceY = frame.cutY + Math.floor(piece / SHEET_COLS) * TILE;
     ctx.drawImage(img, sourceX, sourceY, TILE, TILE, pos.x * TILE, pos.y * TILE, TILE, TILE);
   }
   return cv;

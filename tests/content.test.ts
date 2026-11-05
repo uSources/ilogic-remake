@@ -50,14 +50,14 @@ describe('contenido (src/core/content/*.json)', () => {
   });
 
   it('explica lo que esta mal', () => {
-    const c = clone();
-    c.units[0]!.attack!.hitChance.Dragon = 0.5;
-    c.units[1]!.builtAt = ['Castle'];
-    c.units[2]!.id = 'Soldier';
-    c.units[3]!.name = { es: 'Jeep', en: '' };
-    c.units[4]!.attack!.range = [3, 2];
-    c.buildings[0]!.hq = true;
-    const errs = errsOf(c);
+    const files = clone();
+    files.units[0]!.attack!.hitChance.Dragon = 0.5;
+    files.units[1]!.builtAt = ['Castle'];
+    files.units[2]!.id = 'Soldier';
+    files.units[3]!.name = { es: 'Jeep', en: '' };
+    files.units[4]!.attack!.range = [3, 2];
+    files.buildings[0]!.hq = true;
+    const errs = errsOf(files);
     expect(errs).toContain('unidad Soldier: attack.hitChance nombra "Dragon", que no existe');
     expect(errs).toContain('unidad Tank: builtAt nombra "Castle", que no existe');
     expect(errs.some((error) => error.includes('id repetido'))).toBe(true);
@@ -67,8 +67,8 @@ describe('contenido (src/core/content/*.json)', () => {
   });
 
   it('una unidad nueva al final entra en todas las tablas', () => {
-    const c = clone();
-    c.units.push({
+    const files = clone();
+    files.units.push({
       id: 'Sniper',
       name: { es: 'Francotirador', en: 'Sniper' },
       cost: 4000,
@@ -81,29 +81,29 @@ describe('contenido (src/core/content/*.json)', () => {
       builtAt: ['City'],
       repairedAt: ['City'],
     });
-    c.units[0]!.attack!.hitChance.Sniper = 0.6;
-    expect(errsOf(c)).toEqual([]);
-    const T = buildTables(c);
-    const s = T.UNIT_NAMES.indexOf('Sniper');
+    files.units[0]!.attack!.hitChance.Sniper = 0.6;
+    expect(errsOf(files)).toEqual([]);
+    const tables = buildTables(files);
+    const s = tables.UNIT_NAMES.indexOf('Sniper');
     expect(s).toBe(19);
-    expect(T.UNIT.minalc[s]).toBe(1);
-    expect(T.UNIT.alcance[s]).toBe(3);
-    expect(T.POWER[s]![0]).toBe(0.9);
-    expect(T.POWER[0]![s]).toBe(0.6);
-    expect(T.POWER.every((row) => row.length === 20)).toBe(true);
-    expect(T.SPAWNER[s]![0]).toBe(true);
-    expect(T.UNIT_TERRAIN_PREFIX[s]!.length).toBe(TERRAIN_NAMES.length);
+    expect(tables.UNIT.minalc[s]).toBe(1);
+    expect(tables.UNIT.alcance[s]).toBe(3);
+    expect(tables.POWER[s]![0]).toBe(0.9);
+    expect(tables.POWER[0]![s]).toBe(0.6);
+    expect(tables.POWER.every((row) => row.length === 20)).toBe(true);
+    expect(tables.SPAWNER[s]![0]).toBe(true);
+    expect(tables.UNIT_TERRAIN_PREFIX[s]!.length).toBe(TERRAIN_NAMES.length);
   });
 
   it('terreno, reglas e IA: explica lo que esta mal', () => {
-    const c = clone();
-    c.terrain[2]!.movement.vehicle = 0;
-    c.terrain[3]!.movement.air = null;
-    c.terrain.pop();
-    (c.rules.defaults as unknown as Record<string, unknown>).fog = 'si';
-    (c.rules.defaults as unknown as Record<string, unknown>).magic = true;
-    c.ai.KILLBONUS = -1;
-    const errs = errsOf(c);
+    const files = clone();
+    files.terrain[2]!.movement.vehicle = 0;
+    files.terrain[3]!.movement.air = null;
+    files.terrain.pop();
+    (files.rules.defaults as unknown as Record<string, unknown>).fog = 'si';
+    (files.rules.defaults as unknown as Record<string, unknown>).magic = true;
+    files.ai.KILLBONUS = -1;
+    const errs = errsOf(files);
     expect(errs).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
     expect(errs).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
     expect(errs.some((error) => error.startsWith('terrain.json: tienen que estar los 15 terrenos'))).toBe(true);
@@ -130,11 +130,11 @@ describe('contenido (src/core/content/*.json)', () => {
 
   it('art: una unidad sin dibujo usa el de otra', () => {
     expect(UNIT_ART).toEqual(UNIT_NAMES);
-    const c = clone();
-    c.units.push({ ...structuredClone(c.units[0]!), id: 'Sniper', art: 'Soldier' });
-    expect(errsOf(c)).toEqual([]);
-    expect(buildTables(c).UNIT_ART[19]).toBe('Soldier');
-    c.units[19]!.art = 'Dragon';
-    expect(errsOf(c)).toContain('unidad Sniper: art nombra "Dragon", que no existe');
+    const files = clone();
+    files.units.push({ ...structuredClone(files.units[0]!), id: 'Sniper', art: 'Soldier' });
+    expect(errsOf(files)).toEqual([]);
+    expect(buildTables(files).UNIT_ART[19]).toBe('Soldier');
+    files.units[19]!.art = 'Dragon';
+    expect(errsOf(files)).toContain('unidad Sniper: art nombra "Dragon", que no existe');
   });
 });

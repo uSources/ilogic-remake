@@ -45,8 +45,8 @@ export class OverlayLayer implements MapLayer {
   }
 
   draw(opts: ViewOptions, ctx: OverlayContext): void {
-    const g = this.object;
-    g.clear();
-    for (const paint of this.painters) paint(g, opts, ctx);
+    const graphics = this.object;
+    graphics.clear();
+    for (const paint of this.painters) paint(graphics, opts, ctx);
   }
 }

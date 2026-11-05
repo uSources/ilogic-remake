@@ -46,14 +46,14 @@ export const orderLines: OverlayPainter = (graphics, opts, ctx) => {
 };
 
 /** Banderita de pixeles (mastil y paño del color de la orden) con el pie en `foot`. */
-function drawPixelFlag(g: Phaser.GameObjects.Graphics, foot: { x: number; y: number }, color: number): void {
+function drawPixelFlag(graphics: Phaser.GameObjects.Graphics, foot: { x: number; y: number }, color: number): void {
   const { x, y } = foot;
-  fillRects(g, PAL.ink, 1, [
+  fillRects(graphics, PAL.ink, 1, [
     [x - 1, y - 12, 3, 14],
     [x + 1, y - 13, 10, 8],
   ]);
-  fillRects(g, color, 1, [[x + 2, y - 12, 8, 6]]);
-  fillRects(g, PAL_MAP.paleGold, 1, [[x, y - 11, 1, 12]]);
+  fillRects(graphics, color, 1, [[x + 2, y - 12, 8, 6]]);
+  fillRects(graphics, PAL_MAP.paleGold, 1, [[x, y - 11, 1, 12]]);
 }
 
 /** [CAMBIO] Intenciones de las ordenes con destino: lo que hara cada unidad al terminar el turno. */
@@ -85,26 +85,26 @@ type Step = { dx: number; dy: number };
 function arrowSegment(from: Pos, to: Pos, width: number, cutToward: Step | null): { x: number; y: number; w: number; h: number } {
   let x = Math.min(from.x, to.x) * TILE + TILE / 2 - width / 2;
   let y = Math.min(from.y, to.y) * TILE + TILE / 2 - width / 2;
-  let w = Math.abs(from.x - to.x) * TILE + width;
-  let h = Math.abs(from.y - to.y) * TILE + width;
-  if (!cutToward) return { x, y, w, h };
+  let boxWidth = Math.abs(from.x - to.x) * TILE + width;
+  let boxHeight = Math.abs(from.y - to.y) * TILE + width;
+  if (!cutToward) return { x, y, w: boxWidth, h: boxHeight };
   const { dx, dy } = cutToward;
-  if (dx > 0) w -= ARROW_CUT;
+  if (dx > 0) boxWidth -= ARROW_CUT;
   if (dx < 0) {
     x += ARROW_CUT;
-    w -= ARROW_CUT;
+    boxWidth -= ARROW_CUT;
   }
-  if (dy > 0) h -= ARROW_CUT;
+  if (dy > 0) boxHeight -= ARROW_CUT;
   if (dy < 0) {
     y += ARROW_CUT;
-    h -= ARROW_CUT;
+    boxHeight -= ARROW_CUT;
   }
-  return { x, y, w, h };
+  return { x, y, w: boxWidth, h: boxHeight };
 }
 
 /** Punta: triangulo hecho de lineas de 1 px en `tip`, mirando en la direccion del ultimo paso. */
 function drawArrowHead(
-  g: Phaser.GameObjects.Graphics,
+  graphics: Phaser.GameObjects.Graphics,
   tip: { x: number; y: number },
   step: Step,
   pass: (typeof ARROW_PASSES)[number],
@@ -112,25 +112,25 @@ function drawArrowHead(
   for (let i = 0; i <= pass.head; i++) {
     const half = pass.head - i;
     const along = pass.back + i;
-    if (step.dx !== 0) g.fillRect(tip.x + step.dx * along, tip.y - half, 1, half * 2 + 1);
-    else g.fillRect(tip.x - half, tip.y + step.dy * along, half * 2 + 1, 1);
+    if (step.dx !== 0) graphics.fillRect(tip.x + step.dx * along, tip.y - half, 1, half * 2 + 1);
+    else graphics.fillRect(tip.x - half, tip.y + step.dy * along, half * 2 + 1, 1);
   }
 }
 
 /** Flecha pixel por un camino: tramos de 4 px del color, con borde oscuro de 8 px, y punta. */
-function drawArrow(g: Phaser.GameObjects.Graphics, path: readonly Pos[], color: number, alpha: number, borderAlpha: number): void {
+function drawArrow(graphics: Phaser.GameObjects.Graphics, path: readonly Pos[], color: number, alpha: number, borderAlpha: number): void {
   const end = path[path.length - 1]!;
   const beforeEnd = path[path.length - 2]!;
   const lastStep: Step = { dx: Math.sign(end.x - beforeEnd.x), dy: Math.sign(end.y - beforeEnd.y) };
   const tip = tileCenter(end);
   for (const pass of ARROW_PASSES) {
-    g.fillStyle(pass.border ? PAL.ink : color, pass.border ? borderAlpha : alpha);
+    graphics.fillStyle(pass.border ? PAL.ink : color, pass.border ? borderAlpha : alpha);
     for (let i = 0; i < path.length - 1; i++) {
       const isLast = i === path.length - 2;
       const segment = arrowSegment(path[i]!, path[i + 1]!, pass.w, isLast ? lastStep : null);
-      g.fillRect(segment.x, segment.y, segment.w, segment.h);
+      graphics.fillRect(segment.x, segment.y, segment.w, segment.h);
     }
-    drawArrowHead(g, tip, lastStep, pass);
+    drawArrowHead(graphics, tip, lastStep, pass);
   }
 }
 
@@ -141,12 +141,12 @@ const TARGET_LAYERS = [
 ] as const;
 
 /** Marco de esquinas sobre una casilla (objetivo de ataque o edificio a capturar), con borde oscuro. */
-function drawTargetMark(g: Phaser.GameObjects.Graphics, p: Pos, color: number): void {
-  const left = p.x * TILE;
-  const top = p.y * TILE;
+function drawTargetMark(graphics: Phaser.GameObjects.Graphics, pos: Pos, color: number): void {
+  const left = pos.x * TILE;
+  const top = pos.y * TILE;
   for (const { inset, thickness, isBorder, alpha } of TARGET_LAYERS) {
-    g.fillStyle(isBorder ? PAL.ink : color, alpha);
+    graphics.fillStyle(isBorder ? PAL.ink : color, alpha);
     const length = TARGET_CORNER + (isBorder ? 2 : 0);
-    cornerBrackets(g, left + inset, top + inset, TILE - 2 * inset, TILE - 2 * inset, length, thickness);
+    cornerBrackets(graphics, left + inset, top + inset, TILE - 2 * inset, TILE - 2 * inset, length, thickness);
   }
 }

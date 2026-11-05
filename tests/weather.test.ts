@@ -24,10 +24,10 @@ const RAIN = kind('Rain'),
   SANDSTORM = kind('Sandstorm');
 
 /** Partida de prueba con el clima `k` puesto (dura varios dias). */
-function withWeather(k: number): GameState {
+function withWeather(weatherKind: number): GameState {
   const s = blankState();
   s.setup = { seed: 1234, size: 32, theme: 0 };
-  s.weather = { kind: k, left: 3, next: CLEAR };
+  s.weather = { kind: weatherKind, left: 3, next: CLEAR };
   return s;
 }
 
@@ -104,9 +104,9 @@ describe('clima: efectos', () => {
 
   it('el movimiento nunca baja de 1', () => {
     const s = withWeather(SNOW);
-    for (let t = 0; t < UNIT.mover.length; t++) {
-      const u = newUnit(s, t, 0, { x: t, y: 0 });
-      if (UNIT.mover[t]! > 0) expect(maxSteps(s, u)).toBeGreaterThanOrEqual(1);
+    for (let type = 0; type < UNIT.mover.length; type++) {
+      const unit = newUnit(s, type, 0, { x: type, y: 0 });
+      if (UNIT.mover[type]! > 0) expect(maxSteps(s, unit)).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -135,8 +135,8 @@ describe('clima: como cambia', () => {
     expect(forecast(s)).toBeNull();
     expect(endRound(s).weather).toBeNull();
     expect(forecast(s)).toBe(RAIN);
-    const r = endRound(s);
-    expect(r.weather).toEqual({ from: CLEAR, to: RAIN });
+    const round = endRound(s);
+    expect(round.weather).toEqual({ from: CLEAR, to: RAIN });
     expect(weatherNow(s)).toBe(RAIN);
     expect(s.weather!.left).toBeGreaterThanOrEqual(1);
   });
@@ -147,24 +147,24 @@ describe('clima: como cambia', () => {
       s.setup = { seed: 99, size: 32, theme: 3 };
       ensureWeather(s);
       const seen: number[] = [];
-      for (let d = 0; d < 40; d++) {
+      for (let day = 0; day < 40; day++) {
         endRound(s);
         seen.push(weatherNow(s));
       }
       return seen;
     };
-    const a = run();
-    expect(run()).toEqual(a);
-    expect(new Set(a).size).toBeGreaterThan(1); // en 40 dias de pantano llueve alguna vez
+    const seen = run();
+    expect(run()).toEqual(seen);
+    expect(new Set(seen).size).toBeGreaterThan(1); // en 40 dias de pantano llueve alguna vez
   });
 
   it('cada tema solo saca sus climas (sin tormentas de arena fuera del desierto)', () => {
     const rng = seededRng(5);
     for (let theme = 0; theme < THEME_NAMES.length; theme++) {
       for (let i = 0; i < 300; i++) {
-        const k = rollWeather(blankState(), theme, rng);
-        expect(WEATHER.chance[theme]![k]).toBeGreaterThan(0);
-        if (THEME_NAMES[theme] !== 'Desert') expect(k).not.toBe(SANDSTORM);
+        const rolled = rollWeather(blankState(), theme, rng);
+        expect(WEATHER.chance[theme]![rolled]).toBeGreaterThan(0);
+        if (THEME_NAMES[theme] !== 'Desert') expect(rolled).not.toBe(SANDSTORM);
       }
     }
   });

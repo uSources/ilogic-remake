@@ -280,18 +280,18 @@ function isControlSpot(s: GameState, pos: Pos, toPlayer: number, toEnemy: number
  * pie) de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
  * medio del mapa. Si no caben todos, pone los que pueda.
  */
-export function placeControlPoints(s: GameState, a: Pos, b: Pos, rng: Rng): void {
+export function placeControlPoints(s: GameState, playerBase: Pos, enemyBase: Pos, rng: Rng): void {
   const wanted = s.rules.controlPoints;
   if (wanted <= 0) return;
-  const fromA = groundDistance(s, a, WALK, createLayer(s, false));
-  const fromB = groundDistance(s, b, WALK, createLayer(s, false));
-  const span = fromA.at(b) || manhattan(a, b);
+  const fromPlayer = groundDistance(s, playerBase, WALK, createLayer(s, false));
+  const fromEnemy = groundDistance(s, enemyBase, WALK, createLayer(s, false));
+  const span = fromPlayer.at(enemyBase) || manhattan(playerBase, enemyBase);
   const candidates: { pos: Pos; score: number }[] = [];
-  for (const { pos, value: toA } of fromA.cells()) {
-    const toB = fromB.at(pos);
-    if (!isControlSpot(s, pos, toA, toB, span)) continue;
+  for (const { pos, value: toPlayer } of fromPlayer.cells()) {
+    const toEnemy = fromEnemy.at(pos);
+    if (!isControlSpot(s, pos, toPlayer, toEnemy, span)) continue;
     // Lo justo: misma distancia a las dos salidas.
-    candidates.push({ pos, score: Math.abs(toA - toB) + rng() * CONTROL_SCORE_NOISE });
+    candidates.push({ pos, score: Math.abs(toPlayer - toEnemy) + rng() * CONTROL_SCORE_NOISE });
   }
   candidates.sort((first, second) => first.score - second.score);
   const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.rules.controlRadius;

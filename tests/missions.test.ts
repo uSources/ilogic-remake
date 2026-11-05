@@ -91,7 +91,7 @@ describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
     const s = buildMission(mission, defaultContent());
     const rng = seededRng(5);
-    for (let d = 0; d < 20 && outcome(s) === 'playing'; d++) {
+    for (let day = 0; day < 20 && outcome(s) === 'playing'; day++) {
       for (const team of [0, 1] as const) {
         for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;
         if (outcome(s) !== 'playing') break;
@@ -108,7 +108,7 @@ describe('misiones', () => {
     expect(outcome(hold)).toBe('won');
 
     const bh = buildMission(byId('bridgehead'), defaultContent());
-    for (const b of bh.buildings) if (b.type === 0 && b.owner === null) b.owner = 0;
+    for (const building of bh.buildings) if (building.type === 0 && building.owner === null) building.owner = 0;
     expect(outcome(bh)).toBe('won');
     const bh2 = buildMission(byId('bridgehead'), defaultContent());
     bh2.day = 15;

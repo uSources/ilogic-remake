@@ -11,14 +11,14 @@ const { UNIT_NAMES, UNIT_ART, BUILDING_NAMES, HQ } = defaultContent().tables;
 const frames = new Map<string, { w: number; h: number }>();
 for (let i = 0; i < ATLAS_PAGES; i++) {
   const json = JSON.parse(readFileSync(`public/assets/atlas/atlas-${i}.json`, 'utf8'));
-  for (const [k, f] of Object.entries<{ frame: { w: number; h: number } }>(json.frames)) frames.set(k, f.frame);
+  for (const [key, entry] of Object.entries<{ frame: { w: number; h: number } }>(json.frames)) frames.set(key, entry.frame);
 }
 
 describe('graficos compilados', () => {
   it('cada imagen esta en el atlas o se carga suelta', () => {
     const missing = IMAGE_KEYS.filter((key) => !frames.has(key) && !LOOSE_IMAGES.includes(key));
     expect(missing).toEqual([]);
-    for (const k of LOOSE_IMAGES) expect(existsSync(`public/assets/img/${k}.png`)).toBe(true);
+    for (const image of LOOSE_IMAGES) expect(existsSync(`public/assets/img/${image}.png`)).toBe(true);
   });
 
   it('el terreno nuevo tiene todas sus laminas', () => {
@@ -45,8 +45,11 @@ describe('graficos compilados', () => {
 
   it('las unidades caben en la casilla y los edificios no pasan de 32x48', () => {
     const big = [...frames]
-      .filter(([k, f]) => (k.startsWith('u/') && (f.w > 32 || f.h > 32)) || (k.startsWith('flat/bld_') && (f.w > 32 || f.h > 48)))
-      .map(([k]) => k);
+      .filter(
+        ([key, frame]) =>
+          (key.startsWith('u/') && (frame.w > 32 || frame.h > 32)) || (key.startsWith('flat/bld_') && (frame.w > 32 || frame.h > 48)),
+      )
+      .map(([key]) => key);
     expect(big).toEqual([]);
   });
 });

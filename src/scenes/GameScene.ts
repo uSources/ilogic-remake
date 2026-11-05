@@ -544,10 +544,10 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
   }
 
-  private moveCursorTo(p: Pos, follow: boolean): void {
-    if (!isOnBoard(this.s, p) || samePos(p, this.view.cursor)) return;
-    this.view.cursor = { ...p };
-    if (follow) this.view.ensureVisible(p, FOLLOW_MARGIN);
+  private moveCursorTo(pos: Pos, follow: boolean): void {
+    if (!isOnBoard(this.s, pos) || samePos(pos, this.view.cursor)) return;
+    this.view.cursor = { ...pos };
+    if (follow) this.view.ensureVisible(pos, FOLLOW_MARGIN);
     this.cursorMoved();
   }
 
@@ -711,8 +711,8 @@ export class GameScene extends Phaser.Scene {
     return this.turns.enemyPlaying;
   }
 
-  private visibleToPlayer(p: Pos): boolean {
-    return this.vis.contains(p) && this.vis.at(p);
+  private visibleToPlayer(pos: Pos): boolean {
+    return this.vis.contains(pos) && this.vis.at(pos);
   }
 
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
@@ -916,9 +916,9 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private tileInfo(p: Pos): TileVM {
+  private tileInfo(pos: Pos): TileVM {
     const selected = this.phase !== 'map' ? this.moves.selected : null;
-    return tileVM(this.textures, this.s, p, { vis: this.vis, hidden: this.hidden, selected });
+    return tileVM(this.textures, this.s, pos, { vis: this.vis, hidden: this.hidden, selected });
   }
 
   /** Menu de bocadillo de la fase actual. */
@@ -949,9 +949,9 @@ export class GameScene extends Phaser.Scene {
     return selectionPanel(this.textures, this.s, list, this.view.cursor);
   }
 
-  private anchor(kind: BubbleKind, p: Pos): Anchor {
-    this.anchorAt[kind] = posOf(p);
-    return this.view.tileRectCss(p);
+  private anchor(kind: BubbleKind, pos: Pos): Anchor {
+    this.anchorAt[kind] = posOf(pos);
+    return this.view.tileRectCss(pos);
   }
 
   /**

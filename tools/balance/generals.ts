@@ -20,11 +20,11 @@ import { endRound, outcome, score } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
 
 const arg = (name: string, def: string): string => {
-  const i = process.argv.indexOf(`--${name}`);
-  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : def;
+  const index = process.argv.indexOf(`--${name}`);
+  return index >= 0 && process.argv[index + 1] ? process.argv[index + 1]! : def;
 };
-const a = arg('a', '');
-const b = arg('b', 'none');
+const challenger = arg('a', '');
+const rival = arg('b', 'none');
 const maps = Number(arg('maps', '40'));
 const from = Number(arg('from', '1'));
 const json = process.argv.includes('--json');
@@ -50,37 +50,37 @@ function play(seed: number, g0: string, g1: string, uses: Map<string, number>): 
     }
     endRound(s);
   }
-  const o = outcome(s);
-  if (o !== 'playing') return { winner: o === 'won' ? 0 : 1, byScore: false };
-  const d = score(s, 0) - score(s, 1);
-  return { winner: d > 0 ? 0 : d < 0 ? 1 : -1, byScore: true };
+  const result = outcome(s);
+  if (result !== 'playing') return { winner: result === 'won' ? 0 : 1, byScore: false };
+  const scoreGap = score(s, 0) - score(s, 1);
+  return { winner: scoreGap > 0 ? 0 : scoreGap < 0 ? 1 : -1, byScore: true };
 }
 
-checkGeneralIds([a, b]);
+checkGeneralIds([challenger, rival]);
 let winsA = 0,
   winsB = 0,
   draws = 0,
   byScore = 0;
 const uses = new Map<string, number>();
-for (let m = from; m < from + maps; m++) {
+for (let mapSeed = from; mapSeed < from + maps; mapSeed++) {
   // Partida 1: A es el bando 0. Partida 2: A es el bando 1.
   for (const aTeam of [0, 1] as const) {
-    const r = play(m, aTeam === 0 ? a : b, aTeam === 0 ? b : a, uses);
-    if (r.byScore) byScore++;
-    if (r.winner === -1) draws++;
-    else if (r.winner === aTeam) winsA++;
+    const result = play(mapSeed, aTeam === 0 ? challenger : rival, aTeam === 0 ? rival : challenger, uses);
+    if (result.byScore) byScore++;
+    if (result.winner === -1) draws++;
+    else if (result.winner === aTeam) winsA++;
     else winsB++;
   }
 }
 const games = maps * 2;
 if (json) {
-  console.log(JSON.stringify({ a, b, games, winsA, winsB, draws, byScore, uses: Object.fromEntries(uses) }));
+  console.log(JSON.stringify({ a: challenger, b: rival, games, winsA, winsB, draws, byScore, uses: Object.fromEntries(uses) }));
 } else {
   // Las victorias cuentan 1, los empates medio; margen del 95 %.
-  const p = (winsA + draws / 2) / games;
-  const margin = 1.96 * Math.sqrt((p * (1 - p)) / games);
-  console.log(`${a} contra ${b}: ${games} partidas en ${maps} mapas (desde ${from})`);
-  console.log(`  gana ${a}: ${winsA}, gana ${b}: ${winsB}, empates: ${draws} (${byScore} decididas por puntos al dia 60)`);
-  console.log(`  ${a} se lleva el ${Math.round(p * 100)} % (±${Math.round(margin * 100)})`);
-  for (const [k, n] of uses) console.log(`  ${k}: ${n} veces (${(n / games).toFixed(1)} por partida)`);
+  const winRate = (winsA + draws / 2) / games;
+  const margin = 1.96 * Math.sqrt((winRate * (1 - winRate)) / games);
+  console.log(`${challenger} contra ${rival}: ${games} partidas en ${maps} mapas (desde ${from})`);
+  console.log(`  gana ${challenger}: ${winsA}, gana ${rival}: ${winsB}, empates: ${draws} (${byScore} decididas por puntos al dia 60)`);
+  console.log(`  ${challenger} se lleva el ${Math.round(winRate * 100)} % (±${Math.round(margin * 100)})`);
+  for (const [ability, count] of uses) console.log(`  ${ability}: ${count} veces (${(count / games).toFixed(1)} por partida)`);
 }

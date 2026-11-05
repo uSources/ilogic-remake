@@ -30,11 +30,11 @@ export class TutorialTracker {
   /** Titulo, objetivo y, en el tutorial, el consejo del paso actual (null si no es una mision). */
   panel(s: GameState, phase: Phase): UIState['mission'] {
     const id = s.mission?.id;
-    const m = id ? missionById(id) : undefined;
-    if (!m) return null;
+    const mission = id ? missionById(id) : undefined;
+    if (!mission) return null;
     let tip: string | null = null;
     let step: string | null = null;
-    if (m.tutorial) {
+    if (mission.tutorial) {
       this.advance(s, phase);
       const st = TUTORIAL[this.step];
       if (st) {
@@ -42,7 +42,7 @@ export class TutorialTracker {
         step = `${this.step + 1}/${TUTORIAL.length}`;
       }
     }
-    return { title: m.title[settings.lang], objective: objectiveText(m, s), status: objectiveStatus(s), tip, step };
+    return { title: mission.title[settings.lang], objective: objectiveText(mission, s), status: objectiveStatus(s), tip, step };
   }
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */

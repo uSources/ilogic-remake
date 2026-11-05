@@ -23,8 +23,8 @@ export function squadsVM(s: GameState): SquadVM[] {
       const same =
         !!first &&
         units.every((unit) => {
-          const c = effectiveStandingOrder(s, unit);
-          return c?.kind === first.kind && samePos(c.at, first.at);
+          const order = effectiveStandingOrder(s, unit);
+          return order?.kind === first.kind && samePos(order.at, first.at);
         });
       const formation = squadInFormation(s, listed.id);
       const kind = listed.standingOrder?.kind ?? (same ? first.kind : formation ? 'capture' : null);

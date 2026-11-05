@@ -25,8 +25,8 @@ export function opponentOf(team: Team): Team {
 }
 
 /** Son de bandos distintos. */
-export function isEnemyOf(a: { team: Team }, b: { team: Team }): boolean {
-  return a.team !== b.team;
+export function isEnemyOf(first: { team: Team }, second: { team: Team }): boolean {
+  return first.team !== second.team;
 }
 
 /** Esta en el mapa, no dentro de un transporte (los pasajeros no ocupan casilla ni luchan). */

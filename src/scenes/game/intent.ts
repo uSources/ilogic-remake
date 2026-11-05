@@ -22,7 +22,7 @@ export interface MovePlan {
 }
 
 /** Que pasaria al soltar (o pulsar) la unidad elegida en `tile`. `visible`: la casilla se ve. */
-export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible: (p: Pos) => boolean): Intent {
+export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible: (pos: Pos) => boolean): Intent {
   if (!plan || !isOnBoard(s, tile)) return { kind: 'none' };
   const unit = plan.unit;
   if (samePos(tile, unit)) return { kind: 'stay' };

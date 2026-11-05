@@ -46,14 +46,14 @@ export interface Metrics {
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 /** Convierte el informe de equilibrio en la nota por partes. */
-export function score(r: Report, size: number): Metrics {
-  const o = r.outcome;
+export function score(report: Report, size: number): Metrics {
+  const outcome = report.outcome;
   const parts: Part[] = [];
   const add = (id: string, label: string, max: number, frac: number, value: string) =>
     parts.push({ id, label, max, score: Math.round(max * clamp01(frac) * 10) / 10, value });
 
   // Ganadas de verdad o, si no terminan, con ventaja clara al final (ver buildReport).
-  const eff = [o.wins[0] + o.adjudicated[0], o.wins[1] + o.adjudicated[1]];
+  const eff = [outcome.wins[0] + outcome.adjudicated[0], outcome.wins[1] + outcome.adjudicated[1]];
   const decided = eff[0]! + eff[1]!;
   const rate0 = decided ? eff[0]! / decided : 0.5;
   // Con N partidas decididas, el azar solo ya mueve el reparto unos 2/sqrt(N) puntos (95 %): una
@@ -70,12 +70,12 @@ export function score(r: Report, size: number): Metrics {
     `${Math.round(rate0 * 100)} % / ${Math.round((1 - rate0) * 100)} % (ruido ±${Math.round((noise * 100) / 2)} %)`,
   );
   const [lo, hi] = DEFAULT_TARGETS.days;
-  const med = o.days.median;
+  const med = outcome.days.median;
   const off = med < lo ? lo - med : med > hi ? med - hi : 0;
   add('duracion', `Duracion (mediana entre ${lo} y ${hi} dias)`, 15, 1 - off / 10, `${med} dias`);
-  const unfinished = o.unfinished / Math.max(1, r.games);
+  const unfinished = outcome.unfinished / Math.max(1, report.games);
   add('decididas', 'Partidas que terminan', 15, 1 - unfinished / 0.3, `${Math.round(unfinished * 100)} % sin terminar`);
-  const s5 = r.snowball.find((x) => x.day === 5)?.leaderWins ?? null;
+  const s5 = report.snowball.find((point) => point.day === 5)?.leaderWins ?? null;
   add(
     'remontadas',
     'Se puede remontar (quien va delante el dia 5 no gana siempre)',
@@ -83,17 +83,17 @@ export function score(r: Report, size: number): Metrics {
     s5 === null ? 1 : (0.95 - s5) / 0.25,
     s5 === null ? '-' : `${Math.round(s5 * 100)} %`,
   );
-  const bought = r.units.map((unitRow) => unitRow.bought).filter((count) => count > 0);
+  const bought = report.units.map((unitRow) => unitRow.bought).filter((count) => count > 0);
   const total = bought.reduce((sum, count) => sum + count, 0);
-  const H = -bought.reduce((sum, count) => sum + (count / total) * Math.log(count / total), 0);
-  const variety = r.units.length > 1 ? H / Math.log(r.units.length) : 0;
+  const entropy = -bought.reduce((sum, count) => sum + (count / total) * Math.log(count / total), 0);
+  const variety = report.units.length > 1 ? entropy / Math.log(report.units.length) : 0;
   add('variedad', 'Variedad de unidades compradas', 15, variety / 0.85, `${Math.round(variety * 100)} % de la variedad maxima`);
   // Rendimiento de cada unidad (valor destruido por coste) respecto a la mediana: dentro de la banda
   // cuenta entero; fuera, cada vez menos segun lo lejos (en escala logaritmica: 2x por encima de la
   // banda = 0). Asi acercar una unidad a la banda suma aunque aun no entre, y una que roza el borde no
   // hace saltar la nota.
   const [blo, bhi] = DEFAULT_TARGETS.efficiencyBand;
-  const effs = r.units.map((unitRow) => unitRow.efficiency).filter((entry): entry is number => entry !== null);
+  const effs = report.units.map((unitRow) => unitRow.efficiency).filter((entry): entry is number => entry !== null);
   const med2 = [...effs].sort((first, second) => first - second)[Math.floor(effs.length / 2)] ?? 1;
   const fit = (value: number) => {
     const x = Math.log(value / med2);
@@ -110,35 +110,37 @@ export function score(r: Report, size: number): Metrics {
     `${inBand} de ${effs.length} en la banda, ajuste ${Math.round(priceFit * 100)} %`,
   );
   return {
-    name: r.name,
+    name: report.name,
     date: new Date().toISOString().slice(0, 10),
-    games: r.games,
+    games: report.games,
     size,
     total: Math.round(parts.reduce((amount, part) => amount + part.score, 0) * 10) / 10,
     parts,
-    flags: r.flags,
-    units: r.units,
+    flags: report.flags,
+    units: report.units,
   };
 }
 
-export function metricsMarkdown(m: Metrics, base?: Metrics | null): string {
+export function metricsMarkdown(metrics: Metrics, base?: Metrics | null): string {
   const delta = (id: string, value: number) => {
-    const b = base?.parts.find((part) => part.id === id)?.score;
-    return b === undefined ? '' : ` (${value - b >= 0 ? '+' : ''}${(value - b).toFixed(1)})`;
+    const baseScore = base?.parts.find((part) => part.id === id)?.score;
+    return baseScore === undefined ? '' : ` (${value - baseScore >= 0 ? '+' : ''}${(value - baseScore).toFixed(1)})`;
   };
-  const rows = m.parts
+  const rows = metrics.parts
     .map((part) => `| ${part.label} | ${part.value} | ${part.score} / ${part.max}${delta(part.id, part.score)} |`)
     .join('\n');
-  const tot = base ? ` (linea base ${base.total}, ${m.total - base.total >= 0 ? '+' : ''}${(m.total - base.total).toFixed(1)})` : '';
-  return `# Nota del juego: ${m.total} / 100${tot}
+  const tot = base
+    ? ` (linea base ${base.total}, ${metrics.total - base.total >= 0 ? '+' : ''}${(metrics.total - base.total).toFixed(1)})`
+    : '';
+  return `# Nota del juego: ${metrics.total} / 100${tot}
 
-${m.games} partidas IA contra IA en mapas de ${m.size}x${m.size} (mitad con los bandos cambiados), ${m.date}.
+${metrics.games} partidas IA contra IA en mapas de ${metrics.size}x${metrics.size} (mitad con los bandos cambiados), ${metrics.date}.
 
 | Parte | Medido | Puntos |
 |---|---|---|
 ${rows}
 
-${m.flags.length ? `Avisos del informe de equilibrio:\n${m.flags.map((flag) => `- ${flag}`).join('\n')}\n` : ''}`;
+${metrics.flags.length ? `Avisos del informe de equilibrio:\n${metrics.flags.map((flag) => `- ${flag}`).join('\n')}\n` : ''}`;
 }
 
 async function main(): Promise<void> {
@@ -151,25 +153,25 @@ async function main(): Promise<void> {
   const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, i) => 1 + i);
   const variant = { name, set: {} };
   const setup = buildVariant(variant, defaultContent());
-  const a = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
-  const b = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
+  const records = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
+  const mirrored = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
   const report = buildReport(
-    [...a, ...b],
+    [...records, ...mirrored],
     { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' },
     DEFAULT_TARGETS,
     setup.content,
   );
-  const m = score(report, size);
+  const metrics = score(report, size);
   const base = existsSync(BASELINE) ? (JSON.parse(readFileSync(BASELINE, 'utf8')) as Metrics) : null;
   mkdirSync(OUT, { recursive: true });
-  writeFileSync(`${OUT}${name}.json`, JSON.stringify(m, null, 1));
-  const md = metricsMarkdown(m, base && base.games === m.games && base.size === m.size ? base : null);
+  writeFileSync(`${OUT}${name}.json`, JSON.stringify(metrics, null, 1));
+  const md = metricsMarkdown(metrics, base && base.games === metrics.games && base.size === metrics.size ? base : null);
   writeFileSync(`${OUT}${name}.md`, md);
   console.log(md);
   if (args.includes('--save-baseline')) {
-    writeFileSync(BASELINE, JSON.stringify(m, null, 1));
+    writeFileSync(BASELINE, JSON.stringify(metrics, null, 1));
     console.log('Guardado como linea base (improve/baseline.json).');
-  } else if (base && (base.games !== m.games || base.size !== m.size)) {
+  } else if (base && (base.games !== metrics.games || base.size !== metrics.size)) {
     console.log(`(La linea base es de ${base.games} partidas de ${base.size}x${base.size}: no se compara.)`);
   }
 }

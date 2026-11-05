@@ -10,15 +10,15 @@ describe('geometria', () => {
     expect([0, 1, 2, 3, 10].map(rangeSize)).toEqual([1, 5, 13, 25, 221]);
   });
   it('rangePos recorre el rombo en el orden del original', () => {
-    const c = { x: 10, y: 10 };
-    const ring1 = [1, 2, 3, 4].map((i) => rangePos(MAP, c, i));
+    const pos = { x: 10, y: 10 };
+    const ring1 = [1, 2, 3, 4].map((index) => rangePos(MAP, pos, index));
     expect(ring1).toEqual([
       { x: 10, y: 11 },
       { x: 11, y: 10 },
       { x: 10, y: 9 },
       { x: 9, y: 10 },
     ]);
-    const ring2 = [5, 6, 7, 8, 9, 10, 11, 12].map((i) => rangePos(MAP, c, i));
+    const ring2 = [5, 6, 7, 8, 9, 10, 11, 12].map((index) => rangePos(MAP, pos, index));
     expect(ring2).toEqual([
       { x: 10, y: 12 },
       { x: 11, y: 11 },
@@ -31,12 +31,12 @@ describe('geometria', () => {
     ]);
   });
   it('cada casilla del rombo aparece una vez y a la distancia correcta', () => {
-    const c = { x: 15, y: 15 };
+    const pos = { x: 15, y: 15 };
     const seen = new Set<string>();
     for (let i = 0; i < rangeSize(6); i++) {
-      const p = rangePos(MAP, c, i)!;
-      seen.add(`${p.x},${p.y}`);
-      expect(Math.abs(p.x - c.x) + Math.abs(p.y - c.y)).toBeLessThanOrEqual(6);
+      const tile = rangePos(MAP, pos, i)!;
+      seen.add(`${tile.x},${tile.y}`);
+      expect(Math.abs(tile.x - pos.x) + Math.abs(tile.y - pos.y)).toBeLessThanOrEqual(6);
     }
     expect(seen.size).toBe(rangeSize(6));
   });

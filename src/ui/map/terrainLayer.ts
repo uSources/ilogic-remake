@@ -39,7 +39,7 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
   build(s: GameState, newArt: boolean): void {
     this.object.removeAll(true);
     this.waterAnim = [];
-    for (const o of this.props) o.destroy();
+    for (const prop of this.props) prop.destroy();
     this.props = [];
     if (newArt) this.buildNew(s);
     else this.buildClassic(s);
@@ -59,8 +59,8 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
       this.object.add(img);
     }
     this.waterFrame = -1;
-    for (const o of terrainObjects(tex, s)) {
-      const img = tileImage(this.scene, o.key, o);
+    for (const prop of terrainObjects(tex, s)) {
+      const img = tileImage(this.scene, prop.key, prop);
       this.props.push(img);
       this.buildings.addProp(img);
     }
@@ -71,11 +71,11 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
     const objs: Phaser.GameObjects.GameObject[] = [];
     mapGrid(s).forEach((terrain, { x, y }) => {
       objs.push(tileImage(this.scene, terrainKey(terrain), { x, y }));
-      for (const k of shoreKeys(s, { x, y })) {
-        if (hasImage(this.scene.textures, k))
+      for (const key of shoreKeys(s, { x, y })) {
+        if (hasImage(this.scene.textures, key))
           objs.push(
             this.scene.add
-              .image(x * TILE, y * TILE, ATLAS, k)
+              .image(x * TILE, y * TILE, ATLAS, key)
               .setOrigin(0)
               .setDisplaySize(TILE, TILE),
           );
@@ -87,10 +87,10 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
   /** Agua animada: cambia de fotograma cada WATER_FRAME_MS (cada casilla con su desfase). */
   tick(clock: MapClock): void {
     if (!this.waterAnim.length) return;
-    const f = stepOf(clock, WATER_FRAME_MS, ANIM_FRAMES);
-    if (f === this.waterFrame) return;
-    this.waterFrame = f;
-    for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (f + cell.phase) % ANIM_FRAMES));
+    const frame = stepOf(clock, WATER_FRAME_MS, ANIM_FRAMES);
+    if (frame === this.waterFrame) return;
+    this.waterFrame = frame;
+    for (const { img, cell } of this.waterAnim) img.setFrame(sheetFrame(cell.key, cell.row, (frame + cell.phase) % ANIM_FRAMES));
   }
 
   /** Suelta el lienzo del terreno (los objetos los destruye la escena al cerrarse). */

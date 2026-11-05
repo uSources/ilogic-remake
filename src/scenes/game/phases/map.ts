@@ -44,26 +44,26 @@ export const mapPhase: PhaseHandler = {
  * [CAMBIO] Con un grupo elegido: Enter sobre una de sus unidades abre sus ordenes (escuadra, atacar,
  * capturar...); sobre otra propia, la elige a ella; en otra casilla, mueve el grupo.
  */
-function acceptWithGroup(h: PhaseHost, cursor: Pos, own: Unit | undefined): void {
-  if (own && h.selection.group.has(own.uid)) return h.enter('groupMenu');
-  if (own && h.selection.selectable(own)) return h.selection.apply(new Set([own.uid]));
-  void h.moves.groupMove(cursor);
+function acceptWithGroup(host: PhaseHost, cursor: Pos, own: Unit | undefined): void {
+  if (own && host.selection.group.has(own.uid)) return host.enter('groupMenu');
+  if (own && host.selection.selectable(own)) return host.selection.apply(new Set([own.uid]));
+  void host.moves.groupMove(cursor);
 }
 
 /** Aceptar en una casilla del mapa sin grupo elegido (tambien un toque del dedo, ver pointerInput.ts). */
-export function acceptMapTile(h: PhaseHost, tile: Pos): void {
-  const unit = unitAt(h.state, tile);
-  if (h.inspectUid !== null) {
+export function acceptMapTile(host: PhaseHost, tile: Pos): void {
+  const unit = unitAt(host.state, tile);
+  if (host.inspectUid !== null) {
     // Segunda pulsacion: cerrar el alcance (o señalar otra unidad).
-    const isSameUnit = unit?.uid === h.inspectUid;
-    h.inspectUid = null;
-    if (isSameUnit || !unit) return h.refresh();
+    const isSameUnit = unit?.uid === host.inspectUid;
+    host.inspectUid = null;
+    if (isSameUnit || !unit) return host.refresh();
   }
-  if (unit && isPlayer(unit) && unit.active) return h.moves.select(unit);
-  const building = buildingAt(h.state, tile);
-  if (building && building.owner === 0 && canBuyAt(h.state, building)) return openBuy(h, building);
-  if (unit && unit.carrier === null && (isPlayer(unit) || h.visible(unit))) return h.inspect(unit);
-  h.enter('gameMenu');
+  if (unit && isPlayer(unit) && unit.active) return host.moves.select(unit);
+  const building = buildingAt(host.state, tile);
+  if (building && building.owner === 0 && canBuyAt(host.state, building)) return openBuy(host, building);
+  if (unit && unit.carrier === null && (isPlayer(unit) || host.visible(unit))) return host.inspect(unit);
+  host.enter('gameMenu');
 }
 
 /** Solo pasando por encima de una unidad propia: su alcance en tenue y sus compañeras de escuadra. */

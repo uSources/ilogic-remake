@@ -11,22 +11,22 @@ const SOLDIER = 0,
 describe('reglas nuevas: combate', () => {
   it('el defensor que sobrevive contraataca y gasta municion', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const r = attackFull(s, a, d, seededRng(2));
-    expect(r.damage).toBeGreaterThan(0);
-    expect(r.killed).toBe(false);
-    expect(r.counter).toBeGreaterThan(0);
-    expect(a.life).toBe(100 - r.counter);
+    const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
+    const result = attackFull(s, attacker, defender, seededRng(2));
+    expect(result.damage).toBeGreaterThan(0);
+    expect(result.killed).toBe(false);
+    expect(result.counter).toBeGreaterThan(0);
+    expect(attacker.life).toBe(100 - result.counter);
     // Responde con la vida que le queda: menos de lo que recibio.
-    expect(r.counter).toBeLessThan(r.damage);
+    expect(result.counter).toBeLessThan(result.damage);
   });
 
   it('la artilleria ni contraataca ni recibe contraataque', () => {
     const s = blankState();
     const art = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
-    const t = newUnit(s, TANK, 1, { x: 10, y: 13 });
-    expect(attackFull(s, art, t, seededRng(1)).counter).toBe(0);
+    const tank = newUnit(s, TANK, 1, { x: 10, y: 13 });
+    expect(attackFull(s, art, tank, seededRng(1)).counter).toBe(0);
     const s2 = blankState();
     const t2 = newUnit(s2, TANK, 0, { x: 10, y: 10 });
     const art2 = newUnit(s2, ARTILLERY, 1, { x: 10, y: 11 });
@@ -35,56 +35,56 @@ describe('reglas nuevas: combate', () => {
 
   it('el evento de ataque guarda como estaban las unidades antes del combate', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    d.life = 80;
-    const ev = attackEvent(s, a, d, seededRng(2));
+    const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
+    defender.life = 80;
+    const ev = attackEvent(s, attacker, defender, seededRng(2));
     expect(ev.combat).toMatchObject({ attackerType: TANK, defenderType: TANK, attackerTeam: 0, attackerLife: 100, defenderLife: 80 });
     expect(ev.target).toEqual({ x: 10, y: 11 });
     expect(ev.combat!.hit).toBeGreaterThan(0);
     expect(ev.combat!.counterHit).not.toBeNull();
     // Las vidas de despues salen de las de antes menos el daño.
-    expect(d.life).toBe(80 - ev.damage);
-    expect(a.life).toBe(100 - ev.counter!);
+    expect(defender.life).toBe(80 - ev.damage);
+    expect(attacker.life).toBe(100 - ev.counter!);
   });
 
   it('sin contraataque si el defensor cae o es de distancia', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
-    d.life = 1;
-    const ev = attackEvent(s, a, d, seededRng(1));
+    const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
+    defender.life = 1;
+    const ev = attackEvent(s, attacker, defender, seededRng(1));
     expect(ev.killed).toBe(true);
     expect(ev.combat!.counterHit).toBeNull();
     const s2 = blankState();
     const art = newUnit(s2, ARTILLERY, 0, { x: 10, y: 10 });
-    const t = newUnit(s2, TANK, 1, { x: 10, y: 13 });
-    expect(attackEvent(s2, art, t, seededRng(1)).combat!.counterHit).toBeNull();
+    const tank = newUnit(s2, TANK, 1, { x: 10, y: 13 });
+    expect(attackEvent(s2, art, tank, seededRng(1)).combat!.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {
     for (let seed = 1; seed < 40; seed++) {
       const s = blankState();
-      const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
-      const d = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
-      d.life = 100;
-      const f = combatForecast(s, a, d);
-      const r = attackFull(s, a, d, seededRng(seed));
-      expect(r.damage).toBeGreaterThanOrEqual(f.low - 1);
-      expect(r.damage).toBeLessThanOrEqual(Math.max(f.high, 0) + 1);
+      const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
+      const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
+      defender.life = 100;
+      const forecast = combatForecast(s, attacker, defender);
+      const result = attackFull(s, attacker, defender, seededRng(seed));
+      expect(result.damage).toBeGreaterThanOrEqual(forecast.low - 1);
+      expect(result.damage).toBeLessThanOrEqual(Math.max(forecast.high, 0) + 1);
     }
   });
 
   it('la prevision incluye el contraataque', () => {
     const s = blankState();
-    const a = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    const d = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const f = combatForecast(s, a, d);
-    expect(f.counter).not.toBeNull();
-    expect(f.counter!.expected).toBeGreaterThan(0);
-    expect(f.counter!.expected).toBeLessThan(f.expected);
-    d.life = 1;
-    expect(combatForecast(s, a, d).counter!.expected).toBe(0);
+    const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
+    const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
+    const forecast = combatForecast(s, attacker, defender);
+    expect(forecast.counter).not.toBeNull();
+    expect(forecast.counter!.expected).toBeGreaterThan(0);
+    expect(forecast.counter!.expected).toBeLessThan(forecast.expected);
+    defender.life = 1;
+    expect(combatForecast(s, attacker, defender).counter!.expected).toBe(0);
   });
 
   it('sin niebla se ve todo el mapa', () => {
@@ -99,12 +99,12 @@ describe('reglas nuevas: captura por puntos', () => {
   it('una ciudad cuesta 2 turnos a una unidad entera y pasa directamente a ser tuya', () => {
     const s = blankState();
     s.buildings.push({ type: 0, owner: 1, x: 3, y: 3 });
-    const u = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
-    const r1 = capture(s, u)!;
+    const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
+    const r1 = capture(s, unit)!;
     expect(r1).toEqual({ done: false, left: 10, total: 20 });
     expect(s.buildings[0]!.owner).toBe(1);
-    u.active = true;
-    const r2 = capture(s, u)!;
+    unit.active = true;
+    const r2 = capture(s, unit)!;
     expect(r2.done).toBe(true);
     expect(s.buildings[0]!.owner).toBe(0);
     expect(s.buildings[0]!.capture).toBeNull();
@@ -113,25 +113,25 @@ describe('reglas nuevas: captura por puntos', () => {
   it('una unidad herida captura mas despacio; la Base tiene 30 puntos', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 1, x: 3, y: 3 });
-    const u = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
-    u.life = 45;
-    expect(capture(s, u)!.left).toBe(25);
+    const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
+    unit.life = 45;
+    expect(capture(s, unit)!.left).toBe(25);
   });
 
   it('si la unidad se va, se pierde lo avanzado', () => {
     const s = blankState();
     s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
-    const u = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
-    capture(s, u);
+    const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
+    capture(s, unit);
     expect(captureProgress(s, s.buildings[0]!)?.left).toBe(10);
-    u.x = 4;
+    unit.x = 4;
     expect(captureProgress(s, s.buildings[0]!)).toBeNull();
     expect(s.buildings[0]!.capture).not.toBeNull(); // consultar no la borra...
     dropStaleCaptures(s); // ...la borra el paso que sigue a cada movimiento
     expect(s.buildings[0]!.capture).toBeNull();
-    u.x = 3;
-    u.active = true;
-    expect(capture(s, u)!.left).toBe(10);
+    unit.x = 3;
+    unit.active = true;
+    expect(capture(s, unit)!.left).toBe(10);
   });
 });
 
@@ -139,34 +139,34 @@ describe('reglas nuevas: veterania', () => {
   it('sube de rango al destruir y mejora acierto y defensa', async () => {
     const { hitChance, rank, attackFull, merge } = await import('@core/rules');
     const s = blankState();
-    const a = newUnit(s, TANK, 0, { x: 3, y: 3 });
-    const b = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    const base = hitChance(s, a, b);
-    expect(rank(a)).toBe(0);
-    b.life = 1;
-    const r = attackFull(s, a, b, seededRng(1));
-    expect(r.killed).toBe(true);
-    expect(a.kills).toBe(1);
-    expect(rank(a)).toBe(1);
-    const c = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    expect(hitChance(s, a, c)).toBeCloseTo(base * (1 + s.rules.vetBonus));
-    expect(hitChance(s, c, a)).toBeCloseTo(base * (1 - s.rules.vetBonus));
-    a.kills = 6;
-    expect(rank(a)).toBe(3);
-    const d = newUnit(s, TANK, 0, { x: 2, y: 3 });
-    a.active = true;
-    d.active = true;
-    merge(s, d, a);
-    expect(a.kills).toBe(6);
+    const attacker = newUnit(s, TANK, 0, { x: 3, y: 3 });
+    const defender = newUnit(s, TANK, 1, { x: 4, y: 3 });
+    const base = hitChance(s, attacker, defender);
+    expect(rank(attacker)).toBe(0);
+    defender.life = 1;
+    const result = attackFull(s, attacker, defender, seededRng(1));
+    expect(result.killed).toBe(true);
+    expect(attacker.kills).toBe(1);
+    expect(rank(attacker)).toBe(1);
+    const newDefender = newUnit(s, TANK, 1, { x: 4, y: 3 });
+    expect(hitChance(s, attacker, newDefender)).toBeCloseTo(base * (1 + s.rules.vetBonus));
+    expect(hitChance(s, newDefender, attacker)).toBeCloseTo(base * (1 - s.rules.vetBonus));
+    attacker.kills = 6;
+    expect(rank(attacker)).toBe(3);
+    const ally = newUnit(s, TANK, 0, { x: 2, y: 3 });
+    attacker.active = true;
+    ally.active = true;
+    merge(s, ally, attacker);
+    expect(attacker.kills).toBe(6);
   });
 
   it('sin veterania las bajas no cuentan', async () => {
     const { hitChance } = await import('@core/rules');
     const s = blankState({ veterancy: false });
-    const a = newUnit(s, TANK, 0, { x: 3, y: 3 });
-    const b = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    const base = hitChance(s, a, b);
-    a.kills = 6;
-    expect(hitChance(s, a, b)).toBe(base);
+    const attacker = newUnit(s, TANK, 0, { x: 3, y: 3 });
+    const defender = newUnit(s, TANK, 1, { x: 4, y: 3 });
+    const base = hitChance(s, attacker, defender);
+    attacker.kills = 6;
+    expect(hitChance(s, attacker, defender)).toBe(base);
   });
 });

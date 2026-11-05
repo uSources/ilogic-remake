@@ -78,12 +78,12 @@ function sample(s: GameState): DaySample {
   const { UNIT } = tablesOf(s);
   const army: [number, number] = [0, 0];
   const units: [number, number] = [0, 0];
-  for (const u of s.units) {
-    army[u.team] += (UNIT.cost[u.type]! * u.life) / 100;
-    units[u.team]++;
+  for (const unit of s.units) {
+    army[unit.team] += (UNIT.cost[unit.type]! * unit.life) / 100;
+    units[unit.team]++;
   }
   const buildings: [number, number] = [0, 0];
-  for (const b of s.buildings) if (b.owner !== null) buildings[b.owner]++;
+  for (const building of s.buildings) if (building.owner !== null) buildings[building.owner]++;
   return { day: s.day, funds: [s.funds[0], s.funds[1]], buildings, army: [Math.round(army[0]), Math.round(army[1])], units };
 }
 
@@ -92,8 +92,8 @@ export function playGame(opts: PlayOptions): GameRecord {
   const s = generateGame(rng, { size: opts.size ?? 32, rules: opts.rules, content: opts.content });
   const { UNIT, UNIT_NAMES } = tablesOf(s);
   if (opts.swapSides) {
-    for (const u of s.units) u.team = (1 - u.team) as Team;
-    for (const b of s.buildings) if (b.owner !== null) b.owner = (1 - b.owner) as Team;
+    for (const unit of s.units) unit.team = (1 - unit.team) as Team;
+    for (const building of s.buildings) if (building.owner !== null) building.owner = (1 - building.owner) as Team;
   }
   const units: UnitTally[][] = [0, 1].map(() => Array.from({ length: UNIT_NAMES.length }, emptyTally));
   const samples: DaySample[] = [sample(s)];
@@ -101,7 +101,7 @@ export function playGame(opts: PlayOptions): GameRecord {
   const known = new Map<number, { type: number; team: Team; x: number; y: number; life: number }>();
   const remember = () => {
     known.clear();
-    for (const u of s.units) known.set(u.uid, { type: u.type, team: u.team, x: u.x, y: u.y, life: u.life });
+    for (const unit of s.units) known.set(unit.uid, { type: unit.type, team: unit.team, x: unit.x, y: unit.y, life: unit.life });
   };
   remember();
   let events = 0;
@@ -115,18 +115,18 @@ export function playGame(opts: PlayOptions): GameRecord {
         events++;
         if (ev.kind === 'attack') {
           const atk = known.get(ev.attacker);
-          const victim = [...known.entries()].find(([, k]) => k.x === ev.target.x && k.y === ev.target.y && k.team !== team);
+          const victim = [...known.entries()].find(([, info]) => info.x === ev.target.x && info.y === ev.target.y && info.team !== team);
           if (atk) {
-            const t = units[team]![atk.type]!;
-            t.attacks++;
-            t.damageDealt += ev.damage;
+            const tally = units[team]![atk.type]!;
+            tally.attacks++;
+            tally.damageDealt += ev.damage;
             if (victim) {
-              const [, v] = victim;
-              t.valueDealt += (ev.damage * UNIT.cost[v.type]!) / 100;
-              const vt = units[v.team]![v.type]!;
-              vt.valueLost += (ev.damage * UNIT.cost[v.type]!) / 100;
+              const [, victimInfo] = victim;
+              tally.valueDealt += (ev.damage * UNIT.cost[victimInfo.type]!) / 100;
+              const vt = units[victimInfo.team]![victimInfo.type]!;
+              vt.valueLost += (ev.damage * UNIT.cost[victimInfo.type]!) / 100;
               if (ev.killed) {
-                t.kills++;
+                tally.kills++;
                 vt.deaths++;
               }
             }
@@ -136,25 +136,25 @@ export function playGame(opts: PlayOptions): GameRecord {
           if (atk) {
             const lost = atk.life - (after?.life ?? 0);
             if (lost > 0 && victim) {
-              const [, v] = victim;
-              units[v.team]![v.type]!.damageDealt += lost;
-              units[v.team]![v.type]!.valueDealt += (lost * UNIT.cost[atk.type]!) / 100;
+              const [, victimInfo] = victim;
+              units[victimInfo.team]![victimInfo.type]!.damageDealt += lost;
+              units[victimInfo.team]![victimInfo.type]!.valueDealt += (lost * UNIT.cost[atk.type]!) / 100;
               units[team]![atk.type]!.valueLost += (lost * UNIT.cost[atk.type]!) / 100;
               if (!after) {
-                units[v.team]![v.type]!.kills++;
+                units[victimInfo.team]![victimInfo.type]!.kills++;
                 units[team]![atk.type]!.deaths++;
               }
             }
           }
         } else if (ev.kind === 'spawn') {
-          const u = s.units.find((x) => x.uid === ev.uid);
-          if (u) {
-            units[team]![u.type]!.bought++;
-            units[team]![u.type]!.spent += UNIT.cost[u.type]!;
+          const unit = s.units.find((candidate) => candidate.uid === ev.uid);
+          if (unit) {
+            units[team]![unit.type]!.bought++;
+            units[team]![unit.type]!.spent += UNIT.cost[unit.type]!;
           }
         } else if (ev.kind === 'capture') {
-          const u = s.units.find((x) => x.uid === ev.uid);
-          if (u) units[team]![u.type]!.captures++;
+          const unit = s.units.find((candidate) => candidate.uid === ev.uid);
+          if (unit) units[team]![unit.type]!.captures++;
         }
         remember();
         if (finished()) break;

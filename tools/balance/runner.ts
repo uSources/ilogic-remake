@@ -55,7 +55,7 @@ export async function runGames(
     );
   await Promise.all(jobs);
   process.stderr.write('\n');
-  return records.sort((x, y) => x.seed - y.seed);
+  return records.sort((first, second) => first.seed - second.seed);
 }
 
 /** La tabla de duelos (duel.ts) con el contenido y las reglas de la variante. */

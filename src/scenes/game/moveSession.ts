@@ -64,7 +64,7 @@ export class MoveSession {
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad en una casilla. */
-  intentAt(s: GameState, tile: Pos, visible: (p: Pos) => boolean): Intent {
+  intentAt(s: GameState, tile: Pos, visible: (pos: Pos) => boolean): Intent {
     return intentAt(s, this.plan(), tile, visible);
   }
 

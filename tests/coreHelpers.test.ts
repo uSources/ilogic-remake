@@ -32,12 +32,12 @@ describe('ayudas de reglas', () => {
     expect(tileProtection(s, { x: 0, y: 0 })).toBe(TERRAIN.protection[0]);
     expect(tileProtection(s, { x: 3, y: 3 })).toBe(TERRAIN.protection[WOODS]);
     expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(TERRAIN.protection[0]! * BUILDING.protection[HQ]!);
-    for (const p of [
+    for (const pos of [
       { x: 0, y: 0 },
       { x: 3, y: 3 },
       { x: 5, y: 5 },
     ]) {
-      const st = defenseStars(s, p);
+      const st = defenseStars(s, pos);
       expect(st).toBeGreaterThanOrEqual(0);
       expect(st).toBeLessThanOrEqual(4);
     }
@@ -46,11 +46,11 @@ describe('ayudas de reglas', () => {
 
   it('casillas alcanzables = las de paso > 0, en orden de columnas', () => {
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
-    const r = moveRange(s, u);
-    const tiles = reachableTiles(r);
+    const unit = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
+    const range = moveRange(s, unit);
+    const tiles = reachableTiles(range);
     expect(tiles.length).toBeGreaterThan(0);
-    expect(tiles.every((pos) => r.steps.at(pos) > 0)).toBe(true);
+    expect(tiles.every((pos) => range.steps.at(pos) > 0)).toBe(true);
     expect(tiles.some((pos) => pos.x === 10 && pos.y === 10)).toBe(false);
     const sorted = [...tiles].sort((firstPos, secondPos) => firstPos.x - secondPos.x || firstPos.y - secondPos.y);
     expect(tiles).toEqual(sorted);
@@ -59,17 +59,17 @@ describe('ayudas de reglas', () => {
   it('zona de ataque: la de la amenaza con el alcance dado; nada si no puede disparar', () => {
     const s = blankState();
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    const r = moveRange(s, tank);
-    expect(attackZone(s, tank, r)).toEqual(unitThreat(s, tank, undefined, r));
+    const range = moveRange(s, tank);
+    expect(attackZone(s, tank, range)).toEqual(unitThreat(s, tank, undefined, range));
     tank.canFire = false;
-    expect(attackZone(s, tank, r)).toBeNull();
+    expect(attackZone(s, tank, range)).toBeNull();
     const truck = newUnit(s, TRANSPORT, 0, { x: 2, y: 2 });
     expect(attackZone(s, truck, moveRange(s, truck))).toBeNull();
     // La artilleria (no mueve y dispara) ataca solo desde donde esta, a distancia.
     const art = newUnit(s, ARTILLERY, 0, { x: 20, y: 20 });
-    const z = attackZone(s, art, moveRange(s, art))!;
-    expect(z.at({ x: 20, y: 20 })).toBe(false);
-    expect(z.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
+    const zone = attackZone(s, art, moveRange(s, art))!;
+    expect(zone.at({ x: 20, y: 20 })).toBe(false);
+    expect(zone.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {
@@ -81,11 +81,11 @@ describe('ayudas de reglas', () => {
     path.ambush = { x: 3, y: 1 };
     expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
-    const u = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
-    const b = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
-    expect(captureEvent(u, b, { left: 10, total: 20 })).toEqual({
+    const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
+    const building = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
+    expect(captureEvent(unit, building, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
-      uid: u.uid,
+      uid: unit.uid,
       at: { x: 4, y: 4 },
       owner: 1,
       left: 10,

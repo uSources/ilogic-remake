@@ -26,7 +26,7 @@ const textures = {
   get: () => ({ has: () => true }),
   getFrame: () => null,
 } as unknown as Phaser.Textures.TextureManager;
-const T = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
+const unitType = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
 
 beforeEach(() => {
   settings.lang = 'es';
@@ -35,7 +35,7 @@ beforeEach(() => {
 describe('datos de la interfaz', () => {
   it('ficha de casilla: la unidad enemiga solo si se ve; el edificio sin dueño si no se ve', () => {
     const s = blankState();
-    newUnit(s, T('Tank'), 1, { x: 4, y: 4 });
+    newUnit(s, unitType('Tank'), 1, { x: 4, y: 4 });
     s.buildings.push({ type: HQ, owner: 1, x: 4, y: 4, capture: null });
     const fog = createLayer(s, false);
     const hidden = tileVM(textures, s, { x: 4, y: 4 }, { vis: fog, hidden: new Set() });
@@ -49,26 +49,26 @@ describe('datos de la interfaz', () => {
 
   it('ficha: la unidad que se esta moviendo sale aunque su sprite este oculto', () => {
     const s = blankState();
-    const u = newUnit(s, T('Soldier'), 0, { x: 2, y: 2 });
-    const vm = tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([u.uid]), selected: u });
+    const unit = newUnit(s, unitType('Soldier'), 0, { x: 2, y: 2 });
+    const vm = tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([unit.uid]), selected: unit });
     expect(vm.unit?.name).toBeTruthy();
-    expect(tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([u.uid]) }).unit).toBeUndefined();
+    expect(tileVM(textures, s, { x: 2, y: 2 }, { vis: createLayer(s, true), hidden: new Set([unit.uid]) }).unit).toBeUndefined();
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {
-    expect(unitStatsText(blankState(), T('Soldier'))).toMatch(/\d.*·/);
-    expect(unitStatsText(blankState(), T('Transport'))).not.toMatch(/–/);
+    expect(unitStatsText(blankState(), unitType('Soldier'))).toMatch(/\d.*·/);
+    expect(unitStatsText(blankState(), unitType('Transport'))).not.toMatch(/–/);
     const s = blankState();
-    const u = newUnit(s, T('Soldier'), 0, { x: 3, y: 3 });
-    expect(captureHintText(s, u)).toBeUndefined();
+    const unit = newUnit(s, unitType('Soldier'), 0, { x: 3, y: 3 });
+    expect(captureHintText(s, unit)).toBeUndefined();
     s.buildings.push({ type: 0, owner: 1, x: 3, y: 3, capture: null });
-    expect(captureHintText(s, u)).toMatch(/^\d+→\d+$/);
+    expect(captureHintText(s, unit)).toMatch(/^\d+→\d+$/);
   });
 
   it('minimapa: oculta las unidades enemigas que no se ven y las que se estan animando', () => {
     const s = blankState();
-    const mine = newUnit(s, T('Soldier'), 0, { x: 1, y: 1 });
-    newUnit(s, T('Soldier'), 1, { x: 9, y: 9 });
+    const mine = newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
+    newUnit(s, unitType('Soldier'), 1, { x: 9, y: 9 });
     const vis = createLayer(s, false);
     vis.set({ x: 1, y: 1 }, true);
     expect(minimapVM([], s, vis, new Set()).units).toEqual([{ x: 1, y: 1, team: 0 }]);
@@ -77,19 +77,19 @@ describe('datos de la interfaz', () => {
 });
 
 describe('clima en la barra de arriba', () => {
-  const W = (id: string) => WEATHER.ids.indexOf(id);
+  const weatherIndex = (id: string) => WEATHER.ids.indexOf(id);
 
   it('resume los efectos de cada clima', () => {
-    expect(weatherEffectsText(blankState(), W('Clear'))).toBe('Sin efectos');
-    expect(weatherEffectsText(blankState(), W('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
-    expect(weatherEffectsText(blankState(), W('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
+    expect(weatherEffectsText(blankState(), weatherIndex('Clear'))).toBe('Sin efectos');
+    expect(weatherEffectsText(blankState(), weatherIndex('Rain'))).toBe('Vehículos −1 mov. · Visión −1 · Puntería −10 %');
+    expect(weatherEffectsText(blankState(), weatherIndex('Snow'))).toBe('Infantería/Vehículos/Anfibios −1 mov. · Visión −1');
     settings.lang = 'en';
-    expect(weatherEffectsText(blankState(), W('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
+    expect(weatherEffectsText(blankState(), weatherIndex('Storm'))).toBe('Aircraft −2 move · Vision −2 · Aim −15 %');
   });
 
   it('enseña el clima de hoy y el pronostico solo si cambia mañana', () => {
     const s = blankState();
-    s.weather = { kind: W('Rain'), left: 2, next: W('Clear') };
+    s.weather = { kind: weatherIndex('Rain'), left: 2, next: weatherIndex('Clear') };
     expect(weatherVM(s)).toMatchObject({ id: 'Rain', name: 'Lluvia', next: null });
     s.weather.left = 1;
     expect(weatherVM(s)!.next).toBe('Despejado');
@@ -106,8 +106,8 @@ describe('panel de combate', () => {
 
   it('las vidas bajan por etapas y tu unidad sale a la izquierda', () => {
     const s = blankState();
-    const enemy = newUnit(s, T('Tank'), 1, { x: 10, y: 10 });
-    const mine = newUnit(s, T('Tank'), 0, { x: 10, y: 11 });
+    const enemy = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
+    const mine = newUnit(s, unitType('Tank'), 0, { x: 10, y: 11 });
     const ev = attackEvent(s, enemy, mine, () => 0.5);
     const start = combatVM(blankState(), ev, 'start', icons, both)!;
     expect(start.left.team).toBe(0);
@@ -127,8 +127,8 @@ describe('panel de combate', () => {
 
   it('una unidad en la niebla no se delata', () => {
     const s = blankState();
-    const art = newUnit(s, T('Artillery'), 1, { x: 10, y: 10 });
-    const mine = newUnit(s, T('Soldier'), 0, { x: 10, y: 13 });
+    const art = newUnit(s, unitType('Artillery'), 1, { x: 10, y: 10 });
+    const mine = newUnit(s, unitType('Soldier'), 0, { x: 10, y: 13 });
     const ev = attackEvent(s, art, mine, () => 0.5);
     const vm = combatVM(blankState(), ev, 'hit', icons, { attacker: false, defender: true })!;
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
@@ -138,12 +138,12 @@ describe('panel de combate', () => {
 
   it('marca la unidad destruida', () => {
     const s = blankState();
-    const a = newUnit(s, T('Tank'), 0, { x: 10, y: 10 });
-    const d = newUnit(s, T('Soldier'), 1, { x: 10, y: 11 });
-    d.life = 1;
+    const attacker = newUnit(s, unitType('Tank'), 0, { x: 10, y: 10 });
+    const defender = newUnit(s, unitType('Soldier'), 1, { x: 10, y: 11 });
+    defender.life = 1;
     const vm = combatVM(
       blankState(),
-      attackEvent(s, a, d, () => 0.5),
+      attackEvent(s, attacker, defender, () => 0.5),
       'hit',
       icons,
       both,
@@ -160,39 +160,39 @@ describe('panel de combate', () => {
 });
 
 describe('desglose de la barra de arriba', () => {
-  const B = (name: string) => BUILDING_NAMES.indexOf(name);
+  const buildingType = (name: string) => BUILDING_NAMES.indexOf(name);
   const army = () => {
     const s = blankState();
     s.funds = [5000, 5000];
-    for (const [i, b] of ['City', 'City', 'Factory', 'Oil'].entries())
-      s.buildings.push({ type: B(b), owner: 0, x: 1 + i, y: 1, capture: null });
-    s.buildings.push({ type: B('City'), owner: 1, x: 9, y: 9, capture: null });
-    newUnit(s, T('Tank'), 0, { x: 5, y: 5 });
-    newUnit(s, T('Soldier'), 0, { x: 6, y: 5 });
-    newUnit(s, T('Soldier'), 0, { x: 7, y: 5 });
-    newUnit(s, T('Bomber'), 1, { x: 9, y: 8 });
+    for (const [index, buildingName] of ['City', 'City', 'Factory', 'Oil'].entries())
+      s.buildings.push({ type: buildingType(buildingName), owner: 0, x: 1 + index, y: 1, capture: null });
+    s.buildings.push({ type: buildingType('City'), owner: 1, x: 9, y: 9, capture: null });
+    newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
+    newUnit(s, unitType('Soldier'), 0, { x: 6, y: 5 });
+    newUnit(s, unitType('Soldier'), 0, { x: 7, y: 5 });
+    newUnit(s, unitType('Bomber'), 1, { x: 9, y: 8 });
     return s;
   };
 
   it('ingresos por tipo de edificio y mantenimiento por tipo de unidad, con las cuentas de endRound', () => {
     const s = army();
     s.rules = rulesWith(defaultContent(), { upkeep: 0.1, commandPoints: 30 });
-    const e = economyVM(s, 0);
-    expect(e.income.lines.map((line) => [line.label, line.count])).toEqual([
+    const economy = economyVM(s, 0);
+    expect(economy.income.lines.map((line) => [line.label, line.count])).toEqual([
       ['Ciudad', 2],
       ['Fábrica', 1],
       ['Pozo de petróleo', 1],
     ]);
-    expect(e.income.total).toBe(e.income.lines.reduce((sum, line) => sum + line.amount, 0));
-    expect(e.upkeep!.lines.find((line) => line.label === 'Soldado')!.count).toBe(2);
+    expect(economy.income.total).toBe(economy.income.lines.reduce((sum, line) => sum + line.amount, 0));
+    expect(economy.upkeep!.lines.find((line) => line.label === 'Soldado')!.count).toBe(2);
     // El enemigo no cuenta
-    expect(e.upkeep!.lines.some((line) => line.label === 'Bombardero')).toBe(false);
-    expect(e.net).toBe(e.income.total - e.upkeep!.total);
-    const next = e.next;
+    expect(economy.upkeep!.lines.some((line) => line.label === 'Bombardero')).toBe(false);
+    expect(economy.net).toBe(economy.income.total - economy.upkeep!.total);
+    const next = economy.next;
     endRound(s);
     expect(s.funds[0]).toBe(next); // lo que dice el desglose es lo que pasa
-    expect(e.commandPoints!.used).toBe(UNIT.command[T('Tank')]! + 2 * UNIT.command[T('Soldier')]!);
-    expect(e.commandPoints!.lines.reduce((sum, line) => sum + line.amount, 0)).toBe(e.commandPoints!.used);
+    expect(economy.commandPoints!.used).toBe(UNIT.command[unitType('Tank')]! + 2 * UNIT.command[unitType('Soldier')]!);
+    expect(economy.commandPoints!.lines.reduce((sum, line) => sum + line.amount, 0)).toBe(economy.commandPoints!.used);
   });
 
   it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
@@ -200,20 +200,20 @@ describe('desglose de la barra de arriba', () => {
     s.rules = rulesWith(defaultContent(), { upkeep: 1 });
     s.funds[0] = 0;
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
-    const e = economyVM(s, 0);
-    expect(e.income.total).toBe(0);
-    expect(e.shortfall).toBe(0);
-    expect(e.next).toBe(0);
+    const economy = economyVM(s, 0);
+    expect(economy.income.total).toBe(0);
+    expect(economy.shortfall).toBe(0);
+    expect(economy.next).toBe(0);
   });
 
   it('sin las reglas de mantenimiento y mando no salen esos apartados; el tope de dinero cuenta', () => {
     const s = army();
     s.rules = rulesWith(defaultContent(), { upkeep: 0, commandPoints: null });
     s.funds[0] = MAX_FUNDS;
-    const e = economyVM(s, 0);
-    expect(e.upkeep).toBeNull();
-    expect(e.commandPoints).toBeNull();
-    expect(e.next).toBe(MAX_FUNDS);
+    const economy = economyVM(s, 0);
+    expect(economy.upkeep).toBeNull();
+    expect(economy.commandPoints).toBeNull();
+    expect(economy.next).toBe(MAX_FUNDS);
   });
 
   it('dia: lo que queda y los puntos solo con limite de dias', () => {

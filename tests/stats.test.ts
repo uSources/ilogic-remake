@@ -11,12 +11,12 @@ const { UNIT } = defaultContent().tables;
 describe('estadisticas', () => {
   it('cuenta compras, bajas y capturas por bando', () => {
     const s = blankState();
-    const u = newUnit(s, 1, 0, { x: 3, y: 3 });
-    s.units.push(u);
-    recordEvent(s, { kind: 'spawn', uid: u.uid, at: { x: 3, y: 3 } }, 0);
-    recordEvent(s, { kind: 'attack', attacker: u.uid, target: { x: 4, y: 3 }, damage: 50, killed: true }, 0);
-    recordEvent(s, { kind: 'attack', attacker: u.uid, target: { x: 4, y: 3 }, damage: 10, killed: false }, 0);
-    recordEvent(s, { kind: 'capture', uid: u.uid, at: { x: 3, y: 3 }, owner: null }, 1);
+    const unit = newUnit(s, 1, 0, { x: 3, y: 3 });
+    s.units.push(unit);
+    recordEvent(s, { kind: 'spawn', uid: unit.uid, at: { x: 3, y: 3 } }, 0);
+    recordEvent(s, { kind: 'attack', attacker: unit.uid, target: { x: 4, y: 3 }, damage: 50, killed: true }, 0);
+    recordEvent(s, { kind: 'attack', attacker: unit.uid, target: { x: 4, y: 3 }, damage: 10, killed: false }, 0);
+    recordEvent(s, { kind: 'capture', uid: unit.uid, at: { x: 3, y: 3 }, owner: null }, 1);
     expect(statsOf(s)).toEqual({ built: [1, 0], spent: [UNIT.cost[1], 0], lost: [0, 1], captured: [0, 1] });
   });
 

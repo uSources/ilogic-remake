@@ -50,17 +50,17 @@ export interface PhaseHost {
   abandonSelection(): void;
   /** Enseñar el alcance de una unidad (enemiga, o propia ya usada). */
   inspect(unit: Unit): void;
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   play(events: GameEvent[]): Promise<void>;
 }
 
 export interface PhaseHandler {
   /** Al entrar en la fase: prepara lo que enseña (su menu...) y la pone. */
-  enter?(h: PhaseHost): void;
+  enter?(host: PhaseHost): void;
   /** Aceptar (Enter, clic, toque) en la casilla del cursor o la opcion señalada. */
-  accept(h: PhaseHost): void;
+  accept(host: PhaseHost): void;
   /** Atras (Esc, clic derecho, clic fuera del menu). */
-  back(h: PhaseHost): void;
+  back(host: PhaseHost): void;
   /** Su menu de bocadillo, si tiene. Puro: sale de lo elegido. */
   menu?(input: MenuInput): MenuModel;
   /** Casillas que marca en el mapa. Puro. */

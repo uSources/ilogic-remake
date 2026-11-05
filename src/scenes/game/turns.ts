@@ -66,7 +66,7 @@ export interface TurnHost {
   toMap(): void;
   refresh(): void;
   refreshHud(): void;
-  visible(p: Pos): boolean;
+  visible(pos: Pos): boolean;
   /** Unidades propias sin mover y sin orden. */
   idleUnits(): Unit[];
   /** Se ha guardado esta partida (al acabar se borra el guardado). */
@@ -353,9 +353,9 @@ export class TurnFlow {
     ownHealed(report).forEach((healed, i) => {
       const unit = unitById(host.state, healed.uid);
       if (!unit || unit.carrier !== null || !host.visible(unit)) return;
-      const c = center(unit);
+      const centerPoint = center(unit);
       const delay = HEAL_TEXT_DELAY_MS + i * HEAL_TEXT_STAGGER_MS;
-      void floatText(host.scene, host.view, { x: c.x, y: c.y - 6 }, `+${healed.amount}`, PAL_CSS.green, delay);
+      void floatText(host.scene, host.view, { x: centerPoint.x, y: centerPoint.y - 6 }, `+${healed.amount}`, PAL_CSS.green, delay);
     });
   }
 }

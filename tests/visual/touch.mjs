@@ -32,8 +32,8 @@ async function open(browser, viewport) {
     userAgent: devices['Pixel 7'].userAgent,
   });
   const page = await ctx.newPage();
-  page.on('pageerror', (e) => failures.push(`error en la pagina: ${e.message}`));
-  await page.route(/^https?:\/\//, (r) => r.abort());
+  page.on('pageerror', (error) => failures.push(`error en la pagina: ${error.message}`));
+  await page.route(/^https?:\/\//, (route) => route.abort());
   // Sin el aviso de gestos (tapa el mapa) y con "esperar sola" (lo normal).
   await page.addInitScript(() => {
     localStorage.setItem('ilogic.settings', JSON.stringify({ menuBg: 'classic', music: false, autoWait: true }));
@@ -54,11 +54,11 @@ async function start(page, enemy = false) {
   await page.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false }));
   const st = await page.evaluate((enemy) => {
     const s = window.ilogicDebug.state();
-    const me = s.units.find((u) => u.x === 0 && u.y === 7);
+    const me = s.units.find((unit) => unit.x === 0 && unit.y === 7);
     Object.assign(me, { x: 6, y: 12 });
     // El pozo de petroleo propio de (0,10) pasa a ser una fabrica en (11,12).
     Object.assign(
-      s.buildings.find((b) => b.x === 0 && b.y === 10),
+      s.buildings.find((building) => building.x === 0 && building.y === 10),
       { x: 11, y: 12, type: 2 },
     );
     if (enemy) s.units.push({ ...me, uid: s.nextUid++, team: 1, x: 7, y: 12, cargo: [], carrier: null });
@@ -72,25 +72,25 @@ async function start(page, enemy = false) {
 const center = (page, x, y) =>
   page.evaluate(
     ([x, y]) => {
-      const v = window.ilogic.scene.getScene('Game').view;
-      v.centerOn({ x, y }, true);
-      const r = v.tileRectCss({ x, y });
-      return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+      const view = window.ilogic.scene.getScene('Game').view;
+      view.centerOn({ x, y }, true);
+      const rect = view.tileRectCss({ x, y });
+      return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
     },
     [x, y],
   );
 const at = (page, x, y) =>
   page.evaluate(
     ([x, y]) => {
-      const r = window.ilogic.scene.getScene('Game').view.tileRectCss({ x, y });
-      return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+      const rect = window.ilogic.scene.getScene('Game').view.tileRectCss({ x, y });
+      return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
     },
     [x, y],
   );
 
 async function tap(page, x, y) {
-  const p = await at(page, x, y);
-  await page.touchscreen.tap(p.x, p.y);
+  const point = await at(page, x, y);
+  await page.touchscreen.tap(point.x, point.y);
   await page.waitForTimeout(120);
   await page.evaluate(() => window.ilogicDebug.idle());
 }
@@ -111,7 +111,7 @@ async function drag(page, cdp, from, to, holdMs = 0) {
   await page.evaluate(() => window.ilogicDebug.idle());
 }
 
-const unit = (page, uid) => page.evaluate((uid) => window.ilogicDebug.state().units.find((u) => u.uid === uid) ?? null, uid);
+const unit = (page, uid) => page.evaluate((uid) => window.ilogicDebug.state().units.find((unit) => unit.uid === uid) ?? null, uid);
 const phase = (page) => page.evaluate(() => window.ilogicDebug.game().phase);
 
 /** Soldado propio (ver start) y casillas libres a su derecha. */
@@ -124,7 +124,7 @@ async function scenarios(page, cdp, name) {
   // Mover: dos toques.
   await start(page);
   const s0 = await page.evaluate(
-    ([x, y]) => window.ilogicDebug.state().units.find((u) => u.team === 0 && u.x === x && u.y === y),
+    ([x, y]) => window.ilogicDebug.state().units.find((unit) => unit.team === 0 && unit.x === x && unit.y === y),
     [SOLDIER.x, SOLDIER.y],
   );
   await center(page, SOLDIER.x + 1, SOLDIER.y);
@@ -148,7 +148,9 @@ async function scenarios(page, cdp, name) {
 
   // Atacar: un enemigo al lado del soldado; primer toque prevision, segundo ataque.
   await start(page, true);
-  const enemy = await page.evaluate(() => window.ilogicDebug.state().units.find((u) => u.team === 1 && u.x === 7 && u.y === 12));
+  const enemy = await page.evaluate(() =>
+    window.ilogicDebug.state().units.find((unit) => unit.team === 1 && unit.x === 7 && unit.y === 12),
+  );
   await center(page, SOLDIER.x + 1, SOLDIER.y);
   await tap(page, SOLDIER.x, SOLDIER.y);
   await tap(page, SOLDIER.x + 1, SOLDIER.y);
@@ -187,8 +189,8 @@ async function scenarios(page, cdp, name) {
   await start(page);
   await center(page, SOLDIER.x + 2, SOLDIER.y);
   const hold = async (x, y, ms = 650) => {
-    const p = await at(page, x, y);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: p.x, y: p.y }] });
+    const point = await at(page, x, y);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: point.x, y: point.y }] });
     await page.waitForTimeout(ms);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForTimeout(150);
@@ -197,7 +199,7 @@ async function scenarios(page, cdp, name) {
   check((await phase(page)) === 'map', 'sin unidad elegida, mantener pulsado no abre ordenes');
   await tap(page, SOLDIER.x, SOLDIER.y);
   await hold(SOLDIER.x + 4, SOLDIER.y);
-  const om = await page.evaluate(() => window.ilogicDebug.ui().menu?.items.map((i) => i.id));
+  const om = await page.evaluate(() => window.ilogicDebug.ui().menu?.items.map((item) => item.id));
   check(
     // [CAMBIO] Menu completo (controls/actions.ts): fuera de alcance, ir alli; y las ordenes.
     (await phase(page)) === 'orderMenu' && om?.join() === 'go,orderToAttack,orderToDefend',
@@ -225,12 +227,12 @@ async function scenarios(page, cdp, name) {
   await center(page, 15, 11);
   const cam = () =>
     page.evaluate(() => {
-      const c = window.ilogic.scene.getScene('Game').cameras.main;
-      return `${Math.round(c.scrollX)},${Math.round(c.scrollY)}`;
+      const camera = window.ilogic.scene.getScene('Game').cameras.main;
+      return `${Math.round(camera.scrollX)},${Math.round(camera.scrollY)}`;
     });
   const cam0 = await cam();
-  const a = await at(page, 15, 11);
-  await drag(page, cdp, a, { x: a.x - 100, y: a.y - 100 });
+  const emptyTile = await at(page, 15, 11);
+  await drag(page, cdp, emptyTile, { x: emptyTile.x - 100, y: emptyTile.y - 100 });
   const cam1 = await cam();
   check(cam1 !== cam0 && (await phase(page)) === 'map', `arrastrar desde una casilla vacia mueve el mapa (${cam0} → ${cam1})`);
 
@@ -238,20 +240,20 @@ async function scenarios(page, cdp, name) {
   await start(page);
   const level = () => page.evaluate(() => window.ilogic.scene.getScene('Game').view.level);
   const z0 = await level();
-  const c = await center(page, 10, 10);
+  const pinchCenter = await center(page, 10, 10);
   await cdp.send('Input.dispatchTouchEvent', {
     type: 'touchStart',
     touchPoints: [
-      { x: c.x - 30, y: c.y },
-      { x: c.x + 30, y: c.y },
+      { x: pinchCenter.x - 30, y: pinchCenter.y },
+      { x: pinchCenter.x + 30, y: pinchCenter.y },
     ],
   });
   for (let i = 1; i <= 6; i++) {
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchMove',
       touchPoints: [
-        { x: c.x - 30 - i * 10, y: c.y },
-        { x: c.x + 30 + i * 10, y: c.y },
+        { x: pinchCenter.x - 30 - i * 10, y: pinchCenter.y },
+        { x: pinchCenter.x + 30 + i * 10, y: pinchCenter.y },
       ],
     });
     await page.waitForTimeout(16);

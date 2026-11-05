@@ -37,11 +37,11 @@ const SMOKE_EVERY_MS = 650;
 const CONFETTI_COLORS = [PAL.gold, 0xfff1a8, PAL.blue, 0x8fd0ff, 0xffffff];
 
 /** Filtro CSS del lienzo del juego (gris al perder). */
-export function setEndFilter(f: string | null): void {
+export function setEndFilter(filter: string | null): void {
   const el = document.getElementById('game');
   if (!el) return;
-  el.style.transition = f ? 'filter 1.2s steps(6)' : '';
-  el.style.filter = f ?? '';
+  el.style.transition = filter ? 'filter 1.2s steps(6)' : '';
+  el.style.filter = filter ?? '';
 }
 
 /** Mision que va detras de esta (ninguna si es la ultima). */
@@ -124,8 +124,8 @@ export class EndOfMatch {
     const host = this.host;
     await host.wait(BEFORE_PAN_MS);
     if (match !== host.match) return false;
-    const c = center(focus);
-    host.scene.cameras.main.pan(c.x, c.y, reducedMotion() ? 0 : PAN_MS, 'Sine.easeInOut', true);
+    const centerPoint = center(focus);
+    host.scene.cameras.main.pan(centerPoint.x, centerPoint.y, reducedMotion() ? 0 : PAN_MS, 'Sine.easeInOut', true);
     await host.wait(reducedMotion() ? AFTER_PAN_REDUCED_MS : AFTER_PAN_MS);
     return match === host.match;
   }
@@ -133,24 +133,24 @@ export class EndOfMatch {
   /** Confeti al ganar; al perder, el mapa en gris y humo. Se repite (salvo con "reducir movimiento"). */
   private celebrate(won: boolean, focus: Pos): void {
     const { scene, view } = this.host;
-    const c = center(focus);
+    const centerPoint = center(focus);
     if (won) void tileFlash(scene, view, focus, PAL.gold);
     else setEndFilter(DEFEAT_FILTER);
-    const puff = won ? () => this.confetti(c) : () => this.smoke(c);
+    const puff = won ? () => this.confetti(centerPoint) : () => this.smoke(centerPoint);
     puff();
     if (reducedMotion()) return;
     this.celebration = scene.time.addEvent({ delay: won ? CONFETTI_EVERY_MS : SMOKE_EVERY_MS, loop: true, callback: puff });
   }
 
   /** Un estallido de confeti en un sitio al azar alrededor de la jugada. */
-  private confetti(c: { x: number; y: number }): void {
-    const at = { x: c.x + (Math.random() - 0.5) * TILE * 8, y: c.y + (Math.random() - 0.5) * TILE * 5 };
+  private confetti(pos: { x: number; y: number }): void {
+    const at = { x: pos.x + (Math.random() - 0.5) * TILE * 8, y: pos.y + (Math.random() - 0.5) * TILE * 5 };
     void burst(this.host.scene, this.host.view, at, { colors: CONFETTI_COLORS, count: 14, radius: 30, duration: 900 });
   }
 
   /** Una columna de humo sobre la jugada. */
-  private smoke(c: { x: number; y: number }): void {
-    const at = { x: c.x + (Math.random() - 0.5) * TILE, y: c.y - TILE / 2 };
+  private smoke(pos: { x: number; y: number }): void {
+    const at = { x: pos.x + (Math.random() - 0.5) * TILE, y: pos.y - TILE / 2 };
     void burst(this.host.scene, this.host.view, at, { colors: COLORS.smoke, count: 8, radius: 26, size: 6, duration: 1400 });
   }
 
@@ -177,11 +177,11 @@ export class EndOfMatch {
       },
     });
     Object.assign(ui.actions, {
-      endHover: (i: number) => {
-        this.selected = i;
+      endHover: (index: number) => {
+        this.selected = index;
         this.publishSelected();
       },
-      endPick: (i: number) => this.pick(i),
+      endPick: (index: number) => this.pick(index),
     });
   }
 
@@ -204,8 +204,8 @@ export class EndOfMatch {
     if (cmd.kind === 'back') return this.pick(this.buttons.indexOf('menu'));
   }
 
-  private pick(i: number): void {
-    const id = this.buttons[i];
+  private pick(index: number): void {
+    const id = this.buttons[index];
     if (!id || ui.get().screen !== 'end') return;
     this.celebration?.remove(false);
     this.celebration = null;

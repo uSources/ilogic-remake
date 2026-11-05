@@ -14,14 +14,14 @@ import { defaultContent } from '@core/content/default';
 
 export function checkInvariants(s: GameState): void {
   const seen = new Set<string>();
-  for (const u of s.units) {
-    expect(u.life).toBeGreaterThan(0);
-    if (u.carrier === null) {
-      const k = `${u.x},${u.y}`;
-      expect(seen.has(k), `dos unidades en ${k}`).toBe(false);
-      seen.add(k);
+  for (const unit of s.units) {
+    expect(unit.life).toBeGreaterThan(0);
+    if (unit.carrier === null) {
+      const key = `${unit.x},${unit.y}`;
+      expect(seen.has(key), `dos unidades en ${key}`).toBe(false);
+      seen.add(key);
     } else {
-      expect(s.units.find((unit) => unit.uid === u.carrier)?.cargo).toContain(u.uid);
+      expect(s.units.find((other) => other.uid === unit.carrier)?.cargo).toContain(unit.uid);
     }
   }
 }

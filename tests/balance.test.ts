@@ -88,11 +88,11 @@ describe('herramienta de equilibrio: variantes', () => {
 
 describe('herramienta de equilibrio: partidas y duelos', () => {
   it('la misma semilla da la misma partida', () => {
-    const a = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(defaultContent()), content: defaultContent() });
-    const b = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(defaultContent()), content: defaultContent() });
-    expect(a).toEqual(b);
-    expect(a.samples.length).toBeGreaterThan(5);
-    expect(a.units[0]!.reduce((sum, unitTally) => sum + unitTally.bought, 0)).toBeGreaterThan(0);
+    const first = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(defaultContent()), content: defaultContent() });
+    const second = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(defaultContent()), content: defaultContent() });
+    expect(first).toEqual(second);
+    expect(first.samples.length).toBeGreaterThan(5);
+    expect(first.units[0]!.reduce((sum, unitTally) => sum + unitTally.bought, 0)).toBeGreaterThan(0);
   });
 
   it('duelos: sin contraataque el defensor no devuelve daño; con el, si', () => {

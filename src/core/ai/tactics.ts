@@ -70,11 +70,11 @@ export function* retreat(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange):
  * `chase: false` no persigue a nadie fuera de tiro y `stay` solo dispara desde donde esta.
  */
 export interface AttackOpts {
-  zone?: (t: Unit) => boolean;
+  zone?: (unit: Unit) => boolean;
   chase?: boolean;
   stay?: boolean;
   /** Casillas desde las que puede disparar si se mueve (formacion: sin adelantarse a su escuadra). */
-  from?: (p: Pos) => boolean;
+  from?: (pos: Pos) => boolean;
 }
 
 /** Un disparo posible: desde donde, a quien y cuanto vale. */

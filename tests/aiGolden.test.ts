@@ -10,7 +10,7 @@ import { playGame } from '../tools/balance/play';
  */
 describe('IA: partidas de referencia', () => {
   it.each([1, 2, 3])('semilla %i', (seed) => {
-    const g = playGame({
+    const record = playGame({
       seed,
       maxDays: 25,
       policies: ['ai', 'ai'],
@@ -18,7 +18,7 @@ describe('IA: partidas de referencia', () => {
       rules: rulesWith(defaultContent()),
       content: defaultContent(),
     });
-    const last = g.samples[g.samples.length - 1];
-    expect({ winner: g.winner, reason: g.reason, days: g.days, events: g.events, last }).toMatchSnapshot();
+    const last = record.samples[record.samples.length - 1];
+    expect({ winner: record.winner, reason: record.reason, days: record.days, events: record.events, last }).toMatchSnapshot();
   });
 });

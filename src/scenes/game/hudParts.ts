@@ -21,20 +21,23 @@ import { tablesOf } from '../../core/gameContent';
 export function forecastFor(
   textures: Phaser.Textures.TextureManager,
   s: GameState,
-  o: {
+  options: {
     phase: Phase;
     sel: Unit | null;
     c: Pos;
-    intentAt: (p: Pos) => Intent;
+    intentAt: (pos: Pos) => Intent;
     attackSet: ReadonlyMap<string, number>;
-    anchor: (p: Pos) => Anchor;
+    anchor: (pos: Pos) => Anchor;
   },
 ): ForecastVM | null {
-  const attacker = o.sel;
+  const attacker = options.sel;
   if (!attacker) return null;
-  const fight = o.phase === 'move' ? fightFromMove(attacker, o.intentAt(o.c)) : fightFromHere(s, attacker, o.attackSet, o.c);
+  const fight =
+    options.phase === 'move'
+      ? fightFromMove(attacker, options.intentAt(options.c))
+      : fightFromHere(s, attacker, options.attackSet, options.c);
   if (!fight) return null;
-  return forecastVM(textures, s, attacker, fight.attackerAt, fight.target, o.anchor(fight.target));
+  return forecastVM(textures, s, attacker, fight.attackerAt, fight.target, options.anchor(fight.target));
 }
 
 /** Al mover: si el cursor esta sobre un enemigo atacable, desde la casilla desde la que se atacaria. */
@@ -58,34 +61,34 @@ function fightFromHere(
 /** Bocadillo junto al cursor al mover: movimiento gastado, defensa, combustible, peligro y lo que pasaria al soltar. */
 export function moveTipFor(
   s: GameState,
-  o: {
+  options: {
     sel: Unit | null;
     range: MoveRange | null;
     c: Pos;
-    intentAt: (p: Pos) => Intent;
+    intentAt: (pos: Pos) => Intent;
     trailTo: (dest: Pos) => Pos[];
     danger: Grid<boolean> | null;
-    anchor: (p: Pos) => Anchor;
+    anchor: (pos: Pos) => Anchor;
   },
 ): MoveTipVM | null {
-  const unit = o.sel;
-  const range = o.range;
-  const cursor = o.c;
+  const unit = options.sel;
+  const range = options.range;
+  const cursor = options.c;
   if (!unit || !range) return null;
-  const intent = o.intentAt(cursor);
+  const intent = options.intentAt(cursor);
   // De atacar (y de quedarse) se encarga la prevision de combate.
   if (intent.kind === 'attack' || intent.kind === 'stay') return null;
-  const anchor = o.anchor(cursor);
+  const anchor = options.anchor(cursor);
   if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
   const isMove = intent.kind === 'move';
-  const used = isMove ? pathCost(s, movementOf(s, unit.type), o.trailTo(intent.to)) : range.steps.at(cursor) || 1;
+  const used = isMove ? pathCost(s, movementOf(s, unit.type), options.trailTo(intent.to)) : range.steps.at(cursor) || 1;
   return {
     anchor,
     action: moveTipAction(intent),
     used,
     max: range.maxSteps,
     stars: isMove ? defenseStars(s, cursor) : undefined,
-    danger: isMove && !!o.danger?.at(cursor),
+    danger: isMove && !!options.danger?.at(cursor),
   };
 }
 
@@ -96,7 +99,7 @@ function moveTipAction(intent: Intent): string {
 }
 
 /** [CAMBIO] Panel de lo elegido (dos o mas unidades): retratos en orden y cuantas hay de cada tipo. */
-export function selectionPanel(textures: Phaser.Textures.TextureManager, s: GameState, list: Unit[], c: Pos): SelectionVM {
+export function selectionPanel(textures: Phaser.Textures.TextureManager, s: GameState, list: Unit[], cursor: Pos): SelectionVM {
   const countByType = new Map<number, number>();
   for (const unit of list) countByType.set(unit.type, (countByType.get(unit.type) ?? 0) + 1);
   return {
@@ -105,7 +108,7 @@ export function selectionPanel(textures: Phaser.Textures.TextureManager, s: Game
       icon: unitKey(textures, s, unit),
       name: unitLabel(s.content, unit.type),
       life: unit.life,
-      current: unit.x === c.x && unit.y === c.y,
+      current: unit.x === cursor.x && unit.y === cursor.y,
     })),
     types: [...countByType].map(([type, count]) => ({ name: unitLabel(s.content, type), count })),
   };
@@ -131,10 +134,10 @@ export function labPanel(s: GameState, lab: LabOptions | null): UIState['lab'] {
 }
 
 /** Linea de ayuda de abajo segun la fase. */
-export function hintText(o: { busy: boolean; enemyPlaying: boolean; phase: Phase; ordering: boolean; inspecting: boolean }): string {
+export function hintText(options: { busy: boolean; enemyPlaying: boolean; phase: Phase; ordering: boolean; inspecting: boolean }): string {
   // Animando lo propio no se dice nada; en el turno enemigo, como saltarlo.
-  if (o.busy) return o.enemyPlaying ? t('skip') : '';
-  if (o.phase === 'target') return o.ordering ? t('orderPick') : t('genTarget');
-  if (o.phase === 'map') return o.inspecting ? t('hintInspect') : t('hintMap');
+  if (options.busy) return options.enemyPlaying ? t('skip') : '';
+  if (options.phase === 'target') return options.ordering ? t('orderPick') : t('genTarget');
+  if (options.phase === 'map') return options.inspecting ? t('hintInspect') : t('hintMap');
   return '';
 }

@@ -26,7 +26,7 @@ export interface FuzzFailure {
 }
 
 /** Una partida: cada bando juega al azar o con la IA (sorteado por turno). Devuelve el fallo o null. */
-export function fuzzGame(seed: number, opts: { size?: number; days?: number; log?: (l: string) => void } = {}): FuzzFailure | null {
+export function fuzzGame(seed: number, opts: { size?: number; days?: number; log?: (line: string) => void } = {}): FuzzFailure | null {
   const rng = seededRng(seed);
   const s: GameState = createGame(rng, { size: opts.size ?? 20, ruleChanges: { fog: seed % 3 === 0 } });
   let before = serialize(s);
@@ -54,29 +54,29 @@ export function fuzzGame(seed: number, opts: { size?: number; days?: number; log
 function main(): void {
   const args = process.argv.slice(2);
   const num = (name: string, fallback: number) => {
-    const i = args.indexOf(`--${name}`);
-    return i >= 0 ? Number(args[i + 1]) : fallback;
+    const index = args.indexOf(`--${name}`);
+    return index >= 0 ? Number(args[index + 1]) : fallback;
   };
   const size = num('size', 20),
     days = num('days', 30);
   const repro = args.indexOf('--repro');
   if (repro >= 0) {
     const seed = Number(args[repro + 1]);
-    const f = fuzzGame(seed, { size, days, log: (line) => console.log(line) });
-    console.log(f ? `\nFALLO: ${f.errors.join('; ')}` : '\nsin fallos');
-    process.exit(f ? 1 : 0);
+    const failure = fuzzGame(seed, { size, days, log: (line) => console.log(line) });
+    console.log(failure ? `\nFALLO: ${failure.errors.join('; ')}` : '\nsin fallos');
+    process.exit(failure ? 1 : 0);
   }
   const games = num('games', 200),
     first = num('seed', 1);
   const t0 = Date.now();
   for (let i = 0; i < games; i++) {
     const seed = first + i;
-    const f = fuzzGame(seed, { size, days });
-    if (f) {
-      console.log(`FALLO en la partida ${seed} (dia ${f.day}, bando ${f.team}) tras: ${f.action}`);
-      for (const e of f.errors) console.log(`  - ${e}`);
+    const failure = fuzzGame(seed, { size, days });
+    if (failure) {
+      console.log(`FALLO en la partida ${seed} (dia ${failure.day}, bando ${failure.team}) tras: ${failure.action}`);
+      for (const error of failure.errors) console.log(`  - ${error}`);
       console.log(`\nRepetir con detalle: npm run fuzz -- --repro ${seed} --size ${size} --days ${days}`);
-      console.log(`Estado anterior (para npm run play -- --load): ${f.before.length} caracteres`);
+      console.log(`Estado anterior (para npm run play -- --load): ${failure.before.length} caracteres`);
       process.exit(1);
     }
   }

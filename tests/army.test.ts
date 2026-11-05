@@ -26,13 +26,13 @@ describe('puntos de mando', () => {
   it('no se puede comprar si la unidad no cabe, aunque haya dinero', () => {
     const s = blankState(TEST_RULES);
     s.funds[0] = 100000;
-    const f = { type: FACTORY, owner: 0 as const, x: 4, y: 4 };
-    s.buildings.push(f);
+    const factory = { type: FACTORY, owner: 0 as const, x: 4, y: 4 };
+    s.buildings.push(factory);
     newUnit(s, TANK, 0, { x: 1, y: 1 });
     newUnit(s, TANK, 0, { x: 2, y: 2 }); // 8 de 10
     expect(armyLimit(s, 0, TANK)).toBe('command');
-    expect(buyOptions(s, f).find((buyOption) => buyOption.type === TANK)?.blocked).toBe('command');
-    expect(spawn(s, f, TANK)).toBeNull();
+    expect(buyOptions(s, factory).find((buyOption) => buyOption.type === TANK)?.blocked).toBe('command');
+    expect(spawn(s, factory, TANK)).toBeNull();
     expect(s.funds[0]).toBe(100000);
     // Lo pequeño si cabe.
     const city = { type: CITY, owner: 0 as const, x: 6, y: 6 };
@@ -58,10 +58,10 @@ describe('mantenimiento', () => {
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500
     newUnit(s, TANK, 0, { x: 6, y: 6 }); // 12000
     expect(upkeepOf(s, 0)).toBe(1400); // 1350 redondeado a 100
-    const r = endRound(s);
-    expect(r.income[0]).toBe(1000);
+    const round = endRound(s);
+    expect(round.income[0]).toBe(1000);
     // No llega: se paga lo que hay y no pasa nada mas.
-    expect(r.upkeep[0]).toBe(1000);
+    expect(round.upkeep[0]).toBe(1000);
     expect(s.funds[0]).toBe(0);
     expect(s.units).toHaveLength(2);
     s.funds[0] = 5000;

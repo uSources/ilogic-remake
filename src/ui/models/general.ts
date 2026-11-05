@@ -7,20 +7,20 @@ const BLOCK_TEXT: Partial<Record<AbilityBlock, TextKey>> = { used: 'genUsed', ch
 
 /** Panel del general de un bando (null si no tiene). `targeting`: habilidad que se esta apuntando. */
 export function generalVM(s: GameState, team: Team, targeting: string | null): GeneralVM | null {
-  const g = generalOf(s, team);
-  if (!g) return null;
+  const general = generalOf(s, team);
+  if (!general) return null;
   const lang = settings.lang;
-  const stars = chargeStars(g.state);
+  const stars = chargeStars(general.state);
   return {
-    face: `ui/gen_${team === 0 ? 'b' : 'r'}_${g.def.id}`,
-    name: g.def.name[lang],
-    title: g.def.title[lang],
-    description: g.def.description[lang],
+    face: `ui/gen_${team === 0 ? 'b' : 'r'}_${general.def.id}`,
+    name: general.def.name[lang],
+    title: general.def.title[lang],
+    description: general.def.description[lang],
     stars,
-    max: g.def.charge.max,
-    fraction: stars >= g.def.charge.max ? 0 : g.state.charge - stars,
+    max: general.def.charge.max,
+    fraction: stars >= general.def.charge.max ? 0 : general.state.charge - stars,
     targeting,
-    abilities: g.def.abilities.map((ability) => {
+    abilities: general.def.abilities.map((ability) => {
       // 'target' solo dice que falta elegir casilla: se puede usar.
       const block = abilityBlock(s, team, ability.id, { x: 0, y: 0 });
       const text = block ? BLOCK_TEXT[block] : undefined;

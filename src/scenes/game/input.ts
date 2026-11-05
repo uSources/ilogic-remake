@@ -18,34 +18,34 @@ export interface InputTarget {
 }
 
 /** Traducir un puntero de Phaser al evento del adaptador de punteros (src/controls/pointer.ts). */
-export function pointerIn(p: Phaser.Input.Pointer, right: boolean, middle = false): PointerIn {
-  const e = p.event as MouseEvent | undefined;
+export function pointerIn(pointer: Phaser.Input.Pointer, right: boolean, middle = false): PointerIn {
+  const mouseEvent = pointer.event as MouseEvent | undefined;
   return {
-    id: p.id,
-    x: p.x,
-    y: p.y,
-    touch: p.wasTouch,
-    down: p.isDown,
+    id: pointer.id,
+    x: pointer.x,
+    y: pointer.y,
+    touch: pointer.wasTouch,
+    down: pointer.isDown,
     right,
-    shift: !!e?.shiftKey,
-    ctrl: !!e?.ctrlKey || !!e?.metaKey,
-    alt: !!e?.altKey,
+    shift: !!mouseEvent?.shiftKey,
+    ctrl: !!mouseEvent?.ctrlKey || !!mouseEvent?.metaKey,
+    alt: !!mouseEvent?.altKey,
     middle,
   };
 }
 
 /** Adaptador de teclado: en el mapa, ordenes InputCommand; en la pantalla final y opciones, MenuCommand. */
-export function onKey(e: KeyboardEvent, target: InputTarget): void {
+export function onKey(keyEvent: KeyboardEvent, target: InputTarget): void {
   const ctx = target.controlContext();
   if (ctx !== 'map') {
-    const cmd = menuKeyCommand(e, ctx);
+    const cmd = menuKeyCommand(keyEvent, ctx);
     if (cmd) target.menu(cmd);
     return;
   }
-  const cmd = keyCommand(e);
+  const cmd = keyCommand(keyEvent);
   if (!cmd) return;
   // Ctrl+numero cambia de pestaña en algunos navegadores: aqui es hacer un grupo.
-  if (cmd.kind === 'accept' || (cmd.kind === 'group' && cmd.mode !== 'select')) e.preventDefault();
+  if (cmd.kind === 'accept' || (cmd.kind === 'group' && cmd.mode !== 'select')) keyEvent.preventDefault();
   target.command(cmd);
 }
 
@@ -58,17 +58,15 @@ export function bindInput(scene: Phaser.Scene, target: InputTarget, gestures: Po
   scene.input.keyboard!.addCapture('TAB,SPACE,UP,DOWN,LEFT,RIGHT,BACKSPACE');
   scene.input.keyboard!.on('keydown', (event: KeyboardEvent) => onKey(event, target));
   // Raton y dedos: el adaptador decide el gesto; GameScene.pointerTarget() dice que hace en la partida.
-  const g = gestures;
-  const pin = pointerIn;
-  scene.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => g.move(pin(pointer, false)));
+  scene.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => gestures.move(pointerIn(pointer, false)));
   scene.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) =>
-    g.down(pin(pointer, pointer.rightButtonDown(), pointer.middleButtonDown())),
+    gestures.down(pointerIn(pointer, pointer.rightButtonDown(), pointer.middleButtonDown())),
   );
   scene.input.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) =>
-    g.up(pin(pointer, pointer.rightButtonReleased(), pointer.middleButtonReleased())),
+    gestures.up(pointerIn(pointer, pointer.rightButtonReleased(), pointer.middleButtonReleased())),
   );
-  scene.input.on(Phaser.Input.Events.GAME_OUT, () => g.leave());
+  scene.input.on(Phaser.Input.Events.GAME_OUT, () => gestures.leave());
   scene.input.on(Phaser.Input.Events.POINTER_WHEEL, (pointer: Phaser.Input.Pointer, _o: unknown, _dx: number, dy: number) =>
-    g.wheel(dy, pointer.x, pointer.y),
+    gestures.wheel(dy, pointer.x, pointer.y),
   );
 }

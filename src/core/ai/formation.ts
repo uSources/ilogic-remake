@@ -105,11 +105,11 @@ export function formation(s: GameState, ai: AiCtx, unit: Unit): Formation | null
  * Casilla a la que avanzar sin pasarse del limite de la formacion: lo mas cerca del destino que se
  * pueda y, a igualdad, junto a la mas retrasada. null = mejor quedarse (ya va por delante).
  */
-function formationMove(unit: Unit, range: MoveRange, f: Formation): Pos | null {
-  const progress = (pos: Pos) => [f.remaining.at(pos), manhattan(pos, f.rear)];
+function formationMove(unit: Unit, range: MoveRange, squadFormation: Formation): Pos | null {
+  const progress = (pos: Pos) => [squadFormation.remaining.at(pos), manhattan(pos, squadFormation.rear)];
   const keepsFormation = (pos: Pos) => {
-    const remaining = f.remaining.at(pos);
-    return remaining >= f.minRemaining && remaining !== Infinity;
+    const remaining = squadFormation.remaining.at(pos);
+    return remaining >= squadFormation.minRemaining && remaining !== Infinity;
   };
   const best = minBy(reachableTiles(range).filter(keepsFormation), progress);
   const isBetterThanStaying = best !== null && compareKeys(progress(best), progress(unit)) < 0;
@@ -117,8 +117,15 @@ function formationMove(unit: Unit, range: MoveRange, f: Formation): Pos | null {
 }
 
 /** Hacia el destino de su orden: en formacion si va con su escuadra, si no como siempre. */
-export function standingOrderStep(s: GameState, ai: AiCtx, unit: Unit, at: Pos, range: MoveRange, f: Formation | null): Pos | null {
-  return f ? formationMove(unit, range, f) : bestMoveToward(s, ai, unit, at, range);
+export function standingOrderStep(
+  s: GameState,
+  ai: AiCtx,
+  unit: Unit,
+  at: Pos,
+  range: MoveRange,
+  squadFormation: Formation | null,
+): Pos | null {
+  return squadFormation ? formationMove(unit, range, squadFormation) : bestMoveToward(s, ai, unit, at, range);
 }
 
 /** En formacion solo dispara desde donde no se adelanta a su escuadra (o desde donde esta). */

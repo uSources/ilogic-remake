@@ -17,8 +17,8 @@ export const STANDING_ORDER_KINDS = Object.keys(STANDING_ORDER_NAMES) as readonl
 /** El valor es un tipo de orden permanente. */
 export const isStandingOrderKind = (value: unknown): value is StandingOrderKind => STANDING_ORDER_KINDS.some((kind) => kind === value);
 
-export const sameStandingOrder = (firstStandingOrder: StandingOrder, secondStandingOrder: StandingOrder): boolean =>
-  firstStandingOrder.kind === secondStandingOrder.kind && samePos(firstStandingOrder.at, secondStandingOrder.at);
+export const sameStandingOrder = (first: StandingOrder, second: StandingOrder): boolean =>
+  first.kind === second.kind && samePos(first.at, second.at);
 
 const copyStandingOrder = (standingOrder: StandingOrder): StandingOrder => ({
   kind: standingOrder.kind,
@@ -176,13 +176,13 @@ export function atStandingOrder(s: GameState, unit: Unit): boolean {
  * [CAMBIO] Dos unidades van en formacion: misma escuadra y misma orden (mismo destino; capturar y
  * atacar cuentan igual, porque con "capturar" las que no capturan van escoltando con "atacar").
  */
-export function sameFormation(s: GameState, a: Unit, b: Unit): boolean {
-  if (a.squad === undefined || a.squad !== b.squad || a.team !== b.team) return false;
-  const orderA = effectiveStandingOrder(s, a);
-  const orderB = effectiveStandingOrder(s, b);
-  if (!orderA || !orderB) return false;
+export function sameFormation(s: GameState, first: Unit, second: Unit): boolean {
+  if (first.squad === undefined || first.squad !== second.squad || first.team !== second.team) return false;
+  const firstOrder = effectiveStandingOrder(s, first);
+  const secondOrder = effectiveStandingOrder(s, second);
+  if (!firstOrder || !secondOrder) return false;
   const holds = (standingOrder: StandingOrder) => standingOrder.kind === 'defend';
-  return holds(orderA) === holds(orderB) && samePos(orderA.at, orderB.at);
+  return holds(firstOrder) === holds(secondOrder) && samePos(firstOrder.at, secondOrder.at);
 }
 
 /** [CAMBIO] La escuadra entera (dos o mas unidades) lleva la misma orden: avanza en formacion. */

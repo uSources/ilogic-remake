@@ -23,14 +23,14 @@ export interface CarryHost {
   /** Unidades que no se dibujan (la cogida va en su propia imagen). */
   readonly hidden: Set<number>;
   toMap(): void;
-  selectUnit(u: Unit): void;
-  updateTrail(t: Pos): void;
-  intentAt(t: Pos): Intent;
+  selectUnit(unit: Unit): void;
+  updateTrail(tile: Pos): void;
+  intentAt(tile: Pos): Intent;
   refresh(): void;
   /** Viaje de varios turnos hasta `goal` (travelTo). */
-  giveTravel(u: Unit, goal: Pos): Promise<void>;
+  giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Confirmar el movimiento en una casilla (ver UnitMoves.commit). */
-  commit(t: Pos, opts: { drop?: boolean; wait?: boolean }): Promise<void>;
+  commit(tile: Pos, opts: { drop?: boolean; wait?: boolean }): Promise<void>;
 }
 
 interface Carried {
@@ -61,7 +61,7 @@ export class Carry {
   /** Unidad cogida para arrastrar y soltar. */
   private carried: Carried | null = null;
 
-  constructor(private readonly h: CarryHost) {}
+  constructor(private readonly host: CarryHost) {}
 
   /** Partida nueva. */
   reset(): void {
@@ -83,74 +83,74 @@ export class Carry {
    * que empezo sobre la unidad, y soltar lejos no le da una orden de varios turnos).
    */
   begin(uid: number, touch: boolean, held: boolean): boolean {
-    const h = this.h;
-    const unit = unitById(h.state, uid);
+    const host = this.host;
+    const unit = unitById(host.state, uid);
     if (!unit || !unit.active || !unit.canMove) return false;
-    if (h.phase !== 'move' || h.sel?.uid !== unit.uid) this.selectToMove(unit);
+    if (host.phase !== 'move' || host.sel?.uid !== unit.uid) this.selectToMove(unit);
     if (touch) navigator.vibrate?.(PICK_VIBRATION_MS);
-    const textureKey = unitKey(h.scene.textures, h.state, unit);
+    const textureKey = unitKey(host.scene.textures, host.state, unit);
     if (!textureKey) return true;
     const foot = footOf(unit);
-    const shadow = h.scene.add.rectangle(foot.x, foot.y, SHADOW.width, SHADOW.height, SHADOW.color, SHADOW.alpha);
-    h.view.addFx(shadow);
-    const ghost = h.view.ghost(textureKey, unit);
+    const shadow = host.scene.add.rectangle(foot.x, foot.y, SHADOW.width, SHADOW.height, SHADOW.color, SHADOW.alpha);
+    host.view.addFx(shadow);
+    const ghost = host.view.ghost(textureKey, unit);
     ghost.y -= LIFT_PX;
     this.carried = { uid: unit.uid, ghost, shadow, touch, held: held || !touch };
-    h.hidden.add(unit.uid);
-    h.refresh();
+    host.hidden.add(unit.uid);
+    host.refresh();
     return true;
   }
 
   private selectToMove(unit: Unit): void {
-    const h = this.h;
-    if (h.phase !== 'map') h.toMap();
-    h.view.cursor = posOf(unit);
-    h.selectUnit(unit);
+    const host = this.host;
+    if (host.phase !== 'map') host.toMap();
+    host.view.cursor = posOf(unit);
+    host.selectUnit(unit);
   }
 
   /** El puntero se mueve con la unidad cogida: la unidad salta de casilla en casilla y el camino la sigue. */
   moveTo(x: number, y: number): void {
-    const h = this.h;
+    const host = this.host;
     const carried = this.carried;
     if (!carried) return;
-    const tile = h.view.tileAtScreen(x, y);
-    if (!tile || samePos(tile, h.view.cursor)) return;
-    h.view.cursor = { ...tile };
-    h.updateTrail(tile);
-    const intent = h.intentAt(tile);
+    const tile = host.view.tileAtScreen(x, y);
+    if (!tile || samePos(tile, host.view.cursor)) return;
+    host.view.cursor = { ...tile };
+    host.updateTrail(tile);
+    const intent = host.intentAt(tile);
     // Sobre un enemigo, la unidad se coloca en la casilla desde la que atacaria (y el cursor marca al enemigo).
     const foot = footOf(intent.kind === 'attack' ? intent.from : tile);
     carried.ghost.setPosition(foot.x, foot.y);
     carried.shadow.setPosition(foot.x, foot.y);
     if (intent.kind === 'none') carried.ghost.setTint(INVALID_TINT).setAlpha(INVALID_ALPHA);
     else carried.ghost.clearTint().setAlpha(1);
-    h.refresh();
+    host.refresh();
   }
 
   /** Soltar la unidad cogida. Fuera del alcance (o en su sitio) vuelve sin hacer nada. */
   drop(tile: Pos | null, shift: boolean): void {
-    const h = this.h;
+    const host = this.host;
     const carried = this.carried;
     if (!carried) return;
     this.carried = null;
-    h.hidden.delete(carried.uid);
-    const intent: Intent = tile ? h.intentAt(tile) : { kind: 'none' };
-    if (tile && h.sel && intent.kind === 'none' && carried.held && this.canReachSomeday(h.sel, tile)) {
+    host.hidden.delete(carried.uid);
+    const intent: Intent = tile ? host.intentAt(tile) : { kind: 'none' };
+    if (tile && host.sel && intent.kind === 'none' && carried.held && this.canReachSomeday(host.sel, tile)) {
       destroyImages(carried);
-      return void h.giveTravel(h.sel, tile);
+      return void host.giveTravel(host.sel, tile);
     }
     if (!tile || intent.kind === 'none' || intent.kind === 'stay') {
       void this.snapBack(carried);
-      return h.toMap();
+      return host.toMap();
     }
     destroyImages(carried);
-    h.view.cursor = { ...tile };
-    void h.commit(tile, { drop: true, wait: shift });
+    host.view.cursor = { ...tile };
+    void host.commit(tile, { drop: true, wait: shift });
   }
 
   /** Soltar lejos, fuera del alcance, en una casilla a la que se puede llegar algun dia: orden de varios turnos. */
   private canReachSomeday(unit: Unit, tile: Pos): boolean {
-    const s = this.h.state;
+    const s = this.host.state;
     return !unitAt(s, tile) && canWalk(s, tile, movementOf(s, unit.type));
   }
 
@@ -158,19 +158,19 @@ export class Carry {
     const carried = this.carried;
     if (!carried) return;
     this.carried = null;
-    this.h.hidden.delete(carried.uid);
+    this.host.hidden.delete(carried.uid);
     void this.snapBack(carried);
-    this.h.toMap();
+    this.host.toMap();
   }
 
   /** Animacion de "vuelve a su sitio" de la unidad cogida. */
   private async snapBack(carried: Carried): Promise<void> {
-    const unit = unitById(this.h.state, carried.uid);
+    const unit = unitById(this.host.state, carried.uid);
     carried.shadow.destroy();
     if (!unit || reducedMotion()) return void carried.ghost.destroy();
     carried.ghost.clearTint();
     await new Promise<void>((resolve) =>
-      this.h.scene.tweens.add({
+      this.host.scene.tweens.add({
         targets: carried.ghost,
         x: unit.x * TILE + TILE / 2,
         y: (unit.y + 1) * TILE,

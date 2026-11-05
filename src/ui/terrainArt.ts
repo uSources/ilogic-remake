@@ -95,8 +95,8 @@ export function terrainArtKeys(): string[] {
  * olas, espuma y sprites de montaña y bosque (con su primer plano). Lo comprueba npm run assets.
  */
 export function requiredArtKeys(): string[] {
-  const objs = Object.entries(OBJ_VARIANTS).flatMap(([b, n]) =>
-    Array.from({ length: n }, (_, i) => [`flat/${b}_${i}`, `flat/front_${b}_${i}`]).flat(),
+  const objs = Object.entries(OBJ_VARIANTS).flatMap(([base, count]) =>
+    Array.from({ length: count }, (_, i) => [`flat/${base}_${i}`, `flat/front_${base}_${i}`]).flat(),
   );
   return [
     ...terrainArtKeys(),

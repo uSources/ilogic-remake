@@ -183,8 +183,8 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   }
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
-  keyAt(p: Pos): string | null {
-    for (const { root, key } of this.units.values()) if (root.x === p.x * TILE && root.y === p.y * TILE && root.visible) return key;
+  keyAt(pos: Pos): string | null {
+    for (const { root, key } of this.units.values()) if (root.x === pos.x * TILE && root.y === pos.y * TILE && root.visible) return key;
     return null;
   }
 }

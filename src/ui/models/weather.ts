@@ -20,7 +20,7 @@ export function weatherEffectsText(s: GameState, kind: number): string {
   WEATHER.move[kind]!.forEach((delta, mt) => {
     if (delta !== 0) byDelta.set(delta, [...(byDelta.get(delta) ?? []), t(MOVE_TYPE_KEYS[mt]!)]);
   });
-  for (const [d, names] of byDelta) parts.push(`${names.join('/')} ${signed(d)} ${t('weatherMoveShort')}`);
+  for (const [delta, names] of byDelta) parts.push(`${names.join('/')} ${signed(delta)} ${t('weatherMoveShort')}`);
   const vision = WEATHER.vision[kind]!;
   if (vision !== 0) parts.push(`${cap(t('weatherVision'))} ${signed(vision)}`);
   const aim = Math.round((WEATHER.hitChance[kind]! - 1) * 100);
@@ -28,7 +28,7 @@ export function weatherEffectsText(s: GameState, kind: number): string {
   return parts.length ? parts.join(' · ') : t('weatherNoEffect');
 }
 
-const cap = (x: string): string => x.charAt(0).toUpperCase() + x.slice(1);
+const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** Indicador del clima (null si la partida se juega sin clima). */
 export function weatherVM(s: GameState): WeatherVM | null {

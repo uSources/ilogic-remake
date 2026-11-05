@@ -79,34 +79,34 @@ export class Session {
       if (!s) throw new Error('Partida guardada no valida');
       this.s = s;
     } else if (opts.mission) {
-      const m = missionById(opts.mission);
-      if (!m) throw new Error(`No existe la mision "${opts.mission}"`);
-      this.s = buildMission(m, defaultContent());
+      const mission = missionById(opts.mission);
+      if (!mission) throw new Error(`No existe la mision "${opts.mission}"`);
+      this.s = buildMission(mission, defaultContent());
     } else {
       this.s = createGame(seededRng(seed), { size: opts.size ?? 20, theme: opts.theme ?? null, ruleChanges: { fog: opts.fog ?? false } });
       const pick = (id: string | undefined) => {
         if (!id) return null;
-        const g = newGeneral(this.s, id);
-        if (!g)
+        const general = newGeneral(this.s, id);
+        if (!general)
           throw new Error(
             `No existe el general "${id}" (${defaultContent()
               .files.generals.map((general) => general.id)
               .join(', ')})`,
           );
-        return g;
+        return general;
       };
-      const [g, e] = [pick(opts.general), pick(opts.enemyGeneral)];
-      if (g || e) this.s.generals = [g, e];
+      const [general, enemyGeneral] = [pick(opts.general), pick(opts.enemyGeneral)];
+      if (general || enemyGeneral) this.s.generals = [general, enemyGeneral];
     }
   }
 
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
   run(line: string): string {
-    const [cmd = '', ...a] = line.trim().split(/\s+/);
-    const n = (i: number) => {
-      const v = Number(a[i]);
-      if (!Number.isInteger(v)) throw new UsageError(`falta un numero en la posicion ${i + 1}`);
-      return v;
+    const [cmd = '', ...words] = line.trim().split(/\s+/);
+    const numberAt = (position: number) => {
+      const value = Number(words[position]);
+      if (!Number.isInteger(value)) throw new UsageError(`falta un numero en la posicion ${position + 1}`);
+      return value;
     };
     try {
       switch (cmd.toLowerCase()) {
@@ -121,29 +121,29 @@ export class Session {
           return this.map();
         case 'units':
         case 'unidades':
-          return this.units(a[0] === undefined ? null : n(0));
+          return this.units(words[0] === undefined ? null : numberAt(0));
         case 'unit':
         case 'unidad':
-          return this.unitInfo(this.mine(n(0), false));
+          return this.unitInfo(this.mine(numberAt(0), false));
         case 'move':
         case 'mover':
-          return this.move(this.mine(n(0)), { x: n(1), y: n(2) });
+          return this.move(this.mine(numberAt(0)), { x: numberAt(1), y: numberAt(2) });
         case 'attack':
         case 'atacar':
-          return this.attack(this.mine(n(0)), { x: n(1), y: n(2) });
+          return this.attack(this.mine(numberAt(0)), { x: numberAt(1), y: numberAt(2) });
         case 'capture':
         case 'capturar':
-          return this.capture(this.mine(n(0)));
+          return this.capture(this.mine(numberAt(0)));
         case 'wait':
         case 'esperar':
-          wait(this.mine(n(0)));
+          wait(this.mine(numberAt(0)));
           return 'ok';
         case 'buy':
         case 'comprar':
-          return this.buy({ x: n(0), y: n(1) }, a[2] ?? '');
+          return this.buy({ x: numberAt(0), y: numberAt(1) }, words[2] ?? '');
         case 'power':
         case 'poder':
-          return this.power(a[0] ?? '', a[1] === undefined ? null : { x: n(1), y: n(2) });
+          return this.power(words[0] ?? '', words[1] === undefined ? null : { x: numberAt(1), y: numberAt(2) });
         case 'end':
         case 'fin':
           return this.endTurn(false);
@@ -159,19 +159,19 @@ export class Session {
         default:
           return `error: orden desconocida "${cmd}" (help para ver las ordenes)`;
       }
-    } catch (e) {
-      if (e instanceof UsageError) return `error: ${e.message}`;
-      throw e;
+    } catch (error) {
+      if (error instanceof UsageError) return `error: ${error.message}`;
+      throw error;
     }
   }
 
   private mine(uid: number, needActive = true): Unit {
-    const u = unitById(this.s, uid);
-    if (!u) throw new UsageError(`no existe la unidad ${uid}`);
-    if (u.team !== 0) throw new UsageError(`la unidad ${uid} no es tuya`);
-    if (needActive && !u.active) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
-    if (u.carrier !== null) throw new UsageError(`la unidad ${uid} va dentro de un transporte`);
-    return u;
+    const unit = unitById(this.s, uid);
+    if (!unit) throw new UsageError(`no existe la unidad ${uid}`);
+    if (unit.team !== 0) throw new UsageError(`la unidad ${uid} no es tuya`);
+    if (needActive && !unit.active) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
+    if (unit.carrier !== null) throw new UsageError(`la unidad ${uid} va dentro de un transporte`);
+    return unit;
   }
 
   /** Mapa en texto: terreno, edificios y unidades (las enemigas solo si se ven). */
@@ -179,23 +179,23 @@ export class Session {
     const s = this.s;
     const vis = visibility(s, 0);
     const map = mapGrid(s);
-    const W = map.width,
-      H = map.height;
-    const head = '    ' + Array.from({ length: W }, (_, x) => String(x % 10).padStart(3)).join('');
+    const width = map.width,
+      height = map.height;
+    const head = '    ' + Array.from({ length: width }, (_, x) => String(x % 10).padStart(3)).join('');
     const rows = [head];
-    for (let y = 0; y < H; y++) {
+    for (let y = 0; y < height; y++) {
       let row = String(y).padStart(3) + ' ';
-      for (let x = 0; x < W; x++) {
-        const u = unitAt(s, { x, y });
-        const b = buildingAt(s, { x, y });
+      for (let x = 0; x < width; x++) {
+        const unit = unitAt(s, { x, y });
+        const building = buildingAt(s, { x, y });
         let cell = ' ' + TERRAIN_CHAR[TERRAIN_NAMES[map.at({ x, y })]!] + ' ';
-        if (b) {
-          const c = BUILDING_CHAR[b.type]!;
-          cell = b.owner === null ? `*${c} ` : ` ${b.owner === 0 ? c : c.toLowerCase()} `;
+        if (building) {
+          const char = BUILDING_CHAR[building.type]!;
+          cell = building.owner === null ? `*${char} ` : ` ${building.owner === 0 ? char : char.toLowerCase()} `;
         }
-        if (u && u.carrier === null && (u.team === 0 || vis.at({ x, y })))
-          cell = (u.team === 0 ? '+' : '-') + String(u.uid).padStart(2, '0').slice(-2);
-        else if (!vis.at({ x, y }) && !b) cell = ' ? ';
+        if (unit && unit.carrier === null && (unit.team === 0 || vis.at({ x, y })))
+          cell = (unit.team === 0 ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
+        else if (!vis.at({ x, y }) && !building) cell = ' ? ';
         row += cell;
       }
       rows.push(row);
@@ -215,60 +215,60 @@ export class Session {
       .join('\n');
   }
 
-  unitInfo(u: Unit): string {
-    const r = moveRange(this.s, u);
-    const targets = attackTargets(this.s, u);
-    const tiles = reachableTiles(r);
+  unitInfo(unit: Unit): string {
+    const range = moveRange(this.s, unit);
+    const targets = attackTargets(this.s, unit);
+    const tiles = reachableTiles(range);
     return [
-      `${u.uid} ${tablesOf(this.s).UNIT_NAMES[u.type]} en (${u.x},${u.y}), vida ${u.life}, ${u.active ? 'puede actuar' : 'ya ha actuado'}`,
+      `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
       `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
-      canCapture(this.s, u) ? 'puede capturar el edificio de debajo' : '',
+      canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
     ]
       .filter(Boolean)
       .join('\n');
   }
 
-  private move(u: Unit, to: Pos): string {
-    const path = moveUnit(this.s, u, to);
-    if (!path) throw new UsageError(`la unidad ${u.uid} no puede llegar a (${posKey(to)})`);
-    return path.ambush ? `emboscada: se para en (${u.x},${u.y})` : `movida a (${u.x},${u.y})`;
+  private move(unit: Unit, to: Pos): string {
+    const path = moveUnit(this.s, unit, to);
+    if (!path) throw new UsageError(`la unidad ${unit.uid} no puede llegar a (${posKey(to)})`);
+    return path.ambush ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
   }
 
-  private attack(u: Unit, at: Pos): string {
-    const t = attackTargets(this.s, u).find((target) => samePos(target, at));
-    if (!t) throw new UsageError(`la unidad ${u.uid} no puede atacar a (${posKey(at)}) desde (${u.x},${u.y})`);
-    const r = attackFull(this.s, u, t, this.rng);
-    wait(u);
-    return `daño ${r.damage}${r.killed ? ' (destruida)' : ''}${r.counter ? `, contraataque ${r.counter}${r.attackerKilled ? ' (la tuya destruida)' : ''}` : ''}`;
+  private attack(unit: Unit, at: Pos): string {
+    const target = attackTargets(this.s, unit).find((target) => samePos(target, at));
+    if (!target) throw new UsageError(`la unidad ${unit.uid} no puede atacar a (${posKey(at)}) desde (${unit.x},${unit.y})`);
+    const result = attackFull(this.s, unit, target, this.rng);
+    wait(unit);
+    return `daño ${result.damage}${result.killed ? ' (destruida)' : ''}${result.counter ? `, contraataque ${result.counter}${result.attackerKilled ? ' (la tuya destruida)' : ''}` : ''}`;
   }
 
-  private capture(u: Unit): string {
-    const r = capture(this.s, u);
-    if (!r) throw new UsageError(`la unidad ${u.uid} no puede capturar ahi`);
-    return r.done ? 'edificio capturado' : `capturando: quedan ${r.left} de ${r.total}`;
+  private capture(unit: Unit): string {
+    const result = capture(this.s, unit);
+    if (!result) throw new UsageError(`la unidad ${unit.uid} no puede capturar ahi`);
+    return result.done ? 'edificio capturado' : `capturando: quedan ${result.left} de ${result.total}`;
   }
 
   private buy(at: Pos, name: string): string {
-    const b = buildingAt(this.s, at);
-    if (!b || b.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
+    const building = buildingAt(this.s, at);
+    if (!building || building.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
     const type = tablesOf(this.s).UNIT_NAMES.findIndex((unitName) => unitName.toLowerCase() === name.toLowerCase());
-    const opts = buyOptions(this.s, b);
-    if (!opts.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[b.type]} no fabrica unidades`);
+    const opts = buyOptions(this.s, building);
+    if (!opts.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[building.type]} no fabrica unidades`);
     if (type < 0)
       return `error: tipo desconocido. Aqui se puede: ${opts.map((buyOption) => `${tablesOf(this.s).UNIT_NAMES[buyOption.type]} (${buyOption.cost})`).join(', ')}`;
-    const u = spawn(this.s, b, type);
-    if (!u) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
-    return `comprada ${u.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
+    const unit = spawn(this.s, building, type);
+    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
+    return `comprada ${unit.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
   }
 
   /** Usar una habilidad del general (sin id: lista de habilidades y carga). */
   private power(id: string, target: { x: number; y: number } | null): string {
-    const g = generalOf(this.s, 0);
-    if (!g) throw new UsageError('no tienes general (--general Brisa)');
-    const list = g.def.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
+    const general = generalOf(this.s, 0);
+    if (!general) throw new UsageError('no tienes general (--general Brisa)');
+    const list = general.def.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
     if (!id)
-      return `${g.def.id}: carga ${g.state.charge.toFixed(1)}/${g.def.charge.max}${g.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
+      return `${general.def.id}: carga ${general.state.charge.toFixed(1)}/${general.def.charge.max}${general.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
     const block = abilityBlock(this.s, 0, id, target);
     if (block) throw new UsageError(`no se puede usar ${id}: ${block} (habilidades: ${list})`);
     return describe(this.s, useAbility(this.s, 0, id, target)!);
@@ -279,10 +279,10 @@ export class Session {
     const out: string[] = [];
     if (aiForMe) for (const ev of aiTurn(this.s, this.rng, 0)) out.push(`tu IA: ${describe(this.s, ev)}`);
     for (const ev of aiTurn(this.s, this.rng, 1)) out.push(`enemigo: ${describe(this.s, ev)}`);
-    const r = endRound(this.s);
-    out.push(`--- dia ${this.s.day}: +${r.income[0]} de ingresos, dinero ${this.s.funds[0]}`);
-    const o = outcome(this.s);
-    if (o !== 'playing') out.push(`FIN: ${o}`);
+    const round = endRound(this.s);
+    out.push(`--- dia ${this.s.day}: +${round.income[0]} de ingresos, dinero ${this.s.funds[0]}`);
+    const result = outcome(this.s);
+    if (result !== 'playing') out.push(`FIN: ${result}`);
     return out.join('\n');
   }
 
@@ -307,8 +307,8 @@ class UsageError extends Error {}
 
 function describe(s: GameState, ev: GameEvent): string {
   const name = (uid: number) => {
-    const u = unitById(s, uid);
-    return u ? `${uid} ${tablesOf(s).UNIT_NAMES[u.type]}` : `${uid}`;
+    const unit = unitById(s, uid);
+    return unit ? `${uid} ${tablesOf(s).UNIT_NAMES[unit.type]}` : `${uid}`;
   };
   switch (ev.kind) {
     case 'move':
