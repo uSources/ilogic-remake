@@ -10,10 +10,8 @@
  */
 import type { GameContent } from './content';
 import { rulesWith } from './rulesConfig';
-import type { GameState, RulesConfig, Squad, StandingOrder, Unit } from './model';
-import { sameStandingOrder } from './squads/standingOrders';
-import { squadUnits } from './squads/queries';
-import { isCapturer, isObject } from './util/predicates';
+import type { GameState, Pos, RulesConfig, Squad, StandingOrder, StandingOrderKind, Unit } from './model';
+import { isObject } from './util/predicates';
 
 /** Lo que pone quien lee una partida (ver defaultGames.ts para el del juego). */
 export interface SaveContext {
@@ -77,23 +75,33 @@ const RULES_ADDED_LATER: Partial<RulesConfig> = {
   controlRadius: 0,
 };
 
-/** La orden de una unidad de una escuadra como la seguia en el formato 1: con capturar, escolta. */
-function format1OrderFor(s: GameState, unit: Unit, order: StandingOrder): StandingOrder {
-  return { kind: order.kind === 'capture' && !isCapturer(s, unit) ? 'attack' : order.kind, at: { x: order.at.x, y: order.at.y } };
+/*
+ * Paso del formato 1: copia fija de como eran entonces las escuadras y sus ordenes. No usa nada de
+ * squads/ ni de las reglas de ahora (buscar las unidades, comparar ordenes, quien captura): asi no
+ * cambia aunque cambien. Lo unico que lee de fuera es el contenido con el que se lee la partida
+ * (context.content): si cada tipo de unidad puede capturar.
+ */
+
+const samePosV1 = (first: Pos, second: Pos): boolean => first.x === second.x && first.y === second.y;
+const sameOrderV1 = (first: StandingOrder, second: StandingOrder): boolean => first.kind === second.kind && samePosV1(first.at, second.at);
+
+/** La orden de una unidad de una escuadra como la seguia en el formato 1: con capturar, escolta si no captura. */
+function format1KindFor(content: GameContent, unit: Unit, kind: StandingOrderKind): StandingOrderKind {
+  const capturesV1 = !!content.tables.UNIT.cancapt[unit.type];
+  return kind === 'capture' && !capturesV1 ? 'attack' : kind;
 }
 
 /**
  * En el formato 1 la escuadra no tenia orden: la llevaba copiada cada unidad. Si todas llevan la
- * misma (la de capturar manda; las que no pueden capturar, de escolta), pasa a la escuadra. Copia
- * fija de como era entonces: no cambia aunque cambien las ordenes de ahora.
+ * misma (la de capturar manda; las que no pueden capturar, de escolta), pasa a la escuadra.
  */
-function liftFormat1Order(s: GameState, squad: Squad): void {
-  const units = squadUnits(s, squad.id);
-  const orders = units.map((unit) => unit.standingOrder);
-  if (!units.length || orders.some((order) => !order)) return;
+function liftFormat1Order(s: GameState, content: GameContent, squad: Squad): void {
+  const units = s.units.filter((unit) => unit.squad === squad.id);
+  if (!units.length || units.some((unit) => !unit.standingOrder)) return;
   const lead = units.find((unit) => unit.standingOrder!.kind === 'capture') ?? units[0]!;
   const order = lead.standingOrder!;
-  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, format1OrderFor(s, unit, order)))) return;
+  const followsOrder = (unit: Unit) => sameOrderV1(unit.standingOrder!, { kind: format1KindFor(content, unit, order.kind), at: order.at });
+  if (!units.every(followsOrder)) return;
   squad.standingOrder = { kind: order.kind, at: { x: order.at.x, y: order.at.y } };
   for (const unit of units) delete unit.standingOrder;
 }
@@ -167,8 +175,8 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'la orden comun de las unidades pasa a la escuadra',
     upToVersion: 1,
     stage: 'checked',
-    apply: (s) => {
-      for (const squad of s.squads ?? []) if (!squad.standingOrder) liftFormat1Order(s, squad);
+    apply: (s, context) => {
+      for (const squad of s.squads ?? []) if (!squad.standingOrder) liftFormat1Order(s, context.content, squad);
     },
   },
 ];
