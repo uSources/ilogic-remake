@@ -10,6 +10,8 @@ import { tablesOf } from './core/gameContent';
 import { newGameState } from './core/gameState';
 import { blankMap } from './core/mapGrid';
 import { newUnit } from './core/rules';
+import { MoveType, type ContentTables } from './core/content';
+import { maxBy } from './core/util/pick';
 import type { GameState, RulesConfig } from './core/model';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
@@ -30,9 +32,20 @@ export const LAB_SIZE = 12;
 export const LAB_FROM = { x: 3, y: 6 };
 export const LAB_TARGET = { x: 7, y: 6 };
 
+/**
+ * La unidad de siempre del laboratorio, sacada del contenido (no de su nombre): el vehiculo de cuerpo
+ * a cuerpo mas caro (con el contenido del juego, el tanque).
+ */
+function heaviestMeleeVehicle(tables: ContentTables): number {
+  const { UNIT } = tables;
+  const types = UNIT.cost.map((_, type) => type);
+  const isMeleeVehicle = (type: number) => UNIT.canfight[type] && UNIT.minalc[type] === 0 && UNIT.movtype[type] === MoveType.VEHICLE;
+  return maxBy(types.filter(isMeleeVehicle), (type) => UNIT.cost[type]!) ?? 0;
+}
+
 export const defaultLab = (): LabOptions => ({
-  attacker: Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf('Tank')),
-  defender: Math.max(0, defaultContent().tables.UNIT_NAMES.indexOf('Tank')),
+  attacker: heaviestMeleeVehicle(defaultContent().tables),
+  defender: heaviestMeleeVehicle(defaultContent().tables),
   slow: false,
   play: null,
 });
