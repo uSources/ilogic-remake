@@ -6,10 +6,9 @@
 import { saveContext } from '@core/defaultGames';
 import { MAX_LIFE } from '@core/data';
 import { tablesOf } from '@core/gameContent';
-import { canMoveOn, movementOf } from '@core/rules';
+import { canMoveOn, movementOf, commandUsed } from '@core/rules';
 import { posKey } from '@core/geom';
 import { mapGrid, terrainAt } from '@core/mapGrid';
-import { commandUsed } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 

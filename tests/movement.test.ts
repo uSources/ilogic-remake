@@ -2,8 +2,7 @@ import { saveContext } from '@core/defaultGames';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_RULES } from './plainRules';
-import { load, merge, moveRange, moveUnit, validPath, visibility } from '@core/rules';
-import { newUnit } from '@core/rules';
+import { load, merge, moveRange, moveUnit, validPath, visibility, newUnit } from '@core/rules';
 import { blankState, savedByVersion1 } from './helpers';
 import { defaultContent } from '@core/content/default';
 

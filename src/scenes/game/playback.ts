@@ -9,11 +9,10 @@
 import type Phaser from 'phaser';
 import { MoveType } from '../../core/content';
 import { tablesOf } from '../../core/gameContent';
-import { movementOf } from '../../core/rules';
+import { movementOf, unitAt, unitById } from '../../core/rules';
 import { abilityArea, generalOf } from '../../core/generals';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
-import { unitAt, unitById } from '../../core/rules';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, Team, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';

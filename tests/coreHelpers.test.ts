@@ -11,8 +11,8 @@ import {
   reachableTiles,
   tileProtection,
   unitThreat,
+  type MovePath,
 } from '@core/rules';
-import type { MovePath } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { blankState, savedByVersion1 } from './helpers';
 

@@ -2,7 +2,7 @@
  * Union de unidades iguales y transporte (subir y bajar pasajeros).
  */
 import { tablesOf } from '../gameContent';
-import { movementOf } from './queries';
+import { movementOf, freeSlot, isWalkable, occupancy } from './queries';
 import { MAX_LIFE } from '../data';
 import { manhattan, neighbors4, samePos, posOf } from '../geom';
 import { mapGrid } from '../mapGrid';
@@ -11,7 +11,6 @@ import type { GameState, Pos, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
 import { removeUnit } from './lifecycle';
 import { ambushed, approachPath, moveRange, walkPath, type MovePath } from './movement';
-import { freeSlot, isWalkable, occupancy } from './queries';
 
 /** No lleva a nadie dentro (un transporte con pasajeros no se puede unir). */
 const isEmpty = (unit: Unit): boolean => unit.cargo.every((uid) => uid === null);

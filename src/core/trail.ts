@@ -3,10 +3,9 @@
  * recorta al volver sobre el y salta al mas corto si se pasa. Logica pura, sin interfaz.
  */
 
-import { movementOf } from './rules/queries';
+import { movementOf, canWalk } from './rules/queries';
 import { manhattan, samePos, posOf } from './geom';
 import { moveCost, pathCost, pathTo, type MoveRange } from './rules/movement';
-import { canWalk } from './rules/queries';
 import type { Grid } from './util/grid';
 import type { GameState, Pos, Unit } from './model';
 

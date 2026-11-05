@@ -3,7 +3,7 @@
  * y el evento de mover.
  */
 import { tablesOf } from '../gameContent';
-import { movementOf, terrainMoveCost } from './queries';
+import { movementOf, terrainMoveCost, canWalk, isWalkable, occupancy } from './queries';
 import type { MoveType } from '../content';
 import { isRanged, zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
@@ -14,7 +14,6 @@ import { minBy } from '../util/pick';
 import { weatherMove } from '../weather';
 import type { GameEvent, GameState, Pos, Unit } from '../model';
 import { dropStaleCaptures } from './capture';
-import { canWalk, isWalkable, occupancy } from './queries';
 import { visibility } from './visibility';
 
 export interface MoveRange {

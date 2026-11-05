@@ -2,8 +2,7 @@
  * Consultas basicas sobre el estado: que hay en una casilla, por donde se puede andar, de quien es
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
-import { moveCostFor, walkableFor } from '../content';
-import type { MoveType } from '../content';
+import { moveCostFor, walkableFor, type MoveType } from '../content';
 import { tablesOf } from '../gameContent';
 import { createLayer, isOnBoard, terrainAt } from '../mapGrid';
 import type { Grid } from '../util/grid';

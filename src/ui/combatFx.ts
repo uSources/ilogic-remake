@@ -11,8 +11,7 @@
 import type Phaser from 'phaser';
 import { MoveType } from '../core/content';
 import { tablesOf } from '../core/gameContent';
-import type { GameState } from '../core/model';
-import type { Pos } from '../core/model';
+import type { GameState, Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost, type FxTimeline } from './fxKit';

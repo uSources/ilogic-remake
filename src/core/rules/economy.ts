@@ -4,10 +4,9 @@
  */
 
 import { tablesOf } from '../gameContent';
-import { movementOf } from './queries';
+import { movementOf, isWalkable, teamUnits, unitAt } from './queries';
 import type { Building, GameState, Team, Unit } from '../model';
 import { newUnit } from './lifecycle';
-import { isWalkable, teamUnits, unitAt } from './queries';
 
 /** Los ingresos y el mantenimiento se redondean a multiplos de esto. */
 const MONEY_STEP = 100;

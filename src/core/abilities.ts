@@ -12,8 +12,7 @@
  * Este modulo no importa rules/ (las reglas lo importan a el).
  */
 import { tablesOf } from './gameContent';
-import { MOVEMENTS } from './content';
-import type { AbilityDef, ContentTables } from './content';
+import { MOVEMENTS, type AbilityDef, type ContentTables } from './content';
 import { manhattan, neighbors4 } from './geom';
 import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';

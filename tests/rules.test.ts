@@ -17,6 +17,8 @@ import {
   supply,
   unitActions,
   unload,
+  combatForecast,
+  threatMap,
 } from '@core/rules';
 import { blankState } from './helpers';
 
@@ -177,8 +179,6 @@ describe('compra y fin de ronda', () => {
     expect(sup.active).toBe(false);
   });
 });
-
-import { combatForecast, threatMap } from '@core/rules';
 
 const { UNIT, HQ } = defaultContent().tables;
 

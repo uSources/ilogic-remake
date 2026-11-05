@@ -3,9 +3,8 @@
  * puntero con el camino trazado y, al soltarla, se mueve, ataca, se une... o vuelve a su sitio.
  */
 import type Phaser from 'phaser';
-import { movementOf } from '../../core/rules';
+import { movementOf, canWalk, unitAt, unitById } from '../../core/rules';
 import { samePos, posOf } from '../../core/geom';
-import { canWalk, unitAt, unitById } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { TILE } from '../../layout';
 import { reducedMotion } from '../../ui/fx';

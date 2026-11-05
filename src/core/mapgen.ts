@@ -11,7 +11,7 @@
  */
 import { tablesOf } from './gameContent';
 import { MAPGEN, PROBS_PER_ADJ, TILE_BASE_PROBS } from './mapgenTables';
-import { TERRAIN_TYPES, TerrainType, MoveType } from './content';
+import { TERRAIN_TYPES, TerrainType, MoveType, type GameContent } from './content';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
 import { blankMap, createLayer, mapGrid, terrainAt } from './mapGrid';
@@ -19,7 +19,6 @@ import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, canMoveOn, movementOf, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
-import type { GameContent } from './content';
 import type { GameState, Pos, Rng, RulesConfig, Team } from './model';
 
 const WALK = MoveType.FOOT;

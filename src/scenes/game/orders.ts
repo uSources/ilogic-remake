@@ -7,10 +7,9 @@
  */
 import type Phaser from 'phaser';
 import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
-import { movementOf } from '../../core/rules';
+import { movementOf, canWalk, unitAt, unitById, wait } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
-import { canWalk, unitAt, unitById, wait } from '../../core/rules';
 import { cancelStandingOrder, standingOrderBlock, giveStandingOrder, pruneSquads } from '../../core/squads';
 import type { StandingOrderKind, GameEvent, GameState, Pos, Unit } from '../../core/model';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';

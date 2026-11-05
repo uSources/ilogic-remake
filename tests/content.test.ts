@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import buildingsFile from '@core/content/buildings.json';
 import unitsFile from '@core/content/units.json';
-import { buildTables, validateContent, type Content, TERRAIN_NAMES, TerrainType } from '@core/content';
-import { MOVEMENTS, MoveType } from '@core/content';
+import { buildTables, validateContent, type Content, TERRAIN_NAMES, TerrainType, MOVEMENTS, MoveType, walkableFor } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { walkableFor } from '@core/content';
 
 const { UNIT, UNIT_NAMES, UNIT_ART, BUILDING_NAMES, MOVE_COST } = defaultContent().tables;
 
