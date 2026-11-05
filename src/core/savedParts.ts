@@ -14,7 +14,7 @@ import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
 import type { GeneralState, SavedGameState } from './model';
 import { Grid, type GridBounds } from './util/grid';
-import { isInt, isPosOn, isObject } from './util/validation';
+import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
 /**
  * Una partida guardada tal como llega (ya puesta al dia por MIGRATIONS): cualquier campo puede faltar
@@ -35,7 +35,6 @@ const MAX_TEAMS = 16;
 /** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
 const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
-const MAX_UID = Number.MAX_SAFE_INTEGER;
 const MAX_DAY = 1e9;
 /** Puntos que le pueden quedar a una captura a medias (los de captura de una regla, como mucho). */
 const MAX_CAPTURE_LEFT = 1000;
@@ -130,7 +129,7 @@ function cleanUnit(frame: SaveFrame, unit: Saved): void {
 export function hasValidUnits(frame: SaveFrame, units: readonly unknown[]): boolean {
   const uids = new Set<unknown>();
   for (const unit of units) {
-    if (!isObject(unit) || !isInt(unit.uid, 1, MAX_UID) || uids.has(unit.uid) || !isValidUnit(frame, unit)) return false;
+    if (!isObject(unit) || !isUid(unit.uid) || uids.has(unit.uid) || !isValidUnit(frame, unit)) return false;
     uids.add(unit.uid);
   }
   return true;
@@ -156,7 +155,7 @@ export function hasConsistentCargo(list: readonly unknown[]): boolean {
 
 /** Una captura a medias bien formada de una unidad de un equipo de la partida. */
 const isCaptureProgress = (frame: SaveFrame, value: unknown): boolean =>
-  isObject(value) && isTeam(frame, value.team) && isInt(value.uid, 1, MAX_UID) && isInt(value.left, 1, MAX_CAPTURE_LEFT);
+  isObject(value) && isTeam(frame, value.team) && isUid(value.uid) && isInt(value.left, 1, MAX_CAPTURE_LEFT);
 
 /** Cada edificio esta bien en lo que tiene que tener: tipo, casilla y dueño. Solo mira. */
 export function hasValidBuildings(frame: SaveFrame, buildings: readonly unknown[]): boolean {
@@ -232,7 +231,7 @@ const isControlPoint = (frame: SaveFrame, point: unknown): boolean =>
 
 /** El ultimo movimiento (para deshacerlo): de una unidad, desde una casilla del mapa, con la captura que perdio. */
 function isValidLastMove(frame: SaveFrame, lastMove: unknown): boolean {
-  if (!isObject(lastMove) || !isInt(lastMove.uid, 1, MAX_UID) || !isPosOn(frame.board, lastMove.from)) return false;
+  if (!isObject(lastMove) || !isUid(lastMove.uid) || !isPosOn(frame.board, lastMove.from)) return false;
   if (typeof lastMove.revealed !== 'boolean') return false;
   return lastMove.capture === null || isCaptureProgress(frame, lastMove.capture);
 }
