@@ -6,7 +6,7 @@ import { MAX_LIFE } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
 import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
-import { perTeam, teamIds } from '../teams';
+import { addForTeam, perTeam, teamIds } from '../teams';
 import { earn, pay } from './funds';
 import { restoreInvariants } from './invariants';
 import { quietly } from '../util/quietly';
@@ -75,12 +75,12 @@ function collectAndHeal(s: GameState): GameEvent[] {
     if (building.owner === null) continue;
     const earned = buildingIncome(s, buildingTypeOf(s, building));
     earn(s, building.owner, earned);
-    income[building.owner]! += earned;
+    addForTeam(income, building.owner, earned);
     heals.push(...healOnBuilding(s, building));
   }
   const incomes = teamIds(s)
     .filter((team) => income[team])
-    .map((team): GameEvent => ({ kind: 'income', actor: null, team, amount: income[team]!, source: 'buildings' }));
+    .map((team): GameEvent => ({ kind: 'income', actor: null, team, amount: income[team] ?? 0, source: 'buildings' }));
   return [...incomes, ...heals];
 }
 
@@ -149,8 +149,8 @@ export function roundReport(s: GameState, events: readonly GameEvent[]): RoundRe
 function addToReport(s: GameState, report: RoundReport, event: GameEvent): void {
   switch (event.kind) {
     case 'income':
-      report.income[event.team]! += event.amount;
-      if (event.source === 'controlPoints') controlOf(s, report).income[event.team]! += event.amount;
+      addForTeam(report.income, event.team, event.amount);
+      if (event.source === 'controlPoints') addForTeam(controlOf(s, report).income, event.team, event.amount);
       return;
     case 'upkeep':
       report.upkeep[event.team] = event.amount;
@@ -162,7 +162,7 @@ function addToReport(s: GameState, report: RoundReport, event: GameEvent): void 
       // Solo paga el que no esta disputado y tiene dueño.
       const control = controlOf(s, report);
       if (event.contested) control.contested++;
-      else if (event.owner !== null) control.held[event.owner]!++;
+      else if (event.owner !== null) addForTeam(control.held, event.owner, 1);
       return;
     }
     case 'weather':

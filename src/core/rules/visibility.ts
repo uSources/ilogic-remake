@@ -52,17 +52,33 @@ export function visibility(s: GameState, team: TeamId): Grid<boolean> {
   return visible;
 }
 
+/** Si un equipo ve una casilla: una capa de `visibility` o lo que ya sepa quien pregunta (la escena). */
+export type Sight = (pos: Pos) => boolean;
+
+/** Lo que ve ahora el equipo `team` (sus aliados incluidos), como Sight. */
+export function sightOf(s: GameState, team: TeamId): Sight {
+  const visible = visibility(s, team);
+  return (pos) => visible.at(pos);
+}
+
+/** La unidad es un enemigo de `team`, en el mapa, que su equipo ve (`sees`). */
+export const isVisibleFoe = (s: GameState, team: TeamId, unit: Unit, sees: Sight): boolean =>
+  isHostile(s, team, unit.team) && isOnMap(unit) && sees(unit);
+
 /** Uids de los enemigos de `team` que ve ahora en el mapa (para saber si un movimiento ha descubierto a alguien). */
 export function visibleEnemies(s: GameState, team: TeamId): Set<number> {
-  const visible = visibility(s, team);
-  return new Set(s.units.filter((unit) => isHostile(s, team, unit.team) && isOnMap(unit) && visible.at(unit)).map((unit) => unit.uid));
+  const sees = sightOf(s, team);
+  return new Set(s.units.filter((unit) => isVisibleFoe(s, team, unit, sees)).map((unit) => unit.uid));
+}
+
+/** El enemigo de `team` que hay en `at` y que ve (`sees`); undefined si no hay ninguno a la vista. */
+export function visibleFoeAt(s: GameState, team: TeamId, at: Pos, sees: Sight): Unit | undefined {
+  const unit = unitAt(s, at);
+  return unit && isVisibleFoe(s, team, unit, sees) ? unit : undefined;
 }
 
 /**
- * El enemigo de `team` que hay en `at` y que ve (`sees`: su capa de vision, o lo que ya sabe quien
- * pregunta), en el mapa; undefined si no hay ninguno a la vista.
+ * Quien mira (el equipo `team`) ve la unidad en el mapa: suya, o de otro y a la vista (`sees`). Las
+ * que van dentro de un transporte no se ven.
  */
-export function visibleFoeAt(s: GameState, team: TeamId, at: Pos, sees: (pos: Pos) => boolean): Unit | undefined {
-  const unit = unitAt(s, at);
-  return unit && isHostile(s, team, unit.team) && isOnMap(unit) && sees(unit) ? unit : undefined;
-}
+export const isShownTo = (team: TeamId, unit: Unit, sees: Sight): boolean => isOnMap(unit) && (unit.team === team || sees(unit));

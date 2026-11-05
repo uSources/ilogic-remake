@@ -95,6 +95,11 @@ export function teamValue<T>(perTeamList: readonly T[], team: TeamId): T {
 /** Una lista con un valor por equipo, en orden (informes de la ronda, puntos de control...). */
 export const perTeam = <T>(s: GameState, valueFor: (team: TeamId) => T): T[] => teamIds(s).map(valueFor);
 
+/** Suma `amount` a lo del equipo en una lista por equipo (perTeam); si no estaba, desde 0. */
+export function addForTeam(totals: number[], team: TeamId, amount: number): void {
+  totals[team] = (totals[team] ?? 0) + amount;
+}
+
 /** Lo que se elige de cada equipo al empezar una partida. */
 export interface TeamSetup {
   controller: ControllerKind;

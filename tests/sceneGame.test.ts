@@ -92,7 +92,7 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
         { x: 6, y: 6 },
       ],
     };
-    expect(trailTo(shown, { x: 6, y: 6 })).toBe(shown.trail);
+    expect(trailTo(shown, { x: 6, y: 6 })).toEqual(shown.trail);
     expect(trailTo(shown, { x: 5, y: 6 })).toEqual([
       { x: 5, y: 5 },
       { x: 5, y: 6 },

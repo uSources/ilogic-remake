@@ -14,6 +14,7 @@ import {
   unitThreat,
   canStillAct,
   canMoveNow,
+  isShownTo,
 } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import type { Pos, TeamId, Unit } from '../../../core/model';
@@ -72,7 +73,7 @@ export function acceptMapTile(host: PhaseHost, tile: Pos): void {
   if (unit && isOwn(host.viewer, unit) && canStillAct(unit)) return host.moves.select(unit);
   const building = buildingAt(host.state, tile);
   if (building && building.owner === host.viewer && canBuyAt(host.state, building)) return openBuy(host, building);
-  if (unit && unit.carrier === null && (isOwn(host.viewer, unit) || host.visible(unit))) return host.inspect(unit);
+  if (unit && isShownTo(host.viewer, unit, (pos) => host.visible(pos))) return host.inspect(unit);
   host.enter('gameMenu');
 }
 
@@ -95,7 +96,7 @@ function hoverMarks(input: HighlightInput): Highlights {
 function inspectMarks(input: HighlightInput, uid: number): Highlights {
   const marks = noHighlights();
   const unit = unitById(input.s, uid);
-  if (!unit || unit.carrier !== null || (!isOwn(input.viewer, unit) && !input.visible(unit))) return { ...marks, inspectGone: true };
+  if (!unit || !isShownTo(input.viewer, unit, (pos) => input.visible(pos))) return { ...marks, inspectGone: true };
   // Como si fuera su turno: aunque ya se haya movido, se ve hasta donde llegaria.
   const range = moveRange(input.s, { ...unit, turnState: 'ready' });
   const threat = unitThreat(input.s, unit);

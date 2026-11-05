@@ -10,10 +10,10 @@ import { manhattan, posOf } from '../geom';
 import { generalHitFactor } from '../generals';
 import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
 import { weatherHit } from '../weather';
-import type { ActionRejection, CombatInfo, Dice, GameState, Pos, TeamId, Unit } from '../model';
+import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
-import { visibility } from './visibility';
+import { sightOf, type Sight } from './visibility';
 import { canStillFire } from './unitTurn';
 
 // ---- Alcance y objetivos ----
@@ -50,9 +50,6 @@ export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, a
   return origins;
 }
 
-/** Si un equipo ve una casilla: una capa de `visibility` o lo que ya sepa quien pregunta (la escena). */
-export type Sight = (pos: Pos) => boolean;
-
 /**
  * Por que `target` no es un objetivo para `attacker`, este donde este (null = lo es): un enemigo vivo
  * en el mapa que su equipo ve (`sees`) y al que le hace daño. No mira distancias ni si le queda disparo.
@@ -60,12 +57,6 @@ export type Sight = (pos: Pos) => boolean;
 export function targetProblem(s: GameState, attacker: Unit, target: Unit, sees: Sight): ActionRejection | null {
   if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target) || !sees(target)) return 'notTarget';
   return canDamage(s, attacker, target) ? null : 'notTarget';
-}
-
-/** Lo que ve ahora el equipo `team` (sus aliados incluidos), como Sight. */
-export function sightOf(s: GameState, team: TeamId): Sight {
-  const visible = visibility(s, team);
-  return (pos) => visible.at(pos);
 }
 
 /**

@@ -10,7 +10,7 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption, canStillAct } from '../core/rules';
+import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
 import { dispatch } from '../core/actions';
@@ -697,7 +697,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
   private idleUnits(): Unit[] {
-    return this.s.units.filter((unit) => this.isOwn(unit) && canStillAct(unit) && unit.carrier === null && !this.standingOrderOf(unit));
+    return this.s.units.filter((unit) => this.isOwn(unit) && canActNow(unit) && !this.standingOrderOf(unit));
   }
 
   /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
@@ -842,9 +842,7 @@ export class GameScene extends Phaser.Scene {
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): ViewOptions['intents'] {
     if (this.phase !== 'map' || this.othersPlaying || this.ended || this.lab) return [];
-    const withStandingOrder = this.s.units.filter(
-      (unit) => this.isOwn(unit) && this.standingOrderOf(unit) && canStillAct(unit) && unit.carrier === null,
-    );
+    const withStandingOrder = this.s.units.filter((unit) => this.isOwn(unit) && this.standingOrderOf(unit) && canActNow(unit));
     const shown = withStandingOrder.filter((unit) => this.intents || this.showsOrderLine(unit));
     if (!shown.length) return [];
     return intentLines(shown, this.standingOrderPreview.get(this.s, this.viewer), this.vis);

@@ -19,6 +19,9 @@ export const canStillAct = (unit: Pick<Unit, 'turnState'>): boolean => unit.turn
 /** Aun no se ha movido ni ha hecho nada este turno. */
 export const canStillMove = (unit: Pick<Unit, 'turnState'>): boolean => unit.turnState === 'ready';
 
+/** Puede hacer algo ya: le queda turno y esta en el mapa (no dentro de un transporte). */
+export const canActNow = (unit: Pick<Unit, 'turnState' | 'carrier'>): boolean => canStillAct(unit) && isOnMap(unit);
+
 /** Se puede mover ya: aun no se ha movido y esta en el mapa (no dentro de un transporte). */
 export const canMoveNow = (unit: Pick<Unit, 'turnState' | 'carrier'>): boolean => canStillMove(unit) && isOnMap(unit);
 

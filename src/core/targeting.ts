@@ -4,7 +4,8 @@
  */
 import { manhattan, samePos, posOf } from './geom';
 import { isRanged } from './abilities';
-import { attackProblem, sightOf, tileProtection, type Sight } from './rules/combat';
+import { attackProblem, tileProtection } from './rules/combat';
+import { sightOf, type Sight } from './rules/visibility';
 import { reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
 import { minBy } from './util/pick';
 import type { GameState, Pos, Unit } from './model';

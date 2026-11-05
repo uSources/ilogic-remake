@@ -209,12 +209,14 @@ export function squadInFormation(s: GameState, id: number): boolean {
  * juntas, o una partida guardada antes de que las escuadras tuvieran orden, sigue igual.
  */
 export function liftStandingOrder(s: GameState, squad: Squad): void {
-  const units = squadUnits(s, squad.id);
-  if (!units.length || units.some((unit) => !unit.standingOrder)) return;
+  const orders = squadUnits(s, squad.id).map((unit) => ({ unit, order: unit.standingOrder }));
+  const withOrder = orders.filter((entry): entry is { unit: Unit; order: StandingOrder } => !!entry.order);
+  if (!withOrder.length || withOrder.length < orders.length) return;
   // La de capturar manda: las demas van de escolta con "atacar" al mismo sitio.
-  const lead = units.find((unit) => unit.standingOrder!.kind === 'capture') ?? units[0]!;
-  const standingOrder = lead.standingOrder!;
-  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, forUnit(s, unit, standingOrder)))) return;
+  const lead = withOrder.find((entry) => entry.order.kind === 'capture') ?? withOrder[0];
+  if (!lead) return;
+  const standingOrder = lead.order;
+  if (!withOrder.every((entry) => sameStandingOrder(entry.order, forUnit(s, entry.unit, standingOrder)))) return;
   squad.standingOrder = copyStandingOrder(standingOrder);
-  for (const unit of units) delete unit.standingOrder;
+  for (const { unit } of withOrder) delete unit.standingOrder;
 }

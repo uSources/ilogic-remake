@@ -5,7 +5,7 @@
 import { posKey, samePos, posOf } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/targeting';
-import { canCaptureAt, pathTo, targetProblem, unitAt, unitById, type MoveRange } from '../../core/rules';
+import { canCaptureAt, pathTo, targetProblem, unitAt, unitById, type MoveRange, type Sight } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { type Intent } from './types';
 
@@ -21,7 +21,7 @@ export interface MovePlan {
 }
 
 /** Que pasaria al soltar (o pulsar) la unidad elegida en `tile`. `visible`: la casilla se ve. */
-export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible: (pos: Pos) => boolean): Intent {
+export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible: Sight): Intent {
   if (!plan || !isOnBoard(s, tile)) return { kind: 'none' };
   const unit = plan.unit;
   if (samePos(tile, unit)) return { kind: 'stay' };
@@ -44,15 +44,17 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
 const isReachable = (range: MoveRange, tile: Pos) => range.steps.at(tile) > 0;
 
 /** Mejor casilla desde la que atacar a `target` (ver bestAttackTile), con lo que ve quien mira. */
-export function attackFrom(s: GameState, plan: MovePlan, target: Unit, visible: (pos: Pos) => boolean): Pos | null {
+export function attackFrom(s: GameState, plan: MovePlan, target: Unit, visible: Sight): Pos | null {
   return bestAttackTile(s, plan.unit, target, plan.range, plan.trail[plan.trail.length - 1] ?? plan.unit, visible);
 }
 
 /** Camino hasta `dest`: el trazado si acaba ahi, si no el mas corto. */
 export function trailTo(plan: MovePlan, dest: Pos): Pos[] {
-  const trail = plan.trail as Pos[];
+  const trail = plan.trail;
+  const start = trail[0];
   const end = trail[trail.length - 1];
-  if (end && samePos(end, dest) && samePos(trail[0]!, plan.unit)) return trail;
+  // Una copia: quien lo recibe (la accion 'move') no debe cambiar el trazado de la escena.
+  if (start && end && samePos(end, dest) && samePos(start, plan.unit)) return [...trail];
   // El destino esta a mitad del camino trazado: hasta ahi.
   const destIndex = trail.findIndex((pos) => samePos(pos, dest));
   if (destIndex > 0) return trail.slice(0, destIndex + 1);
