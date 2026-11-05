@@ -113,8 +113,8 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
  * Da una orden con destino a estas unidades del equipo `team` (las de otros equipos no la reciben).
  * Si son una escuadra entera, la orden es de la escuadra (y se olvidan las propias); si son solo
  * algunas, cada una se queda con la orden como propia (destacada) y al cumplirla vuelve a la de su
- * escuadra. Con "capturar", las que no pueden
- * capturar van de escolta. Devuelve cuantas la han recibido.
+ * escuadra. Con "capturar", las que no pueden capturar van de escolta. Devuelve cuantas la han
+ * recibido.
  */
 export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
   const mine = unitsOfTeam(team, units);

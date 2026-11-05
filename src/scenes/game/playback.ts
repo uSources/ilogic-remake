@@ -676,7 +676,8 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   standingOrder: noAnimation,
   standingOrderDone: noAnimation,
   squad: noAnimation,
-  // Los pasajeros caen con la explosion del transporte (la del ataque); el dinero perdido, en la barra.
+  // Los pasajeros se van con su transporte (con la explosion del ataque que lo derriba, o al retirarlo:
+  // su animacion); la captura perdida y el dinero de mas se ven en el mapa y en la barra.
   cargoLost: noAnimation,
   captureDropped: noAnimation,
   fundsCapped: noAnimation,

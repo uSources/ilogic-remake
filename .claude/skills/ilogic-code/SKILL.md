@@ -100,14 +100,15 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
   "Vista del mapa").
 - **Extender sin abrir funciones grandes**: accion nueva = su forma en `GameAction` y en
-  `ACTION_SHAPES` (`core/actions/shape.ts`, campo a campo), su suceso en `GameEvent` y su entrada
-  en `ACTIONS` (`core/actions/`; y en `UNIT_MENU` si sale en el menu de la unidad, en
-  `SELECTION_MENU` si se manda a unas elegidas, y en `ANIMATORS` de la escena); lo que se limpia
-  tras cualquier accion y cada ronda = entrada en `INVARIANTS` (`core/rules/invariants.ts`); lo que se mira antes de cualquiera = entrada en `ACTION_GUARDS`; acierto nuevo =
-  entrada en `HIT_MODIFIERS`; paso por ronda = entrada en `ROUND_PHASES` (devuelve sus sucesos); habilidad de unidad nueva = su efecto en `abilities.ts`; efecto
-  nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`). La IA no tiene
-  variables globales: lo del turno va en `AiCtx`. Antes de
-  escribir un bucle o un literal, buscar si ya existe la ayuda.
+  `ACTION_SHAPES` (`core/actions/shape.ts`, campo a campo), su suceso en `GameEvent` y su entrada en
+  `ACTIONS` (`core/actions/`; y en `UNIT_MENU` si sale en el menu de la unidad, en `SELECTION_MENU`
+  si se manda a unas elegidas, y en `ANIMATORS` de la escena); lo que se limpia tras cualquier
+  accion y cada ronda = entrada en `INVARIANTS` (`core/rules/invariants.ts`); lo que se mira antes
+  de cualquiera = entrada en `ACTION_GUARDS`; acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
+  ronda = entrada en `ROUND_PHASES` (devuelve sus sucesos); habilidad de unidad nueva = su efecto en
+  `abilities.ts`; efecto nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`).
+  La IA no tiene variables globales: lo del turno va en `AiCtx`. Antes de escribir un bucle o un
+  literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de
   `grid[x]![y]!`. El tamaño del mapa sale siempre del estado (`mapGrid(s)`, `createLayer(s, fill)`,
   `isOnBoard(s, pos)` de `core/mapGrid.ts`): no hay tamaño global; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
