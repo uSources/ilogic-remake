@@ -133,7 +133,7 @@ async function scenarios(page, cdp, name) {
   await tap(page, SOLDIER.x + 1, SOLDIER.y);
   const s1 = await unit(page, s0.uid);
   check(s1?.x === SOLDIER.x + 1 && s1?.y === SOLDIER.y, 'tocar el destino la mueve (2 toques)');
-  check((await phase(page)) === 'map' && s1?.active === false, 'sin nada mas que hacer, espera sola');
+  check((await phase(page)) === 'map' && s1?.turnState === 'done', 'sin nada mas que hacer, espera sola');
 
   // Fuera del alcance: se deja de elegir.
   await start(page);

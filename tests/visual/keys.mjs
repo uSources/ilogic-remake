@@ -54,7 +54,7 @@ async function mapTab(page) {
   const idle = await page.evaluate(() =>
     window.ilogicDebug
       .state()
-      .units.filter((u) => u.team === 0 && u.active)
+      .units.filter((u) => u.team === 0 && u.turnState !== 'done')
       .map((u) => `${u.x},${u.y}`),
   );
   const seen = new Set();
@@ -149,7 +149,8 @@ async function groupKeys(page) {
     const s = window.ilogicDebug.state();
     const mine = s.units.filter((u) => u.team === 0);
     for (const u of mine) u.squad = 1;
-    s.squads = [{ id: 1, team: 0, name: 'Alfa' }];
+    // Una partida de ahora: cada escuadra con su tecla (leerla ya no se la da).
+    s.squads = [{ id: 1, team: 0, name: 'Alfa', key: 1 }];
     await window.ilogicDebug.startGame({ state: s });
   });
   const n = await page.evaluate(() => window.ilogicDebug.state().units.filter((u) => u.team === 0).length);
