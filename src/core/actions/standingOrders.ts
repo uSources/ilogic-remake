@@ -27,7 +27,12 @@ export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 
     },
   },
   cancelStandingOrder: {
-    validate: (s, team, action) => ownUnitsProblem(s, team, action.uids),
+    validate: (s, team, action) => {
+      const problem = ownUnitsProblem(s, team, action.uids);
+      if (problem) return problem;
+      const hasOrder = checkedUnits(s, action.uids).some((unit) => effectiveStandingOrder(s, unit));
+      return hasOrder ? null : 'noStandingOrder';
+    },
     apply: (s, team, action) => {
       cancelStandingOrder(s, checkedUnits(s, action.uids));
       return [{ kind: 'standingOrder', actor: team, uids: [...action.uids], order: null }];

@@ -10,12 +10,12 @@ import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
 import { movementOf, canWalk, unitAt, unitById, canStillMove } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
-import { standingOrderBlock } from '../../core/squads';
+import { standingOrderBlock, type StandingOrderBlock } from '../../core/squads';
 import type { GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
-import { t } from '../../settings';
+import { t, type TextKey } from '../../settings';
 import { cursorCss } from '../../ui/cursors';
 import { standingOrderLabel } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
@@ -80,6 +80,13 @@ export interface OrderHost extends ActionHost {
 }
 
 const uidsOf = (units: readonly Unit[]) => units.map((unit) => unit.uid);
+
+/** Por que no se ha podido dar una orden, para el aviso. */
+const BLOCK_TEXT: Record<StandingOrderBlock, TextKey> = {
+  noBuilding: 'orderNoBuilding',
+  noCapturer: 'orderNoCapturer',
+  noFighter: 'orderNoFighter',
+};
 
 export class Orders {
   ordering: Ordering | null = null;
@@ -270,7 +277,7 @@ export class Orders {
     if (!ordering) return host.toMap();
     const units = ordering.uids.map((uid) => unitById(s, uid)).filter((unit): unit is Unit => !!unit);
     const block = standingOrderBlock(s, host.viewer, ordering.kind, at, units);
-    if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
+    if (block) return showToast(t(BLOCK_TEXT[block]));
     this.ordering = null;
     host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind: ordering.kind, at: posOf(at) } });
     if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);

@@ -2,7 +2,7 @@
  * Tipos y constantes que comparten GameScene y sus modulos (src/scenes/game). Sin Phaser: se pueden
  * importar desde los tests.
  */
-import type { UnitActions } from '../../core/rules';
+import type { UnitMenuOption } from '../../core/actions';
 import type { GameAction, GameEvent, GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
@@ -15,7 +15,11 @@ import type { TextKey } from '../../settings';
 export type Phase =
   'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'orderMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
-export type ActionKey = keyof UnitActions;
+/**
+ * Una opcion del menu de una unidad: las que da el nucleo (availableActions) y «Atras», que siempre
+ * esta (deshace el movimiento o, si no hay nada que deshacer, cierra el menu).
+ */
+export type ActionKey = UnitMenuOption | 'back';
 /** Orden de las opciones del menu de una unidad. */
 export const ACTION_ORDER: ActionKey[] = [
   'attack',

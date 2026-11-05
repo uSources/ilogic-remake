@@ -1,19 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/util/random';
-import {
-  attackTargets,
-  endRound,
-  moveRange,
-  newUnit,
-  outcome,
-  unitActions,
-  combatForecast,
-  threatMap,
-  canStillFire,
-  canStillMove,
-} from '@core/rules';
-import { dispatch } from '@core/actions';
+import { attackTargets, endRound, moveRange, newUnit, outcome, combatForecast, threatMap, canStillFire, canStillMove } from '@core/rules';
+import { availableActions, dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
 import { act, blankState, diceFrom, hqId, unitTypeNamed, fight, endRoundReport } from './helpers';
 
@@ -133,7 +122,7 @@ describe('union y transporte', () => {
     const passenger = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
     act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
     expect(passenger.carrier).toBe(transport.uid);
-    expect(unitActions(s, transport).unload).toBe(true);
+    expect(availableActions(s, 0, transport)).toContain('unload');
     act(s, 0, { kind: 'unload', uid: transport.uid, passenger: passenger.uid, to: { x: 10, y: 11 } });
     expect(passenger.carrier).toBeNull();
     expect(passenger.x).toBe(10);
@@ -171,9 +160,9 @@ describe('compra y fin de ronda', () => {
     const tank = newUnit(s, TANK, 0, { x: 5, y: 6 });
     const so = newUnit(s, SOLDIER, 0, { x: 4, y: 5 });
     so.life = 40;
-    expect(unitActions(s, sup).supply).toBe(false); // el tanque esta entero y al soldado no le cura
+    expect(availableActions(s, 0, sup)).not.toContain('supply'); // el tanque esta entero y al soldado no le cura
     tank.life = 50;
-    expect(unitActions(s, sup).supply).toBe(true);
+    expect(availableActions(s, 0, sup)).toContain('supply');
     act(s, 0, { kind: 'supply', uid: sup.uid });
     expect(tank.life).toBe(70);
     expect(so.life).toBe(40);

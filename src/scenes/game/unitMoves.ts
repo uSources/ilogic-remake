@@ -4,10 +4,10 @@
  */
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
-import { isValidAction } from '../../core/actions';
+import { availableActions, isValidAction, type UnitMenuOption } from '../../core/actions';
 import { manhattan, samePos, posOf } from '../../core/geom';
 import { closestStep } from '../../core/targeting';
-import { canCapture, canStillMove, endsInAmbush, moveRange, stepToward, unitActions, unitById, visibility } from '../../core/rules';
+import { canCapture, canStillMove, endsInAmbush, moveRange, stepToward, unitById, visibility } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
@@ -56,10 +56,12 @@ function visibleEnemyUids(s: GameState, viewer: TeamId): string {
     .join(',');
 }
 
+/** Lo que una unidad puede hacer despues de moverse, aparte de esperar y de las ordenes. */
+const ACTIONS_AFTER_MOVING: readonly UnitMenuOption[] = ['attack', 'capture', 'unload', 'supply'];
+
 /** Sin nada mas que hacer tras moverse (para «Esperar sola» al soltar). */
-function hasNothingElseToDo(s: GameState, unit: Unit): boolean {
-  const can = unitActions(s, unit);
-  return !can.attack && !can.capture && !can.unload && !can.supply;
+function hasNothingElseToDo(s: GameState, team: TeamId, unit: Unit): boolean {
+  return !availableActions(s, team, unit).some((option) => ACTIONS_AFTER_MOVING.includes(option));
 }
 
 export class UnitMoves {
@@ -194,7 +196,7 @@ export class UnitMoves {
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (options.wait) return this.waitSelected();
     if (options.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();
-    if (options.drop && settings.autoWait && hasNothingElseToDo(host.state, unit)) return this.waitSelected();
+    if (options.drop && settings.autoWait && hasNothingElseToDo(host.state, host.viewer, unit)) return this.waitSelected();
     host.openUnitMenu();
   }
 

@@ -3,7 +3,8 @@ import { saveContext } from '@core/defaultGames';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
-import { newUnit, unitActions } from '@core/rules';
+import { newUnit } from '@core/rules';
+import { availableActions } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
 import {
   SQUAD_NAME_MAX,
@@ -181,10 +182,11 @@ describe('ordenes con destino', () => {
     const s = world();
     const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const tank = newUnit(s, TANK, 0, { x: 6, y: 6 });
-    expect(unitActions(s, sol)).toMatchObject({ orderToAttack: true, orderToCapture: true, orderToDefend: true, cancelOrder: false });
-    expect(unitActions(s, tank).orderToCapture).toBe(false);
+    expect(availableActions(s, 0, sol)).toEqual(expect.arrayContaining(['orderToAttack', 'orderToCapture', 'orderToDefend']));
+    expect(availableActions(s, 0, sol)).not.toContain('cancelOrder');
+    expect(availableActions(s, 0, tank)).not.toContain('orderToCapture');
     giveStandingOrder(s, 0, [tank], 'defend', { x: 6, y: 6 });
-    expect(unitActions(s, tank).cancelOrder).toBe(true);
+    expect(availableActions(s, 0, tank)).toContain('cancelOrder');
   });
 });
 

@@ -18,11 +18,13 @@
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
  * | `invariants` | lo que se repasa despues de cada accion (`INVARIANTS`) |
+ * | `menu` | el menu de una unidad, sacado de las acciones que valen (`availableActions`) |
  * | `registry` | `ACTIONS`: todas las entradas |
  * | `dispatch` | `dispatch`, `actionProblem`, `isValidAction` |
  */
 export { dispatch, actionProblem, isValidAction, applyAction } from './actions/dispatch';
 export { ACTIONS } from './actions/registry';
+export { availableActions, canGiveStandingOrder, UNIT_MENU, type UnitMenuOption } from './actions/menu';
 /**
  * El combate de la accion 'attack' sin comprobar nada: solo para medirlo fuera de una partida (el
  * laboratorio de duelos de tools/balance, los tests del combate). Quien juega usa `dispatch`.

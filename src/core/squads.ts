@@ -18,6 +18,7 @@ export {
   effectiveStandingOrder,
   isDetached,
   standingOrderBlock,
+  type StandingOrderBlock,
   standingOrderChoices,
   atStandingOrder,
   sameFormation,

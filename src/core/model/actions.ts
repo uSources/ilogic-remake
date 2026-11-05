@@ -86,6 +86,8 @@ export type ActionRejection =
   /** Ordenes permanentes (ver standingOrderBlock): capturar donde no hay nada, o sin nadie que capture. */
   | 'noBuilding'
   | 'noCapturer'
+  /** Atacar o defender sin ninguna unidad que luche. */
+  | 'noFighter'
   /** No lleva ninguna orden que cumplir o quitar. */
   | 'noStandingOrder'
   /** Escuadras: tecla de grupo fuera de 1-9, nombre vacio o ninguna de ellas va en una escuadra. */

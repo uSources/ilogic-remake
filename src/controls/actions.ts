@@ -8,15 +8,18 @@
  * - el cursor del raton al pasar por encima (cursorFor).
  *
  * Logica pura: no mueve nada ni sabe de mandos. Lo que hace cada accion al elegirla esta en
- * scenes/game/actionRunners.ts (una entrada por cada `ActionId`, lo obliga el tipo). La escena le
- * pasa aqui lo que solo ella sabe (que significa ir a esa casilla con la unidad elegida: `intent`).
- * Añadir una accion es una entrada en ACTIONS y otra en ACTION_RUNNERS; los mandos no cambian.
+ * scenes/game/actionRunners.ts (una entrada por cada `ActionId`, lo obliga el tipo), que manda las
+ * acciones del nucleo (core/actions.ts); si una vale lo dice el nucleo (`isValidAction`,
+ * `canGiveStandingOrder`), y aqui solo se añade lo que es de la interfaz (que significa ir a esa
+ * casilla con la unidad elegida: `intent`; que formar escuadra pide dos o mas). Añadir una accion
+ * es una entrada en ACTIONS y otra en ACTION_RUNNERS; los mandos no cambian.
  */
 import { canFight, isCapturer } from '../core/util/predicates';
 import { buildingAt } from '../core/rules';
 import { isAlliedOwner } from '../core/teams';
-import { standingOrderChoices, effectiveStandingOrder, squadUnits } from '../core/squads';
-import type { GameState, Pos, TeamId, Unit } from '../core/model';
+import { standingOrderChoices, squadUnits } from '../core/squads';
+import { canGiveStandingOrder, isValidAction } from '../core/actions';
+import type { GameAction, GameState, Pos, TeamId, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
 /** Puntero del raton que anuncia lo que hara el clic derecho (ver ui/cursors.ts). */
@@ -103,11 +106,16 @@ export function exactSquad(s: GameState, units: readonly Unit[]): number | null 
 
 const isWholeSquad = (context: ActionCtx) => exactSquad(context.s, context.units) !== null;
 
-/** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
+/** Ordenes con destino que ofrece el menu en esa casilla (o todas las que se pueden dar, sin casilla). */
 function canOrder(context: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
-  if (context.at) return standingOrderChoices(context.s, context.viewer, context.at, context.units, context.enemyHere).includes(kind);
-  return kind === 'capture' ? anyCanCapture(context) : anyCanFight(context);
+  const { s, viewer, units, at } = context;
+  if (at && !standingOrderChoices(s, viewer, at, units, context.enemyHere).includes(kind)) return false;
+  return canGiveStandingOrder(s, viewer, units, kind, at);
 }
+
+/** La accion del nucleo con estas unidades vale ahora. */
+const isValidFor = (context: ActionCtx, action: (uids: number[]) => GameAction): boolean =>
+  isValidAction(context.s, context.viewer, action(context.units.map((unit) => unit.uid)));
 
 /**
  * Todas las acciones, en orden: el de prioridad del clic derecho y el del menu. Las de una sola
@@ -149,14 +157,20 @@ export const ACTIONS: readonly ActionDef[] = [
     id: 'cancelOrder',
     label: 'cancelOrder',
     cursor: 'default',
-    ok: (context) => context.units.some((unit) => !!effectiveStandingOrder(context.s, unit)),
+    ok: (context) => isValidFor(context, (uids) => ({ kind: 'cancelStandingOrder', uids })),
   }),
-  inMenu({ id: 'squadForm', label: 'squadForm', cursor: 'default', ok: (context) => context.units.length > 1 && !isWholeSquad(context) }),
+  inMenu({
+    id: 'squadForm',
+    label: 'squadForm',
+    cursor: 'default',
+    // Una escuadra de una sola unidad no sirve de nada: el menu la ofrece desde dos.
+    ok: (context) => context.units.length > 1 && !isWholeSquad(context) && isValidFor(context, (uids) => ({ kind: 'formSquad', uids })),
+  }),
   inMenu({
     id: 'squadLeave',
     label: 'squadLeave',
     cursor: 'default',
-    ok: (context) => context.units.some((unit) => unit.squad !== undefined) && !isWholeSquad(context),
+    ok: (context) => !isWholeSquad(context) && isValidFor(context, (uids) => ({ kind: 'leaveSquad', uids })),
   }),
   inMenu({ id: 'squadRename', label: 'squadRename', cursor: 'default', ok: isWholeSquad }),
   inMenu({ id: 'squadDisband', label: 'squadDisband', cursor: 'default', ok: isWholeSquad }),

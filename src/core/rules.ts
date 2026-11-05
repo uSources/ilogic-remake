@@ -22,7 +22,6 @@
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
  * | `supply` | a quien se puede reparar, y repararlas |
- * | `unitActions` | menu de acciones de una unidad |
  * | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
@@ -101,7 +100,6 @@ export {
 export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';
-export { unitActions, type UnitActions } from './rules/unitActions';
 export {
   commandUsed,
   armyLimit,

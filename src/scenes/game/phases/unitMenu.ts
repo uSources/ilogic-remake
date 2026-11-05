@@ -5,7 +5,8 @@
  */
 import { unitTypeOf } from '../../../core/gameContent';
 import { posKey, posOf } from '../../../core/geom';
-import { attackTargets, unitActions, unitById, unloadTiles } from '../../../core/rules';
+import { attackTargets, unitById, unloadTiles } from '../../../core/rules';
+import { availableActions } from '../../../core/actions';
 import type { StandingOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, nameOf, type TextKey } from '../../../settings';
@@ -19,7 +20,7 @@ import { markTiles, type PhaseHandler, type PhaseHost } from './phase';
 const BACK_ROW = 0;
 const FIRST_PASSENGER_ROW = 1;
 
-/** Lo que hace cada opcion del menu de la unidad (una por cada accion de unitActions). */
+/** Lo que hace cada opcion del menu de la unidad (una por cada opcion de availableActions, y «Atras»). */
 const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, unit: Unit) => void } = {
   attack: pickAttackTarget,
   capture: captureHere,
@@ -86,10 +87,10 @@ export const unitMenuPhase: PhaseHandler = {
   enter: (host) => {
     const unit = host.moves.selected;
     if (!unit) return host.toMap();
-    const can = unitActions(host.state, unit);
+    const available = new Set<ActionKey>(availableActions(host.state, host.viewer, unit));
     // [CAMBIO] "Atras" siempre: deshace el movimiento (en el original no se podia).
-    can.back = true;
-    host.unitOptions = ACTION_ORDER.filter((action) => can[action]);
+    available.add('back');
+    host.unitOptions = ACTION_ORDER.filter((action) => available.has(action));
     // Encima de un edificio que se puede capturar, lo normal es capturar.
     host.menuSel = Math.max(0, host.unitOptions.indexOf('capture'));
     host.deleteArmed = false;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, INVARIANTS, dispatch, isValidAction } from '@core/actions';
+import { ACTIONS, INVARIANTS, availableActions, canGiveStandingOrder, dispatch, isValidAction } from '@core/actions';
 import { endRound, newUnit, roundReport } from '@core/rules';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
@@ -238,5 +238,36 @@ describe('deshacer no pierde la captura a medias (K2)', () => {
     expect(loadGame(JSON.stringify(raw))!.lastMove).toEqual({ uid: soldier.uid, from: { x: 5, y: 5 }, capture: null });
     raw.lastMove.from = { x: -1, y: 0 };
     expect(loadGame(JSON.stringify(raw))!.lastMove).toBeUndefined();
+  });
+});
+
+describe('el menu de una unidad sale de las acciones que valen', () => {
+  it('cada opcion se ofrece si su accion vale ahora', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    newUnit(s, SOLDIER, 1, { x: 5, y: 6 });
+    expect(availableActions(s, 0, soldier)).toEqual([
+      'attack',
+      'capture',
+      'wait',
+      'orderToAttack',
+      'orderToCapture',
+      'orderToDefend',
+      'delete',
+    ]);
+    expect(availableActions(s, 1, soldier)).toEqual([]);
+  });
+
+  it('un transporte con alguien dentro puede bajarlo; uno que no lucha no recibe ordenes de atacar', () => {
+    const s = blankState(PLAIN_RULES);
+    const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
+    const passenger = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
+    act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
+    const options = availableActions(s, 0, transport);
+    expect(options).toContain('unload');
+    expect(options).not.toContain('orderToAttack');
+    expect(canGiveStandingOrder(s, 0, [transport], 'defend', null)).toBe(false);
+    expect(canGiveStandingOrder(s, 0, [transport, passenger], 'defend', null)).toBe(true);
   });
 });

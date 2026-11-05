@@ -5,9 +5,9 @@
  */
 import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt } from '../rules/queries';
-import { isAlive, isCapturer } from '../util/predicates';
+import { canFight, isAlive, isCapturer } from '../util/predicates';
 import { areAllied } from '../teams';
-import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, TeamId, Unit } from '../model';
+import type { ActionRejection, GameState, Pos, Squad, StandingOrder, StandingOrderKind, TeamId, Unit } from '../model';
 import { squadById, squadUnits, unitsOfTeam } from './queries';
 
 /** Que dice cada tipo de orden permanente (el Record obliga a tenerlos todos). */
@@ -67,15 +67,22 @@ function isOwnedOrMissing(s: GameState, team: TeamId, at: Pos): boolean {
   return !building || (building.owner !== null && areAllied(s, building.owner, team));
 }
 
-/** Por que no se puede dar esa orden ahi a unidades del equipo `team` (null = se puede). */
+/** Por que no se puede dar una orden permanente (los mismos nombres que da `dispatch` al rechazarla). */
+export type StandingOrderBlock = Extract<ActionRejection, 'noBuilding' | 'noCapturer' | 'noFighter'>;
+
+/**
+ * Por que no se puede dar esa orden ahi a unidades del equipo `team` (null = se puede): alguna tiene
+ * que poder cumplirla (atacar y defender, alguna que luche; capturar, alguna que capture y un
+ * edificio que no sea ya de la alianza).
+ */
 export function standingOrderBlock(
   s: GameState,
   team: TeamId,
   kind: StandingOrderKind,
   at: Pos,
   units: readonly Unit[],
-): 'noBuilding' | 'noCapturer' | null {
-  if (kind !== 'capture') return null;
+): StandingOrderBlock | null {
+  if (kind !== 'capture') return units.some((unit) => canFight(s, unit)) ? null : 'noFighter';
   if (isOwnedOrMissing(s, team, at)) return 'noBuilding';
   if (!units.some((unit) => isCapturer(s, unit))) return 'noCapturer';
   return null;

@@ -17,6 +17,7 @@ export const orders = {
   orderDone: 'Orden cumplida',
   orderNoBuilding: 'Ahí no hay un edificio que capturar',
   orderNoCapturer: 'Ninguna de estas unidades puede capturar',
+  orderNoFighter: 'Ninguna de estas unidades puede atacar',
   orderHereNone: 'Elige antes una unidad o un grupo (luego F en el destino)',
   squads: 'Escuadras',
   multiOff: 'Elegir varias',
