@@ -99,7 +99,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
 /** Lo que hace la IA con una unidad en su turno (si sigue activa). */
 export function* unitTurn(s: GameState, ai: AiCtx, uid: number, rng: Rng): Generator<GameEvent> {
   const unit = unitById(s, uid);
-  if (!unit || !canAct(unit)) return;
+  if (!unit || !canAct(s, unit)) return;
   // El alcance no cambia mientras ningun comportamiento haya usado la unidad, asi que se calcula una vez.
   const turn: UnitTurnContext = { s, ai, unit, range: moveRange(s, unit), rng };
   for (const behaviour of UNIT_BEHAVIOURS) {

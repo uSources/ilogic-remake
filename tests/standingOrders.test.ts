@@ -4,7 +4,7 @@ import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/ai
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
 import { newUnit } from '@core/rules';
-import { availableActions } from '@core/actions';
+import { availableActions, dispatch } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
 import { SAVE_VERSION } from '@core/saveVersion';
 import {
@@ -197,7 +197,9 @@ describe('escuadras', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 6 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
-    const q1 = formSquad(s, 0, [soldier, tank, enemy])!;
+    // Con una unidad de otro equipo, la accion no vale; con las propias, si.
+    expect(dispatch(s, 0, { kind: 'formSquad', uids: [soldier.uid, tank.uid, enemy.uid] })).toEqual({ ok: false, reason: 'notYours' });
+    const q1 = formSquad(s, 0, [soldier, tank])!;
     expect(q1.name).toBe('Alfa');
     expect(squadUnits(s, q1.id).map((unit) => unit.uid)).toEqual([soldier.uid, tank.uid]);
     expect(enemy.squad).toBeUndefined();
@@ -207,7 +209,7 @@ describe('escuadras', () => {
     expect(s.squads![0]!.name).toBe('Los de la coli');
     expect(s.squads![0]!.name.length).toBeLessThanOrEqual(SQUAD_NAME_MAX);
     expect(renameSquad(s, q1.id, '   ')).toBe(false);
-    disbandSquad(s, q1.id);
+    act(s, 0, { kind: 'disbandSquad', squad: q1.id });
     expect(soldier.squad).toBeUndefined();
     expect(s.squads!.map((squad) => squad.name)).toEqual(['Bravo']);
   });
@@ -536,7 +538,7 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     ];
     const q1 = setGroup(s, 0, [first], 1)!;
     const q2 = addToGroup(s, 0, [second], 2)!;
-    addToGroup(s, 0, [third, second], 1);
+    act(s, 0, { kind: 'addToGroup', uids: [third.uid, second.uid], key: 1 });
     expect(squadUnits(s, q1.id).length).toBe(3);
     // La escuadra 2 se ha quedado vacia: desaparece y su tecla queda libre.
     expect(s.squads!.some((squad) => squad.id === q2.id)).toBe(false);

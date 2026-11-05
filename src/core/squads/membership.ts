@@ -13,14 +13,16 @@ export function pruneSquads(s: GameState): void {
 }
 
 /**
- * Forma una escuadra del equipo `team` con estas unidades (solo las suyas; salen de la que tuvieran) y
- * le da el primer nombre libre y la primera tecla libre del equipo (o la tecla `key`, cuyo nombre de
- * la lista prefiere: Ctrl+3 forma «Charlie»). Devuelve la escuadra, o null si no hay unidades.
+ * Forma una escuadra del equipo `team` con estas unidades suyas (salen de la que tuvieran; que son
+ * del equipo lo comprueba la accion) y le da el primer nombre libre y la primera tecla libre del
+ * equipo (o la tecla `key`, cuyo nombre de la lista prefiere: Ctrl+3 forma «Charlie»). Devuelve la
+ * escuadra, o null si no hay unidades. Las escuadras que se quedan vacias las quita despues dispatch
+ * (INVARIANTS).
  */
-export function formSquad(s: GameState, team: TeamId, units: readonly Unit[], name?: string, key?: number): Squad | null {
-  const mine = unitsOfTeam(team, units);
+export function formSquad(s: GameState, team: TeamId, mine: readonly Unit[], name?: string, key?: number): Squad | null {
   if (!mine.length) return null;
   for (const unit of mine) leaveSquad(s, unit);
+  // Ya, no al final: la que se queda vacia no debe ocupar su nombre ni su tecla.
   pruneSquads(s);
   const squads = s.squads ?? [];
   const id = squads.reduce((highest, squad) => Math.max(highest, squad.id), 0) + 1;
@@ -34,7 +36,6 @@ export function formSquad(s: GameState, team: TeamId, units: readonly Unit[], na
   for (const unit of mine) unit.squad = id;
   s.squads = [...squads, squad];
   liftStandingOrder(s, squad);
-  pruneSquads(s);
   return squad;
 }
 
@@ -71,7 +72,6 @@ function joinSquad(s: GameState, squad: Squad, units: readonly Unit[]): Squad {
     if (unit.standingOrder && squad.standingOrder && sameStandingOrder(unit.standingOrder, forUnit(s, unit, squad.standingOrder)))
       delete unit.standingOrder;
   }
-  pruneSquads(s);
   return squad;
 }
 
@@ -94,8 +94,7 @@ export function renameSquad(s: GameState, id: number, name: string): boolean {
   return true;
 }
 
-/** Deshace una escuadra: sus unidades siguen ahi (con lo que estuvieran haciendo), pero sueltas. */
+/** Deshace una escuadra: sus unidades siguen ahi (con lo que estuvieran haciendo), pero sueltas (la escuadra vacia la quita dispatch). */
 export function disbandSquad(s: GameState, id: number): void {
   for (const unit of squadUnits(s, id)) leaveSquad(s, unit);
-  pruneSquads(s);
 }

@@ -129,7 +129,7 @@ const STANDING_ORDER_TURNS: Record<StandingOrderKind, StandingOrderTurn> = {
 function* unitStandingOrderTurn(s: GameState, ai: AiCtx, uid: number): Generator<GameEvent, boolean> {
   const unit = unitById(s, uid);
   const standingOrder = unit && effectiveStandingOrder(s, unit);
-  if (!unit || !standingOrder || !canAct(unit)) return false;
+  if (!unit || !standingOrder || !canAct(s, unit)) return false;
   const isFulfilled = yield* STANDING_ORDER_TURNS[standingOrder.kind]({ s, ai, unit, at: standingOrder.at });
   if (isFulfilled) yield* act(s, ai, { kind: 'finishStandingOrder', uid });
   return isFulfilled;
@@ -162,7 +162,7 @@ const PREVIEW_DICE_SEED = 0x1d0c;
  */
 export function previewStandingOrders(s: GameState, team: TeamId): Map<number, StandingOrderIntent> {
   const intents = new Map<number, StandingOrderIntent>();
-  const actors = s.units.filter((unit) => unit.team === team && effectiveStandingOrder(s, unit) && canAct(unit));
+  const actors = s.units.filter((unit) => unit.team === team && effectiveStandingOrder(s, unit) && canAct(s, unit));
   if (!actors.length) return intents;
   const copy = withoutHiddenEnemies(s, team);
   copy.dice = PREVIEW_DICE_SEED;
