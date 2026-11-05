@@ -7,7 +7,7 @@
  * lo obliga: un campo nuevo en GameAction no compila sin la suya.
  */
 import { isStandingOrderKind } from '../squads/standingOrders';
-import { isInt, isObject, isPos, isUid, MAX_UID } from '../util/validation';
+import { isObject, isPos, isUid } from '../util/validation';
 import type { GameAction, GameActionKind, GameActionOf } from '../model';
 
 /** Si un campo tiene la forma que toca. */
@@ -24,8 +24,8 @@ const optional =
 const isPosOrNull: FieldCheck = (value) => value === null || isPos(value);
 const isPath: FieldCheck = (value) => Array.isArray(value) && value.every(isPos);
 const isStandingOrder: FieldCheck = (value) => isObject(value) && isStandingOrderKind(value.kind) && isPos(value.at);
-/** Teclas de grupo: un entero (cual vale lo dice la accion, con 'badKey'). */
-const isKey: FieldCheck = (value) => isInt(value, 0, MAX_UID);
+/** Teclas de grupo: un entero (cuales valen, de 1 a SQUAD_KEYS, lo dice la accion, con 'badKey'). */
+const isKey: FieldCheck = (value) => Number.isInteger(value);
 
 const unitOnly = { uid: isUid } as const;
 const unitAndInto = { uid: isUid, into: isUid } as const;

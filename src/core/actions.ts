@@ -19,6 +19,7 @@
  * | `powers` | poderes del general |
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
+ * | `groupMove` | mover un grupo: en que orden y el paso de cada una (`groupMoveOrder`, `groupMoveStep`) |
  * | `menu` | los menus, sacados de las acciones que valen (`availableActions`, `canDoWithSelection`) |
  * | `registry` | `ACTIONS`: todas las entradas |
  * | `dispatch` | `dispatch`, `actionProblem`, `isValidAction` |
@@ -28,14 +29,13 @@ export { ACTIONS } from './actions/registry';
 export {
   availableActions,
   canDoWithSelection,
-  groupMoveOrder,
-  groupMoveStep,
   ORDER_OPTIONS,
   SELECTION_MENU,
   UNIT_MENU,
   type SelectionOption,
   type UnitMenuOption,
 } from './actions/menu';
+export { groupMoveOrder, groupMoveStep } from './actions/groupMove';
 export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
 export type { ActionDefinition, ActionRegistry } from './actions/types';

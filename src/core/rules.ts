@@ -44,8 +44,8 @@ export {
   canMoveOn,
   terrainMoveCost,
 } from './rules/queries';
-export { canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
-export { visionOf, visibility } from './rules/visibility';
+export { canMoveNow, canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
+export { visionOf, visibility, visibleFoeAt } from './rules/visibility';
 export {
   capturePointsOf,
   captureStrength,

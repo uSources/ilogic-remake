@@ -7,12 +7,11 @@
  */
 import type Phaser from 'phaser';
 import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
-import { movementOf, canWalk, unitAt, unitById, canStillMove } from '../../core/rules';
+import { movementOf, canWalk, unitAt, unitById, canMoveNow, visibleFoeAt } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { standingOrderBlock, type StandingOrderBlock } from '../../core/squads';
 import type { GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
-import { isHostile } from '../../core/teams';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t, type TextKey } from '../../settings';
@@ -218,8 +217,7 @@ export class Orders {
     const s = host.state;
     const units = this.chosenUnits();
     if (!units.length) return null;
-    const unitHere = at ? unitAt(s, at) : undefined;
-    const enemyHere = !!unitHere && isHostile(s, host.viewer, unitHere.team) && unitHere.carrier === null && host.visible(unitHere);
+    const enemyHere = !!at && !!visibleFoeAt(s, host.viewer, at, (pos) => host.visible(pos));
     const context: ActionCtx = { s, viewer: host.viewer, units, at: at ? posOf(at) : null, enemyHere };
     const isSelectedUnit = host.phase === 'move' && host.selected && units.length === 1 && units[0]!.uid === host.selected.uid;
     if (at && isSelectedUnit) Object.assign(context, this.movingIntent(host.selected, at));
@@ -285,7 +283,7 @@ export class Orders {
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
     host.toMap();
     showToast(t('orderGiven'));
-    const canStartNow = units.filter((unit) => canStillMove(unit) && unit.carrier === null);
+    const canStartNow = units.filter(canMoveNow);
     if (canStartNow.length) await this.playStandingOrders(canStartNow);
     else host.afterAction();
   }

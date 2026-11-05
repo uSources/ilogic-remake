@@ -8,16 +8,13 @@
  * escuadra pide dos o mas) lo añaden los mandos (controls/actions.ts).
  */
 import { cargoUnits } from '../rules/queries';
-import { moveRange } from '../rules/movement';
 import { unloadTiles } from '../rules/transport';
-import { manhattan, posOf } from '../geom';
+import { posOf } from '../geom';
 import { exactSquad } from '../squads/queries';
-import { canStillMove } from '../rules/unitTurn';
-import { isOnMap } from '../util/predicates';
-import { closestStep } from '../targeting';
 import { isAlliedOwner } from '../teams';
-import type { GameAction, GameActionOf, GameState, Pos, Squad, StandingOrderKind, TeamId, Unit } from '../model';
+import type { GameAction, GameState, Pos, Squad, StandingOrderKind, TeamId, Unit } from '../model';
 import { isValidAction } from './dispatch';
+import { groupMoveOrder, groupMoveStep } from './groupMove';
 
 /** Lo que se puede elegir en el menu de una unidad, en su orden. */
 export type UnitMenuOption =
@@ -73,19 +70,6 @@ export const ORDER_OPTIONS = { attack: 'orderToAttack', capture: 'orderToCapture
 
 /** Las acciones con las que se cumpliria la opcion con estas unidades (se puede si alguna vale). */
 type SelectionCandidates = (s: GameState, team: TeamId, units: readonly Unit[], at: Pos | null) => GameAction[];
-
-/** Las unidades de un grupo que se mueven hacia `goal`, en el orden en que lo hacen: primero las mas cercanas. */
-export function groupMoveOrder(units: readonly Unit[], goal: Pos): Unit[] {
-  return units
-    .filter((unit) => canStillMove(unit) && isOnMap(unit))
-    .sort((first, second) => manhattan(first, goal) - manhattan(second, goal));
-}
-
-/** El paso de una unidad del grupo hacia `goal`: lo mas cerca que puede llegar ahora (null si no se acerca). */
-export function groupMoveStep(s: GameState, unit: Unit, goal: Pos): GameActionOf<'move'> | null {
-  const step = closestStep(unit, goal, moveRange(s, unit));
-  return step ? { kind: 'move', uid: unit.uid, to: step } : null;
-}
 
 /** Una accion sobre la escuadra que forman justo estas unidades (ninguna si no forman una entera). */
 const onExactSquad =

@@ -11,6 +11,7 @@ import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { alliesOf, isHostile } from '../teams';
 import { weatherVision } from '../weather';
+import { unitAt } from './queries';
 import type { GameState, Pos, TeamId, Unit } from '../model';
 
 /** Radio de vision de una unidad. [CAMBIO] El clima puede quitar vision (nunca por debajo de 1 si ve). */
@@ -55,4 +56,13 @@ export function visibility(s: GameState, team: TeamId): Grid<boolean> {
 export function visibleEnemies(s: GameState, team: TeamId): Set<number> {
   const visible = visibility(s, team);
   return new Set(s.units.filter((unit) => isHostile(s, team, unit.team) && isOnMap(unit) && visible.at(unit)).map((unit) => unit.uid));
+}
+
+/**
+ * El enemigo de `team` que hay en `at` y que ve (`sees`: su capa de vision, o lo que ya sabe quien
+ * pregunta), en el mapa; undefined si no hay ninguno a la vista.
+ */
+export function visibleFoeAt(s: GameState, team: TeamId, at: Pos, sees: (pos: Pos) => boolean): Unit | undefined {
+  const unit = unitAt(s, at);
+  return unit && isHostile(s, team, unit.team) && isOnMap(unit) && sees(unit) ? unit : undefined;
 }

@@ -13,7 +13,7 @@ import {
   unitById,
   unitThreat,
   canStillAct,
-  canStillMove,
+  canMoveNow,
 } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import type { Pos, TeamId, Unit } from '../../../core/model';
@@ -81,7 +81,7 @@ function hoverMarks(input: HighlightInput): Highlights {
   const marks = noHighlights();
   const unit = unitAt(input.s, input.cursor);
   if (!unit || !isOwn(input.viewer, unit) || input.othersPlaying) return marks;
-  if (canStillMove(unit) && unit.carrier === null) {
+  if (canMoveNow(unit)) {
     for (const tile of reachableTiles(moveRange(input.s, unit))) marks.tiles.set(posKey(tile), 'hover');
   }
   // [CAMBIO] Señalando una unidad de escuadra: se marcan sus compañeras.

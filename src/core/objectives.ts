@@ -9,7 +9,7 @@
  */
 
 import { entryOf, isEntryId, type GameContent } from './content';
-import { isInt, isPosOn, isObject } from './util/validation';
+import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
 import type { GameState, Objective, Outcome, Pos, TeamId } from './model';
 import { isHostile } from './teams';
@@ -143,7 +143,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
         ? []
         : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
     ],
-    isValid: (where, saved) => hasDays(saved) && isInt(saved.uid, 1, Number.MAX_SAFE_INTEGER) && isPosOn(where.board, saved.to),
+    isValid: (where, saved) => hasDays(saved) && isUid(saved.uid) && isPosOn(where.board, saved.to),
     outcome: (s, _team, objective) => {
       const at = positionOf(s, objective.uid);
       if (!at) return 'lost';
