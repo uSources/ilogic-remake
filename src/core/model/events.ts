@@ -20,8 +20,13 @@ export interface GeneralCharge {
   amount: number;
 }
 
-/** Lo que le ha pasado a una escuadra. */
-/** 'removed': se ha quedado sin unidades y ya no existe (lo cuenta la invariante, sin actor). */
+/**
+ * Lo que le ha pasado a una escuadra. Cada escuadra que deja de existir tiene un solo suceso que lo
+ * dice: 'disbanded' (su equipo la deshace) o 'removed' (se ha quedado sin unidades: al salir, al
+ * formar otra con las suyas o al caer; `actor`, el equipo de esa accion, o null si la quita la
+ * partida). 'left' y 'grouped' solo van para las que siguen existiendo. Los 'removed' de una accion
+ * van antes que su 'formed': la nueva puede reutilizar el numero de la quitada.
+ */
 export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded' | 'removed';
 
 /**

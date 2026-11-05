@@ -53,3 +53,10 @@ export function checkedUnit(s: GameState, uid: number): Unit {
 
 /** Las unidades de una accion ya comprobada, en su orden. */
 export const checkedUnits = (s: GameState, uids: readonly number[]): Unit[] => uids.map((uid) => checkedUnit(s, uid));
+
+/** Las unidades de una accion ya comprobada que pide al menos una (validate lo ha visto). */
+export function someCheckedUnits(s: GameState, uids: readonly number[]): readonly [Unit, ...Unit[]] {
+  const [first, ...rest] = checkedUnits(s, uids);
+  if (!first) throw new Error('Una accion ya comprobada sin unidades');
+  return [first, ...rest];
+}

@@ -9,7 +9,7 @@ import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad } from '@core/squads/membership';
 import { giveStandingOrder } from '@core/squads/standingOrders';
 import { newUnit, outcome } from '@core/rules';
-import { blankState, unitTypeNamed } from './helpers';
+import { blankState, unitTypeNamed, someUnits } from './helpers';
 import { isHostile } from '@core/teams';
 import { loadContent, type Content } from '@core/content';
 import { mutableCopy } from '@core/util/freeze';
@@ -208,7 +208,7 @@ describe('MIGRATIONS', () => {
     const world = () => {
       const s = blankState();
       const units = [newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 }), newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 2 })];
-      const squad = formSquad(s, 0, units)!;
+      const squad = formSquad(s, 0, someUnits(units)).squad;
       // Partida de antes de que la escuadra tuviera orden: la llevaba copiada cada unidad.
       giveStandingOrder(s, 0, [units[0]!], 'defend', { x: 5, y: 5 });
       giveStandingOrder(s, 0, [units[1]!], 'defend', { x: 5, y: 5 });

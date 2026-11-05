@@ -8,7 +8,7 @@ import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
 import type { GameAction, GameState } from '@core/model';
-import { act, blankState, unitTypeNamed, placedBuildings } from './helpers';
+import { act, blankState, unitTypeNamed, placedBuildings, someUnits } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 
 const SOLDIER = unitTypeNamed('Soldier');
@@ -226,7 +226,7 @@ describe('INVARIANTS: lo que dispatch deja en orden tras cada accion', () => {
   it('una escuadra que se queda sin unidades desaparece', () => {
     const s = blankState(PLAIN_RULES);
     const units = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, SOLDIER, 0, { x: 6, y: 5 })];
-    const squad = formSquad(s, 0, units)!;
+    const squad = formSquad(s, 0, someUnits(units)).squad;
     act(s, 0, { kind: 'leaveSquad', uids: units.map((unit) => unit.uid) });
     expect(s.squads?.some((candidate) => candidate.id === squad.id)).toBeFalsy();
   });
@@ -349,11 +349,29 @@ describe('sucesos completos', () => {
       uid: soldier.uid,
       team: 0,
     });
-    const [formed] = act(s, 0, { kind: 'formSquad', uids: [other.uid] });
-    const squad = formed?.kind === 'squad' ? formed.squad : -1;
-    expect(act(s, 0, { kind: 'formSquad', uids: [other.uid] })).toContainEqual(
-      expect.objectContaining({ kind: 'squad', actor: null, squad, change: 'removed', uids: [] }),
-    );
+    act(s, 0, { kind: 'formSquad', uids: [other.uid] });
+    // Volver a formarla con la unica que tenia: la vieja deja de existir y la nueva reutiliza su
+    // numero, asi que el orden importa (una repeticion borraria la nueva si fuera al reves).
+    expect(act(s, 0, { kind: 'formSquad', uids: [other.uid] })).toEqual([
+      { kind: 'squad', actor: 0, squad: 1, change: 'removed', uids: [], name: 'Alfa', key: 1 },
+      { kind: 'squad', actor: 0, squad: 1, change: 'formed', uids: [other.uid], name: 'Alfa', key: 1 },
+    ]);
+  });
+
+  it('cada escuadra que deja de existir tiene un solo suceso: disbanded (deshacerla) o removed (vaciarla)', () => {
+    const s = blankState(PLAIN_RULES);
+    const [first, second] = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, SOLDIER, 0, { x: 6, y: 5 })];
+    act(s, 0, { kind: 'formSquad', uids: [first.uid, second.uid] });
+    expect(act(s, 0, { kind: 'disbandSquad', squad: 1 })).toEqual([
+      { kind: 'squad', actor: 0, squad: 1, change: 'disbanded', uids: [], name: 'Alfa', key: 1 },
+    ]);
+    act(s, 0, { kind: 'formSquad', uids: [first.uid, second.uid] });
+    expect(act(s, 0, { kind: 'leaveSquad', uids: [first.uid] })).toEqual([
+      { kind: 'squad', actor: 0, squad: 1, change: 'left', uids: [second.uid], name: 'Alfa', key: 1 },
+    ]);
+    expect(act(s, 0, { kind: 'leaveSquad', uids: [second.uid] })).toEqual([
+      { kind: 'squad', actor: 0, squad: 1, change: 'removed', uids: [], name: 'Alfa', key: 1 },
+    ]);
   });
 
   it('el fin de ronda da sus sucesos sin actor, y su resumen sale de ellos', () => {

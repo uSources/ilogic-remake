@@ -131,3 +131,10 @@ export function playInterleaved(games: readonly GameState[], days: number, seed:
   }
   return events;
 }
+
+/** Unas unidades que no pueden estar vacias (formar escuadra con ninguna no se puede pedir). */
+export function someUnits(units: readonly Unit[]): readonly [Unit, ...Unit[]] {
+  const [first, ...rest] = units;
+  if (!first) throw new Error('Hace falta al menos una unidad');
+  return [first, ...rest];
+}
