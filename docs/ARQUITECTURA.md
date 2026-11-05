@@ -95,15 +95,22 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   siguiente (solo 'move' la deja abierta: `keepsUndoWindow` en su entrada del registro; dispatch la
   cierra tras las demas) o hasta que su unidad deja de estar recien movida (la invariante
   `undoWindow`: el fin de ronda, si cae). Si al moverse descubrio enemigos
-  (`lastMove.revealed`), no se deshace (`'revealed'`): con niebla seria mirar gratis. «Atras» y
-  Ctrl+Z de la escena solo preguntan al nucleo.
+  (`lastMove.revealed`), no se deshace (`'revealed'`): con niebla seria mirar gratis. «Atras» del
+  menu de la unidad solo manda `undoMove` (y avisa si el nucleo dice `'revealed'`). Ctrl+Z todavia
+  no: guarda en la escena una pila de partidas enteras de antes de cada movimiento, solo apunta una
+  si `undoMove` valdria en ese momento, y la vacia con cualquier suceso fuera de `KEEPS_UNDO`
+  (`GameScene.ts`); al deshacer, vuelve a esa copia. Juntar los dos en un solo deshacer del nucleo es
+  de la fase 4.
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
-- **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`), su suceso en `GameEvent`
-  (`model/events.ts`) y su entrada en el modulo de `actions/` que toque; si se ofrece en el menu de
-  una unidad, su entrada en `UNIT_MENU`; su animacion en `ANIMATORS` (`scenes/game/playback.ts`).
-  Lo comun a todas las acciones es una entrada en `ACTION_GUARDS`; lo que hay que limpiar despues de
-  cualquiera, una en `INVARIANTS`.
+- **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
+  `ACTION_SHAPES` (`actions/shape.ts`; el tipo la pide), su suceso en `GameEvent` (`model/events.ts`)
+  y su entrada en el modulo de `actions/` que toque (con `keepsUndoWindow` si deja deshacer lo de
+  antes); si se ofrece en el menu de una unidad, su entrada en `UNIT_MENU`; si se puede mandar a unas
+  unidades elegidas, en `SELECTION_MENU` (y en `INPUT_ACTIONS` y `ACTION_RUNNERS` de los mandos y la
+  escena); su animacion en `ANIMATORS` (`scenes/game/playback.ts`). Lo comun a todas las acciones es
+  una entrada en `ACTION_GUARDS`; lo que hay que limpiar despues de cualquiera (y de cada ronda), una
+  en `INVARIANTS`, que devuelve sus sucesos.
 
 ### Sucesos
 
