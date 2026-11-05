@@ -1,7 +1,7 @@
 /**
  * Combate: alcance y objetivos, proteccion del terreno, probabilidad de acierto, veterania,
  * contraataque, botin y la tirada de daño. El ataque en si (lo que cambia en la partida) es la accion
- * 'attack' (actions/attack.ts).
+ * 'attack' (actions/combat.ts).
  */
 
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';

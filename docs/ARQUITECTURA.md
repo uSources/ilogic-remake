@@ -319,7 +319,17 @@ sequenceDiagram
 - El azar: los dados de los combates van en la partida (`GameState.dice`, `diceOf(s)`) y las
   decisiones llevan su propio `Rng` con semilla. La misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` y `npm run huella` lo vigilan); cargar una partida no cambia
-  lo que saldra en sus combates.
+  lo que saldra en sus combates: el resultado de un ataque ya esta fijado por la partida, y volver a
+  cargar para atacar otra vez da el mismo. Las guardadas en el formato 3 o antes no tenian dados: al
+  leerlas se les da una semilla fija, sacada de la del mapa y del dia (la migracion 'dados de la
+  partida'), asi que tambien repiten.
+- La semilla de las decisiones de la IA no es de la partida sino de quien la hace jugar: en la
+  pantalla, `TurnFlow.playOtherTeams` (`scenes/game/turns.ts`) saca una nueva cada ronda y se la
+  guarda con el estado de antes para «Repetir turno enemigo»; en las herramientas, la de su
+  `--seed`. Va aparte de `GameState` a proposito: es estado del que controla a ese equipo, no de las
+  reglas, y no se guarda (cargar y pasar turno puede dar otras decisiones, nunca otros dados). Cuando
+  cada equipo tenga su controlador con estado (fase 6, puntos I), su `Rng` ira con el y la escena
+  dejara de sacar semillas.
 - **Nada de estado global de partida**: las reglas van en `s.rules` (obligatorias; `DEFAULT_RULES` esta
   congelado y cada partida lleva su copia, con los cambios de su modo, mision o laboratorio) y el tamaño
   del mapa sale de `s.map` (`mapGrid(s)`, `createLayer(s, fill)`, `isOnBoard(s, pos)` en `core/mapGrid.ts`).
