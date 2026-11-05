@@ -200,17 +200,14 @@ export class UnitMoves {
    */
   async giveTravel(unit: Unit, goal: Pos): Promise<void> {
     const host = this.host;
-    this.clearUndo();
-    host.act({ kind: 'travel', uid: unit.uid, to: goal });
-    const step = { kind: 'travelStep', uid: unit.uid } as const;
-    if (!isValidAction(host.state, host.viewer, step)) {
-      host.act({ kind: 'travel', uid: unit.uid, to: null });
+    if (!host.act({ kind: 'travel', uid: unit.uid, to: goal })) {
       showToast(t('travelUnreachable'));
       return host.toMap();
     }
+    this.clearUndo();
     showToast(t('travelSet'));
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
-    const moved = host.act(step);
+    const moved = host.act({ kind: 'travelStep', uid: unit.uid });
     if (this.session) this.session.range = null;
     if (moved) await host.play(moved, ghost);
     host.toMap();

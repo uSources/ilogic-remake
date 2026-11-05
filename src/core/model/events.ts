@@ -21,6 +21,13 @@ export interface GeneralCharge {
 }
 
 /**
+ * Por que acaba un viaje (suceso 'travel' con `to: null`): se le quita o se la mueve a mano
+ * ('cancelled'), ya esta en el destino ('arrived'), llega este turno y el ultimo trozo lo hace quien
+ * juega ('withinReach') o una emboscada la para ('ambush').
+ */
+export type TravelEnd = 'cancelled' | 'arrived' | 'withinReach' | 'ambush';
+
+/**
  * Lo que le ha pasado a una escuadra. Cada escuadra que deja de existir tiene un solo suceso que lo
  * dice: 'disbanded' (su equipo la deshace) o 'removed' (se ha quedado sin unidades: al salir, al
  * formar otra con las suyas o al caer; `actor`, el equipo de esa accion, o null si la quita la
@@ -71,7 +78,7 @@ export type GameEvent =
   /** Deshecho el ultimo movimiento: la unidad vuelve a `to`. */
   | { kind: 'undoMove'; actor: TeamId; uid: number; to: Pos }
   /** Viaje de varios turnos hacia `to` (null: ya no viaja). */
-  | { kind: 'travel'; actor: TeamId; uid: number; to: Pos | null }
+  | { kind: 'travel'; actor: TeamId; uid: number; to: Pos | null; end?: TravelEnd }
   /** Orden permanente dada a estas unidades (null: se la quitan). */
   | { kind: 'standingOrder'; actor: TeamId; uids: number[]; order: StandingOrder | null }
   /** La unidad ha cumplido la orden que seguia. */

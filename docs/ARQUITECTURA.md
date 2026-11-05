@@ -102,12 +102,15 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   si `undoMove` valdria en ese momento, y la vacia con cualquier suceso fuera de `KEEPS_UNDO`
   (`GameScene.ts`); al deshacer, vuelve a esa copia. Juntar los dos en un solo deshacer del nucleo es
   de la fase 4.
-- Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»): 'travel' pone o quita el destino (solo
-  a una casilla que la unidad pueda pisar) y 'travelStep' da el paso de cada turno, hacia la casilla
-  del alcance que mas acerca (`stepToward`). Si ya llega este turno, el viaje acaba sin moverla (el
-  ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); al llegar o con una emboscada,
-  tambien acaba. Moverla a mano ('move') lo cancela. Cada fin de viaje tiene su suceso 'travel' con
-  `to: null`. La escena solo manda 'travelStep' al empezar el turno y al dar la orden.
+- Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»; reglas en `rules/travel.ts`): 'travel'
+  pone el destino (otra casilla que la unidad pueda pisar y hacia la que pueda dar ya un paso:
+  `travelProblem`) o lo quita, y 'travelStep' da el paso de cada turno, hacia la casilla del alcance
+  que mas acerca (`travelStepOf`). Si ya esta en el destino o llega este turno, el viaje acaba sin
+  moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); una emboscada por
+  el camino tambien lo acaba. Moverla a mano ('move', 'load', 'merge', 'attack') lo acaba con
+  `endTravel`; capturar o esperar, no. Cada fin tiene su suceso 'travel' con `to: null` y por que
+  (`end`: 'cancelled', 'arrived', 'withinReach' o 'ambush'), y la escena avisa «llega» solo con
+  'withinReach'. La escena solo manda 'travel' y 'travelStep' (al dar la orden y al empezar el turno).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en

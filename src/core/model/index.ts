@@ -12,7 +12,17 @@ export type { LastMove } from './lastMove';
 export type { GeneralState } from './general';
 export type { WeatherState } from './weather';
 export type { Objective, Outcome } from './objective';
-export type { CombatInfo, EventActor, GameEvent, GameEventKind, GameEventOf, GeneralCharge, Healing, SquadChange } from './events';
+export type {
+  CombatInfo,
+  EventActor,
+  GameEvent,
+  GameEventKind,
+  GameEventOf,
+  GeneralCharge,
+  Healing,
+  SquadChange,
+  TravelEnd,
+} from './events';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { RulesConfig } from './rules';
 export type { TeamStats } from './stats';

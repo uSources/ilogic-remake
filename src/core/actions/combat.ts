@@ -3,6 +3,7 @@ import { posOf } from '../geom';
 import { chargeFromCombat } from '../generals';
 import { attackProblem, bountyFor, canCounter, combatInfoBefore, strike } from '../rules/combat';
 import { unitById } from '../rules/queries';
+import { endTravel } from '../rules/travel';
 import { spendUnit } from '../rules/unitTurn';
 import { earn } from '../rules/funds';
 import { isAlive } from '../util/predicates';
@@ -71,6 +72,11 @@ export const COMBAT_ACTIONS: Pick<ActionRegistry, 'attack'> = {
       if (!target) return 'missing';
       return actorProblem(s, team, action.uid, (attacker) => attackProblem(s, attacker, target));
     },
-    apply: (s, _team, action, dice) => [resolveAttack(s, checkedUnit(s, action.uid), checkedUnit(s, action.target), dice)],
+    apply: (s, team, action, dice) => {
+      const attacker = checkedUnit(s, action.uid);
+      // Atacar a mano (tambien sin moverse) acaba su viaje, como mover.
+      const cancelled = endTravel(team, attacker);
+      return [...cancelled, resolveAttack(s, attacker, checkedUnit(s, action.target), dice)];
+    },
   },
 };

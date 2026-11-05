@@ -2,6 +2,7 @@
 import { posOf } from '../geom';
 import { moveEvent, type MovePath } from '../rules/movement';
 import { unitById } from '../rules/queries';
+import { endTravel } from '../rules/travel';
 import { boardTransport, dropPassenger, loadProblem, mergeInto, mergeProblem, unloadProblem } from '../rules/transport';
 import type { ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
@@ -29,15 +30,20 @@ export const TRANSPORT_ACTIONS: Pick<ActionRegistry, 'merge' | 'load' | 'unload'
   merge: {
     validate: (s, team, action) => joinProblem(s, team, action.uid, action.into, (unit, target) => mergeProblem(s, unit, target)),
     apply: (s, team, action) => {
-      const path = mergeInto(s, checkedUnit(s, action.uid), checkedUnit(s, action.into));
-      return [joinEvent(team, 'merge', action.uid, action.into, path)];
+      const unit = checkedUnit(s, action.uid);
+      // Llevarla a mano a otra unidad acaba su viaje, como mover.
+      const cancelled = endTravel(team, unit);
+      const path = mergeInto(s, unit, checkedUnit(s, action.into));
+      return [...cancelled, joinEvent(team, 'merge', action.uid, action.into, path)];
     },
   },
   load: {
     validate: (s, team, action) => joinProblem(s, team, action.uid, action.into, (unit, transport) => loadProblem(s, unit, transport)),
     apply: (s, team, action) => {
-      const path = boardTransport(s, checkedUnit(s, action.uid), checkedUnit(s, action.into));
-      return [joinEvent(team, 'load', action.uid, action.into, path)];
+      const unit = checkedUnit(s, action.uid);
+      const cancelled = endTravel(team, unit);
+      const path = boardTransport(s, unit, checkedUnit(s, action.into));
+      return [...cancelled, joinEvent(team, 'load', action.uid, action.into, path)];
     },
   },
   unload: {

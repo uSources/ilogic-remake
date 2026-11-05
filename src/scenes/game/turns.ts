@@ -377,9 +377,8 @@ export class TurnFlow {
     const host = this.host;
     const events = host.act({ kind: 'travelStep', uid: unit.uid });
     if (!events) return false;
-    if (!events.some((event) => event.kind === 'move')) return true;
     await host.play(events);
-    return false;
+    return events.some((event) => event.kind === 'travel' && event.end === 'withinReach');
   }
 
   /** Donde estaba mirando el jugador antes del turno enemigo. */
