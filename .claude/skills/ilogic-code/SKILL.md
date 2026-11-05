@@ -94,6 +94,35 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - Escenas: estado de partida en `resetMatch()` (lo llama `init()`); limpieza en `SHUTDOWN`
   (ver skill `phaser4`). Esperas asincronas: comprobar `this.match` despues de cada `await` largo.
 
+## Tipos que trabajan por nosotros
+
+El compilador es estricto (`strict`, `noUncheckedIndexedAccess`): que pille los fallos antes que una
+partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTILO.md`, regla 9).
+
+- **Lo que entra de fuera es `unknown`** (JSON de contenido, partidas guardadas, `localStorage`): se
+  comprueba con guardas (`v is number`, `isNum` y `Checker` de `core/content/check.ts`; `hasGameShape`
+  en `core/save.ts`) y solo despues se usa. Nada de `as Tipo` para "convencer" al compilador ni de `any`.
+- **Guardas en vez de `!` y de `as`**: para quitar huecos de una lista,
+  `.filter((unit): unit is Unit => !!unit)`; si un valor tiene que existir, una funcion
+  `asserts value is T` que falle con un mensaje claro es mejor que un `!` que falla lejos.
+- **Uniones con discriminante** (`kind`, `type`, `mode`) para cosas que son una de varias, y `switch`
+  con todos los casos y `default: return valor satisfies never` (como `ui/combatFx.ts`): un caso nuevo
+  rompe la compilacion donde falta tratarlo.
+- **`satisfies` para comprobar sin perder el tipo exacto**: `{ mode: 'mission', ... } satisfies GameStartData`,
+  tablas `const X = {...} as const satisfies Record<Clave, Valor>`.
+- **Tablas que no pueden quedarse cortas**: `Record<UnionDeClaves, T>` (como `STANDING_ORDER_TURNS`)
+  obliga a tener una entrada por caso. Si la lista de claves es un dato, se escribe una vez
+  (`const KINDS = [...] as const`) y la union sale de ahi (`type Kind = (typeof KINDS)[number]`).
+- **`interface` para formas de objeto** (lo que usa el proyecto), `type` para uniones y tipos derivados.
+  Imports de tipos con `type` dentro del mismo import (lo pide ESLint).
+- **Genericos con restriccion** solo cuando quitan repeticion de verdad (`Grid<T>`, `minBy<T>`):
+  `<T extends ...>` y que se infiera en la llamada, sin escribir `<T>` a mano.
+- **Sin gimnasia de tipos**: nada de condicionales anidados, tipos recursivos profundos, builders con
+  estados de tipo ni rutas `"a.b.c"` generadas. Si un tipo necesita un comentario largo para entenderse,
+  es mejor un tipo mas simple y una comprobacion en el codigo. Ademas ralentizan `npm run check`.
+- **Probar un tipo** cuando es una pieza comun: `expectTypeOf(...)` de Vitest en `tests/` (lo comprueba
+  `tsc` dentro de `npm run check`), mejor que un `AssertEqual` hecho a mano.
+
 ## Antes de dar algo por terminado
 
 ```bash
