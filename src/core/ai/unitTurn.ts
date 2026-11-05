@@ -8,9 +8,8 @@ import { isHostileOwner } from '../teams';
 import { unitTypeOf, isHq } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
-import { wait } from '../rules/unitActions';
 import type { Building, GameEvent, GameState, Rng, Unit } from '../model';
-import { bestMoveToward, canAct, doMove, needsRepair, type AiCtx } from './context';
+import { bestMoveToward, canAct, doMove, finish, needsRepair, type AiCtx } from './context';
 import { advance, captureHere, randomMove, retreat, tryAttack, tryCapture } from './tactics';
 
 /** Lo que necesita un comportamiento para decidir y actuar con una unidad. */
@@ -38,9 +37,9 @@ function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): Generator<Gam
   const hq = buildingAt(s, unit)!;
   const destination = bestMoveToward(s, ai, unit, hq, range, true);
   if (!destination) return false;
-  yield* doMove(s, unit, destination, range);
+  yield* doMove(s, ai, unit, destination);
   const rangeAfterMove = moveRange(s, unit);
-  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove))) wait(unit);
+  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove))) yield* finish(s, ai, unit);
   return true;
 }
 
@@ -51,7 +50,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
     id: 'finishCapture',
     when: ({ s, unit }) => buildingAt(s, unit) !== undefined,
-    run: ({ s, unit }) => captureHere(s, unit),
+    run: ({ s, ai, unit }) => captureHere(s, ai, unit),
   },
   {
     // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
@@ -90,8 +89,8 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // Si nada de lo anterior sirve, moverse al azar (siempre usa la unidad).
     id: 'randomMove',
     when: () => true,
-    *run({ s, unit, range, rng }) {
-      yield* randomMove(s, unit, range, rng);
+    *run({ s, ai, unit, range, rng }) {
+      yield* randomMove(s, ai, unit, range, rng);
       return true;
     },
   },

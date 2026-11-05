@@ -7,11 +7,10 @@ import { MAX_LIFE } from '../data';
 import { manhattan, neighbors4, samePos, posOf } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { isOnMap } from '../util/predicates';
-import type { GameState, Pos, Unit } from '../model';
-import { dropStaleCaptures } from './capture';
+import type { ActionRejection, GameState, Pos, Unit } from '../model';
 import { removeUnit } from './lifecycle';
 import { ambushed, approachPath, moveRange, walkPath, type MovePath } from './movement';
-import { canStillAct, spendUnit } from './unitTurn';
+import { spendUnit } from './unitTurn';
 
 /** No lleva a nadie dentro (un transporte con pasajeros no se puede unir). */
 const isEmpty = (unit: Unit): boolean => unit.cargo.every((uid) => uid === null);
@@ -20,32 +19,37 @@ const isEmpty = (unit: Unit): boolean => unit.cargo.every((uid) => uid === null)
 const canMergeWith = (unit: Unit, target: Unit): boolean =>
   target.uid !== unit.uid && target.type === unit.type && target.team === unit.team;
 
-/** Unidades del mismo tipo y equipo con las que se puede unir este turno. */
+/** Unidades del mismo tipo y equipo con las que se puede unir este turno (ver mergeProblem). */
 export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit)): Unit[] {
-  return s.units.filter(
-    (target) =>
-      canMergeWith(unit, target) && isOnMap(target) && isEmpty(target) && isEmpty(unit) && approachPath(s, unit, target, range) !== null,
-  );
+  return s.units.filter((target) => mergeProblem(s, unit, target, range) === null);
 }
 
 /**
- * Union (Unit.Merge): la unidad se mueve hasta la otra y se funden.
- * La vida se suma (tope 100) y se queda la experiencia de la mas veterana.
- * Devuelve el camino recorrido.
+ * Por que `unit` no se puede unir ahora a `target` (null = puede): tienen que ser distintas, del
+ * mismo tipo y equipo, estar en el mapa, ir vacias (un transporte con pasajeros no se une: los
+ * perderia) y llegar a su lado este turno.
  */
-export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
-  if (!canStillAct(unit) || !canMergeWith(unit, target)) return null;
-  const path = approachPath(s, unit, target);
-  if (!path) return null;
+export function mergeProblem(s: GameState, unit: Unit, target: Unit, range = moveRange(s, unit)): ActionRejection | null {
+  if (!canMergeWith(unit, target) || !isOnMap(target)) return 'cannotMerge';
+  if (!isEmpty(unit) || !isEmpty(target)) return 'cannotMerge';
+  return approachPath(s, unit, target, range) ? null : 'unreachable';
+}
+
+/**
+ * Union (Unit.Merge), ya comprobada (mergeProblem): la unidad se mueve hasta la otra y se funden.
+ * La vida se suma (tope 100) y se queda la experiencia de la mas veterana. Devuelve el camino
+ * recorrido (si hay emboscada, se para antes y no llega a unirse: `ambush`).
+ */
+export function mergeInto(s: GameState, unit: Unit, target: Unit): MovePath {
+  const path = approachPath(s, unit, target)!;
   const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(s, unit, walked);
+  if (walked.ambush) return ambushed(unit, walked);
   target.life = Math.min(MAX_LIFE, target.life + unit.life);
   // Al unirse se queda la experiencia de la mas veterana.
   if (unit.kills || target.kills) target.kills = Math.max(unit.kills ?? 0, target.kills ?? 0);
   spendUnit(target);
   path.push(posOf(target));
   removeUnit(s, unit.uid);
-  dropStaleCaptures(s);
   return path;
 }
 
@@ -53,34 +57,32 @@ export function merge(s: GameState, unit: Unit, target: Unit): MovePath | null {
 const canCarry = (s: GameState, transport: Unit, passenger: Unit): boolean =>
   transport.team === passenger.team && unitTypeOf(s, transport).carries.includes(unitTypeOf(s, passenger).id);
 
-/** Transportes a los que puede subir. [CAMBIO] el original usaba el movimiento del transporte. */
+/** Transportes a los que puede subir (ver loadProblem). [CAMBIO] el original usaba el movimiento del transporte. */
 export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)): Unit[] {
-  return s.units.filter(
-    (transport) =>
-      transport.uid !== unit.uid &&
-      isOnMap(transport) &&
-      canCarry(s, transport, unit) &&
-      freeSlot(transport) !== -1 &&
-      approachPath(s, unit, transport, range) !== null,
-  );
+  return s.units.filter((transport) => loadProblem(s, unit, transport, range) === null);
 }
 
-/** Subir a un transporte (Unit.Load): la unidad se mueve hasta el y queda dentro. */
-export function load(s: GameState, unit: Unit, transport: Unit): MovePath | null {
-  if (!canStillAct(unit) || !canCarry(s, transport, unit) || !isOnMap(unit)) return null;
-  const slot = freeSlot(transport);
-  if (slot === -1) return null;
-  const path = approachPath(s, unit, transport);
-  if (!path) return null;
+/**
+ * Por que `unit` no puede subir ahora a `transport` (null = puede): el transporte la lleva (mismo
+ * equipo, un tipo que carga), estan en el mapa, tiene una plaza libre y llega a su lado este turno.
+ */
+export function loadProblem(s: GameState, unit: Unit, transport: Unit, range = moveRange(s, unit)): ActionRejection | null {
+  if (transport.uid === unit.uid || !isOnMap(transport) || !canCarry(s, transport, unit)) return 'cannotLoad';
+  if (freeSlot(transport) === -1) return 'cannotLoad';
+  return approachPath(s, unit, transport, range) ? null : 'unreachable';
+}
+
+/** Subir a un transporte (Unit.Load), ya comprobado (loadProblem): la unidad se mueve hasta el y queda dentro. */
+export function boardTransport(s: GameState, unit: Unit, transport: Unit): MovePath {
+  const path = approachPath(s, unit, transport)!;
   const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(s, unit, walked);
+  if (walked.ambush) return ambushed(unit, walked);
   path.push(posOf(transport));
-  transport.cargo[slot] = unit.uid;
+  transport.cargo[freeSlot(transport)] = unit.uid;
   unit.carrier = transport.uid;
   unit.x = transport.x;
   unit.y = transport.y;
   spendUnit(unit);
-  dropStaleCaptures(s);
   return path;
 }
 
@@ -91,15 +93,18 @@ export function unloadTiles(s: GameState, transport: Unit, passenger: Unit): Pos
   return neighbors4(mapGrid(s), transport).filter((pos) => isWalkable(s, pos, movement, occupied));
 }
 
-/** Bajar a un pasajero (Unit.Unload). El pasajero y el transporte quedan sin poder actuar. */
-export function unload(s: GameState, transport: Unit, passenger: Unit, dest: Pos): boolean {
-  if (passenger.carrier !== transport.uid || manhattan(transport, dest) !== 1) return false;
-  if (!unloadTiles(s, transport, passenger).some((pos) => samePos(pos, dest))) return false;
+/** Por que el transporte no puede bajar ahora a `passenger` en `dest` (null = puede): tiene que llevarlo y ser una casilla vecina libre. */
+export function unloadProblem(s: GameState, transport: Unit, passenger: Unit, dest: Pos): ActionRejection | null {
+  if (passenger.carrier !== transport.uid || manhattan(transport, dest) !== 1) return 'cannotUnload';
+  return unloadTiles(s, transport, passenger).some((pos) => samePos(pos, dest)) ? null : 'cannotUnload';
+}
+
+/** Bajar a un pasajero (Unit.Unload), ya comprobado (unloadProblem). El pasajero y el transporte quedan sin poder actuar. */
+export function dropPassenger(transport: Unit, passenger: Unit, dest: Pos): void {
   transport.cargo[transport.cargo.indexOf(passenger.uid)] = null;
   passenger.carrier = null;
   passenger.x = dest.x;
   passenger.y = dest.y;
   spendUnit(passenger);
   spendUnit(transport);
-  return true;
 }

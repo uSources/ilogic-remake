@@ -3,8 +3,8 @@ import { diceOf } from '@core/dice';
 import { loadGame } from '@core/defaultGames';
 import { serialize } from '@core/save';
 import { isRandomState, randomStep, seedFromDraw, seededRng } from '@core/util/random';
-import { blankState, unitTypeNamed } from './helpers';
-import { attackEvent, newUnit } from '@core/rules';
+import { act, blankState, unitTypeNamed } from './helpers';
+import { newUnit } from '@core/rules';
 
 describe('los dados de la partida', () => {
   it('cada tirada avanza su estado, que es un entero de 32 bits', () => {
@@ -25,14 +25,14 @@ describe('los dados de la partida', () => {
   });
 
   it('un combate tira de ellos: el mismo estado da el mismo combate', () => {
-    const fight = (dice: number) => {
+    const combatWithDice = (dice: number) => {
       const s = blankState();
       s.dice = dice;
       const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 5, y: 5 });
       const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 6, y: 5 });
-      return attackEvent(s, attacker, defender, diceOf(s));
+      return act(s, 0, { kind: 'attack', uid: attacker.uid, target: defender.uid });
     };
-    expect(fight(7)).toEqual(fight(7));
+    expect(combatWithDice(7)).toEqual(combatWithDice(7));
   });
 });
 

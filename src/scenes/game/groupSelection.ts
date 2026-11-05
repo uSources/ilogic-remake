@@ -6,7 +6,7 @@
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { unitById, canStillAct } from '../../core/rules';
-import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
+import { squadByKey, squadUnits } from '../../core/squads';
 import { minBy } from '../../core/util/pick';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { GroupMode } from '../../controls/inputCommands';
@@ -15,11 +15,11 @@ import { EMPTY, sameSelection, type Selection } from '../../controls/selection';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
 import type { MapView } from '../../ui/mapView';
-import type { Phase } from './types';
+import type { ActionHost, Phase } from './types';
 import { posOf } from '../../core/geom';
 
 /** Lo que la seleccion necesita de la escena. */
-export interface SelectionHost {
+export interface SelectionHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
@@ -161,7 +161,9 @@ export class GroupSelection {
     }
     const units = this.units();
     if (!units.length) return showToast(t('groupNone'));
-    const squad = mode === 'set' ? setGroup(host.state, host.viewer, units, group) : addToGroup(host.state, host.viewer, units, group);
+    const uids = units.map((unit) => unit.uid);
+    const grouped = host.act({ kind: mode === 'set' ? 'setGroup' : 'addToGroup', uids, key: group });
+    const squad = grouped ? squadByKey(host.state, host.viewer, group) : undefined;
     if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${group} · ${squad.name}`);
     host.refresh();
   }

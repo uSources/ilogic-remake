@@ -15,7 +15,8 @@ import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
 import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
-import { formSquad, giveStandingOrder } from '@core/squads';
+import { dispatch } from '@core/actions';
+import { posOf } from '@core/geom';
 import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
 import type { GameState, RulesConfig } from '@core/model';
 
@@ -56,9 +57,10 @@ function orderPlayerSquad(s: GameState): void {
   const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
   if (!target) return;
-  const squadUnits = s.units.filter((unit) => unit.team === person && unit.squad === undefined).slice(0, 3);
-  if (squadUnits.length < 2 || !formSquad(s, person, squadUnits)) return;
-  giveStandingOrder(s, person, squadUnits, 'attack', target);
+  const uids = s.units.filter((unit) => unit.team === person && unit.squad === undefined).map((unit) => unit.uid);
+  const squad = uids.slice(0, 3);
+  if (squad.length < 2 || !dispatch(s, person, { kind: 'formSquad', uids: squad }).ok) return;
+  dispatch(s, person, { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } });
 }
 
 function playScenario(scenario: Scenario): string {

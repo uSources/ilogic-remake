@@ -1,4 +1,5 @@
 import type { Building, ControlPoint } from './building';
+import type { LastMove } from './lastMove';
 import type { Objective } from './objective';
 import type { TeamId, TeamState } from './team';
 import type { Squad } from './squad';
@@ -55,6 +56,8 @@ export interface GameState {
    * no hay nadie, sigue siendo de quien era y paga.
    */
   controlPoints?: ControlPoint[];
+  /** El ultimo movimiento, mientras se puede deshacer (ver LastMove). */
+  lastMove?: LastMove;
   /**
    * Contenido con el que se juega. No se guarda: `serialize` escribe el resto (`SavedGameState`) y lo
    * ponen `newGameState` y `deserialize`. Copiar la partida con `cloneState` (lo comparte).

@@ -19,7 +19,7 @@ import { posKey, squareArea, posOf } from './geom';
 import { mapGrid } from './mapGrid';
 import { isHostile, teamState } from './teams';
 import { isOnMap } from './util/predicates';
-import type { GameEventOf, GameState, GeneralState, Pos, TeamId, Unit } from './model';
+import type { ActionRejection, GameEventOf, GameState, GeneralState, Pos, TeamId, Unit } from './model';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 
@@ -84,7 +84,8 @@ export const revealsAll = (s: GameState, team: TeamId): boolean => !!teamState(s
 /** Estrellas enteras de la barra. */
 export const chargeStars = (generalState: GeneralState): number => Math.floor(generalState.charge + 1e-9);
 
-export type PowerBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target';
+/** Por que no se puede usar un poder (los mismos nombres que da `dispatch` al rechazar la accion). */
+export type PowerBlock = Extract<ActionRejection, 'noGeneral' | 'unknownPower' | 'powerUsed' | 'charge' | 'needsTarget'>;
 
 /** Un poder de un general por su id (undefined si ese general no lo tiene). */
 export const powerOf = (general: DeepReadonly<GeneralDef>, powerId: string): DeepReadonly<GeneralPowerDef> | undefined =>
@@ -95,10 +96,10 @@ export function powerBlock(s: GameState, team: TeamId, powerId: string, target?:
   const general = generalOf(s, team);
   if (!general) return 'noGeneral';
   const power = powerOf(general.definition, powerId);
-  if (!power) return 'unknown';
-  if (general.state.used) return 'used';
+  if (!power) return 'unknownPower';
+  if (general.state.used) return 'powerUsed';
   if (chargeStars(general.state) < power.cost) return 'charge';
-  if (power.effect.kind === 'areaDamage' && !target) return 'target';
+  if (power.effect.kind === 'areaDamage' && !target) return 'needsTarget';
   return null;
 }
 
@@ -164,11 +165,10 @@ function applyEffect<K extends GeneralEffect['kind']>(context: EffectContext<K>)
 }
 
 /**
- * Usa un poder: gasta la carga, la marca como usado este turno y aplica el efecto.
- * Devuelve el evento para animarlo, o null si no se puede (ver powerBlock).
+ * Usa un poder, ya comprobado (powerBlock): gasta la carga, la marca como usado este turno y aplica
+ * el efecto. Devuelve el evento para animarlo.
  */
-export function usePower(s: GameState, team: TeamId, powerId: string, target?: Pos | null): GameEventOf<'power'> | null {
-  if (powerBlock(s, team, powerId, target)) return null;
+export function applyPower(s: GameState, team: TeamId, powerId: string, target: Pos | null): GameEventOf<'power'> {
   const general = generalOf(s, team)!;
   const power = powerOf(general.definition, powerId)!;
   general.state.charge = Math.max(0, general.state.charge - power.cost);

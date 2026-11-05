@@ -14,7 +14,8 @@ import { isHostile } from './teams';
 import { unitTypeOf, weightsOf } from './gameContent';
 import type { GeneralEffect as GeneralEffectDef } from './content';
 import type { DeepReadonly } from './util/freeze';
-import { applies, chargeStars, generalOf, usePower } from './generals';
+import { applies, chargeStars, generalOf } from './generals';
+import { act, type AiCtx } from './ai/context';
 import { posKey, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import { visibility } from './rules/visibility';
@@ -118,9 +119,8 @@ export function choosePower(s: GameState, team: TeamId): PowerChoice | null {
 }
 
 /** Turno del general de la IA: como mucho un poder. */
-export function* aiGeneral(s: GameState, team: TeamId): Generator<GameEvent> {
-  const choice = choosePower(s, team);
+export function* aiGeneral(s: GameState, ai: AiCtx): Generator<GameEvent> {
+  const choice = choosePower(s, ai.me);
   if (!choice) return;
-  const event = usePower(s, team, choice.power, choice.target);
-  if (event) yield event;
+  yield* act(s, ai, { kind: 'usePower', power: choice.power, target: choice.target });
 }

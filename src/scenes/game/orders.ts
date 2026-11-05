@@ -7,10 +7,10 @@
  */
 import type Phaser from 'phaser';
 import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
-import { movementOf, canWalk, unitAt, unitById, wait, canStillMove, readyUnit } from '../../core/rules';
+import { movementOf, canWalk, unitAt, unitById, canStillMove } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
-import { cancelStandingOrder, standingOrderBlock, giveStandingOrder, pruneSquads } from '../../core/squads';
+import { standingOrderBlock } from '../../core/squads';
 import type { GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
@@ -21,7 +21,7 @@ import { standingOrderLabel } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { ACTION_RUNNERS, type ActionRunHost } from './actionRunners';
 import type { GroupSelection } from './groupSelection';
-import type { Intent, MoveUndo, Phase } from './types';
+import type { ActionHost, Intent, Phase } from './types';
 import { posOf } from '../../core/geom';
 
 /** De donde se abrio el menu de ordenes de una casilla (adonde vuelve al cancelar). */
@@ -47,7 +47,7 @@ export interface OrderMenu {
 export type OrderKey = 'attack' | 'capture' | 'defend' | 'cancel';
 
 /** Lo que las ordenes necesitan de la escena. */
-export interface OrderHost {
+export interface OrderHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
@@ -59,8 +59,6 @@ export interface OrderHost {
   readonly match: number;
   /** La unidad elegida para moverla (o en su menu). */
   readonly selected: Unit | null;
-  /** Donde estaba la unidad elegida antes de moverla este turno. */
-  readonly undo: MoveUndo | null;
   readonly selection: GroupSelection;
   /** Id de la opcion señalada del menu de bocadillo. */
   menuPick(): string | undefined;
@@ -98,6 +96,7 @@ export class Orders {
       get viewer() {
         return host.viewer;
       },
+      act: (action) => host.act(action),
       moveCursorTo: (pos, follow) => host.moveCursorTo(pos, follow),
       commit: (at, options) => host.commit(at, options),
       groupMove: (goal) => host.groupMove(goal),
@@ -147,7 +146,7 @@ export class Orders {
 
   private cancelOrdersOf(units: Unit[]): void {
     const host = this.host;
-    cancelStandingOrder(host.state, units);
+    host.act({ kind: 'cancelStandingOrder', uids: uidsOf(units) });
     showToast(t('orderCancelled'));
     if (host.phase === 'groupMenu') host.toMap();
     host.refresh();
@@ -251,8 +250,7 @@ export class Orders {
   /** Orden sin gastar el turno: se cumple al terminarlo. */
   private queue(kind: StandingOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
     const host = this.host;
-    if (standingOrderBlock(host.state, host.viewer, kind, at, units)) return;
-    giveStandingOrder(host.state, host.viewer, units, kind, at);
+    if (!host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind, at: posOf(at) } })) return;
     showToast(`${standingOrderLabel(kind)} · ${units.length}`);
     if (moving) host.toMap();
     host.refresh();
@@ -274,7 +272,7 @@ export class Orders {
     const block = standingOrderBlock(s, host.viewer, ordering.kind, at, units);
     if (block) return showToast(t(block === 'noBuilding' ? 'orderNoBuilding' : 'orderNoCapturer'));
     this.ordering = null;
-    giveStandingOrder(s, host.viewer, units, ordering.kind, at);
+    host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind: ordering.kind, at: posOf(at) } });
     if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);
     host.clearUndo();
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
@@ -287,14 +285,10 @@ export class Orders {
 
   /**
    * Orden desde el menu de una unidad: si se movio este turno, lo movido cuenta y espera (la orden
-   * empieza el turno que viene); si no se movio, vuelve a poder moverse para empezarla ya.
+   * empieza el turno que viene); si no, la empieza ya.
    */
   private keepThisTurnMove(unit: Unit): void {
-    const undo = this.host.undo;
-    if (!undo || undo.uid !== unit.uid) return;
-    const moved = undo.x !== unit.x || undo.y !== unit.y;
-    if (moved) return wait(unit);
-    readyUnit(unit);
+    if (unit.turnState === 'moved') this.host.act({ kind: 'wait', uid: unit.uid });
   }
 
   /** Las unidades empiezan ya su orden (animado); luego esperan. */
@@ -309,9 +303,8 @@ export class Orders {
         await host.play([event]);
         if (match !== host.match || host.checkEnd()) return;
       }
-      if (unitById(host.state, unit.uid)) wait(unit);
+      if (unitById(host.state, unit.uid)) host.act({ kind: 'wait', uid: unit.uid });
     }
-    pruneSquads(host.state);
     host.afterAction();
   }
 

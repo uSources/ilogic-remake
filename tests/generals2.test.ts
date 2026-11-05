@@ -1,10 +1,10 @@
+import { usePower, blankState, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { choosePower } from '@core/aiGenerals';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { generalHitFactor, appointGeneral, usePower } from '@core/generals';
+import { generalHitFactor, appointGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';
-import { blankState, unitTypeNamed } from './helpers';
 import { teamState } from '@core/teams';
 
 const AI = defaultContent().ai;

@@ -3,32 +3,24 @@ import { saveContext } from '@core/defaultGames';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
-import { capture, newUnit, unitActions } from '@core/rules';
+import { newUnit, unitActions } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
   SQUAD_NAME_MAX,
-  addToGroup,
-  setGroup,
   squadByKey,
-  cancelStandingOrder,
   standingOrderBlock,
   standingOrderChoices,
-  disbandSquad,
   effectiveStandingOrder,
-  finishStandingOrder,
-  formSquad,
-  giveStandingOrder,
   isDetached,
-  keepCapturing,
-  pruneSquads,
-  renameSquad,
   sameFormation,
   squadInFormation,
   squadUnits,
 } from '@core/squads';
+import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup } from '@core/squads/membership';
+import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
+import { act, blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
 import { teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -435,8 +427,8 @@ describe('orden de la escuadra y unidades destacadas', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
     giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
     firstSoldier.x = 3; // ya encima de la ciudad
-    capture(s, firstSoldier);
-    keepCapturing(s, firstSoldier);
+    // La accion de capturar deja la orden en capturar este edificio (keepCapturing).
+    act(s, 0, { kind: 'capture', uid: firstSoldier.uid });
     expect(firstSoldier.standingOrder).toEqual({ kind: 'capture', at: { x: 3, y: 5 } });
     expect(isDetached(s, firstSoldier)).toBe(true);
     for (const unit of s.units) Object.assign(unit, { turnState: 'ready' });

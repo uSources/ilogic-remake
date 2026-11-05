@@ -9,11 +9,10 @@ import { unitTypeOf, weightsOf, cloneState } from '../gameContent';
 import { manhattan, samePos, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
-import { wait } from '../rules/unitActions';
 import { visibility } from '../rules/visibility';
-import { effectiveStandingOrder, finishStandingOrder } from '../squads/standingOrders';
+import { effectiveStandingOrder } from '../squads/standingOrders';
 import type { StandingOrderKind, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { aiCtx, canAct, doMove, needsRepair, type AiCtx } from './context';
+import { act, aiCtx, canAct, doMove, finish, needsRepair, type AiCtx } from './context';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
 
@@ -61,7 +60,7 @@ const ownsBuildingAt = (s: GameState, ai: AiCtx, at: Pos): boolean => isAlliedOw
 
 /** Dispara sin moverse a lo que tenga a tiro; si no hay nada, espera. */
 function* shootFromHereOrWait({ s, ai, unit }: StandingOrderTurnContext): Generator<GameEvent> {
-  if (!(yield* tryAttack(s, ai, unit, moveRange(s, unit), { stay: true, chase: false }))) wait(unit);
+  if (!(yield* tryAttack(s, ai, unit, moveRange(s, unit), { stay: true, chase: false }))) yield* finish(s, ai, unit);
 }
 
 /** Capturar: ir al edificio (en formacion) y capturarlo; por el camino, disparar sin desviarse. */
@@ -70,16 +69,16 @@ function* captureOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent,
   const building = buildingAt(s, at);
   if (!building || isAlliedOwner(s, building.owner, ai.me) || !unitTypeOf(s, unit).canCapture) return true;
   if (samePos(unit, at)) {
-    yield* captureHere(s, unit);
-    wait(unit);
+    yield* captureHere(s, ai, unit);
+    yield* finish(s, ai, unit);
     return ownsBuildingAt(s, ai, at);
   }
   const range = moveRange(s, unit);
-  const ambushed = yield* doMove(s, unit, standingOrderStep(s, ai, unit, at, range, formation(s, ai, unit)), range);
+  const ambushed = yield* doMove(s, ai, unit, standingOrderStep(s, ai, unit, at, range, formation(s, ai, unit)));
   if (ambushed) return false;
-  if (samePos(unit, at)) yield* captureHere(s, unit);
+  if (samePos(unit, at)) yield* captureHere(s, ai, unit);
   else yield* shootFromHereOrWait(turn);
-  wait(unit);
+  yield* finish(s, ai, unit);
   return ownsBuildingAt(s, ai, at);
 }
 
@@ -92,8 +91,8 @@ function* defendOrderTurn({ s, ai, unit, at }: StandingOrderTurnContext): Genera
   if (needsRepair(s, unit) && (yield* retreat(s, ai, unit, range))) return false;
   const squadFormation = formation(s, ai, unit);
   if (yield* tryAttack(s, ai, unit, range, { zone: inGuardZone(s, at), from: formationFrom(squadFormation) })) return false;
-  if (manhattan(unit, at) > 1) yield* doMove(s, unit, standingOrderStep(s, ai, unit, at, range, squadFormation), range);
-  wait(unit);
+  if (manhattan(unit, at) > 1) yield* doMove(s, ai, unit, standingOrderStep(s, ai, unit, at, range, squadFormation));
+  yield* finish(s, ai, unit);
   return false;
 }
 
@@ -105,12 +104,12 @@ function* attackOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, 
   const squadFormation = formation(s, ai, unit);
   if (yield* tryAttack(s, ai, unit, range, { chase: false, from: formationFrom(squadFormation) })) return false;
   if (manhattan(unit, at) > 1) {
-    const ambushed = yield* doMove(s, unit, standingOrderStep(s, ai, unit, at, range, squadFormation), range);
+    const ambushed = yield* doMove(s, ai, unit, standingOrderStep(s, ai, unit, at, range, squadFormation));
     if (!ambushed) yield* shootFromHereOrWait(turn);
     return false;
   }
   // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.
-  wait(unit);
+  yield* finish(s, ai, unit);
   const visible = visibility(s, ai.me);
   const isNear = inGuardZone(s, at);
   const enemiesLeft = s.units.some(
@@ -132,7 +131,7 @@ function* unitStandingOrderTurn(s: GameState, ai: AiCtx, uid: number): Generator
   const standingOrder = unit && effectiveStandingOrder(s, unit);
   if (!unit || !standingOrder || !canAct(unit)) return false;
   const isFulfilled = yield* STANDING_ORDER_TURNS[standingOrder.kind]({ s, ai, unit, at: standingOrder.at });
-  if (isFulfilled) finishStandingOrder(s, unit);
+  if (isFulfilled) yield* act(s, ai, { kind: 'finishStandingOrder', uid });
   return isFulfilled;
 }
 

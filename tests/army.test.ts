@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { armyLimit, buyOptions, commandUsed, endRound, newUnit, spawn, upkeepOf } from '@core/rules';
+import { armyLimit, buyOptions, commandUsed, endRound, newUnit, upkeepOf } from '@core/rules';
+import { dispatch } from '@core/actions';
 import { blankState, unitTypeNamed } from './helpers';
 import { teamState } from '@core/teams';
 
@@ -31,13 +32,13 @@ describe('puntos de mando', () => {
     newUnit(s, TANK, 0, { x: 2, y: 2 }); // 8 de 10
     expect(armyLimit(s, 0, TANK)).toBe('command');
     expect(buyOptions(s, factory).find((buyOption) => buyOption.unitType === TANK)?.blocked).toBe('command');
-    expect(spawn(s, factory, TANK)).toBeNull();
+    expect(dispatch(s, 0, { kind: 'buy', at: factory, unitType: TANK.id })).toEqual({ ok: false, reason: 'command' });
     expect(teamState(s, 0).funds).toBe(100000);
     // Lo pequeño si cabe.
     const city = { type: CITY, owner: 0 as const, x: 6, y: 6 };
     s.buildings.push(city);
     expect(buyOptions(s, city).find((buyOption) => buyOption.unitType === SOLDIER)?.affordable).toBe(true);
-    expect(spawn(s, city, SOLDIER)).not.toBeNull();
+    expect(dispatch(s, 0, { kind: 'buy', at: city, unitType: SOLDIER.id }).ok).toBe(true);
   });
 
   it('sin la regla solo cuenta el limite de unidades', () => {

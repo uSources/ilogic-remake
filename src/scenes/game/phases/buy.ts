@@ -1,6 +1,6 @@
 /** Fase 'buy': el menu de compra de una fabrica propia. */
 import { buildingTypeOf } from '../../../core/gameContent';
-import { buyOptions, spawn, type BuyOption } from '../../../core/rules';
+import { buyOptions, type BuyOption } from '../../../core/rules';
 import type { Building, GameState } from '../../../core/model';
 import { teamState } from '../../../core/teams';
 import { showToast, type MenuItemVM } from '../../../hud/store';
@@ -24,6 +24,11 @@ export function openBuy(host: PhaseHost, building: Building): void {
   host.refresh();
 }
 
+/** Compra lo elegido y, si se ha podido, sigue la partida. */
+async function buy(host: PhaseHost, building: Building, option: BuyOption): Promise<void> {
+  if (await host.perform({ kind: 'buy', at: posOf(building), unitType: option.unitType.id })) host.afterAction();
+}
+
 export const buyPhase: PhaseHandler = {
   accept: (host) => {
     const building = host.buyAt;
@@ -31,8 +36,7 @@ export const buyPhase: PhaseHandler = {
     const option = host.buyOptions[host.menuSel - 1];
     if (!option) return;
     if (option.blocked) return showToast(buyBlockedText(host.state, option.blocked));
-    const unit = spawn(host.state, building, option.unitType);
-    if (unit) void host.play([{ kind: 'spawn', uid: unit.uid, at: posOf(building) }]).then(() => host.afterAction());
+    void buy(host, building, option);
   },
   back: (host) => host.toMap(),
   menu: (input) => {

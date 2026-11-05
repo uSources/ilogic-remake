@@ -1,9 +1,9 @@
 import { defaultContent } from '@core/content/default';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { capture, moveUnit, newUnit, captureProgress, endRound } from '@core/rules';
+import { newUnit, captureProgress, endRound } from '@core/rules';
+import { act, blankState } from './helpers';
 import { fuzzGame } from '../tools/improve/fuzz';
-import { blankState } from './helpers';
 
 afterEach(() => {});
 
@@ -19,13 +19,13 @@ describe('cazador de fallos', () => {
     const unit = newUnit(s, defaultContent().units.list[0]!, 0, { x: 5, y: 5 });
     const building = { type: 'City', owner: 1 as const, x: 5, y: 5, capture: null };
     s.buildings.push(building);
-    expect(capture(s, unit)).toBeTruthy();
+    act(s, 0, { kind: 'capture', uid: unit.uid });
     expect(building.capture).toBeTruthy();
     endRound(s);
-    moveUnit(s, unit, { x: 6, y: 5 });
+    act(s, 0, { kind: 'move', uid: unit.uid, to: { x: 6, y: 5 } });
     expect(building.capture).toBeNull();
     endRound(s);
-    moveUnit(s, unit, { x: 5, y: 5 });
+    act(s, 0, { kind: 'move', uid: unit.uid, to: { x: 5, y: 5 } });
     expect(captureProgress(s, building)).toBeNull();
   });
 });

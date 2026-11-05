@@ -1,5 +1,5 @@
 /**
- * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
+ * Menu de acciones de una unidad (fase 5): que puede hacer ahora.
  */
 
 import { unitTypeOf } from '../gameContent';
@@ -11,12 +11,7 @@ import { attackTargets } from './combat';
 import { cargoUnits } from './queries';
 import { canSupply } from './supply';
 import { unloadTiles } from './transport';
-import { canStillMove, spendUnit } from './unitTurn';
-
-/** Terminar el turno de la unidad sin hacer nada mas. */
-export function wait(unit: Unit): void {
-  spendUnit(unit);
-}
+import { canStillMove } from './unitTurn';
 
 export interface UnitActions {
   attack: boolean;

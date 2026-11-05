@@ -41,8 +41,9 @@ export function captureProgress(s: GameState, building: Building): CaptureProgre
  * [CAMBIO] Una captura a medias se pierde en cuanto la unidad que capturaba se va o muere. Antes solo
  * se borraba al consultarla (captureProgress), asi que en las partidas sin pantalla (IA contra IA,
  * equilibrio) una unidad podia irse y volver sin perderla. Lo encontro el cazador de fallos
- * (npm run fuzz). Se llama al mover, unir, subir a un transporte, al quitar muertos y al acabar la
- * ronda, y es el unico sitio que la borra (captureProgress solo consulta).
+ * (npm run fuzz). Es una de las INVARIANTS (actions/invariants.ts), que `dispatch` repasa despues de
+ * cada accion, y el primer paso del fin de ronda; es el unico sitio que la borra (captureProgress
+ * solo consulta).
  */
 export function dropStaleCaptures(s: GameState): void {
   for (const building of s.buildings) if (building.capture && !captureProgress(s, building)) building.capture = null;
@@ -74,13 +75,12 @@ function pointsLeftBefore(s: GameState, building: Building, unit: Unit, total: n
 }
 
 /**
- * Capturar el edificio de debajo. [CAMBIO] En 2013 era al instante (uno enemigo pasaba primero a
- * neutral); ahora cada turno resta la vida/10 de la unidad a sus puntos (capturePoints, la Base
- * hqCapturePoints) y al llegar a 0 pasa a ser suyo directamente. Si la unidad se va o muere, se
- * pierde lo avanzado (dropStaleCaptures). Tomar la Base enemiga gana la partida.
+ * Capturar el edificio de debajo, ya comprobado (canCapture). [CAMBIO] En 2013 era al instante (uno
+ * enemigo pasaba primero a neutral); ahora cada turno resta la vida/10 de la unidad a sus puntos
+ * (capturePoints, la Base hqCapturePoints) y al llegar a 0 pasa a ser suyo directamente. Si la unidad
+ * se va o muere, se pierde lo avanzado (dropStaleCaptures). Tomar la Base enemiga gana la partida.
  */
-export function capture(s: GameState, unit: Unit): CaptureResult | null {
-  if (!canCapture(s, unit)) return null;
+export function advanceCapture(s: GameState, unit: Unit): CaptureResult {
   const building = buildingAt(s, unit)!;
   spendUnit(unit);
   const total = capturePointsOf(s, building);

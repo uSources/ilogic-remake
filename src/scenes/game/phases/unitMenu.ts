@@ -4,23 +4,8 @@
  * 'unloadTile').
  */
 import { unitTypeOf } from '../../../core/gameContent';
-import { diceOf } from '../../../core/dice';
 import { posKey, posOf } from '../../../core/geom';
-import {
-  attackEvent,
-  attackTargets,
-  buildingAt,
-  capture,
-  captureEvent,
-  removeUnit,
-  supply,
-  unitActions,
-  unitById,
-  unload,
-  unloadTiles,
-  wait,
-} from '../../../core/rules';
-import { cancelStandingOrder, keepCapturing } from '../../../core/squads';
+import { attackTargets, unitActions, unitById, unloadTiles } from '../../../core/rules';
 import type { StandingOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, nameOf, type TextKey } from '../../../settings';
@@ -45,18 +30,18 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, uni
   },
   supply: (host, unit) => {
     host.moves.clearUndo();
-    supply(host.state, unit);
+    host.act({ kind: 'supply', uid: unit.uid });
     host.afterAction();
   },
   wait: (host, unit) => {
-    wait(unit);
+    host.act({ kind: 'wait', uid: unit.uid });
     host.afterAction();
   },
   orderToAttack: (host, unit) => startOrder(host, unit, 'attack'),
   orderToCapture: (host, unit) => startOrder(host, unit, 'capture'),
   orderToDefend: (host, unit) => startOrder(host, unit, 'defend'),
   cancelOrder: (host, unit) => {
-    cancelStandingOrder(host.state, [unit]);
+    host.act({ kind: 'cancelStandingOrder', uids: [unit.uid] });
     showToast(t('orderCancelled'));
     host.enter('unitMenu');
   },
@@ -81,14 +66,9 @@ function pickAttackTarget(host: PhaseHost, unit: Unit): void {
   host.refresh();
 }
 
-/** Capturar el edificio en el que esta. */
+/** Capturar el edificio en el que esta (si llevaba otra orden, la de capturar este manda: ver la accion). */
 function captureHere(host: PhaseHost, unit: Unit): void {
-  const building = buildingAt(host.state, unit);
-  const result = capture(host.state, unit);
-  // [CAMBIO] Si a mitad de captura, que la acabe aunque tuviera otra orden (destacada).
-  keepCapturing(host.state, unit);
-  if (building && result) void host.play([captureEvent(unit, building, result)]).then(() => host.afterAction());
-  else host.afterAction();
+  void host.perform({ kind: 'capture', uid: unit.uid }).then(() => host.afterAction());
 }
 
 /** [CAMBIO] pedir confirmacion (en el original se borraba al instante). */
@@ -98,7 +78,7 @@ function deleteUnit(host: PhaseHost, unit: Unit): void {
     return showToast(t('confirmDelete'));
   }
   host.moves.clearUndo();
-  removeUnit(host.state, unit.uid);
+  host.act({ kind: 'deleteUnit', uid: unit.uid });
   host.afterAction();
 }
 
@@ -152,8 +132,7 @@ export const attackPhase: PhaseHandler = {
     const cursor = host.view.cursor;
     const targetUid = host.moves.session?.attackTargets.get(posKey(cursor));
     if (!unit || targetUid === undefined) return host.enter('unitMenu');
-    const target = unitById(host.state, targetUid)!;
-    void host.play([attackEvent(host.state, unit, target, diceOf(host.state))]).then(() => host.afterAction());
+    void host.perform({ kind: 'attack', uid: unit.uid, target: targetUid }).then(() => host.afterAction());
   },
   back: (host) => host.enter('unitMenu'),
   highlights: (input) => markTiles(input.attack.keys(), 'attack'),
@@ -208,7 +187,7 @@ export const unloadTilePhase: PhaseHandler = {
       host.phase = 'unloadPick';
       return host.refresh();
     }
-    if (!unload(host.state, session.unit, session.passenger, cursor)) return;
+    if (!host.act({ kind: 'unload', uid: session.unit.uid, passenger: session.passenger.uid, to: posOf(cursor) })) return;
     host.moves.clearUndo();
     host.afterAction();
   },

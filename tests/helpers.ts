@@ -4,8 +4,9 @@ import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
-import type { Dice, GameEvent, GameState, Rng, RulesConfig } from '@core/model';
+import type { Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
 import { aiTurn } from '@core/ai';
+import { dispatch, resolveAttack, restoreInvariants } from '@core/actions';
 import { seededRng } from '@core/util/random';
 import { endRound, takesTurn } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
@@ -22,6 +23,30 @@ export function savedByVersion1(json: string): string {
 }
 
 /** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
+/** El equipo `team` hace la accion (por dispatch, como en el juego) y tiene que valer: sus sucesos. */
+export function act(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
+  const result = dispatch(s, team, action);
+  if (!result.ok) throw new Error(`Accion rechazada (${result.reason}): ${JSON.stringify(action)}`);
+  return result.events;
+}
+
+/**
+ * Un combate con unos dados elegidos, sin comprobar si se puede atacar (para probar la cuenta del
+ * combate): el de la accion 'attack', y despues se quitan las que caen, como hace dispatch.
+ */
+export function fight(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
+  const event = resolveAttack(s, attacker, defender, dice);
+  restoreInvariants(s);
+  return event;
+}
+
+/** El equipo usa un poder de su general por dispatch: el suceso, o null si no se puede. */
+export function usePower(s: GameState, team: TeamId, power: string, target: Pos | null = null): GameEventOf<'power'> | null {
+  const result = dispatch(s, team, { kind: 'usePower', power, target });
+  const event = result.ok ? result.events[0] : undefined;
+  return event?.kind === 'power' ? event : null;
+}
+
 /** Dados que tiran de un `Rng` (para probar un combate con una tirada conocida, sin los de la partida). */
 export const diceFrom = (rng: Rng): Dice => ({ roll: rng });
 

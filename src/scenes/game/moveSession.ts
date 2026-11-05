@@ -9,7 +9,7 @@ import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, t
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
 import { intentAt, trailTo, type MovePlan } from './intent';
-import { type Intent, type MoveUndo } from './types';
+import { type Intent } from './types';
 
 /** Mapa de casillas → uid de la unidad que hay en ella. */
 const byTile = (units: readonly Unit[]) => new Map(units.map((unit) => [posKey(unit), unit.uid]));
@@ -28,8 +28,6 @@ export class MoveSession {
   danger: Grid<boolean> | null = null;
   /** Adonde podria atacar desde lo que alcanza. */
   attackZone: Grid<boolean> | null = null;
-  /** Donde estaba antes de moverla este turno (para "Atras" en su menu). */
-  undo: MoveUndo | null = null;
   /** Enemigos a los que puede atacar ahora (fase 'attack', "x,y" → uid). */
   attackTargets = new Map<string, number>();
   /** Pasajero que se va a descargar y casillas donde se puede dejar (fase 'unloadTile'). */

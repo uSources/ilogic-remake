@@ -2,27 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/util/random';
 import {
-  attack,
   attackTargets,
-  capture,
   endRound,
-  load,
-  merge,
   moveRange,
-  moveUnit,
   newUnit,
   outcome,
-  spawn,
-  supply,
   unitActions,
-  unload,
   combatForecast,
   threatMap,
   canStillFire,
   canStillMove,
 } from '@core/rules';
+import { dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
-import { blankState, diceFrom, hqId, unitTypeNamed } from './helpers';
+import { act, blankState, diceFrom, hqId, unitTypeNamed, fight } from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -52,13 +45,13 @@ describe('movimiento', () => {
     s.map[11]![10] = 'Water'; // Water
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     expect(moveRange(s, tank).steps.at({ x: 11, y: 10 })).toBe(0);
-    moveUnit(s, tank, { x: 10, y: 14 });
+    act(s, 0, { kind: 'move', uid: tank.uid, to: { x: 10, y: 14 } });
     expect(canStillMove(tank)).toBe(false);
   });
   it('la artilleria no puede disparar despues de moverse', () => {
     const s = blankState(TEST_RULES);
     const artillery = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
-    moveUnit(s, artillery, { x: 10, y: 11 });
+    act(s, 0, { kind: 'move', uid: artillery.uid, to: { x: 10, y: 11 } });
     expect(canStillFire(s, artillery)).toBe(false);
   });
 });
@@ -69,7 +62,7 @@ describe('combate', () => {
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const enemy = newUnit(s, TANK, 1, { x: 10, y: 11 });
     expect(attackTargets(s, tank).map((unit) => unit.uid)).toEqual([enemy.uid]);
-    const dmg = attack(s, tank, enemy, diceFrom(seededRng(1)));
+    const dmg = fight(s, tank, enemy, diceFrom(seededRng(1))).damage;
     expect(dmg).toBeGreaterThan(30);
     expect(dmg).toBeLessThan(70); // esperado 50
     expect(enemy.life).toBe(100 - dmg);
@@ -80,17 +73,17 @@ describe('combate', () => {
     const s = blankState(TEST_RULES);
     const so = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const lightTank = newUnit(s, unitTypeNamed('LTank'), 1, { x: 10, y: 11 });
-    attack(s, so, lightTank, diceFrom(seededRng(3)));
+    fight(s, so, lightTank, diceFrom(seededRng(3)));
     expect(lightTank.life).toBeGreaterThan(60);
   });
   it('una unidad muerta desaparece con su carga', () => {
     const s = blankState(TEST_RULES);
     const transport = newUnit(s, TRANSPORT, 1, { x: 10, y: 11 });
     const passenger = newUnit(s, SOLDIER, 1, { x: 10, y: 12 });
-    load(s, passenger, transport);
+    act(s, 1, { kind: 'load', uid: passenger.uid, into: transport.uid });
     transport.life = 1;
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    attack(
+    fight(
       s,
       tank,
       transport,
@@ -107,15 +100,16 @@ describe('captura y victoria', () => {
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
     s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
     const soldier = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
-    expect(capture(s, soldier)?.done).toBe(false);
+    const capture = (uid: number) => act(s, 0, { kind: 'capture', uid })[0];
+    expect(capture(soldier.uid)).toMatchObject({ kind: 'capture', left: 10 });
     soldier.turnState = 'ready';
-    expect(capture(s, soldier)?.done).toBe(true);
+    expect(capture(soldier.uid)).toMatchObject({ kind: 'capture', left: 0 });
     expect(s.buildings[2]!.owner).toBe(0);
     expect(outcome(s, 0)).toBe('playing');
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    capture(s, otherSoldier);
+    capture(otherSoldier.uid);
     otherSoldier.turnState = 'ready';
-    capture(s, otherSoldier);
+    capture(otherSoldier.uid);
     expect(s.buildings[1]!.owner).toBe(0);
     expect(outcome(s, 0)).toBe('won');
   });
@@ -128,8 +122,8 @@ describe('union y transporte', () => {
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
     soldier.life = 40;
     otherSoldier.life = 30;
-    const path = merge(s, soldier, otherSoldier)!;
-    expect(path.at(-1)).toEqual({ x: 12, y: 10 });
+    const [merged] = act(s, 0, { kind: 'merge', uid: soldier.uid, into: otherSoldier.uid });
+    expect(merged?.kind === 'merge' && merged.path.at(-1)).toEqual({ x: 12, y: 10 });
     expect(otherSoldier.life).toBe(70);
     expect(s.units).toHaveLength(1);
   });
@@ -137,11 +131,10 @@ describe('union y transporte', () => {
     const s = blankState(TEST_RULES);
     const transport = newUnit(s, TRANSPORT, 0, { x: 10, y: 10 });
     const passenger = newUnit(s, SOLDIER, 0, { x: 12, y: 10 });
-    expect(load(s, passenger, transport)).not.toBeNull();
+    act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
     expect(passenger.carrier).toBe(transport.uid);
-    transport.turnState = 'ready';
     expect(unitActions(s, transport).unload).toBe(true);
-    expect(unload(s, transport, passenger, { x: 10, y: 11 })).toBe(true);
+    act(s, 0, { kind: 'unload', uid: transport.uid, passenger: passenger.uid, to: { x: 10, y: 11 } });
     expect(passenger.carrier).toBeNull();
     expect(passenger.x).toBe(10);
     expect(passenger.y).toBe(11);
@@ -152,9 +145,10 @@ describe('compra y fin de ronda', () => {
   it('fondos insuficientes: no compra', () => {
     const s = blankState(TEST_RULES);
     s.buildings.push({ type: 'Factory', owner: 0, x: 4, y: 4 });
-    expect(spawn(s, s.buildings[0]!, TANK)).toBeNull();
+    expect(dispatch(s, 0, { kind: 'buy', at: { x: 4, y: 4 }, unitType: TANK.id })).toEqual({ ok: false, reason: 'funds' });
     expect(teamState(s, 0).funds).toBe(5000);
-    const car = spawn(s, s.buildings[0]!, unitTypeNamed('Car'))!;
+    const [bought] = act(s, 0, { kind: 'buy', at: { x: 4, y: 4 }, unitType: 'Car' });
+    const car = s.units.find((unit) => bought?.kind === 'spawn' && unit.uid === bought.uid)!;
     expect(car.turnState).toBe('done');
     expect(teamState(s, 0).funds).toBe(5000 - unitTypeNamed('Car').cost); // el Jeep: lo que cueste ahora
   });
@@ -180,7 +174,7 @@ describe('compra y fin de ronda', () => {
     expect(unitActions(s, sup).supply).toBe(false); // el tanque esta entero y al soldado no le cura
     tank.life = 50;
     expect(unitActions(s, sup).supply).toBe(true);
-    expect(supply(s, sup)).toBe(1);
+    act(s, 0, { kind: 'supply', uid: sup.uid });
     expect(tank.life).toBe(70);
     expect(so.life).toBe(40);
     expect(sup.turnState).toBe('done');

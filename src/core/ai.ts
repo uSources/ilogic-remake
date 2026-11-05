@@ -23,9 +23,8 @@
  */
 import { aiGeneral } from './aiGenerals';
 import { teamUnits } from './rules/queries';
-import { wait } from './rules/unitActions';
 import type { GameEvent, GameState, Rng, TeamId } from './model';
-import { aiCtx } from './ai/context';
+import { aiCtx, finish } from './ai/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';
 import { unitTurn } from './ai/unitTurn';
@@ -38,13 +37,13 @@ export type { AiCtx } from './ai/context';
 export function* aiTurn(s: GameState, rng: Rng, team: TeamId): Generator<GameEvent> {
   const ai = aiCtx(team);
   // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
-  yield* aiGeneral(s, ai.me);
+  yield* aiGeneral(s, ai);
   const { plan, order } = planFire(s, ai.me);
   ai.plan = plan;
   ai.group = true;
   for (const uid of order) yield* unitTurn(s, ai, uid, rng);
   ai.group = false;
   ai.plan = new Map();
-  yield* produce(s, ai.me, rng);
-  for (const unit of teamUnits(s, ai.me)) wait(unit);
+  yield* produce(s, ai, rng);
+  for (const unit of teamUnits(s, ai.me)) yield* finish(s, ai, unit);
 }

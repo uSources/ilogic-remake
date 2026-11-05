@@ -6,11 +6,13 @@
 import { areAllied, isHostile } from '../teams';
 import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt, occupancy } from '../rules/queries';
-import { samePos } from '../geom';
-import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
+import { posOf, samePos } from '../geom';
+import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
+import { dispatch } from '../actions/dispatch';
 import { visibility } from '../rules/visibility';
 import { canStillAct } from '../rules/unitTurn';
-import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import { isOnMap } from '../util/predicates';
 import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
@@ -80,13 +82,29 @@ export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, r
   return getsCloser ? best : null;
 }
 
+/**
+ * La IA hace una accion de su equipo por la misma via que cualquiera (`dispatch`) y avisa de sus
+ * sucesos. Devuelve si valia (si no, la partida no cambia).
+ */
+export function* act(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, boolean> {
+  const result = dispatch(s, ai.me, action);
+  if (!result.ok) return false;
+  yield* result.events;
+  return true;
+}
+
+/** Termina el turno de la unidad, si aun no lo ha hecho (esperar). */
+export function* finish(s: GameState, ai: AiCtx, unit: Unit): Generator<GameEvent> {
+  if (canStillAct(unit) && isOnMap(unit)) yield* act(s, ai, { kind: 'wait', uid: unit.uid });
+}
+
 /** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
-export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveRange): Generator<GameEvent, boolean> {
+export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
-  const path = moveUnit(s, unit, dest, range);
-  if (!path) return false;
-  yield moveEvent(unit.uid, path);
-  return !!path.ambush;
+  const result = dispatch(s, ai.me, { kind: 'move', uid: unit.uid, to: posOf(dest) });
+  if (!result.ok) return false;
+  yield* result.events;
+  return endsInAmbush(result.events);
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */

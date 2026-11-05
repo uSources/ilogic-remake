@@ -3,9 +3,9 @@ import { saveContext } from '@core/defaultGames';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
-import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
+import { endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, buildingTypeNamed, diceFrom, savedByVersion1, unitTypeNamed } from './helpers';
+import { blankState, buildingTypeNamed, diceFrom, savedByVersion1, unitTypeNamed, fight } from './helpers';
 import { teamState } from '@core/teams';
 
 /**
@@ -23,7 +23,7 @@ describe('botin', () => {
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
     const before = teamState(s, 0).funds;
-    const event = attackEvent(s, attacker, defender, diceFrom(seededRng(1)));
+    const event = fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(event.killed).toBe(true);
     expect(event.bounty).toBe(Math.round(SOLDIER.cost * 0.25));
     expect(teamState(s, 0).funds).toBe(before + event.bounty!);
@@ -35,7 +35,7 @@ describe('botin', () => {
     const attacker = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
     attacker.life = 1;
-    const result = attackFull(s, attacker, defender, diceFrom(seededRng(1)));
+    const result = fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(result.attackerKilled).toBe(true);
     expect(teamState(s, 1).funds).toBe(5000 + Math.round(SOLDIER.cost * 0.25));
   });
@@ -45,7 +45,7 @@ describe('botin', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const event = attackEvent(s, attacker, defender, diceFrom(seededRng(1)));
+    const event = fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(event.bounty).toBeUndefined();
     expect(s.teams.map((team) => team.funds)).toEqual([5000, 5000]);
   });
@@ -58,7 +58,7 @@ describe('flanqueo', () => {
     const secondAttacker = newUnit(s, TANK, 0, { x: 11, y: 11 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
     const fresh = hitChance(s, secondAttacker, defender);
-    attackFull(s, attacker, defender, diceFrom(seededRng(1)));
+    fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(hitChance(s, secondAttacker, defender)).toBeCloseTo(fresh * 1.15);
     // Al dia siguiente ya no cuenta.
     endRound(s);
@@ -89,7 +89,7 @@ describe('sin cura bajo fuego', () => {
   it('quien recibe un ataque ese dia no se cura en su ciudad', () => {
     const { s, attacker, defender } = setup();
     s.rules = rulesWith(defaultContent(), { noHealUnderFire: true });
-    attackFull(s, attacker, defender, diceFrom(seededRng(1)));
+    fight(s, attacker, defender, diceFrom(seededRng(1)));
     const hurt = defender.life;
     expect(hurt).toBeLessThan(100);
     expect(unhealable(s, defender)).toBe(true);
@@ -104,7 +104,7 @@ describe('sin cura bajo fuego', () => {
   it('sin la regla se cura como siempre', () => {
     const { s, attacker, defender } = setup();
     s.rules = rulesWith(defaultContent(), { noHealUnderFire: false });
-    attackFull(s, attacker, defender, diceFrom(seededRng(1)));
+    fight(s, attacker, defender, diceFrom(seededRng(1)));
     const hurt = defender.life;
     endRound(s);
     expect(defender.life).toBe(Math.min(100, hurt + buildingTypeNamed('City').heals));

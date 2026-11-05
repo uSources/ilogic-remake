@@ -38,9 +38,10 @@ export interface RoundPhase {
   run(s: GameState, report: RoundReport): void;
 }
 
-/** Todas las unidades pueden volver a moverse y disparar. */
+/** Todas las unidades pueden volver a moverse y disparar (y ya no se deshace lo de la ronda anterior). */
 function refreshUnits(s: GameState): void {
   for (const unit of s.units) readyUnit(unit);
+  delete s.lastMove;
 }
 
 /** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */

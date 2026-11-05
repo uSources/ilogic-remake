@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
-import { attackEvent, endRound, newUnit, score } from '@core/rules';
+import { endRound, newUnit, score } from '@core/rules';
 import { settings } from '../src/settings';
 import {
   armyChartVM,
@@ -20,7 +20,7 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { blankState, diceFrom, hqId, unitTypeNamed } from './helpers';
+import { blankState, diceFrom, hqId, unitTypeNamed, fight } from './helpers';
 import { ownerSideOf, sideColor, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
 import { PAL } from '../src/ui/palette';
 import { teamState } from '@core/teams';
@@ -116,7 +116,7 @@ describe('panel de combate', () => {
     const s = blankState();
     const enemy = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 10, y: 11 });
-    const event = attackEvent(
+    const event = fight(
       s,
       enemy,
       mine,
@@ -142,7 +142,7 @@ describe('panel de combate', () => {
     const s = blankState();
     const art = newUnit(s, unitType('Artillery'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Soldier'), 0, { x: 10, y: 13 });
-    const event = attackEvent(
+    const event = fight(
       s,
       art,
       mine,
@@ -162,7 +162,7 @@ describe('panel de combate', () => {
     const vm = combatVM(
       blankState(),
       0,
-      attackEvent(
+      fight(
         s,
         attacker,
         defender,

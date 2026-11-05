@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { canStillAct, canStillFire, canStillMove, isUnitTurnState, markMoved, moveUnit, newUnit, readyUnit, spendUnit } from '@core/rules';
-import { blankState, unitTypeNamed } from './helpers';
+import { canStillAct, canStillFire, canStillMove, isUnitTurnState, newUnit } from '@core/rules';
+import { markMoved, readyUnit, spendUnit } from '@core/rules/unitTurn';
+import { act, blankState, unitTypeNamed } from './helpers';
 
 describe('el turno de cada unidad', () => {
   it('sin usar puede moverse, disparar y actuar; gastada, nada', () => {
@@ -18,7 +19,7 @@ describe('el turno de cada unidad', () => {
     const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 5, y: 5 });
     const artillery = newUnit(s, unitTypeNamed('Artillery'), 0, { x: 9, y: 9 });
     markMoved(tank);
-    moveUnit(s, artillery, { x: 9, y: 10 });
+    act(s, 0, { kind: 'move', uid: artillery.uid, to: { x: 9, y: 10 } });
     expect(artillery.turnState).toBe('moved');
     expect([canStillAct(tank), canStillFire(s, tank), canStillMove(tank)]).toEqual([true, true, false]);
     expect([canStillAct(artillery), canStillFire(s, artillery)]).toEqual([true, false]);

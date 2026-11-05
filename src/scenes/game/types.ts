@@ -3,7 +3,7 @@
  * importar desde los tests.
  */
 import type { UnitActions } from '../../core/rules';
-import type { GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
+import type { GameAction, GameEvent, GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -51,9 +51,15 @@ export type Intent =
   | { kind: 'merge'; target: Unit }
   | { kind: 'load'; target: Unit };
 
-/** Donde estaba la unidad antes de moverla (para "Atras" en su menu). */
-export interface MoveUndo extends Pos {
-  uid: number;
+/**
+ * Lo que la escena da a sus modulos para que la persona de la pantalla haga algo en la partida: una
+ * accion de su equipo (el que mira), por la misma via que la IA y las herramientas (`dispatch`).
+ */
+export interface ActionHost {
+  /** Hace la accion y devuelve sus sucesos, o null si no vale (la partida no cambia). */
+  act(action: GameAction): GameEvent[] | null;
+  /** Hace la accion y anima sus sucesos (con el dibujo `ghostKey` para la unidad que se mueve); false si no valia. */
+  perform(action: GameAction, ghostKey?: string | null): Promise<boolean>;
 }
 
 /** Fases en las que el cursor sigue al puntero. */

@@ -6,7 +6,7 @@ import { posOf } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
-import { giveStandingOrder } from '@core/squads';
+import { giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState, Pos } from '@core/model';
 import { blankState, unitTypeNamed, hqId } from './helpers';
 

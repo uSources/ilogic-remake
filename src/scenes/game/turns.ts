@@ -14,15 +14,11 @@ import { aiTurn, assistTurn } from '../../core/ai';
 import { samePos, posOf } from '../../core/geom';
 import { seededRng } from '../../core/util/random';
 import {
-  buildingAt,
   canCapture,
   canReach,
-  capture,
-  captureEvent,
   endRound,
-  moveEvent,
+  endsInAmbush,
   moveRange,
-  moveUnit,
   stepToward,
   othersAfter,
   unitById,
@@ -30,7 +26,7 @@ import {
   canStillMove,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
-import { pruneSquads, squadById } from '../../core/squads';
+import { squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
 import { isHostile, notAiControlledReason } from '../../core/teams';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
@@ -42,7 +38,7 @@ import { center, floatText } from '../../ui/fx';
 import { weatherEffectsText } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { PAL_CSS } from '../../ui/palette';
-import { CONFIRM_MS, INPUT_LOCK_MS, type Phase } from './types';
+import { CONFIRM_MS, INPUT_LOCK_MS, type ActionHost, type Phase } from './types';
 
 /** Donde estaba mirando el jugador antes del turno enemigo. */
 interface SavedCamera {
@@ -52,7 +48,7 @@ interface SavedCamera {
 }
 
 /** Lo que el turno necesita de la escena. */
-export interface TurnHost {
+export interface TurnHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   /** La partida (repetir el turno enemigo la cambia por la de antes y la vuelve a poner). */
@@ -197,7 +193,6 @@ export class TurnFlow {
     host.phase = 'busy';
     const ordersDone = await this.playStandingOrders(match);
     if (!ordersDone) return;
-    pruneSquads(host.state);
     if (!(await this.playAutoCaptures(match))) return;
     const report = await this.playOtherTeams(match);
     if (!report || host.checkEnd()) return;
@@ -236,9 +231,7 @@ export class TurnFlow {
   private async playAutoCaptures(match: number): Promise<boolean> {
     const host = this.host;
     for (const unit of this.autoCapturers()) {
-      const building = buildingAt(host.state, unit)!;
-      const result = capture(host.state, unit);
-      if (result) await host.play([captureEvent(unit, building, result)]);
+      await host.perform({ kind: 'capture', uid: unit.uid });
       if (!this.continues(match)) return false;
     }
     return true;
@@ -391,21 +384,22 @@ export class TurnFlow {
   private async advanceTravel(unit: Unit): Promise<boolean> {
     const host = this.host;
     const goal = unit.travelTo!;
+    const stopTravel = () => host.act({ kind: 'travel', uid: unit.uid, to: null });
     if (samePos(unit, goal)) {
-      delete unit.travelTo;
+      stopTravel();
       return false;
     }
     const range = moveRange(host.state, unit);
     if (canReach(range, goal)) {
-      delete unit.travelTo;
+      stopTravel();
       return true;
     }
     const destination = stepToward(host.state, unit, goal, range);
     if (!destination) return false;
-    const path = moveUnit(host.state, unit, destination, range);
-    if (!path) return false;
-    await host.play([moveEvent(unit.uid, path)]);
-    if (samePos(unit, goal) || path.ambush) delete unit.travelTo;
+    const moved = host.act({ kind: 'move', uid: unit.uid, to: destination });
+    if (!moved) return false;
+    await host.play(moved);
+    if (samePos(unit, goal) || endsInAmbush(moved)) stopTravel();
     return false;
   }
 

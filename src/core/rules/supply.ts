@@ -30,13 +30,23 @@ export function canSupply(s: GameState, supplier: Unit): boolean {
   return patientsOf(s, supplier).length > 0;
 }
 
+/** Lo que ha curado un abastecimiento a una unidad. */
+export interface Repair {
+  uid: number;
+  amount: number;
+}
+
 /**
- * Reparar (Unit.Heal sobre las 4 vecinas): cura lo que diga "heals" en units.json.
+ * Reparar (Unit.Heal sobre las 4 vecinas), ya comprobado (canSupply): cura lo que diga "heals" en
+ * units.json y gasta el turno de quien repara. Devuelve lo que ha curado a cada una.
  * [CAMBIO] antes tambien llenaba combustible y municion; se quitaron del juego.
  */
-export function supply(s: GameState, supplier: Unit): number {
-  const patients = patientsOf(s, supplier);
-  for (const patient of patients) patient.life = Math.min(MAX_LIFE, patient.life + healAmount(s, supplier, patient));
+export function repairNeighbours(s: GameState, supplier: Unit): Repair[] {
+  const repairs = patientsOf(s, supplier).map((patient) => {
+    const before = patient.life;
+    patient.life = Math.min(MAX_LIFE, patient.life + healAmount(s, supplier, patient));
+    return { uid: patient.uid, amount: patient.life - before };
+  });
   spendUnit(supplier);
-  return patients.length;
+  return repairs;
 }

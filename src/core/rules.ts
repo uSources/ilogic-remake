@@ -1,7 +1,9 @@
 /**
  * Reglas del juego (portadas de Ilogic.java, Unit.java y Building.java).
- * Funciones sobre GameState, sin nada de Phaser: las consultas no cambian nada; las acciones (mover,
- * atacar, capturar...) cambian el estado y lo dicen en su nombre.
+ * Funciones sobre GameState, sin nada de Phaser, que preguntan y calculan: que puede hacer cada
+ * unidad, hasta donde llega, cuanto acierta... Lo que cambia la partida son las acciones
+ * (core/actions.ts, `dispatch`), que usan estas reglas para comprobar y hacer cada una; desde aqui
+ * solo sale lo que no es de quien juega: crear unidades al preparar una partida y el fin de ronda.
  * Las desviaciones respecto al original estan marcadas con [CAMBIO].
  *
  * Este fichero solo reune lo publico de los modulos de `rules/` (uno por tema) para que se pueda
@@ -16,11 +18,11 @@
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
  * | `movement` | alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
- * | `combat` | alcance de tiro, proteccion, acierto, veterania, contraataque, botin, atacar |
+ * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
- * | `supply` | reparar a las vecinas |
- * | `unitActions` | menu de acciones de una unidad, esperar |
+ * | `supply` | a quien se puede reparar, y repararlas |
+ * | `unitActions` | menu de acciones de una unidad |
  * | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
@@ -41,29 +43,18 @@ export {
   canMoveOn,
   terrainMoveCost,
 } from './rules/queries';
-export {
-  canStillAct,
-  canStillFire,
-  canStillMove,
-  isUnitTurnState,
-  markMoved,
-  readyUnit,
-  spendUnit,
-  UNIT_TURN_STATES,
-} from './rules/unitTurn';
+export { canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
 export { visionOf, visibility } from './rules/visibility';
 export {
   capturePointsOf,
   captureStrength,
   captureProgress,
-  dropStaleCaptures,
   canCapture,
-  capture,
   captureEvent,
   type CaptureProgress,
   type CaptureResult,
 } from './rules/capture';
-export { newUnit, removeUnit, removeDead } from './rules/lifecycle';
+export { newUnit } from './rules/lifecycle';
 export {
   maxSteps,
   passMap,
@@ -79,9 +70,10 @@ export {
   validPath,
   groundDistance,
   stepToward,
-  moveUnit,
+  plannedPath,
   approachPath,
   moveEvent,
+  endsInAmbush,
   type MoveRange,
   type MovePath,
   type PassMap,
@@ -93,6 +85,7 @@ export {
   canDamage,
   fireOrigins,
   attackTargets,
+  attackProblem,
   tileProtection,
   defenseStars,
   hitChance,
@@ -102,17 +95,13 @@ export {
   rank,
   expectedDamage,
   canCounter,
-  attackFull,
-  attackEvent,
-  attack,
   HIT_MODIFIERS,
-  type AttackResult,
   type HitModifier,
 } from './rules/combat';
 export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
-export { mergeTargets, merge, loadTargets, load, unloadTiles, unload } from './rules/transport';
-export { canSupply, supply } from './rules/supply';
-export { wait, unitActions, type UnitActions } from './rules/unitActions';
+export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
+export { canSupply } from './rules/supply';
+export { unitActions, type UnitActions } from './rules/unitActions';
 export {
   commandUsed,
   armyLimit,
@@ -120,7 +109,7 @@ export {
   buildingIncome,
   buyOptions,
   canBuyAt,
-  spawn,
+  buyProblem,
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';

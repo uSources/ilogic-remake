@@ -5,7 +5,7 @@
  * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
-import { effectiveStandingOrder, renameSquad } from '../core/squads';
+import { effectiveStandingOrder } from '../core/squads';
 import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
@@ -13,7 +13,8 @@ import { Grid } from '../core/util/grid';
 import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption, canStillAct } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
-import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
+import { dispatch } from '../core/actions';
+import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
 import {
@@ -353,7 +354,7 @@ export class GameScene extends Phaser.Scene {
         if (ready()) this.selection.pickSquad(id);
       },
       renameSquad: (id: number, name: string) => {
-        renameSquad(this.s, id, name);
+        this.act({ kind: 'renameSquad', squad: id, name });
         ui.set({ rename: null });
         this.refresh();
       },
@@ -628,7 +629,7 @@ export class GameScene extends Phaser.Scene {
   /** Si hay una unidad movida a medio decidir, deshacer su movimiento antes de salir. */
   private abandonSelection(): void {
     const isDecidingAfterMove = ['unitMenu', 'attack', 'unloadPick', 'unloadTile'].includes(this.phase);
-    if (isDecidingAfterMove && this.moves.session?.undo) this.moves.undoMove();
+    if (isDecidingAfterMove && this.moves.canUndoSelected()) this.moves.undoMove();
     if (this.phase !== 'map') this.toMap();
   }
 
@@ -727,6 +728,19 @@ export class GameScene extends Phaser.Scene {
   /** Anima eventos (movimiento, ataque...) y vuelve a dibujar al terminar. */
   private playEvents(events: GameEvent[], ghostKey?: string | null): Promise<void> {
     return this.player.play(events, ghostKey);
+  }
+
+  /** La persona de la pantalla hace una accion de su equipo (ver ActionHost): sus sucesos, o null si no vale. */
+  private act(action: GameAction): GameEvent[] | null {
+    const result = dispatch(this.s, this.viewer, action);
+    return result.ok ? result.events : null;
+  }
+
+  /** La hace y anima sus sucesos (ver ActionHost). */
+  private async perform(action: GameAction, ghostKey?: string | null): Promise<boolean> {
+    const events = this.act(action);
+    if (events) await this.playEvents(events, ghostKey);
+    return !!events;
   }
 
   /** Cada evento, antes de animarlo. */
@@ -1042,6 +1056,8 @@ export class GameScene extends Phaser.Scene {
       inspect: (unit) => this.inspect(unit),
       visible: (pos) => this.visibleToPlayer(pos),
       play: (events) => this.playEvents(events),
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 
@@ -1067,6 +1083,8 @@ export class GameScene extends Phaser.Scene {
       afterAction: () => this.afterAction(),
       openUnitMenu: () => this.openUnitMenu(),
       captureNow: () => captureNow(this.phaseHost),
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 
@@ -1086,7 +1104,6 @@ export class GameScene extends Phaser.Scene {
       ),
       match: { get: () => this.match },
       selected: { get: () => this.moves.selected },
-      undo: { get: () => this.moves.session?.undo ?? null },
       selection: { get: () => this.selection },
       menuPick: () => this.menuItems[this.menuSel]?.id,
       stopInspect: () => {
@@ -1106,6 +1123,8 @@ export class GameScene extends Phaser.Scene {
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
       play: (events) => this.playEvents(events),
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 
@@ -1139,6 +1158,8 @@ export class GameScene extends Phaser.Scene {
       },
       refresh: () => this.refresh(),
       cursorMoved: () => this.cursorMoved(),
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 
@@ -1216,6 +1237,8 @@ export class GameScene extends Phaser.Scene {
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
       play: (events) => this.playEvents(events),
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 
@@ -1281,6 +1304,8 @@ export class GameScene extends Phaser.Scene {
       markSaved: () => {
         this.savedThisGame = true;
       },
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 
@@ -1307,6 +1332,8 @@ export class GameScene extends Phaser.Scene {
       viewer: { get: () => this.viewer },
       refresh: () => this.refresh(),
       play: (events) => this.playEvents(events),
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
     });
   }
 }

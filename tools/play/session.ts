@@ -9,34 +9,30 @@ import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState,
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
-import { posKey, samePos } from '@core/geom';
+import { posKey } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
-import { appointGeneral, powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
+import { appointGeneral, generalOf, newGeneral } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
-  attackFull,
   attackTargets,
   buildingAt,
   buyOptions,
   canCapture,
-  capture,
   endRound,
+  endsInAmbush,
   moveRange,
-  moveUnit,
   outcome,
   reachableTiles,
-  spawn,
   othersAfter,
   unitAt,
   unitById,
   visibility,
-  wait,
   canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import { diceOf } from '@core/dice';
-import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
+import { dispatch } from '@core/actions';
+import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -155,7 +151,7 @@ export class Session {
           return this.capture(this.mine(numberAt(0)));
         case 'wait':
         case 'esperar':
-          wait(this.mine(numberAt(0)));
+          this.perform({ kind: 'wait', uid: this.mine(numberAt(0)).uid }, 'no puede esperar');
           return 'ok';
         case 'buy':
         case 'comprar':
@@ -248,24 +244,35 @@ export class Session {
       .join('\n');
   }
 
+  /**
+   * La persona hace una accion de su equipo por la misma via que el juego (dispatch). Si no vale, el
+   * error dice `problem` y la razon que da el nucleo.
+   */
+  private perform(action: GameAction, problem: string): GameEvent[] {
+    const result = dispatch(this.s, this.me, action);
+    if (!result.ok) throw new UsageError(`${problem} (${result.reason})`);
+    return result.events;
+  }
+
   private move(unit: Unit, to: Pos): string {
-    const path = moveUnit(this.s, unit, to);
-    if (!path) throw new UsageError(`la unidad ${unit.uid} no puede llegar a (${posKey(to)})`);
-    return path.ambush ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
+    const events = this.perform({ kind: 'move', uid: unit.uid, to }, `la unidad ${unit.uid} no puede llegar a (${posKey(to)})`);
+    return endsInAmbush(events) ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
   }
 
   private attack(unit: Unit, at: Pos): string {
-    const target = attackTargets(this.s, unit).find((target) => samePos(target, at));
-    if (!target) throw new UsageError(`la unidad ${unit.uid} no puede atacar a (${posKey(at)}) desde (${unit.x},${unit.y})`);
-    const result = attackFull(this.s, unit, target, diceOf(this.s));
-    wait(unit);
-    return `daño ${result.damage}${result.killed ? ' (destruida)' : ''}${result.counter ? `, contraataque ${result.counter}${result.attackerKilled ? ' (la tuya destruida)' : ''}` : ''}`;
+    const target = unitAt(this.s, at);
+    const problem = `la unidad ${unit.uid} no puede atacar a (${posKey(at)}) desde (${unit.x},${unit.y})`;
+    if (!target) throw new UsageError(problem);
+    const [fight] = this.perform({ kind: 'attack', uid: unit.uid, target: target.uid }, problem);
+    if (fight?.kind !== 'attack') return 'ok';
+    const counter = fight.counter ? `, contraataque ${fight.counter}${fight.attackerKilled ? ' (la tuya destruida)' : ''}` : '';
+    return `daño ${fight.damage}${fight.killed ? ' (destruida)' : ''}${counter}`;
   }
 
   private capture(unit: Unit): string {
-    const result = capture(this.s, unit);
-    if (!result) throw new UsageError(`la unidad ${unit.uid} no puede capturar ahi`);
-    return result.done ? 'edificio capturado' : `capturando: quedan ${result.left} de ${result.total}`;
+    const [captured] = this.perform({ kind: 'capture', uid: unit.uid }, `la unidad ${unit.uid} no puede capturar ahi`);
+    if (captured?.kind !== 'capture') return 'ok';
+    return captured.left === 0 ? 'edificio capturado' : `capturando: quedan ${captured.left} de ${captured.total}`;
   }
 
   private buy(at: Pos, name: string): string {
@@ -276,9 +283,10 @@ export class Session {
     if (!options.length) throw new UsageError(`${buildingTypeOf(this.s, building).id} no fabrica unidades`);
     if (!unitType)
       return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${buyOption.unitType.id} (${buyOption.cost})`).join(', ')}`;
-    const unit = spawn(this.s, building, unitType);
-    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${teamState(this.s, this.me).funds})`);
-    return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
+    const problem = `no se puede comprar ${name} aqui (dinero ${teamState(this.s, this.me).funds})`;
+    const [built] = this.perform({ kind: 'buy', at, unitType: unitType.id }, problem);
+    const uid = built?.kind === 'spawn' ? built.uid : '?';
+    return `comprada ${uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
   }
 
   /** Usar un poder del general (sin id: lista de poderes y carga). */
@@ -288,9 +296,8 @@ export class Session {
     const list = general.definition.powers.map((power) => `${power.id} (${power.cost})`).join(', ');
     if (!id)
       return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
-    const block = powerBlock(this.s, this.me, id, target);
-    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (poderes: ${list})`);
-    return describe(this.s, usePower(this.s, this.me, id, target)!);
+    const events = this.perform({ kind: 'usePower', power: id, target }, `no se puede usar ${id} (poderes: ${list})`);
+    return events.map((event) => describe(this.s, event)).join('\n');
   }
 
   /**

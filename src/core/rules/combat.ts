@@ -1,21 +1,20 @@
 /**
- * Combate: alcance, proteccion del terreno, probabilidad de acierto, veterania, contraataque, botin
- * y el ataque en si (con su evento).
+ * Combate: alcance y objetivos, proteccion del terreno, probabilidad de acierto, veterania,
+ * contraataque, botin y la tirada de daño. El ataque en si (lo que cambia en la partida) es la accion
+ * 'attack' (actions/attack.ts).
  */
 
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
 import { coverAgainst, defenseFactor, isRanged } from '../abilities';
 import { manhattan, posOf } from '../geom';
-import { chargeFromCombat, generalHitFactor } from '../generals';
+import { generalHitFactor } from '../generals';
 import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
-import { teamState } from '../teams';
 import { weatherHit } from '../weather';
-import type { CombatInfo, Dice, GameEventOf, GameState, Pos, TeamId, Unit } from '../model';
-import { removeDead } from './lifecycle';
+import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { visibility } from './visibility';
-import { canStillFire, spendUnit } from './unitTurn';
+import { canStillFire } from './unitTurn';
 
 // ---- Alcance y objetivos ----
 
@@ -51,18 +50,19 @@ export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, a
   return origins;
 }
 
-/** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap). */
+/**
+ * Por que `attacker` no puede atacar ahora a `target` (null = puede): le queda disparo, el objetivo es
+ * un enemigo vivo en el mapa y lo tiene a tiro desde donde esta.
+ */
+export function attackProblem(s: GameState, attacker: Unit, target: Unit): ActionRejection | null {
+  if (!canStillFire(s, attacker) || !canFight(s, attacker)) return 'spent';
+  if (!areEnemies(s, target, attacker) || !isOnMap(target) || !isAlive(target)) return 'notTarget';
+  return inAttackRange(s, attacker, attacker, target) ? null : 'notTarget';
+}
+
+/** Objetivos atacables desde la posicion actual (Ilogic.getAtkMap; ver attackProblem) que se ven y a los que hace daño. */
 export function attackTargets(s: GameState, attacker: Unit, visible = visibility(s, attacker.team)): Unit[] {
-  if (!canStillFire(s, attacker) || !canFight(s, attacker)) return [];
-  return s.units.filter(
-    (target) =>
-      areEnemies(s, target, attacker) &&
-      isOnMap(target) &&
-      isAlive(target) &&
-      visible.at(target) &&
-      canDamage(s, attacker, target) &&
-      inAttackRange(s, attacker, attacker, target),
-  );
+  return s.units.filter((target) => attackProblem(s, attacker, target) === null && visible.at(target) && canDamage(s, attacker, target));
 }
 
 // ---- Probabilidad de acierto ----
@@ -134,7 +134,7 @@ export function hitChance(s: GameState, attacker: Unit, defender: Unit): number 
 }
 
 /** La probabilidad de acierto como probabilidad de verdad (sin pasar de 1). */
-function cappedHitChance(s: GameState, attacker: Unit, defender: Unit): number {
+export function cappedHitChance(s: GameState, attacker: Unit, defender: Unit): number {
   return Math.min(1, hitChance(s, attacker, defender));
 }
 
@@ -166,20 +166,6 @@ export function expectedDamage(s: GameState, attacker: Unit, defender: Unit): nu
 
 // ---- El ataque ----
 
-/** Lo que ha pasado en un ataque (ver attackFull). */
-export interface AttackResult {
-  /** Vida quitada al defensor. */
-  damage: number;
-  killed: boolean;
-  /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
-  counter: number;
-  attackerKilled: boolean;
-  /** [CAMBIO] Dinero cobrado por quien destruyo una unidad (0 si nadie cayo o no hay botin). */
-  bounty: number;
-}
-
-const NO_ATTACK: Readonly<AttackResult> = { damage: 0, killed: false, counter: 0, attackerKilled: false, bounty: 0 };
-
 /**
  * Daño de un ataque de una unidad con `life` puntos de vida que acierta con probabilidad `chance`.
  * Original: cada punto de vida es un disparo que acierta con probabilidad `chance`.
@@ -197,7 +183,7 @@ function rollDamage(s: GameState, life: number, chance: number, dice: Dice): num
 }
 
 /** Daño que hace `attacker` a `defender` en una tirada (sin pasar de la vida que le queda). */
-function strike(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
+export function strike(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
   return Math.min(defender.life, rollDamage(s, attacker.life, cappedHitChance(s, attacker, defender), dice));
 }
 
@@ -212,56 +198,8 @@ export function canCounter(s: GameState, defender: Unit, attacker: Unit): boolea
   return canDamage(s, defender, attacker) && inAttackRange(s, defender, defender, attacker);
 }
 
-/** Puede atacar a `defender` ahora mismo: es enemigo, le queda disparo y lo tiene a tiro. */
-function canAttackNow(s: GameState, attacker: Unit, defender: Unit): boolean {
-  if (!areEnemies(s, attacker, defender) || !canStillFire(s, attacker) || !canFight(s, attacker)) return false;
-  return inAttackRange(s, attacker, attacker, defender);
-}
-
-/** Quien destruye a otra unidad gana una baja (veterania), si sigue viva. */
-function countKills(attacker: Unit, defender: Unit, result: AttackResult): void {
-  if (result.killed && isAlive(attacker)) attacker.kills = (attacker.kills ?? 0) + 1;
-  if (result.attackerKilled && isAlive(defender)) defender.kills = (defender.kills ?? 0) + 1;
-}
-
-/** [CAMBIO] Botin: quien destruye cobra parte del precio de lo destruido (atacar sale a cuenta). */
-function payBounty(s: GameState, attacker: Unit, defender: Unit, result: AttackResult): void {
-  const winner: TeamId | null = result.killed ? attacker.team : result.attackerKilled ? defender.team : null;
-  if (winner === null) return;
-  result.bounty = bountyFor(s, result.killed ? defender : attacker);
-  const winnerTeam = teamState(s, winner);
-  winnerTeam.funds = Math.min(s.content.maxFunds, winnerTeam.funds + result.bounty);
-}
-
-/** Ataque completo: daño, y contraataque si las reglas lo tienen. Los dados, los de la partida (`diceOf(s)`). */
-export function attackFull(s: GameState, attacker: Unit, defender: Unit, dice: Dice): AttackResult {
-  if (!canAttackNow(s, attacker, defender)) return { ...NO_ATTACK };
-
-  const damage = strike(s, attacker, defender, dice);
-  defender.life -= damage;
-  defender.hitDay = s.day;
-  // Atacar gasta el turno entero de la unidad.
-  spendUnit(attacker);
-
-  const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, dice) : 0;
-  attacker.life -= counter;
-
-  chargeFromCombat(s, attacker, defender, damage, counter);
-  const result: AttackResult = {
-    damage,
-    killed: !isAlive(defender),
-    counter,
-    attackerKilled: !isAlive(attacker),
-    bounty: 0,
-  };
-  countKills(attacker, defender, result);
-  payBounty(s, attacker, defender, result);
-  removeDead(s);
-  return result;
-}
-
 /** Como estan las dos unidades antes de luchar, para enseñar el combate despues (ver CombatInfo). */
-function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatInfo {
+export function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatInfo {
   return {
     attackerType: attacker.type,
     defenderType: defender.type,
@@ -274,33 +212,4 @@ function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatI
     hit: cappedHitChance(s, attacker, defender),
     counterHit: canCounter(s, defender, attacker) ? cappedHitChance(s, defender, attacker) : null,
   };
-}
-
-/**
- * Ataque completo como evento para la interfaz (jugador e IA). Ademas del resultado lleva lo que
- * hace falta para enseñar el combate aunque alguna de las dos unidades ya no exista: tipos, equipos,
- * vidas de antes, rangos y probabilidad de acierto de cada lado (ver CombatInfo).
- */
-export function attackEvent(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
-  const info = combatInfoBefore(s, attacker, defender);
-  const target = posOf(defender);
-  const result = attackFull(s, attacker, defender, dice);
-  // Si el defensor cae no hay contraataque, aunque pudiera haberlo.
-  if (result.killed) info.counterHit = null;
-  return {
-    kind: 'attack',
-    attacker: attacker.uid,
-    target,
-    damage: result.damage,
-    killed: result.killed,
-    counter: result.counter,
-    attackerKilled: result.attackerKilled,
-    ...(result.bounty ? { bounty: result.bounty } : {}),
-    combat: info,
-  };
-}
-
-/** Ataca y devuelve el daño hecho (ver attackFull para el contraataque). */
-export function attack(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
-  return attackFull(s, attacker, defender, dice).damage;
 }

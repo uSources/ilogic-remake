@@ -2,8 +2,17 @@ import { defaultContent } from '@core/content/default';
 import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/util/random';
-import { attackEvent, attackFull, capture, captureProgress, combatForecast, dropStaleCaptures, newUnit, visibility } from '@core/rules';
-import { blankState, diceFrom, unitTypeNamed } from './helpers';
+import { captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
+import { dropStaleCaptures } from '@core/rules/capture';
+import type { GameState, Unit } from '@core/model';
+import { act, blankState, diceFrom, unitTypeNamed, fight } from './helpers';
+
+/** Captura con la unidad (por dispatch) y da lo que dice su suceso: puntos que quedan y totales. */
+function capture(s: GameState, unit: Unit) {
+  const [event] = act(s, unit.team, { kind: 'capture', uid: unit.uid });
+  if (event?.kind !== 'capture') throw new Error('no ha capturado');
+  return { done: event.left === 0, left: event.left, total: event.total };
+}
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -14,11 +23,11 @@ describe('reglas nuevas: combate', () => {
     const s = blankState();
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const result = attackFull(s, attacker, defender, diceFrom(seededRng(2)));
+    const result = fight(s, attacker, defender, diceFrom(seededRng(2)));
     expect(result.damage).toBeGreaterThan(0);
     expect(result.killed).toBe(false);
     expect(result.counter).toBeGreaterThan(0);
-    expect(attacker.life).toBe(100 - result.counter);
+    expect(attacker.life).toBe(100 - (result.counter ?? 0));
     // Responde con la vida que le queda: menos de lo que recibio.
     expect(result.counter).toBeLessThan(result.damage);
   });
@@ -27,11 +36,11 @@ describe('reglas nuevas: combate', () => {
     const s = blankState();
     const art = newUnit(s, ARTILLERY, 0, { x: 10, y: 10 });
     const tank = newUnit(s, TANK, 1, { x: 10, y: 13 });
-    expect(attackFull(s, art, tank, diceFrom(seededRng(1))).counter).toBe(0);
+    expect(fight(s, art, tank, diceFrom(seededRng(1))).counter).toBe(0);
     const other = blankState();
     const t2 = newUnit(other, TANK, 0, { x: 10, y: 10 });
     const art2 = newUnit(other, ARTILLERY, 1, { x: 10, y: 11 });
-    expect(attackFull(other, t2, art2, diceFrom(seededRng(1))).counter).toBe(0);
+    expect(fight(other, t2, art2, diceFrom(seededRng(1))).counter).toBe(0);
   });
 
   it('el evento de ataque guarda como estaban las unidades antes del combate', () => {
@@ -39,7 +48,7 @@ describe('reglas nuevas: combate', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
     defender.life = 80;
-    const event = attackEvent(s, attacker, defender, diceFrom(seededRng(2)));
+    const event = fight(s, attacker, defender, diceFrom(seededRng(2)));
     expect(event.combat).toMatchObject({
       attackerType: attacker.type,
       defenderType: defender.type,
@@ -60,13 +69,13 @@ describe('reglas nuevas: combate', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const event = attackEvent(s, attacker, defender, diceFrom(seededRng(1)));
+    const event = fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(event.killed).toBe(true);
     expect(event.combat!.counterHit).toBeNull();
     const other = blankState();
     const art = newUnit(other, ARTILLERY, 0, { x: 10, y: 10 });
     const tank = newUnit(other, TANK, 1, { x: 10, y: 13 });
-    expect(attackEvent(other, art, tank, diceFrom(seededRng(1))).combat!.counterHit).toBeNull();
+    expect(fight(other, art, tank, diceFrom(seededRng(1))).combat!.counterHit).toBeNull();
   });
 
   it('daño = esperado +-10 %', () => {
@@ -76,7 +85,7 @@ describe('reglas nuevas: combate', () => {
       const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
       defender.life = 100;
       const forecast = combatForecast(s, attacker, defender);
-      const result = attackFull(s, attacker, defender, diceFrom(seededRng(seed)));
+      const result = fight(s, attacker, defender, diceFrom(seededRng(seed)));
       expect(result.damage).toBeGreaterThanOrEqual(forecast.low - 1);
       expect(result.damage).toBeLessThanOrEqual(Math.max(forecast.high, 0) + 1);
     }
@@ -107,11 +116,11 @@ describe('reglas nuevas: captura por puntos', () => {
     const s = blankState();
     s.buildings.push({ type: 'City', owner: 1, x: 3, y: 3 });
     const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
-    const r1 = capture(s, unit)!;
+    const r1 = capture(s, unit);
     expect(r1).toEqual({ done: false, left: 10, total: 20 });
     expect(s.buildings[0]!.owner).toBe(1);
     unit.turnState = 'ready';
-    const r2 = capture(s, unit)!;
+    const r2 = capture(s, unit);
     expect(r2.done).toBe(true);
     expect(s.buildings[0]!.owner).toBe(0);
     expect(s.buildings[0]!.capture).toBeNull();
@@ -122,7 +131,7 @@ describe('reglas nuevas: captura por puntos', () => {
     s.buildings.push({ type: HQ, owner: 1, x: 3, y: 3 });
     const unit = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     unit.life = 45;
-    expect(capture(s, unit)!.left).toBe(25);
+    expect(capture(s, unit).left).toBe(25);
   });
 
   it('si la unidad se va, se pierde lo avanzado', () => {
@@ -134,24 +143,24 @@ describe('reglas nuevas: captura por puntos', () => {
     unit.x = 4;
     expect(captureProgress(s, s.buildings[0]!)).toBeNull();
     expect(s.buildings[0]!.capture).not.toBeNull(); // consultar no la borra...
-    dropStaleCaptures(s); // ...la borra el paso que sigue a cada movimiento
+    dropStaleCaptures(s); // ...la borra la invariante que repasa dispatch tras cada accion
     expect(s.buildings[0]!.capture).toBeNull();
     unit.x = 3;
     unit.turnState = 'ready';
-    expect(capture(s, unit)!.left).toBe(10);
+    expect(capture(s, unit).left).toBe(10);
   });
 });
 
 describe('reglas nuevas: veterania', () => {
   it('sube de rango al destruir y mejora acierto y defensa', async () => {
-    const { hitChance, rank, attackFull, merge } = await import('@core/rules');
+    const { hitChance, rank } = await import('@core/rules');
     const s = blankState();
     const attacker = newUnit(s, TANK, 0, { x: 3, y: 3 });
     const defender = newUnit(s, TANK, 1, { x: 4, y: 3 });
     const base = hitChance(s, attacker, defender);
     expect(rank(attacker)).toBe(0);
     defender.life = 1;
-    const result = attackFull(s, attacker, defender, diceFrom(seededRng(1)));
+    const result = fight(s, attacker, defender, diceFrom(seededRng(1)));
     expect(result.killed).toBe(true);
     expect(attacker.kills).toBe(1);
     expect(rank(attacker)).toBe(1);
@@ -161,9 +170,7 @@ describe('reglas nuevas: veterania', () => {
     attacker.kills = 6;
     expect(rank(attacker)).toBe(3);
     const ally = newUnit(s, TANK, 0, { x: 2, y: 3 });
-    attacker.turnState = 'ready';
-    ally.turnState = 'ready';
-    merge(s, ally, attacker);
+    act(s, 0, { kind: 'merge', uid: ally.uid, into: attacker.uid });
     expect(attacker.kills).toBe(6);
   });
 

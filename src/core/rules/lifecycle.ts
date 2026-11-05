@@ -6,7 +6,6 @@ import type { UnitType } from '../content';
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
 import type { GameState, Pos, TeamId, Unit, UnitTurnState } from '../model';
-import { dropStaleCaptures } from './capture';
 import { unitById } from './queries';
 
 /** Una unidad nueva en `at`, sin usar (o en el punto de su turno que se diga: las compradas nacen gastadas). */
@@ -42,8 +41,10 @@ function freeSeatOf(s: GameState, passenger: Unit): void {
   if (transport) transport.cargo = transport.cargo.map((uid) => (uid === passenger.uid ? null : uid));
 }
 
-/** Limpieza (en el original, cada fotograma): fuera las unidades sin vida. */
+/**
+ * Limpieza (en el original, cada fotograma): fuera las unidades sin vida. Es una de las INVARIANTS
+ * (actions/invariants.ts), que `dispatch` repasa despues de cada accion.
+ */
 export function removeDead(s: GameState): void {
   for (const unit of [...s.units]) if (!isAlive(unit)) removeUnit(s, unit.uid);
-  dropStaleCaptures(s);
 }

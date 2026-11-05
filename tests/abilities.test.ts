@@ -4,7 +4,8 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
-import { canMoveOn, captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
+import { canMoveOn, captureStrength, hitChance, moveRange, newUnit, tileProtection, validPath, visibility } from '@core/rules';
+import { dispatch } from '@core/actions';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
 import { blankState, terrainNamed } from './helpers';
@@ -109,7 +110,7 @@ describe('habilidades: zona de control', () => {
       { x: 11, y: 9 },
     ];
     expect(validPath(s, unit, through, range)).toBe(false);
-    expect(moveUnit(s, unit, { x: 10, y: 11 }, range)).not.toBeNull();
+    expect(dispatch(s, 0, { kind: 'move', uid: unit.uid, to: { x: 10, y: 11 } }).ok).toBe(true);
     s.rules = { ...TEST_RULES, abilities: false };
     expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
   });

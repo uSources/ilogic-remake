@@ -19,6 +19,7 @@ import { blankState, unitTypeNamed, hqId } from './helpers';
 import { viewerOf } from '../src/scenes/game/matchSetup';
 import { isPlayableOnOneScreen } from '@core/teams';
 import { checkPlayedByAi } from '../src/scenes/game/turns';
+import { dispatch } from '@core/actions';
 
 const HQ = hqId();
 
@@ -196,7 +197,6 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         menuSel: { get: () => 0 },
         match: { get: () => 1 },
         selected: { get: () => state.selected },
-        undo: { get: () => null },
         selection: { get: () => selection },
         menuPick: () => undefined,
         stopInspect: nop,
@@ -213,6 +213,11 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         clearUndo: nop,
         afterAction: nop,
         checkEnd: () => false,
+        act: (action) => {
+          const result = dispatch(s, 0, action);
+          return result.ok ? result.events : null;
+        },
+        perform: async () => false,
         play: async () => {},
       }),
     );

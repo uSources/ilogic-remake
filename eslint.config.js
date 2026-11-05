@@ -26,6 +26,33 @@ const NO_DEFAULT_CONTENT = {
   message: 'El nucleo usa el contenido de la partida (tablesOf(s)); el del juego solo lo eligen defaultGames.ts y quien crea la partida.',
 };
 
+/**
+ * Fuera del nucleo la partida solo cambia con acciones (core/actions.ts, `dispatch`), y el nucleo se
+ * usa por sus fachadas: los modulos de dentro (rules/, squads/, actions/, ai/) tienen lo que cambia la
+ * partida sin comprobarlo.
+ */
+const CORE_FACADES_ONLY = [
+  {
+    group: [
+      '**/core/rules/*',
+      '**/core/squads/*',
+      '**/core/actions/*',
+      '**/core/ai/*',
+      '@core/rules/*',
+      '@core/squads/*',
+      '@core/actions/*',
+      '@core/ai/*',
+    ],
+    message:
+      "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai'); la partida cambia con dispatch.",
+  },
+  {
+    group: ['**/core/generals', '@core/generals'],
+    importNames: ['applyPower'],
+    message: "Un poder se usa con la accion 'usePower' (dispatch).",
+  },
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -117,6 +144,11 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/core/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: CORE_FACADES_ONLY }] },
+  },
+  {
     // Las herramientas solo usan el nucleo, y por su alias: asi se podrian separar en su propio paquete
     // sin tocar nada (ver docs/ARQUITECTURA.md, "Herramientas").
     files: ['tools/**/*.ts'],
@@ -130,6 +162,7 @@ export default tseslint.config(
               message: "tools/ solo puede usar el nucleo del juego, importandolo como '@core/...' (nada de escenas, interfaz ni ajustes).",
             },
             { group: ['phaser', 'preact', 'preact/*'], message: 'tools/ no puede depender de Phaser ni de la interfaz.' },
+            ...CORE_FACADES_ONLY,
           ],
         },
       ],
