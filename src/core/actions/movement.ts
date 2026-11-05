@@ -7,7 +7,7 @@ import { captureProgress } from '../rules/capture';
 import { closeUndoWindow, openUndoWindow, undoWindowProblem } from '../rules/lastMove';
 import { readyUnit } from '../rules/unitTurn';
 import { visibleEnemies } from '../rules/visibility';
-import type { GameState, LastMove, Pos, TeamId, Unit } from '../model';
+import type { GameEvent, GameState, LastMove, Pos, TeamId, Unit } from '../model';
 import { actorProblem, checkedLastMove, checkedUnit, ownUnitOnMapProblem, ownUnitProblem } from './checks';
 import type { ActionRegistry } from './types';
 
@@ -38,6 +38,14 @@ function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[]): M
   else openUndoWindow(s, { uid: unit.uid, from, capture, revealed });
   return walked;
 }
+
+/** El suceso de que la unidad deja su orden permanente propia (como al quitarla: 'cancelStandingOrder'). */
+const standingOrderDroppedEvent = (team: TeamId, unit: Unit): GameEvent => ({
+  kind: 'standingOrder',
+  actor: team,
+  uids: [unit.uid],
+  order: null,
+});
 
 /** El paso de viaje de una accion ya comprobada (si no lo hay, es un fallo del registro). */
 function checkedTravelStep(s: GameState, unit: Unit): TravelStep {
@@ -83,10 +91,11 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
       if (!action.to) return endTravel(team, unit);
-      // Un viaje manda sobre la orden permanente que llevara: es lo ultimo que se le ha dicho.
+      // Un viaje manda sobre la orden permanente propia que llevara: es lo ultimo que se le ha dicho.
+      const orderDropped = unit.standingOrder ? [standingOrderDroppedEvent(team, unit)] : [];
       delete unit.standingOrder;
       unit.travelTo = posOf(action.to);
-      return [{ kind: 'travel', actor: team, uid: unit.uid, to: posOf(action.to) }];
+      return [...orderDropped, { kind: 'travel', actor: team, uid: unit.uid, to: posOf(action.to) }];
     },
   },
   travelStep: {

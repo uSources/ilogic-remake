@@ -54,11 +54,16 @@ export function isDetached(s: GameState, unit: Unit): boolean {
 const followers = (s: GameState, squad: Squad) => squadUnits(s, squad.id).filter((unit) => !unit.standingOrder);
 
 /** Los ids de escuadra a los que pertenecen todas sus unidades vivas de esta lista. */
-function wholeSquads(s: GameState, units: readonly Unit[]): Set<number> {
+function wholeSquads(s: GameState, units: readonly Unit[]): Map<number, Squad> {
   const ids = new Set(units.flatMap((unit) => (unit.squad === undefined ? [] : [unit.squad])));
   const picked = new Set(units.map((unit) => unit.uid));
   const isWhole = (id: number) => squadUnits(s, id).every((unit) => !isAlive(unit) || picked.has(unit.uid));
-  return new Set([...ids].filter(isWhole));
+  const whole = new Map<number, Squad>();
+  for (const id of ids) {
+    const squad = squadById(s, id);
+    if (squad && isWhole(id)) whole.set(id, squad);
+  }
+  return whole;
 }
 
 /** El edificio de esa casilla ya es de la alianza de `team` (o no hay): no hay nada que capturar. */
@@ -114,17 +119,16 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
  * Si son una escuadra entera, la orden es de la escuadra (y se olvidan las propias); si son solo
  * algunas, cada una se queda con la orden como propia (destacada) y al cumplirla vuelve a la de su
  * escuadra. Con "capturar", las que no pueden capturar van de escolta. Devuelve cuantas la han
- * recibido.
+ * recibido. (El viaje que llevaran lo acaba antes la accion, con su suceso: ver endTravel.)
  */
 export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
   const mine = unitsOfTeam(team, units);
   const standingOrder = copyStandingOrder({ kind, at });
   const whole = wholeSquads(s, mine);
-  for (const id of whole) squadById(s, id)!.standingOrder = copyStandingOrder(standingOrder);
+  for (const squad of whole.values()) squad.standingOrder = copyStandingOrder(standingOrder);
   for (const unit of mine) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else giveOwnStandingOrder(s, unit, standingOrder);
-    delete unit.travelTo;
   }
   return mine.length;
 }
@@ -136,7 +140,7 @@ export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Un
  */
 export function cancelStandingOrder(s: GameState, units: readonly Unit[]): void {
   const whole = wholeSquads(s, units);
-  for (const id of whole) delete squadById(s, id)!.standingOrder;
+  for (const squad of whole.values()) delete squad.standingOrder;
   for (const unit of units) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else if (unit.standingOrder) delete unit.standingOrder;

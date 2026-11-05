@@ -108,8 +108,9 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   que mas acerca (`travelStepOf`). Si ya esta en el destino o llega este turno, el viaje acaba sin
   moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); una emboscada por
   el camino tambien lo acaba. Moverla a mano ('move', 'load', 'merge', 'attack') lo acaba con
-  `endTravel`; capturar o esperar, no. Cada fin tiene su suceso 'travel' con `to: null` y por que
-  (`end`: 'cancelled', 'arrived', 'withinReach' o 'ambush'), y la escena avisa «llega» solo con
+  `endTravel`; capturar o esperar, no. Un viaje y una orden permanente se quitan el uno al otro, y
+  cada uno lo cuenta (el viaje que acaba con `end: 'ordered'`; la orden, con `order: null`). Cada fin tiene su suceso 'travel' con `to: null` y por que
+  (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o 'ambush'), y la escena avisa «llega» solo con
   'withinReach'. La escena solo manda 'travel' y 'travelStep' (al dar la orden y al empezar el turno).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).

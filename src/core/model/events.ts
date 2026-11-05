@@ -22,10 +22,10 @@ export interface GeneralCharge {
 
 /**
  * Por que acaba un viaje (suceso 'travel' con `to: null`): se le quita o se la mueve a mano
- * ('cancelled'), ya esta en el destino ('arrived'), llega este turno y el ultimo trozo lo hace quien
- * juega ('withinReach') o una emboscada la para ('ambush').
+ * ('cancelled'), recibe una orden permanente ('ordered'), ya esta en el destino ('arrived'), llega
+ * este turno y el ultimo trozo lo hace quien juega ('withinReach') o una emboscada la para ('ambush').
  */
-export type TravelEnd = 'cancelled' | 'arrived' | 'withinReach' | 'ambush';
+export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | 'ambush';
 
 /**
  * Lo que le ha pasado a una escuadra. Cada escuadra que deja de existir tiene un solo suceso que lo

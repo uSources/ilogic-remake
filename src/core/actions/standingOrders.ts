@@ -8,6 +8,7 @@ import {
   giveStandingOrder,
   standingOrderBlock,
 } from '../squads/standingOrders';
+import { endTravel } from '../rules/travel';
 import { checkedUnit, checkedUnits, ownUnitProblem, ownUnitsProblem } from './checks';
 import type { ActionRegistry } from './types';
 
@@ -20,9 +21,12 @@ export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 
       return standingOrderBlock(s, team, action.order.kind, action.order.at, checkedUnits(s, action.uids));
     },
     apply: (s, team, action) => {
-      giveStandingOrder(s, team, checkedUnits(s, action.uids), action.order.kind, action.order.at);
+      const units = checkedUnits(s, action.uids);
+      // Una orden manda sobre el viaje que llevaran: es lo ultimo que se le ha dicho.
+      const travelsEnded = units.flatMap((unit) => endTravel(team, unit, 'ordered'));
+      giveStandingOrder(s, team, units, action.order.kind, action.order.at);
       const order = { kind: action.order.kind, at: posOf(action.order.at) };
-      return [{ kind: 'standingOrder', actor: team, uids: [...action.uids], order }];
+      return [...travelsEnded, { kind: 'standingOrder', actor: team, uids: [...action.uids], order }];
     },
   },
   cancelStandingOrder: {

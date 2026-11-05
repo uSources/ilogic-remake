@@ -139,6 +139,23 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     ]);
   });
 
+  it('un viaje y una orden permanente se quitan el uno al otro, cada uno con su suceso', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    const order = { kind: 'defend', at: { x: 2, y: 4 } } as const;
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order });
+    expect(act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } })).toEqual([
+      { kind: 'standingOrder', actor: 0, uids: [soldier.uid], order: null },
+      { kind: 'travel', actor: 0, uid: soldier.uid, to: { x: 2, y: 20 } },
+    ]);
+    expect(soldier.standingOrder).toBeUndefined();
+    expect(act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order })).toEqual([
+      { kind: 'travel', actor: 0, uid: soldier.uid, to: null, end: 'ordered' },
+      { kind: 'standingOrder', actor: 0, uids: [soldier.uid], order },
+    ]);
+    expect(soldier.travelTo).toBeUndefined();
+  });
+
   it('el paso de un viaje no se deshace (seria un movimiento gratis)', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
