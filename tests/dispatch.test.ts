@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ACTIONS, ACTION_GUARDS, INVARIANTS, availableActions, canGiveStandingOrder, dispatch, isValidAction } from '@core/actions';
+import {
+  ACTIONS,
+  ACTION_GUARDS,
+  INVARIANTS,
+  availableActions,
+  canDoWithSelection,
+  canGiveStandingOrder,
+  dispatch,
+  isValidAction,
+} from '@core/actions';
 import { endRound, newUnit, roundReport } from '@core/rules';
 import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
@@ -290,5 +299,33 @@ describe('el menu de una unidad sale de las acciones que valen', () => {
     expect(options).not.toContain('orderToAttack');
     expect(canGiveStandingOrder(s, 0, [transport], 'defend', null)).toBe(false);
     expect(canGiveStandingOrder(s, 0, [transport, passenger], 'defend', null)).toBe(true);
+  });
+});
+
+describe('lo que se manda a unas unidades elegidas sale de las acciones que valen', () => {
+  it('un grupo captura un edificio ajeno pero no uno propio, y se mueve si alguna puede acercarse', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 9, y: 5, capture: null }, { type: 'City', owner: 0, x: 9, y: 9, capture: null });
+    const group = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, TANK, 0, { x: 5, y: 6 })];
+    expect(canDoWithSelection(s, 0, group, 'capture', { x: 9, y: 5 })).toBe(true);
+    expect(canDoWithSelection(s, 0, group, 'capture', { x: 9, y: 9 })).toBe(false);
+    expect(canDoWithSelection(s, 0, [group[1]!], 'capture', { x: 9, y: 5 })).toBe(false);
+    expect(canDoWithSelection(s, 0, group, 'move', { x: 9, y: 9 })).toBe(true);
+    for (const unit of group) act(s, 0, { kind: 'wait', uid: unit.uid });
+    expect(canDoWithSelection(s, 0, group, 'move', { x: 9, y: 9 })).toBe(false);
+  });
+
+  it('renombrar y deshacer solo con la escuadra entera; quitar ordenes solo si tienen', () => {
+    const s = blankState(PLAIN_RULES);
+    const group = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, SOLDIER, 0, { x: 5, y: 6 })];
+    expect(canDoWithSelection(s, 0, group, 'squadRename', null)).toBe(false);
+    act(s, 0, { kind: 'formSquad', uids: group.map((unit) => unit.uid) });
+    expect(canDoWithSelection(s, 0, group, 'squadRename', null)).toBe(true);
+    expect(canDoWithSelection(s, 0, group, 'squadDisband', null)).toBe(true);
+    expect(canDoWithSelection(s, 0, [group[0]!], 'squadDisband', null)).toBe(false);
+    expect(canDoWithSelection(s, 1, group, 'squadDisband', null)).toBe(false);
+    expect(canDoWithSelection(s, 0, group, 'cancelOrder', null)).toBe(false);
+    act(s, 0, { kind: 'giveStandingOrder', uids: group.map((unit) => unit.uid), order: { kind: 'defend', at: { x: 5, y: 5 } } });
+    expect(canDoWithSelection(s, 0, group, 'cancelOrder', null)).toBe(true);
   });
 });

@@ -13,3 +13,10 @@ export function squadUnits(s: GameState, id: number): Unit[] {
 export function squadById(s: GameState, id: number | undefined): Squad | undefined {
   return id === undefined ? undefined : s.squads?.find((squad) => squad.id === id);
 }
+
+/** La escuadra que forman exactamente estas unidades, todas y ninguna mas (o null). */
+export function exactSquad(s: GameState, units: readonly Unit[]): number | null {
+  const id = units[0]?.squad;
+  if (id === undefined || !units.every((unit) => unit.squad === id)) return null;
+  return squadUnits(s, id).length === units.length ? id : null;
+}

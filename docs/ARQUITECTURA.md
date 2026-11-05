@@ -79,8 +79,9 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 - `actionProblem`/`isValidAction` preguntan lo mismo sin cambiar nada. El menu de una unidad sale de
   ahi: `UNIT_MENU` (`actions/menu.ts`) dice con que acciones se cumple cada opcion y
   `availableActions(s, team, unit)` ofrece las que tienen alguna que vale; `canGiveStandingOrder`,
-  para las ordenes cuya casilla se elige despues. Los mandos (`controls/actions.ts`) preguntan lo
-  mismo.
+  para las ordenes cuya casilla se elige despues. Lo que se manda a unas unidades elegidas (un
+  grupo, la bandeja) sale igual de `SELECTION_MENU` y `canDoWithSelection`; los mandos
+  (`controls/actions.ts`, `INPUT_ACTIONS`) solo preguntan ahi y añaden lo que es de la interfaz.
 - Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
   (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
   siguiente (la invariante `undoWindow`) o el fin de ronda. Si al moverse descubrio enemigos
@@ -474,16 +475,18 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
 - **Raton**: arrastrar con el izquierdo desde una casilla sin unidad propia es recuadro; con el
   derecho o la rueda, mueve el mapa; el derecho sin arrastrar es clic derecho (al soltar). El doble
   clic lo cuenta `PointerGestures` (`TapInfo.count`).
-- **Acciones** (`actions.ts`): registro de lo que se puede hacer con lo elegido (mover, atacar,
-  capturar, unirse, subir, ir alli, ordenes, escuadra). Cada accion dice cuando vale (`ok`, que para
-  lo que es del nucleo pregunta al nucleo: `isValidAction`, `canGiveStandingOrder`), su texto y su
+- **Acciones** (`actions.ts`, `INPUT_ACTIONS`): registro de lo que se puede hacer con lo elegido (mover, atacar,
+  capturar, unirse, subir, ir alli, ordenes, escuadra). Cada accion dice cuando vale (`ok`: si se
+  puede lo dice siempre el nucleo, `canDoWithSelection` con su `SELECTION_MENU` o, con la unidad que
+  se mueve, lo que pasaria al soltarla; aqui solo se añade lo de la interfaz, como si hay un enemigo
+  a la vista), su texto y su
   cursor. De ahi salen el clic derecho (`smartAction`: la primera principal que vale), el menu
   completo de Alt + clic derecho, F, la pulsacion larga y la bandeja (`menuActions`) y el puntero del
   raton (`cursorFor`, dibujado en `ui/cursors.ts`). La escena le pasa lo que solo ella sabe (que
   significa soltar la unidad elegida en esa casilla) y cumple la accion (`Orders.run`, en
   `scenes/game/orders.ts`, con lo que hace cada una en `ACTION_RUNNERS` de `scenes/game/actionRunners.ts`).
-  Una accion nueva es una entrada en `ACTIONS` y otra en `ACTION_RUNNERS` (el tipo la pide):
-  los mandos no cambian.
+  Una accion nueva es una entrada en `INPUT_ACTIONS` y otra en `ACTION_RUNNERS` (el tipo la pide),
+  y su opcion en `SELECTION_MENU` si es algo nuevo que mandar: los mandos no cambian.
 - **Se quedan fuera a proposito**: el cuadro de texto del nombre de escuadra (`hud/overlays/RenameSquad.tsx`, para el
   teclado del juego mientras se escribe), `main.ts` (que Tab no mueva el foco del navegador), las
   capturas de teclas de Phaser (`addCapture`) y saltar el logo con cualquier tecla o clic (`LogoScene`;

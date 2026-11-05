@@ -13,7 +13,7 @@ import { MENU_PHASES, type Phase } from '../src/scenes/game/types';
 import { PHASES } from '../src/scenes/game/phases';
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
-import { ACTIONS } from '../src/controls/actions';
+import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { blankState, unitTypeNamed, hqId } from './helpers';
 import { viewerOf } from '../src/scenes/game/matchSetup';
@@ -267,7 +267,7 @@ describe('escena: tabla de fases (game/phases)', () => {
   });
 
   it('cada accion del registro (controls/actions.ts) tiene quien la cumpla', () => {
-    expect(ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
+    expect(INPUT_ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
   });
 });
 

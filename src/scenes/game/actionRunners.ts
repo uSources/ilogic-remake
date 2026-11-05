@@ -3,9 +3,9 @@
  * en controls/actions.ts (puro, sin escena); aqui, que pasa en la partida. El tipo de ACTION_RUNNERS
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
-import { squadById, SQUAD_NAME_MAX } from '../../core/squads';
+import { exactSquad, squadById, SQUAD_NAME_MAX } from '../../core/squads';
 import type { GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
-import { exactSquad, type ActionId } from '../../controls/actions';
+import type { ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
 import { t } from '../../settings';
 

@@ -7,12 +7,12 @@
  *
  * | Modulo | Que va |
  * |---|---|
- * | `queries` | unidades de una escuadra, escuadra por id |
+ * | `queries` | unidades de una escuadra, escuadra por id, la escuadra justa de unas unidades |
  * | `naming` | nombres y teclas de grupo (1-9) |
  * | `standingOrders` | la orden de la escuadra y la propia de cada unidad: dar, quitar, cumplir, formacion |
  * | `membership` | formar, meter y sacar unidades, grupos por tecla, renombrar y deshacer |
  */
-export { squadUnits, squadById } from './squads/queries';
+export { squadUnits, squadById, exactSquad } from './squads/queries';
 export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, squadsOfTeam } from './squads/naming';
 export {
   effectiveStandingOrder,

@@ -1,11 +1,18 @@
 /**
- * El menu de una unidad sale de las acciones: una opcion se ofrece si alguna de las acciones con las
- * que se cumpliria vale ahora (su `validate`). Asi el menu, la IA y dispatch no pueden decir cosas
- * distintas de lo que se puede hacer. Una opcion nueva es una entrada en UNIT_MENU.
+ * Los menus salen de las acciones: una opcion se ofrece si alguna de las acciones con las que se
+ * cumpliria vale ahora (su `validate`). Asi los menus, los mandos, la IA y dispatch no pueden decir
+ * cosas distintas de lo que se puede hacer. Dos listas: UNIT_MENU, el menu de la unidad que se acaba
+ * de mover (`availableActions`), y SELECTION_MENU, lo que se puede mandar a unas unidades elegidas
+ * (un grupo, o una desde la bandeja: `canDoWithSelection`). Una opcion nueva es una entrada en una
+ * de las dos; lo que solo es de la interfaz (si hay un enemigo a la vista en la casilla, que formar
+ * escuadra pide dos o mas) lo añaden los mandos (controls/actions.ts).
  */
 import { cargoUnits } from '../rules/queries';
+import { moveRange } from '../rules/movement';
 import { unloadTiles } from '../rules/transport';
 import { posOf } from '../geom';
+import { exactSquad, squadById } from '../squads/queries';
+import { closestStep } from '../targeting';
 import { isAlliedOwner } from '../teams';
 import type { GameAction, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../model';
 import { isValidAction } from './dispatch';
@@ -26,11 +33,20 @@ function orderTargets(s: GameState, team: TeamId, kind: StandingOrderKind, unit:
   return s.buildings.filter((building) => !isAlliedOwner(s, building.owner, team)).map((building) => posOf(building));
 }
 
+const uidsOf = (units: readonly Unit[]): number[] => units.map((unit) => unit.uid);
+
+/** Darles una orden de ese tipo en `at`, o (sin casilla, se elige despues) en cualquiera en la que valdria. */
+function orderCandidates(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos | null): GameAction[] {
+  const first = units[0];
+  if (!first) return [];
+  const targets = at ? [at] : orderTargets(s, team, kind, first);
+  return targets.map((target) => ({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind, at: posOf(target) } }));
+}
+
 /** Darle una orden de ese tipo (la casilla se elige despues): vale si hay alguna casilla en la que valdria. */
 const orderEntry = (id: UnitMenuOption, kind: StandingOrderKind): UnitMenuEntry => ({
   id,
-  candidates: (s, unit) =>
-    orderTargets(s, unit.team, kind, unit).map((at) => ({ kind: 'giveStandingOrder', uids: [unit.uid], order: { kind, at } })),
+  candidates: (s, unit) => orderCandidates(s, unit.team, [unit], kind, null),
 });
 
 /** Cada pasajero a cada casilla de al lado donde se le puede bajar. */
@@ -66,9 +82,59 @@ export function availableActions(s: GameState, team: TeamId, unit: Unit): UnitMe
  * alguna casilla (la que se elegira despues) si no.
  */
 export function canGiveStandingOrder(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos | null): boolean {
-  const first = units[0];
-  if (!first) return false;
-  const uids = units.map((unit) => unit.uid);
-  const targets = at ? [at] : orderTargets(s, team, kind, first);
-  return targets.some((target) => isValidAction(s, team, { kind: 'giveStandingOrder', uids, order: { kind, at: target } }));
+  return orderCandidates(s, team, units, kind, at).some((action) => isValidAction(s, team, action));
+}
+
+/** Lo que se puede mandar a unas unidades elegidas, en una casilla `at` o (null) sin ella. */
+export type SelectionOption =
+  | 'attack'
+  | 'capture'
+  | 'move'
+  | 'orderToAttack'
+  | 'orderToCapture'
+  | 'orderToDefend'
+  | 'cancelOrder'
+  | 'squadForm'
+  | 'squadLeave'
+  | 'squadRename'
+  | 'squadDisband';
+
+/** Las acciones con las que se cumpliria la opcion con estas unidades (se puede si alguna vale). */
+type SelectionCandidates = (s: GameState, team: TeamId, units: readonly Unit[], at: Pos | null) => GameAction[];
+
+/** Cada una va lo mas cerca que pueda de `at` (como al mover el grupo): vale si alguna puede dar un paso. */
+function groupMoveCandidates(s: GameState, units: readonly Unit[], at: Pos | null): GameAction[] {
+  if (!at) return [];
+  return units.flatMap((unit): GameAction[] => {
+    const step = closestStep(unit, at, moveRange(s, unit));
+    return step ? [{ kind: 'move', uid: unit.uid, to: step }] : [];
+  });
+}
+
+/** Una accion sobre la escuadra que forman justo estas unidades (ninguna si no forman una entera). */
+const onExactSquad =
+  (action: (squad: number, name: string) => GameAction): SelectionCandidates =>
+  (s, _team, units) => {
+    const squad = squadById(s, exactSquad(s, units) ?? undefined);
+    return squad ? [action(squad.id, squad.name)] : [];
+  };
+
+export const SELECTION_MENU: { readonly [Option in SelectionOption]: SelectionCandidates } = {
+  // Un grupo ataca o captura recibiendo la orden en esa casilla (y empezandola ya).
+  attack: (s, team, units, at) => (at ? orderCandidates(s, team, units, 'attack', at) : []),
+  capture: (s, team, units, at) => (at ? orderCandidates(s, team, units, 'capture', at) : []),
+  move: (s, _team, units, at) => groupMoveCandidates(s, units, at),
+  orderToAttack: (s, team, units, at) => orderCandidates(s, team, units, 'attack', at),
+  orderToCapture: (s, team, units, at) => orderCandidates(s, team, units, 'capture', at),
+  orderToDefend: (s, team, units, at) => orderCandidates(s, team, units, 'defend', at),
+  cancelOrder: (_s, _team, units) => [{ kind: 'cancelStandingOrder', uids: uidsOf(units) }],
+  squadForm: (_s, _team, units) => [{ kind: 'formSquad', uids: uidsOf(units) }],
+  squadLeave: (_s, _team, units) => [{ kind: 'leaveSquad', uids: uidsOf(units) }],
+  squadRename: onExactSquad((squad, name) => ({ kind: 'renameSquad', squad, name })),
+  squadDisband: onExactSquad((squad) => ({ kind: 'disbandSquad', squad })),
+};
+
+/** El equipo `team` puede mandar ahora esa opcion a estas unidades (en `at`, o sin casilla). */
+export function canDoWithSelection(s: GameState, team: TeamId, units: readonly Unit[], option: SelectionOption, at: Pos | null): boolean {
+  return SELECTION_MENU[option](s, team, units, at).some((action) => isValidAction(s, team, action));
 }
