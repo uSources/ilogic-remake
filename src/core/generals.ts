@@ -86,11 +86,15 @@ export const chargeStars = (generalState: GeneralState): number => Math.floor(ge
 
 export type PowerBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target';
 
+/** Un poder de un general por su id (undefined si ese general no lo tiene). */
+export const powerOf = (general: DeepReadonly<GeneralDef>, powerId: string): DeepReadonly<GeneralPowerDef> | undefined =>
+  general.powers.find((power) => power.id === powerId);
+
 /** Por que no se puede usar ahora un poder (null = se puede). `target` hace falta en los de area. */
 export function powerBlock(s: GameState, team: TeamId, powerId: string, target?: Pos | null): PowerBlock | null {
   const general = generalOf(s, team);
   if (!general) return 'noGeneral';
-  const power = general.definition.powers.find((candidate) => candidate.id === powerId);
+  const power = powerOf(general.definition, powerId);
   if (!power) return 'unknown';
   if (general.state.used) return 'used';
   if (chargeStars(general.state) < power.cost) return 'charge';
@@ -166,7 +170,7 @@ function applyEffect<K extends GeneralEffect['kind']>(context: EffectContext<K>)
 export function usePower(s: GameState, team: TeamId, powerId: string, target?: Pos | null): GameEventOf<'power'> | null {
   if (powerBlock(s, team, powerId, target)) return null;
   const general = generalOf(s, team)!;
-  const power = general.definition.powers.find((candidate) => candidate.id === powerId)!;
+  const power = powerOf(general.definition, powerId)!;
   general.state.charge = Math.max(0, general.state.charge - power.cost);
   general.state.used = true;
   const out: PowerEffects = { hits: [], heals: [], funds: 0 };

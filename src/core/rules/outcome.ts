@@ -3,9 +3,10 @@
  * objectives.ts). Todo se mide para un equipo: gana quien deja sin nada a todos sus enemigos.
  */
 
-import { unitTypeOf, isHq } from '../gameContent';
+import { isHq } from '../gameContent';
+import { armyValue } from '../stats';
 import { measureObjective, objectiveOutcome, type ObjectiveProgress } from '../objectives';
-import { alliesOf, areAllied, enemiesOf } from '../teams';
+import { alliesOf, areAllied, enemiesOf, teamState } from '../teams';
 import { maxBy } from '../util/pick';
 import type { Building, GameState, Outcome, TeamId } from '../model';
 
@@ -27,10 +28,7 @@ export function isDefeated(s: GameState, team: TeamId): boolean {
  * mas 1000 por cada edificio.
  */
 export function score(s: GameState, team: TeamId): number {
-  let total = 0;
-  for (const unit of s.units) if (unit.team === team) total += (unitTypeOf(s, unit).cost * unit.life) / 100;
-  for (const building of s.buildings) if (building.owner === team) total += BUILDING_SCORE;
-  return Math.round(total);
+  return armyValue(s, team) + BUILDING_SCORE * buildingsOf(s, team).length;
 }
 
 /** El limite de dias (si lo hay) ya se ha cumplido. */
@@ -82,8 +80,20 @@ export function outcome(s: GameState, team: TeamId): Outcome {
   return 'playing';
 }
 
-/** La partida ha terminado (para alguno de sus equipos). */
-export const isMatchOver = (s: GameState): boolean => s.teams.some((team) => outcome(s, team.id) !== 'playing');
+/** Los equipos que aun no han perdido (ni su Base ni todo lo suyo). */
+export const standingTeams = (s: GameState): TeamId[] => s.teams.filter((team) => !isDefeated(s, team.id)).map((team) => team.id);
+
+/**
+ * La partida ha terminado: solo queda en pie una alianza (o ninguna), o ya se ha decidido para los
+ * que quedan (objetivo de la mision, limite de dias). Con 3 o mas equipos, que caiga uno no la acaba:
+ * los demas siguen jugando.
+ */
+export function isMatchOver(s: GameState): boolean {
+  const standing = standingTeams(s);
+  const alliances = new Set(standing.map((team) => teamState(s, team).alliance));
+  if (alliances.size <= 1) return true;
+  return standing.some((team) => outcome(s, team) !== 'playing');
+}
 
 /** Progreso del objetivo de la mision para su equipo, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
 export function objectiveProgress(s: GameState): ObjectiveProgress | null {

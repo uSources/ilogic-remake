@@ -22,11 +22,9 @@ import type { Grid, GridBounds, GridSize } from './util/grid';
 import type { GameState, Pos, Rng, RulesConfig, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
-/** Zonas de salida que busca el generador: una por equipo. */
-const START_ZONES = 2;
 /** Lado del mapa del original, con el que estan medidos los numeros de mapgen.json. */
 const ORIGINAL_MAP_SIDE = 32;
-/** Distancia minima entre las dos bases en un mapa de 32; se escala con el lado del mapa. */
+/** Distancia minima entre dos bases en un mapa de 32; se escala con el lado del mapa. */
 const MIN_SPAWN_DISTANCE = 14;
 /** Intentos con poca tierra que se descartan; a partir de ahi vale cualquier mapa. */
 const MAX_ATTEMPTS_FOR_LAND = 500;
@@ -169,11 +167,34 @@ function findSpawn(s: GameState, fromTheEnd: boolean, accept: (pos: Pos) => bool
   return null;
 }
 
-/** La segunda zona tiene que poder alcanzarse a pie desde la primera y estar lejos. */
-function findSecondSpawn(s: GameState, first: Pos): Pos | null {
-  const fromFirst = groundDistance(s, first, WALK, createLayer(s, false));
+/**
+ * Las demas zonas, una tras otra: cada una tiene que poder alcanzarse a pie desde todas las de antes
+ * y estar lejos de ellas. Se buscan desde la esquina opuesta a la primera.
+ */
+function findMoreSpawns(s: GameState, first: Pos, count: number): Pos[] | null {
   const minDistance = Math.round((MIN_SPAWN_DISTANCE * mapGrid(s).width) / ORIGINAL_MAP_SIDE);
-  return findSpawn(s, true, (pos) => fromFirst.at(pos) > 0 && manhattan(pos, first) >= minDistance);
+  const spawns = [first];
+  const distancesFrom = [groundDistance(s, first, WALK, createLayer(s, false))];
+  while (spawns.length < count) {
+    const isFarFromAll = (pos: Pos) =>
+      spawns.every((earlier, i) => distancesFrom[i]!.at(pos) > 0 && manhattan(pos, earlier) >= minDistance);
+    const next = findSpawn(s, true, isFarFromAll);
+    if (!next) return null;
+    spawns.push(next);
+    if (spawns.length < count) distancesFrom.push(groundDistance(s, next, WALK, createLayer(s, false)));
+  }
+  return spawns;
+}
+
+/**
+ * Baraja la lista en su sitio (Fisher-Yates desde el final). Con dos, un solo numero: por debajo de
+ * 0.5 se quedan como estan (como el sorteo de siempre, para que los mapas de dos no cambien).
+ */
+function shuffleInPlace<T>(list: T[], rng: Rng): void {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = i - Math.floor(rng() * (i + 1));
+    [list[i], list[j]] = [list[j]!, list[i]!];
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -291,31 +312,37 @@ function isMostlyLand(s: GameState, center: Pos): boolean {
   return zone.filter((pos) => isWalkable(terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 
-/** Casilla libre de tierra, alcanzable desde las dos salidas y no pegada a ninguna. */
-function isControlSpot(s: GameState, pos: Pos, toPlayer: number, toEnemy: number, span: number): boolean {
-  if (!toPlayer || !toEnemy) return false;
+/** Casilla libre de tierra, alcanzable desde todas las salidas (`toSpawns`: distancia a pie a cada una) y no pegada a ninguna. */
+function isControlSpot(s: GameState, pos: Pos, toSpawns: readonly number[], span: number): boolean {
+  if (toSpawns.some((distance) => !distance)) return false;
   if (!isWalkable(terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
-  if (Math.min(toPlayer, toEnemy) < span * MIN_CONTROL_SPAWN_SHARE) return false;
+  if (Math.min(...toSpawns) < span * MIN_CONTROL_SPAWN_SHARE) return false;
   return isMostlyLand(s, pos);
+}
+
+/** Lo que hay del camino mas corto entre dos salidas (a pie; en linea si no se llega). */
+function shortestSpan(spawns: readonly Pos[], distancesFrom: readonly Grid<number>[]): number {
+  const spans = spawns.flatMap((spawn, i) => spawns.slice(i + 1).map((other) => distancesFrom[i]!.at(other) || manhattan(spawn, other)));
+  return Math.min(...spans);
 }
 
 /**
  * [CAMBIO] Puntos de control (regla controlPoints): zonas de tierra, con el centro igual de lejos (a
- * pie) de las dos zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear en el
- * medio del mapa. Si no caben todos, pone los que pueda.
+ * pie) de todas las zonas de salida, ni pegadas a ellas ni entre si. Asi hay algo por lo que pelear
+ * en el medio del mapa. Si no caben todos, pone los que pueda.
  */
-export function placeControlPoints(s: GameState, firstBase: Pos, secondBase: Pos, rng: Rng): void {
+export function placeControlPoints(s: GameState, spawns: readonly Pos[], rng: Rng): void {
   const wanted = s.rules.controlPoints;
   if (wanted <= 0) return;
-  const fromFirst = groundDistance(s, firstBase, WALK, createLayer(s, false));
-  const fromSecond = groundDistance(s, secondBase, WALK, createLayer(s, false));
-  const span = fromFirst.at(secondBase) || manhattan(firstBase, secondBase);
+  const distancesFrom = spawns.map((spawn) => groundDistance(s, spawn, WALK, createLayer(s, false)));
+  const span = shortestSpan(spawns, distancesFrom);
   const candidates: { pos: Pos; score: number }[] = [];
-  for (const { pos, value: toFirst } of fromFirst.cells()) {
-    const toSecond = fromSecond.at(pos);
-    if (!isControlSpot(s, pos, toFirst, toSecond, span)) continue;
-    // Lo justo: misma distancia a las dos salidas.
-    candidates.push({ pos, score: Math.abs(toFirst - toSecond) + rng() * CONTROL_SCORE_NOISE });
+  for (const { pos } of distancesFrom[0]!.cells()) {
+    const toSpawns = distancesFrom.map((distances) => distances.at(pos));
+    if (!isControlSpot(s, pos, toSpawns, span)) continue;
+    // Lo justo: la misma distancia a todas las salidas (con dos, la diferencia entre ellas).
+    const spread = Math.max(...toSpawns) - Math.min(...toSpawns);
+    candidates.push({ pos, score: spread + rng() * CONTROL_SCORE_NOISE });
   }
   candidates.sort((first, second) => first.score - second.score);
   const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.rules.controlRadius;
@@ -382,16 +409,17 @@ const hasEnoughLand = (draft: MapDraft) =>
   draft.landTiles >= settingsOf(draft.s).minLandTiles * areaScale(mapGrid(draft.s)) || draft.attempt >= MAX_ATTEMPTS_FOR_LAND;
 
 /**
- * [CAMBIO] el original daba siempre la primera zona al jugador y la segunda a la IA. La segunda
- * sale mejor situada mas a menudo (la herramienta de equilibrio: 59-61 % de ventaja para ese
- * lado, en los dos sentidos). Ahora se sortea quien empieza en cada una.
+ * Una zona de salida por equipo. [CAMBIO] el original daba siempre la primera zona al jugador y la
+ * segunda a la IA. La segunda sale mejor situada mas a menudo (la herramienta de equilibrio: 59-61 %
+ * de ventaja para ese lado, en los dos sentidos). Ahora se sortea quien empieza en cada una.
  */
 function findStartZones(draft: MapDraft): boolean {
   const first = findSpawn(draft.s, false, () => true);
   if (!first) return false;
-  const second = findSecondSpawn(draft.s, first);
-  if (!second) return false;
-  draft.spawns = draft.rng() < 0.5 ? [first, second] : [second, first];
+  const spawns = findMoreSpawns(draft.s, first, draft.s.teams.length);
+  if (!spawns) return false;
+  shuffleInPlace(spawns, draft.rng);
+  draft.spawns = spawns;
   return true;
 }
 
@@ -435,8 +463,7 @@ const MAP_STEPS: readonly MapStep[] = [
   {
     name: 'puntos de control',
     run: (draft) => {
-      const [first, second] = spawnsOf(draft);
-      placeControlPoints(draft.s, first!, second!, draft.rng);
+      placeControlPoints(draft.s, spawnsOf(draft), draft.rng);
       return true;
     },
   },
@@ -450,7 +477,7 @@ export interface NewMapOptions {
   rules: Readonly<RulesConfig>;
   /** Contenido de la partida (unidades, edificios, terreno...). */
   content: GameContent;
-  /** Los equipos (el generador hace una salida para cada uno: tienen que ser dos). */
+  /** Los equipos (dos o mas): el generador hace una salida para cada uno. */
   teams: readonly TeamSetup[];
 }
 
@@ -459,8 +486,6 @@ export interface NewMapOptions {
  * mapa desde el principio.
  */
 export function generateGame(rng: Rng, options: NewMapOptions): GameState {
-  if (options.teams.length !== START_ZONES)
-    throw new Error(`Los mapas al azar son para ${START_ZONES} equipos (hay ${options.teams.length})`);
   const size = options.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
   const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };

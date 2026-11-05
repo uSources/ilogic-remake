@@ -2,13 +2,15 @@
  * Clima (weather.json): validacion y su tipo resuelto (`WeatherType`).
  * Es la clase Climate del juego de 2013 (slow, blind, protection), que nunca se llego a usar.
  */
-import { type Checker } from './check';
+import type { Checker, Scope } from './check';
 import { MOVEMENTS, type MoveType, type Texts } from './types';
 
 export interface WeatherDef {
   /** Nombre interno (en ingles, sin espacios); lo guardan las partidas. */
   id: string;
   name: Texts;
+  /** El tiempo neutro (sin efectos), con el que empiezan las partidas. Exactamente uno. */
+  clear?: boolean;
   /** Cambio del radio de vision de las unidades (negativo = ven menos; nunca baja de 1). */
   vision: number;
   /** Cambio del movimiento por tipo de movimiento (negativo = mueven menos; nunca baja de 1). */
@@ -26,42 +28,52 @@ export function validateWeather(list: readonly WeatherDef[], themeIds: ReadonlyS
   const top = check.scope('weather.json');
   if (!top.expect(Array.isArray(list) && list.length > 0, 'tiene que tener una lista "weather" con al menos un clima')) return;
   const ids = new Set<string>();
-  list.forEach((w, i) => {
-    const s = check.scope(`clima ${typeof w?.id === 'string' ? w.id : `#${i}`}`);
-    s.id(w?.id);
-    s.expect(!ids.has(w?.id), 'id repetido');
-    ids.add(w?.id);
-    s.texts('name', w?.name);
-    s.num('vision', w?.vision, { min: -5, max: 5, int: true });
-    s.num('hitChance', w?.hitChance, { min: 0.1, max: 2 });
-    const d = w?.days;
-    s.expect(
-      Array.isArray(d) && d.length === 2 && d.every((n) => Number.isInteger(n) && n >= 1 && n <= 30) && d[0] <= d[1],
-      'days tiene que ser [minimo, maximo], de 1 a 30 dias',
-    );
-    for (const [m, v] of Object.entries(w?.move ?? {})) {
-      s.known('move', m, MOVEMENTS, 'el movimiento ');
-      s.num(`move.${m}`, v, { min: -5, max: 5, int: true });
-    }
-    for (const t of themeIds) s.num(`chance.${t}`, w?.chance?.[t], { min: 0 });
-    for (const t of Object.keys(w?.chance ?? {})) s.known('chance', t, themeIds, 'el tema ');
+  list.forEach((weather, index) => {
+    const scope = check.scope(`clima ${typeof weather?.id === 'string' ? weather.id : `#${index}`}`);
+    scope.id(weather?.id);
+    scope.expect(!ids.has(weather?.id), 'id repetido');
+    ids.add(weather?.id);
+    validateOneWeather(weather, themeIds, scope);
   });
-  const first = list[0];
-  top.expect(
-    !!first && first.vision === 0 && first.hitChance === 1 && Object.values(first.move ?? {}).every((v) => v === 0),
-    'el primer clima es el neutro (vision 0, move vacio, hitChance 1): con el empiezan las partidas',
-  );
-  for (const t of themeIds)
+  const clear = list.filter((weather) => weather?.clear);
+  if (top.expect(clear.length === 1, 'tiene que haber exactamente un clima con "clear": true (con el empiezan las partidas)'))
+    top.expect(isNeutral(clear[0]!), `el clima "clear" (${clear[0]!.id}) tiene que ser neutro: vision 0, move vacio y hitChance 1`);
+  for (const themeId of themeIds)
     top.expect(
-      list.some((w) => (w?.chance?.[t] ?? 0) > 0),
-      `algun clima tiene que poder salir en ${t}`,
+      list.some((weather) => (weather?.chance?.[themeId] ?? 0) > 0),
+      `algun clima tiene que poder salir en ${themeId}`,
     );
 }
+
+/** Los numeros de un clima. */
+function validateOneWeather(weather: WeatherDef, themeIds: ReadonlySet<string>, scope: Scope): void {
+  scope.texts('name', weather?.name);
+  if (weather?.clear !== undefined) scope.bool('clear', weather.clear);
+  scope.num('vision', weather?.vision, { min: -5, max: 5, int: true });
+  scope.num('hitChance', weather?.hitChance, { min: 0.1, max: 2 });
+  const days = weather?.days;
+  scope.expect(
+    Array.isArray(days) && days.length === 2 && days.every((day) => Number.isInteger(day) && day >= 1 && day <= 30) && days[0] <= days[1],
+    'days tiene que ser [minimo, maximo], de 1 a 30 dias',
+  );
+  for (const [movement, change] of Object.entries(weather?.move ?? {})) {
+    scope.known('move', movement, MOVEMENTS, 'el movimiento ');
+    scope.num(`move.${movement}`, change, { min: -5, max: 5, int: true });
+  }
+  for (const themeId of themeIds) scope.num(`chance.${themeId}`, weather?.chance?.[themeId], { min: 0 });
+  for (const themeId of Object.keys(weather?.chance ?? {})) scope.known('chance', themeId, themeIds, 'el tema ');
+}
+
+/** Sin efectos: con el empiezan las partidas. */
+const isNeutral = (weather: WeatherDef): boolean =>
+  weather.vision === 0 && weather.hitChance === 1 && Object.values(weather.move ?? {}).every((change) => change === 0);
 
 /** Un clima, resuelto al cargar el contenido (weather.json). */
 export interface WeatherType {
   readonly id: string;
   readonly name: Texts;
+  /** Es el tiempo neutro, con el que empiezan las partidas (GameContent.clearWeather). */
+  readonly isClear: boolean;
   /** Cambio del radio de vision (nunca baja de 1). */
   readonly vision: number;
   /** Cambio del movimiento por tipo de movimiento (0 si no lo cambia; nunca baja de 1). */
@@ -81,6 +93,7 @@ export function buildWeatherTypes(list: readonly WeatherDef[]): WeatherType[] {
   return list.map((definition) => ({
     id: definition.id,
     name: definition.name,
+    isClear: !!definition.clear,
     vision: definition.vision,
     move: moveChanges(definition),
     hitChance: definition.hitChance,

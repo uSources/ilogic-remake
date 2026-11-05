@@ -3,6 +3,7 @@
   "terrain": [
     {
       "id": "Grass",
+      "plain": true,
       "name": {
         "es": "Llanura",
         "en": "Plains"

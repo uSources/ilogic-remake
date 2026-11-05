@@ -1,7 +1,7 @@
 /**
  * Lo que puede hacer la IA con una unidad, paso a paso: retirarse a curarse, atacar (o acercarse),
  * capturar, avanzar y moverse al azar. Cada paso devuelve true si ha usado la unidad.
- * Los usan el turno de la IA (unitTurn) y las ordenes del jugador (standingOrderTurn).
+ * Los usan el turno de la IA (unitTurn) y las ordenes con destino (standingOrderTurn).
  */
 
 import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
@@ -67,7 +67,7 @@ export function* retreat(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange):
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Opciones de tryAttack para las ordenes del jugador: `zone` limita a que enemigos se mira (defender),
+ * Opciones de tryAttack para las ordenes con destino: `zone` limita a que enemigos se mira (defender),
  * `chase: false` no persigue a nadie fuera de tiro y `stay` solo dispara desde donde esta.
  */
 export interface AttackOpts {

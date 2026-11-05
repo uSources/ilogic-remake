@@ -103,6 +103,8 @@ export interface TerrainDef {
   movement: Record<MoveType, number | null>;
   /** Letra del terreno en los mapas en texto de las misiones si no depende del tema (themes.json, "mapLetters"). */
   mapLetter?: string;
+  /** El suelo llano: el de los mapas vacios (laboratorio, duelos, pruebas). Exactamente uno. */
+  plain?: boolean;
 }
 
 /** Lo que cada parte del contenido puede consultar de las demas al validarse (ids conocidos). */

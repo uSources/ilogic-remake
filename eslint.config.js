@@ -85,7 +85,7 @@ export default tseslint.config(
           patterns: [{ regex: '^(?!\\./)', message: 'src/core/model no depende de nada: solo tipos de partida (importa solo de ./).' }],
         },
       ],
-      // Solo tipos: las constantes y funciones van fuera del modelo (p. ej. TEAMS en util/predicates.ts).
+      // Solo tipos: las constantes y funciones van fuera del modelo (p. ej. CONTROLLER_KINDS en teams.ts).
       'no-restricted-syntax': [
         'error',
         {

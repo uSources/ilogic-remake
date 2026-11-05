@@ -1,7 +1,7 @@
 import type { Pos } from './geometry';
 
 /**
- * [CAMBIO] Orden permanente (con destino) de una unidad del jugador, estilo RTS: la cumple sola al
+ * [CAMBIO] Orden permanente (con destino) de una unidad, estilo RTS (de cualquier equipo; la da quien lo juega): la cumple sola al
  * terminar cada turno (ver ai/standingOrders.ts). Tipos:
  * - attack: avanza hacia `at` atacando lo que tenga a tiro por el camino; al llegar, cuando no
  *   quedan enemigos cerca, la orden se cumple;

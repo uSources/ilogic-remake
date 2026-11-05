@@ -10,23 +10,13 @@ import { findEntry, type Catalog, type Identified } from './content';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
 import { sanitizeTeamStats } from './stats';
+import { allianceCount, isControllerKind } from './teams';
 import { assignKeys } from './squads/naming';
 import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations';
 import { SAVE_VERSION } from './saveVersion';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { isObject } from './util/predicates';
-import type {
-  ControllerKind,
-  GameState,
-  GeneralState,
-  Pos,
-  RulesConfig,
-  SavedGameState,
-  StandingOrder,
-  TeamId,
-  TeamState,
-  Unit,
-} from './model';
+import type { GameState, GeneralState, Pos, RulesConfig, SavedGameState, StandingOrder, TeamId, TeamState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
 
@@ -40,8 +30,6 @@ const isInt = (value: unknown, min: number, max: number): value is number =>
 const isTeam = (s: GameState, value: unknown): boolean => isInt(value, 0, s.teams.length - 1);
 /** Equipos que se aceptan en una partida guardada. */
 const MAX_TEAMS = 16;
-/** Quien puede llevar un equipo. */
-const CONTROLLERS: readonly unknown[] = ['human', 'ai'] satisfies ControllerKind[];
 /** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
 const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
@@ -120,17 +108,17 @@ function hasValidBasics(s: GameState): boolean {
 
 /** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */
 function readTeam(s: GameState, team: TeamState, id: TeamId): boolean {
-  if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !CONTROLLERS.includes(team.controller)) return false;
+  if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !isControllerKind(team.controller)) return false;
   if (!isInt(team.funds, 0, MAX_SAVED_FUNDS)) return false;
   team.general = cleanGeneral(s, team.general);
   team.stats = sanitizeTeamStats(team.stats);
   return true;
 }
 
-/** Entre 2 y MAX_TEAMS equipos, todos bien formados. */
+/** Entre 2 y MAX_TEAMS equipos, todos bien formados, y al menos dos alianzas (si no, nadie es enemigo de nadie). */
 function readTeams(s: GameState): boolean {
   if (!isInt(s.teams.length, 2, MAX_TEAMS)) return false;
-  return s.teams.every((team, id) => readTeam(s, team, id));
+  return s.teams.every((team, id) => readTeam(s, team, id)) && allianceCount(s.teams) >= 2;
 }
 
 /** Comprueba cada unidad (uid sin repetir) y quita lo opcional que este roto. */

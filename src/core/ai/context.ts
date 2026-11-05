@@ -22,7 +22,7 @@ export interface AiCtx {
   /** Equipo que juega el turno. */
   readonly me: TeamId;
   /**
-   * [CAMBIO] Juego en grupo: solo en el turno de la IA enemiga (aiTurn). Las ordenes del jugador
+   * [CAMBIO] Juego en grupo: solo en el turno de la IA (aiTurn). Las ordenes con destino
    * (standingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
    */
   group: boolean;

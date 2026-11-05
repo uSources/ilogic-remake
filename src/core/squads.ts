@@ -1,5 +1,5 @@
 /**
- * [CAMBIO] Escuadras y ordenes permanentes del jugador (estilo RTS). Este fichero solo reune lo
+ * [CAMBIO] Escuadras y ordenes permanentes de cada equipo (estilo RTS). Este fichero solo reune lo
  * publico de `squads/` para importarlo de un sitio desde fuera del nucleo; dentro, mejor del modulo
  * concreto (de abajo arriba, cada uno solo usa los de antes):
  *

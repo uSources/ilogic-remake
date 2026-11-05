@@ -1,5 +1,5 @@
 /**
- * [CAMBIO] Ordenes permanentes del jugador (ver StandingOrder en model/standingOrder.ts): las cumple
+ * [CAMBIO] Ordenes permanentes de un equipo (ver StandingOrder en model/standingOrder.ts): las cumple
  * la misma IA que el enemigo al terminar el turno (assistTurn), o al darlas (startStandingOrder), y se
  * pueden prever sin tocar la partida (previewStandingOrders, para las flechas de intencion).
  */
@@ -18,7 +18,7 @@ import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } f
 import { captureHere, retreat, tryAttack } from './tactics';
 
 /**
- * [CAMBIO] Ordenes del jugador (al terminar su turno): las unidades con orden con destino
+ * [CAMBIO] Ordenes de un equipo (al terminar su turno): las unidades con orden con destino
  * (Unit.standingOrder) que siguen sin usar la cumplen. No toca las demas unidades ni compra nada.
  * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
@@ -31,7 +31,7 @@ export function* assistTurn(s: GameState, rng: Rng, team: TeamId): Generator<Gam
   return fulfilled;
 }
 
-/** [CAMBIO] La unidad del jugador empieza ya su orden recien dada (si aun no se ha movido). */
+/** [CAMBIO] La unidad empieza ya su orden recien dada (si aun no se ha movido). */
 export function* startStandingOrder(s: GameState, uid: number, rng: Rng, team: TeamId): Generator<GameEvent, boolean> {
   return yield* unitStandingOrderTurn(s, aiCtx(team), uid, rng);
 }

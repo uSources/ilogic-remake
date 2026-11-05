@@ -21,6 +21,10 @@
             "type": "string",
             "description": "Nombre interno (fijo: lo guardan las partidas)."
           },
+          "plain": {
+            "type": "boolean",
+            "description": "El suelo llano: el de los mapas vacios (laboratorio, duelos, pruebas). Exactamente uno."
+          },
           "mapLetter": {
             "type": "string",
             "minLength": 1,

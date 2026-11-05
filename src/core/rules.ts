@@ -121,6 +121,7 @@ export {
   dayLimitReached,
   isDefeated,
   isMatchOver,
+  standingTeams,
   outcome,
   objectiveProgress,
   endReason,

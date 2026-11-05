@@ -113,7 +113,14 @@ describe('puntos de control', () => {
 
   it('con la regla a 0 no se ponen', () => {
     const s = blankState({ controlPoints: 0 });
-    placeControlPoints(s, { x: 0, y: 0 }, { x: 19, y: 19 }, seededRng(1));
+    placeControlPoints(
+      s,
+      [
+        { x: 0, y: 0 },
+        { x: 19, y: 19 },
+      ],
+      seededRng(1),
+    );
     expect(s.controlPoints).toBeUndefined();
   });
 

@@ -124,7 +124,7 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
 ];
 
 /**
- * Mantenimiento tras el turno de la IA (ciclojuego, fase 2): reactivar unidades, cobrar y curar
+ * Fin de ronda, tras el turno del ultimo equipo (ciclojuego, fase 2): reactivar unidades, cobrar y curar
  * sobre edificios propios (ver ROUND_PHASES).
  * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */

@@ -107,10 +107,38 @@ function liftFormat1Order(s: GameState, content: GameContent, squad: Squad): voi
 }
 
 /*
- * Paso del formato 2: los tipos iban por su numero. Unidades, edificios y climas, el puesto en su
- * fichero del contenido con el que se lee la partida (las listas solo crecen por el final: ver
- * docs/CONTENIDO.md); terrenos y temas eran listas fijas en el codigo: su copia de entonces.
+ * Paso del formato 2: los tipos iban por su numero, el puesto en su lista de entonces. Cada lista es
+ * una copia fija de la de main cuando se dejo de guardar por numero (8671268): units.json,
+ * buildings.json y weather.json en su orden, y TERRAIN_NAMES y THEME_NAMES, que eran codigo. Asi el
+ * paso no depende del contenido de ahora (que ya se puede reordenar).
  */
+
+/** Las unidades del formato 2, en su orden de units.json. */
+const FORMAT_2_UNITS: readonly string[] = [
+  'Soldier',
+  'Tank',
+  'Artillery',
+  'Car',
+  'LTank',
+  'Blocker',
+  'BSoldier',
+  'Transport',
+  'SSoldier',
+  'Missile_truck',
+  'LFighter',
+  'Fighter',
+  'Bomber',
+  'Supplier',
+  'Antiair',
+  'THelicopter',
+  'MSoldier',
+  'FSoldier',
+  'WTank',
+];
+/** Los edificios del formato 2, en su orden de buildings.json. */
+const FORMAT_2_BUILDINGS: readonly string[] = ['City', 'Oil', 'Factory', 'Stronghold', 'Airport', 'Base'];
+/** Los climas del formato 2, en su orden de weather.json. */
+const FORMAT_2_WEATHER: readonly string[] = ['Clear', 'Rain', 'Snow', 'Storm', 'Sandstorm'];
 
 /** Los terrenos del formato 2, en su orden (eran TERRAIN_NAMES). */
 const FORMAT_2_TERRAIN: readonly string[] = [
@@ -148,17 +176,16 @@ const columnToIds = (column: unknown): unknown =>
 const mapToIds = (map: unknown): unknown => (Array.isArray(map) ? listOf(map).map(columnToIds) : map);
 
 /** Unidades, edificios, terreno, tema, clima y objetivo de captura por id. */
-function format2TypesToIds(raw: Record<string, unknown>, content: GameContent): void {
-  const ids = (list: readonly { id: string }[]) => list.map((entry) => entry.id);
-  for (const unit of listOf(raw.units)) fieldToId(unit, 'type', ids(content.units.list));
-  for (const building of listOf(raw.buildings)) fieldToId(building, 'type', ids(content.buildings.list));
+function format2TypesToIds(raw: Record<string, unknown>): void {
+  for (const unit of listOf(raw.units)) fieldToId(unit, 'type', FORMAT_2_UNITS);
+  for (const building of listOf(raw.buildings)) fieldToId(building, 'type', FORMAT_2_BUILDINGS);
   raw.map = mapToIds(raw.map);
   fieldToId(raw, 'theme', FORMAT_2_THEMES);
   fieldToId(raw.setup, 'theme', FORMAT_2_THEMES);
-  fieldToId(raw.weather, 'kind', ids(content.weather.list));
-  fieldToId(raw.weather, 'next', ids(content.weather.list));
+  fieldToId(raw.weather, 'kind', FORMAT_2_WEATHER);
+  fieldToId(raw.weather, 'next', FORMAT_2_WEATHER);
   const objective = isObject(raw.mission) ? raw.mission.objective : undefined;
-  if (isObject(objective) && objective.kind === 'capture') fieldToId(objective, 'type', ids(content.buildings.list));
+  if (isObject(objective) && objective.kind === 'capture') fieldToId(objective, 'type', FORMAT_2_BUILDINGS);
 }
 
 /*
@@ -266,7 +293,7 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     name: 'tipos por id en vez de por numero',
     upToVersion: 2,
     stage: 'read',
-    apply: (raw, context) => format2TypesToIds(raw, context.content),
+    apply: (raw) => format2TypesToIds(raw),
   },
   {
     // Hasta el formato 2, "0 = jugador, 1 = IA" con pares por bando; desde el 3, equipos (GameState.teams).

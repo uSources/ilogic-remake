@@ -3,13 +3,14 @@
   "weather": [
     {
       "id": "Clear",
+      "clear": true,
       "name": { "es": "Despejado", "en": "Clear" },
       "vision": 0,
       "move": {},
       "hitChance": 1,
       "days": [2, 4],
       "chance": { "Plains": 6, "Desert": 7, "Forest": 5, "Swamp": 4, "Snowy": 4 },
-      "comment": "El primero es el tiempo neutro con el que empieza la partida."
+      "comment": "El tiempo neutro (clear) con el que empieza la partida."
     },
     {
       "id": "Rain",

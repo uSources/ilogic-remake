@@ -38,12 +38,12 @@ export interface ResolvedContent {
   /** El cuartel general (el edificio con "hq": true; hay exactamente uno). */
   hq: BuildingType;
   terrain: Catalog<TerrainType>;
-  /** El suelo llano (el primero de terrain.json): el de los mapas vacios (laboratorio, duelos, pruebas). */
+  /** El suelo llano (el de "plain": true en terrain.json): el de los mapas vacios (laboratorio, duelos, pruebas). */
   plainTerrain: TerrainType;
   themes: Catalog<Theme>;
   mapgen: MapgenSettings;
   weather: Catalog<WeatherType>;
-  /** El clima neutro (el primero de weather.json): con el empiezan las partidas. */
+  /** El clima neutro (el de "clear": true en weather.json): con el empiezan las partidas. */
   clearWeather: WeatherType;
   generals: Catalog<DeepReadonly<GeneralDef>>;
   /** Reglas por defecto de una partida (rules.json, "defaults"): ver rulesWith. */
@@ -63,11 +63,11 @@ export function resolveContent(files: Content): ResolvedContent {
     buildings,
     hq: buildings.list.find((building) => building.isHq)!,
     terrain,
-    plainTerrain: terrain.list[0]!,
+    plainTerrain: terrain.list.find((type) => type.isPlain)!,
     themes: catalogOf(files.themes),
     mapgen: files.mapgen,
     weather,
-    clearWeather: weather.list[0]!,
+    clearWeather: weather.list.find((type) => type.isClear)!,
     generals: catalogOf(files.generals),
     defaultRules: { ...files.rules.defaults },
     maxFunds: files.rules.maxFunds,

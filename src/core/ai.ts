@@ -17,7 +17,7 @@
  * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
  * | `production` | que fabrica |
  * | `formation` | escuadras que avanzan juntas |
- * | `standingOrders` | ordenes permanentes del jugador (con destino) y su prevision |
+ * | `standingOrders` | ordenes permanentes (con destino) de un equipo y su prevision |
  *
  * Fuera de aqui se importa de este fichero (lo publico de `ai/` se reexporta abajo).
  */

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { entryOf, validateContent, type Content, type WeatherType } from '@core/content';
+import { entryOf, loadContent, validateContent, type Content, type WeatherType } from '@core/content';
 
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
@@ -44,10 +44,24 @@ describe('clima: contenido', () => {
     for (const id of ['Rain', 'Snow', 'Storm', 'Sandstorm']) expect(kind(id)).not.toBe(CLEAR);
   });
 
-  it('dice que esta mal si el primer clima no es neutro', () => {
+  it('el clima neutro lo dice "clear" (no su puesto): exactamente uno y sin efectos', () => {
     const bad = mutableCopy<Content>(defaultContent().files);
-    bad.weather[0]!.vision = -1;
-    expect(validateContent(bad).join()).toMatch(/primer clima es el neutro/);
+    bad.weather.find((weather) => weather.clear)!.vision = -1;
+    expect(validateContent(bad).join()).toMatch(/tiene que ser neutro/);
+    const two = mutableCopy<Content>(defaultContent().files);
+    two.weather[1]!.clear = true;
+    expect(validateContent(two).join()).toMatch(/exactamente un clima con "clear"/);
+    const moved = mutableCopy<Content>(defaultContent().files);
+    moved.weather.push(moved.weather.shift()!);
+    expect(validateContent(moved)).toEqual([]);
+    expect(loadContent(moved).clearWeather.id).toBe(defaultContent().clearWeather.id);
+  });
+
+  it('el suelo llano lo dice "plain": exactamente uno', () => {
+    const none = mutableCopy<Content>(defaultContent().files);
+    for (const terrain of none.terrain) delete terrain.plain;
+    expect(validateContent(none).join()).toMatch(/exactamente un terreno con "plain"/);
+    expect(defaultContent().plainTerrain.id).toBe('Grass');
   });
 
   it('dice que esta mal un tipo de movimiento que no existe', () => {

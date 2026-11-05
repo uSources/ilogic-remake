@@ -5,7 +5,6 @@
 import { unitTypeOf } from '../gameContent';
 import { effectiveStandingOrder } from '../squads/standingOrders';
 import { canFight, isCapturer } from '../util/predicates';
-import { teamState } from '../teams';
 import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
 import { attackTargets } from './combat';
@@ -42,8 +41,7 @@ function canUnloadSomeone(s: GameState, transport: Unit): boolean {
 }
 
 export function unitActions(s: GameState, unit: Unit): UnitActions {
-  // Las ordenes con destino son de los equipos que juega una persona: la IA decide sola cada turno.
-  const isMine = teamState(s, unit.team).controller === 'human';
+  // Las ordenes con destino las puede recibir cualquier equipo (la escena solo hace el menu del que mira).
   return {
     attack: attackTargets(s, unit).length > 0,
     capture: canCapture(s, unit),
@@ -51,9 +49,9 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     supply: canSupply(s, unit),
     wait: true,
     back: unit.canMove,
-    orderToAttack: isMine && canFight(s, unit),
-    orderToCapture: isMine && isCapturer(s, unit),
-    orderToDefend: isMine && canFight(s, unit),
+    orderToAttack: canFight(s, unit),
+    orderToCapture: isCapturer(s, unit),
+    orderToDefend: canFight(s, unit),
     // Orden propia o de su escuadra.
     cancelOrder: !!effectiveStandingOrder(s, unit),
     delete: true,

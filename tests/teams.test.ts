@@ -2,15 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { saveContext } from '@core/defaultGames';
-import { seededRng } from '@core/geom';
+import { manhattan, seededRng } from '@core/geom';
+import { MoveType } from '@core/content';
+import { createLayer } from '@core/mapGrid';
+import { generateGame } from '@core/mapgen';
+import { rulesWith } from '@core/rulesConfig';
 import {
   attackTargets,
   canCapture,
   controlRound,
   endRound,
+  groundDistance,
   isMatchOver,
   newUnit,
   outcome,
+  standingTeams,
   threatMap,
   unitById,
   visibility,
@@ -46,7 +52,7 @@ const TWO_VS_TWO: TeamSetup[] = [
   { controller: 'ai', alliance: 1 },
 ];
 
-/** Cuatro equipos con una Base en cada esquina y dos unidades cada uno, con niebla. */
+/** Hasta cuatro equipos, cada uno con una Base en una esquina y dos unidades, con niebla. */
 function fourCorners(teams: readonly TeamSetup[] = TWO_VS_TWO): GameState {
   const s = blankState({ fog: true, weather: false }, teams);
   const corners = [
@@ -55,7 +61,7 @@ function fourCorners(teams: readonly TeamSetup[] = TWO_VS_TWO): GameState {
     { x: 1, y: 30 },
     { x: 30, y: 30 },
   ];
-  corners.forEach((corner, team) => {
+  corners.slice(0, teams.length).forEach((corner, team) => {
     s.buildings.push({ type: HQ, owner: team, ...corner, capture: null });
     newUnit(s, TANK, team, { x: corner.x + (corner.x < 16 ? 1 : -1), y: corner.y });
     newUnit(s, SOLDIER, team, { x: corner.x, y: corner.y + (corner.y < 16 ? 1 : -1) });
@@ -101,6 +107,16 @@ describe('equipos: quien es enemigo de quien', () => {
       [1, 1, 300, null],
     ]);
     expect(() => newTeams([{ controller: 'human' }], 300)).toThrow();
+    // Todos en la misma alianza: nadie seria enemigo de nadie.
+    expect(() =>
+      newTeams(
+        [
+          { controller: 'human', alliance: 3 },
+          { controller: 'ai', alliance: 3 },
+        ],
+        300,
+      ),
+    ).toThrow(/alianzas/);
     expect(() => teamState(blankState(), 5)).toThrow();
   });
 });
@@ -163,8 +179,25 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(outcome(s, 1)).toBe('lost');
     expect(outcome(s, 0)).toBe('playing');
     expect(outcome(s, 3)).toBe('playing');
+    expect(isMatchOver(s)).toBe(false);
+    expect(standingTeams(s)).toEqual([0, 2, 3]);
     s.buildings.find((building) => building.owner === 3)!.owner = 2;
     expect(perTeam(s, (team) => outcome(s, team))).toEqual(['won', 'lost', 'won', 'lost']);
+    expect(isMatchOver(s)).toBe(true);
+  });
+
+  it('todos contra todos (3 equipos): si cae uno, los otros dos siguen; acaba cuando queda uno', () => {
+    const s = fourCorners([{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const loses = (team: number) => {
+      s.units = s.units.filter((unit) => unit.team !== team);
+      s.buildings = s.buildings.filter((building) => building.owner !== team);
+    };
+    loses(1);
+    expect(perTeam(s, (team) => outcome(s, team))).toEqual(['playing', 'lost', 'playing']);
+    expect(isMatchOver(s)).toBe(false);
+    loses(2);
+    expect(perTeam(s, (team) => outcome(s, team))).toEqual(['won', 'lost', 'lost']);
+    expect(isMatchOver(s)).toBe(true);
   });
 
   it('cada IA juega su turno sin atacar a sus aliados, y la partida se guarda y se carga igual', () => {
@@ -185,12 +218,15 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(serialize(back)).toBe(serialize(s));
   });
 
-  it('una partida guardada con un solo equipo o con un equipo mal formado no se lee', () => {
+  it('una partida guardada con un solo equipo, una sola alianza o un equipo mal formado no se lee', () => {
     const raw = JSON.parse(serialize(fourCorners())) as { teams: unknown[] };
     expect(deserialize(JSON.stringify({ ...raw, teams: raw.teams.slice(0, 1) }), saveContext(defaultContent()))).toBeNull();
     const badController = structuredClone(raw) as { teams: { controller: string }[] };
     badController.teams[1]!.controller = 'robot';
     expect(deserialize(JSON.stringify(badController), saveContext(defaultContent()))).toBeNull();
+    const oneAlliance = structuredClone(raw) as { teams: { alliance: number }[] };
+    for (const team of oneAlliance.teams) team.alliance = 0;
+    expect(deserialize(JSON.stringify(oneAlliance), saveContext(defaultContent()))).toBeNull();
     const badId = structuredClone(raw) as { teams: { id: number }[] };
     badId.teams[2]!.id = 7;
     expect(deserialize(JSON.stringify(badId), saveContext(defaultContent()))).toBeNull();
@@ -204,3 +240,24 @@ function recordAttack(s: GameState, event: GameEvent, team: number, attacks: { a
   expect(unitById(s, event.attacker)?.team ?? team).toBe(team);
   attacks.push({ attacker: event.combat.attackerTeam, target: event.combat.defenderTeam });
 }
+
+describe('mapas al azar para mas de dos equipos', () => {
+  it.each([3, 4])('%i equipos: una Base y unidades cada uno, todas las salidas conectadas a pie y separadas', (count) => {
+    for (let seed = 1; seed <= 5; seed++) {
+      const teams: TeamSetup[] = Array.from({ length: count }, () => ({ controller: 'ai' }));
+      const s = generateGame(seededRng(seed), {
+        size: 32,
+        rules: rulesWith(defaultContent(), { controlPoints: 2 }),
+        content: defaultContent(),
+        teams,
+      });
+      const hqs = teamIds(s).map((team) => s.buildings.find((building) => building.owner === team && building.type === HQ)!);
+      expect(hqs.every(Boolean), `semilla ${seed}`).toBe(true);
+      for (const team of teamIds(s)) expect(s.units.filter((unit) => unit.team === team).length).toBeGreaterThan(0);
+      const fromFirst = groundDistance(s, hqs[0]!, MoveType.FOOT, createLayer(s, false));
+      for (const hq of hqs.slice(1)) expect(fromFirst.at(hq)).toBeGreaterThan(0);
+      for (const [i, hq] of hqs.entries()) for (const other of hqs.slice(i + 1)) expect(manhattan(hq, other)).toBeGreaterThan(5);
+      checkInvariants(s);
+    }
+  });
+});

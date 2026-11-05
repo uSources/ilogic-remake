@@ -33,18 +33,11 @@ export function findBuildingType(s: GameState, building: Pick<Building, 'type'>)
 }
 
 /** El tipo de una unidad (o de lo que lleve su tipo: una prevision, un evento). */
-export function unitTypeOf(s: GameState, unit: Pick<Unit, 'type'>): UnitType {
-  const unitType = findUnitType(s, unit);
-  if (!unitType) throw new Error(`Tipo de unidad ${unit.type} desconocido en el contenido de la partida`);
-  return unitType;
-}
+export const unitTypeOf = (s: GameState, unit: Pick<Unit, 'type'>): UnitType => entryOf(s.content.units, unit.type, 'unidad');
 
 /** El tipo de un edificio. */
-export function buildingTypeOf(s: GameState, building: Pick<Building, 'type'>): BuildingType {
-  const buildingType = findBuildingType(s, building);
-  if (!buildingType) throw new Error(`Tipo de edificio ${building.type} desconocido en el contenido de la partida`);
-  return buildingType;
-}
+export const buildingTypeOf = (s: GameState, building: Pick<Building, 'type'>): BuildingType =>
+  entryOf(s.content.buildings, building.type, 'edificio');
 
 /** El edificio es el cuartel general (si lo capturan, su equipo pierde). */
 export function isHq(s: GameState, building: Pick<Building, 'type'>): boolean {

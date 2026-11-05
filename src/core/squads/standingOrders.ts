@@ -1,5 +1,5 @@
 /**
- * [CAMBIO] Ordenes permanentes del jugador (estilo RTS): la de cada escuadra y la propia de cada unidad
+ * [CAMBIO] Ordenes permanentes de cada equipo (estilo RTS): la de cada escuadra y la propia de cada unidad
  * (destacada). Logica pura: la usan la escena y la IA, que las cumple al terminar el turno
  * (ai/standingOrders.ts).
  */
@@ -50,7 +50,7 @@ export function isDetached(s: GameState, unit: Unit): boolean {
   return !!unit.standingOrder && !!squadOrder && !sameStandingOrder(unit.standingOrder, forUnit(s, unit, squadOrder));
 }
 
-/** Unidades del jugador de esa escuadra que siguen su orden (no destacadas). */
+/** Unidades de esa escuadra que siguen su orden (no destacadas). */
 const followers = (s: GameState, squad: Squad) => squadUnits(s, squad.id).filter((unit) => !unit.standingOrder);
 
 /** Los ids de escuadra a los que pertenecen todas sus unidades vivas de esta lista. */

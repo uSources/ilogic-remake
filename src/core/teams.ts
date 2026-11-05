@@ -38,15 +38,32 @@ export const enemiesOf = (s: GameState, team: TeamId): TeamId[] => teamIds(s).fi
 /** Los equipos de su alianza, el incluido, en orden. */
 export const alliesOf = (s: GameState, team: TeamId): TeamId[] => teamIds(s).filter((other) => areAllied(s, team, other));
 
+/**
+ * Todos los controladores (el tipo `ControllerKind` esta en model/, que solo tiene tipos). Es un
+ * registro por clave para que un controlador nuevo no compile hasta estar aqui.
+ */
+const CONTROLLERS: Readonly<Record<ControllerKind, true>> = { human: true, ai: true };
+export const CONTROLLER_KINDS = Object.keys(CONTROLLERS) as readonly ControllerKind[];
+
+/** Es uno de los controladores que hay (para lo que viene de fuera: partidas guardadas). */
+export const isControllerKind = (value: unknown): value is ControllerKind => (CONTROLLER_KINDS as readonly unknown[]).includes(value);
+
 /** Los equipos que lleva ese tipo de controlador (p. ej. los que juega una persona), en orden. */
 export const teamsControlledBy = (s: GameState, controller: ControllerKind): TeamId[] =>
   s.teams.filter((team) => team.controller === controller).map((team) => team.id);
 
 /**
- * El equipo de la persona: el primero que lleva una persona (o el primero, si todos son de la IA). Es
- * el que mira la pantalla (niebla, colores, mandos) y el de las tarjetas de la partida guardada.
+ * El equipo de la persona: el primero que lleva una persona. Es el que mira la pantalla (niebla,
+ * colores, mandos) y el de las tarjetas de la partida guardada. Si todos son de la IA (el fondo del
+ * menu, la herramienta de equilibrio) no hay persona: se mira desde el primer equipo de la lista.
  */
-export const playerTeam = (s: GameState): TeamId => teamsControlledBy(s, 'human')[0] ?? teamState(s, 0).id;
+export function playerTeam(s: GameState): TeamId {
+  const firstPerson = teamsControlledBy(s, 'human')[0];
+  return firstPerson ?? s.teams[0]!.id;
+}
+
+/** Cuantas alianzas distintas hay entre estos equipos (una partida necesita al menos dos: si no, nadie es enemigo de nadie). */
+export const allianceCount = (teams: readonly Pick<TeamState, 'alliance'>[]): number => new Set(teams.map((team) => team.alliance)).size;
 
 /** Una lista con un valor por equipo, en orden (informes de la ronda, puntos de control...). */
 export const perTeam = <T>(s: GameState, valueFor: (team: TeamId) => T): T[] => teamIds(s).map(valueFor);
@@ -68,7 +85,7 @@ export const emptyTeamStats = (): TeamStats => ({ built: 0, spent: 0, lost: 0, c
 /** Los equipos de una partida nueva, sin general (se elige despues: generals.ts). */
 export function newTeams(setups: readonly TeamSetup[], initialFunds: number): TeamState[] {
   if (setups.length < 2) throw new Error('Una partida necesita al menos dos equipos');
-  return setups.map((setup, id) => ({
+  const teams = setups.map((setup, id) => ({
     id,
     alliance: setup.alliance ?? id,
     controller: setup.controller,
@@ -76,4 +93,6 @@ export function newTeams(setups: readonly TeamSetup[], initialFunds: number): Te
     general: null,
     stats: emptyTeamStats(),
   }));
+  if (allianceCount(teams) < 2) throw new Error('Una partida necesita al menos dos alianzas: si no, nadie es enemigo de nadie');
+  return teams;
 }

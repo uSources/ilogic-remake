@@ -7,7 +7,8 @@
  *   M  acantilado                                     *  flores (o escarcha)
  *   ~  agua    ,  agua poco profunda    =  agua profunda    i  hielo
  *   P  bosque nevado    N  acantilado nevado
- * Equipos: `teams`, en orden (el 0 lo juega la persona en todas). Edificios: [tipo, dueño (numero de
+ * Equipos: `teams`, en orden, con quien juega cada uno (`controller`) y su dinero; el objetivo es
+ * del equipo de la persona (`mission.team`). Edificios: [tipo, dueño (numero de
  * equipo, null neutral), x, y]. Unidades: [tipo, equipo, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
