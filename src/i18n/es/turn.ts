@@ -1,6 +1,7 @@
 /** Turnos, dias, fin del turno, guardar, salir y avisos de la partida. */
 export const turn = {
   enemyTurn: 'TURNO ENEMIGO',
+  allyTurn: 'TURNO ALIADO',
   yourTurn: 'TU TURNO',
   saved: 'Partida guardada',
   confirmQuit: 'Pulsa Esc otra vez para salir al menú',

@@ -1,21 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { aiGeneral, bestAreaTarget, chooseAbility } from '@core/aiGenerals';
+import { aiGeneral, bestAreaTarget, choosePower } from '@core/aiGenerals';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { generalDef, newGeneral } from '@core/generals';
+import { appointGeneral, generalDef } from '@core/generals';
 import { newUnit } from '@core/rules';
 import type { GameState } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed } from './helpers';
+import { teamState } from '@core/teams';
 
-const { UNIT_NAMES, AI } = defaultContent().tables;
+const AI = defaultContent().ai;
 
-const unitType = (name: string) => UNIT_NAMES.indexOf(name);
+const unitType = unitTypeNamed;
 
-/** La IA (bando 1) con Brisa y la carga dada; una unidad suya para ver algo. */
+/** La IA (equipo 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {
   const s = blankState(rulesWith(defaultContent(), { fog, weather: false }));
-  s.generals = [null, newGeneral(s, 'Brisa')];
-  s.generals[1]!.charge = charge;
+  appointGeneral(s, 1, 'Brisa');
+  teamState(s, 1).general!.charge = charge;
   newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
   return s;
 }
@@ -29,27 +30,27 @@ describe('la IA usa a su general', () => {
     const best = bestAreaTarget(s, 1, 1, 30, 10)!;
     expect(best.value).toBeGreaterThan(7000);
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
-    const choice = chooseAbility(s, 1)!;
-    expect(choice.ability).toBe('airstrike');
+    const choice = choosePower(s, 1)!;
+    expect(choice.power).toBe('airstrike');
     const evs = [...aiGeneral(s, 1)];
     expect(evs).toHaveLength(1);
     const event = evs[0]!;
-    expect(event.kind === 'ability' ? event.hits.length : 0).toBe(2);
+    expect(event.kind === 'power' ? event.hits.length : 0).toBe(2);
   });
 
   it('no gasta la carga en algo que vale poco', () => {
     // Con Roca: su reparacion no gasta la barra entera, asi que puede esperar a que valga la pena.
     const s = blankState(rulesWith(defaultContent(), { weather: false }));
-    s.generals = [null, newGeneral(s, 'Roca')];
-    s.generals[1]!.charge = generalDef(s, 'Roca')!.abilities[0]!.cost;
+    appointGeneral(s, 1, 'Roca');
+    teamState(s, 1).general!.charge = generalDef(s, 'Roca')!.powers[0]!.cost;
     newUnit(s, unitType('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor
-    expect(chooseAbility(s, 1)).toBeNull();
+    expect(choosePower(s, 1)).toBeNull();
   });
 
   it('con la barra llena usa lo que valga algo (reconocimiento con niebla)', () => {
     const s = aiBrisa(6, true);
-    const choice = chooseAbility(s, 1)!;
-    expect(choice.ability).toBe('recon');
+    const choice = choosePower(s, 1)!;
+    expect(choice.power).toBe('recon');
     expect(choice.value).toBe(AI.REVEALVALUE);
   });
 
@@ -63,9 +64,9 @@ describe('la IA usa a su general', () => {
   it('sin general, o ya usada este turno, no hace nada', () => {
     const s = aiBrisa(6);
     newUnit(s, unitType('Tank'), 0, { x: 11, y: 11 });
-    s.generals![1]!.used = true;
+    teamState(s, 1).general!.used = true;
     expect([...aiGeneral(s, 1)]).toEqual([]);
-    s.generals = undefined;
+    teamState(s, 1).general = null;
     expect([...aiGeneral(s, 1)]).toEqual([]);
   });
 });

@@ -6,12 +6,14 @@ description: Use when adding a new unit or building type to Ilogic or changing w
 # Añadir o cambiar una unidad (o un edificio)
 
 Todo lo de una unidad esta en **`src/core/content/units.json`** (edificios: `buildings.json`). No hay que
-tocar codigo: `src/core/content/index.ts` lo valida y lo convierte en las tablas por indice (`UNIT`,
-`POWER`, `SPAWNER`...), que el codigo lee de cada partida con `tablesOf(s)`. Guia completa con ejemplo: `docs/CONTENIDO.md`.
+tocar codigo: `src/core/content/index.ts` lo valida y lo resuelve en un `UnitType` con sus campos con
+nombre (`BuildingType` los edificios), que el codigo lee de cada partida con `unitTypeOf(s, unit)`.
+Guia completa con ejemplo: `docs/CONTENIDO.md`.
 
-**El orden de la lista es el numero de tipo** que guardan las partidas: la nueva va **al final**. Nunca
-insertar en medio, reordenar ni borrar (`tests/content.test.ts` lo vigila). El `id` de una existente
-tampoco se cambia (misiones e imagenes lo usan).
+**El `id` es lo que guardan las partidas** (`"type": "Tank"`): el de una existente no se cambia ni se
+borra la unidad (misiones, imagenes y partidas guardadas lo usan). La nueva va **al final**: el orden es
+el de los menus y el de los empates de la IA, asi que tampoco se reordena (`tests/content.test.ts` lo
+vigila).
 
 1. `npm run unit -- new <Id> --like <Parecida>`: la añade al final de `units.json` copiando la parecida
    (numeros, columna de daño = quien la ataca y con cuanto acierto, transportes, quien la repara) y con
@@ -35,6 +37,6 @@ tampoco se cambia (misiones e imagenes lo usan).
 7. CHANGELOG.md (apartado `[Sin publicar]`) y `npm run check`, `npm run shots`.
 
 Una regla nueva (curar al lado, volar sobre agua...) que el JSON no sabe expresar si es codigo: campo
-nuevo en `UnitDef` + validacion + tabla en `buildTables` + esquema + test, y la regla en su modulo de `core/rules/` (una habilidad pasiva: su efecto en `core/abilities.ts`).
+nuevo en `UnitDef` + validacion + su campo en `UnitType` (`buildUnitTypes`, content/units.ts) + esquema + test, y la regla en su modulo de `core/rules/` (una habilidad pasiva: su efecto en `core/abilities.ts`).
 
 Probar rapido sin navegador: `npm run play -- --seed 7 -e "buy <x> <y> <id>; unit <id>; end; map"`.

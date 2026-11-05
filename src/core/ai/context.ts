@@ -3,12 +3,13 @@
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
-import { tablesOf, weightsOf } from '../gameContent';
+import { areAllied, isHostile } from '../teams';
+import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt, occupancy } from '../rules/queries';
 import { samePos } from '../geom';
 import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
 import { visibility } from '../rules/visibility';
-import type { GameEvent, GameState, Pos, Team, Unit } from '../model';
+import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
@@ -18,10 +19,10 @@ import { minBy } from '../util/pick';
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).
  */
 export interface AiCtx {
-  /** Bando que juega el turno. */
-  readonly me: Team;
+  /** Equipo que juega el turno. */
+  readonly me: TeamId;
   /**
-   * [CAMBIO] Juego en grupo: solo en el turno de la IA enemiga (aiTurn). Las ordenes del jugador
+   * [CAMBIO] Juego en grupo: solo en el turno de la IA (aiTurn). Las ordenes con destino
    * (standingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
    */
   group: boolean;
@@ -30,7 +31,7 @@ export interface AiCtx {
 }
 
 /** Contexto nuevo para un turno de `me` (sin grupo ni plan). */
-export function aiCtx(me: Team): AiCtx {
+export function aiCtx(me: TeamId): AiCtx {
   return { me, group: false, plan: new Map() };
 }
 
@@ -44,7 +45,7 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
   const occupied = occupancy(s);
   if (ai.group && s.rules.passAllies) {
     const visible = visibility(s, ai.me);
-    const letsPass = (other: Unit) => other.carrier === null && (other.team === ai.me || !visible.at(other));
+    const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, ai.me) || !visible.at(other));
     for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
   }
   occupied.set(unit, false);
@@ -57,7 +58,7 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit.type), occupancyWithout(s, ai, unit));
+  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, ai, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
   return (pos) => steps.at(pos) || Infinity;
 }
@@ -88,11 +89,11 @@ export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveR
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (s: GameState, unit: Unit): number => tablesOf(s).UNIT.mover[unit.type]! + tablesOf(s).UNIT.alcance[unit.type]!;
+export const strikeReach = (s: GameState, unit: Unit): number => unitTypeOf(s, unit).move + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
-export function visibleFoes(s: GameState, me: Team, visible = visibility(s, me)): Unit[] {
-  return s.units.filter((other) => other.team !== me && other.carrier === null && other.life > 0 && visible.at(other));
+export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {
+  return s.units.filter((other) => isHostile(s, other.team, me) && other.carrier === null && other.life > 0 && visible.at(other));
 }
 
 /** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */
@@ -107,7 +108,7 @@ export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {
   return (
     !!building &&
     building.owner === unit.team &&
-    tablesOf(s).HEALER[unit.type]![building.type]! &&
-    tablesOf(s).BUILDING.heals[building.type]! > 0
+    unitTypeOf(s, unit).repairedAt.includes(buildingTypeOf(s, building).id) &&
+    buildingTypeOf(s, building).heals > 0
   );
 }

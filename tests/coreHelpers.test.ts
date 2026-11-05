@@ -14,24 +14,24 @@ import {
   type MovePath,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, savedByVersion1 } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, terrainNamed, hqId } from './helpers';
 
-const { UNIT, BUILDING, HQ, TERRAIN } = defaultContent().tables;
+const HQ = hqId();
 
-const SOLDIER = 0,
-  TANK = 1,
-  ARTILLERY = 2,
-  TRANSPORT = 7;
-const WOODS = 2;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  ARTILLERY = unitTypeNamed('Artillery'),
+  TRANSPORT = unitTypeNamed('Transport');
+const WOODS = 'Woods';
 
 describe('ayudas de reglas', () => {
   it('proteccion de casilla: terreno por edificio, y estrellas de 0 a 4', () => {
     const s = blankState();
     s.map[3]![3] = WOODS;
     s.buildings.push({ type: HQ, owner: 0, x: 5, y: 5, capture: null });
-    expect(tileProtection(s, { x: 0, y: 0 })).toBe(TERRAIN.protection[0]);
-    expect(tileProtection(s, { x: 3, y: 3 })).toBe(TERRAIN.protection[WOODS]);
-    expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(TERRAIN.protection[0]! * BUILDING.protection[HQ]!);
+    expect(tileProtection(s, { x: 0, y: 0 })).toBe(defaultContent().plainTerrain.protection);
+    expect(tileProtection(s, { x: 3, y: 3 })).toBe(terrainNamed('Woods').protection);
+    expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(defaultContent().plainTerrain.protection * defaultContent().hq.protection);
     for (const pos of [
       { x: 0, y: 0 },
       { x: 3, y: 3 },
@@ -69,7 +69,7 @@ describe('ayudas de reglas', () => {
     const art = newUnit(s, ARTILLERY, 0, { x: 20, y: 20 });
     const zone = attackZone(s, art, moveRange(s, art))!;
     expect(zone.at({ x: 20, y: 20 })).toBe(false);
-    expect(zone.at({ x: 20, y: 20 + UNIT.alcance[ARTILLERY]! })).toBe(true);
+    expect(zone.at({ x: 20, y: 20 + ARTILLERY.attack!.maxRange })).toBe(true);
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {
@@ -82,7 +82,7 @@ describe('ayudas de reglas', () => {
     expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
-    const building = { type: 0, owner: 1 as const, x: 4, y: 4, capture: null };
+    const building = { type: 'City', owner: 1 as const, x: 4, y: 4, capture: null };
     expect(captureEvent(unit, building, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
       uid: unit.uid,
@@ -110,13 +110,13 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 3 as 2 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 4 as 3 })],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',
       () => {
         const s = sample();
-        s.map[0]![0] = 999;
+        s.map[0]![0] = 'Lava';
         return serialize(s);
       },
     ],
@@ -156,7 +156,7 @@ describe('partidas guardadas', () => {
       'edificio de tipo desconocido',
       () => {
         const s = sample();
-        s.buildings[0]!.type = 99;
+        s.buildings[0]!.type = 'Castle';
         return serialize(s);
       },
     ],

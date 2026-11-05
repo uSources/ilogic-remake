@@ -1,15 +1,16 @@
 /**
  * Lo que puede hacer la IA con una unidad, paso a paso: retirarse a curarse, atacar (o acercarse),
  * capturar, avanzar y moverse al azar. Cada paso devuelve true si ha usado la unidad.
- * Los usan el turno de la IA (unitTurn) y las ordenes del jugador (standingOrderTurn).
+ * Los usan el turno de la IA (unitTurn) y las ordenes con destino (standingOrderTurn).
  */
 
-import { tablesOf, weightsOf } from '../gameContent';
+import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
+import { unitTypeOf, isHq, weightsOf } from '../gameContent';
 import { diamond, manhattan, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canCapture, capture, captureEvent } from '../rules/capture';
 import { attackEvent, canDamage, fireOrigins, inAttackRange } from '../rules/combat';
-import { teamsInZone } from '../rules/control';
+import { isContested } from '../rules/control';
 import { moveEvent, reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
 import { merge, mergeTargets } from '../rules/transport';
@@ -66,7 +67,7 @@ export function* retreat(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange):
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Opciones de tryAttack para las ordenes del jugador: `zone` limita a que enemigos se mira (defender),
+ * Opciones de tryAttack para las ordenes con destino: `zone` limita a que enemigos se mira (defender),
  * `chase: false` no persigue a nadie fuera de tiro y `stay` solo dispara desde donde esta.
  */
 export interface AttackOpts {
@@ -89,7 +90,7 @@ function shotScore(s: GameState, ai: AiCtx, unit: Unit, target: Unit, from: Pos)
   const score = attackScore(s, ai, unit, target, from);
   // [CAMBIO] Fuego concentrado: el objetivo del plan del turno vale mas (lo rematan entre varias).
   const isPlannedTarget = ai.group && ai.plan.get(unit.uid) === target.uid;
-  return isPlannedTarget ? score + weightsOf(s).FOCUSFIRE * unitValue(s, target.type) : score;
+  return isPlannedTarget ? score + weightsOf(s).FOCUSFIRE * unitValue(s, target) : score;
 }
 
 /**
@@ -100,7 +101,7 @@ function shotScore(s: GameState, ai: AiCtx, unit: Unit, target: Unit, from: Pos)
 function bestShot(s: GameState, ai: AiCtx, unit: Unit, enemies: Unit[], origins: Pos[]): Shot | null {
   const shots = enemies.flatMap((target) =>
     origins
-      .filter((from) => inAttackRange(s, unit.type, from, target))
+      .filter((from) => inAttackRange(s, unit, from, target))
       .map((from) => ({ from, target, score: shotScore(s, ai, unit, target, from) })),
   );
   return maxBy(
@@ -132,7 +133,7 @@ export function* tryAttack(
 ): Generator<GameEvent, boolean> {
   const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
-  if (!tablesOf(s).UNIT.canfight[unit.type] || !unit.canFire) return false;
+  if (!(unitTypeOf(s, unit).attack !== null) || !unit.canFire) return false;
   const reach = strikeReach(s, unit);
   const enemies = visibleFoes(s, ai.me).filter((enemy) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy)));
   if (!enemies.length) return false;
@@ -167,19 +168,19 @@ function captureGoal(s: GameState, ai: AiCtx, unit: Unit): Pos | null {
   const steps = stepsFrom(s, ai, unit);
   const isCapturable = (tile: Pos): boolean => {
     const building = buildingAt(s, tile);
-    if (!building || building.owner === ai.me || !visible.at(tile)) return false;
+    if (!building || isAlliedOwner(s, building.owner, ai.me) || !visible.at(tile)) return false;
     const occupant = unitAt(s, tile);
-    if (occupant && occupant.team === ai.me) return false;
+    if (occupant && areAllied(s, occupant.team, ai.me)) return false;
     return steps(tile) < Infinity;
   };
-  const headStart = (tile: Pos): number => (buildingAt(s, tile)!.type === tablesOf(s).HQ ? HQ_CAPTURE_HEAD_START : 0);
+  const headStart = (tile: Pos): number => (isHq(s, buildingAt(s, tile)!) ? HQ_CAPTURE_HEAD_START : 0);
   const candidates = [...diamond(mapGrid(s), unit, 1, weightsOf(s).MAXCAPTDIST)].filter(isCapturable);
   return minBy(candidates, (tile) => steps(tile) - headStart(tile));
 }
 
 /** Capturar lo de debajo o ir a capturar el edificio ajeno mas cercano (solo las que capturan). */
 export function* tryCapture(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
-  if (!tablesOf(s).UNIT.cancapt[unit.type]) return false;
+  if (!unitTypeOf(s, unit).canCapture) return false;
   if (yield* captureHere(s, unit)) return true;
   const goal = captureGoal(s, ai, unit);
   if (!goal) return false;
@@ -200,8 +201,8 @@ function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
   if (s.controlPoints?.some((point) => samePos(point, goal))) return weightsOf(s).CONTROLPOINT;
   const building = buildingAt(s, goal);
-  if (!building || !tablesOf(s).UNIT.cancapt[unit.type] || building.owner === null) return 0;
-  return building.type === tablesOf(s).HQ ? weightsOf(s).CAPTUREHQ : weightsOf(s).CAPTUREOWNED;
+  if (!building || !unitTypeOf(s, unit).canCapture || building.owner === null) return 0;
+  return isHq(s, building) ? weightsOf(s).CAPTUREHQ : weightsOf(s).CAPTUREOWNED;
 }
 
 /**
@@ -211,13 +212,13 @@ function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
  */
 function advanceGoals(s: GameState, ai: AiCtx, unit: Unit): Pos[] {
   const visible = visibility(s, ai.me);
-  const isOpenPoint = (point: ControlPoint): boolean => (point.owner !== ai.me || teamsInZone(s, point).size > 1) && !unitAt(s, point);
+  const isOpenPoint = (point: ControlPoint): boolean =>
+    (!isAlliedOwner(s, point.owner, ai.me) || isContested(s, point)) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
-  if (tablesOf(s).UNIT.cancapt[unit.type]) return [...s.buildings.filter((building) => building.owner !== ai.me), ...points];
+  if (unitTypeOf(s, unit).canCapture) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
-    other.team !== ai.me && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
-  const isEnemyHq = (building: Building): boolean =>
-    building.owner !== ai.me && building.owner !== null && building.type === tablesOf(s).HQ;
+    isHostile(s, other.team, ai.me) && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
+  const isEnemyHq = (building: Building): boolean => isHostileOwner(s, building.owner, ai.me) && isHq(s, building);
   return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
 }
 
@@ -242,7 +243,7 @@ export function* advance(s: GameState, ai: AiCtx, unit: Unit, range: MoveRange):
   if (!nearest) return false;
   const goal = nearest.goal;
   // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).
-  const wouldBlock = !tablesOf(s).UNIT.cancapt[unit.type] && !!buildingAt(s, goal);
+  const wouldBlock = !unitTypeOf(s, unit).canCapture && !!buildingAt(s, goal);
   const destination = bestMoveToward(s, ai, unit, goal, range, wouldBlock);
   if (!destination) return false;
   yield* doMove(s, unit, destination, range);

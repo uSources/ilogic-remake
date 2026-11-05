@@ -1,42 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { TERRAIN_TYPES } from '@core/content';
-import { unitLabel, settings } from '../src/settings';
+import { findEntry } from '@core/content';
+import { nameOf, settings } from '../src/settings';
 
 /**
- * Las tablas de datos van por indice de unidad, edificio y terreno: al añadir uno, todas tienen que
- * crecer a la vez (skill nueva-unidad). Este test dice cual falta.
+ * Los tipos del contenido se resuelven al cargarlo: cada referencia por id (fabricas, reparacion,
+ * transporte, acierto, graficos de 2013) apunta a algo que existe. Este test dice cual falta.
  */
-describe('tablas de datos', () => {
-  const tables = defaultContent().tables;
-  const unitCount = tables.UNIT_NAMES.length,
-    buildingCount = tables.BUILDING_NAMES.length,
-    terrainCount = TERRAIN_TYPES;
+describe('tipos del contenido resueltos', () => {
+  const content = defaultContent();
 
-  it.each(Object.entries(tables.UNIT))('UNIT.%s tiene un valor por unidad', (_k, row) => {
-    expect((row as readonly unknown[]).length).toBe(unitCount);
-  });
-
-  it.each([
-    ['HEALER', unitCount, buildingCount],
-    ['SPAWNER', unitCount, buildingCount],
-    ['CAN_CARRY', unitCount, unitCount],
-    ['POWER', unitCount, unitCount],
-    ['UNIT_HEALS', unitCount, unitCount],
-    ['UNIT_TERRAIN_PREFIX', unitCount, terrainCount],
-    ['BUILDING_TERRAIN_PREFIX', buildingCount, terrainCount],
-  ] as const)('%s es de %i x %i', (name, rows, cols) => {
-    const table = (tables as unknown as Record<string, readonly (readonly unknown[])[]>)[name]!;
-    expect(table.length).toBe(rows);
-    for (const row of table) expect(row.length).toBe(cols);
+  it('lo que nombra cada unidad existe', () => {
+    for (const unitType of content.units.list) {
+      for (const building of [...unitType.builtAt, ...unitType.repairedAt])
+        expect(findEntry(content.buildings, building), unitType.id).toBeDefined();
+      for (const other of [...unitType.carries, ...Object.keys(unitType.heals), ...Object.keys(unitType.attack?.hitChance ?? {})])
+        expect(findEntry(content.units, other), unitType.id).toBeDefined();
+      for (const terrain of Object.keys(unitType.classicSprite)) expect(findEntry(content.terrain, terrain), unitType.id).toBeDefined();
+      expect(unitType.cargoSlots > 0 || unitType.carries.length === 0, unitType.id).toBe(true);
+    }
   });
 
   it('cada unidad tiene nombre en español e ingles y alguien la fabrica', () => {
     for (const lang of ['es', 'en'] as const) {
       settings.lang = lang;
-      for (let i = 0; i < unitCount; i++) expect(unitLabel(defaultContent(), i), `${tables.UNIT_NAMES[i]} (${lang})`).not.toBe('?');
+      for (const unitType of content.units.list) expect(nameOf(unitType), `${unitType.id} (${lang})`).not.toBe('');
     }
     settings.lang = 'es';
-    for (let i = 0; i < unitCount; i++) expect(tables.SPAWNER[i]!.some(Boolean), `${tables.UNIT_NAMES[i]} no se puede comprar`).toBe(true);
+    for (const unitType of content.units.list) expect(unitType.builtAt.length, `${unitType.id} no se puede comprar`).toBeGreaterThan(0);
   });
 });

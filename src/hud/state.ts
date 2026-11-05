@@ -1,4 +1,6 @@
-import type { GameStats, RulesConfig } from '../core/model';
+import type { RulesConfig } from '../core/model';
+import type { EndStatsVM } from './vm/end';
+import type { BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
@@ -45,13 +47,14 @@ export interface UIState {
   dayInfo: DayInfoVM | null;
   /** Laboratorio de animaciones (null en una partida normal). */
   lab: LabVM | null;
-  /** General del jugador. */
+  /** General del equipo que mira. */
   general: GeneralVM | null;
-  /** General de la IA (solo para verlo). */
+  /** General del primer enemigo que tenga uno (solo para verlo). */
   enemyGeneral: GeneralVM | null;
   buildings: number;
   day: number;
-  turn: 'player' | 'enemy';
+  /** De quien es el turno, visto por quien mira: suyo, de un aliado o de un enemigo. */
+  turn: Side;
   busy: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;
@@ -84,13 +87,15 @@ export interface UIState {
   end: {
     won: boolean;
     day: number;
-    stats: GameStats | null;
+    /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
+    stats: EndStatsVM | null;
     reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
-    score: [number, number] | null;
-    /** Valor de los ejercitos dia a dia [jugador, IA]. */
-    chart: [number, number][] | null;
+    /** Puntos de su alianza y de la mejor enemiga. */
+    score: BySide | null;
+    /** Valor de los ejercitos dia a dia (su alianza y sus enemigos). */
+    chart: BySide[] | null;
     /** Mision: mejor marca en dias y si se acaba de batir. */
     best: number | null;
     newBest: boolean;
@@ -148,7 +153,7 @@ export const initialState: UIState = {
   commandPoints: null,
   buildings: 0,
   day: 1,
-  turn: 'player',
+  turn: 'own',
   busy: false,
   menu: null,
   forecast: null,

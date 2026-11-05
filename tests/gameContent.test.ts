@@ -1,15 +1,16 @@
+import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { aiTurn } from '@core/ai';
-import { loadContent, readContentFiles, type GameContent } from '@core/content';
+import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
-import { cloneState, tablesOf } from '@core/gameContent';
+import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/geom';
 import { generateGame } from '@core/mapgen';
-import { buyOptions, endRound } from '@core/rules';
+import { buyOptions } from '@core/rules';
+import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
-import type { GameEvent, GameState, SavedGameState } from '@core/model';
+import type { GameState, SavedGameState } from '@core/model';
 
 /** Contenido del juego con los tanques al doble de precio (como una variante de equilibrio). */
 function expensiveTanks(): GameContent {
@@ -18,21 +19,10 @@ function expensiveTanks(): GameContent {
   return loadContent({ ...files, units });
 }
 
-const TANK = defaultContent().tables.UNIT_NAMES.indexOf('Tank');
+const TANK = unitTypeNamed('Tank');
 
 function newMatch(content: GameContent): GameState {
-  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content });
-}
-
-/** Juega `days` rondas IA contra IA de cada partida, alternando un turno de cada una. */
-function playInterleaved(games: GameState[], days: number): GameEvent[][] {
-  const rngs = games.map(() => seededRng(11));
-  const events: GameEvent[][] = games.map(() => []);
-  for (let day = 0; day < days; day++) {
-    for (const team of [0, 1] as const) games.forEach((s, i) => events[i]!.push(...aiTurn(s, rngs[i]!, team)));
-    games.forEach((s) => endRound(s));
-  }
-  return events;
+  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content, teams: duel('ai', 'ai') });
 }
 
 describe('contenido de cada partida', () => {
@@ -40,17 +30,18 @@ describe('contenido de cada partida', () => {
     const variant = expensiveTanks();
     const normal = newMatch(defaultContent());
     const expensive = newMatch(variant);
-    const factory = (s: GameState) => s.buildings.find((building) => buyOptions(s, building).some((option) => option.type === TANK))!;
+    const factory = (s: GameState) =>
+      s.buildings.find((building) => buyOptions(s, building).some((option) => option.unitType.id === 'Tank'))!;
 
-    const tankCost = (s: GameState) => buyOptions(s, factory(s)).find((option) => option.type === TANK)!.cost;
+    const tankCost = (s: GameState) => buyOptions(s, factory(s)).find((option) => option.unitType.id === 'Tank')!.cost;
     expect(tankCost(expensive)).toBe(2 * tankCost(normal));
 
-    const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6);
+    const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6, 11);
     // Jugar las dos a la vez no cambia ninguna: la normal hace lo mismo que jugada sola.
-    const [alone] = playInterleaved([newMatch(defaultContent())], 6);
+    const [alone] = playInterleaved([newMatch(defaultContent())], 6, 11);
     expect(normalEvents).toEqual(alone);
     expect(expensiveEvents).not.toEqual(normalEvents);
-    expect(tablesOf(normal).UNIT.cost[TANK]).toBe(defaultContent().tables.UNIT.cost[TANK]);
+    expect(entryOf(normal.content.units, 'Tank', 'unidad').cost).toBe(TANK.cost);
     expect(expensive.content).toBe(variant);
   });
 
@@ -67,7 +58,7 @@ describe('contenido de cada partida', () => {
     const s = newMatch(defaultContent());
     const write = () => {
       // @ts-expect-error las tablas del contenido no se pueden cambiar
-      s.content.tables.UNIT.cost[0] = 1;
+      s.content.tables.unitTypeNamed('Soldier').cost = 1;
     };
     const rename = () => {
       // @ts-expect-error ni los ficheros

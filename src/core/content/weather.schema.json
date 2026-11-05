@@ -43,6 +43,10 @@
             },
             "description": "Nombre que ve el jugador."
           },
+          "clear": {
+            "type": "boolean",
+            "description": "El tiempo neutro (vision 0, move vacio, hitChance 1), con el que empiezan las partidas. Exactamente uno."
+          },
           "vision": {
             "$ref": "#/definitions/delta",
             "description": "Cambio del radio de vision de las unidades (negativo = ven menos; nunca baja de 1). Solo se nota con niebla."

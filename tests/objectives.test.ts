@@ -4,10 +4,9 @@ import { settings } from '../src/settings';
 import { defaultContent } from '@core/content/default';
 import { buildMission, MISSIONS } from '@core/missions';
 import { measureObjective, objectiveOutcome } from '@core/objectives';
-import { objectiveProgress, outcome } from '@core/rules';
+import { isDefeated, objectiveProgress, outcome } from '@core/rules';
+import { teamIds } from '@core/teams';
 import type { GameState } from '@core/model';
-
-const { HQ } = defaultContent().tables;
 
 afterEach(() => {
   settings.lang = 'es';
@@ -55,19 +54,15 @@ function statesOf(id: string): GameState[] {
 
 /** Perder la Base o quedarse sin nada se mira antes que el objetivo (en `outcome`). */
 function isAnyoneDefeated(s: GameState): boolean {
-  return ([0, 1] as const).some(
-    (team) =>
-      !s.buildings.some((building) => building.owner === team && building.type === HQ) ||
-      !(s.units.some((unit) => unit.team === team) || s.buildings.some((building) => building.owner === team)),
-  );
+  return teamIds(s).some((team) => isDefeated(s, team));
 }
 
 describe('objetivos de mision', () => {
   it.each(MISSIONS.map((mission) => [mission.id] as const))('%s: mismo resultado y progreso que las reglas', (id) => {
     for (const s of statesOf(id)) {
-      const objective = s.mission!.objective;
-      expect(measureObjective(s, objective)).toEqual(objectiveProgress(s));
-      if (objective.kind !== 'hq' && !isAnyoneDefeated(s)) expect(objectiveOutcome(s, objective)).toBe(outcome(s));
+      const { objective, team } = s.mission!;
+      expect(measureObjective(s, team, objective)).toEqual(objectiveProgress(s));
+      if (objective.kind !== 'hq' && !isAnyoneDefeated(s)) expect(objectiveOutcome(s, team, objective)).toBe(outcome(s, team));
     }
   });
 

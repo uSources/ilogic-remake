@@ -5,17 +5,16 @@ import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/geom';
 import { attackEvent, attackFull, endRound, hitChance, newUnit, unhealable } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, savedByVersion1 } from './helpers';
-
-const { UNIT, HEALER, BUILDING } = defaultContent().tables;
+import { blankState, savedByVersion1, unitTypeNamed, buildingTypeNamed } from './helpers';
+import { teamState } from '@core/teams';
 
 /**
  * [CAMBIO] Reglas para que atacar salga a cuenta: botin, flanqueo y sin cura bajo fuego
  * (la veteranía mas fuerte esta en modern.test.ts).
  */
-const SOLDIER = 0,
-  TANK = 1,
-  CITY = 0;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  CITY = 'City';
 
 describe('botin', () => {
   it('quien destruye cobra parte del precio de lo destruido', () => {
@@ -23,12 +22,12 @@ describe('botin', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     defender.life = 1;
-    const before = s.funds[0];
+    const before = teamState(s, 0).funds;
     const event = attackEvent(s, attacker, defender, seededRng(1));
     expect(event.killed).toBe(true);
-    expect(event.bounty).toBe(Math.round(UNIT.cost[SOLDIER]! * 0.25));
-    expect(s.funds[0]).toBe(before + event.bounty!);
-    expect(s.funds[1]).toBe(5000);
+    expect(event.bounty).toBe(Math.round(SOLDIER.cost * 0.25));
+    expect(teamState(s, 0).funds).toBe(before + event.bounty!);
+    expect(teamState(s, 1).funds).toBe(5000);
   });
 
   it('si cae el atacante en el contraataque, cobra el defensor', () => {
@@ -38,7 +37,7 @@ describe('botin', () => {
     attacker.life = 1;
     const result = attackFull(s, attacker, defender, seededRng(1));
     expect(result.attackerKilled).toBe(true);
-    expect(s.funds[1]).toBe(5000 + Math.round(UNIT.cost[SOLDIER]! * 0.25));
+    expect(teamState(s, 1).funds).toBe(5000 + Math.round(SOLDIER.cost * 0.25));
   });
 
   it('sin la regla, ni dinero ni campo en el evento', () => {
@@ -48,7 +47,7 @@ describe('botin', () => {
     defender.life = 1;
     const event = attackEvent(s, attacker, defender, seededRng(1));
     expect(event.bounty).toBeUndefined();
-    expect(s.funds).toEqual([5000, 5000]);
+    expect(s.teams.map((team) => team.funds)).toEqual([5000, 5000]);
   });
 });
 
@@ -83,7 +82,7 @@ describe('sin cura bajo fuego', () => {
     const attacker = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
     // Un soldado se cura en una ciudad propia.
-    expect(HEALER[SOLDIER]![CITY]).toBe(true);
+    expect(SOLDIER.repairedAt).toContain('City');
     return { s, attacker, defender };
   };
 
@@ -99,7 +98,7 @@ describe('sin cura bajo fuego', () => {
     // La noche siguiente, si nadie le ataca, si se cura.
     expect(unhealable(s, defender)).toBe(false);
     endRound(s);
-    expect(defender.life).toBe(Math.min(100, hurt + BUILDING.heals[CITY]!));
+    expect(defender.life).toBe(Math.min(100, hurt + buildingTypeNamed('City').heals));
   });
 
   it('sin la regla se cura como siempre', () => {
@@ -108,7 +107,7 @@ describe('sin cura bajo fuego', () => {
     attackFull(s, attacker, defender, seededRng(1));
     const hurt = defender.life;
     endRound(s);
-    expect(defender.life).toBe(Math.min(100, hurt + BUILDING.heals[CITY]!));
+    expect(defender.life).toBe(Math.min(100, hurt + buildingTypeNamed('City').heals));
   });
 });
 

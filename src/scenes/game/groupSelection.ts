@@ -3,11 +3,12 @@
  * unidad elegida para moverla o un grupo (recuadro, «Elegir varias», escuadra o tecla de grupo), el
  * panel de lo elegido y las teclas de grupo con numero.
  */
+import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { unitById } from '../../core/rules';
 import { addToGroup, setGroup, squadByKey, squadUnits } from '../../core/squads';
 import { minBy } from '../../core/util/pick';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { GroupMode } from '../../controls/inputCommands';
 import { DOUBLE_MS } from '../../controls/pointer';
 import { EMPTY, sameSelection, type Selection } from '../../controls/selection';
@@ -22,6 +23,8 @@ export interface SelectionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   readonly phase: Phase;
   /** La unidad elegida para moverla (o en su menu). */
   readonly selected: Unit | null;
@@ -64,7 +67,7 @@ export class GroupSelection {
 
   /** Se puede elegir para un grupo: propia, viva y en el mapa (aunque ya se haya movido: para ordenes). */
   selectable(unit: Unit): boolean {
-    return unit.team === 0 && unit.carrier === null && unit.life > 0;
+    return unit.team === this.host.viewer && unit.carrier === null && unit.life > 0;
   }
 
   /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */
@@ -152,22 +155,27 @@ export class GroupSelection {
     const host = this.host;
     if (!this.canPickGroups()) return;
     if (mode === 'select') {
-      const squad = squadByKey(host.state, group);
+      const squad = squadByKey(host.state, host.viewer, group);
       if (squad) this.pickSquad(squad.id);
       return;
     }
     const units = this.units();
     if (!units.length) return showToast(t('groupNone'));
-    const squad = mode === 'set' ? setGroup(host.state, units, group) : addToGroup(host.state, units, group);
+    const squad = mode === 'set' ? setGroup(host.state, host.viewer, units, group) : addToGroup(host.state, host.viewer, units, group);
     if (squad) showToast(`${t(mode === 'set' ? 'groupSet' : 'groupAdded')} ${group} · ${squad.name}`);
     host.refresh();
+  }
+
+  /** Puesto del tipo de la unidad en units.json (el orden del panel). */
+  private typeOrder(unit: Unit): number {
+    return this.host.state.content.units.list.indexOf(unitTypeOf(this.host.state, unit));
   }
 
   /** [CAMBIO] Las elegidas en el orden del panel: por tipo y, dentro, como estan en la partida. */
   pickedInOrder(): Unit[] {
     return this.groupUnits()
       .filter((unit) => this.selectable(unit))
-      .sort((firstUnit, secondUnit) => firstUnit.type - secondUnit.type || firstUnit.uid - secondUnit.uid);
+      .sort((firstUnit, secondUnit) => this.typeOrder(firstUnit) - this.typeOrder(secondUnit) || firstUnit.uid - secondUnit.uid);
   }
 
   /** [CAMBIO] Tab con varias elegidas: llevar el cursor a la siguiente (su ficha se ve abajo). */

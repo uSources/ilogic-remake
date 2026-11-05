@@ -1,8 +1,8 @@
 /**
  * Constantes del juego que no son contenido ni dependen de el: tamaños de mapa y vida maxima.
- * Unidades, edificios, terreno, temas, clima, generales y pesos de la IA son el contenido
+ * Unidades, edificios, terreno, temas, generador de mapas, clima, generales y pesos de la IA son el contenido
  * (src/core/content, ver docs/CONTENIDO.md), que cada partida lleva en `s.content`; las reglas por
- * defecto salen de el (`rulesWith`, rulesConfig.ts) y las tablas del generador estan en mapgenTables.ts.
+ * defecto salen de el (`rulesWith`, rulesConfig.ts).
  */
 
 /** Tamaños de mapa admitidos en los mapas al azar (el tamaño de cada partida sale de su `map`). */

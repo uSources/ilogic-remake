@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { defaultContent } from '@core/content/default';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
@@ -16,11 +15,14 @@ import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
+import { viewerOf } from '../src/scenes/game/matchSetup';
+import { isPlayableOnOneScreen } from '@core/teams';
+import { checkPlayedByAi } from '../src/scenes/game/turns';
 
-const { UNIT_NAMES, HQ } = defaultContent().tables;
+const HQ = hqId();
 
-const type = (name: (typeof UNIT_NAMES)[number]) => UNIT_NAMES.indexOf(name);
+const type = unitTypeNamed;
 const seeAll = () => true;
 
 function plan(s: GameState, unit: Unit): MovePlan {
@@ -55,6 +57,26 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
     expect(intentAt(s, movePlan, { x: 7, y: 5 }, () => false).kind).not.toBe('attack');
   });
 
+  it('con aliados: a un aliado no se le ataca y lo suyo no se captura; lo enemigo y lo neutral, si', () => {
+    const s = blankState({}, [
+      { controller: 'human', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+      { controller: 'ai', alliance: 0 },
+    ]);
+    const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
+    newUnit(s, type('Soldier'), 2, { x: 7, y: 5 });
+    s.buildings.push(
+      { type: 'City', owner: 2, x: 5, y: 6, capture: null },
+      { type: 'City', owner: 1, x: 4, y: 5, capture: null },
+      { type: 'City', owner: null, x: 5, y: 4, capture: null },
+    );
+    const movePlan = plan(s, unit);
+    expect(intentAt(s, movePlan, { x: 7, y: 5 }, seeAll).kind).not.toBe('attack');
+    expect(intentAt(s, movePlan, { x: 5, y: 6 }, seeAll)).toEqual({ kind: 'move', to: { x: 5, y: 6 }, capture: false });
+    expect(intentAt(s, movePlan, { x: 4, y: 5 }, seeAll)).toEqual({ kind: 'move', to: { x: 4, y: 5 }, capture: true });
+    expect(intentAt(s, movePlan, { x: 5, y: 4 }, seeAll)).toEqual({ kind: 'move', to: { x: 5, y: 4 }, capture: true });
+  });
+
   it('el camino sigue el trazado si acaba en el destino, y si no el mas corto', () => {
     const s = blankState();
     const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
@@ -80,6 +102,7 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
 describe('escena: casillas marcadas (game/highlights.ts)', () => {
   const base = (s: GameState): HighlightInput => ({
     s,
+    viewer: 0,
     phase: 'map',
     cursor: { x: 0, y: 0 },
     range: null,
@@ -92,7 +115,7 @@ describe('escena: casillas marcadas (game/highlights.ts)', () => {
     targetArea: () => [],
     group: new Set(),
     inspectUid: null,
-    enemyPlaying: false,
+    othersPlaying: false,
     visible: seeAll,
   });
 
@@ -117,7 +140,7 @@ describe('escena: casillas marcadas (game/highlights.ts)', () => {
 
 describe('escena: linea de ayuda (game/hudParts.ts)', () => {
   it('cambia con la fase y no dice nada mientras anima lo propio', () => {
-    const options = { busy: false, enemyPlaying: false, phase: 'map' as const, ordering: false, inspecting: false };
+    const options = { busy: false, othersPlaying: false, phase: 'map' as const, ordering: false, inspecting: false };
     expect(hintText({ ...options, busy: true })).toBe('');
     expect(hintText(options)).not.toBe(hintText({ ...options, inspecting: true }));
     expect(hintText({ ...options, phase: 'move' })).toBe('');
@@ -135,8 +158,8 @@ describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
     const s = blankState();
     s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
-    expect(endFocus(s, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
-    expect(endFocus(s, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
+    expect(endFocus(s, 0, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+    expect(endFocus(s, 0, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
   });
 });
 
@@ -162,12 +185,13 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
   function setup(s: GameState) {
     const state = { phase: 'map' as Phase, selected: null as Unit | null };
     const nop = () => {};
-    const selection = new GroupSelection({ state: s, phase: 'map', selected: null } as unknown as SelectionHost);
+    const selection = new GroupSelection({ state: s, viewer: 0, phase: 'map', selected: null } as unknown as SelectionHost);
     const orders = new Orders(
       live<OrderHost>({
         scene: { get: () => null as never },
         view: { get: () => null as never },
         state: { get: () => s },
+        viewer: { get: () => 0 },
         phase: { get: () => state.phase, set: (kind) => (state.phase = kind) },
         menuSel: { get: () => 0 },
         match: { get: () => 1 },
@@ -238,5 +262,24 @@ describe('escena: tabla de fases (game/phases)', () => {
 
   it('cada accion del registro (controls/actions.ts) tiene quien la cumpla', () => {
     expect(ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
+  });
+});
+
+describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
+  const twoPeople = () => blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
+
+  it('una partida con dos equipos de personas no se juega aqui; con una o ninguna, si', () => {
+    expect(isPlayableOnOneScreen(twoPeople())).toBe(false);
+    expect(() => viewerOf(twoPeople())).toThrow(/solo juega una/);
+    expect(isPlayableOnOneScreen(blankState())).toBe(true);
+    const aiOnly = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
+    expect(isPlayableOnOneScreen(aiOnly)).toBe(true);
+    expect(viewerOf(aiOnly)).toBe(0);
+    expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'human' }]))).toBe(1);
+  });
+
+  it('el turno de otro equipo solo lo juega la IA: si es de una persona, falla', () => {
+    expect(() => checkPlayedByAi(blankState(), 1)).not.toThrow();
+    expect(() => checkPlayedByAi(twoPeople(), 1)).toThrow(/solo juega una persona/);
   });
 });

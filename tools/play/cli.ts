@@ -1,5 +1,5 @@
 /**
- * npm run play -- [--seed 7] [--size 20] [--theme 0] [--fog] [--mission tutorial] [--load partida.json] [--general Brisa] [--enemy-general Brisa]
+ * npm run play -- [--seed 7] [--size 20] [--theme Plains] [--fog] [--mission tutorial] [--load partida.json] [--general Brisa] [--enemy-general Brisa]
  *                 [--script ordenes.txt | -e "move 3 5 6; end; map"]
  * Sin --script ni -e: modo interactivo (una orden por linea; help para la lista).
  * Con ordenes por stdin tambien funciona: echo "map" | npm run play --silent
@@ -17,7 +17,7 @@ const num = (name: string) => (opt(name) === undefined ? undefined : Number(opt(
 const session = new Session({
   seed: num('seed'),
   size: num('size'),
-  theme: num('theme'),
+  theme: opt('theme'),
   fog: args.includes('--fog'),
   mission: opt('mission'),
   general: opt('general'),

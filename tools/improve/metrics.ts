@@ -13,6 +13,7 @@ import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { buildReport, DEFAULT_TARGETS, type Report } from '../balance/report';
+import { FIRST_SIDE } from '../balance/play';
 import { runGames } from '../balance/runner';
 import { buildVariant } from '../balance/variant';
 import { defaultContent } from '@core/content/default';
@@ -153,8 +154,8 @@ async function main(): Promise<void> {
   const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, i) => 1 + i);
   const variant = { name, set: {} };
   const setup = buildVariant(variant, defaultContent());
-  const records = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, false, size);
-  const mirrored = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, 0, true, size);
+  const records = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, FIRST_SIDE, false, size);
+  const mirrored = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, FIRST_SIDE, true, size);
   const report = buildReport(
     [...records, ...mirrored],
     { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' },

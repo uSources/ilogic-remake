@@ -1,0 +1,17 @@
+{
+  "$schema": "./mapgen.schema.json",
+  "startingUnits": ["Soldier", "Soldier", "Artillery"],
+  "startingBuildings": ["Base", "City", "Factory", "Oil", "Airport"],
+  "neutralBuildings": {
+    "City": [8, 11],
+    "Oil": [5, 9],
+    "Factory": [3, 5],
+    "Stronghold": [3, 6],
+    "Airport": [1, 3]
+  },
+  "neutralTotal": [24, 30],
+  "spawnRadius": 2,
+  "minSpawnWalkable": 9,
+  "minSpawnBuildable": 6,
+  "minLandTiles": 200
+}

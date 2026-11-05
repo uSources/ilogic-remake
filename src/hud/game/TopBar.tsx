@@ -1,4 +1,4 @@
-import { fmtNum, t } from '../../settings';
+import { fmtNum, t, type TextKey } from '../../settings';
 import { Button } from '../common/buttons';
 import { Icon } from '../common/Icon';
 import { useTipToggle } from '../common/useTipToggle';
@@ -6,8 +6,9 @@ import { WeatherIcon } from '../common/WeatherIcon';
 import type { UIState } from '../state';
 import { ui } from '../store';
 import type { WeatherVM } from '../vm/topBar';
+import type { Side } from '../vm/common';
 import { DayPanel, EconomyPanel } from './Breakdown';
-import { canAct, isPlayerTurn } from './turn';
+import { canAct } from './turn';
 
 /** " · 12/40" con el icono de mando (solo con la regla de puntos de mando). */
 function CommandPoints({ points }: { points: NonNullable<UIState['commandPoints']> }) {
@@ -39,17 +40,19 @@ function Funds({ s }: { s: UIState }) {
   );
 }
 
+/** De quien es el turno: el suyo, el de un aliado (en azul, como lo suyo) o el de un enemigo (en rojo). */
+const TURN_TEXT: Record<Side, TextKey> = { own: 'yourTurn', ally: 'allyTurn', enemy: 'enemyTurn' };
+
 /** Dia (y limite), de quien es el turno y el clima; al pasar por encima o tocarlo, el desglose. */
 function Day({ s }: { s: UIState }) {
   const [isOpen, toggle, close] = useTipToggle();
-  const mine = isPlayerTurn(s);
   return (
     <div class={`day has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
       <span class="d">
         {t('day')} {s.day}
         {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
       </span>
-      <span class={`t ${mine ? '' : 'enemy'}`}>{mine ? t('yourTurn') : t('enemyTurn')}</span>
+      <span class={`t ${s.turn === 'enemy' ? 'enemy' : ''}`}>{t(TURN_TEXT[s.turn])}</span>
       {s.weather && <WeatherChip weather={s.weather} />}
       {s.dayInfo && <DayPanel dayInfo={s.dayInfo} />}
     </div>

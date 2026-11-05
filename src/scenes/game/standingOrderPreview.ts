@@ -3,7 +3,7 @@
  * la partida que pueda cambiarla (unidades, edificios, dia); mover el cursor solo cambia cuales se dibujan.
  */
 import { previewStandingOrders, type StandingOrderIntent } from '../../core/ai';
-import type { GameState } from '../../core/model';
+import type { GameState, TeamId } from '../../core/model';
 
 export class StandingOrderPreview {
   /** Prevision y la firma de la partida con la que se calculo. */
@@ -13,12 +13,13 @@ export class StandingOrderPreview {
     this.cache = null;
   }
 
-  /** Lo que hara cada unidad del jugador con orden al terminar el turno (por uid). */
-  get(s: GameState): Map<number, StandingOrderIntent> {
+  /** Lo que hara cada unidad de `team` con orden al terminar el turno (por uid). */
+  get(s: GameState, team: TeamId): Map<number, StandingOrderIntent> {
     const sig = JSON.stringify([
+      team,
       s.day,
       s.weather,
-      s.generals?.map((generalState) => generalState?.reveal ?? null),
+      s.teams.map((teamState) => teamState.general?.reveal ?? null),
       s.units.map((unit) => [
         unit.uid,
         unit.type,
@@ -38,7 +39,7 @@ export class StandingOrderPreview {
       s.squads?.map((squad) => [squad.id, squad.standingOrder]),
       s.buildings.map((building) => [building.owner, building.capture]),
     ]);
-    if (this.cache?.sig !== sig) this.cache = { sig, map: previewStandingOrders(s, 0) };
+    if (this.cache?.sig !== sig) this.cache = { sig, map: previewStandingOrders(s, team) };
     return this.cache.map;
   }
 }

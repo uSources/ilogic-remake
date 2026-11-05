@@ -3,12 +3,12 @@
  * pantalla con el resumen y sus botones (volver a jugar, siguiente mision, menu...).
  */
 import type Phaser from 'phaser';
-import { tablesOf } from '../../core/gameContent';
+import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { score } from '../../core/rules';
-import { sampleArmy, statsOf } from '../../core/stats';
-import type { GameState, Pos, Team } from '../../core/model';
+import { sampleArmy } from '../../core/stats';
+import { enemiesOf } from '../../core/teams';
+import type { GameState, Pos, TeamId } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
 import { ui, type UIState } from '../../hud/store';
@@ -17,6 +17,7 @@ import { settings, t } from '../../settings';
 import { burst, center, COLORS, reducedMotion, tileFlash } from '../../ui/fx';
 import type { MapView } from '../../ui/mapView';
 import { PAL } from '../../ui/palette';
+import { armyChartVM, endScoreVM, endStatsVM } from '../../ui/hudModels';
 import { END_LABEL, type EndButton, type GameStartData } from './types';
 
 export type EndReason = NonNullable<UIState['end']>['reason'];
@@ -54,14 +55,18 @@ export function endButtonsFor(mission: MissionDef | undefined, won: boolean): En
   return nextMission(mission) ? ['next', 'retry', 'menu'] : ['retry', 'menu'];
 }
 
-/** Donde mirar al acabar. `lastAt`: ultima casilla con un combate o una captura. */
-export function endFocus(s: GameState, won: boolean, reason: EndReason, lastAt: Pos | null): Pos {
-  const hqOf = (team: Team) => s.buildings.find((building) => building.type === tablesOf(s).HQ && building.owner === team);
+/** Donde mirar al acabar (para el equipo que mira, `viewer`). `lastAt`: ultima casilla con un combate o una captura. */
+export function endFocus(s: GameState, viewer: TeamId, won: boolean, reason: EndReason, lastAt: Pos | null): Pos {
+  const hqOf = (team: TeamId) => s.buildings.find((building) => isHq(s, building) && building.owner === team);
   const objective = s.mission?.objective;
   if (reason === 'objective' && objective?.kind === 'escort') return objective.to;
   const endedByAMove = reason === 'hq' || reason === 'wipeout' || reason === 'objective';
   if (endedByAMove && lastAt) return lastAt;
-  const hq = hqOf(0) ?? hqOf(1);
+  const hq =
+    hqOf(viewer) ??
+    enemiesOf(s, viewer)
+      .map(hqOf)
+      .find((found) => found !== undefined);
   if (!won && hq) return hq;
   const map = mapGrid(s);
   return lastAt ?? hq ?? { x: Math.floor(map.width / 2), y: Math.floor(map.height / 2) };
@@ -72,6 +77,8 @@ export interface EndHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   /** Partida en curso (las esperas comprueban que no ha cambiado). */
   readonly match: number;
   readonly ended: boolean;
@@ -111,7 +118,7 @@ export class EndOfMatch {
     hideMatchPanels();
 
     const match = host.match;
-    const focus = endFocus(s, won, reason, host.lastAt);
+    const focus = endFocus(s, host.viewer, won, reason, host.lastAt);
     if (!(await this.panTo(focus, match))) return;
     this.celebrate(won, focus);
     await host.wait(reducedMotion() ? CELEBRATION_REDUCED_MS : CELEBRATION_MS);
@@ -159,17 +166,17 @@ export class EndOfMatch {
     const s = this.host.state;
     this.buttons = endButtonsFor(mission, won);
     this.selected = 0;
-    const matchStats = statsOf(s);
+    const viewer = this.host.viewer;
     ui.set({
       screen: 'end',
       end: {
         won,
         day: s.day,
-        stats: matchStats,
+        stats: endStatsVM(s, viewer),
         reason,
-        score: [score(s, 0), score(s, 1)],
+        score: endScoreVM(s, viewer),
         mission: mission ? mission.title[settings.lang] : null,
-        chart: matchStats.army && matchStats.army.length > 1 ? matchStats.army : null,
+        chart: armyChartVM(s, viewer),
         best: mission ? (won ? bestDays(mission.id) : bestBefore) : null,
         newBest: !!mission && won && (bestBefore === null || s.day < bestBefore),
         buttons: this.buttons.map((id) => ({ id, label: t(END_LABEL[id]) })),

@@ -18,7 +18,7 @@ export function extendTrail(s: GameState, unit: Unit, range: MoveRange, block: G
   const backIndex = current.findIndex((step) => samePos(step, hovered));
   if (backIndex >= 0) return current.slice(0, backIndex + 1);
   const end = current[current.length - 1]!;
-  const movement = movementOf(s, unit.type);
+  const movement = movementOf(s, unit);
   const canExtend =
     manhattan(end, hovered) === 1 &&
     canWalk(s, hovered, movement) &&

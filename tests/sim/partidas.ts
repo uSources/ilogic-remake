@@ -2,7 +2,8 @@ import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
 import { createGame, saveContext } from '@core/defaultGames';
-import { endRound, outcome } from '@core/rules';
+import { endRound, isMatchOver, turnTakers } from '@core/rules';
+import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { defaultContent } from '@core/content/default';
@@ -30,11 +31,11 @@ export function checkInvariants(s: GameState): void {
 export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
-    const s = createGame(rng, {});
-    while (outcome(s) === 'playing' && s.day <= 60) {
-      for (const team of [0, 1] as const) {
-        for (const _ of aiTurn(s, rng, team)) if (outcome(s) !== 'playing') break;
-        if (outcome(s) !== 'playing') break;
+    const s = createGame(rng, { teams: duel('ai', 'ai') });
+    while (!isMatchOver(s) && s.day <= 60) {
+      for (const team of turnTakers(s)) {
+        for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;
+        if (isMatchOver(s)) break;
       }
       endRound(s);
       checkInvariants(s);

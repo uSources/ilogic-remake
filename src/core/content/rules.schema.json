@@ -43,17 +43,17 @@
         "initialFunds": {
           "type": "integer",
           "minimum": 0,
-          "description": "Dinero inicial de cada bando."
+          "description": "Dinero inicial de cada equipo."
         },
         "maxUnits": {
           "type": "integer",
           "minimum": 0,
-          "description": "Unidades maximas por bando."
+          "description": "Unidades maximas por equipo."
         },
         "commandPoints": {
           "type": ["integer", "null"],
           "minimum": 1,
-          "description": "Puntos de mando por bando: cada unidad ocupa los de su campo command (null = sin limite de puntos)."
+          "description": "Puntos de mando por equipo: cada unidad ocupa los de su campo command (null = sin limite de puntos)."
         },
         "upkeep": {
           "type": "number",
@@ -155,7 +155,7 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 6,
-          "description": "Puntos de control en los mapas al azar (0 = ninguno): zonas que dan dinero cada ronda a su dueño, solo si no hay unidades de los dos bandos dentro."
+          "description": "Puntos de control en los mapas al azar (0 = ninguno): zonas que dan dinero cada ronda a su dueño, solo si no hay unidades de los dos equipos dentro."
         },
         "controlIncome": {
           "type": "integer",
@@ -173,7 +173,7 @@
     "maxFunds": {
       "type": "integer",
       "minimum": 1,
-      "description": "Dinero maximo que puede tener un bando."
+      "description": "Dinero maximo que puede tener un equipo."
     }
   }
 }

@@ -1,9 +1,8 @@
 /** Consultas sobre las escuadras: sus unidades y cual es cada una. Sin efectos; la base de las demas. */
-import { isPlayer } from '../util/predicates';
-import type { GameState, Squad, Unit } from '../model';
+import type { GameState, Squad, TeamId, Unit } from '../model';
 
-/** Solo las del jugador: las escuadras y las ordenes con destino son suyas (la IA decide sola). */
-export const playerUnits = (units: readonly Unit[]): Unit[] => units.filter((unit) => isPlayer(unit.team));
+/** Solo las de ese equipo: cada escuadra y cada orden con destino son de un equipo. */
+export const unitsOfTeam = (team: TeamId, units: readonly Unit[]): Unit[] => units.filter((unit) => unit.team === team);
 
 /** Unidades de una escuadra (las que caen se quitan de la partida: no hay que filtrarlas). */
 export function squadUnits(s: GameState, id: number): Unit[] {

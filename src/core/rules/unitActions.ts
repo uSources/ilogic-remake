@@ -2,9 +2,9 @@
  * Menu de acciones de una unidad (fase 5): que puede hacer ahora, y esperar.
  */
 
-import { tablesOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { effectiveStandingOrder } from '../squads/standingOrders';
-import { canFight, isCapturer, isPlayer } from '../util/predicates';
+import { canFight, isCapturer } from '../util/predicates';
 import type { GameState, Unit } from '../model';
 import { canCapture } from './capture';
 import { attackTargets } from './combat';
@@ -36,13 +36,12 @@ export interface UnitActions {
 
 /** Algun pasajero se puede bajar a una casilla de al lado. */
 function canUnloadSomeone(s: GameState, transport: Unit): boolean {
-  if (tablesOf(s).UNIT.maxcarry[transport.type]! <= 0) return false;
+  if (unitTypeOf(s, transport).cargoSlots <= 0) return false;
   return cargoUnits(s, transport).some((passenger) => unloadTiles(s, transport, passenger).length > 0);
 }
 
 export function unitActions(s: GameState, unit: Unit): UnitActions {
-  // Las ordenes con destino son solo del jugador: la IA decide sola cada turno.
-  const isMine = isPlayer(unit.team);
+  // Las ordenes con destino las puede recibir cualquier equipo (la escena solo hace el menu del que mira).
   return {
     attack: attackTargets(s, unit).length > 0,
     capture: canCapture(s, unit),
@@ -50,9 +49,9 @@ export function unitActions(s: GameState, unit: Unit): UnitActions {
     supply: canSupply(s, unit),
     wait: true,
     back: unit.canMove,
-    orderToAttack: isMine && canFight(s, unit),
-    orderToCapture: isMine && isCapturer(s, unit),
-    orderToDefend: isMine && canFight(s, unit),
+    orderToAttack: canFight(s, unit),
+    orderToCapture: isCapturer(s, unit),
+    orderToDefend: canFight(s, unit),
     // Orden propia o de su escuadra.
     cancelOrder: !!effectiveStandingOrder(s, unit),
     delete: true,

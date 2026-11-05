@@ -5,7 +5,7 @@
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
 
-import { tablesOf, weightsOf } from '../gameContent';
+import { unitTypeOf, weightsOf } from '../gameContent';
 import { movementOf } from '../rules/queries';
 import { manhattan } from '../geom';
 import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
@@ -15,7 +15,7 @@ import { compareKeys, maxBy, minBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
 
 /** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
-const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, movementOf(s, unit.type));
+const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, movementOf(s, unit));
 
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega). */
 const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, effectiveStandingOrder(s, unit)!.at).at(unit);
@@ -38,7 +38,7 @@ export function standingOrderPlayOrder(s: GameState, units: readonly Unit[]): Un
     if (placed.has(unit)) continue;
     const group = units.filter((other) => other === unit || (!placed.has(other) && sameFormation(s, unit, other)));
     const remaining = new Map(group.map((member) => [member, remainingOf(s, member)]));
-    const speed = (member: Unit) => tablesOf(s).UNIT.mover[member.type]!;
+    const speed = (member: Unit) => unitTypeOf(s, member).move;
     group.sort((firstUnit, secondUnit) => remaining.get(secondUnit)! - remaining.get(firstUnit)! || speed(firstUnit) - speed(secondUnit));
     for (const member of group) placed.add(member);
     ordered.push(...group);
@@ -76,7 +76,7 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
       return {
         unit: mate,
         remaining,
-        afterThisTurn: canStillMove ? Math.max(0, remaining - tablesOf(s).UNIT.mover[mate.type]!) : remaining,
+        afterThisTurn: canStillMove ? Math.max(0, remaining - unitTypeOf(s, mate).move) : remaining,
       };
     })
     .filter((mate) => mate.remaining < Infinity);

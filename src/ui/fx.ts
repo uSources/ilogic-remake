@@ -238,7 +238,7 @@ export async function lifeBar(
   const y = pos.y * TILE - 8;
   const graphics = scene.add.graphics();
   view.addFx(graphics);
-  /** `life`: lo que queda (color del bando); `fading`: hasta donde llega aun lo perdido (blanco). */
+  /** `life`: lo que queda (color de su lado); `fading`: hasta donde llega aun lo perdido (blanco). */
   const draw = (life: number, fading: number) => {
     graphics.clear();
     graphics.fillStyle(PAL.ink, 1);

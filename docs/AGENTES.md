@@ -40,7 +40,7 @@ npm run play -- --seed 7          # interactivo (help)
 ```
 
 Mapa en texto con coordenadas; `+01` unidades propias, `-04` enemigas; `end` hace jugar a la IA y
-pasa el dia; `ai` juega los dos bandos; `state` da el JSON de la partida (se puede abrir en el juego
+pasa el dia; `ai` juega los dos equipos; `state` da el JSON de la partida (se puede abrir en el juego
 con la API de depuracion). Si una orden falla, la linea empieza por `error:` y el programa sale con 1.
 
 ## API de depuracion en el navegador (`window.ilogicDebug`)
@@ -50,7 +50,7 @@ Desde Playwright (`page.evaluate`) o la consola:
 ```js
 await ilogicDebug.ready();                                  // espera al menu
 ilogicDebug.freeze();                                       // sin animaciones (capturas comparables)
-await ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false });
+await ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false });
 await ilogicDebug.startGame({ mission: 'tutorial' });
 await ilogicDebug.startGame({ state: jsonDeUnaPartida });  // p. ej. el de `npm run play ... state`
 ilogicDebug.game();    // { phase, busy, ended, day, cursor }

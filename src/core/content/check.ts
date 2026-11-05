@@ -85,10 +85,6 @@ export function uniqueIds(check: Checker, kind: string, items: readonly { id?: u
   return ids;
 }
 
-/** Fila de prefijos de imagen de 2013 por terreno (vacio si no hay). */
-export const spriteRow = (m: Record<string, string> | undefined, terrainNames: readonly string[]): string[] =>
-  terrainNames.map((t) => m?.[t] ?? '');
-
-export function checkSprites(s: Scope, m: Record<string, string> | undefined, terrainNames: readonly string[]): void {
-  for (const t of Object.keys(m ?? {})) s.known('classicSprite', t, terrainNames, 'el terreno ');
+export function checkSprites(s: Scope, m: Record<string, string> | undefined, terrainIds: ReadonlySet<string>): void {
+  for (const t of Object.keys(m ?? {})) s.known('classicSprite', t, terrainIds, 'el terreno ');
 }

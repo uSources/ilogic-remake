@@ -2,10 +2,11 @@ import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
 import { rank, unhealable } from '../../core/rules';
 import { effectiveStandingOrder, isDetached } from '../../core/squads';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { TILE } from '../../layout';
 import { addLifeTextures, lifeKey } from '../lifeDigits';
 import { PAL, PAL_MAP } from '../palette';
+import { sideOf, type Side } from '../sides';
 import { unitKey } from '../sprites';
 import { frontKey } from '../terrainArt';
 import { stepOf, type AnimatedLayer, type MapClock, type MapLayer } from './layer';
@@ -15,9 +16,9 @@ import type { ViewOptions } from './viewOptions';
 
 /** Hacia donde mira una unidad. Los dibujos azules miran a la derecha y los rojos a la izquierda. */
 export type Facing = 'left' | 'right';
-export const baseFacing = (team: number): Facing => (team === 1 ? 'left' : 'right');
+export const baseFacing = (side: Side): Facing => (side === 'enemy' ? 'left' : 'right');
 /** Hay que voltear el dibujo para que mire a `dir`. */
-export const faceFlip = (team: number, facing: Facing): boolean => facing !== baseFacing(team);
+export const faceFlip = (side: Side, facing: Facing): boolean => facing !== baseFacing(side);
 
 /** Unidad propia sin usar: sube y baja 1 pixel cada BOB_MS (animacion de espera). */
 const BOB_MS = 500;
@@ -46,7 +47,7 @@ interface UnitSprite {
   key: string;
   /** Unidad propia sin usar: se mueve un poco (animacion de espera). */
   idle: boolean;
-  team: 0 | 1;
+  side: Side;
 }
 
 /** Unidades: un sprite persistente por unidad que se ve, que se actualiza en cada `render`. */
@@ -76,17 +77,17 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const badges = Array.from({ length: BADGE_SLOTS }, () => add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
     const root = add.container(0, 0, [img, front, life, cargo, stars, order, ...badges]);
     this.object.add(root);
-    return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, team: 0 };
+    return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, side: 'own' };
   }
 
   sync(s: GameState, options: ViewOptions, newArt: boolean): void {
     const seen = new Set<number>();
     for (const unit of s.units) {
       if (unit.carrier !== null || options.hidden.has(unit.uid) || !options.vis.at(unit)) continue;
-      const key = unitKey(this.scene.textures, s, unit);
+      const key = unitKey(this.scene.textures, s, unit, options.viewer);
       if (!key) continue;
       seen.add(unit.uid);
-      this.update(this.spriteFor(unit.uid, key), unit, s, newArt);
+      this.update(this.spriteFor(unit.uid, key), unit, s, newArt, options.viewer);
     }
     for (const [uid, sprite] of this.units) {
       if (seen.has(uid)) continue;
@@ -112,14 +113,14 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     return existing;
   }
 
-  private update(sprite: UnitSprite, unit: Unit, s: GameState, newArt: boolean): void {
+  private update(sprite: UnitSprite, unit: Unit, s: GameState, newArt: boolean, viewer: TeamId): void {
     sprite.root.setPosition(unit.x * TILE, unit.y * TILE);
-    sprite.team = unit.team;
-    sprite.img.setFlipX(faceFlip(unit.team, this.facingOf(unit.uid, unit.team)));
+    sprite.side = sideOf(s, viewer, unit.team);
+    sprite.img.setFlipX(faceFlip(sprite.side, this.facingOf(unit.uid, sprite.side)));
     this.updateTerrainFront(sprite, newArt ? frontKey(s, unit) : null);
     updateLifeDigit(sprite, unit.life);
     this.updateMarks(sprite, unit, s);
-    sprite.idle = unit.team === 0 && unit.active;
+    sprite.idle = sprite.side === 'own' && unit.active;
     sprite.img.y = TILE - (sprite.idle ? this.bobPhase : 0);
   }
 
@@ -170,11 +171,11 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   face(uid: number, facing: Facing): void {
     this.facing.set(uid, facing);
     const sprite = this.units.get(uid);
-    if (sprite) sprite.img.setFlipX(faceFlip(sprite.team, facing));
+    if (sprite) sprite.img.setFlipX(faceFlip(sprite.side, facing));
   }
 
-  facingOf(uid: number, team: 0 | 1): Facing {
-    return this.facing.get(uid) ?? baseFacing(team);
+  facingOf(uid: number, side: Side): Facing {
+    return this.facing.get(uid) ?? baseFacing(side);
   }
 
   /** Sprite (contenedor) de una unidad tal como esta dibujada ahora, si se ve. */

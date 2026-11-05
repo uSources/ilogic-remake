@@ -26,12 +26,12 @@ import {
   unloadTiles,
   wait,
 } from '@core/rules';
-import type { GameState, Rng, Team, Unit } from '@core/model';
+import type { GameState, Rng, TeamId, Unit } from '@core/model';
 
 const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng() * xs.length)];
 
 /** Juega el turno de `team` al azar. Llama a `after` tras cada accion (para comprobar invariantes). */
-export function randomTurn(s: GameState, rng: Rng, team: Team, after: (what: string) => void): void {
+export function randomTurn(s: GameState, rng: Rng, team: TeamId, after: (what: string) => void): void {
   const order = teamUnits(s, team).map((unit) => unit.uid);
   for (const uid of order) {
     const unit = s.units.find((candidate) => candidate.uid === uid);
@@ -44,7 +44,7 @@ export function randomTurn(s: GameState, rng: Rng, team: Team, after: (what: str
       rng,
       buyOptions(s, building).filter((candidate) => candidate.affordable),
     );
-    if (option && spawn(s, building, option.type)) after(`compra ${option.type} en (${building.x},${building.y})`);
+    if (option && spawn(s, building, option.unitType)) after(`compra ${option.unitType.id} en (${building.x},${building.y})`);
   }
 }
 

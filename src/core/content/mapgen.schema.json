@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Generador de mapas de Ilogic",
+  "description": "Unidades y edificios de cada salida y cuantos edificios neutrales hay en un mapa al azar (numeros del original de 2013, medidos en un mapa de 32x32: se escalan con la superficie). Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "startingUnits",
+    "startingBuildings",
+    "neutralBuildings",
+    "neutralTotal",
+    "spawnRadius",
+    "minSpawnWalkable",
+    "minSpawnBuildable",
+    "minLandTiles"
+  ],
+  "definitions": {
+    "range": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[minimo, maximo]"
+    }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "startingUnits": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Unidades con las que empieza cada equipo (id de units.json), en orden."
+    },
+    "startingBuildings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Edificios de cada salida (id de buildings.json), en orden."
+    },
+    "neutralBuildings": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/range" },
+      "description": "Edificios neutrales de cada tipo: [minimo, maximo]. Los que no estan, ninguno."
+    },
+    "neutralTotal": { "$ref": "#/definitions/range", "description": "Total de edificios neutrales admitido." },
+    "spawnRadius": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Radio (rombo) de la zona de cada salida." },
+    "minSpawnWalkable": { "type": "integer", "minimum": 0, "description": "Casillas a pie que tiene que tener la zona de una salida." },
+    "minSpawnBuildable": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Casillas para edificios que tiene que tener la zona de una salida."
+    },
+    "minLandTiles": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Casillas a pie que tiene que tener el mapa (si no, se intenta otro)."
+    }
+  }
+}

@@ -2,12 +2,16 @@
  * Pantalla de partida nueva: ajustes ya hechos, opciones de "Personalizada", generales, codigo de
  * mapa y la vista previa del mapa que se jugara. Pide a la escena lo poco que usa (`SetupHost`).
  */
+import { themeOf } from '../core/gameContent';
 import type { MenuCommand } from '../controls/menu';
 import { defaultContent } from '../core/content/default';
+import { entryOf } from '../core/content';
 import { seededRng } from '../core/geom';
 import { generateGame } from '../core/mapgen';
+import { duel } from '../core/teams';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
-import { settings, t, type TextKey } from '../settings';
+import { nameOf, settings, t, type TextKey } from '../settings';
+import type { TerrainPalette } from '../ui/terrainColors';
 import {
   applyPreset,
   CHOICES,
@@ -19,7 +23,6 @@ import {
   randomSeed,
   saveOptions,
   seedToCode,
-  THEME_NAMES,
   type ChoiceKey,
   type NewGameOptions,
   type PresetId,
@@ -30,7 +33,7 @@ import { navGrid } from './nav';
 import { mapThumb } from './thumb';
 
 export interface SetupHost {
-  readonly palette: number[];
+  readonly palette: TerrainPalette;
   toHome(): void;
   /** Empezar la partida con estas opciones y la semilla del mapa. */
   startNew(seed: number): void;
@@ -186,12 +189,13 @@ export class SetupScreen {
     const { size, theme } = this.options;
     const s = generateGame(seededRng(this.seed), {
       size,
-      theme,
+      theme: theme === null ? null : entryOf(defaultContent().themes, theme, 'tema'),
       rules: rulesWith(defaultContent(), ruleChangesFor(this.options)),
       content: defaultContent(),
+      teams: duel('human', 'ai'),
     });
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
-    const themeName = THEME_NAMES[settings.lang === 'es' ? 'es' : 'en'][s.theme] ?? '';
+    const themeName = nameOf(themeOf(s));
     const buildings = settings.lang === 'es' ? 'edificios' : 'buildings';
     this.mapInfo = `${size}×${size} · ${themeName} · ${s.buildings.length} ${buildings}`;
   }

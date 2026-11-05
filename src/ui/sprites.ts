@@ -1,16 +1,20 @@
 import type Phaser from 'phaser';
-import { TERRAIN_NAMES } from '../core/content';
-import { tablesOf } from '../core/gameContent';
-import { isOnBoard, terrainAt } from '../core/mapGrid';
-import type { Building, GameState, Pos, Unit } from '../core/model';
+import type { TerrainType, UnitType } from '../core/content';
+import { buildingTypeOf, terrainAt, themeOf, unitTypeOf } from '../core/gameContent';
+import { isOnBoard } from '../core/mapGrid';
+import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
 import { hasImage } from '../atlas';
 import { settings } from '../settings';
+import { ownerSideOf, sideLetter, sideOf, unitSideLetter } from './sides';
 
 /**
  * Nombres de imagen, igual que en el original (ver docs/SPEC-INTERFAZ.md §5):
  * unidad  = (b_ activa | i_ usada | r_ IA) + (1_ en agua | 2_ en nieve) + nombre
  * edificio = (b_ | r_ | nada si neutral o en niebla) + (2_ en nieve) + nombre
  */
+
+/** Orillas de 2013 de cada tema (id de themes.json): c_<numero>_<mascara>. */
+const CLASSIC_COAST: Readonly<Record<string, number>> = { Plains: 0, Desert: 1, Forest: 2, Swamp: 3, Snowy: 4 };
 
 const warned = new Set<string>();
 
@@ -24,26 +28,35 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
   return null;
 }
 
-export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, unit: Unit): string | null {
-  const side = unit.team === 1 ? 'r_' : unit.active ? 'b_' : 'i_';
-  const tables = tablesOf(s);
-  const terrain = tables.UNIT_TERRAIN_PREFIX[unit.type]![terrainAt(s, unit)]!;
-  const name = tables.UNIT_ART[unit.type]!;
+/** El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada, roja la enemiga. */
+export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, unit: Unit, viewer: TeamId): string | null {
+  const unitSide = sideOf(s, viewer, unit.team);
+  const side = `${unitSideLetter(unitSide, unit.active)}_`;
+  const unitType = unitTypeOf(s, unit);
+  const terrain = unitType.classicSprite[terrainAt(s, unit).id] ?? '';
+  const name = unitType.art;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
   if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
-  return firstExisting(textures, [side + terrain + name, side + name, (unit.team === 1 ? 'r_' : 'b_') + name]);
+  return firstExisting(textures, [side + terrain + name, side + name, `${unitSideLetter(unitSide, true)}_${name}`]);
 }
 
-export function unitIconKey(s: GameState, type: number, available: boolean): string {
-  const key = (available ? 'b_' : 'i_') + tablesOf(s).UNIT_ART[type]!;
+export function unitIconKey(unitType: UnitType, available: boolean): string {
+  const key = (available ? 'b_' : 'i_') + unitType.art;
   return settings.terrainArt === 'new' ? `u/${key}` : key;
 }
 
-export function buildingKey(textures: Phaser.Textures.TextureManager, s: GameState, building: Building, visible: boolean): string | null {
-  const side = visible && building.owner === 0 ? 'b_' : visible && building.owner === 1 ? 'r_' : '';
-  const tables = tablesOf(s);
-  const terrain = tables.BUILDING_TERRAIN_PREFIX[building.type]![terrainAt(s, building)]!;
-  const name = tables.BUILDING_NAMES[building.type]!;
+export function buildingKey(
+  textures: Phaser.Textures.TextureManager,
+  s: GameState,
+  building: Building,
+  visible: boolean,
+  viewer: TeamId,
+): string | null {
+  const owner = visible ? ownerSideOf(s, viewer, building.owner) : 'neutral';
+  const side = owner === 'neutral' ? '' : `${sideLetter(owner)}_`;
+  const buildingType = buildingTypeOf(s, building);
+  const terrain = buildingType.classicSprite[terrainAt(s, building).id] ?? '';
+  const name = buildingType.id;
   // Dibujo nuevo (estilo plano).
   if (settings.terrainArt === 'new') {
     const key = `flat/bld_${side ? side[0] : 'n'}_${name}`;
@@ -53,22 +66,22 @@ export function buildingKey(textures: Phaser.Textures.TextureManager, s: GameSta
   return firstExisting(textures, [side + terrain + name, side + name, 'b_' + name]);
 }
 
-export function terrainKey(terrain: number): string {
-  return TERRAIN_NAMES[terrain]!;
+export function terrainKey(terrain: TerrainType): string {
+  return terrain.id;
 }
 
 /** La casilla a (dx, dy) de `tile` es tierra. Fuera del mapa cuenta como agua: no hay orilla en los bordes. */
 function isLandBeside(s: GameState, tile: Pos, dx: number, dy: number): boolean {
   const pos = { x: tile.x + dx, y: tile.y + dy };
-  return isOnBoard(s, pos) && !tablesOf(s).TERRAIN.iswater[terrainAt(s, pos)];
+  return isOnBoard(s, pos) && !terrainAt(s, pos).isWater;
 }
 
 /** Orillas de una casilla de agua: c_<tema>_<mascara> y esquinas 16..19. */
 export function shoreKeys(s: GameState, tile: Pos): string[] {
-  if (!tablesOf(s).TERRAIN.iswater[terrainAt(s, tile)]) return [];
+  if (!terrainAt(s, tile).isWater) return [];
   const isLand = (dx: number, dy: number) => isLandBeside(s, tile, dx, dy);
   const mask = (isLand(0, 1) ? 8 : 0) | (isLand(-1, 0) ? 4 : 0) | (isLand(0, -1) ? 2 : 0) | (isLand(1, 0) ? 1 : 0);
-  const theme = s.theme;
+  const theme = CLASSIC_COAST[themeOf(s).id] ?? 0;
   const keys: string[] = [];
   if (mask) keys.push(`c_${theme}_${mask}`);
   if (isLand(-1, -1) && (mask & 6) === 0) keys.push(`c_${theme}_16`);

@@ -3,8 +3,9 @@ import { aiTurn } from '../core/ai';
 import { seededRng } from '../core/geom';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createGame } from '../core/defaultGames';
-import { endRound, outcome } from '../core/rules';
-import type { GameEvent, GameState, Pos, Team } from '../core/model';
+import { endRound, isMatchOver, othersAfter } from '../core/rules';
+import { duel, playerTeam } from '../core/teams';
+import type { GameEvent, GameState, Pos, TeamId } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
@@ -46,6 +47,18 @@ function isInVisibleBand(screen: Pos, width: number, height: number): boolean {
 }
 
 /**
+ * Avanza al siguiente equipo que juega tras `team` (othersAfter): si por el camino acaba la ronda,
+ * la cierra (endRound). Devuelve ese equipo, o null si no queda ninguno.
+ */
+function advanceToNextTeam(s: GameState, team: TeamId): TeamId | null {
+  for (const step of othersAfter(s, team)) {
+    if (step.kind === 'team') return step.team;
+    endRound(s);
+  }
+  return null;
+}
+
+/**
  * Fondo del menu: una partida IA contra IA en directo, sin niebla. Cada accion se anima y la camara
  * la sigue por un lateral (el centro lo tapan las tarjetas). Al acabar una partida empieza otra.
  * La escena llama a start() al crearse, a tick() en update() y a destroy() al cerrarse.
@@ -54,7 +67,8 @@ export class LiveBackground {
   private game: GameState | null = null;
   private view: MapView | null = null;
   private events: Generator<GameEvent> | null = null;
-  private team: Team = 0;
+  /** El equipo al que le toca (null sin partida). */
+  private team: TeamId | null = null;
   private rng = seededRng(1);
   /** Cambia al empezar o parar: el bucle anterior se da cuenta y termina. */
   private token = 0;
@@ -85,15 +99,16 @@ export class LiveBackground {
   start(): void {
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES });
+    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') });
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
-    const playerBuilding = this.game.buildings.find((building) => building.owner === 0) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
-    this.view.centerOn(playerBuilding, true);
+    const first = playerTeam(this.game);
+    const firstBuilding = this.game.buildings.find((building) => building.owner === first) ?? { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+    this.view.centerOn(firstBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
-    this.team = 0;
-    this.events = aiTurn(this.game, this.rng, 0);
+    this.team = first;
+    this.events = aiTurn(this.game, this.rng, first);
     this.render();
     void this.loop();
   }
@@ -120,7 +135,7 @@ export class LiveBackground {
     const s = this.game;
     if (!s || !this.view) return;
     const visible = createLayer(s, true);
-    this.view.render(s, { vis: visible, highlights: new Map(), hidden: new Set() });
+    this.view.render(s, { viewer: playerTeam(s), vis: visible, highlights: new Map(), hidden: new Set() });
     this.view.placeCursor(false);
   }
 
@@ -142,15 +157,15 @@ export class LiveBackground {
     }
   }
 
-  /** Turno del otro bando (y fin de ronda tras la IA roja); si la partida ha acabado, otra nueva. */
+  /**
+   * Turno del siguiente equipo que aun juega (y fin de ronda tras el ultimo); si la partida ha
+   * acabado, otra nueva.
+   */
   private async nextTurn(s: GameState): Promise<void> {
-    if (this.team === 0) this.team = 1;
-    else {
-      endRound(s);
-      this.team = 0;
-    }
-    if (outcome(s) !== 'playing' || s.day > MAX_DAYS) return this.start();
-    this.events = aiTurn(s, this.rng, this.team);
+    const next = this.team === null ? null : advanceToNextTeam(s, this.team);
+    if (next === null || isMatchOver(s) || s.day > MAX_DAYS) return this.start();
+    this.team = next;
+    this.events = aiTurn(s, this.rng, next);
     await this.pause(BETWEEN_TURNS_MS);
   }
 

@@ -38,44 +38,44 @@ const SCENES = {
     await p.waitForSelector('.notes');
   },
   ...Object.fromEntries(
-    [0, 1, 2, 3, 4].map((theme) => [
-      `partida-tema${theme}`,
+    ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'].map((theme, index) => [
+      `partida-tema${index}`,
       async (p) => {
         await p.evaluate((th) => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: th }), theme);
       },
     ]),
   ),
   'partida-niebla': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: true }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: true }));
   },
   'partida-menu': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains' }));
     await p.keyboard.press('Escape');
     await p.waitForSelector('.pop, .pause');
   },
   'partida-dinero': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains' }));
     await p.hover('.top .funds');
     await p.waitForSelector('.funds .breakdown', { state: 'visible' });
   },
   'partida-dia': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, dayLimit: 20 }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', dayLimit: 20 }));
     await p.hover('.top .day');
     await p.waitForSelector('.day .breakdown', { state: 'visible' });
   },
   'partida-general': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa' }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', general: 'Brisa' }));
   },
   'partida-general-enemigo': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa', enemyGeneral: 'Brisa' }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', general: 'Brisa', enemyGeneral: 'Brisa' }));
   },
   'partida-ataque-aereo': async (p) => {
     // Brisa con la barra llena (partida preparada) apuntando el ataque aereo cerca del enemigo.
     await p.evaluate(async () => {
       const d = window.ilogicDebug;
-      await d.startGame({ seed: 7, size: 20, theme: 0, general: 'Brisa' });
+      await d.startGame({ seed: 7, size: 20, theme: 'Plains', general: 'Brisa' });
       const s = d.state();
-      s.generals[0].charge = 6;
+      s.teams[0].general.charge = 6;
       await d.startGame({ state: s });
     });
     await p.click('.gp-ab:has-text("Ataque aéreo")');
@@ -86,12 +86,12 @@ const SCENES = {
     await p.evaluate(() => window.ilogicDebug.lab({ attacker: 'Artillery', defender: 'Tank' }));
   },
   'partida-ayuda': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains' }));
     await p.keyboard.press('KeyH');
     await p.waitForSelector('.help');
   },
   'partida-2013': async (p) => {
-    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0 }));
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains' }));
   },
   'campana-tutorial': async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ mission: 'tutorial' }));

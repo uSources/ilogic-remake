@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Terrenos de Ilogic",
-  "description": "Los 15 terrenos. El orden y los id son fijos (los usan el arte, el generador de mapas y las misiones): aqui solo se cambian sus numeros. Ver docs/CONTENIDO.md.",
+  "description": "Los terrenos. Los id los usan el arte, los temas (themes.json) y las partidas guardadas: no se cambian. Ver docs/CONTENIDO.md.",
   "type": "object",
   "required": ["terrain"],
   "additionalProperties": false,
@@ -11,8 +11,7 @@
     },
     "terrain": {
       "type": "array",
-      "minItems": 15,
-      "maxItems": 15,
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -20,7 +19,17 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Nombre interno (fijo)."
+            "description": "Nombre interno (fijo: lo guardan las partidas)."
+          },
+          "plain": {
+            "type": "boolean",
+            "description": "El suelo llano: el de los mapas vacios (laboratorio, duelos, pruebas). Exactamente uno."
+          },
+          "mapLetter": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1,
+            "description": "Letra del terreno en los mapas en texto de las misiones, si no depende del tema (las que dependen, en themes.json, mapLetters)."
           },
           "name": {
             "type": "object",

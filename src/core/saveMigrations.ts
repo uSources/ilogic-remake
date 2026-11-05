@@ -8,7 +8,7 @@
  * Lo que la partida no guarda lo da quien la lee (SaveContext): el contenido con el que se juega y
  * las reglas de cada mision. Asi save.ts no depende del catalogo de misiones.
  */
-import type { GameContent } from './content';
+import { findEntry, type GameContent } from './content';
 import { rulesWith } from './rulesConfig';
 import type { GameState, Pos, RulesConfig, Squad, StandingOrder, StandingOrderKind, Unit } from './model';
 import { isObject } from './util/predicates';
@@ -87,7 +87,7 @@ const sameOrderV1 = (first: StandingOrder, second: StandingOrder): boolean => fi
 
 /** La orden de una unidad de una escuadra como la seguia en el formato 1: con capturar, escolta si no captura. */
 function format1KindFor(content: GameContent, unit: Unit, kind: StandingOrderKind): StandingOrderKind {
-  const capturesV1 = !!content.tables.UNIT.cancapt[unit.type];
+  const capturesV1 = !!findEntry(content.units, unit.type)?.canCapture;
   return kind === 'capture' && !capturesV1 ? 'attack' : kind;
 }
 
@@ -104,6 +104,124 @@ function liftFormat1Order(s: GameState, content: GameContent, squad: Squad): voi
   if (!units.every(followsOrder)) return;
   squad.standingOrder = { kind: order.kind, at: { x: order.at.x, y: order.at.y } };
   for (const unit of units) delete unit.standingOrder;
+}
+
+/*
+ * Paso del formato 2: los tipos iban por su numero, el puesto en su lista de entonces. Cada lista es
+ * una copia fija de la de main cuando se dejo de guardar por numero (8671268): units.json,
+ * buildings.json y weather.json en su orden, y TERRAIN_NAMES y THEME_NAMES, que eran codigo. Asi el
+ * paso no depende del contenido de ahora (que ya se puede reordenar).
+ */
+
+/** Las unidades del formato 2, en su orden de units.json. */
+const FORMAT_2_UNITS: readonly string[] = [
+  'Soldier',
+  'Tank',
+  'Artillery',
+  'Car',
+  'LTank',
+  'Blocker',
+  'BSoldier',
+  'Transport',
+  'SSoldier',
+  'Missile_truck',
+  'LFighter',
+  'Fighter',
+  'Bomber',
+  'Supplier',
+  'Antiair',
+  'THelicopter',
+  'MSoldier',
+  'FSoldier',
+  'WTank',
+];
+/** Los edificios del formato 2, en su orden de buildings.json. */
+const FORMAT_2_BUILDINGS: readonly string[] = ['City', 'Oil', 'Factory', 'Stronghold', 'Airport', 'Base'];
+/** Los climas del formato 2, en su orden de weather.json. */
+const FORMAT_2_WEATHER: readonly string[] = ['Clear', 'Rain', 'Snow', 'Storm', 'Sandstorm'];
+
+/** Los terrenos del formato 2, en su orden (eran TERRAIN_NAMES). */
+const FORMAT_2_TERRAIN: readonly string[] = [
+  'Grass',
+  'Water',
+  'Woods',
+  'Sand',
+  'Cactus',
+  'SandCliff',
+  'Flowers',
+  'GrassCliff',
+  'SWater',
+  'DWater',
+  'Snow',
+  'Frosty',
+  'SnowCliff',
+  'SnowWood',
+  'Ice',
+];
+/** Los temas del formato 2, en su orden (eran THEME_NAMES). */
+const FORMAT_2_THEMES: readonly string[] = ['Plains', 'Desert', 'Forest', 'Swamp', 'Snowy'];
+
+/** El id que tenia el numero `value` en la lista `ids`; si no es uno de sus numeros, tal cual (lo rechaza deserialize). */
+const idAt = (ids: readonly string[], value: unknown): unknown =>
+  typeof value === 'number' && ids[value] !== undefined ? ids[value] : value;
+
+/** Cambia el campo `field` de `holder` (si es un objeto) del numero de `ids` a su id. */
+function fieldToId(holder: unknown, field: string, ids: readonly string[]): void {
+  if (isObject(holder) && field in holder) holder[field] = idAt(ids, holder[field]);
+}
+
+/** El terreno del mapa, columna a columna, del numero al id. */
+const columnToIds = (column: unknown): unknown =>
+  Array.isArray(column) ? listOf(column).map((terrain) => idAt(FORMAT_2_TERRAIN, terrain)) : column;
+const mapToIds = (map: unknown): unknown => (Array.isArray(map) ? listOf(map).map(columnToIds) : map);
+
+/** Unidades, edificios, terreno, tema, clima y objetivo de captura por id. */
+function format2TypesToIds(raw: Record<string, unknown>): void {
+  for (const unit of listOf(raw.units)) fieldToId(unit, 'type', FORMAT_2_UNITS);
+  for (const building of listOf(raw.buildings)) fieldToId(building, 'type', FORMAT_2_BUILDINGS);
+  raw.map = mapToIds(raw.map);
+  fieldToId(raw, 'theme', FORMAT_2_THEMES);
+  fieldToId(raw.setup, 'theme', FORMAT_2_THEMES);
+  fieldToId(raw.weather, 'kind', FORMAT_2_WEATHER);
+  fieldToId(raw.weather, 'next', FORMAT_2_WEATHER);
+  const objective = isObject(raw.mission) ? raw.mission.objective : undefined;
+  if (isObject(objective) && objective.kind === 'capture') fieldToId(objective, 'type', FORMAT_2_BUILDINGS);
+}
+
+/*
+ * Paso del formato 2: habia dos bandos fijos, el 0 (el jugador) y el 1 (la IA), con su dinero, sus
+ * generales y sus estadisticas en pares [jugador, IA], y las escuadras y la mision eran del jugador.
+ */
+
+/** Los dos bandos del formato 2: quien jugaba cada uno. */
+const FORMAT_2_CONTROLLERS = ['human', 'ai'] as const;
+
+/** El valor del bando `team` de un par [jugador, IA] del formato 2 (0 si no esta). */
+const ofPair = (pair: unknown, team: number): unknown => (Array.isArray(pair) ? (pair as unknown[])[team] : undefined) ?? 0;
+
+/** Las estadisticas del formato 2 (pares por bando y un par por dia) de un bando. */
+function format2StatsOf(stats: unknown, team: number): Record<string, unknown> {
+  const saved = isObject(stats) ? stats : {};
+  const army = listOf(saved.army).map((day) => ofPair(day, team));
+  return {
+    built: ofPair(saved.built, team),
+    spent: ofPair(saved.spent, team),
+    lost: ofPair(saved.lost, team),
+    captured: ofPair(saved.captured, team),
+    army,
+  };
+}
+
+/** Los dos bandos del formato 2 como equipos: dinero, general y estadisticas de cada uno. */
+function format2Teams(raw: Record<string, unknown>): Record<string, unknown>[] {
+  return FORMAT_2_CONTROLLERS.map((controller, id) => ({
+    id,
+    alliance: id,
+    controller,
+    funds: ofPair(raw.funds, id),
+    general: (Array.isArray(raw.generals) ? (raw.generals as unknown[])[id] : null) ?? null,
+    stats: format2StatsOf(raw.stats, id),
+  }));
 }
 
 /** Los pasos, del mas antiguo al mas nuevo. */
@@ -168,6 +286,28 @@ export const MIGRATIONS: readonly SaveMigration[] = [
       const rules = raw.rules;
       if (!isObject(rules)) return;
       for (const [rule, value] of Object.entries(RULES_ADDED_LATER)) rules[rule] ??= value;
+    },
+  },
+  {
+    // Hasta el formato 2 los tipos se guardaban por numero; desde el 3, por id (no dependen del orden).
+    name: 'tipos por id en vez de por numero',
+    upToVersion: 2,
+    stage: 'read',
+    apply: (raw) => format2TypesToIds(raw),
+  },
+  {
+    // Hasta el formato 2, "0 = jugador, 1 = IA" con pares por bando; desde el 3, equipos (GameState.teams).
+    name: 'bandos fijos pasan a equipos',
+    upToVersion: 2,
+    stage: 'read',
+    apply: (raw) => {
+      if (raw.teams !== undefined) return;
+      raw.teams = format2Teams(raw);
+      delete raw.funds;
+      delete raw.generals;
+      delete raw.stats;
+      for (const squad of listOf(raw.squads)) if (isObject(squad)) squad.team = 0;
+      if (isObject(raw.mission)) raw.mission.team = 0;
     },
   },
   {

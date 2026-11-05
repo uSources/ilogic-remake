@@ -2,19 +2,21 @@
  * Opciones de "Nueva partida": reglas, mapa y economia. Se recuerdan entre partidas.
  */
 import { defaultContent } from './core/content/default';
+import { entryOf } from './core/content';
 import type { RulesConfig } from './core/model';
-import { fmtNum, settings } from './settings';
+import { fmtNum, nameOf, settings } from './settings';
 
 export interface NewGameOptions {
   size: number;
-  theme: number | null;
+  /** Tema del mapa (id de themes.json) o null para uno al azar. */
+  theme: string | null;
   fog: boolean;
   /** [CAMBIO] Clima que cambia cada pocos dias. */
   weather: boolean;
   funds: number;
   income: number;
   dayLimit: number | null;
-  /** Puntos de mando por bando (null = sin limite de puntos). */
+  /** Puntos de mando por equipo (null = sin limite de puntos). */
   command: number | null;
   /** Mantenimiento por ronda, tanto por uno del precio de las unidades. */
   upkeep: number;
@@ -63,7 +65,6 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
 /** Valores posibles de cada opcion (en orden). */
 export const CHOICES = {
   size: [20, 32, 40] as const,
-  theme: [null, 0, 1, 2, 3, 4] as const,
   fog: [true, false] as const,
   weather: [true, false] as const,
   funds: [3000, 5000, 8000, 12000] as const,
@@ -71,7 +72,10 @@ export const CHOICES = {
   dayLimit: [null, 20, 30, 40, 60] as const,
   command: [null, 20, 30, 40] as const,
   upkeep: [0, 0.05, 0.1, 0.15] as const,
-  /** Sin general o uno de generals.json (se leen al pedirlos, no al cargar el modulo). */
+  /** Al azar o uno de themes.json, y sin general o uno de generals.json (se leen al pedirlos, no al cargar el modulo). */
+  get theme(): readonly (string | null)[] {
+    return [null, ...defaultContent().themes.list.map((theme) => theme.id)];
+  },
   get general(): readonly (string | null)[] {
     return generalChoices();
   },
@@ -148,12 +152,6 @@ export function codeToSeed(code: string): number | null {
 
 export const randomSeed = (): number => Math.floor(Math.random() * MAX_SEED) >>> 0;
 
-/** Nombre de cada tema de graficos del mapa, en el orden de los temas. */
-export const THEME_NAMES = {
-  es: ['Llanura', 'Desierto', 'Bosque', 'Pantano', 'Nieve'],
-  en: ['Plains', 'Desert', 'Forest', 'Swamp', 'Snow'],
-};
-
 const SMALL_SIZE = 20;
 const LARGE_SIZE = 40;
 
@@ -177,7 +175,8 @@ function generalLabel(value: unknown): string {
 /** Texto de cada valor de cada opcion, para la pantalla. */
 const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
   size: sizeLabel,
-  theme: (value) => (value === null ? (isSpanish() ? 'Al azar' : 'Random') : THEME_NAMES[isSpanish() ? 'es' : 'en'][value as number]!),
+  theme: (value) =>
+    value === null ? (isSpanish() ? 'Al azar' : 'Random') : nameOf(entryOf(defaultContent().themes, value as string, 'tema')),
   fog: onOff,
   weather: onOff,
   funds: (value) => fmtNum(value as number),

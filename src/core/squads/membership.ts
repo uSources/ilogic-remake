@@ -1,7 +1,7 @@
 /** [CAMBIO] Quien esta en cada escuadra: formarlas, meter y sacar unidades, grupos por tecla, deshacerlas. */
-import type { GameState, Squad, Unit } from '../model';
-import { cleanSquadName, freeKey, freeName, squadByKey } from './naming';
-import { playerUnits, squadById, squadUnits } from './queries';
+import type { GameState, Squad, TeamId, Unit } from '../model';
+import { cleanSquadName, freeKey, freeName, squadByKey, squadsOfTeam } from './naming';
+import { squadById, squadUnits, unitsOfTeam } from './queries';
 import { forUnit, liftStandingOrder, sameStandingOrder } from './standingOrders';
 
 /** Quita las escuadras que se han quedado sin unidades (las destruyen, se disuelven...). */
@@ -13,21 +13,22 @@ export function pruneSquads(s: GameState): void {
 }
 
 /**
- * Forma una escuadra con estas unidades (solo las del jugador; salen de la que tuvieran) y le da el
- * primer nombre libre y la primera tecla libre (o la tecla `key`, cuyo nombre de la lista prefiere:
- * Ctrl+3 forma «Charlie»). Devuelve la escuadra, o null si no hay unidades.
+ * Forma una escuadra del equipo `team` con estas unidades (solo las suyas; salen de la que tuvieran) y
+ * le da el primer nombre libre y la primera tecla libre del equipo (o la tecla `key`, cuyo nombre de
+ * la lista prefiere: Ctrl+3 forma «Charlie»). Devuelve la escuadra, o null si no hay unidades.
  */
-export function formSquad(s: GameState, units: readonly Unit[], name?: string, key?: number): Squad | null {
-  const mine = playerUnits(units);
+export function formSquad(s: GameState, team: TeamId, units: readonly Unit[], name?: string, key?: number): Squad | null {
+  const mine = unitsOfTeam(team, units);
   if (!mine.length) return null;
   for (const unit of mine) leaveSquad(s, unit);
   pruneSquads(s);
   const squads = s.squads ?? [];
   const id = squads.reduce((highest, squad) => Math.max(highest, squad.id), 0) + 1;
-  const squadKey = key ?? freeKey(s);
+  const squadKey = key ?? freeKey(s, team);
   const squad: Squad = {
     id,
-    name: (name && cleanSquadName(name)) || freeName(squads, id, key),
+    team,
+    name: (name && cleanSquadName(name)) || freeName(squadsOfTeam(s, team), id, key),
     ...(squadKey !== undefined ? { key: squadKey } : {}),
   };
   for (const unit of mine) unit.squad = id;
@@ -38,26 +39,26 @@ export function formSquad(s: GameState, units: readonly Unit[], name?: string, k
 }
 
 /**
- * [CAMBIO] Ctrl + numero: estas unidades pasan a ser el grupo de esa tecla. Si ya habia una
+ * [CAMBIO] Ctrl + numero: estas unidades (las del equipo) pasan a ser su grupo de esa tecla. Si ya habia una
  * escuadra con esa tecla, se queda solo con estas (las demas salen, con lo que estaban haciendo);
  * si no, se forma. Devuelve la escuadra, o null si no hay unidades.
  */
-export function setGroup(s: GameState, units: readonly Unit[], key: number): Squad | null {
-  const mine = playerUnits(units);
+export function setGroup(s: GameState, team: TeamId, units: readonly Unit[], key: number): Squad | null {
+  const mine = unitsOfTeam(team, units);
   if (!mine.length) return null;
-  const squad = squadByKey(s, key);
-  if (!squad) return formSquad(s, mine, undefined, key);
+  const squad = squadByKey(s, team, key);
+  if (!squad) return formSquad(s, team, mine, undefined, key);
   const keep = new Set(mine.map((unit) => unit.uid));
   for (const unit of squadUnits(s, squad.id)) if (!keep.has(unit.uid)) leaveSquad(s, unit);
   return joinSquad(s, squad, mine);
 }
 
 /** [CAMBIO] Mayusculas + numero: añadir estas unidades al grupo de esa tecla (o formarlo). */
-export function addToGroup(s: GameState, units: readonly Unit[], key: number): Squad | null {
-  const mine = playerUnits(units);
+export function addToGroup(s: GameState, team: TeamId, units: readonly Unit[], key: number): Squad | null {
+  const mine = unitsOfTeam(team, units);
   if (!mine.length) return null;
-  const squad = squadByKey(s, key);
-  return squad ? joinSquad(s, squad, mine) : formSquad(s, mine, undefined, key);
+  const squad = squadByKey(s, team, key);
+  return squad ? joinSquad(s, squad, mine) : formSquad(s, team, mine, undefined, key);
 }
 
 /** Meter unidades en una escuadra que ya existe (salen de la suya; las que no tenian orden siguen la de esta). */

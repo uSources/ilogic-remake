@@ -1,6 +1,7 @@
 import { fmtNum, t } from '../../settings';
 import { signed } from '../common/format';
 import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../vm/topBar';
+import { OWN, RIVALS } from '../vm/common';
 
 /** '+' ingresos, '−' gastos, '' puntos (sin color). */
 type Sign = '+' | '−' | '';
@@ -109,7 +110,8 @@ function daysLeftText(daysLeft: number | null): string {
 }
 
 function ScoreSection({ score }: { score: NonNullable<DayInfoVM['score']> }) {
-  const [mine, enemy] = score;
+  const mine = score[OWN];
+  const enemy = score[RIVALS];
   return (
     <>
       <h4>{t('dayScore')}</h4>

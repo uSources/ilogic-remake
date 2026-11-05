@@ -2,20 +2,21 @@
  * Captura de edificios: puntos, capturas a medias y el evento que las cuenta.
  */
 
-import { tablesOf } from '../gameContent';
+import { isHq } from '../gameContent';
 import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
 import type { Building, GameEvent, GameState, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
+import { isHostile } from '../teams';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
-  return building.type === tablesOf(s).HQ ? s.rules.hqCapturePoints : s.rules.capturePoints;
+  return isHq(s, building) ? s.rules.hqCapturePoints : s.rules.capturePoints;
 }
 
 /** Lo que resta una unidad al capturar: su vida / 10 (y mas con la habilidad quickCapture). */
-export const captureStrength = (s: GameState, unit: Unit): number => Math.ceil((unit.life / 10) * captureFactor(s, unit.type));
+export const captureStrength = (s: GameState, unit: Unit): number => Math.ceil((unit.life / 10) * captureFactor(s, unit));
 
 /** Captura a medias de un edificio (ver Building.capture). */
 export type CaptureProgress = NonNullable<Building['capture']>;
@@ -46,11 +47,11 @@ export function dropStaleCaptures(s: GameState): void {
   for (const building of s.buildings) if (building.capture && !captureProgress(s, building)) building.capture = null;
 }
 
-/** Se puede capturar el edificio de debajo (neutral o enemigo). */
+/** Se puede capturar el edificio de debajo (neutral o enemigo: los de la propia alianza, no). */
 export function canCapture(s: GameState, unit: Unit): boolean {
   if (!unit.active || !isCapturer(s, unit)) return false;
   const building = buildingAt(s, unit);
-  return !!building && building.owner !== unit.team;
+  return !!building && (building.owner === null || isHostile(s, building.owner, unit.team));
 }
 
 /**

@@ -39,7 +39,7 @@
           },
           "hq": {
             "type": "boolean",
-            "description": "Cuartel general: si lo capturan, ese bando pierde. Exactamente uno."
+            "description": "Cuartel general: si lo capturan, ese equipo pierde. Exactamente uno."
           },
           "earning": {
             "type": "integer",

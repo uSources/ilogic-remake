@@ -1,13 +1,14 @@
 /**
- * [CAMBIO] Ordenes permanentes del jugador (estilo RTS): la de cada escuadra y la propia de cada unidad
+ * [CAMBIO] Ordenes permanentes de cada equipo (estilo RTS): la de cada escuadra y la propia de cada unidad
  * (destacada). Logica pura: la usan la escena y la IA, que las cumple al terminar el turno
  * (ai/standingOrders.ts).
  */
 import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt } from '../rules/queries';
-import { isAlive, isCapturer, isPlayer } from '../util/predicates';
-import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, Unit } from '../model';
-import { playerUnits, squadById, squadUnits } from './queries';
+import { isAlive, isCapturer } from '../util/predicates';
+import { areAllied } from '../teams';
+import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, TeamId, Unit } from '../model';
+import { squadById, squadUnits, unitsOfTeam } from './queries';
 
 /** Que dice cada tipo de orden permanente (el Record obliga a tenerlos todos). */
 const STANDING_ORDER_NAMES: Record<StandingOrderKind, string> = { attack: 'atacar', capture: 'capturar', defend: 'defender' };
@@ -49,7 +50,7 @@ export function isDetached(s: GameState, unit: Unit): boolean {
   return !!unit.standingOrder && !!squadOrder && !sameStandingOrder(unit.standingOrder, forUnit(s, unit, squadOrder));
 }
 
-/** Unidades del jugador de esa escuadra que siguen su orden (no destacadas). */
+/** Unidades de esa escuadra que siguen su orden (no destacadas). */
 const followers = (s: GameState, squad: Squad) => squadUnits(s, squad.id).filter((unit) => !unit.standingOrder);
 
 /** Los ids de escuadra a los que pertenecen todas sus unidades vivas de esta lista. */
@@ -60,16 +61,22 @@ function wholeSquads(s: GameState, units: readonly Unit[]): Set<number> {
   return new Set([...ids].filter(isWhole));
 }
 
-/** Por que no se puede dar esa orden ahi (null = se puede). */
+/** El edificio de esa casilla ya es de la alianza de `team` (o no hay): no hay nada que capturar. */
+function isOwnedOrMissing(s: GameState, team: TeamId, at: Pos): boolean {
+  const building = buildingAt(s, at);
+  return !building || (building.owner !== null && areAllied(s, building.owner, team));
+}
+
+/** Por que no se puede dar esa orden ahi a unidades del equipo `team` (null = se puede). */
 export function standingOrderBlock(
   s: GameState,
+  team: TeamId,
   kind: StandingOrderKind,
   at: Pos,
   units: readonly Unit[],
 ): 'noBuilding' | 'noCapturer' | null {
   if (kind !== 'capture') return null;
-  const building = buildingAt(s, at);
-  if (!building || isPlayer(building.owner)) return 'noBuilding';
+  if (isOwnedOrMissing(s, team, at)) return 'noBuilding';
   if (!units.some((unit) => isCapturer(s, unit))) return 'noCapturer';
   return null;
 }
@@ -80,10 +87,10 @@ export function standingOrderBlock(
  * un edificio que estas unidades pueden capturar, capturar va primero. Defender siempre se puede.
  * `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide la escena).
  */
-export function standingOrderChoices(s: GameState, at: Pos, units: readonly Unit[], enemyHere: boolean): StandingOrderKind[] {
-  const mine = playerUnits(units);
+export function standingOrderChoices(s: GameState, team: TeamId, at: Pos, units: readonly Unit[], enemyHere: boolean): StandingOrderKind[] {
+  const mine = unitsOfTeam(team, units);
   if (!mine.length) return [];
-  const canCapture = standingOrderBlock(s, 'capture', at, mine) === null;
+  const canCapture = standingOrderBlock(s, team, 'capture', at, mine) === null;
   if (enemyHere) return canCapture ? ['attack', 'capture', 'defend'] : ['attack', 'defend'];
   return canCapture ? ['capture', 'attack', 'defend'] : ['attack', 'defend'];
 }
@@ -96,13 +103,13 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
 }
 
 /**
- * Da una orden con destino a estas unidades del jugador. Si son una escuadra entera, la orden es de
+ * Da una orden con destino a estas unidades del equipo `team` (las de otros equipos no la reciben). Si son una escuadra entera, la orden es de
  * la escuadra (y se olvidan las propias); si son solo algunas, cada una se queda con la orden como
  * propia (destacada) y al cumplirla vuelve a la de su escuadra. Con "capturar", las que no pueden
  * capturar van de escolta. Devuelve cuantas la han recibido.
  */
-export function giveStandingOrder(s: GameState, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
-  const mine = playerUnits(units);
+export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
+  const mine = unitsOfTeam(team, units);
   const standingOrder = copyStandingOrder({ kind, at });
   const whole = wholeSquads(s, mine);
   for (const id of whole) squadById(s, id)!.standingOrder = copyStandingOrder(standingOrder);
@@ -131,10 +138,7 @@ export function cancelStandingOrder(s: GameState, units: readonly Unit[]): void 
 
 /** La orden de la escuadra ya esta cumplida: edificio tomado, o todas las que la siguen han llegado. */
 function squadOrderDone(s: GameState, squad: Squad, standingOrder: StandingOrder): boolean {
-  if (standingOrder.kind === 'capture') {
-    const building = buildingAt(s, standingOrder.at);
-    return !building || isPlayer(building.owner);
-  }
+  if (standingOrder.kind === 'capture') return isOwnedOrMissing(s, squad.team, standingOrder.at);
   return followers(s, squad).every((unit) => !isAlive(unit) || atStandingOrder(s, unit));
 }
 
@@ -161,7 +165,7 @@ export function finishStandingOrder(s: GameState, unit: Unit): void {
 export function keepCapturing(s: GameState, unit: Unit): void {
   const building = buildingAt(s, unit);
   const standingOrder = effectiveStandingOrder(s, unit);
-  if (!isPlayer(unit.team) || !building || isPlayer(building.owner) || !standingOrder) return;
+  if (!building || !standingOrder || isOwnedOrMissing(s, unit.team, unit)) return;
   if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return;
   unit.standingOrder = { kind: 'capture', at: posOf(unit) };
 }

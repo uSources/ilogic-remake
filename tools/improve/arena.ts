@@ -10,46 +10,62 @@
  * Las partidas que no terminan se dan a quien tiene clara ventaja (ejercito + edificios + dinero,
  * al menos un 15 % mas); si no, empate.
  */
+import { duel, duelTeams, teamState } from '@core/teams';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { tablesOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
-import { endRound, outcome } from '@core/rules';
-import type { GameEvent, GameState, Rng, Team } from '@core/model';
+import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { armyValue } from '@core/stats';
+import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
-type Brain = (s: GameState, rng: Rng, team: Team) => Generator<GameEvent>;
+type Brain = (s: GameState, rng: Rng, team: TeamId) => Generator<GameEvent>;
 
-function strength(s: GameState, team: Team): number {
-  const { UNIT } = tablesOf(s);
-  const army = s.units.filter((unit) => unit.team === team).reduce((amount, unit) => amount + (UNIT.cost[unit.type]! * unit.life) / 100, 0);
-  return army + s.buildings.filter((building) => building.owner === team).length * 1500 + s.funds[team] * 0.5;
+/** Lo que vale cada edificio y cada moneda al decidir una partida sin terminar (como en el informe de equilibrio). */
+const STRENGTH_PER_BUILDING = 1500;
+const STRENGTH_PER_FUNDS = 0.5;
+/** Ventaja minima (un 15 % mas de fuerza) para dar ganada una partida sin terminar. */
+const CLEAR_LEAD = 1.15;
+
+/** Fuerza de un equipo para decidir una partida sin terminar: ejercito, edificios y algo del dinero. */
+function strength(s: GameState, team: TeamId): number {
+  const buildings = s.buildings.filter((building) => building.owner === team).length;
+  return armyValue(s, team) + buildings * STRENGTH_PER_BUILDING + teamState(s, team).funds * STRENGTH_PER_FUNDS;
 }
 
-/** Una partida; devuelve el bando ganador (o null si empate). */
-export function duel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): Team | null {
+/** Que IA ha ganado una partida: la primera de `brains`, la segunda o ninguna (empate). */
+export type DuelWinner = 'first' | 'second' | null;
+
+/** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
+export function playDuel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): DuelWinner {
   const rng = seededRng(seed);
-  const s = createGame(rng, { size });
-  while (outcome(s) === 'playing' && s.day <= maxDays) {
-    for (const team of [0, 1] as Team[]) {
-      for (const _ of brains[team](s, rng, team)) if (outcome(s) !== 'playing') break;
-      if (outcome(s) !== 'playing') break;
+  const s = createGame(rng, { size, teams: duel('ai', 'ai') });
+  const [first, second] = duelTeams(s);
+  const brainOf = (team: TeamId): Brain => {
+    if (team === first) return brains[0];
+    if (team === second) return brains[1];
+    throw new Error(`La arena es de dos equipos: no hay IA para el equipo ${team}`);
+  };
+  while (!isMatchOver(s) && s.day <= maxDays) {
+    for (const team of turnTakers(s)) {
+      for (const _ of brainOf(team)(s, rng, team)) if (isMatchOver(s)) break;
+      if (isMatchOver(s)) break;
     }
-    if (outcome(s) !== 'playing') break;
+    if (isMatchOver(s)) break;
     endRound(s);
   }
-  const result = outcome(s);
-  if (result === 'won') return 0;
-  if (result === 'lost') return 1;
-  const playerStrength = strength(s, 0),
-    aiStrength = strength(s, 1);
-  return Math.max(playerStrength, aiStrength) >= 1.15 * Math.min(playerStrength, aiStrength) ? (playerStrength > aiStrength ? 0 : 1) : null;
+  const result = outcome(s, first);
+  if (result !== 'playing') return result === 'won' ? 'first' : 'second';
+  const firstStrength = strength(s, first),
+    secondStrength = strength(s, second);
+  if (Math.max(firstStrength, secondStrength) < CLEAR_LEAD * Math.min(firstStrength, secondStrength)) return null;
+  return firstStrength > secondStrength ? 'first' : 'second';
 }
 
 export interface ArenaResult {
@@ -69,10 +85,10 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
     draws = 0;
   for (let i = 0; i < games; i++) {
     const seed = 1 + Math.floor(i / 2);
-    const swapped = i % 2 === 1; // mismo mapa, bandos cambiados
-    const winner = duel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
+    const swapped = i % 2 === 1; // mismo mapa, equipos cambiados
+    const winner = playDuel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
     if (winner === null) draws++;
-    else if ((winner === 0) !== swapped) wins++;
+    else if ((winner === 'first') !== swapped) wins++;
     else losses++;
   }
   const played = wins + losses;
@@ -133,7 +149,7 @@ function snapshot(): void {
   writeFileSync(
     `${BASE_DIR}weights.ts`,
     `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar.\n` +
-      `const AI = ${JSON.stringify(defaultContent().tables.AI)} as const;\n` +
+      `const AI = ${JSON.stringify(defaultContent().ai)} as const;\n` +
       `/** La IA de referencia juega con estos pesos, sea cual sea el contenido de la partida. */\n` +
       `export const weightsOf = (_s: unknown): typeof AI => AI;\n`,
   );

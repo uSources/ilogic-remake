@@ -4,7 +4,7 @@
  * entrada de PHASES (`highlights`).
  */
 import type { MoveRange } from '../../core/rules';
-import type { GameState, Pos } from '../../core/model';
+import type { GameState, Pos, TeamId } from '../../core/model';
 import type { HighlightKind } from '../../ui/mapView';
 import { PHASES } from './phases';
 import { noHighlights } from './phases/phase';
@@ -12,6 +12,8 @@ import type { Phase } from './types';
 
 export interface HighlightInput {
   s: GameState;
+  /** El equipo que mira (sus unidades se eligen; las demas solo se ven si estan a la vista). */
+  viewer: TeamId;
   phase: Phase;
   cursor: Pos;
   /** Alcance de la unidad que se mueve, y adonde se puede unir o subir. */
@@ -24,11 +26,11 @@ export interface HighlightInput {
   orderMenuUids: readonly number[] | null;
   /** Unidades a las que se esta dando una orden con destino (fase 'target'). */
   orderingUids: readonly number[] | null;
-  /** Area de la habilidad del general que se apunta en `c`. */
+  /** Area del poder del general que se apunta en `c`. */
   targetArea: (target: Pos) => Pos[];
   group: ReadonlySet<number>;
   inspectUid: number | null;
-  enemyPlaying: boolean;
+  othersPlaying: boolean;
   visible: (pos: Pos) => boolean;
 }
 

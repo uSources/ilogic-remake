@@ -1,5 +1,5 @@
 /**
- * [CAMBIO] Escuadras y ordenes permanentes del jugador (estilo RTS). Este fichero solo reune lo
+ * [CAMBIO] Escuadras y ordenes permanentes de cada equipo (estilo RTS). Este fichero solo reune lo
  * publico de `squads/` para importarlo de un sitio desde fuera del nucleo; dentro, mejor del modulo
  * concreto (de abajo arriba, cada uno solo usa los de antes):
  *
@@ -11,7 +11,7 @@
  * | `membership` | formar, meter y sacar unidades, grupos por tecla, renombrar y deshacer |
  */
 export { squadUnits, squadById } from './squads/queries';
-export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, assignKeys } from './squads/naming';
+export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, squadsOfTeam, assignKeys } from './squads/naming';
 export {
   effectiveStandingOrder,
   isDetached,

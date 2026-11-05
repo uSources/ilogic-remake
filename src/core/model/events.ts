@@ -1,5 +1,5 @@
 import type { Pos } from './geometry';
-import type { Team } from './team';
+import type { TeamId } from './team';
 
 /** Lo que acaba de pasar, para que la interfaz lo anime. Lo usan el jugador y la IA. */
 export type GameEvent =
@@ -17,17 +17,17 @@ export type GameEvent =
       /** Datos para enseñar el combate (ver attackEvent). Los eventos antiguos no lo tienen. */
       combat?: CombatInfo;
     }
-  | { kind: 'capture'; uid: number; at: Pos; owner: Team | null; left?: number; total?: number }
+  | { kind: 'capture'; uid: number; at: Pos; owner: TeamId | null; left?: number; total?: number }
   | { kind: 'merge'; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; uid: number; into: number; path: Pos[] }
   | { kind: 'spawn'; uid: number; at: Pos }
   | { kind: 'wait'; uid: number }
   | {
-      kind: 'ability';
-      team: Team;
+      kind: 'power';
+      team: TeamId;
       general: string;
-      ability: string;
-      /** Casilla elegida (habilidades de area). */
+      power: string;
+      /** Casilla elegida (poderes de area). */
       target?: Pos;
       /** Unidades tocadas y vida que han perdido. */
       hits: { uid: number; damage: number }[];
@@ -47,9 +47,11 @@ export type GameEventOf<K extends GameEventKind> = Extract<GameEvent, { kind: K 
  * (panel de combate, barras de vida) aunque una de las dos haya caido.
  */
 export interface CombatInfo {
-  attackerType: number;
-  defenderType: number;
-  attackerTeam: Team;
+  /** Tipos de unidad (id de units.json). */
+  attackerType: string;
+  defenderType: string;
+  attackerTeam: TeamId;
+  defenderTeam: TeamId;
   /** Vida antes del combate. */
   attackerLife: number;
   defenderLife: number;

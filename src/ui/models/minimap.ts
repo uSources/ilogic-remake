@@ -1,33 +1,42 @@
+import { terrainAt } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import type { Grid } from '../../core/util/grid';
-import type { GameState, Pos } from '../../core/model';
+import type { GameState, Pos, TeamId } from '../../core/model';
 import type { MinimapVM } from '../../hud/store';
+import { isFriendly, ownerSideOf, sideOf } from '../sides';
 
-/** Minimapa (`palette`: color de cada terreno, ver terrainPalette): colores del terreno, niebla, edificios (dueño solo si se ve) y unidades visibles. */
-export function minimapVM(pal: readonly number[], s: GameState, vis: Grid<boolean>, hidden: ReadonlySet<number>): MinimapVM {
+/**
+ * Minimapa para el equipo que mira (`pal`: color de cada terreno por id, ver terrainPalette): colores
+ * del terreno, niebla, edificios (dueño solo si se ve o es de su alianza) y unidades visibles.
+ */
+export function minimapVM(
+  pal: Readonly<Record<string, number>>,
+  s: GameState,
+  view: { viewer: TeamId; vis: Grid<boolean>; hidden: ReadonlySet<number> },
+): MinimapVM {
+  const { viewer, vis, hidden } = view;
   const map = mapGrid(s);
   const terrain: number[] = [];
-  for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) terrain.push(pal[map.at({ x, y })] ?? 0x3a7a3a);
+  for (let y = 0; y < map.height; y++) for (let x = 0; x < map.width; x++) terrain.push(pal[terrainAt(s, { x, y }).id] ?? 0x3a7a3a);
   const seen = (pos: Pos) => vis.contains(pos) && vis.at(pos);
   return {
     w: map.width,
     h: map.height,
     terrain,
     fog: vis.columns.map((column) => column.slice()),
-    buildings: s.buildings.map((building) => ({
-      x: building.x,
-      y: building.y,
-      owner: building.owner === 0 || seen(building) ? building.owner : null,
-    })),
+    buildings: s.buildings.map((building) => {
+      const owner = ownerSideOf(s, viewer, building.owner);
+      return { x: building.x, y: building.y, owner: isFriendly(owner) || seen(building) ? owner : 'neutral' };
+    }),
     units: s.units
-      .filter((unit) => unit.carrier === null && !hidden.has(unit.uid) && (unit.team === 0 || seen(unit)))
-      .map((unit) => ({ x: unit.x, y: unit.y, team: unit.team })),
+      .filter((unit) => unit.carrier === null && !hidden.has(unit.uid) && (unit.team === viewer || seen(unit)))
+      .map((unit) => ({ x: unit.x, y: unit.y, side: sideOf(s, viewer, unit.team) })),
     ...(s.controlPoints
       ? {
           points: s.controlPoints.map((controlPoint) => ({
             x: controlPoint.x,
             y: controlPoint.y,
-            owner: controlPoint.owner,
+            owner: ownerSideOf(s, viewer, controlPoint.owner),
             r: s.rules.controlRadius,
           })),
         }

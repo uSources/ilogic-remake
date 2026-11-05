@@ -1,6 +1,6 @@
-/** Edificios (buildings.json): validacion y tablas por indice (BUILDING, HQ...). */
-import { type Checker, checkSprites, spriteRow } from './check';
-import type { BuildingDef, ContentContext } from './types';
+/** Edificios (buildings.json): validacion y su tipo resuelto (`BuildingType`). */
+import { type Checker, checkSprites } from './check';
+import type { BuildingDef, ContentContext, Texts } from './types';
 
 export function validateBuildings(buildings: readonly BuildingDef[], ctx: ContentContext, check: Checker): void {
   for (const b of buildings) {
@@ -10,23 +10,39 @@ export function validateBuildings(buildings: readonly BuildingDef[], ctx: Conten
     s.num('heals', b?.heals, { min: 0, max: 100, int: true });
     s.num('protection', b?.protection, { min: 0.05, max: 1 });
     s.num('vision', b?.vision, { min: 0, max: 20, int: true });
-    checkSprites(s, b?.classicSprite, ctx.terrainNames);
+    checkSprites(s, b?.classicSprite, ctx.terrainIds);
   }
   check
     .scope('buildings.json')
     .expect(buildings.filter((b) => b?.hq).length === 1, 'tiene que haber exactamente un edificio con "hq": true');
 }
 
-export function buildBuildingTables(buildings: readonly BuildingDef[], ctx: ContentContext) {
-  return {
-    BUILDING_NAMES: buildings.map((b) => b.id),
-    HQ: buildings.findIndex((b) => b.hq),
-    BUILDING: {
-      earning: buildings.map((b) => b.earning),
-      heals: buildings.map((b) => b.heals),
-      protection: buildings.map((b) => b.protection),
-      vision: buildings.map((b) => b.vision),
-    },
-    BUILDING_TERRAIN_PREFIX: buildings.map((b) => spriteRow(b.classicSprite, ctx.terrainNames)),
-  };
+/** Un tipo de edificio, resuelto al cargar el contenido (buildings.json). */
+export interface BuildingType {
+  readonly id: string;
+  readonly name: Texts;
+  /** Cuartel general: si lo capturan, ese equipo pierde (hay exactamente uno: GameContent.hq). */
+  readonly isHq: boolean;
+  /** Dinero por ronda (antes de la regla incomeScale). */
+  readonly earning: number;
+  /** Vida que cura a las unidades propias que repara. */
+  readonly heals: number;
+  /** Multiplica el acierto contra quien esta encima (menos = mas defensa). */
+  readonly protection: number;
+  readonly vision: number;
+  /** Graficos de 2013: prefijo de la imagen segun el terreno, por id de terreno (si no esta, ''). */
+  readonly classicSprite: Readonly<Record<string, string>>;
+}
+
+export function buildBuildingTypes(buildings: readonly BuildingDef[]): BuildingType[] {
+  return buildings.map((definition) => ({
+    id: definition.id,
+    name: definition.name,
+    isHq: !!definition.hq,
+    earning: definition.earning,
+    heals: definition.heals,
+    protection: definition.protection,
+    vision: definition.vision,
+    classicSprite: { ...definition.classicSprite },
+  }));
 }

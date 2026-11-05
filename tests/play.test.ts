@@ -4,7 +4,7 @@ import { Session } from '../tools/play/session';
 /** La partida por texto (npm run play) es la forma rapida de probar reglas: que no se rompa. */
 describe('partida por texto', () => {
   it('mapa, unidades y ordenes basicas', () => {
-    const g = new Session({ seed: 7, size: 20, theme: 0 });
+    const g = new Session({ seed: 7, size: 20, theme: 'Plains' });
     expect(g.run('map').split('\n').length).toBeGreaterThan(20);
     const units = g.run('units 0');
     const uid = Number(units.trim().split(/\s+/)[0]);

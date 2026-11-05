@@ -2,7 +2,7 @@
  * Cuanto aporta un general: la IA con el general A contra la IA con B (o sin general) en los mismos
  * mapas, dos partidas por mapa con los bandos cambiados. La IA a menudo no acaba la partida: al dia
  * 60 gana quien tenga mas puntos (como con limite de dias: ejercito + 1000 por edificio). Cuenta
- * victorias (y cuantas fueron por puntos), empates y cuantas veces usa cada habilidad.
+ * victorias (y cuantas fueron por puntos), empates y cuantas veces usa cada poder.
  *
  *   npm run generals -- --a Roca                 Roca contra sin general, 40 mapas (80 partidas)
  *   npm run generals -- --a Roca --b Brisa       Roca contra Brisa
@@ -11,13 +11,15 @@
  *
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
+import { duel, duelTeams } from '@core/teams';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { newGeneral } from '@core/generals';
+import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/geom';
-import { endRound, outcome, score } from '@core/rules';
+import { endRound, isMatchOver, outcome, score, turnTakers } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
+import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
 
 const arg = (name: string, fallback: string): string => {
   const index = process.argv.indexOf(`--${name}`);
@@ -33,28 +35,33 @@ function checkGeneralIds(ids: string[]): void {
   const known = new Set(defaultContent().files.generals.map((general) => general.id));
   for (const id of ids) if (id !== 'none' && !known.has(id)) throw new Error(`General "${id}" no existe (${[...known].join(', ')}, none)`);
 }
-const gen = (s: GameState, id: string) => (id === 'none' ? null : newGeneral(s, id));
 
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
-function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: 0 | 1 | -1; byScore: boolean } {
+function play(
+  seed: number,
+  firstGeneral: string,
+  secondGeneral: string,
+  uses: Map<string, number>,
+): { winner: Side | 'draw'; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createGame(rng, {});
-  s.generals = [gen(s, g0), gen(s, g1)];
-  while (outcome(s) === 'playing' && s.day <= 60) {
-    for (const team of [0, 1] as const) {
+  const s: GameState = createGame(rng, { teams: duel('ai', 'ai') });
+  const [first, second] = duelTeams(s);
+  appointGeneral(s, first, firstGeneral === 'none' ? null : firstGeneral);
+  appointGeneral(s, second, secondGeneral === 'none' ? null : secondGeneral);
+  while (!isMatchOver(s) && s.day <= 60) {
+    for (const team of turnTakers(s)) {
       for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {
-        if (event.kind === 'ability')
-          uses.set(`${event.general}.${event.ability}`, (uses.get(`${event.general}.${event.ability}`) ?? 0) + 1);
-        if (outcome(s) !== 'playing') break;
+        if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);
+        if (isMatchOver(s)) break;
       }
-      if (outcome(s) !== 'playing') break;
+      if (isMatchOver(s)) break;
     }
     endRound(s);
   }
-  const result = outcome(s);
-  if (result !== 'playing') return { winner: result === 'won' ? 0 : 1, byScore: false };
-  const scoreGap = score(s, 0) - score(s, 1);
-  return { winner: scoreGap > 0 ? 0 : scoreGap < 0 ? 1 : -1, byScore: true };
+  const result = outcome(s, FIRST_SIDE);
+  if (result !== 'playing') return { winner: result === 'won' ? FIRST_SIDE : SECOND_SIDE, byScore: false };
+  const scoreGap = score(s, FIRST_SIDE) - score(s, SECOND_SIDE);
+  return { winner: scoreGap > 0 ? FIRST_SIDE : scoreGap < 0 ? SECOND_SIDE : 'draw', byScore: true };
 }
 
 checkGeneralIds([challenger, rival]);
@@ -65,10 +72,10 @@ let winsA = 0,
 const uses = new Map<string, number>();
 for (let mapSeed = from; mapSeed < from + maps; mapSeed++) {
   // Partida 1: A es el bando 0. Partida 2: A es el bando 1.
-  for (const aTeam of [0, 1] as const) {
-    const result = play(mapSeed, aTeam === 0 ? challenger : rival, aTeam === 0 ? rival : challenger, uses);
+  for (const aTeam of [FIRST_SIDE, SECOND_SIDE]) {
+    const result = play(mapSeed, aTeam === FIRST_SIDE ? challenger : rival, aTeam === FIRST_SIDE ? rival : challenger, uses);
     if (result.byScore) byScore++;
-    if (result.winner === -1) draws++;
+    if (result.winner === 'draw') draws++;
     else if (result.winner === aTeam) winsA++;
     else winsB++;
   }
@@ -83,5 +90,5 @@ if (json) {
   console.log(`${challenger} contra ${rival}: ${games} partidas en ${maps} mapas (desde ${from})`);
   console.log(`  gana ${challenger}: ${winsA}, gana ${rival}: ${winsB}, empates: ${draws} (${byScore} decididas por puntos al dia 60)`);
   console.log(`  ${challenger} se lleva el ${Math.round(winRate * 100)} % (±${Math.round(margin * 100)})`);
-  for (const [ability, count] of uses) console.log(`  ${ability}: ${count} veces (${(count / games).toFixed(1)} por partida)`);
+  for (const [power, count] of uses) console.log(`  ${power}: ${count} veces (${(count / games).toFixed(1)} por partida)`);
 }

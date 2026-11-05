@@ -3,29 +3,33 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  */
-import { savedPart, tablesOf } from './gameContent';
+import { unitTypeOf, savedPart } from './gameContent';
 import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
-import { TERRAIN_TYPES, THEME_NAMES } from './content';
 import { generalDef } from './generals';
+import { findEntry, type Catalog, type Identified } from './content';
 import { mapGrid } from './mapGrid';
 import type { GridBounds } from './util/grid';
-import { sanitizeStats } from './stats';
+import { sanitizeTeamStats } from './stats';
+import { allianceCount, isControllerKind } from './teams';
 import { assignKeys } from './squads/naming';
 import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations';
 import { SAVE_VERSION } from './saveVersion';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { isObject } from './util/predicates';
-import type { GameState, Pos, RulesConfig, SavedGameState, StandingOrder, Unit } from './model';
+import type { GameState, GeneralState, Pos, RulesConfig, SavedGameState, StandingOrder, TeamId, TeamState, Unit } from './model';
 
 export type { SaveContext } from './saveMigrations';
+
+/** Un id de ese catalogo del contenido de la partida. */
+const isIdIn = (catalog: Catalog<Identified>, value: unknown): value is string => typeof value === 'string' && !!findEntry(catalog, value);
 
 const isInt = (value: unknown, min: number, max: number): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 
-/** Bando valido (0 jugador, 1 IA). */
-const isTeam = (value: unknown): boolean => value === 0 || value === 1;
-/** Ultimo tema de mapa (Plains..Snowy, ver GameState.theme). */
-const MAX_THEME = THEME_NAMES.length - 1;
+/** Un equipo de la partida que se lee (su numero en GameState.teams). */
+const isTeam = (s: GameState, value: unknown): boolean => isInt(value, 0, s.teams.length - 1);
+/** Equipos que se aceptan en una partida guardada. */
+const MAX_TEAMS = 16;
 /** Topes de lo que se acepta al leer: mas alla, el fichero esta roto. */
 const MAX_SAVED_FUNDS = 1e9;
 const MAX_COUNT = 1e6;
@@ -57,18 +61,16 @@ export function deserialize(json: string, context: SaveContext): GameState | nul
   if (!hasGameShape(raw)) return null;
   // El contenido no se guarda: es el de quien lee (si el JSON trae un "content", se pisa).
   const s: GameState = { ...raw, content: context.content };
-  if (!readMap(s) || !hasValidBasics(s)) return null;
+  if (!readMap(s) || !hasValidBasics(s) || !readTeams(s)) return null;
   if (!readUnits(s) || !hasConsistentCargo(s) || !readBuildings(s)) return null;
   s.nextUid = Math.max(Number(s.nextUid) || 0, Math.max(0, ...s.units.map((unit) => unit.uid)) + 1);
   s.day = isInt(s.day, 1, 1e9) ? s.day : 1;
-  if (s.stats !== undefined) s.stats = sanitizeStats(s.stats);
   if (s.mission !== undefined && !isValidMission(s, s.mission)) return null;
   // Lo opcional que esta roto se quita y la partida sigue sin ello.
   cleanSetup(s);
   cleanWeather(s);
   cleanSquads(s);
   cleanControlPoints(s);
-  cleanGenerals(s);
   if (!hasValidRules(s)) return null;
   migrateChecked(s, savedVersion, context);
   return s;
@@ -89,21 +91,34 @@ function parseObject(json: string): Record<string, unknown> | null {
  * tocan. Lo de dentro lo comprueba deserialize despues, campo a campo.
  */
 function hasGameShape(raw: Record<string, unknown>): raw is Record<string, unknown> & SavedGameState {
-  return [raw.map, raw.funds, raw.units, raw.buildings].every(Array.isArray) && isObject(raw.rules);
+  return [raw.map, raw.teams, raw.units, raw.buildings].every(Array.isArray) && isObject(raw.rules);
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado. */
 function readMap(s: GameState): boolean {
   if (!Array.isArray(s.map) || !isInt(s.map.length, MAP_MIN, MAP_MAX) || !Array.isArray(s.map[0])) return false;
   if (s.map[0].length !== s.map.length) return false;
-  const isTerrain = (value: unknown) => isInt(value, 0, TERRAIN_TYPES - 1);
+  const isTerrain = (value: unknown) => isIdIn(s.content.terrain, value);
   return s.map.every((column) => Array.isArray(column) && column.length === s.map.length && column.every(isTerrain));
 }
 
 function hasValidBasics(s: GameState): boolean {
-  if (!isInt(s.theme, 0, MAX_THEME) || !Array.isArray(s.funds) || s.funds.length !== 2) return false;
-  if (!s.funds.every((funds) => isInt(funds, 0, MAX_SAVED_FUNDS))) return false;
-  return Array.isArray(s.units) && Array.isArray(s.buildings);
+  return isIdIn(s.content.themes, s.theme) && Array.isArray(s.units) && Array.isArray(s.buildings);
+}
+
+/** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */
+function readTeam(s: GameState, team: TeamState, id: TeamId): boolean {
+  if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !isControllerKind(team.controller)) return false;
+  if (!isInt(team.funds, 0, MAX_SAVED_FUNDS)) return false;
+  team.general = cleanGeneral(s, team.general);
+  team.stats = sanitizeTeamStats(team.stats);
+  return true;
+}
+
+/** Entre 2 y MAX_TEAMS equipos, todos bien formados, y al menos dos alianzas (si no, nadie es enemigo de nadie). */
+function readTeams(s: GameState): boolean {
+  if (!isInt(s.teams.length, 2, MAX_TEAMS)) return false;
+  return s.teams.every((team, id) => readTeam(s, team, id)) && allianceCount(s.teams) >= 2;
 }
 
 /** Comprueba cada unidad (uid sin repetir) y quita lo opcional que este roto. */
@@ -119,9 +134,9 @@ function readUnits(s: GameState): boolean {
 }
 
 function isValidUnit(s: GameState, unit: Unit): boolean {
-  if (!isInt(unit.type, 0, tablesOf(s).UNIT_NAMES.length - 1) || !isTeam(unit.team)) return false;
+  if (!isIdIn(s.content.units, unit.type) || !isTeam(s, unit.team)) return false;
   if (!isMapPos(mapGrid(s), unit) || !isInt(unit.life, 1, MAX_LIFE)) return false;
-  return Array.isArray(unit.cargo) && unit.cargo.length === tablesOf(s).UNIT.maxcarry[unit.type];
+  return Array.isArray(unit.cargo) && unit.cargo.length === unitTypeOf(s, unit).cargoSlots;
 }
 
 function cleanUnit(s: GameState, unit: Unit): void {
@@ -145,19 +160,19 @@ function hasConsistentCargo(s: GameState): boolean {
 
 function readBuildings(s: GameState): boolean {
   for (const building of s.buildings) {
-    if (!isInt(building.type, 0, tablesOf(s).BUILDING_NAMES.length - 1) || !isMapPos(mapGrid(s), building)) return false;
-    if (building.owner !== null && !isTeam(building.owner)) return false;
+    if (!isIdIn(s.content.buildings, building.type) || !isMapPos(mapGrid(s), building)) return false;
+    if (building.owner !== null && !isTeam(s, building.owner)) return false;
     // Una captura a medias rota se olvida (el edificio sigue).
     const progress = building.capture;
     if (progress == null) continue;
-    if (!isTeam(progress.team) || !isInt(progress.uid, 1, MAX_UID) || !isInt(progress.left, 1, 1000)) building.capture = null;
+    if (!isTeam(s, progress.team) || !isInt(progress.uid, 1, MAX_UID) || !isInt(progress.left, 1, 1000)) building.capture = null;
   }
   return true;
 }
 
 function isValidMission(s: GameState, mission: GameState['mission']): boolean {
   const objective = mission?.objective as Record<string, unknown> | undefined;
-  if (!mission || typeof mission.id !== 'string' || !objective) return false;
+  if (!mission || typeof mission.id !== 'string' || !isTeam(s, mission.team) || !objective) return false;
   const hasDays = isInt(objective.days, 1, 10000);
   switch (objective.kind) {
     case 'hq':
@@ -166,11 +181,7 @@ function isValidMission(s: GameState, mission: GameState['mission']): boolean {
     case 'destroy':
       return hasDays;
     case 'capture':
-      return (
-        hasDays &&
-        isInt(objective.count, 1, 1000) &&
-        (objective.type === null || isInt(objective.type, 0, tablesOf(s).BUILDING_NAMES.length - 1))
-      );
+      return hasDays && isInt(objective.count, 1, 1000) && (objective.type === null || isIdIn(s.content.buildings, objective.type));
     case 'escort':
       return hasDays && isInt(objective.uid, 1, MAX_UID) && isMapPos(mapGrid(s), objective.to);
     default:
@@ -182,7 +193,10 @@ function cleanSetup(s: GameState): void {
   if (s.setup === undefined) return;
   const setup = s.setup;
   const ok =
-    !!setup && isInt(setup.seed, 0, 2 ** 32) && setup.size === s.map.length && (setup.theme === null || isInt(setup.theme, 0, MAX_THEME));
+    !!setup &&
+    isInt(setup.seed, 0, 2 ** 32) &&
+    setup.size === s.map.length &&
+    (setup.theme === null || isIdIn(s.content.themes, setup.theme));
   if (!ok) delete s.setup;
 }
 
@@ -191,18 +205,16 @@ function cleanWeather(s: GameState): void {
   if (s.weather === undefined) return;
   const weather = s.weather;
   const ok =
-    !!weather &&
-    isInt(weather.kind, 0, tablesOf(s).WEATHER.ids.length - 1) &&
-    isInt(weather.next, 0, tablesOf(s).WEATHER.ids.length - 1) &&
-    isInt(weather.left, 0, 1000);
+    !!weather && isIdIn(s.content.weather, weather.kind) && isIdIn(s.content.weather, weather.next) && isInt(weather.left, 0, 1000);
   if (!ok) delete s.weather;
 }
 
 function cleanSquads(s: GameState): void {
   if (s.squads !== undefined) {
     const isValidSquad = (squad: unknown) => {
-      const saved = squad as { id?: unknown; name?: unknown } | null;
-      return !!saved && isInt(saved.id, 1, MAX_COUNT) && typeof saved.name === 'string' && saved.name.length > 0;
+      const saved = squad as { id?: unknown; team?: unknown; name?: unknown } | null;
+      const hasName = typeof saved?.name === 'string' && saved.name.length > 0;
+      return !!saved && isInt(saved.id, 1, MAX_COUNT) && isTeam(s, saved.team) && hasName;
     };
     if (!Array.isArray(s.squads) || !s.squads.every(isValidSquad)) delete s.squads;
     for (const squad of s.squads ?? []) {
@@ -211,17 +223,23 @@ function cleanSquads(s: GameState): void {
       if (squad.key !== undefined && !isInt(squad.key, 1, 9)) delete squad.key;
     }
   }
-  for (const unit of s.units) if (unit.squad !== undefined && !s.squads?.some((squad) => squad.id === unit.squad)) delete unit.squad;
+  // Una unidad solo esta en una escuadra de su equipo.
+  const isInItsSquad = (unit: Unit) => s.squads?.some((squad) => squad.id === unit.squad && squad.team === unit.team);
+  for (const unit of s.units) if (unit.squad !== undefined && !isInItsSquad(unit)) delete unit.squad;
   dropRepeatedKeys(s);
   assignKeys(s);
 }
 
-/** [CAMBIO] Teclas de grupo sin repetir (se la queda la primera escuadra); las demas, la primera libre (assignKeys). */
+/**
+ * [CAMBIO] Teclas de grupo sin repetir en cada equipo (se la queda la primera escuadra); las demas, la
+ * primera libre (assignKeys).
+ */
 function dropRepeatedKeys(s: GameState): void {
-  const keys = new Set<number>();
+  const keys = new Set<string>();
   for (const squad of s.squads ?? []) {
-    if (squad.key !== undefined && keys.has(squad.key)) delete squad.key;
-    if (squad.key !== undefined) keys.add(squad.key);
+    const key = `${squad.team}:${squad.key}`;
+    if (squad.key !== undefined && keys.has(key)) delete squad.key;
+    if (squad.key !== undefined) keys.add(key);
   }
 }
 
@@ -229,24 +247,17 @@ function cleanControlPoints(s: GameState): void {
   if (s.controlPoints === undefined) return;
   const ok =
     Array.isArray(s.controlPoints) &&
-    s.controlPoints.every((point) => point && isMapPos(mapGrid(s), point) && (point.owner === null || isTeam(point.owner)));
+    s.controlPoints.every((point) => point && isMapPos(mapGrid(s), point) && (point.owner === null || isTeam(s, point.owner)));
   if (!ok) delete s.controlPoints;
 }
 
-/** Un general que no existe (o con datos rotos) se quita: la partida sigue sin el. */
-function cleanGenerals(s: GameState): void {
-  if (s.generals === undefined) return;
-  if (!Array.isArray(s.generals) || s.generals.length !== 2) {
-    delete s.generals;
-    return;
-  }
-  s.generals = s.generals.map((saved) => {
-    const definition = saved ? generalDef(s, saved.id) : undefined;
-    if (!saved || !definition) return null;
-    const hasCharge = typeof saved.charge === 'number' && Number.isFinite(saved.charge);
-    const charge = hasCharge ? Math.max(0, Math.min(saved.charge, definition.charge.max)) : 0;
-    return { id: saved.id, charge, used: !!saved.used, reveal: !!saved.reveal };
-  }) as GameState['generals'];
+/** Un general que no existe (o con datos rotos) se quita: el equipo sigue sin el. */
+function cleanGeneral(s: GameState, saved: GeneralState | null): GeneralState | null {
+  const definition = isObject(saved) && typeof saved.id === 'string' ? generalDef(s, saved.id) : undefined;
+  if (!saved || !definition) return null;
+  const hasCharge = typeof saved.charge === 'number' && Number.isFinite(saved.charge);
+  const charge = hasCharge ? Math.max(0, Math.min(saved.charge, definition.charge.max)) : 0;
+  return { id: saved.id, charge, used: !!saved.used, reveal: !!saved.reveal };
 }
 
 /** Un tanto por uno (0..1). */

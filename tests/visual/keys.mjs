@@ -50,7 +50,7 @@ async function menuTo(page, id) {
 
 /** Mapa 7: tres unidades propias sin mover; Tab las recorre y Mayusculas+Tab tambien (no hay "anterior"). */
 async function mapTab(page) {
-  await page.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false }));
+  await page.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false }));
   const idle = await page.evaluate(() =>
     window.ilogicDebug
       .state()
@@ -119,11 +119,11 @@ async function codeTab(page) {
 /** Nombre de escuadra (el cuadro corta la propagacion de las teclas): Tab tampoco saca el foco. */
 async function squadTab(page) {
   const st = await page.evaluate(async () => {
-    await window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false });
+    await window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false });
     const s = window.ilogicDebug.state();
     const mine = s.units.filter((u) => u.team === 0);
     for (const u of mine) u.squad = 1;
-    s.squads = [{ id: 1, name: 'Alfa' }];
+    s.squads = [{ id: 1, team: 0, name: 'Alfa' }];
     await window.ilogicDebug.startGame({ state: s });
     return mine.map((u) => u.uid);
   });
@@ -145,11 +145,11 @@ async function groupKeys(page) {
   // Cierra el cuadro del nombre de escuadra de la prueba anterior.
   await press(page, 'Escape');
   await page.evaluate(async () => {
-    await window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 0, fog: false });
+    await window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false });
     const s = window.ilogicDebug.state();
     const mine = s.units.filter((u) => u.team === 0);
     for (const u of mine) u.squad = 1;
-    s.squads = [{ id: 1, name: 'Alfa' }];
+    s.squads = [{ id: 1, team: 0, name: 'Alfa' }];
     await window.ilogicDebug.startGame({ state: s });
   });
   const n = await page.evaluate(() => window.ilogicDebug.state().units.filter((u) => u.team === 0).length);

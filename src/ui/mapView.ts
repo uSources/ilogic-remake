@@ -18,6 +18,7 @@ import { tileImage } from './map/tileImage';
 import { UnitLayer, type Facing } from './map/unitLayer';
 import type { ViewOptions } from './map/viewOptions';
 import { reducedMotion } from './motion';
+import type { Side } from './sides';
 import { PAL_CSS } from './palette';
 import { terrainArtReady } from './terrainArt';
 
@@ -177,7 +178,7 @@ export class MapView {
   /** Pone al dia edificios, unidades, niebla y resaltados. */
   render(s: GameState, options: ViewOptions): void {
     const newArt = this.newArt();
-    this.buildings.sync(s, options.vis);
+    this.buildings.sync(s, options.vis, options.viewer);
     this.units.sync(s, options, newArt);
     this.fog.sync(options.vis, newArt);
     this.flags.sync(options);
@@ -225,8 +226,8 @@ export class MapView {
     this.units.face(uid, facing);
   }
 
-  facingOf(uid: number, team: 0 | 1): Facing {
-    return this.units.facingOf(uid, team);
+  facingOf(uid: number, side: Side): Facing {
+    return this.units.facingOf(uid, side);
   }
 
   /** Objeto temporal para animaciones (coordenadas de mundo). */

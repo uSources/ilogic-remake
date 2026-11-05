@@ -2,6 +2,7 @@
  * Pantalla de la campaña: la lista de misiones con su miniatura, estado y mejor marca, y el resumen
  * de la elegida. Pide a la escena lo poco que usa (`CampaignHost`).
  */
+import type { TerrainPalette } from '../ui/terrainColors';
 import { listStep, type MenuCommand } from '../controls/menu';
 import { defaultContent } from '../core/content/default';
 import { buildMission, MISSIONS, type MissionDef } from '../core/missions';
@@ -12,7 +13,7 @@ import { settings, t, type TextKey } from '../settings';
 import { mapThumb } from './thumb';
 
 export interface CampaignHost {
-  readonly palette: number[];
+  readonly palette: TerrainPalette;
   /** Ya se esta saliendo del menu: no empezar otra mision. */
   readonly leaving: boolean;
   toHome(): void;

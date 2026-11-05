@@ -9,13 +9,14 @@ import { placeControlPoints } from '@core/mapgen';
 import { controlRound, endRound, groundDistance, inControlZone, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, savedByVersion1 } from './helpers';
+import { blankState, savedByVersion1, unitTypeNamed, hqId } from './helpers';
+import { duel, teamState } from '@core/teams';
 
-const { HQ } = defaultContent().tables;
+const HQ = hqId();
 
 /** [CAMBIO] Puntos de control: zonas que dan dinero cada ronda a su dueño si no estan disputadas. */
-const SOLDIER = 0,
-  TANK = 1;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank');
 
 function withPoints(): GameState {
   const s = blankState();
@@ -32,16 +33,13 @@ describe('puntos de control', () => {
     const s = withPoints();
     // En la zona (radio 1) aunque no en el centro.
     const unit = newUnit(s, SOLDIER, 0, { x: 11, y: 9 });
-    const before = s.funds[0];
+    const before = teamState(s, 0).funds;
     const control = controlRound(s)!;
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(control.held).toEqual([1, 1]);
     expect(control.contested).toBe(0);
-    expect(control.income).toEqual([
-      defaultContent().tables.DEFAULT_RULES.controlIncome,
-      defaultContent().tables.DEFAULT_RULES.controlIncome,
-    ]);
-    expect(s.funds[0]).toBe(before + defaultContent().tables.DEFAULT_RULES.controlIncome);
+    expect(control.income).toEqual([defaultContent().defaultRules.controlIncome, defaultContent().defaultRules.controlIncome]);
+    expect(teamState(s, 0).funds).toBe(before + defaultContent().defaultRules.controlIncome);
     unit.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
@@ -51,12 +49,12 @@ describe('puntos de control', () => {
     const s = withPoints();
     newUnit(s, TANK, 0, { x: 4, y: 14 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 15 });
-    const funds = [...s.funds];
+    const funds = s.teams.map((team) => team.funds);
     const control = controlRound(s)!;
     expect(control.contested).toBe(1);
     expect(s.controlPoints![1]!.owner).toBe(1);
     expect(control.held).toEqual([0, 0]);
-    expect(s.funds).toEqual(funds);
+    expect(s.teams.map((team) => team.funds)).toEqual(funds);
   });
 
   it('el enemigo se lo queda echando a todos los del otro bando de la zona', () => {
@@ -80,7 +78,7 @@ describe('puntos de control', () => {
     newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const round = endRound(s);
     expect(round.control?.held).toEqual([1, 1]);
-    expect(round.income[0]).toBeGreaterThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlIncome);
+    expect(round.income[0]).toBeGreaterThanOrEqual(defaultContent().defaultRules.controlIncome);
   });
 
   it('sin puntos no hay nada en el informe', () => {
@@ -91,10 +89,10 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = createGame(seededRng(seed * 7919), {});
+      const s = createGame(seededRng(seed * 7919), { teams: duel('human', 'ai') });
       const points = s.controlPoints ?? [];
       total += points.length;
-      expect(points.length).toBeLessThanOrEqual(defaultContent().tables.DEFAULT_RULES.controlPoints);
+      expect(points.length).toBeLessThanOrEqual(defaultContent().defaultRules.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((building) => building.type === HQ && building.owner === team)!;
       const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
       const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
@@ -108,14 +106,21 @@ describe('puntos de control', () => {
       for (const firstPoint of points)
         for (const secondPoint of points)
           if (firstPoint !== secondPoint)
-            expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().tables.DEFAULT_RULES.controlRadius);
+            expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().defaultRules.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });
 
   it('con la regla a 0 no se ponen', () => {
     const s = blankState({ controlPoints: 0 });
-    placeControlPoints(s, { x: 0, y: 0 }, { x: 19, y: 19 }, seededRng(1));
+    placeControlPoints(
+      s,
+      [
+        { x: 0, y: 0 },
+        { x: 19, y: 19 },
+      ],
+      seededRng(1),
+    );
     expect(s.controlPoints).toBeUndefined();
   });
 

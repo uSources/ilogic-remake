@@ -4,7 +4,7 @@ import { Button } from '../common/buttons';
 import { stars } from '../common/format';
 import { Icon } from '../common/Icon';
 import { ui } from '../store';
-import type { GeneralAbilityVM, GeneralVM } from '../vm/general';
+import type { GeneralPowerVM, GeneralVM } from '../vm/general';
 
 /** Retrato del general (o su inicial si no hay dibujo). */
 function GeneralFace({ general, cls = 'gp-face' }: { general: GeneralVM; cls?: string }) {
@@ -29,36 +29,36 @@ function ChargeBar({ general, title }: { general: GeneralVM; title?: string }) {
   );
 }
 
-/** Apuntando con esta habilidad: el boton pasa a ser "Cancelar". */
-function CancelAbilityButton() {
+/** Apuntando con esta poder: el boton pasa a ser "Cancelar". */
+function CancelPowerButton() {
   return (
-    <Button class="px-btn plain gp-ab on" onClick={() => ui.actions.cancelAbility()}>
+    <Button class="px-btn plain gp-ab on" onClick={() => ui.actions.cancelPower()}>
       {t('genCancel')} <span class="key">Esc</span>
     </Button>
   );
 }
 
-/** Una habilidad: apagada si no se puede usar ahora (y al pasar por encima, por que). */
-function AbilityButton({ ability, mine }: { ability: GeneralAbilityVM; mine: boolean }) {
-  const isUsable = ability.ready && mine;
-  const why = ability.reason ? ` · ${ability.reason}` : '';
+/** Un poder: apagada si no se puede usar ahora (y al pasar por encima, por que). */
+function PowerButton({ power, mine }: { power: GeneralPowerVM; mine: boolean }) {
+  const isUsable = power.ready && mine;
+  const why = power.reason ? ` · ${power.reason}` : '';
   return (
     <Button
       class={`px-btn gp-ab ${isUsable ? '' : 'off'}`}
       disabled={!mine}
-      title={`${ability.description}${why}`}
-      onClick={() => ui.actions.useAbility(ability.id)}
+      title={`${power.description}${why}`}
+      onClick={() => ui.actions.usePower(power.id)}
     >
       <span class="gp-ab-name">
-        {imgUrl(ability.icon) && <Icon k={ability.icon} cls="px-icon gp-ab-icon" />}
-        {ability.name}
+        {imgUrl(power.icon) && <Icon k={power.icon} cls="px-icon gp-ab-icon" />}
+        {power.name}
       </span>
-      <span class="gp-cost">{stars(ability.cost)}</span>
+      <span class="gp-cost">{stars(power.cost)}</span>
     </Button>
   );
 }
 
-/** Panel del general: barra de carga en estrellas y un boton por habilidad. */
+/** Panel del general: barra de carga en estrellas y un boton por poder. */
 export function GeneralPanel({ general, mine }: { general: GeneralVM; mine: boolean }) {
   return (
     <div class="px general-panel" aria-label={`${t('general')}: ${general.name}`}>
@@ -70,26 +70,22 @@ export function GeneralPanel({ general, mine }: { general: GeneralVM; mine: bool
         </div>
       </div>
       <ChargeBar general={general} title={t('genChargeHint')} />
-      <div class="gp-abilities">
-        {general.abilities.map((ability) =>
-          general.targeting === ability.id ? (
-            <CancelAbilityButton key={ability.id} />
-          ) : (
-            <AbilityButton key={ability.id} ability={ability} mine={mine} />
-          ),
+      <div class="gp-powers">
+        {general.powers.map((power) =>
+          general.targeting === power.id ? <CancelPowerButton key={power.id} /> : <PowerButton key={power.id} power={power} mine={mine} />,
         )}
       </div>
     </div>
   );
 }
 
-/** Al pasar por encima del general enemigo: su descripcion y cada habilidad con su coste. */
+/** Al pasar por encima del general enemigo: su descripcion y cada poder con su coste. */
 function enemyGeneralTip(general: GeneralVM): string {
-  const abilities = general.abilities.map((ability) => `${ability.name} (${stars(ability.cost)}): ${ability.description}`);
-  return `${general.description}\n${abilities.join('\n')}`;
+  const powers = general.powers.map((power) => `${power.name} (${stars(power.cost)}): ${power.description}`);
+  return `${general.description}\n${powers.join('\n')}`;
 }
 
-/** General de la IA: solo su nombre y su barra (para saber cuando puede usar sus habilidades). */
+/** General de la IA: solo su nombre y su barra (para saber cuando puede usar sus poderes). */
 export function EnemyGeneral({ general }: { general: GeneralVM }) {
   return (
     <div class="px enemy-general" title={enemyGeneralTip(general)}>

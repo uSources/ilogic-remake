@@ -1,6 +1,7 @@
 import { TILE } from '../../layout';
 import { PAL, PAL_MAP } from '../palette';
 import { frameRect } from '../pixelDraw';
+import { sideColor } from '../sides';
 import { parseTileKey } from './geometry';
 import type { OverlayPainter } from './layer';
 import type { HighlightKind } from './viewOptions';
@@ -47,7 +48,7 @@ export const captureBars: OverlayPainter = (g, opts) => {
     const w = TILE - 2 * CAPTURE_INSET;
     g.fillStyle(PAL.ink, 0.9);
     g.fillRect(px - 1, py - 1, w + 2, CAPTURE_H + 2);
-    g.fillStyle(c.team === 0 ? PAL.blue : PAL.red, 1);
+    g.fillStyle(sideColor(c.side), 1);
     g.fillRect(px, py, Math.max(1, Math.round((w * (c.total - c.left)) / c.total)), CAPTURE_H);
   }
 };

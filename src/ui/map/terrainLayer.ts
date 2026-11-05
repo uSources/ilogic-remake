@@ -1,3 +1,4 @@
+import { terrainAt } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { addSheetFrames, ATLAS, hasImage, sheetFrame } from '../../atlas';
 import type { GameState } from '../../core/model';
@@ -69,8 +70,8 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
 
   private buildClassic(s: GameState): void {
     const objs: Phaser.GameObjects.GameObject[] = [];
-    mapGrid(s).forEach((terrain, { x, y }) => {
-      objs.push(tileImage(this.scene, terrainKey(terrain), { x, y }));
+    mapGrid(s).forEach((_, { x, y }) => {
+      objs.push(tileImage(this.scene, terrainKey(terrainAt(s, { x, y })), { x, y }));
       for (const key of shoreKeys(s, { x, y })) {
         if (hasImage(this.scene.textures, key))
           objs.push(

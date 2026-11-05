@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { defaultContent } from '@core/content/default';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/geom';
 import {
@@ -20,14 +19,15 @@ import {
   combatForecast,
   threatMap,
 } from '@core/rules';
-import { blankState } from './helpers';
+import { teamState } from '@core/teams';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const SOLDIER = 0,
-  TANK = 1,
-  ARTILLERY = 2,
-  TRANSPORT = 7,
-  LFIGHTER = 10,
-  SUPPLIER = 13;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  ARTILLERY = unitTypeNamed('Artillery'),
+  TRANSPORT = unitTypeNamed('Transport'),
+  LFIGHTER = unitTypeNamed('LFighter'),
+  SUPPLIER = unitTypeNamed('Supplier');
 
 // Estas pruebas son de las reglas de 2013; las nuevas estan en tests/modern.test.ts.
 /** Reglas de las partidas de estos tests. */
@@ -47,7 +47,7 @@ describe('movimiento', () => {
   });
   it('el agua no la pisan los vehiculos', () => {
     const s = blankState(TEST_RULES);
-    s.map[11]![10] = 1; // Water
+    s.map[11]![10] = 'Water'; // Water
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     expect(moveRange(s, tank).steps.at({ x: 11, y: 10 })).toBe(0);
     moveUnit(s, tank, { x: 10, y: 14 });
@@ -77,7 +77,7 @@ describe('combate', () => {
   it('los soldados ya no matan tanques ligeros de un golpe (tabla corregida)', () => {
     const s = blankState(TEST_RULES);
     const so = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
-    const lightTank = newUnit(s, 4, 1, { x: 10, y: 11 });
+    const lightTank = newUnit(s, unitTypeNamed('LTank'), 1, { x: 10, y: 11 });
     attack(s, so, lightTank, seededRng(3));
     expect(lightTank.life).toBeGreaterThan(60);
   });
@@ -98,19 +98,19 @@ describe('captura y victoria', () => {
     const s = blankState(TEST_RULES);
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 });
     s.buildings.push({ type: HQ, owner: 1, x: 5, y: 5 });
-    s.buildings.push({ type: 0, owner: null, x: 3, y: 3 });
+    s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
     const soldier = newUnit(s, SOLDIER, 0, { x: 3, y: 3 });
     expect(capture(s, soldier)?.done).toBe(false);
     soldier.active = true;
     expect(capture(s, soldier)?.done).toBe(true);
     expect(s.buildings[2]!.owner).toBe(0);
-    expect(outcome(s)).toBe('playing');
+    expect(outcome(s, 0)).toBe('playing');
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     capture(s, otherSoldier);
     otherSoldier.active = true;
     capture(s, otherSoldier);
     expect(s.buildings[1]!.owner).toBe(0);
-    expect(outcome(s)).toBe('won');
+    expect(outcome(s, 0)).toBe('won');
   });
 });
 
@@ -144,16 +144,16 @@ describe('union y transporte', () => {
 describe('compra y fin de ronda', () => {
   it('fondos insuficientes: no compra', () => {
     const s = blankState(TEST_RULES);
-    s.buildings.push({ type: 2, owner: 0, x: 4, y: 4 });
+    s.buildings.push({ type: 'Factory', owner: 0, x: 4, y: 4 });
     expect(spawn(s, s.buildings[0]!, TANK)).toBeNull();
-    expect(s.funds[0]).toBe(5000);
-    const car = spawn(s, s.buildings[0]!, 3)!;
+    expect(teamState(s, 0).funds).toBe(5000);
+    const car = spawn(s, s.buildings[0]!, unitTypeNamed('Car'))!;
     expect(car.active).toBe(false);
-    expect(s.funds[0]).toBe(5000 - UNIT.cost[3]!); // el Jeep: lo que cueste ahora
+    expect(teamState(s, 0).funds).toBe(5000 - unitTypeNamed('Car').cost); // el Jeep: lo que cueste ahora
   });
   it('ingresos y curacion; los aviones ya no caen', () => {
     const s = blankState(TEST_RULES);
-    s.buildings.push({ type: 0, owner: 0, x: 1, y: 1 }); // City
+    s.buildings.push({ type: 'City', owner: 0, x: 1, y: 1 }); // City
     const so = newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     so.life = 50;
     const flying = newUnit(s, LFIGHTER, 0, { x: 8, y: 8 });
@@ -180,14 +180,14 @@ describe('compra y fin de ronda', () => {
   });
 });
 
-const { UNIT, HQ } = defaultContent().tables;
+const HQ = hqId();
 
 describe('prevision y amenaza', () => {
   it('prevision de tanque contra tanque coherente', () => {
     const s = blankState(TEST_RULES);
-    const attacker = newUnit(s, 1, 0, { x: 10, y: 10 });
+    const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 10, y: 10 });
     attacker.life = 80;
-    const defender = newUnit(s, 1, 1, { x: 10, y: 12 });
+    const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 10, y: 12 });
     defender.life = 60;
     const forecast = combatForecast(s, attacker, defender);
     expect(forecast.expected).toBe(40);
@@ -198,21 +198,21 @@ describe('prevision y amenaza', () => {
   });
   it('probabilidad de destruir alta si el defensor esta casi muerto', () => {
     const s = blankState(TEST_RULES);
-    const attacker = newUnit(s, 1, 0, { x: 10, y: 10 });
-    const defender = newUnit(s, 0, 1, { x: 10, y: 11 });
+    const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 10, y: 10 });
+    const defender = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 10, y: 11 });
     defender.life = 10;
     expect(combatForecast(s, attacker, defender).killChance).toBeGreaterThan(0.99);
   });
   it('amenaza: tanque enemigo visible cubre mover + alcance; invisible no cuenta', () => {
     const s = blankState(TEST_RULES);
-    newUnit(s, 0, 0, { x: 10, y: 10 }); // vision 4 del jugador
-    newUnit(s, 1, 1, { x: 12, y: 10 }); // tanque enemigo visible: mover 5 + alcance 2
-    const th = threatMap(s, 1, 0);
+    newUnit(s, unitTypeNamed('Soldier'), 0, { x: 10, y: 10 }); // vision 4 del jugador
+    newUnit(s, unitTypeNamed('Tank'), 1, { x: 12, y: 10 }); // tanque enemigo visible: mover 5 + alcance 2
+    const th = threatMap(s, 0);
     expect(th.at({ x: 12, y: 17 })).toBe(true); // 7 abajo
     expect(th.at({ x: 12, y: 18 })).toBe(false);
     const other = blankState(TEST_RULES);
-    newUnit(other, 0, 0, { x: 0, y: 0 });
-    newUnit(other, 1, 1, { x: 20, y: 20 }); // fuera de vision
-    expect([...threatMap(other, 1, 0).cells()].some((cell) => cell.value)).toBe(false);
+    newUnit(other, unitTypeNamed('Soldier'), 0, { x: 0, y: 0 });
+    newUnit(other, unitTypeNamed('Tank'), 1, { x: 20, y: 20 }); // fuera de vision
+    expect([...threatMap(other, 0).cells()].some((cell) => cell.value)).toBe(false);
   });
 });

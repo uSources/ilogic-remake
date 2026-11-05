@@ -1,7 +1,7 @@
-/** Generales: panel del jugador (con sus habilidades) y el de la IA (solo para verlo). */
+/** Generales: panel del jugador (con sus poderes) y el de la IA (solo para verlo). */
 
-/** Habilidad del general en el panel. */
-export interface GeneralAbilityVM {
+/** Poder del general en el panel. */
+export interface GeneralPowerVM {
   id: string;
   /** Clave del icono en el atlas (ui/ab_<id>); puede no existir. */
   icon: string;
@@ -17,7 +17,7 @@ export interface GeneralAbilityVM {
 
 /** Panel del general del jugador (null = juega sin general). */
 export interface GeneralVM {
-  /** Clave del retrato en el atlas (ui/gen_<b|r>_<id>), con el color de su bando; puede no existir. */
+  /** Clave del retrato en el atlas (ui/gen_<b|r>_<id>), con el color de su lado para quien mira; puede no existir. */
   face: string;
   name: string;
   title: string;
@@ -26,7 +26,7 @@ export interface GeneralVM {
   stars: number;
   max: number;
   fraction: number;
-  abilities: GeneralAbilityVM[];
-  /** Habilidad que se esta apuntando (fase de elegir casilla). */
+  powers: GeneralPowerVM[];
+  /** Poder que se esta apuntando (fase de elegir casilla). */
   targeting: string | null;
 }

@@ -3,11 +3,11 @@ import { EMPTY, boxSelect, clickSelect, pruneSelection, sameSelection } from '..
 import type { Unit } from '@core/model';
 
 /** [CAMBIO] Seleccion como en los juegos de estrategia en tiempo real (controls/selection.ts). */
-const unitWith = (uid: number, type = 0) => ({ uid, type }) as Unit;
+const unitWith = (uid: number, type = 'Soldier') => ({ uid, type }) as Unit;
 const ids = (s: ReadonlySet<number>) => [...s].sort((first, second) => first - second);
 const plain = { shift: false, ctrl: false, count: 1 };
-const tanks = [unitWith(1, 1), unitWith(2, 1), unitWith(5, 1)];
-const sameType = (unit: Unit) => (unit.type === 1 ? tanks : [unit]);
+const tanks = [unitWith(1, 'Tank'), unitWith(2, 'Tank'), unitWith(5, 'Tank')];
+const sameType = (unit: Unit) => (unit.type === 'Tank' ? tanks : [unit]);
 
 describe('seleccion', () => {
   it('clic en una unidad: solo esa; en vacio: ninguna', () => {
@@ -23,9 +23,9 @@ describe('seleccion', () => {
   });
 
   it('doble clic o Ctrl + clic: todas las de ese tipo en pantalla (con Mayusculas se suman)', () => {
-    expect(ids(clickSelect(new Set([7]), unitWith(2, 1), { ...plain, count: 2 }, sameType))).toEqual([1, 2, 5]);
-    expect(ids(clickSelect(new Set([7]), unitWith(2, 1), { ...plain, ctrl: true }, sameType))).toEqual([1, 2, 5]);
-    expect(ids(clickSelect(new Set([7]), unitWith(2, 1), { ...plain, ctrl: true, shift: true }, sameType))).toEqual([1, 2, 5, 7]);
+    expect(ids(clickSelect(new Set([7]), unitWith(2, 'Tank'), { ...plain, count: 2 }, sameType))).toEqual([1, 2, 5]);
+    expect(ids(clickSelect(new Set([7]), unitWith(2, 'Tank'), { ...plain, ctrl: true }, sameType))).toEqual([1, 2, 5]);
+    expect(ids(clickSelect(new Set([7]), unitWith(2, 'Tank'), { ...plain, ctrl: true, shift: true }, sameType))).toEqual([1, 2, 5, 7]);
   });
 
   it('recuadro: las de dentro; con Mayusculas o Ctrl se suman', () => {

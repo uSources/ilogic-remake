@@ -1,16 +1,17 @@
 /**
  * Partida por texto: las reglas del juego sin graficos, para probar cambios de reglas o de IA en
  * segundos (la usan los agentes de IA y los tests). Cada orden es una linea; la respuesta, texto.
- * Juega el bando 0 (azul, "tu"); el 1 (rojo) lo mueve la IA al terminar el turno.
+ * Juega el equipo de la persona (el primero que lleva una persona: "tu"); los demas los mueve la IA al
+ * terminar el turno, en orden.
  */
 import { aiTurn } from '@core/ai';
+import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
-import { TERRAIN_NAMES } from '@core/content';
+import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
-import { tablesOf } from '@core/gameContent';
 import { posKey, samePos, seededRng } from '@core/geom';
 import { mapGrid } from '@core/mapGrid';
-import { abilityBlock, generalOf, newGeneral, useAbility } from '@core/generals';
+import { appointGeneral, powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
   attackFull,
@@ -25,16 +26,17 @@ import {
   outcome,
   reachableTiles,
   spawn,
+  othersAfter,
   unitAt,
   unitById,
   visibility,
   wait,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import type { GameEvent, GameState, Pos, Rng, Unit } from '@core/model';
+import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
-/** Una letra por terreno (minuscula = suelo; mayuscula = obstaculo o agua). */
-const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {
+/** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
+const TERRAIN_CHAR: Readonly<Record<string, string>> = {
   Grass: '.',
   Flowers: ',',
   Woods: 'f',
@@ -52,12 +54,13 @@ const TERRAIN_CHAR: Record<(typeof TERRAIN_NAMES)[number], string> = {
   DWater: '=',
 };
 /** Edificios: inicial (mayuscula = tuyo, minuscula = enemigo, * delante = neutral). */
-const BUILDING_CHAR = ['C', 'O', 'F', 'S', 'A', 'B'];
+const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', Factory: 'F', Stronghold: 'S', Airport: 'A', Base: 'B' };
 
 export interface SessionOptions {
   seed?: number;
   size?: number;
-  theme?: number | null;
+  /** Tema (id de themes.json: Plains, Desert, Forest, Swamp, Snowy) o null al azar. */
+  theme?: string | null;
   fog?: boolean;
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */
@@ -70,6 +73,14 @@ export interface SessionOptions {
 export class Session {
   s: GameState;
   private rng: Rng;
+  /** El equipo que se juega con las ordenes (el de la persona). */
+  private get me(): TeamId {
+    return playerTeam(this.s);
+  }
+  /** Los equipos que mueve la IA al terminar el turno, en orden. */
+  private get others(): TeamId[] {
+    return teamIds(this.s).filter((team) => team !== this.me);
+  }
 
   constructor(options: SessionOptions = {}) {
     const seed = options.seed ?? 1;
@@ -87,20 +98,21 @@ export class Session {
         size: options.size ?? 20,
         theme: options.theme ?? null,
         ruleChanges: { fog: options.fog ?? false },
+        teams: duel('human', 'ai'),
       });
-      const pick = (id: string | undefined) => {
-        if (!id) return null;
-        const general = newGeneral(this.s, id);
-        if (!general)
+      const pick = (team: TeamId, id: string | undefined) => {
+        if (!id) return;
+        if (!newGeneral(this.s, id))
           throw new Error(
             `No existe el general "${id}" (${defaultContent()
-              .files.generals.map((general) => general.id)
+              .generals.list.map((general) => general.id)
               .join(', ')})`,
           );
-        return general;
+        appointGeneral(this.s, team, id);
       };
-      const [general, enemyGeneral] = [pick(options.general), pick(options.enemyGeneral)];
-      if (general || enemyGeneral) this.s.generals = [general, enemyGeneral];
+      const [mine, enemy] = duelTeams(this.s);
+      pick(mine, options.general);
+      pick(enemy, options.enemyGeneral);
     }
   }
 
@@ -172,7 +184,7 @@ export class Session {
   private mine(uid: number, needActive = true): Unit {
     const unit = unitById(this.s, uid);
     if (!unit) throw new UsageError(`no existe la unidad ${uid}`);
-    if (unit.team !== 0) throw new UsageError(`la unidad ${uid} no es tuya`);
+    if (unit.team !== this.me) throw new UsageError(`la unidad ${uid} no es tuya`);
     if (needActive && !unit.active) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
     if (unit.carrier !== null) throw new UsageError(`la unidad ${uid} va dentro de un transporte`);
     return unit;
@@ -181,7 +193,7 @@ export class Session {
   /** Mapa en texto: terreno, edificios y unidades (las enemigas solo si se ven). */
   map(): string {
     const s = this.s;
-    const vis = visibility(s, 0);
+    const vis = visibility(s, this.me);
     const map = mapGrid(s);
     const width = map.width,
       height = map.height;
@@ -192,13 +204,13 @@ export class Session {
       for (let x = 0; x < width; x++) {
         const unit = unitAt(s, { x, y });
         const building = buildingAt(s, { x, y });
-        let cell = ' ' + TERRAIN_CHAR[TERRAIN_NAMES[map.at({ x, y })]!] + ' ';
+        let cell = ' ' + (TERRAIN_CHAR[terrainAt(s, { x, y }).id] ?? '?') + ' ';
         if (building) {
-          const char = BUILDING_CHAR[building.type]!;
-          cell = building.owner === null ? `*${char} ` : ` ${building.owner === 0 ? char : char.toLowerCase()} `;
+          const char = BUILDING_CHAR[buildingTypeOf(s, building).id] ?? '?';
+          cell = building.owner === null ? `*${char} ` : ` ${building.owner === this.me ? char : char.toLowerCase()} `;
         }
-        if (unit && unit.carrier === null && (unit.team === 0 || vis.at({ x, y })))
-          cell = (unit.team === 0 ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
+        if (unit && unit.carrier === null && (unit.team === this.me || vis.at({ x, y })))
+          cell = (unit.team === this.me ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
         else if (!vis.at({ x, y }) && !building) cell = ' ? ';
         row += cell;
       }
@@ -208,13 +220,13 @@ export class Session {
   }
 
   units(team: number | null): string {
-    const vis = visibility(this.s, 0);
-    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === 0 || vis.at(unit)));
+    const vis = visibility(this.s, this.me);
+    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === this.me || vis.at(unit)));
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
         const usedTag = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
-        return `${String(unit.uid).padStart(3)} ${unit.team === 0 ? 'tuya   ' : 'enemiga'} ${tablesOf(this.s).UNIT_NAMES[unit.type]!.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
+        return `${String(unit.uid).padStart(3)} ${unit.team === this.me ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
   }
@@ -224,9 +236,9 @@ export class Session {
     const targets = attackTargets(this.s, unit);
     const tiles = reachableTiles(range);
     return [
-      `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
+      `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
-      `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${tablesOf(this.s).UNIT_NAMES[unit.type]} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
+      `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${unitTypeOf(this.s, unit).id} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
     ]
       .filter(Boolean)
@@ -255,51 +267,70 @@ export class Session {
 
   private buy(at: Pos, name: string): string {
     const building = buildingAt(this.s, at);
-    if (!building || building.owner !== 0) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
-    const type = tablesOf(this.s).UNIT_NAMES.findIndex((unitName) => unitName.toLowerCase() === name.toLowerCase());
+    if (!building || building.owner !== this.me) throw new UsageError(`no tienes un edificio en (${posKey(at)})`);
+    const unitType = this.s.content.units.list.find((candidate) => candidate.id.toLowerCase() === name.toLowerCase());
     const options = buyOptions(this.s, building);
-    if (!options.length) throw new UsageError(`${tablesOf(this.s).BUILDING_NAMES[building.type]} no fabrica unidades`);
-    if (type < 0)
-      return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${tablesOf(this.s).UNIT_NAMES[buyOption.type]} (${buyOption.cost})`).join(', ')}`;
-    const unit = spawn(this.s, building, type);
-    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${this.s.funds[0]})`);
-    return `comprada ${unit.uid} ${tablesOf(this.s).UNIT_NAMES[type]} en (${posKey(at)}); quedan ${this.s.funds[0]}`;
+    if (!options.length) throw new UsageError(`${buildingTypeOf(this.s, building).id} no fabrica unidades`);
+    if (!unitType)
+      return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${buyOption.unitType.id} (${buyOption.cost})`).join(', ')}`;
+    const unit = spawn(this.s, building, unitType);
+    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${teamState(this.s, this.me).funds})`);
+    return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
   }
 
-  /** Usar una habilidad del general (sin id: lista de habilidades y carga). */
+  /** Usar un poder del general (sin id: lista de poderes y carga). */
   private power(id: string, target: { x: number; y: number } | null): string {
-    const general = generalOf(this.s, 0);
+    const general = generalOf(this.s, this.me);
     if (!general) throw new UsageError('no tienes general (--general Brisa)');
-    const list = general.definition.abilities.map((ability) => `${ability.id} (${ability.cost})`).join(', ');
+    const list = general.definition.powers.map((power) => `${power.id} (${power.cost})`).join(', ');
     if (!id)
-      return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usada este turno' : ''}. Habilidades: ${list}`;
-    const block = abilityBlock(this.s, 0, id, target);
-    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (habilidades: ${list})`);
-    return describe(this.s, useAbility(this.s, 0, id, target)!);
+      return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
+    const block = powerBlock(this.s, this.me, id, target);
+    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (poderes: ${list})`);
+    return describe(this.s, usePower(this.s, this.me, id, target)!);
   }
 
-  /** Fin del turno propio (o la IA juega por ti con `ai`), turno enemigo y fin de ronda. */
+  /**
+   * Fin del turno propio (o la IA juega por ti con `ai`), turnos de los demas equipos por su orden
+   * (los derrotados no juegan) con el fin de ronda tras el ultimo. Aqui juega una persona: los demas
+   * equipos tienen que ser de la IA.
+   */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
-    if (aiForMe) for (const event of aiTurn(this.s, this.rng, 0)) out.push(`tu IA: ${describe(this.s, event)}`);
-    for (const event of aiTurn(this.s, this.rng, 1)) out.push(`enemigo: ${describe(this.s, event)}`);
-    const round = endRound(this.s);
-    out.push(`--- dia ${this.s.day}: +${round.income[0]} de ingresos, dinero ${this.s.funds[0]}`);
-    const result = outcome(this.s);
+    if (aiForMe) for (const event of aiTurn(this.s, this.rng, this.me)) out.push(`tu IA: ${describe(this.s, event)}`);
+    // othersAfter pasa siempre una vez por el fin de ronda: ahi se sabe lo cobrado.
+    let income = 0;
+    for (const step of othersAfter(this.s, this.me)) {
+      if (step.kind === 'roundEnd') income = teamValue(endRound(this.s).income, this.me);
+      else this.playOther(step.team, out);
+    }
+    out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
+    const result = outcome(this.s, this.me);
     if (result !== 'playing') out.push(`FIN: ${result}`);
     return out.join('\n');
   }
 
+  /** El turno de otro equipo, que tiene que ser de la IA (aqui juega una sola persona). */
+  private playOther(team: TeamId, out: string[]): void {
+    const reason = notAiControlledReason(this.s, team);
+    if (reason) throw new UsageError(reason);
+    for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
+  }
+
   status(): string {
     const s = this.s;
-    const own = (team: number) => s.buildings.filter((building) => building.owner === team).length;
+    const me = this.me;
+    const own = (team: TeamId) => s.buildings.filter((building) => building.owner === team).length;
+    const unitsOf = (team: TeamId) => s.units.filter((unit) => unit.team === team).length;
+    const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
+    const general = teamState(s, me).general;
     return [
-      `dia ${s.day} · dinero ${s.funds[0]} (enemigo ${s.funds[1]}) · edificios ${own(0)} contra ${own(1)}`,
-      ...(s.generals?.[0] ? [`general ${s.generals[0].id}: carga ${s.generals[0].charge.toFixed(1)}`] : []),
-      `unidades ${s.units.filter((unit) => unit.team === 0).length} contra ${s.units.filter((unit) => unit.team === 1).length} · resultado: ${outcome(s)}`,
+      `dia ${s.day} · dinero ${teamState(s, me).funds} (otros ${others((team) => teamState(s, team).funds)}) · edificios ${own(me)} contra ${others(own)}`,
+      ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
+      `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${outcome(s, me)}`,
       `sin usar: ${
         s.units
-          .filter((unit) => unit.team === 0 && unit.active && unit.carrier === null)
+          .filter((unit) => unit.team === me && unit.active && unit.carrier === null)
           .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,
@@ -312,7 +343,7 @@ class UsageError extends Error {}
 function describe(s: GameState, event: GameEvent): string {
   const name = (uid: number) => {
     const unit = unitById(s, uid);
-    return unit ? `${uid} ${tablesOf(s).UNIT_NAMES[unit.type]}` : `${uid}`;
+    return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
   };
   switch (event.kind) {
     case 'move':
@@ -329,15 +360,15 @@ function describe(s: GameState, event: GameEvent): string {
       return `${name(event.uid)} sube a ${name(event.into)}`;
     case 'wait':
       return `${name(event.uid)} espera`;
-    case 'ability':
-      return `general ${event.general} usa ${event.ability}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+    case 'power':
+      return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
   }
 }
 
 const legend = (s: GameState): string => `+NN unidad tuya · -NN enemiga · ? no se ve
 Terreno: . hierba , flores f bosque ^ acantilado : arena c cactus M meseta _ nieve o muñeco t pinos % roca nevada i hielo ~ agua - poco profunda = profunda
 Edificios: C ciudad O petroleo F fabrica S fortaleza A aeropuerto B base (mayuscula tuyo, minuscula enemigo, * neutral)
-Edificios de tipo: ${tablesOf(s).BUILDING_NAMES.join(', ')}`;
+Edificios de tipo: ${s.content.buildings.list.map((building) => building.id).join(', ')}`;
 
 const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   map                      mapa en texto
@@ -348,7 +379,7 @@ const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   capture <id>             capturar el edificio de debajo
   wait <id>                terminar con la unidad
   buy <x> <y> <Tipo>       comprar en un edificio tuyo (Soldier, Tank...; sin tipo, lista)
-  power [id] [x y]         habilidad del general (con --general; sin id, carga y lista)
+  power [id] [x y]         poder del general (con --general; sin id, carga y lista)
   end                      fin de turno: juega la IA enemiga y empieza el dia siguiente
   ai                       la IA juega tu turno y el enemigo el suyo
   status                   dia, dinero, edificios y unidades

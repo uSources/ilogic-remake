@@ -4,7 +4,7 @@
  * esta en la entrada de su fase en PHASES (`menu`).
  */
 import type { BuyOption } from '../../core/rules';
-import type { Building, GameState, Pos, Unit } from '../../core/model';
+import type { Building, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { ActionCtx, ActionId } from '../../controls/actions';
 import type { MenuItemVM, MenuVM } from '../../hud/store';
 import { PHASES } from './phases';
@@ -12,6 +12,8 @@ import type { ActionKey, Phase } from './types';
 
 export interface MenuInput {
   s: GameState;
+  /** El equipo que mira (el que compra, ordena...). */
+  viewer: TeamId;
   phase: Phase;
   cursor: Pos;
   /** Unidad elegida (menu de la unidad, carga). */

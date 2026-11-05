@@ -3,6 +3,7 @@
  * algunas de ellas, elegir a quien atacar ('attack') y a quien descargar y donde ('unloadPick',
  * 'unloadTile').
  */
+import { unitTypeOf } from '../../../core/gameContent';
 import { posKey, posOf } from '../../../core/geom';
 import {
   attackEvent,
@@ -21,7 +22,7 @@ import {
 import { cancelStandingOrder, keepCapturing } from '../../../core/squads';
 import type { StandingOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
-import { t, unitLabel, type TextKey } from '../../../settings';
+import { t, nameOf, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
 import type { MenuInput, MenuModel } from '../menuModel';
@@ -141,7 +142,7 @@ function unitMenuModel(input: MenuInput): MenuModel {
     // "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas).
     hint: action === 'capture' && unit ? captureHintText(input.s, unit) : undefined,
   }));
-  return { kind: 'unit', title: unit ? unitLabel(input.s.content, unit.type) : undefined, items, at: unit ?? input.cursor };
+  return { kind: 'unit', title: unit ? nameOf(unitTypeOf(input.s, unit)) : undefined, items, at: unit ?? input.cursor };
 }
 
 export const attackPhase: PhaseHandler = {
@@ -187,8 +188,8 @@ function cargoMenuModel(input: MenuInput): MenuModel {
     const hasRoom = unloadTiles(input.s, carrier!, passenger).length > 0;
     return {
       id,
-      label: unitLabel(input.s.content, passenger.type),
-      icon: unitIconKey(input.s, passenger.type, true),
+      label: nameOf(unitTypeOf(input.s, passenger)),
+      icon: unitIconKey(unitTypeOf(input.s, passenger), true),
       hint: `${passenger.life}`,
       disabled: !hasRoom,
     };

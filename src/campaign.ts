@@ -4,9 +4,9 @@
 import { defaultContent } from './core/content/default';
 import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
-import type { GameEvent, GameState, Objective } from './core/model';
-import { buildingLabel, settings } from './settings';
-import type { GameContent } from './core/content';
+import type { GameEvent, GameState, Objective, TeamId } from './core/model';
+import { nameOf, settings } from './settings';
+import { entryOf, type GameContent } from './core/content';
 
 const STORAGE_KEY = 'ilogic.campaign';
 
@@ -75,7 +75,12 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { k
   hq: () => (es() ? 'Conquista la Base enemiga.' : 'Take the enemy HQ.'),
   survive: ({ days }) => (es() ? `Aguanta hasta el final del día ${days}.` : `Hold out until the end of day ${days}.`),
   capture: ({ count, type, days }, content) => {
-    const what = type === null ? (es() ? 'edificios' : 'buildings') : buildingLabel(content, type).toLowerCase() + (es() ? 'es' : 's');
+    const what =
+      type === null
+        ? es()
+          ? 'edificios'
+          : 'buildings'
+        : nameOf(entryOf(content.buildings, type, 'edificio')).toLowerCase() + (es() ? 'es' : 's');
     return es() ? `Ten ${count} ${what} antes de que acabe el día ${days}.` : `Own ${count} ${what} before day ${days} ends.`;
   },
   destroy: ({ days }) =>
@@ -93,7 +98,7 @@ const NO_UNIT_UIDS: readonly number[] = [];
 function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): Objective {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
-  if (mission) return objectiveFromMission(mission.objective, NO_UNIT_UIDS, content.tables);
+  if (mission) return objectiveFromMission(mission.objective, NO_UNIT_UIDS, content);
   return { kind: 'hq' };
 }
 
@@ -114,11 +119,12 @@ export function objectiveText(mission: MissionDef | null, s?: GameState): string
 
 /** Progreso en corto: "3/6", "día 4 de 8"... */
 export function objectiveStatus(s: GameState): string | null {
-  const objective = s.mission?.objective;
-  if (!objective || objective.kind === 'hq') return null;
+  const mission = s.mission;
+  const objective = mission?.objective;
+  if (!mission || !objective || objective.kind === 'hq') return null;
   const shownDay = Math.min(s.day, objective.days);
   const day = es() ? `Día ${shownDay} de ${objective.days}` : `Day ${shownDay} of ${objective.days}`;
-  const progress = measureObjective(s, objective);
+  const progress = measureObjective(s, mission.team, objective);
   if (objective.kind === 'capture' && progress) return `${progress.done}/${progress.total} · ${day}`;
   if (objective.kind === 'destroy' && progress) return `${es() ? 'Quedan' : 'Left'}: ${progress.total} · ${day}`;
   return day;
@@ -127,6 +133,8 @@ export function objectiveStatus(s: GameState): string | null {
 /** Lo que pasa en la partida, para saber cuando se ha cumplido un paso del tutorial. */
 export interface TutorialContext {
   s: GameState;
+  /** El equipo de la persona en la mision (el de su objetivo). */
+  team: TeamId;
   phase: string;
   /** Eventos del jugador desde que empezo el paso actual. */
   events: GameEvent[];
@@ -138,15 +146,14 @@ export interface TutorialStep {
   done: (context: TutorialContext) => boolean;
 }
 
-const PLAYER = 0;
-
-const ownedBuildingCount = (s: GameState) => s.buildings.filter((building) => building.owner === PLAYER).length;
+/** Cuantos edificios tiene un equipo. */
+export const ownedBuildingCount = (s: GameState, team: TeamId) => s.buildings.filter((building) => building.owner === team).length;
 
 /** Alguna unidad del jugador esta sobre un edificio que no es suyo (puede capturarlo). */
-const isOnCapturable = ({ s }: TutorialContext) =>
+const isOnCapturable = ({ s, team }: TutorialContext) =>
   s.units.some(
     (unit) =>
-      unit.team === PLAYER && s.buildings.some((building) => building.x === unit.x && building.y === unit.y && building.owner !== PLAYER),
+      unit.team === team && s.buildings.some((building) => building.x === unit.x && building.y === unit.y && building.owner !== team),
   );
 
 const hasEvent = (context: TutorialContext, kind: GameEvent['kind']) => context.events.some((event) => event.kind === kind);
@@ -185,7 +192,7 @@ export const TUTORIAL: TutorialStep[] = [
       es: 'Te toca otra vez. Vuelve a elegir Capturar con el mismo soldado, sin moverlo: si se va de la ciudad, la captura empieza de cero.',
       en: 'Your turn again. Choose Capture again with the same soldier, without moving it: if it leaves the city, the capture starts over.',
     },
-    done: (context) => ownedBuildingCount(context.s) > context.ownedAtStart,
+    done: (context) => ownedBuildingCount(context.s, context.team) > context.ownedAtStart,
   },
   {
     text: {

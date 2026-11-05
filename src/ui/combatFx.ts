@@ -9,14 +9,14 @@
  * animaciones.
  */
 import type Phaser from 'phaser';
-import { MoveType } from '../core/content';
-import { tablesOf } from '../core/gameContent';
-import type { GameState, Pos } from '../core/model';
+import { MoveType, type UnitType } from '../core/content';
+import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost, type FxTimeline } from './fxKit';
 import type { Facing } from './mapView';
 import { PAL, PAL_MAP } from './palette';
+import { sideColor, type Side } from './sides';
 
 /** Lado al que tiene que mirar quien esta en `from` para disparar a `to` (null si estan en la misma columna). */
 export const facingToward = (from: Pos, to: Pos): Facing | null => (to.x > from.x ? 'right' : to.x < from.x ? 'left' : null);
@@ -35,12 +35,12 @@ export type ShotKind = 'arc' | 'missile' | 'bomb' | 'tracer' | 'bullets' | 'shel
 /** Alcance desde el que un arma a distancia lanza misiles en vez de proyectiles en parabola. */
 const MISSILE_RANGE = 6;
 
-export function shotKind(s: GameState, attackerType: number, defenderType: number): ShotKind {
-  const { UNIT } = tablesOf(s);
-  const isRangedWeapon = UNIT.minalc[attackerType]! > 0;
-  if (isRangedWeapon) return UNIT.alcance[attackerType]! >= MISSILE_RANGE ? 'missile' : 'arc';
-  const movement = UNIT.movtype[attackerType];
-  if (movement === MoveType.AIR) return UNIT.movtype[defenderType] === MoveType.AIR ? 'tracer' : 'bomb';
+export function shotKind(attackerType: UnitType, defenderType: UnitType): ShotKind {
+  const attack = attackerType.attack;
+  const isRangedWeapon = !!attack && attack.minRange > 1;
+  if (isRangedWeapon) return attack.maxRange >= MISSILE_RANGE ? 'missile' : 'arc';
+  const movement = attackerType.movement;
+  if (movement === MoveType.AIR) return defenderType.movement === MoveType.AIR ? 'tracer' : 'bomb';
   return movement === MoveType.FOOT ? 'bullets' : 'shell';
 }
 
@@ -296,11 +296,11 @@ export function tag(timeline: FxTimeline, view: FxHost, at: Pos, text: string, c
 /** Fotogramas de los restos al caer. */
 const DEBRIS_FRAMES = 9;
 
-/** Restos al caer una unidad: trozos del color de su bando que saltan y caen, y una columna de humo. */
-export async function debris(timeline: FxTimeline, view: FxHost, at: Pos, team: number): Promise<void> {
+/** Restos al caer una unidad: trozos del color de su lado que saltan y caen, y una columna de humo. */
+export async function debris(timeline: FxTimeline, view: FxHost, at: Pos, side: Side): Promise<void> {
   const scene = timeline.scene;
   const centerPoint = center(at);
-  const colors = [team === 0 ? PAL.blue : PAL.red, PAL_MAP.smoke, PAL.ink, PAL_MAP.smokeDark];
+  const colors = [sideColor(side), PAL_MAP.smoke, PAL.ink, PAL_MAP.smokeDark];
   const pieces = Array.from({ length: 10 }, (_, i) => {
     const size = i % 3 ? 3 : 4;
     const piece = rect(scene, view, centerPoint.x, centerPoint.y, size, size, colors[i % colors.length]!);

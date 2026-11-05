@@ -10,21 +10,21 @@
  *
  * | Modulo | Que va |
  * |---|---|
- * | `context` | AiCtx (estado del turno: bando, grupo, plan) y ayudas comunes (acercarse, mover) |
+ * | `context` | AiCtx (estado del turno: equipo, grupo, plan) y ayudas comunes (acercarse, mover) |
  * | `scoring` | cuanto vale cada ataque (`ATTACK_SCORE_TERMS`) |
  * | `tactics` | retirarse, atacar, capturar, avanzar, moverse al azar |
  * | `fire` | plan de fuego concentrado y orden de juego |
  * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
  * | `production` | que fabrica |
  * | `formation` | escuadras que avanzan juntas |
- * | `standingOrders` | ordenes permanentes del jugador (con destino) y su prevision |
+ * | `standingOrders` | ordenes permanentes (con destino) de un equipo y su prevision |
  *
  * Fuera de aqui se importa de este fichero (lo publico de `ai/` se reexporta abajo).
  */
 import { aiGeneral } from './aiGenerals';
 import { teamUnits } from './rules/queries';
 import { wait } from './rules/unitActions';
-import type { GameEvent, GameState, Rng, Team } from './model';
+import type { GameEvent, GameState, Rng, TeamId } from './model';
 import { aiCtx } from './ai/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';
@@ -35,9 +35,9 @@ export { standingOrderPlayOrder } from './ai/formation';
 export type { AiCtx } from './ai/context';
 
 /** Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound). */
-export function* aiTurn(s: GameState, rng: Rng, team: Team = 1): Generator<GameEvent> {
+export function* aiTurn(s: GameState, rng: Rng, team: TeamId): Generator<GameEvent> {
   const ai = aiCtx(team);
-  // [CAMBIO] Primero el general (una habilidad, si merece la pena): ver aiGenerals.ts.
+  // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ai.me);
   const { plan, order } = planFire(s, ai.me);
   ai.plan = plan;

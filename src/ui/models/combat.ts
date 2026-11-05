@@ -1,16 +1,19 @@
+import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { bountyFor, combatForecast, flanked } from '../../core/rules';
-import type { CombatInfo, GameEvent, GameState, Pos, Unit } from '../../core/model';
+import type { CombatInfo, GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
-import { unitLabel } from '../../settings';
+import { nameOf } from '../../settings';
+import { isFriendly, sideOf } from '../sides';
 import { unitKey } from '../sprites';
 
 /** Combate: prevision antes de atacar y panel mientras se anima un ataque. */
 
-/** Prevision de combate de `attacker` (colocado en `from`) contra `target`. */
+/** Prevision de combate de `attacker` (colocado en `from`) contra `target`, para el equipo que mira. */
 export function forecastVM(
   textures: Phaser.Textures.TextureManager,
   s: GameState,
+  viewer: TeamId,
   attacker: Unit,
   from: Pos,
   target: Unit,
@@ -18,8 +21,8 @@ export function forecastVM(
 ): ForecastVM {
   const forecast = combatForecast(s, { ...attacker, x: from.x, y: from.y }, target);
   return {
-    attackerIcon: unitKey(textures, s, { ...attacker, active: true }),
-    defenderIcon: unitKey(textures, s, target),
+    attackerIcon: unitKey(textures, s, { ...attacker, active: true }, viewer),
+    defenderIcon: unitKey(textures, s, target, viewer),
     low: forecast.low,
     high: forecast.high,
     expected: forecast.expected,
@@ -28,7 +31,7 @@ export function forecastVM(
     killChance: forecast.killChance,
     anchor,
     flank: flanked(s, target) ? s.rules.flankBonus : 0,
-    bounty: bountyFor(s, target.type),
+    bounty: bountyFor(s, target),
     counter: forecast.counter
       ? {
           low: forecast.counter.low,
@@ -42,13 +45,15 @@ export function forecastVM(
 }
 
 /**
- * Panel de combate de un ataque (ver CombatVM) en el momento `stage`. `icons` son las imagenes que
- * habia dibujadas antes del combate y `seen` si el jugador ve a cada una: una unidad en la niebla
+ * Panel de combate de un ataque (ver CombatVM) en el momento `stage`, para el equipo que mira
+ * (`viewer`: lo suyo o lo aliado va a la izquierda). `icons` son las imagenes que habia dibujadas
+ * antes del combate y `seen` si ese equipo ve a cada una: una unidad en la niebla
  * sale como '???' (no se delata que unidad dispara desde donde no se ve).
  * Devuelve null para eventos antiguos sin datos de combate.
  */
 export function combatVM(
   s: GameState,
+  viewer: TeamId,
   event: Extract<GameEvent, { kind: 'attack' }>,
   stage: CombatVM['stage'],
   icons: { attacker: string | null; defender: string | null },
@@ -58,7 +63,6 @@ export function combatVM(
   const combat: CombatInfo | undefined = event.combat;
   if (!combat) return null;
   const counter = event.counter ?? 0;
-  const defTeam = (1 - combat.attackerTeam) as 0 | 1;
   const hitDone = stage !== 'start';
   const counterDone = stage === 'counter';
   const side = (role: CombatSideVM['role']): CombatSideVM => {
@@ -69,8 +73,8 @@ export function combatVM(
     const life = Math.max(0, before - (hurt ?? 0));
     return {
       icon: known ? (isAttacker ? icons.attacker : icons.defender) : null,
-      name: known ? unitLabel(s.content, isAttacker ? combat.attackerType : combat.defenderType) : '???',
-      team: isAttacker ? combat.attackerTeam : defTeam,
+      name: known ? nameOf(unitTypeOf(s, { type: isAttacker ? combat.attackerType : combat.defenderType })) : '???',
+      side: sideOf(s, viewer, isAttacker ? combat.attackerTeam : combat.defenderTeam),
       role,
       rank: known ? (isAttacker ? combat.attackerRank : combat.defenderRank) : 0,
       life,
@@ -82,12 +86,13 @@ export function combatVM(
   };
   const attacker = side('attacker');
   const defender = side('defender');
-  const playerAttacks = combat.attackerTeam === 0;
+  // A la izquierda, el lado de quien mira; si no es ninguno de los dos (otros equipos), el atacante.
+  const attackerLeft = isFriendly(attacker.side) || !isFriendly(defender.side);
   return {
     id,
     stage,
-    left: playerAttacks ? attacker : defender,
-    right: playerAttacks ? defender : attacker,
+    left: attackerLeft ? attacker : defender,
+    right: attackerLeft ? defender : attacker,
     counter: combat.counterHit !== null,
   };
 }

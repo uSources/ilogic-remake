@@ -52,7 +52,7 @@ export class MoveSession {
     session.load = byTile(loadTargets(s, unit, range));
     session.trail = [posOf(unit)];
     session.block = passMap(s, unit).block;
-    session.danger = threatMap(s, 1, 0);
+    session.danger = threatMap(s, unit.team);
     session.attackZone = attackZone(s, unit, range);
     return session;
   }

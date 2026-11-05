@@ -21,7 +21,8 @@ import {
   wait,
 } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
-import type { GameEvent, GameState, Pos, Unit } from '../../core/model';
+import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
+import { isHostile } from '../../core/teams';
 import { showToast } from '../../hud/store';
 import { settings, t } from '../../settings';
 import type { MapView } from '../../ui/mapView';
@@ -36,6 +37,8 @@ export interface MoveHost {
   readonly view: MapView;
   /** La partida (Ctrl+Z la cambia por la de antes). */
   state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   phase: Phase;
   readonly ended: boolean;
   readonly selection: GroupSelection;
@@ -55,11 +58,11 @@ export interface CommitOptions {
   wait?: boolean;
 }
 
-/** Uids de los enemigos que se ven ahora (para saber si un movimiento ha descubierto a alguien). */
-function visibleEnemyUids(s: GameState): string {
-  const vis = visibility(s, 0);
+/** Uids de los enemigos de `viewer` que ve ahora (para saber si un movimiento ha descubierto a alguien). */
+function visibleEnemyUids(s: GameState, viewer: TeamId): string {
+  const vis = visibility(s, viewer);
   return s.units
-    .filter((unit) => unit.team === 1 && unit.carrier === null && vis.at(unit))
+    .filter((unit) => isHostile(s, viewer, unit.team) && unit.carrier === null && vis.at(unit))
     .map((unit) => unit.uid)
     .sort((first, second) => first - second)
     .join(',');
@@ -161,7 +164,7 @@ export class UnitMoves {
 
   private async joinUnit(unit: Unit, kind: 'merge' | 'load', target: Unit): Promise<void> {
     const s = this.host.state;
-    const ghost = unitKey(this.host.scene.textures, s, unit);
+    const ghost = unitKey(this.host.scene.textures, s, unit, this.host.viewer);
     this.clearUndo();
     const path = kind === 'merge' ? merge(s, unit, target) : load(s, unit, target);
     if (path) {
@@ -175,7 +178,7 @@ export class UnitMoves {
   private async moveAndAttack(session: MoveSession, from: Pos, target: Unit): Promise<void> {
     const host = this.host;
     const unit = session.unit;
-    const ghost = unitKey(host.scene.textures, host.state, unit);
+    const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     this.clearUndo();
     if (!samePos(from, unit)) {
       const path = moveUnit(host.state, unit, from, session.range!, this.trailTo(from));
@@ -193,9 +196,9 @@ export class UnitMoves {
   private async moveTo(session: MoveSession, to: Pos, isCapture: boolean, options: CommitOptions): Promise<void> {
     const host = this.host;
     const unit = session.unit;
-    const ghost = unitKey(host.scene.textures, host.state, unit);
+    const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     const before = serialize(host.state);
-    const seenBefore = visibleEnemyUids(host.state);
+    const seenBefore = visibleEnemyUids(host.state, host.viewer);
     const snapshot: MoveUndo = { uid: unit.uid, x: unit.x, y: unit.y, canFire: unit.canFire };
     const path = moveUnit(host.state, unit, to, session.range!, this.trailTo(to));
     if (!path) return;
@@ -206,7 +209,7 @@ export class UnitMoves {
       return host.afterAction();
     }
     // Se puede deshacer si no ha descubierto a nadie.
-    if (visibleEnemyUids(host.state) === seenBefore) this.undoStack.push(before);
+    if (visibleEnemyUids(host.state, host.viewer) === seenBefore) this.undoStack.push(before);
     else this.clearUndo();
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (options.wait) return this.waitSelected();
@@ -229,7 +232,7 @@ export class UnitMoves {
     this.clearUndo();
     unit.travelTo = posOf(goal);
     showToast(t('travelSet'));
-    const ghost = unitKey(host.scene.textures, host.state, unit);
+    const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     const path = moveUnit(host.state, unit, dest, range);
     if (this.session) this.session.range = null;
     if (path) await host.play([moveEvent(unit.uid, path)], ghost);

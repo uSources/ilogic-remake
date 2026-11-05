@@ -2,42 +2,51 @@
  * Misiones de la campaña: mapas hechos a mano, objetivos y textos.
  *
  * Mapas en texto, una fila por linea (y), una letra por casilla (x):
+ * Letras (las de cada tema en themes.json, "mapLetters"; las demas en terrain.json, "mapLetter"):
  *   .  suelo (hierba, arena o nieve segun el tema)   T  bosque (o cactus, o bosque nevado)
  *   M  acantilado                                     *  flores (o escarcha)
  *   ~  agua    ,  agua poco profunda    =  agua profunda    i  hielo
  *   P  bosque nevado    N  acantilado nevado
- * Edificios: [tipo, dueño (0 jugador, 1 IA, null neutral), x, y]. Unidades: [tipo, bando, x, y, vida?].
+ * Equipos: `teams`, en orden, con quien juega cada uno (`controller`) y su dinero; el objetivo es
+ * del equipo de la persona (`mission.team`). Edificios: [tipo, dueño (numero de
+ * equipo, null neutral), x, y]. Unidades: [tipo, equipo, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
-import { walkableFor, type ContentTables, type GameContent } from './content';
+import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
 import { rulesWith } from './rulesConfig';
-import { tablesOf } from './gameContent';
+
 import { deepFreeze, type DeepReadonly } from './util/freeze';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
-import type { GameState, Pos, RulesConfig, Team } from './model';
+import type { GameState, Pos, RulesConfig, TeamId } from './model';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
+import type { TeamSetup } from './teams';
+import { canMoveOn } from './rules/queries';
 
 type Text = { es: string; en: string };
 /** Nombre interno de un edificio (buildings.json). */
 type BuildingName = string;
 /** Nombre interno de una unidad (units.json). */
 type UnitName = string;
-type MissionBuilding = [type: BuildingName, owner: Team | null, x: number, y: number];
-type MissionUnit = [type: UnitName, team: Team, x: number, y: number, life?: number];
+type MissionBuilding = [type: BuildingName, owner: TeamId | null, x: number, y: number];
+type MissionUnit = [type: UnitName, team: TeamId, x: number, y: number, life?: number];
+/** Un equipo de la mision: quien lo juega y con cuanto dinero empieza. */
+type MissionTeam = TeamSetup & { funds: number };
 
 /** Una mision tal como se escribe aqui abajo (MISSION_DEFS). */
 interface MissionSource {
   id: string;
   title: Text;
   brief: Text;
-  /** Tema de graficos: 0 llanura, 1 desierto, 2 bosque, 3 pantano, 4 nieve. */
-  theme: number;
+  /** Tema del mapa (id de themes.json): graficos, y el terreno de las letras que dependen de el. */
+  theme: string;
   map: string[];
   buildings: MissionBuilding[];
   units: MissionUnit[];
-  funds: [number, number];
+  /** Los equipos, en orden (su puesto es el numero de equipo de edificios y unidades), y su dinero. */
+  teams: MissionTeam[];
+  /** El objetivo es del equipo que juega una persona (para los demas, perder si lo cumple). */
   objective: MissionObjective;
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
   rules?: Partial<RulesConfig>;
@@ -47,37 +56,34 @@ interface MissionSource {
 /** Una mision de la campaña: de solo lectura (MISSIONS esta congelada). */
 export type MissionDef = DeepReadonly<MissionSource>;
 
-/** Letras cuyo terreno depende del tema, en el orden de los temas. */
-const TERRAIN_BY_THEME: DeepReadonly<Record<string, number[]>> = deepFreeze({
-  // tema:      llanura desierto bosque pantano nieve
-  '.': [0, 3, 0, 0, 10],
-  T: [2, 4, 2, 2, 13],
-  M: [7, 5, 7, 7, 12],
-  '*': [6, 3, 6, 6, 11],
-});
-/** Letras con el mismo terreno en todos los temas. */
-const TERRAIN_IN_ANY_THEME: Readonly<Record<string, number>> = Object.freeze({ '~': 1, ',': 8, '=': 9, i: 14, P: 13, N: 12 });
-
-export function terrainOf(letter: string, theme: number): number {
-  if (letter in TERRAIN_IN_ANY_THEME) return TERRAIN_IN_ANY_THEME[letter]!;
-  const byTheme = TERRAIN_BY_THEME[letter];
-  if (!byTheme) throw new Error(`Letra de terreno desconocida: "${letter}"`);
-  return byTheme[theme]!;
+/**
+ * El terreno de una letra del mapa en texto: la del tema (themes.json, "mapLetters") o, si no
+ * depende del tema, la del terreno (terrain.json, "mapLetter").
+ */
+export function terrainOf(content: GameContent, letter: string, theme: Theme): TerrainType {
+  const byTheme = theme.mapLetters[letter];
+  const terrain = byTheme ? findEntry(content.terrain, byTheme) : content.terrain.list.find((candidate) => candidate.mapLetter === letter);
+  if (!terrain) throw new Error(`Letra de terreno desconocida: "${letter}"`);
+  return terrain;
 }
 
+const missionTheme = (content: GameContent, mission: MissionDef): Theme => entryOf(content.themes, mission.theme, 'tema');
+
 /** Terreno de una casilla del mapa en texto (filas = y). */
-const missionTerrainAt = (mission: MissionDef, pos: Pos) => terrainOf(mission.map[pos.y]![pos.x]!, mission.theme);
+const missionTerrainAt = (content: GameContent, mission: MissionDef, pos: Pos) =>
+  terrainOf(content, mission.map[pos.y]![pos.x]!, missionTheme(content, mission));
 
 /** El mapa en texto (filas = y) como rejilla de terreno `map[x][y]`. */
-function terrainGrid(mission: MissionDef): number[][] {
+function terrainGrid(content: GameContent, mission: MissionDef): GameState['map'] {
   const size = mission.map.length;
-  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => missionTerrainAt(mission, { x, y })));
+  const terrainKey = (pos: Pos) => missionTerrainAt(content, mission, pos).id;
+  return Array.from({ length: size }, (_, x) => Array.from({ length: size }, (_, y) => terrainKey({ x, y })));
 }
 
 /** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
 function placeUnits(s: GameState, units: MissionDef['units']): number[] {
   return units.map(([type, team, x, y, life]) => {
-    const unit = newUnit(s, tablesOf(s).UNIT_NAMES.indexOf(type), team, { x, y });
+    const unit = newUnit(s, entryOf(s.content.units, type, 'unidad'), team, { x, y });
     if (life) unit.life = life;
     return unit.uid;
   });
@@ -86,44 +92,61 @@ function placeUnits(s: GameState, units: MissionDef['units']): number[] {
 /** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
 export function buildMission(mission: MissionDef, content: GameContent): GameState {
   const s = newGameState({
-    map: terrainGrid(mission),
+    map: terrainGrid(content, mission),
     rules: missionRules(mission, content),
     content,
-    theme: mission.theme,
-    funds: [mission.funds[0], mission.funds[1]],
+    theme: missionTheme(content, mission).id,
+    teams: mission.teams,
   });
-  for (const [type, owner, x, y] of mission.buildings) s.buildings.push({ type: tablesOf(s).BUILDING_NAMES.indexOf(type), owner, x, y });
+  for (const [type, owner, x, y] of mission.buildings)
+    s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
   const unitUids = placeUnits(s, mission.units);
-  s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, unitUids, content.tables) };
+  s.mission = { id: mission.id, team: missionTeam(mission), objective: objectiveFromMission(mission.objective, unitUids, content) };
   return s;
 }
 
-/** Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los pida). */
-export const missionRules = (mission: MissionDef, content: GameContent): RulesConfig =>
-  rulesWith(content, { commandPoints: null, upkeep: 0, weather: false, initialFunds: mission.funds[0], ...mission.rules });
+/** El equipo que juega la mision: el que lleva una persona (el dueño de su objetivo). */
+export function missionTeam(mission: MissionDef): TeamId {
+  const team = mission.teams.findIndex((candidate) => candidate.controller === 'human');
+  if (team < 0) throw new Error(`La mision ${mission.id} no tiene ningun equipo para una persona`);
+  return team;
+}
 
-function buildingProblems(mission: MissionDef, tables: ContentTables): string[] {
+/**
+ * Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los
+ * pida). El dinero inicial de las reglas es el del equipo que la juega.
+ */
+export const missionRules = (mission: MissionDef, content: GameContent): RulesConfig =>
+  rulesWith(content, {
+    commandPoints: null,
+    upkeep: 0,
+    weather: false,
+    initialFunds: mission.teams[missionTeam(mission)]!.funds,
+    ...mission.rules,
+  });
+
+function buildingProblems(mission: MissionDef, content: GameContent): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
   for (const [type, , x, y] of mission.buildings) {
-    if (!tables.BUILDING_NAMES.includes(type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
-    if (!tables.TERRAIN.canbuild[missionTerrainAt(mission, { x, y })]) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
+    if (!findEntry(content.buildings, type)) problems.push(`edificio "${type}" no existe (src/core/content/buildings.json)`);
+    if (!missionTerrainAt(content, mission, { x, y }).buildable) problems.push(`${type} en (${x},${y}) no esta sobre suelo`);
     if (taken.has(posKey({ x, y }))) problems.push(`dos edificios en (${x},${y})`);
     taken.add(posKey({ x, y }));
   }
   return problems;
 }
 
-function unitProblems(mission: MissionDef, tables: ContentTables): string[] {
+function unitProblems(mission: MissionDef, content: GameContent): string[] {
   const problems: string[] = [];
   const taken = new Set<string>();
   for (const [name, , x, y] of mission.units) {
-    const type = tables.UNIT_NAMES.indexOf(name);
-    if (type < 0) {
+    const unitType = findEntry(content.units, name);
+    if (!unitType) {
       problems.push(`unidad "${name}" no existe (src/core/content/units.json)`);
       continue;
     }
-    if (!walkableFor(tables, tables.UNIT.movtype[type]!, missionTerrainAt(mission, { x, y })))
+    if (!canMoveOn(unitType.movement, missionTerrainAt(content, mission, { x, y })))
       problems.push(`${name} en (${x},${y}) no puede estar en ese terreno`);
     if (taken.has(posKey({ x, y }))) problems.push(`dos unidades en (${x},${y})`);
     taken.add(posKey({ x, y }));
@@ -131,19 +154,30 @@ function unitProblems(mission: MissionDef, tables: ContentTables): string[] {
   return problems;
 }
 
-function missingBases(mission: MissionDef, tables: ContentTables): string[] {
-  const hasBase = (team: Team) => mission.buildings.some(([type, owner]) => type === tables.BUILDING_NAMES[tables.HQ] && owner === team);
-  return ([0, 1] as const).filter((team) => !hasBase(team)).map((team) => `falta la Base del bando ${team}`);
+function missingBases(mission: MissionDef, content: GameContent): string[] {
+  const hasBase = (team: TeamId) => mission.buildings.some(([type, owner]) => type === content.hq.id && owner === team);
+  const teams = mission.teams.map((_, team) => team);
+  return teams.filter((team) => !hasBase(team)).map((team) => `falta la Base del equipo ${team}`);
+}
+
+/** Edificios y unidades de equipos que la mision no tiene. */
+function unknownTeams(mission: MissionDef): string[] {
+  const isTeam = (team: TeamId | null) => team === null || (team >= 0 && team < mission.teams.length);
+  const owners = [...mission.buildings.map(([, owner]) => owner), ...mission.units.map(([, team]) => team)];
+  return owners.filter((owner) => !isTeam(owner)).map((owner) => `el equipo ${owner} no esta en "teams"`);
 }
 
 /** Comprobaciones de un mapa de mision con ese contenido (para los tests). Devuelve los problemas encontrados. */
 export function checkMission(mission: MissionDef, content: GameContent): string[] {
   const size = mission.map.length;
+  if (!findEntry(content.themes, mission.theme)) return [`el tema "${mission.theme}" no existe (src/core/content/themes.json)`];
   return [
     ...(mission.map.some((row) => row.length !== size) ? ['el mapa no es cuadrado'] : []),
-    ...buildingProblems(mission, content.tables),
-    ...unitProblems(mission, content.tables),
-    ...missingBases(mission, content.tables),
+    ...buildingProblems(mission, content),
+    ...unitProblems(mission, content),
+    ...missingBases(mission, content),
+    ...unknownTeams(mission),
+    ...(mission.teams.some((team) => team.controller === 'human') ? [] : ['ningun equipo es de una persona']),
     ...objectiveProblems(mission.objective, { unitCount: mission.units.length, mapSize: size }),
   ];
 }
@@ -157,7 +191,7 @@ const MISSION_DEFS: MissionSource[] = [
       es: 'Aprende lo básico en un mapa pequeño: mover, capturar, comprar y atacar. Te iré diciendo qué hacer en cada paso.',
       en: 'Learn the basics on a small map: moving, capturing, buying and attacking. I will tell you what to do at each step.',
     },
-    theme: 0,
+    theme: 'Plains',
     map: [
       '~~~~~~~~~~~~~~~~',
       '~...TT.....*..~~',
@@ -191,7 +225,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Soldier', 0, 1, 12],
       ['Soldier', 1, 10, 5, 50],
     ],
-    funds: [6000, 0],
+    teams: [
+      { controller: 'human', funds: 6000 },
+      { controller: 'ai', funds: 0 },
+    ],
     objective: { kind: 'hq' },
   },
   {
@@ -201,7 +238,7 @@ const MISSION_DEFS: MissionSource[] = [
       es: 'El río parte el valle en dos. Hazte con 6 ciudades antes de que acabe el día 14: la infantería cruza el agua poco profunda, los vehículos no.',
       en: 'The river splits the valley in two. Own 6 cities before day 14 ends: infantry can wade through shallow water, vehicles cannot.',
     },
-    theme: 0,
+    theme: 'Plains',
     map: [
       '....TT......,,......',
       '...TTT.....,,..T....',
@@ -249,7 +286,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Soldier', 1, 12, 4],
       ['Tank', 1, 16, 4],
     ],
-    funds: [4000, 6000],
+    teams: [
+      { controller: 'human', funds: 4000 },
+      { controller: 'ai', funds: 6000 },
+    ],
     objective: { kind: 'capture', count: 6, type: 'City', days: 14 },
   },
   {
@@ -257,9 +297,9 @@ const MISSION_DEFS: MissionSource[] = [
     title: { es: 'Resistir', en: 'Hold the line' },
     brief: {
       es: 'Un ejército mucho mayor viene hacia tu Base. Aguanta hasta el final del día 8. Aprovecha el terreno y el contraataque: no salgas a buscarlos.',
-      en: 'A much larger army is marching on your tablesOf(s).HQ. Hold out until the end of day 8. Use the terrain and counterattacks: let them come to you.',
+      en: 'A much larger army is marching on your HQ. Hold out until the end of day 8. Use the terrain and counterattacks: let them come to you.',
     },
-    theme: 1,
+    theme: 'Desert',
     map: [
       '..........TT........',
       '....T.....T.....M...',
@@ -312,7 +352,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Artillery', 1, 16, 4],
       ['Artillery', 1, 18, 6],
     ],
-    funds: [6000, 15000],
+    teams: [
+      { controller: 'human', funds: 6000 },
+      { controller: 'ai', funds: 15000 },
+    ],
     objective: { kind: 'survive', days: 8 },
   },
   {
@@ -322,7 +365,7 @@ const MISSION_DEFS: MissionSource[] = [
       es: 'Lleva el camión de suministros (el que tiene la flecha) hasta la ciudad del noreste antes de que acabe el día 12. Si lo destruyen, se acabó.',
       en: 'Take the supply truck to the city in the north-east before day 12 ends. If it is destroyed, the mission is over.',
     },
-    theme: 2,
+    theme: 'Forest',
     map: [
       '..TT..TTTT..TT......',
       '.TT...TTTT...T......',
@@ -368,7 +411,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Artillery', 1, 15, 6],
       ['LTank', 1, 16, 9],
     ],
-    funds: [5000, 8000],
+    teams: [
+      { controller: 'human', funds: 5000 },
+      { controller: 'ai', funds: 8000 },
+    ],
     objective: { kind: 'escort', vip: 0, to: { x: 18, y: 2 }, days: 12 },
   },
   {
@@ -378,7 +424,7 @@ const MISSION_DEFS: MissionSource[] = [
       es: 'Los restos de un ejército enemigo resisten en la nieve, sin fábricas. Destruye todas sus unidades antes de que acabe el día 10.',
       en: 'The remains of an enemy army hold out in the snow, with no factories. Destroy all their units before day 10 ends.',
     },
-    theme: 4,
+    theme: 'Snowy',
     map: [
       'iii.......PP....iiii',
       'ii.....*..P.......ii',
@@ -422,7 +468,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['LTank', 1, 17, 13],
       ['Soldier', 1, 10, 15],
     ],
-    funds: [10000, 0],
+    teams: [
+      { controller: 'human', funds: 10000 },
+      { controller: 'ai', funds: 0 },
+    ],
     objective: { kind: 'destroy', days: 10 },
   },
   {
@@ -430,9 +479,9 @@ const MISSION_DEFS: MissionSource[] = [
     title: { es: 'Asalto final', en: 'Final assault' },
     brief: {
       es: 'El enemigo tiene más dinero y se ha atrincherado tras los pantanos. Conquista su Base.',
-      en: 'The enemy has more money and has dug in behind the swamps. Take their tablesOf(s).HQ.',
+      en: 'The enemy has more money and has dug in behind the swamps. Take their HQ.',
     },
-    theme: 3,
+    theme: 'Swamp',
     map: [
       '....,,......TT......',
       '...,,..*.....T...TT.',
@@ -481,7 +530,10 @@ const MISSION_DEFS: MissionSource[] = [
       ['Soldier', 1, 14, 4],
       ['Tank', 1, 16, 2],
     ],
-    funds: [8000, 14000],
+    teams: [
+      { controller: 'human', funds: 8000 },
+      { controller: 'ai', funds: 14000 },
+    ],
     objective: { kind: 'hq' },
   },
 ];

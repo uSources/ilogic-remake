@@ -10,7 +10,7 @@
  *
  * | Modulo | Que va |
  * |---|---|
- * | `queries` | que hay en una casilla, por donde se anda, unidades de un bando, pasajeros |
+ * | `queries` | que hay en una casilla, por donde se anda, unidades de un equipo, pasajeros |
  * | `visibility` | vision y niebla |
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
@@ -24,6 +24,7 @@
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
  * | `outcome` | victoria, derrota, objetivos de mision |
+ * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
  */
 export {
   unitById,
@@ -114,5 +115,17 @@ export {
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
 export { unhealable, endRound, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
-export { score, dayLimitReached, outcome, objectiveProgress, endReason } from './rules/outcome';
-export { PLAYER, AI_TEAM, isPlayer, opponentOf, isEnemyOf, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';
+export {
+  score,
+  allianceScore,
+  rivalScore,
+  dayLimitReached,
+  isDefeated,
+  isMatchOver,
+  standingTeams,
+  outcome,
+  objectiveProgress,
+  endReason,
+} from './rules/outcome';
+export { othersAfter, takesTurn, turnTakers, turnsAfter, type TurnStep } from './rules/turnOrder';
+export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';

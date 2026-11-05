@@ -33,7 +33,7 @@ function LifeBar({ side }: { side: CombatSideVM }) {
 
 /** Un lado del panel de combate: retrato, papel en el combate, vida que baja y acierto. */
 function CombatSide({ side, hasCounter, align }: { side: CombatSideVM; hasCounter: boolean; align: 'left' | 'right' }) {
-  const tone = side.team === 0 ? 'blue' : 'red';
+  const tone = side.side === 'enemy' ? 'red' : 'blue';
   return (
     <div class={`px combat-side ${tone} ${align}${side.ko ? ' ko' : ''}`}>
       <div class="cs-head">

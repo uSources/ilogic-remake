@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
-import { defaultContent } from '@core/content/default';
 import { newUnit } from '@core/rules';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import type { GameState } from '@core/model';
-import { blankState } from './helpers';
+import { blankState, unitTypeNamed, hqId } from './helpers';
 
-const { HQ } = defaultContent().tables;
+const HQ = hqId();
 
 /** [CAMBIO] Registro de acciones: clic derecho inteligente, menu completo y cursor (controls/actions.ts). */
-const SOLDIER = 0,
-  TANK = 1,
-  CITY = 0;
+const SOLDIER = unitTypeNamed('Soldier'),
+  TANK = unitTypeNamed('Tank'),
+  CITY = 'City';
 
 function world(): GameState {
   const s = blankState();
@@ -24,7 +23,7 @@ describe('acciones con un grupo', () => {
   function grp() {
     const s = world();
     const units = [newUnit(s, SOLDIER, 0, { x: 2, y: 2 }), newUnit(s, TANK, 0, { x: 3, y: 2 })];
-    const context = (x: number, y: number, enemyHere = false): ActionCtx => ({ s, units, at: { x, y }, enemyHere });
+    const context = (x: number, y: number, enemyHere = false): ActionCtx => ({ s, viewer: 0, units, at: { x, y }, enemyHere });
     return { s, units, ctx: context };
   }
 
@@ -41,7 +40,13 @@ describe('acciones con un grupo', () => {
   it('sin unidades que puedan capturar, el edificio no se ofrece para capturar', () => {
     const s = world();
     const units = [newUnit(s, TANK, 0, { x: 3, y: 2 })];
-    const context: ActionCtx = { s, units: [units[0]!, newUnit(s, TANK, 0, { x: 4, y: 2 })], at: { x: 6, y: 6 }, enemyHere: false };
+    const context: ActionCtx = {
+      s,
+      viewer: 0,
+      units: [units[0]!, newUnit(s, TANK, 0, { x: 4, y: 2 })],
+      at: { x: 6, y: 6 },
+      enemyHere: false,
+    };
     expect(smartAction(context)?.id).toBe('move');
     expect(ids(context)).not.toContain('orderToCapture');
   });
@@ -49,16 +54,16 @@ describe('acciones con un grupo', () => {
   it('menu completo: ordenes de la casilla, formar escuadra; con escuadra, cambiar nombre y deshacer', () => {
     const { s, units, ctx: context } = grp();
     expect(ids(context(6, 6))).toEqual(['capture', 'orderToAttack', 'orderToCapture', 'orderToDefend', 'squadForm']);
-    formSquad(s, units);
+    formSquad(s, 0, units);
     expect(ids(context(9, 3))).toEqual(['move', 'orderToAttack', 'orderToDefend', 'squadRename', 'squadDisband']);
-    giveStandingOrder(s, units, 'defend', { x: 9, y: 3 });
+    giveStandingOrder(s, 0, units, 'defend', { x: 9, y: 3 });
     expect(ids(context(9, 3))).toContain('cancelOrder');
   });
 
   it('parte de una escuadra: sacar de la escuadra; sin casilla, solo lo que no la necesita', () => {
     const { s, units } = grp();
-    formSquad(s, units);
-    const context: ActionCtx = { s, units: [units[0]!], at: null, enemyHere: false };
+    formSquad(s, 0, units);
+    const context: ActionCtx = { s, viewer: 0, units: [units[0]!], at: null, enemyHere: false };
     expect(ids(context)).toEqual(['orderToAttack', 'orderToCapture', 'orderToDefend', 'squadLeave']);
     expect(smartAction(context)).toBeNull();
     expect(cursorFor(context)).toBe('default');
@@ -71,6 +76,7 @@ describe('acciones con una sola unidad elegida (la escena dice que pasa en la ca
     const unit = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const ctxWith = (context: Partial<ActionCtx>): ActionCtx => ({
       s,
+      viewer: 0,
       units: [unit],
       at: { x: 5, y: 5 },
       enemyHere: false,

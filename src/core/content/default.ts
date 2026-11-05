@@ -1,6 +1,6 @@
 /**
  * El contenido del juego: el de los ficheros JSON. Quien empieza o carga una partida lo pasa
- * (`defaultContent()`); el nucleo no lo lee nunca por su cuenta, sino de la partida (`tablesOf(s)`).
+ * (`defaultContent()`); el nucleo no lo lee nunca por su cuenta, sino de la partida (`s.content`, `unitTypeOf(s, unit)`).
  *
  * Se lee y valida la primera vez que se pide, no al importar el modulo; despues se devuelve el mismo
  * valor, que esta congelado (es una cache, no estado: siempre vale lo mismo).

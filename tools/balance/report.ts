@@ -1,8 +1,7 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
 import type { GameContent } from '@core/content';
-import { unitLabelEs } from './names';
 import type { DuelCell } from './duel';
-import type { GameRecord } from './play';
+import { FIRST_SIDE, SECOND_SIDE, SIDES, type GameRecord, type Side } from './play';
 import type { Variant } from './variant';
 
 export interface Targets {
@@ -111,23 +110,23 @@ export function buildReport(
   const finished = records.filter((record) => record.winner !== null);
   const days = finished.map((record) => record.days);
 
-  // Fuerza de un bando: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
-  const strength = (sample: GameRecord['samples'][number], team: 0 | 1) =>
-    sample.army[team] + sample.buildings[team] * 1500 + sample.funds[team] * 0.5;
+  // Fuerza de un lado: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
+  const strength = (sample: GameRecord['samples'][number], side: Side) =>
+    sample.army[side] + sample.buildings[side] * 1500 + sample.funds[side] * 0.5;
   // Ganador "efectivo": el real, o en las partidas sin terminar quien va claramente por delante.
   const adjudicated: [number, number] = [0, 0];
   let even = 0;
-  const effWinner = new Map<GameRecord, 0 | 1>();
+  const effWinner = new Map<GameRecord, Side>();
   for (const record of records) {
     if (record.winner !== null) {
       effWinner.set(record, record.winner);
       continue;
     }
     const last = record.samples[record.samples.length - 1]!;
-    const playerStrength = strength(last, 0),
-      aiStrength = strength(last, 1);
-    if (Math.max(playerStrength, aiStrength) >= 1.15 * Math.min(playerStrength, aiStrength)) {
-      const winner = playerStrength > aiStrength ? 0 : 1;
+    const firstStrength = strength(last, FIRST_SIDE),
+      secondStrength = strength(last, SECOND_SIDE);
+    if (Math.max(firstStrength, secondStrength) >= 1.15 * Math.min(firstStrength, secondStrength)) {
+      const winner = firstStrength > secondStrength ? FIRST_SIDE : SECOND_SIDE;
       adjudicated[winner]++;
       effWinner.set(record, winner);
     } else even++;
@@ -162,12 +161,12 @@ export function buildReport(
 
   // Unidades (los dos bandos juntos).
   const totalBought = records.reduce(
-    (amount, record) => amount + record.units.flat().reduce((count, unitTally) => count + unitTally.bought, 0),
+    (amount, record) =>
+      amount + record.units.flatMap((bySide) => Object.values(bySide)).reduce((count, unitTally) => count + unitTally.bought, 0),
     0,
   );
-  const { UNIT: unitStats, UNIT_NAMES } = content.tables;
   const units: UnitRow[] = [];
-  for (let type = 0; type < UNIT_NAMES.length; type++) {
+  content.units.list.forEach((unitType) => {
     let bought = 0,
       spent = 0,
       valueDealt = 0,
@@ -176,8 +175,8 @@ export function buildReport(
       deaths = 0,
       captures = 0;
     for (const record of records)
-      for (const team of [0, 1]) {
-        const tally = record.units[team]![type]!;
+      for (const side of SIDES) {
+        const tally = record.units[side]![unitType.id]!;
         bought += tally.bought;
         spent += tally.spent;
         valueDealt += tally.valueDealt;
@@ -186,11 +185,11 @@ export function buildReport(
         deaths += tally.deaths;
         captures += tally.captures;
       }
-    const fights = unitStats.canfight[type] && unitStats.alcance[type]! > 0;
+    const fights = unitType.attack !== null;
     units.push({
-      type: UNIT_NAMES[type]!,
-      label: unitLabelEs(content, type),
-      cost: unitStats.cost[type]!,
+      type: unitType.id,
+      label: unitType.name.es,
+      cost: unitType.cost,
       bought,
       share: totalBought ? bought / totalBought : 0,
       spent,
@@ -201,7 +200,7 @@ export function buildReport(
       kills,
       captures,
     });
-  }
+  });
 
   // Avisos y propuestas.
   const flags: string[] = [];
@@ -227,7 +226,6 @@ export function buildReport(
   const efficiencies = units.filter((unitRow) => unitRow.efficiency !== null).map((unitRow) => unitRow.efficiency!);
   const medEff = quant(efficiencies, 0.5);
   for (const row of mirror ? units : []) {
-    const type = UNIT_NAMES.indexOf(row.type);
     if (row.efficiency !== null && medEff > 0) {
       const ratio = row.efficiency / medEff;
       if (ratio > targets.efficiencyBand[1] || ratio < targets.efficiencyBand[0]) {
@@ -243,7 +241,7 @@ export function buildReport(
           });
       }
     }
-    if (unitStats.canfight[type] && totalBought > 200 && row.share < 0.005)
+    if (content.units.byId[row.type]?.attack && totalBought > 200 && row.share < 0.005)
       flags.push(
         `${row.label}: casi nadie la compra (${(row.share * 100).toFixed(1)} % de las compras). Ojo: la IA elige compras con sus propias reglas.`,
       );

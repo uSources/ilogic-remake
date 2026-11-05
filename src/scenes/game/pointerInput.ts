@@ -6,7 +6,7 @@
 import type Phaser from 'phaser';
 import { samePos } from '../../core/geom';
 import { buildingAt, canBuyAt, unitAt } from '../../core/rules';
-import type { GameState, Pos, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { smartAction, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import type { PointerTarget, TapInfo } from '../../controls/pointer';
 import { boxSelect, clickSelect, type Selection } from '../../controls/selection';
@@ -23,6 +23,8 @@ export interface PointerHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
+  /** El equipo que juega la persona en esta pantalla (el que mira). */
+  readonly viewer: TeamId;
   readonly phase: Phase;
   readonly ended: boolean;
   /** La unidad elegida para moverla (o en su menu). */
@@ -69,10 +71,10 @@ const LONG_PRESS_VIBRATION_MS = 12;
 /** Con Mayusculas: añadir o quitar esta unidad de lo elegido. */
 const TOGGLE_ONE = { shift: true, ctrl: false, count: 1 };
 
-const isPlayer = (unit: Unit) => unit.team === 0;
-
 /** Una unidad que el jugador puede ver en el mapa (suya, o enemiga a la vista). */
-const isVisibleOnMap = (pointerHost: PointerHost, unit: Unit) => unit.carrier === null && (isPlayer(unit) || pointerHost.visible(unit));
+const isOwn = (pointerHost: PointerHost, unit: Unit) => unit.team === pointerHost.viewer;
+const isVisibleOnMap = (pointerHost: PointerHost, unit: Unit) =>
+  unit.carrier === null && (isOwn(pointerHost, unit) || pointerHost.visible(unit));
 
 /** Añadir o quitar `unit` de lo elegido, como un clic con Mayusculas. */
 function toggleInSelection(picks: GroupSelection, unit: Unit | null): void {
@@ -130,7 +132,7 @@ export function pointerTarget(host: PointerHost): PointerTarget {
 /** ¿Se coge la unidad de esta casilla? Una propia que se puede mover (en el mapa, o la que esta elegida). */
 function pickableUnitAt(host: PointerHost, tile: Pos | null): number | null {
   const unit = tile ? unitAt(host.state, tile) : undefined;
-  if (!unit || !isPlayer(unit) || !unit.active || !unit.canMove || unit.carrier !== null) return null;
+  if (!unit || !isOwn(host, unit) || !unit.active || !unit.canMove || unit.carrier !== null) return null;
   const isSelectedOrFree = host.phase === 'map' || (host.phase === 'move' && host.selected?.uid === unit.uid);
   return isSelectedOrFree ? unit.uid : null;
 }
@@ -295,12 +297,12 @@ function clickPicksAnother(host: PointerHost, tile: Pos, hit: Unit | null, hasMo
 /** Un toque con el dedo en el mapa (fases map y move). */
 function touchTap(host: PointerHost, tile: Pos): void {
   const unit = unitAt(host.state, tile);
-  const own = unit && isPlayer(unit) && unit.active && unit.carrier === null ? unit : null;
+  const own = unit && isOwn(host, unit) && unit.active && unit.carrier === null ? unit : null;
   if (host.phase === 'move') return touchTapMoving(host, tile, own);
   const building = buildingAt(host.state, tile);
   const act = mapTap({
     ownActive: !!own,
-    buyHere: !unit && !!building && building.owner === 0 && canBuyAt(host.state, building),
+    buyHere: !unit && !!building && building.owner === host.viewer && canBuyAt(host.state, building),
     visibleUnit: !!unit && isVisibleOnMap(host, unit),
     inspectingThis: !!unit && unit.uid === host.inspectUid,
   });

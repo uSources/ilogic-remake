@@ -1,4 +1,4 @@
-import type { Anchor } from './common';
+import type { Anchor, Side } from './common';
 
 /** Combate: prevision antes de atacar y panel mientras se anima un ataque. */
 
@@ -25,7 +25,7 @@ export interface CombatSideVM {
   icon: string | null;
   /** Nombre de la unidad ('???' si no se ve). */
   name: string;
-  team: 0 | 1;
+  side: Side;
   role: 'attacker' | 'defender';
   /** Rango de veterania 0..3. */
   rank: number;

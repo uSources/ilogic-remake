@@ -40,7 +40,9 @@ return gotCloser ? best.pos : null;
    funcion con nombre. Orientativo: unas 25 lineas y 2 niveles de anidacion como mucho.
 3. **Salir pronto.** Las comprobaciones arriba con `return`, en vez de `if` dentro de `if`.
 4. **Nada magico.** Ni numeros ni condiciones sueltas que haya que adivinar: `steps > 0` es
-   `isReachable(...)`, `team === 0` es `isPlayer(...)`, una constante con nombre en vez de `350`.
+   `isReachable(...)`, `team !== unit.team` es `isHostile(s, team, unit.team)`, una constante con nombre
+   en vez de `350`. Ningun numero de equipo es especial: ni `team === 0` ni `team = 0` por defecto (el
+   equipo se pasa siempre; en la escena es `viewer`, y la interfaz pinta por lado: `sideOf`).
 5. **Recorrer con piezas comunes, no a mano.** Para el mapa, `Grid<T>` (`at`, `set`, `forEach`) y
    `reachableTiles`; para elegir el mejor, `minBy`/`maxBy`. Nada de `[x]![y]!` ni de tripletes
    `best / bestD / bestC`. Antes de escribir un bucle, buscar si ya existe la ayuda (`src/core/util/`).
@@ -59,8 +61,9 @@ return gotCloser ? best.pos : null;
 11. **Identificadores en ingles, comentarios y textos en castellano** (como hasta ahora).
 12. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
     `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
-    modulo que se cambian al empezar una partida. El contenido va con la partida (`tablesOf(s)`,
-    `weightsOf(s)`) y esta congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
+    modulo que se cambian al empezar una partida. El contenido va con la partida (`unitTypeOf(s, unit)`,
+    `terrainAt(s, pos)`, `weightsOf(s)`), resuelto en tipos con nombre (`unitType.cost`, no columnas
+    por numero de tipo) y congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
     `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
     `posOf(unit)`.
 

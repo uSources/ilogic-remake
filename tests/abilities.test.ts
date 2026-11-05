@@ -2,26 +2,31 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { abilitiesOf, abilityOf, auraFactor } from '@core/abilities';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { walkableFor, MoveType, TerrainType, type AbilityDef, validateContent, type Content } from '@core/content';
-import { captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
+import { MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
+import { unitTypeOf } from '@core/gameContent';
+import { canMoveOn, captureStrength, hitChance, moveRange, moveUnit, newUnit, tileProtection, validPath, visibility } from '@core/rules';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
-import { blankState } from './helpers';
+import { blankState, terrainNamed } from './helpers';
 
-const { UNIT, UNIT_ABILITIES, POWER } = defaultContent().tables;
+const UNIT_TYPES = defaultContent().units.list;
+const WOODS = 'Woods';
 
-/** Primera unidad que tiene la habilidad `kind` (el test no depende de cual sea). */
-const withAbility = (kind: AbilityDef['kind']): number => {
-  const index = UNIT_ABILITIES.findIndex((line) => line.some((ability) => ability.kind === kind));
-  if (index < 0) throw new Error(`ninguna unidad tiene ${kind}`);
-  return index;
+/** Primer tipo de unidad que tiene la habilidad `kind` (el test no depende de cual sea). */
+const withAbility = (kind: AbilityDef['kind']): UnitType => {
+  const found = UNIT_TYPES.find((unitType) => unitType.abilities.some((ability) => ability.kind === kind));
+  if (!found) throw new Error(`ninguna unidad tiene ${kind}`);
+  return found;
 };
-/** Primera unidad que cumple `f` y no tiene habilidades. */
-const plain = (callback: (type: number) => boolean): number =>
-  UNIT_ABILITIES.findIndex((line, type) => line.length === 0 && callback(type));
-const ranged = (type: number) => UNIT.minalc[type]! > 0 && UNIT.canfight[type]!;
-const melee = (type: number) => UNIT.minalc[type]! === 0 && UNIT.canfight[type]!;
-const moves = (moveType: MoveType) => (type: number) => UNIT.movtype[type]! === moveType && UNIT.mover[type]! >= 4;
+/** Primer tipo que cumple `callback` y no tiene habilidades. */
+const plain = (callback: (unitType: UnitType) => boolean): UnitType =>
+  UNIT_TYPES.find((unitType) => unitType.abilities.length === 0 && callback(unitType))!;
+const ranged = (unitType: UnitType) => (unitType.attack?.minRange ?? 1) > 1;
+const melee = (unitType: UnitType) => unitType.attack?.minRange === 1;
+const moves = (moveType: MoveType) => (unitType: UnitType) => unitType.movement === moveType && unitType.move >= 4;
+/** Acierto de units.json de un tipo contra otro (0 si no le puede atacar). */
+const power = (attacker: UnitType, defender: UnitType) => attacker.attack?.hitChance[defender.id] ?? 0;
+const minRangeOf = (unitType: UnitType) => unitType.attack?.minRange ?? 1;
 
 /** Reglas de estos tests: sin niebla, coste de terreno ni veterania, que cambiarian las cuentas. */
 const TEST_RULES = rulesWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
@@ -38,7 +43,7 @@ describe('habilidades: contenido', () => {
   };
 
   it('las cuatro clases estan en alguna unidad', () => {
-    for (const kind of ['guard', 'zoneOfControl', 'aura', 'piercing'] as const) expect(withAbility(kind)).toBeGreaterThanOrEqual(0);
+    for (const kind of ['guard', 'zoneOfControl', 'aura', 'piercing'] as const) expect(withAbility(kind)).toBeDefined();
   });
 
   it('explica lo que esta mal', () => {
@@ -69,15 +74,15 @@ describe('habilidades: escudo (guard)', () => {
     const s = blankState(TEST_RULES);
     const guardType = withAbility('guard');
     const factor = abilityOf(s, guardType, 'guard')!.factor;
-    const rangedType = plain((type) => ranged(type) && POWER[type]![guardType]! > 0);
-    const meleeType = plain((type) => melee(type) && POWER[type]![guardType]! > 0);
+    const rangedType = plain((type) => ranged(type) && power(type, guardType) > 0);
+    const meleeType = plain((type) => melee(type) && power(type, guardType) > 0);
     const defender = newUnit(s, guardType, 1, { x: 10, y: 10 });
-    const far = newUnit(s, rangedType, 0, { x: 10, y: 10 - (UNIT.minalc[rangedType]! + 1) });
+    const far = newUnit(s, rangedType, 0, { x: 10, y: 10 - minRangeOf(rangedType) });
     const near = newUnit(s, meleeType, 0, { x: 9, y: 10 });
-    expect(hitChance(s, far, defender)).toBeCloseTo(POWER[rangedType]![guardType]! * factor);
-    expect(hitChance(s, near, defender)).toBeCloseTo(POWER[meleeType]![guardType]!);
+    expect(hitChance(s, far, defender)).toBeCloseTo(power(rangedType, guardType) * factor);
+    expect(hitChance(s, near, defender)).toBeCloseTo(power(meleeType, guardType));
     s.rules = { ...TEST_RULES, abilities: false };
-    expect(hitChance(s, far, defender)).toBeCloseTo(POWER[rangedType]![guardType]!);
+    expect(hitChance(s, far, defender)).toBeCloseTo(power(rangedType, guardType));
   });
 });
 
@@ -126,7 +131,7 @@ describe('habilidades: zona de control', () => {
 
   it('con niebla solo cuenta si se ve', () => {
     const s = blankState(rulesWith(defaultContent(), { terrainCost: false }));
-    s.map[5]![8] = TerrainType.WOODS; // el bosque la esconde salvo desde al lado
+    s.map[5]![8] = WOODS; // el bosque la esconde salvo desde al lado
     newUnit(s, zoneType, 1, { x: 5, y: 8 });
     const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
     // (4, 9) solo se alcanza pasando por su zona: sin verla, el alcance no la delata.
@@ -138,7 +143,7 @@ describe('habilidades: zona de control', () => {
 
 describe('habilidades: apoyo (aura)', () => {
   const auraType = withAbility('aura');
-  const { radius, defense } = UNIT_ABILITIES[auraType]!.find((ability) => ability.kind === 'aura') as Extract<AbilityDef, { kind: 'aura' }>;
+  const { radius, defense } = auraType.abilities.find((ability) => ability.kind === 'aura') as Extract<AbilityDef, { kind: 'aura' }>;
   const meleeType = plain(melee);
 
   it('protege a las propias cercanas, no a si misma ni a las enemigas', () => {
@@ -151,7 +156,7 @@ describe('habilidades: apoyo (aura)', () => {
     expect(auraFactor(s, far)).toBe(1);
     expect(auraFactor(s, sup)).toBe(1);
     expect(auraFactor(s, foe)).toBe(1);
-    expect(hitChance(s, foe, ally)).toBeCloseTo(POWER[meleeType]![meleeType]! * defense);
+    expect(hitChance(s, foe, ally)).toBeCloseTo(power(meleeType, meleeType) * defense);
   });
 
   it('no se suma con otra aura', () => {
@@ -168,18 +173,16 @@ describe('habilidades: perforante (piercing)', () => {
     const s = blankState(TEST_RULES);
     const piercingType = withAbility('piercing');
     const ignore = abilityOf(s, piercingType, 'piercing')!.ignoreCover;
-    const target = plain(
-      (type) => POWER[piercingType]![type]! > 0 && walkableFor(defaultContent().tables, UNIT.movtype[type]!, TerrainType.WOODS),
-    );
-    const other = plain((type) => melee(type) && POWER[type]![target]! > 0);
-    s.map[10]![10] = TerrainType.WOODS;
+    const target = plain((type) => power(piercingType, type) > 0 && canMoveOn(type.movement, terrainNamed('Woods')));
+    const other = plain((type) => melee(type) && power(type, target) > 0);
+    s.map[10]![10] = WOODS;
     const defender = newUnit(s, target, 1, { x: 10, y: 10 });
-    const attacker = newUnit(s, piercingType, 0, { x: 10, y: 10 - (UNIT.minalc[piercingType]! + 1) });
+    const attacker = newUnit(s, piercingType, 0, { x: 10, y: 10 - minRangeOf(piercingType) });
     const cmp = newUnit(s, other, 0, { x: 9, y: 10 });
     const cover = tileProtection(s, defender);
     expect(cover).toBeLessThan(1);
-    expect(hitChance(s, attacker, defender)).toBeCloseTo(POWER[piercingType]![target]! * (cover + (1 - cover) * ignore));
-    expect(hitChance(s, cmp, defender)).toBeCloseTo(POWER[other]![target]! * cover);
+    expect(hitChance(s, attacker, defender)).toBeCloseTo(power(piercingType, target) * (cover + (1 - cover) * ignore));
+    expect(hitChance(s, cmp, defender)).toBeCloseTo(power(other, target) * cover);
   });
 });
 
@@ -199,10 +202,10 @@ describe('habilidades: interfaz', () => {
 describe('habilidades: explorador (scout)', () => {
   it('ve dentro del bosque en todo su radio; otra unidad solo desde al lado', () => {
     const s = blankState(rulesWith(defaultContent(), { fog: true, forestHides: true, weather: false }));
-    s.map[10]![14] = TerrainType.WOODS;
+    s.map[10]![14] = WOODS;
     const scout = newUnit(s, withAbility('scout'), 0, { x: 10, y: 10 });
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision
-    scout.type = plain((type) => UNIT.vision[type]! >= UNIT.vision[withAbility('scout')]!);
+    scout.type = plain((type) => type.vision >= withAbility('scout').vision).id;
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(false);
   });
 });
@@ -211,7 +214,7 @@ describe('habilidades: captura rapida (quickCapture)', () => {
   it('resta un 50 % mas al capturar que una unidad igual sin la habilidad', () => {
     const s = blankState(TEST_RULES);
     const fast = newUnit(s, withAbility('quickCapture'), 0, { x: 5, y: 5 });
-    const factor = (abilityOf(s, fast.type, 'quickCapture') as { factor: number }).factor;
+    const factor = (abilityOf(s, unitTypeOf(s, fast), 'quickCapture') as { factor: number }).factor;
     expect(captureStrength(s, fast)).toBe(Math.ceil(10 * factor));
     fast.life = 40;
     expect(captureStrength(s, fast)).toBe(Math.ceil(4 * factor));
