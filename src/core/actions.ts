@@ -19,7 +19,7 @@
  * | `powers` | poderes del general |
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
- * | `menu` | los menus, sacados de las acciones que valen: el de una unidad (`availableActions`) y lo que se manda a unas elegidas (`canDoWithSelection`) |
+ * | `menu` | los menus, sacados de las acciones que valen (`availableActions`, `canDoWithSelection`) |
  * | `registry` | `ACTIONS`: todas las entradas |
  * | `dispatch` | `dispatch`, `actionProblem`, `isValidAction` |
  */

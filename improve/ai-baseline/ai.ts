@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * Inteligencia artificial del rival (IA.java), con sus fallos corregidos.
  * Cada unidad decide sola, en orden: retirarse (si esta debil),

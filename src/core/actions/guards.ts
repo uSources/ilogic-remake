@@ -1,8 +1,9 @@
 /**
  * Lo que se comprueba antes de cualquier accion, sea cual sea: que tiene la forma de una accion,
- * que la manda un equipo de la partida y que ese equipo sigue jugando. `dispatch` las pasa todas antes del `validate` de la accion; una comprobacion comun nueva
- * es una entrada mas aqui (la de que sea el turno de ese equipo, cuando la partida sepa de quien es:
- * `GameState.turn`, punto C1 de la fase 4).
+ * que la manda un equipo de la partida y que ese equipo sigue jugando. `dispatch` las pasa todas
+ * antes del `validate` de la accion; una comprobacion comun nueva es una entrada mas aqui (la de
+ * que sea el turno de ese equipo, cuando la partida sepa de quien es: `GameState.turn`, punto C1
+ * de la fase 4).
  */
 import { teamIds } from '../teams';
 import { takesTurn } from '../rules/turnOrder';

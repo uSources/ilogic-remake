@@ -24,7 +24,10 @@ export interface RoundReport {
   healed: { uid: number; team: TeamId; amount: number }[];
   /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
   weather?: WeatherChange | null;
-  /** [CAMBIO] Puntos de control: dinero que ha dado a cada equipo (ya sumado en income), cuantos le han pagado y cuantos estan disputados. */
+  /**
+   * [CAMBIO] Puntos de control: dinero que ha dado a cada equipo (ya sumado en income), cuantos le
+   * han pagado y cuantos estan disputados.
+   */
   control?: ControlReport;
 }
 

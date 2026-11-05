@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * [CAMBIO] Formacion: una escuadra con la misma orden avanza junta. Sin ella, los jeeps y tanques
  * llegaban solos antes que la infanteria y los destrozaban. Las rapidas no se adelantan mas de

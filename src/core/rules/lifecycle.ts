@@ -48,11 +48,17 @@ function freeSeatOf(s: GameState, passenger: Unit): void {
  */
 export function removeDead(s: GameState): GameEvent[] {
   const events: GameEvent[] = [];
-  for (const unit of s.units.filter((unit) => !isAlive(unit))) {
-    const passengers = unit.cargo.filter((uid): uid is number => uid !== null);
-    // Los pasajeros caen con su transporte: que se sepa sin mirar la partida (repeticiones, estadisticas).
-    if (passengers.length) events.push({ kind: 'cargoLost', actor: null, transport: unit.uid, team: unit.team, passengers });
-    removeUnit(s, unit.uid);
-  }
+  for (const unit of s.units.filter((unit) => !isAlive(unit))) events.push(...removeWithCargo(s, unit));
   return events;
+}
+
+/**
+ * Quita la unidad y lo que lleve dentro (removeUnit), y lo cuenta: un suceso 'cargoLost' si llevaba
+ * pasajeros, para que se sepa sin mirar la partida (repeticiones, otra pantalla). Lo usan las que
+ * caen y las que se retiran.
+ */
+export function removeWithCargo(s: GameState, unit: Unit): GameEvent[] {
+  const passengers = unit.cargo.filter((uid): uid is number => uid !== null);
+  removeUnit(s, unit.uid);
+  return passengers.length ? [{ kind: 'cargoLost', actor: null, transport: unit.uid, team: unit.team, passengers }] : [];
 }

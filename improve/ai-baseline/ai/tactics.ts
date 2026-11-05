@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * Lo que puede hacer la IA con una unidad, paso a paso: retirarse a curarse, atacar (o acercarse),
  * capturar, avanzar y moverse al azar. Cada paso devuelve true si ha usado la unidad.

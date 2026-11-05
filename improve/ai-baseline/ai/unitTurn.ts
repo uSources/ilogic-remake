@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * Turno de la IA con una de sus unidades: prueba sus comportamientos en orden y se queda con el
  * primero que la usa. Un papel nuevo (por ejemplo, artilleria que guarda la distancia) es una

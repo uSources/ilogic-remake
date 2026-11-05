@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * [CAMBIO] Fuego concentrado: el plan de quien remata a quien entre varias unidades, antes de mover.
  */

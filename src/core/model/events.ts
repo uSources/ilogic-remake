@@ -61,8 +61,8 @@ export type GameEvent =
   | { kind: 'spawn'; actor: TeamId; uid: number; unitType: string; team: TeamId; at: Pos }
   | { kind: 'wait'; actor: TeamId; uid: number }
   | { kind: 'supply'; actor: TeamId; uid: number; repairs: Healing[] }
-  /** Una unidad retirada del mapa (con lo que llevara dentro). */
-  | { kind: 'remove'; actor: TeamId; uid: number; unitType: string; passengers: number[] }
+  /** Una unidad retirada del mapa; si llevaba pasajeros, detras va un 'cargoLost' con ellos. */
+  | { kind: 'remove'; actor: TeamId; uid: number; unitType: string }
   /** Deshecho el ultimo movimiento: la unidad vuelve a `to`. */
   | { kind: 'undoMove'; actor: TeamId; uid: number; to: Pos }
   /** Viaje de varios turnos hacia `to` (null: ya no viaja). */
@@ -88,8 +88,8 @@ export type GameEvent =
       funds?: number;
     }
   /**
-   * Al acabar una accion: los pasajeros de un transporte que ha caido, que caen con el (sus uids; `transport`
-   * ya no existe).
+   * Los pasajeros de un transporte que ha caido o se ha retirado, que se van con el (sus uids;
+   * `transport` ya no existe). Un solo suceso para los dos casos.
    */
   | { kind: 'cargoLost'; actor: null; transport: number; team: TeamId; passengers: number[] }
   /** Al acabar una accion o la ronda: una captura a medias que se pierde (su unidad se ha ido o ha caido). */

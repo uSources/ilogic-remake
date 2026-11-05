@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * Cuanto vale para la IA cada cosa que puede hacer: de momento, cada ataque posible.
  * El valor de un ataque es la suma de ATTACK_SCORE_TERMS: una razon nueva para preferir (o evitar)

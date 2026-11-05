@@ -1,4 +1,4 @@
-// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar.
+// Copia de la IA guardada por npm run arena -- --snapshot (2026-11-05). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).
 /**
  * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.

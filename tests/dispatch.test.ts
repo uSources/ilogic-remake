@@ -324,6 +324,17 @@ describe('sucesos completos', () => {
     expect(teamState(s, 0).funds).toBe(s.content.maxFunds);
   });
 
+  it('retirar un transporte con pasajeros: su suceso y el mismo cargoLost que si cayera', () => {
+    const s = blankState(PLAIN_RULES);
+    const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
+    const passenger = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
+    act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
+    expect(act(s, 0, { kind: 'deleteUnit', uid: transport.uid })).toEqual([
+      { kind: 'remove', actor: 0, uid: transport.uid, unitType: 'Transport' },
+      { kind: 'cargoLost', actor: null, transport: transport.uid, team: 0, passengers: [passenger.uid] },
+    ]);
+  });
+
   it('la captura a medias que se pierde y la escuadra que se queda vacia tienen suceso', () => {
     const s = blankState(PLAIN_RULES);
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });

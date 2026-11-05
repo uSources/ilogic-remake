@@ -1,6 +1,7 @@
 /**
  * La unica via para cambiar una partida: `dispatch(s, team, action)`. Comprueba la accion contra la
- * partida (las comprobaciones comunes, ACTION_GUARDS, y su `validate`), la hace (su `apply`, con los dados de la partida) y repasa las INVARIANTS.
+ * partida (las comprobaciones comunes, ACTION_GUARDS, y su `validate`), la hace (su `apply`, con
+ * los dados de la partida) y repasa las INVARIANTS.
  * La usan la escena, la IA, la partida por texto y las herramientas; un cliente remoto o una
  * repeticion mandarian lo mismo.
  */

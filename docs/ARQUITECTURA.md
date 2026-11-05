@@ -204,7 +204,8 @@ y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su previ
   IA entra solo en la referencia. La referencia (`improve/ai-baseline/`) usa el nucleo de ahora por
   `@core/...`: `tsc` la comprueba y `tests/arenaSnapshot.test.ts` le hace jugar una partida corta,
   asi que un cambio del nucleo que la rompa se ve en `npm run check` (se arregla con otro `--snapshot`
-  si la IA actual ya se ha aceptado, o adaptando la copia).
+  si la IA actual ya se ha aceptado, o adaptando la copia a ese cambio: lo unico que se edita en
+  ella, como dice su cabecera; sus decisiones no se tocan).
 
 ### Equipos
 
