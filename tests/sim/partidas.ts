@@ -2,8 +2,8 @@ import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/geom';
 import { createGame, saveContext } from '@core/defaultGames';
-import { endRound, isMatchOver } from '@core/rules';
-import { duel, teamIds } from '@core/teams';
+import { endRound, isMatchOver, turnTakers } from '@core/rules';
+import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { defaultContent } from '@core/content/default';
@@ -33,7 +33,7 @@ export function aiVsAi(from: number, to: number): void {
     const rng = seededRng(seed * 7919);
     const s = createGame(rng, { teams: duel('ai', 'ai') });
     while (!isMatchOver(s) && s.day <= 60) {
-      for (const team of teamIds(s)) {
+      for (const team of turnTakers(s)) {
         for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;
         if (isMatchOver(s)) break;
       }

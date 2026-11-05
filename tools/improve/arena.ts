@@ -17,9 +17,9 @@ import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { unitTypeOf } from '@core/gameContent';
 import { seededRng } from '@core/geom';
-import { endRound, isMatchOver, outcome } from '@core/rules';
+import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { armyValue } from '@core/stats';
 import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -27,11 +27,9 @@ const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
 type Brain = (s: GameState, rng: Rng, team: TeamId) => Generator<GameEvent>;
 
+/** Fuerza de un equipo para decidir una partida sin terminar: ejercito, edificios y algo del dinero. */
 function strength(s: GameState, team: TeamId): number {
-  const army = s.units
-    .filter((unit) => unit.team === team)
-    .reduce((amount, unit) => amount + (unitTypeOf(s, unit).cost * unit.life) / 100, 0);
-  return army + s.buildings.filter((building) => building.owner === team).length * 1500 + teamState(s, team).funds * 0.5;
+  return armyValue(s, team) + s.buildings.filter((building) => building.owner === team).length * 1500 + teamState(s, team).funds * 0.5;
 }
 
 /** Una partida; devuelve el bando ganador (o null si empate). */
@@ -39,8 +37,8 @@ export function playDuel(seed: number, brains: [Brain, Brain], size: number, max
   const rng = seededRng(seed);
   const s = createGame(rng, { size, teams: duel('ai', 'ai') });
   while (!isMatchOver(s) && s.day <= maxDays) {
-    for (const [team, brain] of brains.entries()) {
-      for (const _ of brain(s, rng, team)) if (isMatchOver(s)) break;
+    for (const team of turnTakers(s)) {
+      for (const _ of brains[team]!(s, rng, team)) if (isMatchOver(s)) break;
       if (isMatchOver(s)) break;
     }
     if (isMatchOver(s)) break;

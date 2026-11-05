@@ -13,7 +13,7 @@ import { aiTurn, assistTurn } from '@core/ai';
 import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/geom';
 import { appointGeneral } from '@core/generals';
-import { endRound, isMatchOver, outcome } from '@core/rules';
+import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import { duel, enemiesOf, teamIds } from '@core/teams';
@@ -75,7 +75,7 @@ function playScenario(scenario: Scenario): string {
   const isOver = () => isMatchOver(s);
 
   while (!isOver() && s.day <= MAX_DAYS) {
-    for (const team of teamIds(s)) {
+    for (const team of turnTakers(s)) {
       if (team === PERSON && scenario.withSquad) for (const event of assistTurn(s, rng, PERSON)) record(event);
       for (const event of aiTurn(s, rng, team)) {
         record(event);

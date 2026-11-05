@@ -37,10 +37,17 @@ function checkGeneralIds(ids: string[]): void {
 }
 
 /** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
-function play(seed: number, g0: string, g1: string, uses: Map<string, number>): { winner: Side | 'draw'; byScore: boolean } {
+function play(
+  seed: number,
+  firstGeneral: string,
+  secondGeneral: string,
+  uses: Map<string, number>,
+): { winner: Side | 'draw'; byScore: boolean } {
   const rng = seededRng(seed * 7919);
   const s: GameState = createGame(rng, { teams: duel('ai', 'ai') });
-  [g0, g1].forEach((id, team) => appointGeneral(s, team, id === 'none' ? null : id));
+  const [first, second] = teamIds(s);
+  appointGeneral(s, first!, firstGeneral === 'none' ? null : firstGeneral);
+  appointGeneral(s, second!, secondGeneral === 'none' ? null : secondGeneral);
   while (!isMatchOver(s) && s.day <= 60) {
     for (const team of teamIds(s)) {
       for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {

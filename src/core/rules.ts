@@ -24,6 +24,7 @@
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
  * | `outcome` | victoria, derrota, objetivos de mision |
+ * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
  */
 export {
   unitById,
@@ -126,4 +127,5 @@ export {
   objectiveProgress,
   endReason,
 } from './rules/outcome';
+export { takesTurn, turnTakers, turnsAfter } from './rules/turnOrder';
 export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';

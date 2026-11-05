@@ -377,6 +377,10 @@ interface MapStep {
   run: (draft: MapDraft) => boolean;
 }
 
+/** La salida de cada equipo: la zona `i` es del equipo `i` de la partida. */
+const startsOf = (draft: MapDraft): { spawn: Pos; team: TeamId }[] =>
+  spawnsOf(draft).map((spawn, index) => ({ spawn, team: draft.s.teams[index]!.id }));
+
 function spawnsOf(draft: MapDraft): Pos[] {
   if (!draft.spawns) throw new Error('Paso de mapa fuera de orden: aun no hay zonas de inicio');
   return draft.spawns;
@@ -442,14 +446,12 @@ const MAP_STEPS: readonly MapStep[] = [
   { name: 'zonas de inicio', run: findStartZones },
   {
     name: 'edificios iniciales',
-    run: (draft) => {
-      return spawnsOf(draft).every((spawn, team) => placeStartingBuildings(draft.s, spawn, team, draft.rng));
-    },
+    run: (draft) => startsOf(draft).every(({ spawn, team }) => placeStartingBuildings(draft.s, spawn, team, draft.rng)),
   },
   {
     name: 'unidades iniciales',
     run: (draft) => {
-      spawnsOf(draft).forEach((spawn, team) => placeStartingUnits(draft.s, spawn, team, draft.rng));
+      for (const { spawn, team } of startsOf(draft)) placeStartingUnits(draft.s, spawn, team, draft.rng);
       return true;
     },
   },

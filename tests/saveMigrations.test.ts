@@ -3,13 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { loadGame, saveContext } from '@core/defaultGames';
 import { missionById, missionRules } from '@core/missions';
-import { serialize } from '@core/save';
+import { deserialize, serialize } from '@core/save';
 import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad, giveStandingOrder } from '@core/squads';
 import { newUnit, outcome } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 import { isHostile } from '@core/teams';
+import { loadContent, type Content } from '@core/content';
+import { mutableCopy } from '@core/util/freeze';
 
 /**
  * Partidas guardadas de verdad con el formato 1: las genero el codigo de origin/main (ac92f17) con
@@ -69,12 +71,20 @@ describe('partidas guardadas con el formato 1 (de origin/main)', () => {
  */
 describe('partidas guardadas con el formato 2 (de origin/main)', () => {
   it('escaramuza: unidades, edificios, terreno, tema y clima pasan de numero a id', () => {
-    const raw = JSON.parse(fixture('skirmish-v2')) as { units: { type: number }[]; map: number[][] };
     const s = loadGame(fixture('skirmish-v2'))!;
     expect(s.version).toBe(SAVE_VERSION);
-    const ids = defaultContent().units.list.map((unitType) => unitType.id);
-    expect(s.units.map((unit) => unit.type)).toEqual(raw.units.map((unit) => ids[unit.type]));
-    expect(s.map[0]![0]).toBe(defaultContent().terrain.list[raw.map[0]![0]!]!.id);
+    // Los numeros del fichero (0, 0, 0, 2, 5, 4, 16...) eran el puesto en el units.json de entonces.
+    expect(s.units.slice(0, 7).map((unit) => unit.type)).toEqual([
+      'Soldier',
+      'Soldier',
+      'Soldier',
+      'Artillery',
+      'Blocker',
+      'LTank',
+      'MSoldier',
+    ]);
+    // Terreno 0 y 2: hierba y bosque.
+    expect(s.map[0]!.slice(0, 6)).toEqual(['Grass', 'Grass', 'Grass', 'Grass', 'Woods', 'Woods']);
     expect(s.theme).toBe('Swamp');
     expect(s.setup).toEqual({ seed: 3, size: 20, theme: 'Swamp' });
     expect(s.weather).toMatchObject({ kind: 'Rain', next: 'Clear' });
@@ -106,6 +116,20 @@ describe('partidas guardadas con el formato 2 (de origin/main)', () => {
     expect(saved).not.toHaveProperty('funds');
     expect(saved).not.toHaveProperty('generals');
     expect(saved).not.toHaveProperty('stats');
+  });
+
+  it('con el contenido de ahora reordenado, la partida antigua da los mismos ids (el paso usa su copia fija)', () => {
+    const files = mutableCopy<Content>(defaultContent().files);
+    files.units.reverse();
+    files.buildings.reverse();
+    files.terrain.reverse();
+    files.weather.reverse();
+    const reordered = deserialize(fixture('skirmish-v2'), saveContext(loadContent(files)))!;
+    const usual = loadGame(fixture('skirmish-v2'))!;
+    expect(reordered.units.map((unit) => unit.type)).toEqual(usual.units.map((unit) => unit.type));
+    expect(reordered.buildings.map((building) => building.type)).toEqual(usual.buildings.map((building) => building.type));
+    expect(reordered.map).toEqual(usual.map);
+    expect(reordered.weather).toEqual(usual.weather);
   });
 
   it('mision: el tipo del objetivo de captura y la captura a medias', () => {

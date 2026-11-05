@@ -17,6 +17,9 @@ import {
   newUnit,
   outcome,
   standingTeams,
+  takesTurn,
+  turnTakers,
+  turnsAfter,
   threatMap,
   unitById,
   visibility,
@@ -198,6 +201,21 @@ describe('cuatro equipos en dos alianzas', () => {
     loses(2);
     expect(perTeam(s, (team) => outcome(s, team))).toEqual(['won', 'lost', 'lost']);
     expect(isMatchOver(s)).toBe(true);
+  });
+
+  it('orden de los turnos: los derrotados no juegan, y se mira al llegar a cada uno', () => {
+    const s = fourCorners();
+    expect(turnsAfter(s, 2)).toEqual({ thisRound: [3], nextRound: [0, 1] });
+    expect(turnsAfter(s, 0)).toEqual({ thisRound: [1, 2, 3], nextRound: [] });
+    const played: number[] = [];
+    for (const team of turnTakers(s)) {
+      played.push(team);
+      // En el turno del 0 cae el 1: ya no juega esta ronda.
+      if (team === 0) s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    }
+    expect(played).toEqual([0, 2, 3]);
+    expect(takesTurn(s, 1)).toBe(false);
+    expect(takesTurn(s, 3)).toBe(true);
   });
 
   it('cada IA juega su turno sin atacar a sus aliados, y la partida se guarda y se carga igual', () => {

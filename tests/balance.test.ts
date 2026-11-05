@@ -92,7 +92,7 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
     const second = playGame({ seed: 5, maxDays: 6, policies: ['ai', 'ai'], rules: rulesWith(defaultContent()), content: defaultContent() });
     expect(first).toEqual(second);
     expect(first.samples.length).toBeGreaterThan(5);
-    expect(first.units[0]!.reduce((sum, unitTally) => sum + unitTally.bought, 0)).toBeGreaterThan(0);
+    expect(Object.values(first.units[0]!).reduce((sum, unitTally) => sum + unitTally.bought, 0)).toBeGreaterThan(0);
   });
 
   it('duelos: sin contraataque el defensor no devuelve daño; con el, si', () => {
@@ -125,7 +125,7 @@ describe('herramienta de equilibrio: cada hilo juega con el contenido de su vari
   it('con todo carisimo nadie compra; con el contenido de siempre, si', async () => {
     const bought = async (set: Record<string, string>) => {
       const [game] = await runGames(buildVariant({ name: 'v', set }, defaultContent()), [5], 6, ['ai', 'ai'], 1, FIRST_SIDE);
-      return game!.units.flat().reduce((total, tally) => total + tally.bought, 0);
+      return game!.units.flatMap((bySide) => Object.values(bySide)).reduce((total, tally) => total + tally.bought, 0);
     };
     expect(await bought({})).toBeGreaterThan(0);
     expect(await bought({ 'UNIT.cost.*': 'x1000' })).toBe(0);

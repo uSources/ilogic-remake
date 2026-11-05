@@ -6,6 +6,7 @@ import { generateGame } from '@core/mapgen';
 import { endReason, endRound, isMatchOver, outcome } from '@core/rules';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
+import { armyValue } from '@core/stats';
 import type { GameState, RulesConfig, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
@@ -18,7 +19,7 @@ export type Side = 0 | 1;
 /** El primer equipo del mapa (el que en el juego seria la persona) y el segundo. */
 export const FIRST_SIDE: Side = 0;
 export const SECOND_SIDE: Side = 1;
-const SIDES: readonly Side[] = [FIRST_SIDE, SECOND_SIDE];
+export const SIDES: readonly Side[] = [FIRST_SIDE, SECOND_SIDE];
 
 export interface PlayOptions {
   seed: number;
@@ -69,7 +70,8 @@ export interface GameRecord {
   reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'timeout';
   days: number;
   samples: DaySample[];
-  units: UnitTally[][]; // [team][type]
+  /** Lo de cada tipo de unidad, por lado y por id de tipo. */
+  units: Record<string, UnitTally>[];
   events: number;
 }
 
@@ -85,8 +87,6 @@ const emptyTally = (): UnitTally => ({
   captures: 0,
 });
 
-/** El puesto del tipo de una unidad en units.json: las tablas del informe van en ese orden. */
-const typeIndex = (s: GameState, unit: Pick<Unit, 'type'>): number => s.content.units.list.indexOf(unitTypeOf(s, unit));
 const costOf = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost;
 
 /** Un valor por lado: [primero, segundo]. */
@@ -94,7 +94,7 @@ const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(0
 
 function sample(s: GameState): DaySample {
   const unitsOf = (side: Side) => s.units.filter((unit) => unit.team === side);
-  const army = (side: Side) => Math.round(unitsOf(side).reduce((total, unit) => total + (costOf(s, unit) * unit.life) / 100, 0));
+  const army = (side: Side) => armyValue(s, side);
   const buildings = (side: Side) => s.buildings.filter((building) => building.owner === side).length;
   return {
     day: s.day,
@@ -113,7 +113,11 @@ export function playGame(options: PlayOptions): GameRecord {
     for (const unit of s.units) unit.team = otherSide(unit.team);
     for (const building of s.buildings) if (building.owner !== null) building.owner = otherSide(building.owner);
   }
-  const units: UnitTally[][] = SIDES.map(() => Array.from({ length: s.content.units.list.length }, emptyTally));
+  const units: Record<string, UnitTally>[] = SIDES.map(() =>
+    Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])),
+  );
+  /** Lo apuntado de ese tipo de unidad para ese lado. */
+  const tallyOf = (side: TeamId, unit: Pick<Unit, 'type'>): UnitTally => units[side]![unit.type]!;
   const samples: DaySample[] = [sample(s)];
   // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
   const known = new Map<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>();
@@ -137,13 +141,13 @@ export function playGame(options: PlayOptions): GameRecord {
             ([, info]) => info.x === event.target.x && info.y === event.target.y && info.team !== team,
           );
           if (attacker) {
-            const tally = units[team]![typeIndex(s, attacker)]!;
+            const tally = tallyOf(team, attacker);
             tally.attacks++;
             tally.damageDealt += event.damage;
             if (victim) {
               const [, victimInfo] = victim;
               tally.valueDealt += (event.damage * costOf(s, victimInfo)) / 100;
-              const vt = units[victimInfo.team]![typeIndex(s, victimInfo)]!;
+              const vt = tallyOf(victimInfo.team, victimInfo);
               vt.valueLost += (event.damage * costOf(s, victimInfo)) / 100;
               if (event.killed) {
                 tally.kills++;
@@ -157,24 +161,24 @@ export function playGame(options: PlayOptions): GameRecord {
             const lost = attacker.life - (after?.life ?? 0);
             if (lost > 0 && victim) {
               const [, victimInfo] = victim;
-              units[victimInfo.team]![typeIndex(s, victimInfo)]!.damageDealt += lost;
-              units[victimInfo.team]![typeIndex(s, victimInfo)]!.valueDealt += (lost * costOf(s, attacker)) / 100;
-              units[team]![typeIndex(s, attacker)]!.valueLost += (lost * costOf(s, attacker)) / 100;
+              tallyOf(victimInfo.team, victimInfo).damageDealt += lost;
+              tallyOf(victimInfo.team, victimInfo).valueDealt += (lost * costOf(s, attacker)) / 100;
+              tallyOf(team, attacker).valueLost += (lost * costOf(s, attacker)) / 100;
               if (!after) {
-                units[victimInfo.team]![typeIndex(s, victimInfo)]!.kills++;
-                units[team]![typeIndex(s, attacker)]!.deaths++;
+                tallyOf(victimInfo.team, victimInfo).kills++;
+                tallyOf(team, attacker).deaths++;
               }
             }
           }
         } else if (event.kind === 'spawn') {
           const unit = s.units.find((candidate) => candidate.uid === event.uid);
           if (unit) {
-            units[team]![typeIndex(s, unit)]!.bought++;
-            units[team]![typeIndex(s, unit)]!.spent += costOf(s, unit);
+            tallyOf(team, unit).bought++;
+            tallyOf(team, unit).spent += costOf(s, unit);
           }
         } else if (event.kind === 'capture') {
           const unit = s.units.find((candidate) => candidate.uid === event.uid);
-          if (unit) units[team]![typeIndex(s, unit)]!.captures++;
+          if (unit) tallyOf(team, unit).captures++;
         }
         remember();
         if (finished()) break;

@@ -1,7 +1,7 @@
 /** Resume muchas partidas en un informe, detecta desequilibrios y propone ajustes. */
 import type { GameContent } from '@core/content';
 import type { DuelCell } from './duel';
-import { FIRST_SIDE, SECOND_SIDE, type GameRecord, type Side } from './play';
+import { FIRST_SIDE, SECOND_SIDE, SIDES, type GameRecord, type Side } from './play';
 import type { Variant } from './variant';
 
 export interface Targets {
@@ -161,11 +161,12 @@ export function buildReport(
 
   // Unidades (los dos bandos juntos).
   const totalBought = records.reduce(
-    (amount, record) => amount + record.units.flat().reduce((count, unitTally) => count + unitTally.bought, 0),
+    (amount, record) =>
+      amount + record.units.flatMap((bySide) => Object.values(bySide)).reduce((count, unitTally) => count + unitTally.bought, 0),
     0,
   );
   const units: UnitRow[] = [];
-  content.units.list.forEach((unitType, type) => {
+  content.units.list.forEach((unitType) => {
     let bought = 0,
       spent = 0,
       valueDealt = 0,
@@ -174,8 +175,8 @@ export function buildReport(
       deaths = 0,
       captures = 0;
     for (const record of records)
-      for (const team of [0, 1]) {
-        const tally = record.units[team]![type]!;
+      for (const side of SIDES) {
+        const tally = record.units[side]![unitType.id]!;
         bought += tally.bought;
         spent += tally.spent;
         valueDealt += tally.valueDealt;

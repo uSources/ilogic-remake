@@ -26,6 +26,8 @@ import {
   outcome,
   reachableTiles,
   spawn,
+  takesTurn,
+  turnsAfter,
   unitAt,
   unitById,
   visibility,
@@ -289,17 +291,32 @@ export class Session {
     return describe(this.s, usePower(this.s, this.me, id, target)!);
   }
 
-  /** Fin del turno propio (o la IA juega por ti con `ai`), turno enemigo y fin de ronda. */
+  /**
+   * Fin del turno propio (o la IA juega por ti con `ai`), turnos de los demas equipos por su orden
+   * (los derrotados no juegan) con el fin de ronda tras el ultimo. Aqui juega una persona: los demas
+   * equipos tienen que ser de la IA.
+   */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
     if (aiForMe) for (const event of aiTurn(this.s, this.rng, this.me)) out.push(`tu IA: ${describe(this.s, event)}`);
-    for (const team of this.others)
-      for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
+    const { thisRound, nextRound } = turnsAfter(this.s, this.me);
+    this.playOthers(thisRound, out);
     const round = endRound(this.s);
+    this.playOthers(nextRound, out);
     out.push(`--- dia ${this.s.day}: +${round.income[this.me]} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
     const result = outcome(this.s, this.me);
     if (result !== 'playing') out.push(`FIN: ${result}`);
     return out.join('\n');
+  }
+
+  /** Los turnos de esos equipos de la IA, en orden, saltandose los derrotados. */
+  private playOthers(teams: readonly TeamId[], out: string[]): void {
+    for (const team of teams) {
+      if (!takesTurn(this.s, team)) continue;
+      const controller = teamState(this.s, team).controller;
+      if (controller !== 'ai') throw new UsageError(`el equipo ${team} lo juega '${controller}': aqui solo juega una persona`);
+      for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
+    }
   }
 
   status(): string {
