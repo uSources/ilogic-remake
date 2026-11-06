@@ -5,17 +5,20 @@ import { entryOf, loadContent, validateContent, type Content, type WeatherType }
 
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
-import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf, engagement } from '@core/rules';
+import { endRound, hitChance, movementProfile, moveRange, newUnit, visibility, visionOf, engagement } from '@core/rules';
 import { ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
-import type { GameState } from '@core/model';
+import type { GameState, Unit } from '@core/model';
 import { blankState, unitTypeNamed, endRoundReport } from './helpers';
 
 const WEATHER = defaultContent().weather;
 const THEMES = defaultContent().themes;
+
+/** Lo que puede gastar la unidad este turno. */
+const budgetOf = (s: GameState, unit: Unit) => movementProfile(s, unit).budget;
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -77,7 +80,7 @@ describe('clima: efectos', () => {
   it('despejado no cambia nada', () => {
     const s = withWeather(CLEAR);
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    expect(maxSteps(s, tank)).toBe(TANK.move);
+    expect(budgetOf(s, tank)).toBe(TANK.move);
     expect(visionOf(s, tank)).toBe(TANK.vision);
   });
 
@@ -85,17 +88,17 @@ describe('clima: efectos', () => {
     const s = withWeather(RAIN);
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const soldier = newUnit(s, SOLDIER, 0, { x: 15, y: 15 });
-    expect(maxSteps(s, tank)).toBe(TANK.move - 1);
-    expect(maxSteps(s, soldier)).toBe(SOLDIER.move);
-    expect(moveRange(s, tank).maxSteps).toBe(TANK.move - 1);
+    expect(budgetOf(s, tank)).toBe(TANK.move - 1);
+    expect(budgetOf(s, soldier)).toBe(SOLDIER.move);
+    expect(moveRange(s, tank).profile.budget).toBe(TANK.move - 1);
   });
 
   it('la nevada frena a todo lo que va por tierra, no a los aviones', () => {
     const s = withWeather(SNOW);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const plane = newUnit(s, LFIGHTER, 0, { x: 15, y: 15 });
-    expect(maxSteps(s, soldier)).toBe(SOLDIER.move - 1);
-    expect(maxSteps(s, plane)).toBe(LFIGHTER.move);
+    expect(budgetOf(s, soldier)).toBe(SOLDIER.move - 1);
+    expect(budgetOf(s, plane)).toBe(LFIGHTER.move);
   });
 
   it('la tormenta frena a los aviones y hace fallar mas', () => {
@@ -106,7 +109,7 @@ describe('clima: efectos', () => {
       newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
       newUnit(s, LFIGHTER, 0, { x: 15, y: 15 });
     }
-    expect(maxSteps(storm, storm.units[2]!)).toBe(LFIGHTER.move - 2);
+    expect(budgetOf(storm, storm.units[2]!)).toBe(LFIGHTER.move - 2);
     const pc = hitChance(clear, engagement(clear.units[0]!, clear.units[1]!));
     const ps = hitChance(storm, engagement(storm.units[0]!, storm.units[1]!));
     expect(ps).toBeCloseTo(pc * STORM.hitChance);
@@ -128,7 +131,7 @@ describe('clima: efectos', () => {
     const s = withWeather(SNOW);
     defaultContent().units.list.forEach((unitType, x) => {
       const unit = newUnit(s, unitType, 0, { x, y: 0 });
-      if (unitType.move > 0) expect(maxSteps(s, unit)).toBeGreaterThanOrEqual(1);
+      if (unitType.move > 0) expect(budgetOf(s, unit)).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -136,7 +139,7 @@ describe('clima: efectos', () => {
     const s = withWeather(STORM);
     s.rules = rulesWith(defaultContent(), { weather: false });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    expect(maxSteps(s, tank)).toBe(TANK.move);
+    expect(budgetOf(s, tank)).toBe(TANK.move);
     const before = { ...s.weather };
     endRound(s);
     expect(s.weather).toEqual(before);

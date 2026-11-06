@@ -111,7 +111,7 @@ describe('habilidades: zona de control', () => {
     expect(range.steps.at({ x: 10, y: 11 })).toBeGreaterThan(0); // entra en la zona
     expect(range.steps.at({ x: 11, y: 10 })).toBeGreaterThan(0); // otra casilla de la zona, entrando por fuera
     // (11, 9) esta a 5 pasos, pero todos los caminos cortos pasan por la zona.
-    expect(range.steps.at({ x: 11, y: 9 })).toBe(0);
+    expect(range.steps.at({ x: 11, y: 9 })).toBeNull();
     const through = [
       { x: 10, y: 13 },
       { x: 11, y: 13 },
@@ -120,7 +120,7 @@ describe('habilidades: zona de control', () => {
       { x: 11, y: 10 },
       { x: 11, y: 9 },
     ];
-    expect(validPath(s, unit, through, range)).toBe(false);
+    expect(validPath(range, through)).toBe(false);
     expect(dispatch(s, 0, { kind: 'move', uid: unit.uid, to: { x: 10, y: 11 } }).ok).toBe(true);
     s.rules = { ...TEST_RULES, abilities: false };
     expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
@@ -149,7 +149,7 @@ describe('habilidades: zona de control', () => {
     // (4, 9) solo se alcanza pasando por su zona: sin verla, el alcance no la delata.
     expect(moveRange(s, unit).steps.at({ x: 4, y: 9 })).toBeGreaterThan(0);
     newUnit(s, TANK, 0, { x: 6, y: 8 }); // un aliado al lado la descubre
-    expect(moveRange(s, unit).steps.at({ x: 4, y: 9 })).toBe(0);
+    expect(moveRange(s, unit).steps.at({ x: 4, y: 9 })).toBeNull();
   });
 });
 

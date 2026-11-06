@@ -30,7 +30,7 @@ describe('movimiento: pasar entre aliados', () => {
     const tank = newUnit(s, TANK, 0, { x: 2, y: 5 });
     newUnit(s, TANK, 0, { x: 3, y: 5 });
     const range = moveRange(s, tank);
-    expect(range.steps.at({ x: 3, y: 5 })).toBe(0); // ocupada por el aliado
+    expect(range.steps.at({ x: 3, y: 5 })).toBeNull(); // ocupada por el aliado
     expect(range.steps.at({ x: 4, y: 5 })).toBe(2); // pero se llega a la siguiente
   });
 
@@ -39,7 +39,7 @@ describe('movimiento: pasar entre aliados', () => {
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 'Water';
     const tank = newUnit(s, TANK, 0, { x: 2, y: 5 });
     newUnit(s, TANK, 0, { x: 3, y: 5 });
-    expect(moveRange(s, tank).steps.at({ x: 4, y: 5 })).toBe(0);
+    expect(moveRange(s, tank).steps.at({ x: 4, y: 5 })).toBeNull();
   });
 });
 
@@ -136,7 +136,7 @@ describe('movimiento: camino trazado a mano', () => {
       { x: 7, y: 6 },
       { x: 7, y: 5 },
     ];
-    expect(validPath(s, tank, via, range)).toBe(true);
+    expect(validPath(range, via)).toBe(true);
     expect(move(s, tank.uid, { x: 7, y: 5 }, via)).toEqual(via);
   });
 
@@ -145,31 +145,21 @@ describe('movimiento: camino trazado a mano', () => {
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const range = moveRange(s, tank);
     expect(
-      validPath(
-        s,
-        tank,
-        [
-          { x: 5, y: 5 },
-          { x: 7, y: 5 },
-        ],
-        range,
-      ),
+      validPath(range, [
+        { x: 5, y: 5 },
+        { x: 7, y: 5 },
+      ]),
     ).toBe(false);
     expect(
-      validPath(
-        s,
-        tank,
-        [
-          { x: 5, y: 5 },
-          { x: 6, y: 5 },
-          { x: 5, y: 5 },
-          { x: 5, y: 6 },
-        ],
-        range,
-      ),
+      validPath(range, [
+        { x: 5, y: 5 },
+        { x: 6, y: 5 },
+        { x: 5, y: 5 },
+        { x: 5, y: 6 },
+      ]),
     ).toBe(false);
     const long = Array.from({ length: 7 }, (_, i) => ({ x: 5 + i, y: 5 }));
-    expect(validPath(s, tank, long, range)).toBe(false);
+    expect(validPath(range, long)).toBe(false);
   });
 });
 
@@ -183,7 +173,7 @@ describe('movimiento: coste del terreno', () => {
     expect(range.steps.at({ x: 6, y: 5 })).toBe(2);
     expect(range.steps.at({ x: 7, y: 5 })).toBe(4);
     expect(range.steps.at({ x: 8, y: 5 })).toBe(5);
-    expect(range.steps.at({ x: 9, y: 5 })).toBe(0); // 6 > movimiento 5
+    expect(range.steps.at({ x: 9, y: 5 })).toBeNull(); // 6 > movimiento 5
     move(s, tank.uid, { x: 8, y: 5 });
     const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(moveRange(s, sol).steps.at({ x: 7, y: 5 })).toBe(2);
@@ -231,7 +221,7 @@ describe('movimiento: el camino es de casillas, no de lo que hay en ellas', () =
     const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const building = { type: 'City', owner: null, x: 4, y: 2, capture: null };
     s.buildings.push(building);
-    const path = pathTo(moveRange(s, tank), tank, building);
+    const path = pathTo(moveRange(s, tank), building);
     expect(path.at(-1)).toEqual({ x: 4, y: 2 });
     expect(path.at(-1)).not.toBe(building);
   });

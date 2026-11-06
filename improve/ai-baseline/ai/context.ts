@@ -9,7 +9,7 @@ import { unitTypeOf, buildingTypeOf } from '@core/gameContent';
 import { weightsOf } from '../weights';
 import { movementOf, buildingAt, occupancy } from '@core/rules/queries';
 import { posOf, samePos } from '@core/geom';
-import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '@core/rules/movement';
+import { canReach, endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '@core/rules/movement';
 import { dispatch } from '@core/actions/dispatch';
 import type { ActionDispatcher } from '@core/actions/types';
 import { visibility } from '@core/rules/visibility';
@@ -79,7 +79,7 @@ export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit)
  */
 export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
-  if (!avoidDest && range.steps.at(dest) > 0) return dest;
+  if (!avoidDest && canReach(range, dest)) return dest;
   const stepsToDest = stepsFrom(s, ai, unit, dest);
   const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
   const best = minBy(options, stepsToDest);

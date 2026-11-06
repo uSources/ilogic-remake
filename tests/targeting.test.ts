@@ -1,6 +1,5 @@
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
-import { createLayer } from '@core/mapGrid';
 import { bestAttackTile, closestStep } from '@core/targeting';
 import { extendTrail } from '@core/trail';
 import { moveRange, newUnit, pathCost } from '@core/rules';
@@ -62,23 +61,22 @@ describe('ordenes del jugador', () => {
     const s = blankState();
     const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
     const range = moveRange(s, unit);
-    const block = createLayer(s, false);
-    let trail = extendTrail(s, unit, range, block, [], { x: 6, y: 5 });
+    let trail = extendTrail(range, [], { x: 6, y: 5 });
     expect(trail).toEqual([
       { x: 5, y: 5 },
       { x: 6, y: 5 },
     ]);
-    trail = extendTrail(s, unit, range, block, trail, { x: 6, y: 6 });
+    trail = extendTrail(range, trail, { x: 6, y: 6 });
     expect(trail.length).toBe(3);
-    trail = extendTrail(s, unit, range, block, trail, { x: 6, y: 5 });
+    trail = extendTrail(range, trail, { x: 6, y: 5 });
     expect(trail).toEqual([
       { x: 5, y: 5 },
       { x: 6, y: 5 },
     ]);
-    const jump = extendTrail(s, unit, range, block, trail, { x: 5, y: 8 });
+    const jump = extendTrail(range, trail, { x: 5, y: 8 });
     expect(jump[jump.length - 1]).toEqual({ x: 5, y: 8 });
-    expect(pathCost(s, unitTypeOf(s, unit).movement, jump)).toBeLessThanOrEqual(range.maxSteps);
+    expect(pathCost(range.profile, jump)).toBeLessThanOrEqual(range.profile.budget);
     // Fuera de alcance: se queda como estaba.
-    expect(extendTrail(s, unit, range, block, trail, { x: 30, y: 30 })).toBe(trail);
+    expect(extendTrail(range, trail, { x: 30, y: 30 })).toBe(trail);
   });
 });

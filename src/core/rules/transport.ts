@@ -32,7 +32,7 @@ export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit
 export function mergeProblem(s: GameState, unit: Unit, target: Unit, range = moveRange(s, unit)): ActionRejection | null {
   if (!canMergeWith(unit, target) || !isOnMap(target)) return 'cannotMerge';
   if (!isEmpty(unit) || !isEmpty(target)) return 'cannotMerge';
-  return approachPath(s, unit, target, range) ? null : 'unreachable';
+  return approachPath(unit, target, range) ? null : 'unreachable';
 }
 
 /**
@@ -40,7 +40,7 @@ export function mergeProblem(s: GameState, unit: Unit, target: Unit, range = mov
  * Si no lo hay, es un fallo de quien llama (como checkedUnit en las acciones).
  */
 function checkedApproach(s: GameState, unit: Unit, other: Unit): Pos[] {
-  const path = approachPath(s, unit, other);
+  const path = approachPath(unit, other, moveRange(s, unit));
   if (!path) throw new Error(`La unidad ${unit.uid} no llega a ${other.uid} en una union o subida ya comprobada`);
   return path;
 }
@@ -79,7 +79,7 @@ export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)
 export function loadProblem(s: GameState, unit: Unit, transport: Unit, range = moveRange(s, unit)): ActionRejection | null {
   if (transport.uid === unit.uid || !isOnMap(transport) || !canCarry(s, transport, unit)) return 'cannotLoad';
   if (freeSlot(transport) === -1) return 'cannotLoad';
-  return approachPath(s, unit, transport, range) ? null : 'unreachable';
+  return approachPath(unit, transport, range) ? null : 'unreachable';
 }
 
 /** Subir a un transporte (Unit.Load), ya comprobado (loadProblem): la unidad se mueve hasta el y queda dentro. */

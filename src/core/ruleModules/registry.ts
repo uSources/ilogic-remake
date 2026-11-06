@@ -5,6 +5,7 @@
  */
 import type { GameState } from '../model';
 import { ABILITIES } from './abilities';
+import { AMBUSH } from './ambush';
 import { CONTROL_POINTS } from './controlPoints';
 import { FLANK } from './flank';
 import { FOREST_HIDES } from './forestHides';
@@ -12,6 +13,8 @@ import { GENERALS } from './generals';
 import type { RuleHooks, RuleModule, RuleModuleId } from './hooks';
 import { NO_FOG } from './noFog';
 import { NO_HEAL_UNDER_FIRE } from './noHealUnderFire';
+import { PASS_ALLIES } from './passAllies';
+import { TERRAIN_COST } from './terrainCost';
 import { UPKEEP } from './upkeep';
 import { VETERANCY } from './veterancy';
 import { WEATHER } from './weather';
@@ -31,6 +34,9 @@ export const RULE_MODULES: readonly RuleModule[] = [
   NO_HEAL_UNDER_FIRE,
   NO_FOG,
   FOREST_HIDES,
+  TERRAIN_COST,
+  PASS_ALLIES,
+  AMBUSH,
 ];
 
 /** Los modulos que lleva la partida, segun sus ajustes. */

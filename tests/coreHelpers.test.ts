@@ -43,13 +43,13 @@ describe('ayudas de reglas', () => {
     expect(defenseStars(s, { x: 5, y: 5 })).toBeGreaterThanOrEqual(defenseStars(s, { x: 0, y: 0 }));
   });
 
-  it('casillas alcanzables = las de paso > 0, en orden de columnas', () => {
+  it('casillas alcanzables = las que tienen coste (no null), en orden de columnas', () => {
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const range = moveRange(s, unit);
     const tiles = reachableTiles(range);
     expect(tiles.length).toBeGreaterThan(0);
-    expect(tiles.every((pos) => range.steps.at(pos) > 0)).toBe(true);
+    expect(tiles.every((pos) => range.steps.at(pos) !== null)).toBe(true);
     expect(tiles.some((pos) => pos.x === 10 && pos.y === 10)).toBe(false);
     const sorted = [...tiles].sort((firstPos, secondPos) => firstPos.x - secondPos.x || firstPos.y - secondPos.y);
     expect(tiles).toEqual(sorted);

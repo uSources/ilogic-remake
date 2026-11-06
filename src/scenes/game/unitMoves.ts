@@ -98,7 +98,7 @@ export class UnitMoves {
 
   /** El cursor pasa por una casilla: el camino trazado la sigue. */
   followCursor(tile: Pos): void {
-    this.session?.followCursor(this.host.state, tile);
+    this.session?.followCursor(tile);
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */

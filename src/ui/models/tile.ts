@@ -13,7 +13,7 @@ import {
   captureProgress,
   captureStrength,
   cargoUnits,
-  moveCost,
+  terrainAccess,
   rank,
   unhealable,
   tileProtection,
@@ -113,7 +113,7 @@ export function tileVM(
   };
   if (s.rules.terrainCost) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (moveType: MoveType) => (canMoveOn(moveType, terr) ? moveCost(s, moveType, pos) : null);
+    const cost = (moveType: MoveType) => (canMoveOn(moveType, terr) ? terrainAccess(s, moveType).enterCost(pos) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
   }
   if (building) {

@@ -18,7 +18,9 @@
  * | `visibility` | vision y niebla |
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
- * | `movement` | alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
+ * | `movementProfile` | como se mueve cada tipo: por donde, lo que cuesta cada casilla, lo que puede gastar |
+ * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (`PASS_RULES`) |
+ * | `movement` | cada paso (`stepAllowed`), alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
  * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
  * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
@@ -63,10 +65,8 @@ export {
 } from './rules/capture';
 export { newUnit } from './rules/lifecycle';
 export {
-  maxSteps,
-  passMap,
-  moveCost,
-  pathCost,
+  moveRulesOf,
+  stepAllowed,
   moveRange,
   canReach,
   reachableTiles,
@@ -82,11 +82,15 @@ export {
   moveEvent,
   endsInAmbush,
   type MoveRange,
+  type MoveRules,
   type MovePath,
-  type PassMap,
   type ReachableTile,
   type DistanceMap,
+  type Step,
+  type StepKind,
 } from './rules/movement';
+export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
+export { PASS_RULES, passRulesOf, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
 export {
   inAttackRange,
   canDamage,
@@ -104,7 +108,18 @@ export {
   HIT_MODIFIERS,
 } from './rules/combat';
 export { RULE_MODULES, isRuleOn, hooksOf } from './ruleModules/registry';
-export type { HitModifier, CoverPiercing, RoundPhase, RoundStage, RuleHooks, RuleModule, RuleModuleId } from './ruleModules/hooks';
+export type {
+  HitModifier,
+  CoverPiercing,
+  RoundPhase,
+  RoundStage,
+  RuleHooks,
+  RuleModule,
+  RuleModuleId,
+  PassRule,
+  Passage,
+  StopRule,
+} from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './ruleModules/veterancy';
 export { flanked } from './ruleModules/flank';
 export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';

@@ -15,10 +15,9 @@ import { unitTypeOf } from './gameContent';
 import type { AbilityDef, UnitType } from './content';
 import type { DeepReadonly } from './util/freeze';
 import { manhattan, neighbors4 } from './geom';
-import { createLayer } from './mapGrid';
-import type { Grid } from './util/grid';
+import { mapGrid } from './mapGrid';
 import { isAlive, areEnemies, isOnMap } from './util/predicates';
-import type { GameState, Unit } from './model';
+import type { GameState, Pos, Unit } from './model';
 import type { Engagement, Fighter } from './rules/engagement';
 
 type AbilityOf<K extends AbilityDef['kind']> = DeepReadonly<Extract<AbilityDef, { kind: K }>>;
@@ -88,20 +87,11 @@ export function auraFactor(s: GameState, defender: Fighter): number {
 }
 
 /**
- * Casillas en las que `unit` se tiene que parar (zoneOfControl de los enemigos): las de al lado de un
- * enemigo con la habilidad que para a su tipo de movimiento. `visible` (opcional): solo cuentan los
- * enemigos que se ven, como en passMap.
+ * Casillas en las que `mover` se tiene que parar (zoneOfControl de los enemigos de los que sabe,
+ * `noticedFoes`): las de al lado de un enemigo con la habilidad que para a su tipo de movimiento.
  */
-export function zoneOfControl(s: GameState, unit: Unit, visible?: Grid<boolean> | null): Grid<boolean> {
-  const mustStop = createLayer(s, false);
-  if (!s.rules.abilities) return mustStop;
-  const movement = unitTypeOf(s, unit).movement;
-  for (const enemy of s.units) {
-    if (!areEnemies(s, enemy, unit) || !isFieldUnit(enemy)) continue;
-    if (visible && !visible.at(enemy)) continue;
-    const zone = abilityOfUnit(s, enemy, 'zoneOfControl');
-    if (!zone?.stops.includes(movement)) continue;
-    for (const tile of neighbors4(mustStop, enemy)) mustStop.set(tile, true);
-  }
-  return mustStop;
+export function zoneOfControlTiles(s: GameState, mover: Unit, noticedFoes: readonly Unit[]): Pos[] {
+  const movement = unitTypeOf(s, mover).movement;
+  const stopsMover = (enemy: Unit) => isFieldUnit(enemy) && !!abilityOfUnit(s, enemy, 'zoneOfControl')?.stops.includes(movement);
+  return noticedFoes.filter(stopsMover).flatMap((enemy) => neighbors4(mapGrid(s), enemy));
 }

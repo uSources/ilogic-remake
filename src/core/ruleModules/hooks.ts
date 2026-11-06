@@ -6,6 +6,7 @@
  *
  * Una lista nueva que se pueda ampliar es un campo mas de `RuleHooks`, con el tipo de sus entradas.
  */
+import type { MoveType, UnitType } from '../content';
 import type { GameEvent, GameState, MatchSettings, Pos, TeamId, Unit } from '../model';
 import type { Engagement } from '../rules/engagement';
 
@@ -83,6 +84,43 @@ export interface CaptureFactor {
   factor(s: GameState, unit: Unit): number;
 }
 
+/** Lo que cuesta entrar en una casilla a un tipo de movimiento (el coste del terreno). */
+export interface EnterCostRule {
+  readonly id: string;
+  /** El coste con esta regla, partiendo de `cost` (1, o lo que han dejado las de antes). */
+  cost(s: GameState, movement: MoveType, pos: Pos, cost: number): number;
+}
+
+/** Lo que puede gastar en un turno una unidad de ese tipo (el clima frena). */
+export interface MoveBudgetRule {
+  readonly id: string;
+  /** Lo que puede gastar con esta regla, partiendo de `budget` (el `move` de su tipo, o lo de las de antes). */
+  budget(s: GameState, unitType: UnitType, budget: number): number;
+}
+
+/** Lo que es otra unidad para quien se mueve: le cierra el paso, la atraviesa sin pararse encima o no sabe que esta. */
+export type Passage = 'blocks' | 'passThrough' | 'unnoticed';
+
+/** Lo que una regla de paso sabe de quien se mueve. */
+export interface PassContext {
+  readonly s: GameState;
+  readonly mover: Unit;
+  /** Lo que ve ahora su equipo (los aliados incluidos). */
+  readonly sees: (pos: Pos) => boolean;
+}
+
+/** Que es otra unidad para quien se mueve (null = esta regla no dice nada: la siguiente). */
+export interface PassRule {
+  readonly id: string;
+  passage(context: PassContext, other: Unit): Passage | null;
+}
+
+/** Donde tiene que pararse quien se mueve por los enemigos de los que sabe (la zona de control). */
+export interface StopRule {
+  readonly id: string;
+  stopTiles(s: GameState, mover: Unit, noticedFoes: readonly Unit[]): Pos[];
+}
+
 /** Las entradas que aporta un modulo a cada lista (las que no dice, ninguna). */
 export interface RuleHooks {
   /** Modificadores del acierto, detras del poder y la proteccion (ver `hitModifiersOf`, rules/combat.ts). */
@@ -100,13 +138,31 @@ export interface RuleHooks {
   readonly revealRules?: readonly RevealRule[];
   readonly concealment?: readonly Concealment[];
   readonly coverSight?: readonly CoverSight[];
+  /** Movimiento (rules/movementProfile.ts): coste de cada casilla y lo que se puede gastar. */
+  readonly enterCosts?: readonly EnterCostRule[];
+  readonly moveBudgets?: readonly MoveBudgetRule[];
+  /** Quien hay en cada casilla (rules/passage.ts): por donde se pasa y donde hay que pararse. */
+  readonly passRules?: readonly PassRule[];
+  readonly stopRules?: readonly StopRule[];
   /** Captura (rules/capture.ts, `captureStrength`). */
   readonly captureFactors?: readonly CaptureFactor[];
 }
 
 /** Los modulos de reglas que hay (los interruptores de los ajustes de la partida los enchufan). */
 export type RuleModuleId =
-  'abilities' | 'veterancy' | 'flank' | 'generals' | 'weather' | 'controlPoints' | 'upkeep' | 'noHealUnderFire' | 'noFog' | 'forestHides';
+  | 'abilities'
+  | 'veterancy'
+  | 'flank'
+  | 'generals'
+  | 'weather'
+  | 'controlPoints'
+  | 'upkeep'
+  | 'noHealUnderFire'
+  | 'noFog'
+  | 'forestHides'
+  | 'terrainCost'
+  | 'passAllies'
+  | 'ambush';
 
 /** Un modulo de reglas: una pieza del juego que se enchufa o no segun los ajustes de la partida. */
 export interface RuleModule {

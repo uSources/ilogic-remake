@@ -102,7 +102,7 @@ function inspectMarks(input: HighlightInput, uid: number): Highlights {
   const threat = unitThreat(input.s, unit);
   const canMove = unitTypeOf(input.s, unit).move > 0;
   for (const { pos, value: steps } of range.steps.cells()) {
-    if (canMove && steps > 0) marks.tiles.set(posKey(pos), 'reach');
+    if (canMove && steps !== null) marks.tiles.set(posKey(pos), 'reach');
     else if (threat.at(pos)) marks.tiles.set(posKey(pos), 'attack');
   }
   return marks;

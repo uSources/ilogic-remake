@@ -5,7 +5,7 @@
  */
 import { posKey, posOf } from '../../core/geom';
 import { extendTrail } from '../../core/trail';
-import { attackZone, loadTargets, mergeTargets, moveRange, passMap, threatMap, type MoveRange } from '../../core/rules';
+import { attackZone, loadTargets, mergeTargets, moveRange, threatMap, type MoveRange } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
 import { intentAt, trailTo, type MovePlan } from './intent';
@@ -22,8 +22,6 @@ export class MoveSession {
   load = new Map<string, number>();
   /** Camino que se esta trazando, de la unidad al cursor (incluye la casilla de salida). */
   trail: Pos[] = [];
-  /** Casillas que le cierran el paso (enemigos que se ven). */
-  private block: Grid<boolean> | null = null;
   /** Casillas que el enemigo visible puede atacar el turno siguiente. */
   danger: Grid<boolean> | null = null;
   /** Adonde podria atacar desde lo que alcanza. */
@@ -49,7 +47,6 @@ export class MoveSession {
     session.merge = byTile(mergeTargets(s, unit, range));
     session.load = byTile(loadTargets(s, unit, range));
     session.trail = [posOf(unit)];
-    session.block = passMap(s, unit).block;
     session.danger = threatMap(s, unit.team);
     session.attackZone = attackZone(s, unit, range);
     return session;
@@ -72,9 +69,9 @@ export class MoveSession {
   }
 
   /** Alarga, recorta o rehace el camino trazado al pasar el cursor por una casilla. */
-  followCursor(s: GameState, tile: Pos): void {
-    if (!this.range || !this.block) return;
-    this.trail = extendTrail(s, this.unit, this.range, this.block, this.trail, tile);
+  followCursor(tile: Pos): void {
+    if (!this.range) return;
+    this.trail = extendTrail(this.range, this.trail, tile);
   }
 
   /** Quita la ultima casilla del camino trazado; devuelve la nueva ultima (null si no habia camino). */

@@ -7,7 +7,7 @@ import { entryOf, type UnitType } from '../../core/content';
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
 import { posKey, posOf } from '../../core/geom';
 import type Phaser from 'phaser';
-import { movementOf, buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
+import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
@@ -82,12 +82,12 @@ export function moveTipFor(
   const anchor = options.anchor(cursor);
   if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
   const isMove = intent.kind === 'move';
-  const used = isMove ? pathCost(s, movementOf(s, unit), options.trailTo(intent.to)) : range.steps.at(cursor) || 1;
+  const used = isMove ? pathCost(range.profile, options.trailTo(intent.to)) : (range.steps.at(cursor) ?? 1);
   return {
     anchor,
     action: moveTipAction(intent),
     used,
-    max: range.maxSteps,
+    max: range.profile.budget,
     stars: isMove ? defenseStars(s, cursor) : undefined,
     danger: isMove && !!options.danger?.at(cursor),
   };

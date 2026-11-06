@@ -45,16 +45,16 @@ describe('movimiento', () => {
     newUnit(s, SOLDIER, 1, { x: 11, y: 10 }); // bloquea a la derecha
     const range = moveRange(s, unit);
     expect(range.steps.at({ x: 10, y: 13 })).toBe(3);
-    expect(range.steps.at({ x: 11, y: 10 })).toBe(0); // ocupada
+    expect(range.steps.at({ x: 11, y: 10 })).toBeNull(); // ocupada
     expect(range.steps.at({ x: 12, y: 11 })).toBe(3); // rodeando por abajo
-    expect(range.steps.at({ x: 12, y: 10 })).toBe(0); // necesitaria 4 pasos
-    expect(range.steps.at({ x: 10, y: 14 })).toBe(0);
+    expect(range.steps.at({ x: 12, y: 10 })).toBeNull(); // necesitaria 4 pasos
+    expect(range.steps.at({ x: 10, y: 14 })).toBeNull();
   });
   it('el agua no la pisan los vehiculos', () => {
     const s = blankState(TEST_RULES);
     s.map[11]![10] = 'Water'; // Water
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    expect(moveRange(s, tank).steps.at({ x: 11, y: 10 })).toBe(0);
+    expect(moveRange(s, tank).steps.at({ x: 11, y: 10 })).toBeNull();
     act(s, 0, { kind: 'move', uid: tank.uid, to: { x: 10, y: 14 } });
     expect(canStillMove(tank)).toBe(false);
   });

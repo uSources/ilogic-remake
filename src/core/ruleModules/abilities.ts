@@ -1,5 +1,5 @@
 /** [CAMBIO] Las habilidades de las unidades (ajuste `abilities`; core/abilities.ts) se enchufan a las reglas desde aqui. */
-import { captureFactor, defenseFactor, piercingOf, seesIntoCover } from '../abilities';
+import { captureFactor, defenseFactor, piercingOf, seesIntoCover, zoneOfControlTiles } from '../abilities';
 import type { RuleModule } from './hooks';
 
 export const ABILITIES: RuleModule = {
@@ -11,5 +11,7 @@ export const ABILITIES: RuleModule = {
     coverPiercing: [{ id: 'piercing', ignoredCover: piercingOf }],
     coverSight: [{ id: 'scout', seesIntoCover }],
     captureFactors: [{ id: 'quickCapture', factor: captureFactor }],
+    // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
+    stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }],
   },
 };
