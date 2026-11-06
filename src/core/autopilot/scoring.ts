@@ -10,6 +10,7 @@ import { canCounter, expectedDamage } from '../rules/combat';
 import { engagement, reversed } from '../rules/engagement';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
+import { bountyFor } from '../ruleModules/bounty';
 import { posOf } from '../geom';
 import type { Building, GameState, Pos, Unit } from '../model';
 import type { PlayCtx } from './context';
@@ -37,6 +38,9 @@ export interface AttackScoreTerm {
 /** Lo que vale una unidad de ese tipo al comparar ataques (su precio, escalado). */
 export const unitValue = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost / weightsOf(s).COSTSCALE;
 
+/** Lo que vale `money` en la escala de unitValue (lo que vale una unidad entera es su precio). */
+const moneyValue = (s: GameState, money: number): number => (100 * money) / weightsOf(s).COSTSCALE;
+
 const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
 
 /**
@@ -63,10 +67,12 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     value: (attack) => attack.damage * unitValue(attack.s, attack.target),
   },
   {
-    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
+    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da el dinero que cobra (bountyFor), en la misma escala.
     id: 'kill',
     value: (attack) =>
-      kills(attack) ? (weightsOf(attack.s).KILLBONUS + 100 * attack.s.settings.bounty) * unitValue(attack.s, attack.target) : 0,
+      kills(attack)
+        ? weightsOf(attack.s).KILLBONUS * unitValue(attack.s, attack.target) + moneyValue(attack.s, bountyFor(attack.s, attack.target))
+        : 0,
   },
   {
     // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque (si la partida lo tiene: canCounter).
