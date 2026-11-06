@@ -12,6 +12,7 @@ import { posKey, posOf, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 import { earn } from './rules/funds';
+import { isRuleOn } from './ruleModules/registry';
 import { visibility } from './rules/visibility';
 import { isHostile } from './teams';
 import type { DeepReadonly } from './util/freeze';
@@ -109,7 +110,7 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
     apply: ({ general }) => {
       general.reveal = true;
     },
-    aiValue: (s) => (s.rules.fog ? { target: null, value: weightsOf(s).REVEALVALUE } : null),
+    aiValue: (s) => (isRuleOn(s, 'noFog') ? null : { target: null, value: weightsOf(s).REVEALVALUE }),
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata); la IA, en el mejor cuadrado que ve.
   areaDamage: {
