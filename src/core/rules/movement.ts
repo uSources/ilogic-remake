@@ -45,7 +45,8 @@ export interface Step {
 
 /**
  * Como acaba un paso: en la casilla (`walk`) o dentro de la unidad que hay en ella (`join`: unirse o
- * subir a un transporte, que no pisa su terreno ni choca con ella).
+ * subir a un transporte). Al entrar en una unidad no se mira si su terreno es de su tipo ni si esa
+ * unidad cierra el paso, pero se gasta lo mismo que al entrar en su casilla (`enterCost`).
  */
 export type StepKind = 'walk' | 'join';
 
@@ -65,6 +66,7 @@ const canStepOnto = (rules: MoveRules, to: Pos): boolean =>
 export function stepAllowed(rules: MoveRules, step: Step, kind: StepKind = 'walk'): boolean {
   if (manhattan(step.from, step.to) !== 1 || !canGoOnFrom(rules, step.from)) return false;
   if (kind === 'walk' && !canStepOnto(rules, step.to)) return false;
+  // Andando o entrando en una unidad (`join`), cuesta lo que la casilla de destino.
   return step.spent + rules.profile.enterCost(step.to) <= rules.profile.budget;
 }
 
@@ -228,14 +230,14 @@ export function plannedPath(s: GameState, unit: Unit, dest: Pos, drawn?: readonl
 }
 
 /**
- * Para unir o subir a un transporte la unidad tiene que estar al lado del objetivo o poder llegar a
+ * Para unir o subir a un transporte hay que estar al lado del objetivo o llegar dentro del alcance a
  * una casilla vecina y entrar desde alli (`stepAllowed`, como `join`). Devuelve el camino hasta la
- * casilla vecina mas barata (la propia casilla si ya esta al lado) o null.
+ * casilla vecina mas barata (la de salida si ya esta al lado) o null. Si la unidad aun puede
+ * moverse lo mira quien llama (transport.ts).
  * [CAMBIO] en el original la union y la carga se hacian "a distancia" sin mover a la unidad.
  */
-export function approachPath(unit: Unit, target: Pos, range: MoveRange): Pos[] | null {
+export function approachPath(range: MoveRange, target: Pos): Pos[] | null {
   if (manhattan(range.origin, target) === 1) return [posOf(range.origin)];
-  if (!canStillMove(unit)) return null;
   const canJoinFrom = (tile: ReachableTile) => stepAllowed(range, { from: tile.pos, to: target, spent: tile.cost }, 'join');
   const best = minBy(neighborsInReach(range, target).filter(canJoinFrom), (tile) => tile.cost);
   return best ? pathTo(range, best.pos) : null;

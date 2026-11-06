@@ -13,7 +13,7 @@
  * Este modulo no importa rules/ salvo tipos (las reglas no lo importan: lo enchufa su modulo).
  */
 import { unitTypeOf } from './gameContent';
-import type { AbilityDef, AbilityKind, UnitType } from './content';
+import type { AbilityDef, AbilityKind } from './content';
 import type { DeepReadonly } from './util/freeze';
 import { manhattan, neighbors4 } from './geom';
 import { mapGrid } from './mapGrid';
@@ -26,14 +26,12 @@ type AbilityOf<K extends AbilityKind> = DeepReadonly<Extract<AbilityDef, { kind:
 /** Una unidad, o lo que se sabe de su tipo (una prevision, un evento). */
 type OfType = Pick<Unit, 'type'>;
 
-/** Habilidad `kind` de un tipo de unidad, si la tiene (que cuente lo dice el modulo de reglas). */
-export function abilityOf<K extends AbilityKind>(unitType: UnitType, kind: K): AbilityOf<K> | undefined {
-  return unitType.abilities.find((ability): ability is AbilityOf<K> => ability.kind === kind);
-}
-
-/** Habilidad `kind` del tipo de una unidad, si la tiene. */
+/**
+ * Habilidad `kind` del tipo de una unidad, si la tiene. Solo para ABILITY_EFFECTS: fuera, que cuente
+ * lo dice el modulo de reglas (abilitiesOf, ruleModules/abilities.ts).
+ */
 const abilityOfUnit = <K extends AbilityKind>(s: GameState, unit: OfType, kind: K): AbilityOf<K> | undefined =>
-  abilityOf(unitTypeOf(s, unit), kind);
+  unitTypeOf(s, unit).abilities.find((ability): ability is AbilityOf<K> => ability.kind === kind);
 
 /** Puede dar o sufrir efectos de habilidades de otras unidades: en el mapa y con vida. */
 const isFieldUnit = (unit: Unit): boolean => isOnMap(unit) && isAlive(unit);
@@ -66,8 +64,15 @@ function zoneOfControlTiles(s: GameState, mover: Unit, noticedFoes: readonly Uni
 }
 
 /**
- * Lo que aporta cada clase de habilidad a las listas de las reglas (ver AbilityDef). El orden es el
- * de ABILITY_KINDS: en el acierto, el escudo multiplica antes que el aura.
+ * En que orden entra lo de cada clase en las listas de las reglas. Decide: en el acierto, el escudo
+ * multiplica antes que el aura (otro orden cambia el redondeo de la huella). Una clase nueva va aqui
+ * tambien (lo mira tests/abilities.test.ts).
+ */
+export const ABILITY_EFFECT_ORDER: readonly AbilityKind[] = ['guard', 'zoneOfControl', 'aura', 'piercing', 'scout', 'quickCapture'];
+
+/**
+ * Lo que aporta cada clase de habilidad a las listas de las reglas (ver AbilityDef), juntas en el
+ * orden de ABILITY_EFFECT_ORDER.
  */
 export const ABILITY_EFFECTS: { readonly [K in AbilityKind]: RuleHooks } = {
   // Escudo contra los disparos a distancia: hace fuertes a los grupos con quien lo lleva delante.

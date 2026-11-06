@@ -14,7 +14,7 @@
  */
 import { unitTypeOf } from './gameContent';
 import type { DeepReadonly } from './util/freeze';
-import { findEntry, type GeneralDef, type UnitFilter } from './content';
+import { findEntry, type GeneralDef, type GeneralModifier, type UnitFilter } from './content';
 import { teamState } from './teams';
 import { isOnMap } from './util/predicates';
 import type { Engagement } from './rules/engagement';
@@ -55,18 +55,22 @@ export function healedByPower(s: GameState, team: TeamId, filter: DeepReadonly<U
   return s.units.filter((unit) => unit.team === team && isOnMap(unit) && applies(s, filter, unit));
 }
 
+/**
+ * Multiplica `factor` por los pasivos de clase `kind` del general del equipo de `unit` que valen para
+ * ella (en el orden de su definicion; sin general, `factor` tal cual).
+ */
+function passiveFactor(s: GameState, unit: Unit, kind: GeneralModifier['kind'], factor: number): number {
+  const passives = generalOf(s, unit.team)?.definition.passive ?? [];
+  return passives
+    .filter((passive) => passive.kind === kind && applies(s, passive, unit))
+    .reduce((total, passive) => total * passive.factor, factor);
+}
+
 /** Multiplicador del acierto de `attacker` contra `defender` por los generales de los dos equipos (1 = nada). */
 export function generalHitFactor(s: GameState, fight: Engagement): number {
-  const attacker = fight.attacker.unit;
-  const defender = fight.defender.unit;
-  let factor = 1;
-  const attackerGeneral = generalOf(s, attacker.team);
-  for (const passive of attackerGeneral?.definition.passive ?? [])
-    if (passive.kind === 'attack' && applies(s, passive, attacker)) factor *= passive.factor;
-  const defenderGeneral = generalOf(s, defender.team);
-  for (const passive of defenderGeneral?.definition.passive ?? [])
-    if (passive.kind === 'defense' && applies(s, passive, defender)) factor *= passive.factor;
-  return factor;
+  // Primero los de ataque y luego los de defensa, multiplicando en ese orden (como siempre).
+  const attack = passiveFactor(s, fight.attacker.unit, 'attack', 1);
+  return passiveFactor(s, fight.defender.unit, 'defense', attack);
 }
 
 /** Suma carga a un equipo por `value` de valor hecho o recibido (sin pasar del maximo). Devuelve la ganada. */

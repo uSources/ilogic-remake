@@ -84,7 +84,7 @@ export function bestAreaTarget(s: GameState, team: TeamId, effect: EffectOf<'are
   const visible = visibility(s, team);
   // Nunca a ciegas en la niebla, y nada que ya no pueda bajar de minLife.
   const enemies = s.units.filter(
-    (unit) => isHostile(s, unit.team, team) && unit.carrier === null && unit.life > effect.minLife && visible.at(unit),
+    (unit) => isHostile(s, unit.team, team) && isOnMap(unit) && unit.life > effect.minLife && visible.at(unit),
   );
   const valueAt = (center: Pos): number => {
     const area = new Set(squareArea(mapGrid(s), center, effect.radius).map(posKey));

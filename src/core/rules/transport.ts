@@ -9,9 +9,9 @@ import { mapGrid } from '../mapGrid';
 import { isOnMap } from '../util/predicates';
 import type { ActionRejection, GameState, Pos, Unit } from '../model';
 import { removeUnit } from './lifecycle';
-import { approachPath, moveRange } from './movement';
+import { approachPath, moveRange, type MoveRange } from './movement';
 import { traverse, type Traversal } from './traverse';
-import { spendUnit } from './unitTurn';
+import { canStillMove, spendUnit } from './unitTurn';
 
 /** No lleva a nadie dentro (un transporte con pasajeros no se puede unir). */
 const isEmpty = (unit: Unit): boolean => unit.cargo.every((uid) => uid === null);
@@ -26,6 +26,15 @@ export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit
 }
 
 /**
+ * El camino de `unit` hasta el lado de `other` para unirse o subir (approachPath): si ya esta al
+ * lado, sin moverse; si no, solo si aun puede moverse este turno.
+ */
+function pathToSideOf(unit: Unit, other: Pos, range: MoveRange): Pos[] | null {
+  const alreadyBeside = manhattan(unit, other) === 1;
+  return alreadyBeside || canStillMove(unit) ? approachPath(range, other) : null;
+}
+
+/**
  * Por que `unit` no se puede unir ahora a `target` (null = puede): tienen que ser distintas, del
  * mismo tipo y equipo, estar en el mapa, ir vacias (un transporte con pasajeros no se une: los
  * perderia) y llegar a su lado este turno.
@@ -33,7 +42,7 @@ export function mergeTargets(s: GameState, unit: Unit, range = moveRange(s, unit
 export function mergeProblem(s: GameState, unit: Unit, target: Unit, range = moveRange(s, unit)): ActionRejection | null {
   if (!canMergeWith(unit, target) || !isOnMap(target)) return 'cannotMerge';
   if (!isEmpty(unit) || !isEmpty(target)) return 'cannotMerge';
-  return approachPath(unit, target, range) ? null : 'unreachable';
+  return pathToSideOf(unit, target, range) ? null : 'unreachable';
 }
 
 /**
@@ -41,7 +50,7 @@ export function mergeProblem(s: GameState, unit: Unit, target: Unit, range = mov
  * Si no lo hay, es un fallo de quien llama (como checkedUnit en las acciones).
  */
 function checkedApproach(s: GameState, unit: Unit, other: Unit): Pos[] {
-  const path = approachPath(unit, other, moveRange(s, unit));
+  const path = pathToSideOf(unit, other, moveRange(s, unit));
   if (!path) throw new Error(`La unidad ${unit.uid} no llega a ${other.uid} en una union o subida ya comprobada`);
   return path;
 }
@@ -78,7 +87,7 @@ export function loadTargets(s: GameState, unit: Unit, range = moveRange(s, unit)
 export function loadProblem(s: GameState, unit: Unit, transport: Unit, range = moveRange(s, unit)): ActionRejection | null {
   if (transport.uid === unit.uid || !isOnMap(transport) || !canCarry(s, transport, unit)) return 'cannotLoad';
   if (freeSlot(transport) === -1) return 'cannotLoad';
-  return approachPath(unit, transport, range) ? null : 'unreachable';
+  return pathToSideOf(unit, transport, range) ? null : 'unreachable';
 }
 
 /**
