@@ -21,7 +21,7 @@ import type {
 } from '@core/model';
 import { aiController } from '@core/controllers';
 import { GameSession } from '@core/session';
-import { dispatch } from '@core/actions';
+import { dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/sandbox';
 import { seededRng } from '@core/util/random';
@@ -167,7 +167,7 @@ export function playInterleaved(games: readonly GameState[], days: number, seed:
       s.teams.map(() => aiController(rng)),
     );
     session.subscribe((step) => {
-      if (step.action.kind !== 'startTurn' && step.action.kind !== 'endTurn') events[i]!.push(...step.events);
+      if (!isTurnBoundary(step.action)) events[i]!.push(...step.events);
     });
     return session;
   });

@@ -20,7 +20,7 @@ export type TurnStep =
 export type TurnPlan = Generator<TurnStep, void, ActionResult | undefined>;
 
 /** Que tipo de controlador es (para enseñarlo y depurar). */
-export type ControllerName = 'human' | 'ai' | 'autopilot' | 'remote' | 'replay' | 'random' | 'passive' | 'sequence';
+export type ControllerName = 'human' | 'ai' | 'autopilot' | 'remote' | 'replay' | 'random' | 'passive' | 'sequence' | 'scripted';
 
 export interface Controller {
   readonly name: ControllerName;
@@ -39,6 +39,17 @@ export function* propose(action: GameAction): Generator<TurnStep, ActionResult, 
 export const passiveController = (): Controller => ({
   name: 'passive',
   playTurn: function* () {},
+});
+
+/**
+ * Propone en cada turno las acciones que diga `actionsFor` para esa partida y ese equipo (las que no
+ * valgan, la sesion las rechaza): para preparar una partida de prueba o de herramienta jugando.
+ */
+export const scriptedController = (actionsFor: (s: GameState, team: TeamId) => readonly GameAction[]): Controller => ({
+  name: 'scripted',
+  playTurn: function* (s, team) {
+    for (const action of actionsFor(s, team)) yield* propose(action);
+  },
 });
 
 /** Juega el turno con cada uno, en orden (p. ej. el piloto automatico de las ordenes y despues la IA). */

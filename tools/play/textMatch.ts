@@ -12,7 +12,7 @@ import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
-import { seededRng } from '@core/util/random';
+import { aiSeedFor, seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
 import { generalOf } from '@core/generals';
 import { missionById } from '@core/missions';
@@ -59,7 +59,7 @@ const TERRAIN_CHAR: Readonly<Record<string, string>> = {
 /** Edificios: inicial (mayuscula = tuyo, minuscula = enemigo, * delante = neutral). */
 const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', Factory: 'F', Stronghold: 'S', Airport: 'A', Base: 'B' };
 
-export interface SessionOptions {
+export interface TextMatchOptions {
   seed?: number;
   /** Lado del mapa (si no, el de una partida nueva del juego: DEFAULT_MAP_SIZE). */
   size?: number;
@@ -75,10 +75,7 @@ export interface SessionOptions {
   enemyGeneral?: string;
 }
 
-/** Mezcla para que la IA no decida con la misma semilla que el mapa. */
-const AI_SEED_MIX = 0x9e3779b9;
-
-export class Session {
+export class TextMatch {
   readonly s: GameState;
   private readonly rng: Rng;
   /** La partida en juego: los equipos de personas los juegan las ordenes; los demas, la IA. */
@@ -95,9 +92,9 @@ export class Session {
     return teamIds(this.s).filter((team) => team !== this.me);
   }
 
-  constructor(options: SessionOptions = {}) {
+  constructor(options: TextMatchOptions = {}) {
     const seed = options.seed ?? 1;
-    this.rng = seededRng(seed ^ AI_SEED_MIX);
+    this.rng = seededRng(aiSeedFor(seed));
     this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
     this.me = playerTeam(this.s);
     this.session = new GameSession(this.s, controllersFor(this.s, this.rng));
@@ -315,15 +312,23 @@ export class Session {
     const before = this.me;
     const out = aiForMe ? this.playMyTurnWithAi() : [];
     this.told = [];
+    this.lastRound = [];
     this.session.finishInput(before);
     this.advance();
     out.push(...this.told);
-    const income = teamValue(roundReport(this.s, this.lastRound).income, before);
-    out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, before).funds}`);
+    out.push(this.dayLine(before));
     if (this.me !== before) out.push(`--- turno del equipo ${this.me}`);
     const result = this.result();
     if (result !== 'sigue') out.push(`FIN: ${result}`);
     return out.join('\n');
+  }
+
+  /** El dia y el dinero del equipo; si en este fin de turno ha acabado una ronda, lo cobrado en ella. */
+  private dayLine(team: TeamId): string {
+    const funds = `dinero ${teamState(this.s, team).funds}`;
+    if (!this.lastRound.length) return `--- dia ${this.s.day}: ${funds}`;
+    const income = teamValue(roundReport(this.s, this.lastRound).income, team);
+    return `--- dia ${this.s.day}: +${income} de ingresos, ${funds}`;
   }
 
   /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
@@ -382,7 +387,7 @@ function checkedGeneral(id: string | undefined): string | null {
  * La partida que se pide: la mision, o una escaramuza con lo mismo que el juego en lo que no se
  * dice (skirmishConfig: mapa, reglas). Asi la misma semilla da la misma partida aqui y en la pantalla (K4).
  */
-function matchConfigOf(options: SessionOptions, seed: number): MatchConfig {
+function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
   if (options.mission) {
     if (!missionById(options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
     return { mode: 'mission', mission: options.mission, diceSeed: seed };

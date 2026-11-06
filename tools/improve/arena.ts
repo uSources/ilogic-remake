@@ -28,8 +28,6 @@ import type { GameState, TeamId } from '@core/model';
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
-type Brain = AiBrain;
-
 /** Lo que vale cada edificio y cada moneda al decidir una partida sin terminar (como en el informe de equilibrio). */
 const STRENGTH_PER_BUILDING = 1500;
 const STRENGTH_PER_FUNDS = 0.5;
@@ -46,7 +44,7 @@ function strength(s: GameState, team: TeamId): number {
 export type DuelWinner = 'first' | 'second' | null;
 
 /** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
-export function playDuel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): DuelWinner {
+export function playDuel(seed: number, brains: [AiBrain, AiBrain], size: number, maxDays: number): DuelWinner {
   const rng = seededRng(seed);
   const s = createMatch(skirmishConfig({ seed, size, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
@@ -75,7 +73,7 @@ export interface ArenaResult {
   high: number;
 }
 
-export function arena(current: Brain, baseline: Brain, games: number, size: number, maxDays: number): ArenaResult {
+export function arena(current: AiBrain, baseline: AiBrain, games: number, size: number, maxDays: number): ArenaResult {
   let wins = 0,
     losses = 0,
     draws = 0;
@@ -163,7 +161,7 @@ async function main(): Promise<void> {
     console.log('No hay IA de referencia: npm run arena -- --snapshot');
     process.exit(1);
   }
-  const base = (await import(`${BASE_DIR}ai.ts`)) as { aiTurn: Brain };
+  const base = (await import(`${BASE_DIR}ai.ts`)) as { aiTurn: AiBrain };
   const games = opt('games', 200),
     size = opt('size', 20),
     days = opt('days', 40);

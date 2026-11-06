@@ -21,7 +21,7 @@ import {
   canStillFire,
 } from '@core/rules';
 import { posOf } from '@core/geom';
-import { propose, type Controller, type TurnStep } from '@core/session';
+import { propose, type Controller, type TurnPlan, type TurnStep } from '@core/session';
 import type { ActionResult, GameAction, GameState, Rng, TeamId, Unit } from '@core/model';
 
 const pick = <T>(rng: Rng, xs: readonly T[]): T | undefined => xs[Math.floor(rng() * xs.length)];
@@ -41,7 +41,7 @@ export const randomController = (rng: Rng): Controller => ({
 });
 
 /** El turno de `team` al azar: cada unidad que puede actuar hace algo, y despues compra en algunos edificios. */
-function* randomTurn(s: GameState, rng: Rng, team: TeamId): Generator<TurnStep, void, ActionResult | undefined> {
+function* randomTurn(s: GameState, rng: Rng, team: TeamId): TurnPlan {
   const order = teamUnits(s, team).map((unit) => unit.uid);
   for (const uid of order) {
     const unit = s.units.find((candidate) => candidate.uid === uid);

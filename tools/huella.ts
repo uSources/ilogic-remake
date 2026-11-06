@@ -16,14 +16,14 @@ import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
 import { isMatchOver, matchResult } from '@core/rules';
 import { serialize } from '@core/save';
-import { dispatch } from '@core/actions';
 import { posOf } from '@core/geom';
 import { aiController, controllersFor, standingOrderAutopilot } from '@core/controllers';
-import { GameSession, runMatch, sequence, type Controller } from '@core/session';
+import { GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
-import type { GameState, Rng, RulesConfig } from '@core/model';
+import type { GameAction, GameState, Rng, RulesConfig, TeamId } from '@core/model';
 
 const MAX_DAYS = 30;
+const FIRST_DAY = 1;
 
 /** Reglas que se prueban: las de siempre y variantes que apagan las partes con mas condiciones. */
 const RULE_SETS: readonly Partial<RulesConfig>[] = [
@@ -55,30 +55,32 @@ function scenarios(): Scenario[] {
 }
 
 /**
- * La persona junta sus tres primeras unidades en una escuadra y la manda a atacar un edificio
- * enemigo, al empezar su primer turno.
+ * Las ordenes de la persona en su primer turno: junta sus tres primeras unidades en una escuadra y la
+ * manda a atacar un edificio enemigo.
  */
-function orderPlayerSquad(s: GameState): void {
-  const person = playerTeam(s);
+function squadOrders(s: GameState, person: TeamId): GameAction[] {
   const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
-  if (!target) return;
-  const uids = s.units.filter((unit) => unit.team === person && unit.squad === undefined).map((unit) => unit.uid);
-  const squad = uids.slice(0, 3);
-  if (squad.length < 2) return;
-  dispatch(s, person, { kind: 'startTurn' });
-  if (!dispatch(s, person, { kind: 'formSquad', uids: squad }).ok) return;
-  dispatch(s, person, { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } });
+  const squad = s.units
+    .filter((unit) => unit.team === person && unit.squad === undefined)
+    .map((unit) => unit.uid)
+    .slice(0, 3);
+  if (s.day !== FIRST_DAY || !target || squad.length < 2) return [];
+  return [
+    { kind: 'formSquad', uids: squad },
+    { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } },
+  ];
 }
 
 /**
- * Quien juega cada equipo: la IA, con el mismo azar para todos; la persona, si lleva escuadra, deja
- * antes que su piloto automatico cumpla las ordenes (como la IA no las tiene, juega despues).
+ * Quien juega cada equipo: la IA, con el mismo azar para todos; la persona, si lleva escuadra, da sus
+ * ordenes el primer dia y deja antes que su piloto automatico las cumpla (como la IA no las tiene,
+ * juega despues).
  */
 function controllersOf(s: GameState, scenario: Scenario, rng: Rng): Controller[] {
   const person = playerTeam(s);
-  const personController = scenario.withSquad ? sequence(standingOrderAutopilot(), aiController(rng)) : aiController(rng);
-  return controllersFor(s, rng, new Map([[person, personController]]));
+  const withSquad = sequence(scriptedController(squadOrders), standingOrderAutopilot(), aiController(rng));
+  return controllersFor(s, rng, new Map([[person, scenario.withSquad ? withSquad : aiController(rng)]]));
 }
 
 function playScenario(scenario: Scenario): string {
@@ -89,7 +91,6 @@ function playScenario(scenario: Scenario): string {
   );
   const generals = s.content.generals.list;
   if (scenario.withGenerals) for (const team of teamIds(s)) appointGeneral(s, team, generals[team]?.id);
-  if (scenario.withSquad) orderPlayerSquad(s);
 
   const hash = createHash('sha256');
   const record = (value: unknown) => hash.update(JSON.stringify(value));

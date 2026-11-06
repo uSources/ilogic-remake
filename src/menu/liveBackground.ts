@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { controllersFor } from '../core/controllers';
 import { GameSession, playMatch, type ActedStep } from '../core/session';
-import { seededRng } from '../core/util/random';
+import { aiSeedFor, seededRng } from '../core/util/random';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createMatch } from '../core/defaultGames';
 import { skirmishConfig } from '../core/match';
@@ -13,8 +13,6 @@ import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } fro
 import { MapView } from '../ui/mapView';
 import { PAL, PAL_CSS } from '../ui/palette';
 
-/** Mezcla para que la IA del fondo no juegue con la misma semilla que el mapa. */
-const AI_SEED_MIX = 0x5bd1e995;
 const MAP_SIZE = 32;
 /** La partida de fondo se juega sin niebla: se ve todo lo que pasa. */
 const BACKGROUND_RULE_CHANGES = { fog: false };
@@ -93,7 +91,7 @@ export class LiveBackground {
     this.view.centerOn(firstBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
-    this.session = new GameSession(this.game, controllersFor(this.game, seededRng(seed ^ AI_SEED_MIX)));
+    this.session = new GameSession(this.game, controllersFor(this.game, seededRng(aiSeedFor(seed))));
     this.render();
     void this.loop();
   }

@@ -15,6 +15,7 @@ export {
   passiveController,
   propose,
   remoteController,
+  scriptedController,
   sequence,
   type Controller,
   type ControllerName,

@@ -2,6 +2,7 @@
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { buildMatch, skirmishConfig } from '@core/match';
+import { isTurnBoundary } from '@core/actions';
 import { isMatchOver, isWinner, matchResult } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, passiveController, runMatch, type ActedStep, type Controller } from '@core/session';
@@ -202,7 +203,7 @@ export function playGame(options: PlayOptions): GameRecord {
   remember();
   let events = 0;
   let reason: GameRecord['reason'] = 'timeout';
-  const isOwnAction = (step: ActedStep) => step.action.kind !== 'startTurn' && step.action.kind !== 'endTurn';
+  const isOwnAction = (step: ActedStep) => !isTurnBoundary(step.action);
 
   const session = new GameSession(s, controllersOf(s, options.policies, rng));
   session.subscribe((step) => {

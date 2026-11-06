@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { Session } from './session';
+import { TextMatch } from './textMatch';
 
 const args = process.argv.slice(2);
 const opt = (name: string) => {
@@ -14,7 +14,7 @@ const opt = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const num = (name: string) => (opt(name) === undefined ? undefined : Number(opt(name)));
-const session = new Session({
+const session = new TextMatch({
   seed: num('seed'),
   size: num('size'),
   theme: opt('theme'),

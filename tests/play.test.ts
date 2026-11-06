@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { Session } from '../tools/play/session';
+import { TextMatch } from '../tools/play/textMatch';
 
 /** La partida por texto (npm run play) es la forma rapida de probar reglas: que no se rompa. */
 describe('partida por texto', () => {
   it('mapa, unidades y ordenes basicas', () => {
-    const g = new Session({ seed: 7, size: 20, theme: 'Plains' });
+    const g = new TextMatch({ seed: 7, size: 20, theme: 'Plains' });
     expect(g.run('map').split('\n').length).toBeGreaterThan(20);
     const units = g.run('units 0');
     const uid = Number(units.trim().split(/\s+/)[0]);
@@ -18,7 +18,7 @@ describe('partida por texto', () => {
 
   it('misma semilla, misma partida (la IA juega los dos bandos)', () => {
     const play = () => {
-      const g = new Session({ seed: 3, size: 20 });
+      const g = new TextMatch({ seed: 3, size: 20 });
       for (let i = 0; i < 5; i++) g.run('ai');
       return g.run('state');
     };
@@ -26,9 +26,9 @@ describe('partida por texto', () => {
   });
 
   it('se puede guardar en JSON y seguir desde ahi', () => {
-    const g = new Session({ seed: 5, size: 20 });
+    const g = new TextMatch({ seed: 5, size: 20 });
     g.run('ai');
-    const copy = new Session({ state: g.run('state') });
+    const copy = new TextMatch({ state: g.run('state') });
     expect(copy.run('status')).toBe(g.run('status'));
   });
 });

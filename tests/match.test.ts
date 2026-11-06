@@ -6,7 +6,7 @@ import { GAME_MODES } from '@core/modes';
 import { serialize } from '@core/save';
 import { duel } from '@core/teams';
 import { DEFAULT_OPTIONS, matchConfigFor } from '../src/setup';
-import { Session } from '../tools/play/session';
+import { TextMatch } from '../tools/play/textMatch';
 
 describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () => {
   it('cada modo de GAME_MODES tiene su forma de prepararse, y la partida lleva su modo', () => {
@@ -58,7 +58,7 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     const game = createMatch(matchConfigFor(DEFAULT_OPTIONS, 7));
     // npm run play ya ha empezado el turno de la persona (como la pantalla al abrir la partida).
     dispatch(game, 0, { kind: 'startTurn' });
-    expect(serialize(new Session({ seed: 7 }).s)).toBe(serialize(game));
+    expect(serialize(new TextMatch({ seed: 7 }).s)).toBe(serialize(game));
   });
 });
 
