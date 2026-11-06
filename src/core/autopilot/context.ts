@@ -7,6 +7,7 @@
 import { isHostile } from '../teams';
 import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt } from '../rules/queries';
+import { moveBudget } from '../rules/movementProfile';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rules/distance';
@@ -113,8 +114,8 @@ export function* doMove(s: GameState, play: PlayCtx, unit: Unit, dest: Pos | nul
   return events !== null && endsInterrupted(events);
 }
 
-/** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (s: GameState, unit: Unit): number => unitTypeOf(s, unit).move + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
+/** Hasta donde puede llegar y disparar este turno: lo que puede gastar al moverse (con el clima) y su alcance. */
+export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, unit) + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
 /** Enemigos de `me` vivos y en el mapa (no transportados), se vean o no. */
 const foesOnMap = (s: GameState, me: TeamId): Unit[] =>
