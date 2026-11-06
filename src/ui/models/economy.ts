@@ -1,5 +1,5 @@
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
-import { allianceScore, buildingIncome, commandUsed, rivalScore, upkeepOf, type BuyOption } from '../../core/rules';
+import { allianceScore, buildingIncome, commandUsed, isRuleOn, rivalScore, upkeepOf, type BuyOption } from '../../core/rules';
 import { teamState } from '../../core/teams';
 import type { Texts } from '../../core/content';
 import type { GameState, TeamId } from '../../core/model';
@@ -51,14 +51,13 @@ export function economyVM(s: GameState, team: TeamId): EconomyVM {
       total: income,
       scale: s.rules.incomeScale,
     },
-    upkeep:
-      s.rules.upkeep > 0
-        ? {
-            lines: tally(units, (unitType) => Math.round(unitType.cost * s.rules.upkeep)),
-            total: upkeep,
-            rate: s.rules.upkeep,
-          }
-        : null,
+    upkeep: isRuleOn(s, 'upkeep')
+      ? {
+          lines: tally(units, (unitType) => Math.round(unitType.cost * s.rules.upkeep)),
+          total: upkeep,
+          rate: s.rules.upkeep,
+        }
+      : null,
     net: income - upkeep,
     next: Math.min(afterIncome - paid, s.content.maxFunds),
     shortfall: paid < upkeep ? paid : null,

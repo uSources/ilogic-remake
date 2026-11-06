@@ -18,6 +18,7 @@ import {
   tileProtection,
   unitAt,
   abilitiesOf,
+  isRuleOn,
 } from '../../core/rules';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
@@ -111,7 +112,7 @@ export function tileVM(
   const info: TileVM = {
     terrain: { key: terrainKey(terr), name: nameOf(terr), defense: Math.round((1 - tileProtection(s, pos)) * 100) },
   };
-  if (s.rules.terrainCost) {
+  if (isRuleOn(s, 'terrainCost')) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
     const cost = (moveType: MoveType) => (canMoveOn(moveType, terr) ? terrainAccess(s, moveType).enterCost(pos) : null);
     info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
@@ -155,7 +156,7 @@ export function tileVM(
     info.unit = {
       icon: unitKey(textures, s, { ...shown, turnState: own ? shown.turnState : 'ready' }, viewer),
       name: nameOf(shownType),
-      rank: s.rules.veterancy ? rank(shown) : 0,
+      rank: isRuleOn(s, 'veterancy') ? rank(shown) : 0,
       side,
       life: shown.life,
       stats: unitStatsText(shownType),

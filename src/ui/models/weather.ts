@@ -1,5 +1,6 @@
 import { MOVEMENTS, type MoveType, type WeatherType } from '../../core/content';
 import type { GameState } from '../../core/model';
+import { isRuleOn } from '../../core/rules';
 import { forecast, weatherNow } from '../../core/weather';
 import type { WeatherVM } from '../../hud/store';
 import { t, nameOf, type TextKey } from '../../settings';
@@ -37,7 +38,7 @@ const cap = (text: string): string => text.charAt(0).toUpperCase() + text.slice(
 
 /** Indicador del clima (null si la partida se juega sin clima). */
 export function weatherVM(s: GameState): WeatherVM | null {
-  if (!s.rules.weather) return null;
+  if (!isRuleOn(s, 'weather')) return null;
   const weather = weatherNow(s);
   const next = forecast(s);
   return {
