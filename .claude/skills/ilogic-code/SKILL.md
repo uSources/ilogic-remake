@@ -85,7 +85,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
   `createMatch(skirmishConfig({ seed, teams, ruleChanges }))`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
-  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, teams, diceSeed })`, el unico sitio
+  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, mode, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)`, o `readSave(json, saveContext(contenido))` para saber que falla (`deserialize` da
   null); un cambio en lo que se guarda sube

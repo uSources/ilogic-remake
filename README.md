@@ -153,7 +153,11 @@ src/
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)
     gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
     teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)
-    defaultGames.ts Partidas con el contenido del juego (createGame, loadGame, saveContext)
+    defaultGames.ts Partidas con el contenido del juego (createMatch, loadGame, saveContext)
+    match.ts     Empezar una partida: MatchConfig por modo, buildMatch, skirmishConfig, rematchOf
+    modes.ts     GAME_MODES: como se acaba cada modo, su orden de turnos, sus reglas fijas y sus fases
+    session/     La partida en juego: controladores (persona, red, IA, repeticion) y GameSession
+                 (fachadas session.ts, sin IA, y controllers.ts, con los de la IA)
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
