@@ -513,7 +513,7 @@ a `finishInput`). Cuando el turno del controlador acaba, la sesion manda 'endTur
 | `aiController(rng, brain?)` | la IA rival (o la de referencia de la arena), con su azar |
 | `humanController()` | una persona en la pantalla: espera a que acabe (sus ordenes permanentes las cumple la fase de fin de turno) |
 | `remoteController()` | un jugador por la red: espera las acciones que lleguen |
-| `replayControllers(s, log)` | repite lo apuntado en el registro de otra sesion, turno a turno (y lo de fuera de turno, en su sitio) |
+| `replaySession(s, log)` | (una sesion entera, no un controlador) repite el registro de otra, con un `LogCursor` |
 | `autopilotController()` | cumple ya, en el turno, las ordenes permanentes (la huella; session/selfDispatched.ts, sin IA) |
 | `randomController(rng)` | jugadas legales al azar (tools/improve/randomPlayer.ts, para el fuzz) |
 | `passiveController()` | no hace nada |
@@ -541,19 +541,26 @@ el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la 
   `act`, lo que propone un controlador y lo que mandan los que mandan ellos mismos
   (`selfDispatched`: la IA y `autopilotController`, que ademas solo pueden mandar acciones de su
   equipo; lo mismo los pasos de turno).
-- Lo que un equipo manda fuera de su turno (rendirse mientras juega otro) queda en el registro en su
-  sitio. Al repetir, `Controller.offTurn` lo trae en ese mismo sitio (la sesion lo mira antes de
-  cada paso y solo lo acepta si vale en cualquier momento), tambien entre dos turnos: la repeticion
-  sale igual. Si a quien se espera ya no juega (se ha rendido), la sesion deja de esperarle y pasa
-  su turno.
+- Lo que un equipo manda fuera de su turno (rendirse mientras juega otro, o antes de empezar el
+  suyo) queda en el registro en su sitio; si lo es lo dice una sola pregunta, `isOffTurnAction` (el
+  turno es de otro o el suyo aun no ha empezado, y vale en cualquier momento). Los controladores no
+  traen acciones de otros equipos: lo que llega fuera de turno lo da quien crea la sesion
+  (`SessionOptions.offTurnFeed`), que la sesion mira antes de cada paso. La repeticion es una sesion
+  propia (`replaySession`): su controlador (uno para todos los equipos) y su `offTurnFeed` leen el
+  registro con el mismo `LogCursor` (mirar no mueve; `advance`, `skipBoundariesDoneBy`, `seekTurnOf`
+  y `takeOffTurn` si), asi lo de fuera de turno entra en su sitio y la repeticion sale igual. Si a
+  quien se espera ya no juega (se ha rendido), la sesion deja de esperarle y pasa su turno.
 - Si es una persona lo dice `session.isPerson(team)` (`Controller.person`): la unica pregunta, que
   usan la escena, el autoguardado y quien mira. Que un paso empieza un turno lo dice
   `startsTurn(paso)`.
 - El guardado automatico es al empezar el turno de una persona, si su modo guarda
   (`isAutosaveMoment`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
-- En la escena, si la unica persona se rinde y quedan otros equipos, la partida se acaba para esta
-  pantalla (`resignedEnd`: perdida, cerrada y sin guardado). Mientras juegan los demas no hay menu,
-  pero Esc o el boton del menu dejan salir al menu principal (dos pulsaciones).
+- En la escena, si la partida sigue pero ya no juega ninguna persona (se han rendido o han caido, y
+  quedan otros equipos), se acaba para esta pantalla: `checkEnd`, que se mira tras cada paso, la da
+  por perdida con su motivo (`ScreenEnd`: `outOfMatchEnd`; el de una partida decidida,
+  `endOfResult`), la cierra y borra su guardado. Una rendicion vuelve a escribir el guardado que
+  hubiera. Mientras juegan los demas no hay menu, pero Esc o el boton del menu dejan salir al menu
+  principal (`quitWhileWatching`, dos pulsaciones).
 
 ```mermaid
 sequenceDiagram
@@ -579,7 +586,7 @@ sequenceDiagram
 
 - Las acciones **cambian el estado y devuelven sucesos**; las animaciones solo cuentan lo que ya ha
   pasado. Por eso los turnos ajenos se pueden repetir («Repetir turno enemigo»: el registro de la
-  sesion sobre una copia de la partida de antes, `replayControllers`) y acelerar sin cambiar nada.
+  sesion sobre una copia de la partida de antes, `replaySession`) y acelerar sin cambiar nada.
 - El azar: los dados de los combates van en la partida (`GameState.dice`, `diceOf(s)`) y las
   decisiones llevan su propio `Rng` con semilla. La misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` y `npm run huella` lo vigilan); cargar una partida no cambia
