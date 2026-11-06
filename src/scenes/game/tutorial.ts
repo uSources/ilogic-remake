@@ -47,7 +47,7 @@ export class TutorialTracker {
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
   private advance(s: GameState, phase: Phase): void {
-    const team = s.mission?.team;
+    const team = s.mission?.objective.owner;
     if (team === undefined) return;
     if (this.step === 0 && this.events.length === 0) this.ownedAtStart = ownedBuildingCount(s, team);
     for (let guard = 0; guard < TUTORIAL.length; guard++) {

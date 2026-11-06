@@ -7,6 +7,8 @@ import type { ActionRegistry } from './types';
 
 export const UNIT_ACTIONS: Pick<ActionRegistry, 'wait' | 'supply' | 'deleteUnit'> = {
   wait: {
+    // Esperar no cuenta nada nuevo: se puede deshacer el movimiento de antes (y la espera con el).
+    keepsUndo: true,
     validate: (s, team, action) => actorProblem(s, team, action.uid),
     apply: (s, team, action) => {
       spendUnit(checkedUnit(s, action.uid));

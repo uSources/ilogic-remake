@@ -3,7 +3,7 @@
  * cuando se gana o se pierde y cuanto falta. Un objetivo nuevo es una entrada en `OBJECTIVES` (y su
  * frase en `campaign.ts`); el tipo de la partida esta en `Objective` (`model/objective.ts`).
  *
- * Un objetivo es de un equipo (el que juega la mision, `GameState.mission.team`): el resultado y el
+ * Un objetivo es de un equipo (`Objective.owner`, el que juega la mision): el resultado y el
  * progreso se miden para ese equipo. Para sus enemigos el resultado es el contrario
  * (`outcome` de rules/outcome.ts).
  */
@@ -11,7 +11,7 @@
 import { entryOf, isEntryId, type GameContent } from './content';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
-import type { GameState, Objective, Outcome, Pos, TeamId } from './model';
+import type { GameState, Objective, ObjectiveGoal, Outcome, Pos, TeamId } from './model';
 import { isHostile } from './teams';
 import { samePos } from './geom';
 import { Grid, type GridBounds } from './util/grid';
@@ -50,16 +50,18 @@ export interface MissionLayout {
 
 type InMission<K extends ObjectiveKind> = Extract<MissionObjective, { kind: K }>;
 type InGame<K extends ObjectiveKind> = Extract<Objective, { kind: K }>;
+type Goal<K extends ObjectiveKind> = Extract<ObjectiveGoal, { kind: K }>;
 
 interface ObjectiveRules<K extends ObjectiveKind> {
-  /** De como se escribe en la mision a como queda en la partida (`unitUids[i]` es la unidad `i`). */
-  fromMission(written: InMission<K>, unitUids: readonly number[], content: GameContent): InGame<K>;
+  /** De como se escribe en la mision a lo que pide en la partida (`unitUids[i]` es la unidad `i`). */
+  fromMission(written: InMission<K>, unitUids: readonly number[], content: GameContent): Goal<K>;
   /** Problemas del objetivo en el mapa de la mision (para los tests). */
   problems(written: InMission<K>, layout: MissionLayout): string[];
   /** El objetivo de una partida guardada (lo de su `kind` ya esta mirado) tiene bien sus campos. */
   isValid(where: SavedMap, saved: Record<string, unknown>): boolean;
-  /** Resultado de la partida para el equipo `team`, dueño del objetivo (perder la Base ya se ha mirado antes). */
+  /** Resultado de la partida para el dueño del objetivo, `team` (perder la Base ya se ha mirado antes). */
   outcome(s: GameState, team: TeamId, objective: InGame<K>): Outcome;
+  /** Cuanto le falta al dueño del objetivo, `team`. */
   progress(s: GameState, team: TeamId, objective: InGame<K>): ObjectiveProgress | null;
 }
 
@@ -165,16 +167,28 @@ export function isValidObjective(where: SavedMap, value: unknown): value is Obje
   return isObject(value) && isObjectiveKind(value.kind) && OBJECTIVES[value.kind].isValid(where, value);
 }
 
-export const objectiveFromMission = (written: MissionObjective, unitUids: readonly number[], content: GameContent): Objective =>
+/** Lo que pide el objetivo de una mision en la partida (`unitUids[i]` es la unidad `i` de la mision). */
+export const missionGoal = (written: MissionObjective, unitUids: readonly number[], content: GameContent): ObjectiveGoal =>
   rulesOf(written.kind).fromMission(written, unitUids, content);
+
+/** El objetivo de la partida de una mision: lo que pide y su dueño (`owner`, el equipo que la juega). */
+export const objectiveFromMission = (
+  written: MissionObjective,
+  owner: TeamId,
+  unitUids: readonly number[],
+  content: GameContent,
+): Objective => ({
+  ...missionGoal(written, unitUids, content),
+  owner,
+});
 
 export const objectiveProblems = (written: MissionObjective, layout: MissionLayout): string[] =>
   rulesOf(written.kind).problems(written, layout);
 
-/** Resultado de la partida para `team`, el dueño del objetivo. */
-export const objectiveOutcome = (s: GameState, team: TeamId, objective: Objective): Outcome =>
-  rulesOf(objective.kind).outcome(s, team, objective);
+/** Resultado de la partida para el dueño del objetivo. */
+export const objectiveOutcome = (s: GameState, objective: Objective): Outcome =>
+  rulesOf(objective.kind).outcome(s, objective.owner, objective);
 
-/** Cuanto le falta a `team`, el dueño del objetivo (null si no se cuenta). */
-export const measureObjective = (s: GameState, team: TeamId, objective: Objective): ObjectiveProgress | null =>
-  rulesOf(objective.kind).progress(s, team, objective);
+/** Cuanto le falta al dueño del objetivo (null si no se cuenta). */
+export const measureObjective = (s: GameState, objective: Objective): ObjectiveProgress | null =>
+  rulesOf(objective.kind).progress(s, objective.owner, objective);

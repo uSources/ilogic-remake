@@ -75,6 +75,7 @@ export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly Tea
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
+    mode: 'skirmish',
     teams,
     diceSeed: BLANK_DICE_SEED,
   });

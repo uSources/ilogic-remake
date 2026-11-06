@@ -18,6 +18,7 @@ function cornerMatch(size: number): GameState {
     map: blankMap(size, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), { fog: true }),
     content: defaultContent(),
+    mode: 'skirmish',
     teams: [
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },

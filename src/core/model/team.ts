@@ -29,4 +29,6 @@ export interface TeamState {
   general: GeneralState | null;
   /** Estadisticas para la pantalla final. */
   stats: TeamStats;
+  /** Se ha rendido (la accion 'surrender'): cuenta como derrotado, aunque le quede de todo. */
+  resigned: boolean;
 }

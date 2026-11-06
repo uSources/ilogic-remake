@@ -71,6 +71,8 @@ export function labState(options: LabOptions, action: LabAction | null): GameSta
     map,
     rules: labRules(action),
     content,
+    // Una partida para mirar: no se acaba sola ni se guarda.
+    mode: 'sandbox',
     teams: [
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },

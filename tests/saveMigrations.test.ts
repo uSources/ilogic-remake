@@ -135,9 +135,9 @@ describe('partidas guardadas con el formato 2 (de origin/main)', () => {
 
   it('mision: el tipo del objetivo de captura y la captura a medias', () => {
     const s = loadGame(fixture('mission-capture-v2'))!;
-    expect(s.mission!.objective).toEqual({ kind: 'capture', count: 6, type: 'City', days: 14 });
-    // La mision era del jugador (el bando 0): ahora lo dice ella.
-    expect(s.mission!.team).toBe(0);
+    expect(s.mission!.objective).toEqual({ kind: 'capture', count: 6, type: 'City', days: 14, owner: 0 });
+    // La mision era del jugador (el bando 0): ahora lo dice su objetivo.
+    expect(s.mission!.objective.owner).toBe(0);
     expect(outcome(s, 0)).toBe('playing');
     expect(s.theme).toBe('Plains');
     expect(s.buildings.some((building) => building.capture)).toBe(true);
@@ -228,6 +228,50 @@ describe('partida guardada con el formato 4', () => {
 
   it('con Infinity el fichero no es JSON: no se lee', () => {
     expect(withCounters('Infinity').read).toEqual({ ok: false, error: 'notJson' });
+  });
+});
+
+/**
+ * Partidas guardadas de verdad con el formato 5: las genero el codigo de 7afcd7a (origin/main, fases
+ * 1 a 3) con createGame, aiTurn, dispatch, endRound y serialize, sin tocarlas a mano (semilla 11, mapa
+ * de 20, Brisa de general del equipo 0):
+ * - skirmish-v5: el autoguardado del dia 5 (al acabar la ronda): la unidad 1 de viaje hacia (0,18),
+ *   que aun no ha dado el paso de ese turno (K3);
+ * - skirmish-midturn-v5: la misma, guardada a mano tras mover la unidad 2, que deja una captura a
+ *   medias (`lastMove`);
+ * - mission-v5: la mision bridgehead tras su primera ronda (el objetivo era del equipo de `mission.team`).
+ */
+describe('partidas guardadas con el formato 5', () => {
+  it('le toca a la persona, que aun no ha empezado su turno; los equipos juegan en su orden y nadie se ha rendido', () => {
+    const s = loadGame(fixture('skirmish-v5'))!;
+    expect(s.version).toBe(SAVE_VERSION);
+    expect([s.mode, s.turn, s.turnStarted, s.turnOrder]).toEqual(['skirmish', 0, false, [0, 1]]);
+    expect(s.teams.map((team) => team.resigned)).toEqual([false, false]);
+    expect(s.units.find((unit) => unit.uid === 1)).toMatchObject({ travelTo: { x: 0, y: 18 }, turnState: 'ready' });
+  });
+
+  it('el ultimo movimiento pasa a la lista de los que se pueden deshacer, y se deshace con su captura', () => {
+    const s = loadGame(fixture('skirmish-midturn-v5'))!;
+    expect(JSON.parse(serialize(s))).not.toHaveProperty('lastMove');
+    expect(s.undoableMoves).toEqual([{ uid: 2, from: { x: 1, y: 8 }, capture: { team: 0, uid: 2, left: 10 }, revealed: false }]);
+    act(s, 0, { kind: 'undoMove', uid: 2 });
+    expect(s.units.find((unit) => unit.uid === 2)).toMatchObject({ x: 1, y: 8, turnState: 'ready' });
+    expect(s.buildings.find((building) => building.x === 1 && building.y === 8)?.capture).toEqual({ team: 0, uid: 2, left: 10 });
+  });
+
+  it('mision: el objetivo dice de quien es, y la mision ya no', () => {
+    const s = loadGame(fixture('mission-v5'))!;
+    expect(s.mode).toBe('mission');
+    expect(s.mission).toEqual({ id: 'bridgehead', objective: { kind: 'capture', count: 6, type: 'City', days: 14, owner: 0 } });
+  });
+
+  it('un modo que no existe o un turno de quien no esta en el orden: no se lee', () => {
+    const raw = () => JSON.parse(serialize(loadGame(fixture('skirmish-v5'))!)) as Record<string, unknown>;
+    const context = saveContext(defaultContent());
+    expect(readSave(JSON.stringify({ ...raw(), mode: 'arcade' }), context)).toEqual({ ok: false, error: 'badMode' });
+    expect(readSave(JSON.stringify({ ...raw(), turn: 5 }), context)).toEqual({ ok: false, error: 'badTurn' });
+    expect(readSave(JSON.stringify({ ...raw(), turnOrder: [0, 0] }), context)).toEqual({ ok: false, error: 'badTurn' });
+    expect(readSave(JSON.stringify({ ...raw(), turnStarted: 'si' }), context)).toEqual({ ok: false, error: 'badTurn' });
   });
 });
 

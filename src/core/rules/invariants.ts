@@ -10,7 +10,7 @@ import { pruneSquads } from '../squads/membership';
 import { dropStaleCaptures } from './capture';
 import { capFunds } from './funds';
 import { removeDead } from './lifecycle';
-import { dropStaleLastMove } from './lastMove';
+import { dropStaleUndoableMoves } from './undo';
 import type { GameEvent, GameState } from '../model';
 
 export interface Invariant {
@@ -33,9 +33,9 @@ export const INVARIANTS: readonly Invariant[] = [
   { id: 'squads', restore: (s) => pruneSquads(s).map((squad) => squadEvent(s, null, squad, 'removed')) },
   // Lo que pase del maximo de dinero se pierde (botin, poderes...: venga de donde venga).
   { id: 'funds', restore: capFunds },
-  // Lo que se puede deshacer es de una unidad que se acaba de mover (si cae, o vuelve a estar lista
-  // con la ronda nueva, ya no). Que cualquier otra accion lo cierre es cosa de dispatch (keepsUndoWindow).
-  { id: 'undoWindow', restore: dropStaleLastMove },
+  // Lo que se puede deshacer es de unidades que siguen como las dejo su movimiento (si caen, o vuelven
+  // a estar listas con la ronda nueva, ya no). Que otras acciones lo olviden es cosa de dispatch (keepsUndo).
+  { id: 'undoWindow', restore: dropStaleUndoableMoves },
 ];
 
 /** Deja la partida cumpliendo todas las INVARIANTS (ver Invariant.restore): sus sucesos. */

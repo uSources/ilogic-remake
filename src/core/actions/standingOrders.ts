@@ -14,6 +14,7 @@ import type { ActionRegistry } from './types';
 
 export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 'cancelStandingOrder' | 'finishStandingOrder'> = {
   giveStandingOrder: {
+    keepsUndo: true,
     validate: (s, team, action) => {
       if (!isOnBoard(s, action.order.at)) return 'offBoard';
       const problem = ownUnitsProblem(s, team, action.uids);
@@ -30,6 +31,7 @@ export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 
     },
   },
   cancelStandingOrder: {
+    keepsUndo: true,
     validate: (s, team, action) => {
       const problem = ownUnitsProblem(s, team, action.uids);
       if (problem) return problem;

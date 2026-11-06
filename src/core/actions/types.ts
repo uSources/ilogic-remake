@@ -12,11 +12,11 @@ export interface ActionDefinition<K extends GameActionKind> {
   /** La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. */
   apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice): GameEvent[];
   /**
-   * Deja abierta la ventana para deshacer (`GameState.lastMove`): solo la accion que la abre (mover).
-   * Cualquier otra la cierra al acabar (dispatch): deshacer no sirve para mirar con una unidad y
-   * volver despues de haber hecho otra cosa.
+   * Deja como estan los movimientos que se pueden deshacer (`GameState.undoableMoves`): las acciones
+   * que no cuentan nada nuevo de la partida (mover, esperar, escuadras, ordenes). Tras cualquier otra
+   * se olvidan (dispatch): deshacer no sirve para mirar con una unidad, atacar con otra y volver.
    */
-  readonly keepsUndoWindow?: true;
+  readonly keepsUndo?: true;
 }
 
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */

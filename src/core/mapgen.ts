@@ -41,7 +41,15 @@ const settingsOf = (s: GameState): MapgenSettings => s.content.mapgen;
 function emptyState(size: number, options: NewMapOptions, diceSeed: number): GameState {
   // El terreno de partida no importa: el generador pone todas las casillas.
   const plain = options.content.plainTerrain.id;
-  return newGameState({ map: blankMap(size, plain), rules: options.rules, content: options.content, teams: options.teams, diceSeed });
+  return newGameState({
+    map: blankMap(size, plain),
+    rules: options.rules,
+    content: options.content,
+    mode: 'skirmish',
+    teams: options.teams,
+    firstTeam: options.firstTeam,
+    diceSeed,
+  });
 }
 
 const isWalkable = (terrain: TerrainType) => canMoveOn(WALK, terrain);
@@ -482,6 +490,8 @@ export interface NewMapOptions {
   content: GameContent;
   /** Los equipos (dos o mas): el generador hace una salida para cada uno. */
   teams: readonly TeamSetup[];
+  /** El equipo que juega primero cada ronda (si no, el primero). */
+  firstTeam?: TeamId;
 }
 
 /**

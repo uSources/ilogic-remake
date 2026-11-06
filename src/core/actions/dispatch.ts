@@ -9,7 +9,7 @@ import { diceOf } from '../dice';
 import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 import { guardProblem } from './guards';
 import { restoreInvariants } from '../rules/invariants';
-import { closeUndoWindow } from '../rules/lastMove';
+import { forgetUndoableMoves } from '../rules/undo';
 import { ACTIONS } from './registry';
 import type { ActionDefinition } from './types';
 
@@ -28,13 +28,13 @@ export function actionProblem(s: GameState, team: TeamId, action: GameAction): A
 export const isValidAction = (s: GameState, team: TeamId, action: GameAction): boolean => actionProblem(s, team, action) === null;
 
 /**
- * Hace la accion ya comprobada (su `apply`), cierra la ventana de deshacer si la accion no la deja
- * abierta (`keepsUndoWindow`) y deja la partida en orden (INVARIANTS).
+ * Hace la accion ya comprobada (su `apply`), olvida lo que se podia deshacer si la accion cuenta
+ * algo nuevo de la partida (sin `keepsUndo`) y deja la partida en orden (INVARIANTS).
  */
 function applyAction(s: GameState, team: TeamId, action: GameAction, dice: Dice): GameEvent[] {
   const definition = definitionOf(action);
   const events = definition.apply(s, team, action, dice);
-  if (!definition.keepsUndoWindow) closeUndoWindow(s);
+  if (!definition.keepsUndo) forgetUndoableMoves(s);
   return [...events, ...restoreInvariants(s)];
 }
 

@@ -65,6 +65,7 @@ type GroupChange<K extends GroupActionKind> = (s: GameState, team: TeamId, units
 /** La entrada de formar o agrupar: la misma comprobacion y los mismos sucesos, con su cambio. */
 function groupAction<K extends GroupActionKind>(change: SquadChange, run: GroupChange<K>): ActionDefinition<K> {
   return {
+    keepsUndo: true,
     validate: (s, team, action) => groupProblem(s, team, action),
     apply: (s, team, action) => squadChangeEvents(s, team, run(s, team, groupUnits(s, action), action), change),
   };
@@ -76,6 +77,7 @@ export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'add
     setGroup: groupAction<'setGroup'>('grouped', (s, team, units, action) => setGroup(s, team, units, action.key)),
     addToGroup: groupAction<'addToGroup'>('grouped', (s, team, units, action) => addToGroup(s, team, units, action.key)),
     leaveSquad: {
+      keepsUndo: true,
       validate: (s, team, action) => {
         const problem = ownUnitsProblem(s, team, action.uids);
         if (problem) return problem;
@@ -95,6 +97,7 @@ export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'add
       },
     },
     renameSquad: {
+      keepsUndo: true,
       validate: (s, team, action) => ownSquadProblem(s, team, action.squad) ?? (cleanSquadName(action.name) ? null : 'badName'),
       apply: (s, team, action) => {
         const squad = checkedSquad(s, action.squad);
@@ -103,6 +106,7 @@ export const SQUAD_ACTIONS: Pick<ActionRegistry, 'formSquad' | 'setGroup' | 'add
       },
     },
     disbandSquad: {
+      keepsUndo: true,
       validate: (s, team, action) => ownSquadProblem(s, team, action.squad),
       apply: (s, team, action) => {
         const squad = checkedSquad(s, action.squad);

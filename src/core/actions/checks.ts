@@ -5,7 +5,8 @@
 import { buildingAt, unitById } from '../rules/queries';
 import { canStillAct } from '../rules/unitTurn';
 import { isOnMap } from '../util/predicates';
-import type { ActionRejection, Building, GameState, LastMove, Pos, TeamId, Unit } from '../model';
+import type { ActionRejection, Building, GameState, Pos, TeamId, UndoableMove, Unit } from '../model';
+import { lastUndoableMove } from '../rules/undo';
 
 /** Lo que se comprueba despues con la unidad ya encontrada (por defecto, nada mas). */
 type ThenCheck = (unit: Unit) => ActionRejection | null;
@@ -68,8 +69,9 @@ export function checkedBuilding(s: GameState, at: Pos): Building {
   return building;
 }
 
-/** El ultimo movimiento de un 'undoMove' ya comprobado (si no esta, es un fallo del registro). */
-export function checkedLastMove(s: GameState): LastMove {
-  if (!s.lastMove) throw new Error('Deshacer ya comprobado sin ultimo movimiento');
-  return s.lastMove;
+/** El movimiento que deshace un 'undoMove' ya comprobado (si no esta, es un fallo del registro). */
+export function checkedUndoableMove(s: GameState): UndoableMove {
+  const last = lastUndoableMove(s);
+  if (!last) throw new Error('Deshacer ya comprobado sin movimiento que deshacer');
+  return last;
 }

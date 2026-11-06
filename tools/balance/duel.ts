@@ -38,6 +38,8 @@ function arena(terrain: TerrainType, options: DuelOptions, rng: Rng): GameState 
     map,
     rules: options.rules,
     content: options.content,
+    // Un campo para medir el combate suelto: no se acaba solo.
+    mode: 'sandbox',
     teams: duel('ai', 'ai').map((team) => ({ ...team, funds: 0 })),
     diceSeed: seedFromDraw(rng()),
   });

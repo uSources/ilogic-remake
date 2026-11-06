@@ -8,7 +8,7 @@
  *   ~  agua    ,  agua poco profunda    =  agua profunda    i  hielo
  *   P  bosque nevado    N  acantilado nevado
  * Equipos: `teams`, en orden, con quien juega cada uno (`controller`) y su dinero; el objetivo es
- * del equipo de la persona (`mission.team`). Edificios: [tipo, dueño (numero de
+ * del equipo de la persona (su `owner`). Edificios: [tipo, dueño (numero de
  * equipo, null neutral), x, y]. Unidades: [tipo, equipo, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
@@ -98,6 +98,7 @@ export function buildMission(mission: MissionDef, content: GameContent, diceSeed
     map: terrainGrid(content, mission),
     rules: missionRules(mission, content),
     content,
+    mode: 'mission',
     theme: missionTheme(content, mission).id,
     teams: mission.teams,
     diceSeed,
@@ -105,7 +106,7 @@ export function buildMission(mission: MissionDef, content: GameContent, diceSeed
   for (const [type, owner, x, y] of mission.buildings)
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
   const unitUids = placeUnits(s, mission.units);
-  s.mission = { id: mission.id, team: missionTeam(mission), objective: objectiveFromMission(mission.objective, unitUids, content) };
+  s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, missionTeam(mission), unitUids, content) };
   return s;
 }
 

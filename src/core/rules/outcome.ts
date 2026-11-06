@@ -62,8 +62,8 @@ function dayLimitOutcome(s: GameState, team: TeamId): Outcome {
 
 /** Resultado del objetivo de la mision para `team`: el de su dueño, o el contrario si es su enemigo. */
 function missionOutcome(s: GameState, team: TeamId, mission: NonNullable<GameState['mission']>): Outcome {
-  const forOwner = objectiveOutcome(s, mission.team, mission.objective);
-  if (areAllied(s, team, mission.team) || forOwner === 'playing') return forOwner;
+  const forOwner = objectiveOutcome(s, mission.objective);
+  if (areAllied(s, team, mission.objective.owner) || forOwner === 'playing') return forOwner;
   return forOwner === 'won' ? 'lost' : 'won';
 }
 
@@ -99,7 +99,7 @@ export function isMatchOver(s: GameState): boolean {
 export function objectiveProgress(s: GameState): ObjectiveProgress | null {
   const mission = s.mission;
   if (!mission || mission.objective.kind === 'hq') return null;
-  return measureObjective(s, mission.team, mission.objective);
+  return measureObjective(s, mission.objective);
 }
 
 /** Por que ha terminado la partida para `team` (null si sigue). */

@@ -24,10 +24,12 @@ import {
   isValidMap,
   isValidMission,
   isValidTeamList,
+  isValidTurn,
   type SaveFrame,
   type SavedGame,
   type SavedLists,
 } from './savedParts';
+import { isGameModeId } from './modes';
 import { isValidRules } from './rulesSchema';
 import { isInt, isObject } from './util/validation';
 import { isRandomState } from './util/random';
@@ -46,6 +48,10 @@ export type SaveError =
   | 'badTheme'
   | 'badDice'
   | 'badTeams'
+  /** El modo de juego no existe. */
+  | 'badMode'
+  /** El orden de los turnos no es el de sus equipos, o le toca a quien no esta. */
+  | 'badTurn'
   | 'badUnits'
   /** Un pasajero que no esta en su transporte, o al reves. */
   | 'badCargo'
@@ -116,7 +122,9 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
   if (!isEntryId(content.themes, saved.theme)) return fail('badTheme');
   if (!isRandomState(saved.dice)) return fail('badDice');
   if (!isValidTeamList(teams, content)) return fail('badTeams');
+  if (!isGameModeId(saved.mode)) return fail('badMode');
   const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };
+  if (!isValidTurn(frame, saved)) return fail('badTurn');
   if (!hasValidUnits(frame, units)) return fail('badUnits');
   if (!hasConsistentCargo(units)) return fail('badCargo');
   if (!hasValidBuildings(frame, buildings)) return fail('badBuildings');
