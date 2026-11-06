@@ -7,7 +7,7 @@ import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { isWinner, takesTurn } from '../../core/rules';
+import { defeatReason, isWinner, takesTurn } from '../../core/rules';
 import { enemiesOf, teamIds } from '../../core/teams';
 import type { EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
@@ -54,14 +54,28 @@ export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
   return isWinner(result, viewer) ? 'won' : 'lost';
 }
 
-/**
- * El final para quien se rinde cuando ya no queda ninguna persona en juego (la partida sigue entre
- * los demas, pero nadie la mira): perdida por rendirse, con los que siguen como los que quedan. No
- * es el resultado de la partida (matchResult), solo lo que ve esta pantalla.
- */
-export function resignedEnd(s: GameState): Exclude<MatchResult, { status: 'playing' }> {
-  return { status: 'decided', winners: teamIds(s).filter((team) => takesTurn(s, team)), reason: 'surrender' };
+/** Como acaba para esta pantalla: lo que ve el que mira (ganada, perdida o empate) y por que. */
+export interface ScreenEnd {
+  outcome: EndOutcome;
+  reason: EndReason;
 }
+
+/** El final de una partida decidida (`matchResult`), visto por `viewer`. */
+export const endOfResult = (result: Exclude<MatchResult, { status: 'playing' }>, viewer: TeamId): ScreenEnd => ({
+  outcome: outcomeFor(result, viewer),
+  reason: result.reason,
+});
+
+/**
+ * Ya no queda ninguna persona en juego (todas han caido o se han rendido) aunque la partida siga
+ * entre los demas: nadie la mira, asi que se acaba para esta pantalla. Perdida, por lo que le paso
+ * a `viewer` (rendirse, sin Base o sin nada); no es el resultado de la partida.
+ */
+export const outOfMatchEnd = (s: GameState, viewer: TeamId): ScreenEnd => ({ outcome: 'lost', reason: defeatReason(s, viewer) });
+
+/** Queda alguna persona de esta pantalla (`isPerson`) que sigue jugando. */
+export const aPersonStillPlays = (s: GameState, isPerson: (team: TeamId) => boolean): boolean =>
+  teamIds(s).some((team) => isPerson(team) && takesTurn(s, team));
 
 /**
  * Desde que equipo se ve el final: el que miraba o, si ha perdido y gana otra persona de esta
@@ -129,14 +143,13 @@ export class EndOfMatch {
     this.celebration = null;
   }
 
-  /** El final de una partida ya decidida (`result`), visto por el equipo que mira. */
-  async finish(result: Exclude<MatchResult, { status: 'playing' }>): Promise<void> {
+  /** El final para esta pantalla (`ScreenEnd`: de la partida decidida o de quien se ha quedado fuera). */
+  async finish(end: ScreenEnd): Promise<void> {
     const host = this.host;
     if (host.ended) return;
     const s = host.state;
-    const outcome = outcomeFor(result, host.viewer);
+    const { outcome, reason } = end;
     const won = outcome === 'won';
-    const reason = result.reason;
     host.closeMatch();
     const mission = s.mission ? missionById(s.mission.id) : undefined;
     const bestBefore = mission ? bestDays(mission.id) : null;

@@ -71,6 +71,9 @@ function lossReason(s: GameState, losers: readonly TeamId[]): EndReason {
   return losers.some((loser) => !hasHQ(s, loser)) ? 'hq' : 'wipeout';
 }
 
+/** Por que ha caido un equipo ya derrotado (`isDefeated`): se ha rendido, sin Base o sin nada. */
+export const defeatReason = (s: GameState, team: TeamId): EndReason => lossReason(s, [team]);
+
 /** Gana la alianza de `team` (todos sus equipos, tambien los que hayan caido), por `reason`. */
 const allianceWins = (s: GameState, team: TeamId, reason: EndReason): MatchResult => ({
   status: 'decided',

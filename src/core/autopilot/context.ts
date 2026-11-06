@@ -88,7 +88,10 @@ export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Po
   return getsCloser ? best : null;
 }
 
-/** Quien juega el turno (ordenes o IA) hace una accion de su equipo (`dispatch`) y avisa de sus sucesos: los sucesos, o null si no valia. */
+/**
+ * Quien juega el turno (ordenes o IA) hace una accion de su equipo (`dispatch`) y avisa de sus
+ * sucesos: los sucesos, o null si no valia.
+ */
 function* actEvents(s: GameState, play: PlayCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
   const result = play.dispatch(s, play.me, action);
   if (!result.ok) return null;

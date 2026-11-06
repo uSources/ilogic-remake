@@ -7,14 +7,22 @@ import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import { endButtonsFor, endFocus, endViewer, outcomeFor, resignedEnd } from '../src/scenes/game/endOfMatch';
+import {
+  aPersonStillPlays,
+  endButtonsFor,
+  endFocus,
+  endOfResult,
+  endViewer,
+  outcomeFor,
+  outOfMatchEnd,
+} from '../src/scenes/game/endOfMatch';
 import { canUseMenuButton } from '../src/hud/game/turn';
 import { initialState } from '../src/hud/state';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
-import { MENU_PHASES, type Phase } from '../src/scenes/game/types';
-import { PHASES } from '../src/scenes/game/phases';
+import { CONFIRM_MS, MENU_PHASES, type Phase } from '../src/scenes/game/types';
+import { GameMenuChoices, PHASES, quitWhileWatching, watchesOthers, type GameMenuHost } from '../src/scenes/game/phases';
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
@@ -291,12 +299,45 @@ describe('escena: tabla de fases (game/phases)', () => {
 });
 
 describe('escena: rendirse sin personas en juego y salir mientras juegan los demas', () => {
-  it('quien se rinde y deja solo a la IA pierde por rendirse (los que siguen, como los que quedan)', () => {
+  it('sin personas en juego la partida se acaba para la pantalla: perdida, por rendirse o por caer', () => {
     const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const isPerson = (team: number) => team === 0;
+    expect(aPersonStillPlays(s, isPerson)).toBe(true);
     act(s, 0, { kind: 'surrender' });
-    const end = resignedEnd(s);
-    expect(end).toEqual({ status: 'decided', winners: [1, 2], reason: 'surrender' });
-    expect(outcomeFor(end, 0)).toBe('lost');
+    expect(aPersonStillPlays(s, isPerson)).toBe(false);
+    expect(outOfMatchEnd(s, 0)).toEqual({ outcome: 'lost', reason: 'surrender' });
+    // Sin rendirse: cae (sin Base) y quedan dos IA.
+    const fallen = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    fallen.buildings = fallen.buildings.filter((building) => building.owner !== 0);
+    expect(aPersonStillPlays(fallen, isPerson)).toBe(false);
+    expect(outOfMatchEnd(fallen, 0)).toEqual({ outcome: 'lost', reason: 'hq' });
+    expect(endOfResult({ status: 'decided', winners: [1], reason: 'hq' }, 0)).toEqual({ outcome: 'lost', reason: 'hq' });
+  });
+
+  it('salir mientras juegan los demas: solo mirando, y con dos pulsaciones a tiempo', () => {
+    const watching = { ended: false, phase: 'busy' as const, othersPlaying: true };
+    expect(watchesOthers(watching)).toBe(true);
+    expect(watchesOthers({ ...watching, othersPlaying: false })).toBe(false);
+    expect(watchesOthers({ ...watching, phase: 'map' })).toBe(false);
+    expect(watchesOthers({ ...watching, ended: true })).toBe(false);
+    let now = 1000;
+    let quits = 0;
+    const host = {
+      get now() {
+        return now;
+      },
+      quitToMenu: () => quits++,
+    } as unknown as GameMenuHost;
+    const choices = new GameMenuChoices(host);
+    quitWhileWatching({ ...watching, phase: 'map' }, choices);
+    quitWhileWatching(watching, choices);
+    expect(quits).toBe(0);
+    now += CONFIRM_MS - 1;
+    quitWhileWatching(watching, choices);
+    expect(quits).toBe(1);
+    now += CONFIRM_MS * 3;
+    quitWhileWatching(watching, choices);
+    expect(quits).toBe(1);
   });
 
   it('el boton del menu: en tu turno, el menu; mientras juegan los demas, salir; al acabar, nada', () => {

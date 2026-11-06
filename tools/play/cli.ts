@@ -1,5 +1,6 @@
 /**
- * npm run play -- [--seed 7] [--size 20] [--theme Plains] [--fog | --no-fog] [--mission tutorial] [--load partida.json] [--general Brisa] [--enemy-general Brisa]
+ * npm run play -- [--seed 7] [--size 20] [--theme Plains] [--fog | --no-fog] [--mission tutorial]
+ *                 [--load partida.json] [--general Brisa] [--enemy-general Brisa]
  *                 [--script ordenes.txt | -e "move 3 5 6; end; map"]
  * Sin --script ni -e: modo interactivo (una orden por linea; help para la lista).
  * Con ordenes por stdin tambien funciona: echo "map" | npm run play --silent

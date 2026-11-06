@@ -291,7 +291,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     act(s, 1, { kind: 'wait', uid: enemy.uid });
   });
 
-  it('rendirse vale en cualquier momento (anyTime: sin las comprobaciones de turno), pero no si ya ha perdido ni con la partida decidida', () => {
+  it('rendirse vale en cualquier momento (anyTime), pero no si ya ha perdido ni con la partida decidida', () => {
     const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
     s.turnStarted = false;
     expectRejected(s, 2, { kind: 'wait', uid: newUnit(s, SOLDIER, 2, { x: 9, y: 9 }).uid }, 'notYourTurn');

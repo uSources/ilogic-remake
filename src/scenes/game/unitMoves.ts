@@ -225,7 +225,10 @@ export class UnitMoves {
     return !!unit && isValidAction(this.host.state, this.host.viewer, { kind: 'undoMove', uid: unit.uid });
   }
 
-  /** «Atras» en el menu de la unidad: vuelve a donde estaba antes de moverla y se puede mover otra vez; si no se movio, cierra el menu. */
+  /**
+   * «Atras» en el menu de la unidad: vuelve a donde estaba antes de moverla y se puede mover otra vez;
+   * si no se movio, cierra el menu.
+   */
   undoMove(): void {
     const unit = this.selected;
     const outcome = unit ? this.undoMoveOf(unit) : 'nothing';

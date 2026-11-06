@@ -5,7 +5,7 @@ import { showToast, type MenuItemVM } from '../../../hud/store';
 import { settings, t, type TextKey } from '../../../settings';
 import { seedToCode } from '../../../setup';
 import type { MenuInput, MenuModel } from '../menuModel';
-import { CONFIRM_MS, GAME_MENU, type GameMenuKey } from '../types';
+import { CONFIRM_MS, GAME_MENU, type GameMenuKey, type Phase } from '../types';
 import type { PhaseHandler } from './phase';
 
 /** Lo que el menu de pausa necesita de la escena. */
@@ -71,6 +71,21 @@ export class GameMenuChoices {
     this.armedAt[choice] = now;
     showToast(t(warning));
   }
+}
+
+/** Lo que la escena dice de si se esta mirando jugar a los demas. */
+export interface WatchState {
+  ended: boolean;
+  phase: Phase;
+  othersPlaying: boolean;
+}
+
+/** Se mira jugar a los demas (sin menu de pausa): la partida sigue, esta ocupada y juega otro equipo. */
+export const watchesOthers = ({ ended, phase, othersPlaying }: WatchState): boolean => !ended && phase === 'busy' && othersPlaying;
+
+/** Mientras se mira jugar a los demas, Esc o el boton del menu salen al menu principal (dos pulsaciones). */
+export function quitWhileWatching(state: WatchState, choices: GameMenuChoices): void {
+  if (watchesOthers(state)) choices.choose('quit');
 }
 
 export const gameMenuPhase: PhaseHandler = {

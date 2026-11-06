@@ -10,7 +10,7 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, matchResult, takesTurn, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import type { GameSession, ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
@@ -57,7 +57,7 @@ import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
-import { EndOfMatch, endViewer, resignedEnd, setEndFilter, type EndHost } from './game/endOfMatch';
+import { aPersonStillPlays, EndOfMatch, endOfResult, endViewer, outOfMatchEnd, setEndFilter, type EndHost } from './game/endOfMatch';
 import { GeneralPowers, type PowerHost } from './game/powers';
 import { restartLab, startLab, type LabHost } from './game/labMode';
 import { live, rw } from './game/host';
@@ -67,7 +67,7 @@ import { Carry, type CarryHost } from './game/carry';
 import { pointerTarget, type PointerHost } from './game/pointerInput';
 import { Orders, type OrderHost } from './game/orders';
 import { UnitMoves, type MoveHost } from './game/unitMoves';
-import { acceptMapTile, captureNow, GameMenuChoices, PHASES, type GameMenuHost, type PhaseHost } from './game/phases';
+import { acceptMapTile, captureNow, GameMenuChoices, PHASES, quitWhileWatching, type GameMenuHost, type PhaseHost } from './game/phases';
 
 export type { GameStartData } from './game/types';
 
@@ -286,7 +286,18 @@ export class GameScene extends Phaser.Scene {
       this.view.destroy();
       setEndFilter(null);
       resetActions();
-      ui.set({ menu: null, forecast: null, combat: null, tile: null, mission: null, weather: null, handoff: null });
+      // Lo de la partida que se cierra (tambien de quien sale mientras juegan los demas: ocupada, turno ajeno).
+      ui.set({
+        menu: null,
+        forecast: null,
+        combat: null,
+        tile: null,
+        mission: null,
+        weather: null,
+        handoff: null,
+        busy: false,
+        turn: 'own',
+      });
     });
   }
 
@@ -662,13 +673,22 @@ export class GameScene extends Phaser.Scene {
     if (settings.autoNext && this.idleUnits().length) this.nextIdle();
   }
 
-  /** La partida se ha decidido (su modo dice como: el laboratorio nunca): true, y empieza el final. */
+  /**
+   * Se acaba la partida para esta pantalla: true, y empieza el final. Si se ha decidido (su modo dice
+   * como: el laboratorio nunca), su final; si sigue pero ya no juega ninguna persona (han caido o se
+   * han rendido y quedan otros), perdida para quien mira: nadie miraria a la IA jugar sola, y la
+   * partida se cierra y se borra su guardado.
+   */
   private checkEnd(): boolean {
     const result = matchResult(this.s);
-    if (result.status === 'playing') return false;
-    const people = teamIds(this.s).filter((team) => this.session.isPerson(team));
-    this.viewer = endViewer(result, this.viewer, people);
-    void this.endScreen.finish(result);
+    const isPerson = (team: TeamId) => this.session.isPerson(team);
+    if (result.status !== 'playing') {
+      this.viewer = endViewer(result, this.viewer, teamIds(this.s).filter(isPerson));
+      void this.endScreen.finish(endOfResult(result, this.viewer));
+      return true;
+    }
+    if (this.lab || aPersonStillPlays(this.s, isPerson)) return false;
+    void this.endScreen.finish(outOfMatchEnd(this.s, this.viewer));
     return true;
   }
 
@@ -685,27 +705,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Rendirse: el equipo que mira deja la partida. Si con eso acaba, empieza el final. Si no (quedan
-   * tres o mas equipos): con otra persona aun en juego, la sesion ya no le espera y siguen los demas;
-   * sin ninguna, la partida se acaba para esta pantalla (perdida, y se borra su guardado: nadie
-   * miraria a la IA jugar sola).
+   * Rendirse: el equipo que mira deja la partida. Si con eso se acaba para esta pantalla (checkEnd:
+   * decidida, o sin personas en juego), empieza el final; si no (queda otra persona y tres o mas
+   * equipos), la sesion ya no le espera y siguen los demas.
    */
   private surrender(): void {
     this.toMap();
     this.act({ kind: 'surrender' });
-    if (this.checkEnd()) return;
-    if (!this.aPersonStillPlays()) return void this.endScreen.finish(resignedEnd(this.s));
-    void this.turns.endOwnTurn();
-  }
-
-  /** Queda alguna persona de esta pantalla que sigue jugando. */
-  private aPersonStillPlays(): boolean {
-    return teamIds(this.s).some((team) => this.session.isPerson(team) && takesTurn(this.s, team));
+    if (!this.checkEnd()) void this.turns.endOwnTurn();
   }
 
   /** Mientras juegan los demas no hay menu, pero se puede salir al menu principal (pulsando dos veces). */
   private quitWhileWatching(): void {
-    if (!this.ended && this.phase === 'busy' && this.turns.othersPlaying) this.gameMenu.choose('quit');
+    quitWhileWatching({ ended: this.ended, phase: this.phase, othersPlaying: this.turns.othersPlaying }, this.gameMenu);
   }
 
   /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */
@@ -796,6 +808,13 @@ export class GameScene extends Phaser.Scene {
   /** Lo que avisa la sesion de cada accion hecha: lo apunta suceso a suceso. */
   private record(step: ActedStep): void {
     for (const event of step.events) this.noteEvent(event, step.team === this.viewer);
+    // Una rendicion no se deshace al cargar: el guardado de esta partida, si lo hay, la recoge ya.
+    if (step.action.kind === 'surrender') this.refreshSave();
+  }
+
+  /** Vuelve a guardar la partida si ya tenia guardado (no crea uno que no habia). */
+  private refreshSave(): void {
+    if (this.fromSave || this.savedThisGame) this.saveGame();
   }
 
   /** Un suceso ya hecho: tutorial y donde ha pasado lo ultimo (estadisticas y deshacer los lleva el nucleo). */
