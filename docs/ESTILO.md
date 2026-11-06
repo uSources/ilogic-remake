@@ -80,7 +80,7 @@ return gotCloser ? best.pos : null;
     `if (!s.settings.veterancy) return 1` dentro de cada funcion. Un ajuste que es un numero (dinero,
     puntos de captura) se lee de `s.settings` sin mas. Fuera de las reglas (la IA, la interfaz, la
     ayuda) tampoco se repite el `isOn` de un modulo: se le pregunta (`isRuleOn(s, id)`,
-    `isModuleOn(ajustes, id)`) o, mejor, a la regla que lo usa (`seesEverything`,
+    `s.ruleset`; sin partida, `gameModulesFor(ajustes)`) o, mejor, a la regla que lo usa (`seesEverything`,
     `letsTeammatesThrough`). Las reglas no importan el registro de modulos ni un modulo concreto
     (lo mira ESLint).
 15. **Preguntar "y si" sin fingir unidades.** Nada de copias con otra casilla, otra vida u otro turno

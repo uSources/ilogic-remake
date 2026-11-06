@@ -56,8 +56,8 @@ export function rulesetFor(match: { readonly mode: GameModeId }, settings: Reado
 }
 
 /**
- * El modulo `id` del juego va con estos ajustes (lo que no tiene partida, como la ayuda; con
- * partida, isRuleOn, que sabe tambien de los modulos de su modo).
+ * Los modulos del juego que van con estos ajustes. Solo para lo que no tiene partida (la ayuda del
+ * menu): con partida, `s.ruleset` (isRuleOn), que sabe tambien de los modulos de su modo.
  */
-export const isModuleOn = (settings: Readonly<MatchSettings>, id: RuleModuleId): boolean =>
-  RULE_MODULES.some((module) => module.id === id && module.isOn(settings));
+export const gameModulesFor = (settings: Readonly<MatchSettings>): RuleModuleId[] =>
+  RULE_MODULES.filter((module) => module.isOn(settings)).map((module) => module.id);

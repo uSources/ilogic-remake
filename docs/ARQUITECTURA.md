@@ -477,7 +477,7 @@ Los modulos se resuelven **una vez por partida**: `rulesetFor(partida, ajustes)`
 deja sus listas ya juntas en `s.ruleset` (con el modelo de daño, `damageModel`). Se pone al crear la
 partida, al leerla (`readSave`) y al cambiar sus ajustes (`changeSettings`, que cambia los dos a la
 vez: `s.settings` es de solo lectura); no se guarda (como el contenido). `hooksOf` e `isRuleOn` solo
-leen `s.ruleset` (`ruleModules/ruleset.ts`). Sin partida (la ayuda), `isModuleOn(ajustes, id)`. Las
+leen `s.ruleset` (`ruleModules/ruleset.ts`). La ayuda de una partida cuenta sus modulos (`helpRulesOfMatch`); la del menu, sin partida, los del juego que van con los ajustes (`helpRulesForSettingsOnly`, `gameModulesFor`). Las
 partes del juego que no son reglas (la interfaz, la IA) tampoco miran el ajuste: preguntan al
 modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsTeammatesThrough`).
 

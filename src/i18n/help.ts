@@ -8,7 +8,17 @@ export type MapColor = readonly [color: string, meaning: string];
 /** Una fila de la tabla de controles. */
 export type ControlRow = readonly [action: string, keyboard: string, pointerOrTouch: string];
 
-/** Lo que la ayuda sabe de la partida: sus ajustes (las cifras) y que modulos de reglas lleva (que frases salen). */
+/**
+ * Las reglas que cuenta la ayuda, como datos (van en el estado de la interfaz): los ajustes (las
+ * cifras) y los modulos de reglas que van (que frases salen). En una partida, los que lleva (con los
+ * de su modo); en el menu, los del juego que van con esos ajustes.
+ */
+export interface HelpRules {
+  readonly settings: Readonly<MatchSettings>;
+  readonly modules: readonly RuleModuleId[];
+}
+
+/** Lo que reciben las frases de la ayuda: los ajustes y si un modulo va (sale de HelpRules). */
 export interface RuleFacts {
   readonly settings: Readonly<MatchSettings>;
   readonly on: (module: RuleModuleId) => boolean;

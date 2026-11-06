@@ -11,6 +11,7 @@ import type { MissionDef } from '../core/missions';
 import { loadGame } from '../core/defaultGames';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
+import { helpRulesForSettingsOnly } from '../hud/helpText';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
 import { HomeScreen, type HomeHost } from '../menu/homeScreen';
@@ -108,7 +109,7 @@ export class MenuScene extends Phaser.Scene {
       toast: null,
       banner: null,
       report: null,
-      helpSettings: settingsWith(defaultContent()),
+      helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
     });
     this.home.publish();
     if (data?.open === 'setup') this.openSetup();

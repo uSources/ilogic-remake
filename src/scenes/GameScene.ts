@@ -46,6 +46,7 @@ import { PointerGestures } from '../controls/pointer';
 import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
+import { helpRulesOfMatch } from '../hud/helpText';
 import type { LabAction, LabOptions } from '../lab';
 import { gameModeOf } from '../core/modes';
 import { MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
@@ -960,7 +961,7 @@ export class GameScene extends Phaser.Scene {
       buildings: s.buildings.filter((building) => building.owner === viewer).length,
       day: s.day,
       dayLimit: s.settings.dayLimit,
-      helpSettings: s.settings,
+      helpRules: helpRulesOfMatch(s),
       weather,
       turn: sideOf(s, viewer, this.turns.acting),
       busy,
