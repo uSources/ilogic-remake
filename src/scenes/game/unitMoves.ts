@@ -1,13 +1,12 @@
 /**
  * Mover las unidades del jugador: elegir una (MoveSession), soltarla en una casilla (mover, atacar,
- * unirse, subir), ordenes de varios turnos, mover un grupo y deshacer (Atras en su menu y Ctrl+Z).
+ * unirse, subir), ordenes de varios turnos, mover un grupo y deshacer (Atras en su menu y Ctrl+Z:
+ * los dos son la accion 'undoMove' del nucleo, que sabe que se puede deshacer).
  */
-import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { actionProblem, availableActions, groupMoveOrder, groupMoveStep, isValidAction, type UnitMenuOption } from '../../core/actions';
 import { samePos, posOf } from '../../core/geom';
-import { canCapture, canStillMove, endsInAmbush, unitById } from '../../core/rules';
-import { deserialize, serialize } from '../../core/save';
+import { canCapture, canStillMove, endsInAmbush, lastUndoableMove, unitById } from '../../core/rules';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { settings, t, type TextKey } from '../../settings';
@@ -21,8 +20,7 @@ import type { ActionHost, Intent, Phase } from './types';
 export interface MoveHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
-  /** La partida (Ctrl+Z la cambia por la de antes). */
-  state: GameState;
+  readonly state: GameState;
   /** El equipo que juega la persona en esta pantalla (el que mira). */
   readonly viewer: TeamId;
   phase: Phase;
@@ -66,8 +64,6 @@ export class UnitMoves {
   session: MoveSession | null = null;
   /** Ultimo movimiento confirmado (para el doble clic: mover y esperar). */
   lastCommit: { at: Pos; time: number } | null = null;
-  /** Estados anteriores para deshacer movimientos sin consecuencias (Ctrl+Z). */
-  private undoStack: string[] = [];
 
   constructor(private readonly host: MoveHost) {}
 
@@ -75,7 +71,6 @@ export class UnitMoves {
   reset(): void {
     this.session = null;
     this.lastCommit = null;
-    this.undoStack = [];
   }
 
   /** La unidad elegida para moverla (o en su menu). */
@@ -149,7 +144,6 @@ export class UnitMoves {
 
   private async joinUnit(unit: Unit, kind: 'merge' | 'load', target: Unit): Promise<void> {
     const ghost = unitKey(this.host.scene.textures, this.host.state, unit, this.host.viewer);
-    this.clearUndo();
     // Una emboscada por el camino lo deja en mover: no llega a unirse ni a subir (lo dice su suceso).
     await this.host.perform({ kind, uid: unit.uid, into: target.uid }, ghost);
     this.host.afterAction();
@@ -159,7 +153,6 @@ export class UnitMoves {
     const host = this.host;
     const unit = session.unit;
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
-    this.clearUndo();
     if (!samePos(from, unit)) {
       const moved = host.act({ kind: 'move', uid: unit.uid, to: from, path: this.trailTo(from) });
       if (!moved) return host.toMap();
@@ -175,18 +168,11 @@ export class UnitMoves {
     const host = this.host;
     const unit = session.unit;
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
-    const before = serialize(host.state);
     const moved = host.act({ kind: 'move', uid: unit.uid, to, path: this.trailTo(to) });
     if (!moved) return;
     session.range = null;
     await host.play(moved, ghost);
-    if (endsInAmbush(moved)) {
-      this.clearUndo();
-      return host.afterAction();
-    }
-    // Ctrl+Z vale para lo mismo que «Atras»: el nucleo dice si se puede (no si ha descubierto a alguien).
-    if (isValidAction(host.state, host.viewer, { kind: 'undoMove', uid: unit.uid })) this.undoStack.push(before);
-    else this.clearUndo();
+    if (endsInAmbush(moved)) return host.afterAction();
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (options.wait) return this.waitSelected();
     if (options.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();
@@ -204,7 +190,6 @@ export class UnitMoves {
       showToast(t('travelUnreachable'));
       return host.toMap();
     }
-    this.clearUndo();
     showToast(t('travelSet'));
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     const moved = host.act({ kind: 'travelStep', uid: unit.uid });
@@ -219,7 +204,6 @@ export class UnitMoves {
     host.selection.multi = false;
     const group = [...host.selection.group].map((uid) => unitById(host.state, uid)).filter((unit): unit is Unit => !!unit);
     // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
-    this.clearUndo();
     for (const unit of groupMoveOrder(group, goal)) {
       // Cada paso con el mapa como lo han dejado las de antes.
       const step = groupMoveStep(host.state, unit, goal);
@@ -233,10 +217,6 @@ export class UnitMoves {
   waitSelected(): void {
     if (this.selected) this.host.act({ kind: 'wait', uid: this.selected.uid });
     this.host.afterAction();
-  }
-
-  clearUndo(): void {
-    this.undoStack = [];
   }
 
   /** La unidad elegida se acaba de mover y se puede deshacer («Atras» en su menu). */
@@ -253,19 +233,24 @@ export class UnitMoves {
     const warning = backWarning(host.state, host.viewer, unit);
     if (warning) return showToast(t(warning));
     if (!host.act({ kind: 'undoMove', uid: unit.uid })) return host.toMap();
-    this.undoStack.pop();
     host.view.cursor = posOf(unit);
     this.select(unit);
   }
 
-  /** Ctrl+Z: volver al estado de antes del ultimo movimiento (si no descubrio nada ni tuvo consecuencias). */
+  /**
+   * Ctrl+Z: deshacer el ultimo movimiento que se puede (el nucleo los apunta mientras lo de despues
+   * no cuenta nada nuevo: esperar, escuadras, ordenes). Si descubrio enemigos, avisa.
+   */
   undoLast(): void {
-    const previous = this.undoStack.pop();
-    if (!previous) return showToast(t('nothingToUndo'));
-    const restored = deserialize(previous, saveContext(this.host.state.content));
-    if (!restored) return;
-    this.host.state = restored;
-    this.host.toMap();
+    const host = this.host;
+    const last = lastUndoableMove(host.state);
+    const unit = last && unitById(host.state, last.uid);
+    if (!unit) return showToast(t('nothingToUndo'));
+    const warning = backWarning(host.state, host.viewer, unit);
+    if (warning) return showToast(t(warning));
+    if (!host.act({ kind: 'undoMove', uid: unit.uid })) return showToast(t('nothingToUndo'));
+    host.toMap();
+    host.view.cursor = posOf(unit);
     showToast(t('undone'));
   }
 }

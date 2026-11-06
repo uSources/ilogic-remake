@@ -120,6 +120,7 @@ export {
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
 export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
+export { lastUndoableMove } from './rules/undo';
 export {
   score,
   allianceScore,

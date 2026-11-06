@@ -24,21 +24,6 @@ export type Phase =
 export type ActionKey = UnitMenuOption | 'back';
 /** «Atras» va justo antes de esta opcion (la de peligro, al final), o al final si no esta. */
 export const BACK_GOES_BEFORE: UnitMenuOption = 'delete';
-/**
- * Sucesos propios despues de los que Ctrl+Z sigue valiendo: no cuentan nada nuevo de la partida ni
- * tiran dados (moverse, esperar, viajes, escuadras, ordenes, y la captura a medias que se pierde al
- * irse, que deshacer devuelve). Todos los demas lo cierran (GameScene.noteEvent).
- */
-export const KEEPS_UNDO: ReadonlySet<GameEvent['kind']> = new Set([
-  'move',
-  'wait',
-  'undoMove',
-  'travel',
-  'squad',
-  'standingOrder',
-  'captureDropped',
-]);
-
 export type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 export const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 

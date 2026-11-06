@@ -48,7 +48,7 @@ import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
-import { GAME_MENU, KEEPS_UNDO, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
+import { GAME_MENU, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
@@ -758,10 +758,8 @@ export class GameScene extends Phaser.Scene {
     for (const event of step.events) this.noteEvent(event, step.team === this.viewer);
   }
 
-  /** Un suceso ya hecho: tutorial, Ctrl+Z y donde ha pasado lo ultimo (las estadisticas las lleva dispatch). */
+  /** Un suceso ya hecho: tutorial y donde ha pasado lo ultimo (estadisticas y deshacer los lleva el nucleo). */
   private noteEvent(event: GameEvent, isOwn: boolean): void {
-    // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
-    if (isOwn && !KEEPS_UNDO.has(event.kind)) this.moves.clearUndo();
     if (isOwn) this.tutorial.record(event);
     if (event.kind === 'attack') this.lastAt = { ...event.at };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };
@@ -1083,10 +1081,7 @@ export class GameScene extends Phaser.Scene {
     return live<MoveHost>({
       scene: { get: () => this },
       view: { get: () => this.view },
-      state: rw(
-        () => this.s,
-        (state) => (this.s = state),
-      ),
+      state: { get: () => this.s },
       viewer: { get: () => this.viewer },
       phase: rw(
         () => this.phase,
@@ -1136,7 +1131,6 @@ export class GameScene extends Phaser.Scene {
       commit: (tile, options) => this.moves.commit(tile, options),
       groupMove: (goal) => this.moves.groupMove(goal),
       giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
-      clearUndo: () => this.moves.clearUndo(),
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
       play: (events) => this.playEvents(events),
@@ -1308,7 +1302,6 @@ export class GameScene extends Phaser.Scene {
       play: (events) => this.playEvents(events),
       wait: (ms) => this.player.wait(ms),
       checkEnd: () => this.checkEnd(),
-      clearUndo: () => this.moves.clearUndo(),
       abandonSelection: () => this.abandonSelection(),
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),

@@ -53,7 +53,6 @@ export interface TurnHost extends ActionHost {
   wait(ms: number): Promise<void>;
   /** La partida ha terminado (y empieza el final): true. */
   checkEnd(): boolean;
-  clearUndo(): void;
   /** Deshacer lo que este a medio decidir y volver al mapa. */
   abandonSelection(): void;
   toMap(): void;
@@ -191,7 +190,6 @@ export class TurnFlow {
     const host = this.host;
     if (host.phase === 'busy' || host.ended) return;
     const match = host.match;
-    host.clearUndo();
     host.abandonSelection();
     const saved = this.saveCamera();
     host.phase = 'busy';

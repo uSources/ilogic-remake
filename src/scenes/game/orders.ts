@@ -72,7 +72,6 @@ export interface OrderHost extends ActionHost {
   commit(tile: Pos, options?: { drop?: boolean; wait?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
-  clearUndo(): void;
   afterAction(): void;
   checkEnd(): boolean;
   play(events: GameEvent[]): Promise<void>;
@@ -279,7 +278,6 @@ export class Orders {
     this.ordering = null;
     host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind: ordering.kind, at: posOf(at) } });
     if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);
-    host.clearUndo();
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
     host.toMap();
     showToast(t('orderGiven'));
