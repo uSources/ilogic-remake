@@ -4,9 +4,26 @@
  */
 import type { GameEvent, GameState } from '../model';
 import { controlRound } from '../rules/control';
-import type { ControlReport, RoundReport } from '../rules/roundReport';
+import type { RoundReport } from '../rules/roundReport';
 import { addForTeam, perTeam } from '../teams';
 import type { RuleModule } from './hooks';
+
+/** Lo que han dado los puntos de control en una ronda (su parte del resumen, `control`). */
+export interface ControlReport {
+  /** Dinero que ha dado a cada equipo, por numero de equipo (ya sumado en RoundReport.income). */
+  income: number[];
+  /** Cuantos puntos le han pagado a cada equipo. */
+  held: number[];
+  /** Cuantos estan disputados (no pagan a nadie). */
+  contested: number;
+}
+
+declare module '../rules/roundReport' {
+  interface RoundReportParts {
+    /** [CAMBIO] Puntos de control: lo que han pagado, a quien y cuantos estan disputados. */
+    control: ControlReport;
+  }
+}
 
 /** El resumen de los puntos de control de la ronda (lo crea al primer suceso suyo). */
 function controlOf(s: GameState, report: RoundReport): ControlReport {

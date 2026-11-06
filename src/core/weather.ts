@@ -15,7 +15,6 @@ import { themeOf, weatherTypeOf } from './gameContent';
 import type { MoveType, Theme, WeatherType } from './content';
 import { seededRng } from './util/random';
 import type { GameState, Rng, WeatherState } from './model';
-import type { WeatherChange } from './rules/roundReport';
 
 /** Clima de la partida ahora mismo (despejado, `content.clearWeather`, si no tiene: sin el modulo del clima). */
 export function weatherNow(s: GameState): WeatherType {
@@ -73,6 +72,12 @@ export function ensureWeather(s: GameState): void {
   const rng = dayRng(s);
   const clear = s.content.clearWeather;
   s.weather = { kind: clear.id, left: rollDays(clear, rng), next: rollWeather(s, themeOf(s), rng).id };
+}
+
+/** Lo que ha cambiado el clima al empezar una ronda. */
+export interface WeatherChange {
+  from: WeatherType;
+  to: WeatherType;
 }
 
 /**

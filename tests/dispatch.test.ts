@@ -510,7 +510,7 @@ describe('sucesos completos', () => {
     teamState(s, 0).funds = s.content.maxFunds;
     const events = endRound(s);
     const report = roundReport(s, events);
-    const lost = report.income[0]! - report.upkeep[0]!;
+    const lost = report.income[0]! - (report.upkeep?.[0] ?? 0);
     expect(lost).toBeGreaterThan(0);
     expect(events).toContainEqual({ kind: 'fundsCapped', actor: null, team: 0, lost });
     expect(teamState(s, 0).funds).toBe(s.content.maxFunds);

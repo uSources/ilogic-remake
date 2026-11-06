@@ -179,4 +179,9 @@ describe('partes del resumen de la ronda (ROUND_REPORT_PARTS y las de los modulo
     const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
     expect(hooksOf(plain, 'roundReportParts')).toEqual([]);
   });
+
+  it('cada modulo pone su parte solo si la apunta: sin ellos, el resumen solo tiene lo de siempre', () => {
+    const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
+    expect(Object.keys(endRoundReport(plain)).sort()).toEqual(['healed', 'income']);
+  });
 });

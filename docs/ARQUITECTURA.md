@@ -182,7 +182,8 @@ reutilizan (`nextSquadId`). Con ellos
 se anima (`ANIMATORS`), se cuentan las estadisticas (`recordEvents` en dispatch, por el `actor`) y se resume el
 fin de ronda (`roundReport(s, events)`: lo que enseña la escena; cada parte del resumen es una
 `ROUND_REPORT_PARTS` de siempre, ingresos y curas, o una `roundReportParts` de su modulo: control,
-mantenimiento, clima). `endRound` devuelve los suyos:
+mantenimiento, clima; el resumen solo tiene la parte de un modulo si este la ha apuntado, y cada
+modulo dice su forma ampliando `RoundReportParts` con `declare module`). `endRound` devuelve los suyos:
 `income`, `heal`, `upkeep`, `controlPoint`, `newDay`, `weather` (cada paso del fin de ronda, `roundPhasesOf`, da los
 que tiene; el ultimo, 'army', apunta el valor de cada ejercito del dia nuevo) y, al final, los de
 las `INVARIANTS`, que `endRound` tambien repasa (`fundsCapped`...). Van dentro de los del 'endTurn'

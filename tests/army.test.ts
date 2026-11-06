@@ -61,11 +61,11 @@ describe('mantenimiento', () => {
     const round = endRoundReport(s);
     expect(round.income[0]).toBe(1000);
     // No llega: se paga lo que hay y no pasa nada mas.
-    expect(round.upkeep[0]).toBe(1000);
+    expect(round.upkeep?.[0]).toBe(1000);
     expect(teamState(s, 0).funds).toBe(0);
     expect(s.units).toHaveLength(2);
     teamState(s, 0).funds = 5000;
-    expect(endRoundReport(s).upkeep[0]).toBe(1400);
+    expect(endRoundReport(s).upkeep?.[0]).toBe(1400);
     expect(teamState(s, 0).funds).toBe(5000 + 1000 - 1400);
   });
 
@@ -73,6 +73,6 @@ describe('mantenimiento', () => {
     const s = blankState(settingsWith(defaultContent(), { upkeep: 0 }));
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(upkeepOf(s, 0)).toBe(0);
-    expect(endRoundReport(s).upkeep).toEqual([0, 0]);
+    expect(endRoundReport(s).upkeep).toBeUndefined(); // sin el modulo, el resumen no tiene su parte
   });
 });

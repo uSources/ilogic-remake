@@ -1,8 +1,15 @@
 /** [CAMBIO] El clima (ajuste `weather`; core/weather.ts) se enchufa a las reglas desde aqui. */
 import { weatherTypeOf } from '../gameContent';
 import type { GameEvent, GameState } from '../model';
-import { advanceWeather, ensureWeather, weatherHit, weatherMove, weatherVision } from '../weather';
+import { advanceWeather, ensureWeather, weatherHit, weatherMove, weatherVision, type WeatherChange } from '../weather';
 import type { RuleModule } from './hooks';
+
+declare module '../rules/roundReport' {
+  interface RoundReportParts {
+    /** [CAMBIO] Cambio de clima al empezar esta ronda (si no ha cambiado, no esta). */
+    weather: WeatherChange;
+  }
+}
 
 /** Pasa un dia de clima: el suceso del cambio, si lo hay. */
 function changeWeather(s: GameState): GameEvent[] {

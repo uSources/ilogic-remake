@@ -31,8 +31,8 @@ describe('dinero: cobrar, pagar y el tope', () => {
     newUnit(s, unitTypeNamed('Tank'), 0, { x: 5, y: 5 });
     teamState(s, 0).funds = max - 100;
     const report = endRoundReport(s);
-    expect(report.upkeep[0]).toBeGreaterThan(0);
-    expect(teamState(s, 0).funds).toBe(Math.min(max, max - 100 + report.income[0]! - report.upkeep[0]!));
+    expect(report.upkeep?.[0]).toBeGreaterThan(0);
+    expect(teamState(s, 0).funds).toBe(Math.min(max, max - 100 + report.income[0]! - (report.upkeep?.[0] ?? 0)));
   });
 
   it('earn suma y capFunds recorta a todos', () => {

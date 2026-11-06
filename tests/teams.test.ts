@@ -173,7 +173,9 @@ describe('cuatro equipos en dos alianzas', () => {
     const report = endRoundReport(s);
     expect(report.income).toHaveLength(4);
     expect(report.income[3]).toBeGreaterThan(report.income[1]!);
-    expect(s.teams.map((team, id) => team.funds - before[id]!)).toEqual(perTeam(s, (team) => report.income[team]! - report.upkeep[team]!));
+    expect(s.teams.map((team, id) => team.funds - before[id]!)).toEqual(
+      perTeam(s, (team) => report.income[team]! - (report.upkeep?.[team] ?? 0)),
+    );
     // Dos aliados en la zona: no la disputan, es del primero que la tiene.
     expect(s.controlPoints[0]!.owner).toBe(0);
     newUnit(s, SOLDIER, 1, { x: 20, y: 21 });

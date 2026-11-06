@@ -159,7 +159,9 @@ export {
   type BuyOption,
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound } from './rules/control';
-export type { ControlReport, RoundReport, WeatherChange } from './rules/roundReport';
+export type { RoundReport, RoundReportParts } from './rules/roundReport';
+export type { ControlReport } from './ruleModules/controlPoints';
+export type { WeatherChange } from './weather';
 export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_REPORT_PARTS, ROUND_STAGES, roundPhasesOf } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';

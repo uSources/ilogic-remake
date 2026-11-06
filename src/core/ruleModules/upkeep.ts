@@ -5,8 +5,15 @@
 import type { GameEvent, GameState } from '../model';
 import { upkeepOf } from '../rules/economy';
 import { pay } from '../rules/funds';
-import { teamIds } from '../teams';
+import { perTeam, teamIds } from '../teams';
 import type { RuleModule } from './hooks';
+
+declare module '../rules/roundReport' {
+  interface RoundReportParts {
+    /** Mantenimiento pagado por cada equipo (si no llega el dinero, se paga lo que hay). */
+    upkeep: number[];
+  }
+}
 
 /** Cada equipo paga lo de su ejercito: un suceso por equipo que paga algo. */
 function payUpkeep(s: GameState): GameEvent[] {
@@ -27,8 +34,10 @@ export const UPKEEP: RuleModule = {
     roundReportParts: [
       {
         id: 'upkeep',
-        add: (_s, report, event) => {
-          if (event.kind === 'upkeep') report.upkeep[event.team] = event.amount;
+        add: (s, report, event) => {
+          if (event.kind !== 'upkeep') return;
+          report.upkeep ??= perTeam(s, () => 0);
+          report.upkeep[event.team] = event.amount;
         },
       },
     ],

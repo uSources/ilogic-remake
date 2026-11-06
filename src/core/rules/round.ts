@@ -128,7 +128,7 @@ export const ROUND_REPORT_PARTS: readonly RoundReportPart[] = [
 
 /** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound por sus partes. */
 export function roundReport(s: GameState, events: readonly GameEvent[]): RoundReport {
-  const report: RoundReport = { income: perTeam(s, () => 0), upkeep: perTeam(s, () => 0), healed: [] };
+  const report: RoundReport = { income: perTeam(s, () => 0), healed: [] };
   const parts = [...ROUND_REPORT_PARTS, ...hooksOf(s, 'roundReportParts')];
   for (const event of events) for (const part of parts) part.add(s, report, event);
   return report;

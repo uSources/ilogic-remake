@@ -440,7 +440,7 @@ const healedOf = (report: RoundReport, team: TeamId) => report.healed.filter((he
 function roundReportLines(report: RoundReport, team: TeamId, ordersDone: string[]): ReportLineVM[] {
   const { control, weather } = report;
   const income = report.income[team] ?? 0;
-  const upkeep = report.upkeep[team] ?? 0;
+  const upkeep = report.upkeep?.[team] ?? 0;
   const held = control?.held[team] ?? 0;
   const healed = healedOf(report, team);
   const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(income)} ${t('reportIncome')}`, tone: 'gold' }];
