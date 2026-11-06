@@ -1,6 +1,5 @@
 import { usePower, blankState, diceFrom, unitTypeNamed, fight } from './helpers';
 import { describe, expect, it } from 'vitest';
-import { saveContext } from '@core/defaultGames';
 import { readContentFiles, validateContent } from '@core/content';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
@@ -110,12 +109,12 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     newUnit(s, unitType('Soldier'), 0, { x: 1, y: 1 });
     teamState(s, 0).general!.charge = 3.5;
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.teams.map((team) => team.general)).toEqual([{ id: 'Brisa', charge: 3.5, used: false, reveal: false }, null]);
     const bad = JSON.parse(serialize(s)) as { teams: { general: unknown }[] };
     bad.teams[0]!.general = { id: 'Nadie', charge: 99 };
     bad.teams[1]!.general = { id: 'Brisa', charge: 99 };
-    const read = deserialize(JSON.stringify(bad), saveContext(defaultContent()))!;
+    const read = deserialize(JSON.stringify(bad), defaultContent())!;
     expect(read.teams.map((team) => team.general)).toEqual([null, { id: 'Brisa', charge: 6, used: false, reveal: false }]);
   });
 });

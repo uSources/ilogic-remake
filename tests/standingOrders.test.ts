@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { saveContext } from '@core/defaultGames';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/autopilot';
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
 import { newUnit } from '@core/rules';
 import { availableActions, dispatch } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
-import { SAVE_VERSION } from '@core/saveVersion';
 import {
   SQUAD_NAME_MAX,
   squadByKey,
@@ -22,7 +20,7 @@ import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup
 import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { act, blankState, savedByVersion1, unitTypeNamed, hqId, placedBuildings } from './helpers';
+import { act, blankState, unitTypeNamed, hqId, placedBuildings } from './helpers';
 import { teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -237,7 +235,7 @@ describe('escuadras', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const squad = formSquad(s, 0, [soldier], 'Lobos').squad;
     giveStandingOrder(s, 0, [soldier], 'capture', { x: 12, y: 5 });
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     // Toda la escuadra: la orden es de la escuadra, no de la unidad.
     expect(back.squads).toEqual([
       { id: squad.id, team: 0, name: 'Lobos', key: 1, standingOrder: { kind: 'capture', at: { x: 12, y: 5 } } },
@@ -246,28 +244,13 @@ describe('escuadras', () => {
     expect(back.units[0]!.standingOrder).toBeUndefined();
   });
 
-  it('las partidas guardadas con la orden en `command` (antes de llamarla orden permanente) la conservan', () => {
-    const s = world();
-    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
-    const otherSoldier = newUnit(s, SOLDIER, 0, { x: 6, y: 5 });
-    const squad = formSquad(s, 0, [soldier]).squad;
-    giveStandingOrder(s, 0, [soldier], 'attack', { x: 12, y: 5 });
-    giveStandingOrder(s, 0, [otherSoldier], 'defend', { x: 6, y: 5 });
-    const old = savedByVersion1(serialize(s).replaceAll('"standingOrder":', '"command":'));
-    const back = deserialize(old, saveContext(defaultContent()))!;
-    expect(back.squads![0]!.standingOrder).toEqual({ kind: 'attack', at: { x: 12, y: 5 } });
-    expect(back.units.find((unit) => unit.uid === otherSoldier.uid)!.standingOrder).toEqual({ kind: 'defend', at: { x: 6, y: 5 } });
-    expect(serialize(back)).not.toContain('"command"');
-    expect(squad.id).toBe(back.squads![0]!.id);
-  });
-
   it('una orden o escuadra rota se ignora al cargar', () => {
     const s = world();
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const raw = JSON.parse(serialize(s)) as { units: Record<string, unknown>[]; squads?: unknown };
     raw.units[0]!.standingOrder = { kind: 'bailar', at: { x: 1, y: 1 } };
     raw.units[0]!.squad = 7;
-    const back = deserialize(JSON.stringify(raw), saveContext(defaultContent()))!;
+    const back = deserialize(JSON.stringify(raw), defaultContent())!;
     expect(back.units[0]!.standingOrder).toBeUndefined();
     expect(back.units[0]!.squad).toBeUndefined();
   });
@@ -477,16 +460,6 @@ describe('orden de la escuadra y unidades destacadas', () => {
     expect(firstSoldier.standingOrder).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
   });
 
-  it('una partida de antes (orden copiada en cada unidad) carga con la orden en la escuadra', () => {
-    const { s, firstSoldier, secondSoldier, tank, squad } = squadWorld();
-    for (const unit of [firstSoldier, secondSoldier, tank])
-      unit.standingOrder = { kind: unit === tank ? 'attack' : 'capture', at: { x: 12, y: 5 } };
-    const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
-    expect(back.squads![0]!.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
-    expect(back.units.every((unit) => unit.standingOrder === undefined)).toBe(true);
-    expect(squad.id).toBe(back.squads![0]!.id);
-  });
-
   it('llevada a mano a una casilla lejana (orden de varios turnos): eso manda mientras dura', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
     giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
@@ -546,20 +519,17 @@ describe('grupos con numero (Ctrl+n, Mayusculas+n, n)', () => {
     expect(squadByKey(s, 0, 2)).toBeUndefined();
   });
 
-  it('las partidas de antes (formato 3) dan tecla a sus escuadras al cargar, sin repetir', () => {
+  it('leer no da tecla a las escuadras; una tecla repetida en su equipo se queda en la primera', () => {
     const s = world();
     const first = newUnit(s, SOLDIER, 0, { x: 1, y: 1 }),
       second = newUnit(s, SOLDIER, 0, { x: 1, y: 2 });
     formSquad(s, 0, [first]);
     formSquad(s, 0, [second]);
+    const keysAfterLoading = () => deserialize(serialize(s), defaultContent())!.squads!.map((squad) => squad.key);
     for (const squad of s.squads!) delete squad.key;
-    const asFormat3 = () => serialize(s).replace(`"version":${SAVE_VERSION}`, '"version":3');
-    const keysAfterLoading = (json: string) => deserialize(json, saveContext(defaultContent()))!.squads!.map((squad) => squad.key);
-    expect(keysAfterLoading(asFormat3())).toEqual([1, 2]);
+    expect(keysAfterLoading()).toEqual([undefined, undefined]);
     s.squads![0]!.key = 4;
     s.squads![1]!.key = 4;
-    expect(keysAfterLoading(asFormat3())).toEqual([4, 1]);
-    // Desde el formato 4 leer no cambia las escuadras: una tecla repetida se queda sin tecla.
-    expect(keysAfterLoading(serialize(s))).toEqual([4, undefined]);
+    expect(keysAfterLoading()).toEqual([4, undefined]);
   });
 });

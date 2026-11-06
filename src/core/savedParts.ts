@@ -18,7 +18,7 @@ import { Grid, type GridBounds } from './util/grid';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
 /**
- * Una partida guardada tal como llega (ya puesta al dia por MIGRATIONS): cualquier campo puede faltar
+ * Una partida guardada tal como llega (del formato de ahora, SAVE_VERSION): cualquier campo puede faltar
  * o estar roto. Solo despues de comprobarla entera se usa como `GameState`.
  */
 export type SavedGame = { [Field in keyof SavedGameState]?: unknown } & Record<string, unknown>;

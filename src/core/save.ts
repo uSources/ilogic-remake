@@ -3,13 +3,13 @@
  * [CAMBIO] sin comprobacion de "gameid" (el original cerraba el juego si no coincidia)
  * y sin modificar el estado al guardar.
  *
- * Leer es `readSave(json, contexto)`: pone al dia el JSON (MIGRATIONS), lo comprueba parte a parte
+ * Leer es `readSave(json, contenido)`: solo lee partidas del formato de ahora (SAVE_VERSION; mientras
+ * el juego no ha salido, las de antes se descartan, ver saveVersion.ts), las comprueba parte a parte
  * (savedParts.ts) y da la partida o el error que ha encontrado. No toca nada de fuera: ni el contenido
  * ni ninguna otra partida.
  */
 import { savedPart } from './gameContent';
 import { isEntryId, type GameContent } from './content';
-import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations';
 import { fallsMatch } from './rules/falls';
 import { SAVE_VERSION } from './saveVersion';
 import {
@@ -32,17 +32,17 @@ import {
 } from './savedParts';
 import { isGameModeId } from './modes';
 import { isValidRules } from './rulesSchema';
-import { isInt, isObject } from './util/validation';
+import { isObject } from './util/validation';
 import { isRandomState } from './util/random';
 import type { GameState, SavedGameState } from './model';
 
-export type { SaveContext } from './saveMigrations';
 export type { SavedGame } from './savedParts';
 
 /** Por que no se ha podido leer una partida guardada. */
 export type SaveError =
   | 'notJson'
-  | 'unknownVersion'
+  /** No es del formato de ahora (SAVE_VERSION): una de antes, o algo que no es una partida. */
+  | 'badVersion'
   /** Le faltan las listas o las reglas. */
   | 'badShape'
   | 'badMap'
@@ -67,31 +67,22 @@ export function serialize(s: GameState): string {
   return JSON.stringify(savedPart(s));
 }
 
-/**
- * Lee una partida guardada. Lo que no se guarda lo da `context`: el contenido con el que se juega y
- * las reglas de las misiones. Antes de comprobarla le aplica los pasos para partidas antiguas
- * (MIGRATIONS, en saveMigrations.ts).
- */
-export function readSave(json: string, context: SaveContext): ReadSaveResult {
+/** Lee una partida guardada. El contenido con el que se juega no se guarda: lo da quien lee (`content`). */
+export function readSave(json: string, content: GameContent): ReadSaveResult {
   const saved = parseObject(json);
   if (!saved) return { ok: false, error: 'notJson' };
-  const version = saved.version;
-  if (!isInt(version, 1, SAVE_VERSION)) return { ok: false, error: 'unknownVersion' };
-  migrateRead(saved, version, context);
-  saved.version = SAVE_VERSION;
-  const check = checkGame(saved, context.content);
+  if (saved.version !== SAVE_VERSION) return { ok: false, error: 'badVersion' };
+  const check = checkGame(saved, content);
   if (!check.ok) return check;
-  // El contenido es el de quien lee.
-  const state: GameState = { ...cleanGame(saved, check), content: context.content };
-  migrateChecked(state, version, context);
+  const state: GameState = { ...cleanGame(saved, check), content };
   // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
   if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
   return { ok: true, state };
 }
 
 /** Lee una partida guardada (ver readSave): null si no se ha podido. */
-export function deserialize(json: string, context: SaveContext): GameState | null {
-  const result = readSave(json, context);
+export function deserialize(json: string, content: GameContent): GameState | null {
+  const result = readSave(json, content);
   return result.ok ? result.state : null;
 }
 

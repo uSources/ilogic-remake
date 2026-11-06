@@ -1,7 +1,6 @@
 import { expect } from 'vitest';
 import { entryOf, type BuildingType, type TerrainType, type UnitType } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
@@ -31,14 +30,6 @@ import { samePos } from '@core/geom';
 
 /** Lado del mapa de las partidas de prueba (como el original). */
 export const BLANK_SIZE = 32;
-
-/**
- * Una partida guardada que dice ser del formato 1 (`version: 1`): para probar que MIGRATIONS hace con
- * ella lo de entonces (los pasos de los tipos por numero dejan los ids como estan).
- */
-export function savedByVersion1(json: string): string {
-  return json.replace(`"version":${SAVE_VERSION}`, '"version":1');
-}
 
 /**
  * El equipo `team` hace la accion (por dispatch, como en el juego) y tiene que valer: sus sucesos. Si

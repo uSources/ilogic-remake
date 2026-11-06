@@ -2,7 +2,7 @@ import { expect } from 'vitest';
 import { controllersFor } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { seededRng } from '@core/util/random';
-import { createMatch, saveContext } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
@@ -38,7 +38,7 @@ export function aiVsAi(from: number, to: number): void {
       if (!step.events.some((event) => event.kind === 'newDay')) return;
       checkInvariants(s);
       if (s.day % 10 === 0) {
-        const copy = deserialize(serialize(s), saveContext(defaultContent()));
+        const copy = deserialize(serialize(s), defaultContent());
         expect(copy).not.toBeNull();
         expect(serialize(copy!)).toBe(serialize(s));
       }

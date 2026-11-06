@@ -1,6 +1,5 @@
 import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
-import { saveContext } from '@core/defaultGames';
 import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
@@ -49,8 +48,8 @@ describe('contenido de cada partida', () => {
     const variant = expensiveTanks();
     const s = newMatch(variant);
     expect(serialize(s)).not.toContain('tables');
-    expect(deserialize(serialize(s), saveContext(variant))!.content).toBe(variant);
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.content).toBe(defaultContent());
+    expect(deserialize(serialize(s), variant)!.content).toBe(variant);
+    expect(deserialize(serialize(s), defaultContent())!.content).toBe(defaultContent());
     expect(cloneState(s).content).toBe(variant);
   });
 

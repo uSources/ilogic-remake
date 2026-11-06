@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { saveContext } from '@core/defaultGames';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { entryOf, loadContent, validateContent, type Content, type WeatherType } from '@core/content';
@@ -9,8 +8,8 @@ import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
 import { advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { seededRng } from '@core/util/random';
-import type { GameState, RulesConfig } from '@core/model';
-import { blankState, savedByVersion1, unitTypeNamed, endRoundReport } from './helpers';
+import type { GameState } from '@core/model';
+import { blankState, unitTypeNamed, endRoundReport } from './helpers';
 
 const WEATHER = defaultContent().weather;
 const THEMES = defaultContent().themes;
@@ -198,16 +197,9 @@ describe('clima: como cambia', () => {
   it('se guarda con la partida y un clima roto se descarta al cargar', () => {
     const s = withWeather(RAIN);
     s.rules = rulesWith(defaultContent());
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.weather).toEqual(s.weather);
+    expect(deserialize(serialize(s), defaultContent())!.weather).toEqual(s.weather);
     const broken = JSON.parse(serialize(s)) as GameState;
     broken.weather = { kind: 'Meteorites', left: 1, next: CLEAR.id };
-    expect(deserialize(JSON.stringify(broken), saveContext(defaultContent()))!.weather).toBeUndefined();
-  });
-
-  it('las partidas guardadas sin la regla se siguen jugando sin clima', () => {
-    const s = blankState();
-    const { weather: _, ...old } = defaultContent().defaultRules;
-    s.rules = old as RulesConfig;
-    expect(deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!.rules.weather).toBe(false);
+    expect(deserialize(JSON.stringify(broken), defaultContent())!.weather).toBeUndefined();
   });
 });
