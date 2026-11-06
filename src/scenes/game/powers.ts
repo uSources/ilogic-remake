@@ -3,7 +3,8 @@
  * 'target'); el resto se usan ya. La animacion esta en playback.ts (evento 'power').
  */
 import { mapGrid } from '../../core/mapGrid';
-import { powerArea, powerBlock, powerOf, generalOf } from '../../core/generals';
+import { generalOf } from '../../core/generals';
+import { powerArea, powerBlock, powerOf } from '../../core/generalPowers';
 import { posOf, squareArea } from '../../core/geom';
 import type { GameEvent, GameState, Pos, TeamId } from '../../core/model';
 import { showToast } from '../../hud/store';

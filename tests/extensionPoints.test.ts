@@ -51,7 +51,7 @@ describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () =>
     const fight = engagement(attacker, defender);
     const ids = hitModifiersOf(s).map((modifier) => modifier.id);
     expect(ids.slice(0, HIT_MODIFIERS.length)).toEqual(['power', 'cover']);
-    expect(ids).toEqual(expect.arrayContaining(['abilities', 'veterancy', 'flank', 'generals', 'weather']));
+    expect(ids).toEqual(['power', 'cover', 'guard', 'aura', 'veterancy', 'flank', 'generals', 'weather']);
     let chance = power(fighterType, defenderType) * tileProtection(s, defender);
     for (const modifier of hooksOf(s, 'hitModifiers')) chance *= modifier.factor(s, fight);
     expect(hitChance(s, fight)).toBe(chance);

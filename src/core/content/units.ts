@@ -1,7 +1,8 @@
 /** Unidades (units.json): validacion y su tipo resuelto (`UnitType`). */
 import type { DeepReadonly } from '../util/freeze';
 import { type Checker, type Scope, checkSprites } from './check';
-import { ABILITY_KINDS, MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type Texts, type UnitDef } from './types';
+import { ABILITY_KINDS, validateAbilityShape } from './abilities';
+import { MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type Texts, type UnitDef } from './types';
 
 const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
 
@@ -70,36 +71,7 @@ function validateAbilities(scope: Scope, list: unknown, unit: UnitDef): void {
     if (!scope.known(`${field}.kind`, ability?.kind, ABILITY_KINDS, 'la habilidad ')) continue;
     scope.expect(!seen.has(ability.kind), `${field}: la habilidad "${ability.kind}" esta repetida`);
     seen.add(ability.kind);
-    validateAbility(scope, field, ability, unit);
-  }
-}
-
-/** Los numeros de cada clase de habilidad. */
-function validateAbility(scope: Scope, field: string, ability: AbilityDef, unit: UnitDef): void {
-  switch (ability.kind) {
-    case 'guard':
-      scope.num(`${field}.factor`, ability.factor, { min: 0, max: 1 });
-      break;
-    case 'zoneOfControl':
-      if (scope.expect(Array.isArray(ability.stops) && ability.stops.length > 0, `${field}.stops tiene que ser una lista de movimientos`))
-        for (const movement of ability.stops) scope.known(`${field}.stops`, movement, MOVEMENTS, 'el movimiento ');
-      break;
-    case 'aura':
-      scope.num(`${field}.radius`, ability.radius, { min: 1, max: 5, int: true });
-      scope.num(`${field}.defense`, ability.defense, { min: 0, max: 1 });
-      break;
-    case 'piercing':
-      scope.num(`${field}.ignoreCover`, ability.ignoreCover, { min: 0, max: 1 });
-      scope.expect(unit.attack !== null, `${field}: piercing en una unidad que no ataca`);
-      break;
-    case 'scout':
-      break;
-    case 'quickCapture':
-      scope.num(`${field}.factor`, ability.factor, { min: 1, max: 5 });
-      scope.expect(unit.captures, `${field}: quickCapture en una unidad que no captura`);
-      break;
-    default:
-      break;
+    validateAbilityShape(scope, field, ability, unit);
   }
 }
 

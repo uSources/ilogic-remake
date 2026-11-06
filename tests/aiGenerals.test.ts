@@ -1,6 +1,7 @@
 import { dispatch } from '@core/actions';
 import { describe, expect, it } from 'vitest';
-import { aiGeneral, bestAreaTarget, choosePower } from '@core/aiGenerals';
+import { aiGeneral, choosePower } from '@core/aiGenerals';
+import { bestAreaTarget } from '@core/generalPowers';
 import { playCtx } from '@core/autopilot/context';
 import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
@@ -29,7 +30,7 @@ describe('la IA usa a su general', () => {
     newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     newUnit(s, unitType('Tank'), 0, { x: 14, y: 14 });
     newUnit(s, unitType('Tank'), 0, { x: 15, y: 15 });
-    const best = bestAreaTarget(s, 1, 1, 30, 10)!;
+    const best = bestAreaTarget(s, 1, { kind: 'areaDamage', radius: 1, damage: 30, minLife: 10 })!;
     expect(best.value).toBeGreaterThan(7000);
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
     const choice = choosePower(s, 1)!;
@@ -60,7 +61,7 @@ describe('la IA usa a su general', () => {
     const s = aiBrisa(5, true);
     newUnit(s, unitType('Tank'), 0, { x: 25, y: 25 }); // lejos, en la niebla
     newUnit(s, unitType('Tank'), 0, { x: 26, y: 25 });
-    expect(bestAreaTarget(s, 1, 1, 30, 10)).toBeNull();
+    expect(bestAreaTarget(s, 1, { kind: 'areaDamage', radius: 1, damage: 30, minLife: 10 })).toBeNull();
   });
 
   it('sin general, o ya usada este turno, no hace nada', () => {

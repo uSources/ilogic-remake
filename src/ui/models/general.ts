@@ -1,4 +1,5 @@
-import { powerBlock, chargeStars, generalOf, type PowerBlock } from '../../core/generals';
+import { chargeStars, generalOf } from '../../core/generals';
+import { powerBlock, type PowerBlock } from '../../core/generalPowers';
 import type { GameState, TeamId } from '../../core/model';
 import type { GeneralVM } from '../../hud/store';
 import { sideLetter, sideOf } from '../sides';

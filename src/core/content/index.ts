@@ -40,6 +40,7 @@ export type { MapgenDef, MapgenSettings } from './mapgen';
 export type { TerrainType } from './terrain';
 export type { TerrainChance, Theme, ThemeDef, ThemeGenerator } from './themes';
 export type { UnitAttack, UnitType } from './units';
+export { ABILITY_KINDS, ABILITY_SHAPES } from './abilities';
 export type { WeatherDef, WeatherType } from './weather';
 export type { GeneralPowerDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';
 

@@ -1,17 +1,21 @@
-/** [CAMBIO] Las habilidades de las unidades (ajuste `abilities`; core/abilities.ts) se enchufan a las reglas desde aqui. */
-import { captureFactor, defenseFactor, piercingOf, seesIntoCover, zoneOfControlTiles } from '../abilities';
+/**
+ * [CAMBIO] Las habilidades de las unidades (ajuste `abilities`): lo que aporta cada clase
+ * (ABILITY_EFFECTS, core/abilities.ts), todo junto, si la partida las tiene.
+ */
+import { ABILITY_EFFECTS } from '../abilities';
+import { ABILITY_KINDS, type AbilityDef, type UnitType } from '../content';
+import type { GameState } from '../model';
+import type { DeepReadonly } from '../util/freeze';
 import type { RuleModule } from './hooks';
+import { mergeHooks } from './mergeHooks';
 
 export const ABILITIES: RuleModule = {
   id: 'abilities',
   isOn: (settings) => settings.abilities,
-  hooks: {
-    // Escudo del defensor contra disparos a distancia y aura de sus aliados: hacen fuertes a los grupos.
-    hitModifiers: [{ id: 'abilities', factor: defenseFactor }],
-    coverPiercing: [{ id: 'piercing', ignoredCover: piercingOf }],
-    coverSight: [{ id: 'scout', seesIntoCover }],
-    captureFactors: [{ id: 'quickCapture', factor: captureFactor }],
-    // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
-    stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }],
-  },
+  hooks: mergeHooks(ABILITY_KINDS.map((kind) => ABILITY_EFFECTS[kind])),
 };
+
+/** Las habilidades de un tipo de unidad que cuentan en esta partida (para enseñarlas). */
+export function abilitiesOf(s: GameState, unitType: UnitType): readonly DeepReadonly<AbilityDef>[] {
+  return ABILITIES.isOn(s.rules) ? unitType.abilities : [];
+}

@@ -135,6 +135,7 @@ export type {
 } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './ruleModules/veterancy';
 export { flanked } from './ruleModules/flank';
+export { abilitiesOf } from './ruleModules/abilities';
 export { bountyFor } from './ruleModules/bounty';
 export { MELEE_COUNTER } from './ruleModules/counterattack';
 export { inAttackRange, canDamage, basePower } from './rules/weapons';

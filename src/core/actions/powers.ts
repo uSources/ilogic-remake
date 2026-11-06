@@ -1,5 +1,5 @@
 /** La accion de usar un poder del general del equipo. */
-import { applyPower, powerBlock } from '../generals';
+import { applyPower, powerBlock } from '../generalPowers';
 import { isOnBoard } from '../mapGrid';
 import type { ActionRegistry } from './types';
 

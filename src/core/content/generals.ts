@@ -3,7 +3,7 @@
  * llena con el combate y poderes que la gastan. Las reglas estan en core/generals.ts; aqui solo
  * la forma de los datos y su validacion. Ver docs/CONTENIDO.md, "Generales".
  */
-import { type Checker } from './check';
+import { type Checker, type Scope } from './check';
 import { MOVEMENTS, type MoveType, type Texts } from './types';
 
 /** A que unidades afecta una ventaja o un efecto: por tipo de movimiento y/o por id (sin nada = a todas). */
@@ -56,6 +56,44 @@ export interface GeneralDef {
   notes?: string;
 }
 
+/** Un efecto de esa clase, tal como viene del JSON. */
+type EffectOfKind<K extends GeneralEffect['kind']> = Extract<GeneralEffect, { kind: K }>;
+
+/** Comprueba los numeros de un efecto de esa clase. */
+type EffectShapeCheck<K extends GeneralEffect['kind']> = (scope: Scope, effect: EffectOfKind<K>, unitIds: ReadonlySet<string>) => void;
+
+/**
+ * La validacion de cada clase de efecto de un poder. Lo que hace cada una en la partida (y lo que le
+ * vale a la IA) esta en core/generalPowers.ts (`POWER_EFFECTS`), con las mismas claves: una clase
+ * nueva es su forma en `GeneralEffect`, su entrada aqui y la suya alli.
+ */
+export const EFFECT_SHAPES: { readonly [K in GeneralEffect['kind']]: EffectShapeCheck<K> } = {
+  reveal: () => {},
+  areaDamage: (scope, effect) => {
+    scope.num('effect.radius', effect.radius, { min: 0, max: 5, int: true });
+    scope.num('effect.damage', effect.damage, { min: 1, max: 100, int: true });
+    scope.num('effect.minLife', effect.minLife, { min: 1, max: 99, int: true });
+  },
+  heal: (scope, effect, unitIds) => {
+    scope.num('effect.amount', effect.amount, { min: 1, max: 100, int: true });
+    for (const movement of effect.movement ?? []) scope.known('effect.movement', movement, MOVEMENTS);
+    for (const unit of effect.units ?? []) scope.known('effect.units', unit, unitIds);
+  },
+  funds: (scope, effect) => {
+    scope.num('effect.amount', effect.amount, { min: 100, max: 100000, int: true });
+  },
+};
+
+/** Las clases de efecto que entiende el juego (las de EFFECT_SHAPES, en su orden). */
+export const GENERAL_EFFECT_KINDS = Object.keys(EFFECT_SHAPES) as readonly GeneralEffect['kind'][];
+
+/** Comprueba el efecto de un poder: una clase que existe, con los numeros de su clase. */
+function validateEffect(scope: Scope, effect: GeneralEffect | undefined, unitIds: ReadonlySet<string>): void {
+  if (!scope.known('effect.kind', effect?.kind, GENERAL_EFFECT_KINDS, 'la clase de efecto ') || !effect) return;
+  // TypeScript no sabe que la entrada de cada clase recibe un efecto de esa misma clase.
+  (EFFECT_SHAPES[effect.kind] as EffectShapeCheck<typeof effect.kind>)(scope, effect, unitIds);
+}
+
 export function validateGenerals(list: readonly GeneralDef[], unitIds: ReadonlySet<string>, check: Checker): void {
   const top = check.scope('generals.json');
   if (!top.expect(Array.isArray(list), 'tiene que tener una lista "generals"')) return;
@@ -89,18 +127,7 @@ export function validateGenerals(list: readonly GeneralDef[], unitIds: ReadonlyS
         sa.texts('name', a?.name);
         sa.texts('description', a?.description);
         sa.num('cost', a?.cost, { min: 1, max: g?.charge?.max ?? 20, int: true });
-        const e = a?.effect;
-        if (e?.kind === 'areaDamage') {
-          sa.num('effect.radius', e.radius, { min: 0, max: 5, int: true });
-          sa.num('effect.damage', e.damage, { min: 1, max: 100, int: true });
-          sa.num('effect.minLife', e.minLife, { min: 1, max: 99, int: true });
-        } else if (e?.kind === 'heal') {
-          sa.num('effect.amount', e.amount, { min: 1, max: 100, int: true });
-          for (const mv of e.movement ?? []) sa.known('effect.movement', mv, MOVEMENTS);
-          for (const u of e.units ?? []) sa.known('effect.units', u, unitIds);
-        } else if (e?.kind === 'funds') {
-          sa.num('effect.amount', e.amount, { min: 100, max: 100000, int: true });
-        } else sa.expect(e?.kind === 'reveal', `effect.kind "${String(e?.kind)}" no existe (reveal, areaDamage, heal, funds)`);
+        validateEffect(sa, a?.effect, unitIds);
       }
   });
 }

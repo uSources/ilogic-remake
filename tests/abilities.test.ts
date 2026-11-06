@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { abilitiesOf, abilityOf, auraFactor } from '@core/abilities';
+import { ABILITY_EFFECTS, abilityOf, auraFactor } from '@core/abilities';
 import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
+import { ABILITY_KINDS, ABILITY_SHAPES, MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import {
   mergeProblem,
@@ -16,6 +16,8 @@ import {
   visibility,
   engagement,
   fighterOf,
+  hooksOf,
+  abilitiesOf,
 } from '@core/rules';
 import { dispatch } from '@core/actions';
 import { settings } from '../src/settings';
@@ -74,11 +76,21 @@ describe('habilidades: contenido', () => {
     expect(unitWith(files, [{ kind: 'piercing', ignoreCover: 1 }]).join()).toContain('no ataca');
   });
 
+  it('cada clase tiene su validacion y lo que aporta, con las mismas claves, y el modulo lo junta todo', () => {
+    expect(Object.keys(ABILITY_EFFECTS)).toEqual([...ABILITY_KINDS]);
+    expect(Object.keys(ABILITY_SHAPES)).toEqual([...ABILITY_KINDS]);
+    const s = blankState(TEST_RULES);
+    expect(hooksOf(s, 'hitModifiers').map((modifier) => modifier.id)).toEqual(expect.arrayContaining(['guard', 'aura']));
+    expect(hooksOf(s, 'stopRules').map((rule) => rule.id)).toEqual(['zoneOfControl']);
+    expect(hooksOf(s, 'coverPiercing').map((rule) => rule.id)).toEqual(['piercing']);
+  });
+
   it('con la regla apagada no cuenta ninguna', () => {
     const s = blankState({ ...TEST_RULES, abilities: false });
     const guardType = withAbility('guard');
-    expect(abilityOf(s, guardType, 'guard')).toBeUndefined();
+    expect(abilityOf(guardType, 'guard')).toBeDefined(); // la tiene, pero la partida no lleva el modulo
     expect(abilitiesOf(s, guardType)).toEqual([]);
+    expect(hooksOf(s, 'stopRules')).toEqual([]);
   });
 });
 
@@ -86,7 +98,7 @@ describe('habilidades: escudo (guard)', () => {
   it('los ataques a distancia aciertan menos; los de cuerpo a cuerpo igual', () => {
     const s = blankState(TEST_RULES);
     const guardType = withAbility('guard');
-    const factor = abilityOf(s, guardType, 'guard')!.factor;
+    const factor = abilityOf(guardType, 'guard')!.factor;
     const rangedType = plain((type) => ranged(type) && power(type, guardType) > 0);
     const meleeType = plain((type) => melee(type) && power(type, guardType) > 0);
     const defender = newUnit(s, guardType, 1, { x: 10, y: 10 });
@@ -147,7 +159,7 @@ describe('habilidades: zona de control', () => {
 
   it('no para a los movimientos que no estan en stops (aviones)', () => {
     const s = blankState(TEST_RULES);
-    expect(abilityOf(s, zoneType, 'zoneOfControl')!.stops).not.toContain('air');
+    expect(abilityOf(zoneType, 'zoneOfControl')!.stops).not.toContain('air');
     newUnit(s, zoneType, 1, { x: 10, y: 10 });
     const unit = newUnit(s, PLANE, 0, { x: 10, y: 13 });
     expect(moveRange(s, unit).steps.at({ x: 11, y: 10 })).toBeGreaterThan(0);
@@ -196,7 +208,7 @@ describe('habilidades: perforante (piercing)', () => {
   it('ignora la proteccion del bosque', () => {
     const s = blankState(TEST_RULES);
     const piercingType = withAbility('piercing');
-    const ignore = abilityOf(s, piercingType, 'piercing')!.ignoreCover;
+    const ignore = abilityOf(piercingType, 'piercing')!.ignoreCover;
     const target = plain((type) => power(piercingType, type) > 0 && canMoveOn(type.movement, terrainNamed('Woods')));
     const other = plain((type) => melee(type) && power(type, target) > 0);
     s.map[10]![10] = WOODS;
@@ -214,7 +226,7 @@ describe('habilidades: interfaz', () => {
   it('nombre y explicacion con sus numeros, en los dos idiomas', () => {
     const s = blankState(TEST_RULES);
     const guardType = withAbility('guard');
-    const pct = Math.round((1 - abilityOf(s, guardType, 'guard')!.factor) * 100);
+    const pct = Math.round((1 - abilityOf(guardType, 'guard')!.factor) * 100);
     expect(abilitiesVM(s, guardType)).toEqual([{ name: 'Escudo', desc: `Los ataques a distancia le aciertan un ${pct} % menos.` }]);
     settings.lang = 'en';
     expect(abilitiesVM(s, withAbility('zoneOfControl'))[0]!.desc).toContain('foot, vehicles');
@@ -238,7 +250,7 @@ describe('habilidades: captura rapida (quickCapture)', () => {
   it('resta un 50 % mas al capturar que una unidad igual sin la habilidad', () => {
     const s = blankState(TEST_RULES);
     const fast = newUnit(s, withAbility('quickCapture'), 0, { x: 5, y: 5 });
-    const factor = (abilityOf(s, unitTypeOf(s, fast), 'quickCapture') as { factor: number }).factor;
+    const factor = (abilityOf(unitTypeOf(s, fast), 'quickCapture') as { factor: number }).factor;
     expect(captureStrength(s, fast)).toBe(Math.ceil(10 * factor));
     fast.life = 40;
     expect(captureStrength(s, fast)).toBe(Math.ceil(4 * factor));

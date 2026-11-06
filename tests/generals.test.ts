@@ -4,7 +4,9 @@ import { readContentFiles, validateContent } from '@core/content';
 import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
-import { powerBlock, chargeStars, generalHitFactor, appointGeneral } from '@core/generals';
+import { chargeStars, generalHitFactor, appointGeneral } from '@core/generals';
+import { POWER_EFFECTS, powerBlock } from '@core/generalPowers';
+import { EFFECT_SHAPES, GENERAL_EFFECT_KINDS } from '@core/content/generals';
 import { seededRng } from '@core/util/random';
 import { endRound, hitChance, newUnit, visibility, engagement } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -23,6 +25,12 @@ function withBrisa(): GameState {
 const TEST_RULES = rulesWith(defaultContent(), { fog: true, weather: false });
 
 describe('generales: datos', () => {
+  it('cada clase de efecto tiene su validacion y lo que hace y vale, con las mismas claves', () => {
+    expect(Object.keys(POWER_EFFECTS)).toEqual([...GENERAL_EFFECT_KINDS]);
+    expect(Object.keys(EFFECT_SHAPES)).toEqual([...GENERAL_EFFECT_KINDS]);
+    expect(GENERAL_EFFECT_KINDS.filter((kind) => POWER_EFFECTS[kind].needsTarget)).toEqual(['areaDamage']);
+  });
+
   it('generals.json es valido y Brisa existe', () => {
     expect(validateContent(readContentFiles())).toEqual([]);
     expect(defaultContent().files.generals.map((general) => general.id)).toContain('Brisa');
@@ -37,7 +45,7 @@ describe('generales: datos', () => {
     const errors = validateContent(files);
     expect(errors).toContain('general Brisa: passive.attack.units nombra "Dragon", que no existe');
     expect(errors.some((error) => error.includes('poder recon: cost'))).toBe(true);
-    expect(errors.some((error) => error.includes('effect.kind "nuke" no existe'))).toBe(true);
+    expect(errors.some((error) => error.includes('effect.kind nombra la clase de efecto "nuke", que no existe'))).toBe(true);
   });
 });
 

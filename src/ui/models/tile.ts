@@ -1,5 +1,4 @@
 import type Phaser from 'phaser';
-import { abilitiesOf } from '../../core/abilities';
 import { MoveType, type AbilityDef, type UnitAttack, type UnitType } from '../../core/content';
 import type { DeepReadonly } from '../../core/util/freeze';
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../../core/gameContent';
@@ -18,6 +17,7 @@ import {
   unhealable,
   tileProtection,
   unitAt,
+  abilitiesOf,
 } from '../../core/rules';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';

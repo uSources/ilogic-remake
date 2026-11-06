@@ -1,77 +1,51 @@
 /**
- * [CAMBIO] Habilidades de las unidades (regla abilities; no estaban en el juego de 2013).
+ * [CAMBIO] Habilidades de las unidades (ajuste `abilities`; no estaban en el juego de 2013).
  *
  * Son pasivas y salen de units.json ("abilities"): el codigo no sabe que unidad tiene cual, solo
- * que hace cada clase (ver AbilityDef en content/types.ts y docs/CONTENIDO.md). Las reglas
- * (hitChance, moveRange, validPath, visibility, captureStrength) llaman a estas funciones; la IA y la
- * prevision de combate las usan sin saberlo porque pasan por las mismas reglas.
+ * que hace cada clase. Lo que hace cada clase es lo que aporta a las listas de las reglas
+ * (`ABILITY_EFFECTS`: el acierto, la proteccion, por donde se pasa, la vision, la captura), y el
+ * modulo de reglas de las habilidades (ruleModules/abilities.ts) lo enchufa todo si la partida las
+ * tiene. La IA y la prevision de combate las ven sin saberlo porque pasan por las mismas reglas.
  *
- * Una clase de habilidad nueva: su forma en AbilityDef (content/types.ts) y su efecto aqui, como
- * funcion que pregunta la regla que toca. Las reglas no leen `abilityOf` directamente.
+ * Una clase de habilidad nueva: su forma en AbilityDef (content/types.ts), su validacion en
+ * ABILITY_SHAPES (content/abilities.ts) y lo que aporta en ABILITY_EFFECTS, aqui.
  *
- * Este modulo no importa rules/ (las reglas lo importan a el).
+ * Este modulo no importa rules/ salvo tipos (las reglas no lo importan: lo enchufa su modulo).
  */
 import { unitTypeOf } from './gameContent';
-import type { AbilityDef, UnitType } from './content';
+import type { AbilityDef, AbilityKind, UnitType } from './content';
 import type { DeepReadonly } from './util/freeze';
 import { manhattan, neighbors4 } from './geom';
 import { mapGrid } from './mapGrid';
 import { isAlive, areEnemies, isOnMap, isRanged } from './util/predicates';
 import type { GameState, Pos, Unit } from './model';
 import type { Engagement, Fighter } from './rules/engagement';
+import type { RuleHooks } from './ruleModules/hooks';
 
-type AbilityOf<K extends AbilityDef['kind']> = DeepReadonly<Extract<AbilityDef, { kind: K }>>;
+type AbilityOf<K extends AbilityKind> = DeepReadonly<Extract<AbilityDef, { kind: K }>>;
 /** Una unidad, o lo que se sabe de su tipo (una prevision, un evento). */
 type OfType = Pick<Unit, 'type'>;
 
-/** Habilidad `kind` de un tipo de unidad, si la tiene y la regla esta activa. */
-export function abilityOf<K extends AbilityDef['kind']>(s: GameState, unitType: UnitType, kind: K): AbilityOf<K> | undefined {
-  if (!s.rules.abilities) return undefined;
+/** Habilidad `kind` de un tipo de unidad, si la tiene (que cuente lo dice el modulo de reglas). */
+export function abilityOf<K extends AbilityKind>(unitType: UnitType, kind: K): AbilityOf<K> | undefined {
   return unitType.abilities.find((ability): ability is AbilityOf<K> => ability.kind === kind);
 }
 
-/** Habilidad `kind` del tipo de una unidad, si la tiene y la regla esta activa. */
-const abilityOfUnit = <K extends AbilityDef['kind']>(s: GameState, unit: OfType, kind: K): AbilityOf<K> | undefined =>
-  abilityOf(s, unitTypeOf(s, unit), kind);
-
-/** Habilidades de un tipo de unidad que cuentan con las reglas de la partida (para enseñarlas). */
-export function abilitiesOf(s: GameState, unitType: UnitType): readonly DeepReadonly<AbilityDef>[] {
-  return s.rules.abilities ? unitType.abilities : [];
-}
-
-/** Ve dentro del terreno que esconde (bosque) en todo su radio de vision (scout). */
-export function seesIntoCover(s: GameState, unit: OfType): boolean {
-  return !!abilityOfUnit(s, unit, 'scout');
-}
-
-/** Multiplicador de lo que resta al capturar (quickCapture). 1 = nada. */
-export function captureFactor(s: GameState, unit: OfType): number {
-  return abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1;
-}
-
-/** La parte (0..1) de la proteccion del objetivo que ignora `attacker` (piercing; 0 = nada). */
-export function piercingOf(s: GameState, attacker: OfType): number {
-  return abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0;
-}
-
-/**
- * Multiplicador del acierto de `attacker` contra `defender` por las habilidades del defensor y de
- * sus aliados (guard, aura). 1 = nada.
- */
-export function defenseFactor(s: GameState, { attacker, defender }: Engagement): number {
-  let factor = 1;
-  const guard = abilityOfUnit(s, defender.unit, 'guard');
-  if (guard && isRanged(s, attacker.unit)) factor *= guard.factor;
-  factor *= auraFactor(s, defender);
-  return factor;
-}
+/** Habilidad `kind` del tipo de una unidad, si la tiene. */
+const abilityOfUnit = <K extends AbilityKind>(s: GameState, unit: OfType, kind: K): AbilityOf<K> | undefined =>
+  abilityOf(unitTypeOf(s, unit), kind);
 
 /** Puede dar o sufrir efectos de habilidades de otras unidades: en el mapa y con vida. */
 const isFieldUnit = (unit: Unit): boolean => isOnMap(unit) && isAlive(unit);
 
+/** Escudo: los ataques a distancia contra quien lo tiene aciertan `factor` veces. 1 = nada. */
+function guardFactor(s: GameState, { attacker, defender }: Engagement): number {
+  const guard = abilityOfUnit(s, defender.unit, 'guard');
+  return guard && isRanged(s, attacker.unit) ? guard.factor : 1;
+}
+
 /** Mejor aura de las unidades propias cercanas a `defender` (1 si no hay ninguna). */
 export function auraFactor(s: GameState, defender: Fighter): number {
-  if (!s.rules.abilities) return 1;
   let best = 1;
   for (const ally of s.units) {
     if (ally.uid === defender.unit.uid || areEnemies(s, ally, defender.unit) || !isFieldUnit(ally)) continue;
@@ -85,8 +59,29 @@ export function auraFactor(s: GameState, defender: Fighter): number {
  * Casillas en las que `mover` se tiene que parar (zoneOfControl de los enemigos de los que sabe,
  * `noticedFoes`): las de al lado de un enemigo con la habilidad que para a su tipo de movimiento.
  */
-export function zoneOfControlTiles(s: GameState, mover: Unit, noticedFoes: readonly Unit[]): Pos[] {
+function zoneOfControlTiles(s: GameState, mover: Unit, noticedFoes: readonly Unit[]): Pos[] {
   const movement = unitTypeOf(s, mover).movement;
   const stopsMover = (enemy: Unit) => isFieldUnit(enemy) && !!abilityOfUnit(s, enemy, 'zoneOfControl')?.stops.includes(movement);
   return noticedFoes.filter(stopsMover).flatMap((enemy) => neighbors4(mapGrid(s), enemy));
 }
+
+/**
+ * Lo que aporta cada clase de habilidad a las listas de las reglas (ver AbilityDef). El orden es el
+ * de ABILITY_KINDS: en el acierto, el escudo multiplica antes que el aura.
+ */
+export const ABILITY_EFFECTS: { readonly [K in AbilityKind]: RuleHooks } = {
+  // Escudo contra los disparos a distancia: hace fuertes a los grupos con quien lo lleva delante.
+  guard: { hitModifiers: [{ id: 'guard', factor: guardFactor }] },
+  // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
+  zoneOfControl: { stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }] },
+  // A las propias de alrededor les aciertan menos (cuenta la mejor).
+  aura: { hitModifiers: [{ id: 'aura', factor: (s, fight) => auraFactor(s, fight.defender) }] },
+  // Ignora parte de la proteccion del objetivo.
+  piercing: {
+    coverPiercing: [{ id: 'piercing', ignoredCover: (s, attacker) => abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0 }],
+  },
+  // Ve dentro del terreno que esconde (bosque) en todo su radio de vision.
+  scout: { coverSight: [{ id: 'scout', seesIntoCover: (s, unit) => !!abilityOfUnit(s, unit, 'scout') }] },
+  // Resta mas al capturar.
+  quickCapture: { captureFactors: [{ id: 'quickCapture', factor: (s, unit) => abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1 }] },
+};
