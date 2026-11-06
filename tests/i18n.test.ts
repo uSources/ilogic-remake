@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { HELP_TEXTS, TEXTS, TEXTS_BY_FEATURE } from '../src/i18n';
 import { defaultContent } from '@core/content/default';
+import { settingsWith } from '@core/matchSettings';
+import { ruleFactsFor } from '../src/hud/helpText';
 
 describe('textos por tema', () => {
   it('ninguna clave se repite entre temas (si no, un tema taparia el texto de otro en t())', () => {
@@ -27,8 +29,18 @@ describe('ayuda', () => {
     expect(en.colors.map(([color]) => color)).toEqual(es.colors.map(([color]) => color));
     expect(en.goalBasics.length).toBe(es.goalBasics.length);
     const ruleLineIsShown = (lines: string[]) => lines.map((line) => line !== '');
-    expect(ruleLineIsShown(en.ruleLines(defaultContent().defaultSettings))).toEqual(
-      ruleLineIsShown(es.ruleLines(defaultContent().defaultSettings)),
-    );
+    const facts = ruleFactsFor(defaultContent().defaultSettings);
+    expect(ruleLineIsShown(en.ruleLines(facts))).toEqual(ruleLineIsShown(es.ruleLines(facts)));
+  });
+
+  it('las frases de un modulo salen si la partida lo lleva (lo dice el modulo, no la ayuda)', () => {
+    const { es } = HELP_TEXTS;
+    const lines = (changes: Parameters<typeof settingsWith>[1]) => es.ruleLines(ruleFactsFor(settingsWith(defaultContent(), changes)));
+    const weatherLine = (text: string[]) => text.some((line) => line.startsWith('Clima'));
+    expect(weatherLine(lines({ weather: true }))).toBe(true);
+    expect(weatherLine(lines({ weather: false }))).toBe(false);
+    const ambushLine = (text: string[]) => text.some((line) => line.includes('emboscada'));
+    expect(ambushLine(lines({ ambush: true, fog: true }))).toBe(true);
+    expect(ambushLine(lines({ ambush: true, fog: false }))).toBe(false);
   });
 });

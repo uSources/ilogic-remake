@@ -107,7 +107,7 @@ export {
   canCounter,
   HIT_MODIFIERS,
 } from './rules/combat';
-export { RULE_MODULES, rulesetFor } from './ruleModules/registry';
+export { RULE_MODULES, rulesetFor, isModuleOn } from './ruleModules/registry';
 export { isRuleOn, hooksOf, damageModelOf, resolveRuleset, type Ruleset, type HookOf } from './ruleModules/ruleset';
 export type {
   CombatStage,

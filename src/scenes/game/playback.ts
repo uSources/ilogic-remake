@@ -202,7 +202,8 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (es de su
   // mismo equipo y, al unirse, de su mismo tipo). Si tampoco esta, no se anima.
   const drawn = mover ?? unitEntered(s, event);
-  return drawn ? unitKey(stage.scene.textures, s, { ...drawn, x: start.x, y: start.y, turnState: 'ready' }, stage.viewer) : null;
+  // Dibujada en la casilla de salida (su terreno decide el dibujo clasico) y activa, como al empezar a moverse.
+  return drawn ? unitKey(stage.scene.textures, s, { ...drawn, x: start.x, y: start.y }, stage.viewer, true) : null;
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {

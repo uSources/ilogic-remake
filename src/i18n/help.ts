@@ -1,5 +1,6 @@
 /** Forma de la ayuda ("Cómo se juega") y piezas para escribir sus frases en cada idioma. */
 import type { MatchSettings } from '../core/model';
+import type { RuleModuleId } from '../core/rules';
 
 /** Un color del mapa y lo que quiere decir. */
 export type MapColor = readonly [color: string, meaning: string];
@@ -7,13 +8,19 @@ export type MapColor = readonly [color: string, meaning: string];
 /** Una fila de la tabla de controles. */
 export type ControlRow = readonly [action: string, keyboard: string, pointerOrTouch: string];
 
+/** Lo que la ayuda sabe de la partida: sus ajustes (las cifras) y que modulos de reglas lleva (que frases salen). */
+export interface RuleFacts {
+  readonly settings: Readonly<MatchSettings>;
+  readonly on: (module: RuleModuleId) => boolean;
+}
+
 export interface HelpTexts {
   title: string;
   goalTitle: string;
   /** El objetivo sale asi: esta frase, luego las de `ruleLines` y al final `goalBasics`. */
   goalIntro: string;
-  /** Frases que dependen de las reglas de la partida; "" si esa regla no esta activa (no sale). */
-  ruleLines: (settings: MatchSettings) => string[];
+  /** Frases que dependen de las reglas de la partida; "" si ese modulo no esta puesto (no sale). */
+  ruleLines: (facts: RuleFacts) => string[];
   goalBasics: string[];
   colorsTitle: string;
   colors: MapColor[];

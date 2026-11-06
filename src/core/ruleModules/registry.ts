@@ -14,7 +14,7 @@ import { COUNTERATTACK } from './counterattack';
 import { FLANK } from './flank';
 import { FOREST_HIDES } from './forestHides';
 import { GENERALS } from './generals';
-import type { RuleModule } from './hooks';
+import type { RuleModule, RuleModuleId } from './hooks';
 import { resolveRuleset, type Ruleset } from './ruleset';
 import { NO_FOG } from './noFog';
 import { NO_HEAL_UNDER_FIRE } from './noHealUnderFire';
@@ -54,3 +54,10 @@ export const RULE_MODULES: readonly RuleModule[] = [
 export function rulesetFor(match: { readonly mode: GameModeId }, settings: Readonly<MatchSettings>): Ruleset {
   return resolveRuleset([...RULE_MODULES, ...(gameModeOf(match).ruleModules ?? [])], settings);
 }
+
+/**
+ * El modulo `id` del juego va con estos ajustes (lo que no tiene partida, como la ayuda; con
+ * partida, isRuleOn, que sabe tambien de los modulos de su modo).
+ */
+export const isModuleOn = (settings: Readonly<MatchSettings>, id: RuleModuleId): boolean =>
+  RULE_MODULES.some((module) => module.id === id && module.isOn(settings));

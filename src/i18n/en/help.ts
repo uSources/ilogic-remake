@@ -1,65 +1,62 @@
-import type { MatchSettings } from '../../core/model';
-import { controlZoneSide, joinSentences, percent, type HelpTexts } from '../help';
+import { controlZoneSide, joinSentences, percent, type HelpTexts, type RuleFacts } from '../help';
 
-const capture = (settings: MatchSettings) =>
+const capture = ({ settings }: RuleFacts) =>
   `Capturing takes points: a building has ${settings.capturePoints} (the HQ ${settings.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`;
 
-const counterattack = (settings: MatchSettings) =>
-  settings.counterattack
+const counterattack = ({ on }: RuleFacts) =>
+  on('counterattack')
     ? 'When you attack, a defender that survives and can reach you strikes back with the HP it has left. Ranged units neither counter nor get countered.'
     : 'There is no counterattack: striking first is free.';
 
-const veterancy = (settings: MatchSettings) =>
-  settings.veterancy
+const veterancy = ({ settings, on }: RuleFacts) =>
+  on('veterancy')
     ? `Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +${percent(settings.vetBonus)} % hit chance and defence, so a damaged veteran is worth healing rather than replacing. Joining two units keeps the more veteran one.`
     : '';
 
-const attackBonuses = (settings: MatchSettings) =>
+const attackBonuses = ({ settings, on }: RuleFacts) =>
   joinSentences(
-    settings.bounty > 0 ? `Bounty: destroying a unit pays you ${percent(settings.bounty)} % of its price.` : '',
-    settings.flankBonus > 0
+    on('bounty') ? `Bounty: destroying a unit pays you ${percent(settings.bounty)} % of its price.` : '',
+    on('flank')
       ? `Flanking: against a unit that has already been attacked that day you hit ${percent(settings.flankBonus)} % more. Attack together.`
       : '',
-    settings.noHealUnderFire
-      ? 'Under fire: a unit attacked that day does not heal that night (it shows a red mark at the bottom left).'
-      : '',
+    on('noHealUnderFire') ? 'Under fire: a unit attacked that day does not heal that night (it shows a red mark at the bottom left).' : '',
   );
 
-const armyLimits = (settings: MatchSettings) =>
+const armyLimits = ({ settings, on }: RuleFacts) =>
   joinSentences(
     settings.commandPoints !== null
       ? `Command points: your army can't go over ${settings.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`
       : '',
-    settings.upkeep > 0
+    on('upkeep')
       ? `Upkeep: every round you pay ${percent(settings.upkeep)} % of your units' price. If you can't afford it, you just pay what you have.`
       : '',
   );
 
-const controlPoints = (settings: MatchSettings) =>
-  settings.controlPoints > 0
+const controlPoints = ({ settings, on }: RuleFacts) =>
+  on('controlPoints')
     ? `Control points: ${controlZoneSide(settings)}×${controlZoneSide(settings)} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${settings.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
     : '';
 
-const ambush = (settings: MatchSettings) =>
-  settings.ambush && settings.fog
+const ambush = ({ on }: RuleFacts) =>
+  on('ambush') && !on('noFog')
     ? 'You can move through your own units. With fog, woods are only visible from next to them: if your path runs into a hidden enemy, the unit stops short (ambush!) and loses its turn.'
     : '';
 
-const weather = (settings: MatchSettings) =>
-  settings.weather
+const weather = ({ on }: RuleFacts) =>
+  on('weather')
     ? 'Weather: every few days it changes (top, next to the day; hover it to see its effects and the forecast). Rain slows vehicles, snow slows everything on the ground and storms slow aircraft; bad weather costs both sides vision and aim.'
     : '';
 
 /** En el orden en que salen en la ayuda. */
-const ruleLines = (settings: MatchSettings): string[] => [
-  capture(settings),
-  counterattack(settings),
-  veterancy(settings),
-  attackBonuses(settings),
-  armyLimits(settings),
-  controlPoints(settings),
-  ambush(settings),
-  weather(settings),
+const ruleLines = (facts: RuleFacts): string[] => [
+  capture(facts),
+  counterattack(facts),
+  veterancy(facts),
+  attackBonuses(facts),
+  armyLimits(facts),
+  controlPoints(facts),
+  ambush(facts),
+  weather(facts),
 ];
 
 export const help: HelpTexts = {

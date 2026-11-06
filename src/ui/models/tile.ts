@@ -19,6 +19,7 @@ import {
   unitAt,
   abilitiesOf,
   isRuleOn,
+  canStillAct,
 } from '../../core/rules';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
@@ -154,7 +155,8 @@ export function tileVM(
     const side = sideOf(s, viewer, shown.team);
     const own = side === 'own';
     info.unit = {
-      icon: unitKey(textures, s, { ...shown, turnState: own ? shown.turnState : 'ready' }, viewer),
+      // Las ajenas se ven siempre como activas (no se enseña si ya han jugado).
+      icon: unitKey(textures, s, shown, viewer, !own || canStillAct(shown)),
       name: nameOf(shownType),
       rank: isRuleOn(s, 'veterancy') ? rank(shown) : 0,
       side,

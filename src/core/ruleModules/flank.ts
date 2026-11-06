@@ -3,9 +3,9 @@ import type { GameState, Unit } from '../model';
 import type { Engagement } from '../rules/engagement';
 import type { RuleModule } from './hooks';
 
-/** La unidad ya ha recibido un ataque hoy y la partida tiene flanqueo. */
+/** La unidad ya ha recibido un ataque hoy (si la partida tiene flanqueo lo dice el modulo: isOn). */
 export function flanked(s: GameState, defender: Unit): boolean {
-  return s.settings.flankBonus > 0 && defender.hitDay === s.day;
+  return defender.hitDay === s.day;
 }
 
 /** Premia atacar en grupo al mismo objetivo. */
