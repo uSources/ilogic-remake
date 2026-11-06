@@ -64,7 +64,8 @@ describe('misiones', () => {
     expect(changeFunds).toThrow(TypeError);
     expect(moveUnit).toThrow(TypeError);
   });
-  it('una mision guardada despues del arreglo (version 2) se carga con las reglas que guardo', () => {
+
+  it('una mision guardada se carga con las reglas que guardo', () => {
     const s = buildMission(MISSIONS[0]!, defaultContent(), MISSION_DICE_SEED);
     s.rules = rulesWith(defaultContent(), { fog: true, upkeep: 0.1 });
     const back = deserialize(serialize(s), defaultContent())!;
@@ -72,7 +73,7 @@ describe('misiones', () => {
     expect(back.rules).not.toEqual(missionRules(MISSIONS[0]!, defaultContent()));
   });
 
-  it('unas reglas guardadas rotas se rechazan, de una mision o no (en la version 2 no se arreglan)', () => {
+  it('unas reglas guardadas rotas se rechazan, de una mision o no (no se arreglan)', () => {
     const saved = JSON.parse(serialize(buildMission(MISSIONS[0]!, defaultContent(), MISSION_DICE_SEED))) as {
       rules: Record<string, unknown>;
     };
