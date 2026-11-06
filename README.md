@@ -149,7 +149,9 @@ src/
     content/     Unidades, edificios, terreno, temas, mapas al azar, reglas e IA en JSON + su validacion
                  y sus tipos resueltos (UnitType, TerrainType...): ver docs/CONTENIDO.md
     model/       Modelo de datos de la partida (GameState, Unit, Building, GameEvent...), sin dependencias
-    matchSettings.ts  rulesWith(contenido, cambios): las reglas de una partida
+    matchSettings.ts  rulesWith(contenido, cambios): los ajustes de una partida (MatchSettings, s.rules)
+    ruleModules/ Modulos de reglas (veterania, clima, habilidades, emboscadas...): se enchufan segun los
+                 ajustes y aportan entradas a las listas de las reglas (RULE_MODULES, hooksOf)
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)
     gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
     teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)
@@ -161,8 +163,10 @@ src/
     autopilot/   Cumplir las ordenes permanentes (una regla para todos): los pasos de unidad que reutiliza la IA
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)
+    abilities.ts Lo que hace cada clase de habilidad de las unidades (ABILITY_EFFECTS)
+    generals.ts  Los generales; generalPowers.ts: sus poderes (POWER_EFFECTS)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
-    targeting.ts Desde donde atacar y que casilla acerca mas; trail.ts: el camino trazado con el cursor
+    targeting.ts Desde donde atacar; trail.ts: el camino trazado con el cursor
     ai.ts        Inteligencia artificial (fachada de ai/: un generador que va devolviendo cada accion);
                  las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
     mapgen.ts    Generador de mapas aleatorios

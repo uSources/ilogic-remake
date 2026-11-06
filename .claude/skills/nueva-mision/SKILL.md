@@ -19,7 +19,10 @@ solo lectura):
 - `teams`: los equipos en orden, `{ controller: 'human' | 'ai', funds, alliance? }`; su puesto es el
   numero de equipo de `buildings` y `units`. Hoy las misiones son una persona (el 0) contra la IA.
 - `buildings`: `[tipo, dueño (numero de equipo o null neutral), x, y]`. Cada equipo necesita su `Base`.
-- `units`: `[tipo, equipo, x, y, vida?]`. `rules`: cambios a las reglas (niebla, limite de dias...).
+- `units`: `[tipo, equipo, x, y, vida?]`. `rules`: cambios a los ajustes de la partida
+  (`MatchSettings`: niebla, limite de dias, clima...). Los interruptores enchufan o quitan modulos de
+  reglas enteros (sin clima no hay clima ni pronostico; sin `ambush` los enemigos escondidos cortan el
+  paso): ver `docs/ARQUITECTURA.md`, "Modulos de reglas".
 - `objective` (del equipo de la persona: su `owner` en la partida; si lo cumple gana su alianza y si falla, sus enemigos): `hq` | `survive` (dias) | `capture` (cuantos, tipo o null, dias) | `destroy` (dias) |
   `escort` (indice de la unidad en `units`, destino, dias). Un tipo de objetivo nuevo es una entrada en
   `OBJECTIVES` (`src/core/objectives.ts`): como se escribe y queda en la partida, sus problemas en el

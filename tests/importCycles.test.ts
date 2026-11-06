@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Ningun ciclo de imports en src/ (docs/ESTILO.md, regla 14). Un ciclo hace que el orden de carga
+ * Ningun ciclo de imports en src/ (docs/ESTILO.md, regla 16). Un ciclo hace que el orden de carga
  * decida que vale `undefined` al arrancar (paso con content → rulesSchema → predicates → content).
  * Solo cuentan los imports que existen al ejecutar: `import type` y los `{ type X }` sueltos se borran.
  * Mas barato que eslint-plugin-import: lee los ficheros y recorre el grafo.

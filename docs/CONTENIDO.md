@@ -112,8 +112,8 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 
 Lista de habilidades pasivas: siempre estan activas, no son ordenes. Cada una es una clase (`kind`)
 con sus numeros, asi que se pueden dar a cualquier unidad sin tocar codigo. Solo cuentan con la regla
-`abilities` (activada por defecto). La IA y la
-prevision de combate las tienen en cuenta solas, porque pasan por las mismas reglas (`core/abilities.ts`).
+`abilities` (activada por defecto: su modulo de reglas las enchufa). La IA y la prevision de combate
+las tienen en cuenta solas, porque pasan por las mismas reglas (`ABILITY_EFFECTS`, `core/abilities.ts`).
 
 | `kind` | Numeros | Que hace | Ahora la tiene |
 |---|---|---|---|
@@ -128,8 +128,10 @@ prevision de combate las tienen en cuenta solas, porque pasan por las mismas reg
 "abilities": [{ "kind": "guard", "factor": 0.5 }]
 ```
 
-Una clase nueva: añadirla a `ABILITY_KINDS` y `AbilityDef` (`core/content/types.ts`), su validacion
-(`content/units.ts`), su efecto (`core/abilities.ts`, llamado desde `rules.ts`), sus textos
+Una clase nueva: su forma en `AbilityDef` (`core/content/types.ts`), su validacion en
+`ABILITY_SHAPES` (`content/abilities.ts`, de ahi sale `ABILITY_KINDS`), lo que aporta a las listas de
+las reglas en `ABILITY_EFFECTS` (`core/abilities.ts`: un modificador del acierto, una regla de paso...;
+ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
 (`ability_<kind>` en `settings.ts`, y `abilityVM` en `ui/hudModels.ts`), el esquema y un test en
 `tests/abilities.test.ts`.
 
@@ -224,8 +226,9 @@ Efectos que hay (`effect.kind`):
 | `funds` | Consigue `amount` de dinero al momento (sin pasar del maximo, `maxFunds`) |
 
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
-`content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`POWER_EFFECTS`, lo usa
-`applyPower`, el `apply` de la accion `usePower`) y su animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `power`). Los
+`GeneralEffect` y su validacion en `EFFECT_SHAPES` (`content/generals.ts`), su entrada en
+`POWER_EFFECTS` (`core/generalPowers.ts`: si necesita casilla, su area, como se aplica, que usa
+`applyPower`, el `apply` de la accion `usePower`, y lo que le vale a la IA, `aiValue`) y su animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `power`). Los
 "poderes" son del general (se usan una vez por turno); las "habilidades" son de las unidades
 (`abilities`, siempre activas).
 
@@ -233,7 +236,8 @@ La IA usa a su general sin saber cual es (`core/aiGenerals.ts`): al empezar su t
 poder que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
 reconocimiento, un valor fijo con niebla; curar, por la vida que recuperan sus unidades; el dinero,
 por lo que es) y usa la mejor si vale al menos `GENERALMINVALUE`
-(`ai.json`); con la barra llena, cualquiera que valga algo. Un efecto nuevo necesita su valoracion ahi.
+(`ai.json`); con la barra llena, cualquiera que valga algo. Cada valoracion es el `aiValue` de su clase
+en `POWER_EFFECTS`: un efecto nuevo trae la suya y la IA no se toca.
 
 Para medir un general: `npm run generals -- --a Roca` (la IA con Roca contra la IA sin general, 80
 partidas en 40 mapas con los equipos cambiados; al dia 60 gana quien tenga mas puntos). `--b Brisa`
@@ -249,8 +253,10 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   cada accion y cada ronda). Cada regla esta explicada en el esquema (pasar el raton por encima en el
   editor). Que valores puede tener cada una lo dice `RULE_SCHEMA` (`src/core/rulesSchema.ts`): lo
   comprueban al cargar el contenido y al leer una partida guardada, y rules.schema.json tiene que
-  decir lo mismo (lo mira `tests/rulesSchema.test.ts`). Una regla nueva va en `MatchSettings`, en
-  `RULE_SCHEMA`, en rules.json y en su esquema. Las que premian atacar: `bounty` (botin al
+  decir lo mismo (lo mira `tests/rulesSchema.test.ts`). Un ajuste nuevo va en `MatchSettings`, en
+  `RULE_SCHEMA`, en rules.json y en su esquema; si enchufa una pieza de reglas, esa pieza es un
+  modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas") cuyo `isOn`
+  mira el ajuste: las reglas no lo preguntan. Las que premian atacar: `bounty` (botin al
   destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
   (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania); ver
   `docs/BALANCE.md`.
@@ -276,8 +282,9 @@ ruta (`tools/balance/variant.ts`): `--set UNIT.move.Car=7 --set HIT_CHANCE.Tank.
 `src/core/content/` tiene un modulo por parte, cada uno con su `validate*` y, si da un tipo
 resuelto, su `build*` y ese tipo: `units.ts` (`UnitType`), `buildings.ts` (`BuildingType`),
 `terrain.ts` (`TerrainType`), `weather.ts` (`WeatherType`), `themes.ts` (`Theme`), `mapgen.ts`
-(`MapgenSettings`), `rules.ts`, `ai.ts` y `generals.ts` (los generales y sus poderes se leen tal
-cual, ya validados: `s.content.generals`). Comparten `check.ts` (mensajes de error) y `types.ts`
+(`MapgenSettings`), `rules.ts`, `ai.ts`, `abilities.ts` (la validacion de cada clase de habilidad,
+`ABILITY_SHAPES`) y `generals.ts` (los generales y sus poderes se leen tal cual, ya validados:
+`s.content.generals`; la validacion de cada clase de efecto, `EFFECT_SHAPES`). Comparten `check.ts` (mensajes de error) y `types.ts`
 (`UnitDef`, `MoveType`...). El resto:
 
 | Modulo | Que hace |
