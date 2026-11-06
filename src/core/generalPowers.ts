@@ -12,7 +12,7 @@ import { posKey, posOf, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 import { earn } from './rules/funds';
-import { isRuleOn } from './ruleModules/registry';
+import { isRuleOn } from './ruleModules/ruleset';
 import { visibility } from './rules/visibility';
 import { isHostile } from './teams';
 import type { DeepReadonly } from './util/freeze';

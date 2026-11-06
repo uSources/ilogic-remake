@@ -20,6 +20,7 @@ import {
   damageModelOf,
   canCounter,
   MELEE_COUNTER,
+  ROUND_REPORT_PARTS,
 } from '@core/rules';
 import { COMBAT_RESOLUTION, combatResolutionOf } from '@core/actions';
 import type { UnitType } from '@core/content';
@@ -164,5 +165,14 @@ describe('lo que pasa en un ataque (COMBAT_RESOLUTION y los pasos de los modulos
     const plain = blankState(settingsWith(defaultContent(), { fog: false, counterattack: false }));
     const lone = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     expect(canCounter(plain, engagement(lone, newUnit(plain, unitTypeNamed('Tank'), 1, { x: 3, y: 2 })))).toBe(false);
+  });
+});
+
+describe('partes del resumen de la ronda (ROUND_REPORT_PARTS y las de los modulos)', () => {
+  it('lo de siempre (cobrado y curado) y lo de cada modulo puesto (mantenimiento, puntos de control, clima)', () => {
+    expect(ROUND_REPORT_PARTS.map((part) => part.id)).toEqual(['income', 'healed']);
+    expect(hooksOf(blankState(TEST_SETTINGS), 'roundReportParts').map((part) => part.id)).toEqual(['weather', 'control', 'upkeep']);
+    const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
+    expect(hooksOf(plain, 'roundReportParts')).toEqual([]);
   });
 });

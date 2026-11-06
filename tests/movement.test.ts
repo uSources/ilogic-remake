@@ -1,4 +1,5 @@
 import { unitTypeOf } from '@core/gameContent';
+import { changeSettings } from '@core/gameState';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_SETTINGS } from './plainSettings';
@@ -117,7 +118,7 @@ describe('movimiento: emboscadas en la niebla', () => {
 
   it('con los interruptores apagados no hay bosque que esconda ni emboscadas', () => {
     const s = corridor();
-    s.settings = { ...PLAIN_SETTINGS };
+    changeSettings(s, { ...PLAIN_SETTINGS });
     newUnit(s, TANK, 0, { x: 2, y: 5 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     expect(visibility(s, 0).at(enemy)).toBe(true);

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { RULE_MODULES, hooksOf, isRuleOn, type RuleModuleId } from '@core/rules';
+import { RULE_MODULES, hooksOf, isRuleOn, resolveRuleset, rulesetFor, type RuleModuleId } from '@core/rules';
+import { changeSettings } from '@core/gameState';
+import { deserialize, serialize } from '@core/save';
 import type { MatchSettings } from '@core/model';
 import { blankState } from './helpers';
 
@@ -60,5 +62,22 @@ describe('modulos de reglas (RULE_MODULES)', () => {
     expect(hooksOf(s, 'hitModifiers')).toEqual(expected);
     const plain = blankState(settingsWith(defaultContent(), { abilities: false, veterancy: false, flankBonus: 0, weather: false }));
     expect(hooksOf(plain, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['generals']);
+  });
+
+  it('se resuelven una vez por partida: al crearla, al leerla y al cambiar sus ajustes', () => {
+    const s = blankState(DEFAULTS);
+    expect(Object.isFrozen(s.ruleset)).toBe(true);
+    expect(s.ruleset).toEqual(rulesetFor(s, s.settings));
+    const loaded = deserialize(serialize(s), defaultContent())!;
+    expect(loaded.ruleset.modules.map((module) => module.id)).toEqual(s.ruleset.modules.map((module) => module.id));
+    changeSettings(s, settingsWith(defaultContent(), { veterancy: false }));
+    expect(isRuleOn(s, 'veterancy')).toBe(false);
+    expect(s.settings.veterancy).toBe(false);
+  });
+
+  it('resolveRuleset: solo los que se enchufan con esos ajustes, con sus listas juntas en orden', () => {
+    const ruleset = resolveRuleset(RULE_MODULES, settingsWith(defaultContent(), { weather: false }));
+    expect(ruleset.modules.map((module) => module.id)).not.toContain('weather');
+    expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['generals', 'control', 'upkeep']);
   });
 });

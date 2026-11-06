@@ -9,6 +9,7 @@
 import type { MoveType, UnitType } from '../content';
 import type { Dice, GameEvent, GameState, MatchSettings, Pos, TeamId, Unit } from '../model';
 import type { AttackRecord } from '../rules/attackRecord';
+import type { RoundReport } from '../rules/roundReport';
 import type { Engagement } from '../rules/engagement';
 
 /**
@@ -59,6 +60,12 @@ export interface RoundPhase {
   /** En que momento va (dentro de cada uno, los de siempre primero y luego los de los modulos). */
   readonly stage: RoundStage;
   run(s: GameState): GameEvent[];
+}
+
+/** Una parte del resumen de la ronda: apunta en el resumen los sucesos que son suyos (y no hace nada con los demas). */
+export interface RoundReportPart {
+  readonly id: string;
+  add(s: GameState, report: RoundReport, event: GameEvent): void;
 }
 
 /** Algo que se prepara al empezar una partida nueva (el clima del primer dia). */
@@ -152,6 +159,8 @@ export interface RuleHooks {
   readonly combatSteps?: readonly CombatStep[];
   /** Pasos del fin de ronda (ver ROUND_PHASES, rules/round.ts). */
   readonly roundPhases?: readonly RoundPhase[];
+  /** Partes del resumen de la ronda (ver ROUND_REPORT_PARTS, rules/round.ts). */
+  readonly roundReportParts?: readonly RoundReportPart[];
   /** Lo que se prepara al crear la partida (buildMatch). */
   readonly matchSetup?: readonly MatchSetupStep[];
   /** Quien no se cura al acabar el dia (`unhealable`). */

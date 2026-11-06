@@ -66,11 +66,11 @@ export function weightsOf(s: GameState): Readonly<AiWeights> {
 
 /** Lo que se guarda de la partida: todo menos el contenido. */
 export function savedPart(s: GameState): SavedGameState {
-  const { content: _content, ...saved } = s;
+  const { content: _content, ruleset: _ruleset, ...saved } = s;
   return saved;
 }
 
-/** Copia de la partida: lo guardado se copia entero y el contenido (congelado) se comparte. */
+/** Copia de la partida: lo guardado se copia entero; el contenido y los modulos (congelados) se comparten. */
 export function cloneState(s: GameState): GameState {
-  return { ...structuredClone(savedPart(s)), content: s.content };
+  return { ...structuredClone(savedPart(s)), content: s.content, ruleset: s.ruleset };
 }

@@ -9,7 +9,7 @@ import { posOf } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { GameState, Pos, Unit } from '../model';
 import type { PassContext, Passage, PassRule } from '../ruleModules/hooks';
-import { hooksOf } from '../ruleModules/registry';
+import { hooksOf } from '../ruleModules/ruleset';
 import type { Grid } from '../util/grid';
 import { areEnemies, isOnMap } from '../util/predicates';
 import { sightOf, type Sight } from './visibility';

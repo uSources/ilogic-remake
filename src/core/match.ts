@@ -9,7 +9,7 @@
  */
 import { entryOf, type GameContent } from './content';
 import { appointGeneral } from './generals';
-import { newGameState } from './gameState';
+import { changeSettings, newGameState } from './gameState';
 import { generateGame } from './mapgen';
 import { gameModeOf } from './modes';
 import { blankMap } from './mapGrid';
@@ -17,7 +17,7 @@ import { buildMission, missionById } from './missions';
 import { assertAllStanding } from './rules/falls';
 import { newUnit } from './rules/lifecycle';
 import { settingsWith } from './matchSettings';
-import { hooksOf } from './ruleModules/registry';
+import { hooksOf } from './ruleModules/ruleset';
 import { sampleArmy } from './stats';
 import { seededRng } from './util/random';
 import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
@@ -166,7 +166,7 @@ function setupOf(config: MatchConfig): (config: MatchConfig, context: MatchSetup
 /** Las reglas que impone el modo de la partida, por encima de las elegidas (GameMode.fixedSettings). */
 function imposeModeSettings(s: GameState, content: GameContent): void {
   const fixed = gameModeOf(s).fixedSettings;
-  if (fixed) s.settings = settingsWith(content, { ...s.settings, ...fixed });
+  if (fixed) changeSettings(s, settingsWith(content, { ...s.settings, ...fixed }));
 }
 
 /**

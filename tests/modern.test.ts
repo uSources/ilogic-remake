@@ -1,4 +1,5 @@
 import { defaultContent } from '@core/content/default';
+import { changeSettings } from '@core/gameState';
 import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/util/random';
@@ -106,7 +107,7 @@ describe('reglas nuevas: combate', () => {
 
   it('sin niebla se ve todo el mapa', () => {
     const s = blankState();
-    s.settings.fog = false;
+    changeSettings(s, { ...s.settings, fog: false });
     expect([...visibility(s, 0).cells()].every((cell) => cell.value)).toBe(true);
   });
 });

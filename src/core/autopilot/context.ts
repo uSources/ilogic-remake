@@ -10,7 +10,7 @@ import { movementOf, buildingAt } from '../rules/queries';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, visibleEnemiesBlock, type Blockers } from '../rules/distance';
-import { isRuleOn } from '../ruleModules/registry';
+import { isRuleOn } from '../ruleModules/ruleset';
 import { endsInAmbush } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionDispatcher } from '../actions/types';

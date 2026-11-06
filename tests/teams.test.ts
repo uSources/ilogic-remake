@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { changeSettings } from '@core/gameState';
 import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { skirmishConfig } from '@core/match';
@@ -165,7 +166,7 @@ describe('cuatro equipos en dos alianzas', () => {
     const s = fourCorners();
     s.buildings.push({ type: 'City', owner: 3, x: 12, y: 10, capture: null });
     s.controlPoints = [{ x: 20, y: 20, owner: null }];
-    s.settings = { ...s.settings, controlRadius: 1, controlIncome: 500 };
+    changeSettings(s, { ...s.settings, controlRadius: 1, controlIncome: 500 });
     newUnit(s, SOLDIER, 0, { x: 20, y: 20 });
     newUnit(s, SOLDIER, 2, { x: 21, y: 20 });
     const before = s.teams.map((team) => team.funds);

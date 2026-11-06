@@ -10,6 +10,7 @@
  */
 import type { ActionDispatcher } from './actions/types';
 import { deepFreeze } from './util/freeze';
+import type { RuleModule } from './ruleModules/hooks';
 import type { GameEvent, GameModeId, GameState, MatchSettings, TeamId, VictoryRuleId } from './model';
 
 /**
@@ -32,8 +33,10 @@ export interface GameMode {
    * partida guardada sigue con su orden aunque el modo cambie despues.
    */
   turnOrder(teams: readonly TeamId[], first: TeamId | null): TeamId[];
-  /** Reglas que el modo impone, por encima de las que se elijan (buildMatch). */
+  /** Ajustes que el modo impone, por encima de los que se elijan (buildMatch). */
   readonly fixedSettings?: Partial<MatchSettings>;
+  /** Modulos de reglas propios del modo, ademas de los del juego (RULE_MODULES); se enchufan igual, con su `isOn`. */
+  readonly ruleModules?: readonly RuleModule[];
   /** Pasos propios del modo al empezar y al acabar cada turno, detras de TURN_START_PHASES y TURN_END_PHASES. */
   readonly turnPhases?: { readonly start?: readonly TurnPhase[]; readonly end?: readonly TurnPhase[] };
   /**

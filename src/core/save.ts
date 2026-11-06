@@ -32,6 +32,7 @@ import {
 } from './savedParts';
 import { isGameModeId } from './modes';
 import { isValidSettings } from './settingsSchema';
+import { rulesetFor } from './ruleModules/registry';
 import { isObject } from './util/validation';
 import { isRandomState } from './util/random';
 import type { GameState, SavedGameState } from './model';
@@ -74,7 +75,8 @@ export function readSave(json: string, content: GameContent): ReadSaveResult {
   if (saved.version !== SAVE_VERSION) return { ok: false, error: 'badVersion' };
   const check = checkGame(saved, content);
   if (!check.ok) return check;
-  const state: GameState = { ...cleanGame(saved, check), content };
+  const game = cleanGame(saved, check);
+  const state: GameState = { ...game, content, ruleset: rulesetFor(game, game.settings) };
   // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
   if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
   return { ok: true, state };

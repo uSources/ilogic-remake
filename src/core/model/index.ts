@@ -28,5 +28,5 @@ export type {
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { MatchSettings } from './settings';
 export type { TeamStats } from './stats';
-export type { GameSetup, GameState, MatchContent, SavedGameState } from './state';
+export type { GameSetup, GameState, MatchContent, MatchRuleset, SavedGameState } from './state';
 export type { Dice, Rng } from './random';

@@ -8,7 +8,7 @@ import type * as Modes from '@core/modes';
 import type { GameMode } from '@core/modes';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { newUnit, unitById } from '@core/rules';
+import { engagement, hitChance, hooksOf, newUnit, unitById, type RuleModule } from '@core/rules';
 import { GameSession, passiveController, runMatch } from '@core/session';
 import { startsTurn } from '@core/actions';
 import { act, blankState, unitTypeNamed } from './helpers';
@@ -115,5 +115,22 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     session.subscribe((step) => startsTurn(step) && started.push(step.team));
     runMatch(session, { until: (state) => state.day > 2 });
     expect(started).toEqual([2, 1, 0, 2, 1, 0]);
+  });
+
+  it('un modo puede traer sus propios modulos de reglas: se resuelven con la partida, como los del juego', () => {
+    const modeModule: RuleModule = {
+      id: 'flank',
+      isOn: () => true,
+      hooks: { hitModifiers: [{ id: 'modeBonus', factor: () => 2 }] },
+    };
+    const s = withMode({ ruleModules: [modeModule] }, () => blankState({ ...PLAIN_SETTINGS, flankBonus: 0 }));
+    expect(s.ruleset.modules).toContain(modeModule);
+    expect(hooksOf(s, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['generals', 'modeBonus']);
+    const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
+    const plain = blankState({ ...PLAIN_SETTINGS, flankBonus: 0 });
+    const plainAttacker = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    const plainDefender = newUnit(plain, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
+    expect(hitChance(s, engagement(attacker, defender))).toBe(2 * hitChance(plain, engagement(plainAttacker, plainDefender)));
   });
 });

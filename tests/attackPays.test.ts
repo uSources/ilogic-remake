@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { changeSettings } from '@core/gameState';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
@@ -86,7 +87,7 @@ describe('sin cura bajo fuego', () => {
 
   it('quien recibe un ataque ese dia no se cura en su ciudad', () => {
     const { s, attacker, defender } = setup();
-    s.settings = settingsWith(defaultContent(), { noHealUnderFire: true });
+    changeSettings(s, settingsWith(defaultContent(), { noHealUnderFire: true }));
     fight(s, attacker, defender, diceFrom(seededRng(1)));
     const hurt = defender.life;
     expect(hurt).toBeLessThan(100);
@@ -101,7 +102,7 @@ describe('sin cura bajo fuego', () => {
 
   it('sin la regla se cura como siempre', () => {
     const { s, attacker, defender } = setup();
-    s.settings = settingsWith(defaultContent(), { noHealUnderFire: false });
+    changeSettings(s, settingsWith(defaultContent(), { noHealUnderFire: false }));
     fight(s, attacker, defender, diceFrom(seededRng(1)));
     const hurt = defender.life;
     endRound(s);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { changeSettings } from '@core/gameState';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { entryOf, loadContent, validateContent, type Content, type WeatherType } from '@core/content';
@@ -137,7 +138,7 @@ describe('clima: efectos', () => {
 
   it('sin el modulo del clima no cuenta ni cambia, aunque el estado lo tenga', () => {
     const s = withWeather(STORM);
-    s.settings = settingsWith(defaultContent(), { weather: false });
+    changeSettings(s, settingsWith(defaultContent(), { weather: false }));
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(budgetOf(s, tank)).toBe(TANK.move);
     const before = { ...s.weather };
@@ -209,7 +210,7 @@ describe('clima: como cambia', () => {
 
   it('se guarda con la partida y un clima roto se descarta al cargar', () => {
     const s = withWeather(RAIN);
-    s.settings = settingsWith(defaultContent());
+    changeSettings(s, settingsWith(defaultContent()));
     expect(deserialize(serialize(s), defaultContent())!.weather).toEqual(s.weather);
     const broken = JSON.parse(serialize(s)) as GameState;
     broken.weather = { kind: 'Meteorites', left: 1, next: CLEAR.id };

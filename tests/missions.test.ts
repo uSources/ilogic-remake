@@ -1,4 +1,5 @@
 import { MoveType } from '@core/content';
+import { changeSettings } from '@core/gameState';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
@@ -63,7 +64,7 @@ describe('misiones', () => {
 
   it('una mision guardada se carga con las reglas que guardo', () => {
     const s = buildMission(MISSIONS[0]!, defaultContent(), MISSION_DICE_SEED);
-    s.settings = settingsWith(defaultContent(), { fog: true, upkeep: 0.1 });
+    changeSettings(s, settingsWith(defaultContent(), { fog: true, upkeep: 0.1 }));
     const back = deserialize(serialize(s), defaultContent())!;
     expect(back.settings).toEqual(settingsWith(defaultContent(), { fog: true, upkeep: 0.1 }));
     expect(back.settings).not.toEqual(missionSettings(MISSIONS[0]!, defaultContent()));

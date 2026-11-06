@@ -10,7 +10,7 @@ import { endTravel } from '../rules/travel';
 import { canStillMove, spendUnit } from '../rules/unitTurn';
 import { engagement } from '../rules/engagement';
 import type { CombatStage, CombatStep } from '../ruleModules/hooks';
-import { hooksOf } from '../ruleModules/registry';
+import { hooksOf } from '../ruleModules/ruleset';
 import { isAlive } from '../util/predicates';
 import type { Dice, GameEventOf, GameState, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';

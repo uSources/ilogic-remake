@@ -8,7 +8,7 @@
 import type { MoveType } from '../content';
 import { unitTypeOf } from '../gameContent';
 import type { GameState, Pos, Unit } from '../model';
-import { hooksOf } from '../ruleModules/registry';
+import { hooksOf } from '../ruleModules/ruleset';
 import { canWalk } from './queries';
 
 /** Por donde pasa un tipo de movimiento y lo que le cuesta entrar en cada casilla. */

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { changeSettings } from '@core/gameState';
 import { ABILITY_EFFECTS, abilityOf, auraFactor } from '@core/abilities';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
@@ -106,7 +107,7 @@ describe('habilidades: escudo (guard)', () => {
     const near = newUnit(s, meleeType, 0, { x: 9, y: 10 });
     expect(hitChance(s, engagement(far, defender))).toBeCloseTo(power(rangedType, guardType) * factor);
     expect(hitChance(s, engagement(near, defender))).toBeCloseTo(power(meleeType, guardType));
-    s.settings = { ...TEST_SETTINGS, abilities: false };
+    changeSettings(s, { ...TEST_SETTINGS, abilities: false });
     expect(hitChance(s, engagement(far, defender))).toBeCloseTo(power(rangedType, guardType));
   });
 });
@@ -135,7 +136,7 @@ describe('habilidades: zona de control', () => {
     ];
     expect(validPath(range, through)).toBe(false);
     expect(dispatch(s, 0, { kind: 'move', uid: unit.uid, to: { x: 10, y: 11 } }).ok).toBe(true);
-    s.settings = { ...TEST_SETTINGS, abilities: false };
+    changeSettings(s, { ...TEST_SETTINGS, abilities: false });
     expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
   });
 
@@ -146,7 +147,7 @@ describe('habilidades: zona de control', () => {
     // La unica vecina de la compañera a la que llega es (11, 10), dentro de la zona.
     const mate = newUnit(s, TANK, 0, { x: 11, y: 9 });
     expect(mergeProblem(s, unit, mate)).toBe('unreachable');
-    s.settings = { ...TEST_SETTINGS, abilities: false };
+    changeSettings(s, { ...TEST_SETTINGS, abilities: false });
     expect(mergeProblem(s, unit, mate)).toBeNull();
   });
 
@@ -230,7 +231,7 @@ describe('habilidades: interfaz', () => {
     expect(abilitiesVM(s, guardType)).toEqual([{ name: 'Escudo', desc: `Los ataques a distancia le aciertan un ${pct} % menos.` }]);
     settings.lang = 'en';
     expect(abilitiesVM(s, withAbility('zoneOfControl'))[0]!.desc).toContain('foot, vehicles');
-    s.settings = { ...TEST_SETTINGS, abilities: false };
+    changeSettings(s, { ...TEST_SETTINGS, abilities: false });
     expect(abilitiesVM(s, guardType)).toEqual([]);
   });
 });
@@ -254,7 +255,7 @@ describe('habilidades: captura rapida (quickCapture)', () => {
     expect(captureStrength(s, fast)).toBe(Math.ceil(10 * factor));
     fast.life = 40;
     expect(captureStrength(s, fast)).toBe(Math.ceil(4 * factor));
-    s.settings = { ...TEST_SETTINGS, abilities: false };
+    changeSettings(s, { ...TEST_SETTINGS, abilities: false });
     expect(captureStrength(s, fast)).toBe(4); // con la regla apagada, como cualquiera
   });
 });

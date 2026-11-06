@@ -1,37 +1,20 @@
 /**
  * Fin de ronda (ciclojuego, fase 2): reactivar unidades, cobrar, curar, mantenimiento, dia y clima.
  */
-import { unitTypeOf, buildingTypeOf, weatherTypeOf } from '../gameContent';
+import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
-import type { WeatherChange } from '../weather';
-import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
-import type { RoundPhase, RoundStage } from '../ruleModules/hooks';
-import { hooksOf } from '../ruleModules/registry';
+import type { Building, GameEvent, GameState, Unit } from '../model';
+import type { RoundPhase, RoundReportPart, RoundStage } from '../ruleModules/hooks';
+import { hooksOf } from '../ruleModules/ruleset';
 import { addForTeam, perTeam, teamIds } from '../teams';
 import { earn } from './funds';
 import { restoreInvariants } from './invariants';
 import { quietly } from '../util/quietly';
-import type { ControlReport } from './control';
+import type { RoundReport } from './roundReport';
 import { buildingIncome } from './economy';
 import { unitAt } from './queries';
 import { readyUnit } from './unitTurn';
 import { sampleArmy } from '../stats';
-
-export interface RoundReport {
-  /** Lo que ha cobrado cada equipo, por numero de equipo. */
-  income: number[];
-  /** Mantenimiento pagado por cada equipo (si no llega el dinero, se paga lo que hay). */
-  upkeep: number[];
-  /** Unidades curadas en un edificio propio (uid, equipo, vida recuperada). */
-  healed: { uid: number; team: TeamId; amount: number }[];
-  /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
-  weather?: WeatherChange | null;
-  /**
-   * [CAMBIO] Puntos de control: dinero que ha dado a cada equipo (ya sumado en income), cuantos le
-   * han pagado y cuantos estan disputados.
-   */
-  control?: ControlReport;
-}
 
 /** [CAMBIO] La unidad no se curara al acabar el dia (sin cura bajo fuego: ver `healingBlocks` de los modulos). */
 export function unhealable(s: GameState, unit: Unit): boolean {
@@ -124,43 +107,29 @@ export function endRound(s: GameState): GameEvent[] {
   return [...events, ...restoreInvariants(s, null)];
 }
 
-/** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound. */
+/**
+ * Lo que va en el resumen de cualquier ronda: lo cobrado y lo curado. Lo de los modulos (el
+ * mantenimiento, los puntos de control, el clima) lo apuntan sus `roundReportParts`.
+ */
+export const ROUND_REPORT_PARTS: readonly RoundReportPart[] = [
+  {
+    id: 'income',
+    add: (_s, report, event) => {
+      if (event.kind === 'income') addForTeam(report.income, event.team, event.amount);
+    },
+  },
+  {
+    id: 'healed',
+    add: (_s, report, event) => {
+      if (event.kind === 'heal') report.healed.push({ uid: event.uid, team: event.team, amount: event.amount });
+    },
+  },
+];
+
+/** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound por sus partes. */
 export function roundReport(s: GameState, events: readonly GameEvent[]): RoundReport {
   const report: RoundReport = { income: perTeam(s, () => 0), upkeep: perTeam(s, () => 0), healed: [] };
-  for (const event of events) addToReport(s, report, event);
+  const parts = [...ROUND_REPORT_PARTS, ...hooksOf(s, 'roundReportParts')];
+  for (const event of events) for (const part of parts) part.add(s, report, event);
   return report;
-}
-
-/** Apunta un suceso del fin de ronda en su resumen. */
-function addToReport(s: GameState, report: RoundReport, event: GameEvent): void {
-  switch (event.kind) {
-    case 'income':
-      addForTeam(report.income, event.team, event.amount);
-      if (event.source === 'controlPoints') addForTeam(controlOf(s, report).income, event.team, event.amount);
-      return;
-    case 'upkeep':
-      report.upkeep[event.team] = event.amount;
-      return;
-    case 'heal':
-      report.healed.push({ uid: event.uid, team: event.team, amount: event.amount });
-      return;
-    case 'controlPoint': {
-      // Solo paga el que no esta disputado y tiene dueño.
-      const control = controlOf(s, report);
-      if (event.contested) control.contested++;
-      else if (event.owner !== null) addForTeam(control.held, event.owner, 1);
-      return;
-    }
-    case 'weather':
-      report.weather = { from: weatherTypeOf(s, event.from), to: weatherTypeOf(s, event.to) };
-      return;
-    default:
-      return;
-  }
-}
-
-/** El resumen de los puntos de control de la ronda (lo crea al primer suceso suyo). */
-function controlOf(s: GameState, report: RoundReport): ControlReport {
-  report.control ??= { income: perTeam(s, () => 0), held: perTeam(s, () => 0), contested: 0 };
-  return report.control;
 }

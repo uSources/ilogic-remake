@@ -4,6 +4,7 @@
  */
 import type { GameContent } from './content';
 import { gameModeOf } from './modes';
+import { rulesetFor } from './ruleModules/registry';
 import { SAVE_VERSION } from './saveVersion';
 import { newTeams, type TeamSetup } from './teams';
 import type { GameModeId, GameState, MatchSettings, TeamId } from './model';
@@ -53,5 +54,15 @@ export function newGameState(options: NewGameStateOptions): GameState {
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
     settings: { ...settings },
     content: options.content,
+    ruleset: rulesetFor(options, settings),
   };
+}
+
+/**
+ * Cambia los ajustes de una partida ya creada (lo que impone un modo, un laboratorio, una prueba):
+ * los ajustes y los modulos de reglas que salen de ellos, a la vez, para que no se separen. El unico
+ * sitio que los cambia despues de crearla.
+ */
+export function changeSettings(s: GameState, settings: Readonly<MatchSettings>): void {
+  Object.assign(s, { settings: { ...settings }, ruleset: rulesetFor(s, settings) });
 }

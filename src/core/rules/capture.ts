@@ -8,7 +8,7 @@ import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../model
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
-import { hooksOf } from '../ruleModules/registry';
+import { hooksOf } from '../ruleModules/ruleset';
 import { canMoveNow, canStillAct, spendUnit } from './unitTurn';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */

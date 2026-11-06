@@ -8,16 +8,6 @@ import { addForTeam, areAllied, perTeam, teamIds } from '../teams';
 import { earn } from './funds';
 import type { ControlPoint, GameEvent, GameState, Pos, TeamId } from '../model';
 
-/** Lo que han dado los puntos de control en una ronda (ver RoundReport.control). */
-export interface ControlReport {
-  /** Dinero que ha dado a cada equipo, por numero de equipo (ya sumado en RoundReport.income). */
-  income: number[];
-  /** Cuantos puntos le han pagado a cada equipo. */
-  held: number[];
-  /** Cuantos estan disputados (no pagan a nadie). */
-  contested: number;
-}
-
 /** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de rules.controlRadius). */
 export function inControlZone(s: GameState, center: Pos, pos: Pos): boolean {
   return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= s.settings.controlRadius;

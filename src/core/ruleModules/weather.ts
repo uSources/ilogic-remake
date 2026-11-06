@@ -1,4 +1,5 @@
 /** [CAMBIO] El clima (ajuste `weather`; core/weather.ts) se enchufa a las reglas desde aqui. */
+import { weatherTypeOf } from '../gameContent';
 import type { GameEvent, GameState } from '../model';
 import { advanceWeather, ensureWeather, weatherHit, weatherMove, weatherVision } from '../weather';
 import type { RuleModule } from './hooks';
@@ -23,6 +24,14 @@ export const WEATHER: RuleModule = {
     visionRadius: [{ id: 'weather', radius: (s, _unit, radius) => (radius > 0 ? Math.max(1, radius + weatherVision(s)) : radius) }],
     // El clima cambia con el dia nuevo (depende de s.day).
     roundPhases: [{ id: 'weather', stage: 'newDay', run: changeWeather }],
+    roundReportParts: [
+      {
+        id: 'weather',
+        add: (s, report, event) => {
+          if (event.kind === 'weather') report.weather = { from: weatherTypeOf(s, event.from), to: weatherTypeOf(s, event.to) };
+        },
+      },
+    ],
     // Empieza despejado, con su pronostico.
     matchSetup: [{ id: 'weather', run: ensureWeather }],
   },

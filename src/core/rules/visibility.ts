@@ -5,7 +5,7 @@
 import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { diamond, manhattan } from '../geom';
 import { createLayer } from '../mapGrid';
-import { hooksOf } from '../ruleModules/registry';
+import { hooksOf } from '../ruleModules/ruleset';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { alliesOf, isHostile } from '../teams';

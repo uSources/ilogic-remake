@@ -117,7 +117,8 @@ export {
   canCounter,
   HIT_MODIFIERS,
 } from './rules/combat';
-export { RULE_MODULES, isRuleOn, hooksOf } from './ruleModules/registry';
+export { RULE_MODULES, rulesetFor } from './ruleModules/registry';
+export { isRuleOn, hooksOf, resolveRuleset, type Ruleset, type HookOf } from './ruleModules/ruleset';
 export type {
   CombatStage,
   CombatStep,
@@ -125,6 +126,7 @@ export type {
   HitModifier,
   CoverPiercing,
   RoundPhase,
+  RoundReportPart,
   RoundStage,
   RuleHooks,
   RuleModule,
@@ -133,7 +135,7 @@ export type {
   Passage,
   StopRule,
 } from './ruleModules/hooks';
-export { RANK_KILLS, rank } from './ruleModules/veterancy';
+export { RANK_KILLS, rank } from './rules/rank';
 export { flanked } from './ruleModules/flank';
 export { abilitiesOf } from './ruleModules/abilities';
 export { bountyFor } from './ruleModules/bounty';
@@ -156,8 +158,9 @@ export {
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';
-export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
-export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_STAGES, roundPhasesOf, type RoundReport } from './rules/round';
+export { inControlZone, teamsInZone, controlRound } from './rules/control';
+export type { ControlReport, RoundReport, WeatherChange } from './rules/roundReport';
+export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_REPORT_PARTS, ROUND_STAGES, roundPhasesOf } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';
 export {

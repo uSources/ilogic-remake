@@ -24,5 +24,13 @@ export const UPKEEP: RuleModule = {
   hooks: {
     // Despues de cobrar, para que se pague con lo de hoy.
     roundPhases: [{ id: 'upkeep', stage: 'costs', run: payUpkeep }],
+    roundReportParts: [
+      {
+        id: 'upkeep',
+        add: (_s, report, event) => {
+          if (event.kind === 'upkeep') report.upkeep[event.team] = event.amount;
+        },
+      },
+    ],
   },
 };
