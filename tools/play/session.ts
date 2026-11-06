@@ -33,6 +33,7 @@ import {
   canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
+import type { ActionDispatcher } from '@core/actions';
 import { controllersFor, GameSession, runMatch, type ActedStep } from '@core/session';
 import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
@@ -310,19 +311,10 @@ export class Session {
    * sigue con la siguiente.
    */
   private endTurn(aiForMe: boolean): string {
-    const out: string[] = [];
-    this.told = [];
-    if (aiForMe)
-      out.push(
-        ...describeAll(
-          this.s,
-          aiTurn(this.s, this.rng, this.me, (_s, team, action) => this.session.act(team, action)),
-          'tu IA: ',
-        ),
-      );
-    this.told = [];
-    this.session.finishInput(this.me);
     const before = this.me;
+    const out = aiForMe ? this.playMyTurnWithAi() : [];
+    this.told = [];
+    this.session.finishInput(before);
     this.advance();
     out.push(...this.told);
     const income = teamValue(roundReport(this.s, this.lastRound).income, before);
@@ -331,6 +323,12 @@ export class Session {
     const result = this.result();
     if (result !== 'sigue') out.push(`FIN: ${result}`);
     return out.join('\n');
+  }
+
+  /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
+  private playMyTurnWithAi(): string[] {
+    const throughSession: ActionDispatcher = (_s, team, action) => this.session.act(team, action);
+    return describeAll(this.s, aiTurn(this.s, this.rng, this.me, throughSession), 'tu IA: ');
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */

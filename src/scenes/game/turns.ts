@@ -224,7 +224,7 @@ export class TurnFlow {
       if (match !== host.match) return false;
       addToSummary(summary, host.session.state, host.viewer, step);
       this.autosave(step);
-      await this.show(step, match);
+      await this.show(step);
       return this.continues(match);
     });
     this.otherTeam = null;
@@ -253,19 +253,21 @@ export class TurnFlow {
   }
 
   /** Anima un paso de la sesion: al empezar el turno de otro equipo, su aviso; despues, sus sucesos. */
-  private async show(step: ActedStep, match: number): Promise<void> {
+  private async show(step: ActedStep): Promise<void> {
     const host = this.host;
-    if (step.action.kind === 'startTurn') {
-      if (step.team === host.viewer) {
-        this.otherTeam = null;
-        this.othersPlaying = false;
-      } else await this.announceTurnOf(step.team, match);
-    }
+    if (step.action.kind === 'startTurn') await this.turnStarts(step.team);
     await host.play(step.events);
   }
 
+  /** Empieza el turno de un equipo: el propio (ya no juegan otros) o el de otro, con su aviso. */
+  private async turnStarts(team: TeamId): Promise<void> {
+    if (team !== this.host.viewer) return this.announceTurnOf(team);
+    this.otherTeam = null;
+    this.othersPlaying = false;
+  }
+
   /** El turno de otro equipo empieza: su aviso (rojo si es enemigo, azul si es aliado). */
-  private async announceTurnOf(team: TeamId, match: number): Promise<void> {
+  private async announceTurnOf(team: TeamId): Promise<void> {
     const host = this.host;
     this.otherTeam = team;
     this.othersPlaying = true;
@@ -275,7 +277,6 @@ export class TurnFlow {
     const hostile = isHostile(host.state, host.viewer, team);
     showBanner(`${t('day')} ${host.state.day}`, t(hostile ? 'enemyTurn' : 'allyTurn'), hostile ? 'red' : 'blue');
     await host.wait(host.fastForward ? ENEMY_BANNER_FAST_MS : ENEMY_BANNER_MS);
-    if (match !== host.match) return;
   }
 
   /** Guardado automatico: al empezar el turno de una persona (ya con sus viajes dados), si el modo lo hace. */
