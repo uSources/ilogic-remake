@@ -186,7 +186,7 @@ Las piezas de abajo, que usa todo lo demas:
 | `content/` | el contenido (JSON validados) resuelto al cargar en tipos con campos con nombre (`UnitType`, `BuildingType`, `TerrainType`, `WeatherType`, `Theme`, generales y sus poderes), cada uno en un catalogo por id (`Catalog`: `list` en el orden del fichero y `byId`; `findEntry`/`entryOf`): `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego (`defaultContent()`, perezoso). Ver docs/CONTENIDO.md |
 | `gameContent.ts` | el contenido de cada partida es un campo, `GameState.content` (en el modelo se llama `MatchContent` y content/index.ts le da la forma de `GameContent`): lo ponen `newGameState` y `readSave`, no se guarda (`serialize` escribe `SavedGameState`) y se lee como `s.content` o con los atajos que dan el tipo resuelto de lo que hay en la partida: `unitTypeOf(s, unit)`, `buildingTypeOf`, `isHq`, `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (y `findUnitType`/`findBuildingType` para lo que viene de fuera). Las partidas guardan ids (`unit.type = 'Tank'`), nunca el puesto en el fichero; `cloneState(s)` copia la partida y comparte el contenido |
 | `modes.ts` | `GAME_MODES`: lo que fija cada modo de juego (`GameState.mode`: escaramuza, mision, partida para mirar): como se acaba (`victory`, en orden), el orden de los turnos de cada ronda (`turnOrder`: se fija al crear la partida y se guarda con ella), las reglas que impone (`fixedRules`, que `buildMatch` aplica: la partida para mirar no tiene clima), sus fases de turno (`turnPhases`, ademas de las de siempre) y si la pantalla guarda sola al empezar el turno de una persona (`savesAtTurnStart`). Un modo nuevo es su entrada aqui, su configuracion en `MatchConfig` y su forma de prepararse en `MATCH_SETUPS` (match.ts) |
-| `match.ts` | empezar una partida: `MatchConfig` (datos: `SkirmishConfig`, `MissionConfig`, `SandboxConfig`), `MATCH_SETUPS` (como se prepara cada modo) y `buildMatch(config, { content, mapRng? })` (con su clima y la muestra del ejercito del primer dia). `skirmishConfig` pone lo de siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto); `rematchOf(s)` da la revancha. La usan la pantalla, `npm run play`, las herramientas y los tests: una misma semilla da la misma partida en todos (K4) |
+| `match.ts` | empezar una partida: `MatchConfig` (datos: `SkirmishConfig`, `MissionConfig`, `SandboxConfig`), `MATCH_SETUPS` (como se prepara cada modo) y `buildMatch(config, { content, mapRng? })` (con su clima y la muestra del ejercito del primer dia). Todo lo de la partida va en la configuracion, nada se cambia despues: los generales en `MatchTeam.general`, y empezar cada equipo en el sitio del otro en `swapStarts` (la herramienta de equilibrio). `skirmishConfig` pone lo de siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto); `rematchOf(s)` da la revancha. La usan la pantalla, `npm run play`, las herramientas y los tests: una misma semilla da la misma partida en todos (K4) |
 | `gameState.ts` | `newGameState({ map, rules, content, mode, teams, diceSeed, firstTeam?, theme? })`: el unico sitio que escribe la forma de una partida nueva (mapgen, misiones, laboratorio, duelos, tests). Quien la crea dice sus equipos (`teams: duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados |
 | `dice.ts` + `util/random.ts` | el azar. Los dados de las reglas (el combate) son de la partida: `GameState.dice` es el estado de un mulberry32 (un entero de 32 bits) y `diceOf(s)` tira de el, asi que se guarda y se repite con la partida. Las decisiones de quien juega (la IA, el generador de mapas) llevan su propio `Rng` (`seededRng`): lo que decide no cambia lo que sale en los dados. `util/random.ts`: el paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw` |
 | `rulesSchema.ts` | `RULE_SCHEMA`: que valores puede tener cada regla (interruptor, o numero entero o no en un intervalo, quiza null). La usan el contenido (rules.json) y el guardado; rules.schema.json dice lo mismo para los editores (lo comprueba un test) |
@@ -302,12 +302,13 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 - Hace falta al menos dos alianzas (`newTeams` y `readSave` no aceptan menos).
 - Las reglas no miran el `controller`: solo dice quien decide (el controlador que le pone la sesion,
   ver "Partidas en juego"). Las ordenes con destino se le pueden dar a cualquier equipo.
-- **La escena**: el equipo que mira es `viewer` (`viewerOf`: la persona a la que le toca, o si no la
-  primera; sin personas, el primer equipo, que juega la persona aunque guarde `controller: 'ai'`), y
-  todos los `...Host` lo tienen. La niebla, la amenaza, lo que se elige y lo que se ordena son del
-  `viewer`. La interfaz no sabe de numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`:
-  `'own'`, `'ally'`, `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo propio y aliado,
-  rojo lo enemigo).
+- **La escena**: el equipo que mira es `viewer` (`viewerOf(session)`: la persona a la que le toca, o
+  si no la primera; sin personas, el primer equipo, que juega la persona aunque guarde `controller:
+  'ai'`, `sceneControllers`), y todos los `...Host` lo tienen. La niebla, la amenaza, lo que se
+  elige y lo que se ordena son del `viewer`. Si un equipo es de una persona solo lo dice
+  `session.isPerson` (el `person` de su controlador, tambien dentro de un `sequence`). La interfaz
+  no sabe de numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`,
+  `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
 - **Varias personas en la misma pantalla** (por turnos): cada una tiene su `humanController`; al
   empezar el turno de otra, la escena tapa la partida con el aviso de cambio de jugador
   (`UIState.handoff`, `hud/overlays/Handoff.tsx`) y, cuando esta lista, pasa a mirar ella
@@ -409,11 +410,13 @@ o acaba su turno, y para si espera a alguien de fuera o si la partida se ha deci
 de una persona entran por `session.act(team, action)` (solo mientras se la espera, salvo rendirse,
 que vale siempre; 'startTurn' y 'endTurn' nunca: son solo de la sesion, que da 'sessionOnly',
 tambien si los propone un controlador). Si a quien se espera ya no juega (se ha rendido), la sesion
-deja de esperarle y pasa su turno. Si es una persona lo dice `session.isPerson(team)`. Quien la
-juega decide como esperar entre pasos: `runMatch` la lleva seguida (las herramientas y los tests,
-con `until` para un limite de dias) y `playMatch` espera a que se anime cada paso (la escena y el
-fondo del menu). El guardado automatico es al empezar el turno de una persona, si su modo guarda
-(`isAutosaveMoment`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
+deja de esperarle y pasa su turno. Si es una persona lo dice `session.isPerson(team)`
+(`Controller.person`): la unica pregunta, que usan la escena, el autoguardado y quien mira. Que un
+paso empieza un turno lo dice `startsTurn(paso)`. Quien la juega decide como esperar entre pasos:
+`runMatch` la lleva seguida (las herramientas y los tests, con `until` para un limite de dias) y
+`playMatch` espera a que se anime cada paso (la escena y el fondo del menu). El guardado automatico
+es al empezar el turno de una persona, si su modo guarda (`isAutosaveMoment`): con los viajes de ese
+turno ya dados, al cargar nada se repite ni se pierde.
 
 ```mermaid
 sequenceDiagram

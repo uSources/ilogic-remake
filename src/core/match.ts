@@ -36,6 +36,11 @@ export interface SkirmishConfig {
   teams: readonly MatchTeam[];
   /** El equipo que juega primero cada ronda (si no, el primero de la lista). */
   firstTeam?: TeamId;
+  /**
+   * Con dos equipos, cada uno empieza donde le tocaba al otro (sus unidades y sus edificios): para
+   * medir si el mapa favorece a un lado (la herramienta de equilibrio). La revancha no lo repite.
+   */
+  swapStarts?: true;
 }
 
 /** Una mision de la campaña (por su id), con su mapa, sus equipos y sus reglas; `diceSeed`, la de sus dados. */
@@ -108,8 +113,17 @@ function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext
     firstTeam: config.firstTeam,
   });
   s.setup = { ...map };
+  if (config.swapStarts) swapStarts(s);
   appointGenerals(s, config.teams);
   return s;
+}
+
+/** Cada uno de los dos equipos se queda con las unidades y los edificios con los que empezaba el otro. */
+function swapStarts(s: GameState): void {
+  if (s.teams.length !== 2) throw new Error(`Cambiar de sitio es para dos equipos (hay ${s.teams.length})`);
+  const other = (team: TeamId): TeamId => 1 - team;
+  for (const unit of s.units) unit.team = other(unit.team);
+  for (const building of s.buildings) if (building.owner !== null) building.owner = other(building.owner);
 }
 
 function mission(config: MissionConfig, { content }: MatchSetupContext): GameState {

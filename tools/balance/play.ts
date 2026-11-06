@@ -183,11 +183,7 @@ export function playGame(options: PlayOptions): GameRecord {
     teams: duel('ai', 'ai'),
     firstTeam: options.firstTeam ?? FIRST_SIDE,
   });
-  const s = buildMatch(config, { content: options.content, mapRng: rng });
-  if (options.swapSides) {
-    for (const unit of s.units) unit.team = opponentOf(sideOfTeam(unit.team));
-    for (const building of s.buildings) if (building.owner !== null) building.owner = opponentOf(sideOfTeam(building.owner));
-  }
+  const s = buildMatch(options.swapSides ? { ...config, swapStarts: true } : config, { content: options.content, mapRng: rng });
   const units: Record<string, UnitTally>[] = SIDES.map(() =>
     Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])),
   );

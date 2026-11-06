@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { startsTurn } from '../core/actions';
 import { controllersFor } from '../core/controllers';
 import { GameSession, playMatch, type ActedStep } from '../core/session';
 import { aiSeedFor, seededRng } from '../core/util/random';
@@ -139,7 +140,7 @@ export class LiveBackground {
 
   /** Anima lo que ha pasado en un paso y espera un poco (mas entre turnos). */
   private async show(step: ActedStep): Promise<void> {
-    if (step.action.kind === 'startTurn') return this.pause(BETWEEN_TURNS_MS);
+    if (startsTurn(step)) return this.pause(BETWEEN_TURNS_MS);
     for (const event of step.events) await this.animate(event);
     this.render();
     await this.pause(step.action.kind === 'wait' ? AFTER_WAIT_MS : AFTER_ACTION_MS);

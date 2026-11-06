@@ -19,7 +19,10 @@ import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { PLAIN_RULES } from './plainRules';
-import { viewerOf } from '../src/scenes/game/matchSetup';
+import { sceneControllers, viewerOf } from '../src/scenes/game/matchSetup';
+import { controllersFor } from '@core/controllers';
+import { GameSession, humanController, passiveController, remoteController, sequence } from '@core/session';
+import { seededRng } from '@core/util/random';
 import { dispatch } from '@core/actions';
 
 const HQ = hqId();
@@ -286,12 +289,25 @@ describe('escena: tabla de fases (game/phases)', () => {
 });
 
 describe('escena: quien mira al abrir la partida (game/matchSetup.ts)', () => {
+  /** La sesion de la escena para esa partida (sus controladores: los de sceneControllers). */
+  const sceneSession = (s: GameState, isLab = false) => new GameSession(s, controllersFor(s, seededRng(1), sceneControllers(s, isLab)));
+
   it('la persona a la que le toca; si le toca a la IA, la primera persona; sin personas, el primer equipo', () => {
     const twoPeople = blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
-    expect(viewerOf(twoPeople)).toBe(0);
-    expect(viewerOf(giveTurn(twoPeople, 1))).toBe(1);
-    expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]))).toBe(0);
-    expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'human' }]))).toBe(1);
+    expect(viewerOf(sceneSession(twoPeople))).toBe(0);
+    expect(viewerOf(sceneSession(giveTurn(twoPeople, 1)))).toBe(1);
+    expect(viewerOf(sceneSession(blankState({}, [{ controller: 'ai' }, { controller: 'ai' }])))).toBe(0);
+    expect(viewerOf(sceneSession(blankState({}, [{ controller: 'ai' }, { controller: 'human' }])))).toBe(1);
+  });
+
+  it('quien es una persona lo dice su controlador, tambien dentro de una serie', () => {
+    const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
+    const session = new GameSession(s, [sequence(passiveController(), humanController()), remoteController()]);
+    expect([session.isPerson(0), session.isPerson(1)]).toEqual([true, false]);
+    giveTurn(s, 1);
+    expect(viewerOf(session)).toBe(0);
+    const lab = sceneSession(blankState({}, [{ controller: 'human' }, { controller: 'ai' }]), true);
+    expect(lab.controllerOf(1).name).toBe('passive');
   });
 });
 

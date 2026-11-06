@@ -5,6 +5,7 @@
  * registro de acciones de la sesion). Lo que pasa solo al acabar y empezar cada turno (ordenes
  * permanentes, capturas que siguen, viajes) lo hace la partida: aqui solo se anima y se cuenta.
  */
+import { startsTurn } from '../../core/actions';
 import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
@@ -244,7 +245,7 @@ export class TurnFlow {
   /** Empieza el turno de una persona que no es la que mira (varias personas en esta pantalla, por turnos). */
   private startsTurnOfAnotherPerson(step: ActedStep): boolean {
     const host = this.host;
-    return step.action.kind === 'startTurn' && step.team !== host.viewer && host.session.isPerson(step.team);
+    return startsTurn(step) && step.team !== host.viewer && host.session.isPerson(step.team);
   }
 
   /**
@@ -273,7 +274,7 @@ export class TurnFlow {
   /** Anima un paso de la sesion: al empezar el turno de otro equipo, su aviso; despues, sus sucesos. */
   private async show(step: ActedStep): Promise<void> {
     const host = this.host;
-    if (step.action.kind === 'startTurn') await this.turnStarts(step.team);
+    if (startsTurn(step)) await this.turnStarts(step.team);
     await host.play(step.events);
   }
 
@@ -337,7 +338,7 @@ export class TurnFlow {
   /** Un paso repetido: sin avisos ni final (ya se sabe como acabo); se para al volver el turno propio. */
   private async replayStep(step: ActedStep, match: number): Promise<boolean> {
     const host = this.host;
-    if (step.action.kind === 'startTurn' && step.team === host.viewer) return false;
+    if (startsTurn(step) && step.team === host.viewer) return false;
     this.otherTeam = step.team === host.viewer ? null : step.team;
     this.othersPlaying = this.otherTeam !== null;
     await host.play(step.events);

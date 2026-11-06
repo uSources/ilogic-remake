@@ -91,3 +91,6 @@ export const TURN_ACTIONS: Pick<ActionRegistry, 'startTurn' | 'endTurn'> = {
 
 /** Empezar o acabar un turno: lo manda la sesion (core/session), no quien juega el equipo. */
 export const isTurnBoundary = (action: GameAction): boolean => action.kind === 'startTurn' || action.kind === 'endTurn';
+
+/** Lo hecho (un paso de la sesion, una entrada del registro) es empezar un turno. */
+export const startsTurn = (done: { readonly action: GameAction }): boolean => done.action.kind === 'startTurn';

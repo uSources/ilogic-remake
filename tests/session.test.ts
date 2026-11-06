@@ -18,6 +18,7 @@ import {
   type Controller,
 } from '@core/session';
 import { GAME_MODES } from '@core/modes';
+import { startsTurn } from '@core/actions';
 import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
@@ -57,7 +58,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(end).toEqual({ kind: 'awaitingInput', team: 0 });
     const ownEnd = steps.find((step) => step.team === 0 && step.action.kind === 'endTurn')!;
     expect(ownEnd.events[0]).toMatchObject({ kind: 'capture', actor: 0, uid: soldier.uid });
-    expect(steps.some((step) => step.team === 1 && step.action.kind === 'startTurn')).toBe(true);
+    expect(steps.some((step) => step.team === 1 && startsTurn(step))).toBe(true);
     expect(s.day).toBe(2);
   });
 
@@ -210,7 +211,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.awaitingInput).toBeNull();
     runMatch(session, { until: (state) => state.day > 3 });
     expect(steps.filter((step) => step.team === 0).map((step) => step.action.kind)).toEqual(['endTurn']);
-    expect(steps.some((step) => step.team === 1 && step.action.kind === 'startTurn')).toBe(true);
+    expect(steps.some((step) => step.team === 1 && startsTurn(step))).toBe(true);
   });
 
   it('rendirse fuera del turno, sin que la partida acabe: su turno se salta', () => {
@@ -224,7 +225,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     session.finishInput(0);
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
     expect(steps.filter((step) => step.team === 1)).toEqual([]);
-    expect(steps.some((step) => step.team === 2 && step.action.kind === 'startTurn')).toBe(true);
+    expect(steps.some((step) => step.team === 2 && startsTurn(step))).toBe(true);
   });
 
   it('un controlador que propone empezar o acabar el turno no lo consigue (son de la sesion)', () => {

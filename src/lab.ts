@@ -56,9 +56,12 @@ export const defaultLab = (): LabOptions => ({
 /** Distancia desde la que ataca la propia: su alcance minimo (la casilla de al lado si no ataca). */
 export const labRange = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).attack?.minRange ?? 1;
 
-/** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
+/**
+ * Reglas del laboratorio: sin niebla; contraataque solo en la accion que lo enseña (en 'attack', el
+ * defensor no responde). Sin clima ya lo pone su modo (GAME_MODES.sandbox.fixedRules).
+ */
 export function labRuleChanges(action: LabAction | null): Partial<RulesConfig> {
-  return { fog: false, weather: false, counterattack: action !== 'attack' };
+  return { fog: false, counterattack: action !== 'attack' };
 }
 
 /**

@@ -24,6 +24,11 @@ export type ControllerName = 'human' | 'ai' | 'remote' | 'replay' | 'random' | '
 
 export interface Controller {
   readonly name: ControllerName;
+  /**
+   * Lo decide una persona en esta pantalla (la sesion la espera; la escena mira desde ella, guarda al
+   * empezar su turno). Es la unica forma de preguntarlo: `GameSession.isPerson`.
+   */
+  readonly person?: true;
   /** El turno del equipo `team` en la partida `s`, paso a paso. */
   playTurn(s: GameState, team: TeamId): TurnPlan;
 }
@@ -55,6 +60,8 @@ export const scriptedController = (actionsFor: (s: GameState, team: TeamId) => r
 /** Juega el turno con cada uno, en orden (p. ej. el piloto automatico de las ordenes y despues la IA). */
 export const sequence = (...controllers: readonly Controller[]): Controller => ({
   name: 'sequence',
+  // Si en la serie decide una persona, el equipo es de una persona.
+  ...(controllers.some((controller) => controller.person) ? { person: true as const } : {}),
   playTurn: function* (s, team) {
     for (const controller of controllers) yield* controller.playTurn(s, team);
   },
@@ -68,6 +75,7 @@ export const sequence = (...controllers: readonly Controller[]): Controller => (
 function externalController(name: 'human' | 'remote'): Controller {
   return {
     name,
+    ...(name === 'human' ? { person: true as const } : {}),
     playTurn: function* () {
       yield { kind: 'awaitInput' };
     },

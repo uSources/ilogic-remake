@@ -12,8 +12,7 @@ import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
 import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
-import { controllersFor } from '../core/controllers';
-import { GameSession, type ActedStep } from '../core/session';
+import type { GameSession, ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
 import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
@@ -225,10 +224,10 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameStartData): void {
     this.resetMatch();
-    const start = startMatch(data);
-    this.s = start.state;
+    const start = startMatch(seededRng(randomSeed()), data);
+    this.session = start.session;
+    this.s = start.session.state;
     this.viewer = start.viewer;
-    this.session = new GameSession(start.state, controllersFor(start.state, seededRng(randomSeed()), start.controllers));
     this.session.subscribe((step) => this.record(step));
     this.lab = start.lab;
     this.fromSave = start.fromSave;
@@ -786,8 +785,7 @@ export class GameScene extends Phaser.Scene {
   /** Un suceso ya hecho: tutorial y donde ha pasado lo ultimo (estadisticas y deshacer los lleva el nucleo). */
   private noteEvent(event: GameEvent, isOwn: boolean): void {
     if (isOwn) this.tutorial.record(event);
-    if (event.kind === 'attack') this.lastAt = { ...event.at };
-    else if (event.kind === 'capture') this.lastAt = { ...event.at };
+    if (event.kind === 'attack' || event.kind === 'capture') this.lastAt = { ...event.at };
   }
 
   // =========================================================================

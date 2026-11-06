@@ -7,6 +7,7 @@ import { serialize } from '@core/save';
 import { duel } from '@core/teams';
 import { DEFAULT_OPTIONS, matchConfigFor } from '../src/setup';
 import { TextMatch } from '../tools/play/textMatch';
+import { defaultLab, labMatch } from '../src/lab';
 
 describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () => {
   it('cada modo de GAME_MODES tiene su forma de prepararse, y la partida lleva su modo', () => {
@@ -44,6 +45,30 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
       }),
     );
     expect(s.teams.map((team) => team.general?.id ?? null)).toEqual(['Brisa', null]);
+  });
+
+  it('con swapStarts cada equipo empieza donde le tocaba al otro (la herramienta de equilibrio)', () => {
+    const config = skirmishConfig({ seed: 5, size: 16, teams: duel('ai', 'ai') });
+    const normal = createMatch(config);
+    const swapped = createMatch({ ...config, swapStarts: true });
+    const startOf = (s: typeof normal, team: number) => [
+      s.units.filter((unit) => unit.team === team).map((unit) => [unit.type, unit.x, unit.y]),
+      s.buildings.filter((building) => building.owner === team).map((building) => [building.x, building.y]),
+    ];
+    expect(startOf(swapped, 0)).toEqual(startOf(normal, 1));
+    expect(startOf(swapped, 1)).toEqual(startOf(normal, 0));
+    expect(() =>
+      createMatch({
+        ...skirmishConfig({ seed: 5, size: 16, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] }),
+        swapStarts: true,
+      }),
+    ).toThrow(/dos equipos/);
+  });
+
+  it('el laboratorio no tiene clima porque su modo lo impone, no porque lo pida', () => {
+    const config = labMatch(defaultLab(), 'attack');
+    expect(config.ruleChanges?.weather).toBeUndefined();
+    expect(createMatch(config).rules.weather).toBe(false);
   });
 
   it('revancha: el mismo mapa, reglas y equipos; una mision no la tiene', () => {

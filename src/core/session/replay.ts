@@ -4,7 +4,7 @@
  * mismo: los dados van en la partida. Empezar y acabar los turnos lo hace la sesion que repite.
  */
 import type { GameAction, GameState, TeamId } from '../model';
-import { isTurnBoundary } from '../actions/turn';
+import { isTurnBoundary, startsTurn } from '../actions/turn';
 import { propose, type Controller } from './controller';
 
 /** Una accion apuntada: quien la mando y cual. */
@@ -27,8 +27,8 @@ export function replayController(log: readonly LoggedAction[]): Controller {
    */
   const readTurnOf = (team: TeamId) => {
     const entry = log[next];
-    if (entry?.team === team && entry.action.kind !== 'startTurn') return;
-    const start = log.findIndex((candidate, at) => at >= next && candidate.team === team && candidate.action.kind === 'startTurn');
+    if (entry?.team === team && !startsTurn(entry)) return;
+    const start = log.findIndex((candidate, at) => at >= next && candidate.team === team && startsTurn(candidate));
     next = start < 0 ? log.length : start + 1;
   };
   return {

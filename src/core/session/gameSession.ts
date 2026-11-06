@@ -9,7 +9,7 @@
  * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
  */
 import { dispatch, isAnyTime } from '../actions/dispatch';
-import { isTurnBoundary } from '../actions/turn';
+import { isTurnBoundary, startsTurn } from '../actions/turn';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
@@ -67,7 +67,7 @@ export class GameSession {
 
   /** El equipo lo juega una persona en esta pantalla (la sesion la espera en su turno). */
   isPerson(team: TeamId): boolean {
-    return this.controllerOf(team).name === 'human';
+    return this.controllerOf(team).person === true;
   }
 
   /**
@@ -75,7 +75,7 @@ export class GameSession {
    * solo al empezarlo ya hecho: asi, al cargar, nada se repite ni se pierde) y su modo lo marca.
    */
   isAutosaveMoment(step: ActedStep): boolean {
-    return gameModeOf(this.state).savesAtTurnStart && step.action.kind === 'startTurn' && this.isPerson(step.team);
+    return gameModeOf(this.state).savesAtTurnStart && startsTurn(step) && this.isPerson(step.team);
   }
 
   /** Quien juega ese equipo. */
