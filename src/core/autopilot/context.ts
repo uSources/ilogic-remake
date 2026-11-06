@@ -8,7 +8,7 @@ import { isHostile } from '../teams';
 import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt } from '../rules/queries';
 import { posOf, samePos } from '../geom';
-import { canReach, reachableTiles, type MoveRange } from '../rules/movement';
+import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, visibleEnemiesBlock, type Blockers } from '../rules/distance';
 import { isRuleOn } from '../ruleModules/registry';
 import { endsInAmbush } from '../rules/traverse';
@@ -17,7 +17,6 @@ import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive } from '../util/predicates';
-import { minBy } from '../util/pick';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -76,10 +75,8 @@ export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Po
   if (samePos(unit, dest) && !avoidDest) return null;
   if (!avoidDest && canReach(range, dest)) return dest;
   const stepsToDest = stepsFrom(s, play, unit, dest);
-  const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
-  const best = minBy(options, stepsToDest);
-  const getsCloser = best !== null && stepsToDest(best) < stepsToDest(unit);
-  return getsCloser ? best : null;
+  // A igual distancia, la primera (sin mirar lo que gasta: como siempre).
+  return stepToward(range, { score: (tile) => [stepsToDest(tile.pos)], allows: (pos) => !samePos(pos, dest) });
 }
 
 /**

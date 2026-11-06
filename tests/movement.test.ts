@@ -200,18 +200,20 @@ describe('movimiento: coste del terreno', () => {
 
 describe('movimiento: ordenes de varios turnos', () => {
   it('stepToward acerca la unidad al destino y el viaje se guarda con la partida', async () => {
-    const { stepToward } = await import('@core/rules');
+    const { overGroundTo, stepToward } = await import('@core/rules');
     const { deserialize, serialize } = await import('@core/save');
     const s = blankState();
     const tank = newUnit(s, TANK, 0, { x: 2, y: 2 });
     const goal = { x: 20, y: 2 };
-    const step = stepToward(s, tank, goal)!;
+    const step = stepToward(moveRange(s, tank), overGroundTo(s, TANK.movement, goal));
     expect(step).toEqual({ x: 7, y: 2 });
     tank.travelTo = goal;
     expect(deserialize(serialize(s), defaultContent())!.units[0]!.travelTo).toEqual(goal);
-    // Un destino al que no se puede llegar (agua para un tanque): null.
+    // Si ya esta todo lo cerca que puede, quedarse: null.
+    expect(stepToward(moveRange(s, tank), overGroundTo(s, TANK.movement, tank))).toBeNull();
+    // Un destino al que no se puede llegar (agua para un tanque): el viaje no vale.
     s.map[25]![25] = 'Water';
-    expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();
+    expect(dispatch(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 25, y: 25 } })).toEqual({ ok: false, reason: 'unreachable' });
   });
 });
 

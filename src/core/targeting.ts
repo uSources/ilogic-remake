@@ -1,12 +1,11 @@
 /**
- * A donde apuntar con la unidad elegida: desde que casilla atacar a un objetivo y que casilla del
- * alcance acerca mas a un destino. Logica pura, sin interfaz: la usa la escena y se puede probar.
+ * A donde apuntar con la unidad elegida: desde que casilla atacar a un objetivo. Logica pura, sin interfaz: la usa la escena y se puede probar.
  */
 import { manhattan, samePos, posOf } from './geom';
 import { isRanged } from './abilities';
 import { attackProblem, tileProtection } from './rules/combat';
 import { sightOf, type Sight } from './rules/visibility';
-import { reachableTiles, reachableTilesWithCost, type MoveRange } from './rules/movement';
+import { reachableTiles, type MoveRange } from './rules/movement';
 import { minBy } from './util/pick';
 import type { GameState, Pos, Unit } from './model';
 
@@ -31,11 +30,4 @@ export function bestAttackTile(
   const onTrail = candidates.find((tile) => samePos(tile, end));
   if (onTrail) return onTrail;
   return minBy(candidates, (tile) => [manhattan(end, tile), tileProtection(s, tile), manhattan(unit, tile)]);
-}
-
-/** Casilla alcanzable mas cercana a `goal` (si empata, la que cuesta menos); null si ninguna acerca. */
-export function closestStep(unit: Unit, goal: Pos, range: MoveRange): Pos | null {
-  const distanceNow = manhattan(unit, goal);
-  const closer = reachableTilesWithCost(range).filter((tile) => manhattan(tile.pos, goal) < distanceNow);
-  return minBy(closer, (tile) => [manhattan(tile.pos, goal), tile.cost])?.pos ?? null;
 }

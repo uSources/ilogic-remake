@@ -1,8 +1,8 @@
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
-import { bestAttackTile, closestStep } from '@core/targeting';
+import { bestAttackTile } from '@core/targeting';
 import { extendTrail } from '@core/trail';
-import { moveRange, newUnit, pathCost } from '@core/rules';
+import { moveRange, newUnit, pathCost, stepToward, straightTo } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 
 const type = unitTypeNamed;
@@ -52,9 +52,9 @@ describe('ordenes del jugador', () => {
     const s = blankState();
     const unit = newUnit(s, type('Soldier'), 0, { x: 5, y: 5 });
     const range = moveRange(s, unit);
-    const step = closestStep(unit, { x: 20, y: 5 }, range)!;
+    const step = stepToward(range, straightTo({ x: 20, y: 5 }));
     expect(step).toEqual({ x: 5 + unitTypeOf(s, unit).move, y: 5 });
-    expect(closestStep(unit, { x: 5, y: 5 }, range)).toBeNull();
+    expect(stepToward(range, straightTo({ x: 5, y: 5 }))).toBeNull();
   });
 
   it('camino trazado: se alarga paso a paso, se recorta al volver y salta al mas corto', () => {

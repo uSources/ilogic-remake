@@ -6,9 +6,9 @@
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
-import { minBy } from '../util/pick';
+import { compareKeys, minBy, type SortKey } from '../util/pick';
+import type { MoveType } from '../content';
 import type { GameState, Pos, Unit } from '../model';
-import { movementOf, canWalk } from './queries';
 import { distanceMap } from './distance';
 import { movementProfile, type MovementProfile } from './movementProfile';
 import { surroundingsOf, type Surroundings } from './passage';
@@ -159,19 +159,36 @@ function allStepsAllowed(rules: MoveRules, path: readonly Pos[]): boolean {
 }
 
 /**
- * Casilla del alcance que mas acerca a `goal` (por tierra, mar o aire segun la unidad), sin contar a
- * las demas unidades. A igual distancia, la que menos pasos gasta.
- * null si no se puede llegar nunca o ninguna casilla acerca mas que quedarse donde esta.
+ * Como elegir la casilla del alcance con la que acercarse a algo: lo que se quiere hacer pequeño en
+ * cada casilla (lo que falta y, si empata, los desempates) y en cuales vale acabar.
  */
-export function stepToward(s: GameState, unit: Unit, goal: Pos, range = moveRange(s, unit)): Pos | null {
-  const movement = movementOf(s, unit);
-  if (!canWalk(s, goal, movement)) return null;
+export interface Approach {
+  score(tile: ReachableTile): SortKey;
+  /** Si no se dice, vale cualquier casilla del alcance. */
+  readonly allows?: (pos: Pos) => boolean;
+}
 
+/**
+ * La unica forma de dar un paso hacia algo (viajes, mover en grupo, la IA y las formaciones): la
+ * casilla del alcance con menos `score` (a igualdad, la primera, columna a columna), si mejora la de
+ * quedarse donde esta (coste 0). null si ninguna la mejora.
+ */
+export function stepToward(range: MoveRange, approach: Approach): Pos | null {
+  const allowed = reachableTilesWithCost(range).filter((tile) => approach.allows?.(tile.pos) ?? true);
+  const best = minBy(allowed, (tile) => approach.score(tile));
+  const stay: ReachableTile = { pos: posOf(range.origin), cost: 0 };
+  return best && compareKeys(approach.score(best), approach.score(stay)) < 0 ? best.pos : null;
+}
+
+/** Acercarse a `goal` por tierra (mar o aire segun `movement`), sin contar a las demas unidades; a igual distancia, gastando menos. */
+export function overGroundTo(s: GameState, movement: MoveType, goal: Pos): Approach {
   const distanceToGoal = distanceMap(s, goal, movement);
-  const best = minBy(reachableTilesWithCost(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
+  return { score: (tile) => [distanceToGoal.at(tile.pos), tile.cost] };
+}
 
-  const getsCloser = best !== null && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);
-  return getsCloser ? best.pos : null;
+/** Acercarse a `goal` en linea (sin mirar el terreno); a igual distancia, gastando menos. */
+export function straightTo(goal: Pos): Approach {
+  return { score: (tile) => [manhattan(tile.pos, goal), tile.cost] };
 }
 
 /** El camino trazado por el jugador, si acaba en `dest` y es valido; si no, null. */

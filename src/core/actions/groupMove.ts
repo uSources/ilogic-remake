@@ -5,9 +5,8 @@
  * lo cumple paso a paso con dispatch.
  */
 import { manhattan } from '../geom';
-import { moveRange } from '../rules/movement';
+import { moveRange, stepToward, straightTo } from '../rules/movement';
 import { canMoveNow } from '../rules/unitTurn';
-import { closestStep } from '../targeting';
 import type { GameActionOf, GameState, Pos, Unit } from '../model';
 
 /** Las unidades de un grupo que se mueven hacia `goal`, en el orden en que lo hacen: primero las mas cercanas. */
@@ -17,6 +16,6 @@ export function groupMoveOrder(units: readonly Unit[], goal: Pos): Unit[] {
 
 /** El paso de una unidad del grupo hacia `goal`: lo mas cerca que puede llegar ahora (null si no se acerca). */
 export function groupMoveStep(s: GameState, unit: Unit, goal: Pos): GameActionOf<'move'> | null {
-  const step = closestStep(unit, goal, moveRange(s, unit));
+  const step = stepToward(moveRange(s, unit), straightTo(goal));
   return step ? { kind: 'move', uid: unit.uid, to: step } : null;
 }
