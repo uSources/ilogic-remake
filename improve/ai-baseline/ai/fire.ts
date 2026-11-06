@@ -6,7 +6,8 @@
 import { unitTypeOf } from '@core/gameContent';
 import { manhattan } from '@core/geom';
 import { isRanged } from '@core/util/predicates';
-import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '@core/rules/combat';
+import { expectedDamage, fireOrigins } from '@core/rules/combat';
+import { canDamage, inAttackRange } from '@core/rules/weapons';
 import { engagement } from '@core/rules/engagement';
 import { moveRange } from '@core/rules/movement';
 import { teamUnits } from '@core/rules/queries';

@@ -8,7 +8,7 @@ import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
 import { unitTypeOf, isHq, weightsOf } from '../gameContent';
 import { diamond, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
-import { canDamage } from '../rules/combat';
+import { canDamage } from '../rules/weapons';
 import { isContested } from '../rules/control';
 import { reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';

@@ -26,6 +26,8 @@
  * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
  * | `damage` | como sale el daño: la tirada y la probabilidad de cada resultado de cada modelo (`DamageModel`) |
+ * | `weapons` | lo que dice el arma de cada tipo: a que distancias llega y a quien le hace daño |
+ * | `attackRecord` | lo que se apunta de un ataque mientras se resuelve (`AttackRecord`) |
  * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
@@ -103,8 +105,6 @@ export { distanceMap, noBlockers, unitsBlock, visibleEnemiesBlock, type Blockers
 export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
 export { PASS_RULES, passRulesOf, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
 export {
-  inAttackRange,
-  canDamage,
   fireOrigins,
   attackTargets,
   attackProblem,
@@ -113,13 +113,15 @@ export {
   defenseStars,
   hitChance,
   hitModifiersOf,
-  bountyFor,
   expectedDamage,
   canCounter,
   HIT_MODIFIERS,
 } from './rules/combat';
 export { RULE_MODULES, isRuleOn, hooksOf } from './ruleModules/registry';
 export type {
+  CombatStage,
+  CombatStep,
+  CounterRule,
   HitModifier,
   CoverPiercing,
   RoundPhase,
@@ -133,6 +135,10 @@ export type {
 } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './ruleModules/veterancy';
 export { flanked } from './ruleModules/flank';
+export { bountyFor } from './ruleModules/bounty';
+export { MELEE_COUNTER } from './ruleModules/counterattack';
+export { inAttackRange, canDamage, basePower } from './rules/weapons';
+export { fallenIn, type AttackRecord } from './rules/attackRecord';
 export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
 export { combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
 export { damageDistribution, damageModelOf, SHOT_BY_SHOT, spreadAround, type DamageModel } from './rules/damage';

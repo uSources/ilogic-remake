@@ -8,7 +8,8 @@
 import { unitTypeOf, weightsOf } from '../gameContent';
 import { manhattan, samePos } from '../geom';
 import { canCapture } from '../rules/capture';
-import { canDamage, fireOrigins, inAttackRange } from '../rules/combat';
+import { fireOrigins } from '../rules/combat';
+import { canDamage, inAttackRange } from '../rules/weapons';
 import type { MoveRange } from '../rules/movement';
 import { mergeTargets } from '../rules/transport';
 import { canStillFire } from '../rules/unitTurn';

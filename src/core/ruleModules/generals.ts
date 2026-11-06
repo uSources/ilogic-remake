@@ -1,8 +1,8 @@
 /**
  * [CAMBIO] Los generales (core/generals.ts) se enchufan a las reglas desde aqui: su ventaja fija en el
- * acierto, lo que hacen al empezar cada ronda y su reconocimiento. Siempre esta: que un equipo tenga general lo dice su `TeamState`, no los ajustes.
+ * acierto, su carga en combate, lo que hacen al empezar cada ronda y su reconocimiento. Siempre esta: que un equipo tenga general lo dice su `TeamState`, no los ajustes.
  */
-import { generalHitFactor, generalsNewRound, revealsAll } from '../generals';
+import { chargeFromCombat, generalHitFactor, generalsNewRound, revealsAll } from '../generals';
 import { quietly } from '../util/quietly';
 import type { RuleModule } from './hooks';
 
@@ -14,6 +14,16 @@ export const GENERALS: RuleModule = {
     hitModifiers: [{ id: 'generals', factor: generalHitFactor }],
     // Al empezar la ronda pueden volver a usar un poder y se acaba el reconocimiento.
     roundPhases: [{ id: 'generals', stage: 'start', run: quietly(generalsNewRound) }],
+    // La barra se carga con lo que hace y recibe cada equipo en combate.
+    combatSteps: [
+      {
+        id: 'charge',
+        stage: 'wound',
+        run: (s, attack) => {
+          attack.charge = chargeFromCombat(s, attack.attacker, attack.defender, attack.damage, attack.counter);
+        },
+      },
+    ],
     // El poder de reconocimiento: ve todo el mapa hasta que acaba la ronda.
     revealRules: [{ id: 'reconnaissance', revealsAll }],
   },

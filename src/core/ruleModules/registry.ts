@@ -6,7 +6,9 @@
 import type { GameState } from '../model';
 import { ABILITIES } from './abilities';
 import { AMBUSH } from './ambush';
+import { BOUNTY } from './bounty';
 import { CONTROL_POINTS } from './controlPoints';
+import { COUNTERATTACK } from './counterattack';
 import { FLANK } from './flank';
 import { FOREST_HIDES } from './forestHides';
 import { GENERALS } from './generals';
@@ -37,6 +39,8 @@ export const RULE_MODULES: readonly RuleModule[] = [
   TERRAIN_COST,
   PASS_ALLIES,
   AMBUSH,
+  COUNTERATTACK,
+  BOUNTY,
 ];
 
 /** Los modulos que lleva la partida, segun sus ajustes. */

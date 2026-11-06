@@ -7,7 +7,8 @@
  * Una lista nueva que se pueda ampliar es un campo mas de `RuleHooks`, con el tipo de sus entradas.
  */
 import type { MoveType, UnitType } from '../content';
-import type { GameEvent, GameState, MatchSettings, Pos, TeamId, Unit } from '../model';
+import type { Dice, GameEvent, GameState, MatchSettings, Pos, TeamId, Unit } from '../model';
+import type { AttackRecord } from '../rules/attackRecord';
 import type { Engagement } from '../rules/engagement';
 
 /**
@@ -24,6 +25,25 @@ export interface HitModifier {
 export interface CoverPiercing {
   readonly id: string;
   ignoredCover(s: GameState, attacker: Unit): number;
+}
+
+/** El defensor puede responder al ataque (el contraataque); basta con que una regla lo deje. */
+export interface CounterRule {
+  readonly id: string;
+  allows(s: GameState, fight: Engagement): boolean;
+}
+
+/**
+ * Momentos de un ataque, en orden (COMBAT_STAGES, actions/combat.ts): el golpe, el contraataque, lo
+ * que pasa por herir (la carga de los generales) y lo que pasa si una cae (bajas, botin).
+ */
+export type CombatStage = 'strike' | 'counter' | 'wound' | 'kill';
+
+/** Un paso de la resolucion de un ataque: cambia la partida y apunta lo suyo en el ataque. */
+export interface CombatStep {
+  readonly id: string;
+  readonly stage: CombatStage;
+  run(s: GameState, attack: AttackRecord, dice: Dice): void;
 }
 
 /**
@@ -127,6 +147,9 @@ export interface RuleHooks {
   readonly hitModifiers?: readonly HitModifier[];
   /** Perforar la proteccion (cuenta la mayor). */
   readonly coverPiercing?: readonly CoverPiercing[];
+  /** Quien contraataca (`canCounter`, rules/combat.ts) y lo que pasa en cada ataque (COMBAT_RESOLUTION). */
+  readonly counterRules?: readonly CounterRule[];
+  readonly combatSteps?: readonly CombatStep[];
   /** Pasos del fin de ronda (ver ROUND_PHASES, rules/round.ts). */
   readonly roundPhases?: readonly RoundPhase[];
   /** Lo que se prepara al crear la partida (buildMatch). */
@@ -162,7 +185,9 @@ export type RuleModuleId =
   | 'forestHides'
   | 'terrainCost'
   | 'passAllies'
-  | 'ambush';
+  | 'ambush'
+  | 'counterattack'
+  | 'bounty';
 
 /** Un modulo de reglas: una pieza del juego que se enchufa o no segun los ajustes de la partida. */
 export interface RuleModule {

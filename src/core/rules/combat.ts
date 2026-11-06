@@ -1,12 +1,13 @@
 /**
- * Combate: alcance y objetivos, proteccion del terreno, probabilidad de acierto, veterania,
- * contraataque, botin y la tirada de daño. El ataque en si (lo que cambia en la partida) es la accion
- * 'attack' (actions/combat.ts).
+ * Combate: desde donde se dispara y a quien, proteccion del terreno, probabilidad de acierto, daño
+ * esperado, si hay contraataque y la tirada de daño. Lo que dice el arma de cada tipo esta en
+ * weapons.ts; lo que pasa en un ataque (lo que cambia en la partida) es la accion 'attack' y su
+ * COMBAT_RESOLUTION (actions/combat.ts).
  */
 
-import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
-import { manhattan, posOf } from '../geom';
-import { canFight, firesAfterMove, isAlive, areEnemies, isOnMap, isRanged } from '../util/predicates';
+import { buildingTypeOf, terrainAt } from '../gameContent';
+import { posOf } from '../geom';
+import { canFight, firesAfterMove, isAlive, areEnemies, isOnMap } from '../util/predicates';
 import type { HitModifier } from '../ruleModules/hooks';
 import { hooksOf } from '../ruleModules/registry';
 import { rank } from '../ruleModules/veterancy';
@@ -17,28 +18,9 @@ import { sightOf, type Sight } from './visibility';
 import { reversed, type Engagement } from './engagement';
 import { damageModelOf } from './damage';
 import { canStillFire } from './unitTurn';
+import { basePower, canDamage, inAttackRange } from './weapons';
 
 // ---- Alcance y objetivos ----
-
-/** El tipo de `unit` alcanza de `from` a `to`: ataca, y la distancia esta entre su alcance minimo y el maximo. */
-export function inAttackRange(s: GameState, unit: Pick<Unit, 'type'>, from: Pos, to: Pos): boolean {
-  const attack = unitTypeOf(s, unit).attack;
-  const distance = manhattan(from, to);
-  return !!attack && distance >= attack.minRange && distance <= attack.maxRange;
-}
-
-/** `attacker` puede luchar y hacer dano a una unidad como `defender` (sin mirar distancias). */
-export function canDamage(s: GameState, attacker: Unit, defender: Unit): boolean {
-  return canFight(s, attacker) && basePower(s, attacker, defender) > 0;
-}
-
-/**
- * Probabilidad de acierto de units.json ("attack.hitChance"), sin terreno ni modificadores (0 = no
- * le hace nada).
- */
-export function basePower(s: GameState, attacker: Pick<Unit, 'type'>, defender: Pick<Unit, 'type'>): number {
-  return unitTypeOf(s, attacker).attack?.hitChance[unitTypeOf(s, defender).id] ?? 0;
-}
 
 /**
  * Casillas desde las que `unit` puede disparar este turno: donde esta y, si puede moverse y disparar
@@ -145,13 +127,6 @@ export function cappedHitChance(s: GameState, fight: Engagement): number {
   return Math.min(1, hitChance(s, fight));
 }
 
-// ---- Botin ----
-
-/** [CAMBIO] Botin por destruir una unidad como `lost` (0 sin la regla). */
-export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
-  return Math.round(unitTypeOf(s, lost).cost * s.rules.bounty);
-}
-
 /** Dano esperado (para la IA y para mostrarlo en pantalla). */
 export function expectedDamage(s: GameState, fight: Engagement): number {
   return Math.min(fight.defender.life, fight.attacker.life * cappedHitChance(s, fight));
@@ -164,15 +139,9 @@ export function strike(s: GameState, fight: Engagement, dice: Dice): number {
   return Math.min(fight.defender.life, damageModelOf(s).roll(fight.attacker.life, cappedHitChance(s, fight), dice));
 }
 
-/**
- * [CAMBIO] Contraataque (s.rules.counterattack): el defensor que sobrevive responde si es una
- * unidad de cuerpo a cuerpo, el atacante tambien lo es y lo tiene a su alcance.
- * La artilleria y demas unidades a distancia ni contraatacan ni reciben contraataque.
- */
-export function canCounter(s: GameState, { attacker, defender }: Engagement): boolean {
-  if (!s.rules.counterattack || !isAlive(defender)) return false;
-  if (isRanged(s, defender.unit) || isRanged(s, attacker.unit)) return false;
-  return canDamage(s, defender.unit, attacker.unit) && inAttackRange(s, defender.unit, defender.at, attacker.at);
+/** [CAMBIO] El defensor responde al ataque: lo deja alguna regla de contraataque de los modulos (`counterRules`). */
+export function canCounter(s: GameState, fight: Engagement): boolean {
+  return hooksOf(s, 'counterRules').some((rule) => rule.allows(s, fight));
 }
 
 /** Como estan las dos unidades antes de luchar, para enseñar el combate despues (ver CombatInfo). */

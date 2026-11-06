@@ -19,6 +19,11 @@ const SWITCHED_OFF: Partial<Record<RuleModuleId, Partial<MatchSettings>>> = {
   upkeep: { upkeep: 0 },
   noHealUnderFire: { noHealUnderFire: false },
   forestHides: { forestHides: false },
+  terrainCost: { terrainCost: false },
+  passAllies: { passAllies: false },
+  ambush: { ambush: false },
+  counterattack: { counterattack: false },
+  bounty: { bounty: 0 },
 };
 
 describe('modulos de reglas (RULE_MODULES)', () => {
@@ -36,6 +41,11 @@ describe('modulos de reglas (RULE_MODULES)', () => {
       const othersOn = RULE_MODULES.filter((module) => module.id !== id).map((module) => isRuleOn(off, module.id));
       expect(othersOn, id).toEqual(RULE_MODULES.filter((module) => module.id !== id).map((module) => isRuleOn(on, module.id)));
     }
+  });
+
+  it('todos los modulos con interruptor estan en la prueba', () => {
+    const switched = RULE_MODULES.map((module) => module.id).filter((id) => id !== 'generals' && id !== 'noFog');
+    expect(Object.keys(SWITCHED_OFF).sort()).toEqual([...switched].sort());
   });
 
   it('los generales van siempre; sin niebla, el modulo que lo enseña todo', () => {

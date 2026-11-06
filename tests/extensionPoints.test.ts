@@ -18,9 +18,12 @@ import {
   SHOT_BY_SHOT,
   spreadAround,
   damageModelOf,
+  canCounter,
+  MELEE_COUNTER,
 } from '@core/rules';
+import { COMBAT_RESOLUTION, combatResolutionOf } from '@core/actions';
 import type { UnitType } from '@core/content';
-import { blankState, endRoundReport, withoutHeadquarters } from './helpers';
+import { blankState, endRoundReport, unitTypeNamed, withoutHeadquarters } from './helpers';
 
 const UNIT_TYPES = defaultContent().units.list;
 const power = (attacker: UnitType, defender: UnitType) => attacker.attack?.hitChance[defender.id] ?? 0;
@@ -133,5 +136,27 @@ describe('modelos de daño (DamageModel)', () => {
   it('la partida elige el suyo con damageSpread', () => {
     expect(damageModelOf(blankState(rulesWith(defaultContent(), { damageSpread: null })))).toBe(SHOT_BY_SHOT);
     expect(damageModelOf(blankState(TEST_RULES))).not.toBe(SHOT_BY_SHOT);
+  });
+});
+
+describe('lo que pasa en un ataque (COMBAT_RESOLUTION y los pasos de los modulos)', () => {
+  it('por momentos: golpe, contraataque, lo de herir (generales) y lo de caer (bajas, botin)', () => {
+    expect(combatResolutionOf(blankState(TEST_RULES)).map((step) => step.id)).toEqual(['strike', 'counter', 'charge', 'kills', 'bounty']);
+    expect(COMBAT_RESOLUTION.map((step) => step.stage)).toEqual(['strike', 'counter', 'kill']);
+    const noBounty = blankState(rulesWith(defaultContent(), { fog: false, bounty: 0 }));
+    expect(combatResolutionOf(noBounty).map((step) => step.id)).toEqual(['strike', 'counter', 'charge', 'kills']);
+  });
+
+  it('el contraataque lo deciden las reglas de los modulos: sin el modulo nadie responde', () => {
+    const s = blankState(TEST_RULES);
+    const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
+    expect(hooksOf(s, 'counterRules')).toEqual([MELEE_COUNTER]);
+    expect(canCounter(s, engagement(attacker, defender))).toBe(true);
+    expect(canCounter(s, engagement(attacker, defender, { defenderLife: 0 }))).toBe(false);
+    expect(canCounter(s, engagement(attacker, defender, { from: { x: 2, y: 9 } }))).toBe(false);
+    const plain = blankState(rulesWith(defaultContent(), { fog: false, counterattack: false }));
+    const lone = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    expect(canCounter(plain, engagement(lone, newUnit(plain, unitTypeNamed('Tank'), 1, { x: 3, y: 2 })))).toBe(false);
   });
 });

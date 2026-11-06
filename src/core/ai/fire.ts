@@ -4,7 +4,8 @@
 
 import { unitTypeOf } from '../gameContent';
 import { manhattan } from '../geom';
-import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
+import { expectedDamage, fireOrigins } from '../rules/combat';
+import { canDamage, inAttackRange } from '../rules/weapons';
 import { engagement } from '../rules/engagement';
 import { moveRange } from '../rules/movement';
 import { firesAfterMove } from '../util/predicates';

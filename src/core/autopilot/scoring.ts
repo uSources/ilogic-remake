@@ -69,9 +69,9 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
       kills(attack) ? (weightsOf(attack.s).KILLBONUS + 100 * attack.s.rules.bounty) * unitValue(attack.s, attack.target) : 0,
   },
   {
-    // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
+    // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque (si la partida lo tiene: canCounter).
     id: 'counterattack',
-    value: (attack) => (attack.s.rules.counterattack && !kills(attack) ? -counterattackLoss(attack) : 0),
+    value: (attack) => (kills(attack) ? 0 : -counterattackLoss(attack)),
   },
   {
     // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.
