@@ -9,11 +9,12 @@ import { unitTypeOf, weightsOf } from './gameContent';
 import { MAX_LIFE } from './data';
 import { chargeStars, generalOf, healedByPower } from './generals';
 import { posKey, posOf, squareArea } from './geom';
-import { mapGrid } from './mapGrid';
+import { isOnBoard, mapGrid } from './mapGrid';
 import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 import { earn } from './rules/funds';
 import { seesEverything, visibility } from './rules/visibility';
 import { isHostile } from './teams';
+import type { ActionRegistry } from './actions/types';
 import type { DeepReadonly } from './util/freeze';
 import { maxBy } from './util/pick';
 import { isOnMap } from './util/predicates';
@@ -221,3 +222,17 @@ export function applyPower(s: GameState, team: TeamId, powerId: string, target: 
     ...(out.funds ? { funds: out.funds } : {}),
   };
 }
+
+/**
+ * La accion de usar un poder del general del equipo: vive con los poderes (es su pieza) y la junta
+ * con las demas la lista de acciones (actions/registry.ts), como RULE_MODULES junta los modulos.
+ */
+export const POWER_ACTIONS: Pick<ActionRegistry, 'usePower'> = {
+  usePower: {
+    validate: (s, team, action) => {
+      if (action.target && !isOnBoard(s, action.target)) return 'offBoard';
+      return powerBlock(s, team, action.power, action.target);
+    },
+    apply: (s, team, action) => [applyPower(s, team, action.power, action.target)],
+  },
+};

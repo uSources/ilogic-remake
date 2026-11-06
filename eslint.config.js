@@ -97,18 +97,19 @@ const NO_AI = {
  * L7: las reglas y las acciones no importan las piezas que se enchufan (generales, sus poderes, el
  * clima, las habilidades) ni los modulos de reglas concretos o su lista: preguntan a la partida por lo
  * que aportan (ruleModules/ruleset.ts) y los tipos de lo que se puede aportar (ruleModules/hooks.ts).
- * Lo de la accion 'usePower' (actions/powers.ts) es la excepcion: es la accion de los poderes.
+ * Vale con cualquier forma de la ruta: relativa (`../`, `../../core/`) o por alias (`@core/`); lo del
+ * contenido (`content/abilities`, `model/weather`) no es una pieza y si se puede. La lista de
+ * acciones (actions/registry.ts) es la excepcion: junta la accion de los poderes, que vive con ellos.
  */
-const ONLY_THROUGH_RULE_MODULES = {
-  regex: '^\\.\\./(generals|generalPowers|weather|abilities)(\\.ts)?$|^\\.\\./ruleModules/(?!(hooks|ruleset)(\\.ts)?$)',
+const PIECE_PATH = '(^(\\.\\./)+|^@core/|/core/)';
+const pluggedPieces = (pieces) => ({
+  regex: `${PIECE_PATH}(${pieces})(\\.ts)?$|${PIECE_PATH}ruleModules/(?!(hooks|ruleset)(\\.ts)?$)`,
   message:
     'Las reglas y las acciones no importan generales, poderes, clima, habilidades ni modulos concretos: lo que aportan llega por GameState.ruleset (hooksOf, ruleModules/ruleset.ts).',
-};
-const POWER_ACTION_FILE = 'src/core/actions/powers.ts';
-const NO_PLUGGED_PIECES_EXCEPT_POWERS = {
-  ...ONLY_THROUGH_RULE_MODULES,
-  regex: '^\\.\\./(generals|weather|abilities)(\\.ts)?$|^\\.\\./ruleModules/(?!(hooks|ruleset)(\\.ts)?$)',
-};
+});
+const ONLY_THROUGH_RULE_MODULES = pluggedPieces('generals|generalPowers|weather|abilities');
+const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
+const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces('generals|weather|abilities');
 
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
 const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
@@ -169,11 +170,11 @@ export default tseslint.config(
   {
     // Y las reglas y las acciones, ademas, sin las piezas que se enchufan (ONLY_THROUGH_RULE_MODULES).
     files: ['src/core/rules/**/*.ts', 'src/core/actions/**/*.ts'],
-    ignores: [POWER_ACTION_FILE],
+    ignores: [ACTION_LIST_FILE],
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ONLY_THROUGH_RULE_MODULES] }] },
   },
   {
-    files: [POWER_ACTION_FILE],
+    files: [ACTION_LIST_FILE],
     rules: {
       'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, NO_PLUGGED_PIECES_EXCEPT_POWERS] }],
     },

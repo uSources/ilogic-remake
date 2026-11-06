@@ -91,8 +91,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   (`recordEvents`, stats.ts: de todos, se animen o no). Las invariantes no saben de acciones;
   `dispatch` tampoco: lee lo que dice la entrada del registro.
 - `ACTIONS` (`actions/registry.ts`) tiene una entrada por accion (el tipo obliga), cada una en el
-  modulo de su tema (`movement`, `combat`, `capture`, `transport`, `units`, `economy`, `powers`,
-  `standingOrders`, `squads`). `validate(s, team, action)` lo calcula todo desde la partida (alcance,
+  modulo de su tema (`movement`, `combat`, `capture`, `transport`, `units`, `economy`,
+  `standingOrders`, `squads`; la de los poderes, `POWER_ACTIONS`, vive con ellos en `generalPowers.ts`). `validate(s, team, action)` lo calcula todo desde la partida (alcance,
   vision, dinero, de quien es cada unidad): no se fia de nada que traiga la accion. `apply` usa las
   piezas de `rules/` y `squads/` y devuelve los sucesos.
 - `actionProblem`/`isValidAction` preguntan lo mismo sin cambiar nada. El menu de una unidad sale de
@@ -510,8 +510,9 @@ importa (coma flotante). La direccion es una: el registro (`ruleModules/registry
 modulos, los modulos importan lo que enchufan (generales, clima, habilidades...) y las reglas solo
 importan `ruleModules/ruleset.ts` (`hooksOf`, `isRuleOn`) y los tipos de `ruleModules/hooks.ts`:
 ni el registro, ni un modulo concreto, ni generales, clima o habilidades (L7). Lo comprueba ESLint
-(`no-restricted-imports` en `src/core/rules/**` y `src/core/actions/**`; solo `actions/powers.ts`
-importa `generalPowers`). Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que
+(`no-restricted-imports` en `src/core/rules/**` y `src/core/actions/**`, con la ruta que sea:
+relativa o por `@core/`; solo la lista de acciones, `actions/registry.ts`, junta la de los poderes
+de `generalPowers.ts`). Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que
 las reglas de los modulos no tengan que importar el combate.
 
 Un modulo nuevo: su fichero en `ruleModules/` (lo que aporta a cada lista), su id en `RuleModuleId`,
