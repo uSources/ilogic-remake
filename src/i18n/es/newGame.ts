@@ -2,6 +2,9 @@
 export const newGame = {
   optGeneral: 'General',
   optEnemyGeneral: 'General enemigo',
+  optRival: 'Rival',
+  rivalAi: 'La IA',
+  rivalHuman: 'Otra persona (en esta pantalla)',
   presetNormal: 'Normal',
   presetQuick: 'Rápida',
   presetCustom: 'Personalizada',

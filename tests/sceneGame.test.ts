@@ -2,12 +2,12 @@ import { withBack } from '../src/scenes/game/phases/unitMenu';
 import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
 import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
-import type { GameState, Unit } from '@core/model';
+import type { GameState, MatchResult, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import { endButtonsFor, endFocus, outcomeFor } from '../src/scenes/game/endOfMatch';
+import { endButtonsFor, endFocus, endViewer, outcomeFor } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
@@ -17,10 +17,9 @@ import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { act, blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
+import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 import { viewerOf } from '../src/scenes/game/matchSetup';
-import { isPlayableOnOneScreen } from '@core/teams';
 import { dispatch } from '@core/actions';
 
 const HQ = hqId();
@@ -159,6 +158,13 @@ describe('escena: final de la partida (game/endOfMatch.ts)', () => {
     expect(endButtonsFor(undefined, 'won')).toEqual(['rematch', 'new', 'menu']);
   });
 
+  it('con varias personas en esta pantalla, el final se ve desde una que gana', () => {
+    const result: MatchResult = { status: 'decided', winners: [1], reason: 'hq' };
+    expect(endViewer(result, 0, [0, 1])).toBe(1);
+    expect(endViewer(result, 0, [0])).toBe(0);
+    expect(endViewer(result, 1, [0, 1])).toBe(1);
+  });
+
   it('para quien mira: su alianza gana, pierde o nadie gana', () => {
     expect(outcomeFor({ status: 'decided', winners: [0, 2], reason: 'hq' }, 2)).toBe('won');
     expect(outcomeFor({ status: 'decided', winners: [0, 2], reason: 'hq' }, 1)).toBe('lost');
@@ -279,16 +285,12 @@ describe('escena: tabla de fases (game/phases)', () => {
   });
 });
 
-describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
-  const twoPeople = () => blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
-
-  it('una partida con dos equipos de personas no se juega aqui; con una o ninguna, si', () => {
-    expect(isPlayableOnOneScreen(twoPeople())).toBe(false);
-    expect(() => viewerOf(twoPeople())).toThrow(/solo juega una/);
-    expect(isPlayableOnOneScreen(blankState())).toBe(true);
-    const aiOnly = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
-    expect(isPlayableOnOneScreen(aiOnly)).toBe(true);
-    expect(viewerOf(aiOnly)).toBe(0);
+describe('escena: quien mira al abrir la partida (game/matchSetup.ts)', () => {
+  it('la persona a la que le toca; si le toca a la IA, la primera persona; sin personas, el primer equipo', () => {
+    const twoPeople = blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
+    expect(viewerOf(twoPeople)).toBe(0);
+    expect(viewerOf(giveTurn(twoPeople, 1))).toBe(1);
+    expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]))).toBe(0);
     expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'human' }]))).toBe(1);
   });
 });

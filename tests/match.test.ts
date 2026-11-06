@@ -61,3 +61,10 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     expect(serialize(new Session({ seed: 7 }).s)).toBe(serialize(game));
   });
 });
+
+describe('partida nueva desde la pantalla (src/setup.ts)', () => {
+  it('el rival puede ser la IA u otra persona en esta pantalla', () => {
+    expect(matchConfigFor(DEFAULT_OPTIONS, 1).teams.map((team) => team.controller)).toEqual(['human', 'ai']);
+    expect(matchConfigFor({ ...DEFAULT_OPTIONS, rival: 'human' }, 1).teams.map((team) => team.controller)).toEqual(['human', 'human']);
+  });
+});

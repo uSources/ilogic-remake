@@ -33,7 +33,7 @@ export type {
 } from './vm/menus';
 export type { MinimapVM } from './vm/minimap';
 export type { NotesVM } from './vm/notes';
-export type { ReportLineVM } from './vm/notices';
+export type { HandoffVM, ReportLineVM } from './vm/notices';
 export type { AbilityVM, TileVM, UnitVM } from './vm/tile';
 export type { BreakdownLineVM, DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 
@@ -56,6 +56,7 @@ const DEFAULT_ACTIONS: UIActions = {
   selectSquad: noop,
   renameSquad: noop,
   renameClose: () => ui.set({ rename: null }),
+  handoffReady: noop,
   openGameMenu: noop,
   toggleThreat: noop,
   toggleIntents: noop,

@@ -3,7 +3,7 @@
  * la guardada, una preparada desde fuera o el laboratorio. Cada una trae sus reglas en `state.rules`
  * y su modo en `state.mode`. Sin Phaser.
  */
-import { duel, isPlayableOnOneScreen, playerTeam, teamIds, teamsControlledBy } from '../../core/teams';
+import { duel, playerTeam, teamIds, teamState } from '../../core/teams';
 import { humanController, passiveController, type Controller } from '../../core/session';
 import { createMatch, loadGame } from '../../core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '../../core/match';
@@ -36,8 +36,8 @@ const randomSkirmish = (): MatchConfig => skirmishConfig({ seed: randomSeed(), t
 
 export function startMatch(data: GameStartData = { start: 'new', match: randomSkirmish() }): MatchStart {
   const lab = data.start === 'lab' ? (data.lab ?? defaultLab()) : null;
-  const saved = onlyIfPlayable(data.start === 'load' ? readSavedGame() : null);
-  const given = onlyIfPlayable(data.start === 'state' ? loadGame(data.state) : null);
+  const saved = data.start === 'load' ? readSavedGame() : null;
+  const given = data.start === 'state' ? loadGame(data.state) : null;
   const loaded = saved ?? given;
   const corruptSave = (data.start === 'load' || data.start === 'state') && !loaded;
   // Solo se borra el guardado si lo que no se ha podido abrir era el guardado (no una partida de depuracion).
@@ -57,22 +57,14 @@ function controllersOf(state: GameState, viewer: TeamId, isLab: boolean): Map<Te
 const newMatchConfig = (data: GameStartData): MatchConfig => (data.start === 'new' ? data.match : randomSkirmish());
 
 /**
- * La partida leida, o null si no se puede jugar en una pantalla (varias personas: fase 4,
- * isPlayableOnOneScreen): entonces cuenta como dañada y se empieza otra.
- */
-const onlyIfPlayable = (state: GameState | null): GameState | null => (state && isPlayableOnOneScreen(state) ? state : null);
-
-/**
- * El equipo que mira la pantalla: el de la persona. En esta pantalla juega una sola persona; una
- * partida con varias (por turnos o en red) es la fase 4 y no se puede empezar aqui (startMatch no
- * la abre). Una sin personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y
- * ese equipo lo juega la persona en esta pantalla aunque guarde `controller: 'ai'`: las reglas no
- * miran el controller y los demas siguen siendo de la IA.
+ * El equipo que mira la pantalla al abrir la partida: la persona a la que le toca (con varias en la
+ * misma pantalla, cada una mira en su turno: TurnFlow cambia de una a otra) o, si le toca a la IA, la
+ * primera persona. Una sin personas (IA contra IA, de las herramientas) se mira desde el primer
+ * equipo, y ese equipo lo juega la persona en esta pantalla aunque guarde `controller: 'ai'` (las
+ * reglas no miran el controller; los demas siguen siendo de la IA).
  */
 export function viewerOf(state: GameState): TeamId {
-  if (!isPlayableOnOneScreen(state))
-    throw new Error(`La partida tiene ${teamsControlledBy(state, 'human').length} equipos de personas: en esta pantalla solo juega una`);
-  return playerTeam(state);
+  return teamState(state, state.turn).controller === 'human' ? state.turn : playerTeam(state);
 }
 
 function readSavedGame(): GameState | null {

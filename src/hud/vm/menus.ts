@@ -76,6 +76,8 @@ export interface SetupVM {
   /** Opciones de "Personalizada", con botones de segmento. */
   groups: { title: string; rows: OptionRowVM[] }[];
   /** General del jugador (siempre a la vista, no solo en "Personalizada") y lo que hace. */
+  /** Quien juega el otro equipo: la IA u otra persona en esta pantalla. */
+  rival: OptionRowVM;
   general: OptionRowVM | null;
   enemyGeneral: OptionRowVM | null;
   generalNote: string;

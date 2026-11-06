@@ -16,7 +16,7 @@ import { controllersFor, GameSession, type ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
 import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
-import { enemiesOf, teamState } from '../core/teams';
+import { enemiesOf, teamIds, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
 import {
   resetActions,
@@ -58,7 +58,7 @@ import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
-import { EndOfMatch, setEndFilter, type EndHost } from './game/endOfMatch';
+import { EndOfMatch, endViewer, setEndFilter, type EndHost } from './game/endOfMatch';
 import { GeneralPowers, type PowerHost } from './game/powers';
 import { restartLab, startLab, type LabHost } from './game/labMode';
 import { live, rw } from './game/host';
@@ -97,6 +97,8 @@ export class GameScene extends Phaser.Scene {
   private match = 0;
   /** Laboratorio de animaciones (null en una partida normal). */
   private lab: LabOptions | null = null;
+  /** Cambio de persona en esta pantalla esperando a que la siguiente este lista (null: no hay). */
+  private handoffDone: (() => void) | null = null;
   private fromSave = false;
   private savedThisGame = false;
   private corruptSave = false;
@@ -218,6 +220,7 @@ export class GameScene extends Phaser.Scene {
     this.lastAt = null;
     this.anchorAt = {};
     this.endScreen.reset();
+    this.handoffDone = null;
   }
 
   init(data: GameStartData): void {
@@ -284,7 +287,7 @@ export class GameScene extends Phaser.Scene {
       this.view.destroy();
       setEndFilter(null);
       resetActions();
-      ui.set({ menu: null, forecast: null, combat: null, tile: null, mission: null, weather: null });
+      ui.set({ menu: null, forecast: null, combat: null, tile: null, mission: null, weather: null, handoff: null });
     });
   }
 
@@ -391,6 +394,7 @@ export class GameScene extends Phaser.Scene {
       focusUnit: (uid: number) => {
         if (ready()) this.focusUnit(uid);
       },
+      handoffReady: () => this.handoffDone?.(),
     });
   }
 
@@ -440,6 +444,10 @@ export class GameScene extends Phaser.Scene {
     }
     if (command.kind === 'help') return ui.set({ help: true });
     if (command.kind === 'options') return this.openOptions();
+    if (this.handoffDone) {
+      if (command.kind === 'accept') this.handoffDone();
+      return;
+    }
     if (this.phase === 'busy') {
       // Durante el turno enemigo, aceptar acelera las animaciones.
       if (command.kind === 'accept') this.fastForward = true;
@@ -657,8 +665,22 @@ export class GameScene extends Phaser.Scene {
   private checkEnd(): boolean {
     const result = matchResult(this.s);
     if (result.status === 'playing') return false;
+    const people = teamIds(this.s).filter((team) => this.session.controllerOf(team).name === 'human');
+    this.viewer = endViewer(result, this.viewer, people);
     void this.endScreen.finish(result);
     return true;
+  }
+
+  /** Tapa la partida hasta que la persona de `team` dice que esta lista (boton o Enter). */
+  private handOver(team: TeamId): Promise<void> {
+    return new Promise((resolve) => {
+      this.handoffDone = () => {
+        this.handoffDone = null;
+        ui.set({ handoff: null });
+        resolve();
+      };
+      ui.set({ handoff: { team: team + 1 } });
+    });
   }
 
   /** Rendirse: el equipo que mira deja la partida (si con eso acaba, empieza el final). */
@@ -1283,7 +1305,10 @@ export class GameScene extends Phaser.Scene {
         () => this.s,
         (state) => (this.s = state),
       ),
-      viewer: { get: () => this.viewer },
+      viewer: rw(
+        () => this.viewer,
+        (team) => (this.viewer = team),
+      ),
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1311,6 +1336,7 @@ export class GameScene extends Phaser.Scene {
       markSaved: () => {
         this.savedThisGame = true;
       },
+      handOver: (team) => this.handOver(team),
       ...this.actionHost(),
     });
   }

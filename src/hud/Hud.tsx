@@ -9,6 +9,7 @@ import { Help } from './overlays/Help';
 import { Banner, Loading, Report, Toast } from './overlays/Notices';
 import { PatchNotes } from './overlays/PatchNotes';
 import { RenameSquad } from './overlays/RenameSquad';
+import { Handoff } from './overlays/Handoff';
 
 /**
  * Raiz de la interfaz HTML: la pantalla en curso (s.screen) y, encima, los dialogos y avisos.
@@ -35,6 +36,7 @@ export function Hud() {
       {s.options && <Options options={s.options} />}
       {s.help && s.helpRules && <Help rules={s.helpRules} />}
       {s.rename && <RenameSquad rename={s.rename} />}
+      {s.handoff && s.screen === 'game' && <Handoff handoff={s.handoff} />}
       {s.notes && <PatchNotes notes={s.notes} />}
       {s.toast && <Toast key={s.toast.id} toast={s.toast} />}
       {s.report && s.screen === 'game' && <Report key={s.report.id} report={s.report} />}

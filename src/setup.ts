@@ -4,8 +4,9 @@
 import { defaultContent } from './core/content/default';
 import { entryOf } from './core/content';
 import { skirmishConfig, type SkirmishConfig } from './core/match';
-import type { RulesConfig } from './core/model';
-import { fmtNum, nameOf, settings } from './settings';
+import type { ControllerKind, RulesConfig } from './core/model';
+import { CONTROLLER_KINDS } from './core/teams';
+import { fmtNum, nameOf, settings, t } from './settings';
 
 export interface NewGameOptions {
   size: number;
@@ -25,6 +26,8 @@ export interface NewGameOptions {
   general: string | null;
   /** General de la IA (id de generals.json; null = sin general). */
   enemyGeneral: string | null;
+  /** Quien juega el otro equipo: la IA u otra persona en esta misma pantalla (por turnos). */
+  rival: ControllerKind;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
   code: string;
   /** Ajuste elegido en la pantalla de nueva partida. */
@@ -37,7 +40,7 @@ export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
 export const PRESETS: Record<
   Exclude<PresetId, 'custom'>,
-  Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'general' | 'enemyGeneral'>
+  Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'general' | 'enemyGeneral' | 'rival'>
 > = {
   normal: { size: 32, fog: true, weather: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
   quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
@@ -59,6 +62,7 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   upkeep: 0.1,
   general: null,
   enemyGeneral: null,
+  rival: 'ai',
   code: '',
   preset: 'normal',
 };
@@ -83,6 +87,7 @@ export const CHOICES = {
   get enemyGeneral(): readonly (string | null)[] {
     return generalChoices();
   },
+  rival: CONTROLLER_KINDS,
 };
 export type ChoiceKey = keyof typeof CHOICES;
 
@@ -122,7 +127,8 @@ export function saveOptions(options: NewGameOptions): void {
 
 /**
  * La partida nueva de estas opciones con el mapa de `seed`: la persona (con su general) contra la
- * IA (con el suyo). Es la misma que da la misma semilla en `npm run play` (skirmishConfig).
+ * IA u otra persona en esta pantalla (con el suyo). Contra la IA, es la misma que da la misma
+ * semilla en `npm run play` (skirmishConfig).
  */
 export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishConfig {
   return skirmishConfig({
@@ -132,7 +138,7 @@ export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishC
     ruleChanges: ruleChangesFor(options),
     teams: [
       { controller: 'human', general: options.general },
-      { controller: 'ai', general: options.enemyGeneral },
+      { controller: options.rival, general: options.enemyGeneral },
     ],
   });
 }
@@ -204,6 +210,7 @@ const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
   upkeep: (value) => (value === 0 ? (isSpanish() ? 'No' : 'Off') : percent(value)),
   general: generalLabel,
   enemyGeneral: generalLabel,
+  rival: (value) => t(value === 'human' ? 'rivalHuman' : 'rivalAi'),
 };
 
 /** Texto de cada valor, para la pantalla. */

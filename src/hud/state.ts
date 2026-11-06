@@ -8,7 +8,7 @@ import type { LabVM } from './vm/lab';
 import type { CampaignItemVM, HomeVM, MainMenuItemVM, MenuItemVM, MenuVM, OptionRowVM, SetupRowVM, SetupVM } from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
-import type { ReportLineVM } from './vm/notices';
+import type { HandoffVM, ReportLineVM } from './vm/notices';
 import type { TileVM } from './vm/tile';
 import type { DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 
@@ -108,6 +108,8 @@ export interface UIState {
   /** Reglas que cuenta la ayuda: las de la partida en curso, o en el menu las de una partida nueva (null hasta que la escena las pone). */
   helpRules: RulesConfig | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
+  /** Cambio de persona en la misma pantalla (null: no hay que cambiar). */
+  handoff: HandoffVM | null;
   minimap: MinimapVM | null;
   /** Parte del mapa que se ve, en casillas. */
   minimapView: { x: number; y: number; w: number; h: number };
@@ -131,6 +133,7 @@ export const initialState: UIState = {
     preset: 'normal',
     presets: [],
     groups: [],
+    rival: { id: 'opt-rival', group: '', label: '', choices: [], index: 0 },
     general: null,
     enemyGeneral: null,
     generalNote: '',
@@ -179,6 +182,7 @@ export const initialState: UIState = {
   dayLimit: null,
   helpRules: null,
   report: null,
+  handoff: null,
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },
   help: false,

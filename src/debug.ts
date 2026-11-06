@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import type { SavedGameState } from './core/model';
+import type { ControllerKind, SavedGameState } from './core/model';
 import { defaultContent } from './core/content/default';
 import { findEntry } from './core/content';
 import { skirmishConfig, type MatchConfig } from './core/match';
@@ -30,6 +30,8 @@ export interface DebugGameOptions {
   /** General del jugador y de la IA (id de generals.json). */
   general?: string | null;
   enemyGeneral?: string | null;
+  /** Quien juega el segundo equipo: la IA (por defecto) u otra persona en la misma pantalla. */
+  rival?: ControllerKind;
   state?: SavedGameState | string;
   mission?: string;
 }
@@ -47,7 +49,7 @@ function debugMatch(options: DebugGameOptions): MatchConfig {
     ruleChanges: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
     teams: [
       { controller: 'human', general: options.general ?? null },
-      { controller: 'ai', general: options.enemyGeneral ?? null },
+      { controller: options.rival ?? 'ai', general: options.enemyGeneral ?? null },
     ],
   });
 }

@@ -40,8 +40,11 @@ export interface TurnHost extends ActionHost {
   readonly session: GameSession;
   /** La partida que se ve (la de la sesion; al repetir los turnos ajenos, la copia de antes). */
   state: GameState;
-  /** El equipo que juega la persona en esta pantalla (el que mira). */
-  readonly viewer: TeamId;
+  /**
+   * El equipo que juega la persona en esta pantalla (el que mira). Con varias personas por turnos,
+   * cambia al empezar el turno de cada una (despues de `handOver`).
+   */
+  viewer: TeamId;
   phase: Phase;
   readonly match: number;
   readonly ended: boolean;
@@ -63,6 +66,8 @@ export interface TurnHost extends ActionHost {
   idleUnits(): Unit[];
   /** Se ha guardado esta partida (al acabar se borra el guardado). */
   markSaved(): void;
+  /** Tapa la partida hasta que la persona de `team` dice que esta lista (cambio de jugador en esta pantalla). */
+  handOver(team: TeamId): Promise<void>;
 }
 
 /** Lo que se cuenta al volver el turno al jugador: lo que ha pasado mientras jugaban los demas. */
@@ -216,6 +221,8 @@ export class TurnFlow {
     const host = this.host;
     const summary: TurnSummary = { report: null, ordersDone: [], arrived: [] };
     const last: SessionStep = await playMatch(host.session, async (step) => {
+      if (this.startsTurnOfAnotherPerson(step)) await this.switchPerson(step.team, summary);
+      if (match !== host.match) return false;
       addToSummary(summary, host.session.state, host.viewer, step);
       this.autosave(step);
       await this.show(step, match);
@@ -225,6 +232,25 @@ export class TurnFlow {
     this.othersPlaying = false;
     if (last.kind === 'over') host.checkEnd();
     return last.kind === 'awaitingInput' && match === host.match ? summary : null;
+  }
+
+  /** Empieza el turno de una persona que no es la que mira (varias personas en esta pantalla, por turnos). */
+  private startsTurnOfAnotherPerson(step: ActedStep): boolean {
+    const host = this.host;
+    return step.action.kind === 'startTurn' && step.team !== host.viewer && host.session.controllerOf(step.team).name === 'human';
+  }
+
+  /**
+   * Cambio de persona: se tapa la partida hasta que la siguiente esta lista, y desde ahi mira ella (lo
+   * que se iba a contar a la anterior ya no se cuenta).
+   */
+  private async switchPerson(team: TeamId, summary: TurnSummary): Promise<void> {
+    const host = this.host;
+    await host.handOver(team);
+    host.viewer = team;
+    summary.ordersDone = [];
+    summary.arrived = [];
+    host.refresh();
   }
 
   /** Anima un paso de la sesion: al empezar el turno de otro equipo, su aviso; despues, sus sucesos. */

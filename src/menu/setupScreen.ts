@@ -146,8 +146,9 @@ export class SetupScreen {
         preset: options.preset,
         presets: PRESET_IDS.map(presetVM),
         groups: this.customGroups(),
-        general: hasGenerals() ? this.generalRow('general', 'optGeneral') : null,
-        enemyGeneral: hasGenerals() ? this.generalRow('enemyGeneral', 'optEnemyGeneral') : null,
+        rival: this.choiceRow('rival', 'optRival'),
+        general: hasGenerals() ? this.choiceRow('general', 'optGeneral') : null,
+        enemyGeneral: hasGenerals() ? this.choiceRow('enemyGeneral', 'optEnemyGeneral') : null,
         generalNote: defaultContent().files.generals.find((general) => general.id === options.general)?.description[settings.lang] ?? '',
         code: this.code,
         codeError: this.codeError,
@@ -244,13 +245,14 @@ export class SetupScreen {
     }));
   }
 
-  private generalRow(key: 'general' | 'enemyGeneral', label: TextKey): OptionRowVM {
+  /** Una opcion que no es de "Personalizada" (el rival, los generales): su fila. */
+  private choiceRow(key: 'rival' | 'general' | 'enemyGeneral', label: TextKey): OptionRowVM {
     return {
       id: `${OPTION_PREFIX}${key}`,
       group: t(label),
       label: t(label),
-      choices: CHOICES[key].map((value) => choiceLabel(key, value)),
-      index: Math.max(0, CHOICES[key].indexOf(this.options[key])),
+      choices: choicesOf(key).map((value) => choiceLabel(key, value)),
+      index: Math.max(0, choicesOf(key).indexOf(this.options[key])),
     };
   }
 
@@ -283,7 +285,7 @@ export class SetupScreen {
   // --- Foco ------------------------------------------------------------------------------------
 
   private rows(): string[][] {
-    const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`)];
+    const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`), [`${OPTION_PREFIX}rival`]];
     if (hasGenerals()) rows.push([`${OPTION_PREFIX}general`], [`${OPTION_PREFIX}enemyGeneral`]);
     if (this.options.preset === 'custom')
       for (const group of CUSTOM_GROUPS) for (const { k: key } of group.keys) rows.push([`${OPTION_PREFIX}${key}`]);

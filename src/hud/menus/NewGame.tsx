@@ -63,10 +63,10 @@ function Presets({ setup }: { setup: SetupVM }) {
   );
 }
 
-/** Eleccion de general (el tuyo, con lo que hace debajo, o el enemigo). */
-function GeneralChoice({ row, focused, actionId, note }: { row: OptionRowVM; focused: string; actionId: string; note?: string }) {
+/** Una opcion suelta (el rival, el general tuyo con lo que hace debajo, o el enemigo). */
+function ChoiceRow({ row, focused, actionId, note }: { row: OptionRowVM; focused: string; actionId: string; note?: string }) {
   return (
-    <div class="ng-group ng-general">
+    <div class="ng-group ng-choice">
       <span class="label">{row.label}</span>
       <Seg row={row} sel={focused === row.id} onHover={hover(actionId)} onSet={(i) => ui.actions.setupSet(actionId, i)} />
       {note && <p class="ng-note">{note}</p>}
@@ -107,8 +107,9 @@ export function NewGame({ s }: { s: UIState }) {
         <MapPreview setup={setup} />
         <div class="ng-side">
           <Presets setup={setup} />
-          {setup.general && <GeneralChoice row={setup.general} focused={setup.focus} actionId="opt-general" note={setup.generalNote} />}
-          {setup.enemyGeneral && <GeneralChoice row={setup.enemyGeneral} focused={setup.focus} actionId="opt-enemyGeneral" />}
+          <ChoiceRow row={setup.rival} focused={setup.focus} actionId="opt-rival" />
+          {setup.general && <ChoiceRow row={setup.general} focused={setup.focus} actionId="opt-general" note={setup.generalNote} />}
+          {setup.enemyGeneral && <ChoiceRow row={setup.enemyGeneral} focused={setup.focus} actionId="opt-enemyGeneral" />}
           {setup.preset === 'custom' ? <CustomOptions setup={setup} /> : <p class="ng-note">{preset?.note}</p>}
         </div>
       </div>

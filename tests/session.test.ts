@@ -108,6 +108,18 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.step()).toEqual({ kind: 'over', result: { status: 'decided', winners: [2], reason: 'surrender' } });
   });
 
+  it('varias personas en la misma pantalla: la sesion espera a cada una en su turno', () => {
+    const s = createMatch(skirmishConfig({ seed: 2, size: 20, teams: duel('human', 'human') }));
+    const session = new GameSession(s, controllersFor(s, seededRng(1)));
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    session.finishInput(0);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 1 });
+    expect(session.act(0, { kind: 'endTurn' })).toEqual({ ok: false, reason: 'notYourTurn' });
+    session.finishInput(1);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    expect(s.day).toBe(2);
+  });
+
   it('un controlador por equipo', () => {
     expect(() => new GameSession(blankState(), [passiveController()])).toThrow(/uno por equipo/);
   });

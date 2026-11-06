@@ -33,7 +33,6 @@ import {
   duel,
   duelTeams,
   isAiControlled,
-  isPlayableOnOneScreen,
   enemiesOf,
   isHostile,
   isHostileOwner,
@@ -241,12 +240,9 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(act(s, 0, { kind: 'endTurn' })[0]).toEqual({ kind: 'turnEnd', actor: 0, next: 1 });
   });
 
-  it('quien lo lleva y si se puede jugar en una pantalla (una persona como mucho)', () => {
+  it('quien lo lleva', () => {
     const s = fourCorners();
     expect(teamIds(s).map((team) => isAiControlled(s, team))).toEqual([true, true, false, true]);
-    expect(isPlayableOnOneScreen(s)).toBe(true);
-    teamState(s, 0).controller = 'human';
-    expect(isPlayableOnOneScreen(s)).toBe(false);
     expect(() => duelTeams(s)).toThrow(/dos equipos/);
     expect(duelTeams(blankState())).toEqual([0, 1]);
   });

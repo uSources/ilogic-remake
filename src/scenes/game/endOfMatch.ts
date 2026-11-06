@@ -54,6 +54,15 @@ export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
   return isWinner(result, viewer) ? 'won' : 'lost';
 }
 
+/**
+ * Desde que equipo se ve el final: el que miraba o, si ha perdido y gana otra persona de esta
+ * pantalla (varias por turnos), la que gana.
+ */
+export function endViewer(result: MatchResult, viewer: TeamId, people: readonly TeamId[]): TeamId {
+  if (isWinner(result, viewer)) return viewer;
+  return people.find((team) => isWinner(result, team)) ?? viewer;
+}
+
 /** Botones del final: en una mision, siguiente (si se gana y la hay), repetir y menu; si no, revancha, nueva y menu. */
 export function endButtonsFor(mission: MissionDef | undefined, outcome: EndOutcome): EndButton[] {
   if (!mission) return ['rematch', 'new', 'menu'];
