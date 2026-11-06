@@ -1,6 +1,6 @@
 /** [CAMBIO] El clima (ajuste `weather`; core/weather.ts) se enchufa a las reglas desde aqui. */
 import type { GameEvent, GameState } from '../model';
-import { advanceWeather, ensureWeather, weatherHit } from '../weather';
+import { advanceWeather, ensureWeather, weatherHit, weatherVision } from '../weather';
 import type { RuleModule } from './hooks';
 
 /** Pasa un dia de clima: el suceso del cambio, si lo hay. */
@@ -15,6 +15,8 @@ export const WEATHER: RuleModule = {
   hooks: {
     // Con lluvia o tormenta se apunta peor (igual para los dos equipos).
     hitModifiers: [{ id: 'weather', factor: (s) => weatherHit(s) }],
+    // Con mal tiempo se ve menos (nunca por debajo de 1 si la unidad ve algo).
+    visionRadius: [{ id: 'weather', radius: (s, _unit, radius) => (radius > 0 ? Math.max(1, radius + weatherVision(s)) : radius) }],
     // El clima cambia con el dia nuevo (depende de s.day).
     roundPhases: [{ id: 'weather', stage: 'newDay', run: changeWeather }],
     // Empieza despejado, con su pronostico.

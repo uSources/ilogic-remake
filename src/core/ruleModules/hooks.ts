@@ -6,7 +6,7 @@
  *
  * Una lista nueva que se pueda ampliar es un campo mas de `RuleHooks`, con el tipo de sus entradas.
  */
-import type { GameEvent, GameState, MatchSettings, Unit } from '../model';
+import type { GameEvent, GameState, MatchSettings, Pos, TeamId, Unit } from '../model';
 import type { Engagement } from '../rules/engagement';
 
 /**
@@ -52,6 +52,37 @@ export interface HealingBlock {
   blocks(s: GameState, unit: Unit): boolean;
 }
 
+/** Lo que cambia el radio de vision de una unidad (el clima). */
+export interface VisionRadiusRule {
+  readonly id: string;
+  /** El radio con este cambio, partiendo de `radius` (el de su tipo, o el que han dejado los de antes). */
+  radius(s: GameState, unit: Unit, radius: number): number;
+}
+
+/** Algo por lo que un equipo ve todo el mapa (sin niebla, el reconocimiento de un general). */
+export interface RevealRule {
+  readonly id: string;
+  revealsAll(s: GameState, team: TeamId): boolean;
+}
+
+/** Algo que esconde una casilla: solo se ve desde al lado (el bosque). */
+export interface Concealment {
+  readonly id: string;
+  conceals(s: GameState, pos: Pos): boolean;
+}
+
+/** Algo por lo que una unidad ve lo que se esconde (Concealment) en todo su radio (scout). */
+export interface CoverSight {
+  readonly id: string;
+  seesIntoCover(s: GameState, unit: Unit): boolean;
+}
+
+/** Lo que multiplica lo que resta una unidad al capturar (quickCapture). */
+export interface CaptureFactor {
+  readonly id: string;
+  factor(s: GameState, unit: Unit): number;
+}
+
 /** Las entradas que aporta un modulo a cada lista (las que no dice, ninguna). */
 export interface RuleHooks {
   /** Modificadores del acierto, detras del poder y la proteccion (ver `hitModifiersOf`, rules/combat.ts). */
@@ -64,10 +95,18 @@ export interface RuleHooks {
   readonly matchSetup?: readonly MatchSetupStep[];
   /** Quien no se cura al acabar el dia (`unhealable`). */
   readonly healingBlocks?: readonly HealingBlock[];
+  /** Vision (rules/visibility.ts): radio, ver todo, lo que se esconde y quien lo ve igual. */
+  readonly visionRadius?: readonly VisionRadiusRule[];
+  readonly revealRules?: readonly RevealRule[];
+  readonly concealment?: readonly Concealment[];
+  readonly coverSight?: readonly CoverSight[];
+  /** Captura (rules/capture.ts, `captureStrength`). */
+  readonly captureFactors?: readonly CaptureFactor[];
 }
 
 /** Los modulos de reglas que hay (los interruptores de los ajustes de la partida los enchufan). */
-export type RuleModuleId = 'abilities' | 'veterancy' | 'flank' | 'generals' | 'weather' | 'controlPoints' | 'upkeep' | 'noHealUnderFire';
+export type RuleModuleId =
+  'abilities' | 'veterancy' | 'flank' | 'generals' | 'weather' | 'controlPoints' | 'upkeep' | 'noHealUnderFire' | 'noFog' | 'forestHides';
 
 /** Un modulo de reglas: una pieza del juego que se enchufa o no segun los ajustes de la partida. */
 export interface RuleModule {

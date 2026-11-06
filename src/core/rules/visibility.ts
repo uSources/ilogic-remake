@@ -2,37 +2,43 @@
  * Vision y niebla: que casillas ve cada equipo. Los aliados comparten lo que ven.
  */
 
-import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
-import { seesIntoCover } from '../abilities';
+import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { diamond, manhattan } from '../geom';
-import { revealsAll } from '../generals';
 import { createLayer } from '../mapGrid';
+import { hooksOf } from '../ruleModules/registry';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { alliesOf, isHostile } from '../teams';
-import { weatherVision } from '../weather';
 import { unitAt } from './queries';
 import type { GameState, Pos, TeamId, Unit } from '../model';
 
-/** Radio de vision de una unidad. [CAMBIO] El clima puede quitar vision (nunca por debajo de 1 si ve). */
+/** Radio de vision de una unidad: el de su tipo, con lo que cambien los modulos ([CAMBIO] el clima). */
 export function visionOf(s: GameState, unit: Unit): number {
-  const base = unitTypeOf(s, unit).vision;
-  return base > 0 ? Math.max(1, base + weatherVision(s)) : base;
+  return hooksOf(s, 'visionRadius').reduce((radius, rule) => rule.radius(s, unit, radius), unitTypeOf(s, unit).vision);
 }
 
-/** [CAMBIO] Reglas nuevas: el bosque esconde a quien esta dentro (solo se ve desde al lado). */
-function hidesInside(s: GameState, pos: Pos): boolean {
-  return s.rules.forestHides && terrainAt(s, pos).hides;
+/** La casilla solo se ve desde al lado ([CAMBIO] el bosque esconde a quien esta dentro). */
+type IsConcealed = (pos: Pos) => boolean;
+
+/** Lo que esconde en esta partida (lo que aportan sus modulos), para mirarlo casilla a casilla. */
+function concealmentOf(s: GameState): IsConcealed {
+  const rules = hooksOf(s, 'concealment');
+  return (pos) => rules.some((rule) => rule.conceals(s, pos));
 }
 
-/** Casillas que ve una unidad: su rombo de vision, menos el bosque que no tenga al lado. */
-function markSeenByUnit(s: GameState, unit: Unit, visible: Grid<boolean>): void {
-  // [CAMBIO] Habilidad scout (Jeep): ve dentro del bosque en todo su radio.
+/** [CAMBIO] La unidad ve lo escondido en todo su radio (habilidad scout). */
+const seesIntoCover = (s: GameState, unit: Unit): boolean => hooksOf(s, 'coverSight').some((rule) => rule.seesIntoCover(s, unit));
+
+/** Casillas que ve una unidad: su rombo de vision, menos lo escondido que no tenga al lado. */
+function markSeenByUnit(s: GameState, unit: Unit, visible: Grid<boolean>, isConcealed: IsConcealed): void {
   const isScout = seesIntoCover(s, unit);
   for (const pos of diamond(visible, unit, 0, visionOf(s, unit))) {
-    if (isScout || !hidesInside(s, pos) || manhattan(unit, pos) <= 1) visible.set(pos, true);
+    if (isScout || !isConcealed(pos) || manhattan(unit, pos) <= 1) visible.set(pos, true);
   }
 }
+
+/** El equipo ve todo el mapa: sin niebla o con un reconocimiento (lo que aportan los modulos). */
+const revealsAll = (s: GameState, team: TeamId): boolean => hooksOf(s, 'revealRules').some((rule) => rule.revealsAll(s, team));
 
 /**
  * Casillas visibles para un equipo: rombo de vision de sus unidades y las de sus aliados, y casillas
@@ -42,9 +48,10 @@ export function visibility(s: GameState, team: TeamId): Grid<boolean> {
   const allies = alliesOf(s, team);
   const isAlly = (other: TeamId | null) => other !== null && allies.includes(other);
   // [CAMBIO] partida sin niebla, o un general de la alianza ha usado reconocimiento: se ve todo.
-  if (!s.rules.fog || allies.some((ally) => revealsAll(s, ally))) return createLayer(s, true);
+  if (allies.some((ally) => revealsAll(s, ally))) return createLayer(s, true);
   const visible = createLayer(s, false);
-  for (const unit of s.units) if (isAlly(unit.team) && isOnMap(unit)) markSeenByUnit(s, unit, visible);
+  const isConcealed = concealmentOf(s);
+  for (const unit of s.units) if (isAlly(unit.team) && isOnMap(unit)) markSeenByUnit(s, unit, visible, isConcealed);
   for (const building of s.buildings) {
     if (!isAlly(building.owner)) continue;
     for (const pos of diamond(visible, building, 0, buildingTypeOf(s, building).vision)) visible.set(pos, true);

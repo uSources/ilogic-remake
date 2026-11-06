@@ -7,8 +7,10 @@ import type { GameState } from '../model';
 import { ABILITIES } from './abilities';
 import { CONTROL_POINTS } from './controlPoints';
 import { FLANK } from './flank';
+import { FOREST_HIDES } from './forestHides';
 import { GENERALS } from './generals';
 import type { RuleHooks, RuleModule, RuleModuleId } from './hooks';
+import { NO_FOG } from './noFog';
 import { NO_HEAL_UNDER_FIRE } from './noHealUnderFire';
 import { UPKEEP } from './upkeep';
 import { VETERANCY } from './veterancy';
@@ -27,6 +29,8 @@ export const RULE_MODULES: readonly RuleModule[] = [
   CONTROL_POINTS,
   UPKEEP,
   NO_HEAL_UNDER_FIRE,
+  NO_FOG,
+  FOREST_HIDES,
 ];
 
 /** Los modulos que lleva la partida, segun sus ajustes. */
