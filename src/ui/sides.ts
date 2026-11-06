@@ -56,3 +56,6 @@ export const sideLetter = (side: OwnerSide): 'b' | 'r' | 'i' => SIDE_LETTER[pain
  * que ya ha actuado, gris (`i_`). Las enemigas no se ven grises (no se delata si han actuado).
  */
 export const unitSideLetter = (side: Side, active: boolean): 'b' | 'r' | 'i' => (isFriendly(side) && !active ? 'i' : sideLetter(side));
+
+/** El numero de un equipo como se enseña a las personas: contando desde 1 (el equipo 0 es el «equipo 1»). */
+export const shownTeamNumber = (team: TeamId): number => team + 1;

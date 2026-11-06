@@ -21,7 +21,6 @@ import { enemiesOf, teamIds, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
 import {
   resetActions,
-  showBanner,
   showToast,
   ui,
   type ForecastVM,
@@ -43,7 +42,7 @@ import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
-import { sideOf } from '../ui/sides';
+import { shownTeamNumber, sideOf } from '../ui/sides';
 import { PointerGestures } from '../controls/pointer';
 import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
@@ -256,13 +255,13 @@ export class GameScene extends Phaser.Scene {
     );
     ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, intents: this.intents, options: null });
     this.refresh();
+    // El aviso de «Tu turno» lo da TurnFlow al llegar a el (antes pueden jugar otros).
     void this.turns.begin();
     if (this.lab) startLab(this.labHost(), this.lab);
-    else showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
   }
 
-  /** Cursor y camara sobre la Base del jugador. */
+  /** Cursor y camara sobre la Base del equipo que mira. */
   private centerOnHq(): void {
     const hq = this.s.buildings.find((building) => building.owner === this.viewer && isHq(this.s, building)) ?? { x: 0, y: 0 };
     this.view.cursor = posOf(hq);
@@ -680,7 +679,7 @@ export class GameScene extends Phaser.Scene {
         ui.set({ handoff: null });
         resolve();
       };
-      ui.set({ handoff: { team: team + 1 } });
+      ui.set({ handoff: { team: shownTeamNumber(team) } });
     });
   }
 
@@ -1338,6 +1337,7 @@ export class GameScene extends Phaser.Scene {
         this.savedThisGame = true;
       },
       handOver: (team) => this.handOver(team),
+      centerOnHq: () => this.centerOnHq(),
       ...this.actionHost(),
     });
   }

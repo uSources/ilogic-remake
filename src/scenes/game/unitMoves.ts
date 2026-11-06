@@ -225,32 +225,43 @@ export class UnitMoves {
     return !!unit && isValidAction(this.host.state, this.host.viewer, { kind: 'undoMove', uid: unit.uid });
   }
 
-  /** «Atras» en el menu de la unidad: vuelve a donde estaba antes de moverla y se puede mover otra vez. */
+  /** «Atras» en el menu de la unidad: vuelve a donde estaba antes de moverla y se puede mover otra vez; si no se movio, cierra el menu. */
   undoMove(): void {
-    const host = this.host;
     const unit = this.selected;
-    if (!unit) return host.toMap();
-    const warning = backWarning(host.state, host.viewer, unit);
-    if (warning) return showToast(t(warning));
-    if (!host.act({ kind: 'undoMove', uid: unit.uid })) return host.toMap();
-    host.view.cursor = posOf(unit);
-    this.select(unit);
+    const outcome = unit ? this.undoMoveOf(unit) : 'nothing';
+    if (outcome === 'nothing') return this.host.toMap();
+    if (unit && outcome === 'undone') this.select(unit);
   }
 
   /**
    * Ctrl+Z: deshacer el ultimo movimiento que se puede (el nucleo los apunta mientras lo de despues
-   * no cuenta nada nuevo: esperar, escuadras, ordenes). Si descubrio enemigos, avisa.
+   * no cuenta nada nuevo: esperar, escuadras, ordenes).
    */
   undoLast(): void {
     const host = this.host;
     const last = lastUndoableMove(host.state);
     const unit = last && unitById(host.state, last.uid);
-    if (!unit) return showToast(t('nothingToUndo'));
-    const warning = backWarning(host.state, host.viewer, unit);
-    if (warning) return showToast(t(warning));
-    if (!host.act({ kind: 'undoMove', uid: unit.uid })) return showToast(t('nothingToUndo'));
+    const outcome = unit ? this.undoMoveOf(unit) : 'nothing';
+    if (outcome === 'nothing') return showToast(t('nothingToUndo'));
+    if (!unit || outcome !== 'undone') return;
     host.toMap();
     host.view.cursor = posOf(unit);
     showToast(t('undone'));
+  }
+
+  /**
+   * Deshace el movimiento de la unidad (lo mismo para «Atras» y Ctrl+Z: la accion 'undoMove'). Si
+   * descubrio enemigos no se puede, y se avisa ('warned'); 'nothing' si no habia nada que deshacer.
+   */
+  private undoMoveOf(unit: Unit): 'undone' | 'warned' | 'nothing' {
+    const host = this.host;
+    const warning = backWarning(host.state, host.viewer, unit);
+    if (warning) {
+      showToast(t(warning));
+      return 'warned';
+    }
+    if (!host.act({ kind: 'undoMove', uid: unit.uid })) return 'nothing';
+    host.view.cursor = posOf(unit);
+    return 'undone';
   }
 }

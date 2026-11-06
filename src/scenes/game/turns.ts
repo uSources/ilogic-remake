@@ -66,6 +66,8 @@ export interface TurnHost extends ActionHost {
   markSaved(): void;
   /** Tapa la partida hasta que la persona de `team` dice que esta lista (cambio de jugador en esta pantalla). */
   handOver(team: TeamId): Promise<void>;
+  /** Camara y cursor sobre la Base del equipo que mira (la primera vez que mira). */
+  centerOnHq(): void;
 }
 
 /** Lo que se cuenta al volver el turno al jugador: lo que ha pasado mientras jugaban los demas. */
@@ -112,8 +114,13 @@ export class TurnFlow {
   othersPlaying = false;
   /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en el tutorial). */
   replaying = false;
-  /** Una copia de la partida antes de acabar el ultimo turno propio y desde donde va en el registro (para repetir lo de despues). */
-  private lastOthers: { before: GameState; from: number } | null = null;
+  /**
+   * De cada persona: una copia de la partida al acabar su ultimo turno y desde donde va en el registro
+   * (para repetirle lo de despues). Con varias en esta pantalla, cada una ve lo suyo.
+   */
+  private replays = new Map<TeamId, { before: GameState; from: number }>();
+  /** Donde miraba cada persona al acabar su turno (con varias en esta pantalla, cada una vuelve a lo suyo). */
+  private cameras = new Map<TeamId, SavedCamera>();
   private endArmedAt = NOT_ARMED;
   /** El equipo al que le toca ahora si no es el que mira (null: el turno es suyo). */
   private otherTeam: TeamId | null = null;
@@ -124,7 +131,8 @@ export class TurnFlow {
   reset(): void {
     this.othersPlaying = false;
     this.replaying = false;
-    this.lastOthers = null;
+    this.replays = new Map();
+    this.cameras = new Map();
     this.endArmedAt = NOT_ARMED;
     this.otherTeam = null;
   }
@@ -136,7 +144,7 @@ export class TurnFlow {
 
   /** Hay turnos ajenos que repetir (los de la ultima vuelta). */
   get canReplay(): boolean {
-    return !!this.lastOthers;
+    return this.replays.has(this.host.viewer);
   }
 
   /** Unidades sin mover que no hacen nada solas al terminar (las que capturan solas no cuentan). */
@@ -180,6 +188,7 @@ export class TurnFlow {
     const summary = await this.playUntilInput(match);
     if (!summary) return;
     host.phase = 'map';
+    if (!host.lab) showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
     this.showArrivals(summary);
     host.refresh();
   }
@@ -194,13 +203,13 @@ export class TurnFlow {
     if (host.phase === 'busy' || host.ended) return;
     const match = host.match;
     host.abandonSelection();
-    const saved = this.saveCamera();
+    this.cameras.set(host.viewer, this.saveCamera());
     host.phase = 'busy';
-    this.lastOthers = { before: cloneState(host.session.state), from: host.session.log.length };
+    this.replays.set(host.viewer, { before: cloneState(host.session.state), from: host.session.log.length });
     host.session.finishInput(host.viewer);
     const summary = await this.playUntilInput(match);
     if (!summary) return;
-    this.backToPlayer(saved);
+    this.backToPlayer(this.cameras.get(host.viewer));
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
     this.showReport(summary);
     this.showArrivals(summary);
@@ -248,7 +257,17 @@ export class TurnFlow {
     host.viewer = team;
     summary.ordersDone = [];
     summary.arrived = [];
+    this.lookFromOwnPlace(team);
     host.refresh();
+  }
+
+  /** La camara de una persona que empieza a mirar: donde lo dejo, o la primera vez, su Base. */
+  private lookFromOwnPlace(team: TeamId): void {
+    const host = this.host;
+    const saved = this.cameras.get(team);
+    if (!saved) return host.centerOnHq();
+    host.view.cursor = { ...saved.cursor };
+    host.scene.cameras.main.centerOn(saved.x, saved.y);
   }
 
   /** Anima un paso de la sesion: al empezar el turno de otro equipo, su aviso; despues, sus sucesos. */
@@ -291,7 +310,7 @@ export class TurnFlow {
    */
   async replayOthers(): Promise<void> {
     const host = this.host;
-    const last = this.lastOthers;
+    const last = this.replays.get(host.viewer);
     if (!last || host.phase === 'busy' || host.ended) return;
     // Otra copia cada vez: se puede repetir mas de una vez.
     const before = cloneState(last.before);
@@ -341,12 +360,17 @@ export class TurnFlow {
     return { x: camera.midPoint.x, y: camera.midPoint.y, cursor: { ...this.host.view.cursor } };
   }
 
-  /** Vuelve el control al jugador tras el turno enemigo: camara donde estaba y entrada bloqueada un momento. */
-  private backToPlayer(saved: SavedCamera): void {
+  /**
+   * Vuelve el control al jugador tras el turno enemigo: camara donde estaba (si es la primera vez que
+   * mira, en su Base) y entrada bloqueada un momento.
+   */
+  private backToPlayer(saved: SavedCamera | undefined): void {
     const host = this.host;
     host.fastForward = false;
-    host.view.cursor = saved.cursor;
-    host.scene.cameras.main.pan(saved.x, saved.y, CAMERA_BACK_MS, 'Sine.easeInOut', true);
+    if (saved) {
+      host.view.cursor = { ...saved.cursor };
+      host.scene.cameras.main.pan(saved.x, saved.y, CAMERA_BACK_MS, 'Sine.easeInOut', true);
+    } else host.centerOnHq();
     host.phase = 'map';
     // Que el Enter o el clic con el que se aceleraba la IA no actue ya en el turno propio.
     host.inputLockUntil = host.scene.time.now + INPUT_LOCK_MS;
