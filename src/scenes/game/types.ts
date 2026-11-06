@@ -2,7 +2,7 @@
  * Tipos y constantes que comparten GameScene y sus modulos (src/scenes/game). Sin Phaser: se pueden
  * importar desde los tests.
  */
-import type { UnitMenuOption } from '../../core/actions';
+import type { ActionDispatcher, UnitMenuOption } from '../../core/actions';
 import type { MatchConfig } from '../../core/match';
 import type { GameAction, GameEvent, Pos, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
@@ -70,10 +70,10 @@ export interface ActionHost {
   /** Hace la accion y anima sus sucesos (con el dibujo `ghostKey` para la unidad que se mueve); false si no valia. */
   perform(action: GameAction, ghostKey?: string | null): Promise<boolean>;
   /**
-   * Apunta sucesos que no salen de `act` (los turnos de la IA, las ordenes permanentes) igual que
-   * `act` apunta los suyos: estadisticas, tutorial, Ctrl+Z. Animarlos (`play`) ya no apunta nada.
+   * Por donde mandan sus acciones por el equipo que mira los que deciden solos (las ordenes
+   * permanentes que empiezan ya): la sesion, como `act`, para que queden apuntadas.
    */
-  record(events: readonly GameEvent[]): void;
+  readonly dispatcher: ActionDispatcher;
 }
 
 /** Fases en las que el cursor sigue al puntero. */

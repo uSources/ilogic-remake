@@ -2,7 +2,6 @@ import { MoveType } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { aiTurn } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
@@ -11,7 +10,8 @@ import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missio
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_DICE_SEED = 1;
-import { endRound, groundDistance, isMatchOver, turnTakers } from '@core/rules';
+import { groundDistance } from '@core/rules';
+import { aiController, GameSession, runMatch } from '@core/session';
 import { deserialize, serialize } from '@core/save';
 import { savedByVersion1, hqId, resultFor } from './helpers';
 
@@ -115,13 +115,13 @@ describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
     const s = buildMission(mission, defaultContent(), MISSION_DICE_SEED);
     const rng = seededRng(5);
-    for (let day = 0; day < 20 && !isMatchOver(s); day++) {
-      for (const team of turnTakers(s)) {
-        for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;
-        if (isMatchOver(s)) break;
-      }
-      endRound(s);
-    }
+    runMatch(
+      new GameSession(
+        s,
+        s.teams.map(() => aiController(rng)),
+      ),
+      { until: (state) => state.day > 20 },
+    );
     expect(['playing', 'won', 'lost']).toContain(resultFor(s, 0));
   });
 

@@ -11,6 +11,7 @@ import { movementOf, buildingAt, occupancy } from '@core/rules/queries';
 import { posOf, samePos } from '@core/geom';
 import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '@core/rules/movement';
 import { dispatch } from '@core/actions/dispatch';
+import type { ActionDispatcher } from '@core/actions/types';
 import { visibility } from '@core/rules/visibility';
 import { canStillAct } from '@core/rules/unitTurn';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '@core/model';
@@ -33,11 +34,13 @@ export interface AiCtx {
   group: boolean;
   /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
   plan: Map<number, number>;
+  /** Adaptado al nucleo de la fase 4: manda sus acciones por donde diga quien la hace jugar (la sesion). */
+  readonly dispatch: ActionDispatcher;
 }
 
 /** Contexto nuevo para un turno de `me` (sin grupo ni plan). */
-export function aiCtx(me: TeamId): AiCtx {
-  return { me, group: false, plan: new Map() };
+export function aiCtx(me: TeamId, dispatcher: ActionDispatcher = dispatch): AiCtx {
+  return { me, group: false, plan: new Map(), dispatch: dispatcher };
 }
 
 /**
@@ -89,7 +92,7 @@ export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, r
  * sucesos. Devuelve si valia (si no, la partida no cambia).
  */
 export function* act(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, boolean> {
-  const result = dispatch(s, ai.me, action);
+  const result = ai.dispatch(s, ai.me, action);
   if (!result.ok) return false;
   yield* result.events;
   return true;
@@ -103,7 +106,7 @@ export function* finish(s: GameState, ai: AiCtx, unit: Unit): Generator<GameEven
 /** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
 export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
-  const result = dispatch(s, ai.me, { kind: 'move', uid: unit.uid, to: posOf(dest) });
+  const result = ai.dispatch(s, ai.me, { kind: 'move', uid: unit.uid, to: posOf(dest) });
   if (!result.ok) return false;
   yield* result.events;
   return endsInAmbush(result.events);

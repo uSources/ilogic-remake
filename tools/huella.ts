@@ -10,17 +10,17 @@
  *   npm run huella -- --total solo la total (para comparar de un vistazo)
  */
 import { createHash } from 'node:crypto';
-import { aiTurn, assistTurn } from '@core/ai';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
-import { endRound, isMatchOver, matchResult, turnTakers } from '@core/rules';
+import { isMatchOver, matchResult } from '@core/rules';
 import { serialize } from '@core/save';
 import { dispatch } from '@core/actions';
 import { posOf } from '@core/geom';
+import { aiController, controllersFor, GameSession, runMatch, sequence, standingOrderAutopilot, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
-import type { GameState, RulesConfig } from '@core/model';
+import type { GameState, Rng, RulesConfig } from '@core/model';
 
 const MAX_DAYS = 30;
 
@@ -53,7 +53,10 @@ function scenarios(): Scenario[] {
   return list;
 }
 
-/** La persona junta sus tres primeras unidades en una escuadra y la manda a atacar un edificio enemigo. */
+/**
+ * La persona junta sus tres primeras unidades en una escuadra y la manda a atacar un edificio
+ * enemigo, al empezar su primer turno.
+ */
 function orderPlayerSquad(s: GameState): void {
   const person = playerTeam(s);
   const enemies = enemiesOf(s, person);
@@ -61,8 +64,20 @@ function orderPlayerSquad(s: GameState): void {
   if (!target) return;
   const uids = s.units.filter((unit) => unit.team === person && unit.squad === undefined).map((unit) => unit.uid);
   const squad = uids.slice(0, 3);
-  if (squad.length < 2 || !dispatch(s, person, { kind: 'formSquad', uids: squad }).ok) return;
+  if (squad.length < 2) return;
+  dispatch(s, person, { kind: 'startTurn' });
+  if (!dispatch(s, person, { kind: 'formSquad', uids: squad }).ok) return;
   dispatch(s, person, { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } });
+}
+
+/**
+ * Quien juega cada equipo: la IA, con el mismo azar para todos; la persona, si lleva escuadra, deja
+ * antes que su piloto automatico cumpla las ordenes (como la IA no las tiene, juega despues).
+ */
+function controllersOf(s: GameState, scenario: Scenario, rng: Rng): Controller[] {
+  const person = playerTeam(s);
+  const personController = scenario.withSquad ? sequence(standingOrderAutopilot(), aiController(rng)) : aiController(rng);
+  return controllersFor(s, rng, new Map([[person, personController]]));
 }
 
 function playScenario(scenario: Scenario): string {
@@ -71,28 +86,23 @@ function playScenario(scenario: Scenario): string {
     skirmishConfig({ seed: scenario.seed, size: scenario.size, ruleChanges: scenario.rules, teams: duel('human', 'ai') }),
     rng,
   );
-  // El equipo de la persona (el primero de duel): el que tiene escuadras con ordenes.
-  const person = playerTeam(s);
   const generals = s.content.generals.list;
   if (scenario.withGenerals) for (const team of teamIds(s)) appointGeneral(s, team, generals[team]?.id);
   if (scenario.withSquad) orderPlayerSquad(s);
 
   const hash = createHash('sha256');
   const record = (value: unknown) => hash.update(JSON.stringify(value));
-  const isOver = () => isMatchOver(s);
-
-  while (!isOver() && s.day <= MAX_DAYS) {
-    for (const team of turnTakers(s)) {
-      if (team === person && scenario.withSquad) for (const event of assistTurn(s, person)) record(event);
-      for (const event of aiTurn(s, rng, team)) {
-        record(event);
-        if (isOver()) break;
-      }
-      if (isOver()) break;
+  const session = new GameSession(s, controllersOf(s, scenario, rng));
+  session.subscribe((step) => {
+    // Cada suceso; si la partida acaba con esta accion, hasta el primero (como al jugarla suceso a suceso).
+    for (const event of step.events) {
+      record(event);
+      if (isMatchOver(s)) break;
     }
-    for (const event of endRound(s)) record(event);
-    hash.update(serialize(s));
-  }
+    // Y el estado entero al acabar cada ronda.
+    if (step.events.some((event) => event.kind === 'newDay')) hash.update(serialize(s));
+  });
+  runMatch(session, { until: (state) => state.day > MAX_DAYS });
   record(matchResult(s));
   return hash.digest('hex').slice(0, 16);
 }

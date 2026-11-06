@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dispatch } from '@core/actions';
 import { createMatch } from '@core/defaultGames';
 import { DEFAULT_MAP_SIZE, MATCH_SETUPS, rematchOf, skirmishConfig } from '@core/match';
 import { GAME_MODES } from '@core/modes';
@@ -55,6 +56,8 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
 
   it('K4: la misma semilla da la misma partida en la pantalla (opciones de siempre) y en npm run play', () => {
     const game = createMatch(matchConfigFor(DEFAULT_OPTIONS, 7));
+    // npm run play ya ha empezado el turno de la persona (como la pantalla al abrir la partida).
+    dispatch(game, 0, { kind: 'startTurn' });
     expect(serialize(new Session({ seed: 7 }).s)).toBe(serialize(game));
   });
 });

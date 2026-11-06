@@ -7,15 +7,14 @@
  *   npm run fuzz -- --repro 1234                  repetir una partida concreta con todo el detalle
  */
 import { duel } from '@core/teams';
-import { aiTurn } from '@core/ai';
+import { aiController, GameSession, runMatch, type ActedStep, type Controller } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { endRound, isMatchOver, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
-import type { GameState, TeamId } from '@core/model';
+import type { GameState, Rng, TeamId } from '@core/model';
 import { checkInvariants } from './invariants';
-import { randomTurn } from './randomPlayer';
+import { randomController } from './randomPlayer';
 
 export interface FuzzFailure {
   seed: number;
@@ -27,6 +26,17 @@ export interface FuzzFailure {
   before: string;
 }
 
+/** Cada turno, al azar: juega al azar o juega la IA (con el mismo azar, sorteado al empezar el turno). */
+const coinFlipController = (rng: Rng): Controller => {
+  const random = randomController(rng);
+  const ai = aiController(rng);
+  return { name: 'random', playTurn: (s, team) => (rng() < 0.5 ? random : ai).playTurn(s, team) };
+};
+
+/** Lo que se cuenta de un paso al fallar: quien, que accion y el principio de sus sucesos. */
+const describeStep = (step: ActedStep): string =>
+  `${step.action.kind} ${JSON.stringify(step.action)} ${JSON.stringify(step.events).slice(0, 80)}`;
+
 /** Una partida: cada bando juega al azar o con la IA (sorteado por turno). Devuelve el fallo o null. */
 export function fuzzGame(seed: number, options: { size?: number; days?: number; log?: (line: string) => void } = {}): FuzzFailure | null {
   const rng = seededRng(seed);
@@ -34,25 +44,22 @@ export function fuzzGame(seed: number, options: { size?: number; days?: number; 
     skirmishConfig({ seed, size: options.size ?? 20, ruleChanges: { fog: seed % 3 === 0 }, teams: duel('ai', 'ai') }),
     rng,
   );
+  const initial = checkInvariants(s);
+  if (initial.length) return { seed, day: 1, team: 0, action: 'mapa recien generado', errors: initial, before: serialize(s) };
   let before = serialize(s);
   let fail: FuzzFailure | null = null;
-  const check = (team: TeamId, action: string) => {
-    options.log?.(`dia ${s.day} equipo ${team}: ${action}`);
+  const session = new GameSession(
+    s,
+    s.teams.map(() => coinFlipController(rng)),
+  );
+  session.subscribe((step) => {
+    const action = describeStep(step);
+    options.log?.(`dia ${s.day} equipo ${step.team}: ${action}`);
     const errors = checkInvariants(s);
-    if (errors.length && !fail) fail = { seed, day: s.day, team, action, errors, before };
+    if (errors.length && !fail) fail = { seed, day: s.day, team: step.team, action, errors, before };
     before = serialize(s);
-  };
-  const initial = checkInvariants(s);
-  if (initial.length) return { seed, day: 1, team: 0, action: 'mapa recien generado', errors: initial, before };
-  while (!isMatchOver(s) && s.day <= (options.days ?? 30) && !fail) {
-    for (const team of turnTakers(s)) {
-      if (rng() < 0.5) randomTurn(s, rng, team, (action) => check(team, action));
-      else for (const event of aiTurn(s, rng, team)) check(team, `IA ${event.kind} ${JSON.stringify(event).slice(0, 80)}`);
-      if (fail) return fail;
-    }
-    endRound(s);
-    check(0, 'fin de ronda');
-  }
+  });
+  runMatch(session, { until: (state) => state.day > (options.days ?? 30) || fail !== null });
   return fail;
 }
 

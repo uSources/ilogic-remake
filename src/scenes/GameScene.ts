@@ -12,7 +12,9 @@ import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
 import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
-import { dispatch } from '../core/actions';
+import { controllersFor, GameSession, type ActedStep } from '../core/session';
+import { seededRng } from '../core/util/random';
+import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
@@ -83,6 +85,9 @@ type BubbleKind = 'menu' | 'forecast' | 'moveTip';
 
 export class GameScene extends Phaser.Scene {
   // --- La partida -----------------------------------------------------------
+  /** La partida en juego: quien juega cada equipo, el registro de acciones y sus avisos. */
+  private session!: GameSession;
+  /** La partida que se ve: la de la sesion (al repetir los turnos ajenos, la copia de antes). */
   private s!: GameState;
   /** El equipo que juega la persona en esta pantalla: el que mira (niebla, colores, mandos). */
   private viewer!: TeamId;
@@ -220,6 +225,8 @@ export class GameScene extends Phaser.Scene {
     const start = startMatch(data);
     this.s = start.state;
     this.viewer = start.viewer;
+    this.session = new GameSession(start.state, controllersFor(start.state, seededRng(randomSeed()), start.controllers));
+    this.session.subscribe((step) => this.record(step));
     this.lab = start.lab;
     this.fromSave = start.fromSave;
     this.corruptSave = start.corruptSave;
@@ -245,6 +252,7 @@ export class GameScene extends Phaser.Scene {
     );
     ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, intents: this.intents, options: null });
     this.refresh();
+    void this.turns.begin();
     if (this.lab) startLab(this.labHost(), this.lab);
     else showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
@@ -730,14 +738,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * La persona de la pantalla hace una accion de su equipo (ver ActionHost): sus sucesos, o null si
-   * no vale. Sus sucesos se apuntan aqui, se animen o no.
+   * La persona de la pantalla hace una accion de su equipo por la sesion (ver ActionHost): sus
+   * sucesos, o null si no vale. Lo que pasa se apunta al avisar la sesion (`record`), se anime o no.
    */
   private act(action: GameAction): GameEvent[] | null {
-    const result = dispatch(this.s, this.viewer, action);
-    if (!result.ok) return null;
-    this.record(result.events);
-    return result.events;
+    const result = this.session.act(this.viewer, action);
+    return result.ok ? result.events : null;
   }
 
   /** La hace y anima sus sucesos (ver ActionHost). */
@@ -747,18 +753,16 @@ export class GameScene extends Phaser.Scene {
     return !!events;
   }
 
-  /** Apunta los sucesos de una accion ya hecha (ver ActionHost.record). */
-  private record(events: readonly GameEvent[]): void {
-    for (const event of events) this.noteEvent(event);
+  /** Lo que avisa la sesion de cada accion hecha: lo apunta suceso a suceso. */
+  private record(step: ActedStep): void {
+    for (const event of step.events) this.noteEvent(event, step.team === this.viewer);
   }
 
   /** Un suceso ya hecho: tutorial, Ctrl+Z y donde ha pasado lo ultimo (las estadisticas las lleva dispatch). */
-  private noteEvent(event: GameEvent): void {
-    const isOwnTurn = !this.othersPlaying;
-    const replaying = this.turns.replaying;
+  private noteEvent(event: GameEvent, isOwn: boolean): void {
     // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
-    if (isOwnTurn && !KEEPS_UNDO.has(event.kind)) this.moves.clearUndo();
-    if (!replaying && isOwnTurn) this.tutorial.record(event);
+    if (isOwn && !KEEPS_UNDO.has(event.kind)) this.moves.clearUndo();
+    if (isOwn) this.tutorial.record(event);
     if (event.kind === 'attack') this.lastAt = { ...event.at };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };
   }
@@ -1020,7 +1024,7 @@ export class GameScene extends Phaser.Scene {
     return {
       act: (action) => this.act(action),
       perform: (action, ghostKey) => this.perform(action, ghostKey),
-      record: (events) => this.record(events),
+      dispatcher: (_s, team, action) => this.session.act(team, action),
     };
   }
 
@@ -1280,6 +1284,7 @@ export class GameScene extends Phaser.Scene {
     return live<TurnHost>({
       scene: { get: () => this },
       view: { get: () => this.view },
+      session: { get: () => this.session },
       state: rw(
         () => this.s,
         (state) => (this.s = state),

@@ -1,13 +1,13 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
-import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { buildMatch, skirmishConfig } from '@core/match';
-import { endRound, isMatchOver, isWinner, matchResult, takesTurn } from '@core/rules';
+import { isMatchOver, isWinner, matchResult } from '@core/rules';
+import { aiController, GameSession, passiveController, runMatch, type ActedStep, type Controller } from '@core/session';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
-import type { EndReason, GameState, RulesConfig, TeamId, Unit } from '@core/model';
+import type { EndReason, GameEvent, GameEventOf, GameState, Rng, RulesConfig, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
 
@@ -29,9 +29,6 @@ export function sideOfTeam(team: TeamId): Side {
 
 /** El otro lado. */
 export const opponentOf = (side: Side): Side => (side === FIRST_SIDE ? SECOND_SIDE : FIRST_SIDE);
-
-/** Los lados en el orden en que juegan cada ronda, empezando por `first`. */
-const sidesFrom = (first: Side): readonly Side[] => [first, opponentOf(first)];
 
 export interface PlayOptions {
   seed: number;
@@ -118,9 +115,72 @@ function sample(s: GameState): DaySample {
   };
 }
 
+/** Lo que hace falta para apuntar un suceso: como estaba cada unidad antes y lo de cada tipo y lado. */
+interface Tallies {
+  known: ReadonlyMap<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>;
+  tallyOf(side: Side, unit: Pick<Unit, 'type'>): UnitTally;
+}
+
+/** Apunta un ataque: daño, valor y bajas de los dos lados (con el contraataque, si lo hubo). */
+function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, { known, tallyOf }: Tallies): void {
+  const attacker = known.get(event.attacker);
+  const victimInfo = known.get(event.target);
+  if (!attacker) return;
+  const tally = tallyOf(sideOfTeam(team), attacker);
+  tally.attacks++;
+  tally.damageDealt += event.damage;
+  if (!victimInfo) return;
+  const victimTally = tallyOf(sideOfTeam(victimInfo.team), victimInfo);
+  tally.valueDealt += (event.damage * costOf(s, victimInfo)) / 100;
+  victimTally.valueLost += (event.damage * costOf(s, victimInfo)) / 100;
+  if (event.killed) {
+    tally.kills++;
+    victimTally.deaths++;
+  }
+  // Contraataque (si las reglas lo tienen): vida perdida por el atacante.
+  const after = s.units.find((unit) => unit.uid === event.attacker);
+  const lost = attacker.life - (after?.life ?? 0);
+  if (lost <= 0) return;
+  victimTally.damageDealt += lost;
+  victimTally.valueDealt += (lost * costOf(s, attacker)) / 100;
+  tally.valueLost += (lost * costOf(s, attacker)) / 100;
+  if (!after) {
+    victimTally.kills++;
+    tally.deaths++;
+  }
+}
+
+/** Apunta un suceso de una accion de `team`: ataques, compras y capturas, por tipo de unidad. */
+function tallyEvent(s: GameState, event: GameEvent, team: TeamId, tallies: Tallies): void {
+  const unitOf = (uid: number) => s.units.find((candidate) => candidate.uid === uid);
+  if (event.kind === 'attack') return tallyAttack(s, event, team, tallies);
+  if (event.kind === 'spawn') {
+    const unit = unitOf(event.uid);
+    if (!unit) return;
+    tallies.tallyOf(sideOfTeam(team), unit).bought++;
+    tallies.tallyOf(sideOfTeam(team), unit).spent += costOf(s, unit);
+  }
+  if (event.kind === 'capture') {
+    const unit = unitOf(event.uid);
+    if (unit) tallies.tallyOf(sideOfTeam(team), unit).captures++;
+  }
+}
+
+/** Quien juega cada lado: la IA (con el mismo azar para los dos) o nadie ('passive'). */
+function controllersOf(s: GameState, policies: PlayOptions['policies'], rng: Rng): Controller[] {
+  const controllerFor = (policy: Policy) => (policy === 'passive' ? passiveController() : aiController(rng));
+  return s.teams.map((team) => controllerFor(policies[sideOfTeam(team.id)]));
+}
+
 export function playGame(options: PlayOptions): GameRecord {
   const rng = seededRng(options.seed);
-  const config = skirmishConfig({ seed: options.seed, size: options.size, ruleChanges: options.rules, teams: duel('ai', 'ai') });
+  const config = skirmishConfig({
+    seed: options.seed,
+    size: options.size,
+    ruleChanges: options.rules,
+    teams: duel('ai', 'ai'),
+    firstTeam: options.firstTeam ?? FIRST_SIDE,
+  });
   const s = buildMatch(config, { content: options.content, mapRng: rng });
   if (options.swapSides) {
     for (const unit of s.units) unit.team = opponentOf(sideOfTeam(unit.team));
@@ -141,68 +201,24 @@ export function playGame(options: PlayOptions): GameRecord {
   remember();
   let events = 0;
   let reason: GameRecord['reason'] = 'timeout';
+  const isOwnAction = (step: ActedStep) => step.action.kind !== 'startTurn' && step.action.kind !== 'endTurn';
 
-  const finished = () => isMatchOver(s);
-  while (!finished() && s.day <= options.maxDays) {
-    for (const team of sidesFrom(options.firstTeam ?? FIRST_SIDE)) {
-      // Los derrotados no juegan (como en todas partes: rules/turnOrder.ts).
-      if (!takesTurn(s, team) || options.policies[team] === 'passive') continue;
-      for (const event of aiTurn(s, rng, team)) {
-        events++;
-        if (event.kind === 'attack') {
-          const attacker = known.get(event.attacker);
-          const victimInfo = known.get(event.target);
-          const victim = victimInfo ? ([event.target, victimInfo] as const) : undefined;
-          if (attacker) {
-            const tally = tallyOf(team, attacker);
-            tally.attacks++;
-            tally.damageDealt += event.damage;
-            if (victim) {
-              const [, victimInfo] = victim;
-              tally.valueDealt += (event.damage * costOf(s, victimInfo)) / 100;
-              const vt = tallyOf(sideOfTeam(victimInfo.team), victimInfo);
-              vt.valueLost += (event.damage * costOf(s, victimInfo)) / 100;
-              if (event.killed) {
-                tally.kills++;
-                vt.deaths++;
-              }
-            }
-          }
-          // Contraataque (si las reglas lo tienen): vida perdida por el atacante.
-          const after = s.units.find((unit) => unit.uid === event.attacker);
-          if (attacker) {
-            const lost = attacker.life - (after?.life ?? 0);
-            if (lost > 0 && victim) {
-              const [, victimInfo] = victim;
-              tallyOf(sideOfTeam(victimInfo.team), victimInfo).damageDealt += lost;
-              tallyOf(sideOfTeam(victimInfo.team), victimInfo).valueDealt += (lost * costOf(s, attacker)) / 100;
-              tallyOf(team, attacker).valueLost += (lost * costOf(s, attacker)) / 100;
-              if (!after) {
-                tallyOf(sideOfTeam(victimInfo.team), victimInfo).kills++;
-                tallyOf(team, attacker).deaths++;
-              }
-            }
-          }
-        } else if (event.kind === 'spawn') {
-          const unit = s.units.find((candidate) => candidate.uid === event.uid);
-          if (unit) {
-            tallyOf(team, unit).bought++;
-            tallyOf(team, unit).spent += costOf(s, unit);
-          }
-        } else if (event.kind === 'capture') {
-          const unit = s.units.find((candidate) => candidate.uid === event.uid);
-          if (unit) tallyOf(team, unit).captures++;
-        }
-        remember();
-        if (finished()) break;
-      }
-      if (finished()) break;
+  const session = new GameSession(s, controllersOf(s, options.policies, rng));
+  session.subscribe((step) => {
+    if (step.events.some((event) => event.kind === 'newDay')) {
+      remember();
+      samples.push(sample(s));
     }
-    if (finished()) break;
-    endRound(s);
-    remember();
-    samples.push(sample(s));
-  }
+    if (!isOwnAction(step)) return;
+    // Suceso a suceso, como se jugaban: si la partida acaba con esta accion, hasta el primero.
+    for (const event of step.events) {
+      events++;
+      tallyEvent(s, event, step.team, { known, tallyOf });
+      remember();
+      if (isMatchOver(s)) break;
+    }
+  });
+  runMatch(session, { until: (state) => state.day > options.maxDays });
 
   const result = matchResult(s);
   let winner: Side | null = null;

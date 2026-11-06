@@ -437,17 +437,20 @@ export const MIGRATIONS: readonly SaveMigration[] = [
 
 /**
  * Formato 5 (copia fija de lo de entonces): los equipos jugaban en su orden; la pantalla guardaba en
- * el turno de su persona (el primer equipo de una persona, o el primero si no habia ninguna), sin
- * haber empezado aun su turno (el autoguardado era al acabar la ronda, antes de los viajes: K3);
- * nadie se rendia en la partida (rendirse la acababa) y el objetivo era del equipo de la mision.
+ * el turno de su persona (el primer equipo de una persona, o el primero si no habia ninguna). El
+ * autoguardado era al acabar la ronda, antes de los viajes de ese turno (K3): con todas sus unidades
+ * listas, su turno aun no ha empezado (al cargarla, los viajes avanzan); si alguna ya ha hecho algo,
+ * se guardo a mano a mitad de turno, ya empezado. Nadie se rendia en la partida (rendirse la acababa)
+ * y el objetivo era del equipo de la mision.
  */
 function format5Turn(raw: Record<string, unknown>): void {
   const teams = listOf(raw.teams);
   raw.mode ??= raw.mission === undefined ? 'skirmish' : 'mission';
   raw.turnOrder ??= teams.map((_, id) => id);
   const person = teams.findIndex((team) => isObject(team) && team.controller === 'human');
-  raw.turn ??= Math.max(0, person);
-  raw.turnStarted ??= false;
+  const turn = Math.max(0, person);
+  raw.turn ??= turn;
+  raw.turnStarted ??= listOf(raw.units).some((unit) => isObject(unit) && unit.team === turn && unit.turnState !== 'ready');
   for (const team of teams) if (isObject(team)) team.resigned ??= false;
   const mission = raw.mission;
   if (!isObject(mission) || !isObject(mission.objective)) return;

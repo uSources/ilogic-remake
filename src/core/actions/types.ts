@@ -1,7 +1,7 @@
 /**
  * La forma de una accion en el registro (ACTIONS, actions/registry.ts): cuando vale y que hace.
  */
-import type { ActionRejection, Dice, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 
 export interface ActionDefinition<K extends GameActionKind> {
   /**
@@ -21,3 +21,9 @@ export interface ActionDefinition<K extends GameActionKind> {
 
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */
 export type ActionRegistry = { readonly [K in GameActionKind]: ActionDefinition<K> };
+
+/**
+ * Por donde manda sus acciones quien juega un equipo: `dispatch`, o algo que la llama y ademas lo
+ * apunta (la sesion: registro de acciones, avisos). La IA lo recibe (ai/context.ts, `AiCtx.dispatch`).
+ */
+export type ActionDispatcher = (s: GameState, team: TeamId, action: GameAction) => ActionResult;

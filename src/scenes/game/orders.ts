@@ -304,8 +304,7 @@ export class Orders {
     host.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
     for (const unit of standingOrderPlayOrder(host.state, units)) {
-      for (const event of startStandingOrder(host.state, unit.uid, host.viewer)) {
-        host.record([event]);
+      for (const event of startStandingOrder(host.state, unit.uid, host.viewer, host.dispatcher)) {
         await host.play([event]);
         if (match !== host.match || host.checkEnd()) return;
       }

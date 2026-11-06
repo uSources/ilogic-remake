@@ -21,7 +21,6 @@ import { act, blankState, unitTypeNamed, hqId, withoutHeadquarters } from './hel
 import { PLAIN_RULES } from './plainRules';
 import { viewerOf } from '../src/scenes/game/matchSetup';
 import { isPlayableOnOneScreen } from '@core/teams';
-import { checkPlayedByAi } from '../src/scenes/game/turns';
 import { dispatch } from '@core/actions';
 
 const HQ = hqId();
@@ -228,7 +227,7 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
           return result.ok ? result.events : null;
         },
         perform: async () => false,
-        record: nop,
+        dispatcher: dispatch,
         play: async () => {},
       }),
     );
@@ -292,11 +291,6 @@ describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
     expect(isPlayableOnOneScreen(aiOnly)).toBe(true);
     expect(viewerOf(aiOnly)).toBe(0);
     expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'human' }]))).toBe(1);
-  });
-
-  it('el turno de otro equipo solo lo juega la IA: si es de una persona, falla', () => {
-    expect(() => checkPlayedByAi(blankState(), 1)).not.toThrow();
-    expect(() => checkPlayedByAi(twoPeople(), 1)).toThrow(/solo juega una persona/);
   });
 });
 

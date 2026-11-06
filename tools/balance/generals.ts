@@ -12,14 +12,14 @@
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
 import { duel, duelTeams } from '@core/teams';
-import { aiTurn } from '@core/ai';
+import { controllersFor, GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/util/random';
-import { endRound, isMatchOver, isWinner, matchResult, score, turnTakers } from '@core/rules';
-import type { GameEvent, GameState } from '@core/model';
+import { isWinner, matchResult, score } from '@core/rules';
+import type { GameState } from '@core/model';
 import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
 
 const arg = (name: string, fallback: string): string => {
@@ -31,6 +31,8 @@ const rival = arg('b', 'none');
 const maps = Number(arg('maps', '40'));
 const from = Number(arg('from', '1'));
 const json = process.argv.includes('--json');
+/** Las partidas se cortan al dia 60 y se deciden por puntos. */
+const MAX_DAYS = 60;
 /** Los generales pedidos existen en el contenido del juego (si no, para antes de jugar). */
 function checkGeneralIds(ids: string[]): void {
   const known = new Set(defaultContent().files.generals.map((general) => general.id));
@@ -49,16 +51,12 @@ function play(
   const [first, second] = duelTeams(s);
   appointGeneral(s, first, firstGeneral === 'none' ? null : firstGeneral);
   appointGeneral(s, second, secondGeneral === 'none' ? null : secondGeneral);
-  while (!isMatchOver(s) && s.day <= 60) {
-    for (const team of turnTakers(s)) {
-      for (const event of aiTurn(s, rng, team) as Iterable<GameEvent>) {
-        if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);
-        if (isMatchOver(s)) break;
-      }
-      if (isMatchOver(s)) break;
-    }
-    endRound(s);
-  }
+  const session = new GameSession(s, controllersFor(s, rng));
+  session.subscribe((step) => {
+    for (const event of step.events)
+      if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);
+  });
+  runMatch(session, { until: (state) => state.day > MAX_DAYS });
   const result = matchResult(s);
   if (result.status === 'draw') return { winner: 'draw', byScore: false };
   if (result.status === 'decided') return { winner: isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE, byScore: false };
@@ -90,7 +88,9 @@ if (json) {
   const winRate = (winsA + draws / 2) / games;
   const margin = 1.96 * Math.sqrt((winRate * (1 - winRate)) / games);
   console.log(`${challenger} contra ${rival}: ${games} partidas en ${maps} mapas (desde ${from})`);
-  console.log(`  gana ${challenger}: ${winsA}, gana ${rival}: ${winsB}, empates: ${draws} (${byScore} decididas por puntos al dia 60)`);
+  console.log(
+    `  gana ${challenger}: ${winsA}, gana ${rival}: ${winsB}, empates: ${draws} (${byScore} decididas por puntos al dia ${MAX_DAYS})`,
+  );
   console.log(`  ${challenger} se lleva el ${Math.round(winRate * 100)} % (±${Math.round(margin * 100)})`);
   for (const [power, count] of uses) console.log(`  ${power}: ${count} veces (${(count / games).toFixed(1)} por partida)`);
 }

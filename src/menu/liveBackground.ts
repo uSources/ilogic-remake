@@ -1,12 +1,11 @@
 import type Phaser from 'phaser';
-import { aiTurn } from '../core/ai';
+import { controllersFor, GameSession, playMatch, type ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createMatch } from '../core/defaultGames';
 import { skirmishConfig } from '../core/match';
-import { endRound, isMatchOver, othersAfter } from '../core/rules';
 import { duel, playerTeam } from '../core/teams';
-import type { GameEvent, GameState, Pos, TeamId } from '../core/model';
+import type { GameEvent, GameState, Pos } from '../core/model';
 import { TILE } from '../layout';
 import { randomSeed } from '../setup';
 import { burst, center, COLORS, floatText, lunge, reducedMotion, tileFlash } from '../ui/fx';
@@ -48,18 +47,6 @@ function isInVisibleBand(screen: Pos, width: number, height: number): boolean {
 }
 
 /**
- * Avanza al siguiente equipo que juega tras `team` (othersAfter): si por el camino acaba la ronda,
- * la cierra (endRound). Devuelve ese equipo, o null si no queda ninguno.
- */
-function advanceToNextTeam(s: GameState, team: TeamId): TeamId | null {
-  for (const step of othersAfter(s, team)) {
-    if (step.kind === 'team') return step.team;
-    endRound(s);
-  }
-  return null;
-}
-
-/**
  * Fondo del menu: una partida IA contra IA en directo, sin niebla. Cada accion se anima y la camara
  * la sigue por un lateral (el centro lo tapan las tarjetas). Al acabar una partida empieza otra.
  * La escena llama a start() al crearse, a tick() en update() y a destroy() al cerrarse.
@@ -67,10 +54,8 @@ function advanceToNextTeam(s: GameState, team: TeamId): TeamId | null {
 export class LiveBackground {
   private game: GameState | null = null;
   private view: MapView | null = null;
-  private events: Generator<GameEvent> | null = null;
-  /** El equipo al que le toca (null sin partida). */
-  private team: TeamId | null = null;
-  private rng = seededRng(1);
+  /** La partida en juego (la IA lleva los dos equipos). */
+  private session: GameSession | null = null;
   /** Cambia al empezar o parar: el bucle anterior se da cuenta y termina. */
   private token = 0;
 
@@ -92,14 +77,13 @@ export class LiveBackground {
   destroy(): void {
     this.token++;
     this.game = null;
-    this.events = null;
+    this.session = null;
     this.view?.destroy();
     this.view = null;
   }
 
   start(): void {
     const seed = randomSeed();
-    this.rng = seededRng(seed ^ AI_SEED_MIX);
     this.game = createMatch(skirmishConfig({ seed, size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') }));
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
@@ -108,8 +92,7 @@ export class LiveBackground {
     this.view.centerOn(firstBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
-    this.team = first;
-    this.events = aiTurn(this.game, this.rng, first);
+    this.session = new GameSession(this.game, controllersFor(this.game, seededRng(seed ^ AI_SEED_MIX)));
     this.render();
     void this.loop();
   }
@@ -140,34 +123,27 @@ export class LiveBackground {
     this.view.placeCursor(false);
   }
 
-  /** Bucle de la partida de fondo: cada accion de la IA se anima y la camara la sigue. */
+  /** Bucle de la partida de fondo: cada accion de la IA se anima y la camara la sigue; al acabar, otra. */
   private async loop(): Promise<void> {
     const token = ++this.token;
     const isAlive = () => token === this.token && !!this.game && this.scene.scene.isActive();
+    const session = this.session;
+    if (!session) return;
     await this.pause(FIRST_PAUSE_MS);
-    while (isAlive()) {
-      const next = this.events!.next();
-      if (next.done) {
-        await this.nextTurn(this.game!);
-        continue;
-      }
-      await this.animate(next.value);
-      if (!isAlive()) return;
-      this.render();
-      await this.pause(next.value.kind === 'wait' ? AFTER_WAIT_MS : AFTER_ACTION_MS);
-    }
+    const last = await playMatch(session, async (step) => {
+      if (!isAlive()) return false;
+      await this.show(step);
+      return isAlive() && session.state.day <= MAX_DAYS;
+    });
+    if (isAlive() && last.kind !== 'awaitingInput') this.start();
   }
 
-  /**
-   * Turno del siguiente equipo que aun juega (y fin de ronda tras el ultimo); si la partida ha
-   * acabado, otra nueva.
-   */
-  private async nextTurn(s: GameState): Promise<void> {
-    const next = this.team === null ? null : advanceToNextTeam(s, this.team);
-    if (next === null || isMatchOver(s) || s.day > MAX_DAYS) return this.start();
-    this.team = next;
-    this.events = aiTurn(s, this.rng, next);
-    await this.pause(BETWEEN_TURNS_MS);
+  /** Anima lo que ha pasado en un paso y espera un poco (mas entre turnos). */
+  private async show(step: ActedStep): Promise<void> {
+    if (step.action.kind === 'startTurn') return this.pause(BETWEEN_TURNS_MS);
+    for (const event of step.events) await this.animate(event);
+    this.render();
+    await this.pause(step.action.kind === 'wait' ? AFTER_WAIT_MS : AFTER_ACTION_MS);
   }
 
   private pause(ms: number): Promise<void> {

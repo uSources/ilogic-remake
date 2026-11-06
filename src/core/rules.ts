@@ -134,5 +134,5 @@ export {
   VICTORY_RULES,
   type VictoryRule,
 } from './rules/victory';
-export { othersAfter, takesTurn, turnTakers, turnsAfter, type TurnStep } from './rules/turnOrder';
+export { nextTurn, takesTurn, type NextTurn } from './rules/turnOrder';
 export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';

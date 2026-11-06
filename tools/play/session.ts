@@ -1,11 +1,12 @@
 /**
  * Partida por texto: las reglas del juego sin graficos, para probar cambios de reglas o de IA en
  * segundos (la usan los agentes de IA y los tests). Cada orden es una linea; la respuesta, texto.
- * Juega el equipo de la persona (el primero que lleva una persona: "tu"); los demas los mueve la IA al
- * terminar el turno, en orden.
+ * Juega la persona a la que le toca ("tu"; con varias, por turnos); los demas equipos los mueve la IA
+ * al terminar el turno, en orden. La partida se juega con la misma sesion que la pantalla (GameSession):
+ * lo que pasa solo al acabar y empezar cada turno, igual.
  */
 import { aiTurn } from '@core/ai';
-import { notAiControlledReason, playerTeam, teamIds, teamState, teamValue } from '@core/teams';
+import { playerTeam, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
@@ -20,21 +21,19 @@ import {
   buildingAt,
   buyOptions,
   canCapture,
-  endRound,
   roundReport,
   endsInAmbush,
   moveRange,
   isWinner,
   matchResult,
   reachableTiles,
-  othersAfter,
   unitAt,
   unitById,
   visibility,
   canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import { dispatch } from '@core/actions';
+import { controllersFor, GameSession, runMatch, type ActedStep } from '@core/session';
 import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
@@ -74,22 +73,48 @@ export interface SessionOptions {
   enemyGeneral?: string;
 }
 
+/** Mezcla para que la IA no decida con la misma semilla que el mapa. */
+const AI_SEED_MIX = 0x9e3779b9;
+
 export class Session {
-  s: GameState;
-  private rng: Rng;
-  /** El equipo que se juega con las ordenes (el de la persona). */
-  private get me(): TeamId {
-    return playerTeam(this.s);
-  }
-  /** Los equipos que mueve la IA al terminar el turno, en orden. */
+  readonly s: GameState;
+  private readonly rng: Rng;
+  /** La partida en juego: los equipos de personas los juegan las ordenes; los demas, la IA. */
+  private readonly session: GameSession;
+  /** El equipo que se juega con las ordenes: la persona a la que le toca (con varias, por turnos). */
+  private me: TeamId;
+  /** Lo que se cuenta de lo que pasa mientras la partida sigue sola (turnos de los demas, ordenes). */
+  private told: string[] = [];
+  /** Los sucesos del ultimo fin de ronda (para contar lo cobrado). */
+  private lastRound: GameEvent[] = [];
+
+  /** Los demas equipos, en orden. */
   private get others(): TeamId[] {
     return teamIds(this.s).filter((team) => team !== this.me);
   }
 
   constructor(options: SessionOptions = {}) {
     const seed = options.seed ?? 1;
-    this.rng = seededRng(seed ^ 0x9e3779b9);
+    this.rng = seededRng(seed ^ AI_SEED_MIX);
     this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
+    this.me = playerTeam(this.s);
+    this.session = new GameSession(this.s, controllersFor(this.s, this.rng));
+    this.session.subscribe((step) => this.note(step));
+    this.advance();
+    this.told = [];
+  }
+
+  /** Apunta lo que pasa: los sucesos que se cuentan (con quien los hace) y lo del fin de ronda. */
+  private note(step: ActedStep): void {
+    if (step.events.some((event) => event.kind === 'newDay')) this.lastRound = step.events;
+    const prefix = step.team === this.me ? 'tu: ' : `equipo ${step.team}: `;
+    this.told.push(...describeAll(this.s, step.events, prefix));
+  }
+
+  /** La partida sigue sola hasta que le toca a una persona (desde entonces se juega con ella) o se acaba. */
+  private advance(): void {
+    const step = runMatch(this.session);
+    if (step.kind === 'awaitingInput') this.me = step.team;
   }
 
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
@@ -226,7 +251,7 @@ export class Session {
    * error dice `problem` y la razon que da el nucleo.
    */
   private perform(action: GameAction, problem: string): GameEvent[] {
-    const result = dispatch(this.s, this.me, action);
+    const result = this.session.act(this.me, action);
     if (!result.ok) throw new UsageError(`${problem} (${result.reason})`);
     return result.events;
   }
@@ -274,34 +299,38 @@ export class Session {
     if (!id)
       return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
     const events = this.perform({ kind: 'usePower', power: id, target }, `no se puede usar ${id} (poderes: ${list})`);
-    return told(this.s, events, '').join('\n');
+    return describeAll(this.s, events, '').join('\n');
   }
 
   /**
-   * Fin del turno propio (o la IA juega por ti con `ai`), turnos de los demas equipos por su orden
-   * (los derrotados no juegan) con el fin de ronda tras el ultimo. Aqui juega una persona: los demas
-   * equipos tienen que ser de la IA.
+   * Fin del turno propio (o la IA juega por ti con `ai`): lo que pasa solo al acabarlo (las ordenes
+   * permanentes, las capturas que siguen), los turnos de los demas equipos por su orden (los
+   * derrotados no juegan) con el fin de ronda tras el ultimo, y lo que pasa solo al empezar el
+   * siguiente turno de una persona (los viajes): lo mismo que en la pantalla. Con varias personas, se
+   * sigue con la siguiente.
    */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
-    if (aiForMe) out.push(...told(this.s, aiTurn(this.s, this.rng, this.me), 'tu IA: '));
-    // othersAfter pasa siempre una vez por el fin de ronda: ahi se sabe lo cobrado.
-    let income = 0;
-    for (const step of othersAfter(this.s, this.me)) {
-      if (step.kind === 'roundEnd') income = teamValue(roundReport(this.s, endRound(this.s)).income, this.me);
-      else this.playOther(step.team, out);
-    }
-    out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
+    this.told = [];
+    if (aiForMe)
+      out.push(
+        ...describeAll(
+          this.s,
+          aiTurn(this.s, this.rng, this.me, (_s, team, action) => this.session.act(team, action)),
+          'tu IA: ',
+        ),
+      );
+    this.told = [];
+    this.session.finishInput(this.me);
+    const before = this.me;
+    this.advance();
+    out.push(...this.told);
+    const income = teamValue(roundReport(this.s, this.lastRound).income, before);
+    out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, before).funds}`);
+    if (this.me !== before) out.push(`--- turno del equipo ${this.me}`);
     const result = this.result();
     if (result !== 'sigue') out.push(`FIN: ${result}`);
     return out.join('\n');
-  }
-
-  /** El turno de otro equipo, que tiene que ser de la IA (aqui juega una sola persona). */
-  private playOther(team: TeamId, out: string[]): void {
-    const reason = notAiControlledReason(this.s, team);
-    if (reason) throw new UsageError(reason);
-    out.push(...told(this.s, aiTurn(this.s, this.rng, team), `equipo ${team}: `));
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
@@ -375,7 +404,7 @@ function matchConfigOf(options: SessionOptions, seed: number): MatchConfig {
  * Lo que se cuenta de unos sucesos, una linea por suceso con `prefix` delante (los que no dicen nada
  * nuevo, como esperar o una orden cumplida, no se cuentan).
  */
-function told(s: GameState, events: Iterable<GameEvent>, prefix: string): string[] {
+function describeAll(s: GameState, events: Iterable<GameEvent>, prefix: string): string[] {
   const lines: string[] = [];
   for (const event of events) {
     const line = describe(s, event);

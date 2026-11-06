@@ -2,11 +2,11 @@ import { hqId, resultFor } from './helpers';
 import { duel } from '@core/teams';
 import { MoveType } from '@core/content';
 import { describe, expect, it } from 'vitest';
-import { aiTurn } from '@core/ai';
+import { aiController, GameSession, passiveController, runMatch } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { endRound, groundDistance } from '@core/rules';
+import { groundDistance } from '@core/rules';
 import { createLayer } from '@core/mapGrid';
 import { checkInvariants } from './sim/partidas';
 
@@ -41,10 +41,7 @@ describe('partidas simuladas', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const rng = seededRng(seed * 104729);
       const s = createMatch(skirmishConfig({ seed, teams: duel('human', 'ai') }), rng);
-      while (resultFor(s, 0) === 'playing' && s.day <= 60) {
-        for (const _ of aiTurn(s, rng, 1)) if (resultFor(s, 0) !== 'playing') break;
-        endRound(s);
-      }
+      runMatch(new GameSession(s, [passiveController(), aiController(rng)]), { until: (state) => state.day > 60 });
       if (resultFor(s, 0) === 'lost') {
         won++;
         days.push(s.day);

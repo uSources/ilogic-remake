@@ -123,7 +123,11 @@ export type GameEvent =
   /** [CAMBIO] Fin de ronda: cambia el clima (ids de weather.json). */
   | { kind: 'weather'; actor: null; from: string; to: string }
   /** El equipo `actor` se ha rendido. */
-  | { kind: 'surrender'; actor: TeamId };
+  | { kind: 'surrender'; actor: TeamId }
+  /** Empieza el turno del equipo `actor` en el dia `day` (lo que hagan sus TURN_START_PHASES va detras). */
+  | { kind: 'turnStart'; actor: TeamId; day: number }
+  /** Acaba el turno del equipo `actor` y le toca a `next` (si acaba la ronda, sus sucesos van detras). */
+  | { kind: 'turnEnd'; actor: TeamId; next: TeamId };
 
 /** Tipo de evento ('move', 'attack'...). */
 export type GameEventKind = GameEvent['kind'];

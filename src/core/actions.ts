@@ -20,6 +20,7 @@
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
  * | `match` | lo de la partida entera: rendirse |
+ * | `turn` | empezar y acabar el turno, con lo que pasa solo en cada momento (`TURN_START_PHASES`, `TURN_END_PHASES`) |
  * | `groupMove` | mover un grupo: en que orden y el paso de cada una (`groupMoveOrder`, `groupMoveStep`) |
  * | `menu` | los menus, sacados de las acciones que valen (`availableActions`, `canDoWithSelection`) |
  * | `registry` | `ACTIONS`: todas las entradas |
@@ -38,6 +39,7 @@ export {
 } from './actions/menu';
 export { groupMoveOrder, groupMoveStep } from './actions/groupMove';
 export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
+export { autoCapturers, TURN_END_PHASES, TURN_START_PHASES, type TurnPhase } from './actions/turn';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
-export type { ActionDefinition, ActionRegistry } from './actions/types';
+export type { ActionDefinition, ActionDispatcher, ActionRegistry } from './actions/types';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';

@@ -47,7 +47,14 @@ export type GameAction =
   | { kind: 'renameSquad'; squad: number; name: string }
   | { kind: 'disbandSquad'; squad: number }
   /** El equipo se rinde: cuenta como derrotado (ver isDefeated) aunque le quede de todo. */
-  | { kind: 'surrender' };
+  | { kind: 'surrender' }
+  /** Empieza el turno del equipo al que le toca (sus TURN_START_PHASES: los viajes de varios turnos). */
+  | { kind: 'startTurn' }
+  /**
+   * Acaba el turno del equipo (sus TURN_END_PHASES: las capturas que siguen solas) y pasa al
+   * siguiente que juega; tras el ultimo de la ronda, el fin de ronda (ROUND_PHASES).
+   */
+  | { kind: 'endTurn' };
 
 /** Tipo de accion ('move', 'attack'...). */
 export type GameActionKind = GameAction['kind'];
@@ -60,6 +67,13 @@ export type ActionRejection =
   | 'badAction'
   /** Quien la manda no es un equipo de la partida. */
   | 'notATeam'
+  /** La partida ya ha acabado (ver matchResult): nadie juega mas. */
+  | 'matchOver'
+  /** No es el turno de ese equipo (`GameState.turn`). */
+  | 'notYourTurn'
+  /** Su turno aun no ha empezado ('startTurn'), o ya habia empezado (al pedir empezarlo otra vez). */
+  | 'turnNotStarted'
+  | 'turnStarted'
   /** El equipo ya ha perdido (ver isDefeated): no juega mas. */
   | 'defeated'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */

@@ -56,16 +56,6 @@ export const teamsControlledBy = (s: GameState, controller: ControllerKind): Tea
 export const isAiControlled = (s: GameState, team: TeamId): boolean => teamState(s, team).controller === 'ai';
 
 /**
- * Por que el turno de `team` no lo puede jugar la IA (null si es de la IA): hasta la fase 4, en una
- * pantalla juega una sola persona y los demas equipos tienen que ser de la IA. Lo usan la escena y
- * `npm run play`, cada uno con su tipo de error.
- */
-export function notAiControlledReason(s: GameState, team: TeamId): string | null {
-  if (isAiControlled(s, team)) return null;
-  return `El equipo ${team} lo juega '${teamState(s, team).controller}': aqui solo juega una persona`;
-}
-
-/**
  * Se puede jugar en una sola pantalla: como mucho un equipo de personas (el que mira; los demas los
  * lleva la IA). Varias personas en la misma partida (por turnos o en red) es la fase 4: hasta
  * entonces, ni el menu ofrece continuar una asi ni la escena la abre.

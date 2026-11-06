@@ -688,8 +688,10 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   controlPoint: noAnimation,
   newDay: noAnimation,
   weather: noAnimation,
-  // El final de la partida lo enseña la escena (endOfMatch.ts).
+  // El final de la partida y los avisos de cada turno los enseña la escena (endOfMatch.ts, turns.ts).
   surrender: noAnimation,
+  turnStart: noAnimation,
+  turnEnd: noAnimation,
 };
 
 /** La animacion de un evento, con su tipo (TypeScript no lo deduce solo al indexar `ANIMATORS`). */

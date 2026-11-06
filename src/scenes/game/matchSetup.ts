@@ -3,7 +3,8 @@
  * la guardada, una preparada desde fuera o el laboratorio. Cada una trae sus reglas en `state.rules`
  * y su modo en `state.mode`. Sin Phaser.
  */
-import { duel, isPlayableOnOneScreen, playerTeam, teamsControlledBy } from '../../core/teams';
+import { duel, isPlayableOnOneScreen, playerTeam, teamIds, teamsControlledBy } from '../../core/teams';
+import { humanController, passiveController, type Controller } from '../../core/session';
 import { createMatch, loadGame } from '../../core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '../../core/match';
 import type { GameState, TeamId } from '../../core/model';
@@ -16,6 +17,12 @@ export interface MatchStart {
   state: GameState;
   /** El equipo que juega la persona en esta pantalla (el que mira: niebla, colores, mandos). */
   viewer: TeamId;
+  /**
+   * Quien juega los equipos que no van por su `controller`: el que mira lo juega la persona (aunque
+   * la partida diga 'ai': una de IA contra IA de las herramientas) y, en el laboratorio, el otro no
+   * hace nada.
+   */
+  controllers: ReadonlyMap<TeamId, Controller>;
   /** Laboratorio de animaciones (null en una partida normal). */
   lab: LabOptions | null;
   /** Viene del guardado (al terminarla se borra). */
@@ -36,7 +43,14 @@ export function startMatch(data: GameStartData = { start: 'new', match: randomSk
   // Solo se borra el guardado si lo que no se ha podido abrir era el guardado (no una partida de depuracion).
   if (corruptSave && data.start === 'load') deleteSave();
   const state = lab ? createMatch(labMatch(lab, lab.play)) : (loaded ?? createMatch(newMatchConfig(data)));
-  return { state, viewer: viewerOf(state), lab, fromSave: !!saved, corruptSave };
+  const viewer = viewerOf(state);
+  return { state, viewer, controllers: controllersOf(state, viewer, !!lab), lab, fromSave: !!saved, corruptSave };
+}
+
+/** La persona juega el equipo que mira; en el laboratorio, los demas se quedan quietos (solo se mira). */
+function controllersOf(state: GameState, viewer: TeamId, isLab: boolean): Map<TeamId, Controller> {
+  const quiet = isLab ? teamIds(state).filter((team) => team !== viewer) : [];
+  return new Map([[viewer, humanController()], ...quiet.map((team) => [team, passiveController()] as const)]);
 }
 
 /** La configuracion de la partida nueva que se pide (o una al azar si no se pedia una nueva o no se pudo abrir la pedida). */

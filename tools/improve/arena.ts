@@ -15,18 +15,19 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
+import { aiController, controllersFor, GameSession, runMatch, type AiBrain } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
-import { endRound, isMatchOver, isWinner, matchResult, turnTakers } from '@core/rules';
+import { isWinner, matchResult } from '@core/rules';
 import { armyValue } from '@core/stats';
-import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
+import type { GameState, TeamId } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
 
-type Brain = (s: GameState, rng: Rng, team: TeamId) => Generator<GameEvent>;
+type Brain = AiBrain;
 
 /** Lo que vale cada edificio y cada moneda al decidir una partida sin terminar (como en el informe de equilibrio). */
 const STRENGTH_PER_BUILDING = 1500;
@@ -48,19 +49,11 @@ export function playDuel(seed: number, brains: [Brain, Brain], size: number, max
   const rng = seededRng(seed);
   const s = createMatch(skirmishConfig({ seed, size, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
-  const brainOf = (team: TeamId): Brain => {
-    if (team === first) return brains[0];
-    if (team === second) return brains[1];
-    throw new Error(`La arena es de dos equipos: no hay IA para el equipo ${team}`);
-  };
-  while (!isMatchOver(s) && s.day <= maxDays) {
-    for (const team of turnTakers(s)) {
-      for (const _ of brainOf(team)(s, rng, team)) if (isMatchOver(s)) break;
-      if (isMatchOver(s)) break;
-    }
-    if (isMatchOver(s)) break;
-    endRound(s);
-  }
+  const controllers = new Map([
+    [first, aiController(rng, brains[0])],
+    [second, aiController(rng, brains[1])],
+  ]);
+  runMatch(new GameSession(s, controllersFor(s, rng, controllers)), { until: (state) => state.day > maxDays });
   const result = matchResult(s);
   if (result.status === 'draw') return null;
   if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';

@@ -1,0 +1,204 @@
+/**
+ * Una partida en juego (`GameSession`): la partida, quien juega cada equipo (`Controller`), el
+ * registro de lo que se ha hecho (`log`) y los avisos de cada accion a quien escucha (`subscribe`:
+ * la pantalla, la huella, el autoguardado). La partida sabe de quien es el turno (`GameState.turn`);
+ * la sesion se lo pide a su controlador, empieza y acaba los turnos ('startTurn', 'endTurn') y para
+ * cuando alguien de fuera tiene que decidir o cuando la partida se ha decidido.
+ *
+ * Avanza paso a paso (`step`): quien la juega decide como esperar entre pasos. Las herramientas la
+ * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
+ */
+import { dispatch } from '../actions/dispatch';
+import { takesTurn } from '../rules/turnOrder';
+import { matchResult } from '../rules/victory';
+import { gameModeOf } from '../modes';
+import { teamState } from '../teams';
+import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../model';
+import type { Controller, TurnPlan, TurnStep } from './controller';
+import type { LoggedAction } from './replay';
+
+/** Lo que ha pasado en un paso: el equipo `team` ha hecho `action` y estos son sus sucesos. */
+export interface ActedStep {
+  kind: 'acted';
+  team: TeamId;
+  action: GameAction;
+  events: GameEvent[];
+}
+
+/** Un paso de la sesion: algo que ha pasado, alguien de fuera que tiene que decidir o el final. */
+export type SessionStep = ActedStep | { kind: 'awaitingInput'; team: TeamId } | { kind: 'over'; result: MatchResult };
+
+/** Quien escucha lo que pasa (cada accion hecha, con sus sucesos, en orden). */
+export type SessionListener = (step: ActedStep) => void;
+
+/** El turno en curso de un controlador: su plan y lo que hay que contestarle (el resultado de lo que propuso). */
+interface TurnInPlay {
+  team: TeamId;
+  plan: TurnPlan;
+  reply: ActionResult | undefined;
+}
+
+export class GameSession {
+  /** Lo que se ha hecho, en orden (para repetirlo: replayController). */
+  readonly log: LoggedAction[] = [];
+  private readonly listeners = new Set<SessionListener>();
+  private current: TurnInPlay | null = null;
+  /** El equipo al que se espera (decide alguien de fuera), o null. */
+  private awaiting: TeamId | null = null;
+
+  /** `controllers`: el de cada equipo, por su numero. */
+  constructor(
+    readonly state: GameState,
+    private readonly controllers: readonly Controller[],
+  ) {
+    if (controllers.length !== state.teams.length)
+      throw new Error(`Hay ${state.teams.length} equipos y ${controllers.length} controladores: uno por equipo`);
+  }
+
+  /** Como va la partida (igual para todos). */
+  get result(): MatchResult {
+    return matchResult(this.state);
+  }
+
+  /** El equipo al que se espera para que decida (una persona en la pantalla, un jugador remoto), o null. */
+  get awaitingInput(): TeamId | null {
+    return this.awaiting;
+  }
+
+  /** Quien juega ese equipo. */
+  controllerOf(team: TeamId): Controller {
+    const controller = this.controllers[team];
+    if (!controller) throw new Error(`El equipo ${team} no esta en la partida`);
+    return controller;
+  }
+
+  /** Avisar de cada accion hecha. Devuelve como dejar de escuchar. */
+  subscribe(listener: SessionListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Una accion del equipo al que se espera (la decide alguien de fuera). Mientras no se le espera,
+   * no vale ('notYourTurn'): su turno no ha llegado o lo esta jugando su controlador.
+   */
+  act(team: TeamId, action: GameAction): ActionResult {
+    if (this.awaiting !== team) return { ok: false, reason: 'notYourTurn' };
+    const result = dispatch(this.state, team, action);
+    if (result.ok) this.record(team, action, result.events);
+    return result;
+  }
+
+  /** Quien decidia fuera ha terminado (p. ej. ha pulsado «Fin de turno»): su controlador sigue y acaba el turno. */
+  finishInput(team: TeamId): void {
+    if (this.awaiting === team) this.awaiting = null;
+  }
+
+  /**
+   * El siguiente paso: empezar el turno de quien le toca, lo siguiente que haga su controlador o
+   * acabar su turno. Para (sin hacer nada) si se espera a alguien de fuera o si la partida ha acabado.
+   */
+  step(): SessionStep {
+    for (;;) {
+      const result = this.result;
+      if (result.status !== 'playing') return { kind: 'over', result };
+      if (this.awaiting !== null) return { kind: 'awaitingInput', team: this.awaiting };
+      const team = this.state.turn;
+      if (!this.state.turnStarted) return this.perform(team, { kind: 'startTurn' });
+      // Si ha caido en su propio turno, ya no juega: lo pasa.
+      if (!takesTurn(this.state, team)) return this.endTurn(team);
+      const step = this.nextStepOf(team);
+      if (!step) return this.endTurn(team);
+      const outcome = this.follow(team, step);
+      if (outcome) return outcome;
+    }
+  }
+
+  /** Lo siguiente que quiere hacer el controlador del equipo (null: ha acabado su turno). */
+  private nextStepOf(team: TeamId): TurnStep | null {
+    const current = this.turnOf(team);
+    const next = current.plan.next(current.reply);
+    current.reply = undefined;
+    return next.done ? null : next.value;
+  }
+
+  /** El turno en curso del controlador del equipo (lo empieza si aun no lo tenia). */
+  private turnOf(team: TeamId): TurnInPlay {
+    if (this.current?.team !== team) this.current = { team, plan: this.controllerOf(team).playTurn(this.state, team), reply: undefined };
+    return this.current;
+  }
+
+  /** Hace lo que pide un paso del controlador: lo que ha pasado, si ha pasado algo (una accion rechazada no cuenta). */
+  private follow(team: TeamId, step: TurnStep): SessionStep | null {
+    switch (step.kind) {
+      case 'awaitInput':
+        this.awaiting = team;
+        return { kind: 'awaitingInput', team };
+      case 'propose': {
+        const result = dispatch(this.state, team, step.action);
+        this.turnOf(team).reply = result;
+        return result.ok ? this.record(team, step.action, result.events) : null;
+      }
+      case 'applied':
+        return step.result.ok ? this.record(team, step.action, step.result.events) : null;
+    }
+  }
+
+  /** El turno del equipo acaba: su controlador ya no sigue y le toca al siguiente. */
+  private endTurn(team: TeamId): ActedStep {
+    this.current = null;
+    return this.perform(team, { kind: 'endTurn' });
+  }
+
+  /** Una accion que manda la propia sesion (empezar o acabar un turno): siempre vale. */
+  private perform(team: TeamId, action: GameAction): ActedStep {
+    const result = dispatch(this.state, team, action);
+    if (!result.ok) throw new Error(`La sesion no ha podido hacer '${action.kind}' por el equipo ${team}: ${result.reason}`);
+    return this.record(team, action, result.events);
+  }
+
+  /** Apunta una accion hecha y avisa a quien escucha. */
+  private record(team: TeamId, action: GameAction, events: GameEvent[]): ActedStep {
+    const step: ActedStep = { kind: 'acted', team, action, events };
+    this.log.push({ team, action });
+    for (const listener of this.listeners) listener(step);
+    return step;
+  }
+}
+
+/** Hasta donde llevar una partida seguida (ademas de hasta el final o hasta que alguien de fuera tenga que decidir). */
+export interface RunOptions {
+  /** Parar cuando se cumpla (se mira tras cada paso): p. ej. un limite de dias de una herramienta. */
+  until?: (s: GameState) => boolean;
+}
+
+/**
+ * Lleva la partida seguida, sin esperas (las herramientas, los tests): hasta el final, hasta que se
+ * cumpla `until` o hasta que tenga que decidir alguien de fuera. Devuelve el ultimo paso.
+ */
+export function runMatch(session: GameSession, options: RunOptions = {}): SessionStep {
+  for (;;) {
+    const step = session.step();
+    if (step.kind !== 'acted' || options.until?.(session.state)) return step;
+  }
+}
+
+/**
+ * Lleva la partida paso a paso, esperando a `onActed` tras cada uno (la pantalla anima sus sucesos):
+ * hasta el final, hasta que tenga que decidir alguien de fuera o hasta que `onActed` diga que no
+ * siga (false: se ha cambiado de partida). Devuelve el ultimo paso.
+ */
+export async function playMatch(session: GameSession, onActed: (step: ActedStep) => Promise<boolean>): Promise<SessionStep> {
+  for (;;) {
+    const step = session.step();
+    if (step.kind !== 'acted' || !(await onActed(step))) return step;
+  }
+}
+
+/**
+ * Es el momento del guardado automatico: acaba de empezar el turno de una persona (con lo que pasa
+ * solo al empezarlo ya hecho: asi, al cargar, nada se repite ni se pierde) y su modo guarda solo.
+ */
+export function isAutosaveMoment(s: GameState, step: ActedStep): boolean {
+  return gameModeOf(s).autosaves && step.action.kind === 'startTurn' && teamState(s, step.team).controller === 'human';
+}

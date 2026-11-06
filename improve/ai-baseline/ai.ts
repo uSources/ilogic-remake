@@ -24,6 +24,7 @@
  */
 import { aiGeneral } from '@core/aiGenerals';
 import { teamUnits } from '@core/rules/queries';
+import type { ActionDispatcher } from '@core/actions/types';
 import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
 import { aiCtx, finish } from './ai/context';
 import { planFire } from './ai/fire';
@@ -35,8 +36,9 @@ export { standingOrderPlayOrder } from './ai/formation';
 export type { AiCtx } from './ai/context';
 
 /** Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound). */
-export function* aiTurn(s: GameState, rng: Rng, team: TeamId): Generator<GameEvent> {
-  const ai = aiCtx(team);
+// Adaptado al nucleo de la fase 4: `dispatcher`, por donde manda sus acciones (la sesion las apunta).
+export function* aiTurn(s: GameState, rng: Rng, team: TeamId, dispatcher?: ActionDispatcher): Generator<GameEvent> {
+  const ai = aiCtx(team, dispatcher);
   // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ai);
   const { plan, order } = planFire(s, ai.me);

@@ -9,7 +9,7 @@ import { movementOf, buildingAt, occupancy } from '../rules/queries';
 import { posOf, samePos } from '../geom';
 import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
 import { actorProblem } from '../actions/checks';
-import { dispatch } from '../actions/dispatch';
+import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive } from '../util/predicates';
@@ -26,16 +26,21 @@ export interface AiCtx {
   readonly me: TeamId;
   /**
    * [CAMBIO] Juego en grupo: solo en el turno de la IA (aiTurn). Las ordenes con destino
-   * (standingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
+   * (unitStandingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
    */
   group: boolean;
   /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
   plan: Map<number, number>;
+  /**
+   * Por donde manda sus acciones: dispatch, o lo que le de quien la hace jugar (la sesion, que las
+   * apunta). Hasta que la IA solo proponga acciones (fase 6), las manda ella.
+   */
+  readonly dispatch: ActionDispatcher;
 }
 
-/** Contexto nuevo para un turno de `me` (sin grupo ni plan). */
-export function aiCtx(me: TeamId): AiCtx {
-  return { me, group: false, plan: new Map() };
+/** Contexto nuevo para un turno de `me` (sin grupo ni plan), que manda sus acciones por `dispatcher`. */
+export function aiCtx(me: TeamId, dispatcher: ActionDispatcher): AiCtx {
+  return { me, group: false, plan: new Map(), dispatch: dispatcher };
 }
 
 /**
@@ -84,7 +89,7 @@ export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, r
 
 /** La IA hace una accion de su equipo (`dispatch`) y avisa de sus sucesos: los sucesos, o null si no valia. */
 function* actEvents(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
-  const result = dispatch(s, ai.me, action);
+  const result = ai.dispatch(s, ai.me, action);
   if (!result.ok) return null;
   yield* result.events;
   return result.events;

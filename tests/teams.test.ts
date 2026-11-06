@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { aiTurn } from '@core/ai';
+import { aiController, GameSession, runMatch } from '@core/session';
+import { skirmishConfig } from '@core/match';
 import { defaultContent } from '@core/content/default';
-import { saveContext } from '@core/defaultGames';
+import { createMatch, saveContext } from '@core/defaultGames';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { MoveType } from '@core/content';
@@ -12,17 +13,14 @@ import {
   attackTargets,
   canCapture,
   controlRound,
-  endRound,
   groundDistance,
   isMatchOver,
   newUnit,
   matchResult,
   isDefeated,
   standingTeams,
-  othersAfter,
+  nextTurn,
   takesTurn,
-  turnTakers,
-  turnsAfter,
   threatMap,
   unitById,
   visibility,
@@ -32,6 +30,7 @@ import { deserialize, serialize } from '@core/save';
 import {
   alliesOf,
   areAllied,
+  duel,
   duelTeams,
   isAiControlled,
   isPlayableOnOneScreen,
@@ -48,7 +47,7 @@ import {
 } from '@core/teams';
 import type { GameEvent, GameState } from '@core/model';
 import { checkInvariants } from './sim/partidas';
-import { blankState, hqId, unitTypeNamed, endRoundReport, withoutHeadquarters, resultFor } from './helpers';
+import { act, blankState, expectRejected, giveTurn, hqId, unitTypeNamed, endRoundReport, withoutHeadquarters, resultFor } from './helpers';
 
 const HQ = hqId();
 const SOLDIER = unitTypeNamed('Soldier');
@@ -208,34 +207,38 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(isMatchOver(s)).toBe(true);
   });
 
-  it('orden de los turnos: los derrotados no juegan, y se mira al llegar a cada uno', () => {
+  it('orden de los turnos: endTurn pasa al siguiente que juega (no los derrotados) y tras el ultimo acaba la ronda', () => {
     const s = fourCorners();
-    expect(turnsAfter(s, 2)).toEqual({ thisRound: [3], nextRound: [0, 1] });
-    expect(turnsAfter(s, 0)).toEqual({ thisRound: [1, 2, 3], nextRound: [] });
-    const played: number[] = [];
-    for (const team of turnTakers(s)) {
-      played.push(team);
-      // En el turno del 0 cae el 1: ya no juega esta ronda.
-      if (team === 0) s.buildings = s.buildings.filter((building) => building.owner !== 1);
-    }
-    expect(played).toEqual([0, 2, 3]);
-    expect(takesTurn(s, 1)).toBe(false);
-    expect(takesTurn(s, 3)).toBe(true);
+    expect([s.turn, s.turnOrder, nextTurn(s)]).toEqual([0, [0, 1, 2, 3], { team: 1, endsRound: false }]);
+    // En el turno del 0 cae el 1: ya no juega.
+    s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    expect(act(s, 0, { kind: 'endTurn' })).toEqual([{ kind: 'turnEnd', actor: 0, next: 2 }]);
+    expect([s.turn, s.turnStarted]).toEqual([2, false]);
+    expectRejected(s, 2, { kind: 'wait', uid: 1 }, 'turnNotStarted');
+    expectRejected(s, 3, { kind: 'startTurn' }, 'notYourTurn');
+    expect(act(s, 2, { kind: 'startTurn' })).toEqual([{ kind: 'turnStart', actor: 2, day: 1 }]);
+    expectRejected(s, 2, { kind: 'startTurn' }, 'turnStarted');
+    act(s, 2, { kind: 'endTurn' });
+    act(s, 3, { kind: 'startTurn' });
+    const roundEnd = act(s, 3, { kind: 'endTurn' });
+    expect(roundEnd.map((event) => event.kind)).toContain('newDay');
+    expect([s.turn, s.day, takesTurn(s, 1)]).toEqual([0, 2, false]);
   });
 
-  it('lo que viene tras un turno: los de despues, el fin de ronda y los de antes, mirando quien sigue en pie', () => {
-    const s = fourCorners();
-    const steps = (team: number) => [...othersAfter(s, team)].map((step) => (step.kind === 'team' ? step.team : 'fin'));
-    expect(steps(1)).toEqual([2, 3, 'fin', 0]);
-    expect(steps(3)).toEqual(['fin', 0, 1, 2]);
-    const played: (number | string)[] = [];
-    for (const step of othersAfter(s, 0)) {
-      played.push(step.kind === 'team' ? step.team : 'fin');
-      // Durante el turno del 1 cae el 2: ya no juega.
-      if (step.kind === 'team' && step.team === 1) s.buildings = s.buildings.filter((building) => building.owner !== 2);
-    }
-    expect(played).toEqual([1, 3, 'fin']);
-    expect(() => turnsAfter(s, 9)).toThrow(/no esta en la partida/);
+  it('el orden de cada ronda lo dice la partida: si empieza otro, la ronda acaba tras el de antes', () => {
+    const s = createMatch(skirmishConfig({ seed: 3, size: 20, teams: duel('ai', 'ai'), firstTeam: 1 }));
+    expect([s.turnOrder, s.turn]).toEqual([[1, 0], 1]);
+    giveTurn(s, 1);
+    expect(nextTurn(s)).toEqual({ team: 0, endsRound: false });
+    giveTurn(s, 0);
+    expect(nextTurn(s)).toEqual({ team: 1, endsRound: true });
+  });
+
+  it('un equipo que cae en su propio turno (o se rinde) solo puede pasarlo', () => {
+    const s = fourCorners([{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    act(s, 0, { kind: 'surrender' });
+    expectRejected(s, 0, { kind: 'surrender' }, 'defeated');
+    expect(act(s, 0, { kind: 'endTurn' })[0]).toEqual({ kind: 'turnEnd', actor: 0, next: 1 });
   });
 
   it('quien lo lleva y si se puede jugar en una pantalla (una persona como mucho)', () => {
@@ -252,13 +255,15 @@ describe('cuatro equipos en dos alianzas', () => {
     const s = fourCorners();
     const rng = seededRng(17);
     const attacks: { attacker: number; target: number }[] = [];
-    for (let day = 0; day < 12 && !isMatchOver(s); day++) {
-      for (const team of turnTakers(s)) {
-        for (const event of aiTurn(s, rng, team)) recordAttack(s, event, team, attacks);
-      }
-      endRound(s);
-      checkInvariants(s);
-    }
+    const session = new GameSession(
+      s,
+      s.teams.map(() => aiController(rng)),
+    );
+    session.subscribe((step) => {
+      for (const event of step.events) recordAttack(s, event, step.team, attacks);
+      if (step.events.some((event) => event.kind === 'newDay')) checkInvariants(s);
+    });
+    runMatch(session, { until: (state) => state.day > 12 });
     expect(attacks.length).toBeGreaterThan(0);
     for (const { attacker, target } of attacks) expect(isHostile(s, attacker, target)).toBe(true);
     const back = deserialize(serialize(s), saveContext(defaultContent()))!;

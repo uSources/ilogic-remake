@@ -1,7 +1,7 @@
 /**
  * Lo que puede hacer la IA con una unidad, paso a paso: retirarse a curarse, atacar (o acercarse),
  * capturar, avanzar y moverse al azar. Cada paso devuelve true si ha usado la unidad.
- * Los usan el turno de la IA (unitTurn) y las ordenes con destino (standingOrderTurn).
+ * Los usan el turno de la IA (unitTurn) y las ordenes con destino (ai/standingOrders.ts).
  */
 
 import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';

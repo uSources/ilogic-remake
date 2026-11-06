@@ -1,9 +1,8 @@
 import { expect } from 'vitest';
-import { aiTurn } from '@core/ai';
+import { controllersFor, GameSession, runMatch } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { createMatch, saveContext } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { endRound, isMatchOver, turnTakers } from '@core/rules';
 import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
@@ -33,18 +32,16 @@ export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
     const s = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('ai', 'ai') }), rng);
-    while (!isMatchOver(s) && s.day <= 60) {
-      for (const team of turnTakers(s)) {
-        for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;
-        if (isMatchOver(s)) break;
-      }
-      endRound(s);
+    const session = new GameSession(s, controllersFor(s, rng));
+    session.subscribe((step) => {
+      if (!step.events.some((event) => event.kind === 'newDay')) return;
       checkInvariants(s);
       if (s.day % 10 === 0) {
         const copy = deserialize(serialize(s), saveContext(defaultContent()));
         expect(copy).not.toBeNull();
         expect(serialize(copy!)).toBe(serialize(s));
       }
-    }
+    });
+    runMatch(session, { until: (state) => state.day > 60 });
   }
 }

@@ -4,7 +4,6 @@ import {
   ACTION_GUARDS,
   availableActions,
   canDoWithSelection,
-  dispatch,
   groupMoveOrder,
   groupMoveStep,
   isGameAction,
@@ -18,21 +17,14 @@ import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
-import type { GameAction, GameActionKind, GameState } from '@core/model';
-import { act, BLANK_SIZE, blankState, unitTypeNamed, placedBuildings, someUnits } from './helpers';
+import type { GameAction, GameActionKind } from '@core/model';
+import { act, BLANK_SIZE, blankState, expectRejected, giveTurn, unitTypeNamed, placedBuildings, someUnits } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 
 const SOLDIER = unitTypeNamed('Soldier');
 const TANK = unitTypeNamed('Tank');
 const TRANSPORT = unitTypeNamed('Transport');
 const SUPPLIER = unitTypeNamed('Supplier');
-
-/** La accion no vale por `reason` y la partida no cambia. */
-function expectRejected(s: GameState, team: number, action: GameAction, reason: string): void {
-  const before = serialize(s);
-  expect(dispatch(s, team, action)).toEqual({ ok: false, reason });
-  expect(serialize(s)).toBe(before);
-}
 
 describe('dispatch: la unica via para cambiar la partida', () => {
   it('el registro tiene una entrada por accion y las invariantes no se repiten', () => {
@@ -285,15 +277,28 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
     expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
-    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team', 'standing']);
+    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team', 'playing', 'turn', 'started', 'standing']);
   });
 
-  it('un equipo que ya ha perdido (sin Base) no manda acciones', () => {
+  it('solo juega el equipo al que le toca, y despues de empezar su turno', () => {
     const s = blankState(PLAIN_RULES);
+    const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
+    expectRejected(s, 1, { kind: 'wait', uid: enemy.uid }, 'notYourTurn');
+    giveTurn(s, 1);
+    s.turnStarted = false;
+    expectRejected(s, 1, { kind: 'wait', uid: enemy.uid }, 'turnNotStarted');
+    act(s, 1, { kind: 'startTurn' });
+    act(s, 1, { kind: 'wait', uid: enemy.uid });
+  });
+
+  it('un equipo que ya ha perdido (sin Base) no manda acciones; si con eso acaba la partida, nadie mas', () => {
+    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(isValidAction(s, 0, { kind: 'wait', uid: soldier.uid })).toBe(true);
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
     expectRejected(s, 0, { kind: 'wait', uid: soldier.uid }, 'defeated');
+    s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    expectRejected(s, 0, { kind: 'endTurn' }, 'matchOver');
   });
 
   it('una accion sin la forma de GameAction se rechaza con badAction, sin TypeError', () => {
