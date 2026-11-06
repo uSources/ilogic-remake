@@ -28,8 +28,8 @@ export function terrainMoveCost(moveType: MoveType, terrain: TerrainType): numbe
   return terrain.moveCost[moveType] ?? 1;
 }
 
-export function unitById(s: GameState, uid: number | null): Unit | undefined {
-  return uid === null ? undefined : s.units.find((unit) => unit.uid === uid);
+export function unitById(s: GameState, uid: number | null | undefined): Unit | undefined {
+  return uid === null || uid === undefined ? undefined : s.units.find((unit) => unit.uid === uid);
 }
 
 /** Unidad (no transportada) en una casilla. */

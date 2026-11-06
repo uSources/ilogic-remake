@@ -19,6 +19,7 @@ import { newUnit } from './rules/lifecycle';
 import { groundDistance } from './rules/movement';
 import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
+import { seedFromDraw } from './util/random';
 import type { GameState, Pos, Rng, RulesConfig, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
@@ -37,10 +38,10 @@ const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP
 /** Los numeros del generador del contenido de la partida (mapgen.json). */
 const settingsOf = (s: GameState): MapgenSettings => s.content.mapgen;
 
-function emptyState(size: number, options: NewMapOptions): GameState {
+function emptyState(size: number, options: NewMapOptions, diceSeed: number): GameState {
   // El terreno de partida no importa: el generador pone todas las casillas.
   const plain = options.content.plainTerrain.id;
-  return newGameState({ map: blankMap(size, plain), rules: options.rules, content: options.content, teams: options.teams });
+  return newGameState({ map: blankMap(size, plain), rules: options.rules, content: options.content, teams: options.teams, diceSeed });
 }
 
 const isWalkable = (terrain: TerrainType) => canMoveOn(WALK, terrain);
@@ -224,7 +225,7 @@ function placeStartingUnits(s: GameState, spawn: Pos, team: TeamId, rng: Rng): v
     const free = spawnZone(s, spawn).filter((pos) => canMoveOn(unitType.movement, terrainAt(s, pos)) && !unitAt(s, pos));
     // Con la probabilidad corregida (las que quedan por poner); si no sale ninguna, la ultima libre.
     const chosen = sampleInOrder(free, starting.length - index, rng, (left) => left - 1) ?? free.at(-1);
-    if (chosen) newUnit(s, unitType, team, chosen, true);
+    if (chosen) newUnit(s, unitType, team, chosen);
   });
 }
 
@@ -490,10 +491,13 @@ export interface NewMapOptions {
 export function generateGame(rng: Rng, options: NewMapOptions): GameState {
   const size = options.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
-  const origin = { x: Math.floor(rng() * size), y: Math.floor(rng() * size) };
+  const originDraw = rng();
+  const origin = { x: Math.floor(originDraw * size), y: Math.floor(rng() * size) };
+  // Los dados de la partida salen de esa misma tirada: sin gastar otra, cada semilla sigue dando su mapa.
+  const diceSeed = seedFromDraw(originDraw);
   for (let attempt = 0; ; attempt++) {
     const draft: MapDraft = {
-      s: emptyState(size, options),
+      s: emptyState(size, options, diceSeed),
       rng,
       origin,
       attempt,

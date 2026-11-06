@@ -1,5 +1,7 @@
+import { withBack } from '../src/scenes/game/phases/unitMenu';
+import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
-import { mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
+import { endRound, mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
 import type { GameState, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
@@ -9,16 +11,18 @@ import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
-import { MENU_PHASES, type Phase } from '../src/scenes/game/types';
+import { KEEPS_UNDO, MENU_PHASES, type Phase } from '../src/scenes/game/types';
 import { PHASES } from '../src/scenes/game/phases';
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
-import { ACTIONS } from '../src/controls/actions';
+import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { act, blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
+import { PLAIN_RULES } from './plainRules';
 import { viewerOf } from '../src/scenes/game/matchSetup';
 import { isPlayableOnOneScreen } from '@core/teams';
 import { checkPlayedByAi } from '../src/scenes/game/turns';
+import { dispatch } from '@core/actions';
 
 const HQ = hqId();
 
@@ -88,7 +92,7 @@ describe('escena: que pasa al soltar la unidad elegida (game/intent.ts)', () => 
         { x: 6, y: 6 },
       ],
     };
-    expect(trailTo(shown, { x: 6, y: 6 })).toBe(shown.trail);
+    expect(trailTo(shown, { x: 6, y: 6 })).toEqual(shown.trail);
     expect(trailTo(shown, { x: 5, y: 6 })).toEqual([
       { x: 5, y: 5 },
       { x: 5, y: 6 },
@@ -156,7 +160,7 @@ describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   });
 
   it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
-    const s = blankState();
+    const s = withoutHeadquarters(blankState());
     s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
     expect(endFocus(s, 0, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
     expect(endFocus(s, 0, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
@@ -196,7 +200,6 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         menuSel: { get: () => 0 },
         match: { get: () => 1 },
         selected: { get: () => state.selected },
-        undo: { get: () => null },
         selection: { get: () => selection },
         menuPick: () => undefined,
         stopInspect: nop,
@@ -213,6 +216,12 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         clearUndo: nop,
         afterAction: nop,
         checkEnd: () => false,
+        act: (action) => {
+          const result = dispatch(s, 0, action);
+          return result.ok ? result.events : null;
+        },
+        perform: async () => false,
+        record: nop,
         play: async () => {},
       }),
     );
@@ -261,7 +270,7 @@ describe('escena: tabla de fases (game/phases)', () => {
   });
 
   it('cada accion del registro (controls/actions.ts) tiene quien la cumpla', () => {
-    expect(ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
+    expect(INPUT_ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
   });
 });
 
@@ -281,5 +290,38 @@ describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
   it('el turno de otro equipo solo lo juega la IA: si es de una persona, falla', () => {
     expect(() => checkPlayedByAi(blankState(), 1)).not.toThrow();
     expect(() => checkPlayedByAi(twoPeople(), 1)).toThrow(/solo juega una persona/);
+  });
+});
+
+describe('escena: menu de la unidad (game/phases/unitMenu.ts)', () => {
+  it('las opciones son las del nucleo, en su orden, con «Atras» antes de retirar', () => {
+    expect(withBack(['attack', 'wait', 'delete'])).toEqual(['attack', 'wait', 'back', 'delete']);
+    expect(withBack(['wait'])).toEqual(['wait', 'back']);
+  });
+});
+
+describe('escena: Ctrl+Z (KEEPS_UNDO)', () => {
+  it('irse de un edificio a medio capturar no cierra Ctrl+Z (deshacer devuelve la captura)', () => {
+    const s = blankState(PLAIN_RULES);
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 5 });
+    act(s, 0, { kind: 'capture', uid: soldier.uid });
+    endRound(s);
+    const events = act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
+    expect(events.map((event) => event.kind)).toContain('captureDropped');
+    expect(events.every((event) => KEEPS_UNDO.has(event.kind))).toBe(true);
+  });
+});
+
+describe('escena: «Atras» (game/unitMoves.ts)', () => {
+  it('avisa en vez de deshacer si el movimiento ha descubierto enemigos', () => {
+    const s = blankState({ ...PLAIN_RULES, fog: true });
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
+    newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 4 + unitTypeNamed('Soldier').vision });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 3 } });
+    expect(backWarning(s, 0, soldier)).toBeNull();
+    act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 4 } });
+    expect(backWarning(s, 0, soldier)).toBe('undoRevealed');
   });
 });

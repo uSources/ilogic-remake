@@ -5,9 +5,9 @@
  */
 import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt } from '../rules/queries';
-import { isAlive, isCapturer } from '../util/predicates';
+import { canFight, isAlive, isCapturer } from '../util/predicates';
 import { areAllied } from '../teams';
-import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, TeamId, Unit } from '../model';
+import type { ActionRejection, GameState, Pos, Squad, StandingOrder, StandingOrderKind, TeamId, Unit } from '../model';
 import { squadById, squadUnits, unitsOfTeam } from './queries';
 
 /** Que dice cada tipo de orden permanente (el Record obliga a tenerlos todos). */
@@ -54,11 +54,16 @@ export function isDetached(s: GameState, unit: Unit): boolean {
 const followers = (s: GameState, squad: Squad) => squadUnits(s, squad.id).filter((unit) => !unit.standingOrder);
 
 /** Los ids de escuadra a los que pertenecen todas sus unidades vivas de esta lista. */
-function wholeSquads(s: GameState, units: readonly Unit[]): Set<number> {
+function wholeSquads(s: GameState, units: readonly Unit[]): Map<number, Squad> {
   const ids = new Set(units.flatMap((unit) => (unit.squad === undefined ? [] : [unit.squad])));
   const picked = new Set(units.map((unit) => unit.uid));
   const isWhole = (id: number) => squadUnits(s, id).every((unit) => !isAlive(unit) || picked.has(unit.uid));
-  return new Set([...ids].filter(isWhole));
+  const whole = new Map<number, Squad>();
+  for (const id of ids) {
+    const squad = squadById(s, id);
+    if (squad && isWhole(id)) whole.set(id, squad);
+  }
+  return whole;
 }
 
 /** El edificio de esa casilla ya es de la alianza de `team` (o no hay): no hay nada que capturar. */
@@ -67,15 +72,22 @@ function isOwnedOrMissing(s: GameState, team: TeamId, at: Pos): boolean {
   return !building || (building.owner !== null && areAllied(s, building.owner, team));
 }
 
-/** Por que no se puede dar esa orden ahi a unidades del equipo `team` (null = se puede). */
+/** Por que no se puede dar una orden permanente (los mismos nombres que da `dispatch` al rechazarla). */
+export type StandingOrderBlock = Extract<ActionRejection, 'noBuilding' | 'noCapturer' | 'noFighter'>;
+
+/**
+ * Por que no se puede dar esa orden ahi a unidades del equipo `team` (null = se puede): alguna tiene
+ * que poder cumplirla (atacar y defender, alguna que luche; capturar, alguna que capture y un
+ * edificio que no sea ya de la alianza).
+ */
 export function standingOrderBlock(
   s: GameState,
   team: TeamId,
   kind: StandingOrderKind,
   at: Pos,
   units: readonly Unit[],
-): 'noBuilding' | 'noCapturer' | null {
-  if (kind !== 'capture') return null;
+): StandingOrderBlock | null {
+  if (kind !== 'capture') return units.some((unit) => canFight(s, unit)) ? null : 'noFighter';
   if (isOwnedOrMissing(s, team, at)) return 'noBuilding';
   if (!units.some((unit) => isCapturer(s, unit))) return 'noCapturer';
   return null;
@@ -103,20 +115,20 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
 }
 
 /**
- * Da una orden con destino a estas unidades del equipo `team` (las de otros equipos no la reciben). Si son una escuadra entera, la orden es de
- * la escuadra (y se olvidan las propias); si son solo algunas, cada una se queda con la orden como
- * propia (destacada) y al cumplirla vuelve a la de su escuadra. Con "capturar", las que no pueden
- * capturar van de escolta. Devuelve cuantas la han recibido.
+ * Da una orden con destino a estas unidades del equipo `team` (las de otros equipos no la reciben).
+ * Si son una escuadra entera, la orden es de la escuadra (y se olvidan las propias); si son solo
+ * algunas, cada una se queda con la orden como propia (destacada) y al cumplirla vuelve a la de su
+ * escuadra. Con "capturar", las que no pueden capturar van de escolta. Devuelve cuantas la han
+ * recibido. (El viaje que llevaran lo acaba antes la accion, con su suceso: ver endTravel.)
  */
 export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
   const mine = unitsOfTeam(team, units);
   const standingOrder = copyStandingOrder({ kind, at });
   const whole = wholeSquads(s, mine);
-  for (const id of whole) squadById(s, id)!.standingOrder = copyStandingOrder(standingOrder);
+  for (const squad of whole.values()) squad.standingOrder = copyStandingOrder(standingOrder);
   for (const unit of mine) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else giveOwnStandingOrder(s, unit, standingOrder);
-    delete unit.travelTo;
   }
   return mine.length;
 }
@@ -128,7 +140,7 @@ export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Un
  */
 export function cancelStandingOrder(s: GameState, units: readonly Unit[]): void {
   const whole = wholeSquads(s, units);
-  for (const id of whole) delete squadById(s, id)!.standingOrder;
+  for (const squad of whole.values()) delete squad.standingOrder;
   for (const unit of units) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else if (unit.standingOrder) delete unit.standingOrder;
@@ -161,13 +173,15 @@ export function finishStandingOrder(s: GameState, unit: Unit): void {
  * [CAMBIO] Has empezado a mano una captura con esta unidad: si llevaba una orden (suya o de su
  * escuadra) que no es capturar este edificio, ahora lo es, para que el turno siguiente no lo deje a
  * medias. En una escuadra queda destacada y, con el edificio tomado, vuelve a la orden de la escuadra.
+ * Devuelve la orden nueva (para su suceso), o null si no ha cambiado nada.
  */
-export function keepCapturing(s: GameState, unit: Unit): void {
+export function keepCapturing(s: GameState, unit: Unit): StandingOrder | null {
   const building = buildingAt(s, unit);
   const standingOrder = effectiveStandingOrder(s, unit);
-  if (!building || !standingOrder || isOwnedOrMissing(s, unit.team, unit)) return;
-  if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return;
+  if (!building || !standingOrder || isOwnedOrMissing(s, unit.team, unit)) return null;
+  if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return null;
   unit.standingOrder = { kind: 'capture', at: posOf(unit) };
+  return copyStandingOrder(unit.standingOrder);
 }
 
 /** Ya ha llegado a la zona de su orden (a 1 casilla o menos). */
@@ -202,11 +216,14 @@ export function squadInFormation(s: GameState, id: number): boolean {
  */
 export function liftStandingOrder(s: GameState, squad: Squad): void {
   const units = squadUnits(s, squad.id);
-  if (!units.length || units.some((unit) => !unit.standingOrder)) return;
+  const withOrder = units.flatMap((unit) => (unit.standingOrder ? [{ unit, order: unit.standingOrder }] : []));
+  const [first] = withOrder;
+  // Si alguna no lleva orden propia, la escuadra no tiene una comun.
+  if (!first || withOrder.length !== units.length) return;
   // La de capturar manda: las demas van de escolta con "atacar" al mismo sitio.
-  const lead = units.find((unit) => unit.standingOrder!.kind === 'capture') ?? units[0]!;
-  const standingOrder = lead.standingOrder!;
-  if (!units.every((unit) => sameStandingOrder(unit.standingOrder!, forUnit(s, unit, standingOrder)))) return;
-  squad.standingOrder = copyStandingOrder(standingOrder);
+  const lead = withOrder.find((entry) => entry.order.kind === 'capture') ?? first;
+  const allAgree = withOrder.every((entry) => sameStandingOrder(entry.order, forUnit(s, entry.unit, lead.order)));
+  if (!allAgree) return;
+  squad.standingOrder = copyStandingOrder(lead.order);
   for (const unit of units) delete unit.standingOrder;
 }

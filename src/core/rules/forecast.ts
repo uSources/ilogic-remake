@@ -7,12 +7,12 @@ import { diamond } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isRanged } from '../abilities';
-import { canFight, isOnMap } from '../util/predicates';
+import { canFight } from '../util/predicates';
 import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
-import { visibility } from './visibility';
-import { isHostile } from '../teams';
+import { isVisibleFoe, sightOf } from './visibility';
+import { canStillFire } from './unitTurn';
 
 export interface CombatForecast {
   /** Dano mas probable (media). */
@@ -145,11 +145,8 @@ export function combatForecast(s: GameState, attacker: Unit, defender: Unit): Co
  */
 export function threatMap(s: GameState, viewer: TeamId): Grid<boolean> {
   const threatened = createLayer(s, false);
-  const visible = visibility(s, viewer);
-  for (const unit of s.units) {
-    if (!isHostile(s, unit.team, viewer) || !isOnMap(unit) || !visible.at(unit)) continue;
-    unitThreat(s, unit, threatened);
-  }
+  const sees = sightOf(s, viewer);
+  for (const unit of s.units) if (isVisibleFoe(s, viewer, unit, sees)) unitThreat(s, unit, threatened);
   return threatened;
 }
 
@@ -162,7 +159,7 @@ export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = create
   if (!attack) return out;
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen (como si fuera su turno).
   const canMoveAndFire = !isRanged(s, unit);
-  const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, active: true, canMove: true })) : null;
+  const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, turnState: 'ready' })) : null;
   for (const origin of fireOrigins(s, unit, moveReach)) {
     for (const pos of diamond(out, origin, attack.minRange, attack.maxRange)) out.set(pos, true);
   }
@@ -171,6 +168,6 @@ export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = create
 
 /** Lo que la unidad puede atacar este turno con su alcance de movimiento `range` (null si no puede disparar). */
 export function attackZone(s: GameState, unit: Unit, range: MoveRange): Grid<boolean> | null {
-  if (!canFight(s, unit) || !unit.canFire) return null;
+  if (!canFight(s, unit) || !canStillFire(s, unit)) return null;
   return unitThreat(s, unit, createLayer(s, false), range);
 }

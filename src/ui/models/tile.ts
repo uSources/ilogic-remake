@@ -6,6 +6,7 @@ import { unitTypeOf, buildingTypeOf, terrainAt } from '../../core/gameContent';
 import {
   canMoveOn,
   inControlZone,
+  isShownTo,
   buildingAt,
   buildingIncome,
   capturePointsOf,
@@ -133,9 +134,7 @@ export function tileVM(
   // Disputada solo si se ven dentro unidades de alianzas enemigas (no delata a los escondidos).
   const controlPoint = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, pos));
   if (controlPoint) {
-    const inside = s.units.filter(
-      (unit) => unit.carrier === null && inControlZone(s, controlPoint, unit) && (unit.team === viewer || view.vis.at(unit)),
-    );
+    const inside = s.units.filter((unit) => inControlZone(s, controlPoint, unit) && isShownTo(viewer, unit, (at) => view.vis.at(at)));
     const owner = ownerSideOf(s, viewer, controlPoint.owner);
     info.point = {
       owner,
@@ -154,7 +153,7 @@ export function tileVM(
     const side = sideOf(s, viewer, shown.team);
     const own = side === 'own';
     info.unit = {
-      icon: unitKey(textures, s, { ...shown, active: !own || shown.active }, viewer),
+      icon: unitKey(textures, s, { ...shown, turnState: own ? shown.turnState : 'ready' }, viewer),
       name: nameOf(shownType),
       rank: s.rules.veterancy ? rank(shown) : 0,
       side,

@@ -1,15 +1,18 @@
 /**
  * Laboratorio de duelos: una unidad contra otra, sin mapa ni IA, usando las reglas reales
- * (attack() de core/rules.ts, asi que incluye contraataque o menos azar si las reglas lo tienen).
+ * (uncheckedAttack de core/sandbox.ts, el combate de la accion 'attack': incluye contraataque o menos
+ * azar si las reglas lo tienen).
  */
 import { findEntry, type GameContent, type TerrainType, type UnitType } from '@core/content';
 
-import { seededRng } from '@core/geom';
+import { seedFromDraw, seededRng } from '@core/util/random';
+import { diceOf } from '@core/dice';
 import { newGameState } from '@core/gameState';
-import { duel } from '@core/teams';
+import { duel, duelTeams } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
-import { attack, inAttackRange, newUnit } from '@core/rules';
-import type { GameState, RulesConfig, Unit } from '@core/model';
+import { inAttackRange, newUnit } from '@core/rules';
+import { uncheckedAttack } from '@core/sandbox';
+import type { GameState, Rng, RulesConfig, Unit } from '@core/model';
 
 export interface DuelCell {
   attacker: string;
@@ -28,13 +31,15 @@ export interface DuelCell {
 /** Lado del campo de los duelos (solo se usan unas casillas del medio). */
 const DUEL_MAP_SIZE = 32;
 
-function arena(terrain: TerrainType, options: DuelOptions): GameState {
+/** El campo de un duelo, con sus propios dados (sacados de `rng`: cada duelo tira distinto). */
+function arena(terrain: TerrainType, options: DuelOptions, rng: Rng): GameState {
   const map = blankMap(DUEL_MAP_SIZE, terrain.id);
   return newGameState({
     map,
     rules: options.rules,
     content: options.content,
     teams: duel('ai', 'ai').map((team) => ({ ...team, funds: 0 })),
+    diceSeed: seedFromDraw(rng()),
   });
 }
 
@@ -47,10 +52,6 @@ function place(s: GameState, attackerType: UnitType, attacker: Unit, defender: U
   defender.y = 10;
   s.units = [attacker, defender];
 }
-
-const fresh = (unit: Unit) => {
-  unit.active = unit.canMove = unit.canFire = true;
-};
 
 /** Cuantos duelos por pareja, en que terreno, con que semilla y con que reglas. */
 export interface DuelOptions {
@@ -76,12 +77,13 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
         counter = 0,
         kills = 0;
       for (let i = 0; i < options.trials; i++) {
-        const s = arena(terrain, options);
-        const attacker = newUnit(s, attackerType, 0, { x: 0, y: 0 });
-        const defender = newUnit(s, defenderType, 1, { x: 0, y: 0 });
+        const s = arena(terrain, options, rng);
+        const [attackerTeam, defenderTeam] = duelTeams(s);
+        const attacker = newUnit(s, attackerType, attackerTeam, { x: 0, y: 0 });
+        const defender = newUnit(s, defenderType, defenderTeam, { x: 0, y: 0 });
         place(s, attackerType, attacker, defender);
         const lifeA = attacker.life;
-        dmg += attack(s, attacker, defender, rng);
+        dmg += uncheckedAttack(s, attacker, defender, diceOf(s)).damage;
         counter += lifeA - (s.units.includes(attacker) ? attacker.life : 0);
         if (!s.units.includes(defender)) kills++;
       }
@@ -92,16 +94,16 @@ export function duelMatrix(options: DuelOptions): DuelCell[] {
         let wins = 0,
           decided = 0;
         for (let i = 0; i < options.trials; i++) {
-          const s = arena(terrain, options);
-          const attacker = newUnit(s, attackerType, 0, { x: 0, y: 0 });
-          const defender = newUnit(s, defenderType, 1, { x: 0, y: 0 });
+          const s = arena(terrain, options, rng);
+          const [attackerTeam, defenderTeam] = duelTeams(s);
+          const attacker = newUnit(s, attackerType, attackerTeam, { x: 0, y: 0 });
+          const defender = newUnit(s, defenderType, defenderTeam, { x: 0, y: 0 });
           place(s, attackerType, attacker, defender);
           if (!inAttackRange(s, defender, defender, attacker)) break; // B no llega a A a esa distancia: no hay duelo mutuo
           for (let round = 0; round < 40; round++) {
             const [shooter, target] = round % 2 === 0 ? [attacker, defender] : [defender, attacker];
             if (!s.units.includes(shooter) || !s.units.includes(target)) break;
-            fresh(shooter);
-            attack(s, shooter, target, rng);
+            uncheckedAttack(s, shooter, target, diceOf(s));
           }
           const aAlive = s.units.includes(attacker),
             bAlive = s.units.includes(defender);

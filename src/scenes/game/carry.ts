@@ -3,7 +3,7 @@
  * puntero con el camino trazado y, al soltarla, se mueve, ataca, se une... o vuelve a su sitio.
  */
 import type Phaser from 'phaser';
-import { movementOf, canWalk, unitAt, unitById } from '../../core/rules';
+import { movementOf, canWalk, unitAt, unitById, canStillMove } from '../../core/rules';
 import { samePos, posOf } from '../../core/geom';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { TILE } from '../../layout';
@@ -86,7 +86,7 @@ export class Carry {
   begin(uid: number, touch: boolean, held: boolean): boolean {
     const host = this.host;
     const unit = unitById(host.state, uid);
-    if (!unit || !unit.active || !unit.canMove) return false;
+    if (!unit || !canStillMove(unit)) return false;
     if (host.phase !== 'move' || host.selected?.uid !== unit.uid) this.selectToMove(unit);
     if (touch) navigator.vibrate?.(PICK_VIBRATION_MS);
     const textureKey = unitKey(host.scene.textures, host.state, unit, host.viewer);

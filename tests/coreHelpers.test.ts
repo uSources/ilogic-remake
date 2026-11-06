@@ -61,7 +61,7 @@ describe('ayudas de reglas', () => {
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const range = moveRange(s, tank);
     expect(attackZone(s, tank, range)).toEqual(unitThreat(s, tank, undefined, range));
-    tank.canFire = false;
+    tank.turnState = 'done';
     expect(attackZone(s, tank, range)).toBeNull();
     const truck = newUnit(s, TRANSPORT, 0, { x: 2, y: 2 });
     expect(attackZone(s, truck, moveRange(s, truck))).toBeNull();
@@ -77,14 +77,15 @@ describe('ayudas de reglas', () => {
       { x: 1, y: 1 },
       { x: 2, y: 1 },
     ];
-    expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path });
+    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path });
     path.ambush = { x: 3, y: 1 };
-    expect(moveEvent(4, path)).toEqual({ kind: 'move', uid: 4, path, ambush: { x: 3, y: 1 } });
+    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
     const building = { type: 'City', owner: 1 as const, x: 4, y: 4, capture: null };
-    expect(captureEvent(unit, building, { left: 10, total: 20 })).toEqual({
+    expect(captureEvent(0, unit, building, { left: 10, total: 20 })).toEqual({
       kind: 'capture',
+      actor: 0,
       uid: unit.uid,
       at: { x: 4, y: 4 },
       owner: 1,
@@ -110,7 +111,7 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 4 as 3 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 6 as 5 })],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',

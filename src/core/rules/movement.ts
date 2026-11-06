@@ -5,16 +5,16 @@
 import { unitTypeOf, terrainAt } from '../gameContent';
 import { movementOf, terrainMoveCost, canWalk, isWalkable, occupancy } from './queries';
 import type { MoveType } from '../content';
-import { isRanged, zoneOfControl } from '../abilities';
+import { zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
 import { createLayer, mapGrid } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { areEnemies, isOnMap } from '../util/predicates';
 import { minBy } from '../util/pick';
 import { weatherMove } from '../weather';
-import type { GameEvent, GameState, Pos, Unit } from '../model';
-import { dropStaleCaptures } from './capture';
+import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { visibility } from './visibility';
+import { canStillMove, markMoved, spendUnit } from './unitTurn';
 
 export interface MoveRange {
   /** Pasos para llegar a cada casilla (1..max); 0 = inalcanzable o casilla de origen. */
@@ -74,7 +74,7 @@ export function moveCost(s: GameState, moveType: MoveType, pos: Pos): number {
 }
 
 /** Coste de recorrer un camino (sin contar la casilla de salida). */
-export function pathCost(s: GameState, moveType: MoveType, path: Pos[]): number {
+export function pathCost(s: GameState, moveType: MoveType, path: readonly Pos[]): number {
   let cost = 0;
   for (const step of path.slice(1)) cost += moveCost(s, moveType, step);
   return cost;
@@ -176,17 +176,19 @@ export function walkPath(s: GameState, unit: Unit, path: Pos[]): MovePath {
 
 /**
  * Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno.
- * (Interna de las reglas: la usan mover, unir y subir a un transporte.)
+ * (Interna de las acciones: la usan mover, unir y subir a un transporte.)
  */
-export function ambushed(s: GameState, unit: Unit, walked: MovePath): MovePath {
-  const end = walked[walked.length - 1]!;
+export function ambushed(unit: Unit, walked: MovePath): MovePath {
+  placeAtEnd(unit, walked);
+  spendUnit(unit);
+  return walked;
+}
+
+/** Pone la unidad en la ultima casilla del camino. */
+function placeAtEnd(unit: Unit, path: readonly Pos[]): void {
+  const end = path[path.length - 1]!;
   unit.x = end.x;
   unit.y = end.y;
-  unit.active = false;
-  unit.canMove = false;
-  unit.canFire = false;
-  dropStaleCaptures(s);
-  return walked;
 }
 
 /** Camino desde la unidad hasta `dest` (incluye ambos extremos), siguiendo `prev` hacia atras. */
@@ -194,7 +196,7 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
   const path: Pos[] = [];
   let step: Pos | null = dest;
   while (step && !samePos(step, from)) {
-    path.unshift(step);
+    path.unshift(posOf(step));
     step = range.prev.at(step);
   }
   path.unshift(posOf(from));
@@ -205,7 +207,7 @@ export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
  * Un camino trazado a mano es valido si empieza en la unidad, va de casilla vecina en vecina por
  * casillas del alcance (o de paso), sin repetir, no supera el movimiento y termina en un destino libre.
  */
-export function validPath(s: GameState, unit: Unit, path: Pos[], range: MoveRange): boolean {
+export function validPath(s: GameState, unit: Unit, path: readonly Pos[], range: MoveRange): boolean {
   const movement = movementOf(s, unit);
   if (path.length < 2 || !samePos(path[0]!, unit) || pathCost(s, movement, path) > range.maxSteps) return false;
   const end = path[path.length - 1]!;
@@ -214,7 +216,7 @@ export function validPath(s: GameState, unit: Unit, path: Pos[], range: MoveRang
 }
 
 /** Cada paso del camino es a una vecina por la que se puede pasar, sin volver atras ni pararse antes de tiempo. */
-function validSteps(s: GameState, unit: Unit, path: Pos[]): boolean {
+function validSteps(s: GameState, unit: Unit, path: readonly Pos[]): boolean {
   const { block, stop } = passMap(s, unit);
   const movement = movementOf(s, unit);
   const visited = new Set<string>();
@@ -287,24 +289,32 @@ export function stepToward(s: GameState, unit: Unit, goal: Pos, range = moveRang
 }
 
 /** El camino trazado por el jugador, si acaba en `dest` y es valido; si no, null. */
-function drawnPath(s: GameState, unit: Unit, dest: Pos, range: MoveRange, via?: Pos[]): Pos[] | null {
-  if (!via || !samePos(via[via.length - 1]!, dest) || !validPath(s, unit, via, range)) return null;
-  return via.map((step) => ({ ...step }));
+function drawnPath(s: GameState, unit: Unit, dest: Pos, range: MoveRange, drawn?: readonly Pos[]): Pos[] | null {
+  if (!drawn || !samePos(drawn[drawn.length - 1]!, dest) || !validPath(s, unit, drawn, range)) return null;
+  return drawn.map((step) => posOf(step));
 }
 
-/** Mueve la unidad (Ilogic.Move). Devuelve el camino recorrido o null si no es valido. */
-export function moveUnit(s: GameState, unit: Unit, dest: Pos, range = moveRange(s, unit), via?: Pos[]): MovePath | null {
-  if (!unit.active || !unit.canMove || samePos(unit, dest) || !canReach(range, dest)) return null;
-  // `via`: camino trazado por el jugador (si es valido); si no, el mas corto.
-  const path = drawnPath(s, unit, dest, range, via) ?? pathTo(range, unit, dest);
+/**
+ * Por donde iria la unidad hasta `dest` este turno (Ilogic.Move): el camino trazado `drawn`, si acaba
+ * alli y es valido, o si no el mas corto. null si no puede: ya se ha movido, es su casilla o no llega.
+ * Calcula el alcance desde la partida (el que tenga guardado quien pregunta no cuenta).
+ */
+export function plannedPath(s: GameState, unit: Unit, dest: Pos, drawn?: readonly Pos[]): Pos[] | null {
+  if (!canStillMove(unit) || samePos(unit, dest)) return null;
+  const range = moveRange(s, unit);
+  if (!canReach(range, dest)) return null;
+  return drawnPath(s, unit, dest, range, drawn) ?? pathTo(range, unit, dest);
+}
+
+/**
+ * La unidad recorre un camino ya comprobado (plannedPath): si choca con un enemigo escondido se para
+ * antes y pierde el turno (emboscada); si no, llega y queda movida. Devuelve lo recorrido.
+ */
+export function followPath(s: GameState, unit: Unit, path: Pos[]): MovePath {
   const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(s, unit, walked);
-  unit.x = dest.x;
-  unit.y = dest.y;
-  unit.canMove = false;
-  // Las unidades a distancia no pueden mover y disparar en el mismo turno.
-  if (isRanged(s, unit)) unit.canFire = false;
-  dropStaleCaptures(s);
+  if (walked.ambush) return ambushed(unit, walked);
+  placeAtEnd(unit, path);
+  markMoved(unit);
   return path;
 }
 
@@ -315,7 +325,7 @@ export function moveUnit(s: GameState, unit: Unit, dest: Pos, range = moveRange(
  * [CAMBIO] en el original la union y la carga se hacian "a distancia" sin mover a la unidad.
  */
 export function approachPath(s: GameState, unit: Unit, target: Pos, range = moveRange(s, unit)): Pos[] | null {
-  if (!unit.canMove && manhattan(unit, target) !== 1) return null;
+  if (!canStillMove(unit) && manhattan(unit, target) !== 1) return null;
   const lastStepCost = moveCost(s, movementOf(s, unit), target);
   const stepsTo = (tile: Pos) => (samePos(tile, unit) ? 0 : range.steps.at(tile));
   const canStepInFrom = (tile: Pos) => samePos(tile, unit) || (stepsTo(tile) > 0 && stepsTo(tile) + lastStepCost <= range.maxSteps);
@@ -325,7 +335,12 @@ export function approachPath(s: GameState, unit: Unit, target: Pos, range = move
   return samePos(best, unit) ? [posOf(unit)] : pathTo(range, unit, best);
 }
 
+/** Los sucesos de una accion acaban en una emboscada: la unidad se ha parado antes y ya no puede hacer nada. */
+export function endsInAmbush(events: readonly GameEvent[]): boolean {
+  return events.some((event) => event.kind === 'move' && !!event.ambush);
+}
+
 /** Evento de mover (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
-export function moveEvent(uid: number, path: MovePath): GameEvent {
-  return path.ambush ? { kind: 'move', uid, path, ambush: path.ambush } : { kind: 'move', uid, path };
+export function moveEvent(actor: TeamId, uid: number, path: MovePath): GameEvent {
+  return path.ambush ? { kind: 'move', actor, uid, path, ambush: path.ambush } : { kind: 'move', actor, uid, path };
 }

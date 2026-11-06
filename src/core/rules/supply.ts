@@ -5,8 +5,9 @@ import { unitTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import { neighbors4 } from '../geom';
 import { mapGrid } from '../mapGrid';
-import type { GameState, Unit } from '../model';
+import type { GameState, Healing, Unit } from '../model';
 import { unitAt } from './queries';
+import { spendUnit } from './unitTurn';
 
 /** Vida que `supplier` le cura a `patient` cada vez (units.json, "heals"). */
 function healAmount(s: GameState, supplier: Unit, patient: Unit): number {
@@ -30,13 +31,16 @@ export function canSupply(s: GameState, supplier: Unit): boolean {
 }
 
 /**
- * Reparar (Unit.Heal sobre las 4 vecinas): cura lo que diga "heals" en units.json.
+ * Reparar (Unit.Heal sobre las 4 vecinas), ya comprobado (canSupply): cura lo que diga "heals" en
+ * units.json y gasta el turno de quien repara. Devuelve lo que ha curado a cada una.
  * [CAMBIO] antes tambien llenaba combustible y municion; se quitaron del juego.
  */
-export function supply(s: GameState, supplier: Unit): number {
-  const patients = patientsOf(s, supplier);
-  for (const patient of patients) patient.life = Math.min(MAX_LIFE, patient.life + healAmount(s, supplier, patient));
-  supplier.active = false;
-  supplier.canMove = false;
-  return patients.length;
+export function repairNeighbours(s: GameState, supplier: Unit): Healing[] {
+  const repairs = patientsOf(s, supplier).map((patient) => {
+    const before = patient.life;
+    patient.life = Math.min(MAX_LIFE, patient.life + healAmount(s, supplier, patient));
+    return { uid: patient.uid, amount: patient.life - before };
+  });
+  spendUnit(supplier);
+  return repairs;
 }

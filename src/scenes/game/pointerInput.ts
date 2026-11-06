@@ -5,7 +5,7 @@
  */
 import type Phaser from 'phaser';
 import { samePos } from '../../core/geom';
-import { buildingAt, canBuyAt, unitAt } from '../../core/rules';
+import { buildingAt, canBuyAt, unitAt, canActNow, canMoveNow, isShownTo } from '../../core/rules';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { smartAction, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import type { PointerTarget, TapInfo } from '../../controls/pointer';
@@ -73,8 +73,7 @@ const TOGGLE_ONE = { shift: true, ctrl: false, count: 1 };
 
 /** Una unidad que el jugador puede ver en el mapa (suya, o enemiga a la vista). */
 const isOwn = (pointerHost: PointerHost, unit: Unit) => unit.team === pointerHost.viewer;
-const isVisibleOnMap = (pointerHost: PointerHost, unit: Unit) =>
-  unit.carrier === null && (isOwn(pointerHost, unit) || pointerHost.visible(unit));
+const isVisibleOnMap = (pointerHost: PointerHost, unit: Unit) => isShownTo(pointerHost.viewer, unit, (pos) => pointerHost.visible(pos));
 
 /** Añadir o quitar `unit` de lo elegido, como un clic con Mayusculas. */
 function toggleInSelection(picks: GroupSelection, unit: Unit | null): void {
@@ -132,7 +131,7 @@ export function pointerTarget(host: PointerHost): PointerTarget {
 /** ¿Se coge la unidad de esta casilla? Una propia que se puede mover (en el mapa, o la que esta elegida). */
 function pickableUnitAt(host: PointerHost, tile: Pos | null): number | null {
   const unit = tile ? unitAt(host.state, tile) : undefined;
-  if (!unit || !isOwn(host, unit) || !unit.active || !unit.canMove || unit.carrier !== null) return null;
+  if (!unit || !isOwn(host, unit) || !canMoveNow(unit)) return null;
   const isSelectedOrFree = host.phase === 'map' || (host.phase === 'move' && host.selected?.uid === unit.uid);
   return isSelectedOrFree ? unit.uid : null;
 }
@@ -297,7 +296,7 @@ function clickPicksAnother(host: PointerHost, tile: Pos, hit: Unit | null, hasMo
 /** Un toque con el dedo en el mapa (fases map y move). */
 function touchTap(host: PointerHost, tile: Pos): void {
   const unit = unitAt(host.state, tile);
-  const own = unit && isOwn(host, unit) && unit.active && unit.carrier === null ? unit : null;
+  const own = unit && isOwn(host, unit) && canActNow(unit) ? unit : null;
   if (host.phase === 'move') return touchTapMoving(host, tile, own);
   const building = buildingAt(host.state, tile);
   const act = mapTap({

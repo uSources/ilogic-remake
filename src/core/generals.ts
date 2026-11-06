@@ -18,8 +18,9 @@ import { MAX_LIFE } from './data';
 import { posKey, squareArea, posOf } from './geom';
 import { mapGrid } from './mapGrid';
 import { isHostile, teamState } from './teams';
+import { earn } from './rules/funds';
 import { isOnMap } from './util/predicates';
-import type { GameEventOf, GameState, GeneralState, Pos, TeamId, Unit } from './model';
+import type { ActionRejection, GameEventOf, GameState, GeneralCharge, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 
@@ -48,6 +49,14 @@ export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, unit: Pi
   return true;
 }
 
+/**
+ * Las unidades que cura un poder de curar del equipo: las suyas del filtro, en el mapa.
+ * [CAMBIO] Fallo K5: antes curaba tambien a las que iban dentro de un transporte.
+ */
+export function healedByPower(s: GameState, team: TeamId, filter: DeepReadonly<UnitFilter>): Unit[] {
+  return s.units.filter((unit) => unit.team === team && isOnMap(unit) && applies(s, filter, unit));
+}
+
 /** Multiplicador del acierto de `attacker` contra `defender` por los generales de los dos equipos (1 = nada). */
 export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): number {
   let factor = 1;
@@ -60,22 +69,28 @@ export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): 
   return factor;
 }
 
-/** Suma carga a un equipo por `value` de valor hecho o recibido (sin pasar del maximo). */
-function addCharge(s: GameState, team: TeamId, value: number): void {
+/** Suma carga a un equipo por `value` de valor hecho o recibido (sin pasar del maximo). Devuelve la ganada. */
+function addCharge(s: GameState, team: TeamId, value: number): number {
   const general = generalOf(s, team);
-  if (!general || value <= 0) return;
-  general.state.charge = Math.min(general.definition.charge.max, general.state.charge + value / general.definition.charge.per);
+  if (!general || value <= 0) return 0;
+  const before = general.state.charge;
+  general.state.charge = Math.min(general.definition.charge.max, before + value / general.definition.charge.per);
+  return general.state.charge - before;
 }
 
 /**
  * Carga por un combate: los dos equipos ganan por el valor que hacen y por el que reciben.
- * `toDefender`/`toAttacker`: vida que ha perdido cada uno.
+ * `toDefender`/`toAttacker`: vida que ha perdido cada uno. Devuelve la que ha ganado cada equipo
+ * (solo los que ganan algo), para el suceso del ataque.
  */
-export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): void {
+export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): GeneralCharge[] {
   const defenderValueLost = (toDefender * unitTypeOf(s, defender).cost) / 100;
   const attackerValueLost = (toAttacker * unitTypeOf(s, attacker).cost) / 100;
-  addCharge(s, attacker.team, defenderValueLost + attackerValueLost);
-  addCharge(s, defender.team, defenderValueLost + attackerValueLost);
+  const charges = [attacker.team, defender.team].map((team) => ({
+    team,
+    amount: addCharge(s, team, defenderValueLost + attackerValueLost),
+  }));
+  return charges.filter((charge) => charge.amount > 0);
 }
 
 /** El equipo ve todo el mapa (poder reveal activa). */
@@ -84,7 +99,8 @@ export const revealsAll = (s: GameState, team: TeamId): boolean => !!teamState(s
 /** Estrellas enteras de la barra. */
 export const chargeStars = (generalState: GeneralState): number => Math.floor(generalState.charge + 1e-9);
 
-export type PowerBlock = 'noGeneral' | 'unknown' | 'used' | 'charge' | 'target';
+/** Por que no se puede usar un poder (los mismos nombres que da `dispatch` al rechazar la accion). */
+export type PowerBlock = Extract<ActionRejection, 'noGeneral' | 'unknownPower' | 'powerUsed' | 'charge' | 'needsTarget'>;
 
 /** Un poder de un general por su id (undefined si ese general no lo tiene). */
 export const powerOf = (general: DeepReadonly<GeneralDef>, powerId: string): DeepReadonly<GeneralPowerDef> | undefined =>
@@ -95,10 +111,10 @@ export function powerBlock(s: GameState, team: TeamId, powerId: string, target?:
   const general = generalOf(s, team);
   if (!general) return 'noGeneral';
   const power = powerOf(general.definition, powerId);
-  if (!power) return 'unknown';
-  if (general.state.used) return 'used';
+  if (!power) return 'unknownPower';
+  if (general.state.used) return 'powerUsed';
   if (chargeStars(general.state) < power.cost) return 'charge';
-  if (power.effect.kind === 'areaDamage' && !target) return 'target';
+  if (power.effect.kind === 'areaDamage' && !target) return 'needsTarget';
   return null;
 }
 
@@ -110,7 +126,7 @@ export function powerArea(power: DeepReadonly<GeneralPowerDef>): number | null {
 /** Lo que ha hecho un poder, para su evento. */
 interface PowerEffects {
   hits: { uid: number; damage: number }[];
-  heals: { uid: number; amount: number }[];
+  heals: Healing[];
   funds: number;
 }
 
@@ -134,8 +150,7 @@ const POWER_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>)
     general.reveal = true;
   },
   heal: ({ s, team, effect, out }) => {
-    for (const unit of s.units) {
-      if (unit.team !== team || !applies(s, effect, unit)) continue;
+    for (const unit of healedByPower(s, team, effect)) {
       const amount = Math.min(effect.amount, MAX_LIFE - unit.life);
       if (amount <= 0) continue;
       unit.life += amount;
@@ -143,7 +158,7 @@ const POWER_EFFECTS: { [K in GeneralEffect['kind']]: (context: EffectContext<K>)
     }
   },
   funds: ({ s, team, effect, out }) => {
-    teamState(s, team).funds += effect.amount;
+    earn(s, team, effect.amount);
     out.funds = effect.amount;
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata).
@@ -164,11 +179,10 @@ function applyEffect<K extends GeneralEffect['kind']>(context: EffectContext<K>)
 }
 
 /**
- * Usa un poder: gasta la carga, la marca como usado este turno y aplica el efecto.
- * Devuelve el evento para animarlo, o null si no se puede (ver powerBlock).
+ * Usa un poder, ya comprobado (powerBlock): gasta la carga, la marca como usado este turno y aplica
+ * el efecto. Devuelve el evento para animarlo.
  */
-export function usePower(s: GameState, team: TeamId, powerId: string, target?: Pos | null): GameEventOf<'power'> | null {
-  if (powerBlock(s, team, powerId, target)) return null;
+export function applyPower(s: GameState, team: TeamId, powerId: string, target: Pos | null): GameEventOf<'power'> {
   const general = generalOf(s, team)!;
   const power = powerOf(general.definition, powerId)!;
   general.state.charge = Math.max(0, general.state.charge - power.cost);
@@ -177,7 +191,7 @@ export function usePower(s: GameState, team: TeamId, powerId: string, target?: P
   applyEffect({ s, team, general: general.state, effect: power.effect, target, out });
   return {
     kind: 'power',
-    team,
+    actor: team,
     general: general.definition.id,
     power: power.id,
     ...(target ? { target: posOf(target) } : {}),

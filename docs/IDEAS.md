@@ -57,8 +57,10 @@ el PvP, después.
 
 ## PvP (más adelante: primero un núcleo PvE bueno)
 
-El juego por turnos le va bien al PvP asíncrono, y el núcleo ya ayuda: es determinista con semilla,
-la partida es JSON y se puede repetir un turno. Por fases, para no apostarlo todo de golpe:
+El juego por turnos le va bien al PvP asíncrono, y el núcleo ya ayuda: es determinista con semilla
+(los dados van en la partida), la partida es JSON, se puede repetir un turno y todo lo que hace un
+jugador es una acción (datos) que pasa por `dispatch`, con sucesos completos: lo que mandaría y
+recibiría un cliente. Por fases, para no apostarlo todo de golpe:
 
 14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): casi gratis de hacer, y sirve para
     probar el equilibrio de los generales entre personas.

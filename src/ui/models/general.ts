@@ -4,7 +4,7 @@ import type { GeneralVM } from '../../hud/store';
 import { sideLetter, sideOf } from '../sides';
 import { settings, t, type TextKey } from '../../settings';
 
-const BLOCK_TEXT: Partial<Record<PowerBlock, TextKey>> = { used: 'genUsed', charge: 'genCharge' };
+const BLOCK_TEXT: Partial<Record<PowerBlock, TextKey>> = { powerUsed: 'genUsed', charge: 'genCharge' };
 
 /**
  * Panel del general de un equipo para el que mira (`viewer`: su color en la cara), o null si no tiene.

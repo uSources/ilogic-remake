@@ -4,35 +4,21 @@
  */
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
-import { manhattan, samePos, posOf } from '../../core/geom';
-import { closestStep } from '../../core/targeting';
-import {
-  attackEvent,
-  canCapture,
-  load,
-  merge,
-  moveEvent,
-  moveRange,
-  moveUnit,
-  stepToward,
-  unitActions,
-  unitById,
-  visibility,
-  wait,
-} from '../../core/rules';
+import { actionProblem, availableActions, groupMoveOrder, groupMoveStep, isValidAction, type UnitMenuOption } from '../../core/actions';
+import { samePos, posOf } from '../../core/geom';
+import { canCapture, canStillMove, endsInAmbush, unitById } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
-import { isHostile } from '../../core/teams';
 import { showToast } from '../../hud/store';
-import { settings, t } from '../../settings';
+import { settings, t, type TextKey } from '../../settings';
 import type { MapView } from '../../ui/mapView';
 import { unitKey } from '../../ui/sprites';
 import type { GroupSelection } from './groupSelection';
 import { MoveSession } from './moveSession';
-import type { Intent, MoveUndo, Phase } from './types';
+import type { ActionHost, Intent, Phase } from './types';
 
 /** Lo que mover necesita de la escena. */
-export interface MoveHost {
+export interface MoveHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   /** La partida (Ctrl+Z la cambia por la de antes). */
@@ -58,20 +44,21 @@ export interface CommitOptions {
   wait?: boolean;
 }
 
-/** Uids de los enemigos de `viewer` que ve ahora (para saber si un movimiento ha descubierto a alguien). */
-function visibleEnemyUids(s: GameState, viewer: TeamId): string {
-  const vis = visibility(s, viewer);
-  return s.units
-    .filter((unit) => isHostile(s, viewer, unit.team) && unit.carrier === null && vis.at(unit))
-    .map((unit) => unit.uid)
-    .sort((first, second) => first - second)
-    .join(',');
-}
+/** Lo que una unidad puede hacer despues de moverse, aparte de esperar y de las ordenes. */
+const ACTIONS_AFTER_MOVING: readonly UnitMenuOption[] = ['attack', 'capture', 'unload', 'supply'];
 
 /** Sin nada mas que hacer tras moverse (para «Esperar sola» al soltar). */
-function hasNothingElseToDo(s: GameState, unit: Unit): boolean {
-  const can = unitActions(s, unit);
-  return !can.attack && !can.capture && !can.unload && !can.supply;
+function hasNothingElseToDo(s: GameState, team: TeamId, unit: Unit): boolean {
+  return !availableActions(s, team, unit).some((option) => ACTIONS_AFTER_MOVING.includes(option));
+}
+
+/**
+ * Lo que «Atras» tiene que avisar en vez de deshacer: con niebla, si al moverse ha descubierto a
+ * alguien ya no vuelve (seria mirar gratis) y el menu sigue abierto. null si no hay que avisar (se
+ * deshace o, si no se ha movido, se cierra el menu).
+ */
+export function backWarning(s: GameState, viewer: TeamId, unit: Unit): TextKey | null {
+  return actionProblem(s, viewer, { kind: 'undoMove', uid: unit.uid }) === 'revealed' ? 'undoRevealed' : null;
 }
 
 export class UnitMoves {
@@ -104,7 +91,7 @@ export class UnitMoves {
   /** Elegir una unidad: a moverla o, si ya se ha movido este turno, directamente a sus acciones. */
   select(unit: Unit): void {
     const host = this.host;
-    if (!unit.canMove) {
+    if (!canStillMove(unit)) {
       this.session = MoveSession.alreadyMoved(unit);
       return host.openUnitMenu();
     }
@@ -138,8 +125,6 @@ export class UnitMoves {
     if (!session?.range || this.host.phase !== 'move') return;
     const unit = session.unit;
     const intent = this.intentAt(tile);
-    // Moverla a mano cancela su orden de varios turnos.
-    if (intent.kind !== 'none' && intent.kind !== 'stay') delete unit.travelTo;
     switch (intent.kind) {
       case 'none':
         return this.host.toMap();
@@ -163,15 +148,10 @@ export class UnitMoves {
   }
 
   private async joinUnit(unit: Unit, kind: 'merge' | 'load', target: Unit): Promise<void> {
-    const s = this.host.state;
-    const ghost = unitKey(this.host.scene.textures, s, unit, this.host.viewer);
+    const ghost = unitKey(this.host.scene.textures, this.host.state, unit, this.host.viewer);
     this.clearUndo();
-    const path = kind === 'merge' ? merge(s, unit, target) : load(s, unit, target);
-    if (path) {
-      // Una emboscada por el camino lo deja en mover: no llega a unirse ni a subir.
-      const event: GameEvent = path.ambush ? moveEvent(unit.uid, path) : { kind, uid: unit.uid, into: target.uid, path };
-      await this.host.play([event], ghost);
-    }
+    // Una emboscada por el camino lo deja en mover: no llega a unirse ni a subir (lo dice su suceso).
+    await this.host.perform({ kind, uid: unit.uid, into: target.uid }, ghost);
     this.host.afterAction();
   }
 
@@ -181,15 +161,13 @@ export class UnitMoves {
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     this.clearUndo();
     if (!samePos(from, unit)) {
-      const path = moveUnit(host.state, unit, from, session.range!, this.trailTo(from));
-      if (!path) return host.toMap();
+      const moved = host.act({ kind: 'move', uid: unit.uid, to: from, path: this.trailTo(from) });
+      if (!moved) return host.toMap();
       session.range = null;
-      await host.play([moveEvent(unit.uid, path)], ghost);
-      if (path.ambush) return host.afterAction();
+      await host.play(moved, ghost);
+      if (endsInAmbush(moved)) return host.afterAction();
     }
-    const stillThere = unitById(host.state, target.uid);
-    if (!stillThere) return host.afterAction();
-    await host.play([attackEvent(host.state, unit, stillThere, Math.random)]);
+    await host.perform({ kind: 'attack', uid: unit.uid, target: target.uid });
     host.afterAction();
   }
 
@@ -198,72 +176,62 @@ export class UnitMoves {
     const unit = session.unit;
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
     const before = serialize(host.state);
-    const seenBefore = visibleEnemyUids(host.state, host.viewer);
-    const snapshot: MoveUndo = { uid: unit.uid, x: unit.x, y: unit.y, canFire: unit.canFire };
-    const path = moveUnit(host.state, unit, to, session.range!, this.trailTo(to));
-    if (!path) return;
+    const moved = host.act({ kind: 'move', uid: unit.uid, to, path: this.trailTo(to) });
+    if (!moved) return;
     session.range = null;
-    await host.play([moveEvent(unit.uid, path)], ghost);
-    if (path.ambush) {
+    await host.play(moved, ghost);
+    if (endsInAmbush(moved)) {
       this.clearUndo();
       return host.afterAction();
     }
-    // Se puede deshacer si no ha descubierto a nadie.
-    if (visibleEnemyUids(host.state, host.viewer) === seenBefore) this.undoStack.push(before);
+    // Ctrl+Z vale para lo mismo que «Atras»: el nucleo dice si se puede (no si ha descubierto a alguien).
+    if (isValidAction(host.state, host.viewer, { kind: 'undoMove', uid: unit.uid })) this.undoStack.push(before);
     else this.clearUndo();
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (options.wait) return this.waitSelected();
     if (options.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();
-    if (options.drop && settings.autoWait && hasNothingElseToDo(host.state, unit)) return this.waitSelected();
-    session.undo = snapshot;
+    if (options.drop && settings.autoWait && hasNothingElseToDo(host.state, host.viewer, unit)) return this.waitSelected();
     host.openUnitMenu();
   }
 
-  /** Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al empezar. */
+  /**
+   * Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al
+   * empezar ('travelStep': hasta donde, y cuando acaba, lo dice el nucleo).
+   */
   async giveTravel(unit: Unit, goal: Pos): Promise<void> {
     const host = this.host;
-    delete unit.standingOrder;
-    const range = this.session?.range ?? moveRange(host.state, unit);
-    const dest = stepToward(host.state, unit, goal, range);
-    if (!dest) {
+    if (!host.act({ kind: 'travel', uid: unit.uid, to: goal })) {
       showToast(t('travelUnreachable'));
       return host.toMap();
     }
     this.clearUndo();
-    unit.travelTo = posOf(goal);
     showToast(t('travelSet'));
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
-    const path = moveUnit(host.state, unit, dest, range);
+    const moved = host.act({ kind: 'travelStep', uid: unit.uid });
     if (this.session) this.session.range = null;
-    if (path) await host.play([moveEvent(unit.uid, path)], ghost);
-    if (samePos(unit, goal) || path?.ambush) delete unit.travelTo;
+    if (moved) await host.play(moved, ghost);
     host.toMap();
   }
 
-  /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse. */
+  /** Mover en grupo: cada unidad elegida va lo mas cerca posible del destino, sin pisarse (el plan es del nucleo). */
   async groupMove(goal: Pos): Promise<void> {
     const host = this.host;
     host.selection.multi = false;
-    const closestFirst = [...host.selection.group]
-      .map((uid) => unitById(host.state, uid))
-      .filter((unit): unit is Unit => !!unit && unit.active && unit.canMove && unit.carrier === null)
-      .sort((firstUnit, secondUnit) => manhattan(firstUnit, goal) - manhattan(secondUnit, goal));
+    const group = [...host.selection.group].map((uid) => unitById(host.state, uid)).filter((unit): unit is Unit => !!unit);
     // [CAMBIO] El grupo sigue elegido despues de moverlo (como en los juegos de estrategia en tiempo real).
     this.clearUndo();
-    for (const unit of closestFirst) {
-      const range = moveRange(host.state, unit);
-      const best = closestStep(unit, goal, range);
-      if (!best) continue;
-      delete unit.travelTo;
-      const path = moveUnit(host.state, unit, best, range);
-      if (path) await host.play([moveEvent(unit.uid, path)]);
+    for (const unit of groupMoveOrder(group, goal)) {
+      // Cada paso con el mapa como lo han dejado las de antes.
+      const step = groupMoveStep(host.state, unit, goal);
+      if (!step) continue;
+      await host.perform(step);
       if (host.ended) return;
     }
     host.toMap();
   }
 
   waitSelected(): void {
-    if (this.selected) wait(this.selected);
+    if (this.selected) this.host.act({ kind: 'wait', uid: this.selected.uid });
     this.host.afterAction();
   }
 
@@ -271,17 +239,21 @@ export class UnitMoves {
     this.undoStack = [];
   }
 
+  /** La unidad elegida se acaba de mover y se puede deshacer («Atras» en su menu). */
+  canUndoSelected(): boolean {
+    const unit = this.selected;
+    return !!unit && isValidAction(this.host.state, this.host.viewer, { kind: 'undoMove', uid: unit.uid });
+  }
+
   /** «Atras» en el menu de la unidad: vuelve a donde estaba antes de moverla y se puede mover otra vez. */
   undoMove(): void {
     const host = this.host;
     const unit = this.selected;
-    const undo = this.session?.undo;
-    if (!unit || !undo || undo.uid !== unit.uid) return host.toMap();
+    if (!unit) return host.toMap();
+    const warning = backWarning(host.state, host.viewer, unit);
+    if (warning) return showToast(t(warning));
+    if (!host.act({ kind: 'undoMove', uid: unit.uid })) return host.toMap();
     this.undoStack.pop();
-    unit.x = undo.x;
-    unit.y = undo.y;
-    unit.canFire = undo.canFire;
-    unit.canMove = true;
     host.view.cursor = posOf(unit);
     this.select(unit);
   }

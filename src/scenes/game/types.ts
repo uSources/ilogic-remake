@@ -2,8 +2,8 @@
  * Tipos y constantes que comparten GameScene y sus modulos (src/scenes/game). Sin Phaser: se pueden
  * importar desde los tests.
  */
-import type { UnitActions } from '../../core/rules';
-import type { GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
+import type { UnitMenuOption } from '../../core/actions';
+import type { GameAction, GameEvent, GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -15,21 +15,29 @@ import type { TextKey } from '../../settings';
 export type Phase =
   'map' | 'gameMenu' | 'unitMenu' | 'groupMenu' | 'orderMenu' | 'buy' | 'move' | 'attack' | 'unloadPick' | 'unloadTile' | 'target' | 'busy';
 
-export type ActionKey = keyof UnitActions;
-/** Orden de las opciones del menu de una unidad. */
-export const ACTION_ORDER: ActionKey[] = [
-  'attack',
-  'capture',
-  'unload',
-  'supply',
+/**
+ * Una opcion del menu de una unidad: las que da el nucleo (availableActions, en el orden de
+ * UNIT_MENU) y «Atras», que pone la escena: deshace el movimiento si se puede, avisa si ya no
+ * (ha descubierto enemigos) y, si no se ha movido, cierra el menu.
+ */
+export type ActionKey = UnitMenuOption | 'back';
+/** «Atras» va justo antes de esta opcion (la de peligro, al final), o al final si no esta. */
+export const BACK_GOES_BEFORE: UnitMenuOption = 'delete';
+/**
+ * Sucesos propios despues de los que Ctrl+Z sigue valiendo: no cuentan nada nuevo de la partida ni
+ * tiran dados (moverse, esperar, viajes, escuadras, ordenes, y la captura a medias que se pierde al
+ * irse, que deshacer devuelve). Todos los demas lo cierran (GameScene.noteEvent).
+ */
+export const KEEPS_UNDO: ReadonlySet<GameEvent['kind']> = new Set([
+  'move',
   'wait',
-  'orderToAttack',
-  'orderToCapture',
-  'orderToDefend',
-  'cancelOrder',
-  'back',
-  'delete',
-];
+  'undoMove',
+  'travel',
+  'squad',
+  'standingOrder',
+  'captureDropped',
+]);
+
 export type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 export const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 
@@ -51,10 +59,20 @@ export type Intent =
   | { kind: 'merge'; target: Unit }
   | { kind: 'load'; target: Unit };
 
-/** Donde estaba la unidad antes de moverla (para "Atras" en su menu). */
-export interface MoveUndo extends Pos {
-  uid: number;
-  canFire: boolean;
+/**
+ * Lo que la escena da a sus modulos para que la persona de la pantalla haga algo en la partida: una
+ * accion de su equipo (el que mira), por la misma via que la IA y las herramientas (`dispatch`).
+ */
+export interface ActionHost {
+  /** Hace la accion y devuelve sus sucesos, o null si no vale (la partida no cambia). */
+  act(action: GameAction): GameEvent[] | null;
+  /** Hace la accion y anima sus sucesos (con el dibujo `ghostKey` para la unidad que se mueve); false si no valia. */
+  perform(action: GameAction, ghostKey?: string | null): Promise<boolean>;
+  /**
+   * Apunta sucesos que no salen de `act` (los turnos de la IA, las ordenes permanentes) igual que
+   * `act` apunta los suyos: estadisticas, tutorial, Ctrl+Z. Animarlos (`play`) ya no apunta nada.
+   */
+  record(events: readonly GameEvent[]): void;
 }
 
 /** Fases en las que el cursor sigue al puntero. */

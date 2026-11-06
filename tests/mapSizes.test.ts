@@ -1,9 +1,9 @@
-import { playInterleaved, unitTypeNamed } from './helpers';
+import { BLANK_DICE_SEED, playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
 import { createGame } from '@core/defaultGames';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { blankMap, mapGrid } from '@core/mapGrid';
 import { newGameState } from '@core/gameState';
 import { moveRange, newUnit, reachableTiles, visibility } from '@core/rules';
@@ -22,6 +22,7 @@ function cornerMatch(size: number): GameState {
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },
     ],
+    diceSeed: BLANK_DICE_SEED,
   });
   newUnit(s, TANK, 0, { x: size - 1, y: size - 1 });
   newUnit(s, TANK, 1, { x: 0, y: 0 });

@@ -6,10 +6,13 @@
 import { areAllied, isHostile } from '../teams';
 import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt, occupancy } from '../rules/queries';
-import { samePos } from '../geom';
-import { groundDistance, moveEvent, moveUnit, reachableTiles, type MoveRange } from '../rules/movement';
+import { posOf, samePos } from '../geom';
+import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
+import { actorProblem } from '../actions/checks';
+import { dispatch } from '../actions/dispatch';
 import { visibility } from '../rules/visibility';
-import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import { isAlive } from '../util/predicates';
 import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
@@ -79,13 +82,32 @@ export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, r
   return getsCloser ? best : null;
 }
 
+/** La IA hace una accion de su equipo (`dispatch`) y avisa de sus sucesos: los sucesos, o null si no valia. */
+function* actEvents(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
+  const result = dispatch(s, ai.me, action);
+  if (!result.ok) return null;
+  yield* result.events;
+  return result.events;
+}
+
+/**
+ * La IA hace una accion de su equipo por la misma via que cualquiera (`dispatch`) y avisa de sus
+ * sucesos. Devuelve si valia (si no, la partida no cambia).
+ */
+export function* act(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, boolean> {
+  return (yield* actEvents(s, ai, action)) !== null;
+}
+
+/** Termina el turno de la unidad, si aun no lo ha hecho (esperar). */
+export function* finish(s: GameState, ai: AiCtx, unit: Unit): Generator<GameEvent> {
+  if (canAct(s, unit)) yield* act(s, ai, { kind: 'wait', uid: unit.uid });
+}
+
 /** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
-export function* doMove(s: GameState, unit: Unit, dest: Pos | null, range: MoveRange): Generator<GameEvent, boolean> {
+export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
-  const path = moveUnit(s, unit, dest, range);
-  if (!path) return false;
-  yield moveEvent(unit.uid, path);
-  return !!path.ambush;
+  const events = yield* actEvents(s, ai, { kind: 'move', uid: unit.uid, to: posOf(dest) });
+  return events !== null && endsInAmbush(events);
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
@@ -96,8 +118,11 @@ export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me
   return s.units.filter((other) => isHostile(s, other.team, me) && other.carrier === null && other.life > 0 && visible.at(other));
 }
 
-/** Puede jugar este turno: viva, sin usar y en el mapa (no dentro de un transporte). */
-export const canAct = (unit: Unit): boolean => unit.active && unit.carrier === null && unit.life > 0;
+/**
+ * Puede jugar este turno: lo mismo que pide cualquier accion de una unidad (`actorProblem`: suya,
+ * en el mapa y sin gastar), y viva.
+ */
+export const canAct = (s: GameState, unit: Unit): boolean => isAlive(unit) && actorProblem(s, unit.team, unit.uid) === null;
 
 /** Necesita volver a curarse a un edificio. */
 export const needsRepair = (s: GameState, unit: Unit): boolean => unit.life < weightsOf(s).LIFETOBACK;

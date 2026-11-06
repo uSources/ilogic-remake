@@ -1,15 +1,15 @@
+import { usePower, blankState, diceFrom, unitTypeNamed, fight } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { readContentFiles, validateContent } from '@core/content';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
-import { powerBlock, chargeStars, generalHitFactor, appointGeneral, usePower } from '@core/generals';
-import { seededRng } from '@core/geom';
-import { attackFull, endRound, hitChance, newUnit, visibility } from '@core/rules';
+import { powerBlock, chargeStars, generalHitFactor, appointGeneral } from '@core/generals';
+import { seededRng } from '@core/util/random';
+import { endRound, hitChance, newUnit, visibility } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, unitTypeNamed } from './helpers';
 import { teamState } from '@core/teams';
 
 const unitType = unitTypeNamed;
@@ -59,7 +59,7 @@ describe('generales: reglas', () => {
     const s = withBrisa();
     const attacker = newUnit(s, unitType('Tank'), 0, { x: 5, y: 5 });
     const defender = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
-    const result = attackFull(s, attacker, defender, seededRng(3));
+    const result = fight(s, attacker, defender, diceFrom(seededRng(3)));
     const value = ((result.damage + result.counter) * unitType('Tank').cost) / 100;
     expect(teamState(s, 0).general!.charge).toBeCloseTo(value / 6000);
   });
@@ -72,7 +72,7 @@ describe('generales: reglas', () => {
     e2.life = 25;
     const far = newUnit(s, unitType('Tank'), 1, { x: 12, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 9, y: 9 });
-    expect(powerBlock(s, 0, 'airstrike')).toBe('target');
+    expect(powerBlock(s, 0, 'airstrike')).toBe('needsTarget');
     const event = usePower(s, 0, 'airstrike', { x: 10, y: 10 })!;
     expect(e1.life).toBe(80);
     expect(e2.life).toBe(10); // no baja de minLife
@@ -83,7 +83,7 @@ describe('generales: reglas', () => {
       { uid: e2.uid, damage: 15 },
     ]);
     expect(chargeStars(teamState(s, 0).general!)).toBe(0); // cuesta la barra entera (6)
-    expect(powerBlock(s, 0, 'recon')).toBe('used');
+    expect(powerBlock(s, 0, 'recon')).toBe('powerUsed');
     endRound(s);
     expect(powerBlock(s, 0, 'recon')).toBe('charge'); // nuevo turno, pero sin estrellas no llega
   });

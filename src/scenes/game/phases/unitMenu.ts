@@ -5,35 +5,22 @@
  */
 import { unitTypeOf } from '../../../core/gameContent';
 import { posKey, posOf } from '../../../core/geom';
-import {
-  attackEvent,
-  attackTargets,
-  buildingAt,
-  capture,
-  captureEvent,
-  removeUnit,
-  supply,
-  unitActions,
-  unitById,
-  unload,
-  unloadTiles,
-  wait,
-} from '../../../core/rules';
-import { cancelStandingOrder, keepCapturing } from '../../../core/squads';
+import { attackTargets, unitById, unloadTiles } from '../../../core/rules';
+import { availableActions, type UnitMenuOption } from '../../../core/actions';
 import type { StandingOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, nameOf, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
 import type { MenuInput, MenuModel } from '../menuModel';
-import { ACTION_ORDER, type ActionKey } from '../types';
+import { BACK_GOES_BEFORE, type ActionKey } from '../types';
 import { markTiles, type PhaseHandler, type PhaseHost } from './phase';
 
 /** En el menu de carga, la primera opcion es «Atras»; los pasajeros van detras. */
 const BACK_ROW = 0;
 const FIRST_PASSENGER_ROW = 1;
 
-/** Lo que hace cada opcion del menu de la unidad (una por cada accion de unitActions). */
+/** Lo que hace cada opcion del menu de la unidad (una por cada opcion de availableActions, y «Atras»). */
 const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, unit: Unit) => void } = {
   attack: pickAttackTarget,
   capture: captureHere,
@@ -43,25 +30,31 @@ const UNIT_MENU_ACTIONS: { readonly [Action in ActionKey]: (host: PhaseHost, uni
     host.refresh();
   },
   supply: (host, unit) => {
-    host.moves.clearUndo();
-    supply(host.state, unit);
+    host.act({ kind: 'supply', uid: unit.uid });
     host.afterAction();
   },
   wait: (host, unit) => {
-    wait(unit);
+    host.act({ kind: 'wait', uid: unit.uid });
     host.afterAction();
   },
   orderToAttack: (host, unit) => startOrder(host, unit, 'attack'),
   orderToCapture: (host, unit) => startOrder(host, unit, 'capture'),
   orderToDefend: (host, unit) => startOrder(host, unit, 'defend'),
   cancelOrder: (host, unit) => {
-    cancelStandingOrder(host.state, [unit]);
+    host.act({ kind: 'cancelStandingOrder', uids: [unit.uid] });
     showToast(t('orderCancelled'));
     host.enter('unitMenu');
   },
   back: (host) => host.moves.undoMove(),
   delete: deleteUnit,
 };
+
+/** Las opciones del nucleo, en su orden, con «Atras» en su sitio (BACK_GOES_BEFORE). */
+export function withBack(options: readonly UnitMenuOption[]): ActionKey[] {
+  const at = options.indexOf(BACK_GOES_BEFORE);
+  const cut = at < 0 ? options.length : at;
+  return [...options.slice(0, cut), 'back', ...options.slice(cut)];
+}
 
 /** La orden pide despues la casilla; lo ya movido este turno se mantiene. */
 function startOrder(host: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
@@ -80,14 +73,9 @@ function pickAttackTarget(host: PhaseHost, unit: Unit): void {
   host.refresh();
 }
 
-/** Capturar el edificio en el que esta. */
+/** Capturar el edificio en el que esta (si llevaba otra orden, la de capturar este manda: ver la accion). */
 function captureHere(host: PhaseHost, unit: Unit): void {
-  const building = buildingAt(host.state, unit);
-  const result = capture(host.state, unit);
-  // [CAMBIO] Si a mitad de captura, que la acabe aunque tuviera otra orden (destacada).
-  keepCapturing(host.state, unit);
-  if (building && result) void host.play([captureEvent(unit, building, result)]).then(() => host.afterAction());
-  else host.afterAction();
+  void host.perform({ kind: 'capture', uid: unit.uid }).then(() => host.afterAction());
 }
 
 /** [CAMBIO] pedir confirmacion (en el original se borraba al instante). */
@@ -97,7 +85,7 @@ function deleteUnit(host: PhaseHost, unit: Unit): void {
     return showToast(t('confirmDelete'));
   }
   host.moves.clearUndo();
-  removeUnit(host.state, unit.uid);
+  host.act({ kind: 'deleteUnit', uid: unit.uid });
   host.afterAction();
 }
 
@@ -105,10 +93,8 @@ export const unitMenuPhase: PhaseHandler = {
   enter: (host) => {
     const unit = host.moves.selected;
     if (!unit) return host.toMap();
-    const can = unitActions(host.state, unit);
-    // [CAMBIO] "Atras" siempre: deshace el movimiento (en el original no se podia).
-    can.back = true;
-    host.unitOptions = ACTION_ORDER.filter((action) => can[action]);
+    // [CAMBIO] «Atras» siempre (en el original no se podia deshacer): ver ActionKey.
+    host.unitOptions = withBack(availableActions(host.state, host.viewer, unit));
     // Encima de un edificio que se puede capturar, lo normal es capturar.
     host.menuSel = Math.max(0, host.unitOptions.indexOf('capture'));
     host.deleteArmed = false;
@@ -151,8 +137,7 @@ export const attackPhase: PhaseHandler = {
     const cursor = host.view.cursor;
     const targetUid = host.moves.session?.attackTargets.get(posKey(cursor));
     if (!unit || targetUid === undefined) return host.enter('unitMenu');
-    const target = unitById(host.state, targetUid)!;
-    void host.play([attackEvent(host.state, unit, target, Math.random)]).then(() => host.afterAction());
+    void host.perform({ kind: 'attack', uid: unit.uid, target: targetUid }).then(() => host.afterAction());
   },
   back: (host) => host.enter('unitMenu'),
   highlights: (input) => markTiles(input.attack.keys(), 'attack'),
@@ -207,7 +192,7 @@ export const unloadTilePhase: PhaseHandler = {
       host.phase = 'unloadPick';
       return host.refresh();
     }
-    if (!unload(host.state, session.unit, session.passenger, cursor)) return;
+    if (!host.act({ kind: 'unload', uid: session.unit.uid, passenger: session.passenger.uid, to: posOf(cursor) })) return;
     host.moves.clearUndo();
     host.afterAction();
   },

@@ -7,8 +7,9 @@ import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import type { BuildingType, UnitType } from '../content';
 import { teamState } from '../teams';
 import { isWalkable, teamUnits, unitAt } from './queries';
-import type { Building, GameState, TeamId, Unit } from '../model';
+import type { ActionRejection, Building, GameState, TeamId, Unit } from '../model';
 import { newUnit } from './lifecycle';
+import { pay } from './funds';
 
 /** Los ingresos y el mantenimiento se redondean a multiplos de esto. */
 const MONEY_STEP = 100;
@@ -76,12 +77,23 @@ export function canBuyAt(s: GameState, building: Building): boolean {
   return building.owner !== null && buyOptions(s, building).length > 0 && !unitAt(s, building);
 }
 
-/** Fabrica una unidad: nace sin poder actuar hasta la ronda siguiente. */
-export function spawn(s: GameState, building: Building, unitType: UnitType): Unit | null {
-  if (building.owner === null || !builds(s, building, unitType)) return null;
-  const team = building.owner;
-  if (buyBlock(s, team, unitType)) return null;
-  if (!isWalkable(s, building, unitType.movement)) return null;
-  teamState(s, team).funds -= unitType.cost;
-  return newUnit(s, unitType, team, building, false);
+/**
+ * Por que `team` no puede fabricar ahora una unidad de ese tipo en ese edificio (null = puede): tiene
+ * que ser suyo, fabricarla, estar libre (y la casilla ser de su tipo de movimiento), y que haya dinero y
+ * sitio en el ejercito.
+ */
+export function buyProblem(s: GameState, team: TeamId, building: Building, unitType: UnitType): ActionRejection | null {
+  if (building.owner !== team) return 'notYours';
+  if (!builds(s, building, unitType)) return 'notBuiltHere';
+  if (!isWalkable(s, building, unitType.movement)) return 'occupied';
+  return buyBlock(s, team, unitType) ?? null;
+}
+
+/**
+ * El equipo `team` fabrica una unidad en su edificio, ya comprobado (buyProblem): se paga y nace sin
+ * poder actuar hasta la ronda siguiente.
+ */
+export function buildUnit(s: GameState, team: TeamId, building: Building, unitType: UnitType): Unit {
+  pay(s, team, unitType.cost);
+  return newUnit(s, unitType, team, building, 'done');
 }

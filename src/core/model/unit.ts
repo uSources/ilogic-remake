@@ -2,6 +2,14 @@ import type { Pos } from './geometry';
 import type { StandingOrder } from './standingOrder';
 import type { TeamId } from './team';
 
+/**
+ * En que punto de su turno esta una unidad:
+ * - 'ready': aun no ha hecho nada (puede moverse y actuar);
+ * - 'moved': se ha movido y aun puede actuar (atacar, salvo las de distancia, capturar, esperar...);
+ * - 'done': ya no hace nada mas hasta la ronda siguiente (ha atacado, capturado, esperado...).
+ */
+export type UnitTurnState = 'ready' | 'moved' | 'done';
+
 /** Una unidad en su casilla (x, y), o dentro de un transporte (carrier). */
 export interface Unit extends Pos {
   /** Identificador estable (no cambia al morir otras unidades ni al guardar). */
@@ -9,12 +17,8 @@ export interface Unit extends Pos {
   /** Tipo de unidad: su id en units.json (ver unitTypeOf). */
   type: string;
   team: TeamId;
-  /** Puede actuar este turno. */
-  active: boolean;
-  /** Aun no se ha movido este turno. */
-  canMove: boolean;
-  /** Puede disparar este turno (las unidades a distancia lo pierden al moverse). */
-  canFire: boolean;
+  /** En que punto de su turno esta (ver UnitTurnState y rules/unitTurn.ts). */
+  turnState: UnitTurnState;
   /** 0..100 */
   life: number;
   /** [CAMBIO] Enemigos destruidos (veterania, reglas nuevas). Las partidas antiguas no lo tienen. */

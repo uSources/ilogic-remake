@@ -14,12 +14,12 @@ import type { GroupSelection } from '../groupSelection';
 import type { HighlightInput, Highlights } from '../highlights';
 import type { MenuInput, MenuModel } from '../menuModel';
 import type { Orders } from '../orders';
-import { type ActionKey, type Phase } from '../types';
+import { type ActionHost, type ActionKey, type Phase } from '../types';
 import type { UnitMoves } from '../unitMoves';
 import type { GameMenuChoices } from './gameMenu';
 
 /** Lo que las fases necesitan de la escena. */
-export interface PhaseHost {
+export interface PhaseHost extends ActionHost {
   readonly state: GameState;
   /** El equipo que juega la persona en esta pantalla (el que mira). */
   readonly viewer: TeamId;

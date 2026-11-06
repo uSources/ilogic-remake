@@ -8,6 +8,7 @@ import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { moveRange } from '../rules/movement';
 import { teamUnits } from '../rules/queries';
+import { canStillFire } from '../rules/unitTurn';
 import type { GameState, TeamId, Unit } from '../model';
 import { needsRepair, strikeReach, visibleFoes } from './context';
 
@@ -24,7 +25,7 @@ type DamageTable = Map<number, Map<number, number>>;
 
 /** Puede disparar este turno y no tiene que irse a curar. */
 const isShooter = (s: GameState, unit: Unit): boolean =>
-  unit.carrier === null && unit.canFire && unitTypeOf(s, unit).attack !== null && !needsRepair(s, unit);
+  unit.carrier === null && canStillFire(s, unit) && unitTypeOf(s, unit).attack !== null && !needsRepair(s, unit);
 
 /** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
 function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {

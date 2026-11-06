@@ -89,14 +89,18 @@ function placeUnits(s: GameState, units: MissionDef['units']): number[] {
   });
 }
 
-/** Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. */
-export function buildMission(mission: MissionDef, content: GameContent): GameState {
+/**
+ * Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. `diceSeed`:
+ * la semilla de sus dados (cada vez que se juega, la que diga quien la empieza).
+ */
+export function buildMission(mission: MissionDef, content: GameContent, diceSeed: number): GameState {
   const s = newGameState({
     map: terrainGrid(content, mission),
     rules: missionRules(mission, content),
     content,
     theme: missionTheme(content, mission).id,
     teams: mission.teams,
+    diceSeed,
   });
   for (const [type, owner, x, y] of mission.buildings)
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });

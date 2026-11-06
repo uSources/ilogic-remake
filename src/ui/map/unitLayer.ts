@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
-import { rank, unhealable } from '../../core/rules';
+import { rank, unhealable, canStillAct } from '../../core/rules';
 import { effectiveStandingOrder, isDetached } from '../../core/squads';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { TILE } from '../../layout';
@@ -120,7 +120,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     this.updateTerrainFront(sprite, newArt ? frontKey(s, unit) : null);
     updateLifeDigit(sprite, unit.life);
     this.updateMarks(sprite, unit, s);
-    sprite.idle = sprite.side === 'own' && unit.active;
+    sprite.idle = sprite.side === 'own' && canStillAct(unit);
     sprite.img.y = TILE - (sprite.idle ? this.bobPhase : 0);
   }
 

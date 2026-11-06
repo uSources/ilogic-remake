@@ -3,7 +3,7 @@ import { duel } from '@core/teams';
 import { MoveType } from '@core/content';
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { createGame } from '@core/defaultGames';
 import { endRound, groundDistance, outcome } from '@core/rules';
 import { createLayer } from '@core/mapGrid';

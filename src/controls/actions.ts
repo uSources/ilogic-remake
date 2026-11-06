@@ -8,15 +8,17 @@
  * - el cursor del raton al pasar por encima (cursorFor).
  *
  * Logica pura: no mueve nada ni sabe de mandos. Lo que hace cada accion al elegirla esta en
- * scenes/game/actionRunners.ts (una entrada por cada `ActionId`, lo obliga el tipo). La escena le
- * pasa aqui lo que solo ella sabe (que significa ir a esa casilla con la unidad elegida: `intent`).
- * Añadir una accion es una entrada en ACTIONS y otra en ACTION_RUNNERS; los mandos no cambian.
+ * scenes/game/actionRunners.ts (una entrada por cada `ActionId`, lo obliga el tipo), que manda las
+ * acciones del nucleo (core/actions.ts). Si una vale lo dice siempre el nucleo: con un grupo,
+ * `canDoWithSelection` (SELECTION_MENU); con la unidad que se esta moviendo, lo que pasaria al
+ * soltarla (`intent`, que la escena saca de su alcance). Aqui solo se añade lo que es de la
+ * interfaz: si hay un enemigo a la vista en la casilla, en que orden se ofrecen las ordenes, que
+ * formar escuadra pide dos o mas. Añadir una accion es una entrada en INPUT_ACTIONS y otra en
+ * ACTION_RUNNERS (y, si es una nueva, su entrada en SELECTION_MENU); los mandos no cambian.
  */
-import { canFight, isCapturer } from '../core/util/predicates';
-import { buildingAt } from '../core/rules';
-import { isAlliedOwner } from '../core/teams';
-import { standingOrderChoices, effectiveStandingOrder, squadUnits } from '../core/squads';
-import type { GameState, Pos, TeamId, Unit } from '../core/model';
+import { exactSquad, standingOrderChoices } from '../core/squads';
+import { canDoWithSelection, ORDER_OPTIONS, type SelectionOption } from '../core/actions';
+import type { GameState, Pos, StandingOrderKind, TeamId, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
 /** Puntero del raton que anuncia lo que hara el clic derecho (ver ui/cursors.ts). */
@@ -84,29 +86,18 @@ const movingUnit = (context: ActionCtx): Unit | null =>
   context.units.length === 1 && context.intent !== undefined ? context.units[0]! : null;
 const isMoving = (context: ActionCtx) => movingUnit(context) !== null;
 const isGroup = (context: ActionCtx) => !isMoving(context) && context.units.length > 0;
-const anyCanCapture = (context: ActionCtx) => context.units.some((unit) => isCapturer(context.s, unit));
-const anyCanFight = (context: ActionCtx) => context.units.some((unit) => canFight(context.s, unit));
 
-/** La casilla tiene un edificio que no es del jugador y alguna de estas unidades puede capturar. */
-function hasBuildingToCapture(context: ActionCtx): boolean {
-  if (!context.at) return false;
-  const building = buildingAt(context.s, context.at);
-  return !!building && !isAlliedOwner(context.s, building.owner, context.viewer) && anyCanCapture(context);
-}
-
-/** Escuadra que forman exactamente estas unidades (o null). */
-export function exactSquad(s: GameState, units: readonly Unit[]): number | null {
-  const id = units[0]?.squad;
-  if (id === undefined || !units.every((unit) => unit.squad === id)) return null;
-  return squadUnits(s, id).length === units.length ? id : null;
-}
+/** El nucleo deja mandar esa opcion a lo elegido, en su casilla (SELECTION_MENU). */
+const canDo = (context: ActionCtx, option: SelectionOption): boolean =>
+  canDoWithSelection(context.s, context.viewer, context.units, option, context.at);
 
 const isWholeSquad = (context: ActionCtx) => exactSquad(context.s, context.units) !== null;
 
-/** Ordenes con destino que ofrece el menu en esa casilla (o todas las que pueden cumplir, sin casilla). */
-function canOrder(context: ActionCtx, kind: 'attack' | 'capture' | 'defend'): boolean {
-  if (context.at) return standingOrderChoices(context.s, context.viewer, context.at, context.units, context.enemyHere).includes(kind);
-  return kind === 'capture' ? anyCanCapture(context) : anyCanFight(context);
+/** Ordenes con destino que ofrece el menu en esa casilla (o todas las que se pueden dar, sin casilla). */
+function canOrder(context: ActionCtx, kind: StandingOrderKind): boolean {
+  const { s, viewer, units, at } = context;
+  if (at && !standingOrderChoices(s, viewer, at, units, context.enemyHere).includes(kind)) return false;
+  return canDo(context, ORDER_OPTIONS[kind]);
 }
 
 /**
@@ -114,12 +105,12 @@ function canOrder(context: ActionCtx, kind: 'attack' | 'capture' | 'defend'): bo
  * unidad (atacar, capturar, unirse, subir, mover, ir) usan lo que dice la escena de esa casilla; con
  * un grupo, atacar y capturar son ordenes que empiezan ya y mover lleva a cada una lo mas cerca.
  */
-export const ACTIONS: readonly ActionDef[] = [
+export const INPUT_ACTIONS: readonly ActionDef[] = [
   onTile({
     id: 'attack',
     label: 'attack',
     cursor: 'attack',
-    ok: (context) => (isMoving(context) ? context.intent === 'attack' : isGroup(context) && context.enemyHere && anyCanFight(context)),
+    ok: (context) => (isMoving(context) ? context.intent === 'attack' : isGroup(context) && context.enemyHere && canDo(context, 'attack')),
   }),
   onTile({
     id: 'capture',
@@ -128,7 +119,7 @@ export const ACTIONS: readonly ActionDef[] = [
     ok: (context) =>
       isMoving(context)
         ? context.intent === 'move' && !!context.intentCapture
-        : isGroup(context) && !context.enemyHere && hasBuildingToCapture(context),
+        : isGroup(context) && !context.enemyHere && canDo(context, 'capture'),
   }),
   onTile({ id: 'merge', label: 'actMerge', cursor: 'merge', ok: (context) => isMoving(context) && context.intent === 'merge' }),
   onTile({ id: 'load', label: 'actLoad', cursor: 'load', ok: (context) => isMoving(context) && context.intent === 'load' }),
@@ -139,7 +130,7 @@ export const ACTIONS: readonly ActionDef[] = [
     ok: (context) =>
       isMoving(context)
         ? context.intent === 'move' && !context.intentCapture
-        : isGroup(context) && !!context.at && !context.enemyHere && !hasBuildingToCapture(context),
+        : isGroup(context) && !context.enemyHere && !canDo(context, 'capture') && canDo(context, 'move'),
   }),
   onTile({ id: 'go', label: 'goThere', cursor: 'go', ok: (context) => isMoving(context) && context.intent === 'none' && !!context.farOk }),
   inMenu({ id: 'orderToAttack', label: 'orderToAttack', cursor: 'attack', ok: (context) => canOrder(context, 'attack') }),
@@ -149,17 +140,23 @@ export const ACTIONS: readonly ActionDef[] = [
     id: 'cancelOrder',
     label: 'cancelOrder',
     cursor: 'default',
-    ok: (context) => context.units.some((unit) => !!effectiveStandingOrder(context.s, unit)),
+    ok: (context) => canDo(context, 'cancelOrder'),
   }),
-  inMenu({ id: 'squadForm', label: 'squadForm', cursor: 'default', ok: (context) => context.units.length > 1 && !isWholeSquad(context) }),
+  inMenu({
+    id: 'squadForm',
+    label: 'squadForm',
+    cursor: 'default',
+    // Una escuadra de una sola unidad no sirve de nada: el menu la ofrece desde dos.
+    ok: (context) => context.units.length > 1 && !isWholeSquad(context) && canDo(context, 'squadForm'),
+  }),
   inMenu({
     id: 'squadLeave',
     label: 'squadLeave',
     cursor: 'default',
-    ok: (context) => context.units.some((unit) => unit.squad !== undefined) && !isWholeSquad(context),
+    ok: (context) => !isWholeSquad(context) && canDo(context, 'squadLeave'),
   }),
-  inMenu({ id: 'squadRename', label: 'squadRename', cursor: 'default', ok: isWholeSquad }),
-  inMenu({ id: 'squadDisband', label: 'squadDisband', cursor: 'default', ok: isWholeSquad }),
+  inMenu({ id: 'squadRename', label: 'squadRename', cursor: 'default', ok: (context) => canDo(context, 'squadRename') }),
+  inMenu({ id: 'squadDisband', label: 'squadDisband', cursor: 'default', ok: (context) => canDo(context, 'squadDisband') }),
 ];
 
 const isValid = (context: ActionCtx, action: ActionDef) => (!action.needsTile || context.at !== null) && action.ok(context);
@@ -167,13 +164,13 @@ const isValid = (context: ActionCtx, action: ActionDef) => (!action.needsTile ||
 /** Lo que hace el clic derecho en esa casilla (null: nada, la escena hace lo de siempre). */
 export function smartAction(context: ActionCtx): ActionDef | null {
   if (!context.units.length || !context.at) return null;
-  return ACTIONS.find((action) => action.smart && isValid(context, action)) ?? null;
+  return INPUT_ACTIONS.find((action) => action.smart && isValid(context, action)) ?? null;
 }
 
 /** El menu completo: todas las acciones que valen, en orden. */
 export function menuActions(context: ActionCtx): ActionDef[] {
   if (!context.units.length) return [];
-  return ACTIONS.filter((action) => isValid(context, action));
+  return INPUT_ACTIONS.filter((action) => isValid(context, action));
 }
 
 /** Puntero del raton en esa casilla: el de la accion del clic derecho, o prohibido si no hay ninguna. */
@@ -182,4 +179,4 @@ export function cursorFor(context: ActionCtx): CursorKind {
   return smartAction(context)?.cursor ?? 'forbidden';
 }
 
-export const actionById = (id: string): ActionDef | undefined => ACTIONS.find((action) => action.id === id);
+export const actionById = (id: string): ActionDef | undefined => INPUT_ACTIONS.find((action) => action.id === id);

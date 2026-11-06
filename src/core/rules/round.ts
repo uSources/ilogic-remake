@@ -1,16 +1,19 @@
 /**
  * Fin de ronda (ciclojuego, fase 2): reactivar unidades, cobrar, curar, mantenimiento, dia y clima.
  */
-import { unitTypeOf, buildingTypeOf } from '../gameContent';
+import { unitTypeOf, buildingTypeOf, weatherTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import { generalsNewRound } from '../generals';
 import { advanceWeather, type WeatherChange } from '../weather';
-import type { Building, GameState, TeamId, Unit } from '../model';
-import { perTeam, teamIds, teamState } from '../teams';
-import { dropStaleCaptures } from './capture';
+import type { Building, GameEvent, GameState, TeamId, Unit } from '../model';
+import { addForTeam, perTeam, teamIds } from '../teams';
+import { earn, pay } from './funds';
+import { restoreInvariants } from './invariants';
+import { quietly } from '../util/quietly';
 import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
 import { unitAt } from './queries';
+import { readyUnit } from './unitTurn';
 
 export interface RoundReport {
   /** Lo que ha cobrado cada equipo, por numero de equipo. */
@@ -21,7 +24,10 @@ export interface RoundReport {
   healed: { uid: number; team: TeamId; amount: number }[];
   /** [CAMBIO] Cambio de clima al empezar esta ronda (null si sigue igual o no hay clima). */
   weather?: WeatherChange | null;
-  /** [CAMBIO] Puntos de control: dinero que ha dado a cada equipo (ya sumado en income), cuantos le han pagado y cuantos estan disputados. */
+  /**
+   * [CAMBIO] Puntos de control: dinero que ha dado a cada equipo (ya sumado en income), cuantos le
+   * han pagado y cuantos estan disputados.
+   */
   control?: ControlReport;
 }
 
@@ -30,20 +36,17 @@ export function unhealable(s: GameState, unit: Unit): boolean {
   return s.rules.noHealUnderFire && unit.hitDay === s.day;
 }
 
-/** Un paso del fin de ronda: cambia el estado y apunta en el informe lo que la interfaz enseña. */
+/** Un paso del fin de ronda: cambia el estado y devuelve sus sucesos (los que tenga). */
 export interface RoundPhase {
   /** Nombre corto (para depurar). */
   readonly id: string;
-  run(s: GameState, report: RoundReport): void;
+  run(s: GameState): GameEvent[];
 }
 
-/** Todas las unidades pueden volver a moverse y disparar. */
-function refreshUnits(s: GameState): void {
-  for (const unit of s.units) {
-    unit.active = true;
-    unit.canMove = true;
-    unit.canFire = true;
-  }
+/** Todas las unidades pueden volver a moverse y disparar (lo de la ronda anterior ya no se deshace: INVARIANTS). */
+function refreshUnits(s: GameState): GameEvent[] {
+  for (const unit of s.units) readyUnit(unit);
+  return [];
 }
 
 /** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */
@@ -54,49 +57,52 @@ function patientOn(s: GameState, building: Building): Unit | null {
   return unhealable(s, unit) ? null : unit;
 }
 
-function healOnBuilding(s: GameState, building: Building, report: RoundReport): void {
+/** El edificio cura a la unidad propia que tenga encima: su suceso, si ha recuperado algo. */
+function healOnBuilding(s: GameState, building: Building): GameEvent[] {
   const patient = patientOn(s, building);
-  if (!patient) return;
+  if (!patient) return [];
   const before = patient.life;
   patient.life = Math.min(MAX_LIFE, patient.life + buildingTypeOf(s, building).heals);
-  if (patient.life > before) report.healed.push({ uid: patient.uid, team: patient.team, amount: patient.life - before });
+  const amount = patient.life - before;
+  return amount > 0 ? [{ kind: 'heal', actor: null, uid: patient.uid, team: patient.team, amount }] : [];
 }
 
 /** Cada edificio con dueño le paga y cura a la unidad propia que tenga encima. */
-function collectAndHeal(s: GameState, report: RoundReport): void {
+function collectAndHeal(s: GameState): GameEvent[] {
+  const heals: GameEvent[] = [];
+  const income = perTeam(s, () => 0);
   for (const building of s.buildings) {
     if (building.owner === null) continue;
-    const income = buildingIncome(s, buildingTypeOf(s, building));
-    teamState(s, building.owner).funds += income;
-    report.income[building.owner]! += income;
-    healOnBuilding(s, building, report);
+    const earned = buildingIncome(s, buildingTypeOf(s, building));
+    earn(s, building.owner, earned);
+    addForTeam(income, building.owner, earned);
+    heals.push(...healOnBuilding(s, building));
   }
-}
-
-function payControlPoints(s: GameState, report: RoundReport): void {
-  const control = controlRound(s);
-  if (!control) return;
-  report.control = control;
-  for (const team of teamIds(s)) report.income[team]! += control.income[team]!;
+  const incomes = teamIds(s)
+    .filter((team) => income[team])
+    .map((team): GameEvent => ({ kind: 'income', actor: null, team, amount: income[team] ?? 0, source: 'buildings' }));
+  return [...incomes, ...heals];
 }
 
 /** [CAMBIO] Mantenimiento. Sin dinero no hay castigo: se paga lo que haya. */
-function payUpkeep(s: GameState, report: RoundReport): void {
-  for (const team of s.teams) {
-    const paid = Math.min(upkeepOf(s, team.id), team.funds);
-    team.funds -= paid;
-    report.upkeep[team.id] = paid;
+function payUpkeep(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const team of teamIds(s)) {
+    const paid = pay(s, team, upkeepOf(s, team));
+    if (paid > 0) events.push({ kind: 'upkeep', actor: null, team, amount: paid });
   }
+  return events;
 }
 
-/** Empieza el dia siguiente; lo que pase del maximo de dinero se pierde. */
-function nextDay(s: GameState): void {
-  for (const team of s.teams) team.funds = Math.min(team.funds, s.content.maxFunds);
+/** Empieza el dia siguiente (lo que pase del maximo de dinero se pierde despues: INVARIANTS). */
+function nextDay(s: GameState): GameEvent[] {
   s.day++;
+  return [{ kind: 'newDay', actor: null, day: s.day }];
 }
 
-function changeWeather(s: GameState, report: RoundReport): void {
-  report.weather = advanceWeather(s);
+function changeWeather(s: GameState): GameEvent[] {
+  const change = advanceWeather(s);
+  return change ? [{ kind: 'weather', actor: null, from: change.from.id, to: change.to.id }] : [];
 }
 
 /**
@@ -105,19 +111,16 @@ function changeWeather(s: GameState, report: RoundReport): void {
  * cobrar, y el clima cambia con el dia nuevo).
  */
 export const ROUND_PHASES: readonly RoundPhase[] = [
-  // Antes de nada: una captura a medias cuya unidad se ha ido no debe seguir contando.
-  { id: 'captures', run: (s) => dropStaleCaptures(s) },
   // Las unidades vuelven a poder actuar en la ronda nueva.
   { id: 'refresh', run: refreshUnits },
   // Los generales pueden volver a usar un poder y se acaba el reconocimiento.
-  { id: 'generals', run: (s) => generalsNewRound(s) },
+  { id: 'generals', run: quietly(generalsNewRound) },
   // Ingresos de los edificios y cura de las unidades propias encima.
   { id: 'buildings', run: collectAndHeal },
   // Los puntos de control pagan despues de los edificios (se suman al mismo ingreso).
-  { id: 'control', run: payControlPoints },
+  { id: 'control', run: controlRound },
   // Despues de cobrar, para que se pague con lo de hoy.
   { id: 'upkeep', run: payUpkeep },
-  // El tope de dinero se aplica al final, con todo ya cobrado y pagado.
   { id: 'day', run: nextDay },
   // El clima cambia con el dia nuevo (depende de s.day).
   { id: 'weather', run: changeWeather },
@@ -125,11 +128,53 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
 
 /**
  * Fin de ronda, tras el turno del ultimo equipo (ciclojuego, fase 2): reactivar unidades, cobrar y curar
- * sobre edificios propios (ver ROUND_PHASES).
+ * sobre edificios propios (ver ROUND_PHASES). Devuelve sus sucesos, sin actor (los hace la partida).
  * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */
-export function endRound(s: GameState): RoundReport {
+export function endRound(s: GameState): GameEvent[] {
+  const events = ROUND_PHASES.flatMap((phase) => phase.run(s));
+  // Al final, con todo ya cobrado y pagado, lo mismo que tras cada accion (el tope de dinero, el
+  // deshacer de la ronda que acaba, capturas cuya unidad se ha ido...).
+  return [...events, ...restoreInvariants(s)];
+}
+
+/** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound. */
+export function roundReport(s: GameState, events: readonly GameEvent[]): RoundReport {
   const report: RoundReport = { income: perTeam(s, () => 0), upkeep: perTeam(s, () => 0), healed: [] };
-  for (const phase of ROUND_PHASES) phase.run(s, report);
+  for (const event of events) addToReport(s, report, event);
   return report;
+}
+
+/** Apunta un suceso del fin de ronda en su resumen. */
+function addToReport(s: GameState, report: RoundReport, event: GameEvent): void {
+  switch (event.kind) {
+    case 'income':
+      addForTeam(report.income, event.team, event.amount);
+      if (event.source === 'controlPoints') addForTeam(controlOf(s, report).income, event.team, event.amount);
+      return;
+    case 'upkeep':
+      report.upkeep[event.team] = event.amount;
+      return;
+    case 'heal':
+      report.healed.push({ uid: event.uid, team: event.team, amount: event.amount });
+      return;
+    case 'controlPoint': {
+      // Solo paga el que no esta disputado y tiene dueño.
+      const control = controlOf(s, report);
+      if (event.contested) control.contested++;
+      else if (event.owner !== null) addForTeam(control.held, event.owner, 1);
+      return;
+    }
+    case 'weather':
+      report.weather = { from: weatherTypeOf(s, event.from), to: weatherTypeOf(s, event.to) };
+      return;
+    default:
+      return;
+  }
+}
+
+/** El resumen de los puntos de control de la ronda (lo crea al primer suceso suyo). */
+function controlOf(s: GameState, report: RoundReport): ControlReport {
+  report.control ??= { income: perTeam(s, () => 0), held: perTeam(s, () => 0), contested: 0 };
+  return report.control;
 }

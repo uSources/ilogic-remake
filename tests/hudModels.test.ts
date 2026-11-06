@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
-import { attackEvent, endRound, newUnit, score } from '@core/rules';
+import { endRound, newUnit, score } from '@core/rules';
 import { settings } from '../src/settings';
 import {
   armyChartVM,
@@ -20,7 +20,7 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, diceFrom, hqId, unitTypeNamed, fight, withoutHeadquarters } from './helpers';
 import { ownerSideOf, sideColor, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
 import { PAL } from '../src/ui/palette';
 import { teamState } from '@core/teams';
@@ -116,20 +116,25 @@ describe('panel de combate', () => {
     const s = blankState();
     const enemy = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Tank'), 0, { x: 10, y: 11 });
-    const event = attackEvent(s, enemy, mine, () => 0.5);
-    const start = combatVM(blankState(), 0, event, 'start', icons, both)!;
+    const event = fight(
+      s,
+      enemy,
+      mine,
+      diceFrom(() => 0.5),
+    );
+    const start = combatVM(blankState(), 0, event, 'start', icons, both);
     expect(start.left.side).toBe('own');
     expect(start.left.role).toBe('defender');
     expect(start.right.role).toBe('attacker');
     expect(start.left.life).toBe(100);
     expect(start.left.hurt).toBeNull();
-    const hit = combatVM(blankState(), 0, event, 'hit', icons, both)!;
+    const hit = combatVM(blankState(), 0, event, 'hit', icons, both);
     expect(hit.left.life).toBe(100 - event.damage);
     expect(hit.left.hurt).toBe(event.damage);
     expect(hit.right.life).toBe(100);
     expect(hit.counter).toBe(true);
-    const counter = combatVM(blankState(), 0, event, 'counter', icons, both)!;
-    expect(counter.right.life).toBe(100 - event.counter!);
+    const counter = combatVM(blankState(), 0, event, 'counter', icons, both);
+    expect(counter.right.life).toBe(100 - event.counter);
     expect(counter.right.hurt).toBe(event.counter);
   });
 
@@ -137,8 +142,13 @@ describe('panel de combate', () => {
     const s = blankState();
     const art = newUnit(s, unitType('Artillery'), 1, { x: 10, y: 10 });
     const mine = newUnit(s, unitType('Soldier'), 0, { x: 10, y: 13 });
-    const event = attackEvent(s, art, mine, () => 0.5);
-    const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true })!;
+    const event = fight(
+      s,
+      art,
+      mine,
+      diceFrom(() => 0.5),
+    );
+    const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true });
     expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
     expect(vm.left.icon).toBe('d');
     expect(vm.counter).toBe(false);
@@ -152,7 +162,12 @@ describe('panel de combate', () => {
     const vm = combatVM(
       blankState(),
       0,
-      attackEvent(s, attacker, defender, () => 0.5),
+      fight(
+        s,
+        attacker,
+        defender,
+        diceFrom(() => 0.5),
+      ),
       'hit',
       icons,
       both,
@@ -160,17 +175,11 @@ describe('panel de combate', () => {
     expect(vm.right).toMatchObject({ life: 0, ko: true });
     expect(vm.counter).toBe(false);
   });
-
-  it('eventos antiguos sin datos: sin panel', () => {
-    expect(
-      combatVM(blankState(), 0, { kind: 'attack', attacker: 1, target: { x: 0, y: 0 }, damage: 5, killed: false }, 'hit', icons, both),
-    ).toBeNull();
-  });
 });
 
 describe('desglose de la barra de arriba', () => {
   const army = () => {
-    const s = blankState();
+    const s = withoutHeadquarters(blankState());
     for (const team of s.teams) team.funds = 5000;
     for (const [index, buildingName] of ['City', 'City', 'Factory', 'Oil'].entries())
       s.buildings.push({ type: buildingName, owner: 0, x: 1 + index, y: 1, capture: null });
@@ -275,7 +284,7 @@ describe('lados para quien mira (con mas de dos equipos)', () => {
   });
 
   it('pantalla final: lo de quien mira contra lo de todos sus enemigos juntos', () => {
-    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const s = withoutHeadquarters(blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]));
     s.teams.forEach((team, id) => {
       team.stats.built = id + 1;
       team.stats.army = [100 * (id + 1), 200 * (id + 1)];

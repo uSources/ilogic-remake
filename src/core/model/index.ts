@@ -4,15 +4,27 @@
  */
 export type { Pos } from './geometry';
 export type { ControllerKind, TeamId, TeamState } from './team';
-export type { Unit } from './unit';
+export type { Unit, UnitTurnState } from './unit';
 export type { Building, ControlPoint } from './building';
 export type { StandingOrder, StandingOrderKind } from './standingOrder';
 export type { Squad } from './squad';
+export type { LastMove } from './lastMove';
 export type { GeneralState } from './general';
 export type { WeatherState } from './weather';
 export type { Objective, Outcome } from './objective';
-export type { CombatInfo, GameEvent, GameEventKind, GameEventOf } from './events';
+export type {
+  CombatInfo,
+  EventActor,
+  GameEvent,
+  GameEventKind,
+  GameEventOf,
+  GeneralCharge,
+  Healing,
+  SquadChange,
+  TravelEnd,
+} from './events';
+export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { RulesConfig } from './rules';
 export type { TeamStats } from './stats';
 export type { GameSetup, GameState, MatchContent, SavedGameState } from './state';
-export type { Rng } from './random';
+export type { Dice, Rng } from './random';

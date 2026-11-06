@@ -30,9 +30,9 @@ export function freeName(squads: readonly Squad[], id: number, key?: number): st
 /** Las escuadras de un equipo. */
 export const squadsOfTeam = (s: GameState, team: TeamId): Squad[] => (s.squads ?? []).filter((squad) => squad.team === team);
 
-/** La primera tecla de grupo (1-9) que no tiene ninguna escuadra del equipo. */
-export function freeKey(s: GameState, team: TeamId): number | undefined {
-  const used = new Set(squadsOfTeam(s, team).map((squad) => squad.key));
+/** La primera tecla de grupo (1-9) que no tiene ninguna de estas escuadras (las de un equipo). */
+export function freeKey(squads: readonly Squad[]): number | undefined {
+  const used = new Set(squads.map((squad) => squad.key));
   for (let key = 1; key <= SQUAD_KEYS; key++) if (!used.has(key)) return key;
   return undefined;
 }
@@ -40,13 +40,4 @@ export function freeKey(s: GameState, team: TeamId): number | undefined {
 /** La escuadra del equipo con esa tecla de grupo. */
 export function squadByKey(s: GameState, team: TeamId, key: number): Squad | undefined {
   return squadsOfTeam(s, team).find((squad) => squad.key === key);
-}
-
-/** Da tecla a las escuadras que no tienen (partidas de antes, o cuando se libera una): la primera libre de su equipo. */
-export function assignKeys(s: GameState): void {
-  for (const squad of s.squads ?? []) {
-    if (squad.key !== undefined) continue;
-    const key = freeKey(s, squad.team);
-    if (key !== undefined) squad.key = key;
-  }
 }

@@ -20,5 +20,5 @@
     "allowImportingTsExtensions": true,
     "paths": { "@core/*": ["./src/core/*"] }
   },
-  "include": ["src", "tests", "tools", "vite.config.ts"]
+  "include": ["src", "tests", "tools", "improve/ai-baseline", "vite.config.ts"]
 }

@@ -5,10 +5,11 @@
 import { isHq } from '../gameContent';
 import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
-import type { Building, GameEvent, GameState, Unit } from '../model';
+import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
+import { canStillAct, spendUnit } from './unitTurn';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
@@ -40,18 +41,34 @@ export function captureProgress(s: GameState, building: Building): CaptureProgre
  * [CAMBIO] Una captura a medias se pierde en cuanto la unidad que capturaba se va o muere. Antes solo
  * se borraba al consultarla (captureProgress), asi que en las partidas sin pantalla (IA contra IA,
  * equilibrio) una unidad podia irse y volver sin perderla. Lo encontro el cazador de fallos
- * (npm run fuzz). Se llama al mover, unir, subir a un transporte, al quitar muertos y al acabar la
- * ronda, y es el unico sitio que la borra (captureProgress solo consulta).
+ * (npm run fuzz). Es una de las INVARIANTS (rules/invariants.ts), que repasan `dispatch` despues de
+ * cada accion y `endRound`; es el unico sitio que la borra (captureProgress solo consulta). Devuelve
+ * un suceso 'captureDropped' por cada una.
  */
-export function dropStaleCaptures(s: GameState): void {
-  for (const building of s.buildings) if (building.capture && !captureProgress(s, building)) building.capture = null;
+export function dropStaleCaptures(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const building of s.buildings) {
+    const progress = building.capture;
+    if (!progress || captureProgress(s, building)) continue;
+    building.capture = null;
+    events.push({ kind: 'captureDropped', actor: null, at: posOf(building), uid: progress.uid, team: progress.team });
+  }
+  return events;
 }
 
-/** Se puede capturar el edificio de debajo (neutral o enemigo: los de la propia alianza, no). */
-export function canCapture(s: GameState, unit: Unit): boolean {
-  if (!unit.active || !isCapturer(s, unit)) return false;
-  const building = buildingAt(s, unit);
+/**
+ * La unidad podria capturar el edificio de `at` si estuviera alli (neutral o enemigo: los de la propia
+ * alianza, no). No mira si le queda turno: para lo que pasaria al llevarla alli (la escena).
+ */
+export function canCaptureAt(s: GameState, unit: Unit, at: Pos): boolean {
+  if (!isCapturer(s, unit)) return false;
+  const building = buildingAt(s, at);
   return !!building && (building.owner === null || isHostile(s, building.owner, unit.team));
+}
+
+/** Se puede capturar ya el edificio de debajo: le queda turno y podria (canCaptureAt). */
+export function canCapture(s: GameState, unit: Unit): boolean {
+  return canStillAct(unit) && canCaptureAt(s, unit, unit);
 }
 
 /**
@@ -73,16 +90,13 @@ function pointsLeftBefore(s: GameState, building: Building, unit: Unit, total: n
 }
 
 /**
- * Capturar el edificio de debajo. [CAMBIO] En 2013 era al instante (uno enemigo pasaba primero a
- * neutral); ahora cada turno resta la vida/10 de la unidad a sus puntos (capturePoints, la Base
- * hqCapturePoints) y al llegar a 0 pasa a ser suyo directamente. Si la unidad se va o muere, se
- * pierde lo avanzado (dropStaleCaptures). Tomar la Base enemiga gana la partida.
+ * Capturar el edificio de debajo (`building`), ya comprobado (canCapture). [CAMBIO] En 2013 era al instante (uno
+ * enemigo pasaba primero a neutral); ahora cada turno resta la vida/10 de la unidad a sus puntos
+ * (capturePoints, la Base hqCapturePoints) y al llegar a 0 pasa a ser suyo directamente. Si la unidad
+ * se va o muere, se pierde lo avanzado (dropStaleCaptures). Tomar la Base enemiga gana la partida.
  */
-export function capture(s: GameState, unit: Unit): CaptureResult | null {
-  if (!canCapture(s, unit)) return null;
-  const building = buildingAt(s, unit)!;
-  unit.active = false;
-  unit.canMove = false;
+export function advanceCapture(s: GameState, unit: Unit, building: Building): CaptureResult {
+  spendUnit(unit);
   const total = capturePointsOf(s, building);
   const left = Math.max(0, pointsLeftBefore(s, building, unit, total) - captureStrength(s, unit));
   if (left === 0) {
@@ -95,7 +109,7 @@ export function capture(s: GameState, unit: Unit): CaptureResult | null {
 }
 
 /** Evento de captura (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
-export function captureEvent(unit: Unit, building: Building, result: { left: number; total: number }): GameEvent {
+export function captureEvent(actor: TeamId, unit: Unit, building: Building, result: { left: number; total: number }): GameEvent {
   const at = posOf(building);
-  return { kind: 'capture', uid: unit.uid, at, owner: building.owner, left: result.left, total: result.total };
+  return { kind: 'capture', actor, uid: unit.uid, at, owner: building.owner, left: result.left, total: result.total };
 }

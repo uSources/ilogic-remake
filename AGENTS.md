@@ -31,6 +31,8 @@ npm run huella              # huella del comportamiento: igual antes y despues d
   idea, salir pronto, nada magico, piezas comunes (`core/util/`) en vez de bucles a mano, lo que crece como lista
   de datos, comentarios del porque. Al reescribir, `npm run huella` tiene que dar lo mismo.
 - `src/core` es logica pura: sin Phaser, DOM ni interfaz (lo comprueba ESLint). Logica nueva → core + test.
+- La partida solo cambia con acciones: `dispatch(s, team, action)` (`src/core/actions.ts`; una accion
+  nueva, una entrada en `ACTIONS`). Las reglas (`core/rules`) solo preguntan y calculan.
 - Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/mapgen.ts`, con sus numeros en `mapgen.json` y `themes.json` (el contenido se lee de cada partida, ya resuelto: `s.content`, `unitTypeOf(s, unit)`, `terrainAt(s, pos)`); textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
 - No editar a mano lo generado: `public/assets/atlas/`, `src/assetList.ts`, `src/atlasPages.ts`,
   `src/ui/{wangSets,blobSets,sheets}.ts` → `npm run assets`.

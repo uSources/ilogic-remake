@@ -3,10 +3,12 @@ import { objectiveStatus, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
 import { defaultContent } from '@core/content/default';
 import { buildMission, MISSIONS } from '@core/missions';
-import { measureObjective, objectiveOutcome } from '@core/objectives';
+import { isValidObjective, measureObjective, objectiveOutcome } from '@core/objectives';
 import { isDefeated, objectiveProgress, outcome } from '@core/rules';
 import { teamIds } from '@core/teams';
+import { mapGrid } from '@core/mapGrid';
 import type { GameState } from '@core/model';
+import { BLANK_DICE_SEED } from './helpers';
 
 afterEach(() => {
   settings.lang = 'es';
@@ -15,7 +17,7 @@ afterEach(() => {
 /** Partidas de cada mision en momentos distintos: al empezar, al acabar el plazo, sin enemigos, con todo capturado... */
 function statesOf(id: string): GameState[] {
   const mission = MISSIONS.find((candidate) => candidate.id === id)!;
-  const fresh = () => buildMission(mission, defaultContent());
+  const fresh = () => buildMission(mission, defaultContent(), BLANK_DICE_SEED);
   const lastDay = (s: GameState) => ('days' in s.mission!.objective ? s.mission!.objective.days : 20);
   const states: GameState[] = [];
   const atStart = fresh();
@@ -68,13 +70,13 @@ describe('objetivos de mision', () => {
 
   it('textos del objetivo y del progreso, como antes', () => {
     const texts = MISSIONS.map((mission) => {
-      const s = buildMission(mission, defaultContent());
+      const s = buildMission(mission, defaultContent(), BLANK_DICE_SEED);
       return [objectiveText(mission), objectiveText(mission, s), objectiveText(null, s), objectiveStatus(s)];
     });
     expect(objectiveText(null)).toBe('Conquista la Base enemiga.');
     settings.lang = 'en';
     expect(objectiveText(MISSIONS[1]!)).toBe('Own 6 citys before day 14 ends.');
-    expect(objectiveStatus(buildMission(MISSIONS[4]!, defaultContent()))).toBe('Left: 8 · Day 1 of 10');
+    expect(objectiveStatus(buildMission(MISSIONS[4]!, defaultContent(), BLANK_DICE_SEED))).toBe('Left: 8 · Day 1 of 10');
     settings.lang = 'es';
     expect(texts).toEqual([
       ['Conquista la Base enemiga.', 'Conquista la Base enemiga.', 'Conquista la Base enemiga.', null],
@@ -99,5 +101,19 @@ describe('objetivos de mision', () => {
       ],
       ['Conquista la Base enemiga.', 'Conquista la Base enemiga.', 'Conquista la Base enemiga.', null],
     ]);
+  });
+});
+
+describe('objetivo de una partida guardada: cada tipo comprueba sus campos', () => {
+  it('isValidObjective', () => {
+    const s = buildMission(MISSIONS[0]!, defaultContent(), BLANK_DICE_SEED);
+    const where = { content: s.content, board: mapGrid(s) };
+    expect(isValidObjective(where, { kind: 'hq' })).toBe(true);
+    expect(isValidObjective(where, { kind: 'survive', days: 5 })).toBe(true);
+    expect(isValidObjective(where, { kind: 'survive', days: 0 })).toBe(false);
+    expect(isValidObjective(where, { kind: 'capture', count: 3, type: 'City', days: 9 })).toBe(true);
+    expect(isValidObjective(where, { kind: 'capture', count: 3, type: 'Castle', days: 9 })).toBe(false);
+    expect(isValidObjective(where, { kind: 'escort', uid: 1, to: { x: -1, y: 0 }, days: 9 })).toBe(false);
+    expect(isValidObjective(where, { kind: 'conquer' })).toBe(false);
   });
 });

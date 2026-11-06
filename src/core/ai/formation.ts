@@ -10,6 +10,7 @@ import { movementOf } from '../rules/queries';
 import { manhattan } from '../geom';
 import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '../rules/movement';
 import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders';
+import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { compareKeys, maxBy, minBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
@@ -72,11 +73,11 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
   return formationMates(s, unit)
     .map((mate) => {
       const remaining = remainingOf(s, mate);
-      const canStillMove = mate.active && mate.canMove;
+      const movesThisTurn = canStillMove(mate);
       return {
         unit: mate,
         remaining,
-        afterThisTurn: canStillMove ? Math.max(0, remaining - unitTypeOf(s, mate).move) : remaining,
+        afterThisTurn: movesThisTurn ? Math.max(0, remaining - unitTypeOf(s, mate).move) : remaining,
       };
     })
     .filter((mate) => mate.remaining < Infinity);

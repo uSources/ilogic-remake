@@ -25,6 +25,10 @@ export function findEntry<T extends Identified>(catalog: Catalog<T>, id: string)
   return Object.hasOwn(catalog.byId, id) ? catalog.byId[id] : undefined;
 }
 
+/** El valor es el id de un tipo del catalogo (para comprobar lo que viene de fuera). */
+export const isEntryId = <T extends Identified>(catalog: Catalog<T>, value: unknown): value is string =>
+  typeof value === 'string' && !!findEntry(catalog, value);
+
 /**
  * El tipo con ese id. Un id que no esta es un fallo de quien lo pide (el contenido y las partidas
  * se comprueban al cargarlas): lanza un error que lo dice.

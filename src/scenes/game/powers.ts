@@ -3,15 +3,15 @@
  * 'target'); el resto se usan ya. La animacion esta en playback.ts (evento 'power').
  */
 import { mapGrid } from '../../core/mapGrid';
-import { powerArea, powerBlock, powerOf, generalOf, usePower } from '../../core/generals';
-import { squareArea } from '../../core/geom';
+import { powerArea, powerBlock, powerOf, generalOf } from '../../core/generals';
+import { posOf, squareArea } from '../../core/geom';
 import type { GameEvent, GameState, Pos, TeamId } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { t } from '../../settings';
-import type { Phase } from './types';
+import type { ActionHost, Phase } from './types';
 
 /** Lo que los poderes necesitan de la escena. */
-export interface PowerHost {
+export interface PowerHost extends ActionHost {
   readonly state: GameState;
   /** El equipo que juega la persona en esta pantalla (el que mira). */
   readonly viewer: TeamId;
@@ -32,17 +32,16 @@ export class GeneralPowers {
   async start(id: string): Promise<void> {
     const host = this.host;
     if (!this.powerById(id)) return;
-    const block = powerBlock(host.state, 0, id);
-    if (block === 'target') {
+    const block = powerBlock(host.state, host.viewer, id);
+    if (block === 'needsTarget') {
       host.abandonSelection();
       host.phase = 'target';
       this.targeting = id;
       return host.refresh();
     }
-    if (block) return showToast(t(block === 'used' ? 'genUsed' : 'genCharge'));
+    if (block) return showToast(t(block === 'powerUsed' ? 'genUsed' : 'genCharge'));
     if (host.phase === 'target') host.toMap();
-    const event = usePower(host.state, host.viewer, id);
-    if (event) await host.play([event]);
+    await host.perform({ kind: 'usePower', power: id, target: null });
   }
 
   /** Casillas que tocaria el poder que se apunta si se lanza en `c` (dentro del mapa). */
@@ -64,8 +63,8 @@ export class GeneralPowers {
     const host = this.host;
     const id = this.targeting;
     if (!id) return host.toMap();
-    const event = usePower(host.state, host.viewer, id, target);
+    const events = host.act({ kind: 'usePower', power: id, target: posOf(target) });
     host.toMap();
-    if (event) await host.play([event]);
+    if (events) await host.play(events);
   }
 }

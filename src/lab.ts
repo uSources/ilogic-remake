@@ -29,6 +29,8 @@ export interface LabOptions {
 }
 
 export const LAB_SIZE = 12;
+/** Semilla de los dados del laboratorio: la misma animacion sale siempre igual. */
+const LAB_DICE_SEED = 1;
 /** Donde empieza cada una. La propia avanza 3 casillas para atacar (mover) o empieza al lado. */
 export const LAB_FROM = { x: 3, y: 6 };
 export const LAB_TARGET = { x: 7, y: 6 };
@@ -73,6 +75,7 @@ export function labState(options: LabOptions, action: LabAction | null): GameSta
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },
     ],
+    diceSeed: LAB_DICE_SEED,
   });
   const hq = content.hq.id;
   const [person, enemy] = duelTeams(s);

@@ -1,7 +1,7 @@
 /** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
 import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';
 import { endReason, endRound, isMatchOver, outcome, takesTurn } from '@core/rules';
 import { duel, teamState } from '@core/teams';
@@ -149,9 +149,8 @@ export function playGame(options: PlayOptions): GameRecord {
         events++;
         if (event.kind === 'attack') {
           const attacker = known.get(event.attacker);
-          const victim = [...known.entries()].find(
-            ([, info]) => info.x === event.target.x && info.y === event.target.y && info.team !== team,
-          );
+          const victimInfo = known.get(event.target);
+          const victim = victimInfo ? ([event.target, victimInfo] as const) : undefined;
           if (attacker) {
             const tally = tallyOf(team, attacker);
             tally.attacks++;

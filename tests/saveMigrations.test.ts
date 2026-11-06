@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { loadGame, saveContext } from '@core/defaultGames';
 import { missionById, missionRules } from '@core/missions';
-import { deserialize, serialize } from '@core/save';
+import { deserialize, readSave, serialize } from '@core/save';
 import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
 import { SAVE_VERSION } from '@core/saveVersion';
-import { formSquad, giveStandingOrder } from '@core/squads';
+import { formSquad } from '@core/squads/membership';
+import { giveStandingOrder } from '@core/squads/standingOrders';
 import { newUnit, outcome } from '@core/rules';
-import { blankState, unitTypeNamed } from './helpers';
+import { blankState, unitTypeNamed, someUnits, act } from './helpers';
 import { isHostile } from '@core/teams';
 import { loadContent, type Content } from '@core/content';
 import { mutableCopy } from '@core/util/freeze';
@@ -150,6 +151,86 @@ describe('partidas guardadas con el formato 2 (de origin/main)', () => {
   });
 });
 
+/**
+ * Partida guardada de verdad con el formato 3: la genero el codigo de la fase 2 (3b96611, rama
+ * nucleo/contenido-equipos) con 6 dias de IA contra IA (tema y generales, niebla y clima), una captura
+ * a medias, una unidad movida, otra que ya ha esperado y una escuadra con orden, sin tocarla a mano.
+ */
+describe('partida guardada con el formato 3', () => {
+  it('se lee, y sus dados salen de la propia partida: siempre los mismos', () => {
+    const json = fixture('skirmish-v3');
+    const s = loadGame(json)!;
+    expect(s.version).toBe(SAVE_VERSION);
+    expect(s.dice).toBe(loadGame(json)!.dice);
+    expect(Number.isInteger(s.dice)).toBe(true);
+    expect(s.buildings.some((building) => building.capture)).toBe(true);
+    expect(s.squads?.[0]?.standingOrder?.kind).toBe('defend');
+  });
+
+  it('las tres banderas del turno de cada unidad pasan a su turnState', () => {
+    const s = loadGame(fixture('skirmish-v3'))!;
+    const turnOf = (uid: number) => s.units.find((unit) => unit.uid === uid)?.turnState;
+    // La 10 ha capturado y la 2 ha esperado (active: false); la 1 se ha movido (canMove: false).
+    expect([turnOf(10), turnOf(2), turnOf(1)]).toEqual(['done', 'done', 'moved']);
+    expect(s.units.some((unit) => 'active' in unit || 'canMove' in unit || 'canFire' in unit)).toBe(false);
+  });
+
+  it('una del formato 4 sin dados esta rota', () => {
+    const raw = JSON.parse(serialize(loadGame(fixture('skirmish-v3'))!)) as Record<string, unknown>;
+    delete raw.dice;
+    expect(loadGame(JSON.stringify(raw))).toBeNull();
+  });
+});
+
+/**
+ * Partida guardada de verdad con el formato 4: la genero el codigo de fc127b5 (esta rama, antes de
+ * `nextSquadId`) con 4 dias de IA contra IA y tres escuadras del jugador, la tercera ya vaciada.
+ */
+describe('partida guardada con el formato 4', () => {
+  it('sigue numerando las escuadras desde la mayor, y desde ahi ningun numero se repite', () => {
+    const json = fixture('skirmish-v4');
+    expect(JSON.parse(json)).not.toHaveProperty('nextSquadId');
+    const s = loadGame(json)!;
+    expect(s.version).toBe(SAVE_VERSION);
+    expect(s.squads?.map((squad) => squad.id)).toEqual([1, 2]);
+    expect(s.nextSquadId).toBe(3);
+    const loner = s.units.find((unit) => unit.team === 0 && unit.squad === undefined && unit.carrier === null)!;
+    act(s, 0, { kind: 'formSquad', uids: [loner.uid] });
+    act(s, 0, { kind: 'leaveSquad', uids: [loner.uid] });
+    const [formed] = act(s, 0, { kind: 'formSquad', uids: [loner.uid] });
+    expect(formed).toMatchObject({ kind: 'squad', change: 'formed', squad: 4 });
+  });
+
+  it('un nextSquadId roto o por debajo de las escuadras que hay se arregla al leer', () => {
+    const raw = JSON.parse(serialize(loadGame(fixture('skirmish-v4'))!)) as Record<string, unknown>;
+    raw.nextSquadId = 1;
+    expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
+    raw.nextSquadId = 'x';
+    expect(loadGame(JSON.stringify(raw))!.nextSquadId).toBe(3);
+  });
+
+  /** La partida del formato 4 con `nextUid` y `nextSquadId` escritos a mano (como un fichero roto). */
+  const withCounters = (written: string) => {
+    const s = loadGame(fixture('skirmish-v4'))!;
+    const json = serialize(s)
+      .replace(/"nextUid":\d+/, `"nextUid":${written}`)
+      .replace(/"nextSquadId":\d+/, `"nextSquadId":${written}`);
+    return { s, read: readSave(json, saveContext(s.content)) };
+  };
+
+  it('los contadores rotos (1e300, 3,5, -4, null) se arreglan: el mayor que hay + 1', () => {
+    for (const broken of ['1e300', '3.5', '-4', 'null']) {
+      const { s, read } = withCounters(broken);
+      const highestUid = Math.max(...s.units.map((unit) => unit.uid));
+      expect(read.ok && [read.state.nextUid, read.state.nextSquadId]).toEqual([highestUid + 1, 3]);
+    }
+  });
+
+  it('con Infinity el fichero no es JSON: no se lee', () => {
+    expect(withCounters('Infinity').read).toEqual({ ok: false, error: 'notJson' });
+  });
+});
+
 describe('MIGRATIONS', () => {
   it('cada paso es para versiones anteriores a la actual y tiene un nombre propio', () => {
     for (const migration of MIGRATIONS) expect(migration.upToVersion).toBeLessThan(SAVE_VERSION);
@@ -164,7 +245,10 @@ describe('MIGRATIONS', () => {
     expect(current).toEqual(raw());
     const old: Record<string, unknown> = raw();
     migrateRead(old, 1, context);
-    expect(old.units).toEqual([{ uid: 1, standingOrder: { kind: 'attack', at: { x: 1, y: 1 } }, travelTo: { x: 2, y: 2 } }]);
+    // Sin banderas del turno (active...): la del formato 3 la da por gastada.
+    expect(old.units).toEqual([
+      { uid: 1, standingOrder: { kind: 'attack', at: { x: 1, y: 1 } }, travelTo: { x: 2, y: 2 }, turnState: 'done' },
+    ]);
     // Sin reglas: las de siempre de ese contenido.
     expect(old.rules).toEqual(defaultContent().defaultRules);
   });
@@ -173,7 +257,7 @@ describe('MIGRATIONS', () => {
     const world = () => {
       const s = blankState();
       const units = [newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 }), newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 2 })];
-      const squad = formSquad(s, 0, units)!;
+      const squad = formSquad(s, 0, someUnits(units)).squad;
       // Partida de antes de que la escuadra tuviera orden: la llevaba copiada cada unidad.
       giveStandingOrder(s, 0, [units[0]!], 'defend', { x: 5, y: 5 });
       giveStandingOrder(s, 0, [units[1]!], 'defend', { x: 5, y: 5 });

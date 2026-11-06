@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn, assistTurn, previewStandingOrders } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { seededRng, posOf } from '@core/geom';
+import { posOf } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { newUnit, visibility } from '@core/rules';
 import { serialize } from '@core/save';
-import { giveStandingOrder } from '@core/squads';
+import { giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState, Pos } from '@core/model';
 import { blankState, unitTypeNamed, hqId } from './helpers';
 
@@ -22,9 +23,10 @@ function world(): GameState {
   return s;
 }
 
-/** Juega el turno de ordenes de verdad (otra suerte que la de la prevision). */
-function playOrders(s: GameState, seed = 99): void {
-  Array.from(assistTurn(s, seededRng(seed), 0));
+/** Juega el turno de ordenes de verdad (con los dados de la partida, otra suerte que la de la prevision). */
+function playOrders(s: GameState, diceSeed = 99): void {
+  s.dice = diceSeed;
+  Array.from(assistTurn(s, 0));
 }
 
 const last = (path: Pos[]): Pos | undefined => path[path.length - 1];
@@ -83,7 +85,7 @@ describe('previewStandingOrders', () => {
     const used = newUnit(s, TANK, 0, { x: 5, y: 5 });
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 5 });
-    Object.assign(used, { active: false, canMove: false });
+    Object.assign(used, { turnState: 'done' });
     expect(previewStandingOrders(s, 0).size).toBe(0);
   });
 

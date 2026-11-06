@@ -3,7 +3,7 @@
  * cuadrados. Lo que depende de los bordes del mapa los recibe (`GridBounds`: el mapa de la
  * partida, `mapGrid(s)`, o cualquier capa del mismo tamaño).
  */
-import type { Pos, Rng } from './model';
+import type { Pos } from './model';
 import type { GridBounds } from './util/grid';
 
 export function manhattan(first: Pos, second: Pos): number {
@@ -88,16 +88,4 @@ export function squareArea(board: GridBounds, center: Pos, radius: number): Pos[
       if (board.contains(tile)) tiles.push(tile);
     }
   return tiles;
-}
-
-/** PRNG con semilla (mulberry32) para tests y partidas reproducibles. */
-export function seededRng(seed: number): Rng {
-  let seedState = seed >>> 0;
-  return () => {
-    seedState = (seedState + 0x6d2b79f5) >>> 0;
-    let mixed = seedState;
-    mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
-    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
-    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
-  };
 }

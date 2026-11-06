@@ -5,20 +5,18 @@ import type { UnitType } from '../content';
 
 import { MAX_LIFE } from '../data';
 import { isAlive } from '../util/predicates';
-import type { GameState, Pos, TeamId, Unit } from '../model';
-import { dropStaleCaptures } from './capture';
+import type { GameEvent, GameState, Pos, TeamId, Unit, UnitTurnState } from '../model';
 import { unitById } from './queries';
 
-export function newUnit(s: GameState, unitType: UnitType, team: TeamId, at: Pos, active = true): Unit {
+/** Una unidad nueva en `at`, sin usar (o en el punto de su turno que se diga: las compradas nacen gastadas). */
+export function newUnit(s: GameState, unitType: UnitType, team: TeamId, at: Pos, turnState: UnitTurnState = 'ready'): Unit {
   const unit: Unit = {
     uid: s.nextUid++,
     type: unitType.id,
     team,
     x: at.x,
     y: at.y,
-    active,
-    canMove: active,
-    canFire: active,
+    turnState,
     life: MAX_LIFE,
     carrier: null,
     cargo: Array<number | null>(unitType.cargoSlots).fill(null),
@@ -43,8 +41,24 @@ function freeSeatOf(s: GameState, passenger: Unit): void {
   if (transport) transport.cargo = transport.cargo.map((uid) => (uid === passenger.uid ? null : uid));
 }
 
-/** Limpieza (en el original, cada fotograma): fuera las unidades sin vida. */
-export function removeDead(s: GameState): void {
-  for (const unit of [...s.units]) if (!isAlive(unit)) removeUnit(s, unit.uid);
-  dropStaleCaptures(s);
+/**
+ * Limpieza (en el original, cada fotograma): fuera las unidades sin vida. Es una de las INVARIANTS
+ * (rules/invariants.ts), que `dispatch` repasa despues de cada accion. Devuelve un suceso
+ * 'cargoLost' por cada transporte que cae con alguien dentro.
+ */
+export function removeDead(s: GameState): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const unit of s.units.filter((unit) => !isAlive(unit))) events.push(...removeWithCargo(s, unit));
+  return events;
+}
+
+/**
+ * Quita la unidad y lo que lleve dentro (removeUnit), y lo cuenta: un suceso 'cargoLost' si llevaba
+ * pasajeros, para que se sepa sin mirar la partida (repeticiones, otra pantalla). Lo usan las que
+ * caen y las que se retiran.
+ */
+export function removeWithCargo(s: GameState, unit: Unit): GameEvent[] {
+  const passengers = unit.cargo.filter((uid): uid is number => uid !== null);
+  removeUnit(s, unit.uid);
+  return passengers.length ? [{ kind: 'cargoLost', actor: null, transport: unit.uid, team: unit.team, passengers }] : [];
 }

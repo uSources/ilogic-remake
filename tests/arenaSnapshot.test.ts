@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { snapshotSource } from '../tools/improve/arena';
+import { aiTurn } from '@core/ai';
+import { playDuel, snapshotSource } from '../tools/improve/arena';
+
+/** Una partida pequeña y corta: basta con que la IA de referencia haga de todo unos dias. */
+const ARENA_TEST_SIZE = 16;
+const ARENA_TEST_DAYS = 6;
 
 /** La copia de referencia de la IA (npm run arena -- --snapshot) reescribe bien los imports. */
 describe('arena: copia de la IA', () => {
@@ -23,5 +28,18 @@ describe('arena: copia de la IA', () => {
     expect(snapshotSource('ai.ts', "import { weightsOf } from './gameContent';\n", copied)).toBe(
       "import { weightsOf } from './weights';\n",
     );
+  });
+});
+
+/**
+ * La IA de referencia sigue funcionando con el nucleo de ahora: si el nucleo cambia por debajo (un
+ * export que se quita, una regla que cambia de forma), esto falla en vez de enterarse al lanzar la
+ * arena. tsc tambien la comprueba (tsconfig.json, "include").
+ */
+describe('arena: la IA de referencia juega', () => {
+  it('una partida corta de la IA actual contra la de referencia termina sin errores', async () => {
+    const { aiTurn: baseline } = (await import('../improve/ai-baseline/ai')) as { aiTurn: typeof aiTurn };
+    const winner = playDuel(1, [aiTurn, baseline], ARENA_TEST_SIZE, ARENA_TEST_DAYS);
+    expect([null, 'first', 'second']).toContain(winner);
   });
 });

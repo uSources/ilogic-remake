@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiGeneral, bestAreaTarget, choosePower } from '@core/aiGenerals';
+import { aiCtx } from '@core/ai/context';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';
@@ -32,7 +33,7 @@ describe('la IA usa a su general', () => {
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
     const choice = choosePower(s, 1)!;
     expect(choice.power).toBe('airstrike');
-    const evs = [...aiGeneral(s, 1)];
+    const evs = [...aiGeneral(s, aiCtx(1))];
     expect(evs).toHaveLength(1);
     const event = evs[0]!;
     expect(event.kind === 'power' ? event.hits.length : 0).toBe(2);
@@ -65,8 +66,8 @@ describe('la IA usa a su general', () => {
     const s = aiBrisa(6);
     newUnit(s, unitType('Tank'), 0, { x: 11, y: 11 });
     teamState(s, 1).general!.used = true;
-    expect([...aiGeneral(s, 1)]).toEqual([]);
+    expect([...aiGeneral(s, aiCtx(1))]).toEqual([]);
     teamState(s, 1).general = null;
-    expect([...aiGeneral(s, 1)]).toEqual([]);
+    expect([...aiGeneral(s, aiCtx(1))]).toEqual([]);
   });
 });

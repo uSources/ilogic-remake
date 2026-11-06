@@ -16,7 +16,7 @@ import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
 import { appointGeneral } from '@core/generals';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { endRound, isMatchOver, outcome, score, turnTakers } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
 import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';

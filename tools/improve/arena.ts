@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { armyValue } from '@core/stats';
 import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
@@ -144,11 +144,14 @@ function snapshot(): void {
   const day = new Date().toISOString().slice(0, 10);
   for (const rel of files) {
     const source = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
-    writeFileSync(`${BASE_DIR}${rel}`, `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar.\n${source}`);
+    writeFileSync(
+      `${BASE_DIR}${rel}`,
+      `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).\n${source}`,
+    );
   }
   writeFileSync(
     `${BASE_DIR}weights.ts`,
-    `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar.\n` +
+    `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).\n` +
       `const AI = ${JSON.stringify(defaultContent().ai)} as const;\n` +
       `/** La IA de referencia juega con estos pesos, sea cual sea el contenido de la partida. */\n` +
       `export const weightsOf = (_s: unknown): typeof AI => AI;\n`,

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
 import { newUnit } from '@core/rules';
-import { formSquad, giveStandingOrder } from '@core/squads';
+import { formSquad } from '@core/squads/membership';
+import { giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState } from '@core/model';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, unitTypeNamed, hqId, someUnits } from './helpers';
 
 const HQ = hqId();
 
@@ -54,7 +55,7 @@ describe('acciones con un grupo', () => {
   it('menu completo: ordenes de la casilla, formar escuadra; con escuadra, cambiar nombre y deshacer', () => {
     const { s, units, ctx: context } = grp();
     expect(ids(context(6, 6))).toEqual(['capture', 'orderToAttack', 'orderToCapture', 'orderToDefend', 'squadForm']);
-    formSquad(s, 0, units);
+    formSquad(s, 0, someUnits(units));
     expect(ids(context(9, 3))).toEqual(['move', 'orderToAttack', 'orderToDefend', 'squadRename', 'squadDisband']);
     giveStandingOrder(s, 0, units, 'defend', { x: 9, y: 3 });
     expect(ids(context(9, 3))).toContain('cancelOrder');
@@ -62,7 +63,7 @@ describe('acciones con un grupo', () => {
 
   it('parte de una escuadra: sacar de la escuadra; sin casilla, solo lo que no la necesita', () => {
     const { s, units } = grp();
-    formSquad(s, 0, units);
+    formSquad(s, 0, someUnits(units));
     const context: ActionCtx = { s, viewer: 0, units: [units[0]!], at: null, enemyHere: false };
     expect(ids(context)).toEqual(['orderToAttack', 'orderToCapture', 'orderToDefend', 'squadLeave']);
     expect(smartAction(context)).toBeNull();

@@ -3,8 +3,20 @@ import { saveContext } from '@core/defaultGames';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_RULES } from './plainRules';
-import { load, merge, moveRange, moveUnit, validPath, visibility, newUnit } from '@core/rules';
-import { blankState, savedByVersion1, unitTypeNamed } from './helpers';
+import { moveRange, pathTo, validPath, visibility, newUnit } from '@core/rules';
+import { dispatch } from '@core/actions';
+import type { GameEvent, GameState, Pos } from '@core/model';
+import { act, blankState, savedByVersion1, unitTypeNamed } from './helpers';
+
+/** El camino del suceso de mover (o de unirse) que ha dejado una accion. */
+function pathOf(events: GameEvent[]): Pos[] & { ambush?: Pos } {
+  const event = events[0];
+  if (event?.kind !== 'move' && event?.kind !== 'merge') throw new Error('no se ha movido');
+  return Object.assign(event.path, event.kind === 'move' && event.ambush ? { ambush: event.ambush } : {});
+}
+
+/** El equipo 0 mueve la unidad `uid` (por dispatch) y da el camino recorrido. */
+const move = (s: GameState, uid: number, to: Pos, path?: Pos[]) => pathOf(act(s, 0, { kind: 'move', uid, to, path }));
 import { defaultContent } from '@core/content/default';
 
 const SOLDIER = unitTypeNamed('Soldier'),
@@ -64,11 +76,10 @@ describe('movimiento: emboscadas en la niebla', () => {
     const s = corridor();
     const tank = newUnit(s, TANK, 0, { x: 2, y: 5 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
-    const path = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank))!;
+    const path = move(s, tank.uid, { x: 7, y: 5 });
     expect(path.ambush).toEqual({ x: 6, y: 5 });
     expect(tank.x).toBe(5);
-    expect(tank.active).toBe(false);
-    expect(tank.canFire).toBe(false);
+    expect(tank.turnState).toBe('done');
   });
 
   it('si la casilla anterior a la emboscada es de un aliado, se para en la de antes', () => {
@@ -77,13 +88,13 @@ describe('movimiento: emboscadas en la niebla', () => {
     newUnit(s, SOLDIER, 0, { x: 4, y: 5 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     // Con el soldado propio en (4,5) el bosque de (6,5) sigue sin verse desde (4,5): distancia 2.
-    const path = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank))!;
+    const path = move(s, tank.uid, { x: 7, y: 5 });
     expect(path.ambush).toEqual({ x: 6, y: 5 });
     expect(tank.x).toBe(5);
     s.units.find((unit) => unit.team === 0 && unitTypeOf(s, unit) === SOLDIER)!.x = 5;
     tank.x = 2;
-    tank.active = tank.canMove = true;
-    const p2 = moveUnit(s, tank, { x: 7, y: 5 }, moveRange(s, tank));
+    tank.turnState = 'ready';
+    const p2 = dispatch(s, 0, { kind: 'move', uid: tank.uid, to: { x: 7, y: 5 } }).ok ? 'moved' : null;
     // Ahora el soldado propio esta al lado del bosque: el enemigo se ve y bloquea, no hay camino.
     expect(p2).toBeNull();
   });
@@ -97,12 +108,11 @@ describe('movimiento: emboscadas en la niebla', () => {
     const target = newUnit(s, TANK, 0, { x: 6, y: 5 });
     tank.life = 40;
     target.life = 50;
-    const path = merge(s, tank, target);
-    expect(path?.ambush).toEqual({ x: 4, y: 5 });
+    const path = pathOf(act(s, 0, { kind: 'merge', uid: tank.uid, into: target.uid }));
+    expect(path.ambush).toEqual({ x: 4, y: 5 });
     expect(s.units.includes(tank)).toBe(true);
     expect(tank.x).toBe(3);
     expect(target.life).toBe(50);
-    void load;
     void TRANSPORT;
   });
 
@@ -128,8 +138,7 @@ describe('movimiento: camino trazado a mano', () => {
       { x: 7, y: 5 },
     ];
     expect(validPath(s, tank, via, range)).toBe(true);
-    const path = moveUnit(s, tank, { x: 7, y: 5 }, range, via)!;
-    expect(path).toEqual(via);
+    expect(move(s, tank.uid, { x: 7, y: 5 }, via)).toEqual(via);
   });
 
   it('caminos no validos: saltos, repetir casilla o pasarse de movimiento', () => {
@@ -176,7 +185,7 @@ describe('movimiento: coste del terreno', () => {
     expect(range.steps.at({ x: 7, y: 5 })).toBe(4);
     expect(range.steps.at({ x: 8, y: 5 })).toBe(5);
     expect(range.steps.at({ x: 9, y: 5 })).toBe(0); // 6 > movimiento 5
-    moveUnit(s, tank, { x: 8, y: 5 }, range);
+    move(s, tank.uid, { x: 8, y: 5 });
     const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(moveRange(s, sol).steps.at({ x: 7, y: 5 })).toBe(2);
   });
@@ -218,5 +227,17 @@ describe('movimiento: ordenes de varios turnos', () => {
     // Un destino al que no se puede llegar (agua para un tanque): null.
     s.map[25]![25] = 'Water';
     expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();
+  });
+});
+
+describe('movimiento: el camino es de casillas, no de lo que hay en ellas', () => {
+  it('pathTo da casillas nuevas, aunque el destino sea un edificio', () => {
+    const s = blankState(PLAIN_RULES);
+    const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    const building = { type: 'City', owner: null, x: 4, y: 2, capture: null };
+    s.buildings.push(building);
+    const path = pathTo(moveRange(s, tank), tank, building);
+    expect(path.at(-1)).toEqual({ x: 4, y: 2 });
+    expect(path.at(-1)).not.toBe(building);
   });
 });

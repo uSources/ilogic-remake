@@ -35,6 +35,3 @@ export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
 export function isCapturer(s: GameState, unit: Pick<Unit, 'type'>): boolean {
   return unitTypeOf(s, unit).canCapture;
 }
-
-/** Un objeto (no null) del que se pueden leer campos: para comprobar datos que vienen de fuera (JSON). */
-export const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;

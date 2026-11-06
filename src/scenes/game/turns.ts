@@ -11,24 +11,11 @@ import { unitTypeOf } from '../../core/gameContent';
 import { saveContext } from '../../core/defaultGames';
 import type Phaser from 'phaser';
 import { aiTurn, assistTurn } from '../../core/ai';
-import { samePos, seededRng, posOf } from '../../core/geom';
-import {
-  buildingAt,
-  canCapture,
-  canReach,
-  capture,
-  captureEvent,
-  endRound,
-  moveEvent,
-  moveRange,
-  moveUnit,
-  stepToward,
-  othersAfter,
-  unitById,
-  type RoundReport,
-} from '../../core/rules';
+import { posOf } from '../../core/geom';
+import { seededRng } from '../../core/util/random';
+import { canCapture, endRound, roundReport, othersAfter, unitById, type RoundReport, canMoveNow } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
-import { pruneSquads, squadById } from '../../core/squads';
+import { squadById } from '../../core/squads';
 import { sampleArmy } from '../../core/stats';
 import { isHostile, notAiControlledReason } from '../../core/teams';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
@@ -40,7 +27,7 @@ import { center, floatText } from '../../ui/fx';
 import { weatherEffectsText } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { PAL_CSS } from '../../ui/palette';
-import { CONFIRM_MS, INPUT_LOCK_MS, type Phase } from './types';
+import { CONFIRM_MS, INPUT_LOCK_MS, type ActionHost, type Phase } from './types';
 
 /** Donde estaba mirando el jugador antes del turno enemigo. */
 interface SavedCamera {
@@ -50,7 +37,7 @@ interface SavedCamera {
 }
 
 /** Lo que el turno necesita de la escena. */
-export interface TurnHost {
+export interface TurnHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   /** La partida (repetir el turno enemigo la cambia por la de antes y la vuelve a poner). */
@@ -95,7 +82,7 @@ const HEAL_TEXT_DELAY_MS = 1100;
 const HEAL_TEXT_STAGGER_MS = 90;
 
 /** Una unidad de `team` que aun puede actuar este turno (y no va dentro de un transporte). */
-const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && unit.active && unit.canMove && unit.carrier === null;
+const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && canMoveNow(unit);
 
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
@@ -195,7 +182,6 @@ export class TurnFlow {
     host.phase = 'busy';
     const ordersDone = await this.playStandingOrders(match);
     if (!ordersDone) return;
-    pruneSquads(host.state);
     if (!(await this.playAutoCaptures(match))) return;
     const report = await this.playOtherTeams(match);
     if (!report || host.checkEnd()) return;
@@ -216,9 +202,10 @@ export class TurnFlow {
    */
   private async playStandingOrders(match: number): Promise<string[] | null> {
     const host = this.host;
-    const orders = assistTurn(host.state, Math.random, host.viewer);
+    const orders = assistTurn(host.state, host.viewer);
     let step = orders.next();
     while (!step.done) {
+      host.record([step.value]);
       await host.play([step.value]);
       if (!this.continues(match)) return null;
       step = orders.next();
@@ -234,9 +221,7 @@ export class TurnFlow {
   private async playAutoCaptures(match: number): Promise<boolean> {
     const host = this.host;
     for (const unit of this.autoCapturers()) {
-      const building = buildingAt(host.state, unit)!;
-      const result = capture(host.state, unit);
-      if (result) await host.play([captureEvent(unit, building, result)]);
+      await host.perform({ kind: 'capture', uid: unit.uid });
       if (!this.continues(match)) return false;
     }
     return true;
@@ -299,6 +284,7 @@ export class TurnFlow {
     await host.wait(host.fastForward ? ENEMY_BANNER_FAST_MS : ENEMY_BANNER_MS);
     if (match !== host.match) return false;
     for (const event of aiTurn(host.state, rng, team)) {
+      host.record([event]);
       await host.play([event]);
       if (!this.continues(match)) return false;
     }
@@ -308,7 +294,7 @@ export class TurnFlow {
   /** Final de la ronda: ingresos, curar, estadisticas y guardado automatico. */
   private closeRound(): RoundReport {
     const host = this.host;
-    const report = endRound(host.state);
+    const report = roundReport(host.state, endRound(host.state));
     sampleArmy(host.state);
     if (settings.autosave && writeSave(serialize(host.state))) host.markSaved();
     return report;
@@ -340,7 +326,7 @@ export class TurnFlow {
     const rng = seededRng(last.seed);
     const replayed = await this.playRoundOfOthers(
       (team) => this.replayTeam(team, rng, match),
-      () => endRound(host.state),
+      () => roundReport(host.state, endRound(host.state)),
     );
     if (!replayed) return;
     host.state = deserialize(after, saveContext(host.state.content))!;
@@ -356,6 +342,7 @@ export class TurnFlow {
     this.otherTeam = team;
     for (const event of aiTurn(host.state, rng, team)) {
       if (match !== host.match) return false;
+      host.record([event]);
       await host.play([event]);
       if (match !== host.match || host.ended) return false;
     }
@@ -382,29 +369,16 @@ export class TurnFlow {
   }
 
   /**
-   * Un turno de camino hacia el destino del viaje, que acaba al llegar o si le tienden una
-   * emboscada. Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno
-   * en las ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
+   * El paso de este turno del viaje (la accion 'travelStep': el nucleo decide hasta donde y cuando
+   * acaba). Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno en las
+   * ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
    */
   private async advanceTravel(unit: Unit): Promise<boolean> {
     const host = this.host;
-    const goal = unit.travelTo!;
-    if (samePos(unit, goal)) {
-      delete unit.travelTo;
-      return false;
-    }
-    const range = moveRange(host.state, unit);
-    if (canReach(range, goal)) {
-      delete unit.travelTo;
-      return true;
-    }
-    const destination = stepToward(host.state, unit, goal, range);
-    if (!destination) return false;
-    const path = moveUnit(host.state, unit, destination, range);
-    if (!path) return false;
-    await host.play([moveEvent(unit.uid, path)]);
-    if (samePos(unit, goal) || path.ambush) delete unit.travelTo;
-    return false;
+    const events = host.act({ kind: 'travelStep', uid: unit.uid });
+    if (!events) return false;
+    await host.play(events);
+    return events.some((event) => event.kind === 'travel' && event.to === null && event.end === 'withinReach');
   }
 
   /** Donde estaba mirando el jugador antes del turno enemigo. */

@@ -1,6 +1,7 @@
 /**
  * Huella del comportamiento del juego: juega partidas IA contra IA con semilla fija y resume en un
- * solo codigo todo lo que pasa (cada suceso y el estado entero tras cada ronda). Sirve para
+ * solo codigo todo lo que pasa (cada suceso, tambien los del fin de ronda, y el estado entero tras
+ * cada ronda). Sirve para
  * reescribir codigo sin cambiar lo que hace: la huella de antes y la de despues tienen que ser
  * iguales. Mas estricta que tests/aiGolden.test.ts: varias reglas, tamaños, generales y escuadras
  * del jugador con ordenes.
@@ -11,11 +12,12 @@
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
 import { createGame } from '@core/defaultGames';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
 import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
-import { formSquad, giveStandingOrder } from '@core/squads';
+import { dispatch } from '@core/actions';
+import { posOf } from '@core/geom';
 import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
 import type { GameState, RulesConfig } from '@core/model';
 
@@ -56,9 +58,10 @@ function orderPlayerSquad(s: GameState): void {
   const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
   if (!target) return;
-  const squadUnits = s.units.filter((unit) => unit.team === person && unit.squad === undefined).slice(0, 3);
-  if (squadUnits.length < 2 || !formSquad(s, person, squadUnits)) return;
-  giveStandingOrder(s, person, squadUnits, 'attack', target);
+  const uids = s.units.filter((unit) => unit.team === person && unit.squad === undefined).map((unit) => unit.uid);
+  const squad = uids.slice(0, 3);
+  if (squad.length < 2 || !dispatch(s, person, { kind: 'formSquad', uids: squad }).ok) return;
+  dispatch(s, person, { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } });
 }
 
 function playScenario(scenario: Scenario): string {
@@ -76,14 +79,14 @@ function playScenario(scenario: Scenario): string {
 
   while (!isOver() && s.day <= MAX_DAYS) {
     for (const team of turnTakers(s)) {
-      if (team === person && scenario.withSquad) for (const event of assistTurn(s, rng, person)) record(event);
+      if (team === person && scenario.withSquad) for (const event of assistTurn(s, person)) record(event);
       for (const event of aiTurn(s, rng, team)) {
         record(event);
         if (isOver()) break;
       }
       if (isOver()) break;
     }
-    endRound(s);
+    for (const event of endRound(s)) record(event);
     hash.update(serialize(s));
   }
   record(outcome(s, person));

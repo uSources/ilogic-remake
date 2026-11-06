@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { STYLES, spawnParticle, stepParticle } from '../src/ui/weatherFx';
 
 describe('efecto de clima', () => {

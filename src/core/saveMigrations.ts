@@ -11,7 +11,7 @@
 import { findEntry, type GameContent } from './content';
 import { rulesWith } from './rulesConfig';
 import type { GameState, Pos, RulesConfig, Squad, StandingOrder, StandingOrderKind, Unit } from './model';
-import { isObject } from './util/predicates';
+import { isObject } from './util/validation';
 
 /** Lo que pone quien lee una partida (ver defaultGames.ts para el del juego). */
 export interface SaveContext {
@@ -224,6 +224,61 @@ function format2Teams(raw: Record<string, unknown>): Record<string, unknown>[] {
   }));
 }
 
+/*
+ * Paso del formato 3: los dados no iban en la partida (el combate del jugador tiraba de Math.random y
+ * el de la IA, de su semilla). Se les da una semilla que sale de la propia partida (la de su mapa y su
+ * dia), con una cuenta fija: la misma partida antigua tira siempre igual al cargarla.
+ */
+
+/** Mezcla del dia con la semilla del mapa (la constante de oro de 32 bits, para separar dias seguidos). */
+const FORMAT_3_DAY_MIX = 0x9e3779b1;
+
+/** La semilla de los dados de una partida del formato 3: de la de su mapa (si la tiene) y de su dia. */
+function format3DiceSeed(raw: Record<string, unknown>): number {
+  const mapSeed = isObject(raw.setup) && typeof raw.setup.seed === 'number' ? raw.setup.seed : 0;
+  const day = typeof raw.day === 'number' ? raw.day : 0;
+  return (mapSeed ^ Math.imul(day, FORMAT_3_DAY_MIX)) >>> 0;
+}
+
+/*
+ * Paso del formato 3: el turno de cada unidad eran tres banderas (active, canMove, canFire). Con
+ * `active` apagado ya habia actuado; con el encendido, si aun no se habia movido estaba sin usar.
+ */
+
+/** El punto del turno de una unidad del formato 3, por sus banderas de entonces. */
+function format3TurnState(unit: Record<string, unknown>): string {
+  if (!unit.active) return 'done';
+  return unit.canMove ? 'ready' : 'moved';
+}
+
+/*
+ * Paso del formato 3: al leer una partida se le daban teclas de grupo a las escuadras que no tenian
+ * (o la tenian repetida en su equipo): la primera libre de su equipo, en orden. Desde el 4 leer no
+ * cambia las escuadras; las partidas de antes se ponen asi una vez, con esta copia fija.
+ */
+
+/** Teclas de grupo que habia en el formato 3 (1-9). */
+const FORMAT_3_SQUAD_KEYS = 9;
+
+/** Las escuadras del formato 3 sin tecla repetida en su equipo, y con la primera libre las que no tienen. */
+function format3SquadKeys(raw: Record<string, unknown>): void {
+  const squads = listOf(raw.squads).filter(isObject);
+  const taken = new Set<string>();
+  const keyOf = (squad: Record<string, unknown>, key: unknown) => `${String(squad.team)}:${String(key)}`;
+  const isKey = (key: unknown) => typeof key === 'number' && Number.isInteger(key) && key >= 1 && key <= FORMAT_3_SQUAD_KEYS;
+  for (const squad of squads) {
+    if (isKey(squad.key) && !taken.has(keyOf(squad, squad.key))) taken.add(keyOf(squad, squad.key));
+    else delete squad.key;
+  }
+  for (const squad of squads) {
+    if (squad.key !== undefined) continue;
+    const free = Array.from({ length: FORMAT_3_SQUAD_KEYS }, (_, index) => index + 1).find((key) => !taken.has(keyOf(squad, key)));
+    if (free === undefined) continue;
+    squad.key = free;
+    taken.add(keyOf(squad, free));
+  }
+}
+
 /** Los pasos, del mas antiguo al mas nuevo. */
 export const MIGRATIONS: readonly SaveMigration[] = [
   {
@@ -311,6 +366,47 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
   {
+    // Hasta el formato 3 leer una partida daba tecla a sus escuadras; desde el 4, leer no las cambia.
+    name: 'teclas de grupo de las escuadras',
+    upToVersion: 3,
+    stage: 'read',
+    apply: (raw) => format3SquadKeys(raw),
+  },
+  {
+    // Hasta el formato 3 los dados no iban en la partida; desde el 4, `dice` (ver core/dice.ts).
+    name: 'dados de la partida',
+    upToVersion: 3,
+    stage: 'read',
+    apply: (raw) => {
+      raw.dice ??= format3DiceSeed(raw);
+    },
+  },
+  {
+    // Hasta el formato 3, tres banderas por unidad; desde el 4, `turnState` (ver rules/unitTurn.ts).
+    name: 'banderas del turno pasan a turnState',
+    upToVersion: 3,
+    stage: 'read',
+    apply: (raw) => {
+      for (const unit of listOf(raw.units)) {
+        if (!isObject(unit) || unit.turnState !== undefined) continue;
+        unit.turnState = format3TurnState(unit);
+        delete unit.active;
+        delete unit.canMove;
+        delete unit.canFire;
+      }
+    },
+  },
+  {
+    // Hasta el formato 4 el numero de una escuadra nueva era el mayor + 1 (se reutilizaba el de una
+    // que acababa de desaparecer); desde el 5, `nextSquadId`, que solo sube. Se sigue desde el mayor.
+    name: 'numero de la siguiente escuadra',
+    upToVersion: 4,
+    stage: 'read',
+    apply: (raw) => {
+      raw.nextSquadId ??= format4NextSquadId(raw);
+    },
+  },
+  {
     // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
     name: 'la orden comun de las unidades pasa a la escuadra',
     upToVersion: 1,
@@ -320,6 +416,12 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
 ];
+
+/** Formato 4: la siguiente escuadra era la del mayor numero + 1 (copia fija de lo de entonces). */
+function format4NextSquadId(raw: Record<string, unknown>): number {
+  const ids = listOf(raw.squads).map((squad) => (isObject(squad) && typeof squad.id === 'number' ? squad.id : 0));
+  return Math.max(0, ...ids) + 1;
+}
 
 const needs = (migration: SaveMigration, savedVersion: number) => savedVersion <= migration.upToVersion;
 

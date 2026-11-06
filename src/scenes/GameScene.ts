@@ -5,15 +5,16 @@
  * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
-import { effectiveStandingOrder, renameSquad } from '../core/squads';
+import { effectiveStandingOrder } from '../core/squads';
 import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption } from '../core/rules';
+import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
-import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
+import { dispatch } from '../core/actions';
+import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
 import {
@@ -46,7 +47,7 @@ import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
-import { GAME_MENU, MENU_PHASES, type ActionKey, type GameStartData, type Phase } from './game/types';
+import { GAME_MENU, KEEPS_UNDO, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
@@ -353,7 +354,7 @@ export class GameScene extends Phaser.Scene {
         if (ready()) this.selection.pickSquad(id);
       },
       renameSquad: (id: number, name: string) => {
-        renameSquad(this.s, id, name);
+        this.act({ kind: 'renameSquad', squad: id, name });
         ui.set({ rename: null });
         this.refresh();
       },
@@ -628,7 +629,7 @@ export class GameScene extends Phaser.Scene {
   /** Si hay una unidad movida a medio decidir, deshacer su movimiento antes de salir. */
   private abandonSelection(): void {
     const isDecidingAfterMove = ['unitMenu', 'attack', 'unloadPick', 'unloadTile'].includes(this.phase);
-    if (isDecidingAfterMove && this.moves.session?.undo) this.moves.undoMove();
+    if (isDecidingAfterMove && this.moves.canUndoSelected()) this.moves.undoMove();
     if (this.phase !== 'map') this.toMap();
   }
 
@@ -696,7 +697,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
   private idleUnits(): Unit[] {
-    return this.s.units.filter((unit) => this.isOwn(unit) && unit.active && unit.carrier === null && !this.standingOrderOf(unit));
+    return this.s.units.filter((unit) => this.isOwn(unit) && canActNow(unit) && !this.standingOrderOf(unit));
   }
 
   /** [CAMBIO] Linea de la orden: de la unidad bajo el cursor (y su escuadra) o de las que se estan ordenando. */
@@ -729,15 +730,38 @@ export class GameScene extends Phaser.Scene {
     return this.player.play(events, ghostKey);
   }
 
-  /** Cada evento, antes de animarlo. */
+  /**
+   * La persona de la pantalla hace una accion de su equipo (ver ActionHost): sus sucesos, o null si
+   * no vale. Sus sucesos se apuntan aqui, se animen o no.
+   */
+  private act(action: GameAction): GameEvent[] | null {
+    const result = dispatch(this.s, this.viewer, action);
+    if (!result.ok) return null;
+    this.record(result.events);
+    return result.events;
+  }
+
+  /** La hace y anima sus sucesos (ver ActionHost). */
+  private async perform(action: GameAction, ghostKey?: string | null): Promise<boolean> {
+    const events = this.act(action);
+    if (events) await this.playEvents(events, ghostKey);
+    return !!events;
+  }
+
+  /** Apunta los sucesos de una accion ya hecha (ver ActionHost.record). */
+  private record(events: readonly GameEvent[]): void {
+    for (const event of events) this.noteEvent(event);
+  }
+
+  /** Un suceso ya hecho: estadisticas, tutorial, Ctrl+Z y donde ha pasado lo ultimo. */
   private noteEvent(event: GameEvent): void {
     const isOwnTurn = !this.othersPlaying;
     const replaying = this.turns.replaying;
     // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
-    if (isOwnTurn && event.kind !== 'move') this.moves.clearUndo();
-    if (!replaying) recordEvent(this.s, event, this.turns.acting);
+    if (isOwnTurn && !KEEPS_UNDO.has(event.kind)) this.moves.clearUndo();
+    if (!replaying) recordEvent(this.s, event);
     if (!replaying && isOwnTurn) this.tutorial.record(event);
-    if (event.kind === 'attack') this.lastAt = { ...event.target };
+    if (event.kind === 'attack') this.lastAt = { ...event.at };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };
   }
 
@@ -818,9 +842,7 @@ export class GameScene extends Phaser.Scene {
   /** Intenciones que se dibujan: de la unidad señalada y su escuadra, o de todas con la tecla V. */
   private intentsToDraw(): ViewOptions['intents'] {
     if (this.phase !== 'map' || this.othersPlaying || this.ended || this.lab) return [];
-    const withStandingOrder = this.s.units.filter(
-      (unit) => this.isOwn(unit) && this.standingOrderOf(unit) && unit.active && unit.carrier === null,
-    );
+    const withStandingOrder = this.s.units.filter((unit) => this.isOwn(unit) && this.standingOrderOf(unit) && canActNow(unit));
     const shown = withStandingOrder.filter((unit) => this.intents || this.showsOrderLine(unit));
     if (!shown.length) return [];
     return intentLines(shown, this.standingOrderPreview.get(this.s, this.viewer), this.vis);
@@ -995,6 +1017,15 @@ export class GameScene extends Phaser.Scene {
   // Lo que cada modulo de game/ ve de la escena
   // =========================================================================
 
+  /** Hacer acciones y apuntar sucesos: lo mismo para todos los modulos que hacen acciones. */
+  private actionHost(): ActionHost {
+    return {
+      act: (action) => this.act(action),
+      perform: (action, ghostKey) => this.perform(action, ghostKey),
+      record: (events) => this.record(events),
+    };
+  }
+
   private makePhaseHost(): PhaseHost {
     return live<PhaseHost>({
       state: { get: () => this.s },
@@ -1042,6 +1073,7 @@ export class GameScene extends Phaser.Scene {
       inspect: (unit) => this.inspect(unit),
       visible: (pos) => this.visibleToPlayer(pos),
       play: (events) => this.playEvents(events),
+      ...this.actionHost(),
     });
   }
 
@@ -1067,6 +1099,7 @@ export class GameScene extends Phaser.Scene {
       afterAction: () => this.afterAction(),
       openUnitMenu: () => this.openUnitMenu(),
       captureNow: () => captureNow(this.phaseHost),
+      ...this.actionHost(),
     });
   }
 
@@ -1086,7 +1119,6 @@ export class GameScene extends Phaser.Scene {
       ),
       match: { get: () => this.match },
       selected: { get: () => this.moves.selected },
-      undo: { get: () => this.moves.session?.undo ?? null },
       selection: { get: () => this.selection },
       menuPick: () => this.menuItems[this.menuSel]?.id,
       stopInspect: () => {
@@ -1106,6 +1138,7 @@ export class GameScene extends Phaser.Scene {
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
       play: (events) => this.playEvents(events),
+      ...this.actionHost(),
     });
   }
 
@@ -1139,6 +1172,7 @@ export class GameScene extends Phaser.Scene {
       },
       refresh: () => this.refresh(),
       cursorMoved: () => this.cursorMoved(),
+      ...this.actionHost(),
     });
   }
 
@@ -1216,6 +1250,7 @@ export class GameScene extends Phaser.Scene {
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
       play: (events) => this.playEvents(events),
+      ...this.actionHost(),
     });
   }
 
@@ -1240,7 +1275,6 @@ export class GameScene extends Phaser.Scene {
       visible: (pos) => this.visibleToPlayer(pos),
       refresh: () => this.refresh(),
       refreshHud: () => this.refreshHud(),
-      noteEvent: (event) => this.noteEvent(event),
     });
   }
 
@@ -1281,6 +1315,7 @@ export class GameScene extends Phaser.Scene {
       markSaved: () => {
         this.savedThisGame = true;
       },
+      ...this.actionHost(),
     });
   }
 
@@ -1307,6 +1342,7 @@ export class GameScene extends Phaser.Scene {
       viewer: { get: () => this.viewer },
       refresh: () => this.refresh(),
       play: (events) => this.playEvents(events),
+      ...this.actionHost(),
     });
   }
 }

@@ -219,12 +219,12 @@ Efectos que hay (`effect.kind`):
 |---|---|
 | `reveal` | Ve todo el mapa hasta que acaba la ronda |
 | `areaDamage` | Quita `damage` de vida a los enemigos en un cuadrado de lado `2 × radius + 1` alrededor de la casilla elegida; nunca los deja por debajo de `minLife` (no mata) |
-| `heal` | Sus unidades recuperan `amount` de vida (hasta 100). Con `movement` y/o `units`, solo esas (como en `passive`) |
-| `funds` | Consigue `amount` de dinero al momento |
+| `heal` | Sus unidades en el mapa (no las que van en un transporte) recuperan `amount` de vida (hasta 100). Con `movement` y/o `units`, solo esas (como en `passive`) |
+| `funds` | Consigue `amount` de dinero al momento (sin pasar del maximo, `maxFunds`) |
 
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
 `content/generals.ts` (tipo y validacion), su regla en `core/generals.ts` (`POWER_EFFECTS`, lo usa
-`usePower`) y su animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `power`). Los
+`applyPower`, el `apply` de la accion `usePower`) y su animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `power`). Los
 "poderes" son del general (se usan una vez por turno); las "habilidades" son de las unidades
 (`abilities`, siempre activas).
 
@@ -244,8 +244,12 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 ## Reglas e IA
 
 - `rules.json`: `defaults` son las reglas con las que empieza una partida nueva (la pantalla de nueva
-  partida y las misiones cambian algunas) y `maxFunds` el dinero maximo. Cada regla esta explicada en el
-  esquema (pasar el raton por encima en el editor). Las que premian atacar: `bounty` (botin al
+  partida y las misiones cambian algunas) y `maxFunds` el dinero maximo (lo que pase se pierde al acabar
+  cada accion y cada ronda). Cada regla esta explicada en el esquema (pasar el raton por encima en el
+  editor). Que valores puede tener cada una lo dice `RULE_SCHEMA` (`src/core/rulesSchema.ts`): lo
+  comprueban al cargar el contenido y al leer una partida guardada, y rules.schema.json tiene que
+  decir lo mismo (lo mira `tests/rulesSchema.test.ts`). Una regla nueva va en `RulesConfig`, en
+  `RULE_SCHEMA`, en rules.json y en su esquema. Las que premian atacar: `bounty` (botin al
   destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
   (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania); ver
   `docs/BALANCE.md`.
@@ -283,7 +287,7 @@ cual, ya validados: `s.content.generals`). Comparten `check.ts` (mensajes de err
 Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 
 **El contenido es un valor que lleva cada partida**, no un modulo: `loadContent(ficheros)` da un
-`GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `deserialize` lo ponen en el campo
+`GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `readSave` lo ponen en el campo
 `GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
 `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, building).earning`, `terrainAt(s, pos)`, `themeOf(s)`,
 `weightsOf(s).KILLBONUS`, `s.content.generals`; las reglas por defecto, `rulesWith(contenido, cambios)`;

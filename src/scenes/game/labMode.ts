@@ -3,17 +3,15 @@
  * combaten, a camara lenta si se pide. Es una partida sin niebla ni final.
  */
 import type Phaser from 'phaser';
-import { seededRng } from '../../core/geom';
-import { attackEvent, moveEvent, moveRange, moveUnit } from '../../core/rules';
 import type { GameEvent, GameState, TeamId } from '../../core/model';
 import { isHostile } from '../../core/teams';
 import { LAB_TARGET, labRange, type LabAction, type LabOptions } from '../../lab';
 import { TILE } from '../../layout';
 import type { MapView } from '../../ui/mapView';
-import type { GameStartData } from './types';
+import type { ActionHost, GameStartData } from './types';
 
 /** Lo que el laboratorio necesita de la escena. */
-export interface LabHost {
+export interface LabHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
   readonly state: GameState;
@@ -45,13 +43,10 @@ async function runLab(host: LabHost, action: LabAction): Promise<void> {
   const foe = s.units.find((unit) => isHostile(s, host.viewer, unit.team));
   if (!me || !foe) return;
   if (action === 'move') {
-    const range = moveRange(s, me);
-    const dest = { x: LAB_TARGET.x - labRange(s, me), y: LAB_TARGET.y };
-    const path = moveUnit(s, me, dest, range);
-    if (path) await host.play([moveEvent(me.uid, path)]);
+    await host.perform({ kind: 'move', uid: me.uid, to: { x: LAB_TARGET.x - labRange(s, me), y: LAB_TARGET.y } });
     return;
   }
-  await host.play([attackEvent(s, me, foe, seededRng(3))]);
+  await host.perform({ kind: 'attack', uid: me.uid, target: foe.uid });
 }
 
 /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */

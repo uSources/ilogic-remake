@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { createGame, saveContext } from '@core/defaultGames';
 import { endRound, isMatchOver, turnTakers } from '@core/rules';
 import { duel } from '@core/teams';

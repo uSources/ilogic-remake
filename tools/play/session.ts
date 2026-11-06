@@ -9,31 +9,31 @@ import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState,
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createGame, loadGame } from '@core/defaultGames';
-import { posKey, samePos, seededRng } from '@core/geom';
+import { posKey } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
-import { appointGeneral, powerBlock, generalOf, newGeneral, usePower } from '@core/generals';
+import { appointGeneral, generalOf, newGeneral } from '@core/generals';
 import { buildMission, missionById } from '@core/missions';
 import {
-  attackFull,
   attackTargets,
   buildingAt,
   buyOptions,
   canCapture,
-  capture,
   endRound,
+  roundReport,
+  endsInAmbush,
   moveRange,
-  moveUnit,
   outcome,
   reachableTiles,
-  spawn,
   othersAfter,
   unitAt,
   unitById,
   visibility,
-  wait,
+  canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
+import { dispatch } from '@core/actions';
+import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -92,7 +92,7 @@ export class Session {
     } else if (options.mission) {
       const mission = missionById(options.mission);
       if (!mission) throw new Error(`No existe la mision "${options.mission}"`);
-      this.s = buildMission(mission, defaultContent());
+      this.s = buildMission(mission, defaultContent(), seed);
     } else {
       this.s = createGame(seededRng(seed), {
         size: options.size ?? 20,
@@ -152,7 +152,7 @@ export class Session {
           return this.capture(this.mine(numberAt(0)));
         case 'wait':
         case 'esperar':
-          wait(this.mine(numberAt(0)));
+          this.perform({ kind: 'wait', uid: this.mine(numberAt(0)).uid }, 'no puede esperar');
           return 'ok';
         case 'buy':
         case 'comprar':
@@ -185,7 +185,7 @@ export class Session {
     const unit = unitById(this.s, uid);
     if (!unit) throw new UsageError(`no existe la unidad ${uid}`);
     if (unit.team !== this.me) throw new UsageError(`la unidad ${uid} no es tuya`);
-    if (needActive && !unit.active) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
+    if (needActive && !canStillAct(unit)) throw new UsageError(`la unidad ${uid} ya ha actuado este turno`);
     if (unit.carrier !== null) throw new UsageError(`la unidad ${uid} va dentro de un transporte`);
     return unit;
   }
@@ -225,7 +225,7 @@ export class Session {
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
-        const usedTag = [unit.active ? '' : 'usada'].filter(Boolean).join(' ');
+        const usedTag = [canStillAct(unit) ? '' : 'usada'].filter(Boolean).join(' ');
         return `${String(unit.uid).padStart(3)} ${unit.team === this.me ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
@@ -236,7 +236,7 @@ export class Session {
     const targets = attackTargets(this.s, unit);
     const tiles = reachableTiles(range);
     return [
-      `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${unit.active ? 'puede actuar' : 'ya ha actuado'}`,
+      `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${canStillAct(unit) ? 'puede actuar' : 'ya ha actuado'}`,
       `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
       `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${unitTypeOf(this.s, unit).id} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
@@ -245,24 +245,35 @@ export class Session {
       .join('\n');
   }
 
+  /**
+   * La persona hace una accion de su equipo por la misma via que el juego (dispatch). Si no vale, el
+   * error dice `problem` y la razon que da el nucleo.
+   */
+  private perform(action: GameAction, problem: string): GameEvent[] {
+    const result = dispatch(this.s, this.me, action);
+    if (!result.ok) throw new UsageError(`${problem} (${result.reason})`);
+    return result.events;
+  }
+
   private move(unit: Unit, to: Pos): string {
-    const path = moveUnit(this.s, unit, to);
-    if (!path) throw new UsageError(`la unidad ${unit.uid} no puede llegar a (${posKey(to)})`);
-    return path.ambush ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
+    const events = this.perform({ kind: 'move', uid: unit.uid, to }, `la unidad ${unit.uid} no puede llegar a (${posKey(to)})`);
+    return endsInAmbush(events) ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
   }
 
   private attack(unit: Unit, at: Pos): string {
-    const target = attackTargets(this.s, unit).find((target) => samePos(target, at));
-    if (!target) throw new UsageError(`la unidad ${unit.uid} no puede atacar a (${posKey(at)}) desde (${unit.x},${unit.y})`);
-    const result = attackFull(this.s, unit, target, this.rng);
-    wait(unit);
-    return `daño ${result.damage}${result.killed ? ' (destruida)' : ''}${result.counter ? `, contraataque ${result.counter}${result.attackerKilled ? ' (la tuya destruida)' : ''}` : ''}`;
+    const target = unitAt(this.s, at);
+    const problem = `la unidad ${unit.uid} no puede atacar a (${posKey(at)}) desde (${unit.x},${unit.y})`;
+    if (!target) throw new UsageError(problem);
+    const [fight] = this.perform({ kind: 'attack', uid: unit.uid, target: target.uid }, problem);
+    if (fight?.kind !== 'attack') return 'ok';
+    const counter = fight.counter ? `, contraataque ${fight.counter}${fight.attackerKilled ? ' (la tuya destruida)' : ''}` : '';
+    return `daño ${fight.damage}${fight.killed ? ' (destruida)' : ''}${counter}`;
   }
 
   private capture(unit: Unit): string {
-    const result = capture(this.s, unit);
-    if (!result) throw new UsageError(`la unidad ${unit.uid} no puede capturar ahi`);
-    return result.done ? 'edificio capturado' : `capturando: quedan ${result.left} de ${result.total}`;
+    const [captured] = this.perform({ kind: 'capture', uid: unit.uid }, `la unidad ${unit.uid} no puede capturar ahi`);
+    if (captured?.kind !== 'capture') return 'ok';
+    return captured.left === 0 ? 'edificio capturado' : `capturando: quedan ${captured.left} de ${captured.total}`;
   }
 
   private buy(at: Pos, name: string): string {
@@ -273,9 +284,10 @@ export class Session {
     if (!options.length) throw new UsageError(`${buildingTypeOf(this.s, building).id} no fabrica unidades`);
     if (!unitType)
       return `error: tipo desconocido. Aqui se puede: ${options.map((buyOption) => `${buyOption.unitType.id} (${buyOption.cost})`).join(', ')}`;
-    const unit = spawn(this.s, building, unitType);
-    if (!unit) throw new UsageError(`no se puede comprar ${name} aqui (dinero ${teamState(this.s, this.me).funds})`);
-    return `comprada ${unit.uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
+    const problem = `no se puede comprar ${name} aqui (dinero ${teamState(this.s, this.me).funds})`;
+    const [built] = this.perform({ kind: 'buy', at, unitType: unitType.id }, problem);
+    const uid = built?.kind === 'spawn' ? built.uid : '?';
+    return `comprada ${uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
   }
 
   /** Usar un poder del general (sin id: lista de poderes y carga). */
@@ -285,9 +297,8 @@ export class Session {
     const list = general.definition.powers.map((power) => `${power.id} (${power.cost})`).join(', ');
     if (!id)
       return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
-    const block = powerBlock(this.s, this.me, id, target);
-    if (block) throw new UsageError(`no se puede usar ${id}: ${block} (poderes: ${list})`);
-    return describe(this.s, usePower(this.s, this.me, id, target)!);
+    const events = this.perform({ kind: 'usePower', power: id, target }, `no se puede usar ${id} (poderes: ${list})`);
+    return told(this.s, events, '').join('\n');
   }
 
   /**
@@ -297,11 +308,11 @@ export class Session {
    */
   private endTurn(aiForMe: boolean): string {
     const out: string[] = [];
-    if (aiForMe) for (const event of aiTurn(this.s, this.rng, this.me)) out.push(`tu IA: ${describe(this.s, event)}`);
+    if (aiForMe) out.push(...told(this.s, aiTurn(this.s, this.rng, this.me), 'tu IA: '));
     // othersAfter pasa siempre una vez por el fin de ronda: ahi se sabe lo cobrado.
     let income = 0;
     for (const step of othersAfter(this.s, this.me)) {
-      if (step.kind === 'roundEnd') income = teamValue(endRound(this.s).income, this.me);
+      if (step.kind === 'roundEnd') income = teamValue(roundReport(this.s, endRound(this.s)).income, this.me);
       else this.playOther(step.team, out);
     }
     out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
@@ -314,7 +325,7 @@ export class Session {
   private playOther(team: TeamId, out: string[]): void {
     const reason = notAiControlledReason(this.s, team);
     if (reason) throw new UsageError(reason);
-    for (const event of aiTurn(this.s, this.rng, team)) out.push(`equipo ${team}: ${describe(this.s, event)}`);
+    out.push(...told(this.s, aiTurn(this.s, this.rng, team), `equipo ${team}: `));
   }
 
   status(): string {
@@ -330,7 +341,7 @@ export class Session {
       `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${outcome(s, me)}`,
       `sin usar: ${
         s.units
-          .filter((unit) => unit.team === me && unit.active && unit.carrier === null)
+          .filter((unit) => unit.team === me && canStillAct(unit) && unit.carrier === null)
           .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,
@@ -340,7 +351,21 @@ export class Session {
 
 class UsageError extends Error {}
 
-function describe(s: GameState, event: GameEvent): string {
+/**
+ * Lo que se cuenta de unos sucesos, una linea por suceso con `prefix` delante (los que no dicen nada
+ * nuevo, como esperar o una orden cumplida, no se cuentan).
+ */
+function told(s: GameState, events: Iterable<GameEvent>, prefix: string): string[] {
+  const lines: string[] = [];
+  for (const event of events) {
+    const line = describe(s, event);
+    if (line) lines.push(prefix + line);
+  }
+  return lines;
+}
+
+/** Un suceso en una linea, o null si no merece la pena contarlo. */
+function describe(s: GameState, event: GameEvent): string | null {
   const name = (uid: number) => {
     const unit = unitById(s, uid);
     return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
@@ -349,7 +374,7 @@ function describe(s: GameState, event: GameEvent): string {
     case 'move':
       return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.ambush ? ' (emboscada)' : ''}`;
     case 'attack':
-      return `${name(event.attacker)} ataca (${event.target.x},${event.target.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
+      return `${name(event.attacker)} ataca (${event.at.x},${event.at.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
     case 'capture':
       return `${name(event.uid)} captura (${event.at.x},${event.at.y})${event.left ? `, quedan ${event.left}` : ''}`;
     case 'spawn':
@@ -358,10 +383,15 @@ function describe(s: GameState, event: GameEvent): string {
       return `${name(event.uid)} se une a ${name(event.into)}`;
     case 'load':
       return `${name(event.uid)} sube a ${name(event.into)}`;
-    case 'wait':
-      return `${name(event.uid)} espera`;
+    case 'unload':
+      return `${name(event.uid)} baja a ${name(event.passenger)} en (${event.to.x},${event.to.y})`;
+    case 'supply':
+      return `${name(event.uid)} repara a ${event.repairs.length}`;
     case 'power':
       return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+    default:
+      // Esperar, ordenes, escuadras, viajes y el fin de ronda (eso lo resume endTurn) no se cuentan.
+      return null;
   }
 }
 

@@ -4,7 +4,18 @@
  */
 import { posKey } from '../../../core/geom';
 import { unitTypeOf } from '../../../core/gameContent';
-import { buildingAt, canBuyAt, moveRange, reachableTiles, unitAt, unitById, unitThreat } from '../../../core/rules';
+import {
+  buildingAt,
+  canBuyAt,
+  moveRange,
+  reachableTiles,
+  unitAt,
+  unitById,
+  unitThreat,
+  canStillAct,
+  canMoveNow,
+  isShownTo,
+} from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import type { Pos, TeamId, Unit } from '../../../core/model';
 import { clickSelect } from '../../../controls/selection';
@@ -59,10 +70,10 @@ export function acceptMapTile(host: PhaseHost, tile: Pos): void {
     host.inspectUid = null;
     if (isSameUnit || !unit) return host.refresh();
   }
-  if (unit && isOwn(host.viewer, unit) && unit.active) return host.moves.select(unit);
+  if (unit && isOwn(host.viewer, unit) && canStillAct(unit)) return host.moves.select(unit);
   const building = buildingAt(host.state, tile);
   if (building && building.owner === host.viewer && canBuyAt(host.state, building)) return openBuy(host, building);
-  if (unit && unit.carrier === null && (isOwn(host.viewer, unit) || host.visible(unit))) return host.inspect(unit);
+  if (unit && isShownTo(host.viewer, unit, (pos) => host.visible(pos))) return host.inspect(unit);
   host.enter('gameMenu');
 }
 
@@ -71,7 +82,7 @@ function hoverMarks(input: HighlightInput): Highlights {
   const marks = noHighlights();
   const unit = unitAt(input.s, input.cursor);
   if (!unit || !isOwn(input.viewer, unit) || input.othersPlaying) return marks;
-  if (unit.active && unit.canMove && unit.carrier === null) {
+  if (canMoveNow(unit)) {
     for (const tile of reachableTiles(moveRange(input.s, unit))) marks.tiles.set(posKey(tile), 'hover');
   }
   // [CAMBIO] Señalando una unidad de escuadra: se marcan sus compañeras.
@@ -85,9 +96,9 @@ function hoverMarks(input: HighlightInput): Highlights {
 function inspectMarks(input: HighlightInput, uid: number): Highlights {
   const marks = noHighlights();
   const unit = unitById(input.s, uid);
-  if (!unit || unit.carrier !== null || (!isOwn(input.viewer, unit) && !input.visible(unit))) return { ...marks, inspectGone: true };
+  if (!unit || !isShownTo(input.viewer, unit, (pos) => input.visible(pos))) return { ...marks, inspectGone: true };
   // Como si fuera su turno: aunque ya se haya movido, se ve hasta donde llegaria.
-  const range = moveRange(input.s, { ...unit, active: true, canMove: true });
+  const range = moveRange(input.s, { ...unit, turnState: 'ready' });
   const threat = unitThreat(input.s, unit);
   const canMove = unitTypeOf(input.s, unit).move > 0;
   for (const { pos, value: steps } of range.steps.cells()) {

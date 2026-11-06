@@ -3,9 +3,9 @@
  * en controls/actions.ts (puro, sin escena); aqui, que pasa en la partida. El tipo de ACTION_RUNNERS
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
-import { cancelStandingOrder, disbandSquad, formSquad, leaveSquad, pruneSquads, squadById, SQUAD_NAME_MAX } from '../../core/squads';
-import type { GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
-import { exactSquad, type ActionId } from '../../controls/actions';
+import { exactSquad, SQUAD_NAME_MAX } from '../../core/squads';
+import type { GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
+import type { ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
 import { t } from '../../settings';
 
@@ -25,6 +25,8 @@ export interface ActionRunHost {
   readonly state: GameState;
   /** El equipo que juega la persona en esta pantalla (el que mira). */
   readonly viewer: TeamId;
+  /** Hace una accion del que mira (ver ActionHost en types.ts). */
+  act(action: GameAction): GameEvent[] | null;
   moveCursorTo(pos: Pos, follow: boolean): void;
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
   commit(at: Pos, options: { drop?: boolean }): Promise<void>;
@@ -79,39 +81,40 @@ function orderWithTarget(kind: StandingOrderKind) {
 }
 
 /** Accion inmediata sobre la partida (quitar ordenes, escuadras): se hace, y se cierra el menu. */
-function instant(change: (s: GameState, units: Unit[], team: TeamId) => void) {
+function instant(change: (host: ActionRunHost, units: Unit[]) => void) {
   return (action: ActionRun, host: ActionRunHost) => {
-    change(host.state, action.units, host.viewer);
+    change(host, action.units);
     host.finish();
   };
 }
 
-function cancelOrders(s: GameState, units: Unit[]): void {
-  cancelStandingOrder(s, units);
+const uidsOf = (units: readonly Unit[]): number[] => units.map((unit) => unit.uid);
+
+function cancelOrders(host: ActionRunHost, units: Unit[]): void {
+  host.act({ kind: 'cancelStandingOrder', uids: uidsOf(units) });
   showToast(t('orderCancelled'));
 }
 
-function announceNewSquad(s: GameState, units: Unit[], team: TeamId): void {
-  const squad = formSquad(s, team, units);
-  if (!squad) return;
-  const keyHint = squad.key ? ` · ${t('squadKeyHint')} ${squad.key}` : '';
-  showToast(`${t('squadFormed')}: ${squad.name}${keyHint}`);
+function announceNewSquad(host: ActionRunHost, units: Unit[]): void {
+  const formed = host.act({ kind: 'formSquad', uids: uidsOf(units) })?.find((event) => event.kind === 'squad');
+  if (formed?.kind !== 'squad') return;
+  const keyHint = formed.key ? ` · ${t('squadKeyHint')} ${formed.key}` : '';
+  showToast(`${t('squadFormed')}: ${formed.name}${keyHint}`);
 }
 
-function leaveSquads(s: GameState, units: Unit[]): void {
-  for (const unit of units) leaveSquad(s, unit);
-  pruneSquads(s);
+function leaveSquads(host: ActionRunHost, units: Unit[]): void {
+  host.act({ kind: 'leaveSquad', uids: uidsOf(units) });
 }
 
 /** Abre el cuadro para escribir el nombre (hud/overlays/RenameSquad.tsx). */
-function askSquadName(s: GameState, units: Unit[]): void {
-  const id = exactSquad(s, units);
-  if (id !== null) ui.set({ rename: { id, name: squadById(s, id)?.name ?? '', max: SQUAD_NAME_MAX } });
+function askSquadName(host: ActionRunHost, units: Unit[]): void {
+  const squad = exactSquad(host.state, units);
+  if (squad) ui.set({ rename: { id: squad.id, name: squad.name, max: SQUAD_NAME_MAX } });
 }
 
-function disbandWholeSquad(s: GameState, units: Unit[]): void {
-  const id = exactSquad(s, units);
-  if (id !== null) disbandSquad(s, id);
+function disbandWholeSquad(host: ActionRunHost, units: Unit[]): void {
+  const squad = exactSquad(host.state, units);
+  if (squad) host.act({ kind: 'disbandSquad', squad: squad.id });
 }
 
 export const ACTION_RUNNERS: { readonly [Id in ActionId]: ActionRunner } = {

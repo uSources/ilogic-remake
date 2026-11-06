@@ -19,6 +19,7 @@ export const orders: Translation<typeof es> = {
   orderDone: 'Order complete',
   orderNoBuilding: 'There is no building to capture there',
   orderNoCapturer: 'None of these units can capture',
+  orderNoFighter: 'None of these units can attack',
   orderHereNone: 'Pick a unit or a group first (then F on the destination)',
   squads: 'Squads',
   multiOff: 'Pick several',

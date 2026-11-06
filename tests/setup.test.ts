@@ -3,13 +3,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
-import { seededRng } from '@core/geom';
+import { seededRng } from '@core/util/random';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
 import { createGame, saveContext } from '@core/defaultGames';
 import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { duel } from '@core/teams';
 
 const HQ = hqId();
@@ -73,7 +73,7 @@ describe('nueva partida: tamaños de mapa', () => {
 
 describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
-    const s = blankState(rulesWith(defaultContent(), { dayLimit: 10 }));
+    const s = withoutHeadquarters(blankState(rulesWith(defaultContent(), { dayLimit: 10 })));
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 'City', owner: 1, x: 5, y: 5 });
     newUnit(s, unitTypeNamed('Tank'), 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;

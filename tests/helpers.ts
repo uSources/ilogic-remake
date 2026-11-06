@@ -4,11 +4,14 @@ import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
-import type { GameEvent, GameState, RulesConfig } from '@core/model';
+import type { Building, Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
 import { aiTurn } from '@core/ai';
-import { seededRng } from '@core/geom';
-import { endRound, takesTurn } from '@core/rules';
+import { dispatch } from '@core/actions';
+import { uncheckedAttack } from '@core/sandbox';
+import { seededRng } from '@core/util/random';
+import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
+import { samePos } from '@core/geom';
 
 /** Lado del mapa de las partidas de prueba (como el original). */
 export const BLANK_SIZE = 32;
@@ -21,7 +24,37 @@ export function savedByVersion1(json: string): string {
   return json.replace(`"version":${SAVE_VERSION}`, '"version":1');
 }
 
-/** Partida vacia toda de hierba, para tests de reglas: con las reglas de siempre y los cambios de `rules`. */
+/** El equipo `team` hace la accion (por dispatch, como en el juego) y tiene que valer: sus sucesos. */
+export function act(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
+  const result = dispatch(s, team, action);
+  if (!result.ok) throw new Error(`Accion rechazada (${result.reason}): ${JSON.stringify(action)}`);
+  return result.events;
+}
+
+/**
+ * Un combate con unos dados elegidos, sin comprobar si se puede atacar (para probar la cuenta del
+ * combate): el de la accion 'attack', y despues se quitan las que caen, como hace dispatch.
+ */
+export function fight(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
+  return uncheckedAttack(s, attacker, defender, dice);
+}
+
+/** El equipo usa un poder de su general por dispatch: el suceso, o null si no se puede. */
+export function usePower(s: GameState, team: TeamId, power: string, target: Pos | null = null): GameEventOf<'power'> | null {
+  const result = dispatch(s, team, { kind: 'usePower', power, target });
+  const event = result.ok ? result.events[0] : undefined;
+  return event?.kind === 'power' ? event : null;
+}
+
+/** Acaba la ronda y da su resumen (el que enseña la escena: lo cobrado, pagado, curado...). */
+export const endRoundReport = (s: GameState): RoundReport => roundReport(s, endRound(s));
+
+/** Dados que tiran de un `Rng` (para probar un combate con una tirada conocida, sin los de la partida). */
+export const diceFrom = (rng: Rng): Dice => ({ roll: rng });
+
+/** Semilla de los dados de las partidas de prueba (`GameState.dice`). */
+export const BLANK_DICE_SEED = 1;
+
 /** Dinero de cada equipo en las partidas de prueba. */
 export const BLANK_FUNDS = 5000;
 
@@ -33,15 +66,43 @@ const PERSON_VS_AI: TeamSetup[] = [
   { controller: 'ai', funds: BLANK_FUNDS },
 ];
 
-/** Una partida vacia (todo llano, sin unidades ni edificios) con esas reglas y esos equipos. */
+/**
+ * Una partida vacia (todo llano, sin unidades y sin mas edificios que una Base por equipo, ver
+ * blankHeadquarters) con esas reglas y esos equipos.
+ */
 export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
-  return newGameState({
+  const s = newGameState({
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
     teams,
+    diceSeed: BLANK_DICE_SEED,
   });
+  teams.forEach((_, team) => s.buildings.push({ type: hqId(), owner: team, ...blankHeadquarters(team), capture: null }));
+  return s;
 }
+
+/**
+ * Donde esta la Base de cada equipo en `blankState`: en la ultima fila, lejos de donde ponen sus
+ * unidades los tests. Sin Base un equipo ha perdido (isDefeated) y no puede mandar acciones.
+ */
+export const blankHeadquarters = (team: TeamId): Pos => ({ x: BLANK_SIZE - 1 - team, y: BLANK_SIZE - 1 });
+
+/**
+ * Quita las Bases de `blankState`: para los tests de dinero o de puntos que ponen sus propios
+ * edificios. Sin Base, el equipo ya no puede mandar acciones (ha perdido).
+ */
+export function withoutHeadquarters(s: GameState): GameState {
+  s.buildings = placedBuildings(s);
+  return s;
+}
+
+/** Los edificios que ha puesto el test (sin las Bases de `blankState`). */
+export const placedBuildings = (s: GameState): Building[] =>
+  s.buildings.filter((building) => building.type !== hqId() || !isBlankHeadquarters(building));
+
+const isBlankHeadquarters = (building: Building): boolean =>
+  building.owner !== null && samePos(building, blankHeadquarters(building.owner));
 
 /** Un tipo de unidad del contenido del juego, por su id ('Tank'). */
 export const unitTypeNamed = (id: string): UnitType => entryOf(defaultContent().units, id, 'unidad');
@@ -69,4 +130,11 @@ export function playInterleaved(games: readonly GameState[], days: number, seed:
     games.forEach((s) => endRound(s));
   }
   return events;
+}
+
+/** Unas unidades que no pueden estar vacias (formar escuadra con ninguna no se puede pedir). */
+export function someUnits(units: readonly Unit[]): readonly [Unit, ...Unit[]] {
+  const [first, ...rest] = units;
+  if (!first) throw new Error('Hace falta al menos una unidad');
+  return [first, ...rest];
 }
