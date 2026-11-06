@@ -438,9 +438,10 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
     lo de cualquier ataque esta en `COMBAT_RESOLUTION` (`actions/combat.ts`); quien contraataca, un
     `counterRules`;
   - por donde se pasa, un `passRules` o `stopRules`; lo que corta un camino a mitad, un
-    `pathInterruptions` (con su `InterruptionKind` en `model/events.ts`, su animacion en
-    `INTERRUPTION_ANIMATIONS`, `scenes/game/playback.ts`, y su nombre en `npm run play`);
-  - una parte del resumen de ronda, un `roundReportParts`;
+    `pathInterruptions` (su nombre ampliando `InterruptionKinds`, `model/events.ts`, con `declare
+    module`; si quiere animacion propia, en `INTERRUPTION_ANIMATIONS`, `scenes/game/playback.ts`, y si
+    no sale un destello; en `npm run play`, su nombre o el del codigo);
+  - una parte del resumen de ronda, un `roundReportParts` y su forma ampliando `RoundReportParts`;
   - otra forma de repartir el daño, una entrada en `DAMAGE_MODELS` (`rules/damage.ts`) y su nombre
     en el ajuste `damageModel`; el coste de las casillas o lo que se puede gastar,
     un `enterCosts` o `moveBudgets`; la vision, `visionRadius`, `revealRules`, `concealment` o
@@ -516,7 +517,9 @@ relativa o por `@core/`; solo la lista de acciones, `actions/registry.ts`, junta
 de `generalPowers.ts`). Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que
 las reglas de los modulos no tengan que importar el combate.
 
-Un modulo nuevo: su fichero en `ruleModules/` (lo que aporta a cada lista), su id en `RuleModuleId`,
+Un modulo nuevo: su fichero en `ruleModules/` (lo que aporta a cada lista), su nombre en
+`RuleModuleIds` (los del juego estan alli; el de un modo la amplia con `declare module`, y
+`resolveRuleset` no deja dos con el mismo nombre),
 su entrada en `RULE_MODULES` y, si tiene interruptor, su ajuste en `MatchSettings`, `SETTINGS_SCHEMA`,
 settings.json y settings.schema.json. Una lista nueva que se pueda ampliar: su campo en `RuleHooks` y la
 regla que la mira con `hooksOf`. Lo prueba `tests/ruleModules.test.ts` (cada interruptor quita su

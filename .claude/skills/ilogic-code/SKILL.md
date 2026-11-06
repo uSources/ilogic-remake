@@ -118,9 +118,10 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   (`RuleHooks`): acierto nuevo = `hitModifiers` de su modulo; paso por ronda = `roundPhases` (con su
   momento; los de siempre en `ROUND_PHASES`); algo que pasa en cada ataque = `combatSteps` (los de
   siempre en `COMBAT_RESOLUTION`, `core/actions/combat.ts`); quien contraataca = `counterRules`; por
-  donde se pasa = `passRules`/`stopRules`; lo que corta un camino = `pathInterruptions` (con su
-  `InterruptionKind` y su animacion en `INTERRUPTION_ANIMATIONS`); parte del resumen de ronda =
-  `roundReportParts`; reparto del daño = entrada en `DAMAGE_MODELS` (ajuste `damageModel`); un modo
+  donde se pasa = `passRules`/`stopRules`; lo que corta un camino = `pathInterruptions` (su nombre
+  ampliando `InterruptionKinds`; animacion propia opcional en `INTERRUPTION_ANIMATIONS`); parte del
+  resumen de ronda = `roundReportParts` (su forma ampliando `RoundReportParts`); nombre de un modulo
+  = `RuleModuleIds` (un modo lo amplia con `declare module`); reparto del daño = entrada en `DAMAGE_MODELS` (ajuste `damageModel`); un modo
   puede traer sus propios modulos (`GameMode.ruleModules`: se resuelven con la partida, `s.ruleset`); las reglas no preguntan por un ajuste (`if (!s.settings.x)`); paso al empezar o acabar cada turno =
   entrada en `TURN_START_PHASES`/`TURN_END_PHASES` (`core/actions/turn.ts`); forma de acabar la
   partida = entrada en `VICTORY_RULES` (`core/rules/victory.ts`) y en la lista de su modo; modo de

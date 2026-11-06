@@ -19,16 +19,16 @@
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
  * | `movementProfile` | como se mueve cada tipo: por donde, lo que cuesta cada casilla, lo que puede gastar |
- * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (las `passRules` de los modulos; `passBlockers` para medir) |
- * | `movement` | cada paso (`stepAllowed`), alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
+ * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (las `passRules` de los modulos; `passBlockers` y `letsAlliesThrough` para medir) |
+ * | `movement` | cada paso (`stepAllowed`), alcance (`moveRange`), caminos (`plannedPath`, `validPath`, `approachPath`) y el paso hacia algo (`stepToward`) |
  * | `distance` | pasos por tierra sin limite (`distanceMap`) y lo que corta el paso al medir (`Blockers`) |
- * | `traverse` | recorrer de verdad un camino: lo que lo corta a mitad (`PATH_INTERRUPTIONS`: la emboscada), su evento |
+ * | `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo corta el primer `pathInterruptions` de los modulos (la emboscada); el suceso de mover |
  * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
  * | `damage` | como sale el daño: la tirada y la probabilidad de cada resultado de cada modelo (`DamageModel`) |
  * | `weapons` | lo que dice el arma de cada tipo: a que distancias llega y a quien le hace daño |
  * | `attackRecord` | lo que se apunta de un ataque mientras se resuelve (`AttackRecord`) |
- * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
+ * | `combat` | desde donde y a quien se dispara (`fireOrigins`, `attackTargets`), proteccion, acierto (`HIT_MODIFIERS` y los de los modulos: veterania, flanqueo, clima...), quien contraataca (`counterRules`), tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
  * | `supply` | a quien se puede reparar, y repararlas |
