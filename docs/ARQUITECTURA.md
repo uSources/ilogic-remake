@@ -145,7 +145,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   un jugador por la red), no del controlador: las cumple core/autopilot, no la IA. 'startTurn' y
   'endTurn' solo los manda la sesion (`isTurnBoundary`; `session.act` los rechaza con
   'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado),
-  en su turno o fuera de el (`anyTime`).
+  en su turno o fuera de el (`anyTime`); el menu solo lo ofrece si la partida se puede perder
+  (`canBeLost`: el laboratorio no), y guardar, si su modo se guarda (`saves`; `gameMenuOf`).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`buildMatch`, `newGameState`, `newUnit`, `appointGeneral`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
@@ -278,7 +279,7 @@ mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
   `savedParts.ts` comprueba o limpia cada parte (lo opcional roto se quita) con lo que necesita
   (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni
   escuadras ni teclas).
-- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 6, atada al
+- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 7, atada al
   tipo de `GameState.version`). `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones
   anteriores, cada uno con hasta que version hace falta y si va sobre el JSON tal cual ('read') o
   sobre la partida comprobada ('checked'). Cada paso hace lo de entonces con su propia copia fija
@@ -295,8 +296,9 @@ mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
   los numeros se reutilizaban). Del 1 al 5: 'turno, modo, rendirse y dueño del objetivo' (le toca a
   la persona; su turno aun no ha empezado si todas sus unidades estan listas, el autoguardado: asi
   sus viajes avanzan al cargar, K3) y 'movimientos que se pueden deshacer' (`lastMove` pasa a
-  `undoableMoves`).
-- Se prueban con partidas guardadas de verdad (`tests/fixtures/saves/*-v1.json` a `*-v5.json`).
+  `undoableMoves`). Del 1 al 6: 'cuando cayo cada equipo' (no se sabia: `fell` null; la siguiente
+  accion apunta a quien ya habia caido).
+- Se prueban con partidas guardadas de verdad (`tests/fixtures/saves/*-v1.json` a `*-v6.json`).
 
 #### Rejillas y casillas
 
@@ -356,8 +358,11 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   `attackTargets`, el botin y la tirada (`strike`).
 - `victory`: `MatchResult` con `status`, `winners` y `reason`; `isMatchOver`, `isWinner`. Las formas
   de acabar estan en `VICTORY_RULES` ('lastAllianceStanding', 'objective', 'dayLimit') y cada modo
-  dice las suyas. Derrota de un equipo (`isDefeated`: sin Base, sin nada o rendido), puntos del
-  limite de dias por alianza, progreso del objetivo de mision.
+  dice las suyas. Derrota de un equipo (`isDefeated`: sin Base, sin nada o rendido) y su motivo
+  (`defeatReason`: rendirse; si no le queda nada, 'wipeout' antes que 'hq'). dispatch apunta cada
+  caida en la accion en que pasa (`noteFallenTeams`: `TeamState.fell`, con su numero de caida, y el
+  suceso 'teamDefeated'), y el motivo del resultado es el de la ultima caida, la que lo decide (no
+  una rendicion de antes). Puntos del limite de dias por alianza, progreso del objetivo de mision.
 - `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
 
 `src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
@@ -502,11 +507,12 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
 ## Partidas en juego (`core/session`)
 
 Quien decide lo que hace cada equipo es un **controlador** (`Controller`, `session/controller.ts`):
-la sesion le pide su turno (`playTurn`) y va haciendo lo que da, paso a paso (`TurnStep`):
-'propose' (una accion para que la mande la sesion; recibe el resultado), 'applied' (una que ya ha
-mandado el: la IA, hasta que en la fase 6 solo proponga, manda las suyas por el `ActionDispatcher`
-que se le da, y la sesion las recibe asi) o 'awaitInput' (decide alguien de fuera: la sesion espera
-a `finishInput`). Cuando el turno del controlador acaba, la sesion manda 'endTurn'.
+la sesion le pide su turno (`playTurn`) y va haciendo lo que da, paso a paso (`TurnStep`): 'propose'
+(una accion para que la mande la sesion; recibe el resultado), 'applied' (una que ya ha hecho el: la
+IA y `autopilotController`, hasta que en la fase 6 solo propongan, mandan las suyas por el
+`ActionDispatcher` de `selfDispatched`, que solo da las hechas y les pone la marca de `AppliedStep`:
+ningun otro controlador puede colar una) o 'awaitInput' (decide alguien de fuera: la sesion espera a
+`finishInput`). Cuando el turno del controlador acaba, la sesion manda 'endTurn'.
 
 | Controlador | Que hace |
 |---|---|
@@ -541,15 +547,17 @@ el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la 
   `act`, lo que propone un controlador y lo que mandan los que mandan ellos mismos
   (`selfDispatched`: la IA y `autopilotController`, que ademas solo pueden mandar acciones de su
   equipo; lo mismo los pasos de turno).
-- Lo que un equipo manda fuera de su turno (rendirse mientras juega otro, o antes de empezar el
-  suyo) queda en el registro en su sitio; si lo es lo dice una sola pregunta, `isOffTurnAction` (el
-  turno es de otro o el suyo aun no ha empezado, y vale en cualquier momento). Los controladores no
-  traen acciones de otros equipos: lo que llega fuera de turno lo da quien crea la sesion
+- El registro (`log`, de `LoggedAction`) y como se lee estan en `session/log.ts`. Lo que un equipo
+  manda fuera de su turno (rendirse mientras juega otro, o antes de empezar el suyo) queda en el
+  registro en su sitio; si lo es lo dice una sola pregunta, `isOffTurnAction` (el turno es de otro o
+  el suyo aun no ha empezado, y vale en cualquier momento). Los controladores no traen acciones de
+  otros equipos: lo que llega fuera de turno lo da quien crea la sesion
   (`SessionOptions.offTurnFeed`), que la sesion mira antes de cada paso. La repeticion es una sesion
   propia (`replaySession`): su controlador (uno para todos los equipos) y su `offTurnFeed` leen el
   registro con el mismo `LogCursor` (mirar no mueve; `advance`, `skipBoundariesDoneBy`, `seekTurnOf`
-  y `takeOffTurn` si), asi lo de fuera de turno entra en su sitio y la repeticion sale igual. Si a
-  quien se espera ya no juega (se ha rendido), la sesion deja de esperarle y pasa su turno.
+  y `takeOffTurn` si), asi lo de fuera de turno entra en su sitio y la repeticion sale igual; al
+  acabarse el registro se para esperando, como la partida que se apunto. Si a quien se espera ya no
+  juega (se ha rendido), la sesion deja de esperarle y pasa su turno.
 - Si es una persona lo dice `session.isPerson(team)` (`Controller.person`): la unica pregunta, que
   usan la escena, el autoguardado y quien mira. Que un paso empieza un turno lo dice
   `startsTurn(paso)`.
@@ -559,8 +567,10 @@ el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la 
   quedan otros equipos), se acaba para esta pantalla: `checkEnd`, que se mira tras cada paso, la da
   por perdida con su motivo (`ScreenEnd`: `outOfMatchEnd`; el de una partida decidida,
   `endOfResult`), la cierra y borra su guardado. Una rendicion vuelve a escribir el guardado que
-  hubiera. Mientras juegan los demas no hay menu, pero Esc o el boton del menu dejan salir al menu
-  principal (`quitWhileWatching`, dos pulsaciones).
+  hubiera, y la escena avisa de cada equipo que cae ('teamDefeated': «El equipo N queda fuera»). El
+  final se lee desde quien mira («El enemigo se ha rendido» si no ha perdido). Mientras juegan los
+  demas no hay menu, pero Esc o el boton del menu (que sigue a `UIState.watching`, lo que dice la
+  escena) dejan salir al menu principal (`quitWhileWatching`, dos pulsaciones).
 
 ```mermaid
 sequenceDiagram
