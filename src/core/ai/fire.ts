@@ -6,6 +6,7 @@ import { unitTypeOf } from '../gameContent';
 import { manhattan } from '../geom';
 import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
+import { engagement } from '../rules/engagement';
 import { moveRange } from '../rules/movement';
 import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
@@ -37,7 +38,8 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
     const origins = fireOrigins(s, shooter, isRanged(s, shooter) ? null : moveRange(s, shooter));
     const damageByTarget = new Map<number, number>();
     for (const foe of nearby)
-      if (origins.some((from) => inAttackRange(s, shooter, from, foe))) damageByTarget.set(foe.uid, expectedDamage(s, shooter, foe));
+      if (origins.some((from) => inAttackRange(s, shooter, from, foe)))
+        damageByTarget.set(foe.uid, expectedDamage(s, engagement(shooter, foe)));
     if (damageByTarget.size) table.set(shooter.uid, damageByTarget);
   }
   return table;

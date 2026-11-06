@@ -4,7 +4,7 @@ import { choosePower } from '@core/aiGenerals';
 import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';
-import { newUnit } from '@core/rules';
+import { newUnit, engagement } from '@core/rules';
 import { teamState } from '@core/teams';
 
 const AI = defaultContent().ai;
@@ -58,8 +58,8 @@ describe('Roca: reparar', () => {
     const tank = newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     const soldier = newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 });
     const attacker = newUnit(s, unitType('Tank'), 1, { x: 3, y: 4 });
-    expect(generalHitFactor(s, attacker, tank)).toBeLessThan(1);
-    expect(generalHitFactor(s, attacker, soldier)).toBe(1);
+    expect(generalHitFactor(s, engagement(attacker, tank))).toBeLessThan(1);
+    expect(generalHitFactor(s, engagement(attacker, soldier))).toBe(1);
   });
 
   it('la IA repara cuando vale la pena, y no con el ejercito entero', () => {
@@ -91,8 +91,8 @@ describe('Ambar: suministros', () => {
     const s = blankState(TEST_RULES);
     appointGeneral(s, 0, 'Ambar');
     const target = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
-    expect(generalHitFactor(s, newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 }), target)).toBeGreaterThan(1);
-    expect(generalHitFactor(s, newUnit(s, unitType('Fighter'), 0, { x: 6, y: 6 }), target)).toBe(1);
+    expect(generalHitFactor(s, engagement(newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 }), target))).toBeGreaterThan(1);
+    expect(generalHitFactor(s, engagement(newUnit(s, unitType('Fighter'), 0, { x: 6, y: 6 }), target))).toBe(1);
   });
 
   it('la IA valora el dinero por lo que es', () => {

@@ -11,6 +11,7 @@ import { canFight } from '../util/predicates';
 import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
+import { reversed, type Engagement } from './engagement';
 import { isVisibleFoe, sightOf } from './visibility';
 import { canStillFire } from './unitTurn';
 
@@ -98,11 +99,12 @@ function summarize(distribution: number[], cap: number) {
  * Reparto del daño del contraataque: para cada vida que le pueda quedar al defensor, el daño que
  * devolveria, pesado por lo probable que es. Lo que falta hasta 1 (el defensor cae) es daño 0.
  */
-function counterDistribution(s: GameState, attacker: Unit, defender: Unit, attackDist: number[]): number[] {
-  const counterChance = hitChance(s, defender, attacker);
+function counterDistribution(s: GameState, fight: Engagement, attackDist: number[]): number[] {
+  const counterChance = hitChance(s, reversed(fight));
+  const defenderLife = fight.defender.life;
   const total: number[] = [];
   for (let damage = 0; damage < attackDist.length; damage++) {
-    const lifeLeft = defender.life - Math.min(damage, defender.life);
+    const lifeLeft = defenderLife - Math.min(damage, defenderLife);
     if (lifeLeft <= 0 || !attackDist[damage]) continue;
     const counterDist = damageDistribution(s, lifeLeft, counterChance);
     for (let j = 0; j < counterDist.length; j++) total[j] = (total[j] ?? 0) + attackDist[damage]! * counterDist[j]!;
@@ -113,13 +115,18 @@ function counterDistribution(s: GameState, attacker: Unit, defender: Unit, attac
   return total;
 }
 
-export function combatForecast(s: GameState, attacker: Unit, defender: Unit): CombatForecast {
-  const attackDist = damageDistribution(s, attacker.life, hitChance(s, attacker, defender));
+/**
+ * Lo que se espera de un combate (`fight`: el de ahora, o uno hipotetico desde otra casilla o con
+ * otra vida: ver `engagement`), con su contraataque si lo hay.
+ */
+export function combatForecast(s: GameState, fight: Engagement): CombatForecast {
+  const { attacker, defender } = fight;
+  const attackDist = damageDistribution(s, attacker.life, hitChance(s, fight));
   const main = summarize(attackDist, defender.life);
   const expected = Math.round(main.expected);
   let counter: CombatForecast['counter'] = null;
-  if (canCounter(s, defender, attacker)) {
-    const back = summarize(counterDistribution(s, attacker, defender, attackDist), attacker.life);
+  if (canCounter(s, fight)) {
+    const back = summarize(counterDistribution(s, fight, attackDist), attacker.life);
     const counterExpected = Math.round(back.expected);
     counter = {
       expected: counterExpected,
@@ -159,7 +166,7 @@ export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = create
   if (!attack) return out;
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen (como si fuera su turno).
   const canMoveAndFire = !isRanged(s, unit);
-  const moveReach = canMoveAndFire ? (range ?? moveRange(s, { ...unit, turnState: 'ready' })) : null;
+  const moveReach = canMoveAndFire ? (range ?? moveRange(s, unit)) : null;
   for (const origin of fireOrigins(s, unit, moveReach)) {
     for (const pos of diamond(out, origin, attack.minRange, attack.maxRange)) out.set(pos, true);
   }

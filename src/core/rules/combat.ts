@@ -14,6 +14,7 @@ import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '..
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { sightOf, type Sight } from './visibility';
+import { reversed, type Engagement } from './engagement';
 import { canStillFire } from './unitTurn';
 
 // ---- Alcance y objetivos ----
@@ -111,18 +112,18 @@ export function defenseStars(s: GameState, pos: Pos): number {
 export interface HitModifier {
   /** Nombre corto (para depurar o enseñar el desglose). */
   readonly id: string;
-  factor(s: GameState, attacker: Unit, defender: Unit): number;
+  factor(s: GameState, fight: Engagement): number;
 }
 
 /** [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca. */
-function veterancyFactor(s: GameState, attacker: Unit, defender: Unit): number {
+function veterancyFactor(s: GameState, { attacker, defender }: Engagement): number {
   if (!s.rules.veterancy) return 1;
-  return (1 + s.rules.vetBonus * rank(attacker)) * (1 - s.rules.vetBonus * rank(defender));
+  return (1 + s.rules.vetBonus * rank(attacker.unit)) * (1 - s.rules.vetBonus * rank(defender.unit));
 }
 
 /** [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil. */
-function flankFactor(s: GameState, _attacker: Unit, defender: Unit): number {
-  return flanked(s, defender) ? 1 + s.rules.flankBonus : 1;
+function flankFactor(s: GameState, { defender }: Engagement): number {
+  return flanked(s, defender.unit) ? 1 + s.rules.flankBonus : 1;
 }
 
 /**
@@ -145,15 +146,16 @@ export const HIT_MODIFIERS: readonly HitModifier[] = [
 ];
 
 /** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). Puede pasar de 1. */
-export function hitChance(s: GameState, attacker: Unit, defender: Unit): number {
-  let chance = basePower(s, attacker, defender) * coverAgainst(s, attacker, tileProtection(s, defender));
-  for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, attacker, defender);
+export function hitChance(s: GameState, fight: Engagement): number {
+  const { attacker, defender } = fight;
+  let chance = basePower(s, attacker.unit, defender.unit) * coverAgainst(s, attacker.unit, tileProtection(s, defender.at));
+  for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, fight);
   return chance;
 }
 
 /** La probabilidad de acierto como probabilidad de verdad (sin pasar de 1). */
-export function cappedHitChance(s: GameState, attacker: Unit, defender: Unit): number {
-  return Math.min(1, hitChance(s, attacker, defender));
+export function cappedHitChance(s: GameState, fight: Engagement): number {
+  return Math.min(1, hitChance(s, fight));
 }
 
 // ---- Veterania, flanqueo y botin ----
@@ -178,8 +180,8 @@ export function rank(unit: Unit): number {
 }
 
 /** Dano esperado (para la IA y para mostrarlo en pantalla). */
-export function expectedDamage(s: GameState, attacker: Unit, defender: Unit): number {
-  return Math.min(defender.life, attacker.life * cappedHitChance(s, attacker, defender));
+export function expectedDamage(s: GameState, fight: Engagement): number {
+  return Math.min(fight.defender.life, fight.attacker.life * cappedHitChance(s, fight));
 }
 
 // ---- El ataque ----
@@ -200,9 +202,9 @@ function rollDamage(s: GameState, life: number, chance: number, dice: Dice): num
   return Math.max(0, Math.round(expected * (1 + spread)));
 }
 
-/** Daño que hace `attacker` a `defender` en una tirada (sin pasar de la vida que le queda). */
-export function strike(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
-  return Math.min(defender.life, rollDamage(s, attacker.life, cappedHitChance(s, attacker, defender), dice));
+/** Daño que hace el atacante al defensor en una tirada (sin pasar de la vida que le queda). */
+export function strike(s: GameState, fight: Engagement, dice: Dice): number {
+  return Math.min(fight.defender.life, rollDamage(s, fight.attacker.life, cappedHitChance(s, fight), dice));
 }
 
 /**
@@ -210,24 +212,25 @@ export function strike(s: GameState, attacker: Unit, defender: Unit, dice: Dice)
  * unidad de cuerpo a cuerpo, el atacante tambien lo es y lo tiene a su alcance.
  * La artilleria y demas unidades a distancia ni contraatacan ni reciben contraataque.
  */
-export function canCounter(s: GameState, defender: Unit, attacker: Unit): boolean {
+export function canCounter(s: GameState, { attacker, defender }: Engagement): boolean {
   if (!s.rules.counterattack || !isAlive(defender)) return false;
-  if (isRanged(s, defender) || isRanged(s, attacker)) return false;
-  return canDamage(s, defender, attacker) && inAttackRange(s, defender, defender, attacker);
+  if (isRanged(s, defender.unit) || isRanged(s, attacker.unit)) return false;
+  return canDamage(s, defender.unit, attacker.unit) && inAttackRange(s, defender.unit, defender.at, attacker.at);
 }
 
 /** Como estan las dos unidades antes de luchar, para enseñar el combate despues (ver CombatInfo). */
-export function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatInfo {
+export function combatInfoBefore(s: GameState, fight: Engagement): CombatInfo {
+  const { attacker, defender } = fight;
   return {
-    attackerType: attacker.type,
-    defenderType: defender.type,
-    attackerTeam: attacker.team,
-    defenderTeam: defender.team,
+    attackerType: attacker.unit.type,
+    defenderType: defender.unit.type,
+    attackerTeam: attacker.unit.team,
+    defenderTeam: defender.unit.team,
     attackerLife: attacker.life,
     defenderLife: defender.life,
-    attackerRank: rank(attacker),
-    defenderRank: rank(defender),
-    hit: cappedHitChance(s, attacker, defender),
-    counterHit: canCounter(s, defender, attacker) ? cappedHitChance(s, defender, attacker) : null,
+    attackerRank: rank(attacker.unit),
+    defenderRank: rank(defender.unit),
+    hit: cappedHitChance(s, fight),
+    counterHit: canCounter(s, fight) ? cappedHitChance(s, reversed(fight)) : null,
   };
 }

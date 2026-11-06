@@ -6,7 +6,7 @@ import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { powerBlock, chargeStars, generalHitFactor, appointGeneral } from '@core/generals';
 import { seededRng } from '@core/util/random';
-import { endRound, hitChance, newUnit, visibility } from '@core/rules';
+import { endRound, hitChance, newUnit, visibility, engagement } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { teamState } from '@core/teams';
@@ -47,11 +47,11 @@ describe('generales: reglas', () => {
     const plane = newUnit(s, unitType('Fighter'), 0, { x: 5, y: 5 });
     const tank = newUnit(s, unitType('Tank'), 0, { x: 6, y: 6 });
     const target = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
-    expect(generalHitFactor(s, plane, target)).toBeCloseTo(1.1);
-    expect(generalHitFactor(s, tank, target)).toBe(1);
+    expect(generalHitFactor(s, engagement(plane, target))).toBeCloseTo(1.1);
+    expect(generalHitFactor(s, engagement(tank, target))).toBe(1);
     const without = cloneState(s);
     for (const team of without.teams) team.general = null;
-    expect(hitChance(s, plane, target)).toBeCloseTo(hitChance(without, plane, target) * 1.1);
+    expect(hitChance(s, engagement(plane, target))).toBeCloseTo(hitChance(without, engagement(plane, target)) * 1.1);
   });
 
   it('la barra se carga con el daño hecho y recibido', () => {

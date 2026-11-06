@@ -20,6 +20,7 @@ import { mapGrid } from './mapGrid';
 import { isHostile, teamState } from './teams';
 import { earn } from './rules/funds';
 import { isOnMap } from './util/predicates';
+import type { Engagement } from './rules/engagement';
 import type { ActionRejection, GameEventOf, GameState, GeneralCharge, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
@@ -58,7 +59,9 @@ export function healedByPower(s: GameState, team: TeamId, filter: DeepReadonly<U
 }
 
 /** Multiplicador del acierto de `attacker` contra `defender` por los generales de los dos equipos (1 = nada). */
-export function generalHitFactor(s: GameState, attacker: Unit, defender: Unit): number {
+export function generalHitFactor(s: GameState, fight: Engagement): number {
+  const attacker = fight.attacker.unit;
+  const defender = fight.defender.unit;
   let factor = 1;
   const attackerGeneral = generalOf(s, attacker.team);
   for (const passive of attackerGeneral?.definition.passive ?? [])

@@ -4,7 +4,18 @@ import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
-import { canMoveOn, captureStrength, hitChance, moveRange, newUnit, tileProtection, validPath, visibility } from '@core/rules';
+import {
+  canMoveOn,
+  captureStrength,
+  hitChance,
+  moveRange,
+  newUnit,
+  tileProtection,
+  validPath,
+  visibility,
+  engagement,
+  fighterOf,
+} from '@core/rules';
 import { dispatch } from '@core/actions';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
@@ -80,10 +91,10 @@ describe('habilidades: escudo (guard)', () => {
     const defender = newUnit(s, guardType, 1, { x: 10, y: 10 });
     const far = newUnit(s, rangedType, 0, { x: 10, y: 10 - minRangeOf(rangedType) });
     const near = newUnit(s, meleeType, 0, { x: 9, y: 10 });
-    expect(hitChance(s, far, defender)).toBeCloseTo(power(rangedType, guardType) * factor);
-    expect(hitChance(s, near, defender)).toBeCloseTo(power(meleeType, guardType));
+    expect(hitChance(s, engagement(far, defender))).toBeCloseTo(power(rangedType, guardType) * factor);
+    expect(hitChance(s, engagement(near, defender))).toBeCloseTo(power(meleeType, guardType));
     s.rules = { ...TEST_RULES, abilities: false };
-    expect(hitChance(s, far, defender)).toBeCloseTo(power(rangedType, guardType));
+    expect(hitChance(s, engagement(far, defender))).toBeCloseTo(power(rangedType, guardType));
   });
 });
 
@@ -153,11 +164,11 @@ describe('habilidades: apoyo (aura)', () => {
     const ally = newUnit(s, meleeType, 0, { x: 10 + radius, y: 10 });
     const far = newUnit(s, meleeType, 0, { x: 10 + radius + 1, y: 10 });
     const foe = newUnit(s, meleeType, 1, { x: 10, y: 10 - radius });
-    expect(auraFactor(s, ally)).toBe(defense);
-    expect(auraFactor(s, far)).toBe(1);
-    expect(auraFactor(s, sup)).toBe(1);
-    expect(auraFactor(s, foe)).toBe(1);
-    expect(hitChance(s, foe, ally)).toBeCloseTo(power(meleeType, meleeType) * defense);
+    expect(auraFactor(s, fighterOf(ally))).toBe(defense);
+    expect(auraFactor(s, fighterOf(far))).toBe(1);
+    expect(auraFactor(s, fighterOf(sup))).toBe(1);
+    expect(auraFactor(s, fighterOf(foe))).toBe(1);
+    expect(hitChance(s, engagement(foe, ally))).toBeCloseTo(power(meleeType, meleeType) * defense);
   });
 
   it('no se suma con otra aura', () => {
@@ -165,7 +176,7 @@ describe('habilidades: apoyo (aura)', () => {
     newUnit(s, auraType, 0, { x: 10, y: 10 });
     newUnit(s, auraType, 0, { x: 12, y: 10 });
     const ally = newUnit(s, meleeType, 0, { x: 11, y: 10 });
-    expect(auraFactor(s, ally)).toBe(defense);
+    expect(auraFactor(s, fighterOf(ally))).toBe(defense);
   });
 });
 
@@ -182,8 +193,8 @@ describe('habilidades: perforante (piercing)', () => {
     const cmp = newUnit(s, other, 0, { x: 9, y: 10 });
     const cover = tileProtection(s, defender);
     expect(cover).toBeLessThan(1);
-    expect(hitChance(s, attacker, defender)).toBeCloseTo(power(piercingType, target) * (cover + (1 - cover) * ignore));
-    expect(hitChance(s, cmp, defender)).toBeCloseTo(power(other, target) * cover);
+    expect(hitChance(s, engagement(attacker, defender))).toBeCloseTo(power(piercingType, target) * (cover + (1 - cover) * ignore));
+    expect(hitChance(s, engagement(cmp, defender))).toBeCloseTo(power(other, target) * cover);
   });
 });
 

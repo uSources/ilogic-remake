@@ -19,6 +19,7 @@ import { createLayer } from './mapGrid';
 import type { Grid } from './util/grid';
 import { isAlive, areEnemies, isOnMap } from './util/predicates';
 import type { GameState, Unit } from './model';
+import type { Engagement, Fighter } from './rules/engagement';
 
 type AbilityOf<K extends AbilityDef['kind']> = DeepReadonly<Extract<AbilityDef, { kind: K }>>;
 /** Una unidad, o lo que se sabe de su tipo (una prevision, un evento). */
@@ -67,11 +68,11 @@ export function coverAgainst(s: GameState, attacker: OfType, protection: number)
  * Multiplicador del acierto de `attacker` contra `defender` por las habilidades del defensor y de
  * sus aliados (guard, aura). 1 = nada.
  */
-export function defenseFactor(s: GameState, attacker: Unit, defender: Unit): number {
+export function defenseFactor(s: GameState, { attacker, defender }: Engagement): number {
   if (!s.rules.abilities) return 1;
   let factor = 1;
-  const guard = abilityOfUnit(s, defender, 'guard');
-  if (guard && isRanged(s, attacker)) factor *= guard.factor;
+  const guard = abilityOfUnit(s, defender.unit, 'guard');
+  if (guard && isRanged(s, attacker.unit)) factor *= guard.factor;
   factor *= auraFactor(s, defender);
   return factor;
 }
@@ -80,13 +81,13 @@ export function defenseFactor(s: GameState, attacker: Unit, defender: Unit): num
 const isFieldUnit = (unit: Unit): boolean => isOnMap(unit) && isAlive(unit);
 
 /** Mejor aura de las unidades propias cercanas a `defender` (1 si no hay ninguna). */
-export function auraFactor(s: GameState, defender: Unit): number {
+export function auraFactor(s: GameState, defender: Fighter): number {
   if (!s.rules.abilities) return 1;
   let best = 1;
   for (const ally of s.units) {
-    if (ally.uid === defender.uid || areEnemies(s, ally, defender) || !isFieldUnit(ally)) continue;
+    if (ally.uid === defender.unit.uid || areEnemies(s, ally, defender.unit) || !isFieldUnit(ally)) continue;
     const aura = abilityOfUnit(s, ally, 'aura');
-    if (aura && manhattan(ally, defender) <= aura.radius) best = Math.min(best, aura.defense);
+    if (aura && manhattan(ally, defender.at) <= aura.radius) best = Math.min(best, aura.defense);
   }
   return best;
 }

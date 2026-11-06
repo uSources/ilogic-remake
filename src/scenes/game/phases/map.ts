@@ -97,8 +97,8 @@ function inspectMarks(input: HighlightInput, uid: number): Highlights {
   const marks = noHighlights();
   const unit = unitById(input.s, uid);
   if (!unit || !isShownTo(input.viewer, unit, (pos) => input.visible(pos))) return { ...marks, inspectGone: true };
-  // Como si fuera su turno: aunque ya se haya movido, se ve hasta donde llegaria.
-  const range = moveRange(input.s, { ...unit, turnState: 'ready' });
+  // Aunque ya se haya movido, se ve hasta donde llegaria en su turno (el alcance no mira lo que ya ha hecho).
+  const range = moveRange(input.s, unit);
   const threat = unitThreat(input.s, unit);
   const canMove = unitTypeOf(input.s, unit).move > 0;
   for (const { pos, value: steps } of range.steps.cells()) {

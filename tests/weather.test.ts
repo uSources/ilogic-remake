@@ -5,7 +5,7 @@ import { entryOf, loadContent, validateContent, type Content, type WeatherType }
 
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
-import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf } from '@core/rules';
+import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf, engagement } from '@core/rules';
 import { advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
 import { seededRng } from '@core/util/random';
 import type { GameState } from '@core/model';
@@ -104,8 +104,8 @@ describe('clima: efectos', () => {
       newUnit(s, LFIGHTER, 0, { x: 15, y: 15 });
     }
     expect(maxSteps(storm, storm.units[2]!)).toBe(LFIGHTER.move - 2);
-    const pc = hitChance(clear, clear.units[0]!, clear.units[1]!);
-    const ps = hitChance(storm, storm.units[0]!, storm.units[1]!);
+    const pc = hitChance(clear, engagement(clear.units[0]!, clear.units[1]!));
+    const ps = hitChance(storm, engagement(storm.units[0]!, storm.units[1]!));
     expect(ps).toBeCloseTo(pc * STORM.hitChance);
     expect(ps).toBeLessThan(pc);
   });

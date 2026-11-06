@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/util/random';
-import { attackTargets, endRound, moveRange, newUnit, combatForecast, threatMap, canStillFire, canStillMove } from '@core/rules';
+import {
+  attackTargets,
+  endRound,
+  moveRange,
+  newUnit,
+  combatForecast,
+  threatMap,
+  canStillFire,
+  canStillMove,
+  engagement,
+} from '@core/rules';
 import { availableActions, dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
 import {
@@ -191,7 +201,7 @@ describe('prevision y amenaza', () => {
     attacker.life = 80;
     const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 10, y: 12 });
     defender.life = 60;
-    const forecast = combatForecast(s, attacker, defender);
+    const forecast = combatForecast(s, engagement(attacker, defender));
     expect(forecast.expected).toBe(40);
     expect(forecast.low).toBeGreaterThanOrEqual(30);
     expect(forecast.high).toBeLessThanOrEqual(50);
@@ -203,7 +213,7 @@ describe('prevision y amenaza', () => {
     const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 10, y: 10 });
     const defender = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 10, y: 11 });
     defender.life = 10;
-    expect(combatForecast(s, attacker, defender).killChance).toBeGreaterThan(0.99);
+    expect(combatForecast(s, engagement(attacker, defender)).killChance).toBeGreaterThan(0.99);
   });
   it('amenaza: tanque enemigo visible cubre mover + alcance; invisible no cuenta', () => {
     const s = blankState(TEST_RULES);

@@ -7,8 +7,10 @@
 
 import { unitTypeOf, isHq, weightsOf } from '../gameContent';
 import { canCounter, expectedDamage } from '../rules/combat';
+import { engagement, reversed } from '../rules/engagement';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
+import { posOf } from '../geom';
 import type { Building, GameState, Pos, Unit } from '../model';
 import type { PlayCtx } from './context';
 
@@ -16,8 +18,9 @@ import type { PlayCtx } from './context';
 export interface AttackPlan {
   s: GameState;
   play: PlayCtx;
-  /** El atacante, ya colocado en la casilla desde la que dispara. */
   attacker: Unit;
+  /** La casilla desde la que dispara. */
+  from: Pos;
   target: Unit;
   /** Vida que se espera quitar. */
   damage: number;
@@ -43,10 +46,10 @@ const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.li
 const evictionWeight = (attack: AttackPlan): number => Math.max(0.5, attack.damage / weightsOf(attack.s).BONUSDAMAGE);
 
 /** Lo que devolveria el objetivo al contraatacar, con la vida que le queda, en valor del atacante. */
-function counterattackLoss({ s, attacker, target, damage }: AttackPlan): number {
-  const survivor = { ...target, life: Math.max(1, Math.round(target.life - damage)) };
-  if (!canCounter(s, survivor, attacker)) return 0;
-  return expectedDamage(s, survivor, attacker) * unitValue(s, attacker);
+function counterattackLoss({ s, attacker, from, target, damage }: AttackPlan): number {
+  const afterTheHit = engagement(attacker, target, { from, defenderLife: Math.max(1, Math.round(target.life - damage)) });
+  if (!canCounter(s, afterTheHit)) return 0;
+  return expectedDamage(s, reversed(afterTheHit)) * unitValue(s, attacker);
 }
 
 /**
@@ -92,13 +95,13 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
 
 /** Valor de que `attacker` dispare a `target` desde `from` (por defecto, desde donde esta). */
 export function attackScore(s: GameState, play: PlayCtx, attacker: Unit, target: Unit, from: Pos = attacker): number {
-  const attackerThere = { ...attacker, x: from.x, y: from.y };
   const attack: AttackPlan = {
     s,
     play,
-    attacker: attackerThere,
+    attacker,
+    from: posOf(from),
     target,
-    damage: expectedDamage(s, attackerThere, target),
+    damage: expectedDamage(s, engagement(attacker, target, { from })),
     targetBuilding: buildingAt(s, target),
   };
   return ATTACK_SCORE_TERMS.reduce((score, term) => score + term.value(attack), 0);

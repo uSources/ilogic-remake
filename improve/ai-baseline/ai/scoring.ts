@@ -8,6 +8,7 @@
 import { unitTypeOf, isHq } from '@core/gameContent';
 import { weightsOf } from '../weights';
 import { canCounter, expectedDamage } from '@core/rules/combat';
+import { engagement } from '@core/rules/engagement';
 import { captureProgress } from '@core/rules/capture';
 import { buildingAt } from '@core/rules/queries';
 import type { Building, GameState, Pos, Unit } from '@core/model';
@@ -46,8 +47,8 @@ const evictionWeight = (attack: AttackPlan): number => Math.max(0.5, attack.dama
 /** Lo que devolveria el objetivo al contraatacar, con la vida que le queda, en valor del atacante. */
 function counterattackLoss({ s, attacker, target, damage }: AttackPlan): number {
   const survivor = { ...target, life: Math.max(1, Math.round(target.life - damage)) };
-  if (!canCounter(s, survivor, attacker)) return 0;
-  return expectedDamage(s, survivor, attacker) * unitValue(s, attacker);
+  if (!canCounter(s, engagement(attacker, survivor))) return 0;
+  return expectedDamage(s, engagement(survivor, attacker)) * unitValue(s, attacker);
 }
 
 /**
@@ -99,7 +100,7 @@ export function attackScore(s: GameState, ai: AiCtx, attacker: Unit, target: Uni
     ai,
     attacker: attackerThere,
     target,
-    damage: expectedDamage(s, attackerThere, target),
+    damage: expectedDamage(s, engagement(attackerThere, target)),
     targetBuilding: buildingAt(s, target),
   };
   return ATTACK_SCORE_TERMS.reduce((score, term) => score + term.value(attack), 0);

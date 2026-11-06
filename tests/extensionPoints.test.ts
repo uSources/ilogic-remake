@@ -11,6 +11,7 @@ import {
   newUnit,
   reachableTiles,
   tileProtection,
+  engagement,
 } from '@core/rules';
 import { coverAgainst } from '@core/abilities';
 import type { UnitType } from '@core/content';
@@ -40,8 +41,8 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
     defender.hitDay = s.day; // flanqueado
     attacker.kills = 3; // veterano
     let chance = power(fighterType, defenderType) * coverAgainst(s, attacker, tileProtection(s, defender));
-    for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, attacker, defender);
-    expect(hitChance(s, attacker, defender)).toBe(chance);
+    for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, engagement(attacker, defender));
+    expect(hitChance(s, engagement(attacker, defender))).toBe(chance);
   });
 
   it('con las reglas apagadas cada modificador vale 1', () => {
@@ -49,7 +50,7 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
     const fighterType = fighter();
     const attacker = newUnit(s, fighterType, 0, { x: 2, y: 2 });
     const defender = newUnit(s, fighterType, 1, { x: 3, y: 2 });
-    for (const modifier of HIT_MODIFIERS) expect(modifier.factor(s, attacker, defender), modifier.id).toBe(1);
+    for (const modifier of HIT_MODIFIERS) expect(modifier.factor(s, engagement(attacker, defender)), modifier.id).toBe(1);
   });
 });
 

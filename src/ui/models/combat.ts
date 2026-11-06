@@ -1,6 +1,6 @@
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { bountyFor, combatForecast, flanked } from '../../core/rules';
+import { bountyFor, combatForecast, engagement, flanked } from '../../core/rules';
 import type { CombatInfo, GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
 import { nameOf } from '../../settings';
@@ -19,9 +19,10 @@ export function forecastVM(
   target: Unit,
   anchor: Anchor,
 ): ForecastVM {
-  const forecast = combatForecast(s, { ...attacker, x: from.x, y: from.y }, target);
+  const forecast = combatForecast(s, engagement(attacker, target, { from }));
   return {
-    attackerIcon: unitKey(textures, s, { ...attacker, turnState: 'ready' }, viewer),
+    // El atacante, en color aunque ya se haya movido: es el que va a disparar.
+    attackerIcon: unitKey(textures, s, attacker, viewer, true),
     defenderIcon: unitKey(textures, s, target, viewer),
     low: forecast.low,
     high: forecast.high,

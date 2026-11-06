@@ -6,6 +6,7 @@ import { unitById } from '../rules/queries';
 import { endTravel } from '../rules/travel';
 import { canStillMove, spendUnit } from '../rules/unitTurn';
 import { earn } from '../rules/funds';
+import { engagement } from '../rules/engagement';
 import { isAlive } from '../util/predicates';
 import type { Dice, GameEventOf, GameState, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
@@ -34,14 +35,14 @@ function payBounty(s: GameState, attacker: Unit, defender: Unit): number {
  * despues `dispatch` (INVARIANTS).
  */
 export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
-  const combat = combatInfoBefore(s, attacker, defender);
+  const combat = combatInfoBefore(s, engagement(attacker, defender));
   const at = posOf(defender);
-  const damage = strike(s, attacker, defender, dice);
+  const damage = strike(s, engagement(attacker, defender), dice);
   defender.life -= damage;
   defender.hitDay = s.day;
   // Atacar gasta el turno entero de la unidad.
   spendUnit(attacker);
-  const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, dice) : 0;
+  const counter = canCounter(s, engagement(attacker, defender)) ? strike(s, engagement(defender, attacker), dice) : 0;
   attacker.life -= counter;
   const charge = chargeFromCombat(s, attacker, defender, damage, counter);
   countKills(attacker, defender);

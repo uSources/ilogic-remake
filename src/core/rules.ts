@@ -20,6 +20,7 @@
  * | `lifecycle` | crear, quitar y limpiar unidades |
  * | `movement` | alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
  * | `travel` | viajes de varios turnos (usa `movement`) |
+ * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
  * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
@@ -105,6 +106,7 @@ export {
   HIT_MODIFIERS,
   type HitModifier,
 } from './rules/combat';
+export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
 export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';

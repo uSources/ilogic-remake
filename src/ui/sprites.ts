@@ -29,10 +29,19 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
   return null;
 }
 
-/** El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada, roja la enemiga. */
-export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, unit: Unit, viewer: TeamId): string | null {
+/**
+ * El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado: `isActive`, que por defecto
+ * es si aun puede actuar) la propia y la aliada, roja la enemiga.
+ */
+export function unitKey(
+  textures: Phaser.Textures.TextureManager,
+  s: GameState,
+  unit: Unit,
+  viewer: TeamId,
+  isActive = canStillAct(unit),
+): string | null {
   const unitSide = sideOf(s, viewer, unit.team);
-  const side = `${unitSideLetter(unitSide, canStillAct(unit))}_`;
+  const side = `${unitSideLetter(unitSide, isActive)}_`;
   const unitType = unitTypeOf(s, unit);
   const terrain = unitType.classicSprite[terrainAt(s, unit).id] ?? '';
   const name = unitType.art;
