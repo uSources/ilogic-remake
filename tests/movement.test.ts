@@ -12,7 +12,7 @@ import { act, blankState, unitTypeNamed } from './helpers';
 function pathOf(events: GameEvent[]): Pos[] & { ambush?: Pos } {
   const event = events[0];
   if (event?.kind !== 'move' && event?.kind !== 'merge') throw new Error('no se ha movido');
-  return Object.assign(event.path, event.kind === 'move' && event.ambush ? { ambush: event.ambush } : {});
+  return Object.assign(event.path, event.kind === 'move' && event.interruption?.kind === 'ambush' ? { ambush: event.interruption.at } : {});
 }
 
 /** El equipo 0 mueve la unidad `uid` (por dispatch) y da el camino recorrido. */

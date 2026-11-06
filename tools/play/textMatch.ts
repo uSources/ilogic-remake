@@ -22,7 +22,7 @@ import {
   buyOptions,
   canCapture,
   roundReport,
-  endsInAmbush,
+  endsInterrupted,
   moveRange,
   outcomeFor,
   type MatchOutcome,
@@ -35,7 +35,7 @@ import {
 import { serialize } from '@core/save';
 import { screenControllers } from '@core/controllers';
 import { GameSession, runMatch, type ActedStep } from '@core/session';
-import type { DefeatReason, GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
+import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -270,7 +270,7 @@ export class TextMatch {
 
   private move(unit: Unit, to: Pos): string {
     const events = this.perform({ kind: 'move', uid: unit.uid, to }, `la unidad ${unit.uid} no puede llegar a (${posKey(to)})`);
-    return endsInAmbush(events) ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
+    return endsInterrupted(events) ? `emboscada: se para en (${unit.x},${unit.y})` : `movida a (${unit.x},${unit.y})`;
   }
 
   private attack(unit: Unit, at: Pos): string {
@@ -457,6 +457,9 @@ const OUTCOME_TEXT: Record<MatchOutcome, string> = { won: 'ganada', lost: 'perdi
 /** Por que cae un equipo, en una palabra o dos. */
 const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'sin nada', surrender: 'rendido' };
 
+/** Que ha cortado un camino, en una palabra. */
+const INTERRUPTION_NAMES: Record<InterruptionKind, string> = { ambush: 'emboscada' };
+
 /** Un suceso en una linea, o null si no merece la pena contarlo. */
 function describe(s: GameState, event: GameEvent): string | null {
   const name = (uid: number) => {
@@ -465,7 +468,7 @@ function describe(s: GameState, event: GameEvent): string | null {
   };
   switch (event.kind) {
     case 'move':
-      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.ambush ? ' (emboscada)' : ''}`;
+      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind]})` : ''}`;
     case 'attack':
       return `${name(event.attacker)} ataca (${event.at.x},${event.at.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
     case 'capture':

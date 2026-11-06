@@ -130,8 +130,8 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const step = checkedTravelStep(s, unit);
       if (step.arrives) return endTravel(team, unit, step.end);
       const walked = moveAlong(s, unit, step.path);
-      // El paso nunca llega al destino (si llegara este turno, seria 'withinReach'): solo una emboscada lo acaba.
-      return [moveEvent(team, unit.uid, walked), ...(walked.interruption ? endTravel(team, unit, 'ambush') : [])];
+      // El paso nunca llega al destino (si llegara este turno, seria 'withinReach'): solo un corte del camino lo acaba.
+      return [moveEvent(team, unit.uid, walked), ...(walked.interruption ? endTravel(team, unit, walked.interruption.kind) : [])];
     },
   },
 };

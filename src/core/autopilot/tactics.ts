@@ -131,9 +131,9 @@ export function* tryAttack(
 
   const shot = bestShot(s, play, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
   if (shot) {
-    const ambushed = yield* doMove(s, play, unit, samePos(shot.from, unit) ? null : shot.from);
+    const interrupted = yield* doMove(s, play, unit, samePos(shot.from, unit) ? null : shot.from);
     // Desde la casilla nueva puede no verlo ya (el bosque solo se ve desde al lado): entonces espera.
-    const attacked = !ambushed && (yield* act(s, play, { kind: 'attack', uid: unit.uid, target: shot.target.uid }));
+    const attacked = !interrupted && (yield* act(s, play, { kind: 'attack', uid: unit.uid, target: shot.target.uid }));
     if (!attacked) yield* finish(s, play, unit);
     return true;
   }

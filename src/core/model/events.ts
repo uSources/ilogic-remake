@@ -22,11 +22,25 @@ export interface GeneralCharge {
 }
 
 /**
+ * Por que se puede cortar un camino a mitad (las `pathInterruptions` de los modulos de reglas): de
+ * momento la emboscada. Un corte nuevo (minas, fuego de vigilancia...) es su nombre aqui y su entrada
+ * en la lista de su modulo.
+ */
+export type InterruptionKind = 'ambush';
+
+/** Lo que ha cortado un camino y donde (la casilla que ya no se ha podido pisar). */
+export interface Interruption {
+  readonly kind: InterruptionKind;
+  readonly at: Pos;
+}
+
+/**
  * Por que acaba un viaje (suceso 'travel' con `to: null`): se le quita o se la mueve a mano
  * ('cancelled'), recibe una orden permanente ('ordered'), ya esta en el destino ('arrived'), llega
- * este turno y el ultimo trozo lo hace quien juega ('withinReach') o una emboscada la para ('ambush').
+ * este turno y el ultimo trozo lo hace quien juega ('withinReach') o algo corta su camino (el nombre
+ * del corte: 'ambush'...).
  */
-export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | 'ambush';
+export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | InterruptionKind;
 
 /**
  * Lo que le ha pasado a una escuadra. Cada escuadra que deja de existir tiene un solo suceso que lo
@@ -45,7 +59,7 @@ export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded
  * (`dispatch`) y el fin de ronda (`endRound`).
  */
 export type GameEvent =
-  | { kind: 'move'; actor: TeamId; uid: number; path: Pos[]; ambush?: Pos }
+  | { kind: 'move'; actor: TeamId; uid: number; path: Pos[]; interruption?: Interruption }
   | {
       kind: 'attack';
       actor: TeamId;

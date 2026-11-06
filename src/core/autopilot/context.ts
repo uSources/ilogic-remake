@@ -11,7 +11,7 @@ import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, visibleEnemiesBlock, type Blockers } from '../rules/distance';
 import { isRuleOn } from '../ruleModules/ruleset';
-import { endsInAmbush } from '../rules/traverse';
+import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
@@ -103,11 +103,11 @@ export function* finish(s: GameState, play: PlayCtx, unit: Unit): Generator<Game
   if (canAct(s, unit)) yield* act(s, play, { kind: 'wait', uid: unit.uid });
 }
 
-/** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
+/** Mueve y avisa. Devuelve true si algo le ha cortado el camino (la unidad ya no puede hacer nada). */
 export function* doMove(s: GameState, play: PlayCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
   const events = yield* actEvents(s, play, { kind: 'move', uid: unit.uid, to: posOf(dest) });
-  return events !== null && endsInAmbush(events);
+  return events !== null && endsInterrupted(events);
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */

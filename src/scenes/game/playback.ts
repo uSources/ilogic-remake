@@ -14,7 +14,7 @@ import { generalOf } from '../../core/generals';
 import { powerArea, powerOf } from '../../core/generalPowers';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
-import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId, Unit } from '../../core/model';
+import type { GameEvent, GameEventKind, GameEventOf, GameState, InterruptionKind, Pos, TeamId, Unit } from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';
 import { fmtNum, settings, t } from '../../settings';
@@ -214,19 +214,26 @@ const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKe
   const mover = unitById(stage.state, event.uid) ?? unitEntered(stage.state, event);
   const showWholePath = mover?.team === stage.viewer;
   await animatePath(stage, event.uid, texture, event.path, showWholePath);
-  if (event.kind === 'move' && event.ambush && !stage.fastForward) {
-    await showAmbush(stage, event.ambush, event.path[event.path.length - 1]!, showWholePath);
+  if (event.kind === 'move' && event.interruption && !stage.fastForward) {
+    const { kind, at } = event.interruption;
+    await INTERRUPTION_ANIMATIONS[kind](stage, at, event.path[event.path.length - 1]!, showWholePath);
   }
 };
 
+/** Como se ve cada corte de camino: donde estaba lo que lo corto y donde se paro la unidad. */
+type InterruptionAnimation = (stage: EventStage, at: Pos, stoppedAt: Pos, showWholePath: boolean) => Promise<void>;
+
 /** Emboscada: la casilla de la unidad escondida destella y sale el aviso donde se paro. */
-async function showAmbush(stage: EventStage, ambusher: Pos, stoppedAt: Pos, showWholePath: boolean): Promise<void> {
+const showAmbush: InterruptionAnimation = async (stage, ambusher, stoppedAt, showWholePath) => {
   stage.refresh();
   if (!showWholePath && !stage.visible(stoppedAt)) return;
   const centerPoint = center(stoppedAt);
   void tileFlash(stage.scene, stage.view, ambusher, PAL.red);
   await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
-}
+};
+
+/** Una animacion por cada clase de corte (un modulo que corte caminos de otra forma anade la suya aqui). */
+const INTERRUPTION_ANIMATIONS: Record<InterruptionKind, InterruptionAnimation> = { ambush: showAmbush };
 
 /** Punto donde se apoya una unidad en una casilla (centro abajo, como sus sprites). */
 const feetOf = (pos: Pos) => ({ x: pos.x * TILE + TILE / 2, y: (pos.y + 1) * TILE });

@@ -11,7 +11,7 @@ import { movementOf, buildingAt, occupancy } from '@core/rules/queries';
 import { posOf, samePos } from '@core/geom';
 import { canReach, reachableTiles, type MoveRange } from '@core/rules/movement';
 import { distanceMap } from '@core/rules/distance';
-import { endsInAmbush } from '@core/rules/traverse';
+import { endsInterrupted } from '@core/rules/traverse';
 import { dispatch } from '@core/actions/dispatch';
 import type { ActionDispatcher } from '@core/actions/types';
 import { visibility } from '@core/rules/visibility';
@@ -111,7 +111,7 @@ export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): 
   const result = ai.dispatch(s, ai.me, { kind: 'move', uid: unit.uid, to: posOf(dest) });
   if (!result.ok) return false;
   yield* result.events;
-  return endsInAmbush(result.events);
+  return endsInterrupted(result.events);
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */

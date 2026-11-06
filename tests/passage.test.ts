@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { moveRulesOf, newUnit, passRulesOf, PATH_INTERRUPTIONS, stepAllowed, surroundingsOf, traverse } from '@core/rules';
+import { hooksOf, moveRulesOf, newUnit, passRulesOf, stepAllowed, surroundingsOf, traverse } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 
 /** Por donde se pasa: las reglas de paso (PASS_RULES y las de los modulos) y la regla de cada paso (stepAllowed). */
@@ -81,7 +81,7 @@ describe('traverse: recorrer un camino de verdad', () => {
     const unit = newUnit(s, TANK, 0, { x: 5, y: 10 });
     newUnit(s, TANK, 0, { x: 7, y: 10 });
     newUnit(s, SOLDIER, 1, { x: 8, y: 10 });
-    expect(PATH_INTERRUPTIONS.map((interruption) => interruption.kind)).toEqual(['ambush']);
+    expect(hooksOf(s, 'pathInterruptions').map((interruption) => interruption.kind)).toEqual(['ambush']);
     const traversal = traverse(s, unit, path);
     expect(traversal.interruption).toEqual({ kind: 'ambush', at: { x: 8, y: 10 } });
     expect(traversal.path).toEqual(path.slice(0, 2));

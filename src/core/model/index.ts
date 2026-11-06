@@ -24,6 +24,8 @@ export type {
   Healing,
   SquadChange,
   TravelEnd,
+  Interruption,
+  InterruptionKind,
 } from './events';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { DamageModelId, MatchSettings } from './settings';

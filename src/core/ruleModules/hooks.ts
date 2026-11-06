@@ -7,7 +7,7 @@
  * Una lista nueva que se pueda ampliar es un campo mas de `RuleHooks`, con el tipo de sus entradas.
  */
 import type { MoveType, UnitType } from '../content';
-import type { Dice, GameEvent, GameState, MatchSettings, Pos, TeamId, Unit } from '../model';
+import type { Dice, GameEvent, GameState, InterruptionKind, MatchSettings, Pos, TeamId, Unit } from '../model';
 import type { AttackRecord } from '../rules/attackRecord';
 import type { RoundReport } from '../rules/roundReport';
 import type { Engagement } from '../rules/engagement';
@@ -148,6 +148,13 @@ export interface StopRule {
   stopTiles(s: GameState, mover: Unit, noticedFoes: readonly Unit[]): Pos[];
 }
 
+/** Algo que corta un camino a mitad al recorrerlo (traverse, rules/traverse.ts). */
+export interface PathInterruption {
+  readonly kind: InterruptionKind;
+  /** El primer paso del camino (su puesto en `path`) que ya no se puede dar, o null si no corta. */
+  cutAt(s: GameState, unit: Unit, path: readonly Pos[]): number | null;
+}
+
 /** Las entradas que aporta un modulo a cada lista (las que no dice, ninguna). */
 export interface RuleHooks {
   /** Modificadores del acierto, detras del poder y la proteccion (ver `hitModifiersOf`, rules/combat.ts). */
@@ -176,6 +183,8 @@ export interface RuleHooks {
   /** Quien hay en cada casilla (rules/passage.ts): por donde se pasa y donde hay que pararse. */
   readonly passRules?: readonly PassRule[];
   readonly stopRules?: readonly StopRule[];
+  /** Lo que corta un camino a mitad (rules/traverse.ts). */
+  readonly pathInterruptions?: readonly PathInterruption[];
   /** Captura (rules/capture.ts, `captureStrength`). */
   readonly captureFactors?: readonly CaptureFactor[];
 }

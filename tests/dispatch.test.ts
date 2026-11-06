@@ -179,7 +179,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     act(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 25, y: 5 } });
     const events = act(s, 0, { kind: 'travelStep', uid: tank.uid });
-    expect(events[0]).toMatchObject({ kind: 'move', ambush: { x: 6, y: 5 } });
+    expect(events[0]).toMatchObject({ kind: 'move', interruption: { kind: 'ambush', at: { x: 6, y: 5 } } });
     expect(events[1]).toEqual({ kind: 'travel', actor: 0, uid: tank.uid, to: null, end: 'ambush' });
     expect(tank.travelTo).toBeUndefined();
   });

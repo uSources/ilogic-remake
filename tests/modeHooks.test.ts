@@ -8,7 +8,7 @@ import type * as Modes from '@core/modes';
 import type { GameMode } from '@core/modes';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { engagement, hitChance, hooksOf, newUnit, unitById, type RuleModule } from '@core/rules';
+import { engagement, hitChance, hooksOf, newUnit, traverse, unitById, type RuleModule } from '@core/rules';
 import { GameSession, passiveController, runMatch } from '@core/session';
 import { startsTurn } from '@core/actions';
 import { act, blankState, unitTypeNamed } from './helpers';
@@ -132,5 +132,27 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     const plainAttacker = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const plainDefender = newUnit(plain, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
     expect(hitChance(s, engagement(attacker, defender))).toBe(2 * hitChance(plain, engagement(plainAttacker, plainDefender)));
+  });
+
+  it('un modulo puede cortar caminos (pathInterruptions): manda el corte que llega antes', () => {
+    const path = [2, 3, 4, 5, 6].map((x) => ({ x, y: 2 }));
+    // Un corte de prueba en la casilla x=5 y un enemigo escondido en x=6: la emboscada llega despues.
+    const mine: RuleModule = {
+      id: 'ambush',
+      isOn: () => true,
+      hooks: { pathInterruptions: [{ kind: 'ambush', cutAt: (_s, _unit, steps) => steps.findIndex((pos) => pos.x === 5) }] },
+    };
+    const s = withMode({ ruleModules: [mine] }, () => blankState({ ...PLAIN_SETTINGS, ambush: true }));
+    expect(hooksOf(s, 'pathInterruptions')).toHaveLength(2);
+    const unit = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    newUnit(s, unitTypeNamed('Soldier'), 1, { x: 6, y: 2 });
+    expect(traverse(s, unit, path)).toEqual({ path: path.slice(0, 3), interruption: { kind: 'ambush', at: { x: 5, y: 2 } } });
+    expect(unit).toMatchObject({ x: 4, y: 2, turnState: 'done' });
+
+    const plain = blankState({ ...PLAIN_SETTINGS, ambush: false });
+    expect(hooksOf(plain, 'pathInterruptions')).toEqual([]);
+    const free = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
+    newUnit(plain, unitTypeNamed('Soldier'), 1, { x: 6, y: 7 });
+    expect(traverse(plain, free, path.slice(0, 4)).interruption).toBeNull();
   });
 });

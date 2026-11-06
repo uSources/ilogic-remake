@@ -43,6 +43,7 @@ const HOOK_LISTS = {
   moveBudgets: true,
   passRules: true,
   stopRules: true,
+  pathInterruptions: true,
   captureFactors: true,
 } as const satisfies Record<keyof RuleHooks, true>;
 

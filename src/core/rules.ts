@@ -90,17 +90,7 @@ export {
   type Step,
   type StepKind,
 } from './rules/movement';
-export {
-  traverse,
-  moveAlong,
-  moveEvent,
-  endsInAmbush,
-  PATH_INTERRUPTIONS,
-  type Traversal,
-  type Interruption,
-  type InterruptionKind,
-  type PathInterruption,
-} from './rules/traverse';
+export { traverse, moveAlong, moveEvent, endsInterrupted, type Traversal } from './rules/traverse';
 export { distanceMap, noBlockers, unitsBlock, visibleEnemiesBlock, type Blockers, type DistanceMap } from './rules/distance';
 export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
 export { PASS_RULES, passRulesOf, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
@@ -133,6 +123,7 @@ export type {
   RuleModuleId,
   PassRule,
   Passage,
+  PathInterruption,
   StopRule,
 } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './rules/rank';
