@@ -237,6 +237,9 @@ export function plannedPath(s: GameState, unit: Unit, dest: Pos, drawn?: readonl
  * [CAMBIO] en el original la union y la carga se hacian "a distancia" sin mover a la unidad.
  */
 export function approachPath(range: MoveRange, target: Pos): Pos[] | null {
+  // Ya al lado no es un paso del movimiento: no gasta ni mira lo que podria gastar (vale aunque ya
+  // se haya movido o el clima no le deje moverse, como la union "a distancia" de 2013, y desde
+  // dentro de una zona de control). Desde mas lejos, entrar es el ultimo paso y paga como tal.
   if (manhattan(range.origin, target) === 1) return [posOf(range.origin)];
   const canJoinFrom = (tile: ReachableTile) => stepAllowed(range, { from: tile.pos, to: target, spent: tile.cost }, 'join');
   const best = minBy(neighborsInReach(range, target).filter(canJoinFrom), (tile) => tile.cost);

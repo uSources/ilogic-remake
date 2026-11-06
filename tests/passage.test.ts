@@ -5,6 +5,7 @@ import {
   distanceMap,
   hooksOf,
   letsAlliesThrough,
+  mergeProblem,
   moveRulesOf,
   newUnit,
   passBlockers,
@@ -116,5 +117,17 @@ describe('traverse: recorrer un camino de verdad', () => {
     expect(traversal.interruption).toEqual({ kind: 'ambush', at: { x: 8, y: 10 } });
     expect(traversal.path).toEqual(path.slice(0, 2));
     expect(unit).toMatchObject({ x: 6, y: 10, turnState: 'done' });
+  });
+});
+
+describe('unirse o subir desde al lado (approachPath)', () => {
+  it('ya al lado no es un paso: vale aunque se haya movido; desde lejos, no si ya se ha movido', () => {
+    const s = blankState({ fog: false });
+    const unit = newUnit(s, TANK, 0, { x: 5, y: 10 });
+    const beside = newUnit(s, TANK, 0, { x: 6, y: 10 });
+    const far = newUnit(s, TANK, 0, { x: 8, y: 10 });
+    unit.turnState = 'moved';
+    expect(mergeProblem(s, unit, beside)).toBeNull();
+    expect(mergeProblem(s, unit, far)).toBe('unreachable');
   });
 });
