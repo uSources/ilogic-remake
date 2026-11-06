@@ -1,6 +1,7 @@
 /** Acciones de moverse: ir a una casilla este turno y el viaje de varios turnos. */
 import { posOf } from '../geom';
-import { followPath, moveEvent, plannedPath, type MovePath } from '../rules/movement';
+import { plannedPath } from '../rules/movement';
+import { moveAlong, moveEvent, type Traversal } from '../rules/traverse';
 import { buildingAt } from '../rules/queries';
 import { endTravel, travelProblem, travelStepOf, type TravelStep } from '../rules/travel';
 import { captureProgress } from '../rules/capture';
@@ -28,13 +29,13 @@ function checkedPath(path: Pos[] | null): Pos[] {
  * La unidad recorre el camino y lo deja apuntado para deshacerlo (con la captura que pierde al irse
  * y si ha descubierto a alguien). Con emboscada no hay vuelta atras: ya ha gastado su turno.
  */
-function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[], travelTo: Pos | undefined): MovePath {
+function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[], travelTo: Pos | undefined): Traversal {
   const from = posOf(unit);
   const capture = ownCaptureHere(s, unit);
   const seenBefore = visibleEnemies(s, team);
-  const walked = followPath(s, unit, path);
+  const walked = moveAlong(s, unit, path);
   const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
-  if (walked.ambush) forgetUndoableMoves(s);
+  if (walked.interruption) forgetUndoableMoves(s);
   else rememberMove(s, { uid: unit.uid, from, capture, revealed, ...(travelTo ? { travelTo: posOf(travelTo) } : {}) });
   return walked;
 }
@@ -128,9 +129,9 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       const unit = checkedUnit(s, action.uid);
       const step = checkedTravelStep(s, unit);
       if (step.arrives) return endTravel(team, unit, step.end);
-      const walked = followPath(s, unit, step.path);
+      const walked = moveAlong(s, unit, step.path);
       // El paso nunca llega al destino (si llegara este turno, seria 'withinReach'): solo una emboscada lo acaba.
-      return [moveEvent(team, unit.uid, walked), ...(walked.ambush ? endTravel(team, unit, 'ambush') : [])];
+      return [moveEvent(team, unit.uid, walked), ...(walked.interruption ? endTravel(team, unit, 'ambush') : [])];
     },
   },
 };

@@ -10,7 +10,6 @@ import {
   reachableTiles,
   tileProtection,
   unitThreat,
-  type MovePath,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { blankState, unitTypeNamed, terrainNamed, hqId } from './helpers';
@@ -72,13 +71,13 @@ describe('ayudas de reglas', () => {
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {
-    const path: MovePath = [
+    const path = [
       { x: 1, y: 1 },
       { x: 2, y: 1 },
     ];
-    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path });
-    path.ambush = { x: 3, y: 1 };
-    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path, ambush: { x: 3, y: 1 } });
+    expect(moveEvent(0, 4, { path, interruption: null })).toEqual({ kind: 'move', actor: 0, uid: 4, path });
+    const ambushed = { path, interruption: { kind: 'ambush' as const, at: { x: 3, y: 1 } } };
+    expect(moveEvent(0, 4, ambushed)).toEqual({ kind: 'move', actor: 0, uid: 4, path, ambush: { x: 3, y: 1 } });
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
     const building = { type: 'City', owner: 1 as const, x: 4, y: 4, capture: null };

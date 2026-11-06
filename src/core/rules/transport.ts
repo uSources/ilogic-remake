@@ -9,7 +9,8 @@ import { mapGrid } from '../mapGrid';
 import { isOnMap } from '../util/predicates';
 import type { ActionRejection, GameState, Pos, Unit } from '../model';
 import { removeUnit } from './lifecycle';
-import { ambushed, approachPath, moveRange, walkPath, type MovePath } from './movement';
+import { approachPath, moveRange } from './movement';
+import { traverse, type Traversal } from './traverse';
 import { spendUnit } from './unitTurn';
 
 /** No lleva a nadie dentro (un transporte con pasajeros no se puede unir). */
@@ -47,20 +48,18 @@ function checkedApproach(s: GameState, unit: Unit, other: Unit): Pos[] {
 
 /**
  * Union (Unit.Merge), ya comprobada (mergeProblem): la unidad se mueve hasta la otra y se funden.
- * La vida se suma (tope 100) y se queda la experiencia de la mas veterana. Devuelve el camino
- * recorrido (si hay emboscada, se para antes y no llega a unirse: `ambush`).
+ * La vida se suma (tope 100) y se queda la experiencia de la mas veterana. Devuelve lo recorrido,
+ * hasta la otra (si algo corta el camino, se para antes y no llega a unirse: ver traverse).
  */
-export function mergeInto(s: GameState, unit: Unit, target: Unit): MovePath {
-  const path = checkedApproach(s, unit, target);
-  const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(unit, walked);
+export function mergeInto(s: GameState, unit: Unit, target: Unit): Traversal {
+  const traversal = traverse(s, unit, checkedApproach(s, unit, target));
+  if (traversal.interruption) return traversal;
   target.life = Math.min(MAX_LIFE, target.life + unit.life);
   // Al unirse se queda la experiencia de la mas veterana.
   if (unit.kills || target.kills) target.kills = Math.max(unit.kills ?? 0, target.kills ?? 0);
   spendUnit(target);
-  path.push(posOf(target));
   removeUnit(s, unit.uid);
-  return path;
+  return { path: [...traversal.path, posOf(target)], interruption: null };
 }
 
 /** El transporte puede llevar a la unidad (del mismo equipo y de un tipo que lleva). */
@@ -82,18 +81,19 @@ export function loadProblem(s: GameState, unit: Unit, transport: Unit, range = m
   return approachPath(unit, transport, range) ? null : 'unreachable';
 }
 
-/** Subir a un transporte (Unit.Load), ya comprobado (loadProblem): la unidad se mueve hasta el y queda dentro. */
-export function boardTransport(s: GameState, unit: Unit, transport: Unit): MovePath {
-  const path = checkedApproach(s, unit, transport);
-  const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(unit, walked);
-  path.push(posOf(transport));
+/**
+ * Subir a un transporte (Unit.Load), ya comprobado (loadProblem): la unidad se mueve hasta el y queda
+ * dentro. Devuelve lo recorrido, hasta el transporte (o hasta donde la para algo: ver traverse).
+ */
+export function boardTransport(s: GameState, unit: Unit, transport: Unit): Traversal {
+  const traversal = traverse(s, unit, checkedApproach(s, unit, transport));
+  if (traversal.interruption) return traversal;
   transport.cargo[freeSlot(transport)] = unit.uid;
   unit.carrier = transport.uid;
   unit.x = transport.x;
   unit.y = transport.y;
   spendUnit(unit);
-  return path;
+  return { path: [...traversal.path, posOf(transport)], interruption: null };
 }
 
 /** Casillas donde se puede bajar a un pasajero: vecinas transitables y libres. */

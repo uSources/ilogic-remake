@@ -1,19 +1,18 @@
 /**
  * Movimiento y caminos: las reglas de cada paso (`stepAllowed`), el alcance de cada unidad, los
- * caminos trazados, emboscadas, distancia por tierra y el evento de mover. Como se mueve cada tipo
- * esta en movementProfile.ts y lo que hacen las demas unidades en passage.ts.
+ * caminos trazados y la distancia por tierra. Como se mueve cada tipo esta en movementProfile.ts, lo
+ * que hacen las demas unidades en passage.ts y recorrer un camino de verdad en traverse.ts.
  */
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
 import { createLayer, mapGrid } from '../mapGrid';
 import type { Grid } from '../util/grid';
-import { areEnemies, isOnMap } from '../util/predicates';
 import { minBy } from '../util/pick';
 import type { MoveType } from '../content';
-import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import type { GameState, Pos, Unit } from '../model';
 import { movementOf, canWalk, isWalkable, occupancy } from './queries';
 import { movementProfile, type MovementProfile } from './movementProfile';
 import { surroundingsOf, type Surroundings } from './passage';
-import { canStillMove, markMoved, spendUnit } from './unitTurn';
+import { canStillMove } from './unitTurn';
 
 /**
  * Por donde puede ir una unidad este turno, sin camino aun: desde donde sale, su movimiento (terreno,
@@ -128,51 +127,6 @@ export function reachableTilesWithCost(range: MoveRange): ReachableTile[] {
   return tiles;
 }
 
-/** Camino de un movimiento; si ha habido emboscada, donde estaba el enemigo escondido. */
-export type MovePath = Pos[] & { ambush?: Pos };
-
-/** Hay una unidad del otro equipo en la casilla (escondida o no: al pisarla se descubre). */
-function enemyAt(s: GameState, unit: Unit, pos: Pos): boolean {
-  return s.units.some((other) => isOnMap(other) && areEnemies(s, other, unit) && samePos(other, pos));
-}
-
-/** Hay otra unidad (de cualquier equipo) en la casilla: ahi no se puede quedar parada. */
-function someoneElseAt(s: GameState, unit: Unit, pos: Pos): boolean {
-  return s.units.some((other) => isOnMap(other) && other.uid !== unit.uid && samePos(other, pos));
-}
-
-/**
- * Recorre un camino comprobando emboscadas: si una casilla tiene un enemigo (escondido), la unidad
- * se para en la ultima casilla libre antes de el. Devuelve el camino recorrido de verdad.
- */
-export function walkPath(s: GameState, unit: Unit, path: Pos[]): MovePath {
-  const ambushIndex = path.findIndex((pos, index) => index > 0 && enemyAt(s, unit, pos));
-  if (ambushIndex < 0) return path;
-  // Retrocede por las casillas de paso (con aliados) hasta una en la que se pueda parar.
-  let stopIndex = ambushIndex - 1;
-  while (stopIndex > 0 && someoneElseAt(s, unit, path[stopIndex]!)) stopIndex--;
-  const walked = path.slice(0, stopIndex + 1) as MovePath;
-  walked.ambush = { ...path[ambushIndex]! };
-  return walked;
-}
-
-/**
- * Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno.
- * (Interna de las acciones: la usan mover, unir y subir a un transporte.)
- */
-export function ambushed(unit: Unit, walked: MovePath): MovePath {
-  placeAtEnd(unit, walked);
-  spendUnit(unit);
-  return walked;
-}
-
-/** Pone la unidad en la ultima casilla del camino. */
-function placeAtEnd(unit: Unit, path: readonly Pos[]): void {
-  const end = path[path.length - 1]!;
-  unit.x = end.x;
-  unit.y = end.y;
-}
-
 /** Camino desde donde sale hasta `dest` (incluye los dos), siguiendo `prev` hacia atras. */
 export function pathTo(range: MoveRange, dest: Pos): Pos[] {
   const path: Pos[] = [];
@@ -278,18 +232,6 @@ export function plannedPath(s: GameState, unit: Unit, dest: Pos, drawn?: readonl
 }
 
 /**
- * La unidad recorre un camino ya comprobado (plannedPath): si choca con un enemigo escondido se para
- * antes y pierde el turno (emboscada); si no, llega y queda movida. Devuelve lo recorrido.
- */
-export function followPath(s: GameState, unit: Unit, path: Pos[]): MovePath {
-  const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(unit, walked);
-  placeAtEnd(unit, path);
-  markMoved(unit);
-  return path;
-}
-
-/**
  * Para unir o subir a un transporte la unidad tiene que estar al lado del objetivo o poder llegar a
  * una casilla vecina y entrar desde alli (`stepAllowed`, como `join`). Devuelve el camino hasta la
  * casilla vecina mas barata (la propia casilla si ya esta al lado) o null.
@@ -309,14 +251,4 @@ function neighborsInReach(range: MoveRange, pos: Pos): ReachableTile[] {
     const cost = range.steps.at(neighbor);
     return cost === null ? [] : [{ pos: neighbor, cost }];
   });
-}
-
-/** Los sucesos de una accion acaban en una emboscada: la unidad se ha parado antes y ya no puede hacer nada. */
-export function endsInAmbush(events: readonly GameEvent[]): boolean {
-  return events.some((event) => event.kind === 'move' && !!event.ambush);
-}
-
-/** Evento de mover (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
-export function moveEvent(actor: TeamId, uid: number, path: MovePath): GameEvent {
-  return path.ambush ? { kind: 'move', actor, uid, path, ambush: path.ambush } : { kind: 'move', actor, uid, path };
 }
