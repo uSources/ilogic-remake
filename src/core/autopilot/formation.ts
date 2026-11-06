@@ -84,7 +84,7 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
 }
 
 /** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
-export function formation(s: GameState, ai: PlayCtx, unit: Unit): Formation | null {
+export function formation(s: GameState, play: PlayCtx, unit: Unit): Formation | null {
   const standingOrder = effectiveStandingOrder(s, unit);
   if (!standingOrder || needsRepair(s, unit)) return null;
   const mates = matesProgress(s, unit);
@@ -98,7 +98,7 @@ export function formation(s: GameState, ai: PlayCtx, unit: Unit): Formation | nu
   // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
   const rearReach = strikeReach(s, rear.unit);
   if (rear.remaining <= rearReach) return null;
-  if (visibleFoes(s, ai.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
+  if (visibleFoes(s, play.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
   return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - weightsOf(s).SQUADSPREAD, rear: rearAfterThisTurn.unit };
 }
 
@@ -120,13 +120,13 @@ function formationMove(unit: Unit, range: MoveRange, squadFormation: Formation):
 /** Hacia el destino de su orden: en formacion si va con su escuadra, si no como siempre. */
 export function standingOrderStep(
   s: GameState,
-  ai: PlayCtx,
+  play: PlayCtx,
   unit: Unit,
   at: Pos,
   range: MoveRange,
   squadFormation: Formation | null,
 ): Pos | null {
-  return squadFormation ? formationMove(unit, range, squadFormation) : bestMoveToward(s, ai, unit, at, range);
+  return squadFormation ? formationMove(unit, range, squadFormation) : bestMoveToward(s, play, unit, at, range);
 }
 
 /** En formacion solo dispara desde donde no se adelanta a su escuadra (o desde donde esta). */

@@ -20,7 +20,7 @@ import { sampleArmy } from './stats';
 import { seededRng } from './util/random';
 import { ensureWeather } from './weather';
 import type { GameModeId, GameSetup, GameState, Pos, Rng, RulesConfig, TeamId } from './model';
-import type { TeamSetup } from './teams';
+import { teamIds, type TeamSetup } from './teams';
 
 /** Un equipo de una partida nueva: quien lo juega, su alianza, su dinero y su general (id de generals.json, o ninguno). */
 export interface MatchTeam extends TeamSetup {
@@ -120,8 +120,10 @@ function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext
 
 /** Cada uno de los dos equipos se queda con las unidades y los edificios con los que empezaba el otro. */
 function swapStarts(s: GameState): void {
-  if (s.teams.length !== 2) throw new Error(`Cambiar de sitio es para dos equipos (hay ${s.teams.length})`);
-  const other = (team: TeamId): TeamId => 1 - team;
+  const [first, second, ...more] = teamIds(s);
+  if (first === undefined || second === undefined || more.length)
+    throw new Error(`Cambiar de sitio es para dos equipos (hay ${s.teams.length})`);
+  const other = (team: TeamId): TeamId => (team === first ? second : first);
   for (const unit of s.units) unit.team = other(unit.team);
   for (const building of s.buildings) if (building.owner !== null) building.owner = other(building.owner);
 }

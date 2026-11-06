@@ -3,7 +3,7 @@
  * generador de mapas, las misiones, el laboratorio, las herramientas y los tests.
  */
 import type { GameContent } from './content';
-import { GAME_MODES } from './modes';
+import { gameModeOf } from './modes';
 import { SAVE_VERSION } from './saveVersion';
 import { newTeams, type TeamSetup } from './teams';
 import type { GameModeId, GameState, RulesConfig, TeamId } from './model';
@@ -31,7 +31,7 @@ export interface NewGameStateOptions {
 export function newGameState(options: NewGameStateOptions): GameState {
   const { map, rules } = options;
   const teams = newTeams(options.teams, rules.initialFunds);
-  const turnOrder = GAME_MODES[options.mode].turnOrder(
+  const turnOrder = gameModeOf(options).turnOrder(
     teams.map((team) => team.id),
     options.firstTeam ?? null,
   );

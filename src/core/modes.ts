@@ -42,6 +42,12 @@ export interface GameMode {
   readonly savesAtTurnStart: boolean;
 }
 
+/** Congela un objeto y lo que lleva dentro (las listas de un modo tambien). */
+function deepFreeze<T extends object>(value: T): T {
+  for (const inner of Object.values(value)) if (typeof inner === 'object' && inner !== null) deepFreeze(inner as object);
+  return Object.freeze(value);
+}
+
 /** Los equipos en su orden, empezando por `first` (si se pide) y siguiendo en el de la partida. */
 function startingWith(teams: readonly TeamId[], first: TeamId | null): TeamId[] {
   const at = first === null ? 0 : teams.indexOf(first);
@@ -49,7 +55,8 @@ function startingWith(teams: readonly TeamId[], first: TeamId | null): TeamId[] 
   return [...teams.slice(at), ...teams.slice(0, at)];
 }
 
-export const GAME_MODES: { readonly [M in GameModeId]: GameMode & { readonly id: M } } = {
+/** Congelados: un modo es lo que dice aqui, no se cambia en marcha (los tests que prueban otro lo dan con vi.mock de gameModeOf). */
+export const GAME_MODES: { readonly [M in GameModeId]: GameMode & { readonly id: M } } = deepFreeze({
   skirmish: { id: 'skirmish', victory: ['lastAllianceStanding', 'dayLimit'], turnOrder: startingWith, savesAtTurnStart: true },
   // El objetivo antes que el limite de dias: una mision de aguantar se gana al acabar sus dias.
   mission: {
@@ -61,10 +68,10 @@ export const GAME_MODES: { readonly [M in GameModeId]: GameMode & { readonly id:
   // Una partida preparada para ver algo (el laboratorio de animaciones): ni se acaba ni se guarda, y
   // sin clima que cambie lo que se mira.
   sandbox: { id: 'sandbox', victory: [], turnOrder: startingWith, fixedRules: { weather: false }, savesAtTurnStart: false },
-};
+});
 
 /** Los modos que hay (para lo que viene de fuera: partidas guardadas). */
 export const isGameModeId = (value: unknown): value is GameModeId => typeof value === 'string' && Object.hasOwn(GAME_MODES, value);
 
-/** El modo de la partida. */
-export const gameModeOf = (s: { mode: GameModeId }): GameMode => GAME_MODES[s.mode];
+/** El modo de la partida: la unica forma de leerlo (las reglas, la sesion y la preparacion). */
+export const gameModeOf = (s: { readonly mode: GameModeId }): GameMode => GAME_MODES[s.mode];

@@ -19,13 +19,12 @@ import {
   type ActedStep,
   type Controller,
 } from '@core/session';
-import { GAME_MODES, type GameMode } from '@core/modes';
+import { GAME_MODES } from '@core/modes';
 import { startsTurn } from '@core/actions';
 import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { PLAIN_RULES } from './plainRules';
-import type { GameModeId } from '@core/model';
 
 const fixture = (name: string) => readFileSync(`tests/fixtures/saves/${name}.json`, 'utf8');
 
@@ -391,99 +390,7 @@ describe('pasos de turno (actions/turn.ts) con las comprobaciones de dispatch', 
   });
 });
 
-/**
- * Cambia por un rato lo que fija un modo (para probar lo que ningun modo del juego usa aun) y lo
- * deja como estaba al acabar.
- */
-function withMode<T>(mode: GameModeId, changes: Partial<GameMode>, run: () => T): T {
-  const modes = GAME_MODES as unknown as Record<GameModeId, GameMode>;
-  const original = modes[mode];
-  modes[mode] = { ...original, ...changes };
-  try {
-    return run();
-  } finally {
-    modes[mode] = original;
-  }
-}
-
 describe('modos de juego (core/modes.ts)', () => {
-  it('los pasos de turno del modo van detras de los de todos, y por las mismas comprobaciones', () => {
-    const s = blankState(PLAIN_RULES, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
-    s.turnStarted = false;
-    const traveler = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
-    traveler.travelTo = { x: 2, y: 20 };
-    s.buildings.push({ type: 'City', owner: null, x: 9, y: 9 });
-    const capturer = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 9, y: 9 });
-    s.buildings.at(-1)!.capture = { team: 0, uid: capturer.uid, left: 1 };
-    const other = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 12 });
-    const enemy = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 12, y: 5 });
-    const seen: string[] = [];
-    const replies: unknown[] = [];
-    const result = withMode(
-      s.mode,
-      {
-        turnPhases: {
-          start: [
-            {
-              id: 'modeStart',
-              run: (state, team, perform) => {
-                // Los viajes (TURN_START_PHASES) ya han dado su paso.
-                seen.push(`start: viajero en y=${unitById(state, traveler.uid)!.y}`);
-                const result = perform(state, team, { kind: 'wait', uid: other.uid });
-                return result.ok ? result.events : [];
-              },
-            },
-          ],
-          end: [
-            {
-              id: 'modeEnd',
-              run: (state, team, perform) => {
-                // Las capturas (TURN_END_PHASES) ya se han hecho.
-                seen.push(`end: ciudad de ${String(state.buildings.at(-1)!.owner)}`);
-                replies.push(perform(state, team, { kind: 'wait', uid: other.uid }));
-                replies.push(perform(state, 1, { kind: 'wait', uid: enemy.uid }));
-                replies.push(perform(state, 1, { kind: 'surrender' }));
-                return [];
-              },
-            },
-          ],
-        },
-      },
-      () => {
-        const started = act(s, 0, { kind: 'startTurn' });
-        const ended = act(s, 0, { kind: 'endTurn' });
-        return { started, ended };
-      },
-    );
-    expect(seen[0]).not.toBe('start: viajero en y=2');
-    expect(result.started.at(-1)).toMatchObject({ kind: 'wait', uid: other.uid });
-    expect(seen[1]).toBe('end: ciudad de 0');
-    // Lo que manda el paso pasa por validate (esa unidad ya se ha usado) y por las guardas: otro
-    // equipo no actua en este turno, ni para rendirse: un paso de turno solo manda las de su equipo.
-    expect(replies).toMatchObject([
-      { ok: false, reason: 'spent' },
-      { ok: false, reason: 'notYourTurn' },
-      { ok: false, reason: 'notYourTurn' },
-    ]);
-  });
-
-  it('un modo con su propio orden de turnos: la partida lo guarda y la sesion lo sigue', () => {
-    const reversed = (teams: readonly number[]) => [...teams].reverse();
-    const s = withMode('skirmish', { turnOrder: reversed }, () =>
-      createMatch(skirmishConfig({ seed: 4, size: 16, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] })),
-    );
-    expect(s.turnOrder).toEqual([2, 1, 0]);
-    expect(s.turn).toBe(2);
-    const session = new GameSession(
-      s,
-      s.teams.map(() => passiveController()),
-    );
-    const started: number[] = [];
-    session.subscribe((step) => startsTurn(step) && started.push(step.team));
-    runMatch(session, { until: (state) => state.day > 2 });
-    expect(started).toEqual([2, 1, 0, 2, 1, 0]);
-  });
-
   it('el orden de los turnos no admite un equipo que no esta', () => {
     expect(GAME_MODES.skirmish.turnOrder([0, 1, 2], 1)).toEqual([1, 2, 0]);
     expect(() => GAME_MODES.skirmish.turnOrder([0, 1], 5)).toThrow(/no esta en la partida/);

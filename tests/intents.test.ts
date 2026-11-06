@@ -6,7 +6,8 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { posOf } from '@core/geom';
 import { seededRng } from '@core/util/random';
-import { newUnit, visibility } from '@core/rules';
+import { newUnit, unitById, visibility } from '@core/rules';
+import { GameSession, humanController, passiveController } from '@core/session';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState, Pos } from '@core/model';
@@ -34,6 +35,15 @@ function playOrders(s: GameState, diceSeed = 99): void {
 const last = (path: Pos[]): Pos | undefined => path[path.length - 1];
 
 describe('previewStandingOrders', () => {
+  it('simula con dispatch en su copia; el dispatcher de una sesion (solo para su partida) no vale', () => {
+    const s = world();
+    const unit = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
+    giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
+    const session = new GameSession(s, [humanController(), passiveController()]);
+    expect(() => previewStandingOrders(s, 0, session.dispatcher)).toThrow(/solo manda acciones en su partida/);
+    expect(unitById(s, unit.uid)).toMatchObject({ x: 9, y: 5 });
+  });
+
   it('capturar: prevé el camino hasta el edificio y la captura, y el turno real hace eso', () => {
     const s = world();
     const unit = newUnit(s, SOLDIER, 0, { x: 9, y: 5 });
