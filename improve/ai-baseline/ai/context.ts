@@ -53,7 +53,7 @@ export function aiCtx(me: TeamId, dispatcher: ActionDispatcher = dispatch): AiCt
  */
 export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
-  if (ai.group && s.rules.passAllies) {
+  if (ai.group && s.settings.passAllies) {
     const visible = visibility(s, ai.me);
     const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, ai.me) || !visible.at(other));
     for (const other of s.units) if (letsPass(other)) occupied.set(other, false);

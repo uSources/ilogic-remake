@@ -16,7 +16,7 @@ import { PAL, PAL_CSS } from '../ui/palette';
 
 const MAP_SIZE = 32;
 /** La partida de fondo se juega sin niebla: se ve todo lo que pasa. */
-const BACKGROUND_RULE_CHANGES = { fog: false };
+const BACKGROUND_SETTING_CHANGES = { fog: false };
 /** La partida de fondo se corta a los 45 dias y empieza otra. */
 const MAX_DAYS = 45;
 const FIRST_PAUSE_MS = 600;
@@ -84,7 +84,7 @@ export class LiveBackground {
 
   start(): void {
     const seed = randomSeed();
-    this.game = createMatch(skirmishConfig({ seed, size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') }));
+    this.game = createMatch(skirmishConfig({ seed, size: MAP_SIZE, settingChanges: BACKGROUND_SETTING_CHANGES, teams: duel('ai', 'ai') }));
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
     const first = playerTeam(this.game);

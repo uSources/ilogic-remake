@@ -1,5 +1,5 @@
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { describe, expect, it } from 'vitest';
 import { playGame } from '../tools/balance/play';
 
@@ -15,7 +15,7 @@ describe('IA: partidas de referencia', () => {
       maxDays: 25,
       policies: ['ai', 'ai'],
       size: 20,
-      rules: rulesWith(defaultContent()),
+      settings: settingsWith(defaultContent()),
       content: defaultContent(),
     });
     const last = record.samples[record.samples.length - 1];

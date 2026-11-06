@@ -20,7 +20,7 @@ export interface ControlReport {
 
 /** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de rules.controlRadius). */
 export function inControlZone(s: GameState, center: Pos, pos: Pos): boolean {
-  return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= s.rules.controlRadius;
+  return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= s.settings.controlRadius;
 }
 
 /** [CAMBIO] Equipos con unidades dentro de la zona de un punto de control. */
@@ -60,8 +60,8 @@ export function controlRound(s: GameState): GameEvent[] {
     const contested = owner === 'contested';
     events.push({ kind: 'controlPoint', actor: null, at: posOf(point), owner: point.owner, contested });
     if (contested || owner === null) continue;
-    addForTeam(income, owner, s.rules.controlIncome);
-    earn(s, owner, s.rules.controlIncome);
+    addForTeam(income, owner, s.settings.controlIncome);
+    earn(s, owner, s.settings.controlIncome);
   }
   for (const team of teamIds(s))
     if (income[team]) events.push({ kind: 'income', actor: null, team, amount: income[team], source: 'controlPoints' });

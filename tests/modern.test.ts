@@ -106,7 +106,7 @@ describe('reglas nuevas: combate', () => {
 
   it('sin niebla se ve todo el mapa', () => {
     const s = blankState();
-    s.rules.fog = false;
+    s.settings.fog = false;
     expect([...visibility(s, 0).cells()].every((cell) => cell.value)).toBe(true);
   });
 });
@@ -166,8 +166,8 @@ describe('reglas nuevas: veterania', () => {
     expect(attacker.kills).toBe(1);
     expect(rank(attacker)).toBe(1);
     const newDefender = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    expect(hitChance(s, engagement(attacker, newDefender))).toBeCloseTo(base * (1 + s.rules.vetBonus));
-    expect(hitChance(s, engagement(newDefender, attacker))).toBeCloseTo(base * (1 - s.rules.vetBonus));
+    expect(hitChance(s, engagement(attacker, newDefender))).toBeCloseTo(base * (1 + s.settings.vetBonus));
+    expect(hitChance(s, engagement(newDefender, attacker))).toBeCloseTo(base * (1 - s.settings.vetBonus));
     attacker.kills = 6;
     expect(rank(attacker)).toBe(3);
     const ally = newUnit(s, TANK, 0, { x: 2, y: 3 });

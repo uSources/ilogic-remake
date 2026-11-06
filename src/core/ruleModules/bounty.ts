@@ -7,7 +7,7 @@ import type { RuleModule } from './hooks';
 
 /** Lo que se cobra por destruir una unidad como `lost` (0 sin botin). */
 export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
-  return Math.round(unitTypeOf(s, lost).cost * s.rules.bounty);
+  return Math.round(unitTypeOf(s, lost).cost * s.settings.bounty);
 }
 
 /** El equipo de quien ha destruido a la otra cobra su botin. */

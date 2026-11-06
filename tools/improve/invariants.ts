@@ -47,10 +47,10 @@ export function checkInvariants(s: GameState): string[] {
   for (const { id: team, funds } of s.teams) {
     if (!(Number.isInteger(funds) && funds >= 0 && funds <= s.content.maxFunds)) errors.push(`dinero del equipo ${team}: ${funds}`);
     const count = s.units.filter((unit) => unit.team === team).length;
-    if (count > s.rules.maxUnits) errors.push(`equipo ${team}: ${count} unidades, el limite es ${s.rules.maxUnits}`);
+    if (count > s.settings.maxUnits) errors.push(`equipo ${team}: ${count} unidades, el limite es ${s.settings.maxUnits}`);
     const commandPoints = commandUsed(s, team);
-    if (s.rules.commandPoints !== null && commandPoints > s.rules.commandPoints)
-      errors.push(`equipo ${team}: ${commandPoints} puntos de mando, el limite es ${s.rules.commandPoints}`);
+    if (s.settings.commandPoints !== null && commandPoints > s.settings.commandPoints)
+      errors.push(`equipo ${team}: ${commandPoints} puntos de mando, el limite es ${s.settings.commandPoints}`);
   }
   const bpos = new Set<string>();
   for (const building of s.buildings) {

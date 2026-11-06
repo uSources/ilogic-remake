@@ -135,7 +135,7 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 
 Se definen en ficheros de configuracion, sin tocar codigo: `src/core/content/units.json` (precio,
 movimiento, daño contra cada unidad, quien la fabrica...), `buildings.json`, `terrain.json` (defensa y
-coste de movimiento), `rules.json` (reglas por defecto) y `ai.json` (pesos de la IA). El editor los
+coste de movimiento), `settings.json` (reglas por defecto) y `ai.json` (pesos de la IA). El editor los
 autocompleta con su esquema y el juego dice que esta mal si hay un error. Para una unidad nueva:
 `npm run unit -- new <Id> --like <Parecida>`. Los temas de mapa y el generador de mapas al azar
 estan en `themes.json` y `mapgen.json`. Guia: [docs/CONTENIDO.md](docs/CONTENIDO.md).
@@ -149,7 +149,7 @@ src/
     content/     Unidades, edificios, terreno, temas, mapas al azar, reglas e IA en JSON + su validacion
                  y sus tipos resueltos (UnitType, TerrainType...): ver docs/CONTENIDO.md
     model/       Modelo de datos de la partida (GameState, Unit, Building, GameEvent...), sin dependencias
-    matchSettings.ts  rulesWith(contenido, cambios): los ajustes de una partida (MatchSettings, s.rules)
+    matchSettings.ts  settingsWith(contenido, cambios): los ajustes de una partida (MatchSettings, s.settings)
     ruleModules/ Modulos de reglas (veterania, clima, habilidades, emboscadas...): se enchufan segun los
                  ajustes y aportan entradas a las listas de las reglas (RULE_MODULES, hooksOf)
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)

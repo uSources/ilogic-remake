@@ -12,7 +12,7 @@ import type { GameModeId, GameState, MatchSettings, TeamId } from './model';
 export interface NewGameStateOptions {
   /** Terreno `map[x][y]` (ids de terrain.json): su tamaño es el de la partida. */
   map: GameState['map'];
-  rules: Readonly<MatchSettings>;
+  settings: Readonly<MatchSettings>;
   /** Contenido con el que se juega (unidades, edificios, terreno...): `defaultContent()` o una variante. */
   content: GameContent;
   /** El modo de juego (core/modes.ts): como se acaba y en que orden se juegan los turnos. */
@@ -29,8 +29,8 @@ export interface NewGameStateOptions {
 
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido; el primer equipo aun no ha empezado su turno. */
 export function newGameState(options: NewGameStateOptions): GameState {
-  const { map, rules } = options;
-  const teams = newTeams(options.teams, rules.initialFunds);
+  const { map, settings } = options;
+  const teams = newTeams(options.teams, settings.initialFunds);
   const turnOrder = gameModeOf(options).turnOrder(
     teams.map((team) => team.id),
     options.firstTeam ?? null,
@@ -51,7 +51,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
     turnStarted: false,
     dice: options.diceSeed >>> 0,
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
-    rules: { ...rules },
+    settings: { ...settings },
     content: options.content,
   };
 }

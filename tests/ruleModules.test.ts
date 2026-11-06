@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { RULE_MODULES, hooksOf, isRuleOn, type RuleModuleId } from '@core/rules';
 import type { MatchSettings } from '@core/model';
@@ -7,7 +7,7 @@ import { blankState } from './helpers';
 
 /** Modulos de reglas (core/ruleModules/): cada pieza se enchufa segun los ajustes y aporta sus entradas. */
 
-const DEFAULTS = rulesWith(defaultContent());
+const DEFAULTS = settingsWith(defaultContent());
 
 /** Los ajustes que apagan cada modulo (los que tienen interruptor). */
 const SWITCHED_OFF: Partial<Record<RuleModuleId, Partial<MatchSettings>>> = {
@@ -35,7 +35,7 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   it('cada interruptor quita su modulo, y solo ese', () => {
     for (const [id, change] of Object.entries(SWITCHED_OFF)) {
       const on = blankState(DEFAULTS);
-      const off = blankState(rulesWith(defaultContent(), change));
+      const off = blankState(settingsWith(defaultContent(), change));
       expect(isRuleOn(on, id as RuleModuleId), id).toBe(true);
       expect(isRuleOn(off, id as RuleModuleId), id).toBe(false);
       const othersOn = RULE_MODULES.filter((module) => module.id !== id).map((module) => isRuleOn(off, module.id));
@@ -51,14 +51,14 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   it('los generales van siempre; sin niebla, el modulo que lo enseña todo', () => {
     expect(isRuleOn(blankState(DEFAULTS), 'generals')).toBe(true);
     expect(isRuleOn(blankState(DEFAULTS), 'noFog')).toBe(false);
-    expect(isRuleOn(blankState(rulesWith(defaultContent(), { fog: false })), 'noFog')).toBe(true);
+    expect(isRuleOn(blankState(settingsWith(defaultContent(), { fog: false })), 'noFog')).toBe(true);
   });
 
   it('hooksOf junta las entradas de los modulos puestos, en el orden de RULE_MODULES', () => {
     const s = blankState(DEFAULTS);
-    const expected = RULE_MODULES.filter((module) => module.isOn(s.rules)).flatMap((module) => module.hooks.hitModifiers ?? []);
+    const expected = RULE_MODULES.filter((module) => module.isOn(s.settings)).flatMap((module) => module.hooks.hitModifiers ?? []);
     expect(hooksOf(s, 'hitModifiers')).toEqual(expected);
-    const plain = blankState(rulesWith(defaultContent(), { abilities: false, veterancy: false, flankBonus: 0, weather: false }));
+    const plain = blankState(settingsWith(defaultContent(), { abilities: false, veterancy: false, flankBonus: 0, weather: false }));
     expect(hooksOf(plain, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['generals']);
   });
 });

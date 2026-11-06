@@ -58,7 +58,7 @@ function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: Dama
   for (const uid of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += damageTo(uid) * (squad.length ? 1 + s.rules.flankBonus : 1);
+    total += damageTo(uid) * (squad.length ? 1 + s.settings.flankBonus : 1);
     squad.push(uid);
   }
   return total >= foe.life && squad.length >= 2 ? squad : null;

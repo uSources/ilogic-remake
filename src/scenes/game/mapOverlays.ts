@@ -65,7 +65,7 @@ export function controlPointMarks(s: GameState, viewer: TeamId, visible: (pos: P
   return s.controlPoints?.map((point) => {
     const inside = s.units.filter((unit) => onMap(unit) && inControlZone(s, point, unit) && (unit.team === viewer || visible(unit)));
     const contested = inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team)));
-    return { x: point.x, y: point.y, owner: ownerSideOf(s, viewer, point.owner), r: s.rules.controlRadius, contested };
+    return { x: point.x, y: point.y, owner: ownerSideOf(s, viewer, point.owner), r: s.settings.controlRadius, contested };
   });
 }
 

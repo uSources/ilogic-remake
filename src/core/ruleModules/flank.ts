@@ -5,12 +5,12 @@ import type { RuleModule } from './hooks';
 
 /** La unidad ya ha recibido un ataque hoy y la partida tiene flanqueo. */
 export function flanked(s: GameState, defender: Unit): boolean {
-  return s.rules.flankBonus > 0 && defender.hitDay === s.day;
+  return s.settings.flankBonus > 0 && defender.hitDay === s.day;
 }
 
 /** Premia atacar en grupo al mismo objetivo. */
 function flankFactor(s: GameState, { defender }: Engagement): number {
-  return flanked(s, defender.unit) ? 1 + s.rules.flankBonus : 1;
+  return flanked(s, defender.unit) ? 1 + s.settings.flankBonus : 1;
 }
 
 export const FLANK: RuleModule = {

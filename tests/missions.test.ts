@@ -1,10 +1,10 @@
 import { MoveType } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
-import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
+import { buildMission, checkMission, missionSettings, MISSIONS } from '@core/missions';
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_DICE_SEED = 1;
@@ -37,13 +37,13 @@ describe('misiones', () => {
     '%s: guardada y cargada sigue con sus reglas (fallo K1)',
     (_id, mission) => {
       const s = buildMission(mission, defaultContent(), MISSION_DICE_SEED);
-      expect(s.rules).toEqual(missionRules(mission, defaultContent()));
-      expect(s.rules).not.toEqual(defaultContent().defaultRules); // sin mantenimiento, ni puntos de mando, ni clima
-      expect(deserialize(serialize(s), defaultContent())!.rules).toEqual(missionRules(mission, defaultContent()));
+      expect(s.settings).toEqual(missionSettings(mission, defaultContent()));
+      expect(s.settings).not.toEqual(defaultContent().defaultSettings); // sin mantenimiento, ni puntos de mando, ni clima
+      expect(deserialize(serialize(s), defaultContent())!.settings).toEqual(missionSettings(mission, defaultContent()));
       // Sin reglas esta rota: no se ponen las de su mision.
-      const withoutRules = JSON.parse(serialize(s)) as { rules?: unknown };
-      delete withoutRules.rules;
-      expect(deserialize(JSON.stringify(withoutRules), defaultContent())).toBeNull();
+      const withoutSettings = JSON.parse(serialize(s)) as { settings?: unknown };
+      delete withoutSettings.settings;
+      expect(deserialize(JSON.stringify(withoutSettings), defaultContent())).toBeNull();
     },
   );
 
@@ -63,30 +63,32 @@ describe('misiones', () => {
 
   it('una mision guardada se carga con las reglas que guardo', () => {
     const s = buildMission(MISSIONS[0]!, defaultContent(), MISSION_DICE_SEED);
-    s.rules = rulesWith(defaultContent(), { fog: true, upkeep: 0.1 });
+    s.settings = settingsWith(defaultContent(), { fog: true, upkeep: 0.1 });
     const back = deserialize(serialize(s), defaultContent())!;
-    expect(back.rules).toEqual(rulesWith(defaultContent(), { fog: true, upkeep: 0.1 }));
-    expect(back.rules).not.toEqual(missionRules(MISSIONS[0]!, defaultContent()));
+    expect(back.settings).toEqual(settingsWith(defaultContent(), { fog: true, upkeep: 0.1 }));
+    expect(back.settings).not.toEqual(missionSettings(MISSIONS[0]!, defaultContent()));
   });
 
   it('unas reglas guardadas rotas se rechazan, de una mision o no (no se arreglan)', () => {
     const saved = JSON.parse(serialize(buildMission(MISSIONS[0]!, defaultContent(), MISSION_DICE_SEED))) as {
-      rules: Record<string, unknown>;
+      settings: Record<string, unknown>;
     };
-    saved.rules.fog = 'mucha';
+    saved.settings.fog = 'mucha';
     expect(deserialize(JSON.stringify(saved), defaultContent())).toBeNull();
-    delete saved.rules.fog;
+    delete saved.settings.fog;
     expect(deserialize(JSON.stringify(saved), defaultContent())).toBeNull();
   });
 
   it('una mision que ya no existe se carga con las reglas que guardo', () => {
     const saved = JSON.parse(serialize(buildMission(MISSIONS[0]!, defaultContent(), MISSION_DICE_SEED))) as {
       mission: { id: string };
-      rules: unknown;
+      settings: unknown;
     };
     saved.mission.id = 'ya-no-existe';
-    saved.rules = rulesWith(defaultContent(), { fog: true, upkeep: 0.1 });
-    expect(deserialize(JSON.stringify(saved), defaultContent())!.rules).toEqual(rulesWith(defaultContent(), { fog: true, upkeep: 0.1 }));
+    saved.settings = settingsWith(defaultContent(), { fog: true, upkeep: 0.1 });
+    expect(deserialize(JSON.stringify(saved), defaultContent())!.settings).toEqual(
+      settingsWith(defaultContent(), { fog: true, upkeep: 0.1 }),
+    );
   });
 
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {

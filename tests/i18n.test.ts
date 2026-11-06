@@ -27,8 +27,8 @@ describe('ayuda', () => {
     expect(en.colors.map(([color]) => color)).toEqual(es.colors.map(([color]) => color));
     expect(en.goalBasics.length).toBe(es.goalBasics.length);
     const ruleLineIsShown = (lines: string[]) => lines.map((line) => line !== '');
-    expect(ruleLineIsShown(en.ruleLines(defaultContent().defaultRules))).toEqual(
-      ruleLineIsShown(es.ruleLines(defaultContent().defaultRules)),
+    expect(ruleLineIsShown(en.ruleLines(defaultContent().defaultSettings))).toEqual(
+      ruleLineIsShown(es.ruleLines(defaultContent().defaultSettings)),
     );
   });
 });

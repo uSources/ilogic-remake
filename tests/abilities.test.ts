@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ABILITY_EFFECTS, abilityOf, auraFactor } from '@core/abilities';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { ABILITY_KINDS, ABILITY_SHAPES, MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
@@ -44,7 +44,7 @@ const power = (attacker: UnitType, defender: UnitType) => attacker.attack?.hitCh
 const minRangeOf = (unitType: UnitType) => unitType.attack?.minRange ?? 1;
 
 /** Reglas de estos tests: sin niebla, coste de terreno ni veterania, que cambiarian las cuentas. */
-const TEST_RULES = rulesWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
+const TEST_SETTINGS = settingsWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
 
 beforeEach(() => {
   settings.lang = 'es';
@@ -79,14 +79,14 @@ describe('habilidades: contenido', () => {
   it('cada clase tiene su validacion y lo que aporta, con las mismas claves, y el modulo lo junta todo', () => {
     expect(Object.keys(ABILITY_EFFECTS)).toEqual([...ABILITY_KINDS]);
     expect(Object.keys(ABILITY_SHAPES)).toEqual([...ABILITY_KINDS]);
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     expect(hooksOf(s, 'hitModifiers').map((modifier) => modifier.id)).toEqual(expect.arrayContaining(['guard', 'aura']));
     expect(hooksOf(s, 'stopRules').map((rule) => rule.id)).toEqual(['zoneOfControl']);
     expect(hooksOf(s, 'coverPiercing').map((rule) => rule.id)).toEqual(['piercing']);
   });
 
   it('con la regla apagada no cuenta ninguna', () => {
-    const s = blankState({ ...TEST_RULES, abilities: false });
+    const s = blankState({ ...TEST_SETTINGS, abilities: false });
     const guardType = withAbility('guard');
     expect(abilityOf(guardType, 'guard')).toBeDefined(); // la tiene, pero la partida no lleva el modulo
     expect(abilitiesOf(s, guardType)).toEqual([]);
@@ -96,7 +96,7 @@ describe('habilidades: contenido', () => {
 
 describe('habilidades: escudo (guard)', () => {
   it('los ataques a distancia aciertan menos; los de cuerpo a cuerpo igual', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const guardType = withAbility('guard');
     const factor = abilityOf(guardType, 'guard')!.factor;
     const rangedType = plain((type) => ranged(type) && power(type, guardType) > 0);
@@ -106,7 +106,7 @@ describe('habilidades: escudo (guard)', () => {
     const near = newUnit(s, meleeType, 0, { x: 9, y: 10 });
     expect(hitChance(s, engagement(far, defender))).toBeCloseTo(power(rangedType, guardType) * factor);
     expect(hitChance(s, engagement(near, defender))).toBeCloseTo(power(meleeType, guardType));
-    s.rules = { ...TEST_RULES, abilities: false };
+    s.settings = { ...TEST_SETTINGS, abilities: false };
     expect(hitChance(s, engagement(far, defender))).toBeCloseTo(power(rangedType, guardType));
   });
 });
@@ -117,7 +117,7 @@ describe('habilidades: zona de control', () => {
   const PLANE = plain(moves(MoveType.AIR));
 
   it('quien entra al lado se para: no sigue desde ahi', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     newUnit(s, zoneType, 1, { x: 10, y: 10 });
     const unit = newUnit(s, TANK, 0, { x: 10, y: 13 });
     const range = moveRange(s, unit);
@@ -135,30 +135,30 @@ describe('habilidades: zona de control', () => {
     ];
     expect(validPath(range, through)).toBe(false);
     expect(dispatch(s, 0, { kind: 'move', uid: unit.uid, to: { x: 10, y: 11 } }).ok).toBe(true);
-    s.rules = { ...TEST_RULES, abilities: false };
+    s.settings = { ...TEST_SETTINGS, abilities: false };
     expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
   });
 
   it('tampoco se sigue desde la zona para unirse o subir a un transporte', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     newUnit(s, zoneType, 1, { x: 10, y: 10 });
     const unit = newUnit(s, TANK, 0, { x: 10, y: 13 });
     // La unica vecina de la compañera a la que llega es (11, 10), dentro de la zona.
     const mate = newUnit(s, TANK, 0, { x: 11, y: 9 });
     expect(mergeProblem(s, unit, mate)).toBe('unreachable');
-    s.rules = { ...TEST_RULES, abilities: false };
+    s.settings = { ...TEST_SETTINGS, abilities: false };
     expect(mergeProblem(s, unit, mate)).toBeNull();
   });
 
   it('desde dentro de la zona se puede salir el turno siguiente', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     newUnit(s, zoneType, 1, { x: 10, y: 10 });
     const unit = newUnit(s, TANK, 0, { x: 10, y: 11 });
     expect(moveRange(s, unit).steps.at({ x: 10, y: 14 })).toBeGreaterThan(0);
   });
 
   it('no para a los movimientos que no estan en stops (aviones)', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     expect(abilityOf(zoneType, 'zoneOfControl')!.stops).not.toContain('air');
     newUnit(s, zoneType, 1, { x: 10, y: 10 });
     const unit = newUnit(s, PLANE, 0, { x: 10, y: 13 });
@@ -166,7 +166,7 @@ describe('habilidades: zona de control', () => {
   });
 
   it('con niebla solo cuenta si se ve', () => {
-    const s = blankState(rulesWith(defaultContent(), { terrainCost: false }));
+    const s = blankState(settingsWith(defaultContent(), { terrainCost: false }));
     s.map[5]![8] = WOODS; // el bosque la esconde salvo desde al lado
     newUnit(s, zoneType, 1, { x: 5, y: 8 });
     const unit = newUnit(s, TANK, 0, { x: 5, y: 5 });
@@ -183,7 +183,7 @@ describe('habilidades: apoyo (aura)', () => {
   const meleeType = plain(melee);
 
   it('protege a las propias cercanas, no a si misma ni a las enemigas', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const sup = newUnit(s, auraType, 0, { x: 10, y: 10 });
     const ally = newUnit(s, meleeType, 0, { x: 10 + radius, y: 10 });
     const far = newUnit(s, meleeType, 0, { x: 10 + radius + 1, y: 10 });
@@ -196,7 +196,7 @@ describe('habilidades: apoyo (aura)', () => {
   });
 
   it('no se suma con otra aura', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     newUnit(s, auraType, 0, { x: 10, y: 10 });
     newUnit(s, auraType, 0, { x: 12, y: 10 });
     const ally = newUnit(s, meleeType, 0, { x: 11, y: 10 });
@@ -206,7 +206,7 @@ describe('habilidades: apoyo (aura)', () => {
 
 describe('habilidades: perforante (piercing)', () => {
   it('ignora la proteccion del bosque', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const piercingType = withAbility('piercing');
     const ignore = abilityOf(piercingType, 'piercing')!.ignoreCover;
     const target = plain((type) => power(piercingType, type) > 0 && canMoveOn(type.movement, terrainNamed('Woods')));
@@ -224,20 +224,20 @@ describe('habilidades: perforante (piercing)', () => {
 
 describe('habilidades: interfaz', () => {
   it('nombre y explicacion con sus numeros, en los dos idiomas', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const guardType = withAbility('guard');
     const pct = Math.round((1 - abilityOf(guardType, 'guard')!.factor) * 100);
     expect(abilitiesVM(s, guardType)).toEqual([{ name: 'Escudo', desc: `Los ataques a distancia le aciertan un ${pct} % menos.` }]);
     settings.lang = 'en';
     expect(abilitiesVM(s, withAbility('zoneOfControl'))[0]!.desc).toContain('foot, vehicles');
-    s.rules = { ...TEST_RULES, abilities: false };
+    s.settings = { ...TEST_SETTINGS, abilities: false };
     expect(abilitiesVM(s, guardType)).toEqual([]);
   });
 });
 
 describe('habilidades: explorador (scout)', () => {
   it('ve dentro del bosque en todo su radio; otra unidad solo desde al lado', () => {
-    const s = blankState(rulesWith(defaultContent(), { fog: true, forestHides: true, weather: false }));
+    const s = blankState(settingsWith(defaultContent(), { fog: true, forestHides: true, weather: false }));
     s.map[10]![14] = WOODS;
     const scout = newUnit(s, withAbility('scout'), 0, { x: 10, y: 10 });
     expect(visibility(s, 0).at({ x: 10, y: 14 })).toBe(true); // a 4 casillas, dentro de su vision
@@ -248,13 +248,13 @@ describe('habilidades: explorador (scout)', () => {
 
 describe('habilidades: captura rapida (quickCapture)', () => {
   it('resta un 50 % mas al capturar que una unidad igual sin la habilidad', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const fast = newUnit(s, withAbility('quickCapture'), 0, { x: 5, y: 5 });
     const factor = (abilityOf(unitTypeOf(s, fast), 'quickCapture') as { factor: number }).factor;
     expect(captureStrength(s, fast)).toBe(Math.ceil(10 * factor));
     fast.life = 40;
     expect(captureStrength(s, fast)).toBe(Math.ceil(4 * factor));
-    s.rules = { ...TEST_RULES, abilities: false };
+    s.settings = { ...TEST_SETTINGS, abilities: false };
     expect(captureStrength(s, fast)).toBe(4); // con la regla apagada, como cualquiera
   });
 });

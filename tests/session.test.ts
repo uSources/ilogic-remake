@@ -25,7 +25,7 @@ import { startsTurn } from '@core/actions';
 import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, hqId, unitTypeNamed } from './helpers';
-import { PLAIN_RULES } from './plainRules';
+import { PLAIN_SETTINGS } from './plainSettings';
 
 /** Una sesion de la persona (equipo 0) contra la IA, con lo que se haga apuntado. */
 function personVsAi(s: ReturnType<typeof blankState>) {
@@ -306,7 +306,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
   });
 
   it('repetir cuando el equipo que va a jugar se rinde antes de empezar su turno (con un viaje): sale igual', () => {
-    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    const s = blankState(PLAIN_SETTINGS, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
     s.turnStarted = false;
     const traveler = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 2 });
     traveler.travelTo = { x: 2, y: 20 };
@@ -364,7 +364,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
   });
 
   it('rendirse otro equipo fuera de turno no le quita al que juega lo que puede deshacer', () => {
-    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    const s = blankState(PLAIN_SETTINGS, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
     const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
     runMatch(session);
     const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 5 });
@@ -491,7 +491,7 @@ describe('modos de juego (core/modes.ts)', () => {
     const s = createMatch({
       mode: 'sandbox',
       size: 12,
-      ruleChanges: { weather: true },
+      settingChanges: { weather: true },
       teams: duel('human', 'ai'),
       buildings: [
         { type: hqId(), owner: 0, at: { x: 0, y: 0 } },
@@ -500,6 +500,6 @@ describe('modos de juego (core/modes.ts)', () => {
       units: [],
       diceSeed: 1,
     });
-    expect(s.rules.weather).toBe(false);
+    expect(s.settings.weather).toBe(false);
   });
 });

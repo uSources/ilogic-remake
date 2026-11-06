@@ -36,7 +36,7 @@ function arena(terrain: TerrainType, options: DuelOptions, rng: Rng): GameState 
   const map = blankMap(DUEL_MAP_SIZE, terrain.id);
   return newGameState({
     map,
-    rules: options.rules,
+    settings: options.settings,
     content: options.content,
     // Un campo para medir el combate suelto: no se acaba solo.
     mode: 'sandbox',
@@ -60,7 +60,7 @@ export interface DuelOptions {
   trials: number;
   terrain: string;
   seed: number;
-  rules: MatchSettings;
+  settings: MatchSettings;
   /** Contenido de las unidades que se enfrentan (el de una variante, o el del juego). */
   content: GameContent;
 }

@@ -17,5 +17,5 @@ export const ABILITIES: RuleModule = {
 
 /** Las habilidades de un tipo de unidad que cuentan en esta partida (para enseñarlas). */
 export function abilitiesOf(s: GameState, unitType: UnitType): readonly DeepReadonly<AbilityDef>[] {
-  return ABILITIES.isOn(s.rules) ? unitType.abilities : [];
+  return ABILITIES.isOn(s.settings) ? unitType.abilities : [];
 }

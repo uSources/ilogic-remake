@@ -5,7 +5,7 @@
  */
 import { parentPort, workerData } from 'node:worker_threads';
 import { loadContent } from '@core/content';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { duelMatrix } from './duel';
 import { playGame } from './play';
 import type { WorkerJob } from './runner';
@@ -13,10 +13,10 @@ import type { WorkerJob } from './runner';
 const job = workerData as WorkerJob;
 // Los ficheros se vuelven a cargar en el hilo: validados, con todas sus tablas y congelados.
 const content = loadContent(job.files);
-const rules = rulesWith(content);
+const settings = settingsWith(content);
 
 if (job.kind === 'games') {
-  for (const seed of job.seeds) parentPort!.postMessage(playGame({ ...job.game, seed, rules, content }));
+  for (const seed of job.seeds) parentPort!.postMessage(playGame({ ...job.game, seed, settings, content }));
 } else {
-  parentPort!.postMessage(duelMatrix({ ...job.duel, rules, content }));
+  parentPort!.postMessage(duelMatrix({ ...job.duel, settings, content }));
 }

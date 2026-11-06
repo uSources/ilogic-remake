@@ -199,8 +199,8 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `match.ts` | empezar una partida: `MatchConfig`, `MATCH_SETUPS`, `buildMatch`, `skirmishConfig`, `rematchOf` |
 | `gameState.ts` | `newGameState(...)`: el unico sitio que escribe la forma de una partida nueva |
 | `dice.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`) y el `Rng` de quien decide (`seededRng`) |
-| `rulesSchema.ts` | `RULE_SCHEMA`: que valores puede tener cada ajuste |
-| `matchSettings.ts` | `rulesWith(contenido, cambios)`: los ajustes por defecto con cambios (`MatchSettings`, `s.rules`) |
+| `settingsSchema.ts` | `SETTINGS_SCHEMA`: que valores puede tener cada ajuste |
+| `matchSettings.ts` | `settingsWith(contenido, cambios)`: los ajustes por defecto con cambios (`MatchSettings`, `s.settings`) |
 | `ruleModules/` | los modulos de reglas (`RULE_MODULES`) y lo que aporta cada uno a las listas de las reglas (`RuleHooks`); ver "Modulos de reglas" |
 | `abilities.ts` | lo que hace cada clase de habilidad de las unidades (`ABILITY_EFFECTS`; lo enchufa el modulo `abilities`) |
 | `generals.ts`, `generalPowers.ts` | el general de cada equipo (ventaja fija, carga, ronda, reconocimiento) y sus poderes (`POWER_EFFECTS`: casilla, area, efecto y valor para la IA; `powerBlock`, `applyPower`) |
@@ -239,7 +239,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 
 - `modes.ts`: lo que fija cada modo (`GameState.mode`: escaramuza, mision, partida para mirar): como
   se acaba (`victory`, en orden), el orden de los turnos de cada ronda (`turnOrder`: se fija al
-  crear la partida y se guarda con ella), las reglas que impone (`fixedRules`, que aplica
+  crear la partida y se guarda con ella), las reglas que impone (`fixedSettings`, que aplica
   `buildMatch`: la partida para mirar no tiene clima), sus pasos de turno (`turnPhases`, detras de
   los de siempre) y si la pantalla guarda sola al empezar el turno de una persona
   (`saves`). Esta congelado y todo lo lee por `gameModeOf` (las reglas, la sesion,
@@ -259,9 +259,9 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados.
 - `defaultGames.ts`: `createMatch(config, mapRng?)` y `loadGame(json)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
   juego (ESLint).
-- `rulesSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
-  null). La usan el contenido (rules.json) y el guardado; rules.schema.json dice lo mismo para los
-  editores (lo comprueba un test). `rulesWith` usa `content.defaultRules`; nunca `{ ...reglas, ...
+- `settingsSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
+  null). La usan el contenido (settings.json) y el guardado; settings.schema.json dice lo mismo para los
+  editores (lo comprueba un test). `settingsWith` usa `content.defaultSettings`; nunca `{ ...reglas, ...
   }` a mano.
 - `teams.ts`: `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`,
   `enemiesOf`/`alliesOf`, `teamsControlledBy`, `isAiControlled`, `playerTeam`, `perTeam`,
@@ -278,14 +278,14 @@ mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
 #### Guardar y leer
 
 - `readSave(json, contenido)` da `{ ok, state }` o `{ ok: false, error }` con el `SaveError` de la
-  parte rota (`badVersion`, `badMap`, `badUnits`, `badRules`...); `deserialize` es su atajo que da
+  parte rota (`badVersion`, `badMap`, `badUnits`, `badSettings`...); `deserialize` es su atajo que da
   null. El contenido no va en la partida: lo da quien lee.
 - El JSON leido es un `SavedGame` (sus campos, `unknown`) hasta que se ha comprobado entero;
   `savedParts.ts` comprueba o limpia cada parte (lo opcional roto se quita) con lo que necesita
   (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni
   escuadras ni teclas). Lo que la partida siempre guarda tiene que estar: no se rellena con valores
-  por defecto (una regla que falta es `badRules`).
-- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 7, atada al
+  por defecto (una regla que falta es `badSettings`).
+- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 8, atada al
   tipo de `GameState.version`) y **solo se lee la de ahora**: no hay migraciones. Mientras el juego no
   ha salido, cambiar lo que se guarda es subir la version, y las partidas guardadas con una de antes
   se descartan (`badVersion`): el menu no ofrece Continuar y, al intentar cargarla, se borra el hueco.
@@ -300,7 +300,7 @@ mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
 de `geom.ts` reciben los bordes y solo dan casillas de dentro; `posOf` copia la casilla de una
 unidad o edificio.
 
-**El estado es la unica fuente de la partida**: los ajustes van en `s.rules` (obligatorios; de ellos salen los modulos de reglas que lleva), el tamaño
+**El estado es la unica fuente de la partida**: los ajustes van en `s.settings` (obligatorios; de ellos salen los modulos de reglas que lleva), el tamaño
 del mapa en `s.map`, los equipos en `s.teams` y el contenido va unido a la partida (`s.content`); no hay variables de modulo
 con la partida en curso, y dos partidas con otro tamaño, otras reglas u otro contenido se juegan a la
 vez en el mismo proceso (tests/gameContent.test.ts, tests/mapSizes.test.ts). Las consultas no la cambian
@@ -448,12 +448,12 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
 
 ### Modulos de reglas (`core/ruleModules/`)
 
-Los ajustes de una partida (`s.rules`, un `MatchSettings`: numeros e interruptores; se guardan con
+Los ajustes de una partida (`s.settings`, un `MatchSettings`: numeros e interruptores; se guardan con
 ella) no se preguntan dentro de cada regla. Cada pieza que la partida lleva o no es un modulo
 (`RuleModule`: `id`, `isOn(ajustes)` y lo que aporta, `hooks: RuleHooks`), y las reglas miran
 listas: las entradas de siempre mas las de los modulos que la partida lleva (`hooksOf(s, lista)`,
 en el orden de `RULE_MODULES`; `isRuleOn(s, id)` dice si uno esta puesto). Sin el modulo, sus
-entradas no estan: no hay `if (!s.rules.veterancy) return 1`.
+entradas no estan: no hay `if (!s.settings.veterancy) return 1`.
 
 | Modulo | Su ajuste | Lo que aporta |
 |---|---|---|
@@ -485,8 +485,8 @@ clima ni habilidades (L7). Lo que solo usa el arma de cada tipo esta en `rules/w
 las reglas de los modulos no tengan que importar el combate.
 
 Un modulo nuevo: su fichero en `ruleModules/` (lo que aporta a cada lista), su id en `RuleModuleId`,
-su entrada en `RULE_MODULES` y, si tiene interruptor, su ajuste en `MatchSettings`, `RULE_SCHEMA`,
-rules.json y rules.schema.json. Una lista nueva que se pueda ampliar: su campo en `RuleHooks` y la
+su entrada en `RULE_MODULES` y, si tiene interruptor, su ajuste en `MatchSettings`, `SETTINGS_SCHEMA`,
+settings.json y settings.schema.json. Una lista nueva que se pueda ampliar: su campo en `RuleHooks` y la
 regla que la mira con `hooksOf`. Lo prueba `tests/ruleModules.test.ts` (cada interruptor quita su
 modulo y solo ese).
 
@@ -704,8 +704,8 @@ sequenceDiagram
   (`aiController(rng)`): en la pantalla, una al empezar la partida; en las herramientas, la de su
   `--seed`. Va aparte de `GameState` a proposito: es estado del que controla a ese equipo, no de las
   reglas, y no se guarda (cargar y pasar turno puede dar otras decisiones, nunca otros dados).
-- **Nada de estado global de partida**: los ajustes van en `s.rules` (obligatorios; los de siempre,
-  `content.defaultRules`, estan congelados y cada partida lleva su copia, con los cambios de su modo,
+- **Nada de estado global de partida**: los ajustes van en `s.settings` (obligatorios; los de siempre,
+  `content.defaultSettings`, estan congelados y cada partida lleva su copia, con los cambios de su modo,
   mision o laboratorio; que modulos de reglas lleva sale de ahi, sin guardar nada mas) y el tamaño
   del mapa sale de `s.map` (`mapGrid(s)`, `createLayer(s, fill)`, `isOnBoard(s, pos)` en `core/mapGrid.ts`).
   Asi dos partidas a la vez (la de la pantalla y la miniatura del menu, una prevision, un servidor) no se pisan.
@@ -892,7 +892,7 @@ mando puede jugar una partida entera sin raton.
 | Quiero... | Fichero |
 |---|---|
 | Añadir o cambiar unidades y edificios (precio, daño...) | `src/core/content/*.json` (`docs/CONTENIDO.md`, skill `nueva-unidad`) |
-| Cambiar terreno, reglas, pesos de la IA | `src/core/content/terrain.json`, `rules.json`, `ai.json` (+ skill `equilibrar`) |
+| Cambiar terreno, reglas, pesos de la IA | `src/core/content/terrain.json`, `settings.json`, `ai.json` (+ skill `equilibrar`) |
 | Cambiar una regla | su modulo en `src/core/rules/` (ver "El nucleo por dentro"; + test en `tests/`) |
 | Cambiar cuando vale una accion o lo que hace, o añadir una | su entrada en `src/core/actions/` (ver "Acciones"; + test en `tests/dispatch.test.ts`) |
 | Cambiar como juega la IA | `src/core/ai/` (`unitTurn.ts` prioridades, `tactics.ts` cada paso, `production.ts` compras), pesos en `data.AI` |

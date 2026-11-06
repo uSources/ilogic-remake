@@ -12,7 +12,7 @@ import { newUnit, unitById } from '@core/rules';
 import { GameSession, passiveController, runMatch } from '@core/session';
 import { startsTurn } from '@core/actions';
 import { act, blankState, unitTypeNamed } from './helpers';
-import { PLAIN_RULES } from './plainRules';
+import { PLAIN_SETTINGS } from './plainSettings';
 
 const testMode = vi.hoisted(() => ({ changes: null as Partial<GameMode> | null }));
 
@@ -42,7 +42,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
   });
 
   it('los pasos de turno del modo van detras de los de todos, y por las mismas comprobaciones', () => {
-    const s = blankState(PLAIN_RULES, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const s = blankState(PLAIN_SETTINGS, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
     s.turnStarted = false;
     const traveler = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
     traveler.travelTo = { x: 2, y: 20 };

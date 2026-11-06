@@ -31,7 +31,7 @@ export function forecastVM(
     lifeAfter: forecast.lifeAfter,
     killChance: forecast.killChance,
     anchor,
-    flank: flanked(s, target) ? s.rules.flankBonus : 0,
+    flank: flanked(s, target) ? s.settings.flankBonus : 0,
     bounty: bountyFor(s, target),
     counter: forecast.counter
       ? {

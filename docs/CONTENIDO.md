@@ -11,7 +11,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/mapgen.json` | El generador de mapas al azar: unidades y edificios de salida, edificios neutrales y lo que tiene que tener cada salida |
 | `src/core/content/weather.json` | Los climas: cuanto quitan de movimiento, vision y punteria, cuantos dias duran y en que terreno salen |
 | `src/core/content/generals.json` | Los generales: ventaja fija, barra de carga y poderes (ataque aereo, reconocimiento...) |
-| `src/core/content/rules.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
+| `src/core/content/settings.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
 | `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
 
 Cada fichero tiene su esquema (`units.schema.json`, `buildings.schema.json`): VS Code y otros editores
@@ -203,7 +203,7 @@ del clima de hoy y del de mañana.
 
 El tiempo de cada dia sale de la semilla del mapa (la misma partida tiene siempre el mismo clima) y el
 siguiente ya esta decidido: es el pronostico que se ve arriba. Reglas en `src/core/weather.ts`.
-Para probar sin el: `--set RULES.weather=false`.
+Para probar sin el: `--set SETTINGS.weather=false`.
 
 ## Generales
 
@@ -248,13 +248,13 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 
 ## Reglas e IA
 
-- `rules.json`: `defaults` son las reglas con las que empieza una partida nueva (la pantalla de nueva
+- `settings.json`: `defaults` son las reglas con las que empieza una partida nueva (la pantalla de nueva
   partida y las misiones cambian algunas) y `maxFunds` el dinero maximo (lo que pase se pierde al acabar
   cada accion y cada ronda). Cada regla esta explicada en el esquema (pasar el raton por encima en el
-  editor). Que valores puede tener cada una lo dice `RULE_SCHEMA` (`src/core/rulesSchema.ts`): lo
-  comprueban al cargar el contenido y al leer una partida guardada, y rules.schema.json tiene que
-  decir lo mismo (lo mira `tests/rulesSchema.test.ts`). Un ajuste nuevo va en `MatchSettings`, en
-  `RULE_SCHEMA`, en rules.json y en su esquema; si enchufa una pieza de reglas, esa pieza es un
+  editor). Que valores puede tener cada una lo dice `SETTINGS_SCHEMA` (`src/core/settingsSchema.ts`): lo
+  comprueban al cargar el contenido y al leer una partida guardada, y settings.schema.json tiene que
+  decir lo mismo (lo mira `tests/settingsSchema.test.ts`). Un ajuste nuevo va en `MatchSettings`, en
+  `SETTINGS_SCHEMA`, en settings.json y en su esquema; si enchufa una pieza de reglas, esa pieza es un
   modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas") cuyo `isOn`
   mira el ajuste: las reglas no lo preguntan. Las que premian atacar: `bounty` (botin al
   destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
@@ -274,7 +274,7 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 Para probar sin tocar ficheros, las variantes de equilibrio cambian los campos de los ficheros por
 ruta (`tools/balance/variant.ts`): `--set UNIT.move.Car=7 --set HIT_CHANCE.Tank.Soldier=+0.05
 --set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60
---set RULES.initialFunds=8000` (`UNIT.<campo>.<unidad>` con los campos de units.json: `cost`,
+--set SETTINGS.initialFunds=8000` (`UNIT.<campo>.<unidad>` con los campos de units.json: `cost`,
 `command`, `move`, `vision`; `TERRAIN.<campo>.<terreno>`: `protection`, `buildable`, `water`).
 
 ## Como esta hecho
@@ -290,7 +290,7 @@ resuelto, su `build*` y ese tipo: `units.ts` (`UnitType`), `buildings.ts` (`Buil
 | Modulo | Que hace |
 |---|---|
 | `index.ts` | lee los JSON (`readContentFiles`), los valida todos a la vez (`validateContent`) y los carga: `loadContent(ficheros)` valida, resuelve los tipos y da el `GameContent` congelado |
-| `resolve.ts` | la forma de los ficheros (`Content`) y del contenido resuelto (`ResolvedContent`: un catalogo por parte, `hq`, `plainTerrain`, `clearWeather`, `defaultRules`, `maxFunds`, `ai`), y `resolveContent` |
+| `resolve.ts` | la forma de los ficheros (`Content`) y del contenido resuelto (`ResolvedContent`: un catalogo por parte, `hq`, `plainTerrain`, `clearWeather`, `defaultSettings`, `maxFunds`, `ai`), y `resolveContent` |
 | `catalog.ts` | `Catalog<T>` (`list` y `byId`), `findEntry` (undefined si no esta) y `entryOf` (error que lo dice) |
 | `default.ts` | `defaultContent()`: el contenido del juego, cargado la primera vez que se pide |
 
@@ -300,7 +300,7 @@ Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 `GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `readSave` lo ponen en el campo
 `GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
 `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, building).earning`, `terrainAt(s, pos)`, `themeOf(s)`,
-`weightsOf(s).KILLBONUS`, `s.content.generals`; las reglas por defecto, `rulesWith(contenido, cambios)`;
+`weightsOf(s).KILLBONUS`, `s.content.generals`; las reglas por defecto, `settingsWith(contenido, cambios)`;
 los nombres en pantalla, `nameOf(unitType)` (settings.ts). Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
 que se pide), y lo usan `createMatch`/`loadGame` (core/defaultGames.ts), la interfaz y las
@@ -309,7 +309,7 @@ herramientas.
 Una variante de `npm run balance` no toca el contenido del juego: `buildVariant`
 (tools/balance/variant.ts) aplica sus cambios a una copia de los ficheros y la carga con
 `loadContent`, como el juego (se valida, se resuelven todos los tipos y se congela). Sus reglas son las
-de ese contenido (`rulesWith(variante.content)`). Los hilos reciben los ficheros, los cargan y se los
+de ese contenido (`settingsWith(variante.content)`). Los hilos reciben los ficheros, los cargan y se los
 pasan a cada partida (`playGame`, `duelMatrix`). Dos contenidos se pueden jugar a la vez en el mismo
 proceso (tests/gameContent.test.ts).
 

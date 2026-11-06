@@ -39,8 +39,8 @@ describe('puntos de control', () => {
     expect(s.controlPoints![0]!.owner).toBe(0);
     expect(control.held).toEqual([1, 1]);
     expect(control.contested).toBe(0);
-    expect(control.income).toEqual([defaultContent().defaultRules.controlIncome, defaultContent().defaultRules.controlIncome]);
-    expect(teamState(s, 0).funds).toBe(before + defaultContent().defaultRules.controlIncome);
+    expect(control.income).toEqual([defaultContent().defaultSettings.controlIncome, defaultContent().defaultSettings.controlIncome]);
+    expect(teamState(s, 0).funds).toBe(before + defaultContent().defaultSettings.controlIncome);
     unit.x = 13; // fuera de la zona
     controlRound(s);
     expect(s.controlPoints![0]!.owner).toBe(0);
@@ -79,7 +79,7 @@ describe('puntos de control', () => {
     newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const round = endRoundReport(s);
     expect(round.control?.held).toEqual([1, 1]);
-    expect(round.income[0]).toBeGreaterThanOrEqual(defaultContent().defaultRules.controlIncome);
+    expect(round.income[0]).toBeGreaterThanOrEqual(defaultContent().defaultSettings.controlIncome);
   });
 
   it('sin puntos no hay nada en el informe', () => {
@@ -93,7 +93,7 @@ describe('puntos de control', () => {
       const s = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('human', 'ai') }));
       const points = s.controlPoints ?? [];
       total += points.length;
-      expect(points.length).toBeLessThanOrEqual(defaultContent().defaultRules.controlPoints);
+      expect(points.length).toBeLessThanOrEqual(defaultContent().defaultSettings.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((building) => building.type === HQ && building.owner === team)!;
       const da = distanceMap(s, hq(0), MoveType.FOOT);
       const db = distanceMap(s, hq(1), MoveType.FOOT);
@@ -107,7 +107,7 @@ describe('puntos de control', () => {
       for (const firstPoint of points)
         for (const secondPoint of points)
           if (firstPoint !== secondPoint)
-            expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().defaultRules.controlRadius);
+            expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().defaultSettings.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });

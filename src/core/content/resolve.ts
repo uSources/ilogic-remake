@@ -11,7 +11,7 @@ import { buildBuildingTypes, type BuildingType } from './buildings';
 import { catalogOf, type Catalog } from './catalog';
 import type { GeneralDef } from './generals';
 import type { MapgenDef, MapgenSettings } from './mapgen';
-import type { RulesFile } from './rules';
+import type { SettingsFile } from './settings';
 import { buildTerrainTypes, type TerrainType } from './terrain';
 import type { Theme, ThemeDef } from './themes';
 import type { BuildingDef, TerrainDef, UnitDef } from './types';
@@ -25,7 +25,7 @@ export interface Content {
   terrain: TerrainDef[];
   themes: ThemeDef[];
   mapgen: MapgenDef;
-  rules: RulesFile;
+  settings: SettingsFile;
   ai: Record<string, unknown>;
   weather: WeatherDef[];
   generals: GeneralDef[];
@@ -46,8 +46,8 @@ export interface ResolvedContent {
   /** El clima neutro (el de "clear": true en weather.json): con el empiezan las partidas. */
   clearWeather: WeatherType;
   generals: Catalog<DeepReadonly<GeneralDef>>;
-  /** Reglas por defecto de una partida (rules.json, "defaults"): ver rulesWith. */
-  defaultRules: Readonly<MatchSettings>;
+  /** Reglas por defecto de una partida (settings.json, "defaults"): ver settingsWith. */
+  defaultSettings: Readonly<MatchSettings>;
   /** Dinero maximo de un equipo. */
   maxFunds: number;
   /** Pesos de la IA (ai.json). */
@@ -69,8 +69,8 @@ export function resolveContent(files: Content): ResolvedContent {
     weather,
     clearWeather: weather.list.find((type) => type.isClear)!,
     generals: catalogOf(files.generals),
-    defaultRules: { ...files.rules.defaults },
-    maxFunds: files.rules.maxFunds,
+    defaultSettings: { ...files.settings.defaults },
+    maxFunds: files.settings.maxFunds,
     ai: buildAiWeights(files.ai),
   };
 }

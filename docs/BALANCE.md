@@ -49,7 +49,7 @@ Medido el 27-10-2026: `npm run balance -- run --games 200 --name f2-captura` y `
 - **La Base ya no cae por sorpresa.**
   - Capturarla cuesta como mínimo 3 turnos seguidos con una unidad entera (30 puntos), y se pierde lo avanzado si la echan.
   - La IA contra un jugador pasivo gana 56 de 60 (93 %), en 27 días de mediana.
-- **Bola de nieve moderada.** Quien va por delante el día 5 acaba ganando o por delante el 56 % de las veces; el día 10, el 70 %. No hace falta tocar los ingresos (`RULES.incomeScale` se queda en 1).
+- **Bola de nieve moderada.** Quien va por delante el día 5 acaba ganando o por delante el 56 % de las veces; el día 10, el 70 %. No hace falta tocar los ingresos (`SETTINGS.incomeScale` se queda en 1).
 - **Bandos equilibrados:** 82 frente a 85 en las partidas sin terminar.
 - **Las partidas IA contra IA siguen sin terminar** (199 de 200 en 60 días). Las dos IA son iguales y defienden bien. Sin una IA más agresiva (fuera del plan por ahora), el límite de días con victoria por puntos de la fase 4 es lo que les pone fin.
 
@@ -113,7 +113,7 @@ Medido con `npm run balance -- run --games 100 --name ejercito` contra la varian
 ## Clima (30-10-2026)
 
 Medido con `npm run balance -- run --games 200 --name con-clima` contra `sin-clima`
-(`--set RULES.weather=false`). Informes en `balance/reports/con-clima.md`, `sin-clima.md` y
+(`--set SETTINGS.weather=false`). Informes en `balance/reports/con-clima.md`, `sin-clima.md` y
 `comparar-sin-clima-vs-con-clima.md`.
 
 | | Sin clima | Con clima |
@@ -171,7 +171,7 @@ Palancas de reglas probadas (sin terminar el día 60; menos es mejor):
 | Veteranía +10 % por rango | 94 % |
 | Las cuatro nuevas juntas (las de ahora) | 91-93 % |
 
-Reglas nuevas (`rules.json`, todas se pueden apagar):
+Reglas nuevas (`settings.json`, todas se pueden apagar):
 
 - `bounty` 0,25: quien destruye una unidad cobra el 25 % de su precio (también el defensor si el
   atacante cae en el contraataque). La IA lo suma al valor de rematar.
@@ -193,9 +193,9 @@ Conclusiones:
 ## Puntos de control (01-11-2026)
 
 Para que haya algo por lo que pelear en el medio del mapa: 3 casillas por mapa al azar
-(`RULES.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
+(`SETTINGS.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
 ronda son de quien tenga una unidad encima (y siguen suyas al irse) y cada una da
-`RULES.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
+`SETTINGS.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
 de ventaja).
 
 `npm run balance -- run --games 80` (IA contra IA, máximo 60 días):
@@ -209,7 +209,7 @@ de ventaja).
 
 Con 200 partidas, 3 de 1000: ventaja 77 / 89, sin un lado claramente favorecido.
 
-**Zonas de 3×3 que solo pagan sin disputa** (`RULES.controlRadius` 1): un punto paga a su dueño solo
+**Zonas de 3×3 que solo pagan sin disputa** (`SETTINGS.controlRadius` 1): un punto paga a su dueño solo
 si en su zona no hay unidades de los dos bandos, para que haya batallas por él. 80 partidas: 90 % sin
 terminar, ventaja 33 / 38, igualadas 1 (antes 5): se decide más a menudo quién va por delante. Como con las demás
 reglas, el empate entre IAs casi no se mueve; los puntos dan al jugador un objetivo claro en el

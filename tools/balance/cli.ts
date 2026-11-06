@@ -3,7 +3,7 @@
  *
  *   npm run balance -- run --games 200 --name actual
  *   npm run balance -- run --variant balance/variants/contraataque.json
- *   npm run balance -- run --set RULES.counterattack=true --set UNIT.cost.Tank=10000 --name prueba
+ *   npm run balance -- run --set SETTINGS.counterattack=true --set UNIT.cost.Tank=10000 --name prueba
  *   npm run balance -- duel --terrain Woods
  *   npm run balance -- compare actual prueba
  *   npm run balance -- tune --iterations 3 --games 150

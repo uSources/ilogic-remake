@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import {
   HIT_MODIFIERS,
@@ -30,18 +30,18 @@ const power = (attacker: UnitType, defender: UnitType) => attacker.attack?.hitCh
 
 /** Puntos de extension y ayudas compartidas del nucleo: modificadores del acierto, pasos del fin de ronda, origenes de tiro. */
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith(defaultContent(), { fog: false });
+const TEST_SETTINGS = settingsWith(defaultContent(), { fog: false });
 
 const fighter = (): UnitType => UNIT_TYPES.find((unitType) => UNIT_TYPES.some((target) => power(unitType, target) > 0))!;
 
 describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () => {
   it('tienen nombres distintos', () => {
-    const ids = hitModifiersOf(blankState(TEST_RULES)).map((hitModifier) => hitModifier.id);
+    const ids = hitModifiersOf(blankState(TEST_SETTINGS)).map((hitModifier) => hitModifier.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('hitChance es el poder, por la proteccion, por cada modificador de los modulos, en orden', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const fighterType = fighter();
     const defenderType = UNIT_TYPES.find((target) => power(fighterType, target) > 0)!;
     const attacker = newUnit(s, fighterType, 0, { x: 2, y: 2 });
@@ -58,7 +58,7 @@ describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () =>
   });
 
   it('sin los modulos solo quedan el poder y la proteccion', () => {
-    const s = blankState(rulesWith(defaultContent(), { fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false }));
+    const s = blankState(settingsWith(defaultContent(), { fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false }));
     const fighterType = fighter();
     const attacker = newUnit(s, fighterType, 0, { x: 2, y: 2 });
     const defender = newUnit(s, fighterType, 1, { x: 3, y: 2 });
@@ -69,19 +69,19 @@ describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () =>
 
 describe('pasos del fin de ronda (ROUND_PHASES y los de los modulos)', () => {
   it('tienen nombres distintos y van por momentos: el dia cambia antes que el clima', () => {
-    const ids = roundPhasesOf(blankState(TEST_RULES)).map((roundPhase) => roundPhase.id);
+    const ids = roundPhasesOf(blankState(TEST_SETTINGS)).map((roundPhase) => roundPhase.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual(['refresh', 'generals', 'buildings', 'control', 'upkeep', 'day', 'weather', 'army']);
   });
 
   it('sin los modulos solo quedan los de siempre', () => {
-    const s = blankState(rulesWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
+    const s = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
     expect(roundPhasesOf(s).map((roundPhase) => roundPhase.id)).toEqual(['refresh', 'generals', 'buildings', 'day', 'army']);
     expect(ROUND_PHASES.map((roundPhase) => roundPhase.stage)).toEqual(['start', 'income', 'newDay', 'record']);
   });
 
   it('endRound los recorre todos: reactiva unidades y pasa el dia', () => {
-    const s = withoutHeadquarters(blankState(TEST_RULES));
+    const s = withoutHeadquarters(blankState(TEST_SETTINGS));
     const unit = newUnit(s, fighter(), 0, { x: 1, y: 1 }, 'done');
     const round = endRoundReport(s);
     expect(s.day).toBe(2);
@@ -92,7 +92,7 @@ describe('pasos del fin de ronda (ROUND_PHASES y los de los modulos)', () => {
 
 describe('ayudas de combate compartidas', () => {
   it('fireOrigins: donde esta y, si puede mover y disparar, lo que alcanza', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const melee = UNIT_TYPES.find((unitType) => unitType.attack?.minRange === 1 && unitType.move > 0)!;
     const ranged = UNIT_TYPES.find((unitType) => (unitType.attack?.minRange ?? 1) > 1)!;
     const meleeUnit = newUnit(s, melee, 0, { x: 5, y: 5 });
@@ -105,7 +105,7 @@ describe('ayudas de combate compartidas', () => {
   });
 
   it('canDamage: lucha y su poder contra ese tipo es mayor que 0', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const fighterType = fighter();
     const attacker = newUnit(s, fighterType, 0, { x: 1, y: 1 });
     for (const defenderType of UNIT_TYPES)
@@ -134,28 +134,34 @@ describe('modelos de daño (DamageModel)', () => {
   });
 
   it('la partida elige el suyo con damageSpread', () => {
-    expect(damageModelOf(blankState(rulesWith(defaultContent(), { damageSpread: null })))).toBe(SHOT_BY_SHOT);
-    expect(damageModelOf(blankState(TEST_RULES))).not.toBe(SHOT_BY_SHOT);
+    expect(damageModelOf(blankState(settingsWith(defaultContent(), { damageSpread: null })))).toBe(SHOT_BY_SHOT);
+    expect(damageModelOf(blankState(TEST_SETTINGS))).not.toBe(SHOT_BY_SHOT);
   });
 });
 
 describe('lo que pasa en un ataque (COMBAT_RESOLUTION y los pasos de los modulos)', () => {
   it('por momentos: golpe, contraataque, lo de herir (generales) y lo de caer (bajas, botin)', () => {
-    expect(combatResolutionOf(blankState(TEST_RULES)).map((step) => step.id)).toEqual(['strike', 'counter', 'charge', 'kills', 'bounty']);
+    expect(combatResolutionOf(blankState(TEST_SETTINGS)).map((step) => step.id)).toEqual([
+      'strike',
+      'counter',
+      'charge',
+      'kills',
+      'bounty',
+    ]);
     expect(COMBAT_RESOLUTION.map((step) => step.stage)).toEqual(['strike', 'counter', 'kill']);
-    const noBounty = blankState(rulesWith(defaultContent(), { fog: false, bounty: 0 }));
+    const noBounty = blankState(settingsWith(defaultContent(), { fog: false, bounty: 0 }));
     expect(combatResolutionOf(noBounty).map((step) => step.id)).toEqual(['strike', 'counter', 'charge', 'kills']);
   });
 
   it('el contraataque lo deciden las reglas de los modulos: sin el modulo nadie responde', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
     expect(hooksOf(s, 'counterRules')).toEqual([MELEE_COUNTER]);
     expect(canCounter(s, engagement(attacker, defender))).toBe(true);
     expect(canCounter(s, engagement(attacker, defender, { defenderLife: 0 }))).toBe(false);
     expect(canCounter(s, engagement(attacker, defender, { from: { x: 2, y: 9 } }))).toBe(false);
-    const plain = blankState(rulesWith(defaultContent(), { fog: false, counterattack: false }));
+    const plain = blankState(settingsWith(defaultContent(), { fog: false, counterattack: false }));
     const lone = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     expect(canCounter(plain, engagement(lone, newUnit(plain, unitTypeNamed('Tank'), 1, { x: 3, y: 2 })))).toBe(false);
   });

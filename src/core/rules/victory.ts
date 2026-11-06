@@ -27,7 +27,7 @@ export function score(s: GameState, team: TeamId): number {
 }
 
 /** El limite de dias (si lo hay) ya se ha cumplido. */
-export const dayLimitReached = (s: GameState): boolean => s.rules.dayLimit !== null && s.day > s.rules.dayLimit;
+export const dayLimitReached = (s: GameState): boolean => s.settings.dayLimit !== null && s.day > s.settings.dayLimit;
 
 /** Lo que suma una alianza (la de `team`): sus puntos y sus edificios. */
 function allianceStanding(s: GameState, team: TeamId): { points: number; buildings: number } {

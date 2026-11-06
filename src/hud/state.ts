@@ -110,7 +110,7 @@ export interface UIState {
   /** Limite de dias de la partida (null = sin limite). */
   dayLimit: number | null;
   /** Reglas que cuenta la ayuda: las de la partida en curso, o en el menu las de una partida nueva (null hasta que la escena las pone). */
-  helpRules: MatchSettings | null;
+  helpSettings: MatchSettings | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
   /** Cambio de persona en la misma pantalla (null: no hay que cambiar). */
   handoff: HandoffVM | null;
@@ -185,7 +185,7 @@ export const initialState: UIState = {
   hint: '',
   end: null,
   dayLimit: null,
-  helpRules: null,
+  helpSettings: null,
   report: null,
   handoff: null,
   minimap: null,

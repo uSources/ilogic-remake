@@ -44,7 +44,7 @@ export interface PlayOptions {
   /** Lado del mapa (32 por defecto). */
   size?: number;
   /** Reglas de la partida. */
-  rules: MatchSettings;
+  settings: MatchSettings;
   /** Contenido con el que se juega (el de una variante, o el del juego). */
   content: GameContent;
 }
@@ -179,7 +179,7 @@ export function playGame(options: PlayOptions): GameRecord {
   const config = skirmishConfig({
     seed: options.seed,
     size: options.size,
-    ruleChanges: options.rules,
+    settingChanges: options.settings,
     teams: duel('ai', 'ai'),
     firstTeam: options.firstTeam ?? FIRST_SIDE,
   });

@@ -1,7 +1,7 @@
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 
-import { PLAIN_RULES } from './plainRules';
+import { PLAIN_SETTINGS } from './plainSettings';
 import { moveRange, pathTo, validPath, visibility, newUnit } from '@core/rules';
 import { dispatch } from '@core/actions';
 import type { GameEvent, GameState, Pos } from '@core/model';
@@ -35,7 +35,7 @@ describe('movimiento: pasar entre aliados', () => {
   });
 
   it('con los interruptores apagados el aliado bloquea', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 'Water';
     const tank = newUnit(s, TANK, 0, { x: 2, y: 5 });
     newUnit(s, TANK, 0, { x: 3, y: 5 });
@@ -117,7 +117,7 @@ describe('movimiento: emboscadas en la niebla', () => {
 
   it('con los interruptores apagados no hay bosque que esconda ni emboscadas', () => {
     const s = corridor();
-    s.rules = { ...PLAIN_RULES };
+    s.settings = { ...PLAIN_SETTINGS };
     newUnit(s, TANK, 0, { x: 2, y: 5 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
     expect(visibility(s, 0).at(enemy)).toBe(true);
@@ -191,7 +191,7 @@ describe('movimiento: coste del terreno', () => {
   });
 
   it('con los interruptores apagados todo cuesta 1', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.map[6]![5] = 'Woods';
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     expect(moveRange(s, tank).steps.at({ x: 6, y: 5 })).toBe(1);
@@ -219,7 +219,7 @@ describe('movimiento: ordenes de varios turnos', () => {
 
 describe('movimiento: el camino es de casillas, no de lo que hay en ellas', () => {
   it('pathTo da casillas nuevas, aunque el destino sea un edificio', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const building = { type: 'City', owner: null, x: 4, y: 2, capture: null };
     s.buildings.push(building);

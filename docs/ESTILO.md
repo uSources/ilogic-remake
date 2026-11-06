@@ -68,17 +68,17 @@ return gotCloser ? best.pos : null;
     su `apply`, y lo que hay que dejar en orden despues de cualquiera es una entrada en `INVARIANTS`,
     no una llamada que cada uno tiene que acordarse de hacer.
 13. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
-    `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
+    `s.settings`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
     modulo que se cambian al empezar una partida. El contenido va con la partida (`unitTypeOf(s, unit)`,
     `terrainAt(s, pos)`, `weightsOf(s)`), resuelto en tipos con nombre (`unitType.cost`, no columnas
-    por numero de tipo) y congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
+    por numero de tipo) y congelado; reglas con cambios con `settingsWith(...)`, partidas nuevas con
     `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
     `posOf(unit)`.
 14. **Las reglas no preguntan por un ajuste.** Lo que la partida lleva o no segun sus ajustes
     (veterania, clima, habilidades, emboscadas...) es un modulo de reglas (`core/ruleModules/`) que
     aporta entradas a las listas que miran las reglas (`hooksOf(s, 'hitModifiers')`), no un
-    `if (!s.rules.veterancy) return 1` dentro de cada funcion. Un ajuste que es un numero (dinero,
-    puntos de captura) se lee de `s.rules` sin mas.
+    `if (!s.settings.veterancy) return 1` dentro de cada funcion. Un ajuste que es un numero (dinero,
+    puntos de captura) se lee de `s.settings` sin mas.
 15. **Preguntar "y si" sin fingir unidades.** Nada de copias con otra casilla, otra vida u otro turno
     (`{ ...unit, x, y }`) que pasan por las reglas como si fueran de verdad: la pregunta se dice con su
     tipo (`engagement(atacante, defensor, { from, attackerLife })` para el combate) o la regla no

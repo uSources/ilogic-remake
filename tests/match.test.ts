@@ -22,7 +22,7 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     expect(config.map).toEqual({ seed: 9, size: DEFAULT_MAP_SIZE, theme: null });
     const s = createMatch(config);
     expect(s.setup).toEqual(config.map);
-    expect(s.rules).toEqual(s.content.defaultRules);
+    expect(s.settings).toEqual(s.content.defaultSettings);
   });
 
   it('la misma configuracion da la misma partida (con su clima del primer dia y la muestra del ejercito)', () => {
@@ -73,15 +73,15 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
 
   it('el laboratorio no tiene clima porque su modo lo impone, no porque lo pida', () => {
     const config = labMatch(defaultLab(), 'attack');
-    expect(config.ruleChanges?.weather).toBeUndefined();
-    expect(createMatch(config).rules.weather).toBe(false);
+    expect(config.settingChanges?.weather).toBeUndefined();
+    expect(createMatch(config).settings.weather).toBe(false);
   });
 
   it('revancha: el mismo mapa, reglas y equipos; una mision no la tiene', () => {
-    const s = createMatch(skirmishConfig({ seed: 5, size: 20, ruleChanges: { fog: false }, teams: duel('human', 'ai') }));
+    const s = createMatch(skirmishConfig({ seed: 5, size: 20, settingChanges: { fog: false }, teams: duel('human', 'ai') }));
     const again = createMatch(rematchOf(s)!);
     expect(again.map).toEqual(s.map);
-    expect(again.rules).toEqual(s.rules);
+    expect(again.settings).toEqual(s.settings);
     expect(rematchOf(createMatch({ mode: 'mission', mission: 'bridgehead', diceSeed: 1 }))).toBeNull();
   });
 

@@ -14,9 +14,9 @@ export function buyBlockedText(s: GameState, blocked: NonNullable<BuyOption['blo
     case 'funds':
       return t('cantAfford');
     case 'units':
-      return t('unitLimit').replace('{n}', String(s.rules.maxUnits));
+      return t('unitLimit').replace('{n}', String(s.settings.maxUnits));
     case 'command':
-      return t('commandLimit').replace('{n}', String(s.rules.commandPoints ?? 0));
+      return t('commandLimit').replace('{n}', String(s.settings.commandPoints ?? 0));
   }
 }
 /** Un tipo del contenido (unidad o edificio): se cuenta por el y se enseña su nombre. */
@@ -49,25 +49,25 @@ export function economyVM(s: GameState, team: TeamId): EconomyVM {
     income: {
       lines: tally(owned, (buildingType) => buildingIncome(s, buildingType)),
       total: income,
-      scale: s.rules.incomeScale,
+      scale: s.settings.incomeScale,
     },
     upkeep: isRuleOn(s, 'upkeep')
       ? {
-          lines: tally(units, (unitType) => Math.round(unitType.cost * s.rules.upkeep)),
+          lines: tally(units, (unitType) => Math.round(unitType.cost * s.settings.upkeep)),
           total: upkeep,
-          rate: s.rules.upkeep,
+          rate: s.settings.upkeep,
         }
       : null,
     net: income - upkeep,
     next: Math.min(afterIncome - paid, s.content.maxFunds),
     shortfall: paid < upkeep ? paid : null,
     commandPoints:
-      s.rules.commandPoints === null
+      s.settings.commandPoints === null
         ? null
         : {
             lines: tally(units, (unitType) => unitType.command),
             used: commandUsed(s, team),
-            max: s.rules.commandPoints,
+            max: s.settings.commandPoints,
           },
   };
 }
@@ -77,7 +77,7 @@ export function economyVM(s: GameState, team: TeamId): EconomyVM {
  * de su alianza y los de la mejor alianza enemiga).
  */
 export function dayInfoVM(s: GameState, viewer: TeamId): DayInfoVM {
-  const limit = s.rules.dayLimit;
+  const limit = s.settings.dayLimit;
   return {
     day: s.day,
     limit,

@@ -1,7 +1,7 @@
 import { usePower, blankState, diceFrom, unitTypeNamed, fight } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { readContentFiles, validateContent } from '@core/content';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { chargeStars, generalHitFactor, appointGeneral } from '@core/generals';
@@ -16,13 +16,13 @@ import { teamState } from '@core/teams';
 const unitType = unitTypeNamed;
 
 function withBrisa(): GameState {
-  const s = blankState(TEST_RULES);
+  const s = blankState(TEST_SETTINGS);
   appointGeneral(s, 0, 'Brisa');
   return s;
 }
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith(defaultContent(), { fog: true, weather: false });
+const TEST_SETTINGS = settingsWith(defaultContent(), { fog: true, weather: false });
 
 describe('generales: datos', () => {
   it('cada clase de efecto tiene su validacion y lo que hace y vale, con las mismas claves', () => {
@@ -108,7 +108,7 @@ describe('generales: reglas', () => {
   });
 
   it('sin general no pasa nada', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     expect(powerBlock(s, 0, 'airstrike', { x: 1, y: 1 })).toBe('noGeneral');
     expect(usePower(s, 0, 'airstrike', { x: 1, y: 1 })).toBeNull();
   });

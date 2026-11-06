@@ -44,7 +44,7 @@ export const RULE_MODULES: readonly RuleModule[] = [
 ];
 
 /** Los modulos que lleva la partida, segun sus ajustes. */
-export const activeModules = (s: GameState): RuleModule[] => RULE_MODULES.filter((module) => module.isOn(s.rules));
+export const activeModules = (s: GameState): RuleModule[] => RULE_MODULES.filter((module) => module.isOn(s.settings));
 
 /** La partida lleva ese modulo de reglas. */
 export const isRuleOn = (s: GameState, id: RuleModuleId): boolean => activeModules(s).some((module) => module.id === id);

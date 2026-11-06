@@ -11,7 +11,7 @@
  *     "BUILDING.earning.City": 800,
  *     "TERRAIN.protection.Woods": 0.8,
  *     "MOVE_COST.vehicle.Woods": 3,
- *     "RULES.counterattack": true,
+ *     "SETTINGS.counterattack": true,
  *     "AI.KILLBONUS": 60
  *   }
  * }
@@ -19,13 +19,13 @@
  * Cada ruta nombra un campo de los ficheros (TABLE_PATHS), con el mismo nombre que en el JSON:
  * `UNIT.cost.Tank` es el `cost` del Tank en units.json, `HIT_CHANCE.Tank.Soldier` su
  * `attack.hitChance.Soldier`, `MOVE_COST.vehicle.Woods` el `movement.vehicle` de Woods en
- * terrain.json, `RULES.fog` `defaults.fog` en rules.json... Las filas se nombran por id, por indice o
+ * terrain.json, `SETTINGS.fog` `defaults.fog` en settings.json... Las filas se nombran por id, por indice o
  * con `*` (todas).
  *
  * Una variante no cambia el contenido del juego: `buildVariant` aplica los cambios a una copia de los
  * ficheros y la carga con `loadContent`, que la valida (un valor imposible para antes de jugar),
  * resuelve todos los tipos y la congela. Sus reglas son las de ese contenido:
- * `rulesWith(variante.content)`.
+ * `settingsWith(variante.content)`.
  */
 import { loadContent, MOVEMENTS, type Content, type GameContent } from '@core/content';
 import { mutableCopy } from '@core/util/freeze';
@@ -143,11 +143,11 @@ const TABLE_PATHS: Record<string, TablePath> = {
       );
     },
   },
-  RULES: {
+  SETTINGS: {
     keys: 1,
-    slots: (files, [rule = '']) => {
-      if (!(rule in files.rules.defaults)) throw new Error(`"${rule}" no existe en RULES`);
-      return [{ holder: asHolder(files.rules.defaults), key: rule, label: rule }];
+    slots: (files, [setting = '']) => {
+      if (!(setting in files.settings.defaults)) throw new Error(`"${setting}" no existe en SETTINGS`);
+      return [{ holder: asHolder(files.settings.defaults), key: setting, label: setting }];
     },
   },
   AI: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { moveRulesOf, newUnit, passRulesOf, PATH_INTERRUPTIONS, stepAllowed, surroundingsOf, traverse } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
@@ -13,7 +13,7 @@ describe('reglas de paso', () => {
   it('las de los modulos van antes que la de siempre (otra unidad cierra el paso)', () => {
     const ids = passRulesOf(blankState()).map((rule) => rule.id);
     expect(ids).toEqual(['allies', 'unseenFoes', 'occupied']);
-    const plain = blankState(rulesWith(defaultContent(), { passAllies: false, ambush: false }));
+    const plain = blankState(settingsWith(defaultContent(), { passAllies: false, ambush: false }));
     expect(passRulesOf(plain).map((rule) => rule.id)).toEqual(['occupied']);
   });
 

@@ -46,7 +46,7 @@ function debugMatch(options: DebugGameOptions): MatchConfig {
     seed: options.seed ?? 1,
     size: options.size ?? DEBUG_MAP_SIZE,
     theme: options.theme ?? null,
-    ruleChanges: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
+    settingChanges: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
     teams: [
       { controller: 'human', general: options.general ?? null },
       { controller: options.rival ?? 'ai', general: options.enemyGeneral ?? null },

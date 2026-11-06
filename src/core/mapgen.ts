@@ -43,7 +43,7 @@ function emptyState(size: number, options: NewMapOptions, diceSeed: number): Gam
   const plain = options.content.plainTerrain.id;
   return newGameState({
     map: blankMap(size, plain),
-    rules: options.rules,
+    settings: options.settings,
     content: options.content,
     mode: 'skirmish',
     teams: options.teams,
@@ -329,7 +329,7 @@ const CONTROL_SCORE_NOISE = 1.5;
 const MAX_CONTROL_SCORE = 4;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
-  const zone = squareArea(mapGrid(s), center, s.rules.controlRadius);
+  const zone = squareArea(mapGrid(s), center, s.settings.controlRadius);
   return zone.filter((pos) => isWalkable(terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 
@@ -353,7 +353,7 @@ function shortestSpan(spawns: readonly SpawnDistances[]): number {
  * en el medio del mapa. Si no caben todos, pone los que pueda.
  */
 export function placeControlPoints(s: GameState, spawns: readonly Pos[], rng: Rng): void {
-  const wanted = s.rules.controlPoints;
+  const wanted = s.settings.controlPoints;
   if (wanted <= 0) return;
   const fromSpawns = spawns.map((spawn) => walkingFrom(s, spawn));
   const span = shortestSpan(fromSpawns);
@@ -367,7 +367,7 @@ export function placeControlPoints(s: GameState, spawns: readonly Pos[], rng: Rn
     candidates.push({ pos, score: spread + rng() * CONTROL_SCORE_NOISE });
   }
   candidates.sort((first, second) => first.score - second.score);
-  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.rules.controlRadius;
+  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.settings.controlRadius;
   const chosen: Pos[] = [];
   for (const candidate of candidates) {
     if (chosen.length >= wanted || candidate.score > MAX_CONTROL_SCORE) break;
@@ -498,7 +498,7 @@ export interface NewMapOptions {
   size?: number;
   /** Tema del mapa (de themes.json), o null (o nada) para uno al azar. */
   theme?: Theme | null;
-  rules: Readonly<MatchSettings>;
+  settings: Readonly<MatchSettings>;
   /** Contenido de la partida (unidades, edificios, terreno...). */
   content: GameContent;
   /** Los equipos (dos o mas): el generador hace una salida para cada uno. */

@@ -1,5 +1,5 @@
 {
-  "$schema": "./rules.schema.json",
+  "$schema": "./settings.schema.json",
   "defaults": {
     "initialFunds": 5000,
     "maxUnits": 30,

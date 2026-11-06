@@ -19,7 +19,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 7;
+  version: 8;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -53,8 +53,11 @@ export interface GameState {
    * partida con las mismas acciones da siempre los mismos combates, se cargue o no por medio.
    */
   dice: number;
-  /** Reglas de esta partida: la unica fuente de las reglas (no hay reglas globales). */
-  rules: MatchSettings;
+  /**
+   * Los ajustes de esta partida (la unica fuente: no hay ajustes globales): numeros e interruptores
+   * de los modulos de reglas.
+   */
+  settings: MatchSettings;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
   setup?: GameSetup;
   /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */

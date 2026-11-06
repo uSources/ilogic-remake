@@ -1,9 +1,9 @@
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import type { MatchSettings } from '@core/model';
 import { defaultContent } from '@core/content/default';
 
 /** Reglas "basicas" para tests: los interruptores de reglas apagados (como variante de equilibrio). */
-export const PLAIN_RULES: MatchSettings = rulesWith(defaultContent(), {
+export const PLAIN_SETTINGS: MatchSettings = settingsWith(defaultContent(), {
   counterattack: false,
   damageSpread: null,
   hqCapturePoints: 20,

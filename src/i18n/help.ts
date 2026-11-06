@@ -13,7 +13,7 @@ export interface HelpTexts {
   /** El objetivo sale asi: esta frase, luego las de `ruleLines` y al final `goalBasics`. */
   goalIntro: string;
   /** Frases que dependen de las reglas de la partida; "" si esa regla no esta activa (no sale). */
-  ruleLines: (rules: MatchSettings) => string[];
+  ruleLines: (settings: MatchSettings) => string[];
   goalBasics: string[];
   colorsTitle: string;
   colors: MapColor[];
@@ -30,4 +30,4 @@ export const percent = (fraction: number): number => Math.round(fraction * 100);
 export const joinSentences = (...sentences: string[]): string => sentences.filter(Boolean).join(' ');
 
 /** Lado de la zona de un punto de control: el radio a cada lado mas la casilla del centro. */
-export const controlZoneSide = (rules: MatchSettings): number => 2 * rules.controlRadius + 1;
+export const controlZoneSide = (settings: MatchSettings): number => 2 * settings.controlRadius + 1;

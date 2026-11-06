@@ -19,7 +19,7 @@ import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
 import type { GameAction, GameActionKind } from '@core/model';
 import { act, BLANK_SIZE, blankState, expectRejected, giveTurn, unitTypeNamed, placedBuildings, someUnits } from './helpers';
-import { PLAIN_RULES } from './plainRules';
+import { PLAIN_SETTINGS } from './plainSettings';
 
 const SOLDIER = unitTypeNamed('Soldier');
 const TANK = unitTypeNamed('Tank');
@@ -37,7 +37,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('una unidad que no existe, de otro equipo, dentro de un transporte o ya gastada no actua', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const mine = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const theirs = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     const transport = newUnit(s, TRANSPORT, 0, { x: 6, y: 5 });
@@ -50,7 +50,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('mover comprueba el alcance de la partida: lo que traiga la accion no cuenta', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 15 } }, 'unreachable');
     // Un camino trazado que no vale se cambia por el mas corto.
@@ -68,7 +68,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('atacar: tiene que ser un enemigo vivo a tiro', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const friend = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
     const far = newUnit(s, SOLDIER, 1, { x: 15, y: 15 });
@@ -78,7 +78,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('atacar: solo a lo que se ve y a lo que se le hace daño', () => {
-    const s = blankState({ ...PLAIN_RULES, fog: true, forestHides: true });
+    const s = blankState({ ...PLAIN_SETTINGS, fog: true, forestHides: true });
     // El tanque llega a 2 casillas, pero el bosque solo se ve desde al lado.
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
     const hidden = newUnit(s, SOLDIER, 1, { x: 7, y: 5 });
@@ -90,7 +90,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('lo que pasaria en otra casilla tambien lo dice el nucleo: objetivo y captura', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 9, y: 9, capture: null }, { type: 'City', owner: 0, x: 9, y: 8, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const tank = newUnit(s, TANK, 0, { x: 1, y: 1 });
@@ -107,7 +107,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('un viaje avanza con travelStep: se acerca y acaba si ya llega este turno', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     expectRejected(s, 0, { kind: 'travelStep', uid: soldier.uid }, 'noTravel');
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
@@ -132,7 +132,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('capturar a mano con otra orden la cambia a capturar ese edificio, y lo cuenta', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 9, y: 9 } } });
@@ -145,7 +145,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('un viaje y una orden permanente se quitan el uno al otro, cada uno con su suceso', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const order = { kind: 'defend', at: { x: 2, y: 4 } } as const;
     act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order });
@@ -162,7 +162,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('el paso de un viaje no se deshace (seria un movimiento gratis)', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
     act(s, 0, { kind: 'travelStep', uid: soldier.uid });
@@ -185,7 +185,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('a mano (mover, subir, unirse, atacar sin moverse) se acaba el viaje', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 6 });
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
@@ -207,7 +207,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('atacar despues del paso del viaje no lo acaba (ya se ha movido solo); sin moverse, si', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const tank = newUnit(s, TANK, 0, { x: 2, y: 10 });
     act(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 30, y: 10 } });
     act(s, 0, { kind: 'travelStep', uid: tank.uid });
@@ -218,7 +218,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('un viaje: solo desde el mapa, a otra casilla que pueda pisar y hacia la que pueda ir ya', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const transport = newUnit(s, TRANSPORT, 0, { x: 6, y: 5 });
     s.map[20]![20] = 'DWater';
@@ -234,14 +234,14 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('una unidad que no lucha no ataca (noFighter), aunque le quede turno', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 5, y: 6 });
     expectRejected(s, 0, { kind: 'attack', uid: transport.uid, target: enemy.uid }, 'noFighter');
   });
 
   it('un transporte con pasajeros no se une (los perderia)', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const first = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
     const second = newUnit(s, TRANSPORT, 0, { x: 7, y: 5 });
     const passenger = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
@@ -250,7 +250,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('bajar, reparar y esperar tambien se comprueban', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
     const passenger = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
     const supplier = newUnit(s, SUPPLIER, 0, { x: 12, y: 12 });
@@ -262,7 +262,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('comprar y retirar una unidad: solo lo propio', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'Factory', owner: 1, x: 4, y: 4 }, { type: 'City', owner: 0, x: 8, y: 8 });
     const theirs = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
@@ -273,7 +273,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('antes de nada: la manda un equipo de la partida (ACTION_GUARDS)', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
     expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
@@ -281,7 +281,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('solo juega el equipo al que le toca, y despues de empezar su turno', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
     expectRejected(s, 1, { kind: 'wait', uid: enemy.uid }, 'notYourTurn');
     giveTurn(s, 1);
@@ -292,7 +292,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('rendirse vale en cualquier momento (anyTime), pero no si ya ha perdido ni con la partida decidida', () => {
-    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const s = blankState(PLAIN_SETTINGS, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
     s.turnStarted = false;
     expectRejected(s, 2, { kind: 'wait', uid: newUnit(s, SOLDIER, 2, { x: 9, y: 9 }).uid }, 'notYourTurn');
     act(s, 2, { kind: 'surrender' });
@@ -304,7 +304,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('un equipo que ya ha perdido (sin Base) no manda acciones; si con eso acaba la partida, nadie mas', () => {
-    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const s = blankState(PLAIN_SETTINGS, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(isValidAction(s, 0, { kind: 'wait', uid: soldier.uid })).toBe(true);
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
@@ -315,7 +315,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('una accion sin la forma de GameAction se rechaza con badAction, sin TypeError', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const broken: unknown[] = [
       null,
@@ -338,7 +338,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
   });
 
   it('isValidAction pregunta lo mismo sin cambiar nada', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const before = serialize(s);
     expect(isValidAction(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } })).toBe(true);
@@ -349,7 +349,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
 
 describe('INVARIANTS: lo que dispatch deja en orden tras cada accion', () => {
   it('la unidad que cae desaparece, y la captura a medias de una unidad que se va se pierde', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'capture', uid: soldier.uid });
@@ -367,7 +367,7 @@ describe('INVARIANTS: lo que dispatch deja en orden tras cada accion', () => {
   });
 
   it('una escuadra que se queda sin unidades desaparece', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const units = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, SOLDIER, 0, { x: 6, y: 5 })];
     const squad = formSquad(s, 0, someUnits(units)).squad;
     act(s, 0, { kind: 'leaveSquad', uids: units.map((unit) => unit.uid) });
@@ -377,7 +377,7 @@ describe('INVARIANTS: lo que dispatch deja en orden tras cada accion', () => {
 
 describe('deshacer el ultimo movimiento', () => {
   it('justo despues vuelve a su casilla y puede moverse otra vez', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
     act(s, 0, { kind: 'undoMove', uid: soldier.uid });
@@ -385,7 +385,7 @@ describe('deshacer el ultimo movimiento', () => {
   });
 
   it('con niebla, si el movimiento descubre enemigos no se deshace (seria mirar gratis)', () => {
-    const s = blankState({ ...PLAIN_RULES, fog: true });
+    const s = blankState({ ...PLAIN_SETTINGS, fog: true });
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 2, y: 4 + SOLDIER.vision });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 3 } });
@@ -397,7 +397,7 @@ describe('deshacer el ultimo movimiento', () => {
   });
 
   it('deshacer un movimiento que acabo un viaje lo devuelve', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
@@ -408,7 +408,7 @@ describe('deshacer el ultimo movimiento', () => {
   });
 
   it('el viaje que corto un movimiento se guarda con el: al cargar, deshacer lo devuelve', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
@@ -419,7 +419,7 @@ describe('deshacer el ultimo movimiento', () => {
   });
 
   it('un viaje cortado fuera del mapa en un guardado roto: se pierde lo que se podia deshacer, no la partida', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
@@ -432,7 +432,7 @@ describe('deshacer el ultimo movimiento', () => {
   });
 
   it('una accion que cuenta algo nuevo (retirar una unidad, atacar, comprar...) o el fin de ronda los olvidan', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
@@ -445,7 +445,7 @@ describe('deshacer el ultimo movimiento', () => {
   });
 
   it('se deshacen uno tras otro, el ultimo primero, aunque despues hayan esperado', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
@@ -461,7 +461,7 @@ describe('deshacer el ultimo movimiento', () => {
 
 describe('sucesos completos', () => {
   it('cada accion dice quien la hizo y a quien, con uids y tipos', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
     const [bought] = act(s, 0, { kind: 'buy', at: { x: 4, y: 4 }, unitType: 'Soldier' });
     expect(bought).toMatchObject({ kind: 'spawn', actor: 0, unitType: 'Soldier', team: 0, at: { x: 4, y: 4 } });
@@ -474,7 +474,7 @@ describe('sucesos completos', () => {
   });
 
   it('las escuadras y las ordenes tambien tienen suceso', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const uids = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }).uid, newUnit(s, SOLDIER, 0, { x: 6, y: 5 }).uid];
     const [formed] = act(s, 0, { kind: 'formSquad', uids });
     expect(formed).toMatchObject({ kind: 'squad', actor: 0, change: 'formed', uids, name: 'Alfa', key: 1 });
@@ -483,7 +483,7 @@ describe('sucesos completos', () => {
   });
 
   it('el ataque cuenta la carga que gana cada general', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     appointGeneral(s, 0, 'Brisa');
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
@@ -493,7 +493,7 @@ describe('sucesos completos', () => {
   });
 
   it('los pasajeros que caen con su transporte y el dinero que pasa del maximo tienen suceso', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const transport = newUnit(s, TRANSPORT, 1, { x: 5, y: 5 });
     const passenger = newUnit(s, SOLDIER, 1, { x: 5, y: 6 });
     act(s, 1, { kind: 'load', uid: passenger.uid, into: transport.uid });
@@ -517,7 +517,7 @@ describe('sucesos completos', () => {
   });
 
   it('retirar un transporte con pasajeros: su suceso y el mismo cargoLost que si cayera', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
     const passenger = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
     act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
@@ -528,7 +528,7 @@ describe('sucesos completos', () => {
   });
 
   it('la captura a medias que se pierde y la escuadra que se queda vacia tienen suceso', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
@@ -552,7 +552,7 @@ describe('sucesos completos', () => {
   });
 
   it('cada escuadra que deja de existir tiene un solo suceso: disbanded (deshacerla) o removed (vaciarla)', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const [first, second] = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, SOLDIER, 0, { x: 6, y: 5 })];
     act(s, 0, { kind: 'formSquad', uids: [first.uid, second.uid] });
     expect(act(s, 0, { kind: 'disbandSquad', squad: 1 })).toEqual([
@@ -568,7 +568,7 @@ describe('sucesos completos', () => {
   });
 
   it('el fin de ronda da sus sucesos sin actor, y su resumen sale de ellos', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
     const soldier = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
     soldier.life = 50;
@@ -584,7 +584,7 @@ describe('sucesos completos', () => {
 
 describe('deshacer no pierde la captura a medias (K2)', () => {
   it('al volver al edificio, la captura sigue donde estaba', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'capture', uid: soldier.uid });
@@ -599,7 +599,7 @@ describe('deshacer no pierde la captura a medias (K2)', () => {
   });
 
   it('los movimientos para deshacer se guardan; si estan rotos, se quitan', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
     const raw = JSON.parse(serialize(s)) as { undoableMoves: { from: unknown }[] };
@@ -613,7 +613,7 @@ describe('deshacer no pierde la captura a medias (K2)', () => {
 
 describe('el menu de una unidad sale de las acciones que valen', () => {
   it('cada opcion se ofrece si su accion vale ahora', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     newUnit(s, SOLDIER, 1, { x: 5, y: 6 });
@@ -630,7 +630,7 @@ describe('el menu de una unidad sale de las acciones que valen', () => {
   });
 
   it('un transporte con alguien dentro puede bajarlo; uno que no lucha no recibe ordenes de atacar', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 5 });
     const passenger = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
     act(s, 0, { kind: 'load', uid: passenger.uid, into: transport.uid });
@@ -644,7 +644,7 @@ describe('el menu de una unidad sale de las acciones que valen', () => {
 
 describe('lo que se manda a unas unidades elegidas sale de las acciones que valen', () => {
   it('un grupo captura un edificio ajeno pero no uno propio, y se mueve si alguna puede acercarse', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     s.buildings.push({ type: 'City', owner: null, x: 9, y: 5, capture: null }, { type: 'City', owner: 0, x: 9, y: 9, capture: null });
     const group = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, TANK, 0, { x: 5, y: 6 })];
     expect(canDoWithSelection(s, 0, group, 'capture', { x: 9, y: 5 })).toBe(true);
@@ -656,7 +656,7 @@ describe('lo que se manda a unas unidades elegidas sale de las acciones que vale
   });
 
   it('renombrar y deshacer solo con la escuadra entera; quitar ordenes solo si tienen', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const group = [newUnit(s, SOLDIER, 0, { x: 5, y: 5 }), newUnit(s, SOLDIER, 0, { x: 5, y: 6 })];
     expect(canDoWithSelection(s, 0, group, 'squadRename', null)).toBe(false);
     act(s, 0, { kind: 'formSquad', uids: group.map((unit) => unit.uid) });
@@ -689,7 +689,7 @@ describe('ventana de deshacer y menus: piezas del nucleo', () => {
         'disbandSquad',
       ].sort(),
     );
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
@@ -701,7 +701,7 @@ describe('ventana de deshacer y menus: piezas del nucleo', () => {
   });
 
   it('mover en grupo: las mas cercanas primero, cada paso con el mapa como lo dejan las de antes', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const far = newUnit(s, SOLDIER, 0, { x: 2, y: 10 });
     const near = newUnit(s, SOLDIER, 0, { x: 7, y: 10 });
     const done = newUnit(s, SOLDIER, 0, { x: 8, y: 12 }, 'done');
@@ -718,7 +718,7 @@ describe('ventana de deshacer y menus: piezas del nucleo', () => {
   });
 
   it('las ordenes del menu de una unidad son las de SELECTION_MENU con ella sola', () => {
-    const s = blankState(PLAIN_RULES);
+    const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const options = availableActions(s, 0, soldier);
     for (const kind of ['attack', 'capture', 'defend'] as const) {

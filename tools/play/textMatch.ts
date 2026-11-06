@@ -408,7 +408,7 @@ function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
     seed,
     size: options.size,
     theme: options.theme,
-    ruleChanges: options.fog === undefined ? {} : { fog: options.fog },
+    settingChanges: options.fog === undefined ? {} : { fog: options.fog },
     teams: [
       { controller: 'human', general: checkedGeneral(options.general) },
       { controller: 'ai', general: checkedGeneral(options.enemyGeneral) },

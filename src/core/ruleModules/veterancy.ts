@@ -18,7 +18,7 @@ export function rank(unit: Unit): number {
 
 /** Lo que cambia el acierto por el rango de los dos (premia conservar las unidades que ya han destruido a alguien). */
 function veterancyFactor(s: GameState, { attacker, defender }: Engagement): number {
-  return (1 + s.rules.vetBonus * rank(attacker.unit)) * (1 - s.rules.vetBonus * rank(defender.unit));
+  return (1 + s.settings.vetBonus * rank(attacker.unit)) * (1 - s.settings.vetBonus * rank(defender.unit));
 }
 
 export const VETERANCY: RuleModule = {

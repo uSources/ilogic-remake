@@ -139,7 +139,7 @@ export function tileVM(
     const owner = ownerSideOf(s, viewer, controlPoint.owner);
     info.point = {
       owner,
-      income: s.rules.controlIncome,
+      income: s.settings.controlIncome,
       contested: inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team))),
       icon: `ui/zona_${sideLetter(owner)}`,
     };

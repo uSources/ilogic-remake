@@ -1,5 +1,5 @@
 /**
- * Los ajustes de una partida (`s.rules`; se guardan con ella; los de siempre, en rules.json): numeros
+ * Los ajustes de una partida (`s.settings`; se guardan con ella; los de siempre, en settings.json): numeros
  * (dinero, puntos de captura...) e interruptores de las reglas nuevas.
  */
 export interface MatchSettings {

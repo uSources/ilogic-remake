@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { aiGeneral, choosePower } from '@core/aiGenerals';
 import { bestAreaTarget } from '@core/generalPowers';
 import { playCtx } from '@core/autopilot/context';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';
 import { newUnit } from '@core/rules';
@@ -17,7 +17,7 @@ const unitType = unitTypeNamed;
 
 /** La IA (equipo 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {
-  const s = blankState(rulesWith(defaultContent(), { fog, weather: false }));
+  const s = blankState(settingsWith(defaultContent(), { fog, weather: false }));
   appointGeneral(s, 1, 'Brisa');
   teamState(s, 1).general!.charge = charge;
   newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
@@ -43,7 +43,7 @@ describe('la IA usa a su general', () => {
 
   it('no gasta la carga en algo que vale poco', () => {
     // Con Roca: su reparacion no gasta la barra entera, asi que puede esperar a que valga la pena.
-    const s = blankState(rulesWith(defaultContent(), { weather: false }));
+    const s = blankState(settingsWith(defaultContent(), { weather: false }));
     appointGeneral(s, 1, 'Roca');
     teamState(s, 1).general!.charge = generalDef(s, 'Roca')!.powers[0]!.cost;
     newUnit(s, unitType('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor

@@ -38,7 +38,7 @@ export function minimapVM(
             x: controlPoint.x,
             y: controlPoint.y,
             owner: ownerSideOf(s, viewer, controlPoint.owner),
-            r: s.rules.controlRadius,
+            r: s.settings.controlRadius,
           })),
         }
       : {}),

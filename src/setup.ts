@@ -135,7 +135,7 @@ export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishC
     seed,
     size: options.size,
     theme: options.theme,
-    ruleChanges: ruleChangesFor(options),
+    settingChanges: settingChangesFor(options),
     teams: [
       { controller: 'human', general: options.general },
       { controller: options.rival, general: options.enemyGeneral },
@@ -143,8 +143,8 @@ export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishC
   });
 }
 
-/** Lo que las opciones cambian de las reglas de siempre (`rulesWith(contenido, ruleChangesFor(opciones))`). */
-export function ruleChangesFor(options: NewGameOptions): Partial<MatchSettings> {
+/** Lo que las opciones cambian de las reglas de siempre (`settingsWith(contenido, settingChangesFor(opciones))`). */
+export function settingChangesFor(options: NewGameOptions): Partial<MatchSettings> {
   return {
     fog: options.fog,
     weather: options.weather,

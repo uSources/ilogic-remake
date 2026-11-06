@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { armyLimit, buyOptions, commandUsed, newUnit, upkeepOf } from '@core/rules';
 import { dispatch } from '@core/actions';
@@ -12,11 +12,11 @@ const CITY = 'City',
   FACTORY = 'Factory';
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith(defaultContent(), { commandPoints: 10, upkeep: 0.1 });
+const TEST_SETTINGS = settingsWith(defaultContent(), { commandPoints: 10, upkeep: 0.1 });
 
 describe('puntos de mando', () => {
   it('cada unidad ocupa los puntos de su tipo', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     newUnit(s, SOLDIER, 0, { x: 1, y: 1 });
     newUnit(s, TANK, 0, { x: 2, y: 2 });
     newUnit(s, TANK, 1, { x: 3, y: 3 });
@@ -24,7 +24,7 @@ describe('puntos de mando', () => {
   });
 
   it('no se puede comprar si la unidad no cabe, aunque haya dinero', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     teamState(s, 0).funds = 100000;
     const factory = { type: FACTORY, owner: 0 as const, x: 4, y: 4 };
     s.buildings.push(factory);
@@ -42,7 +42,7 @@ describe('puntos de mando', () => {
   });
 
   it('sin la regla solo cuenta el limite de unidades', () => {
-    const s = blankState(rulesWith(defaultContent(), { commandPoints: null, maxUnits: 2 }));
+    const s = blankState(settingsWith(defaultContent(), { commandPoints: null, maxUnits: 2 }));
     newUnit(s, TANK, 0, { x: 1, y: 1 });
     expect(armyLimit(s, 0, TANK)).toBeNull();
     newUnit(s, TANK, 0, { x: 2, y: 2 });
@@ -52,7 +52,7 @@ describe('puntos de mando', () => {
 
 describe('mantenimiento', () => {
   it('se paga el 10 % del precio de las unidades despues de cobrar', () => {
-    const s = withoutHeadquarters(blankState(TEST_RULES));
+    const s = withoutHeadquarters(blankState(TEST_SETTINGS));
     for (const team of s.teams) team.funds = 0;
     s.buildings.push({ type: CITY, owner: 0, x: 1, y: 1 }); // 1000 por ronda
     newUnit(s, SOLDIER, 0, { x: 5, y: 5 }); // 1500
@@ -70,7 +70,7 @@ describe('mantenimiento', () => {
   });
 
   it('con mantenimiento 0 no se cobra nada', () => {
-    const s = blankState(rulesWith(defaultContent(), { upkeep: 0 }));
+    const s = blankState(settingsWith(defaultContent(), { upkeep: 0 }));
     newUnit(s, TANK, 0, { x: 6, y: 6 });
     expect(upkeepOf(s, 0)).toBe(0);
     expect(endRoundReport(s).upkeep).toEqual([0, 0]);

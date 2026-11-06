@@ -13,7 +13,7 @@ import { canMoveNow, canStillAct, spendUnit } from './unitTurn';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
-  return isHq(s, building) ? s.rules.hqCapturePoints : s.rules.capturePoints;
+  return isHq(s, building) ? s.settings.hqCapturePoints : s.settings.capturePoints;
 }
 
 /** Lo que resta una unidad al capturar: su vida / 10, por lo que aporten los modulos ([CAMBIO] habilidad quickCapture). */

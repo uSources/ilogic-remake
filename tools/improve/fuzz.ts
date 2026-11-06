@@ -42,7 +42,7 @@ const describeStep = (step: ActedStep): string =>
 export function fuzzGame(seed: number, options: { size?: number; days?: number; log?: (line: string) => void } = {}): FuzzFailure | null {
   const rng = seededRng(seed);
   const s: GameState = createMatch(
-    skirmishConfig({ seed, size: options.size ?? 20, ruleChanges: { fog: seed % 3 === 0 }, teams: duel('ai', 'ai') }),
+    skirmishConfig({ seed, size: options.size ?? 20, settingChanges: { fog: seed % 3 === 0 }, teams: duel('ai', 'ai') }),
     rng,
   );
   const initial = checkInvariants(s);

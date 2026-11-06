@@ -32,9 +32,9 @@ describe('readSave: leer una partida dice que ha fallado', () => {
     ['badTurn', () => savedWith((raw) => (raw.turnOrder = [0, 0]))],
     ['badTurn', () => savedWith((raw) => (raw.turnStarted = 'si'))],
     ['badUnits', () => savedWith((raw) => ((raw.units as { life: number }[])[0]!.life = 0))],
-    ['badRules', () => savedWith((raw) => ((raw.rules as { fog: unknown }).fog = 'mucha'))],
+    ['badSettings', () => savedWith((raw) => ((raw.settings as { fog: unknown }).fog = 'mucha'))],
     // Una regla que falta no se rellena: todas las partidas de ahora las guardan todas.
-    ['badRules', () => savedWith((raw) => delete (raw.rules as { weather?: unknown }).weather)],
+    ['badSettings', () => savedWith((raw) => delete (raw.settings as { weather?: unknown }).weather)],
   ])('%s', (error, json) => {
     expect(readSave(json(), defaultContent())).toEqual({ ok: false, error });
   });

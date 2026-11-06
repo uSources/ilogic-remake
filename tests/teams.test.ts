@@ -8,7 +8,7 @@ import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { MoveType } from '@core/content';
 import { generateGame } from '@core/mapgen';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import {
   attackTargets,
   canCapture,
@@ -165,7 +165,7 @@ describe('cuatro equipos en dos alianzas', () => {
     const s = fourCorners();
     s.buildings.push({ type: 'City', owner: 3, x: 12, y: 10, capture: null });
     s.controlPoints = [{ x: 20, y: 20, owner: null }];
-    s.rules = { ...s.rules, controlRadius: 1, controlIncome: 500 };
+    s.settings = { ...s.settings, controlRadius: 1, controlIncome: 500 };
     newUnit(s, SOLDIER, 0, { x: 20, y: 20 });
     newUnit(s, SOLDIER, 2, { x: 21, y: 20 });
     const before = s.teams.map((team) => team.funds);
@@ -304,7 +304,7 @@ describe('mapas al azar para mas de dos equipos', () => {
       const teams: TeamSetup[] = Array.from({ length: count }, () => ({ controller: 'ai' }));
       const s = generateGame(seededRng(seed), {
         size: 32,
-        rules: rulesWith(defaultContent(), { controlPoints: 2 }),
+        settings: settingsWith(defaultContent(), { controlPoints: 2 }),
         content: defaultContent(),
         teams,
       });

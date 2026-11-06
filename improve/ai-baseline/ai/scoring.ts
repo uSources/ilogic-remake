@@ -65,12 +65,12 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da dinero (100 de vida = su precio entero).
     id: 'kill',
     value: (attack) =>
-      kills(attack) ? (weightsOf(attack.s).KILLBONUS + 100 * attack.s.rules.bounty) * unitValue(attack.s, attack.target) : 0,
+      kills(attack) ? (weightsOf(attack.s).KILLBONUS + 100 * attack.s.settings.bounty) * unitValue(attack.s, attack.target) : 0,
   },
   {
     // [CAMBIO] Reglas nuevas: restar lo que devolveria el contraataque.
     id: 'counterattack',
-    value: (attack) => (attack.s.rules.counterattack && !kills(attack) ? -counterattackLoss(attack) : 0),
+    value: (attack) => (attack.s.settings.counterattack && !kills(attack) ? -counterattackLoss(attack) : 0),
   },
   {
     // Quien defiende su Base encima de ella impide capturarla: hay que echarlo aunque cueste.

@@ -25,7 +25,7 @@ import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
-import { PLAIN_RULES } from './plainRules';
+import { PLAIN_SETTINGS } from './plainSettings';
 import { labControllers, viewerOf } from '../src/scenes/game/matchSetup';
 import { screenControllers } from '@core/controllers';
 import { GameSession, humanController, passiveController, remoteController, sequence } from '@core/session';
@@ -438,7 +438,7 @@ describe('escena: menu de la unidad (game/phases/unitMenu.ts)', () => {
 
 describe('escena: «Atras» (game/unitMoves.ts)', () => {
   it('avisa en vez de deshacer si el movimiento ha descubierto enemigos', () => {
-    const s = blankState({ ...PLAIN_RULES, fog: true });
+    const s = blankState({ ...PLAIN_SETTINGS, fog: true });
     const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
     newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 4 + unitTypeNamed('Soldier').vision });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 3 } });

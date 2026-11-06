@@ -13,7 +13,7 @@ import aiFile from './ai.json';
 import buildingsFile from './buildings.json';
 import generalsFile from './generals.json';
 import mapgenFile from './mapgen.json';
-import rulesFile from './rules.json';
+import settingsFile from './settings.json';
 import terrainFile from './terrain.json';
 import themesFile from './themes.json';
 import unitsFile from './units.json';
@@ -24,7 +24,7 @@ import { Checker, uniqueIds } from './check';
 import { validateGenerals, type GeneralDef } from './generals';
 import { validateMapgen, type MapgenDef } from './mapgen';
 import { resolveContent, type Content, type ResolvedContent } from './resolve';
-import { validateRules } from './rules';
+import { validateSettings } from './settings';
 import { validateTerrain } from './terrain';
 import { validateThemes, type ThemeDef } from './themes';
 import type { BuildingDef, ContentContext, TerrainDef, UnitDef } from './types';
@@ -52,7 +52,7 @@ export function readContentFiles(): Content {
     terrain: (terrainFile as unknown as { terrain: TerrainDef[] }).terrain,
     themes: (themesFile as unknown as { themes: ThemeDef[] }).themes,
     mapgen: mapgenFile as unknown as MapgenDef,
-    rules: rulesFile,
+    settings: settingsFile,
     ai: aiFile,
     weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
     generals: (generalsFile as unknown as { generals: GeneralDef[] }).generals,
@@ -81,7 +81,7 @@ export function validateContent(files: Content): string[] {
   validateTerrain(files.terrain, check);
   validateThemes(files.themes, context.terrainIds, check);
   validateMapgen(files.mapgen, context, check);
-  validateRules(files.rules, check);
+  validateSettings(files.settings, check);
   validateAi(files.ai, check);
   validateWeather(files.weather, context.themeIds, check);
   validateGenerals(files.generals, context.unitIds, check);

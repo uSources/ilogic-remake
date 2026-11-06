@@ -1,63 +1,65 @@
 import type { MatchSettings } from '../../core/model';
 import { controlZoneSide, joinSentences, percent, type HelpTexts } from '../help';
 
-const capture = (rules: MatchSettings) =>
-  `Capturing takes points: a building has ${rules.capturePoints} (the HQ ${rules.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`;
+const capture = (settings: MatchSettings) =>
+  `Capturing takes points: a building has ${settings.capturePoints} (the HQ ${settings.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`;
 
-const counterattack = (rules: MatchSettings) =>
-  rules.counterattack
+const counterattack = (settings: MatchSettings) =>
+  settings.counterattack
     ? 'When you attack, a defender that survives and can reach you strikes back with the HP it has left. Ranged units neither counter nor get countered.'
     : 'There is no counterattack: striking first is free.';
 
-const veterancy = (rules: MatchSettings) =>
-  rules.veterancy
-    ? `Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +${percent(rules.vetBonus)} % hit chance and defence, so a damaged veteran is worth healing rather than replacing. Joining two units keeps the more veteran one.`
+const veterancy = (settings: MatchSettings) =>
+  settings.veterancy
+    ? `Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +${percent(settings.vetBonus)} % hit chance and defence, so a damaged veteran is worth healing rather than replacing. Joining two units keeps the more veteran one.`
     : '';
 
-const attackBonuses = (rules: MatchSettings) =>
+const attackBonuses = (settings: MatchSettings) =>
   joinSentences(
-    rules.bounty > 0 ? `Bounty: destroying a unit pays you ${percent(rules.bounty)} % of its price.` : '',
-    rules.flankBonus > 0
-      ? `Flanking: against a unit that has already been attacked that day you hit ${percent(rules.flankBonus)} % more. Attack together.`
+    settings.bounty > 0 ? `Bounty: destroying a unit pays you ${percent(settings.bounty)} % of its price.` : '',
+    settings.flankBonus > 0
+      ? `Flanking: against a unit that has already been attacked that day you hit ${percent(settings.flankBonus)} % more. Attack together.`
       : '',
-    rules.noHealUnderFire ? 'Under fire: a unit attacked that day does not heal that night (it shows a red mark at the bottom left).' : '',
-  );
-
-const armyLimits = (rules: MatchSettings) =>
-  joinSentences(
-    rules.commandPoints !== null
-      ? `Command points: your army can't go over ${rules.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`
-      : '',
-    rules.upkeep > 0
-      ? `Upkeep: every round you pay ${percent(rules.upkeep)} % of your units' price. If you can't afford it, you just pay what you have.`
+    settings.noHealUnderFire
+      ? 'Under fire: a unit attacked that day does not heal that night (it shows a red mark at the bottom left).'
       : '',
   );
 
-const controlPoints = (rules: MatchSettings) =>
-  rules.controlPoints > 0
-    ? `Control points: ${controlZoneSide(rules)}×${controlZoneSide(rules)} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${rules.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
+const armyLimits = (settings: MatchSettings) =>
+  joinSentences(
+    settings.commandPoints !== null
+      ? `Command points: your army can't go over ${settings.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`
+      : '',
+    settings.upkeep > 0
+      ? `Upkeep: every round you pay ${percent(settings.upkeep)} % of your units' price. If you can't afford it, you just pay what you have.`
+      : '',
+  );
+
+const controlPoints = (settings: MatchSettings) =>
+  settings.controlPoints > 0
+    ? `Control points: ${controlZoneSide(settings)}×${controlZoneSide(settings)} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${settings.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
     : '';
 
-const ambush = (rules: MatchSettings) =>
-  rules.ambush && rules.fog
+const ambush = (settings: MatchSettings) =>
+  settings.ambush && settings.fog
     ? 'You can move through your own units. With fog, woods are only visible from next to them: if your path runs into a hidden enemy, the unit stops short (ambush!) and loses its turn.'
     : '';
 
-const weather = (rules: MatchSettings) =>
-  rules.weather
+const weather = (settings: MatchSettings) =>
+  settings.weather
     ? 'Weather: every few days it changes (top, next to the day; hover it to see its effects and the forecast). Rain slows vehicles, snow slows everything on the ground and storms slow aircraft; bad weather costs both sides vision and aim.'
     : '';
 
 /** En el orden en que salen en la ayuda. */
-const ruleLines = (rules: MatchSettings): string[] => [
-  capture(rules),
-  counterattack(rules),
-  veterancy(rules),
-  attackBonuses(rules),
-  armyLimits(rules),
-  controlPoints(rules),
-  ambush(rules),
-  weather(rules),
+const ruleLines = (settings: MatchSettings): string[] => [
+  capture(settings),
+  counterattack(settings),
+  veterancy(settings),
+  attackBonuses(settings),
+  armyLimits(settings),
+  controlPoints(settings),
+  ambush(settings),
+  weather(settings),
 ];
 
 export const help: HelpTexts = {

@@ -63,7 +63,7 @@ export function spreadAround(spread: number): DamageModel {
 
 /** El modelo de daño de la partida: el original (disparo a disparo) o, con `damageSpread`, el esperado +- ese tanto. */
 export function damageModelOf(s: GameState): DamageModel {
-  return s.rules.damageSpread === null ? SHOT_BY_SHOT : spreadAround(s.rules.damageSpread);
+  return s.settings.damageSpread === null ? SHOT_BY_SHOT : spreadAround(s.settings.damageSpread);
 }
 
 /** La probabilidad de cada daño en esta partida (`life` no negativa y `chance` entre 0 y 1). */

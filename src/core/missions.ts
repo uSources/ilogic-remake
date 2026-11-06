@@ -13,7 +13,7 @@
  * Objetivos: uno por entrada en `objectives.ts`.
  */
 import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
-import { rulesWith } from './matchSettings';
+import { settingsWith } from './matchSettings';
 
 import { deepFreeze, type DeepReadonly } from './util/freeze';
 import { newGameState } from './gameState';
@@ -49,7 +49,7 @@ interface MissionSource {
   /** El objetivo es del equipo que juega una persona (para los demas, perder si lo cumple). */
   objective: MissionObjective;
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
-  rules?: Partial<MatchSettings>;
+  settings?: Partial<MatchSettings>;
   /** Consejos paso a paso (solo el tutorial). */
   tutorial?: boolean;
 }
@@ -90,13 +90,13 @@ function placeUnits(s: GameState, units: MissionDef['units']): number[] {
 }
 
 /**
- * Crea la partida de una mision, con sus reglas (`missionRules`) guardadas en la partida. `diceSeed`:
+ * Crea la partida de una mision, con sus reglas (`missionSettings`) guardadas en la partida. `diceSeed`:
  * la semilla de sus dados (cada vez que se juega, la que diga quien la empieza).
  */
 export function buildMission(mission: MissionDef, content: GameContent, diceSeed: number): GameState {
   const s = newGameState({
     map: terrainGrid(content, mission),
-    rules: missionRules(mission, content),
+    settings: missionSettings(mission, content),
     content,
     mode: 'mission',
     theme: missionTheme(content, mission).id,
@@ -121,13 +121,13 @@ export function missionTeam(mission: MissionDef): TeamId {
  * Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los
  * pida). El dinero inicial de las reglas es el del equipo que la juega.
  */
-export const missionRules = (mission: MissionDef, content: GameContent): MatchSettings =>
-  rulesWith(content, {
+export const missionSettings = (mission: MissionDef, content: GameContent): MatchSettings =>
+  settingsWith(content, {
     commandPoints: null,
     upkeep: 0,
     weather: false,
     initialFunds: mission.teams[missionTeam(mission)]!.funds,
-    ...mission.rules,
+    ...mission.settings,
   });
 
 function buildingProblems(mission: MissionDef, content: GameContent): string[] {

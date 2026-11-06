@@ -2,7 +2,7 @@ import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/matchSettings';
+import { settingsWith } from '@core/matchSettings';
 import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';
@@ -21,7 +21,12 @@ function expensiveTanks(): GameContent {
 const TANK = unitTypeNamed('Tank');
 
 function newMatch(content: GameContent): GameState {
-  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content, teams: duel('ai', 'ai') });
+  return generateGame(seededRng(7), {
+    size: 20,
+    settings: settingsWith(defaultContent(), { fog: false }),
+    content,
+    teams: duel('ai', 'ai'),
+  });
 }
 
 describe('contenido de cada partida', () => {

@@ -34,7 +34,7 @@ export function Hud() {
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && <EndScreen end={s.end} />}
       {s.options && <Options options={s.options} />}
-      {s.help && s.helpRules && <Help rules={s.helpRules} />}
+      {s.help && s.helpSettings && <Help matchSettings={s.helpSettings} />}
       {s.rename && <RenameSquad rename={s.rename} />}
       {s.handoff && s.screen === 'game' && <Handoff handoff={s.handoff} />}
       {s.notes && <PatchNotes notes={s.notes} />}

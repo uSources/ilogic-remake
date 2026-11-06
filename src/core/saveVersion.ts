@@ -14,4 +14,4 @@
  */
 import type { GameState } from './model';
 
-export const SAVE_VERSION: GameState['version'] = 7;
+export const SAVE_VERSION: GameState['version'] = 8;

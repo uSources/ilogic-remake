@@ -82,10 +82,10 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
-- **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
+- **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
-  `createMatch(skirmishConfig({ seed, teams, ruleChanges }))`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
+  `createMatch(skirmishConfig({ seed, teams, settingChanges }))`). Reglas con cambios: `settingsWith(contenido, { fog: false })` (nunca
   `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, mode, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)`, o `readSave(json, contenido)` para saber que falla (`deserialize` da
@@ -97,8 +97,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent` (con su `actor`), el turno de
   una unidad con `rules/unitTurn.ts` (`canStillAct`, `canStillMove`, `canStillFire`, `spendUnit`), el
-  dinero con `earn`/`pay` (`rules/funds.ts`), las reglas validas con `RULE_SCHEMA`
-  (`core/rulesSchema.ts`), lo que viene de fuera con `util/validation.ts`, proteccion con
+  dinero con `earn`/`pay` (`rules/funds.ts`), las reglas validas con `SETTINGS_SCHEMA`
+  (`core/settingsSchema.ts`), lo que viene de fuera con `util/validation.ts`, proteccion con
   `tileProtection`, casillas alcanzables con `reachableTiles`, si se puede dar un paso con
   `stepAllowed`, recorrer un camino con `traverse`/`moveAlong`, distancias con `distanceMap` (y lo
   que corta el paso, `Blockers`), acercarse con `stepToward` y un `Approach`, desde donde se dispara
@@ -119,7 +119,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   momento; los de siempre en `ROUND_PHASES`); algo que pasa en cada ataque = `combatSteps` (los de
   siempre en `COMBAT_RESOLUTION`, `core/actions/combat.ts`); quien contraataca = `counterRules`; por
   donde se pasa = `passRules`/`stopRules`; lo que corta un camino = `PATH_INTERRUPTIONS`
-  (`core/rules/traverse.ts`); las reglas no preguntan por un ajuste (`if (!s.rules.x)`); paso al empezar o acabar cada turno =
+  (`core/rules/traverse.ts`); las reglas no preguntan por un ajuste (`if (!s.settings.x)`); paso al empezar o acabar cada turno =
   entrada en `TURN_START_PHASES`/`TURN_END_PHASES` (`core/actions/turn.ts`); forma de acabar la
   partida = entrada en `VICTORY_RULES` (`core/rules/victory.ts`) y en la lista de su modo; modo de
   juego = entrada en `GAME_MODES` (`core/modes.ts`), su configuracion en `MatchConfig` y su
