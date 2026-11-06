@@ -34,7 +34,6 @@ export function armyLimit(s: GameState, team: TeamId, unitType: UnitType): ArmyL
  * unidades, redondeado a 100. Frena la acumulacion de ejercitos enormes (el original no lo tenia).
  */
 export function upkeepOf(s: GameState, team: TeamId): number {
-  if (s.rules.upkeep <= 0) return 0;
   const armyCost = teamUnits(s, team).reduce((total, unit) => total + unitTypeOf(s, unit).cost, 0);
   return roundToMoneyStep(armyCost * s.rules.upkeep);
 }

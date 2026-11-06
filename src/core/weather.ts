@@ -16,9 +16,9 @@ import type { MoveType, Theme, WeatherType } from './content';
 import { seededRng } from './util/random';
 import type { GameState, Rng, WeatherState } from './model';
 
-/** Clima de la partida ahora mismo (despejado, `content.clearWeather`, si la regla esta quitada). */
+/** Clima de la partida ahora mismo (despejado, `content.clearWeather`, si no tiene: sin el modulo del clima). */
 export function weatherNow(s: GameState): WeatherType {
-  return s.rules.weather && s.weather ? weatherTypeOf(s, s.weather.kind) : s.content.clearWeather;
+  return s.weather ? weatherTypeOf(s, s.weather.kind) : s.content.clearWeather;
 }
 
 /** Cambio de movimiento por el clima para un tipo de movimiento. */
@@ -66,9 +66,9 @@ export function rollDays(weather: WeatherType, rng: Rng): number {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-/** Pone el clima del principio (despejado) si la partida aun no lo tiene. */
+/** Pone el clima del principio (despejado) si la partida aun no lo tiene (al prepararla: el modulo del clima). */
 export function ensureWeather(s: GameState): void {
-  if (!s.rules.weather || s.weather) return;
+  if (s.weather) return;
   const rng = dayRng(s);
   const clear = s.content.clearWeather;
   s.weather = { kind: clear.id, left: rollDays(clear, rng), next: rollWeather(s, themeOf(s), rng).id };
@@ -81,11 +81,10 @@ export interface WeatherChange {
 }
 
 /**
- * Pasa un dia (lo llama endRound despues de subir s.day): cuando se acaba el clima entra el del
- * pronostico y se decide el siguiente. Devuelve el cambio, o null si sigue igual.
+ * Pasa un dia (al acabar la ronda, despues de subir s.day: el modulo del clima): cuando se acaba el
+ * clima entra el del pronostico y se decide el siguiente. Devuelve el cambio, o null si sigue igual.
  */
 export function advanceWeather(s: GameState): WeatherChange | null {
-  if (!s.rules.weather) return null;
   if (!s.weather) {
     ensureWeather(s);
     return null;
@@ -104,6 +103,6 @@ export function advanceWeather(s: GameState): WeatherChange | null {
 
 /** Pronostico: el clima que entra al empezar la ronda siguiente, o null si mañana sigue igual. */
 export function forecast(s: GameState): WeatherType | null {
-  if (!s.rules.weather || !s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
+  if (!s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
   return weatherTypeOf(s, s.weather.next);
 }

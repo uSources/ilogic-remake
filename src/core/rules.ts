@@ -104,7 +104,7 @@ export {
   HIT_MODIFIERS,
 } from './rules/combat';
 export { RULE_MODULES, isRuleOn, hooksOf } from './ruleModules/registry';
-export type { HitModifier, CoverPiercing, RuleHooks, RuleModule, RuleModuleId } from './ruleModules/hooks';
+export type { HitModifier, CoverPiercing, RoundPhase, RoundStage, RuleHooks, RuleModule, RuleModuleId } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './ruleModules/veterancy';
 export { flanked } from './ruleModules/flank';
 export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
@@ -123,7 +123,7 @@ export {
   type BuyOption,
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
-export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
+export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_STAGES, roundPhasesOf, type RoundReport } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';
 export {

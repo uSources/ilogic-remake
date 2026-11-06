@@ -6,7 +6,7 @@
  *
  * Una lista nueva que se pueda ampliar es un campo mas de `RuleHooks`, con el tipo de sus entradas.
  */
-import type { GameState, MatchSettings, Unit } from '../model';
+import type { GameEvent, GameState, MatchSettings, Unit } from '../model';
 import type { Engagement } from '../rules/engagement';
 
 /**
@@ -25,16 +25,49 @@ export interface CoverPiercing {
   ignoredCover(s: GameState, attacker: Unit): number;
 }
 
+/**
+ * Momentos del fin de ronda, en orden (ROUND_STAGES, rules/round.ts): empezar (las unidades y los
+ * generales vuelven a poder actuar), cobrar, pagar, el dia nuevo y apuntar como acaba.
+ */
+export type RoundStage = 'start' | 'income' | 'costs' | 'newDay' | 'record';
+
+/** Un paso del fin de ronda: cambia el estado y devuelve sus sucesos (los que tenga). */
+export interface RoundPhase {
+  /** Nombre corto (para depurar). */
+  readonly id: string;
+  /** En que momento va (dentro de cada uno, los de siempre primero y luego los de los modulos). */
+  readonly stage: RoundStage;
+  run(s: GameState): GameEvent[];
+}
+
+/** Algo que se prepara al empezar una partida nueva (el clima del primer dia). */
+export interface MatchSetupStep {
+  readonly id: string;
+  run(s: GameState): void;
+}
+
+/** Una razon por la que una unidad no se cura en un edificio al acabar el dia. */
+export interface HealingBlock {
+  readonly id: string;
+  blocks(s: GameState, unit: Unit): boolean;
+}
+
 /** Las entradas que aporta un modulo a cada lista (las que no dice, ninguna). */
 export interface RuleHooks {
   /** Modificadores del acierto, detras del poder y la proteccion (ver `hitModifiersOf`, rules/combat.ts). */
   readonly hitModifiers?: readonly HitModifier[];
   /** Perforar la proteccion (cuenta la mayor). */
   readonly coverPiercing?: readonly CoverPiercing[];
+  /** Pasos del fin de ronda (ver ROUND_PHASES, rules/round.ts). */
+  readonly roundPhases?: readonly RoundPhase[];
+  /** Lo que se prepara al crear la partida (buildMatch). */
+  readonly matchSetup?: readonly MatchSetupStep[];
+  /** Quien no se cura al acabar el dia (`unhealable`). */
+  readonly healingBlocks?: readonly HealingBlock[];
 }
 
 /** Los modulos de reglas que hay (los interruptores de los ajustes de la partida los enchufan). */
-export type RuleModuleId = 'abilities' | 'veterancy' | 'flank' | 'generals' | 'weather';
+export type RuleModuleId = 'abilities' | 'veterancy' | 'flank' | 'generals' | 'weather' | 'controlPoints' | 'upkeep' | 'noHealUnderFire';
 
 /** Un modulo de reglas: una pieza del juego que se enchufa o no segun los ajustes de la partida. */
 export interface RuleModule {

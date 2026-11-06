@@ -6,7 +6,10 @@ import { entryOf, loadContent, validateContent, type Content, type WeatherType }
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
 import { endRound, hitChance, maxSteps, moveRange, newUnit, visibility, visionOf, engagement } from '@core/rules';
-import { advanceWeather, ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
+import { ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
+import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
 import type { GameState } from '@core/model';
 import { blankState, unitTypeNamed, endRoundReport } from './helpers';
@@ -129,13 +132,20 @@ describe('clima: efectos', () => {
     });
   });
 
-  it('con la regla quitada no hay clima aunque el estado lo tenga', () => {
+  it('sin el modulo del clima no cuenta ni cambia, aunque el estado lo tenga', () => {
     const s = withWeather(STORM);
     s.rules = rulesWith(defaultContent(), { weather: false });
     const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    expect(weatherNow(s)).toBe(CLEAR);
     expect(maxSteps(s, tank)).toBe(TANK.move);
-    expect(advanceWeather(s)).toBeNull();
+    const before = { ...s.weather };
+    endRound(s);
+    expect(s.weather).toEqual(before);
+  });
+
+  it('una partida sin clima no lo prepara', () => {
+    const s = createMatch(skirmishConfig({ seed: 3, teams: duel('human', 'ai'), ruleChanges: { weather: false } }));
+    expect(s.weather ?? null).toBeNull();
+    expect(weatherNow(s)).toBe(CLEAR);
   });
 });
 

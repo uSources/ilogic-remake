@@ -14,6 +14,7 @@ import {
   engagement,
   hitModifiersOf,
   hooksOf,
+  roundPhasesOf,
 } from '@core/rules';
 import type { UnitType } from '@core/content';
 import { blankState, endRoundReport, withoutHeadquarters } from './helpers';
@@ -60,12 +61,17 @@ describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () =>
   });
 });
 
-describe('pasos del fin de ronda (ROUND_PHASES)', () => {
-  it('tienen nombres distintos y el dia cambia antes que el clima', () => {
-    const ids = ROUND_PHASES.map((roundPhase) => roundPhase.id);
+describe('pasos del fin de ronda (ROUND_PHASES y los de los modulos)', () => {
+  it('tienen nombres distintos y van por momentos: el dia cambia antes que el clima', () => {
+    const ids = roundPhasesOf(blankState(TEST_RULES)).map((roundPhase) => roundPhase.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.indexOf('day')).toBeLessThan(ids.indexOf('weather'));
-    expect(ids.indexOf('buildings')).toBeLessThan(ids.indexOf('upkeep'));
+    expect(ids).toEqual(['refresh', 'generals', 'buildings', 'control', 'upkeep', 'day', 'weather', 'army']);
+  });
+
+  it('sin los modulos solo quedan los de siempre', () => {
+    const s = blankState(rulesWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
+    expect(roundPhasesOf(s).map((roundPhase) => roundPhase.id)).toEqual(['refresh', 'generals', 'buildings', 'day', 'army']);
+    expect(ROUND_PHASES.map((roundPhase) => roundPhase.stage)).toEqual(['start', 'income', 'newDay', 'record']);
   });
 
   it('endRound los recorre todos: reactiva unidades y pasa el dia', () => {

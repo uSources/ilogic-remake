@@ -4,7 +4,7 @@
  */
 import { isOnMap } from '../util/predicates';
 import { posOf } from '../geom';
-import { areAllied, perTeam, teamIds } from '../teams';
+import { addForTeam, areAllied, perTeam, teamIds } from '../teams';
 import { earn } from './funds';
 import type { ControlPoint, GameEvent, GameState, Pos, TeamId } from '../model';
 
@@ -30,8 +30,8 @@ export function teamsInZone(s: GameState, center: Pos): Set<TeamId> {
 
 /** [CAMBIO] Hay unidades de equipos enemigos dentro de la zona: nadie la tiene ese dia. */
 export function isContested(s: GameState, center: Pos): boolean {
-  const inside = [...teamsInZone(s, center)];
-  return inside.some((team) => !areAllied(s, team, inside[0]!));
+  const [first, ...others] = teamsInZone(s, center);
+  return first !== undefined && others.some((team) => !areAllied(s, team, first));
 }
 
 /**
@@ -42,7 +42,8 @@ function updateOwner(s: GameState, point: ControlPoint): TeamId | null | 'contes
   if (isContested(s, point)) return 'contested';
   const inside = [...teamsInZone(s, point)].sort((first, second) => first - second);
   const keepsIt = point.owner !== null && inside.includes(point.owner);
-  if (inside.length && !keepsIt) point.owner = inside[0]!;
+  const [newcomer] = inside;
+  if (newcomer !== undefined && !keepsIt) point.owner = newcomer;
   return point.owner;
 }
 
@@ -59,7 +60,7 @@ export function controlRound(s: GameState): GameEvent[] {
     const contested = owner === 'contested';
     events.push({ kind: 'controlPoint', actor: null, at: posOf(point), owner: point.owner, contested });
     if (contested || owner === null) continue;
-    income[owner]! += s.rules.controlIncome;
+    addForTeam(income, owner, s.rules.controlIncome);
     earn(s, owner, s.rules.controlIncome);
   }
   for (const team of teamIds(s))

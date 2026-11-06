@@ -17,9 +17,9 @@ import { buildMission, missionById } from './missions';
 import { assertAllStanding } from './rules/falls';
 import { newUnit } from './rules/lifecycle';
 import { rulesWith } from './matchSettings';
+import { hooksOf } from './ruleModules/registry';
 import { sampleArmy } from './stats';
 import { seededRng } from './util/random';
-import { ensureWeather } from './weather';
 import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import { teamIds, type TeamSetup } from './teams';
 
@@ -170,15 +170,15 @@ function imposeModeRules(s: GameState, content: GameContent): void {
 }
 
 /**
- * La partida nueva de esa configuracion, lista para jugar: con su modo, sus equipos, el clima del
- * primer dia y la muestra del ejercito de ese dia (para la grafica del final). El primer equipo aun
+ * La partida nueva de esa configuracion, lista para jugar: con su modo, sus equipos, lo que
+ * preparan sus modulos de reglas (el clima del primer dia) y la muestra del ejercito de ese dia (para la grafica del final). El primer equipo aun
  * no ha empezado su turno (lo empieza quien la juega: la sesion, 'startTurn').
  */
 export function buildMatch(config: MatchConfig, context: MatchSetupContext): GameState {
   const s = setupOf(config)(config, context);
   assertAllStanding(s);
   imposeModeRules(s, context.content);
-  ensureWeather(s);
+  for (const step of hooksOf(s, 'matchSetup')) step.run(s);
   sampleArmy(s);
   return s;
 }

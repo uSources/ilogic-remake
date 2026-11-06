@@ -5,9 +5,12 @@
  */
 import type { GameState } from '../model';
 import { ABILITIES } from './abilities';
+import { CONTROL_POINTS } from './controlPoints';
 import { FLANK } from './flank';
 import { GENERALS } from './generals';
 import type { RuleHooks, RuleModule, RuleModuleId } from './hooks';
+import { NO_HEAL_UNDER_FIRE } from './noHealUnderFire';
+import { UPKEEP } from './upkeep';
 import { VETERANCY } from './veterancy';
 import { WEATHER } from './weather';
 
@@ -15,7 +18,16 @@ import { WEATHER } from './weather';
  * Todos los modulos, en orden: lo que aportan a una lista va en este orden (en el acierto importa
  * por el redondeo de coma flotante: las partidas de referencia lo notarian).
  */
-export const RULE_MODULES: readonly RuleModule[] = [ABILITIES, VETERANCY, FLANK, GENERALS, WEATHER];
+export const RULE_MODULES: readonly RuleModule[] = [
+  ABILITIES,
+  VETERANCY,
+  FLANK,
+  GENERALS,
+  WEATHER,
+  CONTROL_POINTS,
+  UPKEEP,
+  NO_HEAL_UNDER_FIRE,
+];
 
 /** Los modulos que lleva la partida, segun sus ajustes. */
 export const activeModules = (s: GameState): RuleModule[] => RULE_MODULES.filter((module) => module.isOn(s.rules));
