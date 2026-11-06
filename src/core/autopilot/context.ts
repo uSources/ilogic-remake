@@ -4,18 +4,19 @@
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
-import { areAllied, isHostile } from '../teams';
+import { isHostile } from '../teams';
 import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
-import { movementOf, buildingAt, occupancy } from '../rules/queries';
+import { movementOf, buildingAt } from '../rules/queries';
 import { posOf, samePos } from '../geom';
-import { canReach, groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
+import { canReach, reachableTiles, type MoveRange } from '../rules/movement';
+import { distanceMap, unitsBlock, visibleEnemiesBlock, type Blockers } from '../rules/distance';
+import { isRuleOn } from '../ruleModules/registry';
 import { endsInAmbush } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive } from '../util/predicates';
-import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
 /**
@@ -46,31 +47,23 @@ export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
 }
 
 /**
- * Ocupacion sin contar a la propia unidad (para medir distancias desde su sitio).
+ * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
  * [CAMBIO] En grupo, si se puede pasar entre aliados, las propias no cortan el camino (solo las
  * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
  * detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function occupancyWithout(s: GameState, play: PlayCtx, unit: Unit): Grid<boolean> {
-  const occupied = occupancy(s);
-  if (play.group && s.rules.passAllies) {
-    const visible = visibility(s, play.me);
-    const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, play.me) || !visible.at(other));
-    for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
-  }
-  occupied.set(unit, false);
-  return occupied;
+export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
+  return play.group && isRuleOn(s, 'passAllies') ? visibleEnemiesBlock(s, play.me) : unitsBlock(s, unit);
 }
 
 /**
  * Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con las demas
- * unidades cortando el paso como en occupancyWithout. Infinity si no se llega o si es la propia
- * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
+ * unidades cortando el paso como en blockersFor. Infinity si no se llega o si es la propia casilla
+ * `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, play: PlayCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, play, unit));
-  // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
-  return (pos) => steps.at(pos) || Infinity;
+  const steps = distanceMap(s, from, movementOf(s, unit), blockersFor(s, play, unit));
+  return (pos) => (samePos(pos, from) ? Infinity : steps.at(pos));
 }
 
 /**

@@ -1,15 +1,15 @@
 /**
  * Movimiento y caminos: las reglas de cada paso (`stepAllowed`), el alcance de cada unidad, los
- * caminos trazados y la distancia por tierra. Como se mueve cada tipo esta en movementProfile.ts, lo
+ * caminos trazados y el paso hacia un destino. Como se mueve cada tipo esta en movementProfile.ts, lo
  * que hacen las demas unidades en passage.ts y recorrer un camino de verdad en traverse.ts.
  */
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
-import { createLayer, mapGrid } from '../mapGrid';
+import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
-import type { MoveType } from '../content';
 import type { GameState, Pos, Unit } from '../model';
-import { movementOf, canWalk, isWalkable, occupancy } from './queries';
+import { movementOf, canWalk } from './queries';
+import { distanceMap } from './distance';
 import { movementProfile, type MovementProfile } from './movementProfile';
 import { surroundingsOf, type Surroundings } from './passage';
 import { canStillMove } from './unitTurn';
@@ -159,44 +159,6 @@ function allStepsAllowed(rules: MoveRules, path: readonly Pos[]): boolean {
 }
 
 /**
- * Distancia en pasos desde `from` a cada casilla para un tipo de movimiento, sin limite
- * (Auxiliar.getGroundRange). 0 = inalcanzable (o la propia casilla de origen). El origen no tiene
- * que ser transitable. Las unidades bloquean salvo que se pase `occ` vacio.
- */
-export function groundDistance(s: GameState, from: Pos, moveType: MoveType, occ = occupancy(s)): Grid<number> {
-  const board = mapGrid(s);
-  const distance = board.createLayer(0);
-  const seen = board.createLayer(false);
-  seen.set(from, true);
-  // Busqueda en anchura: cada vuelta avanza un paso desde todo lo alcanzado en la anterior.
-  let frontier: Pos[] = [from];
-  for (let step = 1; frontier.length; step++) {
-    const next: Pos[] = [];
-    for (const tile of frontier.flatMap((pos) => neighbors4(board, pos))) {
-      if (seen.at(tile) || !isWalkable(s, tile, moveType, occ)) continue;
-      seen.set(tile, true);
-      distance.set(tile, step);
-      next.push(tile);
-    }
-    frontier = next;
-  }
-  return distance;
-}
-
-/** Pasos que faltan hasta un destino desde cada casilla. */
-export interface DistanceMap {
-  /** Pasos desde `pos` hasta el destino: 0 en el propio destino, Infinity si no se llega nunca. */
-  at(pos: Pos): number;
-}
-
-/** Distancias hasta `goal` para un tipo de movimiento, como si no hubiera unidades en medio. */
-export function distancesIgnoringUnits(s: GameState, goal: Pos, movement: MoveType): DistanceMap {
-  const steps = groundDistance(s, goal, movement, createLayer(s, false));
-  // groundDistance marca con 0 tanto el destino como lo que no se alcanza.
-  return { at: (pos) => (samePos(pos, goal) ? 0 : steps.at(pos) || Infinity) };
-}
-
-/**
  * Casilla del alcance que mas acerca a `goal` (por tierra, mar o aire segun la unidad), sin contar a
  * las demas unidades. A igual distancia, la que menos pasos gasta.
  * null si no se puede llegar nunca o ninguna casilla acerca mas que quedarse donde esta.
@@ -205,7 +167,7 @@ export function stepToward(s: GameState, unit: Unit, goal: Pos, range = moveRang
   const movement = movementOf(s, unit);
   if (!canWalk(s, goal, movement)) return null;
 
-  const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
+  const distanceToGoal = distanceMap(s, goal, movement);
   const best = minBy(reachableTilesWithCost(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
 
   const getsCloser = best !== null && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);

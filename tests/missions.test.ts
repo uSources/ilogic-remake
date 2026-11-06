@@ -4,12 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
-import { createLayer } from '@core/mapGrid';
 import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missions';
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_DICE_SEED = 1;
-import { groundDistance } from '@core/rules';
+import { distanceMap } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { deserialize, serialize } from '@core/save';
@@ -23,15 +22,12 @@ describe('misiones', () => {
     const s = buildMission(mission, defaultContent(), MISSION_DICE_SEED);
     const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-    expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
+    expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1), 'a pie de base a base').toBeLessThan(Infinity);
     expect(resultFor(s, 0)).toBe('playing');
     const objective = s.mission!.objective;
     if (objective.kind === 'escort') {
       const vip = s.units.find((unit) => unit.uid === objective.uid)!;
-      expect(
-        groundDistance(s, vip, unitTypeOf(s, vip).movement, createLayer(s, false)).at(objective.to),
-        'el convoy puede llegar',
-      ).toBeGreaterThan(0);
+      expect(distanceMap(s, vip, unitTypeOf(s, vip).movement).at(objective.to), 'el convoy puede llegar').toBeLessThan(Infinity);
     }
     // Guardar y cargar conserva la mision.
     expect(deserialize(serialize(s), defaultContent())!.mission).toEqual(s.mission);

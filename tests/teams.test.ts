@@ -7,14 +7,13 @@ import { createMatch } from '@core/defaultGames';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { MoveType } from '@core/content';
-import { createLayer } from '@core/mapGrid';
 import { generateGame } from '@core/mapgen';
 import { rulesWith } from '@core/matchSettings';
 import {
   attackTargets,
   canCapture,
   controlRound,
-  groundDistance,
+  distanceMap,
   isMatchOver,
   newUnit,
   matchResult,
@@ -312,8 +311,8 @@ describe('mapas al azar para mas de dos equipos', () => {
       const hqs = teamIds(s).map((team) => s.buildings.find((building) => building.owner === team && building.type === HQ)!);
       expect(hqs.every(Boolean), `semilla ${seed}`).toBe(true);
       for (const team of teamIds(s)) expect(s.units.filter((unit) => unit.team === team).length).toBeGreaterThan(0);
-      const fromFirst = groundDistance(s, hqs[0]!, MoveType.FOOT, createLayer(s, false));
-      for (const hq of hqs.slice(1)) expect(fromFirst.at(hq)).toBeGreaterThan(0);
+      const fromFirst = distanceMap(s, hqs[0]!, MoveType.FOOT);
+      for (const hq of hqs.slice(1)) expect(fromFirst.at(hq)).toBeLessThan(Infinity);
       for (const [i, hq] of hqs.entries()) for (const other of hqs.slice(i + 1)) expect(manhattan(hq, other)).toBeGreaterThan(5);
       checkInvariants(s);
     }

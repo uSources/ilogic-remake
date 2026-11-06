@@ -21,6 +21,7 @@
  * | `movementProfile` | como se mueve cada tipo: por donde, lo que cuesta cada casilla, lo que puede gastar |
  * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (`PASS_RULES`) |
  * | `movement` | cada paso (`stepAllowed`), alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
+ * | `distance` | pasos por tierra sin limite (`distanceMap`) y lo que corta el paso al medir (`Blockers`) |
  * | `traverse` | recorrer de verdad un camino: lo que lo corta a mitad (`PATH_INTERRUPTIONS`: la emboscada), su evento |
  * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
@@ -72,17 +73,14 @@ export {
   canReach,
   reachableTiles,
   reachableTilesWithCost,
-  distancesIgnoringUnits,
   pathTo,
   validPath,
-  groundDistance,
   stepToward,
   plannedPath,
   approachPath,
   type MoveRange,
   type MoveRules,
   type ReachableTile,
-  type DistanceMap,
   type Step,
   type StepKind,
 } from './rules/movement';
@@ -97,6 +95,7 @@ export {
   type InterruptionKind,
   type PathInterruption,
 } from './rules/traverse';
+export { distanceMap, noBlockers, unitsBlock, visibleEnemiesBlock, type Blockers, type DistanceMap } from './rules/distance';
 export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
 export { PASS_RULES, passRulesOf, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
 export {

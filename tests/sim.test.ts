@@ -7,8 +7,7 @@ import { GameSession, passiveController, runMatch } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { groundDistance } from '@core/rules';
-import { createLayer } from '@core/mapGrid';
+import { distanceMap } from '@core/rules';
 import { checkInvariants } from './sim/partidas';
 
 const HQ = hqId();
@@ -21,7 +20,7 @@ describe('generador de mapas', () => {
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
       expect(hq1, `seed ${seed}`).toBeTruthy();
-      expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
+      expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1)).toBeLessThan(Infinity);
       expect(s.units.filter((unit) => unit.team === 0)).toHaveLength(3);
       expect(s.units.filter((unit) => unit.team === 1)).toHaveLength(3);
       const neutral = s.buildings.filter((building) => building.owner === null).length;

@@ -9,7 +9,8 @@ import { unitTypeOf, buildingTypeOf } from '@core/gameContent';
 import { weightsOf } from '../weights';
 import { movementOf, buildingAt, occupancy } from '@core/rules/queries';
 import { posOf, samePos } from '@core/geom';
-import { canReach, groundDistance, reachableTiles, type MoveRange } from '@core/rules/movement';
+import { canReach, reachableTiles, type MoveRange } from '@core/rules/movement';
+import { distanceMap } from '@core/rules/distance';
 import { endsInAmbush } from '@core/rules/traverse';
 import { dispatch } from '@core/actions/dispatch';
 import type { ActionDispatcher } from '@core/actions/types';
@@ -67,9 +68,9 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, ai, unit));
-  // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
-  return (pos) => steps.at(pos) || Infinity;
+  const occupied = occupancyWithout(s, ai, unit);
+  const steps = distanceMap(s, from, movementOf(s, unit), (pos) => occupied.at(pos));
+  return (pos) => (samePos(pos, from) ? Infinity : steps.at(pos));
 }
 
 /**

@@ -4,11 +4,10 @@ import { MoveType } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
-import { createLayer } from '@core/mapGrid';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { placeControlPoints } from '@core/mapgen';
-import { controlRound, groundDistance, inControlZone, newUnit, roundReport } from '@core/rules';
+import { controlRound, distanceMap, inControlZone, newUnit, roundReport } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
 import { blankState, giveTurn, unitTypeNamed, hqId, endRoundReport } from './helpers';
@@ -96,8 +95,8 @@ describe('puntos de control', () => {
       total += points.length;
       expect(points.length).toBeLessThanOrEqual(defaultContent().defaultRules.controlPoints);
       const hq = (team: 0 | 1) => s.buildings.find((building) => building.type === HQ && building.owner === team)!;
-      const da = groundDistance(s, hq(0), MoveType.FOOT, createLayer(s, false));
-      const db = groundDistance(s, hq(1), MoveType.FOOT, createLayer(s, false));
+      const da = distanceMap(s, hq(0), MoveType.FOOT);
+      const db = distanceMap(s, hq(1), MoveType.FOOT);
       for (const point of points) {
         expect(point.owner).toBeNull();
         expect(s.buildings.some((building) => building.x === point.x && building.y === point.y)).toBe(false);
