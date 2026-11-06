@@ -16,13 +16,10 @@ import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type PlayCtx } from './context';
 
-/** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
-const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distanceMap(s, at, movementOf(s, unit));
-
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega o no tiene orden). */
 function remainingOf(s: GameState, unit: Unit): number {
   const standingOrder = effectiveStandingOrder(s, unit);
-  return standingOrder ? remainingMap(s, unit, standingOrder.at).at(unit) : Infinity;
+  return standingOrder ? distanceMap(s, standingOrder.at, movementOf(s, unit)).at(unit) : Infinity;
 }
 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
@@ -96,7 +93,7 @@ export function formation(s: GameState, play: PlayCtx, unit: Unit): Formation | 
   const rearAfterThisTurn = maxBy(mates, (mate) => mate.afterThisTurn);
   const furthestBehind = maxBy(mates, (mate) => mate.remaining);
   if (!rearAfterThisTurn || !furthestBehind) return null;
-  const remaining = remainingMap(s, unit, standingOrder.at);
+  const remaining = distanceMap(s, standingOrder.at, movementOf(s, unit));
   const mine = remaining.at(unit);
   if (mine === Infinity) return null; // no llega por tierra: como siempre
   const rear = mine > furthestBehind.remaining ? { unit, remaining: mine } : furthestBehind;

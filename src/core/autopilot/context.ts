@@ -9,14 +9,15 @@ import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
 import { movementOf, buildingAt } from '../rules/queries';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
-import { distanceMap, unitsBlock, visibleEnemiesBlock, type Blockers } from '../rules/distance';
-import { isRuleOn } from '../ruleModules/ruleset';
+import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rules/distance';
+import { letsTeammatesThrough, passBlockers } from '../rules/passage';
+import type { PassRule } from '../ruleModules/hooks';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { isAlive } from '../util/predicates';
+import { areEnemies, isAlive } from '../util/predicates';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -46,24 +47,27 @@ export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
 }
 
 /**
- * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
- * [CAMBIO] En grupo, si se puede pasar entre aliados, las propias no cortan el camino (solo las
- * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
- * detras "sin camino" a nada y paseaban al azar en casa.
+ * [CAMBIO] La IA en grupo planea con lo que ve: los enemigos que no ve no le cortan el camino al
+ * medir, haya emboscadas o no (al moverse de verdad manda lo que diga la partida).
  */
-export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
-  return play.group && isRuleOn(s, 'passAllies') ? visibleEnemiesBlock(s, play.me) : unitsBlock(s, unit);
-}
+export const PLANS_WITH_WHAT_IT_SEES: PassRule = {
+  id: 'plansWithWhatItSees',
+  passage: ({ s, mover, sees }, other) => (areEnemies(s, other, mover) && !sees(other) ? 'unnoticed' : null),
+};
 
 /**
- * Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con las demas
- * unidades cortando el paso como en blockersFor. Infinity si no se llega o si es la propia casilla
- * `from` (alli ya se esta: no cuenta como sitio al que ir).
+ * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
+ * [CAMBIO] En grupo, si las reglas de paso le dejan atravesar a los suyos, mide con esas reglas y
+ * con lo que ve (PLANS_WITH_WHAT_IT_SEES): antes una columna en un puente o en la salida de la
+ * Fabrica dejaba a las de detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function stepsFrom(s: GameState, play: PlayCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = distanceMap(s, from, movementOf(s, unit), blockersFor(s, play, unit));
-  return (pos) => (samePos(pos, from) ? Infinity : steps.at(pos));
+export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
+  return play.group && letsTeammatesThrough(s, unit) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
 }
+
+/** Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con lo que le corta el paso (blockersFor). */
+export const stepsMap = (s: GameState, play: PlayCtx, unit: Unit, from: Pos = unit): DistanceMap =>
+  distanceMap(s, from, movementOf(s, unit), blockersFor(s, play, unit));
 
 /**
  * Mejor casilla alcanzable este turno para acercarse a `dest` (IA.getBestMove): la que menos pasos
@@ -74,9 +78,11 @@ export function stepsFrom(s: GameState, play: PlayCtx, unit: Unit, from: Pos = u
 export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
   if (!avoidDest && canReach(range, dest)) return dest;
-  const stepsToDest = stepsFrom(s, play, unit, dest);
+  const stepsToDest = stepsMap(s, play, unit, dest);
+  // Si no puede acabar en el destino, estar en el no es haber llegado: cuenta como lo peor (tiene que salir).
+  const stepsLeft = (pos: Pos) => (samePos(pos, dest) ? Infinity : stepsToDest.at(pos));
   // A igual distancia, la primera (sin mirar lo que gasta: como siempre).
-  return stepToward(range, { score: (tile) => [stepsToDest(tile.pos)], allows: (pos) => !samePos(pos, dest) });
+  return stepToward(range, { score: (tile) => [stepsLeft(tile.pos)], allows: (pos) => !samePos(pos, dest) });
 }
 
 /**

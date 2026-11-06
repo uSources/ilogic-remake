@@ -15,7 +15,7 @@ import { mergeTargets } from '../rules/transport';
 import { canStillFire } from '../rules/unitTurn';
 import type { Building, GameEvent, GameState, Pos, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
-import { act, bestMoveToward, doMove, finish, repairsHere, stepsFrom, strikeReach, visibleFoes, type PlayCtx } from './context';
+import { act, bestMoveToward, doMove, finish, repairsHere, stepsMap, strikeReach, visibleFoes, type PlayCtx } from './context';
 import { attackScore, unitValue } from './scoring';
 
 // ---------------------------------------------------------------------------------------------
@@ -32,9 +32,10 @@ function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRang
 
 /** El edificio propio libre que la repara al que menos pasos hay (null si no llega a ninguno). */
 function nearestRepairBuilding(s: GameState, play: PlayCtx, unit: Unit): Building | null {
-  const steps = stepsFrom(s, play, unit);
-  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps(building) < Infinity);
-  return minBy(repairShops, steps);
+  // La casilla en la que esta no sale: si alli la repararan, ya se habria quedado (retreat).
+  const steps = stepsMap(s, play, unit);
+  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps.at(building) < Infinity);
+  return minBy(repairShops, (building) => steps.at(building));
 }
 
 /** Ir a curarse: unirse a otra igual, quedarse si ya esta en un edificio que la repara o ir al mas cercano. */

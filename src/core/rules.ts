@@ -19,7 +19,7 @@
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
  * | `movementProfile` | como se mueve cada tipo: por donde, lo que cuesta cada casilla, lo que puede gastar |
- * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (`PASS_RULES`) |
+ * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (las `passRules` de los modulos; `passBlockers` para medir) |
  * | `movement` | cada paso (`stepAllowed`), alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
  * | `distance` | pasos por tierra sin limite (`distanceMap`) y lo que corta el paso al medir (`Blockers`) |
  * | `traverse` | recorrer de verdad un camino: lo que lo corta a mitad (`PATH_INTERRUPTIONS`: la emboscada), su evento |
@@ -91,9 +91,9 @@ export {
   type StepKind,
 } from './rules/movement';
 export { traverse, moveAlong, moveEvent, endsInterrupted, type Traversal } from './rules/traverse';
-export { distanceMap, noBlockers, unitsBlock, visibleEnemiesBlock, type Blockers, type DistanceMap } from './rules/distance';
+export { distanceMap, noBlockers, unitsBlock, type Blockers, type DistanceMap } from './rules/distance';
 export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
-export { PASS_RULES, passRulesOf, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
+export { letsTeammatesThrough, passBlockers, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
 export {
   fireOrigins,
   attackTargets,

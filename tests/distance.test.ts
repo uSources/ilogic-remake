@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MoveType } from '@core/content';
-import { distanceMap, newUnit, noBlockers, unitsBlock, visibleEnemiesBlock } from '@core/rules';
+import { distanceMap, newUnit, noBlockers, passBlockers, unitsBlock } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 
 /** Distancia por tierra (distanceMap) con cada estrategia de lo que corta el paso (Blockers). */
@@ -23,15 +23,15 @@ describe('distanceMap', () => {
     expect(distance.at({ x: 2, y: 4 })).toBe(Infinity);
   });
 
-  it('las unidades cortan el paso segun la estrategia: ninguna, todas (menos la que mide) o los enemigos que se ven', () => {
+  it('las unidades cortan el paso segun la estrategia: ninguna, todas (menos la que mide) o las que digan las reglas de paso', () => {
     const s = corridor({ fog: false });
     const mover = newUnit(s, TANK, 0, { x: 2, y: 5 });
     newUnit(s, TANK, 0, { x: 4, y: 5 });
     const beyond = { x: 7, y: 5 };
     expect(distanceMap(s, mover, MoveType.VEHICLE, noBlockers).at(beyond)).toBe(5);
     expect(distanceMap(s, mover, MoveType.VEHICLE, unitsBlock(s, mover)).at(beyond)).toBe(Infinity);
-    expect(distanceMap(s, mover, MoveType.VEHICLE, visibleEnemiesBlock(s, 0)).at(beyond)).toBe(5);
+    expect(distanceMap(s, mover, MoveType.VEHICLE, passBlockers(s, mover)).at(beyond)).toBe(5);
     newUnit(s, TANK, 1, { x: 6, y: 5 });
-    expect(distanceMap(s, mover, MoveType.VEHICLE, visibleEnemiesBlock(s, 0)).at(beyond)).toBe(Infinity);
+    expect(distanceMap(s, mover, MoveType.VEHICLE, passBlockers(s, mover)).at(beyond)).toBe(Infinity);
   });
 });

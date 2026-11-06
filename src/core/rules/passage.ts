@@ -1,7 +1,7 @@
 /**
  * Lo que las demas unidades le hacen a quien se mueve: por donde no le dejan pasar, por donde pasa
- * sin poder pararse encima y donde se tiene que parar. `PASS_RULES` dice lo de cualquier partida
- * (otra unidad cierra el paso) y los modulos de reglas ponen delante lo suyo: [CAMBIO] pasar entre
+ * sin poder pararse encima y donde se tiene que parar. Si ninguna regla dice nada, lo de cualquier
+ * partida: otra unidad cierra el paso (las reglas de 2013). Los modulos de reglas ponen lo suyo: [CAMBIO] pasar entre
  * aliados (`passAllies`), no saber de los enemigos que no se ven (`ambush`) y la zona de control
  * de algunas unidades (`stopRules`, habilidades).
  */
@@ -12,16 +12,14 @@ import type { PassContext, Passage, PassRule } from '../ruleModules/hooks';
 import { hooksOf } from '../ruleModules/ruleset';
 import type { Grid } from '../util/grid';
 import { areEnemies, isOnMap } from '../util/predicates';
+import type { Blockers } from './distance';
 import { sightOf, type Sight } from './visibility';
 
 /** Lo que pasa al entrar en una casilla por quien hay en ella. */
 export type TileOccupancy = 'empty' | 'passThrough' | 'blocked';
 
-/** Lo de cualquier partida: otra unidad cierra el paso (las reglas de 2013). Va detras de lo de los modulos. */
-export const PASS_RULES: readonly PassRule[] = [{ id: 'occupied', passage: () => 'blocks' }];
-
-/** Todas las reglas de paso de esta partida, en orden: las de sus modulos y luego las de siempre. */
-export const passRulesOf = (s: GameState): PassRule[] => [...hooksOf(s, 'passRules'), ...PASS_RULES];
+/** Lo de cualquier partida, si ninguna regla dice nada: otra unidad cierra el paso (las reglas de 2013). */
+const UNLESS_A_RULE_SAYS: Passage = 'blocks';
 
 /** Lo que sabe quien se mueve, para preguntarselo a las reglas (lo que ve su equipo se mira solo si alguna lo pide). */
 function passContext(s: GameState, mover: Unit): PassContext {
@@ -35,8 +33,11 @@ function passageOf(rules: readonly PassRule[], context: PassContext, other: Unit
     const passage = rule.passage(context, other);
     if (passage) return passage;
   }
-  return 'blocks';
+  return UNLESS_A_RULE_SAYS;
 }
+
+/** Las demas unidades del mapa (no `mover` ni las que van dentro de un transporte). */
+const othersOnMap = (s: GameState, mover: Unit): Unit[] => s.units.filter((other) => isOnMap(other) && other.uid !== mover.uid);
 
 /** Lo que una casilla con una unidad asi le hace a quien se mueve (si no sabe que esta, como si no hubiera nadie). */
 const TILE_OF: Record<Passage, TileOccupancy> = { blocks: 'blocked', passThrough: 'passThrough', unnoticed: 'empty' };
@@ -54,11 +55,10 @@ export interface Surroundings {
  */
 export function surroundingsOf(s: GameState, mover: Unit): Surroundings {
   const tiles = createLayer<TileOccupancy>(s, 'empty');
-  const rules = passRulesOf(s);
+  const rules = hooksOf(s, 'passRules');
   const context = passContext(s, mover);
   const noticedFoes: Unit[] = [];
-  for (const other of s.units) {
-    if (!isOnMap(other) || other.uid === mover.uid) continue;
+  for (const other of othersOnMap(s, mover)) {
     const passage = passageOf(rules, context, other);
     tiles.set(other, TILE_OF[passage]);
     if (passage !== 'unnoticed' && areEnemies(s, other, mover)) noticedFoes.push(other);
@@ -73,3 +73,19 @@ function stopsFor(s: GameState, mover: Unit, noticedFoes: readonly Unit[]): Grid
   for (const tile of stops) mustStop.set(posOf(tile), true);
   return mustStop;
 }
+
+/**
+ * Lo que corta el paso a `mover` al medir distancias (distanceMap), segun las reglas de paso de la
+ * partida con `firstRules` delante: las casillas de las unidades que le cierran el paso.
+ */
+export function passBlockers(s: GameState, mover: Unit, firstRules: readonly PassRule[] = []): Blockers {
+  const rules = [...firstRules, ...hooksOf(s, 'passRules')];
+  const context = passContext(s, mover);
+  const blocked = createLayer(s, false);
+  for (const other of othersOnMap(s, mover)) if (passageOf(rules, context, other) === 'blocks') blocked.set(other, true);
+  return (pos) => blocked.at(pos);
+}
+
+/** Las reglas de paso de la partida dejan a `mover` atravesar a los de su equipo (ella misma sirve de muestra). */
+export const letsTeammatesThrough = (s: GameState, mover: Unit): boolean =>
+  passageOf(hooksOf(s, 'passRules'), passContext(s, mover), mover) === 'passThrough';

@@ -1,20 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { hooksOf, moveRulesOf, newUnit, passRulesOf, stepAllowed, surroundingsOf, traverse } from '@core/rules';
+import {
+  distanceMap,
+  hooksOf,
+  letsTeammatesThrough,
+  moveRulesOf,
+  newUnit,
+  passBlockers,
+  stepAllowed,
+  surroundingsOf,
+  traverse,
+} from '@core/rules';
+import { MoveType } from '@core/content';
 import { blankState, unitTypeNamed } from './helpers';
 
-/** Por donde se pasa: las reglas de paso (PASS_RULES y las de los modulos) y la regla de cada paso (stepAllowed). */
+/** Por donde se pasa: las reglas de paso (las de los modulos; si ninguna dice nada, otra unidad cierra el paso) y la regla de cada paso (stepAllowed). */
 
 const TANK = unitTypeNamed('Tank');
 const SOLDIER = unitTypeNamed('Soldier');
 
 describe('reglas de paso', () => {
-  it('las de los modulos van antes que la de siempre (otra unidad cierra el paso)', () => {
-    const ids = passRulesOf(blankState()).map((rule) => rule.id);
-    expect(ids).toEqual(['allies', 'unseenFoes', 'occupied']);
+  it('las ponen los modulos; si ninguna dice nada, otra unidad cierra el paso', () => {
+    expect(hooksOf(blankState(), 'passRules').map((rule) => rule.id)).toEqual(['allies', 'unseenFoes']);
     const plain = blankState(settingsWith(defaultContent(), { passAllies: false, ambush: false }));
-    expect(passRulesOf(plain).map((rule) => rule.id)).toEqual(['occupied']);
+    expect(hooksOf(plain, 'passRules')).toEqual([]);
+    const mover = newUnit(plain, TANK, 0, { x: 5, y: 10 });
+    newUnit(plain, TANK, 0, { x: 6, y: 10 });
+    expect(surroundingsOf(plain, mover).tiles.at({ x: 6, y: 10 })).toBe('blocked');
+  });
+
+  it('passBlockers: al medir, cortan el paso las unidades que las reglas dicen (con las de quien mide delante)', () => {
+    const s = blankState({ fog: true, ambush: false, passAllies: true, forestHides: true });
+    const mover = newUnit(s, TANK, 0, { x: 5, y: 10 });
+    const ally = newUnit(s, TANK, 0, { x: 6, y: 10 });
+    const hidden = newUnit(s, SOLDIER, 1, { x: 18, y: 18 });
+    const seen = newUnit(s, SOLDIER, 1, { x: 5, y: 11 });
+    expect(letsTeammatesThrough(s, mover)).toBe(true);
+    const blocks = passBlockers(s, mover);
+    expect([ally, hidden, seen].map((unit) => blocks(unit))).toEqual([false, true, true]);
+    const notSeen = passBlockers(s, mover, [{ id: 'blind', passage: ({ sees }, other) => (sees(other) ? null : 'unnoticed') }]);
+    expect([ally, hidden, seen].map((unit) => notSeen(unit))).toEqual([false, false, true]);
+    expect(distanceMap(s, mover, MoveType.VEHICLE, blocks).at({ x: 7, y: 10 })).toBe(2);
+
+    const closed = blankState({ fog: true, ambush: false, passAllies: false, forestHides: true });
+    expect(letsTeammatesThrough(closed, newUnit(closed, TANK, 0, { x: 5, y: 10 }))).toBe(false);
   });
 
   it('un aliado se atraviesa, un enemigo a la vista cierra el paso y uno escondido no se sabe que esta', () => {

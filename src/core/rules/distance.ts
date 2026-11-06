@@ -1,16 +1,15 @@
 /**
  * Distancia por tierra (mar o aire, segun el tipo de movimiento) sin limite de pasos: cuantos pasos
  * hay desde una casilla a cada una (Auxiliar.getGroundRange). Lo que corta el paso al medir es una
- * estrategia (`Blockers`): nada, cualquier unidad, o los enemigos que ve un equipo.
+ * estrategia (`Blockers`): nada, cualquier unidad, o lo que digan las reglas de paso (passBlockers, passage.ts).
  */
 import type { MoveType } from '../content';
 import { neighbors4 } from '../geom';
 import { createLayer } from '../mapGrid';
-import type { GameState, Pos, TeamId, Unit } from '../model';
+import type { GameState, Pos, Unit } from '../model';
 import type { Grid } from '../util/grid';
 import { terrainAccess } from './movementProfile';
 import { occupancy } from './queries';
-import { isVisibleFoe, sightOf } from './visibility';
 
 /** Pasos desde el origen hasta cada casilla: 0 en el propio origen, Infinity donde no se llega. */
 export type DistanceMap = Grid<number>;
@@ -26,14 +25,6 @@ export function unitsBlock(s: GameState, except?: Unit): Blockers {
   const occupied = occupancy(s);
   if (except) occupied.set(except, false);
   return (pos) => occupied.at(pos);
-}
-
-/** Solo cortan el paso los enemigos de `team` que ve (los aliados se atraviesan y los escondidos no se saben). */
-export function visibleEnemiesBlock(s: GameState, team: TeamId): Blockers {
-  const blocked = createLayer(s, false);
-  const sees = sightOf(s, team);
-  for (const unit of s.units) if (isVisibleFoe(s, team, unit, sees)) blocked.set(unit, true);
-  return (pos) => blocked.at(pos);
 }
 
 /**
