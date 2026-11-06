@@ -6,17 +6,23 @@
  * repeticion mandarian lo mismo.
  */
 import { diceOf } from '../dice';
-import type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 import { guardProblem } from './guards';
 import { isGameAction } from './shape';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
 import { recordEvents } from '../stats';
 import { ACTIONS } from './registry';
-import type { ActionDefinition } from './types';
+import type { ActionDefinition, ActionDispatcher } from './types';
 
-/** La entrada del registro de una accion, con su tipo. */
-const definitionOf = <K extends GameActionKind>(action: GameActionOf<K>): ActionDefinition<K> => ACTIONS[action.kind];
+/**
+ * La entrada del registro de una accion, con su tipo. Se llama igual a todas: las que no hacen otras
+ * acciones no usan `perform` (solo las de turno lo reciben, CompositeActionDefinition).
+ */
+type AnyDefinition<K extends GameActionKind> = Omit<ActionDefinition<K>, 'apply'> & {
+  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
+};
+const definitionOf = <K extends GameActionKind>(action: GameActionOf<K>): AnyDefinition<K> => ACTIONS[action.kind] as AnyDefinition<K>;
 
 /**
  * Por que no vale ahora la accion para el equipo `team` (null = vale): las comprobaciones comunes
@@ -46,7 +52,7 @@ function applyAction(s: GameState, team: TeamId, action: GameAction): GameEvent[
 /**
  * Comprueba la accion (ACTION_GUARDS y su `validate`) y, si vale, la hace: sus sucesos, o por que no
  * vale. Es lo que hace dispatch, y lo que una accion manda dentro de la suya (los pasos de turno:
- * `ActionDefinition.apply` recibe esto), con las mismas comprobaciones.
+ * `CompositeActionDefinition.apply` recibe esto), con las mismas comprobaciones.
  */
 function perform(s: GameState, team: TeamId, action: GameAction): ActionResult {
   const reason = actionProblem(s, team, action);

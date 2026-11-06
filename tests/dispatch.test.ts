@@ -406,6 +406,30 @@ describe('deshacer el ultimo movimiento', () => {
     expect(soldier.travelTo).toEqual({ x: 2, y: 20 });
   });
 
+  it('el viaje que corto un movimiento se guarda con el: al cargar, deshacer lo devuelve', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
+    const loaded = loadGame(serialize(s))!;
+    expect(loaded.undoableMoves).toEqual(s.undoableMoves);
+    act(loaded, 0, { kind: 'undoMove', uid: soldier.uid });
+    expect(unitById(loaded, soldier.uid)!.travelTo).toEqual({ x: 2, y: 20 });
+  });
+
+  it('un viaje cortado fuera del mapa en un guardado roto: se pierde lo que se podia deshacer, no la partida', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
+    const saved = JSON.parse(serialize(s)) as { undoableMoves: { travelTo: unknown }[] };
+    saved.undoableMoves[0]!.travelTo = { x: BLANK_SIZE + 5, y: 2 };
+    const loaded = loadGame(JSON.stringify(saved))!;
+    expect(loaded).not.toBeNull();
+    expect(loaded.undoableMoves).toBeUndefined();
+    expectRejected(loaded, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
+  });
+
   it('una accion que cuenta algo nuevo (retirar una unidad, atacar, comprar...) o el fin de ronda los olvidan', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });

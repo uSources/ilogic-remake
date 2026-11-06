@@ -131,28 +131,31 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 - **Turnos**: la partida sabe de quien es el turno (`GameState.turn`, en el orden de la ronda
   `turnOrder`, que pone el modo; `turnStarted`). 'startTurn' lo empieza (`TURN_START_PHASES`, en
   actions/turn.ts: los viajes avanzan) y 'endTurn' lo acaba (`TURN_END_PHASES`: las ordenes
-  permanentes del equipo se cumplen, `assistTurn`, y las unidades que se han quedado sobre un edificio
-  que pueden capturar siguen capturando, `autoCapturers` en rules/capture.ts) y lo pasa al
+  permanentes del equipo se cumplen, `assistTurn`, y las unidades que se han quedado sobre un
+  edificio que pueden capturar siguen capturando, `autoCapturers` en rules/capture.ts) y lo pasa al
   siguiente que juega (`nextTurn`, rules/turnOrder.ts: los derrotados no); tras el ultimo del orden,
   el fin de ronda (`endRound`, con `ROUND_PHASES`). Sus sucesos: 'turnStart' y 'turnEnd'. Cada paso
   de turno hace acciones del equipo (las mismas entradas de ACTIONS, con su validate). Las fases son
-  acciones mandadas por el mismo camino que las demas (el `ActionDispatcher` que recibe `apply`:
-  guardas, validate, invariantes) y sus sucesos se cuentan una vez en las estadisticas; el modo puede
-  añadir las suyas (`turnPhases`). Las ordenes permanentes son una regla para todos los equipos (la
-  persona, la IA o un jugador por la red), no del controlador: las cumple core/autopilot, no la IA.
-  'startTurn' y 'endTurn' solo los manda la sesion (`isTurnBoundary`; `session.act` los rechaza con
-  'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado), en su turno o
-  fuera de el (`anyTime`).
+  acciones mandadas por el mismo camino que las demas (el `ActionDispatcher` que recibe el `apply`
+  de las acciones de turno, y solo ellas: `CompositeActionDefinition`; guardas, validate,
+  invariantes) y sus sucesos se cuentan una vez en las estadisticas; el modo puede añadir las suyas
+  (`turnPhases`). Las ordenes permanentes son una regla para todos los equipos (la persona, la IA o
+  un jugador por la red), no del controlador: las cumple core/autopilot, no la IA. 'startTurn' y
+  'endTurn' solo los manda la sesion (`isTurnBoundary`; `session.act` los rechaza con
+  'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado),
+  en su turno o fuera de el (`anyTime`).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`buildMatch`, `newGameState`, `newUnit`, `appointGeneral`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
-  `ACTION_SHAPES` (`actions/shape.ts`; el tipo la pide), su suceso en `GameEvent` (`model/events.ts`)
-  y su entrada en el modulo de `actions/` que toque (con `keepsUndo` si no cuenta nada nuevo de la
-  partida y deja deshacer lo de antes); si se ofrece en el menu de una unidad, su entrada en `UNIT_MENU`; si se puede mandar a unas
-  unidades elegidas, en `SELECTION_MENU` (y en `INPUT_ACTIONS` y `ACTION_RUNNERS` de los mandos y la
-  escena); su animacion en `ANIMATORS` (`scenes/game/playback.ts`). Lo comun a todas las acciones es
-  una entrada en `ACTION_GUARDS`; lo que hay que limpiar despues de cualquiera (y de cada ronda), una
-  en `INVARIANTS`, que devuelve sus sucesos.
+  `ACTION_SHAPES` (`actions/shape.ts`; el tipo la pide), su suceso en `GameEvent`
+  (`model/events.ts`) y su entrada en el modulo de `actions/` que toque (con `keepsUndo` si no
+  cuenta nada nuevo de la partida y deja deshacer lo de antes, y con `anyTime` si vale fuera del
+  turno, como rendirse); si se ofrece en el menu de una unidad, su entrada en `UNIT_MENU`; si se
+  puede mandar a unas unidades elegidas, en `SELECTION_MENU` (y en `INPUT_ACTIONS` y
+  `ACTION_RUNNERS` de los mandos y la escena); su animacion en `ANIMATORS`
+  (`scenes/game/playback.ts`). Lo comun a todas las acciones es una entrada en `ACTION_GUARDS`; lo
+  que hay que limpiar despues de cualquiera (y de cada ronda), una en `INVARIANTS`, que devuelve sus
+  sucesos.
 
 ### Sucesos
 

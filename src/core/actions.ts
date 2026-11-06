@@ -42,5 +42,5 @@ export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
 export { isTurnBoundary, startsTurn, TURN_END_PHASES, TURN_START_PHASES } from './actions/turn';
 export type { TurnPhase } from './modes';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
-export type { ActionDefinition, ActionDispatcher, ActionRegistry } from './actions/types';
+export type { ActionDefinition, ActionDispatcher, ActionRegistry, CompositeActionDefinition } from './actions/types';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';

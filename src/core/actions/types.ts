@@ -9,12 +9,8 @@ export interface ActionDefinition<K extends GameActionKind> {
    * (alcance, vision, dinero...): no se fia de nada que traiga la accion ni de quien la manda.
    */
   validate(s: GameState, team: TeamId, action: GameActionOf<K>): ActionRejection | null;
-  /**
-   * La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. Si hace otras
-   * acciones del equipo (los pasos de turno), las manda por `perform`: con las mismas comprobaciones
-   * que dispatch, y sus sucesos van entre los suyos.
-   */
-  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
+  /** La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. */
+  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice): GameEvent[];
   /**
    * Deja como estan los movimientos que se pueden deshacer (`GameState.undoableMoves`): las acciones
    * que no cuentan nada nuevo de la partida (mover, esperar, escuadras, ordenes). Tras cualquier otra
@@ -28,8 +24,21 @@ export interface ActionDefinition<K extends GameActionKind> {
   readonly anyTime?: true;
 }
 
+/** Las acciones que hacen otras acciones del equipo: empezar y acabar el turno (sus pasos). */
+export type CompositeActionKind = 'startTurn' | 'endTurn';
+
+/**
+ * Una accion que hace otras del equipo (los pasos de turno): las manda por `perform`, con las mismas
+ * comprobaciones que dispatch, y sus sucesos van entre los suyos. Solo estas lo reciben.
+ */
+export interface CompositeActionDefinition<K extends CompositeActionKind> extends Omit<ActionDefinition<K>, 'apply'> {
+  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
+}
+
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */
-export type ActionRegistry = { readonly [K in GameActionKind]: ActionDefinition<K> };
+export type ActionRegistry = {
+  readonly [K in GameActionKind]: K extends CompositeActionKind ? CompositeActionDefinition<K> : ActionDefinition<K>;
+};
 
 /**
  * Por donde manda sus acciones quien juega un equipo: `dispatch`, o algo que la llama y ademas lo
