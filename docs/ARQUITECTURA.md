@@ -235,7 +235,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   crear la partida y se guarda con ella), las reglas que impone (`fixedRules`, que aplica
   `buildMatch`: la partida para mirar no tiene clima), sus pasos de turno (`turnPhases`, detras de
   los de siempre) y si la pantalla guarda sola al empezar el turno de una persona
-  (`savesAtTurnStart`). Esta congelado y todo lo lee por `gameModeOf` (las reglas, la sesion,
+  (`saves`). Esta congelado y todo lo lee por `gameModeOf` (las reglas, la sesion,
   `newGameState`); los tests que prueban otro modo lo dan con `vi.mock` de `gameModeOf`
   (tests/modeHooks.test.ts). Un modo nuevo es su entrada aqui, su configuracion en `MatchConfig` y
   su forma de prepararse en `MATCH_SETUPS`.

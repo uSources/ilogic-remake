@@ -47,7 +47,8 @@ import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
-import { GAME_MENU, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
+import { gameModeOf } from '../core/modes';
+import { MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
@@ -67,7 +68,16 @@ import { Carry, type CarryHost } from './game/carry';
 import { pointerTarget, type PointerHost } from './game/pointerInput';
 import { Orders, type OrderHost } from './game/orders';
 import { UnitMoves, type MoveHost } from './game/unitMoves';
-import { acceptMapTile, captureNow, GameMenuChoices, PHASES, quitWhileWatching, type GameMenuHost, type PhaseHost } from './game/phases';
+import {
+  acceptMapTile,
+  captureNow,
+  GameMenuChoices,
+  gameMenuOf,
+  PHASES,
+  quitWhileWatching,
+  type GameMenuHost,
+  type PhaseHost,
+} from './game/phases';
 
 export type { GameStartData } from './game/types';
 
@@ -514,7 +524,7 @@ export class GameScene extends Phaser.Scene {
   private openOptions(): void {
     if (this.phase !== 'map' && this.phase !== 'gameMenu') return;
     if (this.phase === 'map') this.openGameMenu();
-    this.menuSel = GAME_MENU.indexOf('options');
+    this.menuSel = gameMenuOf(this.s).indexOf('options');
     this.refreshHud();
     this.optionsPanel.open();
   }
@@ -675,7 +685,7 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Se acaba la partida para esta pantalla: true, y empieza el final. Si se ha decidido (su modo dice
-   * como: el laboratorio nunca), su final; si sigue pero ya no juega ninguna persona (han caido o se
+   * como; el laboratorio nunca se decide), su final; si sigue pero ya no juega ninguna persona (han caido o se
    * han rendido y quedan otros), perdida para quien mira: nadie miraria a la IA jugar sola, y la
    * partida se cierra y se borra su guardado.
    */
@@ -687,7 +697,7 @@ export class GameScene extends Phaser.Scene {
       void this.endScreen.finish(endOfResult(result, this.viewer));
       return true;
     }
-    if (this.lab || aPersonStillPlays(this.s, isPerson)) return false;
+    if (aPersonStillPlays(this.s, isPerson)) return false;
     void this.endScreen.finish(outOfMatchEnd(this.s, this.viewer));
     return true;
   }
@@ -734,8 +744,9 @@ export class GameScene extends Phaser.Scene {
     this.scene.start('Menu');
   }
 
+  /** Guarda la partida (si su modo se guarda: la partida para mirar, no). */
   private saveGame(): boolean {
-    if (!writeSave(serialize(this.s))) return false;
+    if (!gameModeOf(this.s).saves || !writeSave(serialize(this.s))) return false;
     this.savedThisGame = true;
     return true;
   }

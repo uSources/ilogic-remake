@@ -18,12 +18,16 @@ import {
 } from '../src/scenes/game/endOfMatch';
 import { canUseMenuButton } from '../src/hud/game/turn';
 import { reasonText } from '../src/hud/menus/EndScreen';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
+import { duel } from '@core/teams';
+import { defaultLab, labMatch } from '../src/lab';
 import { initialState } from '../src/hud/state';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
 import { CONFIRM_MS, MENU_PHASES, type Phase } from '../src/scenes/game/types';
-import { GameMenuChoices, PHASES, quitWhileWatching, watchesOthers, type GameMenuHost } from '../src/scenes/game/phases';
+import { GameMenuChoices, gameMenuOf, PHASES, quitWhileWatching, watchesOthers, type GameMenuHost } from '../src/scenes/game/phases';
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
@@ -326,6 +330,16 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     expect(reasonText('won', 'surrender')).toBe('endEnemySurrender');
     expect(reasonText('draw', 'surrender')).toBe('endEnemySurrender');
     expect(reasonText('won', 'hq')).toBe('endHq');
+  });
+
+  it('el menu de pausa: en el laboratorio (no se acaba ni se guarda) ni guardar ni rendirse', () => {
+    const skirmish = createMatch(skirmishConfig({ seed: 3, size: 16, teams: duel('human', 'ai') }));
+    expect(gameMenuOf(skirmish)).toEqual(['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit']);
+    const lab = createMatch(labMatch(defaultLab(), null));
+    expect(gameMenuOf(lab)).toEqual(['resume', 'endTurn', 'replay', 'options', 'help', 'quit']);
+    // Si aun asi se rindiera (por depuracion), ya no queda persona en juego: la escena lo acaba.
+    act(lab, 0, { kind: 'surrender' });
+    expect(aPersonStillPlays(lab, (team) => team === 0)).toBe(false);
   });
 
   it('salir mientras juegan los demas: solo mirando, y con dos pulsaciones a tiempo', () => {

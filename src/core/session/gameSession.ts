@@ -86,7 +86,7 @@ export class GameSession {
    * solo al empezarlo ya hecho: asi, al cargar, nada se repite ni se pierde) y su modo lo marca.
    */
   isAutosaveMoment(step: ActedStep): boolean {
-    return gameModeOf(this.state).savesAtTurnStart && startsTurn(step) && this.isPerson(step.team);
+    return gameModeOf(this.state).saves && startsTurn(step) && this.isPerson(step.team);
   }
 
   /** Quien juega ese equipo. */

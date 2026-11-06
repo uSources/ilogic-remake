@@ -1,5 +1,7 @@
 /** Fase 'gameMenu': el menu de pausa (seguir, terminar turno, guardar, repetir, opciones...). */
 import { missionById } from '../../../core/missions';
+import { canBeLost, gameModeOf } from '../../../core/modes';
+import type { GameState } from '../../../core/model';
 import { objectiveText } from '../../../campaign';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { settings, t, type TextKey } from '../../../settings';
@@ -88,6 +90,15 @@ export function quitWhileWatching(state: WatchState, choices: GameMenuChoices): 
   if (watchesOthers(state)) choices.choose('quit');
 }
 
+/**
+ * Las opciones del menu de pausa en esta partida: guardar solo si su modo se guarda y rendirse solo si
+ * se puede perder (la partida para mirar, el laboratorio, no tiene ninguna de las dos).
+ */
+export function gameMenuOf(s: GameState): GameMenuKey[] {
+  const mode = gameModeOf(s);
+  return GAME_MENU.filter((choice) => (choice !== 'save' || mode.saves) && (choice !== 'surrender' || canBeLost(mode)));
+}
+
 export const gameMenuPhase: PhaseHandler = {
   enter: (host) => {
     if (host.phase !== 'map' && host.phase !== 'gameMenu') host.abandonSelection();
@@ -96,7 +107,7 @@ export const gameMenuPhase: PhaseHandler = {
     host.refresh();
   },
   accept: (host) => {
-    const choice = GAME_MENU[host.menuSel];
+    const choice = gameMenuOf(host.state)[host.menuSel];
     if (choice) host.gameMenu.choose(choice);
   },
   back: (host) => host.toMap(),
@@ -105,7 +116,7 @@ export const gameMenuPhase: PhaseHandler = {
 
 function gameMenuModel(input: MenuInput): MenuModel {
   const s = input.s;
-  const items: MenuItemVM[] = GAME_MENU.map((choice) => ({
+  const items: MenuItemVM[] = gameMenuOf(s).map((choice) => ({
     id: choice,
     label: t(choice as TextKey),
     hint: MENU_KEY_HINT[choice],
