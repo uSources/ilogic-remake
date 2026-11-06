@@ -21,7 +21,11 @@ export interface Traversal {
 function firstCut(s: GameState, unit: Unit, path: readonly Pos[]): { kind: InterruptionKind; index: number } | null {
   const cuts = hooksOf(s, 'pathInterruptions').flatMap((interruption) => {
     const index = interruption.cutAt(s, unit, path);
-    return index === null ? [] : [{ kind: interruption.kind, index }];
+    if (index === null) return [];
+    // La casilla de salida no se corta (ya se esta en ella): un corte ahi o fuera del camino es un fallo de su modulo.
+    if (!Number.isInteger(index) || index < 1 || index >= path.length)
+      throw new Error(`Un corte de camino (${interruption.kind}) fuera del camino: casilla ${index} de ${path.length}`);
+    return [{ kind: interruption.kind, index }];
   });
   return minBy(cuts, (cut) => cut.index);
 }

@@ -54,6 +54,8 @@ function collect<K extends keyof RuleHooks>(modules: readonly RuleModule[], list
 
 /** Los modulos de `available` que se enchufan con estos ajustes, con sus listas ya juntas. */
 export function resolveRuleset(available: readonly RuleModule[], settings: Readonly<MatchSettings>): Ruleset {
+  const repeated = available.find((module, index) => available.findIndex((other) => other.id === module.id) !== index);
+  if (repeated) throw new Error(`Dos modulos de reglas con el mismo nombre: ${repeated.id}`);
   const modules = available.filter((module) => module.isOn(settings));
   const lists = Object.keys(HOOK_LISTS) as (keyof RuleHooks)[];
   // Cada lista se junta con su propio tipo (collect); el objeto entero no lo sabe ver TypeScript.

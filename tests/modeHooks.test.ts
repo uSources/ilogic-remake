@@ -8,11 +8,24 @@ import type * as Modes from '@core/modes';
 import type { GameMode } from '@core/modes';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { engagement, hitChance, hooksOf, newUnit, traverse, unitById, type RuleModule } from '@core/rules';
+import { engagement, hitChance, hooksOf, isRuleOn, newUnit, traverse, unitById, type RuleModule } from '@core/rules';
 import { GameSession, passiveController, runMatch } from '@core/session';
 import { startsTurn } from '@core/actions';
 import { act, blankState, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
+
+// Los modulos y el corte de camino del modo de prueba tienen sus propios nombres, como los de un modo de verdad.
+declare module '@core/ruleModules/hooks' {
+  interface RuleModuleIds {
+    testBonus: true;
+    testMines: true;
+  }
+}
+declare module '@core/model/events' {
+  interface InterruptionKinds {
+    testMine: true;
+  }
+}
 
 const testMode = vi.hoisted(() => ({ changes: null as Partial<GameMode> | null }));
 
@@ -119,12 +132,14 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
 
   it('un modo puede traer sus propios modulos de reglas: se resuelven con la partida, como los del juego', () => {
     const modeModule: RuleModule = {
-      id: 'flank',
+      id: 'testBonus',
       isOn: () => true,
       hooks: { hitModifiers: [{ id: 'modeBonus', factor: () => 2 }] },
     };
     const s = withMode({ ruleModules: [modeModule] }, () => blankState({ ...PLAIN_SETTINGS, flankBonus: 0 }));
     expect(s.ruleset.modules).toContain(modeModule);
+    expect(isRuleOn(s, 'testBonus')).toBe(true);
+    expect(isRuleOn(s, 'flank')).toBe(false);
     expect(hooksOf(s, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['generals', 'modeBonus']);
     const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
@@ -134,19 +149,28 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     expect(hitChance(s, engagement(attacker, defender))).toBe(2 * hitChance(plain, engagement(plainAttacker, plainDefender)));
   });
 
+  it('un modulo del modo no puede llamarse como uno del juego (isRuleOn diria que esta puesto el otro)', () => {
+    const impostor: RuleModule = { id: 'flank', isOn: () => true, hooks: {} };
+    expect(() => withMode({ ruleModules: [impostor] }, () => blankState({ ...PLAIN_SETTINGS, flankBonus: 0 }))).toThrow(/flank/);
+  });
+
   it('un modulo puede cortar caminos (pathInterruptions): manda el corte que llega antes', () => {
     const path = [2, 3, 4, 5, 6].map((x) => ({ x, y: 2 }));
-    // Un corte de prueba en la casilla x=5 y un enemigo escondido en x=6: la emboscada llega despues.
+    // Una mina de prueba en la casilla x=5 y un enemigo escondido en x=6: la emboscada llega despues.
+    const mineAt = (steps: readonly { x: number }[]) => {
+      const index = steps.findIndex((pos) => pos.x === 5);
+      return index < 1 ? null : index;
+    };
     const mine: RuleModule = {
-      id: 'ambush',
+      id: 'testMines',
       isOn: () => true,
-      hooks: { pathInterruptions: [{ kind: 'ambush', cutAt: (_s, _unit, steps) => steps.findIndex((pos) => pos.x === 5) }] },
+      hooks: { pathInterruptions: [{ kind: 'testMine', cutAt: (_s, _unit, steps) => mineAt(steps) }] },
     };
     const s = withMode({ ruleModules: [mine] }, () => blankState({ ...PLAIN_SETTINGS, ambush: true }));
     expect(hooksOf(s, 'pathInterruptions')).toHaveLength(2);
     const unit = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     newUnit(s, unitTypeNamed('Soldier'), 1, { x: 6, y: 2 });
-    expect(traverse(s, unit, path)).toEqual({ path: path.slice(0, 3), interruption: { kind: 'ambush', at: { x: 5, y: 2 } } });
+    expect(traverse(s, unit, path)).toEqual({ path: path.slice(0, 3), interruption: { kind: 'testMine', at: { x: 5, y: 2 } } });
     expect(unit).toMatchObject({ x: 4, y: 2, turnState: 'done' });
 
     const plain = blankState({ ...PLAIN_SETTINGS, ambush: false });
@@ -154,5 +178,18 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     const free = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     newUnit(plain, unitTypeNamed('Soldier'), 1, { x: 6, y: 7 });
     expect(traverse(plain, free, path.slice(0, 4)).interruption).toBeNull();
+  });
+
+  it('un corte tiene que caer despues de la casilla de salida y dentro del camino (si no, es un fallo del modulo)', () => {
+    const path = [2, 3, 4].map((x) => ({ x, y: 2 }));
+    for (const index of [0, -1, 3]) {
+      const broken: RuleModule = {
+        id: 'testMines',
+        isOn: () => true,
+        hooks: { pathInterruptions: [{ kind: 'testMine', cutAt: () => index }] },
+      };
+      const s = withMode({ ruleModules: [broken] }, () => blankState({ ...PLAIN_SETTINGS }));
+      expect(() => traverse(s, newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 }), path)).toThrow(/corte/);
+    }
   });
 });

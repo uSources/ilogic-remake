@@ -22,11 +22,18 @@ export interface GeneralCharge {
 }
 
 /**
- * Por que se puede cortar un camino a mitad (las `pathInterruptions` de los modulos de reglas): de
- * momento la emboscada. Un corte nuevo (minas, fuego de vigilancia...) es su nombre aqui y su entrada
- * en la lista de su modulo.
+ * Por que se puede cortar un camino a mitad (las `pathInterruptions` de los modulos de reglas): los
+ * del juego aqui (la emboscada). Un corte nuevo (minas, fuego de vigilancia...) anade su nombre
+ * ampliando esta interfaz (`declare module '.../model/events' { interface InterruptionKinds { minas:
+ * true } }`, tambien desde el modulo de un modo) y su entrada en la lista de su modulo; la escena y
+ * `npm run play` tienen algo por defecto para los que no conocen.
  */
-export type InterruptionKind = 'ambush';
+export interface InterruptionKinds {
+  ambush: true;
+}
+
+/** El nombre de un corte de camino (ver InterruptionKinds). */
+export type InterruptionKind = keyof InterruptionKinds;
 
 /** Lo que ha cortado un camino y donde (la casilla que ya no se ha podido pisar). */
 export interface Interruption {

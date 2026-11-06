@@ -121,6 +121,7 @@ export type {
   RuleHooks,
   RuleModule,
   RuleModuleId,
+  RuleModuleIds,
   PassRule,
   Passage,
   PathInterruption,

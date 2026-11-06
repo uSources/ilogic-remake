@@ -26,6 +26,7 @@ export type {
   TravelEnd,
   Interruption,
   InterruptionKind,
+  InterruptionKinds,
 } from './events';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { DamageModelId, MatchSettings } from './settings';

@@ -151,7 +151,10 @@ export interface StopRule {
 /** Algo que corta un camino a mitad al recorrerlo (traverse, rules/traverse.ts). */
 export interface PathInterruption {
   readonly kind: InterruptionKind;
-  /** El primer paso del camino (su puesto en `path`) que ya no se puede dar, o null si no corta. */
+  /**
+   * El primer paso del camino (su puesto en `path`, de 1 en adelante: la casilla de salida no se
+   * corta) que ya no se puede dar, o null si no corta. Otro numero es un fallo (traverse lo dice).
+   */
   cutAt(s: GameState, unit: Unit, path: readonly Pos[]): number | null;
 }
 
@@ -189,23 +192,32 @@ export interface RuleHooks {
   readonly captureFactors?: readonly CaptureFactor[];
 }
 
-/** Los modulos de reglas que hay (los interruptores de los ajustes de la partida los enchufan). */
-export type RuleModuleId =
-  | 'abilities'
-  | 'veterancy'
-  | 'flank'
-  | 'generals'
-  | 'weather'
-  | 'controlPoints'
-  | 'upkeep'
-  | 'noHealUnderFire'
-  | 'noFog'
-  | 'forestHides'
-  | 'terrainCost'
-  | 'passAllies'
-  | 'ambush'
-  | 'counterattack'
-  | 'bounty';
+/**
+ * Los nombres de los modulos de reglas que hay: los del juego aqui; un modo que trae los suyos
+ * (`GameMode.ruleModules`) anade su nombre ampliando esta interfaz (`declare module
+ * '.../ruleModules/hooks' { interface RuleModuleIds { miModulo: true } }`). Los nombres no se
+ * repiten en una partida (lo mira resolveRuleset).
+ */
+export interface RuleModuleIds {
+  abilities: true;
+  veterancy: true;
+  flank: true;
+  generals: true;
+  weather: true;
+  controlPoints: true;
+  upkeep: true;
+  noHealUnderFire: true;
+  noFog: true;
+  forestHides: true;
+  terrainCost: true;
+  passAllies: true;
+  ambush: true;
+  counterattack: true;
+  bounty: true;
+}
+
+/** El nombre de un modulo de reglas (ver RuleModuleIds). */
+export type RuleModuleId = keyof RuleModuleIds;
 
 /** Un modulo de reglas: una pieza del juego que se enchufa o no segun los ajustes de la partida. */
 export interface RuleModule {

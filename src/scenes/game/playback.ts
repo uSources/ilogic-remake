@@ -217,24 +217,36 @@ const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKe
   await animatePath(stage, event.uid, texture, event.path, showWholePath);
   if (event.kind === 'move' && event.interruption && !stage.fastForward) {
     const { kind, at } = event.interruption;
-    await INTERRUPTION_ANIMATIONS[kind](stage, at, event.path[event.path.length - 1]!, showWholePath);
+    await (INTERRUPTION_ANIMATIONS[kind] ?? showCut)(stage, at, event.path[event.path.length - 1]!, showWholePath);
   }
 };
 
 /** Como se ve cada corte de camino: donde estaba lo que lo corto y donde se paro la unidad. */
 type InterruptionAnimation = (stage: EventStage, at: Pos, stoppedAt: Pos, showWholePath: boolean) => Promise<void>;
 
+/** Un corte cualquiera: destella la casilla de lo que lo ha cortado (si se ve donde se paro). Devuelve si se ha visto. */
+function flashCut(stage: EventStage, at: Pos, stoppedAt: Pos, showWholePath: boolean): boolean {
+  stage.refresh();
+  if (!showWholePath && !stage.visible(stoppedAt)) return false;
+  void tileFlash(stage.scene, stage.view, at, PAL.red);
+  return true;
+}
+
+/** Lo que se ve de un corte que la escena no conoce (el de un modulo sin animacion propia): el destello. */
+const showCut: InterruptionAnimation = (stage, at, stoppedAt, showWholePath) => {
+  flashCut(stage, at, stoppedAt, showWholePath);
+  return Promise.resolve();
+};
+
 /** Emboscada: la casilla de la unidad escondida destella y sale el aviso donde se paro. */
 const showAmbush: InterruptionAnimation = async (stage, ambusher, stoppedAt, showWholePath) => {
-  stage.refresh();
-  if (!showWholePath && !stage.visible(stoppedAt)) return;
+  if (!flashCut(stage, ambusher, stoppedAt, showWholePath)) return;
   const centerPoint = center(stoppedAt);
-  void tileFlash(stage.scene, stage.view, ambusher, PAL.red);
   await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
 };
 
-/** Una animacion por cada clase de corte (un modulo que corte caminos de otra forma anade la suya aqui). */
-const INTERRUPTION_ANIMATIONS: Record<InterruptionKind, InterruptionAnimation> = { ambush: showAmbush };
+/** La animacion propia de cada clase de corte que la escena conoce; las demas, `showCut`. */
+const INTERRUPTION_ANIMATIONS: Partial<Record<InterruptionKind, InterruptionAnimation>> = { ambush: showAmbush };
 
 /** Punto donde se apoya una unidad en una casilla (centro abajo, como sus sprites). */
 const feetOf = (pos: Pos) => ({ x: pos.x * TILE + TILE / 2, y: (pos.y + 1) * TILE });

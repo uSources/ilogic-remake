@@ -457,8 +457,8 @@ const OUTCOME_TEXT: Record<MatchOutcome, string> = { won: 'ganada', lost: 'perdi
 /** Por que cae un equipo, en una palabra o dos. */
 const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'sin nada', surrender: 'rendido' };
 
-/** Que ha cortado un camino, en una palabra. */
-const INTERRUPTION_NAMES: Record<InterruptionKind, string> = { ambush: 'emboscada' };
+/** Que ha cortado un camino, en una palabra (los que no estan aqui, por su nombre en el codigo). */
+const INTERRUPTION_NAMES: Partial<Record<InterruptionKind, string>> = { ambush: 'emboscada' };
 
 /** Un suceso en una linea, o null si no merece la pena contarlo. */
 function describe(s: GameState, event: GameEvent): string | null {
@@ -468,7 +468,7 @@ function describe(s: GameState, event: GameEvent): string | null {
   };
   switch (event.kind) {
     case 'move':
-      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind]})` : ''}`;
+      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind] ?? event.interruption.kind})` : ''}`;
     case 'attack':
       return `${name(event.attacker)} ataca (${event.at.x},${event.at.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
     case 'capture':
