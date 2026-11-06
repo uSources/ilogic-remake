@@ -366,8 +366,12 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 - `victory`: `MatchResult` con `status`, `winners` y `reason`; `isMatchOver`, `isWinner`. Las formas
   de acabar estan en `VICTORY_RULES` ('lastAllianceStanding', 'objective', 'dayLimit') y cada modo
   dice las suyas. Solo lee las caidas apuntadas: el motivo del resultado es el de la ultima
-  (`lastFallen`), la que lo decide, no una rendicion de antes. Puntos del limite de dias por
-  alianza, progreso del objetivo de mision.
+  (`lastFallen`; si caen varios a la vez, `mainFall`), la que lo decide, no una rendicion de antes.
+  Contrato: una partida decidida por una caida que no esta apuntada (cambiada sin pasar por las
+  INVARIANTS) hace que `matchResult` lance un error; por eso `buildMatch` y `buildMission` exigen
+  que todos empiecen en pie (`assertAllStanding`) y `readSave` rechaza lo que no cuadre. Si lo que
+  pasa al acabar un turno decide la partida, 'endTurn' no pasa el turno (ni ronda nueva, ni otro
+  dia). Puntos del limite de dias por alianza, progreso del objetivo de mision.
 - `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
 
 `src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
@@ -570,15 +574,21 @@ el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la 
   (`isAutosaveMoment`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
 - En la escena, si la partida sigue pero ya no juega ninguna persona (se han rendido o han caido, y
   quedan otros equipos), se acaba para esta pantalla: `checkEnd`, que se mira tras cada paso, la da
-  por perdida con su motivo (`ScreenEnd`: `outOfMatchEnd`; el de una partida decidida,
-  `endOfResult`), la cierra y borra su guardado. Una rendicion vuelve a escribir el guardado que
-  hubiera, y la escena avisa de cada equipo que cae ('teamDefeated': «El equipo N queda fuera»). El
-  final se lee desde quien mira: de quien fue la caida que lo decidio (`ScreenEnd.fallenBy`: suya,
-  de un aliado o de un enemigo), asi «Te has rendido» solo lo lee quien se rindio («Un aliado se ha
-  rendido», «El enemigo se ha rendido»). Rendirse con `act` no anima sus sucesos: el aviso de su
-  caida lo da la escena (`showFallNotice`). Mientras juegan los demas no hay menu, pero Esc o el
-  boton del menu (que sigue a `UIState.watching`, lo que dice la escena) dejan salir al menu
-  principal (`quitWhileWatching`, dos pulsaciones).
+  por perdida con su motivo (`GameSession.screenEnd`, y para la pantalla `screenEndFor`: un
+  `ScreenEnd`, que solo lleva de quien fue la caida, `fallenBy`, si la decidio una), la cierra y
+  borra su guardado. Una rendicion vuelve a escribir el guardado que hubiera, y la escena avisa de
+  cada equipo que cae ('teamDefeated': «El equipo N queda fuera»). El final se lee desde quien mira:
+  de quien fue la caida que lo decidio (`ScreenEnd.fallenBy`: suya, de un aliado o de un enemigo),
+  asi «Te has rendido» solo lo lee quien se rindio («Un aliado se ha rendido», «El enemigo se ha
+  rendido»). Rendirse con `act` no anima sus sucesos: el aviso de su caida lo da la escena
+  (`showFallNotice`), salvo si con eso se acaba (lo cuenta el final). Con varias personas, cada una
+  apunta hasta que caida ha visto (`TurnFlow.seenFalls`: al dejar de mirar y tras ver el aviso de
+  una), y al volver a mirar se le avisa de las que no vio (`tellFallsSince`, con `fallsNoticeFor`:
+  «El equipo N queda fuera» o, si son varias, `teamsOut`). Se acaba para la pantalla lo dice la
+  sesion (`GameSession.screenEnd`, `personStillPlays`), asi la partida por texto acaba igual (K4).
+  Mientras juegan los demas no hay menu, pero Esc o el boton del menu (que sigue a
+  `UIState.watching`, lo que dice la escena) dejan salir al menu principal (`quitWhileWatching`, dos
+  pulsaciones).
 
 ```mermaid
 sequenceDiagram
