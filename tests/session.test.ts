@@ -13,7 +13,9 @@ import {
   passiveController,
   propose,
   remoteController,
-  replayControllers,
+  replaySession,
+  LogCursor,
+  isOffTurnAction,
   runMatch,
   sequence,
   type ActedStep,
@@ -96,7 +98,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     const start = cloneState(s);
     const session = new GameSession(s, controllersFor(s, seededRng(9)));
     runMatch(session, { until: (state) => state.day > 4 });
-    const replay = new GameSession(start, replayControllers(start, session.log));
+    const replay = replaySession(start, session.log);
     runMatch(replay, { until: (state) => state.day > 4 });
     expect(serialize(start)).toBe(serialize(s));
     expect(replay.log).toEqual(session.log);
@@ -182,7 +184,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     const session = new GameSession(s, [quitter, aiController(rng), aiController(rng)]);
     runMatch(session, { until: (state) => state.day > 4 });
     expect(session.log.some((entry) => entry.action.kind === 'undoMove')).toBe(true);
-    const replay = new GameSession(start, replayControllers(start, session.log));
+    const replay = replaySession(start, session.log);
     runMatch(replay, { until: (state) => state.day > 4 });
     expect(replay.log).toEqual(session.log);
     expect(serialize(start)).toBe(serialize(s));
@@ -285,7 +287,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
       '0:wait',
       '0:endTurn',
     ]);
-    const replay = new GameSession(start, replayControllers(start, session.log));
+    const replay = replaySession(start, session.log);
     runMatch(replay, { until: () => replay.log.length >= session.log.length });
     expect(replay.log).toEqual(session.log);
     expect(serialize(start)).toBe(serialize(s));
@@ -311,10 +313,53 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
       '2:endTurn',
       '0:startTurn',
     ]);
-    const replay = new GameSession(start, replayControllers(start, session.log));
+    const replay = replaySession(start, session.log);
     runMatch(replay, { until: () => replay.log.length >= session.log.length });
     expect(replay.log).toEqual(session.log);
     expect(serialize(start)).toBe(serialize(s));
+  });
+
+  it('repetir cuando el equipo que va a jugar se rinde antes de empezar su turno (con un viaje): sale igual', () => {
+    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    const traveler = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 2 });
+    traveler.travelTo = { x: 2, y: 20 };
+    const start = cloneState(s);
+    const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
+    runMatch(session);
+    session.finishInput(0);
+    expect(session.step()).toMatchObject({ kind: 'acted', team: 0, action: { kind: 'endTurn' } });
+    expect([s.turn, s.turnStarted]).toEqual([1, false]);
+    expect(session.act(1, { kind: 'surrender' }).ok).toBe(true);
+    runMatch(session);
+    expect(session.log.map((entry) => `${entry.team}:${entry.action.kind}`).slice(1, 4)).toEqual(['0:endTurn', '1:surrender', '1:endTurn']);
+    // Su viaje no ha dado el paso de un turno que no ha empezado.
+    expect([traveler.x, traveler.y]).toEqual([2, 2]);
+    const replay = replaySession(start, session.log);
+    runMatch(replay, { until: () => replay.log.length >= session.log.length });
+    expect(replay.log).toEqual(session.log);
+    expect(serialize(start)).toBe(serialize(s));
+  });
+
+  it('LogCursor: mirar no mueve; solo saca lo de fuera de turno, pasando los limites ya hechos', () => {
+    const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const cursor = new LogCursor([
+      { team: 0, action: { kind: 'startTurn' } },
+      { team: 2, action: { kind: 'surrender' } },
+      { team: 0, action: { kind: 'wait', uid: 1 } },
+    ]);
+    expect(cursor.peek()).toEqual(cursor.peek());
+    s.turnStarted = false;
+    expect(cursor.takeOffTurn(s)).toBeNull();
+    expect(cursor.peek()?.action.kind).toBe('startTurn');
+    s.turnStarted = true;
+    expect(cursor.takeOffTurn(s)).toEqual({ team: 2, action: { kind: 'surrender' } });
+    expect(cursor.takeOffTurn(s)).toBeNull();
+    expect(cursor.peek()?.action.kind).toBe('wait');
+    expect(isOffTurnAction(s, { team: 0, action: { kind: 'surrender' } })).toBe(false);
+    s.turnStarted = false;
+    expect(isOffTurnAction(s, { team: 0, action: { kind: 'surrender' } })).toBe(true);
+    expect(isOffTurnAction(s, { team: 1, action: { kind: 'wait', uid: 1 } })).toBe(false);
   });
 
   it('rendirse otro equipo fuera de turno no le quita al que juega lo que puede deshacer', () => {

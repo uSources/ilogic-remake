@@ -11,7 +11,7 @@ import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
 import { autoCapturers, roundReport, unitById, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
-import { GameSession, playMatch, replayControllers, type ActedStep, type SessionStep } from '../../core/session';
+import { playMatch, replaySession, type ActedStep, type GameSession, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
 import { isHostile } from '../../core/teams';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -317,7 +317,7 @@ export class TurnFlow {
     const before = cloneState(last.before);
     host.toMap();
     const saved = this.saveCamera();
-    const replay = new GameSession(before, replayControllers(before, host.session.log.slice(last.from)));
+    const replay = replaySession(before, host.session.log.slice(last.from));
     host.state = before;
     this.replaying = true;
     host.phase = 'busy';

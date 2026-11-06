@@ -15,8 +15,7 @@ import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
 import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../model';
-import type { Controller, TurnPlan, TurnStep } from './controller';
-import type { LoggedAction } from './replay';
+import { isOffTurnAction, type Controller, type LoggedAction, type TurnPlan, type TurnStep } from './controller';
 
 /** Lo que ha pasado en un paso: el equipo `team` ha hecho `action` y estos son sus sucesos. */
 export interface ActedStep {
@@ -39,8 +38,18 @@ interface TurnInPlay {
   reply: ActionResult | undefined;
 }
 
+/** Lo que se le puede dar a una sesion ademas de sus controladores. */
+export interface SessionOptions {
+  /**
+   * De donde llegan acciones de otros equipos fuera de su turno, en el momento en que llegan (la
+   * sesion lo mira antes de cada paso): la repeticion las saca del registro en su sitio
+   * (replaySession). En una partida, llegan por `act`.
+   */
+  offTurnFeed?: (s: GameState) => LoggedAction | null;
+}
+
 export class GameSession {
-  /** Lo que se ha hecho, en orden (para repetirlo: replayController). */
+  /** Lo que se ha hecho, en orden (para repetirlo: replaySession). */
   readonly log: LoggedAction[] = [];
   private readonly listeners = new Set<SessionListener>();
   private current: TurnInPlay | null = null;
@@ -51,6 +60,7 @@ export class GameSession {
   constructor(
     readonly state: GameState,
     private readonly controllers: readonly Controller[],
+    private readonly options: SessionOptions = {},
   ) {
     if (controllers.length !== state.teams.length)
       throw new Error(`Hay ${state.teams.length} equipos y ${controllers.length} controladores: uno por equipo`);
@@ -133,7 +143,7 @@ export class GameSession {
       const result = this.result;
       if (result.status !== 'playing') return { kind: 'over', result };
       // Lo que llega de otro equipo fuera de su turno entra antes que lo siguiente (ver Controller.offTurn).
-      const offTurn = this.nextOffTurn();
+      const offTurn = this.options.offTurnFeed?.(this.state);
       if (offTurn) return this.applyOffTurn(offTurn);
       // Al que se esperaba ya no juega (se ha rendido): no se le espera mas, y su turno se pasa.
       if (this.awaiting !== null && !takesTurn(this.state, this.awaiting)) this.awaiting = null;
@@ -180,30 +190,19 @@ export class GameSession {
         return result.ok ? this.record(team, step.action, result.events) : null;
       }
       case 'applied':
-        // Ya lo ha mandado el (por selfDispatched, que no deja): si era un limite de turno, se ha saltado la regla.
-        if (sessionOnlyProblem(step.action) && step.result.ok)
-          throw new Error(`El controlador del equipo ${team} ha mandado '${step.action.kind}': es de la sesion`);
+        // Ya lo ha mandado el, por selfDispatched (que no deja mandar limites de turno ni de otro equipo).
         return step.result.ok ? this.record(team, step.action, step.result.events) : null;
     }
   }
 
-  /** La siguiente accion fuera de turno que trae algun controlador (Controller.offTurn), o null. */
-  private nextOffTurn(): LoggedAction | null {
-    for (const controller of new Set(this.controllers)) {
-      const entry = controller.offTurn?.(this.state);
-      if (entry) return entry;
-    }
-    return null;
-  }
-
   /**
-   * Hace una accion que ha llegado fuera de turno, como `act` la habria hecho: solo de otro equipo y
-   * de las que valen en cualquier momento. Si no vale, quien la trae (una repeticion) no cuadra con la
+   * Hace una accion que ha llegado fuera de turno (`offTurnFeed`), como `act` la habria hecho: solo
+   * si lo es (`isOffTurnAction`). Si no vale, quien la trae (una repeticion) no cuadra con la
    * partida: es un fallo y lo dice.
    */
-  private applyOffTurn({ team, action }: LoggedAction): ActedStep {
-    if (team === this.state.turn || !isAnyTime(action))
-      throw new Error(`'${action.kind}' del equipo ${team} no puede llegar fuera de su turno`);
+  private applyOffTurn(entry: LoggedAction): ActedStep {
+    const { team, action } = entry;
+    if (!isOffTurnAction(this.state, entry)) throw new Error(`'${action.kind}' del equipo ${team} no puede llegar fuera de su turno`);
     const result = dispatch(this.state, team, action);
     if (!result.ok) throw new Error(`'${action.kind}' del equipo ${team}, fuera de su turno, no vale: ${result.reason}`);
     return this.record(team, action, result.events);

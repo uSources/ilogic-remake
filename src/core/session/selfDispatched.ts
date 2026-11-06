@@ -5,7 +5,7 @@
  * como pasos 'applied': asi quedan en su registro igual que las demas.
  */
 import { assistTurn } from '../autopilot/standingOrders';
-import { dispatch } from '../actions/dispatch';
+import { dispatch, ownTeamOnly } from '../actions/dispatch';
 import { sessionOnlyProblem } from '../actions/turn';
 import type { ActionDispatcher } from '../actions/types';
 import type { GameEvent, TeamId } from '../model';
@@ -16,16 +16,22 @@ import type { Controller, TurnPlan, TurnStep } from './controller';
  * que se le da): cada accion que manda sale como un paso 'applied', en cuanto la manda. Solo valen
  * acciones de ese equipo ('notYourTurn': la sesion las apunta como suyas) y nunca los limites de
  * turno ('sessionOnly').
+ *
+ * Lo que manda se hace al mandarlo, pero la sesion lo apunta al recoger su paso 'applied': si entre
+ * medias llegara algo fuera de turno (`GameSession.act`), el registro lo pondria antes de una accion
+ * ya hecha. No pasa en la partida (la escena y la red solo mandan entre pasos de la sesion, y cada
+ * accion de estos controladores sale en el mismo paso en que se manda); la fase 6, en la que la IA
+ * solo propone, quita los pasos 'applied'.
  */
 export function* selfDispatched(team: TeamId, run: (dispatcher: ActionDispatcher) => Iterator<GameEvent, unknown>): TurnPlan {
   const sent: TurnStep[] = [];
-  const recording: ActionDispatcher = (s, actor, action) => {
-    const problem = sessionOnlyProblem(action) ?? (actor === team ? null : 'notYourTurn');
-    if (problem) return { ok: false, reason: problem };
+  const recording = ownTeamOnly(team, (s, actor, action) => {
+    const sessionOnly = sessionOnlyProblem(action);
+    if (sessionOnly) return { ok: false, reason: sessionOnly };
     const result = dispatch(s, actor, action);
     sent.push({ kind: 'applied', action, result });
     return result;
-  };
+  });
   const turn = run(recording);
   for (let step = turn.next(); !step.done; step = turn.next()) yield* sent.splice(0);
   yield* sent.splice(0);

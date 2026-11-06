@@ -50,13 +50,14 @@ export const isAnyTime = (action: GameAction): boolean => isGameAction(action) &
 export const isValidAction = (s: GameState, team: TeamId, action: GameAction): boolean => actionProblem(s, team, action) === null;
 
 /**
- * Lo que manda una accion de turno dentro de la suya: solo acciones de su equipo (las de otro, aunque
- * valgan en cualquier momento, no son de este turno: 'notYourTurn').
+ * `dispatcher`, pero solo para acciones del equipo `team` (las de otro, aunque valgan en cualquier
+ * momento, no son de este turno: 'notYourTurn'). Lo que reciben los pasos de turno y quien manda el
+ * mismo sus acciones (session/selfDispatched.ts): asi nada queda apuntado como de otro equipo.
  */
-const performAs =
-  (team: TeamId): ActionDispatcher =>
+export const ownTeamOnly =
+  (team: TeamId, dispatcher: ActionDispatcher): ActionDispatcher =>
   (s, actor, action) =>
-    actor === team ? perform(s, actor, action) : { ok: false, reason: 'notYourTurn' };
+    actor === team ? dispatcher(s, actor, action) : { ok: false, reason: 'notYourTurn' };
 
 /**
  * Hace la accion ya comprobada (su `apply`; solo las de turno reciben por donde mandar otras), olvida
@@ -67,7 +68,7 @@ const performAs =
 function applyAction(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
   const onTurn = team === s.turn;
   const applied = isComposite(action)
-    ? compositeOf(action.kind).apply(s, team, action, diceOf(s), performAs(team))
+    ? compositeOf(action.kind).apply(s, team, action, diceOf(s), ownTeamOnly(team, perform))
     : plainOf(action.kind).apply(s, team, action, diceOf(s));
   if (!rulesOf(action).keepsUndo && onTurn) forgetUndoableMoves(s);
   return [...applied, ...restoreInvariants(s)];

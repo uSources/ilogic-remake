@@ -2,16 +2,30 @@
  * Quien decide lo que hace un equipo en su turno: un `Controller`. La sesion (gameSession.ts) le
  * pide su turno (`playTurn`) cuando le toca y va haciendo lo que da, paso a paso (`TurnStep`):
  * - 'propose': una accion que propone (la sesion la manda con `dispatch` y le devuelve el resultado);
- * - 'applied': una accion que ya ha mandado el (la IA hasta la fase 6: decide mirando cada resultado
- *   y aun no sabe solo proponer; la sesion la apunta igual);
+ * - 'applied': una accion que ya ha mandado el (la IA y `autopilotController`, que deciden mirando
+ *   cada resultado, por session/selfDispatched.ts; hasta la fase 6; la sesion la apunta igual);
  * - 'awaitInput': espera a quien decide fuera (una persona en la pantalla, un jugador en la red):
  *   la sesion se para hasta que le digan que ha terminado (`GameSession.finishInput`).
  * Cuando su turno acaba (el generador termina), la sesion manda 'endTurn'. Un controlador nuevo (la
  * IA que solo propone acciones, un cliente remoto, una repeticion) es una funcion que da un
  * `Controller`: la sesion y las reglas no cambian.
  */
+import { isAnyTime } from '../actions/dispatch';
 import type { ActionResult, GameAction, GameState, TeamId } from '../model';
-import type { LoggedAction } from './replay';
+
+/** Una accion apuntada en el registro de una sesion: quien la mando y cual. */
+export interface LoggedAction {
+  team: TeamId;
+  action: GameAction;
+}
+
+/**
+ * La accion llega fuera del turno de su equipo en `s` (el turno es de otro, o el suyo aun no ha
+ * empezado) y vale asi: solo las que valen en cualquier momento (rendirse). Lo preguntan la sesion
+ * al aceptarla y la repeticion al buscarla en el registro.
+ */
+export const isOffTurnAction = (s: GameState, entry: LoggedAction): boolean =>
+  isAnyTime(entry.action) && (entry.team !== s.turn || !s.turnStarted);
 
 /** Un paso del turno de un controlador. */
 export type TurnStep =
@@ -32,13 +46,6 @@ export interface Controller {
   readonly person?: true;
   /** El turno del equipo `team` en la partida `s`, paso a paso. */
   playTurn(s: GameState, team: TeamId): TurnPlan;
-  /**
-   * Una accion de otro equipo que llega fuera de su turno, en este momento (solo las que valen en
-   * cualquier momento: rendirse), o null. La sesion la mira antes de cada paso, asi entra en el
-   * mismo sitio en que llego: la repeticion la saca del registro (lo que en la partida mando un
-   * jugador con `GameSession.act` mientras jugaba otro).
-   */
-  offTurn?(s: GameState): LoggedAction | null;
 }
 
 /** Propone una accion y da su resultado (lo que ha dicho la sesion al mandarla). */
