@@ -5,13 +5,12 @@
  * registro de acciones de la sesion). Lo que pasa solo al acabar y empezar cada turno (ordenes
  * permanentes, capturas que siguen, viajes) lo hace la partida: aqui solo se anima y se cuenta.
  */
-import { unitTypeOf } from '../../core/gameContent';
-import { saveContext } from '../../core/defaultGames';
+import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
 import { autoCapturers } from '../../core/actions';
 import { roundReport, unitById, type RoundReport } from '../../core/rules';
-import { deserialize, serialize } from '../../core/save';
+import { serialize } from '../../core/save';
 import { isAutosaveMoment, GameSession, playMatch, replayControllers, type ActedStep, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
 import { isHostile } from '../../core/teams';
@@ -114,8 +113,8 @@ export class TurnFlow {
   othersPlaying = false;
   /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en el tutorial). */
   replaying = false;
-  /** La partida antes de acabar el ultimo turno propio y desde donde va en el registro (para repetir lo de despues). */
-  private lastOthers: { before: string; from: number } | null = null;
+  /** Una copia de la partida antes de acabar el ultimo turno propio y desde donde va en el registro (para repetir lo de despues). */
+  private lastOthers: { before: GameState; from: number } | null = null;
   private endArmedAt = NOT_ARMED;
   /** El equipo al que le toca ahora si no es el que mira (null: el turno es suyo). */
   private otherTeam: TeamId | null = null;
@@ -198,7 +197,7 @@ export class TurnFlow {
     host.abandonSelection();
     const saved = this.saveCamera();
     host.phase = 'busy';
-    this.lastOthers = { before: serialize(host.session.state), from: host.session.log.length };
+    this.lastOthers = { before: cloneState(host.session.state), from: host.session.log.length };
     host.session.finishInput(host.viewer);
     const summary = await this.playUntilInput(match);
     if (!summary) return;
@@ -294,8 +293,8 @@ export class TurnFlow {
     const host = this.host;
     const last = this.lastOthers;
     if (!last || host.phase === 'busy' || host.ended) return;
-    const before = deserialize(last.before, saveContext(host.session.state.content));
-    if (!before) return;
+    // Otra copia cada vez: se puede repetir mas de una vez.
+    const before = cloneState(last.before);
     host.toMap();
     const saved = this.saveCamera();
     const replay = new GameSession(before, replayControllers(before, host.session.log.slice(last.from)));
