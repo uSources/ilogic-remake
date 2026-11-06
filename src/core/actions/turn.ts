@@ -15,7 +15,7 @@ import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
 import { nextTurn } from '../rules/turnOrder';
 import { canMoveNow } from '../rules/unitTurn';
-import type { ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
 import type { ActionDispatcher, ActionRegistry } from './types';
 
 /** Los sucesos de una accion hecha (ninguno si no valia). */
@@ -91,6 +91,13 @@ export const TURN_ACTIONS: Pick<ActionRegistry, 'startTurn' | 'endTurn'> = {
 
 /** Empezar o acabar un turno: lo manda la sesion (core/session), no quien juega el equipo. */
 export const isTurnBoundary = (action: GameAction): boolean => action.kind === 'startTurn' || action.kind === 'endTurn';
+
+/**
+ * Por que quien juega un equipo no puede mandar esta accion por su cuenta: empezar y acabar el turno
+ * son de la sesion ('sessionOnly'). La regla, una vez: la usan `GameSession.act`, lo que proponen
+ * los controladores y lo que mandan los que mandan ellos mismos (la IA).
+ */
+export const sessionOnlyProblem = (action: GameAction): ActionRejection | null => (isTurnBoundary(action) ? 'sessionOnly' : null);
 
 /** Lo hecho (un paso de la sesion, una entrada del registro) es empezar un turno. */
 export const startsTurn = (done: { readonly action: GameAction }): boolean => done.action.kind === 'startTurn';

@@ -35,10 +35,16 @@ export interface CompositeActionDefinition<K extends CompositeActionKind> extend
   apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
 }
 
+/** Las demas acciones: no hacen otras. */
+export type PlainActionKind = Exclude<GameActionKind, CompositeActionKind>;
+
+/** Las entradas de las acciones que no hacen otras (su `apply` no recibe por donde mandarlas). */
+export type PlainActionRegistry = { readonly [K in PlainActionKind]: ActionDefinition<K> };
+/** Las entradas de las acciones de turno (su `apply` recibe `perform`). */
+export type CompositeActionRegistry = { readonly [K in CompositeActionKind]: CompositeActionDefinition<K> };
+
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */
-export type ActionRegistry = {
-  readonly [K in GameActionKind]: K extends CompositeActionKind ? CompositeActionDefinition<K> : ActionDefinition<K>;
-};
+export type ActionRegistry = PlainActionRegistry & CompositeActionRegistry;
 
 /**
  * Por donde manda sus acciones quien juega un equipo: `dispatch`, o algo que la llama y ademas lo

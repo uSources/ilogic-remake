@@ -25,6 +25,7 @@ export {
   type TurnStep,
 } from './session/controller';
 export { replayController, replayControllers, type LoggedAction } from './session/replay';
+export { autopilotController } from './session/selfDispatched';
 export {
   GameSession,
   playMatch,

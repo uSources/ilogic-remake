@@ -6,46 +6,70 @@
  * repeticion mandarian lo mismo.
  */
 import { diceOf } from '../dice';
-import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, GameAction, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 import { guardProblem } from './guards';
 import { isGameAction } from './shape';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
 import { recordEvents } from '../stats';
 import { ACTIONS } from './registry';
-import type { ActionDefinition, ActionDispatcher } from './types';
+import type {
+  ActionDefinition,
+  ActionDispatcher,
+  CompositeActionDefinition,
+  CompositeActionKind,
+  CompositeActionRegistry,
+  PlainActionKind,
+  PlainActionRegistry,
+} from './types';
 
-/**
- * La entrada del registro de una accion, con su tipo. Se llama igual a todas: las que no hacen otras
- * acciones no usan `perform` (solo las de turno lo reciben, CompositeActionDefinition).
- */
-type AnyDefinition<K extends GameActionKind> = Omit<ActionDefinition<K>, 'apply'> & {
-  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
-};
-const definitionOf = <K extends GameActionKind>(action: GameActionOf<K>): AnyDefinition<K> => ACTIONS[action.kind] as AnyDefinition<K>;
+/** Las acciones que no hacen otras y las de turno, cada una con su forma de entrada. */
+const PLAIN: PlainActionRegistry = ACTIONS;
+const COMPOSITE: CompositeActionRegistry = ACTIONS;
+
+const isComposite = (action: GameAction): action is GameActionOf<CompositeActionKind> => Object.hasOwn(COMPOSITE, action.kind);
+const plainOf = <K extends PlainActionKind>(kind: K): ActionDefinition<K> => PLAIN[kind];
+const compositeOf = <K extends CompositeActionKind>(kind: K): CompositeActionDefinition<K> => COMPOSITE[kind];
+
+/** Lo que tienen todas las entradas: cuando vale (`validate`), si deja deshacer y si vale fuera del turno. */
+type ActionRules = Pick<ActionDefinition<GameAction['kind']>, 'validate' | 'keepsUndo' | 'anyTime'>;
+const rulesOf = (action: GameAction): ActionRules => (isComposite(action) ? compositeOf(action.kind) : plainOf(action.kind));
 
 /**
  * Por que no vale ahora la accion para el equipo `team` (null = vale): las comprobaciones comunes
  * (ACTION_GUARDS) y las de la accion. No cambia nada.
  */
 export function actionProblem(s: GameState, team: TeamId, action: GameAction): ActionRejection | null {
-  return guardProblem(s, team, action, isAnyTime(action)) ?? definitionOf(action).validate(s, team, action);
+  return guardProblem(s, team, action, isAnyTime(action)) ?? rulesOf(action).validate(s, team, action);
 }
 
 /** La accion vale tambien fuera del turno de quien la manda (`ActionDefinition.anyTime`: rendirse). */
-export const isAnyTime = (action: GameAction): boolean => isGameAction(action) && definitionOf(action).anyTime === true;
+export const isAnyTime = (action: GameAction): boolean => isGameAction(action) && rulesOf(action).anyTime === true;
 
 /** La accion vale ahora para el equipo `team`. */
 export const isValidAction = (s: GameState, team: TeamId, action: GameAction): boolean => actionProblem(s, team, action) === null;
 
 /**
- * Hace la accion ya comprobada (su `apply`), olvida lo que se podia deshacer si la accion cuenta
- * algo nuevo de la partida (sin `keepsUndo`) y deja la partida en orden (INVARIANTS).
+ * Lo que manda una accion de turno dentro de la suya: solo acciones de su equipo (las de otro, aunque
+ * valgan en cualquier momento, no son de este turno: 'notYourTurn').
+ */
+const performAs =
+  (team: TeamId): ActionDispatcher =>
+  (s, actor, action) =>
+    actor === team ? perform(s, actor, action) : { ok: false, reason: 'notYourTurn' };
+
+/**
+ * Hace la accion ya comprobada (su `apply`; solo las de turno reciben por donde mandar otras), olvida
+ * lo que se podia deshacer si la accion cuenta algo nuevo de la partida (sin `keepsUndo`) y la manda
+ * el equipo que juega (una de otro fuera de su turno, rendirse, no le quita al que juega lo que puede
+ * deshacer) y deja la partida en orden (INVARIANTS).
  */
 function applyAction(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
-  const definition = definitionOf(action);
-  const applied = definition.apply(s, team, action, diceOf(s), perform);
-  if (!definition.keepsUndo) forgetUndoableMoves(s);
+  const onTurn = team === s.turn;
+  const applied = isComposite(action)
+    ? compositeOf(action.kind).apply(s, team, action, diceOf(s), performAs(team))
+    : plainOf(action.kind).apply(s, team, action, diceOf(s));
+  if (!rulesOf(action).keepsUndo && onTurn) forgetUndoableMoves(s);
   return [...applied, ...restoreInvariants(s)];
 }
 

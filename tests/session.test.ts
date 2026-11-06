@@ -7,6 +7,7 @@ import { canMoveNow, moveRange, newUnit, reachableTiles, unitById } from '@core/
 import { serialize } from '@core/save';
 import { aiController, controllersFor, type AiBrain } from '@core/controllers';
 import {
+  autopilotController,
   GameSession,
   humanController,
   passiveController,
@@ -14,6 +15,7 @@ import {
   remoteController,
   replayControllers,
   runMatch,
+  sequence,
   type ActedStep,
   type Controller,
 } from '@core/session';
@@ -264,6 +266,103 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
   });
 
+  it('repetir una partida en la que otro equipo se rinde fuera de su turno: mismo registro, misma partida', () => {
+    const s = createMatch(
+      skirmishConfig({ seed: 8, size: 20, teams: [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }] }),
+    );
+    const start = cloneState(s);
+    const session = new GameSession(s, [humanController(), remoteController(), aiController(seededRng(4))]);
+    runMatch(session);
+    const [first, second] = s.units.filter((unit) => unit.team === 0);
+    expect(session.act(0, { kind: 'wait', uid: first!.uid }).ok).toBe(true);
+    expect(session.act(1, { kind: 'surrender' }).ok).toBe(true);
+    expect(session.act(0, { kind: 'wait', uid: second!.uid }).ok).toBe(true);
+    session.finishInput(0);
+    runMatch(session);
+    expect(session.log.map((entry) => `${entry.team}:${entry.action.kind}`).slice(0, 5)).toEqual([
+      '0:startTurn',
+      '0:wait',
+      '1:surrender',
+      '0:wait',
+      '0:endTurn',
+    ]);
+    const replay = new GameSession(start, replayControllers(start, session.log));
+    runMatch(replay, { until: () => replay.log.length >= session.log.length });
+    expect(replay.log).toEqual(session.log);
+    expect(serialize(start)).toBe(serialize(s));
+  });
+
+  it('repetir con una rendicion entre dos turnos: entra antes de que empiece el siguiente', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    const start = cloneState(s);
+    const session = new GameSession(s, [humanController(), passiveController(), passiveController(), passiveController()]);
+    runMatch(session);
+    session.finishInput(0);
+    expect(session.step()).toMatchObject({ kind: 'acted', team: 0, action: { kind: 'endTurn' } });
+    expect(session.act(3, { kind: 'surrender' }).ok).toBe(true);
+    runMatch(session);
+    expect(session.log.map((entry) => `${entry.team}:${entry.action.kind}`)).toEqual([
+      '0:startTurn',
+      '0:endTurn',
+      '3:surrender',
+      '1:startTurn',
+      '1:endTurn',
+      '2:startTurn',
+      '2:endTurn',
+      '0:startTurn',
+    ]);
+    const replay = new GameSession(start, replayControllers(start, session.log));
+    runMatch(replay, { until: () => replay.log.length >= session.log.length });
+    expect(replay.log).toEqual(session.log);
+    expect(serialize(start)).toBe(serialize(s));
+  });
+
+  it('rendirse otro equipo fuera de turno no le quita al que juega lo que puede deshacer', () => {
+    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
+    runMatch(session);
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 5 });
+    expect(session.act(0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } }).ok).toBe(true);
+    expect(session.act(1, { kind: 'surrender' }).ok).toBe(true);
+    expect(s.undoableMoves).toHaveLength(1);
+    expect(session.act(0, { kind: 'undoMove', uid: soldier.uid }).ok).toBe(true);
+    expect([soldier.x, soldier.y]).toEqual([5, 5]);
+  });
+
+  it('quien manda el mismo sus acciones (la IA, el piloto) solo las manda de su equipo', () => {
+    const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    let reply: unknown = null;
+    const brain: AiBrain = (state, _rng, _team, dispatcher) => {
+      reply = dispatcher(state, 2, { kind: 'surrender' });
+      return [][Symbol.iterator]();
+    };
+    const session = new GameSession(s, [aiController(seededRng(1), brain), passiveController(), passiveController()]);
+    session.step();
+    expect(reply).toEqual({ ok: false, reason: 'notYourTurn' });
+    expect(s.teams[2]!.resigned).toBeFalsy();
+  });
+
+  it('el dispatcher de la sesion solo vale para su partida (no para simular en una copia)', () => {
+    const s = blankState();
+    const session = new GameSession(s, [humanController(), passiveController()]);
+    runMatch(session);
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    expect(session.dispatcher(s, 0, { kind: 'wait', uid: soldier.uid }).ok).toBe(true);
+    expect(() => session.dispatcher(cloneState(s), 0, { kind: 'wait', uid: soldier.uid })).toThrow(/solo manda acciones en su partida/);
+  });
+
+  it('autopilotController cumple ya, en el turno, las ordenes permanentes (y lo apunta como del equipo)', () => {
+    const s = blankState();
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 3, y: 9 } } });
+    const session = new GameSession(s, [sequence(autopilotController(), humanController()), passiveController()]);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    expect(soldier.y).toBeGreaterThan(3);
+    expect(session.log.every((entry) => entry.team === 0)).toBe(true);
+    expect(session.isPerson(0)).toBe(true);
+  });
+
   it('un controlador por equipo', () => {
     expect(() => new GameSession(blankState(), [passiveController()])).toThrow(/uno por equipo/);
   });
@@ -360,8 +459,12 @@ describe('modos de juego (core/modes.ts)', () => {
     expect(result.started.at(-1)).toMatchObject({ kind: 'wait', uid: other.uid });
     expect(seen[1]).toBe('end: ciudad de 0');
     // Lo que manda el paso pasa por validate (esa unidad ya se ha usado) y por las guardas: otro
-    // equipo no actua en este turno, salvo para rendirse (anyTime).
-    expect(replies).toMatchObject([{ ok: false, reason: 'spent' }, { ok: false, reason: 'notYourTurn' }, { ok: true }]);
+    // equipo no actua en este turno, ni para rendirse: un paso de turno solo manda las de su equipo.
+    expect(replies).toMatchObject([
+      { ok: false, reason: 'spent' },
+      { ok: false, reason: 'notYourTurn' },
+      { ok: false, reason: 'notYourTurn' },
+    ]);
   });
 
   it('un modo con su propio orden de turnos: la partida lo guarda y la sesion lo sigue', () => {

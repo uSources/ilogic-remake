@@ -1045,7 +1045,8 @@ export class GameScene extends Phaser.Scene {
     return {
       act: (action) => this.act(action),
       perform: (action, ghostKey) => this.perform(action, ghostKey),
-      dispatcher: (_s, team, action) => this.session.act(team, action),
+      // La sesion cambia con cada partida: se pide la suya al mandar.
+      dispatcher: (s, team, action) => this.session.dispatcher(s, team, action),
     };
   }
 

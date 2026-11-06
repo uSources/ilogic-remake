@@ -17,9 +17,8 @@ import { defaultContent } from '@core/content/default';
 import { isMatchOver, matchResult } from '@core/rules';
 import { serialize } from '@core/save';
 import { posOf } from '@core/geom';
-import { assistTurn } from '@core/autopilot';
-import { aiController, controllersFor, type AiBrain } from '@core/controllers';
-import { GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
+import { aiController, controllersFor } from '@core/controllers';
+import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam } from '@core/teams';
 import type { GameAction, GameState, Rng, RulesConfig, TeamId } from '@core/model';
 
@@ -76,19 +75,13 @@ function squadOrders(s: GameState, person: TeamId): GameAction[] {
 }
 
 /**
- * Solo de la huella: la persona cumple ya, en su turno, las ordenes que acaba de dar (lo que hacia el
- * piloto automatico de antes; al acabar el turno las cumpliria igual la partida, TURN_END_PHASES).
- */
-const followOrdersNow: AiBrain = (s, _rng, team, dispatcher) => assistTurn(s, team, dispatcher);
-
-/**
  * Quien juega cada equipo: la IA, con el mismo azar para todos; la persona, si lleva escuadra, da sus
  * ordenes el primer dia y deja antes que su piloto automatico las cumpla (como la IA no las tiene,
  * juega despues).
  */
 function controllersOf(s: GameState, scenario: Scenario, rng: Rng): Controller[] {
   const person = playerTeam(s);
-  const withSquad = sequence(scriptedController(squadOrders), aiController(rng, followOrdersNow), aiController(rng));
+  const withSquad = sequence(scriptedController(squadOrders), autopilotController(), aiController(rng));
   return controllersFor(s, rng, new Map([[person, scenario.withSquad ? withSquad : aiController(rng)]]));
 }
 

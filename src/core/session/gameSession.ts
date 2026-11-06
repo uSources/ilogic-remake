@@ -9,7 +9,8 @@
  * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
  */
 import { dispatch, isAnyTime } from '../actions/dispatch';
-import { isTurnBoundary, startsTurn } from '../actions/turn';
+import { sessionOnlyProblem, startsTurn } from '../actions/turn';
+import type { ActionDispatcher } from '../actions/types';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
@@ -98,11 +99,24 @@ export class GameSession {
    * de la sesion ('sessionOnly'): para acabarlo, `finishInput`.
    */
   act(team: TeamId, action: GameAction): ActionResult {
-    if (isTurnBoundary(action)) return { ok: false, reason: 'sessionOnly' };
+    const sessionOnly = sessionOnlyProblem(action);
+    if (sessionOnly) return { ok: false, reason: sessionOnly };
     if (this.awaiting !== team && !isAnyTime(action)) return { ok: false, reason: 'notYourTurn' };
     const result = dispatch(this.state, team, action);
     if (result.ok) this.record(team, action, result.events);
     return result;
+  }
+
+  /**
+   * `act` como `ActionDispatcher` (para quien manda acciones de una persona: la escena, la partida
+   * por texto). Solo sobre la partida de la sesion: si se le pasa otra (una copia para simular), es
+   * un fallo de quien la usa y lo dice.
+   */
+  get dispatcher(): ActionDispatcher {
+    return (s, team, action) => {
+      if (s !== this.state) throw new Error('El dispatcher de la sesion solo manda acciones en su partida (para simular, dispatch)');
+      return this.act(team, action);
+    };
   }
 
   /** Quien decidia fuera ha terminado (p. ej. ha pulsado «Fin de turno»): su controlador sigue y acaba el turno. */
@@ -118,6 +132,9 @@ export class GameSession {
     for (;;) {
       const result = this.result;
       if (result.status !== 'playing') return { kind: 'over', result };
+      // Lo que llega de otro equipo fuera de su turno entra antes que lo siguiente (ver Controller.offTurn).
+      const offTurn = this.nextOffTurn();
+      if (offTurn) return this.applyOffTurn(offTurn);
       // Al que se esperaba ya no juega (se ha rendido): no se le espera mas, y su turno se pasa.
       if (this.awaiting !== null && !takesTurn(this.state, this.awaiting)) this.awaiting = null;
       if (this.awaiting !== null) return { kind: 'awaitingInput', team: this.awaiting };
@@ -157,18 +174,39 @@ export class GameSession {
         this.awaiting = team;
         return { kind: 'awaitingInput', team };
       case 'propose': {
-        const result: ActionResult = isTurnBoundary(step.action)
-          ? { ok: false, reason: 'sessionOnly' }
-          : dispatch(this.state, team, step.action);
+        const sessionOnly = sessionOnlyProblem(step.action);
+        const result: ActionResult = sessionOnly ? { ok: false, reason: sessionOnly } : dispatch(this.state, team, step.action);
         this.turnOf(team).reply = result;
         return result.ok ? this.record(team, step.action, result.events) : null;
       }
       case 'applied':
-        // Ya lo ha mandado el: si era un limite de turno, el controlador se ha saltado la regla.
-        if (isTurnBoundary(step.action) && step.result.ok)
+        // Ya lo ha mandado el (por selfDispatched, que no deja): si era un limite de turno, se ha saltado la regla.
+        if (sessionOnlyProblem(step.action) && step.result.ok)
           throw new Error(`El controlador del equipo ${team} ha mandado '${step.action.kind}': es de la sesion`);
         return step.result.ok ? this.record(team, step.action, step.result.events) : null;
     }
+  }
+
+  /** La siguiente accion fuera de turno que trae algun controlador (Controller.offTurn), o null. */
+  private nextOffTurn(): LoggedAction | null {
+    for (const controller of new Set(this.controllers)) {
+      const entry = controller.offTurn?.(this.state);
+      if (entry) return entry;
+    }
+    return null;
+  }
+
+  /**
+   * Hace una accion que ha llegado fuera de turno, como `act` la habria hecho: solo de otro equipo y
+   * de las que valen en cualquier momento. Si no vale, quien la trae (una repeticion) no cuadra con la
+   * partida: es un fallo y lo dice.
+   */
+  private applyOffTurn({ team, action }: LoggedAction): ActedStep {
+    if (team === this.state.turn || !isAnyTime(action))
+      throw new Error(`'${action.kind}' del equipo ${team} no puede llegar fuera de su turno`);
+    const result = dispatch(this.state, team, action);
+    if (!result.ok) throw new Error(`'${action.kind}' del equipo ${team}, fuera de su turno, no vale: ${result.reason}`);
+    return this.record(team, action, result.events);
   }
 
   /** El turno del equipo acaba: su controlador ya no sigue y le toca al siguiente. */

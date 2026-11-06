@@ -11,6 +11,7 @@
  * `Controller`: la sesion y las reglas no cambian.
  */
 import type { ActionResult, GameAction, GameState, TeamId } from '../model';
+import type { LoggedAction } from './replay';
 
 /** Un paso del turno de un controlador. */
 export type TurnStep =
@@ -20,7 +21,7 @@ export type TurnStep =
 export type TurnPlan = Generator<TurnStep, void, ActionResult | undefined>;
 
 /** Que tipo de controlador es (para enseñarlo y depurar). */
-export type ControllerName = 'human' | 'ai' | 'remote' | 'replay' | 'random' | 'passive' | 'sequence' | 'scripted';
+export type ControllerName = 'human' | 'ai' | 'autopilot' | 'remote' | 'replay' | 'random' | 'passive' | 'sequence' | 'scripted';
 
 export interface Controller {
   readonly name: ControllerName;
@@ -31,6 +32,13 @@ export interface Controller {
   readonly person?: true;
   /** El turno del equipo `team` en la partida `s`, paso a paso. */
   playTurn(s: GameState, team: TeamId): TurnPlan;
+  /**
+   * Una accion de otro equipo que llega fuera de su turno, en este momento (solo las que valen en
+   * cualquier momento: rendirse), o null. La sesion la mira antes de cada paso, asi entra en el
+   * mismo sitio en que llego: la repeticion la saca del registro (lo que en la partida mando un
+   * jugador con `GameSession.act` mientras jugaba otro).
+   */
+  offTurn?(s: GameState): LoggedAction | null;
 }
 
 /** Propone una accion y da su resultado (lo que ha dicho la sesion al mandarla). */
