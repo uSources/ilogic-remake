@@ -6,6 +6,7 @@
 import { samePos } from '../geom';
 import type { GameState, Pos, Unit } from '../model';
 import { areEnemies, isOnMap } from '../util/predicates';
+import { UNSEEN_FOES_UNNOTICED } from '../rules/passage';
 import type { RuleModule } from './hooks';
 
 /** Hay una unidad enemiga en la casilla (escondida o no: al pisarla se descubre). */
@@ -22,9 +23,7 @@ export const AMBUSH: RuleModule = {
   id: 'ambush',
   isOn: (settings) => settings.ambush,
   hooks: {
-    passRules: [
-      { id: 'unseenFoes', passage: ({ s, mover, sees }, other) => (areEnemies(s, other, mover) && !sees(other) ? 'unnoticed' : null) },
-    ],
+    passRules: [UNSEEN_FOES_UNNOTICED],
     // Al recorrer el camino, el enemigo escondido lo corta: se para antes y pierde el turno.
     pathInterruptions: [{ kind: 'ambush', cutAt: firstEnemyOnPath }],
   },

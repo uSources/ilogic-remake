@@ -485,7 +485,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsTeammatesThrough`).
 |---|---|---|
 | `abilities` | `abilities` | lo de cada clase de habilidad (`ABILITY_EFFECTS`): escudo y aura al acierto, perforar, zona de control, ver en el bosque, capturar rapido |
 | `veterancy` | `veterancy` | el rango al acierto (`rank`, `RANK_KILLS`; las bajas se cuentan siempre) |
-| `flank` | `flankBonus` > 0 | rematar a quien ya ha recibido un ataque hoy (`flanked`) |
+| `flank` | `flankBonus` > 0 | rematar a quien ya ha recibido un ataque hoy (`flankBonusFor`, `wasHitToday`) |
 | `generals` | siempre | su ventaja fija al acierto, su carga en combate, su ronda (volver a usar un poder) y su reconocimiento |
 | `weather` | `weather` | acierto, lo que se puede gastar al moverse, el radio de vision, el cambio de clima con el dia y el clima del primer dia (`matchSetup`) |
 | `controlPoints` | `controlPoints` > 0 | lo que pagan al acabar la ronda |

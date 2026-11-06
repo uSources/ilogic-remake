@@ -1,16 +1,18 @@
 /** [CAMBIO] Flanqueo (ajuste `flankBonus`, 0 = sin flanqueo): rematar a quien ya ha recibido un ataque hoy es mas facil. */
 import type { GameState, Unit } from '../model';
 import type { Engagement } from '../rules/engagement';
+import { wasHitToday } from '../util/predicates';
 import type { RuleModule } from './hooks';
+import { isRuleOn } from './ruleset';
 
-/** La unidad ya ha recibido un ataque hoy (si la partida tiene flanqueo lo dice el modulo: isOn). */
-export function flanked(s: GameState, defender: Unit): boolean {
-  return defender.hitDay === s.day;
+/** Cuanto acierto de mas da atacar a `target` ahora (0 si la partida no lleva flanqueo o no le han atacado hoy). */
+export function flankBonusFor(s: GameState, target: Unit): number {
+  return isRuleOn(s, 'flank') && wasHitToday(s, target) ? s.settings.flankBonus : 0;
 }
 
 /** Premia atacar en grupo al mismo objetivo. */
 function flankFactor(s: GameState, { defender }: Engagement): number {
-  return flanked(s, defender.unit) ? 1 + s.settings.flankBonus : 1;
+  return 1 + flankBonusFor(s, defender.unit);
 }
 
 export const FLANK: RuleModule = {

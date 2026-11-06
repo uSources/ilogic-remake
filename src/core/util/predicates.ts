@@ -4,6 +4,7 @@
  * `unitTypeOf(s, unit).attack !== null` sueltos (docs/ESTILO.md, regla 4). Sin efectos.
  */
 
+import type { UnitType } from '../content';
 import { unitTypeOf } from '../gameContent';
 import type { GameState, Unit } from '../model';
 import { isHostile } from '../teams';
@@ -11,6 +12,11 @@ import { isHostile } from '../teams';
 /** Las dos son de equipos enemigos (alianzas distintas: ver teams.ts). */
 export function areEnemies(s: GameState, first: Pick<Unit, 'team'>, second: Pick<Unit, 'team'>): boolean {
   return isHostile(s, first.team, second.team);
+}
+
+/** Ha recibido un ataque hoy (lo miran el flanqueo y la cura bajo fuego). */
+export function wasHitToday(s: GameState, unit: Pick<Unit, 'hitDay'>): boolean {
+  return unit.hitDay === s.day;
 }
 
 /** Esta en el mapa, no dentro de un transporte (los pasajeros no ocupan casilla ni luchan). */
@@ -28,9 +34,14 @@ export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
   return unitTypeOf(s, unit).attack !== null;
 }
 
-/** Ataca a distancia: no puede disparar a la casilla de al lado (alcance minimo > 1). */
+/** El tipo ataca a distancia: no puede disparar a la casilla de al lado (alcance minimo > 1). */
+export function isRangedType(unitType: Pick<UnitType, 'attack'>): boolean {
+  return (unitType.attack?.minRange ?? 1) > 1;
+}
+
+/** Ataca a distancia (ver isRangedType). */
 export function isRanged(s: GameState, unit: Pick<Unit, 'type'>): boolean {
-  return (unitTypeOf(s, unit).attack?.minRange ?? 1) > 1;
+  return isRangedType(unitTypeOf(s, unit));
 }
 
 /** Puede moverse y disparar en el mismo turno (units.json, "attack.firesAfterMove"; la artilleria no). */

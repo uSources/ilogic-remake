@@ -41,9 +41,13 @@ export function terrainAccess(s: GameState, movement: MoveType): TerrainAccess {
 
 /** El movimiento de la unidad este turno: el de su tipo, con lo que cambien los modulos. */
 export function movementProfile(s: GameState, unit: Pick<Unit, 'type'>): MovementProfile {
+  return { ...terrainAccess(s, unitTypeOf(s, unit).movement), budget: moveBudget(s, unit) };
+}
+
+/** Lo que puede gastar al moverse este turno: su movimiento, cambiado por los `moveBudgets` de los modulos (el clima). */
+export function moveBudget(s: GameState, unit: Pick<Unit, 'type'>): number {
   const unitType = unitTypeOf(s, unit);
-  const budget = hooksOf(s, 'moveBudgets').reduce((total, rule) => rule.budget(s, unitType, total), unitType.move);
-  return { ...terrainAccess(s, unitType.movement), budget };
+  return hooksOf(s, 'moveBudgets').reduce((total, rule) => rule.budget(s, unitType, total), unitType.move);
 }
 
 /** Lo que cuesta recorrer un camino (sin contar la casilla de salida). */

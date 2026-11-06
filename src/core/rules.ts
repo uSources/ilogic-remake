@@ -128,7 +128,7 @@ export type {
   StopRule,
 } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './rules/rank';
-export { flanked } from './ruleModules/flank';
+export { flankBonusFor } from './ruleModules/flank';
 export { abilitiesOf } from './ruleModules/abilities';
 export { bountyFor } from './ruleModules/bounty';
 export { MELEE_COUNTER } from './ruleModules/counterattack';
@@ -192,4 +192,4 @@ export {
   type VictoryRule,
 } from './rules/victory';
 export { nextTurn, takesTurn, type NextTurn } from './rules/turnOrder';
-export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';
+export { areEnemies, isOnMap, isAlive, canFight, isCapturer, isRangedType } from './util/predicates';

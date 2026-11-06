@@ -10,14 +10,14 @@ import { movementOf, buildingAt } from '../rules/queries';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rules/distance';
-import { letsTeammatesThrough, passBlockers } from '../rules/passage';
+import { letsTeammatesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules/passage';
 import type { PassRule } from '../ruleModules/hooks';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { areEnemies, isAlive } from '../util/predicates';
+import { isAlive } from '../util/predicates';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -50,10 +50,7 @@ export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
  * [CAMBIO] La IA en grupo planea con lo que ve: los enemigos que no ve no le cortan el camino al
  * medir, haya emboscadas o no (al moverse de verdad manda lo que diga la partida).
  */
-export const PLANS_WITH_WHAT_IT_SEES: PassRule = {
-  id: 'plansWithWhatItSees',
-  passage: ({ s, mover, sees }, other) => (areEnemies(s, other, mover) && !sees(other) ? 'unnoticed' : null),
-};
+export const PLANS_WITH_WHAT_IT_SEES: PassRule = UNSEEN_FOES_UNNOTICED;
 
 /**
  * Lo que corta el paso a `unit` al medir distancias: las demas unidades.

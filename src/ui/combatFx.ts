@@ -10,6 +10,7 @@
  */
 import type Phaser from 'phaser';
 import { MoveType, type UnitType } from '../core/content';
+import { isRangedType } from '../core/rules';
 import type { Pos } from '../core/model';
 import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
@@ -37,8 +38,7 @@ const MISSILE_RANGE = 6;
 
 export function shotKind(attackerType: UnitType, defenderType: UnitType): ShotKind {
   const attack = attackerType.attack;
-  const isRangedWeapon = !!attack && attack.minRange > 1;
-  if (isRangedWeapon) return attack.maxRange >= MISSILE_RANGE ? 'missile' : 'arc';
+  if (attack && isRangedType(attackerType)) return attack.maxRange >= MISSILE_RANGE ? 'missile' : 'arc';
   const movement = attackerType.movement;
   if (movement === MoveType.AIR) return defenderType.movement === MoveType.AIR ? 'tracer' : 'bomb';
   return movement === MoveType.FOOT ? 'bullets' : 'shell';

@@ -66,6 +66,10 @@ const healedLife = (unit: Unit, amount: number): number => Math.min(amount, MAX_
 const areaDamageTo = (unit: Unit, effect: EffectOf<'areaDamage'>): number =>
   Math.max(0, Math.min(effect.damage, unit.life - effect.minLife));
 
+/** Los enemigos de `team` en el mapa a los que un daño de area aun quitaria vida (los que estan en `minLife` ya no). */
+const hurtableByArea = (s: GameState, team: TeamId, effect: EffectOf<'areaDamage'>): Unit[] =>
+  s.units.filter((unit) => isHostile(s, unit.team, team) && isOnMap(unit) && areaDamageTo(unit, effect) > 0);
+
 /** Las casillas en las que se puede centrar un area de `radius` que toque a alguno de `enemies`, sin repetir. */
 function areaCentersTouching(s: GameState, enemies: readonly Pos[], radius: number): Pos[] {
   const seen = new Set<string>();
@@ -82,10 +86,8 @@ function areaCentersTouching(s: GameState, enemies: readonly Pos[], radius: numb
 /** Mejor casilla para un daño en area: la que mas valor quita a enemigos que se ven. */
 export function bestAreaTarget(s: GameState, team: TeamId, effect: EffectOf<'areaDamage'>): { target: Pos; value: number } | null {
   const visible = visibility(s, team);
-  // Nunca a ciegas en la niebla, y nada que ya no pueda bajar de minLife.
-  const enemies = s.units.filter(
-    (unit) => isHostile(s, unit.team, team) && isOnMap(unit) && unit.life > effect.minLife && visible.at(unit),
-  );
+  // Nunca a ciegas en la niebla.
+  const enemies = hurtableByArea(s, team, effect).filter((unit) => visible.at(unit));
   const valueAt = (center: Pos): number => {
     const area = new Set(squareArea(mapGrid(s), center, effect.radius).map(posKey));
     return enemies.reduce((total, enemy) => total + (area.has(posKey(enemy)) ? lifeValue(s, areaDamageTo(enemy, effect), enemy) : 0), 0);
@@ -117,10 +119,8 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
     area: (effect) => effect.radius,
     apply: ({ s, team, effect, target, out }) => {
       const inArea = new Set(squareArea(mapGrid(s), checkedTarget(target), effect.radius).map(posKey));
-      for (const unit of s.units) {
-        if (!isHostile(s, unit.team, team) || !isOnMap(unit) || !inArea.has(posKey(unit))) continue;
+      for (const unit of hurtableByArea(s, team, effect).filter((enemy) => inArea.has(posKey(enemy)))) {
         const damage = areaDamageTo(unit, effect);
-        if (damage <= 0) continue;
         unit.life -= damage;
         out.hits.push({ uid: unit.uid, damage });
       }

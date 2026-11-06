@@ -18,6 +18,15 @@ import { sightOf, type Sight } from './visibility';
 /** Lo que pasa al entrar en una casilla por quien hay en ella. */
 export type TileOccupancy = 'empty' | 'passThrough' | 'blocked';
 
+/**
+ * Regla de paso: de los enemigos que su equipo no ve no se sabe (como si no hubiera nadie). La pone
+ * el modulo de la emboscada y la IA al planear en grupo (PLANS_WITH_WHAT_IT_SEES).
+ */
+export const UNSEEN_FOES_UNNOTICED: PassRule = {
+  id: 'unseenFoes',
+  passage: ({ s, mover, sees }, other) => (areEnemies(s, other, mover) && !sees(other) ? 'unnoticed' : null),
+};
+
 /** Lo de cualquier partida, si ninguna regla dice nada: otra unidad cierra el paso (las reglas de 2013). */
 const UNLESS_A_RULE_SAYS: Passage = 'blocks';
 
