@@ -6,8 +6,7 @@ import { unitTypeOf } from '../gameContent';
 import { diamond } from '../geom';
 import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
-import { isRanged } from '../abilities';
-import { canFight } from '../util/predicates';
+import { canFight, firesAfterMove } from '../util/predicates';
 import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
@@ -159,14 +158,13 @@ export function threatMap(s: GameState, viewer: TeamId): Grid<boolean> {
 
 /**
  * Casillas que una unidad podria atacar en su proximo turno (moviendose si puede).
- * Las unidades a distancia no pueden mover y disparar: solo cuentan desde donde estan.
+ * Las que no pueden moverse y disparar (firesAfterMove) solo cuentan desde donde estan.
  */
 export function unitThreat(s: GameState, unit: Unit, out: Grid<boolean> = createLayer(s, false), range?: MoveRange): Grid<boolean> {
   const attack = unitTypeOf(s, unit).attack;
   if (!attack) return out;
   // Las que pueden mover y disparar atacan desde cualquier casilla a la que lleguen (como si fuera su turno).
-  const canMoveAndFire = !isRanged(s, unit);
-  const moveReach = canMoveAndFire ? (range ?? moveRange(s, unit)) : null;
+  const moveReach = firesAfterMove(s, unit) ? (range ?? moveRange(s, unit)) : null;
   for (const origin of fireOrigins(s, unit, moveReach)) {
     for (const pos of diamond(out, origin, attack.minRange, attack.maxRange)) out.set(pos, true);
   }

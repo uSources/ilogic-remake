@@ -14,7 +14,7 @@ describe('el turno de cada unidad', () => {
     expect(tank.turnState).toBe('ready');
   });
 
-  it('movida: actua y dispara, salvo las de distancia, que no pueden mover y disparar', () => {
+  it('movida: actua y dispara, salvo las que no pueden moverse y disparar (firesAfterMove)', () => {
     const s = blankState();
     const tank = newUnit(s, unitTypeNamed('Tank'), 0, { x: 5, y: 5 });
     const artillery = newUnit(s, unitTypeNamed('Artillery'), 0, { x: 9, y: 9 });

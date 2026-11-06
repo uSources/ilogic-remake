@@ -95,8 +95,9 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 | `vision` | Radio de vision |
 | `movement` | `foot` (a pie), `vehicle`, `air` o `amphibious`: por donde pasa y cuanto cuesta cada terreno |
 | `captures` | Puede capturar edificios |
-| `attack` | `null` si no ataca; si no, `range: [desde, hasta]` y `hitChance` |
+| `attack` | `null` si no ataca; si no, `range: [desde, hasta]`, `firesAfterMove` y `hitChance` |
 | `attack.range` | Distancias a las que dispara: `[1, 1]` cuerpo a cuerpo, `[3, 5]` artilleria |
+| `attack.firesAfterMove` | Puede moverse y disparar en el mismo turno (`false`: solo dispara si no se ha movido, como la artilleria). Va aparte del alcance: una unidad de cuerpo a cuerpo podria no poder, y una de distancia corta si |
 | `attack.hitChance` | **Daño**: probabilidad (0..1) de quitar cada punto de vida que le queda al atacante. Con 100 de vida y 0.5 quita unos 50 (menos si el defensor esta en un edificio, ver `protection`). Una unidad que no aparece no se puede atacar |
 | `transport` | `{ "slots", "carries" }`: plazas y unidades que lleva |
 | `builtAt` | Edificios que la fabrican |

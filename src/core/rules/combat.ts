@@ -5,9 +5,8 @@
  */
 
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
-import { isRanged } from '../abilities';
 import { manhattan, posOf } from '../geom';
-import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
+import { canFight, firesAfterMove, isAlive, areEnemies, isOnMap, isRanged } from '../util/predicates';
 import type { HitModifier } from '../ruleModules/hooks';
 import { hooksOf } from '../ruleModules/registry';
 import { rank } from '../ruleModules/veterancy';
@@ -41,12 +40,12 @@ export function basePower(s: GameState, attacker: Pick<Unit, 'type'>, defender: 
 }
 
 /**
- * Casillas desde las que `unit` puede disparar este turno: donde esta y, si no es de distancia (esas
- * no pueden mover y disparar) y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`).
+ * Casillas desde las que `unit` puede disparar este turno: donde esta y, si puede moverse y disparar
+ * y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`).
  */
 export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
   const origins: Pos[] = [posOf(unit)];
-  if (!range || isRanged(s, unit)) return origins;
+  if (!range || !firesAfterMove(s, unit)) return origins;
   const reachable = reachableTiles(range);
   origins.push(...(allowed ? reachable.filter((pos) => allowed(pos)) : reachable));
   return origins;

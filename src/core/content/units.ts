@@ -35,6 +35,7 @@ function validateAttack(scope: Scope, attack: UnitDef['attack'] | undefined, con
       Array.isArray(range) && Number.isInteger(range[0]) && Number.isInteger(range[1]) && range[0] >= 1 && range[1] >= range[0],
       'attack.range: 1 <= desde <= hasta',
     );
+  scope.bool('attack.firesAfterMove', attack?.firesAfterMove);
   for (const [target, chance] of Object.entries(attack?.hitChance ?? {})) {
     scope.known('attack.hitChance', target, context.unitIds);
     scope.num(`attack.hitChance.${target}`, chance, { min: 0, max: 1 });
@@ -107,6 +108,8 @@ export interface UnitAttack {
   /** Distancia minima de tiro (1 = la casilla de al lado). */
   readonly minRange: number;
   readonly maxRange: number;
+  /** Puede moverse y disparar en el mismo turno (la artilleria no: solo dispara si no se ha movido). */
+  readonly firesAfterMove: boolean;
   /** Probabilidad de acierto de cada punto de vida contra cada tipo, por id (si no esta, 0: no le puede atacar). */
   readonly hitChance: Readonly<Record<string, number>>;
 }
@@ -146,7 +149,7 @@ export interface UnitType {
 function attackOf(definition: UnitDef): UnitAttack | null {
   if (!definition.attack) return null;
   const [minRange, maxRange] = definition.attack.range;
-  return { minRange, maxRange, hitChance: { ...definition.attack.hitChance } };
+  return { minRange, maxRange, firesAfterMove: definition.attack.firesAfterMove, hitChance: { ...definition.attack.hitChance } };
 }
 
 /** Los tipos de unidad del fichero (validado), en su orden. */

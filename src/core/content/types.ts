@@ -54,9 +54,10 @@ export interface UnitDef {
   captures: boolean;
   /**
    * null = no ataca. `range`: distancias desde/hasta (1 = casilla de al lado; [2, 5] = artilleria).
+   * `firesAfterMove`: puede moverse y disparar en el mismo turno (la artilleria no).
    * `hitChance`: probabilidad de acierto de cada punto de vida contra cada unidad (0..1; si no esta, 0).
    */
-  attack: { range: [number, number]; hitChance: Record<string, number> } | null;
+  attack: { range: [number, number]; firesAfterMove: boolean; hitChance: Record<string, number> } | null;
   transport?: { slots: number; carries: string[] };
   /** Edificios que la fabrican y edificios propios que la curan al empezar la ronda. */
   builtAt: string[];

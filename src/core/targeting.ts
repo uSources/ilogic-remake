@@ -2,11 +2,11 @@
  * A donde apuntar con la unidad elegida: desde que casilla atacar a un objetivo. Logica pura, sin interfaz: la usa la escena y se puede probar.
  */
 import { manhattan, samePos, posOf } from './geom';
-import { isRanged } from './abilities';
 import { attackProblem, tileProtection } from './rules/combat';
 import { sightOf, type Sight } from './rules/visibility';
 import { reachableTiles, type MoveRange } from './rules/movement';
 import { minBy } from './util/pick';
+import { firesAfterMove } from './util/predicates';
 import type { GameState, Pos, Unit } from './model';
 
 /**
@@ -25,7 +25,7 @@ export function bestAttackTile(
 ): Pos | null {
   const canAttackFrom = (from: Pos) => attackProblem(s, unit, target, sees, from) === null;
   // Las que no pueden mover y disparar solo atacan desde donde estan.
-  const origins = isRanged(s, unit) ? [posOf(unit)] : [posOf(unit), ...reachableTiles(range)];
+  const origins = firesAfterMove(s, unit) ? [posOf(unit), ...reachableTiles(range)] : [posOf(unit)];
   const candidates = origins.filter(canAttackFrom);
   const onTrail = candidates.find((tile) => samePos(tile, end));
   if (onTrail) return onTrail;

@@ -16,7 +16,7 @@ import type { AbilityDef, UnitType } from './content';
 import type { DeepReadonly } from './util/freeze';
 import { manhattan, neighbors4 } from './geom';
 import { mapGrid } from './mapGrid';
-import { isAlive, areEnemies, isOnMap } from './util/predicates';
+import { isAlive, areEnemies, isOnMap, isRanged } from './util/predicates';
 import type { GameState, Pos, Unit } from './model';
 import type { Engagement, Fighter } from './rules/engagement';
 
@@ -47,11 +47,6 @@ export function seesIntoCover(s: GameState, unit: OfType): boolean {
 /** Multiplicador de lo que resta al capturar (quickCapture). 1 = nada. */
 export function captureFactor(s: GameState, unit: OfType): number {
   return abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1;
-}
-
-/** Ataca a distancia (no puede disparar a la casilla de al lado). */
-export function isRanged(s: GameState, unit: OfType): boolean {
-  return (unitTypeOf(s, unit).attack?.minRange ?? 1) > 1;
 }
 
 /** La parte (0..1) de la proteccion del objetivo que ignora `attacker` (piercing; 0 = nada). */

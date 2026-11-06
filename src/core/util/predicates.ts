@@ -28,6 +28,16 @@ export function canFight(s: GameState, unit: Pick<Unit, 'type'>): boolean {
   return unitTypeOf(s, unit).attack !== null;
 }
 
+/** Ataca a distancia: no puede disparar a la casilla de al lado (alcance minimo > 1). */
+export function isRanged(s: GameState, unit: Pick<Unit, 'type'>): boolean {
+  return (unitTypeOf(s, unit).attack?.minRange ?? 1) > 1;
+}
+
+/** Puede moverse y disparar en el mismo turno (units.json, "attack.firesAfterMove"; la artilleria no). */
+export function firesAfterMove(s: GameState, unit: Pick<Unit, 'type'>): boolean {
+  return unitTypeOf(s, unit).attack?.firesAfterMove ?? false;
+}
+
 /**
  * Su tipo puede capturar edificios (units.json, "captures"). No mira si hay un edificio debajo: eso
  * es `canCapture` de rules/capture.ts.

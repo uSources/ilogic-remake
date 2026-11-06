@@ -3,9 +3,8 @@
  * para lo que antes eran tres banderas (puede actuar, puede moverse, puede disparar) cambiadas a mano
  * en cada accion.
  */
-import { isRanged } from '../abilities';
 import type { GameState, Unit, UnitTurnState } from '../model';
-import { isOnMap } from '../util/predicates';
+import { firesAfterMove, isOnMap } from '../util/predicates';
 
 /** Todos los puntos de su turno en los que puede estar una unidad (para comprobar los que vienen de fuera). */
 export const UNIT_TURN_STATES: readonly UnitTurnState[] = ['ready', 'moved', 'done'];
@@ -25,11 +24,10 @@ export const canActNow = (unit: Pick<Unit, 'turnState' | 'carrier'>): boolean =>
 /** Se puede mover ya: aun no se ha movido y esta en el mapa (no dentro de un transporte). */
 export const canMoveNow = (unit: Pick<Unit, 'turnState' | 'carrier'>): boolean => canStillMove(unit) && isOnMap(unit);
 
-/** Aun puede disparar este turno: sin usar o, si no es de distancia, despues de moverse. */
+/** Aun puede disparar este turno: sin usar o, si puede moverse y disparar, despues de moverse. */
 export function canStillFire(s: GameState, unit: Pick<Unit, 'turnState' | 'type'>): boolean {
   if (unit.turnState === 'ready') return true;
-  // Las unidades a distancia no pueden mover y disparar en el mismo turno.
-  return unit.turnState === 'moved' && !isRanged(s, unit);
+  return unit.turnState === 'moved' && firesAfterMove(s, unit);
 }
 
 /** Se ha movido: puede seguir actuando (ver canStillFire). */

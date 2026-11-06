@@ -74,7 +74,7 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["range", "hitChance"],
+                "required": ["range", "firesAfterMove", "hitChance"],
                 "properties": {
                   "range": {
                     "type": "array",
@@ -85,6 +85,10 @@
                     "minItems": 2,
                     "maxItems": 2,
                     "description": "[desde, hasta] en casillas. [1, 1] = cuerpo a cuerpo; [3, 5] = artilleria (no dispara a 1 o 2)."
+                  },
+                  "firesAfterMove": {
+                    "type": "boolean",
+                    "description": "Puede moverse y disparar en el mismo turno. false = solo dispara si no se ha movido (artilleria, lanzamisiles)."
                   },
                   "hitChance": {
                     "type": "object",

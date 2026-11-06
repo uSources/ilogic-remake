@@ -4,10 +4,10 @@
 
 import { unitTypeOf } from '../gameContent';
 import { manhattan } from '../geom';
-import { isRanged } from '../abilities';
 import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '../rules/combat';
 import { engagement } from '../rules/engagement';
 import { moveRange } from '../rules/movement';
+import { firesAfterMove } from '../util/predicates';
 import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
 import type { GameState, TeamId, Unit } from '../model';
@@ -35,7 +35,7 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
     const reach = strikeReach(s, shooter);
     const nearby = foes.filter((foe) => manhattan(shooter, foe) <= reach && canDamage(s, shooter, foe));
     if (!nearby.length) continue;
-    const origins = fireOrigins(s, shooter, isRanged(s, shooter) ? null : moveRange(s, shooter));
+    const origins = fireOrigins(s, shooter, firesAfterMove(s, shooter) ? moveRange(s, shooter) : null);
     const damageByTarget = new Map<number, number>();
     for (const foe of nearby)
       if (origins.some((from) => inAttackRange(s, shooter, from, foe)))
@@ -66,10 +66,10 @@ function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: Dama
 /** Lo que vale quitar a un enemigo: su precio por la vida que le queda (los mas valiosos, primero). */
 const remainingValue = (s: GameState, unit: Unit): number => unitTypeOf(s, unit).cost * unit.life;
 
-/** Turno de juego: primero las del plan a distancia (no se mueven y dejan al objetivo flanqueado), luego las del plan, luego el resto. */
+/** Turno de juego: primero las del plan que no se mueven para disparar (dejan al objetivo flanqueado), luego las del plan, luego el resto. */
 function playRank(s: GameState, unit: Unit, plan: Map<number, number>): number {
   if (!plan.has(unit.uid)) return 2;
-  return isRanged(s, unit) ? 0 : 1;
+  return firesAfterMove(s, unit) ? 1 : 0;
 }
 
 /**
