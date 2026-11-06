@@ -124,6 +124,7 @@ export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariant
 export { lastUndoableMove } from './rules/undo';
 export {
   defeatReason,
+  noteFallenTeams,
   score,
   allianceScore,
   rivalScore,

@@ -425,6 +425,16 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
   {
+    // Hasta el formato 6 no se apuntaba cuando caia un equipo: no se sabe (null). Si ya habia caido,
+    // la siguiente accion lo apunta (noteFallenTeams), como si cayera entonces.
+    name: 'cuando cayo cada equipo',
+    upToVersion: 6,
+    stage: 'read',
+    apply: (raw) => {
+      for (const team of listOf(raw.teams)) if (isObject(team)) team.fell ??= null;
+    },
+  },
+  {
     // [CAMBIO] Partidas de antes de que la escuadra tuviera orden: si todas llevaban la misma, es suya.
     name: 'la orden comun de las unidades pasa a la escuadra',
     upToVersion: 1,

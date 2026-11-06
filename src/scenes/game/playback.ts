@@ -35,7 +35,7 @@ import { FxTimeline } from '../../ui/fxKit';
 import { baseFacing, faceFlip, type MapView } from '../../ui/mapView';
 import { combatVM } from '../../ui/hudModels';
 import { PAL, PAL_CSS } from '../../ui/palette';
-import { sideColor, sideOf, type Side } from '../../ui/sides';
+import { shownTeamNumber, sideColor, sideOf, type Side } from '../../ui/sides';
 import { unitKey } from '../../ui/sprites';
 import { STEP_MS, type Phase } from './types';
 
@@ -92,6 +92,8 @@ export type Animator<K extends GameEventKind> = EventAnimation<GameEventOf<K>>;
 
 /** Espera de la camara al ir a una casilla que no se veia. */
 const LOOK_AT_MS = 180;
+/** Lo que se para la partida para que se lea que un equipo ha caido. */
+const DEFEAT_NOTICE_MS = 600;
 /** Al mirar a una casilla: margen (casillas) para darla por vista y para colocar la camara. */
 const ON_SCREEN_MARGIN = 2;
 const LOOK_AT_MARGIN = 4;
@@ -654,6 +656,16 @@ const animatePower: Animator<'power'> = async (stage, event) => {
   ]);
 };
 
+/**
+ * Un equipo queda fuera de la partida: se avisa (sobre todo con varias personas en la misma
+ * pantalla, para que la que ha caido lo sepa aunque no le toque mirar).
+ */
+const announceDefeat: Animator<'teamDefeated'> = async (stage, event) => {
+  const own = event.team === stage.viewer;
+  showToast(own ? t('youAreOut') : t('teamOut').replace('{n}', String(shownTeamNumber(event.team))));
+  await stage.wait(DEFEAT_NOTICE_MS);
+};
+
 /** Esperar no se anima. */
 const noAnimation = async (): Promise<void> => {};
 
@@ -690,6 +702,7 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   weather: noAnimation,
   // El final de la partida y los avisos de cada turno los enseña la escena (endOfMatch.ts, turns.ts).
   surrender: noAnimation,
+  teamDefeated: announceDefeat,
   turnStart: noAnimation,
   turnEnd: noAnimation,
 };

@@ -11,6 +11,7 @@ import { guardProblem } from './guards';
 import { isGameAction } from './shape';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
+import { noteFallenTeams } from '../rules/victory';
 import { recordEvents } from '../stats';
 import { ACTIONS } from './registry';
 import type {
@@ -71,7 +72,8 @@ function applyAction(s: GameState, team: TeamId, action: GameAction): GameEvent[
     ? compositeOf(action.kind).apply(s, team, action, diceOf(s), ownTeamOnly(team, perform))
     : plainOf(action.kind).apply(s, team, action, diceOf(s));
   if (!rulesOf(action).keepsUndo && onTurn) forgetUndoableMoves(s);
-  return [...applied, ...restoreInvariants(s)];
+  // Despues de dejarla en orden (los muertos ya fuera), quien haya caido con esta accion.
+  return [...applied, ...restoreInvariants(s), ...noteFallenTeams(s, team)];
 }
 
 /**

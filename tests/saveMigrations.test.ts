@@ -275,6 +275,35 @@ describe('partidas guardadas con el formato 5', () => {
   });
 });
 
+/**
+ * Partida guardada de verdad con el formato 6: la genero el codigo de 35a25d5 (esta rama, antes de
+ * `TeamState.fell`): dos personas y la IA, la primera persona rendida en su turno del dia 1.
+ */
+describe('partida guardada con el formato 6', () => {
+  it('se lee sin saber cuando cayo nadie; la siguiente accion apunta la caida de quien ya habia caido', () => {
+    const json = fixture('hotseat-resigned-v6');
+    expect(JSON.parse(json).version).toBe(6);
+    const s = loadGame(json)!;
+    expect(s.version).toBe(SAVE_VERSION);
+    expect(s.teams.map((team) => [team.resigned, team.fell])).toEqual([
+      [true, null],
+      [false, null],
+      [false, null],
+    ]);
+    const unit = s.units.find((candidate) => candidate.team === s.turn && candidate.turnState === 'ready')!;
+    const events = act(s, s.turn, { kind: 'wait', uid: unit.uid });
+    expect(events.at(-1)).toEqual({ kind: 'teamDefeated', actor: s.turn, team: 0, reason: 'surrender' });
+    expect(s.teams[0]!.fell).toEqual({ order: 1, reason: 'surrender' });
+    expect(serialize(loadGame(serialize(s))!)).toBe(serialize(s));
+  });
+
+  it('una caida rota en el guardado lo rompe', () => {
+    const raw = JSON.parse(serialize(loadGame(fixture('hotseat-resigned-v6'))!)) as { teams: { fell: unknown }[] };
+    raw.teams[0]!.fell = { order: 0, reason: 'bored' };
+    expect(loadGame(JSON.stringify(raw))).toBeNull();
+  });
+});
+
 describe('MIGRATIONS', () => {
   it('cada paso es para versiones anteriores a la actual y tiene un nombre propio', () => {
     for (const migration of MIGRATIONS) expect(migration.upToVersion).toBeLessThan(SAVE_VERSION);

@@ -47,6 +47,7 @@ export const menu: Translation<typeof es> = {
   endWipeout: 'No units or buildings left',
   endDays: 'On points when the day limit ran out',
   endSurrender: 'You surrendered',
+  endEnemySurrender: 'The enemy surrendered',
   endObjective: 'Mission objective',
   campaign: 'Campaign',
   locked: 'Finish the previous mission to unlock it.',

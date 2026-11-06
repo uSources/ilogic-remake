@@ -11,7 +11,7 @@ import { armyValue } from '../stats';
 import { measureObjective, objectiveStatus, type ObjectiveProgress } from '../objectives';
 import { alliesOf, enemiesOf, teamIds, teamState } from '../teams';
 import { maxBy } from '../util/pick';
-import type { Building, EndReason, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
+import type { Building, DefeatReason, EndReason, GameEvent, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;
@@ -65,14 +65,56 @@ function oneTeamPerAlliance(s: GameState, teams: readonly TeamId[]): TeamId[] {
   });
 }
 
-/** Por que han perdido estos equipos: alguno se ha rendido, se ha quedado sin Base o sin nada. */
-function lossReason(s: GameState, losers: readonly TeamId[]): EndReason {
-  if (losers.some((loser) => teamState(s, loser).resigned)) return 'surrender';
-  return losers.some((loser) => !hasHQ(s, loser)) ? 'hq' : 'wipeout';
+/**
+ * Por que ha caido un equipo ya derrotado (`isDefeated`), mirando la partida de ahora: se ha rendido,
+ * se ha quedado sin nada (ni unidades ni edificios: tampoco Base) o sin su Base.
+ */
+export function defeatReason(s: GameState, team: TeamId): DefeatReason {
+  if (teamState(s, team).resigned) return 'surrender';
+  const hasAnything = s.units.some((unit) => unit.team === team) || buildingsOf(s, team).length > 0;
+  return hasAnything ? 'hq' : 'wipeout';
 }
 
-/** Por que ha caido un equipo ya derrotado (`isDefeated`): se ha rendido, sin Base o sin nada. */
-export const defeatReason = (s: GameState, team: TeamId): EndReason => lossReason(s, [team]);
+/** Por que cayo: lo apuntado al caer (`TeamState.fell`) o, si no se apunto, lo de ahora. */
+const fallReason = (s: GameState, team: TeamId): DefeatReason => teamState(s, team).fell?.reason ?? defeatReason(s, team);
+
+/**
+ * Los que deciden de entre estos equipos caidos: los de la ultima caida apuntada (los que caen en la
+ * misma accion la comparten) o, si alguno no la tiene apuntada, esos (caen ahora).
+ */
+function lastFallen(s: GameState, losers: readonly TeamId[]): TeamId[] {
+  const unnoted = losers.filter((loser) => teamState(s, loser).fell === null);
+  if (unnoted.length) return unnoted;
+  const last = Math.max(...losers.map((loser) => teamState(s, loser).fell?.order ?? 0));
+  return losers.filter((loser) => teamState(s, loser).fell?.order === last);
+}
+
+/**
+ * Por que se decide la partida: por la caida que la decide (la ultima), no por una de antes. Si
+ * caen varios a la vez por motivos distintos, cuenta perder la Base, despues quedarse sin nada y
+ * despues rendirse.
+ */
+function lossReason(s: GameState, losers: readonly TeamId[]): EndReason {
+  const reasons = lastFallen(s, losers).map((loser) => fallReason(s, loser));
+  return REASON_PRIORITY.find((reason) => reasons.includes(reason)) ?? 'wipeout';
+}
+const REASON_PRIORITY: readonly DefeatReason[] = ['hq', 'wipeout', 'surrender'];
+
+/**
+ * Apunta la caida de los equipos que acaban de caer (`TeamState.fell`) y da su suceso
+ * ('teamDefeated', de `actor`: quien hizo la accion). Lo llama dispatch tras cada accion; el
+ * resultado de la partida mira la ultima caida.
+ */
+export function noteFallenTeams(s: GameState, actor: TeamId): GameEvent[] {
+  const fallen = teamIds(s).filter((team) => teamState(s, team).fell === null && isDefeated(s, team));
+  if (!fallen.length) return [];
+  const order = 1 + Math.max(0, ...s.teams.map((team) => team.fell?.order ?? 0));
+  return fallen.map((team) => {
+    const reason = defeatReason(s, team);
+    teamState(s, team).fell = { order, reason };
+    return { kind: 'teamDefeated', actor, team, reason };
+  });
+}
 
 /** Gana la alianza de `team` (todos sus equipos, tambien los que hayan caido), por `reason`. */
 const allianceWins = (s: GameState, team: TeamId, reason: EndReason): MatchResult => ({

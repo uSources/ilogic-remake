@@ -111,7 +111,7 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 7 as 6 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 8 as 7 })],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',

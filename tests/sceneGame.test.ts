@@ -17,6 +17,7 @@ import {
   outOfMatchEnd,
 } from '../src/scenes/game/endOfMatch';
 import { canUseMenuButton } from '../src/hud/game/turn';
+import { reasonText } from '../src/hud/menus/EndScreen';
 import { initialState } from '../src/hud/state';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
@@ -306,12 +307,25 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     act(s, 0, { kind: 'surrender' });
     expect(aPersonStillPlays(s, isPerson)).toBe(false);
     expect(outOfMatchEnd(s, 0)).toEqual({ outcome: 'lost', reason: 'surrender' });
-    // Sin rendirse: cae (sin Base) y quedan dos IA.
+    // Sin rendirse: cae y quedan dos IA. Sin nada (ni Base) es 'wipeout'; sin Base pero con algo, 'hq'.
     const fallen = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     fallen.buildings = fallen.buildings.filter((building) => building.owner !== 0);
     expect(aPersonStillPlays(fallen, isPerson)).toBe(false);
+    expect(outOfMatchEnd(fallen, 0)).toEqual({ outcome: 'lost', reason: 'wipeout' });
+    newUnit(fallen, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
     expect(outOfMatchEnd(fallen, 0)).toEqual({ outcome: 'lost', reason: 'hq' });
+    // Con dos personas, si cae una la otra sigue jugando.
+    const hotSeat = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    act(hotSeat, 0, { kind: 'surrender' });
+    expect(aPersonStillPlays(hotSeat, (team) => team === 0 || team === 1)).toBe(true);
     expect(endOfResult({ status: 'decided', winners: [1], reason: 'hq' }, 0)).toEqual({ outcome: 'lost', reason: 'hq' });
+  });
+
+  it('el motivo del final, para quien mira: rendirse es «te has rendido» solo si ha perdido', () => {
+    expect(reasonText('lost', 'surrender')).toBe('endSurrender');
+    expect(reasonText('won', 'surrender')).toBe('endEnemySurrender');
+    expect(reasonText('draw', 'surrender')).toBe('endEnemySurrender');
+    expect(reasonText('won', 'hq')).toBe('endHq');
   });
 
   it('salir mientras juegan los demas: solo mirando, y con dos pulsaciones a tiempo', () => {

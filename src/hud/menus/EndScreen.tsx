@@ -46,6 +46,12 @@ function ArmyChart({ data }: { data: readonly BySide[] }) {
 
 const REASON = { hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', objective: 'endObjective', surrender: 'endSurrender' } as const;
 
+/** Por que ha acabado, para quien mira: «te has rendido» solo si ha perdido; si no, se ha rendido el otro. */
+export function reasonText(outcome: EndVM['outcome'], reason: keyof typeof REASON): TextKey {
+  if (reason === 'surrender' && outcome !== 'lost') return 'endEnemySurrender';
+  return REASON[reason];
+}
+
 /** El titulo del final para quien mira: en una mision, cumplida o no; si no, victoria, derrota o empate. */
 const END_TITLE: Record<'game' | 'mission', Record<EndVM['outcome'], TextKey>> = {
   game: { won: 'victory', lost: 'defeat', draw: 'draw' },
@@ -116,7 +122,7 @@ export function EndScreen({ end }: { end: EndVM }) {
       <div class="end-head">
         {end.mission && <span class="label">{end.mission}</span>}
         <span class="end-title">{endTitle(end)}</span>
-        {end.reason && <span class="end-reason">{t(REASON[end.reason])}</span>}
+        {end.reason && <span class="end-reason">{t(reasonText(end.outcome, end.reason))}</span>}
       </div>
       <div class="px end-card">
         <div class="end-cols">

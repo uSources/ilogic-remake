@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_MODES, gameModeOf } from '@core/modes';
-import { isWinner, matchResult, VICTORY_RULES } from '@core/rules';
+import { defeatReason, isWinner, matchResult, newUnit, VICTORY_RULES } from '@core/rules';
 import { buildMission, missionById } from '@core/missions';
 import { defaultContent } from '@core/content/default';
 import type { GameModeId, VictoryRuleId } from '@core/model';
-import { act, blankState, BLANK_DICE_SEED, hqId, resultFor } from './helpers';
+import { act, blankState, BLANK_DICE_SEED, hqId, resultFor, unitTypeNamed } from './helpers';
 
-/** Quita al equipo su Base (con eso ha perdido). */
+/** Quita al equipo su Base (con eso ha perdido) y le deja una unidad: ha caido por la Base, no por quedarse sin nada. */
 const takeHeadquarters = (s: ReturnType<typeof blankState>, team: number) => {
   s.buildings = s.buildings.filter((building) => !(building.owner === team && building.type === hqId()));
+  newUnit(s, unitTypeNamed('Soldier'), team, { x: 1 + team, y: 10 });
 };
 
 describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
@@ -34,6 +35,38 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
     const result = matchResult(s);
     expect(result).toEqual({ status: 'decided', winners: [0, 2], reason: 'hq' });
     expect([isWinner(result, 0), isWinner(result, 1), isWinner(result, 2)]).toEqual([true, false, true]);
+  });
+
+  it('el motivo es el de la caida que decide, no el de una de antes (dos personas y la IA)', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    act(s, 0, { kind: 'surrender' });
+    expect(s.teams[0]!.fell).toEqual({ order: 1, reason: 'surrender' });
+    expect(matchResult(s).status).toBe('playing');
+    // Despues, el 1 le captura la Base a la IA (la caida se apunta en la accion en que pasa).
+    newUnit(s, unitTypeNamed('Soldier'), 2, { x: 8, y: 8 });
+    const hq = s.buildings.find((building) => building.owner === 2 && building.type === hqId())!;
+    const unit = newUnit(s, unitTypeNamed('Soldier'), 1, hq);
+    hq.capture = { team: 1, uid: unit.uid, left: 1 };
+    s.turn = 1;
+    const events = act(s, 1, { kind: 'capture', uid: unit.uid });
+    expect(events.at(-1)).toEqual({ kind: 'teamDefeated', actor: 1, team: 2, reason: 'hq' });
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'hq' });
+  });
+
+  it('con dos personas, la que se rinde decide la partida: la otra gana por eso', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
+    act(s, 0, { kind: 'surrender' });
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'surrender' });
+  });
+
+  it('por que cae un equipo: rendirse, sin nada (antes que sin Base) o sin Base', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    expect(defeatReason(s, 1)).toBe('wipeout');
+    newUnit(s, unitTypeNamed('Soldier'), 1, { x: 4, y: 4 });
+    expect(defeatReason(s, 1)).toBe('hq');
+    act(s, 2, { kind: 'surrender' });
+    expect(defeatReason(s, 2)).toBe('surrender');
   });
 
   it('[CAMBIO] si caen todos a la vez, empate (en 2013 perdia el jugador)', () => {

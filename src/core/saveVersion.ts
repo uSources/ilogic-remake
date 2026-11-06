@@ -7,9 +7,10 @@
  * 6: la partida sabe de quien es el turno (`turn`, `turnOrder`, `turnStarted`), su modo (`mode`), quien
  *    se ha rendido (`TeamState.resigned`), de quien es el objetivo (`Objective.owner`) y los movimientos
  *    que se pueden deshacer (`undoableMoves`, antes uno solo: `lastMove`).
+ * 7: cada equipo apunta cuando y por que cayo (`TeamState.fell`): el final dice la ultima caida.
  * El tipo la ata al de GameState.version: subir una sin la otra no compila. Al subirla, los pasos para
  * leer las de antes van en MIGRATIONS (saveMigrations.ts).
  */
 import type { GameState } from './model';
 
-export const SAVE_VERSION: GameState['version'] = 6;
+export const SAVE_VERSION: GameState['version'] = 7;

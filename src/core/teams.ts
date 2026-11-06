@@ -116,6 +116,7 @@ export function newTeams(setups: readonly TeamSetup[], initialFunds: number): Te
     general: null,
     stats: emptyTeamStats(),
     resigned: false,
+    fell: null,
   }));
   if (allianceCount(teams) < 2) throw new Error('Una partida necesita al menos dos alianzas: si no, nadie es enemigo de nadie');
   return teams;

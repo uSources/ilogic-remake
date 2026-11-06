@@ -212,7 +212,10 @@ describe('cuatro equipos en dos alianzas', () => {
     expect([s.turn, s.turnOrder, nextTurn(s)]).toEqual([0, [0, 1, 2, 3], { team: 1, endsRound: false }]);
     // En el turno del 0 cae el 1: ya no juega.
     s.buildings = s.buildings.filter((building) => building.owner !== 1);
-    expect(act(s, 0, { kind: 'endTurn' })).toEqual([{ kind: 'turnEnd', actor: 0, next: 2 }]);
+    expect(act(s, 0, { kind: 'endTurn' })).toEqual([
+      { kind: 'turnEnd', actor: 0, next: 2 },
+      { kind: 'teamDefeated', actor: 0, team: 1, reason: 'hq' },
+    ]);
     expect([s.turn, s.turnStarted]).toEqual([2, false]);
     expectRejected(s, 2, { kind: 'wait', uid: 1 }, 'turnNotStarted');
     expectRejected(s, 3, { kind: 'startTurn' }, 'notYourTurn');

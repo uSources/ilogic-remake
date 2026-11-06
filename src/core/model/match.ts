@@ -25,6 +25,9 @@ export type VictoryRuleId = 'lastAllianceStanding' | 'objective' | 'dayLimit';
  */
 export type EndReason = 'hq' | 'wipeout' | 'surrender' | 'objective' | 'days';
 
+/** Por que cae un equipo: se ha rendido, se ha quedado sin nada o sin su Base. */
+export type DefeatReason = Extract<EndReason, 'surrender' | 'wipeout' | 'hq'>;
+
 /**
  * Como va una partida, igual para todos: sigue ('playing'), se ha decidido ('decided': `winners`,
  * los equipos que ganan: una alianza entera, o, si el dueño de un objetivo de mision lo falla, todos

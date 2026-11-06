@@ -45,6 +45,7 @@ export const menu = {
   endWipeout: 'Sin unidades ni edificios',
   endDays: 'Por puntos al acabar el límite de días',
   endSurrender: 'Te has rendido',
+  endEnemySurrender: 'El enemigo se ha rendido',
   endObjective: 'Objetivo de la misión',
   campaign: 'Campaña',
   locked: 'Termina la misión anterior para desbloquearla.',
