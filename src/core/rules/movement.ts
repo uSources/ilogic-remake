@@ -75,6 +75,31 @@ function takeCheapest(open: Pos[], cheapest: Grid<number>): Pos | null {
   return best;
 }
 
+/** El alcance a medio calcular: lo mas barato hasta cada casilla y las que quedan por mirar. */
+interface RangeSearch {
+  readonly rules: MoveRules;
+  readonly cheapest: Grid<number>;
+  readonly steps: Grid<number | null>;
+  readonly prev: Grid<Pos | null>;
+  readonly open: Pos[];
+}
+
+/** Mira cada vecina de `current`: si se llega mas barato por aqui, lo apunta (y la mira despues si es nueva). */
+function expandFrom(search: RangeSearch, current: Pos): void {
+  const { rules, cheapest } = search;
+  const spent = cheapest.at(current);
+  for (const next of neighbors4(cheapest, current)) {
+    if (!stepAllowed(rules, { from: current, to: next, spent })) continue;
+    const cost = spent + rules.profile.enterCost(next);
+    if (cost >= cheapest.at(next)) continue;
+    if (cheapest.at(next) === Infinity) search.open.push(next);
+    cheapest.set(next, cost);
+    search.prev.set(next, current);
+    // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
+    search.steps.set(next, rules.tiles.at(next) === 'passThrough' ? null : cost);
+  }
+}
+
 /**
  * Alcance de movimiento de la unidad desde donde esta: `steps` es lo que cuesta llegar a cada casilla
  * en la que se puede terminar, `prev` el camino mas barato. No mira si ya se ha movido este turno:
@@ -82,26 +107,18 @@ function takeCheapest(open: Pos[], cheapest: Grid<number>): Pos | null {
  */
 export function moveRange(s: GameState, unit: Unit): MoveRange {
   const rules = moveRulesOf(s, unit);
-  const steps = createLayer<number | null>(s, null);
-  const prev = createLayer<Pos | null>(s, null);
+  const search: RangeSearch = {
+    rules,
+    cheapest: createLayer(s, Infinity),
+    steps: createLayer<number | null>(s, null),
+    prev: createLayer<Pos | null>(s, null),
+    open: [rules.origin],
+  };
+  search.cheapest.set(rules.origin, 0);
   // Dijkstra sencillo: los costes son pequeños (1 a 3) y el alcance tambien.
-  const cheapest = createLayer(s, Infinity);
-  cheapest.set(rules.origin, 0);
-  const open: Pos[] = [rules.origin];
-  for (let current = takeCheapest(open, cheapest); current; current = takeCheapest(open, cheapest)) {
-    const spent = cheapest.at(current);
-    for (const next of neighbors4(cheapest, current)) {
-      if (!stepAllowed(rules, { from: current, to: next, spent })) continue;
-      const cost = spent + rules.profile.enterCost(next);
-      if (cost >= cheapest.at(next)) continue;
-      if (cheapest.at(next) === Infinity) open.push(next);
-      cheapest.set(next, cost);
-      prev.set(next, current);
-      // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
-      steps.set(next, rules.tiles.at(next) === 'passThrough' ? null : cost);
-    }
-  }
-  return { ...rules, steps, prev };
+  for (let current = takeCheapest(search.open, search.cheapest); current; current = takeCheapest(search.open, search.cheapest))
+    expandFrom(search, current);
+  return { ...rules, steps: search.steps, prev: search.prev };
 }
 
 /** Se puede terminar el movimiento en `pos` con este alcance. */
