@@ -21,7 +21,7 @@ export interface Unit extends Pos {
   turnState: UnitTurnState;
   /** 0..100 */
   life: number;
-  /** [CAMBIO] Enemigos destruidos (veterania, reglas nuevas). Las partidas antiguas no lo tienen. */
+  /** [CAMBIO] Enemigos destruidos (veterania, reglas nuevas). Sin poner: ninguno. */
   kills?: number;
   /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
   hitDay?: number;

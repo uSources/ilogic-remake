@@ -22,7 +22,7 @@ function sampleTeamArmy(s: GameState, stats: TeamStats, today: number): void {
     samples[dayIndex] = today;
     return;
   }
-  // Dias sin muestra (partidas antiguas): repetir la ultima.
+  // Dias sin muestra (unas estadisticas rotas que se vaciaron al leer la partida): repetir la ultima.
   while (samples.length < dayIndex) samples.push(samples[samples.length - 1] ?? today);
   samples.push(today);
 }

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { saveContext } from '@core/defaultGames';
 import { defaultContent } from '@core/content/default';
 import { endRound, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -61,10 +60,10 @@ describe('estadisticas', () => {
   it('se guardan con la partida y unas rotas se leen a cero', () => {
     const s = blankState();
     teamState(s, 0).stats.built = 4;
-    expect(statsOf(deserialize(serialize(s), saveContext(defaultContent()))!, 0).built).toBe(4);
+    expect(statsOf(deserialize(serialize(s), defaultContent())!, 0).built).toBe(4);
     const bad = JSON.parse(serialize(s)) as { teams: { stats: unknown }[] };
     bad.teams[0]!.stats = { built: 'x' };
-    expect(statsOf(deserialize(JSON.stringify(bad), saveContext(defaultContent()))!, 0)).toEqual(emptyTeamStats());
+    expect(statsOf(deserialize(JSON.stringify(bad), defaultContent())!, 0)).toEqual(emptyTeamStats());
   });
 });
 

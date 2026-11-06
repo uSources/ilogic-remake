@@ -5,13 +5,13 @@ import { defaultContent } from '@core/content/default';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { createLayer } from '@core/mapGrid';
-import { createMatch, saveContext } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { placeControlPoints } from '@core/mapgen';
 import { controlRound, groundDistance, inControlZone, newUnit, roundReport } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, giveTurn, savedByVersion1, unitTypeNamed, hqId, endRoundReport } from './helpers';
+import { blankState, giveTurn, unitTypeNamed, hqId, endRoundReport } from './helpers';
 import { duel, teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -136,17 +136,12 @@ describe('puntos de control', () => {
     expect(manhattan(tank, s.controlPoints[0]!)).toBeLessThan(d0);
   });
 
-  it('se guardan con la partida; las partidas antiguas siguen sin ellos', () => {
+  it('se guardan con la partida; una lista rota se quita al cargar', () => {
     const s = withPoints();
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.controlPoints).toEqual(s.controlPoints);
-    const raw = JSON.parse(serialize(s)) as { rules: Record<string, unknown>; controlPoints: unknown };
-    delete raw.rules.controlPoints;
-    delete raw.rules.controlIncome;
-    delete raw.rules.controlRadius;
+    const raw = JSON.parse(serialize(s)) as { controlPoints: unknown };
     raw.controlPoints = [{ x: -1, y: 2, owner: 0 }];
-    const old = deserialize(savedByVersion1(JSON.stringify(raw)), saveContext(defaultContent()))!;
-    expect(old.rules).toMatchObject({ controlPoints: 0, controlIncome: 0, controlRadius: 0 });
-    expect(old.controlPoints).toBeUndefined();
+    expect(deserialize(JSON.stringify(raw), defaultContent())!.controlPoints).toBeUndefined();
   });
 });

@@ -8,8 +8,9 @@
  *    se ha rendido (`TeamState.resigned`), de quien es el objetivo (`Objective.owner`) y los movimientos
  *    que se pueden deshacer (`undoableMoves`, antes uno solo: `lastMove`).
  * 7: cada equipo apunta cuando y por que cayo (`TeamState.fell`): el final dice la ultima caida.
- * El tipo la ata al de GameState.version: subir una sin la otra no compila. Al subirla, los pasos para
- * leer las de antes van en MIGRATIONS (saveMigrations.ts).
+ * El tipo la ata al de GameState.version: subir una sin la otra no compila. Solo se lee la de ahora:
+ * mientras el juego no ha salido, cambiar el formato es subir la version, y las partidas guardadas
+ * con una de antes se descartan (readSave da 'badVersion'; el juego hace como si no hubiera).
  */
 import type { GameState } from './model';
 

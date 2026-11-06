@@ -1,9 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
-import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles, unitById } from '@core/rules';
+import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles } from '@core/rules';
 import { serialize } from '@core/save';
 import { aiController, controllersFor, type AiBrain } from '@core/controllers';
 import {
@@ -27,8 +26,6 @@ import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, hqId, unitTypeNamed } from './helpers';
 import { PLAIN_RULES } from './plainRules';
-
-const fixture = (name: string) => readFileSync(`tests/fixtures/saves/${name}.json`, 'utf8');
 
 /** Una sesion de la persona (equipo 0) contra la IA, con lo que se haga apuntado. */
 function personVsAi(s: ReturnType<typeof blankState>) {
@@ -65,17 +62,6 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(ownEnd.events[0]).toMatchObject({ kind: 'capture', actor: 0, uid: soldier.uid });
     expect(steps.some((step) => step.team === 1 && startsTurn(step))).toBe(true);
     expect(s.day).toBe(2);
-  });
-
-  it('K3: al cargar un autoguardado del formato 5, el viaje de ese turno avanza', () => {
-    const s = loadGame(fixture('skirmish-v5'))!;
-    const before = { ...unitById(s, 1)! };
-    const { session, steps } = personVsAi(s);
-    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
-    const travel = steps[0]!.events.filter((event) => 'uid' in event && event.uid === 1);
-    expect(travel.length).toBeGreaterThan(0);
-    const after = unitById(s, 1)!;
-    expect(after.turnState !== 'ready' || after.travelTo === undefined || after.x !== before.x || after.y !== before.y).toBe(true);
   });
 
   it('el autoguardado es al empezar el turno de la persona: al cargarlo, nada se repite', () => {

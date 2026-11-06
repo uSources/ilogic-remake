@@ -3,7 +3,6 @@
  * Las comprueba el cazador de fallos (fuzz.ts) despues de cada accion. Si una falla, es un fallo del
  * juego (o un invariante mal escrito): nunca "arreglarlo" relajando el invariante sin explicarlo.
  */
-import { saveContext } from '@core/defaultGames';
 import { MAX_LIFE } from '@core/data';
 import { findBuildingType, findUnitType, terrainAt } from '@core/gameContent';
 import { canMoveOn, movementOf, commandUsed } from '@core/rules';
@@ -70,7 +69,7 @@ export function checkInvariants(s: GameState): string[] {
   const squadIds = (s.squads ?? []).map((squad) => squad.id);
   if (s.nextSquadId <= Math.max(0, ...squadIds)) errors.push(`nextSquadId ${s.nextSquadId} no es mayor que las escuadras que hay`);
   // Guardar y cargar no pierde nada.
-  const back = deserialize(serialize(s), saveContext(s.content));
+  const back = deserialize(serialize(s), s.content);
   if (!back) errors.push('la partida no se puede volver a cargar (deserialize la rechaza)');
   else if (serialize(back) !== serialize(s)) errors.push('guardar y cargar cambia la partida');
   return errors;

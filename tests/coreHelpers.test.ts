@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { saveContext } from '@core/defaultGames';
 import { defaultContent } from '@core/content/default';
 import {
   attackZone,
@@ -14,7 +13,7 @@ import {
   type MovePath,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { blankState, savedByVersion1, unitTypeNamed, terrainNamed, hqId } from './helpers';
+import { blankState, unitTypeNamed, terrainNamed, hqId } from './helpers';
 
 const HQ = hqId();
 
@@ -106,7 +105,7 @@ describe('partidas guardadas', () => {
 
   it('ida y vuelta sin perder nada', () => {
     const s = sample();
-    expect(serialize(deserialize(serialize(s), saveContext(defaultContent()))!)).toBe(serialize(s));
+    expect(serialize(deserialize(serialize(s), defaultContent())!)).toBe(serialize(s));
   });
 
   it.each([
@@ -191,17 +190,14 @@ describe('partidas guardadas', () => {
       () => serialize({ ...sample(), mission: { id: 'x', objective: { kind: 'survive', days: 0 } } as never }),
     ],
   ])('rechaza: %s', (_name, make) => {
-    expect(deserialize(make(), saveContext(defaultContent()))).toBeNull();
+    expect(deserialize(make(), defaultContent())).toBeNull();
   });
 
-  it('corrige lo que se puede corregir (uid siguiente, dia) e ignora el combustible de las antiguas', () => {
+  it('corrige lo que se puede corregir (uid siguiente, dia)', () => {
     const s = sample();
-    Object.assign(s.units[0]!, { fuel: 1e9, ammo: 3 }); // partida guardada antes de quitarlos
     s.nextUid = 0;
     s.day = -3;
-    const back = deserialize(savedByVersion1(serialize(s)), saveContext(defaultContent()))!;
-    expect(back.units[0]).not.toHaveProperty('fuel');
-    expect(back.units[0]).not.toHaveProperty('ammo');
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.nextUid).toBeGreaterThan(Math.max(...back.units.map((unit) => unit.uid)));
     expect(back.day).toBe(1);
   });

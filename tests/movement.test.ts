@@ -1,12 +1,11 @@
 import { unitTypeOf } from '@core/gameContent';
-import { saveContext } from '@core/defaultGames';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_RULES } from './plainRules';
 import { moveRange, pathTo, validPath, visibility, newUnit } from '@core/rules';
 import { dispatch } from '@core/actions';
 import type { GameEvent, GameState, Pos } from '@core/model';
-import { act, blankState, savedByVersion1, unitTypeNamed } from './helpers';
+import { act, blankState, unitTypeNamed } from './helpers';
 
 /** El camino del suceso de mover (o de unirse) que ha dejado una accion. */
 function pathOf(events: GameEvent[]): Pos[] & { ambush?: Pos } {
@@ -219,11 +218,7 @@ describe('movimiento: ordenes de varios turnos', () => {
     const step = stepToward(s, tank, goal)!;
     expect(step).toEqual({ x: 7, y: 2 });
     tank.travelTo = goal;
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.units[0]!.travelTo).toEqual(goal);
-    // Las guardadas antes de llamarlo travelTo lo traen como `order` (MIGRATIONS).
-    const old = savedByVersion1(serialize(s).replace('"travelTo"', '"order"'));
-    expect(old).toContain('"order"');
-    expect(deserialize(old, saveContext(defaultContent()))!.units[0]!.travelTo).toEqual(goal);
+    expect(deserialize(serialize(s), defaultContent())!.units[0]!.travelTo).toEqual(goal);
     // Un destino al que no se puede llegar (agua para un tanque): null.
     s.map[25]![25] = 'Water';
     expect(stepToward(s, tank, { x: 25, y: 25 })).toBeNull();

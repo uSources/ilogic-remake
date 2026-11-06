@@ -3,7 +3,7 @@ import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { skirmishConfig } from '@core/match';
 import { defaultContent } from '@core/content/default';
-import { createMatch, saveContext } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { MoveType } from '@core/content';
@@ -271,23 +271,23 @@ describe('cuatro equipos en dos alianzas', () => {
     runMatch(session, { until: (state) => state.day > 12 });
     expect(attacks.length).toBeGreaterThan(0);
     for (const { attacker, target } of attacks) expect(isHostile(s, attacker, target)).toBe(true);
-    const back = deserialize(serialize(s), saveContext(defaultContent()))!;
+    const back = deserialize(serialize(s), defaultContent())!;
     expect(back.teams).toEqual(s.teams);
     expect(serialize(back)).toBe(serialize(s));
   });
 
   it('una partida guardada con un solo equipo, una sola alianza o un equipo mal formado no se lee', () => {
     const raw = JSON.parse(serialize(fourCorners())) as { teams: unknown[] };
-    expect(deserialize(JSON.stringify({ ...raw, teams: raw.teams.slice(0, 1) }), saveContext(defaultContent()))).toBeNull();
+    expect(deserialize(JSON.stringify({ ...raw, teams: raw.teams.slice(0, 1) }), defaultContent())).toBeNull();
     const badController = structuredClone(raw) as { teams: { controller: string }[] };
     badController.teams[1]!.controller = 'robot';
-    expect(deserialize(JSON.stringify(badController), saveContext(defaultContent()))).toBeNull();
+    expect(deserialize(JSON.stringify(badController), defaultContent())).toBeNull();
     const oneAlliance = structuredClone(raw) as { teams: { alliance: number }[] };
     for (const team of oneAlliance.teams) team.alliance = 0;
-    expect(deserialize(JSON.stringify(oneAlliance), saveContext(defaultContent()))).toBeNull();
+    expect(deserialize(JSON.stringify(oneAlliance), defaultContent())).toBeNull();
     const badId = structuredClone(raw) as { teams: { id: number }[] };
     badId.teams[2]!.id = 7;
-    expect(deserialize(JSON.stringify(badId), saveContext(defaultContent()))).toBeNull();
+    expect(deserialize(JSON.stringify(badId), defaultContent())).toBeNull();
   });
 });
 

@@ -15,10 +15,9 @@ type MissionRecords = Record<string, number | null>;
 
 const isValidRecord = (days: unknown): days is number => typeof days === 'number' && days > 0;
 
-/** Las partidas antiguas guardaban solo la lista de misiones terminadas, sin marca. */
+/** Las marcas guardadas (id de mision → dias); lo que no lo es, como si no hubiera nada. */
 function recordsFromSaved(saved: unknown): MissionRecords {
-  if (Array.isArray(saved)) return Object.fromEntries(saved.filter((id): id is string => typeof id === 'string').map((id) => [id, null]));
-  if (!saved || typeof saved !== 'object') return {};
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
   const records: MissionRecords = {};
   for (const [id, days] of Object.entries(saved)) records[id] = isValidRecord(days) ? days : null;
   return records;

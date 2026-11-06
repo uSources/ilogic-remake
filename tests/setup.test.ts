@@ -5,7 +5,7 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
-import { createMatch, saveContext } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { groundDistance, matchResult, newUnit, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -52,21 +52,21 @@ describe('nueva partida: tamaños de mapa', () => {
     const rules = rulesWith(defaultContent(), ruleChanges);
     const s = createMatch(skirmishConfig({ seed: 3, size: 20, ruleChanges, teams: duel('human', 'ai') }));
     expect(s.rules).toEqual(rules);
-    expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules).toEqual(rules);
+    expect(deserialize(serialize(s), defaultContent())!.rules).toEqual(rules);
   });
 
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
     const s = createMatch(skirmishConfig({ seed: 7, size: 40, teams: duel('human', 'ai') }));
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
-    const loaded = deserialize(json, saveContext(defaultContent()))!;
+    const loaded = deserialize(json, defaultContent())!;
     expect(loaded).not.toBeNull();
     expect([mapGrid(loaded).width, mapGrid(loaded).height]).toEqual([40, 40]);
     expect(loaded.setup).toEqual({ seed: 7, size: 40, theme: null });
     expect(
       deserialize(
         JSON.stringify({ ...JSON.parse(json), map: blankMap(32, defaultContent().plainTerrain.id).slice(0, 25) }),
-        saveContext(defaultContent()),
+        defaultContent(),
       ),
     ).toBeNull();
   });
@@ -100,7 +100,7 @@ describe('repetir el turno enemigo', () => {
     const before = serialize(s);
     const ev1 = [...aiTurn(s, seededRng(42), 1)];
     const after = serialize(s);
-    const copy = deserialize(before, saveContext(defaultContent()))!;
+    const copy = deserialize(before, defaultContent())!;
     const ev2 = [...aiTurn(copy, seededRng(42), 1)];
     expect(ev2).toEqual(ev1);
     expect(serialize(copy)).toBe(after);

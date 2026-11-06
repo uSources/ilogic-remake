@@ -202,8 +202,8 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `rulesConfig.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto con cambios |
 | `teams.ts` | los equipos de la partida: alianzas, enemigos, quien los juega (ver "Equipos") |
 | `data.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`) |
-| `defaultGames.ts` | partidas con el contenido del juego: `createMatch`, `loadGame`, `saveContext` |
-| `save.ts` + `savedParts.ts` + `saveMigrations.ts` | guardar y leer (`readSave`), con las migraciones de los formatos antiguos |
+| `defaultGames.ts` | partidas con el contenido del juego: `createMatch`, `loadGame` |
+| `save.ts` + `savedParts.ts` + `saveVersion.ts` | guardar y leer (`readSave`): solo el formato de ahora |
 | `util/grid.ts`, `mapGrid.ts` | rejillas (`Grid<T>`, `GridBounds`) y el mapa de una partida como rejilla (`mapGrid(s)`) |
 | `geom.ts` | `posOf`, rombos (`diamond`, `neighbors4`), cuadrados (`squareArea`), `posKey` |
 | `util/validation.ts` | comprobar lo que viene de fuera: `isInt`, `isPos`, `isPosOn` (e `isEntryId`, en content/catalog.ts) |
@@ -252,8 +252,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 - `gameState.ts`: `newGameState({ map, rules, content, mode, teams, diceSeed, firstTeam?, theme? })`
   lo usan mapgen, misiones, laboratorio, duelos y tests. Quien la crea dice sus equipos (`teams:
   duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados.
-- `defaultGames.ts`: `createMatch(config, mapRng?)`, `loadGame(json)` y `saveContext(contenido)` (lo
-  que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
+- `defaultGames.ts`: `createMatch(config, mapRng?)` y `loadGame(json)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
   juego (ESLint).
 - `rulesSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
   null). La usan el contenido (rules.json) y el guardado; rules.schema.json dice lo mismo para los
@@ -273,33 +272,20 @@ mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
 
 #### Guardar y leer
 
-- `readSave(json, contexto)` da `{ ok, state }` o `{ ok: false, error }` con el `SaveError` de la
-  parte rota (`badMap`, `badUnits`, `badRules`...); `deserialize` es su atajo que da null. El
-  `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo).
+- `readSave(json, contenido)` da `{ ok, state }` o `{ ok: false, error }` con el `SaveError` de la
+  parte rota (`badVersion`, `badMap`, `badUnits`, `badRules`...); `deserialize` es su atajo que da
+  null. El contenido no va en la partida: lo da quien lee.
 - El JSON leido es un `SavedGame` (sus campos, `unknown`) hasta que se ha comprobado entero;
   `savedParts.ts` comprueba o limpia cada parte (lo opcional roto se quita) con lo que necesita
   (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni
-  escuadras ni teclas).
+  escuadras ni teclas). Lo que la partida siempre guarda tiene que estar: no se rellena con valores
+  por defecto (una regla que falta es `badRules`).
 - Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 7, atada al
-  tipo de `GameState.version`). `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones
-  anteriores, cada uno con hasta que version hace falta y si va sobre el JSON tal cual ('read') o
-  sobre la partida comprobada ('checked'). Cada paso hace lo de entonces con su propia copia fija
-  (no llama al codigo de ahora: de fuera solo lee el `SaveContext`, p. ej. la lista de unidades de
-  su contenido).
-- Los pasos, por los formatos que los necesitan. Del 1: nombres viejos de campos, reglas que
-  faltaban, pasar a la escuadra la orden comun de sus unidades. Del 1 y 2: 'tipos por id en vez de
-  por numero' (unidades, edificios, terreno, tema, clima y objetivo de captura; el terreno y los
-  temas con su orden de entonces, `FORMAT_2_TERRAIN`/`FORMAT_2_THEMES`) y 'bandos fijos pasan a
-  equipos' (los pares [jugador, IA] de dinero, generales y estadisticas pasan a `teams`; las
-  escuadras y la mision eran del equipo 0). Del 1 al 3: 'dados de la partida' (una semilla sacada de
-  la del mapa y el dia), 'banderas del turno pasan a turnState' y 'teclas de grupo de las
-  escuadras'. Del 1 al 4: 'numero de la siguiente escuadra' (`nextSquadId`, desde la mayor; antes
-  los numeros se reutilizaban). Del 1 al 5: 'turno, modo, rendirse y dueño del objetivo' (le toca a
-  la persona; su turno aun no ha empezado si todas sus unidades estan listas, el autoguardado: asi
-  sus viajes avanzan al cargar, K3) y 'movimientos que se pueden deshacer' (`lastMove` pasa a
-  `undoableMoves`). Del 1 al 6: 'cuando cayo cada equipo' (no se sabia: `fell` null; la siguiente
-  accion apunta a quien ya habia caido).
-- Se prueban con partidas guardadas de verdad (`tests/fixtures/saves/*-v1.json` a `*-v6.json`).
+  tipo de `GameState.version`) y **solo se lee la de ahora**: no hay migraciones. Mientras el juego no
+  ha salido, cambiar lo que se guarda es subir la version, y las partidas guardadas con una de antes
+  se descartan (`badVersion`): el menu no ofrece Continuar y, al intentar cargarla, se borra el hueco.
+- Se prueba con partidas creadas por el codigo de ahora (`tests/readSave.test.ts`), sin ficheros
+  guardados.
 
 #### Rejillas y casillas
 
@@ -623,9 +609,7 @@ sequenceDiagram
   decisiones llevan su propio `Rng` con semilla. La misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` y `npm run huella` lo vigilan); cargar una partida no cambia
   lo que saldra en sus combates: el resultado de un ataque ya esta fijado por la partida, y volver a
-  cargar para atacar otra vez da el mismo. Las guardadas en el formato 3 o antes no tenian dados: al
-  leerlas se les da una semilla fija, sacada de la del mapa y del dia (la migracion 'dados de la
-  partida'), asi que tambien repiten.
+  cargar para atacar otra vez da el mismo.
 - La semilla de las decisiones de la IA no es de la partida sino de su controlador
   (`aiController(rng)`): en la pantalla, una al empezar la partida; en las herramientas, la de su
   `--seed`. Va aparte de `GameState` a proposito: es estado del que controla a ese equipo, no de las
