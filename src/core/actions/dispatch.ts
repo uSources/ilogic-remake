@@ -10,6 +10,7 @@ import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, G
 import { guardProblem } from './guards';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
+import { recordEvents } from '../stats';
 import { ACTIONS } from './registry';
 import type { ActionDefinition } from './types';
 
@@ -29,13 +30,16 @@ export const isValidAction = (s: GameState, team: TeamId, action: GameAction): b
 
 /**
  * Hace la accion ya comprobada (su `apply`), olvida lo que se podia deshacer si la accion cuenta
- * algo nuevo de la partida (sin `keepsUndo`) y deja la partida en orden (INVARIANTS).
+ * algo nuevo de la partida (sin `keepsUndo`), deja la partida en orden (INVARIANTS) y apunta sus
+ * sucesos en las estadisticas (stats.ts: de todos los sucesos, se animen o no).
  */
 function applyAction(s: GameState, team: TeamId, action: GameAction, dice: Dice): GameEvent[] {
   const definition = definitionOf(action);
-  const events = definition.apply(s, team, action, dice);
+  const applied = definition.apply(s, team, action, dice);
   if (!definition.keepsUndo) forgetUndoableMoves(s);
-  return [...events, ...restoreInvariants(s)];
+  const events = [...applied, ...restoreInvariants(s)];
+  recordEvents(s, events);
+  return events;
 }
 
 /**

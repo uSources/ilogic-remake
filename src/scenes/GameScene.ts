@@ -12,7 +12,6 @@ import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
 import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
-import { recordEvent, sampleArmy } from '../core/stats';
 import { dispatch } from '../core/actions';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
@@ -228,7 +227,6 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     setEndFilter(null);
-    sampleArmy(this.s);
     this.lastAt = null;
     this.view = new MapView(this);
     this.view.buildTerrain(this.s);
@@ -754,13 +752,12 @@ export class GameScene extends Phaser.Scene {
     for (const event of events) this.noteEvent(event);
   }
 
-  /** Un suceso ya hecho: estadisticas, tutorial, Ctrl+Z y donde ha pasado lo ultimo. */
+  /** Un suceso ya hecho: tutorial, Ctrl+Z y donde ha pasado lo ultimo (las estadisticas las lleva dispatch). */
   private noteEvent(event: GameEvent): void {
     const isOwnTurn = !this.othersPlaying;
     const replaying = this.turns.replaying;
     // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
     if (isOwnTurn && !KEEPS_UNDO.has(event.kind)) this.moves.clearUndo();
-    if (!replaying) recordEvent(this.s, event);
     if (!replaying && isOwnTurn) this.tutorial.record(event);
     if (event.kind === 'attack') this.lastAt = { ...event.at };
     else if (event.kind === 'capture') this.lastAt = { ...event.at };

@@ -1,5 +1,6 @@
 import { allianceScore, rivalScore } from '../../core/rules';
-import { alliesOf, enemiesOf, teamState } from '../../core/teams';
+import { armyByDay } from '../../core/stats';
+import { alliesOf, enemiesOf, perTeam, teamState, teamValue } from '../../core/teams';
 import type { GameState, TeamId, TeamStats } from '../../core/model';
 import type { EndStatsVM } from '../../hud/store';
 import type { BySide } from '../../hud/vm/common';
@@ -32,8 +33,9 @@ export const endScoreVM = (s: GameState, viewer: TeamId): BySide => [allianceSco
 
 /** Valor de los ejercitos dia a dia, de su alianza y de sus enemigos (null con menos de dos dias apuntados). */
 export function armyChartVM(s: GameState, viewer: TeamId): BySide[] | null {
-  const days = teamState(s, viewer).stats.army.length;
-  if (days < 2) return null;
-  const onDay = (day: number) => bySide(s, viewer, (team) => teamState(s, team).stats.army[day] ?? 0);
-  return Array.from({ length: days }, (_, day) => onDay(day));
+  // Con un solo dia no hay grafica: un punto.
+  if (s.day < 2) return null;
+  const armies = perTeam(s, (team) => armyByDay(s, team));
+  const onDay = (day: number) => bySide(s, viewer, (team) => teamValue(armies, team)[day] ?? 0);
+  return Array.from({ length: s.day }, (_, day) => onDay(day));
 }

@@ -16,7 +16,6 @@ import { seededRng } from '../../core/util/random';
 import { canCapture, endRound, roundReport, othersAfter, unitById, type RoundReport, canMoveNow } from '../../core/rules';
 import { deserialize, serialize } from '../../core/save';
 import { squadById } from '../../core/squads';
-import { sampleArmy } from '../../core/stats';
 import { isHostile, notAiControlledReason } from '../../core/teams';
 import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
@@ -295,7 +294,6 @@ export class TurnFlow {
   private closeRound(): RoundReport {
     const host = this.host;
     const report = roundReport(host.state, endRound(host.state));
-    sampleArmy(host.state);
     if (settings.autosave && writeSave(serialize(host.state))) host.markSaved();
     return report;
   }

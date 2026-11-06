@@ -27,9 +27,19 @@ function sampleTeamArmy(s: GameState, stats: TeamStats, today: number): void {
   samples.push(today);
 }
 
-/** Apunta el valor del ejercito de cada equipo del dia actual. */
+/** Apunta el valor del ejercito de cada equipo del dia actual (al crear la partida y al empezar cada dia). */
 export function sampleArmy(s: GameState): void {
   for (const team of s.teams) sampleTeamArmy(s, team.stats, armyValue(s, team.id));
+}
+
+/**
+ * El valor del ejercito de un equipo cada dia, hasta hoy: el de las muestras de los dias pasados y,
+ * hoy, el de ahora (asi la grafica del final acaba en como ha acabado). Solo lee.
+ */
+export function armyByDay(s: GameState, team: TeamId): number[] {
+  const samples = teamState(s, team).stats.army;
+  const pastDays = Math.max(0, s.day - 1);
+  return [...Array.from({ length: pastDays }, (_, day) => samples[day] ?? 0), armyValue(s, team)];
 }
 
 /** Las estadisticas de un equipo, para leerlas. */
@@ -61,6 +71,11 @@ export function recordEvent(s: GameState, event: GameEvent): void {
       // Mover, unir, subir, esperar, ordenes, escuadras y los poderes no cuentan para las estadisticas.
       break;
   }
+}
+
+/** Apunta los sucesos de una accion ya hecha (dispatch lo hace con todas: las estadisticas salen de los sucesos). */
+export function recordEvents(s: GameState, events: readonly GameEvent[]): void {
+  for (const event of events) recordEvent(s, event);
 }
 
 /** Muestras de ejercito que se aceptan de una partida guardada (una por dia; mas es un fichero roto). */

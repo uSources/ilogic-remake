@@ -7,7 +7,6 @@ import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { sampleArmy } from '../../core/stats';
 import { isWinner } from '../../core/rules';
 import { enemiesOf } from '../../core/teams';
 import type { EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
@@ -121,7 +120,6 @@ export class EndOfMatch {
     const won = outcome === 'won';
     const reason = result.reason;
     host.closeMatch();
-    sampleArmy(s);
     const mission = s.mission ? missionById(s.mission.id) : undefined;
     const bestBefore = mission ? bestDays(mission.id) : null;
     if (mission && won) markCompleted(mission.id, s.day);
