@@ -19,7 +19,8 @@ import type {
   TeamId,
   Unit,
 } from '@core/model';
-import { aiController, GameSession } from '@core/session';
+import { aiController } from '@core/controllers';
+import { GameSession } from '@core/session';
 import { dispatch } from '@core/actions';
 import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/sandbox';

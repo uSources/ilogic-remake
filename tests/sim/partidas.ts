@@ -1,5 +1,6 @@
 import { expect } from 'vitest';
-import { controllersFor, GameSession, runMatch } from '@core/session';
+import { controllersFor } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { createMatch, saveContext } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';

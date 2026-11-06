@@ -12,7 +12,6 @@ import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { visibility } from '../rules/visibility';
 import { effectiveStandingOrder } from '../squads/standingOrders';
 import type { StandingOrderKind, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { dispatch } from '../actions/dispatch';
 import type { ActionDispatcher } from '../actions/types';
 import { act, aiCtx, canAct, doMove, finish, needsRepair, type AiCtx } from './context';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
@@ -23,7 +22,7 @@ import { captureHere, retreat, tryAttack } from './tactics';
  * (Unit.standingOrder) que siguen sin usar la cumplen. No toca las demas unidades ni compra nada.
  * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
-export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispatcher = dispatch): Generator<GameEvent, number[]> {
+export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispatcher): Generator<GameEvent, number[]> {
   const ai = aiCtx(team, dispatcher);
   const withStandingOrder = teamUnits(s, ai.me).filter((unit) => effectiveStandingOrder(s, unit));
   const fulfilled: number[] = [];
@@ -33,12 +32,7 @@ export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispat
 }
 
 /** [CAMBIO] La unidad empieza ya su orden recien dada (si aun no se ha movido). */
-export function* startStandingOrder(
-  s: GameState,
-  uid: number,
-  team: TeamId,
-  dispatcher: ActionDispatcher = dispatch,
-): Generator<GameEvent, boolean> {
+export function* startStandingOrder(s: GameState, uid: number, team: TeamId, dispatcher: ActionDispatcher): Generator<GameEvent, boolean> {
   return yield* unitStandingOrderTurn(s, aiCtx(team, dispatcher), uid);
 }
 
@@ -163,14 +157,14 @@ const PREVIEW_DICE_SEED = 0x1d0c;
  * puede delatarlos (ni como objetivo, ni por un camino que los rodee o una emboscada).
  * Es una prevision: con enemigos escondidos o la suerte del combate, el turno real puede variar.
  */
-export function previewStandingOrders(s: GameState, team: TeamId): Map<number, StandingOrderIntent> {
+export function previewStandingOrders(s: GameState, team: TeamId, dispatcher: ActionDispatcher): Map<number, StandingOrderIntent> {
   const intents = new Map<number, StandingOrderIntent>();
   const actors = s.units.filter((unit) => unit.team === team && effectiveStandingOrder(s, unit) && canAct(s, unit));
   if (!actors.length) return intents;
   const copy = withoutHiddenEnemies(s, team);
   copy.dice = PREVIEW_DICE_SEED;
   for (const unit of actors) intents.set(unit.uid, { path: [] });
-  const turn = assistTurn(copy, team);
+  const turn = assistTurn(copy, team, dispatcher);
   for (let step = turn.next(); !step.done; step = turn.next()) recordIntent(intents, step.value);
   return intents;
 }

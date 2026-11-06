@@ -8,10 +8,9 @@
 import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
-import { autoCapturers } from '../../core/actions';
-import { roundReport, unitById, type RoundReport } from '../../core/rules';
+import { autoCapturers, roundReport, unitById, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
-import { isAutosaveMoment, GameSession, playMatch, replayControllers, type ActedStep, type SessionStep } from '../../core/session';
+import { GameSession, playMatch, replayControllers, type ActedStep, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
 import { isHostile } from '../../core/teams';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -236,7 +235,7 @@ export class TurnFlow {
   /** Empieza el turno de una persona que no es la que mira (varias personas en esta pantalla, por turnos). */
   private startsTurnOfAnotherPerson(step: ActedStep): boolean {
     const host = this.host;
-    return step.action.kind === 'startTurn' && step.team !== host.viewer && host.session.controllerOf(step.team).name === 'human';
+    return step.action.kind === 'startTurn' && step.team !== host.viewer && host.session.isPerson(step.team);
   }
 
   /**
@@ -282,7 +281,7 @@ export class TurnFlow {
   /** Guardado automatico: al empezar el turno de una persona (ya con sus viajes dados), si el modo lo hace. */
   private autosave(step: ActedStep): void {
     const s = this.host.session.state;
-    if (settings.autosave && isAutosaveMoment(s, step) && writeSave(serialize(s))) this.host.markSaved();
+    if (settings.autosave && this.host.session.isAutosaveMoment(step) && writeSave(serialize(s))) this.host.markSaved();
   }
 
   /**

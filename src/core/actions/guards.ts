@@ -26,8 +26,12 @@ export const ACTION_GUARDS: readonly ActionGuard[] = [
   { id: 'playing', check: (s) => (isMatchOver(s) ? 'matchOver' : null) },
   // Solo juega el equipo al que le toca (GameState.turn).
   { id: 'turn', check: (s, team) => (s.turn === team ? null : 'notYourTurn') },
-  // Y su turno empieza antes de nada (lo que pasa solo al empezarlo va primero: los viajes).
-  { id: 'started', check: (s, _team, action) => (s.turnStarted || action.kind === 'startTurn' ? null : 'turnNotStarted') },
+  // Y su turno empieza antes de nada (lo que pasa solo al empezarlo va primero: los viajes). Un
+  // equipo que ya ha perdido no lo empieza: solo lo pasa (lo mira 'standing').
+  {
+    id: 'started',
+    check: (s, team, action) => (s.turnStarted || action.kind === 'startTurn' || !takesTurn(s, team) ? null : 'turnNotStarted'),
+  },
   // Un equipo que ha perdido (sin Base, sin nada o rendido: isDefeated) ya no juega, aunque le quede
   // algo. Si cae en su propio turno, solo puede pasarlo.
   { id: 'standing', check: (s, team, action) => (takesTurn(s, team) || action.kind === 'endTurn' ? null : 'defeated') },

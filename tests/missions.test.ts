@@ -11,7 +11,8 @@ import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missio
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_DICE_SEED = 1;
 import { groundDistance } from '@core/rules';
-import { aiController, GameSession, runMatch } from '@core/session';
+import { aiController } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { deserialize, serialize } from '@core/save';
 import { savedByVersion1, hqId, resultFor } from './helpers';
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { aiController, GameSession, runMatch } from '@core/session';
+import { aiController } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { skirmishConfig } from '@core/match';
 import { defaultContent } from '@core/content/default';
 import { createMatch, saveContext } from '@core/defaultGames';

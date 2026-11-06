@@ -15,7 +15,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
-import { aiController, controllersFor, GameSession, runMatch, type AiBrain } from '@core/session';
+import { aiController, controllersFor, type AiBrain } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';

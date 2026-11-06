@@ -12,7 +12,8 @@ import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
 import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
-import { controllersFor, GameSession, type ActedStep } from '../core/session';
+import { controllersFor } from '../core/controllers';
+import { GameSession, type ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
 import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
@@ -665,7 +666,7 @@ export class GameScene extends Phaser.Scene {
   private checkEnd(): boolean {
     const result = matchResult(this.s);
     if (result.status === 'playing') return false;
-    const people = teamIds(this.s).filter((team) => this.session.controllerOf(team).name === 'human');
+    const people = teamIds(this.s).filter((team) => this.session.isPerson(team));
     this.viewer = endViewer(result, this.viewer, people);
     void this.endScreen.finish(result);
     return true;

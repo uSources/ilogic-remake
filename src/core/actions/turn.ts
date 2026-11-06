@@ -1,71 +1,63 @@
 /**
  * Los turnos: empezar el del equipo al que le toca ('startTurn') y acabarlo ('endTurn'), con lo que
  * pasa solo en cada momento. `TURN_START_PHASES` y `TURN_END_PHASES` son, como ROUND_PHASES
- * (rules/round.ts) para la ronda, la lista de pasos de cada uno, en orden: lo que antes hacia la
- * escena al empezar o acabar el turno de la persona (y `npm run play` no hacia) ahora lo hace la
- * partida para todos los equipos. Cada paso hace acciones del equipo (las mismas entradas de ACTIONS,
- * con su validate) y devuelve sus sucesos; un paso nuevo es una entrada mas, en su sitio.
+ * (rules/round.ts) para la ronda, la lista de pasos de cada uno, en orden (y detras, los propios del
+ * modo: `GameMode.turnPhases`). Lo que antes hacia la escena al empezar o acabar el turno de la
+ * persona (y `npm run play` no hacia) ahora lo hace la partida para todos los equipos, sea quien sea
+ * quien los juegue. Cada paso hace acciones del equipo por `perform` (las mismas comprobaciones que
+ * dispatch: un equipo que ya ha perdido no hace nada) y devuelve sus sucesos; un paso nuevo es una
+ * entrada mas, en su sitio. Empezar y acabar los turnos es cosa de la sesion (core/session), no de
+ * quien juega el equipo.
  */
-import { diceOf } from '../dice';
-import { canCapture } from '../rules/capture';
-import { restoreInvariants } from '../rules/invariants';
+import { assistTurn } from '../ai/standingOrders';
+import { gameModeOf, type TurnPhase } from '../modes';
+import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
 import { nextTurn } from '../rules/turnOrder';
 import { canMoveNow } from '../rules/unitTurn';
-import type { GameActionKind, GameActionOf, GameEvent, GameState, TeamId, Unit } from '../model';
-import { CAPTURE_ACTIONS } from './capture';
-import { MOVEMENT_ACTIONS } from './movement';
-import type { ActionDefinition, ActionRegistry } from './types';
+import type { ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
+import type { ActionDispatcher, ActionRegistry } from './types';
 
-/** Un paso del principio o del final de un turno: lo que hace solo por el equipo `team`, con sus sucesos. */
-export interface TurnPhase {
-  /** Nombre corto (para depurar). */
-  readonly id: string;
-  run(s: GameState, team: TeamId): GameEvent[];
+/** Los sucesos de una accion hecha (ninguno si no valia). */
+const eventsOf = (result: ActionResult): GameEvent[] => (result.ok ? result.events : []);
+
+/** [CAMBIO] Viajes de varios turnos: cada unidad de viaje da su paso de este turno (y despues puede seguir). */
+function advanceTravels(s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] {
+  const travelers = s.units.filter((unit) => unit.team === team && canMoveNow(unit) && unit.travelTo);
+  return travelers.flatMap((unit) => eventsOf(perform(s, team, { kind: 'travelStep', uid: unit.uid })));
 }
 
 /**
- * El equipo hace la accion de esa entrada si vale ahora (como dispatch, sin las comprobaciones
- * comunes: es su turno), y la partida queda en orden despues (INVARIANTS).
+ * [CAMBIO] Ordenes permanentes: las unidades con orden que siguen sin usar la cumplen (la misma IA
+ * que el enemigo, ai/standingOrders.ts), sea quien sea quien juegue el equipo.
  */
-function actFor<K extends GameActionKind>(
-  s: GameState,
-  team: TeamId,
-  definition: ActionDefinition<K>,
-  action: GameActionOf<K>,
-): GameEvent[] {
-  if (definition.validate(s, team, action)) return [];
-  return [...definition.apply(s, team, action, diceOf(s)), ...restoreInvariants(s)];
-}
+const followStandingOrders = (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] => [...assistTurn(s, team, perform)];
 
-/** Las unidades del equipo que aun no se han movido este turno (y estan en el mapa). */
-const readyUnitsOf = (s: GameState, team: TeamId): Unit[] => s.units.filter((unit) => unit.team === team && canMoveNow(unit));
-
-/** [CAMBIO] Viajes de varios turnos: cada unidad de viaje da su paso de este turno (y despues puede seguir). */
-function advanceTravels(s: GameState, team: TeamId): GameEvent[] {
-  const travelers = readyUnitsOf(s, team).filter((unit) => unit.travelTo);
-  return travelers.flatMap((unit) => actFor(s, team, MOVEMENT_ACTIONS.travelStep, { kind: 'travelStep', uid: unit.uid }));
-}
-
-/** [CAMBIO] Las unidades del equipo sin usar encima de un edificio que pueden capturar: capturaran solas al acabar el turno. */
-export const autoCapturers = (s: GameState, team: TeamId): Unit[] => readyUnitsOf(s, team).filter((unit) => canCapture(s, unit));
-
-/** Las que se han quedado sin usar encima de un edificio que pueden capturar, siguen capturando. */
-function keepCapturing(s: GameState, team: TeamId): GameEvent[] {
-  return autoCapturers(s, team).flatMap((unit) => actFor(s, team, CAPTURE_ACTIONS.capture, { kind: 'capture', uid: unit.uid }));
+/** [CAMBIO] Las que se han quedado sin usar encima de un edificio que pueden capturar, siguen capturando. */
+function keepCapturing(s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] {
+  return autoCapturers(s, team).flatMap((unit) => eventsOf(perform(s, team, { kind: 'capture', uid: unit.uid })));
 }
 
 /** Lo que pasa solo al empezar el turno de un equipo, en orden. */
 export const TURN_START_PHASES: readonly TurnPhase[] = [{ id: 'travels', run: advanceTravels }];
 
-/**
- * Lo que pasa solo al acabar el turno de un equipo, en orden (antes del fin de ronda, si acaba). Las
- * ordenes permanentes no estan aqui: las cumple quien juega el equipo (su piloto automatico, que es
- * un controlador: core/session), antes de pedir el fin del turno.
- */
-export const TURN_END_PHASES: readonly TurnPhase[] = [{ id: 'captures', run: keepCapturing }];
+/** Lo que pasa solo al acabar el turno de un equipo, en orden (antes del fin de ronda, si acaba). */
+export const TURN_END_PHASES: readonly TurnPhase[] = [
+  { id: 'standingOrders', run: followStandingOrders },
+  // Despues de las ordenes: una que lleva a capturar deja a la unidad encima, ya usada.
+  { id: 'captures', run: keepCapturing },
+];
 
-const runPhases = (phases: readonly TurnPhase[], s: GameState, team: TeamId): GameEvent[] => phases.flatMap((phase) => phase.run(s, team));
+/** Los pasos de turno de todos y, detras, los del modo de la partida. */
+function runPhases(
+  common: readonly TurnPhase[],
+  ofMode: readonly TurnPhase[] | undefined,
+  s: GameState,
+  team: TeamId,
+  perform: ActionDispatcher,
+): GameEvent[] {
+  return [...common, ...(ofMode ?? [])].flatMap((phase) => phase.run(s, team, perform));
+}
 
 /** Pasa el turno al siguiente que juega; si con eso se da la vuelta al orden, antes acaba la ronda. */
 function passTurn(s: GameState, team: TeamId): GameEvent[] {
@@ -82,13 +74,20 @@ export const TURN_ACTIONS: Pick<ActionRegistry, 'startTurn' | 'endTurn'> = {
   startTurn: {
     // De quien es el turno lo miran ACTION_GUARDS; aqui, que no se empiece dos veces.
     validate: (s) => (s.turnStarted ? 'turnStarted' : null),
-    apply: (s, team) => {
+    apply: (s, team, _action, _dice, perform) => {
       s.turnStarted = true;
-      return [{ kind: 'turnStart', actor: team, day: s.day }, ...runPhases(TURN_START_PHASES, s, team)];
+      const started: GameEvent = { kind: 'turnStart', actor: team, day: s.day };
+      return [started, ...runPhases(TURN_START_PHASES, gameModeOf(s).turnPhases?.start, s, team, perform)];
     },
   },
   endTurn: {
     validate: () => null,
-    apply: (s, team) => [...runPhases(TURN_END_PHASES, s, team), ...passTurn(s, team)],
+    apply: (s, team, _action, _dice, perform) => [
+      ...runPhases(TURN_END_PHASES, gameModeOf(s).turnPhases?.end, s, team, perform),
+      ...passTurn(s, team),
+    ],
   },
 };
+
+/** Empezar o acabar un turno: lo manda la sesion (core/session), no quien juega el equipo. */
+export const isTurnBoundary = (action: GameAction): boolean => action.kind === 'startTurn' || action.kind === 'endTurn';

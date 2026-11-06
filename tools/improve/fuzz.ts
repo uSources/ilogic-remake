@@ -7,7 +7,8 @@
  *   npm run fuzz -- --repro 1234                  repetir una partida concreta con todo el detalle
  */
 import { duel } from '@core/teams';
-import { aiController, GameSession, runMatch, type ActedStep, type Controller } from '@core/session';
+import { aiController } from '@core/controllers';
+import { GameSession, runMatch, type ActedStep, type Controller } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';

@@ -6,7 +6,7 @@
  * repeticion mandarian lo mismo.
  */
 import { diceOf } from '../dice';
-import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 import { guardProblem } from './guards';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
@@ -30,24 +30,33 @@ export const isValidAction = (s: GameState, team: TeamId, action: GameAction): b
 
 /**
  * Hace la accion ya comprobada (su `apply`), olvida lo que se podia deshacer si la accion cuenta
- * algo nuevo de la partida (sin `keepsUndo`), deja la partida en orden (INVARIANTS) y apunta sus
- * sucesos en las estadisticas (stats.ts: de todos los sucesos, se animen o no).
+ * algo nuevo de la partida (sin `keepsUndo`) y deja la partida en orden (INVARIANTS).
  */
-function applyAction(s: GameState, team: TeamId, action: GameAction, dice: Dice): GameEvent[] {
+function applyAction(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
   const definition = definitionOf(action);
-  const applied = definition.apply(s, team, action, dice);
+  const applied = definition.apply(s, team, action, diceOf(s), perform);
   if (!definition.keepsUndo) forgetUndoableMoves(s);
-  const events = [...applied, ...restoreInvariants(s)];
-  recordEvents(s, events);
-  return events;
+  return [...applied, ...restoreInvariants(s)];
 }
 
 /**
- * El equipo `team` hace la accion: si vale, cambia la partida y devuelve sus sucesos; si no, no toca
- * nada y dice por que.
+ * Comprueba la accion (ACTION_GUARDS y su `validate`) y, si vale, la hace: sus sucesos, o por que no
+ * vale. Es lo que hace dispatch, y lo que una accion manda dentro de la suya (los pasos de turno:
+ * `ActionDefinition.apply` recibe esto), con las mismas comprobaciones.
  */
-export function dispatch(s: GameState, team: TeamId, action: GameAction): ActionResult {
+function perform(s: GameState, team: TeamId, action: GameAction): ActionResult {
   const reason = actionProblem(s, team, action);
   if (reason) return { ok: false, reason };
-  return { ok: true, events: applyAction(s, team, action, diceOf(s)) };
+  return { ok: true, events: applyAction(s, team, action) };
+}
+
+/**
+ * El equipo `team` hace la accion: si vale, cambia la partida y devuelve sus sucesos (apuntados en
+ * las estadisticas, stats.ts: todos, se animen o no, una sola vez aunque una accion mande otras); si
+ * no, no toca nada y dice por que.
+ */
+export function dispatch(s: GameState, team: TeamId, action: GameAction): ActionResult {
+  const result = perform(s, team, action);
+  if (result.ok) recordEvents(s, result.events);
+  return result;
 }

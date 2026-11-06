@@ -383,6 +383,17 @@ describe('deshacer el ultimo movimiento', () => {
     expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'revealed');
   });
 
+  it('deshacer un movimiento que acabo un viaje lo devuelve', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
+    expect(soldier.travelTo).toBeUndefined();
+    const events = act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    expect(events.at(-1)).toEqual({ kind: 'travel', actor: 0, uid: soldier.uid, to: { x: 2, y: 20 } });
+    expect(soldier.travelTo).toEqual({ x: 2, y: 20 });
+  });
+
   it('una accion que cuenta algo nuevo (retirar una unidad, atacar, comprar...) o el fin de ronda los olvidan', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });

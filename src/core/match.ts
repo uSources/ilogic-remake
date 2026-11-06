@@ -11,6 +11,7 @@ import { entryOf, type GameContent } from './content';
 import { appointGeneral } from './generals';
 import { newGameState } from './gameState';
 import { generateGame } from './mapgen';
+import { gameModeOf } from './modes';
 import { blankMap } from './mapGrid';
 import { buildMission, missionById } from './missions';
 import { newUnit } from './rules/lifecycle';
@@ -145,6 +146,12 @@ function setupOf(config: MatchConfig): (config: MatchConfig, context: MatchSetup
   return MATCH_SETUPS[config.mode] as (config: MatchConfig, context: MatchSetupContext) => GameState;
 }
 
+/** Las reglas que impone el modo de la partida, por encima de las elegidas (GameMode.fixedRules). */
+function imposeModeRules(s: GameState, content: GameContent): void {
+  const fixed = gameModeOf(s).fixedRules;
+  if (fixed) s.rules = rulesWith(content, { ...s.rules, ...fixed });
+}
+
 /**
  * La partida nueva de esa configuracion, lista para jugar: con su modo, sus equipos, el clima del
  * primer dia y la muestra del ejercito de ese dia (para la grafica del final). El primer equipo aun
@@ -152,6 +159,7 @@ function setupOf(config: MatchConfig): (config: MatchConfig, context: MatchSetup
  */
 export function buildMatch(config: MatchConfig, context: MatchSetupContext): GameState {
   const s = setupOf(config)(config, context);
+  imposeModeRules(s, context.content);
   ensureWeather(s);
   sampleArmy(s);
   return s;

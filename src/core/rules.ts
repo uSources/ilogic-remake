@@ -49,6 +49,7 @@ export {
 export { canActNow, canMoveNow, canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
 export { visionOf, visibility, visibleFoeAt, isShownTo, isVisibleFoe, sightOf, type Sight } from './rules/visibility';
 export {
+  autoCapturers,
   capturePointsOf,
   captureStrength,
   captureProgress,

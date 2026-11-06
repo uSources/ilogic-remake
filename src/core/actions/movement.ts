@@ -28,15 +28,22 @@ function checkedPath(path: Pos[] | null): Pos[] {
  * La unidad recorre el camino y lo deja apuntado para deshacerlo (con la captura que pierde al irse
  * y si ha descubierto a alguien). Con emboscada no hay vuelta atras: ya ha gastado su turno.
  */
-function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[]): MovePath {
+function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[], travelTo: Pos | undefined): MovePath {
   const from = posOf(unit);
   const capture = ownCaptureHere(s, unit);
   const seenBefore = visibleEnemies(s, team);
   const walked = followPath(s, unit, path);
   const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
   if (walked.ambush) forgetUndoableMoves(s);
-  else rememberMove(s, { uid: unit.uid, from, capture, revealed });
+  else rememberMove(s, { uid: unit.uid, from, capture, revealed, ...(travelTo ? { travelTo: posOf(travelTo) } : {}) });
   return walked;
+}
+
+/** Vuelve a poner el viaje que acabo un movimiento deshecho (si lo habia): su suceso. */
+function resumeTravel(team: TeamId, unit: Unit, travelTo: Pos | undefined): GameEvent[] {
+  if (!travelTo) return [];
+  unit.travelTo = posOf(travelTo);
+  return [{ kind: 'travel', actor: team, uid: unit.uid, to: posOf(travelTo) }];
 }
 
 /** El suceso de que la unidad deja su orden permanente propia (como al quitarla: 'cancelStandingOrder'). */
@@ -61,9 +68,10 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       actorProblem(s, team, action.uid, (unit) => (plannedPath(s, unit, action.to, action.path) ? null : 'unreachable')),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      // Moverla a mano cancela su viaje de varios turnos.
+      // Moverla a mano cancela su viaje de varios turnos (deshacer lo devuelve).
+      const travelTo = unit.travelTo;
       const cancelled = endTravel(team, unit);
-      const walked = walkRemembering(s, team, unit, checkedPath(plannedPath(s, unit, action.to, action.path)));
+      const walked = walkRemembering(s, team, unit, checkedPath(plannedPath(s, unit, action.to, action.path)), travelTo);
       return [...cancelled, moveEvent(team, unit.uid, walked)];
     },
   },
@@ -75,7 +83,7 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
     validate: (s, team, action) => ownUnitProblem(s, team, action.uid, (unit) => undoMoveProblem(s, unit)),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      const { from, capture } = checkedUndoableMove(s);
+      const { from, capture, travelTo } = checkedUndoableMove(s);
       dropLastUndoableMove(s);
       unit.x = from.x;
       unit.y = from.y;
@@ -83,7 +91,8 @@ export const MOVEMENT_ACTIONS: Pick<ActionRegistry, 'move' | 'undoMove' | 'trave
       // [CAMBIO] Fallo K2: al irse perdia la captura a medias; al volver, la recupera.
       const building = buildingAt(s, from);
       if (building && capture) building.capture = { ...capture };
-      return [{ kind: 'undoMove', actor: team, uid: unit.uid, to: posOf(from) }];
+      const undone: GameEvent = { kind: 'undoMove', actor: team, uid: unit.uid, to: posOf(from) };
+      return [undone, ...resumeTravel(team, unit, travelTo)];
     },
   },
   travel: {

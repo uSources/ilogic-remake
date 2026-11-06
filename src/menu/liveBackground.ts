@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { controllersFor, GameSession, playMatch, type ActedStep } from '../core/session';
+import { controllersFor } from '../core/controllers';
+import { GameSession, playMatch, type ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createMatch } from '../core/defaultGames';

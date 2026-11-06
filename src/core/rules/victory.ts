@@ -99,10 +99,11 @@ function lastAllianceStanding(s: GameState): MatchResult | null {
   return allianceWins(s, survivor, lossReason(s, enemiesOf(s, survivor)));
 }
 
-/** El objetivo de la mision: si su dueño lo cumple, gana su alianza; si falla, sus enemigos. */
+/** El objetivo de la mision: si su dueño lo cumple, gana su alianza; si falla, todos sus enemigos. */
 function missionObjective(s: GameState): MatchResult | null {
+  // Conquistar la Base ('hq') nunca se cumple aqui: lo decide 'lastAllianceStanding'.
   const objective = s.mission?.objective;
-  if (!objective || objective.kind === 'hq') return null;
+  if (!objective) return null;
   switch (objectiveStatus(s, objective)) {
     case 'achieved':
       return allianceWins(s, objective.owner, 'objective');
@@ -154,6 +155,5 @@ export const isWinner = (result: MatchResult, team: TeamId): boolean => result.s
 /** Progreso del objetivo de la mision para su dueño, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
 export function objectiveProgress(s: GameState): ObjectiveProgress | null {
   const objective = s.mission?.objective;
-  if (!objective || objective.kind === 'hq') return null;
-  return measureObjective(s, objective);
+  return objective ? measureObjective(s, objective) : null;
 }

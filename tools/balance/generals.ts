@@ -12,7 +12,8 @@
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
 import { duel, duelTeams } from '@core/teams';
-import { controllersFor, GameSession, runMatch } from '@core/session';
+import { controllersFor } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';

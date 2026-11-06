@@ -18,7 +18,8 @@ import { isMatchOver, matchResult } from '@core/rules';
 import { serialize } from '@core/save';
 import { dispatch } from '@core/actions';
 import { posOf } from '@core/geom';
-import { aiController, controllersFor, GameSession, runMatch, sequence, standingOrderAutopilot, type Controller } from '@core/session';
+import { aiController, controllersFor, standingOrderAutopilot } from '@core/controllers';
+import { GameSession, runMatch, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
 import type { GameState, Rng, RulesConfig } from '@core/model';
 

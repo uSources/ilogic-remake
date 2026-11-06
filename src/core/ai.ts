@@ -30,8 +30,9 @@ import { aiCtx, finish } from './ai/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';
 import { unitTurn } from './ai/unitTurn';
+import * as standingOrders from './ai/standingOrders';
 
-export { assistTurn, startStandingOrder, previewStandingOrders, type StandingOrderIntent } from './ai/standingOrders';
+export { type StandingOrderIntent } from './ai/standingOrders';
 export { standingOrderPlayOrder } from './ai/formation';
 export type { AiCtx } from './ai/context';
 
@@ -52,3 +53,22 @@ export function* aiTurn(s: GameState, rng: Rng, team: TeamId, dispatcher: Action
   yield* produce(s, ai, rng);
   for (const unit of teamUnits(s, ai.me)) yield* finish(s, ai, unit);
 }
+
+/** Ordenes permanentes de un equipo (ai/standingOrders.ts), por `dispatcher` (dispatch, si no se dice). */
+export const assistTurn = (s: GameState, team: TeamId, dispatcher: ActionDispatcher = dispatch): Generator<GameEvent, number[]> =>
+  standingOrders.assistTurn(s, team, dispatcher);
+
+/** La unidad empieza ya su orden recien dada (ai/standingOrders.ts), por `dispatcher`. */
+export const startStandingOrder = (
+  s: GameState,
+  uid: number,
+  team: TeamId,
+  dispatcher: ActionDispatcher = dispatch,
+): Generator<GameEvent, boolean> => standingOrders.startStandingOrder(s, uid, team, dispatcher);
+
+/** Lo que hara cada unidad con orden al acabar el turno (ai/standingOrders.ts), simulado con `dispatcher` sobre una copia. */
+export const previewStandingOrders = (
+  s: GameState,
+  team: TeamId,
+  dispatcher: ActionDispatcher = dispatch,
+): Map<number, standingOrders.StandingOrderIntent> => standingOrders.previewStandingOrders(s, team, dispatcher);

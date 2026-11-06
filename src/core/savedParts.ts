@@ -255,6 +255,7 @@ const isControlPoint = (frame: SaveFrame, point: unknown): boolean =>
 function isValidUndoableMove(frame: SaveFrame, move: unknown): boolean {
   if (!isObject(move) || !isUid(move.uid) || !isPosOn(frame.board, move.from)) return false;
   if (typeof move.revealed !== 'boolean') return false;
+  if (move.travelTo !== undefined && !isPosOn(frame.board, move.travelTo)) return false;
   return move.capture === null || isCaptureProgress(frame, move.capture);
 }
 

@@ -1,32 +1,29 @@
 /**
  * Jugar una partida: quien decide cada equipo (`Controller`) y la partida en juego (`GameSession`),
  * que empieza y acaba los turnos, apunta lo que se hace y avisa de ello. La usan la escena, `npm run
- * play`, el fondo del menu, las herramientas y los tests. El codigo esta en `session/`:
+ * play`, el fondo del menu, las herramientas y los tests. No sabe de la IA: los controladores que
+ * deciden con ella, y el de cada equipo segun quien lo juega, estan en `core/controllers.ts`.
  *
  * | Modulo | Que va |
  * |---|---|
- * | `controller` | la forma de un controlador (`Controller`, `TurnStep`) y los sencillos: quieto, en serie, de fuera |
- * | `aiControllers` | los que deciden con la IA: la IA rival, el piloto automatico de las ordenes y la persona |
- * | `replay` | repetir lo apuntado (`replayController`, `LoggedAction`) |
- * | `controllers` | el controlador de cada equipo segun su `TeamState.controller` (`controllersFor`) |
- * | `gameSession` | `GameSession` y como llevarla: seguida (`runMatch`) o paso a paso (`playMatch`) |
+ * | `session/controller` | la forma de un controlador (`Controller`, `TurnStep`) y los sencillos: persona, remoto, quieto, en serie |
+ * | `session/replay` | repetir lo apuntado (`replayControllers`, `LoggedAction`) |
+ * | `session/gameSession` | `GameSession` y como llevarla: seguida (`runMatch`) o paso a paso (`playMatch`) |
  */
 export {
-  externalController,
+  humanController,
   passiveController,
   propose,
+  remoteController,
   sequence,
   type Controller,
   type ControllerName,
   type TurnPlan,
   type TurnStep,
 } from './session/controller';
-export { aiController, humanController, remoteController, standingOrderAutopilot, type AiBrain } from './session/aiControllers';
 export { replayController, replayControllers, type LoggedAction } from './session/replay';
-export { controllersFor } from './session/controllers';
 export {
   GameSession,
-  isAutosaveMoment,
   playMatch,
   runMatch,
   type ActedStep,

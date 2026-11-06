@@ -50,13 +50,21 @@ export const sequence = (...controllers: readonly Controller[]): Controller => (
 });
 
 /**
- * Decide alguien de fuera: la sesion espera (el equipo manda sus acciones con `GameSession.act`) y,
- * cuando le dicen que ha terminado, juega lo que haga `then` antes de pasar el turno.
+ * Decide alguien de fuera: la sesion espera (el equipo manda sus acciones con `GameSession.act`)
+ * hasta que le dicen que ha terminado (`finishInput`); despues pasa el turno (sus ordenes
+ * permanentes las cumple la partida al acabarlo, como las de cualquiera).
  */
-export const externalController = (name: 'human' | 'remote', then?: Controller): Controller => ({
-  name,
-  playTurn: function* (s, team) {
-    yield { kind: 'awaitInput' };
-    if (then) yield* then.playTurn(s, team);
-  },
-});
+function externalController(name: 'human' | 'remote'): Controller {
+  return {
+    name,
+    playTurn: function* () {
+      yield { kind: 'awaitInput' };
+    },
+  };
+}
+
+/** Una persona en esta pantalla. */
+export const humanController = (): Controller => externalController('human');
+
+/** Un jugador por la red: la sesion espera las acciones que lleguen. */
+export const remoteController = (): Controller => externalController('remote');

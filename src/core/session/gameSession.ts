@@ -9,10 +9,10 @@
  * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
  */
 import { dispatch } from '../actions/dispatch';
+import { isTurnBoundary } from '../actions/turn';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
-import { teamState } from '../teams';
 import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../model';
 import type { Controller, TurnPlan, TurnStep } from './controller';
 import type { LoggedAction } from './replay';
@@ -65,6 +65,19 @@ export class GameSession {
     return this.awaiting;
   }
 
+  /** El equipo lo juega una persona en esta pantalla (la sesion la espera en su turno). */
+  isPerson(team: TeamId): boolean {
+    return this.controllerOf(team).name === 'human';
+  }
+
+  /**
+   * Es el momento del guardado automatico: acaba de empezar el turno de una persona (con lo que pasa
+   * solo al empezarlo ya hecho: asi, al cargar, nada se repite ni se pierde) y su modo lo marca.
+   */
+  isAutosaveMoment(step: ActedStep): boolean {
+    return gameModeOf(this.state).savesAtTurnStart && step.action.kind === 'startTurn' && this.isPerson(step.team);
+  }
+
   /** Quien juega ese equipo. */
   controllerOf(team: TeamId): Controller {
     const controller = this.controllers[team];
@@ -80,9 +93,11 @@ export class GameSession {
 
   /**
    * Una accion del equipo al que se espera (la decide alguien de fuera). Mientras no se le espera,
-   * no vale ('notYourTurn'): su turno no ha llegado o lo esta jugando su controlador.
+   * no vale ('notYourTurn'): su turno no ha llegado o lo esta jugando su controlador. Empezar y
+   * acabar el turno son de la sesion ('sessionOnly'): para acabarlo, `finishInput`.
    */
   act(team: TeamId, action: GameAction): ActionResult {
+    if (isTurnBoundary(action)) return { ok: false, reason: 'sessionOnly' };
     if (this.awaiting !== team) return { ok: false, reason: 'notYourTurn' };
     const result = dispatch(this.state, team, action);
     if (result.ok) this.record(team, action, result.events);
@@ -104,9 +119,9 @@ export class GameSession {
       if (result.status !== 'playing') return { kind: 'over', result };
       if (this.awaiting !== null) return { kind: 'awaitingInput', team: this.awaiting };
       const team = this.state.turn;
-      if (!this.state.turnStarted) return this.perform(team, { kind: 'startTurn' });
-      // Si ha caido en su propio turno, ya no juega: lo pasa.
+      // Si ha caido (en su propio turno, o en una partida guardada asi), ya no juega: lo pasa.
       if (!takesTurn(this.state, team)) return this.endTurn(team);
+      if (!this.state.turnStarted) return this.perform(team, { kind: 'startTurn' });
       const step = this.nextStepOf(team);
       if (!step) return this.endTurn(team);
       const outcome = this.follow(team, step);
@@ -193,12 +208,4 @@ export async function playMatch(session: GameSession, onActed: (step: ActedStep)
     const step = session.step();
     if (step.kind !== 'acted' || !(await onActed(step))) return step;
   }
-}
-
-/**
- * Es el momento del guardado automatico: acaba de empezar el turno de una persona (con lo que pasa
- * solo al empezarlo ya hecho: asi, al cargar, nada se repite ni se pierde) y su modo guarda solo.
- */
-export function isAutosaveMoment(s: GameState, step: ActedStep): boolean {
-  return gameModeOf(s).autosaves && step.action.kind === 'startTurn' && teamState(s, step.team).controller === 'human';
 }

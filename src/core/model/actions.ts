@@ -74,6 +74,8 @@ export type ActionRejection =
   /** Su turno aun no ha empezado ('startTurn'), o ya habia empezado (al pedir empezarlo otra vez). */
   | 'turnNotStarted'
   | 'turnStarted'
+  /** Empezar o acabar un turno: lo hace la sesion (core/session), no quien juega el equipo. */
+  | 'sessionOnly'
   /** El equipo ya ha perdido (ver isDefeated): no juega mas. */
   | 'defeated'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */

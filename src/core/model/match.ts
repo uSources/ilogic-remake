@@ -26,9 +26,10 @@ export type VictoryRuleId = 'lastAllianceStanding' | 'objective' | 'dayLimit';
 export type EndReason = 'hq' | 'wipeout' | 'surrender' | 'objective' | 'days';
 
 /**
- * Como va una partida, igual para todos: sigue ('playing'), la ha ganado una alianza ('decided':
- * `winners`, todos sus equipos) o nadie ('draw': cayeron todos a la vez, o empate a puntos). Nada en
- * ella es "ganado" o "perdido" de un equipo concreto: eso lo mira quien lo enseña.
+ * Como va una partida, igual para todos: sigue ('playing'), se ha decidido ('decided': `winners`,
+ * los equipos que ganan: una alianza entera, o, si el dueño de un objetivo de mision lo falla, todos
+ * sus enemigos) o nadie gana ('draw': cayeron todos a la vez, o empate a puntos). Nada en ella es
+ * "ganado" o "perdido" de un equipo concreto: eso lo mira quien lo enseña.
  */
 export type MatchResult =
   | { status: 'playing'; winners: []; reason: null }

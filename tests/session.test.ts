@@ -3,22 +3,24 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
-import { newUnit, unitById } from '@core/rules';
+import { canMoveNow, moveRange, newUnit, reachableTiles, unitById } from '@core/rules';
 import { serialize } from '@core/save';
+import { aiController, controllersFor } from '@core/controllers';
 import {
-  aiController,
-  controllersFor,
   GameSession,
   humanController,
-  isAutosaveMoment,
   passiveController,
+  propose,
+  remoteController,
   replayControllers,
   runMatch,
   type ActedStep,
+  type Controller,
 } from '@core/session';
+import { GAME_MODES } from '@core/modes';
 import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
-import { act, blankState, unitTypeNamed } from './helpers';
+import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
 
 const fixture = (name: string) => readFileSync(`tests/fixtures/saves/${name}.json`, 'utf8');
 
@@ -75,14 +77,14 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     const { session } = personVsAi(s);
     let saved: string | null = null;
     session.subscribe((step) => {
-      if (isAutosaveMoment(s, step)) saved = serialize(s);
+      if (session.isAutosaveMoment(step)) saved = serialize(s);
     });
     runMatch(session);
     expect(saved).not.toBeNull();
     const loaded = loadGame(saved!)!;
     expect(loaded.turnStarted).toBe(true);
     expect(new GameSession(loaded, [humanController(), passiveController()]).step()).toEqual({ kind: 'awaitingInput', team: 0 });
-    expect(isAutosaveMoment(s, { kind: 'acted', team: 1, action: { kind: 'startTurn' }, events: [] })).toBe(false);
+    expect(session.isAutosaveMoment({ kind: 'acted', team: 1, action: { kind: 'startTurn' }, events: [] })).toBe(false);
   });
 
   it('el registro se repite igual desde la partida de antes (los dados van en la partida)', () => {
@@ -114,13 +116,118 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
     session.finishInput(0);
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 1 });
-    expect(session.act(0, { kind: 'endTurn' })).toEqual({ ok: false, reason: 'notYourTurn' });
+    expect(session.act(0, { kind: 'wait', uid: 1 })).toEqual({ ok: false, reason: 'notYourTurn' });
     session.finishInput(1);
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
     expect(s.day).toBe(2);
   });
 
+  it('empezar y acabar el turno son de la sesion: quien juega no los manda (para acabar, finishInput)', () => {
+    const s = blankState();
+    const { session } = personVsAi(s);
+    runMatch(session);
+    expect(session.act(0, { kind: 'endTurn' })).toEqual({ ok: false, reason: 'sessionOnly' });
+    expect(session.act(0, { kind: 'startTurn' })).toEqual({ ok: false, reason: 'sessionOnly' });
+    expect(session.step()).toEqual({ kind: 'awaitingInput', team: 0 });
+  });
+
+  it('las ordenes permanentes se cumplen al acabar el turno de cualquier equipo, lo juegue quien lo juegue', () => {
+    const s = blankState();
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 3, y: 9 } } });
+    const session = new GameSession(s, [remoteController(), passiveController()]);
+    runMatch(session);
+    session.finishInput(0);
+    session.step();
+    expect(soldier.y).toBeGreaterThan(3);
+  });
+
+  it('un equipo que ha caido con su turno sin empezar (partida guardada asi) lo pasa sin empezarlo', () => {
+    const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    act(s, 0, { kind: 'surrender' });
+    giveTurn(s, 0).turnStarted = false;
+    const session = new GameSession(
+      s,
+      s.teams.map(() => passiveController()),
+    );
+    expect(session.step()).toMatchObject({ kind: 'acted', team: 0, action: { kind: 'endTurn' } });
+  });
+
+  it('repetir el registro con un equipo que cae en su propio turno, deshacer y rendirse sale igual', () => {
+    const s = createMatch(skirmishConfig({ seed: 8, size: 20, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] }));
+    const start = cloneState(s);
+    let surrendered = false;
+    const quitter: Controller = {
+      name: 'random',
+      playTurn: function* (state, team) {
+        const unit = state.units.find((candidate) => candidate.team === team && canMoveNow(candidate));
+        const to = unit && reachableTiles(moveRange(state, unit)).find((tile) => tile.x !== unit.x || tile.y !== unit.y);
+        if (unit && to) {
+          yield* propose({ kind: 'move', uid: unit.uid, to });
+          yield* propose({ kind: 'undoMove', uid: unit.uid });
+        }
+        if (state.day === 2 && !surrendered) {
+          surrendered = true;
+          yield* propose({ kind: 'surrender' });
+          yield* propose({ kind: 'wait', uid: 1 });
+        }
+      },
+    };
+    const rng = seededRng(4);
+    const session = new GameSession(s, [quitter, aiController(rng), aiController(rng)]);
+    runMatch(session, { until: (state) => state.day > 4 });
+    expect(session.log.some((entry) => entry.action.kind === 'undoMove')).toBe(true);
+    const replay = new GameSession(start, replayControllers(start, session.log));
+    runMatch(replay, { until: (state) => state.day > 4 });
+    expect(replay.log).toEqual(session.log);
+    expect(serialize(start)).toBe(serialize(s));
+  });
+
   it('un controlador por equipo', () => {
     expect(() => new GameSession(blankState(), [passiveController()])).toThrow(/uno por equipo/);
+  });
+});
+
+describe('pasos de turno (actions/turn.ts) con las comprobaciones de dispatch', () => {
+  it('un equipo que se rinde no captura al pasar su turno', () => {
+    const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const hq = s.buildings.find((building) => building.owner === 1)!;
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, hq);
+    hq.capture = { team: 0, uid: soldier.uid, left: 1 };
+    act(s, 0, { kind: 'surrender' });
+    const events = act(s, 0, { kind: 'endTurn' });
+    expect(events.some((event) => event.kind === 'capture')).toBe(false);
+    expect(hq.owner).toBe(1);
+  });
+
+  it('lo que captura sola una unidad al acabar el turno cuenta una vez en las estadisticas', () => {
+    const s = blankState();
+    s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
+    newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 }).life = 100;
+    s.buildings.at(-1)!.capture = { team: 0, uid: s.units[0]!.uid, left: 1 };
+    const events = act(s, 0, { kind: 'endTurn' });
+    expect(events.filter((event) => event.kind === 'capture')).toHaveLength(1);
+    expect(s.teams[0]!.stats.captured).toBe(1);
+  });
+});
+
+describe('modos de juego (core/modes.ts)', () => {
+  it('el orden de los turnos no admite un equipo que no esta', () => {
+    expect(GAME_MODES.skirmish.turnOrder([0, 1, 2], 1)).toEqual([1, 2, 0]);
+    expect(() => GAME_MODES.skirmish.turnOrder([0, 1], 5)).toThrow(/no esta en la partida/);
+  });
+
+  it('las reglas que impone el modo van por encima de las elegidas', () => {
+    const s = createMatch({
+      mode: 'sandbox',
+      size: 12,
+      ruleChanges: { weather: true },
+      teams: duel('human', 'ai'),
+      buildings: [],
+      units: [],
+      diceSeed: 1,
+    });
+    expect(s.rules.weather).toBe(false);
   });
 });

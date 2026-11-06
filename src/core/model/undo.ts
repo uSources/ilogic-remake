@@ -14,4 +14,6 @@ export interface UndoableMove {
   capture: NonNullable<Building['capture']> | null;
   /** Al moverse descubrio enemigos que antes no veia: entonces no se puede deshacer (seria mirar gratis). */
   revealed: boolean;
+  /** El viaje de varios turnos que llevaba y que acabo al moverla a mano (vuelve al deshacer). */
+  travelTo?: Pos;
 }

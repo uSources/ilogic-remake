@@ -9,8 +9,12 @@ export interface ActionDefinition<K extends GameActionKind> {
    * (alcance, vision, dinero...): no se fia de nada que traiga la accion ni de quien la manda.
    */
   validate(s: GameState, team: TeamId, action: GameActionOf<K>): ActionRejection | null;
-  /** La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. */
-  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice): GameEvent[];
+  /**
+   * La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. Si hace otras
+   * acciones del equipo (los pasos de turno), las manda por `perform`: con las mismas comprobaciones
+   * que dispatch, y sus sucesos van entre los suyos.
+   */
+  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
   /**
    * Deja como estan los movimientos que se pueden deshacer (`GameState.undoableMoves`): las acciones
    * que no cuentan nada nuevo de la partida (mover, esperar, escuadras, ordenes). Tras cualquier otra

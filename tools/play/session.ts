@@ -34,7 +34,8 @@ import {
 } from '@core/rules';
 import { serialize } from '@core/save';
 import type { ActionDispatcher } from '@core/actions';
-import { controllersFor, GameSession, runMatch, type ActedStep } from '@core/session';
+import { controllersFor } from '@core/controllers';
+import { GameSession, runMatch, type ActedStep } from '@core/session';
 import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */

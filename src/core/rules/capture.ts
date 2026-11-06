@@ -9,7 +9,7 @@ import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../model
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
-import { canStillAct, spendUnit } from './unitTurn';
+import { canMoveNow, canStillAct, spendUnit } from './unitTurn';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
@@ -113,3 +113,10 @@ export function captureEvent(actor: TeamId, unit: Unit, building: Building, resu
   const at = posOf(building);
   return { kind: 'capture', actor, uid: unit.uid, at, owner: building.owner, left: result.left, total: result.total };
 }
+
+/**
+ * [CAMBIO] Las unidades del equipo sin usar encima de un edificio que pueden capturar: capturan solas
+ * al acabar el turno (TURN_END_PHASES).
+ */
+export const autoCapturers = (s: GameState, team: TeamId): Unit[] =>
+  s.units.filter((unit) => unit.team === team && canMoveNow(unit) && canCapture(s, unit));
