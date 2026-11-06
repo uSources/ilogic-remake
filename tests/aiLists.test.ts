@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ATTACK_SCORE_TERMS } from '@core/ai/scoring';
+import { ATTACK_SCORE_TERMS } from '@core/autopilot/scoring';
 import { UNIT_BEHAVIOURS } from '@core/ai/unitTurn';
 
 /**

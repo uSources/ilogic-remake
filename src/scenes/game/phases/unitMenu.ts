@@ -84,7 +84,6 @@ function deleteUnit(host: PhaseHost, unit: Unit): void {
     host.deleteArmed = true;
     return showToast(t('confirmDelete'));
   }
-  host.moves.clearUndo();
   host.act({ kind: 'deleteUnit', uid: unit.uid });
   host.afterAction();
 }
@@ -193,7 +192,6 @@ export const unloadTilePhase: PhaseHandler = {
       return host.refresh();
     }
     if (!host.act({ kind: 'unload', uid: session.unit.uid, passenger: session.passenger.uid, to: posOf(cursor) })) return;
-    host.moves.clearUndo();
     host.afterAction();
   },
   back: (host) => {

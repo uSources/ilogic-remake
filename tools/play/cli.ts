@@ -1,12 +1,13 @@
 /**
- * npm run play -- [--seed 7] [--size 20] [--theme Plains] [--fog] [--mission tutorial] [--load partida.json] [--general Brisa] [--enemy-general Brisa]
+ * npm run play -- [--seed 7] [--size 20] [--theme Plains] [--fog | --no-fog] [--mission tutorial]
+ *                 [--load partida.json] [--general Brisa] [--enemy-general Brisa]
  *                 [--script ordenes.txt | -e "move 3 5 6; end; map"]
  * Sin --script ni -e: modo interactivo (una orden por linea; help para la lista).
  * Con ordenes por stdin tambien funciona: echo "map" | npm run play --silent
  */
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { Session } from './session';
+import { TextMatch } from './textMatch';
 
 const args = process.argv.slice(2);
 const opt = (name: string) => {
@@ -14,11 +15,11 @@ const opt = (name: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const num = (name: string) => (opt(name) === undefined ? undefined : Number(opt(name)));
-const session = new Session({
+const session = new TextMatch({
   seed: num('seed'),
   size: num('size'),
   theme: opt('theme'),
-  fog: args.includes('--fog'),
+  fog: args.includes('--no-fog') ? false : args.includes('--fog') ? true : undefined,
   mission: opt('mission'),
   general: opt('general'),
   enemyGeneral: opt('enemy-general'),

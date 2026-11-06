@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
 import { ui } from '../hud/store';
+import type { GameStartData } from './game/types';
 
 const FADE_IN_MS = 400;
 /** Tiempo con el logo a la vista antes de fundir a negro (con el fundido, unos 2 segundos). */
@@ -46,7 +47,7 @@ export class LogoScene extends Phaser.Scene {
 
   private leave(): void {
     // #lab en la direccion: directo al laboratorio de animaciones (src/lab.ts).
-    if (window.location.hash === '#lab') this.scene.start('Game', { mode: 'lab' });
+    if (window.location.hash === '#lab') this.scene.start('Game', { start: 'lab' } satisfies GameStartData);
     else this.scene.start('Menu');
   }
 }

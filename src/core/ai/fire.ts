@@ -10,7 +10,7 @@ import { moveRange } from '../rules/movement';
 import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
 import type { GameState, TeamId, Unit } from '../model';
-import { needsRepair, strikeReach, visibleFoes } from './context';
+import { needsRepair, strikeReach, visibleFoes } from '../autopilot/context';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {

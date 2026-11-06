@@ -35,6 +35,12 @@
     4px 4px 0 #4a0f0c,
     8px 8px 0 #000;
 }
+.endscreen.draw .end-title {
+  color: var(--text);
+  text-shadow:
+    4px 4px 0 #2a2a2a,
+    8px 8px 0 #000;
+}
 .end-reason {
   font-family: var(--display);
   font-size: 16px;

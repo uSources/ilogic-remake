@@ -291,9 +291,12 @@ describe('lados para quien mira (con mas de dos equipos)', () => {
     });
     expect(endStatsVM(s, 0).built).toEqual([1, 5]);
     expect(endStatsVM(s, 2).built).toEqual([3, 3]);
+    // Los dias pasados, de sus muestras; hoy (el tercero), lo que hay ahora (nadie tiene unidades).
+    s.day = 3;
     expect(armyChartVM(s, 0)).toEqual([
       [100, 500],
       [200, 1000],
+      [0, 0],
     ]);
     s.buildings.push({ type: 'City', owner: 1, x: 1, y: 1, capture: null }, { type: 'City', owner: 2, x: 3, y: 1, capture: null });
     s.buildings.push({ type: 'City', owner: 2, x: 5, y: 1, capture: null });

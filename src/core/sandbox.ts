@@ -17,6 +17,6 @@ import type { Dice, GameEventOf, GameState, Unit } from './model';
  */
 export function uncheckedAttack(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
   const event = resolveAttack(s, attacker, defender, dice);
-  restoreInvariants(s);
+  restoreInvariants(s, null);
   return event;
 }

@@ -1,39 +1,41 @@
 /**
  * Partida por texto: las reglas del juego sin graficos, para probar cambios de reglas o de IA en
  * segundos (la usan los agentes de IA y los tests). Cada orden es una linea; la respuesta, texto.
- * Juega el equipo de la persona (el primero que lleva una persona: "tu"); los demas los mueve la IA al
- * terminar el turno, en orden.
+ * Juega la persona a la que le toca ("tu"; con varias, por turnos); los demas equipos los mueve la IA
+ * al terminar el turno, en orden. La partida se juega con la misma sesion que la pantalla (GameSession):
+ * lo que pasa solo al acabar y empezar cada turno, igual.
  */
 import { aiTurn } from '@core/ai';
-import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState, teamValue } from '@core/teams';
+import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
-import { createGame, loadGame } from '@core/defaultGames';
+import { createMatch, loadGame } from '@core/defaultGames';
+import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
-import { seededRng } from '@core/util/random';
+import { aiSeedFor, seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
-import { appointGeneral, generalOf, newGeneral } from '@core/generals';
-import { buildMission, missionById } from '@core/missions';
+import { generalOf } from '@core/generals';
+import { missionById } from '@core/missions';
 import {
   attackTargets,
   buildingAt,
   buyOptions,
   canCapture,
-  endRound,
   roundReport,
   endsInAmbush,
   moveRange,
-  outcome,
+  outcomeFor,
+  type MatchOutcome,
   reachableTiles,
-  othersAfter,
   unitAt,
   unitById,
   visibility,
   canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import { dispatch } from '@core/actions';
-import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
+import { screenControllers } from '@core/controllers';
+import { GameSession, runMatch, type ActedStep } from '@core/session';
+import type { DefeatReason, GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -56,11 +58,13 @@ const TERRAIN_CHAR: Readonly<Record<string, string>> = {
 /** Edificios: inicial (mayuscula = tuyo, minuscula = enemigo, * delante = neutral). */
 const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', Factory: 'F', Stronghold: 'S', Airport: 'A', Base: 'B' };
 
-export interface SessionOptions {
+export interface TextMatchOptions {
   seed?: number;
+  /** Lado del mapa (si no, el de una partida nueva del juego: DEFAULT_MAP_SIZE). */
   size?: number;
   /** Tema (id de themes.json: Plains, Desert, Forest, Swamp, Snowy) o null al azar. */
   theme?: string | null;
+  /** Con niebla (si no se dice, como en el juego: la de las reglas por defecto). */
   fog?: boolean;
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */
@@ -70,50 +74,48 @@ export interface SessionOptions {
   enemyGeneral?: string;
 }
 
-export class Session {
-  s: GameState;
-  private rng: Rng;
-  /** El equipo que se juega con las ordenes (el de la persona). */
-  private get me(): TeamId {
-    return playerTeam(this.s);
-  }
-  /** Los equipos que mueve la IA al terminar el turno, en orden. */
+export class TextMatch {
+  readonly s: GameState;
+  private readonly rng: Rng;
+  /** La partida en juego: los equipos de personas los juegan las ordenes; los demas, la IA. */
+  private readonly session: GameSession;
+  /** El equipo que se juega con las ordenes: la persona a la que le toca (con varias, por turnos). */
+  private me: TeamId;
+  /** Lo que se cuenta de lo que pasa mientras la partida sigue sola (turnos de los demas, ordenes). */
+  private told: string[] = [];
+  /** Los sucesos del ultimo fin de ronda (para contar lo cobrado). */
+  private lastRound: GameEvent[] = [];
+
+  /** Los demas equipos, en orden. */
   private get others(): TeamId[] {
     return teamIds(this.s).filter((team) => team !== this.me);
   }
 
-  constructor(options: SessionOptions = {}) {
+  constructor(options: TextMatchOptions = {}) {
     const seed = options.seed ?? 1;
-    this.rng = seededRng(seed ^ 0x9e3779b9);
-    if (options.state) {
-      const s = loadGame(options.state);
-      if (!s) throw new Error('Partida guardada no valida');
-      this.s = s;
-    } else if (options.mission) {
-      const mission = missionById(options.mission);
-      if (!mission) throw new Error(`No existe la mision "${options.mission}"`);
-      this.s = buildMission(mission, defaultContent(), seed);
-    } else {
-      this.s = createGame(seededRng(seed), {
-        size: options.size ?? 20,
-        theme: options.theme ?? null,
-        ruleChanges: { fog: options.fog ?? false },
-        teams: duel('human', 'ai'),
-      });
-      const pick = (team: TeamId, id: string | undefined) => {
-        if (!id) return;
-        if (!newGeneral(this.s, id))
-          throw new Error(
-            `No existe el general "${id}" (${defaultContent()
-              .generals.list.map((general) => general.id)
-              .join(', ')})`,
-          );
-        appointGeneral(this.s, team, id);
-      };
-      const [mine, enemy] = duelTeams(this.s);
-      pick(mine, options.general);
-      pick(enemy, options.enemyGeneral);
-    }
+    this.rng = seededRng(aiSeedFor(seed));
+    this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
+    this.me = playerTeam(this.s);
+    this.session = new GameSession(this.s, screenControllers(this.s, this.rng));
+    this.session.subscribe((step) => this.note(step));
+    this.advance();
+    this.told = [];
+  }
+
+  /** Apunta lo que pasa: los sucesos que se cuentan (con quien los hace) y lo del fin de ronda. */
+  private note(step: ActedStep): void {
+    if (step.events.some((event) => event.kind === 'newDay')) this.lastRound = step.events;
+    const prefix = step.team === this.me ? 'tu: ' : `equipo ${shownTeamNumber(step.team)}: `;
+    this.told.push(...describeAll(this.s, step.events, prefix));
+  }
+
+  /**
+   * La partida sigue sola hasta que le toca a una persona (desde entonces se juega con ella), se acaba
+   * o ya no juega ninguna persona (se acaba para esta pantalla, como en el juego: GameSession.screenEnd).
+   */
+  private advance(): void {
+    const step = runMatch(this.session, { until: () => !this.session.personStillPlays() });
+    if (step.kind === 'awaitingInput') this.me = step.team;
   }
 
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
@@ -125,7 +127,10 @@ export class Session {
       return value;
     };
     try {
-      switch (command.toLowerCase()) {
+      const verb = command.toLowerCase();
+      // Acabada para esta pantalla, solo se mira: nada de seguir jugando (ni de exportar mas jugadas).
+      if (PLAY_COMMANDS.has(verb) && this.session.screenEnd(this.me)) return `error: la partida ha acabado (${this.result()})`;
+      switch (verb) {
         case '':
         case '#':
           return '';
@@ -166,6 +171,14 @@ export class Session {
         case 'ai':
         case 'ia':
           return this.endTurn(true);
+        case 'surrender':
+        case 'rendirse': {
+          // Lo que cuenta rendirse (tu caida), y despues lo que pase al seguir los demas.
+          this.told = [];
+          this.perform({ kind: 'surrender' }, 'no puede rendirse');
+          const said = this.told;
+          return [...said, this.endTurn(false)].join('\n');
+        }
         case 'status':
         case 'estado':
           return this.status();
@@ -250,7 +263,7 @@ export class Session {
    * error dice `problem` y la razon que da el nucleo.
    */
   private perform(action: GameAction, problem: string): GameEvent[] {
-    const result = dispatch(this.s, this.me, action);
+    const result = this.session.act(this.me, action);
     if (!result.ok) throw new UsageError(`${problem} (${result.reason})`);
     return result.events;
   }
@@ -298,34 +311,50 @@ export class Session {
     if (!id)
       return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
     const events = this.perform({ kind: 'usePower', power: id, target }, `no se puede usar ${id} (poderes: ${list})`);
-    return told(this.s, events, '').join('\n');
+    return describeAll(this.s, events, '').join('\n');
   }
 
   /**
-   * Fin del turno propio (o la IA juega por ti con `ai`), turnos de los demas equipos por su orden
-   * (los derrotados no juegan) con el fin de ronda tras el ultimo. Aqui juega una persona: los demas
-   * equipos tienen que ser de la IA.
+   * Fin del turno propio (o la IA juega por ti con `ai`): lo que pasa solo al acabarlo (las ordenes
+   * permanentes, las capturas que siguen), los turnos de los demas equipos por su orden (los
+   * derrotados no juegan) con el fin de ronda tras el ultimo, y lo que pasa solo al empezar el
+   * siguiente turno de una persona (los viajes): lo mismo que en la pantalla. Con varias personas, se
+   * sigue con la siguiente.
    */
   private endTurn(aiForMe: boolean): string {
-    const out: string[] = [];
-    if (aiForMe) out.push(...told(this.s, aiTurn(this.s, this.rng, this.me), 'tu IA: '));
-    // othersAfter pasa siempre una vez por el fin de ronda: ahi se sabe lo cobrado.
-    let income = 0;
-    for (const step of othersAfter(this.s, this.me)) {
-      if (step.kind === 'roundEnd') income = teamValue(roundReport(this.s, endRound(this.s)).income, this.me);
-      else this.playOther(step.team, out);
-    }
-    out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
-    const result = outcome(this.s, this.me);
-    if (result !== 'playing') out.push(`FIN: ${result}`);
+    const before = this.me;
+    const out = aiForMe ? this.playMyTurnWithAi() : [];
+    this.told = [];
+    this.lastRound = [];
+    this.session.finishInput(before);
+    this.advance();
+    out.push(...this.told);
+    out.push(this.dayLine(before));
+    if (this.me !== before) out.push(`--- turno del equipo ${shownTeamNumber(this.me)}`);
+    const result = this.result();
+    if (result !== 'sigue') out.push(`FIN: ${result}`);
     return out.join('\n');
   }
 
-  /** El turno de otro equipo, que tiene que ser de la IA (aqui juega una sola persona). */
-  private playOther(team: TeamId, out: string[]): void {
-    const reason = notAiControlledReason(this.s, team);
-    if (reason) throw new UsageError(reason);
-    out.push(...told(this.s, aiTurn(this.s, this.rng, team), `equipo ${team}: `));
+  /** El dia y el dinero del equipo; si en este fin de turno ha acabado una ronda, lo cobrado en ella. */
+  private dayLine(team: TeamId): string {
+    const funds = `dinero ${teamState(this.s, team).funds}`;
+    if (!this.lastRound.length) return `--- dia ${this.s.day}: ${funds}`;
+    const income = teamValue(roundReport(this.s, this.lastRound).income, team);
+    return `--- dia ${this.s.day}: +${income} de ingresos, ${funds}`;
+  }
+
+  /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
+  private playMyTurnWithAi(): string[] {
+    return describeAll(this.s, aiTurn(this.s, this.rng, this.me, this.session.dispatcher), 'tu IA: ');
+  }
+
+  /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
+  private result(): string {
+    const end = this.session.screenEnd(this.me);
+    if (!end) return 'sigue';
+    if (end.kind === 'out') return `perdida (${DEFEAT_TEXT[end.fall.reason]}; los demas siguen sin personas)`;
+    return `${OUTCOME_TEXT[outcomeFor(end.result, this.me)]} (${end.result.reason})`;
   }
 
   status(): string {
@@ -338,7 +367,7 @@ export class Session {
     return [
       `dia ${s.day} · dinero ${teamState(s, me).funds} (otros ${others((team) => teamState(s, team).funds)}) · edificios ${own(me)} contra ${others(own)}`,
       ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
-      `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${outcome(s, me)}`,
+      `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${this.result()}`,
       `sin usar: ${
         s.units
           .filter((unit) => unit.team === me && canStillAct(unit) && unit.carrier === null)
@@ -351,11 +380,47 @@ export class Session {
 
 class UsageError extends Error {}
 
+/** La partida guardada (si no es valida, para aqui). */
+function loadedGame(json: string): GameState {
+  const s = loadGame(json);
+  if (!s) throw new Error('Partida guardada no valida');
+  return s;
+}
+
+/** Un general que no existe para aqui; ninguno (undefined), sin general. */
+function checkedGeneral(id: string | undefined): string | null {
+  if (!id) return null;
+  const known = defaultContent().generals.list.map((general) => general.id);
+  if (!known.includes(id)) throw new Error(`No existe el general "${id}" (${known.join(', ')})`);
+  return id;
+}
+
+/**
+ * La partida que se pide: la mision, o una escaramuza con lo mismo que el juego en lo que no se
+ * dice (skirmishConfig: mapa, reglas). Asi la misma semilla da la misma partida aqui y en la pantalla (K4).
+ */
+function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
+  if (options.mission) {
+    if (!missionById(options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
+    return { mode: 'mission', mission: options.mission, diceSeed: seed };
+  }
+  return skirmishConfig({
+    seed,
+    size: options.size,
+    theme: options.theme,
+    ruleChanges: options.fog === undefined ? {} : { fog: options.fog },
+    teams: [
+      { controller: 'human', general: checkedGeneral(options.general) },
+      { controller: 'ai', general: checkedGeneral(options.enemyGeneral) },
+    ],
+  });
+}
+
 /**
  * Lo que se cuenta de unos sucesos, una linea por suceso con `prefix` delante (los que no dicen nada
  * nuevo, como esperar o una orden cumplida, no se cuentan).
  */
-function told(s: GameState, events: Iterable<GameEvent>, prefix: string): string[] {
+function describeAll(s: GameState, events: Iterable<GameEvent>, prefix: string): string[] {
   const lines: string[] = [];
   for (const event of events) {
     const line = describe(s, event);
@@ -363,6 +428,34 @@ function told(s: GameState, events: Iterable<GameEvent>, prefix: string): string
   }
   return lines;
 }
+
+/** Las ordenes que juegan (las demas solo miran: mapa, unidades, estado, la partida en JSON). */
+const PLAY_COMMANDS: ReadonlySet<string> = new Set([
+  'move',
+  'mover',
+  'attack',
+  'atacar',
+  'capture',
+  'capturar',
+  'wait',
+  'esperar',
+  'buy',
+  'comprar',
+  'power',
+  'poder',
+  'end',
+  'fin',
+  'ai',
+  'ia',
+  'surrender',
+  'rendirse',
+]);
+
+/** Como ha acabado para ti, en una palabra. */
+const OUTCOME_TEXT: Record<MatchOutcome, string> = { won: 'ganada', lost: 'perdida', draw: 'empate' };
+
+/** Por que cae un equipo, en una palabra o dos. */
+const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'sin nada', surrender: 'rendido' };
 
 /** Un suceso en una linea, o null si no merece la pena contarlo. */
 function describe(s: GameState, event: GameEvent): string | null {
@@ -389,6 +482,10 @@ function describe(s: GameState, event: GameEvent): string | null {
       return `${name(event.uid)} repara a ${event.repairs.length}`;
     case 'power':
       return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+    case 'surrender':
+      return `el equipo ${shownTeamNumber(event.actor)} se rinde`;
+    case 'teamDefeated':
+      return `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`;
     default:
       // Esperar, ordenes, escuadras, viajes y el fin de ronda (eso lo resume endTurn) no se cuentan.
       return null;
@@ -412,6 +509,7 @@ const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   power [id] [x y]         poder del general (con --general; sin id, carga y lista)
   end                      fin de turno: juega la IA enemiga y empieza el dia siguiente
   ai                       la IA juega tu turno y el enemigo el suyo
+  surrender                rendirse (y siguen los demas, si queda alguna persona)
   status                   dia, dinero, edificios y unidades
   state                    partida en JSON (para guardarla o abrirla en el juego)
-Tambien en español: mapa, unidades, unidad, mover, atacar, capturar, esperar, comprar, fin, ia, estado.`;
+Tambien en español: mapa, unidades, unidad, mover, atacar, capturar, esperar, comprar, fin, ia, rendirse, estado.`;

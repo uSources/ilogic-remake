@@ -16,8 +16,8 @@ describe('arena: copia de la IA', () => {
     expect(snapshotSource('ai/tactics.ts', source, copied)).toBe(
       "import { HQ, UNIT } from '@core/data';\nimport { buildingAt } from '@core/rules/queries';\nimport { doMove } from './context';\n",
     );
-    expect(snapshotSource('ai.ts', "import { aiCtx } from './ai/context';\nimport { wait } from './rules/unitActions';\n", copied)).toBe(
-      "import { aiCtx } from './ai/context';\nimport { wait } from '@core/rules/unitActions';\n",
+    expect(snapshotSource('ai.ts', "import { playCtx } from './ai/context';\nimport { wait } from './rules/unitActions';\n", copied)).toBe(
+      "import { playCtx } from './ai/context';\nimport { wait } from '@core/rules/unitActions';\n",
     );
   });
 

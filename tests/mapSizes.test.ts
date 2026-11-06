@@ -2,8 +2,8 @@ import { BLANK_DICE_SEED, playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { rulesWith } from '@core/rulesConfig';
-import { createGame } from '@core/defaultGames';
-import { seededRng } from '@core/util/random';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { blankMap, mapGrid } from '@core/mapGrid';
 import { newGameState } from '@core/gameState';
 import { moveRange, newUnit, reachableTiles, visibility } from '@core/rules';
@@ -18,6 +18,7 @@ function cornerMatch(size: number): GameState {
     map: blankMap(size, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), { fog: true }),
     content: defaultContent(),
+    mode: 'skirmish',
     teams: [
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },
@@ -57,7 +58,7 @@ describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', ()
 
   it('dos partidas IA contra IA de 20 y de 40 jugadas a la vez hacen lo mismo que por separado', () => {
     const play = (games: GameState[], days: number) => playInterleaved(games, days, 3);
-    const newMatch = (size: number) => createGame(seededRng(size), { size, teams: duel('ai', 'ai') });
+    const newMatch = (size: number) => createMatch(skirmishConfig({ seed: size, size, teams: duel('ai', 'ai') }));
     const together = play([newMatch(20), newMatch(40)], 5);
     expect(together[0]).toEqual(play([newMatch(20)], 5)[0]);
     expect(together[1]).toEqual(play([newMatch(40)], 5)[0]);

@@ -15,17 +15,18 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
+import { aiController, controllersFor, type AiBrain } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
-import { createGame } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
-import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { isWinner, matchResult } from '@core/rules';
 import { armyValue } from '@core/stats';
-import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
+import type { GameState, TeamId } from '@core/model';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BASE_DIR = `${ROOT}improve/ai-baseline/`;
-
-type Brain = (s: GameState, rng: Rng, team: TeamId) => Generator<GameEvent>;
 
 /** Lo que vale cada edificio y cada moneda al decidir una partida sin terminar (como en el informe de equilibrio). */
 const STRENGTH_PER_BUILDING = 1500;
@@ -43,25 +44,18 @@ function strength(s: GameState, team: TeamId): number {
 export type DuelWinner = 'first' | 'second' | null;
 
 /** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
-export function playDuel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): DuelWinner {
+export function playDuel(seed: number, brains: [AiBrain, AiBrain], size: number, maxDays: number): DuelWinner {
   const rng = seededRng(seed);
-  const s = createGame(rng, { size, teams: duel('ai', 'ai') });
+  const s = createMatch(skirmishConfig({ seed, size, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
-  const brainOf = (team: TeamId): Brain => {
-    if (team === first) return brains[0];
-    if (team === second) return brains[1];
-    throw new Error(`La arena es de dos equipos: no hay IA para el equipo ${team}`);
-  };
-  while (!isMatchOver(s) && s.day <= maxDays) {
-    for (const team of turnTakers(s)) {
-      for (const _ of brainOf(team)(s, rng, team)) if (isMatchOver(s)) break;
-      if (isMatchOver(s)) break;
-    }
-    if (isMatchOver(s)) break;
-    endRound(s);
-  }
-  const result = outcome(s, first);
-  if (result !== 'playing') return result === 'won' ? 'first' : 'second';
+  const controllers = new Map([
+    [first, aiController(rng, brains[0])],
+    [second, aiController(rng, brains[1])],
+  ]);
+  runMatch(new GameSession(s, controllersFor(s, rng, controllers)), { until: (state) => state.day > maxDays });
+  const result = matchResult(s);
+  if (result.status === 'draw') return null;
+  if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';
   const firstStrength = strength(s, first),
     secondStrength = strength(s, second);
   if (Math.max(firstStrength, secondStrength) < CLEAR_LEAD * Math.min(firstStrength, secondStrength)) return null;
@@ -79,7 +73,7 @@ export interface ArenaResult {
   high: number;
 }
 
-export function arena(current: Brain, baseline: Brain, games: number, size: number, maxDays: number): ArenaResult {
+export function arena(current: AiBrain, baseline: AiBrain, games: number, size: number, maxDays: number): ArenaResult {
   let wins = 0,
     losses = 0,
     draws = 0;
@@ -97,17 +91,19 @@ export function arena(current: Brain, baseline: Brain, games: number, size: numb
   return { games, wins, losses, draws, rate, low: Math.max(0, rate - se), high: Math.min(1, rate + se) };
 }
 
+/** Carpetas de src/core con lo que decide la IA: la suya y los pasos de unidad que reutiliza (autopilot/). */
+const AI_DIRS = ['ai', 'autopilot'] as const;
+
 /**
- * Ficheros de la IA que se copian: ai.ts y todo src/core/ai/ (rutas relativas a src/core). Las
- * reglas, los datos y demas se siguen usando los de ahora, por su alias.
+ * Ficheros de la IA que se copian: ai.ts y todo src/core/ai/ y src/core/autopilot/ (rutas relativas
+ * a src/core). Las reglas, los datos y demas se siguen usando los de ahora, por su alias.
  */
 function aiFiles(): string[] {
-  return [
-    'ai.ts',
-    ...readdirSync(`${ROOT}src/core/ai`)
+  const inDir = (dir: string) =>
+    readdirSync(`${ROOT}src/core/${dir}`)
       .filter((file) => file.endsWith('.ts'))
-      .map((file) => `ai/${file}`),
-  ];
+      .map((file) => `${dir}/${file}`);
+  return ['ai.ts', ...AI_DIRS.flatMap(inDir)];
 }
 
 /**
@@ -135,10 +131,12 @@ export function snapshotSource(rel: string, source: string, copied: ReadonlySet<
   });
 }
 
-/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (los de ai.json) congelados. */
+/** Copia la IA actual como referencia (ai.ts, src/core/ai/ y src/core/autopilot/), con sus pesos (los de ai.json) congelados. */
 function snapshot(): void {
-  rmSync(`${BASE_DIR}ai`, { recursive: true, force: true });
-  mkdirSync(`${BASE_DIR}ai`, { recursive: true });
+  for (const dir of AI_DIRS) {
+    rmSync(`${BASE_DIR}${dir}`, { recursive: true, force: true });
+    mkdirSync(`${BASE_DIR}${dir}`, { recursive: true });
+  }
   const files = aiFiles();
   const copied = new Set(files);
   const day = new Date().toISOString().slice(0, 10);
@@ -167,7 +165,7 @@ async function main(): Promise<void> {
     console.log('No hay IA de referencia: npm run arena -- --snapshot');
     process.exit(1);
   }
-  const base = (await import(`${BASE_DIR}ai.ts`)) as { aiTurn: Brain };
+  const base = (await import(`${BASE_DIR}ai.ts`)) as { aiTurn: AiBrain };
   const games = opt('games', 200),
     size = opt('size', 20),
     days = opt('days', 40);

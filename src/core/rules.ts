@@ -27,9 +27,10 @@
  * | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
- * | `lastMove` | la ventana para deshacer el ultimo movimiento |
+ * | `undo` | los movimientos que se pueden deshacer (`undoableMoves`): apuntarlos, olvidarlos y por que no se puede |
+ * | `falls` | si un equipo ha caido y por que (`currentDefeat`, `isDefeated`) y cuando cayo (`recordFalls`, `fallOf`) |
  * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
- * | `outcome` | victoria, derrota, objetivos de mision |
+ * | `victory` | como acaba la partida (`VICTORY_RULES`, `matchResult`), derrota de un equipo, puntos, objetivo de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
  */
 export {
@@ -49,6 +50,7 @@ export {
 export { canActNow, canMoveNow, canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
 export { visionOf, visibility, visibleFoeAt, isShownTo, isVisibleFoe, sightOf, type Sight } from './rules/visibility';
 export {
+  autoCapturers,
   capturePointsOf,
   captureStrength,
   captureProgress,
@@ -120,17 +122,34 @@ export {
 export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
 export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
+export { lastUndoableMove } from './rules/undo';
+export {
+  currentDefeat,
+  fallenSince,
+  fallOf,
+  isDefeated,
+  isDefeatReason,
+  lastFallen,
+  lastFallOrder,
+  mainFall,
+  recordFalls,
+  type FallenTeam,
+} from './rules/falls';
 export {
   score,
   allianceScore,
   rivalScore,
   dayLimitReached,
-  isDefeated,
+  decidingFall,
   isMatchOver,
+  isWinner,
+  outcomeFor,
+  type MatchOutcome,
+  matchResult,
   standingTeams,
-  outcome,
   objectiveProgress,
-  endReason,
-} from './rules/outcome';
-export { othersAfter, takesTurn, turnTakers, turnsAfter, type TurnStep } from './rules/turnOrder';
+  VICTORY_RULES,
+  type VictoryRule,
+} from './rules/victory';
+export { nextTurn, takesTurn, type NextTurn } from './rules/turnOrder';
 export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';

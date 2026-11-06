@@ -1,18 +1,21 @@
 /**
  * Lo que se comprueba antes de cualquier accion, sea cual sea: que tiene la forma de una accion,
- * que la manda un equipo de la partida y que ese equipo sigue jugando. `dispatch` las pasa todas
- * antes del `validate` de la accion; una comprobacion comun nueva es una entrada mas aqui (la de
- * que sea el turno de ese equipo, cuando la partida sepa de quien es: `GameState.turn`, punto C1
- * de la fase 4).
+ * que la manda un equipo de la partida, que la partida sigue, que es su turno (y ya lo ha empezado)
+ * y que ese equipo sigue jugando. `dispatch` las pasa todas antes del `validate` de la accion; una
+ * comprobacion comun nueva es una entrada mas aqui. Las de turno (`turnOnly`) no cuentan para las
+ * acciones que valen en cualquier momento (`ActionDefinition.anyTime`: rendirse).
  */
 import { teamIds } from '../teams';
 import { takesTurn } from '../rules/turnOrder';
+import { isMatchOver } from '../rules/victory';
 import { isGameAction } from './shape';
 import type { ActionRejection, GameAction, GameState, TeamId } from '../model';
 
 export interface ActionGuard {
   /** Nombre corto (para depurar). */
   readonly id: string;
+  /** Solo mira de quien es el turno: no cuenta para las acciones que valen en cualquier momento. */
+  readonly turnOnly?: true;
   /** Por que el equipo `team` no puede mandar ahora esta accion (null = puede). */
   check(s: GameState, team: TeamId, action: GameAction): ActionRejection | null;
 }
@@ -22,13 +25,29 @@ export const ACTION_GUARDS: readonly ActionGuard[] = [
   { id: 'shape', check: (_s, _team, action) => (isGameAction(action) ? null : 'badAction') },
   // Un numero que no es un equipo de la partida (un cliente roto, una repeticion de otra partida).
   { id: 'team', check: (s, team) => (teamIds(s).includes(team) ? null : 'notATeam') },
-  // Un equipo que ha perdido (sin Base o sin nada: isDefeated) ya no juega, aunque le quede algo.
-  { id: 'standing', check: (s, team) => (takesTurn(s, team) ? null : 'defeated') },
+  // Decidida la partida (matchResult), nadie hace nada mas en ella.
+  { id: 'playing', check: (s) => (isMatchOver(s) ? 'matchOver' : null) },
+  // Solo juega el equipo al que le toca (GameState.turn).
+  { id: 'turn', turnOnly: true, check: (s, team) => (s.turn === team ? null : 'notYourTurn') },
+  // Y su turno empieza antes de nada (lo que pasa solo al empezarlo va primero: los viajes). Un
+  // equipo que ya ha perdido no lo empieza: solo lo pasa (lo mira 'standing').
+  {
+    id: 'started',
+    turnOnly: true,
+    check: (s, team, action) => (s.turnStarted || action.kind === 'startTurn' || !takesTurn(s, team) ? null : 'turnNotStarted'),
+  },
+  // Un equipo que ha perdido (sin Base, sin nada o rendido: isDefeated) ya no juega, aunque le quede
+  // algo. Si cae en su propio turno, solo puede pasarlo.
+  { id: 'standing', check: (s, team, action) => (takesTurn(s, team) || action.kind === 'endTurn' ? null : 'defeated') },
 ];
 
-/** La primera comprobacion comun que no pasa la accion (null = todas pasan). */
-export function guardProblem(s: GameState, team: TeamId, action: GameAction): ActionRejection | null {
+/**
+ * La primera comprobacion comun que no pasa la accion (null = todas pasan). `anyTime`: la accion vale
+ * tambien fuera de su turno (se saltan las de turno).
+ */
+export function guardProblem(s: GameState, team: TeamId, action: GameAction, anyTime = false): ActionRejection | null {
   for (const guard of ACTION_GUARDS) {
+    if (anyTime && guard.turnOnly) continue;
     const problem = guard.check(s, team, action);
     if (problem) return problem;
   }

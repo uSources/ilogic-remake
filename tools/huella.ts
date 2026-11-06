@@ -10,18 +10,21 @@
  *   npm run huella -- --total solo la total (para comparar de un vistazo)
  */
 import { createHash } from 'node:crypto';
-import { aiTurn, assistTurn } from '@core/ai';
-import { createGame } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig, type MatchTeam } from '@core/match';
 import { seededRng } from '@core/util/random';
-import { appointGeneral } from '@core/generals';
-import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { defaultContent } from '@core/content/default';
+import { isMatchOver, matchResult } from '@core/rules';
 import { serialize } from '@core/save';
-import { dispatch } from '@core/actions';
 import { posOf } from '@core/geom';
-import { duel, enemiesOf, playerTeam, teamIds } from '@core/teams';
-import type { GameState, RulesConfig } from '@core/model';
+import { aiController, controllersFor } from '@core/controllers';
+import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
+import { duel, enemiesOf, playerTeam } from '@core/teams';
+import type { GameAction, GameState, Rng, RulesConfig, TeamId } from '@core/model';
 
 const MAX_DAYS = 30;
+const FIRST_DAY = 1;
+const GENERALS = defaultContent().generals;
 
 /** Reglas que se prueban: las de siempre y variantes que apagan las partes con mas condiciones. */
 const RULE_SETS: readonly Partial<RulesConfig>[] = [
@@ -52,44 +55,63 @@ function scenarios(): Scenario[] {
   return list;
 }
 
-/** La persona junta sus tres primeras unidades en una escuadra y la manda a atacar un edificio enemigo. */
-function orderPlayerSquad(s: GameState): void {
-  const person = playerTeam(s);
+/**
+ * Las ordenes de la persona en su primer turno: junta sus tres primeras unidades en una escuadra y la
+ * manda a atacar un edificio enemigo.
+ */
+function squadOrders(s: GameState, person: TeamId): GameAction[] {
+  if (s.day !== FIRST_DAY) return [];
   const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
-  if (!target) return;
-  const uids = s.units.filter((unit) => unit.team === person && unit.squad === undefined).map((unit) => unit.uid);
-  const squad = uids.slice(0, 3);
-  if (squad.length < 2 || !dispatch(s, person, { kind: 'formSquad', uids: squad }).ok) return;
-  dispatch(s, person, { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } });
+  const squad = s.units
+    .filter((unit) => unit.team === person && unit.squad === undefined)
+    .map((unit) => unit.uid)
+    .slice(0, 3);
+  if (!target || squad.length < 2) return [];
+  return [
+    { kind: 'formSquad', uids: squad },
+    { kind: 'giveStandingOrder', uids: squad, order: { kind: 'attack', at: posOf(target) } },
+  ];
+}
+
+/**
+ * Quien juega cada equipo: la IA, con el mismo azar para todos; la persona, si lleva escuadra, da sus
+ * ordenes el primer dia y deja antes que su piloto automatico las cumpla (como la IA no las tiene,
+ * juega despues).
+ */
+function controllersOf(s: GameState, scenario: Scenario, rng: Rng): Controller[] {
+  const person = playerTeam(s);
+  const withSquad = sequence(scriptedController(squadOrders), autopilotController(), aiController(rng));
+  return controllersFor(s, rng, new Map([[person, scenario.withSquad ? withSquad : aiController(rng)]]));
+}
+
+/** Una persona contra la IA; con generales, cada equipo el de su numero en generals.json. */
+function teamsOf(scenario: Scenario): MatchTeam[] {
+  const generals = GENERALS.list;
+  return duel('human', 'ai').map((team, id) => (scenario.withGenerals ? { ...team, general: generals[id]?.id ?? null } : team));
 }
 
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
-  const s = createGame(rng, { size: scenario.size, ruleChanges: scenario.rules, teams: duel('human', 'ai') });
-  // El equipo de la persona (el primero de duel): el que tiene escuadras con ordenes.
-  const person = playerTeam(s);
-  const generals = s.content.generals.list;
-  if (scenario.withGenerals) for (const team of teamIds(s)) appointGeneral(s, team, generals[team]?.id);
-  if (scenario.withSquad) orderPlayerSquad(s);
+  const s = createMatch(
+    skirmishConfig({ seed: scenario.seed, size: scenario.size, ruleChanges: scenario.rules, teams: teamsOf(scenario) }),
+    rng,
+  );
 
   const hash = createHash('sha256');
   const record = (value: unknown) => hash.update(JSON.stringify(value));
-  const isOver = () => isMatchOver(s);
-
-  while (!isOver() && s.day <= MAX_DAYS) {
-    for (const team of turnTakers(s)) {
-      if (team === person && scenario.withSquad) for (const event of assistTurn(s, person)) record(event);
-      for (const event of aiTurn(s, rng, team)) {
-        record(event);
-        if (isOver()) break;
-      }
-      if (isOver()) break;
+  const session = new GameSession(s, controllersOf(s, scenario, rng));
+  session.subscribe((step) => {
+    // Cada suceso; si la partida acaba con esta accion, hasta el primero (como al jugarla suceso a suceso).
+    for (const event of step.events) {
+      record(event);
+      if (isMatchOver(s)) break;
     }
-    for (const event of endRound(s)) record(event);
-    hash.update(serialize(s));
-  }
-  record(outcome(s, person));
+    // Y el estado entero al acabar cada ronda.
+    if (step.events.some((event) => event.kind === 'newDay')) hash.update(serialize(s));
+  });
+  runMatch(session, { until: (state) => state.day > MAX_DAYS });
+  record(matchResult(s));
   return hash.digest('hex').slice(0, 16);
 }
 

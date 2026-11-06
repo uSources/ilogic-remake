@@ -1,7 +1,7 @@
 /**
  * La forma de una accion en el registro (ACTIONS, actions/registry.ts): cuando vale y que hace.
  */
-import type { ActionRejection, Dice, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 
 export interface ActionDefinition<K extends GameActionKind> {
   /**
@@ -12,12 +12,42 @@ export interface ActionDefinition<K extends GameActionKind> {
   /** La hace (ya comprobada) y devuelve sus sucesos, en orden. El azar, de `dice`. */
   apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice): GameEvent[];
   /**
-   * Deja abierta la ventana para deshacer (`GameState.lastMove`): solo la accion que la abre (mover).
-   * Cualquier otra la cierra al acabar (dispatch): deshacer no sirve para mirar con una unidad y
-   * volver despues de haber hecho otra cosa.
+   * Deja como estan los movimientos que se pueden deshacer (`GameState.undoableMoves`): las acciones
+   * que no cuentan nada nuevo de la partida (mover, esperar, escuadras, ordenes). Tras cualquier otra
+   * se olvidan (dispatch): deshacer no sirve para mirar con una unidad, atacar con otra y volver.
    */
-  readonly keepsUndoWindow?: true;
+  readonly keepsUndo?: true;
+  /**
+   * Vale tambien fuera del turno del equipo (sin las comprobaciones de turno de ACTION_GUARDS):
+   * rendirse, que en una partida por la red o con varias personas se puede pedir en cualquier momento.
+   */
+  readonly anyTime?: true;
 }
 
+/** Las acciones que hacen otras acciones del equipo: empezar y acabar el turno (sus pasos). */
+export type CompositeActionKind = 'startTurn' | 'endTurn';
+
+/**
+ * Una accion que hace otras del equipo (los pasos de turno): las manda por `perform`, con las mismas
+ * comprobaciones que dispatch, y sus sucesos van entre los suyos. Solo estas lo reciben.
+ */
+export interface CompositeActionDefinition<K extends CompositeActionKind> extends Omit<ActionDefinition<K>, 'apply'> {
+  apply(s: GameState, team: TeamId, action: GameActionOf<K>, dice: Dice, perform: ActionDispatcher): GameEvent[];
+}
+
+/** Las demas acciones: no hacen otras. */
+export type PlainActionKind = Exclude<GameActionKind, CompositeActionKind>;
+
+/** Las entradas de las acciones que no hacen otras (su `apply` no recibe por donde mandarlas). */
+export type PlainActionRegistry = { readonly [K in PlainActionKind]: ActionDefinition<K> };
+/** Las entradas de las acciones de turno (su `apply` recibe `perform`). */
+export type CompositeActionRegistry = { readonly [K in CompositeActionKind]: CompositeActionDefinition<K> };
+
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */
-export type ActionRegistry = { readonly [K in GameActionKind]: ActionDefinition<K> };
+export type ActionRegistry = PlainActionRegistry & CompositeActionRegistry;
+
+/**
+ * Por donde manda sus acciones quien juega un equipo: `dispatch`, o algo que la llama y ademas lo
+ * apunta (la sesion: registro de acciones, avisos). La IA y las ordenes lo reciben (autopilot/context.ts, `PlayCtx.dispatch`).
+ */
+export type ActionDispatcher = (s: GameState, team: TeamId, action: GameAction) => ActionResult;

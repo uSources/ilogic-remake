@@ -153,12 +153,18 @@ src/
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)
     gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
     teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)
-    defaultGames.ts Partidas con el contenido del juego (createGame, loadGame, saveContext)
+    defaultGames.ts Partidas con el contenido del juego (createMatch, loadGame, saveContext)
+    match.ts     Empezar una partida: MatchConfig por modo, buildMatch, skirmishConfig, rematchOf
+    modes.ts     GAME_MODES: como se acaba cada modo, su orden de turnos, sus reglas fijas y sus fases
+    session/     La partida en juego: GameSession y los controladores sin IA (persona, red, repeticion)
+    controllers/ Los controladores de la IA y el de cada equipo (controllersFor)
+    autopilot/   Cumplir las ordenes permanentes (una regla para todos): los pasos de unidad que reutiliza la IA
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
     targeting.ts Desde donde atacar y que casilla acerca mas; trail.ts: el camino trazado con el cursor
-    ai.ts        Inteligencia artificial (fachada de ai/: un generador que va devolviendo cada accion)
+    ai.ts        Inteligencia artificial (fachada de ai/: un generador que va devolviendo cada accion);
+                 las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
     mapgen.ts    Generador de mapas aleatorios
     save.ts      Guardar / cargar en JSON (saveMigrations.ts: MIGRATIONS para partidas antiguas)
     geom.ts      Rombos, distancias, numeros aleatorios con semilla

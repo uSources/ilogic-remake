@@ -62,6 +62,16 @@ function runtimeImports(file: string): string[] {
   return found.flatMap((spec) => resolveImport(file, spec) ?? []);
 }
 
+/**
+ * Todo lo que importa un fichero, tambien los imports de solo tipos: un ciclo de tipos no rompe al
+ * arrancar, pero ata los dos modulos igual (lo que cuenta `madge --circular`).
+ */
+function allImports(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
+  const statement = /^\s*(?:import|export)\s+[^'";]*?\s*from\s*['"]([^'"]+)['"]|^\s*import\s+['"]([^'"]+)['"]/gm;
+  return [...source.matchAll(statement)].flatMap((match) => resolveImport(file, (match[1] ?? match[2])!) ?? []);
+}
+
 function findCycle(graph: Map<string, string[]>): string[] | null {
   const state = new Map<string, 'open' | 'done'>();
   const stack: string[] = [];
@@ -88,6 +98,12 @@ function findCycle(graph: Map<string, string[]>): string[] | null {
 describe('imports', () => {
   it('no hay ciclos de imports en src/', () => {
     const graph = new Map(sourceFiles(SRC).map((file) => [file, runtimeImports(file)]));
+    const cycle = findCycle(graph);
+    expect(cycle?.map((file) => relative(ROOT, file)).join(' → ') ?? null).toBeNull();
+  });
+
+  it('no hay ciclos en src/core ni contando los imports de solo tipos (como madge --circular)', () => {
+    const graph = new Map(sourceFiles(join(SRC, 'core')).map((file) => [file, allImports(file)]));
     const cycle = findCycle(graph);
     expect(cycle?.map((file) => relative(ROOT, file)).join(' → ') ?? null).toBeNull();
   });

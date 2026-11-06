@@ -72,7 +72,9 @@ return gotCloser ? best.pos : null;
     `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
     `posOf(unit)`.
 14. **Sin ciclos de imports.** Si dos modulos se necesitan, lo comun baja a uno que no importa a
-    ninguno (`util/validation.ts` no sabe del contenido). Lo comprueba `tests/importCycles.test.ts`.
+    ninguno (`util/validation.ts` no sabe del contenido). Lo comprueba `tests/importCycles.test.ts`:
+    en todo src/ los imports que se cargan y, en src/core, tambien los de solo tipos (como `madge
+    --circular`: un ciclo de tipos no rompe al arrancar, pero ata los dos modulos igual).
 
 ## Al cambiar codigo que ya existe
 

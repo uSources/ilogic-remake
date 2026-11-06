@@ -43,6 +43,8 @@ export interface UIActions {
   selectSquad(id: number): void;
   renameSquad(id: number, name: string): void;
   renameClose(): void;
+  /** La siguiente persona esta lista para su turno (cambio de jugador en la misma pantalla). */
+  handoffReady(): void;
   toggleThreat(): void;
   toggleIntents(): void;
   focusUnit(uid: number): void;

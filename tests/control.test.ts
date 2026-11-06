@@ -5,12 +5,13 @@ import { defaultContent } from '@core/content/default';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { createLayer } from '@core/mapGrid';
-import { createGame, saveContext } from '@core/defaultGames';
+import { createMatch, saveContext } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { placeControlPoints } from '@core/mapgen';
 import { controlRound, groundDistance, inControlZone, newUnit, roundReport } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, savedByVersion1, unitTypeNamed, hqId, endRoundReport } from './helpers';
+import { blankState, giveTurn, savedByVersion1, unitTypeNamed, hqId, endRoundReport } from './helpers';
 import { duel, teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -90,7 +91,7 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = createGame(seededRng(seed * 7919), { teams: duel('human', 'ai') });
+      const s = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('human', 'ai') }));
       const points = s.controlPoints ?? [];
       total += points.length;
       expect(points.length).toBeLessThanOrEqual(defaultContent().defaultRules.controlPoints);
@@ -131,7 +132,7 @@ describe('puntos de control', () => {
     s.controlPoints = [{ x: 14, y: 12, owner: 0 }];
     const tank = newUnit(s, TANK, 1, { x: 18, y: 12 });
     const d0 = manhattan(tank, s.controlPoints[0]!);
-    Array.from(aiTurn(s, seededRng(1), 1));
+    Array.from(aiTurn(giveTurn(s, 1), seededRng(1), 1));
     expect(manhattan(tank, s.controlPoints[0]!)).toBeLessThan(d0);
   });
 

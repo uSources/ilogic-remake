@@ -5,22 +5,24 @@
 import type Phaser from 'phaser';
 import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
+import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { sampleArmy } from '../../core/stats';
+import { decidingFall, isDefeatReason, isWinner, outcomeFor } from '../../core/rules';
 import { enemiesOf } from '../../core/teams';
-import type { GameState, Pos, TeamId } from '../../core/model';
+import type { DefeatReason, EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
+import type { PersonEnd } from '../../core/session';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
-import { ui, type UIState } from '../../hud/store';
+import { ui, type EndOutcome } from '../../hud/store';
 import { TILE } from '../../layout';
-import { settings, t } from '../../settings';
+import { settings, t, type TextKey } from '../../settings';
+import { randomSeed } from '../../setup';
 import { burst, center, COLORS, reducedMotion, tileFlash } from '../../ui/fx';
 import type { MapView } from '../../ui/mapView';
+import { sideOf, type Side } from '../../ui/sides';
 import { PAL } from '../../ui/palette';
 import { armyChartVM, endScoreVM, endStatsVM } from '../../ui/hudModels';
 import { END_LABEL, type EndButton, type GameStartData } from './types';
-
-export type EndReason = NonNullable<UIState['end']>['reason'];
 
 /** Filtro del lienzo al perder: casi gris y oscuro. */
 const DEFEAT_FILTER = 'grayscale(0.9) brightness(0.55)';
@@ -48,15 +50,58 @@ export function setEndFilter(filter: string | null): void {
 /** Mision que va detras de esta (ninguna si es la ultima). */
 const nextMission = (mission: MissionDef): MissionDef | undefined => MISSIONS[MISSIONS.indexOf(mission) + 1];
 
+/**
+ * Como acaba para esta pantalla: lo que ve el que mira (ganada, perdida o empate), por que y, si lo
+ * decidio una caida, de quien fue para el (`fallenBy`: suya, de un aliado o de un enemigo). Asi «te
+ * has rendido» solo lo lee quien se rindio. Sin caida (limite de dias, objetivo), no hay `fallenBy`.
+ */
+export type ScreenEnd =
+  { outcome: EndOutcome; reason: Exclude<EndReason, DefeatReason> } | { outcome: EndOutcome; reason: DefeatReason; fallenBy: Side };
+
+/** El final de esta pantalla segun la sesion (GameSession.screenEnd), visto por `viewer`. */
+export function screenEndFor(s: GameState, end: PersonEnd, viewer: TeamId): ScreenEnd {
+  if (end.kind === 'out') return { outcome: 'lost', reason: end.fall.reason, fallenBy: 'own' };
+  const { result } = end;
+  const outcome = outcomeFor(result, viewer);
+  return isDefeatReason(result.reason)
+    ? { outcome, reason: result.reason, fallenBy: sideOf(s, viewer, decidingFall(s, result).team) }
+    : { outcome, reason: result.reason };
+}
+
+const REASON_TEXT: { readonly [Reason in Exclude<EndReason, 'surrender'>]: TextKey } = {
+  hq: 'endHq',
+  wipeout: 'endWipeout',
+  days: 'endDays',
+  objective: 'endObjective',
+};
+
+/** Quien se rindio, para quien mira: el, un aliado o un enemigo. */
+const SURRENDER_BY: { readonly [Who in Side]: TextKey } = { own: 'endSurrender', ally: 'endAllySurrender', enemy: 'endEnemySurrender' };
+
+/** Por que ha acabado, para quien mira: si fue por rendirse, «te has rendido» solo lo lee quien se rindio. */
+export function reasonText(end: ScreenEnd): TextKey {
+  if (!('fallenBy' in end)) return REASON_TEXT[end.reason];
+  return end.reason === 'surrender' ? SURRENDER_BY[end.fallenBy] : REASON_TEXT[end.reason];
+}
+
+/**
+ * Desde que equipo se ve el final: el que miraba o, si ha perdido y gana otra persona de esta
+ * pantalla (varias por turnos), la que gana.
+ */
+export function endViewer(result: MatchResult, viewer: TeamId, people: readonly TeamId[]): TeamId {
+  if (isWinner(result, viewer)) return viewer;
+  return people.find((team) => isWinner(result, team)) ?? viewer;
+}
+
 /** Botones del final: en una mision, siguiente (si se gana y la hay), repetir y menu; si no, revancha, nueva y menu. */
-export function endButtonsFor(mission: MissionDef | undefined, won: boolean): EndButton[] {
+export function endButtonsFor(mission: MissionDef | undefined, outcome: EndOutcome): EndButton[] {
   if (!mission) return ['rematch', 'new', 'menu'];
-  if (!won) return ['retry', 'menu'];
+  if (outcome !== 'won') return ['retry', 'menu'];
   return nextMission(mission) ? ['next', 'retry', 'menu'] : ['retry', 'menu'];
 }
 
 /** Donde mirar al acabar (para el equipo que mira, `viewer`). `lastAt`: ultima casilla con un combate o una captura. */
-export function endFocus(s: GameState, viewer: TeamId, won: boolean, reason: EndReason, lastAt: Pos | null): Pos {
+export function endFocus(s: GameState, viewer: TeamId, outcome: EndOutcome, reason: EndReason, lastAt: Pos | null): Pos {
   const hqOf = (team: TeamId) => s.buildings.find((building) => isHq(s, building) && building.owner === team);
   const objective = s.mission?.objective;
   if (reason === 'objective' && objective?.kind === 'escort') return objective.to;
@@ -67,7 +112,7 @@ export function endFocus(s: GameState, viewer: TeamId, won: boolean, reason: End
     enemiesOf(s, viewer)
       .map(hqOf)
       .find((found) => found !== undefined);
-  if (!won && hq) return hq;
+  if (outcome !== 'won' && hq) return hq;
   const map = mapGrid(s);
   return lastAt ?? hq ?? { x: Math.floor(map.width / 2), y: Math.floor(map.height / 2) };
 }
@@ -105,12 +150,14 @@ export class EndOfMatch {
     this.celebration = null;
   }
 
-  async finish(won: boolean, reason: EndReason): Promise<void> {
+  /** El final para esta pantalla (`ScreenEnd`: de la partida decidida o de quien se ha quedado fuera). */
+  async finish(end: ScreenEnd): Promise<void> {
     const host = this.host;
     if (host.ended) return;
     const s = host.state;
+    const { outcome, reason } = end;
+    const won = outcome === 'won';
     host.closeMatch();
-    sampleArmy(s);
     const mission = s.mission ? missionById(s.mission.id) : undefined;
     const bestBefore = mission ? bestDays(mission.id) : null;
     if (mission && won) markCompleted(mission.id, s.day);
@@ -118,12 +165,12 @@ export class EndOfMatch {
     hideMatchPanels();
 
     const match = host.match;
-    const focus = endFocus(s, host.viewer, won, reason, host.lastAt);
+    const focus = endFocus(s, host.viewer, outcome, reason, host.lastAt);
     if (!(await this.panTo(focus, match))) return;
     this.celebrate(won, focus);
     await host.wait(reducedMotion() ? CELEBRATION_REDUCED_MS : CELEBRATION_MS);
     if (match !== host.match) return;
-    this.showEndScreen(won, reason, mission, bestBefore);
+    this.showEndScreen(end, mission, bestBefore);
   }
 
   /** Camara a la jugada que lo ha decidido. false si entre medias se ha cambiado de partida. */
@@ -162,18 +209,20 @@ export class EndOfMatch {
   }
 
   /** La pantalla del final, con el resumen y sus botones. */
-  private showEndScreen(won: boolean, reason: EndReason, mission: MissionDef | undefined, bestBefore: number | null): void {
+  private showEndScreen(end: ScreenEnd, mission: MissionDef | undefined, bestBefore: number | null): void {
+    const { outcome } = end;
     const s = this.host.state;
-    this.buttons = endButtonsFor(mission, won);
+    const won = outcome === 'won';
+    this.buttons = endButtonsFor(mission, outcome);
     this.selected = 0;
     const viewer = this.host.viewer;
     ui.set({
       screen: 'end',
       end: {
-        won,
+        outcome,
         day: s.day,
         stats: endStatsVM(s, viewer),
-        reason,
+        reasonText: reasonText(end),
         score: endScoreVM(s, viewer),
         mission: mission ? mission.title[settings.lang] : null,
         chart: armyChartVM(s, viewer),
@@ -221,15 +270,16 @@ export class EndOfMatch {
     const s = this.host.state;
     const scenes = this.host.scene.scene;
     const mission = s.mission ? missionById(s.mission.id) : undefined;
-    const sameGame: GameStartData = { mode: 'new', rules: s.rules, setup: s.setup };
+    const rematch = rematchOf(s);
+    const sameGame: GameStartData | undefined = rematch ? { start: 'new', match: rematch } : undefined;
     switch (id) {
       case 'rematch':
         return void scenes.start('Game', sameGame);
       case 'retry':
-        return void scenes.start('Game', mission ? ({ mode: 'mission', mission: mission.id } satisfies GameStartData) : sameGame);
+        return void scenes.start('Game', mission ? missionStart(mission) : sameGame);
       case 'next': {
         const next = mission ? nextMission(mission) : undefined;
-        return void scenes.start('Game', next ? ({ mode: 'mission', mission: next.id } satisfies GameStartData) : undefined);
+        return void scenes.start('Game', next ? missionStart(next) : undefined);
       }
       case 'new':
         return void scenes.start('Menu', { open: 'setup' });
@@ -238,6 +288,12 @@ export class EndOfMatch {
     }
   }
 }
+
+/** Empezar una mision (cada vez con otros dados). */
+const missionStart = (mission: MissionDef): GameStartData => ({
+  start: 'new',
+  match: { mode: 'mission', mission: mission.id, diceSeed: randomSeed() },
+});
 
 /** Al acabar se quita todo lo de la partida (menus, prevision, avisos...) y empieza el final. */
 function hideMatchPanels(): void {

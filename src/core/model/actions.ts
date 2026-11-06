@@ -36,7 +36,7 @@ export type GameAction =
   | { kind: 'travelStep'; uid: number }
   | { kind: 'giveStandingOrder'; uids: number[]; order: StandingOrder }
   | { kind: 'cancelStandingOrder'; uids: number[] }
-  /** La unidad ha cumplido la orden que seguia (la decide quien la cumple: ver ai/standingOrders.ts). */
+  /** La unidad ha cumplido la orden que seguia (la decide quien la cumple: ver autopilot/standingOrders.ts). */
   | { kind: 'finishStandingOrder'; uid: number }
   | { kind: 'formSquad'; uids: number[]; name?: string; key?: number }
   /** Estas unidades pasan a ser el grupo de esa tecla (Ctrl + numero). */
@@ -45,7 +45,16 @@ export type GameAction =
   | { kind: 'addToGroup'; uids: number[]; key: number }
   | { kind: 'leaveSquad'; uids: number[] }
   | { kind: 'renameSquad'; squad: number; name: string }
-  | { kind: 'disbandSquad'; squad: number };
+  | { kind: 'disbandSquad'; squad: number }
+  /** El equipo se rinde: cuenta como derrotado (ver isDefeated) aunque le quede de todo. */
+  | { kind: 'surrender' }
+  /** Empieza el turno del equipo al que le toca (sus TURN_START_PHASES: los viajes de varios turnos). */
+  | { kind: 'startTurn' }
+  /**
+   * Acaba el turno del equipo (sus TURN_END_PHASES: las capturas que siguen solas) y pasa al
+   * siguiente que juega; tras el ultimo de la ronda, el fin de ronda (ROUND_PHASES).
+   */
+  | { kind: 'endTurn' };
 
 /** Tipo de accion ('move', 'attack'...). */
 export type GameActionKind = GameAction['kind'];
@@ -58,8 +67,19 @@ export type ActionRejection =
   | 'badAction'
   /** Quien la manda no es un equipo de la partida. */
   | 'notATeam'
+  /** La partida ya ha acabado (ver matchResult): nadie juega mas. */
+  | 'matchOver'
+  /** No es el turno de ese equipo (`GameState.turn`). */
+  | 'notYourTurn'
+  /** Su turno aun no ha empezado ('startTurn'), o ya habia empezado (al pedir empezarlo otra vez). */
+  | 'turnNotStarted'
+  | 'turnStarted'
+  /** Empezar o acabar un turno: lo hace la sesion (core/session), no quien juega el equipo. */
+  | 'sessionOnly'
   /** El equipo ya ha perdido (ver isDefeated): no juega mas. */
   | 'defeated'
+  /** La partida no se puede perder (su modo no tiene forma de acabar): rendirse no vale. */
+  | 'cannotLose'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */
   | 'missing'
   /** Es de otro equipo. */

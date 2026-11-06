@@ -5,15 +5,11 @@
  * Cada accion vuelve a empezar la escena desde cero, asi siempre se ve igual.
  */
 import { defaultContent } from './core/content/default';
-import { rulesWith } from './core/rulesConfig';
-import { newGameState } from './core/gameState';
-import { blankMap } from './core/mapGrid';
-import { newUnit } from './core/rules';
+import type { SandboxConfig } from './core/match';
 import { entryOf, MoveType, type GameContent, type UnitType } from './core/content';
 import { unitTypeOf } from './core/gameContent';
 import { maxBy } from './core/util/pick';
 import type { GameState, RulesConfig, Unit } from './core/model';
-import { duelTeams } from './core/teams';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];
@@ -31,6 +27,11 @@ export interface LabOptions {
 export const LAB_SIZE = 12;
 /** Semilla de los dados del laboratorio: la misma animacion sale siempre igual. */
 const LAB_DICE_SEED = 1;
+/** Los dos equipos del laboratorio: el de la persona y su enemigo. */
+const LAB_PERSON = 0;
+const LAB_ENEMY = 1;
+/** Vida del defensor en 'kill': lo justo para que el golpe lo destruya. */
+const KILL_LIFE = 15;
 /** Donde empieza cada una. La propia avanza 3 casillas para atacar (mover) o empieza al lado. */
 export const LAB_FROM = { x: 3, y: 6 };
 export const LAB_TARGET = { x: 7, y: 6 };
@@ -55,39 +56,41 @@ export const defaultLab = (): LabOptions => ({
 /** Distancia desde la que ataca la propia: su alcance minimo (la casilla de al lado si no ataca). */
 export const labRange = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).attack?.minRange ?? 1;
 
-/** Reglas del laboratorio: sin niebla ni clima; contraataque solo en la accion que lo enseña (en 'attack', el defensor no responde). */
-export function labRules(action: LabAction | null): RulesConfig {
-  return rulesWith(defaultContent(), { fog: false, weather: false, counterattack: action !== 'attack' });
+/**
+ * Reglas del laboratorio: sin niebla; contraataque solo en la accion que lo enseña (en 'attack', el
+ * defensor no responde). Sin clima ya lo pone su modo (GAME_MODES.sandbox.fixedRules).
+ */
+export function labRuleChanges(action: LabAction | null): Partial<RulesConfig> {
+  return { fog: false, counterattack: action !== 'attack' };
 }
 
 /**
- * Partida del laboratorio: todo hierba, una Base por equipo en las esquinas (si no, la partida
- * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
+ * Partida del laboratorio: todo hierba, una Base por equipo en las esquinas (sin Base un equipo
+ * empezaria caido: buildMatch no lo deja, assertAllStanding, y un equipo caido no puede actuar) y las
+ * dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
-export function labState(options: LabOptions, action: LabAction | null): GameState {
+export function labMatch(options: LabOptions, action: LabAction | null): SandboxConfig {
   const content = defaultContent();
-  const map = blankMap(LAB_SIZE, content.plainTerrain.id);
-  const s = newGameState({
-    map,
-    rules: labRules(action),
-    content,
+  const hq = content.hq.id;
+  const attackerType = entryOf(content.units, options.attacker, 'unidad');
+  const near = action !== null && action !== 'move';
+  const from = near ? { x: LAB_TARGET.x - (attackerType.attack?.minRange ?? 1), y: LAB_TARGET.y } : LAB_FROM;
+  return {
+    mode: 'sandbox',
+    size: LAB_SIZE,
+    ruleChanges: labRuleChanges(action),
     teams: [
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },
     ],
+    buildings: [
+      { type: hq, owner: LAB_PERSON, at: { x: 0, y: LAB_SIZE - 1 } },
+      { type: hq, owner: LAB_ENEMY, at: { x: LAB_SIZE - 1, y: 0 } },
+    ],
+    units: [
+      { type: attackerType.id, team: LAB_PERSON, at: from },
+      { type: options.defender, team: LAB_ENEMY, at: LAB_TARGET, ...(action === 'kill' ? { life: KILL_LIFE } : {}) },
+    ],
     diceSeed: LAB_DICE_SEED,
-  });
-  const hq = content.hq.id;
-  const [person, enemy] = duelTeams(s);
-  s.buildings.push(
-    { type: hq, owner: person, x: 0, y: LAB_SIZE - 1, capture: null },
-    { type: hq, owner: enemy, x: LAB_SIZE - 1, y: 0, capture: null },
-  );
-  const attackerType = entryOf(content.units, options.attacker, 'unidad');
-  const near = action !== null && action !== 'move';
-  const from = near ? { x: LAB_TARGET.x - (attackerType.attack?.minRange ?? 1), y: LAB_TARGET.y } : LAB_FROM;
-  newUnit(s, attackerType, person, from);
-  const defender = newUnit(s, entryOf(content.units, options.defender, 'unidad'), enemy, LAB_TARGET);
-  if (action === 'kill') defender.life = 15;
-  return s;
+  };
 }

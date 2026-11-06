@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { isMatchOver } from '@core/rules';
-import { defaultLab, LAB_FROM, LAB_TARGET, labRange, labState } from '../src/lab';
+import { createMatch } from '@core/defaultGames';
+import { defaultLab, LAB_FROM, LAB_TARGET, labMatch, labRange, type LabAction, type LabOptions } from '../src/lab';
+
+const labState = (options: LabOptions, action: LabAction) => createMatch(labMatch(options, action));
 
 describe('laboratorio de animaciones', () => {
   it('para mover, la propia empieza lejos; para atacar, ya a su distancia de tiro', () => {
@@ -18,6 +21,8 @@ describe('laboratorio de animaciones', () => {
   it('destruir: la enemiga empieza con poca vida; la partida no se acaba sola', () => {
     const s = labState(defaultLab(), 'kill');
     expect(s.units[1]!.life).toBeLessThan(30);
+    expect(s.mode).toBe('sandbox');
+    s.units = [];
     expect(isMatchOver(s)).toBe(false);
   });
 });

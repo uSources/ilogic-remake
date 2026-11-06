@@ -51,5 +51,5 @@ async function runLab(host: LabHost, action: LabAction): Promise<void> {
 
 /** Volver a empezar el laboratorio con otras opciones (y una accion, si se pide). */
 export function restartLab(scene: Phaser.Scene, options: LabOptions): void {
-  scene.scene.start('Game', { mode: 'lab', lab: options } satisfies GameStartData);
+  scene.scene.start('Game', { start: 'lab', lab: options } satisfies GameStartData);
 }

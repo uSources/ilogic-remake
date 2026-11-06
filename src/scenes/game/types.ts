@@ -2,8 +2,9 @@
  * Tipos y constantes que comparten GameScene y sus modulos (src/scenes/game). Sin Phaser: se pueden
  * importar desde los tests.
  */
-import type { UnitMenuOption } from '../../core/actions';
-import type { GameAction, GameEvent, GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
+import type { ActionDispatcher, UnitMenuOption } from '../../core/actions';
+import type { MatchConfig } from '../../core/match';
+import type { GameAction, GameEvent, Pos, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -23,21 +24,6 @@ export type Phase =
 export type ActionKey = UnitMenuOption | 'back';
 /** «Atras» va justo antes de esta opcion (la de peligro, al final), o al final si no esta. */
 export const BACK_GOES_BEFORE: UnitMenuOption = 'delete';
-/**
- * Sucesos propios despues de los que Ctrl+Z sigue valiendo: no cuentan nada nuevo de la partida ni
- * tiran dados (moverse, esperar, viajes, escuadras, ordenes, y la captura a medias que se pierde al
- * irse, que deshacer devuelve). Todos los demas lo cierran (GameScene.noteEvent).
- */
-export const KEEPS_UNDO: ReadonlySet<GameEvent['kind']> = new Set([
-  'move',
-  'wait',
-  'undoMove',
-  'travel',
-  'squad',
-  'standingOrder',
-  'captureDropped',
-]);
-
 export type GameMenuKey = 'endTurn' | 'save' | 'replay' | 'options' | 'help' | 'surrender' | 'quit' | 'resume';
 export const GAME_MENU: GameMenuKey[] = ['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit'];
 
@@ -69,10 +55,10 @@ export interface ActionHost {
   /** Hace la accion y anima sus sucesos (con el dibujo `ghostKey` para la unidad que se mueve); false si no valia. */
   perform(action: GameAction, ghostKey?: string | null): Promise<boolean>;
   /**
-   * Apunta sucesos que no salen de `act` (los turnos de la IA, las ordenes permanentes) igual que
-   * `act` apunta los suyos: estadisticas, tutorial, Ctrl+Z. Animarlos (`play`) ya no apunta nada.
+   * Por donde mandan sus acciones por el equipo que mira los que deciden solos (las ordenes
+   * permanentes que empiezan ya): la sesion, como `act`, para que queden apuntadas.
    */
-  record(events: readonly GameEvent[]): void;
+  readonly dispatcher: ActionDispatcher;
 }
 
 /** Fases en las que el cursor sigue al puntero. */
@@ -86,17 +72,11 @@ export const INPUT_LOCK_MS = 350;
 /** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
 export const CONFIRM_MS = 2500;
 
-/** Como empieza una partida (scene.start('Game', data)). */
-export interface GameStartData {
-  /** new: mapa al azar o con `setup`; load: la guardada; mission: `mission`; state: `state` (JSON de una partida). */
-  mode?: 'new' | 'load' | 'mission' | 'state' | 'lab';
-  /** Laboratorio de animaciones (src/lab.ts). */
-  lab?: LabOptions;
-  rules?: Partial<RulesConfig>;
-  setup?: GameSetup;
-  mission?: string;
-  state?: string;
-  /** Partida nueva: general del jugador y de la IA (id de generals.json). */
-  general?: string | null;
-  enemyGeneral?: string | null;
-}
+/**
+ * Como empieza una partida (scene.start('Game', data)): una nueva, con su configuracion (cualquier
+ * modo de juego: `MatchConfig`, core/match.ts); la guardada; una preparada desde fuera (`state`, el
+ * JSON de una partida: depuracion y pruebas), o el laboratorio de animaciones (src/lab.ts, que
+ * prepara la suya). Sin datos, una escaramuza nueva al azar.
+ */
+export type GameStartData =
+  { start: 'new'; match: MatchConfig } | { start: 'load' } | { start: 'state'; state: string } | { start: 'lab'; lab?: LabOptions };

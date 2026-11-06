@@ -1,5 +1,6 @@
 import type { Pos } from './geometry';
 import type { StandingOrder } from './standingOrder';
+import type { DefeatReason } from './defeat';
 import type { TeamId } from './team';
 
 /**
@@ -121,7 +122,15 @@ export type GameEvent =
   /** Fin de ronda: empieza el dia `day`. */
   | { kind: 'newDay'; actor: null; day: number }
   /** [CAMBIO] Fin de ronda: cambia el clima (ids de weather.json). */
-  | { kind: 'weather'; actor: null; from: string; to: string };
+  | { kind: 'weather'; actor: null; from: string; to: string }
+  /** El equipo `actor` se ha rendido. */
+  | { kind: 'surrender'; actor: TeamId }
+  /** Con lo que ha hecho `actor` (null: al acabar la ronda), el equipo `team` ha caido (ya no juega), por `reason`. */
+  | { kind: 'teamDefeated'; actor: TeamId | null; team: TeamId; reason: DefeatReason }
+  /** Empieza el turno del equipo `actor` en el dia `day` (lo que hagan sus TURN_START_PHASES va detras). */
+  | { kind: 'turnStart'; actor: TeamId; day: number }
+  /** Acaba el turno del equipo `actor` y le toca a `next` (si acaba la ronda, sus sucesos van detras). */
+  | { kind: 'turnEnd'; actor: TeamId; next: TeamId };
 
 /** Tipo de evento ('move', 'attack'...). */
 export type GameEventKind = GameEvent['kind'];

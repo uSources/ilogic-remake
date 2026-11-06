@@ -259,7 +259,9 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
   `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
   (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
-  las cumple la misma IA que el enemigo (`assistTurn`/`standingOrderTurn` en `src/core/ai/standingOrders.ts`); escuadras
+  las cumple la partida, no la IA (`assistTurn` en `src/core/autopilot/standingOrders.ts`, con los
+  pasos de unidad que la IA reutiliza, al acabar el turno de cada equipo: la fase 'standingOrders'
+  de `TURN_END_PHASES`, core/actions/turn.ts); escuadras
   y ordenes estan en `src/core/squads/` (fachada `squads.ts`).
 
 Para probar sin tocar ficheros, las variantes de equilibrio cambian los campos de los ficheros por
@@ -293,7 +295,7 @@ Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 `weightsOf(s).KILLBONUS`, `s.content.generals`; las reglas por defecto, `rulesWith(contenido, cambios)`;
 los nombres en pantalla, `nameOf(unitType)` (settings.ts). Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
-que se pide), y lo usan `createGame`/`loadGame` (core/defaultGames.ts), la interfaz y las
+que se pide), y lo usan `createMatch`/`loadGame` (core/defaultGames.ts), la interfaz y las
 herramientas.
 
 Una variante de `npm run balance` no toca el contenido del juego: `buildVariant`

@@ -36,5 +36,5 @@ export const PHASES: { readonly [P in Phase]: PhaseHandler } = {
 
 export { acceptMapTile } from './map';
 export { captureNow } from './unitMenu';
-export { GameMenuChoices, type GameMenuHost } from './gameMenu';
+export { GameMenuChoices, gameMenuOf, quitWhileWatching, watchesOthers, type GameMenuHost, type WatchState } from './gameMenu';
 export type { PhaseHost } from './phase';

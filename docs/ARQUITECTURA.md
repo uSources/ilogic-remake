@@ -14,7 +14,10 @@ flowchart TB
     rules["rules.ts + rules/<br/>alcance, combate, captura, economia, fin de ronda"]
     orders["targeting.ts / trail.ts<br/>a donde apuntar y camino trazado"]
     squads["squads.ts + squads/<br/>escuadras y ordenes permanentes"]
+    autopilot["autopilot.ts + autopilot/<br/>cumplir ordenes permanentes:<br/>pasos de unidad (atacar, retirarse, formacion)"]
     ai["ai.ts + ai/<br/>IA (generador de eventos)"]
+    session["session.ts + session/<br/>GameSession y controladores sin IA"]
+    controllers["controllers.ts + controllers/<br/>controladores de la IA"]
     gen["mapgen.ts / missions.ts"]
     save["save.ts / stats.ts"]
     teams["teams.ts<br/>equipos y alianzas"]
@@ -30,10 +33,13 @@ flowchart TB
   subgraph hud["src/hud — interfaz HTML (Preact)"]
     store["store.ts<br/>estado de la interfaz"] --> comps["Hud.tsx → game/ · menus/ · overlays/"]
   end
-  game -- "dispatch(accion)" --> actions
-  game --> rules & ai & orders & squads
+  game -- "session.act(accion)" --> session
+  game --> rules & autopilot & orders & squads & controllers
+  session -- "dispatch(accion)" --> actions
+  controllers --> session & ai
   ai -- "dispatch(accion)" --> actions
-  actions --> rules & squads
+  ai --> autopilot
+  actions --> rules & squads & autopilot
   game --> mapView & fx & hudModels
   game -- "ui.set(...)" --> store
   comps -- "ui.actions.*" --> game
@@ -47,11 +53,15 @@ flowchart TB
 
 ### El nucleo por dentro
 
-`actions.ts`, `rules.ts`, `ai.ts` y `squads.ts` son fachadas: reexportan lo publico de sus modulos,
-uno por tema, y desde fuera de `src/core` se importa siempre de ellas (`'../core/rules'`,
-`'@core/actions'`); ESLint no deja que la escena, la interfaz ni las herramientas importen los
-modulos de dentro. Dentro de core, mejor del modulo concreto (`'./rules/movement'`): menos
-acoplamiento y sin ciclos.
+`actions.ts`, `rules.ts`, `ai.ts`, `autopilot.ts`, `session.ts`, `controllers.ts` y `squads.ts` son
+fachadas: reexportan lo publico de sus modulos, uno por tema, y desde fuera de `src/core` se importa
+siempre de ellas (`'../core/rules'`, `'@core/actions'`); ESLint no deja que la escena, la interfaz
+ni las herramientas importen los modulos de dentro. Dentro de core, mejor del modulo concreto
+(`'./rules/movement'`): menos acoplamiento y sin ciclos. **La IA es un jugador mas**: las reglas,
+las acciones, las ordenes permanentes (autopilot/) y la sesion no importan nada de la IA (ai/,
+ai.ts, aiGenerals.ts, controllers/); ESLint lo vigila (`NO_AI`) y `tests/layers.test.ts` comprueba
+que `session.ts`, `actions.ts`, `autopilot.ts` y `rules.ts` no la cargan ni de lejos. La IA
+reutiliza autopilot/.
 
 ### Acciones: la unica via para cambiar la partida
 
@@ -67,14 +77,18 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 
 - Las `INVARIANTS` son de las reglas (`rules/invariants.ts`): las repasan `dispatch` despues de cada
   accion y `endRound` al acabar la ronda, asi que ninguno de los dos copia sus pasos.
-- `dispatch` pasa las comprobaciones comunes (`ACTION_GUARDS`, `actions/guards.ts`: la primera, que
+- `dispatch` pasa las comprobaciones comunes (`ACTION_GUARDS`, `actions/guards.ts`, en orden: que
   tenga la forma de una accion, `isGameAction` con `ACTION_SHAPES` de `actions/shape.ts`, o
-  `'badAction'`; que la mande un equipo de la partida; que ese equipo no haya perdido, `'defeated'`;
-  el turno, cuando la partida sepa de quien es, fase 4), el `validate` de la
-  accion, su `apply` (con los dados de la partida, `diceOf(s)`) y despues las `INVARIANTS`
-  (`rules/invariants.ts`: fuera los muertos, las capturas cuya unidad se ha ido, las escuadras
-  vacias, el dinero por encima del maximo, el movimiento que ya no se puede deshacer). Las
-  invariantes no saben de acciones; `dispatch` tampoco: lee lo que dice la entrada del registro.
+  `'badAction'`; que la mande un equipo de la partida, `'notATeam'`; que la partida no se haya
+  decidido, `'matchOver'`; que sea su turno, `'notYourTurn'`, y que lo haya empezado,
+  `'turnNotStarted'` (estas dos, `turnOnly`, no cuentan para las acciones con `anyTime`: rendirse
+  vale en cualquier momento, como pide una partida por la red o con varias personas); que ese equipo
+  no haya perdido, `'defeated'`, salvo para pasar el turno), el `validate` de la accion, su `apply`
+  (con los dados de la partida, `diceOf(s)`), despues las `INVARIANTS` (`rules/invariants.ts`: fuera
+  los muertos, las capturas cuya unidad se ha ido, las escuadras vacias, el dinero por encima del
+  maximo, los movimientos que ya no se pueden deshacer) y apunta los sucesos en las estadisticas
+  (`recordEvents`, stats.ts: de todos, se animen o no). Las invariantes no saben de acciones;
+  `dispatch` tampoco: lee lo que dice la entrada del registro.
 - `ACTIONS` (`actions/registry.ts`) tiene una entrada por accion (el tipo obliga), cada una en el
   modulo de su tema (`movement`, `combat`, `capture`, `transport`, `units`, `economy`, `powers`,
   `standingOrders`, `squads`). `validate(s, team, action)` lo calcula todo desde la partida (alcance,
@@ -90,18 +104,18 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   `groupMoveStep`), que la escena cumple paso a paso. Los mandos (`controls/actions.ts`,
   `INPUT_ACTIONS`) solo preguntan ahi y añaden lo que es de la interfaz. Lo que pasaria al soltar la
   unidad en otra casilla tambien lo dice el nucleo (`targetProblem`, `canCaptureAt`).
-- Deshacer el ultimo movimiento es la accion `undoMove`: la partida guarda ese movimiento
-  (`GameState.lastMove`, con la captura a medias que perdio la unidad al irse) hasta la accion
-  siguiente (solo 'move' la deja abierta: `keepsUndoWindow` en su entrada del registro; el paso de
-  un viaje no, para que no sea un movimiento gratis; dispatch la cierra tras las demas con
-  `closeUndoWindow`, de `rules/lastMove.ts`, donde esta tambien por que no se puede deshacer) o
-  hasta que su unidad deja de estar recien movida (la invariante `undoWindow`: el fin de ronda, si
-  cae). Si al moverse descubrio enemigos (`lastMove.revealed`), no se deshace (`'revealed'`): con
-  niebla seria mirar gratis. «Atras» del menu de la unidad solo manda `undoMove` (y avisa si el
-  nucleo dice `'revealed'`). Ctrl+Z todavia no: guarda en la escena una pila de partidas enteras de
-  antes de cada movimiento, solo apunta una si `undoMove` valdria en ese momento, y la vacia con
-  cualquier suceso fuera de `KEEPS_UNDO` (`GameScene.ts`); al deshacer, vuelve a esa copia. Juntar
-  los dos en un solo deshacer del nucleo es de la fase 4.
+- Un solo deshacer, en el nucleo: la accion `undoMove`. La partida apunta cada movimiento
+  (`GameState.undoableMoves`, con la captura a medias que perdio la unidad al irse; `rules/undo.ts`)
+  y los deja mientras lo de despues no cuente nada nuevo de la partida: las entradas con `keepsUndo`
+  (mover, deshacer, esperar, viajes, escuadras, ordenes); tras cualquier otra del equipo que juega,
+  dispatch los olvida (`forgetUndoableMoves`; una de otro fuera de su turno, rendirse, no). El paso
+  de un viaje no se deshace (seria un movimiento gratis). La invariante 'undoWindow' olvida los de
+  unidades que ya no estan como las dejo su movimiento (caen, suben a un transporte o vuelven a
+  estar listas con la ronda nueva). Se deshace siempre el ultimo (`lastUndoableMove`,
+  `undoMoveProblem`), uno tras otro; si al moverse descubrio enemigos (`revealed`), no
+  (`'revealed'`): con niebla seria mirar gratis. «Atras» del menu de la unidad y Ctrl+Z mandan
+  `undoMove` con la misma funcion (y avisan si el nucleo dice `'revealed'`). Si el movimiento corto
+  un viaje, deshacerlo lo devuelve (`UndoableMove.travelTo`, con su suceso 'travel').
 - Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»; reglas en `rules/travel.ts`): 'travel'
   pone el destino (una casilla que la unidad pueda pisar, a la que no llegue ya este turno
   —`'withinReach'`: para eso se mueve— y hacia la que pueda dar ya un paso: `travelProblem`) o lo
@@ -113,18 +127,39 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   viaje, no. Un viaje y una orden permanente se quitan el uno al otro, y cada uno lo cuenta (el
   viaje que acaba con `end: 'ordered'`; la orden, con `order: null`). Cada fin tiene su suceso
   'travel' con `to: null` y por que (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o
-  'ambush'), y la escena avisa «llega» solo con 'withinReach'. La escena solo manda 'travel' y
-  'travelStep' (al dar la orden y al empezar el turno).
+  'ambush'), y la escena avisa «llega» solo con 'withinReach'. El paso de cada turno lo da la
+  partida al empezar el turno de su equipo (`TURN_START_PHASES`); la escena manda 'travel' y, al
+  dar la orden, el primer 'travelStep'.
+- **Turnos**: la partida sabe de quien es el turno (`GameState.turn`, en el orden de la ronda
+  `turnOrder`, que pone el modo; `turnStarted`). 'startTurn' lo empieza (`TURN_START_PHASES`, en
+  actions/turn.ts: los viajes avanzan) y 'endTurn' lo acaba (`TURN_END_PHASES`: las ordenes
+  permanentes del equipo se cumplen, `assistTurn`, y las unidades que se han quedado sobre un
+  edificio que pueden capturar siguen capturando, `autoCapturers` en rules/capture.ts) y lo pasa al
+  siguiente que juega (`nextTurn`, rules/turnOrder.ts: los derrotados no); tras el ultimo del orden,
+  el fin de ronda (`endRound`, con `ROUND_PHASES`). Sus sucesos: 'turnStart' y 'turnEnd'. Cada paso
+  de turno hace acciones del equipo (las mismas entradas de ACTIONS, con su validate). Las fases son
+  acciones mandadas por el mismo camino que las demas (el `ActionDispatcher` que recibe el `apply`
+  de las acciones de turno, y solo ellas: `CompositeActionDefinition`; guardas, validate,
+  invariantes) y sus sucesos se cuentan una vez en las estadisticas; el modo puede añadir las suyas
+  (`turnPhases`). Las ordenes permanentes son una regla para todos los equipos (la persona, la IA o
+  un jugador por la red), no del controlador: las cumple core/autopilot, no la IA. 'startTurn' y
+  'endTurn' solo los manda la sesion (`isTurnBoundary`; `session.act` los rechaza con
+  'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado),
+  en su turno o fuera de el (`anyTime`); el menu solo lo ofrece si la partida se puede perder
+  (`canBeLost`: el laboratorio no; el nucleo tampoco lo deja, 'cannotLose'), y guardar, si su modo se
+  guarda (`saves`; `gameMenuOf`).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
-  (`newGameState`, `newUnit`, `appointGeneral`) y el fin de ronda (`endRound`).
+  (`buildMatch`, `newGameState`, `newUnit`, `appointGeneral`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
-  `ACTION_SHAPES` (`actions/shape.ts`; el tipo la pide), su suceso en `GameEvent` (`model/events.ts`)
-  y su entrada en el modulo de `actions/` que toque (con `keepsUndoWindow` si deja deshacer lo de
-  antes); si se ofrece en el menu de una unidad, su entrada en `UNIT_MENU`; si se puede mandar a unas
-  unidades elegidas, en `SELECTION_MENU` (y en `INPUT_ACTIONS` y `ACTION_RUNNERS` de los mandos y la
-  escena); su animacion en `ANIMATORS` (`scenes/game/playback.ts`). Lo comun a todas las acciones es
-  una entrada en `ACTION_GUARDS`; lo que hay que limpiar despues de cualquiera (y de cada ronda), una
-  en `INVARIANTS`, que devuelve sus sucesos.
+  `ACTION_SHAPES` (`actions/shape.ts`; el tipo la pide), su suceso en `GameEvent`
+  (`model/events.ts`) y su entrada en el modulo de `actions/` que toque (con `keepsUndo` si no
+  cuenta nada nuevo de la partida y deja deshacer lo de antes, y con `anyTime` si vale fuera del
+  turno, como rendirse); si se ofrece en el menu de una unidad, su entrada en `UNIT_MENU`; si se
+  puede mandar a unas unidades elegidas, en `SELECTION_MENU` (y en `INPUT_ACTIONS` y
+  `ACTION_RUNNERS` de los mandos y la escena); su animacion en `ANIMATORS`
+  (`scenes/game/playback.ts`). Lo comun a todas las acciones es una entrada en `ACTION_GUARDS`; lo
+  que hay que limpiar despues de cualquiera (y de cada ronda), una en `INVARIANTS`, que devuelve sus
+  sucesos.
 
 ### Sucesos
 
@@ -143,30 +178,136 @@ tiene un solo suceso `squad` (`SquadChange`): `change: 'disbanded'` si su equipo
 lleva el equipo de esa accion como actor y va antes que el `formed` o `grouped`; si la vacia la
 partida (caen sus unidades), la cuenta la invariante sin actor. Los numeros de escuadra no se
 reutilizan (`nextSquadId`). Con ellos
-se anima (`ANIMATORS`), se cuentan las estadisticas (`recordEvent`, por el `actor`) y se resume el
+se anima (`ANIMATORS`), se cuentan las estadisticas (`recordEvents` en dispatch, por el `actor`) y se resume el
 fin de ronda (`roundReport(s, events)`: lo que enseña la escena). `endRound` devuelve los suyos:
 `income`, `heal`, `upkeep`, `controlPoint`, `newDay`, `weather` (cada paso de `ROUND_PHASES` da los
-que tiene) y, al final, los de las `INVARIANTS`, que `endRound` tambien repasa (`fundsCapped`...).
+que tiene; el ultimo, 'army', apunta el valor de cada ejercito del dia nuevo) y, al final, los de
+las `INVARIANTS`, que `endRound` tambien repasa (`fundsCapped`...). Van dentro de los del 'endTurn'
+que acaba la ronda.
 
-Las piezas de abajo, que usa todo lo demas:
+### Las piezas del nucleo
+
+Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 
 | Pieza | Que va |
 |---|---|
-| `model/` | los tipos de la partida (`GameState`, `Unit` y su `UnitTurnState`, `Building`, `GameAction`, `GameEvent`, `StandingOrder`, `Squad`, `LastMove`, `RulesConfig`, `Rng`, `Dice`...). Solo tipos: no importa nada ni exporta constantes o funciones (ESLint lo vigila) |
-| `content/` | el contenido (JSON validados) resuelto al cargar en tipos con campos con nombre (`UnitType`, `BuildingType`, `TerrainType`, `WeatherType`, `Theme`, generales y sus poderes), cada uno en un catalogo por id (`Catalog`: `list` en el orden del fichero y `byId`; `findEntry`/`entryOf`): `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego (`defaultContent()`, perezoso). Ver docs/CONTENIDO.md |
-| `gameContent.ts` | el contenido de cada partida es un campo, `GameState.content` (en el modelo se llama `MatchContent` y content/index.ts le da la forma de `GameContent`): lo ponen `newGameState` y `readSave`, no se guarda (`serialize` escribe `SavedGameState`) y se lee como `s.content` o con los atajos que dan el tipo resuelto de lo que hay en la partida: `unitTypeOf(s, unit)`, `buildingTypeOf`, `isHq`, `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (y `findUnitType`/`findBuildingType` para lo que viene de fuera). Las partidas guardan ids (`unit.type = 'Tank'`), nunca el puesto en el fichero; `cloneState(s)` copia la partida y comparte el contenido |
-| `gameState.ts` | `newGameState({ map, rules, content, teams, diceSeed, theme? })`: el unico sitio que escribe la forma de una partida nueva (mapgen, misiones, laboratorio, duelos, tests). Quien la crea dice sus equipos (`teams: duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados |
-| `dice.ts` + `util/random.ts` | el azar. Los dados de las reglas (el combate) son de la partida: `GameState.dice` es el estado de un mulberry32 (un entero de 32 bits) y `diceOf(s)` tira de el, asi que se guarda y se repite con la partida. Las decisiones de quien juega (la IA, el generador de mapas) llevan su propio `Rng` (`seededRng`): lo que decide no cambia lo que sale en los dados. `util/random.ts`: el paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw` |
-| `rulesSchema.ts` | `RULE_SCHEMA`: que valores puede tener cada regla (interruptor, o numero entero o no en un intervalo, quiza null). La usan el contenido (rules.json) y el guardado; rules.schema.json dice lo mismo para los editores (lo comprueba un test) |
-| `rulesConfig.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto de ese contenido (`content.defaultRules`) con cambios; nunca `{ ...reglas, ... }` a mano |
-| `teams.ts` | los equipos de la partida (`GameState.teams`, ver "Equipos" abajo): `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`, `enemiesOf`/`alliesOf`, `teamsControlledBy`, `isAiControlled`, `isPlayableOnOneScreen`, `playerTeam`, `perTeam`, `duel`/`duelTeams`, `newTeams` |
-| `data.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`). Las tablas del generador de mapas (`mapgen.json`) y los temas (`themes.json`: letras de los mapas en texto, probabilidades de terreno) son contenido; `MoveType` (`'foot'`, `'vehicle'`...) esta en `content/types.ts` |
-| `defaultGames.ts` | partidas con el contenido del juego: `createGame(rng, opciones)`, `loadGame(json)` y `saveContext(contenido)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del juego (ESLint) |
-| `save.ts` + `savedParts.ts` + `saveMigrations.ts` | guardar y leer. `readSave(json, contexto)` da `{ ok, state }` o `{ ok: false, error }` con el `SaveError` de la parte rota (`badMap`, `badUnits`, `badRules`...); `deserialize` es su atajo que da null. El `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo). El JSON leido es un `SavedGame` (sus campos, `unknown`) hasta que se ha comprobado entero; `savedParts.ts` comprueba o limpia cada parte (lo opcional roto se quita) con lo que necesita (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni escuadras ni teclas). Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 5, atada al tipo de `GameState.version`); `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones anteriores, cada uno con hasta que version hace falta y si va sobre el JSON tal cual ('read') o sobre la partida comprobada ('checked'). Cada paso hace lo de entonces con su propia copia fija (no llama al codigo de ahora: de fuera solo lee el `SaveContext`, p. ej. la lista de unidades de su contenido). Los del formato 1: nombres viejos de campos, reglas que faltaban, pasar a la escuadra la orden comun de sus unidades. Los de los formatos 1 y 2: 'tipos por id en vez de por numero' (unidades, edificios, terreno, tema, clima y objetivo de captura; el terreno y los temas con su orden de entonces, `FORMAT_2_TERRAIN`/`FORMAT_2_THEMES`) y 'bandos fijos pasan a equipos' (los pares [jugador, IA] de dinero, generales y estadisticas pasan a `teams`; las escuadras y la mision eran del equipo 0). Los de los formatos 1 a 3: 'dados de la partida' (una semilla sacada de la del mapa y el dia), 'banderas del turno pasan a turnState' y 'teclas de grupo de las escuadras' (lo que hacia leer entonces). Los de los formatos 1 a 4: 'numero de la siguiente escuadra' (`nextSquadId`, desde la mayor; antes los numeros se reutilizaban). Se prueban con partidas guardadas de verdad (`tests/fixtures/saves/*-v1.json`, `*-v2.json`, `*-v3.json`, `*-v4.json`) |
-| `util/grid.ts` | `Grid<T>`: rejilla con `at`, `atClamped`, `set`, `contains`, `forEach`, `cells`, `createLayer`, `width`/`height`; `GridBounds` (tamaño y `contains`) para lo que solo mira los bordes |
-| `mapGrid.ts` | el mapa de una partida como rejilla: `mapGrid(s)`, `terrainAt`, `isOnBoard`, `createLayer(s, fill)` |
-| `geom.ts` | `posOf` (copia la casilla de una unidad o edificio), rombos (`diamond`, `neighbors4`) y cuadrados (`squareArea`), que reciben los bordes y solo dan casillas de dentro, `posKey` |
-| `util/validation.ts` | comprobar lo que viene de fuera: `isInt`, `isPos`, `isPosOn(bordes, valor)` (y `isEntryId(catalogo, valor)` en content/catalog.ts) |
+| `model/` | los tipos de la partida; solo tipos (ESLint lo vigila) |
+| `content/` | el contenido (JSON validados) resuelto en tipos con nombre y catalogos por id; ver docs/CONTENIDO.md |
+| `gameContent.ts` | el contenido de cada partida (`s.content`) y sus atajos (`unitTypeOf`, `terrainAt`...); `cloneState` |
+| `modes.ts` | `GAME_MODES`: lo que fija cada modo de juego (congelado; se lee con `gameModeOf`) |
+| `match.ts` | empezar una partida: `MatchConfig`, `MATCH_SETUPS`, `buildMatch`, `skirmishConfig`, `rematchOf` |
+| `gameState.ts` | `newGameState(...)`: el unico sitio que escribe la forma de una partida nueva |
+| `dice.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`) y el `Rng` de quien decide (`seededRng`) |
+| `rulesSchema.ts` | `RULE_SCHEMA`: que valores puede tener cada regla |
+| `rulesConfig.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto con cambios |
+| `teams.ts` | los equipos de la partida: alianzas, enemigos, quien los juega (ver "Equipos") |
+| `data.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`) |
+| `defaultGames.ts` | partidas con el contenido del juego: `createMatch`, `loadGame`, `saveContext` |
+| `save.ts` + `savedParts.ts` + `saveMigrations.ts` | guardar y leer (`readSave`), con las migraciones de los formatos antiguos |
+| `util/grid.ts`, `mapGrid.ts` | rejillas (`Grid<T>`, `GridBounds`) y el mapa de una partida como rejilla (`mapGrid(s)`) |
+| `geom.ts` | `posOf`, rombos (`diamond`, `neighbors4`), cuadrados (`squareArea`), `posKey` |
+| `util/validation.ts` | comprobar lo que viene de fuera: `isInt`, `isPos`, `isPosOn` (e `isEntryId`, en content/catalog.ts) |
+
+#### Los tipos y el contenido
+
+- `model/`: `GameState`, `Unit` y su `UnitTurnState`, `Building`, `GameAction`, `GameEvent`,
+  `StandingOrder`, `Squad`, `UndoableMove`, `MatchResult`, `GameModeId`, `RulesConfig`, `Rng`,
+  `Dice`... No importa nada ni exporta constantes o funciones.
+- `content/`: los JSON validados se resuelven al cargar en tipos con campos con nombre (`UnitType`,
+  `BuildingType`, `TerrainType`, `WeatherType`, `Theme`, generales y sus poderes), cada uno en un
+  catalogo por id (`Catalog`: `list` en el orden del fichero y `byId`; `findEntry`/`entryOf`).
+  `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego
+  (`defaultContent()`, perezoso).
+- `gameContent.ts`: el contenido de cada partida es un campo, `GameState.content` (en el modelo,
+  `MatchContent`; content/index.ts le da la forma de `GameContent`). Lo ponen `newGameState` y
+  `readSave`, no se guarda (`serialize` escribe `SavedGameState`) y se lee como `s.content` o con
+  los atajos que dan el tipo resuelto: `unitTypeOf(s, unit)`, `buildingTypeOf`, `isHq`,
+  `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (y
+  `findUnitType`/`findBuildingType` para lo que viene de fuera). Las partidas guardan ids
+  (`unit.type = 'Tank'`), nunca el puesto en el fichero; `cloneState(s)` copia la partida y comparte
+  el contenido.
+- `data.ts`: las tablas del generador de mapas (`mapgen.json`) y los temas (`themes.json`: letras de
+  los mapas en texto, probabilidades de terreno) son contenido; `MoveType` (`'foot'`,
+  `'vehicle'`...) esta en `content/types.ts`.
+
+#### Modos y partidas nuevas
+
+- `modes.ts`: lo que fija cada modo (`GameState.mode`: escaramuza, mision, partida para mirar): como
+  se acaba (`victory`, en orden), el orden de los turnos de cada ronda (`turnOrder`: se fija al
+  crear la partida y se guarda con ella), las reglas que impone (`fixedRules`, que aplica
+  `buildMatch`: la partida para mirar no tiene clima), sus pasos de turno (`turnPhases`, detras de
+  los de siempre) y si la pantalla guarda sola al empezar el turno de una persona
+  (`saves`). Esta congelado y todo lo lee por `gameModeOf` (las reglas, la sesion,
+  `newGameState`); los tests que prueban otro modo lo dan con `vi.mock` de `gameModeOf`
+  (tests/modeHooks.test.ts). Un modo nuevo es su entrada aqui, su configuracion en `MatchConfig` y
+  su forma de prepararse en `MATCH_SETUPS`.
+- `match.ts`: `MatchConfig` son datos (`SkirmishConfig`, `MissionConfig`, `SandboxConfig`);
+  `MATCH_SETUPS`, como se prepara cada modo; `buildMatch(config, { content, mapRng? })`, con su
+  clima y la muestra del ejercito del primer dia. Todo lo de la partida va en la configuracion, nada
+  se cambia despues: los generales en `MatchTeam.general`, y empezar cada uno de los dos equipos en
+  el sitio del otro en `swapStarts` (la herramienta de equilibrio). `skirmishConfig` pone lo de
+  siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto);
+  `rematchOf(s)` da la revancha. La usan la pantalla, `npm run play`, las herramientas y los tests:
+  una misma semilla da la misma partida en todos (K4).
+- `gameState.ts`: `newGameState({ map, rules, content, mode, teams, diceSeed, firstTeam?, theme? })`
+  lo usan mapgen, misiones, laboratorio, duelos y tests. Quien la crea dice sus equipos (`teams:
+  duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados.
+- `defaultGames.ts`: `createMatch(config, mapRng?)`, `loadGame(json)` y `saveContext(contenido)` (lo
+  que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
+  juego (ESLint).
+- `rulesSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
+  null). La usan el contenido (rules.json) y el guardado; rules.schema.json dice lo mismo para los
+  editores (lo comprueba un test). `rulesWith` usa `content.defaultRules`; nunca `{ ...reglas, ...
+  }` a mano.
+- `teams.ts`: `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`,
+  `enemiesOf`/`alliesOf`, `teamsControlledBy`, `isAiControlled`, `playerTeam`, `perTeam`,
+  `duel`/`duelTeams`, `newTeams`.
+
+#### El azar
+
+Los dados de las reglas (el combate) son de la partida: `GameState.dice` es el estado de un
+mulberry32 (un entero de 32 bits) y `diceOf(s)` tira de el, asi que se guarda y se repite con la
+partida. Las decisiones de quien juega (la IA, el generador de mapas) llevan su propio `Rng`
+(`seededRng`): lo que decide no cambia lo que sale en los dados. `util/random.ts`: el paso de
+mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
+
+#### Guardar y leer
+
+- `readSave(json, contexto)` da `{ ok, state }` o `{ ok: false, error }` con el `SaveError` de la
+  parte rota (`badMap`, `badUnits`, `badRules`...); `deserialize` es su atajo que da null. El
+  `SaveContext` da el contenido y las reglas de las misiones (save.ts no importa el catalogo).
+- El JSON leido es un `SavedGame` (sus campos, `unknown`) hasta que se ha comprobado entero;
+  `savedParts.ts` comprueba o limpia cada parte (lo opcional roto se quita) con lo que necesita
+  (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni
+  escuadras ni teclas).
+- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 7, atada al
+  tipo de `GameState.version`). `MIGRATIONS` es la lista de pasos que ponen al dia las de versiones
+  anteriores, cada uno con hasta que version hace falta y si va sobre el JSON tal cual ('read') o
+  sobre la partida comprobada ('checked'). Cada paso hace lo de entonces con su propia copia fija
+  (no llama al codigo de ahora: de fuera solo lee el `SaveContext`, p. ej. la lista de unidades de
+  su contenido).
+- Los pasos, por los formatos que los necesitan. Del 1: nombres viejos de campos, reglas que
+  faltaban, pasar a la escuadra la orden comun de sus unidades. Del 1 y 2: 'tipos por id en vez de
+  por numero' (unidades, edificios, terreno, tema, clima y objetivo de captura; el terreno y los
+  temas con su orden de entonces, `FORMAT_2_TERRAIN`/`FORMAT_2_THEMES`) y 'bandos fijos pasan a
+  equipos' (los pares [jugador, IA] de dinero, generales y estadisticas pasan a `teams`; las
+  escuadras y la mision eran del equipo 0). Del 1 al 3: 'dados de la partida' (una semilla sacada de
+  la del mapa y el dia), 'banderas del turno pasan a turnState' y 'teclas de grupo de las
+  escuadras'. Del 1 al 4: 'numero de la siguiente escuadra' (`nextSquadId`, desde la mayor; antes
+  los numeros se reutilizaban). Del 1 al 5: 'turno, modo, rendirse y dueño del objetivo' (le toca a
+  la persona; su turno aun no ha empezado si todas sus unidades estan listas, el autoguardado: asi
+  sus viajes avanzan al cargar, K3) y 'movimientos que se pueden deshacer' (`lastMove` pasa a
+  `undoableMoves`). Del 1 al 6: 'cuando cayo cada equipo' (no se sabia: `fell` null; la siguiente
+  accion apunta a quien ya habia caido).
+- Se prueban con partidas guardadas de verdad (`tests/fixtures/saves/*-v1.json` a `*-v6.json`).
+
+#### Rejillas y casillas
+
+`Grid<T>` tiene `at`, `atClamped`, `set`, `contains`, `forEach`, `cells`, `createLayer`,
+`width`/`height`; `GridBounds` (tamaño y `contains`) es para lo que solo mira los bordes.
+`mapGrid.ts`: `mapGrid(s)`, `terrainAt`, `isOnBoard`, `createLayer(s, fill)`. Los rombos y cuadrados
+de `geom.ts` reciben los bordes y solo dan casillas de dentro; `posOf` copia la casilla de una
+unidad o edificio.
 
 **El estado es la unica fuente de la partida**: las reglas van en `s.rules` (obligatorias), el tamaño
 del mapa en `s.map`, los equipos en `s.teams` y el contenido va unido a la partida (`s.content`); no hay variables de modulo
@@ -180,43 +321,77 @@ escuadra), `naming` (nombres y teclas de grupo), `standingOrders` (la orden de l
 de cada unidad), `membership` (formar, meter, sacar, deshacer; no hace sucesos) y `events` (el suceso
 de una escuadra, `squadEvent`): las piezas con las que se hacen las acciones de escuadras y ordenes
 (`actions/squads.ts`, `actions/standingOrders.ts`); la fachada `squads.ts` solo da las consultas.
-Las cumple la IA al acabar el turno (`ai/standingOrders.ts`). `targeting.ts` y `trail.ts`: desde
-donde atacar (con la regla del ataque, `attackProblem` con `from`) y el camino trazado con el
-cursor, para la escena.
+Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo juegue (la fase
+'standingOrders' de `TURN_END_PHASES`, con `assistTurn` de `autopilot/standingOrders.ts`).
+`targeting.ts` y `trail.ts`: desde donde atacar (con la regla del ataque, `attackProblem` con
+`from`) y el camino trazado con el cursor, para la escena.
 
 `src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
 
 | Modulo | Que va |
 |---|---|
 | `queries` | que hay en una casilla, por donde se anda (`canMoveOn`, `movementOf`), unidades de un equipo, pasajeros |
-| `unitTurn` | el turno de cada unidad (`Unit.turnState`: `'ready'`, `'moved'`, `'done'`): `canStillAct`, `canStillMove`, `canStillFire` (una de distancia movida ya no dispara), `canActNow`/`canMoveNow` (lo mismo y en el mapa), y la unica forma de cambiarlo (`markMoved`, `spendUnit`, `readyUnit`) |
+| `unitTurn` | el turno de cada unidad (`Unit.turnState`) y la unica forma de cambiarlo (ver abajo) |
 | `funds` | el dinero: `earn`, `pay` (paga lo que haya) y `capFunds` (lo que pase del maximo se pierde al acabar cada accion y cada ronda) |
-| `visibility` | vision y niebla (la de toda la alianza); lo que ve un equipo como `Sight` (`sightOf`), enemigos a la vista (`isVisibleFoe`, `visibleEnemies`, `visibleFoeAt`) y que unidades se le enseñan (`isShownTo`) |
-| `capture` | puntos de captura, capturas a medias (`captureProgress`, solo consulta; `dropStaleCaptures`, una de las INVARIANTS), capturar y su suceso |
+| `visibility` | vision y niebla (la de toda la alianza), enemigos a la vista y que se le enseña a cada equipo |
+| `capture` | puntos de captura, capturas a medias (`captureProgress`), capturar y su suceso, `autoCapturers` |
 | `lifecycle` | crear, quitar y limpiar unidades (`removeWithCargo`, con su `cargoLost`) |
-| `lastMove` | la ventana para deshacer el ultimo movimiento: abrirla, cerrarla, por que no se puede (`undoWindowProblem`) y su invariante |
+| `undo` | los movimientos que se pueden deshacer (`undoableMoves`), el ultimo, por que no y su invariante |
+| `falls` | si un equipo ha caido y por que (`currentDefeat`) y cuando cayo (`recordFalls`, `fallOf`, `lastFallen`) |
 | `invariants` | `INVARIANTS` y `restoreInvariants`: lo que se deja en orden tras cada accion y cada ronda, con sus sucesos |
-| `movement` | alcance (`moveRange`), caminos (`plannedPath`: por donde iria, calculado desde la partida), emboscadas, recorrer un camino (`followPath`), distancia por tierra, el suceso de mover |
+| `movement` | alcance (`moveRange`), caminos (`plannedPath`), emboscadas, `followPath`, distancia por tierra |
 | `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
-| `combat` | alcance de tiro y objetivos (`attackProblem`, `attackTargets`), proteccion, acierto (`HIT_MODIFIERS`), veterania, contraataque, botin, la tirada (`strike`) |
+| `combat` | alcance de tiro y objetivos, proteccion, acierto (`HIT_MODIFIERS`), veterania, contraataque, tirada |
 | `forecast` | prevision de combate y zona de amenaza |
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar (`buyProblem`, `buildUnit`) |
 | `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen) |
-| `outcome` | victoria y derrota de cada equipo (`outcome(s, team)`, `isMatchOver`), puntos del limite de dias por alianza, objetivos de mision |
-| `turnOrder` | quien juega y en que orden (`turnTakers`, `othersAfter`, `turnsAfter`, `takesTurn`: los derrotados ya no) |
+| `victory` | como acaba la partida, igual para todos (`matchResult(s)`, `VICTORY_RULES`; ver abajo) |
+| `turnOrder` | quien juega despues (`nextTurn`, y si con eso acaba la ronda; `takesTurn`) |
 
-`src/core/ai/`: `context` (el `AiCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada
-ataque), `tactics` (retirarse, atacar, capturar, avanzar), `fire` (fuego concentrado), `unitTurn`
-(prioridades de cada unidad), `production` (que fabrica), `formation` (escuadras que avanzan juntas)
-y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su prevision). `ai.ts` tiene `aiTurn`, que los junta.
+- `unitTurn`: `'ready'`, `'moved'`, `'done'`; `canStillAct`, `canStillMove`, `canStillFire` (una de
+  distancia movida ya no dispara), `canActNow`/`canMoveNow` (lo mismo y en el mapa), y se cambia
+  solo con `markMoved`, `spendUnit` y `readyUnit`.
+- `visibility`: lo que ve un equipo es un `Sight` (`sightOf`); enemigos a la vista con
+  `isVisibleFoe`, `visibleEnemies` y `visibleFoeAt`; que unidades se le enseñan, `isShownTo`.
+- `capture`: `captureProgress` solo consulta; `dropStaleCaptures` es una de las INVARIANTS. `undo`:
+  apuntar, olvidar, `lastUndoableMove` y `undoMoveProblem`. `movement`: `plannedPath` es por donde
+  iria, calculado desde la partida, y el suceso de mover. `combat`: `attackProblem`,
+  `attackTargets`, el botin y la tirada (`strike`).
+- `falls`: si un equipo ha caido y por que, mirando la partida (`currentDefeat`, para un equipo:
+  rendido, si no sin nada, si no sin Base; `isDefeated`), y cuando cayo: `TeamState.fell`, con su
+  numero de caida, que apunta la invariante 'falls' (`recordFalls`, con el suceso 'teamDefeated') en
+  la accion o la ronda en que pasa. Si caen varios a la vez, cual cuenta lo dice `DEFEAT_PRIORITY`
+  (sin Base, sin nada, rendido: `mainFall`). Al cargar, `readSave` solo comprueba que lo apuntado
+  cuadre con la partida en los dos sentidos (`fallsMatch`) y si no, la rechaza; `assertAllStanding`
+  exige que una partida nueva empiece con todos en pie.
+- `victory`: `MatchResult` con `status`, `winners` y `reason`; `isMatchOver`, `isWinner`. Las formas
+  de acabar estan en `VICTORY_RULES` ('lastAllianceStanding', 'objective', 'dayLimit') y cada modo
+  dice las suyas. Solo lee las caidas apuntadas: el motivo del resultado es el de la ultima
+  (`decidingFall`, la misma que usa el final para decir de quien fue), la que lo decide, no una
+  rendicion de antes. `outcomeFor` dice si un equipo ha ganado, perdido o empatado. Contrato: una
+  partida decidida por una caida que no esta apuntada (cambiada sin pasar por las INVARIANTS) hace
+  que `matchResult` lance un error; por eso `buildMatch` exige que todos empiecen en pie
+  (`assertAllStanding`) y `readSave` rechaza lo que no cuadre. Si lo que pasa al acabar un turno
+  decide la partida, 'endTurn' no pasa el turno (ni ronda nueva, ni otro dia). Puntos del limite de
+  dias por alianza, progreso del objetivo de mision.
+- `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
+
+`src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
+`context` (el `PlayCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada ataque), `tactics`
+(retirarse, atacar, capturar lo de debajo), `formation` (escuadras que avanzan juntas) y
+`standingOrders` (cumplir las ordenes del jugador, `StandingOrder`, y su prevision).
+`src/core/ai/` los reutiliza: `tactics` (ir a capturar, avanzar, moverse al azar), `fire` (fuego
+concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabrica). `ai.ts` tiene
+`aiTurn`, que los junta.
 
 - **Sin estado global en la IA**: el equipo que juega, el modo grupo y el plan de fuego van en un
-  `AiCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `startStandingOrder`) y se pasa a cada
+  `PlayCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `startStandingOrder`, con el
+  `ActionDispatcher` por el que manda sus acciones: el de la sesion, que las apunta) y se pasa a cada
   paso. Dos turnos, o una prevision en medio de uno, no se mezclan (lo necesitara un PvP o un
   servidor con varias partidas).
-- **La IA juega por la misma via**: cada cosa que hace con una unidad es una accion
-  (`act`, `doMove`, `finish` en `ai/context.ts`, que llaman a `dispatch` con su equipo); los sucesos
+- **La IA juega por la misma via**: cada cosa que hace con una unidad es una accion (`act`,
+  `doMove`, `finish` en `autopilot/context.ts`, que llaman a `dispatch` con su equipo); los sucesos
   que da son los que devuelve `dispatch`. Decide con su `Rng`; los combates tiran de los dados de la
   partida.
 - **Puntos de extension**:
@@ -229,14 +404,15 @@ y `standingOrders` (ordenes permanentes del jugador, `StandingOrder`, y su previ
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`), en su sitio de la lista; `run` devuelve si ha usado la
     unidad y suele llamar a un paso de `ai/tactics.ts`;
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
-    (`ai/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
-    `STANDING_ORDER_TURNS` (`ai/standingOrders.ts`); un tipo de efecto de general, una entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
-- La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/`, asi que un modulo nuevo de la
-  IA entra solo en la referencia. La referencia (`improve/ai-baseline/`) usa el nucleo de ahora por
-  `@core/...`: `tsc` la comprueba y `tests/arenaSnapshot.test.ts` le hace jugar una partida corta,
-  asi que un cambio del nucleo que la rompa se ve en `npm run check` (se arregla con otro `--snapshot`
-  si la IA actual ya se ha aceptado, o adaptando la copia a ese cambio: lo unico que se edita en
-  ella, como dice su cabecera; sus decisiones no se tocan).
+    (`autopilot/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
+    `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`); un tipo de efecto de general, una
+    entrada en `EFFECT_VALUES` (`aiGenerals.ts`).
+- La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/` y `autopilot/`, asi que un
+  modulo nuevo de la IA entra solo en la referencia. La referencia (`improve/ai-baseline/`) usa el
+  nucleo de ahora por `@core/...`: `tsc` la comprueba y `tests/arenaSnapshot.test.ts` le hace jugar
+  una partida corta, asi que un cambio del nucleo que la rompa se ve en `npm run check` (se arregla
+  con otro `--snapshot` si la IA actual ya se ha aceptado, o adaptando la copia a ese cambio: lo
+  unico que se edita en ella, como dice su cabecera; sus decisiones no se tocan).
 
 ### Equipos
 
@@ -246,44 +422,40 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 
 - Enemigos son los de otra alianza (`isHostile`, `enemiesOf`); los de la misma comparten la vision,
   no se atacan ni se capturan lo suyo, y un punto de control solo lo disputan enemigos.
-- Todo lo que es de un equipo lo dice: `unit.team`, `building.owner`, `squad.team`, `mission.team`.
-  Las funciones que hacen algo por un equipo lo reciben siempre (`dispatch(s, team, action)`,
-  `aiTurn(s, rng, team)`, `visibility(s, team)`, `outcome(s, team)`), sin valor por defecto.
+- Todo lo que es de un equipo lo dice: `unit.team`, `building.owner`, `squad.team`,
+  `objective.owner`. Las funciones que hacen algo por un equipo lo reciben siempre
+  (`dispatch(s, team, action)`, `aiTurn(s, rng, team, dispatcher)`, `visibility(s, team)`), sin
+  valor por defecto. Como acaba la partida no es de un equipo: `matchResult(s)` dice quien gana.
 - Los sucesos dicen que equipo los ha hecho (`actor`); el resumen de la ronda (`RoundReport`,
   `ControlReport`) lleva una lista por equipo (`perTeam`).
-- Un equipo pierde si se queda sin Base o sin nada (`isDefeated`); los derrotados ya no juegan.
-  El orden de los turnos esta en el nucleo (`rules/turnOrder.ts`), en dos formas que miran quien
-  sigue en pie al llegar a cada equipo:
-  - `turnTakers(s)`, una ronda entera: la huella, la arena, el fuzz, `npm run generals` y las
-    partidas de prueba;
-  - `othersAfter(s, team)`, lo que viene tras el turno de un equipo (los turnos de los demas y el
-    fin de ronda en su sitio): la escena, `npm run play` y el fondo del menu.
-
-  `npm run balance` juega sus dos lados en el orden pedido con `takesTurn`, y los tests que juegan
-  dos partidas a la vez, turno a turno (`playInterleaved` en tests/helpers.ts), van por `teamIds` y
-  `takesTurn`. Lo que le queda en el mapa a un derrotado se queda a proposito y el fin de ronda lo
-  trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los demas.
-- La partida termina (`isMatchOver`) cuando solo queda en pie una alianza, o cuando ya se ha
-  decidido para los que quedan (objetivo de la mision, limite de dias: gana la alianza con mas
-  puntos). Con 3 o mas equipos, que caiga uno no la acaba.
+- Un equipo pierde si se queda sin Base o sin nada, o si se rinde (`isDefeated`); los derrotados ya
+  no juegan. A quien le toca lo dice la partida (`GameState.turn`, ver "Acciones": 'endTurn' pasa al
+  siguiente que juega, `nextTurn`). Lo que le queda en el mapa a un derrotado se queda a proposito y
+  el fin de ronda lo trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los
+  demas.
+- La partida termina (`isMatchOver`) cuando la primera forma de acabar de su modo lo decide
+  (`VICTORY_RULES`): solo queda en pie una alianza (o ninguna: empate), el objetivo de la mision o
+  el limite de dias (gana la alianza con mas puntos; si empatan, empate). Con 3 o mas equipos, que
+  caiga uno no la acaba.
 - Hace falta al menos dos alianzas (`newTeams` y `readSave` no aceptan menos).
-- Las reglas no miran el `controller`: solo dice quien decide (la escena, la IA). Las ordenes con
-  destino se le pueden dar a cualquier equipo.
-- **La escena**: el equipo que juega la persona en la pantalla es `viewer` (`viewerOf`, con
-  `playerTeam(s)`: el primero con `controller: 'human'`), y todos los `...Host` lo tienen. La niebla,
-  la amenaza, lo que se elige y lo que se ordena son del `viewer`; los demas equipos los lleva la IA,
-  por su orden en la partida y saltandose los derrotados (`turns.ts`). La interfaz no sabe de
-  numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`, `'enemy'` y
-  `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
-- **Limite hasta la fase 4**: en una pantalla juega una sola persona (`isPlayableOnOneScreen`, en
-  teams.ts).
-  - El menu no ofrece continuar una partida guardada que no lo cumpla.
-  - `startMatch` la trata como dañada y empieza otra: con `load` borra el guardado; una preparada
-    por depuracion (`state`) no lo toca. `viewerOf` falla con una asi.
-  - Si otro equipo que no es de la IA llegara a su turno, la escena (`checkPlayedByAi`) y
-    `npm run play` fallan en vez de jugarlo por el (`notAiControlledReason`, en teams.ts).
-  - Una partida sin personas (IA contra IA, de las herramientas) se mira desde el primer equipo, y
-    ese lo juega la persona aunque guarde `controller: 'ai'` (las reglas no miran el controller).
+- Las reglas no miran el `controller`: solo dice quien decide (el controlador que le pone la sesion,
+  ver "Partidas en juego"). Las ordenes con destino se le pueden dar a cualquier equipo.
+- **La escena**: el equipo que mira es `viewer` (`viewerOf(session)`: la persona a la que le toca, o
+  si no la primera; sin personas, el primer equipo, que juega la persona aunque guarde `controller:
+  'ai'`, `screenControllers` de core/controllers, que usa tambien `npm run play`; en el laboratorio,
+  ademas, `labControllers`), y todos los `...Host` lo tienen. La niebla, la amenaza, lo que se elige
+  y lo que se ordena son del `viewer`. Si un equipo es de una persona solo lo dice
+  `session.isPerson` (el `person` de su controlador, tambien dentro de un `sequence`). La interfaz
+  no sabe de numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`,
+  `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
+- **Varias personas en la misma pantalla** (por turnos): cada una tiene su `humanController`; al
+  empezar el turno de otra, la escena tapa la partida con el aviso de cambio de jugador
+  (`UIState.handoff`, `hud/overlays/Handoff.tsx`) y, cuando esta lista, pasa a mirar ella
+  (`TurnFlow.switchPerson`). Cada una tiene su camara (la primera vez, sobre su cuartel) y su
+  «repetir el turno de los demas» (lo que vio al acabar su turno); el aviso «TU TURNO» sale al
+  empezar el turno de la persona, no al cargar. El final se ve desde una que gana (`endViewer`). La
+  pantalla de partida nueva lo ofrece en «Rival»; `npm run play` juega la persona a la que le toca
+  (`TextMatch`, tools/play/textMatch.ts, sobre la misma `GameSession`).
 - El turno en la barra de arriba es el del equipo que juega, por lado (`turn: Side`): tu turno, el
   de un aliado (en azul) o el de un enemigo (en rojo).
 - Los mapas al azar valen para 2 o mas equipos (`generateGame` busca una salida por equipo, cada una
@@ -294,7 +466,7 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 ### Herramientas
 
 `tools/` (equilibrio, automejora, partida por texto, contenido) solo usa el nucleo, importado por su
-alias: `import { createGame } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
+alias: `import { createMatch } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (escenas, interfaz, ajustes) o Phaser/Preact, y que los tests importen el nucleo por ruta relativa.
 Lo que mide una regla fuera de una partida de verdad, sin comprobar nada (el combate suelto del
@@ -345,32 +517,108 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
 - Los textos salen de `t('clave')` al pintar: por eso los componentes no se memorizan (`memo`), un
   cambio de idioma o de escala tiene que repintarlos aunque sus datos no cambien.
 
-## Un turno, paso a paso
+## Partidas en juego (`core/session`)
+
+Quien decide lo que hace cada equipo es un **controlador** (`Controller`, `session/controller.ts`):
+la sesion le pide su turno (`playTurn`) y va haciendo lo que da, paso a paso (`TurnStep`): 'propose'
+(una accion para que la mande la sesion; recibe el resultado), 'applied' (una que ya ha hecho el: la
+IA y `autopilotController`, hasta que en la fase 6 solo propongan, mandan las suyas por el
+`ActionDispatcher` de `selfDispatched`, que solo da las hechas y les pone la marca de `AppliedStep`:
+ningun otro controlador puede colar una) o 'awaitInput' (decide alguien de fuera: la sesion espera a
+`finishInput`). Cuando el turno del controlador acaba, la sesion manda 'endTurn'.
+
+| Controlador | Que hace |
+|---|---|
+| `aiController(rng, brain?)` | la IA rival (o la de referencia de la arena), con su azar |
+| `humanController()` | una persona en la pantalla: espera a que acabe (sus ordenes permanentes las cumple la fase de fin de turno) |
+| `remoteController()` | un jugador por la red: espera las acciones que lleguen |
+| `replaySession(s, log)` | (una sesion entera, no un controlador) repite el registro de otra, con un `LogCursor` |
+| `autopilotController()` | cumple ya, en el turno, las ordenes permanentes (la huella; session/selfDispatched.ts, sin IA) |
+| `randomController(rng)` | jugadas legales al azar (tools/improve/randomPlayer.ts, para el fuzz) |
+| `passiveController()` | no hace nada |
+| `scriptedController(acciones)` | manda una lista fija de acciones (la huella: las ordenes del primer dia) |
+| `sequence(...)` | uno detras de otro (la huella: sus ordenes, `autopilotController` y la IA) |
+
+Los de la IA (`aiController`, y `controllersFor`, que da el de cada equipo segun su
+`TeamState.controller`) estan en `core/controllers/` (fachada `core/controllers.ts`), fuera de
+session/: la sesion no importa la IA. La semilla del azar de la IA la elige quien empieza la sesion:
+el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la escena, una al azar
+(`seededRng(randomSeed())`; igualarlas, y llevar el azar de la IA en la partida, es de la fase 6).
+
+- La partida en juego es una `GameSession` (`session/gameSession.ts`): la partida, sus
+  controladores, el registro de lo que se ha hecho (`log`, para repetirlo) y los avisos de cada
+  accion (`subscribe`). Avanza paso a paso (`step`): empieza el turno de quien le toca, hace lo
+  siguiente de su controlador o acaba su turno, y para si espera a alguien de fuera o si la partida
+  se ha decidido. Quien la juega decide como esperar entre pasos: `runMatch` la lleva seguida (las
+  herramientas y los tests, con `until`) y `playMatch` espera a que se anime cada paso (la escena y
+  el fondo del menu).
+- Las acciones de una persona entran por `session.act(team, action)`, o por `session.dispatcher`
+  donde hace falta un `ActionDispatcher` (la escena, la partida por texto; solo vale para la partida
+  de la sesion: para simular en una copia, `dispatch`). Solo mientras se la espera, salvo rendirse,
+  que vale siempre.
+- 'startTurn' y 'endTurn' son solo de la sesion: la regla esta en `sessionOnlyProblem` y la usan
+  `act`, lo que propone un controlador y lo que mandan los que mandan ellos mismos
+  (`selfDispatched`: la IA y `autopilotController`, que ademas solo pueden mandar acciones de su
+  equipo; lo mismo los pasos de turno).
+- El registro (`log`, de `LoggedAction`) y como se lee estan en `session/log.ts`. Lo que un equipo
+  manda fuera de su turno (rendirse mientras juega otro, o antes de empezar el suyo) queda en el
+  registro en su sitio; si lo es lo dice una sola pregunta, `isOffTurnAction` (el turno es de otro o
+  el suyo aun no ha empezado, y vale en cualquier momento). Los controladores no traen acciones de
+  otros equipos: lo que llega fuera de turno lo da quien crea la sesion
+  (`SessionOptions.offTurnFeed`), que la sesion mira antes de cada paso. La repeticion es una sesion
+  propia (`replaySession`): su controlador (uno para todos los equipos) y su `offTurnFeed` leen el
+  registro con el mismo `LogCursor` (mirar no mueve; `advance`, `skipBoundariesDoneBy`, `seekTurnOf`
+  y `takeOffTurn` si), asi lo de fuera de turno entra en su sitio y la repeticion sale igual; al
+  acabarse el registro se para esperando, como la partida que se apunto. Si a quien se espera ya no
+  juega (se ha rendido), la sesion deja de esperarle y pasa su turno.
+- Si es una persona lo dice `session.isPerson(team)` (`Controller.person`): la unica pregunta, que
+  usan la escena, el autoguardado y quien mira. Que un paso empieza un turno lo dice
+  `startsTurn(paso)`.
+- El guardado automatico es al empezar el turno de una persona, si su modo guarda
+  (`isAutosaveMoment`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
+- En la escena, si la partida sigue pero ya no juega ninguna persona (se han rendido o han caido, y
+  quedan otros equipos), se acaba para esta pantalla: `checkEnd`, que se mira tras cada paso, la da
+  por perdida con su motivo (`GameSession.screenEnd`, y para la pantalla `screenEndFor`: un
+  `ScreenEnd`, que solo lleva de quien fue la caida, `fallenBy`, si la decidio una), la cierra y
+  borra su guardado. Una rendicion vuelve a escribir el guardado que hubiera, y la escena avisa de
+  cada equipo que cae ('teamDefeated': «El equipo N queda fuera»). El final se lee desde quien mira:
+  de quien fue la caida que lo decidio (`ScreenEnd.fallenBy`: suya, de un aliado o de un enemigo),
+  asi «Te has rendido» solo lo lee quien se rindio («Un aliado se ha rendido», «El enemigo se ha
+  rendido»). Rendirse con `act` no anima sus sucesos: el aviso de su caida lo da la escena
+  (`showFallNotice`), salvo si con eso se acaba (lo cuenta el final). Con varias personas, cada una
+  apunta hasta que caida ha visto (`TurnFlow.seenFalls`: al dejar de mirar y tras ver el aviso de
+  una), y al volver a mirar se le avisa de las que no vio (`tellFallsSince`, con `fallsNoticeFor`:
+  «El equipo N queda fuera» o, si son varias, `teamsOut`). Se acaba para la pantalla lo dice la
+  sesion (`GameSession.screenEnd`, que da un `PersonEnd`; `people`, `personStillPlays`), asi la
+  partida por texto acaba igual (K4): despues ya no deja jugar, solo mirar. Mientras juegan los
+  demas no hay menu, pero Esc o el boton del menu (que sigue a `UIState.watching`, lo que dice la
+  escena) dejan salir al menu principal (`quitWhileWatching`, dos pulsaciones).
 
 ```mermaid
 sequenceDiagram
   participant J as Jugador
   participant G as GameScene
-  participant R as core/rules
+  participant S as GameSession
+  participant R as core/actions + rules
   participant V as MapView + fx
   participant H as store → Preact
   J->>G: clic / tecla / arrastrar
-  G->>R: dispatch(s, viewer, { kind: 'move' | 'attack' | 'capture' | 'buy'... })
-  R-->>G: estado cambiado + GameEvent[] (o el motivo del rechazo)
+  G->>S: act(viewer, { kind: 'move' | 'attack' | 'capture' | 'buy'... })
+  S->>R: dispatch: estado cambiado + GameEvent[] (o el motivo del rechazo)
   G->>V: playEvents (animar)
   G->>H: refresh() → hudModels → ui.set
   J->>G: fin de turno (E)
-  loop cada accion de la IA
-    G->>R: aiTurn(s, rng, equipo) de cada otro equipo, por orden (cada accion por dispatch; da sus sucesos)
-    G->>V: animar el evento
+  G->>S: finishInput(viewer)
+  loop playMatch: cada paso hasta el turno de la persona
+    S->>R: 'endTurn' (ordenes permanentes, capturas, fin de ronda), 'startTurn' y acciones de cada otro equipo
+    G->>V: animar los sucesos del paso
   end
-  G->>R: endRound (ingresos, curar, dia + 1: sus sucesos, y roundReport los resume)
-  G->>H: resumen de ronda, guardado automatico
+  G->>H: resumen de ronda (roundReport de los sucesos), guardado automatico
 ```
 
 - Las acciones **cambian el estado y devuelven sucesos**; las animaciones solo cuentan lo que ya ha
-  pasado. Por eso el turno enemigo se puede repetir (estado de antes, con sus dados, y la semilla de
-  la IA) y acelerar sin cambiar nada.
+  pasado. Por eso los turnos ajenos se pueden repetir («Repetir turno enemigo»: el registro de la
+  sesion sobre una copia de la partida de antes, `replaySession`) y acelerar sin cambiar nada.
 - El azar: los dados de los combates van en la partida (`GameState.dice`, `diceOf(s)`) y las
   decisiones llevan su propio `Rng` con semilla. La misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` y `npm run huella` lo vigilan); cargar una partida no cambia
@@ -378,13 +626,10 @@ sequenceDiagram
   cargar para atacar otra vez da el mismo. Las guardadas en el formato 3 o antes no tenian dados: al
   leerlas se les da una semilla fija, sacada de la del mapa y del dia (la migracion 'dados de la
   partida'), asi que tambien repiten.
-- La semilla de las decisiones de la IA no es de la partida sino de quien la hace jugar: en la
-  pantalla, `TurnFlow.playOtherTeams` (`scenes/game/turns.ts`) saca una nueva cada ronda y se la
-  guarda con el estado de antes para «Repetir turno enemigo»; en las herramientas, la de su
+- La semilla de las decisiones de la IA no es de la partida sino de su controlador
+  (`aiController(rng)`): en la pantalla, una al empezar la partida; en las herramientas, la de su
   `--seed`. Va aparte de `GameState` a proposito: es estado del que controla a ese equipo, no de las
-  reglas, y no se guarda (cargar y pasar turno puede dar otras decisiones, nunca otros dados). Cuando
-  cada equipo tenga su controlador con estado (fase 6, puntos I), su `Rng` ira con el y la escena
-  dejara de sacar semillas.
+  reglas, y no se guarda (cargar y pasar turno puede dar otras decisiones, nunca otros dados).
 - **Nada de estado global de partida**: las reglas van en `s.rules` (obligatorias; `DEFAULT_RULES` esta
   congelado y cada partida lleva su copia, con los cambios de su modo, mision o laboratorio) y el tamaño
   del mapa sale de `s.map` (`mapGrid(s)`, `createLayer(s, fill)`, `isOnBoard(s, pos)` en `core/mapGrid.ts`).
@@ -454,6 +699,7 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 | Version en un solo fichero HTML | Jugar sin servidor (file://), compartir por correo | Releases, pruebas por file:// |
 | Releases y web por GitHub Actions | La sesion de Claude no puede crear Releases; asi no hace falta | Novedades y aviso de version |
 | Contenido resuelto al cargar en tipos con nombre, y guardado por id | `unitType.cost` se lee y se comprueba; añadir o reordenar una unidad no rompe partidas ni reglas | Formato 3 de las partidas, CONTENIDO.md |
+| El turno es de la partida; cada equipo, un controlador | Todos juegan igual (K4); persona, IA o red son controladores | Formato 6 |
 | Equipos con alianza y controlador; ningun numero especial | Partidas de 3 o 4 equipos, con aliados, o IA contra IA, sin tocar las reglas | `isHostile`, la vision compartida, la interfaz por lado |
 
 ## La escena de la partida (`src/scenes/game/`)
@@ -464,10 +710,10 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 
 | Modulo | Que hace | Phaser |
 |---|---|---|
-| `types.ts` | `Phase`, `Intent`, constantes, `GameStartData` | no |
-| `matchSetup.ts` | con que partida se empieza (guardada, preparada, laboratorio, mision o mapa nuevo); cada una trae sus reglas en `state.rules` y la escena no las toca | no |
+| `types.ts` | `Phase`, `Intent`, constantes, `GameStartData` (partida nueva con su `MatchConfig`, guardada, preparada o laboratorio) | no |
+| `matchSetup.ts` | la partida con que se empieza, ya en juego (`startMatch`), y quien mira (`viewerOf`) | no |
 | `phases/` | que hace cada fase del turno del jugador: una entrada de `PHASES` por fase (ver abajo) | solo tipos |
-| `moveSession.ts`, `unitMoves.ts` | la unidad elegida (alcance y camino para la interfaz) y moverla: soltar, atacar, unirse, ordenes de varios turnos, mover en grupo, Atras (`undoMove`), Ctrl+Z | solo tipos |
+| `moveSession.ts`, `unitMoves.ts` | la unidad elegida y moverla (en grupo, viajes), Atras y Ctrl+Z (`undoMove`) | solo tipos |
 | `mapOverlays.ts` | lo que se dibuja encima del mapa: capturas, ordenes, intenciones, puntos de control, escolta | no |
 | `intent.ts` | que pasa al soltar la unidad elegida y por que camino (`MovePlan`) | no |
 | `highlights.ts`, `menuModel.ts`, `hudParts.ts` | casillas marcadas, menu de bocadillo, prevision, panel de lo elegido, ayuda | no |
@@ -479,12 +725,15 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | `orders.ts`, `actionRunners.ts` | elegir y cumplir las acciones del registro (`ACTION_RUNNERS`: una entrada por accion) y las ordenes con destino; puntero del raton | solo tipos |
 | `powers.ts`, `labMode.ts` | poderes del general (apuntar y usar); laboratorio de animaciones | poco |
 | `playback.ts` | animar los `GameEvent` (mover, combate, captura, compra, poder del general) | si |
-| `turns.ts` | fin de turno, turnos de los demas equipos (los lleva la IA, por orden, con el fin de ronda tras el ultimo), repeticion, ordenes de varios turnos | si |
+| `turns.ts` | fin de turno y lo que juega la sesion hasta la persona (`playMatch`), cambio de persona, repetir los turnos ajenos | si |
 | `endOfMatch.ts` | final de la partida y su pantalla | si |
 
 - **La partida cambia con acciones**: los modulos que hacen algo en ella piden `ActionHost`
-  (`types.ts`): `act(action)` la manda por `dispatch` con el equipo que mira y da sus sucesos (o
-  null si no vale) y `perform(action)` ademas los anima. Ninguno cambia la partida a mano.
+  (`types.ts`): `act(action)` la manda por la sesion (`GameSession.act`) con el equipo que mira y da
+  sus sucesos (o null si no vale), `perform(action)` ademas los anima y `dispatcher` es lo que se le
+  da a la IA para las ordenes que empiezan ya. Ninguno cambia la partida a mano; lo que se apunta de
+  cada accion (tutorial, ultima casilla) llega por los avisos de la sesion. La escena no juega a los
+  demas equipos ni hace el fin de ronda: lo hace la sesion.
 - **Dependencias por interfaces pequeñas**: cada modulo declara lo que necesita de la escena en una
   interfaz `...Host` (como `PointerTarget` en `src/controls`). La escena se la da con `live()`
   (`host.ts`): los campos se leen en la escena cada vez, asi que el modulo ve siempre la partida y la

@@ -1,4 +1,5 @@
 import type { GeneralState } from './general';
+import type { TeamFall } from './defeat';
 import type { TeamStats } from './stats';
 
 /**
@@ -29,4 +30,11 @@ export interface TeamState {
   general: GeneralState | null;
   /** Estadisticas para la pantalla final. */
   stats: TeamStats;
+  /** Se ha rendido (la accion 'surrender'): cuenta como derrotado, aunque le quede de todo. */
+  resigned: boolean;
+  /**
+   * Cuando y por que cayo (null: sigue en pie). Lo apunta la invariante 'falls' (`recordFalls`) en la
+   * accion o la ronda en que cae; el resultado de la partida mira la ultima caida.
+   */
+  fell: TeamFall | null;
 }

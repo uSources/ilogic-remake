@@ -44,12 +44,13 @@ function ArmyChart({ data }: { data: readonly BySide[] }) {
   );
 }
 
-const REASON = { hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', objective: 'endObjective', surrender: 'endSurrender' } as const;
+/** El titulo del final para quien mira: en una mision, cumplida o no; si no, victoria, derrota o empate. */
+const END_TITLE: Record<'game' | 'mission', Record<EndVM['outcome'], TextKey>> = {
+  game: { won: 'victory', lost: 'defeat', draw: 'draw' },
+  mission: { won: 'missionWon', lost: 'missionLost', draw: 'missionLost' },
+};
 
-function endTitle(end: EndVM): string {
-  if (end.mission) return end.won ? t('missionWon') : t('missionLost');
-  return end.won ? t('victory') : t('defeat');
-}
+const endTitle = (end: EndVM): string => t(END_TITLE[end.mission ? 'mission' : 'game'][end.outcome]);
 
 function ChartSection({ chart }: { chart: readonly BySide[] }) {
   return (
@@ -109,11 +110,11 @@ function StatsTable({ stats, score, day }: { stats: NonNullable<EndVM['stats']>;
 /** Final de la partida: resultado, grafica de los ejercitos, estadisticas y botones. */
 export function EndScreen({ end }: { end: EndVM }) {
   return (
-    <div class={`endscreen ${end.won ? 'won' : 'lost'}`}>
+    <div class={`endscreen ${end.outcome}`}>
       <div class="end-head">
         {end.mission && <span class="label">{end.mission}</span>}
         <span class="end-title">{endTitle(end)}</span>
-        {end.reason && <span class="end-reason">{t(REASON[end.reason])}</span>}
+        {end.reasonText && <span class="end-reason">{t(end.reasonText)}</span>}
       </div>
       <div class="px end-card">
         <div class="end-cols">

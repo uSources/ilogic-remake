@@ -2,7 +2,6 @@ import { MoveType } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
-import { aiTurn } from '@core/ai';
 import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
@@ -11,9 +10,11 @@ import { buildMission, checkMission, missionRules, MISSIONS } from '@core/missio
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_DICE_SEED = 1;
-import { endRound, groundDistance, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { groundDistance } from '@core/rules';
+import { aiController } from '@core/controllers';
+import { GameSession, runMatch } from '@core/session';
 import { deserialize, serialize } from '@core/save';
-import { savedByVersion1, hqId } from './helpers';
+import { savedByVersion1, hqId, resultFor } from './helpers';
 
 const HQ = hqId();
 
@@ -24,7 +25,7 @@ describe('misiones', () => {
     const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
     expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1), 'a pie de base a base').toBeGreaterThan(0);
-    expect(outcome(s, 0)).toBe('playing');
+    expect(resultFor(s, 0)).toBe('playing');
     const objective = s.mission!.objective;
     if (objective.kind === 'escort') {
       const vip = s.units.find((unit) => unit.uid === objective.uid)!;
@@ -115,41 +116,41 @@ describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
     const s = buildMission(mission, defaultContent(), MISSION_DICE_SEED);
     const rng = seededRng(5);
-    for (let day = 0; day < 20 && !isMatchOver(s); day++) {
-      for (const team of turnTakers(s)) {
-        for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;
-        if (isMatchOver(s)) break;
-      }
-      endRound(s);
-    }
-    expect(['playing', 'won', 'lost']).toContain(outcome(s, 0));
+    runMatch(
+      new GameSession(
+        s,
+        s.teams.map(() => aiController(rng)),
+      ),
+      { until: (state) => state.day > 20 },
+    );
+    expect(['playing', 'won', 'lost']).toContain(resultFor(s, 0));
   });
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
     const byId = (id: string) => MISSIONS.find((mission) => mission.id === id)!;
     const hold = buildMission(byId('hold'), defaultContent(), MISSION_DICE_SEED);
     hold.day = 9;
-    expect(outcome(hold, 0)).toBe('won');
+    expect(resultFor(hold, 0)).toBe('won');
 
     const bh = buildMission(byId('bridgehead'), defaultContent(), MISSION_DICE_SEED);
     for (const building of bh.buildings) if (building.type === 'City' && building.owner === null) building.owner = 0;
-    expect(outcome(bh, 0)).toBe('won');
+    expect(resultFor(bh, 0)).toBe('won');
     const bh2 = buildMission(byId('bridgehead'), defaultContent(), MISSION_DICE_SEED);
     bh2.day = 15;
-    expect(outcome(bh2, 0)).toBe('lost');
+    expect(resultFor(bh2, 0)).toBe('lost');
 
     const cl = buildMission(byId('cleanup'), defaultContent(), MISSION_DICE_SEED);
     cl.units = cl.units.filter((unit) => unit.team === 0);
-    expect(outcome(cl, 0)).toBe('won');
+    expect(resultFor(cl, 0)).toBe('won');
 
     const es = buildMission(byId('escort'), defaultContent(), MISSION_DICE_SEED);
     const objective = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
     const vip = es.units.find((unit) => unit.uid === objective.uid)!;
-    expect(outcome(es, 0)).toBe('playing');
+    expect(resultFor(es, 0)).toBe('playing');
     vip.x = objective.to.x;
     vip.y = objective.to.y;
-    expect(outcome(es, 0)).toBe('won');
+    expect(resultFor(es, 0)).toBe('won');
     es.units = es.units.filter((unit) => unit.uid !== objective.uid);
-    expect(outcome(es, 0)).toBe('lost');
+    expect(resultFor(es, 0)).toBe('lost');
   });
 });

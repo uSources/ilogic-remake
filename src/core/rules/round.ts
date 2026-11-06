@@ -14,6 +14,7 @@ import { controlRound, type ControlReport } from './control';
 import { buildingIncome, upkeepOf } from './economy';
 import { unitAt } from './queries';
 import { readyUnit } from './unitTurn';
+import { sampleArmy } from '../stats';
 
 export interface RoundReport {
   /** Lo que ha cobrado cada equipo, por numero de equipo. */
@@ -124,6 +125,8 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
   { id: 'day', run: nextDay },
   // El clima cambia con el dia nuevo (depende de s.day).
   { id: 'weather', run: changeWeather },
+  // Con el dia ya empezado: el valor del ejercito de cada equipo ese dia (la grafica del final).
+  { id: 'army', run: quietly(sampleArmy) },
 ];
 
 /**
@@ -135,7 +138,7 @@ export function endRound(s: GameState): GameEvent[] {
   const events = ROUND_PHASES.flatMap((phase) => phase.run(s));
   // Al final, con todo ya cobrado y pagado, lo mismo que tras cada accion (el tope de dinero, el
   // deshacer de la ronda que acaba, capturas cuya unidad se ha ido...).
-  return [...events, ...restoreInvariants(s)];
+  return [...events, ...restoreInvariants(s, null)];
 }
 
 /** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound. */

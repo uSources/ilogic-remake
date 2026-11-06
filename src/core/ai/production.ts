@@ -8,7 +8,7 @@ import { buildingIncome, buyOptions, upkeepOf, type BuyOption } from '../rules/e
 import { teamUnits, unitAt } from '../rules/queries';
 import type { Building, GameEvent, GameState, Rng, TeamId, Unit } from '../model';
 import { posOf } from '../geom';
-import { act, type AiCtx } from './context';
+import { act, type PlayCtx } from '../autopilot/context';
 
 /** Elige uno al azar con probabilidad proporcional a su peso. */
 export function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: Rng): T {
@@ -91,7 +91,7 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
  * soldados de 1 punto. Entonces elige entre todo lo que cabe (no solo lo que puede pagar), empieza
  * por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
  */
-export function* produce(s: GameState, ai: AiCtx, rng: Rng): Generator<GameEvent> {
+export function* produce(s: GameState, ai: PlayCtx, rng: Rng): Generator<GameEvent> {
   const me = ai.me;
   const limited = s.rules.commandPoints !== null;
   const order = productionOrder(s, rng, limited);

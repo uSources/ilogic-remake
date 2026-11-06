@@ -38,13 +38,17 @@ const CORE_FACADES_ONLY = [
       '**/core/squads/*',
       '**/core/actions/*',
       '**/core/ai/*',
+      '**/core/autopilot/*',
+      '**/core/controllers/*',
       '@core/rules/*',
       '@core/squads/*',
       '@core/actions/*',
       '@core/ai/*',
+      '@core/autopilot/*',
+      '@core/controllers/*',
     ],
     message:
-      "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai'); la partida cambia con dispatch.",
+      "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai', 'core/autopilot', 'core/controllers'); la partida cambia con dispatch.",
   },
   {
     group: ['**/core/generals', '@core/generals'],
@@ -66,6 +70,28 @@ const UNCHECKED_ATTACK_ONLY_IN_SANDBOX = {
   regex: '(^|/)actions/combat(\\.ts)?$|^\\./combat(\\.ts)?$',
   importNames: ['resolveAttack'],
   message: "resolveAttack no comprueba nada: el juego ataca con la accion 'attack' (dispatch); fuera de una partida, core/sandbox.ts.",
+};
+/**
+ * Las reglas, las acciones, las ordenes permanentes y la sesion no dependen de la IA (ai/, ai.ts,
+ * aiGenerals.ts, ni los controladores que la usan): una partida se juega, se repite o se lleva en un
+ * servidor sin cargarla. La IA es un jugador mas: reutiliza autopilot/, no al reves.
+ */
+const NOT_THE_AI_FILES = [
+  'src/core/actions/**/*.ts',
+  'src/core/actions.ts',
+  'src/core/rules/**/*.ts',
+  'src/core/rules.ts',
+  'src/core/squads/**/*.ts',
+  'src/core/squads.ts',
+  'src/core/autopilot/**/*.ts',
+  'src/core/autopilot.ts',
+  'src/core/session/**/*.ts',
+  'src/core/session.ts',
+];
+const NO_AI = {
+  regex: '(^|/)(ai|aiGenerals|controllers)(\\.ts)?(/.*)?$',
+  message:
+    'Las reglas, las acciones, las ordenes y la sesion no importan la IA (ai/, ai.ts, aiGenerals.ts, controllers/): la IA reutiliza autopilot/.',
 };
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
 const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
@@ -117,6 +143,11 @@ export default tseslint.config(
       'no-restricted-imports': ['error', { patterns: CORE_LIMITS }],
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator'],
     },
+  },
+  {
+    // Sin la IA debajo de las reglas (NO_AI): la ultima de las de todo el nucleo para estos ficheros.
+    files: NOT_THE_AI_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI] }] },
   },
   {
     // El modelo es la capa de abajo del nucleo: solo tipos, sin depender de nada (ni del contenido).

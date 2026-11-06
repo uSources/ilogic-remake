@@ -52,30 +52,13 @@ export const isControllerKind = (value: unknown): value is ControllerKind => (CO
 export const teamsControlledBy = (s: GameState, controller: ControllerKind): TeamId[] =>
   s.teams.filter((team) => team.controller === controller).map((team) => team.id);
 
-/** El equipo lo lleva la IA del juego (los demas de una pantalla tienen que serlo: ver isPlayableOnOneScreen). */
+/** El equipo lo lleva la IA del juego. */
 export const isAiControlled = (s: GameState, team: TeamId): boolean => teamState(s, team).controller === 'ai';
 
 /**
- * Por que el turno de `team` no lo puede jugar la IA (null si es de la IA): hasta la fase 4, en una
- * pantalla juega una sola persona y los demas equipos tienen que ser de la IA. Lo usan la escena y
- * `npm run play`, cada uno con su tipo de error.
- */
-export function notAiControlledReason(s: GameState, team: TeamId): string | null {
-  if (isAiControlled(s, team)) return null;
-  return `El equipo ${team} lo juega '${teamState(s, team).controller}': aqui solo juega una persona`;
-}
-
-/**
- * Se puede jugar en una sola pantalla: como mucho un equipo de personas (el que mira; los demas los
- * lleva la IA). Varias personas en la misma partida (por turnos o en red) es la fase 4: hasta
- * entonces, ni el menu ofrece continuar una asi ni la escena la abre.
- */
-export const isPlayableOnOneScreen = (s: GameState): boolean => teamsControlledBy(s, 'human').length <= 1;
-
-/**
- * El equipo de la persona: el primero que lleva una persona. Es el que mira la pantalla (niebla,
- * colores, mandos) y el de las tarjetas de la partida guardada. Si todos son de la IA (el fondo del
- * menu, la herramienta de equilibrio) no hay persona: se mira desde el primer equipo de la lista.
+ * El equipo de la persona: el primero que lleva una persona (con varias en la misma pantalla, cada
+ * una mira en su turno: la escena). Es el de las tarjetas de la partida guardada. Si todos son de la
+ * IA (el fondo del menu, la herramienta de equilibrio) no hay persona: se mira desde el primer equipo.
  */
 export function playerTeam(s: GameState): TeamId {
   const firstPerson = teamsControlledBy(s, 'human')[0];
@@ -132,7 +115,12 @@ export function newTeams(setups: readonly TeamSetup[], initialFunds: number): Te
     funds: setup.funds ?? initialFunds,
     general: null,
     stats: emptyTeamStats(),
+    resigned: false,
+    fell: null,
   }));
   if (allianceCount(teams) < 2) throw new Error('Una partida necesita al menos dos alianzas: si no, nadie es enemigo de nadie');
   return teams;
 }
+
+/** El numero de un equipo como se enseña a las personas: contando desde 1 (el equipo 0 es el «equipo 1»). */
+export const shownTeamNumber = (team: TeamId): number => team + 1;

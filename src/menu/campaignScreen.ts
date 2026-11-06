@@ -4,8 +4,8 @@
  */
 import type { TerrainPalette } from '../ui/terrainColors';
 import { listStep, type MenuCommand } from '../controls/menu';
-import { defaultContent } from '../core/content/default';
-import { buildMission, MISSIONS, type MissionDef } from '../core/missions';
+import { createMatch } from '../core/defaultGames';
+import { MISSIONS, type MissionDef } from '../core/missions';
 import type { ObjectiveKind } from '../core/objectives';
 import { bestDays, completedMissions, missionUnlocked, nextMissionIndex, objectiveText } from '../campaign';
 import { ui, type CampaignItemVM, type UIActions } from '../hud/store';
@@ -61,7 +61,7 @@ export class CampaignScreen {
   missionThumb(index: number): string {
     const cached = this.thumbs.get(index);
     if (cached) return cached;
-    const s = buildMission(MISSIONS[index]!, defaultContent(), THUMB_DICE_SEED);
+    const s = createMatch({ mode: 'mission', mission: MISSIONS[index]!.id, diceSeed: THUMB_DICE_SEED });
     const thumb = mapThumb(s, this.host.palette, { units: true, px: MISSION_THUMB_PX });
     this.thumbs.set(index, thumb);
     return thumb;

@@ -1,27 +1,35 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
 import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
-import { endRound, mergeTargets, loadTargets, moveRange, newUnit } from '@core/rules';
-import type { GameState, Unit } from '@core/model';
+import { mergeTargets, loadTargets, moveRange, newUnit, outcomeFor, restoreInvariants } from '@core/rules';
+import type { GameState, MatchResult, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
+import { endButtonsFor, endFocus, endViewer, reasonText, screenEndFor } from '../src/scenes/game/endOfMatch';
+import { fallsNoticeFor } from '../src/scenes/game/turns';
+import { canUseMenuButton } from '../src/hud/game/turn';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
+import { duel } from '@core/teams';
+import { defaultLab, labMatch } from '../src/lab';
+import { initialState } from '../src/hud/state';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
-import { KEEPS_UNDO, MENU_PHASES, type Phase } from '../src/scenes/game/types';
-import { PHASES } from '../src/scenes/game/phases';
+import { CONFIRM_MS, MENU_PHASES, type Phase } from '../src/scenes/game/types';
+import { GameMenuChoices, gameMenuOf, PHASES, quitWhileWatching, watchesOthers, type GameMenuHost } from '../src/scenes/game/phases';
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
-import { act, blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
+import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { PLAIN_RULES } from './plainRules';
-import { viewerOf } from '../src/scenes/game/matchSetup';
-import { isPlayableOnOneScreen } from '@core/teams';
-import { checkPlayedByAi } from '../src/scenes/game/turns';
+import { labControllers, viewerOf } from '../src/scenes/game/matchSetup';
+import { screenControllers } from '@core/controllers';
+import { GameSession, humanController, passiveController, remoteController, sequence } from '@core/session';
+import { seededRng } from '@core/util/random';
 import { dispatch } from '@core/actions';
 
 const HQ = hqId();
@@ -153,17 +161,31 @@ describe('escena: linea de ayuda (game/hudParts.ts)', () => {
 
 describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   it('botones: en una mision ganada, la siguiente si la hay; si no es mision, revancha', () => {
-    expect(endButtonsFor(MISSIONS[0], true)).toEqual(['next', 'retry', 'menu']);
-    expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], true)).toEqual(['retry', 'menu']);
-    expect(endButtonsFor(MISSIONS[0], false)).toEqual(['retry', 'menu']);
-    expect(endButtonsFor(undefined, true)).toEqual(['rematch', 'new', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], 'won')).toEqual(['next', 'retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], 'won')).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], 'lost')).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], 'draw')).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(undefined, 'won')).toEqual(['rematch', 'new', 'menu']);
+  });
+
+  it('con varias personas en esta pantalla, el final se ve desde una que gana', () => {
+    const result: MatchResult = { status: 'decided', winners: [1], reason: 'hq' };
+    expect(endViewer(result, 0, [0, 1])).toBe(1);
+    expect(endViewer(result, 0, [0])).toBe(0);
+    expect(endViewer(result, 1, [0, 1])).toBe(1);
+  });
+
+  it('para quien mira: su alianza gana, pierde o nadie gana', () => {
+    expect(outcomeFor({ status: 'decided', winners: [0, 2], reason: 'hq' }, 2)).toBe('won');
+    expect(outcomeFor({ status: 'decided', winners: [0, 2], reason: 'hq' }, 1)).toBe('lost');
+    expect(outcomeFor({ status: 'draw', winners: [], reason: 'days' }, 0)).toBe('draw');
   });
 
   it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
     const s = withoutHeadquarters(blankState());
     s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
-    expect(endFocus(s, 0, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
-    expect(endFocus(s, 0, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
+    expect(endFocus(s, 0, 'won', 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+    expect(endFocus(s, 0, 'lost', 'surrender', null)).toMatchObject({ x: 3, y: 4 });
   });
 });
 
@@ -213,7 +235,6 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
         commit: async () => {},
         groupMove: async () => {},
         giveTravel: async () => {},
-        clearUndo: nop,
         afterAction: nop,
         checkEnd: () => false,
         act: (action) => {
@@ -221,7 +242,7 @@ describe('escena: a quien va una orden (game/orders.ts)', () => {
           return result.ok ? result.events : null;
         },
         perform: async () => false,
-        record: nop,
+        dispatcher: dispatch,
         play: async () => {},
       }),
     );
@@ -274,22 +295,137 @@ describe('escena: tabla de fases (game/phases)', () => {
   });
 });
 
-describe('escena: una sola persona por pantalla (hasta la fase 4)', () => {
-  const twoPeople = () => blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
+describe('escena: rendirse sin personas en juego y salir mientras juegan los demas', () => {
+  /** Una sesion con estas personas (las demas, quietas): como la de la escena. */
+  const withPeople = (s: GameState, people: readonly number[]) =>
+    new GameSession(
+      s,
+      s.teams.map((team) => (people.includes(team.id) ? humanController() : passiveController())),
+    );
 
-  it('una partida con dos equipos de personas no se juega aqui; con una o ninguna, si', () => {
-    expect(isPlayableOnOneScreen(twoPeople())).toBe(false);
-    expect(() => viewerOf(twoPeople())).toThrow(/solo juega una/);
-    expect(isPlayableOnOneScreen(blankState())).toBe(true);
-    const aiOnly = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
-    expect(isPlayableOnOneScreen(aiOnly)).toBe(true);
-    expect(viewerOf(aiOnly)).toBe(0);
-    expect(viewerOf(blankState({}, [{ controller: 'ai' }, { controller: 'human' }]))).toBe(1);
+  it('sin personas en juego la partida se acaba para la pantalla (GameSession.screenEnd): perdida, por rendirse o por caer', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const session = withPeople(s, [0]);
+    expect([session.personStillPlays(), session.screenEnd(0)]).toEqual([true, null]);
+    act(s, 0, { kind: 'surrender' });
+    expect(session.personStillPlays()).toBe(false);
+    const out = session.screenEnd(0)!;
+    expect(out).toEqual({ kind: 'out', fall: { order: 1, reason: 'surrender' } });
+    expect(screenEndFor(s, out, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
+    // Sin rendirse: cae y quedan dos IA. Sin nada (ni Base) es 'wipeout'; el motivo es el apuntado al caer.
+    const fallen = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    fallen.buildings = fallen.buildings.filter((building) => building.owner !== 0);
+    restoreInvariants(fallen, null);
+    newUnit(fallen, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
+    expect(screenEndFor(fallen, withPeople(fallen, [0]).screenEnd(0)!, 0)).toEqual({ outcome: 'lost', reason: 'wipeout', fallenBy: 'own' });
+    // Con dos personas, si cae una la otra sigue jugando.
+    const hotSeat = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    act(hotSeat, 0, { kind: 'surrender' });
+    expect(withPeople(hotSeat, [0, 1]).screenEnd(1)).toBeNull();
   });
 
-  it('el turno de otro equipo solo lo juega la IA: si es de una persona, falla', () => {
-    expect(() => checkPlayedByAi(blankState(), 1)).not.toThrow();
-    expect(() => checkPlayedByAi(twoPeople(), 1)).toThrow(/solo juega una persona/);
+  it('el final de una partida decidida segun quien mira: 2 contra 2, se rinden los dos de una alianza', () => {
+    const pairs = blankState({}, [
+      { controller: 'human', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+      { controller: 'ai', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+    ]);
+    act(pairs, 0, { kind: 'surrender' });
+    act(pairs, 2, { kind: 'surrender' });
+    const end = withPeople(pairs, [0]).screenEnd(0)!;
+    expect(end).toEqual({ kind: 'decided', result: { status: 'decided', winners: [1, 3], reason: 'surrender' } });
+    expect(screenEndFor(pairs, end, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'ally' });
+    expect(screenEndFor(pairs, end, 2)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
+    expect(screenEndFor(pairs, end, 1)).toEqual({ outcome: 'won', reason: 'surrender', fallenBy: 'enemy' });
+  });
+
+  it('el motivo del final, para quien mira: «te has rendido» solo para quien se rindio', () => {
+    expect(reasonText({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' })).toBe('endSurrender');
+    expect(reasonText({ outcome: 'lost', reason: 'surrender', fallenBy: 'ally' })).toBe('endAllySurrender');
+    expect(reasonText({ outcome: 'won', reason: 'surrender', fallenBy: 'enemy' })).toBe('endEnemySurrender');
+    expect(reasonText({ outcome: 'won', reason: 'hq', fallenBy: 'enemy' })).toBe('endHq');
+    expect(reasonText({ outcome: 'won', reason: 'days' })).toBe('endDays');
+  });
+
+  it('con varias personas, la que vuelve a mirar se entera de las caidas que no vio (una, varias, ya vistas no)', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    expect(fallsNoticeFor(s, 1, 0)).toBeNull();
+    act(s, 0, { kind: 'surrender' });
+    expect(fallsNoticeFor(s, 1, 0)).toEqual({ key: 'teamOut', numbers: '1' });
+    // La propia no se cuenta, y lo ya visto tampoco.
+    expect(fallsNoticeFor(s, 0, 0)).toBeNull();
+    expect(fallsNoticeFor(s, 1, 1)).toBeNull();
+    s.turn = 2;
+    act(s, 2, { kind: 'surrender' });
+    expect(fallsNoticeFor(s, 1, 0)).toEqual({ key: 'teamsOut', numbers: '1, 3' });
+    expect(fallsNoticeFor(s, 1, 1)).toEqual({ key: 'teamOut', numbers: '3' });
+  });
+
+  it('el menu de pausa: en el laboratorio (no se acaba ni se guarda) ni guardar ni rendirse', () => {
+    const skirmish = createMatch(skirmishConfig({ seed: 3, size: 16, teams: duel('human', 'ai') }));
+    expect(gameMenuOf(skirmish)).toEqual(['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit']);
+    const lab = createMatch(labMatch(defaultLab(), null));
+    expect(gameMenuOf(lab)).toEqual(['resume', 'endTurn', 'replay', 'options', 'help', 'quit']);
+    // Y el nucleo tampoco lo deja.
+    expect(dispatch(lab, 0, { kind: 'surrender' })).toEqual({ ok: false, reason: 'cannotLose' });
+  });
+
+  it('salir mientras juegan los demas: solo mirando, y con dos pulsaciones a tiempo', () => {
+    const watching = { ended: false, phase: 'busy' as const, othersPlaying: true };
+    expect(watchesOthers(watching)).toBe(true);
+    expect(watchesOthers({ ...watching, othersPlaying: false })).toBe(false);
+    expect(watchesOthers({ ...watching, phase: 'map' })).toBe(false);
+    expect(watchesOthers({ ...watching, ended: true })).toBe(false);
+    let now = 1000;
+    let quits = 0;
+    const host = {
+      get now() {
+        return now;
+      },
+      quitToMenu: () => quits++,
+    } as unknown as GameMenuHost;
+    const choices = new GameMenuChoices(host);
+    quitWhileWatching({ ...watching, phase: 'map' }, choices);
+    quitWhileWatching(watching, choices);
+    expect(quits).toBe(0);
+    now += CONFIRM_MS - 1;
+    quitWhileWatching(watching, choices);
+    expect(quits).toBe(1);
+    now += CONFIRM_MS * 3;
+    quitWhileWatching(watching, choices);
+    expect(quits).toBe(1);
+  });
+
+  it('el boton del menu: en tu turno, el menu; mientras juegan los demas, salir; al acabar, nada', () => {
+    expect(canUseMenuButton({ ...initialState, turn: 'own', busy: false })).toBe(true);
+    expect(canUseMenuButton({ ...initialState, turn: 'own', busy: true })).toBe(false);
+    // Mientras juegan los demas, lo que dice la escena (watching); al acabar (animacion del final), no.
+    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true, watching: true })).toBe(true);
+    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true, watching: false })).toBe(false);
+  });
+});
+
+describe('escena: quien mira al abrir la partida (game/matchSetup.ts)', () => {
+  /** La sesion de la escena para esa partida (sus controladores: screenControllers y, en el laboratorio, labControllers). */
+  const sceneSession = (s: GameState, isLab = false) => new GameSession(s, screenControllers(s, seededRng(1), labControllers(s, isLab)));
+
+  it('la persona a la que le toca; si le toca a la IA, la primera persona; sin personas, el primer equipo', () => {
+    const twoPeople = blankState({}, [{ controller: 'human' }, { controller: 'human' }]);
+    expect(viewerOf(sceneSession(twoPeople))).toBe(0);
+    expect(viewerOf(sceneSession(giveTurn(twoPeople, 1)))).toBe(1);
+    expect(viewerOf(sceneSession(blankState({}, [{ controller: 'ai' }, { controller: 'ai' }])))).toBe(0);
+    expect(viewerOf(sceneSession(blankState({}, [{ controller: 'ai' }, { controller: 'human' }])))).toBe(1);
+  });
+
+  it('quien es una persona lo dice su controlador, tambien dentro de una serie', () => {
+    const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
+    const session = new GameSession(s, [sequence(passiveController(), humanController()), remoteController()]);
+    expect([session.isPerson(0), session.isPerson(1)]).toEqual([true, false]);
+    giveTurn(s, 1);
+    expect(viewerOf(session)).toBe(0);
+    const lab = sceneSession(blankState({}, [{ controller: 'human' }, { controller: 'ai' }]), true);
+    expect(lab.controllerOf(1).name).toBe('passive');
   });
 });
 
@@ -297,19 +433,6 @@ describe('escena: menu de la unidad (game/phases/unitMenu.ts)', () => {
   it('las opciones son las del nucleo, en su orden, con «Atras» antes de retirar', () => {
     expect(withBack(['attack', 'wait', 'delete'])).toEqual(['attack', 'wait', 'back', 'delete']);
     expect(withBack(['wait'])).toEqual(['wait', 'back']);
-  });
-});
-
-describe('escena: Ctrl+Z (KEEPS_UNDO)', () => {
-  it('irse de un edificio a medio capturar no cierra Ctrl+Z (deshacer devuelve la captura)', () => {
-    const s = blankState(PLAIN_RULES);
-    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
-    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 5 });
-    act(s, 0, { kind: 'capture', uid: soldier.uid });
-    endRound(s);
-    const events = act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
-    expect(events.map((event) => event.kind)).toContain('captureDropped');
-    expect(events.every((event) => KEEPS_UNDO.has(event.kind))).toBe(true);
   });
 });
 

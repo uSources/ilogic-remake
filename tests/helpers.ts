@@ -1,15 +1,31 @@
+import { expect } from 'vitest';
 import { entryOf, type BuildingType, type TerrainType, type UnitType } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { rulesWith } from '@core/rulesConfig';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
-import type { Building, Dice, GameAction, GameEvent, GameEventOf, GameState, Pos, Rng, RulesConfig, TeamId, Unit } from '@core/model';
-import { aiTurn } from '@core/ai';
-import { dispatch } from '@core/actions';
+import type {
+  ActionRejection,
+  Building,
+  Dice,
+  GameAction,
+  GameEvent,
+  GameEventOf,
+  GameState,
+  Pos,
+  Rng,
+  RulesConfig,
+  TeamId,
+  Unit,
+} from '@core/model';
+import { aiController } from '@core/controllers';
+import { GameSession } from '@core/session';
+import { dispatch, isTurnBoundary } from '@core/actions';
+import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/sandbox';
 import { seededRng } from '@core/util/random';
-import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
+import { endRound, isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
 
@@ -24,11 +40,24 @@ export function savedByVersion1(json: string): string {
   return json.replace(`"version":${SAVE_VERSION}`, '"version":1');
 }
 
-/** El equipo `team` hace la accion (por dispatch, como en el juego) y tiene que valer: sus sucesos. */
+/**
+ * El equipo `team` hace la accion (por dispatch, como en el juego) y tiene que valer: sus sucesos. Si
+ * no era su turno, antes se le da (ya empezado: `giveTurn`), para probar las acciones de cualquier
+ * equipo sin jugar los turnos de los demas; lo de los turnos se prueba con `dispatch` o `expectRejected`.
+ */
 export function act(s: GameState, team: TeamId, action: GameAction): GameEvent[] {
+  const isOwnStartedTurn = s.turn === team && (s.turnStarted || action.kind === 'startTurn');
+  if (!isOwnStartedTurn) giveTurn(s, team);
   const result = dispatch(s, team, action);
   if (!result.ok) throw new Error(`Accion rechazada (${result.reason}): ${JSON.stringify(action)}`);
   return result.events;
+}
+
+/** La accion no vale por `reason` y la partida no cambia. */
+export function expectRejected(s: GameState, team: TeamId, action: GameAction, reason: ActionRejection): void {
+  const before = serialize(s);
+  expect(dispatch(s, team, action)).toEqual({ ok: false, reason });
+  expect(serialize(s)).toBe(before);
 }
 
 /**
@@ -68,18 +97,20 @@ const PERSON_VS_AI: TeamSetup[] = [
 
 /**
  * Una partida vacia (todo llano, sin unidades y sin mas edificios que una Base por equipo, ver
- * blankHeadquarters) con esas reglas y esos equipos.
+ * blankHeadquarters) con esas reglas y esos equipos, en el turno ya empezado del primero.
  */
 export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
   const s = newGameState({
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     rules: rulesWith(defaultContent(), rules),
     content: defaultContent(),
+    mode: 'skirmish',
     teams,
     diceSeed: BLANK_DICE_SEED,
   });
   teams.forEach((_, team) => s.buildings.push({ type: hqId(), owner: team, ...blankHeadquarters(team), capture: null }));
-  return s;
+  // La partida de prueba ya esta en el turno del primer equipo (sin nada que hacer al empezarlo).
+  return giveTurn(s, s.turn);
 }
 
 /**
@@ -114,22 +145,41 @@ export const terrainNamed = (id: string): TerrainType => entryOf(defaultContent(
 /** El id del cuartel general del contenido del juego (lo que guarda `Building.type`). */
 export const hqId = (): string => defaultContent().hq.id;
 
+/** Juega el turno del equipo al que le toca en la sesion, hasta que lo pasa (o acaba la partida). */
+export function playOneTurn(session: GameSession): void {
+  for (;;) {
+    const step = session.step();
+    if (step.kind !== 'acted' || step.action.kind === 'endTurn') return;
+  }
+}
+
 /**
  * Juega `days` rondas IA contra IA de cada partida a la vez, turno a turno (un turno de cada una por
  * equipo), cada una con su azar de semilla `seed`: para ver que dos partidas en el mismo proceso no
- * se mezclan. Los equipos que han perdido no juegan (takesTurn). Devuelve los eventos de cada una.
+ * se mezclan. Devuelve los sucesos de las acciones de cada una (sin empezar ni acabar los turnos).
  */
 export function playInterleaved(games: readonly GameState[], days: number, seed: number): GameEvent[][] {
-  const rngs = games.map(() => seededRng(seed));
   const events: GameEvent[][] = games.map(() => []);
-  for (let day = 0; day < days; day++) {
-    for (const team of teamIds(games[0]!))
-      games.forEach((s, i) => {
-        if (takesTurn(s, team)) events[i]!.push(...aiTurn(s, rngs[i]!, team));
-      });
-    games.forEach((s) => endRound(s));
-  }
+  const sessions = games.map((s, i) => {
+    const rng = seededRng(seed);
+    const session = new GameSession(
+      s,
+      s.teams.map(() => aiController(rng)),
+    );
+    session.subscribe((step) => {
+      if (!isTurnBoundary(step.action)) events[i]!.push(...step.events);
+    });
+    return session;
+  });
+  for (let turn = 0; turn < days * teamIds(games[0]!).length; turn++) sessions.forEach(playOneTurn);
   return events;
+}
+
+/** Le pasa el turno a `team`, ya empezado (para probar las acciones de cualquier equipo sin jugar los de antes). */
+export function giveTurn(s: GameState, team: TeamId): GameState {
+  s.turn = team;
+  s.turnStarted = true;
+  return s;
 }
 
 /** Unas unidades que no pueden estar vacias (formar escuadra con ninguna no se puede pedir). */
@@ -137,4 +187,11 @@ export function someUnits(units: readonly Unit[]): readonly [Unit, ...Unit[]] {
   const [first, ...rest] = units;
   if (!first) throw new Error('Hace falta al menos una unidad');
   return [first, ...rest];
+}
+
+/** Como va la partida para `team`, en una palabra (para comprobarlo en una linea): sigue, gana, pierde o empate. */
+export function resultFor(s: GameState, team: TeamId): 'playing' | 'won' | 'lost' | 'draw' {
+  const result = matchResult(s);
+  if (result.status !== 'decided') return result.status;
+  return isWinner(result, team) ? 'won' : 'lost';
 }

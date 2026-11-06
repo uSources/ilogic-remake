@@ -1,27 +1,22 @@
 /**
- * Fin del turno del jugador y turnos de los demas equipos: ordenes pendientes, capturas automaticas,
- * cada equipo de la IA paso a paso (por su orden en la partida), el final de la ronda (ingresos,
- * curar) y la vuelta al jugador. Tambien repetir los ultimos turnos ajenos (misma semilla) y avanzar
- * las ordenes de varios turnos al empezar el propio. En esta pantalla juega una persona (el equipo que
- * mira, `viewer`): los demas equipos tienen que ser de la IA (`controller: 'ai'`). Varias personas en
- * la misma partida (por turnos o en red) es la fase 4: hasta entonces, otro equipo 'human' es un
- * fallo y lo dice (playTeam), y startMatch no deja empezar una partida asi.
+ * Los turnos en la pantalla: el fin del turno propio, los turnos de los demas equipos (los juega la
+ * sesion: `GameSession`, con el controlador de cada equipo) animados paso a paso, el resumen de la
+ * ronda, el autoguardado y la vuelta al jugador. Tambien repetir los ultimos turnos ajenos (con el
+ * registro de acciones de la sesion). Lo que pasa solo al acabar y empezar cada turno (ordenes
+ * permanentes, capturas que siguen, viajes) lo hace la partida: aqui solo se anima y se cuenta.
  */
-import { unitTypeOf } from '../../core/gameContent';
-import { saveContext } from '../../core/defaultGames';
+import { startsTurn } from '../../core/actions';
+import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { aiTurn, assistTurn } from '../../core/ai';
 import { posOf } from '../../core/geom';
-import { seededRng } from '../../core/util/random';
-import { canCapture, endRound, roundReport, othersAfter, unitById, type RoundReport, canMoveNow } from '../../core/rules';
-import { deserialize, serialize } from '../../core/save';
+import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, type RoundReport } from '../../core/rules';
+import { serialize } from '../../core/save';
+import { playMatch, replaySession, type ActedStep, type GameSession, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
-import { sampleArmy } from '../../core/stats';
-import { isHostile, notAiControlledReason } from '../../core/teams';
-import type { GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../../core/model';
+import { isHostile, shownTeamNumber } from '../../core/teams';
+import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
-import { randomSeed } from '../../setup';
 import { writeSave } from '../../storage';
 import { center, floatText } from '../../ui/fx';
 import { weatherEffectsText } from '../../ui/hudModels';
@@ -40,10 +35,15 @@ interface SavedCamera {
 export interface TurnHost extends ActionHost {
   readonly scene: Phaser.Scene;
   readonly view: MapView;
-  /** La partida (repetir el turno enemigo la cambia por la de antes y la vuelve a poner). */
+  /** La partida en juego. */
+  readonly session: GameSession;
+  /** La partida que se ve (la de la sesion; al repetir los turnos ajenos, la copia de antes). */
   state: GameState;
-  /** El equipo que juega la persona en esta pantalla (el que mira). */
-  readonly viewer: TeamId;
+  /**
+   * El equipo que juega la persona en esta pantalla (el que mira). Con varias personas por turnos,
+   * cambia al empezar el turno de cada una (despues de `handOver`).
+   */
+  viewer: TeamId;
   phase: Phase;
   readonly match: number;
   readonly ended: boolean;
@@ -55,7 +55,6 @@ export interface TurnHost extends ActionHost {
   wait(ms: number): Promise<void>;
   /** La partida ha terminado (y empieza el final): true. */
   checkEnd(): boolean;
-  clearUndo(): void;
   /** Deshacer lo que este a medio decidir y volver al mapa. */
   abandonSelection(): void;
   toMap(): void;
@@ -66,6 +65,20 @@ export interface TurnHost extends ActionHost {
   idleUnits(): Unit[];
   /** Se ha guardado esta partida (al acabar se borra el guardado). */
   markSaved(): void;
+  /** Tapa la partida hasta que la persona de `team` dice que esta lista (cambio de jugador en esta pantalla). */
+  handOver(team: TeamId): Promise<void>;
+  /** Camara y cursor sobre la Base del equipo que mira (la primera vez que mira). */
+  centerOnHq(): void;
+}
+
+/** Lo que se cuenta al volver el turno al jugador: lo que ha pasado mientras jugaban los demas. */
+interface TurnSummary {
+  /** El fin de ronda (si ha acabado una por medio). */
+  report: RoundReport | null;
+  /** Unidades propias que han cumplido su orden al acabar el turno (ahora esperan otra). */
+  ordersDone: number[];
+  /** Unidades propias de viaje que ya llegan este turno (el ultimo trozo lo hace el jugador). */
+  arrived: number[];
 }
 
 /** Instante de "sin armar" del boton de fin de turno (muy atras: nunca cuenta como reciente). */
@@ -81,8 +94,15 @@ const ARRIVED_MARGIN = 3;
 const HEAL_TEXT_DELAY_MS = 1100;
 const HEAL_TEXT_STAGGER_MS = 90;
 
-/** Una unidad de `team` que aun puede actuar este turno (y no va dentro de un transporte). */
-const isReadyUnitOf = (team: TeamId, unit: Unit): boolean => unit.team === team && canMoveNow(unit);
+/** Lo que es de un equipo en lo que pasa mientras juegan los demas (para el resumen al volver). */
+function addToSummary(summary: TurnSummary, s: GameState, team: TeamId, step: ActedStep): void {
+  if (step.events.some((event) => event.kind === 'newDay')) summary.report = roundReport(s, step.events);
+  for (const event of step.events) {
+    if (event.actor !== team) continue;
+    if (event.kind === 'standingOrderDone') summary.ordersDone.push(event.uid);
+    if (event.kind === 'travel' && event.to === null && event.end === 'withinReach') summary.arrived.push(event.uid);
+  }
+}
 
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
@@ -91,21 +111,33 @@ function unitWithSquad(s: GameState, unit: Unit): string {
 }
 
 /**
- * El turno de otro equipo lo juega la IA: si es de una persona, es un fallo (en esta pantalla juega
- * una sola; varias, fase 4) y se dice en vez de jugarlo por ella.
+ * El aviso para quien vuelve a mirar (`viewer`) de los equipos que han caido desde la caida `seen`,
+ * la ultima que vio (sin contar la suya): uno («El equipo N queda fuera») o varios; null si ninguno.
  */
-export function checkPlayedByAi(s: GameState, team: TeamId): void {
-  const reason = notAiControlledReason(s, team);
-  if (reason) throw new Error(reason);
+export function fallsNoticeFor(s: GameState, viewer: TeamId, seen: number): { key: 'teamOut' | 'teamsOut'; numbers: string } | null {
+  const fallen = fallenSince(s, seen).filter(({ team }) => team !== viewer);
+  if (!fallen.length) return null;
+  const numbers = fallen.map(({ team }) => shownTeamNumber(team)).join(', ');
+  return { key: fallen.length === 1 ? 'teamOut' : 'teamsOut', numbers };
 }
 
 export class TurnFlow {
   /** Esta jugando (o repitiendose) el turno de otro equipo. */
   othersPlaying = false;
-  /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en estadisticas ni tutorial). */
+  /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en el tutorial). */
   replaying = false;
-  /** Estado antes de los ultimos turnos ajenos y semilla con la que se jugaron (para repetirlos). */
-  private lastOthers: { before: string; seed: number } | null = null;
+  /**
+   * De cada persona: una copia de la partida al acabar su ultimo turno y desde donde va en el registro
+   * (para repetirle lo de despues). Con varias en esta pantalla, cada una ve lo suyo.
+   */
+  private replays = new Map<TeamId, { before: GameState; from: number }>();
+  /** Donde miraba cada persona al acabar su turno (con varias en esta pantalla, cada una vuelve a lo suyo). */
+  private cameras = new Map<TeamId, SavedCamera>();
+  /**
+   * Hasta que caida (`TeamFall.order`) habia visto cada persona al acabar su turno: al volver a mirar
+   * se le avisa de los equipos que han caido mientras no miraba (con varias en esta pantalla).
+   */
+  private seenFalls = new Map<TeamId, number>();
   private endArmedAt = NOT_ARMED;
   /** El equipo al que le toca ahora si no es el que mira (null: el turno es suyo). */
   private otherTeam: TeamId | null = null;
@@ -116,7 +148,9 @@ export class TurnFlow {
   reset(): void {
     this.othersPlaying = false;
     this.replaying = false;
-    this.lastOthers = null;
+    this.replays = new Map();
+    this.cameras = new Map();
+    this.seenFalls = new Map();
     this.endArmedAt = NOT_ARMED;
     this.otherTeam = null;
   }
@@ -128,18 +162,12 @@ export class TurnFlow {
 
   /** Hay turnos ajenos que repetir (los de la ultima vuelta). */
   get canReplay(): boolean {
-    return !!this.lastOthers;
-  }
-
-  /** Unidades sin usar encima de un edificio que pueden capturar: capturan solas al terminar el turno. */
-  autoCapturers(): Unit[] {
-    const s = this.host.state;
-    return s.units.filter((unit) => isReadyUnitOf(this.host.viewer, unit) && canCapture(s, unit));
+    return this.replays.has(this.host.viewer);
   }
 
   /** Unidades sin mover que no hacen nada solas al terminar (las que capturan solas no cuentan). */
   pendingUnits(): Unit[] {
-    const capturers = new Set(this.autoCapturers().map((unit) => unit.uid));
+    const capturers = new Set(autoCapturers(this.host.state, this.host.viewer).map((unit) => unit.uid));
     return this.host.idleUnits().filter((unit) => !capturers.has(unit.uid));
   }
 
@@ -168,27 +196,42 @@ export class TurnFlow {
   }
 
   /**
-   * Fin del turno propio y turnos de los demas: ordenes y capturas pendientes, la IA de cada equipo,
-   * el final de la ronda y la vuelta al jugador. Despues de cada animacion se para si la partida ha
-   * cambiado o terminado.
+   * Al empezar la partida: la sesion juega hasta que le toca a la persona (empezar su turno, con sus
+   * viajes; o antes los turnos de otros, si les toca primero).
+   */
+  async begin(): Promise<void> {
+    const host = this.host;
+    const match = host.match;
+    host.phase = 'busy';
+    const summary = await this.playUntilInput(match);
+    if (!summary) return;
+    host.phase = 'map';
+    if (!host.lab) showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
+    this.showArrivals(summary);
+    host.refresh();
+  }
+
+  /**
+   * Fin del turno propio y turnos de los demas: la sesion acaba el turno (ordenes y capturas que
+   * siguen solas), juega los de los demas equipos con el fin de ronda en su sitio y empieza el
+   * siguiente propio; aqui se anima cada paso. Se para si la partida cambia o termina.
    */
   async endOwnTurn(): Promise<void> {
     const host = this.host;
     if (host.phase === 'busy' || host.ended) return;
     const match = host.match;
-    host.clearUndo();
     host.abandonSelection();
-    const saved = this.saveCamera();
+    this.cameras.set(host.viewer, this.saveCamera());
+    this.markFallsSeen(host.viewer);
     host.phase = 'busy';
-    const ordersDone = await this.playStandingOrders(match);
-    if (!ordersDone) return;
-    if (!(await this.playAutoCaptures(match))) return;
-    const report = await this.playOtherTeams(match);
-    if (!report || host.checkEnd()) return;
-    this.backToPlayer(saved);
+    this.replays.set(host.viewer, { before: cloneState(host.session.state), from: host.session.log.length });
+    host.session.finishInput(host.viewer);
+    const summary = await this.playUntilInput(match);
+    if (!summary) return;
+    this.backToPlayer(this.cameras.get(host.viewer));
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
-    this.showReport(report, ordersDone);
-    await this.runTravels();
+    this.showReport(summary);
+    this.showArrivals(summary);
   }
 
   /** La partida sigue: no se ha cambiado por otra ni acaba de terminar (si termina, empieza el final). */
@@ -197,188 +240,154 @@ export class TurnFlow {
   }
 
   /**
-   * [CAMBIO] Ordenes con destino: las unidades con orden que siguen sin usar la cumplen. Devuelve
-   * las que la han terminado (para el resumen), o null si la partida ha cambiado o terminado.
+   * La sesion juega (animando cada paso) hasta que le toca a la persona. Devuelve lo que contar al
+   * volver, o null si la partida ha cambiado o ha terminado.
    */
-  private async playStandingOrders(match: number): Promise<string[] | null> {
+  private async playUntilInput(match: number): Promise<TurnSummary | null> {
     const host = this.host;
-    const orders = assistTurn(host.state, host.viewer);
-    let step = orders.next();
-    while (!step.done) {
-      host.record([step.value]);
-      await host.play([step.value]);
-      if (!this.continues(match)) return null;
-      step = orders.next();
-    }
-    const s = host.state;
-    return step.value
-      .map((uid) => unitById(s, uid))
-      .filter((unit): unit is Unit => !!unit)
-      .map((unit) => unitWithSquad(s, unit));
-  }
-
-  /** [CAMBIO] Las unidades que se han quedado sin usar encima de un edificio capturable siguen capturando. */
-  private async playAutoCaptures(match: number): Promise<boolean> {
-    const host = this.host;
-    for (const unit of this.autoCapturers()) {
-      await host.perform({ kind: 'capture', uid: unit.uid });
-      if (!this.continues(match)) return false;
-    }
-    return true;
-  }
-
-  /**
-   * Los turnos de los demas equipos y el final de la ronda, con una semilla propia para poder
-   * repetirlos igual (menu > Repetir turno enemigo). Devuelve el informe de la ronda, o null si la
-   * partida ha cambiado o terminado.
-   */
-  private async playOtherTeams(match: number): Promise<RoundReport | null> {
-    const host = this.host;
-    const before = serialize(host.state);
-    const seed = randomSeed();
-    const rng = seededRng(seed);
-    this.othersPlaying = true;
-    const report = await this.playRoundOfOthers(
-      (team) => this.playTeam(team, rng, match),
-      () => this.closeRound(),
-    );
-    if (!report) return null;
+    const summary: TurnSummary = { report: null, ordersDone: [], arrived: [] };
+    const last: SessionStep = await playMatch(host.session, async (step) => {
+      if (this.startsTurnOfAnotherPerson(step)) await this.switchPerson(step.team, summary);
+      if (match !== host.match) return false;
+      addToSummary(summary, host.session.state, host.viewer, step);
+      this.autosave(step);
+      await this.show(step);
+      // Quien mira ha visto el aviso de los que caen en este paso.
+      if (step.events.some((event) => event.kind === 'teamDefeated')) this.markFallsSeen(host.viewer);
+      return this.continues(match);
+    });
     this.otherTeam = null;
     this.othersPlaying = false;
-    this.lastOthers = { before, seed };
-    return report;
+    if (last.kind === 'over') host.checkEnd();
+    return last.kind === 'awaitingInput' && match === host.match ? summary : null;
   }
 
-  /**
-   * Los turnos de los demas equipos, por su orden en la partida, con el fin de ronda entre el ultimo
-   * y el primero (`othersAfter`, del nucleo: un equipo ya derrotado no juega). Devuelve el informe
-   * de la ronda, o null si `playTeam` dice que hay que parar.
-   */
-  private async playRoundOfOthers(
-    playTeam: (team: TeamId) => Promise<boolean>,
-    closeRound: () => RoundReport,
-  ): Promise<RoundReport | null> {
-    let report: RoundReport | null = null;
-    for (const step of othersAfter(this.host.state, this.host.viewer)) {
-      if (step.kind === 'roundEnd') report = closeRound();
-      else if (!(await playTeam(step.team))) return null;
-    }
-    return report;
-  }
-
-  /**
-   * El turno de otro equipo, con su aviso (rojo si es enemigo, azul si es aliado). En esta pantalla
-   * solo juega una persona: los demas equipos tienen que ser de la IA (partidas de varias personas,
-   * fase 4; startMatch ya no las deja empezar).
-   */
-  private async playTeam(team: TeamId, rng: Rng, match: number): Promise<boolean> {
+  /** Empieza el turno de una persona que no es la que mira (varias personas en esta pantalla, por turnos). */
+  private startsTurnOfAnotherPerson(step: ActedStep): boolean {
     const host = this.host;
-    if (!this.continues(match)) return false;
-    checkPlayedByAi(host.state, team);
+    return startsTurn(step) && step.team !== host.viewer && host.session.isPerson(step.team);
+  }
+
+  /**
+   * Cambio de persona: se tapa la partida hasta que la siguiente esta lista, y desde ahi mira ella (lo
+   * que se iba a contar a la anterior ya no se cuenta).
+   */
+  private async switchPerson(team: TeamId, summary: TurnSummary): Promise<void> {
+    const host = this.host;
+    // La que deja de mirar lo ha visto todo hasta aqui.
+    this.markFallsSeen(host.viewer);
+    await host.handOver(team);
+    host.viewer = team;
+    summary.ordersDone = [];
+    summary.arrived = [];
+    this.lookFromOwnPlace(team);
+    this.tellFallsSince(team);
+    host.refresh();
+  }
+
+  /** Avisa a la persona que vuelve a mirar de los equipos que han caido mientras no miraba. */
+  private tellFallsSince(viewer: TeamId): void {
+    const notice = fallsNoticeFor(this.host.session.state, viewer, this.seenFalls.get(viewer) ?? 0);
+    if (notice) showToast(t(notice.key).replace('{n}', notice.numbers));
+    this.markFallsSeen(viewer);
+  }
+
+  /** `viewer` ha visto las caidas hasta la ultima apuntada. */
+  private markFallsSeen(viewer: TeamId): void {
+    this.seenFalls.set(viewer, lastFallOrder(this.host.session.state));
+  }
+
+  /** La camara de una persona que empieza a mirar: donde lo dejo, o la primera vez, su Base. */
+  private lookFromOwnPlace(team: TeamId): void {
+    const host = this.host;
+    const saved = this.cameras.get(team);
+    if (!saved) return host.centerOnHq();
+    host.view.cursor = { ...saved.cursor };
+    host.scene.cameras.main.centerOn(saved.x, saved.y);
+  }
+
+  /** Anima un paso de la sesion: al empezar el turno de otro equipo, su aviso; despues, sus sucesos. */
+  private async show(step: ActedStep): Promise<void> {
+    const host = this.host;
+    if (startsTurn(step)) await this.turnStarts(step.team);
+    await host.play(step.events);
+  }
+
+  /** Empieza el turno de un equipo: el propio (ya no juegan otros) o el de otro, con su aviso. */
+  private async turnStarts(team: TeamId): Promise<void> {
+    if (team !== this.host.viewer) return this.announceTurnOf(team);
+    this.otherTeam = null;
+    this.othersPlaying = false;
+  }
+
+  /** El turno de otro equipo empieza: su aviso (rojo si es enemigo, azul si es aliado). */
+  private async announceTurnOf(team: TeamId): Promise<void> {
+    const host = this.host;
     this.otherTeam = team;
+    this.othersPlaying = true;
     // Velocidad "instantanea" del enemigo: como si se pulsara Enter para acelerar desde el principio.
     host.fastForward = settings.speedEnemy === 'instant';
     host.refresh();
     const hostile = isHostile(host.state, host.viewer, team);
     showBanner(`${t('day')} ${host.state.day}`, t(hostile ? 'enemyTurn' : 'allyTurn'), hostile ? 'red' : 'blue');
     await host.wait(host.fastForward ? ENEMY_BANNER_FAST_MS : ENEMY_BANNER_MS);
-    if (match !== host.match) return false;
-    for (const event of aiTurn(host.state, rng, team)) {
-      host.record([event]);
-      await host.play([event]);
-      if (!this.continues(match)) return false;
-    }
-    return true;
   }
 
-  /** Final de la ronda: ingresos, curar, estadisticas y guardado automatico. */
-  private closeRound(): RoundReport {
-    const host = this.host;
-    const report = roundReport(host.state, endRound(host.state));
-    sampleArmy(host.state);
-    if (settings.autosave && writeSave(serialize(host.state))) host.markSaved();
-    return report;
+  /** Guardado automatico: al empezar el turno de una persona (ya con sus viajes dados), si el modo lo hace. */
+  private autosave(step: ActedStep): void {
+    const s = this.host.session.state;
+    if (settings.autosave && this.host.session.isAutosaveMoment(step) && writeSave(serialize(s))) this.host.markSaved();
   }
 
   /**
-   * Volver a ver los ultimos turnos ajenos: se restaura el estado de antes y se vuelven a jugar con
-   * la misma semilla y en el mismo orden (la IA y los combates son deterministas con ella); al acabar
-   * se deja todo exactamente como estaba.
+   * Volver a ver los ultimos turnos ajenos: con la partida de antes se repiten las acciones apuntadas
+   * en la sesion (los dados van en la partida: sale lo mismo), hasta que vuelve el turno propio. La
+   * partida de verdad no se toca.
    */
   async replayOthers(): Promise<void> {
     const host = this.host;
-    const last = this.lastOthers;
+    const last = this.replays.get(host.viewer);
     if (!last || host.phase === 'busy' || host.ended) return;
+    // Otra copia cada vez: se puede repetir mas de una vez.
+    const before = cloneState(last.before);
     host.toMap();
     const saved = this.saveCamera();
-    const after = serialize(host.state);
-    const before = deserialize(last.before, saveContext(host.state.content));
-    if (!before) return;
+    const replay = replaySession(before, host.session.log.slice(last.from));
     host.state = before;
     this.replaying = true;
     host.phase = 'busy';
-    this.othersPlaying = true;
     host.fastForward = false;
     host.refresh();
     showBanner(`${t('day')} ${host.state.day}`, t('replayBanner'), 'red');
     const match = host.match;
     await host.wait(ENEMY_BANNER_MS);
-    const rng = seededRng(last.seed);
-    const replayed = await this.playRoundOfOthers(
-      (team) => this.replayTeam(team, rng, match),
-      () => roundReport(host.state, endRound(host.state)),
-    );
-    if (!replayed) return;
-    host.state = deserialize(after, saveContext(host.state.content))!;
+    await playMatch(replay, (step) => this.replayStep(step, match));
+    if (match !== host.match) return;
+    host.state = host.session.state;
     this.otherTeam = null;
     this.replaying = false;
     this.othersPlaying = false;
     this.backToPlayer(saved);
   }
 
-  /** Un turno ajeno repetido: sin aviso y sin comprobar el final (ya se sabe como acabo), solo si se cambia de partida. */
-  private async replayTeam(team: TeamId, rng: Rng, match: number): Promise<boolean> {
+  /** Un paso repetido: sin avisos ni final (ya se sabe como acabo); se para al volver el turno propio. */
+  private async replayStep(step: ActedStep, match: number): Promise<boolean> {
     const host = this.host;
-    this.otherTeam = team;
-    for (const event of aiTurn(host.state, rng, team)) {
-      if (match !== host.match) return false;
-      host.record([event]);
-      await host.play([event]);
-      if (match !== host.match || host.ended) return false;
-    }
-    return true;
+    if (startsTurn(step) && step.team === host.viewer) return false;
+    this.otherTeam = step.team === host.viewer ? null : step.team;
+    this.othersPlaying = this.otherTeam !== null;
+    await host.play(step.events);
+    return match === host.match && !host.ended;
   }
 
-  /** Al empezar el turno: las unidades de viaje (travelTo) avanzan solas (y pueden seguir actuando despues). */
-  async runTravels(): Promise<void> {
+  /** Las unidades de viaje que ya llegan este turno: la camara va a la primera y se avisa. */
+  private showArrivals(summary: TurnSummary): void {
     const host = this.host;
-    const movers = host.state.units.filter((unit) => isReadyUnitOf(host.viewer, unit) && unit.travelTo);
-    const arrived: Unit[] = [];
-    const match = host.match;
-    for (const unit of movers) {
-      if (match !== host.match) return;
-      if (await this.advanceTravel(unit)) arrived.push(unit);
-    }
-    const firstArrived = arrived[0];
-    if (firstArrived) {
-      host.view.cursor = posOf(firstArrived);
-      host.view.ensureVisible(firstArrived, ARRIVED_MARGIN);
-      showToast(t('travelArrives'));
-    }
-    if (movers.length) host.refresh();
-  }
-
-  /**
-   * El paso de este turno del viaje (la accion 'travelStep': el nucleo decide hasta donde y cuando
-   * acaba). Devuelve true si ya llega este turno: entonces no se mueve, para no gastar el turno en las
-   * ultimas casillas; la mueve el jugador (y puede seguir, atacar o capturar).
-   */
-  private async advanceTravel(unit: Unit): Promise<boolean> {
-    const host = this.host;
-    const events = host.act({ kind: 'travelStep', uid: unit.uid });
-    if (!events) return false;
-    await host.play(events);
-    return events.some((event) => event.kind === 'travel' && event.to === null && event.end === 'withinReach');
+    const firstArrived = summary.arrived.map((uid) => unitById(host.state, uid)).find((unit): unit is Unit => !!unit);
+    if (!firstArrived) return;
+    host.view.cursor = posOf(firstArrived);
+    host.view.ensureVisible(firstArrived, ARRIVED_MARGIN);
+    showToast(t('travelArrives'));
   }
 
   /** Donde estaba mirando el jugador antes del turno enemigo. */
@@ -387,12 +396,17 @@ export class TurnFlow {
     return { x: camera.midPoint.x, y: camera.midPoint.y, cursor: { ...this.host.view.cursor } };
   }
 
-  /** Vuelve el control al jugador tras el turno enemigo: camara donde estaba y entrada bloqueada un momento. */
-  private backToPlayer(saved: SavedCamera): void {
+  /**
+   * Vuelve el control al jugador tras el turno enemigo: camara donde estaba (si es la primera vez que
+   * mira, en su Base) y entrada bloqueada un momento.
+   */
+  private backToPlayer(saved: SavedCamera | undefined): void {
     const host = this.host;
     host.fastForward = false;
-    host.view.cursor = saved.cursor;
-    host.scene.cameras.main.pan(saved.x, saved.y, CAMERA_BACK_MS, 'Sine.easeInOut', true);
+    if (saved) {
+      host.view.cursor = { ...saved.cursor };
+      host.scene.cameras.main.pan(saved.x, saved.y, CAMERA_BACK_MS, 'Sine.easeInOut', true);
+    } else host.centerOnHq();
     host.phase = 'map';
     // Que el Enter o el clic con el que se aceleraba la IA no actue ya en el turno propio.
     host.inputLockUntil = host.scene.time.now + INPUT_LOCK_MS;
@@ -400,8 +414,14 @@ export class TurnFlow {
   }
 
   /** Resumen de la ronda (ingresos, reparaciones...) y "+vida" sobre las unidades curadas que se ven. */
-  private showReport(report: RoundReport, ordersDone: string[] = []): void {
+  private showReport(summary: TurnSummary): void {
     const host = this.host;
+    const report = summary.report;
+    if (!report) return;
+    const ordersDone = summary.ordersDone
+      .map((uid) => unitById(host.state, uid))
+      .filter((unit): unit is Unit => !!unit)
+      .map((unit) => unitWithSquad(host.state, unit));
     showReport(`${t('day')} ${host.state.day}`, roundReportLines(report, host.viewer, ordersDone));
     if (host.fastForward) return;
     healedOf(report, host.viewer).forEach((healed, i) => {

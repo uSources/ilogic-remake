@@ -6,7 +6,7 @@
  * derecho.
  */
 import type Phaser from 'phaser';
-import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
+import { startStandingOrder, standingOrderPlayOrder } from '../../core/autopilot';
 import { movementOf, canWalk, unitAt, unitById, canMoveNow, visibleFoeAt } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
@@ -72,7 +72,6 @@ export interface OrderHost extends ActionHost {
   commit(tile: Pos, options?: { drop?: boolean; wait?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
-  clearUndo(): void;
   afterAction(): void;
   checkEnd(): boolean;
   play(events: GameEvent[]): Promise<void>;
@@ -279,7 +278,6 @@ export class Orders {
     this.ordering = null;
     host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind: ordering.kind, at: posOf(at) } });
     if (ordering.single && units[0]) this.keepThisTurnMove(units[0]);
-    host.clearUndo();
     // [CAMBIO] El grupo sigue elegido (como en los juegos de estrategia en tiempo real).
     host.toMap();
     showToast(t('orderGiven'));
@@ -304,8 +302,7 @@ export class Orders {
     host.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
     for (const unit of standingOrderPlayOrder(host.state, units)) {
-      for (const event of startStandingOrder(host.state, unit.uid, host.viewer)) {
-        host.record([event]);
+      for (const event of startStandingOrder(host.state, unit.uid, host.viewer, host.dispatcher)) {
         await host.play([event]);
         if (match !== host.match || host.checkEnd()) return;
       }

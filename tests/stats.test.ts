@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { saveContext } from '@core/defaultGames';
 import { defaultContent } from '@core/content/default';
-import { newUnit } from '@core/rules';
+import { endRound, newUnit } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
-import { recordEvent, sampleArmy, statsOf } from '@core/stats';
+import { armyByDay, armyValue, recordEvent, sampleArmy, statsOf } from '@core/stats';
 import { emptyTeamStats, teamState } from '@core/teams';
 import { posOf } from '@core/geom';
 import type { CombatInfo } from '@core/model';
-import { blankState, unitTypeNamed } from './helpers';
+import { act, blankState, unitTypeNamed } from './helpers';
 
 describe('estadisticas', () => {
   it('cuenta compras, bajas y capturas por equipo', () => {
@@ -65,5 +65,18 @@ describe('estadisticas', () => {
     const bad = JSON.parse(serialize(s)) as { teams: { stats: unknown }[] };
     bad.teams[0]!.stats = { built: 'x' };
     expect(statsOf(deserialize(JSON.stringify(bad), saveContext(defaultContent()))!, 0)).toEqual(emptyTeamStats());
+  });
+});
+
+describe('las estadisticas salen de los sucesos, no de lo que se anima', () => {
+  it('dispatch apunta cada accion (comprar) y el fin de ronda la muestra del ejercito del dia nuevo', () => {
+    const s = blankState();
+    s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
+    act(s, 0, { kind: 'buy', at: { x: 4, y: 4 }, unitType: 'Soldier' });
+    expect(statsOf(s, 0)).toMatchObject({ built: 1, spent: unitTypeNamed('Soldier').cost });
+    endRound(s);
+    expect(statsOf(s, 0).army).toHaveLength(2);
+    expect(armyByDay(s, 0)).toHaveLength(2);
+    expect(armyByDay(s, 0).at(-1)).toBe(armyValue(s, 0));
   });
 });

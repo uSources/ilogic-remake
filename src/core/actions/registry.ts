@@ -6,6 +6,8 @@
 import { CAPTURE_ACTIONS } from './capture';
 import { COMBAT_ACTIONS } from './combat';
 import { ECONOMY_ACTIONS } from './economy';
+import { MATCH_ACTIONS } from './match';
+import { TURN_ACTIONS } from './turn';
 import { MOVEMENT_ACTIONS } from './movement';
 import { POWER_ACTIONS } from './powers';
 import { SQUAD_ACTIONS } from './squads';
@@ -24,4 +26,6 @@ export const ACTIONS: ActionRegistry = {
   ...POWER_ACTIONS,
   ...STANDING_ORDER_ACTIONS,
   ...SQUAD_ACTIONS,
+  ...MATCH_ACTIONS,
+  ...TURN_ACTIONS,
 };

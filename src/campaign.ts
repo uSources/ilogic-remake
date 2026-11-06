@@ -3,8 +3,8 @@
  */
 import { defaultContent } from './core/content/default';
 import { MISSIONS, type MissionDef } from './core/missions';
-import { measureObjective, objectiveFromMission, type ObjectiveKind } from './core/objectives';
-import type { GameEvent, GameState, Objective, TeamId } from './core/model';
+import { measureObjective, missionGoal, type ObjectiveKind } from './core/objectives';
+import type { GameEvent, GameState, ObjectiveGoal, TeamId } from './core/model';
 import { nameOf, settings } from './settings';
 import { entryOf, type GameContent } from './core/content';
 
@@ -71,7 +71,7 @@ export function nextMissionIndex(done = completedMissions()): number {
 const es = () => settings.lang === 'es';
 
 /** Frase de cada objetivo, para la pantalla de campaña y el panel de la partida. */
-const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { kind: K }>, content: GameContent) => string } = {
+const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<ObjectiveGoal, { kind: K }>, content: GameContent) => string } = {
   hq: () => (es() ? 'Conquista la Base enemiga.' : 'Take the enemy HQ.'),
   survive: ({ days }) => (es() ? `Aguanta hasta el final del día ${days}.` : `Hold out until the end of day ${days}.`),
   capture: ({ count, type, days }, content) => {
@@ -95,16 +95,16 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<Objective, { k
 const NO_UNIT_UIDS: readonly number[] = [];
 
 /** El objetivo de la partida si la hay; si no, el de la mision; si no hay ninguna, conquistar la Base. */
-function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): Objective {
+function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): ObjectiveGoal {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
-  if (mission) return objectiveFromMission(mission.objective, NO_UNIT_UIDS, content);
+  if (mission) return missionGoal(mission.objective, NO_UNIT_UIDS, content);
   return { kind: 'hq' };
 }
 
-function describeObjective(objective: Objective, content: GameContent): string {
+function describeObjective(objective: ObjectiveGoal, content: GameContent): string {
   // TypeScript no sabe que la entrada de cada tipo recibe ese mismo tipo de objetivo.
-  const describe = OBJECTIVE_TEXT[objective.kind] as (objective: Objective, content: GameContent) => string;
+  const describe = OBJECTIVE_TEXT[objective.kind] as (objective: ObjectiveGoal, content: GameContent) => string;
   return describe(objective, content);
 }
 
@@ -118,13 +118,13 @@ export function objectiveText(mission: MissionDef | null, s?: GameState): string
 }
 
 /** Progreso en corto: "3/6", "día 4 de 8"... */
-export function objectiveStatus(s: GameState): string | null {
+export function objectiveStatusText(s: GameState): string | null {
   const mission = s.mission;
   const objective = mission?.objective;
   if (!mission || !objective || objective.kind === 'hq') return null;
   const shownDay = Math.min(s.day, objective.days);
   const day = es() ? `Día ${shownDay} de ${objective.days}` : `Day ${shownDay} of ${objective.days}`;
-  const progress = measureObjective(s, mission.team, objective);
+  const progress = measureObjective(s, objective);
   if (objective.kind === 'capture' && progress) return `${progress.done}/${progress.total} · ${day}`;
   if (objective.kind === 'destroy' && progress) return `${es() ? 'Quedan' : 'Left'}: ${progress.total} · ${day}`;
   return day;

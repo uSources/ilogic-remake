@@ -1,5 +1,6 @@
 import type { RulesConfig } from '../core/model';
-import type { EndStatsVM } from './vm/end';
+import type { TextKey } from '../settings';
+import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
@@ -8,7 +9,7 @@ import type { LabVM } from './vm/lab';
 import type { CampaignItemVM, HomeVM, MainMenuItemVM, MenuItemVM, MenuVM, OptionRowVM, SetupRowVM, SetupVM } from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
-import type { ReportLineVM } from './vm/notices';
+import type { HandoffVM, ReportLineVM } from './vm/notices';
 import type { TileVM } from './vm/tile';
 import type { DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 
@@ -56,6 +57,8 @@ export interface UIState {
   /** De quien es el turno, visto por quien mira: suyo, de un aliado o de un enemigo. */
   turn: Side;
   busy: boolean;
+  /** Se mira jugar a los demas (lo dice la escena: watchesOthers): el boton del menu deja salir. */
+  watching: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;
   /** Clima (null si la partida no tiene). */
@@ -85,11 +88,13 @@ export interface UIState {
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
   end: {
-    won: boolean;
+    /** Como ha acabado para quien mira. */
+    outcome: EndOutcome;
     day: number;
     /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
     stats: EndStatsVM | null;
-    reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
+    /** Por que ha acabado, ya visto por quien mira (endOfMatch.ts: reasonText), o null. */
+    reasonText: TextKey | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
     /** Puntos de su alianza y de la mejor enemiga. */
@@ -107,6 +112,8 @@ export interface UIState {
   /** Reglas que cuenta la ayuda: las de la partida en curso, o en el menu las de una partida nueva (null hasta que la escena las pone). */
   helpRules: RulesConfig | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
+  /** Cambio de persona en la misma pantalla (null: no hay que cambiar). */
+  handoff: HandoffVM | null;
   minimap: MinimapVM | null;
   /** Parte del mapa que se ve, en casillas. */
   minimapView: { x: number; y: number; w: number; h: number };
@@ -130,6 +137,7 @@ export const initialState: UIState = {
     preset: 'normal',
     presets: [],
     groups: [],
+    rival: { id: 'opt-rival', group: '', label: '', choices: [], index: 0 },
     general: null,
     enemyGeneral: null,
     generalNote: '',
@@ -155,6 +163,7 @@ export const initialState: UIState = {
   day: 1,
   turn: 'own',
   busy: false,
+  watching: false,
   menu: null,
   forecast: null,
   combat: null,
@@ -178,6 +187,7 @@ export const initialState: UIState = {
   dayLimit: null,
   helpRules: null,
   report: null,
+  handoff: null,
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },
   help: false,

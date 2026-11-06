@@ -1,5 +1,6 @@
 /**
- * Cuanto vale para la IA cada cosa que puede hacer: de momento, cada ataque posible.
+ * Cuanto vale cada cosa que puede hacer una unidad (al cumplir una orden o en el turno de la IA): de
+ * momento, cada ataque posible.
  * El valor de un ataque es la suma de ATTACK_SCORE_TERMS: una razon nueva para preferir (o evitar)
  * un ataque es una entrada mas en la lista.
  */
@@ -9,12 +10,12 @@ import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
 import type { Building, GameState, Pos, Unit } from '../model';
-import type { AiCtx } from './context';
+import type { PlayCtx } from './context';
 
 /** Un ataque que se esta valorando, con lo que comparten todos los terminos. */
 export interface AttackPlan {
   s: GameState;
-  ai: AiCtx;
+  play: PlayCtx;
   /** El atacante, ya colocado en la casilla desde la que dispara. */
   attacker: Unit;
   target: Unit;
@@ -30,7 +31,7 @@ export interface AttackScoreTerm {
   value(attack: AttackPlan): number;
 }
 
-/** Lo que vale una unidad de ese tipo en la escala de la IA (su precio, escalado). */
+/** Lo que vale una unidad de ese tipo al comparar ataques (su precio, escalado). */
 export const unitValue = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost / weightsOf(s).COSTSCALE;
 
 const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
@@ -83,18 +84,18 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     id: 'stopCapture',
     value: (attack) => {
       const building = attack.targetBuilding;
-      if (!building || building.owner !== attack.ai.me || !captureProgress(attack.s, building)) return 0;
+      if (!building || building.owner !== attack.play.me || !captureProgress(attack.s, building)) return 0;
       return (isHq(attack.s, building) ? weightsOf(attack.s).STOPCAPTUREHQ : weightsOf(attack.s).STOPCAPTURE) * evictionWeight(attack);
     },
   },
 ];
 
 /** Valor de que `attacker` dispare a `target` desde `from` (por defecto, desde donde esta). */
-export function attackScore(s: GameState, ai: AiCtx, attacker: Unit, target: Unit, from: Pos = attacker): number {
+export function attackScore(s: GameState, play: PlayCtx, attacker: Unit, target: Unit, from: Pos = attacker): number {
   const attackerThere = { ...attacker, x: from.x, y: from.y };
   const attack: AttackPlan = {
     s,
-    ai,
+    play,
     attacker: attackerThere,
     target,
     damage: expectedDamage(s, attackerThere, target),

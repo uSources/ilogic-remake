@@ -111,7 +111,32 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 6 as 5 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 8 as 7 })],
+    [
+      'equipo caido sin caida apuntada',
+      () => {
+        const s = sample();
+        s.buildings = s.buildings.filter((building) => building.owner !== 0);
+        return serialize(s);
+      },
+    ],
+    [
+      'caida apuntada de un equipo que sigue en pie',
+      () => {
+        const s = sample();
+        s.teams[1]!.fell = { order: 1, reason: 'hq' };
+        return serialize(s);
+      },
+    ],
+    [
+      'caida por rendirse de un equipo que no se ha rendido',
+      () => {
+        const s = sample();
+        s.buildings = s.buildings.filter((building) => building.owner !== 1);
+        s.teams[1]!.fell = { order: 1, reason: 'surrender' };
+        return serialize(s);
+      },
+    ],
     ['mapa no cuadrado', () => serialize({ ...sample(), map: sample().map.slice(1) })],
     [
       'terreno fuera de rango',

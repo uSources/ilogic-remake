@@ -1,5 +1,6 @@
 /**
- * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
+ * Lo que comparten los pasos de un turno jugado por el nucleo (las ordenes permanentes) o por la IA
+ * (PlayCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
@@ -9,7 +10,7 @@ import { movementOf, buildingAt, occupancy } from '../rules/queries';
 import { posOf, samePos } from '../geom';
 import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
 import { actorProblem } from '../actions/checks';
-import { dispatch } from '../actions/dispatch';
+import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive } from '../util/predicates';
@@ -17,25 +18,30 @@ import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
 /**
- * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
+ * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
  * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan.
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).
  */
-export interface AiCtx {
+export interface PlayCtx {
   /** Equipo que juega el turno. */
   readonly me: TeamId;
   /**
    * [CAMBIO] Juego en grupo: solo en el turno de la IA (aiTurn). Las ordenes con destino
-   * (standingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
+   * (unitStandingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
    */
   group: boolean;
   /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
   plan: Map<number, number>;
+  /**
+   * Por donde manda sus acciones: dispatch, o lo que le de quien la hace jugar (la sesion, que las
+   * apunta). Hasta que la IA solo proponga acciones (fase 6), las manda ella.
+   */
+  readonly dispatch: ActionDispatcher;
 }
 
-/** Contexto nuevo para un turno de `me` (sin grupo ni plan). */
-export function aiCtx(me: TeamId): AiCtx {
-  return { me, group: false, plan: new Map() };
+/** Contexto nuevo para un turno de `me` (sin grupo ni plan), que manda sus acciones por `dispatcher`. */
+export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
+  return { me, group: false, plan: new Map(), dispatch: dispatcher };
 }
 
 /**
@@ -44,11 +50,11 @@ export function aiCtx(me: TeamId): AiCtx {
  * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
  * detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
+export function occupancyWithout(s: GameState, play: PlayCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
-  if (ai.group && s.rules.passAllies) {
-    const visible = visibility(s, ai.me);
-    const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, ai.me) || !visible.at(other));
+  if (play.group && s.rules.passAllies) {
+    const visible = visibility(s, play.me);
+    const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, play.me) || !visible.at(other));
     for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
   }
   occupied.set(unit, false);
@@ -60,8 +66,8 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * unidades cortando el paso como en occupancyWithout. Infinity si no se llega o si es la propia
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
-export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, ai, unit));
+export function stepsFrom(s: GameState, play: PlayCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
+  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, play, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
   return (pos) => steps.at(pos) || Infinity;
 }
@@ -72,50 +78,62 @@ export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit)
  * [CAMBIO] la cercania se mide con el tipo de movimiento de la unidad (antes siempre "a pie")
  * y si ya esta tan cerca como puede, se queda.
  */
-export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
+export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
   if (!avoidDest && range.steps.at(dest) > 0) return dest;
-  const stepsToDest = stepsFrom(s, ai, unit, dest);
+  const stepsToDest = stepsFrom(s, play, unit, dest);
   const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
   const best = minBy(options, stepsToDest);
   const getsCloser = best !== null && stepsToDest(best) < stepsToDest(unit);
   return getsCloser ? best : null;
 }
 
-/** La IA hace una accion de su equipo (`dispatch`) y avisa de sus sucesos: los sucesos, o null si no valia. */
-function* actEvents(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
-  const result = dispatch(s, ai.me, action);
+/**
+ * Quien juega el turno (ordenes o IA) hace una accion de su equipo (`dispatch`) y avisa de sus
+ * sucesos: los sucesos, o null si no valia.
+ */
+function* actEvents(s: GameState, play: PlayCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
+  const result = play.dispatch(s, play.me, action);
   if (!result.ok) return null;
   yield* result.events;
   return result.events;
 }
 
 /**
- * La IA hace una accion de su equipo por la misma via que cualquiera (`dispatch`) y avisa de sus
- * sucesos. Devuelve si valia (si no, la partida no cambia).
+ * Quien juega el turno (ordenes o IA) hace una accion de su equipo por la misma via que cualquiera
+ * (`dispatch`) y avisa de sus sucesos. Devuelve si valia (si no, la partida no cambia).
  */
-export function* act(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, boolean> {
-  return (yield* actEvents(s, ai, action)) !== null;
+export function* act(s: GameState, play: PlayCtx, action: GameAction): Generator<GameEvent, boolean> {
+  return (yield* actEvents(s, play, action)) !== null;
 }
 
 /** Termina el turno de la unidad, si aun no lo ha hecho (esperar). */
-export function* finish(s: GameState, ai: AiCtx, unit: Unit): Generator<GameEvent> {
-  if (canAct(s, unit)) yield* act(s, ai, { kind: 'wait', uid: unit.uid });
+export function* finish(s: GameState, play: PlayCtx, unit: Unit): Generator<GameEvent> {
+  if (canAct(s, unit)) yield* act(s, play, { kind: 'wait', uid: unit.uid });
 }
 
 /** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
-export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
+export function* doMove(s: GameState, play: PlayCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
-  const events = yield* actEvents(s, ai, { kind: 'move', uid: unit.uid, to: posOf(dest) });
+  const events = yield* actEvents(s, play, { kind: 'move', uid: unit.uid, to: posOf(dest) });
   return events !== null && endsInAmbush(events);
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
 export const strikeReach = (s: GameState, unit: Unit): number => unitTypeOf(s, unit).move + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
+/** Enemigos de `me` vivos y en el mapa (no transportados), se vean o no. */
+const foesOnMap = (s: GameState, me: TeamId): Unit[] =>
+  s.units.filter((other) => isHostile(s, other.team, me) && other.carrier === null && other.life > 0);
+
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {
-  return s.units.filter((other) => isHostile(s, other.team, me) && other.carrier === null && other.life > 0 && visible.at(other));
+  return foesOnMap(s, me).filter((other) => visible.at(other));
+}
+
+/** Los mismos que `visibleFoes` no ve: enemigos vivos en el mapa escondidos para `me`. */
+export function hiddenFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {
+  return foesOnMap(s, me).filter((other) => !visible.at(other));
 }
 
 /**

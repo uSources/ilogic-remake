@@ -4,7 +4,7 @@
  */
 import { missionById } from '../../core/missions';
 import type { GameEvent, GameState } from '../../core/model';
-import { objectiveStatus, objectiveText, ownedBuildingCount, TUTORIAL } from '../../campaign';
+import { objectiveStatusText, objectiveText, ownedBuildingCount, TUTORIAL } from '../../campaign';
 import type { UIState } from '../../hud/store';
 import { settings } from '../../settings';
 import type { Phase } from './types';
@@ -42,12 +42,12 @@ export class TutorialTracker {
         step = `${this.step + 1}/${TUTORIAL.length}`;
       }
     }
-    return { title: mission.title[settings.lang], objective: objectiveText(mission, s), status: objectiveStatus(s), tip, step };
+    return { title: mission.title[settings.lang], objective: objectiveText(mission, s), status: objectiveStatusText(s), tip, step };
   }
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
   private advance(s: GameState, phase: Phase): void {
-    const team = s.mission?.team;
+    const team = s.mission?.objective.owner;
     if (team === undefined) return;
     if (this.step === 0 && this.events.length === 0) this.ownedAtStart = ownedBuildingCount(s, team);
     for (let guard = 0; guard < TUTORIAL.length; guard++) {

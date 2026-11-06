@@ -10,6 +10,7 @@
 import { savedPart } from './gameContent';
 import { isEntryId, type GameContent } from './content';
 import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations';
+import { fallsMatch } from './rules/falls';
 import { SAVE_VERSION } from './saveVersion';
 import {
   boardOf,
@@ -24,10 +25,12 @@ import {
   isValidMap,
   isValidMission,
   isValidTeamList,
+  isValidTurn,
   type SaveFrame,
   type SavedGame,
   type SavedLists,
 } from './savedParts';
+import { isGameModeId } from './modes';
 import { isValidRules } from './rulesSchema';
 import { isInt, isObject } from './util/validation';
 import { isRandomState } from './util/random';
@@ -46,6 +49,10 @@ export type SaveError =
   | 'badTheme'
   | 'badDice'
   | 'badTeams'
+  /** El modo de juego no existe. */
+  | 'badMode'
+  /** El orden de los turnos no es el de sus equipos, o le toca a quien no esta. */
+  | 'badTurn'
   | 'badUnits'
   /** Un pasajero que no esta en su transporte, o al reves. */
   | 'badCargo'
@@ -77,6 +84,8 @@ export function readSave(json: string, context: SaveContext): ReadSaveResult {
   // El contenido es el de quien lee.
   const state: GameState = { ...cleanGame(saved, check), content: context.content };
   migrateChecked(state, version, context);
+  // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
+  if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
   return { ok: true, state };
 }
 
@@ -116,7 +125,9 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
   if (!isEntryId(content.themes, saved.theme)) return fail('badTheme');
   if (!isRandomState(saved.dice)) return fail('badDice');
   if (!isValidTeamList(teams, content)) return fail('badTeams');
+  if (!isGameModeId(saved.mode)) return fail('badMode');
   const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };
+  if (!isValidTurn(frame, saved)) return fail('badTurn');
   if (!hasValidUnits(frame, units)) return fail('badUnits');
   if (!hasConsistentCargo(units)) return fail('badCargo');
   if (!hasValidBuildings(frame, buildings)) return fail('badBuildings');

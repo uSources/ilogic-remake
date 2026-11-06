@@ -9,7 +9,6 @@ import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
 import type { MissionDef } from '../core/missions';
 import { loadGame } from '../core/defaultGames';
-import { isPlayableOnOneScreen } from '../core/teams';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
@@ -20,11 +19,12 @@ import { OptionsPanel } from '../menu/optionsPanel';
 import { isTypingCode, SetupScreen, type SetupHost } from '../menu/setupScreen';
 import { playMusic } from '../music';
 import { checkNotes, closeNotes, notesCommand, notesOpen } from '../patchNotes';
-import { ruleChangesFor } from '../setup';
+import { matchConfigFor, randomSeed } from '../setup';
 import { settings } from '../settings';
 import { readSave } from '../storage';
 import { terrainPalette, type TerrainPalette } from '../ui/terrainColors';
 import { live } from './game/host';
+import type { GameStartData } from './game/types';
 
 type Mode = 'home' | 'setup' | 'campaign';
 
@@ -86,8 +86,7 @@ export class MenuScene extends Phaser.Scene {
 
     const raw = readSave();
     const save = raw ? loadGame(raw) : null;
-    // Solo se ofrece continuar una partida que se puede jugar aqui (una persona: isPlayableOnOneScreen).
-    this.save = save && isPlayableOnOneScreen(save) ? save : null;
+    this.save = save;
     this.setup.loadOptions();
     this.home.focus = this.save ? 'continue' : 'quick';
     this.optionsPanel = new OptionsPanel(
@@ -183,26 +182,22 @@ export class MenuScene extends Phaser.Scene {
 
   private continueGame(): void {
     this.leaving = true;
-    this.scene.start('Game', { mode: 'load' });
+    this.scene.start('Game', { start: 'load' } satisfies GameStartData);
   }
 
   private startNew(seed: number): void {
     if (this.leaving) return;
     this.leaving = true;
     blurFocusedElement();
-    const options = this.setup.options;
-    this.scene.start('Game', {
-      mode: 'new',
-      rules: ruleChangesFor(options),
-      setup: { seed, size: options.size, theme: options.theme },
-      general: options.general,
-      enemyGeneral: options.enemyGeneral,
-    });
+    this.scene.start('Game', { start: 'new', match: matchConfigFor(this.setup.options, seed) } satisfies GameStartData);
   }
 
   private startMission(mission: MissionDef): void {
     this.leaving = true;
-    this.scene.start('Game', { mode: 'mission', mission: mission.id });
+    this.scene.start('Game', {
+      start: 'new',
+      match: { mode: 'mission', mission: mission.id, diceSeed: randomSeed() },
+    } satisfies GameStartData);
   }
 
   // --- Fondo: partida IA contra IA en directo, o la imagen de 2013 -----------------------------

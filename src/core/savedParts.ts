@@ -12,6 +12,7 @@ import { SQUAD_KEYS } from './squads/naming';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
+import { isDefeatReason } from './rules/falls';
 import type { GeneralState, SavedGameState } from './model';
 import { Grid, type GridBounds } from './util/grid';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
@@ -83,10 +84,14 @@ function cleanGeneral(content: GameContent, saved: unknown): GeneralState | null
   return { id: definition.id, charge, used: !!saved.used, reveal: !!saved.reveal };
 }
 
+/** Cuando y por que cayo un equipo (o null, si sigue en pie). Que cuadre con la partida lo mira readSave (fallsMatch). */
+const isTeamFall = (fell: unknown): boolean =>
+  fell === null || (isObject(fell) && isInt(fell.order, 1, MAX_COUNT) && isDefeatReason(fell.reason));
+
 /** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */
 function isValidTeam(content: GameContent, team: unknown, id: number): boolean {
   if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !isControllerKind(team.controller)) return false;
-  if (!isInt(team.funds, 0, MAX_SAVED_FUNDS)) return false;
+  if (!isInt(team.funds, 0, MAX_SAVED_FUNDS) || typeof team.resigned !== 'boolean' || !isTeamFall(team.fell)) return false;
   team.general = cleanGeneral(content, team.general);
   team.stats = sanitizeTeamStats(team.stats);
   return true;
@@ -174,9 +179,21 @@ export function cleanBuildings(frame: SaveFrame, buildings: readonly unknown[]):
     if (building.capture != null && !isCaptureProgress(frame, building.capture)) building.capture = null;
 }
 
-/** La mision: su id, el equipo que la juega y su objetivo (cada tipo de objetivo comprueba sus campos). */
+/** La mision: su id y su objetivo, de un equipo de la partida (cada tipo de objetivo comprueba sus campos). */
 export function isValidMission(frame: SaveFrame, mission: unknown): boolean {
-  return isObject(mission) && typeof mission.id === 'string' && isTeam(frame, mission.team) && isValidObjective(frame, mission.objective);
+  if (!isObject(mission) || typeof mission.id !== 'string' || !isObject(mission.objective)) return false;
+  return isTeam(frame, mission.objective.owner) && isValidObjective(frame, mission.objective);
+}
+
+/**
+ * El turno: el orden de cada ronda tiene a todos los equipos una vez, y le toca a uno de ellos (que
+ * sepa si ya ha empezado su turno).
+ */
+export function isValidTurn(frame: SaveFrame, saved: SavedGame): boolean {
+  const order = saved.turnOrder;
+  if (!Array.isArray(order) || order.length !== frame.teamCount || !order.every((team) => isTeam(frame, team))) return false;
+  if (new Set(order).size !== order.length) return false;
+  return order.includes(saved.turn) && typeof saved.turnStarted === 'boolean';
 }
 
 /**
@@ -239,11 +256,12 @@ function cleanSquads(frame: SaveFrame, saved: SavedGame): void {
 const isControlPoint = (frame: SaveFrame, point: unknown): boolean =>
   isObject(point) && isPosOn(frame.board, point) && (point.owner === null || isTeam(frame, point.owner));
 
-/** El ultimo movimiento (para deshacerlo): de una unidad, desde una casilla del mapa, con la captura que perdio. */
-function isValidLastMove(frame: SaveFrame, lastMove: unknown): boolean {
-  if (!isObject(lastMove) || !isUid(lastMove.uid) || !isPosOn(frame.board, lastMove.from)) return false;
-  if (typeof lastMove.revealed !== 'boolean') return false;
-  return lastMove.capture === null || isCaptureProgress(frame, lastMove.capture);
+/** Un movimiento que se puede deshacer: de una unidad, desde una casilla del mapa, con la captura que perdio. */
+function isValidUndoableMove(frame: SaveFrame, move: unknown): boolean {
+  if (!isObject(move) || !isUid(move.uid) || !isPosOn(frame.board, move.from)) return false;
+  if (typeof move.revealed !== 'boolean') return false;
+  if (move.travelTo !== undefined && !isPosOn(frame.board, move.travelTo)) return false;
+  return move.capture === null || isCaptureProgress(frame, move.capture);
 }
 
 /** Lo opcional de la partida que este roto se quita, y la partida sigue sin ello. */
@@ -253,5 +271,5 @@ export function cleanOptionalParts(frame: SaveFrame, saved: SavedGame): void {
   cleanSquads(frame, saved);
   dropIfInvalid(saved, 'controlPoints', (points) => Array.isArray(points) && points.every((point) => isControlPoint(frame, point)));
   // Si esta roto, solo no se puede deshacer.
-  dropIfInvalid(saved, 'lastMove', (lastMove) => isValidLastMove(frame, lastMove));
+  dropIfInvalid(saved, 'undoableMoves', (moves) => Array.isArray(moves) && moves.every((move) => isValidUndoableMove(frame, move)));
 }

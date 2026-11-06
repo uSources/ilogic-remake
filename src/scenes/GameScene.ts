@@ -10,16 +10,16 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
-import { recordEvent, sampleArmy } from '../core/stats';
-import { dispatch } from '../core/actions';
+import type { GameSession, ActedStep } from '../core/session';
+import { seededRng } from '../core/util/random';
+import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
 import {
   resetActions,
-  showBanner,
   showToast,
   ui,
   type ForecastVM,
@@ -41,13 +41,14 @@ import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
 import { unitKey } from '../ui/sprites';
 import { terrainPalette } from '../ui/terrainColors';
-import { sideOf } from '../ui/sides';
+import { shownTeamNumber, sideOf } from '../ui/sides';
 import { PointerGestures } from '../controls/pointer';
 import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
 import type { LabAction, LabOptions } from '../lab';
-import { GAME_MENU, KEEPS_UNDO, MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
+import { gameModeOf } from '../core/modes';
+import { MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
 import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
@@ -55,9 +56,9 @@ import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } 
 import { startMatch } from './game/matchSetup';
 import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
-import { EventPlayer, type PlaybackHost } from './game/playback';
+import { EventPlayer, showFallNotice, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
-import { EndOfMatch, setEndFilter, type EndHost } from './game/endOfMatch';
+import { EndOfMatch, endViewer, screenEndFor, setEndFilter, type EndHost } from './game/endOfMatch';
 import { GeneralPowers, type PowerHost } from './game/powers';
 import { restartLab, startLab, type LabHost } from './game/labMode';
 import { live, rw } from './game/host';
@@ -67,7 +68,17 @@ import { Carry, type CarryHost } from './game/carry';
 import { pointerTarget, type PointerHost } from './game/pointerInput';
 import { Orders, type OrderHost } from './game/orders';
 import { UnitMoves, type MoveHost } from './game/unitMoves';
-import { acceptMapTile, captureNow, GameMenuChoices, PHASES, type GameMenuHost, type PhaseHost } from './game/phases';
+import {
+  acceptMapTile,
+  captureNow,
+  GameMenuChoices,
+  gameMenuOf,
+  PHASES,
+  quitWhileWatching,
+  watchesOthers,
+  type GameMenuHost,
+  type PhaseHost,
+} from './game/phases';
 
 export type { GameStartData } from './game/types';
 
@@ -84,6 +95,9 @@ type BubbleKind = 'menu' | 'forecast' | 'moveTip';
 
 export class GameScene extends Phaser.Scene {
   // --- La partida -----------------------------------------------------------
+  /** La partida en juego: quien juega cada equipo, el registro de acciones y sus avisos. */
+  private session!: GameSession;
+  /** La partida que se ve: la de la sesion (al repetir los turnos ajenos, la copia de antes). */
   private s!: GameState;
   /** El equipo que juega la persona en esta pantalla: el que mira (niebla, colores, mandos). */
   private viewer!: TeamId;
@@ -93,6 +107,8 @@ export class GameScene extends Phaser.Scene {
   private match = 0;
   /** Laboratorio de animaciones (null en una partida normal). */
   private lab: LabOptions | null = null;
+  /** Cambio de persona en esta pantalla esperando a que la siguiente este lista (null: no hay). */
+  private handoffDone: (() => void) | null = null;
   private fromSave = false;
   private savedThisGame = false;
   private corruptSave = false;
@@ -214,13 +230,16 @@ export class GameScene extends Phaser.Scene {
     this.lastAt = null;
     this.anchorAt = {};
     this.endScreen.reset();
+    this.handoffDone = null;
   }
 
   init(data: GameStartData): void {
     this.resetMatch();
-    const start = startMatch(data);
-    this.s = start.state;
+    const start = startMatch(seededRng(randomSeed()), data);
+    this.session = start.session;
+    this.s = start.session.state;
     this.viewer = start.viewer;
+    this.session.subscribe((step) => this.record(step));
     this.lab = start.lab;
     this.fromSave = start.fromSave;
     this.corruptSave = start.corruptSave;
@@ -228,7 +247,6 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     setEndFilter(null);
-    sampleArmy(this.s);
     this.lastAt = null;
     this.view = new MapView(this);
     this.view.buildTerrain(this.s);
@@ -247,12 +265,13 @@ export class GameScene extends Phaser.Scene {
     );
     ui.set({ screen: 'game', toast: null, banner: null, combat: null, threat: this.threat, intents: this.intents, options: null });
     this.refresh();
+    // El aviso de «Tu turno» lo da TurnFlow al llegar a el (antes pueden jugar otros).
+    void this.turns.begin();
     if (this.lab) startLab(this.labHost(), this.lab);
-    else showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
     if (this.corruptSave) showToast(t('badSave'));
   }
 
-  /** Cursor y camara sobre la Base del jugador. */
+  /** Cursor y camara sobre la Base del equipo que mira. */
   private centerOnHq(): void {
     const hq = this.s.buildings.find((building) => building.owner === this.viewer && isHq(this.s, building)) ?? { x: 0, y: 0 };
     this.view.cursor = posOf(hq);
@@ -278,7 +297,19 @@ export class GameScene extends Phaser.Scene {
       this.view.destroy();
       setEndFilter(null);
       resetActions();
-      ui.set({ menu: null, forecast: null, combat: null, tile: null, mission: null, weather: null });
+      // Lo de la partida que se cierra (tambien de quien sale mientras juegan los demas: ocupada, turno ajeno).
+      ui.set({
+        menu: null,
+        forecast: null,
+        combat: null,
+        tile: null,
+        mission: null,
+        weather: null,
+        handoff: null,
+        busy: false,
+        watching: false,
+        turn: 'own',
+      });
     });
   }
 
@@ -366,6 +397,7 @@ export class GameScene extends Phaser.Scene {
       },
       openGameMenu: () => {
         if (ready()) this.openGameMenu();
+        else this.quitWhileWatching();
       },
       minimapJump: (at: Pos) => {
         if (this.ended) return;
@@ -385,6 +417,7 @@ export class GameScene extends Phaser.Scene {
       focusUnit: (uid: number) => {
         if (ready()) this.focusUnit(uid);
       },
+      handoffReady: () => this.handoffDone?.(),
     });
   }
 
@@ -434,9 +467,14 @@ export class GameScene extends Phaser.Scene {
     }
     if (command.kind === 'help') return ui.set({ help: true });
     if (command.kind === 'options') return this.openOptions();
+    if (this.handoffDone) {
+      if (command.kind === 'accept') this.handoffDone();
+      return;
+    }
     if (this.phase === 'busy') {
-      // Durante el turno enemigo, aceptar acelera las animaciones.
+      // Durante el turno enemigo, aceptar acelera las animaciones y Esc deja salir al menu.
       if (command.kind === 'accept') this.fastForward = true;
+      if (command.kind === 'cancel') this.quitWhileWatching();
       return;
     }
     this.mapCommand(command);
@@ -488,7 +526,7 @@ export class GameScene extends Phaser.Scene {
   private openOptions(): void {
     if (this.phase !== 'map' && this.phase !== 'gameMenu') return;
     if (this.phase === 'map') this.openGameMenu();
-    this.menuSel = GAME_MENU.indexOf('options');
+    this.menuSel = gameMenuOf(this.s).indexOf('options');
     this.refreshHud();
     this.optionsPanel.open();
   }
@@ -647,18 +685,52 @@ export class GameScene extends Phaser.Scene {
     if (settings.autoNext && this.idleUnits().length) this.nextIdle();
   }
 
+  /**
+   * Se acaba la partida para esta pantalla: true, y empieza el final. Si se ha decidido (su modo dice
+   * como; el laboratorio nunca se decide), su final; si sigue pero ya no juega ninguna persona (han caido o se
+   * han rendido y quedan otros), perdida para quien mira: nadie miraria a la IA jugar sola, y la
+   * partida se cierra y se borra su guardado.
+   */
   private checkEnd(): boolean {
-    if (this.lab) return false;
-    const result = outcome(this.s, this.viewer);
-    if (result === 'playing') return false;
-    void this.endScreen.finish(result === 'won', endReason(this.s, this.viewer));
+    const end = this.session.screenEnd(this.viewer);
+    if (!end) return false;
+    if (end.kind === 'decided') {
+      this.viewer = endViewer(end.result, this.viewer, this.session.people());
+    }
+    void this.endScreen.finish(screenEndFor(this.s, end, this.viewer));
     return true;
   }
 
-  /** Rendirse: la partida termina como derrota. */
+  /** Tapa la partida hasta que la persona de `team` dice que esta lista (boton o Enter). */
+  private handOver(team: TeamId): Promise<void> {
+    return new Promise((resolve) => {
+      this.handoffDone = () => {
+        this.handoffDone = null;
+        ui.set({ handoff: null });
+        resolve();
+      };
+      ui.set({ handoff: { team: shownTeamNumber(team) } });
+    });
+  }
+
+  /**
+   * Rendirse: el equipo que mira deja la partida. Si con eso se acaba para esta pantalla (checkEnd:
+   * decidida, o sin personas en juego), empieza el final; si no (queda otra persona y tres o mas
+   * equipos), la sesion ya no le espera y siguen los demas.
+   */
   private surrender(): void {
     this.toMap();
-    void this.endScreen.finish(false, 'surrender');
+    const events = this.act({ kind: 'surrender' }) ?? [];
+    // Si con eso se acaba para esta pantalla, lo cuenta el final; si no, `act` no anima sus sucesos y
+    // el aviso de la caida (la suya) se da aqui.
+    if (this.checkEnd()) return;
+    for (const event of events) if (event.kind === 'teamDefeated') showFallNotice(event, this.viewer);
+    void this.turns.endOwnTurn();
+  }
+
+  /** Mientras juegan los demas no hay menu, pero se puede salir al menu principal (pulsando dos veces). */
+  private quitWhileWatching(): void {
+    quitWhileWatching({ ended: this.ended, phase: this.phase, othersPlaying: this.turns.othersPlaying }, this.gameMenu);
   }
 
   /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */
@@ -675,8 +747,9 @@ export class GameScene extends Phaser.Scene {
     this.scene.start('Menu');
   }
 
+  /** Guarda la partida (si su modo se guarda: la partida para mirar, no). */
   private saveGame(): boolean {
-    if (!writeSave(serialize(this.s))) return false;
+    if (!gameModeOf(this.s).saves || !writeSave(serialize(this.s))) return false;
     this.savedThisGame = true;
     return true;
   }
@@ -731,14 +804,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * La persona de la pantalla hace una accion de su equipo (ver ActionHost): sus sucesos, o null si
-   * no vale. Sus sucesos se apuntan aqui, se animen o no.
+   * La persona de la pantalla hace una accion de su equipo por la sesion (ver ActionHost): sus
+   * sucesos, o null si no vale. Lo que pasa se apunta al avisar la sesion (`record`), se anime o no.
    */
   private act(action: GameAction): GameEvent[] | null {
-    const result = dispatch(this.s, this.viewer, action);
-    if (!result.ok) return null;
-    this.record(result.events);
-    return result.events;
+    const result = this.session.act(this.viewer, action);
+    return result.ok ? result.events : null;
   }
 
   /** La hace y anima sus sucesos (ver ActionHost). */
@@ -748,21 +819,22 @@ export class GameScene extends Phaser.Scene {
     return !!events;
   }
 
-  /** Apunta los sucesos de una accion ya hecha (ver ActionHost.record). */
-  private record(events: readonly GameEvent[]): void {
-    for (const event of events) this.noteEvent(event);
+  /** Lo que avisa la sesion de cada accion hecha: lo apunta suceso a suceso. */
+  private record(step: ActedStep): void {
+    for (const event of step.events) this.noteEvent(event, step.team === this.viewer);
+    // Una rendicion no se deshace al cargar: el guardado de esta partida, si lo hay, la recoge ya.
+    if (step.action.kind === 'surrender') this.refreshSave();
   }
 
-  /** Un suceso ya hecho: estadisticas, tutorial, Ctrl+Z y donde ha pasado lo ultimo. */
-  private noteEvent(event: GameEvent): void {
-    const isOwnTurn = !this.othersPlaying;
-    const replaying = this.turns.replaying;
-    // Lo que tiene consecuencias (combates, capturas, compras...) ya no se puede deshacer con Ctrl+Z.
-    if (isOwnTurn && !KEEPS_UNDO.has(event.kind)) this.moves.clearUndo();
-    if (!replaying) recordEvent(this.s, event);
-    if (!replaying && isOwnTurn) this.tutorial.record(event);
-    if (event.kind === 'attack') this.lastAt = { ...event.at };
-    else if (event.kind === 'capture') this.lastAt = { ...event.at };
+  /** Vuelve a guardar la partida si ya tenia guardado (no crea uno que no habia). */
+  private refreshSave(): void {
+    if (this.fromSave || this.savedThisGame) this.saveGame();
+  }
+
+  /** Un suceso ya hecho: tutorial y donde ha pasado lo ultimo (estadisticas y deshacer los lleva el nucleo). */
+  private noteEvent(event: GameEvent, isOwn: boolean): void {
+    if (isOwn) this.tutorial.record(event);
+    if (event.kind === 'attack' || event.kind === 'capture') this.lastAt = { ...event.at };
   }
 
   // =========================================================================
@@ -892,6 +964,7 @@ export class GameScene extends Phaser.Scene {
       weather,
       turn: sideOf(s, viewer, this.turns.acting),
       busy,
+      watching: watchesOthers({ ended: this.ended, phase: this.phase, othersPlaying: this.turns.othersPlaying }),
       tile: busy ? null : this.tileInfo(cursor),
       forecast: this.phase === 'attack' || this.phase === 'move' ? this.forecast(cursor) : null,
       moveTip: this.phase === 'move' ? this.moveTip(cursor) : null,
@@ -1022,7 +1095,8 @@ export class GameScene extends Phaser.Scene {
     return {
       act: (action) => this.act(action),
       perform: (action, ghostKey) => this.perform(action, ghostKey),
-      record: (events) => this.record(events),
+      // La sesion cambia con cada partida: se pide la suya al mandar.
+      dispatcher: (s, team, action) => this.session.dispatcher(s, team, action),
     };
   }
 
@@ -1081,10 +1155,7 @@ export class GameScene extends Phaser.Scene {
     return live<MoveHost>({
       scene: { get: () => this },
       view: { get: () => this.view },
-      state: rw(
-        () => this.s,
-        (state) => (this.s = state),
-      ),
+      state: { get: () => this.s },
       viewer: { get: () => this.viewer },
       phase: rw(
         () => this.phase,
@@ -1134,7 +1205,6 @@ export class GameScene extends Phaser.Scene {
       commit: (tile, options) => this.moves.commit(tile, options),
       groupMove: (goal) => this.moves.groupMove(goal),
       giveTravel: (unit, goal) => this.moves.giveTravel(unit, goal),
-      clearUndo: () => this.moves.clearUndo(),
       afterAction: () => this.afterAction(),
       checkEnd: () => this.checkEnd(),
       play: (events) => this.playEvents(events),
@@ -1282,11 +1352,15 @@ export class GameScene extends Phaser.Scene {
     return live<TurnHost>({
       scene: { get: () => this },
       view: { get: () => this.view },
+      session: { get: () => this.session },
       state: rw(
         () => this.s,
         (state) => (this.s = state),
       ),
-      viewer: { get: () => this.viewer },
+      viewer: rw(
+        () => this.viewer,
+        (team) => (this.viewer = team),
+      ),
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1305,7 +1379,6 @@ export class GameScene extends Phaser.Scene {
       play: (events) => this.playEvents(events),
       wait: (ms) => this.player.wait(ms),
       checkEnd: () => this.checkEnd(),
-      clearUndo: () => this.moves.clearUndo(),
       abandonSelection: () => this.abandonSelection(),
       toMap: () => this.toMap(),
       refresh: () => this.refresh(),
@@ -1315,6 +1388,8 @@ export class GameScene extends Phaser.Scene {
       markSaved: () => {
         this.savedThisGame = true;
       },
+      handOver: (team) => this.handOver(team),
+      centerOnHq: () => this.centerOnHq(),
       ...this.actionHost(),
     });
   }

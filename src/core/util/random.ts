@@ -47,3 +47,9 @@ export function seedFromDraw(draw: number): number {
 export function isRandomState(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < UINT32_RANGE;
 }
+
+/** Mezcla para que las decisiones de la IA no salgan de la misma semilla que el mapa. */
+const AI_SEED_MIX = 0x9e3779b9;
+
+/** La semilla de las decisiones de la IA de una partida, sacada de la del mapa (la misma en todas partes). */
+export const aiSeedFor = (mapSeed: number): number => (mapSeed ^ AI_SEED_MIX) >>> 0;

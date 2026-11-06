@@ -4,14 +4,16 @@
  */
 export type { Pos } from './geometry';
 export type { ControllerKind, TeamId, TeamState } from './team';
+export type { DefeatReason, TeamFall } from './defeat';
 export type { Unit, UnitTurnState } from './unit';
 export type { Building, ControlPoint } from './building';
 export type { StandingOrder, StandingOrderKind } from './standingOrder';
 export type { Squad } from './squad';
-export type { LastMove } from './lastMove';
+export type { UndoableMove } from './undo';
+export type { EndReason, GameModeId, MatchResult, VictoryRuleId } from './match';
 export type { GeneralState } from './general';
 export type { WeatherState } from './weather';
-export type { Objective, Outcome } from './objective';
+export type { Objective, ObjectiveGoal, ObjectiveStatus } from './objective';
 export type {
   CombatInfo,
   EventActor,

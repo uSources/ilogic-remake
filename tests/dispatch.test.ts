@@ -4,35 +4,27 @@ import {
   ACTION_GUARDS,
   availableActions,
   canDoWithSelection,
-  dispatch,
   groupMoveOrder,
   groupMoveStep,
   isGameAction,
   isValidAction,
   ORDER_OPTIONS,
 } from '@core/actions';
-import { canCaptureAt, endRound, INVARIANTS, newUnit, roundReport, targetProblem, unitById } from '@core/rules';
+import { canCaptureAt, endRound, INVARIANTS, newUnit, restoreInvariants, roundReport, targetProblem, unitById } from '@core/rules';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
-import type { GameAction, GameActionKind, GameState } from '@core/model';
-import { act, BLANK_SIZE, blankState, unitTypeNamed, placedBuildings, someUnits } from './helpers';
+import type { GameAction, GameActionKind } from '@core/model';
+import { act, BLANK_SIZE, blankState, expectRejected, giveTurn, unitTypeNamed, placedBuildings, someUnits } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 
 const SOLDIER = unitTypeNamed('Soldier');
 const TANK = unitTypeNamed('Tank');
 const TRANSPORT = unitTypeNamed('Transport');
 const SUPPLIER = unitTypeNamed('Supplier');
-
-/** La accion no vale por `reason` y la partida no cambia. */
-function expectRejected(s: GameState, team: number, action: GameAction, reason: string): void {
-  const before = serialize(s);
-  expect(dispatch(s, team, action)).toEqual({ ok: false, reason });
-  expect(serialize(s)).toBe(before);
-}
 
 describe('dispatch: la unica via para cambiar la partida', () => {
   it('el registro tiene una entrada por accion y las invariantes no se repiten', () => {
@@ -174,7 +166,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
     act(s, 0, { kind: 'travelStep', uid: soldier.uid });
-    expect(s.lastMove).toBeUndefined();
+    expect(s.undoableMoves).toBeUndefined();
     expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
   });
 
@@ -285,15 +277,41 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
     expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
-    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team', 'standing']);
+    expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team', 'playing', 'turn', 'started', 'standing']);
   });
 
-  it('un equipo que ya ha perdido (sin Base) no manda acciones', () => {
+  it('solo juega el equipo al que le toca, y despues de empezar su turno', () => {
     const s = blankState(PLAIN_RULES);
+    const enemy = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
+    expectRejected(s, 1, { kind: 'wait', uid: enemy.uid }, 'notYourTurn');
+    giveTurn(s, 1);
+    s.turnStarted = false;
+    expectRejected(s, 1, { kind: 'wait', uid: enemy.uid }, 'turnNotStarted');
+    act(s, 1, { kind: 'startTurn' });
+    act(s, 1, { kind: 'wait', uid: enemy.uid });
+  });
+
+  it('rendirse vale en cualquier momento (anyTime), pero no si ya ha perdido ni con la partida decidida', () => {
+    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    expectRejected(s, 2, { kind: 'wait', uid: newUnit(s, SOLDIER, 2, { x: 9, y: 9 }).uid }, 'notYourTurn');
+    act(s, 2, { kind: 'surrender' });
+    expectRejected(s, 2, { kind: 'surrender' }, 'defeated');
+    act(s, 0, { kind: 'surrender' });
+    expect(s.teams.map((team) => team.resigned)).toEqual([true, false, true, false]);
+    act(s, 3, { kind: 'surrender' });
+    expectRejected(s, 1, { kind: 'surrender' }, 'matchOver');
+  });
+
+  it('un equipo que ya ha perdido (sin Base) no manda acciones; si con eso acaba la partida, nadie mas', () => {
+    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expect(isValidAction(s, 0, { kind: 'wait', uid: soldier.uid })).toBe(true);
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
     expectRejected(s, 0, { kind: 'wait', uid: soldier.uid }, 'defeated');
+    s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    restoreInvariants(s, null);
+    expectRejected(s, 0, { kind: 'endTurn' }, 'matchOver');
   });
 
   it('una accion sin la forma de GameAction se rechaza con badAction, sin TypeError', () => {
@@ -371,24 +389,73 @@ describe('deshacer el ultimo movimiento', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 2, y: 4 + SOLDIER.vision });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 3 } });
-    expect(s.lastMove?.revealed).toBe(false);
+    expect(s.undoableMoves?.at(-1)?.revealed).toBe(false);
     act(s, 0, { kind: 'undoMove', uid: soldier.uid });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 2, y: 4 } });
     expect(manhattan(soldier, enemy)).toBe(SOLDIER.vision);
     expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'revealed');
   });
 
-  it('cualquier otra accion o el fin de ronda lo olvidan', () => {
+  it('deshacer un movimiento que acabo un viaje lo devuelve', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
+    expect(soldier.travelTo).toBeUndefined();
+    const events = act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    expect(events.at(-1)).toEqual({ kind: 'travel', actor: 0, uid: soldier.uid, to: { x: 2, y: 20 } });
+    expect(soldier.travelTo).toEqual({ x: 2, y: 20 });
+  });
+
+  it('el viaje que corto un movimiento se guarda con el: al cargar, deshacer lo devuelve', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
+    const loaded = loadGame(serialize(s))!;
+    expect(loaded.undoableMoves).toEqual(s.undoableMoves);
+    act(loaded, 0, { kind: 'undoMove', uid: soldier.uid });
+    expect(unitById(loaded, soldier.uid)!.travelTo).toEqual({ x: 2, y: 20 });
+  });
+
+  it('un viaje cortado fuera del mapa en un guardado roto: se pierde lo que se podia deshacer, no la partida', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
+    const saved = JSON.parse(serialize(s)) as { undoableMoves: { travelTo: unknown }[] };
+    saved.undoableMoves[0]!.travelTo = { x: BLANK_SIZE + 5, y: 2 };
+    const loaded = loadGame(JSON.stringify(saved))!;
+    expect(loaded).not.toBeNull();
+    expect(loaded.undoableMoves).toBeUndefined();
+    expectRejected(loaded, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
+  });
+
+  it('una accion que cuenta algo nuevo (retirar una unidad, atacar, comprar...) o el fin de ronda los olvidan', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
-    act(s, 0, { kind: 'wait', uid: other.uid });
+    act(s, 0, { kind: 'deleteUnit', uid: other.uid });
     expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
     endRound(s);
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 9 } });
     endRound(s);
-    expect(s.lastMove).toBeUndefined();
+    expect(s.undoableMoves).toBeUndefined();
+  });
+
+  it('se deshacen uno tras otro, el ultimo primero, aunque despues hayan esperado', () => {
+    const s = blankState(PLAIN_RULES);
+    const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
+    const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
+    act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
+    act(s, 0, { kind: 'wait', uid: soldier.uid });
+    act(s, 0, { kind: 'move', uid: other.uid, to: { x: 9, y: 11 } });
+    expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
+    act(s, 0, { kind: 'undoMove', uid: other.uid });
+    act(s, 0, { kind: 'undoMove', uid: soldier.uid });
+    expect([soldier.x, soldier.y, soldier.turnState, other.y, other.turnState]).toEqual([5, 5, 'ready', 9, 'ready']);
+    expect(s.undoableMoves).toBeUndefined();
   });
 });
 
@@ -531,14 +598,16 @@ describe('deshacer no pierde la captura a medias (K2)', () => {
     expect(placedBuildings(loadGame(serialize(s))!)[0]!.capture).toEqual(progress);
   });
 
-  it('un ultimo movimiento roto en una partida guardada se quita', () => {
+  it('los movimientos para deshacer se guardan; si estan rotos, se quitan', () => {
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
-    const raw = JSON.parse(serialize(s)) as { lastMove: { from: unknown } };
-    expect(loadGame(JSON.stringify(raw))!.lastMove).toEqual({ uid: soldier.uid, from: { x: 5, y: 5 }, capture: null, revealed: false });
-    raw.lastMove.from = { x: -1, y: 0 };
-    expect(loadGame(JSON.stringify(raw))!.lastMove).toBeUndefined();
+    const raw = JSON.parse(serialize(s)) as { undoableMoves: { from: unknown }[] };
+    expect(loadGame(JSON.stringify(raw))!.undoableMoves).toEqual([
+      { uid: soldier.uid, from: { x: 5, y: 5 }, capture: null, revealed: false },
+    ]);
+    raw.undoableMoves[0]!.from = { x: -1, y: 0 };
+    expect(loadGame(JSON.stringify(raw))!.undoableMoves).toBeUndefined();
   });
 });
 
@@ -602,18 +671,33 @@ describe('lo que se manda a unas unidades elegidas sale de las acciones que vale
 });
 
 describe('ventana de deshacer y menus: piezas del nucleo', () => {
-  it('solo las entradas con keepsUndoWindow dejan deshacer lo de antes', () => {
-    const keeping = (Object.keys(ACTIONS) as GameActionKind[]).filter((kind) => ACTIONS[kind].keepsUndoWindow);
-    expect(keeping).toEqual(['move']);
+  it('solo las entradas con keepsUndo dejan deshacer lo de antes: las que no cuentan nada nuevo de la partida', () => {
+    const keeping = (Object.keys(ACTIONS) as GameActionKind[]).filter((kind) => ACTIONS[kind].keepsUndo);
+    expect(keeping.sort()).toEqual(
+      [
+        'move',
+        'undoMove',
+        'wait',
+        'travel',
+        'giveStandingOrder',
+        'cancelStandingOrder',
+        'formSquad',
+        'setGroup',
+        'addToGroup',
+        'leaveSquad',
+        'renameSquad',
+        'disbandSquad',
+      ].sort(),
+    );
     const s = blankState(PLAIN_RULES);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const other = newUnit(s, SOLDIER, 0, { x: 9, y: 9 });
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } });
-    act(s, 0, { kind: 'move', uid: other.uid, to: { x: 9, y: 10 } });
-    // Otro movimiento la deja abierta (para el nuevo); cualquier otra accion la cierra.
-    expect(s.lastMove?.uid).toBe(other.uid);
     act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 5, y: 7 } } });
-    expect(s.lastMove).toBeUndefined();
+    act(s, 0, { kind: 'move', uid: other.uid, to: { x: 9, y: 10 } });
+    expect(s.undoableMoves?.map((move) => move.uid)).toEqual([soldier.uid, other.uid]);
+    act(s, 0, { kind: 'deleteUnit', uid: other.uid });
+    expect(s.undoableMoves).toBeUndefined();
   });
 
   it('mover en grupo: las mas cercanas primero, cada paso con el mapa como lo dejan las de antes', () => {

@@ -20,10 +20,10 @@ solo lectura):
   numero de equipo de `buildings` y `units`. Hoy las misiones son una persona (el 0) contra la IA.
 - `buildings`: `[tipo, dueño (numero de equipo o null neutral), x, y]`. Cada equipo necesita su `Base`.
 - `units`: `[tipo, equipo, x, y, vida?]`. `rules`: cambios a las reglas (niebla, limite de dias...).
-- `objective` (del equipo de la persona: `mission.team` en la partida): `hq` | `survive` (dias) | `capture` (cuantos, tipo o null, dias) | `destroy` (dias) |
+- `objective` (del equipo de la persona: su `owner` en la partida; si lo cumple gana su alianza y si falla, sus enemigos): `hq` | `survive` (dias) | `capture` (cuantos, tipo o null, dias) | `destroy` (dias) |
   `escort` (indice de la unidad en `units`, destino, dias). Un tipo de objetivo nuevo es una entrada en
   `OBJECTIVES` (`src/core/objectives.ts`): como se escribe y queda en la partida, sus problemas en el
-  mapa, como se gana, el progreso y `isValid` (sus campos en una partida guardada).
+  mapa, cuando se cumple o falla (`status`), el progreso y `isValid` (sus campos en una partida guardada).
 - La partida de una mision la crea `buildMission(mision, contenido, semillaDeLosDados)`: cada vez que
   se juega, sus combates tiran con la semilla que da quien la empieza (`GameState.dice`).
 
