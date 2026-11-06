@@ -358,20 +358,23 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   apuntar, olvidar, `lastUndoableMove` y `undoMoveProblem`. `movement`: `plannedPath` es por donde
   iria, calculado desde la partida, y el suceso de mover. `combat`: `attackProblem`,
   `attackTargets`, el botin y la tirada (`strike`).
-- `falls`: si un equipo ha caido y por que, mirando la partida (`currentDefeat`: rendido, sin nada o
-  sin Base, en el orden de `DEFEAT_REASONS`; `isDefeated`), y cuando cayo: `TeamState.fell`, con su
+- `falls`: si un equipo ha caido y por que, mirando la partida (`currentDefeat`, para un equipo:
+  rendido, si no sin nada, si no sin Base; `isDefeated`), y cuando cayo: `TeamState.fell`, con su
   numero de caida, que apunta la invariante 'falls' (`recordFalls`, con el suceso 'teamDefeated') en
-  la accion o la ronda en que pasa, y `readSave` al cargar (sin sucesos; lo apuntado tiene que
-  cuadrar con la partida, `fallsMatch`).
+  la accion o la ronda en que pasa. Si caen varios a la vez, cual cuenta lo dice `DEFEAT_PRIORITY`
+  (sin Base, sin nada, rendido: `mainFall`). Al cargar, `readSave` solo comprueba que lo apuntado
+  cuadre con la partida en los dos sentidos (`fallsMatch`) y si no, la rechaza; `assertAllStanding`
+  exige que una partida nueva empiece con todos en pie.
 - `victory`: `MatchResult` con `status`, `winners` y `reason`; `isMatchOver`, `isWinner`. Las formas
   de acabar estan en `VICTORY_RULES` ('lastAllianceStanding', 'objective', 'dayLimit') y cada modo
   dice las suyas. Solo lee las caidas apuntadas: el motivo del resultado es el de la ultima
-  (`lastFallen`; si caen varios a la vez, `mainFall`), la que lo decide, no una rendicion de antes.
-  Contrato: una partida decidida por una caida que no esta apuntada (cambiada sin pasar por las
-  INVARIANTS) hace que `matchResult` lance un error; por eso `buildMatch` y `buildMission` exigen
-  que todos empiecen en pie (`assertAllStanding`) y `readSave` rechaza lo que no cuadre. Si lo que
-  pasa al acabar un turno decide la partida, 'endTurn' no pasa el turno (ni ronda nueva, ni otro
-  dia). Puntos del limite de dias por alianza, progreso del objetivo de mision.
+  (`decidingFall`, la misma que usa el final para decir de quien fue), la que lo decide, no una
+  rendicion de antes. `outcomeFor` dice si un equipo ha ganado, perdido o empatado. Contrato: una
+  partida decidida por una caida que no esta apuntada (cambiada sin pasar por las INVARIANTS) hace
+  que `matchResult` lance un error; por eso `buildMatch` exige que todos empiecen en pie
+  (`assertAllStanding`) y `readSave` rechaza lo que no cuadre. Si lo que pasa al acabar un turno
+  decide la partida, 'endTurn' no pasa el turno (ni ronda nueva, ni otro dia). Puntos del limite de
+  dias por alianza, progreso del objetivo de mision.
 - `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
 
 `src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
@@ -439,8 +442,9 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   ver "Partidas en juego"). Las ordenes con destino se le pueden dar a cualquier equipo.
 - **La escena**: el equipo que mira es `viewer` (`viewerOf(session)`: la persona a la que le toca, o
   si no la primera; sin personas, el primer equipo, que juega la persona aunque guarde `controller:
-  'ai'`, `sceneControllers`), y todos los `...Host` lo tienen. La niebla, la amenaza, lo que se
-  elige y lo que se ordena son del `viewer`. Si un equipo es de una persona solo lo dice
+  'ai'`, `screenControllers` de core/controllers, que usa tambien `npm run play`; en el laboratorio,
+  ademas, `labControllers`), y todos los `...Host` lo tienen. La niebla, la amenaza, lo que se elige
+  y lo que se ordena son del `viewer`. Si un equipo es de una persona solo lo dice
   `session.isPerson` (el `person` de su controlador, tambien dentro de un `sequence`). La interfaz
   no sabe de numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`,
   `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
@@ -585,10 +589,10 @@ el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la 
   apunta hasta que caida ha visto (`TurnFlow.seenFalls`: al dejar de mirar y tras ver el aviso de
   una), y al volver a mirar se le avisa de las que no vio (`tellFallsSince`, con `fallsNoticeFor`:
   «El equipo N queda fuera» o, si son varias, `teamsOut`). Se acaba para la pantalla lo dice la
-  sesion (`GameSession.screenEnd`, `personStillPlays`), asi la partida por texto acaba igual (K4).
-  Mientras juegan los demas no hay menu, pero Esc o el boton del menu (que sigue a
-  `UIState.watching`, lo que dice la escena) dejan salir al menu principal (`quitWhileWatching`, dos
-  pulsaciones).
+  sesion (`GameSession.screenEnd`, que da un `PersonEnd`; `people`, `personStillPlays`), asi la
+  partida por texto acaba igual (K4): despues ya no deja jugar, solo mirar. Mientras juegan los
+  demas no hay menu, pero Esc o el boton del menu (que sigue a `UIState.watching`, lo que dice la
+  escena) dejan salir al menu principal (`quitWhileWatching`, dos pulsaciones).
 
 ```mermaid
 sequenceDiagram
