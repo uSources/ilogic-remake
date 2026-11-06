@@ -1,7 +1,7 @@
 import { dispatch } from '@core/actions';
 import { describe, expect, it } from 'vitest';
 import { aiGeneral, choosePower } from '@core/aiGenerals';
-import { bestAreaTarget } from '@core/generalPowers';
+import { bestAreaTarget, powerValue } from '@core/generalPowers';
 import { playCtx } from '@core/autopilot/context';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
@@ -55,6 +55,26 @@ describe('la IA usa a su general', () => {
     const choice = choosePower(s, 1)!;
     expect(choice.power).toBe('recon');
     expect(choice.value).toBe(AI.REVEALVALUE);
+  });
+
+  it('el reconocimiento no vale nada si ya lo ve todo: sin niebla o con uno de la alianza puesto', () => {
+    const recon = generalDef(aiBrisa(6), 'Brisa')!.powers.find((power) => power.effect.kind === 'reveal')!;
+    expect(powerValue(aiBrisa(6, false), 1, recon)).toBeNull();
+    const fogged = aiBrisa(6, true);
+    expect(powerValue(fogged, 1, recon)).toEqual({ target: null, value: AI.REVEALVALUE });
+    teamState(fogged, 1).general!.reveal = true;
+    expect(powerValue(fogged, 1, recon)).toBeNull();
+
+    const withAlly = blankState(settingsWith(defaultContent(), { fog: true, weather: false }), [
+      { controller: 'human', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+      { controller: 'ai', alliance: 1 },
+    ]);
+    appointGeneral(withAlly, 1, 'Brisa');
+    appointGeneral(withAlly, 2, 'Brisa');
+    expect(powerValue(withAlly, 1, recon)).not.toBeNull();
+    teamState(withAlly, 2).general!.reveal = true;
+    expect(powerValue(withAlly, 1, recon)).toBeNull();
   });
 
   it('no bombardea a ciegas: solo enemigos que ve', () => {

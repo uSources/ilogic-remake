@@ -12,8 +12,7 @@ import { posKey, posOf, squareArea } from './geom';
 import { mapGrid } from './mapGrid';
 import type { ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
 import { earn } from './rules/funds';
-import { isRuleOn } from './ruleModules/ruleset';
-import { visibility } from './rules/visibility';
+import { seesEverything, visibility } from './rules/visibility';
 import { isHostile } from './teams';
 import type { DeepReadonly } from './util/freeze';
 import { maxBy } from './util/pick';
@@ -103,14 +102,14 @@ function checkedTarget(target: Pos | null): Pos {
 
 /** Que hace y cuanto vale cada clase de efecto (generals.json, "effect.kind"). */
 export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect<K> } = {
-  // Ve todo el mapa hasta que acaba la ronda. A la IA le vale poco, y solo con niebla (sin ella ya lo ve todo).
+  // Ve todo el mapa hasta que acaba la ronda. A la IA le vale poco, y nada si ya lo ve todo (sin niebla o con el de un aliado).
   reveal: {
     needsTarget: false,
     area: () => null,
     apply: ({ general }) => {
       general.reveal = true;
     },
-    aiValue: (s) => (isRuleOn(s, 'noFog') ? null : { target: null, value: weightsOf(s).REVEALVALUE }),
+    aiValue: (s, team) => (seesEverything(s, team) ? null : { target: null, value: weightsOf(s).REVEALVALUE }),
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata); la IA, en el mejor cuadrado que ve.
   areaDamage: {

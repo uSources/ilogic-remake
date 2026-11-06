@@ -37,18 +37,20 @@ function markSeenByUnit(s: GameState, unit: Unit, visible: Grid<boolean>, isConc
   }
 }
 
-/** El equipo ve todo el mapa: sin niebla o con un reconocimiento (lo que aportan los modulos). */
+/** El equipo enseña todo el mapa a su alianza: sin niebla o con un reconocimiento (lo que aportan los modulos). */
 const revealsAll = (s: GameState, team: TeamId): boolean => hooksOf(s, 'revealRules').some((rule) => rule.revealsAll(s, team));
+
+/** [CAMBIO] El equipo ve todo el mapa: partida sin niebla, o un general de la alianza ha usado reconocimiento. */
+export const seesEverything = (s: GameState, team: TeamId): boolean => alliesOf(s, team).some((ally) => revealsAll(s, ally));
 
 /**
  * Casillas visibles para un equipo: rombo de vision de sus unidades y las de sus aliados, y casillas
  * de sus edificios y los de sus aliados.
  */
 export function visibility(s: GameState, team: TeamId): Grid<boolean> {
+  if (seesEverything(s, team)) return createLayer(s, true);
   const allies = alliesOf(s, team);
   const isAlly = (other: TeamId | null) => other !== null && allies.includes(other);
-  // [CAMBIO] partida sin niebla, o un general de la alianza ha usado reconocimiento: se ve todo.
-  if (allies.some((ally) => revealsAll(s, ally))) return createLayer(s, true);
   const visible = createLayer(s, false);
   const isConcealed = concealmentOf(s);
   for (const unit of s.units) if (isAlly(unit.team) && isOnMap(unit)) markSeenByUnit(s, unit, visible, isConcealed);
