@@ -683,11 +683,14 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Rendirse: el equipo que mira deja la partida (si con eso acaba, empieza el final). */
+  /**
+   * Rendirse: el equipo que mira deja la partida. Si con eso acaba, empieza el final; si no (quedan
+   * tres o mas equipos), la sesion ya no le espera y siguen los demas.
+   */
   private surrender(): void {
     this.toMap();
     this.act({ kind: 'surrender' });
-    this.checkEnd();
+    if (!this.checkEnd()) void this.turns.endOwnTurn();
   }
 
   /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */

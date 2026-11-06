@@ -5,7 +5,7 @@ import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
 import { canMoveNow, moveRange, newUnit, reachableTiles, unitById } from '@core/rules';
 import { serialize } from '@core/save';
-import { aiController, controllersFor } from '@core/controllers';
+import { aiController, controllersFor, type AiBrain } from '@core/controllers';
 import {
   GameSession,
   humanController,
@@ -182,6 +182,83 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     runMatch(replay, { until: (state) => state.day > 4 });
     expect(replay.log).toEqual(session.log);
     expect(serialize(start)).toBe(serialize(s));
+  });
+
+  it('rendirse vale fuera del turno, y la sesion deja de esperar a quien se rinde (tres equipos)', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    // El equipo 1 se rinde en el turno del 0 (por la red se puede en cualquier momento).
+    expect(session.act(1, { kind: 'surrender' }).ok).toBe(true);
+    expect(session.act(1, { kind: 'wait', uid: 1 })).toEqual({ ok: false, reason: 'notYourTurn' });
+    // El 0 se rinde en su turno: la sesion ya no le espera, y como solo queda el 2, la partida acaba.
+    expect(session.act(0, { kind: 'surrender' }).ok).toBe(true);
+    expect(session.awaitingInput).toBe(0);
+    expect(runMatch(session)).toEqual({ kind: 'over', result: { status: 'decided', winners: [2], reason: 'surrender' } });
+  });
+
+  it('quien se rinde en su turno, con mas equipos en juego: la sesion deja de esperarle y siguen los demas', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    const session = new GameSession(s, [humanController(), passiveController(), passiveController()]);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    expect(session.act(0, { kind: 'surrender' }).ok).toBe(true);
+    const steps: ActedStep[] = [];
+    session.subscribe((step) => steps.push(step));
+    expect(session.step()).toMatchObject({ kind: 'acted', team: 0, action: { kind: 'endTurn' } });
+    expect(session.awaitingInput).toBeNull();
+    runMatch(session, { until: (state) => state.day > 3 });
+    expect(steps.filter((step) => step.team === 0).map((step) => step.action.kind)).toEqual(['endTurn']);
+    expect(steps.some((step) => step.team === 1 && step.action.kind === 'startTurn')).toBe(true);
+  });
+
+  it('rendirse fuera del turno, sin que la partida acabe: su turno se salta', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
+    runMatch(session);
+    expect(session.act(1, { kind: 'surrender' }).ok).toBe(true);
+    const steps: ActedStep[] = [];
+    session.subscribe((step) => steps.push(step));
+    session.finishInput(0);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    expect(steps.filter((step) => step.team === 1)).toEqual([]);
+    expect(steps.some((step) => step.team === 2 && step.action.kind === 'startTurn')).toBe(true);
+  });
+
+  it('un controlador que propone empezar o acabar el turno no lo consigue (son de la sesion)', () => {
+    const s = blankState();
+    const replies: unknown[] = [];
+    const cheater: Controller = {
+      name: 'scripted',
+      playTurn: function* () {
+        replies.push(yield { kind: 'propose', action: { kind: 'endTurn' } });
+        replies.push(yield { kind: 'propose', action: { kind: 'startTurn' } });
+        yield { kind: 'awaitInput' };
+      },
+    };
+    const session = new GameSession(s, [cheater, passiveController()]);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    expect(replies).toEqual([
+      { ok: false, reason: 'sessionOnly' },
+      { ok: false, reason: 'sessionOnly' },
+    ]);
+    expect(s.turn).toBe(0);
+    expect(session.log.map((entry) => entry.action.kind)).toEqual([]);
+  });
+
+  it('la IA que mandara un limite de turno recibe sessionOnly (no pasa su turno)', () => {
+    const s = blankState();
+    let reply: unknown = null;
+    const brain: AiBrain = (state, _rng, team, dispatcher) => {
+      reply = dispatcher(state, team, { kind: 'endTurn' });
+      return [][Symbol.iterator]();
+    };
+    const session = new GameSession(s, [aiController(seededRng(1), brain), passiveController()]);
+    session.step();
+    expect(reply).toEqual({ ok: false, reason: 'sessionOnly' });
+    expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
   });
 
   it('un controlador por equipo', () => {

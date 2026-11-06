@@ -8,6 +8,7 @@
 import { diceOf } from '../dice';
 import type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
 import { guardProblem } from './guards';
+import { isGameAction } from './shape';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
 import { recordEvents } from '../stats';
@@ -22,8 +23,11 @@ const definitionOf = <K extends GameActionKind>(action: GameActionOf<K>): Action
  * (ACTION_GUARDS) y las de la accion. No cambia nada.
  */
 export function actionProblem(s: GameState, team: TeamId, action: GameAction): ActionRejection | null {
-  return guardProblem(s, team, action) ?? definitionOf(action).validate(s, team, action);
+  return guardProblem(s, team, action, isAnyTime(action)) ?? definitionOf(action).validate(s, team, action);
 }
+
+/** La accion vale tambien fuera del turno de quien la manda (`ActionDefinition.anyTime`: rendirse). */
+export const isAnyTime = (action: GameAction): boolean => isGameAction(action) && definitionOf(action).anyTime === true;
 
 /** La accion vale ahora para el equipo `team`. */
 export const isValidAction = (s: GameState, team: TeamId, action: GameAction): boolean => actionProblem(s, team, action) === null;

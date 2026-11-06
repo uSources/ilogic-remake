@@ -81,7 +81,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   tenga la forma de una accion, `isGameAction` con `ACTION_SHAPES` de `actions/shape.ts`, o
   `'badAction'`; que la mande un equipo de la partida, `'notATeam'`; que la partida no se haya
   decidido, `'matchOver'`; que sea su turno, `'notYourTurn'`, y que lo haya empezado,
-  `'turnNotStarted'`; que ese equipo no haya perdido, `'defeated'`, salvo para pasar el turno), el
+  `'turnNotStarted'` (estas dos, `turnOnly`, no cuentan para las acciones con `anyTime`: rendirse
+  vale en cualquier momento, como pide una partida por la red o con varias personas); que ese equipo no haya perdido, `'defeated'`, salvo para pasar el turno), el
   `validate` de la accion, su `apply` (con los dados de la partida, `diceOf(s)`), despues las
   `INVARIANTS` (`rules/invariants.ts`: fuera los muertos, las capturas cuya unidad se ha ido, las
   escuadras vacias, el dinero por encima del maximo, los movimientos que ya no se pueden deshacer)
@@ -140,7 +141,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   añadir las suyas (`turnPhases`). Las ordenes permanentes son una regla para todos los equipos (la
   persona, la IA o un jugador por la red), no del controlador: las cumple core/autopilot, no la IA.
   'startTurn' y 'endTurn' solo los manda la sesion (`isTurnBoundary`; `session.act` los rechaza con
-  'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado).
+  'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado), en su turno o
+  fuera de el (`anyTime`).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`buildMatch`, `newGameState`, `newUnit`, `appointGeneral`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
@@ -397,20 +399,20 @@ a `finishInput`). Cuando el turno del controlador acaba, la sesion manda 'endTur
 
 Los de la IA (`aiController`, y `controllersFor`, que da el de cada equipo segun su
 `TeamState.controller`) estan en `core/controllers/` (fachada `core/controllers.ts`), fuera de
-session/: la sesion no importa la IA. La semilla del azar de la IA la elige quien empieza la
-sesion: el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la escena,
-una al azar (`seededRng(randomSeed())`; igualarlas, y llevar el azar de la IA en la partida, es de
-la fase 6). La partida
-en juego es una `GameSession` (`session/gameSession.ts`): la partida, sus controladores, el registro
-de lo que se ha hecho (`log`, para repetirlo) y los avisos de cada accion (`subscribe`). Avanza
-paso a paso (`step`): empieza el turno de quien le toca, hace lo siguiente de su controlador o
-acaba su turno, y para si espera a alguien de fuera o si la partida se ha decidido. Las acciones de
-una persona entran por `session.act(team, action)` (solo mientras se la espera; 'startTurn' y
-'endTurn' nunca: son solo de la sesion, que da 'sessionOnly'). Si es una persona lo dice
-`session.isPerson(team)`. Quien la juega
-decide como esperar entre pasos: `runMatch` la lleva seguida (las herramientas y los tests, con
-`until` para un limite de dias) y `playMatch` espera a que se anime cada paso (la escena y el fondo
-del menu). El guardado automatico es al empezar el turno de una persona, si su modo guarda
+session/: la sesion no importa la IA. La semilla del azar de la IA la elige quien empieza la sesion:
+el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la escena, una al azar
+(`seededRng(randomSeed())`; igualarlas, y llevar el azar de la IA en la partida, es de la fase 6).
+La partida en juego es una `GameSession` (`session/gameSession.ts`): la partida, sus controladores,
+el registro de lo que se ha hecho (`log`, para repetirlo) y los avisos de cada accion (`subscribe`).
+Avanza paso a paso (`step`): empieza el turno de quien le toca, hace lo siguiente de su controlador
+o acaba su turno, y para si espera a alguien de fuera o si la partida se ha decidido. Las acciones
+de una persona entran por `session.act(team, action)` (solo mientras se la espera, salvo rendirse,
+que vale siempre; 'startTurn' y 'endTurn' nunca: son solo de la sesion, que da 'sessionOnly',
+tambien si los propone un controlador). Si a quien se espera ya no juega (se ha rendido), la sesion
+deja de esperarle y pasa su turno. Si es una persona lo dice `session.isPerson(team)`. Quien la
+juega decide como esperar entre pasos: `runMatch` la lleva seguida (las herramientas y los tests,
+con `until` para un limite de dias) y `playMatch` espera a que se anime cada paso (la escena y el
+fondo del menu). El guardado automatico es al empezar el turno de una persona, si su modo guarda
 (`isAutosaveMoment`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
 
 ```mermaid

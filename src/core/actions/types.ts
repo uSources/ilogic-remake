@@ -21,6 +21,11 @@ export interface ActionDefinition<K extends GameActionKind> {
    * se olvidan (dispatch): deshacer no sirve para mirar con una unidad, atacar con otra y volver.
    */
   readonly keepsUndo?: true;
+  /**
+   * Vale tambien fuera del turno del equipo (sin las comprobaciones de turno de ACTION_GUARDS):
+   * rendirse, que en una partida por la red o con varias personas se puede pedir en cualquier momento.
+   */
+  readonly anyTime?: true;
 }
 
 /** Una entrada por tipo de accion (el tipo obliga a tenerlas todas). */

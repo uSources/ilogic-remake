@@ -291,6 +291,18 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     act(s, 1, { kind: 'wait', uid: enemy.uid });
   });
 
+  it('rendirse vale en cualquier momento (anyTime: sin las comprobaciones de turno), pero no si ya ha perdido ni con la partida decidida', () => {
+    const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    s.turnStarted = false;
+    expectRejected(s, 2, { kind: 'wait', uid: newUnit(s, SOLDIER, 2, { x: 9, y: 9 }).uid }, 'notYourTurn');
+    act(s, 2, { kind: 'surrender' });
+    expectRejected(s, 2, { kind: 'surrender' }, 'defeated');
+    act(s, 0, { kind: 'surrender' });
+    expect(s.teams.map((team) => team.resigned)).toEqual([true, false, true, false]);
+    act(s, 3, { kind: 'surrender' });
+    expectRejected(s, 1, { kind: 'surrender' }, 'matchOver');
+  });
+
   it('un equipo que ya ha perdido (sin Base) no manda acciones; si con eso acaba la partida, nadie mas', () => {
     const s = blankState(PLAIN_RULES, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });

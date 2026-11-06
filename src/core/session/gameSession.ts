@@ -8,7 +8,7 @@
  * Avanza paso a paso (`step`): quien la juega decide como esperar entre pasos. Las herramientas la
  * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
  */
-import { dispatch } from '../actions/dispatch';
+import { dispatch, isAnyTime } from '../actions/dispatch';
 import { isTurnBoundary } from '../actions/turn';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
@@ -93,12 +93,13 @@ export class GameSession {
 
   /**
    * Una accion del equipo al que se espera (la decide alguien de fuera). Mientras no se le espera,
-   * no vale ('notYourTurn'): su turno no ha llegado o lo esta jugando su controlador. Empezar y
-   * acabar el turno son de la sesion ('sessionOnly'): para acabarlo, `finishInput`.
+   * no vale ('notYourTurn'): su turno no ha llegado o lo esta jugando su controlador; las que valen
+   * en cualquier momento (rendirse, `ActionDefinition.anyTime`) si. Empezar y acabar el turno son
+   * de la sesion ('sessionOnly'): para acabarlo, `finishInput`.
    */
   act(team: TeamId, action: GameAction): ActionResult {
     if (isTurnBoundary(action)) return { ok: false, reason: 'sessionOnly' };
-    if (this.awaiting !== team) return { ok: false, reason: 'notYourTurn' };
+    if (this.awaiting !== team && !isAnyTime(action)) return { ok: false, reason: 'notYourTurn' };
     const result = dispatch(this.state, team, action);
     if (result.ok) this.record(team, action, result.events);
     return result;
@@ -117,6 +118,8 @@ export class GameSession {
     for (;;) {
       const result = this.result;
       if (result.status !== 'playing') return { kind: 'over', result };
+      // Al que se esperaba ya no juega (se ha rendido): no se le espera mas, y su turno se pasa.
+      if (this.awaiting !== null && !takesTurn(this.state, this.awaiting)) this.awaiting = null;
       if (this.awaiting !== null) return { kind: 'awaitingInput', team: this.awaiting };
       const team = this.state.turn;
       // Si ha caido (en su propio turno, o en una partida guardada asi), ya no juega: lo pasa.
@@ -143,18 +146,27 @@ export class GameSession {
     return this.current;
   }
 
-  /** Hace lo que pide un paso del controlador: lo que ha pasado, si ha pasado algo (una accion rechazada no cuenta). */
+  /**
+   * Hace lo que pide un paso del controlador: lo que ha pasado, si ha pasado algo (una accion
+   * rechazada no cuenta). Empezar o acabar el turno no se le aceptan: son de la sesion
+   * ('sessionOnly'; para acabarlo, el controlador termina su turno).
+   */
   private follow(team: TeamId, step: TurnStep): SessionStep | null {
     switch (step.kind) {
       case 'awaitInput':
         this.awaiting = team;
         return { kind: 'awaitingInput', team };
       case 'propose': {
-        const result = dispatch(this.state, team, step.action);
+        const result: ActionResult = isTurnBoundary(step.action)
+          ? { ok: false, reason: 'sessionOnly' }
+          : dispatch(this.state, team, step.action);
         this.turnOf(team).reply = result;
         return result.ok ? this.record(team, step.action, result.events) : null;
       }
       case 'applied':
+        // Ya lo ha mandado el: si era un limite de turno, el controlador se ha saltado la regla.
+        if (isTurnBoundary(step.action) && step.result.ok)
+          throw new Error(`El controlador del equipo ${team} ha mandado '${step.action.kind}': es de la sesion`);
         return step.result.ok ? this.record(team, step.action, step.result.events) : null;
     }
   }
