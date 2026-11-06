@@ -1,7 +1,7 @@
 import { MoveType } from '@core/content';
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';

@@ -12,7 +12,7 @@ import { duel, duelTeams } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
 import { inAttackRange, newUnit } from '@core/rules';
 import { uncheckedAttack } from '@core/sandbox';
-import type { GameState, Rng, RulesConfig, Unit } from '@core/model';
+import type { GameState, Rng, MatchSettings, Unit } from '@core/model';
 
 export interface DuelCell {
   attacker: string;
@@ -60,7 +60,7 @@ export interface DuelOptions {
   trials: number;
   terrain: string;
   seed: number;
-  rules: RulesConfig;
+  rules: MatchSettings;
   /** Contenido de las unidades que se enfrentan (el de una variante, o el del juego). */
   content: GameContent;
 }

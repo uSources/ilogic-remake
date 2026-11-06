@@ -1,5 +1,5 @@
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { describe, expect, it } from 'vitest';
 import { playGame } from '../tools/balance/play';
 

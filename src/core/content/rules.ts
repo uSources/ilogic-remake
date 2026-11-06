@@ -1,10 +1,10 @@
 /** Reglas por defecto de una partida (rules.json). */
-import type { RulesConfig } from '../model';
+import type { MatchSettings } from '../model';
 import { type Checker } from './check';
 import { isValidRule, ruleRequirement, RULE_NAMES, RULE_SCHEMA } from '../rulesSchema';
 
 export interface RulesFile {
-  defaults: RulesConfig;
+  defaults: MatchSettings;
   maxFunds: number;
 }
 

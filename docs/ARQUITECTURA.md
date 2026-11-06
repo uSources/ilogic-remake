@@ -199,7 +199,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `gameState.ts` | `newGameState(...)`: el unico sitio que escribe la forma de una partida nueva |
 | `dice.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`) y el `Rng` de quien decide (`seededRng`) |
 | `rulesSchema.ts` | `RULE_SCHEMA`: que valores puede tener cada regla |
-| `rulesConfig.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto con cambios |
+| `matchSettings.ts` | `rulesWith(contenido, cambios)`: las reglas por defecto con cambios |
 | `teams.ts` | los equipos de la partida: alianzas, enemigos, quien los juega (ver "Equipos") |
 | `data.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`) |
 | `defaultGames.ts` | partidas con el contenido del juego: `createMatch`, `loadGame` |
@@ -211,7 +211,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 #### Los tipos y el contenido
 
 - `model/`: `GameState`, `Unit` y su `UnitTurnState`, `Building`, `GameAction`, `GameEvent`,
-  `StandingOrder`, `Squad`, `UndoableMove`, `MatchResult`, `GameModeId`, `RulesConfig`, `Rng`,
+  `StandingOrder`, `Squad`, `UndoableMove`, `MatchResult`, `GameModeId`, `MatchSettings`, `Rng`,
   `Dice`... No importa nada ni exporta constantes o funciones.
 - `content/`: los JSON validados se resuelven al cargar en tipos con campos con nombre (`UnitType`,
   `BuildingType`, `TerrainType`, `WeatherType`, `Theme`, generales y sus poderes), cada uno en un

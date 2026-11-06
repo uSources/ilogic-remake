@@ -1,7 +1,7 @@
 import { entryOf } from '@core/content';
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
 import { endRound, newUnit, score } from '@core/rules';

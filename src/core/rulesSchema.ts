@@ -1,9 +1,9 @@
 /**
- * Que valores puede tener cada regla de una partida (`RulesConfig`): la unica descripcion de las
+ * Que valores puede tener cada regla de una partida (`MatchSettings`): la unica descripcion de las
  * reglas validas. La usan el contenido (rules.json, al cargarlo) y las partidas guardadas (al
  * leerlas), y rules.schema.json la copia para los editores (lo comprueba un test).
  */
-import type { RulesConfig } from './model';
+import type { MatchSettings } from './model';
 import { isObject } from './util/validation';
 
 /** Una regla: interruptor, o numero en un intervalo (entero o no, y quiza null = "sin"). */
@@ -25,7 +25,7 @@ const orNull = (spec: RuleSpec): RuleSpec => (spec.kind === 'number' ? { ...spec
  * Cada regla con sus valores validos. Los topes son de cordura (mas alla, el fichero esta roto o la
  * partida no se puede jugar), no de equilibrio.
  */
-export const RULE_SCHEMA: { readonly [Rule in keyof RulesConfig]: RuleSpec } = {
+export const RULE_SCHEMA: { readonly [Rule in keyof MatchSettings]: RuleSpec } = {
   initialFunds: count(0, 1e9),
   maxUnits: count(1, 200),
   commandPoints: orNull(count(1, 10000)),
@@ -54,7 +54,7 @@ export const RULE_SCHEMA: { readonly [Rule in keyof RulesConfig]: RuleSpec } = {
 };
 
 /** Los nombres de todas las reglas. */
-export const RULE_NAMES = Object.keys(RULE_SCHEMA) as readonly (keyof RulesConfig)[];
+export const RULE_NAMES = Object.keys(RULE_SCHEMA) as readonly (keyof MatchSettings)[];
 
 /** El valor vale para una regla asi. */
 export function isValidRule(spec: RuleSpec, value: unknown): boolean {
@@ -72,6 +72,6 @@ export function ruleRequirement(spec: RuleSpec): string {
 }
 
 /** Son unas reglas completas y validas (todas las de RULE_SCHEMA, con su valor bien). */
-export function isValidRules(value: unknown): value is RulesConfig {
+export function isValidRules(value: unknown): value is MatchSettings {
   return isObject(value) && RULE_NAMES.every((rule) => isValidRule(RULE_SCHEMA[rule], value[rule]));
 }

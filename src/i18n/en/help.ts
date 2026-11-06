@@ -1,20 +1,20 @@
-import type { RulesConfig } from '../../core/model';
+import type { MatchSettings } from '../../core/model';
 import { controlZoneSide, joinSentences, percent, type HelpTexts } from '../help';
 
-const capture = (rules: RulesConfig) =>
+const capture = (rules: MatchSettings) =>
   `Capturing takes points: a building has ${rules.capturePoints} (the HQ ${rules.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`;
 
-const counterattack = (rules: RulesConfig) =>
+const counterattack = (rules: MatchSettings) =>
   rules.counterattack
     ? 'When you attack, a defender that survives and can reach you strikes back with the HP it has left. Ranged units neither counter nor get countered.'
     : 'There is no counterattack: striking first is free.';
 
-const veterancy = (rules: RulesConfig) =>
+const veterancy = (rules: MatchSettings) =>
   rules.veterancy
     ? `Veterancy: units that destroy enemies earn stars (1, 3 and 6 kills). Each star gives +${percent(rules.vetBonus)} % hit chance and defence, so a damaged veteran is worth healing rather than replacing. Joining two units keeps the more veteran one.`
     : '';
 
-const attackBonuses = (rules: RulesConfig) =>
+const attackBonuses = (rules: MatchSettings) =>
   joinSentences(
     rules.bounty > 0 ? `Bounty: destroying a unit pays you ${percent(rules.bounty)} % of its price.` : '',
     rules.flankBonus > 0
@@ -23,7 +23,7 @@ const attackBonuses = (rules: RulesConfig) =>
     rules.noHealUnderFire ? 'Under fire: a unit attacked that day does not heal that night (it shows a red mark at the bottom left).' : '',
   );
 
-const armyLimits = (rules: RulesConfig) =>
+const armyLimits = (rules: MatchSettings) =>
   joinSentences(
     rules.commandPoints !== null
       ? `Command points: your army can't go over ${rules.commandPoints}. Infantry takes 1 and big vehicles and aircraft up to 5 (shown when buying).`
@@ -33,23 +33,23 @@ const armyLimits = (rules: RulesConfig) =>
       : '',
   );
 
-const controlPoints = (rules: RulesConfig) =>
+const controlPoints = (rules: MatchSettings) =>
   rules.controlPoints > 0
     ? `Control points: ${controlZoneSide(rules)}×${controlZoneSide(rules)} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${rules.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
     : '';
 
-const ambush = (rules: RulesConfig) =>
+const ambush = (rules: MatchSettings) =>
   rules.ambush && rules.fog
     ? 'You can move through your own units. With fog, woods are only visible from next to them: if your path runs into a hidden enemy, the unit stops short (ambush!) and loses its turn.'
     : '';
 
-const weather = (rules: RulesConfig) =>
+const weather = (rules: MatchSettings) =>
   rules.weather
     ? 'Weather: every few days it changes (top, next to the day; hover it to see its effects and the forecast). Rain slows vehicles, snow slows everything on the ground and storms slow aircraft; bad weather costs both sides vision and aim.'
     : '';
 
 /** En el orden en que salen en la ayuda. */
-const ruleLines = (rules: RulesConfig): string[] => [
+const ruleLines = (rules: MatchSettings): string[] => [
   capture(rules),
   counterattack(rules),
   veterancy(rules),

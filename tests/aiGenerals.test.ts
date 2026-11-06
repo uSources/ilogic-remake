@@ -2,7 +2,7 @@ import { dispatch } from '@core/actions';
 import { describe, expect, it } from 'vitest';
 import { aiGeneral, bestAreaTarget, choosePower } from '@core/aiGenerals';
 import { playCtx } from '@core/autopilot/context';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';
 import { newUnit } from '@core/rules';

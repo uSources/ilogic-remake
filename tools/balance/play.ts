@@ -9,7 +9,7 @@ import { GameSession, passiveController, runMatch, type ActedStep, type Controll
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
-import type { EndReason, GameEvent, GameEventOf, GameState, Rng, RulesConfig, TeamId, Unit } from '@core/model';
+import type { EndReason, GameEvent, GameEventOf, GameState, Rng, MatchSettings, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
 
@@ -44,7 +44,7 @@ export interface PlayOptions {
   /** Lado del mapa (32 por defecto). */
   size?: number;
   /** Reglas de la partida. */
-  rules: RulesConfig;
+  rules: MatchSettings;
   /** Contenido con el que se juega (el de una variante, o el del juego). */
   content: GameContent;
 }

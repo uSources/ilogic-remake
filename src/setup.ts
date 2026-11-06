@@ -4,7 +4,7 @@
 import { defaultContent } from './core/content/default';
 import { entryOf } from './core/content';
 import { skirmishConfig, type SkirmishConfig } from './core/match';
-import type { ControllerKind, RulesConfig } from './core/model';
+import type { ControllerKind, MatchSettings } from './core/model';
 import { CONTROLLER_KINDS } from './core/teams';
 import { fmtNum, nameOf, settings, t } from './settings';
 
@@ -144,7 +144,7 @@ export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishC
 }
 
 /** Lo que las opciones cambian de las reglas de siempre (`rulesWith(contenido, ruleChangesFor(opciones))`). */
-export function ruleChangesFor(options: NewGameOptions): Partial<RulesConfig> {
+export function ruleChangesFor(options: NewGameOptions): Partial<MatchSettings> {
   return {
     fog: options.fog,
     weather: options.weather,

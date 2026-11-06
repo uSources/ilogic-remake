@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { assistTurn, previewStandingOrders } from '@core/autopilot';
 import { dispatch } from '@core/actions';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { posOf } from '@core/geom';
 import { seededRng } from '@core/util/random';

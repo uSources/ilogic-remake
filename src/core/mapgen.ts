@@ -20,7 +20,7 @@ import { groundDistance } from './rules/movement';
 import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
 import { seedFromDraw } from './util/random';
-import type { GameState, Pos, Rng, RulesConfig, TeamId } from './model';
+import type { GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
 /** Lado del mapa del original, con el que estan medidos los numeros de mapgen.json. */
@@ -485,7 +485,7 @@ export interface NewMapOptions {
   size?: number;
   /** Tema del mapa (de themes.json), o null (o nada) para uno al azar. */
   theme?: Theme | null;
-  rules: Readonly<RulesConfig>;
+  rules: Readonly<MatchSettings>;
   /** Contenido de la partida (unidades, edificios, terreno...). */
   content: GameContent;
   /** Los equipos (dos o mas): el generador hace una salida para cada uno. */

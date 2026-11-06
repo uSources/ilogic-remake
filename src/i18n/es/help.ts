@@ -1,20 +1,20 @@
-import type { RulesConfig } from '../../core/model';
+import type { MatchSettings } from '../../core/model';
 import { controlZoneSide, joinSentences, percent, type HelpTexts } from '../help';
 
-const capture = (rules: RulesConfig) =>
+const capture = (rules: MatchSettings) =>
   `Capturar va por puntos: un edificio tiene ${rules.capturePoints} (la Base ${rules.hqCapturePoints}) y cada turno la unidad le resta su vida ÷ 10. Si se mueve o la destruyen, se pierde lo avanzado. Al llegar a 0 pasa a ser tuyo.`;
 
-const counterattack = (rules: RulesConfig) =>
+const counterattack = (rules: MatchSettings) =>
   rules.counterattack
     ? 'Al atacar, si el defensor sobrevive y te alcanza, responde con la vida que le queda. Las unidades a distancia ni contraatacan ni reciben contraataque.'
     : 'No hay contraataque: atacar primero sale gratis.';
 
-const veterancy = (rules: RulesConfig) =>
+const veterancy = (rules: MatchSettings) =>
   rules.veterancy
     ? `Veteranía: una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas). Cada estrella da +${percent(rules.vetBonus)} % de acierto y de defensa: a una veterana dañada le compensa curarse antes que comprar otra. Al unir dos unidades se queda la más veterana.`
     : '';
 
-const attackBonuses = (rules: RulesConfig) =>
+const attackBonuses = (rules: MatchSettings) =>
   joinSentences(
     rules.bounty > 0 ? `Botín: al destruir una unidad cobras el ${percent(rules.bounty)} % de su precio.` : '',
     rules.flankBonus > 0
@@ -25,7 +25,7 @@ const attackBonuses = (rules: RulesConfig) =>
       : '',
   );
 
-const armyLimits = (rules: RulesConfig) =>
+const armyLimits = (rules: MatchSettings) =>
   joinSentences(
     rules.commandPoints !== null
       ? `Puntos de mando: tu ejército no puede pasar de ${rules.commandPoints}. La infantería ocupa 1 y los vehículos y aviones grandes hasta 5 (lo pone al comprar).`
@@ -35,23 +35,23 @@ const armyLimits = (rules: RulesConfig) =>
       : '',
   );
 
-const controlPoints = (rules: RulesConfig) =>
+const controlPoints = (rules: MatchSettings) =>
   rules.controlPoints > 0
     ? `Puntos de control: zonas de ${controlZoneSide(rules)}×${controlZoneSide(rules)} marcadas con un borde y un banderín (grises si no son de nadie). Al acabar la ronda, si dentro solo hay unidades tuyas, la zona es tuya y te da ${rules.controlIncome}; si hay de los dos bandos, está disputada y no paga a nadie; vacía, sigue pagando a quien la tenía. Pelea por ellas.`
     : '';
 
-const ambush = (rules: RulesConfig) =>
+const ambush = (rules: MatchSettings) =>
   rules.ambush && rules.fog
     ? 'Puedes atravesar tus unidades. Con niebla, el bosque solo se ve desde al lado: si tu camino choca con un enemigo escondido, la unidad se para antes (¡emboscada!) y pierde el turno.'
     : '';
 
-const weather = (rules: RulesConfig) =>
+const weather = (rules: MatchSettings) =>
   rules.weather
     ? 'Clima: cada pocos días cambia el tiempo (arriba, junto al día; al pasar por encima ves sus efectos y el pronóstico). La lluvia frena a los vehículos, la nieve a todo lo que va por tierra y las tormentas a los aviones; el mal tiempo quita visión y puntería a los dos bandos.'
     : '';
 
 /** En el orden en que salen en la ayuda. */
-const ruleLines = (rules: RulesConfig): string[] => [
+const ruleLines = (rules: MatchSettings): string[] => [
   capture(rules),
   counterattack(rules),
   veterancy(rules),

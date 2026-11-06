@@ -1,5 +1,8 @@
-/** Reglas y parametros de una partida (se guardan con ella). Los valores por defecto, en rules.json. */
-export interface RulesConfig {
+/**
+ * Los ajustes de una partida (`s.rules`; se guardan con ella; los de siempre, en rules.json): numeros
+ * (dinero, puntos de captura...) e interruptores de las reglas nuevas.
+ */
+export interface MatchSettings {
   /** Dinero inicial de cada equipo. */
   initialFunds: number;
   /** Unidades maximas por equipo. */

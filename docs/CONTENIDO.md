@@ -248,7 +248,7 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   cada accion y cada ronda). Cada regla esta explicada en el esquema (pasar el raton por encima en el
   editor). Que valores puede tener cada una lo dice `RULE_SCHEMA` (`src/core/rulesSchema.ts`): lo
   comprueban al cargar el contenido y al leer una partida guardada, y rules.schema.json tiene que
-  decir lo mismo (lo mira `tests/rulesSchema.test.ts`). Una regla nueva va en `RulesConfig`, en
+  decir lo mismo (lo mira `tests/rulesSchema.test.ts`). Una regla nueva va en `MatchSettings`, en
   `RULE_SCHEMA`, en rules.json y en su esquema. Las que premian atacar: `bounty` (botin al
   destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
   (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania); ver

@@ -43,7 +43,7 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
   - `AI.<peso>`: pesos de `ai.json`.
 - **Casillas:** se nombran con los nombres internos (`Tank`, `City`, `Woods`…), con su índice o con `*` para todas.
 - **Valores:** un número fijo, `"x1.1"` (multiplicar), `"+500"` o `"-0.05"`. Precios e ingresos se redondean a 100.
-- **Reglas nuevas:** se añaden a `rules.json` (y a `RulesConfig`) y quedan disponibles para las variantes sin tocar la herramienta.
+- **Reglas nuevas:** se añaden a `rules.json` (y a `MatchSettings`) y quedan disponibles para las variantes sin tocar la herramienta.
 
 ## Qué mide
 

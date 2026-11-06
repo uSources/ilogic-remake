@@ -1,7 +1,7 @@
 import { usePower, blankState, unitTypeNamed, act } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { choosePower } from '@core/aiGenerals';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';
 import { newUnit } from '@core/rules';

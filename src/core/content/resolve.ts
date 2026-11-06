@@ -4,7 +4,7 @@
  * campos con nombre, en un catalogo por id. Lo usa index.ts (cargar el contenido); aparte para que
  * los modulos de cada parte no dependan de el.
  */
-import type { RulesConfig } from '../model';
+import type { MatchSettings } from '../model';
 import type { DeepReadonly } from '../util/freeze';
 import { buildAiWeights, type AiWeights } from './ai';
 import { buildBuildingTypes, type BuildingType } from './buildings';
@@ -47,7 +47,7 @@ export interface ResolvedContent {
   clearWeather: WeatherType;
   generals: Catalog<DeepReadonly<GeneralDef>>;
   /** Reglas por defecto de una partida (rules.json, "defaults"): ver rulesWith. */
-  defaultRules: Readonly<RulesConfig>;
+  defaultRules: Readonly<MatchSettings>;
   /** Dinero maximo de un equipo. */
   maxFunds: number;
   /** Pesos de la IA (ai.json). */

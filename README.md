@@ -149,7 +149,7 @@ src/
     content/     Unidades, edificios, terreno, temas, mapas al azar, reglas e IA en JSON + su validacion
                  y sus tipos resueltos (UnitType, TerrainType...): ver docs/CONTENIDO.md
     model/       Modelo de datos de la partida (GameState, Unit, Building, GameEvent...), sin dependencias
-    rulesConfig.ts  rulesWith(contenido, cambios): las reglas de una partida
+    matchSettings.ts  rulesWith(contenido, cambios): las reglas de una partida
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)
     gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
     teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)

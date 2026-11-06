@@ -20,14 +20,14 @@ import { posOf } from '@core/geom';
 import { aiController, controllersFor } from '@core/controllers';
 import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam } from '@core/teams';
-import type { GameAction, GameState, Rng, RulesConfig, TeamId } from '@core/model';
+import type { GameAction, GameState, Rng, MatchSettings, TeamId } from '@core/model';
 
 const MAX_DAYS = 30;
 const FIRST_DAY = 1;
 const GENERALS = defaultContent().generals;
 
 /** Reglas que se prueban: las de siempre y variantes que apagan las partes con mas condiciones. */
-const RULE_SETS: readonly Partial<RulesConfig>[] = [
+const RULE_SETS: readonly Partial<MatchSettings>[] = [
   {},
   { fog: false, counterattack: false, veterancy: false },
   { ambush: false, terrainCost: false, weather: false, passAllies: false },
@@ -38,7 +38,7 @@ const MAP_SIZES = [16, 24, 32] as const;
 
 interface Scenario {
   seed: number;
-  rules: Partial<RulesConfig>;
+  rules: Partial<MatchSettings>;
   size: number;
   withGenerals: boolean;
   withSquad: boolean;

@@ -1,7 +1,7 @@
 import { BLANK_DICE_SEED, playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { blankMap, mapGrid } from '@core/mapGrid';

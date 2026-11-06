@@ -1,7 +1,7 @@
 import { usePower, blankState, diceFrom, unitTypeNamed, fight } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { readContentFiles, validateContent } from '@core/content';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { powerBlock, chargeStars, generalHitFactor, appointGeneral } from '@core/generals';

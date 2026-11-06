@@ -16,11 +16,11 @@ import { blankMap } from './mapGrid';
 import { buildMission, missionById } from './missions';
 import { assertAllStanding } from './rules/falls';
 import { newUnit } from './rules/lifecycle';
-import { rulesWith } from './rulesConfig';
+import { rulesWith } from './matchSettings';
 import { sampleArmy } from './stats';
 import { seededRng } from './util/random';
 import { ensureWeather } from './weather';
-import type { GameModeId, GameSetup, GameState, Pos, Rng, RulesConfig, TeamId } from './model';
+import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import { teamIds, type TeamSetup } from './teams';
 
 /** Un equipo de una partida nueva: quien lo juega, su alianza, su dinero y su general (id de generals.json, o ninguno). */
@@ -33,7 +33,7 @@ export interface SkirmishConfig {
   mode: 'skirmish';
   map: GameSetup;
   /** Cambios a las reglas por defecto del contenido (sin cambios, las de siempre). */
-  ruleChanges?: Partial<RulesConfig>;
+  ruleChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   /** El equipo que juega primero cada ronda (si no, el primero de la lista). */
   firstTeam?: TeamId;
@@ -71,7 +71,7 @@ export interface PlacedUnit {
 export interface SandboxConfig {
   mode: 'sandbox';
   size: number;
-  ruleChanges?: Partial<RulesConfig>;
+  ruleChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   buildings: readonly PlacedBuilding[];
   units: readonly PlacedUnit[];
@@ -199,7 +199,7 @@ export interface SkirmishChoices {
   seed: number;
   size?: number;
   theme?: string | null;
-  ruleChanges?: Partial<RulesConfig>;
+  ruleChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   firstTeam?: TeamId;
 }

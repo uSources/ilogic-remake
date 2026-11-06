@@ -13,12 +13,12 @@
  * Objetivos: uno por entrada en `objectives.ts`.
  */
 import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
-import { rulesWith } from './rulesConfig';
+import { rulesWith } from './matchSettings';
 
 import { deepFreeze, type DeepReadonly } from './util/freeze';
 import { newGameState } from './gameState';
 import { posKey } from './geom';
-import type { GameState, Pos, RulesConfig, TeamId } from './model';
+import type { GameState, Pos, MatchSettings, TeamId } from './model';
 import { objectiveFromMission, objectiveProblems, type MissionObjective } from './objectives';
 import { newUnit } from './rules/lifecycle';
 import type { TeamSetup } from './teams';
@@ -49,7 +49,7 @@ interface MissionSource {
   /** El objetivo es del equipo que juega una persona (para los demas, perder si lo cumple). */
   objective: MissionObjective;
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
-  rules?: Partial<RulesConfig>;
+  rules?: Partial<MatchSettings>;
   /** Consejos paso a paso (solo el tutorial). */
   tutorial?: boolean;
 }
@@ -121,7 +121,7 @@ export function missionTeam(mission: MissionDef): TeamId {
  * Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los
  * pida). El dinero inicial de las reglas es el del equipo que la juega.
  */
-export const missionRules = (mission: MissionDef, content: GameContent): RulesConfig =>
+export const missionRules = (mission: MissionDef, content: GameContent): MatchSettings =>
   rulesWith(content, {
     commandPoints: null,
     upkeep: 0,

@@ -1,7 +1,7 @@
 import { MoveType } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
 import { createLayer } from '@core/mapGrid';

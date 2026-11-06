@@ -26,7 +26,7 @@ export type {
   TravelEnd,
 } from './events';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
-export type { RulesConfig } from './rules';
+export type { MatchSettings } from './settings';
 export type { TeamStats } from './stats';
 export type { GameSetup, GameState, MatchContent, SavedGameState } from './state';
 export type { Dice, Rng } from './random';

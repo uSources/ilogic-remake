@@ -3,7 +3,7 @@ import type { GameModeId } from './match';
 import type { Objective } from './objective';
 import type { TeamId, TeamState } from './team';
 import type { Squad } from './squad';
-import type { RulesConfig } from './rules';
+import type { MatchSettings } from './settings';
 import type { UndoableMove } from './undo';
 import type { Unit } from './unit';
 import type { WeatherState } from './weather';
@@ -54,7 +54,7 @@ export interface GameState {
    */
   dice: number;
   /** Reglas de esta partida: la unica fuente de las reglas (no hay reglas globales). */
-  rules: RulesConfig;
+  rules: MatchSettings;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
   setup?: GameSetup;
   /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */

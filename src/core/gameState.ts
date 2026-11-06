@@ -6,13 +6,13 @@ import type { GameContent } from './content';
 import { gameModeOf } from './modes';
 import { SAVE_VERSION } from './saveVersion';
 import { newTeams, type TeamSetup } from './teams';
-import type { GameModeId, GameState, RulesConfig, TeamId } from './model';
+import type { GameModeId, GameState, MatchSettings, TeamId } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */
 export interface NewGameStateOptions {
   /** Terreno `map[x][y]` (ids de terrain.json): su tamaño es el de la partida. */
   map: GameState['map'];
-  rules: Readonly<RulesConfig>;
+  rules: Readonly<MatchSettings>;
   /** Contenido con el que se juega (unidades, edificios, terreno...): `defaultContent()` o una variante. */
   content: GameContent;
   /** El modo de juego (core/modes.ts): como se acaba y en que orden se juegan los turnos. */

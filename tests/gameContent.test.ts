@@ -2,7 +2,7 @@ import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';

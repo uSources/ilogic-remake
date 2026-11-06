@@ -10,7 +10,7 @@
  */
 import type { ActionDispatcher } from './actions/types';
 import { deepFreeze } from './util/freeze';
-import type { GameEvent, GameModeId, GameState, RulesConfig, TeamId, VictoryRuleId } from './model';
+import type { GameEvent, GameModeId, GameState, MatchSettings, TeamId, VictoryRuleId } from './model';
 
 /**
  * Un paso del principio o del final de un turno: lo que pasa solo por el equipo `team`, con sus
@@ -33,7 +33,7 @@ export interface GameMode {
    */
   turnOrder(teams: readonly TeamId[], first: TeamId | null): TeamId[];
   /** Reglas que el modo impone, por encima de las que se elijan (buildMatch). */
-  readonly fixedRules?: Partial<RulesConfig>;
+  readonly fixedRules?: Partial<MatchSettings>;
   /** Pasos propios del modo al empezar y al acabar cada turno, detras de TURN_START_PHASES y TURN_END_PHASES. */
   readonly turnPhases?: { readonly start?: readonly TurnPhase[]; readonly end?: readonly TurnPhase[] };
   /**

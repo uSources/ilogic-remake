@@ -9,7 +9,7 @@ import { seededRng } from '@core/util/random';
 import { MoveType } from '@core/content';
 import { createLayer } from '@core/mapGrid';
 import { generateGame } from '@core/mapgen';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import {
   attackTargets,
   canCapture,

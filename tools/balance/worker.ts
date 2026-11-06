@@ -5,7 +5,7 @@
  */
 import { parentPort, workerData } from 'node:worker_threads';
 import { loadContent } from '@core/content';
-import { rulesWith } from '@core/rulesConfig';
+import { rulesWith } from '@core/matchSettings';
 import { duelMatrix } from './duel';
 import { playGame } from './play';
 import type { WorkerJob } from './runner';
