@@ -7,8 +7,8 @@ import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { isWinner } from '../../core/rules';
-import { enemiesOf } from '../../core/teams';
+import { isWinner, takesTurn } from '../../core/rules';
+import { enemiesOf, teamIds } from '../../core/teams';
 import type { EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
@@ -52,6 +52,15 @@ const nextMission = (mission: MissionDef): MissionDef | undefined => MISSIONS[MI
 export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
   if (result.status === 'draw') return 'draw';
   return isWinner(result, viewer) ? 'won' : 'lost';
+}
+
+/**
+ * El final para quien se rinde cuando ya no queda ninguna persona en juego (la partida sigue entre
+ * los demas, pero nadie la mira): perdida por rendirse, con los que siguen como los que quedan. No
+ * es el resultado de la partida (matchResult), solo lo que ve esta pantalla.
+ */
+export function resignedEnd(s: GameState): Exclude<MatchResult, { status: 'playing' }> {
+  return { status: 'decided', winners: teamIds(s).filter((team) => takesTurn(s, team)), reason: 'surrender' };
 }
 
 /**

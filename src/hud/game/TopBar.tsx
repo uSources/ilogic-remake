@@ -8,7 +8,7 @@ import { ui } from '../store';
 import type { WeatherVM } from '../vm/topBar';
 import type { Side } from '../vm/common';
 import { DayPanel, EconomyPanel } from './Breakdown';
-import { canAct } from './turn';
+import { canAct, canUseMenuButton } from './turn';
 
 /** " · 12/40" con el icono de mando (solo con la regla de puntos de mando). */
 function CommandPoints({ points }: { points: NonNullable<UIState['commandPoints']> }) {
@@ -84,7 +84,12 @@ export function TopBar({ s }: { s: UIState }) {
       <Day s={s} />
       <div class="spacer" />
       <EndTurnButton s={s} />
-      <Button class="px-btn plain menu-btn" aria-label={t('gameMenu')} disabled={!canAct(s)} onClick={() => ui.actions.openGameMenu()}>
+      <Button
+        class="px-btn plain menu-btn"
+        aria-label={t('gameMenu')}
+        disabled={!canUseMenuButton(s)}
+        onClick={() => ui.actions.openGameMenu()}
+      >
         <i />
         <i />
         <i />

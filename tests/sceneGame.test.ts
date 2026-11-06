@@ -7,7 +7,9 @@ import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import { endButtonsFor, endFocus, endViewer, outcomeFor } from '../src/scenes/game/endOfMatch';
+import { endButtonsFor, endFocus, endViewer, outcomeFor, resignedEnd } from '../src/scenes/game/endOfMatch';
+import { canUseMenuButton } from '../src/hud/game/turn';
+import { initialState } from '../src/hud/state';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
@@ -285,6 +287,23 @@ describe('escena: tabla de fases (game/phases)', () => {
 
   it('cada accion del registro (controls/actions.ts) tiene quien la cumpla', () => {
     expect(INPUT_ACTIONS.every((action) => ACTION_RUNNERS[action.id])).toBe(true);
+  });
+});
+
+describe('escena: rendirse sin personas en juego y salir mientras juegan los demas', () => {
+  it('quien se rinde y deja solo a la IA pierde por rendirse (los que siguen, como los que quedan)', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    act(s, 0, { kind: 'surrender' });
+    const end = resignedEnd(s);
+    expect(end).toEqual({ status: 'decided', winners: [1, 2], reason: 'surrender' });
+    expect(outcomeFor(end, 0)).toBe('lost');
+  });
+
+  it('el boton del menu: en tu turno, el menu; mientras juegan los demas, salir; al acabar, nada', () => {
+    expect(canUseMenuButton({ ...initialState, turn: 'own', busy: false })).toBe(true);
+    expect(canUseMenuButton({ ...initialState, turn: 'own', busy: true })).toBe(false);
+    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true })).toBe(true);
+    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true, end: {} as never })).toBe(false);
   });
 });
 

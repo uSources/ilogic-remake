@@ -10,7 +10,7 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, matchResult, takesTurn, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import type { GameSession, ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
@@ -57,7 +57,7 @@ import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
-import { EndOfMatch, endViewer, setEndFilter, type EndHost } from './game/endOfMatch';
+import { EndOfMatch, endViewer, resignedEnd, setEndFilter, type EndHost } from './game/endOfMatch';
 import { GeneralPowers, type PowerHost } from './game/powers';
 import { restartLab, startLab, type LabHost } from './game/labMode';
 import { live, rw } from './game/host';
@@ -374,6 +374,7 @@ export class GameScene extends Phaser.Scene {
       },
       openGameMenu: () => {
         if (ready()) this.openGameMenu();
+        else this.quitWhileWatching();
       },
       minimapJump: (at: Pos) => {
         if (this.ended) return;
@@ -448,8 +449,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.phase === 'busy') {
-      // Durante el turno enemigo, aceptar acelera las animaciones.
+      // Durante el turno enemigo, aceptar acelera las animaciones y Esc deja salir al menu.
       if (command.kind === 'accept') this.fastForward = true;
+      if (command.kind === 'cancel') this.quitWhileWatching();
       return;
     }
     this.mapCommand(command);
@@ -683,13 +685,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Rendirse: el equipo que mira deja la partida. Si con eso acaba, empieza el final; si no (quedan
-   * tres o mas equipos), la sesion ya no le espera y siguen los demas.
+   * Rendirse: el equipo que mira deja la partida. Si con eso acaba, empieza el final. Si no (quedan
+   * tres o mas equipos): con otra persona aun en juego, la sesion ya no le espera y siguen los demas;
+   * sin ninguna, la partida se acaba para esta pantalla (perdida, y se borra su guardado: nadie
+   * miraria a la IA jugar sola).
    */
   private surrender(): void {
     this.toMap();
     this.act({ kind: 'surrender' });
-    if (!this.checkEnd()) void this.turns.endOwnTurn();
+    if (this.checkEnd()) return;
+    if (!this.aPersonStillPlays()) return void this.endScreen.finish(resignedEnd(this.s));
+    void this.turns.endOwnTurn();
+  }
+
+  /** Queda alguna persona de esta pantalla que sigue jugando. */
+  private aPersonStillPlays(): boolean {
+    return teamIds(this.s).some((team) => this.session.isPerson(team) && takesTurn(this.s, team));
+  }
+
+  /** Mientras juegan los demas no hay menu, pero se puede salir al menu principal (pulsando dos veces). */
+  private quitWhileWatching(): void {
+    if (!this.ended && this.phase === 'busy' && this.turns.othersPlaying) this.gameMenu.choose('quit');
   }
 
   /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */
