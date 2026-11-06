@@ -16,10 +16,13 @@ export interface DamageModel {
 
 /** El reparto despues de un disparo mas que acierta con probabilidad `chance`. */
 function afterOneMoreShot(distribution: readonly number[], chance: number): number[] {
-  const next: number[] = [];
-  // Con `hits` aciertos: los que ya habia y este falla, o uno menos y este acierta.
-  for (let hits = 0; hits <= distribution.length; hits++)
-    next.push((distribution[hits - 1] ?? 0) * chance + (distribution[hits] ?? 0) * (1 - chance));
+  // Lo que habia con `hits` aciertos pasa a `hits` si este falla y a `hits + 1` si acierta. Cada
+  // casilla suma primero lo que llega acertando y luego lo que llega fallando (el orden de siempre).
+  const next = new Array<number>(distribution.length + 1).fill(0);
+  for (let hits = 0; hits < distribution.length; hits++) {
+    next[hits]! += distribution[hits]! * (1 - chance);
+    next[hits + 1]! += distribution[hits]! * chance;
+  }
   return next;
 }
 
