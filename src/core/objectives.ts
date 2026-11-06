@@ -15,6 +15,7 @@ import type { GameState, Objective, ObjectiveGoal, ObjectiveStatus, Pos, TeamId 
 import { isHostile } from './teams';
 import { samePos } from './geom';
 import { Grid, type GridBounds } from './util/grid';
+import { isOnMap } from './util/predicates';
 
 /** Nombre interno de un edificio (buildings.json). */
 type BuildingName = string;
@@ -95,7 +96,7 @@ const enemyUnitCount = (s: GameState, team: TeamId) => s.units.filter((unit) => 
 function positionOf(s: GameState, uid: number): Pos | undefined {
   const unit = s.units.find((candidate) => candidate.uid === uid);
   if (!unit) return undefined;
-  if (unit.carrier === null) return unit;
+  if (isOnMap(unit)) return unit;
   return s.units.find((candidate) => candidate.uid === unit.carrier) ?? unit;
 }
 

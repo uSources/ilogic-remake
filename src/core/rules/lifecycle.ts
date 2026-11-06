@@ -4,7 +4,7 @@
 import type { UnitType } from '../content';
 
 import { MAX_LIFE } from '../data';
-import { isAlive } from '../util/predicates';
+import { isAlive, isOnMap } from '../util/predicates';
 import type { GameEvent, GameState, Pos, TeamId, Unit, UnitTurnState } from '../model';
 import { unitById } from './queries';
 
@@ -36,7 +36,7 @@ export function removeUnit(s: GameState, uid: number): void {
 
 /** Si la unidad va dentro de un transporte, deja libre su plaza. */
 function freeSeatOf(s: GameState, passenger: Unit): void {
-  if (passenger.carrier === null) return;
+  if (isOnMap(passenger)) return;
   const transport = unitById(s, passenger.carrier);
   if (transport) transport.cargo = transport.cargo.map((uid) => (uid === passenger.uid ? null : uid));
 }

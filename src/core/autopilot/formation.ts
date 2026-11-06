@@ -15,6 +15,7 @@ import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type PlayCtx } from './context';
+import { isAlive, isOnMap } from '../util/predicates';
 
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega o no tiene orden). */
 function remainingOf(s: GameState, unit: Unit): number {
@@ -25,7 +26,7 @@ function remainingOf(s: GameState, unit: Unit): number {
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
 function formationMates(s: GameState, unit: Unit): Unit[] {
   return s.units.filter(
-    (other) => other !== unit && other.carrier === null && other.life > 0 && !needsRepair(s, other) && sameFormation(s, unit, other),
+    (other) => other !== unit && isOnMap(other) && isAlive(other) && !needsRepair(s, other) && sameFormation(s, unit, other),
   );
 }
 

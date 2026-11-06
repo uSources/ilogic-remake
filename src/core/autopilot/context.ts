@@ -18,7 +18,7 @@ import { actorProblem } from '../actions/checks';
 import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { isAlive } from '../util/predicates';
+import { isAlive, isOnMap } from '../util/predicates';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -119,7 +119,7 @@ export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, u
 
 /** Enemigos de `me` vivos y en el mapa (no transportados), se vean o no. */
 const foesOnMap = (s: GameState, me: TeamId): Unit[] =>
-  s.units.filter((other) => isHostile(s, other.team, me) && other.carrier === null && other.life > 0);
+  s.units.filter((other) => isHostile(s, other.team, me) && isOnMap(other) && isAlive(other));
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {

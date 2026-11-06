@@ -17,6 +17,7 @@ import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } fro
 import { minBy } from '../util/pick';
 import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
 import { captureHere } from '../autopilot/tactics';
+import { isOnMap } from '../util/predicates';
 
 /** La Base enemiga vale mas que otro edificio: al buscar que capturar, cuenta como si estuviera estos pasos mas cerca. */
 const HQ_CAPTURE_HEAD_START = 4;
@@ -81,7 +82,7 @@ function advanceGoals(s: GameState, ai: PlayCtx, unit: Unit): Pos[] {
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
   if (unitTypeOf(s, unit).canCapture) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
-    isHostile(s, other.team, ai.me) && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
+    isHostile(s, other.team, ai.me) && isOnMap(other) && visible.at(other) && canDamage(s, unit, other);
   const isEnemyHq = (building: Building): boolean => isHostileOwner(s, building.owner, ai.me) && isHq(s, building);
   return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
 }

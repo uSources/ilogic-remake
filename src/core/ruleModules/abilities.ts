@@ -9,6 +9,7 @@ import type { GameState } from '../model';
 import type { DeepReadonly } from '../util/freeze';
 import type { RuleModule } from './hooks';
 import { mergeHooks } from './mergeHooks';
+import { isRuleOn } from './ruleset';
 
 export const ABILITIES: RuleModule = {
   id: 'abilities',
@@ -18,5 +19,5 @@ export const ABILITIES: RuleModule = {
 
 /** Las habilidades de un tipo de unidad que cuentan en esta partida (para enseñarlas). */
 export function abilitiesOf(s: GameState, unitType: UnitType): readonly DeepReadonly<AbilityDef>[] {
-  return ABILITIES.isOn(s.settings) ? unitType.abilities : [];
+  return isRuleOn(s, 'abilities') ? unitType.abilities : [];
 }
