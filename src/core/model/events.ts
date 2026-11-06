@@ -121,7 +121,9 @@ export type GameEvent =
   /** Fin de ronda: empieza el dia `day`. */
   | { kind: 'newDay'; actor: null; day: number }
   /** [CAMBIO] Fin de ronda: cambia el clima (ids de weather.json). */
-  | { kind: 'weather'; actor: null; from: string; to: string };
+  | { kind: 'weather'; actor: null; from: string; to: string }
+  /** El equipo `actor` se ha rendido. */
+  | { kind: 'surrender'; actor: TeamId };
 
 /** Tipo de evento ('move', 'attack'...). */
 export type GameEventKind = GameEvent['kind'];

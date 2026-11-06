@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_RULES } from './plainRules';
 import { seededRng } from '@core/util/random';
-import { attackTargets, endRound, moveRange, newUnit, outcome, combatForecast, threatMap, canStillFire, canStillMove } from '@core/rules';
+import { attackTargets, endRound, moveRange, newUnit, combatForecast, threatMap, canStillFire, canStillMove } from '@core/rules';
 import { availableActions, dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
-import { act, blankState, diceFrom, hqId, unitTypeNamed, fight, endRoundReport, withoutHeadquarters, placedBuildings } from './helpers';
+import {
+  act,
+  blankState,
+  diceFrom,
+  hqId,
+  unitTypeNamed,
+  fight,
+  endRoundReport,
+  withoutHeadquarters,
+  placedBuildings,
+  resultFor,
+} from './helpers';
 
 const SOLDIER = unitTypeNamed('Soldier'),
   TANK = unitTypeNamed('Tank'),
@@ -95,13 +106,13 @@ describe('captura y victoria', () => {
     soldier.turnState = 'ready';
     expect(capture(soldier.uid)).toMatchObject({ kind: 'capture', left: 0 });
     expect(placedBuildings(s)[2]!.owner).toBe(0);
-    expect(outcome(s, 0)).toBe('playing');
+    expect(resultFor(s, 0)).toBe('playing');
     const otherSoldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     capture(otherSoldier.uid);
     otherSoldier.turnState = 'ready';
     capture(otherSoldier.uid);
     expect(placedBuildings(s)[1]!.owner).toBe(0);
-    expect(outcome(s, 0)).toBe('won');
+    expect(resultFor(s, 0)).toBe('won');
   });
 });
 

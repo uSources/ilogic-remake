@@ -7,7 +7,7 @@ import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import { endButtonsFor, endFocus } from '../src/scenes/game/endOfMatch';
+import { endButtonsFor, endFocus, outcomeFor } from '../src/scenes/game/endOfMatch';
 import { live } from '../src/scenes/game/host';
 import { Orders, type OrderHost } from '../src/scenes/game/orders';
 import { GroupSelection, type SelectionHost } from '../src/scenes/game/groupSelection';
@@ -153,17 +153,24 @@ describe('escena: linea de ayuda (game/hudParts.ts)', () => {
 
 describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   it('botones: en una mision ganada, la siguiente si la hay; si no es mision, revancha', () => {
-    expect(endButtonsFor(MISSIONS[0], true)).toEqual(['next', 'retry', 'menu']);
-    expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], true)).toEqual(['retry', 'menu']);
-    expect(endButtonsFor(MISSIONS[0], false)).toEqual(['retry', 'menu']);
-    expect(endButtonsFor(undefined, true)).toEqual(['rematch', 'new', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], 'won')).toEqual(['next', 'retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], 'won')).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], 'lost')).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(MISSIONS[0], 'draw')).toEqual(['retry', 'menu']);
+    expect(endButtonsFor(undefined, 'won')).toEqual(['rematch', 'new', 'menu']);
+  });
+
+  it('para quien mira: su alianza gana, pierde o nadie gana', () => {
+    expect(outcomeFor({ status: 'decided', winners: [0, 2], reason: 'hq' }, 2)).toBe('won');
+    expect(outcomeFor({ status: 'decided', winners: [0, 2], reason: 'hq' }, 1)).toBe('lost');
+    expect(outcomeFor({ status: 'draw', winners: [], reason: 'days' }, 0)).toBe('draw');
   });
 
   it('la camara va a la ultima jugada o, al perder sin ella, a la Base propia', () => {
     const s = withoutHeadquarters(blankState());
     s.buildings.push({ type: HQ, owner: 0, x: 3, y: 4 });
-    expect(endFocus(s, 0, true, 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
-    expect(endFocus(s, 0, false, 'surrender', null)).toMatchObject({ x: 3, y: 4 });
+    expect(endFocus(s, 0, 'won', 'hq', { x: 7, y: 7 })).toEqual({ x: 7, y: 7 });
+    expect(endFocus(s, 0, 'lost', 'surrender', null)).toMatchObject({ x: 3, y: 4 });
   });
 });
 

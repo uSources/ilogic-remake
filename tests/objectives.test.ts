@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { objectiveStatus, objectiveText } from '../src/campaign';
+import { objectiveStatusText, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
 import { defaultContent } from '@core/content/default';
 import { buildMission, MISSIONS } from '@core/missions';
-import { isValidObjective, measureObjective, objectiveOutcome } from '@core/objectives';
-import { isDefeated, objectiveProgress, outcome } from '@core/rules';
+import { isValidObjective, measureObjective, objectiveStatus } from '@core/objectives';
+import { isDefeated, objectiveProgress } from '@core/rules';
 import { teamIds } from '@core/teams';
 import { mapGrid } from '@core/mapGrid';
 import type { GameState } from '@core/model';
-import { BLANK_DICE_SEED } from './helpers';
+import { BLANK_DICE_SEED, resultFor } from './helpers';
 
 afterEach(() => {
   settings.lang = 'es';
@@ -54,7 +54,10 @@ function statesOf(id: string): GameState[] {
   return states;
 }
 
-/** Perder la Base o quedarse sin nada se mira antes que el objetivo (en `outcome`). */
+/** Lo que da el objetivo a su dueño: cumplido, gana; fallado, pierde; si no, se sigue. */
+const STATUS_FOR_OWNER = { achieved: 'won', failed: 'lost', pending: 'playing' } as const;
+
+/** Perder la Base o quedarse sin nada se mira antes que el objetivo (la regla 'lastAllianceStanding'). */
 function isAnyoneDefeated(s: GameState): boolean {
   return teamIds(s).some((team) => isDefeated(s, team));
 }
@@ -65,19 +68,20 @@ describe('objetivos de mision', () => {
       const { objective } = s.mission!;
       const team = objective.owner;
       expect(measureObjective(s, objective)).toEqual(objectiveProgress(s));
-      if (objective.kind !== 'hq' && !isAnyoneDefeated(s)) expect(objectiveOutcome(s, objective)).toBe(outcome(s, team));
+      if (objective.kind === 'hq' || isAnyoneDefeated(s)) continue;
+      expect(resultFor(s, team)).toBe(STATUS_FOR_OWNER[objectiveStatus(s, objective)]);
     }
   });
 
   it('textos del objetivo y del progreso, como antes', () => {
     const texts = MISSIONS.map((mission) => {
       const s = buildMission(mission, defaultContent(), BLANK_DICE_SEED);
-      return [objectiveText(mission), objectiveText(mission, s), objectiveText(null, s), objectiveStatus(s)];
+      return [objectiveText(mission), objectiveText(mission, s), objectiveText(null, s), objectiveStatusText(s)];
     });
     expect(objectiveText(null)).toBe('Conquista la Base enemiga.');
     settings.lang = 'en';
     expect(objectiveText(MISSIONS[1]!)).toBe('Own 6 citys before day 14 ends.');
-    expect(objectiveStatus(buildMission(MISSIONS[4]!, defaultContent(), BLANK_DICE_SEED))).toBe('Left: 8 · Day 1 of 10');
+    expect(objectiveStatusText(buildMission(MISSIONS[4]!, defaultContent(), BLANK_DICE_SEED))).toBe('Left: 8 · Day 1 of 10');
     settings.lang = 'es';
     expect(texts).toEqual([
       ['Conquista la Base enemiga.', 'Conquista la Base enemiga.', 'Conquista la Base enemiga.', null],

@@ -3,15 +3,15 @@
  * cuando se gana o se pierde y cuanto falta. Un objetivo nuevo es una entrada en `OBJECTIVES` (y su
  * frase en `campaign.ts`); el tipo de la partida esta en `Objective` (`model/objective.ts`).
  *
- * Un objetivo es de un equipo (`Objective.owner`, el que juega la mision): el resultado y el
- * progreso se miden para ese equipo. Para sus enemigos el resultado es el contrario
- * (`outcome` de rules/outcome.ts).
+ * Un objetivo es de un equipo (`Objective.owner`, el que juega la mision): si se cumple y el
+ * progreso se miden para ese equipo. Si lo cumple gana su alianza, y si falla, sus enemigos (la
+ * regla 'objective' de rules/victory.ts).
  */
 
 import { entryOf, isEntryId, type GameContent } from './content';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
-import type { GameState, Objective, ObjectiveGoal, Outcome, Pos, TeamId } from './model';
+import type { GameState, Objective, ObjectiveGoal, ObjectiveStatus, Pos, TeamId } from './model';
 import { isHostile } from './teams';
 import { samePos } from './geom';
 import { Grid, type GridBounds } from './util/grid';
@@ -59,8 +59,8 @@ interface ObjectiveRules<K extends ObjectiveKind> {
   problems(written: InMission<K>, layout: MissionLayout): string[];
   /** El objetivo de una partida guardada (lo de su `kind` ya esta mirado) tiene bien sus campos. */
   isValid(where: SavedMap, saved: Record<string, unknown>): boolean;
-  /** Resultado de la partida para el dueño del objetivo, `team` (perder la Base ya se ha mirado antes). */
-  outcome(s: GameState, team: TeamId, objective: InGame<K>): Outcome;
+  /** Como va para su dueño, `team` (perder la Base ya lo mira la regla 'lastAllianceStanding'). */
+  status(s: GameState, team: TeamId, objective: InGame<K>): ObjectiveStatus;
   /** Cuanto le falta al dueño del objetivo, `team`. */
   progress(s: GameState, team: TeamId, objective: InGame<K>): ObjectiveProgress | null;
 }
@@ -77,10 +77,10 @@ const hasDays = (saved: Record<string, unknown>): boolean => isInt(saved.days, 1
 /** Pasado el ultimo dia del objetivo. */
 const isPastLastDay = (s: GameState, objective: { days: number }) => s.day > objective.days;
 
-/** Ganada si ya se cumple; perdida si se acabaron los dias; si no, se sigue jugando. */
-function wonOrLostByDays(s: GameState, objective: { days: number }, isDone: boolean): Outcome {
-  if (isDone) return 'won';
-  return isPastLastDay(s, objective) ? 'lost' : 'playing';
+/** Cumplido si ya se cumple; fallado si se acabaron los dias; si no, aun no se sabe. */
+function doneInTime(s: GameState, objective: { days: number }, isDone: boolean): ObjectiveStatus {
+  if (isDone) return 'achieved';
+  return isPastLastDay(s, objective) ? 'failed' : 'pending';
 }
 
 /** Edificios del equipo de ese tipo (o de cualquiera). */
@@ -104,15 +104,15 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     fromMission: (written) => written,
     problems: noProblems,
     isValid: () => true,
-    // La Base se mira en `outcome()` para todas las partidas, con objetivo o sin el.
-    outcome: () => 'playing',
+    // La Base la mira la regla 'lastAllianceStanding' (rules/victory.ts), con objetivo o sin el.
+    status: () => 'pending',
     progress: () => null,
   },
   survive: {
     fromMission: (written) => written,
     problems: noProblems,
     isValid: (_s, saved) => hasDays(saved),
-    outcome: (s, _team, objective) => (isPastLastDay(s, objective) ? 'won' : 'playing'),
+    status: (s, _team, objective) => (isPastLastDay(s, objective) ? 'achieved' : 'pending'),
     progress: (s, _team, objective) => ({ done: Math.min(s.day - 1, objective.days), total: objective.days }),
   },
   capture: {
@@ -127,14 +127,14 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
       hasDays(saved) &&
       isInt(saved.count, 1, MAX_OBJECTIVE_COUNT) &&
       (saved.type === null || isEntryId(where.content.buildings, saved.type)),
-    outcome: (s, team, objective) => wonOrLostByDays(s, objective, ownedBuildingsOfType(s, team, objective.type) >= objective.count),
+    status: (s, team, objective) => doneInTime(s, objective, ownedBuildingsOfType(s, team, objective.type) >= objective.count),
     progress: (s, team, objective) => ({ done: ownedBuildingsOfType(s, team, objective.type), total: objective.count }),
   },
   destroy: {
     fromMission: (written) => written,
     problems: noProblems,
     isValid: (_s, saved) => hasDays(saved),
-    outcome: (s, team, objective) => wonOrLostByDays(s, objective, enemyUnitCount(s, team) === 0),
+    status: (s, team, objective) => doneInTime(s, objective, enemyUnitCount(s, team) === 0),
     progress: (s, team) => ({ done: 0, total: enemyUnitCount(s, team) }),
   },
   escort: {
@@ -146,10 +146,10 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
         : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
     ],
     isValid: (where, saved) => hasDays(saved) && isUid(saved.uid) && isPosOn(where.board, saved.to),
-    outcome: (s, _team, objective) => {
+    status: (s, _team, objective) => {
       const at = positionOf(s, objective.uid);
-      if (!at) return 'lost';
-      return wonOrLostByDays(s, objective, samePos(at, objective.to));
+      if (!at) return 'failed';
+      return doneInTime(s, objective, samePos(at, objective.to));
     },
     progress: () => null,
   },
@@ -185,9 +185,9 @@ export const objectiveFromMission = (
 export const objectiveProblems = (written: MissionObjective, layout: MissionLayout): string[] =>
   rulesOf(written.kind).problems(written, layout);
 
-/** Resultado de la partida para el dueño del objetivo. */
-export const objectiveOutcome = (s: GameState, objective: Objective): Outcome =>
-  rulesOf(objective.kind).outcome(s, objective.owner, objective);
+/** Como va el objetivo para su dueño. */
+export const objectiveStatus = (s: GameState, objective: Objective): ObjectiveStatus =>
+  rulesOf(objective.kind).status(s, objective.owner, objective);
 
 /** Cuanto le falta al dueño del objetivo (null si no se cuenta). */
 export const measureObjective = (s: GameState, objective: Objective): ObjectiveProgress | null =>

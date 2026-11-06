@@ -17,7 +17,7 @@ import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
 import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/util/random';
-import { endRound, isMatchOver, outcome, score, turnTakers } from '@core/rules';
+import { endRound, isMatchOver, isWinner, matchResult, score, turnTakers } from '@core/rules';
 import type { GameEvent, GameState } from '@core/model';
 import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
 
@@ -58,8 +58,9 @@ function play(
     }
     endRound(s);
   }
-  const result = outcome(s, FIRST_SIDE);
-  if (result !== 'playing') return { winner: result === 'won' ? FIRST_SIDE : SECOND_SIDE, byScore: false };
+  const result = matchResult(s);
+  if (result.status === 'draw') return { winner: 'draw', byScore: false };
+  if (result.status === 'decided') return { winner: isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE, byScore: false };
   const scoreGap = score(s, FIRST_SIDE) - score(s, SECOND_SIDE);
   return { winner: scoreGap > 0 ? FIRST_SIDE : scoreGap < 0 ? SECOND_SIDE : 'draw', byScore: true };
 }

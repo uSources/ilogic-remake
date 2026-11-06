@@ -8,7 +8,7 @@
  */
 import { teamIds } from '../teams';
 import type { GameState, TeamId } from '../model';
-import { isDefeated } from './outcome';
+import { isDefeated } from './victory';
 
 /** El equipo aun juega sus turnos (no ha perdido). */
 export const takesTurn = (s: GameState, team: TeamId): boolean => !isDefeated(s, team);

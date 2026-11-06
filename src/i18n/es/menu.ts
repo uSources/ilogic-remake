@@ -53,6 +53,7 @@ export const menu = {
   points: 'Puntos',
   victory: '¡Victoria!',
   defeat: 'Derrota',
+  draw: 'Empate',
   statBuilt: 'Unidades compradas',
   statLost: 'Unidades perdidas',
   statCaptured: 'Edificios capturados',

@@ -19,6 +19,7 @@
  * | `powers` | poderes del general |
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
+ * | `match` | lo de la partida entera: rendirse |
  * | `groupMove` | mover un grupo: en que orden y el paso de cada una (`groupMoveOrder`, `groupMoveStep`) |
  * | `menu` | los menus, sacados de las acciones que valen (`availableActions`, `canDoWithSelection`) |
  * | `registry` | `ACTIONS`: todas las entradas |

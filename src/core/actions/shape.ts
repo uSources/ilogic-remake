@@ -57,6 +57,7 @@ export const ACTION_SHAPES: { readonly [K in GameActionKind]: ShapeOf<K> } = {
   leaveSquad: unitList,
   renameSquad: { squad: isUid, name: isText },
   disbandSquad: squadOnly,
+  surrender: {},
 };
 
 const isActionKind = (kind: unknown): kind is GameActionKind => typeof kind === 'string' && Object.hasOwn(ACTION_SHAPES, kind);

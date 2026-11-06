@@ -45,7 +45,9 @@ export type GameAction =
   | { kind: 'addToGroup'; uids: number[]; key: number }
   | { kind: 'leaveSquad'; uids: number[] }
   | { kind: 'renameSquad'; squad: number; name: string }
-  | { kind: 'disbandSquad'; squad: number };
+  | { kind: 'disbandSquad'; squad: number }
+  /** El equipo se rinde: cuenta como derrotado (ver isDefeated) aunque le quede de todo. */
+  | { kind: 'surrender' };
 
 /** Tipo de accion ('move', 'attack'...). */
 export type GameActionKind = GameAction['kind'];

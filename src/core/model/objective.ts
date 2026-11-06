@@ -1,7 +1,8 @@
 import type { Pos } from './geometry';
 import type { TeamId } from './team';
 
-export type Outcome = 'playing' | 'won' | 'lost';
+/** Como va un objetivo para su dueño: aun no se sabe, cumplido o fallado. */
+export type ObjectiveStatus = 'pending' | 'achieved' | 'failed';
 
 /**
  * Lo que pide un objetivo de mision. En todas se pierde tambien si cae la Base propia.

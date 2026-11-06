@@ -6,7 +6,7 @@ import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
 import { createGame, saveContext } from '@core/defaultGames';
-import { endReason, groundDistance, newUnit, outcome, score } from '@core/rules';
+import { groundDistance, matchResult, newUnit, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
 import { blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
@@ -77,12 +77,18 @@ describe('limite de dias', () => {
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 'City', owner: 1, x: 5, y: 5 });
     newUnit(s, unitTypeNamed('Tank'), 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;
-    expect(outcome(s, 0)).toBe('playing');
+    expect(matchResult(s).status).toBe('playing');
     s.day = 11;
     expect(score(s, 0)).toBe(unitTypeNamed('Tank').cost + 1000); // tanque entero + su Base
     expect(score(s, 1)).toBe(2000);
-    expect(outcome(s, 0)).toBe('won');
-    expect(endReason(s, 0)).toBe('days');
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [0], reason: 'days' });
+  });
+
+  it('[CAMBIO] al limite de dias, mismos puntos y mismos edificios: empate (en 2013 perdian los dos)', () => {
+    const s = withoutHeadquarters(blankState(rulesWith(defaultContent(), { dayLimit: 10 })));
+    s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 });
+    s.day = 11;
+    expect(matchResult(s)).toEqual({ status: 'draw', winners: [], reason: 'days' });
   });
 });
 

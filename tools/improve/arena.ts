@@ -18,7 +18,7 @@ import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/util/random';
-import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { endRound, isMatchOver, isWinner, matchResult, turnTakers } from '@core/rules';
 import { armyValue } from '@core/stats';
 import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
 
@@ -60,8 +60,9 @@ export function playDuel(seed: number, brains: [Brain, Brain], size: number, max
     if (isMatchOver(s)) break;
     endRound(s);
   }
-  const result = outcome(s, first);
-  if (result !== 'playing') return result === 'won' ? 'first' : 'second';
+  const result = matchResult(s);
+  if (result.status === 'draw') return null;
+  if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';
   const firstStrength = strength(s, first),
     secondStrength = strength(s, second);
   if (Math.max(firstStrength, secondStrength) < CLEAR_LEAD * Math.min(firstStrength, secondStrength)) return null;

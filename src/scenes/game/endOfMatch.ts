@@ -7,11 +7,12 @@ import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { sampleArmy } from '../../core/stats';
+import { isWinner } from '../../core/rules';
 import { enemiesOf } from '../../core/teams';
-import type { GameState, Pos, TeamId } from '../../core/model';
+import type { EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
-import { ui, type UIState } from '../../hud/store';
+import { ui, type EndOutcome } from '../../hud/store';
 import { TILE } from '../../layout';
 import { settings, t } from '../../settings';
 import { burst, center, COLORS, reducedMotion, tileFlash } from '../../ui/fx';
@@ -19,8 +20,6 @@ import type { MapView } from '../../ui/mapView';
 import { PAL } from '../../ui/palette';
 import { armyChartVM, endScoreVM, endStatsVM } from '../../ui/hudModels';
 import { END_LABEL, type EndButton, type GameStartData } from './types';
-
-export type EndReason = NonNullable<UIState['end']>['reason'];
 
 /** Filtro del lienzo al perder: casi gris y oscuro. */
 const DEFEAT_FILTER = 'grayscale(0.9) brightness(0.55)';
@@ -48,15 +47,21 @@ export function setEndFilter(filter: string | null): void {
 /** Mision que va detras de esta (ninguna si es la ultima). */
 const nextMission = (mission: MissionDef): MissionDef | undefined => MISSIONS[MISSIONS.indexOf(mission) + 1];
 
+/** Como ha acabado la partida para el equipo que mira (`viewer`). */
+export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
+  if (result.status === 'draw') return 'draw';
+  return isWinner(result, viewer) ? 'won' : 'lost';
+}
+
 /** Botones del final: en una mision, siguiente (si se gana y la hay), repetir y menu; si no, revancha, nueva y menu. */
-export function endButtonsFor(mission: MissionDef | undefined, won: boolean): EndButton[] {
+export function endButtonsFor(mission: MissionDef | undefined, outcome: EndOutcome): EndButton[] {
   if (!mission) return ['rematch', 'new', 'menu'];
-  if (!won) return ['retry', 'menu'];
+  if (outcome !== 'won') return ['retry', 'menu'];
   return nextMission(mission) ? ['next', 'retry', 'menu'] : ['retry', 'menu'];
 }
 
 /** Donde mirar al acabar (para el equipo que mira, `viewer`). `lastAt`: ultima casilla con un combate o una captura. */
-export function endFocus(s: GameState, viewer: TeamId, won: boolean, reason: EndReason, lastAt: Pos | null): Pos {
+export function endFocus(s: GameState, viewer: TeamId, outcome: EndOutcome, reason: EndReason, lastAt: Pos | null): Pos {
   const hqOf = (team: TeamId) => s.buildings.find((building) => isHq(s, building) && building.owner === team);
   const objective = s.mission?.objective;
   if (reason === 'objective' && objective?.kind === 'escort') return objective.to;
@@ -67,7 +72,7 @@ export function endFocus(s: GameState, viewer: TeamId, won: boolean, reason: End
     enemiesOf(s, viewer)
       .map(hqOf)
       .find((found) => found !== undefined);
-  if (!won && hq) return hq;
+  if (outcome !== 'won' && hq) return hq;
   const map = mapGrid(s);
   return lastAt ?? hq ?? { x: Math.floor(map.width / 2), y: Math.floor(map.height / 2) };
 }
@@ -105,10 +110,14 @@ export class EndOfMatch {
     this.celebration = null;
   }
 
-  async finish(won: boolean, reason: EndReason): Promise<void> {
+  /** El final de una partida ya decidida (`result`), visto por el equipo que mira. */
+  async finish(result: Exclude<MatchResult, { status: 'playing' }>): Promise<void> {
     const host = this.host;
     if (host.ended) return;
     const s = host.state;
+    const outcome = outcomeFor(result, host.viewer);
+    const won = outcome === 'won';
+    const reason = result.reason;
     host.closeMatch();
     sampleArmy(s);
     const mission = s.mission ? missionById(s.mission.id) : undefined;
@@ -118,12 +127,12 @@ export class EndOfMatch {
     hideMatchPanels();
 
     const match = host.match;
-    const focus = endFocus(s, host.viewer, won, reason, host.lastAt);
+    const focus = endFocus(s, host.viewer, outcome, reason, host.lastAt);
     if (!(await this.panTo(focus, match))) return;
     this.celebrate(won, focus);
     await host.wait(reducedMotion() ? CELEBRATION_REDUCED_MS : CELEBRATION_MS);
     if (match !== host.match) return;
-    this.showEndScreen(won, reason, mission, bestBefore);
+    this.showEndScreen(outcome, reason, mission, bestBefore);
   }
 
   /** Camara a la jugada que lo ha decidido. false si entre medias se ha cambiado de partida. */
@@ -162,15 +171,16 @@ export class EndOfMatch {
   }
 
   /** La pantalla del final, con el resumen y sus botones. */
-  private showEndScreen(won: boolean, reason: EndReason, mission: MissionDef | undefined, bestBefore: number | null): void {
+  private showEndScreen(outcome: EndOutcome, reason: EndReason, mission: MissionDef | undefined, bestBefore: number | null): void {
     const s = this.host.state;
-    this.buttons = endButtonsFor(mission, won);
+    const won = outcome === 'won';
+    this.buttons = endButtonsFor(mission, outcome);
     this.selected = 0;
     const viewer = this.host.viewer;
     ui.set({
       screen: 'end',
       end: {
-        won,
+        outcome,
         day: s.day,
         stats: endStatsVM(s, viewer),
         reason,

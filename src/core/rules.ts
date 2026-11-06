@@ -29,7 +29,7 @@
  * | `round` | fin de ronda |
  * | `undo` | los movimientos que se pueden deshacer (`undoableMoves`): apuntarlos, olvidarlos y por que no se puede |
  * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
- * | `outcome` | victoria, derrota, objetivos de mision |
+ * | `victory` | como acaba la partida (`VICTORY_RULES`, `matchResult`: quien gana, igual para todos), derrota de un equipo, puntos, objetivo de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
  */
 export {
@@ -127,10 +127,12 @@ export {
   dayLimitReached,
   isDefeated,
   isMatchOver,
+  isWinner,
+  matchResult,
   standingTeams,
-  outcome,
   objectiveProgress,
-  endReason,
-} from './rules/outcome';
+  VICTORY_RULES,
+  type VictoryRule,
+} from './rules/victory';
 export { othersAfter, takesTurn, turnTakers, turnsAfter, type TurnStep } from './rules/turnOrder';
 export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';

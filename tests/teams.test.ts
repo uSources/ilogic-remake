@@ -16,7 +16,8 @@ import {
   groundDistance,
   isMatchOver,
   newUnit,
-  outcome,
+  matchResult,
+  isDefeated,
   standingTeams,
   othersAfter,
   takesTurn,
@@ -47,7 +48,7 @@ import {
 } from '@core/teams';
 import type { GameEvent, GameState } from '@core/model';
 import { checkInvariants } from './sim/partidas';
-import { blankState, hqId, unitTypeNamed, endRoundReport, withoutHeadquarters } from './helpers';
+import { blankState, hqId, unitTypeNamed, endRoundReport, withoutHeadquarters, resultFor } from './helpers';
 
 const HQ = hqId();
 const SOLDIER = unitTypeNamed('Soldier');
@@ -185,14 +186,12 @@ describe('cuatro equipos en dos alianzas', () => {
     // Cae el equipo 1, pero su aliado 3 sigue: nadie ha ganado aun.
     s.units = s.units.filter((unit) => unit.team !== 1);
     s.buildings = s.buildings.filter((building) => building.owner !== 1);
-    expect(outcome(s, 1)).toBe('lost');
-    expect(outcome(s, 0)).toBe('playing');
-    expect(outcome(s, 3)).toBe('playing');
-    expect(isMatchOver(s)).toBe(false);
+    expect(perTeam(s, (team) => isDefeated(s, team))).toEqual([false, true, false, false]);
+    expect(matchResult(s).status).toBe('playing');
     expect(standingTeams(s)).toEqual([0, 2, 3]);
     s.buildings.find((building) => building.owner === 3)!.owner = 2;
-    expect(perTeam(s, (team) => outcome(s, team))).toEqual(['won', 'lost', 'won', 'lost']);
-    expect(isMatchOver(s)).toBe(true);
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [0, 2], reason: 'hq' });
+    expect(perTeam(s, (team) => resultFor(s, team))).toEqual(['won', 'lost', 'won', 'lost']);
   });
 
   it('todos contra todos (3 equipos): si cae uno, los otros dos siguen; acaba cuando queda uno', () => {
@@ -202,10 +201,10 @@ describe('cuatro equipos en dos alianzas', () => {
       s.buildings = s.buildings.filter((building) => building.owner !== team);
     };
     loses(1);
-    expect(perTeam(s, (team) => outcome(s, team))).toEqual(['playing', 'lost', 'playing']);
+    expect(perTeam(s, (team) => isDefeated(s, team))).toEqual([false, true, false]);
     expect(isMatchOver(s)).toBe(false);
     loses(2);
-    expect(perTeam(s, (team) => outcome(s, team))).toEqual(['won', 'lost', 'lost']);
+    expect(perTeam(s, (team) => resultFor(s, team))).toEqual(['won', 'lost', 'lost']);
     expect(isMatchOver(s)).toBe(true);
   });
 

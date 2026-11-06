@@ -14,7 +14,7 @@ import { aiTurn, assistTurn } from '@core/ai';
 import { createGame } from '@core/defaultGames';
 import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
-import { endRound, isMatchOver, outcome, turnTakers } from '@core/rules';
+import { endRound, isMatchOver, matchResult, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
 import { dispatch } from '@core/actions';
 import { posOf } from '@core/geom';
@@ -89,7 +89,7 @@ function playScenario(scenario: Scenario): string {
     for (const event of endRound(s)) record(event);
     hash.update(serialize(s));
   }
-  record(outcome(s, person));
+  record(matchResult(s));
   return hash.digest('hex').slice(0, 16);
 }
 

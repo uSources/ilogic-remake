@@ -118,7 +118,7 @@ export function objectiveText(mission: MissionDef | null, s?: GameState): string
 }
 
 /** Progreso en corto: "3/6", "día 4 de 8"... */
-export function objectiveStatus(s: GameState): string | null {
+export function objectiveStatusText(s: GameState): string | null {
   const mission = s.mission;
   const objective = mission?.objective;
   if (!mission || !objective || objective.kind === 'hq') return null;

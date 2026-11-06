@@ -9,7 +9,7 @@ import { aiTurn } from '@core/ai';
 import { dispatch } from '@core/actions';
 import { uncheckedAttack } from '@core/sandbox';
 import { seededRng } from '@core/util/random';
-import { endRound, roundReport, takesTurn, type RoundReport } from '@core/rules';
+import { endRound, isWinner, matchResult, roundReport, takesTurn, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
 
@@ -138,4 +138,11 @@ export function someUnits(units: readonly Unit[]): readonly [Unit, ...Unit[]] {
   const [first, ...rest] = units;
   if (!first) throw new Error('Hace falta al menos una unidad');
   return [first, ...rest];
+}
+
+/** Como va la partida para `team`, en una palabra (para comprobarlo en una linea): sigue, gana, pierde o empate. */
+export function resultFor(s: GameState, team: TeamId): 'playing' | 'won' | 'lost' | 'draw' {
+  const result = matchResult(s);
+  if (result.status !== 'decided') return result.status;
+  return isWinner(result, team) ? 'won' : 'lost';
 }

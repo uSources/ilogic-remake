@@ -3,11 +3,11 @@ import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';
-import { endReason, endRound, isMatchOver, outcome, takesTurn } from '@core/rules';
+import { endRound, isMatchOver, isWinner, matchResult, takesTurn } from '@core/rules';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
-import type { GameState, RulesConfig, TeamId, Unit } from '@core/model';
+import type { EndReason, GameState, RulesConfig, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
 
@@ -79,7 +79,8 @@ export interface DaySample {
 export interface GameRecord {
   seed: number;
   winner: Side | null;
-  reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'timeout';
+  /** Por que acabo; 'timeout' si se llego a `maxDays` sin acabar (entonces `winner` es null). */
+  reason: EndReason | 'timeout';
   days: number;
   samples: DaySample[];
   /** Lo de cada tipo de unidad, por lado y por id de tipo. */
@@ -202,12 +203,10 @@ export function playGame(options: PlayOptions): GameRecord {
     samples.push(sample(s));
   }
 
-  const result = outcome(s, FIRST_SIDE);
+  const result = matchResult(s);
   let winner: Side | null = null;
-  if (result !== 'playing') {
-    winner = result === 'won' ? FIRST_SIDE : SECOND_SIDE;
-    reason = endReason(s, FIRST_SIDE) ?? 'timeout';
-  }
-  if (result === 'playing') samples.push(sample(s));
+  if (result.status === 'decided') winner = isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE;
+  if (result.status !== 'playing') reason = result.reason;
+  else samples.push(sample(s));
   return { seed: options.seed, winner, reason, days: s.day, samples, units, events };
 }

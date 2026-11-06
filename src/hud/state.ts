@@ -1,5 +1,5 @@
-import type { RulesConfig } from '../core/model';
-import type { EndStatsVM } from './vm/end';
+import type { EndReason, RulesConfig } from '../core/model';
+import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
@@ -85,11 +85,12 @@ export interface UIState {
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
   hint: string;
   end: {
-    won: boolean;
+    /** Como ha acabado para quien mira. */
+    outcome: EndOutcome;
     day: number;
     /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
     stats: EndStatsVM | null;
-    reason: 'hq' | 'wipeout' | 'days' | 'objective' | 'surrender' | null;
+    reason: EndReason | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
     /** Puntos de su alianza y de la mejor enemiga. */

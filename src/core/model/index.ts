@@ -12,7 +12,7 @@ export type { UndoableMove } from './undo';
 export type { EndReason, GameModeId, MatchResult, VictoryRuleId } from './match';
 export type { GeneralState } from './general';
 export type { WeatherState } from './weather';
-export type { Objective, ObjectiveGoal, Outcome } from './objective';
+export type { Objective, ObjectiveGoal, ObjectiveStatus } from './objective';
 export type {
   CombatInfo,
   EventActor,

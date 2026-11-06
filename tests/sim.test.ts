@@ -1,11 +1,11 @@
-import { hqId } from './helpers';
+import { hqId, resultFor } from './helpers';
 import { duel } from '@core/teams';
 import { MoveType } from '@core/content';
 import { describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/util/random';
 import { createGame } from '@core/defaultGames';
-import { endRound, groundDistance, outcome } from '@core/rules';
+import { endRound, groundDistance } from '@core/rules';
 import { createLayer } from '@core/mapGrid';
 import { checkInvariants } from './sim/partidas';
 
@@ -40,11 +40,11 @@ describe('partidas simuladas', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const rng = seededRng(seed * 104729);
       const s = createGame(rng, { teams: duel('human', 'ai') });
-      while (outcome(s, 0) === 'playing' && s.day <= 60) {
-        for (const _ of aiTurn(s, rng, 1)) if (outcome(s, 0) !== 'playing') break;
+      while (resultFor(s, 0) === 'playing' && s.day <= 60) {
+        for (const _ of aiTurn(s, rng, 1)) if (resultFor(s, 0) !== 'playing') break;
         endRound(s);
       }
-      if (outcome(s, 0) === 'lost') {
+      if (resultFor(s, 0) === 'lost') {
         won++;
         days.push(s.day);
       }

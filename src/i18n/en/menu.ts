@@ -55,6 +55,7 @@ export const menu: Translation<typeof es> = {
   points: 'Points',
   victory: 'Victory!',
   defeat: 'Defeat',
+  draw: 'Draw',
   statBuilt: 'Units bought',
   statLost: 'Units lost',
   statCaptured: 'Buildings captured',

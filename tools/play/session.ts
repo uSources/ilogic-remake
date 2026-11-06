@@ -23,7 +23,8 @@ import {
   roundReport,
   endsInAmbush,
   moveRange,
-  outcome,
+  isWinner,
+  matchResult,
   reachableTiles,
   othersAfter,
   unitAt,
@@ -316,8 +317,8 @@ export class Session {
       else this.playOther(step.team, out);
     }
     out.push(`--- dia ${this.s.day}: +${income} de ingresos, dinero ${teamState(this.s, this.me).funds}`);
-    const result = outcome(this.s, this.me);
-    if (result !== 'playing') out.push(`FIN: ${result}`);
+    const result = this.result();
+    if (result !== 'sigue') out.push(`FIN: ${result}`);
     return out.join('\n');
   }
 
@@ -326,6 +327,14 @@ export class Session {
     const reason = notAiControlledReason(this.s, team);
     if (reason) throw new UsageError(reason);
     out.push(...told(this.s, aiTurn(this.s, this.rng, team), `equipo ${team}: `));
+  }
+
+  /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
+  private result(): string {
+    const result = matchResult(this.s);
+    if (result.status === 'playing') return 'sigue';
+    if (result.status === 'draw') return `empate (${result.reason})`;
+    return `${isWinner(result, this.me) ? 'ganada' : 'perdida'} (${result.reason})`;
   }
 
   status(): string {
@@ -338,7 +347,7 @@ export class Session {
     return [
       `dia ${s.day} · dinero ${teamState(s, me).funds} (otros ${others((team) => teamState(s, team).funds)}) · edificios ${own(me)} contra ${others(own)}`,
       ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
-      `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${outcome(s, me)}`,
+      `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${this.result()}`,
       `sin usar: ${
         s.units
           .filter((unit) => unit.team === me && canStillAct(unit) && unit.carrier === null)

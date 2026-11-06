@@ -8,8 +8,8 @@ import { MIGRATIONS, migrateChecked, migrateRead } from '@core/saveMigrations';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { formSquad } from '@core/squads/membership';
 import { giveStandingOrder } from '@core/squads/standingOrders';
-import { newUnit, outcome } from '@core/rules';
-import { blankState, unitTypeNamed, someUnits, act } from './helpers';
+import { newUnit } from '@core/rules';
+import { blankState, unitTypeNamed, someUnits, act, resultFor } from './helpers';
 import { isHostile } from '@core/teams';
 import { loadContent, type Content } from '@core/content';
 import { mutableCopy } from '@core/util/freeze';
@@ -138,7 +138,7 @@ describe('partidas guardadas con el formato 2 (de origin/main)', () => {
     expect(s.mission!.objective).toEqual({ kind: 'capture', count: 6, type: 'City', days: 14, owner: 0 });
     // La mision era del jugador (el bando 0): ahora lo dice su objetivo.
     expect(s.mission!.objective.owner).toBe(0);
-    expect(outcome(s, 0)).toBe('playing');
+    expect(resultFor(s, 0)).toBe('playing');
     expect(s.theme).toBe('Plains');
     expect(s.buildings.some((building) => building.capture)).toBe(true);
     expect(s.rules).toEqual(missionRules(missionById('bridgehead')!, defaultContent()));

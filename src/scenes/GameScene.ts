@@ -10,7 +10,7 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, endReason, outcome, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import { recordEvent, sampleArmy } from '../core/stats';
 import { dispatch } from '../core/actions';
@@ -647,18 +647,19 @@ export class GameScene extends Phaser.Scene {
     if (settings.autoNext && this.idleUnits().length) this.nextIdle();
   }
 
+  /** La partida se ha decidido (su modo dice como: el laboratorio nunca): true, y empieza el final. */
   private checkEnd(): boolean {
-    if (this.lab) return false;
-    const result = outcome(this.s, this.viewer);
-    if (result === 'playing') return false;
-    void this.endScreen.finish(result === 'won', endReason(this.s, this.viewer));
+    const result = matchResult(this.s);
+    if (result.status === 'playing') return false;
+    void this.endScreen.finish(result);
     return true;
   }
 
-  /** Rendirse: la partida termina como derrota. */
+  /** Rendirse: el equipo que mira deja la partida (si con eso acaba, empieza el final). */
   private surrender(): void {
     this.toMap();
-    void this.endScreen.finish(false, 'surrender');
+    this.act({ kind: 'surrender' });
+    this.checkEnd();
   }
 
   /** Da la partida por terminada (al ganar, perder o rendirse): sin entrada y sin zona de amenaza. */
