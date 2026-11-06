@@ -81,7 +81,7 @@ return gotCloser ? best.pos : null;
     puntos de captura) se lee de `s.settings` sin mas. Fuera de las reglas (la IA, la interfaz, la
     ayuda) tampoco se repite el `isOn` de un modulo: se le pregunta (`isRuleOn(s, id)`,
     `s.ruleset`; sin partida, `gameModulesFor(ajustes)`) o, mejor, a la regla que lo usa (`seesEverything`,
-    `letsTeammatesThrough`). Las reglas no importan el registro de modulos ni un modulo concreto
+    `letsAlliesThrough`). Las reglas no importan el registro de modulos ni un modulo concreto
     (lo mira ESLint).
 15. **Preguntar "y si" sin fingir unidades.** Nada de copias con otra casilla, otra vida u otro turno
     (`{ ...unit, x, y }`) que pasan por las reglas como si fueran de verdad: la pregunta se dice con su

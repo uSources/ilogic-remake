@@ -333,7 +333,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 | `falls` | si un equipo ha caido y por que (`currentDefeat`) y cuando cayo (`recordFalls`, `fallOf`, `lastFallen`) |
 | `invariants` | `INVARIANTS` y `restoreInvariants`: lo que se deja en orden tras cada accion y cada ronda, con sus sucesos |
 | `movementProfile` | como se mueve cada tipo: por donde entra y lo que le cuesta (`TerrainAccess`), lo que puede gastar (`MovementProfile`), `pathCost` |
-| `passage` | lo que le hacen las demas unidades a quien se mueve (las `passRules` de los modulos; si ninguna dice nada, cierra el paso: `surroundingsOf`) y donde tiene que pararse; lo mismo para medir (`passBlockers`) y si atraviesa a los suyos (`letsTeammatesThrough`) |
+| `passage` | lo que le hacen las demas unidades a quien se mueve (las `passRules` de los modulos; si ninguna dice nada, cierra el paso: `surroundingsOf`) y donde tiene que pararse; lo mismo para medir (`passBlockers`) y si se atraviesa a los aliados (`letsAlliesThrough`: lo que dice el `allies` de las reglas, sin unidad de ejemplo) |
 | `distance` | pasos por tierra sin limite (`distanceMap`: 0 en el origen, Infinity donde no se llega) y lo que corta el paso al medir (`Blockers`: `noBlockers`, `unitsBlock` o `passBlockers`) |
 | `movement` | la regla de cada paso (`stepAllowed`), alcance (`moveRange`), caminos (`plannedPath`, `validPath`, `approachPath`) y el paso hacia algo (`stepToward` con un `Approach`) |
 | `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo corta el primer `pathInterruptions` de los modulos que llega (la emboscada); el suceso de mover lleva el corte (`interruption: { kind, at }`) |
@@ -379,7 +379,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   movimiento, blockers)`; acercarse a algo: `stepToward(alcance, approach)` (`overGroundTo`,
   `straightTo` o el `Approach` de la IA y de la formacion). La IA mide con `stepsMap`
   (`autopilot/context.ts`): sola, todas las unidades cortan el paso; en grupo y si las reglas de paso
-  le dejan atravesar a los suyos, mide con esas reglas y con `PLANS_WITH_WHAT_IT_SEES` delante (los
+  dejan atravesar a los aliados, mide con esas reglas y con `PLANS_WITH_WHAT_IT_SEES` delante (los
   enemigos que no ve no le cortan el camino al planear, haya emboscadas o no).
 - **La rejilla**: el mapa es una rejilla de casillas con cuatro vecinas (`neighbors4`) y distancia
   en linea `manhattan` (`geom.ts`). Es la unica suposicion fija del nucleo: alcance, distancias,
@@ -479,7 +479,7 @@ partida, al leerla (`readSave`) y al cambiar sus ajustes (`changeSettings`, que 
 vez: `s.settings` es de solo lectura); no se guarda (como el contenido). `hooksOf` e `isRuleOn` solo
 leen `s.ruleset` (`ruleModules/ruleset.ts`). La ayuda de una partida cuenta sus modulos (`helpRulesOfMatch`); la del menu, sin partida, los del juego que van con los ajustes (`helpRulesForSettingsOnly`, `gameModulesFor`). Las
 partes del juego que no son reglas (la interfaz, la IA) tampoco miran el ajuste: preguntan al
-modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsTeammatesThrough`).
+modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 
 | Modulo | Su ajuste | Lo que aporta |
 |---|---|---|

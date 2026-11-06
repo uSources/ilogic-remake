@@ -5,5 +5,9 @@ import type { RuleModule } from './hooks';
 export const PASS_ALLIES: RuleModule = {
   id: 'passAllies',
   isOn: (settings) => settings.passAllies,
-  hooks: { passRules: [{ id: 'allies', passage: ({ s, mover }, other) => (areEnemies(s, other, mover) ? null : 'passThrough') }] },
+  hooks: {
+    passRules: [
+      { id: 'allies', passage: ({ s, mover }, other) => (areEnemies(s, other, mover) ? null : 'passThrough'), allies: 'passThrough' },
+    ],
+  },
 };

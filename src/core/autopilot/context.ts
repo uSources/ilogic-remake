@@ -11,7 +11,7 @@ import { moveBudget } from '../rules/movementProfile';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rules/distance';
-import { letsTeammatesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules/passage';
+import { letsAlliesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules/passage';
 import type { PassRule } from '../ruleModules/hooks';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
@@ -55,12 +55,12 @@ export const PLANS_WITH_WHAT_IT_SEES: PassRule = UNSEEN_FOES_UNNOTICED;
 
 /**
  * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
- * [CAMBIO] En grupo, si las reglas de paso le dejan atravesar a los suyos, mide con esas reglas y
+ * [CAMBIO] En grupo, si las reglas de paso dejan atravesar a los aliados, mide con esas reglas y
  * con lo que ve (PLANS_WITH_WHAT_IT_SEES): antes una columna en un puente o en la salida de la
  * Fabrica dejaba a las de detras "sin camino" a nada y paseaban al azar en casa.
  */
 export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
-  return play.group && letsTeammatesThrough(s, unit) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
+  return play.group && letsAlliesThrough(s) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
 }
 
 /** Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con lo que le corta el paso (blockersFor). */

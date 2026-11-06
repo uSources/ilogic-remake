@@ -140,6 +140,12 @@ export interface PassContext {
 export interface PassRule {
   readonly id: string;
   passage(context: PassContext, other: Unit): Passage | null;
+  /**
+   * Lo que dice de cualquier unidad aliada (de la alianza de quien se mueve), sin mirar cual, si lo
+   * dice igual para todas: asi se pregunta sin una unidad de ejemplo (letsAlliesThrough). Si no lo
+   * pone, la regla no dice nada general de los aliados.
+   */
+  readonly allies?: Passage;
 }
 
 /** Donde tiene que pararse quien se mueve por los enemigos de los que sabe (la zona de control). */

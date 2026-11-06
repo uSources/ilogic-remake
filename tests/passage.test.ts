@@ -4,7 +4,7 @@ import { defaultContent } from '@core/content/default';
 import {
   distanceMap,
   hooksOf,
-  letsTeammatesThrough,
+  letsAlliesThrough,
   moveRulesOf,
   newUnit,
   passBlockers,
@@ -36,7 +36,7 @@ describe('reglas de paso', () => {
     const ally = newUnit(s, TANK, 0, { x: 6, y: 10 });
     const hidden = newUnit(s, SOLDIER, 1, { x: 18, y: 18 });
     const seen = newUnit(s, SOLDIER, 1, { x: 5, y: 11 });
-    expect(letsTeammatesThrough(s, mover)).toBe(true);
+    expect(letsAlliesThrough(s)).toBe(true);
     const blocks = passBlockers(s, mover);
     expect([ally, hidden, seen].map((unit) => blocks(unit))).toEqual([false, true, true]);
     const notSeen = passBlockers(s, mover, [{ id: 'blind', passage: ({ sees }, other) => (sees(other) ? null : 'unnoticed') }]);
@@ -44,7 +44,7 @@ describe('reglas de paso', () => {
     expect(distanceMap(s, mover, MoveType.VEHICLE, blocks).at({ x: 7, y: 10 })).toBe(2);
 
     const closed = blankState({ fog: true, ambush: false, passAllies: false, forestHides: true });
-    expect(letsTeammatesThrough(closed, newUnit(closed, TANK, 0, { x: 5, y: 10 }))).toBe(false);
+    expect(letsAlliesThrough(closed)).toBe(false);
   });
 
   it('un aliado se atraviesa, un enemigo a la vista cierra el paso y uno escondido no se sabe que esta', () => {

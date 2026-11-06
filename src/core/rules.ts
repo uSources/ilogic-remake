@@ -93,7 +93,7 @@ export {
 export { traverse, moveAlong, moveEvent, endsInterrupted, type Traversal } from './rules/traverse';
 export { distanceMap, noBlockers, unitsBlock, type Blockers, type DistanceMap } from './rules/distance';
 export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
-export { letsTeammatesThrough, passBlockers, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
+export { letsAlliesThrough, passBlockers, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
 export {
   fireOrigins,
   attackTargets,

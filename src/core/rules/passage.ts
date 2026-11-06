@@ -95,6 +95,6 @@ export function passBlockers(s: GameState, mover: Unit, firstRules: readonly Pas
   return (pos) => blocked.at(pos);
 }
 
-/** Las reglas de paso de la partida dejan a `mover` atravesar a los de su equipo (ella misma sirve de muestra). */
-export const letsTeammatesThrough = (s: GameState, mover: Unit): boolean =>
-  passageOf(hooksOf(s, 'passRules'), passContext(s, mover), mover) === 'passThrough';
+/** Las reglas de paso de la partida dejan atravesar a los aliados: lo dice la primera que habla de ellos (`allies`). */
+export const letsAlliesThrough = (s: GameState): boolean =>
+  hooksOf(s, 'passRules').find((rule) => rule.allies !== undefined)?.allies === 'passThrough';
