@@ -7,8 +7,8 @@ import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { defeatReason, isWinner, takesTurn } from '../../core/rules';
-import { enemiesOf, teamIds } from '../../core/teams';
+import { fallOf, isWinner, lastFallen, takesTurn } from '../../core/rules';
+import { areAllied, enemiesOf, teamIds } from '../../core/teams';
 import type { EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
@@ -54,16 +54,34 @@ export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
   return isWinner(result, viewer) ? 'won' : 'lost';
 }
 
-/** Como acaba para esta pantalla: lo que ve el que mira (ganada, perdida o empate) y por que. */
+/**
+ * Como acaba para esta pantalla: lo que ve el que mira (ganada, perdida o empate), por que y de
+ * quien, visto por el, fue la caida que lo decidio (`fallenBy`: suya, de un aliado o de un enemigo;
+ * null si no la decidio una caida: el limite de dias, el objetivo). Asi «te has rendido» solo lo lee
+ * quien se rindio.
+ */
 export interface ScreenEnd {
   outcome: EndOutcome;
   reason: EndReason;
+  fallenBy: FallenBy | null;
+}
+
+/** De quien es una caida, para quien mira. */
+export type FallenBy = 'own' | 'ally' | 'enemy';
+
+/** De quien, visto por `viewer`, es la ultima caida apuntada (la que decide), o null si no hay. */
+function lastFallBy(s: GameState, viewer: TeamId): FallenBy | null {
+  const fallen = lastFallen(s);
+  if (!fallen.length) return null;
+  if (fallen.includes(viewer)) return 'own';
+  return fallen.some((team) => areAllied(s, viewer, team)) ? 'ally' : 'enemy';
 }
 
 /** El final de una partida decidida (`matchResult`), visto por `viewer`. */
-export const endOfResult = (result: Exclude<MatchResult, { status: 'playing' }>, viewer: TeamId): ScreenEnd => ({
+export const endOfResult = (s: GameState, result: Exclude<MatchResult, { status: 'playing' }>, viewer: TeamId): ScreenEnd => ({
   outcome: outcomeFor(result, viewer),
   reason: result.reason,
+  fallenBy: result.reason === 'days' || result.reason === 'objective' ? null : lastFallBy(s, viewer),
 });
 
 /**
@@ -71,7 +89,11 @@ export const endOfResult = (result: Exclude<MatchResult, { status: 'playing' }>,
  * entre los demas: nadie la mira, asi que se acaba para esta pantalla. Perdida, por lo que le paso
  * a `viewer` (rendirse, sin Base o sin nada); no es el resultado de la partida.
  */
-export const outOfMatchEnd = (s: GameState, viewer: TeamId): ScreenEnd => ({ outcome: 'lost', reason: defeatReason(s, viewer) });
+export const outOfMatchEnd = (s: GameState, viewer: TeamId): ScreenEnd => ({
+  outcome: 'lost',
+  reason: fallOf(s, viewer)?.reason ?? 'wipeout',
+  fallenBy: 'own',
+});
 
 /** Queda alguna persona de esta pantalla (`isPerson`) que sigue jugando. */
 export const aPersonStillPlays = (s: GameState, isPerson: (team: TeamId) => boolean): boolean =>
@@ -163,7 +185,7 @@ export class EndOfMatch {
     this.celebrate(won, focus);
     await host.wait(reducedMotion() ? CELEBRATION_REDUCED_MS : CELEBRATION_MS);
     if (match !== host.match) return;
-    this.showEndScreen(outcome, reason, mission, bestBefore);
+    this.showEndScreen(end, mission, bestBefore);
   }
 
   /** Camara a la jugada que lo ha decidido. false si entre medias se ha cambiado de partida. */
@@ -202,7 +224,7 @@ export class EndOfMatch {
   }
 
   /** La pantalla del final, con el resumen y sus botones. */
-  private showEndScreen(outcome: EndOutcome, reason: EndReason, mission: MissionDef | undefined, bestBefore: number | null): void {
+  private showEndScreen({ outcome, reason, fallenBy }: ScreenEnd, mission: MissionDef | undefined, bestBefore: number | null): void {
     const s = this.host.state;
     const won = outcome === 'won';
     this.buttons = endButtonsFor(mission, outcome);
@@ -215,6 +237,7 @@ export class EndOfMatch {
         day: s.day,
         stats: endStatsVM(s, viewer),
         reason,
+        fallenBy,
         score: endScoreVM(s, viewer),
         mission: mission ? mission.title[settings.lang] : null,
         chart: armyChartVM(s, viewer),

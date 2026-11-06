@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_MODES, gameModeOf } from '@core/modes';
-import { defeatReason, isWinner, matchResult, newUnit, VICTORY_RULES } from '@core/rules';
+import { currentDefeat, isWinner, matchResult, newUnit, restoreInvariants, VICTORY_RULES } from '@core/rules';
 import { buildMission, missionById } from '@core/missions';
 import { defaultContent } from '@core/content/default';
 import type { GameModeId, VictoryRuleId } from '@core/model';
-import { act, blankState, BLANK_DICE_SEED, hqId, resultFor, unitTypeNamed } from './helpers';
+import { act, blankState, BLANK_DICE_SEED, expectRejected, hqId, resultFor, unitTypeNamed } from './helpers';
 
 /** Quita al equipo su Base (con eso ha perdido) y le deja una unidad: ha caido por la Base, no por quedarse sin nada. */
 const takeHeadquarters = (s: ReturnType<typeof blankState>, team: number) => {
   s.buildings = s.buildings.filter((building) => !(building.owner === team && building.type === hqId()));
   newUnit(s, unitTypeNamed('Soldier'), team, { x: 1 + team, y: 10 });
+  // Como tras una accion o una ronda: las INVARIANTS apuntan la caida (el resultado solo lee eso).
+  restoreInvariants(s, null);
 };
 
 describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
@@ -59,14 +61,27 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
     expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'surrender' });
   });
 
-  it('por que cae un equipo: rendirse, sin nada (antes que sin Base) o sin Base', () => {
+  it('por que cae un equipo: rendirse, sin nada (antes que sin Base) o sin Base; en pie, null', () => {
     const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    expect(currentDefeat(s, 1)).toBeNull();
     s.buildings = s.buildings.filter((building) => building.owner !== 1);
-    expect(defeatReason(s, 1)).toBe('wipeout');
+    expect(currentDefeat(s, 1)).toBe('wipeout');
     newUnit(s, unitTypeNamed('Soldier'), 1, { x: 4, y: 4 });
-    expect(defeatReason(s, 1)).toBe('hq');
+    expect(currentDefeat(s, 1)).toBe('hq');
     act(s, 2, { kind: 'surrender' });
-    expect(defeatReason(s, 2)).toBe('surrender');
+    expect(currentDefeat(s, 2)).toBe('surrender');
+  });
+
+  it('el resultado solo lee las caidas apuntadas: una partida cambiada sin las INVARIANTS es un fallo', () => {
+    const s = blankState();
+    s.buildings = s.buildings.filter((building) => !(building.owner === 1 && building.type === hqId()));
+    expect(() => matchResult(s)).toThrow(/sin ninguna caida apuntada/);
+  });
+
+  it('rendirse no vale donde la partida no se puede perder (el laboratorio)', () => {
+    const s = blankState();
+    s.mode = 'sandbox';
+    expectRejected(s, 0, { kind: 'surrender' }, 'cannotLose');
   });
 
   it('[CAMBIO] si caen todos a la vez, empate (en 2013 perdia el jugador)', () => {

@@ -12,7 +12,8 @@ import { SQUAD_KEYS } from './squads/naming';
 import { isStandingOrderKind } from './squads/standingOrders';
 import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
-import type { DefeatReason, GeneralState, SavedGameState } from './model';
+import { isDefeatReason } from './rules/falls';
+import type { GeneralState, SavedGameState } from './model';
 import { Grid, type GridBounds } from './util/grid';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
@@ -83,12 +84,9 @@ function cleanGeneral(content: GameContent, saved: unknown): GeneralState | null
   return { id: definition.id, charge, used: !!saved.used, reveal: !!saved.reveal };
 }
 
-/** Por que puede caer un equipo (TeamFall.reason). */
-const DEFEAT_REASONS: readonly unknown[] = ['surrender', 'wipeout', 'hq'] satisfies readonly DefeatReason[];
-
-/** Cuando y por que cayo un equipo (o null, si sigue en pie). */
+/** Cuando y por que cayo un equipo (o null, si sigue en pie). Que cuadre con la partida lo mira readSave (fallsMatch). */
 const isTeamFall = (fell: unknown): boolean =>
-  fell === null || (isObject(fell) && isInt(fell.order, 1, MAX_COUNT) && DEFEAT_REASONS.includes(fell.reason));
+  fell === null || (isObject(fell) && isInt(fell.order, 1, MAX_COUNT) && isDefeatReason(fell.reason));
 
 /** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */
 function isValidTeam(content: GameContent, team: unknown, id: number): boolean {

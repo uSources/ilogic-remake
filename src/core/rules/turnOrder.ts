@@ -7,7 +7,7 @@
  * nada, y no hace falta un caso aparte. Es botin para los demas: lo pueden capturar o destruir.
  */
 import type { GameState, TeamId } from '../model';
-import { isDefeated } from './victory';
+import { isDefeated } from './falls';
 
 /** El equipo aun juega sus turnos (no ha perdido). */
 export const takesTurn = (s: GameState, team: TeamId): boolean => !isDefeated(s, team);

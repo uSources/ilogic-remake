@@ -3,8 +3,8 @@
  * sueltas. Una entrada por modo (el tipo obliga a tenerlas todas): como se acaba (`victory`, en
  * orden: la primera regla que decide, manda), en que orden juegan los equipos cada ronda
  * (`turnOrder`), las reglas que el modo impone (`fixedRules`), sus pasos propios al empezar y
- * acabar cada turno (`turnPhases`, detras de los de todos) y si la sesion marca para guardar el
- * empezar del turno de una persona (`saves`). Como se prepara cada uno (su mapa, sus
+ * acabar cada turno (`turnPhases`, detras de los de todos) y si la partida se guarda (`saves`: a
+ * mano y, si quien juega quiere, sola al empezar el turno de una persona). Como se prepara cada uno (su mapa, sus
  * equipos) esta en `MATCH_SETUPS` (core/match.ts), que necesita el generador de mapas y las
  * misiones; aqui solo lo que leen las reglas y la sesion.
  */

@@ -1,3 +1,4 @@
+import type { DefeatReason } from './defeat';
 import type { TeamId } from './team';
 
 /**
@@ -20,13 +21,10 @@ export type GameModeId = 'skirmish' | 'mission' | 'sandbox';
 export type VictoryRuleId = 'lastAllianceStanding' | 'objective' | 'dayLimit';
 
 /**
- * Por que se ha acabado una partida: un equipo rival sin Base ('hq') o sin nada ('wipeout'), uno
- * que se ha rendido ('surrender'), el objetivo de la mision ('objective') o el limite de dias ('days').
+ * Por que se ha acabado una partida: la caida que la decide (`DefeatReason`: sin Base, sin nada o
+ * rendido), el objetivo de la mision ('objective') o el limite de dias ('days').
  */
-export type EndReason = 'hq' | 'wipeout' | 'surrender' | 'objective' | 'days';
-
-/** Por que cae un equipo: se ha rendido, se ha quedado sin nada o sin su Base. */
-export type DefeatReason = Extract<EndReason, 'surrender' | 'wipeout' | 'hq'>;
+export type EndReason = DefeatReason | 'objective' | 'days';
 
 /**
  * Como va una partida, igual para todos: sigue ('playing'), se ha decidido ('decided': `winners`,

@@ -1,5 +1,5 @@
 import type { GeneralState } from './general';
-import type { DefeatReason } from './match';
+import type { TeamFall } from './defeat';
 import type { TeamStats } from './stats';
 
 /**
@@ -34,13 +34,7 @@ export interface TeamState {
   resigned: boolean;
   /**
    * Cuando y por que cayo (null: sigue en pie, o cayo antes de que se apuntara). Lo apunta dispatch
-   * (`noteFallenTeams`) en la accion en que cae: el resultado de la partida mira la ultima caida.
+   * (`recordFalls`, una de las INVARIANTS) en la accion en que cae: el resultado de la partida mira la ultima caida.
    */
   fell: TeamFall | null;
-}
-
-/** La caida de un equipo: la `order`-esima (los que caen en la misma accion comparten numero) y por que. */
-export interface TeamFall {
-  order: number;
-  reason: DefeatReason;
 }

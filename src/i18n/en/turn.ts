@@ -10,6 +10,7 @@ export const turn: Translation<typeof es> = {
   handoffHint: 'Hand over the device. Nobody else should look at the screen until the button is pressed.',
   handoffReady: 'Start my turn',
   teamOut: 'Team {n} is out of the match',
+  teamsOut: 'Teams {n} are out of the match',
   youAreOut: 'You are out of the match',
   saved: 'Game saved',
   confirmQuit: 'Press Esc again to quit to the menu',

@@ -78,6 +78,8 @@ export type ActionRejection =
   | 'sessionOnly'
   /** El equipo ya ha perdido (ver isDefeated): no juega mas. */
   | 'defeated'
+  /** La partida no se puede perder (su modo no tiene forma de acabar): rendirse no vale. */
+  | 'cannotLose'
   /** Una unidad, edificio o escuadra que nombra no existe (o no hay ninguna). */
   | 'missing'
   /** Es de otro equipo. */

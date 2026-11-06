@@ -13,7 +13,7 @@ import { autoCapturers, roundReport, unitById, type RoundReport } from '../../co
 import { serialize } from '../../core/save';
 import { playMatch, replaySession, type ActedStep, type GameSession, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
-import { isHostile } from '../../core/teams';
+import { isHostile, shownTeamNumber } from '../../core/teams';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
@@ -110,6 +110,9 @@ function unitWithSquad(s: GameState, unit: Unit): string {
   return nameOf(unitTypeOf(s, unit)) + (squad ? ` (${squad.name})` : '');
 }
 
+/** La ultima caida apuntada de la partida (0 si no ha caido nadie). */
+const lastFallOrder = (s: GameState): number => Math.max(0, ...s.teams.map((team) => team.fell?.order ?? 0));
+
 export class TurnFlow {
   /** Esta jugando (o repitiendose) el turno de otro equipo. */
   othersPlaying = false;
@@ -122,6 +125,11 @@ export class TurnFlow {
   private replays = new Map<TeamId, { before: GameState; from: number }>();
   /** Donde miraba cada persona al acabar su turno (con varias en esta pantalla, cada una vuelve a lo suyo). */
   private cameras = new Map<TeamId, SavedCamera>();
+  /**
+   * Hasta que caida (`TeamFall.order`) habia visto cada persona al acabar su turno: al volver a mirar
+   * se le avisa de los equipos que han caido mientras no miraba (con varias en esta pantalla).
+   */
+  private seenFalls = new Map<TeamId, number>();
   private endArmedAt = NOT_ARMED;
   /** El equipo al que le toca ahora si no es el que mira (null: el turno es suyo). */
   private otherTeam: TeamId | null = null;
@@ -134,6 +142,7 @@ export class TurnFlow {
     this.replaying = false;
     this.replays = new Map();
     this.cameras = new Map();
+    this.seenFalls = new Map();
     this.endArmedAt = NOT_ARMED;
     this.otherTeam = null;
   }
@@ -205,6 +214,7 @@ export class TurnFlow {
     const match = host.match;
     host.abandonSelection();
     this.cameras.set(host.viewer, this.saveCamera());
+    this.seenFalls.set(host.viewer, lastFallOrder(host.session.state));
     host.phase = 'busy';
     this.replays.set(host.viewer, { before: cloneState(host.session.state), from: host.session.log.length });
     host.session.finishInput(host.viewer);
@@ -259,7 +269,18 @@ export class TurnFlow {
     summary.ordersDone = [];
     summary.arrived = [];
     this.lookFromOwnPlace(team);
+    this.tellFallsSince(team);
     host.refresh();
+  }
+
+  /** Avisa a la persona que vuelve a mirar de los equipos que han caido mientras no miraba. */
+  private tellFallsSince(viewer: TeamId): void {
+    const s = this.host.session.state;
+    const seen = this.seenFalls.get(viewer) ?? 0;
+    const fallen = s.teams.filter((team) => team.id !== viewer && (team.fell?.order ?? 0) > seen);
+    if (!fallen.length) return;
+    const numbers = fallen.map((team) => shownTeamNumber(team.id)).join(', ');
+    showToast(t(fallen.length === 1 ? 'teamOut' : 'teamsOut').replace('{n}', numbers));
   }
 
   /** La camara de una persona que empieza a mirar: donde lo dejo, o la primera vez, su Base. */

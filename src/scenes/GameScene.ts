@@ -56,7 +56,7 @@ import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } 
 import { startMatch } from './game/matchSetup';
 import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
-import { EventPlayer, type PlaybackHost } from './game/playback';
+import { EventPlayer, showFallNotice, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
 import { aPersonStillPlays, EndOfMatch, endOfResult, endViewer, outOfMatchEnd, setEndFilter, type EndHost } from './game/endOfMatch';
 import { GeneralPowers, type PowerHost } from './game/powers';
@@ -696,7 +696,7 @@ export class GameScene extends Phaser.Scene {
     const isPerson = (team: TeamId) => this.session.isPerson(team);
     if (result.status !== 'playing') {
       this.viewer = endViewer(result, this.viewer, teamIds(this.s).filter(isPerson));
-      void this.endScreen.finish(endOfResult(result, this.viewer));
+      void this.endScreen.finish(endOfResult(this.s, result, this.viewer));
       return true;
     }
     if (aPersonStillPlays(this.s, isPerson)) return false;
@@ -723,7 +723,8 @@ export class GameScene extends Phaser.Scene {
    */
   private surrender(): void {
     this.toMap();
-    this.act({ kind: 'surrender' });
+    // `act` no anima sus sucesos: el aviso de la caida (la suya) se da aqui.
+    for (const event of this.act({ kind: 'surrender' }) ?? []) if (event.kind === 'teamDefeated') showFallNotice(event, this.viewer);
     if (!this.checkEnd()) void this.turns.endOwnTurn();
   }
 

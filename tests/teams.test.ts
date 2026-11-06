@@ -26,6 +26,7 @@ import {
   unitById,
   visibility,
   roundReport,
+  restoreInvariants,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import {
@@ -185,10 +186,12 @@ describe('cuatro equipos en dos alianzas', () => {
     // Cae el equipo 1, pero su aliado 3 sigue: nadie ha ganado aun.
     s.units = s.units.filter((unit) => unit.team !== 1);
     s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    restoreInvariants(s, null);
     expect(perTeam(s, (team) => isDefeated(s, team))).toEqual([false, true, false, false]);
     expect(matchResult(s).status).toBe('playing');
     expect(standingTeams(s)).toEqual([0, 2, 3]);
     s.buildings.find((building) => building.owner === 3)!.owner = 2;
+    restoreInvariants(s, null);
     expect(matchResult(s)).toEqual({ status: 'decided', winners: [0, 2], reason: 'hq' });
     expect(perTeam(s, (team) => resultFor(s, team))).toEqual(['won', 'lost', 'won', 'lost']);
   });
@@ -198,6 +201,8 @@ describe('cuatro equipos en dos alianzas', () => {
     const loses = (team: number) => {
       s.units = s.units.filter((unit) => unit.team !== team);
       s.buildings = s.buildings.filter((building) => building.owner !== team);
+      // Como tras una accion: las INVARIANTS apuntan la caida.
+      restoreInvariants(s, null);
     };
     loses(1);
     expect(perTeam(s, (team) => isDefeated(s, team))).toEqual([false, true, false]);

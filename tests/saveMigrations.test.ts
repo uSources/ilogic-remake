@@ -280,20 +280,19 @@ describe('partidas guardadas con el formato 5', () => {
  * `TeamState.fell`): dos personas y la IA, la primera persona rendida en su turno del dia 1.
  */
 describe('partida guardada con el formato 6', () => {
-  it('se lee sin saber cuando cayo nadie; la siguiente accion apunta la caida de quien ya habia caido', () => {
+  it('se lee sin saber cuando cayo nadie; al cargarla se apunta, sin suceso, la caida de quien ya habia caido', () => {
     const json = fixture('hotseat-resigned-v6');
     expect(JSON.parse(json).version).toBe(6);
     const s = loadGame(json)!;
     expect(s.version).toBe(SAVE_VERSION);
     expect(s.teams.map((team) => [team.resigned, team.fell])).toEqual([
-      [true, null],
+      [true, { order: 1, reason: 'surrender' }],
       [false, null],
       [false, null],
     ]);
     const unit = s.units.find((candidate) => candidate.team === s.turn && candidate.turnState === 'ready')!;
     const events = act(s, s.turn, { kind: 'wait', uid: unit.uid });
-    expect(events.at(-1)).toEqual({ kind: 'teamDefeated', actor: s.turn, team: 0, reason: 'surrender' });
-    expect(s.teams[0]!.fell).toEqual({ order: 1, reason: 'surrender' });
+    expect(events.some((event) => event.kind === 'teamDefeated')).toBe(false);
     expect(serialize(loadGame(serialize(s))!)).toBe(serialize(s));
   });
 

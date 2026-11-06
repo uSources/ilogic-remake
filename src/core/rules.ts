@@ -28,6 +28,7 @@
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
  * | `undo` | los movimientos que se pueden deshacer (`undoableMoves`): apuntarlos, olvidarlos y por que no se puede |
+ * | `falls` | si un equipo ha caido y por que (`currentDefeat`, `isDefeated`) y cuando cayo (`recordFalls`, `fallOf`) |
  * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
  * | `victory` | como acaba la partida (`VICTORY_RULES`, `matchResult`), derrota de un equipo, puntos, objetivo de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
@@ -122,14 +123,12 @@ export { inControlZone, teamsInZone, controlRound, type ControlReport } from './
 export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';
+export { currentDefeat, DEFEAT_REASONS, fallOf, isDefeated, lastFallen, recordFalls } from './rules/falls';
 export {
-  defeatReason,
-  noteFallenTeams,
   score,
   allianceScore,
   rivalScore,
   dayLimitReached,
-  isDefeated,
   isMatchOver,
   isWinner,
   matchResult,

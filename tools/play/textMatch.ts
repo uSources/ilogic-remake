@@ -6,7 +6,7 @@
  * lo que pasa solo al acabar y empezar cada turno, igual.
  */
 import { aiTurn } from '@core/ai';
-import { playerTeam, teamIds, teamState, teamValue } from '@core/teams';
+import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
@@ -35,7 +35,7 @@ import {
 import { serialize } from '@core/save';
 import { controllersFor } from '@core/controllers';
 import { GameSession, runMatch, type ActedStep } from '@core/session';
-import type { GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
+import type { DefeatReason, GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -415,6 +415,9 @@ function describeAll(s: GameState, events: Iterable<GameEvent>, prefix: string):
   return lines;
 }
 
+/** Por que cae un equipo, en una palabra o dos. */
+const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'sin nada', surrender: 'rendido' };
+
 /** Un suceso en una linea, o null si no merece la pena contarlo. */
 function describe(s: GameState, event: GameEvent): string | null {
   const name = (uid: number) => {
@@ -440,6 +443,10 @@ function describe(s: GameState, event: GameEvent): string | null {
       return `${name(event.uid)} repara a ${event.repairs.length}`;
     case 'power':
       return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
+    case 'surrender':
+      return `el equipo ${shownTeamNumber(event.actor)} se rinde`;
+    case 'teamDefeated':
+      return `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`;
     default:
       // Esperar, ordenes, escuadras, viajes y el fin de ronda (eso lo resume endTurn) no se cuentan.
       return null;

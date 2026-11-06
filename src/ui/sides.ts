@@ -4,7 +4,7 @@
  * equipo: asi da igual cual sea el equipo que mira (o cuantos equipos haya).
  */
 import type { GameState, TeamId } from '../core/model';
-import { areAllied } from '../core/teams';
+import { areAllied, shownTeamNumber } from '../core/teams';
 import type { OwnerSide, Side } from '../hud/vm/common';
 import { PAL, PAL_MAP } from './palette';
 
@@ -57,5 +57,5 @@ export const sideLetter = (side: OwnerSide): 'b' | 'r' | 'i' => SIDE_LETTER[pain
  */
 export const unitSideLetter = (side: Side, active: boolean): 'b' | 'r' | 'i' => (isFriendly(side) && !active ? 'i' : sideLetter(side));
 
-/** El numero de un equipo como se enseña a las personas: contando desde 1 (el equipo 0 es el «equipo 1»). */
-export const shownTeamNumber = (team: TeamId): number => team + 1;
+/** El numero de un equipo como se enseña a las personas (core/teams.ts, que tambien usa la partida por texto). */
+export { shownTeamNumber };

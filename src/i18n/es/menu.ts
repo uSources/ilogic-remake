@@ -46,6 +46,7 @@ export const menu = {
   endDays: 'Por puntos al acabar el límite de días',
   endSurrender: 'Te has rendido',
   endEnemySurrender: 'El enemigo se ha rendido',
+  endAllySurrender: 'Un aliado se ha rendido',
   endObjective: 'Objetivo de la misión',
   campaign: 'Campaña',
   locked: 'Termina la misión anterior para desbloquearla.',

@@ -8,6 +8,7 @@ export const turn = {
   handoffHint: 'Pasa el dispositivo. Que nadie más mire la pantalla hasta pulsar el botón.',
   handoffReady: 'Empezar mi turno',
   teamOut: 'El equipo {n} queda fuera de la partida',
+  teamsOut: 'Los equipos {n} quedan fuera de la partida',
   youAreOut: 'Quedas fuera de la partida',
   saved: 'Partida guardada',
   confirmQuit: 'Pulsa Esc otra vez para salir al menú',

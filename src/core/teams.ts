@@ -121,3 +121,6 @@ export function newTeams(setups: readonly TeamSetup[], initialFunds: number): Te
   if (allianceCount(teams) < 2) throw new Error('Una partida necesita al menos dos alianzas: si no, nadie es enemigo de nadie');
   return teams;
 }
+
+/** El numero de un equipo como se enseña a las personas: contando desde 1 (el equipo 0 es el «equipo 1»). */
+export const shownTeamNumber = (team: TeamId): number => team + 1;

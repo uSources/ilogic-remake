@@ -661,10 +661,14 @@ const animatePower: Animator<'power'> = async (stage, event) => {
  * pantalla, para que la que ha caido lo sepa aunque no le toque mirar).
  */
 const announceDefeat: Animator<'teamDefeated'> = async (stage, event) => {
-  const own = event.team === stage.viewer;
-  showToast(own ? t('youAreOut') : t('teamOut').replace('{n}', String(shownTeamNumber(event.team))));
+  showFallNotice(event, stage.viewer);
   await stage.wait(DEFEAT_NOTICE_MS);
 };
+
+/** El aviso de que un equipo ha caido, visto por `viewer` («Quedas fuera» o «El equipo N queda fuera»). */
+export function showFallNotice(event: GameEventOf<'teamDefeated'>, viewer: TeamId): void {
+  showToast(event.team === viewer ? t('youAreOut') : t('teamOut').replace('{n}', String(shownTeamNumber(event.team))));
+}
 
 /** Esperar no se anima. */
 const noAnimation = async (): Promise<void> => {};

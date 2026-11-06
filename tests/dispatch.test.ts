@@ -10,7 +10,7 @@ import {
   isValidAction,
   ORDER_OPTIONS,
 } from '@core/actions';
-import { canCaptureAt, endRound, INVARIANTS, newUnit, roundReport, targetProblem, unitById } from '@core/rules';
+import { canCaptureAt, endRound, INVARIANTS, newUnit, restoreInvariants, roundReport, targetProblem, unitById } from '@core/rules';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';
@@ -310,6 +310,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
     expectRejected(s, 0, { kind: 'wait', uid: soldier.uid }, 'defeated');
     s.buildings = s.buildings.filter((building) => building.owner !== 1);
+    restoreInvariants(s, null);
     expectRejected(s, 0, { kind: 'endTurn' }, 'matchOver');
   });
 

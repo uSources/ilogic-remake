@@ -138,7 +138,7 @@ export function endRound(s: GameState): GameEvent[] {
   const events = ROUND_PHASES.flatMap((phase) => phase.run(s));
   // Al final, con todo ya cobrado y pagado, lo mismo que tras cada accion (el tope de dinero, el
   // deshacer de la ronda que acaba, capturas cuya unidad se ha ido...).
-  return [...events, ...restoreInvariants(s)];
+  return [...events, ...restoreInvariants(s, null)];
 }
 
 /** El resumen de una ronda para enseñarlo (ver RoundReport), sacado de los sucesos de endRound. */

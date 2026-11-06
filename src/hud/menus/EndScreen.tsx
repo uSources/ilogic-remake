@@ -2,7 +2,7 @@ import { fmtNum, t, type TextKey } from '../../settings';
 import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
-import { OWN, RIVALS, type BySide, type SideIndex } from '../vm/common';
+import { OWN, RIVALS, type BySide, type Side, type SideIndex } from '../vm/common';
 
 type EndVM = NonNullable<UIState['end']>;
 
@@ -46,9 +46,12 @@ function ArmyChart({ data }: { data: readonly BySide[] }) {
 
 const REASON = { hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', objective: 'endObjective', surrender: 'endSurrender' } as const;
 
-/** Por que ha acabado, para quien mira: «te has rendido» solo si ha perdido; si no, se ha rendido el otro. */
-export function reasonText(outcome: EndVM['outcome'], reason: keyof typeof REASON): TextKey {
-  if (reason === 'surrender' && outcome !== 'lost') return 'endEnemySurrender';
+/** Quien se rindio, para quien mira: el, un aliado o un enemigo (EndVM.fallenBy). */
+const SURRENDER_BY: Record<Side, TextKey> = { own: 'endSurrender', ally: 'endAllySurrender', enemy: 'endEnemySurrender' };
+
+/** Por que ha acabado, para quien mira: si fue por rendirse, «te has rendido» solo lo lee quien se rindio. */
+export function reasonText(reason: keyof typeof REASON, fallenBy: Side | null): TextKey {
+  if (reason === 'surrender') return SURRENDER_BY[fallenBy ?? 'enemy'];
   return REASON[reason];
 }
 
@@ -122,7 +125,7 @@ export function EndScreen({ end }: { end: EndVM }) {
       <div class="end-head">
         {end.mission && <span class="label">{end.mission}</span>}
         <span class="end-title">{endTitle(end)}</span>
-        {end.reason && <span class="end-reason">{t(reasonText(end.outcome, end.reason))}</span>}
+        {end.reason && <span class="end-reason">{t(reasonText(end.reason, end.fallenBy))}</span>}
       </div>
       <div class="px end-card">
         <div class="end-cols">

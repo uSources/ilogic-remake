@@ -48,6 +48,7 @@ export const menu: Translation<typeof es> = {
   endDays: 'On points when the day limit ran out',
   endSurrender: 'You surrendered',
   endEnemySurrender: 'The enemy surrendered',
+  endAllySurrender: 'An ally surrendered',
   endObjective: 'Mission objective',
   campaign: 'Campaign',
   locked: 'Finish the previous mission to unlock it.',

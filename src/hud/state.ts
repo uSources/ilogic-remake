@@ -93,6 +93,8 @@ export interface UIState {
     /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
     stats: EndStatsVM | null;
     reason: EndReason | null;
+    /** De quien, para quien mira, fue la caida que lo decidio (null: no lo decidio una caida). */
+    fallenBy: Side | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
     /** Puntos de su alianza y de la mejor enemiga. */
