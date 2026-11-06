@@ -18,6 +18,7 @@
         "commandPoints",
         "upkeep",
         "counterattack",
+        "damageModel",
         "damageSpread",
         "capturePoints",
         "hqCapturePoints",
@@ -68,9 +69,14 @@
           "description": "El defensor que sobrevive responde al ataque.",
           "type": "boolean"
         },
+        "damageModel": {
+          "description": "Como sale el daño: shotByShot = tirada original, un disparo por punto de vida; spread = daño esperado +- damageSpread.",
+          "type": "string",
+          "enum": ["shotByShot", "spread"]
+        },
         "damageSpread": {
-          "description": "null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %).",
-          "type": ["number", "null"],
+          "description": "Con damageModel spread: cuanto se aparta el daño del esperado, en tanto por uno (0.1 = 10 %).",
+          "type": "number",
           "minimum": 0,
           "maximum": 1
         },

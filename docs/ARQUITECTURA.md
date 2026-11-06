@@ -285,7 +285,7 @@ mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
   (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni
   escuadras ni teclas). Lo que la partida siempre guarda tiene que estar: no se rellena con valores
   por defecto (una regla que falta es `badSettings`).
-- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 8, atada al
+- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 9, atada al
   tipo de `GameState.version`) y **solo se lee la de ahora**: no hay migraciones. Mientras el juego no
   ha salido, cambiar lo que se guarda es subir la version, y las partidas guardadas con una de antes
   se descartan (`badVersion`): el menu no ofrece Continuar y, al intentar cargarla, se borra el hueco.

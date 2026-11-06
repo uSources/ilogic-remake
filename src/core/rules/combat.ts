@@ -9,14 +9,13 @@ import { buildingTypeOf, terrainAt } from '../gameContent';
 import { posOf } from '../geom';
 import { canFight, firesAfterMove, isAlive, areEnemies, isOnMap } from '../util/predicates';
 import type { HitModifier } from '../ruleModules/hooks';
-import { hooksOf } from '../ruleModules/ruleset';
+import { damageModelOf, hooksOf } from '../ruleModules/ruleset';
 import { rank } from './rank';
 import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { sightOf, type Sight } from './visibility';
 import { reversed, type Engagement } from './engagement';
-import { damageModelOf } from './damage';
 import { canStillFire } from './unitTurn';
 import { basePower, canDamage, inAttackRange } from './weapons';
 

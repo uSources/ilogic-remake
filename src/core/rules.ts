@@ -118,7 +118,7 @@ export {
   HIT_MODIFIERS,
 } from './rules/combat';
 export { RULE_MODULES, rulesetFor } from './ruleModules/registry';
-export { isRuleOn, hooksOf, resolveRuleset, type Ruleset, type HookOf } from './ruleModules/ruleset';
+export { isRuleOn, hooksOf, damageModelOf, resolveRuleset, type Ruleset, type HookOf } from './ruleModules/ruleset';
 export type {
   CombatStage,
   CombatStep,
@@ -144,7 +144,15 @@ export { inAttackRange, canDamage, basePower } from './rules/weapons';
 export { fallenIn, type AttackRecord } from './rules/attackRecord';
 export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
 export { combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
-export { damageDistribution, damageModelOf, SHOT_BY_SHOT, spreadAround, type DamageModel } from './rules/damage';
+export {
+  boundedDistribution,
+  DAMAGE_MODELS,
+  DAMAGE_MODEL_IDS,
+  damageModelFor,
+  SHOT_BY_SHOT,
+  spreadAround,
+  type DamageModel,
+} from './rules/damage';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';
 export {

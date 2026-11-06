@@ -5,7 +5,7 @@ import { defaultContent } from '@core/content/default';
 /** Reglas "basicas" para tests: los interruptores de reglas apagados (como variante de equilibrio). */
 export const PLAIN_SETTINGS: MatchSettings = settingsWith(defaultContent(), {
   counterattack: false,
-  damageSpread: null,
+  damageModel: 'shotByShot',
   hqCapturePoints: 20,
   veterancy: false,
   bounty: 0,

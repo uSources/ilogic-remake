@@ -16,6 +16,7 @@ import {
   hooksOf,
   roundPhasesOf,
   SHOT_BY_SHOT,
+  DAMAGE_MODELS,
   spreadAround,
   damageModelOf,
   canCounter,
@@ -134,9 +135,12 @@ describe('modelos de daño (DamageModel)', () => {
     for (const roll of [0, 0.5, 0.999]) expect(distribution[model.roll(50, 0.5, { roll: () => roll })]).toBeGreaterThan(0);
   });
 
-  it('la partida elige el suyo con damageSpread', () => {
-    expect(damageModelOf(blankState(settingsWith(defaultContent(), { damageSpread: null })))).toBe(SHOT_BY_SHOT);
-    expect(damageModelOf(blankState(TEST_SETTINGS))).not.toBe(SHOT_BY_SHOT);
+  it('la partida elige el suyo con damageModel (DAMAGE_MODELS), construido una vez con sus modulos', () => {
+    expect(Object.keys(DAMAGE_MODELS)).toEqual(['shotByShot', 'spread']);
+    expect(damageModelOf(blankState(settingsWith(defaultContent(), { damageModel: 'shotByShot' })))).toBe(SHOT_BY_SHOT);
+    const s = blankState(TEST_SETTINGS);
+    expect(damageModelOf(s)).not.toBe(SHOT_BY_SHOT);
+    expect(damageModelOf(s)).toBe(damageModelOf(s));
   });
 });
 

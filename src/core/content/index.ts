@@ -24,7 +24,7 @@ import { Checker, uniqueIds } from './check';
 import { validateGenerals, type GeneralDef } from './generals';
 import { validateMapgen, type MapgenDef } from './mapgen';
 import { resolveContent, type Content, type ResolvedContent } from './resolve';
-import { validateSettings } from './settings';
+import { validateSettings, type SettingsFile } from './settings';
 import { validateTerrain } from './terrain';
 import { validateThemes, type ThemeDef } from './themes';
 import type { BuildingDef, ContentContext, TerrainDef, UnitDef } from './types';
@@ -52,7 +52,7 @@ export function readContentFiles(): Content {
     terrain: (terrainFile as unknown as { terrain: TerrainDef[] }).terrain,
     themes: (themesFile as unknown as { themes: ThemeDef[] }).themes,
     mapgen: mapgenFile as unknown as MapgenDef,
-    settings: settingsFile,
+    settings: settingsFile as unknown as SettingsFile,
     ai: aiFile,
     weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
     generals: (generalsFile as unknown as { generals: GeneralDef[] }).generals,

@@ -8,6 +8,7 @@ interface JsonSetting {
   type: string | string[];
   minimum?: number;
   maximum?: number;
+  enum?: string[];
 }
 
 const jsonSettings = (): Record<string, JsonSetting> =>
@@ -32,6 +33,10 @@ describe('SETTINGS_SCHEMA: una sola descripcion de las reglas validas', () => {
         expect(written.type, rule).toBe('boolean');
         continue;
       }
+      if (spec.kind === 'choice') {
+        expect([written.type, written.enum], rule).toEqual(['string', spec.options]);
+        continue;
+      }
       const type = spec.integer ? 'integer' : 'number';
       expect(written.type, rule).toEqual(spec.nullable ? [type, 'null'] : type);
       expect([written.minimum, written.maximum], rule).toEqual([spec.min, spec.max]);
@@ -46,5 +51,7 @@ describe('SETTINGS_SCHEMA: una sola descripcion de las reglas validas', () => {
     expect(isValidSetting(SETTINGS_SCHEMA.maxUnits, null)).toBe(false);
     expect(isValidSetting(SETTINGS_SCHEMA.fog, 1)).toBe(false);
     expect(isValidSettings({ ...defaultContent().defaultSettings, upkeep: 2 })).toBe(false);
+    expect(isValidSetting(SETTINGS_SCHEMA.damageModel, 'shotByShot')).toBe(true);
+    expect(isValidSetting(SETTINGS_SCHEMA.damageModel, 'dados')).toBe(false);
   });
 });

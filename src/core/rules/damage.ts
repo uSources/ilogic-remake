@@ -1,9 +1,10 @@
 /**
  * Como sale el daño de un ataque: la tirada y la probabilidad de cada resultado, escritas una vez por
  * modelo (`DamageModel`) para que la tirada del combate y la prevision no se separen. La partida
- * elige el suyo con el ajuste `damageSpread` (`damageModelOf`).
+ * elige el suyo con el ajuste `damageModel` (`DAMAGE_MODELS`); se construye una vez por partida, con
+ * sus modulos de reglas (`damageModelOf`, ruleModules/ruleset.ts).
  */
-import type { Dice, GameState } from '../model';
+import type { DamageModelId, Dice, MatchSettings } from '../model';
 
 /** Un modelo de daño: un atacante con `life` puntos de vida que acierta cada uno con probabilidad `chance` (0..1). */
 export interface DamageModel {
@@ -15,10 +16,11 @@ export interface DamageModel {
 
 /** El reparto despues de un disparo mas que acierta con probabilidad `chance`. */
 function afterOneMoreShot(distribution: readonly number[], chance: number): number[] {
-  return Array.from(
-    { length: distribution.length + 1 },
-    (_, hits) => (distribution[hits - 1] ?? 0) * chance + (distribution[hits] ?? 0) * (1 - chance),
-  );
+  const next: number[] = [];
+  // Con `hits` aciertos: los que ya habia y este falla, o uno menos y este acierta.
+  for (let hits = 0; hits <= distribution.length; hits++)
+    next.push((distribution[hits - 1] ?? 0) * chance + (distribution[hits] ?? 0) * (1 - chance));
+  return next;
 }
 
 /** Original: cada punto de vida es un disparo que acierta con probabilidad `chance` (binomial). */
@@ -61,12 +63,19 @@ export function spreadAround(spread: number): DamageModel {
   };
 }
 
-/** El modelo de daño de la partida: el original (disparo a disparo) o, con `damageSpread`, el esperado +- ese tanto. */
-export function damageModelOf(s: GameState): DamageModel {
-  return s.settings.damageSpread === null ? SHOT_BY_SHOT : spreadAround(s.settings.damageSpread);
-}
+/** Cada modelo de daño por su nombre (el ajuste `damageModel`), construido con los ajustes de la partida. */
+export const DAMAGE_MODELS: { readonly [Id in DamageModelId]: (settings: Readonly<MatchSettings>) => DamageModel } = {
+  shotByShot: () => SHOT_BY_SHOT,
+  spread: (settings) => spreadAround(settings.damageSpread),
+};
 
-/** La probabilidad de cada daño en esta partida (`life` no negativa y `chance` entre 0 y 1). */
-export function damageDistribution(s: GameState, life: number, chance: number): number[] {
-  return damageModelOf(s).distribution(Math.max(0, life), Math.min(1, Math.max(0, chance)));
+/** Los nombres de los modelos de daño (los que valen en el ajuste `damageModel`). */
+export const DAMAGE_MODEL_IDS = Object.keys(DAMAGE_MODELS) as readonly DamageModelId[];
+
+/** El modelo de daño de unos ajustes. */
+export const damageModelFor = (settings: Readonly<MatchSettings>): DamageModel => DAMAGE_MODELS[settings.damageModel](settings);
+
+/** La probabilidad de cada daño con ese modelo, con `life` llevada a no negativa y `chance` a 0..1. */
+export function boundedDistribution(model: DamageModel, life: number, chance: number): number[] {
+  return model.distribution(Math.max(0, life), Math.min(1, Math.max(0, chance)));
 }

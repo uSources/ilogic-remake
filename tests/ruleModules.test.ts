@@ -67,7 +67,10 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   it('se resuelven una vez por partida: al crearla, al leerla y al cambiar sus ajustes', () => {
     const s = blankState(DEFAULTS);
     expect(Object.isFrozen(s.ruleset)).toBe(true);
-    expect(s.ruleset).toEqual(rulesetFor(s, s.settings));
+    // El modelo de daño es una funcion hecha con los ajustes: se compara lo que reparte, no la funcion.
+    const { damageModel, ...rest } = rulesetFor(s, s.settings);
+    expect(s.ruleset).toMatchObject(rest);
+    expect(s.ruleset.damageModel.distribution(10, 0.5)).toEqual(damageModel.distribution(10, 0.5));
     const loaded = deserialize(serialize(s), defaultContent())!;
     expect(loaded.ruleset.modules.map((module) => module.id)).toEqual(s.ruleset.modules.map((module) => module.id));
     changeSettings(s, settingsWith(defaultContent(), { veterancy: false }));

@@ -13,8 +13,13 @@ export interface MatchSettings {
   upkeep: number;
   /** [CAMBIO] El defensor que sobrevive responde al ataque. */
   counterattack: boolean;
-  /** null = tirada original por punto de vida; numero = daño esperado +- ese tanto por uno (0.1 = 10 %). */
-  damageSpread: number | null;
+  /**
+   * Como sale el daño (DAMAGE_MODELS, rules/damage.ts): 'shotByShot' = la tirada original, un disparo por
+   * punto de vida; 'spread' = el daño esperado +- `damageSpread`.
+   */
+  damageModel: DamageModelId;
+  /** [CAMBIO] Con el modelo 'spread': cuanto se aparta el daño del esperado, en tanto por uno (0.1 = 10 %). */
+  damageSpread: number;
   /** Puntos de captura de un edificio y de la Base. */
   capturePoints: number;
   hqCapturePoints: number;
@@ -53,3 +58,6 @@ export interface MatchSettings {
   /** [CAMBIO] Tamaño de la zona de cada punto: casillas alrededor del centro (1 = zona de 3×3). */
   controlRadius: number;
 }
+
+/** Los modelos de daño que hay (cada uno es una entrada de DAMAGE_MODELS, rules/damage.ts). */
+export type DamageModelId = 'shotByShot' | 'spread';

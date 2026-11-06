@@ -11,7 +11,8 @@ import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
 import { reversed, type Engagement } from './engagement';
-import { damageDistribution } from './damage';
+import { boundedDistribution } from './damage';
+import { damageModelOf } from '../ruleModules/ruleset';
 import { isVisibleFoe, sightOf } from './visibility';
 import { canStillFire } from './unitTurn';
 
@@ -79,7 +80,7 @@ function counterDistribution(s: GameState, fight: Engagement, attackDist: readon
   for (const [damage, probability] of attackDist.entries()) {
     const lifeLeft = defenderLife - Math.min(damage, defenderLife);
     if (lifeLeft <= 0 || !probability) continue;
-    addWeighted(total, damageDistribution(s, lifeLeft, counterChance), probability);
+    addWeighted(total, boundedDistribution(damageModelOf(s), lifeLeft, counterChance), probability);
   }
   const counter = Array.from(total, (probability) => probability ?? 0);
   const noCounter = 1 - counter.reduce((sum, probability) => sum + probability, 0);
@@ -93,7 +94,7 @@ function counterDistribution(s: GameState, fight: Engagement, attackDist: readon
  */
 export function combatForecast(s: GameState, fight: Engagement): CombatForecast {
   const { attacker, defender } = fight;
-  const attackDist = damageDistribution(s, attacker.life, hitChance(s, fight));
+  const attackDist = boundedDistribution(damageModelOf(s), attacker.life, hitChance(s, fight));
   const main = summarize(attackDist, defender.life);
   const expected = Math.round(main.expected);
   let counter: CombatForecast['counter'] = null;

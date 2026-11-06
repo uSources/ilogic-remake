@@ -6,6 +6,7 @@
     "commandPoints": 30,
     "upkeep": 0.1,
     "counterattack": true,
+    "damageModel": "spread",
     "damageSpread": 0.1,
     "capturePoints": 20,
     "hqCapturePoints": 30,
