@@ -6,7 +6,7 @@
 /**
  * Por que cae un equipo: sin su Base ('hq'), sin nada, ni unidades ni edificios ('wipeout'), o se ha
  * rendido ('surrender'). La lista, en el orden en que cuentan si caen varios a la vez, es
- * DEFEAT_REASONS (rules/falls.ts: el modelo no tiene constantes).
+ * DEFEAT_PRIORITY (rules/falls.ts: el modelo no tiene constantes).
  */
 export type DefeatReason = 'hq' | 'wipeout' | 'surrender';
 

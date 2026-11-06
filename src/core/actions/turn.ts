@@ -13,6 +13,7 @@ import { assistTurn } from '../autopilot/standingOrders';
 import { gameModeOf, type TurnPhase } from '../modes';
 import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
+import { isMatchOver } from '../rules/victory';
 import { nextTurn } from '../rules/turnOrder';
 import { canMoveNow } from '../rules/unitTurn';
 import type { ActionRejection, ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
@@ -56,7 +57,13 @@ function runPhases(
   team: TeamId,
   perform: ActionDispatcher,
 ): GameEvent[] {
-  return [...common, ...(ofMode ?? [])].flatMap((phase) => phase.run(s, team, perform));
+  const events: GameEvent[] = [];
+  for (const phase of [...common, ...(ofMode ?? [])]) {
+    // Si un paso ha decidido la partida (una captura que sigue, una orden que gana), nadie hace nada mas.
+    if (isMatchOver(s)) break;
+    events.push(...phase.run(s, team, perform));
+  }
+  return events;
 }
 
 /** Pasa el turno al siguiente que juega; si con eso se da la vuelta al orden, antes acaba la ronda. */
@@ -82,10 +89,12 @@ export const TURN_ACTIONS: Pick<ActionRegistry, 'startTurn' | 'endTurn'> = {
   },
   endTurn: {
     validate: () => null,
-    apply: (s, team, _action, _dice, perform) => [
-      ...runPhases(TURN_END_PHASES, gameModeOf(s).turnPhases?.end, s, team, perform),
-      ...passTurn(s, team),
-    ],
+    // Si lo que pasa al acabar el turno decide la partida, el turno no se pasa: ni ronda nueva, ni
+    // ingresos, ni otro dia (la partida se queda en el dia y el turno en que se decidio).
+    apply: (s, team, _action, _dice, perform) => {
+      const phases = runPhases(TURN_END_PHASES, gameModeOf(s).turnPhases?.end, s, team, perform);
+      return isMatchOver(s) ? phases : [...phases, ...passTurn(s, team)];
+    },
   },
 };
 

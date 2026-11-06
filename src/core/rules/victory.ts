@@ -11,7 +11,7 @@ import { measureObjective, objectiveStatus, type ObjectiveProgress } from '../ob
 import { alliesOf, enemiesOf, teamIds, teamState } from '../teams';
 import { maxBy } from '../util/pick';
 import type { Building, EndReason, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
-import { DEFEAT_REASONS, fallOf, isDefeated, lastFallen } from './falls';
+import { isDefeated, lastFallen, mainFall } from './falls';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;
@@ -60,14 +60,13 @@ function oneTeamPerAlliance(s: GameState, teams: readonly TeamId[]): TeamId[] {
 /**
  * Por que se decide la partida: por la caida que la decide (la ultima apuntada, de entre `losers`),
  * no por una de antes. Si cayeron varios a la vez por motivos distintos, cuenta el primero de
- * DEFEAT_REASONS (perder la Base, quedarse sin nada, rendirse). Solo lee lo apuntado: una partida
+ * de mas prioridad (perder la Base, quedarse sin nada, rendirse: mainFall). Solo lee lo apuntado: una partida
  * cambiada sin pasar por las INVARIANTS (que apuntan las caidas) es un fallo de quien la cambio.
  */
 function lossReason(s: GameState, losers: readonly TeamId[]): EndReason {
-  const deciding = lastFallen(s).filter((team) => losers.includes(team));
-  if (!deciding.length) throw new Error('La partida se decide sin ninguna caida apuntada: se ha cambiado sin las INVARIANTS');
-  const reasons = deciding.map((team) => fallOf(s, team)?.reason);
-  return DEFEAT_REASONS.find((reason) => reasons.includes(reason)) ?? 'wipeout';
+  const deciding = mainFall(lastFallen(s).filter(({ team }) => losers.includes(team)));
+  if (!deciding) throw new Error('La partida se decide sin ninguna caida apuntada: se ha cambiado sin las INVARIANTS');
+  return deciding.fall.reason;
 }
 
 /** Gana la alianza de `team` (todos sus equipos, tambien los que hayan caido), por `reason`. */

@@ -10,7 +10,7 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, matchResult, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import type { GameSession, ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
@@ -58,7 +58,7 @@ import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, showFallNotice, type PlaybackHost } from './game/playback';
 import { TurnFlow, type TurnHost } from './game/turns';
-import { aPersonStillPlays, EndOfMatch, endOfResult, endViewer, outOfMatchEnd, setEndFilter, type EndHost } from './game/endOfMatch';
+import { EndOfMatch, endViewer, screenEndFor, setEndFilter, type EndHost } from './game/endOfMatch';
 import { GeneralPowers, type PowerHost } from './game/powers';
 import { restartLab, startLab, type LabHost } from './game/labMode';
 import { live, rw } from './game/host';
@@ -692,15 +692,13 @@ export class GameScene extends Phaser.Scene {
    * partida se cierra y se borra su guardado.
    */
   private checkEnd(): boolean {
-    const result = matchResult(this.s);
-    const isPerson = (team: TeamId) => this.session.isPerson(team);
-    if (result.status !== 'playing') {
-      this.viewer = endViewer(result, this.viewer, teamIds(this.s).filter(isPerson));
-      void this.endScreen.finish(endOfResult(this.s, result, this.viewer));
-      return true;
+    const end = this.session.screenEnd(this.viewer);
+    if (!end) return false;
+    if (end.kind === 'decided') {
+      const people = teamIds(this.s).filter((team) => this.session.isPerson(team));
+      this.viewer = endViewer(end.result, this.viewer, people);
     }
-    if (aPersonStillPlays(this.s, isPerson)) return false;
-    void this.endScreen.finish(outOfMatchEnd(this.s, this.viewer));
+    void this.endScreen.finish(screenEndFor(this.s, end, this.viewer));
     return true;
   }
 
@@ -723,9 +721,12 @@ export class GameScene extends Phaser.Scene {
    */
   private surrender(): void {
     this.toMap();
-    // `act` no anima sus sucesos: el aviso de la caida (la suya) se da aqui.
-    for (const event of this.act({ kind: 'surrender' }) ?? []) if (event.kind === 'teamDefeated') showFallNotice(event, this.viewer);
-    if (!this.checkEnd()) void this.turns.endOwnTurn();
+    const events = this.act({ kind: 'surrender' }) ?? [];
+    // Si con eso se acaba para esta pantalla, lo cuenta el final; si no, `act` no anima sus sucesos y
+    // el aviso de la caida (la suya) se da aqui.
+    if (this.checkEnd()) return;
+    for (const event of events) if (event.kind === 'teamDefeated') showFallNotice(event, this.viewer);
+    void this.turns.endOwnTurn();
   }
 
   /** Mientras juegan los demas no hay menu, pero se puede salir al menu principal (pulsando dos veces). */

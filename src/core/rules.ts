@@ -123,7 +123,18 @@ export { inControlZone, teamsInZone, controlRound, type ControlReport } from './
 export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';
-export { currentDefeat, DEFEAT_REASONS, fallOf, isDefeated, lastFallen, recordFalls } from './rules/falls';
+export {
+  currentDefeat,
+  fallenSince,
+  fallOf,
+  isDefeated,
+  isDefeatReason,
+  lastFallen,
+  lastFallOrder,
+  mainFall,
+  recordFalls,
+  type FallenTeam,
+} from './rules/falls';
 export {
   score,
   allianceScore,

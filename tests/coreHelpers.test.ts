@@ -113,6 +113,14 @@ describe('partidas guardadas', () => {
     ['JSON roto', () => '{'],
     ['version desconocida', () => serialize({ ...sample(), version: 8 as 7 })],
     [
+      'equipo caido sin caida apuntada',
+      () => {
+        const s = sample();
+        s.buildings = s.buildings.filter((building) => building.owner !== 0);
+        return serialize(s);
+      },
+    ],
+    [
       'caida apuntada de un equipo que sigue en pie',
       () => {
         const s = sample();

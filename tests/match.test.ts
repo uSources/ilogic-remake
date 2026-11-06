@@ -65,6 +65,12 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     ).toThrow(/dos equipos/);
   });
 
+  it('una partida que empezaria con un equipo ya caido (sin Base) es un fallo de su configuracion', () => {
+    const config = labMatch(defaultLab(), null);
+    const noHq = { ...config, buildings: config.buildings.filter((building) => building.owner !== 1) };
+    expect(() => createMatch(noHq)).toThrow(/empieza con el equipo 1 ya caido/);
+  });
+
   it('el laboratorio no tiene clima porque su modo lo impone, no porque lo pida', () => {
     const config = labMatch(defaultLab(), 'attack');
     expect(config.ruleChanges?.weather).toBeUndefined();

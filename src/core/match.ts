@@ -14,6 +14,7 @@ import { generateGame } from './mapgen';
 import { gameModeOf } from './modes';
 import { blankMap } from './mapGrid';
 import { buildMission, missionById } from './missions';
+import { assertAllStanding } from './rules/falls';
 import { newUnit } from './rules/lifecycle';
 import { rulesWith } from './rulesConfig';
 import { sampleArmy } from './stats';
@@ -175,6 +176,7 @@ function imposeModeRules(s: GameState, content: GameContent): void {
  */
 export function buildMatch(config: MatchConfig, context: MatchSetupContext): GameState {
   const s = setupOf(config)(config, context);
+  assertAllStanding(s);
   imposeModeRules(s, context.content);
   ensureWeather(s);
   sampleArmy(s);

@@ -10,7 +10,7 @@
 import { savedPart } from './gameContent';
 import { isEntryId, type GameContent } from './content';
 import { migrateChecked, migrateRead, type SaveContext } from './saveMigrations';
-import { fallsMatch, recordFalls } from './rules/falls';
+import { fallsMatch } from './rules/falls';
 import { SAVE_VERSION } from './saveVersion';
 import {
   boardOf,
@@ -84,11 +84,8 @@ export function readSave(json: string, context: SaveContext): ReadSaveResult {
   // El contenido es el de quien lee.
   const state: GameState = { ...cleanGame(saved, check), content: context.content };
   migrateChecked(state, version, context);
-  // Las caidas apuntadas tienen que cuadrar con la partida; las que no lo estaban (una partida de
-  // antes de apuntarlas, formato 6 o anterior) se apuntan ya, sin sucesos: asi lo que caiga despues
-  // es una caida posterior, y el final no culpa a una de antes.
+  // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
   if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
-  recordFalls(state, null);
   return { ok: true, state };
 }
 

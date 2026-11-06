@@ -9,6 +9,7 @@
  * las reglas de cada mision. Asi save.ts no depende del catalogo de misiones.
  */
 import { findEntry, type GameContent } from './content';
+import { recordFalls } from './rules/falls';
 import { rulesWith } from './rulesConfig';
 import type { GameState, Pos, RulesConfig, Squad, StandingOrder, StandingOrderKind, Unit } from './model';
 import { isObject } from './util/validation';
@@ -425,13 +426,22 @@ export const MIGRATIONS: readonly SaveMigration[] = [
     },
   },
   {
-    // Hasta el formato 6 no se apuntaba cuando caia un equipo: no se sabe (null). Si ya habia caido,
-    // la siguiente accion lo apunta (noteFallenTeams), como si cayera entonces.
+    // Hasta el formato 6 no se apuntaba cuando caia un equipo: no se sabe (null).
     name: 'cuando cayo cada equipo',
     upToVersion: 6,
     stage: 'read',
     apply: (raw) => {
       for (const team of listOf(raw.teams)) if (isObject(team)) team.fell ??= null;
+    },
+  },
+  {
+    // Y, ya con la partida comprobada, los que ya habian caido quedan apuntados (la primera caida),
+    // sin sucesos.
+    name: 'cuando cayo cada equipo: los ya caidos',
+    upToVersion: 6,
+    stage: 'checked',
+    apply: (s) => {
+      recordFalls(s, null);
     },
   },
   {

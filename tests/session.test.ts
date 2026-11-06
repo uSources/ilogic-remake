@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
-import { canMoveNow, moveRange, newUnit, reachableTiles, unitById } from '@core/rules';
+import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles, unitById } from '@core/rules';
 import { serialize } from '@core/save';
 import { aiController, controllersFor, type AiBrain } from '@core/controllers';
 import {
@@ -25,7 +25,7 @@ import { GAME_MODES } from '@core/modes';
 import { startsTurn } from '@core/actions';
 import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
-import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
+import { act, blankState, giveTurn, hqId, unitTypeNamed } from './helpers';
 import { PLAIN_RULES } from './plainRules';
 
 const fixture = (name: string) => readFileSync(`tests/fixtures/saves/${name}.json`, 'utf8');
@@ -439,6 +439,32 @@ describe('pasos de turno (actions/turn.ts) con las comprobaciones de dispatch', 
     expect(hq.owner).toBe(1);
   });
 
+  it('si lo que pasa al acabar el turno gana la partida, el turno no se pasa (ni ronda, ni dia, ni ingresos)', () => {
+    const s = blankState();
+    const hq = s.buildings.find((building) => building.owner === 1 && building.type === hqId())!;
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, hq);
+    hq.capture = { team: 0, uid: soldier.uid, left: 1 };
+    const funds = s.teams.map((team) => team.funds);
+    const events = act(s, 0, { kind: 'endTurn' });
+    expect(events.map((event) => event.kind)).toEqual(['capture', 'teamDefeated']);
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [0], reason: 'wipeout' });
+    expect([s.day, s.turn, s.turnStarted]).toEqual([1, 0, true]);
+    expect(s.teams.map((team) => team.funds)).toEqual(funds);
+  });
+
+  it('tambien si la gana una orden permanente: los pasos de despues ya no se hacen', () => {
+    const s = blankState();
+    const hq = s.buildings.find((building) => building.owner === 1 && building.type === hqId())!;
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, hq);
+    hq.capture = { team: 0, uid: soldier.uid, left: 1 };
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'capture', at: { x: hq.x, y: hq.y } } });
+    const events = act(s, 0, { kind: 'endTurn' });
+    expect(events.filter((event) => event.kind === 'capture')).toHaveLength(1);
+    expect(events.some((event) => event.kind === 'turnEnd' || event.kind === 'newDay')).toBe(false);
+    expect(matchResult(s).status).toBe('decided');
+    expect([s.day, s.turn]).toEqual([1, 0]);
+  });
+
   it('lo que captura sola una unidad al acabar el turno cuenta una vez en las estadisticas', () => {
     const s = blankState();
     s.buildings.push({ type: 'City', owner: null, x: 3, y: 3 });
@@ -462,7 +488,10 @@ describe('modos de juego (core/modes.ts)', () => {
       size: 12,
       ruleChanges: { weather: true },
       teams: duel('human', 'ai'),
-      buildings: [],
+      buildings: [
+        { type: hqId(), owner: 0, at: { x: 0, y: 0 } },
+        { type: hqId(), owner: 1, at: { x: 11, y: 11 } },
+      ],
       units: [],
       diceSeed: 1,
     });

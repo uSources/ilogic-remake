@@ -2,7 +2,7 @@ import { fmtNum, t, type TextKey } from '../../settings';
 import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
-import { OWN, RIVALS, type BySide, type Side, type SideIndex } from '../vm/common';
+import { OWN, RIVALS, type BySide, type SideIndex } from '../vm/common';
 
 type EndVM = NonNullable<UIState['end']>;
 
@@ -42,17 +42,6 @@ function ArmyChart({ data }: { data: readonly BySide[] }) {
       <path d={stepPath(data, OWN)} class="you" />
     </svg>
   );
-}
-
-const REASON = { hq: 'endHq', wipeout: 'endWipeout', days: 'endDays', objective: 'endObjective', surrender: 'endSurrender' } as const;
-
-/** Quien se rindio, para quien mira: el, un aliado o un enemigo (EndVM.fallenBy). */
-const SURRENDER_BY: Record<Side, TextKey> = { own: 'endSurrender', ally: 'endAllySurrender', enemy: 'endEnemySurrender' };
-
-/** Por que ha acabado, para quien mira: si fue por rendirse, «te has rendido» solo lo lee quien se rindio. */
-export function reasonText(reason: keyof typeof REASON, fallenBy: Side | null): TextKey {
-  if (reason === 'surrender') return SURRENDER_BY[fallenBy ?? 'enemy'];
-  return REASON[reason];
 }
 
 /** El titulo del final para quien mira: en una mision, cumplida o no; si no, victoria, derrota o empate. */
@@ -125,7 +114,7 @@ export function EndScreen({ end }: { end: EndVM }) {
       <div class="end-head">
         {end.mission && <span class="label">{end.mission}</span>}
         <span class="end-title">{endTitle(end)}</span>
-        {end.reason && <span class="end-reason">{t(reasonText(end.reason, end.fallenBy))}</span>}
+        {end.reasonText && <span class="end-reason">{t(end.reasonText)}</span>}
       </div>
       <div class="px end-card">
         <div class="end-cols">

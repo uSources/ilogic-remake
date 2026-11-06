@@ -1,23 +1,15 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
 import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
-import { mergeTargets, loadTargets, matchResult, moveRange, newUnit, restoreInvariants } from '@core/rules';
+import { mergeTargets, loadTargets, moveRange, newUnit, restoreInvariants } from '@core/rules';
 import type { GameState, MatchResult, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import {
-  aPersonStillPlays,
-  endButtonsFor,
-  endFocus,
-  endOfResult,
-  endViewer,
-  outcomeFor,
-  outOfMatchEnd,
-} from '../src/scenes/game/endOfMatch';
+import { endButtonsFor, endFocus, endViewer, outcomeFor, reasonText, screenEndFor } from '../src/scenes/game/endOfMatch';
+import { fallsNoticeFor } from '../src/scenes/game/turns';
 import { canUseMenuButton } from '../src/hud/game/turn';
-import { reasonText } from '../src/hud/menus/EndScreen';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { duel } from '@core/teams';
@@ -304,27 +296,35 @@ describe('escena: tabla de fases (game/phases)', () => {
 });
 
 describe('escena: rendirse sin personas en juego y salir mientras juegan los demas', () => {
-  it('sin personas en juego la partida se acaba para la pantalla: perdida, por rendirse o por caer', () => {
+  /** Una sesion con estas personas (las demas, quietas): como la de la escena. */
+  const withPeople = (s: GameState, people: readonly number[]) =>
+    new GameSession(
+      s,
+      s.teams.map((team) => (people.includes(team.id) ? humanController() : passiveController())),
+    );
+
+  it('sin personas en juego la partida se acaba para la pantalla (GameSession.screenEnd): perdida, por rendirse o por caer', () => {
     const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
-    const isPerson = (team: number) => team === 0;
-    expect(aPersonStillPlays(s, isPerson)).toBe(true);
+    const session = withPeople(s, [0]);
+    expect([session.personStillPlays(), session.screenEnd(0)]).toEqual([true, null]);
     act(s, 0, { kind: 'surrender' });
-    expect(aPersonStillPlays(s, isPerson)).toBe(false);
-    expect(outOfMatchEnd(s, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
-    // Sin rendirse: cae y quedan dos IA. Sin nada (ni Base) es 'wipeout'; sin Base pero con algo, 'hq'.
+    expect(session.personStillPlays()).toBe(false);
+    const out = session.screenEnd(0)!;
+    expect(out).toEqual({ kind: 'out', team: 0, fall: { order: 1, reason: 'surrender' } });
+    expect(screenEndFor(s, out, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
+    // Sin rendirse: cae y quedan dos IA. Sin nada (ni Base) es 'wipeout'; el motivo es el apuntado al caer.
     const fallen = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     fallen.buildings = fallen.buildings.filter((building) => building.owner !== 0);
-    expect(aPersonStillPlays(fallen, isPerson)).toBe(false);
     restoreInvariants(fallen, null);
-    expect(outOfMatchEnd(fallen, 0)).toEqual({ outcome: 'lost', reason: 'wipeout', fallenBy: 'own' });
-    // El motivo es el apuntado al caer, aunque la partida cambie despues.
     newUnit(fallen, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
-    expect(outOfMatchEnd(fallen, 0)).toEqual({ outcome: 'lost', reason: 'wipeout', fallenBy: 'own' });
+    expect(screenEndFor(fallen, withPeople(fallen, [0]).screenEnd(0)!, 0)).toEqual({ outcome: 'lost', reason: 'wipeout', fallenBy: 'own' });
     // Con dos personas, si cae una la otra sigue jugando.
     const hotSeat = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
     act(hotSeat, 0, { kind: 'surrender' });
-    expect(aPersonStillPlays(hotSeat, (team) => team === 0 || team === 1)).toBe(true);
-    // 2 contra 2: se rinde el aliado de quien mira; para el enemigo, se ha rendido el enemigo.
+    expect(withPeople(hotSeat, [0, 1]).screenEnd(1)).toBeNull();
+  });
+
+  it('el final de una partida decidida segun quien mira: 2 contra 2, se rinden los dos de una alianza', () => {
     const pairs = blankState({}, [
       { controller: 'human', alliance: 0 },
       { controller: 'ai', alliance: 1 },
@@ -333,19 +333,33 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     ]);
     act(pairs, 0, { kind: 'surrender' });
     act(pairs, 2, { kind: 'surrender' });
-    const result = matchResult(pairs);
-    expect(result).toEqual({ status: 'decided', winners: [1, 3], reason: 'surrender' });
-    if (result.status === 'playing') return;
-    expect(endOfResult(pairs, result, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'ally' });
-    expect(endOfResult(pairs, result, 2)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
-    expect(endOfResult(pairs, result, 1)).toEqual({ outcome: 'won', reason: 'surrender', fallenBy: 'enemy' });
+    const end = withPeople(pairs, [0]).screenEnd(0)!;
+    expect(end).toEqual({ kind: 'decided', result: { status: 'decided', winners: [1, 3], reason: 'surrender' } });
+    expect(screenEndFor(pairs, end, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'ally' });
+    expect(screenEndFor(pairs, end, 2)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
+    expect(screenEndFor(pairs, end, 1)).toEqual({ outcome: 'won', reason: 'surrender', fallenBy: 'enemy' });
   });
 
   it('el motivo del final, para quien mira: «te has rendido» solo para quien se rindio', () => {
-    expect(reasonText('surrender', 'own')).toBe('endSurrender');
-    expect(reasonText('surrender', 'ally')).toBe('endAllySurrender');
-    expect(reasonText('surrender', 'enemy')).toBe('endEnemySurrender');
-    expect(reasonText('hq', 'enemy')).toBe('endHq');
+    expect(reasonText({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' })).toBe('endSurrender');
+    expect(reasonText({ outcome: 'lost', reason: 'surrender', fallenBy: 'ally' })).toBe('endAllySurrender');
+    expect(reasonText({ outcome: 'won', reason: 'surrender', fallenBy: 'enemy' })).toBe('endEnemySurrender');
+    expect(reasonText({ outcome: 'won', reason: 'hq', fallenBy: 'enemy' })).toBe('endHq');
+    expect(reasonText({ outcome: 'won', reason: 'days' })).toBe('endDays');
+  });
+
+  it('con varias personas, la que vuelve a mirar se entera de las caidas que no vio (una, varias, ya vistas no)', () => {
+    const s = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    expect(fallsNoticeFor(s, 1, 0)).toBeNull();
+    act(s, 0, { kind: 'surrender' });
+    expect(fallsNoticeFor(s, 1, 0)).toEqual({ key: 'teamOut', numbers: '1' });
+    // La propia no se cuenta, y lo ya visto tampoco.
+    expect(fallsNoticeFor(s, 0, 0)).toBeNull();
+    expect(fallsNoticeFor(s, 1, 1)).toBeNull();
+    s.turn = 2;
+    act(s, 2, { kind: 'surrender' });
+    expect(fallsNoticeFor(s, 1, 0)).toEqual({ key: 'teamsOut', numbers: '1, 3' });
+    expect(fallsNoticeFor(s, 1, 1)).toEqual({ key: 'teamOut', numbers: '3' });
   });
 
   it('el menu de pausa: en el laboratorio (no se acaba ni se guarda) ni guardar ni rendirse', () => {

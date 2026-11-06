@@ -2,8 +2,8 @@
  * Lo que tiene que ser verdad en una partida despues de cada accion y al acabar cada ronda.
  * `dispatch` y `endRound` las repasan todas, en orden, al acabar: asi ninguna accion ni ningun paso
  * de la ronda tiene que acordarse de limpiar lo que deja atras (una unidad muerta, una captura cuya
- * unidad se ha ido, una escuadra sin nadie, dinero de mas) ni de apuntar quien ha caido. Una regla nueva que deje algo que limpiar
- * es una entrada mas aqui.
+ * unidad se ha ido, una escuadra sin nadie, dinero de mas) ni de apuntar quien ha caido. Una regla
+ * nueva que deje algo que limpiar o apuntar es una entrada mas aqui.
  */
 import { squadEvent } from '../squads/events';
 import { pruneSquads } from '../squads/membership';

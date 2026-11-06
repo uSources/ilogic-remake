@@ -33,8 +33,8 @@ export interface TeamState {
   /** Se ha rendido (la accion 'surrender'): cuenta como derrotado, aunque le quede de todo. */
   resigned: boolean;
   /**
-   * Cuando y por que cayo (null: sigue en pie, o cayo antes de que se apuntara). Lo apunta dispatch
-   * (`recordFalls`, una de las INVARIANTS) en la accion en que cae: el resultado de la partida mira la ultima caida.
+   * Cuando y por que cayo (null: sigue en pie). Lo apunta la invariante 'falls' (`recordFalls`) en la
+   * accion o la ronda en que cae; el resultado de la partida mira la ultima caida.
    */
   fell: TeamFall | null;
 }

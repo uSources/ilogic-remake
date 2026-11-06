@@ -25,7 +25,6 @@ import {
   endsInAmbush,
   moveRange,
   isWinner,
-  matchResult,
   reachableTiles,
   unitAt,
   unitById,
@@ -105,13 +104,16 @@ export class TextMatch {
   /** Apunta lo que pasa: los sucesos que se cuentan (con quien los hace) y lo del fin de ronda. */
   private note(step: ActedStep): void {
     if (step.events.some((event) => event.kind === 'newDay')) this.lastRound = step.events;
-    const prefix = step.team === this.me ? 'tu: ' : `equipo ${step.team}: `;
+    const prefix = step.team === this.me ? 'tu: ' : `equipo ${shownTeamNumber(step.team)}: `;
     this.told.push(...describeAll(this.s, step.events, prefix));
   }
 
-  /** La partida sigue sola hasta que le toca a una persona (desde entonces se juega con ella) o se acaba. */
+  /**
+   * La partida sigue sola hasta que le toca a una persona (desde entonces se juega con ella), se acaba
+   * o ya no juega ninguna persona (se acaba para esta pantalla, como en el juego: GameSession.screenEnd).
+   */
   private advance(): void {
-    const step = runMatch(this.session);
+    const step = runMatch(this.session, { until: () => !this.session.personStillPlays() });
     if (step.kind === 'awaitingInput') this.me = step.team;
   }
 
@@ -165,6 +167,10 @@ export class TextMatch {
         case 'ai':
         case 'ia':
           return this.endTurn(true);
+        case 'surrender':
+        case 'rendirse':
+          this.perform({ kind: 'surrender' }, 'no puede rendirse');
+          return this.endTurn(false);
         case 'status':
         case 'estado':
           return this.status();
@@ -316,7 +322,7 @@ export class TextMatch {
     this.advance();
     out.push(...this.told);
     out.push(this.dayLine(before));
-    if (this.me !== before) out.push(`--- turno del equipo ${this.me}`);
+    if (this.me !== before) out.push(`--- turno del equipo ${shownTeamNumber(this.me)}`);
     const result = this.result();
     if (result !== 'sigue') out.push(`FIN: ${result}`);
     return out.join('\n');
@@ -337,8 +343,10 @@ export class TextMatch {
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
   private result(): string {
-    const result = matchResult(this.s);
-    if (result.status === 'playing') return 'sigue';
+    const end = this.session.screenEnd(this.me);
+    if (!end) return 'sigue';
+    if (end.kind === 'out') return `perdida (${DEFEAT_TEXT[end.fall.reason]}; los demas siguen sin personas)`;
+    const { result } = end;
     if (result.status === 'draw') return `empate (${result.reason})`;
     return `${isWinner(result, this.me) ? 'ganada' : 'perdida'} (${result.reason})`;
   }
@@ -470,6 +478,7 @@ const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   power [id] [x y]         poder del general (con --general; sin id, carga y lista)
   end                      fin de turno: juega la IA enemiga y empieza el dia siguiente
   ai                       la IA juega tu turno y el enemigo el suyo
+  surrender                rendirse (y siguen los demas, si queda alguna persona)
   status                   dia, dinero, edificios y unidades
   state                    partida en JSON (para guardarla o abrirla en el juego)
-Tambien en español: mapa, unidades, unidad, mover, atacar, capturar, esperar, comprar, fin, ia, estado.`;
+Tambien en español: mapa, unidades, unidad, mover, atacar, capturar, esperar, comprar, fin, ia, rendirse, estado.`;

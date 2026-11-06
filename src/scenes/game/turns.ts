@@ -9,7 +9,7 @@ import { startsTurn } from '../../core/actions';
 import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
-import { autoCapturers, roundReport, unitById, type RoundReport } from '../../core/rules';
+import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
 import { playMatch, replaySession, type ActedStep, type GameSession, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
@@ -110,8 +110,16 @@ function unitWithSquad(s: GameState, unit: Unit): string {
   return nameOf(unitTypeOf(s, unit)) + (squad ? ` (${squad.name})` : '');
 }
 
-/** La ultima caida apuntada de la partida (0 si no ha caido nadie). */
-const lastFallOrder = (s: GameState): number => Math.max(0, ...s.teams.map((team) => team.fell?.order ?? 0));
+/**
+ * El aviso para quien vuelve a mirar (`viewer`) de los equipos que han caido desde la caida `seen`,
+ * la ultima que vio (sin contar la suya): uno («El equipo N queda fuera») o varios; null si ninguno.
+ */
+export function fallsNoticeFor(s: GameState, viewer: TeamId, seen: number): { key: 'teamOut' | 'teamsOut'; numbers: string } | null {
+  const fallen = fallenSince(s, seen).filter(({ team }) => team !== viewer);
+  if (!fallen.length) return null;
+  const numbers = fallen.map(({ team }) => shownTeamNumber(team)).join(', ');
+  return { key: fallen.length === 1 ? 'teamOut' : 'teamsOut', numbers };
+}
 
 export class TurnFlow {
   /** Esta jugando (o repitiendose) el turno de otro equipo. */
@@ -214,7 +222,7 @@ export class TurnFlow {
     const match = host.match;
     host.abandonSelection();
     this.cameras.set(host.viewer, this.saveCamera());
-    this.seenFalls.set(host.viewer, lastFallOrder(host.session.state));
+    this.markFallsSeen(host.viewer);
     host.phase = 'busy';
     this.replays.set(host.viewer, { before: cloneState(host.session.state), from: host.session.log.length });
     host.session.finishInput(host.viewer);
@@ -244,6 +252,8 @@ export class TurnFlow {
       addToSummary(summary, host.session.state, host.viewer, step);
       this.autosave(step);
       await this.show(step);
+      // Quien mira ha visto el aviso de los que caen en este paso.
+      if (step.events.some((event) => event.kind === 'teamDefeated')) this.markFallsSeen(host.viewer);
       return this.continues(match);
     });
     this.otherTeam = null;
@@ -264,6 +274,8 @@ export class TurnFlow {
    */
   private async switchPerson(team: TeamId, summary: TurnSummary): Promise<void> {
     const host = this.host;
+    // La que deja de mirar lo ha visto todo hasta aqui.
+    this.markFallsSeen(host.viewer);
     await host.handOver(team);
     host.viewer = team;
     summary.ordersDone = [];
@@ -275,12 +287,14 @@ export class TurnFlow {
 
   /** Avisa a la persona que vuelve a mirar de los equipos que han caido mientras no miraba. */
   private tellFallsSince(viewer: TeamId): void {
-    const s = this.host.session.state;
-    const seen = this.seenFalls.get(viewer) ?? 0;
-    const fallen = s.teams.filter((team) => team.id !== viewer && (team.fell?.order ?? 0) > seen);
-    if (!fallen.length) return;
-    const numbers = fallen.map((team) => shownTeamNumber(team.id)).join(', ');
-    showToast(t(fallen.length === 1 ? 'teamOut' : 'teamsOut').replace('{n}', numbers));
+    const notice = fallsNoticeFor(this.host.session.state, viewer, this.seenFalls.get(viewer) ?? 0);
+    if (notice) showToast(t(notice.key).replace('{n}', notice.numbers));
+    this.markFallsSeen(viewer);
+  }
+
+  /** `viewer` ha visto las caidas hasta la ultima apuntada. */
+  private markFallsSeen(viewer: TeamId): void {
+    this.seenFalls.set(viewer, lastFallOrder(this.host.session.state));
   }
 
   /** La camara de una persona que empieza a mirar: donde lo dejo, o la primera vez, su Base. */

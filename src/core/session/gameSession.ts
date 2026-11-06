@@ -11,10 +11,12 @@
 import { dispatch, isAnyTime } from '../actions/dispatch';
 import { sessionOnlyProblem, startsTurn } from '../actions/turn';
 import type { ActionDispatcher } from '../actions/types';
+import { fallOf } from '../rules/falls';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
-import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../model';
+import { teamIds } from '../teams';
+import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamFall, TeamId } from '../model';
 import type { Controller, TurnPlan, TurnStep } from './controller';
 import { isOffTurnAction, type LoggedAction } from './log';
 
@@ -38,6 +40,13 @@ interface TurnInPlay {
   plan: TurnPlan;
   reply: ActionResult | undefined;
 }
+
+/**
+ * Como se acaba la partida para quien mira (GameSession.screenEnd): decidida, o fuera (ya no juega
+ * ninguna persona) con la caida de quien mira.
+ */
+export type ScreenEndOf =
+  { kind: 'decided'; result: Exclude<MatchResult, { status: 'playing' }> } | { kind: 'out'; team: TeamId; fall: TeamFall };
 
 /** Lo que se le puede dar a una sesion ademas de sus controladores. */
 export interface SessionOptions {
@@ -80,6 +89,26 @@ export class GameSession {
   /** El equipo lo juega una persona en esta pantalla (la sesion la espera en su turno). */
   isPerson(team: TeamId): boolean {
     return this.controllerOf(team).person === true;
+  }
+
+  /** Queda alguna persona de esta pantalla que sigue jugando. */
+  personStillPlays(): boolean {
+    return teamIds(this.state).some((team) => this.isPerson(team) && takesTurn(this.state, team));
+  }
+
+  /**
+   * Si la partida se ha acabado para quien mira en esta pantalla (`viewer`, una persona), y como: se
+   * ha decidido (su resultado), o sigue pero ya no juega ninguna persona (todas han caido o se han
+   * rendido y quedan otros equipos: nadie la miraria) y `viewer` esta fuera, con su caida. Lo miran la
+   * escena y la partida por texto, asi acaban igual (K4). null: sigue.
+   */
+  screenEnd(viewer: TeamId): ScreenEndOf | null {
+    const result = this.result;
+    if (result.status !== 'playing') return { kind: 'decided', result };
+    if (this.personStillPlays()) return null;
+    const fall = fallOf(this.state, viewer);
+    if (!fall) throw new Error(`El equipo ${viewer} mira la partida sin ninguna persona en juego, pero no ha caido`);
+    return { kind: 'out', team: viewer, fall };
   }
 
   /**

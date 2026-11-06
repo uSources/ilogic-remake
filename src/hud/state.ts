@@ -1,4 +1,5 @@
-import type { EndReason, RulesConfig } from '../core/model';
+import type { RulesConfig } from '../core/model';
+import type { TextKey } from '../settings';
 import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
@@ -92,9 +93,8 @@ export interface UIState {
     day: number;
     /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
     stats: EndStatsVM | null;
-    reason: EndReason | null;
-    /** De quien, para quien mira, fue la caida que lo decidio (null: no lo decidio una caida). */
-    fallenBy: Side | null;
+    /** Por que ha acabado, ya visto por quien mira (endOfMatch.ts: reasonText), o null. */
+    reasonText: TextKey | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
     /** Puntos de su alianza y de la mejor enemiga. */
