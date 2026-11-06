@@ -5,10 +5,7 @@
 import { themeOf } from '../core/gameContent';
 import type { MenuCommand } from '../controls/menu';
 import { defaultContent } from '../core/content/default';
-import { entryOf } from '../core/content';
-import { seededRng } from '../core/util/random';
-import { generateGame } from '../core/mapgen';
-import { duel } from '../core/teams';
+import { createMatch } from '../core/defaultGames';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
 import { nameOf, settings, t, type TextKey } from '../settings';
 import type { TerrainPalette } from '../ui/terrainColors';
@@ -26,9 +23,8 @@ import {
   type ChoiceKey,
   type NewGameOptions,
   type PresetId,
-  ruleChangesFor,
+  matchConfigFor,
 } from '../setup';
-import { rulesWith } from '../core/rulesConfig';
 import { navGrid } from './nav';
 import { mapThumb } from './thumb';
 
@@ -186,14 +182,8 @@ export class SetupScreen {
   // --- Vista previa y codigo -------------------------------------------------------------------
 
   private refreshPreview(): void {
-    const { size, theme } = this.options;
-    const s = generateGame(seededRng(this.seed), {
-      size,
-      theme: theme === null ? null : entryOf(defaultContent().themes, theme, 'tema'),
-      rules: rulesWith(defaultContent(), ruleChangesFor(this.options)),
-      content: defaultContent(),
-      teams: duel('human', 'ai'),
-    });
+    const { size } = this.options;
+    const s = createMatch(matchConfigFor(this.options, this.seed));
     this.thumb = mapThumb(s, this.host.palette, { px: thumbTileSize(size) });
     const themeName = nameOf(themeOf(s));
     const buildings = settings.lang === 'es' ? 'edificios' : 'buildings';

@@ -16,7 +16,8 @@ import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { createGame } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
 import { endRound, isMatchOver, isWinner, matchResult, turnTakers } from '@core/rules';
 import { armyValue } from '@core/stats';
@@ -45,7 +46,7 @@ export type DuelWinner = 'first' | 'second' | null;
 /** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
 export function playDuel(seed: number, brains: [Brain, Brain], size: number, maxDays: number): DuelWinner {
   const rng = seededRng(seed);
-  const s = createGame(rng, { size, teams: duel('ai', 'ai') });
+  const s = createMatch(skirmishConfig({ seed, size, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
   const brainOf = (team: TeamId): Brain => {
     if (team === first) return brains[0];

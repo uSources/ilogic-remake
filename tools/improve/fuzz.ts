@@ -9,7 +9,8 @@
 import { duel } from '@core/teams';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/util/random';
-import { createGame } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { endRound, isMatchOver, turnTakers } from '@core/rules';
 import { serialize } from '@core/save';
 import type { GameState, TeamId } from '@core/model';
@@ -29,7 +30,10 @@ export interface FuzzFailure {
 /** Una partida: cada bando juega al azar o con la IA (sorteado por turno). Devuelve el fallo o null. */
 export function fuzzGame(seed: number, options: { size?: number; days?: number; log?: (line: string) => void } = {}): FuzzFailure | null {
   const rng = seededRng(seed);
-  const s: GameState = createGame(rng, { size: options.size ?? 20, ruleChanges: { fog: seed % 3 === 0 }, teams: duel('ai', 'ai') });
+  const s: GameState = createMatch(
+    skirmishConfig({ seed, size: options.size ?? 20, ruleChanges: { fog: seed % 3 === 0 }, teams: duel('ai', 'ai') }),
+    rng,
+  );
   let before = serialize(s);
   let fail: FuzzFailure | null = null;
   const check = (team: TeamId, action: string) => {

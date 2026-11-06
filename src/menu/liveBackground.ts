@@ -2,7 +2,8 @@ import type Phaser from 'phaser';
 import { aiTurn } from '../core/ai';
 import { seededRng } from '../core/util/random';
 import { createLayer, mapGrid } from '../core/mapGrid';
-import { createGame } from '../core/defaultGames';
+import { createMatch } from '../core/defaultGames';
+import { skirmishConfig } from '../core/match';
 import { endRound, isMatchOver, othersAfter } from '../core/rules';
 import { duel, playerTeam } from '../core/teams';
 import type { GameEvent, GameState, Pos, TeamId } from '../core/model';
@@ -99,7 +100,7 @@ export class LiveBackground {
   start(): void {
     const seed = randomSeed();
     this.rng = seededRng(seed ^ AI_SEED_MIX);
-    this.game = createGame(seededRng(seed), { size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') });
+    this.game = createMatch(skirmishConfig({ seed, size: MAP_SIZE, ruleChanges: BACKGROUND_RULE_CHANGES, teams: duel('ai', 'ai') }));
     if (!this.view) this.view = new MapView(this.scene);
     this.view.buildTerrain(this.game);
     const first = playerTeam(this.game);

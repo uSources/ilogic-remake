@@ -3,6 +3,7 @@
  */
 import { defaultContent } from './core/content/default';
 import { entryOf } from './core/content';
+import { skirmishConfig, type SkirmishConfig } from './core/match';
 import type { RulesConfig } from './core/model';
 import { fmtNum, nameOf, settings } from './settings';
 
@@ -117,6 +118,23 @@ export function saveOptions(options: NewGameOptions): void {
   } catch {
     // sin almacenamiento
   }
+}
+
+/**
+ * La partida nueva de estas opciones con el mapa de `seed`: la persona (con su general) contra la
+ * IA (con el suyo). Es la misma que da la misma semilla en `npm run play` (skirmishConfig).
+ */
+export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishConfig {
+  return skirmishConfig({
+    seed,
+    size: options.size,
+    theme: options.theme,
+    ruleChanges: ruleChangesFor(options),
+    teams: [
+      { controller: 'human', general: options.general },
+      { controller: 'ai', general: options.enemyGeneral },
+    ],
+  });
 }
 
 /** Lo que las opciones cambian de las reglas de siempre (`rulesWith(contenido, ruleChangesFor(opciones))`). */

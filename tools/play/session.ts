@@ -5,15 +5,16 @@
  * terminar el turno, en orden.
  */
 import { aiTurn } from '@core/ai';
-import { duel, duelTeams, notAiControlledReason, playerTeam, teamIds, teamState, teamValue } from '@core/teams';
+import { notAiControlledReason, playerTeam, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
-import { createGame, loadGame } from '@core/defaultGames';
+import { createMatch, loadGame } from '@core/defaultGames';
+import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
-import { appointGeneral, generalOf, newGeneral } from '@core/generals';
-import { buildMission, missionById } from '@core/missions';
+import { generalOf } from '@core/generals';
+import { missionById } from '@core/missions';
 import {
   attackTargets,
   buildingAt,
@@ -59,9 +60,11 @@ const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', F
 
 export interface SessionOptions {
   seed?: number;
+  /** Lado del mapa (si no, el de una partida nueva del juego: DEFAULT_MAP_SIZE). */
   size?: number;
   /** Tema (id de themes.json: Plains, Desert, Forest, Swamp, Snowy) o null al azar. */
   theme?: string | null;
+  /** Con niebla (si no se dice, como en el juego: la de las reglas por defecto). */
   fog?: boolean;
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */
@@ -86,35 +89,7 @@ export class Session {
   constructor(options: SessionOptions = {}) {
     const seed = options.seed ?? 1;
     this.rng = seededRng(seed ^ 0x9e3779b9);
-    if (options.state) {
-      const s = loadGame(options.state);
-      if (!s) throw new Error('Partida guardada no valida');
-      this.s = s;
-    } else if (options.mission) {
-      const mission = missionById(options.mission);
-      if (!mission) throw new Error(`No existe la mision "${options.mission}"`);
-      this.s = buildMission(mission, defaultContent(), seed);
-    } else {
-      this.s = createGame(seededRng(seed), {
-        size: options.size ?? 20,
-        theme: options.theme ?? null,
-        ruleChanges: { fog: options.fog ?? false },
-        teams: duel('human', 'ai'),
-      });
-      const pick = (team: TeamId, id: string | undefined) => {
-        if (!id) return;
-        if (!newGeneral(this.s, id))
-          throw new Error(
-            `No existe el general "${id}" (${defaultContent()
-              .generals.list.map((general) => general.id)
-              .join(', ')})`,
-          );
-        appointGeneral(this.s, team, id);
-      };
-      const [mine, enemy] = duelTeams(this.s);
-      pick(mine, options.general);
-      pick(enemy, options.enemyGeneral);
-    }
+    this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
   }
 
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
@@ -359,6 +334,42 @@ export class Session {
 }
 
 class UsageError extends Error {}
+
+/** La partida guardada (si no es valida, para aqui). */
+function loadedGame(json: string): GameState {
+  const s = loadGame(json);
+  if (!s) throw new Error('Partida guardada no valida');
+  return s;
+}
+
+/** Un general que no existe para aqui; ninguno (undefined), sin general. */
+function checkedGeneral(id: string | undefined): string | null {
+  if (!id) return null;
+  const known = defaultContent().generals.list.map((general) => general.id);
+  if (!known.includes(id)) throw new Error(`No existe el general "${id}" (${known.join(', ')})`);
+  return id;
+}
+
+/**
+ * La partida que se pide: la mision, o una escaramuza con lo mismo que el juego en lo que no se
+ * dice (skirmishConfig: mapa, reglas). Asi la misma semilla da la misma partida aqui y en la pantalla (K4).
+ */
+function matchConfigOf(options: SessionOptions, seed: number): MatchConfig {
+  if (options.mission) {
+    if (!missionById(options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
+    return { mode: 'mission', mission: options.mission, diceSeed: seed };
+  }
+  return skirmishConfig({
+    seed,
+    size: options.size,
+    theme: options.theme,
+    ruleChanges: options.fog === undefined ? {} : { fog: options.fog },
+    teams: [
+      { controller: 'human', general: checkedGeneral(options.general) },
+      { controller: 'ai', general: checkedGeneral(options.enemyGeneral) },
+    ],
+  });
+}
 
 /**
  * Lo que se cuenta de unos sucesos, una linea por suceso con `prefix` delante (los que no dicen nada

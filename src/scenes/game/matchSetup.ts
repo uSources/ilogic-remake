@@ -1,16 +1,13 @@
 /**
- * Con que partida empieza la escena (GameStartData): la guardada, una preparada desde fuera, el
- * laboratorio, una mision o un mapa nuevo. Cada una lleva sus reglas en `state.rules`. Sin Phaser.
+ * Con que partida empieza la escena (GameStartData): una nueva (de su configuracion: createMatch),
+ * la guardada, una preparada desde fuera o el laboratorio. Cada una trae sus reglas en `state.rules`
+ * y su modo en `state.mode`. Sin Phaser.
  */
-import { appointGeneral } from '../../core/generals';
-import { duel, duelTeams, isPlayableOnOneScreen, playerTeam, teamsControlledBy } from '../../core/teams';
-import { seededRng } from '../../core/util/random';
-import { defaultContent } from '../../core/content/default';
-import { createGame, loadGame } from '../../core/defaultGames';
-import { buildMission, missionById } from '../../core/missions';
-import type { GameSetup, GameState, TeamId } from '../../core/model';
-import { ensureWeather } from '../../core/weather';
-import { defaultLab, labState, type LabOptions } from '../../lab';
+import { duel, isPlayableOnOneScreen, playerTeam, teamsControlledBy } from '../../core/teams';
+import { createMatch, loadGame } from '../../core/defaultGames';
+import { skirmishConfig, type MatchConfig } from '../../core/match';
+import type { GameState, TeamId } from '../../core/model';
+import { defaultLab, labMatch, type LabOptions } from '../../lab';
 import { randomSeed } from '../../setup';
 import { deleteSave, readSave } from '../../storage';
 import type { GameStartData } from './types';
@@ -27,21 +24,23 @@ export interface MatchStart {
   corruptSave: boolean;
 }
 
-/** Tamaño del mapa al azar si no se dice otro. */
-const DEFAULT_MAP_SIZE = 32;
+/** Una escaramuza nueva al azar, una persona contra la IA (sin datos, o si no se ha podido abrir la pedida). */
+const randomSkirmish = (): MatchConfig => skirmishConfig({ seed: randomSeed(), teams: duel('human', 'ai') });
 
-export function startMatch(data: GameStartData): MatchStart {
-  const lab = data.mode === 'lab' ? (data.lab ?? defaultLab()) : null;
-  const saved = onlyIfPlayable(data.mode === 'load' ? readSavedGame() : null);
-  const given = onlyIfPlayable(data.mode === 'state' && data.state ? loadGame(data.state) : null);
+export function startMatch(data: GameStartData = { start: 'new', match: randomSkirmish() }): MatchStart {
+  const lab = data.start === 'lab' ? (data.lab ?? defaultLab()) : null;
+  const saved = onlyIfPlayable(data.start === 'load' ? readSavedGame() : null);
+  const given = onlyIfPlayable(data.start === 'state' ? loadGame(data.state) : null);
   const loaded = saved ?? given;
-  const corruptSave = (data.mode === 'load' || data.mode === 'state') && !loaded;
+  const corruptSave = (data.start === 'load' || data.start === 'state') && !loaded;
   // Solo se borra el guardado si lo que no se ha podido abrir era el guardado (no una partida de depuracion).
-  if (corruptSave && data.mode === 'load') deleteSave();
-  const state = lab ? labMatch(lab) : loaded ? loaded : (missionMatch(data) ?? newMatch(data));
-  ensureWeather(state);
+  if (corruptSave && data.start === 'load') deleteSave();
+  const state = lab ? createMatch(labMatch(lab, lab.play)) : (loaded ?? createMatch(newMatchConfig(data)));
   return { state, viewer: viewerOf(state), lab, fromSave: !!saved, corruptSave };
 }
+
+/** La configuracion de la partida nueva que se pide (o una al azar si no se pedia una nueva o no se pudo abrir la pedida). */
+const newMatchConfig = (data: GameStartData): MatchConfig => (data.start === 'new' ? data.match : randomSkirmish());
 
 /**
  * La partida leida, o null si no se puede jugar en una pantalla (varias personas: fase 4,
@@ -65,33 +64,4 @@ export function viewerOf(state: GameState): TeamId {
 function readSavedGame(): GameState | null {
   const raw = readSave();
   return raw ? loadGame(raw) : null;
-}
-
-function labMatch(lab: LabOptions): GameState {
-  return labState(lab, lab.play);
-}
-
-function missionMatch(data: GameStartData): GameState | null {
-  const mission = data.mode === 'mission' && data.mission ? missionById(data.mission) : undefined;
-  if (!mission) return null;
-  return buildMission(mission, defaultContent(), randomSeed());
-}
-
-/**
- * Mapa al azar (o el de `setup`): una persona contra la IA, con los generales elegidos (el de la
- * persona y el de su enemigo).
- */
-function newMatch(data: GameStartData): GameState {
-  const setup: GameSetup = data.setup ?? { seed: randomSeed(), size: DEFAULT_MAP_SIZE, theme: null };
-  const state = createGame(seededRng(setup.seed), {
-    size: setup.size,
-    theme: setup.theme,
-    ruleChanges: data.rules,
-    teams: duel('human', 'ai'),
-  });
-  state.setup = setup;
-  const [person, enemy] = duelTeams(state);
-  appointGeneral(state, person, data.general);
-  appointGeneral(state, enemy, data.enemyGeneral);
-  return state;
 }

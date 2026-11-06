@@ -1,7 +1,8 @@
 import { expect } from 'vitest';
 import { aiTurn } from '@core/ai';
 import { seededRng } from '@core/util/random';
-import { createGame, saveContext } from '@core/defaultGames';
+import { createMatch, saveContext } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { endRound, isMatchOver, turnTakers } from '@core/rules';
 import { duel } from '@core/teams';
 import { deserialize, serialize } from '@core/save';
@@ -31,7 +32,7 @@ export function checkInvariants(s: GameState): void {
 export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
-    const s = createGame(rng, { teams: duel('ai', 'ai') });
+    const s = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('ai', 'ai') }), rng);
     while (!isMatchOver(s) && s.day <= 60) {
       for (const team of turnTakers(s)) {
         for (const _ of aiTurn(s, rng, team)) if (isMatchOver(s)) break;

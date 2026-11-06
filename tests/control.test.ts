@@ -5,7 +5,8 @@ import { defaultContent } from '@core/content/default';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { createLayer } from '@core/mapGrid';
-import { createGame, saveContext } from '@core/defaultGames';
+import { createMatch, saveContext } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { placeControlPoints } from '@core/mapgen';
 import { controlRound, groundDistance, inControlZone, newUnit, roundReport } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
@@ -90,7 +91,7 @@ describe('puntos de control', () => {
   it('los mapas al azar los ponen igual de lejos de las dos salidas y separados entre si', () => {
     let total = 0;
     for (let seed = 1; seed <= 20; seed++) {
-      const s = createGame(seededRng(seed * 7919), { teams: duel('human', 'ai') });
+      const s = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('human', 'ai') }));
       const points = s.controlPoints ?? [];
       total += points.length;
       expect(points.length).toBeLessThanOrEqual(defaultContent().defaultRules.controlPoints);

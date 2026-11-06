@@ -11,7 +11,8 @@
  */
 import { createHash } from 'node:crypto';
 import { aiTurn, assistTurn } from '@core/ai';
-import { createGame } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
 import { appointGeneral } from '@core/generals';
 import { endRound, isMatchOver, matchResult, turnTakers } from '@core/rules';
@@ -66,7 +67,10 @@ function orderPlayerSquad(s: GameState): void {
 
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
-  const s = createGame(rng, { size: scenario.size, ruleChanges: scenario.rules, teams: duel('human', 'ai') });
+  const s = createMatch(
+    skirmishConfig({ seed: scenario.seed, size: scenario.size, ruleChanges: scenario.rules, teams: duel('human', 'ai') }),
+    rng,
+  );
   // El equipo de la persona (el primero de duel): el que tiene escuadras con ordenes.
   const person = playerTeam(s);
   const generals = s.content.generals.list;

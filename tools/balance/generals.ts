@@ -14,7 +14,8 @@
 import { duel, duelTeams } from '@core/teams';
 import { aiTurn } from '@core/ai';
 import { defaultContent } from '@core/content/default';
-import { createGame } from '@core/defaultGames';
+import { createMatch } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/util/random';
 import { endRound, isMatchOver, isWinner, matchResult, score, turnTakers } from '@core/rules';
@@ -44,7 +45,7 @@ function play(
   uses: Map<string, number>,
 ): { winner: Side | 'draw'; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createGame(rng, { teams: duel('ai', 'ai') });
+  const s: GameState = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
   appointGeneral(s, first, firstGeneral === 'none' ? null : firstGeneral);
   appointGeneral(s, second, secondGeneral === 'none' ? null : secondGeneral);

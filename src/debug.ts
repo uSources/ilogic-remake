@@ -2,6 +2,7 @@ import type Phaser from 'phaser';
 import type { SavedGameState } from './core/model';
 import { defaultContent } from './core/content/default';
 import { findEntry } from './core/content';
+import { skirmishConfig, type MatchConfig } from './core/match';
 import { defaultLab } from './lab';
 import { ui, type UIState } from './hud/store';
 import type { GameScene, GameStartData } from './scenes/GameScene';
@@ -13,6 +14,44 @@ import { setFrozen } from './ui/fx';
  * Lo que se haga con ella es lo mismo que haria un jugador (empezar partidas, volver al menu); para
  * jugar, pulsar teclas o hacer clic con Playwright. Documentada en docs/AGENTES.md.
  */
+/** Las partidas de prueba son de 20 casillas, y sus misiones tiran siempre los mismos dados. */
+const DEBUG_MAP_SIZE = 20;
+const DEBUG_DICE_SEED = 1;
+
+/** Lo que se puede pedir de una partida de prueba (ver IlogicDebug.startGame). */
+export interface DebugGameOptions {
+  seed?: number;
+  size?: number;
+  /** Tema (id de themes.json: 'Plains', 'Snowy'...) o null al azar. */
+  theme?: string | null;
+  fog?: boolean;
+  /** Limite de dias (por defecto, sin limite). */
+  dayLimit?: number | null;
+  /** General del jugador y de la IA (id de generals.json). */
+  general?: string | null;
+  enemyGeneral?: string | null;
+  state?: SavedGameState | string;
+  mission?: string;
+}
+
+/**
+ * La partida nueva de unas opciones de prueba: la mision, si se pide; si no, una escaramuza de 20
+ * (sin niebla, salvo que se pida) de la persona contra la IA, siempre con el mismo mapa por semilla.
+ */
+function debugMatch(options: DebugGameOptions): MatchConfig {
+  if (options.mission) return { mode: 'mission', mission: options.mission, diceSeed: DEBUG_DICE_SEED };
+  return skirmishConfig({
+    seed: options.seed ?? 1,
+    size: options.size ?? DEBUG_MAP_SIZE,
+    theme: options.theme ?? null,
+    ruleChanges: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
+    teams: [
+      { controller: 'human', general: options.general ?? null },
+      { controller: 'ai', general: options.enemyGeneral ?? null },
+    ],
+  });
+}
+
 export interface IlogicDebug {
   /** Version del juego (package.json). */
   version: string;
@@ -27,20 +66,7 @@ export interface IlogicDebug {
    * `theme` ('Plains'...'Snowy'), `fog`) se genera el mismo mapa siempre; con `state` se carga esa partida (JSON de
    * partida guardada (SavedGameState), ver `state()`); con `mission` una mision de la campaña.
    */
-  startGame(options: {
-    seed?: number;
-    size?: number;
-    /** Tema (id de themes.json: 'Plains', 'Snowy'...) o null al azar. */
-    theme?: string | null;
-    fog?: boolean;
-    /** Limite de dias (por defecto, sin limite). */
-    dayLimit?: number | null;
-    /** General del jugador y de la IA (id de generals.json). */
-    general?: string | null;
-    enemyGeneral?: string | null;
-    state?: SavedGameState | string;
-    mission?: string;
-  }): Promise<void>;
+  startGame(options: DebugGameOptions): Promise<void>;
   /** Laboratorio de animaciones (src/lab.ts): unidades por nombre, camara lenta y accion a reproducir. */
   lab(options?: { attacker?: string; defender?: string; slow?: boolean; play?: 'move' | 'attack' | 'counter' | 'kill' }): Promise<void>;
   /** Partida en curso (copia) o null fuera de la partida. */
@@ -81,16 +107,8 @@ export function installDebug(game: Phaser.Game): void {
     async startGame(options) {
       const data: GameStartData =
         options.state !== undefined
-          ? { mode: 'state', state: typeof options.state === 'string' ? options.state : JSON.stringify(options.state) }
-          : options.mission
-            ? { mode: 'mission', mission: options.mission }
-            : {
-                mode: 'new',
-                rules: { fog: options.fog ?? false, dayLimit: options.dayLimit ?? null },
-                setup: { seed: options.seed ?? 1, size: options.size ?? 20, theme: options.theme ?? null },
-                general: options.general ?? null,
-                enemyGeneral: options.enemyGeneral ?? null,
-              };
+          ? { start: 'state', state: typeof options.state === 'string' ? options.state : JSON.stringify(options.state) }
+          : { start: 'new', match: debugMatch(options) };
       const from = activeScene();
       if (!from) throw new Error('ilogicDebug: el juego aun no ha arrancado (usar ready())');
       from.scene.start('Game', data);
@@ -103,7 +121,7 @@ export function installDebug(game: Phaser.Game): void {
       const type = (name: string | undefined, fallback: string) => (name && findEntry(defaultContent().units, name) ? name : fallback);
       const base = defaultLab();
       from.scene.start('Game', {
-        mode: 'lab',
+        start: 'lab',
         lab: {
           attacker: type(options.attacker, base.attacker),
           defender: type(options.defender, base.defender),

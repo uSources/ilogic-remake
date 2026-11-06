@@ -3,7 +3,8 @@
  * importar desde los tests.
  */
 import type { UnitMenuOption } from '../../core/actions';
-import type { GameAction, GameEvent, GameSetup, Pos, RulesConfig, Unit } from '../../core/model';
+import type { MatchConfig } from '../../core/match';
+import type { GameAction, GameEvent, Pos, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
 import type { TextKey } from '../../settings';
 
@@ -86,17 +87,11 @@ export const INPUT_LOCK_MS = 350;
 /** Ventana para confirmar acciones pulsando dos veces (terminar turno, salir, rendirse). */
 export const CONFIRM_MS = 2500;
 
-/** Como empieza una partida (scene.start('Game', data)). */
-export interface GameStartData {
-  /** new: mapa al azar o con `setup`; load: la guardada; mission: `mission`; state: `state` (JSON de una partida). */
-  mode?: 'new' | 'load' | 'mission' | 'state' | 'lab';
-  /** Laboratorio de animaciones (src/lab.ts). */
-  lab?: LabOptions;
-  rules?: Partial<RulesConfig>;
-  setup?: GameSetup;
-  mission?: string;
-  state?: string;
-  /** Partida nueva: general del jugador y de la IA (id de generals.json). */
-  general?: string | null;
-  enemyGeneral?: string | null;
-}
+/**
+ * Como empieza una partida (scene.start('Game', data)): una nueva, con su configuracion (cualquier
+ * modo de juego: `MatchConfig`, core/match.ts); la guardada; una preparada desde fuera (`state`, el
+ * JSON de una partida: depuracion y pruebas), o el laboratorio de animaciones (src/lab.ts, que
+ * prepara la suya). Sin datos, una escaramuza nueva al azar.
+ */
+export type GameStartData =
+  { start: 'new'; match: MatchConfig } | { start: 'load' } | { start: 'state'; state: string } | { start: 'lab'; lab?: LabOptions };

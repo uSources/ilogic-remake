@@ -5,7 +5,8 @@ import { rulesWith } from '@core/rulesConfig';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
 import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
-import { createGame, saveContext } from '@core/defaultGames';
+import { createMatch, saveContext } from '@core/defaultGames';
+import { skirmishConfig } from '@core/match';
 import { groundDistance, matchResult, newUnit, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
@@ -19,7 +20,7 @@ afterEach(() => {});
 describe('nueva partida: tamaños de mapa', () => {
   it.each([20, 32, 40])('mapas de %i: bases conectadas y edificios en proporcion', (size) => {
     for (let seed = 1; seed <= 15; seed++) {
-      const s = createGame(seededRng(seed), { size, teams: duel('human', 'ai') });
+      const s = createMatch(skirmishConfig({ seed, size, teams: duel('human', 'ai') }));
       expect(s.map.length).toBe(size);
       expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
@@ -32,8 +33,8 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('el mismo codigo da el mismo mapa; el tema se puede elegir', () => {
-    const first = createGame(seededRng(1234), { size: 20, theme: 'Snowy', teams: duel('human', 'ai') });
-    const second = createGame(seededRng(1234), { size: 20, theme: 'Snowy', teams: duel('human', 'ai') });
+    const first = createMatch(skirmishConfig({ seed: 1234, size: 20, theme: 'Snowy', teams: duel('human', 'ai') }));
+    const second = createMatch(skirmishConfig({ seed: 1234, size: 20, theme: 'Snowy', teams: duel('human', 'ai') }));
     expect(serialize(first)).toBe(serialize(second));
     expect(first.theme).toBe('Snowy');
   });
@@ -49,13 +50,13 @@ describe('nueva partida: tamaños de mapa', () => {
   it('una partida guardada se carga con sus propias reglas, no con las de siempre', () => {
     const ruleChanges = { counterattack: false, fog: false, upkeep: 0.25 };
     const rules = rulesWith(defaultContent(), ruleChanges);
-    const s = createGame(seededRng(3), { size: 20, ruleChanges, teams: duel('human', 'ai') });
+    const s = createMatch(skirmishConfig({ seed: 3, size: 20, ruleChanges, teams: duel('human', 'ai') }));
     expect(s.rules).toEqual(rules);
     expect(deserialize(serialize(s), saveContext(defaultContent()))!.rules).toEqual(rules);
   });
 
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
-    const s = createGame(seededRng(7), { size: 40, teams: duel('human', 'ai') });
+    const s = createMatch(skirmishConfig({ seed: 7, size: 40, teams: duel('human', 'ai') }));
     s.setup = { seed: 7, size: 40, theme: null };
     const json = serialize(s);
     const loaded = deserialize(json, saveContext(defaultContent()))!;
@@ -94,7 +95,7 @@ describe('limite de dias', () => {
 
 describe('repetir el turno enemigo', () => {
   it('la IA juega igual desde el mismo estado y la misma semilla', () => {
-    const s = createGame(seededRng(3), { teams: duel('human', 'ai') });
+    const s = createMatch(skirmishConfig({ seed: 3, teams: duel('human', 'ai') }));
     for (let i = 0; i < 4; i++) for (const _ of aiTurn(s, seededRng(i), 1));
     const before = serialize(s);
     const ev1 = [...aiTurn(s, seededRng(42), 1)];

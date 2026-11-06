@@ -2,7 +2,7 @@
 import { aiTurn } from '@core/ai';
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
-import { generateGame } from '@core/mapgen';
+import { buildMatch, skirmishConfig } from '@core/match';
 import { endRound, isMatchOver, isWinner, matchResult, takesTurn } from '@core/rules';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
@@ -120,7 +120,8 @@ function sample(s: GameState): DaySample {
 
 export function playGame(options: PlayOptions): GameRecord {
   const rng = seededRng(options.seed);
-  const s = generateGame(rng, { size: options.size ?? 32, rules: options.rules, content: options.content, teams: duel('ai', 'ai') });
+  const config = skirmishConfig({ seed: options.seed, size: options.size, ruleChanges: options.rules, teams: duel('ai', 'ai') });
+  const s = buildMatch(config, { content: options.content, mapRng: rng });
   if (options.swapSides) {
     for (const unit of s.units) unit.team = opponentOf(sideOfTeam(unit.team));
     for (const building of s.buildings) if (building.owner !== null) building.owner = opponentOf(sideOfTeam(building.owner));

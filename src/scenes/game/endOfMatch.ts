@@ -5,6 +5,7 @@
 import type Phaser from 'phaser';
 import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
+import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
 import { sampleArmy } from '../../core/stats';
 import { isWinner } from '../../core/rules';
@@ -15,6 +16,7 @@ import { listStep, type MenuCommand } from '../../controls/menu';
 import { ui, type EndOutcome } from '../../hud/store';
 import { TILE } from '../../layout';
 import { settings, t } from '../../settings';
+import { randomSeed } from '../../setup';
 import { burst, center, COLORS, reducedMotion, tileFlash } from '../../ui/fx';
 import type { MapView } from '../../ui/mapView';
 import { PAL } from '../../ui/palette';
@@ -231,15 +233,16 @@ export class EndOfMatch {
     const s = this.host.state;
     const scenes = this.host.scene.scene;
     const mission = s.mission ? missionById(s.mission.id) : undefined;
-    const sameGame: GameStartData = { mode: 'new', rules: s.rules, setup: s.setup };
+    const rematch = rematchOf(s);
+    const sameGame: GameStartData | undefined = rematch ? { start: 'new', match: rematch } : undefined;
     switch (id) {
       case 'rematch':
         return void scenes.start('Game', sameGame);
       case 'retry':
-        return void scenes.start('Game', mission ? ({ mode: 'mission', mission: mission.id } satisfies GameStartData) : sameGame);
+        return void scenes.start('Game', mission ? missionStart(mission) : sameGame);
       case 'next': {
         const next = mission ? nextMission(mission) : undefined;
-        return void scenes.start('Game', next ? ({ mode: 'mission', mission: next.id } satisfies GameStartData) : undefined);
+        return void scenes.start('Game', next ? missionStart(next) : undefined);
       }
       case 'new':
         return void scenes.start('Menu', { open: 'setup' });
@@ -248,6 +251,12 @@ export class EndOfMatch {
     }
   }
 }
+
+/** Empezar una mision (cada vez con otros dados). */
+const missionStart = (mission: MissionDef): GameStartData => ({
+  start: 'new',
+  match: { mode: 'mission', mission: mission.id, diceSeed: randomSeed() },
+});
 
 /** Al acabar se quita todo lo de la partida (menus, prevision, avisos...) y empieza el final. */
 function hideMatchPanels(): void {
