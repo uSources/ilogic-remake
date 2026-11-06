@@ -9,7 +9,7 @@
  * entrada mas, en su sitio. Empezar y acabar los turnos es cosa de la sesion (core/session), no de
  * quien juega el equipo.
  */
-import { assistTurn } from '../ai/standingOrders';
+import { assistTurn } from '../autopilot/standingOrders';
 import { gameModeOf, type TurnPhase } from '../modes';
 import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
@@ -28,8 +28,8 @@ function advanceTravels(s: GameState, team: TeamId, perform: ActionDispatcher): 
 }
 
 /**
- * [CAMBIO] Ordenes permanentes: las unidades con orden que siguen sin usar la cumplen (la misma IA
- * que el enemigo, ai/standingOrders.ts), sea quien sea quien juegue el equipo.
+ * [CAMBIO] Ordenes permanentes: las unidades con orden que siguen sin usar la cumplen (core/autopilot,
+ * no la IA), sea quien sea quien juegue el equipo.
  */
 const followStandingOrders = (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] => [...assistTurn(s, team, perform)];
 

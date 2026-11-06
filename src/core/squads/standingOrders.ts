@@ -1,7 +1,7 @@
 /**
  * [CAMBIO] Ordenes permanentes de cada equipo (estilo RTS): la de cada escuadra y la propia de cada unidad
  * (destacada). Logica pura: la usan la escena y la IA, que las cumple al terminar el turno
- * (ai/standingOrders.ts).
+ * (autopilot/standingOrders.ts).
  */
 import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt } from '../rules/queries';

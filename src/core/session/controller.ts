@@ -20,7 +20,7 @@ export type TurnStep =
 export type TurnPlan = Generator<TurnStep, void, ActionResult | undefined>;
 
 /** Que tipo de controlador es (para enseñarlo y depurar). */
-export type ControllerName = 'human' | 'ai' | 'autopilot' | 'remote' | 'replay' | 'random' | 'passive' | 'sequence' | 'scripted';
+export type ControllerName = 'human' | 'ai' | 'remote' | 'replay' | 'random' | 'passive' | 'sequence' | 'scripted';
 
 export interface Controller {
   readonly name: ControllerName;

@@ -1,8 +1,10 @@
 /**
  * Jugar una partida: quien decide cada equipo (`Controller`) y la partida en juego (`GameSession`),
  * que empieza y acaba los turnos, apunta lo que se hace y avisa de ello. La usan la escena, `npm run
- * play`, el fondo del menu, las herramientas y los tests. No sabe de la IA: los controladores que
- * deciden con ella, y el de cada equipo segun quien lo juega, estan en `core/controllers.ts`.
+ * play`, el fondo del menu, las herramientas y los tests. No importa la IA, ni ella ni las acciones
+ * que manda (las ordenes permanentes son de core/autopilot, no de ai/; ESLint lo vigila): los
+ * controladores que deciden con ella, y el de cada equipo segun quien lo juega, estan en
+ * `core/controllers.ts`.
  *
  * | Modulo | Que va |
  * |---|---|

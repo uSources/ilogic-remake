@@ -9,13 +9,14 @@ import { unitTypeOf, isHq } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
 import type { Building, GameEvent, GameState, Rng, Unit } from '../model';
-import { bestMoveToward, canAct, doMove, finish, needsRepair, type AiCtx } from './context';
-import { advance, captureHere, randomMove, retreat, tryAttack, tryCapture } from './tactics';
+import { bestMoveToward, canAct, doMove, finish, needsRepair, type PlayCtx } from '../autopilot/context';
+import { captureHere, retreat, tryAttack } from '../autopilot/tactics';
+import { advance, randomMove, tryCapture } from './tactics';
 
 /** Lo que necesita un comportamiento para decidir y actuar con una unidad. */
 export interface UnitTurnContext {
   s: GameState;
-  ai: AiCtx;
+  ai: PlayCtx;
   unit: Unit;
   /** Alcance de la unidad al empezar su turno. */
   range: MoveRange;
@@ -30,7 +31,7 @@ export interface UnitBehaviour {
   run(turn: UnitTurnContext): Generator<GameEvent, boolean>;
 }
 
-const isEnemyHq = (s: GameState, building: Building, ai: AiCtx): boolean => isHq(s, building) && isHostileOwner(s, building.owner, ai.me);
+const isEnemyHq = (s: GameState, building: Building, ai: PlayCtx): boolean => isHq(s, building) && isHostileOwner(s, building.owner, ai.me);
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): Generator<GameEvent, boolean> {
@@ -97,7 +98,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
 ];
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa). */
-export function* unitTurn(s: GameState, ai: AiCtx, uid: number, rng: Rng): Generator<GameEvent> {
+export function* unitTurn(s: GameState, ai: PlayCtx, uid: number, rng: Rng): Generator<GameEvent> {
   const unit = unitById(s, uid);
   if (!unit || !canAct(s, unit)) return;
   // El alcance no cambia mientras ningun comportamiento haya usado la unidad, asi que se calcula una vez.

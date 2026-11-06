@@ -36,7 +36,7 @@ export type GameAction =
   | { kind: 'travelStep'; uid: number }
   | { kind: 'giveStandingOrder'; uids: number[]; order: StandingOrder }
   | { kind: 'cancelStandingOrder'; uids: number[] }
-  /** La unidad ha cumplido la orden que seguia (la decide quien la cumple: ver ai/standingOrders.ts). */
+  /** La unidad ha cumplido la orden que seguia (la decide quien la cumple: ver autopilot/standingOrders.ts). */
   | { kind: 'finishStandingOrder'; uid: number }
   | { kind: 'formSquad'; uids: number[]; name?: string; key?: number }
   /** Estas unidades pasan a ser el grupo de esa tecla (Ctrl + numero). */

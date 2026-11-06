@@ -13,7 +13,7 @@ import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders'
 import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { compareKeys, maxBy, minBy } from '../util/pick';
-import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
+import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type PlayCtx } from './context';
 
 /** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
 const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, movementOf(s, unit));
@@ -84,7 +84,7 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
 }
 
 /** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
-export function formation(s: GameState, ai: AiCtx, unit: Unit): Formation | null {
+export function formation(s: GameState, ai: PlayCtx, unit: Unit): Formation | null {
   const standingOrder = effectiveStandingOrder(s, unit);
   if (!standingOrder || needsRepair(s, unit)) return null;
   const mates = matesProgress(s, unit);
@@ -120,7 +120,7 @@ function formationMove(unit: Unit, range: MoveRange, squadFormation: Formation):
 /** Hacia el destino de su orden: en formacion si va con su escuadra, si no como siempre. */
 export function standingOrderStep(
   s: GameState,
-  ai: AiCtx,
+  ai: PlayCtx,
   unit: Unit,
   at: Pos,
   range: MoveRange,

@@ -91,17 +91,19 @@ export function arena(current: AiBrain, baseline: AiBrain, games: number, size: 
   return { games, wins, losses, draws, rate, low: Math.max(0, rate - se), high: Math.min(1, rate + se) };
 }
 
+/** Carpetas de src/core con lo que decide la IA: la suya y los pasos de unidad que reutiliza (autopilot/). */
+const AI_DIRS = ['ai', 'autopilot'] as const;
+
 /**
- * Ficheros de la IA que se copian: ai.ts y todo src/core/ai/ (rutas relativas a src/core). Las
- * reglas, los datos y demas se siguen usando los de ahora, por su alias.
+ * Ficheros de la IA que se copian: ai.ts y todo src/core/ai/ y src/core/autopilot/ (rutas relativas
+ * a src/core). Las reglas, los datos y demas se siguen usando los de ahora, por su alias.
  */
 function aiFiles(): string[] {
-  return [
-    'ai.ts',
-    ...readdirSync(`${ROOT}src/core/ai`)
+  const inDir = (dir: string) =>
+    readdirSync(`${ROOT}src/core/${dir}`)
       .filter((file) => file.endsWith('.ts'))
-      .map((file) => `ai/${file}`),
-  ];
+      .map((file) => `${dir}/${file}`);
+  return ['ai.ts', ...AI_DIRS.flatMap(inDir)];
 }
 
 /**
@@ -129,10 +131,12 @@ export function snapshotSource(rel: string, source: string, copied: ReadonlySet<
   });
 }
 
-/** Copia la IA actual como referencia (ai.ts y src/core/ai/), con sus pesos (los de ai.json) congelados. */
+/** Copia la IA actual como referencia (ai.ts, src/core/ai/ y src/core/autopilot/), con sus pesos (los de ai.json) congelados. */
 function snapshot(): void {
-  rmSync(`${BASE_DIR}ai`, { recursive: true, force: true });
-  mkdirSync(`${BASE_DIR}ai`, { recursive: true });
+  for (const dir of AI_DIRS) {
+    rmSync(`${BASE_DIR}${dir}`, { recursive: true, force: true });
+    mkdirSync(`${BASE_DIR}${dir}`, { recursive: true });
+  }
   const files = aiFiles();
   const copied = new Set(files);
   const day = new Date().toISOString().slice(0, 10);

@@ -40,7 +40,7 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   la partida; solo el equipo al que le toca: `GameState.turn`), la hace y devuelve sus sucesos (o por
   que no vale). Cada equipo lo juega un controlador dentro de una `GameSession` (`core/session.ts`):
   la escena manda las de la persona con `host.act(...)`/`host.perform(...)` (`ActionHost`, por
-  `session.act`), la IA con `act`/`doMove`/`finish` (`ai/context.ts`, por el dispatcher que le da la
+  `session.act`), la IA con `act`/`doMove`/`finish` (`autopilot/context.ts`, por el dispatcher que le da la
   sesion). Las herramientas y los tests juegan partidas enteras con `runMatch`; nada de bucles de
   turnos a mano. Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
   modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
@@ -116,7 +116,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   preparacion en `MATCH_SETUPS` (`core/match.ts`); quien juega un equipo = un `Controller`
   (`core/session`); habilidad de unidad nueva = su efecto en
   `abilities.ts`; efecto nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`).
-  La IA no tiene variables globales: lo del turno va en `AiCtx`. Antes de escribir un bucle o un
+  La IA no tiene variables globales: lo del turno va en `PlayCtx`. Antes de escribir un bucle o un
   literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de
   `grid[x]![y]!`. El tamaño del mapa sale siempre del estado (`mapGrid(s)`, `createLayer(s, fill)`,

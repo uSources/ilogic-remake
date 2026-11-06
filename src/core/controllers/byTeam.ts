@@ -4,8 +4,8 @@
  * sesion (`controllersFor` con `overrides`).
  */
 import type { ControllerKind, GameState, Rng, TeamId } from '../model';
-import { aiController } from './aiControllers';
-import { humanController, type Controller } from './controller';
+import { aiController } from './aiController';
+import { humanController, type Controller } from '../session/controller';
 
 /** El controlador de cada tipo de equipo (el tipo obliga a tener uno por `ControllerKind`). */
 const CONTROLLER_FOR: { readonly [Kind in ControllerKind]: (rng: Rng) => Controller } = {

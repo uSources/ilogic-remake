@@ -1,5 +1,6 @@
 /**
- * Lo que comparten los pasos de un turno de IA (AiCtx) y las ayudas que usan todos: medir distancias
+ * Lo que comparten los pasos de un turno jugado por el nucleo (las ordenes permanentes) o por la IA
+ * (PlayCtx) y las ayudas que usan todos: medir distancias
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
@@ -17,11 +18,11 @@ import type { Grid } from '../util/grid';
 import { minBy } from '../util/pick';
 
 /**
- * Estado de un turno de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
+ * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
  * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan.
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).
  */
-export interface AiCtx {
+export interface PlayCtx {
   /** Equipo que juega el turno. */
   readonly me: TeamId;
   /**
@@ -39,7 +40,7 @@ export interface AiCtx {
 }
 
 /** Contexto nuevo para un turno de `me` (sin grupo ni plan), que manda sus acciones por `dispatcher`. */
-export function aiCtx(me: TeamId, dispatcher: ActionDispatcher): AiCtx {
+export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
   return { me, group: false, plan: new Map(), dispatch: dispatcher };
 }
 
@@ -49,7 +50,7 @@ export function aiCtx(me: TeamId, dispatcher: ActionDispatcher): AiCtx {
  * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
  * detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
+export function occupancyWithout(s: GameState, ai: PlayCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
   if (ai.group && s.rules.passAllies) {
     const visible = visibility(s, ai.me);
@@ -65,7 +66,7 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * unidades cortando el paso como en occupancyWithout. Infinity si no se llega o si es la propia
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
-export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
+export function stepsFrom(s: GameState, ai: PlayCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
   const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, ai, unit));
   // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
   return (pos) => steps.at(pos) || Infinity;
@@ -77,7 +78,7 @@ export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit)
  * [CAMBIO] la cercania se mide con el tipo de movimiento de la unidad (antes siempre "a pie")
  * y si ya esta tan cerca como puede, se queda.
  */
-export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
+export function bestMoveToward(s: GameState, ai: PlayCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
   if (!avoidDest && range.steps.at(dest) > 0) return dest;
   const stepsToDest = stepsFrom(s, ai, unit, dest);
@@ -88,7 +89,7 @@ export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, r
 }
 
 /** La IA hace una accion de su equipo (`dispatch`) y avisa de sus sucesos: los sucesos, o null si no valia. */
-function* actEvents(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
+function* actEvents(s: GameState, ai: PlayCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
   const result = ai.dispatch(s, ai.me, action);
   if (!result.ok) return null;
   yield* result.events;
@@ -99,17 +100,17 @@ function* actEvents(s: GameState, ai: AiCtx, action: GameAction): Generator<Game
  * La IA hace una accion de su equipo por la misma via que cualquiera (`dispatch`) y avisa de sus
  * sucesos. Devuelve si valia (si no, la partida no cambia).
  */
-export function* act(s: GameState, ai: AiCtx, action: GameAction): Generator<GameEvent, boolean> {
+export function* act(s: GameState, ai: PlayCtx, action: GameAction): Generator<GameEvent, boolean> {
   return (yield* actEvents(s, ai, action)) !== null;
 }
 
 /** Termina el turno de la unidad, si aun no lo ha hecho (esperar). */
-export function* finish(s: GameState, ai: AiCtx, unit: Unit): Generator<GameEvent> {
+export function* finish(s: GameState, ai: PlayCtx, unit: Unit): Generator<GameEvent> {
   if (canAct(s, unit)) yield* act(s, ai, { kind: 'wait', uid: unit.uid });
 }
 
 /** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
-export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
+export function* doMove(s: GameState, ai: PlayCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
   const events = yield* actEvents(s, ai, { kind: 'move', uid: unit.uid, to: posOf(dest) });
   return events !== null && endsInAmbush(events);

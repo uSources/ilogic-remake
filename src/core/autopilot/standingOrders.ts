@@ -1,6 +1,7 @@
 /**
  * [CAMBIO] Ordenes permanentes de un equipo (ver StandingOrder en model/standingOrder.ts): las cumple
- * la misma IA que el enemigo al terminar el turno (assistTurn), o al darlas (startStandingOrder), y se
+ * la partida al terminar el turno de cada equipo (assistTurn, fase de TURN_END_PHASES; los pasos de
+ * unidad son los mismos que reutiliza la IA), o al darlas (startStandingOrder), y se
  * pueden prever sin tocar la partida (previewStandingOrders, para las flechas de intencion).
  */
 
@@ -13,7 +14,7 @@ import { visibility } from '../rules/visibility';
 import { effectiveStandingOrder } from '../squads/standingOrders';
 import type { StandingOrderKind, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import type { ActionDispatcher } from '../actions/types';
-import { act, aiCtx, canAct, doMove, finish, needsRepair, type AiCtx } from './context';
+import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
 
@@ -23,7 +24,7 @@ import { captureHere, retreat, tryAttack } from './tactics';
  * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
 export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispatcher): Generator<GameEvent, number[]> {
-  const ai = aiCtx(team, dispatcher);
+  const ai = playCtx(team, dispatcher);
   const withStandingOrder = teamUnits(s, ai.me).filter((unit) => effectiveStandingOrder(s, unit));
   const fulfilled: number[] = [];
   for (const unit of standingOrderPlayOrder(s, withStandingOrder))
@@ -33,13 +34,13 @@ export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispat
 
 /** [CAMBIO] La unidad empieza ya su orden recien dada (si aun no se ha movido). */
 export function* startStandingOrder(s: GameState, uid: number, team: TeamId, dispatcher: ActionDispatcher): Generator<GameEvent, boolean> {
-  return yield* unitStandingOrderTurn(s, aiCtx(team, dispatcher), uid);
+  return yield* unitStandingOrderTurn(s, playCtx(team, dispatcher), uid);
 }
 
 /** Lo que necesita cada tipo de orden para jugar el turno de una unidad. */
 interface StandingOrderTurnContext {
   s: GameState;
-  ai: AiCtx;
+  ai: PlayCtx;
   unit: Unit;
   /** Casilla de destino de la orden. */
   at: Pos;
@@ -49,7 +50,7 @@ interface StandingOrderTurnContext {
 type StandingOrderTurn = (turn: StandingOrderTurnContext) => Generator<GameEvent, boolean>;
 
 /** Ya es suyo el edificio de la casilla. */
-const ownsBuildingAt = (s: GameState, ai: AiCtx, at: Pos): boolean => isAlliedOwner(s, buildingAt(s, at)?.owner ?? null, ai.me);
+const ownsBuildingAt = (s: GameState, ai: PlayCtx, at: Pos): boolean => isAlliedOwner(s, buildingAt(s, at)?.owner ?? null, ai.me);
 
 /** Dispara sin moverse a lo que tenga a tiro; si no hay nada, espera. */
 function* shootFromHereOrWait({ s, ai, unit }: StandingOrderTurnContext): Generator<GameEvent> {
@@ -123,7 +124,7 @@ const STANDING_ORDER_TURNS: Record<StandingOrderKind, StandingOrderTurn> = {
  * dentro de un turno ya empezado (`ai`). Devuelve true si la orden se ha cumplido (y la quita: la
  * unidad se queda esperando).
  */
-function* unitStandingOrderTurn(s: GameState, ai: AiCtx, uid: number): Generator<GameEvent, boolean> {
+function* unitStandingOrderTurn(s: GameState, ai: PlayCtx, uid: number): Generator<GameEvent, boolean> {
   const unit = unitById(s, uid);
   const standingOrder = unit && effectiveStandingOrder(s, unit);
   if (!unit || !standingOrder || !canAct(s, unit)) return false;

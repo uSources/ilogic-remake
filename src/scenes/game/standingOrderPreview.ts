@@ -2,7 +2,8 @@
  * [CAMBIO] Prevision de las ordenes con destino (previewStandingOrders). Solo se recalcula si cambia algo de
  * la partida que pueda cambiarla (unidades, edificios, dia); mover el cursor solo cambia cuales se dibujan.
  */
-import { previewStandingOrders, type StandingOrderIntent } from '../../core/ai';
+import { dispatch } from '../../core/actions';
+import { previewStandingOrders, type StandingOrderIntent } from '../../core/autopilot';
 import type { GameState, TeamId } from '../../core/model';
 
 export class StandingOrderPreview {
@@ -37,7 +38,7 @@ export class StandingOrderPreview {
       s.squads?.map((squad) => [squad.id, squad.standingOrder]),
       s.buildings.map((building) => [building.owner, building.capture]),
     ]);
-    if (this.cache?.sig !== sig) this.cache = { sig, map: previewStandingOrders(s, team) };
+    if (this.cache?.sig !== sig) this.cache = { sig, map: previewStandingOrders(s, team, dispatch) };
     return this.cache.map;
   }
 }

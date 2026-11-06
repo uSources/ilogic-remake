@@ -3,7 +3,7 @@
  * (lineas y banderas), lo que hara cada unidad con orden, puntos de control y la escolta de una
  * mision. Funciones puras: la escena las junta en las ViewOptions de MapView.render.
  */
-import type { StandingOrderIntent } from '../../core/ai';
+import type { StandingOrderIntent } from '../../core/autopilot';
 import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
 import { effectiveStandingOrder } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';

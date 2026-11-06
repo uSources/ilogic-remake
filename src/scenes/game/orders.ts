@@ -6,7 +6,7 @@
  * derecho.
  */
 import type Phaser from 'phaser';
-import { startStandingOrder, standingOrderPlayOrder } from '../../core/ai';
+import { startStandingOrder, standingOrderPlayOrder } from '../../core/autopilot';
 import { movementOf, canWalk, unitAt, unitById, canMoveNow, visibleFoeAt } from '../../core/rules';
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';

@@ -9,12 +9,12 @@ import { canCounter, expectedDamage } from '../rules/combat';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
 import type { Building, GameState, Pos, Unit } from '../model';
-import type { AiCtx } from './context';
+import type { PlayCtx } from './context';
 
 /** Un ataque que se esta valorando, con lo que comparten todos los terminos. */
 export interface AttackPlan {
   s: GameState;
-  ai: AiCtx;
+  ai: PlayCtx;
   /** El atacante, ya colocado en la casilla desde la que dispara. */
   attacker: Unit;
   target: Unit;
@@ -90,7 +90,7 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
 ];
 
 /** Valor de que `attacker` dispare a `target` desde `from` (por defecto, desde donde esta). */
-export function attackScore(s: GameState, ai: AiCtx, attacker: Unit, target: Unit, from: Pos = attacker): number {
+export function attackScore(s: GameState, ai: PlayCtx, attacker: Unit, target: Unit, from: Pos = attacker): number {
   const attackerThere = { ...attacker, x: from.x, y: from.y };
   const attack: AttackPlan = {
     s,
