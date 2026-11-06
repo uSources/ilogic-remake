@@ -198,12 +198,12 @@ const unitEntered = (s: GameState, event: PathEvent): Unit | undefined => ('into
 function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const s = stage.state;
   const mover = unitById(s, event.uid);
-  const start = event.path[0]!;
+  const start = event.path.at(0);
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (es de su
   // mismo equipo y, al unirse, de su mismo tipo). Si tampoco esta, no se anima.
   const drawn = mover ?? unitEntered(s, event);
   // Dibujada en la casilla de salida (su terreno decide el dibujo clasico) y activa, como al empezar a moverse.
-  return drawn ? unitKey(stage.scene.textures, s, { ...drawn, x: start.x, y: start.y }, stage.viewer, true) : null;
+  return drawn && start ? unitKey(stage.scene.textures, s, drawn, stage.viewer, true, start) : null;
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
@@ -215,9 +215,10 @@ const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKe
   const mover = unitById(stage.state, event.uid) ?? unitEntered(stage.state, event);
   const showWholePath = mover?.team === stage.viewer;
   await animatePath(stage, event.uid, texture, event.path, showWholePath);
-  if (event.kind === 'move' && event.interruption && !stage.fastForward) {
+  const stoppedAt = event.path.at(-1);
+  if (event.kind === 'move' && event.interruption && stoppedAt && !stage.fastForward) {
     const { kind, at } = event.interruption;
-    await (INTERRUPTION_ANIMATIONS[kind] ?? showCut)(stage, at, event.path[event.path.length - 1]!, showWholePath);
+    await (INTERRUPTION_ANIMATIONS[kind] ?? showCut)(stage, at, stoppedAt, showWholePath);
   }
 };
 

@@ -31,7 +31,8 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
 
 /**
  * El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado: `isActive`, que por defecto
- * es si aun puede actuar) la propia y la aliada, roja la enemiga.
+ * es si aun puede actuar) la propia y la aliada, roja la enemiga. El dibujo clasico cambia con el
+ * terreno de donde se dibuja (`drawnAt`, por defecto su casilla).
  */
 export function unitKey(
   textures: Phaser.Textures.TextureManager,
@@ -39,11 +40,12 @@ export function unitKey(
   unit: Unit,
   viewer: TeamId,
   isActive = canStillAct(unit),
+  drawnAt: Pos = unit,
 ): string | null {
   const unitSide = sideOf(s, viewer, unit.team);
   const side = `${unitSideLetter(unitSide, isActive)}_`;
   const unitType = unitTypeOf(s, unit);
-  const terrain = unitType.classicSprite[terrainAt(s, unit).id] ?? '';
+  const terrain = unitType.classicSprite[terrainAt(s, drawnAt).id] ?? '';
   const name = unitType.art;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
   if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
