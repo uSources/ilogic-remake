@@ -78,7 +78,11 @@ return gotCloser ? best.pos : null;
     (veterania, clima, habilidades, emboscadas...) es un modulo de reglas (`core/ruleModules/`) que
     aporta entradas a las listas que miran las reglas (`hooksOf(s, 'hitModifiers')`), no un
     `if (!s.settings.veterancy) return 1` dentro de cada funcion. Un ajuste que es un numero (dinero,
-    puntos de captura) se lee de `s.settings` sin mas.
+    puntos de captura) se lee de `s.settings` sin mas. Fuera de las reglas (la IA, la interfaz, la
+    ayuda) tampoco se repite el `isOn` de un modulo: se le pregunta (`isRuleOn(s, id)`,
+    `isModuleOn(ajustes, id)`) o, mejor, a la regla que lo usa (`seesEverything`,
+    `letsTeammatesThrough`). Las reglas no importan el registro de modulos ni un modulo concreto
+    (lo mira ESLint).
 15. **Preguntar "y si" sin fingir unidades.** Nada de copias con otra casilla, otra vida u otro turno
     (`{ ...unit, x, y }`) que pasan por las reglas como si fueran de verdad: la pregunta se dice con su
     tipo (`engagement(atacante, defensor, { from, attackerLife })` para el combate) o la regla no

@@ -123,11 +123,11 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   quita (`'noTravel'` si no viajaba), y 'travelStep' da el paso de cada turno, hacia la casilla del
   alcance que mas acerca (`travelStepOf`). Si ya esta en el destino o llega este turno, el viaje
   acaba sin moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); una
-  emboscada por el camino tambien lo acaba. Moverla a mano ('move', 'load', 'merge', y 'attack' sin
+  camino cortado (`interruption`, la emboscada) tambien lo acaba, con la clase del corte como `end`. Moverla a mano ('move', 'load', 'merge', y 'attack' sin
   haberse movido aun) lo acaba con `endTravel`; capturar, esperar o atacar despues del paso del
   viaje, no. Un viaje y una orden permanente se quitan el uno al otro, y cada uno lo cuenta (el
   viaje que acaba con `end: 'ordered'`; la orden, con `order: null`). Cada fin tiene su suceso
-  'travel' con `to: null` y por que (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o
+  'travel' con `to: null` y por que (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o la clase del corte,
   'ambush'), y la escena avisa «llega» solo con 'withinReach'. El paso de cada turno lo da la
   partida al empezar el turno de su equipo (`TURN_START_PHASES`); la escena manda 'travel' y, al
   dar la orden, el primer 'travelStep'.
@@ -180,7 +180,9 @@ lleva el equipo de esa accion como actor y va antes que el `formed` o `grouped`;
 partida (caen sus unidades), la cuenta la invariante sin actor. Los numeros de escuadra no se
 reutilizan (`nextSquadId`). Con ellos
 se anima (`ANIMATORS`), se cuentan las estadisticas (`recordEvents` en dispatch, por el `actor`) y se resume el
-fin de ronda (`roundReport(s, events)`: lo que enseña la escena). `endRound` devuelve los suyos:
+fin de ronda (`roundReport(s, events)`: lo que enseña la escena; cada parte del resumen es una
+`ROUND_REPORT_PARTS` de siempre, ingresos y curas, o una `roundReportParts` de su modulo: control,
+mantenimiento, clima). `endRound` devuelve los suyos:
 `income`, `heal`, `upkeep`, `controlPoint`, `newDay`, `weather` (cada paso del fin de ronda, `roundPhasesOf`, da los
 que tiene; el ultimo, 'army', apunta el valor de cada ejercito del dia nuevo) y, al final, los de
 las `INVARIANTS`, que `endRound` tambien repasa (`fundsCapped`...). Van dentro de los del 'endTurn'
@@ -331,20 +333,21 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 | `falls` | si un equipo ha caido y por que (`currentDefeat`) y cuando cayo (`recordFalls`, `fallOf`, `lastFallen`) |
 | `invariants` | `INVARIANTS` y `restoreInvariants`: lo que se deja en orden tras cada accion y cada ronda, con sus sucesos |
 | `movementProfile` | como se mueve cada tipo: por donde entra y lo que le cuesta (`TerrainAccess`), lo que puede gastar (`MovementProfile`), `pathCost` |
-| `passage` | lo que le hacen las demas unidades a quien se mueve (`PASS_RULES`, `surroundingsOf`: cierra el paso, se atraviesa, no se sabe que esta) y donde tiene que pararse |
-| `distance` | pasos por tierra sin limite (`distanceMap`: 0 en el origen, Infinity donde no se llega) y lo que corta el paso al medir (`Blockers`) |
+| `passage` | lo que le hacen las demas unidades a quien se mueve (las `passRules` de los modulos; si ninguna dice nada, cierra el paso: `surroundingsOf`) y donde tiene que pararse; lo mismo para medir (`passBlockers`) y si atraviesa a los suyos (`letsTeammatesThrough`) |
+| `distance` | pasos por tierra sin limite (`distanceMap`: 0 en el origen, Infinity donde no se llega) y lo que corta el paso al medir (`Blockers`: `noBlockers`, `unitsBlock` o `passBlockers`) |
 | `movement` | la regla de cada paso (`stepAllowed`), alcance (`moveRange`), caminos (`plannedPath`, `validPath`, `approachPath`) y el paso hacia algo (`stepToward` con un `Approach`) |
-| `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo que lo corta a mitad (`PATH_INTERRUPTIONS`: la emboscada) y el suceso de mover |
+| `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo corta el primer `pathInterruptions` de los modulos que llega (la emboscada); el suceso de mover lleva el corte (`interruption: { kind, at }`) |
 | `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
 | `engagement` | un combate como pregunta (`Engagement`: atacante y defensor como `Fighter`, con casilla y vida): lo hipotetico sin fingir unidades |
 | `weapons` | lo que dice el arma de cada tipo: `inAttackRange`, `basePower`, `canDamage` |
-| `damage` | como sale el daño (`DamageModel`: la tirada y su reparto; `SHOT_BY_SHOT`, `spreadAround`, `damageModelOf`) |
+| `damage` | como sale el daño (`DamageModel`: la tirada y su reparto); cada modelo por su nombre en `DAMAGE_MODELS` (el ajuste `damageModel`: `shotByShot`, `spread`), construido una vez por partida (`damageModelOf`) |
 | `attackRecord` | lo que se apunta de un ataque mientras se resuelve (`AttackRecord`, `fallenIn`) |
 | `combat` | desde donde y a quien se dispara, proteccion, acierto (`HIT_MODIFIERS` y los de los modulos), daño esperado, contraataque (`canCounter`), tirada |
 | `forecast` | prevision de combate (`combatForecast` de un `Engagement`) y zona de amenaza |
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar (`buyProblem`, `buildUnit`) |
-| `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen) |
+| `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen, con `ROUND_REPORT_PARTS` y las `roundReportParts` de los modulos) |
+| `rank`, `roundReport` | el rango por bajas (`RANK_KILLS`, `rank`: lo usa el modulo de veterania y la interfaz); la forma del resumen de ronda |
 | `victory` | como acaba la partida, igual para todos (`matchResult(s)`, `VICTORY_RULES`; ver abajo) |
 | `turnOrder` | quien juega despues (`nextTurn`, y si con eso acaba la ronda; `takesTurn`) |
 
@@ -360,18 +363,28 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 - **Movimiento** (G1-G7 de la auditoria del nucleo): `movementProfile(s, unidad)` dice por donde
   entra, lo que cuesta cada casilla y lo que puede gastar (el coste del terreno y el clima los ponen
   sus modulos); `surroundingsOf(s, unidad)` lo que encuentra en cada casilla (`'empty'`,
-  `'passThrough'`, `'blocked'`) segun `PASS_RULES` y las reglas de paso de los modulos (pasar entre
-  aliados, no saber de los enemigos escondidos) y donde tiene que pararse (`stopRules`: la zona de
+  `'passThrough'`, `'blocked'`) segun las reglas de paso de los modulos (pasar entre aliados, no
+  saber de los enemigos escondidos; si ninguna dice nada, otra unidad cierra el paso) y donde tiene que pararse (`stopRules`: la zona de
   control); `moveRulesOf` junta las dos cosas y `stepAllowed(reglas, paso, 'walk' | 'join')` es la
   unica regla de cada paso: la usan el alcance, `validPath`, el rastro del cursor (`extendTrail`) y
   `approachPath` (unirse o subir a un transporte es un paso `'join'`, que entra en la unidad y no
-  en su casilla). `MoveRange` lleva esas reglas, `steps` (lo que cuesta acabar en cada casilla, o
+  en su casilla, aunque cuesta lo mismo que entrar en ella; si aun puede moverse lo mira quien
+  llama, `transport.ts`). `MoveRange` lleva esas reglas, `steps` (lo que cuesta acabar en cada casilla, o
   null) y `prev`; no mira si la unidad ya se ha movido (es hasta donde llegaria en su turno). Un
-  camino ya comprobado se recorre con `traverse` (`moveAlong` al mover): `PATH_INTERRUPTIONS` lo
-  puede cortar (la emboscada) y entonces la unidad se para antes y pierde el turno; mover, unirse,
+  camino ya comprobado se recorre con `traverse` (`moveAlong` al mover): lo puede cortar una
+  `pathInterruptions` de un modulo (la emboscada; si hay varias, la que corta antes) y entonces la
+  unidad se para antes y pierde el turno; el suceso lleva el corte (`interruption: { kind, at }`),
+  el viaje acaba con su `kind` y la escena busca su animacion por `kind`; mover, unirse,
   subir y el paso de un viaje usan lo mismo. Distancias sin limite: `distanceMap(s, desde,
   movimiento, blockers)`; acercarse a algo: `stepToward(alcance, approach)` (`overGroundTo`,
-  `straightTo` o el `Approach` de la IA y de la formacion).
+  `straightTo` o el `Approach` de la IA y de la formacion). La IA mide con `stepsMap`
+  (`autopilot/context.ts`): sola, todas las unidades cortan el paso; en grupo y si las reglas de paso
+  le dejan atravesar a los suyos, mide con esas reglas y con `PLANS_WITH_WHAT_IT_SEES` delante (los
+  enemigos que no ve no le cortan el camino al planear, haya emboscadas o no).
+- **La rejilla**: el mapa es una rejilla de casillas con cuatro vecinas (`neighbors4`) y distancia
+  en linea `manhattan` (`geom.ts`). Es la unica suposicion fija del nucleo: alcance, distancias,
+  zona de control, rombos de vision y de alcance la dan por hecha. Otra forma (hexagonos) seria
+  cambiar `geom.ts` y lo que usa `diamond`, no una lista de los modulos.
 - **Combate como pregunta**: las reglas del combate reciben un `Engagement` (`engagement(atacante,
   defensor, { from, attackerLife, defenderLife })`; `reversed` es el del contraataque). Asi la
   prevision desde otra casilla, el valor de un ataque para la IA o el contraataque con la vida que
@@ -423,13 +436,17 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
   - algo que pasa en cada ataque es un `combatSteps` de su modulo, en su momento (`CombatStage`);
     lo de cualquier ataque esta en `COMBAT_RESOLUTION` (`actions/combat.ts`); quien contraataca, un
     `counterRules`;
-  - por donde se pasa, un `passRules` o `stopRules`; lo que corta un camino a mitad, una entrada en
-    `PATH_INTERRUPTIONS` (`rules/traverse.ts`); el coste de las casillas o lo que se puede gastar,
+  - por donde se pasa, un `passRules` o `stopRules`; lo que corta un camino a mitad, un
+    `pathInterruptions` (con su `InterruptionKind` en `model/events.ts`, su animacion en
+    `INTERRUPTION_ANIMATIONS`, `scenes/game/playback.ts`, y su nombre en `npm run play`);
+  - una parte del resumen de ronda, un `roundReportParts`;
+  - otra forma de repartir el daño, una entrada en `DAMAGE_MODELS` (`rules/damage.ts`) y su nombre
+    en el ajuste `damageModel`; el coste de las casillas o lo que se puede gastar,
     un `enterCosts` o `moveBudgets`; la vision, `visionRadius`, `revealRules`, `concealment` o
     `coverSight`;
   - una clase de habilidad de unidad es su forma en `AbilityDef` (`content/types.ts`), su validacion
-    en `ABILITY_SHAPES` (`content/abilities.ts`) y lo que aporta a las listas en `ABILITY_EFFECTS`
-    (`abilities.ts`); el modulo de las habilidades lo enchufa todo;
+    en `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta a las listas en `ABILITY_EFFECTS` y
+    su sitio en `ABILITY_EFFECT_ORDER` (`abilities.ts`); el modulo de las habilidades lo enchufa todo;
   - una clase de efecto de un poder del general es su forma en `GeneralEffect`, su validacion en
     `EFFECT_SHAPES` (`content/generals.ts`) y su entrada en `POWER_EFFECTS` (`generalPowers.ts`: si
     necesita casilla, su area, como se aplica y lo que le vale a la IA, `aiValue`);
@@ -455,6 +472,15 @@ listas: las entradas de siempre mas las de los modulos que la partida lleva (`ho
 en el orden de `RULE_MODULES`; `isRuleOn(s, id)` dice si uno esta puesto). Sin el modulo, sus
 entradas no estan: no hay `if (!s.settings.veterancy) return 1`.
 
+Los modulos se resuelven **una vez por partida**: `rulesetFor(partida, ajustes)` junta los del juego
+(`RULE_MODULES`) y los que trae su modo (`GameMode.ruleModules`), se queda con los que se enchufan y
+deja sus listas ya juntas en `s.ruleset` (con el modelo de daño, `damageModel`). Se pone al crear la
+partida, al leerla (`readSave`) y al cambiar sus ajustes (`changeSettings`, que cambia los dos a la
+vez: `s.settings` es de solo lectura); no se guarda (como el contenido). `hooksOf` e `isRuleOn` solo
+leen `s.ruleset` (`ruleModules/ruleset.ts`). Sin partida (la ayuda), `isModuleOn(ajustes, id)`. Las
+partes del juego que no son reglas (la interfaz, la IA) tampoco miran el ajuste: preguntan al
+modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsTeammatesThrough`).
+
 | Modulo | Su ajuste | Lo que aporta |
 |---|---|---|
 | `abilities` | `abilities` | lo de cada clase de habilidad (`ABILITY_EFFECTS`): escudo y aura al acierto, perforar, zona de control, ver en el bosque, capturar rapido |
@@ -476,12 +502,16 @@ entradas no estan: no hay `if (!s.settings.veterancy) return 1`.
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
 `counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),
 `matchSetup`, `healingBlocks`, `visionRadius`, `revealRules`, `concealment`, `coverSight`,
-`enterCosts`, `moveBudgets`, `passRules`, `stopRules` y `captureFactors`. Las que van por momentos
+`enterCosts`, `moveBudgets`, `passRules`, `stopRules`, `pathInterruptions`, `roundReportParts` y
+`captureFactors`. Las que van por momentos
 (el fin de ronda, el ataque) se ordenan por momento y, en cada uno, primero las de siempre y luego
 las de los modulos (`roundPhasesOf`, `combatResolutionOf`); en el acierto, el orden de los modulos
-importa (coma flotante). Las reglas importan `ruleModules/registry.ts` y los modulos importan lo que
-enchufan (generales, clima, habilidades...), nunca al reves: las reglas ya no importan generales,
-clima ni habilidades (L7). Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que
+importa (coma flotante). La direccion es una: el registro (`ruleModules/registry.ts`) importa los
+modulos, los modulos importan lo que enchufan (generales, clima, habilidades...) y las reglas solo
+importan `ruleModules/ruleset.ts` (`hooksOf`, `isRuleOn`) y los tipos de `ruleModules/hooks.ts`:
+ni el registro, ni un modulo concreto, ni generales, clima o habilidades (L7). Lo comprueba ESLint
+(`no-restricted-imports` en `src/core/rules/**` y `src/core/actions/**`; solo `actions/powers.ts`
+importa `generalPowers`). Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que
 las reglas de los modulos no tengan que importar el combate.
 
 Un modulo nuevo: su fichero en `ruleModules/` (lo que aporta a cada lista), su id en `RuleModuleId`,

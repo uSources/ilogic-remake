@@ -260,6 +260,9 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
   (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania); ver
   `docs/BALANCE.md`.
+  `damageModel` elige como sale el daño por su nombre (`spread`: el esperado +- `damageSpread`;
+  `shotByShot`: la tirada de 2013, un disparo por punto de vida): un ajuste de una lista (`choice` en
+  `SETTINGS_SCHEMA`), y cada nombre es una entrada de `DAMAGE_MODELS` (`src/core/rules/damage.ts`).
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`).
   `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
