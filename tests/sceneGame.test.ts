@@ -1,13 +1,13 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
 import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
-import { mergeTargets, loadTargets, moveRange, newUnit, restoreInvariants } from '@core/rules';
+import { mergeTargets, loadTargets, moveRange, newUnit, outcomeFor, restoreInvariants } from '@core/rules';
 import type { GameState, MatchResult, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
 import { hintText } from '../src/scenes/game/hudParts';
 import { posKey, posOf } from '@core/geom';
-import { endButtonsFor, endFocus, endViewer, outcomeFor, reasonText, screenEndFor } from '../src/scenes/game/endOfMatch';
+import { endButtonsFor, endFocus, endViewer, reasonText, screenEndFor } from '../src/scenes/game/endOfMatch';
 import { fallsNoticeFor } from '../src/scenes/game/turns';
 import { canUseMenuButton } from '../src/hud/game/turn';
 import { createMatch } from '@core/defaultGames';
@@ -26,8 +26,8 @@ import { INPUT_ACTIONS } from '../src/controls/actions';
 import { MISSIONS } from '@core/missions';
 import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { PLAIN_RULES } from './plainRules';
-import { sceneControllers, viewerOf } from '../src/scenes/game/matchSetup';
-import { controllersFor } from '@core/controllers';
+import { labControllers, viewerOf } from '../src/scenes/game/matchSetup';
+import { screenControllers } from '@core/controllers';
 import { GameSession, humanController, passiveController, remoteController, sequence } from '@core/session';
 import { seededRng } from '@core/util/random';
 import { dispatch } from '@core/actions';
@@ -310,7 +310,7 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     act(s, 0, { kind: 'surrender' });
     expect(session.personStillPlays()).toBe(false);
     const out = session.screenEnd(0)!;
-    expect(out).toEqual({ kind: 'out', team: 0, fall: { order: 1, reason: 'surrender' } });
+    expect(out).toEqual({ kind: 'out', fall: { order: 1, reason: 'surrender' } });
     expect(screenEndFor(s, out, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
     // Sin rendirse: cae y quedan dos IA. Sin nada (ni Base) es 'wipeout'; el motivo es el apuntado al caer.
     const fallen = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
@@ -407,8 +407,8 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
 });
 
 describe('escena: quien mira al abrir la partida (game/matchSetup.ts)', () => {
-  /** La sesion de la escena para esa partida (sus controladores: los de sceneControllers). */
-  const sceneSession = (s: GameState, isLab = false) => new GameSession(s, controllersFor(s, seededRng(1), sceneControllers(s, isLab)));
+  /** La sesion de la escena para esa partida (sus controladores: screenControllers y, en el laboratorio, labControllers). */
+  const sceneSession = (s: GameState, isLab = false) => new GameSession(s, screenControllers(s, seededRng(1), labControllers(s, isLab)));
 
   it('la persona a la que le toca; si le toca a la IA, la primera persona; sin personas, el primer equipo', () => {
     const twoPeople = blankState({}, [{ controller: 'human' }, { controller: 'human' }]);

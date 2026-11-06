@@ -7,10 +7,10 @@ import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { rematchOf } from '../../core/match';
 import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
-import { isDefeatReason, isWinner, lastFallen } from '../../core/rules';
+import { decidingFall, isDefeatReason, isWinner, outcomeFor } from '../../core/rules';
 import { enemiesOf } from '../../core/teams';
 import type { DefeatReason, EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
-import type { ScreenEndOf } from '../../core/session';
+import type { PersonEnd } from '../../core/session';
 import { bestDays, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
 import { ui, type EndOutcome } from '../../hud/store';
@@ -50,12 +50,6 @@ export function setEndFilter(filter: string | null): void {
 /** Mision que va detras de esta (ninguna si es la ultima). */
 const nextMission = (mission: MissionDef): MissionDef | undefined => MISSIONS[MISSIONS.indexOf(mission) + 1];
 
-/** Como ha acabado la partida para el equipo que mira (`viewer`). */
-export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
-  if (result.status === 'draw') return 'draw';
-  return isWinner(result, viewer) ? 'won' : 'lost';
-}
-
 /**
  * Como acaba para esta pantalla: lo que ve el que mira (ganada, perdida o empate), por que y, si lo
  * decidio una caida, de quien fue para el (`fallenBy`: suya, de un aliado o de un enemigo). Asi «te
@@ -64,24 +58,13 @@ export function outcomeFor(result: MatchResult, viewer: TeamId): EndOutcome {
 export type ScreenEnd =
   { outcome: EndOutcome; reason: Exclude<EndReason, DefeatReason> } | { outcome: EndOutcome; reason: DefeatReason; fallenBy: Side };
 
-/** El orden en que cuenta de quien es una caida si caen varios a la vez: la propia, la de un aliado, la de un enemigo. */
-const SIDE_ORDER: readonly Side[] = ['own', 'ally', 'enemy'];
-
-/** De quien, visto por `viewer`, es la ultima caida apuntada (la que decide). */
-function lastFallBy(s: GameState, viewer: TeamId): Side {
-  const sides = lastFallen(s).map(({ team }) => sideOf(s, viewer, team));
-  const side = SIDE_ORDER.find((candidate) => sides.includes(candidate));
-  if (!side) throw new Error('La partida se ha decidido por una caida que no esta apuntada');
-  return side;
-}
-
 /** El final de esta pantalla segun la sesion (GameSession.screenEnd), visto por `viewer`. */
-export function screenEndFor(s: GameState, end: ScreenEndOf, viewer: TeamId): ScreenEnd {
+export function screenEndFor(s: GameState, end: PersonEnd, viewer: TeamId): ScreenEnd {
   if (end.kind === 'out') return { outcome: 'lost', reason: end.fall.reason, fallenBy: 'own' };
   const { result } = end;
   const outcome = outcomeFor(result, viewer);
   return isDefeatReason(result.reason)
-    ? { outcome, reason: result.reason, fallenBy: lastFallBy(s, viewer) }
+    ? { outcome, reason: result.reason, fallenBy: sideOf(s, viewer, decidingFall(s, result).team) }
     : { outcome, reason: result.reason };
 }
 

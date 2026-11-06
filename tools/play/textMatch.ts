@@ -24,7 +24,8 @@ import {
   roundReport,
   endsInAmbush,
   moveRange,
-  isWinner,
+  outcomeFor,
+  type MatchOutcome,
   reachableTiles,
   unitAt,
   unitById,
@@ -32,7 +33,7 @@ import {
   canStillAct,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import { controllersFor } from '@core/controllers';
+import { screenControllers } from '@core/controllers';
 import { GameSession, runMatch, type ActedStep } from '@core/session';
 import type { DefeatReason, GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '@core/model';
 
@@ -95,7 +96,7 @@ export class TextMatch {
     this.rng = seededRng(aiSeedFor(seed));
     this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
     this.me = playerTeam(this.s);
-    this.session = new GameSession(this.s, controllersFor(this.s, this.rng));
+    this.session = new GameSession(this.s, screenControllers(this.s, this.rng));
     this.session.subscribe((step) => this.note(step));
     this.advance();
     this.told = [];
@@ -126,7 +127,10 @@ export class TextMatch {
       return value;
     };
     try {
-      switch (command.toLowerCase()) {
+      const verb = command.toLowerCase();
+      // Acabada para esta pantalla, solo se mira: nada de seguir jugando (ni de exportar mas jugadas).
+      if (PLAY_COMMANDS.has(verb) && this.session.screenEnd(this.me)) return `error: la partida ha acabado (${this.result()})`;
+      switch (verb) {
         case '':
         case '#':
           return '';
@@ -168,9 +172,13 @@ export class TextMatch {
         case 'ia':
           return this.endTurn(true);
         case 'surrender':
-        case 'rendirse':
+        case 'rendirse': {
+          // Lo que cuenta rendirse (tu caida), y despues lo que pase al seguir los demas.
+          this.told = [];
           this.perform({ kind: 'surrender' }, 'no puede rendirse');
-          return this.endTurn(false);
+          const said = this.told;
+          return [...said, this.endTurn(false)].join('\n');
+        }
         case 'status':
         case 'estado':
           return this.status();
@@ -346,9 +354,7 @@ export class TextMatch {
     const end = this.session.screenEnd(this.me);
     if (!end) return 'sigue';
     if (end.kind === 'out') return `perdida (${DEFEAT_TEXT[end.fall.reason]}; los demas siguen sin personas)`;
-    const { result } = end;
-    if (result.status === 'draw') return `empate (${result.reason})`;
-    return `${isWinner(result, this.me) ? 'ganada' : 'perdida'} (${result.reason})`;
+    return `${OUTCOME_TEXT[outcomeFor(end.result, this.me)]} (${end.result.reason})`;
   }
 
   status(): string {
@@ -422,6 +428,31 @@ function describeAll(s: GameState, events: Iterable<GameEvent>, prefix: string):
   }
   return lines;
 }
+
+/** Las ordenes que juegan (las demas solo miran: mapa, unidades, estado, la partida en JSON). */
+const PLAY_COMMANDS: ReadonlySet<string> = new Set([
+  'move',
+  'mover',
+  'attack',
+  'atacar',
+  'capture',
+  'capturar',
+  'wait',
+  'esperar',
+  'buy',
+  'comprar',
+  'power',
+  'poder',
+  'end',
+  'fin',
+  'ai',
+  'ia',
+  'surrender',
+  'rendirse',
+]);
+
+/** Como ha acabado para ti, en una palabra. */
+const OUTCOME_TEXT: Record<MatchOutcome, string> = { won: 'ganada', lost: 'perdida', draw: 'empate' };
 
 /** Por que cae un equipo, en una palabra o dos. */
 const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'sin nada', surrender: 'rendido' };

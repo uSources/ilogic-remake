@@ -42,7 +42,8 @@ export const isDefeated = (s: GameState, team: TeamId): boolean => currentDefeat
 /**
  * Todos los equipos de una partida nueva empiezan en pie (con su Base): uno que empezara caido no
  * tendria su caida apuntada (la apuntan las INVARIANTS al pasar), y es un fallo de su preparacion,
- * no algo que arreglar en silencio. Lo miran buildMatch y buildMission.
+ * no algo que arreglar en silencio. Lo mira buildMatch (las misiones, ademas, ya lo comprueba
+ * checkMission: missingBases).
  */
 export function assertAllStanding(s: GameState): void {
   for (const team of teamIds(s)) {
@@ -84,10 +85,8 @@ export function recordFalls(s: GameState, actor: TeamId | null): GameEvent[] {
     return reason ? [{ team, reason }] : [];
   });
   const order = lastFallOrder(s) + 1;
-  return fallen.map(({ team, reason }) => {
-    teamState(s, team).fell = { order, reason };
-    return { kind: 'teamDefeated', actor, team, reason };
-  });
+  for (const { team, reason } of fallen) teamState(s, team).fell = { order, reason };
+  return fallen.map(({ team, reason }) => ({ kind: 'teamDefeated', actor, team, reason }));
 }
 
 /**

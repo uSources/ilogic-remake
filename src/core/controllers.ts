@@ -5,4 +5,4 @@
  * solo lleva una partida (un servidor, una repeticion) no la carga.
  */
 export { aiController, type AiBrain } from './controllers/aiController';
-export { controllersFor } from './controllers/byTeam';
+export { controllersFor, screenControllers } from './controllers/byTeam';

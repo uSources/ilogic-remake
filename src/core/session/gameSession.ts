@@ -42,11 +42,11 @@ interface TurnInPlay {
 }
 
 /**
- * Como se acaba la partida para quien mira (GameSession.screenEnd): decidida, o fuera (ya no juega
- * ninguna persona) con la caida de quien mira.
+ * Como se acaba la partida para la persona que mira (GameSession.screenEnd): decidida, o fuera (ya no
+ * juega ninguna persona) con su caida. (El final que se enseña, visto por ella, es el ScreenEnd de la
+ * escena.)
  */
-export type ScreenEndOf =
-  { kind: 'decided'; result: Exclude<MatchResult, { status: 'playing' }> } | { kind: 'out'; team: TeamId; fall: TeamFall };
+export type PersonEnd = { kind: 'decided'; result: Exclude<MatchResult, { status: 'playing' }> } | { kind: 'out'; fall: TeamFall };
 
 /** Lo que se le puede dar a una sesion ademas de sus controladores. */
 export interface SessionOptions {
@@ -91,9 +91,14 @@ export class GameSession {
     return this.controllerOf(team).person === true;
   }
 
+  /** Los equipos que juegan personas en esta pantalla. */
+  people(): TeamId[] {
+    return teamIds(this.state).filter((team) => this.isPerson(team));
+  }
+
   /** Queda alguna persona de esta pantalla que sigue jugando. */
   personStillPlays(): boolean {
-    return teamIds(this.state).some((team) => this.isPerson(team) && takesTurn(this.state, team));
+    return this.people().some((team) => takesTurn(this.state, team));
   }
 
   /**
@@ -102,13 +107,13 @@ export class GameSession {
    * rendido y quedan otros equipos: nadie la miraria) y `viewer` esta fuera, con su caida. Lo miran la
    * escena y la partida por texto, asi acaban igual (K4). null: sigue.
    */
-  screenEnd(viewer: TeamId): ScreenEndOf | null {
+  screenEnd(viewer: TeamId): PersonEnd | null {
     const result = this.result;
     if (result.status !== 'playing') return { kind: 'decided', result };
     if (this.personStillPlays()) return null;
     const fall = fallOf(this.state, viewer);
     if (!fall) throw new Error(`El equipo ${viewer} mira la partida sin ninguna persona en juego, pero no ha caido`);
-    return { kind: 'out', team: viewer, fall };
+    return { kind: 'out', fall };
   }
 
   /**

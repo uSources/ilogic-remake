@@ -13,7 +13,6 @@
  * Objetivos: uno por entrada en `objectives.ts`.
  */
 import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
-import { assertAllStanding } from './rules/falls';
 import { rulesWith } from './rulesConfig';
 
 import { deepFreeze, type DeepReadonly } from './util/freeze';
@@ -108,7 +107,6 @@ export function buildMission(mission: MissionDef, content: GameContent, diceSeed
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
   const unitUids = placeUnits(s, mission.units);
   s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, missionTeam(mission), unitUids, content) };
-  assertAllStanding(s);
   return s;
 }
 

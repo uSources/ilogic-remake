@@ -11,7 +11,7 @@ import { measureObjective, objectiveStatus, type ObjectiveProgress } from '../ob
 import { alliesOf, enemiesOf, teamIds, teamState } from '../teams';
 import { maxBy } from '../util/pick';
 import type { Building, EndReason, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
-import { isDefeated, lastFallen, mainFall } from './falls';
+import { isDefeated, lastFallen, mainFall, type FallenTeam } from './falls';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;
@@ -58,15 +58,29 @@ function oneTeamPerAlliance(s: GameState, teams: readonly TeamId[]): TeamId[] {
 }
 
 /**
- * Por que se decide la partida: por la caida que la decide (la ultima apuntada, de entre `losers`),
- * no por una de antes. Si cayeron varios a la vez por motivos distintos, cuenta el primero de
- * de mas prioridad (perder la Base, quedarse sin nada, rendirse: mainFall). Solo lee lo apuntado: una partida
- * cambiada sin pasar por las INVARIANTS (que apuntan las caidas) es un fallo de quien la cambio.
+ * La caida que decide la partida: la ultima apuntada de entre `losers`, no una de antes; si cayeron
+ * varios a la vez, la de mas prioridad (perder la Base, quedarse sin nada, rendirse: mainFall). Solo
+ * lee lo apuntado: una partida cambiada sin las INVARIANTS (que apuntan las caidas) es un fallo.
  */
-function lossReason(s: GameState, losers: readonly TeamId[]): EndReason {
+function decidingFallAmong(s: GameState, losers: readonly TeamId[]): FallenTeam {
   const deciding = mainFall(lastFallen(s).filter(({ team }) => losers.includes(team)));
   if (!deciding) throw new Error('La partida se decide sin ninguna caida apuntada: se ha cambiado sin las INVARIANTS');
-  return deciding.fall.reason;
+  return deciding;
+}
+
+/** Por que se decide la partida: por la caida que la decide (decidingFallAmong). */
+const lossReason = (s: GameState, losers: readonly TeamId[]): EndReason => decidingFallAmong(s, losers).fall.reason;
+
+/**
+ * La caida que decidio una partida acabada por caidas (no por el limite de dias ni por el objetivo):
+ * la misma que da su motivo, de entre los que no ganan. La usa el final para decir de quien fue.
+ */
+export function decidingFall(s: GameState, result: Exclude<MatchResult, { status: 'playing' }>): FallenTeam {
+  const winners: readonly TeamId[] = result.winners;
+  return decidingFallAmong(
+    s,
+    teamIds(s).filter((team) => !winners.includes(team)),
+  );
 }
 
 /** Gana la alianza de `team` (todos sus equipos, tambien los que hayan caido), por `reason`. */
@@ -149,6 +163,15 @@ export const isMatchOver = (s: GameState): boolean => matchResult(s).status !== 
 
 /** El equipo esta entre los que ganan (su alianza ha ganado). */
 export const isWinner = (result: MatchResult, team: TeamId): boolean => result.status === 'decided' && result.winners.includes(team);
+
+/** Como ha acabado una partida para un equipo: ganada, perdida o empate. */
+export type MatchOutcome = 'won' | 'lost' | 'draw';
+
+/** Como ha acabado la partida (ya acabada) para `team`. */
+export function outcomeFor(result: Exclude<MatchResult, { status: 'playing' }>, team: TeamId): MatchOutcome {
+  if (result.status === 'draw') return 'draw';
+  return isWinner(result, team) ? 'won' : 'lost';
+}
 
 /** Progreso del objetivo de la mision para su dueño, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
 export function objectiveProgress(s: GameState): ObjectiveProgress | null {

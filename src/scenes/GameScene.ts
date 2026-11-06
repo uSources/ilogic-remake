@@ -16,7 +16,7 @@ import type { GameSession, ActedStep } from '../core/session';
 import { seededRng } from '../core/util/random';
 import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
-import { enemiesOf, teamIds, teamState } from '../core/teams';
+import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
 import {
   resetActions,
@@ -695,8 +695,7 @@ export class GameScene extends Phaser.Scene {
     const end = this.session.screenEnd(this.viewer);
     if (!end) return false;
     if (end.kind === 'decided') {
-      const people = teamIds(this.s).filter((team) => this.session.isPerson(team));
-      this.viewer = endViewer(end.result, this.viewer, people);
+      this.viewer = endViewer(end.result, this.viewer, this.session.people());
     }
     void this.endScreen.finish(screenEndFor(this.s, end, this.viewer));
     return true;

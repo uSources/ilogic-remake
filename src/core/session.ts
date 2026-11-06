@@ -37,7 +37,7 @@ export {
   type ActedStep,
   type RunOptions,
   type SessionListener,
-  type ScreenEndOf,
+  type PersonEnd,
   type SessionOptions,
   type SessionStep,
 } from './session/gameSession';

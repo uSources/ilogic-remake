@@ -4,6 +4,7 @@
  * sesion (`controllersFor` con `overrides`).
  */
 import type { ControllerKind, GameState, Rng, TeamId } from '../model';
+import { playerTeam } from '../teams';
 import { aiController } from './aiController';
 import { humanController, type Controller } from '../session/controller';
 
@@ -19,4 +20,13 @@ const CONTROLLER_FOR: { readonly [Kind in ControllerKind]: (rng: Rng) => Control
  */
 export function controllersFor(s: GameState, rng: Rng, overrides: ReadonlyMap<TeamId, Controller> = new Map()): Controller[] {
   return s.teams.map((team) => overrides.get(team.id) ?? CONTROLLER_FOR[team.controller](rng));
+}
+
+/**
+ * Los de una pantalla en la que juega una persona (la escena, `npm run play`): como controllersFor,
+ * pero el equipo de la persona (`playerTeam`) lo juega ella aunque la partida diga 'ai' (una de IA
+ * contra IA de las herramientas o del fuzz): asi siempre hay alguien mirando. `overrides` manda.
+ */
+export function screenControllers(s: GameState, rng: Rng, overrides: ReadonlyMap<TeamId, Controller> = new Map()): Controller[] {
+  return controllersFor(s, rng, new Map([[playerTeam(s), humanController()], ...overrides]));
 }

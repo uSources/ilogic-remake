@@ -65,8 +65,9 @@ export function labRuleChanges(action: LabAction | null): Partial<RulesConfig> {
 }
 
 /**
- * Partida del laboratorio: todo hierba, una Base por equipo en las esquinas (si no, la partida
- * acabaria sola) y las dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
+ * Partida del laboratorio: todo hierba, una Base por equipo en las esquinas (sin Base un equipo
+ * empezaria caido: buildMatch no lo deja, assertAllStanding, y un equipo caido no puede actuar) y las
+ * dos unidades. Para atacar, la propia ya esta a su distancia de tiro.
  */
 export function labMatch(options: LabOptions, action: LabAction | null): SandboxConfig {
   const content = defaultContent();
