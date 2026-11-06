@@ -37,9 +37,12 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   panel y que pieza usar (`Button`, `Popover`, `Veil`...): `docs/ARQUITECTURA.md`, "Interfaz HTML".
 - **La partida solo cambia con acciones**: quien juega un equipo manda una `GameAction` (datos: uids y
   casillas) con `dispatch(s, team, action)` (`core/actions.ts`), que la comprueba (`validate`, desde
-  la partida), la hace y devuelve sus sucesos (o por que no vale). La escena lo hace con
-  `host.act(...)`/`host.perform(...)` (`ActionHost`), la IA con `act`/`doMove`/`finish`
-  (`ai/context.ts`). Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
+  la partida; solo el equipo al que le toca: `GameState.turn`), la hace y devuelve sus sucesos (o por
+  que no vale). Cada equipo lo juega un controlador dentro de una `GameSession` (`core/session.ts`):
+  la escena manda las de la persona con `host.act(...)`/`host.perform(...)` (`ActionHost`, por
+  `session.act`), la IA con `act`/`doMove`/`finish` (`ai/context.ts`, por el dispatcher que le da la
+  sesion). Las herramientas y los tests juegan partidas enteras con `runMatch`; nada de bucles de
+  turnos a mano. Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
   modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
 - El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`), las decisiones
   llevan su `Rng` con semilla (`seededRng`, `core/util/random.ts`); nada de `Math.random` en core.
@@ -71,7 +74,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **Equipos, no bandos**: ningun numero de equipo es especial (ni `team === 0` ni `team = 0` por
   defecto). Enemigo es `isHostile(s, a, b)` (otra alianza); lo de cada equipo, `teamState(s, team)`
   (dinero, general, estadisticas); quien lo juega, su `controller`. Lo que actua por un equipo lo
-  recibe (`aiTurn(s, rng, team)`, `formSquad(s, team, units)`, `outcome(s, team)`). En la escena, el
+  recibe (`aiTurn(s, rng, team, dispatcher)`, `formSquad(s, team, units)`); como acaba la partida es
+  igual para todos (`matchResult(s)`: quien gana, nada de 'won'/'lost' de un equipo). En la escena, el
   equipo que mira es `viewer` y la interfaz pinta por lado (`ui/sides.ts`). Ver `docs/ARQUITECTURA.md`, "Equipos".
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
@@ -80,7 +84,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
-  `createGame(rng, { rules })`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
+  `createMatch(skirmishConfig({ seed, teams, ruleChanges }))`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
   `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)`, o `readSave(json, saveContext(contenido))` para saber que falla (`deserialize` da
@@ -105,7 +109,12 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   si se manda a unas elegidas, y en `ANIMATORS` de la escena); lo que se limpia tras cualquier
   accion y cada ronda = entrada en `INVARIANTS` (`core/rules/invariants.ts`); lo que se mira antes
   de cualquiera = entrada en `ACTION_GUARDS`; acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
-  ronda = entrada en `ROUND_PHASES` (devuelve sus sucesos); habilidad de unidad nueva = su efecto en
+  ronda = entrada en `ROUND_PHASES` (devuelve sus sucesos); paso al empezar o acabar cada turno =
+  entrada en `TURN_START_PHASES`/`TURN_END_PHASES` (`core/actions/turn.ts`); forma de acabar la
+  partida = entrada en `VICTORY_RULES` (`core/rules/victory.ts`) y en la lista de su modo; modo de
+  juego = entrada en `GAME_MODES` (`core/modes.ts`), su configuracion en `MatchConfig` y su
+  preparacion en `MATCH_SETUPS` (`core/match.ts`); quien juega un equipo = un `Controller`
+  (`core/session`); habilidad de unidad nueva = su efecto en
   `abilities.ts`; efecto nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`).
   La IA no tiene variables globales: lo del turno va en `AiCtx`. Antes de escribir un bucle o un
   literal, buscar si ya existe la ayuda.
@@ -133,7 +142,7 @@ partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTIL
 - **Uniones con discriminante** (`kind`, `type`, `mode`) para cosas que son una de varias, y `switch`
   con todos los casos y `default: return valor satisfies never` (como `ui/combatFx.ts`): un caso nuevo
   rompe la compilacion donde falta tratarlo.
-- **`satisfies` para comprobar sin perder el tipo exacto**: `{ mode: 'mission', ... } satisfies GameStartData`,
+- **`satisfies` para comprobar sin perder el tipo exacto**: `{ start: 'load' } satisfies GameStartData`,
   tablas `const X = {...} as const satisfies Record<Clave, Valor>`.
 - **Tablas que no pueden quedarse cortas**: `Record<UnionDeClaves, T>` (como `STANDING_ORDER_TURNS`)
   obliga a tener una entrada por caso. Si la lista de claves es un dato, se escribe una vez
