@@ -111,7 +111,7 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 
 Lista de habilidades pasivas: siempre estan activas, no son ordenes. Cada una es una clase (`kind`)
 con sus numeros, asi que se pueden dar a cualquier unidad sin tocar codigo. Solo cuentan con la regla
-`abilities` (activada por defecto; las partidas guardadas antes de existir no la tienen). La IA y la
+`abilities` (activada por defecto). La IA y la
 prevision de combate las tienen en cuenta solas, porque pasan por las mismas reglas (`core/abilities.ts`).
 
 | `kind` | Numeros | Que hace | Ahora la tiene |

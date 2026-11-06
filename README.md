@@ -153,7 +153,7 @@ src/
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)
     gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
     teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)
-    defaultGames.ts Partidas con el contenido del juego (createMatch, loadGame, saveContext)
+    defaultGames.ts Partidas con el contenido del juego (createMatch, loadGame)
     match.ts     Empezar una partida: MatchConfig por modo, buildMatch, skirmishConfig, rematchOf
     modes.ts     GAME_MODES: como se acaba cada modo, su orden de turnos, sus reglas fijas y sus fases
     session/     La partida en juego: GameSession y los controladores sin IA (persona, red, repeticion)
@@ -166,7 +166,7 @@ src/
     ai.ts        Inteligencia artificial (fachada de ai/: un generador que va devolviendo cada accion);
                  las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
     mapgen.ts    Generador de mapas aleatorios
-    save.ts      Guardar / cargar en JSON (saveMigrations.ts: MIGRATIONS para partidas antiguas)
+    save.ts      Guardar / cargar en JSON (solo el formato de ahora: las partidas de antes se descartan)
     geom.ts      Rombos, distancias, numeros aleatorios con semilla
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
   ui/          Dibujo del mapa (mapView y sus capas en ui/map: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
@@ -296,8 +296,7 @@ retocar en la web de GitHub, pero el siguiente cambio del CHANGELOG lo vuelve a 
 
 ## Diferencias con el original de 2013
 
-El modo "reglas de 2013" se quitó (27-10-2026): las partidas guardadas con esas reglas se siguen
-jugando con las actuales.
+El modo "reglas de 2013" se quitó (27-10-2026).
 
 
 Las reglas son las del juego original salvo los fallos que se han corregido. Todos estan

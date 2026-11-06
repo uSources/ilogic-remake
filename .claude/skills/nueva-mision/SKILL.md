@@ -24,6 +24,8 @@ solo lectura):
   `escort` (indice de la unidad en `units`, destino, dias). Un tipo de objetivo nuevo es una entrada en
   `OBJECTIVES` (`src/core/objectives.ts`): como se escribe y queda en la partida, sus problemas en el
   mapa, cuando se cumple o falla (`status`), el progreso y `isValid` (sus campos en una partida guardada).
+  Si cambia lo que se guarda (un objetivo con campos nuevos), se sube `SAVE_VERSION`
+  (core/saveVersion.ts): mientras el juego no ha salido no hay migraciones, las partidas de antes se descartan.
 - La partida de una mision la crea `buildMission(mision, contenido, semillaDeLosDados)`: cada vez que
   se juega, sus combates tiran con la semilla que da quien la empieza (`GameState.dice`).
 

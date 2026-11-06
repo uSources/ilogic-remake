@@ -87,10 +87,10 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `createMatch(skirmishConfig({ seed, teams, ruleChanges }))`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
   `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, mode, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
-  `loadGame(json)`, o `readSave(json, saveContext(contenido))` para saber que falla (`deserialize` da
-  null); un cambio en lo que se guarda sube
-  `SAVE_VERSION` (core/saveVersion.ts, y el tipo de `GameState.version`) y lleva su paso en `MIGRATIONS`
-  (core/saveMigrations.ts).
+  `loadGame(json)`, o `readSave(json, contenido)` para saber que falla (`deserialize` da
+  null). Solo se lee el formato de ahora: mientras el juego no ha salido, un cambio en lo que se guarda
+  sube `SAVE_VERSION` (core/saveVersion.ts, y el tipo de `GameState.version`) y las partidas de antes se
+  descartan (`badVersion`). Sin migraciones ni valores por defecto para campos que antes faltaban.
 - **Casillas como `Pos`**: firmas con `pos: Pos`, no `(x, y)`; copiar la casilla de una unidad o
   edificio con `posOf(unit)`; los bordes, con `mapGrid(s).contains(pos)`, `isOnBoard(s, pos)` o
   `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).
