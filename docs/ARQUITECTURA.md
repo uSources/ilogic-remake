@@ -146,7 +146,8 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   'endTurn' solo los manda la sesion (`isTurnBoundary`; `session.act` los rechaza con
   'sessionOnly'). Rendirse es la accion 'surrender' (`TeamState.resigned`: cuenta como derrotado),
   en su turno o fuera de el (`anyTime`); el menu solo lo ofrece si la partida se puede perder
-  (`canBeLost`: el laboratorio no), y guardar, si su modo se guarda (`saves`; `gameMenuOf`).
+  (`canBeLost`: el laboratorio no; el nucleo tampoco lo deja, 'cannotLose'), y guardar, si su modo se
+  guarda (`saves`; `gameMenuOf`).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
   (`buildMatch`, `newGameState`, `newUnit`, `appointGeneral`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
@@ -336,6 +337,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 | `capture` | puntos de captura, capturas a medias (`captureProgress`), capturar y su suceso, `autoCapturers` |
 | `lifecycle` | crear, quitar y limpiar unidades (`removeWithCargo`, con su `cargoLost`) |
 | `undo` | los movimientos que se pueden deshacer (`undoableMoves`), el ultimo, por que no y su invariante |
+| `falls` | si un equipo ha caido y por que (`currentDefeat`) y cuando cayo (`recordFalls`, `fallOf`, `lastFallen`) |
 | `invariants` | `INVARIANTS` y `restoreInvariants`: lo que se deja en orden tras cada accion y cada ronda, con sus sucesos |
 | `movement` | alcance (`moveRange`), caminos (`plannedPath`), emboscadas, `followPath`, distancia por tierra |
 | `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
@@ -356,13 +358,16 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   apuntar, olvidar, `lastUndoableMove` y `undoMoveProblem`. `movement`: `plannedPath` es por donde
   iria, calculado desde la partida, y el suceso de mover. `combat`: `attackProblem`,
   `attackTargets`, el botin y la tirada (`strike`).
+- `falls`: si un equipo ha caido y por que, mirando la partida (`currentDefeat`: rendido, sin nada o
+  sin Base, en el orden de `DEFEAT_REASONS`; `isDefeated`), y cuando cayo: `TeamState.fell`, con su
+  numero de caida, que apunta la invariante 'falls' (`recordFalls`, con el suceso 'teamDefeated') en
+  la accion o la ronda en que pasa, y `readSave` al cargar (sin sucesos; lo apuntado tiene que
+  cuadrar con la partida, `fallsMatch`).
 - `victory`: `MatchResult` con `status`, `winners` y `reason`; `isMatchOver`, `isWinner`. Las formas
   de acabar estan en `VICTORY_RULES` ('lastAllianceStanding', 'objective', 'dayLimit') y cada modo
-  dice las suyas. Derrota de un equipo (`isDefeated`: sin Base, sin nada o rendido) y su motivo
-  (`defeatReason`: rendirse; si no le queda nada, 'wipeout' antes que 'hq'). dispatch apunta cada
-  caida en la accion en que pasa (`noteFallenTeams`: `TeamState.fell`, con su numero de caida, y el
-  suceso 'teamDefeated'), y el motivo del resultado es el de la ultima caida, la que lo decide (no
-  una rendicion de antes). Puntos del limite de dias por alianza, progreso del objetivo de mision.
+  dice las suyas. Solo lee las caidas apuntadas: el motivo del resultado es el de la ultima
+  (`lastFallen`), la que lo decide, no una rendicion de antes. Puntos del limite de dias por
+  alianza, progreso del objetivo de mision.
 - `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
 
 `src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
@@ -568,9 +573,12 @@ el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la 
   por perdida con su motivo (`ScreenEnd`: `outOfMatchEnd`; el de una partida decidida,
   `endOfResult`), la cierra y borra su guardado. Una rendicion vuelve a escribir el guardado que
   hubiera, y la escena avisa de cada equipo que cae ('teamDefeated': «El equipo N queda fuera»). El
-  final se lee desde quien mira («El enemigo se ha rendido» si no ha perdido). Mientras juegan los
-  demas no hay menu, pero Esc o el boton del menu (que sigue a `UIState.watching`, lo que dice la
-  escena) dejan salir al menu principal (`quitWhileWatching`, dos pulsaciones).
+  final se lee desde quien mira: de quien fue la caida que lo decidio (`ScreenEnd.fallenBy`: suya,
+  de un aliado o de un enemigo), asi «Te has rendido» solo lo lee quien se rindio («Un aliado se ha
+  rendido», «El enemigo se ha rendido»). Rendirse con `act` no anima sus sucesos: el aviso de su
+  caida lo da la escena (`showFallNotice`). Mientras juegan los demas no hay menu, pero Esc o el
+  boton del menu (que sigue a `UIState.watching`, lo que dice la escena) dejan salir al menu
+  principal (`quitWhileWatching`, dos pulsaciones).
 
 ```mermaid
 sequenceDiagram
