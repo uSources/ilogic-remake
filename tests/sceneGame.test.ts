@@ -371,8 +371,9 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
   it('el boton del menu: en tu turno, el menu; mientras juegan los demas, salir; al acabar, nada', () => {
     expect(canUseMenuButton({ ...initialState, turn: 'own', busy: false })).toBe(true);
     expect(canUseMenuButton({ ...initialState, turn: 'own', busy: true })).toBe(false);
-    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true })).toBe(true);
-    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true, end: {} as never })).toBe(false);
+    // Mientras juegan los demas, lo que dice la escena (watching); al acabar (animacion del final), no.
+    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true, watching: true })).toBe(true);
+    expect(canUseMenuButton({ ...initialState, turn: 'enemy', busy: true, watching: false })).toBe(false);
   });
 });
 

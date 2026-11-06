@@ -4,65 +4,19 @@
  * dados van en la partida. Empezar y acabar los turnos lo hace la sesion que repite; lo de cada
  * turno lo propone un controlador (el mismo para todos los equipos), y lo que un equipo mando fuera
  * de su turno entra por `offTurnFeed`, en el mismo sitio del registro. Los dos leen con el mismo
- * cursor (`LogCursor`).
+ * cursor (`LogCursor`, session/log.ts). Al acabarse el registro, la repeticion se para esperando
+ * (`awaitingInput`), como la partida que se apunto: no se inventa turnos.
  */
-import type { GameState, TeamId } from '../model';
-import { isTurnBoundary, startsTurn } from '../actions/turn';
-import { isOffTurnAction, propose, type Controller, type LoggedAction } from './controller';
+import type { GameState } from '../model';
+import { isTurnBoundary } from '../actions/turn';
+import { propose, type Controller } from './controller';
 import { GameSession } from './gameSession';
+import { LogCursor, type LoggedAction } from './log';
 
-/** Por donde va la lectura de un registro. Solo `advance` y los `skip...`/`seek...` la mueven. */
-export class LogCursor {
-  private at = 0;
-
-  constructor(private readonly log: readonly LoggedAction[]) {}
-
-  /** La entrada de ahora (sin moverse), o undefined al final. */
-  peek(): LoggedAction | undefined {
-    return this.log[this.at];
-  }
-
-  /** Pasa a la siguiente entrada. */
-  advance(): void {
-    this.at++;
-  }
-
-  /**
-   * Pasa los limites de turno que la sesion que repite ya ha hecho en `s` (los hace ella, no se
-   * proponen): el 'startTurn' del que juega si ya lo ha empezado, y el 'endTurn' de quien ya no juega.
-   */
-  skipBoundariesDoneBy(s: GameState): void {
-    for (let entry = this.peek(); entry; entry = this.peek()) {
-      const started = startsTurn(entry) && entry.team === s.turn && s.turnStarted;
-      const ended = entry.action.kind === 'endTurn' && entry.team !== s.turn;
-      if (!started && !ended) return;
-      this.advance();
-    }
-  }
-
-  /**
-   * Lleva la lectura al turno de `team`: si ya esta en medio de el (se repite desde la mitad de un
-   * turno), sigue; si no, justo despues de su siguiente 'startTurn'. Asi se salta lo que quedo sin
-   * hacer de un turno que la sesion corto (un equipo que cae en su propio turno lo pasa).
-   */
-  seekTurnOf(team: TeamId): void {
-    const entry = this.peek();
-    if (entry?.team === team && !startsTurn(entry)) return;
-    const start = this.log.findIndex((candidate, at) => at >= this.at && candidate.team === team && startsTurn(candidate));
-    this.at = start < 0 ? this.log.length : start + 1;
-  }
-
-  /** Saca la entrada de ahora si llego fuera de turno en `s` (`isOffTurnAction`), o null si no. */
-  takeOffTurn(s: GameState): LoggedAction | null {
-    this.skipBoundariesDoneBy(s);
-    const entry = this.peek();
-    if (!entry || !isOffTurnAction(s, entry)) return null;
-    this.advance();
-    return entry;
-  }
-}
-
-/** En el turno de cada equipo, propone sus acciones apuntadas hasta su 'endTurn'. */
+/**
+ * En el turno de cada equipo, propone sus acciones apuntadas hasta su 'endTurn'. Si el registro se
+ * acaba antes (la partida que se apunto estaba esperando a alguien), espera: la sesion se para.
+ */
 function replayController(cursor: LogCursor): Controller {
   return {
     name: 'replay',
@@ -72,6 +26,7 @@ function replayController(cursor: LogCursor): Controller {
         cursor.advance();
         yield* propose(entry.action);
       }
+      if (!cursor.peek()) yield { kind: 'awaitInput' };
     },
   };
 }

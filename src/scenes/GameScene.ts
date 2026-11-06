@@ -75,6 +75,7 @@ import {
   gameMenuOf,
   PHASES,
   quitWhileWatching,
+  watchesOthers,
   type GameMenuHost,
   type PhaseHost,
 } from './game/phases';
@@ -306,6 +307,7 @@ export class GameScene extends Phaser.Scene {
         weather: null,
         handoff: null,
         busy: false,
+        watching: false,
         turn: 'own',
       });
     });
@@ -961,6 +963,7 @@ export class GameScene extends Phaser.Scene {
       weather,
       turn: sideOf(s, viewer, this.turns.acting),
       busy,
+      watching: watchesOthers({ ended: this.ended, phase: this.phase, othersPlaying: this.turns.othersPlaying }),
       tile: busy ? null : this.tileInfo(cursor),
       forecast: this.phase === 'attack' || this.phase === 'move' ? this.forecast(cursor) : null,
       moveTip: this.phase === 'move' ? this.moveTip(cursor) : null,

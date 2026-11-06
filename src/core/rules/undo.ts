@@ -16,6 +16,12 @@ export function forgetUndoableMoves(s: GameState): void {
   delete s.undoableMoves;
 }
 
+/** Deja los que se pueden deshacer en `moves`; si no queda ninguno, no hay nada que deshacer. */
+function keepUndoableMoves(s: GameState, moves: readonly UndoableMove[]): void {
+  if (moves.length) s.undoableMoves = [...moves];
+  else forgetUndoableMoves(s);
+}
+
 /** El movimiento que se acaba de hacer se puede deshacer (el ultimo, hasta que se olviden). */
 export function rememberMove(s: GameState, move: UndoableMove): void {
   s.undoableMoves = [...(s.undoableMoves ?? []), move];
@@ -23,8 +29,7 @@ export function rememberMove(s: GameState, move: UndoableMove): void {
 
 /** Se ha deshecho el ultimo movimiento: el de antes pasa a ser el ultimo. */
 export function dropLastUndoableMove(s: GameState): void {
-  s.undoableMoves = s.undoableMoves?.slice(0, -1);
-  if (!s.undoableMoves?.length) forgetUndoableMoves(s);
+  keepUndoableMoves(s, (s.undoableMoves ?? []).slice(0, -1));
 }
 
 /** La unidad sigue como la dejo su movimiento: en el mapa y sin haber vuelto a estar lista (ronda nueva). */
@@ -48,7 +53,9 @@ export function undoMoveProblem(s: GameState, unit: Unit): ActionRejection | nul
 export function dropStaleUndoableMoves(s: GameState): GameEvent[] {
   const moves = s.undoableMoves;
   if (!moves) return [];
-  s.undoableMoves = moves.filter((move) => isStillMoved(unitById(s, move.uid)));
-  if (!s.undoableMoves.length) forgetUndoableMoves(s);
+  keepUndoableMoves(
+    s,
+    moves.filter((move) => isStillMoved(unitById(s, move.uid))),
+  );
   return [];
 }

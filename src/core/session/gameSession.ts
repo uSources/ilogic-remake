@@ -15,7 +15,8 @@ import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
 import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../model';
-import { isOffTurnAction, type Controller, type LoggedAction, type TurnPlan, type TurnStep } from './controller';
+import type { Controller, TurnPlan, TurnStep } from './controller';
+import { isOffTurnAction, type LoggedAction } from './log';
 
 /** Lo que ha pasado en un paso: el equipo `team` ha hecho `action` y estos son sus sucesos. */
 export interface ActedStep {
@@ -142,7 +143,7 @@ export class GameSession {
     for (;;) {
       const result = this.result;
       if (result.status !== 'playing') return { kind: 'over', result };
-      // Lo que llega de otro equipo fuera de su turno entra antes que lo siguiente (ver Controller.offTurn).
+      // Lo que llega de otro equipo fuera de su turno entra antes que lo siguiente (ver SessionOptions.offTurnFeed).
       const offTurn = this.options.offTurnFeed?.(this.state);
       if (offTurn) return this.applyOffTurn(offTurn);
       // Al que se esperaba ya no juega (se ha rendido): no se le espera mas, y su turno se pasa.
@@ -190,8 +191,8 @@ export class GameSession {
         return result.ok ? this.record(team, step.action, result.events) : null;
       }
       case 'applied':
-        // Ya lo ha mandado el, por selfDispatched (que no deja mandar limites de turno ni de otro equipo).
-        return step.result.ok ? this.record(team, step.action, step.result.events) : null;
+        // Ya hecha y comprobada por selfDispatched (lo dice su marca: AppliedStep): solo se apunta.
+        return this.record(team, step.action, step.events);
     }
   }
 

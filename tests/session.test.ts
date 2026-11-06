@@ -341,6 +341,21 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(serialize(start)).toBe(serialize(s));
   });
 
+  it('la repeticion se para al acabarse el registro (esperando, como la partida apuntada), sin inventar turnos', () => {
+    const s = createMatch(
+      skirmishConfig({ seed: 8, size: 20, teams: [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }] }),
+    );
+    const start = cloneState(s);
+    const session = new GameSession(s, [humanController(), aiController(seededRng(4)), aiController(seededRng(5))]);
+    runMatch(session);
+    session.finishInput(0);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    const replay = replaySession(start, session.log);
+    expect(runMatch(replay)).toEqual({ kind: 'awaitingInput', team: 0 });
+    expect(replay.log).toEqual(session.log);
+    expect(serialize(start)).toBe(serialize(s));
+  });
+
   it('LogCursor: mirar no mueve; solo saca lo de fuera de turno, pasando los limites ya hechos', () => {
     const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
     const cursor = new LogCursor([

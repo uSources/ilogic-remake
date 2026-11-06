@@ -8,8 +8,8 @@ import { assistTurn } from '../autopilot/standingOrders';
 import { dispatch, ownTeamOnly } from '../actions/dispatch';
 import { sessionOnlyProblem } from '../actions/turn';
 import type { ActionDispatcher } from '../actions/types';
-import type { GameEvent, TeamId } from '../model';
-import type { Controller, TurnPlan, TurnStep } from './controller';
+import type { GameAction, GameEvent, TeamId } from '../model';
+import type { AppliedStep, Controller, TurnPlan } from './controller';
 
 /**
  * El turno del equipo `team` de alguien que manda sus acciones el mismo (`run`, con el dispatcher
@@ -24,12 +24,13 @@ import type { Controller, TurnPlan, TurnStep } from './controller';
  * solo propone, quita los pasos 'applied'.
  */
 export function* selfDispatched(team: TeamId, run: (dispatcher: ActionDispatcher) => Iterator<GameEvent, unknown>): TurnPlan {
-  const sent: TurnStep[] = [];
+  const sent: AppliedStep[] = [];
   const recording = ownTeamOnly(team, (s, actor, action) => {
     const sessionOnly = sessionOnlyProblem(action);
     if (sessionOnly) return { ok: false, reason: sessionOnly };
     const result = dispatch(s, actor, action);
-    sent.push({ kind: 'applied', action, result });
+    // Solo lo que se ha hecho: lo que no valia no cambia nada y no se apunta.
+    if (result.ok) sent.push(appliedStep(action, result.events));
     return result;
   });
   const turn = run(recording);
@@ -38,7 +39,13 @@ export function* selfDispatched(team: TeamId, run: (dispatcher: ActionDispatcher
 }
 
 /**
- * [CAMBIO] Cumple ya, en su turno, las ordenes permanentes del equipo (`assistTurn`): las unidades con
+ * El paso 'applied' de una accion ya hecha y comprobada aqui (de su equipo, no un limite de turno):
+ * el unico sitio que le pone su marca (AppliedStep).
+ */
+const appliedStep = (action: GameAction, events: GameEvent[]): AppliedStep => ({ kind: 'applied', action, events }) as AppliedStep;
+
+/**
+ * Cumple ya, en su turno, las ordenes permanentes del equipo (`assistTurn`): las unidades con
  * orden que siguen sin usar. Al acabar el turno las cumpliria igual la partida (TURN_END_PHASES); esto
  * es para quien quiere verlas antes de hacer lo demas (la huella, en serie con la IA). No es la IA.
  */

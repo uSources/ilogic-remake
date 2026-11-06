@@ -10,26 +10,25 @@
  * IA que solo propone acciones, un cliente remoto, una repeticion) es una funcion que da un
  * `Controller`: la sesion y las reglas no cambian.
  */
-import { isAnyTime } from '../actions/dispatch';
-import type { ActionResult, GameAction, GameState, TeamId } from '../model';
+import type { ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
 
-/** Una accion apuntada en el registro de una sesion: quien la mando y cual. */
-export interface LoggedAction {
-  team: TeamId;
-  action: GameAction;
-}
+/** La marca de los pasos 'applied': solo existe en el tipo (ver AppliedStep). */
+declare const appliedMark: unique symbol;
 
 /**
- * La accion llega fuera del turno de su equipo en `s` (el turno es de otro, o el suyo aun no ha
- * empezado) y vale asi: solo las que valen en cualquier momento (rendirse). Lo preguntan la sesion
- * al aceptarla y la repeticion al buscarla en el registro.
+ * Una accion que el controlador ya ha hecho, con sus sucesos (solo las que valian). Lleva una marca
+ * que solo pone session/selfDispatched.ts (`appliedStep`): ahi se comprueba que es de su equipo y no
+ * un limite de turno, asi que otro controlador no puede colar uno.
  */
-export const isOffTurnAction = (s: GameState, entry: LoggedAction): boolean =>
-  isAnyTime(entry.action) && (entry.team !== s.turn || !s.turnStarted);
+export interface AppliedStep {
+  kind: 'applied';
+  action: GameAction;
+  events: GameEvent[];
+  readonly [appliedMark]: true;
+}
 
 /** Un paso del turno de un controlador. */
-export type TurnStep =
-  { kind: 'propose'; action: GameAction } | { kind: 'applied'; action: GameAction; result: ActionResult } | { kind: 'awaitInput' };
+export type TurnStep = { kind: 'propose'; action: GameAction } | AppliedStep | { kind: 'awaitInput' };
 
 /** El turno de un equipo, paso a paso: recibe el resultado de cada accion que propone. */
 export type TurnPlan = Generator<TurnStep, void, ActionResult | undefined>;

@@ -56,6 +56,8 @@ export interface UIState {
   /** De quien es el turno, visto por quien mira: suyo, de un aliado o de un enemigo. */
   turn: Side;
   busy: boolean;
+  /** Se mira jugar a los demas (lo dice la escena: watchesOthers): el boton del menu deja salir. */
+  watching: boolean;
   menu: MenuVM | null;
   forecast: ForecastVM | null;
   /** Clima (null si la partida no tiene). */
@@ -159,6 +161,7 @@ export const initialState: UIState = {
   day: 1,
   turn: 'own',
   busy: false,
+  watching: false,
   menu: null,
   forecast: null,
   combat: null,
