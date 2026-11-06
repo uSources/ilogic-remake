@@ -19,6 +19,7 @@ import {
   fighterOf,
   hooksOf,
   abilitiesOf,
+  loadProblem,
 } from '@core/rules';
 import { dispatch } from '@core/actions';
 import { settings } from '../src/settings';
@@ -156,6 +157,25 @@ describe('habilidades: zona de control', () => {
     expect(mergeProblem(s, unit, mate)).toBe('unreachable');
     changeSettings(s, { ...TEST_SETTINGS, abilities: false });
     expect(mergeProblem(s, unit, mate)).toBeNull();
+  });
+
+  it('dentro de la zona, unirse o subir a una vecina sigue valiendo (no hay que moverse)', () => {
+    const s = blankState(TEST_SETTINGS);
+    newUnit(s, zoneType, 1, { x: 10, y: 10 });
+    const unit = newUnit(s, TANK, 0, { x: 10, y: 11 });
+    expect(mergeProblem(s, unit, newUnit(s, TANK, 0, { x: 11, y: 11 }))).toBeNull();
+    const soldier = newUnit(s, unitTypeOf(s, { type: 'Soldier' }), 0, { x: 9, y: 11 });
+    expect(loadProblem(s, soldier, newUnit(s, unitTypeOf(s, { type: 'Transport' }), 0, { x: 9, y: 12 }))).toBeNull();
+  });
+
+  it('quien empieza en la zona puede salir y unirse desde una casilla libre', () => {
+    const s = blankState(TEST_SETTINGS);
+    newUnit(s, zoneType, 1, { x: 10, y: 10 });
+    const unit = newUnit(s, TANK, 0, { x: 10, y: 11 });
+    // (10, 12) y (10, 13) estan fuera de la zona: sale y entra en la compañera desde (10, 13).
+    const mate = newUnit(s, TANK, 0, { x: 10, y: 14 });
+    expect(mergeProblem(s, unit, mate)).toBeNull();
+    expect(dispatch(s, 0, { kind: 'merge', uid: unit.uid, into: mate.uid }).ok).toBe(true);
   });
 
   it('desde dentro de la zona se puede salir el turno siguiente', () => {

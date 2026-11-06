@@ -5,6 +5,7 @@ import { RULE_MODULES, hooksOf, isRuleOn, resolveRuleset, rulesetFor, type RuleM
 import { changeSettings } from '@core/gameState';
 import { deserialize, serialize } from '@core/save';
 import type { MatchSettings } from '@core/model';
+import { mergeHooks } from '@core/ruleModules/mergeHooks';
 import { blankState } from './helpers';
 
 /** Modulos de reglas (core/ruleModules/): cada pieza se enchufa segun los ajustes y aporta sus entradas. */
@@ -82,5 +83,14 @@ describe('modulos de reglas (RULE_MODULES)', () => {
     const ruleset = resolveRuleset(RULE_MODULES, settingsWith(defaultContent(), { weather: false }));
     expect(ruleset.modules.map((module) => module.id)).not.toContain('weather');
     expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['generals', 'control', 'upkeep']);
+  });
+
+  it('mergeHooks: cada lista con las entradas de todas las piezas, una detras de otra y en su orden', () => {
+    const first = { id: 'first', factor: () => 2 };
+    const second = { id: 'second', factor: () => 3 };
+    const stop = { id: 'stop', stopTiles: () => [] };
+    const merged = mergeHooks([{ hitModifiers: [first] }, { stopRules: [stop] }, { hitModifiers: [second] }]);
+    expect(merged).toEqual({ hitModifiers: [first, second], stopRules: [stop] });
+    expect(mergeHooks([])).toEqual({});
   });
 });
