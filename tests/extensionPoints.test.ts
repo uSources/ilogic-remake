@@ -15,6 +15,9 @@ import {
   hitModifiersOf,
   hooksOf,
   roundPhasesOf,
+  SHOT_BY_SHOT,
+  spreadAround,
+  damageModelOf,
 } from '@core/rules';
 import type { UnitType } from '@core/content';
 import { blankState, endRoundReport, withoutHeadquarters } from './helpers';
@@ -106,5 +109,29 @@ describe('ayudas de combate compartidas', () => {
       expect(canDamage(s, attacker, newUnit(s, defenderType, 1, { x: 2, y: 1 }))).toBe(power(fighterType, defenderType) > 0);
     const pacifist = UNIT_TYPES.find((unitType) => unitType.attack === null);
     if (pacifist) expect(canDamage(s, newUnit(s, pacifist, 0, { x: 3, y: 3 }), attacker)).toBe(false);
+  });
+});
+
+describe('modelos de daño (DamageModel)', () => {
+  const always = { roll: () => 0 };
+  const never = { roll: () => 0.999 };
+
+  it('disparo a disparo: la tirada y el reparto dicen lo mismo (binomial)', () => {
+    expect(SHOT_BY_SHOT.roll(10, 0.5, always)).toBe(10);
+    expect(SHOT_BY_SHOT.roll(10, 0.5, never)).toBe(0);
+    const distribution = SHOT_BY_SHOT.distribution(2, 0.5);
+    expect(distribution).toEqual([0.25, 0.5, 0.25]);
+  });
+
+  it('esperado +- un tanto: la tirada cae dentro del reparto y el reparto suma 1', () => {
+    const model = spreadAround(0.2);
+    const distribution = model.distribution(50, 0.5);
+    expect(distribution.reduce((sum, probability) => sum + probability, 0)).toBeCloseTo(1);
+    for (const roll of [0, 0.5, 0.999]) expect(distribution[model.roll(50, 0.5, { roll: () => roll })]).toBeGreaterThan(0);
+  });
+
+  it('la partida elige el suyo con damageSpread', () => {
+    expect(damageModelOf(blankState(rulesWith(defaultContent(), { damageSpread: null })))).toBe(SHOT_BY_SHOT);
+    expect(damageModelOf(blankState(TEST_RULES))).not.toBe(SHOT_BY_SHOT);
   });
 });

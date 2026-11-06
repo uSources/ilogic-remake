@@ -25,6 +25,7 @@
  * | `traverse` | recorrer de verdad un camino: lo que lo corta a mitad (`PATH_INTERRUPTIONS`: la emboscada), su evento |
  * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
+ * | `damage` | como sale el daño: la tirada y la probabilidad de cada resultado de cada modelo (`DamageModel`) |
  * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
@@ -133,7 +134,8 @@ export type {
 export { RANK_KILLS, rank } from './ruleModules/veterancy';
 export { flanked } from './ruleModules/flank';
 export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
-export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
+export { combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
+export { damageDistribution, damageModelOf, SHOT_BY_SHOT, spreadAround, type DamageModel } from './rules/damage';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';
 export {

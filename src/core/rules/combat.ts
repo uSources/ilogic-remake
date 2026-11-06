@@ -15,6 +15,7 @@ import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { sightOf, type Sight } from './visibility';
 import { reversed, type Engagement } from './engagement';
+import { damageModelOf } from './damage';
 import { canStillFire } from './unitTurn';
 
 // ---- Alcance y objetivos ----
@@ -158,25 +159,9 @@ export function expectedDamage(s: GameState, fight: Engagement): number {
 
 // ---- El ataque ----
 
-/**
- * Daño de un ataque de una unidad con `life` puntos de vida que acierta con probabilidad `chance`.
- * Original: cada punto de vida es un disparo que acierta con probabilidad `chance`.
- * [CAMBIO] con la regla damageSpread: el daño esperado (life x chance) +- ese tanto por uno.
- */
-function rollDamage(s: GameState, life: number, chance: number, dice: Dice): number {
-  if (s.rules.damageSpread === null) {
-    let hits = 0;
-    for (let shot = 0; shot < life; shot++) if (dice.roll() < chance) hits++;
-    return hits;
-  }
-  const expected = life * chance;
-  const spread = (dice.roll() * 2 - 1) * s.rules.damageSpread;
-  return Math.max(0, Math.round(expected * (1 + spread)));
-}
-
 /** Daño que hace el atacante al defensor en una tirada (sin pasar de la vida que le queda). */
 export function strike(s: GameState, fight: Engagement, dice: Dice): number {
-  return Math.min(fight.defender.life, rollDamage(s, fight.attacker.life, cappedHitChance(s, fight), dice));
+  return Math.min(fight.defender.life, damageModelOf(s).roll(fight.attacker.life, cappedHitChance(s, fight), dice));
 }
 
 /**
