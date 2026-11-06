@@ -64,9 +64,7 @@ const canStepOnto = (rules: MoveRules, to: Pos): boolean =>
  * que puede gastar.
  */
 export function stepAllowed(rules: MoveRules, step: Step, kind: StepKind = 'walk'): boolean {
-  if (manhattan(step.from, step.to) !== 1) return false;
-  // Unirse o subir desde una zona de control no la mira (como hasta ahora; el commit siguiente lo arregla).
-  if (kind === 'walk' && !canGoOnFrom(rules, step.from)) return false;
+  if (manhattan(step.from, step.to) !== 1 || !canGoOnFrom(rules, step.from)) return false;
   if (kind === 'walk' && !canStepOnto(rules, step.to)) return false;
   return step.spent + rules.profile.enterCost(step.to) <= rules.profile.budget;
 }

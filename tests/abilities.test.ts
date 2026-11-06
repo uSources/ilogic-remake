@@ -5,6 +5,7 @@ import { defaultContent } from '@core/content/default';
 import { MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import {
+  mergeProblem,
   canMoveOn,
   captureStrength,
   hitChance,
@@ -124,6 +125,17 @@ describe('habilidades: zona de control', () => {
     expect(dispatch(s, 0, { kind: 'move', uid: unit.uid, to: { x: 10, y: 11 } }).ok).toBe(true);
     s.rules = { ...TEST_RULES, abilities: false };
     expect(moveRange(s, newUnit(s, TANK, 0, { x: 10, y: 13 })).steps.at({ x: 11, y: 9 })).toBeGreaterThan(0);
+  });
+
+  it('tampoco se sigue desde la zona para unirse o subir a un transporte', () => {
+    const s = blankState(TEST_RULES);
+    newUnit(s, zoneType, 1, { x: 10, y: 10 });
+    const unit = newUnit(s, TANK, 0, { x: 10, y: 13 });
+    // La unica vecina de la compañera a la que llega es (11, 10), dentro de la zona.
+    const mate = newUnit(s, TANK, 0, { x: 11, y: 9 });
+    expect(mergeProblem(s, unit, mate)).toBe('unreachable');
+    s.rules = { ...TEST_RULES, abilities: false };
+    expect(mergeProblem(s, unit, mate)).toBeNull();
   });
 
   it('desde dentro de la zona se puede salir el turno siguiente', () => {
