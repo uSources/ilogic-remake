@@ -5,11 +5,12 @@
  */
 
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
-import { coverAgainst, defenseFactor, isRanged } from '../abilities';
+import { isRanged } from '../abilities';
 import { manhattan, posOf } from '../geom';
-import { generalHitFactor } from '../generals';
 import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
-import { weatherHit } from '../weather';
+import type { HitModifier } from '../ruleModules/hooks';
+import { hooksOf } from '../ruleModules/registry';
+import { rank } from '../ruleModules/veterancy';
 import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
@@ -106,51 +107,37 @@ export function defenseStars(s: GameState, pos: Pos): number {
 }
 
 /**
- * Algo que cambia la probabilidad de acierto (habilidades, veterania, generales, clima...). Devuelve
- * un multiplicador: 1 = nada (con la regla apagada, por ejemplo).
+ * Proteccion de la casilla que le queda al defensor frente a este atacante: la de la casilla, menos
+ * la parte que perfora el atacante (la mayor de las que aporten los modulos; piercing).
  */
-export interface HitModifier {
-  /** Nombre corto (para depurar o enseñar el desglose). */
-  readonly id: string;
-  factor(s: GameState, fight: Engagement): number;
-}
-
-/** [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca. */
-function veterancyFactor(s: GameState, { attacker, defender }: Engagement): number {
-  if (!s.rules.veterancy) return 1;
-  return (1 + s.rules.vetBonus * rank(attacker.unit)) * (1 - s.rules.vetBonus * rank(defender.unit));
-}
-
-/** [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil. */
-function flankFactor(s: GameState, { defender }: Engagement): number {
-  return flanked(s, defender.unit) ? 1 + s.rules.flankBonus : 1;
+function coverLeft(s: GameState, { attacker, defender }: Engagement): number {
+  const protection = tileProtection(s, defender.at);
+  const piercing = Math.max(0, ...hooksOf(s, 'coverPiercing').map((rule) => rule.ignoredCover(s, attacker.unit)));
+  return protection + (1 - protection) * piercing;
 }
 
 /**
- * [CAMBIO] Modificadores del acierto, en el orden en que se aplican sobre el poder base y la
- * proteccion de la casilla. Una regla nueva que cambie el acierto es una entrada mas: la prevision,
- * el panel de combate y la IA la ven solas porque todas pasan por hitChance.
- * El orden importa (redondeo de coma flotante: las partidas de referencia lo notarian).
+ * Lo que da la probabilidad de acierto en cualquier partida: el poder del atacante contra ese tipo
+ * (units.json) por la proteccion que le queda al defensor. Lo que cambia segun la partida (habilidades,
+ * veterania, flanqueo, generales, clima) lo aportan sus modulos de reglas (`hitModifiersOf`).
  */
 export const HIT_MODIFIERS: readonly HitModifier[] = [
-  // Escudo del defensor contra disparos a distancia y aura de sus aliados: hacen fuertes a los grupos.
-  { id: 'abilities', factor: defenseFactor },
-  // Premia conservar las unidades que ya han destruido a alguien.
-  { id: 'veterancy', factor: veterancyFactor },
-  // Premia atacar en grupo al mismo objetivo.
-  { id: 'flank', factor: flankFactor },
-  // La ventaja fija de cada general (ataque de uno, defensa del otro).
-  { id: 'generals', factor: generalHitFactor },
-  // Con lluvia o tormenta se apunta peor (igual para los dos equipos).
-  { id: 'weather', factor: (s) => weatherHit(s) },
+  { id: 'power', factor: (s, { attacker, defender }) => basePower(s, attacker.unit, defender.unit) },
+  { id: 'cover', factor: coverLeft },
 ];
+
+/**
+ * [CAMBIO] Todo lo que cambia el acierto en esta partida, en el orden en que se multiplica: el poder
+ * y la proteccion, y despues lo de sus modulos de reglas (en su orden). Una regla nueva que cambie el
+ * acierto es una entrada mas en su modulo: la prevision, el panel de combate y la IA la ven solas
+ * porque todas pasan por hitChance. El orden importa (redondeo de coma flotante: las partidas de
+ * referencia lo notarian).
+ */
+export const hitModifiersOf = (s: GameState): HitModifier[] => [...HIT_MODIFIERS, ...hooksOf(s, 'hitModifiers')];
 
 /** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). Puede pasar de 1. */
 export function hitChance(s: GameState, fight: Engagement): number {
-  const { attacker, defender } = fight;
-  let chance = basePower(s, attacker.unit, defender.unit) * coverAgainst(s, attacker.unit, tileProtection(s, defender.at));
-  for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, fight);
-  return chance;
+  return hitModifiersOf(s).reduce((chance, modifier) => chance * modifier.factor(s, fight), 1);
 }
 
 /** La probabilidad de acierto como probabilidad de verdad (sin pasar de 1). */
@@ -158,25 +145,11 @@ export function cappedHitChance(s: GameState, fight: Engagement): number {
   return Math.min(1, hitChance(s, fight));
 }
 
-// ---- Veterania, flanqueo y botin ----
-
-/** Bajas necesarias para cada rango (1, 2 y 3 estrellas). */
-export const RANK_KILLS = [1, 3, 6] as const;
-
-/** [CAMBIO] La unidad ya ha recibido un ataque hoy y la regla de flanqueo esta puesta. */
-export function flanked(s: GameState, defender: Unit): boolean {
-  return s.rules.flankBonus > 0 && defender.hitDay === s.day;
-}
+// ---- Botin ----
 
 /** [CAMBIO] Botin por destruir una unidad como `lost` (0 sin la regla). */
 export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
   return Math.round(unitTypeOf(s, lost).cost * s.rules.bounty);
-}
-
-/** Rango de veterania de una unidad: 0 a 3. */
-export function rank(unit: Unit): number {
-  const kills = unit.kills ?? 0;
-  return RANK_KILLS.filter((needed) => kills >= needed).length;
 }
 
 /** Dano esperado (para la IA y para mostrarlo en pantalla). */

@@ -12,8 +12,9 @@ import {
   reachableTiles,
   tileProtection,
   engagement,
+  hitModifiersOf,
+  hooksOf,
 } from '@core/rules';
-import { coverAgainst } from '@core/abilities';
 import type { UnitType } from '@core/content';
 import { blankState, endRoundReport, withoutHeadquarters } from './helpers';
 
@@ -26,13 +27,13 @@ const TEST_RULES = rulesWith(defaultContent(), { fog: false });
 
 const fighter = (): UnitType => UNIT_TYPES.find((unitType) => UNIT_TYPES.some((target) => power(unitType, target) > 0))!;
 
-describe('modificadores del acierto (HIT_MODIFIERS)', () => {
+describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () => {
   it('tienen nombres distintos', () => {
-    const ids = HIT_MODIFIERS.map((hitModifier) => hitModifier.id);
+    const ids = hitModifiersOf(blankState(TEST_RULES)).map((hitModifier) => hitModifier.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('hitChance es el poder por la proteccion por cada modificador, en orden', () => {
+  it('hitChance es el poder, por la proteccion, por cada modificador de los modulos, en orden', () => {
     const s = blankState(TEST_RULES);
     const fighterType = fighter();
     const defenderType = UNIT_TYPES.find((target) => power(fighterType, target) > 0)!;
@@ -40,17 +41,22 @@ describe('modificadores del acierto (HIT_MODIFIERS)', () => {
     const defender = newUnit(s, defenderType, 1, { x: 3, y: 2 });
     defender.hitDay = s.day; // flanqueado
     attacker.kills = 3; // veterano
-    let chance = power(fighterType, defenderType) * coverAgainst(s, attacker, tileProtection(s, defender));
-    for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, engagement(attacker, defender));
-    expect(hitChance(s, engagement(attacker, defender))).toBe(chance);
+    const fight = engagement(attacker, defender);
+    const ids = hitModifiersOf(s).map((modifier) => modifier.id);
+    expect(ids.slice(0, HIT_MODIFIERS.length)).toEqual(['power', 'cover']);
+    expect(ids).toEqual(expect.arrayContaining(['abilities', 'veterancy', 'flank', 'generals', 'weather']));
+    let chance = power(fighterType, defenderType) * tileProtection(s, defender);
+    for (const modifier of hooksOf(s, 'hitModifiers')) chance *= modifier.factor(s, fight);
+    expect(hitChance(s, fight)).toBe(chance);
   });
 
-  it('con las reglas apagadas cada modificador vale 1', () => {
+  it('sin los modulos solo quedan el poder y la proteccion', () => {
     const s = blankState(rulesWith(defaultContent(), { fog: false, veterancy: false, flankBonus: 0, abilities: false, weather: false }));
     const fighterType = fighter();
     const attacker = newUnit(s, fighterType, 0, { x: 2, y: 2 });
     const defender = newUnit(s, fighterType, 1, { x: 3, y: 2 });
-    for (const modifier of HIT_MODIFIERS) expect(modifier.factor(s, engagement(attacker, defender)), modifier.id).toBe(1);
+    expect(hitModifiersOf(s).map((modifier) => modifier.id)).toEqual(['power', 'cover', 'generals']);
+    expect(hitChance(s, engagement(attacker, defender))).toBe(power(fighterType, fighterType) * tileProtection(s, defender));
   });
 });
 

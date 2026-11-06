@@ -97,15 +97,16 @@ export {
   tileProtection,
   defenseStars,
   hitChance,
-  RANK_KILLS,
-  flanked,
+  hitModifiersOf,
   bountyFor,
-  rank,
   expectedDamage,
   canCounter,
   HIT_MODIFIERS,
-  type HitModifier,
 } from './rules/combat';
+export { RULE_MODULES, isRuleOn, hooksOf } from './ruleModules/registry';
+export type { HitModifier, CoverPiercing, RuleHooks, RuleModule, RuleModuleId } from './ruleModules/hooks';
+export { RANK_KILLS, rank } from './ruleModules/veterancy';
+export { flanked } from './ruleModules/flank';
 export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
 export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';

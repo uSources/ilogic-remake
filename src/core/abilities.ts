@@ -55,13 +55,9 @@ export function isRanged(s: GameState, unit: OfType): boolean {
   return (unitTypeOf(s, unit).attack?.minRange ?? 1) > 1;
 }
 
-/**
- * Proteccion de la casilla que le queda al objetivo frente a `attacker` (piercing): 1 = sin
- * proteccion. `protection` es la de tileProtection.
- */
-export function coverAgainst(s: GameState, attacker: OfType, protection: number): number {
-  const piercing = abilityOfUnit(s, attacker, 'piercing');
-  return piercing ? protection + (1 - protection) * piercing.ignoreCover : protection;
+/** La parte (0..1) de la proteccion del objetivo que ignora `attacker` (piercing; 0 = nada). */
+export function piercingOf(s: GameState, attacker: OfType): number {
+  return abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0;
 }
 
 /**
@@ -69,7 +65,6 @@ export function coverAgainst(s: GameState, attacker: OfType, protection: number)
  * sus aliados (guard, aura). 1 = nada.
  */
 export function defenseFactor(s: GameState, { attacker, defender }: Engagement): number {
-  if (!s.rules.abilities) return 1;
   let factor = 1;
   const guard = abilityOfUnit(s, defender.unit, 'guard');
   if (guard && isRanged(s, attacker.unit)) factor *= guard.factor;
