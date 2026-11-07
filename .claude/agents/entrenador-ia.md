@@ -15,17 +15,24 @@ Proceso:
 1. Mira como juega: `npm run play --silent -- --seed N -e "ia; ia; ia; ia; ia; map; status"` con varias
    semillas, y la nota (`improve/baseline.json`). Busca un defecto concreto (p. ej. no avanza hacia
    la Base enemiga, no remata, deja unidades quietas, compra mal).
-2. Cambia `src/core/ai.ts` y/o los pesos de `src/core/content/ai.json`. Cambios pequeños y explicados
-   con comentario `[CAMBIO]`. La IA tiene que seguir siendo determinista con la semilla (`rng`).
-3. Prueba: `npm run arena -- --games 200` (IA nueva contra la de referencia, mismos mapas). Un
-   comportamiento o una razon de ataque nueva se prueba antes como perfil: un fichero que exporta
-   `candidate(contenido): AiProfile` (los de `defaultAiProfile` con lo nuevo) y
-   `npm run arena -- --candidate ese-fichero.ts`; si gana, pasa a `UNIT_BEHAVIOURS`/`ATTACK_SCORE_TERMS`.
+2. Escribe la idea como un perfil candidato, sin tocar `src/core`: un fichero en
+   `tools/improve/candidates/` que exporta `profile(contenido): AiProfile` (mira `example.ts`), con lo
+   de `defaultAiProfile` y el cambio: pesos (`weights`), comportamientos de cada unidad
+   (`behaviours`: los de `UNIT_BEHAVIOURS` con uno nuevo, quitado o en otro orden), razones para
+   valorar un ataque (`scoreTerms`) o el turno entero (`turn`, que puede envolver o rehacer
+   `aiTurn`). Solo usa lo que da `@core/ai` (y las demas fachadas). La IA decide con el azar de la
+   partida (`decisionSeed`), asi que la misma semilla da la misma partida.
+3. Prueba: `npm run arena -- --games 200 --candidate tools/improve/candidates/<idea>.ts` (el candidato
+   contra la IA del juego, mismos mapas; con `--rival otro.ts`, contra otro candidato). Para un
+   cambio solo de pesos tambien vale cambiar `src/core/content/ai.json` y `npm run arena -- --games
+   200` (la IA del juego contra la de referencia, la misma con los pesos guardados).
    **Criterio**: el intervalo del 95 % por encima del 50 % ("MEJOR"). Ademas `npm run metrics` no
-   puede bajar la nota total ni "Ningun bando con ventaja" mas de 1 punto.
+   puede bajar la nota total ni "Ningun bando con ventaja" mas de 1 punto (para medirlo, el cambio
+   ya en `src/core`).
 4. Si no gana, deshaz, apunta DESCARTADO en `improve/DIARIO.md` con los numeros y lo que aprendiste,
    y prueba otra idea (como mucho 3 intentos).
-5. Si gana: `npm run arena -- --snapshot` (los pesos nuevos como referencia), `npm run metrics -- --save-baseline`,
+5. Si gana: pasa el cambio a `src/core` (`UNIT_BEHAVIOURS`, `ATTACK_SCORE_TERMS`, `aiTurn` o
+   `ai.json`, con comentario `[CAMBIO]`) y quita el candidato; `npm run arena -- --snapshot` (los pesos nuevos como referencia), `npm run metrics -- --save-baseline`,
    `npx vitest run -u tests/aiGolden.test.ts`, entrada ACEPTADO en el diario, `CHANGELOG.md` (apartado
    `## [Sin publicar]`), `npm run check`. Commit: `⚖️ IA: <mejora> (arena X %, nota A → B)` (formato en `docs/COMMITS.md`).
 

@@ -465,7 +465,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   La sesion pone al dia la vista de quien juega tras cada accion; fuera de una sesion lo hace
   `seeing`. La vista es de solo lectura hasta el fondo (lo que se lee de ella tambien).
 - **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,
-  `scoreTerms`, `behaviours`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
+  `scoreTerms`, `behaviours` y su turno entero, `turn`: el del juego, `aiTurn`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
   contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
   con otros perfiles juegan a la vez (la arena). Las ordenes de la partida usan
   `autopilotProfileOf(contenido)`.
@@ -529,7 +529,9 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
 - La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
   su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la
   IA del juego con los pesos guardados en `improve/ai-baseline.json` (`--snapshot` guarda los de
-  ai.json); un comportamiento o una razon de ataque nueva se prueba como perfil (`--candidate`).
+  ai.json). Un cambio de codigo de la IA (comportamientos, razones de ataque o el turno entero, el
+  `turn` del perfil) se prueba como perfil antes de ponerlo en src/core: un fichero de
+  `tools/improve/candidates/` (`--candidate`; `--rival` para enfrentarlo a otro).
   `tests/arenaSnapshot.test.ts` comprueba que los pesos guardados son justo los que lee la IA y que
   las dos juegan una partida corta.
 

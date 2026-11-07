@@ -3,7 +3,7 @@
  * IA solo propone sus acciones (`ActionPlan`): las manda la sesion, como las de cualquiera. Decide con
  * lo que sabe su equipo (la `PlayerView` que le da la sesion, que la pone al dia tras cada accion).
  */
-import { aiTurn, defaultAiProfile, type AiProfile } from '../ai';
+import { defaultAiProfile, type AiProfile } from '../ai';
 import { seededRng } from '../util/random';
 import { proposing, type Controller } from '../session/controller';
 
@@ -16,6 +16,7 @@ export const aiController = (profile?: AiProfile): Controller => ({
   name: 'ai',
   playTurn: (view) => {
     const rng = seededRng(view.turnSeed);
-    return proposing(aiTurn(view, profile ?? defaultAiProfile(view.state.content), rng));
+    const played = profile ?? defaultAiProfile(view.state.content);
+    return proposing(played.turn(view, played, rng));
   },
 });

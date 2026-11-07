@@ -139,7 +139,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
   su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`).
   La IA no tiene variables globales: lo del turno va en `PlayCtx` (equipo, perfil, `paths`,
-  `focusFire`); como juega, en su `AiProfile` (pesos, `scoreTerms`, `behaviours`), que se le da al
+  `focusFire`); como juega, en su `AiProfile` (pesos, `scoreTerms`, `behaviours`, `turn`), que se le da al
   controlador; como pelea una unidad, un preset de `EngagementPolicy` (`HUNT`, `SHOOT_FROM_HERE`,
   `guardZone`, `fireOnTheWay`); lo que sabe de la partida, una consulta de las reglas
   (`visibleFoes`, `projectedIncome`, `canRepair`, `isEnemyHq`...), nunca una copia; lo que un

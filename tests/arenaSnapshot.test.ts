@@ -36,3 +36,14 @@ describe('arena: la IA de referencia', () => {
     expect([null, 'first', 'second']).toContain(winner);
   });
 });
+
+/** Un cambio de codigo de la IA se prueba como perfil (`--candidate`): el ejemplo compila y juega. */
+describe('arena: candidatos', () => {
+  it('el candidato de ejemplo juega contra la IA del juego', async () => {
+    const { profile } = await import('../tools/improve/candidates/example');
+    const content = defaultContent();
+    const candidate = profile(content);
+    expect(candidate.behaviours.some((behaviour) => behaviour.id === 'randomMove')).toBe(false);
+    expect([null, 'first', 'second']).toContain(playDuel(2, [candidate, defaultAiProfile(content)], ARENA_TEST_SIZE, ARENA_TEST_DAYS));
+  });
+});

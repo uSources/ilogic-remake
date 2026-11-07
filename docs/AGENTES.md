@@ -26,7 +26,8 @@ Solo cuando el usuario lo pide (skill `automejora`). Medidas:
   `improve/baseline.json`. `--save-baseline` al aceptar un cambio.
 - `npm run arena -- --games 200`: la IA del juego contra la de referencia (la misma con los pesos guardados en
   `improve/ai-baseline.json`); `--candidate fichero.ts` prueba otro perfil (`AiProfile`: comportamientos,
-  razones de ataque, pesos) contra la del juego. Un cambio de IA solo vale si el intervalo del 95 % queda
+  razones de ataque, pesos o su turno entero: asi se mide un cambio de codigo de la IA antes de ponerlo en
+  `src/core`; ejemplo en `tools/improve/candidates/example.ts`) contra la del juego, y `--rival` cambia el rival. Un cambio de IA solo vale si el intervalo del 95 % queda
   por encima del 50 %. `--snapshot` guarda los pesos de ahora al aceptarlo.
 - `npm run fuzz`: invariantes (`tools/improve/invariants.ts`) en partidas con jugadas al azar e IA;
   `--repro N` para ver una partida entera.

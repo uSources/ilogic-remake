@@ -1,15 +1,19 @@
 /**
- * Arena de la IA: dos perfiles de IA (`AiProfile`: pesos, razones de ataque, comportamientos) uno
- * contra otro, mismos mapas, la mitad de las partidas con los bandos cambiados. Un cambio en la IA
+ * Arena de la IA: dos perfiles de IA (`AiProfile`: pesos, razones de ataque, comportamientos y su
+ * turno entero, `turn`) uno contra otro, mismos mapas, la mitad de las partidas con los bandos cambiados. Un cambio en la IA
  * solo se acepta si gana claramente. Los perfiles se le dan a cada controlador (`aiController`): las
  * dos IAs juegan a la vez en el mismo proceso, sin copiar codigo ni cambiar nada global.
  *
  *   npm run arena                     la IA del juego contra la de referencia (sus pesos guardados en
  *                                     improve/ai-baseline.json), 200 partidas de 20x20, 40 dias
  *   npm run arena -- --games 400 --size 32
- *   npm run arena -- --candidate tools/improve/miPerfil.ts
- *                                     otro perfil (el fichero exporta `candidate(contenido): AiProfile`)
- *                                     contra la IA del juego: para probar comportamientos o razones nuevas
+ *   npm run arena -- --candidate tools/improve/candidates/miIdea.ts
+ *                                     otro perfil (el fichero exporta `profile(contenido): AiProfile`)
+ *                                     contra la IA del juego: para probar un cambio de codigo de la IA
+ *                                     (comportamientos, razones de ataque o un turno distinto) antes de
+ *                                     ponerlo en src/core
+ *   npm run arena -- --candidate a.ts --rival b.ts
+ *                                     dos perfiles cualesquiera (p. ej. la idea contra la anterior)
  *   npm run arena -- --snapshot       guarda los pesos de ahora (ai.json) como los de referencia
  *
  * Las partidas que no terminan se dan a quien tiene clara ventaja (`clearLeader`, tools/strength.ts).
@@ -108,11 +112,20 @@ function snapshot(): void {
   console.log('Pesos de ahora (ai.json) guardados como los de referencia en improve/ai-baseline.json');
 }
 
-/** El perfil de un fichero de --candidate: exporta `candidate(contenido)`. */
-async function candidateFrom(file: string, content: GameContent): Promise<AiProfile> {
-  const module = (await import(pathToFileURL(file).href)) as { candidate?: (content: GameContent) => AiProfile };
-  if (typeof module.candidate !== 'function') throw new Error(`${file} no exporta candidate(contenido): AiProfile`);
-  return module.candidate(content);
+/** El perfil de un fichero de --candidate o --rival: exporta `profile(contenido)`. */
+async function profileFrom(file: string, content: GameContent): Promise<AiProfile> {
+  const module = (await import(pathToFileURL(file).href)) as { profile?: (content: GameContent) => AiProfile };
+  if (typeof module.profile !== 'function') throw new Error(`${file} no exporta profile(contenido): AiProfile`);
+  return module.profile(content);
+}
+
+/** La IA de referencia: la del juego con los pesos guardados (hace falta haberlos guardado con --snapshot). */
+function savedBaseline(content: GameContent): AiProfile {
+  if (!existsSync(BASELINE_FILE)) {
+    console.log('No hay pesos de referencia: npm run arena -- --snapshot');
+    process.exit(1);
+  }
+  return baselineProfile(content, readWeights(JSON.parse(readFileSync(BASELINE_FILE, 'utf8'))));
 }
 
 async function main(): Promise<void> {
@@ -123,19 +136,15 @@ async function main(): Promise<void> {
   const games = opt('games', 200),
     size = opt('size', 20),
     days = opt('days', 40);
-  const candidateIndex = args.indexOf('--candidate');
-  if (candidateIndex < 0 && !existsSync(BASELINE_FILE)) {
-    console.log('No hay pesos de referencia: npm run arena -- --snapshot');
-    process.exit(1);
-  }
-  const [current, rival, rivalName] =
-    candidateIndex >= 0
-      ? [await candidateFrom(args[candidateIndex + 1] ?? '', content), defaultAiProfile(content), 'la del juego']
-      : [
-          defaultAiProfile(content),
-          baselineProfile(content, readWeights(JSON.parse(readFileSync(BASELINE_FILE, 'utf8')))),
-          'la de referencia',
-        ];
+  const fileOf = (key: string) => (args.includes(`--${key}`) ? (args[args.indexOf(`--${key}`) + 1] ?? '') : null);
+  const candidateFile = fileOf('candidate'),
+    rivalFile = fileOf('rival');
+  const current = candidateFile ? await profileFrom(candidateFile, content) : defaultAiProfile(content);
+  const [rival, rivalName] = rivalFile
+    ? [await profileFrom(rivalFile, content), rivalFile]
+    : candidateFile
+      ? [defaultAiProfile(content), 'la del juego']
+      : [savedBaseline(content), 'la de referencia'];
   const t0 = Date.now();
   const result = arena(current, rival, games, size, days);
   const pct = (x: number) => `${Math.round(x * 100)} %`;
