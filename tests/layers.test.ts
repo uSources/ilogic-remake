@@ -55,3 +55,22 @@ describe('capas: quien decide no manda', () => {
     expect([...loadedBy('controllers.ts')].some(sendsActions)).toBe(true);
   });
 });
+
+const isNet = (file: string) => /^(net\/|net\.ts$)/.test(file);
+
+/** La red (core/net) esta encima de todo: nada del nucleo la carga; ella si carga la sesion y la IA (los asientos de la IA juegan en el servidor). */
+describe('capas: la red esta encima del nucleo', () => {
+  it.each(['session.ts', 'actions.ts', 'autopilot.ts', 'rules.ts', 'ai.ts', 'controllers.ts', 'playerView.ts', 'save.ts'])(
+    '%s no carga nada de la red',
+    (entry) => {
+      expect([...loadedBy(entry)].filter(isNet)).toEqual([]);
+    },
+  );
+
+  it('core/net.ts carga la sesion y la IA (para comprobar que la prueba mira de verdad), y no cambia la partida a mano', () => {
+    const loaded = loadedBy('net.ts');
+    expect(loaded.has('session/gameSession.ts')).toBe(true);
+    expect(loaded.has('ai.ts') || loaded.has('ai/turn.ts')).toBe(true);
+    expect(loaded.has('actions/dispatch.ts')).toBe(true);
+  });
+});

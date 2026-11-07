@@ -40,15 +40,17 @@ const CORE_FACADES_ONLY = [
       '**/core/ai/*',
       '**/core/autopilot/*',
       '**/core/controllers/*',
+      '**/core/net/*',
       '@core/rules/*',
       '@core/squads/*',
       '@core/actions/*',
       '@core/ai/*',
       '@core/autopilot/*',
       '@core/controllers/*',
+      '@core/net/*',
     ],
     message:
-      "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai', 'core/autopilot', 'core/controllers'); la partida cambia con dispatch.",
+      "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai', 'core/autopilot', 'core/controllers', 'core/net'); la partida cambia con dispatch.",
   },
   {
     group: ['**/core/generalPowers', '@core/generalPowers'],
@@ -91,6 +93,24 @@ const NOT_THE_AI_FILES = [
 const NO_AI = {
   regex: '(^|/)(ai|controllers)(\\.ts)?(/.*)?$',
   message: 'Las reglas, las acciones, las ordenes y la sesion no importan la IA (ai/, ai.ts, controllers/): la IA reutiliza autopilot/.',
+};
+/**
+ * La red (net/: el protocolo, la sala, la niebla de los sucesos) esta encima de todo el nucleo: lee la
+ * partida y manda por la sesion. Nada de debajo la conoce (ni la IA, ni las ordenes, ni las reglas, ni
+ * la sesion, ni la vista): una partida se juega igual con red que sin ella.
+ */
+export const NO_NET = {
+  regex: '(^|/)net(\\.ts)?(/.*)?$',
+  message: 'La red (core/net) esta encima del nucleo: nada del nucleo la importa (ni la IA, ni las ordenes, ni la sesion).',
+};
+/**
+ * La red no manda acciones a la partida a mano: todo lo que llega de un cliente pasa por la sesion
+ * (`GameSession.act`), con las mismas comprobaciones que lo de cualquiera. Lo prueba tests/lintImports.test.ts.
+ */
+export const NO_DIRECT_DISPATCH = {
+  regex: '(^|/)(actions/dispatch|actions)(\\.ts)?$',
+  importNames: ['dispatch'],
+  message: 'La red no manda acciones con dispatch: pasan por la sesion (GameSession.act), como las de cualquiera.',
 };
 /**
  * I1/I2: quien decide por un equipo (la IA: ai/ y ai.ts; y los pasos de autopilot/)
@@ -203,8 +223,11 @@ export const ONLY_THROUGH_RULE_MODULES = pluggedPieces(`generals|generalPowers|w
 const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
 export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces(`generals|weather|abilities|${FACADES}`);
 
-/** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
-const CORE_LIMITS = [...CORE_IS_PURE, MEASURING_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_MEASURE];
+/** Lo que se prohibe en todo el nucleo, tambien en la red. */
+const PURE_LIMITS = [...CORE_IS_PURE, MEASURING_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_MEASURE];
+/** Lo que se prohibe en todo el nucleo menos en la red (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
+const CORE_LIMITS = [...PURE_LIMITS, NO_NET];
+const NET_FILES = ['src/core/net/**/*.ts', 'src/core/net.ts'];
 
 export default tseslint.config(
   {
@@ -280,6 +303,11 @@ export default tseslint.config(
     // La sesion lleva los turnos mandando acciones: no cambia la partida a mano (APPLY_STEPS) ni carga la IA.
     files: SESSION_FILES,
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...APPLY_STEPS] }] },
+  },
+  {
+    // La red lee la partida y manda por la sesion: ni la cambia a mano (APPLY_STEPS) ni manda con dispatch (NO_DIRECT_DISPATCH).
+    files: NET_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...PURE_LIMITS, NO_DEFAULT_CONTENT, ...APPLY_STEPS, NO_DIRECT_DISPATCH] }] },
   },
   {
     // Los controladores, la vista y lo que apunta la escena solo preguntan (APPLY_STEPS).

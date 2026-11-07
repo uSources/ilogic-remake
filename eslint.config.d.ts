@@ -11,6 +11,8 @@ interface ImportPattern {
 export const ONLY_THROUGH_RULE_MODULES: ImportPattern;
 export const NO_PLUGGED_PIECES_EXCEPT_POWERS: ImportPattern;
 export const DECIDERS_ONLY_PROPOSE: readonly ImportPattern[];
+export const NO_NET: ImportPattern;
+export const NO_DIRECT_DISPATCH: ImportPattern;
 export const APPLY_STEPS: readonly ImportPattern[];
 export const APPLY_STEP_NAMES: readonly string[];
 export const APPLY_STEPS_BY_MODULE: Readonly<Record<string, readonly string[]>>;
