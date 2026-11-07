@@ -30,35 +30,42 @@ export interface PlayCtx {
   /** Equipo que juega el turno. */
   readonly me: TeamId;
   /**
-   * [CAMBIO] Juego en grupo: solo en el turno de la IA (aiTurn). Las ordenes con destino
-   * (unitStandingOrderTurn) usan las mismas funciones sin esto, para no cambiar como se cumplen.
+   * [CAMBIO] Como mide los caminos (`blockersFor`): 'alone', cada una como si fuera sola (las ordenes
+   * con destino y lo que no mueve), o 'army', todo el ejercito a la vez (la IA al mover sus unidades).
    */
-  group: boolean;
-  /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
-  plan: Map<number, number>;
+  readonly paths: PathPlanning;
+  /** [CAMBIO] Fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias (vacio: no hay). */
+  readonly focusFire: ReadonlyMap<number, number>;
   /** Con que pesos y razones juega (el de las ordenes de la partida, o el de la IA que decide). */
   readonly profile: AutopilotProfile;
 }
 
-/** Contexto nuevo para un turno de `me` (sin grupo ni plan) que juega con `profile`. */
-export function playCtx(me: TeamId, profile: AutopilotProfile): PlayCtx {
-  return { me, group: false, plan: new Map(), profile };
+/** Como mide los caminos quien juega: cada unidad sola o todo el ejercito a la vez (ver PlayCtx.paths). */
+export type PathPlanning = 'alone' | 'army';
+
+/** Contexto para un turno de `me` que juega con `profile`: por defecto mide cada unidad sola y sin fuego concentrado. */
+export function playCtx(
+  me: TeamId,
+  profile: AutopilotProfile,
+  { paths = 'alone', focusFire = new Map() }: { paths?: PathPlanning; focusFire?: ReadonlyMap<number, number> } = {},
+): PlayCtx {
+  return { me, paths, focusFire, profile };
 }
 
 /**
- * [CAMBIO] La IA en grupo planea con lo que ve: los enemigos que no ve no le cortan el camino al
+ * [CAMBIO] La IA que mueve el ejercito a la vez planea con lo que ve: los enemigos que no ve no le cortan el camino al
  * medir, haya emboscadas o no (al moverse de verdad manda lo que diga la partida).
  */
 export const PLANS_WITH_WHAT_IT_SEES: PassRule = UNSEEN_FOES_UNNOTICED;
 
 /**
  * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
- * [CAMBIO] En grupo, si las reglas de paso dejan atravesar a los aliados, mide con esas reglas y
+ * [CAMBIO] Con el ejercito a la vez ('army'), si las reglas de paso dejan atravesar a los aliados, mide con esas reglas y
  * con lo que ve (PLANS_WITH_WHAT_IT_SEES): antes una columna en un puente o en la salida de la
  * Fabrica dejaba a las de detras "sin camino" a nada y paseaban al azar en casa.
  */
 export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
-  return play.group && letsAlliesThrough(s) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
+  return play.paths === 'army' && letsAlliesThrough(s) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
 }
 
 /** Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con lo que le corta el paso (blockersFor). */

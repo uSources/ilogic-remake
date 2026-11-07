@@ -39,15 +39,13 @@ export { defaultAiProfile, type AiProfile } from './ai/profile';
  * controlador, por la sesion) y le contesta con lo que ha dicho la partida.
  */
 export function* aiTurn(s: GameState, team: TeamId, profile: AiProfile, rng: Rng): ActionPlan {
-  const ai = playCtx(team, profile);
+  const alone = playCtx(team, profile);
   // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
-  yield* aiGeneral(s, ai);
-  const { plan, order } = planFire(s, ai);
-  ai.plan = plan;
-  ai.group = true;
-  for (const uid of order) yield* unitTurn(s, ai, profile.behaviours, uid, rng);
-  ai.group = false;
-  ai.plan = new Map();
-  yield* produce(s, ai, rng);
-  for (const unit of teamUnits(s, ai.me)) yield* finish(s, unit);
+  yield* aiGeneral(s, alone);
+  const { plan, order } = planFire(s, alone);
+  // Las unidades juegan como un ejercito, con el fuego concentrado del plan.
+  const army = playCtx(team, profile, { paths: 'army', focusFire: plan });
+  for (const uid of order) yield* unitTurn(s, army, profile.behaviours, uid, rng);
+  yield* produce(s, alone, rng);
+  for (const unit of teamUnits(s, team)) yield* finish(s, unit);
 }

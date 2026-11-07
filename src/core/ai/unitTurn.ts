@@ -11,6 +11,7 @@ import { buildingAt, unitById } from '../rules/queries';
 import type { ActionPlan, Building, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, finish, needsRepair, type PlayCtx } from '../autopilot/context';
 import { captureHere, retreat, tryAttack } from '../autopilot/tactics';
+import { HUNT } from '../autopilot/engagement';
 import { advance, randomMove, tryCapture } from './tactics';
 
 /** Lo que necesita un comportamiento para decidir y actuar con una unidad. */
@@ -40,7 +41,7 @@ function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): ActionPlan<bo
   if (!destination) return false;
   yield* doMove(unit, destination);
   const rangeAfterMove = moveRange(s, unit);
-  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove))) yield* finish(s, unit);
+  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove, HUNT))) yield* finish(s, unit);
   return true;
 }
 
@@ -72,7 +73,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // Atacar al mejor objetivo a tiro o acercarse al mas cercano.
     id: 'attack',
     when: () => true,
-    run: ({ s, ai, unit, range }) => tryAttack(s, ai, unit, range),
+    run: ({ s, ai, unit, range }) => tryAttack(s, ai, unit, range, HUNT),
   },
   {
     // Las que capturan: el edificio ajeno mas cercano a la vista.

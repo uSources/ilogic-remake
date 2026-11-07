@@ -16,6 +16,7 @@ import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type PlayCtx } from './context';
 import { isAlive, isOnMap } from '../util/predicates';
+import type { FiringPositions } from './engagement';
 
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega o no tiene orden). */
 function remainingOf(s: GameState, unit: Unit): number {
@@ -132,6 +133,6 @@ export function standingOrderStep(
   return squadFormation ? formationMove(range, squadFormation) : bestMoveToward(s, play, unit, at, range);
 }
 
-/** En formacion solo dispara desde donde no se adelanta a su escuadra (o desde donde esta). */
-export const formationFrom = (formation: Formation | null) =>
-  formation ? (pos: Pos) => formation.remaining.at(pos) >= formation.minRemaining : undefined;
+/** Desde donde dispara: en formacion, solo desde donde no se adelanta a su escuadra (o desde donde esta); si no, desde cualquiera. */
+export const formationFrom = (formation: Formation | null): FiringPositions =>
+  formation ? (pos: Pos) => formation.remaining.at(pos) >= formation.minRemaining : 'anywhere';

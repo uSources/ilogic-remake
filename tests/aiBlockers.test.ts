@@ -15,7 +15,7 @@ function scene(settings: { passAllies: boolean; ambush: boolean }) {
   const units = [newUnit(s, TANK, 0, { x: 6, y: 10 }), newUnit(s, SOLDIER, 1, { x: 5, y: 11 }), newUnit(s, SOLDIER, 1, { x: 18, y: 18 })];
   /** Si cortan el paso: [aliado, enemigo a la vista, enemigo escondido]. */
   const blocked = (group: boolean) => {
-    const play = Object.assign(playCtx(0, autopilotProfileOf(defaultContent())), { group });
+    const play = playCtx(0, autopilotProfileOf(defaultContent()), { paths: group ? 'army' : 'alone' });
     const blocks = blockersFor(s, play, mover);
     return units.map((unit) => blocks(unit));
   };

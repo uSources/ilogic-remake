@@ -17,6 +17,7 @@ import type { ActionPlan, Building, GameState, Pos, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
 import { act, bestMoveToward, doMove, finish, repairsHere, stepsMap, strikeReach, visibleFoes, type PlayCtx } from './context';
 import { attackScore, unitValue } from './scoring';
+import type { EngagementPolicy, FiringPositions } from './engagement';
 
 // ---------------------------------------------------------------------------------------------
 // Retirarse
@@ -57,18 +58,6 @@ export function* retreat(s: GameState, play: PlayCtx, unit: Unit, range: MoveRan
 // Atacar
 // ---------------------------------------------------------------------------------------------
 
-/**
- * Opciones de tryAttack para las ordenes con destino: `zone` limita a que enemigos se mira (defender),
- * `chase: false` no persigue a nadie fuera de tiro y `stay` solo dispara desde donde esta.
- */
-export interface AttackOpts {
-  zone?: (unit: Unit) => boolean;
-  chase?: boolean;
-  stay?: boolean;
-  /** Casillas desde las que puede disparar si se mueve (formacion: sin adelantarse a su escuadra). */
-  from?: (pos: Pos) => boolean;
-}
-
 /** Un disparo posible: desde donde, a quien y cuanto vale. */
 interface Shot {
   from: Pos;
@@ -80,7 +69,7 @@ interface Shot {
 function shotScore(s: GameState, play: PlayCtx, unit: Unit, target: Unit, from: Pos): number {
   const score = attackScore(s, play, unit, target, from);
   // [CAMBIO] Fuego concentrado: el objetivo del plan del turno vale mas (lo rematan entre varias).
-  const isPlannedTarget = play.group && play.plan.get(unit.uid) === target.uid;
+  const isPlannedTarget = play.focusFire.get(unit.uid) === target.uid;
   return isPlannedTarget ? score + play.profile.weights.FOCUSFIRE * unitValue(s, play.profile.weights, target) : score;
 }
 
@@ -113,20 +102,26 @@ function* chaseNearest(s: GameState, play: PlayCtx, unit: Unit, enemies: Unit[],
   return true;
 }
 
-/** Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano (ver AttackOpts). */
-export function* tryAttack(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange, options: AttackOpts = {}): ActionPlan<boolean> {
-  const { zone, chase = true, stay = false, from: allowedOrigin } = options;
+/** Las casillas desde las que dispararia con esa forma de pelear (la suya, la primera). */
+function originsFor(s: GameState, unit: Unit, range: MoveRange, firesFrom: FiringPositions): Pos[] {
+  if (firesFrom === 'here') return fireOrigins(s, unit, null);
+  return fireOrigins(s, unit, range, firesFrom === 'anywhere' ? undefined : firesFrom);
+}
+
+/** Atacar al mejor objetivo a tiro o, si no hay, lo que diga `policy` (perseguir al mas cercano o nada). */
+export function* tryAttack(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange, policy: EngagementPolicy): ActionPlan<boolean> {
+  const { engages } = policy;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (unitTypeOf(s, unit).attack === null || !canStillFire(s, unit)) return false;
   // Solo mira a los enemigos dentro del radio al que llega a disparar este turno (strikeReach, con el
   // clima): de ellos sale a quien dispara y, si no puede a ninguno, a quien persigue (chaseNearest).
   const reach = strikeReach(s, unit);
-  const isInReach = (enemy: Unit) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy));
+  const isInReach = (enemy: Unit) => manhattan(unit, enemy) <= reach && (!engages || engages(enemy));
   // Solo a los que puede hacer daño: un ataque que no quita vida no vale (ver attackProblem).
   const enemies = visibleFoes(s, play.me).filter((enemy) => isInReach(enemy) && canDamage(s, unit, enemy));
   if (!enemies.length) return false;
 
-  const shot = bestShot(s, play, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
+  const shot = bestShot(s, play, unit, enemies, originsFor(s, unit, range, policy.firesFrom));
   if (shot) {
     const interrupted = yield* doMove(unit, samePos(shot.from, unit) ? null : shot.from);
     // Desde la casilla nueva puede no verlo ya (el bosque solo se ve desde al lado): entonces espera.
@@ -134,7 +129,7 @@ export function* tryAttack(s: GameState, play: PlayCtx, unit: Unit, range: MoveR
     if (!attacked) yield* finish(s, unit);
     return true;
   }
-  if (!chase) return false;
+  if (policy.whenNoShot === 'hold') return false;
   return yield* chaseNearest(s, play, unit, enemies, range);
 }
 
