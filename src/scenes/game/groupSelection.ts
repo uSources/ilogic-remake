@@ -5,7 +5,7 @@
  */
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { unitById, canStillAct } from '../../core/rules';
+import { unitById, canStillAct, isAlive, isOnMap } from '../../core/rules';
 import { squadByKey, squadUnits } from '../../core/squads';
 import { minBy } from '../../core/util/pick';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -67,7 +67,7 @@ export class GroupSelection {
 
   /** Se puede elegir para un grupo: propia, viva y en el mapa (aunque ya se haya movido: para ordenes). */
   selectable(unit: Unit): boolean {
-    return unit.team === this.host.viewer && unit.carrier === null && unit.life > 0;
+    return unit.team === this.host.viewer && isOnMap(unit) && isAlive(unit);
   }
 
   /** Lo elegido ahora: el grupo o, si no hay, la unidad que se esta moviendo. */

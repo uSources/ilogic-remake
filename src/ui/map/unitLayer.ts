@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
-import { rank, unhealable, canStillAct } from '../../core/rules';
+import { rank, unhealable, canStillAct, isOnMap } from '../../core/rules';
 import { effectiveStandingOrder, isDetached } from '../../core/squads';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { TILE } from '../../layout';
@@ -83,7 +83,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   sync(s: GameState, options: ViewOptions, newArt: boolean): void {
     const seen = new Set<number>();
     for (const unit of s.units) {
-      if (unit.carrier !== null || options.hidden.has(unit.uid) || !options.vis.at(unit)) continue;
+      if (!isOnMap(unit) || options.hidden.has(unit.uid) || !options.vis.at(unit)) continue;
       const key = unitKey(this.scene.textures, s, unit, options.viewer);
       if (!key) continue;
       seen.add(unit.uid);

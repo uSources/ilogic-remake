@@ -4,7 +4,7 @@
  * mision. Funciones puras: la escena las junta en las ViewOptions de MapView.render.
  */
 import type { StandingOrderIntent } from '../../core/autopilot';
-import { capturePointsOf, captureProgress, inControlZone, unitById } from '../../core/rules';
+import { capturePointsOf, captureProgress, inControlZone, isOnMap, unitById } from '../../core/rules';
 import { effectiveStandingOrder } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -14,8 +14,6 @@ import type { ViewOptions } from '../../ui/mapView';
 import { posOf } from '../../core/geom';
 
 type Overlay<K extends keyof ViewOptions> = NonNullable<ViewOptions[K]>;
-
-const onMap = (unit: Unit) => unit.carrier === null;
 
 /** Capturas a medias que ve el equipo que mira (o de edificios de su alianza). */
 export function captureBars(s: GameState, viewer: TeamId, vis: Grid<boolean>): Overlay<'captures'> {
@@ -32,7 +30,7 @@ export function captureBars(s: GameState, viewer: TeamId, vis: Grid<boolean>): O
  * con destino (bandera siempre; linea solo si `showsLine`: la unidad señalada y su escuadra).
  */
 export function orderMarks(s: GameState, viewer: TeamId, showsLine: (unit: Unit) => boolean): Overlay<'orders'> {
-  const isOwn = (unit: Unit) => unit.team === viewer && onMap(unit);
+  const isOwn = (unit: Unit) => unit.team === viewer && isOnMap(unit);
   const multiTurn = s.units.filter((unit) => isOwn(unit) && unit.travelTo).map((unit) => ({ from: posOf(unit), to: unit.travelTo! }));
   const withTarget = s.units.flatMap((unit) => {
     const order = isOwn(unit) ? effectiveStandingOrder(s, unit) : undefined;
@@ -63,7 +61,7 @@ export function intentLines(
  */
 export function controlPointMarks(s: GameState, viewer: TeamId, visible: (pos: Pos) => boolean): ViewOptions['controlPoints'] {
   return s.controlPoints?.map((point) => {
-    const inside = s.units.filter((unit) => onMap(unit) && inControlZone(s, point, unit) && (unit.team === viewer || visible(unit)));
+    const inside = s.units.filter((unit) => isOnMap(unit) && inControlZone(s, point, unit) && (unit.team === viewer || visible(unit)));
     const contested = inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team)));
     return { x: point.x, y: point.y, owner: ownerSideOf(s, viewer, point.owner), r: s.settings.controlRadius, contested };
   });

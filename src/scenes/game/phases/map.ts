@@ -15,6 +15,7 @@ import {
   canStillAct,
   canMoveNow,
   isShownTo,
+  isOnMap,
 } from '../../../core/rules';
 import { squadUnits } from '../../../core/squads';
 import type { Pos, TeamId, Unit } from '../../../core/model';
@@ -87,8 +88,7 @@ function hoverMarks(input: HighlightInput): Highlights {
   }
   // [CAMBIO] Señalando una unidad de escuadra: se marcan sus compañeras.
   if (unit.squad === undefined) return marks;
-  for (const mate of squadUnits(input.s, unit.squad))
-    if (mate.uid !== unit.uid && mate.carrier === null) marks.tiles.set(posKey(mate), 'squad');
+  for (const mate of squadUnits(input.s, unit.squad)) if (mate.uid !== unit.uid && isOnMap(mate)) marks.tiles.set(posKey(mate), 'squad');
   return marks;
 }
 
