@@ -150,9 +150,11 @@ export interface PassRule {
   readonly id: string;
   passage(context: PassContext, other: Unit): Passage | null;
   /**
-   * Lo que dice de cualquier unidad aliada (de la alianza de quien se mueve), sin mirar cual, si lo
-   * dice igual para todas: asi se pregunta sin una unidad de ejemplo (letsAlliesThrough). Si no lo
-   * pone, la regla no dice nada general de los aliados.
+   * Lo que dice de cualquier unidad aliada (de la alianza de quien se mueve), sin mirar cual: asi se
+   * pregunta sin una unidad de ejemplo (letsAlliesThrough). Contrato, para que las dos preguntas
+   * digan lo mismo: si la regla lo pone, `passage` da eso para cualquier aliado; si no lo pone,
+   * `passage` no dice nada (null) de ningun aliado. Lo mira tests/passage.test.ts con todas las
+   * reglas de paso del juego.
    */
   readonly allies?: Passage;
 }

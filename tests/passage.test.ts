@@ -9,11 +9,13 @@ import {
   moveRulesOf,
   newUnit,
   passBlockers,
+  RULE_MODULES,
   stepAllowed,
   surroundingsOf,
   traverse,
 } from '@core/rules';
 import { MoveType } from '@core/content';
+import { sightOf } from '@core/rules/visibility';
 import { blankState, unitTypeNamed } from './helpers';
 
 /** Por donde se pasa: las reglas de paso (las de los modulos; si ninguna dice nada, otra unidad cierra el paso) y la regla de cada paso (stepAllowed). */
@@ -117,6 +119,22 @@ describe('traverse: recorrer un camino de verdad', () => {
     expect(traversal.interruption).toEqual({ kind: 'ambush', at: { x: 8, y: 10 } });
     expect(traversal.path).toEqual(path.slice(0, 2));
     expect(unit).toMatchObject({ x: 6, y: 10, turnState: 'done' });
+  });
+});
+
+describe('el contrato de `allies` (letsAlliesThrough y passage dicen lo mismo)', () => {
+  it('cada regla de paso del juego: si pone `allies`, passage da eso para cualquier aliado; si no, no dice nada de ellos', () => {
+    const s = blankState({ fog: true }, [
+      { controller: 'human', alliance: 0 },
+      { controller: 'ai', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+    ]);
+    const mover = newUnit(s, TANK, 0, { x: 5, y: 10 });
+    const allies = [newUnit(s, SOLDIER, 0, { x: 6, y: 10 }), newUnit(s, TANK, 1, { x: 18, y: 18 })];
+    const context = { s, mover, sees: sightOf(s, mover.team) };
+    const rules = RULE_MODULES.flatMap((module) => module.hooks.passRules ?? []);
+    expect(rules.length).toBeGreaterThan(0);
+    for (const rule of rules) for (const ally of allies) expect(rule.passage(context, ally)).toBe(rule.allies ?? null);
   });
 });
 

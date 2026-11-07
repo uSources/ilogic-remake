@@ -95,6 +95,10 @@ export function passBlockers(s: GameState, mover: Unit, firstRules: readonly Pas
   return (pos) => blocked.at(pos);
 }
 
-/** Las reglas de paso de la partida dejan atravesar a los aliados: lo dice la primera que habla de ellos (`allies`). */
+/**
+ * Las reglas de paso de la partida dejan atravesar a los aliados: lo dice la primera que habla de
+ * ellos (`allies`). Da lo mismo que passageOf con cualquier aliado porque las reglas cumplen el
+ * contrato de `allies` (PassRule): las que no lo ponen no dicen nada de los aliados.
+ */
 export const letsAlliesThrough = (s: GameState): boolean =>
   hooksOf(s, 'passRules').find((rule) => rule.allies !== undefined)?.allies === 'passThrough';
