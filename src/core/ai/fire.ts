@@ -53,15 +53,21 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
  * bastaria con uno solo (eso ya lo hace cada unidad por su cuenta).
  */
 function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
-  const damageTo = (shooterUid: number) => damage.get(shooterUid)!.get(foe.uid)!;
-  const candidates = [...free].filter((uid) => damage.get(uid)!.has(foe.uid)).sort((first, second) => damageTo(second) - damageTo(first));
+  // Lo que le haria cada tirador libre (solo los que le llegan).
+  const damageTo = (shooterUid: number): number | undefined => damage.get(shooterUid)?.get(foe.uid);
+  const candidates = [...free]
+    .flatMap((uid) => {
+      const dealt = damageTo(uid);
+      return dealt === undefined ? [] : [{ uid, dealt }];
+    })
+    .sort((first, second) => second.dealt - first.dealt);
   let total = 0;
   const squad: number[] = [];
-  for (const uid of candidates) {
+  for (const candidate of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += damageTo(uid) * (squad.length ? 1 + flankBonusOnceHit(s) : 1);
-    squad.push(uid);
+    total += candidate.dealt * (squad.length ? 1 + flankBonusOnceHit(s) : 1);
+    squad.push(candidate.uid);
   }
   return total >= foe.life && squad.length >= 2 ? squad : null;
 }

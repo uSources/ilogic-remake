@@ -15,12 +15,10 @@ import { buildingAt, isEnemyHq, unitAt } from '../rules/queries';
 import { sightOf, visibleFoes } from '../rules/visibility';
 import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
+import { pick } from '../util/random';
 import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
 import { captureHere } from '../autopilot/tactics';
 import { isCapturer } from '../util/predicates';
-
-/** La Base enemiga vale mas que otro edificio: al buscar que capturar, cuenta como si estuviera estos pasos mas cerca. */
-const HQ_CAPTURE_HEAD_START = 4;
 
 // ---------------------------------------------------------------------------------------------
 // Capturar
@@ -42,7 +40,7 @@ function captureGoal(s: GameState, ai: PlayCtx, unit: Unit): Pos | null {
     const building = capturableAt(tile);
     return building ? [{ tile, building }] : [];
   });
-  const headStart = (building: Building): number => (isHq(s, building) ? HQ_CAPTURE_HEAD_START : 0);
+  const headStart = (building: Building): number => (isHq(s, building) ? ai.profile.weights.HQHEADSTART : 0);
   return minBy(candidates, (candidate) => steps.at(candidate.tile) - headStart(candidate.building))?.tile ?? null;
 }
 
@@ -124,7 +122,7 @@ export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange
 
 /** [CAMBIO] eleccion uniforme (el original nunca elegia la ultima casilla). */
 export function* randomMove(s: GameState, unit: Unit, range: MoveRange, rng: Rng): ActionPlan {
-  const options = reachableTiles(range);
-  if (options.length) yield* doMove(unit, options[Math.floor(rng() * options.length)]!);
+  const destination = pick(reachableTiles(range), rng);
+  if (destination) yield* doMove(unit, destination);
   yield* finish(s, unit);
 }

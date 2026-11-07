@@ -264,7 +264,11 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   `shotByShot`: la tirada de 2013, un disparo por punto de vida): un ajuste de una lista (`choice` en
   `SETTINGS_SCHEMA`), y cada nombre es una entrada de `DAMAGE_MODELS` (`src/core/damage.ts`).
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
-  `npm run balance` (skill `equilibrar`).
+  `npm run balance` (skill `equilibrar`). Los lee quien juega por su perfil (`AiProfile.weights`; las
+  ordenes de la partida, `autopilotProfileOf(contenido)`), nunca de un sitio comun: la arena juega
+  con otros sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `HQHEADSTART` (la
+  Base enemiga, al elegir que capturar), `BIGUNITCOST` (desde que precio un edificio fabrica lo
+  grande) y `MINEVICTION` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
   `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
   `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion

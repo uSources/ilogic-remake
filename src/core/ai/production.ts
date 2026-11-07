@@ -10,27 +10,12 @@ import { teamUnits, unitAt } from '../rules/queries';
 import type { ActionPlan, Building, GameState, Rng, Unit } from '../model';
 import { posOf } from '../geom';
 import { act, type PlayCtx } from '../autopilot/context';
-
-/** Elige uno al azar con probabilidad proporcional a su peso. */
-export function weightedPick<T>(items: readonly T[], weights: readonly number[], rng: Rng): T {
-  let remaining = rng() * weights.reduce((total, weight) => total + weight, 0);
-  for (let i = 0; i < items.length; i++) {
-    remaining -= weights[i]!;
-    if (remaining < 0) return items[i]!;
-  }
-  return items[items.length - 1]!;
-}
+import { weightedPick } from '../util/random';
+import { compareKeys } from '../util/pick';
 
 /** Elige una compra al azar, con mas peso a lo mas caro (raiz del precio). */
-const pickByCost = (options: readonly BuyOption[], rng: Rng): BuyOption =>
-  weightedPick(
-    options,
-    options.map((option) => Math.sqrt(option.cost)),
-    rng,
-  );
-
-/** Un edificio que fabrica algo de este precio o mas fabrica "lo grande" (Fabrica, Aeropuerto). */
-const BIG_UNIT = 10000;
+const pickByCost = (options: readonly BuyOption[], rng: Rng): BuyOption | undefined =>
+  weightedPick(options, (option) => Math.sqrt(option.cost), rng);
 
 /**
  * En que orden fabrican los edificios. Con puntos de mando (`limited`), primero los de lo grande,
@@ -39,18 +24,18 @@ const BIG_UNIT = 10000;
  * (Caza, 20000) iba siempre primero se llevaba el dinero o el ahorro y la Fabrica casi nunca podia
  * pagar un Tanque (0,3 % de las compras; ver balance/reports/tanques-vs-infanteria.md).
  */
-function productionOrder(s: GameState, rng: Rng, limited: boolean): Building[] {
+function productionOrder(s: GameState, ai: PlayCtx, rng: Rng, limited: boolean): Building[] {
   const priciest = (building: Building) => Math.max(0, ...buyOptions(s, building).map((option) => option.cost));
   // Se tira el dado aunque no haga falta ordenar, para gastar la misma suerte en cualquier caso.
-  const priority = new Map(
-    s.buildings.map((building) => {
-      const top = priciest(building);
-      return [building, top >= BIG_UNIT ? BIG_UNIT + rng() : top / BIG_UNIT];
-    }),
-  );
-  return limited
-    ? [...s.buildings].sort((firstBuilding, secondBuilding) => priority.get(secondBuilding)! - priority.get(firstBuilding)!)
-    : s.buildings;
+  const ranked = s.buildings.map((building) => {
+    const top = priciest(building);
+    const makesBigUnits = top >= ai.profile.weights.BIGUNITCOST;
+    // Lo grande primero (entre ellos, al azar); despues, de mas caro a mas barato.
+    return { building, priority: makesBigUnits ? [1, rng()] : [0, top] };
+  });
+  if (!limited) return s.buildings;
+  // sort es estable: a igual prioridad, el orden del mapa.
+  return ranked.sort((first, second) => compareKeys(second.priority, first.priority)).map((entry) => entry.building);
 }
 
 /** Lo que se plantea comprar en el edificio: lo que cabe (o se paga) sin repetir unidades de apoyo, e infanteria si faltan. */
@@ -67,11 +52,16 @@ function purchaseOptions(s: GameState, ai: PlayCtx, building: Building, mine: Un
 
 /** Que compra: una opcion, `'save'` para ahorrar (lo elegido se paga el turno que viene) o null para nada aqui. */
 function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): BuyOption | 'save' | null {
-  const pick = pickByCost(options, rng);
-  if (pick.affordable) return pick;
-  if (pick.cost <= fundsNextTurn) return 'save';
-  const affordable = options.filter((option) => option.affordable);
-  return affordable.length ? pickByCost(affordable, rng) : null;
+  const choice = pickByCost(options, rng);
+  if (!choice) return null;
+  if (choice.affordable) return choice;
+  if (choice.cost <= fundsNextTurn) return 'save';
+  return (
+    pickByCost(
+      options.filter((option) => option.affordable),
+      rng,
+    ) ?? null
+  );
 }
 
 /**
@@ -86,7 +76,7 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
 export function* produce(s: GameState, ai: PlayCtx, rng: Rng): ActionPlan {
   const me = ai.me;
   const limited = usesCommandPoints(s);
-  const order = productionOrder(s, rng, limited);
+  const order = productionOrder(s, ai, rng, limited);
   const income = projectedIncome(s, me);
   for (const building of order) {
     if (building.owner !== me || hasFullArmy(s, me) || unitAt(s, building)) continue;

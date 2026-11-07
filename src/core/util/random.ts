@@ -53,3 +53,22 @@ const AI_SEED_MIX = 0x9e3779b9;
 
 /** La semilla de las decisiones de la IA de una partida, sacada de la del mapa (la misma en todas partes). */
 export const aiSeedFor = (mapSeed: number): number => (mapSeed ^ AI_SEED_MIX) >>> 0;
+
+/** Uno de la lista al azar, todos con la misma probabilidad (undefined si esta vacia: entonces no tira). */
+export function pick<T>(items: readonly T[], rng: Rng): T | undefined {
+  if (!items.length) return undefined;
+  return items[Math.floor(rng() * items.length)];
+}
+
+/** Uno de la lista al azar, con probabilidad proporcional a su peso (`weightOf`; undefined si esta vacia: entonces no tira). */
+export function weightedPick<T>(items: readonly T[], weightOf: (item: T) => number, rng: Rng): T | undefined {
+  if (!items.length) return undefined;
+  const weighted = items.map((item) => ({ item, weight: weightOf(item) }));
+  let remaining = rng() * weighted.reduce((total, entry) => total + entry.weight, 0);
+  for (const entry of weighted) {
+    remaining -= entry.weight;
+    if (remaining < 0) return entry.item;
+  }
+  // Por el redondeo, el ultimo.
+  return weighted.at(-1)?.item;
+}

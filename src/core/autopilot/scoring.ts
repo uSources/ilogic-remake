@@ -13,6 +13,7 @@ import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
 import { bountyFor } from '../ruleModules/bounty';
 import { posOf } from '../geom';
+import { MAX_LIFE } from '../data';
 import type { GameState, Pos, Unit } from '../model';
 import type { PlayCtx } from './context';
 import type { AttackPlan, AttackScoreTerm } from './profile';
@@ -22,15 +23,15 @@ export const unitValue = (s: GameState, weights: Readonly<AiWeights>, unit: Pick
   unitTypeOf(s, unit).cost / weights.COSTSCALE;
 
 /** Lo que vale `money` en la escala de unitValue (lo que vale una unidad entera es su precio). */
-const moneyValue = (weights: Readonly<AiWeights>, money: number): number => (100 * money) / weights.COSTSCALE;
+const moneyValue = (weights: Readonly<AiWeights>, money: number): number => (MAX_LIFE * money) / weights.COSTSCALE;
 
 const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
 
 /**
- * Cuanto pesa echar a alguien segun el dano que le hace: nunca menos de la mitad, para que se
+ * Cuanto pesa echar a alguien segun el dano que le hace: nunca menos de MINEVICTION, para que se
  * intente aunque el golpe sea flojo.
  */
-const evictionWeight = (attack: AttackPlan): number => Math.max(0.5, attack.damage / attack.weights.BONUSDAMAGE);
+const evictionWeight = (attack: AttackPlan): number => Math.max(attack.weights.MINEVICTION, attack.damage / attack.weights.BONUSDAMAGE);
 
 /** Lo que devolveria el objetivo al contraatacar, con la vida que le queda, en valor del atacante. */
 function counterattackLoss({ s, weights, attacker, from, target, damage }: AttackPlan): number {
