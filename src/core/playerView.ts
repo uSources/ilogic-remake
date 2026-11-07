@@ -74,32 +74,99 @@ export interface PlayerView {
   /**
    * La partida tal como la sabe el equipo (sin lo que quita FOG). Es el mismo objeto todo el turno:
    * se pone al dia con `refresh` (lo hace `seeing` tras cada accion), asi quien guarda una unidad
-   * suya la sigue viendo como es. No se puede cambiar: se proponen acciones.
+   * suya la sigue viendo como es. No se puede cambiar, ni ella ni nada de lo que se lee de ella
+   * (unidades, equipos, edificios...): se proponen acciones.
    */
   readonly state: GameState;
   /** Vuelve a mirar la partida (tras una accion, o algo que haya pasado fuera del turno). */
   refresh(): void;
 }
 
+/** Lo que se le dice a quien intenta cambiar la vista. */
+const READ_ONLY = 'La vista de un equipo no se cambia: quien decide propone acciones';
+
+const refuseChange = (): never => {
+  throw new Error(READ_ONLY);
+};
+
+/** Un objeto de la partida que hay que proteger: los datos (objetos planos y listas) que no esten ya congelados. */
+const needsGuard = (value: unknown): value is object =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Object.isFrozen(value) &&
+  (Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype);
+
+/**
+ * Lo mismo que `value`, pero de solo lectura hasta el fondo: lo que se lee de ella tambien lo es.
+ * Cada objeto tiene siempre la misma envoltura (`guards`), asi que comparar dos unidades de la vista
+ * sigue dando lo que debe.
+ */
+function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
+  if (!needsGuard(value)) return value;
+  const known = guards.get(value);
+  if (known) return known as T;
+  const guarded = new Proxy(value, {
+    get: (target, key): unknown => {
+      const property: unknown = Reflect.get(target, key);
+      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee.
+      return typeof property === 'object' ? readOnly(property, guards) : property;
+    },
+    set: refuseChange,
+    deleteProperty: refuseChange,
+    defineProperty: refuseChange,
+  });
+  guards.set(value, guarded);
+  return guarded;
+}
+
 /**
  * La vista del equipo `team` en la partida `s`: lo que no sabe, quitado; lo demas, la misma partida
- * (sus unidades y edificios son los de verdad, asi se ve lo que les pasa al momento).
+ * (sus unidades y edificios son los de verdad, asi se ve lo que les pasa al momento), de solo
+ * lectura hasta el fondo: ni la partida ni nada de lo que se lee de ella se puede cambiar.
  */
 export function playerView(s: GameState, team: TeamId): PlayerView {
-  let fogged = foggedParts(s, team);
+  const guards = new WeakMap<object, object>();
+  // Lo que no cambia en un turno, congelado una vez: el terreno, los ajustes y los modulos de reglas
+  // que salen de ellos (estos ya vienen congelados de arriba). La vista es de un turno: si algo de esto
+  // cambiara (el laboratorio cambia los ajustes), lo vera la del turno siguiente.
+  const fixed: Record<string, unknown> = {
+    map: Object.freeze(s.map.map((column) => Object.freeze([...column]))),
+    settings: Object.freeze({ ...s.settings }),
+    ruleset: s.ruleset,
+  };
+  let seen = seenParts(s, team, guards);
   const state = new Proxy(s, {
-    get: (target, key, receiver): unknown => (Reflect.has(fogged, key) ? Reflect.get(fogged, key) : Reflect.get(target, key, receiver)),
-    set: () => {
-      throw new Error('La vista de un equipo no se cambia: quien decide propone acciones');
+    get: (target, key, receiver): unknown => {
+      if (Reflect.has(fixed, key)) return Reflect.get(fixed, key);
+      if (Reflect.has(seen, key)) return Reflect.get(seen, key);
+      return readOnly(Reflect.get(target, key, receiver), guards);
     },
-    deleteProperty: () => {
-      throw new Error('La vista de un equipo no se cambia: quien decide propone acciones');
-    },
+    set: refuseChange,
+    deleteProperty: refuseChange,
+    defineProperty: refuseChange,
   });
   const refresh = () => {
-    fogged = foggedParts(s, team);
+    seen = seenParts(s, team, guards);
   };
   return { team, state, refresh };
+}
+
+/** Las listas de la partida que mas se recorren, ya con la niebla. */
+const LISTS = ['units', 'buildings', 'teams', 'squads', 'controlPoints', 'undoableMoves'] as const;
+
+/**
+ * Lo que ve ahora el equipo de las listas de la partida (con la niebla de FOG): listas congeladas
+ * (recorrerlas no pasa por la envoltura) de cosas de solo lectura; y lo demas que cambia FOG.
+ * Las listas se vuelven a sacar al poner la vista al dia (tras cada accion).
+ */
+function seenParts(s: GameState, team: TeamId, guards: WeakMap<object, object>): Record<string, unknown> {
+  const fogged = foggedParts(s, team);
+  const parts: Record<string, unknown> = { ...fogged };
+  for (const key of LISTS) {
+    const list: unknown = Reflect.has(fogged, key) ? Reflect.get(fogged, key) : Reflect.get(s, key);
+    if (Array.isArray(list)) parts[key] = Object.freeze(list.map((item: unknown) => readOnly(item, guards)));
+  }
+  return parts;
 }
 
 /**

@@ -76,11 +76,20 @@ describe('PlayerView: lo que sabe un equipo', () => {
     expect(view.state.teams[1]!.fell).toEqual(s.teams[1]!.fell);
   });
 
-  it('no se puede cambiar: quien decide propone acciones', () => {
-    const { s } = fogged();
+  it('no se puede cambiar, ni nada de lo que se lee de ella: quien decide propone acciones', () => {
+    const { s, mine, seen } = fogged();
     const view = playerView(s, 0);
+    const funds = s.teams[0]!.funds;
     expect(() => Object.assign(view.state, { day: 5 })).toThrow(/no se cambia/);
-    expect(s.day).toBe(1);
+    expect(() => Object.assign(view.state.teams[0]!, { funds: 99999 })).toThrow(/no se cambia/);
+    expect(() => Object.assign(unitById(view.state, mine.uid)!, { life: 1 })).toThrow(/no se cambia/);
+    expect(() => Object.assign(unitById(view.state, seen.uid)!, { x: 9 })).toThrow(/no se cambia/);
+    expect(() => view.state.units.push(mine)).toThrow();
+    expect(() => Object.assign(view.state.map[0]!, { 0: 'Water' })).toThrow();
+    expect(() => Object.assign(view.state.buildings[0]!, { owner: 1 })).toThrow(/no se cambia/);
+    expect([s.day, s.teams[0]!.funds, mine.life, s.units.length]).toEqual([1, funds, 100, 3]);
+    // Lo mismo se ve igual: dos lecturas de una unidad son la misma.
+    expect(unitById(view.state, mine.uid)).toBe(unitById(view.state, mine.uid));
   });
 
   it('es el mismo objeto todo el turno y se pone al dia tras cada accion (seeing)', () => {
