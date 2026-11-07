@@ -9,7 +9,7 @@ import { buildMission, checkMission, missionSettings, MISSIONS } from '@core/mis
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_SEEDS = matchSeedsFrom(1);
-import { distanceMap } from '@core/rules';
+import { distanceMap, matchResult } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { deserialize, serialize } from '@core/save';
@@ -92,17 +92,28 @@ describe('misiones', () => {
     );
   });
 
-  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
-    const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
-    runMatch(
-      new GameSession(
-        s,
-        s.teams.map(() => aiController()),
-      ),
-      { until: (state) => state.day > 20 },
-    );
-    expect(['playing', 'won', 'lost']).toContain(resultFor(s, 0));
-  });
+  /** Dias que se juegan: los de la mision mas larga en llegar a algo, sin hacer la prueba lenta. */
+  const DAYS_PLAYED = 10;
+  /** Cada partida tarda unos segundos; con la maquina cargada (CI, todos los tests a la vez) mas. */
+  const PLAY_TIMEOUT_MS = 60_000;
+
+  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))(
+    '%s: se juega IA contra IA sin errores',
+    (_id, mission) => {
+      const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
+      runMatch(
+        new GameSession(
+          s,
+          s.teams.map(() => aiController()),
+        ),
+        { until: (state) => state.day > DAYS_PLAYED },
+      );
+      const result = matchResult(s);
+      expect(['playing', 'decided', 'draw']).toContain(result.status);
+      for (const winner of result.winners) expect(s.teams.map((team) => team.id)).toContain(winner);
+    },
+    PLAY_TIMEOUT_MS,
+  );
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
     const byId = (id: string) => MISSIONS.find((mission) => mission.id === id)!;
