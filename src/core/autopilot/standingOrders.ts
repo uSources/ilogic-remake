@@ -12,6 +12,7 @@ import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { effectiveStandingOrder, standingOrderAt } from '../squads/standingOrders';
 import { carryOut } from '../actions/plan';
+import { unitsKnownTo } from '../playerView';
 import type {
   ActionDispatcher,
   ActionPlan,
@@ -25,7 +26,7 @@ import type {
   Unit,
 } from '../model';
 import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
-import { hiddenFoes, visibleFoes } from '../rules/visibility';
+import { visibleFoes } from '../rules/visibility';
 import { isCapturer } from '../util/predicates';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
@@ -210,12 +211,10 @@ export function previewStandingOrders(s: GameState, team: TeamId, simulate: Acti
   return intents;
 }
 
-/** Copia de la partida sin los enemigos que `team` no ve (ni lo que llevan dentro). */
+/** Copia de la partida con las unidades que conoce `team` (sin los enemigos que no ve ni lo que llevan dentro: playerView). */
 function withoutHiddenEnemies(s: GameState, team: TeamId): GameState {
   const copy = cloneState(s);
-  const hidden = new Set(hiddenFoes(copy, team).map((unit) => unit.uid));
-  const isCarriedByHidden = (unit: Unit) => unit.carrier !== null && hidden.has(unit.carrier);
-  if (hidden.size) copy.units = copy.units.filter((unit) => !hidden.has(unit.uid) && !isCarriedByHidden(unit));
+  copy.units = unitsKnownTo(copy, team);
   return copy;
 }
 
