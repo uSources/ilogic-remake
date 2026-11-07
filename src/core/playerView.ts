@@ -17,13 +17,14 @@
  */
 import { cloneState } from './gameContent';
 import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from './model';
+import { unitById } from './rules/queries';
 import { sightOf, type Sight } from './rules/visibility';
 import { areAllied } from './teams';
 import { turnSeedOf } from './turnSeeds';
 import { seededRng } from './util/random';
 
 /** Lo que cambia la niebla en la vista (los campos de la partida que se ven de otra forma). */
-type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'buildings' | 'dice' | 'decisionSeed' | 'setup'>>;
+type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'buildings' | 'dice' | 'decisionSeed' | 'setup' | 'undoableMoves'>>;
 
 /** Una cosa que el equipo no sabe: lo que deja ver de esa parte de la partida. */
 interface FogRule {
@@ -71,6 +72,11 @@ const FOG: readonly FogRule[] = [
         return isHiddenCapture ? withoutUnseenCapture(building) : building;
       }),
     }),
+  },
+  {
+    // Lo que puede deshacer otro equipo (de donde venian sus unidades, la captura que perdieron).
+    id: 'othersUndo',
+    hide: (s, team) => (s.undoableMoves ? { undoableMoves: s.undoableMoves.filter((move) => unitById(s, move.uid)?.team === team) } : {}),
   },
   {
     // El azar de la partida: los dados (se sabria como va a salir cada combate), la semilla de las
@@ -138,6 +144,29 @@ const needsGuard = (value: unknown): value is object =>
   (Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype);
 
 /**
+ * Lo que no deja hacer ninguna envoltura de la vista: cambiar algo, ni por la puerta de atras
+ * (definir una propiedad, cambiar el prototipo, cerrar el objeto para que no crezca).
+ */
+const REFUSED_CHANGES = {
+  set: refuseChange,
+  deleteProperty: refuseChange,
+  defineProperty: refuseChange,
+  setPrototypeOf: refuseChange,
+  preventExtensions: refuseChange,
+} as const;
+
+/**
+ * El descriptor de una propiedad con su valor como se lee por la envoltura (`shown`): pedir el
+ * descriptor (`Object.getOwnPropertyDescriptor`) da lo mismo que leerla, nunca el objeto de verdad.
+ * Una propiedad que no se puede ni reconfigurar ni escribir se tiene que dar tal cual (lo exige
+ * Proxy); en la partida no hay ninguna con algo que proteger.
+ */
+function shownDescriptor(descriptor: PropertyDescriptor | undefined, shown: (value: unknown) => unknown): PropertyDescriptor | undefined {
+  if (!descriptor || !('value' in descriptor) || (!descriptor.configurable && !descriptor.writable)) return descriptor;
+  return { ...descriptor, value: shown(descriptor.value) };
+}
+
+/**
  * Lo mismo que `value`, pero de solo lectura hasta el fondo: lo que se lee de ella tambien lo es.
  * Cada objeto tiene siempre la misma envoltura (`guards`), asi que comparar dos unidades de la vista
  * sigue dando lo que debe.
@@ -146,15 +175,15 @@ function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
   if (!needsGuard(value)) return value;
   const known = guards.get(value);
   if (known) return known as T;
+  const guard = (property: unknown): unknown => readOnly(property, guards);
   const guarded = new Proxy(value, {
     get: (target, key): unknown => {
       const property: unknown = Reflect.get(target, key);
       // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee.
-      return typeof property === 'object' ? readOnly(property, guards) : property;
+      return typeof property === 'object' ? guard(property) : property;
     },
-    set: refuseChange,
-    deleteProperty: refuseChange,
-    defineProperty: refuseChange,
+    getOwnPropertyDescriptor: (target, key) => shownDescriptor(Reflect.getOwnPropertyDescriptor(target, key), guard),
+    ...REFUSED_CHANGES,
   });
   guards.set(value, guarded);
   return guarded;
@@ -176,15 +205,28 @@ export function playerView(s: GameState, team: TeamId): PlayerView {
     ruleset: s.ruleset,
   };
   let seen = seenParts(s, team, guards);
+  /** Lo que da la vista en lugar de lo que hay en la partida (lo fijo del turno y lo que cambia la niebla), si da algo. */
+  const replaced = (key: string | symbol): { value: unknown } | null => {
+    if (Reflect.has(fixed, key)) return { value: Reflect.get(fixed, key) };
+    return Reflect.has(seen, key) ? { value: Reflect.get(seen, key) } : null;
+  };
   const state = new Proxy(s, {
     get: (target, key, receiver): unknown => {
-      if (Reflect.has(fixed, key)) return Reflect.get(fixed, key);
-      if (Reflect.has(seen, key)) return Reflect.get(seen, key);
-      return readOnly(Reflect.get(target, key, receiver), guards);
+      const instead = replaced(key);
+      return instead ? instead.value : readOnly(Reflect.get(target, key, receiver), guards);
     },
-    set: refuseChange,
-    deleteProperty: refuseChange,
-    defineProperty: refuseChange,
+    getOwnPropertyDescriptor: (target, key) => {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      const instead = replaced(key);
+      if (!instead) return shownDescriptor(descriptor, (value) => readOnly(value, guards));
+      // Lo que la niebla quita de la partida (`setup`) puede no estar en ella: se da como una propiedad mas.
+      return {
+        ...(descriptor ?? { writable: false, enumerable: true }),
+        configurable: descriptor?.configurable ?? true,
+        value: instead.value,
+      };
+    },
+    ...REFUSED_CHANGES,
   });
   const refresh = () => {
     seen = seenParts(s, team, guards);

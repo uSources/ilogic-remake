@@ -6,6 +6,7 @@
  */
 import type { DamageModel, GameState, MatchSettings } from '../model';
 import { damageModelFor } from '../damage';
+import { deepFreeze } from '../util/freeze';
 import type { RuleHooks, RuleModule, RuleModuleId } from './hooks';
 
 /** Lo que es una entrada de esa lista. */
@@ -61,7 +62,11 @@ export function resolveRuleset(available: readonly RuleModule[], settings: Reado
   const lists = Object.keys(HOOK_LISTS) as (keyof RuleHooks)[];
   // Cada lista se junta con su propio tipo (collect); el objeto entero no lo sabe ver TypeScript.
   const hooks = Object.fromEntries(lists.map((list) => [list, collect(modules, list)])) as Ruleset['hooks'];
-  return Object.freeze({ modules, hooks, damageModel: damageModelFor(settings) });
+  const ruleset: Ruleset = { modules, hooks, damageModel: damageModelFor(settings) };
+  // Congelado hasta el fondo (las listas, los modulos y sus entradas): se comparte entre partidas y
+  // llega a quien decide por su vista; nadie puede cambiar las reglas de una partida tocandolo.
+  deepFreeze(ruleset);
+  return ruleset;
 }
 
 /** Las entradas de una lista que aportan los modulos que lleva la partida, en el orden en que se enchufaron. */

@@ -110,6 +110,46 @@ describe('PlayerView: lo que sabe un equipo', () => {
     expect(unitById(view.state, mine.uid)).toBe(unitById(view.state, mine.uid));
   });
 
+  it('por la puerta de atras tampoco: el descriptor de una propiedad da lo mismo que leerla', () => {
+    const { s, mine, hidden } = fogged();
+    s.setup = { seed: 1234, size: 32, theme: null };
+    const view = playerView(s, 0);
+    const descriptorOf = (holder: object, key: string): unknown => Object.getOwnPropertyDescriptor(holder, key)?.value;
+    const units = descriptorOf(view.state, 'units') as GameState['units'];
+    expect(units.map((unit) => unit.uid)).not.toContain(hidden.uid);
+    expect([descriptorOf(view.state, 'dice'), descriptorOf(view.state, 'decisionSeed'), descriptorOf(view.state, 'setup')]).toEqual([
+      0,
+      0,
+      undefined,
+    ]);
+    expect({ ...view.state }.setup).toBeUndefined();
+    const transport = newUnit(s, TRANSPORT, 0, { x: 4, y: 4 });
+    view.refresh();
+    const cargo = descriptorOf(unitById(view.state, transport.uid)!, 'cargo') as (number | null)[];
+    expect(() => cargo.push(mine.uid)).toThrow();
+    expect(transport.cargo).not.toContain(mine.uid);
+    expect(() => Object.setPrototypeOf(view.state, null)).toThrow(/no se cambia/);
+    expect(() => Object.preventExtensions(view.state)).toThrow(/no se cambia/);
+    expect(() => Object.freeze(unitById(view.state, mine.uid))).toThrow(/no se cambia/);
+  });
+
+  it('las reglas de la partida tampoco se cambian desde la vista (ni desde la partida: estan congeladas)', () => {
+    const { s } = fogged();
+    const view = playerView(s, 0);
+    const rules = view.state.ruleset;
+    expect(() => (rules.modules as unknown[]).push(rules.modules[0])).toThrow();
+    expect(() => (rules.hooks.hitModifiers as unknown[]).push(rules.hooks.hitModifiers[0])).toThrow();
+    expect(() => Object.assign(rules.modules[0]!, { id: 'otro' })).toThrow();
+    expect(Object.isFrozen(s.ruleset.modules[0]!.hooks)).toBe(true);
+  });
+
+  it('lo que puede deshacer otro equipo no se ve', () => {
+    const { s, mine } = fogged();
+    s.undoableMoves = [{ uid: mine.uid, from: { x: 1, y: 2 }, capture: null, revealed: false }];
+    expect(playerView(s, 0).state.undoableMoves).toHaveLength(1);
+    expect(playerView(s, 1).state.undoableMoves).toEqual([]);
+  });
+
   it('es el mismo objeto todo el turno y se pone al dia tras cada accion (seeing)', () => {
     const { s, mine } = fogged();
     giveTurn(s, 0);

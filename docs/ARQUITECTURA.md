@@ -465,7 +465,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
 - **Lo que sabe su equipo**: decide con la `PlayerView` que le da la sesion (`playerView.ts`): la
   partida sin lo que su equipo no sabe (`FOG`: los enemigos que no ve; de los que ve, sus ordenes,
   su escuadra y a quien llevan dentro; las escuadras enemigas; quien captura un edificio que no ve;
-  y las semillas: dados, decisiones y la del mapa, `setup`). De su azar solo sabe el de sus
+  lo que pueden deshacer los demas equipos; y las semillas: dados, decisiones y la del mapa, `setup`). De su azar solo sabe el de sus
   decisiones de este turno (`PlayerView.turnSeed`, que usa su controlador). Las semillas son de 32
   bits y la pantalla enseña a la persona el codigo del mapa (de el salen las de una escaramuza): una
   partida por la red que las tenga que guardar en secreto no las manda. Es la misma partida por
@@ -478,7 +478,12 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   la partida tal como la sabe el equipo (`foggedCopy`, con toda la niebla de FOG), asi que sin
   combates ni emboscadas dice lo que despues hacen y no delata nada de lo que no ve.
   La sesion pone al dia la vista de quien juega tras cada accion; fuera de una sesion lo hace
-  `seeing`. La vista es de solo lectura hasta el fondo (lo que se lee de ella tambien).
+  `seeing`. La vista es de solo lectura hasta el fondo (lo que se lee de ella tambien) y por todas
+  las puertas: pedir el descriptor de una propiedad (`Object.getOwnPropertyDescriptor`) da lo mismo
+  que leerla (la lista con niebla, no la de verdad), y cambiar el prototipo o cerrar un objeto lanza
+  un error, como escribir. Las reglas de la partida (`s.ruleset`: modulos, listas y entradas) estan
+  congeladas hasta el fondo desde que se resuelven (`resolveRuleset`), asi que tampoco se cambian por
+  la vista. La guarda va siempre puesta: solo lanza errores y cuesta poco por turno de la IA.
 - **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,
   `scoreTerms`, `behaviours` y su turno entero, `turn`: el del juego, `aiTurn`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
   contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
