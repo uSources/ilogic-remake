@@ -235,7 +235,7 @@ Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es cod
 La IA usa a su general sin saber cual es (`core/ai/general.ts`): al empezar su turno valora cada
 poder que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
 reconocimiento, un valor fijo con niebla; curar, por la vida que recuperan sus unidades; el dinero,
-por lo que es) y usa la mejor si vale al menos `GENERALMINVALUE`
+por lo que es) y usa la mejor si vale al menos `minPowerValue`
 (`ai.json`); con la barra llena, cualquiera que valga algo. Cada valoracion es el `aiValue` de su clase
 en `POWER_EFFECTS`: un efecto nuevo trae la suya y la IA no se toca.
 
@@ -266,12 +266,12 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`). Los lee quien juega por su perfil (`AiProfile.weights`; las
   ordenes de la partida, `autopilotProfileOf(contenido)`), nunca de un sitio comun: la arena juega
-  con otros sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `HQHEADSTART` (la
-  Base enemiga, al elegir que capturar), `BIGUNITCOST` (desde que precio un edificio fabrica lo
-  grande) y `MINEVICTION` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
-  `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
+  con otros sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `hqCaptureHeadStart` (la
+  Base enemiga, al elegir que capturar), `bigUnitCost` (desde que precio un edificio fabrica lo
+  grande) y `minEvictionWeight` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
+  `guardRadius` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
-  `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
+  `squadSpread` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
   (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
   las cumple la partida, no la IA (`assistTurn` en `src/core/autopilot/standingOrders.ts`, con los
   pasos de unidad que la IA reutiliza, al acabar el turno de cada equipo: la fase 'standingOrders'
@@ -280,7 +280,7 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 
 Para probar sin tocar ficheros, las variantes de equilibrio cambian los campos de los ficheros por
 ruta (`tools/balance/variant.ts`): `--set UNIT.move.Car=7 --set HIT_CHANCE.Tank.Soldier=+0.05
---set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60
+--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.killBonus=60
 --set SETTINGS.initialFunds=8000` (`UNIT.<campo>.<unidad>` con los campos de units.json: `cost`,
 `command`, `move`, `vision`; `TERRAIN.<campo>.<terreno>`: `protection`, `buildable`, `water`).
 

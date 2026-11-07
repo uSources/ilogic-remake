@@ -29,7 +29,7 @@ function productionOrder(s: GameState, play: PlayCtx, rng: Rng, limited: boolean
   // Se tira el dado aunque no haga falta ordenar, para gastar la misma suerte en cualquier caso.
   const ranked = s.buildings.map((building) => {
     const top = priciest(building);
-    const makesBigUnits = top >= play.profile.weights.BIGUNITCOST;
+    const makesBigUnits = top >= play.profile.weights.bigUnitCost;
     // Lo grande primero (entre ellos, al azar); despues, de mas caro a mas barato.
     return { building, priority: makesBigUnits ? [1, rng()] : [0, top] };
   });
@@ -46,7 +46,7 @@ function purchaseOptions(s: GameState, play: PlayCtx, building: Building, mine: 
   const options = buyOptions(s, building).filter((option) => fits(option) && !repeatsSupport(option));
   const capturers = mine.filter((unit) => isCapturer(s, unit)).length;
   const isAffordableCapturer = (option: BuyOption) => option.unitType.canCapture && option.affordable;
-  if (capturers < play.profile.weights.MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
+  if (capturers < play.profile.weights.minCapturers && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
   return options;
 }
 

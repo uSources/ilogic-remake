@@ -71,7 +71,7 @@ describe('Roca: reparar', () => {
     for (const tank of tanks) tank.life = 40;
     const choice = choosePower(s, 1, AI)!;
     expect(choice.power).toBe('repair');
-    expect(choice.value).toBeGreaterThanOrEqual(AI.GENERALMINVALUE);
+    expect(choice.value).toBeGreaterThanOrEqual(AI.minPowerValue);
   });
 });
 

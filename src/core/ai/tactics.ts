@@ -24,7 +24,7 @@ import { isCapturer } from '../util/predicates';
 // Capturar
 // ---------------------------------------------------------------------------------------------
 
-/** El edificio ajeno a la vista (hasta profile.weights.MAXCAPTDIST) mas cercano por tierra, con la Base enemiga por delante. */
+/** El edificio ajeno a la vista (hasta profile.weights.maxCaptureDistance) mas cercano por tierra, con la Base enemiga por delante. */
 function captureGoal(s: GameState, play: PlayCtx, unit: Unit): Pos | null {
   const sees = sightOf(s, play.me);
   // Desde 1 casilla: lo de debajo ya lo ha mirado captureHere.
@@ -36,11 +36,11 @@ function captureGoal(s: GameState, play: PlayCtx, unit: Unit): Pos | null {
     if (occupant && areAllied(s, occupant.team, play.me)) return null;
     return steps.at(tile) < Infinity ? building : null;
   };
-  const candidates = [...diamond(mapGrid(s), unit, 1, play.profile.weights.MAXCAPTDIST)].flatMap((tile) => {
+  const candidates = [...diamond(mapGrid(s), unit, 1, play.profile.weights.maxCaptureDistance)].flatMap((tile) => {
     const building = capturableAt(tile);
     return building ? [{ tile, building }] : [];
   });
-  const headStart = (building: Building): number => (isHq(s, building) ? play.profile.weights.HQHEADSTART : 0);
+  const headStart = (building: Building): number => (isHq(s, building) ? play.profile.weights.hqCaptureHeadStart : 0);
   return minBy(candidates, (candidate) => steps.at(candidate.tile) - headStart(candidate.building))?.tile ?? null;
 }
 
@@ -65,10 +65,10 @@ export function* tryCapture(s: GameState, play: PlayCtx, unit: Unit, range: Move
  */
 function advanceHeadStart(s: GameState, play: PlayCtx, unit: Unit, goal: Pos): number {
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
-  if (s.controlPoints?.some((point) => samePos(point, goal))) return play.profile.weights.CONTROLPOINT;
+  if (s.controlPoints?.some((point) => samePos(point, goal))) return play.profile.weights.controlPointHeadStart;
   const building = buildingAt(s, goal);
   if (!building || !isCapturer(s, unit) || building.owner === null) return 0;
-  return isHq(s, building) ? play.profile.weights.CAPTUREHQ : play.profile.weights.CAPTUREOWNED;
+  return isHq(s, building) ? play.profile.weights.enemyHqPreference : play.profile.weights.ownedBuildingPreference;
 }
 
 /**

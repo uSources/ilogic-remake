@@ -108,7 +108,7 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
     apply: ({ general }) => {
       general.reveal = true;
     },
-    aiValue: (s, team, _effect, weights) => (seesEverything(s, team) ? null : { target: null, value: weights.REVEALVALUE }),
+    aiValue: (s, team, _effect, weights) => (seesEverything(s, team) ? null : { target: null, value: weights.revealValue }),
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata); la IA, en el mejor cuadrado que ve.
   areaDamage: {

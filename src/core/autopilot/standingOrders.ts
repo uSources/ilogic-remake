@@ -91,8 +91,8 @@ function* captureOrderTurn(turn: StandingOrderTurnContext): ActionPlan<boolean> 
   return ownsBuildingAt(s, play, at);
 }
 
-/** Esta en la zona que guarda la orden (a profile.weights.GUARDRADIUS o menos del destino). */
-const inGuardZone = (play: PlayCtx, at: Pos) => (pos: Pos) => manhattan(pos, at) <= play.profile.weights.GUARDRADIUS;
+/** Esta en la zona que guarda la orden (a profile.weights.guardRadius o menos del destino). */
+const inGuardZone = (play: PlayCtx, at: Pos) => (pos: Pos) => manhattan(pos, at) <= play.profile.weights.guardRadius;
 
 /** Defender: disparar a lo que entre en la zona y, si no, colocarse junto al destino. Nunca se cumple sola. */
 function* defendOrderTurn({ s, play, unit, at }: StandingOrderTurnContext): ActionPlan<boolean> {

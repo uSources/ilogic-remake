@@ -26,9 +26,9 @@ import type { EngagementPolicy, FiringPositions } from './engagement';
 // Retirarse
 // ---------------------------------------------------------------------------------------------
 
-/** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de profile.weights.MAXMERGELIFE. */
+/** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de profile.weights.maxMergedLife. */
 function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
-  const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= play.profile.weights.MAXMERGELIFE);
+  const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= play.profile.weights.maxMergedLife);
   const nearest = minBy(mates, (mate) => manhattan(unit, mate));
   if (!nearest) return false;
   return yield* act({ kind: 'merge', uid: unit.uid, into: nearest.uid });
@@ -74,7 +74,7 @@ function shotScore(s: GameState, play: PlayCtx, unit: Unit, target: Unit, from: 
   const score = attackScore(s, play, unit, target, from);
   // [CAMBIO] Fuego concentrado: el objetivo del plan del turno vale mas (lo rematan entre varias).
   const isPlannedTarget = play.focusFire.get(unit.uid) === target.uid;
-  return isPlannedTarget ? score + play.profile.weights.FOCUSFIRE * unitValue(s, play.profile.weights, target) : score;
+  return isPlannedTarget ? score + play.profile.weights.focusFireBonus * unitValue(s, play.profile.weights, target) : score;
 }
 
 /**

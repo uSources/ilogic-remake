@@ -53,14 +53,14 @@ describe('la IA usa a su general', () => {
     const s = aiBrisa(6, true);
     const choice = choosePower(s, 1, AI)!;
     expect(choice.power).toBe('recon');
-    expect(choice.value).toBe(AI.REVEALVALUE);
+    expect(choice.value).toBe(AI.revealValue);
   });
 
   it('el reconocimiento no vale nada si ya lo ve todo: sin niebla o con uno de la alianza puesto', () => {
     const recon = generalDef(aiBrisa(6), 'Brisa')!.powers.find((power) => power.effect.kind === 'reveal')!;
     expect(powerValue(aiBrisa(6, false), 1, recon, AI)).toBeNull();
     const fogged = aiBrisa(6, true);
-    expect(powerValue(fogged, 1, recon, AI)).toEqual({ target: null, value: AI.REVEALVALUE });
+    expect(powerValue(fogged, 1, recon, AI)).toEqual({ target: null, value: AI.revealValue });
     teamState(fogged, 1).general!.reveal = true;
     expect(powerValue(fogged, 1, recon, AI)).toBeNull();
 

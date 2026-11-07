@@ -133,14 +133,14 @@ describe('contenido (src/core/content/*.json)', () => {
     files.terrain[4]!.mapLetter = '~';
     (files.settings.defaults as unknown as Record<string, unknown>).fog = 'si';
     (files.settings.defaults as unknown as Record<string, unknown>).magic = true;
-    files.ai.KILLBONUS = -1;
+    files.ai.killBonus = -1;
     const errors = errsOf(files);
     expect(errors).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
     expect(errors).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
     expect(errors).toContain('terreno Cactus: la letra "~" ya es de otro terreno');
     expect(errors).toContain('settings.json: defaults.fog tiene que ser true o false');
     expect(errors).toContain('settings.json: regla desconocida "magic"');
-    expect(errors.some((error) => error.startsWith('ai.json: KILLBONUS'))).toBe(true);
+    expect(errors.some((error) => error.startsWith('ai.json: killBonus'))).toBe(true);
   });
 
   it('temas y generador de mapas: nombran terrenos, unidades y edificios que existen', () => {

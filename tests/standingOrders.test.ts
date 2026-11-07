@@ -256,7 +256,7 @@ describe('escuadras', () => {
 describe('escuadras en formacion', () => {
   /** Casillas que le quedan hasta el destino (todo hierba: en linea recta). */
   const left = (unit: { x: number; y: number }, at: { x: number; y: number }) => Math.abs(unit.x - at.x) + Math.abs(unit.y - at.y);
-  const SPREAD = 2; // SQUADSPREAD de ai.json (profile.weights.SQUADSPREAD)
+  const SPREAD = 2; // squadSpread de ai.json (profile.weights.squadSpread)
 
   it('el jeep no deja atras al soldado: van juntos hacia un destino lejano', () => {
     const s = world();

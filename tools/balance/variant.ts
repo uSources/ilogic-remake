@@ -12,7 +12,7 @@
  *     "TERRAIN.protection.Woods": 0.8,
  *     "MOVE_COST.vehicle.Woods": 3,
  *     "SETTINGS.counterattack": true,
- *     "AI.KILLBONUS": 60
+ *     "AI.killBonus": 60
  *   }
  * }
  *

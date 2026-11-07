@@ -120,4 +120,4 @@ export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, u
 export const canAct = (s: GameState, unit: Unit): boolean => isAlive(unit) && actorProblem(s, unit.team, unit.uid) === null;
 
 /** Necesita volver a curarse a un edificio. */
-export const needsRepair = (play: PlayCtx, unit: Unit): boolean => unit.life < play.profile.weights.LIFETOBACK;
+export const needsRepair = (play: PlayCtx, unit: Unit): boolean => unit.life < play.profile.weights.retreatBelowLife;

@@ -56,7 +56,7 @@ describe('herramienta de equilibrio: variantes', () => {
 
   it('cambia los ficheros y los vuelve a cargar: ficheros, tablas y reglas cuadran', () => {
     const setup = buildVariant(
-      { name: 'v', set: { 'UNIT.cost.Tank': 9000, 'MOVE_COST.vehicle.Woods': null, 'SETTINGS.upkeep': 0.2, 'AI.KILLBONUS': 7 } },
+      { name: 'v', set: { 'UNIT.cost.Tank': 9000, 'MOVE_COST.vehicle.Woods': null, 'SETTINGS.upkeep': 0.2, 'AI.killBonus': 7 } },
       defaultContent(),
     );
     const variant = setup.content;
@@ -68,7 +68,7 @@ describe('herramienta de equilibrio: variantes', () => {
     expect(woodsOf(variant).moveCost.vehicle).toBeNull();
     expect(woodsOf(defaultContent()).moveCost.vehicle).not.toBeNull();
     expect(settingsWith(setup.content).upkeep).toBe(0.2);
-    expect(variant.ai.KILLBONUS).toBe(7);
+    expect(variant.ai.killBonus).toBe(7);
     expect(Object.isFrozen(variant.files.units[TANK_INDEX])).toBe(true);
   });
 
