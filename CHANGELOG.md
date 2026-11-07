@@ -7,49 +7,93 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.8.0] - 2026-11-07 — Escuadras, órdenes y un rival que juega limpio
 
-### Cambios de juego
+### Novedades
+- **Escuadras con nombre y órdenes que duran**: da a una unidad o a una escuadra la orden de atacar, capturar, defender o ir a un sitio y la cumple turno a turno sin que la muevas. Unas **flechas** enseñan qué hará cada unidad con orden al terminar el turno, y las escuadras con la misma orden avanzan **en formación**.
 - **Órdenes de escuadra**: una orden a toda la escuadra es de la escuadra. A solo algunas de sus unidades, esas van **destacadas** (raya naranja, y «2 destacadas» en el botón de la escuadra) y al cumplirla vuelven solas a la orden de la escuadra.
-- Si empiezas a capturar a mano con una unidad que tenía orden, la acaba en vez de irse el turno siguiente.
+- **Ayudante**: deja unidades en automático y la **fábrica automática** compra por ti, con postura «Responder», dinero de reserva y resumen de lo comprado.
+- **Puntos de control**: zonas de 3×3 en el centro del mapa que dan dinero cada ronda, pero solo si nadie te las disputa.
+- **Varias personas en la misma pantalla**, por turnos, cada una con su cámara.
+- **Rendirse** en cualquier momento, y salir mientras juega la IA.
+- El botón de fin de turno avisa de las unidades que aún no han movido.
 
 ### Controles
 - **Elegir unidades como en los juegos de estrategia en tiempo real**: recuadro arrastrando desde fuera de tus unidades (sin tecla), Mayúsculas + clic para añadir o quitar, doble clic (o Ctrl + clic) para todas las de ese tipo en pantalla y clic en vacío o Esc para soltar. Las elegidas llevan un aro a los pies.
 - **Grupos con número**: Ctrl + 1…9 hace el grupo con lo elegido (es una escuadra), Mayúsculas + número añade, el número lo elige y pulsarlo dos veces lleva la cámara allí. El botón de la bandeja hace lo mismo.
 - **Clic derecho que acierta solo**: con unidades elegidas, en una casilla libre las mueve, en un enemigo ataca, en un edificio captura, en un transporte sube y, fuera del alcance de una sola unidad, va allí en varios turnos. El puntero del ratón dice qué hará (y prohibido si no puede). Mayúsculas + clic derecho lo deja como orden sin mover nada ahora; Alt + clic derecho (o F, o mantener pulsado) abre el menú con todas las acciones, también «Formar escuadra» y «Sacar de la escuadra». El grupo sigue elegido después.
+- Las órdenes y las escuadras también se manejan **con el dedo**.
 - La cámara se mueve arrastrando con el botón derecho o la rueda (además del borde de la pantalla).
 - Al señalar una unidad de escuadra se marcan sus compañeras.
 - **Panel de lo elegido**: con varias unidades elegidas, abajo salen sus retratos por tipo con su vida. Clic en uno elige solo esa, Mayúsculas + clic la quita y Ctrl + clic deja solo las de su tipo. Tab va pasando por ellas.
 - **Teclas de orden**: Q atacar, C capturar y G defender, y luego la casilla (clic o Enter); X quita la orden. (A, D y S siguen moviendo el cursor.)
 
+### Cambios de juego
+- **La IA juega limpio**: decide solo con lo que ve su equipo y ya no esquiva unidades escondidas en la niebla. Lo mismo las órdenes que cumplen tus unidades: no te delatan a un enemigo que no ves.
+- **La IA, más dura**: concentra el fuego para rematar y deja paso a sus aliados.
+- Atacar exige ver al objetivo y poder hacerle daño.
+- Si empiezas a capturar a mano con una unidad que tenía orden, la acaba en vez de irse el turno siguiente.
+- Deshacer un movimiento que ha descubierto enemigos ya no se puede.
+- Con tres o más equipos, la partida acaba bien y avisa de cada equipo que cae.
+- **Las partidas guardadas con versiones anteriores no se pueden cargar** en esta.
+
 ### Equilibrio
 - **Motorizado** 3500 → 2500, **Jeep** 5000 → 4000 y **Tanque anfibio** 15000 → 11000: rendían menos de la mitad de lo que costaban.
 - **Caza ligero** 12000 → 15000: rendía casi el doble de lo que costaba.
+- **Generales más igualados**: el ataque aéreo de Brisa hace 20 de daño (antes 30) y cuesta 6★; la reparación de Roca cura 8 (antes 10) y cuesta 5★; la ventaja en tierra de Ámbar sube del 7 % al 15 %.
 
 ### Arreglos
-- Las **partidas guardadas** se cargan con las reglas con las que se jugaban (niebla, clima, mantenimiento, puntos de mando...), y las de una **misión**, siempre con las de esa misión. Antes una misión guardada podía seguir con las reglas de una partida rápida.
+- Las **partidas guardadas** se cargan con las reglas con las que se jugaban (niebla, clima, mantenimiento, puntos de mando...), y las de una **misión**, siempre con las de esa misión.
+- Tab vuelve a saltar de unidad en el mapa y de botón en la pantalla final, también con Mayúsculas + Tab.
+- «Atrás» ya no pierde una captura a medias, e irse de un edificio a medio capturar ya no estropea Ctrl + Z.
+- El poder de curar del general ya no cura a las unidades que van en un transporte.
+- Unirse o subir a un transporte ya no se salta la zona de control.
+- Subir, unirse o atacar a mano también acaban el viaje de una unidad.
+- El juego en un solo fichero (`ilogic.html`) ya no estropea partes de la interfaz.
 
 <!-- en -->
 
-### Gameplay
+### New
+- **Named squads and lasting orders**: tell a unit or a squad to attack, capture, hold or go somewhere and it carries it out turn after turn without you moving it. **Arrows** show what each unit with an order will do at the end of the turn, and squads with the same order move **in formation**.
 - **Squad orders**: an order to a whole squad belongs to the squad. To only some of its units, those go **detached** (orange stripe, and "2 detached" on the squad button) and rejoin the squad's order once done.
-- If you start a capture by hand with a unit that had an order, it finishes it instead of leaving next turn.
+- **Helper**: put units on automatic, and the **automatic factory** buys for you, with a "Respond" stance, a cash reserve and a summary of what it bought.
+- **Control points**: 3×3 areas in the middle of the map that pay every round, but only while nobody contests them.
+- **Several people on the same screen**, taking turns, each with their own camera.
+- **Surrender** at any moment, and leave while the AI is playing.
+- The end-turn button warns about units that have not moved yet.
 
 ### Controls
 - **Select units like in real-time strategy games**: drag a box from outside your units (no key needed), Shift + click adds or removes, double-click (or Ctrl + click) picks all of that type on screen, and clicking empty ground or Esc clears. Selected units have a ring at their feet.
 - **Number groups**: Ctrl + 1…9 makes the group from the selection (it is a squad), Shift + number adds, the number selects it and pressing it twice moves the camera there. The tray button does the same.
 - **Smart right-click**: with units selected, a free tile moves them, an enemy is attacked, a building is captured, a transport is boarded and, out of a single unit's range, it goes there over several turns. The mouse pointer shows what will happen (or a no-entry sign). Shift + right-click leaves it as an order without moving now; Alt + right-click (or F, or a long press) opens the menu with every action, including "Form squad" and "Leave the squad". The group stays selected afterwards.
+- Orders and squads also work **by touch**.
 - Pan the camera by dragging with the right button or the wheel (besides the screen edge).
 - Pointing at a squad unit highlights its squadmates.
 - **Selection panel**: with several units selected, their portraits appear at the bottom by type with their health. Click one to select only it, Shift + click removes it and Ctrl + click keeps only its type. Tab goes through them.
 - **Order keys**: Q attack, C capture and G hold, then the tile (click or Enter); X clears the order. (A, D and S still move the cursor.)
 
+### Gameplay
+- **The AI plays fair**: it decides only from what its team can see and no longer dodges units hidden in the fog. The same goes for the orders your units carry out: they never give away an enemy you can't see.
+- **A tougher AI**: it focuses fire to finish units off and makes way for its allies.
+- Attacking requires seeing the target and being able to damage it.
+- If you start a capture by hand with a unit that had an order, it finishes it instead of leaving next turn.
+- A move that revealed enemies can no longer be undone.
+- With three or more teams, the match ends properly and announces every team that falls.
+- **Games saved with earlier versions can't be loaded** in this one.
+
 ### Balance
 - **Motor trooper** 3500 → 2500, **Jeep** 5000 → 4000 and **Amphibious tank** 15000 → 11000: they were worth less than half their price.
 - **Light fighter** 12000 → 15000: it was worth almost twice its price.
+- **More even generals**: Brisa's air strike deals 20 damage (was 30) and costs 6★; Roca's repair heals 8 (was 10) and costs 5★; Ámbar's land bonus goes from 7 % to 15 %.
 
 ### Fixes
-- **Saved games** load with the rules they were played with (fog, weather, upkeep, command points...), and a **mission** always with that mission's rules. Before, a saved mission could carry on with quick-game rules.
+- **Saved games** load with the rules they were played with (fog, weather, upkeep, command points...), and a **mission** always with that mission's rules.
+- Tab again jumps between units on the map and between buttons on the end screen, Shift + Tab too.
+- "Back" no longer loses a half-done capture, and leaving a building mid-capture no longer breaks Ctrl + Z.
+- The general's heal power no longer heals units riding in a transport.
+- Joining or boarding a transport no longer skips the zone of control.
+- Boarding, joining or attacking by hand also ends a unit's trip.
+- The single-file game (`ilogic.html`) no longer breaks parts of the interface.
 
 ## [0.7.1] - 2026-10-31 — Polvo en los ojos
 
