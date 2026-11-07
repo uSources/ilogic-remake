@@ -537,9 +537,16 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     (`autopilot/scoring.ts`, los del perfil); una forma de pelear, un preset de `EngagementPolicy`
     (`autopilot/engagement.ts`); un tipo de orden permanente, su linea en `StandingOrderKinds`
     (`model/standingOrder.ts`, con su momento: de ahi salen los tipos), su entrada en
-    `STANDING_ORDER_TYPES` (`squads/standingOrders.ts`: nombre, momento, si es solo de la unidad y por
-    que no se puede dar) y como se juega en `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`); el
-    compilador pide las tres;
+    `STANDING_ORDER_TYPES` (`squads/standingOrders.ts`: nombre, momento, si es solo de la unidad, por
+    que no se puede dar, como la cumple quien no puede (`escort`), si es quedarse guardando el sitio
+    (`holdsPosition`, la que se da al parar), si es tomar el edificio (`takesBuilding`, la de quien
+    captura a mano), si manda en la escuadra (`leadsSquad`), cuando esta cumplida para su escuadra
+    (`squadDone`) y su puesto en el menu de una casilla (`menuRank`): nada de las ordenes pregunta por
+    un tipo concreto) y como se juega en `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`); el
+    compilador pide las tres. Que sean tres tablas es a proposito: el modelo (solo tipos) no puede
+    tener funciones, las reglas de las ordenes (squads/) no pueden depender de quien las cumple
+    (autopilot/, que usa las reglas) y cada capa tiene su entrada por tipo, sin ciclos; las une el
+    compilador, no una lista que haya que acordarse de tocar;
   - algo mas que un equipo no sabe de la partida, una entrada en `FOG` (`playerView.ts`).
 - La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
   su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la

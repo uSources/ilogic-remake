@@ -37,9 +37,10 @@ const copyStandingOrder = <Order extends StandingOrder>(standingOrder: Order): O
   at: posOf(standingOrder.at),
 });
 
-/** La orden tal como la cumple esta unidad: con "capturar", las que no pueden capturar van de escolta (atacar). */
+/** La orden tal como la cumple esta unidad: la que no puede cumplirla va de escolta (`escort`: con capturar, atacar). */
 export function forUnit<Order extends StandingOrder>(s: GameState, unit: Unit, standingOrder: Order): Order {
-  const kind = standingOrder.kind === 'capture' && !isCapturer(s, unit) ? 'attack' : standingOrder.kind;
+  const escort = STANDING_ORDER_TYPES[standingOrder.kind].escort;
+  const kind = escort && !escort.canFulfil(s, unit) ? escort.as : standingOrder.kind;
   return { ...copyStandingOrder(standingOrder), kind };
 }
 
@@ -116,6 +117,20 @@ export function standingOrderBlock(
 
 type BlockCheck = (s: GameState, team: TeamId, at: Pos, units: readonly Unit[]) => StandingOrderBlock | null;
 
+/** Lo que se sabe de la casilla al ofrecer las ordenes en ella (clic derecho o pulsacion larga con unidades elegidas). */
+export interface OrderPlace {
+  /** Hay un enemigo que quien mira ve en esa casilla. */
+  readonly enemyHere: boolean;
+  /** Esta orden se puede dar ahi a esas unidades (su `block`). */
+  readonly canGive: () => boolean;
+}
+
+/** Como la cumple quien no puede cumplirla (con capturar, las que no capturan: escoltan atacando al mismo sitio). */
+interface Escort {
+  readonly canFulfil: (s: GameState, unit: Unit) => boolean;
+  readonly as: TurnEndOrderKind;
+}
+
 /** Lo que hay que saber de un tipo de orden permanente. */
 interface StandingOrderType<Kind extends StandingOrderKind> {
   /** Como se dice (para depurar y la partida por texto). */
@@ -129,10 +144,32 @@ interface StandingOrderType<Kind extends StandingOrderKind> {
   readonly unitOnly: boolean;
   /** Por que no se puede dar ahi a esas unidades (null = se puede). */
   readonly block: BlockCheck;
+  /** Quien no la puede cumplir va con otra (ver Escort); sin esto, todas la cumplen igual. */
+  readonly escort?: Escort;
+  /**
+   * Es quedarse guardando el sitio: la que se da al parar a una unidad que seguia a su escuadra, y
+   * en formacion no va con las que avanzan (las demas, aunque sean de otro tipo, si).
+   */
+  readonly holdsPosition: boolean;
+  /** Es tomar el edificio del destino: la que se queda quien empieza a capturar a mano. */
+  readonly takesBuilding: boolean;
+  /** Si la llevan todas las de una escuadra (unas de escolta), es esta la que pasa a la escuadra. */
+  readonly leadsSquad: boolean;
+  /** Cuando esta cumplida para su escuadra (`finishStandingOrder`): las de cada unidad no llegan aqui. */
+  readonly squadDone: (s: GameState, squad: Squad, at: Pos) => boolean;
+  /** Su puesto en el menu de ordenes de una casilla (menor, antes), o null si ahi no se ofrece. */
+  readonly menuRank: (place: OrderPlace) => number | null;
 }
 
 /** Atacar y defender: alguna tiene que poder luchar. */
 const needsFighter: BlockCheck = (s, _team, _at, units) => (units.some((unit) => canFight(s, unit)) ? null : 'noFighter');
+
+/** Cumplida para la escuadra cuando han llegado todas las que la siguen. */
+const whenAllArrive = (s: GameState, squad: Squad): boolean =>
+  followers(s, squad).every((unit) => !isAlive(unit) || atStandingOrder(s, unit));
+
+/** Nunca es de una escuadra (`unitOnly`). */
+const neverForSquads = (): boolean => false;
 
 /**
  * Cada tipo de orden permanente, con todo lo suyo (el tipo obliga a tener uno por tipo, con su
@@ -140,7 +177,18 @@ const needsFighter: BlockCheck = (s, _team, _at, units) => (units.some((unit) =>
  * aqui y como se juega en `STANDING_ORDER_TURNS` (autopilot/standingOrders.ts).
  */
 export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: StandingOrderType<Kind> } = {
-  attack: { name: 'atacar', moment: 'turnEnd', unitOnly: false, block: needsFighter },
+  attack: {
+    name: 'atacar',
+    moment: 'turnEnd',
+    unitOnly: false,
+    block: needsFighter,
+    holdsPosition: false,
+    takesBuilding: false,
+    leadsSquad: false,
+    squadDone: whenAllArrive,
+    // Con un enemigo a la vista ahi, lo primero.
+    menuRank: ({ enemyHere }) => (enemyHere ? 0 : 1),
+  },
   capture: {
     name: 'capturar',
     moment: 'turnEnd',
@@ -149,12 +197,36 @@ export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: Stand
       if (isOwnedOrMissing(s, team, at)) return 'noBuilding';
       return units.some((unit) => isCapturer(s, unit)) ? null : 'noCapturer';
     },
+    escort: { canFulfil: isCapturer, as: 'attack' },
+    holdsPosition: false,
+    takesBuilding: true,
+    leadsSquad: true,
+    squadDone: (s, squad, at) => isOwnedOrMissing(s, squad.team, at),
+    // Solo si estas unidades pueden tomar el edificio; sin enemigo a la vista, lo primero.
+    menuRank: ({ enemyHere, canGive }) => (!canGive() ? null : enemyHere ? 1 : 0),
   },
-  defend: { name: 'defender', moment: 'turnEnd', unitOnly: false, block: needsFighter },
+  defend: {
+    name: 'defender',
+    moment: 'turnEnd',
+    unitOnly: false,
+    block: needsFighter,
+    holdsPosition: true,
+    takesBuilding: false,
+    leadsSquad: false,
+    squadDone: whenAllArrive,
+    // Siempre se puede, la ultima.
+    menuRank: () => 2,
+  },
   goto: {
     name: 'ir',
     moment: 'turnStart',
     unitOnly: true,
+    holdsPosition: false,
+    takesBuilding: false,
+    leadsSquad: false,
+    squadDone: neverForSquads,
+    // Ir alli se da moviendo (el viaje), no desde el menu de ordenes de una casilla.
+    menuRank: () => null,
     // Cada una tiene que poder ir (en el mapa, a donde no llegue ya este turno: travelProblem).
     block: (s, _team, at, units) => {
       for (const unit of units) {
@@ -184,16 +256,32 @@ const isUnitOnly = (kind: StandingOrderKind): boolean => STANDING_ORDER_TYPES[ki
 
 /**
  * Ordenes que tiene sentido ofrecer en una casilla (clic derecho o pulsacion larga en el destino, con
- * unidades elegidas), en el orden del menu. Con un enemigo visible ahi, atacar va primero; si no, con
- * un edificio que estas unidades pueden capturar, capturar va primero. Defender siempre se puede.
- * `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide la escena).
+ * unidades elegidas), en el orden del menu: el `menuRank` de cada tipo (con un enemigo visible ahi,
+ * atacar va primero; si no, con un edificio que estas unidades pueden capturar, capturar; defender
+ * siempre se puede). `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide
+ * la escena).
  */
 export function standingOrderChoices(s: GameState, team: TeamId, at: Pos, units: readonly Unit[], enemyHere: boolean): StandingOrderKind[] {
   const mine = teamUnits(s, team, units);
   if (!mine.length) return [];
-  const canCapture = standingOrderBlock(s, team, 'capture', at, mine) === null;
-  if (enemyHere) return canCapture ? ['attack', 'capture', 'defend'] : ['attack', 'defend'];
-  return canCapture ? ['capture', 'attack', 'defend'] : ['attack', 'defend'];
+  const ranked = STANDING_ORDER_KINDS.flatMap((kind) => {
+    const rank = STANDING_ORDER_TYPES[kind].menuRank({ enemyHere, canGive: () => standingOrderBlock(s, team, kind, at, mine) === null });
+    return rank === null ? [] : [{ kind, rank }];
+  });
+  // sort es estable: a igual puesto, el orden de STANDING_ORDER_TYPES.
+  return ranked.sort((first, second) => first.rank - second.rank).map((entry) => entry.kind);
+}
+
+/** El tipo de orden que es quedarse guardando el sitio (`holdsPosition`). */
+const holdingKind = (): StandingOrderKind => kindWith('holdsPosition');
+/** El tipo de orden que es tomar el edificio del destino (`takesBuilding`). */
+const capturingKind = (): StandingOrderKind => kindWith('takesBuilding');
+
+/** El tipo de orden que dice que si a `field` (tiene que haber uno: lo comprueba tests/standingOrders.test.ts). */
+function kindWith(field: 'holdsPosition' | 'takesBuilding'): StandingOrderKind {
+  const kind = STANDING_ORDER_KINDS.find((candidate) => STANDING_ORDER_TYPES[candidate][field]);
+  if (!kind) throw new Error(`Ningun tipo de orden tiene ${field}`);
+  return kind;
 }
 
 /** La unidad se queda con la orden como propia, salvo que sea justo la de su escuadra (entonces la sigue). */
@@ -235,14 +323,8 @@ export function cancelStandingOrder(s: GameState, units: readonly Unit[]): void 
   for (const unit of units) {
     if (unit.squad !== undefined && whole.has(unit.squad)) delete unit.standingOrder;
     else if (unit.standingOrder) delete unit.standingOrder;
-    else if (effectiveStandingOrder(s, unit)) unit.standingOrder = { kind: 'defend', at: posOf(unit) };
+    else if (effectiveStandingOrder(s, unit)) unit.standingOrder = { kind: holdingKind(), at: posOf(unit) };
   }
-}
-
-/** La orden de la escuadra ya esta cumplida: edificio tomado, o todas las que la siguen han llegado. */
-function squadOrderDone(s: GameState, squad: Squad, standingOrder: StandingOrder): boolean {
-  if (standingOrder.kind === 'capture') return isOwnedOrMissing(s, squad.team, standingOrder.at);
-  return followers(s, squad).every((unit) => !isAlive(unit) || atStandingOrder(s, unit));
 }
 
 /**
@@ -257,7 +339,7 @@ export function finishStandingOrder(s: GameState, unit: Unit): void {
   }
   const squad = squadById(s, unit.squad);
   if (!squad?.standingOrder) return;
-  if (squadOrderDone(s, squad, squad.standingOrder)) delete squad.standingOrder;
+  if (STANDING_ORDER_TYPES[squad.standingOrder.kind].squadDone(s, squad, squad.standingOrder.at)) delete squad.standingOrder;
 }
 
 /**
@@ -271,8 +353,9 @@ export function keepCapturing(s: GameState, unit: Unit): StandingOrder | null {
   const standingOrder = effectiveStandingOrder(s, unit);
   // La de ir alli no se toca: capturar de paso no la cambia (la unidad sigue su viaje).
   if (!building || !standingOrder || isUnitOnly(standingOrder.kind) || isOwnedOrMissing(s, unit.team, unit)) return null;
-  if (standingOrder.kind === 'capture' && samePos(standingOrder.at, unit)) return null;
-  unit.standingOrder = { kind: 'capture', at: posOf(unit) };
+  const capturing = capturingKind();
+  if (standingOrder.kind === capturing && samePos(standingOrder.at, unit)) return null;
+  unit.standingOrder = { kind: capturing, at: posOf(unit) };
   return copyStandingOrder(unit.standingOrder);
 }
 
@@ -291,7 +374,7 @@ export function sameFormation(s: GameState, first: Unit, second: Unit): boolean 
   const firstOrder = turnEndOrderOf(s, first);
   const secondOrder = turnEndOrderOf(s, second);
   if (!firstOrder || !secondOrder) return false;
-  const holds = (standingOrder: StandingOrder) => standingOrder.kind === 'defend';
+  const holds = (standingOrder: StandingOrder) => STANDING_ORDER_TYPES[standingOrder.kind].holdsPosition;
   return holds(firstOrder) === holds(secondOrder) && samePos(firstOrder.at, secondOrder.at);
 }
 
@@ -314,8 +397,8 @@ export function liftStandingOrder(s: GameState, squad: Squad): void {
   const [first] = withOrder;
   // Si alguna no lleva orden propia, la escuadra no tiene una comun.
   if (!first || withOrder.length !== units.length) return;
-  // La de capturar manda: las demas van de escolta con "atacar" al mismo sitio.
-  const lead = withOrder.find((entry) => entry.order.kind === 'capture') ?? first;
+  // La que manda (`leadsSquad`, capturar): las demas van de escolta (con "atacar") al mismo sitio.
+  const lead = withOrder.find((entry) => STANDING_ORDER_TYPES[entry.order.kind].leadsSquad) ?? first;
   const allAgree = withOrder.every((entry) => sameStandingOrder(entry.order, forUnit(s, entry.unit, lead.order)));
   if (!allAgree) return;
   squad.standingOrder = copyStandingOrder(lead.order);
