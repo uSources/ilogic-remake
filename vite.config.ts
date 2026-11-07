@@ -83,5 +83,8 @@ export default defineConfig({
   resolve: { alias: { '@core': fileURLToPath(new URL('./src/core', import.meta.url)) } },
   plugins: [preact(), pruneLooseImages(), serviceWorker()],
   build: { target: 'es2022', chunkSizeWarningLimit: 2000, assetsInlineLimit: 0 },
-  test: { include: ['tests/**/*.test.ts'] },
+  // Sin aislar cada fichero en su propio entorno: casi todo el tiempo es jugar partidas (IA contra
+  // IA), y volver a cargar el nucleo en cada fichero costaba un 7 % mas (198 s → 185 s con 2 nucleos).
+  // Ningun test deja nada cambiado a nivel de modulo (lo que tocan los de la interfaz lo devuelven).
+  test: { include: ['tests/**/*.test.ts'], isolate: false },
 });

@@ -28,7 +28,7 @@ describe('generador de mapas', () => {
       expect(new Set(s.buildings.map((building) => `${building.x},${building.y}`)).size).toBe(s.buildings.length);
       checkInvariants(s);
     }
-  });
+  }, 60_000); // 100 mapas: con la maquina cargada pasaba de los 5 s por defecto
 });
 
 describe('partidas simuladas', () => {
