@@ -117,7 +117,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   modulo de reglas (`core/ruleModules/`, entrada en `RULE_MODULES`) que aporta a las listas
   (`RuleHooks`): acierto nuevo = `hitModifiers` de su modulo; paso por ronda = `roundPhases` (con su
   momento; los de siempre en `ROUND_PHASES`); algo que pasa en cada ataque = `combatSteps` (los de
-  siempre en `COMBAT_RESOLUTION`, `core/actions/combat.ts`); quien contraataca = `counterRules`; por
+  siempre en `COMBAT_RESOLUTION`, `core/actions/combat.ts`) y lo que apunta en el ataque = su campo en `AttackRecordParts` (`declare module`); quien contraataca = `counterRules`; por
   donde se pasa = `passRules`/`stopRules`; lo que corta un camino = `pathInterruptions` (su nombre
   ampliando `InterruptionKinds`; animacion propia opcional en `INTERRUPTION_ANIMATIONS`); parte del
   resumen de ronda = `roundReportParts` (su forma ampliando `RoundReportParts`); nombre de un modulo

@@ -3,8 +3,7 @@
  * de cuerpo a cuerpo, el atacante tambien lo es y lo tiene a su alcance. La artilleria y demas
  * unidades a distancia ni contraatacan ni reciben contraataque.
  */
-import type { GameState } from '../model';
-import type { Engagement } from '../rules/engagement';
+import type { Engagement, GameState } from '../model';
 import { canDamage, inAttackRange } from '../rules/weapons';
 import { isAlive, isRanged } from '../util/predicates';
 import type { CounterRule, RuleModule } from './hooks';

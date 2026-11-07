@@ -2,17 +2,12 @@
  * Como sale el daño de un ataque: la tirada y la probabilidad de cada resultado, escritas una vez por
  * modelo (`DamageModel`) para que la tirada del combate y la prevision no se separen. La partida
  * elige el suyo con el ajuste `damageModel` (`DAMAGE_MODELS`); se construye una vez por partida, con
- * sus modulos de reglas (`damageModelOf`, ruleModules/ruleset.ts).
+ * sus modulos de reglas (`damageModelOf`, ruleModules/ruleset.ts). Esta debajo de las reglas y de los
+ * modulos (solo usa model/) para que ruleset.ts no tenga que importar rules/.
  */
-import type { DamageModelId, Dice, MatchSettings } from '../model';
+import type { DamageModel, DamageModelId, MatchSettings } from './model';
 
-/** Un modelo de daño: un atacante con `life` puntos de vida que acierta cada uno con probabilidad `chance` (0..1). */
-export interface DamageModel {
-  /** El daño de una tirada (sin tope: la vida del defensor la pone quien llama). */
-  roll(life: number, chance: number, dice: Dice): number;
-  /** La probabilidad de cada daño: `distribution[k]` = P(daño = k), sin tope. */
-  distribution(life: number, chance: number): number[];
-}
+export type { DamageModel } from './model';
 
 /** El reparto despues de un disparo mas que acierta con probabilidad `chance`. */
 function afterOneMoreShot(distribution: readonly number[], chance: number): number[] {

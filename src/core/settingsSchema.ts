@@ -5,7 +5,7 @@
  */
 import type { MatchSettings } from './model';
 import { isObject } from './util/validation';
-import { DAMAGE_MODEL_IDS } from './rules/damage';
+import { DAMAGE_MODEL_IDS } from './damage';
 
 /** Un ajuste: interruptor, numero en un intervalo (entero o no, y quiza null = "sin") o uno de unos nombres. */
 export type SettingSpec =

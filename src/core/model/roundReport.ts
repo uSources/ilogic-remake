@@ -3,11 +3,11 @@
  * lo rellenan las partes del resumen (`ROUND_REPORT_PARTS` en rules/round.ts, lo de cualquier
  * partida, y las `roundReportParts` de los modulos), cada una con los sucesos que son suyos.
  */
-import type { TeamId } from '../model';
+import type { TeamId } from './team';
 
 /**
  * Lo que apunta cada modulo en el resumen, por su nombre. Esta vacia aqui: cada modulo que apunta
- * algo anade su parte ampliandola (`declare module '../rules/roundReport' { interface
+ * algo anade su parte ampliandola (`declare module '../model/roundReport' { interface
  * RoundReportParts { upkeep: number[] } }`), y solo esta en el resumen si la ha apuntado.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- se amplia con declare module

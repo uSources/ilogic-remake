@@ -11,7 +11,7 @@ import type { GameState, TeamId, Unit } from '../model';
 import { canCounter, fireOrigins, hitChance } from './combat';
 import { moveRange, type MoveRange } from './movement';
 import { reversed, type Engagement } from './engagement';
-import { boundedDistribution } from './damage';
+import { boundedDistribution } from '../damage';
 import { damageModelOf } from '../ruleModules/ruleset';
 import { isVisibleFoe, sightOf } from './visibility';
 import { canStillFire } from './unitTurn';

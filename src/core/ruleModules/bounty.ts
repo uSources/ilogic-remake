@@ -10,12 +10,23 @@ export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
   return Math.round(unitTypeOf(s, lost).cost * s.settings.bounty);
 }
 
-/** El equipo de quien ha destruido a la otra cobra su botin. */
+declare module '../model/combat' {
+  interface AttackRecordParts {
+    /**
+     * [CAMBIO] Dinero cobrado por destruir una unidad (para quien la destruyo), entero: si pasa del
+     * maximo, lo que se pierde lo cuenta un suceso 'fundsCapped' de la misma accion. Si es 0, no esta.
+     */
+    bounty: number;
+  }
+}
+
+/** El equipo de quien ha destruido a la otra cobra su botin (y lo apunta en el ataque). */
 function payBounty(s: GameState, attack: AttackRecord): void {
   const fallen = fallenIn(attack);
   if (!fallen) return;
-  attack.bounty = bountyFor(s, fallen.loser);
-  earn(s, fallen.winner.team, attack.bounty);
+  const bounty = bountyFor(s, fallen.loser);
+  if (bounty) attack.parts.bounty = bounty;
+  earn(s, fallen.winner.team, bounty);
 }
 
 export const BOUNTY: RuleModule = {

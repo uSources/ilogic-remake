@@ -18,8 +18,7 @@ import type { DeepReadonly } from './util/freeze';
 import { manhattan, neighbors4 } from './geom';
 import { mapGrid } from './mapGrid';
 import { isAlive, areEnemies, isOnMap, isRanged } from './util/predicates';
-import type { GameState, Pos, Unit } from './model';
-import type { Engagement, Fighter } from './rules/engagement';
+import type { Engagement, Fighter, GameState, Pos, Unit } from './model';
 import type { RuleHooks } from './ruleModules/hooks';
 
 type AbilityOf<K extends AbilityKind> = DeepReadonly<Extract<AbilityDef, { kind: K }>>;

@@ -2,9 +2,8 @@
  * [CAMBIO] Puntos de control (ajuste `controlPoints`, cuantos pone el generador de mapas; las reglas
  * en rules/control.ts): pagan al acabar cada ronda a quien los tiene sin disputa.
  */
-import type { GameEvent, GameState } from '../model';
+import type { GameEvent, GameState, RoundReport } from '../model';
 import { controlRound } from '../rules/control';
-import type { RoundReport } from '../rules/roundReport';
 import { addForTeam, perTeam } from '../teams';
 import type { RuleModule } from './hooks';
 
@@ -18,7 +17,7 @@ export interface ControlReport {
   contested: number;
 }
 
-declare module '../rules/roundReport' {
+declare module '../model/roundReport' {
   interface RoundReportParts {
     /** [CAMBIO] Puntos de control: lo que han pagado, a quien y cuantos estan disputados. */
     control: ControlReport;

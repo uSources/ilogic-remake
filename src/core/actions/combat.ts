@@ -12,7 +12,7 @@ import { engagement } from '../rules/engagement';
 import type { CombatStage, CombatStep } from '../ruleModules/hooks';
 import { hooksOf } from '../ruleModules/ruleset';
 import { isAlive } from '../util/predicates';
-import type { Dice, GameEventOf, GameState, Unit } from '../model';
+import type { AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
 import type { ActionRegistry } from './types';
 
@@ -59,6 +59,10 @@ export function combatResolutionOf(s: GameState): CombatStep[] {
   return [...COMBAT_RESOLUTION, ...hooksOf(s, 'combatSteps')].sort((first, second) => order(first) - order(second));
 }
 
+/** Lo que han apuntado los modulos, por orden de nombre (el suceso sale igual sea cual sea el orden de sus pasos). */
+const partsInNameOrder = (parts: Partial<AttackRecordParts>): Partial<AttackRecordParts> =>
+  Object.fromEntries(Object.entries(parts).sort(([first], [second]) => (first < second ? -1 : 1)));
+
 /**
  * El combate de `attacker` contra `defender`, ya comprobado (attackProblem): los pasos de
  * COMBAT_RESOLUTION en su orden. Devuelve su suceso, que lleva lo que hace falta para enseñarlo
@@ -83,8 +87,7 @@ export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice
     killed,
     counter: attack.counter,
     attackerKilled: !isAlive(attacker),
-    ...(attack.bounty ? { bounty: attack.bounty } : {}),
-    ...(attack.charge.length ? { charge: attack.charge } : {}),
+    ...partsInNameOrder(attack.parts),
     combat,
   };
 }

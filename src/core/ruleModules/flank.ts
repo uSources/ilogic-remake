@@ -1,6 +1,5 @@
 /** [CAMBIO] Flanqueo (ajuste `flankBonus`, 0 = sin flanqueo): rematar a quien ya ha recibido un ataque hoy es mas facil. */
-import type { GameState, Unit } from '../model';
-import type { Engagement } from '../rules/engagement';
+import type { Engagement, GameState, Unit } from '../model';
 import { wasHitToday } from '../util/predicates';
 import type { RuleModule } from './hooks';
 import { isRuleOn } from './ruleset';

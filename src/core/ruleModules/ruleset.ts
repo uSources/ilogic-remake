@@ -4,8 +4,8 @@
  * (`GameState.ruleset`, una vez por partida: al crearla, al leerla y al cambiar sus ajustes), asi
  * que las reglas no importan ningun modulo concreto ni la lista de todos (registry.ts): solo esto.
  */
-import type { GameState, MatchSettings } from '../model';
-import { damageModelFor, type DamageModel } from '../rules/damage';
+import type { DamageModel, GameState, MatchSettings } from '../model';
+import { damageModelFor } from '../damage';
 import type { RuleHooks, RuleModule, RuleModuleId } from './hooks';
 
 /** Lo que es una entrada de esa lista. */

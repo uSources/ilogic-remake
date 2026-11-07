@@ -4,7 +4,15 @@
  */
 import { chargeFromCombat, generalHitFactor, generalsNewRound, revealsAll } from '../generals';
 import { quietly } from '../util/quietly';
+import type { GeneralCharge } from '../model';
 import type { RuleModule } from './hooks';
+
+declare module '../model/combat' {
+  interface AttackRecordParts {
+    /** Carga que gana el general de cada equipo por el combate (solo los que la ganan; si nadie, no esta). */
+    charge: GeneralCharge[];
+  }
+}
 
 export const GENERALS: RuleModule = {
   id: 'generals',
@@ -20,7 +28,8 @@ export const GENERALS: RuleModule = {
         id: 'charge',
         stage: 'wound',
         run: (s, attack) => {
-          attack.charge = chargeFromCombat(s, attack.attacker, attack.defender, attack.damage, attack.counter);
+          const charge = chargeFromCombat(s, attack.attacker, attack.defender, attack.damage, attack.counter);
+          if (charge.length) attack.parts.charge = charge;
         },
       },
     ],

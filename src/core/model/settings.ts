@@ -14,7 +14,7 @@ export interface MatchSettings {
   /** [CAMBIO] El defensor que sobrevive responde al ataque. */
   counterattack: boolean;
   /**
-   * Como sale el daño (DAMAGE_MODELS, rules/damage.ts): 'shotByShot' = la tirada original, un disparo por
+   * Como sale el daño (DAMAGE_MODELS, damage.ts): 'shotByShot' = la tirada original, un disparo por
    * punto de vida; 'spread' = el daño esperado +- `damageSpread`.
    */
   damageModel: DamageModelId;
@@ -59,5 +59,5 @@ export interface MatchSettings {
   controlRadius: number;
 }
 
-/** Los modelos de daño que hay (cada uno es una entrada de DAMAGE_MODELS, rules/damage.ts). */
+/** Los modelos de daño que hay (cada uno es una entrada de DAMAGE_MODELS, damage.ts). */
 export type DamageModelId = 'shotByShot' | 'spread';

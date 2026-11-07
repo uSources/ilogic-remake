@@ -8,7 +8,7 @@ import { pay } from '../rules/funds';
 import { perTeam, teamIds } from '../teams';
 import type { RuleModule } from './hooks';
 
-declare module '../rules/roundReport' {
+declare module '../model/roundReport' {
   interface RoundReportParts {
     /** Mantenimiento pagado por cada equipo (si no llega el dinero, se paga lo que hay). */
     upkeep: number[];

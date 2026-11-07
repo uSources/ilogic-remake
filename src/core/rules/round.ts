@@ -3,14 +3,13 @@
  */
 import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
-import type { Building, GameEvent, GameState, Unit } from '../model';
+import type { Building, GameEvent, GameState, RoundReport, Unit } from '../model';
 import type { RoundPhase, RoundReportPart, RoundStage } from '../ruleModules/hooks';
 import { hooksOf } from '../ruleModules/ruleset';
 import { addForTeam, perTeam, teamIds } from '../teams';
 import { earn } from './funds';
 import { restoreInvariants } from './invariants';
 import { quietly } from '../util/quietly';
-import type { RoundReport } from './roundReport';
 import { buildingIncome } from './economy';
 import { unitAt } from './queries';
 import { readyUnit } from './unitTurn';

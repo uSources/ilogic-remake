@@ -17,8 +17,7 @@ import type { DeepReadonly } from './util/freeze';
 import { findEntry, type GeneralDef, type GeneralModifier, type UnitFilter } from './content';
 import { teamState } from './teams';
 import { isOnMap } from './util/predicates';
-import type { Engagement } from './rules/engagement';
-import type { GameState, GeneralCharge, GeneralState, TeamId, Unit } from './model';
+import type { Engagement, GameState, GeneralCharge, GeneralState, TeamId, Unit } from './model';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 

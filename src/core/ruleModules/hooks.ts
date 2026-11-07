@@ -7,10 +7,19 @@
  * Una lista nueva que se pueda ampliar es un campo mas de `RuleHooks`, con el tipo de sus entradas.
  */
 import type { MoveType, UnitType } from '../content';
-import type { Dice, GameEvent, GameState, InterruptionKind, MatchSettings, Pos, TeamId, Unit } from '../model';
-import type { AttackRecord } from '../rules/attackRecord';
-import type { RoundReport } from '../rules/roundReport';
-import type { Engagement } from '../rules/engagement';
+import type {
+  AttackRecord,
+  Dice,
+  Engagement,
+  GameEvent,
+  GameState,
+  InterruptionKind,
+  MatchSettings,
+  Pos,
+  RoundReport,
+  TeamId,
+  Unit,
+} from '../model';
 
 /**
  * Algo que cambia la probabilidad de acierto (el poder del atacante, la proteccion, habilidades,

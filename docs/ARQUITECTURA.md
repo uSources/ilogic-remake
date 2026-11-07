@@ -208,6 +208,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `abilities.ts` | lo que hace cada clase de habilidad de las unidades (`ABILITY_EFFECTS`; lo enchufa el modulo `abilities`) |
 | `generals.ts`, `generalPowers.ts` | el general de cada equipo (ventaja fija, carga, ronda, reconocimiento) y sus poderes (`POWER_EFFECTS`: casilla, area, efecto y valor para la IA; `powerBlock`, `applyPower`) |
 | `weather.ts` | el clima de la partida: cual hay, el pronostico y como cambia (lo enchufa el modulo `weather`) |
+| `damage.ts` | como sale el daño (`DamageModel`: la tirada y su reparto); cada modelo por su nombre en `DAMAGE_MODELS` (el ajuste `damageModel`: `shotByShot`, `spread`), construido una vez por partida (`damageModelOf`); solo usa `model/` |
 | `teams.ts` | los equipos de la partida: alianzas, enemigos, quien los juega (ver "Equipos") |
 | `data.ts` | constantes que no son contenido (`MAP_SIZES`, `MAP_MIN`/`MAP_MAX`, `MAX_LIFE`) |
 | `defaultGames.ts` | partidas con el contenido del juego: `createMatch`, `loadGame` |
@@ -341,14 +342,13 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 | `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
 | `engagement` | un combate como pregunta (`Engagement`: atacante y defensor como `Fighter`, con casilla y vida): lo hipotetico sin fingir unidades |
 | `weapons` | lo que dice el arma de cada tipo: `inAttackRange`, `basePower`, `canDamage` |
-| `damage` | como sale el daño (`DamageModel`: la tirada y su reparto); cada modelo por su nombre en `DAMAGE_MODELS` (el ajuste `damageModel`: `shotByShot`, `spread`), construido una vez por partida (`damageModelOf`) |
-| `attackRecord` | lo que se apunta de un ataque mientras se resuelve (`AttackRecord`, `fallenIn`) |
+| `attackRecord` | un ataque recien empezado (`newAttackRecord`) y quien ha caido (`fallenIn`); la forma, `AttackRecord`, con las partes de los modulos (`AttackRecordParts`), en `model/combat.ts` |
 | `combat` | desde donde y a quien se dispara, proteccion, acierto (`HIT_MODIFIERS` y los de los modulos), daño esperado, contraataque (`canCounter`), tirada |
 | `forecast` | prevision de combate (`combatForecast` de un `Engagement`) y zona de amenaza |
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar (`buyProblem`, `buildUnit`) |
 | `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen, con `ROUND_REPORT_PARTS` y las `roundReportParts` de los modulos) |
-| `rank`, `roundReport` | el rango por bajas (`RANK_KILLS`, `rank`: lo usa el modulo de veterania y la interfaz); la forma del resumen de ronda |
+| `rank` | el rango por bajas (`RANK_KILLS`, `rank`: lo usa el modulo de veterania y la interfaz) |
 | `victory` | como acaba la partida, igual para todos (`matchResult(s)`, `VICTORY_RULES`; ver abajo) |
 | `turnOrder` | quien juega despues (`nextTurn`, y si con eso acaba la ronda; `takesTurn`) |
 
@@ -435,14 +435,15 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
   - un sistema que actua cada ronda es un `roundPhases` de su modulo, en su momento (`RoundStage`);
     lo de cualquier partida esta en `ROUND_PHASES` (`rules/round.ts`);
   - algo que pasa en cada ataque es un `combatSteps` de su modulo, en su momento (`CombatStage`);
-    lo de cualquier ataque esta en `COMBAT_RESOLUTION` (`actions/combat.ts`); quien contraataca, un
-    `counterRules`;
+    lo de cualquier ataque esta en `COMBAT_RESOLUTION` (`actions/combat.ts`); lo que apunta en el
+    ataque (y lleva su suceso) es su campo en `AttackRecordParts` (`model/combat.ts`, con `declare
+    module`, como el botin y la carga); quien contraataca, un `counterRules`;
   - por donde se pasa, un `passRules` o `stopRules`; lo que corta un camino a mitad, un
     `pathInterruptions` (su nombre ampliando `InterruptionKinds`, `model/events.ts`, con `declare
     module`; si quiere animacion propia, en `INTERRUPTION_ANIMATIONS`, `scenes/game/playback.ts`, y si
     no sale un destello; en `npm run play`, su nombre o el del codigo);
   - una parte del resumen de ronda, un `roundReportParts` y su forma ampliando `RoundReportParts`;
-  - otra forma de repartir el daño, una entrada en `DAMAGE_MODELS` (`rules/damage.ts`) y su nombre
+  - otra forma de repartir el daño, una entrada en `DAMAGE_MODELS` (`damage.ts`) y su nombre
     en el ajuste `damageModel`; el coste de las casillas o lo que se puede gastar,
     un `enterCosts` o `moveBudgets`; la vision, `visionRadius`, `revealRules`, `concealment` o
     `coverSight`;
@@ -514,8 +515,14 @@ importan `ruleModules/ruleset.ts` (`hooksOf`, `isRuleOn`) y los tipos de `ruleMo
 ni el registro, ni un modulo concreto, ni generales, clima o habilidades (L7). Lo comprueba ESLint
 (`no-restricted-imports` en `src/core/rules/**` y `src/core/actions/**`, con la ruta que sea:
 relativa o por `@core/`; solo la lista de acciones, `actions/registry.ts`, junta la de los poderes
-de `generalPowers.ts`). Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que
-las reglas de los modulos no tengan que importar el combate.
+de `generalPowers.ts`). `ruleModules/ruleset.ts` y `ruleModules/hooks.ts` no importan rules/: lo
+que comparten con las reglas son tipos de `model/` (`Engagement`, `AttackRecord` y sus
+`AttackRecordParts`, `DamageModel`, `RoundReport` y sus `RoundReportParts`, `model/combat.ts` y
+`model/roundReport.ts`) y los modelos de daño (`damage.ts`, que solo usa `model/`). Asi la direccion
+es rules → ruleModules/ruleset → model, sin vuelta. Los tipos del registro de acciones tambien
+estan en `model/actionRegistry.ts`, para que una pieza que trae su accion (los poderes) no importe
+actions/. Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que las reglas de
+los modulos no tengan que importar el combate.
 
 Un modulo nuevo: su fichero en `ruleModules/` (lo que aporta a cada lista), su nombre en
 `RuleModuleIds` (los del juego estan alli; el de un modo la amplia con `declare module`, y

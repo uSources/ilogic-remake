@@ -1,3 +1,4 @@
+import type { AttackRecordParts } from './combat';
 import type { Pos } from './geometry';
 import type { StandingOrder } from './standingOrder';
 import type { DefeatReason } from './defeat';
@@ -67,7 +68,8 @@ export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded
  */
 export type GameEvent =
   | { kind: 'move'; actor: TeamId; uid: number; path: Pos[]; interruption?: Interruption }
-  | {
+  | ({
+      /** Lleva tambien lo que han apuntado los modulos en el ataque (AttackRecordParts: botin, carga...). */
       kind: 'attack';
       actor: TeamId;
       attacker: number;
@@ -79,16 +81,9 @@ export type GameEvent =
       /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
       counter: number;
       attackerKilled: boolean;
-      /**
-       * [CAMBIO] Dinero cobrado por destruir una unidad (para quien la destruyo), entero: si pasa del
-       * maximo, lo que se pierde lo cuenta un suceso 'fundsCapped' de la misma accion.
-       */
-      bounty?: number;
-      /** Carga que gana el general de cada equipo por el combate (solo los que la ganan). */
-      charge?: GeneralCharge[];
       /** Como estaban las dos antes del combate (ver CombatInfo). */
       combat: CombatInfo;
-    }
+    } & Partial<AttackRecordParts>)
   | { kind: 'capture'; actor: TeamId; uid: number; at: Pos; owner: TeamId | null; left: number; total: number }
   | { kind: 'merge'; actor: TeamId; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; actor: TeamId; uid: number; into: number; path: Pos[] }

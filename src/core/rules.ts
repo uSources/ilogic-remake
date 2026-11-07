@@ -25,7 +25,6 @@
  * | `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo corta el primer `pathInterruptions` de los modulos (la emboscada); el suceso de mover |
  * | `travel` | viajes de varios turnos (usa `movement`) |
  * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
- * | `damage` | como sale el daño: la tirada y la probabilidad de cada resultado de cada modelo (`DamageModel`) |
  * | `weapons` | lo que dice el arma de cada tipo: a que distancias llega y a quien le hace daño |
  * | `attackRecord` | lo que se apunta de un ataque mientras se resuelve (`AttackRecord`) |
  * | `combat` | desde donde y a quien se dispara (`fireOrigins`, `attackTargets`), proteccion, acierto (`HIT_MODIFIERS` y los de los modulos: veterania, flanqueo, clima...), quien contraataca (`counterRules`), tirada |
@@ -144,7 +143,7 @@ export {
   SHOT_BY_SHOT,
   spreadAround,
   type DamageModel,
-} from './rules/damage';
+} from './damage';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';
 export {
@@ -159,7 +158,7 @@ export {
   type BuyOption,
 } from './rules/economy';
 export { inControlZone, teamsInZone, controlRound } from './rules/control';
-export type { RoundReport, RoundReportParts } from './rules/roundReport';
+export type { RoundReport, RoundReportParts } from './model';
 export type { ControlReport } from './ruleModules/controlPoints';
 export type { WeatherChange } from './weather';
 export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_REPORT_PARTS, ROUND_STAGES, roundPhasesOf } from './rules/round';
