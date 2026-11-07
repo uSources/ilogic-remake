@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn, defaultAiProfile } from '@core/ai';
-import { dispatch, TURN_END_PHASES } from '@core/actions';
-import { previewStandingOrders } from '@core/autopilot';
-import { foggedCopy, knownFoes, playerView, seeing, sightIn } from '@core/playerView';
+import { carryOut, dispatch, TURN_END_PHASES } from '@core/actions';
+import { previewStandingOrders, startStandingOrder } from '@core/autopilot';
+import { decidingAs, foggedCopy, knownFoes, playerView, seeing, sightIn } from '@core/playerView';
 import { sightOf, unitById, visibleFoes } from '@core/rules';
 import { newUnit } from '@core/measure';
 import type { ActionPlan, Building, GameAction, GameState } from '@core/model';
@@ -235,6 +235,22 @@ describe('las ordenes que cumple la partida deciden con lo que sabe el equipo', 
     expect(playerView(withHidden.s, 0).state.units).toHaveLength(1);
     expect(runPhase(withHidden.s)).toEqual(runPhase(without.s));
     expect(withHidden.soldier.x).toBeGreaterThan(2);
+  });
+
+  it('la escena empieza una orden recien dada con lo que sabe el equipo (decidingAs), como al cumplirse sola', () => {
+    // Lo que hace scenes/game/orders.ts al dar una orden a una unidad que aun puede moverse.
+    const startNow = (s: GameState, uid: number) =>
+      carryOut(
+        decidingAs(s, 0, (known) => startStandingOrder(known, uid, 0)),
+        (action) => dispatch(s, 0, action),
+      ).events;
+    const without = corridor(false);
+    const withHidden = corridor(true);
+    expect(startNow(withHidden.s, withHidden.soldier.uid)).toEqual(startNow(without.s, without.soldier.uid));
+    // Con la partida de verdad (sin su vista), el escondido le cortaria el camino y no avanzaria igual.
+    const cheating = corridor(true);
+    const decidedOnTruth = carryOut(startStandingOrder(cheating.s, cheating.soldier.uid, 0), (action) => dispatch(cheating.s, 0, action));
+    expect(decidedOnTruth.events).not.toEqual(startNow(corridor(false).s, corridor(false).soldier.uid));
   });
 
   it('la copia de la prevision lleva toda la niebla del equipo y no toca la partida (foggedCopy)', () => {

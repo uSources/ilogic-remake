@@ -300,3 +300,14 @@ export function* seeing<Result>(view: PlayerView, plan: ActionPlan<Result>): Act
     step = plan.next(result);
   }
 }
+
+/**
+ * El plan de quien decide por `team` (`planFor`, con la partida tal como la sabe), mirando la vista de
+ * su equipo, al dia tras cada accion, fuera de una sesion: lo que hacen las ordenes que cumple la
+ * partida al empezar y acabar un turno (actions/turn.ts) y las que empieza la escena al darlas
+ * (scenes/game/orders.ts). Asi deciden con lo que sabe el equipo, las cumpla quien las cumpla.
+ */
+export function decidingAs<Result>(s: GameState, team: TeamId, planFor: (known: GameState) => ActionPlan<Result>): ActionPlan<Result> {
+  const view = playerView(s, team);
+  return seeing(view, planFor(view.state));
+}

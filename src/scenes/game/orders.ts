@@ -22,7 +22,7 @@ import { ACTION_RUNNERS, type ActionRunHost } from './actionRunners';
 import type { GroupSelection } from './groupSelection';
 import type { ActionHost, Intent, Phase } from './types';
 import { posOf } from '../../core/geom';
-import { playerView, seeing } from '../../core/playerView';
+import { decidingAs } from '../../core/playerView';
 
 /** De donde se abrio el menu de ordenes de una casilla (adonde vuelve al cancelar). */
 export type OrderFrom = 'move' | 'unitMenu' | 'map';
@@ -307,8 +307,8 @@ export class Orders {
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
     for (const unit of standingOrderPlayOrder(host.state, units)) {
       // La orden decide con lo que sabe el equipo que mira, como al cumplirse sola.
-      const view = playerView(host.state, host.viewer);
-      if (!(await this.playPlan(seeing(view, startStandingOrder(view.state, unit.uid, host.viewer))))) return;
+      const plan = decidingAs(host.state, host.viewer, (known) => startStandingOrder(known, unit.uid, host.viewer));
+      if (!(await this.playPlan(plan))) return;
       if (unitById(host.state, unit.uid)) host.act({ kind: 'wait', uid: unit.uid });
     }
     host.afterAction();
