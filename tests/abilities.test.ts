@@ -3,7 +3,7 @@ import { changeSettings } from '@core/gameState';
 import { ABILITY_EFFECTS, auraFactor } from '@core/abilities';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { ABILITY_KINDS, ABILITY_SHAPES, MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
+import { ABILITY_KINDS, ABILITY_SHAPES, type AbilityDef, type MoveType, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import {
   mergeProblem,
@@ -121,8 +121,8 @@ describe('habilidades: escudo (guard)', () => {
 
 describe('habilidades: zona de control', () => {
   const zoneType = withAbility('zoneOfControl');
-  const TANK = plain(moves(MoveType.VEHICLE));
-  const PLANE = plain(moves(MoveType.AIR));
+  const TANK = plain(moves('vehicle'));
+  const PLANE = plain(moves('air'));
 
   it('quien entra al lado se para: no sigue desde ahi', () => {
     const s = blankState(TEST_SETTINGS);

@@ -10,7 +10,7 @@
  * misma semilla tiene que salir el mismo mapa (lo comprueban `npm run huella` y `tests/sim.test.ts`).
  */
 import { terrainAt, themeOf } from './gameContent';
-import { entryOf, MoveType, type GameContent, type MapgenSettings, type TerrainType, type Theme } from './content';
+import { entryOf, type MoveType, type GameContent, type MapgenSettings, type TerrainType, type Theme } from './content';
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
 import type { TeamSetup } from './teams';
@@ -23,7 +23,6 @@ import { pick, randomInt, seedFromDraw, shuffleInPlace, type MatchSeeds } from '
 import type { GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import type { GameModeRegistry } from './modes';
 
-const WALK = MoveType.FOOT;
 /** Lado del mapa del original, con el que estan medidos los numeros de mapgen.json. */
 const ORIGINAL_MAP_SIDE = 32;
 /** Distancia minima entre dos bases en un mapa de 32; se escala con el lado del mapa. */
@@ -54,7 +53,9 @@ function emptyState(size: number, options: NewMapOptions, seeds: MatchSeeds): Ga
   });
 }
 
-const isWalkable = (terrain: TerrainType) => canMoveOn(WALK, terrain);
+/** Lo que pisa a pie el generador (mapgen.json, "landMovement"): las salidas y la tierra se miden con el. */
+const landMovementOf = (s: GameState): MoveType => settingsOf(s).landMovement;
+const isWalkable = (s: GameState, terrain: TerrainType) => canMoveOn(landMovementOf(s), terrain);
 /** El terreno de un id de themes.json (validado al cargar el contenido). */
 const terrainNamed = (s: GameState, id: string): TerrainType => entryOf(s.content.terrain, id, 'terreno');
 
@@ -107,7 +108,7 @@ function growTerrain(s: GameState, origin: Pos, theme: Theme, rng: Rng): number 
       const rolled = rollTerrain(terrains, rng, (terrain) => terrainChance(s, generated, pos, terrain, theme));
       map.set(pos, rolled.id);
       generated.set(pos, true);
-      if (isWalkable(rolled)) walkable++;
+      if (isWalkable(s, rolled)) walkable++;
     }
   }
 }
@@ -160,7 +161,7 @@ function hasRoomToStart(s: GameState, pos: Pos): boolean {
   const zone = spawnZone(s, pos).map((tile) => terrainAt(s, tile));
   return (
     zone.filter((terrain) => terrain.buildable).length >= settingsOf(s).minSpawnBuildable &&
-    zone.filter(isWalkable).length >= settingsOf(s).minSpawnWalkable
+    zone.filter((terrain) => isWalkable(s, terrain)).length >= settingsOf(s).minSpawnWalkable
   );
 }
 
@@ -174,7 +175,7 @@ function* scanOrder(size: GridSize, fromTheEnd: boolean): Generator<Pos> {
 /** Zona de inicio (RandomMap.getSpawn): la primera casilla a pie con bastante sitio alrededor. */
 function findSpawn(s: GameState, fromTheEnd: boolean, accept: (pos: Pos) => boolean): Pos | null {
   for (const pos of scanOrder(mapGrid(s), fromTheEnd))
-    if (isWalkable(terrainAt(s, pos)) && hasRoomToStart(s, pos) && accept(pos)) return pos;
+    if (isWalkable(s, terrainAt(s, pos)) && hasRoomToStart(s, pos) && accept(pos)) return pos;
   return null;
 }
 
@@ -185,7 +186,7 @@ interface SpawnDistances {
 }
 
 /** Los pasos a pie desde `spawn` (sin unidades en medio). */
-const walkingFrom = (s: GameState, spawn: Pos): SpawnDistances => ({ spawn, distances: distanceMap(s, spawn, WALK) });
+const walkingFrom = (s: GameState, spawn: Pos): SpawnDistances => ({ spawn, distances: distanceMap(s, spawn, landMovementOf(s)) });
 
 /** Se llega a pie a `pos` desde la salida (y no es la propia salida). */
 function walksTo(from: SpawnDistances, pos: Pos): boolean {
@@ -321,12 +322,12 @@ const MAX_CONTROL_SCORE = 4;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
   const zone = squareArea(mapGrid(s), center, s.settings.controlRadius);
-  return zone.filter((pos) => isWalkable(terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
+  return zone.filter((pos) => isWalkable(s, terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 
 /** Casilla libre de tierra y no pegada a ninguna salida (`toSpawns`: distancia a pie a cada una, a las que llega). */
 function isControlSpot(s: GameState, pos: Pos, toSpawns: readonly number[], span: number): boolean {
-  if (!isWalkable(terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
+  if (!isWalkable(s, terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
   if (Math.min(...toSpawns) < span * MIN_CONTROL_SPAWN_SHARE) return false;
   return isMostlyLand(s, pos);
 }

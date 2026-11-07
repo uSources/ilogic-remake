@@ -255,8 +255,10 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   (`unit.type = 'Tank'`), nunca el puesto en el fichero; `cloneState(s)` copia la partida y comparte
   el contenido.
 - `data.ts`: las tablas del generador de mapas (`mapgen.json`) y los temas (`themes.json`: letras de
-  los mapas en texto, probabilidades de terreno) son contenido; `MoveType` (`'foot'`,
-  `'vehicle'`...) esta en `content/types.ts`.
+  los mapas en texto, probabilidades de terreno) son contenido, y tambien los tipos de movimiento
+  (`movements.json`, `content.movements`: `MoveType` es su id; el generador mide la tierra con el
+  de `mapgen.json`, "landMovement", y la escena dibuja segun su `motion`, que lleva cada tipo de
+  unidad: `unitType.motion`).
 
 #### Modos y partidas nuevas
 

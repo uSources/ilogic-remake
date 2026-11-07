@@ -7,14 +7,10 @@ export interface Texts {
 }
 
 /**
- * Tipos de movimiento: por donde pasa una unidad y cuanto le cuesta cada terreno (terrain.json,
- * "movement"). Es el nombre que se escribe en los JSON.
+ * Un tipo de movimiento: por donde pasa una unidad y cuanto le cuesta cada terreno. Es el id de
+ * movements.json (contenido, no codigo: `content.movements`), el nombre que escriben los demas JSON.
  */
-export const MoveType = { FOOT: 'foot', VEHICLE: 'vehicle', AIR: 'air', AMPHIBIOUS: 'amphibious' } as const;
-export type MoveType = (typeof MoveType)[keyof typeof MoveType];
-
-/** Todos los tipos de movimiento, en el orden de MoveType. */
-export const MOVEMENTS: readonly MoveType[] = Object.values(MoveType);
+export type MoveType = string;
 
 /**
  * Habilidad pasiva de una unidad (units.json, "abilities"). Siempre esta activa; no es una orden.
@@ -109,6 +105,8 @@ export interface TerrainDef {
 
 /** Lo que cada parte del contenido puede consultar de las demas al validarse (ids conocidos). */
 export interface ContentContext {
+  /** Los tipos de movimiento (movements.json), en su orden. */
+  movementIds: readonly string[];
   unitIds: ReadonlySet<string>;
   buildingIds: ReadonlySet<string>;
   terrainIds: ReadonlySet<string>;

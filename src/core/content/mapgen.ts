@@ -31,6 +31,8 @@ export interface MapgenDef {
   minSpawnBuildable: number;
   /** Casillas a pie que tiene que tener el mapa (si no, se intenta otro). */
   minLandTiles: number;
+  /** El tipo de movimiento con el que se mide lo que se pisa a pie (las salidas, la tierra): id de movements.json. */
+  landMovement: string;
 }
 
 const isRange = (value: unknown): value is Range =>
@@ -51,4 +53,5 @@ export function validateMapgen(settings: MapgenDef, context: ContentContext, che
   scope.num('spawnRadius', settings?.spawnRadius, { min: 1, max: 6, int: true });
   for (const field of ['minSpawnWalkable', 'minSpawnBuildable', 'minLandTiles'] as const)
     scope.num(field, settings?.[field], { min: 0, int: true });
+  scope.known('landMovement', settings?.landMovement, context.movementIds, 'el movimiento ');
 }

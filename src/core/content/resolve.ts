@@ -12,6 +12,7 @@ import { catalogOf, type Catalog } from './catalog';
 import type { GeneralDef } from './generals';
 import type { MapgenDef, MapgenSettings } from './mapgen';
 import type { MissionDef } from './missions';
+import { buildMovementTypes, type MovementDef, type MovementType } from './movements';
 import type { SettingsFile } from './settings';
 import { buildTerrainTypes, type TerrainType } from './terrain';
 import type { Theme, ThemeDef } from './themes';
@@ -31,6 +32,7 @@ export interface Content {
   weather: WeatherDef[];
   generals: GeneralDef[];
   missions: MissionDef[];
+  movements: MovementDef[];
 }
 
 /** El contenido resuelto (recien construido: luego se congela). Los ficheros tienen que estar validados. */
@@ -48,6 +50,8 @@ export interface ResolvedContent {
   /** El clima neutro (el de "clear": true en weather.json): con el empiezan las partidas. */
   clearWeather: WeatherType;
   generals: Catalog<DeepReadonly<GeneralDef>>;
+  /** Los tipos de movimiento (movements.json), en su orden. */
+  movements: Catalog<MovementType>;
   /** Las misiones de la campaña, en su orden (missions.json). */
   missions: Catalog<DeepReadonly<MissionDef>>;
   /** Reglas por defecto de una partida (settings.json, "defaults"): ver settingsWith. */
@@ -60,10 +64,11 @@ export interface ResolvedContent {
 
 export function resolveContent(files: Content): ResolvedContent {
   const buildings = catalogOf(buildBuildingTypes(files.buildings));
-  const weather = catalogOf(buildWeatherTypes(files.weather));
+  const movementIds = files.movements.map((movement) => movement.id);
+  const weather = catalogOf(buildWeatherTypes(files.weather, movementIds));
   const terrain = catalogOf(buildTerrainTypes(files.terrain));
   return {
-    units: catalogOf(buildUnitTypes(files.units)),
+    units: catalogOf(buildUnitTypes(files.units, files.movements)),
     buildings,
     hq: buildings.list.find((building) => building.isHq)!,
     terrain,
@@ -74,6 +79,7 @@ export function resolveContent(files: Content): ResolvedContent {
     clearWeather: weather.list.find((type) => type.isClear)!,
     generals: catalogOf(files.generals),
     missions: catalogOf(files.missions),
+    movements: catalogOf(buildMovementTypes(files.movements)),
     defaultSettings: { ...files.settings.defaults },
     maxFunds: files.settings.maxFunds,
     ai: buildAiWeights(files.ai),

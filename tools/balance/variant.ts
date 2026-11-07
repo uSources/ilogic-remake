@@ -27,7 +27,7 @@
  * resuelve todos los tipos y la congela. Sus reglas son las de ese contenido:
  * `settingsWith(variante.content)`.
  */
-import { loadContent, MOVEMENTS, type Content, type GameContent } from '@core/content';
+import { loadContent, type Content, type GameContent } from '@core/content';
 import { mutableCopy } from '@core/util/freeze';
 
 export interface Variant {
@@ -137,7 +137,8 @@ const TABLE_PATHS: Record<string, TablePath> = {
   MOVE_COST: {
     keys: 2,
     slots: (files, [movementKey = '', terrainKey = '']) => {
-      const movements = movementKey === '*' ? [...MOVEMENTS] : [fieldOf(MOVEMENTS, movementKey, 'MOVE_COST')];
+      const all = files.movements.map((movement) => movement.id);
+      const movements = movementKey === '*' ? all : [fieldOf(all, movementKey, 'MOVE_COST')];
       return pick(files.terrain, terrainKey, 'terreno').flatMap((terrain) =>
         movements.map((movement) => ({ holder: asHolder(terrain.movement), key: movement, label: `${movement}.${terrain.id}` })),
       );

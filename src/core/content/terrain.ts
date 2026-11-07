@@ -1,11 +1,12 @@
 /** Terreno (terrain.json): validacion y su tipo resuelto (`TerrainType`). */
 import type { Checker, Scope } from './check';
-import { MOVEMENTS, type MoveType, type TerrainDef, type Texts } from './types';
+import type { MovementDef } from './movements';
+import type { MoveType, TerrainDef, Texts } from './types';
 
 /** Coste de movimiento admitido en un terreno (null = no se pasa). */
 const MAX_MOVE_COST = 9;
 
-export function validateTerrain(terrain: readonly TerrainDef[], check: Checker): void {
+export function validateTerrain(terrain: readonly TerrainDef[], movements: readonly MovementDef[], check: Checker): void {
   const top = check.scope('terrain.json');
   top.expect(
     terrain.filter((type) => type?.plain).length === 1,
@@ -18,7 +19,7 @@ export function validateTerrain(terrain: readonly TerrainDef[], check: Checker):
     scope.num('protection', type?.protection, { min: 0.05, max: 1 });
     for (const field of ['hides', 'buildable', 'water'] as const) scope.bool(field, type?.[field]);
     if (type?.plain !== undefined) scope.bool('plain', type.plain);
-    validateMovement(scope, type?.movement);
+    validateMovement(scope, type?.movement, movements);
     if (type?.mapLetter === undefined) continue;
     scope.expect(typeof type.mapLetter === 'string' && type.mapLetter.length === 1, 'mapLetter tiene que ser una sola letra');
     scope.expect(!letters.has(type.mapLetter), `la letra "${type.mapLetter}" ya es de otro terreno`);
@@ -26,20 +27,24 @@ export function validateTerrain(terrain: readonly TerrainDef[], check: Checker):
   }
 }
 
-/** El coste de entrar de cada tipo de movimiento (null = no se pasa; los aereos pasan por todo). */
-function validateMovement(scope: Scope, movement: TerrainDef['movement'] | undefined): void {
-  for (const moveType of MOVEMENTS) {
-    const cost = movement?.[moveType];
+/**
+ * El coste de entrar de cada tipo de movimiento de movements.json (null = no se pasa; los que pasan
+ * por todo, `crossesEverything`, tienen que tener un coste).
+ */
+function validateMovement(scope: Scope, movement: TerrainDef['movement'] | undefined, movements: readonly MovementDef[]): void {
+  const ids = movements.map((type) => type.id);
+  for (const moveType of movements) {
+    const cost = movement?.[moveType.id];
     scope.expect(
       cost === null || (typeof cost === 'number' && Number.isInteger(cost) && cost >= 1 && cost <= MAX_MOVE_COST),
-      `movement.${moveType} tiene que ser un coste de 1 a ${MAX_MOVE_COST} o null (no se pasa)`,
+      `movement.${moveType.id} tiene que ser un coste de 1 a ${MAX_MOVE_COST} o null (no se pasa)`,
     );
+    if (moveType.crossesEverything) scope.expect(cost !== null, `movement.${moveType.id} pasa por todo: tiene que tener un coste`);
   }
   scope.expect(
-    Object.keys(movement ?? {}).every((key) => MOVEMENTS.includes(key as MoveType)),
-    `movement solo admite ${MOVEMENTS.join(', ')}`,
+    Object.keys(movement ?? {}).every((key) => ids.includes(key)),
+    `movement solo admite ${ids.join(', ')} (movements.json)`,
   );
-  scope.expect(movement?.air !== null, 'los aereos tienen que poder pasar por todo (movement.air)');
 }
 
 /** Un terreno, resuelto al cargar el contenido (terrain.json). */

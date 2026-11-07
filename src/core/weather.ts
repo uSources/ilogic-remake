@@ -22,7 +22,7 @@ export function weatherNow(s: GameState): WeatherType {
 }
 
 /** Cambio de movimiento por el clima para un tipo de movimiento. */
-export const weatherMove = (s: GameState, movement: MoveType): number => weatherNow(s).move[movement];
+export const weatherMove = (s: GameState, movement: MoveType): number => weatherNow(s).move[movement] ?? 0;
 
 /** Cambio del radio de vision de las unidades por el clima. */
 export const weatherVision = (s: GameState): number => weatherNow(s).vision;

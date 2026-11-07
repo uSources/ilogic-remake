@@ -1,19 +1,12 @@
-import { MOVEMENTS, type MoveType, type WeatherType } from '../../core/content';
+import type { WeatherType } from '../../core/content';
+import { defaultContent } from '../../core/content/default';
 import type { GameState } from '../../core/model';
 import { isRuleOn } from '../../core/rules';
 import { upcomingWeather, weatherNow } from '../../core/weather';
 import type { WeatherVM } from '../../hud/store';
-import { t, nameOf, type TextKey } from '../../settings';
+import { t, nameOf } from '../../settings';
 
 /** Clima de la barra de arriba: el de hoy, sus efectos en corto y el de mañana. */
-
-/** Nombre de cada tipo de movimiento, en el orden de MOVEMENTS. */
-const MOVE_TYPE_KEYS: Readonly<Record<MoveType, TextKey>> = {
-  foot: 'mtFoot',
-  vehicle: 'mtVehicle',
-  air: 'mtAir',
-  amphibious: 'mtAmphibious',
-};
 
 const signed = (value: number): string => (value > 0 ? `+${value}` : `−${-value}`);
 
@@ -22,9 +15,9 @@ export function weatherEffectsText(weather: WeatherType): string {
   const parts: string[] = [];
   // Tipos de movimiento con el mismo cambio, juntos: "Infantería/Vehículos −1 mov."
   const byDelta = new Map<number, string[]>();
-  for (const moveType of MOVEMENTS) {
-    const delta = weather.move[moveType];
-    if (delta !== 0) byDelta.set(delta, [...(byDelta.get(delta) ?? []), t(MOVE_TYPE_KEYS[moveType])]);
+  for (const movement of defaultContent().movements.list) {
+    const delta = weather.move[movement.id] ?? 0;
+    if (delta !== 0) byDelta.set(delta, [...(byDelta.get(delta) ?? []), nameOf(movement)]);
   }
   for (const [delta, names] of byDelta) parts.push(`${names.join('/')} ${signed(delta)} ${t('weatherMoveShort')}`);
   const vision = weather.vision;

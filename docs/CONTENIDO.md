@@ -6,6 +6,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 |---|---|
 | `src/core/content/units.json` | Las 19 unidades: precio, movimiento, vision, **ataque y daño contra cada unidad**, quien las fabrica y repara, transportes |
 | `src/core/content/buildings.json` | Los 6 edificios: ingresos, curacion, proteccion, vision y cual es el cuartel general |
+| `src/core/content/movements.json` | Los tipos de movimiento (a pie, vehiculos, aviones, anfibios): su nombre, como se ven (`motion`: a pie, rodando o volando) y si pasan por todo (`crossesEverything`). Uno nuevo es su entrada aqui y su coste en cada terreno |
 | `src/core/content/terrain.json` | Los 15 terrenos: nombre, defensa, si esconde, por donde pasa y cuanto cuesta a cada tipo de movimiento, y su letra en los mapas en texto |
 | `src/core/content/themes.json` | Los 5 temas de mapa (llanura, desierto...): que terreno es cada letra de los mapas en texto y con que probabilidad sale cada terreno en los mapas al azar |
 | `src/core/content/mapgen.json` | El generador de mapas al azar: unidades y edificios de salida, edificios neutrales y lo que tiene que tener cada salida |
@@ -167,7 +168,7 @@ numeros; uno nuevo necesita su arte (`terrainArt.ts`) y salir en algun tema (`th
 | `mapLetter` | Letra que lo nombra en los mapas en texto de las misiones en cualquier tema (agua `~`, carretera `=`...). Los que cambian con el tema (la hierba, el bosque) los da `themes.json` |
 
 En el codigo se consulta con el tipo resuelto y por la partida: `movementOf(s, unit)` (el
-movimiento de una unidad), `canMoveOn(MoveType.VEHICLE, terrainAt(s, pos))`,
+movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,
 `terrainMoveCost(movimiento, terreno)` (core/rules/queries.ts).
 
 ## Temas y mapas al azar

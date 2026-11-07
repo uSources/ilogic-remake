@@ -1,4 +1,3 @@
-import { MoveType } from '@core/content';
 import { afterEach, describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
@@ -25,7 +24,7 @@ describe('nueva partida: tamaños de mapa', () => {
       expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-      expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1)).toBeLessThan(Infinity);
+      expect(distanceMap(s, hq0, 'foot').at(hq1)).toBeLessThan(Infinity);
       const neutral = s.buildings.filter((building) => building.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
       for (const building of s.buildings) expect(building.x < size && building.y < size).toBe(true);

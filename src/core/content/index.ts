@@ -1,7 +1,7 @@
 /**
  * Contenido del juego en ficheros de configuracion (src/core/content/*.json): unidades, edificios,
- * terreno, temas de mapa, generador de mapas, clima, generales, misiones, reglas por defecto y pesos
- * de la IA.
+ * terreno, tipos de movimiento, temas de mapa, generador de mapas, clima, generales, misiones, reglas
+ * por defecto y pesos de la IA.
  * Ver docs/CONTENIDO.md.
  *
  * Cada parte tiene su modulo con `validate*` y, si hace falta, `build*` (units.ts, buildings.ts...);
@@ -15,6 +15,7 @@ import buildingsFile from './buildings.json';
 import generalsFile from './generals.json';
 import mapgenFile from './mapgen.json';
 import missionsFile from './missions.json';
+import movementsFile from './movements.json';
 import settingsFile from './settings.json';
 import terrainFile from './terrain.json';
 import themesFile from './themes.json';
@@ -26,6 +27,7 @@ import { Checker, uniqueIds } from './check';
 import { validateGenerals, type GeneralDef } from './generals';
 import { validateMapgen, type MapgenDef } from './mapgen';
 import { validateMissions, type MissionDef } from './missions';
+import { validateMovements, type MovementDef } from './movements';
 import { resolveContent, type Content, type ResolvedContent } from './resolve';
 import { validateSettings, type SettingsFile } from './settings';
 import { validateTerrain } from './terrain';
@@ -41,6 +43,7 @@ export type { AiWeights } from './ai';
 export type { BuildingType } from './buildings';
 export type { MapgenDef, MapgenSettings } from './mapgen';
 export type { MissionBuilding, MissionDef, MissionObjective, MissionTeam, MissionUnit } from './missions';
+export type { MovementDef, MovementMotion, MovementType } from './movements';
 export type { TerrainType } from './terrain';
 export type { TerrainChance, Theme, ThemeDef, ThemeGenerator } from './themes';
 export type { UnitAttack, UnitType } from './units';
@@ -61,14 +64,16 @@ export function readContentFiles(): Content {
     weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
     generals: (generalsFile as unknown as { generals: GeneralDef[] }).generals,
     missions: (missionsFile as unknown as { missions: MissionDef[] }).missions,
+    movements: (movementsFile as unknown as { movements: MovementDef[] }).movements,
   };
 }
 
 /** Las listas que tienen que estar para poder validar lo demas (las demas partes las nombran por id). */
-const LISTS = ['units', 'buildings', 'terrain', 'themes'] as const;
+const LISTS = ['movements', 'units', 'buildings', 'terrain', 'themes'] as const;
 
 function contextOf(files: Content, check: Checker): ContentContext {
   return {
+    movementIds: [...uniqueIds(check, 'movimiento', files.movements)],
     unitIds: uniqueIds(check, 'unidad', files.units),
     buildingIds: uniqueIds(check, 'edificio', files.buildings),
     terrainIds: uniqueIds(check, 'terreno', files.terrain),
@@ -81,15 +86,16 @@ export function validateContent(files: Content): string[] {
   const check = new Checker();
   for (const name of LISTS) if (!Array.isArray(files[name])) return [`${name}.json: tiene que tener una lista "${name}"`];
   const context = contextOf(files, check);
+  validateMovements(files.movements, check);
   validateUnits(files.units, context, check);
   validateBuildings(files.buildings, context, check);
-  validateTerrain(files.terrain, check);
+  validateTerrain(files.terrain, files.movements, check);
   validateThemes(files.themes, context.terrainIds, check);
   validateMapgen(files.mapgen, context, check);
   validateSettings(files.settings, check);
   validateAi(files.ai, check);
-  validateWeather(files.weather, context.themeIds, check);
-  validateGenerals(files.generals, context.unitIds, check);
+  validateWeather(files.weather, context, check);
+  validateGenerals(files.generals, context, check);
   validateMissions(files.missions, context, check);
   return check.errors;
 }

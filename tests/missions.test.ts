@@ -1,5 +1,5 @@
 import { matchSeedsFrom } from '@core/util/random';
-import { loadContent, MoveType, readContentFiles } from '@core/content';
+import { loadContent, readContentFiles } from '@core/content';
 import { changeSettings } from '@core/gameState';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
@@ -26,7 +26,7 @@ describe('misiones', () => {
     const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
     const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-    expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1), 'a pie de base a base').toBeLessThan(Infinity);
+    expect(distanceMap(s, hq0, 'foot').at(hq1), 'a pie de base a base').toBeLessThan(Infinity);
     expect(resultFor(s, 0)).toBe('playing');
     const objective = objectiveOf(s, 0)!;
     if (objective.kind === 'escort') {

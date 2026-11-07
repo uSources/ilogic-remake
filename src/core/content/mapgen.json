@@ -13,5 +13,6 @@
   "spawnRadius": 2,
   "minSpawnWalkable": 9,
   "minSpawnBuildable": 6,
-  "minLandTiles": 200
+  "minLandTiles": 200,
+  "landMovement": "foot"
 }

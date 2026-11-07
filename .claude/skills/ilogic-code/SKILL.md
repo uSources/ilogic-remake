@@ -77,7 +77,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   etiquetas), `defaultContent()`. Un tipo se busca por su id en su catalogo (`entryOf(content.units,
   id, 'unidad')`). El codigo no compara nombres de unidades (`'Tank'`) ni de temas: si necesita saber
   algo de uno, es un campo del JSON.
-- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT` (`'foot'`), `movementOf(s, unit)`,
+- **Tipos con nombre, no indices sueltos**: los tipos de movimiento son contenido (`movements.json`,
+  `content.movements`; `MoveType` es su id, como `'foot'`, y lo que el codigo necesita saber de uno es
+  un campo: `motion`, `crossesEverything`), `movementOf(s, unit)`,
   `canMoveOn(moveType, terrain)`; como se mueve una unidad en esta partida (por donde, lo que cuesta,
   lo que puede gastar) es su `movementProfile(s, unit)`; las partidas guardan ids
   (`unit.type = 'Tank'`, `s.theme = 'Plains'`), nunca el puesto en el fichero.

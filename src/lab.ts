@@ -6,7 +6,7 @@
  */
 import { defaultContent } from './core/content/default';
 import type { SandboxConfig } from './core/match';
-import { entryOf, MoveType, type GameContent, type UnitType } from './core/content';
+import { entryOf, type GameContent, type UnitType } from './core/content';
 import { unitTypeOf } from './core/gameContent';
 import { maxBy } from './core/util/pick';
 import type { GameState, MatchSettings, Unit } from './core/model';
@@ -41,7 +41,7 @@ export const LAB_TARGET = { x: 7, y: 6 };
  * a cuerpo mas caro (con el contenido del juego, el tanque).
  */
 function heaviestMeleeVehicle(content: GameContent): string {
-  const isMeleeVehicle = (unitType: UnitType) => unitType.attack?.minRange === 1 && unitType.movement === MoveType.VEHICLE;
+  const isMeleeVehicle = (unitType: UnitType) => unitType.attack?.minRange === 1 && unitType.motion === 'drive';
   const heaviest = maxBy(content.units.list.filter(isMeleeVehicle), (unitType) => unitType.cost) ?? content.units.list[0]!;
   return heaviest.id;
 }

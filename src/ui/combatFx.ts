@@ -9,7 +9,7 @@
  * animaciones.
  */
 import type Phaser from 'phaser';
-import { MoveType, type UnitType } from '../core/content';
+import type { UnitType } from '../core/content';
 import { isRangedType } from '../core/rules';
 import type { Pos } from '../core/model';
 import { TILE } from '../layout';
@@ -39,9 +39,8 @@ const MISSILE_RANGE = 6;
 export function shotKind(attackerType: UnitType, defenderType: UnitType): ShotKind {
   const attack = attackerType.attack;
   if (attack && isRangedType(attackerType)) return attack.maxRange >= MISSILE_RANGE ? 'missile' : 'arc';
-  const movement = attackerType.movement;
-  if (movement === MoveType.AIR) return defenderType.movement === MoveType.AIR ? 'tracer' : 'bomb';
-  return movement === MoveType.FOOT ? 'bullets' : 'shell';
+  if (attackerType.motion === 'fly') return defenderType.motion === 'fly' ? 'tracer' : 'bomb';
+  return attackerType.motion === 'march' ? 'bullets' : 'shell';
 }
 
 /** Un punto del mundo (pixeles del dibujo), no una casilla. */

@@ -2,29 +2,31 @@
 import type { DeepReadonly } from '../util/freeze';
 import { type Checker, type Scope, checkSprites } from './check';
 import { ABILITY_KINDS, validateAbilityShape } from './abilities';
-import { MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type Texts, type UnitDef } from './types';
+import { MAX_LIFE } from '../data';
+import type { MovementDef, MovementMotion } from './movements';
+import type { AbilityDef, ContentContext, MoveType, Texts, UnitDef } from './types';
 
 const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
 
 export function validateUnits(units: readonly UnitDef[], context: ContentContext, check: Checker): void {
   for (const unit of units) {
     const scope = check.scope(`unidad ${unit?.id}`);
-    validateNumbers(scope, unit);
+    validateNumbers(scope, unit, context);
     if (unit?.attack !== null) validateAttack(scope, unit?.attack, context);
     validateLinks(scope, unit, context);
     checkSprites(scope, unit?.classicSprite, context.terrainIds);
-    if (unit?.abilities !== undefined) validateAbilities(scope, unit.abilities, unit);
+    if (unit?.abilities !== undefined) validateAbilities(scope, unit.abilities, unit, context);
   }
 }
 
 /** Nombre, precio, mando, movimiento, vision y si captura. */
-function validateNumbers(scope: Scope, unit: UnitDef): void {
+function validateNumbers(scope: Scope, unit: UnitDef, context: ContentContext): void {
   scope.texts('name', unit?.name);
   scope.num('cost', unit?.cost, { min: 1, int: true });
   scope.num('command', unit?.command, { min: 1, max: 20, int: true });
   scope.num('move', unit?.move, { min: 0, max: 30, int: true });
   scope.num('vision', unit?.vision, { min: 0, max: 30, int: true });
-  scope.expect(MOVEMENTS.includes(unit?.movement), `movement tiene que ser ${MOVEMENTS.join(', ')}`);
+  scope.known('movement', unit?.movement, context.movementIds, 'el movimiento ');
   scope.bool('captures', unit?.captures);
 }
 
@@ -57,13 +59,13 @@ function validateLinks(scope: Scope, unit: UnitDef, context: ContentContext): vo
   if (Array.isArray(unit?.builtAt)) scope.expect(unit.builtAt.length > 0, 'builtAt vacio: nadie la puede comprar');
   for (const [healed, amount] of Object.entries(unit?.heals ?? {})) {
     scope.known('heals', healed, context.unitIds);
-    scope.num(`heals.${healed}`, amount, { min: 0, max: 100, int: true });
+    scope.num(`heals.${healed}`, amount, { min: 0, max: MAX_LIFE, int: true });
   }
   if (unit?.art !== undefined && scope.known('art', unit.art, context.unitIds))
     scope.expect(unit.art !== unit.id, 'art no puede ser ella misma');
 }
 
-function validateAbilities(scope: Scope, list: unknown, unit: UnitDef): void {
+function validateAbilities(scope: Scope, list: unknown, unit: UnitDef, context: ContentContext): void {
   if (!scope.expect(Array.isArray(list), 'abilities tiene que ser una lista')) return;
   const seen = new Set<string>();
   for (const [index, ability] of (list as AbilityDef[]).entries()) {
@@ -71,7 +73,7 @@ function validateAbilities(scope: Scope, list: unknown, unit: UnitDef): void {
     if (!scope.known(`${field}.kind`, ability?.kind, ABILITY_KINDS, 'la habilidad ')) continue;
     scope.expect(!seen.has(ability.kind), `${field}: la habilidad "${ability.kind}" esta repetida`);
     seen.add(ability.kind);
-    validateAbilityShape(scope, field, ability, unit);
+    validateAbilityShape(scope, field, ability, unit, context);
   }
 }
 
@@ -97,6 +99,8 @@ export interface UnitType {
   readonly move: number;
   readonly vision: number;
   readonly movement: MoveType;
+  /** Como se ve al moverse y al disparar: el de su tipo de movimiento (movements.json, "motion"). */
+  readonly motion: MovementMotion;
   readonly canCapture: boolean;
   /** null = no ataca. */
   readonly attack: UnitAttack | null;
@@ -125,7 +129,8 @@ function attackOf(definition: UnitDef): UnitAttack | null {
 }
 
 /** Los tipos de unidad del fichero (validado), en su orden. */
-export function buildUnitTypes(units: readonly UnitDef[]): UnitType[] {
+export function buildUnitTypes(units: readonly UnitDef[], movements: readonly MovementDef[]): UnitType[] {
+  const motionOf = (movement: MoveType) => movements.find((type) => type.id === movement)!.motion;
   return units.map((definition) => ({
     id: definition.id,
     name: definition.name,
@@ -134,6 +139,7 @@ export function buildUnitTypes(units: readonly UnitDef[]): UnitType[] {
     move: definition.move,
     vision: definition.vision,
     movement: definition.movement,
+    motion: motionOf(definition.movement),
     canCapture: definition.captures,
     attack: attackOf(definition),
     cargoSlots: definition.transport?.slots ?? 0,
