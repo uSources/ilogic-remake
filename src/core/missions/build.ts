@@ -8,8 +8,9 @@ import { settingsWith } from '../matchSettings';
 import type { DeepReadonly } from '../util/freeze';
 import { newGameState } from '../gameState';
 import type { GameModeRegistry } from '../modes';
-import type { GameState, MatchSettings, Objective, Pos } from '../model';
-import { objectiveFromMission } from '../objectives';
+import type { GameState, MatchSettings, Objective, Pos, TeamId } from '../model';
+import { objectiveFromMission, type MissionPlacement } from '../objectives';
+import { posOf } from '../geom';
 import { newUnit } from '../rules/lifecycle';
 
 /** Una mision de la campaña tal como esta en el contenido (de solo lectura). */
@@ -44,11 +45,17 @@ function terrainGrid(content: GameContent, mission: Mission): GameState['map'] {
 
 /** Pone las unidades de la mision y devuelve sus uid, en el orden de la lista. */
 function placeUnits(s: GameState, units: Mission['units']): number[] {
-  return units.map(([type, team, x, y, life]) => {
-    const unit = newUnit(s, entryOf(s.content.units, type, 'unidad'), team, { x, y });
+  return units.map(({ type, team, at, life }) => {
+    const unit = newUnit(s, entryOf(s.content.units, type, 'unidad'), team, posOf(at));
     if (life) unit.life = life;
     return unit.uid;
   });
+}
+
+/** Lo de la mision puesto en la partida para el objetivo de `team`: el uid de su unidad a escoltar (`vip`). */
+function placementFor(mission: Mission, unitUids: readonly number[], team: TeamId): MissionPlacement {
+  const vipIndex = mission.units.findIndex((unit) => unit.vip && unit.team === team);
+  return vipIndex < 0 ? {} : { vipUid: unitUids[vipIndex]! };
 }
 
 /**
@@ -66,8 +73,8 @@ export function buildMission(mission: Mission, content: GameContent, seeds: Matc
     seeds,
     modes,
   });
-  for (const [type, owner, x, y] of mission.buildings)
-    s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
+  for (const { type, owner, at } of mission.buildings)
+    s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, ...posOf(at) });
   const unitUids = placeUnits(s, mission.units);
   s.mission = { id: mission.id, objectives: missionObjectives(mission, unitUids, content) };
   return s;
@@ -75,7 +82,9 @@ export function buildMission(mission: Mission, content: GameContent, seeds: Matc
 
 /** Los objetivos de los equipos de la mision en la partida, en el orden de los equipos (los que no tienen, ninguno). */
 function missionObjectives(mission: Mission, unitUids: readonly number[], content: GameContent): Objective[] {
-  return mission.teams.flatMap((team, owner) => (team.objective ? [objectiveFromMission(team.objective, owner, unitUids, content)] : []));
+  return mission.teams.flatMap((team, owner) =>
+    team.objective ? [objectiveFromMission(team.objective, owner, placementFor(mission, unitUids, owner), content)] : [],
+  );
 }
 
 /**

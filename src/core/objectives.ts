@@ -32,19 +32,28 @@ export interface SavedMap {
   board: GridBounds;
 }
 
-/** Lo que hace falta saber de la mision para comprobar su objetivo. */
+/** Lo que hace falta saber de la mision para comprobar el objetivo de un equipo. */
 export interface MissionLayout {
-  unitCount: number;
+  /** Cuantas unidades de ese equipo estan marcadas para escoltar (`vip`). */
+  vipCount: number;
   mapSize: number;
 }
+
+/** Donde ha quedado lo de la mision en la partida para el objetivo de un equipo: el uid de su unidad a escoltar (si la tiene). */
+export interface MissionPlacement {
+  vipUid?: number;
+}
+
+/** El uid de una unidad que todavia no esta en ninguna partida (al describir el objetivo antes de jugar). */
+const NOT_PLACED = -1;
 
 type InMission<K extends ObjectiveKind> = Extract<MissionObjective, { kind: K }>;
 type InGame<K extends ObjectiveKind> = Extract<Objective, { kind: K }>;
 type Goal<K extends ObjectiveKind> = Extract<ObjectiveGoal, { kind: K }>;
 
 interface ObjectiveRules<K extends ObjectiveKind> {
-  /** De como se escribe en la mision a lo que pide en la partida (`unitUids[i]` es la unidad `i`). */
-  fromMission(written: InMission<K>, unitUids: readonly number[], content: GameContent): Goal<K>;
+  /** De como se escribe en la mision a lo que pide en la partida (con lo de la mision ya puesto: `placed`). */
+  fromMission(written: InMission<K>, placed: MissionPlacement, content: GameContent): Goal<K>;
   /** Problemas del objetivo en el mapa de la mision (para los tests). */
   problems(written: InMission<K>, layout: MissionLayout): string[];
   /** El objetivo de una partida guardada (lo de su `kind` ya esta mirado) tiene bien sus campos. */
@@ -106,7 +115,7 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     progress: (s, _team, objective) => ({ done: Math.min(s.day - 1, objective.days), total: objective.days }),
   },
   capture: {
-    fromMission: (written, _unitUids, content) => ({
+    fromMission: (written, _placed, content) => ({
       kind: 'capture',
       count: written.count,
       type: written.type === null ? null : entryOf(content.buildings, written.type, 'edificio').id,
@@ -128,9 +137,9 @@ const OBJECTIVES: { [K in ObjectiveKind]: ObjectiveRules<K> } = {
     progress: (s, team) => ({ done: 0, total: enemyUnitCount(s, team) }),
   },
   escort: {
-    fromMission: (written, unitUids) => ({ kind: 'escort', uid: unitUids[written.vip]!, to: written.to, days: written.days }),
+    fromMission: (written, placed) => ({ kind: 'escort', uid: placed.vipUid ?? NOT_PLACED, to: written.to, days: written.days }),
     problems: (written, layout) => [
-      ...(written.vip >= 0 && written.vip < layout.unitCount ? [] : [`la unidad a escoltar (${written.vip}) no esta en la lista`]),
+      ...(layout.vipCount === 1 ? [] : [`escoltar: el equipo tiene que tener una unidad con "vip": true (tiene ${layout.vipCount})`]),
       ...(Grid.fits({ width: layout.mapSize, height: layout.mapSize }, written.to)
         ? []
         : [`el destino (${written.to.x},${written.to.y}) esta fuera del mapa`]),
@@ -157,18 +166,18 @@ export function isValidObjective(where: SavedMap, value: unknown): value is Obje
   return isObject(value) && isObjectiveKind(value.kind) && OBJECTIVES[value.kind].isValid(where, value);
 }
 
-/** Lo que pide el objetivo de una mision en la partida (`unitUids[i]` es la unidad `i` de la mision). */
-export const missionGoal = (written: MissionObjective, unitUids: readonly number[], content: GameContent): ObjectiveGoal =>
-  rulesOf(written.kind).fromMission(written, unitUids, content);
+/** Lo que pide el objetivo de una mision en la partida (con lo de la mision ya puesto, `placed`; sin partida, nada). */
+export const missionGoal = (written: MissionObjective, placed: MissionPlacement, content: GameContent): ObjectiveGoal =>
+  rulesOf(written.kind).fromMission(written, placed, content);
 
 /** El objetivo de la partida de una mision: lo que pide y su dueño (`owner`, el equipo que la juega). */
 export const objectiveFromMission = (
   written: MissionObjective,
   owner: TeamId,
-  unitUids: readonly number[],
+  placed: MissionPlacement,
   content: GameContent,
 ): Objective => ({
-  ...missionGoal(written, unitUids, content),
+  ...missionGoal(written, placed, content),
   owner,
 });
 

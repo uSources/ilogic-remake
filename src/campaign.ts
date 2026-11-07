@@ -95,9 +95,6 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<ObjectiveGoal,
       : `Get the supply truck to the marked city before day ${days} ends.`,
 };
 
-/** Sin partida no hay uid de la unidad a escoltar, pero la frase no lo usa. */
-const NO_UNIT_UIDS: readonly number[] = [];
-
 /** El objetivo de quien juega la mision desde el menu (el del primer equipo de una persona que tiene uno). */
 export const playerObjective = (mission: Mission): MissionObjective | undefined =>
   mission.teams.find((team) => team.controller === 'human' && team.objective)?.objective;
@@ -115,7 +112,7 @@ export interface ObjectiveViewer {
 function objectiveToDescribe(mission: Mission | null, content: GameContent, viewer?: ObjectiveViewer): ObjectiveGoal {
   if (viewer) return objectiveOf(viewer.s, viewer.team) ?? { kind: 'hq' };
   const written = mission && playerObjective(mission);
-  return written ? missionGoal(written, NO_UNIT_UIDS, content) : { kind: 'hq' };
+  return written ? missionGoal(written, {}, content) : { kind: 'hq' };
 }
 
 function describeObjective(objective: ObjectiveGoal, content: GameContent): string {

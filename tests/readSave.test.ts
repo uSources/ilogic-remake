@@ -110,5 +110,8 @@ describe('readSave: los contadores rotos se arreglan', () => {
     expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
     saved.mission.objectives = [{ ...saved.mission.objectives[0]!, owner: 7 }];
     expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
+    // Sin ningun objetivo no es una mision (missions.json tampoco la acepta).
+    saved.mission.objectives = [];
+    expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
   });
 });

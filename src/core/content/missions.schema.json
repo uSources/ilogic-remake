@@ -96,15 +96,11 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "vip", "to", "days"],
+          "required": ["kind", "to", "days"],
           "properties": {
             "kind": {
               "const": "escort",
-              "description": "Llevar la unidad numero `vip` de \"units\" a la casilla `to` a tiempo."
-            },
-            "vip": {
-              "type": "integer",
-              "minimum": 0
+              "description": "Llevar la unidad de su equipo marcada con \"vip\" en \"units\" a la casilla `to` a tiempo."
             },
             "to": {
               "type": "object",
@@ -167,55 +163,72 @@
           },
           "buildings": {
             "type": "array",
-            "description": "[tipo (buildings.json), dueño (numero de equipo o null, neutral), x, y].",
+            "description": "Los edificios: su tipo (buildings.json), su dueño (numero de equipo o null, neutral) y su casilla.",
             "items": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": [
-                {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "owner", "at"],
+              "properties": {
+                "type": {
                   "type": "string"
                 },
-                {
+                "owner": {
                   "type": ["integer", "null"],
                   "minimum": 0
                 },
-                {
-                  "$ref": "#/definitions/tile"
-                },
-                {
-                  "$ref": "#/definitions/tile"
+                "at": {
+                  "type": "object",
+                  "required": ["x", "y"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "$ref": "#/definitions/tile"
+                    },
+                    "y": {
+                      "$ref": "#/definitions/tile"
+                    }
+                  }
                 }
-              ]
+              }
             }
           },
           "units": {
             "type": "array",
-            "description": "[tipo (units.json), equipo, x, y, vida?].",
+            "description": "Las unidades: su tipo (units.json), su equipo, su casilla, su vida (si no, entera) y si es la que hay que escoltar (`vip`, la del objetivo \"escort\" de su equipo).",
             "items": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 5,
-              "items": [
-                {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "team", "at"],
+              "properties": {
+                "type": {
                   "type": "string"
                 },
-                {
+                "team": {
                   "type": "integer",
                   "minimum": 0
                 },
-                {
-                  "$ref": "#/definitions/tile"
+                "at": {
+                  "type": "object",
+                  "required": ["x", "y"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "$ref": "#/definitions/tile"
+                    },
+                    "y": {
+                      "$ref": "#/definitions/tile"
+                    }
+                  }
                 },
-                {
-                  "$ref": "#/definitions/tile"
-                },
-                {
+                "life": {
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 100
+                },
+                "vip": {
+                  "const": true
                 }
-              ]
+              }
             }
           },
           "teams": {

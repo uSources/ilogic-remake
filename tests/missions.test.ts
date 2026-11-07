@@ -59,7 +59,7 @@ describe('misiones', () => {
     };
     const moveUnit = () => {
       // @ts-expect-error ni lo de dentro
-      mission.units[0]![2] = 0;
+      mission.units[0]!.at.x = 0;
     };
     expect(changeFunds).toThrow(TypeError);
     expect(moveUnit).toThrow(TypeError);
@@ -156,10 +156,31 @@ describe('misiones', () => {
     };
     expect(withMission(() => {})).not.toThrow();
     expect(withMission((mission) => (mission.theme = 'Luna'))).toThrow(/tema "Luna"/);
-    expect(withMission((mission) => (mission.units = [['Dragon', 0, 1, 1]]))).toThrow(/unidad "Dragon"/);
-    expect(withMission((mission) => (mission.buildings = [['Base', 7, 1, 1]]))).toThrow(/no esta en "teams"/);
+    expect(withMission((mission) => (mission.units = [{ type: 'Dragon', team: 0, at: { x: 1, y: 1 } }]))).toThrow(/unidad "Dragon"/);
+    expect(withMission((mission) => (mission.units = [{ type: 'Soldier', team: 0, at: [1, 1] }]))).toThrow(/casilla no valida/);
+    expect(withMission((mission) => (mission.buildings = [{ type: 'Base', owner: 7, at: { x: 1, y: 1 } }]))).toThrow(/no esta en "teams"/);
+    expect(withMission((mission) => (mission.teams as { objective?: unknown }[]).forEach((team) => delete team.objective))).toThrow(
+      /algun equipo tiene que tener un objetivo/,
+    );
     expect(withMission((mission) => (mission.teams = [{ controller: 'human', funds: 0 }]))).toThrow(/al menos dos equipos/);
     expect(withMission((mission) => ((mission.teams as { objective?: unknown }[])[0]!.objective = {}))).toThrow(/objective/);
     expect(withMission((mission) => (mission.id = 'bridgehead'))).toThrow(/repetido/);
+  });
+
+  it('la unidad a escoltar es la marcada con "vip" de su equipo', () => {
+    const escort = MISSIONS.find((mission) => mission.teams.some((team) => team.objective?.kind === 'escort'))!;
+    const s = buildMission(escort, defaultContent(), MISSION_SEEDS);
+    const vipIndex = escort.units.findIndex((unit) => unit.vip);
+    const objective = s.mission!.objectives.find((candidate) => candidate.kind === 'escort');
+    expect(objective?.kind === 'escort' && objective.uid).toBe(s.units[vipIndex]!.uid);
+    const withoutVip = { ...escort, units: escort.units.map(({ vip: _vip, ...unit }) => unit) };
+    expect(checkMission(withoutVip, defaultContent())).toContain(
+      'escoltar: el equipo tiene que tener una unidad con "vip": true (tiene 0)',
+    );
+    const strayVip = {
+      ...MISSIONS[0]!,
+      units: MISSIONS[0]!.units.map((unit, index) => (index === 0 ? { ...unit, vip: true as const } : unit)),
+    };
+    expect(checkMission(strayVip, defaultContent())).toContain('el equipo 0 tiene una unidad con "vip" pero no tiene que escoltarla');
   });
 });

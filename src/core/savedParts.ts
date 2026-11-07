@@ -192,10 +192,11 @@ export function cleanBuildings(frame: SaveFrame, buildings: readonly unknown[]):
 const isValidTeamObjective = (frame: SaveFrame, objective: unknown): boolean =>
   isObject(objective) && isTeam(frame, objective.owner) && isValidObjective(frame, objective);
 
-/** La mision: su id y los objetivos de sus equipos, cada uno de un equipo distinto. */
+/** La mision: su id y los objetivos de sus equipos (al menos uno, como en missions.json), cada uno de un equipo distinto. */
 export function isValidMission(frame: SaveFrame, mission: unknown): boolean {
   if (!isObject(mission) || typeof mission.id !== 'string' || !Array.isArray(mission.objectives)) return false;
   const objectives: unknown[] = mission.objectives;
+  if (!objectives.length) return false;
   if (!objectives.every((objective) => isValidTeamObjective(frame, objective))) return false;
   return new Set(objectives.filter(isObject).map((objective) => objective.owner)).size === objectives.length;
 }

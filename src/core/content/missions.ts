@@ -5,8 +5,8 @@
  * sobre un terreno en el que no puede estar) lo mira `checkMission` (core/missions/check.ts).
  *
  * Mapas en texto, una fila por linea (y), una letra por casilla (x): las de cada tema en themes.json
- * ("mapLetters") y las demas en terrain.json ("mapLetter"). Edificios: [tipo, dueño (numero de
- * equipo, null neutral), x, y]. Unidades: [tipo, equipo, x, y, vida?]. Ver docs/CONTENIDO.md.
+ * ("mapLetters") y las demas en terrain.json ("mapLetter"). Edificios: { type, owner (numero de
+ * equipo, null neutral), at }. Unidades: { type, team, at, life?, vip? }. Ver docs/CONTENIDO.md.
  */
 import type { ControllerKind, MatchSettings, Pos, TeamId } from '../model';
 import { MAX_LIFE } from '../data';
@@ -19,11 +19,25 @@ export type MissionObjective =
   | { kind: 'survive'; days: number }
   | { kind: 'capture'; count: number; type: string | null; days: number }
   | { kind: 'destroy'; days: number }
-  /** `vip` es el indice en `units` de la mision de la unidad a escoltar. */
-  | { kind: 'escort'; vip: number; to: Pos; days: number };
+  /** Llevar a `to` la unidad de su equipo marcada con `vip` (MissionUnit.vip). */
+  | { kind: 'escort'; to: Pos; days: number };
 
-export type MissionBuilding = [type: string, owner: TeamId | null, x: number, y: number];
-export type MissionUnit = [type: string, team: TeamId, x: number, y: number, life?: number];
+/** Un edificio de la mision: su tipo, su dueño (numero de equipo, null neutral) y su casilla. */
+export interface MissionBuilding {
+  type: string;
+  owner: TeamId | null;
+  at: Pos;
+}
+
+/** Una unidad de la mision: su tipo, su equipo, su casilla y, si no, su vida entera. */
+export interface MissionUnit {
+  type: string;
+  team: TeamId;
+  at: Pos;
+  life?: number;
+  /** Es la que tiene que escoltar su equipo (su objetivo "escort"). */
+  vip?: true;
+}
 
 /**
  * Un equipo de la mision: quien lo juega, con cuanto dinero empieza y, si lo tiene, su objetivo (si
@@ -66,24 +80,28 @@ const isTeamIn = (context: MissionContext, team: unknown): boolean =>
   Number.isInteger(team) && (team as number) >= 0 && (team as number) < context.teamCount;
 
 /** Una casilla de la lista: dos enteros no negativos (que este dentro del mapa lo mira checkMission). */
-const isTile = (x: unknown, y: unknown): boolean => [x, y].every((value) => Number.isInteger(value) && (value as number) >= 0);
+const isTile = (at: unknown): boolean =>
+  typeof at === 'object' &&
+  at !== null &&
+  [(at as Partial<Pos>).x, (at as Partial<Pos>).y].every((value) => Number.isInteger(value) && (value as number) >= 0);
 
 function validateBuildingsOf(scope: Scope, context: MissionContext, buildings: unknown): void {
   if (!scope.expect(Array.isArray(buildings), 'buildings tiene que ser una lista')) return;
-  for (const [type, owner, x, y] of buildings as unknown[][]) {
+  for (const { type, owner, at } of buildings as Partial<MissionBuilding>[]) {
     scope.known('buildings', type, context.buildingIds, 'el edificio ');
     scope.expect(owner === null || isTeamIn(context, owner), `el dueño de ${String(type)} (${String(owner)}) no esta en "teams"`);
-    scope.expect(isTile(x, y), `${String(type)}: casilla no valida`);
+    scope.expect(isTile(at), `${String(type)}: casilla no valida`);
   }
 }
 
 function validateUnitsOf(scope: Scope, context: MissionContext, units: unknown): void {
   if (!scope.expect(Array.isArray(units), 'units tiene que ser una lista')) return;
-  for (const [type, team, x, y, life] of units as unknown[][]) {
+  for (const { type, team, at, life, vip } of units as Partial<MissionUnit>[]) {
     scope.known('units', type, context.unitIds, 'la unidad ');
     scope.expect(isTeamIn(context, team), `el equipo de ${String(type)} (${String(team)}) no esta en "teams"`);
-    scope.expect(isTile(x, y), `${String(type)}: casilla no valida`);
+    scope.expect(isTile(at), `${String(type)}: casilla no valida`);
     if (life !== undefined) scope.num(`vida de ${String(type)}`, life, { min: 1, max: MAX_LIFE, int: true });
+    if (vip !== undefined) scope.expect(vip === true, `vip de ${String(type)}: solo true (o nada)`);
   }
 }
 
@@ -94,6 +112,11 @@ function validateTeamsOf(scope: Scope, teams: unknown): boolean {
     scope.num('funds', team?.funds, { min: 0, int: true });
     if (team?.objective !== undefined) scope.expect(typeof team.objective?.kind === 'string', 'objective tiene que tener un "kind"');
   }
+  // Una mision sin objetivos no la gana nadie hasta quedarse solo: la partida guardada tampoco la acepta.
+  scope.expect(
+    (teams as Partial<MissionTeam>[]).some((team) => team?.objective !== undefined),
+    'algun equipo tiene que tener un objetivo',
+  );
   return true;
 }
 

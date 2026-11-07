@@ -32,19 +32,19 @@
         "~~~~~~~~~~~~~~~~"
       ],
       "buildings": [
-        ["Base", 0, 2, 13],
-        ["Factory", 0, 4, 13],
-        ["City", 0, 2, 11],
-        ["City", null, 4, 10],
-        ["City", null, 9, 11],
-        ["City", null, 6, 4],
-        ["Base", 1, 13, 2],
-        ["City", 1, 11, 3]
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 13 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 13 } },
+        { "type": "City", "owner": 0, "at": { "x": 2, "y": 11 } },
+        { "type": "City", "owner": null, "at": { "x": 4, "y": 10 } },
+        { "type": "City", "owner": null, "at": { "x": 9, "y": 11 } },
+        { "type": "City", "owner": null, "at": { "x": 6, "y": 4 } },
+        { "type": "Base", "owner": 1, "at": { "x": 13, "y": 2 } },
+        { "type": "City", "owner": 1, "at": { "x": 11, "y": 3 } }
       ],
       "units": [
-        ["Soldier", 0, 3, 12],
-        ["Soldier", 0, 1, 12],
-        ["Soldier", 1, 10, 5, 50]
+        { "type": "Soldier", "team": 0, "at": { "x": 3, "y": 12 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 1, "y": 12 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 10, "y": 5 }, "life": 50 }
       ],
       "teams": [
         {
@@ -94,29 +94,29 @@
         "......,,............"
       ],
       "buildings": [
-        ["Base", 0, 2, 17],
-        ["Factory", 0, 4, 17],
-        ["City", 0, 3, 15],
-        ["City", null, 8, 13],
-        ["City", null, 5, 10],
-        ["City", null, 12, 16],
-        ["City", null, 15, 12],
-        ["City", null, 15, 8],
-        ["City", null, 7, 3],
-        ["City", null, 13, 3],
-        ["City", null, 17, 2],
-        ["Base", 1, 17, 1],
-        ["Factory", 1, 18, 3],
-        ["City", 1, 15, 3]
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 17 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 17 } },
+        { "type": "City", "owner": 0, "at": { "x": 3, "y": 15 } },
+        { "type": "City", "owner": null, "at": { "x": 8, "y": 13 } },
+        { "type": "City", "owner": null, "at": { "x": 5, "y": 10 } },
+        { "type": "City", "owner": null, "at": { "x": 12, "y": 16 } },
+        { "type": "City", "owner": null, "at": { "x": 15, "y": 12 } },
+        { "type": "City", "owner": null, "at": { "x": 15, "y": 8 } },
+        { "type": "City", "owner": null, "at": { "x": 7, "y": 3 } },
+        { "type": "City", "owner": null, "at": { "x": 13, "y": 3 } },
+        { "type": "City", "owner": null, "at": { "x": 17, "y": 2 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 1 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 18, "y": 3 } },
+        { "type": "City", "owner": 1, "at": { "x": 15, "y": 3 } }
       ],
       "units": [
-        ["Soldier", 0, 1, 16],
-        ["Soldier", 0, 3, 16],
-        ["Soldier", 0, 5, 16],
-        ["Car", 0, 5, 17],
-        ["Soldier", 1, 13, 2],
-        ["Soldier", 1, 12, 4],
-        ["Tank", 1, 16, 4]
+        { "type": "Soldier", "team": 0, "at": { "x": 1, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 5, "y": 16 } },
+        { "type": "Car", "team": 0, "at": { "x": 5, "y": 17 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 13, "y": 2 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 12, "y": 4 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 4 } }
       ],
       "teams": [
         {
@@ -169,34 +169,34 @@
         "..............T....."
       ],
       "buildings": [
-        ["Base", 0, 2, 17],
-        ["Factory", 0, 4, 18],
-        ["City", 0, 2, 15],
-        ["City", 0, 6, 16],
-        ["City", null, 10, 10],
-        ["City", null, 12, 6],
-        ["Base", 1, 17, 2],
-        ["Factory", 1, 15, 1],
-        ["Airport", 1, 18, 4],
-        ["City", 1, 13, 3]
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 17 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 18 } },
+        { "type": "City", "owner": 0, "at": { "x": 2, "y": 15 } },
+        { "type": "City", "owner": 0, "at": { "x": 6, "y": 16 } },
+        { "type": "City", "owner": null, "at": { "x": 10, "y": 10 } },
+        { "type": "City", "owner": null, "at": { "x": 12, "y": 6 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 2 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 15, "y": 1 } },
+        { "type": "Airport", "owner": 1, "at": { "x": 18, "y": 4 } },
+        { "type": "City", "owner": 1, "at": { "x": 13, "y": 3 } }
       ],
       "units": [
-        ["Tank", 0, 4, 15],
-        ["Tank", 0, 7, 14],
-        ["Artillery", 0, 3, 16],
-        ["Soldier", 0, 5, 13],
-        ["Soldier", 0, 8, 15],
-        ["Antiair", 0, 6, 15],
-        ["Tank", 1, 14, 6],
-        ["Tank", 1, 12, 8],
-        ["Tank", 1, 16, 7],
-        ["LTank", 1, 10, 5],
-        ["Soldier", 1, 13, 9],
-        ["Soldier", 1, 11, 11],
-        ["Soldier", 1, 15, 10],
-        ["Soldier", 1, 9, 7],
-        ["Artillery", 1, 16, 4],
-        ["Artillery", 1, 18, 6]
+        { "type": "Tank", "team": 0, "at": { "x": 4, "y": 15 } },
+        { "type": "Tank", "team": 0, "at": { "x": 7, "y": 14 } },
+        { "type": "Artillery", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 5, "y": 13 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 8, "y": 15 } },
+        { "type": "Antiair", "team": 0, "at": { "x": 6, "y": 15 } },
+        { "type": "Tank", "team": 1, "at": { "x": 14, "y": 6 } },
+        { "type": "Tank", "team": 1, "at": { "x": 12, "y": 8 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 7 } },
+        { "type": "LTank", "team": 1, "at": { "x": 10, "y": 5 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 13, "y": 9 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 11, "y": 11 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 15, "y": 10 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 9, "y": 7 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 16, "y": 4 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 18, "y": 6 } }
       ],
       "teams": [
         {
@@ -247,27 +247,27 @@
         "....TT.............."
       ],
       "buildings": [
-        ["Base", 0, 1, 19],
-        ["Factory", 0, 3, 18],
-        ["City", null, 18, 2],
-        ["City", null, 9, 9],
-        ["City", null, 3, 13],
-        ["Base", 1, 17, 0],
-        ["Factory", 1, 19, 1],
-        ["City", 1, 12, 3]
+        { "type": "Base", "owner": 0, "at": { "x": 1, "y": 19 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 3, "y": 18 } },
+        { "type": "City", "owner": null, "at": { "x": 18, "y": 2 } },
+        { "type": "City", "owner": null, "at": { "x": 9, "y": 9 } },
+        { "type": "City", "owner": null, "at": { "x": 3, "y": 13 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 0 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 19, "y": 1 } },
+        { "type": "City", "owner": 1, "at": { "x": 12, "y": 3 } }
       ],
       "units": [
-        ["Supplier", 0, 2, 17],
-        ["Tank", 0, 3, 16],
-        ["Tank", 0, 4, 17],
-        ["Soldier", 0, 1, 15],
-        ["Antiair", 0, 5, 18],
-        ["Tank", 1, 10, 8],
-        ["Tank", 1, 14, 11],
-        ["Soldier", 1, 8, 12],
-        ["Soldier", 1, 12, 5],
-        ["Artillery", 1, 15, 6],
-        ["LTank", 1, 16, 9]
+        { "type": "Supplier", "team": 0, "at": { "x": 2, "y": 17 }, "vip": true },
+        { "type": "Tank", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Tank", "team": 0, "at": { "x": 4, "y": 17 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 1, "y": 15 } },
+        { "type": "Antiair", "team": 0, "at": { "x": 5, "y": 18 } },
+        { "type": "Tank", "team": 1, "at": { "x": 10, "y": 8 } },
+        { "type": "Tank", "team": 1, "at": { "x": 14, "y": 11 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 8, "y": 12 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 12, "y": 5 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 15, "y": 6 } },
+        { "type": "LTank", "team": 1, "at": { "x": 16, "y": 9 } }
       ],
       "teams": [
         {
@@ -275,7 +275,6 @@
           "funds": 5000,
           "objective": {
             "kind": "escort",
-            "vip": 0,
             "to": {
               "x": 18,
               "y": 2
@@ -323,25 +322,25 @@
         "iiii.............iii"
       ],
       "buildings": [
-        ["Base", 0, 2, 16],
-        ["Factory", 0, 4, 15],
-        ["City", 0, 3, 13],
-        ["Airport", 0, 6, 16],
-        ["Base", 1, 17, 3]
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 16 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 15 } },
+        { "type": "City", "owner": 0, "at": { "x": 3, "y": 13 } },
+        { "type": "Airport", "owner": 0, "at": { "x": 6, "y": 16 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 3 } }
       ],
       "units": [
-        ["Tank", 0, 5, 14],
-        ["Tank", 0, 4, 12],
-        ["Artillery", 0, 2, 14],
-        ["Soldier", 0, 6, 13],
-        ["Soldier", 1, 13, 5],
-        ["Soldier", 1, 15, 8],
-        ["Tank", 1, 11, 7],
-        ["Tank", 1, 16, 11],
-        ["Artillery", 1, 14, 2],
-        ["Antiair", 1, 12, 10],
-        ["LTank", 1, 17, 13],
-        ["Soldier", 1, 10, 15]
+        { "type": "Tank", "team": 0, "at": { "x": 5, "y": 14 } },
+        { "type": "Tank", "team": 0, "at": { "x": 4, "y": 12 } },
+        { "type": "Artillery", "team": 0, "at": { "x": 2, "y": 14 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 6, "y": 13 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 13, "y": 5 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 15, "y": 8 } },
+        { "type": "Tank", "team": 1, "at": { "x": 11, "y": 7 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 11 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 14, "y": 2 } },
+        { "type": "Antiair", "team": 1, "at": { "x": 12, "y": 10 } },
+        { "type": "LTank", "team": 1, "at": { "x": 17, "y": 13 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 10, "y": 15 } }
       ],
       "teams": [
         {
@@ -392,30 +391,30 @@
         ".T...............,,."
       ],
       "buildings": [
-        ["Base", 0, 2, 17],
-        ["Factory", 0, 4, 18],
-        ["City", 0, 3, 15],
-        ["Airport", 0, 6, 16],
-        ["City", null, 9, 6],
-        ["City", null, 14, 9],
-        ["City", null, 6, 12],
-        ["City", null, 15, 13],
-        ["City", null, 11, 17],
-        ["City", null, 4, 3],
-        ["Oil", null, 9, 15],
-        ["Stronghold", null, 10, 8],
-        ["Base", 1, 17, 2],
-        ["Factory", 1, 15, 1],
-        ["City", 1, 18, 4],
-        ["Airport", 1, 13, 2]
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 17 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 18 } },
+        { "type": "City", "owner": 0, "at": { "x": 3, "y": 15 } },
+        { "type": "Airport", "owner": 0, "at": { "x": 6, "y": 16 } },
+        { "type": "City", "owner": null, "at": { "x": 9, "y": 6 } },
+        { "type": "City", "owner": null, "at": { "x": 14, "y": 9 } },
+        { "type": "City", "owner": null, "at": { "x": 6, "y": 12 } },
+        { "type": "City", "owner": null, "at": { "x": 15, "y": 13 } },
+        { "type": "City", "owner": null, "at": { "x": 11, "y": 17 } },
+        { "type": "City", "owner": null, "at": { "x": 4, "y": 3 } },
+        { "type": "Oil", "owner": null, "at": { "x": 9, "y": 15 } },
+        { "type": "Stronghold", "owner": null, "at": { "x": 10, "y": 8 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 2 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 15, "y": 1 } },
+        { "type": "City", "owner": 1, "at": { "x": 18, "y": 4 } },
+        { "type": "Airport", "owner": 1, "at": { "x": 13, "y": 2 } }
       ],
       "units": [
-        ["Soldier", 0, 3, 16],
-        ["Soldier", 0, 5, 17],
-        ["Tank", 0, 5, 15],
-        ["Soldier", 1, 16, 3],
-        ["Soldier", 1, 14, 4],
-        ["Tank", 1, 16, 2]
+        { "type": "Soldier", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 5, "y": 17 } },
+        { "type": "Tank", "team": 0, "at": { "x": 5, "y": 15 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 16, "y": 3 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 14, "y": 4 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 2 } }
       ],
       "teams": [
         {
