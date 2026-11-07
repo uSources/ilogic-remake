@@ -101,7 +101,8 @@ const NO_AI = {
  * (`../`, `./../`, `../util/../`, `../../core/`, `@core/`), con o sin extension (`.ts`, `.js`). Lo del
  * contenido (`content/abilities`, `model/weather`) no es una pieza y si se puede. La lista de
  * acciones (actions/registry.ts) es la excepcion: junta la accion de los poderes, que vive con ellos.
- * Lo prueba tests/lintImports.test.ts.
+ * Tampoco las fachadas (`../rules`, `../actions`, `@core/rules`...), que las reexportan. Lo prueba
+ * tests/lintImports.test.ts (los patrones y que la configuracion de verdad los pone).
  */
 const PIECE_PATH = '(^|/)(\\.\\.?|@?core)/';
 const EXTENSION = '(\\.[jt]s)?$';
@@ -110,9 +111,11 @@ const pluggedPieces = (pieces) => ({
   message:
     'Las reglas y las acciones no importan generales, poderes, clima, habilidades ni modulos concretos: lo que aportan llega por GameState.ruleset (hooksOf, ruleModules/ruleset.ts).',
 });
-export const ONLY_THROUGH_RULE_MODULES = pluggedPieces('generals|generalPowers|weather|abilities');
+/** Las fachadas (rules.ts, actions.ts, un index) reexportan las piezas: por ahi tambien se saltaria L7. */
+const FACADES = 'rules|actions|index';
+export const ONLY_THROUGH_RULE_MODULES = pluggedPieces(`generals|generalPowers|weather|abilities|${FACADES}`);
 const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
-export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces('generals|weather|abilities');
+export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces(`generals|weather|abilities|${FACADES}`);
 
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
 const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];

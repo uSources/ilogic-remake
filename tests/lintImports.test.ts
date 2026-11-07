@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Linter } from 'eslint';
+import { ESLint, Linter } from 'eslint';
 import { NO_PLUGGED_PIECES_EXCEPT_POWERS, ONLY_THROUGH_RULE_MODULES } from '../eslint.config.js';
 
 /**
@@ -35,6 +35,13 @@ const FORBIDDEN = [
   '../../core/ruleModules/registry',
   './../ruleModules/registry.js',
   '../ruleModules/hooks/../registry',
+  '../rules',
+  '../rules.ts',
+  '@core/rules',
+  '../../core/rules',
+  '../actions',
+  '@core/actions',
+  '../index',
 ];
 const ALLOWED = [
   '../ruleModules/ruleset',
@@ -55,5 +62,19 @@ describe('L7: las reglas y las acciones no importan las piezas que se enchufan (
     expect(forbids(NO_PLUGGED_PIECES_EXCEPT_POWERS, '../generalPowers')).toBe(false);
     expect(forbids(NO_PLUGGED_PIECES_EXCEPT_POWERS, '../weather')).toBe(true);
     expect(forbids(NO_PLUGGED_PIECES_EXCEPT_POWERS, '@core/ruleModules/flank')).toBe(true);
+  });
+
+  it('la configuracion de verdad pone el patron en las reglas y las acciones, y el de la excepcion en la lista de acciones', async () => {
+    const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
+    const patternsFor = async (file: string) => {
+      const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
+      const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
+      return options?.patterns ?? [];
+    };
+    expect(await patternsFor('src/core/rules/combat.ts')).toContainEqual(ONLY_THROUGH_RULE_MODULES);
+    expect(await patternsFor('src/core/actions/movement.ts')).toContainEqual(ONLY_THROUGH_RULE_MODULES);
+    const actionList = await patternsFor('src/core/actions/registry.ts');
+    expect(actionList).toContainEqual(NO_PLUGGED_PIECES_EXCEPT_POWERS);
+    expect(actionList).not.toContainEqual(ONLY_THROUGH_RULE_MODULES);
   });
 });
