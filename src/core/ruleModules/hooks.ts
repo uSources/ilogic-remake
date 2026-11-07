@@ -233,7 +233,10 @@ export interface RuleModuleIds {
   bounty: true;
 }
 
-/** El nombre de un modulo de reglas (ver RuleModuleIds). */
+/**
+ * El nombre de un modulo de reglas (ver RuleModuleIds). Como la lista se puede ampliar (un modo, las
+ * pruebas de tests/modeHooks.test.ts), una tabla indexada por nombre es Partial, nunca exhaustiva.
+ */
 export type RuleModuleId = keyof RuleModuleIds;
 
 /** Un modulo de reglas: una pieza del juego que se enchufa o no segun los ajustes de la partida. */

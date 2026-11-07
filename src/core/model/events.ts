@@ -33,7 +33,10 @@ export interface InterruptionKinds {
   ambush: true;
 }
 
-/** El nombre de un corte de camino (ver InterruptionKinds). */
+/**
+ * El nombre de un corte de camino (ver InterruptionKinds). Como la lista se puede ampliar, una tabla
+ * indexada por nombre es Partial y tiene algo por defecto (la escena, `npm run play`).
+ */
 export type InterruptionKind = keyof InterruptionKinds;
 
 /** Lo que ha cortado un camino y donde (la casilla que ya no se ha podido pisar). */

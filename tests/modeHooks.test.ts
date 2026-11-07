@@ -15,6 +15,11 @@ import { act, blankState, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 
 // Los modulos y el corte de camino del modo de prueba tienen sus propios nombres, como los de un modo de verdad.
+// Ojo: `tsc` comprueba src/ y tests/ juntos, asi que estos nombres tambien existen para el codigo
+// del juego mientras se comprueba. Por eso (y porque un modo puede traer los suyos) ninguna tabla de
+// src/ indexada por RuleModuleId o InterruptionKind es exhaustiva: son Partial y tienen algo por
+// defecto (INTERRUPTION_ANIMATIONS, INTERRUPTION_NAMES); la lista de ids que si es completa es la de
+// RULE_MODULES, que se recorre, no se indexa.
 declare module '@core/ruleModules/hooks' {
   interface RuleModuleIds {
     testBonus: true;
