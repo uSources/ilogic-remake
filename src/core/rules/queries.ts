@@ -54,8 +54,8 @@ export function canWalk(s: GameState, pos: Pos, moveType: MoveType): boolean {
 }
 
 /** Transitable y libre de unidades (amigas o enemigas: no se puede atravesar a nadie). */
-export function isWalkable(s: GameState, pos: Pos, moveType: MoveType, occ = occupancy(s)): boolean {
-  return canWalk(s, pos, moveType) && !occ.at(pos);
+export function isWalkable(s: GameState, pos: Pos, moveType: MoveType, occupied = occupancy(s)): boolean {
+  return canWalk(s, pos, moveType) && !occupied.at(pos);
 }
 
 /** Las unidades del equipo `team`: las de la partida o, si se dan, las suyas de entre `among`. */
