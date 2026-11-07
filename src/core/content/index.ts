@@ -1,6 +1,7 @@
 /**
  * Contenido del juego en ficheros de configuracion (src/core/content/*.json): unidades, edificios,
- * terreno, temas de mapa, generador de mapas, clima, generales, reglas por defecto y pesos de la IA.
+ * terreno, temas de mapa, generador de mapas, clima, generales, misiones, reglas por defecto y pesos
+ * de la IA.
  * Ver docs/CONTENIDO.md.
  *
  * Cada parte tiene su modulo con `validate*` y, si hace falta, `build*` (units.ts, buildings.ts...);
@@ -13,6 +14,7 @@ import aiFile from './ai.json';
 import buildingsFile from './buildings.json';
 import generalsFile from './generals.json';
 import mapgenFile from './mapgen.json';
+import missionsFile from './missions.json';
 import settingsFile from './settings.json';
 import terrainFile from './terrain.json';
 import themesFile from './themes.json';
@@ -23,6 +25,7 @@ import { validateBuildings } from './buildings';
 import { Checker, uniqueIds } from './check';
 import { validateGenerals, type GeneralDef } from './generals';
 import { validateMapgen, type MapgenDef } from './mapgen';
+import { validateMissions, type MissionDef } from './missions';
 import { resolveContent, type Content, type ResolvedContent } from './resolve';
 import { validateSettings, type SettingsFile } from './settings';
 import { validateTerrain } from './terrain';
@@ -37,6 +40,7 @@ export type { Content } from './resolve';
 export type { AiWeights } from './ai';
 export type { BuildingType } from './buildings';
 export type { MapgenDef, MapgenSettings } from './mapgen';
+export type { MissionBuilding, MissionDef, MissionObjective, MissionTeam, MissionUnit } from './missions';
 export type { TerrainType } from './terrain';
 export type { TerrainChance, Theme, ThemeDef, ThemeGenerator } from './themes';
 export type { UnitAttack, UnitType } from './units';
@@ -56,6 +60,7 @@ export function readContentFiles(): Content {
     ai: aiFile,
     weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
     generals: (generalsFile as unknown as { generals: GeneralDef[] }).generals,
+    missions: (missionsFile as unknown as { missions: MissionDef[] }).missions,
   };
 }
 
@@ -85,6 +90,7 @@ export function validateContent(files: Content): string[] {
   validateAi(files.ai, check);
   validateWeather(files.weather, context.themeIds, check);
   validateGenerals(files.generals, context.unitIds, check);
+  validateMissions(files.missions, context, check);
   return check.errors;
 }
 

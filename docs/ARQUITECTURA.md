@@ -20,7 +20,7 @@ flowchart TB
     view["playerView.ts<br/>lo que sabe cada equipo (PlayerView)"]
     session["session.ts + session/<br/>GameSession y controladores sin IA"]
     controllers["controllers.ts + controllers/<br/>controladores de la IA"]
-    gen["mapgen.ts / missions.ts"]
+    gen["mapgen.ts / missions.ts + missions/"]
     save["save.ts / stats.ts"]
     teams["teams.ts<br/>equipos y alianzas"]
   end
@@ -1049,4 +1049,4 @@ mando puede jugar una partida entera sin raton.
 | Cambiar algo de la partida en pantalla (animaciones, turno enemigo, final, seleccion...) | `src/scenes/game/` (ver "La escena de la partida") |
 | Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |
 | Textos | `src/settings.ts` (`TEXTS.es` / `TEXTS.en`) |
-| Misiones | `src/core/missions.ts` (+ skill `nueva-mision`); un tipo de objetivo nuevo, una entrada en `OBJECTIVES` (`src/core/objectives.ts`, con su `isValid` para las partidas guardadas) y su frase en `OBJECTIVE_TEXT` (`src/campaign.ts`) |
+| Misiones | `src/core/content/missions.json` (contenido, con su esquema); la partida de una, `src/core/missions/build.ts`, y lo que se mira de su mapa, `missions/check.ts` (+ skill `nueva-mision`); un tipo de objetivo nuevo, una entrada en `OBJECTIVES` (`src/core/objectives.ts`, con su `isValid` para las partidas guardadas) y su frase en `OBJECTIVE_TEXT` (`src/campaign.ts`) |

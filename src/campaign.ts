@@ -3,7 +3,7 @@
  */
 import { buildingsOf } from './core/rules';
 import { defaultContent } from './core/content/default';
-import { MISSIONS, type MissionDef } from './core/missions';
+import type { Mission } from './core/missions';
 import { measureObjective, missionGoal, type ObjectiveKind } from './core/objectives';
 import type { GameEvent, GameState, ObjectiveGoal, TeamId } from './core/model';
 import { nameOf, settings } from './settings';
@@ -58,14 +58,18 @@ export function markCompleted(id: string, days?: number): void {
   }
 }
 
+/** Las misiones de la campaña del juego, en orden (el contenido del juego: content/missions.json). */
+export const campaignMissions = (): readonly Mission[] => defaultContent().missions.list;
+
 /** Se puede jugar si es la primera o la anterior esta hecha. */
 export function missionUnlocked(index: number, done = completedMissions()): boolean {
-  return index === 0 || done.has(MISSIONS[index - 1]!.id) || done.has(MISSIONS[index]!.id);
+  const missions = campaignMissions();
+  return index === 0 || done.has(missions[index - 1]!.id) || done.has(missions[index]!.id);
 }
 
 /** La primera mision que queda por hacer y se puede jugar, o -1. */
 export function nextMissionIndex(done = completedMissions()): number {
-  return MISSIONS.findIndex((mission, index) => !done.has(mission.id) && missionUnlocked(index, done));
+  return campaignMissions().findIndex((mission, index) => !done.has(mission.id) && missionUnlocked(index, done));
 }
 
 const es = () => settings.lang === 'es';
@@ -95,7 +99,7 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<ObjectiveGoal,
 const NO_UNIT_UIDS: readonly number[] = [];
 
 /** El objetivo de la partida si la hay; si no, el de la mision; si no hay ninguna, conquistar la Base. */
-function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): ObjectiveGoal {
+function objectiveToDescribe(mission: Mission | null, content: GameContent, s?: GameState): ObjectiveGoal {
   const inGame = s?.mission?.objective;
   if (inGame) return inGame;
   if (mission) return missionGoal(mission.objective, NO_UNIT_UIDS, content);
@@ -112,7 +116,7 @@ function describeObjective(objective: ObjectiveGoal, content: GameContent): stri
  * Objetivo en una frase (para la pantalla de campaña y el panel de la partida). Con partida, con su
  * contenido; en el menu de campaña, antes de jugar, con el del juego.
  */
-export function objectiveText(mission: MissionDef | null, s?: GameState): string {
+export function objectiveText(mission: Mission | null, s?: GameState): string {
   const content = s?.content ?? defaultContent();
   return describeObjective(objectiveToDescribe(mission, content, s), content);
 }

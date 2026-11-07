@@ -134,7 +134,7 @@ function swapStarts(s: GameState): void {
 }
 
 function mission(config: MissionConfig, { content }: MatchSetupContext): GameState {
-  const found = missionById(config.mission);
+  const found = missionById(content, config.mission);
   if (!found) throw new Error(`No existe la mision "${config.mission}"`);
   return buildMission(found, content, matchSeedsFrom(config.seed));
 }

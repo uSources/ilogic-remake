@@ -30,7 +30,7 @@ export class TutorialTracker {
   /** Titulo, objetivo y, en el tutorial, el consejo del paso actual (null si no es una mision). */
   panel(s: GameState, phase: Phase): UIState['mission'] {
     const id = s.mission?.id;
-    const mission = id ? missionById(id) : undefined;
+    const mission = id ? missionById(s.content, id) : undefined;
     if (!mission) return null;
     let tip: string | null = null;
     let step: string | null = null;

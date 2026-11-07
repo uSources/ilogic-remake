@@ -8,7 +8,7 @@
  * regla 'objective' de rules/victory.ts).
  */
 
-import { entryOf, isEntryId, type GameContent } from './content';
+import { entryOf, isEntryId, type GameContent, type MissionObjective } from './content';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
 import type { GameState, Objective, ObjectiveGoal, ObjectiveStatus, Pos, TeamId } from './model';
@@ -16,18 +16,6 @@ import { isHostile } from './teams';
 import { samePos } from './geom';
 import { Grid, type GridBounds } from './util/grid';
 import { isOnMap } from './util/predicates';
-
-/** Nombre interno de un edificio (buildings.json). */
-type BuildingName = string;
-
-/** El objetivo tal como se escribe en una mision: por nombre de edificio y por indice de unidad. */
-export type MissionObjective =
-  | { kind: 'hq' }
-  | { kind: 'survive'; days: number }
-  | { kind: 'capture'; count: number; type: BuildingName | null; days: number }
-  | { kind: 'destroy'; days: number }
-  /** `vip` es el indice en `units` de la mision de la unidad a escoltar. */
-  | { kind: 'escort'; vip: number; to: Pos; days: number };
 
 export type ObjectiveKind = Objective['kind'];
 

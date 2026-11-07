@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import buildingsFile from '@core/content/buildings.json';
 import unitsFile from '@core/content/units.json';
+import missionsFile from '@core/content/missions.json';
 import { entryOf, findEntry, loadContent, validateContent, type Content, MOVEMENTS, MoveType } from '@core/content';
 import { canMoveOn, terrainMoveCost } from '@core/rules';
 import { defaultContent } from '@core/content/default';
@@ -48,6 +49,7 @@ describe('contenido (src/core/content/*.json)', () => {
   it('los JSON apuntan a su esquema', () => {
     expect(unitsFile.$schema).toBe('./units.schema.json');
     expect(buildingsFile.$schema).toBe('./buildings.schema.json');
+    expect(missionsFile.$schema).toBe('./missions.schema.json');
   });
 
   it('explica lo que esta mal', () => {

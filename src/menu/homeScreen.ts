@@ -4,11 +4,10 @@
  */
 import type { TerrainPalette } from '../ui/terrainColors';
 import type { MenuCommand } from '../controls/menu';
-import { MISSIONS } from '../core/missions';
 import { mapGrid } from '../core/mapGrid';
 import { playerTeam, teamState } from '../core/teams';
 import type { GameState } from '../core/model';
-import { completedMissions, missionUnlocked, nextMissionIndex } from '../campaign';
+import { campaignMissions, completedMissions, missionUnlocked, nextMissionIndex } from '../campaign';
 import { ui, type MarkVM, type UIActions } from '../hud/store';
 import { WEB_URL } from '../layout';
 import { openNotes } from '../patchNotes';
@@ -38,7 +37,7 @@ const FOOTER_ROW: HomeCard[] = ['news', 'help', 'options', 'credits', 'web'];
 
 /** Como se ve cada mision en la tarjeta de la campaña: hecha, abierta o cerrada. */
 function missionMarks(done: Set<string>): MarkVM[] {
-  return MISSIONS.map((mission, index) => {
+  return campaignMissions().map((mission, index) => {
     if (done.has(mission.id)) return 'done';
     return missionUnlocked(index, done) ? 'open' : 'locked';
   });
@@ -99,7 +98,9 @@ export class HomeScreen {
     const save = this.host.save;
     if (!save) return null;
     const savedMission = save.mission;
-    const mission = savedMission ? (MISSIONS.find((candidate) => candidate.id === savedMission.id)?.title[settings.lang] ?? null) : null;
+    const mission = savedMission
+      ? (campaignMissions().find((candidate) => candidate.id === savedMission.id)?.title[settings.lang] ?? null)
+      : null;
     return {
       thumb: mapThumb(save, this.host.palette, { units: 'own' }),
       day: save.day,
@@ -114,10 +115,10 @@ export class HomeScreen {
     const done = completedMissions();
     const marks = missionMarks(done);
     const nextIndex = nextMissionIndex(done);
-    const next = nextIndex >= 0 ? MISSIONS[nextIndex]! : null;
+    const next = nextIndex >= 0 ? campaignMissions()[nextIndex]! : null;
     return {
       done: marks.filter((mark) => mark === 'done').length,
-      total: MISSIONS.length,
+      total: campaignMissions().length,
       next: next ? `${nextIndex + 1}. ${next.title[settings.lang]}` : null,
       thumb: next ? this.host.missionThumb(nextIndex) : null,
       marks,

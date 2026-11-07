@@ -7,7 +7,7 @@ import { defaultContent } from '../core/content/default';
 import { settingsWith } from '../core/matchSettings';
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
-import type { MissionDef } from '../core/missions';
+import type { Mission } from '../core/missions';
 import { loadGame } from '../core/defaultGames';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
@@ -71,7 +71,7 @@ export class MenuScene extends Phaser.Scene {
       palette: { get: () => this.palette },
       leaving: { get: () => this.leaving },
       toHome: () => this.toHome(),
-      startMission: (mission: MissionDef) => this.startMission(mission),
+      startMission: (mission: Mission) => this.startMission(mission),
     }),
   );
 
@@ -201,7 +201,7 @@ export class MenuScene extends Phaser.Scene {
     this.scene.start('Game', { start: 'new', match: matchConfigFor(this.setup.options, seed) } satisfies GameStartData);
   }
 
-  private startMission(mission: MissionDef): void {
+  private startMission(mission: Mission): void {
     this.leaving = true;
     this.scene.start('Game', {
       start: 'new',

@@ -111,7 +111,7 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('mision: si su dueño falla el objetivo, ganan sus enemigos', () => {
-    const s = buildMission(missionById('bridgehead')!, defaultContent(), BLANK_SEEDS);
+    const s = buildMission(missionById(defaultContent(), 'bridgehead')!, defaultContent(), BLANK_SEEDS);
     const objective = s.mission!.objective;
     if (objective.kind !== 'capture') throw new Error('bridgehead es de capturar');
     s.day = objective.days + 1;

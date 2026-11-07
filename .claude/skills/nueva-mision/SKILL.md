@@ -5,9 +5,11 @@ description: Use when adding or editing a campaign mission in Ilogic (map, units
 
 # Añadir una mision
 
-Las misiones estan en `src/core/missions.ts` (se escriben en `MISSION_DEFS`; `MISSIONS` es esa lista
-congelada, en orden: cada una se desbloquea al pasar la anterior). Una mision es un `MissionDef` (de
-solo lectura):
+Las misiones son contenido: `src/core/content/missions.json` (con su esquema, `missions.schema.json`,
+para el editor), en el orden de la campaña: cada una se desbloquea al pasar la anterior. Al cargar el
+contenido se comprueba lo que dice el fichero (content/missions.ts: ids, textos, tema, tipos, equipos);
+el juego las lee del contenido (`content.missions`, `missionById(contenido, id)`; la lista de la campaña,
+`campaignMissions()` en src/campaign.ts). Una mision es un `MissionDef` (de solo lectura, `Mission`):
 
 - `id` (unico, no cambiarlo despues: el progreso guardado lo usa), `title` y `brief` en `{ es, en }`.
 - `theme`: id de un tema de `src/core/content/themes.json` (`'Plains'`, `'Desert'`, `'Forest'`,
@@ -15,7 +17,7 @@ solo lectura):
 - `map`: lineas de texto, cuadrado. Las letras que dependen del tema las da su `mapLetters`
   (themes.json: `.` suelo, `T` bosque, `M` montaña/acantilado, `*` decorado); las demas, el
   `mapLetter` de cada terreno (terrain.json: `~` agua, `,` poco profunda, `=` profunda, `i` hielo,
-  `P` pinos nevados, `N` roca nevada). Lo resuelve `terrainOf` (src/core/missions.ts).
+  `P` pinos nevados, `N` roca nevada). Lo resuelve `terrainOf` (src/core/missions/build.ts).
 - `teams`: los equipos en orden, `{ controller: 'human' | 'ai', funds, alliance? }`; su puesto es el
   numero de equipo de `buildings` y `units`. Hoy las misiones son una persona (el 0) contra la IA.
 - `buildings`: `[tipo, dueño (numero de equipo o null neutral), x, y]`. Cada equipo necesita su `Base`.
@@ -33,7 +35,9 @@ solo lectura):
   se juega, sus combates tiran con la semilla que da quien la empieza (`GameState.dice`).
 
 Comprobar:
-1. `npx vitest run tests/missions.test.ts`: mapa valido, bases conectadas, guardar/cargar.
+1. `npx vitest run tests/missions.test.ts`: el fichero valido, el mapa (`checkMission`,
+   src/core/missions/check.ts: edificios sobre suelo, unidades donde pueden estar, una Base por
+   equipo, el objetivo en su sitio), bases conectadas, guardar/cargar.
 2. Jugarla por texto: `npm run play -- --mission <id>` (o `-e "map; ai; ai; status"` para ver a la IA).
 3. En el navegador: `window.ilogicDebug.startGame({ mission: '<id>' })` y añadir una escena en
    `tests/visual/shots.mjs` si es importante que no cambie.

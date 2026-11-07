@@ -126,7 +126,7 @@ function gameMenuModel(input: MenuInput): MenuModel {
   const dayLimit = s.settings.dayLimit ? ` / ${s.settings.dayLimit}` : '';
   // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
   const subtitle = s.setup ? `${t('mapCode')}: ${seedToCode(s.setup.seed)} · ${s.setup.size}×${s.setup.size}` : undefined;
-  const mission = s.mission ? missionById(s.mission.id) : undefined;
+  const mission = s.mission ? missionById(s.content, s.mission.id) : undefined;
   const info = mission ? [`${mission.title[settings.lang]}: ${objectiveText(mission, s)}`] : undefined;
   return { kind: 'game', title: `${t('day')} ${s.day}${dayLimit}`, subtitle, info, items, at: input.cursor };
 }

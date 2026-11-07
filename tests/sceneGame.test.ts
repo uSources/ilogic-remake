@@ -1,4 +1,5 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
+import { defaultContent } from '@core/content/default';
 import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
 import { mergeTargets, loadTargets, moveRange, outcomeFor } from '@core/rules';
@@ -25,7 +26,6 @@ import { GameMenuChoices, gameMenuOf, PHASES, quitWhileWatching, watchesOthers, 
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
-import { MISSIONS } from '@core/missions';
 import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 import { labControllers, viewerOf } from '../src/scenes/game/matchSetup';
@@ -171,6 +171,7 @@ describe('escena: linea de ayuda (game/hudParts.ts)', () => {
 
 describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   it('botones: en una mision ganada, la siguiente si la hay; si no es mision, revancha', () => {
+    const MISSIONS = defaultContent().missions.list;
     expect(endButtonsFor(MISSIONS[0], 'won')).toEqual(['next', 'retry', 'menu']);
     expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], 'won')).toEqual(['retry', 'menu']);
     expect(endButtonsFor(MISSIONS[0], 'lost')).toEqual(['retry', 'menu']);

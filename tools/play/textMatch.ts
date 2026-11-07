@@ -407,7 +407,7 @@ function checkedGeneral(id: string | undefined): string | null {
  */
 function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
   if (options.mission) {
-    if (!missionById(options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
+    if (!missionById(defaultContent(), options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
     return { mode: 'mission', mission: options.mission, seed };
   }
   return skirmishConfig({

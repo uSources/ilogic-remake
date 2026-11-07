@@ -5,9 +5,9 @@
 import type { TerrainPalette } from '../ui/terrainColors';
 import { listStep, type MenuCommand } from '../controls/menu';
 import { createMatch } from '../core/defaultGames';
-import { MISSIONS, type MissionDef } from '../core/missions';
+import type { Mission } from '../core/missions';
 import type { ObjectiveKind } from '../core/objectives';
-import { bestDays, completedMissions, missionUnlocked, nextMissionIndex, objectiveText } from '../campaign';
+import { bestDays, campaignMissions, completedMissions, missionUnlocked, nextMissionIndex, objectiveText } from '../campaign';
 import { ui, type CampaignItemVM, type UIActions } from '../hud/store';
 import { settings, t, type TextKey } from '../settings';
 import { mapThumb } from './thumb';
@@ -17,7 +17,7 @@ export interface CampaignHost {
   /** Ya se esta saliendo del menu: no empezar otra mision. */
   readonly leaving: boolean;
   toHome(): void;
-  startMission(mission: MissionDef): void;
+  startMission(mission: Mission): void;
 }
 
 /** Nombre corto del tipo de objetivo, para la lista. */
@@ -61,7 +61,7 @@ export class CampaignScreen {
   missionThumb(index: number): string {
     const cached = this.thumbs.get(index);
     if (cached) return cached;
-    const s = createMatch({ mode: 'mission', mission: MISSIONS[index]!.id, seed: THUMB_SEED });
+    const s = createMatch({ mode: 'mission', mission: campaignMissions()[index]!.id, seed: THUMB_SEED });
     const thumb = mapThumb(s, this.host.palette, { units: true, px: MISSION_THUMB_PX });
     this.thumbs.set(index, thumb);
     return thumb;
@@ -78,7 +78,7 @@ export class CampaignScreen {
   publish(): void {
     const done = completedMissions();
     const lang = settings.lang;
-    const items: CampaignItemVM[] = MISSIONS.map((mission, index) => ({
+    const items: CampaignItemVM[] = campaignMissions().map((mission, index) => ({
       id: mission.id,
       title: mission.title[lang],
       status: done.has(mission.id) ? 'done' : missionUnlocked(index, done) ? 'open' : 'locked',
@@ -86,14 +86,14 @@ export class CampaignScreen {
       kind: t(OBJECTIVE_KIND_LABEL[mission.objective.kind]),
       best: bestDays(mission.id),
     }));
-    const selected = MISSIONS[this.selected]!;
+    const selected = campaignMissions()[this.selected]!;
     ui.set({ campaign: { items, selected: this.selected, brief: selected.brief[lang], objective: objectiveText(selected) } });
   }
 
   command(command: MenuCommand): void {
     const step = listStep(command);
     if (step) {
-      this.selected = (this.selected + step + MISSIONS.length) % MISSIONS.length;
+      this.selected = (this.selected + step + campaignMissions().length) % campaignMissions().length;
       return this.publish();
     }
     if (command.kind === 'ok' && !command.repeat) return this.startSelected();
@@ -102,6 +102,6 @@ export class CampaignScreen {
 
   private startSelected(): void {
     if (this.host.leaving || !missionUnlocked(this.selected)) return this.publish();
-    this.host.startMission(MISSIONS[this.selected]!);
+    this.host.startMission(campaignMissions()[this.selected]!);
   }
 }

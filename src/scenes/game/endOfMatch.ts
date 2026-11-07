@@ -6,12 +6,12 @@ import type Phaser from 'phaser';
 import { isHq } from '../../core/gameContent';
 import { mapGrid } from '../../core/mapGrid';
 import { rematchOf } from '../../core/match';
-import { missionById, MISSIONS, type MissionDef } from '../../core/missions';
+import { missionById, type Mission } from '../../core/missions';
 import { decidingFall, isDefeatReason, isWinner, outcomeFor } from '../../core/rules';
 import { enemiesOf } from '../../core/teams';
 import type { DefeatReason, EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
 import type { PersonEnd } from '../../core/session';
-import { bestDays, markCompleted } from '../../campaign';
+import { bestDays, campaignMissions, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
 import { ui, type EndOutcome } from '../../hud/store';
 import { TILE } from '../../layout';
@@ -48,7 +48,10 @@ export function setEndFilter(filter: string | null): void {
 }
 
 /** Mision que va detras de esta (ninguna si es la ultima). */
-const nextMission = (mission: MissionDef): MissionDef | undefined => MISSIONS[MISSIONS.indexOf(mission) + 1];
+const nextMission = (mission: Mission): Mission | undefined => {
+  const missions = campaignMissions();
+  return missions[missions.findIndex((candidate) => candidate.id === mission.id) + 1];
+};
 
 /**
  * Como acaba para esta pantalla: lo que ve el que mira (ganada, perdida o empate), por que y, si lo
@@ -94,7 +97,7 @@ export function endViewer(result: MatchResult, viewer: TeamId, people: readonly 
 }
 
 /** Botones del final: en una mision, siguiente (si se gana y la hay), repetir y menu; si no, revancha, nueva y menu. */
-export function endButtonsFor(mission: MissionDef | undefined, outcome: EndOutcome): EndButton[] {
+export function endButtonsFor(mission: Mission | undefined, outcome: EndOutcome): EndButton[] {
   if (!mission) return ['rematch', 'new', 'menu'];
   if (outcome !== 'won') return ['retry', 'menu'];
   return nextMission(mission) ? ['next', 'retry', 'menu'] : ['retry', 'menu'];
@@ -158,7 +161,7 @@ export class EndOfMatch {
     const { outcome, reason } = end;
     const won = outcome === 'won';
     host.closeMatch();
-    const mission = s.mission ? missionById(s.mission.id) : undefined;
+    const mission = s.mission ? missionById(s.content, s.mission.id) : undefined;
     const bestBefore = mission ? bestDays(mission.id) : null;
     if (mission && won) markCompleted(mission.id, s.day);
     host.refresh();
@@ -209,7 +212,7 @@ export class EndOfMatch {
   }
 
   /** La pantalla del final, con el resumen y sus botones. */
-  private showEndScreen(end: ScreenEnd, mission: MissionDef | undefined, bestBefore: number | null): void {
+  private showEndScreen(end: ScreenEnd, mission: Mission | undefined, bestBefore: number | null): void {
     const { outcome } = end;
     const s = this.host.state;
     const won = outcome === 'won';
@@ -269,7 +272,7 @@ export class EndOfMatch {
     ui.set({ end: null });
     const s = this.host.state;
     const scenes = this.host.scene.scene;
-    const mission = s.mission ? missionById(s.mission.id) : undefined;
+    const mission = s.mission ? missionById(s.content, s.mission.id) : undefined;
     const rematch = rematchOf(s);
     const sameGame: GameStartData | undefined = rematch ? { start: 'new', match: rematch } : undefined;
     switch (id) {
@@ -290,7 +293,7 @@ export class EndOfMatch {
 }
 
 /** Empezar una mision (cada vez con otros dados). */
-const missionStart = (mission: MissionDef): GameStartData => ({
+const missionStart = (mission: Mission): GameStartData => ({
   start: 'new',
   match: { mode: 'mission', mission: mission.id, seed: randomSeed() },
 });

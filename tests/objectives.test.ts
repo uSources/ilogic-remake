@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { objectiveStatusText, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
 import { defaultContent } from '@core/content/default';
-import { buildMission, MISSIONS } from '@core/missions';
+import { buildMission } from '@core/missions';
 import { isValidObjective, measureObjective, objectiveStatus } from '@core/objectives';
 import { isDefeated, objectiveProgress } from '@core/rules';
 import { teamIds } from '@core/teams';
@@ -10,13 +10,16 @@ import { mapGrid } from '@core/mapGrid';
 import type { GameState } from '@core/model';
 import { BLANK_SEEDS, resultFor } from './helpers';
 
+/** Las misiones de la campaña (las del contenido del juego). */
+const MISSIONS = defaultContent().missions.list;
+
 afterEach(() => {
   settings.lang = 'es';
 });
 
 /** Partidas de cada mision en momentos distintos: al empezar, al acabar el plazo, sin enemigos, con todo capturado... */
 function statesOf(id: string): GameState[] {
-  const mission = MISSIONS.find((candidate) => candidate.id === id)!;
+  const mission = defaultContent().missions.byId[id]!;
   const fresh = () => buildMission(mission, defaultContent(), BLANK_SEEDS);
   const lastDay = (s: GameState) => ('days' in s.mission!.objective ? s.mission!.objective.days : 20);
   const states: GameState[] = [];

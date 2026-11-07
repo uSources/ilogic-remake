@@ -1,11 +1,11 @@
 import { matchSeedsFrom } from '@core/util/random';
-import { MoveType } from '@core/content';
+import { loadContent, MoveType, readContentFiles } from '@core/content';
 import { changeSettings } from '@core/gameState';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { buildMission, checkMission, missionSettings, MISSIONS } from '@core/missions';
+import { buildMission, checkMission, missionSettings } from '@core/missions';
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_SEEDS = matchSeedsFrom(1);
@@ -16,6 +16,8 @@ import { deserialize, serialize } from '@core/save';
 import { hqId, resultFor } from './helpers';
 
 const HQ = hqId();
+/** Las misiones de la campaña: las del contenido del juego (content/missions.json). */
+const MISSIONS = defaultContent().missions.list;
 
 describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: mapa valido y bases conectadas', (_id, mission) => {
@@ -116,7 +118,7 @@ describe('misiones', () => {
   );
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
-    const byId = (id: string) => MISSIONS.find((mission) => mission.id === id)!;
+    const byId = (id: string) => defaultContent().missions.byId[id]!;
     const hold = buildMission(byId('hold'), defaultContent(), MISSION_SEEDS);
     hold.day = 9;
     expect(resultFor(hold, 0)).toBe('won');
@@ -141,5 +143,21 @@ describe('misiones', () => {
     expect(resultFor(es, 0)).toBe('won');
     es.units = es.units.filter((unit) => unit.uid !== objective.uid);
     expect(resultFor(es, 0)).toBe('lost');
+  });
+
+  it('son contenido: missions.json se comprueba al cargarlo', () => {
+    const withMission = (change: (mission: Record<string, unknown>) => void) => {
+      const files = readContentFiles();
+      const missions = structuredClone(files.missions) as unknown as Record<string, unknown>[];
+      change(missions[0]!);
+      return () => loadContent({ ...files, missions: missions as unknown as typeof files.missions });
+    };
+    expect(withMission(() => {})).not.toThrow();
+    expect(withMission((mission) => (mission.theme = 'Luna'))).toThrow(/tema "Luna"/);
+    expect(withMission((mission) => (mission.units = [['Dragon', 0, 1, 1]]))).toThrow(/unidad "Dragon"/);
+    expect(withMission((mission) => (mission.buildings = [['Base', 7, 1, 1]]))).toThrow(/no esta en "teams"/);
+    expect(withMission((mission) => (mission.teams = [{ controller: 'human', funds: 0 }]))).toThrow(/al menos dos equipos/);
+    expect(withMission((mission) => (mission.objective = {}))).toThrow(/objective/);
+    expect(withMission((mission) => (mission.id = 'bridgehead'))).toThrow(/repetido/);
   });
 });
