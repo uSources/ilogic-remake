@@ -125,6 +125,17 @@ export class GameSession {
   }
 
   /**
+   * Quien decidia fuera deja lo que queda de su turno a otro controlador (la persona le pide a la IA
+   * que juegue por ella): la sesion lo juega como el de cualquiera, con la vista de su equipo, y al
+   * acabar pasa el turno. Solo si se le esperaba.
+   */
+  handOver(team: TeamId, controller: Controller): void {
+    if (this.awaiting !== team) throw new Error(`El equipo ${team} no esta decidiendo: no puede dejar su turno a otro`);
+    this.awaiting = null;
+    this.current = this.turnInPlay(team, controller);
+  }
+
+  /**
    * El siguiente paso: empezar el turno de quien le toca, lo siguiente que haga su controlador o
    * acabar su turno. Para (sin hacer nada) si se espera a alguien de fuera o si la partida ha acabado.
    */
@@ -159,11 +170,14 @@ export class GameSession {
 
   /** El turno en curso del controlador del equipo (lo empieza si aun no lo tenia). */
   private turnOf(team: TeamId): TurnInPlay {
-    if (this.current?.team !== team) {
-      const view = playerView(this.state, team);
-      this.current = { team, view, plan: this.controllerOf(team).playTurn(view), reply: undefined };
-    }
+    if (this.current?.team !== team) this.current = this.turnInPlay(team, this.controllerOf(team));
     return this.current;
+  }
+
+  /** El turno de `team` que empieza a jugar `controller`, con la vista de su equipo. */
+  private turnInPlay(team: TeamId, controller: Controller): TurnInPlay {
+    const view = playerView(this.state, team);
+    return { team, view, plan: controller.playTurn(view), reply: undefined };
   }
 
   /**

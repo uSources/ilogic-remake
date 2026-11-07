@@ -449,8 +449,10 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   (`Generator<GameAction, R, ActionResult>`, model/actions.ts): cada paso propone una accion
   (`act`, `doMove`, `finish` en `autopilot/context.ts`) y recibe lo que ha dicho la partida; no
   manda nada. La sesion lo cumple como lo de cualquier controlador (`proposing`, 'propose'); fuera
-  de una sesion (el paso de fin de turno, la prevision, la escena al dar una orden, la partida por
-  texto, los tests) se cumple con `carryOut(plan, enviar)` (actions/plan.ts). Asi todo lo que hace
+  de una sesion (el paso de fin de turno, la prevision, la escena al dar una orden, los tests) se
+  cumple con `carryOut(plan, enviar)` (actions/plan.ts). Cuando una persona pide que la IA juegue su
+  turno (`ia` en la partida por texto), se lo deja a la sesion (`GameSession.handOver(equipo,
+  aiController())`), que lo juega como el de cualquier equipo de la IA, con su perfil. Asi todo lo que hace
   la IA pasa por `dispatch` con las mismas comprobaciones que lo de una persona, queda en el
   registro de la sesion y se puede repetir o mandar por la red.
 - **Lo que sabe su equipo**: decide con la `PlayerView` que le da la sesion (`playerView.ts`): la

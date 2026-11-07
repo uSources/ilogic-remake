@@ -5,9 +5,6 @@
  * al terminar el turno, en orden. La partida se juega con la misma sesion que la pantalla (GameSession):
  * lo que pasa solo al acabar y empezar cada turno, igual.
  */
-import { aiTurn, defaultAiProfile } from '@core/ai';
-import { carryOut } from '@core/actions';
-import { decisionRngOf, playerView, seeing } from '@core/playerView';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
@@ -35,7 +32,7 @@ import {
   buildingsOf,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import { screenControllers } from '@core/controllers';
+import { aiController, screenControllers } from '@core/controllers';
 import { GameSession, personStillPlays, runMatch, screenEnd, type ActedStep } from '@core/session';
 import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
@@ -86,6 +83,8 @@ export class TextMatch {
   private told: string[] = [];
   /** Los sucesos del ultimo fin de ronda (para contar lo cobrado). */
   private lastRound: GameEvent[] = [];
+  /** La IA esta jugando el turno de la persona (orden `ai`): lo que hace se cuenta como suyo. */
+  private aiPlaysForMe = false;
 
   /** Los demas equipos, en orden. */
   private get others(): TeamId[] {
@@ -105,7 +104,9 @@ export class TextMatch {
   /** Apunta lo que pasa: los sucesos que se cuentan (con quien los hace) y lo del fin de ronda. */
   private note(step: ActedStep): void {
     if (step.events.some((event) => event.kind === 'newDay')) this.lastRound = step.events;
-    const prefix = step.team === this.me ? 'tu: ' : `equipo ${shownTeamNumber(step.team)}: `;
+    // Lo que pasa al acabar el turno ya no es de la IA que jugaba por ti (como cuando lo acabas tu).
+    if (step.action.kind === 'endTurn') this.aiPlaysForMe = false;
+    const prefix = step.team !== this.me ? `equipo ${shownTeamNumber(step.team)}: ` : this.aiPlaysForMe ? 'tu IA: ' : 'tu: ';
     this.told.push(...describeAll(this.s, step.events, prefix));
   }
 
@@ -323,12 +324,12 @@ export class TextMatch {
    */
   private endTurn(aiForMe: boolean): string {
     const before = this.me;
-    const out = aiForMe ? this.playMyTurnWithAi() : [];
     this.told = [];
     this.lastRound = [];
-    this.session.finishInput(before);
+    if (aiForMe) this.handTurnToAi();
+    else this.session.finishInput(before);
     this.advance();
-    out.push(...this.told);
+    const out = [...this.told];
     out.push(this.dayLine(before));
     if (this.me !== before) out.push(`--- turno del equipo ${shownTeamNumber(this.me)}`);
     const result = this.result();
@@ -344,16 +345,14 @@ export class TextMatch {
     return `--- dia ${this.s.day}: +${income} de ingresos, ${funds}`;
   }
 
-  /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
-  private playMyTurnWithAi(): string[] {
-    return describeAll(this.s, this.aiPlaysMyTurn(), 'tu IA: ');
-  }
-
-  /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
-  private aiPlaysMyTurn(): GameEvent[] {
-    const view = playerView(this.s, this.me);
-    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), decisionRngOf(view)));
-    return carryOut(plan, (action) => this.session.act(this.me, action)).events;
+  /**
+   * La IA juega lo que queda de tu turno: se lo dejas a la sesion (`handOver`), que lo juega como el
+   * de cualquier equipo de la IA (su perfil, su vista; sus acciones quedan apuntadas como tuyas) y
+   * despues pasa el turno.
+   */
+  private handTurnToAi(): void {
+    this.aiPlaysForMe = true;
+    this.session.handOver(this.me, aiController());
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */

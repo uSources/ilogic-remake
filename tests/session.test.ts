@@ -402,6 +402,26 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
   });
 
+  it('handOver: la persona deja su turno a otro controlador; la sesion lo juega y pasa el turno', () => {
+    const s = blankState();
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    const { session, steps } = personVsAi(s);
+    expect(() => session.handOver(0, aiController())).toThrow(/no esta decidiendo/);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    const waits = planning(function* () {
+      yield { kind: 'wait', uid: soldier.uid };
+    });
+    session.handOver(0, waits);
+    expect(session.awaitingInput).toBeNull();
+    steps.length = 0;
+    runMatch(session, { until: (state) => state.turn !== 0 });
+    expect(steps.map((step) => [step.team, step.action.kind])).toEqual([
+      [0, 'wait'],
+      [0, 'endTurn'],
+    ]);
+    expect(session.log.at(-2)).toEqual({ team: 0, action: { kind: 'wait', uid: soldier.uid } });
+  });
+
   it('el dispatcher de la sesion solo vale para su partida (no para simular en una copia)', () => {
     const s = blankState();
     const session = new GameSession(s, [humanController(), passiveController()]);
