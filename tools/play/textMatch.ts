@@ -119,80 +119,66 @@ export class TextMatch {
     if (step.kind === 'awaitingInput') this.me = step.team;
   }
 
+  /** Las ordenes, en ingles y en español; `plays`: juega (no vale con la partida acabada para esta pantalla). */
+  private static readonly COMMANDS: readonly TextCommand[] = [
+    { names: ['', '#'], plays: false, run: () => '' },
+    { names: ['help', 'ayuda'], plays: false, run: () => HELP },
+    { names: ['map', 'mapa'], plays: false, run: (match) => match.map() },
+    {
+      names: ['units', 'unidades'],
+      plays: false,
+      run: (match, words) => match.units(words.list[0] === undefined ? null : words.numberAt(0)),
+    },
+    { names: ['unit', 'unidad'], plays: false, run: (match, words) => match.unitInfo(match.mine(words.numberAt(0), false)) },
+    { names: ['move', 'mover'], plays: true, run: (match, words) => match.move(match.mine(words.numberAt(0)), words.posAt(1)) },
+    { names: ['attack', 'atacar'], plays: true, run: (match, words) => match.attack(match.mine(words.numberAt(0)), words.posAt(1)) },
+    { names: ['capture', 'capturar'], plays: true, run: (match, words) => match.capture(match.mine(words.numberAt(0))) },
+    {
+      names: ['wait', 'esperar'],
+      plays: true,
+      run: (match, words) => {
+        match.perform({ kind: 'wait', uid: match.mine(words.numberAt(0)).uid }, 'no puede esperar');
+        return 'ok';
+      },
+    },
+    { names: ['buy', 'comprar'], plays: true, run: (match, words) => match.buy(words.posAt(0), words.list[2] ?? '') },
+    {
+      names: ['power', 'poder'],
+      plays: true,
+      run: (match, words) => match.power(words.list[0] ?? '', words.list[1] === undefined ? null : words.posAt(1)),
+    },
+    { names: ['end', 'fin'], plays: true, run: (match) => match.endTurn(false) },
+    { names: ['ai', 'ia'], plays: true, run: (match) => match.endTurn(true) },
+    { names: ['surrender', 'rendirse'], plays: true, run: (match) => match.surrender() },
+    { names: ['status', 'estado'], plays: false, run: (match) => match.status() },
+    { names: ['state', 'json'], plays: false, run: (match) => serialize(match.s) },
+  ];
+
+  private static readonly COMMAND_BY_NAME: ReadonlyMap<string, TextCommand> = new Map(
+    TextMatch.COMMANDS.flatMap((command) => command.names.map((name) => [name, command] as const)),
+  );
+
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
   run(line: string): string {
-    const [command = '', ...words] = line.trim().split(/\s+/);
-    const numberAt = (position: number) => {
-      const value = Number(words[position]);
-      if (!Number.isInteger(value)) throw new UsageError(`falta un numero en la posicion ${position + 1}`);
-      return value;
-    };
+    const [name = '', ...words] = line.trim().split(/\s+/);
     try {
-      const verb = command.toLowerCase();
+      const command = TextMatch.COMMAND_BY_NAME.get(name.toLowerCase());
+      if (!command) return `error: orden desconocida "${name}" (help para ver las ordenes)`;
       // Acabada para esta pantalla, solo se mira: nada de seguir jugando (ni de exportar mas jugadas).
-      if (PLAY_COMMANDS.has(verb) && screenEnd(this.session, this.me)) return `error: la partida ha acabado (${this.result()})`;
-      switch (verb) {
-        case '':
-        case '#':
-          return '';
-        case 'help':
-        case 'ayuda':
-          return HELP;
-        case 'map':
-        case 'mapa':
-          return this.map();
-        case 'units':
-        case 'unidades':
-          return this.units(words[0] === undefined ? null : numberAt(0));
-        case 'unit':
-        case 'unidad':
-          return this.unitInfo(this.mine(numberAt(0), false));
-        case 'move':
-        case 'mover':
-          return this.move(this.mine(numberAt(0)), { x: numberAt(1), y: numberAt(2) });
-        case 'attack':
-        case 'atacar':
-          return this.attack(this.mine(numberAt(0)), { x: numberAt(1), y: numberAt(2) });
-        case 'capture':
-        case 'capturar':
-          return this.capture(this.mine(numberAt(0)));
-        case 'wait':
-        case 'esperar':
-          this.perform({ kind: 'wait', uid: this.mine(numberAt(0)).uid }, 'no puede esperar');
-          return 'ok';
-        case 'buy':
-        case 'comprar':
-          return this.buy({ x: numberAt(0), y: numberAt(1) }, words[2] ?? '');
-        case 'power':
-        case 'poder':
-          return this.power(words[0] ?? '', words[1] === undefined ? null : { x: numberAt(1), y: numberAt(2) });
-        case 'end':
-        case 'fin':
-          return this.endTurn(false);
-        case 'ai':
-        case 'ia':
-          return this.endTurn(true);
-        case 'surrender':
-        case 'rendirse': {
-          // Lo que cuenta rendirse (tu caida), y despues lo que pase al seguir los demas.
-          this.told = [];
-          this.perform({ kind: 'surrender' }, 'no puede rendirse');
-          const said = this.told;
-          return [...said, this.endTurn(false)].join('\n');
-        }
-        case 'status':
-        case 'estado':
-          return this.status();
-        case 'state':
-        case 'json':
-          return serialize(this.s);
-        default:
-          return `error: orden desconocida "${command}" (help para ver las ordenes)`;
-      }
+      if (command.plays && screenEnd(this.session, this.me)) return `error: la partida ha acabado (${this.result()})`;
+      return command.run(this, commandWords(words));
     } catch (error) {
       if (error instanceof UsageError) return `error: ${error.message}`;
       throw error;
     }
+  }
+
+  /** Rendirse: lo que cuenta (tu caida) y despues lo que pase al seguir los demas. */
+  private surrender(): string {
+    this.told = [];
+    this.perform({ kind: 'surrender' }, 'no puede rendirse');
+    const said = this.told;
+    return [...said, this.endTurn(false)].join('\n');
   }
 
   private mine(uid: number, needActive = true): Unit {
@@ -209,8 +195,7 @@ export class TextMatch {
     const s = this.s;
     const vis = visibility(s, this.me);
     const map = mapGrid(s);
-    const width = map.width,
-      height = map.height;
+    const { width, height } = map;
     const head = '    ' + Array.from({ length: width }, (_, x) => String(x % 10).padStart(3)).join('');
     const rows = [head];
     for (let y = 0; y < height; y++) {
@@ -386,6 +371,30 @@ export class TextMatch {
 
 class UsageError extends Error {}
 
+/** Las palabras que siguen a una orden y como leer de ellas un numero o una casilla. */
+interface CommandWords {
+  list: readonly string[];
+  numberAt(position: number): number;
+  /** La casilla de las palabras `position` (x) y la siguiente (y). */
+  posAt(position: number): Pos;
+}
+
+function commandWords(list: readonly string[]): CommandWords {
+  const numberAt = (position: number) => {
+    const value = Number(list[position]);
+    if (!Number.isInteger(value)) throw new UsageError(`falta un numero en la posicion ${position + 1}`);
+    return value;
+  };
+  return { list, numberAt, posAt: (position) => ({ x: numberAt(position), y: numberAt(position + 1) }) };
+}
+
+/** Una orden de la partida por texto: sus nombres, si juega y lo que hace. */
+interface TextCommand {
+  names: readonly string[];
+  plays: boolean;
+  run(match: TextMatch, words: CommandWords): string;
+}
+
 /** La partida guardada (si no es valida, para aqui). */
 function loadedGame(json: string): GameState {
   const s = loadGame(json);
@@ -434,28 +443,6 @@ function describeAll(s: GameState, events: Iterable<GameEvent>, prefix: string):
   }
   return lines;
 }
-
-/** Las ordenes que juegan (las demas solo miran: mapa, unidades, estado, la partida en JSON). */
-const PLAY_COMMANDS: ReadonlySet<string> = new Set([
-  'move',
-  'mover',
-  'attack',
-  'atacar',
-  'capture',
-  'capturar',
-  'wait',
-  'esperar',
-  'buy',
-  'comprar',
-  'power',
-  'poder',
-  'end',
-  'fin',
-  'ai',
-  'ia',
-  'surrender',
-  'rendirse',
-]);
 
 /** Como ha acabado para ti, en una palabra. */
 const OUTCOME_TEXT: Record<MatchOutcome, string> = { won: 'ganada', lost: 'perdida', draw: 'empate' };
