@@ -19,4 +19,7 @@ export const median = (values: readonly number[]): number => quantile(values, 0.
 
 export const roundTo = (value: number, step: number): number => Math.round(value / step) * step;
 
+/** Redondeado a una decimal (para enseñarlo: 12.34 → 12.3). */
+export const toTenths = (value: number): number => Math.round(value * 10) / 10;
+
 export const pct = (fraction: number): string => `${Math.round(fraction * 100)} %`;

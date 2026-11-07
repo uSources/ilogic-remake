@@ -12,11 +12,11 @@
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { buildReport, DEFAULT_TARGETS, type Report } from '../balance/report';
+import { buildReport, decidedWins, DEFAULT_TARGETS, EARLY_SNOWBALL_DAY, type Report } from '../balance/report';
 import { FIRST_TEAM } from '../balance/play';
 import { runGames } from '../balance/runner';
 import { buildVariant } from '../balance/variant';
-import { median, sum } from '../balance/numbers';
+import { median, sum, toTenths } from '../balance/numbers';
 import { defaultContent } from '@core/content/default';
 import { DEFAULT_MAP_SIZE } from '@core/match';
 import { commandLine } from '../cliArgs';
@@ -47,7 +47,22 @@ export interface Metrics {
   units: Report['units'];
 }
 
-const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+const clamp01 = (fraction: number) => Math.max(0, Math.min(1, fraction));
+
+/** Lados: el azar mueve el reparto unos NOISE_SPREAD / sqrt(N) (95 %); lo que pase de ahi resta, a cero con SIDE_EXCESS_TO_ZERO mas. */
+const NOISE_SPREAD = 2;
+const SIDE_EXCESS_TO_ZERO = 0.2;
+/** Duracion: cada dia fuera de los objetivos resta; a cero con DAYS_OFF_TO_ZERO dias fuera. */
+const DAYS_OFF_TO_ZERO = 10;
+/** Partidas que terminan: a cero con esta parte sin terminar. */
+const UNFINISHED_TO_ZERO = 0.3;
+/** Remontadas: puntos completos si quien va delante el dia de la bola de nieve gana menos de COMEBACK_FULL_BELOW; a cero COMEBACK_RANGE mas arriba. */
+const COMEBACK_FULL_BELOW = 0.95;
+const COMEBACK_RANGE = 0.25;
+/** Variedad: puntos completos desde esta parte de la variedad maxima. */
+const FULL_VARIETY = 0.85;
+/** Precios: fuera de la banda, a cero cuando la unidad rinde este factor mas (o menos) que el borde. */
+const PRICE_ZERO_FACTOR = 2;
 
 /** Lo que mide una parte de la nota: que fraccion de sus puntos se lleva (se recorta a 0-1) y el valor, legible. */
 interface Measure {
@@ -71,33 +86,34 @@ interface PartDef {
  * nota se movia mas por el azar que por los cambios.)
  */
 function sidesMeasure({ outcome }: Report): Measure {
-  const won = outcome.wins.map((wins, team) => wins + outcome.adjudicated[team]!);
+  const won = decidedWins(outcome);
   const decided = sum(won);
   const shares = won.map((count) => (decided ? count / decided : 1 / won.length));
   // Lo lejos que esta el que mas se aparta del reparto igual, de 0 (todos igual) a 1 (uno lo gana todo).
   const gap = Math.max(...shares.map((share) => Math.abs(won.length * share - 1) / (won.length - 1)));
-  const noise = decided ? 2 / Math.sqrt(decided) : 1;
+  const noise = decided ? NOISE_SPREAD / Math.sqrt(decided) : 1;
   return {
-    fraction: 1 - Math.max(0, gap - noise) / 0.2,
-    value: `${shares.map((share) => `${Math.round(share * 100)} %`).join(' / ')} (ruido ±${Math.round((noise * 100) / 2)} %)`,
+    fraction: 1 - Math.max(0, gap - noise) / SIDE_EXCESS_TO_ZERO,
+    value: `${shares.map((share) => `${Math.round(share * 100)} %`).join(' / ')} (ruido ±${Math.round((noise * 100) / NOISE_SPREAD)} %)`,
   };
 }
 
 function lengthMeasure({ outcome }: Report): Measure {
   const [shortest, longest] = DEFAULT_TARGETS.days;
   const days = outcome.days.median;
-  const off = days < shortest ? shortest - days : days > longest ? days - longest : 0;
-  return { fraction: 1 - off / 10, value: `${days} dias` };
+  const daysOutside = days < shortest ? shortest - days : days > longest ? days - longest : 0;
+  return { fraction: 1 - daysOutside / DAYS_OFF_TO_ZERO, value: `${days} dias` };
 }
 
 function finishedMeasure(report: Report): Measure {
   const unfinished = report.outcome.unfinished / Math.max(1, report.games);
-  return { fraction: 1 - unfinished / 0.3, value: `${Math.round(unfinished * 100)} % sin terminar` };
+  return { fraction: 1 - unfinished / UNFINISHED_TO_ZERO, value: `${Math.round(unfinished * 100)} % sin terminar` };
 }
 
 function comebackMeasure(report: Report): Measure {
-  const day5 = report.snowball.find((point) => point.day === 5)?.leaderWins ?? null;
-  return day5 === null ? { fraction: 1, value: '-' } : { fraction: (0.95 - day5) / 0.25, value: `${Math.round(day5 * 100)} %` };
+  const early = report.snowball.find((point) => point.day === EARLY_SNOWBALL_DAY)?.leaderWins ?? null;
+  if (early === null) return { fraction: 1, value: '-' };
+  return { fraction: (COMEBACK_FULL_BELOW - early) / COMEBACK_RANGE, value: `${Math.round(early * 100)} %` };
 }
 
 /** Variedad de compras: la entropia del reparto entre tipos, sobre la maxima posible. */
@@ -106,7 +122,7 @@ function varietyMeasure(report: Report): Measure {
   const total = sum(bought);
   const entropy = -bought.reduce((amount, count) => amount + (count / total) * Math.log(count / total), 0);
   const variety = report.units.length > 1 ? entropy / Math.log(report.units.length) : 0;
-  return { fraction: variety / 0.85, value: `${Math.round(variety * 100)} % de la variedad maxima` };
+  return { fraction: variety / FULL_VARIETY, value: `${Math.round(variety * 100)} % de la variedad maxima` };
 }
 
 /**
@@ -119,13 +135,14 @@ function pricesMeasure(report: Report): Measure {
   const [bandLow, bandHigh] = DEFAULT_TARGETS.efficiencyBand;
   const efficiencies = report.units.map((unitRow) => unitRow.efficiency).filter((entry): entry is number => entry !== null);
   const middle = efficiencies.length ? median(efficiencies) : 1;
-  const fit = (value: number) => {
-    const x = Math.log(value / middle);
-    const out = x > Math.log(bandHigh) ? x - Math.log(bandHigh) : x < Math.log(bandLow) ? Math.log(bandLow) - x : 0;
-    return clamp01(1 - out / Math.log(2));
+  const bandFit = (value: number) => {
+    const logRatio = Math.log(value / middle);
+    const outsideBand =
+      logRatio > Math.log(bandHigh) ? logRatio - Math.log(bandHigh) : logRatio < Math.log(bandLow) ? Math.log(bandLow) - logRatio : 0;
+    return clamp01(1 - outsideBand / Math.log(PRICE_ZERO_FACTOR));
   };
   const inBand = efficiencies.filter((value) => value >= middle * bandLow && value <= middle * bandHigh).length;
-  const priceFit = efficiencies.length ? efficiencies.reduce((amount, value) => amount + fit(value), 0) / efficiencies.length : 1;
+  const priceFit = efficiencies.length ? efficiencies.reduce((amount, value) => amount + bandFit(value), 0) / efficiencies.length : 1;
   return { fraction: priceFit, value: `${inBand} de ${efficiencies.length} en la banda, ajuste ${Math.round(priceFit * 100)} %` };
 }
 
@@ -139,14 +156,19 @@ const PARTS: readonly PartDef[] = [
     measure: lengthMeasure,
   },
   { id: 'decididas', label: 'Partidas que terminan', max: 15, measure: finishedMeasure },
-  { id: 'remontadas', label: 'Se puede remontar (quien va delante el dia 5 no gana siempre)', max: 15, measure: comebackMeasure },
+  {
+    id: 'remontadas',
+    label: `Se puede remontar (quien va delante el dia ${EARLY_SNOWBALL_DAY} no gana siempre)`,
+    max: 15,
+    measure: comebackMeasure,
+  },
   { id: 'variedad', label: 'Variedad de unidades compradas', max: 15, measure: varietyMeasure },
   { id: 'precios', label: 'Unidades que rinden lo que cuestan', max: 15, measure: pricesMeasure },
 ];
 
 function scorePart(part: PartDef, report: Report): Part {
   const { fraction, value } = part.measure(report);
-  return { id: part.id, label: part.label, max: part.max, score: Math.round(part.max * clamp01(fraction) * 10) / 10, value };
+  return { id: part.id, label: part.label, max: part.max, score: toTenths(part.max * clamp01(fraction)), value };
 }
 
 /** Convierte el informe de equilibrio en la nota por partes. */
@@ -157,7 +179,7 @@ export function score(report: Report, size: number): Metrics {
     date: new Date().toISOString().slice(0, 10),
     games: report.games,
     size,
-    total: Math.round(sum(parts.map((part) => part.score)) * 10) / 10,
+    total: toTenths(sum(parts.map((part) => part.score))),
     parts,
     flags: report.flags,
     units: report.units,
@@ -172,10 +194,10 @@ export function metricsMarkdown(metrics: Metrics, base?: Metrics | null): string
   const rows = metrics.parts
     .map((part) => `| ${part.label} | ${part.value} | ${part.score} / ${part.max}${delta(part.id, part.score)} |`)
     .join('\n');
-  const tot = base
+  const againstBase = base
     ? ` (linea base ${base.total}, ${metrics.total - base.total >= 0 ? '+' : ''}${(metrics.total - base.total).toFixed(1)})`
     : '';
-  return `# Nota del juego: ${metrics.total} / 100${tot}
+  return `# Nota del juego: ${metrics.total} / 100${againstBase}
 
 ${metrics.games} partidas IA contra IA en mapas de ${metrics.size}x${metrics.size} (mitad con los bandos cambiados), ${metrics.date}.
 
@@ -186,34 +208,47 @@ ${rows}
 ${metrics.flags.length ? `Avisos del informe de equilibrio:\n${metrics.flags.map((flag) => `- ${flag}`).join('\n')}\n` : ''}`;
 }
 
-async function main(): Promise<void> {
-  const args = commandLine(import.meta.url, { games: 'number', size: 'number', name: 'text', 'save-baseline': 'flag' });
-  const games = args.number('games', 120);
-  const size = args.number('size', DEFAULT_MAP_SIZE);
-  const name = args.text('name', 'actual');
+/** Partidas por defecto (la mitad de mapas, cada uno dos veces con las salidas cambiadas) y sus dias. */
+const DEFAULT_GAMES = 120;
+const METRICS_DAYS = 40;
+
+/** El informe de equilibrio de la nota: la IA contra si misma, cada mapa dos veces (con las salidas giradas). */
+async function metricsReport(name: string, games: number, size: number): Promise<Report> {
   const threads = Math.max(1, Math.min(cpus().length, games));
-  const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, i) => 1 + i);
+  const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, index) => 1 + index);
   const variant = { name, set: {} };
   const setup = buildVariant(variant, defaultContent());
-  const records = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, FIRST_TEAM, 0, size);
-  const mirrored = await runGames(setup, seeds, 40, ['ai', 'ai'], threads, FIRST_TEAM, 1, size);
-  const report = buildReport(
+  const run = { seeds, maxDays: METRICS_DAYS, policies: ['ai', 'ai'] as const, threads, firstTeam: FIRST_TEAM, size };
+  const records = await runGames(setup, { ...run, rotateStarts: 0 });
+  const mirrored = await runGames(setup, { ...run, rotateStarts: 1 });
+  return buildReport(
     [...records, ...mirrored],
-    { name, variant, changes: [], maxDays: 40, seeds: [1, seeds.length], policies: 'ai-ai' },
+    { name, variant, changes: [], maxDays: METRICS_DAYS, seeds: [1, seeds.length], policies: 'ai-ai' },
     DEFAULT_TARGETS,
     setup.content,
   );
-  const metrics = score(report, size);
+}
+
+/** La linea base guardada, si es comparable (mismas partidas y mismo mapa). */
+const comparableBase = (base: Metrics | null, metrics: Metrics): Metrics | null =>
+  base && base.games === metrics.games && base.size === metrics.size ? base : null;
+
+async function main(): Promise<void> {
+  const args = commandLine(import.meta.url, { games: 'number', size: 'number', name: 'text', 'save-baseline': 'flag' });
+  const games = args.number('games', DEFAULT_GAMES);
+  const size = args.number('size', DEFAULT_MAP_SIZE);
+  const name = args.text('name', 'actual');
+  const metrics = score(await metricsReport(name, games, size), size);
   const base = existsSync(BASELINE) ? (JSON.parse(readFileSync(BASELINE, 'utf8')) as Metrics) : null;
   mkdirSync(OUT, { recursive: true });
   writeFileSync(`${OUT}${name}.json`, JSON.stringify(metrics, null, 1));
-  const markdown = metricsMarkdown(metrics, base && base.games === metrics.games && base.size === metrics.size ? base : null);
+  const markdown = metricsMarkdown(metrics, comparableBase(base, metrics));
   writeFileSync(`${OUT}${name}.md`, markdown);
   console.log(markdown);
   if (args.flag('save-baseline')) {
     writeFileSync(BASELINE, JSON.stringify(metrics, null, 1));
     console.log('Guardado como linea base (improve/baseline.json).');
-  } else if (base && (base.games !== metrics.games || base.size !== metrics.size)) {
+  } else if (base && !comparableBase(base, metrics)) {
     console.log(`(La linea base es de ${base.games} partidas de ${base.size}x${base.size}: no se compara.)`);
   }
 }

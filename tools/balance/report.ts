@@ -5,7 +5,7 @@ import type { DuelCell } from './duel';
 import { emptyTally, type DaySample, type GameRecord, type PerTeam, type UnitTally } from './play';
 import { unitFieldPath, type Variant } from './variant';
 import { clearLeader, strengthRanking, type Holdings } from './strength';
-import { mean, median, pct, quantile, roundTo, sum } from './numbers';
+import { mean, median, pct, quantile, roundTo, sum, toTenths } from './numbers';
 
 export interface Targets {
   /** Duracion deseada (mediana de dias). */
@@ -117,8 +117,15 @@ export interface Report extends ReportMeta {
  */
 const SHARE_TOLERANCE = 1e-9;
 
-/** Los dias en los que se mira si gana quien iba por delante. */
-const SNOWBALL_DAYS = [5, 10, 20];
+/** Los dias en los que se mira si gana quien iba por delante; el primero es el de los avisos y la nota. */
+const SNOWBALL_DAYS = [5, 10, 20] as const;
+export const EARLY_SNOWBALL_DAY = SNOWBALL_DAYS[0];
+
+/** La bola de nieve del primer dia que se mira (EARLY_SNOWBALL_DAY). */
+export const earlySnowball = (snowball: readonly SnowballPoint[]): SnowballPoint => snowball[0]!;
+
+/** Las partidas que gana cada equipo contando las que no terminan pero va claramente por delante. */
+export const decidedWins = (outcome: Outcome): PerTeam<number> => outcome.wins.map((wins, team) => wins + outcome.adjudicated[team]!);
 /** El dia en el que se compara la economia (edificios, ejercito y unidades), y el de despues para las unidades. */
 const ECONOMY_DAY = 10;
 const LATE_ECONOMY_DAY = 20;
@@ -276,7 +283,7 @@ interface Findings {
 
 /** Avisa si algun equipo gana (contando ventaja al final) mas de lo que le toca. */
 function sideFlags({ outcome }: Findings, targets: Targets): string[] {
-  const won = outcome.wins.map((wins, team) => wins + outcome.adjudicated[team]!);
+  const won = decidedWins(outcome);
   const decided = sum(won);
   const fairShare = 1 / won.length;
   const uneven = won.some((count) => Math.abs(count / decided - fairShare) > targets.sideGap + SHARE_TOLERANCE);
@@ -297,9 +304,9 @@ function lengthFlags({ games, outcome }: Findings, targets: Targets, maxDays: nu
 }
 
 function snowballFlags({ snowball }: Findings, targets: Targets): string[] {
-  const day5 = snowball[0]!.leaderWins;
-  return day5 !== null && day5 > targets.snowball5
-    ? [`Bola de nieve: quien va por delante el dia 5 gana el ${pct(day5)} de las veces.`]
+  const early = earlySnowball(snowball).leaderWins;
+  return early !== null && early > targets.snowball5
+    ? [`Bola de nieve: quien va por delante el dia ${EARLY_SNOWBALL_DAY} gana el ${pct(early)} de las veces.`]
     : [];
 }
 
@@ -367,7 +374,7 @@ function outcomeOf(records: readonly GameRecord[], teams: readonly TeamId[], win
     winRate: wins.map((count) => (games ? count / games : 0)),
     unfinished: reasons.timeout!,
     reasons,
-    days: { median: median(days), p10: quantile(days, 0.1), p90: quantile(days, 0.9), mean: Math.round(mean(days) * 10) / 10 },
+    days: { median: median(days), p10: quantile(days, 0.1), p90: quantile(days, 0.9), mean: toTenths(mean(days)) },
   };
 }
 
@@ -484,7 +491,7 @@ function suggestionsSection(report: Report): string[] {
 }
 
 function outcomeRows({ outcome }: Report): string[] {
-  const teams = outcome.wins.map((_, team) => `bando ${team}`).join(' / ');
+  const teams = outcome.wins.map((_, team) => teamLabel(team)).join(' / ');
   const { reasons, days } = outcome;
   return [
     tableRow([`Victorias ${teams}`, `${outcome.wins.join(' / ')} (${outcome.winRate.map(pct).join(' / ')})`]),
@@ -614,12 +621,17 @@ function comparisonRow(label: string, before: number | null, after: number | nul
 function comparisonRows(before: Report, after: Report): string[] {
   const teamCount = Math.max(before.outcome.winRate.length, after.outcome.winRate.length);
   const rows = Array.from({ length: teamCount }, (_, team) =>
-    comparisonRow(`Victorias bando ${team}`, before.outcome.winRate[team] ?? null, after.outcome.winRate[team] ?? null, pct),
+    comparisonRow(`Victorias ${teamLabel(team)}`, before.outcome.winRate[team] ?? null, after.outcome.winRate[team] ?? null, pct),
   );
   rows.push(
     comparisonRow('Sin terminar', before.outcome.unfinished / before.games, after.outcome.unfinished / after.games, pct),
     comparisonRow('Dias (mediana)', before.outcome.days.median, after.outcome.days.median, (value) => `${value}`),
-    comparisonRow('Bola de nieve dia 5', before.snowball[0]!.leaderWins, after.snowball[0]!.leaderWins, pct),
+    comparisonRow(
+      `Bola de nieve dia ${EARLY_SNOWBALL_DAY}`,
+      earlySnowball(before.snowball).leaderWins,
+      earlySnowball(after.snowball).leaderWins,
+      pct,
+    ),
   );
   if (before.duel || after.duel)
     rows.push(

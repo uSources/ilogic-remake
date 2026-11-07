@@ -14,7 +14,7 @@ import { createMatch } from '@core/defaultGames';
 import { skirmishConfig, type MatchTeam } from '@core/match';
 import { seededRng } from '@core/util/random';
 import { defaultContent } from '@core/content/default';
-import { isMatchOver, matchResult } from '@core/rules';
+import { isMatchOver, matchResult, teamUnits } from '@core/rules';
 import { serialize } from '@core/save';
 import { posOf } from '@core/geom';
 import { aiController, controllersFor } from '@core/controllers';
@@ -64,8 +64,8 @@ function squadOrders(s: GameState, person: TeamId): GameAction[] {
   if (s.day !== FIRST_DAY) return [];
   const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
-  const squad = s.units
-    .filter((unit) => unit.team === person && unit.squad === undefined)
+  const squad = teamUnits(s, person)
+    .filter((unit) => unit.squad === undefined)
     .map((unit) => unit.uid)
     .slice(0, 3);
   if (!target || squad.length < 2) return [];

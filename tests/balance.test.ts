@@ -137,7 +137,13 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
 describe('herramienta de equilibrio: cada hilo juega con el contenido de su variante', () => {
   it('con todo carisimo nadie compra; con el contenido de siempre, si', async () => {
     const bought = async (set: Record<string, string>) => {
-      const [game] = await runGames(buildVariant({ name: 'v', set }, defaultContent()), [5], 6, ['ai', 'ai'], 1, FIRST_TEAM);
+      const [game] = await runGames(buildVariant({ name: 'v', set }, defaultContent()), {
+        seeds: [5],
+        maxDays: 6,
+        policies: ['ai', 'ai'],
+        threads: 1,
+        firstTeam: FIRST_TEAM,
+      });
       return game!.units.flatMap((bySide) => Object.values(bySide)).reduce((total, tally) => total + tally.bought, 0);
     };
     expect(await bought({})).toBeGreaterThan(0);

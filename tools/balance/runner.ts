@@ -9,7 +9,7 @@ import type { DeepReadonly } from '@core/util/freeze';
 import type { DuelCell, DuelOptions } from './duel';
 import { DEFAULT_MAP_SIZE } from '@core/match';
 import type { TeamId } from '@core/model';
-import type { GameRecord, PlayOptions, Policy } from './play';
+import { FIRST_TEAM, type GameRecord, type PlayOptions, type Policy } from './play';
 import type { VariantSetup } from './variant';
 
 /** Lo que hace un hilo, con los ficheros de contenido de la variante. */
@@ -28,19 +28,25 @@ function runWorker<T>(job: WorkerJob, onMessage: (message: T) => void): Promise<
   });
 }
 
-export async function runGames(
-  setup: VariantSetup,
-  seeds: number[],
-  maxDays: number,
-  policies: readonly Policy[],
-  threads: number,
-  firstTeam: TeamId,
-  /** Cuantos puestos giran las salidas (0: como salen del mapa). */
-  rotateStarts = 0,
-  size = DEFAULT_MAP_SIZE,
-): Promise<GameRecord[]> {
+/** Que partidas jugar: con que semillas, cuantos dias, quien juega cada equipo y en cuantos hilos. */
+export interface GamesRun {
+  seeds: readonly number[];
+  maxDays: number;
+  /** Quien juega cada equipo (hay tantos equipos como politicas). */
+  policies: readonly Policy[];
+  threads: number;
+  /** El equipo que mueve primero (si no, FIRST_TEAM). */
+  firstTeam?: TeamId;
+  /** Cuantos puestos giran las salidas (si no, 0: como salen del mapa). */
+  rotateStarts?: number;
+  /** Lado del mapa (si no, DEFAULT_MAP_SIZE). */
+  size?: number;
+}
+
+export async function runGames(setup: VariantSetup, run: GamesRun): Promise<GameRecord[]> {
+  const { seeds, maxDays, policies, threads, firstTeam = FIRST_TEAM, rotateStarts = 0, size = DEFAULT_MAP_SIZE } = run;
   const chunks: number[][] = Array.from({ length: threads }, () => []);
-  seeds.forEach((s, i) => chunks[i % threads]!.push(s));
+  seeds.forEach((seed, index) => chunks[index % threads]!.push(seed));
   const records: GameRecord[] = [];
   const started = Date.now();
   const game = { maxDays, policies, firstTeam, rotateStarts, size };

@@ -33,37 +33,38 @@ export interface Draft {
 
 export const GITMOJI: readonly Gitmoji[] = (gitmojiFile as { emojis: Gitmoji[] }).emojis;
 
-const BY_LENGTH = [...GITMOJI].sort((a, b) => b.emoji.length - a.emoji.length);
+const BY_LENGTH = [...GITMOJI].sort((first, second) => second.emoji.length - first.emoji.length);
 
 /** Emoji de la lista con el que empieza el asunto, y el resto del asunto. */
 export function parseSubject(subject: string): { gitmoji: Gitmoji; text: string } | null {
-  const g = BY_LENGTH.find((e) => subject.startsWith(`${e.emoji} `));
-  return g ? { gitmoji: g, text: subject.slice(g.emoji.length + 1).trim() } : null;
+  const gitmoji = BY_LENGTH.find((entry) => subject.startsWith(`${entry.emoji} `));
+  return gitmoji ? { gitmoji, text: subject.slice(gitmoji.emoji.length + 1).trim() } : null;
 }
 
 export function buildDraft(commits: readonly Commit[], gitmoji: readonly Gitmoji[] = GITMOJI): Draft {
   const sections = new Map<string, DraftSection>();
   // El orden de los apartados es el de gitmoji.json (Novedades primero).
-  for (const g of gitmoji) if (g.notes) sections.set(g.emoji, { emoji: g.emoji, title: g.notes, items: [] });
+  for (const entry of gitmoji) if (entry.notes) sections.set(entry.emoji, { emoji: entry.emoji, title: entry.notes, items: [] });
   let internal = 0;
   const unknown: string[] = [];
-  for (const c of commits) {
-    const p = parseSubject(c.subject);
-    if (!p) unknown.push(c.subject);
-    else if (!p.gitmoji.notes) internal++;
-    else sections.get(p.gitmoji.emoji)!.items.push(p.text);
+  for (const commit of commits) {
+    const parsed = parseSubject(commit.subject);
+    if (!parsed) unknown.push(commit.subject);
+    else if (!parsed.gitmoji.notes) internal++;
+    else sections.get(parsed.gitmoji.emoji)!.items.push(parsed.text);
   }
-  return { sections: [...sections.values()].filter((s) => s.items.length), internal, unknown };
+  return { sections: [...sections.values()].filter((section) => section.items.length), internal, unknown };
 }
 
 export const DRAFT_START = '<!-- borrador: npm run notes. Reescribir para el jugador (y traducir), y borrar estas marcas -->';
 export const DRAFT_END = '<!-- fin del borrador -->';
 
 /** Markdown de un idioma. Los asuntos de los commits estan en español: en ingles van marcados para traducir. */
-export function renderDraft(d: Draft, lang: 'es' | 'en'): string {
-  if (!d.sections.length) return '';
-  const parts = d.sections.map(
-    (s) => `### ${s.title[lang]}\n${s.items.map((i) => `- ${lang === 'en' ? `(traducir) ${i}` : i}`).join('\n')}`,
+export function renderDraft(draft: Draft, lang: 'es' | 'en'): string {
+  if (!draft.sections.length) return '';
+  const parts = draft.sections.map(
+    (section) =>
+      `### ${section.title[lang]}\n${section.items.map((item) => `- ${lang === 'en' ? `(traducir) ${item}` : item}`).join('\n')}`,
   );
   return `${DRAFT_START}\n\n${parts.join('\n\n')}\n\n${DRAFT_END}`;
 }
