@@ -12,7 +12,9 @@
  * no lo que se ve (y las reglas que cuentan unidades para saber si alguien ha caido miran la
  * partida de verdad, nunca una vista). De los enemigos tampoco se saben sus estadisticas (lo que han
  * comprado, gastado y perdido, y su ejercito cada dia) ni cuantas unidades y escuadras llevan hechas
- * (`nextUid`, `nextSquadId`: la vista da el siguiente a lo que conoce). Las semillas (dados, decisiones y la del mapa, `setup`) no se
+ * (`nextUid`, `nextSquadId`: la vista da el siguiente a lo que conoce); esto, aunque la partida no
+ * tenga niebla (sin niebla se ven todas las unidades, pero las cuentas de los demas no son de nadie mas).
+ * Que la vista sea de solo lectura hasta el fondo lo hacen las envolturas de util/readOnly.ts. Las semillas (dados, decisiones y la del mapa, `setup`) no se
  * ven: el equipo solo sabe la de sus propias decisiones de este turno (`turnSeed`). Ojo: la pantalla
  * enseña a la persona el codigo del mapa (de el salen las semillas de una escaramuza) y son de 32
  * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
@@ -25,6 +27,7 @@ import { areAllied, emptyTeamStats, isHostile } from './teams';
 import { isAlive, isOnMap } from './util/predicates';
 import { turnSeedOf } from './turnSeeds';
 import { seededRng } from './util/random';
+import { readOnly, REFUSED_CHANGES, shownDescriptor, UNSHOWN_KEYS } from './util/readOnly';
 
 /** Lo que cambia la niebla en la vista (los campos de la partida que se ven de otra forma). */
 type FoggedParts = Partial<
@@ -159,85 +162,6 @@ export interface PlayerView {
  * de las reglas y la semilla de la partida no se ve en la vista.
  */
 export const decisionRngOf = (view: PlayerView): Rng => seededRng(view.turnSeed);
-
-/** Lo que se le dice a quien intenta cambiar la vista. */
-const READ_ONLY = 'La vista de un equipo no se cambia: quien decide propone acciones';
-
-const refuseChange = (): never => {
-  throw new Error(READ_ONLY);
-};
-
-/** Un objeto de la partida que hay que proteger: los datos (objetos planos y listas) que no esten ya congelados. */
-const needsGuard = (value: unknown): value is object =>
-  typeof value === 'object' &&
-  value !== null &&
-  !Object.isFrozen(value) &&
-  (Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype);
-
-/**
- * Lo que no deja hacer ninguna envoltura de la vista: cambiar algo, ni por la puerta de atras
- * (definir una propiedad, cambiar el prototipo, cerrar el objeto para que no crezca).
- */
-const REFUSED_CHANGES = {
-  set: refuseChange,
-  deleteProperty: refuseChange,
-  defineProperty: refuseChange,
-  setPrototypeOf: refuseChange,
-  preventExtensions: refuseChange,
-} as const;
-
-/**
- * El descriptor de una propiedad con su valor como se lee por la envoltura (`shown`): pedir el
- * descriptor (`Object.getOwnPropertyDescriptor`) da lo mismo que leerla, nunca el objeto de verdad.
- * Una propiedad que no se puede ni reconfigurar ni escribir se tiene que dar tal cual (lo exige
- * Proxy); en la partida no hay ninguna con algo que proteger.
- */
-function shownDescriptor(descriptor: PropertyDescriptor | undefined, shown: (value: unknown) => unknown): PropertyDescriptor | undefined {
-  if (!descriptor || !('value' in descriptor) || (!descriptor.configurable && !descriptor.writable)) return descriptor;
-  return { ...descriptor, value: shown(descriptor.value) };
-}
-
-/**
- * Lo que no se da desde la vista aunque se pida por su nombre: `__proto__` y `constructor` llevarian
- * al prototipo de verdad (`Object.prototype`, compartido por todo el programa), que se podria cambiar.
- * Leerlos da undefined (las listas, sin `constructor`, siguen haciendo listas normales con map o filter).
- */
-const UNSHOWN_KEYS: ReadonlySet<string | symbol> = new Set(['__proto__', 'constructor']);
-
-/**
- * La envoltura de solo lectura de un objeto de la partida: lo que se lee pasa por `guard` (de solo
- * lectura tambien, si es un objeto), cambiar no se puede y lo de UNSHOWN_KEYS no se da.
- */
-function readOnlyHandler(guard: (value: unknown) => unknown): ProxyHandler<object> {
-  return {
-    get: (target, key): unknown => {
-      const property: unknown = Reflect.get(target, key);
-      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee. Lo de
-      // UNSHOWN_KEYS es un objeto (`__proto__`) o una funcion (`constructor`): solo ahi se mira.
-      if (typeof property === 'object') return UNSHOWN_KEYS.has(key) ? undefined : guard(property);
-      return typeof property === 'function' && UNSHOWN_KEYS.has(key) ? undefined : property;
-    },
-    getOwnPropertyDescriptor: (target, key) => shownDescriptor(Reflect.getOwnPropertyDescriptor(target, key), guard),
-    ...REFUSED_CHANGES,
-  };
-}
-
-/**
- * Lo mismo que `value`, pero de solo lectura hasta el fondo: lo que se lee de ella tambien lo es.
- * Cada objeto tiene siempre la misma envoltura (`guards`), asi que comparar dos unidades de la vista
- * sigue dando lo que debe.
- */
-function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
-  if (!needsGuard(value)) return value;
-  const known = guards.get(value);
-  if (known) return known as T;
-  const guarded: object = new Proxy(
-    value,
-    readOnlyHandler((property) => readOnly(property, guards)),
-  );
-  guards.set(value, guarded);
-  return guarded as T;
-}
 
 /**
  * Lo que no cambia en un turno, congelado una vez: el terreno, los ajustes y los modulos de reglas
