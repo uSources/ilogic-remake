@@ -22,16 +22,14 @@ import { seededRng } from '@core/util/random';
 import { isWinner, matchResult, score } from '@core/rules';
 import type { GameState } from '@core/model';
 import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
+import { commandLine } from '../cliArgs';
 
-const arg = (name: string, fallback: string): string => {
-  const index = process.argv.indexOf(`--${name}`);
-  return index >= 0 && process.argv[index + 1] ? process.argv[index + 1]! : fallback;
-};
-const challenger = arg('a', '');
-const rival = arg('b', 'none');
-const maps = Number(arg('maps', '40'));
-const from = Number(arg('from', '1'));
-const json = process.argv.includes('--json');
+const args = commandLine(import.meta.url, { a: 'text', b: 'text', maps: 'number', from: 'number', json: 'flag' });
+const challenger = args.text('a', '');
+const rival = args.text('b', 'none');
+const maps = args.number('maps', 40);
+const from = args.number('from', 1);
+const json = args.flag('json') === true;
 /** Las partidas se cortan al dia 60 y se deciden por puntos. */
 const MAX_DAYS = 60;
 /** Los generales pedidos existen en el contenido del juego (si no, para antes de jugar). */

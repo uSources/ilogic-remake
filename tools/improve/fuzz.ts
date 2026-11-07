@@ -14,6 +14,7 @@ import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { serialize } from '@core/save';
 import type { GameState, Rng, TeamId } from '@core/model';
+import { commandLine } from '../cliArgs';
 import { checkInvariants } from './invariants';
 import { randomController } from './randomPlayer';
 
@@ -65,22 +66,17 @@ export function fuzzGame(seed: number, options: { size?: number; days?: number; 
 }
 
 function main(): void {
-  const args = process.argv.slice(2);
-  const numberArg = (name: string, fallback: number) => {
-    const index = args.indexOf(`--${name}`);
-    return index >= 0 ? Number(args[index + 1]) : fallback;
-  };
-  const size = numberArg('size', 20),
-    days = numberArg('days', 30);
-  const repro = args.indexOf('--repro');
-  if (repro >= 0) {
-    const seed = Number(args[repro + 1]);
-    const failure = fuzzGame(seed, { size, days, log: (line) => console.log(line) });
+  const args = commandLine(import.meta.url, { size: 'number', days: 'number', repro: 'number', games: 'number', seed: 'number' });
+  const size = args.number('size', 20);
+  const days = args.number('days', 30);
+  const repro = args.number('repro');
+  if (repro !== undefined) {
+    const failure = fuzzGame(repro, { size, days, log: (line) => console.log(line) });
     console.log(failure ? `\nFALLO: ${failure.errors.join('; ')}` : '\nsin fallos');
     process.exit(failure ? 1 : 0);
   }
-  const games = numberArg('games', 200),
-    first = numberArg('seed', 1);
+  const games = args.number('games', 200);
+  const first = args.number('seed', 1);
   const t0 = Date.now();
   for (let i = 0; i < games; i++) {
     const seed = first + i;

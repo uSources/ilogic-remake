@@ -17,6 +17,7 @@ import { FIRST_SIDE } from '../balance/play';
 import { runGames } from '../balance/runner';
 import { buildVariant } from '../balance/variant';
 import { defaultContent } from '@core/content/default';
+import { commandLine } from '../cliArgs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const OUT = `${ROOT}improve/metrics/`;
@@ -145,11 +146,10 @@ ${metrics.flags.length ? `Avisos del informe de equilibrio:\n${metrics.flags.map
 }
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const opt = (key: string) => (args.includes(`--${key}`) ? args[args.indexOf(`--${key}`) + 1] : undefined);
-  const games = Number(opt('games') ?? 120);
-  const size = Number(opt('size') ?? 32);
-  const name = opt('name') ?? 'actual';
+  const args = commandLine(import.meta.url, { games: 'number', size: 'number', name: 'text', 'save-baseline': 'flag' });
+  const games = args.number('games', 120);
+  const size = args.number('size', 32);
+  const name = args.text('name', 'actual');
   const threads = Math.max(1, Math.min(cpus().length, games));
   const seeds = Array.from({ length: Math.ceil(games / 2) }, (_, i) => 1 + i);
   const variant = { name, set: {} };
@@ -169,7 +169,7 @@ async function main(): Promise<void> {
   const markdown = metricsMarkdown(metrics, base && base.games === metrics.games && base.size === metrics.size ? base : null);
   writeFileSync(`${OUT}${name}.md`, markdown);
   console.log(markdown);
-  if (args.includes('--save-baseline')) {
+  if (args.flag('save-baseline')) {
     writeFileSync(BASELINE, JSON.stringify(metrics, null, 1));
     console.log('Guardado como linea base (improve/baseline.json).');
   } else if (base && (base.games !== metrics.games || base.size !== metrics.size)) {
