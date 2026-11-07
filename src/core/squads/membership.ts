@@ -2,7 +2,8 @@
 import type { GameState, Squad, TeamId, Unit } from '../model';
 import { cleanSquadName, freeKey, freeName, squadByKey } from './naming';
 import { squadById, squadUnits } from './queries';
-import { forUnit, liftStandingOrder, sameStandingOrder } from './standingOrders';
+import { forUnit, sameStandingOrder } from './standingOrderQueries';
+import { liftStandingOrder } from './standingOrderSteps';
 
 /** La escuadra tiene alguna unidad. */
 const hasUnits = (s: GameState, squad: Squad): boolean => s.units.some((unit) => unit.squad === squad.id);

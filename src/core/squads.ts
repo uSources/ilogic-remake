@@ -15,18 +15,16 @@
  */
 export { squadUnits, squadById, exactSquad } from './squads/queries';
 export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, squadsOfTeam } from './squads/naming';
+export { STANDING_ORDER_TYPES, momentOf, type StandingOrderBlock } from './squads/standingOrderTypes';
 export {
   effectiveStandingOrder,
   gotoDestination,
   standingOrderAt,
-  STANDING_ORDER_TYPES,
-  momentOf,
   turnEndOrderOf,
   isDetached,
   standingOrderBlock,
-  type StandingOrderBlock,
   standingOrderChoices,
   atStandingOrder,
   sameFormation,
   squadInFormation,
-} from './squads/standingOrders';
+} from './squads/standingOrderQueries';

@@ -9,7 +9,7 @@ import { posOf } from '../geom';
 import { carryOut } from '../actions/plan';
 import { foggedCopy } from '../playerView';
 import { teamUnits } from '../rules/queries';
-import { standingOrderAt } from '../squads/standingOrders';
+import { standingOrderAt } from '../squads/standingOrderQueries';
 import type { ActionDispatcher, GameAction, GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId } from '../model';
 import { canAct } from './context';
 import { assistTurn } from './standingOrders';

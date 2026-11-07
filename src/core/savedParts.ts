@@ -9,7 +9,7 @@ import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
 import { isValidObjective, type SavedMap } from './objectives';
 import { isUnitTurnState } from './rules/unitTurn';
 import { SQUAD_KEYS } from './squads/naming';
-import { isStandingOrderKind, isTurnEndOrderKind } from './squads/standingOrders';
+import { isStandingOrderKind, isTurnEndOrderKind } from './squads/standingOrderTypes';
 import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
 import { isDefeatReason } from './rules/falls';

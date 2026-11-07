@@ -10,7 +10,7 @@ import { unitById, visibility } from '@core/rules';
 import { newUnit } from '@core/measure';
 import { GameSession, humanController, passiveController } from '@core/session';
 import { serialize } from '@core/save';
-import { giveStandingOrder } from '@core/squads/standingOrders';
+import { giveStandingOrder } from '@core/squads/standingOrderSteps';
 import type { GameState, Pos } from '@core/model';
 import { blankState, unitTypeNamed, hqId, playPlan, aiPlan } from './helpers';
 

@@ -9,7 +9,7 @@ import { isAlliedOwner } from '../teams';
 import { manhattan, samePos } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
-import { effectiveStandingOrder, standingOrderAt } from '../squads/standingOrders';
+import { effectiveStandingOrder, standingOrderAt } from '../squads/standingOrderQueries';
 import type { ActionPlan, GameState, Pos, StandingOrderKind, StandingOrderMoment, TeamId, Unit } from '../model';
 import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
 import { knownFoes } from '../playerView';

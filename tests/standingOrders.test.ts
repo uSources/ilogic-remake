@@ -17,14 +17,9 @@ import {
   squadUnits,
 } from '@core/squads';
 import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup } from '@core/squads/membership';
-import {
-  cancelStandingOrder,
-  finishStandingOrder,
-  giveStandingOrder,
-  STANDING_ORDER_KINDS,
-  STANDING_ORDER_TYPES,
-  turnEndOrderOf,
-} from '@core/squads/standingOrders';
+import { STANDING_ORDER_KINDS, STANDING_ORDER_TYPES } from '@core/squads/standingOrderTypes';
+import { turnEndOrderOf } from '@core/squads/standingOrderQueries';
+import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrderSteps';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
 import { act, blankState, unitTypeNamed, hqId, placedBuildings, playPlan } from './helpers';

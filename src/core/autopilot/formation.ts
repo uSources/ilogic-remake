@@ -10,7 +10,7 @@ import { movementOf } from '../rules/queries';
 import { manhattan } from '../geom';
 import { stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, type DistanceMap } from '../rules/distance';
-import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders';
+import { effectiveStandingOrder, sameFormation } from '../squads/standingOrderQueries';
 import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';

@@ -1,6 +1,6 @@
 /** La accion de capturar el edificio de debajo. */
 import { advanceCapture, canCapture, captureEvent } from '../rules/capture';
-import { keepCapturing } from '../squads/standingOrders';
+import { keepCapturing } from '../squads/standingOrderSteps';
 import { actorProblem, checkedBuilding, checkedUnit } from './checks';
 import type { ActionRegistry, GameEvent } from '../model';
 
