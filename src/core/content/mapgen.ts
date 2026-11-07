@@ -34,7 +34,7 @@ export interface MapgenDef {
 }
 
 const isRange = (value: unknown): value is Range =>
-  Array.isArray(value) && value.length === 2 && value.every((n) => Number.isInteger(n) && n >= 0) && value[0] <= value[1];
+  Array.isArray(value) && value.length === 2 && value.every((bound) => Number.isInteger(bound) && bound >= 0) && value[0] <= value[1];
 
 /** Los numeros del generador de una partida (mapgen.json), de solo lectura. */
 export type MapgenSettings = DeepReadonly<MapgenDef>;

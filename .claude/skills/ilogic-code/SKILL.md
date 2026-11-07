@@ -163,7 +163,7 @@ El compilador es estricto (`strict`, `noUncheckedIndexedAccess`): que pille los 
 partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTILO.md`, regla 9).
 
 - **Lo que entra de fuera es `unknown`** (JSON de contenido, partidas guardadas, `localStorage`): se
-  comprueba con guardas (`v is number`, `isNum` y `Checker` de `core/content/check.ts`; `hasGameShape`
+  comprueba con guardas (`v is number`, `isNumberWithin` y `Checker` de `core/content/check.ts`; `hasGameShape`
   en `core/savedParts.ts`, `SavedGame` hasta que `readSave` la ha comprobado) y solo despues se usa. Nada de `as Tipo` para "convencer" al compilador ni de `any`.
 - **Guardas en vez de `!` y de `as`**: para quitar huecos de una lista,
   `.filter((unit): unit is Unit => !!unit)`; si un valor tiene que existir, una funcion
