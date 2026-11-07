@@ -208,6 +208,19 @@ describe('prevision y amenaza', () => {
     expect(forecast.killChance).toBeLessThan(0.01);
     expect(forecast.lifeAfter).toBe(20);
   });
+  it('prevision hipotetica (desde otra casilla y con otra vida) = la de una unidad que estuviera alli asi, sin tocar la partida', () => {
+    const s = blankState(TEST_SETTINGS);
+    const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 10, y: 10 });
+    const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 10, y: 14 });
+    const asked = combatForecast(s, engagement(attacker, defender, { from: { x: 10, y: 13 }, attackerLife: 45 }));
+    expect(attacker).toMatchObject({ x: 10, y: 10, life: 100 });
+    const there = blankState(TEST_SETTINGS);
+    const moved = newUnit(there, unitTypeNamed('Tank'), 0, { x: 10, y: 13 });
+    moved.life = 45;
+    const real = combatForecast(there, engagement(moved, newUnit(there, unitTypeNamed('Tank'), 1, { x: 10, y: 14 })));
+    expect(asked).toEqual(real);
+    expect(asked.expected).toBeLessThan(combatForecast(s, engagement(attacker, defender, { from: { x: 10, y: 13 } })).expected);
+  });
   it('probabilidad de destruir alta si el defensor esta casi muerto', () => {
     const s = blankState(TEST_SETTINGS);
     const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 10, y: 10 });
