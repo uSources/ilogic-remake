@@ -10,7 +10,7 @@ import {
 } from '../squads/standingOrders';
 import { endTravel } from '../rules/travel';
 import { checkedUnit, checkedUnits, ownUnitProblem, ownUnitsProblem } from './checks';
-import type { ActionRegistry } from './types';
+import type { ActionRegistry } from '../model';
 
 export const STANDING_ORDER_ACTIONS: Pick<ActionRegistry, 'giveStandingOrder' | 'cancelStandingOrder' | 'finishStandingOrder'> = {
   giveStandingOrder: {

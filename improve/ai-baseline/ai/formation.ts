@@ -10,7 +10,8 @@ import { unitTypeOf } from '@core/gameContent';
 import { weightsOf } from '../weights';
 import { movementOf } from '@core/rules/queries';
 import { manhattan } from '@core/geom';
-import { distancesIgnoringUnits, reachableTiles, type DistanceMap, type MoveRange } from '@core/rules/movement';
+import { reachableTiles, type MoveRange } from '@core/rules/movement';
+import { distanceMap, type DistanceMap } from '@core/rules/distance';
 import { effectiveStandingOrder, sameFormation } from '@core/squads/standingOrders';
 import { canStillMove } from '@core/rules/unitTurn';
 import type { GameState, Pos, Unit } from '@core/model';
@@ -18,7 +19,7 @@ import { compareKeys, maxBy, minBy } from '@core/util/pick';
 import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type AiCtx } from './context';
 
 /** Casillas por tierra que le quedan hasta `at` desde cada sitio, con su tipo de movimiento. */
-const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distancesIgnoringUnits(s, at, movementOf(s, unit));
+const remainingMap = (s: GameState, unit: Unit, at: Pos): DistanceMap => distanceMap(s, at, movementOf(s, unit));
 
 /** Lo que le queda a la unidad hasta el destino de su orden (Infinity si no llega). */
 const remainingOf = (s: GameState, unit: Unit): number => remainingMap(s, unit, effectiveStandingOrder(s, unit)!.at).at(unit);

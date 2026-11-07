@@ -9,7 +9,7 @@ import { startsTurn } from '../../core/actions';
 import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
-import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, type RoundReport } from '../../core/rules';
+import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, isOnMap, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
 import { playMatch, replaySession, type ActedStep, type GameSession, type SessionStep } from '../../core/session';
 import { squadById } from '../../core/squads';
@@ -426,7 +426,7 @@ export class TurnFlow {
     if (host.fastForward) return;
     healedOf(report, host.viewer).forEach((healed, i) => {
       const unit = unitById(host.state, healed.uid);
-      if (!unit || unit.carrier !== null || !host.visible(unit)) return;
+      if (!unit || !isOnMap(unit) || !host.visible(unit)) return;
       const centerPoint = center(unit);
       const delay = HEAL_TEXT_DELAY_MS + i * HEAL_TEXT_STAGGER_MS;
       void floatText(host.scene, host.view, { x: centerPoint.x, y: centerPoint.y - 6 }, `+${healed.amount}`, PAL_CSS.green, delay);
@@ -440,7 +440,7 @@ const healedOf = (report: RoundReport, team: TeamId) => report.healed.filter((he
 function roundReportLines(report: RoundReport, team: TeamId, ordersDone: string[]): ReportLineVM[] {
   const { control, weather } = report;
   const income = report.income[team] ?? 0;
-  const upkeep = report.upkeep[team] ?? 0;
+  const upkeep = report.upkeep?.[team] ?? 0;
   const held = control?.held[team] ?? 0;
   const healed = healedOf(report, team);
   const lines: ReportLineVM[] = [{ icon: 'ui/dinero', text: `+${fmtNum(income)} ${t('reportIncome')}`, tone: 'gold' }];

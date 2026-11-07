@@ -14,13 +14,13 @@ import { entryOf, MoveType, type GameContent, type MapgenSettings, type TerrainT
 import { diamond, manhattan, squareArea } from './geom';
 import { newGameState } from './gameState';
 import type { TeamSetup } from './teams';
-import { blankMap, createLayer, mapGrid } from './mapGrid';
+import { blankMap, mapGrid } from './mapGrid';
 import { newUnit } from './rules/lifecycle';
-import { groundDistance } from './rules/movement';
+import { distanceMap, type DistanceMap } from './rules/distance';
 import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
 import { seedFromDraw } from './util/random';
-import type { GameState, Pos, Rng, RulesConfig, TeamId } from './model';
+import type { GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
 /** Lado del mapa del original, con el que estan medidos los numeros de mapgen.json. */
@@ -43,7 +43,7 @@ function emptyState(size: number, options: NewMapOptions, diceSeed: number): Gam
   const plain = options.content.plainTerrain.id;
   return newGameState({
     map: blankMap(size, plain),
-    rules: options.rules,
+    settings: options.settings,
     content: options.content,
     mode: 'skirmish',
     teams: options.teams,
@@ -176,23 +176,35 @@ function findSpawn(s: GameState, fromTheEnd: boolean, accept: (pos: Pos) => bool
   return null;
 }
 
+/** Una zona de salida y los pasos a pie desde ella a cada casilla. */
+interface SpawnDistances {
+  spawn: Pos;
+  distances: DistanceMap;
+}
+
+/** Los pasos a pie desde `spawn` (sin unidades en medio). */
+const walkingFrom = (s: GameState, spawn: Pos): SpawnDistances => ({ spawn, distances: distanceMap(s, spawn, WALK) });
+
+/** Se llega a pie a `pos` desde la salida (y no es la propia salida). */
+function walksTo(from: SpawnDistances, pos: Pos): boolean {
+  const steps = from.distances.at(pos);
+  return steps > 0 && steps < Infinity;
+}
+
 /**
  * Las demas zonas, una tras otra: cada una tiene que poder alcanzarse a pie desde todas las de antes
  * y estar lejos de ellas. Se buscan desde la esquina opuesta a la primera.
  */
 function findMoreSpawns(s: GameState, first: Pos, count: number): Pos[] | null {
   const minDistance = Math.round((MIN_SPAWN_DISTANCE * mapGrid(s).width) / ORIGINAL_MAP_SIDE);
-  const spawns = [first];
-  const distancesFrom = [groundDistance(s, first, WALK, createLayer(s, false))];
+  const spawns = [walkingFrom(s, first)];
   while (spawns.length < count) {
-    const isFarFromAll = (pos: Pos) =>
-      spawns.every((earlier, i) => distancesFrom[i]!.at(pos) > 0 && manhattan(pos, earlier) >= minDistance);
+    const isFarFromAll = (pos: Pos) => spawns.every((earlier) => walksTo(earlier, pos) && manhattan(pos, earlier.spawn) >= minDistance);
     const next = findSpawn(s, true, isFarFromAll);
     if (!next) return null;
-    spawns.push(next);
-    if (spawns.length < count) distancesFrom.push(groundDistance(s, next, WALK, createLayer(s, false)));
+    spawns.push(walkingFrom(s, next));
   }
-  return spawns;
+  return spawns.map((found) => found.spawn);
 }
 
 /**
@@ -317,21 +329,21 @@ const CONTROL_SCORE_NOISE = 1.5;
 const MAX_CONTROL_SCORE = 4;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
-  const zone = squareArea(mapGrid(s), center, s.rules.controlRadius);
+  const zone = squareArea(mapGrid(s), center, s.settings.controlRadius);
   return zone.filter((pos) => isWalkable(terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
 }
 
-/** Casilla libre de tierra, alcanzable desde todas las salidas (`toSpawns`: distancia a pie a cada una) y no pegada a ninguna. */
+/** Casilla libre de tierra y no pegada a ninguna salida (`toSpawns`: distancia a pie a cada una, a las que llega). */
 function isControlSpot(s: GameState, pos: Pos, toSpawns: readonly number[], span: number): boolean {
-  if (toSpawns.some((distance) => !distance)) return false;
   if (!isWalkable(terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
   if (Math.min(...toSpawns) < span * MIN_CONTROL_SPAWN_SHARE) return false;
   return isMostlyLand(s, pos);
 }
 
 /** Lo que hay del camino mas corto entre dos salidas (a pie; en linea si no se llega). */
-function shortestSpan(spawns: readonly Pos[], distancesFrom: readonly Grid<number>[]): number {
-  const spans = spawns.flatMap((spawn, i) => spawns.slice(i + 1).map((other) => distancesFrom[i]!.at(other) || manhattan(spawn, other)));
+function shortestSpan(spawns: readonly SpawnDistances[]): number {
+  const walkOrLine = (from: SpawnDistances, to: Pos) => (walksTo(from, to) ? from.distances.at(to) : manhattan(from.spawn, to));
+  const spans = spawns.flatMap((from, i) => spawns.slice(i + 1).map((other) => walkOrLine(from, other.spawn)));
   return Math.min(...spans);
 }
 
@@ -341,20 +353,21 @@ function shortestSpan(spawns: readonly Pos[], distancesFrom: readonly Grid<numbe
  * en el medio del mapa. Si no caben todos, pone los que pueda.
  */
 export function placeControlPoints(s: GameState, spawns: readonly Pos[], rng: Rng): void {
-  const wanted = s.rules.controlPoints;
+  const wanted = s.settings.controlPoints;
   if (wanted <= 0) return;
-  const distancesFrom = spawns.map((spawn) => groundDistance(s, spawn, WALK, createLayer(s, false)));
-  const span = shortestSpan(spawns, distancesFrom);
+  const fromSpawns = spawns.map((spawn) => walkingFrom(s, spawn));
+  const span = shortestSpan(fromSpawns);
   const candidates: { pos: Pos; score: number }[] = [];
-  for (const { pos } of distancesFrom[0]!.cells()) {
-    const toSpawns = distancesFrom.map((distances) => distances.at(pos));
+  for (const { pos } of mapGrid(s).cells()) {
+    if (!fromSpawns.every((from) => walksTo(from, pos))) continue;
+    const toSpawns = fromSpawns.map((from) => from.distances.at(pos));
     if (!isControlSpot(s, pos, toSpawns, span)) continue;
     // Lo justo: la misma distancia a todas las salidas (con dos, la diferencia entre ellas).
     const spread = Math.max(...toSpawns) - Math.min(...toSpawns);
     candidates.push({ pos, score: spread + rng() * CONTROL_SCORE_NOISE });
   }
   candidates.sort((first, second) => first.score - second.score);
-  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.rules.controlRadius;
+  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.settings.controlRadius;
   const chosen: Pos[] = [];
   for (const candidate of candidates) {
     if (chosen.length >= wanted || candidate.score > MAX_CONTROL_SCORE) break;
@@ -485,7 +498,7 @@ export interface NewMapOptions {
   size?: number;
   /** Tema del mapa (de themes.json), o null (o nada) para uno al azar. */
   theme?: Theme | null;
-  rules: Readonly<RulesConfig>;
+  settings: Readonly<MatchSettings>;
   /** Contenido de la partida (unidades, edificios, terreno...). */
   content: GameContent;
   /** Los equipos (dos o mas): el generador hace una salida para cada uno. */

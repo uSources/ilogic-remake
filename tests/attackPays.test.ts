@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/rulesConfig';
+import { changeSettings } from '@core/gameState';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
-import { endRound, hitChance, newUnit, unhealable } from '@core/rules';
+import { endRound, hitChance, newUnit, unhealable, engagement } from '@core/rules';
 import { blankState, buildingTypeNamed, diceFrom, unitTypeNamed, fight } from './helpers';
 import { teamState } from '@core/teams';
 
@@ -55,21 +56,21 @@ describe('flanqueo', () => {
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const secondAttacker = newUnit(s, TANK, 0, { x: 11, y: 11 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const fresh = hitChance(s, secondAttacker, defender);
+    const fresh = hitChance(s, engagement(secondAttacker, defender));
     fight(s, attacker, defender, diceFrom(seededRng(1)));
-    expect(hitChance(s, secondAttacker, defender)).toBeCloseTo(fresh * 1.15);
+    expect(hitChance(s, engagement(secondAttacker, defender))).toBeCloseTo(fresh * 1.15);
     // Al dia siguiente ya no cuenta.
     endRound(s);
-    expect(hitChance(s, secondAttacker, defender)).toBeCloseTo(fresh);
+    expect(hitChance(s, engagement(secondAttacker, defender))).toBeCloseTo(fresh);
   });
 
   it('sin la regla no cambia nada', () => {
     const s = blankState({ flankBonus: 0 });
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const fresh = hitChance(s, attacker, defender);
+    const fresh = hitChance(s, engagement(attacker, defender));
     defender.hitDay = s.day;
-    expect(hitChance(s, attacker, defender)).toBe(fresh);
+    expect(hitChance(s, engagement(attacker, defender))).toBe(fresh);
   });
 });
 
@@ -86,7 +87,7 @@ describe('sin cura bajo fuego', () => {
 
   it('quien recibe un ataque ese dia no se cura en su ciudad', () => {
     const { s, attacker, defender } = setup();
-    s.rules = rulesWith(defaultContent(), { noHealUnderFire: true });
+    changeSettings(s, settingsWith(defaultContent(), { noHealUnderFire: true }));
     fight(s, attacker, defender, diceFrom(seededRng(1)));
     const hurt = defender.life;
     expect(hurt).toBeLessThan(100);
@@ -101,7 +102,7 @@ describe('sin cura bajo fuego', () => {
 
   it('sin la regla se cura como siempre', () => {
     const { s, attacker, defender } = setup();
-    s.rules = rulesWith(defaultContent(), { noHealUnderFire: false });
+    changeSettings(s, settingsWith(defaultContent(), { noHealUnderFire: false }));
     fight(s, attacker, defender, diceFrom(seededRng(1)));
     const hurt = defender.life;
     endRound(s);

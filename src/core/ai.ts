@@ -24,8 +24,7 @@
 import { aiGeneral } from './aiGenerals';
 import { teamUnits } from './rules/queries';
 import { dispatch } from './actions/dispatch';
-import type { ActionDispatcher } from './actions/types';
-import type { GameEvent, GameState, Rng, TeamId } from './model';
+import type { ActionDispatcher, GameEvent, GameState, Rng, TeamId } from './model';
 import { playCtx, finish } from './autopilot/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';

@@ -9,18 +9,18 @@
  */
 import { entryOf, type GameContent } from './content';
 import { appointGeneral } from './generals';
-import { newGameState } from './gameState';
+import { changeSettings, newGameState } from './gameState';
 import { generateGame } from './mapgen';
 import { gameModeOf } from './modes';
 import { blankMap } from './mapGrid';
 import { buildMission, missionById } from './missions';
 import { assertAllStanding } from './rules/falls';
 import { newUnit } from './rules/lifecycle';
-import { rulesWith } from './rulesConfig';
+import { settingsWith } from './matchSettings';
+import { hooksOf } from './ruleModules/ruleset';
 import { sampleArmy } from './stats';
 import { seededRng } from './util/random';
-import { ensureWeather } from './weather';
-import type { GameModeId, GameSetup, GameState, Pos, Rng, RulesConfig, TeamId } from './model';
+import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import { teamIds, type TeamSetup } from './teams';
 
 /** Un equipo de una partida nueva: quien lo juega, su alianza, su dinero y su general (id de generals.json, o ninguno). */
@@ -33,7 +33,7 @@ export interface SkirmishConfig {
   mode: 'skirmish';
   map: GameSetup;
   /** Cambios a las reglas por defecto del contenido (sin cambios, las de siempre). */
-  ruleChanges?: Partial<RulesConfig>;
+  settingChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   /** El equipo que juega primero cada ronda (si no, el primero de la lista). */
   firstTeam?: TeamId;
@@ -71,7 +71,7 @@ export interface PlacedUnit {
 export interface SandboxConfig {
   mode: 'sandbox';
   size: number;
-  ruleChanges?: Partial<RulesConfig>;
+  settingChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   buildings: readonly PlacedBuilding[];
   units: readonly PlacedUnit[];
@@ -108,7 +108,7 @@ function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext
   const s = generateGame(mapRng ?? seededRng(map.seed), {
     size: map.size,
     theme,
-    rules: rulesWith(content, config.ruleChanges ?? {}),
+    settings: settingsWith(content, config.settingChanges ?? {}),
     content,
     teams: config.teams,
     firstTeam: config.firstTeam,
@@ -138,7 +138,7 @@ function mission(config: MissionConfig, { content }: MatchSetupContext): GameSta
 function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameState {
   const s = newGameState({
     map: blankMap(config.size, content.plainTerrain.id),
-    rules: rulesWith(content, config.ruleChanges ?? {}),
+    settings: settingsWith(content, config.settingChanges ?? {}),
     content,
     mode: 'sandbox',
     teams: config.teams,
@@ -163,22 +163,22 @@ function setupOf(config: MatchConfig): (config: MatchConfig, context: MatchSetup
   return MATCH_SETUPS[config.mode] as (config: MatchConfig, context: MatchSetupContext) => GameState;
 }
 
-/** Las reglas que impone el modo de la partida, por encima de las elegidas (GameMode.fixedRules). */
-function imposeModeRules(s: GameState, content: GameContent): void {
-  const fixed = gameModeOf(s).fixedRules;
-  if (fixed) s.rules = rulesWith(content, { ...s.rules, ...fixed });
+/** Las reglas que impone el modo de la partida, por encima de las elegidas (GameMode.fixedSettings). */
+function imposeModeSettings(s: GameState, content: GameContent): void {
+  const fixed = gameModeOf(s).fixedSettings;
+  if (fixed) changeSettings(s, settingsWith(content, { ...s.settings, ...fixed }));
 }
 
 /**
- * La partida nueva de esa configuracion, lista para jugar: con su modo, sus equipos, el clima del
- * primer dia y la muestra del ejercito de ese dia (para la grafica del final). El primer equipo aun
+ * La partida nueva de esa configuracion, lista para jugar: con su modo, sus equipos, lo que
+ * preparan sus modulos de reglas (el clima del primer dia) y la muestra del ejercito de ese dia (para la grafica del final). El primer equipo aun
  * no ha empezado su turno (lo empieza quien la juega: la sesion, 'startTurn').
  */
 export function buildMatch(config: MatchConfig, context: MatchSetupContext): GameState {
   const s = setupOf(config)(config, context);
   assertAllStanding(s);
-  imposeModeRules(s, context.content);
-  ensureWeather(s);
+  imposeModeSettings(s, context.content);
+  for (const step of hooksOf(s, 'matchSetup')) step.run(s);
   sampleArmy(s);
   return s;
 }
@@ -190,7 +190,7 @@ export function buildMatch(config: MatchConfig, context: MatchSetupContext): Gam
 export function rematchOf(s: GameState): SkirmishConfig | null {
   if (s.mode !== 'skirmish' || !s.setup) return null;
   const teams = s.teams.map((team) => ({ controller: team.controller, alliance: team.alliance, general: team.general?.id ?? null }));
-  return { mode: 'skirmish', map: { ...s.setup }, ruleChanges: { ...s.rules }, teams, firstTeam: s.turnOrder[0] };
+  return { mode: 'skirmish', map: { ...s.setup }, settingChanges: { ...s.settings }, teams, firstTeam: s.turnOrder[0] };
 }
 
 /** Lo que se elige de una escaramuza; lo demas, lo de siempre (mapa de DEFAULT_MAP_SIZE, tema al azar, reglas por defecto). */
@@ -199,7 +199,7 @@ export interface SkirmishChoices {
   seed: number;
   size?: number;
   theme?: string | null;
-  ruleChanges?: Partial<RulesConfig>;
+  settingChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   firstTeam?: TeamId;
 }
@@ -208,7 +208,7 @@ export interface SkirmishChoices {
  * Una escaramuza con lo de siempre en lo que no se elige: lo mismo en la pantalla, la partida por
  * texto y las herramientas (K4: la misma semilla da la misma partida en todas).
  */
-export function skirmishConfig({ seed, size, theme, ruleChanges, teams, firstTeam }: SkirmishChoices): SkirmishConfig {
+export function skirmishConfig({ seed, size, theme, settingChanges, teams, firstTeam }: SkirmishChoices): SkirmishConfig {
   const map = { seed, size: size ?? DEFAULT_MAP_SIZE, theme: theme ?? null };
-  return { mode: 'skirmish', map, ruleChanges, teams, ...(firstTeam === undefined ? {} : { firstTeam }) };
+  return { mode: 'skirmish', map, settingChanges, teams, ...(firstTeam === undefined ? {} : { firstTeam }) };
 }

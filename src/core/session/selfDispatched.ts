@@ -7,8 +7,7 @@
 import { assistTurn } from '../autopilot/standingOrders';
 import { dispatch, ownTeamOnly } from '../actions/dispatch';
 import { sessionOnlyProblem } from '../actions/turn';
-import type { ActionDispatcher } from '../actions/types';
-import type { GameAction, GameEvent, TeamId } from '../model';
+import type { ActionDispatcher, GameAction, GameEvent, TeamId } from '../model';
 import type { AppliedStep, Controller, TurnPlan } from './controller';
 
 /**

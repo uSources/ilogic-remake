@@ -1,7 +1,8 @@
 import { entryOf } from '@core/content';
+import { changeSettings } from '@core/gameState';
 import type Phaser from 'phaser';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
 import { endRound, newUnit, score } from '@core/rules';
@@ -104,7 +105,7 @@ describe('clima en la barra de arriba', () => {
   });
 
   it('sin la regla no hay indicador', () => {
-    expect(weatherVM(blankState(rulesWith(defaultContent(), { weather: false })))).toBeNull();
+    expect(weatherVM(blankState(settingsWith(defaultContent(), { weather: false })))).toBeNull();
   });
 });
 
@@ -193,7 +194,7 @@ describe('desglose de la barra de arriba', () => {
 
   it('ingresos por tipo de edificio y mantenimiento por tipo de unidad, con las cuentas de endRound', () => {
     const s = army();
-    s.rules = rulesWith(defaultContent(), { upkeep: 0.1, commandPoints: 30 });
+    changeSettings(s, settingsWith(defaultContent(), { upkeep: 0.1, commandPoints: 30 }));
     const economy = economyVM(s, 0);
     expect(economy.income.lines.map((line) => [line.label, line.count])).toEqual([
       ['Ciudad', 2],
@@ -214,7 +215,7 @@ describe('desglose de la barra de arriba', () => {
 
   it('si no llega para el mantenimiento, avisa de lo que se paga', () => {
     const s = army();
-    s.rules = rulesWith(defaultContent(), { upkeep: 1 });
+    changeSettings(s, settingsWith(defaultContent(), { upkeep: 1 }));
     teamState(s, 0).funds = 0;
     s.buildings = s.buildings.filter((building) => building.owner !== 0);
     const economy = economyVM(s, 0);
@@ -225,7 +226,7 @@ describe('desglose de la barra de arriba', () => {
 
   it('sin las reglas de mantenimiento y mando no salen esos apartados; el tope de dinero cuenta', () => {
     const s = army();
-    s.rules = rulesWith(defaultContent(), { upkeep: 0, commandPoints: null });
+    changeSettings(s, settingsWith(defaultContent(), { upkeep: 0, commandPoints: null }));
     teamState(s, 0).funds = MAX_FUNDS;
     const economy = economyVM(s, 0);
     expect(economy.upkeep).toBeNull();
@@ -236,9 +237,9 @@ describe('desglose de la barra de arriba', () => {
   it('dia: lo que queda y los puntos solo con limite de dias', () => {
     const s = army();
     s.day = 18;
-    s.rules = rulesWith(defaultContent(), { dayLimit: null });
+    changeSettings(s, settingsWith(defaultContent(), { dayLimit: null }));
     expect(dayInfoVM(s, 0)).toEqual({ day: 18, limit: null, left: null, score: null });
-    s.rules = rulesWith(defaultContent(), { dayLimit: 20 });
+    changeSettings(s, settingsWith(defaultContent(), { dayLimit: 20 }));
     expect(dayInfoVM(s, 0)).toEqual({ day: 18, limit: 20, left: 3, score: [score(s, 0), score(s, 1)] });
   });
 });

@@ -7,6 +7,7 @@
  */
 import type { ActionRejection, GameEvent, GameState, UndoableMove, Unit } from '../model';
 import { unitAt, unitById } from './queries';
+import { isOnMap } from '../util/predicates';
 
 /** El ultimo movimiento que se puede deshacer (null si no hay ninguno). */
 export const lastUndoableMove = (s: GameState): UndoableMove | null => s.undoableMoves?.at(-1) ?? null;
@@ -33,7 +34,7 @@ export function dropLastUndoableMove(s: GameState): void {
 }
 
 /** La unidad sigue como la dejo su movimiento: en el mapa y sin haber vuelto a estar lista (ronda nueva). */
-const isStillMoved = (unit: Unit | undefined): unit is Unit => !!unit && unit.carrier === null && unit.turnState !== 'ready';
+const isStillMoved = (unit: Unit | undefined): unit is Unit => !!unit && isOnMap(unit) && unit.turnState !== 'ready';
 
 /**
  * Por que no se puede deshacer ahora el movimiento de `unit`: tiene que ser el ultimo apuntado (y la

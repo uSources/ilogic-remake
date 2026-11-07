@@ -25,11 +25,13 @@ for (let x = 0; x < range.steps.length; x++)
 Despues (se lee como lo que hace):
 
 ```ts
-const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
-const best = minBy(reachableTiles(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
+const distanceToGoal = distanceMap(s, goal, movement);
+const best = minBy(reachableTilesWithCost(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
 const gotCloser = best && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);
 return gotCloser ? best.pos : null;
 ```
+
+(Y si ya hay una pieza que lo hace, se usa: esto es `stepToward(range, overGroundTo(s, movement, goal))`.)
 
 ## Reglas
 
@@ -40,7 +42,8 @@ return gotCloser ? best.pos : null;
    funcion con nombre. Orientativo: unas 25 lineas y 2 niveles de anidacion como mucho.
 3. **Salir pronto.** Las comprobaciones arriba con `return`, en vez de `if` dentro de `if`.
 4. **Nada magico.** Ni numeros ni condiciones sueltas que haya que adivinar: `steps > 0` es
-   `isReachable(...)`, `team !== unit.team` es `isHostile(s, team, unit.team)`, una constante con nombre
+   `canReach(range, pos)`, y ningun valor dice dos cosas (0 para "no llega" y para "ya esta alli": se
+   usa `null` o `Infinity` y se dice), `team !== unit.team` es `isHostile(s, team, unit.team)`, una constante con nombre
    en vez de `350`. Ningun numero de equipo es especial: ni `team === 0` ni `team = 0` por defecto (el
    equipo se pasa siempre; en la escena es `viewer`, y la interfaz pinta por lado: `sideOf`).
 5. **Recorrer con piezas comunes, no a mano.** Para el mapa, `Grid<T>` (`at`, `set`, `forEach`) y
@@ -65,13 +68,26 @@ return gotCloser ? best.pos : null;
     su `apply`, y lo que hay que dejar en orden despues de cualquiera es una entrada en `INVARIANTS`,
     no una llamada que cada uno tiene que acordarse de hacer.
 13. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
-    `s.rules`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
+    `s.settings`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
     modulo que se cambian al empezar una partida. El contenido va con la partida (`unitTypeOf(s, unit)`,
     `terrainAt(s, pos)`, `weightsOf(s)`), resuelto en tipos con nombre (`unitType.cost`, no columnas
-    por numero de tipo) y congelado; reglas con cambios con `rulesWith(...)`, partidas nuevas con
+    por numero de tipo) y congelado; reglas con cambios con `settingsWith(...)`, partidas nuevas con
     `newGameState(...)`. Las casillas se pasan como `Pos`, no como `x, y` sueltos, y se copian con
     `posOf(unit)`.
-14. **Sin ciclos de imports.** Si dos modulos se necesitan, lo comun baja a uno que no importa a
+14. **Las reglas no preguntan por un ajuste.** Lo que la partida lleva o no segun sus ajustes
+    (veterania, clima, habilidades, emboscadas...) es un modulo de reglas (`core/ruleModules/`) que
+    aporta entradas a las listas que miran las reglas (`hooksOf(s, 'hitModifiers')`), no un
+    `if (!s.settings.veterancy) return 1` dentro de cada funcion. Un ajuste que es un numero (dinero,
+    puntos de captura) se lee de `s.settings` sin mas. Fuera de las reglas (la IA, la interfaz, la
+    ayuda) tampoco se repite el `isOn` de un modulo: se le pregunta (`isRuleOn(s, id)`,
+    `s.ruleset`; sin partida, `gameModulesFor(ajustes)`) o, mejor, a la regla que lo usa (`seesEverything`,
+    `letsAlliesThrough`). Las reglas no importan el registro de modulos ni un modulo concreto
+    (lo mira ESLint).
+15. **Preguntar "y si" sin fingir unidades.** Nada de copias con otra casilla, otra vida u otro turno
+    (`{ ...unit, x, y }`) que pasan por las reglas como si fueran de verdad: la pregunta se dice con su
+    tipo (`engagement(atacante, defensor, { from, attackerLife })` para el combate) o la regla no
+    mira lo que se cambiaria (el alcance no mira si la unidad ya se ha movido).
+16. **Sin ciclos de imports.** Si dos modulos se necesitan, lo comun baja a uno que no importa a
     ninguno (`util/validation.ts` no sabe del contenido). Lo comprueba `tests/importCycles.test.ts`:
     en todo src/ los imports que se cargan y, en src/core, tambien los de solo tipos (como `madge
     --circular`: un ciclo de tipos no rompe al arrancar, pero ata los dos modulos igual).

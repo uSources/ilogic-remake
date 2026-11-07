@@ -5,8 +5,10 @@
 
 import { unitTypeOf } from '@core/gameContent';
 import { manhattan } from '@core/geom';
-import { isRanged } from '@core/abilities';
-import { canDamage, expectedDamage, fireOrigins, inAttackRange } from '@core/rules/combat';
+import { isRanged } from '@core/util/predicates';
+import { expectedDamage, fireOrigins } from '@core/rules/combat';
+import { canDamage, inAttackRange } from '@core/rules/weapons';
+import { engagement } from '@core/rules/engagement';
 import { moveRange } from '@core/rules/movement';
 import { teamUnits } from '@core/rules/queries';
 import { canStillFire } from '@core/rules/unitTurn';
@@ -38,7 +40,7 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
     const origins = fireOrigins(s, shooter, isRanged(s, shooter) ? null : moveRange(s, shooter));
     const damageByTarget = new Map<number, number>();
     for (const foe of nearby)
-      if (origins.some((from) => inAttackRange(s, shooter, from, foe))) damageByTarget.set(foe.uid, expectedDamage(s, shooter, foe));
+      if (origins.some((from) => inAttackRange(s, shooter, from, foe))) damageByTarget.set(foe.uid, expectedDamage(s, engagement(shooter, foe)));
     if (damageByTarget.size) table.set(shooter.uid, damageByTarget);
   }
   return table;
@@ -56,7 +58,7 @@ function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: Dama
   for (const uid of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += damageTo(uid) * (squad.length ? 1 + s.rules.flankBonus : 1);
+    total += damageTo(uid) * (squad.length ? 1 + s.settings.flankBonus : 1);
     squad.push(uid);
   }
   return total >= foe.life && squad.length >= 2 ? squad : null;

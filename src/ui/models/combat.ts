@@ -1,11 +1,11 @@
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { bountyFor, combatForecast, flanked } from '../../core/rules';
+import { bountyFor, combatForecast, engagement, flankBonusFor } from '../../core/rules';
 import type { CombatInfo, GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
 import { nameOf } from '../../settings';
 import { isFriendly, sideOf } from '../sides';
-import { unitKey } from '../sprites';
+import { AS_ACTIVE, unitKey } from '../sprites';
 
 /** Combate: prevision antes de atacar y panel mientras se anima un ataque. */
 
@@ -19,9 +19,10 @@ export function forecastVM(
   target: Unit,
   anchor: Anchor,
 ): ForecastVM {
-  const forecast = combatForecast(s, { ...attacker, x: from.x, y: from.y }, target);
+  const forecast = combatForecast(s, engagement(attacker, target, { from }));
   return {
-    attackerIcon: unitKey(textures, s, { ...attacker, turnState: 'ready' }, viewer),
+    // El atacante, en color aunque ya se haya movido: es el que va a disparar.
+    attackerIcon: unitKey(textures, s, attacker, viewer, AS_ACTIVE),
     defenderIcon: unitKey(textures, s, target, viewer),
     low: forecast.low,
     high: forecast.high,
@@ -30,7 +31,7 @@ export function forecastVM(
     lifeAfter: forecast.lifeAfter,
     killChance: forecast.killChance,
     anchor,
-    flank: flanked(s, target) ? s.rules.flankBonus : 0,
+    flank: flankBonusFor(s, target),
     bounty: bountyFor(s, target),
     counter: forecast.counter
       ? {

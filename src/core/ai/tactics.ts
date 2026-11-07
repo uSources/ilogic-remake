@@ -8,15 +8,16 @@ import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
 import { unitTypeOf, isHq, weightsOf } from '../gameContent';
 import { diamond, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
-import { canDamage } from '../rules/combat';
+import { canDamage } from '../rules/weapons';
 import { isContested } from '../rules/control';
 import { reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
 import { visibility } from '../rules/visibility';
 import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
-import { bestMoveToward, doMove, finish, stepsFrom, type PlayCtx } from '../autopilot/context';
+import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
 import { captureHere } from '../autopilot/tactics';
+import { isOnMap } from '../util/predicates';
 
 /** La Base enemiga vale mas que otro edificio: al buscar que capturar, cuenta como si estuviera estos pasos mas cerca. */
 const HQ_CAPTURE_HEAD_START = 4;
@@ -28,17 +29,18 @@ const HQ_CAPTURE_HEAD_START = 4;
 /** El edificio ajeno a la vista (hasta AI.MAXCAPTDIST) mas cercano por tierra, con la Base enemiga por delante. */
 function captureGoal(s: GameState, ai: PlayCtx, unit: Unit): Pos | null {
   const visible = visibility(s, ai.me);
-  const steps = stepsFrom(s, ai, unit);
+  // Desde 1 casilla: lo de debajo ya lo ha mirado captureHere.
+  const steps = stepsMap(s, ai, unit);
   const isCapturable = (tile: Pos): boolean => {
     const building = buildingAt(s, tile);
     if (!building || isAlliedOwner(s, building.owner, ai.me) || !visible.at(tile)) return false;
     const occupant = unitAt(s, tile);
     if (occupant && areAllied(s, occupant.team, ai.me)) return false;
-    return steps(tile) < Infinity;
+    return steps.at(tile) < Infinity;
   };
   const headStart = (tile: Pos): number => (isHq(s, buildingAt(s, tile)!) ? HQ_CAPTURE_HEAD_START : 0);
   const candidates = [...diamond(mapGrid(s), unit, 1, weightsOf(s).MAXCAPTDIST)].filter(isCapturable);
-  return minBy(candidates, (tile) => steps(tile) - headStart(tile));
+  return minBy(candidates, (tile) => steps.at(tile) - headStart(tile));
 }
 
 /** Capturar lo de debajo o ir a capturar el edificio ajeno mas cercano (solo las que capturan). */
@@ -80,7 +82,7 @@ function advanceGoals(s: GameState, ai: PlayCtx, unit: Unit): Pos[] {
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
   if (unitTypeOf(s, unit).canCapture) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
   const isVisibleTarget = (other: Unit): boolean =>
-    isHostile(s, other.team, ai.me) && other.carrier === null && visible.at(other) && canDamage(s, unit, other);
+    isHostile(s, other.team, ai.me) && isOnMap(other) && visible.at(other) && canDamage(s, unit, other);
   const isEnemyHq = (building: Building): boolean => isHostileOwner(s, building.owner, ai.me) && isHq(s, building);
   return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
 }
@@ -98,7 +100,9 @@ function stepsToGoalOrNextToIt(s: GameState, steps: (pos: Pos) => number, goal: 
  * [CAMBIO] en el original este paso casi nunca se activaba y la IA paseaba al azar.
  */
 export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
-  const steps = stepsFrom(s, ai, unit);
+  const fromHere = stepsMap(s, ai, unit);
+  // La casilla en la que ya esta no cuenta como sitio al que ir (ni como vecina del objetivo).
+  const steps = (pos: Pos) => (samePos(pos, unit) ? Infinity : fromHere.at(pos));
   const reachableGoals = advanceGoals(s, ai, unit)
     .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(s, steps, goal) }))
     .filter((option) => option.steps < Infinity);

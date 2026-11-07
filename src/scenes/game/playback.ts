@@ -10,10 +10,21 @@ import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { MoveType, type UnitType } from '../../core/content';
 import { movementOf, unitAt, unitById } from '../../core/rules';
-import { powerArea, powerOf, generalOf } from '../../core/generals';
+import { generalOf } from '../../core/generals';
+import { powerArea, powerOf } from '../../core/generalPowers';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
-import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId, Unit } from '../../core/model';
+import type {
+  CoreGameEventKind,
+  GameEvent,
+  GameEventKind,
+  GameEventOf,
+  GameState,
+  InterruptionKind,
+  Pos,
+  TeamId,
+  Unit,
+} from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';
 import { fmtNum, settings, t } from '../../settings';
@@ -36,7 +47,7 @@ import { baseFacing, faceFlip, type MapView } from '../../ui/mapView';
 import { combatVM } from '../../ui/hudModels';
 import { PAL, PAL_CSS } from '../../ui/palette';
 import { shownTeamNumber, sideColor, sideOf, type Side } from '../../ui/sides';
-import { unitKey } from '../../ui/sprites';
+import { AS_ACTIVE, unitKey } from '../../ui/sprites';
 import { STEP_MS, type Phase } from './types';
 
 /** Lo que el reproductor necesita de la escena. */
@@ -197,11 +208,12 @@ const unitEntered = (s: GameState, event: PathEvent): Unit | undefined => ('into
 function moverTexture(stage: EventStage, event: PathEvent): string | null {
   const s = stage.state;
   const mover = unitById(s, event.uid);
-  const start = event.path[0]!;
+  const start = event.path.at(0);
   // Al unirse o subir ya no esta en el estado: se dibuja como la unidad en la que entra (es de su
   // mismo equipo y, al unirse, de su mismo tipo). Si tampoco esta, no se anima.
   const drawn = mover ?? unitEntered(s, event);
-  return drawn ? unitKey(stage.scene.textures, s, { ...drawn, x: start.x, y: start.y, turnState: 'ready' }, stage.viewer) : null;
+  // Dibujada en la casilla de salida (su terreno decide el dibujo clasico) y activa, como al empezar a moverse.
+  return drawn && start ? unitKey(stage.scene.textures, s, drawn, stage.viewer, { ...AS_ACTIVE, at: start }) : null;
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {
@@ -213,19 +225,39 @@ const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKe
   const mover = unitById(stage.state, event.uid) ?? unitEntered(stage.state, event);
   const showWholePath = mover?.team === stage.viewer;
   await animatePath(stage, event.uid, texture, event.path, showWholePath);
-  if (event.kind === 'move' && event.ambush && !stage.fastForward) {
-    await showAmbush(stage, event.ambush, event.path[event.path.length - 1]!, showWholePath);
+  const stoppedAt = event.path.at(-1);
+  if (event.kind === 'move' && event.interruption && stoppedAt && !stage.fastForward) {
+    const { kind, at } = event.interruption;
+    await (INTERRUPTION_ANIMATIONS[kind] ?? showCut)(stage, at, stoppedAt, showWholePath);
   }
 };
 
-/** Emboscada: la casilla de la unidad escondida destella y sale el aviso donde se paro. */
-async function showAmbush(stage: EventStage, ambusher: Pos, stoppedAt: Pos, showWholePath: boolean): Promise<void> {
+/** Como se ve cada corte de camino: donde estaba lo que lo corto y donde se paro la unidad. */
+type InterruptionAnimation = (stage: EventStage, at: Pos, stoppedAt: Pos, showWholePath: boolean) => Promise<void>;
+
+/** Un corte cualquiera: destella la casilla de lo que lo ha cortado (si se ve donde se paro). Devuelve si se ha visto. */
+function flashCut(stage: EventStage, at: Pos, stoppedAt: Pos, showWholePath: boolean): boolean {
   stage.refresh();
-  if (!showWholePath && !stage.visible(stoppedAt)) return;
-  const centerPoint = center(stoppedAt);
-  void tileFlash(stage.scene, stage.view, ambusher, PAL.red);
-  await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
+  if (!showWholePath && !stage.visible(stoppedAt)) return false;
+  void tileFlash(stage.scene, stage.view, at, PAL.red);
+  return true;
 }
+
+/** Lo que se ve de un corte que la escena no conoce (el de un modulo sin animacion propia): el destello. */
+const showCut: InterruptionAnimation = (stage, at, stoppedAt, showWholePath) => {
+  flashCut(stage, at, stoppedAt, showWholePath);
+  return Promise.resolve();
+};
+
+/** Emboscada: la casilla de la unidad escondida destella y sale el aviso donde se paro. */
+const showAmbush: InterruptionAnimation = async (stage, ambusher, stoppedAt, showWholePath) => {
+  if (!flashCut(stage, ambusher, stoppedAt, showWholePath)) return;
+  const centerPoint = center(stoppedAt);
+  await floatText(stage.scene, stage.view, { x: centerPoint.x, y: centerPoint.y - 6 }, t('fxAmbush'), PAL_CSS.redSoft);
+};
+
+/** La animacion propia de cada clase de corte que la escena conoce; las demas, `showCut`. */
+const INTERRUPTION_ANIMATIONS: Partial<Record<InterruptionKind, InterruptionAnimation>> = { ambush: showAmbush };
 
 /** Punto donde se apoya una unidad en una casilla (centro abajo, como sus sprites). */
 const feetOf = (pos: Pos) => ({ x: pos.x * TILE + TILE / 2, y: (pos.y + 1) * TILE });
@@ -673,8 +705,11 @@ export function showFallNotice(event: GameEventOf<'teamDefeated'>, viewer: TeamI
 /** Esperar no se anima. */
 const noAnimation = async (): Promise<void> => {};
 
-/** La animacion de cada tipo de evento. Un tipo nuevo de GameEvent no compila sin su entrada. */
-export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
+/**
+ * La animacion de cada tipo de suceso de cualquier partida: uno nuevo no compila sin su entrada. Los
+ * de los modulos (ModuleEvents) van en MODULE_ANIMATORS si tienen animacion; si no, ninguna.
+ */
+export const ANIMATORS: { [K in CoreGameEventKind]: Animator<K> } = {
   move: animatePathEvent,
   merge: animatePathEvent,
   load: animatePathEvent,
@@ -700,10 +735,7 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   // El fin de ronda lo cuenta su resumen (turns.ts), no una animacion por suceso.
   income: noAnimation,
   heal: noAnimation,
-  upkeep: noAnimation,
-  controlPoint: noAnimation,
   newDay: noAnimation,
-  weather: noAnimation,
   // El final de la partida y los avisos de cada turno los enseña la escena (endOfMatch.ts, turns.ts).
   surrender: noAnimation,
   teamDefeated: announceDefeat,
@@ -711,7 +743,14 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   turnEnd: noAnimation,
 };
 
-/** La animacion de un evento, con su tipo (TypeScript no lo deduce solo al indexar `ANIMATORS`). */
+/**
+ * La animacion de los sucesos de los modulos que tienen una. Ninguno de ahora (mantenimiento, puntos
+ * de control, clima: los cuenta el resumen de la ronda); uno sin entrada no se anima.
+ */
+const MODULE_ANIMATORS: { [K in Exclude<GameEventKind, CoreGameEventKind>]?: Animator<K> } = {};
+
+/** La animacion de un evento, con su tipo (TypeScript no lo deduce solo al indexar las tablas); la de un suceso que no se conoce, ninguna. */
 function animatorFor<K extends GameEventKind>(event: GameEventOf<K>): Animator<K> {
-  return ANIMATORS[event.kind];
+  const animators: { [L in GameEventKind]?: Animator<L> } = { ...MODULE_ANIMATORS, ...ANIMATORS };
+  return animators[event.kind] ?? noAnimation;
 }

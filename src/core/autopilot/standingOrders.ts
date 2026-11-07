@@ -11,8 +11,7 @@ import { manhattan, samePos, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { effectiveStandingOrder } from '../squads/standingOrders';
-import type { StandingOrderKind, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import type { ActionDispatcher } from '../actions/types';
+import type { ActionDispatcher, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../model';
 import { act, playCtx, canAct, doMove, finish, hiddenFoes, needsRepair, visibleFoes, type PlayCtx } from './context';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
@@ -67,8 +66,8 @@ function* captureOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent,
     return ownsBuildingAt(s, play, at);
   }
   const range = moveRange(s, unit);
-  const ambushed = yield* doMove(s, play, unit, standingOrderStep(s, play, unit, at, range, formation(s, play, unit)));
-  if (ambushed) return false;
+  const interrupted = yield* doMove(s, play, unit, standingOrderStep(s, play, unit, at, range, formation(s, play, unit)));
+  if (interrupted) return false;
   if (samePos(unit, at)) yield* captureHere(s, play, unit);
   else yield* shootFromHereOrWait(turn);
   yield* finish(s, play, unit);
@@ -97,8 +96,8 @@ function* attackOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, 
   const squadFormation = formation(s, play, unit);
   if (yield* tryAttack(s, play, unit, range, { chase: false, from: formationFrom(squadFormation) })) return false;
   if (manhattan(unit, at) > 1) {
-    const ambushed = yield* doMove(s, play, unit, standingOrderStep(s, play, unit, at, range, squadFormation));
-    if (!ambushed) yield* shootFromHereOrWait(turn);
+    const interrupted = yield* doMove(s, play, unit, standingOrderStep(s, play, unit, at, range, squadFormation));
+    if (!interrupted) yield* shootFromHereOrWait(turn);
     return false;
   }
   // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.

@@ -10,13 +10,12 @@
  */
 import { dispatch, isAnyTime } from '../actions/dispatch';
 import { sessionOnlyProblem, startsTurn } from '../actions/turn';
-import type { ActionDispatcher } from '../actions/types';
 import { fallOf } from '../rules/falls';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
 import { teamIds } from '../teams';
-import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamFall, TeamId } from '../model';
+import type { ActionDispatcher, ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamFall, TeamId } from '../model';
 import type { Controller, TurnPlan, TurnStep } from './controller';
 import { isOffTurnAction, type LoggedAction } from './log';
 

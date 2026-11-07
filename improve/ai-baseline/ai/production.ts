@@ -95,12 +95,12 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
  */
 export function* produce(s: GameState, ai: AiCtx, rng: Rng): Generator<GameEvent> {
   const me = ai.me;
-  const limited = s.rules.commandPoints !== null;
+  const limited = s.settings.commandPoints !== null;
   const order = productionOrder(s, rng, limited);
   const income = netIncome(s, me);
   for (const building of order) {
     const mine = teamUnits(s, me);
-    if (building.owner !== me || mine.length >= s.rules.maxUnits || unitAt(s, building)) continue;
+    if (building.owner !== me || mine.length >= s.settings.maxUnits || unitAt(s, building)) continue;
     const options = purchaseOptions(s, building, mine, limited);
     if (!options.length) continue;
     const purchase = choosePurchase(options, teamState(s, me).funds + income, rng);

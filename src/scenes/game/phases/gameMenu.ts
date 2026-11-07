@@ -123,7 +123,7 @@ function gameMenuModel(input: MenuInput): MenuModel {
     danger: choice === 'quit' || choice === 'surrender',
     disabled: choice === 'replay' && !input.canReplay,
   }));
-  const dayLimit = s.rules.dayLimit ? ` / ${s.rules.dayLimit}` : '';
+  const dayLimit = s.settings.dayLimit ? ` / ${s.settings.dayLimit}` : '';
   // Codigo del mapa, para volver a jugarlo (Nueva partida > Codigo del mapa).
   const subtitle = s.setup ? `${t('mapCode')}: ${seedToCode(s.setup.seed)} · ${s.setup.size}×${s.setup.size}` : undefined;
   const mission = s.mission ? missionById(s.mission.id) : undefined;

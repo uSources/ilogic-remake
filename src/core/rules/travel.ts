@@ -7,7 +7,7 @@
 import { samePos } from '../geom';
 import type { ActionRejection, GameEvent, GameState, Pos, TeamId, TravelEnd, Unit } from '../model';
 import { isOnBoard } from '../mapGrid';
-import { canReach, moveRange, plannedPath, stepToward } from './movement';
+import { canReach, moveRange, overGroundTo, plannedPath, stepToward } from './movement';
 import { canWalk, movementOf } from './queries';
 
 /** El paso de este turno de un viaje: llega (sin moverse: el ultimo trozo es de quien juega) o anda un camino. */
@@ -15,14 +15,15 @@ export type TravelStep = { arrives: true; end: Extract<TravelEnd, 'arrived' | 'w
 
 /**
  * El paso de este turno hacia `goal`: si ya esta ('arrived') o llega este turno ('withinReach'), el
- * viaje acaba sin moverla; si no, el camino a la casilla del alcance que mas acerca (stepToward).
- * Null si no se acerca nada.
+ * viaje acaba sin moverla; si no, el camino a la casilla del alcance que mas acerca por tierra
+ * (stepToward). Null si no se acerca nada o el destino no se puede pisar.
  */
 export function travelStepOf(s: GameState, unit: Unit, goal: Pos): TravelStep | null {
   if (samePos(unit, goal)) return { arrives: true, end: 'arrived' };
   const range = moveRange(s, unit);
   if (canReach(range, goal)) return { arrives: true, end: 'withinReach' };
-  const dest = stepToward(s, unit, goal, range);
+  const movement = movementOf(s, unit);
+  const dest = canWalk(s, goal, movement) ? stepToward(range, overGroundTo(s, movement, goal)) : null;
   const path = dest && plannedPath(s, unit, dest);
   return path ? { arrives: false, path } : null;
 }

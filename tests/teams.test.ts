@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { changeSettings } from '@core/gameState';
 import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { skirmishConfig } from '@core/match';
@@ -7,14 +8,13 @@ import { createMatch } from '@core/defaultGames';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
 import { MoveType } from '@core/content';
-import { createLayer } from '@core/mapGrid';
 import { generateGame } from '@core/mapgen';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import {
   attackTargets,
   canCapture,
   controlRound,
-  groundDistance,
+  distanceMap,
   isMatchOver,
   newUnit,
   matchResult,
@@ -166,14 +166,16 @@ describe('cuatro equipos en dos alianzas', () => {
     const s = fourCorners();
     s.buildings.push({ type: 'City', owner: 3, x: 12, y: 10, capture: null });
     s.controlPoints = [{ x: 20, y: 20, owner: null }];
-    s.rules = { ...s.rules, controlRadius: 1, controlIncome: 500 };
+    changeSettings(s, { ...s.settings, controlRadius: 1, controlIncome: 500 });
     newUnit(s, SOLDIER, 0, { x: 20, y: 20 });
     newUnit(s, SOLDIER, 2, { x: 21, y: 20 });
     const before = s.teams.map((team) => team.funds);
     const report = endRoundReport(s);
     expect(report.income).toHaveLength(4);
     expect(report.income[3]).toBeGreaterThan(report.income[1]!);
-    expect(s.teams.map((team, id) => team.funds - before[id]!)).toEqual(perTeam(s, (team) => report.income[team]! - report.upkeep[team]!));
+    expect(s.teams.map((team, id) => team.funds - before[id]!)).toEqual(
+      perTeam(s, (team) => report.income[team]! - (report.upkeep?.[team] ?? 0)),
+    );
     // Dos aliados en la zona: no la disputan, es del primero que la tiene.
     expect(s.controlPoints[0]!.owner).toBe(0);
     newUnit(s, SOLDIER, 1, { x: 20, y: 21 });
@@ -305,15 +307,15 @@ describe('mapas al azar para mas de dos equipos', () => {
       const teams: TeamSetup[] = Array.from({ length: count }, () => ({ controller: 'ai' }));
       const s = generateGame(seededRng(seed), {
         size: 32,
-        rules: rulesWith(defaultContent(), { controlPoints: 2 }),
+        settings: settingsWith(defaultContent(), { controlPoints: 2 }),
         content: defaultContent(),
         teams,
       });
       const hqs = teamIds(s).map((team) => s.buildings.find((building) => building.owner === team && building.type === HQ)!);
       expect(hqs.every(Boolean), `semilla ${seed}`).toBe(true);
       for (const team of teamIds(s)) expect(s.units.filter((unit) => unit.team === team).length).toBeGreaterThan(0);
-      const fromFirst = groundDistance(s, hqs[0]!, MoveType.FOOT, createLayer(s, false));
-      for (const hq of hqs.slice(1)) expect(fromFirst.at(hq)).toBeGreaterThan(0);
+      const fromFirst = distanceMap(s, hqs[0]!, MoveType.FOOT);
+      for (const hq of hqs.slice(1)) expect(fromFirst.at(hq)).toBeLessThan(Infinity);
       for (const [i, hq] of hqs.entries()) for (const other of hqs.slice(i + 1)) expect(manhattan(hq, other)).toBeGreaterThan(5);
       checkInvariants(s);
     }

@@ -10,7 +10,6 @@ import {
   reachableTiles,
   tileProtection,
   unitThreat,
-  type MovePath,
 } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { blankState, unitTypeNamed, terrainNamed, hqId } from './helpers';
@@ -43,13 +42,13 @@ describe('ayudas de reglas', () => {
     expect(defenseStars(s, { x: 5, y: 5 })).toBeGreaterThanOrEqual(defenseStars(s, { x: 0, y: 0 }));
   });
 
-  it('casillas alcanzables = las de paso > 0, en orden de columnas', () => {
+  it('casillas alcanzables = las que tienen coste (no null), en orden de columnas', () => {
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 10, y: 10 });
     const range = moveRange(s, unit);
     const tiles = reachableTiles(range);
     expect(tiles.length).toBeGreaterThan(0);
-    expect(tiles.every((pos) => range.steps.at(pos) > 0)).toBe(true);
+    expect(tiles.every((pos) => range.steps.at(pos) !== null)).toBe(true);
     expect(tiles.some((pos) => pos.x === 10 && pos.y === 10)).toBe(false);
     const sorted = [...tiles].sort((firstPos, secondPos) => firstPos.x - secondPos.x || firstPos.y - secondPos.y);
     expect(tiles).toEqual(sorted);
@@ -72,13 +71,13 @@ describe('ayudas de reglas', () => {
   });
 
   it('eventos: forma unica para mover (con o sin emboscada) y capturar', () => {
-    const path: MovePath = [
+    const path = [
       { x: 1, y: 1 },
       { x: 2, y: 1 },
     ];
-    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path });
-    path.ambush = { x: 3, y: 1 };
-    expect(moveEvent(0, 4, path)).toEqual({ kind: 'move', actor: 0, uid: 4, path, ambush: { x: 3, y: 1 } });
+    expect(moveEvent(0, 4, { path, interruption: null })).toEqual({ kind: 'move', actor: 0, uid: 4, path });
+    const ambushed = { path, interruption: { kind: 'ambush' as const, at: { x: 3, y: 1 } } };
+    expect(moveEvent(0, 4, ambushed)).toEqual({ kind: 'move', actor: 0, uid: 4, path, interruption: ambushed.interruption });
     const s = blankState();
     const unit = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
     const building = { type: 'City', owner: 1 as const, x: 4, y: 4, capture: null };
@@ -110,7 +109,7 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 8 as 7 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 10 as 9 })],
     [
       'equipo caido sin caida apuntada',
       () => {

@@ -1,51 +1,86 @@
-/** La accion de atacar: el combate entero (daño, contraataque, veterania, botin y carga del general). */
+/**
+ * La accion de atacar y lo que pasa en un ataque (COMBAT_RESOLUTION): el golpe, el contraataque y lo
+ * que aportan los modulos de reglas (la carga de los generales, el botin).
+ */
 import { posOf } from '../geom';
-import { chargeFromCombat } from '../generals';
-import { attackProblem, bountyFor, canCounter, combatInfoBefore, strike } from '../rules/combat';
+import { attackProblem, canCounter, combatInfoBefore, strike } from '../rules/combat';
+import { fallenIn, newAttackRecord } from '../rules/attackRecord';
 import { unitById } from '../rules/queries';
 import { endTravel } from '../rules/travel';
 import { canStillMove, spendUnit } from '../rules/unitTurn';
-import { earn } from '../rules/funds';
+import { engagement } from '../rules/engagement';
+import type { CombatStage, CombatStep } from '../ruleModules/hooks';
+import { hooksOf } from '../ruleModules/ruleset';
+import { inStageOrder } from '../util/stages';
 import { isAlive } from '../util/predicates';
-import type { Dice, GameEventOf, GameState, TeamId, Unit } from '../model';
+import type { ActionRegistry, AttackPartsFitEvent, AttackRecord, AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
-import type { ActionRegistry } from './types';
 
-/** Quien destruye a otra unidad gana una baja (veterania), si sigue viva. */
-function countKills(attacker: Unit, defender: Unit): void {
-  if (!isAlive(defender) && isAlive(attacker)) attacker.kills = (attacker.kills ?? 0) + 1;
-  if (!isAlive(attacker) && isAlive(defender)) defender.kills = (defender.kills ?? 0) + 1;
+/** Los momentos de un ataque, en orden: el golpe, el contraataque, lo de herir y lo de que una caiga. */
+export const COMBAT_STAGES: readonly CombatStage[] = ['strike', 'counter', 'wound', 'kill'];
+
+/** El atacante dispara: el defensor pierde la vida de la tirada y queda tocado hoy; atacar gasta el turno entero. */
+function strikeDefender(s: GameState, attack: AttackRecord, dice: Dice): void {
+  const { attacker, defender } = attack;
+  attack.damage = strike(s, engagement(attacker, defender), dice);
+  defender.life -= attack.damage;
+  defender.hitDay = s.day;
+  spendUnit(attacker);
 }
 
-/** [CAMBIO] Botin: quien destruye cobra parte del precio de lo destruido (atacar sale a cuenta). Devuelve lo cobrado. */
-function payBounty(s: GameState, attacker: Unit, defender: Unit): number {
-  const loser = !isAlive(defender) ? defender : !isAlive(attacker) ? attacker : null;
-  if (!loser) return 0;
-  const winner: TeamId = loser === defender ? attacker.team : defender.team;
-  const bounty = bountyFor(s, loser);
-  earn(s, winner, bounty);
-  return bounty;
+/** Si el defensor puede responder (canCounter: las reglas de contraataque de los modulos), devuelve el golpe. */
+function counterAttack(s: GameState, attack: AttackRecord, dice: Dice): void {
+  const { attacker, defender } = attack;
+  if (!canCounter(s, engagement(attacker, defender))) return;
+  attack.counter = strike(s, engagement(defender, attacker), dice);
+  attacker.life -= attack.counter;
+}
+
+/** Quien destruye a la otra gana una baja (la veterania sale de ahi, aunque la partida no la tenga puesta). */
+function countKill(_s: GameState, attack: AttackRecord): void {
+  const fallen = fallenIn(attack);
+  if (fallen) fallen.winner.kills = (fallen.winner.kills ?? 0) + 1;
 }
 
 /**
- * El combate de `attacker` contra `defender`, ya comprobado (attackProblem): daño, contraataque si las
- * reglas lo tienen, carga de los generales, bajas y botin. Devuelve su suceso, que lleva lo que hace
- * falta para enseñarlo aunque alguna de las dos ya no exista (ver CombatInfo). Las que caen las quita
- * despues `dispatch` (INVARIANTS).
+ * Lo que pasa en cualquier ataque, cada paso en su momento. Lo que depende de la partida lo ponen sus
+ * modulos de reglas (`combatSteps`): la carga de los generales al herir, el botin si una cae. Un
+ * efecto nuevo de los combates (moral, experiencia por daño...) es un paso de su modulo.
+ */
+export const COMBAT_RESOLUTION: readonly CombatStep[] = [
+  { id: 'strike', stage: 'strike', run: strikeDefender },
+  { id: 'counter', stage: 'counter', run: counterAttack },
+  { id: 'kills', stage: 'kill', run: countKill },
+];
+
+/** Los pasos de un ataque en esta partida, en orden: por momento y, en cada uno, los de siempre y luego los de sus modulos. */
+export function combatResolutionOf(s: GameState): CombatStep[] {
+  return inStageOrder(COMBAT_STAGES, COMBAT_RESOLUTION, hooksOf(s, 'combatSteps'));
+}
+
+/**
+ * Las partes de los modulos en forma canonica para el suceso: por orden de nombre. Asi el suceso
+ * depende solo de lo que ha pasado, no del orden en que se enchufan los modulos ni del momento de
+ * sus pasos: dos partidas iguales dan sucesos iguales byte a byte (la huella, una repeticion, otra
+ * pantalla que los reciba).
+ */
+const canonicalParts = (parts: Partial<AttackRecordParts>): Partial<AttackRecordParts> =>
+  Object.fromEntries(Object.entries(parts).sort(([first], [second]) => (first < second ? -1 : 1)));
+
+/** Ninguna parte de un modulo pisa un campo del suceso del ataque: si alguno lo hiciera, esto no compila. */
+export const ATTACK_PARTS_FIT_EVENT: AttackPartsFitEvent = true;
+
+/**
+ * El combate de `attacker` contra `defender`, ya comprobado (attackProblem): los pasos de
+ * COMBAT_RESOLUTION en su orden. Devuelve su suceso, que lleva lo que hace falta para enseñarlo
+ * aunque alguna de las dos ya no exista (ver CombatInfo). Las que caen las quita despues `dispatch`
+ * (INVARIANTS).
  */
 export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice: Dice): GameEventOf<'attack'> {
-  const combat = combatInfoBefore(s, attacker, defender);
+  const combat = combatInfoBefore(s, engagement(attacker, defender));
   const at = posOf(defender);
-  const damage = strike(s, attacker, defender, dice);
-  defender.life -= damage;
-  defender.hitDay = s.day;
-  // Atacar gasta el turno entero de la unidad.
-  spendUnit(attacker);
-  const counter = canCounter(s, defender, attacker) ? strike(s, defender, attacker, dice) : 0;
-  attacker.life -= counter;
-  const charge = chargeFromCombat(s, attacker, defender, damage, counter);
-  countKills(attacker, defender);
-  const bounty = payBounty(s, attacker, defender);
+  const attack = newAttackRecord(attacker, defender);
+  for (const step of combatResolutionOf(s)) step.run(s, attack, dice);
   const killed = !isAlive(defender);
   // Si el defensor cae no hay contraataque, aunque pudiera haberlo.
   if (killed) combat.counterHit = null;
@@ -55,12 +90,11 @@ export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice
     attacker: attacker.uid,
     target: defender.uid,
     at,
-    damage,
+    damage: attack.damage,
     killed,
-    counter,
+    counter: attack.counter,
     attackerKilled: !isAlive(attacker),
-    ...(bounty ? { bounty } : {}),
-    ...(charge.length ? { charge } : {}),
+    ...canonicalParts(attack.parts),
     combat,
   };
 }

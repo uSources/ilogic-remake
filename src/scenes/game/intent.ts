@@ -5,7 +5,7 @@
 import { posKey, samePos, posOf } from '../../core/geom';
 import { isOnBoard } from '../../core/mapGrid';
 import { bestAttackTile } from '../../core/targeting';
-import { canCaptureAt, pathTo, targetProblem, unitAt, unitById, type MoveRange, type Sight } from '../../core/rules';
+import { canCaptureAt, canReach, pathTo, targetProblem, unitAt, unitById, type MoveRange, type Sight } from '../../core/rules';
 import type { GameState, Pos, Unit } from '../../core/model';
 import { type Intent } from './types';
 
@@ -36,12 +36,9 @@ export function intentAt(s: GameState, plan: MovePlan | null, tile: Pos, visible
     const from = attackFrom(s, plan, other, visible);
     return from ? { kind: 'attack', from, target: other } : { kind: 'none' };
   }
-  if (!isReachable(plan.range, tile)) return { kind: 'none' };
+  if (!canReach(plan.range, tile)) return { kind: 'none' };
   return { kind: 'move', to: posOf(tile), capture: canCaptureAt(s, unit, tile) };
 }
-
-/** La unidad puede terminar su movimiento en esa casilla este turno. */
-const isReachable = (range: MoveRange, tile: Pos) => range.steps.at(tile) > 0;
 
 /** Mejor casilla desde la que atacar a `target` (ver bestAttackTile), con lo que ve quien mira. */
 export function attackFrom(s: GameState, plan: MovePlan, target: Unit, visible: Sight): Pos | null {
@@ -58,5 +55,5 @@ export function trailTo(plan: MovePlan, dest: Pos): Pos[] {
   // El destino esta a mitad del camino trazado: hasta ahi.
   const destIndex = trail.findIndex((pos) => samePos(pos, dest));
   if (destIndex > 0) return trail.slice(0, destIndex + 1);
-  return pathTo(plan.range, plan.unit, dest);
+  return pathTo(plan.range, dest);
 }

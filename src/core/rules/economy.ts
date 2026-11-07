@@ -24,9 +24,9 @@ export function commandUsed(s: GameState, team: TeamId): number {
 /** Por que no cabe una unidad mas de ese tipo en el equipo (null = cabe). */
 export type ArmyLimit = 'units' | 'command';
 export function armyLimit(s: GameState, team: TeamId, unitType: UnitType): ArmyLimit | null {
-  if (teamUnits(s, team).length >= s.rules.maxUnits) return 'units';
-  if (s.rules.commandPoints === null) return null;
-  return commandUsed(s, team) + unitType.command > s.rules.commandPoints ? 'command' : null;
+  if (teamUnits(s, team).length >= s.settings.maxUnits) return 'units';
+  if (s.settings.commandPoints === null) return null;
+  return commandUsed(s, team) + unitType.command > s.settings.commandPoints ? 'command' : null;
 }
 
 /**
@@ -34,14 +34,13 @@ export function armyLimit(s: GameState, team: TeamId, unitType: UnitType): ArmyL
  * unidades, redondeado a 100. Frena la acumulacion de ejercitos enormes (el original no lo tenia).
  */
 export function upkeepOf(s: GameState, team: TeamId): number {
-  if (s.rules.upkeep <= 0) return 0;
   const armyCost = teamUnits(s, team).reduce((total, unit) => total + unitTypeOf(s, unit).cost, 0);
-  return roundToMoneyStep(armyCost * s.rules.upkeep);
+  return roundToMoneyStep(armyCost * s.settings.upkeep);
 }
 
 /** Ingresos de un tipo de edificio por ronda con las reglas de la partida (multiplos de 100). */
 export function buildingIncome(s: GameState, buildingType: BuildingType): number {
-  return roundToMoneyStep(buildingType.earning * s.rules.incomeScale);
+  return roundToMoneyStep(buildingType.earning * s.settings.incomeScale);
 }
 
 export interface BuyOption {

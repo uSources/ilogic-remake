@@ -46,6 +46,7 @@ import { PointerGestures } from '../controls/pointer';
 import { CLOSES_HELP, type InputCommand } from '../controls/inputCommands';
 import type { ControlContext, MenuCommand } from '../controls/menu';
 import { squadsVM, minimapVM, tileVM, weatherVM, dayInfoVM, economyVM, generalVM } from '../ui/hudModels';
+import { helpRulesOfMatch } from '../hud/helpText';
 import type { LabAction, LabOptions } from '../lab';
 import { gameModeOf } from '../core/modes';
 import { MENU_PHASES, type ActionHost, type ActionKey, type GameStartData, type Phase } from './game/types';
@@ -951,7 +952,7 @@ export class GameScene extends Phaser.Scene {
     ui.set({
       funds: teamState(s, viewer).funds,
       income: teamIncome(s, viewer),
-      commandPoints: s.rules.commandPoints === null ? null : { used: commandUsed(s, viewer), max: s.rules.commandPoints },
+      commandPoints: s.settings.commandPoints === null ? null : { used: commandUsed(s, viewer), max: s.settings.commandPoints },
       economy: economyVM(s, viewer),
       dayInfo: dayInfoVM(s, viewer),
       lab: labPanel(this.s, this.lab),
@@ -959,8 +960,8 @@ export class GameScene extends Phaser.Scene {
       enemyGeneral: enemyWithGeneral === undefined ? null : generalVM(s, viewer, enemyWithGeneral, null),
       buildings: s.buildings.filter((building) => building.owner === viewer).length,
       day: s.day,
-      dayLimit: s.rules.dayLimit,
-      helpRules: s.rules,
+      dayLimit: s.settings.dayLimit,
+      helpRules: helpRulesOfMatch(s),
       weather,
       turn: sideOf(s, viewer, this.turns.acting),
       busy,

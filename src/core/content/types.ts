@@ -16,10 +16,6 @@ export type MoveType = (typeof MoveType)[keyof typeof MoveType];
 /** Todos los tipos de movimiento, en el orden de MoveType. */
 export const MOVEMENTS: readonly MoveType[] = Object.values(MoveType);
 
-/** Clases de habilidad que entiende el juego. Cada una tiene sus numeros en el JSON. */
-export const ABILITY_KINDS = ['guard', 'zoneOfControl', 'aura', 'piercing', 'scout', 'quickCapture'] as const;
-export type AbilityKind = (typeof ABILITY_KINDS)[number];
-
 /**
  * Habilidad pasiva de una unidad (units.json, "abilities"). Siempre esta activa; no es una orden.
  * - guard: los ataques a distancia (alcance minimo > 1) contra ella aciertan `factor` veces (0.5 = la mitad).
@@ -39,6 +35,9 @@ export type AbilityDef =
   | { kind: 'scout' }
   | { kind: 'quickCapture'; factor: number };
 
+/** Las clases de habilidad (sus validaciones: content/abilities.ts; lo que hacen: core/abilities.ts). */
+export type AbilityKind = AbilityDef['kind'];
+
 export interface UnitDef {
   /** Nombre interno (en ingles, sin espacios). Las imagenes son u/b_<id>.png, u/r_<id>.png... */
   id: string;
@@ -54,9 +53,10 @@ export interface UnitDef {
   captures: boolean;
   /**
    * null = no ataca. `range`: distancias desde/hasta (1 = casilla de al lado; [2, 5] = artilleria).
+   * `firesAfterMove`: puede moverse y disparar en el mismo turno (la artilleria no).
    * `hitChance`: probabilidad de acierto de cada punto de vida contra cada unidad (0..1; si no esta, 0).
    */
-  attack: { range: [number, number]; hitChance: Record<string, number> } | null;
+  attack: { range: [number, number]; firesAfterMove: boolean; hitChance: Record<string, number> } | null;
   transport?: { slots: number; carries: string[] };
   /** Edificios que la fabrican y edificios propios que la curan al empezar la ronda. */
   builtAt: string[];

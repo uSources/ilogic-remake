@@ -27,7 +27,7 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
     "HIT_CHANCE.Tank.Soldier": "+0.05",
     "BUILDING.earning.City": 800,
     "TERRAIN.protection.Woods": 0.8,
-    "RULES.initialFunds": 8000
+    "SETTINGS.initialFunds": 8000
   }
 }
 ```
@@ -39,11 +39,11 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
   - `HIT_CHANCE.<atacante>.<defensor>`: probabilidad de acierto (`attack.hitChance`).
   - `BUILDING.<earning|heals|protection|vision>.<edificio>`.
   - `TERRAIN.<protection|buildable|water>.<terreno>` y `MOVE_COST.<movimiento>.<terreno>` (`movement` de `terrain.json`; `null` = no se puede pasar).
-  - `RULES.<regla>`: las reglas por defecto de `rules.json` (la variante se juega con `rulesWith(su contenido)`).
+  - `SETTINGS.<regla>`: las reglas por defecto de `settings.json` (la variante se juega con `settingsWith(su contenido)`).
   - `AI.<peso>`: pesos de `ai.json`.
 - **Casillas:** se nombran con los nombres internos (`Tank`, `City`, `Woods`…), con su índice o con `*` para todas.
 - **Valores:** un número fijo, `"x1.1"` (multiplicar), `"+500"` o `"-0.05"`. Precios e ingresos se redondean a 100.
-- **Reglas nuevas:** se añaden a `rules.json` (y a `RulesConfig`) y quedan disponibles para las variantes sin tocar la herramienta.
+- **Reglas nuevas:** se añaden a `settings.json` (y a `MatchSettings`) y quedan disponibles para las variantes sin tocar la herramienta.
 
 ## Qué mide
 

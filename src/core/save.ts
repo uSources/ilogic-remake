@@ -31,7 +31,8 @@ import {
   type SavedLists,
 } from './savedParts';
 import { isGameModeId } from './modes';
-import { isValidRules } from './rulesSchema';
+import { isValidSettings } from './settingsSchema';
+import { rulesetFor } from './ruleModules/registry';
 import { isObject } from './util/validation';
 import { isRandomState } from './util/random';
 import type { GameState, SavedGameState } from './model';
@@ -58,7 +59,7 @@ export type SaveError =
   | 'badCargo'
   | 'badBuildings'
   | 'badMission'
-  | 'badRules';
+  | 'badSettings';
 
 /** Lo que da leer una partida guardada: la partida, o por que no se ha podido. */
 export type ReadSaveResult = { ok: true; state: GameState } | { ok: false; error: SaveError };
@@ -74,7 +75,8 @@ export function readSave(json: string, content: GameContent): ReadSaveResult {
   if (saved.version !== SAVE_VERSION) return { ok: false, error: 'badVersion' };
   const check = checkGame(saved, content);
   if (!check.ok) return check;
-  const state: GameState = { ...cleanGame(saved, check), content };
+  const game = cleanGame(saved, check);
+  const state: GameState = { ...game, content, ruleset: rulesetFor(game, game.settings) };
   // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
   if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
   return { ok: true, state };
@@ -123,7 +125,7 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
   if (!hasConsistentCargo(units)) return fail('badCargo');
   if (!hasValidBuildings(frame, buildings)) return fail('badBuildings');
   if (saved.mission !== undefined && !isValidMission(frame, saved.mission)) return fail('badMission');
-  if (!isValidRules(saved.rules)) return fail('badRules');
+  if (!isValidSettings(saved.settings)) return fail('badSettings');
   return { ok: true, lists: { map, teams, units, buildings }, frame };
 }
 

@@ -4,15 +4,16 @@
  */
 import type { GameContent } from './content';
 import { gameModeOf } from './modes';
+import { rulesetFor } from './ruleModules/registry';
 import { SAVE_VERSION } from './saveVersion';
 import { newTeams, type TeamSetup } from './teams';
-import type { GameModeId, GameState, RulesConfig, TeamId } from './model';
+import type { GameModeId, GameState, MatchSettings, TeamId } from './model';
 
 /** Lo que hace falta para empezar una partida: su mapa y sus reglas (el resto sale de ellas). */
 export interface NewGameStateOptions {
   /** Terreno `map[x][y]` (ids de terrain.json): su tamaño es el de la partida. */
   map: GameState['map'];
-  rules: Readonly<RulesConfig>;
+  settings: Readonly<MatchSettings>;
   /** Contenido con el que se juega (unidades, edificios, terreno...): `defaultContent()` o una variante. */
   content: GameContent;
   /** El modo de juego (core/modes.ts): como se acaba y en que orden se juegan los turnos. */
@@ -29,8 +30,8 @@ export interface NewGameStateOptions {
 
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido; el primer equipo aun no ha empezado su turno. */
 export function newGameState(options: NewGameStateOptions): GameState {
-  const { map, rules } = options;
-  const teams = newTeams(options.teams, rules.initialFunds);
+  const { map, settings } = options;
+  const teams = newTeams(options.teams, settings.initialFunds);
   const turnOrder = gameModeOf(options).turnOrder(
     teams.map((team) => team.id),
     options.firstTeam ?? null,
@@ -51,7 +52,17 @@ export function newGameState(options: NewGameStateOptions): GameState {
     turnStarted: false,
     dice: options.diceSeed >>> 0,
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
-    rules: { ...rules },
+    settings: { ...settings },
     content: options.content,
+    ruleset: rulesetFor(options, settings),
   };
+}
+
+/**
+ * Cambia los ajustes de una partida ya creada (lo que impone un modo, un laboratorio, una prueba):
+ * los ajustes y los modulos de reglas que salen de ellos, a la vez, para que no se separen. El unico
+ * sitio que los cambia despues de crearla.
+ */
+export function changeSettings(s: GameState, settings: Readonly<MatchSettings>): void {
+  Object.assign(s, { settings: { ...settings }, ruleset: rulesetFor(s, settings) });
 }

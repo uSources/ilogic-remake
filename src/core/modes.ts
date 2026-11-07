@@ -2,15 +2,15 @@
  * Los modos de juego (`GameState.mode`): lo que cada uno fija de una partida y que no son reglas
  * sueltas. Una entrada por modo (el tipo obliga a tenerlas todas): como se acaba (`victory`, en
  * orden: la primera regla que decide, manda), en que orden juegan los equipos cada ronda
- * (`turnOrder`), las reglas que el modo impone (`fixedRules`), sus pasos propios al empezar y
+ * (`turnOrder`), las reglas que el modo impone (`fixedSettings`), sus pasos propios al empezar y
  * acabar cada turno (`turnPhases`, detras de los de todos) y si la partida se guarda (`saves`: a
  * mano y, si quien juega quiere, sola al empezar el turno de una persona). Como se prepara cada uno (su mapa, sus
  * equipos) esta en `MATCH_SETUPS` (core/match.ts), que necesita el generador de mapas y las
  * misiones; aqui solo lo que leen las reglas y la sesion.
  */
-import type { ActionDispatcher } from './actions/types';
 import { deepFreeze } from './util/freeze';
-import type { GameEvent, GameModeId, GameState, RulesConfig, TeamId, VictoryRuleId } from './model';
+import type { RuleModule } from './ruleModules/hooks';
+import type { ActionDispatcher, GameEvent, GameModeId, GameState, MatchSettings, TeamId, VictoryRuleId } from './model';
 
 /**
  * Un paso del principio o del final de un turno: lo que pasa solo por el equipo `team`, con sus
@@ -32,8 +32,10 @@ export interface GameMode {
    * partida guardada sigue con su orden aunque el modo cambie despues.
    */
   turnOrder(teams: readonly TeamId[], first: TeamId | null): TeamId[];
-  /** Reglas que el modo impone, por encima de las que se elijan (buildMatch). */
-  readonly fixedRules?: Partial<RulesConfig>;
+  /** Ajustes que el modo impone, por encima de los que se elijan (buildMatch). */
+  readonly fixedSettings?: Partial<MatchSettings>;
+  /** Modulos de reglas propios del modo, ademas de los del juego (RULE_MODULES); se enchufan igual, con su `isOn`. */
+  readonly ruleModules?: readonly RuleModule[];
   /** Pasos propios del modo al empezar y al acabar cada turno, detras de TURN_START_PHASES y TURN_END_PHASES. */
   readonly turnPhases?: { readonly start?: readonly TurnPhase[]; readonly end?: readonly TurnPhase[] };
   /**
@@ -62,7 +64,7 @@ export const GAME_MODES: { readonly [M in GameModeId]: GameMode & { readonly id:
   },
   // Una partida preparada para ver algo (el laboratorio de animaciones): ni se acaba ni se guarda, y
   // sin clima que cambie lo que se mira.
-  sandbox: { id: 'sandbox', victory: [], turnOrder: startingWith, fixedRules: { weather: false }, saves: false },
+  sandbox: { id: 'sandbox', victory: [], turnOrder: startingWith, fixedSettings: { weather: false }, saves: false },
 };
 deepFreeze(GAME_MODES);
 

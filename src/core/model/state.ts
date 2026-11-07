@@ -3,7 +3,7 @@ import type { GameModeId } from './match';
 import type { Objective } from './objective';
 import type { TeamId, TeamState } from './team';
 import type { Squad } from './squad';
-import type { RulesConfig } from './rules';
+import type { MatchSettings } from './settings';
 import type { UndoableMove } from './undo';
 import type { Unit } from './unit';
 import type { WeatherState } from './weather';
@@ -19,7 +19,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 7;
+  version: 9;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -53,8 +53,12 @@ export interface GameState {
    * partida con las mismas acciones da siempre los mismos combates, se cargue o no por medio.
    */
   dice: number;
-  /** Reglas de esta partida: la unica fuente de las reglas (no hay reglas globales). */
-  rules: RulesConfig;
+  /**
+   * Los ajustes de esta partida (la unica fuente: no hay ajustes globales): numeros e interruptores
+   * de los modulos de reglas. De ellos y del modo salen los modulos que lleva (`ruleset`); se cambian,
+   * los dos a la vez, con `changeSettings`.
+   */
+  readonly settings: Readonly<MatchSettings>;
   /** Como se genero la partida (para enseñar el codigo del mapa y repetirlo). */
   setup?: GameSetup;
   /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */
@@ -80,10 +84,23 @@ export interface GameState {
    * ponen `newGameState` y `deserialize`. Copiar la partida con `cloneState` (lo comparte).
    */
   readonly content: MatchContent;
+  /**
+   * Los modulos de reglas que lleva la partida, ya resueltos (de su modo y sus ajustes) con lo que
+   * aporta cada uno a cada lista. Como el contenido, no se guarda (sale de los ajustes): lo ponen
+   * `newGameState`, `readSave` y `changeSettings`; ruleModules/ruleset.ts le da la forma.
+   */
+  readonly ruleset: MatchRuleset;
 }
 
-/** Lo que se guarda de una partida: todo menos su contenido. */
-export type SavedGameState = Omit<GameState, 'content'>;
+/**
+ * Lo que resuelven los modulos de reglas para una partida. El modelo solo lo nombra:
+ * ruleModules/ruleset.ts lo completa con `declare module` (como MatchContent).
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- la completa ruleModules/ruleset.ts
+export interface MatchRuleset {}
+
+/** Lo que se guarda de una partida: todo menos su contenido y sus modulos (que salen de los ajustes). */
+export type SavedGameState = Omit<GameState, 'content' | 'ruleset'>;
 
 /** Opciones de una partida nueva que no son reglas: mapa. */
 export interface GameSetup {

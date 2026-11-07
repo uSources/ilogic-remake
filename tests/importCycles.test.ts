@@ -3,8 +3,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Ningun ciclo de imports en src/ (docs/ESTILO.md, regla 14). Un ciclo hace que el orden de carga
- * decida que vale `undefined` al arrancar (paso con content → rulesSchema → predicates → content).
+ * Ningun ciclo de imports en src/ (docs/ESTILO.md, regla 16). Un ciclo hace que el orden de carga
+ * decida que vale `undefined` al arrancar (paso con content → settingsSchema → predicates → content).
  * Solo cuentan los imports que existen al ejecutar: `import type` y los `{ type X }` sueltos se borran.
  * Mas barato que eslint-plugin-import: lee los ficheros y recorre el grafo.
  */
@@ -108,12 +108,12 @@ describe('imports', () => {
     expect(cycle?.map((file) => relative(ROOT, file)).join(' → ') ?? null).toBeNull();
   });
 
-  it('el detector ve el ciclo de content → rulesSchema → predicates → content', () => {
+  it('el detector ve el ciclo de content → settingsSchema → predicates → content', () => {
     const graph = new Map([
-      ['content', ['rulesSchema']],
-      ['rulesSchema', ['predicates']],
+      ['content', ['settingsSchema']],
+      ['settingsSchema', ['predicates']],
       ['predicates', ['content']],
     ]);
-    expect(findCycle(graph)).toEqual(['content', 'rulesSchema', 'predicates', 'content']);
+    expect(findCycle(graph)).toEqual(['content', 'settingsSchema', 'predicates', 'content']);
   });
 });

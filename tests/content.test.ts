@@ -78,7 +78,7 @@ describe('contenido (src/core/content/*.json)', () => {
       vision: 6,
       movement: 'foot',
       captures: false,
-      attack: { range: [2, 3], hitChance: { Soldier: 0.9, Sniper: 0.5 } },
+      attack: { range: [2, 3], firesAfterMove: false, hitChance: { Soldier: 0.9, Sniper: 0.5 } },
       builtAt: ['City'],
       repairedAt: ['City'],
     });
@@ -87,12 +87,24 @@ describe('contenido (src/core/content/*.json)', () => {
     const content = loadContent(files);
     const sniper = entryOf(content.units, 'Sniper', 'unidad');
     expect(content.units.list.indexOf(sniper)).toBe(19);
-    expect(sniper.attack).toEqual({ minRange: 2, maxRange: 3, hitChance: { Soldier: 0.9, Sniper: 0.5 } });
+    expect(sniper.attack).toEqual({ minRange: 2, maxRange: 3, firesAfterMove: false, hitChance: { Soldier: 0.9, Sniper: 0.5 } });
     expect(sniper.cargoSlots).toBe(0);
     expect(sniper.canCapture).toBe(false);
     expect(sniper.builtAt).toEqual(['City']);
     expect(entryOf(content.units, 'Soldier', 'unidad').attack!.hitChance.Sniper).toBe(0.6);
     expect(sniper.art).toBe('Sniper');
+  });
+
+  it('moverse y disparar es un campo propio, no sale del alcance minimo', () => {
+    const files = clone();
+    const soldier = files.units[0]!;
+    delete (soldier.attack as Partial<NonNullable<typeof soldier.attack>>).firesAfterMove;
+    expect(errsOf(files).some((error) => error.includes('attack.firesAfterMove'))).toBe(true);
+    soldier.attack!.firesAfterMove = false;
+    expect(errsOf(files)).toEqual([]);
+    const content = loadContent(files);
+    const melee = entryOf(content.units, soldier.id, 'unidad');
+    expect(melee.attack).toMatchObject({ minRange: 1, firesAfterMove: false });
   });
 
   it('el catalogo: por id, en orden, y un id que no esta lo dice', () => {
@@ -119,15 +131,15 @@ describe('contenido (src/core/content/*.json)', () => {
     files.terrain[2]!.movement.vehicle = 0;
     files.terrain[3]!.movement.air = null;
     files.terrain[4]!.mapLetter = '~';
-    (files.rules.defaults as unknown as Record<string, unknown>).fog = 'si';
-    (files.rules.defaults as unknown as Record<string, unknown>).magic = true;
+    (files.settings.defaults as unknown as Record<string, unknown>).fog = 'si';
+    (files.settings.defaults as unknown as Record<string, unknown>).magic = true;
     files.ai.KILLBONUS = -1;
     const errors = errsOf(files);
     expect(errors).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
     expect(errors).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
     expect(errors).toContain('terreno Cactus: la letra "~" ya es de otro terreno');
-    expect(errors).toContain('rules.json: defaults.fog tiene que ser true o false');
-    expect(errors).toContain('rules.json: regla desconocida "magic"');
+    expect(errors).toContain('settings.json: defaults.fog tiene que ser true o false');
+    expect(errors).toContain('settings.json: regla desconocida "magic"');
     expect(errors.some((error) => error.startsWith('ai.json: KILLBONUS'))).toBe(true);
   });
 

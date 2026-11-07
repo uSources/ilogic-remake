@@ -1,3 +1,4 @@
+import type { AttackRecordParts } from './combat';
 import type { Pos } from './geometry';
 import type { StandingOrder } from './standingOrder';
 import type { DefeatReason } from './defeat';
@@ -22,11 +23,35 @@ export interface GeneralCharge {
 }
 
 /**
+ * Por que se puede cortar un camino a mitad (las `pathInterruptions` de los modulos de reglas): los
+ * del juego aqui (la emboscada). Un corte nuevo (minas, fuego de vigilancia...) anade su nombre
+ * ampliando esta interfaz (`declare module '.../model/events' { interface InterruptionKinds { minas:
+ * true } }`, tambien desde el modulo de un modo) y su entrada en la lista de su modulo; la escena y
+ * `npm run play` tienen algo por defecto para los que no conocen.
+ */
+export interface InterruptionKinds {
+  ambush: true;
+}
+
+/**
+ * El nombre de un corte de camino (ver InterruptionKinds). Como la lista se puede ampliar, una tabla
+ * indexada por nombre es Partial y tiene algo por defecto (la escena, `npm run play`).
+ */
+export type InterruptionKind = keyof InterruptionKinds;
+
+/** Lo que ha cortado un camino y donde (la casilla que ya no se ha podido pisar). */
+export interface Interruption {
+  readonly kind: InterruptionKind;
+  readonly at: Pos;
+}
+
+/**
  * Por que acaba un viaje (suceso 'travel' con `to: null`): se le quita o se la mueve a mano
  * ('cancelled'), recibe una orden permanente ('ordered'), ya esta en el destino ('arrived'), llega
- * este turno y el ultimo trozo lo hace quien juega ('withinReach') o una emboscada la para ('ambush').
+ * este turno y el ultimo trozo lo hace quien juega ('withinReach') o algo corta su camino (el nombre
+ * del corte: 'ambush'...).
  */
-export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | 'ambush';
+export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | InterruptionKind;
 
 /**
  * Lo que le ha pasado a una escuadra. Cada escuadra que deja de existir tiene un solo suceso que lo
@@ -44,30 +69,50 @@ export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded
  * estadisticas y se podria repetir una partida o mandarla a otra pantalla. Lo dan las acciones
  * (`dispatch`) y el fin de ronda (`endRound`).
  */
-export type GameEvent =
-  | { kind: 'move'; actor: TeamId; uid: number; path: Pos[]; ambush?: Pos }
-  | {
-      kind: 'attack';
-      actor: TeamId;
-      attacker: number;
-      /** La unidad atacada (puede ya no existir) y su casilla. */
-      target: number;
-      at: Pos;
-      damage: number;
-      killed: boolean;
-      /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
-      counter: number;
-      attackerKilled: boolean;
-      /**
-       * [CAMBIO] Dinero cobrado por destruir una unidad (para quien la destruyo), entero: si pasa del
-       * maximo, lo que se pierde lo cuenta un suceso 'fundsCapped' de la misma accion.
-       */
-      bounty?: number;
-      /** Carga que gana el general de cada equipo por el combate (solo los que la ganan). */
-      charge?: GeneralCharge[];
-      /** Como estaban las dos antes del combate (ver CombatInfo). */
-      combat: CombatInfo;
-    }
+export type GameEvent = CoreGameEvent | ModuleEvent;
+
+/**
+ * Lo de cualquier ataque en su suceso. El suceso lleva ademas lo que han apuntado los modulos
+ * (AttackRecordParts: botin, carga...), que no puede llamarse como nada de aqui (AttackPartsFitEvent).
+ */
+export interface AttackEventBase {
+  kind: 'attack';
+  actor: TeamId;
+  attacker: number;
+  /** La unidad atacada (puede ya no existir) y su casilla. */
+  target: number;
+  at: Pos;
+  damage: number;
+  killed: boolean;
+  /** Vida quitada al atacante por el contraataque (0 si no lo hay). */
+  counter: number;
+  attackerKilled: boolean;
+  /** Como estaban las dos antes del combate (ver CombatInfo). */
+  combat: CombatInfo;
+}
+
+/** true si ninguna parte de los modulos se llama como un campo del suceso del ataque (si no, never: no compila quien lo comprueba). */
+export type AttackPartsFitEvent = [keyof AttackRecordParts & keyof AttackEventBase] extends [never] ? true : never;
+
+/**
+ * Los sucesos de los modulos de reglas, por su tipo (`kind`): esta vacia aqui y cada modulo anade
+ * los suyos ampliandola (`declare module '../model/events' { interface ModuleEvents { upkeep: {
+ * actor: null; team: TeamId; amount: number } } }`). Quien los lee (la escena, `npm run play`, las
+ * estadisticas) tiene algo por defecto para los que no conoce.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- se amplia con declare module
+export interface ModuleEvents {}
+
+/** Un suceso de un modulo (ver ModuleEvents). */
+export type ModuleEvent = { [K in keyof ModuleEvents]: { kind: K } & ModuleEvents[K] }[keyof ModuleEvents];
+
+/** true si ningun modulo usa el tipo de un suceso de siempre (si no, never). */
+export type ModuleEventsAreNew = [keyof ModuleEvents & CoreGameEvent['kind']] extends [never] ? true : never;
+
+/** Los sucesos de cualquier partida (los de los modulos van en ModuleEvents). */
+export type CoreGameEvent =
+  | { kind: 'move'; actor: TeamId; uid: number; path: Pos[]; interruption?: Interruption }
+  | (AttackEventBase & Partial<AttackRecordParts>)
   | { kind: 'capture'; actor: TeamId; uid: number; at: Pos; owner: TeamId | null; left: number; total: number }
   | { kind: 'merge'; actor: TeamId; uid: number; into: number; path: Pos[] }
   | { kind: 'load'; actor: TeamId; uid: number; into: number; path: Pos[] }
@@ -115,14 +160,8 @@ export type GameEvent =
   | { kind: 'income'; actor: null; team: TeamId; amount: number; source: 'buildings' | 'controlPoints' }
   /** Fin de ronda: una unidad curada en un edificio propio. */
   | { kind: 'heal'; actor: null; uid: number; team: TeamId; amount: number }
-  /** Fin de ronda: el mantenimiento que paga un equipo. */
-  | { kind: 'upkeep'; actor: null; team: TeamId; amount: number }
-  /** Fin de ronda: un punto de control, de quien queda (y si esta disputado: entonces no paga). */
-  | { kind: 'controlPoint'; actor: null; at: Pos; owner: TeamId | null; contested: boolean }
   /** Fin de ronda: empieza el dia `day`. */
   | { kind: 'newDay'; actor: null; day: number }
-  /** [CAMBIO] Fin de ronda: cambia el clima (ids de weather.json). */
-  | { kind: 'weather'; actor: null; from: string; to: string }
   /** El equipo `actor` se ha rendido. */
   | { kind: 'surrender'; actor: TeamId }
   /** Con lo que ha hecho `actor` (null: al acabar la ronda), el equipo `team` ha caido (ya no juega), por `reason`. */
@@ -132,8 +171,10 @@ export type GameEvent =
   /** Acaba el turno del equipo `actor` y le toca a `next` (si acaba la ronda, sus sucesos van detras). */
   | { kind: 'turnEnd'; actor: TeamId; next: TeamId };
 
-/** Tipo de evento ('move', 'attack'...). */
+/** Tipo de evento ('move', 'attack'... y los de los modulos). */
 export type GameEventKind = GameEvent['kind'];
+/** Tipo de un suceso de cualquier partida (no de un modulo). */
+export type CoreGameEventKind = CoreGameEvent['kind'];
 /** El evento de un tipo concreto, p. ej. `GameEventOf<'attack'>`. */
 export type GameEventOf<K extends GameEventKind> = Extract<GameEvent, { kind: K }>;
 

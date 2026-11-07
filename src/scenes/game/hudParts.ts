@@ -5,9 +5,9 @@
  */
 import { entryOf, type UnitType } from '../../core/content';
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
-import { posKey } from '../../core/geom';
+import { posKey, posOf } from '../../core/geom';
 import type Phaser from 'phaser';
-import { movementOf, buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
+import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
@@ -35,29 +35,28 @@ export function forecastFor(
   const attacker = options.selected;
   if (!attacker) return null;
   const fight =
-    options.phase === 'move'
-      ? fightFromMove(attacker, options.intentAt(options.c))
-      : fightFromHere(s, attacker, options.attackSet, options.c);
+    options.phase === 'move' ? fightFromMove(options.intentAt(options.c)) : fightFromHere(s, attacker, options.attackSet, options.c);
   if (!fight) return null;
-  return forecastVM(textures, s, options.viewer, attacker, fight.attackerAt, fight.target, options.anchor(fight.target));
+  return forecastVM(textures, s, options.viewer, attacker, fight.from, fight.target, options.anchor(fight.target));
+}
+
+/** A quien se apunta y desde que casilla se dispararia. */
+interface AimedFight {
+  from: Pos;
+  target: Unit;
 }
 
 /** Al mover: si el cursor esta sobre un enemigo atacable, desde la casilla desde la que se atacaria. */
-function fightFromMove(attacker: Unit, intent: Intent): { attackerAt: Unit; target: Unit } | null {
+function fightFromMove(intent: Intent): AimedFight | null {
   if (intent.kind !== 'attack') return null;
-  return { attackerAt: { ...attacker, x: intent.from.x, y: intent.from.y }, target: intent.target };
+  return { from: intent.from, target: intent.target };
 }
 
 /** Eligiendo a quien atacar (fase 'attack'): desde donde esta. */
-function fightFromHere(
-  s: GameState,
-  attacker: Unit,
-  targets: ReadonlyMap<string, number>,
-  cursor: Pos,
-): { attackerAt: Unit; target: Unit } | null {
+function fightFromHere(s: GameState, attacker: Unit, targets: ReadonlyMap<string, number>, cursor: Pos): AimedFight | null {
   const uid = targets.get(posKey(cursor));
   const target = uid !== undefined ? unitById(s, uid) : undefined;
-  return target ? { attackerAt: attacker, target } : null;
+  return target ? { from: posOf(attacker), target } : null;
 }
 
 /** Bocadillo junto al cursor al mover: movimiento gastado, defensa, combustible, peligro y lo que pasaria al soltar. */
@@ -83,12 +82,12 @@ export function moveTipFor(
   const anchor = options.anchor(cursor);
   if (intent.kind === 'none') return { anchor, action: t('tipNone'), invalid: true };
   const isMove = intent.kind === 'move';
-  const used = isMove ? pathCost(s, movementOf(s, unit), options.trailTo(intent.to)) : range.steps.at(cursor) || 1;
+  const used = isMove ? pathCost(range.profile, options.trailTo(intent.to)) : (range.steps.at(cursor) ?? 1);
   return {
     anchor,
     action: moveTipAction(intent),
     used,
-    max: range.maxSteps,
+    max: range.profile.budget,
     stars: isMove ? defenseStars(s, cursor) : undefined,
     danger: isMove && !!options.danger?.at(cursor),
   };

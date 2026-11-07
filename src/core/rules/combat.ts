@@ -1,51 +1,39 @@
 /**
- * Combate: alcance y objetivos, proteccion del terreno, probabilidad de acierto, veterania,
- * contraataque, botin y la tirada de daño. El ataque en si (lo que cambia en la partida) es la accion
- * 'attack' (actions/combat.ts).
+ * Combate: desde donde se dispara y a quien, proteccion del terreno, probabilidad de acierto, daño
+ * esperado, si hay contraataque y la tirada de daño. Lo que dice el arma de cada tipo esta en
+ * weapons.ts; lo que pasa en un ataque (lo que cambia en la partida) es la accion 'attack' y su
+ * COMBAT_RESOLUTION (actions/combat.ts).
  */
 
-import { unitTypeOf, buildingTypeOf, terrainAt } from '../gameContent';
-import { coverAgainst, defenseFactor, isRanged } from '../abilities';
-import { manhattan, posOf } from '../geom';
-import { generalHitFactor } from '../generals';
-import { canFight, isAlive, areEnemies, isOnMap } from '../util/predicates';
-import { weatherHit } from '../weather';
-import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
+import { buildingTypeOf, terrainAt } from '../gameContent';
+import { posOf } from '../geom';
+import { canFight, firesAfterMove, isAlive, areEnemies, isOnMap } from '../util/predicates';
+import type { HitModifier } from '../ruleModules/hooks';
+import { damageModelOf, hooksOf } from '../ruleModules/ruleset';
+import { rank } from './rank';
+import type { ActionRejection, CombatInfo, Dice, Engagement, GameState, Pos, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { sightOf, type Sight } from './visibility';
+import { reversed } from './engagement';
 import { canStillFire } from './unitTurn';
+import { basePower, canDamage, inAttackRange } from './weapons';
 
 // ---- Alcance y objetivos ----
 
-/** El tipo de `unit` alcanza de `from` a `to`: ataca, y la distancia esta entre su alcance minimo y el maximo. */
-export function inAttackRange(s: GameState, unit: Pick<Unit, 'type'>, from: Pos, to: Pos): boolean {
-  const attack = unitTypeOf(s, unit).attack;
-  const distance = manhattan(from, to);
-  return !!attack && distance >= attack.minRange && distance <= attack.maxRange;
-}
-
-/** `attacker` puede luchar y hacer dano a una unidad como `defender` (sin mirar distancias). */
-export function canDamage(s: GameState, attacker: Unit, defender: Unit): boolean {
-  return canFight(s, attacker) && basePower(s, attacker, defender) > 0;
-}
+/** El alcance de una unidad, o como sacarlo si hace falta (fireOrigins solo lo pide si puede moverse y disparar). */
+export type LazyMoveRange = MoveRange | (() => MoveRange);
 
 /**
- * Probabilidad de acierto de units.json ("attack.hitChance"), sin terreno ni modificadores (0 = no
- * le hace nada).
+ * Casillas desde las que `unit` puede disparar este turno: donde esta y, si puede moverse y disparar
+ * y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`). Es el unico sitio que
+ * decide desde donde se dispara segun firesAfterMove: quien no sabe aun si hara falta el alcance lo
+ * pasa como funcion.
  */
-export function basePower(s: GameState, attacker: Pick<Unit, 'type'>, defender: Pick<Unit, 'type'>): number {
-  return unitTypeOf(s, attacker).attack?.hitChance[unitTypeOf(s, defender).id] ?? 0;
-}
-
-/**
- * Casillas desde las que `unit` puede disparar este turno: donde esta y, si no es de distancia (esas
- * no pueden mover y disparar) y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`).
- */
-export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
+export function fireOrigins(s: GameState, unit: Unit, range: LazyMoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
   const origins: Pos[] = [posOf(unit)];
-  if (!range || isRanged(s, unit)) return origins;
-  const reachable = reachableTiles(range);
+  if (!range || !firesAfterMove(s, unit)) return origins;
+  const reachable = reachableTiles(typeof range === 'function' ? range() : range);
   origins.push(...(allowed ? reachable.filter((pos) => allowed(pos)) : reachable));
   return origins;
 }
@@ -105,129 +93,74 @@ export function defenseStars(s: GameState, pos: Pos): number {
 }
 
 /**
- * Algo que cambia la probabilidad de acierto (habilidades, veterania, generales, clima...). Devuelve
- * un multiplicador: 1 = nada (con la regla apagada, por ejemplo).
+ * Proteccion de la casilla que le queda al defensor frente a este atacante: la de la casilla, menos
+ * la parte que perfora el atacante (la mayor de las que aporten los modulos; piercing).
  */
-export interface HitModifier {
-  /** Nombre corto (para depurar o enseñar el desglose). */
-  readonly id: string;
-  factor(s: GameState, attacker: Unit, defender: Unit): number;
-}
-
-/** [CAMBIO] Veterania: cada rango da +vetBonus de acierto al atacar y -vetBonus al que le ataca. */
-function veterancyFactor(s: GameState, attacker: Unit, defender: Unit): number {
-  if (!s.rules.veterancy) return 1;
-  return (1 + s.rules.vetBonus * rank(attacker)) * (1 - s.rules.vetBonus * rank(defender));
-}
-
-/** [CAMBIO] Flanqueo: rematar a quien ya ha recibido un ataque hoy es mas facil. */
-function flankFactor(s: GameState, _attacker: Unit, defender: Unit): number {
-  return flanked(s, defender) ? 1 + s.rules.flankBonus : 1;
+function coverLeft(s: GameState, { attacker, defender }: Engagement): number {
+  const protection = tileProtection(s, defender.at);
+  const piercing = Math.max(0, ...hooksOf(s, 'coverPiercing').map((rule) => rule.ignoredCover(s, attacker.unit)));
+  return protection + (1 - protection) * piercing;
 }
 
 /**
- * [CAMBIO] Modificadores del acierto, en el orden en que se aplican sobre el poder base y la
- * proteccion de la casilla. Una regla nueva que cambie el acierto es una entrada mas: la prevision,
- * el panel de combate y la IA la ven solas porque todas pasan por hitChance.
- * El orden importa (redondeo de coma flotante: las partidas de referencia lo notarian).
+ * Lo que da la probabilidad de acierto en cualquier partida: el poder del atacante contra ese tipo
+ * (units.json) por la proteccion que le queda al defensor. Lo que cambia segun la partida (habilidades,
+ * veterania, flanqueo, generales, clima) lo aportan sus modulos de reglas (`hitModifiersOf`).
  */
 export const HIT_MODIFIERS: readonly HitModifier[] = [
-  // Escudo del defensor contra disparos a distancia y aura de sus aliados: hacen fuertes a los grupos.
-  { id: 'abilities', factor: defenseFactor },
-  // Premia conservar las unidades que ya han destruido a alguien.
-  { id: 'veterancy', factor: veterancyFactor },
-  // Premia atacar en grupo al mismo objetivo.
-  { id: 'flank', factor: flankFactor },
-  // La ventaja fija de cada general (ataque de uno, defensa del otro).
-  { id: 'generals', factor: generalHitFactor },
-  // Con lluvia o tormenta se apunta peor (igual para los dos equipos).
-  { id: 'weather', factor: (s) => weatherHit(s) },
+  { id: 'power', factor: (s, { attacker, defender }) => basePower(s, attacker.unit, defender.unit) },
+  { id: 'cover', factor: coverLeft },
 ];
 
+/**
+ * [CAMBIO] Todo lo que cambia el acierto en esta partida, en el orden en que se multiplica: el poder
+ * y la proteccion, y despues lo de sus modulos de reglas (en su orden). Una regla nueva que cambie el
+ * acierto es una entrada mas en su modulo: la prevision, el panel de combate y la IA la ven solas
+ * porque todas pasan por hitChance. El orden importa (redondeo de coma flotante: las partidas de
+ * referencia lo notarian).
+ */
+export const hitModifiersOf = (s: GameState): HitModifier[] => [...HIT_MODIFIERS, ...hooksOf(s, 'hitModifiers')];
+
 /** Probabilidad de acierto de cada "disparo" (uno por punto de vida del atacante). Puede pasar de 1. */
-export function hitChance(s: GameState, attacker: Unit, defender: Unit): number {
-  let chance = basePower(s, attacker, defender) * coverAgainst(s, attacker, tileProtection(s, defender));
-  for (const modifier of HIT_MODIFIERS) chance *= modifier.factor(s, attacker, defender);
-  return chance;
+export function hitChance(s: GameState, fight: Engagement): number {
+  return hitModifiersOf(s).reduce((chance, modifier) => chance * modifier.factor(s, fight), 1);
 }
 
 /** La probabilidad de acierto como probabilidad de verdad (sin pasar de 1). */
-export function cappedHitChance(s: GameState, attacker: Unit, defender: Unit): number {
-  return Math.min(1, hitChance(s, attacker, defender));
-}
-
-// ---- Veterania, flanqueo y botin ----
-
-/** Bajas necesarias para cada rango (1, 2 y 3 estrellas). */
-export const RANK_KILLS = [1, 3, 6] as const;
-
-/** [CAMBIO] La unidad ya ha recibido un ataque hoy y la regla de flanqueo esta puesta. */
-export function flanked(s: GameState, defender: Unit): boolean {
-  return s.rules.flankBonus > 0 && defender.hitDay === s.day;
-}
-
-/** [CAMBIO] Botin por destruir una unidad como `lost` (0 sin la regla). */
-export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
-  return Math.round(unitTypeOf(s, lost).cost * s.rules.bounty);
-}
-
-/** Rango de veterania de una unidad: 0 a 3. */
-export function rank(unit: Unit): number {
-  const kills = unit.kills ?? 0;
-  return RANK_KILLS.filter((needed) => kills >= needed).length;
+export function cappedHitChance(s: GameState, fight: Engagement): number {
+  return Math.min(1, hitChance(s, fight));
 }
 
 /** Dano esperado (para la IA y para mostrarlo en pantalla). */
-export function expectedDamage(s: GameState, attacker: Unit, defender: Unit): number {
-  return Math.min(defender.life, attacker.life * cappedHitChance(s, attacker, defender));
+export function expectedDamage(s: GameState, fight: Engagement): number {
+  return Math.min(fight.defender.life, fight.attacker.life * cappedHitChance(s, fight));
 }
 
 // ---- El ataque ----
 
-/**
- * Daño de un ataque de una unidad con `life` puntos de vida que acierta con probabilidad `chance`.
- * Original: cada punto de vida es un disparo que acierta con probabilidad `chance`.
- * [CAMBIO] con la regla damageSpread: el daño esperado (life x chance) +- ese tanto por uno.
- */
-function rollDamage(s: GameState, life: number, chance: number, dice: Dice): number {
-  if (s.rules.damageSpread === null) {
-    let hits = 0;
-    for (let shot = 0; shot < life; shot++) if (dice.roll() < chance) hits++;
-    return hits;
-  }
-  const expected = life * chance;
-  const spread = (dice.roll() * 2 - 1) * s.rules.damageSpread;
-  return Math.max(0, Math.round(expected * (1 + spread)));
+/** Daño que hace el atacante al defensor en una tirada (sin pasar de la vida que le queda). */
+export function strike(s: GameState, fight: Engagement, dice: Dice): number {
+  return Math.min(fight.defender.life, damageModelOf(s).roll(fight.attacker.life, cappedHitChance(s, fight), dice));
 }
 
-/** Daño que hace `attacker` a `defender` en una tirada (sin pasar de la vida que le queda). */
-export function strike(s: GameState, attacker: Unit, defender: Unit, dice: Dice): number {
-  return Math.min(defender.life, rollDamage(s, attacker.life, cappedHitChance(s, attacker, defender), dice));
-}
-
-/**
- * [CAMBIO] Contraataque (s.rules.counterattack): el defensor que sobrevive responde si es una
- * unidad de cuerpo a cuerpo, el atacante tambien lo es y lo tiene a su alcance.
- * La artilleria y demas unidades a distancia ni contraatacan ni reciben contraataque.
- */
-export function canCounter(s: GameState, defender: Unit, attacker: Unit): boolean {
-  if (!s.rules.counterattack || !isAlive(defender)) return false;
-  if (isRanged(s, defender) || isRanged(s, attacker)) return false;
-  return canDamage(s, defender, attacker) && inAttackRange(s, defender, defender, attacker);
+/** [CAMBIO] El defensor responde al ataque: lo deja alguna regla de contraataque de los modulos (`counterRules`). */
+export function canCounter(s: GameState, fight: Engagement): boolean {
+  return hooksOf(s, 'counterRules').some((rule) => rule.allows(s, fight));
 }
 
 /** Como estan las dos unidades antes de luchar, para enseñar el combate despues (ver CombatInfo). */
-export function combatInfoBefore(s: GameState, attacker: Unit, defender: Unit): CombatInfo {
+export function combatInfoBefore(s: GameState, fight: Engagement): CombatInfo {
+  const { attacker, defender } = fight;
   return {
-    attackerType: attacker.type,
-    defenderType: defender.type,
-    attackerTeam: attacker.team,
-    defenderTeam: defender.team,
+    attackerType: attacker.unit.type,
+    defenderType: defender.unit.type,
+    attackerTeam: attacker.unit.team,
+    defenderTeam: defender.unit.team,
     attackerLife: attacker.life,
     defenderLife: defender.life,
-    attackerRank: rank(attacker),
-    defenderRank: rank(defender),
-    hit: cappedHitChance(s, attacker, defender),
-    counterHit: canCounter(s, defender, attacker) ? cappedHitChance(s, defender, attacker) : null,
+    attackerRank: rank(attacker.unit),
+    defenderRank: rank(defender.unit),
+    hit: cappedHitChance(s, fight),
+    counterHit: canCounter(s, fight) ? cappedHitChance(s, reversed(fight)) : null,
   };
 }

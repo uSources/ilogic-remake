@@ -29,12 +29,34 @@ function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[])
   return null;
 }
 
-/** El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada, roja la enemiga. */
-export function unitKey(textures: Phaser.Textures.TextureManager, s: GameState, unit: Unit, viewer: TeamId): string | null {
+/** Como se dibuja una unidad cuando no es como esta ahora. */
+export interface UnitDrawing {
+  /** Activa (en color) o ya ha actuado (gris); por defecto, si aun puede actuar. */
+  readonly active?: boolean;
+  /** Donde se dibuja (el dibujo clasico cambia con el terreno); por defecto, su casilla. */
+  readonly at?: Pos;
+}
+
+/** Dibujada como activa, haya actuado o no (iconos, quien empieza a moverse, unidades ajenas). */
+export const AS_ACTIVE: UnitDrawing = { active: true };
+
+/**
+ * El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada,
+ * roja la enemiga; `drawing` dice si se dibuja de otra forma que como esta (UnitDrawing).
+ */
+export function unitKey(
+  textures: Phaser.Textures.TextureManager,
+  s: GameState,
+  unit: Unit,
+  viewer: TeamId,
+  drawing: UnitDrawing = {},
+): string | null {
+  const isActive = drawing.active ?? canStillAct(unit);
+  const drawnAt = drawing.at ?? unit;
   const unitSide = sideOf(s, viewer, unit.team);
-  const side = `${unitSideLetter(unitSide, canStillAct(unit))}_`;
+  const side = `${unitSideLetter(unitSide, isActive)}_`;
   const unitType = unitTypeOf(s, unit);
-  const terrain = unitType.classicSprite[terrainAt(s, unit).id] ?? '';
+  const terrain = unitType.classicSprite[terrainAt(s, drawnAt).id] ?? '';
   const name = unitType.art;
   // Dibujo nuevo (carpeta u/), si esta elegido y existe.
   if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;

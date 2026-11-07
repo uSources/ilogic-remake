@@ -2,15 +2,15 @@
  * Estadisticas de cada equipo para la pantalla final (TeamState.stats): lo que ha fabricado y
  * gastado, lo que ha perdido y capturado, y el valor de su ejercito cada dia.
  */
-import { unitTypeOf } from './gameContent';
 import { entryOf } from './content';
 import { emptyTeamStats, teamState } from './teams';
+import { lifeValue } from './unitValue';
 import type { GameEvent, GameState, TeamId, TeamStats } from './model';
 
-/** Valor de un ejercito: coste de cada unidad por su vida. */
+/** Valor de un ejercito: lo que vale la vida de cada unidad (lifeValue), redondeado. */
 export function armyValue(s: GameState, team: TeamId): number {
   let value = 0;
-  for (const unit of s.units) if (unit.team === team) value += (unitTypeOf(s, unit).cost * unit.life) / 100;
+  for (const unit of s.units) if (unit.team === team) value += lifeValue(s, unit.life, unit);
   return Math.round(value);
 }
 

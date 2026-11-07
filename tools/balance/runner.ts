@@ -12,8 +12,8 @@ import type { VariantSetup } from './variant';
 
 /** Lo que hace un hilo, con los ficheros de contenido de la variante. */
 export type WorkerJob = { files: DeepReadonly<Content> } & (
-  | { kind: 'games'; seeds: number[]; game: Omit<PlayOptions, 'seed' | 'rules' | 'content'> }
-  | { kind: 'duels'; duel: Omit<DuelOptions, 'rules' | 'content'> }
+  | { kind: 'games'; seeds: number[]; game: Omit<PlayOptions, 'seed' | 'settings' | 'content'> }
+  | { kind: 'duels'; duel: Omit<DuelOptions, 'settings' | 'content'> }
 );
 
 /** Lanza un hilo con un trabajo y pasa cada mensaje que devuelve a `onMessage`. */
@@ -59,7 +59,7 @@ export async function runGames(
 }
 
 /** La tabla de duelos (duel.ts) con el contenido y las reglas de la variante. */
-export async function runDuels(setup: VariantSetup, duel: Omit<DuelOptions, 'rules' | 'content'>): Promise<DuelCell[]> {
+export async function runDuels(setup: VariantSetup, duel: Omit<DuelOptions, 'settings' | 'content'>): Promise<DuelCell[]> {
   let cells: DuelCell[] = [];
   await runWorker<DuelCell[]>({ files: setup.content.files, kind: 'duels', duel }, (result) => (cells = result));
   return cells;

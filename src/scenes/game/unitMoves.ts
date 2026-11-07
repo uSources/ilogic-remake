@@ -6,7 +6,7 @@
 import type Phaser from 'phaser';
 import { actionProblem, availableActions, groupMoveOrder, groupMoveStep, isValidAction, type UnitMenuOption } from '../../core/actions';
 import { samePos, posOf } from '../../core/geom';
-import { canCapture, canStillMove, endsInAmbush, lastUndoableMove, unitById } from '../../core/rules';
+import { canCapture, canStillMove, endsInterrupted, lastUndoableMove, unitById } from '../../core/rules';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { showToast } from '../../hud/store';
 import { settings, t, type TextKey } from '../../settings';
@@ -98,7 +98,7 @@ export class UnitMoves {
 
   /** El cursor pasa por una casilla: el camino trazado la sigue. */
   followCursor(tile: Pos): void {
-    this.session?.followCursor(this.host.state, tile);
+    this.session?.followCursor(tile);
   }
 
   /** Que pasaria al soltar (o pulsar) la unidad elegida en una casilla. */
@@ -158,7 +158,7 @@ export class UnitMoves {
       if (!moved) return host.toMap();
       session.range = null;
       await host.play(moved, ghost);
-      if (endsInAmbush(moved)) return host.afterAction();
+      if (endsInterrupted(moved)) return host.afterAction();
     }
     await host.perform({ kind: 'attack', uid: unit.uid, target: target.uid });
     host.afterAction();
@@ -172,7 +172,7 @@ export class UnitMoves {
     if (!moved) return;
     session.range = null;
     await host.play(moved, ghost);
-    if (endsInAmbush(moved)) return host.afterAction();
+    if (endsInterrupted(moved)) return host.afterAction();
     this.lastCommit = { at: { ...to }, time: host.scene.time.now };
     if (options.wait) return this.waitSelected();
     if (options.drop && isCapture && canCapture(host.state, unit)) return host.captureNow();

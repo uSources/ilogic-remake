@@ -1,7 +1,7 @@
 import { expect } from 'vitest';
 import { entryOf, type BuildingType, type TerrainType, type UnitType } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import type {
@@ -14,7 +14,7 @@ import type {
   GameState,
   Pos,
   Rng,
-  RulesConfig,
+  MatchSettings,
   TeamId,
   Unit,
 } from '@core/model';
@@ -90,10 +90,10 @@ const PERSON_VS_AI: TeamSetup[] = [
  * Una partida vacia (todo llano, sin unidades y sin mas edificios que una Base por equipo, ver
  * blankHeadquarters) con esas reglas y esos equipos, en el turno ya empezado del primero.
  */
-export function blankState(rules: Partial<RulesConfig> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
+export function blankState(settingChanges: Partial<MatchSettings> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
   const s = newGameState({
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
-    rules: rulesWith(defaultContent(), rules),
+    settings: settingsWith(defaultContent(), settingChanges),
     content: defaultContent(),
     mode: 'skirmish',
     teams,

@@ -51,7 +51,7 @@ const CORE_FACADES_ONLY = [
       "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai', 'core/autopilot', 'core/controllers'); la partida cambia con dispatch.",
   },
   {
-    group: ['**/core/generals', '@core/generals'],
+    group: ['**/core/generalPowers', '@core/generalPowers'],
     importNames: ['applyPower'],
     message: "Un poder se usa con la accion 'usePower' (dispatch).",
   },
@@ -93,6 +93,30 @@ const NO_AI = {
   message:
     'Las reglas, las acciones, las ordenes y la sesion no importan la IA (ai/, ai.ts, aiGenerals.ts, controllers/): la IA reutiliza autopilot/.',
 };
+/**
+ * L7: las reglas y las acciones no importan las piezas que se enchufan (generales, sus poderes, el
+ * clima, las habilidades) ni los modulos de reglas concretos o su lista: preguntan a la partida por lo
+ * que aportan (ruleModules/ruleset.ts) y los tipos de lo que se puede aportar (ruleModules/hooks.ts).
+ * Vale con cualquier forma de la ruta: la pieza es el ultimo trozo y lo de antes sube o es el nucleo
+ * (`../`, `./../`, `../util/../`, `../../core/`, `@core/`), con o sin extension (`.ts`, `.js`). Lo del
+ * contenido (`content/abilities`, `model/weather`) no es una pieza y si se puede. La lista de
+ * acciones (actions/registry.ts) es la excepcion: junta la accion de los poderes, que vive con ellos.
+ * Tampoco las fachadas (`../rules`, `../actions`, `@core/rules`...), que las reexportan. Lo prueba
+ * tests/lintImports.test.ts (los patrones y que la configuracion de verdad los pone).
+ */
+const PIECE_PATH = '(^|/)(\\.\\.?|@?core)/';
+const EXTENSION = '(\\.[jt]s)?$';
+const pluggedPieces = (pieces) => ({
+  regex: `${PIECE_PATH}(${pieces})${EXTENSION}|${PIECE_PATH}ruleModules/(?!(hooks|ruleset)${EXTENSION})`,
+  message:
+    'Las reglas y las acciones no importan generales, poderes, clima, habilidades ni modulos concretos: lo que aportan llega por GameState.ruleset (hooksOf, ruleModules/ruleset.ts).',
+});
+/** Las fachadas (rules.ts, actions.ts, un index) reexportan las piezas: por ahi tambien se saltaria L7. */
+const FACADES = 'rules|actions|index';
+export const ONLY_THROUGH_RULE_MODULES = pluggedPieces(`generals|generalPowers|weather|abilities|${FACADES}`);
+const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
+export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces(`generals|weather|abilities|${FACADES}`);
+
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
 const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
 
@@ -148,6 +172,18 @@ export default tseslint.config(
     // Sin la IA debajo de las reglas (NO_AI): la ultima de las de todo el nucleo para estos ficheros.
     files: NOT_THE_AI_FILES,
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI] }] },
+  },
+  {
+    // Y las reglas y las acciones, ademas, sin las piezas que se enchufan (ONLY_THROUGH_RULE_MODULES).
+    files: ['src/core/rules/**/*.ts', 'src/core/actions/**/*.ts'],
+    ignores: [ACTION_LIST_FILE],
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ONLY_THROUGH_RULE_MODULES] }] },
+  },
+  {
+    files: [ACTION_LIST_FILE],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, NO_PLUGGED_PIECES_EXCEPT_POWERS] }],
+    },
   },
   {
     // El modelo es la capa de abajo del nucleo: solo tipos, sin depender de nada (ni del contenido).

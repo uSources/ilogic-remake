@@ -1,8 +1,9 @@
 import { defaultContent } from '@core/content/default';
+import { changeSettings } from '@core/gameState';
 import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/util/random';
-import { captureProgress, combatForecast, newUnit, visibility } from '@core/rules';
+import { captureProgress, combatForecast, newUnit, visibility, engagement } from '@core/rules';
 import { dropStaleCaptures } from '@core/rules/capture';
 import type { GameState, Unit } from '@core/model';
 import { act, blankState, diceFrom, unitTypeNamed, fight, placedBuildings } from './helpers';
@@ -85,7 +86,7 @@ describe('reglas nuevas: combate', () => {
       const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
       const defender = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
       defender.life = 100;
-      const forecast = combatForecast(s, attacker, defender);
+      const forecast = combatForecast(s, engagement(attacker, defender));
       const result = fight(s, attacker, defender, diceFrom(seededRng(seed)));
       expect(result.damage).toBeGreaterThanOrEqual(forecast.low - 1);
       expect(result.damage).toBeLessThanOrEqual(Math.max(forecast.high, 0) + 1);
@@ -96,17 +97,17 @@ describe('reglas nuevas: combate', () => {
     const s = blankState();
     const attacker = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const defender = newUnit(s, TANK, 1, { x: 10, y: 11 });
-    const forecast = combatForecast(s, attacker, defender);
+    const forecast = combatForecast(s, engagement(attacker, defender));
     expect(forecast.counter).not.toBeNull();
     expect(forecast.counter!.expected).toBeGreaterThan(0);
     expect(forecast.counter!.expected).toBeLessThan(forecast.expected);
     defender.life = 1;
-    expect(combatForecast(s, attacker, defender).counter!.expected).toBe(0);
+    expect(combatForecast(s, engagement(attacker, defender)).counter!.expected).toBe(0);
   });
 
   it('sin niebla se ve todo el mapa', () => {
     const s = blankState();
-    s.rules.fog = false;
+    changeSettings(s, { ...s.settings, fog: false });
     expect([...visibility(s, 0).cells()].every((cell) => cell.value)).toBe(true);
   });
 });
@@ -158,7 +159,7 @@ describe('reglas nuevas: veterania', () => {
     const s = blankState();
     const attacker = newUnit(s, TANK, 0, { x: 3, y: 3 });
     const defender = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    const base = hitChance(s, attacker, defender);
+    const base = hitChance(s, engagement(attacker, defender));
     expect(rank(attacker)).toBe(0);
     defender.life = 1;
     const result = fight(s, attacker, defender, diceFrom(seededRng(1)));
@@ -166,8 +167,8 @@ describe('reglas nuevas: veterania', () => {
     expect(attacker.kills).toBe(1);
     expect(rank(attacker)).toBe(1);
     const newDefender = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    expect(hitChance(s, attacker, newDefender)).toBeCloseTo(base * (1 + s.rules.vetBonus));
-    expect(hitChance(s, newDefender, attacker)).toBeCloseTo(base * (1 - s.rules.vetBonus));
+    expect(hitChance(s, engagement(attacker, newDefender))).toBeCloseTo(base * (1 + s.settings.vetBonus));
+    expect(hitChance(s, engagement(newDefender, attacker))).toBeCloseTo(base * (1 - s.settings.vetBonus));
     attacker.kills = 6;
     expect(rank(attacker)).toBe(3);
     const ally = newUnit(s, TANK, 0, { x: 2, y: 3 });
@@ -180,8 +181,8 @@ describe('reglas nuevas: veterania', () => {
     const s = blankState({ veterancy: false });
     const attacker = newUnit(s, TANK, 0, { x: 3, y: 3 });
     const defender = newUnit(s, TANK, 1, { x: 4, y: 3 });
-    const base = hitChance(s, attacker, defender);
+    const base = hitChance(s, engagement(attacker, defender));
     attacker.kills = 6;
-    expect(hitChance(s, attacker, defender)).toBe(base);
+    expect(hitChance(s, engagement(attacker, defender))).toBe(base);
   });
 });

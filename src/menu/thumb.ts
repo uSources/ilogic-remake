@@ -2,6 +2,7 @@ import { isHq, terrainAt } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState } from '../core/model';
 import { playerTeam } from '../core/teams';
+import { isOnMap } from '../core/rules';
 import { ownerSideOf, sideOf, sidePaint } from '../ui/sides';
 import { PAL_CSS } from '../ui/palette';
 import type { TerrainPalette } from '../ui/terrainColors';
@@ -44,7 +45,7 @@ function drawUnits(context: CanvasRenderingContext2D, s: GameState, px: number, 
   const size = Math.max(1, px - 2);
   const viewer = playerTeam(s);
   for (const unit of s.units) {
-    if (unit.carrier !== null || (which === 'own' && unit.team !== viewer)) continue;
+    if (!isOnMap(unit) || (which === 'own' && unit.team !== viewer)) continue;
     context.fillStyle = sidePaint(sideOf(s, viewer, unit.team), 'canvasUnit');
     context.fillRect(unit.x * px + 1, unit.y * px + 1, size, size);
   }

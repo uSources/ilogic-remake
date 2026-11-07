@@ -1,13 +1,13 @@
 import { MoveType } from '@core/content';
 import { afterEach, describe, expect, it } from 'vitest';
 import { aiTurn } from '@core/ai';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
-import { blankMap, createLayer, mapGrid } from '@core/mapGrid';
+import { blankMap, mapGrid } from '@core/mapGrid';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { groundDistance, matchResult, newUnit, score } from '@core/rules';
+import { distanceMap, matchResult, newUnit, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
 import { blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
@@ -25,7 +25,7 @@ describe('nueva partida: tamaños de mapa', () => {
       expect(mapGrid(s).height).toBe(size);
       const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-      expect(groundDistance(s, hq0, MoveType.FOOT, createLayer(s, false)).at(hq1)).toBeGreaterThan(0);
+      expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1)).toBeLessThan(Infinity);
       const neutral = s.buildings.filter((building) => building.owner === null).length;
       expect(neutral).toBeGreaterThanOrEqual(Math.floor((20 * (size * size)) / 1024));
       for (const building of s.buildings) expect(building.x < size && building.y < size).toBe(true);
@@ -48,11 +48,11 @@ describe('nueva partida: tamaños de mapa', () => {
   });
 
   it('una partida guardada se carga con sus propias reglas, no con las de siempre', () => {
-    const ruleChanges = { counterattack: false, fog: false, upkeep: 0.25 };
-    const rules = rulesWith(defaultContent(), ruleChanges);
-    const s = createMatch(skirmishConfig({ seed: 3, size: 20, ruleChanges, teams: duel('human', 'ai') }));
-    expect(s.rules).toEqual(rules);
-    expect(deserialize(serialize(s), defaultContent())!.rules).toEqual(rules);
+    const settingChanges = { counterattack: false, fog: false, upkeep: 0.25 };
+    const rules = settingsWith(defaultContent(), settingChanges);
+    const s = createMatch(skirmishConfig({ seed: 3, size: 20, settingChanges, teams: duel('human', 'ai') }));
+    expect(s.settings).toEqual(rules);
+    expect(deserialize(serialize(s), defaultContent())!.settings).toEqual(rules);
   });
 
   it('una partida guardada en un mapa de 40 se carga con ese tamaño', () => {
@@ -74,7 +74,7 @@ describe('nueva partida: tamaños de mapa', () => {
 
 describe('limite de dias', () => {
   it('al pasarse el ultimo dia gana quien tenga mas puntos', () => {
-    const s = withoutHeadquarters(blankState(rulesWith(defaultContent(), { dayLimit: 10 })));
+    const s = withoutHeadquarters(blankState(settingsWith(defaultContent(), { dayLimit: 10 })));
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 }, { type: 'City', owner: 1, x: 5, y: 5 });
     newUnit(s, unitTypeNamed('Tank'), 0, { x: 1, y: 1 }); // tanque: vale su precio
     s.day = 10;
@@ -86,7 +86,7 @@ describe('limite de dias', () => {
   });
 
   it('[CAMBIO] al limite de dias, mismos puntos y mismos edificios: empate (en 2013 perdian los dos)', () => {
-    const s = withoutHeadquarters(blankState(rulesWith(defaultContent(), { dayLimit: 10 })));
+    const s = withoutHeadquarters(blankState(settingsWith(defaultContent(), { dayLimit: 10 })));
     s.buildings.push({ type: HQ, owner: 0, x: 0, y: 0 }, { type: HQ, owner: 1, x: 9, y: 9 });
     s.day = 11;
     expect(matchResult(s)).toEqual({ status: 'draw', winners: [], reason: 'days' });

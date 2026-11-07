@@ -9,9 +9,11 @@ import { unitTypeOf, buildingTypeOf } from '@core/gameContent';
 import { weightsOf } from '../weights';
 import { movementOf, buildingAt, occupancy } from '@core/rules/queries';
 import { posOf, samePos } from '@core/geom';
-import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '@core/rules/movement';
+import { canReach, reachableTiles, type MoveRange } from '@core/rules/movement';
+import { distanceMap } from '@core/rules/distance';
+import { endsInterrupted } from '@core/rules/traverse';
 import { dispatch } from '@core/actions/dispatch';
-import type { ActionDispatcher } from '@core/actions/types';
+import type { ActionDispatcher } from '@core/model';
 import { visibility } from '@core/rules/visibility';
 import { canStillAct } from '@core/rules/unitTurn';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '@core/model';
@@ -51,7 +53,7 @@ export function aiCtx(me: TeamId, dispatcher: ActionDispatcher = dispatch): AiCt
  */
 export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<boolean> {
   const occupied = occupancy(s);
-  if (ai.group && s.rules.passAllies) {
+  if (ai.group && s.settings.passAllies) {
     const visible = visibility(s, ai.me);
     const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, ai.me) || !visible.at(other));
     for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
@@ -66,9 +68,9 @@ export function occupancyWithout(s: GameState, ai: AiCtx, unit: Unit): Grid<bool
  * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
  */
 export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, ai, unit));
-  // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
-  return (pos) => steps.at(pos) || Infinity;
+  const occupied = occupancyWithout(s, ai, unit);
+  const steps = distanceMap(s, from, movementOf(s, unit), (pos) => occupied.at(pos));
+  return (pos) => (samePos(pos, from) ? Infinity : steps.at(pos));
 }
 
 /**
@@ -79,7 +81,7 @@ export function stepsFrom(s: GameState, ai: AiCtx, unit: Unit, from: Pos = unit)
  */
 export function bestMoveToward(s: GameState, ai: AiCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
-  if (!avoidDest && range.steps.at(dest) > 0) return dest;
+  if (!avoidDest && canReach(range, dest)) return dest;
   const stepsToDest = stepsFrom(s, ai, unit, dest);
   const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
   const best = minBy(options, stepsToDest);
@@ -109,7 +111,7 @@ export function* doMove(s: GameState, ai: AiCtx, unit: Unit, dest: Pos | null): 
   const result = ai.dispatch(s, ai.me, { kind: 'move', uid: unit.uid, to: posOf(dest) });
   if (!result.ok) return false;
   yield* result.events;
-  return endsInAmbush(result.events);
+  return endsInterrupted(result.events);
 }
 
 /** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */

@@ -3,24 +3,24 @@
 exports[`IA: partidas de referencia > semilla 1 1`] = `
 {
   "days": 26,
-  "events": 1018,
+  "events": 995,
   "last": {
     "army": [
-      28910,
-      54975,
+      28935,
+      69820,
     ],
     "buildings": [
-      9,
-      9,
+      7,
+      11,
     ],
     "day": 26,
     "funds": [
-      10325,
-      11075,
+      5250,
+      32250,
     ],
     "units": [
       10,
-      19,
+      21,
     ],
   },
   "reason": "timeout",
@@ -30,29 +30,29 @@ exports[`IA: partidas de referencia > semilla 1 1`] = `
 
 exports[`IA: partidas de referencia > semilla 2 1`] = `
 {
-  "days": 25,
-  "events": 476,
+  "days": 26,
+  "events": 498,
   "last": {
     "army": [
-      37615,
-      12050,
+      42215,
+      11475,
     ],
     "buildings": [
       7,
       4,
     ],
-    "day": 25,
+    "day": 26,
     "funds": [
-      4075,
-      15550,
+      4175,
+      17950,
     ],
     "units": [
-      14,
+      15,
       2,
     ],
   },
-  "reason": "hq",
-  "winner": 0,
+  "reason": "timeout",
+  "winner": null,
 }
 `;
 

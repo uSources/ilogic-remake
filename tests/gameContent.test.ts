@@ -2,7 +2,7 @@ import { playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { loadContent, readContentFiles, type GameContent, entryOf } from '@core/content';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { cloneState } from '@core/gameContent';
 import { seededRng } from '@core/util/random';
 import { generateGame } from '@core/mapgen';
@@ -21,7 +21,12 @@ function expensiveTanks(): GameContent {
 const TANK = unitTypeNamed('Tank');
 
 function newMatch(content: GameContent): GameState {
-  return generateGame(seededRng(7), { size: 20, rules: rulesWith(defaultContent(), { fog: false }), content, teams: duel('ai', 'ai') });
+  return generateGame(seededRng(7), {
+    size: 20,
+    settings: settingsWith(defaultContent(), { fog: false }),
+    content,
+    teams: duel('ai', 'ai'),
+  });
 }
 
 describe('contenido de cada partida', () => {
@@ -68,17 +73,19 @@ describe('contenido de cada partida', () => {
     expect(rename).toThrow(TypeError);
   });
 
-  it('el contenido es un campo de la partida: sin el no compila, y serialize no lo escribe', () => {
+  it('el contenido y los modulos son campos de la partida: sin ellos no compila, y serialize no los escribe', () => {
     const s = newMatch(defaultContent());
     const saved = JSON.parse(serialize(s)) as SavedGameState;
     expect(saved).not.toHaveProperty('content');
-    expect(Object.keys(saved)).toEqual(Object.keys(s).filter((key) => key !== 'content'));
+    expect(saved).not.toHaveProperty('ruleset');
+    expect(Object.keys(saved)).toEqual(Object.keys(s).filter((key) => key !== 'content' && key !== 'ruleset'));
     // @ts-expect-error lo guardado no es una partida: le falta su contenido
     const bare: GameState = saved;
     expect(bare).toBe(saved);
     // Una copia a mano lo conserva (es un campo normal) y cloneState lo comparte sin copiarlo.
     expect({ ...s }.content).toBe(s.content);
     expect(cloneState(s).content).toBe(s.content);
+    expect(cloneState(s).ruleset).toBe(s.ruleset);
     expect(cloneState(s)).not.toBe(s);
   });
 });

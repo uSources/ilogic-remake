@@ -11,7 +11,7 @@
  * | `shape` | la forma de cada accion (`ACTION_SHAPES`, `isGameAction`): uids enteros, casillas bien formadas |
  * | `checks` | comprobaciones de las unidades de una accion: existen, son del equipo, aun pueden actuar |
  * | `movement` | mover, viaje de varios turnos |
- * | `combat` | atacar (el combate entero) |
+ * | `combat` | atacar: lo que pasa en un ataque, paso a paso (`COMBAT_RESOLUTION` y los pasos de los modulos) |
  * | `capture` | capturar |
  * | `transport` | unirse, subir y bajar de un transporte |
  * | `units` | esperar, reparar, retirar una unidad |
@@ -38,9 +38,10 @@ export {
   type UnitMenuOption,
 } from './actions/menu';
 export { groupMoveOrder, groupMoveStep } from './actions/groupMove';
+export { COMBAT_RESOLUTION, COMBAT_STAGES, combatResolutionOf } from './actions/combat';
 export { ACTION_GUARDS, type ActionGuard } from './actions/guards';
 export { isTurnBoundary, sessionOnlyProblem, startsTurn, TURN_END_PHASES, TURN_START_PHASES } from './actions/turn';
 export type { TurnPhase } from './modes';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
-export type { ActionDefinition, ActionDispatcher, ActionRegistry, CompositeActionDefinition } from './actions/types';
+export type { ActionDefinition, ActionDispatcher, ActionRegistry, CompositeActionDefinition } from './model';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';

@@ -1,7 +1,13 @@
 /**
- * La forma de una accion en el registro (ACTIONS, actions/registry.ts): cuando vale y que hace.
+ * La forma de una accion en el registro (ACTIONS, actions/registry.ts): cuando vale y que hace. Solo
+ * tipos, aqui abajo para que una pieza que trae su accion (los poderes, generalPowers.ts) la escriba
+ * sin importar actions/.
  */
-import type { ActionRejection, ActionResult, Dice, GameAction, GameActionKind, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
+import type { GameEvent } from './events';
+import type { Dice } from './random';
+import type { GameState } from './state';
+import type { TeamId } from './team';
 
 export interface ActionDefinition<K extends GameActionKind> {
   /**

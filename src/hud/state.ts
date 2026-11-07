@@ -1,4 +1,4 @@
-import type { RulesConfig } from '../core/model';
+import type { HelpRules } from '../i18n/help';
 import type { TextKey } from '../settings';
 import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { BySide, Side } from './vm/common';
@@ -110,7 +110,7 @@ export interface UIState {
   /** Limite de dias de la partida (null = sin limite). */
   dayLimit: number | null;
   /** Reglas que cuenta la ayuda: las de la partida en curso, o en el menu las de una partida nueva (null hasta que la escena las pone). */
-  helpRules: RulesConfig | null;
+  helpRules: HelpRules | null;
   report: { title: string; lines: ReportLineVM[]; id: number } | null;
   /** Cambio de persona en la misma pantalla (null: no hay que cambiar). */
   handoff: HandoffVM | null;

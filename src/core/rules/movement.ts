@@ -1,131 +1,131 @@
 /**
- * Movimiento y caminos: alcance de cada unidad, caminos trazados, emboscadas, distancia por tierra
- * y el evento de mover.
+ * Movimiento y caminos: las reglas de cada paso (`stepAllowed`), el alcance de cada unidad, los
+ * caminos trazados y el paso hacia un destino. Como se mueve cada tipo esta en movementProfile.ts, lo
+ * que hacen las demas unidades en passage.ts y recorrer un camino de verdad en traverse.ts.
  */
-import { unitTypeOf, terrainAt } from '../gameContent';
-import { movementOf, terrainMoveCost, canWalk, isWalkable, occupancy } from './queries';
-import type { MoveType } from '../content';
-import { zoneOfControl } from '../abilities';
 import { manhattan, neighbors4, posKey, samePos, posOf } from '../geom';
-import { createLayer, mapGrid } from '../mapGrid';
+import { createLayer } from '../mapGrid';
 import type { Grid } from '../util/grid';
-import { areEnemies, isOnMap } from '../util/predicates';
-import { minBy } from '../util/pick';
-import { weatherMove } from '../weather';
-import type { GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { visibility } from './visibility';
-import { canStillMove, markMoved, spendUnit } from './unitTurn';
+import { compareKeys, minBy, type SortKey } from '../util/pick';
+import type { MoveType } from '../content';
+import type { GameState, Pos, Unit } from '../model';
+import { distanceMap } from './distance';
+import { movementProfile, type MovementProfile } from './movementProfile';
+import { surroundingsOf, type Surroundings } from './passage';
+import { canStillMove } from './unitTurn';
 
-export interface MoveRange {
-  /** Pasos para llegar a cada casilla (1..max); 0 = inalcanzable o casilla de origen. */
-  steps: Grid<number>;
-  /** Casilla previa en el camino mas corto (para animar el recorrido). */
-  prev: Grid<Pos | null>;
-  maxSteps: number;
+/**
+ * Por donde puede ir una unidad este turno, sin camino aun: desde donde sale, su movimiento (terreno,
+ * coste y lo que puede gastar) y lo que encuentra en cada casilla. Cada paso lo juzga `stepAllowed`.
+ */
+export interface MoveRules extends Surroundings {
+  readonly origin: Pos;
+  readonly profile: MovementProfile;
+}
+
+/** El alcance de una unidad este turno: sus reglas de paso y lo que cuesta llegar a cada casilla. */
+export interface MoveRange extends MoveRules {
+  /** Lo que cuesta acabar en cada casilla; null = no puede acabar alli (no llega, solo puede pasar o ya esta alli). */
+  readonly steps: Grid<number | null>;
+  /** Casilla previa en el camino mas barato (tambien por las casillas de paso: aliados). */
+  readonly prev: Grid<Pos | null>;
+}
+
+/** Las reglas de paso de `unit` desde donde esta, con lo que hay ahora en la partida. */
+export function moveRulesOf(s: GameState, unit: Unit): MoveRules {
+  return { origin: posOf(unit), profile: movementProfile(s, unit), ...surroundingsOf(s, unit) };
+}
+
+/** Un paso de un camino: de `from` a `to`, con `spent` ya gastado antes de darlo. */
+export interface Step {
+  readonly from: Pos;
+  readonly to: Pos;
+  readonly spent: number;
 }
 
 /**
- * Pasos maximos este turno.
- * [CAMBIO] El clima puede quitar movimiento (nunca por debajo de 1 si la unidad se mueve).
+ * Como acaba un paso: en la casilla (`walk`) o dentro de la unidad que hay en ella (`join`: unirse o
+ * subir a un transporte). Al entrar en una unidad no se mira si su terreno es de su tipo ni si esa
+ * unidad cierra el paso, pero se gasta lo mismo que al entrar en su casilla (`enterCost`).
  */
-export function maxSteps(s: GameState, unit: Unit): number {
-  const base = unitTypeOf(s, unit).move;
-  if (base <= 0) return base;
-  return Math.max(1, base + weatherMove(s, movementOf(s, unit)));
-}
+export type StepKind = 'walk' | 'join';
 
-/** Lo que dice passMap de cada casilla para una unidad. */
-export interface PassMap {
-  /** No se puede pasar. */
-  block: Grid<boolean>;
-  /** Hay alguien: se puede pasar (aliados) pero no terminar. */
-  taken: Grid<boolean>;
-  /** Hay que pararse al entrar (zona de control enemiga). */
-  stop: Grid<boolean>;
-}
+/** Desde `from` se puede seguir: es de donde sale o no es una casilla en la que haya que pararse. */
+const canGoOnFrom = (rules: MoveRules, from: Pos): boolean => samePos(from, rules.origin) || !rules.mustStop.at(from);
+
+/** Puede entrar en `to` (`walk`): un terreno de su tipo, sin nadie que le cierre el paso y que no sea de donde sale. */
+const canStepOnto = (rules: MoveRules, to: Pos): boolean =>
+  rules.profile.canEnter(to) && rules.tiles.at(to) !== 'blocked' && !samePos(to, rules.origin);
 
 /**
- * Que casillas bloquean el paso a `unit` y en cuales no puede terminar.
- * [CAMBIO] Reglas nuevas: se atraviesan las unidades propias, y los enemigos que el equipo de `unit`
- * no ve no cuentan (asi el alcance no delata donde estan; al moverse, emboscada).
+ * La unica regla de cada paso de un movimiento (alcance, caminos trazados, el rastro del cursor y
+ * acercarse para unirse o subir): a una vecina, sin seguir desde una casilla en la que hay que
+ * pararse, a una casilla en la que puede entrar (o a la unidad en la que entra) y sin pasarse de lo
+ * que puede gastar.
  */
-export function passMap(s: GameState, unit: Unit): PassMap {
-  const block = createLayer(s, false);
-  const taken = createLayer(s, false);
-  const visible = s.rules.ambush ? visibility(s, unit.team) : null;
-  // [CAMBIO] Zona de control (habilidades): casillas en las que hay que pararse.
-  const stop = zoneOfControl(s, unit, visible);
-  for (const other of s.units) {
-    if (!isOnMap(other) || other.uid === unit.uid) continue;
-    if (!areEnemies(s, other, unit)) {
-      taken.set(other, true);
-      if (!s.rules.passAllies) block.set(other, true);
-    } else if (!visible || visible.at(other)) {
-      taken.set(other, true);
-      block.set(other, true);
-    }
-  }
-  return { block, taken, stop };
-}
-
-/** Lo que cuesta entrar en una casilla (1 con las reglas clasicas). */
-export function moveCost(s: GameState, moveType: MoveType, pos: Pos): number {
-  return s.rules.terrainCost ? terrainMoveCost(moveType, terrainAt(s, pos)) : 1;
-}
-
-/** Coste de recorrer un camino (sin contar la casilla de salida). */
-export function pathCost(s: GameState, moveType: MoveType, path: readonly Pos[]): number {
-  let cost = 0;
-  for (const step of path.slice(1)) cost += moveCost(s, moveType, step);
-  return cost;
+export function stepAllowed(rules: MoveRules, step: Step, kind: StepKind = 'walk'): boolean {
+  if (manhattan(step.from, step.to) !== 1 || !canGoOnFrom(rules, step.from)) return false;
+  if (kind === 'walk' && !canStepOnto(rules, step.to)) return false;
+  // Andando o entrando en una unidad (`join`), cuesta lo que la casilla de destino.
+  return step.spent + rules.profile.enterCost(step.to) <= rules.profile.budget;
 }
 
 /** Saca de `open` la casilla mas barata de llegar (la primera si empatan) y la devuelve. */
-function takeCheapest(open: Pos[], cheapest: Grid<number>): Pos {
-  const best = minBy(open, (pos) => cheapest.at(pos))!;
-  open.splice(open.indexOf(best), 1);
+function takeCheapest(open: Pos[], cheapest: Grid<number>): Pos | null {
+  const best = minBy(open, (pos) => cheapest.at(pos));
+  if (best) open.splice(open.indexOf(best), 1);
   return best;
 }
 
+/** El alcance a medio calcular: lo mas barato hasta cada casilla y las que quedan por mirar. */
+interface RangeSearch {
+  readonly rules: MoveRules;
+  readonly cheapest: Grid<number>;
+  readonly steps: Grid<number | null>;
+  readonly prev: Grid<Pos | null>;
+  readonly open: Pos[];
+}
+
+/** Mira cada vecina de `current`: si se llega mas barato por aqui, lo apunta (y la mira despues si es nueva). */
+function expandFrom(search: RangeSearch, current: Pos): void {
+  const { rules, cheapest } = search;
+  const spent = cheapest.at(current);
+  for (const next of neighbors4(cheapest, current)) {
+    if (!stepAllowed(rules, { from: current, to: next, spent })) continue;
+    const cost = spent + rules.profile.enterCost(next);
+    if (cost >= cheapest.at(next)) continue;
+    if (cheapest.at(next) === Infinity) search.open.push(next);
+    cheapest.set(next, cost);
+    search.prev.set(next, current);
+    // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
+    search.steps.set(next, rules.tiles.at(next) === 'passThrough' ? null : cost);
+  }
+}
+
 /**
- * Alcance de movimiento: `steps` es lo que cuesta llegar a cada casilla en la que se puede terminar
- * (0 si no se llega), `prev` el camino mas barato (tambien por casillas de paso, con aliados).
+ * Alcance de movimiento de la unidad desde donde esta: `steps` es lo que cuesta llegar a cada casilla
+ * en la que se puede terminar, `prev` el camino mas barato. No mira si ya se ha movido este turno:
+ * es hasta donde llegaria en su turno.
  */
 export function moveRange(s: GameState, unit: Unit): MoveRange {
-  const board = mapGrid(s);
-  const steps = board.createLayer(0);
-  const cameFrom = board.createLayer<Pos | null>(null);
-  const max = maxSteps(s, unit);
-  const movement = movementOf(s, unit);
-  const { block, taken, stop } = passMap(s, unit);
-  const canEnter = (tile: Pos) => canWalk(s, tile, movement) && !block.at(tile) && !samePos(tile, unit);
-
+  const rules = moveRulesOf(s, unit);
+  const search: RangeSearch = {
+    rules,
+    cheapest: createLayer(s, Infinity),
+    steps: createLayer<number | null>(s, null),
+    prev: createLayer<Pos | null>(s, null),
+    open: [rules.origin],
+  };
+  search.cheapest.set(rules.origin, 0);
   // Dijkstra sencillo: los costes son pequeños (1 a 3) y el alcance tambien.
-  const cheapest = board.createLayer(Infinity);
-  cheapest.set(unit, 0);
-  const open: Pos[] = [posOf(unit)];
-  while (open.length) {
-    const current = takeCheapest(open, cheapest);
-    const costHere = cheapest.at(current);
-    for (const next of neighbors4(board, current)) {
-      if (!canEnter(next)) continue;
-      const cost = costHere + moveCost(s, movement, next);
-      if (cost > max || cost >= cheapest.at(next)) continue;
-      const isFirstVisit = cheapest.at(next) === Infinity;
-      // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
-      if (isFirstVisit && !stop.at(next)) open.push(next);
-      cheapest.set(next, cost);
-      cameFrom.set(next, current);
-      // Por una casilla con un aliado se pasa, pero no se puede terminar en ella.
-      steps.set(next, taken.at(next) ? 0 : cost);
-    }
-  }
-  return { steps, prev: cameFrom, maxSteps: max };
+  for (let current = takeCheapest(search.open, search.cheapest); current; current = takeCheapest(search.open, search.cheapest))
+    expandFrom(search, current);
+  return { ...rules, steps: search.steps, prev: search.prev };
 }
 
 /** Se puede terminar el movimiento en `pos` con este alcance. */
 export function canReach(range: MoveRange, pos: Pos): boolean {
-  return range.steps.contains(pos) && range.steps.at(pos) > 0;
+  return range.steps.contains(pos) && range.steps.at(pos) !== null;
 }
 
 /** Casillas a las que se puede mover (sin contar la de salida). */
@@ -142,155 +142,78 @@ export interface ReachableTile {
 /** Las casillas del alcance con lo que cuesta llegar a cada una, columna a columna. */
 export function reachableTilesWithCost(range: MoveRange): ReachableTile[] {
   const tiles: ReachableTile[] = [];
-  for (const { pos, value: cost } of range.steps.cells()) if (cost > 0) tiles.push({ pos, cost });
+  for (const { pos, value: cost } of range.steps.cells()) if (cost !== null) tiles.push({ pos, cost });
   return tiles;
 }
 
-/** Camino de un movimiento; si ha habido emboscada, donde estaba el enemigo escondido. */
-export type MovePath = Pos[] & { ambush?: Pos };
-
-/** Hay una unidad del otro equipo en la casilla (escondida o no: al pisarla se descubre). */
-function enemyAt(s: GameState, unit: Unit, pos: Pos): boolean {
-  return s.units.some((other) => isOnMap(other) && areEnemies(s, other, unit) && samePos(other, pos));
-}
-
-/** Hay otra unidad (de cualquier equipo) en la casilla: ahi no se puede quedar parada. */
-function someoneElseAt(s: GameState, unit: Unit, pos: Pos): boolean {
-  return s.units.some((other) => isOnMap(other) && other.uid !== unit.uid && samePos(other, pos));
-}
-
-/**
- * Recorre un camino comprobando emboscadas: si una casilla tiene un enemigo (escondido), la unidad
- * se para en la ultima casilla libre antes de el. Devuelve el camino recorrido de verdad.
- */
-export function walkPath(s: GameState, unit: Unit, path: Pos[]): MovePath {
-  const ambushIndex = path.findIndex((pos, index) => index > 0 && enemyAt(s, unit, pos));
-  if (ambushIndex < 0) return path;
-  // Retrocede por las casillas de paso (con aliados) hasta una en la que se pueda parar.
-  let stopIndex = ambushIndex - 1;
-  while (stopIndex > 0 && someoneElseAt(s, unit, path[stopIndex]!)) stopIndex--;
-  const walked = path.slice(0, stopIndex + 1) as MovePath;
-  walked.ambush = { ...path[ambushIndex]! };
-  return walked;
-}
-
-/**
- * Aplica una emboscada: la unidad acaba en el ultimo punto del camino y pierde el turno.
- * (Interna de las acciones: la usan mover, unir y subir a un transporte.)
- */
-export function ambushed(unit: Unit, walked: MovePath): MovePath {
-  placeAtEnd(unit, walked);
-  spendUnit(unit);
-  return walked;
-}
-
-/** Pone la unidad en la ultima casilla del camino. */
-function placeAtEnd(unit: Unit, path: readonly Pos[]): void {
-  const end = path[path.length - 1]!;
-  unit.x = end.x;
-  unit.y = end.y;
-}
-
-/** Camino desde la unidad hasta `dest` (incluye ambos extremos), siguiendo `prev` hacia atras. */
-export function pathTo(range: MoveRange, from: Pos, dest: Pos): Pos[] {
+/** Camino desde donde sale hasta `dest` (incluye los dos), siguiendo `prev` hacia atras. */
+export function pathTo(range: MoveRange, dest: Pos): Pos[] {
   const path: Pos[] = [];
-  let step: Pos | null = dest;
-  while (step && !samePos(step, from)) {
-    path.unshift(posOf(step));
-    step = range.prev.at(step);
-  }
-  path.unshift(posOf(from));
+  for (let step: Pos | null = dest; step && !samePos(step, range.origin); step = range.prev.at(step)) path.unshift(posOf(step));
+  path.unshift(posOf(range.origin));
   return path;
 }
 
 /**
- * Un camino trazado a mano es valido si empieza en la unidad, va de casilla vecina en vecina por
- * casillas del alcance (o de paso), sin repetir, no supera el movimiento y termina en un destino libre.
+ * Un camino trazado a mano es valido si empieza donde sale, cada paso vale (`stepAllowed`), no
+ * repite casillas y termina en una del alcance.
  */
-export function validPath(s: GameState, unit: Unit, path: readonly Pos[], range: MoveRange): boolean {
-  const movement = movementOf(s, unit);
-  if (path.length < 2 || !samePos(path[0]!, unit) || pathCost(s, movement, path) > range.maxSteps) return false;
-  const end = path[path.length - 1]!;
-  if (!canReach(range, end)) return false;
-  return validSteps(s, unit, path);
+export function validPath(range: MoveRange, path: readonly Pos[]): boolean {
+  const [start, ...rest] = path;
+  const end = rest.at(-1);
+  if (!start || !end || !samePos(start, range.origin) || !canReach(range, end)) return false;
+  return allStepsAllowed(range, path) && new Set(path.map(posKey)).size === path.length;
 }
 
-/** Cada paso del camino es a una vecina por la que se puede pasar, sin volver atras ni pararse antes de tiempo. */
-function validSteps(s: GameState, unit: Unit, path: readonly Pos[]): boolean {
-  const { block, stop } = passMap(s, unit);
-  const movement = movementOf(s, unit);
-  const visited = new Set<string>();
-  for (let i = 1; i < path.length; i++) {
-    const from = path[i - 1]!;
-    const to = path[i]!;
-    const isLast = i === path.length - 1;
-    if (manhattan(from, to) !== 1 || !canWalk(s, to, movement) || block.at(to)) return false;
-    // En una zona de control enemiga hay que pararse: solo vale como ultima casilla.
-    if (!isLast && stop.at(to)) return false;
-    const key = posKey(to);
-    if (visited.has(key) || samePos(to, unit)) return false;
-    visited.add(key);
+/** Cada paso del camino vale, gastando lo de los anteriores. */
+function allStepsAllowed(rules: MoveRules, path: readonly Pos[]): boolean {
+  let spent = 0;
+  for (const [index, to] of path.entries()) {
+    const from = path[index - 1];
+    if (!from) continue;
+    if (!stepAllowed(rules, { from, to, spent })) return false;
+    spent += rules.profile.enterCost(to);
   }
   return true;
 }
 
 /**
- * Distancia en pasos desde `from` a cada casilla para un tipo de movimiento, sin limite
- * (Auxiliar.getGroundRange). 0 = inalcanzable (o la propia casilla de origen). El origen no tiene
- * que ser transitable. Las unidades bloquean salvo que se pase `occ` vacio.
+ * Como elegir la casilla del alcance con la que acercarse a algo: lo que se quiere hacer pequeño en
+ * cada casilla (lo que falta y, si empata, los desempates) y en cuales vale acabar.
  */
-export function groundDistance(s: GameState, from: Pos, moveType: MoveType, occ = occupancy(s)): Grid<number> {
-  const board = mapGrid(s);
-  const distance = board.createLayer(0);
-  const seen = board.createLayer(false);
-  seen.set(from, true);
-  // Busqueda en anchura: cada vuelta avanza un paso desde todo lo alcanzado en la anterior.
-  let frontier: Pos[] = [from];
-  for (let step = 1; frontier.length; step++) {
-    const next: Pos[] = [];
-    for (const tile of frontier.flatMap((pos) => neighbors4(board, pos))) {
-      if (seen.at(tile) || !isWalkable(s, tile, moveType, occ)) continue;
-      seen.set(tile, true);
-      distance.set(tile, step);
-      next.push(tile);
-    }
-    frontier = next;
-  }
-  return distance;
-}
-
-/** Pasos que faltan hasta un destino desde cada casilla. */
-export interface DistanceMap {
-  /** Pasos desde `pos` hasta el destino: 0 en el propio destino, Infinity si no se llega nunca. */
-  at(pos: Pos): number;
-}
-
-/** Distancias hasta `goal` para un tipo de movimiento, como si no hubiera unidades en medio. */
-export function distancesIgnoringUnits(s: GameState, goal: Pos, movement: MoveType): DistanceMap {
-  const steps = groundDistance(s, goal, movement, createLayer(s, false));
-  // groundDistance marca con 0 tanto el destino como lo que no se alcanza.
-  return { at: (pos) => (samePos(pos, goal) ? 0 : steps.at(pos) || Infinity) };
+export interface Approach {
+  score(tile: ReachableTile): SortKey;
+  /** Si no se dice, vale cualquier casilla del alcance. */
+  readonly allows?: (pos: Pos) => boolean;
 }
 
 /**
- * Casilla del alcance que mas acerca a `goal` (por tierra, mar o aire segun la unidad), sin contar a
- * las demas unidades. A igual distancia, la que menos pasos gasta.
- * null si no se puede llegar nunca o ninguna casilla acerca mas que quedarse donde esta.
+ * La unica forma de dar un paso hacia algo (viajes, mover en grupo, la IA y las formaciones): la
+ * casilla del alcance con menos `score` (a igualdad, la primera, columna a columna), si mejora la de
+ * quedarse donde esta (coste 0). null si ninguna la mejora.
  */
-export function stepToward(s: GameState, unit: Unit, goal: Pos, range = moveRange(s, unit)): Pos | null {
-  const movement = movementOf(s, unit);
-  if (!canWalk(s, goal, movement)) return null;
+export function stepToward(range: MoveRange, approach: Approach): Pos | null {
+  const allowed = reachableTilesWithCost(range).filter((tile) => approach.allows?.(tile.pos) ?? true);
+  const best = minBy(allowed, (tile) => approach.score(tile));
+  const stay: ReachableTile = { pos: posOf(range.origin), cost: 0 };
+  return best && compareKeys(approach.score(best), approach.score(stay)) < 0 ? best.pos : null;
+}
 
-  const distanceToGoal = distancesIgnoringUnits(s, goal, movement);
-  const best = minBy(reachableTilesWithCost(range), (tile) => [distanceToGoal.at(tile.pos), tile.cost]);
+/** Acercarse a `goal` por tierra (mar o aire segun `movement`), sin contar a las demas unidades; a igual distancia, gastando menos. */
+export function overGroundTo(s: GameState, movement: MoveType, goal: Pos): Approach {
+  const distanceToGoal = distanceMap(s, goal, movement);
+  return { score: (tile) => [distanceToGoal.at(tile.pos), tile.cost] };
+}
 
-  const getsCloser = best !== null && distanceToGoal.at(best.pos) < distanceToGoal.at(unit);
-  return getsCloser ? best.pos : null;
+/** Acercarse a `goal` en linea (sin mirar el terreno); a igual distancia, gastando menos. */
+export function straightTo(goal: Pos): Approach {
+  return { score: (tile) => [manhattan(tile.pos, goal), tile.cost] };
 }
 
 /** El camino trazado por el jugador, si acaba en `dest` y es valido; si no, null. */
-function drawnPath(s: GameState, unit: Unit, dest: Pos, range: MoveRange, drawn?: readonly Pos[]): Pos[] | null {
-  if (!drawn || !samePos(drawn[drawn.length - 1]!, dest) || !validPath(s, unit, drawn, range)) return null;
+function drawnPath(range: MoveRange, dest: Pos, drawn?: readonly Pos[]): Pos[] | null {
+  const end = drawn?.at(-1);
+  if (!drawn || !end || !samePos(end, dest) || !validPath(range, drawn)) return null;
   return drawn.map((step) => posOf(step));
 }
 
@@ -303,44 +226,30 @@ export function plannedPath(s: GameState, unit: Unit, dest: Pos, drawn?: readonl
   if (!canStillMove(unit) || samePos(unit, dest)) return null;
   const range = moveRange(s, unit);
   if (!canReach(range, dest)) return null;
-  return drawnPath(s, unit, dest, range, drawn) ?? pathTo(range, unit, dest);
+  return drawnPath(range, dest, drawn) ?? pathTo(range, dest);
 }
 
 /**
- * La unidad recorre un camino ya comprobado (plannedPath): si choca con un enemigo escondido se para
- * antes y pierde el turno (emboscada); si no, llega y queda movida. Devuelve lo recorrido.
- */
-export function followPath(s: GameState, unit: Unit, path: Pos[]): MovePath {
-  const walked = walkPath(s, unit, path);
-  if (walked.ambush) return ambushed(unit, walked);
-  placeAtEnd(unit, path);
-  markMoved(unit);
-  return path;
-}
-
-/**
- * Para unir o subir a un transporte la unidad tiene que poder llegar a una casilla
- * vecina del objetivo y dar un paso mas. Devuelve el camino hasta la casilla vecina
- * (la propia casilla si ya esta al lado) o null.
+ * Para unir o subir a un transporte hay que estar al lado del objetivo o llegar dentro del alcance a
+ * una casilla vecina y entrar desde alli (`stepAllowed`, como `join`). Devuelve el camino hasta la
+ * casilla vecina mas barata (la de salida si ya esta al lado) o null. Si la unidad aun puede
+ * moverse lo mira quien llama (transport.ts).
  * [CAMBIO] en el original la union y la carga se hacian "a distancia" sin mover a la unidad.
  */
-export function approachPath(s: GameState, unit: Unit, target: Pos, range = moveRange(s, unit)): Pos[] | null {
-  if (!canStillMove(unit) && manhattan(unit, target) !== 1) return null;
-  const lastStepCost = moveCost(s, movementOf(s, unit), target);
-  const stepsTo = (tile: Pos) => (samePos(tile, unit) ? 0 : range.steps.at(tile));
-  const canStepInFrom = (tile: Pos) => samePos(tile, unit) || (stepsTo(tile) > 0 && stepsTo(tile) + lastStepCost <= range.maxSteps);
-
-  const best = minBy(neighbors4(range.steps, target).filter(canStepInFrom), stepsTo);
-  if (!best) return null;
-  return samePos(best, unit) ? [posOf(unit)] : pathTo(range, unit, best);
+export function approachPath(range: MoveRange, target: Pos): Pos[] | null {
+  // Ya al lado no es un paso del movimiento: no gasta ni mira lo que podria gastar (vale aunque ya
+  // se haya movido o el clima no le deje moverse, como la union "a distancia" de 2013, y desde
+  // dentro de una zona de control). Desde mas lejos, entrar es el ultimo paso y paga como tal.
+  if (manhattan(range.origin, target) === 1) return [posOf(range.origin)];
+  const canJoinFrom = (tile: ReachableTile) => stepAllowed(range, { from: tile.pos, to: target, spent: tile.cost }, 'join');
+  const best = minBy(neighborsInReach(range, target).filter(canJoinFrom), (tile) => tile.cost);
+  return best ? pathTo(range, best.pos) : null;
 }
 
-/** Los sucesos de una accion acaban en una emboscada: la unidad se ha parado antes y ya no puede hacer nada. */
-export function endsInAmbush(events: readonly GameEvent[]): boolean {
-  return events.some((event) => event.kind === 'move' && !!event.ambush);
-}
-
-/** Evento de mover (los que anima la escena y cuentan las estadisticas). Un solo sitio para su forma. */
-export function moveEvent(actor: TeamId, uid: number, path: MovePath): GameEvent {
-  return path.ambush ? { kind: 'move', actor, uid, path, ambush: path.ambush } : { kind: 'move', actor, uid, path };
+/** Las casillas vecinas de `pos` en las que puede acabar, con lo que cuesta llegar. */
+function neighborsInReach(range: MoveRange, pos: Pos): ReachableTile[] {
+  return neighbors4(range.steps, pos).flatMap((neighbor) => {
+    const cost = range.steps.at(neighbor);
+    return cost === null ? [] : [{ pos: neighbor, cost }];
+  });
 }

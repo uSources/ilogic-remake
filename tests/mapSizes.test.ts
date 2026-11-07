@@ -1,7 +1,7 @@
 import { BLANK_DICE_SEED, playInterleaved, unitTypeNamed } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { blankMap, mapGrid } from '@core/mapGrid';
@@ -16,7 +16,7 @@ const TANK = unitTypeNamed('Tank');
 function cornerMatch(size: number): GameState {
   const s = newGameState({
     map: blankMap(size, defaultContent().plainTerrain.id),
-    rules: rulesWith(defaultContent(), { fog: true }),
+    settings: settingsWith(defaultContent(), { fog: true }),
     content: defaultContent(),
     mode: 'skirmish',
     teams: [

@@ -21,6 +21,9 @@ vigila).
    movimiento... El editor autocompleta y avisa con `units.schema.json`.
    - **Daño**: `attack.hitChance` = probabilidad de acierto contra cada unidad (0..1). El comando ya
      puso la nueva en el `hitChance` de las demas con el valor de la parecida: ajustarlo si no es igual.
+   - **Disparo**: `attack.range` (`[desde, hasta]`) y `attack.firesAfterMove` (si puede moverse y
+     disparar en el mismo turno: la artilleria no). Son cosas distintas: una de alcance corto puede
+     no poder moverse y disparar, y al reves.
    - Relaciones por nombre: `builtAt`/`repairedAt` (edificios), `transport.carries` y el `heals` de
      Suministros (unidades: si un transporte debe llevarla, añadirla a su `carries`).
    - Si no combate: `"ai": { "support": true }` (la IA tiene como mucho una).
@@ -37,6 +40,6 @@ vigila).
 7. CHANGELOG.md (apartado `[Sin publicar]`) y `npm run check`, `npm run shots`.
 
 Una regla nueva (curar al lado, volar sobre agua...) que el JSON no sabe expresar si es codigo: campo
-nuevo en `UnitDef` + validacion + su campo en `UnitType` (`buildUnitTypes`, content/units.ts) + esquema + test, y la regla en su modulo de `core/rules/` (una habilidad pasiva: su efecto en `core/abilities.ts`).
+nuevo en `UnitDef` + validacion + su campo en `UnitType` (`buildUnitTypes`, content/units.ts) + esquema + test, y la regla en su modulo de `core/rules/`. Una habilidad pasiva nueva: su forma en `AbilityDef`, su validacion en `ABILITY_SHAPES` (`content/abilities.ts`) y lo que aporta a las listas de las reglas en `ABILITY_HOOKS` y su sitio en `ABILITY_ORDER` (`core/abilities.ts`). Si depende de un ajuste de la partida, es un modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas").
 
 Probar rapido sin navegador: `npm run play -- --seed 7 -e "buy <x> <y> <id>; unit <id>; end; map"`.

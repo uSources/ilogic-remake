@@ -4,13 +4,14 @@
  * IA o la imagen original.
  */
 import { defaultContent } from '../core/content/default';
-import { rulesWith } from '../core/rulesConfig';
+import { settingsWith } from '../core/matchSettings';
 import Phaser from 'phaser';
 import { ATLAS } from '../atlas';
 import type { MissionDef } from '../core/missions';
 import { loadGame } from '../core/defaultGames';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
+import { helpRulesForSettingsOnly } from '../hud/helpText';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
 import { HomeScreen, type HomeHost } from '../menu/homeScreen';
@@ -101,7 +102,15 @@ export class MenuScene extends Phaser.Scene {
 
     Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions());
     // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
-    ui.set({ screen: 'menu', options: null, pause: null, toast: null, banner: null, report: null, helpRules: rulesWith(defaultContent()) });
+    ui.set({
+      screen: 'menu',
+      options: null,
+      pause: null,
+      toast: null,
+      banner: null,
+      report: null,
+      helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
+    });
     this.home.publish();
     if (data?.open === 'setup') this.openSetup();
 

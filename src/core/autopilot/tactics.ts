@@ -8,13 +8,14 @@
 import { unitTypeOf, weightsOf } from '../gameContent';
 import { manhattan, samePos } from '../geom';
 import { canCapture } from '../rules/capture';
-import { canDamage, fireOrigins, inAttackRange } from '../rules/combat';
+import { fireOrigins } from '../rules/combat';
+import { canDamage, inAttackRange } from '../rules/weapons';
 import type { MoveRange } from '../rules/movement';
 import { mergeTargets } from '../rules/transport';
 import { canStillFire } from '../rules/unitTurn';
 import type { Building, GameEvent, GameState, Pos, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
-import { act, bestMoveToward, doMove, finish, repairsHere, stepsFrom, strikeReach, visibleFoes, type PlayCtx } from './context';
+import { act, bestMoveToward, doMove, finish, repairsHere, stepsMap, strikeReach, visibleFoes, type PlayCtx } from './context';
 import { attackScore, unitValue } from './scoring';
 
 // ---------------------------------------------------------------------------------------------
@@ -31,9 +32,10 @@ function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRang
 
 /** El edificio propio libre que la repara al que menos pasos hay (null si no llega a ninguno). */
 function nearestRepairBuilding(s: GameState, play: PlayCtx, unit: Unit): Building | null {
-  const steps = stepsFrom(s, play, unit);
-  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps(building) < Infinity);
-  return minBy(repairShops, steps);
+  // La casilla en la que esta no sale: si alli la repararan, ya se habria quedado (retreat).
+  const steps = stepsMap(s, play, unit);
+  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps.at(building) < Infinity);
+  return minBy(repairShops, (building) => steps.at(building));
 }
 
 /** Ir a curarse: unirse a otra igual, quedarse si ya esta en un edificio que la repara o ir al mas cercano. */
@@ -122,6 +124,8 @@ export function* tryAttack(
   const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (unitTypeOf(s, unit).attack === null || !canStillFire(s, unit)) return false;
+  // Solo mira a los enemigos dentro del radio al que llega a disparar este turno (strikeReach, con el
+  // clima): de ellos sale a quien dispara y, si no puede a ninguno, a quien persigue (chaseNearest).
   const reach = strikeReach(s, unit);
   const isInReach = (enemy: Unit) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy));
   // Solo a los que puede hacer daño: un ataque que no quita vida no vale (ver attackProblem).
@@ -130,9 +134,9 @@ export function* tryAttack(
 
   const shot = bestShot(s, play, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
   if (shot) {
-    const ambushed = yield* doMove(s, play, unit, samePos(shot.from, unit) ? null : shot.from);
+    const interrupted = yield* doMove(s, play, unit, samePos(shot.from, unit) ? null : shot.from);
     // Desde la casilla nueva puede no verlo ya (el bosque solo se ve desde al lado): entonces espera.
-    const attacked = !ambushed && (yield* act(s, play, { kind: 'attack', uid: unit.uid, target: shot.target.uid }));
+    const attacked = !interrupted && (yield* act(s, play, { kind: 'attack', uid: unit.uid, target: shot.target.uid }));
     if (!attacked) yield* finish(s, play, unit);
     return true;
   }

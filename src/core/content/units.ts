@@ -1,7 +1,8 @@
 /** Unidades (units.json): validacion y su tipo resuelto (`UnitType`). */
 import type { DeepReadonly } from '../util/freeze';
 import { type Checker, type Scope, checkSprites } from './check';
-import { ABILITY_KINDS, MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type Texts, type UnitDef } from './types';
+import { ABILITY_KINDS, validateAbilityShape } from './abilities';
+import { MOVEMENTS, type AbilityDef, type ContentContext, type MoveType, type Texts, type UnitDef } from './types';
 
 const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
 
@@ -35,6 +36,7 @@ function validateAttack(scope: Scope, attack: UnitDef['attack'] | undefined, con
       Array.isArray(range) && Number.isInteger(range[0]) && Number.isInteger(range[1]) && range[0] >= 1 && range[1] >= range[0],
       'attack.range: 1 <= desde <= hasta',
     );
+  scope.bool('attack.firesAfterMove', attack?.firesAfterMove);
   for (const [target, chance] of Object.entries(attack?.hitChance ?? {})) {
     scope.known('attack.hitChance', target, context.unitIds);
     scope.num(`attack.hitChance.${target}`, chance, { min: 0, max: 1 });
@@ -69,36 +71,7 @@ function validateAbilities(scope: Scope, list: unknown, unit: UnitDef): void {
     if (!scope.known(`${field}.kind`, ability?.kind, ABILITY_KINDS, 'la habilidad ')) continue;
     scope.expect(!seen.has(ability.kind), `${field}: la habilidad "${ability.kind}" esta repetida`);
     seen.add(ability.kind);
-    validateAbility(scope, field, ability, unit);
-  }
-}
-
-/** Los numeros de cada clase de habilidad. */
-function validateAbility(scope: Scope, field: string, ability: AbilityDef, unit: UnitDef): void {
-  switch (ability.kind) {
-    case 'guard':
-      scope.num(`${field}.factor`, ability.factor, { min: 0, max: 1 });
-      break;
-    case 'zoneOfControl':
-      if (scope.expect(Array.isArray(ability.stops) && ability.stops.length > 0, `${field}.stops tiene que ser una lista de movimientos`))
-        for (const movement of ability.stops) scope.known(`${field}.stops`, movement, MOVEMENTS, 'el movimiento ');
-      break;
-    case 'aura':
-      scope.num(`${field}.radius`, ability.radius, { min: 1, max: 5, int: true });
-      scope.num(`${field}.defense`, ability.defense, { min: 0, max: 1 });
-      break;
-    case 'piercing':
-      scope.num(`${field}.ignoreCover`, ability.ignoreCover, { min: 0, max: 1 });
-      scope.expect(unit.attack !== null, `${field}: piercing en una unidad que no ataca`);
-      break;
-    case 'scout':
-      break;
-    case 'quickCapture':
-      scope.num(`${field}.factor`, ability.factor, { min: 1, max: 5 });
-      scope.expect(unit.captures, `${field}: quickCapture en una unidad que no captura`);
-      break;
-    default:
-      break;
+    validateAbilityShape(scope, field, ability, unit);
   }
 }
 
@@ -107,6 +80,8 @@ export interface UnitAttack {
   /** Distancia minima de tiro (1 = la casilla de al lado). */
   readonly minRange: number;
   readonly maxRange: number;
+  /** Puede moverse y disparar en el mismo turno (la artilleria no: solo dispara si no se ha movido). */
+  readonly firesAfterMove: boolean;
   /** Probabilidad de acierto de cada punto de vida contra cada tipo, por id (si no esta, 0: no le puede atacar). */
   readonly hitChance: Readonly<Record<string, number>>;
 }
@@ -146,7 +121,7 @@ export interface UnitType {
 function attackOf(definition: UnitDef): UnitAttack | null {
   if (!definition.attack) return null;
   const [minRange, maxRange] = definition.attack.range;
-  return { minRange, maxRange, hitChance: { ...definition.attack.hitChance } };
+  return { minRange, maxRange, firesAfterMove: definition.attack.firesAfterMove, hitChance: { ...definition.attack.hitChance } };
 }
 
 /** Los tipos de unidad del fichero (validado), en su orden. */

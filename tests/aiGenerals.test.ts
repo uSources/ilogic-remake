@@ -1,8 +1,9 @@
 import { dispatch } from '@core/actions';
 import { describe, expect, it } from 'vitest';
-import { aiGeneral, bestAreaTarget, choosePower } from '@core/aiGenerals';
+import { aiGeneral, choosePower } from '@core/aiGenerals';
+import { bestAreaTarget, powerValue } from '@core/generalPowers';
 import { playCtx } from '@core/autopilot/context';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';
 import { newUnit } from '@core/rules';
@@ -16,7 +17,7 @@ const unitType = unitTypeNamed;
 
 /** La IA (equipo 1) con Brisa y la carga dada; una unidad suya para ver algo. */
 function aiBrisa(charge: number, fog = false): GameState {
-  const s = blankState(rulesWith(defaultContent(), { fog, weather: false }));
+  const s = blankState(settingsWith(defaultContent(), { fog, weather: false }));
   appointGeneral(s, 1, 'Brisa');
   teamState(s, 1).general!.charge = charge;
   newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
@@ -29,7 +30,7 @@ describe('la IA usa a su general', () => {
     newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     newUnit(s, unitType('Tank'), 0, { x: 14, y: 14 });
     newUnit(s, unitType('Tank'), 0, { x: 15, y: 15 });
-    const best = bestAreaTarget(s, 1, 1, 30, 10)!;
+    const best = bestAreaTarget(s, 1, { kind: 'areaDamage', radius: 1, damage: 30, minLife: 10 })!;
     expect(best.value).toBeGreaterThan(7000);
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
     const choice = choosePower(s, 1)!;
@@ -42,7 +43,7 @@ describe('la IA usa a su general', () => {
 
   it('no gasta la carga en algo que vale poco', () => {
     // Con Roca: su reparacion no gasta la barra entera, asi que puede esperar a que valga la pena.
-    const s = blankState(rulesWith(defaultContent(), { weather: false }));
+    const s = blankState(settingsWith(defaultContent(), { weather: false }));
     appointGeneral(s, 1, 'Roca');
     teamState(s, 1).general!.charge = generalDef(s, 'Roca')!.powers[0]!.cost;
     newUnit(s, unitType('Tank'), 1, { x: 3, y: 3 }).life = 98; // 2 de vida de un tanque: poco valor
@@ -56,11 +57,31 @@ describe('la IA usa a su general', () => {
     expect(choice.value).toBe(AI.REVEALVALUE);
   });
 
+  it('el reconocimiento no vale nada si ya lo ve todo: sin niebla o con uno de la alianza puesto', () => {
+    const recon = generalDef(aiBrisa(6), 'Brisa')!.powers.find((power) => power.effect.kind === 'reveal')!;
+    expect(powerValue(aiBrisa(6, false), 1, recon)).toBeNull();
+    const fogged = aiBrisa(6, true);
+    expect(powerValue(fogged, 1, recon)).toEqual({ target: null, value: AI.REVEALVALUE });
+    teamState(fogged, 1).general!.reveal = true;
+    expect(powerValue(fogged, 1, recon)).toBeNull();
+
+    const withAlly = blankState(settingsWith(defaultContent(), { fog: true, weather: false }), [
+      { controller: 'human', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+      { controller: 'ai', alliance: 1 },
+    ]);
+    appointGeneral(withAlly, 1, 'Brisa');
+    appointGeneral(withAlly, 2, 'Brisa');
+    expect(powerValue(withAlly, 1, recon)).not.toBeNull();
+    teamState(withAlly, 2).general!.reveal = true;
+    expect(powerValue(withAlly, 1, recon)).toBeNull();
+  });
+
   it('no bombardea a ciegas: solo enemigos que ve', () => {
     const s = aiBrisa(5, true);
     newUnit(s, unitType('Tank'), 0, { x: 25, y: 25 }); // lejos, en la niebla
     newUnit(s, unitType('Tank'), 0, { x: 26, y: 25 });
-    expect(bestAreaTarget(s, 1, 1, 30, 10)).toBeNull();
+    expect(bestAreaTarget(s, 1, { kind: 'areaDamage', radius: 1, damage: 30, minLife: 10 })).toBeNull();
   });
 
   it('sin general, o ya usada este turno, no hace nada', () => {

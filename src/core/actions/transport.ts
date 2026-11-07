@@ -1,12 +1,11 @@
 /** Acciones de transporte: unirse a otra unidad igual, subir a un transporte y bajar a un pasajero. */
 import { posOf } from '../geom';
-import { moveEvent, type MovePath } from '../rules/movement';
+import { moveEvent, type Traversal } from '../rules/traverse';
 import { unitById } from '../rules/queries';
 import { endTravel } from '../rules/travel';
 import { boardTransport, dropPassenger, loadProblem, mergeInto, mergeProblem, unloadProblem } from '../rules/transport';
-import type { ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
+import type { ActionRegistry, ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
-import type { ActionRegistry } from './types';
 
 /** Por que no vale que `uid` vaya hasta la unidad `otherUid` (que tiene que existir) y entre en ella. */
 function joinProblem(
@@ -22,8 +21,8 @@ function joinProblem(
 }
 
 /** El suceso de ir hasta otra unidad y entrar en ella; con una emboscada por el camino, solo el de mover. */
-function joinEvent(actor: TeamId, kind: 'merge' | 'load', uid: number, into: number, path: MovePath): GameEvent {
-  return path.ambush ? moveEvent(actor, uid, path) : { kind, actor, uid, into, path };
+function joinEvent(actor: TeamId, kind: 'merge' | 'load', uid: number, into: number, traversal: Traversal): GameEvent {
+  return traversal.interruption ? moveEvent(actor, uid, traversal) : { kind, actor, uid, into, path: traversal.path };
 }
 
 export const TRANSPORT_ACTIONS: Pick<ActionRegistry, 'merge' | 'load' | 'unload'> = {

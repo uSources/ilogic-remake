@@ -59,7 +59,7 @@ export interface SavedLists {
 
 /** Lo de arriba tiene la forma de una partida: listas y objetos donde tocan. Lo de dentro se mira despues. */
 export function hasGameShape(saved: SavedGame): saved is SavedGame & SavedLists {
-  return [saved.map, saved.teams, saved.units, saved.buildings].every(Array.isArray) && isObject(saved.rules);
+  return [saved.map, saved.teams, saved.units, saved.buildings].every(Array.isArray) && isObject(saved.settings);
 }
 
 /** [CAMBIO] Mapas de varios tamaños: el tamaño sale del propio mapa guardado, que tiene que ser cuadrado y de terrenos que existan. */

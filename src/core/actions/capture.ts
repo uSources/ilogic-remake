@@ -2,8 +2,7 @@
 import { advanceCapture, canCapture, captureEvent } from '../rules/capture';
 import { keepCapturing } from '../squads/standingOrders';
 import { actorProblem, checkedBuilding, checkedUnit } from './checks';
-import type { GameEvent } from '../model';
-import type { ActionRegistry } from './types';
+import type { ActionRegistry, GameEvent } from '../model';
 
 export const CAPTURE_ACTIONS: Pick<ActionRegistry, 'capture'> = {
   capture: {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { changeSettings } from '@core/gameState';
 import { aiTurn } from '@core/ai';
 import { assistTurn, previewStandingOrders } from '@core/autopilot';
 import { dispatch } from '@core/actions';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { posOf } from '@core/geom';
 import { seededRng } from '@core/util/random';
@@ -113,7 +114,7 @@ describe('previewStandingOrders', () => {
     expect(withHidden).toEqual(clean);
     expect(withHidden.get(unit.uid)!.attack).toBeUndefined();
     // Sin niebla si lo ve, y la prevision si lo marca (la prueba de arriba no es casualidad).
-    s.rules = rulesWith(defaultContent(), { fog: false });
+    changeSettings(s, settingsWith(defaultContent(), { fog: false }));
     expect(previewStandingOrders(s, 0, dispatch).get(unit.uid)!.attack).toEqual(posOf(hidden));
   });
 

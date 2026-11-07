@@ -106,7 +106,7 @@ export class HomeScreen {
       funds: teamState(save, playerTeam(save)).funds,
       size: mapGrid(save).width,
       mission,
-      limit: save.rules.dayLimit,
+      limit: save.settings.dayLimit,
     };
   }
 

@@ -4,18 +4,20 @@
  * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
  */
 
-import { areAllied, isHostile } from '../teams';
+import { isHostile } from '../teams';
 import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
-import { movementOf, buildingAt, occupancy } from '../rules/queries';
+import { movementOf, buildingAt } from '../rules/queries';
+import { moveBudget } from '../rules/movementProfile';
 import { posOf, samePos } from '../geom';
-import { endsInAmbush, groundDistance, reachableTiles, type MoveRange } from '../rules/movement';
+import { canReach, stepToward, type MoveRange } from '../rules/movement';
+import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rules/distance';
+import { letsAlliesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules/passage';
+import type { PassRule } from '../ruleModules/hooks';
+import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
-import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
-import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { isAlive } from '../util/predicates';
-import type { Grid } from '../util/grid';
-import { minBy } from '../util/pick';
+import type { ActionDispatcher, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import { isAlive, isOnMap } from '../util/predicates';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -45,32 +47,24 @@ export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
 }
 
 /**
- * Ocupacion sin contar a la propia unidad (para medir distancias desde su sitio).
- * [CAMBIO] En grupo, si se puede pasar entre aliados, las propias no cortan el camino (solo las
- * enemigas visibles): antes una columna en un puente o en la salida de la Fabrica dejaba a las de
- * detras "sin camino" a nada y paseaban al azar en casa.
+ * [CAMBIO] La IA en grupo planea con lo que ve: los enemigos que no ve no le cortan el camino al
+ * medir, haya emboscadas o no (al moverse de verdad manda lo que diga la partida).
  */
-export function occupancyWithout(s: GameState, play: PlayCtx, unit: Unit): Grid<boolean> {
-  const occupied = occupancy(s);
-  if (play.group && s.rules.passAllies) {
-    const visible = visibility(s, play.me);
-    const letsPass = (other: Unit) => other.carrier === null && (areAllied(s, other.team, play.me) || !visible.at(other));
-    for (const other of s.units) if (letsPass(other)) occupied.set(other, false);
-  }
-  occupied.set(unit, false);
-  return occupied;
-}
+export const PLANS_WITH_WHAT_IT_SEES: PassRule = UNSEEN_FOES_UNNOTICED;
 
 /**
- * Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con las demas
- * unidades cortando el paso como en occupancyWithout. Infinity si no se llega o si es la propia
- * casilla `from` (alli ya se esta: no cuenta como sitio al que ir).
+ * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
+ * [CAMBIO] En grupo, si las reglas de paso dejan atravesar a los aliados, mide con esas reglas y
+ * con lo que ve (PLANS_WITH_WHAT_IT_SEES): antes una columna en un puente o en la salida de la
+ * Fabrica dejaba a las de detras "sin camino" a nada y paseaban al azar en casa.
  */
-export function stepsFrom(s: GameState, play: PlayCtx, unit: Unit, from: Pos = unit): (pos: Pos) => number {
-  const steps = groundDistance(s, from, movementOf(s, unit), occupancyWithout(s, play, unit));
-  // groundDistance marca con 0 tanto el origen como lo que no se alcanza.
-  return (pos) => steps.at(pos) || Infinity;
+export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
+  return play.group && letsAlliesThrough(s) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
 }
+
+/** Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con lo que le corta el paso (blockersFor). */
+export const stepsMap = (s: GameState, play: PlayCtx, unit: Unit, from: Pos = unit): DistanceMap =>
+  distanceMap(s, from, movementOf(s, unit), blockersFor(s, play, unit));
 
 /**
  * Mejor casilla alcanzable este turno para acercarse a `dest` (IA.getBestMove): la que menos pasos
@@ -80,12 +74,12 @@ export function stepsFrom(s: GameState, play: PlayCtx, unit: Unit, from: Pos = u
  */
 export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Pos, range: MoveRange, avoidDest = false): Pos | null {
   if (samePos(unit, dest) && !avoidDest) return null;
-  if (!avoidDest && range.steps.at(dest) > 0) return dest;
-  const stepsToDest = stepsFrom(s, play, unit, dest);
-  const options = reachableTiles(range).filter((tile) => !samePos(tile, dest));
-  const best = minBy(options, stepsToDest);
-  const getsCloser = best !== null && stepsToDest(best) < stepsToDest(unit);
-  return getsCloser ? best : null;
+  if (!avoidDest && canReach(range, dest)) return dest;
+  const stepsToDest = stepsMap(s, play, unit, dest);
+  // Si no puede acabar en el destino, estar en el no es haber llegado: cuenta como lo peor (tiene que salir).
+  const stepsLeft = (pos: Pos) => (samePos(pos, dest) ? Infinity : stepsToDest.at(pos));
+  // A igual distancia, la primera (sin mirar lo que gasta: como siempre).
+  return stepToward(range, { score: (tile) => [stepsLeft(tile.pos)], allows: (pos) => !samePos(pos, dest) });
 }
 
 /**
@@ -112,19 +106,25 @@ export function* finish(s: GameState, play: PlayCtx, unit: Unit): Generator<Game
   if (canAct(s, unit)) yield* act(s, play, { kind: 'wait', uid: unit.uid });
 }
 
-/** Mueve y avisa. Devuelve true si ha caido en una emboscada (la unidad ya no puede hacer nada). */
+/** Mueve y avisa. Devuelve true si algo le ha cortado el camino (la unidad ya no puede hacer nada). */
 export function* doMove(s: GameState, play: PlayCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
   if (!dest) return false;
   const events = yield* actEvents(s, play, { kind: 'move', uid: unit.uid, to: posOf(dest) });
-  return events !== null && endsInAmbush(events);
+  return events !== null && endsInterrupted(events);
 }
 
-/** Hasta donde puede llegar y disparar este turno (movimiento + alcance). */
-export const strikeReach = (s: GameState, unit: Unit): number => unitTypeOf(s, unit).move + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
+/**
+ * Radio en linea hasta el que una unidad puede llegar y disparar este turno: lo que puede gastar al
+ * moverse (con el clima) mas su alcance. Es una cota: decide a que enemigos mira tryAttack (a cuales
+ * dispara o, si no puede a ninguno, a cual persigue), cuando se suelta una formacion y que enemigos
+ * prueba la tabla de fuego de la IA (que despues mira el alcance de verdad). [CAMBIO] Antes usaba el
+ * movimiento del tipo sin el clima, asi que con mal tiempo perseguia enemigos que no iba a alcanzar.
+ */
+export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, unit) + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
 /** Enemigos de `me` vivos y en el mapa (no transportados), se vean o no. */
 const foesOnMap = (s: GameState, me: TeamId): Unit[] =>
-  s.units.filter((other) => isHostile(s, other.team, me) && other.carrier === null && other.life > 0);
+  s.units.filter((other) => isHostile(s, other.team, me) && isOnMap(other) && isAlive(other));
 
 /** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
 export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {

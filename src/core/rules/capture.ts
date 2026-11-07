@@ -3,21 +3,24 @@
  */
 
 import { isHq } from '../gameContent';
-import { captureFactor } from '../abilities';
 import { isCapturer } from '../util/predicates';
 import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { buildingAt, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
+import { hooksOf } from '../ruleModules/ruleset';
 import { canMoveNow, canStillAct, spendUnit } from './unitTurn';
 
 /** Puntos de captura de un edificio con las reglas de la partida. */
 export function capturePointsOf(s: GameState, building: Building): number {
-  return isHq(s, building) ? s.rules.hqCapturePoints : s.rules.capturePoints;
+  return isHq(s, building) ? s.settings.hqCapturePoints : s.settings.capturePoints;
 }
 
-/** Lo que resta una unidad al capturar: su vida / 10 (y mas con la habilidad quickCapture). */
-export const captureStrength = (s: GameState, unit: Unit): number => Math.ceil((unit.life / 10) * captureFactor(s, unit));
+/** Lo que resta una unidad al capturar: su vida / 10, por lo que aporten los modulos ([CAMBIO] habilidad quickCapture). */
+export function captureStrength(s: GameState, unit: Unit): number {
+  const factor = hooksOf(s, 'captureFactors').reduce((product, rule) => product * rule.factor(s, unit), 1);
+  return Math.ceil((unit.life / 10) * factor);
+}
 
 /** Captura a medias de un edificio (ver Building.capture). */
 export type CaptureProgress = NonNullable<Building['capture']>;

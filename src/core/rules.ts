@@ -18,9 +18,16 @@
  * | `visibility` | vision y niebla |
  * | `capture` | puntos de captura, capturas a medias, capturar, su evento |
  * | `lifecycle` | crear, quitar y limpiar unidades |
- * | `movement` | alcance, caminos, emboscadas, distancia por tierra, mover, su evento |
+ * | `movementProfile` | como se mueve cada tipo: por donde, lo que cuesta cada casilla, lo que puede gastar |
+ * | `passage` | lo que hacen las demas unidades: por donde no se pasa, por donde sin pararse, donde hay que pararse (las `passRules` de los modulos; `passBlockers` y `letsAlliesThrough` para medir) |
+ * | `movement` | cada paso (`stepAllowed`), alcance (`moveRange`), caminos (`plannedPath`, `validPath`, `approachPath`) y el paso hacia algo (`stepToward`) |
+ * | `distance` | pasos por tierra sin limite (`distanceMap`) y lo que corta el paso al medir (`Blockers`) |
+ * | `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo corta el primer `pathInterruptions` de los modulos (la emboscada); el suceso de mover |
  * | `travel` | viajes de varios turnos (usa `movement`) |
- * | `combat` | alcance de tiro y objetivos, proteccion, acierto, veterania, contraataque, botin, tirada |
+ * | `engagement` | un combate como pregunta: quien, a quien, desde donde y con que vida (`engagement`) |
+ * | `weapons` | lo que dice el arma de cada tipo: a que distancias llega y a quien le hace daño |
+ * | `attackRecord` | lo que se apunta de un ataque mientras se resuelve (`AttackRecord`) |
+ * | `combat` | desde donde y a quien se dispara (`fireOrigins`, `attackTargets`), proteccion, acierto (`HIT_MODIFIERS` y los de los modulos: veterania, flanqueo, clima...), quien contraataca (`counterRules`), tirada |
  * | `forecast` | prevision de combate, zona de amenaza |
  * | `transport` | unir, subir y bajar de transportes |
  * | `supply` | a quien se puede reparar, y repararlas |
@@ -62,33 +69,31 @@ export {
 } from './rules/capture';
 export { newUnit } from './rules/lifecycle';
 export {
-  maxSteps,
-  passMap,
-  moveCost,
-  pathCost,
+  moveRulesOf,
+  stepAllowed,
   moveRange,
   canReach,
   reachableTiles,
   reachableTilesWithCost,
-  distancesIgnoringUnits,
-  walkPath,
   pathTo,
   validPath,
-  groundDistance,
   stepToward,
+  overGroundTo,
+  straightTo,
+  type Approach,
   plannedPath,
   approachPath,
-  moveEvent,
-  endsInAmbush,
   type MoveRange,
-  type MovePath,
-  type PassMap,
+  type MoveRules,
   type ReachableTile,
-  type DistanceMap,
+  type Step,
+  type StepKind,
 } from './rules/movement';
+export { traverse, moveAlong, moveEvent, endsInterrupted, type Traversal } from './rules/traverse';
+export { distanceMap, noBlockers, unitsBlock, type Blockers, type DistanceMap } from './rules/distance';
+export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
+export { letsAlliesThrough, passBlockers, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
 export {
-  inAttackRange,
-  canDamage,
   fireOrigins,
   attackTargets,
   attackProblem,
@@ -96,16 +101,42 @@ export {
   tileProtection,
   defenseStars,
   hitChance,
-  RANK_KILLS,
-  flanked,
-  bountyFor,
-  rank,
+  hitModifiersOf,
   expectedDamage,
   canCounter,
   HIT_MODIFIERS,
-  type HitModifier,
 } from './rules/combat';
-export { damageDistribution, combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
+export { RULE_MODULES, rulesetFor, gameModulesFor } from './ruleModules/registry';
+export { isRuleOn, hooksOf, damageModelOf, resolveRuleset, type Ruleset, type HookOf } from './ruleModules/ruleset';
+export type {
+  CombatStage,
+  CombatStep,
+  CounterRule,
+  HitModifier,
+  CoverPiercing,
+  RoundPhase,
+  RoundReportPart,
+  RoundStage,
+  RuleHooks,
+  RuleModule,
+  RuleModuleId,
+  RuleModuleIds,
+  PassRule,
+  Passage,
+  PathInterruption,
+  StopRule,
+} from './ruleModules/hooks';
+export { RANK_KILLS, rank } from './rules/rank';
+export { flankBonusFor } from './ruleModules/flank';
+export { abilitiesOf } from './ruleModules/abilities';
+export { bountyFor } from './ruleModules/bounty';
+export { MELEE_COUNTER } from './ruleModules/counterattack';
+export { inAttackRange, canDamage, basePower } from './rules/weapons';
+export { fallenIn } from './rules/attackRecord';
+export type { AttackRecord, AttackRecordParts, DamageModel, Engagement, Fighter } from './model';
+export { engagement, fighterOf, reversed, type EngagementOptions } from './rules/engagement';
+export { combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
+export { boundedDistribution, DAMAGE_MODELS, DAMAGE_MODEL_IDS, damageModelFor, SHOT_BY_SHOT, spreadAround } from './damage';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';
 export {
@@ -119,8 +150,11 @@ export {
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';
-export { inControlZone, teamsInZone, controlRound, type ControlReport } from './rules/control';
-export { unhealable, endRound, roundReport, ROUND_PHASES, type RoundPhase, type RoundReport } from './rules/round';
+export { inControlZone, teamsInZone, controlRound } from './rules/control';
+export type { RoundReport, RoundReportParts } from './model';
+export type { ControlReport } from './ruleModules/controlPoints';
+export type { WeatherChange } from './weather';
+export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_REPORT_PARTS, ROUND_STAGES, roundPhasesOf } from './rules/round';
 export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';
 export {
@@ -152,4 +186,4 @@ export {
   type VictoryRule,
 } from './rules/victory';
 export { nextTurn, takesTurn, type NextTurn } from './rules/turnOrder';
-export { areEnemies, isOnMap, isAlive, canFight, isCapturer } from './util/predicates';
+export { areEnemies, isOnMap, isAlive, canFight, isCapturer, isRangedType } from './util/predicates';

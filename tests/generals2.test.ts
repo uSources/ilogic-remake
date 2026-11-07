@@ -1,10 +1,10 @@
 import { usePower, blankState, unitTypeNamed, act } from './helpers';
 import { describe, expect, it } from 'vitest';
 import { choosePower } from '@core/aiGenerals';
-import { rulesWith } from '@core/rulesConfig';
+import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';
-import { newUnit } from '@core/rules';
+import { newUnit, engagement } from '@core/rules';
 import { teamState } from '@core/teams';
 
 const AI = defaultContent().ai;
@@ -14,11 +14,11 @@ const unitType = unitTypeNamed;
 const generalDefinition = (id: string) => defaultContent().files.generals.find((general) => general.id === id)!;
 
 /** Reglas de las partidas de estos tests. */
-const TEST_RULES = rulesWith(defaultContent(), { fog: false, weather: false });
+const TEST_SETTINGS = settingsWith(defaultContent(), { fog: false, weather: false });
 
 describe('Roca: reparar', () => {
   it('sus unidades recuperan vida, sin pasar de 100; las del enemigo no', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 0, 'Roca');
     teamState(s, 0).general!.charge = 6;
     const amount = (generalDefinition('Roca').powers[0]!.effect as { amount: number }).amount;
@@ -40,7 +40,7 @@ describe('Roca: reparar', () => {
   });
 
   it('no cura a las que van dentro de un transporte (K5)', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 0, 'Roca');
     teamState(s, 0).general!.charge = 6;
     const transport = newUnit(s, unitType('Transport'), 0, { x: 3, y: 3 });
@@ -53,17 +53,17 @@ describe('Roca: reparar', () => {
   });
 
   it('sus vehiculos reciben algo menos de daño', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 0, 'Roca');
     const tank = newUnit(s, unitType('Tank'), 0, { x: 3, y: 3 });
     const soldier = newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 });
     const attacker = newUnit(s, unitType('Tank'), 1, { x: 3, y: 4 });
-    expect(generalHitFactor(s, attacker, tank)).toBeLessThan(1);
-    expect(generalHitFactor(s, attacker, soldier)).toBe(1);
+    expect(generalHitFactor(s, engagement(attacker, tank))).toBeLessThan(1);
+    expect(generalHitFactor(s, engagement(attacker, soldier))).toBe(1);
   });
 
   it('la IA repara cuando vale la pena, y no con el ejercito entero', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 1, 'Roca');
     teamState(s, 1).general!.charge = generalDefinition('Roca').powers[0]!.cost;
     const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, unitType('Tank'), 1, { x: x, y: 3 }));
@@ -77,7 +77,7 @@ describe('Roca: reparar', () => {
 
 describe('Ambar: suministros', () => {
   it('da el dinero al momento', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 0, 'Ambar');
     teamState(s, 0).general!.charge = 6;
     const amount = (generalDefinition('Ambar').powers.find((power) => power.id === 'supplies')!.effect as { amount: number }).amount;
@@ -88,15 +88,15 @@ describe('Ambar: suministros', () => {
   });
 
   it('sus tropas de tierra aciertan mas; los aviones no', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 0, 'Ambar');
     const target = newUnit(s, unitType('Tank'), 1, { x: 5, y: 6 });
-    expect(generalHitFactor(s, newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 }), target)).toBeGreaterThan(1);
-    expect(generalHitFactor(s, newUnit(s, unitType('Fighter'), 0, { x: 6, y: 6 }), target)).toBe(1);
+    expect(generalHitFactor(s, engagement(newUnit(s, unitType('Soldier'), 0, { x: 5, y: 5 }), target))).toBeGreaterThan(1);
+    expect(generalHitFactor(s, engagement(newUnit(s, unitType('Fighter'), 0, { x: 6, y: 6 }), target))).toBe(1);
   });
 
   it('la IA valora el dinero por lo que es', () => {
-    const s = blankState(TEST_RULES);
+    const s = blankState(TEST_SETTINGS);
     appointGeneral(s, 1, 'Ambar');
     teamState(s, 1).general!.charge = 4;
     newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });

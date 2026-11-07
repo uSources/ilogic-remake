@@ -54,7 +54,7 @@ Todo codigo nuevo o tocado sigue `docs/ESTILO.md` (con un ejemplo de antes y des
 nombres completos (`unit`, `distanceToGoal`; no `u`, `d`, `c`), una funcion por idea (unas 25
 lineas, 2 niveles de anidacion), salir pronto con `return`, nada de numeros ni condiciones magicas,
 recorrer y elegir con las piezas comunes (`Grid<T>` de `core/util/grid.ts` con `at`/`set`/`forEach`/`cells`, `minBy`/`maxBy`
-de `core/util/pick.ts`, `reachableTilesWithCost`, `distancesIgnoringUnits`) en vez de bucles a mano,
+de `core/util/pick.ts`, `reachableTilesWithCost`, `distanceMap`, `stepToward`) en vez de bucles a mano,
 lo que crece como lista de datos y no como `switch`, cada modulo pide solo lo que usa, y comentarios
 del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar lo mismo antes y despues.
 
@@ -69,7 +69,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   id, 'unidad')`). El codigo no compara nombres de unidades (`'Tank'`) ni de temas: si necesita saber
   algo de uno, es un campo del JSON.
 - **Tipos con nombre, no indices sueltos**: `MoveType.FOOT` (`'foot'`), `movementOf(s, unit)`,
-  `canMoveOn(moveType, terrain)`, `terrainMoveCost(moveType, terrain)`; las partidas guardan ids
+  `canMoveOn(moveType, terrain)`; como se mueve una unidad en esta partida (por donde, lo que cuesta,
+  lo que puede gastar) es su `movementProfile(s, unit)`; las partidas guardan ids
   (`unit.type = 'Tank'`, `s.theme = 'Plains'`), nunca el puesto en el fichero.
 - **Equipos, no bandos**: ningun numero de equipo es especial (ni `team === 0` ni `team = 0` por
   defecto). Enemigo es `isHostile(s, a, b)` (otra alianza); lo de cada equipo, `teamState(s, team)`
@@ -81,11 +82,11 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
   las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
-- **La partida es la unica fuente**: reglas en `s.rules`, tamaño del mapa en `s.map` (`mapGrid(s)`),
+- **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
-  en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
-  `createMatch(skirmishConfig({ seed, teams, ruleChanges }))`). Reglas con cambios: `rulesWith(contenido, { fog: false })` (nunca
-  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, mode, teams, diceSeed })`, el unico sitio
+  en curso; para probar otras reglas, una partida con otras reglas (`blankState(settingChanges)` en los tests,
+  `createMatch(skirmishConfig({ seed, teams, settingChanges }))`). Reglas con cambios: `settingsWith(contenido, { fog: false })` (nunca
+  `{ ...ajustes, ... }` a mano). Partida nueva: `newGameState({ map, settings, content, mode, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)`, o `readSave(json, contenido)` para saber que falla (`deserialize` da
   null). Solo se lee el formato de ahora: mientras el juego no ha salido, un cambio en lo que se guarda
@@ -96,10 +97,14 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `grid.atClamped(pos)` (no hay `isInside` fuera de util/grid.ts).
 - **Una sola forma por cosa**: eventos con `moveEvent`/`captureEvent` (con su `actor`), el turno de
   una unidad con `rules/unitTurn.ts` (`canStillAct`, `canStillMove`, `canStillFire`, `spendUnit`), el
-  dinero con `earn`/`pay` (`rules/funds.ts`), las reglas validas con `RULE_SCHEMA`
-  (`core/rulesSchema.ts`), lo que viene de fuera con `util/validation.ts`, proteccion con
-  `tileProtection`, casillas alcanzables con `reachableTiles`, desde donde se dispara con
-  `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged`, numeros con `fmtNum`; en
+  dinero con `earn`/`pay` (`rules/funds.ts`), las reglas validas con `SETTINGS_SCHEMA`
+  (`core/settingsSchema.ts`), lo que viene de fuera con `util/validation.ts`, proteccion con
+  `tileProtection`, casillas alcanzables con `reachableTiles`, si se puede dar un paso con
+  `stepAllowed`, recorrer un camino con `traverse`/`moveAlong`, distancias con `distanceMap` (y lo
+  que corta el paso, `Blockers`), acercarse con `stepToward` y un `Approach`, desde donde se dispara
+  con `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged` y si se mueve y
+  dispara con `firesAfterMove`, un combate hipotetico con `engagement(...)` (nunca copias de
+  unidades), el daño con `damageModelOf`, numeros con `fmtNum`; en
   el mapa, esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`,
   casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
   "Vista del mapa").
@@ -108,14 +113,25 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `ACTIONS` (`core/actions/`; y en `UNIT_MENU` si sale en el menu de la unidad, en `SELECTION_MENU`
   si se manda a unas elegidas, y en `ANIMATORS` de la escena); lo que se limpia tras cualquier
   accion y cada ronda = entrada en `INVARIANTS` (`core/rules/invariants.ts`); lo que se mira antes
-  de cualquiera = entrada en `ACTION_GUARDS`; acierto nuevo = entrada en `HIT_MODIFIERS`; paso por
-  ronda = entrada en `ROUND_PHASES` (devuelve sus sucesos); paso al empezar o acabar cada turno =
+  de cualquiera = entrada en `ACTION_GUARDS`; una pieza de reglas que depende de un ajuste = un
+  modulo de reglas (`core/ruleModules/`, entrada en `RULE_MODULES`) que aporta a las listas
+  (`RuleHooks`): acierto nuevo = `hitModifiers` de su modulo; paso por ronda = `roundPhases` (con su
+  momento; los de siempre en `ROUND_PHASES`); algo que pasa en cada ataque = `combatSteps` (los de
+  siempre en `COMBAT_RESOLUTION`, `core/actions/combat.ts`) y lo que apunta en el ataque = su campo en `AttackRecordParts` (`declare module`); quien contraataca = `counterRules`; por
+  donde se pasa = `passRules`/`stopRules`; lo que corta un camino = `pathInterruptions` (su nombre
+  ampliando `InterruptionKinds`; animacion propia opcional en `INTERRUPTION_ANIMATIONS`); parte del
+  resumen de ronda = `roundReportParts` (su forma ampliando `RoundReportParts`); nombre de un modulo
+  = `RuleModuleIds` (un modo lo amplia con `declare module`); reparto del daño = entrada en `DAMAGE_MODELS` (ajuste `damageModel`); un modo
+  puede traer sus propios modulos (`GameMode.ruleModules`: se resuelven con la partida, `s.ruleset`); las reglas no preguntan por un ajuste (`if (!s.settings.x)`); paso al empezar o acabar cada turno =
   entrada en `TURN_START_PHASES`/`TURN_END_PHASES` (`core/actions/turn.ts`); forma de acabar la
   partida = entrada en `VICTORY_RULES` (`core/rules/victory.ts`) y en la lista de su modo; modo de
   juego = entrada en `GAME_MODES` (`core/modes.ts`), su configuracion en `MatchConfig` y su
   preparacion en `MATCH_SETUPS` (`core/match.ts`); quien juega un equipo = un `Controller`
-  (`core/session`); habilidad de unidad nueva = su efecto en
-  `abilities.ts`; efecto nuevo de un poder del general = entrada en `POWER_EFFECTS` (`generals.ts`).
+  (`core/session`); habilidad de unidad nueva = su forma en `AbilityDef`, su validacion en
+  `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta en `ABILITY_HOOKS` y su sitio
+  en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos);
+  efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
+  su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`).
   La IA no tiene variables globales: lo del turno va en `PlayCtx`. Antes de escribir un bucle o un
   literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de

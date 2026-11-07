@@ -63,7 +63,7 @@ function buyItem(s: GameState, option: BuyOption): MenuItemVM {
 
 function buyDetail(s: GameState, option: BuyOption): string {
   const { unitType } = option;
-  const command = s.rules.commandPoints === null ? '' : ` · ${t('commandShort')} ${unitType.command}`;
+  const command = s.settings.commandPoints === null ? '' : ` · ${t('commandShort')} ${unitType.command}`;
   const abilities = abilitiesVM(s, unitType)
     .map((ability) => ` · ${ability.name}`)
     .join('');

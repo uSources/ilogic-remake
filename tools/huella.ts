@@ -20,14 +20,14 @@ import { posOf } from '@core/geom';
 import { aiController, controllersFor } from '@core/controllers';
 import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam } from '@core/teams';
-import type { GameAction, GameState, Rng, RulesConfig, TeamId } from '@core/model';
+import type { GameAction, GameState, Rng, MatchSettings, TeamId } from '@core/model';
 
 const MAX_DAYS = 30;
 const FIRST_DAY = 1;
 const GENERALS = defaultContent().generals;
 
 /** Reglas que se prueban: las de siempre y variantes que apagan las partes con mas condiciones. */
-const RULE_SETS: readonly Partial<RulesConfig>[] = [
+const SETTING_SETS: readonly Partial<MatchSettings>[] = [
   {},
   { fog: false, counterattack: false, veterancy: false },
   { ambush: false, terrainCost: false, weather: false, passAllies: false },
@@ -38,7 +38,7 @@ const MAP_SIZES = [16, 24, 32] as const;
 
 interface Scenario {
   seed: number;
-  rules: Partial<RulesConfig>;
+  settings: Partial<MatchSettings>;
   size: number;
   withGenerals: boolean;
   withSquad: boolean;
@@ -47,10 +47,10 @@ interface Scenario {
 function scenarios(): Scenario[] {
   const list: Scenario[] = [];
   let seed = 1;
-  for (const rules of RULE_SETS)
+  for (const settings of SETTING_SETS)
     for (const size of MAP_SIZES) {
-      list.push({ seed: seed++, rules, size, withGenerals: false, withSquad: true });
-      list.push({ seed: seed++, rules, size, withGenerals: true, withSquad: false });
+      list.push({ seed: seed++, settings, size, withGenerals: false, withSquad: true });
+      list.push({ seed: seed++, settings, size, withGenerals: true, withSquad: false });
     }
   return list;
 }
@@ -94,7 +94,7 @@ function teamsOf(scenario: Scenario): MatchTeam[] {
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
   const s = createMatch(
-    skirmishConfig({ seed: scenario.seed, size: scenario.size, ruleChanges: scenario.rules, teams: teamsOf(scenario) }),
+    skirmishConfig({ seed: scenario.seed, size: scenario.size, settingChanges: scenario.settings, teams: teamsOf(scenario) }),
     rng,
   );
 
@@ -122,7 +122,7 @@ for (const scenario of scenarios()) {
   total.update(fingerprint);
   if (!onlyTotal)
     console.log(
-      `${fingerprint}  semilla ${scenario.seed}, mapa ${scenario.size}, ${JSON.stringify(scenario.rules)}${scenario.withGenerals ? ', generales' : ''}${scenario.withSquad ? ', escuadra' : ''}`,
+      `${fingerprint}  semilla ${scenario.seed}, mapa ${scenario.size}, ${JSON.stringify(scenario.settings)}${scenario.withGenerals ? ', generales' : ''}${scenario.withSquad ? ', escuadra' : ''}`,
     );
 }
 console.log(`huella total: ${total.digest('hex').slice(0, 16)}`);

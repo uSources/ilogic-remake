@@ -9,7 +9,7 @@ import type { SandboxConfig } from './core/match';
 import { entryOf, MoveType, type GameContent, type UnitType } from './core/content';
 import { unitTypeOf } from './core/gameContent';
 import { maxBy } from './core/util/pick';
-import type { GameState, RulesConfig, Unit } from './core/model';
+import type { GameState, MatchSettings, Unit } from './core/model';
 
 export type LabAction = 'move' | 'attack' | 'counter' | 'kill';
 export const LAB_ACTIONS: readonly LabAction[] = ['move', 'attack', 'counter', 'kill'];
@@ -58,9 +58,9 @@ export const labRange = (s: GameState, unit: Pick<Unit, 'type'>): number => unit
 
 /**
  * Reglas del laboratorio: sin niebla; contraataque solo en la accion que lo enseña (en 'attack', el
- * defensor no responde). Sin clima ya lo pone su modo (GAME_MODES.sandbox.fixedRules).
+ * defensor no responde). Sin clima ya lo pone su modo (GAME_MODES.sandbox.fixedSettings).
  */
-export function labRuleChanges(action: LabAction | null): Partial<RulesConfig> {
+export function labSettingChanges(action: LabAction | null): Partial<MatchSettings> {
   return { fog: false, counterattack: action !== 'attack' };
 }
 
@@ -78,7 +78,7 @@ export function labMatch(options: LabOptions, action: LabAction | null): Sandbox
   return {
     mode: 'sandbox',
     size: LAB_SIZE,
-    ruleChanges: labRuleChanges(action),
+    settingChanges: labSettingChanges(action),
     teams: [
       { controller: 'human', funds: 0 },
       { controller: 'ai', funds: 0 },

@@ -19,14 +19,36 @@ export type {
   EventActor,
   GameEvent,
   GameEventKind,
+  AttackEventBase,
+  AttackPartsFitEvent,
+  CoreGameEvent,
+  CoreGameEventKind,
+  ModuleEvent,
+  ModuleEvents,
+  ModuleEventsAreNew,
   GameEventOf,
   GeneralCharge,
   Healing,
   SquadChange,
   TravelEnd,
+  Interruption,
+  InterruptionKind,
+  InterruptionKinds,
 } from './events';
 export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
-export type { RulesConfig } from './rules';
+export type { DamageModelId, MatchSettings } from './settings';
 export type { TeamStats } from './stats';
-export type { GameSetup, GameState, MatchContent, SavedGameState } from './state';
+export type { GameSetup, GameState, MatchContent, MatchRuleset, SavedGameState } from './state';
 export type { Dice, Rng } from './random';
+export type { AttackRecord, AttackRecordParts, DamageModel, Engagement, Fighter } from './combat';
+export type { RoundReport, RoundReportParts } from './roundReport';
+export type {
+  ActionDefinition,
+  ActionDispatcher,
+  ActionRegistry,
+  CompositeActionDefinition,
+  CompositeActionKind,
+  CompositeActionRegistry,
+  PlainActionKind,
+  PlainActionRegistry,
+} from './actionRegistry';
