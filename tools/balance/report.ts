@@ -85,6 +85,12 @@ export interface Report {
 }
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
+
+/**
+ * Lo que se perdona al comparar un reparto con `sideGap`: con decimales, 29/50 - 0.5 da 0.0799... y
+ * 0.5 - 21/50 da 0.0800...2, asi que 58/42 pasaba y 42/58 avisaba, con la misma diferencia.
+ */
+const SHARE_TOLERANCE = 1e-9;
 const quant = (xs: number[], fraction: number) => {
   if (!xs.length) return 0;
   const sorted = [...xs].sort((first, second) => first - second);
@@ -212,7 +218,7 @@ export function buildReport(
   const mirror = !meta.policies.includes('passive');
   const ew: [number, number] = [wins[0] + adjudicated[0], wins[1] + adjudicated[1]];
   const decided = ew[0] + ew[1];
-  if (mirror && decided >= 20 && Math.abs(ew[0] / decided - 0.5) > targets.sideGap)
+  if (mirror && decided >= 20 && Math.abs(ew[0] / decided - 0.5) > targets.sideGap + SHARE_TOLERANCE)
     flags.push(
       `Un bando gana mas (contando ventaja al final): bando 0 (el jugador) ${pct(ew[0] / decided)}, bando 1 (la IA) ${pct(ew[1] / decided)}.`,
     );

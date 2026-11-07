@@ -3,9 +3,10 @@ import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { PLAIN_SETTINGS } from './plainSettings';
 import { duelMatrix } from '../tools/balance/duel';
-import { FIRST_SIDE, playGame } from '../tools/balance/play';
+import { FIRST_SIDE, playGame, type GameRecord, type UnitTally } from '../tools/balance/play';
 import { runDuels, runGames } from '../tools/balance/runner';
 import { buildVariant } from '../tools/balance/variant';
+import { buildReport, DEFAULT_TARGETS } from '../tools/balance/report';
 import { entryOf, type GameContent } from '@core/content';
 
 const TANK_INDEX = defaultContent().units.list.findIndex((unitType) => unitType.id === 'Tank');
@@ -152,4 +153,47 @@ describe('herramienta de equilibrio: cada hilo juega con el contenido de su vari
     // Sin poder de tanque contra tanque, ese duelo ni se juega.
     expect(await tankVsTank({ 'HIT_CHANCE.Tank.Tank': 0 })).toBeUndefined();
   }, 30_000);
+});
+
+describe('herramienta de equilibrio: el informe', () => {
+  const noTally = (): UnitTally => ({
+    bought: 0,
+    spent: 0,
+    damageDealt: 0,
+    valueDealt: 0,
+    valueLost: 0,
+    kills: 0,
+    deaths: 0,
+    attacks: 0,
+    captures: 0,
+  });
+  const tallies = () => Object.fromEntries(defaultContent().units.list.map((unitType) => [unitType.id, noTally()]));
+  const won = (seed: number, winner: 0 | 1): GameRecord => ({
+    seed,
+    winner,
+    reason: 'hq',
+    days: 20,
+    samples: [{ day: 1, funds: [0, 0], buildings: [1, 1], army: [0, 0], units: [0, 0] }],
+    units: [tallies(), tallies()],
+    events: 0,
+  });
+  const sideFlags = (firstWins: number, games: number) => {
+    const records = Array.from({ length: games }, (_, i) => won(i, i < firstWins ? 0 : 1));
+    const meta = {
+      name: 'x',
+      variant: { name: 'x', set: {} },
+      changes: [],
+      maxDays: 60,
+      seeds: [0, games - 1] as [number, number],
+      policies: 'ai vs ai',
+    };
+    return buildReport(records, meta, DEFAULT_TARGETS, defaultContent()).flags.filter((flag) => flag.startsWith('Un bando gana mas'));
+  };
+
+  it('el aviso de un bando que gana mas es igual para los dos: 58/42 y 42/58 pasan, 60/40 y 40/60 no', () => {
+    expect(sideFlags(29, 50)).toEqual([]);
+    expect(sideFlags(21, 50)).toEqual([]);
+    expect(sideFlags(30, 50)).toHaveLength(1);
+    expect(sideFlags(20, 50)).toHaveLength(1);
+  });
 });
