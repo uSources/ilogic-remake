@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildDraft, insertDraft, renderDraft, type Commit } from './draft';
+import { commandLine } from '../cliArgs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CHANGELOG = `${ROOT}CHANGELOG.md`;
@@ -65,6 +66,7 @@ function commitsSince(from: string | null): Commit[] {
 }
 
 function main(): void {
+  const write = commandLine(import.meta.url, { write: 'flag' }).flag('write') === true;
   const md = readFileSync(CHANGELOG, 'utf8');
   const rel = lastRelease(md);
   const commits = commitsSince(rel?.commit ?? null);
@@ -74,7 +76,7 @@ function main(): void {
     `${commits.length} commits ${since}: ${commits.length - draft.internal - draft.unknown.length} para el jugador, ${draft.internal} internos.`,
   );
   if (draft.unknown.length) console.log(`Sin emoji de la lista (no salen): ${draft.unknown.join(' | ')}`);
-  if (process.argv.includes('--write')) {
+  if (write) {
     writeFileSync(CHANGELOG, insertDraft(md, draft));
     console.log('Borrador escrito en CHANGELOG.md, [Sin publicar]. Reescribirlo para el jugador, traducirlo y borrar las marcas.');
   } else console.log(`\n${renderDraft(draft, 'es') || '(nada para el jugador)'}`);

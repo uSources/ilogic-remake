@@ -21,6 +21,7 @@ import { aiController, controllersFor } from '@core/controllers';
 import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam } from '@core/teams';
 import type { GameAction, GameState, MatchSettings, TeamId } from '@core/model';
+import { commandLine } from './cliArgs';
 
 const MAX_DAYS = 30;
 const FIRST_DAY = 1;
@@ -115,7 +116,7 @@ function playScenario(scenario: Scenario): string {
   return hash.digest('hex').slice(0, 16);
 }
 
-const onlyTotal = process.argv.includes('--total');
+const onlyTotal = commandLine(import.meta.url, { total: 'flag' }).flag('total') === true;
 const total = createHash('sha256');
 for (const scenario of scenarios()) {
   const fingerprint = playScenario(scenario);

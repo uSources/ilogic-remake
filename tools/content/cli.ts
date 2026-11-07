@@ -11,14 +11,16 @@ import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 import { validateContent, readContentFiles, type UnitDef } from '@core/content';
 import { addUnitLike } from './newUnit';
+import { commandLine, usageOf } from '../cliArgs';
 
 const FILE = fileURLToPath(new URL('../../src/core/content/units.json', import.meta.url));
 
 async function main(): Promise<void> {
-  const [cmd, id, ...rest] = process.argv.slice(2);
-  const like = rest[rest.indexOf('--like') + 1];
-  if (cmd !== 'new' || !id || !rest.includes('--like') || !like) {
-    console.log('Uso: npm run unit -- new <Id> --like <UnidadParecida>');
+  const args = commandLine(import.meta.url, { like: 'text' });
+  const [command, id, ...extra] = args.positionals;
+  const like = args.text('like');
+  if (command !== 'new' || !id || !like || extra.length) {
+    console.log(`Uso: npm run unit -- new <Id> --like <UnidadParecida>\n\n${usageOf(import.meta.url)}`);
     process.exit(1);
   }
   const file = JSON.parse(readFileSync(FILE, 'utf8')) as { $schema: string; units: UnitDef[] };
