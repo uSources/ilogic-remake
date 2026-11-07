@@ -42,6 +42,12 @@ const ambush = ({ on }: RuleFacts) =>
     ? 'You can move through your own units. With fog, woods are only visible from next to them: if your path runs into a hidden enemy, the unit stops short (ambush!) and loses its turn.'
     : '';
 
+// [CAMBIO] Los edificios propios ven a su alrededor (radios en src/core/content/buildings.json).
+const buildingVision = ({ on }: RuleFacts) =>
+  on('noFog')
+    ? ''
+    : 'Your buildings also keep watch around them: the HQ and the stronghold 3 tiles, factories and airports 2, cities and oil wells 1.';
+
 const weather = ({ on }: RuleFacts) =>
   on('weather')
     ? 'Weather: every few days it changes (top, next to the day; hover it to see its effects and the forecast). Rain slows vehicles, snow slows everything on the ground and storms slow aircraft; bad weather costs both sides vision and aim.'
@@ -56,6 +62,7 @@ const ruleLines = (facts: RuleFacts): string[] => [
   armyLimits(facts),
   controlPoints(facts),
   ambush(facts),
+  buildingVision(facts),
   weather(facts),
 ];
 

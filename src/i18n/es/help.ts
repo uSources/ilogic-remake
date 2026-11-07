@@ -44,6 +44,12 @@ const ambush = ({ on }: RuleFacts) =>
     ? 'Puedes atravesar tus unidades. Con niebla, el bosque solo se ve desde al lado: si tu camino choca con un enemigo escondido, la unidad se para antes (¡emboscada!) y pierde el turno.'
     : '';
 
+// [CAMBIO] Los edificios propios ven a su alrededor (radios en src/core/content/buildings.json).
+const buildingVision = ({ on }: RuleFacts) =>
+  on('noFog')
+    ? ''
+    : 'Tus edificios también vigilan a su alrededor: la Base y la fortaleza 3 casillas, las fábricas y los aeropuertos 2, las ciudades y los pozos 1.';
+
 const weather = ({ on }: RuleFacts) =>
   on('weather')
     ? 'Clima: cada pocos días cambia el tiempo (arriba, junto al día; al pasar por encima ves sus efectos y el pronóstico). La lluvia frena a los vehículos, la nieve a todo lo que va por tierra y las tormentas a los aviones; el mal tiempo quita visión y puntería a los dos bandos.'
@@ -58,6 +64,7 @@ const ruleLines = (facts: RuleFacts): string[] => [
   armyLimits(facts),
   controlPoints(facts),
   ambush(facts),
+  buildingVision(facts),
   weather(facts),
 ];
 

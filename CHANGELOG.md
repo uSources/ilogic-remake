@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Cambios de juego
+- **Los edificios vigilan**: con niebla, cada edificio tuyo descubre lo que hay a su alrededor. La Base y la fortaleza ven 3 casillas, las fábricas y los aeropuertos 2, las ciudades y los pozos 1. Capturar un edificio también sirve para ver más.
+
+<!-- en -->
+
+### Gameplay
+- **Buildings keep watch**: with fog of war, each building you own reveals its surroundings. The HQ and the stronghold see 3 tiles, factories and airports 2, cities and oil wells 1. Capturing a building also widens your view.
+
 ## [0.8.0] - 2026-11-07 — Escuadras, órdenes y un rival que juega limpio
 
 ### Novedades
