@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn, defaultAiProfile } from '@core/ai';
 import { dispatch, TURN_END_PHASES } from '@core/actions';
 import { previewStandingOrders } from '@core/autopilot';
-import { playerView, seeing, unitsKnownTo } from '@core/playerView';
+import { foggedCopy, playerView, seeing } from '@core/playerView';
 import { unitById } from '@core/rules';
 import { newUnit } from '@core/measure';
 import type { ActionPlan, Building, GameAction, GameState } from '@core/model';
@@ -46,12 +46,12 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const transport = newUnit(s, TRANSPORT, 1, { x: 2, y: 3 });
     const passenger = newUnit(s, SOLDIER, 1, { x: 2, y: 4 });
     act(s, 1, { kind: 'load', uid: passenger.uid, into: transport.uid });
-    const known = unitsKnownTo(s, 0);
+    const known = foggedCopy(s, 0).units;
     expect(known.find((unit) => unit.uid === seen.uid)?.standingOrder).toBeUndefined();
     expect(known.some((unit) => unit.uid === passenger.uid)).toBe(false);
     expect(known.find((unit) => unit.uid === transport.uid)?.cargo).toEqual(transport.cargo.map(() => null));
     // Su propio equipo lo sabe todo de lo suyo.
-    expect(unitsKnownTo(s, 1).find((unit) => unit.uid === seen.uid)?.standingOrder).toEqual({ kind: 'defend', at: { x: 3, y: 2 } });
+    expect(foggedCopy(s, 1).units.find((unit) => unit.uid === seen.uid)?.standingOrder).toEqual({ kind: 'defend', at: { x: 3, y: 2 } });
   });
 
   it('las escuadras de los enemigos y las semillas no se ven; su azar del turno, si', () => {
@@ -126,7 +126,7 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const last = steps.next(dispatch(s, 0, first.value));
     expect(view.state).toBe(state);
     expect(unitById(state, mine.uid)).toMatchObject({ x: 2, y: 5 });
-    expect(last).toEqual({ done: true, value: unitsKnownTo(s, 0).map((unit) => unit.uid) });
+    expect(last).toEqual({ done: true, value: foggedCopy(s, 0).units.map((unit) => unit.uid) });
   });
 
   it('la IA decide igual haya o no enemigos que no ve (I2: ya no los esquiva)', () => {
@@ -169,6 +169,23 @@ describe('las ordenes que cumple la partida deciden con lo que sabe el equipo', 
     expect(playerView(withHidden.s, 0).state.units).toHaveLength(1);
     expect(runPhase(withHidden.s)).toEqual(runPhase(without.s));
     expect(withHidden.soldier.x).toBeGreaterThan(2);
+  });
+
+  it('la copia de la prevision lleva toda la niebla del equipo y no toca la partida (foggedCopy)', () => {
+    const { s } = corridor(true);
+    const copy = foggedCopy(s, 0);
+    const view = playerView(s, 0).state;
+    expect(copy).not.toBe(s);
+    expect(copy.units.map((unit) => unit.uid)).toEqual(view.units.map((unit) => unit.uid));
+    expect([copy.dice, copy.decisionSeed, copy.setup]).toEqual([view.dice, view.decisionSeed, view.setup]);
+    copy.units[0]!.x = 0;
+    expect(s.units[0]!.x).not.toBe(0);
+  });
+
+  it('con un enemigo escondido la prevision es la misma que sin el', () => {
+    const without = corridor(false);
+    const withHidden = corridor(true);
+    expect(previewStandingOrders(withHidden.s, 0, dispatch)).toEqual(previewStandingOrders(without.s, 0, dispatch));
   });
 
   it('la prevision es lo que despues hacen', () => {

@@ -113,7 +113,7 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
   it.each([
     "import { actorProblem } from '../actions/checks';",
     "import { carryOut } from '../actions/plan';",
-    "import { seeing, unitsKnownTo } from '../playerView';",
+    "import { foggedCopy, seeing } from '../playerView';",
     "import { decisionRngOf } from '../playerView';",
   ])('deja %s', (code) => expect(forbidsCode(`${code}\nexport const used = 1;\n`)).toBe(false));
 

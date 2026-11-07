@@ -219,7 +219,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `match.ts` | empezar una partida: `MatchConfig`, `MATCH_SETUPS`, `buildMatch`, `skirmishConfig`, `rematchOf` |
 | `gameState.ts` | `newGameState(...)`: el unico sitio que escribe la forma de una partida nueva |
 | `dice.ts`, `turnSeeds.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`), la semilla de las decisiones de cada turno (`turnSeedOf`; quien decide, de su vista: `decisionRngOf`, playerView.ts), el `Rng` con semilla (`seededRng`) y elegir al azar (`pick`, `weightedPick`) |
-| `playerView.ts` | lo que sabe cada equipo (`PlayerView`, con lo que no sabe en `FOG`) y un plan con la vista al dia (`seeing`) |
+| `playerView.ts` | lo que sabe cada equipo (`PlayerView`, con lo que no sabe en `FOG`), un plan con la vista al dia (`seeing`), su azar (`decisionRngOf`) y una copia con su niebla para simular (`foggedCopy`) |
 | `settingsSchema.ts` | `SETTINGS_SCHEMA`: que valores puede tener cada ajuste |
 | `matchSettings.ts` | `settingsWith(contenido, cambios)`: los ajustes por defecto con cambios (`MatchSettings`, `s.settings`) |
 | `ruleModules/` | los modulos de reglas (`RULE_MODULES`) y lo que aporta cada uno a las listas de las reglas (`RuleHooks`); ver "Modulos de reglas" |
@@ -474,8 +474,9 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   (`TeamState.fell`), nunca las deduce de lo que ve. Las ordenes permanentes deciden igual, con la
   vista del equipo, las cumpla quien las cumpla: los pasos de turno (`followStandingOrders` en
   actions/turn.ts: `playerView` + `seeing`), la escena al darlas (scenes/game/orders.ts) y
-  `autopilotController` (con la vista que le da la sesion). Su prevision simula sobre una copia con
-  lo mismo quitado (`unitsKnownTo`), asi que sin combates ni emboscadas dice lo que despues hacen.
+  `autopilotController` (con la vista que le da la sesion). Su prevision simula sobre una copia de
+  la partida tal como la sabe el equipo (`foggedCopy`, con toda la niebla de FOG), asi que sin
+  combates ni emboscadas dice lo que despues hacen y no delata nada de lo que no ve.
   La sesion pone al dia la vista de quien juega tras cada accion; fuera de una sesion lo hace
   `seeing`. La vista es de solo lectura hasta el fondo (lo que se lee de ella tambien).
 - **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,

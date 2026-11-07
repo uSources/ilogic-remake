@@ -1,14 +1,13 @@
 /**
  * [CAMBIO] La prevision de las ordenes permanentes de un equipo (las flechas de intencion de la
  * pantalla): lo que haran al terminar su turno, sin tocar la partida. Se cumple su plan (assistTurn)
- * sobre una copia con los enemigos que el equipo no ve quitados, asi que la prevision no puede
- * delatarlos (ni como objetivo, ni por un camino que los rodee o una emboscada) y sin combates ni
- * emboscadas dice lo que despues hacen.
+ * sobre una copia con lo que el equipo no sabe quitado (`foggedCopy`, con toda la niebla de FOG), asi
+ * que la prevision no puede delatar a nadie (ni como objetivo, ni por un camino que lo rodee o una
+ * emboscada) y sin combates ni emboscadas dice lo que despues hacen.
  */
 import { posOf } from '../geom';
 import { carryOut } from '../actions/plan';
-import { cloneState } from '../gameContent';
-import { unitsKnownTo } from '../playerView';
+import { foggedCopy } from '../playerView';
 import { teamUnits } from '../rules/queries';
 import { standingOrderAt } from '../squads/standingOrders';
 import type { ActionDispatcher, GameAction, GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId } from '../model';
@@ -41,13 +40,13 @@ export interface PlannedAction {
 
 /**
  * [CAMBIO] Lo que haran las ordenes del equipo al terminar el turno: las acciones que propone su plan
- * (assistTurn), cumplido sobre una copia de la partida sin los enemigos que el equipo no ve (las que
+ * (assistTurn), cumplido sobre una copia de la partida como la sabe el equipo (`foggedCopy`; las que
  * no valdrian no salen). No toca `s`. Es una prevision: con enemigos escondidos o la suerte del
  * combate, el turno real puede variar. `simulate` manda las acciones en la copia que se le da:
  * `dispatch` (no el de una sesion, que solo vale para su partida y lo dice: GameSession.dispatcher).
  */
 export function plannedStandingOrders(s: GameState, team: TeamId, simulate: ActionDispatcher): PlannedAction[] {
-  const copy = withoutHiddenEnemies(s, team);
+  const copy = foggedCopy(s, team);
   copy.dice = PREVIEW_DICE_SEED;
   const planned: PlannedAction[] = [];
   carryOut(assistTurn(copy, team, 'turnEnd'), (action) => {
@@ -69,13 +68,6 @@ export function previewStandingOrders(s: GameState, team: TeamId, simulate: Acti
   for (const unit of actors) intents.set(unit.uid, { path: [] });
   for (const planned of plannedStandingOrders(s, team, simulate)) for (const event of planned.events) recordIntent(intents, event);
   return intents;
-}
-
-/** Copia de la partida con las unidades que conoce `team` (sin los enemigos que no ve ni lo que llevan dentro: playerView). */
-function withoutHiddenEnemies(s: GameState, team: TeamId): GameState {
-  const copy = cloneState(s);
-  copy.units = unitsKnownTo(copy, team);
-  return copy;
 }
 
 /** Lo que apunta un suceso de una accion planeada en las intenciones (de la unidad que lo hace). */

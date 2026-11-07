@@ -15,6 +15,7 @@
  * enseña a la persona el codigo del mapa (de el salen las semillas de una escaramuza) y son de 32
  * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
  */
+import { cloneState } from './gameContent';
 import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from './model';
 import { sightOf, type Sight } from './rules/visibility';
 import { areAllied } from './teams';
@@ -89,8 +90,15 @@ function foggedParts(s: GameState, team: TeamId): FoggedParts {
   return FOG.reduce<FoggedParts>((parts, rule) => ({ ...parts, ...rule.hide(s, team, sees) }), {});
 }
 
-/** Las unidades que conoce el equipo `team` (las suyas y las de sus aliados, y lo que ve de las enemigas). */
-export const unitsKnownTo = (s: GameState, team: TeamId): Unit[] => foggedParts(s, team).units ?? s.units;
+/**
+ * Una copia de la partida tal como la sabe el equipo `team` (con todo lo que quita FOG), para simular
+ * en ella lo que haria (la prevision de sus ordenes): se puede cambiar sin tocar la de verdad, y lo
+ * que se simule no puede delatar lo que el equipo no ve.
+ */
+export function foggedCopy(s: GameState, team: TeamId): GameState {
+  const copy = cloneState(s);
+  return Object.assign(copy, foggedParts(copy, team));
+}
 
 export interface PlayerView {
   /** El equipo que mira. */
