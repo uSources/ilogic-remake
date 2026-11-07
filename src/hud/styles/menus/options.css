@@ -8,10 +8,43 @@
   gap: 12px;
   padding: 16px 18px;
 }
+.opt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.opt-tab {
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  background: var(--panel);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 14px;
+  cursor: var(--cursor-button, pointer);
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo);
+}
+.opt-tab.on {
+  background: var(--blue-btn);
+  color: #fff;
+  box-shadow:
+    inset 3px 3px 0 var(--blue-hi),
+    inset -3px -3px 0 var(--blue-lo);
+}
+.opt-tabs-keys {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
 .opt-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 12px;
+  /* La pestaña mas larga (Controles) marca la altura: asi el panel no salta al cambiar de pestaña. */
+  min-height: 360px;
+  align-content: start;
 }
 .opt-card {
   display: flex;

@@ -20,7 +20,9 @@ export type MenuCommand =
   /** Partida nueva: otro mapa al azar. */
   | { kind: 'reroll' }
   /** Opciones, cambiando una tecla: la pulsada (KeyboardEvent.code), sea la que sea. */
-  | { kind: 'key'; code: string };
+  | { kind: 'key'; code: string }
+  /** Opciones: la pestaña anterior o la siguiente. */
+  | { kind: 'tab'; dir: -1 | 1 };
 
 /**
  * Donde esta el foco de los mandos. 'map': el mapa (ordenes InputCommand); el resto son menus
@@ -58,7 +60,13 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
     { codes: ['KeyH'], command: { kind: 'help' } },
   ],
   notes: [...MENU_KEYS, { codes: ['KeyN'], command: { kind: 'notes' } }],
-  options: [...MENU_KEYS, { codes: ['KeyO'], command: { kind: 'options' } }],
+  // Opciones: Q y E cambian de pestaña (izquierda y derecha cambian el valor de la fila).
+  options: [
+    ...MENU_KEYS,
+    { codes: ['KeyO'], command: { kind: 'options' } },
+    { codes: ['KeyQ'], command: { kind: 'tab', dir: -1 } },
+    { codes: ['KeyE'], command: { kind: 'tab', dir: 1 } },
+  ],
   // Opciones esperando la tecla nueva de una orden: Esc lo deja; cualquier otra es la elegida (`key`).
   keyCapture: [{ codes: ['Escape'], command: { kind: 'back' } }],
   home: [...MENU_KEYS, { codes: ['KeyO'], command: { kind: 'options' } }],

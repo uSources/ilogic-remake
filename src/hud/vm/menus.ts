@@ -78,6 +78,20 @@ export interface ActionRowVM {
 /** Las filas de la pantalla de opciones: botones de segmento, una tecla o un boton. */
 export type OptionsRowVM = ({ kind: 'choices' } & OptionRowVM) | KeyRowVM | ActionRowVM;
 
+/** Una pestaña de la pantalla de opciones: su titulo y sus filas (cada una con su `group`). */
+export interface OptionsTabVM {
+  id: string;
+  title: string;
+  rows: OptionsRowVM[];
+}
+
+/** La pantalla de opciones: las pestañas, la abierta y la fila elegida dentro de ella. */
+export interface OptionsVM {
+  tabs: OptionsTabVM[];
+  tab: number;
+  focus: number;
+}
+
 export type MarkVM = 'done' | 'open' | 'locked';
 
 export interface HomeVM {

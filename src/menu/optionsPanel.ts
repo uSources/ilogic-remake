@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { ui, type OptionsRowVM } from '../hud/store';
+import { ui, type OptionsRowVM, type OptionsTabVM } from '../hud/store';
 import { keyLabelOf } from '../hud/keyLabels';
 import { playMusic, stopMusic } from '../music';
 import { saveSettings, settings, t, UI_SCALES, type Settings, type TextKey } from '../settings';
@@ -70,6 +70,21 @@ const KEY_LABELS: Readonly<Record<KeyBindingId, TextKey>> = {
   options: 'key_options',
 };
 
+/** Las pestañas, en orden: cada una con los grupos de filas que enseña (las teclas van aparte). */
+interface Tab {
+  id: string;
+  title: TextKey;
+  groups: readonly TextKey[];
+}
+
+const TABS: readonly Tab[] = [
+  { id: 'game', title: 'optGroupGame', groups: ['optGroupGame'] },
+  { id: 'screen', title: 'optGroupScreen', groups: ['optGroupScreen'] },
+  { id: 'soundLang', title: 'optTabSoundLang', groups: ['optGroupSound', 'optGroupLang'] },
+  { id: 'keys', title: 'optGroupKeys', groups: ['optGroupKeys'] },
+];
+const KEYS_TAB = 'keys';
+
 /** Por que no vale una tecla, para el jugador. */
 function conflictText(conflict: KeyConflict): string {
   if (conflict.kind === 'fixed') return t('keyTakenFixed');
@@ -93,8 +108,12 @@ interface Entry {
  * mientras esta abierta, la escena le pasa las teclas (y, cambiando una tecla, todas: `context`).
  */
 export class OptionsPanel {
+  /** La ultima pestaña abierta, para volver a ella mientras dure la sesion (no se guarda). */
+  private static lastTab = 0;
+  private tab = OptionsPanel.lastTab;
   private focus = 0;
-  private entries: Entry[];
+  /** Cada pestaña con sus filas, en el orden de TABS. */
+  private tabs: { tab: Tab; entries: Entry[] }[];
   /** La orden cuya tecla nueva se espera. */
   private capturing: KeyBindingId | null = null;
   /** Por que no valio la ultima tecla pulsada, junto a su orden. */
@@ -108,7 +127,16 @@ export class OptionsPanel {
     private onClose: () => void,
   ) {
     const rows = ROWS.filter((row) => !(row.menuOnly && track === 'game'));
-    this.entries = [...rows.map((row) => this.choiceEntry(row)), ...KEY_BINDING_IDS.map((id) => this.keyEntry(id)), this.resetEntry()];
+    const keyEntries = [...KEY_BINDING_IDS.map((id) => this.keyEntry(id)), this.resetEntry()];
+    this.tabs = TABS.map((tab) => ({
+      tab,
+      entries: tab.id === KEYS_TAB ? keyEntries : rows.filter((row) => tab.groups.includes(row.group)).map((row) => this.choiceEntry(row)),
+    }));
+  }
+
+  /** Las filas de la pestaña abierta. */
+  private get entries(): Entry[] {
+    return this.tabs[this.tab]?.entries ?? [];
   }
 
   get isOpen(): boolean {
@@ -121,6 +149,7 @@ export class OptionsPanel {
   }
 
   open(): void {
+    this.tab = OptionsPanel.lastTab;
     this.focus = 0;
     this.capturing = null;
     this.notice = null;
@@ -131,8 +160,19 @@ export class OptionsPanel {
       },
       optionsSet: (index: number, choice: number) => this.setChoice(index, choice),
       optionsPick: (index: number) => this.pick(index),
+      optionsTab: (tab: number) => this.showTab(tab),
       optionsClose: () => this.close(),
     });
+    this.publish();
+  }
+
+  /** Abrir la pestaña `tab` (dando la vuelta), con la primera fila elegida. */
+  private showTab(tab: number): void {
+    this.tab = (tab + this.tabs.length) % this.tabs.length;
+    OptionsPanel.lastTab = this.tab;
+    this.focus = 0;
+    this.capturing = null;
+    this.notice = null;
     this.publish();
   }
 
@@ -147,6 +187,7 @@ export class OptionsPanel {
     if (cmd.kind === 'key') return this.bindKey(cmd.code);
     if (cmd.kind === 'back') return this.capturing ? this.stopCapturing() : this.close();
     if (cmd.kind === 'options') return this.close();
+    if (cmd.kind === 'tab') return this.showTab(this.tab + cmd.dir);
     if (cmd.kind === 'ok') return cmd.repeat ? undefined : this.pick(this.focus);
     if (cmd.kind !== 'move') return;
     if (cmd.dx) return this.entries[this.focus]?.step(cmd.dx);
@@ -239,7 +280,12 @@ export class OptionsPanel {
   // --- Cambios y pintado -----------------------------------------------------------------------
 
   private publish(): void {
-    ui.set({ options: { focus: this.focus, rows: this.entries.map((entry) => entry.vm()) } });
+    const tabs = this.tabs.map(({ tab, entries }): OptionsTabVM => ({
+      id: tab.id,
+      title: t(tab.title),
+      rows: entries.map((entry) => entry.vm()),
+    }));
+    ui.set({ options: { tabs, tab: this.tab, focus: this.focus } });
   }
 
   /** Un ajuste ha cambiado: guardarlo, aplicarlo y repintar. */

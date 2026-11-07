@@ -6,7 +6,7 @@ import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
 import type { LabVM } from './vm/lab';
-import type { CampaignItemVM, HomeVM, MainMenuItemVM, MenuItemVM, MenuVM, OptionsRowVM, SetupRowVM, SetupVM } from './vm/menus';
+import type { CampaignItemVM, HomeVM, MainMenuItemVM, MenuItemVM, MenuVM, OptionsVM, SetupRowVM, SetupVM } from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
 import type { HandoffVM, ReportLineVM } from './vm/notices';
@@ -21,7 +21,7 @@ import type { DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 export interface UIState {
   home: HomeVM;
   setup: SetupVM;
-  options: { focus: number; rows: OptionsRowVM[] } | null;
+  options: OptionsVM | null;
   /** Panel de pausa centrado (menu de partida). */
   pause: { title: string; info: string[]; items: MenuItemVM[]; selected: number } | null;
   screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'game' | 'outro' | 'end';

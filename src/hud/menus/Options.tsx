@@ -2,11 +2,8 @@ import { t } from '../../settings';
 import { Btn, Button, scrollRef } from '../common/buttons';
 import { Seg } from '../common/Seg';
 import { Veil } from '../common/Veil';
-import type { UIState } from '../state';
 import { ui } from '../store';
-import type { ActionRowVM, KeyRowVM, OptionsRowVM } from '../vm/menus';
-
-type OptionsVM = NonNullable<UIState['options']>;
+import type { ActionRowVM, KeyRowVM, OptionsRowVM, OptionsTabVM, OptionsVM } from '../vm/menus';
 
 /** Una fila con su posicion en la lista entera (la que entienden optionsHover, optionsSet y optionsPick). */
 interface IndexedRow {
@@ -75,9 +72,50 @@ function OptionsRow({ row, index, focus }: IndexedRow & { focus: number }) {
 /** Un grupo sin botones de segmento (las teclas) ocupa todo el ancho, con sus filas en columnas. */
 const isKeysGroup = (rows: IndexedRow[]) => rows.every(({ row }) => row.kind !== 'choices');
 
-/** Opciones (desde el menu y desde la partida): las filas, agrupadas por su `group`. */
+/** La barra de pestañas: Q y E con el teclado, o pulsarlas. */
+function TabBar({ tabs, current }: { tabs: OptionsTabVM[]; current: number }) {
+  return (
+    <div class="opt-tabs" role="tablist">
+      {tabs.map((tab, index) => (
+        <Button
+          key={tab.id}
+          role="tab"
+          aria-selected={index === current}
+          class={`opt-tab ${index === current ? 'on' : ''}`}
+          data-tab={tab.id}
+          onClick={() => ui.actions.optionsTab(index)}
+        >
+          {tab.title}
+        </Button>
+      ))}
+      <span class="opt-tabs-keys">
+        <span class="key">Q</span> <span class="key">E</span>
+      </span>
+    </div>
+  );
+}
+
+/** Las filas de la pestaña abierta, agrupadas por su `group` (el titulo del grupo solo si hay varios). */
+function TabContent({ tab, focus }: { tab: OptionsTabVM; focus: number }) {
+  const groups = groupRows(tab.rows);
+  return (
+    <div class="opt-groups">
+      {groups.map((group) => (
+        <div class={`opt-card ${isKeysGroup(group.rows) ? 'keys' : ''}`} key={group.title}>
+          {groups.length > 1 && <span class="label">{group.title}</span>}
+          {group.rows.map(({ row, index }) => (
+            <OptionsRow key={row.id} row={row} index={index} focus={focus} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Opciones (desde el menu y desde la partida): una pestaña por tema. */
 export function Options({ options }: { options: OptionsVM }) {
   const actions = ui.actions;
+  const tab = options.tabs[options.tab];
   return (
     <Veil kind="veil" onClose={() => actions.optionsClose()}>
       <div class="px options" role="dialog" aria-label={t('options')}>
@@ -87,16 +125,8 @@ export function Options({ options }: { options: OptionsVM }) {
             {t('close')} <span class="key">Esc</span>
           </Btn>
         </div>
-        <div class="opt-groups">
-          {groupRows(options.rows).map((group) => (
-            <div class={`opt-card ${isKeysGroup(group.rows) ? 'keys' : ''}`} key={group.title}>
-              <span class="label">{group.title}</span>
-              {group.rows.map(({ row, index }) => (
-                <OptionsRow key={row.id} row={row} index={index} focus={options.focus} />
-              ))}
-            </div>
-          ))}
-        </div>
+        <TabBar tabs={options.tabs} current={options.tab} />
+        {tab && <TabContent tab={tab} focus={options.focus} />}
       </div>
     </Veil>
   );

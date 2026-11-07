@@ -28,6 +28,7 @@ export const options = {
   bgClassic: 'Original de 2013',
   close: 'Cerrar',
   optGroupKeys: 'Controles',
+  optTabSoundLang: 'Sonido e idioma',
   keyChange: 'Cambiar',
   keyPress: 'Pulsa una tecla… (Esc: dejarlo)',
   keyResetAll: 'Teclas de serie',

@@ -158,4 +158,12 @@ describe('esperando la tecla nueva en Opciones', () => {
     // En las opciones normales, una letra suelta no hace nada.
     expect(menuKeyCommand({ code: 'KeyP', repeat: false }, 'options')).toBeNull();
   });
+
+  it('en Opciones, Q y E cambian de pestaña (izquierda y derecha siguen cambiando el valor)', () => {
+    expect(menuKeyCommand({ code: 'KeyQ', repeat: false }, 'options')).toEqual({ kind: 'tab', dir: -1 });
+    expect(menuKeyCommand({ code: 'KeyE', repeat: false }, 'options')).toEqual({ kind: 'tab', dir: 1 });
+    expect(menuKeyCommand({ code: 'ArrowRight', repeat: false }, 'options')).toEqual({ kind: 'move', dx: 1, dy: 0 });
+    // Esperando una tecla, Q y E son teclas que se pueden elegir.
+    expect(menuKeyCommand({ code: 'KeyQ', repeat: false }, 'keyCapture')).toEqual({ kind: 'key', code: 'KeyQ' });
+  });
 });

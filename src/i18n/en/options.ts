@@ -30,6 +30,7 @@ export const options: Translation<typeof es> = {
   bgClassic: '2013 original',
   close: 'Close',
   optGroupKeys: 'Controls',
+  optTabSoundLang: 'Sound and language',
   keyChange: 'Change',
   keyPress: 'Press a key… (Esc: leave it)',
   keyResetAll: 'Default keys',
