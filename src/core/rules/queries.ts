@@ -58,8 +58,9 @@ export function isWalkable(s: GameState, pos: Pos, moveType: MoveType, occ = occ
   return canWalk(s, pos, moveType) && !occ.at(pos);
 }
 
-export function teamUnits(s: GameState, team: TeamId): Unit[] {
-  return s.units.filter((unit) => unit.team === team);
+/** Las unidades del equipo `team`: las de la partida o, si se dan, las suyas de entre `among`. */
+export function teamUnits(s: GameState, team: TeamId, among: readonly Unit[] = s.units): Unit[] {
+  return among.filter((unit) => unit.team === team);
 }
 
 /** Primera plaza libre de un transporte (-1 si va lleno o no lleva a nadie). */

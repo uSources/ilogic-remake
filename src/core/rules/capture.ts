@@ -5,7 +5,7 @@
 import { isHq } from '../gameContent';
 import { isCapturer } from '../util/predicates';
 import type { Building, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { buildingAt, unitAt } from './queries';
+import { buildingAt, teamUnits, unitAt } from './queries';
 import { posOf } from '../geom';
 import { isHostile } from '../teams';
 import { hooksOf } from '../ruleModules/ruleset';
@@ -122,4 +122,4 @@ export function captureEvent(actor: TeamId, unit: Unit, building: Building, resu
  * al acabar el turno (TURN_END_PHASES).
  */
 export const autoCapturers = (s: GameState, team: TeamId): Unit[] =>
-  s.units.filter((unit) => unit.team === team && canMoveNow(unit) && canCapture(s, unit));
+  teamUnits(s, team).filter((unit) => canMoveNow(unit) && canCapture(s, unit));

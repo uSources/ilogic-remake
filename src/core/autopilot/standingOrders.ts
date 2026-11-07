@@ -204,7 +204,7 @@ export function plannedStandingOrders(s: GameState, team: TeamId, simulate: Acti
  */
 export function previewStandingOrders(s: GameState, team: TeamId, simulate: ActionDispatcher): Map<number, StandingOrderIntent> {
   const intents = new Map<number, StandingOrderIntent>();
-  const actors = s.units.filter((unit) => unit.team === team && standingOrderAt(s, unit, 'turnEnd') && canAct(s, unit));
+  const actors = teamUnits(s, team).filter((unit) => standingOrderAt(s, unit, 'turnEnd') && canAct(s, unit));
   if (!actors.length) return intents;
   for (const unit of actors) intents.set(unit.uid, { path: [] });
   for (const planned of plannedStandingOrders(s, team, simulate)) for (const event of planned.events) recordIntent(intents, event);

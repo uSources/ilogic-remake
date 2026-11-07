@@ -1,5 +1,15 @@
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
-import { allianceScore, buildingIncome, commandUsed, isRuleOn, rivalScore, upkeepOf, type BuyOption, buildingsOf } from '../../core/rules';
+import {
+  allianceScore,
+  buildingIncome,
+  commandUsed,
+  isRuleOn,
+  rivalScore,
+  teamUnits,
+  upkeepOf,
+  type BuyOption,
+  buildingsOf,
+} from '../../core/rules';
 import { teamState } from '../../core/teams';
 import type { Texts } from '../../core/content';
 import type { GameState, TeamId } from '../../core/model';
@@ -39,7 +49,7 @@ function tally<T extends Named>(types: readonly T[], each: (type: T) => number):
  */
 export function economyVM(s: GameState, team: TeamId): EconomyVM {
   const owned = buildingsOf(s, team).map((building) => buildingTypeOf(s, building));
-  const units = s.units.filter((unit) => unit.team === team).map((unit) => unitTypeOf(s, unit));
+  const units = teamUnits(s, team).map((unit) => unitTypeOf(s, unit));
   const income = owned.reduce((sum, buildingType) => sum + buildingIncome(s, buildingType), 0);
   const upkeep = upkeepOf(s, team);
   // endRound cobra primero y despues paga lo que pueda del mantenimiento.

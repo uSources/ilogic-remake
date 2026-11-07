@@ -4,7 +4,7 @@
  * partida para todos los equipos (autopilot/standingOrders.ts, en los pasos de turno), no la IA.
  */
 import { manhattan, samePos, posOf } from '../geom';
-import { buildingAt } from '../rules/queries';
+import { buildingAt, teamUnits } from '../rules/queries';
 import { canFight, isAlive, isCapturer, isOnMap } from '../util/predicates';
 import { travelProblem, type TravelProblem } from '../rules/travel';
 import { areAllied } from '../teams';
@@ -22,7 +22,7 @@ import type {
   TurnEndOrderKind,
   Unit,
 } from '../model';
-import { squadById, squadUnits, unitsOfTeam } from './queries';
+import { squadById, squadUnits } from './queries';
 
 /** La orden es de las que se cumplen al acabar el turno (las de pelear). */
 const isTurnEndOrder = (order: StandingOrder): order is TurnEndOrder => isTurnEndOrderKind(order.kind);
@@ -187,7 +187,7 @@ const isUnitOnly = (kind: StandingOrderKind): boolean => STANDING_ORDER_TYPES[ki
  * `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide la escena).
  */
 export function standingOrderChoices(s: GameState, team: TeamId, at: Pos, units: readonly Unit[], enemyHere: boolean): StandingOrderKind[] {
-  const mine = unitsOfTeam(team, units);
+  const mine = teamUnits(s, team, units);
   if (!mine.length) return [];
   const canCapture = standingOrderBlock(s, team, 'capture', at, mine) === null;
   if (enemyHere) return canCapture ? ['attack', 'capture', 'defend'] : ['attack', 'defend'];
@@ -209,7 +209,7 @@ function giveOwnStandingOrder(s: GameState, unit: Unit, standingOrder: StandingO
  * recibido.
  */
 export function giveStandingOrder(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos): number {
-  const mine = unitsOfTeam(team, units);
+  const mine = teamUnits(s, team, units);
   const standingOrder = copyStandingOrder({ kind, at });
   // La de ir alli es siempre de cada unidad, aunque sean una escuadra entera.
   const squadOrder = isTurnEndOrder(standingOrder) ? standingOrder : null;
