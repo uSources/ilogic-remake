@@ -69,7 +69,10 @@ function pick<T extends { id: string }>(list: readonly T[], key: string, what: s
 }
 
 /** Campos de cada unidad que se pueden cambiar como `UNIT.<campo>.<unidad>` (los de units.json). */
-const UNIT_FIELDS = ['cost', 'command', 'move', 'vision'];
+const UNIT_FIELDS = ['cost', 'command', 'move', 'vision'] as const;
+
+/** La ruta de un campo de una unidad, para una variante: `UNIT.cost.Tank`. */
+export const unitFieldPath = (field: (typeof UNIT_FIELDS)[number], unit: string): string => `UNIT.${field}.${unit}`;
 const BUILDING_FIELDS = ['earning', 'heals', 'protection', 'vision'];
 const TERRAIN_FIELDS = ['protection', 'buildable', 'water'];
 

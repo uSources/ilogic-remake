@@ -14,11 +14,12 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
-import { FIRST_SIDE, SECOND_SIDE, type Policy } from './play';
+import { FIRST_TEAM, type Policy } from './play';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
 import { buildVariant, type Variant } from './variant';
 import { runDuels, runGames } from './runner';
 import { defaultContent } from '@core/content/default';
+import { DEFAULT_MAP_SIZE } from '@core/match';
 import { commandLine, usageOf, type CliArgs } from '../cliArgs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
@@ -93,7 +94,7 @@ async function evaluate(variant: Variant, parsed: BalanceArgs): Promise<Report> 
   const seed0 = parsed.number('seed', 1);
   const maxDays = parsed.number('days', 60);
   const vs = parsed.text('vs', 'ai') as Policy;
-  const policies: [Policy, Policy] = vs === 'passive' ? ['passive', 'ai'] : ['ai', 'ai'];
+  const policies: Policy[] = [vs === 'passive' ? 'passive' : 'ai', 'ai'];
   const threads = Math.max(1, Math.min(parsed.number('threads', cpus().length), games));
   const seeds = Array.from({ length: games }, (_, i) => seed0 + i);
   const setup = buildVariant(variant, defaultContent()); // aqui se valida: una ruta o un valor mal escrito para antes de jugar
@@ -105,9 +106,9 @@ async function evaluate(variant: Variant, parsed: BalanceArgs): Promise<Report> 
     maxDays,
     policies,
     threads,
-    parsed.number('first') === 1 ? SECOND_SIDE : FIRST_SIDE,
+    parsed.number('first', FIRST_TEAM),
     parsed.flag('swap') === true,
-    parsed.number('size', 32),
+    parsed.number('size', DEFAULT_MAP_SIZE),
   );
   const terrain = parsed.text('terrain', 'Grass');
   const duel = parsed.flag('duel') === false ? undefined : { terrain, cells: await runDuels(setup, { trials: 200, terrain, seed: seed0 }) };
@@ -152,7 +153,8 @@ const COMMANDS: Record<string, (parsed: BalanceArgs) => void | Promise<void>> = 
   compare(parsed) {
     const [before, after] = parsed.positionals.slice(1);
     if (!before || !after) throw new Error('Uso: compare <informe-antes> <informe-despues>');
-    const read = (name: string) => JSON.parse(readFileSync(name.endsWith('.json') ? name : join(REPORTS, `${name}.json`), 'utf8')) as Report;
+    const read = (name: string) =>
+      JSON.parse(readFileSync(name.endsWith('.json') ? name : join(REPORTS, `${name}.json`), 'utf8')) as Report;
     const markdown = compareMarkdown(read(before), read(after));
     console.log(markdown);
     save(`comparar-${before}-vs-${after}`.replace(/\.json/g, ''), markdown);
@@ -182,7 +184,10 @@ async function tune(parsed: BalanceArgs): Promise<void> {
   }
   mkdirSync(VARIANTS, { recursive: true });
   const vpath = join(VARIANTS, `${variant.name}.json`);
-  writeFileSync(vpath, JSON.stringify({ ...variant, notes: `Generada por "balance tune" el ${new Date().toISOString().slice(0, 10)}` }, null, 2) + '\n');
+  writeFileSync(
+    vpath,
+    JSON.stringify({ ...variant, notes: `Generada por "balance tune" el ${new Date().toISOString().slice(0, 10)}` }, null, 2) + '\n',
+  );
   printSummary(best, save(variant.name, reportMarkdown(best), best));
   console.log(`Variante: ${vpath}`);
 }

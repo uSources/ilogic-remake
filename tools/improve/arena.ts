@@ -49,6 +49,9 @@ function holdingsOf(s: GameState, team: TeamId): Holdings {
 /** Que IA ha ganado una partida: la primera de `profiles`, la segunda o ninguna (empate). */
 export type DuelWinner = 'first' | 'second' | null;
 
+/** La IA de cada puesto de la partida (la primera lleva el primer equipo). */
+const DUEL_WINNERS = ['first', 'second'] as const;
+
 /** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
 export function playDuel(seed: number, profiles: [AiProfile, AiProfile], size: number, maxDays: number): DuelWinner {
   const rng = seededRng(seed);
@@ -62,7 +65,8 @@ export function playDuel(seed: number, profiles: [AiProfile, AiProfile], size: n
   const result = matchResult(s);
   if (result.status === 'draw') return null;
   if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';
-  return clearLeader(holdingsOf(s, first), holdingsOf(s, second));
+  const leader = clearLeader([holdingsOf(s, first), holdingsOf(s, second)]);
+  return leader === null ? null : DUEL_WINNERS[leader]!;
 }
 
 export interface ArenaResult {
