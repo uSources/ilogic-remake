@@ -37,7 +37,7 @@ import { baseFacing, faceFlip, type MapView } from '../../ui/mapView';
 import { combatVM } from '../../ui/hudModels';
 import { PAL, PAL_CSS } from '../../ui/palette';
 import { shownTeamNumber, sideColor, sideOf, type Side } from '../../ui/sides';
-import { unitKey } from '../../ui/sprites';
+import { AS_ACTIVE, unitKey } from '../../ui/sprites';
 import { STEP_MS, type Phase } from './types';
 
 /** Lo que el reproductor necesita de la escena. */
@@ -203,7 +203,7 @@ function moverTexture(stage: EventStage, event: PathEvent): string | null {
   // mismo equipo y, al unirse, de su mismo tipo). Si tampoco esta, no se anima.
   const drawn = mover ?? unitEntered(s, event);
   // Dibujada en la casilla de salida (su terreno decide el dibujo clasico) y activa, como al empezar a moverse.
-  return drawn && start ? unitKey(stage.scene.textures, s, drawn, stage.viewer, true, start) : null;
+  return drawn && start ? unitKey(stage.scene.textures, s, drawn, stage.viewer, { ...AS_ACTIVE, at: start }) : null;
 }
 
 const animatePathEvent: EventAnimation<PathEvent> = async (stage, event, ghostKey) => {

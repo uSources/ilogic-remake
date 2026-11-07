@@ -19,7 +19,6 @@ import {
   unitAt,
   abilitiesOf,
   isRuleOn,
-  canStillAct,
 } from '../../core/rules';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
@@ -28,7 +27,7 @@ import { effectiveStandingOrder, isDetached, squadById } from '../../core/squads
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
 import { nameOf, t } from '../../settings';
 import { isFriendly, ownerSideOf, sideLetter, sideOf } from '../sides';
-import { buildingKey, terrainKey, unitKey } from '../sprites';
+import { AS_ACTIVE, buildingKey, terrainKey, unitKey } from '../sprites';
 import { standingOrderLabel } from './army';
 
 /** Fichas de abajo: la casilla (terreno, edificio, punto de control) y la unidad que hay en ella. */
@@ -156,7 +155,7 @@ export function tileVM(
     const own = side === 'own';
     info.unit = {
       // Las ajenas se ven siempre como activas (no se enseña si ya han jugado).
-      icon: unitKey(textures, s, shown, viewer, !own || canStillAct(shown)),
+      icon: unitKey(textures, s, shown, viewer, own ? {} : AS_ACTIVE),
       name: nameOf(shownType),
       rank: isRuleOn(s, 'veterancy') ? rank(shown) : 0,
       side,

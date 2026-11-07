@@ -19,6 +19,12 @@ export interface UnitFilter {
  */
 export type GeneralModifier = ({ kind: 'attack' } | { kind: 'defense' }) & UnitFilter & { factor: number };
 
+/** Las clases de ventaja fija (el tipo obliga a que esten todas, como EFFECT_SHAPES con los efectos). */
+const MODIFIER_KINDS: { readonly [K in GeneralModifier['kind']]: true } = { attack: true, defense: true };
+
+/** Las clases de ventaja fija que entiende el juego, en su orden. */
+export const GENERAL_MODIFIER_KINDS = Object.keys(MODIFIER_KINDS) as readonly GeneralModifier['kind'][];
+
 /**
  * Lo que hace un poder:
  * - reveal: el general ve todo el mapa hasta que acaba la ronda.
@@ -94,40 +100,56 @@ function validateEffect(scope: Scope, effect: GeneralEffect | undefined, unitIds
   (EFFECT_SHAPES[effect.kind] as EffectShapeCheck<typeof effect.kind>)(scope, effect, unitIds);
 }
 
+/** Una ventaja fija: una clase que existe, un factor razonable y un filtro de movimientos y unidades que existen. */
+function validatePassive(scope: Scope, passive: GeneralModifier, unitIds: ReadonlySet<string>): void {
+  const kinds: readonly string[] = GENERAL_MODIFIER_KINDS;
+  scope.expect(kinds.includes(String(passive?.kind)), `passive: kind "${String(passive?.kind)}" no existe (${kinds.join(', ')})`);
+  scope.num(`passive.${passive?.kind}.factor`, passive?.factor, { min: 0.1, max: 3 });
+  for (const movement of passive?.movement ?? []) scope.known(`passive.${passive?.kind}.movement`, movement, MOVEMENTS);
+  for (const unit of passive?.units ?? []) scope.known(`passive.${passive?.kind}.units`, unit, unitIds);
+}
+
+/** Un poder de `general`: id propio (sin repetir en el general), textos, un coste que cabe en su barra y su efecto. */
+function validatePower(
+  check: Checker,
+  general: GeneralDef,
+  power: GeneralPowerDef,
+  powerIds: Set<string>,
+  unitIds: ReadonlySet<string>,
+): void {
+  const scope = check.scope(`general ${general?.id} · poder ${typeof power?.id === 'string' ? power.id : '?'}`);
+  if (scope.id(power?.id)) {
+    scope.expect(!powerIds.has(power.id), 'id repetido');
+    powerIds.add(power.id);
+  }
+  scope.texts('name', power?.name);
+  scope.texts('description', power?.description);
+  scope.num('cost', power?.cost, { min: 1, max: general?.charge?.max ?? 20, int: true });
+  validateEffect(scope, power?.effect, unitIds);
+}
+
+/** Un general (el `index` de la lista, para nombrarlo si no tiene id): id sin repetir, textos, barra, ventajas y poderes. */
+function validateGeneral(check: Checker, general: GeneralDef, index: number, ids: Set<string>, unitIds: ReadonlySet<string>): void {
+  const scope = check.scope(`general ${typeof general?.id === 'string' ? general.id : `#${index}`}`);
+  if (scope.id(general?.id)) {
+    scope.expect(!ids.has(general.id), 'id repetido');
+    ids.add(general.id);
+  }
+  scope.texts('name', general?.name);
+  scope.texts('title', general?.title);
+  scope.texts('description', general?.description);
+  scope.num('charge.max', general?.charge?.max, { min: 1, max: 20, int: true });
+  scope.num('charge.per', general?.charge?.per, { min: 100, max: 1e6, int: true });
+  if (scope.expect(Array.isArray(general?.passive), 'passive tiene que ser una lista (puede estar vacia)'))
+    for (const passive of general.passive) validatePassive(scope, passive, unitIds);
+  const powerIds = new Set<string>();
+  if (scope.expect(Array.isArray(general?.powers) && general.powers.length > 0, 'powers: al menos un poder'))
+    for (const power of general.powers) validatePower(check, general, power, powerIds, unitIds);
+}
+
+/** Comprueba generals.json: una lista de generales validos y sin ids repetidos. */
 export function validateGenerals(list: readonly GeneralDef[], unitIds: ReadonlySet<string>, check: Checker): void {
-  const top = check.scope('generals.json');
-  if (!top.expect(Array.isArray(list), 'tiene que tener una lista "generals"')) return;
+  if (!check.scope('generals.json').expect(Array.isArray(list), 'tiene que tener una lista "generals"')) return;
   const ids = new Set<string>();
-  list.forEach((g, i) => {
-    const s = check.scope(`general ${typeof g?.id === 'string' ? g.id : `#${i}`}`);
-    if (s.id(g?.id)) {
-      s.expect(!ids.has(g.id), 'id repetido');
-      ids.add(g.id);
-    }
-    s.texts('name', g?.name);
-    s.texts('title', g?.title);
-    s.texts('description', g?.description);
-    s.num('charge.max', g?.charge?.max, { min: 1, max: 20, int: true });
-    s.num('charge.per', g?.charge?.per, { min: 100, max: 1e6, int: true });
-    if (s.expect(Array.isArray(g?.passive), 'passive tiene que ser una lista (puede estar vacia)'))
-      for (const m of g.passive) {
-        s.expect(m?.kind === 'attack' || m?.kind === 'defense', `passive: kind "${String(m?.kind)}" no existe (attack, defense)`);
-        s.num(`passive.${m?.kind}.factor`, m?.factor, { min: 0.1, max: 3 });
-        for (const mv of m?.movement ?? []) s.known(`passive.${m.kind}.movement`, mv, MOVEMENTS);
-        for (const u of m?.units ?? []) s.known(`passive.${m.kind}.units`, u, unitIds);
-      }
-    const powerIds = new Set<string>();
-    if (s.expect(Array.isArray(g?.powers) && g.powers.length > 0, 'powers: al menos un poder'))
-      for (const a of g.powers) {
-        const sa = check.scope(`general ${g?.id} · poder ${typeof a?.id === 'string' ? a.id : '?'}`);
-        if (sa.id(a?.id)) {
-          sa.expect(!powerIds.has(a.id), 'id repetido');
-          powerIds.add(a.id);
-        }
-        sa.texts('name', a?.name);
-        sa.texts('description', a?.description);
-        sa.num('cost', a?.cost, { min: 1, max: g?.charge?.max ?? 20, int: true });
-        validateEffect(sa, a?.effect, unitIds);
-      }
-  });
+  list.forEach((general, index) => validateGeneral(check, general, index, ids, unitIds));
 }

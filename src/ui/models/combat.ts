@@ -5,7 +5,7 @@ import type { CombatInfo, GameEvent, GameState, Pos, TeamId, Unit } from '../../
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
 import { nameOf } from '../../settings';
 import { isFriendly, sideOf } from '../sides';
-import { unitKey } from '../sprites';
+import { AS_ACTIVE, unitKey } from '../sprites';
 
 /** Combate: prevision antes de atacar y panel mientras se anima un ataque. */
 
@@ -22,7 +22,7 @@ export function forecastVM(
   const forecast = combatForecast(s, engagement(attacker, target, { from }));
   return {
     // El atacante, en color aunque ya se haya movido: es el que va a disparar.
-    attackerIcon: unitKey(textures, s, attacker, viewer, true),
+    attackerIcon: unitKey(textures, s, attacker, viewer, AS_ACTIVE),
     defenderIcon: unitKey(textures, s, target, viewer),
     low: forecast.low,
     high: forecast.high,
