@@ -15,7 +15,7 @@ import { canStillFire } from '../rules/unitTurn';
 import type { ActionPlan, Building, GameState, Pos, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
 import { act, bestMoveToward, doMove, finish, stepsMap, strikeReach, type PlayCtx } from './context';
-import { visibleFoes } from '../rules/visibility';
+import { knownFoes } from '../playerView';
 import { canRepair } from '../rules/supply';
 import { buildingAt } from '../rules/queries';
 import { canFight } from '../util/predicates';
@@ -122,7 +122,7 @@ export function* tryAttack(s: GameState, play: PlayCtx, unit: Unit, range: MoveR
   const reach = strikeReach(s, unit);
   const isInReach = (enemy: Unit) => manhattan(unit, enemy) <= reach && (!engages || engages(enemy));
   // Solo a los que puede hacer daño: un ataque que no quita vida no vale (ver attackProblem).
-  const enemies = visibleFoes(s, play.me).filter((enemy) => isInReach(enemy) && canDamage(s, unit, enemy));
+  const enemies = knownFoes(s, play.me).filter((enemy) => isInReach(enemy) && canDamage(s, unit, enemy));
   if (!enemies.length) return false;
 
   const shot = bestShot(s, play, unit, enemies, originsFor(s, unit, range, policy.firesFrom));

@@ -12,7 +12,7 @@ import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { effectiveStandingOrder, standingOrderAt } from '../squads/standingOrders';
 import type { ActionPlan, GameState, Pos, StandingOrderKind, StandingOrderMoment, TeamId, Unit } from '../model';
 import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
-import { visibleFoes } from '../rules/visibility';
+import { knownFoes } from '../playerView';
 import { isCapturer } from '../util/predicates';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
@@ -105,7 +105,7 @@ function* attackOrderTurn(turn: StandingOrderTurnContext): ActionPlan<boolean> {
   }
   // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.
   yield* finish(s, unit);
-  return !visibleFoes(s, play.me).some(inGuardZone(play, at));
+  return !knownFoes(s, play.me).some(inGuardZone(play, at));
 }
 
 /**

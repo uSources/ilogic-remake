@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { aiTurn, defaultAiProfile } from '@core/ai';
 import { dispatch, TURN_END_PHASES } from '@core/actions';
 import { previewStandingOrders } from '@core/autopilot';
-import { foggedCopy, playerView, seeing } from '@core/playerView';
-import { unitById } from '@core/rules';
+import { foggedCopy, knownFoes, playerView, seeing, sightIn } from '@core/playerView';
+import { sightOf, unitById, visibleFoes } from '@core/rules';
 import { newUnit } from '@core/measure';
 import type { ActionPlan, Building, GameAction, GameState } from '@core/model';
 import { turnSeedOf } from '@core/turnSeeds';
@@ -148,6 +148,32 @@ describe('PlayerView: lo que sabe un equipo', () => {
     s.undoableMoves = [{ uid: mine.uid, from: { x: 1, y: 2 }, capture: null, revealed: false }];
     expect(playerView(s, 0).state.undoableMoves).toHaveLength(1);
     expect(playerView(s, 1).state.undoableMoves).toEqual([]);
+  });
+
+  it('knownFoes y sightIn: en la vista, lo que ya ve (sin volver a calcularlo); en otra partida, lo que ve en ella', () => {
+    const { s, seen, hidden } = fogged();
+    const view = playerView(s, 0);
+    expect(knownFoes(view.state, 0)).toEqual(visibleFoes(view.state, 0));
+    expect(knownFoes(view.state, 0).map((unit) => unit.uid)).toEqual([seen.uid]);
+    expect(sightIn(view.state, 0)(hidden)).toBe(false);
+    expect(sightIn(view.state, 0)(seen)).toBe(true);
+    // Fuera de una vista (o con la vista de otro equipo) se mira de nuevo: nunca da lo que no ve.
+    expect(knownFoes(s, 0)).toEqual(visibleFoes(s, 0));
+    expect(knownFoes(view.state, 1)).toEqual(visibleFoes(view.state, 1));
+    expect(sightIn(s, 0)(hidden)).toBe(sightOf(s, 0)(hidden));
+  });
+
+  it('se pone al dia al mirarla despues de refresh, no antes', () => {
+    const { s, mine, hidden } = fogged();
+    const view = playerView(s, 0);
+    expect(unitById(view.state, hidden.uid)).toBeUndefined();
+    mine.x = 24;
+    mine.y = 25;
+    // Sin refresh sigue como estaba; despues, ve al que tiene al lado.
+    expect(knownFoes(view.state, 0).map((unit) => unit.uid)).not.toContain(hidden.uid);
+    view.refresh();
+    expect(knownFoes(view.state, 0).map((unit) => unit.uid)).toContain(hidden.uid);
+    expect(sightIn(view.state, 0)(hidden)).toBe(true);
   });
 
   it('es el mismo objeto todo el turno y se pone al dia tras cada accion (seeing)', () => {

@@ -12,7 +12,7 @@ import { canDamage } from '../rules/weapons';
 import { isContested } from '../rules/control';
 import { reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, isEnemyHq, unitAt } from '../rules/queries';
-import { sightOf, visibleFoes } from '../rules/visibility';
+import { knownFoes, sightIn } from '../playerView';
 import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
 import { pick } from '../util/random';
@@ -26,7 +26,7 @@ import { isCapturer } from '../util/predicates';
 
 /** El edificio ajeno a la vista (hasta profile.weights.maxCaptureDistance) mas cercano por tierra, con la Base enemiga por delante. */
 function captureGoal(s: GameState, play: PlayCtx, unit: Unit): Pos | null {
-  const sees = sightOf(s, play.me);
+  const sees = sightIn(s, play.me);
   // Desde 1 casilla: lo de debajo ya lo ha mirado captureHere.
   const steps = stepsMap(s, play, unit);
   const capturableAt = (tile: Pos): Building | null => {
@@ -81,7 +81,7 @@ function advanceGoals(s: GameState, play: PlayCtx, unit: Unit): Pos[] {
     (!isAlliedOwner(s, point.owner, play.me) || isContested(s, point)) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
   if (isCapturer(s, unit)) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, play.me)), ...points];
-  const targets = visibleFoes(s, play.me).filter((foe) => canDamage(s, unit, foe));
+  const targets = knownFoes(s, play.me).filter((foe) => canDamage(s, unit, foe));
   return [...targets, ...s.buildings.filter((building) => isEnemyHq(s, building, play.me)), ...points];
 }
 

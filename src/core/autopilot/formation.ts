@@ -15,7 +15,7 @@ import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, type PlayCtx } from './context';
-import { visibleFoes } from '../rules/visibility';
+import { knownFoes } from '../playerView';
 import { isAlive, isOnMap } from '../util/predicates';
 import type { FiringPositions } from './engagement';
 
@@ -103,7 +103,7 @@ export function formation(s: GameState, play: PlayCtx, unit: Unit): Formation | 
   // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
   const rearReach = strikeReach(s, rear.unit);
   if (rear.remaining <= rearReach) return null;
-  if (visibleFoes(s, play.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
+  if (knownFoes(s, play.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
   return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - play.profile.weights.squadSpread, rear: rearAfterThisTurn.unit };
 }
 

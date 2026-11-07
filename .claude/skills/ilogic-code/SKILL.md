@@ -145,7 +145,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `focusFire`); como juega, en su `AiProfile` (pesos, `scoreTerms`, `behaviours`, `turn`), que se le da al
   controlador; como pelea una unidad, un preset de `EngagementPolicy` (`HUNT`, `SHOOT_FROM_HERE`,
   `guardZone`, `fireOnTheWay`); lo que sabe de la partida, una consulta de las reglas
-  (`visibleFoes`, `projectedIncome`, `canRepair`, `isEnemyHq`...), nunca una copia; lo que un
+  (`projectedIncome`, `canRepair`, `isEnemyHq`...; los enemigos que conoce y lo que ve, de su vista:
+  `knownFoes`, `sightIn`), nunca una copia; lo que un
   equipo no sabe, una entrada en `FOG` (`playerView.ts`); un tipo de orden permanente, su
   linea en `StandingOrderKinds` (model) y sus entradas en `STANDING_ORDER_TYPES` y `STANDING_ORDER_TURNS` («Ir alli» es
   la orden 'goto'). Antes de escribir un bucle o un

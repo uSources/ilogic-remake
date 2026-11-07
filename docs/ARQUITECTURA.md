@@ -497,9 +497,13 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   crea uno para el general y la compra y otro para mover el ejercito. Dos turnos, o una prevision en
   medio de uno, no se mezclan.
 - **Pregunta a las reglas**: lo que necesita saber de la partida es una consulta de las reglas
-  (`projectedIncome`, `canRepair`, `visibleFoes`, `isEnemyHq`, `hasFullArmy`, `killReward`; el daño de rematar
+  (`projectedIncome`, `canRepair`, `isEnemyHq`, `hasFullArmy`, `killReward`; el daño de rematar
   a quien otro ya ha dado, `expectedDamage` de `engagement(..., { defenderHitToday: true })`),
-  nunca una copia propia; los numeros con los que decide son pesos de su perfil.
+  nunca una copia propia; los numeros con los que decide son pesos de su perfil. Los enemigos que
+  conoce y lo que ve los da su vista (`knownFoes`, `sightIn`, playerView.ts): la vision se calcula una
+  vez cada vez que la vista se pone al dia (y eso, la primera vez que se mira despues de una accion,
+  no en cada una), no en cada unidad que decide; en otra partida (la copia de la prevision) se mira
+  en ella.
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
     "Modulos de reglas"): un fichero en `ruleModules/` y su entrada en `RULE_MODULES`;

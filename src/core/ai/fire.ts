@@ -13,7 +13,7 @@ import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
 import type { GameState, Unit } from '../model';
 import { needsRepair, strikeReach, type PlayCtx } from '../autopilot/context';
-import { visibleFoes } from '../rules/visibility';
+import { knownFoes } from '../playerView';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {
@@ -105,7 +105,7 @@ export function planFire(s: GameState, play: PlayCtx): FirePlan {
   const me = play.me;
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
-  const foes = visibleFoes(s, me);
+  const foes = knownFoes(s, me);
   const damage = damageTable(
     s,
     mine.filter((unit) => isShooter(s, play, unit)),
