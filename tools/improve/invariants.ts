@@ -5,7 +5,7 @@
  */
 import { MAX_LIFE } from '@core/data';
 import { findBuildingType, findUnitType, terrainAt } from '@core/gameContent';
-import { canMoveOn, movementOf, commandUsed } from '@core/rules';
+import { canMoveOn, movementOf, commandUsed, teamUnits } from '@core/rules';
 import { posKey } from '@core/geom';
 import { mapGrid } from '@core/mapGrid';
 import { deserialize, serialize } from '@core/save';
@@ -61,7 +61,7 @@ function teamsWithinLimits(s: GameState): string[] {
   const errors: string[] = [];
   for (const { id: team, funds } of s.teams) {
     if (!(Number.isInteger(funds) && funds >= 0 && funds <= s.content.maxFunds)) errors.push(`dinero del equipo ${team}: ${funds}`);
-    const count = s.units.filter((unit) => unit.team === team).length;
+    const count = teamUnits(s, team).length;
     if (count > s.settings.maxUnits) errors.push(`equipo ${team}: ${count} unidades, el limite es ${s.settings.maxUnits}`);
     const commandPoints = commandUsed(s, team);
     if (s.settings.commandPoints !== null && commandPoints > s.settings.commandPoints)

@@ -30,11 +30,12 @@ import {
   visibility,
   canStillAct,
   buildingsOf,
+  teamUnits,
 } from '@core/rules';
 import { serialize } from '@core/save';
 import { aiController, screenControllers } from '@core/controllers';
 import { GameSession, personStillPlays, runMatch, screenEnd, type ActedStep } from '@core/session';
-import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
+import type { DefeatReason, GameAction, GameEvent, GameEventOf, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -352,7 +353,7 @@ export class TextMatch {
     const s = this.s;
     const me = this.me;
     const own = (team: TeamId) => buildingsOf(s, team).length;
-    const unitsOf = (team: TeamId) => s.units.filter((unit) => unit.team === team).length;
+    const unitsOf = (team: TeamId) => teamUnits(s, team).length;
     const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
     const general = teamState(s, me).general;
     return [
@@ -360,8 +361,8 @@ export class TextMatch {
       ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
       `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${this.result()}`,
       `sin usar: ${
-        s.units
-          .filter((unit) => unit.team === me && canStillAct(unit) && unit.carrier === null)
+        teamUnits(s, me)
+          .filter((unit) => canStillAct(unit) && unit.carrier === null)
           .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,
@@ -453,39 +454,40 @@ const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'si
 /** Que ha cortado un camino, en una palabra (los que no estan aqui, por su nombre en el codigo). */
 const INTERRUPTION_NAMES: Partial<Record<InterruptionKind, string>> = { ambush: 'emboscada' };
 
+/** Como se nombra una unidad en el texto: su uid y su tipo (si ya no esta, solo el uid). */
+function unitName(s: GameState, uid: number): string {
+  const unit = unitById(s, uid);
+  return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
+}
+
+const at = (pos: Pos): string => `(${pos.x},${pos.y})`;
+
+/** Cada suceso que se cuenta, en una linea. Los que no estan (esperar, ordenes, escuadras, viajes y el fin de ronda, que resume endTurn) no se cuentan. */
+const EVENT_TEXT: { readonly [Kind in GameEvent['kind']]?: (s: GameState, event: GameEventOf<Kind>) => string } = {
+  move: (s, event) => {
+    const interruption = event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind] ?? event.interruption.kind})` : '';
+    return `${unitName(s, event.uid)} mueve a ${at(event.path[event.path.length - 1]!)}${interruption}`;
+  },
+  attack: (s, event) => `${unitName(s, event.attacker)} ataca ${at(event.at)}: daño ${event.damage}${event.killed ? ', destruida' : ''}`,
+  capture: (s, event) => `${unitName(s, event.uid)} captura ${at(event.at)}${event.left ? `, quedan ${event.left}` : ''}`,
+  spawn: (s, event) => `compra ${unitName(s, event.uid)} en ${at(event.at)}`,
+  merge: (s, event) => `${unitName(s, event.uid)} se une a ${unitName(s, event.into)}`,
+  load: (s, event) => `${unitName(s, event.uid)} sube a ${unitName(s, event.into)}`,
+  unload: (s, event) => `${unitName(s, event.uid)} baja a ${unitName(s, event.passenger)} en ${at(event.to)}`,
+  supply: (s, event) => `${unitName(s, event.uid)} repara a ${event.repairs.length}`,
+  power: (s, event) => {
+    const target = event.target ? ` en ${at(event.target)}` : '';
+    const hits = event.hits.length ? `: ${event.hits.map((hit) => `${unitName(s, hit.uid)} -${hit.damage}`).join(', ')}` : '';
+    return `general ${event.general} usa ${event.power}${target}${hits}`;
+  },
+  surrender: (_s, event) => `el equipo ${shownTeamNumber(event.actor)} se rinde`,
+  teamDefeated: (_s, event) => `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`,
+};
+
 /** Un suceso en una linea, o null si no merece la pena contarlo. */
 function describe(s: GameState, event: GameEvent): string | null {
-  const name = (uid: number) => {
-    const unit = unitById(s, uid);
-    return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
-  };
-  switch (event.kind) {
-    case 'move':
-      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind] ?? event.interruption.kind})` : ''}`;
-    case 'attack':
-      return `${name(event.attacker)} ataca (${event.at.x},${event.at.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
-    case 'capture':
-      return `${name(event.uid)} captura (${event.at.x},${event.at.y})${event.left ? `, quedan ${event.left}` : ''}`;
-    case 'spawn':
-      return `compra ${name(event.uid)} en (${event.at.x},${event.at.y})`;
-    case 'merge':
-      return `${name(event.uid)} se une a ${name(event.into)}`;
-    case 'load':
-      return `${name(event.uid)} sube a ${name(event.into)}`;
-    case 'unload':
-      return `${name(event.uid)} baja a ${name(event.passenger)} en (${event.to.x},${event.to.y})`;
-    case 'supply':
-      return `${name(event.uid)} repara a ${event.repairs.length}`;
-    case 'power':
-      return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
-    case 'surrender':
-      return `el equipo ${shownTeamNumber(event.actor)} se rinde`;
-    case 'teamDefeated':
-      return `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`;
-    default:
-      // Esperar, ordenes, escuadras, viajes y el fin de ronda (eso lo resume endTurn) no se cuentan.
-      return null;
-  }
+  const text = EVENT_TEXT[event.kind] as ((s: GameState, event: GameEvent) => string) | undefined;
+  return text ? text(s, event) : null;
 }
 
 const legend = (s: GameState): string => `+NN unidad tuya · -NN enemiga · ? no se ve
