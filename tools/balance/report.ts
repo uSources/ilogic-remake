@@ -119,6 +119,27 @@ const SHARE_TOLERANCE = 1e-9;
 
 /** Los dias en los que se mira si gana quien iba por delante. */
 const SNOWBALL_DAYS = [5, 10, 20];
+/** El dia en el que se compara la economia (edificios, ejercito y unidades), y el de despues para las unidades. */
+const ECONOMY_DAY = 10;
+const LATE_ECONOMY_DAY = 20;
+/** Una unidad tiene eficiencia si se ha comprado al menos tantas veces, y en una de cada cinco partidas. */
+const MIN_BOUGHT_FOR_EFFICIENCY = 5;
+const MIN_BOUGHT_PER_GAME = 0.2;
+/** Partidas decididas que hacen falta para avisar de que un equipo gana mas. */
+const MIN_DECIDED_FOR_SIDE_FLAG = 20;
+/** Los precios propuestos: de PRICE_STEP en PRICE_STEP, nunca menos de uno, y como mucho un 25 % mas o un 20 % menos. */
+const PRICE_STEP = 500;
+const MAX_PRICE_RISE = 1.25;
+const MAX_PRICE_DROP = 0.8;
+/** "Casi nadie la compra": menos de esta parte de las compras, con al menos tantas compras en total. */
+const RARE_PURCHASE_SHARE = 0.005;
+const MIN_PURCHASES_FOR_RARE = 200;
+/** Por encima de esta razon de daño hecho / devuelto, el devuelto es casi nada ("sin respuesta"). */
+const NO_REPLY_RATIO = 50;
+/** El contraataque mas pequeño con el que se divide (con 0, la razon seria infinita). */
+const MIN_COUNTER = 0.5;
+/** Cuantos cruces de la tabla de duelos salen en el informe: los mas rentables para el atacante. */
+const WORST_DUELS_SHOWN = 8;
 
 /** Los equipos de las partidas (todas tienen los mismos). */
 const teamsOf = (records: readonly GameRecord[]): TeamId[] => (records[0]?.units ?? []).map((_, team) => team);
@@ -184,14 +205,14 @@ function unitsOnDay(records: readonly GameRecord[], day: number): number | null 
 }
 
 function economyOf(records: readonly GameRecord[], teams: readonly TeamId[]): Economy {
-  const day10 = records.map((record) => sampleOn(record, 10)).filter((sample) => !!sample);
+  const samples = records.map((record) => sampleOn(record, ECONOMY_DAY)).filter((sample) => !!sample);
   const meanOf = (valueOf: (sample: DaySample) => PerTeam<number>) =>
-    day10.length ? teams.map((team) => mean(day10.map((sample) => valueOf(sample)[team]!))) : null;
-  const unitsOnDay10 = unitsOnDay(records, 10);
+    samples.length ? teams.map((team) => mean(samples.map((sample) => valueOf(sample)[team]!))) : null;
+  const unitsOnEconomyDay = unitsOnDay(records, ECONOMY_DAY);
   return {
     day10Buildings: meanOf((sample) => sample.buildings),
     day10Army: meanOf((sample) => sample.army),
-    unitsOnMap: unitsOnDay10 === null ? null : { day10: unitsOnDay10, day20: unitsOnDay(records, 20) ?? 0 },
+    unitsOnMap: unitsOnEconomyDay === null ? null : { day10: unitsOnEconomyDay, day20: unitsOnDay(records, LATE_ECONOMY_DAY) ?? 0 },
   };
 }
 
@@ -218,7 +239,8 @@ function unitRowOf(unitType: UnitType, tally: UnitTally, totalBought: number, ga
     spent,
     valueDealt: Math.round(valueDealt),
     valueLost: Math.round(tally.valueLost),
-    efficiency: fights && spent > 0 && bought >= Math.max(5, games * 0.2) ? valueDealt / spent : null,
+    efficiency:
+      fights && spent > 0 && bought >= Math.max(MIN_BOUGHT_FOR_EFFICIENCY, games * MIN_BOUGHT_PER_GAME) ? valueDealt / spent : null,
     survival: bought > 0 ? Math.max(0, 1 - deaths / bought) : null,
     kills: tally.kills,
     captures: tally.captures,
@@ -252,7 +274,7 @@ function sideFlags({ outcome }: Findings, targets: Targets): string[] {
   const decided = sum(won);
   const fairShare = 1 / won.length;
   const uneven = won.some((count) => Math.abs(count / decided - fairShare) > targets.sideGap + SHARE_TOLERANCE);
-  if (decided < 20 || !uneven) return [];
+  if (decided < MIN_DECIDED_FOR_SIDE_FLAG || !uneven) return [];
   const shares = won.map((count, team) => `${teamLabel(team)} ${pct(count / decided)}`);
   return [`Un bando gana mas (contando ventaja al final): ${shares.join(', ')}.`];
 }
@@ -275,9 +297,9 @@ function snowballFlags({ snowball }: Findings, targets: Targets): string[] {
     : [];
 }
 
-/** Lo que cuesta una unidad que rinde `ratio` veces la mediana: hacia la mediana, como mucho un 25 %, de 500 en 500. */
+/** Lo que cuesta una unidad que rinde `ratio` veces la mediana: hacia la mediana, sin pasarse de los limites de cambio. */
 const fairerCost = (cost: number, ratio: number): number =>
-  Math.max(500, roundTo(cost * Math.min(1.25, Math.max(0.8, Math.sqrt(ratio))), 500));
+  Math.max(PRICE_STEP, roundTo(cost * Math.min(MAX_PRICE_RISE, Math.max(MAX_PRICE_DROP, Math.sqrt(ratio))), PRICE_STEP));
 
 /** Avisa de las unidades que rinden demasiado o demasiado poco para lo que cuestan, con su precio propuesto, y de las que casi nadie compra. */
 function priceFindings({ units }: Findings, targets: Targets, content: GameContent): { flags: string[]; suggestions: Suggestion[] } {
@@ -298,7 +320,7 @@ function priceFindings({ units }: Findings, targets: Targets, content: GameConte
           why: ratio > 1 ? 'rinde demasiado para lo que cuesta' : 'rinde poco para lo que cuesta',
         });
     }
-    if (content.units.byId[row.type]?.attack && totalBought > 200 && row.share < 0.005)
+    if (content.units.byId[row.type]?.attack && totalBought > MIN_PURCHASES_FOR_RARE && row.share < RARE_PURCHASE_SHARE)
       flags.push(
         `${row.label}: casi nadie la compra (${(row.share * 100).toFixed(1)} % de las compras). Ojo: la IA elige compras con sus propias reglas.`,
       );
@@ -312,9 +334,11 @@ function duelSummaryOf(duel: { terrain: string; cells: DuelCell[] }): DuelSummar
   const firstStrikeMean = firstStrikes.length ? mean(firstStrikes.map((cell) => cell.firstStrikeWins!)) : null;
   // Ventaja de atacar primero en un intercambio entre iguales: daño hecho / daño recibido.
   const same = duel.cells.filter((cell) => cell.attacker === cell.defender && cell.damage > 0);
-  const ratios = same.map((cell) => cell.damage / Math.max(cell.counter, 0.5));
+  const ratios = same.map((cell) => cell.damage / Math.max(cell.counter, MIN_COUNTER));
   const exchangeRatio = ratios.length ? median(ratios) : null;
-  const worst = [...duel.cells].sort((firstCell, secondCell) => secondCell.valuePer1000 - firstCell.valuePer1000).slice(0, 8);
+  const worst = [...duel.cells]
+    .sort((firstCell, secondCell) => secondCell.valuePer1000 - firstCell.valuePer1000)
+    .slice(0, WORST_DUELS_SHOWN);
   return { terrain: duel.terrain, firstStrikeMean, exchangeRatio, worst };
 }
 
@@ -322,7 +346,7 @@ function duelFlags(summary: DuelSummary | undefined, targets: Targets): string[]
   const ratio = summary?.exchangeRatio ?? null;
   if (ratio === null || ratio <= targets.exchangeRatio) return [];
   return [
-    `Atacar primero sale muy a cuenta: entre unidades iguales se hace ${ratio > 50 ? 'todo el' : ratio.toFixed(1) + ' veces mas'} daño del que se recibe.`,
+    `Atacar primero sale muy a cuenta: entre unidades iguales se hace ${ratio > NO_REPLY_RATIO ? 'todo el' : ratio.toFixed(1) + ' veces mas'} daño del que se recibe.`,
   ];
 }
 
@@ -341,6 +365,36 @@ function outcomeOf(records: readonly GameRecord[], teams: readonly TeamId[], win
   };
 }
 
+/** Los avisos y las propuestas. Contra un jugador pasivo solo interesan la duracion y si la IA gana: lo demas no tiene sentido. */
+function adviceOf(
+  findings: Findings,
+  duel: DuelSummary | undefined,
+  context: { meta: ReportMeta; targets: Targets; content: GameContent },
+): Pick<Report, 'flags' | 'suggestions'> {
+  const { meta, targets, content } = context;
+  const mirror = !meta.policies.includes('passive');
+  const prices = mirror ? priceFindings(findings, targets, content) : { flags: [], suggestions: [] };
+  const flags = [
+    ...(mirror ? sideFlags(findings, targets) : []),
+    ...lengthFlags(findings, targets, meta.maxDays),
+    ...(mirror ? snowballFlags(findings, targets) : []),
+    ...prices.flags,
+    ...duelFlags(duel, targets),
+  ];
+  return { flags, suggestions: prices.suggestions };
+}
+
+/** Lo que se mira de las partidas: como acabaron, la bola de nieve y cada tipo de unidad. */
+function findingsOf(records: readonly GameRecord[], teams: readonly TeamId[], content: GameContent): Findings {
+  const winners = effectiveWinners(records, teams);
+  return {
+    games: records.length,
+    outcome: outcomeOf(records, teams, winners),
+    snowball: snowballOf(winners.winners),
+    units: unitRowsOf(records, content),
+  };
+}
+
 export function buildReport(
   records: GameRecord[],
   meta: ReportMeta,
@@ -350,24 +404,9 @@ export function buildReport(
   duel?: { terrain: string; cells: DuelCell[] },
 ): Report {
   const teams = teamsOf(records);
-  const winners = effectiveWinners(records, teams);
-  const findings: Findings = {
-    games: records.length,
-    outcome: outcomeOf(records, teams, winners),
-    snowball: snowballOf(winners.winners),
-    units: unitRowsOf(records, content),
-  };
+  const findings = findingsOf(records, teams, content);
   const duelSummary = duel ? duelSummaryOf(duel) : undefined;
-  // Contra un jugador pasivo solo interesan la duracion y si la IA gana: el resto no tiene sentido.
-  const mirror = !meta.policies.includes('passive');
-  const prices = mirror ? priceFindings(findings, targets, content) : { flags: [], suggestions: [] };
-  const flags = [
-    ...(mirror ? sideFlags(findings, targets) : []),
-    ...lengthFlags(findings, targets, meta.maxDays),
-    ...(mirror ? snowballFlags(findings, targets) : []),
-    ...prices.flags,
-    ...duelFlags(duelSummary, targets),
-  ];
+  const { flags, suggestions } = adviceOf(findings, duelSummary, { meta, targets, content });
   return {
     name: meta.name,
     date: new Date().toISOString(),
@@ -383,77 +422,169 @@ export function buildReport(
     units: [...findings.units],
     duel: duelSummary,
     flags,
-    suggestions: prices.suggestions,
+    suggestions,
   };
 }
 
-export function reportMarkdown(report: Report): string {
-  const lines: string[] = [];
-  lines.push(`# Informe de equilibrio: ${report.name}`, '');
-  lines.push(
-    `${report.games} partidas (${report.policies}), semillas ${report.seeds[0]}-${report.seeds[1]}, maximo ${report.maxDays} dias. ${report.date.slice(0, 16).replace('T', ' ')}.`,
+/** Una fila de una tabla de Markdown. */
+const tableRow = (cells: readonly (string | number)[]): string => `| ${cells.join(' | ')} |`;
+
+/** La cabecera de una tabla de Markdown: los nombres y cada columna a la izquierda o, con `right`, a la derecha. */
+const tableHead = (headers: readonly string[], right: readonly boolean[]): string[] => [
+  tableRow(headers),
+  `|${right.map((alignedRight) => (alignedRight ? '---:' : '---')).join('|')}|`,
+];
+
+/** Un numero que puede faltar: con su formato, o una raya. */
+const orDash = (value: number | null, format: (value: number) => string): string => (value === null ? '—' : format(value));
+
+/** Una razon de daño hecho / devuelto: "sin respuesta" (o `noReply`) si casi no se devuelve nada. */
+const exchangeText = (ratio: number, noReply = 'sin respuesta'): string => (ratio > NO_REPLY_RATIO ? noReply : ratio.toFixed(1));
+
+function headerSection(report: Report): string[] {
+  const when = report.date.slice(0, 16).replace('T', ' ');
+  return [
+    `# Informe de equilibrio: ${report.name}`,
     '',
+    `${report.games} partidas (${report.policies}), semillas ${report.seeds[0]}-${report.seeds[1]}, maximo ${report.maxDays} dias. ${when}.`,
+    '',
+  ];
+}
+
+function changesSection(report: Report): string[] {
+  if (!report.changes.length) return [];
+  const changes = report.changes.map((change) => `- \`${change.path}\`: ${JSON.stringify(change.from)} → ${JSON.stringify(change.to)}`);
+  return ['**Cambios de esta variante:**', '', ...changes, ''];
+}
+
+function flagsSection(report: Report): string[] {
+  const flags = report.flags.length ? report.flags.map((flag) => `- ${flag}`) : ['- Nada fuera de los objetivos.'];
+  return ['## Avisos', '', ...flags, ''];
+}
+
+function suggestionsSection(report: Report): string[] {
+  if (!report.suggestions.length) return [];
+  const suggestions = report.suggestions.map(
+    (suggestion) => `- \`${suggestion.path}\`: ${suggestion.from} → **${suggestion.to}** (${suggestion.why})`,
   );
-  if (report.changes.length) {
-    lines.push('**Cambios de esta variante:**', '');
-    for (const change of report.changes) lines.push(`- \`${change.path}\`: ${JSON.stringify(change.from)} → ${JSON.stringify(change.to)}`);
-    lines.push('');
-  }
-  lines.push('## Avisos', '');
-  lines.push(...(report.flags.length ? report.flags.map((flag) => `- ${flag}`) : ['- Nada fuera de los objetivos.']), '');
-  if (report.suggestions.length) {
-    lines.push('## Ajustes propuestos', '', 'Para probarlos: `npm run balance -- tune` o una variante con estos valores.', '');
-    for (const s of report.suggestions) lines.push(`- \`${s.path}\`: ${s.from} → **${s.to}** (${s.why})`);
-    lines.push('');
-  }
-  const outcome = report.outcome;
-  lines.push('## Resultado', '');
-  lines.push('| | |', '|---|---|');
+  return [
+    '## Ajustes propuestos',
+    '',
+    'Para probarlos: `npm run balance -- tune` o una variante con estos valores.',
+    '',
+    ...suggestions,
+    '',
+  ];
+}
+
+function outcomeRows({ outcome }: Report): string[] {
   const teams = outcome.wins.map((_, team) => `bando ${team}`).join(' / ');
-  lines.push(`| Victorias ${teams} | ${outcome.wins.join(' / ')} (${outcome.winRate.map(pct).join(' / ')}) |`);
-  lines.push(`| Sin terminar | ${outcome.unfinished}: con ventaja clara ${outcome.adjudicated.join(' / ')}, igualadas ${outcome.even} |`);
-  lines.push(
-    `| Por Base / por quedarse sin nada / por puntos al limite de dias | ${outcome.reasons.hq} / ${outcome.reasons.wipeout} / ${outcome.reasons.days ?? 0} |`,
+  const { reasons, days } = outcome;
+  return [
+    tableRow([`Victorias ${teams}`, `${outcome.wins.join(' / ')} (${outcome.winRate.map(pct).join(' / ')})`]),
+    tableRow(['Sin terminar', `${outcome.unfinished}: con ventaja clara ${outcome.adjudicated.join(' / ')}, igualadas ${outcome.even}`]),
+    tableRow([
+      'Por Base / por quedarse sin nada / por puntos al limite de dias',
+      `${reasons.hq} / ${reasons.wipeout} / ${reasons.days ?? 0}`,
+    ]),
+    tableRow(['Dias (mediana, p10-p90, media)', `${days.median} (${days.p10}-${days.p90}), ${days.mean}`]),
+  ];
+}
+
+function snowballRows(report: Report): string[] {
+  return report.snowball.map((point) =>
+    tableRow([
+      `Gana (o va ganando al final) quien iba por delante el dia ${point.day}`,
+      `${orDash(point.leaderWins, pct)} (${point.games} partidas)`,
+    ]),
   );
-  lines.push(`| Dias (mediana, p10-p90, media) | ${outcome.days.median} (${outcome.days.p10}-${outcome.days.p90}), ${outcome.days.mean} |`);
-  for (const sb of report.snowball)
-    lines.push(
-      `| Gana (o va ganando al final) quien iba por delante el dia ${sb.day} | ${sb.leaderWins === null ? '—' : pct(sb.leaderWins)} (${sb.games} partidas) |`,
-    );
-  if (report.economy.day10Buildings)
-    lines.push(
-      `| Dia 10: edificios / valor del ejercito | ${report.economy.day10Buildings.map((x) => x.toFixed(1)).join(' vs ')} / ${report.economy.day10Army!.map((x) => Math.round(x)).join(' vs ')} |`,
-    );
-  if (report.economy.unitsOnMap)
-    lines.push(
-      `| Unidades en el mapa por bando (dia 10 / dia 20) | ${report.economy.unitsOnMap.day10.toFixed(1)} / ${report.economy.unitsOnMap.day20.toFixed(1)} |`,
-    );
-  lines.push('');
-  lines.push('## Unidades', '', 'Eficiencia = valor destruido / dinero gastado en esa unidad (los dos bandos juntos).', '');
-  lines.push(
-    '| Unidad | Coste | Compradas | % compras | Eficiencia | Sobreviven | Bajas causadas | Capturas |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|',
-  );
-  for (const row of [...report.units].sort((firstUnitRow, secondUnitRow) => secondUnitRow.bought - firstUnitRow.bought))
-    lines.push(
-      `| ${row.label} | ${row.cost} | ${row.bought} | ${(row.share * 100).toFixed(1)} | ${row.efficiency === null ? '—' : row.efficiency.toFixed(2)} | ${row.survival === null ? '—' : pct(row.survival)} | ${row.kills} | ${row.captures} |`,
-    );
-  lines.push('');
-  if (report.duel) {
-    lines.push(`## Duelos (terreno ${report.duel.terrain})`, '');
-    lines.push(
-      `Entre unidades iguales, daño hecho / daño devuelto al atacar primero: ${report.duel.exchangeRatio === null ? '—' : report.duel.exchangeRatio > 50 ? 'sin respuesta' : report.duel.exchangeRatio.toFixed(1)}. En un duelo a muerte gana quien empieza el ${report.duel.firstStrikeMean === null ? '—' : pct(report.duel.firstStrikeMean)} de las veces.`,
-      '',
-    );
-    lines.push('Los cruces mas rentables para el atacante (valor quitado por cada 1000 de coste, en un ataque):', '');
-    lines.push('| Atacante | Defensor | Daño | Contraataque | Destruye | Valor/1000 |', '|---|---|---:|---:|---:|---:|');
-    for (const cell of report.duel.worst)
-      lines.push(
-        `| ${cell.attacker} | ${cell.defender} | ${cell.damage.toFixed(1)} | ${cell.counter.toFixed(1)} | ${pct(cell.killChance)} | ${Math.round(cell.valuePer1000)} |`,
-      );
-    lines.push('');
+}
+
+function economyRows({ economy }: Report): string[] {
+  const rows: string[] = [];
+  if (economy.day10Buildings) {
+    const buildings = economy.day10Buildings.map((count) => count.toFixed(1)).join(' vs ');
+    const army = economy.day10Army!.map((value) => Math.round(value)).join(' vs ');
+    rows.push(tableRow([`Dia ${ECONOMY_DAY}: edificios / valor del ejercito`, `${buildings} / ${army}`]));
   }
-  return lines.join('\n');
+  if (economy.unitsOnMap) {
+    const { day10, day20 } = economy.unitsOnMap;
+    rows.push(
+      tableRow([
+        `Unidades en el mapa por bando (dia ${ECONOMY_DAY} / dia ${LATE_ECONOMY_DAY})`,
+        `${day10.toFixed(1)} / ${day20.toFixed(1)}`,
+      ]),
+    );
+  }
+  return rows;
+}
+
+function resultSection(report: Report): string[] {
+  return ['## Resultado', '', '| | |', '|---|---|', ...outcomeRows(report), ...snowballRows(report), ...economyRows(report), ''];
+}
+
+function unitsSection(report: Report): string[] {
+  const head = tableHead(
+    ['Unidad', 'Coste', 'Compradas', '% compras', 'Eficiencia', 'Sobreviven', 'Bajas causadas', 'Capturas'],
+    [false, true, true, true, true, true, true, true],
+  );
+  const byPurchases = [...report.units].sort((first, second) => second.bought - first.bought);
+  const rows = byPurchases.map((row) =>
+    tableRow([
+      row.label,
+      row.cost,
+      row.bought,
+      (row.share * 100).toFixed(1),
+      orDash(row.efficiency, (efficiency) => efficiency.toFixed(2)),
+      orDash(row.survival, pct),
+      row.kills,
+      row.captures,
+    ]),
+  );
+  return [
+    '## Unidades',
+    '',
+    'Eficiencia = valor destruido / dinero gastado en esa unidad (los dos bandos juntos).',
+    '',
+    ...head,
+    ...rows,
+    '',
+  ];
+}
+
+/** Las columnas de un cruce de la tabla de duelos: atacante, defensor, daño, contraataque, destruye y valor/1000. */
+const duelCells = (cell: DuelCell): (string | number)[] => [
+  cell.attacker,
+  cell.defender,
+  cell.damage.toFixed(1),
+  cell.counter.toFixed(1),
+  pct(cell.killChance),
+  Math.round(cell.valuePer1000),
+];
+
+const DUEL_HEADERS = ['Atacante', 'Defensor', 'Daño', 'Contraataque', 'Destruye', 'Valor/1000'];
+const DUEL_RIGHT = [false, false, true, true, true, true];
+
+function duelSection({ duel }: Report): string[] {
+  if (!duel) return [];
+  const exchange = orDash(duel.exchangeRatio, (ratio) => exchangeText(ratio));
+  return [
+    `## Duelos (terreno ${duel.terrain})`,
+    '',
+    `Entre unidades iguales, daño hecho / daño devuelto al atacar primero: ${exchange}. En un duelo a muerte gana quien empieza el ${orDash(duel.firstStrikeMean, pct)} de las veces.`,
+    '',
+    'Los cruces mas rentables para el atacante (valor quitado por cada 1000 de coste, en un ataque):',
+    '',
+    ...tableHead(DUEL_HEADERS, DUEL_RIGHT),
+    ...duel.worst.map((cell) => tableRow(duelCells(cell))),
+    '',
+  ];
+}
+
+/** El informe en Markdown, seccion a seccion. */
+export function reportMarkdown(report: Report): string {
+  const sections = [headerSection, changesSection, flagsSection, suggestionsSection, resultSection, unitsSection, duelSection];
+  return sections.flatMap((section) => section(report)).join('\n');
 }
 
 export function duelMarkdown(cells: DuelCell[], terrain: string): string {
@@ -462,47 +593,67 @@ export function duelMarkdown(cells: DuelCell[], terrain: string): string {
     '',
     'Una unidad a 100 de vida ataca a otra a 100. Valor/1000 = valor quitado por cada 1000 que cuesta el atacante.',
     '',
+    ...tableHead([...DUEL_HEADERS, 'Gana quien ataca primero'], [...DUEL_RIGHT, true]),
+    ...cells.map((cell) => tableRow([...duelCells(cell), orDash(cell.firstStrikeWins, pct)])),
   ];
-  lines.push(
-    '| Atacante | Defensor | Daño | Contraataque | Destruye | Valor/1000 | Gana quien ataca primero |',
-    '|---|---|---:|---:|---:|---:|---:|',
-  );
-  for (const cell of cells)
-    lines.push(
-      `| ${cell.attacker} | ${cell.defender} | ${cell.damage.toFixed(1)} | ${cell.counter.toFixed(1)} | ${pct(cell.killChance)} | ${Math.round(cell.valuePer1000)} | ${cell.firstStrikeWins === null ? '—' : pct(cell.firstStrikeWins)} |`,
-    );
   return lines.join('\n') + '\n';
 }
 
-export function compareMarkdown(before: Report, after: Report): string {
-  const lines: string[] = [`# ${before.name} → ${after.name}`, ''];
-  if (before.seeds.join() !== after.seeds.join() || before.maxDays !== after.maxDays)
-    lines.push('> Ojo: no usan las mismas semillas o el mismo maximo de dias; la comparacion es menos fiable.', '');
-  const row = (label: string, beforeValue: number | null, afterValue: number | null, fmt: (value: number) => string) => {
-    const diff = beforeValue !== null && afterValue !== null ? afterValue - beforeValue : null;
-    lines.push(
-      `| ${label} | ${beforeValue === null ? '—' : fmt(beforeValue)} | ${afterValue === null ? '—' : fmt(afterValue)} | ${diff === null ? '' : (diff > 0 ? '+' : '') + fmt(diff)} |`,
-    );
-  };
-  lines.push('| | antes | despues | cambio |', '|---|---:|---:|---:|');
+/** Una fila de la comparacion: antes, despues y el cambio (vacio si falta uno de los dos). */
+function comparisonRow(label: string, before: number | null, after: number | null, format: (value: number) => string): string {
+  const change = before !== null && after !== null ? after - before : null;
+  return tableRow([label, orDash(before, format), orDash(after, format), change === null ? '' : (change > 0 ? '+' : '') + format(change)]);
+}
+
+function comparisonRows(before: Report, after: Report): string[] {
   const teamCount = Math.max(before.outcome.winRate.length, after.outcome.winRate.length);
-  for (let team = 0; team < teamCount; team++)
-    row(`Victorias bando ${team}`, before.outcome.winRate[team] ?? null, after.outcome.winRate[team] ?? null, pct);
-  row('Sin terminar', before.outcome.unfinished / before.games, after.outcome.unfinished / after.games, pct);
-  row('Dias (mediana)', before.outcome.days.median, after.outcome.days.median, (value) => `${value}`);
-  row('Bola de nieve dia 5', before.snowball[0]!.leaderWins, after.snowball[0]!.leaderWins, pct);
+  const rows = Array.from({ length: teamCount }, (_, team) =>
+    comparisonRow(`Victorias bando ${team}`, before.outcome.winRate[team] ?? null, after.outcome.winRate[team] ?? null, pct),
+  );
+  rows.push(
+    comparisonRow('Sin terminar', before.outcome.unfinished / before.games, after.outcome.unfinished / after.games, pct),
+    comparisonRow('Dias (mediana)', before.outcome.days.median, after.outcome.days.median, (value) => `${value}`),
+    comparisonRow('Bola de nieve dia 5', before.snowball[0]!.leaderWins, after.snowball[0]!.leaderWins, pct),
+  );
   if (before.duel || after.duel)
-    row('Daño hecho / devuelto (iguales)', before.duel?.exchangeRatio ?? null, after.duel?.exchangeRatio ?? null, (value) =>
-      value > 50 ? '∞' : value.toFixed(1),
+    rows.push(
+      comparisonRow('Daño hecho / devuelto (iguales)', before.duel?.exchangeRatio ?? null, after.duel?.exchangeRatio ?? null, (ratio) =>
+        exchangeText(ratio, '∞'),
+      ),
     );
-  lines.push('', '## Unidades', '', '| Unidad | Coste | Compras (antes → despues) | Eficiencia (antes → despues) |', '|---|---|---|---|');
-  for (const rowBefore of before.units) {
+  return rows;
+}
+
+function unitComparisonRows(before: Report, after: Report): string[] {
+  const twoDecimals = (value: number | null) => orDash(value, (number) => number.toFixed(2));
+  return before.units.map((rowBefore) => {
     const rowAfter = after.units.find((unitRow) => unitRow.type === rowBefore.type)!;
-    const twoDecimals = (value: number | null) => (value === null ? '—' : value.toFixed(2));
-    lines.push(
-      `| ${rowBefore.label} | ${rowBefore.cost}${rowAfter.cost !== rowBefore.cost ? ` → ${rowAfter.cost}` : ''} | ${rowBefore.bought} → ${rowAfter.bought} | ${twoDecimals(rowBefore.efficiency)} → ${twoDecimals(rowAfter.efficiency)} |`,
-    );
-  }
-  lines.push('', `Avisos antes: ${before.flags.length}, despues: ${after.flags.length}.`, '');
-  return lines.join('\n');
+    const cost = `${rowBefore.cost}${rowAfter.cost !== rowBefore.cost ? ` → ${rowAfter.cost}` : ''}`;
+    return tableRow([
+      rowBefore.label,
+      cost,
+      `${rowBefore.bought} → ${rowAfter.bought}`,
+      `${twoDecimals(rowBefore.efficiency)} → ${twoDecimals(rowAfter.efficiency)}`,
+    ]);
+  });
+}
+
+export function compareMarkdown(before: Report, after: Report): string {
+  const sameRuns = before.seeds.join() === after.seeds.join() && before.maxDays === after.maxDays;
+  return [
+    `# ${before.name} → ${after.name}`,
+    '',
+    ...(sameRuns ? [] : ['> Ojo: no usan las mismas semillas o el mismo maximo de dias; la comparacion es menos fiable.', '']),
+    '| | antes | despues | cambio |',
+    '|---|---:|---:|---:|',
+    ...comparisonRows(before, after),
+    '',
+    '## Unidades',
+    '',
+    ...tableHead(['Unidad', 'Coste', 'Compras (antes → despues)', 'Eficiencia (antes → despues)'], [false, false, false, false]),
+    ...unitComparisonRows(before, after),
+    '',
+    `Avisos antes: ${before.flags.length}, despues: ${after.flags.length}.`,
+    '',
+  ].join('\n');
 }
