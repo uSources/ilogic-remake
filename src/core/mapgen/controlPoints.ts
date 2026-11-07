@@ -4,27 +4,22 @@ import { manhattan, squareArea } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { buildingAt, unitAt } from '../rules/queries';
 import type { GameState, Pos, Rng } from '../model';
-import { isWalkable } from './common';
+import type { ControlPointPlacement } from '../content';
+import { isWalkable, settingsOf } from './common';
 import { walkingFrom, walksTo, type SpawnDistances } from './spawns';
 
-/** Parte de la zona de un punto de control que tiene que ser tierra para poder pelear por ella. */
-const MIN_CONTROL_LAND = 0.6;
-/** Ni pegados a las salidas: al menos esta parte del camino entre ellas. */
-const MIN_CONTROL_SPAWN_SHARE = 1 / 4;
-/** Azar que se suma a la puntuacion para que no salgan siempre igual. */
-const CONTROL_SCORE_NOISE = 1.5;
-/** Puntuacion maxima (diferencia de distancias a las salidas) para valer como punto de control. */
-const MAX_CONTROL_SCORE = 4;
+/** Donde pone los puntos de control la partida (mapgen.json, "controlPoints"). */
+const placementOf = (s: GameState): ControlPointPlacement => settingsOf(s).controlPoints;
 
 function isMostlyLand(s: GameState, center: Pos): boolean {
   const zone = squareArea(mapGrid(s), center, s.settings.controlRadius);
-  return zone.filter((pos) => isWalkable(s, terrainAt(s, pos))).length >= zone.length * MIN_CONTROL_LAND;
+  return zone.filter((pos) => isWalkable(s, terrainAt(s, pos))).length >= zone.length * placementOf(s).minLandShare;
 }
 
 /** Casilla libre de tierra y no pegada a ninguna salida (`toSpawns`: distancia a pie a cada una, a las que llega). */
 function isControlSpot(s: GameState, pos: Pos, toSpawns: readonly number[], span: number): boolean {
   if (!isWalkable(s, terrainAt(s, pos)) || buildingAt(s, pos) || unitAt(s, pos)) return false;
-  if (Math.min(...toSpawns) < span * MIN_CONTROL_SPAWN_SHARE) return false;
+  if (Math.min(...toSpawns) < span * placementOf(s).minSpawnShare) return false;
   return isMostlyLand(s, pos);
 }
 
@@ -52,13 +47,15 @@ export function placeControlPoints(s: GameState, spawns: readonly Pos[], rng: Rn
     if (!isControlSpot(s, pos, toSpawns, span)) continue;
     // Lo justo: la misma distancia a todas las salidas (con dos, la diferencia entre ellas).
     const spread = Math.max(...toSpawns) - Math.min(...toSpawns);
-    candidates.push({ pos, score: spread + rng() * CONTROL_SCORE_NOISE });
+    candidates.push({ pos, score: spread + rng() * placementOf(s).scoreNoise });
   }
   candidates.sort((first, second) => first.score - second.score);
-  const minGap = Math.max(3, Math.round(mapGrid(s).width / 4)) + 2 * s.settings.controlRadius;
+  const { minGap: gapFloor, gapShareOfSide, maxScore } = placementOf(s);
+  // Separados por sus dos zonas y algo mas: lo minimo o una parte del lado del mapa.
+  const minGap = Math.max(gapFloor, Math.round(mapGrid(s).width * gapShareOfSide)) + 2 * s.settings.controlRadius;
   const chosen: Pos[] = [];
   for (const candidate of candidates) {
-    if (chosen.length >= wanted || candidate.score > MAX_CONTROL_SCORE) break;
+    if (chosen.length >= wanted || candidate.score > maxScore) break;
     if (chosen.every((other) => manhattan(other, candidate.pos) >= minGap)) chosen.push(candidate.pos);
   }
   if (chosen.length) s.controlPoints = chosen.map((pos) => ({ ...pos, owner: null }));

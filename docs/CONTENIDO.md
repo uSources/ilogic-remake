@@ -184,8 +184,10 @@ movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,
 
 `mapgen.json` es lo que el generador pone en cada mapa: `startingUnits` y `startingBuildings` de cada
 salida, `neutralBuildings` (cuantos de cada tipo, `[minimo, maximo]`) y `neutralTotal`, y lo que tiene
-que tener una salida para valer (`spawnRadius`, `minSpawnWalkable`, `minSpawnBuildable`) y un mapa
-(`minLandTiles`). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
+que tener una salida para valer (`spawnRadius`, `minSpawnWalkable`, `minSpawnBuildable`, y lo lejos
+que estan dos, `minSpawnDistance`) y un mapa (`minLandTiles`, medido con el movimiento de
+`landMovement`), y donde van los puntos de control (`controlPoints`: cuanta tierra tiene su zona,
+lo lejos que estan de las salidas y entre ellos, y el azar de su puntuacion). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
 codigo de mapa) y el mismo contenido.
 
 ## Clima

@@ -41,7 +41,7 @@ export { catalogOf, entryOf, findEntry, isEntryId, type Catalog, type Identified
 export type { Content } from './resolve';
 export type { AiWeights } from './ai';
 export type { BuildingType } from './buildings';
-export type { MapgenDef, MapgenSettings } from './mapgen';
+export type { ControlPointPlacement, MapgenDef, MapgenSettings } from './mapgen';
 export type { MissionBuilding, MissionDef, MissionObjective, MissionTeam, MissionUnit } from './missions';
 export type { MovementDef, MovementMotion, MovementType } from './movements';
 export type { TerrainType } from './terrain';

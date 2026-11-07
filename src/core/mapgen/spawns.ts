@@ -5,7 +5,7 @@ import { mapGrid } from '../mapGrid';
 import { distanceMap, type DistanceMap } from '../rules/distance';
 import type { GridSize } from '../util/grid';
 import type { GameState, Pos } from '../model';
-import { isWalkable, landMovementOf, MIN_SPAWN_DISTANCE, ORIGINAL_MAP_SIDE, settingsOf } from './common';
+import { isWalkable, landMovementOf, ORIGINAL_MAP_SIDE, settingsOf } from './common';
 
 /** Hay bastante sitio para edificios y unidades en la zona de inicio alrededor de `pos`. */
 function hasRoomToStart(s: GameState, pos: Pos): boolean {
@@ -50,7 +50,7 @@ export function walksTo(from: SpawnDistances, pos: Pos): boolean {
  * y estar lejos de ellas. Se buscan desde la esquina opuesta a la primera.
  */
 export function findMoreSpawns(s: GameState, first: Pos, count: number): Pos[] | null {
-  const minDistance = Math.round((MIN_SPAWN_DISTANCE * mapGrid(s).width) / ORIGINAL_MAP_SIDE);
+  const minDistance = Math.round((settingsOf(s).minSpawnDistance * mapGrid(s).width) / ORIGINAL_MAP_SIDE);
   const spawns = [walkingFrom(s, first)];
   while (spawns.length < count) {
     const isFarFromAll = (pos: Pos) => spawns.every((earlier) => walksTo(earlier, pos) && manhattan(pos, earlier.spawn) >= minDistance);
