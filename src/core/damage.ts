@@ -9,13 +9,16 @@ import type { DamageModel, DamageModelId, MatchSettings } from './model';
 
 /** El reparto despues de un disparo mas que acierta con probabilidad `chance`. */
 function afterOneMoreShot(distribution: readonly number[], chance: number): number[] {
-  // Lo que habia con `hits` aciertos pasa a `hits` si este falla y a `hits + 1` si acierta. Cada
-  // casilla suma primero lo que llega acertando y luego lo que llega fallando (el orden de siempre).
+  // Con `hits` aciertos se llega acertando desde `hits - 1` (`arriving`) o fallando desde `hits`; se
+  // suma en ese orden, el de siempre (0 + x da x exacto, asi que los bordes salen igual).
   const next = new Array<number>(distribution.length + 1).fill(0);
+  let arriving = 0;
   for (let hits = 0; hits < distribution.length; hits++) {
-    next[hits]! += distribution[hits]! * (1 - chance);
-    next[hits + 1]! += distribution[hits]! * chance;
+    const probability = distribution[hits] ?? 0; // siempre esta (hits < length): el `?? 0` es para el tipo
+    next[hits] = arriving + probability * (1 - chance);
+    arriving = probability * chance;
   }
+  next[distribution.length] = arriving;
   return next;
 }
 
