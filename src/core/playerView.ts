@@ -1,8 +1,8 @@
 /**
  * Lo que sabe un equipo de la partida (`PlayerView`): lo que recibe quien decide por el (los
  * controladores: la IA, el jugador al azar; y las ordenes permanentes que cumple la partida). Quien
- * decide no lee la partida de verdad: lee su vista, que se pone al dia despues de cada accion
- * (`seeing`), y propone acciones que la partida comprueba contra la de verdad. Asi la IA no puede
+ * decide no lee la partida de verdad: lee su vista, que se pone al dia despues de cada accion (la
+ * sesion lo hace sola; fuera de una sesion, `seeing`), y propone acciones que la partida comprueba contra la de verdad. Asi la IA no puede
  * esquivar ni perseguir lo que no ve (I2).
  *
  * Lo que no sabe un equipo es una lista (`FOG`): cada entrada quita una cosa de la vista. Lo demas
@@ -102,7 +102,11 @@ export function playerView(s: GameState, team: TeamId): PlayerView {
   return { team, state, refresh };
 }
 
-/** El plan con la vista al dia: tras el resultado de cada accion que propone, `view` vuelve a mirar la partida. */
+/**
+ * El plan con la vista al dia fuera de una sesion (el paso de fin de turno, la partida por texto, los
+ * tests): tras el resultado de cada accion que propone, `view` vuelve a mirar la partida. En una
+ * sesion no hace falta: la sesion pone al dia la vista de quien juega tras cada accion.
+ */
 export function* seeing<Result>(view: PlayerView, plan: ActionPlan<Result>): ActionPlan<Result> {
   for (let step = plan.next(); ;) {
     if (step.done) return step.value;

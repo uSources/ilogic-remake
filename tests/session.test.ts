@@ -18,6 +18,7 @@ import {
   LogCursor,
   isOffTurnAction,
   runMatch,
+  scriptedController,
   sequence,
   type ActedStep,
   type Controller,
@@ -509,5 +510,25 @@ describe('modos de juego (core/modes.ts)', () => {
       diceSeed: 1,
     });
     expect(s.settings.weather).toBe(false);
+  });
+});
+
+describe('la sesion pone al dia la vista de quien juega', () => {
+  it('tras cada accion, aunque el controlador no lo pida (scripted y en serie)', () => {
+    const s = blankState();
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    const seen: number[] = [];
+    // Mira cuantas unidades ve y no hace nada (un controlador sin pasos).
+    const looking: Controller = {
+      name: 'scripted',
+      playTurn: (view) => {
+        seen.push(view.state.units.length);
+        return passiveController().playTurn(view);
+      },
+    };
+    // Retirar la unidad: una vista sin poner al dia la seguiria viendo.
+    const retire = scriptedController(() => [{ kind: 'deleteUnit', uid: soldier.uid }]);
+    runMatch(new GameSession(s, [sequence(retire, looking, humanController()), passiveController()]));
+    expect(seen).toEqual([0]);
   });
 });

@@ -6,11 +6,10 @@
  */
 import { assistTurn } from '../autopilot/standingOrders';
 import { proposing, type Controller } from './controller';
-import { seeing } from '../playerView';
 
 export const autopilotController = (): Controller => ({
   name: 'autopilot',
   playTurn: function* (view) {
-    yield* proposing(seeing(view, assistTurn(view.state, view.team, 'turnEnd')));
+    yield* proposing(assistTurn(view.state, view.team, 'turnEnd'));
   },
 });

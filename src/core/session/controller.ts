@@ -30,7 +30,7 @@ export interface Controller {
   readonly person?: true;
   /**
    * El turno de su equipo, paso a paso, con lo que sabe de la partida (`view`: la de su equipo, que
-   * le da la sesion; nunca la partida de verdad).
+   * le da la sesion y pone al dia tras cada accion hecha; nunca la partida de verdad).
    */
   playTurn(view: PlayerView): TurnPlan;
 }

@@ -2,7 +2,7 @@
  * Un "jugador" que hace jugadas legales al azar (mover, atacar, capturar, unir, subir, bajar,
  * abastecer, comprar). No juega bien: sirve para recorrer combinaciones raras que la IA nunca prueba.
  * Es un controlador como cualquiera (`Controller`, core/session): decide con la vista de su equipo
- * (`PlayerView`, al dia tras cada accion) y propone sus acciones, que manda la sesion. No sabe las
+ * (`PlayerView`, que la sesion pone al dia tras cada accion) y propone sus acciones, que manda la sesion. No sabe las
  * reglas: elige entre las acciones que el juego daria por buenas ahora (`isValidAction`), como las
  * que ofrecen los menus (`UNIT_MENU`).
  */
@@ -10,7 +10,7 @@ import { isValidAction, UNIT_MENU, type UnitMenuOption } from '@core/actions';
 import { moveRange, reachableTiles, teamUnits, unitById } from '@core/rules';
 import { posOf } from '@core/geom';
 import { proposing, type Controller } from '@core/session';
-import { seeing, type PlayerView } from '@core/playerView';
+import type { PlayerView } from '@core/playerView';
 import { pick } from '@core/util/random';
 import type { ActionPlan, Building, GameAction, Rng, Unit } from '@core/model';
 
@@ -35,7 +35,7 @@ const AFTER_MOVE: readonly (UnitMenuOption & keyof typeof CHANCE)[] = ['unload',
 /** Juega al azar, con `rng`. */
 export const randomController = (rng: Rng): Controller => ({
   name: 'random',
-  playTurn: (view) => proposing(seeing(view, randomTurn(view, rng))),
+  playTurn: (view) => proposing(randomTurn(view, rng)),
 });
 
 /** El turno al azar: cada unidad que puede actuar hace algo, y despues compra en algunos edificios. */
