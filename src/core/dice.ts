@@ -20,5 +20,8 @@ export function diceOf(s: GameState): Dice {
   };
 }
 
-/** El azar de las decisiones del equipo `team` en su turno de hoy: el mismo cada vez que se juegue ese turno. */
-export const decisionRng = (s: GameState, team: TeamId): Rng => seededRng(turnSeed(s.decisionSeed, s.day, team));
+/** La semilla de las decisiones del equipo `team` en su turno de hoy: la misma cada vez que se juegue ese turno. */
+export const turnSeedOf = (s: GameState, team: TeamId): number => turnSeed(s.decisionSeed, s.day, team);
+
+/** El azar de las decisiones del equipo `team` en su turno de hoy (el que le da su vista: `PlayerView.turnSeed`). */
+export const decisionRng = (s: GameState, team: TeamId): Rng => seededRng(turnSeedOf(s, team));

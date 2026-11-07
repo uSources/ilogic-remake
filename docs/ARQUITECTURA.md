@@ -449,9 +449,13 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   la IA pasa por `dispatch` con las mismas comprobaciones que lo de una persona, queda en el
   registro de la sesion y se puede repetir o mandar por la red.
 - **Lo que sabe su equipo**: decide con la `PlayerView` que le da la sesion (`playerView.ts`): la
-  partida sin lo que su equipo no sabe (`FOG`: los enemigos que no ve y lo que llevan dentro, las
-  ordenes y escuadras de los enemigos, los dados). Es la misma partida por debajo (un Proxy de
-  solo lectura; sus unidades son las de verdad) y se pone al dia tras cada accion (`seeing`). Las
+  partida sin lo que su equipo no sabe (`FOG`: los enemigos que no ve; de los que ve, sus ordenes,
+  su escuadra y a quien llevan dentro; las escuadras enemigas; quien captura un edificio que no ve;
+  y las semillas: dados, decisiones y la del mapa, `setup`). De su azar solo sabe el de sus
+  decisiones de este turno (`PlayerView.turnSeed`, que usa su controlador). Las semillas son de 32
+  bits y la pantalla enseña a la persona el codigo del mapa (de el salen las de una escaramuza): una
+  partida por la red que las tenga que guardar en secreto no las manda. Es la misma partida por
+  debajo (un Proxy; sus unidades son las de verdad) y se pone al dia tras cada accion. Las
   caidas son publicas (la partida las anuncia): la vista las lleva como estan apuntadas
   (`TeamState.fell`), nunca las deduce de lo que ve. Las ordenes permanentes deciden igual, con la
   vista del equipo, las cumpla quien las cumpla: los pasos de turno (`followStandingOrders` en

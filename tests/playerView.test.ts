@@ -4,7 +4,8 @@ import { dispatch, TURN_END_PHASES } from '@core/actions';
 import { previewStandingOrders } from '@core/autopilot';
 import { playerView, seeing, unitsKnownTo } from '@core/playerView';
 import { newUnit, unitById } from '@core/rules';
-import type { ActionPlan, GameAction, GameState } from '@core/model';
+import type { ActionPlan, Building, GameAction, GameState } from '@core/model';
+import { turnSeedOf } from '@core/dice';
 import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { seededRng } from '@core/util/random';
 
@@ -47,19 +48,34 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const known = unitsKnownTo(s, 0);
     expect(known.find((unit) => unit.uid === seen.uid)?.standingOrder).toBeUndefined();
     expect(known.some((unit) => unit.uid === passenger.uid)).toBe(false);
-    expect(known.some((unit) => unit.uid === transport.uid)).toBe(true);
+    expect(known.find((unit) => unit.uid === transport.uid)?.cargo).toEqual(transport.cargo.map(() => null));
     // Su propio equipo lo sabe todo de lo suyo.
     expect(unitsKnownTo(s, 1).find((unit) => unit.uid === seen.uid)?.standingOrder).toEqual({ kind: 'defend', at: { x: 3, y: 2 } });
   });
 
-  it('las escuadras de los enemigos y los dados no se ven', () => {
+  it('las escuadras de los enemigos y las semillas no se ven; su azar del turno, si', () => {
     const { s, seen } = fogged();
     const other = newUnit(s, SOLDIER, 1, { x: 4, y: 2 });
     act(giveTurn(s, 1), 1, { kind: 'formSquad', uids: [seen.uid, other.uid] });
     s.dice = 12345;
-    expect(playerView(s, 0).state.squads).toEqual([]);
+    s.setup = { seed: 77, size: 32, theme: null };
+    const view = playerView(s, 0);
+    expect(view.state.squads).toEqual([]);
     expect(playerView(s, 1).state.squads).toHaveLength(1);
-    expect(playerView(s, 0).state.dice).not.toBe(12345);
+    expect([view.state.dice, view.state.decisionSeed, view.state.setup]).toEqual([0, 0, undefined]);
+    expect(view.turnSeed).toBe(turnSeedOf(s, 0));
+    expect(playerView(s, 1).turnSeed).not.toBe(view.turnSeed);
+  });
+
+  it('quien captura un edificio que no ve no se sabe; lo que se ve, si', () => {
+    const { s } = fogged();
+    const far: Building = { type: 'City', owner: null, x: 25, y: 25, capture: { team: 1, uid: 3, left: 10 } };
+    const near: Building = { type: 'City', owner: 0, x: 2, y: 3, capture: { team: 1, uid: 2, left: 10 } };
+    s.buildings.push(far, near);
+    const shown = playerView(s, 0).state.buildings;
+    expect(shown.find((building) => building.x === 25)?.capture).toBeNull();
+    expect(shown.find((building) => building.x === 2 && building.y === 3)?.capture).toEqual(near.capture);
+    expect(far.capture).not.toBeNull();
   });
 
   it('sin niebla lo ve todo (menos lo que es solo de su dueño)', () => {

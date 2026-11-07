@@ -10,14 +10,18 @@
  * y el clima, y las caidas (`TeamState.fell`: la partida las anuncia a todos, «El equipo N queda
  * fuera»). Un enemigo del que no se ve ninguna unidad no ha caido por eso: lo dice lo apuntado,
  * no lo que se ve (y las reglas que cuentan unidades para saber si alguien ha caido miran la
- * partida de verdad, nunca una vista).
+ * partida de verdad, nunca una vista). Las semillas (dados, decisiones y la del mapa, `setup`) no se
+ * ven: el equipo solo sabe la de sus propias decisiones de este turno (`turnSeed`). Ojo: la pantalla
+ * enseña a la persona el codigo del mapa (de el salen las semillas de una escaramuza) y son de 32
+ * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
  */
-import type { ActionPlan, GameState, TeamId, Unit } from './model';
+import { turnSeedOf } from './dice';
+import type { ActionPlan, Building, GameState, TeamId, Unit } from './model';
 import { sightOf, type Sight } from './rules/visibility';
 import { areAllied } from './teams';
 
 /** Lo que cambia la niebla en la vista (los campos de la partida que se ven de otra forma). */
-type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'dice'>>;
+type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'buildings' | 'dice' | 'decisionSeed' | 'setup'>>;
 
 /** Una cosa que el equipo no sabe: lo que deja ver de esa parte de la partida. */
 interface FogRule {
@@ -25,11 +29,17 @@ interface FogRule {
   hide(s: GameState, team: TeamId, sees: Sight): FoggedParts;
 }
 
-/** Una unidad de un enemigo como la ve el equipo: sin lo que solo sabe su dueño (sus ordenes y su escuadra). */
+/**
+ * Una unidad de un enemigo como la ve el equipo: sin lo que solo sabe su dueño (sus ordenes, su
+ * escuadra y a quien lleva dentro: sus plazas se ven, no quien va en ellas).
+ */
 function asSeenByEnemy(unit: Unit): Unit {
   const { standingOrder: _order, squad: _squad, ...seen } = unit;
-  return seen;
+  return { ...seen, cargo: unit.cargo.map(() => null) };
 }
+
+/** Un edificio en una casilla que el equipo no ve, como lo sabe: de quien es, pero no quien lo esta capturando. */
+const withoutUnseenCapture = (building: Building): Building => ({ ...building, capture: null });
 
 /** Lo que el equipo no sabe de la partida, en orden. */
 const FOG: readonly FogRule[] = [
@@ -50,14 +60,27 @@ const FOG: readonly FogRule[] = [
     hide: (s, team) => (s.squads ? { squads: s.squads.filter((squad) => areAllied(s, squad.team, team)) } : {}),
   },
   {
-    // Los dados de la partida: con ellos se sabria como va a salir cada combate.
-    id: 'dice',
-    hide: () => ({ dice: HIDDEN_DICE }),
+    // Quien captura un edificio en una casilla que no ve (si es un enemigo: lo de los aliados se ve).
+    id: 'unseenCaptures',
+    hide: (s, team, sees) => ({
+      buildings: s.buildings.map((building) => {
+        const capturer = building.capture?.team;
+        const isHiddenCapture = capturer !== undefined && !areAllied(s, capturer, team) && !sees(building);
+        return isHiddenCapture ? withoutUnseenCapture(building) : building;
+      }),
+    }),
+  },
+  {
+    // El azar de la partida: los dados (se sabria como va a salir cada combate), la semilla de las
+    // decisiones (se sabria lo que va a hacer la IA de los demas) y la del mapa (de ella salen las dos
+    // en una escaramuza). Lo suyo de este turno lo da la vista aparte (`turnSeed`).
+    id: 'seeds',
+    hide: () => ({ dice: HIDDEN_SEED, decisionSeed: HIDDEN_SEED, setup: undefined }),
   },
 ];
 
-/** Lo que ve un equipo de los dados (nada: siempre lo mismo). */
-const HIDDEN_DICE = 0;
+/** Lo que ve un equipo de una semilla que no sabe (nada: siempre lo mismo). */
+const HIDDEN_SEED = 0;
 
 /** Lo que el equipo `team` ve distinto de la partida ahora mismo (lo que deja cada entrada de FOG). */
 function foggedParts(s: GameState, team: TeamId): FoggedParts {
@@ -78,6 +101,8 @@ export interface PlayerView {
    * (unidades, equipos, edificios...): se proponen acciones.
    */
   readonly state: GameState;
+  /** La semilla del azar de las decisiones de su equipo en este turno (`decisionRng` de la partida): lo unico que sabe de ella. */
+  readonly turnSeed: number;
   /** Vuelve a mirar la partida (tras una accion, o algo que haya pasado fuera del turno). */
   refresh(): void;
 }
@@ -148,7 +173,7 @@ export function playerView(s: GameState, team: TeamId): PlayerView {
   const refresh = () => {
     seen = seenParts(s, team, guards);
   };
-  return { team, state, refresh };
+  return { team, state, turnSeed: turnSeedOf(s, team), refresh };
 }
 
 /** Las listas de la partida que mas se recorren, ya con la niebla. */
