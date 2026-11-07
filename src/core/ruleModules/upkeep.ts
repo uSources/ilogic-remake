@@ -2,11 +2,18 @@
  * [CAMBIO] Mantenimiento (ajuste `upkeep`, el tanto por uno del precio del ejercito que se paga cada
  * ronda; la cuenta en rules/economy.ts, `upkeepOf`). Sin dinero no hay castigo: se paga lo que haya.
  */
-import type { GameEvent, GameState } from '../model';
+import type { GameEvent, GameState, TeamId } from '../model';
 import { upkeepOf } from '../rules/economy';
 import { pay } from '../rules/funds';
 import { perTeam, teamIds } from '../teams';
 import type { RuleModule } from './hooks';
+
+declare module '../model/events' {
+  interface ModuleEvents {
+    /** Fin de ronda: el mantenimiento que paga un equipo. */
+    upkeep: { actor: null; team: TeamId; amount: number };
+  }
+}
 
 declare module '../model/roundReport' {
   interface RoundReportParts {

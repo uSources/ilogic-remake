@@ -14,7 +14,17 @@ import { generalOf } from '../../core/generals';
 import { powerArea, powerOf } from '../../core/generalPowers';
 import { squareArea, posOf } from '../../core/geom';
 import { mapGrid } from '../../core/mapGrid';
-import type { GameEvent, GameEventKind, GameEventOf, GameState, InterruptionKind, Pos, TeamId, Unit } from '../../core/model';
+import type {
+  CoreGameEventKind,
+  GameEvent,
+  GameEventKind,
+  GameEventOf,
+  GameState,
+  InterruptionKind,
+  Pos,
+  TeamId,
+  Unit,
+} from '../../core/model';
 import { showToast, ui } from '../../hud/store';
 import { TILE } from '../../layout';
 import { fmtNum, settings, t } from '../../settings';
@@ -695,8 +705,11 @@ export function showFallNotice(event: GameEventOf<'teamDefeated'>, viewer: TeamI
 /** Esperar no se anima. */
 const noAnimation = async (): Promise<void> => {};
 
-/** La animacion de cada tipo de evento. Un tipo nuevo de GameEvent no compila sin su entrada. */
-export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
+/**
+ * La animacion de cada tipo de suceso de cualquier partida: uno nuevo no compila sin su entrada. Los
+ * de los modulos (ModuleEvents) van en MODULE_ANIMATORS si tienen animacion; si no, ninguna.
+ */
+export const ANIMATORS: { [K in CoreGameEventKind]: Animator<K> } = {
   move: animatePathEvent,
   merge: animatePathEvent,
   load: animatePathEvent,
@@ -722,10 +735,7 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   // El fin de ronda lo cuenta su resumen (turns.ts), no una animacion por suceso.
   income: noAnimation,
   heal: noAnimation,
-  upkeep: noAnimation,
-  controlPoint: noAnimation,
   newDay: noAnimation,
-  weather: noAnimation,
   // El final de la partida y los avisos de cada turno los enseña la escena (endOfMatch.ts, turns.ts).
   surrender: noAnimation,
   teamDefeated: announceDefeat,
@@ -733,7 +743,14 @@ export const ANIMATORS: { [K in GameEventKind]: Animator<K> } = {
   turnEnd: noAnimation,
 };
 
-/** La animacion de un evento, con su tipo (TypeScript no lo deduce solo al indexar `ANIMATORS`). */
+/**
+ * La animacion de los sucesos de los modulos que tienen una. Ninguno de ahora (mantenimiento, puntos
+ * de control, clima: los cuenta el resumen de la ronda); uno sin entrada no se anima.
+ */
+const MODULE_ANIMATORS: { [K in Exclude<GameEventKind, CoreGameEventKind>]?: Animator<K> } = {};
+
+/** La animacion de un evento, con su tipo (TypeScript no lo deduce solo al indexar las tablas); la de un suceso que no se conoce, ninguna. */
 function animatorFor<K extends GameEventKind>(event: GameEventOf<K>): Animator<K> {
-  return ANIMATORS[event.kind];
+  const animators: { [L in GameEventKind]?: Animator<L> } = { ...MODULE_ANIMATORS, ...ANIMATORS };
+  return animators[event.kind] ?? noAnimation;
 }

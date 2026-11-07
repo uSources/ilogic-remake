@@ -4,7 +4,7 @@
  * (o en los `ruleModules` de un modo, si es solo de ese modo); las reglas que miran esas listas no
  * cambian. Las reglas no importan esto: preguntan a `GameState.ruleset` (ruleset.ts).
  */
-import type { GameModeId, MatchSettings } from '../model';
+import type { GameModeId, MatchSettings, ModuleEventsAreNew } from '../model';
 import { gameModeOf } from '../modes';
 import { ABILITIES } from './abilities';
 import { AMBUSH } from './ambush';
@@ -61,3 +61,6 @@ export function rulesetFor(match: { readonly mode: GameModeId }, settings: Reado
  */
 export const gameModulesFor = (settings: Readonly<MatchSettings>): RuleModuleId[] =>
   RULE_MODULES.filter((module) => module.isOn(settings)).map((module) => module.id);
+
+/** Ningun modulo usa para sus sucesos el tipo de uno de siempre: si alguno lo hiciera, esto no compila. */
+export const MODULE_EVENTS_ARE_NEW: ModuleEventsAreNew = true;

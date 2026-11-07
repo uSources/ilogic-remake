@@ -4,6 +4,13 @@ import type { GameEvent, GameState } from '../model';
 import { advanceWeather, ensureWeather, weatherHit, weatherMove, weatherVision, type WeatherChange } from '../weather';
 import type { RuleModule } from './hooks';
 
+declare module '../model/events' {
+  interface ModuleEvents {
+    /** [CAMBIO] Fin de ronda: cambia el clima (ids de weather.json). */
+    weather: { actor: null; from: string; to: string };
+  }
+}
+
 declare module '../model/roundReport' {
   interface RoundReportParts {
     /** [CAMBIO] Cambio de clima al empezar esta ronda (si no ha cambiado, no esta). */

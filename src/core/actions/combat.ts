@@ -12,7 +12,7 @@ import { engagement } from '../rules/engagement';
 import type { CombatStage, CombatStep } from '../ruleModules/hooks';
 import { hooksOf, inStageOrder } from '../ruleModules/ruleset';
 import { isAlive } from '../util/predicates';
-import type { ActionRegistry, AttackRecord, AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
+import type { ActionRegistry, AttackPartsFitEvent, AttackRecord, AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
 
 /** Los momentos de un ataque, en orden: el golpe, el contraataque, lo de herir y lo de que una caiga. */
@@ -57,9 +57,17 @@ export function combatResolutionOf(s: GameState): CombatStep[] {
   return inStageOrder(COMBAT_STAGES, COMBAT_RESOLUTION, hooksOf(s, 'combatSteps'));
 }
 
-/** Lo que han apuntado los modulos, por orden de nombre (el suceso sale igual sea cual sea el orden de sus pasos). */
-const partsInNameOrder = (parts: Partial<AttackRecordParts>): Partial<AttackRecordParts> =>
+/**
+ * Las partes de los modulos en forma canonica para el suceso: por orden de nombre. Asi el suceso
+ * depende solo de lo que ha pasado, no del orden en que se enchufan los modulos ni del momento de
+ * sus pasos: dos partidas iguales dan sucesos iguales byte a byte (la huella, una repeticion, otra
+ * pantalla que los reciba).
+ */
+const canonicalParts = (parts: Partial<AttackRecordParts>): Partial<AttackRecordParts> =>
   Object.fromEntries(Object.entries(parts).sort(([first], [second]) => (first < second ? -1 : 1)));
+
+/** Ninguna parte de un modulo pisa un campo del suceso del ataque: si alguno lo hiciera, esto no compila. */
+export const ATTACK_PARTS_FIT_EVENT: AttackPartsFitEvent = true;
 
 /**
  * El combate de `attacker` contra `defender`, ya comprobado (attackProblem): los pasos de
@@ -85,7 +93,7 @@ export function resolveAttack(s: GameState, attacker: Unit, defender: Unit, dice
     killed,
     counter: attack.counter,
     attackerKilled: !isAlive(attacker),
-    ...partsInNameOrder(attack.parts),
+    ...canonicalParts(attack.parts),
     combat,
   };
 }

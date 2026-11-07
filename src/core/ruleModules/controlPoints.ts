@@ -2,10 +2,17 @@
  * [CAMBIO] Puntos de control (ajuste `controlPoints`, cuantos pone el generador de mapas; las reglas
  * en rules/control.ts): pagan al acabar cada ronda a quien los tiene sin disputa.
  */
-import type { GameEvent, GameState, RoundReport } from '../model';
+import type { GameEvent, GameState, Pos, RoundReport, TeamId } from '../model';
 import { controlRound } from '../rules/control';
 import { addForTeam, perTeam } from '../teams';
 import type { RuleModule } from './hooks';
+
+declare module '../model/events' {
+  interface ModuleEvents {
+    /** [CAMBIO] Fin de ronda: un punto de control, de quien queda (y si esta disputado: entonces no paga). La da rules/control.ts. */
+    controlPoint: { actor: null; at: Pos; owner: TeamId | null; contested: boolean };
+  }
+}
 
 /** Lo que han dado los puntos de control en una ronda (su parte del resumen, `control`). */
 export interface ControlReport {

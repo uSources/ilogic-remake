@@ -437,7 +437,14 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
   - algo que pasa en cada ataque es un `combatSteps` de su modulo, en su momento (`CombatStage`);
     lo de cualquier ataque esta en `COMBAT_RESOLUTION` (`actions/combat.ts`); lo que apunta en el
     ataque (y lleva su suceso) es su campo en `AttackRecordParts` (`model/combat.ts`, con `declare
-    module`, como el botin y la carga); quien contraataca, un `counterRules`;
+    module`, como el botin y la carga; no puede llamarse como un campo de `AttackEventBase`:
+    `AttackPartsFitEvent` no compila); quien contraataca, un `counterRules`;
+  - un suceso propio de un modulo (el mantenimiento, los puntos de control, el clima) es su tipo en
+    `ModuleEvents` (`model/events.ts`, con `declare module` desde el modulo). `GameEvent` es lo de
+    cualquier partida (`CoreGameEvent`) mas esos; la escena anima los de siempre por `ANIMATORS`
+    (exhaustiva) y los de los modulos por `MODULE_ANIMATORS` o nada, y `npm run play` y las
+    estadisticas tienen un caso por defecto. Los sucesos no se guardan ni se leen de fuera, asi que
+    no hay validacion que necesite la lista cerrada;
   - por donde se pasa, un `passRules` o `stopRules`; lo que corta un camino a mitad, un
     `pathInterruptions` (su nombre ampliando `InterruptionKinds`, `model/events.ts`, con `declare
     module`; si quiere animacion propia, en `INTERRUPTION_ANIMATIONS`, `scenes/game/playback.ts`, y si
