@@ -11,7 +11,15 @@ import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
 import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, isOnMap, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
-import { playMatch, replaySession, type ActedStep, type GameSession, type SessionStep } from '../../core/session';
+import {
+  isAutosaveMoment,
+  isPerson,
+  playMatch,
+  replaySession,
+  type ActedStep,
+  type GameSession,
+  type SessionStep,
+} from '../../core/session';
 import { squadById } from '../../core/squads';
 import { isHostile, shownTeamNumber } from '../../core/teams';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -267,7 +275,7 @@ export class TurnFlow {
   /** Empieza el turno de una persona que no es la que mira (varias personas en esta pantalla, por turnos). */
   private startsTurnOfAnotherPerson(step: ActedStep): boolean {
     const host = this.host;
-    return startsTurn(step) && step.team !== host.viewer && host.session.isPerson(step.team);
+    return startsTurn(step) && step.team !== host.viewer && isPerson(host.session, step.team);
   }
 
   /**
@@ -338,7 +346,7 @@ export class TurnFlow {
   /** Guardado automatico: al empezar el turno de una persona (ya con sus viajes dados), si el modo lo hace. */
   private autosave(step: ActedStep): void {
     const s = this.host.session.state;
-    if (settings.autosave && this.host.session.isAutosaveMoment(step) && writeSave(serialize(s))) this.host.markSaved();
+    if (settings.autosave && isAutosaveMoment(this.host.session, step) && writeSave(serialize(s))) this.host.markSaved();
   }
 
   /**

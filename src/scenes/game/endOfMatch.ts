@@ -58,7 +58,7 @@ const nextMission = (mission: MissionDef): MissionDef | undefined => MISSIONS[MI
 export type ScreenEnd =
   { outcome: EndOutcome; reason: Exclude<EndReason, DefeatReason> } | { outcome: EndOutcome; reason: DefeatReason; fallenBy: Side };
 
-/** El final de esta pantalla segun la sesion (GameSession.screenEnd), visto por `viewer`. */
+/** El final de esta pantalla segun la sesion (screenEnd, core/session), visto por `viewer`. */
 export function screenEndFor(s: GameState, end: PersonEnd, viewer: TeamId): ScreenEnd {
   if (end.kind === 'out') return { outcome: 'lost', reason: end.fall.reason, fallenBy: 'own' };
   const { result } = end;

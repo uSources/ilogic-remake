@@ -5,7 +5,7 @@
  */
 import { duel, playerTeam, teamIds } from '../../core/teams';
 import { screenControllers } from '../../core/controllers';
-import { GameSession, passiveController, type Controller } from '../../core/session';
+import { GameSession, isPerson, passiveController, type Controller } from '../../core/session';
 import { createMatch, loadGame } from '../../core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '../../core/match';
 import type { GameState, TeamId } from '../../core/model';
@@ -60,14 +60,14 @@ const newMatchConfig = (data: GameStartData): MatchConfig => (data.start === 'ne
 /**
  * El equipo que mira la pantalla al abrir la partida: la persona a la que le toca (con varias en la
  * misma pantalla, cada una mira en su turno: TurnFlow cambia de una a otra) o, si le toca a otro, la
- * primera persona (`GameSession.isPerson`, lo mismo que mira la escena despues). Una sin personas
+ * primera persona (`isPerson` de core/session, lo mismo que mira la escena despues). Una sin personas
  * (IA contra IA, de las herramientas) la juega desde el primer equipo la persona de esta pantalla
  * (`screenControllers`).
  */
 export function viewerOf(session: GameSession): TeamId {
   const { state } = session;
-  if (session.isPerson(state.turn)) return state.turn;
-  const person = teamIds(state).find((team) => session.isPerson(team));
+  if (isPerson(session, state.turn)) return state.turn;
+  const person = teamIds(state).find((team) => isPerson(session, team));
   if (person === undefined) throw new Error('La partida de la escena no tiene ninguna persona (ver sceneControllers)');
   return person;
 }

@@ -36,7 +36,7 @@ import {
 } from '@core/rules';
 import { serialize } from '@core/save';
 import { screenControllers } from '@core/controllers';
-import { GameSession, runMatch, type ActedStep } from '@core/session';
+import { GameSession, personStillPlays, runMatch, screenEnd, type ActedStep } from '@core/session';
 import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
@@ -111,10 +111,10 @@ export class TextMatch {
 
   /**
    * La partida sigue sola hasta que le toca a una persona (desde entonces se juega con ella), se acaba
-   * o ya no juega ninguna persona (se acaba para esta pantalla, como en el juego: GameSession.screenEnd).
+   * o ya no juega ninguna persona (se acaba para esta pantalla, como en el juego: screenEnd).
    */
   private advance(): void {
-    const step = runMatch(this.session, { until: () => !this.session.personStillPlays() });
+    const step = runMatch(this.session, { until: () => !personStillPlays(this.session) });
     if (step.kind === 'awaitingInput') this.me = step.team;
   }
 
@@ -129,7 +129,7 @@ export class TextMatch {
     try {
       const verb = command.toLowerCase();
       // Acabada para esta pantalla, solo se mira: nada de seguir jugando (ni de exportar mas jugadas).
-      if (PLAY_COMMANDS.has(verb) && this.session.screenEnd(this.me)) return `error: la partida ha acabado (${this.result()})`;
+      if (PLAY_COMMANDS.has(verb) && screenEnd(this.session, this.me)) return `error: la partida ha acabado (${this.result()})`;
       switch (verb) {
         case '':
         case '#':
@@ -358,7 +358,7 @@ export class TextMatch {
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
   private result(): string {
-    const end = this.session.screenEnd(this.me);
+    const end = screenEnd(this.session, this.me);
     if (!end) return 'sigue';
     if (end.kind === 'out') return `perdida (${DEFEAT_TEXT[end.fall.reason]}; los demas siguen sin personas)`;
     return `${OUTCOME_TEXT[outcomeFor(end.result, this.me)]} (${end.result.reason})`;

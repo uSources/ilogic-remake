@@ -13,6 +13,7 @@
  * | `session/replay` | repetir lo apuntado (`replaySession`) |
  * | `session/autopilotController` | `autopilotController`: cumple ya, en el turno, las ordenes permanentes |
  * | `session/gameSession` | `GameSession` y como llevarla: seguida (`runMatch`) o paso a paso (`playMatch`) |
+ * | `session/screen` | lo que mira la pantalla: quien es una persona (`isPerson`, `people`), cuando se acaba para ella (`screenEnd`) y cuando se guarda sola (`isAutosaveMoment`) |
  */
 export {
   humanController,
@@ -37,7 +38,7 @@ export {
   type ActedStep,
   type RunOptions,
   type SessionListener,
-  type PersonEnd,
   type SessionOptions,
   type SessionStep,
 } from './session/gameSession';
+export { isAutosaveMoment, isPerson, people, personStillPlays, screenEnd, type PersonEnd, type SeatedMatch } from './session/screen';

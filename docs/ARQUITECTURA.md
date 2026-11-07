@@ -638,7 +638,7 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   'ai'`, `screenControllers` de core/controllers, que usa tambien `npm run play`; en el laboratorio,
   ademas, `labControllers`), y todos los `...Host` lo tienen. La niebla, la amenaza, lo que se elige
   y lo que se ordena son del `viewer`. Si un equipo es de una persona solo lo dice
-  `session.isPerson` (el `person` de su controlador, tambien dentro de un `sequence`). La interfaz
+  `isPerson(session, equipo)` (session/screen.ts: el `person` de su controlador, tambien dentro de un `sequence`). La interfaz
   no sabe de numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`,
   `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
 - **Varias personas en la misma pantalla** (por turnos): cada una tiene su `humanController`; al
@@ -762,14 +762,16 @@ azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramienta
   y `takeOffTurn` si), asi lo de fuera de turno entra en su sitio y la repeticion sale igual; al
   acabarse el registro se para esperando, como la partida que se apunto. Si a quien se espera ya no
   juega (se ha rendido), la sesion deja de esperarle y pasa su turno.
-- Si es una persona lo dice `session.isPerson(team)` (`Controller.person`): la unica pregunta, que
+- Lo que mira la pantalla no es de la sesion (ella solo lleva los turnos): son preguntas puras de
+  `session/screen.ts` sobre la partida y sus controladores (`SeatedMatch`, que una `GameSession` ya
+  es). Si es una persona lo dice `isPerson(session, team)` (`Controller.person`): la unica pregunta, que
   usan la escena, el autoguardado y quien mira. Que un paso empieza un turno lo dice
   `startsTurn(paso)`.
 - El guardado automatico es al empezar el turno de una persona, si su modo guarda
-  (`isAutosaveMoment`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
+  (`isAutosaveMoment(session, paso)`): con los viajes de ese turno ya dados, al cargar nada se repite ni se pierde.
 - En la escena, si la partida sigue pero ya no juega ninguna persona (se han rendido o han caido, y
   quedan otros equipos), se acaba para esta pantalla: `checkEnd`, que se mira tras cada paso, la da
-  por perdida con su motivo (`GameSession.screenEnd`, y para la pantalla `screenEndFor`: un
+  por perdida con su motivo (`screenEnd(session, viewer)`, y para la pantalla `screenEndFor`: un
   `ScreenEnd`, que solo lleva de quien fue la caida, `fallenBy`, si la decidio una), la cierra y
   borra su guardado. Una rendicion vuelve a escribir el guardado que hubiera, y la escena avisa de
   cada equipo que cae ('teamDefeated': «El equipo N queda fuera»). El final se lee desde quien mira:
@@ -780,7 +782,7 @@ azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramienta
   apunta hasta que caida ha visto (`TurnFlow.seenFalls`: al dejar de mirar y tras ver el aviso de
   una), y al volver a mirar se le avisa de las que no vio (`tellFallsSince`, con `fallsNoticeFor`:
   «El equipo N queda fuera» o, si son varias, `teamsOut`). Se acaba para la pantalla lo dice la
-  sesion (`GameSession.screenEnd`, que da un `PersonEnd`; `people`, `personStillPlays`), asi la
+  pantalla (`screenEnd`, que da un `PersonEnd`; `people`, `personStillPlays`, session/screen.ts), asi la
   partida por texto acaba igual (K4): despues ya no deja jugar, solo mirar. Mientras juegan los
   demas no hay menu, pero Esc o el boton del menu (que sigue a `UIState.watching`, lo que dice la
   escena) dejan salir al menu principal (`quitWhileWatching`, dos pulsaciones).

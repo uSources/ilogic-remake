@@ -1,7 +1,8 @@
 /**
  * Una partida en juego (`GameSession`): la partida, quien juega cada equipo (`Controller`), el
  * registro de lo que se ha hecho (`log`) y los avisos de cada accion a quien escucha (`subscribe`:
- * la pantalla, la huella, el autoguardado). La partida sabe de quien es el turno (`GameState.turn`);
+ * la pantalla, la huella, el autoguardado). Lo que mira la pantalla (quien es una persona, cuando se
+ * acaba para ella, cuando se guarda) son preguntas aparte, en screen.ts. La partida sabe de quien es el turno (`GameState.turn`);
  * la sesion se lo pide a su controlador, empieza y acaba los turnos ('startTurn', 'endTurn') y para
  * cuando alguien de fuera tiene que decidir o cuando la partida se ha decidido.
  *
@@ -9,14 +10,11 @@
  * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
  */
 import { dispatch, isAnyTime } from '../actions/dispatch';
-import { sessionOnlyProblem, startsTurn } from '../actions/turn';
-import { fallOf } from '../rules/falls';
+import { sessionOnlyProblem } from '../actions/turn';
 import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
-import { gameModeOf } from '../modes';
-import { teamIds } from '../teams';
 import { playerView, type PlayerView } from '../playerView';
-import type { ActionDispatcher, ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamFall, TeamId } from '../model';
+import type { ActionDispatcher, ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../model';
 import type { Controller, TurnPlan, TurnStep } from './controller';
 import { isOffTurnAction, type LoggedAction } from './log';
 
@@ -42,13 +40,6 @@ interface TurnInPlay {
   plan: TurnPlan;
   reply: ActionResult | undefined;
 }
-
-/**
- * Como se acaba la partida para la persona que mira (GameSession.screenEnd): decidida, o fuera (ya no
- * juega ninguna persona) con su caida. (El final que se enseña, visto por ella, es el ScreenEnd de la
- * escena.)
- */
-export type PersonEnd = { kind: 'decided'; result: Exclude<MatchResult, { status: 'playing' }> } | { kind: 'out'; fall: TeamFall };
 
 /** Lo que se le puede dar a una sesion ademas de sus controladores. */
 export interface SessionOptions {
@@ -86,44 +77,6 @@ export class GameSession {
   /** El equipo al que se espera para que decida (una persona en la pantalla, un jugador remoto), o null. */
   get awaitingInput(): TeamId | null {
     return this.awaiting;
-  }
-
-  /** El equipo lo juega una persona en esta pantalla (la sesion la espera en su turno). */
-  isPerson(team: TeamId): boolean {
-    return this.controllerOf(team).person === true;
-  }
-
-  /** Los equipos que juegan personas en esta pantalla. */
-  people(): TeamId[] {
-    return teamIds(this.state).filter((team) => this.isPerson(team));
-  }
-
-  /** Queda alguna persona de esta pantalla que sigue jugando. */
-  personStillPlays(): boolean {
-    return this.people().some((team) => takesTurn(this.state, team));
-  }
-
-  /**
-   * Si la partida se ha acabado para quien mira en esta pantalla (`viewer`, una persona), y como: se
-   * ha decidido (su resultado), o sigue pero ya no juega ninguna persona (todas han caido o se han
-   * rendido y quedan otros equipos: nadie la miraria) y `viewer` esta fuera, con su caida. Lo miran la
-   * escena y la partida por texto, asi acaban igual (K4). null: sigue.
-   */
-  screenEnd(viewer: TeamId): PersonEnd | null {
-    const result = this.result;
-    if (result.status !== 'playing') return { kind: 'decided', result };
-    if (this.personStillPlays()) return null;
-    const fall = fallOf(this.state, viewer);
-    if (!fall) throw new Error(`El equipo ${viewer} mira la partida sin ninguna persona en juego, pero no ha caido`);
-    return { kind: 'out', fall };
-  }
-
-  /**
-   * Es el momento del guardado automatico: acaba de empezar el turno de una persona (con lo que pasa
-   * solo al empezarlo ya hecho: asi, al cargar, nada se repite ni se pierde) y su modo lo marca.
-   */
-  isAutosaveMoment(step: ActedStep): boolean {
-    return gameModeOf(this.state).saves && startsTurn(step) && this.isPerson(step.team);
   }
 
   /** Quien juega ese equipo. */

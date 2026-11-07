@@ -25,7 +25,7 @@ export interface Controller {
   readonly name: ControllerName;
   /**
    * Lo decide una persona en esta pantalla (la sesion la espera; la escena mira desde ella, guarda al
-   * empezar su turno). Es la unica forma de preguntarlo: `GameSession.isPerson`.
+   * empezar su turno). Es la unica forma de preguntarlo: `isPerson` (session/screen.ts).
    */
   readonly person?: true;
   /**
