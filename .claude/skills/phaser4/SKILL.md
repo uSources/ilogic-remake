@@ -74,6 +74,10 @@ guardian de Tab va en `window` en fase de burbuja (`src/controls/browserKeys.ts`
 
 - Nunca `preventDefault()` de una tecla del juego en fase de captura ni en `document` antes que
   Phaser; un campo de texto que corte la propagacion tiene que ocuparse el de sus teclas.
+- Phaser reparte la misma pulsacion varias veces: con cada evento nuevo vuelve a repartir la cola
+  entera del fotograma (solo se salta la repetida justo antes). Mayusculas+Tab en un fotograma da
+  el Tab tres veces. Quien escucha `keydown` en una escena lo envuelve en `onceEachKey`
+  (`src/controls/browserKeys.ts`).
 - Si aparece el fallo: mirar `keydown`/`keyup` en captura de `window` y en `document`, comparando
   `event.code`, `event.defaultPrevented` y el estado de la tecla; probar sin extensiones del
   navegador. Quitar o acotar el oyente que cancela la soltada y llamar **una vez**

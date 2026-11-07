@@ -998,7 +998,8 @@ Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `In
 abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
 
 - **Teclado**: `keyCommand(key)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(key, context)` (tabla
-  `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas.
+  `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas. Las escenas escuchan
+  con `onceEachKey` (`browserKeys.ts`): Phaser reparte varias veces las teclas de un mismo fotograma.
 - **Raton y dedos**: la escena traduce el `Phaser.Input.Pointer` a `PointerIn` (`pointerIn`) y llama a
   `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
 - **Seleccion** (`selection.ts`): como en los juegos de estrategia en tiempo real. Funciones puras que
