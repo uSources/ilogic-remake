@@ -107,7 +107,7 @@ async function evaluate(variant: Variant, parsed: BalanceArgs): Promise<Report> 
     policies,
     threads,
     parsed.number('first', FIRST_TEAM),
-    parsed.flag('swap') === true,
+    parsed.flag('swap') === true ? 1 : 0,
     parsed.number('size', DEFAULT_MAP_SIZE),
   );
   const terrain = parsed.text('terrain', 'Grass');

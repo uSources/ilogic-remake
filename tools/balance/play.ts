@@ -30,8 +30,8 @@ export interface PlayOptions {
   policies: readonly Policy[];
   /** Equipo que mueve primero en cada ronda (si no, FIRST_TEAM). */
   firstTeam?: TeamId;
-  /** Intercambiar las salidas en el mapa generado (para ver si el mapa favorece a alguien). */
-  swapSides?: boolean;
+  /** Girar las salidas del mapa generado tantos puestos (rotateStarts; para ver si el mapa favorece a alguien). */
+  rotateStarts?: number;
   /** Lado del mapa (si no, el de una escaramuza del juego: DEFAULT_MAP_SIZE). */
   size?: number;
   /** Reglas de la partida. */
@@ -182,7 +182,7 @@ function balanceMatch(options: PlayOptions, mapRng: Rng): GameState {
     teams: options.policies.map(() => ({ controller: 'ai' })),
     firstTeam: options.firstTeam ?? FIRST_TEAM,
   });
-  return buildMatch(options.swapSides ? { ...config, swapStarts: true } : config, { content: options.content, mapRng });
+  return buildMatch({ ...config, rotateStarts: options.rotateStarts }, { content: options.content, mapRng });
 }
 
 /** Lo que se apunta de una partida mientras se juega: muestras de cada dia, lo de cada tipo de unidad y cuantos sucesos. */

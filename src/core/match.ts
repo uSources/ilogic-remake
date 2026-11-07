@@ -38,10 +38,11 @@ export interface SkirmishConfig {
   /** El equipo que juega primero cada ronda (si no, el primero de la lista). */
   firstTeam?: TeamId;
   /**
-   * Con dos equipos, cada uno empieza donde le tocaba al otro (sus unidades y sus edificios): para
-   * medir si el mapa favorece a un lado (la herramienta de equilibrio). La revancha no lo repite.
+   * Cada equipo empieza donde le tocaba al que va `rotateStarts` puestos detras (sus unidades y sus
+   * edificios; con dos equipos y 1, se cambian): para medir si el mapa favorece a alguien (la
+   * herramienta de equilibrio). La revancha no lo repite.
    */
-  swapStarts?: true;
+  rotateStarts?: number;
 }
 
 /**
@@ -121,19 +122,21 @@ function skirmish(config: SkirmishConfig, { content, mapRng, modes }: MatchSetup
     modes,
   });
   s.setup = { ...map };
-  if (config.swapStarts) swapStarts(s);
+  if (config.rotateStarts) rotateStarts(s, config.rotateStarts);
   appointGenerals(s, config.teams);
   return s;
 }
 
-/** Cada uno de los dos equipos se queda con las unidades y los edificios con los que empezaba el otro. */
-function swapStarts(s: GameState): void {
-  const [first, second, ...more] = teamIds(s);
-  if (first === undefined || second === undefined || more.length)
-    throw new Error(`Cambiar de sitio es para dos equipos (hay ${s.teams.length})`);
-  const other = (team: TeamId): TeamId => (team === first ? second : first);
-  for (const unit of s.units) unit.team = other(unit.team);
-  for (const building of s.buildings) if (building.owner !== null) building.owner = other(building.owner);
+/**
+ * Cada equipo se queda con las unidades y los edificios con los que empezaba el que va `steps`
+ * puestos detras (el ultimo, con los del primero si da la vuelta): lo del equipo t pasa al t + steps.
+ */
+function rotateStarts(s: GameState, steps: number): void {
+  const teams = teamIds(s);
+  if (!Number.isInteger(steps) || steps < 0) throw new Error(`Girar las salidas va de puesto en puesto: ${steps}`);
+  const next = (team: TeamId): TeamId => teams[(teams.indexOf(team) + steps) % teams.length]!;
+  for (const unit of s.units) unit.team = next(unit.team);
+  for (const building of s.buildings) if (building.owner !== null) building.owner = next(building.owner);
 }
 
 function mission(config: MissionConfig, { content, modes }: MatchSetupContext): GameState {

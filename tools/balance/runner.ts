@@ -35,14 +35,15 @@ export async function runGames(
   policies: readonly Policy[],
   threads: number,
   firstTeam: TeamId,
-  swapSides = false,
+  /** Cuantos puestos giran las salidas (0: como salen del mapa). */
+  rotateStarts = 0,
   size = DEFAULT_MAP_SIZE,
 ): Promise<GameRecord[]> {
   const chunks: number[][] = Array.from({ length: threads }, () => []);
   seeds.forEach((s, i) => chunks[i % threads]!.push(s));
   const records: GameRecord[] = [];
   const started = Date.now();
-  const game = { maxDays, policies, firstTeam, swapSides, size };
+  const game = { maxDays, policies, firstTeam, rotateStarts, size };
   const progress = () => {
     if (process.stderr.isTTY || records.length % 25 === 0 || records.length === seeds.length)
       process.stderr.write(`\r  ${records.length}/${seeds.length} partidas (${((Date.now() - started) / 1000).toFixed(0)} s)   `);

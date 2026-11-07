@@ -5,6 +5,7 @@ import { DEFAULT_MAP_SIZE, MATCH_SETUPS, rematchOf, skirmishConfig } from '@core
 import { GAME_MODES } from '@core/modes';
 import { serialize } from '@core/save';
 import { duel } from '@core/teams';
+import type { GameState } from '@core/model';
 import { DEFAULT_OPTIONS, matchConfigFor } from '../src/setup';
 import { TextMatch } from '../tools/play/textMatch';
 import { defaultLab, labMatch } from '../src/lab';
@@ -47,22 +48,27 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     expect(s.teams.map((team) => team.general?.id ?? null)).toEqual(['Brisa', null]);
   });
 
-  it('con swapStarts cada equipo empieza donde le tocaba al otro (la herramienta de equilibrio)', () => {
+  const startOf = (s: GameState, team: number) => [
+    s.units.filter((unit) => unit.team === team).map((unit) => [unit.type, unit.x, unit.y]),
+    s.buildings.filter((building) => building.owner === team).map((building) => [building.x, building.y]),
+  ];
+
+  it('con rotateStarts 1 y dos equipos cada uno empieza donde le tocaba al otro (la herramienta de equilibrio)', () => {
     const config = skirmishConfig({ seed: 5, size: 16, teams: duel('ai', 'ai') });
     const normal = createMatch(config);
-    const swapped = createMatch({ ...config, swapStarts: true });
-    const startOf = (s: typeof normal, team: number) => [
-      s.units.filter((unit) => unit.team === team).map((unit) => [unit.type, unit.x, unit.y]),
-      s.buildings.filter((building) => building.owner === team).map((building) => [building.x, building.y]),
-    ];
+    const swapped = createMatch({ ...config, rotateStarts: 1 });
     expect(startOf(swapped, 0)).toEqual(startOf(normal, 1));
     expect(startOf(swapped, 1)).toEqual(startOf(normal, 0));
-    expect(() =>
-      createMatch({
-        ...skirmishConfig({ seed: 5, size: 16, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] }),
-        swapStarts: true,
-      }),
-    ).toThrow(/dos equipos/);
+  });
+
+  it('con mas equipos las salidas giran: lo del equipo t pasa al t + k (dando la vuelta)', () => {
+    const config = skirmishConfig({ seed: 5, size: 24, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] });
+    const normal = createMatch(config);
+    for (const steps of [1, 2]) {
+      const rotated = createMatch({ ...config, rotateStarts: steps });
+      for (const team of [0, 1, 2]) expect(startOf(rotated, (team + steps) % 3)).toEqual(startOf(normal, team));
+    }
+    expect(startOf(createMatch({ ...config, rotateStarts: 3 }), 0)).toEqual(startOf(normal, 0));
   });
 
   it('una partida que empezaria con un equipo ya caido (sin Base) es un fallo de su configuracion', () => {
