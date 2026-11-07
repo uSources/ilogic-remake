@@ -436,7 +436,7 @@ ataque), `tactics` (retirarse, atacar, capturar lo de debajo), `formation` (escu
 juntas) y `standingOrders` (cumplir las ordenes, `StandingOrder`, y su prevision).
 `src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `general` (que poder usa su general: `choosePower`), `tactics` (ir a capturar,
 avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades de cada unidad) y
-`production` (que fabrica). `ai.ts` tiene `aiTurn`, que los junta.
+`production` (que fabrica). `turn` tiene `aiTurn`, que los junta (es el `turn` del perfil del juego, `defaultProfile`); `ai.ts` es la fachada.
 
 ### La IA
 

@@ -195,7 +195,7 @@ Conclusiones:
 Para que haya algo por lo que pelear en el medio del mapa: 3 casillas por mapa al azar
 (`SETTINGS.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
 ronda son de quien tenga una unidad encima (y siguen suyas al irse) y cada una da
-`SETTINGS.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
+`SETTINGS.controlIncome` (1000) por ronda. La IA las busca al avanzar (`CONTROLPOINT` de ai.json, 6 casillas
 de ventaja).
 
 `npm run balance -- run --games 80` (IA contra IA, máximo 60 días):
