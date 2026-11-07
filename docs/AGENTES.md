@@ -36,7 +36,7 @@ Solo cuando el usuario lo pide (skill `automejora`). Medidas:
 ## Partida por texto (`npm run play`)
 
 ```bash
-npm run play --silent -- --seed 7 --size 20 -e "status; units 0; map"
+npm run play --silent -- --seed 7 --size 20 -e "status; units 1; map"
 npm run play --silent -- --seed 7 -e "unit 1; move 1 2 3; capture 1; end; status"
 npm run play --silent -- --mission tutorial -e "map; ai; ai; status"
 npm run play -- --seed 7          # interactivo (help)

@@ -95,7 +95,6 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 | `command` | Puntos de mando que ocupa (regla `commandPoints`): 1 la infanteria, hasta 5 lo mas grande |
 | `move` | Casillas por turno |
 | `vision` | Radio de vision |
-| `textLetter` | Letra del edificio en el mapa de la partida por texto (`npm run play`): una mayuscula distinta por edificio; la de otro equipo sale en minuscula |
 | `movement` | `foot` (a pie), `vehicle`, `air` o `amphibious`: por donde pasa y cuanto cuesta cada terreno |
 | `captures` | Puede capturar edificios |
 | `attack` | `null` si no ataca; si no, `range: [desde, hasta]`, `firesAfterMove` y `hitChance` |
@@ -148,6 +147,7 @@ ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
 | `heals` | Vida que cura a las unidades que repara |
 | `protection` | Multiplica el acierto contra quien esta encima: `0.7` = un 30 % menos de daño |
 | `vision` | Radio de vision |
+| `textLetter` | Letra del edificio en el mapa de la partida por texto (`npm run play`): una mayuscula distinta por edificio; la de otro equipo sale en minuscula, asi que ningun terreno puede tener esa letra (ni en minuscula) |
 
 Un edificio nuevo necesita ademas graficos (`public/assets/b/`) y, para que salga en los mapas al
 azar, su sitio en `mapgen.json` (ver "Mapas al azar").
@@ -167,7 +167,7 @@ numeros; uno nuevo necesita su arte (`terrainArt.ts`) y salir en algun tema (`th
 | `buildable`, `water` | Para el generador de mapas: se puede poner un edificio, cuenta como agua |
 | `movement` | Coste de entrar por tipo: `{ "foot": 1, "vehicle": 2, "air": 1, "amphibious": null }`; `null` = no se puede pasar |
 | `mapLetter` | Letra que lo nombra en los mapas en texto de las misiones en cualquier tema (agua `~`, carretera `=`...). Los que cambian con el tema (la hierba, el bosque) los da `themes.json` |
-| `textLetter` | Letra del terreno en el mapa de la partida por texto (`npm run play`), distinta en cada terreno (no depende del tema) |
+| `textLetter` | Letra del terreno en el mapa de la partida por texto (`npm run play`), distinta en cada terreno (no depende del tema) y de la de cada edificio |
 
 En el codigo se consulta con el tipo resuelto y por la partida: `movementOf(s, unit)` (el
 movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,

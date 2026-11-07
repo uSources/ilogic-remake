@@ -284,8 +284,9 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 - `match.ts`: `MatchConfig` son datos (`SkirmishConfig`, `MissionConfig`, `SandboxConfig`);
   `MATCH_SETUPS`, como se prepara cada modo; `buildMatch(config, { content, mapRng? })`, con su
   clima y la muestra del ejercito del primer dia. Todo lo de la partida va en la configuracion, nada
-  se cambia despues: los generales en `MatchTeam.general`, y empezar cada uno de los dos equipos en
-  el sitio del otro en `swapStarts` (la herramienta de equilibrio). `skirmishConfig` pone lo de
+  se cambia despues: los generales en `MatchTeam.general`, y empezar cada equipo en el sitio del que
+  va k puestos detras en `rotateStarts: k`, con cualquier numero de equipos (la herramienta de
+  equilibrio; con dos y 1, se cambian). `skirmishConfig` pone lo de
   siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto);
   `rematchOf(s)` da la revancha. La usan la pantalla, `npm run play`, las herramientas y los tests:
   una misma semilla da la misma partida en todos (K4).
