@@ -2,33 +2,17 @@
  * Quien decide lo que hace un equipo en su turno: un `Controller`. La sesion (gameSession.ts) le
  * pide su turno (`playTurn`) cuando le toca y va haciendo lo que da, paso a paso (`TurnStep`):
  * - 'propose': una accion que propone (la sesion la manda con `dispatch` y le devuelve el resultado);
- * - 'applied': una accion que ya ha mandado el (la IA y `autopilotController`, que deciden mirando
- *   cada resultado, por session/selfDispatched.ts; hasta la fase 6; la sesion la apunta igual);
  * - 'awaitInput': espera a quien decide fuera (una persona en la pantalla, un jugador en la red):
  *   la sesion se para hasta que le digan que ha terminado (`GameSession.finishInput`).
- * Cuando su turno acaba (el generador termina), la sesion manda 'endTurn'. Un controlador nuevo (la
- * IA que solo propone acciones, un cliente remoto, una repeticion) es una funcion que da un
- * `Controller`: la sesion y las reglas no cambian.
+ * Ningun controlador manda nada: todo lo que hace un equipo pasa por la sesion (la IA y las ordenes
+ * son planes que proponen, `ActionPlan`: `proposing`). Cuando su turno acaba (el generador termina),
+ * la sesion manda 'endTurn'. Un controlador nuevo (un cliente remoto, una repeticion) es una funcion
+ * que da un `Controller`: la sesion y las reglas no cambian.
  */
-import type { ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
-
-/** La marca de los pasos 'applied': solo existe en el tipo (ver AppliedStep). */
-declare const appliedMark: unique symbol;
-
-/**
- * Una accion que el controlador ya ha hecho, con sus sucesos (solo las que valian). Lleva una marca
- * que solo pone session/selfDispatched.ts (`appliedStep`): ahi se comprueba que es de su equipo y no
- * un limite de turno, asi que otro controlador no puede colar uno.
- */
-export interface AppliedStep {
-  kind: 'applied';
-  action: GameAction;
-  events: GameEvent[];
-  readonly [appliedMark]: true;
-}
+import type { ActionPlan, ActionResult, GameAction, GameState, TeamId } from '../model';
 
 /** Un paso del turno de un controlador. */
-export type TurnStep = { kind: 'propose'; action: GameAction } | AppliedStep | { kind: 'awaitInput' };
+export type TurnStep = { kind: 'propose'; action: GameAction } | { kind: 'awaitInput' };
 
 /** El turno de un equipo, paso a paso: recibe el resultado de cada accion que propone. */
 export type TurnPlan = Generator<TurnStep, void, ActionResult | undefined>;
@@ -52,6 +36,14 @@ export function* propose(action: GameAction): Generator<TurnStep, ActionResult, 
   const result = yield { kind: 'propose', action };
   if (!result) throw new Error('La sesion no ha devuelto el resultado de una accion propuesta');
   return result;
+}
+
+/** El plan de quien decide (la IA, las ordenes) como pasos de un controlador: cada accion que propone, con su resultado. */
+export function* proposing<Result>(plan: ActionPlan<Result>): Generator<TurnStep, Result, ActionResult | undefined> {
+  for (let step = plan.next(); ;) {
+    if (step.done) return step.value;
+    step = plan.next(yield* propose(step.value));
+  }
 }
 
 /** No hace nada: pasa el turno (para medir a la IA contra un rival quieto). */

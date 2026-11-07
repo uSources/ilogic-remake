@@ -13,7 +13,7 @@ import { canDamage, inAttackRange } from '../rules/weapons';
 import type { MoveRange } from '../rules/movement';
 import { mergeTargets } from '../rules/transport';
 import { canStillFire } from '../rules/unitTurn';
-import type { Building, GameEvent, GameState, Pos, Unit } from '../model';
+import type { ActionPlan, Building, GameState, Pos, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
 import { act, bestMoveToward, doMove, finish, repairsHere, stepsMap, strikeReach, visibleFoes, type PlayCtx } from './context';
 import { attackScore, unitValue } from './scoring';
@@ -23,11 +23,11 @@ import { attackScore, unitValue } from './scoring';
 // ---------------------------------------------------------------------------------------------
 
 /** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de AI.MAXMERGELIFE. */
-function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
+function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= play.profile.weights.MAXMERGELIFE);
   const nearest = minBy(mates, (mate) => manhattan(unit, mate));
   if (!nearest) return false;
-  return yield* act(s, play, { kind: 'merge', uid: unit.uid, into: nearest.uid });
+  return yield* act({ kind: 'merge', uid: unit.uid, into: nearest.uid });
 }
 
 /** El edificio propio libre que la repara al que menos pasos hay (null si no llega a ninguno). */
@@ -39,17 +39,17 @@ function nearestRepairBuilding(s: GameState, play: PlayCtx, unit: Unit): Buildin
 }
 
 /** Ir a curarse: unirse a otra igual, quedarse si ya esta en un edificio que la repara o ir al mas cercano. */
-export function* retreat(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
+export function* retreat(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   if (yield* mergeWithMate(s, play, unit, range)) return true;
   // [CAMBIO] Si ya esta en un edificio que la repara, se queda (antes se marchaba a otro).
   if (repairsHere(s, unit, unit)) {
-    yield* finish(s, play, unit);
+    yield* finish(s, unit);
     return true;
   }
   const repairShop = nearestRepairBuilding(s, play, unit);
   if (!repairShop) return false;
-  yield* doMove(s, play, unit, bestMoveToward(s, play, unit, repairShop, range));
-  yield* finish(s, play, unit);
+  yield* doMove(unit, bestMoveToward(s, play, unit, repairShop, range));
+  yield* finish(s, unit);
   return true;
 }
 
@@ -102,25 +102,19 @@ function bestShot(s: GameState, play: PlayCtx, unit: Unit, enemies: Unit[], orig
 }
 
 /** Nadie a tiro este turno: acercarse al enemigo visible mas cercano al que pueda danar. */
-function* chaseNearest(s: GameState, play: PlayCtx, unit: Unit, enemies: Unit[], range: MoveRange): Generator<GameEvent, boolean> {
+function* chaseNearest(s: GameState, play: PlayCtx, unit: Unit, enemies: Unit[], range: MoveRange): ActionPlan<boolean> {
   const prey = minBy(
     enemies.filter((enemy) => canDamage(s, unit, enemy)),
     (enemy) => manhattan(unit, enemy),
   );
   if (!prey) return false;
-  yield* doMove(s, play, unit, bestMoveToward(s, play, unit, prey, range));
-  yield* finish(s, play, unit);
+  yield* doMove(unit, bestMoveToward(s, play, unit, prey, range));
+  yield* finish(s, unit);
   return true;
 }
 
 /** Atacar al mejor objetivo a tiro o, si no hay, acercarse al mas cercano (ver AttackOpts). */
-export function* tryAttack(
-  s: GameState,
-  play: PlayCtx,
-  unit: Unit,
-  range: MoveRange,
-  options: AttackOpts = {},
-): Generator<GameEvent, boolean> {
+export function* tryAttack(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange, options: AttackOpts = {}): ActionPlan<boolean> {
   const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (unitTypeOf(s, unit).attack === null || !canStillFire(s, unit)) return false;
@@ -134,10 +128,10 @@ export function* tryAttack(
 
   const shot = bestShot(s, play, unit, enemies, fireOrigins(s, unit, stay ? null : range, allowedOrigin));
   if (shot) {
-    const interrupted = yield* doMove(s, play, unit, samePos(shot.from, unit) ? null : shot.from);
+    const interrupted = yield* doMove(unit, samePos(shot.from, unit) ? null : shot.from);
     // Desde la casilla nueva puede no verlo ya (el bosque solo se ve desde al lado): entonces espera.
-    const attacked = !interrupted && (yield* act(s, play, { kind: 'attack', uid: unit.uid, target: shot.target.uid }));
-    if (!attacked) yield* finish(s, play, unit);
+    const attacked = !interrupted && (yield* act({ kind: 'attack', uid: unit.uid, target: shot.target.uid }));
+    if (!attacked) yield* finish(s, unit);
     return true;
   }
   if (!chase) return false;
@@ -149,7 +143,7 @@ export function* tryAttack(
 // ---------------------------------------------------------------------------------------------
 
 /** Capturar el edificio de debajo y avisar a la interfaz. */
-export function* captureHere(s: GameState, play: PlayCtx, unit: Unit): Generator<GameEvent, boolean> {
+export function* captureHere(s: GameState, unit: Unit): ActionPlan<boolean> {
   if (!canCapture(s, unit)) return false;
-  return yield* act(s, play, { kind: 'capture', uid: unit.uid });
+  return yield* act({ kind: 'capture', uid: unit.uid });
 }

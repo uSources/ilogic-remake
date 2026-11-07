@@ -134,3 +134,12 @@ export type ActionRejection =
 
 /** Lo que ha pasado al mandar una accion: sus sucesos, o por que no valia. */
 export type ActionResult = { ok: true; events: GameEvent[] } | { ok: false; reason: ActionRejection };
+
+/**
+ * Lo que decide quien juega un equipo (la IA, las ordenes permanentes), paso a paso: propone cada
+ * accion (`yield`) y recibe lo que ha dicho la partida de ella; no la manda el. Quien lo cumple (la
+ * sesion, el paso de fin de turno, la prevision sobre una copia) manda cada accion por su via y le
+ * contesta con su resultado (`carryOut`, actions/plan.ts). Devuelve lo que diga el plan (si ha usado
+ * la unidad, que ordenes se han cumplido...).
+ */
+export type ActionPlan<Result = void> = Generator<GameAction, Result, ActionResult>;

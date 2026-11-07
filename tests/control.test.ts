@@ -10,7 +10,7 @@ import { placeControlPoints } from '@core/mapgen';
 import { controlRound, distanceMap, inControlZone, newUnit, roundReport } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import type { GameState } from '@core/model';
-import { blankState, giveTurn, unitTypeNamed, hqId, endRoundReport } from './helpers';
+import { blankState, giveTurn, unitTypeNamed, hqId, endRoundReport, playPlan } from './helpers';
 import { duel, teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -131,7 +131,7 @@ describe('puntos de control', () => {
     s.controlPoints = [{ x: 14, y: 12, owner: 0 }];
     const tank = newUnit(s, TANK, 1, { x: 18, y: 12 });
     const d0 = manhattan(tank, s.controlPoints[0]!);
-    Array.from(aiTurn(giveTurn(s, 1), 1, defaultAiProfile(defaultContent()), seededRng(1)));
+    playPlan(giveTurn(s, 1), 1, aiTurn(s, 1, defaultAiProfile(defaultContent()), seededRng(1)));
     expect(manhattan(tank, s.controlPoints[0]!)).toBeLessThan(d0);
   });
 

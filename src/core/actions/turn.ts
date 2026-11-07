@@ -10,6 +10,7 @@
  * quien juega el equipo.
  */
 import { assistTurn } from '../autopilot/standingOrders';
+import { carryOut } from './plan';
 import { gameModeOf, type TurnPhase } from '../modes';
 import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
@@ -31,7 +32,8 @@ function advanceTravels(s: GameState, team: TeamId, perform: ActionDispatcher): 
  * [CAMBIO] Ordenes permanentes: las unidades con orden que siguen sin usar la cumplen (core/autopilot,
  * no la IA), sea quien sea quien juegue el equipo.
  */
-const followStandingOrders = (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] => [...assistTurn(s, team, perform)];
+const followStandingOrders = (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] =>
+  carryOut(assistTurn(s, team), (action) => perform(s, team, action)).events;
 
 /** [CAMBIO] Las que se han quedado sin usar encima de un edificio que pueden capturar, siguen capturando. */
 function keepCapturing(s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] {

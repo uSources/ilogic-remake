@@ -1,7 +1,7 @@
 /**
  * Lo que comparten los pasos de un turno jugado por el nucleo (las ordenes permanentes) o por la IA
  * (PlayCtx) y las ayudas que usan todos: medir distancias
- * desde una unidad, la mejor casilla para acercarse a algo y mover avisando a la interfaz.
+ * desde una unidad, la mejor casilla para acercarse a algo y proponer lo que hace una unidad.
  */
 
 import { isHostile } from '../teams';
@@ -16,13 +16,14 @@ import type { PassRule } from '../ruleModules/hooks';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import { visibility } from '../rules/visibility';
-import type { ActionDispatcher, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import type { ActionPlan, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive, isOnMap } from '../util/predicates';
 import type { AutopilotProfile } from './profile';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
- * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan.
+ * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan. No manda nada: los
+ * pasos proponen sus acciones (`ActionPlan`) y las manda quien cumple el plan.
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).
  */
 export interface PlayCtx {
@@ -37,16 +38,11 @@ export interface PlayCtx {
   plan: Map<number, number>;
   /** Con que pesos y razones juega (el de las ordenes de la partida, o el de la IA que decide). */
   readonly profile: AutopilotProfile;
-  /**
-   * Por donde manda sus acciones: dispatch, o lo que le de quien la hace jugar (la sesion, que las
-   * apunta). Hasta que la IA solo proponga acciones (fase 6), las manda ella.
-   */
-  readonly dispatch: ActionDispatcher;
 }
 
-/** Contexto nuevo para un turno de `me` (sin grupo ni plan) que juega con `profile` y manda sus acciones por `dispatcher`. */
-export function playCtx(me: TeamId, profile: AutopilotProfile, dispatcher: ActionDispatcher): PlayCtx {
-  return { me, group: false, plan: new Map(), profile, dispatch: dispatcher };
+/** Contexto nuevo para un turno de `me` (sin grupo ni plan) que juega con `profile`. */
+export function playCtx(me: TeamId, profile: AutopilotProfile): PlayCtx {
+  return { me, group: false, plan: new Map(), profile };
 }
 
 /**
@@ -85,34 +81,26 @@ export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Po
   return stepToward(range, { score: (tile) => [stepsLeft(tile.pos)], allows: (pos) => !samePos(pos, dest) });
 }
 
-/**
- * Quien juega el turno (ordenes o IA) hace una accion de su equipo (`dispatch`) y avisa de sus
- * sucesos: los sucesos, o null si no valia.
- */
-function* actEvents(s: GameState, play: PlayCtx, action: GameAction): Generator<GameEvent, GameEvent[] | null> {
-  const result = play.dispatch(s, play.me, action);
-  if (!result.ok) return null;
-  yield* result.events;
-  return result.events;
+/** Propone una accion de su equipo: sus sucesos, o null si no valia. */
+function* actEvents(action: GameAction): ActionPlan<GameEvent[] | null> {
+  const result = yield action;
+  return result.ok ? result.events : null;
 }
 
-/**
- * Quien juega el turno (ordenes o IA) hace una accion de su equipo por la misma via que cualquiera
- * (`dispatch`) y avisa de sus sucesos. Devuelve si valia (si no, la partida no cambia).
- */
-export function* act(s: GameState, play: PlayCtx, action: GameAction): Generator<GameEvent, boolean> {
-  return (yield* actEvents(s, play, action)) !== null;
+/** Propone una accion de su equipo (la manda quien cumple el plan). Devuelve si valia (si no, la partida no cambia). */
+export function* act(action: GameAction): ActionPlan<boolean> {
+  return (yield* actEvents(action)) !== null;
 }
 
 /** Termina el turno de la unidad, si aun no lo ha hecho (esperar). */
-export function* finish(s: GameState, play: PlayCtx, unit: Unit): Generator<GameEvent> {
-  if (canAct(s, unit)) yield* act(s, play, { kind: 'wait', uid: unit.uid });
+export function* finish(s: GameState, unit: Unit): ActionPlan {
+  if (canAct(s, unit)) yield* act({ kind: 'wait', uid: unit.uid });
 }
 
-/** Mueve y avisa. Devuelve true si algo le ha cortado el camino (la unidad ya no puede hacer nada). */
-export function* doMove(s: GameState, play: PlayCtx, unit: Unit, dest: Pos | null): Generator<GameEvent, boolean> {
+/** Propone moverla a `dest`. Devuelve true si algo le ha cortado el camino (la unidad ya no puede hacer nada). */
+export function* doMove(unit: Unit, dest: Pos | null): ActionPlan<boolean> {
   if (!dest) return false;
-  const events = yield* actEvents(s, play, { kind: 'move', uid: unit.uid, to: posOf(dest) });
+  const events = yield* actEvents({ kind: 'move', uid: unit.uid, to: posOf(dest) });
   return events !== null && endsInterrupted(events);
 }
 

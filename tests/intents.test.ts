@@ -12,7 +12,7 @@ import { GameSession, humanController, passiveController } from '@core/session';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState, Pos } from '@core/model';
-import { blankState, unitTypeNamed, hqId } from './helpers';
+import { blankState, unitTypeNamed, hqId, playPlan } from './helpers';
 
 const HQ = hqId();
 
@@ -30,7 +30,7 @@ function world(): GameState {
 /** Juega el turno de ordenes de verdad (con los dados de la partida, otra suerte que la de la prevision). */
 function playOrders(s: GameState, diceSeed = 99): void {
   s.dice = diceSeed;
-  Array.from(assistTurn(s, 0, dispatch));
+  playPlan(s, 0, assistTurn(s, 0));
 }
 
 const last = (path: Pos[]): Pos | undefined => path[path.length - 1];
@@ -128,10 +128,13 @@ describe('previewStandingOrders', () => {
       return s;
     };
     const first = make();
-    Array.from(aiTurn(first, 1, defaultAiProfile(defaultContent()), seededRng(5)));
+    playPlan(first, 1, aiTurn(first, 1, defaultAiProfile(defaultContent()), seededRng(5)));
     const second = make();
-    const it = aiTurn(second, 1, defaultAiProfile(defaultContent()), seededRng(5));
-    for (let step = it.next(); !step.done; step = it.next()) previewStandingOrders(second, 0, dispatch);
+    const plan = aiTurn(second, 1, defaultAiProfile(defaultContent()), seededRng(5));
+    for (let step = plan.next(); !step.done;) {
+      previewStandingOrders(second, 0, dispatch);
+      step = plan.next(dispatch(second, 1, step.value));
+    }
     expect(serialize(second)).toBe(serialize(first));
   });
 });

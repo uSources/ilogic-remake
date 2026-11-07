@@ -6,6 +6,7 @@
  * lo que pasa solo al acabar y empezar cada turno, igual.
  */
 import { aiTurn, defaultAiProfile } from '@core/ai';
+import { carryOut } from '@core/actions';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
@@ -346,7 +347,13 @@ export class TextMatch {
 
   /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
   private playMyTurnWithAi(): string[] {
-    return describeAll(this.s, aiTurn(this.s, this.me, defaultAiProfile(this.s.content), this.rng, this.session.dispatcher), 'tu IA: ');
+    return describeAll(this.s, this.aiPlaysMyTurn(), 'tu IA: ');
+  }
+
+  /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
+  private aiPlaysMyTurn(): GameEvent[] {
+    const plan = aiTurn(this.s, this.me, defaultAiProfile(this.s.content), this.rng);
+    return carryOut(plan, (action) => this.session.act(this.me, action)).events;
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */

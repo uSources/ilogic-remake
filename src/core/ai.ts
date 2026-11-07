@@ -4,7 +4,7 @@
  * atacar, capturar, avanzar hacia edificios ajenos y, si nada de eso, moverse al azar.
  * [CAMBIO] Antes de mover reparte un plan de fuego concentrado (planFire) entre varias unidades.
  * Al final fabrica unidades en sus edificios.
- * Es un generador: devuelve un GameEvent tras cada accion para que la interfaz la anime.
+ * Es un plan (`ActionPlan`): propone cada accion y decide lo siguiente con lo que ha dicho la partida.
  *
  * Aqui esta el turno completo (aiTurn); las piezas, una por tema, en `ai/`:
  *
@@ -24,8 +24,7 @@
  */
 import { aiGeneral } from './aiGenerals';
 import { teamUnits } from './rules/queries';
-import { dispatch } from './actions/dispatch';
-import type { ActionDispatcher, GameEvent, GameState, Rng, TeamId } from './model';
+import type { ActionPlan, GameState, Rng, TeamId } from './model';
 import { playCtx, finish } from './autopilot/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';
@@ -36,17 +35,11 @@ export { defaultAiProfile, type AiProfile } from './ai/profile';
 
 /**
  * Turno completo de la IA que juega con `profile`. Deja todas sus unidades inactivas; el mantenimiento
- * va aparte (endRound). Manda sus acciones por `dispatcher` (dispatch, si no se dice: quien la hace
- * jugar puede apuntarlas).
+ * va aparte (endRound). Propone sus acciones (`ActionPlan`): las manda quien la hace jugar (su
+ * controlador, por la sesion) y le contesta con lo que ha dicho la partida.
  */
-export function* aiTurn(
-  s: GameState,
-  team: TeamId,
-  profile: AiProfile,
-  rng: Rng,
-  dispatcher: ActionDispatcher = dispatch,
-): Generator<GameEvent> {
-  const ai = playCtx(team, profile, dispatcher);
+export function* aiTurn(s: GameState, team: TeamId, profile: AiProfile, rng: Rng): ActionPlan {
+  const ai = playCtx(team, profile);
   // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ai);
   const { plan, order } = planFire(s, ai);
@@ -56,5 +49,5 @@ export function* aiTurn(
   ai.group = false;
   ai.plan = new Map();
   yield* produce(s, ai, rng);
-  for (const unit of teamUnits(s, ai.me)) yield* finish(s, ai, unit);
+  for (const unit of teamUnits(s, ai.me)) yield* finish(s, unit);
 }

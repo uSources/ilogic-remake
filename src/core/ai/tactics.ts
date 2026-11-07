@@ -13,7 +13,7 @@ import { isContested } from '../rules/control';
 import { reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, unitAt } from '../rules/queries';
 import { visibility } from '../rules/visibility';
-import type { Building, ControlPoint, GameEvent, GameState, Pos, Rng, Unit } from '../model';
+import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
 import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
 import { captureHere } from '../autopilot/tactics';
@@ -44,13 +44,13 @@ function captureGoal(s: GameState, ai: PlayCtx, unit: Unit): Pos | null {
 }
 
 /** Capturar lo de debajo o ir a capturar el edificio ajeno mas cercano (solo las que capturan). */
-export function* tryCapture(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
+export function* tryCapture(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   if (!unitTypeOf(s, unit).canCapture) return false;
-  if (yield* captureHere(s, ai, unit)) return true;
+  if (yield* captureHere(s, unit)) return true;
   const goal = captureGoal(s, ai, unit);
   if (!goal) return false;
-  yield* doMove(s, ai, unit, bestMoveToward(s, ai, unit, goal, range));
-  if (!(yield* captureHere(s, ai, unit))) yield* finish(s, ai, unit);
+  yield* doMove(unit, bestMoveToward(s, ai, unit, goal, range));
+  if (!(yield* captureHere(s, unit))) yield* finish(s, unit);
   return true;
 }
 
@@ -99,7 +99,7 @@ function stepsToGoalOrNextToIt(s: GameState, steps: (pos: Pos) => number, goal: 
  * jugador mas cercana o, si no hay, hacia su Base.
  * [CAMBIO] en el original este paso casi nunca se activaba y la IA paseaba al azar.
  */
-export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
+export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   const fromHere = stepsMap(s, ai, unit);
   // La casilla en la que ya esta no cuenta como sitio al que ir (ni como vecina del objetivo).
   const steps = (pos: Pos) => (samePos(pos, unit) ? Infinity : fromHere.at(pos));
@@ -113,8 +113,8 @@ export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange
   const wouldBlock = !unitTypeOf(s, unit).canCapture && !!buildingAt(s, goal);
   const destination = bestMoveToward(s, ai, unit, goal, range, wouldBlock);
   if (!destination) return false;
-  yield* doMove(s, ai, unit, destination);
-  yield* finish(s, ai, unit);
+  yield* doMove(unit, destination);
+  yield* finish(s, unit);
   return true;
 }
 
@@ -123,8 +123,8 @@ export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange
 // ---------------------------------------------------------------------------------------------
 
 /** [CAMBIO] eleccion uniforme (el original nunca elegia la ultima casilla). */
-export function* randomMove(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange, rng: Rng): Generator<GameEvent> {
+export function* randomMove(s: GameState, unit: Unit, range: MoveRange, rng: Rng): ActionPlan {
   const options = reachableTiles(range);
-  if (options.length) yield* doMove(s, ai, unit, options[Math.floor(rng() * options.length)]!);
-  yield* finish(s, ai, unit);
+  if (options.length) yield* doMove(unit, options[Math.floor(rng() * options.length)]!);
+  yield* finish(s, unit);
 }

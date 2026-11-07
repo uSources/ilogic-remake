@@ -5,6 +5,7 @@ import { settingsWith } from '@core/matchSettings';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import type {
+  ActionPlan,
   ActionRejection,
   Building,
   Dice,
@@ -20,7 +21,7 @@ import type {
 } from '@core/model';
 import { aiController } from '@core/controllers';
 import { GameSession } from '@core/session';
-import { dispatch, isTurnBoundary } from '@core/actions';
+import { carryOut, dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/sandbox';
 import { seededRng } from '@core/util/random';
@@ -185,4 +186,9 @@ export function resultFor(s: GameState, team: TeamId): 'playing' | 'won' | 'lost
   const result = matchResult(s);
   if (result.status !== 'decided') return result.status;
   return isWinner(result, team) ? 'won' : 'lost';
+}
+
+/** Cumple un plan del nucleo (la IA, las ordenes) mandando cada accion con `dispatch` por `team`: sus sucesos. */
+export function playPlan(s: GameState, team: TeamId, plan: ActionPlan<unknown>): GameEvent[] {
+  return carryOut(plan, (action) => dispatch(s, team, action)).events;
 }

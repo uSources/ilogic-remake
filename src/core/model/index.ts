@@ -35,7 +35,7 @@ export type {
   InterruptionKind,
   InterruptionKinds,
 } from './events';
-export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
+export type { ActionPlan, ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { DamageModelId, MatchSettings } from './settings';
 export type { TeamStats } from './stats';
 export type { GameSetup, GameState, MatchContent, MatchRuleset, SavedGameState } from './state';

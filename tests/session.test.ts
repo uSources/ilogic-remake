@@ -5,14 +5,14 @@ import { skirmishConfig } from '@core/match';
 import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles } from '@core/rules';
 import { serialize } from '@core/save';
 import { aiController, controllersFor } from '@core/controllers';
-import { selfDispatched } from '@core/session/selfDispatched';
-import type { ActionDispatcher, GameState, TeamId } from '@core/model';
+import type { ActionPlan, ActionResult } from '@core/model';
 import {
   autopilotController,
   GameSession,
   humanController,
   passiveController,
   propose,
+  proposing,
   remoteController,
   replaySession,
   LogCursor,
@@ -29,15 +29,8 @@ import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, hqId, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 
-/** Un controlador que manda el mismo una accion al empezar su turno (como la IA), con lo que hace `send`. */
-const selfDispatching = (send: (s: GameState, team: TeamId, dispatcher: ActionDispatcher) => unknown): Controller => ({
-  name: 'ai',
-  playTurn: (s, team) =>
-    selfDispatched(team, (dispatcher) => {
-      send(s, team, dispatcher);
-      return [][Symbol.iterator]();
-    }),
-});
+/** Un controlador que decide como la IA (con un plan que propone), con el plan que da `planFor`. */
+const planning = (planFor: () => ActionPlan): Controller => ({ name: 'ai', playTurn: () => proposing(planFor()) });
 
 /** Una sesion de la persona (equipo 0) contra la IA, con lo que se haga apuntado. */
 function personVsAi(s: ReturnType<typeof blankState>) {
@@ -252,11 +245,13 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.log.map((entry) => entry.action.kind)).toEqual([]);
   });
 
-  it('la IA que mandara un limite de turno recibe sessionOnly (no pasa su turno)', () => {
+  it('la IA que propusiera un limite de turno recibe sessionOnly (no pasa su turno)', () => {
     const s = blankState();
-    let reply: unknown = null;
+    let reply: ActionResult | null = null;
     const session = new GameSession(s, [
-      selfDispatching((state, team, dispatcher) => (reply = dispatcher(state, team, { kind: 'endTurn' }))),
+      planning(function* () {
+        reply = yield { kind: 'endTurn' };
+      }),
       passiveController(),
     ]);
     session.step();
@@ -386,17 +381,21 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect([soldier.x, soldier.y]).toEqual([5, 5]);
   });
 
-  it('quien manda el mismo sus acciones (la IA, el piloto) solo las manda de su equipo', () => {
+  it('lo que propone un plan es de su equipo: no puede mover las unidades de otro', () => {
     const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
-    let reply: unknown = null;
+    const enemy = newUnit(s, unitTypeNamed('Soldier'), 2, { x: 3, y: 3 });
+    let reply: ActionResult | null = null;
     const session = new GameSession(s, [
-      selfDispatching((state, _team, dispatcher) => (reply = dispatcher(state, 2, { kind: 'surrender' }))),
+      planning(function* () {
+        reply = yield { kind: 'wait', uid: enemy.uid };
+      }),
       passiveController(),
       passiveController(),
     ]);
     session.step();
-    expect(reply).toEqual({ ok: false, reason: 'notYourTurn' });
-    expect(s.teams[2]!.resigned).toBeFalsy();
+    expect(reply).toMatchObject({ ok: false });
+    expect(enemy.turnState).toBe('ready');
+    expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
   });
 
   it('el dispatcher de la sesion solo vale para su partida (no para simular en una copia)', () => {

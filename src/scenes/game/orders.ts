@@ -11,7 +11,7 @@ import { movementOf, canWalk, unitAt, unitById, canMoveNow, visibleFoeAt } from 
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { standingOrderBlock, type StandingOrderBlock } from '../../core/squads';
-import type { GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
+import type { ActionPlan, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t, type TextKey } from '../../settings';
@@ -297,18 +297,30 @@ export class Orders {
   /** Las unidades empiezan ya su orden (animado); luego esperan. */
   private async playStandingOrders(units: Unit[]): Promise<void> {
     const host = this.host;
-    const match = host.match;
     host.phase = 'busy';
     host.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
     for (const unit of standingOrderPlayOrder(host.state, units)) {
-      for (const event of startStandingOrder(host.state, unit.uid, host.viewer, host.dispatcher)) {
-        await host.play([event]);
-        if (match !== host.match || host.checkEnd()) return;
-      }
+      if (!(await this.playPlan(startStandingOrder(host.state, unit.uid, host.viewer)))) return;
       if (unitById(host.state, unit.uid)) host.act({ kind: 'wait', uid: unit.uid });
     }
     host.afterAction();
+  }
+
+  /**
+   * Cumple un plan del nucleo (lo que propone una orden, accion a accion) por la sesion y anima lo que
+   * pasa en cada una. false si la partida se ha cambiado o se ha acabado por medio.
+   */
+  private async playPlan(plan: ActionPlan<unknown>): Promise<boolean> {
+    const host = this.host;
+    const match = host.match;
+    for (let step = plan.next(); !step.done;) {
+      const result = host.dispatcher(host.state, host.viewer, step.value);
+      if (result.ok) await host.play(result.events);
+      if (match !== host.match || host.checkEnd()) return false;
+      step = plan.next(result);
+    }
+    return true;
   }
 
   /** [CAMBIO] Puntero del raton segun lo que haria el clic derecho en esa casilla. */

@@ -53,7 +53,8 @@ export type CompositeActionRegistry = { readonly [K in CompositeActionKind]: Com
 export type ActionRegistry = PlainActionRegistry & CompositeActionRegistry;
 
 /**
- * Por donde manda sus acciones quien juega un equipo: `dispatch`, o algo que la llama y ademas lo
- * apunta (la sesion: registro de acciones, avisos). La IA y las ordenes lo reciben (autopilot/context.ts, `PlayCtx.dispatch`).
+ * Por donde se manda una accion de un equipo: `dispatch`, o algo que la llama y ademas lo apunta (la
+ * sesion: registro de acciones, avisos). Lo reciben los pasos de turno y quien cumple un plan
+ * (`carryOut`); quien decide no lo tiene: propone (`ActionPlan`).
  */
 export type ActionDispatcher = (s: GameState, team: TeamId, action: GameAction) => ActionResult;

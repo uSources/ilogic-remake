@@ -8,7 +8,7 @@ import { isHostileOwner } from '../teams';
 import { unitTypeOf, isHq } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
 import { buildingAt, unitById } from '../rules/queries';
-import type { Building, GameEvent, GameState, Rng, Unit } from '../model';
+import type { ActionPlan, Building, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, finish, needsRepair, type PlayCtx } from '../autopilot/context';
 import { captureHere, retreat, tryAttack } from '../autopilot/tactics';
 import { advance, randomMove, tryCapture } from './tactics';
@@ -28,19 +28,19 @@ export interface UnitTurnContext {
 export interface UnitBehaviour {
   id: string;
   when(turn: UnitTurnContext): boolean;
-  run(turn: UnitTurnContext): Generator<GameEvent, boolean>;
+  run(turn: UnitTurnContext): ActionPlan<boolean>;
 }
 
 const isEnemyHq = (s: GameState, building: Building, ai: PlayCtx): boolean => isHq(s, building) && isHostileOwner(s, building.owner, ai.me);
 
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
-function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): Generator<GameEvent, boolean> {
+function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): ActionPlan<boolean> {
   const hq = buildingAt(s, unit)!;
   const destination = bestMoveToward(s, ai, unit, hq, range, true);
   if (!destination) return false;
-  yield* doMove(s, ai, unit, destination);
+  yield* doMove(unit, destination);
   const rangeAfterMove = moveRange(s, unit);
-  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove))) yield* finish(s, ai, unit);
+  if (!(yield* tryAttack(s, ai, unit, rangeAfterMove))) yield* finish(s, unit);
   return true;
 }
 
@@ -51,7 +51,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // Con captura por puntos, una unidad que ya esta sobre un edificio capturable lo empieza a capturar.
     id: 'finishCapture',
     when: ({ s, unit }) => buildingAt(s, unit) !== undefined,
-    run: ({ s, ai, unit }) => captureHere(s, ai, unit),
+    run: ({ s, unit }) => captureHere(s, unit),
   },
   {
     // [CAMBIO] Una unidad que no captura y esta encima de la Base enemiga se aparta para dejar sitio.
@@ -90,15 +90,15 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     // Si nada de lo anterior sirve, moverse al azar (siempre usa la unidad).
     id: 'randomMove',
     when: () => true,
-    *run({ s, ai, unit, range, rng }) {
-      yield* randomMove(s, ai, unit, range, rng);
+    *run({ s, unit, range, rng }) {
+      yield* randomMove(s, unit, range, rng);
       return true;
     },
   },
 ];
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa): el primero de `behaviours` (los del perfil) que la usa. */
-export function* unitTurn(s: GameState, ai: PlayCtx, behaviours: readonly UnitBehaviour[], uid: number, rng: Rng): Generator<GameEvent> {
+export function* unitTurn(s: GameState, ai: PlayCtx, behaviours: readonly UnitBehaviour[], uid: number, rng: Rng): ActionPlan {
   const unit = unitById(s, uid);
   if (!unit || !canAct(s, unit)) return;
   // El alcance no cambia mientras ningun comportamiento haya usado la unidad, asi que se calcula una vez.

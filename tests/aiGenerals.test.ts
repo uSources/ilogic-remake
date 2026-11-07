@@ -1,4 +1,3 @@
-import { dispatch } from '@core/actions';
 import { describe, expect, it } from 'vitest';
 import { aiGeneral, choosePower } from '@core/aiGenerals';
 import { bestAreaTarget, powerValue } from '@core/generalPowers';
@@ -9,7 +8,7 @@ import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';
 import { newUnit } from '@core/rules';
 import type { GameState } from '@core/model';
-import { blankState, giveTurn, unitTypeNamed } from './helpers';
+import { blankState, giveTurn, unitTypeNamed, playPlan } from './helpers';
 import { teamState } from '@core/teams';
 
 const AI = defaultContent().ai;
@@ -36,7 +35,7 @@ describe('la IA usa a su general', () => {
     expect(Math.abs(best.target.x - 14.5)).toBeLessThanOrEqual(1);
     const choice = choosePower(s, 1, AI)!;
     expect(choice.power).toBe('airstrike');
-    const evs = [...aiGeneral(giveTurn(s, 1), playCtx(1, defaultAiProfile(defaultContent()), dispatch))];
+    const evs = playPlan(giveTurn(s, 1), 1, aiGeneral(s, playCtx(1, defaultAiProfile(defaultContent()))));
     expect(evs).toHaveLength(1);
     const event = evs[0]!;
     expect(event.kind === 'power' ? event.hits.length : 0).toBe(2);
@@ -89,8 +88,8 @@ describe('la IA usa a su general', () => {
     const s = aiBrisa(6);
     newUnit(s, unitType('Tank'), 0, { x: 11, y: 11 });
     teamState(s, 1).general!.used = true;
-    expect([...aiGeneral(giveTurn(s, 1), playCtx(1, defaultAiProfile(defaultContent()), dispatch))]).toEqual([]);
+    expect(playPlan(giveTurn(s, 1), 1, aiGeneral(s, playCtx(1, defaultAiProfile(defaultContent()))))).toEqual([]);
     teamState(s, 1).general = null;
-    expect([...aiGeneral(giveTurn(s, 1), playCtx(1, defaultAiProfile(defaultContent()), dispatch))]).toEqual([]);
+    expect(playPlan(giveTurn(s, 1), 1, aiGeneral(s, playCtx(1, defaultAiProfile(defaultContent()))))).toEqual([]);
   });
 });

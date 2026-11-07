@@ -6,7 +6,7 @@ import { teamState } from '../teams';
 import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { buildingIncome, buyOptions, upkeepOf, type BuyOption } from '../rules/economy';
 import { teamUnits, unitAt } from '../rules/queries';
-import type { Building, GameEvent, GameState, Rng, TeamId, Unit } from '../model';
+import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from '../model';
 import { posOf } from '../geom';
 import { act, type PlayCtx } from '../autopilot/context';
 
@@ -91,7 +91,7 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
  * soldados de 1 punto. Entonces elige entre todo lo que cabe (no solo lo que puede pagar), empieza
  * por los edificios que fabrican lo grande y, si lo elegido aun no se paga, ahorra ese turno.
  */
-export function* produce(s: GameState, ai: PlayCtx, rng: Rng): Generator<GameEvent> {
+export function* produce(s: GameState, ai: PlayCtx, rng: Rng): ActionPlan {
   const me = ai.me;
   const limited = s.settings.commandPoints !== null;
   const order = productionOrder(s, rng, limited);
@@ -104,6 +104,6 @@ export function* produce(s: GameState, ai: PlayCtx, rng: Rng): Generator<GameEve
     const purchase = choosePurchase(options, teamState(s, me).funds + income, rng);
     if (purchase === 'save') break;
     if (!purchase) continue;
-    yield* act(s, ai, { kind: 'buy', at: posOf(building), unitType: purchase.unitType.id });
+    yield* act({ kind: 'buy', at: posOf(building), unitType: purchase.unitType.id });
   }
 }

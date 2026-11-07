@@ -223,9 +223,6 @@ export class GameSession {
         this.turnOf(team).reply = result;
         return result.ok ? this.record(team, step.action, result.events) : null;
       }
-      case 'applied':
-        // Ya hecha y comprobada por selfDispatched (lo dice su marca: AppliedStep): solo se apunta.
-        return this.record(team, step.action, step.events);
     }
   }
 

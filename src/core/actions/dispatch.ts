@@ -57,8 +57,8 @@ export const isValidAction = (s: GameState, team: TeamId, action: GameAction): b
 
 /**
  * `dispatcher`, pero solo para acciones del equipo `team` (las de otro, aunque valgan en cualquier
- * momento, no son de este turno: 'notYourTurn'). Lo que reciben los pasos de turno y quien manda el
- * mismo sus acciones (session/selfDispatched.ts): asi nada queda apuntado como de otro equipo.
+ * momento, no son de este turno: 'notYourTurn'). Lo que reciben los pasos de turno: asi nada queda
+ * apuntado como de otro equipo.
  */
 export const ownTeamOnly =
   (team: TeamId, dispatcher: ActionDispatcher): ActionDispatcher =>
