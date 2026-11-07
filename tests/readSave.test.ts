@@ -3,6 +3,7 @@ import { defaultContent } from '@core/content/default';
 import { loadGame } from '@core/defaultGames';
 import { readSave, serialize } from '@core/save';
 import { SAVE_VERSION } from '@core/saveVersion';
+import { cleanTeams, hasValidTeams } from '@core/savedParts';
 import { newUnit } from '@core/rules';
 import { formSquad } from '@core/squads/membership';
 import { blankState, unitTypeNamed } from './helpers';
@@ -85,5 +86,19 @@ describe('readSave: los contadores rotos se arreglan', () => {
 
   it('con Infinity el fichero no es JSON: no se lee', () => {
     expect(withCounters('Infinity').read).toEqual({ ok: false, error: 'notJson' });
+  });
+
+  it('los equipos: comprobar solo mira; limpiar arregla el general y las estadisticas rotas', () => {
+    const saved = JSON.parse(serialize(blankState())) as { teams: Record<string, unknown>[] };
+    saved.teams[0]!.general = { id: 'ya-no-existe' };
+    saved.teams[0]!.stats = 'rotas';
+    const before = structuredClone(saved.teams);
+    expect(hasValidTeams(saved.teams)).toBe(true);
+    expect(saved.teams).toEqual(before);
+    cleanTeams(defaultContent(), saved.teams);
+    expect(saved.teams[0]!.general).toBeNull();
+    expect(saved.teams[0]!.stats).not.toBe('rotas');
+    expect(hasValidTeams([saved.teams[0]])).toBe(false);
+    expect(hasValidTeams([saved.teams[0], { ...saved.teams[1], alliance: saved.teams[0]!.alliance }])).toBe(false);
   });
 });

@@ -24,7 +24,8 @@ import {
   hasValidUnits,
   isValidMap,
   isValidMission,
-  isValidTeamList,
+  hasValidTeams,
+  cleanTeams,
   isValidTurn,
   type SaveFrame,
   type SavedGame,
@@ -117,7 +118,7 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
   if (!isValidMap(map, content)) return fail('badMap');
   if (!isEntryId(content.themes, saved.theme)) return fail('badTheme');
   if (!isRandomState(saved.dice) || !isRandomState(saved.decisionSeed)) return fail('badDice');
-  if (!isValidTeamList(teams, content)) return fail('badTeams');
+  if (!hasValidTeams(teams)) return fail('badTeams');
   if (!isGameModeId(saved.mode)) return fail('badMode');
   const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };
   if (!isValidTurn(frame, saved)) return fail('badTurn');
@@ -131,6 +132,7 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
 
 /** Lo opcional que este roto se arregla o se quita, en una partida que ya ha pasado checkGame. */
 function cleanGame(saved: SavedGame, { lists, frame }: CheckedGame): SavedGameState {
+  cleanTeams(frame.content, lists.teams);
   cleanUnits(frame, lists.units);
   cleanBuildings(frame, lists.buildings);
   cleanCounters(saved);

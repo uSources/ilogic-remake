@@ -88,19 +88,25 @@ function cleanGeneral(content: GameContent, saved: unknown): GeneralState | null
 const isTeamFall = (fell: unknown): boolean =>
   fell === null || (isObject(fell) && isInt(fell.order, 1, MAX_COUNT) && isDefeatReason(fell.reason));
 
-/** Un equipo bien formado (su numero es su puesto); su general y sus estadisticas, si estan rotos, se arreglan. */
-function isValidTeam(content: GameContent, team: unknown, id: number): boolean {
+/** Un equipo bien formado en lo que tiene que tener (su numero es su puesto). Solo mira. */
+function isValidTeam(team: unknown, id: number): team is Saved & { alliance: number } {
   if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !isControllerKind(team.controller)) return false;
-  if (!isInt(team.funds, 0, MAX_SAVED_FUNDS) || typeof team.resigned !== 'boolean' || !isTeamFall(team.fell)) return false;
-  team.general = cleanGeneral(content, team.general);
-  team.stats = sanitizeTeamStats(team.stats);
-  return true;
+  return isInt(team.funds, 0, MAX_SAVED_FUNDS) && typeof team.resigned === 'boolean' && isTeamFall(team.fell);
 }
 
-/** Entre 2 y MAX_TEAMS equipos, todos bien formados, y al menos dos alianzas (si no, nadie es enemigo de nadie). */
-export function isValidTeamList(teams: unknown[], content: GameContent): boolean {
-  if (!isInt(teams.length, 2, MAX_TEAMS) || !teams.every((team, id) => isValidTeam(content, team, id))) return false;
-  return allianceCount(teams as { alliance: number }[]) >= 2;
+/** Entre 2 y MAX_TEAMS equipos, todos bien formados, y al menos dos alianzas (si no, nadie es enemigo de nadie). Solo mira. */
+export function hasValidTeams(teams: readonly unknown[]): boolean {
+  if (!isInt(teams.length, 2, MAX_TEAMS)) return false;
+  const checked = teams.filter(isValidTeam);
+  return checked.length === teams.length && allianceCount(checked) >= 2;
+}
+
+/** El general y las estadisticas de cada equipo, si estan rotos, se arreglan (despues de hasValidTeams). */
+export function cleanTeams(content: GameContent, teams: readonly unknown[]): void {
+  for (const team of objectsIn(teams)) {
+    team.general = cleanGeneral(content, team.general);
+    team.stats = sanitizeTeamStats(team.stats);
+  }
 }
 
 /** Una orden con destino bien formada (Unit.standingOrder). */
