@@ -1,4 +1,4 @@
-import type { StandingOrder } from './standingOrder';
+import type { TurnEndOrder } from './standingOrder';
 import type { TeamId } from './team';
 
 /**
@@ -12,7 +12,7 @@ export interface Squad {
   team: TeamId;
   name: string;
   /** Orden de toda la escuadra. */
-  standingOrder?: StandingOrder;
+  standingOrder?: TurnEndOrder;
   /** Tecla del grupo (1-9) en su equipo, como Ctrl+1 en los juegos de estrategia en tiempo real. */
   key?: number;
 }

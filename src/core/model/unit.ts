@@ -26,17 +26,12 @@ export interface Unit extends Pos {
   /** [CAMBIO] Dia en que recibio un ataque por ultima vez (flanqueo y sin cura bajo fuego). */
   hitDay?: number;
   /**
-   * [CAMBIO] Orden con destino propia (atacar, capturar o defender aqui): la cumple sola al terminar
-   * cada turno si sigue sin usar. En una escuadra manda sobre la orden de la escuadra (destacada).
+   * [CAMBIO] Orden con destino propia (atacar, capturar, defender aqui o ir alli): la cumple sola cada
+   * turno si sigue sin usar. En una escuadra manda sobre la orden de la escuadra (destacada).
    */
   standingOrder?: StandingOrder;
   /** [CAMBIO] Escuadra a la que pertenece (id de GameState.squads). */
   squad?: number;
-  /**
-   * [CAMBIO] Viaje de varios turnos: casilla a la que va avanzando sola al empezar cada turno (sin
-   * atacar ni capturar; para eso, `standingOrder`). Antes se guardaba como `order`.
-   */
-  travelTo?: Pos;
   /** uid del transporte que la lleva, o null. */
   carrier: number | null;
   /** uids de las unidades que lleva (una entrada por plaza, null = libre). */

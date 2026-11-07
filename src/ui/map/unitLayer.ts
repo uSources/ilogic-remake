@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
 import { rank, unhealable, canStillAct, isOnMap } from '../../core/rules';
-import { effectiveStandingOrder, isDetached } from '../../core/squads';
+import { turnEndOrderOf, isDetached } from '../../core/squads';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { TILE } from '../../layout';
 import { addLifeTextures, lifeKey } from '../lifeDigits';
@@ -150,7 +150,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
       noHeal: unit.life < 100 && unhealable(s, unit),
       cargo: hasCargo,
       // [CAMBIO] Ayudante: la orden que cumple (la suya o la de su escuadra) y si va destacada con otra.
-      order: effectiveStandingOrder(s, unit)?.kind ?? null,
+      order: turnEndOrderOf(s, unit)?.kind ?? null,
       detached: isDetached(s, unit),
     };
     const signature = markSignature(marks);

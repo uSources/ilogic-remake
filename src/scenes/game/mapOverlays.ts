@@ -5,7 +5,7 @@
  */
 import type { StandingOrderIntent } from '../../core/autopilot';
 import { capturePointsOf, captureProgress, inControlZone, isOnMap, unitById } from '../../core/rules';
-import { effectiveStandingOrder } from '../../core/squads';
+import { gotoDestination, turnEndOrderOf } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isAlliedOwner, isHostile } from '../../core/teams';
@@ -26,14 +26,17 @@ export function captureBars(s: GameState, viewer: TeamId, vis: Grid<boolean>): O
 }
 
 /**
- * Ordenes del equipo que mira: las de varios turnos (linea hasta el destino) y, [CAMBIO], las ordenes
+ * Ordenes del equipo que mira: las de ir alli (linea hasta el destino) y, [CAMBIO], las ordenes
  * con destino (bandera siempre; linea solo si `showsLine`: la unidad señalada y su escuadra).
  */
 export function orderMarks(s: GameState, viewer: TeamId, showsLine: (unit: Unit) => boolean): Overlay<'orders'> {
   const isOwn = (unit: Unit) => unit.team === viewer && isOnMap(unit);
-  const multiTurn = s.units.filter((unit) => isOwn(unit) && unit.travelTo).map((unit) => ({ from: posOf(unit), to: unit.travelTo! }));
+  const multiTurn = s.units.flatMap((unit) => {
+    const goal = isOwn(unit) ? gotoDestination(unit) : undefined;
+    return goal ? [{ from: posOf(unit), to: goal }] : [];
+  });
   const withTarget = s.units.flatMap((unit) => {
-    const order = isOwn(unit) ? effectiveStandingOrder(s, unit) : undefined;
+    const order = isOwn(unit) ? turnEndOrderOf(s, unit) : undefined;
     return order ? [{ from: posOf(unit), to: order.at, kind: order.kind, line: showsLine(unit) }] : [];
   });
   return [...multiTurn, ...withTarget];

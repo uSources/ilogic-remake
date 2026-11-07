@@ -7,7 +7,7 @@ import { unitTypeOf } from '../../../core/gameContent';
 import { posKey, posOf } from '../../../core/geom';
 import { attackTargets, unitById, unloadTiles } from '../../../core/rules';
 import { availableActions, type UnitMenuOption } from '../../../core/actions';
-import type { StandingOrderKind, Unit } from '../../../core/model';
+import type { TurnEndOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, nameOf, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
@@ -57,7 +57,7 @@ export function withBack(options: readonly UnitMenuOption[]): ActionKey[] {
 }
 
 /** La orden pide despues la casilla; lo ya movido este turno se mantiene. */
-function startOrder(host: PhaseHost, unit: Unit, kind: StandingOrderKind): void {
+function startOrder(host: PhaseHost, unit: Unit, kind: TurnEndOrderKind): void {
   host.orders.start(kind, [unit], true);
 }
 

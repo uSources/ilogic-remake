@@ -18,7 +18,7 @@
  */
 import { exactSquad, standingOrderChoices } from '../core/squads';
 import { canDoWithSelection, ORDER_OPTIONS, type SelectionOption } from '../core/actions';
-import type { GameState, Pos, StandingOrderKind, TeamId, Unit } from '../core/model';
+import type { GameState, Pos, TurnEndOrderKind, TeamId, Unit } from '../core/model';
 import type { IntentKind } from '../ui/touch';
 
 /** Puntero del raton que anuncia lo que hara el clic derecho (ver ui/cursors.ts). */
@@ -94,7 +94,7 @@ const canDo = (context: ActionCtx, option: SelectionOption): boolean =>
 const isWholeSquad = (context: ActionCtx) => exactSquad(context.s, context.units) !== null;
 
 /** Ordenes con destino que ofrece el menu en esa casilla (o todas las que se pueden dar, sin casilla). */
-function canOrder(context: ActionCtx, kind: StandingOrderKind): boolean {
+function canOrder(context: ActionCtx, kind: TurnEndOrderKind): boolean {
   const { s, viewer, units, at } = context;
   if (at && !standingOrderChoices(s, viewer, at, units, context.enemyHere).includes(kind)) return false;
   return canDo(context, ORDER_OPTIONS[kind]);

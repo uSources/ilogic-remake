@@ -1,13 +1,13 @@
 import { samePos } from '../../core/geom';
-import { effectiveStandingOrder, isDetached, squadInFormation } from '../../core/squads';
-import type { StandingOrderKind, GameState } from '../../core/model';
+import { turnEndOrderOf, isDetached, squadInFormation } from '../../core/squads';
+import type { TurnEndOrderKind, GameState } from '../../core/model';
 import type { SquadVM } from '../../hud/store';
 import { t } from '../../settings';
 
 /** Tus unidades: nombre de las ordenes y escuadras de la bandeja. */
 
 /** [CAMBIO] Nombre de una orden con destino ("Atacar aquí"...). */
-export const standingOrderLabel = (kind: StandingOrderKind): string =>
+export const standingOrderLabel = (kind: TurnEndOrderKind): string =>
   t(kind === 'capture' ? 'orderCapture' : kind === 'defend' ? 'orderDefend' : 'orderAttack');
 
 /**
@@ -19,11 +19,11 @@ export function squadsVM(s: GameState): SquadVM[] {
   return (s.squads ?? [])
     .map((listed) => {
       const units = s.units.filter((unit) => unit.squad === listed.id);
-      const first = units[0] && effectiveStandingOrder(s, units[0]);
+      const first = units[0] && turnEndOrderOf(s, units[0]);
       const same =
         !!first &&
         units.every((unit) => {
-          const order = effectiveStandingOrder(s, unit);
+          const order = turnEndOrderOf(s, unit);
           return order?.kind === first.kind && samePos(order.at, first.at);
         });
       const formation = squadInFormation(s, listed.id);

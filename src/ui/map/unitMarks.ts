@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
-import type { StandingOrderKind } from '../../core/model';
+import type { TurnEndOrderKind } from '../../core/model';
 import { TILE } from '../../layout';
 import { PAL, PAL_MAP } from '../palette';
 
@@ -12,7 +12,7 @@ import { PAL, PAL_MAP } from '../palette';
  */
 
 /** Letra (3x5 pixeles) de cada orden con destino: Capturar, Defender, Atacar. */
-const MISSION_GLYPH: Record<StandingOrderKind, [number, number][]> = {
+const MISSION_GLYPH: Record<TurnEndOrderKind, [number, number][]> = {
   capture: [
     [1, 0],
     [2, 0],
@@ -47,7 +47,7 @@ const MISSION_GLYPH: Record<StandingOrderKind, [number, number][]> = {
     [2, 4],
   ],
 };
-const MISSION_KEY: Record<StandingOrderKind, number> = { capture: 1, defend: 2, attack: 3 };
+const MISSION_KEY: Record<TurnEndOrderKind, number> = { capture: 1, defend: 2, attack: 3 };
 
 /** Marcas dibujadas: tamaño de la de carga y sin cura, de cada estrella, y paso entre estrellas. */
 const BADGE = 10;
@@ -64,7 +64,7 @@ export interface UnitMarkState {
   noHeal: boolean;
   cargo: boolean;
   /** Orden que cumple (la suya o la de su escuadra). */
-  order: StandingOrderKind | null;
+  order: TurnEndOrderKind | null;
   /** Va destacada de su escuadra. */
   detached: boolean;
 }
@@ -134,7 +134,7 @@ function drawDetachedStripe(graphics: Phaser.GameObjects.Graphics, besidePixelCa
 }
 
 /** Placa con la letra de la mision (C, D, A) en blanco sobre verde azulado. */
-function drawOrderPlaque(graphics: Phaser.GameObjects.Graphics, order: StandingOrderKind, cargo: boolean): void {
+function drawOrderPlaque(graphics: Phaser.GameObjects.Graphics, order: TurnEndOrderKind, cargo: boolean): void {
   const left = cargo ? 12 : 1;
   const y = 1;
   graphics.fillStyle(PAL.ink, 1);

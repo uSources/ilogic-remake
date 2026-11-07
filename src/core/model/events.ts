@@ -46,12 +46,12 @@ export interface Interruption {
 }
 
 /**
- * Por que acaba un viaje (suceso 'travel' con `to: null`): se le quita o se la mueve a mano
- * ('cancelled'), recibe una orden permanente ('ordered'), ya esta en el destino ('arrived'), llega
- * este turno y el ultimo trozo lo hace quien juega ('withinReach') o algo corta su camino (el nombre
- * del corte: 'ambush'...).
+ * Como se cumple una orden (suceso 'standingOrderDone'): la de pelear, cuando lo dice quien la
+ * cumple ('fulfilled'); la de ir alli, al estar en el destino ('arrived'), al llegar ya este turno
+ * (el ultimo trozo lo hace quien juega: 'withinReach') o cuando algo corta su camino (el nombre del
+ * corte: 'ambush'...). Quitarla, o moverla a mano con la de ir alli, es un 'standingOrder' sin orden.
  */
-export type TravelEnd = 'cancelled' | 'ordered' | 'arrived' | 'withinReach' | InterruptionKind;
+export type StandingOrderEnd = 'fulfilled' | 'arrived' | 'withinReach' | InterruptionKind;
 
 /**
  * Lo que le ha pasado a una escuadra. Cada escuadra que deja de existir tiene un solo suceso que lo
@@ -124,13 +124,10 @@ export type CoreGameEvent =
   | { kind: 'remove'; actor: TeamId; uid: number; unitType: string }
   /** Deshecho el ultimo movimiento: la unidad vuelve a `to`. */
   | { kind: 'undoMove'; actor: TeamId; uid: number; to: Pos }
-  /** Viaje de varios turnos hacia `to` (null: ya no viaja). */
-  /** Un viaje que empieza (`to`, su destino) o que acaba (`to: null`, y por que). */
-  | ({ kind: 'travel'; actor: TeamId; uid: number } & ({ to: Pos } | { to: null; end: TravelEnd }))
   /** Orden permanente dada a estas unidades (null: se la quitan). */
   | { kind: 'standingOrder'; actor: TeamId; uids: number[]; order: StandingOrder | null }
-  /** La unidad ha cumplido la orden que seguia. */
-  | { kind: 'standingOrderDone'; actor: TeamId; uid: number }
+  /** La unidad ha cumplido la orden que seguia, y como (`end`). */
+  | { kind: 'standingOrderDone'; actor: TeamId; uid: number; end: StandingOrderEnd }
   /** Una escuadra formada, cambiada o deshecha: como queda (`uids`, las suyas ahora; vacio si ya no existe). */
   | { kind: 'squad'; actor: TeamId | null; squad: number; change: SquadChange; uids: number[]; name: string; key?: number }
   | {

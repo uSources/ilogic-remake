@@ -315,7 +315,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     const s = blankState(PLAIN_SETTINGS, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
     s.turnStarted = false;
     const traveler = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 2 });
-    traveler.travelTo = { x: 2, y: 20 };
+    traveler.standingOrder = { kind: 'goto', at: { x: 2, y: 20 } };
     const start = cloneState(s);
     const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
     runMatch(session);

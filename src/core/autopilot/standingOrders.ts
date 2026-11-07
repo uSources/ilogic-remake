@@ -10,9 +10,20 @@ import { cloneState } from '../gameContent';
 import { manhattan, samePos, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
-import { effectiveStandingOrder } from '../squads/standingOrders';
+import { effectiveStandingOrder, standingOrderAt } from '../squads/standingOrders';
 import { carryOut } from '../actions/plan';
-import type { ActionDispatcher, ActionPlan, GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../model';
+import type {
+  ActionDispatcher,
+  ActionPlan,
+  GameAction,
+  GameEvent,
+  GameState,
+  Pos,
+  StandingOrderKind,
+  StandingOrderMoment,
+  TeamId,
+  Unit,
+} from '../model';
 import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
 import { hiddenFoes, visibleFoes } from '../rules/visibility';
 import { isCapturer } from '../util/predicates';
@@ -22,13 +33,13 @@ import { fireOnTheWay, guardZone, SHOOT_FROM_HERE } from './engagement';
 import { autopilotProfileOf } from './defaultProfile';
 
 /**
- * [CAMBIO] Ordenes de un equipo (al terminar su turno): las unidades con orden con destino
- * (Unit.standingOrder) que siguen sin usar la cumplen. No toca las demas unidades ni compra nada.
- * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
+ * [CAMBIO] Ordenes de un equipo en ese momento de su turno (`moment`): las unidades con una orden
+ * de ese momento (STANDING_ORDER_MOMENT) que siguen sin usar la cumplen. No toca las demas unidades
+ * ni compra nada. Devuelve los uid de las que han cumplido su orden (se quedan esperando otra).
  */
-export function* assistTurn(s: GameState, team: TeamId): ActionPlan<number[]> {
+export function* assistTurn(s: GameState, team: TeamId, moment: StandingOrderMoment): ActionPlan<number[]> {
   const play = playCtx(team, autopilotProfileOf(s.content));
-  const withStandingOrder = teamUnits(s, play.me).filter((unit) => effectiveStandingOrder(s, unit));
+  const withStandingOrder = teamUnits(s, play.me).filter((unit) => standingOrderAt(s, unit, moment));
   const fulfilled: number[] = [];
   for (const unit of standingOrderPlayOrder(s, withStandingOrder))
     if (yield* unitStandingOrderTurn(s, play, unit.uid)) fulfilled.push(unit.uid);
@@ -110,11 +121,21 @@ function* attackOrderTurn(turn: StandingOrderTurnContext): ActionPlan<boolean> {
   return !visibleFoes(s, play.me).some(inGuardZone(play, at));
 }
 
-/** Como juega una unidad cada tipo de orden. Un tipo de orden nuevo es una entrada aqui. */
+/**
+ * Ir alli: su paso de este turno ('gotoStep': hasta donde, y si con eso acaba, lo dice la accion).
+ * Despues la unidad sigue libre para quien juega.
+ */
+function* gotoOrderTurn({ unit }: StandingOrderTurnContext): ActionPlan<boolean> {
+  yield* act({ kind: 'gotoStep', uid: unit.uid });
+  return false;
+}
+
+/** Como juega una unidad cada tipo de orden (y cuando: STANDING_ORDER_MOMENT). Un tipo de orden nuevo es una entrada aqui. */
 const STANDING_ORDER_TURNS: Record<StandingOrderKind, StandingOrderTurn> = {
   capture: captureOrderTurn,
   defend: defendOrderTurn,
   attack: attackOrderTurn,
+  goto: gotoOrderTurn,
 };
 
 /**
@@ -168,7 +189,7 @@ export function plannedStandingOrders(s: GameState, team: TeamId, simulate: Acti
   const copy = withoutHiddenEnemies(s, team);
   copy.dice = PREVIEW_DICE_SEED;
   const planned: PlannedAction[] = [];
-  carryOut(assistTurn(copy, team), (action) => {
+  carryOut(assistTurn(copy, team, 'turnEnd'), (action) => {
     const result = simulate(copy, team, action);
     if (result.ok) planned.push({ action, events: result.events });
     return result;
@@ -182,7 +203,7 @@ export function plannedStandingOrders(s: GameState, team: TeamId, simulate: Acti
  */
 export function previewStandingOrders(s: GameState, team: TeamId, simulate: ActionDispatcher): Map<number, StandingOrderIntent> {
   const intents = new Map<number, StandingOrderIntent>();
-  const actors = s.units.filter((unit) => unit.team === team && effectiveStandingOrder(s, unit) && canAct(s, unit));
+  const actors = s.units.filter((unit) => unit.team === team && standingOrderAt(s, unit, 'turnEnd') && canAct(s, unit));
   if (!actors.length) return intents;
   for (const unit of actors) intents.set(unit.uid, { path: [] });
   for (const planned of plannedStandingOrders(s, team, simulate)) for (const event of planned.events) recordIntent(intents, event);

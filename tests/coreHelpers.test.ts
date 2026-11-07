@@ -109,7 +109,7 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 10 as 9 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 11 as 10 })],
     [
       'equipo caido sin caida apuntada',
       () => {

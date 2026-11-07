@@ -30,7 +30,7 @@ function world(): GameState {
 /** Juega el turno de ordenes de verdad (con los dados de la partida, otra suerte que la de la prevision). */
 function playOrders(s: GameState, diceSeed = 99): void {
   s.dice = diceSeed;
-  playPlan(s, 0, assistTurn(s, 0));
+  playPlan(s, 0, assistTurn(s, 0, 'turnEnd'));
 }
 
 const last = (path: Pos[]): Pos | undefined => path[path.length - 1];

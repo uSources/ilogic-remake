@@ -9,7 +9,7 @@ import { MAP_MAX, MAP_MIN, MAX_LIFE } from './data';
 import { isValidObjective, type SavedMap } from './objectives';
 import { isUnitTurnState } from './rules/unitTurn';
 import { SQUAD_KEYS } from './squads/naming';
-import { isStandingOrderKind } from './squads/standingOrders';
+import { isStandingOrderKind, isTurnEndOrderKind } from './squads/standingOrders';
 import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
 import { isDefeatReason } from './rules/falls';
@@ -103,9 +103,13 @@ export function isValidTeamList(teams: unknown[], content: GameContent): boolean
   return allianceCount(teams as { alliance: number }[]) >= 2;
 }
 
-/** Una orden con destino bien formada (Unit.standingOrder o Squad.standingOrder). */
+/** Una orden con destino bien formada (Unit.standingOrder). */
 const isStandingOrder = (board: GridBounds, value: unknown): boolean =>
   isObject(value) && isStandingOrderKind(value.kind) && isPosOn(board, value.at);
+
+/** La orden de una escuadra: una de pelear (la de ir alli es siempre de cada unidad). */
+const isSquadOrder = (board: GridBounds, value: unknown): boolean =>
+  isStandingOrder(board, value) && isObject(value) && isTurnEndOrderKind(value.kind);
 
 /** Quita el campo opcional `field` si esta pero no vale. */
 function dropIfInvalid(holder: Saved, field: string, isValid: (value: unknown) => boolean): void {
@@ -127,7 +131,6 @@ function cleanUnit(frame: SaveFrame, unit: Saved): void {
   dropIfInvalid(unit, 'hitDay', (day) => isInt(day, 0, MAX_COUNT));
   dropIfInvalid(unit, 'standingOrder', (order) => isStandingOrder(frame.board, order));
   dropIfInvalid(unit, 'squad', (squad) => isInt(squad, 1, MAX_COUNT));
-  dropIfInvalid(unit, 'travelTo', (pos) => isPosOn(frame.board, pos));
 }
 
 /** Cada unidad esta bien en lo que tiene que tener, y su uid no se repite. Solo mira. */
@@ -244,7 +247,7 @@ function cleanSquads(frame: SaveFrame, saved: SavedGame): void {
   /** La tecla de grupo de un equipo (cada equipo tiene sus nueve). */
   const teamKey = (squad: Saved, key: number) => `${squad.team as number}:${key}`;
   for (const squad of squads) {
-    dropIfInvalid(squad, 'standingOrder', (order) => isStandingOrder(frame.board, order));
+    dropIfInvalid(squad, 'standingOrder', (order) => isSquadOrder(frame.board, order));
     dropIfInvalid(squad, 'key', (key) => isInt(key, 1, SQUAD_KEYS) && !keysTaken.has(teamKey(squad, key)));
     if (isInt(squad.key, 1, SQUAD_KEYS)) keysTaken.add(teamKey(squad, squad.key));
   }
@@ -260,7 +263,7 @@ const isControlPoint = (frame: SaveFrame, point: unknown): boolean =>
 function isValidUndoableMove(frame: SaveFrame, move: unknown): boolean {
   if (!isObject(move) || !isUid(move.uid) || !isPosOn(frame.board, move.from)) return false;
   if (typeof move.revealed !== 'boolean') return false;
-  if (move.travelTo !== undefined && !isPosOn(frame.board, move.travelTo)) return false;
+  if (move.goto !== undefined && !isPosOn(frame.board, move.goto)) return false;
   return move.capture === null || isCaptureProgress(frame, move.capture);
 }
 

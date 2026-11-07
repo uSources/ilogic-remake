@@ -115,26 +115,30 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   estar listas con la ronda nueva). Se deshace siempre el ultimo (`lastUndoableMove`,
   `undoMoveProblem`), uno tras otro; si al moverse descubrio enemigos (`revealed`), no
   (`'revealed'`): con niebla seria mirar gratis. «Atras» del menu de la unidad y Ctrl+Z mandan
-  `undoMove` con la misma funcion (y avisan si el nucleo dice `'revealed'`). Si el movimiento corto
-  un viaje, deshacerlo lo devuelve (`UndoableMove.travelTo`, con su suceso 'travel').
-- Los viajes de varios turnos (`Unit.travelTo`, «Ir alli»; reglas en `rules/travel.ts`): 'travel'
-  pone el destino (una casilla que la unidad pueda pisar, a la que no llegue ya este turno
-  —`'withinReach'`: para eso se mueve— y hacia la que pueda dar ya un paso: `travelProblem`) o lo
-  quita (`'noTravel'` si no viajaba), y 'travelStep' da el paso de cada turno, hacia la casilla del
-  alcance que mas acerca (`travelStepOf`). Si ya esta en el destino o llega este turno, el viaje
-  acaba sin moverla (el ultimo trozo lo hace quien juega: puede seguir, atacar o capturar); una
-  camino cortado (`interruption`, la emboscada) tambien lo acaba, con la clase del corte como `end`. Moverla a mano ('move', 'load', 'merge', y 'attack' sin
-  haberse movido aun) lo acaba con `endTravel`; capturar, esperar o atacar despues del paso del
-  viaje, no. Un viaje y una orden permanente se quitan el uno al otro, y cada uno lo cuenta (el
-  viaje que acaba con `end: 'ordered'`; la orden, con `order: null`). Cada fin tiene su suceso
-  'travel' con `to: null` y por que (`end`: 'cancelled', 'ordered', 'arrived', 'withinReach' o la clase del corte,
-  'ambush'), y la escena avisa «llega» solo con 'withinReach'. El paso de cada turno lo da la
-  partida al empezar el turno de su equipo (`TURN_START_PHASES`); la escena manda 'travel' y, al
-  dar la orden, el primer 'travelStep'.
+  `undoMove` con la misma funcion (y avisan si el nucleo dice `'revealed'`). Si el movimiento acabo
+  una orden de ir alli, deshacerlo la devuelve (`UndoableMove.goto`, con su suceso 'standingOrder').
+- «Ir alli» (el viaje de varios turnos) es una orden permanente mas: `StandingOrder` de tipo 'goto'
+  (reglas del viaje en `rules/travel.ts`). Se da con 'giveStandingOrder' como las demas, a una
+  casilla que la unidad pueda pisar, a la que no llegue ya este turno —`'withinReach'`: para eso se
+  mueve— y hacia la que pueda dar ya un paso (`travelProblem`, en `STANDING_ORDER_BLOCKS`), y se
+  quita con 'cancelStandingOrder'. Es siempre de cada unidad (nunca de su escuadra: `isUnitOnly`) y
+  manda sobre la de su escuadra mientras dura. Cada orden dice cuando se cumple
+  (`STANDING_ORDER_MOMENT`): la de ir alli al empezar el turno (la fase 'gotoOrders' de
+  `TURN_START_PHASES`: su paso, 'gotoStep', hacia la casilla del alcance que mas acerca,
+  `travelStepOf`, y despues quien juega puede seguir con ella), las de pelear al acabarlo. Si ya
+  esta en el destino o llega este turno, la orden se cumple sin moverla (el ultimo trozo lo hace
+  quien juega: puede seguir, atacar o capturar); un camino cortado (`interruption`, la emboscada)
+  tambien la cumple: su suceso es 'standingOrderDone' con como acabo (`end`: 'arrived',
+  'withinReach' o la clase del corte), y la escena avisa «llega» solo con 'withinReach'. Moverla a
+  mano ('move', 'load', 'merge', y 'attack' sin haberse movido aun) la acaba (`endGotoByHand`, con
+  el suceso de quitarla); capturar, esperar o atacar despues del paso, no. El paso no se deshace
+  (seria un movimiento gratis); si un movimiento a mano la acabo, deshacerlo la devuelve
+  (`UndoableMove.goto`). La interfaz enseña la de ir alli como una flecha hasta el destino
+  (`gotoDestination`) y las de pelear con su bandera (`turnEndOrderOf`).
 - **Turnos**: la partida sabe de quien es el turno (`GameState.turn`, en el orden de la ronda
   `turnOrder`, que pone el modo; `turnStarted`). 'startTurn' lo empieza (`TURN_START_PHASES`, en
-  actions/turn.ts: los viajes avanzan) y 'endTurn' lo acaba (`TURN_END_PHASES`: las ordenes
-  permanentes del equipo se cumplen, `assistTurn`, y las unidades que se han quedado sobre un
+  actions/turn.ts: las ordenes de ir alli dan su paso, `assistTurn` de 'turnStart') y 'endTurn' lo
+  acaba (`TURN_END_PHASES`: las ordenes de pelear del equipo se cumplen, `assistTurn` de 'turnEnd', y las unidades que se han quedado sobre un
   edificio que pueden capturar siguen capturando, `autoCapturers` en rules/capture.ts) y lo pasa al
   siguiente que juega (`nextTurn`, rules/turnOrder.ts: los derrotados no); tras el ultimo del orden,
   el fin de ronda (`endRound`, con `roundPhasesOf`). Sus sucesos: 'turnStart' y 'turnEnd'. Cada paso
@@ -339,7 +343,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 | `distance` | pasos por tierra sin limite (`distanceMap`: 0 en el origen, Infinity donde no se llega) y lo que corta el paso al medir (`Blockers`: `noBlockers`, `unitsBlock` o `passBlockers`) |
 | `movement` | la regla de cada paso (`stepAllowed`), alcance (`moveRange`), caminos (`plannedPath`, `validPath`, `approachPath`) y el paso hacia algo (`stepToward` con un `Approach`) |
 | `traverse` | recorrer de verdad un camino (`traverse`, `moveAlong`): lo corta el primer `pathInterruptions` de los modulos que llega (la emboscada); el suceso de mover lleva el corte (`interruption: { kind, at }`) |
-| `travel` | viajes de varios turnos: a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaban (`endTravel`) |
+| `travel` | la orden de ir alli (varios turnos): a donde (`travelProblem`), el paso de cada turno (`travelStepOf`) y como acaba (`finishGoto`, `endGotoByHand`) |
 | `engagement` | un combate como pregunta (`Engagement`: atacante y defensor como `Fighter`, con casilla y vida): lo hipotetico sin fingir unidades |
 | `weapons` | lo que dice el arma de cada tipo: `inAttackRange`, `basePower`, `canDamage` |
 | `attackRecord` | un ataque recien empezado (`newAttackRecord`) y quien ha caido (`fallenIn`); la forma, `AttackRecord`, con las partes de los modulos (`AttackRecordParts`), en `model/combat.ts` |
@@ -375,7 +379,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   camino ya comprobado se recorre con `traverse` (`moveAlong` al mover): lo puede cortar una
   `pathInterruptions` de un modulo (la emboscada; si hay varias, la que corta antes) y entonces la
   unidad se para antes y pierde el turno; el suceso lleva el corte (`interruption: { kind, at }`),
-  el viaje acaba con su `kind` y la escena busca su animacion por `kind`; mover, unirse,
+  la orden de ir alli acaba con su `kind` y la escena busca su animacion por `kind`; mover, unirse,
   subir y el paso de un viaje usan lo mismo. Distancias sin limite: `distanceMap(s, desde,
   movimiento, blockers)`; acercarse a algo: `stepToward(alcance, approach)` (`overGroundTo`,
   `straightTo` o el `Approach` de la IA y de la formacion). La IA mide con `stepsMap`

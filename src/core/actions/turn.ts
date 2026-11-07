@@ -16,24 +16,30 @@ import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
 import { isMatchOver } from '../rules/victory';
 import { nextTurn } from '../rules/turnOrder';
-import { canMoveNow } from '../rules/unitTurn';
-import type { ActionDispatcher, ActionRegistry, ActionRejection, ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
+import type {
+  ActionDispatcher,
+  ActionRegistry,
+  ActionRejection,
+  ActionResult,
+  GameAction,
+  GameEvent,
+  GameState,
+  StandingOrderMoment,
+  TeamId,
+} from '../model';
 
 /** Los sucesos de una accion hecha (ninguno si no valia). */
 const eventsOf = (result: ActionResult): GameEvent[] => (result.ok ? result.events : []);
 
-/** [CAMBIO] Viajes de varios turnos: cada unidad de viaje da su paso de este turno (y despues puede seguir). */
-function advanceTravels(s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] {
-  const travelers = s.units.filter((unit) => unit.team === team && canMoveNow(unit) && unit.travelTo);
-  return travelers.flatMap((unit) => eventsOf(perform(s, team, { kind: 'travelStep', uid: unit.uid })));
-}
-
 /**
- * [CAMBIO] Ordenes permanentes: las unidades con orden que siguen sin usar la cumplen (core/autopilot,
- * no la IA), sea quien sea quien juegue el equipo.
+ * [CAMBIO] Ordenes permanentes: las unidades con una orden de ese momento del turno la cumplen
+ * (core/autopilot, no la IA), sea quien sea quien juegue el equipo: al empezarlo, las de ir alli dan
+ * su paso (y despues quien juega puede seguir con ellas); al acabarlo, las de pelear que siguen sin usar.
  */
-const followStandingOrders = (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] =>
-  carryOut(assistTurn(s, team), (action) => perform(s, team, action)).events;
+const followStandingOrders =
+  (moment: StandingOrderMoment) =>
+  (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] =>
+    carryOut(assistTurn(s, team, moment), (action) => perform(s, team, action)).events;
 
 /** [CAMBIO] Las que se han quedado sin usar encima de un edificio que pueden capturar, siguen capturando. */
 function keepCapturing(s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] {
@@ -41,11 +47,11 @@ function keepCapturing(s: GameState, team: TeamId, perform: ActionDispatcher): G
 }
 
 /** Lo que pasa solo al empezar el turno de un equipo, en orden. */
-export const TURN_START_PHASES: readonly TurnPhase[] = [{ id: 'travels', run: advanceTravels }];
+export const TURN_START_PHASES: readonly TurnPhase[] = [{ id: 'gotoOrders', run: followStandingOrders('turnStart') }];
 
 /** Lo que pasa solo al acabar el turno de un equipo, en orden (antes del fin de ronda, si acaba). */
 export const TURN_END_PHASES: readonly TurnPhase[] = [
-  { id: 'standingOrders', run: followStandingOrders },
+  { id: 'standingOrders', run: followStandingOrders('turnEnd') },
   // Despues de las ordenes: una que lleva a capturar deja a la unidad encima, ya usada.
   { id: 'captures', run: keepCapturing },
 ];

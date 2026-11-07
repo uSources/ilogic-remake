@@ -5,8 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { PLAIN_SETTINGS } from './plainSettings';
 import { moveRange, pathTo, validPath, visibility, newUnit } from '@core/rules';
 import { dispatch } from '@core/actions';
-import type { GameEvent, GameState, Pos } from '@core/model';
+import type { GameAction, GameEvent, GameState, Pos } from '@core/model';
 import { act, blankState, unitTypeNamed } from './helpers';
+
+/** Dar la orden de ir alli ('goto') a una unidad. */
+const goTo = (uid: number, at: Pos): GameAction => ({ kind: 'giveStandingOrder', uids: [uid], order: { kind: 'goto', at } });
 
 /** El camino del suceso de mover (o de unirse) que ha dejado una accion. */
 function pathOf(events: GameEvent[]): Pos[] & { ambush?: Pos } {
@@ -208,13 +211,13 @@ describe('movimiento: ordenes de varios turnos', () => {
     const goal = { x: 20, y: 2 };
     const step = stepToward(moveRange(s, tank), overGroundTo(s, TANK.movement, goal));
     expect(step).toEqual({ x: 7, y: 2 });
-    tank.travelTo = goal;
-    expect(deserialize(serialize(s), defaultContent())!.units[0]!.travelTo).toEqual(goal);
+    tank.standingOrder = { kind: 'goto', at: goal };
+    expect(deserialize(serialize(s), defaultContent())!.units[0]!.standingOrder).toEqual({ kind: 'goto', at: goal });
     // Si ya esta todo lo cerca que puede, quedarse: null.
     expect(stepToward(moveRange(s, tank), overGroundTo(s, TANK.movement, tank))).toBeNull();
     // Un destino al que no se puede llegar (agua para un tanque): el viaje no vale.
     s.map[25]![25] = 'Water';
-    expect(dispatch(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 25, y: 25 } })).toEqual({ ok: false, reason: 'unreachable' });
+    expect(dispatch(s, 0, goTo(tank.uid, { x: 25, y: 25 }))).toEqual({ ok: false, reason: 'unreachable' });
   });
 });
 

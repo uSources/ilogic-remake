@@ -181,18 +181,18 @@ export class UnitMoves {
   }
 
   /**
-   * Viaje de varios turnos (travelTo): la unidad avanza ya este turno y, en los siguientes, sola al
-   * empezar ('travelStep': hasta donde, y cuando acaba, lo dice el nucleo).
+   * Ir alli (la orden 'goto', varios turnos): la unidad avanza ya este turno y, en los siguientes,
+   * sola al empezar ('gotoStep': hasta donde, y cuando acaba, lo dice el nucleo).
    */
   async giveTravel(unit: Unit, goal: Pos): Promise<void> {
     const host = this.host;
-    if (!host.act({ kind: 'travel', uid: unit.uid, to: goal })) {
+    if (!host.act({ kind: 'giveStandingOrder', uids: [unit.uid], order: { kind: 'goto', at: goal } })) {
       showToast(t('travelUnreachable'));
       return host.toMap();
     }
     showToast(t('travelSet'));
     const ghost = unitKey(host.scene.textures, host.state, unit, host.viewer);
-    const moved = host.act({ kind: 'travelStep', uid: unit.uid });
+    const moved = host.act({ kind: 'gotoStep', uid: unit.uid });
     if (this.session) this.session.range = null;
     if (moved) await host.play(moved, ghost);
     host.toMap();

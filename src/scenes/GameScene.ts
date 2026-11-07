@@ -5,7 +5,7 @@
  * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
-import { effectiveStandingOrder } from '../core/squads';
+import { turnEndOrderOf } from '../core/squads';
 import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
@@ -766,7 +766,7 @@ export class GameScene extends Phaser.Scene {
 
   /** La orden que cumple la unidad (la suya o la de su escuadra). */
   private standingOrderOf(unit: Unit) {
-    return effectiveStandingOrder(this.s, unit);
+    return turnEndOrderOf(this.s, unit);
   }
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */

@@ -23,7 +23,7 @@ import {
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
 import type { Grid } from '../../core/util/grid';
-import { effectiveStandingOrder, isDetached, squadById } from '../../core/squads';
+import { turnEndOrderOf, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
 import { nameOf, t } from '../../settings';
 import { isFriendly, ownerSideOf, sideLetter, sideOf } from '../sides';
@@ -165,7 +165,7 @@ export function tileVM(
       abilities: abilitiesVM(s, shownType),
       cargo: shownType.cargoSlots > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
       ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(own && effectiveStandingOrder(s, shown) ? { order: standingOrderLabel(effectiveStandingOrder(s, shown)!.kind) } : {}),
+      ...(own && turnEndOrderOf(s, shown) ? { order: standingOrderLabel(turnEndOrderOf(s, shown)!.kind) } : {}),
       ...(own && isDetached(s, shown) ? { detached: true } : {}),
       ...(own && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
     };

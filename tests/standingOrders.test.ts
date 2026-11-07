@@ -17,7 +17,7 @@ import {
   squadUnits,
 } from '@core/squads';
 import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup } from '@core/squads/membership';
-import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrders';
+import { cancelStandingOrder, finishStandingOrder, giveStandingOrder, turnEndOrderOf } from '@core/squads/standingOrders';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
 import { act, blankState, unitTypeNamed, hqId, placedBuildings, playPlan } from './helpers';
@@ -43,7 +43,7 @@ function world(): GameState {
 function turns(s: GameState, rounds: number): number[] {
   const done: number[] = [];
   for (let i = 0; i < rounds; i++) {
-    done.push(...carryOut(assistTurn(s, 0), (action) => dispatch(s, 0, action)).value);
+    done.push(...carryOut(assistTurn(s, 0, 'turnEnd'), (action) => dispatch(s, 0, action)).value);
     for (const unit of s.units) Object.assign(unit, { turnState: 'ready' });
     s.day++;
   }
@@ -157,7 +157,7 @@ describe('ordenes con destino', () => {
     const used = newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
     giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 15 });
     Object.assign(used, { turnState: 'done' });
-    const evs = playPlan(s, 0, assistTurn(s, 0));
+    const evs = playPlan(s, 0, assistTurn(s, 0, 'turnEnd'));
     expect(evs).toEqual([]);
     expect(free).toMatchObject({ x: 3, y: 3, turnState: 'ready' });
     expect(used).toMatchObject({ x: 8, y: 8 });
@@ -457,11 +457,13 @@ describe('orden de la escuadra y unidades destacadas', () => {
     expect(firstSoldier.standingOrder).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
   });
 
-  it('llevada a mano a una casilla lejana (orden de varios turnos): eso manda mientras dura', () => {
+  it('llevada a mano a una casilla lejana (ir alli): eso manda mientras dura, y no es de pelear', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
     giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
-    firstSoldier.travelTo = { x: 0, y: 9 };
-    expect(effectiveStandingOrder(s, firstSoldier)).toBeUndefined();
+    giveStandingOrder(s, 0, [firstSoldier], 'goto', { x: 0, y: 9 });
+    expect(effectiveStandingOrder(s, firstSoldier)).toEqual({ kind: 'goto', at: { x: 0, y: 9 } });
+    expect(turnEndOrderOf(s, firstSoldier)).toBeUndefined();
+    expect(sameFormation(s, firstSoldier, secondSoldier)).toBe(false);
   });
 });
 

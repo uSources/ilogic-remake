@@ -11,7 +11,7 @@ import { movementOf, canWalk, unitAt, unitById, canMoveNow, visibleFoeAt } from 
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { standingOrderBlock, type StandingOrderBlock } from '../../core/squads';
-import type { ActionPlan, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
+import type { ActionPlan, GameEvent, GameState, Pos, TurnEndOrderKind, TeamId, Unit } from '../../core/model';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t, type TextKey } from '../../settings';
@@ -28,7 +28,7 @@ export type OrderFrom = 'move' | 'unitMenu' | 'map';
 
 /** Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
 export interface Ordering {
-  kind: StandingOrderKind;
+  kind: TurnEndOrderKind;
   uids: number[];
   /** Una unidad desde su menu: su movimiento de este turno, si lo hay, se mantiene. */
   single: boolean;
@@ -84,6 +84,10 @@ const BLOCK_TEXT: Record<StandingOrderBlock, TextKey> = {
   noBuilding: 'orderNoBuilding',
   noCapturer: 'orderNoCapturer',
   noFighter: 'orderNoFighter',
+  transported: 'travelUnreachable',
+  offBoard: 'travelUnreachable',
+  unreachable: 'travelUnreachable',
+  withinReach: 'travelArrives',
 };
 
 export class Orders {
@@ -161,7 +165,7 @@ export class Orders {
    * Empieza a dar una orden a estas unidades: ahora se elige la casilla en el mapa (fase 'target').
    * `single` = una unidad desde su menu (su movimiento de este turno, si lo hay, se mantiene).
    */
-  start(kind: StandingOrderKind, units: Unit[], single: boolean): void {
+  start(kind: TurnEndOrderKind, units: Unit[], single: boolean): void {
     const host = this.host;
     if (!units.length) return host.toMap();
     this.ordering = { kind, uids: uidsOf(units), single };
@@ -252,7 +256,7 @@ export class Orders {
   }
 
   /** Orden sin gastar el turno: se cumple al terminarlo. */
-  private queue(kind: StandingOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
+  private queue(kind: TurnEndOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
     const host = this.host;
     if (!host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind, at: posOf(at) } })) return;
     showToast(`${standingOrderLabel(kind)} · ${units.length}`);

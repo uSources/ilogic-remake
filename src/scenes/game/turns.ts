@@ -99,8 +99,10 @@ function addToSummary(summary: TurnSummary, s: GameState, team: TeamId, step: Ac
   if (step.events.some((event) => event.kind === 'newDay')) summary.report = roundReport(s, step.events);
   for (const event of step.events) {
     if (event.actor !== team) continue;
-    if (event.kind === 'standingOrderDone') summary.ordersDone.push(event.uid);
-    if (event.kind === 'travel' && event.to === null && event.end === 'withinReach') summary.arrived.push(event.uid);
+    if (event.kind !== 'standingOrderDone') continue;
+    // La de ir alli que ya llega: la acaba quien juega (se le avisa); las demas, cumplidas.
+    if (event.end === 'withinReach') summary.arrived.push(event.uid);
+    else if (event.end === 'fulfilled') summary.ordersDone.push(event.uid);
   }
 }
 

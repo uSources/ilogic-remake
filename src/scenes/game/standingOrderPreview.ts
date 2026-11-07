@@ -33,7 +33,6 @@ export class StandingOrderPreview {
         unit.cargo,
         unit.standingOrder,
         unit.squad,
-        unit.travelTo,
       ]),
       s.squads?.map((squad) => [squad.id, squad.standingOrder]),
       s.buildings.map((building) => [building.owner, building.capture]),
