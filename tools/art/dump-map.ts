@@ -9,10 +9,10 @@ import { duel } from '@core/teams';
 import { commandLine, usageOf } from '../cliArgs';
 
 const [seed = '1', size = '24', theme, ...extra] = commandLine(import.meta.url, {}).positionals;
+if (extra.length) throw new Error(`Sobra: ${extra.join(' ')} (son semilla, tamaño y tema)\n\n${usageOf(import.meta.url)}`);
 const numberOf = (name: string, text: string): number => {
   const value = Number(text);
-  if (!Number.isInteger(value) || extra.length)
-    throw new Error(`${name} tiene que ser un numero entero (pone "${text}")\n\n${usageOf(import.meta.url)}`);
+  if (!Number.isInteger(value)) throw new Error(`${name} tiene que ser un numero entero (pone "${text}")\n\n${usageOf(import.meta.url)}`);
   return value;
 };
 const s = createMatch(

@@ -22,11 +22,16 @@ describe('tipos del contenido resueltos', () => {
   });
 
   it('cada unidad tiene nombre en español e ingles y alguien la fabrica', () => {
-    for (const lang of ['es', 'en'] as const) {
-      settings.lang = lang;
-      for (const unitType of content.units.list) expect(nameOf(unitType), `${unitType.id} (${lang})`).not.toBe('');
+    const before = settings.lang;
+    try {
+      for (const lang of ['es', 'en'] as const) {
+        settings.lang = lang;
+        for (const unitType of content.units.list) expect(nameOf(unitType), `${unitType.id} (${lang})`).not.toBe('');
+      }
+    } finally {
+      // Sin aislar los ficheros (isolate: false), un idioma cambiado se quedaria para los demas tests.
+      settings.lang = before;
     }
-    settings.lang = 'es';
     for (const unitType of content.units.list) expect(unitType.builtAt.length, `${unitType.id} no se puede comprar`).toBeGreaterThan(0);
   });
 });

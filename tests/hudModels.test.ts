@@ -1,7 +1,7 @@
 import { entryOf } from '@core/content';
 import { changeSettings } from '@core/gameState';
 import type Phaser from 'phaser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
@@ -40,6 +40,10 @@ const textures = {
 const unitType = unitTypeNamed;
 
 beforeEach(() => {
+  settings.lang = 'es';
+});
+// Sin aislar los ficheros (isolate: false): el idioma vuelve a ser el de siempre para los demas.
+afterEach(() => {
   settings.lang = 'es';
 });
 

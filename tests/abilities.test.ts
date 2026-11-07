@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { changeSettings } from '@core/gameState';
 import { ABILITY_EFFECTS, auraFactor } from '@core/abilities';
 import { settingsWith } from '@core/matchSettings';
@@ -53,6 +53,10 @@ const minRangeOf = (unitType: UnitType) => unitType.attack?.minRange ?? 1;
 const TEST_SETTINGS = settingsWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
 
 beforeEach(() => {
+  settings.lang = 'es';
+});
+// Sin aislar los ficheros (isolate: false): el idioma vuelve a ser el de siempre para los demas.
+afterEach(() => {
   settings.lang = 'es';
 });
 
