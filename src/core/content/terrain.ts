@@ -1,5 +1,5 @@
 /** Terreno (terrain.json): validacion y su tipo resuelto (`TerrainType`). */
-import type { Checker, Scope } from './check';
+import { uniqueLetter, type Checker, type Scope } from './check';
 import type { MovementDef } from './movements';
 import type { MoveType, TerrainDef, Texts } from './types';
 
@@ -13,6 +13,7 @@ export function validateTerrain(terrain: readonly TerrainDef[], movements: reado
     'tiene que haber exactamente un terreno con "plain": true (el suelo llano)',
   );
   const letters = new Set<string>();
+  const textLetters = new Set<string>();
   for (const type of terrain) {
     const scope = check.scope(`terreno ${type?.id}`);
     scope.texts('name', type?.name);
@@ -20,6 +21,7 @@ export function validateTerrain(terrain: readonly TerrainDef[], movements: reado
     for (const field of ['hides', 'buildable', 'water'] as const) scope.bool(field, type?.[field]);
     if (type?.plain !== undefined) scope.bool('plain', type.plain);
     validateMovement(scope, type?.movement, movements);
+    uniqueLetter(scope, 'textLetter', type?.textLetter, textLetters);
     if (type?.mapLetter === undefined) continue;
     scope.expect(typeof type.mapLetter === 'string' && type.mapLetter.length === 1, 'mapLetter tiene que ser una sola letra');
     scope.expect(!letters.has(type.mapLetter), `la letra "${type.mapLetter}" ya es de otro terreno`);
@@ -64,6 +66,8 @@ export interface TerrainType {
   readonly moveCost: Readonly<Record<MoveType, number | null>>;
   /** Letra en los mapas en texto que no depende del tema (null si solo la da un tema). */
   readonly mapLetter: string | null;
+  /** Letra en el mapa de la partida por texto. */
+  readonly textLetter: string;
 }
 
 export function buildTerrainTypes(terrain: readonly TerrainDef[]): TerrainType[] {
@@ -77,5 +81,6 @@ export function buildTerrainTypes(terrain: readonly TerrainDef[]): TerrainType[]
     isPlain: !!definition.plain,
     moveCost: { ...definition.movement },
     mapLetter: definition.mapLetter ?? null,
+    textLetter: definition.textLetter,
   }));
 }

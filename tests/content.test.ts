@@ -145,6 +145,21 @@ describe('contenido (src/core/content/*.json)', () => {
     expect(errors.some((error) => error.startsWith('ai.json: killBonus'))).toBe(true);
   });
 
+  it('las letras de la partida por texto: una por terreno y por edificio, y la de un edificio en mayuscula', () => {
+    const files = clone();
+    files.terrain[1]!.textLetter = files.terrain[0]!.textLetter;
+    files.terrain[2]!.textLetter = 'ff';
+    files.buildings[1]!.textLetter = 'o';
+    files.buildings[2]!.textLetter = files.buildings[0]!.textLetter;
+    const errors = errsOf(files);
+    expect(errors).toContain(`terreno ${files.terrain[1]!.id}: textLetter: la letra "${files.terrain[0]!.textLetter}" ya es de otro`);
+    expect(errors).toContain(`terreno ${files.terrain[2]!.id}: textLetter tiene que ser una sola letra`);
+    expect(errors).toContain(
+      `edificio ${files.buildings[1]!.id}: textLetter tiene que ser una mayuscula (la de otro equipo sale en minuscula)`,
+    );
+    expect(errors).toContain(`edificio ${files.buildings[2]!.id}: textLetter: la letra "${files.buildings[0]!.textLetter}" ya es de otro`);
+  });
+
   it('temas y generador de mapas: nombran terrenos, unidades y edificios que existen', () => {
     const files = clone();
     files.themes[0]!.mapLetters.T = 'Jungle';

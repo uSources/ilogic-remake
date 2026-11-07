@@ -15,11 +15,17 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "protection", "hides", "buildable", "water", "movement"],
+        "required": ["id", "name", "protection", "hides", "buildable", "water", "movement", "textLetter"],
         "properties": {
           "id": {
             "type": "string",
             "description": "Nombre interno (fijo: lo guardan las partidas)."
+          },
+          "textLetter": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1,
+            "description": "Letra del terreno en el mapa de la partida por texto (npm run play), distinta en cada terreno."
           },
           "plain": {
             "type": "boolean",

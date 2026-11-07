@@ -37,27 +37,6 @@ import { aiController, screenControllers } from '@core/controllers';
 import { GameSession, personStillPlays, runMatch, screenEnd, type ActedStep } from '@core/session';
 import type { DefeatReason, GameAction, GameEvent, GameEventOf, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
-/** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
-const TERRAIN_CHAR: Readonly<Record<string, string>> = {
-  Grass: '.',
-  Flowers: ',',
-  Woods: 'f',
-  GrassCliff: '^',
-  Sand: ':',
-  Cactus: 'c',
-  SandCliff: 'M',
-  Snow: '_',
-  Frosty: 'o',
-  SnowWood: 't',
-  SnowCliff: '%',
-  Ice: 'i',
-  Water: '~',
-  SWater: '-',
-  DWater: '=',
-};
-/** Edificios: inicial (mayuscula = tuyo, minuscula = enemigo, * delante = neutral). */
-const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', Factory: 'F', Stronghold: 'S', Airport: 'A', Base: 'B' };
-
 export interface TextMatchOptions {
   seed?: number;
   /** Lado del mapa (si no, el de una partida nueva del juego: DEFAULT_MAP_SIZE). */
@@ -204,9 +183,9 @@ export class TextMatch {
       for (let x = 0; x < width; x++) {
         const unit = unitAt(s, { x, y });
         const building = buildingAt(s, { x, y });
-        let cell = ' ' + (TERRAIN_CHAR[terrainAt(s, { x, y }).id] ?? '?') + ' ';
+        let cell = ` ${terrainAt(s, { x, y }).textLetter} `;
         if (building) {
-          const char = BUILDING_CHAR[buildingTypeOf(s, building).id] ?? '?';
+          const char = buildingTypeOf(s, building).textLetter;
           cell = building.owner === null ? `*${char} ` : ` ${building.owner === this.me ? char : char.toLowerCase()} `;
         }
         if (unit && unit.carrier === null && (unit.team === this.me || vis.at({ x, y })))
@@ -490,14 +469,20 @@ function describe(s: GameState, event: GameEvent): string | null {
   return text ? text(s, event) : null;
 }
 
-const legend = (s: GameState): string => `+NN unidad tuya · -NN enemiga · ? no se ve
-Terreno: . hierba , flores f bosque ^ acantilado : arena c cactus M meseta _ nieve o muñeco t pinos % roca nevada i hielo ~ agua - poco profunda = profunda
-Edificios: C ciudad O petroleo F fabrica S fortaleza A aeropuerto B base (mayuscula tuyo, minuscula enemigo, * neutral)
-Edificios de tipo: ${s.content.buildings.list.map((building) => building.id).join(', ')}`;
+/** La leyenda del mapa: lo de las unidades y la letra de cada terreno y edificio (textLetter del contenido). */
+function legend(s: GameState): string {
+  const terrain = s.content.terrain.list.map((type) => `${type.textLetter} ${type.name.es.toLowerCase()}`).join(' ');
+  const buildings = s.content.buildings.list.map((type) => `${type.textLetter} ${type.name.es.toLowerCase()}`).join(' ');
+  return [
+    '+NN unidad tuya · -NN enemiga · ? no se ve',
+    `Terreno: ${terrain}`,
+    `Edificios: ${buildings} (mayuscula tuyo, minuscula de otro equipo, * delante neutral)`,
+  ].join('\n');
+}
 
 const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   map                      mapa en texto
-  units [0|1]              unidades (las enemigas solo si se ven)
+  units [equipo]           unidades, todas o las de un equipo (las enemigas solo si se ven)
   unit <id>                a donde puede ir y a quien puede atacar
   move <id> <x> <y>        mover
   attack <id> <x> <y>      atacar a la unidad de (x,y) desde donde esta (mover antes si hace falta)

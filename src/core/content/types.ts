@@ -82,6 +82,8 @@ export interface BuildingDef {
   /** Multiplicador de la probabilidad de acierto contra quien esta encima (menos = mas defensa). */
   protection: number;
   vision: number;
+  /** Letra en el mapa de la partida por texto (mayuscula; minuscula si es de otro equipo). */
+  textLetter: string;
   classicSprite?: Record<string, string>;
   notes?: string;
 }
@@ -99,6 +101,8 @@ export interface TerrainDef {
   movement: Record<MoveType, number | null>;
   /** Letra del terreno en los mapas en texto de las misiones si no depende del tema (themes.json, "mapLetters"). */
   mapLetter?: string;
+  /** Letra en el mapa de la partida por texto (npm run play), una por terreno. */
+  textLetter: string;
   /** El suelo llano: el de los mapas vacios (laboratorio, duelos, pruebas). Exactamente uno. */
   plain?: boolean;
 }

@@ -92,6 +92,18 @@ export function uniqueIds(check: Checker, kind: string, items: readonly { id?: u
   return ids;
 }
 
+/**
+ * `field` es una sola letra y ninguna otra entrada del fichero la tiene (`seen`: las de antes; se
+ * apunta). true si es una letra, para seguir mirandola.
+ */
+export function uniqueLetter(scope: Scope, field: string, letter: unknown, seen: Set<string>): letter is string {
+  if (!scope.expect(typeof letter === 'string' && letter.length === 1, `${field} tiene que ser una sola letra`)) return false;
+  const text = letter as string;
+  scope.expect(!seen.has(text), `${field}: la letra "${text}" ya es de otro`);
+  seen.add(text);
+  return true;
+}
+
 /** Los dibujos del juego de 2013 por terreno (`classicSprite`): solo de terrenos que existen. */
 export function checkSprites(scope: Scope, spritesByTerrain: Record<string, string> | undefined, terrainIds: ReadonlySet<string>): void {
   for (const terrain of Object.keys(spritesByTerrain ?? {})) scope.known('classicSprite', terrain, terrainIds, 'el terreno ');

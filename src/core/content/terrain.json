@@ -3,6 +3,7 @@
   "terrain": [
     {
       "id": "Grass",
+      "textLetter": ".",
       "plain": true,
       "name": {
         "es": "Llanura",
@@ -21,6 +22,7 @@
     },
     {
       "id": "Water",
+      "textLetter": "~",
       "name": {
         "es": "Agua",
         "en": "Water"
@@ -39,6 +41,7 @@
     },
     {
       "id": "Woods",
+      "textLetter": "f",
       "name": {
         "es": "Bosque",
         "en": "Woods"
@@ -56,6 +59,7 @@
     },
     {
       "id": "Sand",
+      "textLetter": ":",
       "name": {
         "es": "Arena",
         "en": "Sand"
@@ -73,6 +77,7 @@
     },
     {
       "id": "Cactus",
+      "textLetter": "c",
       "name": {
         "es": "Cactus",
         "en": "Cactus"
@@ -90,6 +95,7 @@
     },
     {
       "id": "SandCliff",
+      "textLetter": "M",
       "name": {
         "es": "Acantilado",
         "en": "Cliff"
@@ -107,6 +113,7 @@
     },
     {
       "id": "Flowers",
+      "textLetter": ",",
       "name": {
         "es": "Flores",
         "en": "Flowers"
@@ -124,6 +131,7 @@
     },
     {
       "id": "GrassCliff",
+      "textLetter": "^",
       "name": {
         "es": "Acantilado",
         "en": "Cliff"
@@ -141,6 +149,7 @@
     },
     {
       "id": "SWater",
+      "textLetter": "-",
       "name": {
         "es": "Agua poco profunda",
         "en": "Shallow water"
@@ -159,6 +168,7 @@
     },
     {
       "id": "DWater",
+      "textLetter": "=",
       "name": {
         "es": "Agua profunda",
         "en": "Deep water"
@@ -177,6 +187,7 @@
     },
     {
       "id": "Snow",
+      "textLetter": "_",
       "name": {
         "es": "Nieve",
         "en": "Snow"
@@ -194,6 +205,7 @@
     },
     {
       "id": "Frosty",
+      "textLetter": "o",
       "name": {
         "es": "Escarcha",
         "en": "Frost"
@@ -211,6 +223,7 @@
     },
     {
       "id": "SnowCliff",
+      "textLetter": "%",
       "name": {
         "es": "Acantilado nevado",
         "en": "Snowy cliff"
@@ -229,6 +242,7 @@
     },
     {
       "id": "SnowWood",
+      "textLetter": "t",
       "name": {
         "es": "Bosque nevado",
         "en": "Snowy woods"
@@ -247,6 +261,7 @@
     },
     {
       "id": "Ice",
+      "textLetter": "i",
       "name": {
         "es": "Hielo",
         "en": "Ice"
