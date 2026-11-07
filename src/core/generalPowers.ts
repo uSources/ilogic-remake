@@ -4,8 +4,7 @@
  * todo lo suyo (si necesita una casilla, su area, como se aplica y lo que vale); su forma y su
  * validacion estan en content/generals.ts (`EFFECT_SHAPES`), con las mismas claves.
  */
-import type { GeneralEffect, GeneralPowerDef } from './content';
-import { weightsOf } from './gameContent';
+import type { AiWeights, GeneralEffect, GeneralPowerDef } from './content';
 import { MAX_LIFE } from './data';
 import { chargeStars, generalOf, healedByPower } from './generals';
 import { posKey, posOf, squareArea } from './geom';
@@ -54,7 +53,7 @@ interface PowerEffect<K extends GeneralEffect['kind']> {
   area(effect: EffectOf<K>): number | null;
   apply(context: EffectContext<K>): void;
   /** Donde apuntarlo y cuanto vale usarlo ahora (null si no tiene sentido): lo que mira la IA. */
-  aiValue(s: GameState, team: TeamId, effect: EffectOf<K>): ValuedTarget | null;
+  aiValue(s: GameState, team: TeamId, effect: EffectOf<K>, weights: Readonly<AiWeights>): ValuedTarget | null;
 }
 
 /** La vida que recuperaria la unidad con una cura de `amount` (lo que ya esta entero no cuenta). */
@@ -109,7 +108,7 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
     apply: ({ general }) => {
       general.reveal = true;
     },
-    aiValue: (s, team) => (seesEverything(s, team) ? null : { target: null, value: weightsOf(s).REVEALVALUE }),
+    aiValue: (s, team, _effect, weights) => (seesEverything(s, team) ? null : { target: null, value: weights.REVEALVALUE }),
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata); la IA, en el mejor cuadrado que ve.
   areaDamage: {
@@ -186,8 +185,13 @@ export function powerArea(power: DeepReadonly<GeneralPowerDef>): number | null {
 }
 
 /** Donde usaria la IA un poder y cuanto vale (null si ahora no tiene sentido). */
-export function powerValue(s: GameState, team: TeamId, power: DeepReadonly<GeneralPowerDef>): ValuedTarget | null {
-  return powerEffectOf(power.effect).aiValue(s, team, power.effect);
+export function powerValue(
+  s: GameState,
+  team: TeamId,
+  power: DeepReadonly<GeneralPowerDef>,
+  weights: Readonly<AiWeights>,
+): ValuedTarget | null {
+  return powerEffectOf(power.effect).aiValue(s, team, power.effect, weights);
 }
 
 /** El general de un equipo con poder, ya comprobado (si no lo tiene, es un fallo de quien aplica el poder). */

@@ -4,7 +4,9 @@ import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
 import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles } from '@core/rules';
 import { serialize } from '@core/save';
-import { aiController, controllersFor, type AiBrain } from '@core/controllers';
+import { aiController, controllersFor } from '@core/controllers';
+import { selfDispatched } from '@core/session/selfDispatched';
+import type { ActionDispatcher, GameState, TeamId } from '@core/model';
 import {
   autopilotController,
   GameSession,
@@ -26,6 +28,16 @@ import { duel } from '@core/teams';
 import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, hqId, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
+
+/** Un controlador que manda el mismo una accion al empezar su turno (como la IA), con lo que hace `send`. */
+const selfDispatching = (send: (s: GameState, team: TeamId, dispatcher: ActionDispatcher) => unknown): Controller => ({
+  name: 'ai',
+  playTurn: (s, team) =>
+    selfDispatched(team, (dispatcher) => {
+      send(s, team, dispatcher);
+      return [][Symbol.iterator]();
+    }),
+});
 
 /** Una sesion de la persona (equipo 0) contra la IA, con lo que se haga apuntado. */
 function personVsAi(s: ReturnType<typeof blankState>) {
@@ -243,11 +255,10 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
   it('la IA que mandara un limite de turno recibe sessionOnly (no pasa su turno)', () => {
     const s = blankState();
     let reply: unknown = null;
-    const brain: AiBrain = (state, _rng, team, dispatcher) => {
-      reply = dispatcher(state, team, { kind: 'endTurn' });
-      return [][Symbol.iterator]();
-    };
-    const session = new GameSession(s, [aiController(seededRng(1), brain), passiveController()]);
+    const session = new GameSession(s, [
+      selfDispatching((state, team, dispatcher) => (reply = dispatcher(state, team, { kind: 'endTurn' }))),
+      passiveController(),
+    ]);
     session.step();
     expect(reply).toEqual({ ok: false, reason: 'sessionOnly' });
     expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
@@ -378,11 +389,11 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
   it('quien manda el mismo sus acciones (la IA, el piloto) solo las manda de su equipo', () => {
     const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
     let reply: unknown = null;
-    const brain: AiBrain = (state, _rng, _team, dispatcher) => {
-      reply = dispatcher(state, 2, { kind: 'surrender' });
-      return [][Symbol.iterator]();
-    };
-    const session = new GameSession(s, [aiController(seededRng(1), brain), passiveController(), passiveController()]);
+    const session = new GameSession(s, [
+      selfDispatching((state, _team, dispatcher) => (reply = dispatcher(state, 2, { kind: 'surrender' }))),
+      passiveController(),
+      passiveController(),
+    ]);
     session.step();
     expect(reply).toEqual({ ok: false, reason: 'notYourTurn' });
     expect(s.teams[2]!.resigned).toBeFalsy();

@@ -14,6 +14,7 @@
  * | `fire` | plan de fuego concentrado y orden de juego |
  * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
  * | `production` | que fabrica |
+ * | `profile` | como juega una IA (`AiProfile`: pesos, razones de ataque, comportamientos) y la del juego (`defaultAiProfile`) |
  *
  * Lo que hace una unidad paso a paso (retirarse, atacar, capturar, ir en formacion: `PlayCtx` y
  * autopilot/) no es de la IA: lo usan tambien las ordenes permanentes, que cumple la partida para
@@ -29,19 +30,29 @@ import { playCtx, finish } from './autopilot/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';
 import { unitTurn } from './ai/unitTurn';
+import type { AiProfile } from './ai/profile';
+
+export { defaultAiProfile, type AiProfile } from './ai/profile';
 
 /**
- * Turno completo de la IA. Deja todas sus unidades inactivas; el mantenimiento va aparte (endRound).
- * Manda sus acciones por `dispatcher` (dispatch, si no se dice: quien la hace jugar puede apuntarlas).
+ * Turno completo de la IA que juega con `profile`. Deja todas sus unidades inactivas; el mantenimiento
+ * va aparte (endRound). Manda sus acciones por `dispatcher` (dispatch, si no se dice: quien la hace
+ * jugar puede apuntarlas).
  */
-export function* aiTurn(s: GameState, rng: Rng, team: TeamId, dispatcher: ActionDispatcher = dispatch): Generator<GameEvent> {
-  const ai = playCtx(team, dispatcher);
+export function* aiTurn(
+  s: GameState,
+  team: TeamId,
+  profile: AiProfile,
+  rng: Rng,
+  dispatcher: ActionDispatcher = dispatch,
+): Generator<GameEvent> {
+  const ai = playCtx(team, profile, dispatcher);
   // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, ai);
-  const { plan, order } = planFire(s, ai.me);
+  const { plan, order } = planFire(s, ai);
   ai.plan = plan;
   ai.group = true;
-  for (const uid of order) yield* unitTurn(s, ai, uid, rng);
+  for (const uid of order) yield* unitTurn(s, ai, profile.behaviours, uid, rng);
   ai.group = false;
   ai.plan = new Map();
   yield* produce(s, ai, rng);

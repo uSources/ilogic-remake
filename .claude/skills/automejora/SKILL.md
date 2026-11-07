@@ -13,7 +13,7 @@ Areas: equilibrio, IA enemiga y caza de fallos. Solo se lanza cuando el usuario 
 | Orden | Mide |
 |---|---|
 | `npm run metrics` | Nota del juego 0-100 por partes (IA contra IA), comparada con `improve/baseline.json` |
-| `npm run arena -- --games 200` | IA actual contra la guardada (`improve/ai-baseline/`) |
+| `npm run arena -- --games 200` | IA actual contra la de referencia (sus pesos en `improve/ai-baseline.json`); `--candidate` prueba otro perfil |
 | `npm run fuzz -- --games 300 --seed N` | Invariantes en partidas con jugadas al azar e IA |
 | `improve/DIARIO.md` | Todo lo probado, aceptado o no (leer siempre antes) |
 

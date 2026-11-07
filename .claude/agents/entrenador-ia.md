@@ -17,12 +17,15 @@ Proceso:
    la Base enemiga, no remata, deja unidades quietas, compra mal).
 2. Cambia `src/core/ai.ts` y/o los pesos de `src/core/content/ai.json`. Cambios pequeños y explicados
    con comentario `[CAMBIO]`. La IA tiene que seguir siendo determinista con la semilla (`rng`).
-3. Prueba: `npm run arena -- --games 200` (IA nueva contra la guardada, mismos mapas).
+3. Prueba: `npm run arena -- --games 200` (IA nueva contra la de referencia, mismos mapas). Un
+   comportamiento o una razon de ataque nueva se prueba antes como perfil: un fichero que exporta
+   `candidate(contenido): AiProfile` (los de `defaultAiProfile` con lo nuevo) y
+   `npm run arena -- --candidate ese-fichero.ts`; si gana, pasa a `UNIT_BEHAVIOURS`/`ATTACK_SCORE_TERMS`.
    **Criterio**: el intervalo del 95 % por encima del 50 % ("MEJOR"). Ademas `npm run metrics` no
    puede bajar la nota total ni "Ningun bando con ventaja" mas de 1 punto.
 4. Si no gana, deshaz, apunta DESCARTADO en `improve/DIARIO.md` con los numeros y lo que aprendiste,
    y prueba otra idea (como mucho 3 intentos).
-5. Si gana: `npm run arena -- --snapshot` (nueva referencia), `npm run metrics -- --save-baseline`,
+5. Si gana: `npm run arena -- --snapshot` (los pesos nuevos como referencia), `npm run metrics -- --save-baseline`,
    `npx vitest run -u tests/aiGolden.test.ts`, entrada ACEPTADO en el diario, `CHANGELOG.md` (apartado
    `## [Sin publicar]`), `npm run check`. Commit: `⚖️ IA: <mejora> (arena X %, nota A → B)` (formato en `docs/COMMITS.md`).
 

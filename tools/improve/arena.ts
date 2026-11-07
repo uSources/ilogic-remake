@@ -1,21 +1,27 @@
 /**
- * Arena de la IA: la IA actual (src/core/ai.ts y src/core/ai/) contra la guardada (improve/ai-baseline/),
- * mismos mapas, la mitad de las partidas con los bandos cambiados. Un cambio en la IA solo se
- * acepta si gana claramente a la anterior.
+ * Arena de la IA: dos perfiles de IA (`AiProfile`: pesos, razones de ataque, comportamientos) uno
+ * contra otro, mismos mapas, la mitad de las partidas con los bandos cambiados. Un cambio en la IA
+ * solo se acepta si gana claramente. Los perfiles se le dan a cada controlador (`aiController`): las
+ * dos IAs juegan a la vez en el mismo proceso, sin copiar codigo ni cambiar nada global.
  *
- *   npm run arena                     200 partidas de 20x20, 40 dias
+ *   npm run arena                     la IA del juego contra la de referencia (sus pesos guardados en
+ *                                     improve/ai-baseline.json), 200 partidas de 20x20, 40 dias
  *   npm run arena -- --games 400 --size 32
- *   npm run arena -- --snapshot       guarda la IA actual como la de referencia (tras aceptar un cambio)
+ *   npm run arena -- --candidate tools/improve/miPerfil.ts
+ *                                     otro perfil (el fichero exporta `candidate(contenido): AiProfile`)
+ *                                     contra la IA del juego: para probar comportamientos o razones nuevas
+ *   npm run arena -- --snapshot       guarda los pesos de ahora (ai.json) como los de referencia
  *
- * Las partidas que no terminan se dan a quien tiene clara ventaja (ejercito + edificios + dinero,
- * al menos un 15 % mas); si no, empate.
+ * Las partidas que no terminan se dan a quien tiene clara ventaja (`clearLeader`, tools/strength.ts).
  */
 import { duel, duelTeams, teamState } from '@core/teams';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { posix } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { aiTurn } from '@core/ai';
-import { aiController, controllersFor, type AiBrain } from '@core/controllers';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { defaultAiProfile, type AiProfile } from '@core/ai';
+import { aiController, controllersFor } from '@core/controllers';
+import type { AiWeights, GameContent } from '@core/content';
+import { buildAiWeights, validateAi } from '@core/content/ai';
+import { Checker } from '@core/content/check';
 import { GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
@@ -24,42 +30,35 @@ import { seededRng } from '@core/util/random';
 import { isWinner, matchResult } from '@core/rules';
 import { armyValue } from '@core/stats';
 import type { GameState, TeamId } from '@core/model';
+import { clearLeader, type Holdings } from '../balance/strength';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const BASE_DIR = `${ROOT}improve/ai-baseline/`;
+/** Los pesos de la IA de referencia (los de ai.json al guardarla con --snapshot). */
+const BASELINE_FILE = `${ROOT}improve/ai-baseline.json`;
 
-/** Lo que vale cada edificio y cada moneda al decidir una partida sin terminar (como en el informe de equilibrio). */
-const STRENGTH_PER_BUILDING = 1500;
-const STRENGTH_PER_FUNDS = 0.5;
-/** Ventaja minima (un 15 % mas de fuerza) para dar ganada una partida sin terminar. */
-const CLEAR_LEAD = 1.15;
-
-/** Fuerza de un equipo para decidir una partida sin terminar: ejercito, edificios y algo del dinero. */
-function strength(s: GameState, team: TeamId): number {
+/** Lo que tiene un equipo al decidir una partida sin terminar. */
+function holdingsOf(s: GameState, team: TeamId): Holdings {
   const buildings = s.buildings.filter((building) => building.owner === team).length;
-  return armyValue(s, team) + buildings * STRENGTH_PER_BUILDING + teamState(s, team).funds * STRENGTH_PER_FUNDS;
+  return { army: armyValue(s, team), buildings, funds: teamState(s, team).funds };
 }
 
-/** Que IA ha ganado una partida: la primera de `brains`, la segunda o ninguna (empate). */
+/** Que IA ha ganado una partida: la primera de `profiles`, la segunda o ninguna (empate). */
 export type DuelWinner = 'first' | 'second' | null;
 
 /** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
-export function playDuel(seed: number, brains: [AiBrain, AiBrain], size: number, maxDays: number): DuelWinner {
+export function playDuel(seed: number, profiles: [AiProfile, AiProfile], size: number, maxDays: number): DuelWinner {
   const rng = seededRng(seed);
   const s = createMatch(skirmishConfig({ seed, size, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
   const controllers = new Map([
-    [first, aiController(rng, brains[0])],
-    [second, aiController(rng, brains[1])],
+    [first, aiController(rng, profiles[0])],
+    [second, aiController(rng, profiles[1])],
   ]);
   runMatch(new GameSession(s, controllersFor(s, rng, controllers)), { until: (state) => state.day > maxDays });
   const result = matchResult(s);
   if (result.status === 'draw') return null;
   if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';
-  const firstStrength = strength(s, first),
-    secondStrength = strength(s, second);
-  if (Math.max(firstStrength, secondStrength) < CLEAR_LEAD * Math.min(firstStrength, secondStrength)) return null;
-  return firstStrength > secondStrength ? 'first' : 'second';
+  return clearLeader(holdingsOf(s, first), holdingsOf(s, second));
 }
 
 export interface ArenaResult {
@@ -73,7 +72,7 @@ export interface ArenaResult {
   high: number;
 }
 
-export function arena(current: AiBrain, baseline: AiBrain, games: number, size: number, maxDays: number): ArenaResult {
+export function arena(current: AiProfile, baseline: AiProfile, games: number, size: number, maxDays: number): ArenaResult {
   let wins = 0,
     losses = 0,
     draws = 0;
@@ -91,96 +90,65 @@ export function arena(current: AiBrain, baseline: AiBrain, games: number, size: 
   return { games, wins, losses, draws, rate, low: Math.max(0, rate - se), high: Math.min(1, rate + se) };
 }
 
-/** Carpetas de src/core con lo que decide la IA: la suya y los pasos de unidad que reutiliza (autopilot/). */
-const AI_DIRS = ['ai', 'autopilot'] as const;
-
-/**
- * Ficheros de la IA que se copian: ai.ts y todo src/core/ai/ y src/core/autopilot/ (rutas relativas
- * a src/core). Las reglas, los datos y demas se siguen usando los de ahora, por su alias.
- */
-function aiFiles(): string[] {
-  const inDir = (dir: string) =>
-    readdirSync(`${ROOT}src/core/${dir}`)
-      .filter((file) => file.endsWith('.ts'))
-      .map((file) => `${dir}/${file}`);
-  return ['ai.ts', ...AI_DIRS.flatMap(inDir)];
+/** Lee unos pesos guardados (los de ai.json en su momento): tienen que ser justo los que lee la IA de ahora. */
+export function readWeights(json: unknown): AiWeights {
+  const check = new Checker();
+  const weights: Record<string, unknown> = typeof json === 'object' && json !== null ? { ...json } : {};
+  validateAi(weights, check);
+  if (check.errors.length) throw new Error(`Pesos de referencia rotos: ${check.errors.join('; ')}`);
+  return buildAiWeights(weights);
 }
 
-/**
- * Prepara un fichero de la IA para la copia: los imports de fuera de la IA pasan a '@core/...' y
- * los pesos (`weightsOf` de gameContent) salen de weights.ts, congelados al hacer la copia: la IA de
- * referencia juega siempre con los pesos que tenia, aunque la partida lleve otros.
- */
-export function snapshotSource(rel: string, source: string, copied: ReadonlySet<string>): string {
-  const directory = posix.dirname(rel);
-  const weights = directory === '.' ? './weights' : posix.relative(directory, 'weights');
-  const out = source.replace(/from '(\.{1,2}\/[^']+)'/g, (match, spec: string) => {
-    const target = posix.normalize(posix.join(directory, spec));
-    return copied.has(`${target}.ts`) ? match : `from '@core/${target}'`;
-  });
-  // import { weightsOf, X } from '@core/gameContent' -> import { X } from '@core/gameContent' + import { weightsOf } from './weights'
-  return out.replace(/import \{([^}]*)\} from '@core\/gameContent';/, (whole, names: string) => {
-    const list = names
-      .split(',')
-      .map((name) => name.trim())
-      .filter(Boolean);
-    if (!list.includes('weightsOf')) return whole;
-    const rest = list.filter((name) => name !== 'weightsOf');
-    const own = `import { weightsOf } from '${weights}';`;
-    return rest.length ? `import { ${rest.join(', ')} } from '@core/gameContent';\n${own}` : own;
-  });
-}
+/** La IA de referencia: la del juego, con los pesos guardados. */
+export const baselineProfile = (content: GameContent, weights: AiWeights): AiProfile => ({ ...defaultAiProfile(content), weights });
 
-/** Copia la IA actual como referencia (ai.ts, src/core/ai/ y src/core/autopilot/), con sus pesos (los de ai.json) congelados. */
+/** Guarda los pesos de ahora (ai.json) como los de la IA de referencia. */
 function snapshot(): void {
-  for (const dir of AI_DIRS) {
-    rmSync(`${BASE_DIR}${dir}`, { recursive: true, force: true });
-    mkdirSync(`${BASE_DIR}${dir}`, { recursive: true });
-  }
-  const files = aiFiles();
-  const copied = new Set(files);
-  const day = new Date().toISOString().slice(0, 10);
-  for (const rel of files) {
-    const source = snapshotSource(rel, readFileSync(`${ROOT}src/core/${rel}`, 'utf8'), copied);
-    writeFileSync(
-      `${BASE_DIR}${rel}`,
-      `// Copia de la IA guardada por npm run arena -- --snapshot (${day}). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).\n${source}`,
-    );
-  }
-  writeFileSync(
-    `${BASE_DIR}weights.ts`,
-    `// Pesos de ai.json al guardar la IA de referencia (${day}). No editar, salvo para adaptarla a un cambio del nucleo (docs/ARQUITECTURA.md, IA).\n` +
-      `const AI = ${JSON.stringify(defaultContent().ai)} as const;\n` +
-      `/** La IA de referencia juega con estos pesos, sea cual sea el contenido de la partida. */\n` +
-      `export const weightsOf = (_s: unknown): typeof AI => AI;\n`,
-  );
-  console.log(`IA actual guardada como referencia en improve/ai-baseline/ (${files.length} ficheros)`);
+  const { $schema: _schema, ...weights } = JSON.parse(readFileSync(`${ROOT}src/core/content/ai.json`, 'utf8')) as Record<string, unknown>;
+  writeFileSync(BASELINE_FILE, `${JSON.stringify(readWeights(weights), null, 2)}\n`);
+  console.log('Pesos de ahora (ai.json) guardados como los de referencia en improve/ai-baseline.json');
+}
+
+/** El perfil de un fichero de --candidate: exporta `candidate(contenido)`. */
+async function candidateFrom(file: string, content: GameContent): Promise<AiProfile> {
+  const module = (await import(pathToFileURL(file).href)) as { candidate?: (content: GameContent) => AiProfile };
+  if (typeof module.candidate !== 'function') throw new Error(`${file} no exporta candidate(contenido): AiProfile`);
+  return module.candidate(content);
 }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.includes('--snapshot')) return snapshot();
   const opt = (key: string, fallback: number) => (args.includes(`--${key}`) ? Number(args[args.indexOf(`--${key}`) + 1]) : fallback);
-  if (!existsSync(`${BASE_DIR}ai.ts`)) {
-    console.log('No hay IA de referencia: npm run arena -- --snapshot');
-    process.exit(1);
-  }
-  const base = (await import(`${BASE_DIR}ai.ts`)) as { aiTurn: AiBrain };
+  const content = defaultContent();
   const games = opt('games', 200),
     size = opt('size', 20),
     days = opt('days', 40);
+  const candidateIndex = args.indexOf('--candidate');
+  if (candidateIndex < 0 && !existsSync(BASELINE_FILE)) {
+    console.log('No hay pesos de referencia: npm run arena -- --snapshot');
+    process.exit(1);
+  }
+  const [current, rival, rivalName] =
+    candidateIndex >= 0
+      ? [await candidateFrom(args[candidateIndex + 1] ?? '', content), defaultAiProfile(content), 'la del juego']
+      : [
+          defaultAiProfile(content),
+          baselineProfile(content, readWeights(JSON.parse(readFileSync(BASELINE_FILE, 'utf8')))),
+          'la de referencia',
+        ];
   const t0 = Date.now();
-  const result = arena(aiTurn, base.aiTurn, games, size, days);
+  const result = arena(current, rival, games, size, days);
   const pct = (x: number) => `${Math.round(x * 100)} %`;
   console.log(
-    `IA actual contra la de referencia: ${result.wins} ganadas, ${result.losses} perdidas, ${result.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
+    `IA a probar contra ${rivalName}: ${result.wins} ganadas, ${result.losses} perdidas, ${result.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
   );
   console.log(`Gana el ${pct(result.rate)} de las decididas (95 %: ${pct(result.low)}-${pct(result.high)})`);
   const verdict =
     result.low > 0.5
-      ? 'MEJOR: la IA actual gana claramente'
+      ? 'MEJOR: la IA a probar gana claramente'
       : result.high < 0.5
-        ? 'PEOR: la IA actual pierde claramente'
+        ? 'PEOR: la IA a probar pierde claramente'
         : 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)';
   console.log(verdict);
 }

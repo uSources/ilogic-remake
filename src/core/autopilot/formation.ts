@@ -5,7 +5,7 @@
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
 
-import { unitTypeOf, weightsOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { movementOf } from '../rules/queries';
 import { manhattan } from '../geom';
 import { stepToward, type MoveRange } from '../rules/movement';
@@ -24,9 +24,9 @@ function remainingOf(s: GameState, unit: Unit): number {
 }
 
 /** Las otras unidades de su formacion que cuentan (vivas, en el mapa, sin volver a curarse). */
-function formationMates(s: GameState, unit: Unit): Unit[] {
+function formationMates(s: GameState, play: PlayCtx, unit: Unit): Unit[] {
   return s.units.filter(
-    (other) => other !== unit && isOnMap(other) && isAlive(other) && !needsRepair(s, other) && sameFormation(s, unit, other),
+    (other) => other !== unit && isOnMap(other) && isAlive(other) && !needsRepair(play, other) && sameFormation(s, unit, other),
   );
 }
 
@@ -72,8 +72,8 @@ interface MateProgress {
  * cuentan donde podrian acabar (si no, la mas lenta, que juega primero, esperaria a una rapida que va
  * igual de retrasada).
  */
-function matesProgress(s: GameState, unit: Unit): MateProgress[] {
-  return formationMates(s, unit)
+function matesProgress(s: GameState, play: PlayCtx, unit: Unit): MateProgress[] {
+  return formationMates(s, play, unit)
     .map((mate) => {
       const remaining = remainingOf(s, mate);
       const movesThisTurn = canStillMove(mate);
@@ -89,8 +89,8 @@ function matesProgress(s: GameState, unit: Unit): MateProgress[] {
 /** Limite de formacion para esta unidad, o null si va suelta (sin escuadra, sola o ya cerca). */
 export function formation(s: GameState, play: PlayCtx, unit: Unit): Formation | null {
   const standingOrder = effectiveStandingOrder(s, unit);
-  if (!standingOrder || needsRepair(s, unit)) return null;
-  const mates = matesProgress(s, unit);
+  if (!standingOrder || needsRepair(play, unit)) return null;
+  const mates = matesProgress(s, play, unit);
   const rearAfterThisTurn = maxBy(mates, (mate) => mate.afterThisTurn);
   const furthestBehind = maxBy(mates, (mate) => mate.remaining);
   if (!rearAfterThisTurn || !furthestBehind) return null;
@@ -102,7 +102,7 @@ export function formation(s: GameState, play: PlayCtx, unit: Unit): Formation | 
   const rearReach = strikeReach(s, rear.unit);
   if (rear.remaining <= rearReach) return null;
   if (visibleFoes(s, play.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
-  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - weightsOf(s).SQUADSPREAD, rear: rearAfterThisTurn.unit };
+  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - play.profile.weights.SQUADSPREAD, rear: rearAfterThisTurn.unit };
 }
 
 /**

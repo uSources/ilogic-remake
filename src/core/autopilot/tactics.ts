@@ -5,7 +5,7 @@
  * IA (ai/unitTurn.ts, ai/tactics.ts), que los reutiliza.
  */
 
-import { unitTypeOf, weightsOf } from '../gameContent';
+import { unitTypeOf } from '../gameContent';
 import { manhattan, samePos } from '../geom';
 import { canCapture } from '../rules/capture';
 import { fireOrigins } from '../rules/combat';
@@ -24,7 +24,7 @@ import { attackScore, unitValue } from './scoring';
 
 /** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de AI.MAXMERGELIFE. */
 function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): Generator<GameEvent, boolean> {
-  const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= weightsOf(s).MAXMERGELIFE);
+  const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= play.profile.weights.MAXMERGELIFE);
   const nearest = minBy(mates, (mate) => manhattan(unit, mate));
   if (!nearest) return false;
   return yield* act(s, play, { kind: 'merge', uid: unit.uid, into: nearest.uid });
@@ -81,7 +81,7 @@ function shotScore(s: GameState, play: PlayCtx, unit: Unit, target: Unit, from: 
   const score = attackScore(s, play, unit, target, from);
   // [CAMBIO] Fuego concentrado: el objetivo del plan del turno vale mas (lo rematan entre varias).
   const isPlannedTarget = play.group && play.plan.get(unit.uid) === target.uid;
-  return isPlannedTarget ? score + weightsOf(s).FOCUSFIRE * unitValue(s, target) : score;
+  return isPlannedTarget ? score + play.profile.weights.FOCUSFIRE * unitValue(s, play.profile.weights, target) : score;
 }
 
 /**

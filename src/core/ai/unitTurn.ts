@@ -44,7 +44,7 @@ function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): Generator<Gam
   return true;
 }
 
-/** Prioridades de cada unidad, de mas a menos urgente. El orden importa: es el de siempre. */
+/** Prioridades de cada unidad de siempre (las del perfil por defecto), de mas a menos urgente. El orden importa. */
 export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
   {
     // [CAMBIO] Reglas nuevas: una captura a medias se termina antes que nada (si se va, se pierde).
@@ -65,7 +65,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
   {
     // Debil: a curarse antes de que la destruyan.
     id: 'retreat',
-    when: ({ s, unit }) => needsRepair(s, unit),
+    when: ({ ai, unit }) => needsRepair(ai, unit),
     run: ({ s, ai, unit, range }) => retreat(s, ai, unit, range),
   },
   {
@@ -97,13 +97,13 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
   },
 ];
 
-/** Lo que hace la IA con una unidad en su turno (si sigue activa). */
-export function* unitTurn(s: GameState, ai: PlayCtx, uid: number, rng: Rng): Generator<GameEvent> {
+/** Lo que hace la IA con una unidad en su turno (si sigue activa): el primero de `behaviours` (los del perfil) que la usa. */
+export function* unitTurn(s: GameState, ai: PlayCtx, behaviours: readonly UnitBehaviour[], uid: number, rng: Rng): Generator<GameEvent> {
   const unit = unitById(s, uid);
   if (!unit || !canAct(s, unit)) return;
   // El alcance no cambia mientras ningun comportamiento haya usado la unidad, asi que se calcula una vez.
   const turn: UnitTurnContext = { s, ai, unit, range: moveRange(s, unit), rng };
-  for (const behaviour of UNIT_BEHAVIOURS) {
+  for (const behaviour of behaviours) {
     if (!behaviour.when(turn)) continue;
     if (yield* behaviour.run(turn)) return;
   }

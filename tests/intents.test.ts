@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { changeSettings } from '@core/gameState';
-import { aiTurn } from '@core/ai';
+import { aiTurn, defaultAiProfile } from '@core/ai';
 import { assistTurn, previewStandingOrders } from '@core/autopilot';
 import { dispatch } from '@core/actions';
 import { settingsWith } from '@core/matchSettings';
@@ -128,9 +128,9 @@ describe('previewStandingOrders', () => {
       return s;
     };
     const first = make();
-    Array.from(aiTurn(first, seededRng(5), 1));
+    Array.from(aiTurn(first, 1, defaultAiProfile(defaultContent()), seededRng(5)));
     const second = make();
-    const it = aiTurn(second, seededRng(5), 1);
+    const it = aiTurn(second, 1, defaultAiProfile(defaultContent()), seededRng(5));
     for (let step = it.next(); !step.done; step = it.next()) previewStandingOrders(second, 0, dispatch);
     expect(serialize(second)).toBe(serialize(first));
   });

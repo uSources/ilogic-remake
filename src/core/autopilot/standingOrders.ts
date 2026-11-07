@@ -6,7 +6,7 @@
  */
 
 import { isAlliedOwner } from '../teams';
-import { unitTypeOf, weightsOf, cloneState } from '../gameContent';
+import { unitTypeOf, cloneState } from '../gameContent';
 import { manhattan, samePos, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
@@ -15,6 +15,7 @@ import type { ActionDispatcher, GameEvent, GameState, Pos, StandingOrderKind, Te
 import { act, playCtx, canAct, doMove, finish, hiddenFoes, needsRepair, visibleFoes, type PlayCtx } from './context';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
+import { autopilotProfileOf } from './defaultProfile';
 
 /**
  * [CAMBIO] Ordenes de un equipo (al terminar su turno): las unidades con orden con destino
@@ -22,7 +23,7 @@ import { captureHere, retreat, tryAttack } from './tactics';
  * Devuelve los uid de las que han cumplido su orden este turno (se quedan esperando otra).
  */
 export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispatcher): Generator<GameEvent, number[]> {
-  const play = playCtx(team, dispatcher);
+  const play = playCtx(team, autopilotProfileOf(s.content), dispatcher);
   const withStandingOrder = teamUnits(s, play.me).filter((unit) => effectiveStandingOrder(s, unit));
   const fulfilled: number[] = [];
   for (const unit of standingOrderPlayOrder(s, withStandingOrder))
@@ -32,7 +33,7 @@ export function* assistTurn(s: GameState, team: TeamId, dispatcher: ActionDispat
 
 /** [CAMBIO] La unidad empieza ya su orden recien dada (si aun no se ha movido). */
 export function* startStandingOrder(s: GameState, uid: number, team: TeamId, dispatcher: ActionDispatcher): Generator<GameEvent, boolean> {
-  return yield* unitStandingOrderTurn(s, playCtx(team, dispatcher), uid);
+  return yield* unitStandingOrderTurn(s, playCtx(team, autopilotProfileOf(s.content), dispatcher), uid);
 }
 
 /** Lo que necesita cada tipo de orden para jugar el turno de una unidad. */
@@ -75,14 +76,14 @@ function* captureOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent,
 }
 
 /** Esta en la zona que guarda la orden (a AI.GUARDRADIUS o menos del destino). */
-const inGuardZone = (s: GameState, at: Pos) => (pos: Pos) => manhattan(pos, at) <= weightsOf(s).GUARDRADIUS;
+const inGuardZone = (play: PlayCtx, at: Pos) => (pos: Pos) => manhattan(pos, at) <= play.profile.weights.GUARDRADIUS;
 
 /** Defender: disparar a lo que entre en la zona y, si no, colocarse junto al destino. Nunca se cumple sola. */
 function* defendOrderTurn({ s, play, unit, at }: StandingOrderTurnContext): Generator<GameEvent, boolean> {
   const range = moveRange(s, unit);
-  if (needsRepair(s, unit) && (yield* retreat(s, play, unit, range))) return false;
+  if (needsRepair(play, unit) && (yield* retreat(s, play, unit, range))) return false;
   const squadFormation = formation(s, play, unit);
-  if (yield* tryAttack(s, play, unit, range, { zone: inGuardZone(s, at), from: formationFrom(squadFormation) })) return false;
+  if (yield* tryAttack(s, play, unit, range, { zone: inGuardZone(play, at), from: formationFrom(squadFormation) })) return false;
   if (manhattan(unit, at) > 1) yield* doMove(s, play, unit, standingOrderStep(s, play, unit, at, range, squadFormation));
   yield* finish(s, play, unit);
   return false;
@@ -92,7 +93,7 @@ function* defendOrderTurn({ s, play, unit, at }: StandingOrderTurnContext): Gene
 function* attackOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, boolean> {
   const { s, play, unit, at } = turn;
   const range = moveRange(s, unit);
-  if (needsRepair(s, unit) && (yield* retreat(s, play, unit, range))) return false;
+  if (needsRepair(play, unit) && (yield* retreat(s, play, unit, range))) return false;
   const squadFormation = formation(s, play, unit);
   if (yield* tryAttack(s, play, unit, range, { chase: false, from: formationFrom(squadFormation) })) return false;
   if (manhattan(unit, at) > 1) {
@@ -102,7 +103,7 @@ function* attackOrderTurn(turn: StandingOrderTurnContext): Generator<GameEvent, 
   }
   // Ha llegado: si no quedan enemigos a la vista cerca, la orden esta cumplida.
   yield* finish(s, play, unit);
-  return !visibleFoes(s, play.me).some(inGuardZone(s, at));
+  return !visibleFoes(s, play.me).some(inGuardZone(play, at));
 }
 
 /** Como juega una unidad cada tipo de orden. Un tipo de orden nuevo es una entrada aqui. */

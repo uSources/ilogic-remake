@@ -5,7 +5,7 @@
  */
 
 import { isHostile } from '../teams';
-import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
+import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { movementOf, buildingAt } from '../rules/queries';
 import { moveBudget } from '../rules/movementProfile';
 import { posOf, samePos } from '../geom';
@@ -18,6 +18,7 @@ import { actorProblem } from '../actions/checks';
 import { visibility } from '../rules/visibility';
 import type { ActionDispatcher, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive, isOnMap } from '../util/predicates';
+import type { AutopilotProfile } from './profile';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -34,6 +35,8 @@ export interface PlayCtx {
   group: boolean;
   /** [CAMBIO] Plan de fuego concentrado del turno: uid de la unidad propia -> uid del objetivo que remata entre varias. */
   plan: Map<number, number>;
+  /** Con que pesos y razones juega (el de las ordenes de la partida, o el de la IA que decide). */
+  readonly profile: AutopilotProfile;
   /**
    * Por donde manda sus acciones: dispatch, o lo que le de quien la hace jugar (la sesion, que las
    * apunta). Hasta que la IA solo proponga acciones (fase 6), las manda ella.
@@ -41,9 +44,9 @@ export interface PlayCtx {
   readonly dispatch: ActionDispatcher;
 }
 
-/** Contexto nuevo para un turno de `me` (sin grupo ni plan), que manda sus acciones por `dispatcher`. */
-export function playCtx(me: TeamId, dispatcher: ActionDispatcher): PlayCtx {
-  return { me, group: false, plan: new Map(), dispatch: dispatcher };
+/** Contexto nuevo para un turno de `me` (sin grupo ni plan) que juega con `profile` y manda sus acciones por `dispatcher`. */
+export function playCtx(me: TeamId, profile: AutopilotProfile, dispatcher: ActionDispatcher): PlayCtx {
+  return { me, group: false, plan: new Map(), profile, dispatch: dispatcher };
 }
 
 /**
@@ -143,7 +146,7 @@ export function hiddenFoes(s: GameState, me: TeamId, visible = visibility(s, me)
 export const canAct = (s: GameState, unit: Unit): boolean => isAlive(unit) && actorProblem(s, unit.team, unit.uid) === null;
 
 /** Necesita volver a curarse a un edificio. */
-export const needsRepair = (s: GameState, unit: Unit): boolean => unit.life < weightsOf(s).LIFETOBACK;
+export const needsRepair = (play: PlayCtx, unit: Unit): boolean => unit.life < play.profile.weights.LIFETOBACK;
 
 /** En esa casilla hay un edificio propio que repara a la unidad. */
 export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {

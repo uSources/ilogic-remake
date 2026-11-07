@@ -5,13 +5,13 @@
  *
  * Cada poder se valora en "valor" (precio × vida que quita / 100, como el resto de la IA) con el
  * `aiValue` de su clase de efecto (POWER_EFFECTS, generalPowers.ts). Se usa el de mas valor si llega
- * a AI.GENERALMINVALUE. Con la barra llena se usa cualquiera que valga algo, para no desperdiciar la
+ * a su GENERALMINVALUE (ai.json, en el perfil de la IA). Con la barra llena se usa cualquiera que valga algo, para no desperdiciar la
  * carga que seguiria ganando. Una clase de efecto nueva no toca esto.
  */
-import { weightsOf } from './gameContent';
 import { chargeStars, generalOf } from './generals';
 import { powerValue } from './generalPowers';
 import { act, type PlayCtx } from './autopilot/context';
+import type { AiWeights } from './content';
 import type { GameEvent, GameState, Pos, TeamId } from './model';
 import { maxBy } from './util/pick';
 
@@ -22,25 +22,25 @@ export interface PowerChoice {
 }
 
 /** Que poder usaria ahora la IA (null = ninguna, guarda la carga). */
-export function choosePower(s: GameState, team: TeamId): PowerChoice | null {
+export function choosePower(s: GameState, team: TeamId, weights: Readonly<AiWeights>): PowerChoice | null {
   const general = generalOf(s, team);
   if (!general || general.state.used) return null;
   const stars = chargeStars(general.state);
   const choices: PowerChoice[] = [];
   for (const power of general.definition.powers) {
     if (power.cost > stars) continue;
-    const valued = powerValue(s, team, power);
+    const valued = powerValue(s, team, power, weights);
     if (valued) choices.push({ power: power.id, ...valued });
   }
   const best = maxBy(choices, (choice) => choice.value);
   if (!best) return null;
   const isChargeFull = stars >= general.definition.charge.max;
-  return best.value >= weightsOf(s).GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
+  return best.value >= weights.GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
 }
 
 /** Turno del general de la IA: como mucho un poder. */
 export function* aiGeneral(s: GameState, ai: PlayCtx): Generator<GameEvent> {
-  const choice = choosePower(s, ai.me);
+  const choice = choosePower(s, ai.me, ai.profile.weights);
   if (!choice) return;
   yield* act(s, ai, { kind: 'usePower', power: choice.power, target: choice.target });
 }

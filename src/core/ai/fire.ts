@@ -11,8 +11,8 @@ import { moveRange } from '../rules/movement';
 import { firesAfterMove, isOnMap } from '../util/predicates';
 import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
-import type { GameState, TeamId, Unit } from '../model';
-import { needsRepair, strikeReach, visibleFoes } from '../autopilot/context';
+import type { GameState, Unit } from '../model';
+import { needsRepair, strikeReach, visibleFoes, type PlayCtx } from '../autopilot/context';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {
@@ -26,8 +26,8 @@ export interface FirePlan {
 type DamageTable = Map<number, Map<number, number>>;
 
 /** Puede disparar este turno y no tiene que irse a curar. */
-const isShooter = (s: GameState, unit: Unit): boolean =>
-  isOnMap(unit) && canStillFire(s, unit) && unitTypeOf(s, unit).attack !== null && !needsRepair(s, unit);
+const isShooter = (s: GameState, ai: PlayCtx, unit: Unit): boolean =>
+  isOnMap(unit) && canStillFire(s, unit) && unitTypeOf(s, unit).attack !== null && !needsRepair(ai, unit);
 
 /** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
 function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {
@@ -80,13 +80,14 @@ function playRank(s: GameState, unit: Unit, plan: Map<number, number>): number {
  * el orden de juego: primero las del plan (las de distancia antes), despues el resto en el orden de
  * siempre.
  */
-export function planFire(s: GameState, me: TeamId): FirePlan {
+export function planFire(s: GameState, ai: PlayCtx): FirePlan {
+  const me = ai.me;
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
   const foes = visibleFoes(s, me);
   const damage = damageTable(
     s,
-    mine.filter((unit) => isShooter(s, unit)),
+    mine.filter((unit) => isShooter(s, ai, unit)),
     foes,
   );
   const free = new Set(damage.keys());

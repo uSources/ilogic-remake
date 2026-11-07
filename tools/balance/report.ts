@@ -3,6 +3,7 @@ import type { GameContent } from '@core/content';
 import type { DuelCell } from './duel';
 import { FIRST_SIDE, SECOND_SIDE, SIDES, type GameRecord, type Side } from './play';
 import type { Variant } from './variant';
+import { clearLeader, strengthOf, type Holdings } from './strength';
 
 export interface Targets {
   /** Duracion deseada (mediana de dias). */
@@ -110,9 +111,11 @@ export function buildReport(
   const finished = records.filter((record) => record.winner !== null);
   const days = finished.map((record) => record.days);
 
-  // Fuerza de un lado: valor del ejercito + edificios (lo que rinden en unas rondas) + algo del dinero.
-  const strength = (sample: GameRecord['samples'][number], side: Side) =>
-    sample.army[side] + sample.buildings[side] * 1500 + sample.funds[side] * 0.5;
+  const holdings = (sample: GameRecord['samples'][number], side: Side): Holdings => ({
+    army: sample.army[side],
+    buildings: sample.buildings[side],
+    funds: sample.funds[side],
+  });
   // Ganador "efectivo": el real, o en las partidas sin terminar quien va claramente por delante.
   const adjudicated: [number, number] = [0, 0];
   let even = 0;
@@ -123,10 +126,9 @@ export function buildReport(
       continue;
     }
     const last = record.samples[record.samples.length - 1]!;
-    const firstStrength = strength(last, FIRST_SIDE),
-      secondStrength = strength(last, SECOND_SIDE);
-    if (Math.max(firstStrength, secondStrength) >= 1.15 * Math.min(firstStrength, secondStrength)) {
-      const winner = firstStrength > secondStrength ? FIRST_SIDE : SECOND_SIDE;
+    const leader = clearLeader(holdings(last, FIRST_SIDE), holdings(last, SECOND_SIDE));
+    if (leader) {
+      const winner = leader === 'first' ? FIRST_SIDE : SECOND_SIDE;
       adjudicated[winner]++;
       effWinner.set(record, winner);
     } else even++;
@@ -139,8 +141,8 @@ export function buildReport(
     for (const [record, winner] of effWinner) {
       const sample = record.samples.find((sample) => sample.day === day);
       if (!sample || record.days <= day) continue;
-      const playerStrength = strength(sample, 0),
-        aiStrength = strength(sample, 1);
+      const playerStrength = strengthOf(holdings(sample, FIRST_SIDE)),
+        aiStrength = strengthOf(holdings(sample, SECOND_SIDE));
       if (Math.abs(playerStrength - aiStrength) < 1) continue;
       count++;
       if ((playerStrength > aiStrength ? 0 : 1) === winner) leaderWins++;

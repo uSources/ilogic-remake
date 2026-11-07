@@ -5,7 +5,7 @@
  */
 
 import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
-import { unitTypeOf, isHq, weightsOf } from '../gameContent';
+import { unitTypeOf, isHq } from '../gameContent';
 import { diamond, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canDamage } from '../rules/weapons';
@@ -39,7 +39,7 @@ function captureGoal(s: GameState, ai: PlayCtx, unit: Unit): Pos | null {
     return steps.at(tile) < Infinity;
   };
   const headStart = (tile: Pos): number => (isHq(s, buildingAt(s, tile)!) ? HQ_CAPTURE_HEAD_START : 0);
-  const candidates = [...diamond(mapGrid(s), unit, 1, weightsOf(s).MAXCAPTDIST)].filter(isCapturable);
+  const candidates = [...diamond(mapGrid(s), unit, 1, ai.profile.weights.MAXCAPTDIST)].filter(isCapturable);
   return minBy(candidates, (tile) => steps.at(tile) - headStart(tile));
 }
 
@@ -62,12 +62,12 @@ export function* tryCapture(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRa
  * Cuantos pasos "de ventaja" tiene un objetivo de avance: los que interesan mas cuentan como si
  * estuvieran mas cerca.
  */
-function advanceHeadStart(s: GameState, unit: Unit, goal: Pos): number {
+function advanceHeadStart(s: GameState, ai: PlayCtx, unit: Unit, goal: Pos): number {
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
-  if (s.controlPoints?.some((point) => samePos(point, goal))) return weightsOf(s).CONTROLPOINT;
+  if (s.controlPoints?.some((point) => samePos(point, goal))) return ai.profile.weights.CONTROLPOINT;
   const building = buildingAt(s, goal);
   if (!building || !unitTypeOf(s, unit).canCapture || building.owner === null) return 0;
-  return isHq(s, building) ? weightsOf(s).CAPTUREHQ : weightsOf(s).CAPTUREOWNED;
+  return isHq(s, building) ? ai.profile.weights.CAPTUREHQ : ai.profile.weights.CAPTUREOWNED;
 }
 
 /**
@@ -106,7 +106,7 @@ export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange
   const reachableGoals = advanceGoals(s, ai, unit)
     .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(s, steps, goal) }))
     .filter((option) => option.steps < Infinity);
-  const nearest = minBy(reachableGoals, (option) => option.steps - advanceHeadStart(s, unit, option.goal));
+  const nearest = minBy(reachableGoals, (option) => option.steps - advanceHeadStart(s, ai, unit, option.goal));
   if (!nearest) return false;
   const goal = nearest.goal;
   // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).

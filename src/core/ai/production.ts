@@ -3,7 +3,7 @@
  */
 
 import { teamState } from '../teams';
-import { unitTypeOf, buildingTypeOf, weightsOf } from '../gameContent';
+import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { buildingIncome, buyOptions, upkeepOf, type BuyOption } from '../rules/economy';
 import { teamUnits, unitAt } from '../rules/queries';
 import type { Building, GameEvent, GameState, Rng, TeamId, Unit } from '../model';
@@ -62,14 +62,14 @@ function netIncome(s: GameState, me: TeamId): number {
 }
 
 /** Lo que se plantea comprar en el edificio: lo que cabe (o se paga) sin repetir unidades de apoyo, e infanteria si faltan. */
-function purchaseOptions(s: GameState, building: Building, mine: Unit[], limited: boolean): BuyOption[] {
+function purchaseOptions(s: GameState, ai: PlayCtx, building: Building, mine: Unit[], limited: boolean): BuyOption[] {
   const fits = (option: BuyOption) => (limited ? option.blocked === undefined || option.blocked === 'funds' : option.affordable);
   // Lo que no combate ("ai": { "support": true } en units.json): como mucho uno de cada a la vez.
   const repeatsSupport = (option: BuyOption) => option.unitType.isSupport && mine.some((unit) => unitTypeOf(s, unit) === option.unitType);
   const options = buyOptions(s, building).filter((option) => fits(option) && !repeatsSupport(option));
   const capturers = mine.filter((unit) => unitTypeOf(s, unit).canCapture).length;
   const isAffordableCapturer = (option: BuyOption) => option.unitType.canCapture && option.affordable;
-  if (capturers < weightsOf(s).MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
+  if (capturers < ai.profile.weights.MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
   return options;
 }
 
@@ -99,7 +99,7 @@ export function* produce(s: GameState, ai: PlayCtx, rng: Rng): Generator<GameEve
   for (const building of order) {
     const mine = teamUnits(s, me);
     if (building.owner !== me || mine.length >= s.settings.maxUnits || unitAt(s, building)) continue;
-    const options = purchaseOptions(s, building, mine, limited);
+    const options = purchaseOptions(s, ai, building, mine, limited);
     if (!options.length) continue;
     const purchase = choosePurchase(options, teamState(s, me).funds + income, rng);
     if (purchase === 'save') break;

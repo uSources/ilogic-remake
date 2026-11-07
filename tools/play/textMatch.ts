@@ -5,7 +5,7 @@
  * al terminar el turno, en orden. La partida se juega con la misma sesion que la pantalla (GameSession):
  * lo que pasa solo al acabar y empezar cada turno, igual.
  */
-import { aiTurn } from '@core/ai';
+import { aiTurn, defaultAiProfile } from '@core/ai';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
@@ -346,7 +346,7 @@ export class TextMatch {
 
   /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
   private playMyTurnWithAi(): string[] {
-    return describeAll(this.s, aiTurn(this.s, this.rng, this.me, this.session.dispatcher), 'tu IA: ');
+    return describeAll(this.s, aiTurn(this.s, this.me, defaultAiProfile(this.s.content), this.rng, this.session.dispatcher), 'tu IA: ');
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */

@@ -467,12 +467,12 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
     (`autopilot/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
     `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`).
-- La arena (`npm run arena -- --snapshot`) copia `ai.ts` y todo `ai/` y `autopilot/`, asi que un
-  modulo nuevo de la IA entra solo en la referencia. La referencia (`improve/ai-baseline/`) usa el
-  nucleo de ahora por `@core/...`: `tsc` la comprueba y `tests/arenaSnapshot.test.ts` le hace jugar
-  una partida corta, asi que un cambio del nucleo que la rompa se ve en `npm run check` (se arregla
-  con otro `--snapshot` si la IA actual ya se ha aceptado, o adaptando la copia a ese cambio: lo
-  unico que se edita en ella, como dice su cabecera; sus decisiones no se tocan).
+- La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
+  su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la
+  IA del juego con los pesos guardados en `improve/ai-baseline.json` (`--snapshot` guarda los de
+  ai.json); un comportamiento o una razon de ataque nueva se prueba como perfil (`--candidate`).
+  `tests/arenaSnapshot.test.ts` comprueba que los pesos guardados son justo los que lee la IA y que
+  las dos juegan una partida corta.
 
 ### Modulos de reglas (`core/ruleModules/`)
 
