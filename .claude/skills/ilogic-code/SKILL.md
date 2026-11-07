@@ -84,9 +84,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
 - **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
-  en curso; para probar otras reglas, una partida con otras reglas (`blankState(rules)` en los tests,
+  en curso; para probar otras reglas, una partida con otras reglas (`blankState(settingChanges)` en los tests,
   `createMatch(skirmishConfig({ seed, teams, settingChanges }))`). Reglas con cambios: `settingsWith(contenido, { fog: false })` (nunca
-  `{ ...reglas, ... }` a mano). Partida nueva: `newGameState({ map, rules, content, mode, teams, diceSeed })`, el unico sitio
+  `{ ...ajustes, ... }` a mano). Partida nueva: `newGameState({ map, settings, content, mode, teams, diceSeed })`, el unico sitio
   que escribe su forma (`teams: duel('human', 'ai')` o una lista de `TeamSetup`); el contenido es el campo `s.content` (no se guarda). Leer una guardada:
   `loadGame(json)`, o `readSave(json, contenido)` para saber que falla (`deserialize` da
   null). Solo se lee el formato de ahora: mientras el juego no ha salido, un cambio en lo que se guarda

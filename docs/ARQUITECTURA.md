@@ -258,14 +258,14 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto);
   `rematchOf(s)` da la revancha. La usan la pantalla, `npm run play`, las herramientas y los tests:
   una misma semilla da la misma partida en todos (K4).
-- `gameState.ts`: `newGameState({ map, rules, content, mode, teams, diceSeed, firstTeam?, theme? })`
+- `gameState.ts`: `newGameState({ map, settings, content, mode, teams, diceSeed, firstTeam?, theme? })`
   lo usan mapgen, misiones, laboratorio, duelos y tests. Quien la crea dice sus equipos (`teams:
   duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados.
 - `defaultGames.ts`: `createMatch(config, mapRng?)` y `loadGame(json)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
   juego (ESLint).
 - `settingsSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
   null). La usan el contenido (settings.json) y el guardado; settings.schema.json dice lo mismo para los
-  editores (lo comprueba un test). `settingsWith` usa `content.defaultSettings`; nunca `{ ...reglas, ...
+  editores (lo comprueba un test). `settingsWith` usa `content.defaultSettings`; nunca `{ ...ajustes, ...
   }` a mano.
 - `teams.ts`: `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`,
   `enemiesOf`/`alliesOf`, `teamsControlledBy`, `isAiControlled`, `playerTeam`, `perTeam`,
