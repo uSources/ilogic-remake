@@ -143,6 +143,24 @@ describe('PlayerView: lo que sabe un equipo', () => {
     expect(Object.isFrozen(s.ruleset.modules[0]!.hooks)).toBe(true);
   });
 
+  it('de los enemigos no se ven sus estadisticas ni cuantas unidades y escuadras llevan hechas', () => {
+    const { s, mine, seen } = fogged();
+    s.teams[1]!.stats = { built: 7, spent: 9000, lost: 2, captured: 3, army: [11000, 15000] };
+    s.teams[0]!.stats = { built: 1, spent: 1500, lost: 0, captured: 1, army: [11000] };
+    const view = playerView(s, 0).state;
+    expect(view.teams[1]!.stats).toEqual({ built: 0, spent: 0, lost: 0, captured: 0, army: [] });
+    expect(view.teams[0]!.stats).toEqual(s.teams[0]!.stats);
+    expect(view.teams[1]!.funds).toBe(s.teams[1]!.funds);
+    // El escondido tiene el uid mas alto: la vista da el siguiente a los que conoce, no el de verdad.
+    expect(s.nextUid).toBeGreaterThan(seen.uid + 1);
+    expect(view.nextUid).toBe(Math.max(mine.uid, seen.uid) + 1);
+    s.squads = [{ id: 4, team: 1, name: 'Ellos' }];
+    s.nextSquadId = 5;
+    expect(playerView(s, 0).state.nextSquadId).toBe(1);
+    // La partida de verdad no cambia.
+    expect(s.teams[1]!.stats.built).toBe(7);
+  });
+
   it('lo que puede deshacer otro equipo no se ve', () => {
     const { s, mine } = fogged();
     s.undoableMoves = [{ uid: mine.uid, from: { x: 1, y: 2 }, capture: null, revealed: false }];

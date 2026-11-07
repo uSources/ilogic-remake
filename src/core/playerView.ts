@@ -10,7 +10,9 @@
  * y el clima, y las caidas (`TeamState.fell`: la partida las anuncia a todos, «El equipo N queda
  * fuera»). Un enemigo del que no se ve ninguna unidad no ha caido por eso: lo dice lo apuntado,
  * no lo que se ve (y las reglas que cuentan unidades para saber si alguien ha caido miran la
- * partida de verdad, nunca una vista). Las semillas (dados, decisiones y la del mapa, `setup`) no se
+ * partida de verdad, nunca una vista). De los enemigos tampoco se saben sus estadisticas (lo que han
+ * comprado, gastado y perdido, y su ejercito cada dia) ni cuantas unidades y escuadras llevan hechas
+ * (`nextUid`, `nextSquadId`: la vista da el siguiente a lo que conoce). Las semillas (dados, decisiones y la del mapa, `setup`) no se
  * ven: el equipo solo sabe la de sus propias decisiones de este turno (`turnSeed`). Ojo: la pantalla
  * enseña a la persona el codigo del mapa (de el salen las semillas de una escaramuza) y son de 32
  * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
@@ -19,13 +21,18 @@ import { cloneState } from './gameContent';
 import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from './model';
 import { unitById } from './rules/queries';
 import { sightOf, visibleFoes, type Sight } from './rules/visibility';
-import { areAllied, isHostile } from './teams';
+import { areAllied, emptyTeamStats, isHostile } from './teams';
 import { isAlive, isOnMap } from './util/predicates';
 import { turnSeedOf } from './turnSeeds';
 import { seededRng } from './util/random';
 
 /** Lo que cambia la niebla en la vista (los campos de la partida que se ven de otra forma). */
-type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'buildings' | 'dice' | 'decisionSeed' | 'setup' | 'undoableMoves'>>;
+type FoggedParts = Partial<
+  Pick<
+    GameState,
+    'units' | 'squads' | 'buildings' | 'teams' | 'dice' | 'decisionSeed' | 'setup' | 'undoableMoves' | 'nextUid' | 'nextSquadId'
+  >
+>;
 
 /** Una cosa que el equipo no sabe: lo que deja ver de esa parte de la partida. */
 interface FogRule {
@@ -42,6 +49,15 @@ function asSeenByEnemy(unit: Unit): Unit {
   return { ...seen, cargo: unit.cargo.map(() => null) };
 }
 
+/** El equipo sabe de esta unidad: es suya o de un aliado, o es de un enemigo y la ve (fuera de un transporte). */
+const isKnownTo =
+  (s: GameState, team: TeamId, sees: Sight) =>
+  (unit: Unit): boolean =>
+    areAllied(s, unit.team, team) || (unit.carrier === null && sees(unit));
+
+/** El siguiente numero despues de los que el equipo conoce (el contador de verdad diria cuantos hay que no ve). */
+const nextAfter = (ids: readonly number[]): number => 1 + Math.max(0, ...ids);
+
 /** Un edificio en una casilla que el equipo no ve, como lo sabe: de quien es, pero no quien lo esta capturando. */
 const withoutUnseenCapture = (building: Building): Building => ({ ...building, capture: null });
 
@@ -52,10 +68,24 @@ const FOG: readonly FogRule[] = [
     // ve, solo lo que se ve. Las suyas y las de sus aliados, enteras (comparten lo que ven).
     id: 'unseenUnits',
     hide: (s, team, sees) => ({
-      units: s.units.flatMap((unit) => {
-        if (areAllied(s, unit.team, team)) return [unit];
-        return unit.carrier === null && sees(unit) ? [asSeenByEnemy(unit)] : [];
-      }),
+      units: s.units.filter(isKnownTo(s, team, sees)).map((unit) => (areAllied(s, unit.team, team) ? unit : asSeenByEnemy(unit))),
+    }),
+  },
+  {
+    // Las estadisticas de los enemigos (lo que han comprado, gastado, perdido y capturado, y el valor
+    // de su ejercito cada dia, que cuenta las unidades que no se ven): solo las de su alianza.
+    id: 'foreignStats',
+    hide: (s, team) => ({
+      teams: s.teams.map((other) => (areAllied(s, other.id, team) ? other : { ...other, stats: emptyTeamStats() })),
+    }),
+  },
+  {
+    // Los contadores de unidades y escuadras (diria cuantas ha hecho un enemigo sin verlas): el
+    // siguiente despues de las que conoce. Asi una copia para simular sigue dando numeros nuevos.
+    id: 'counters',
+    hide: (s, team, sees) => ({
+      nextUid: nextAfter(s.units.filter(isKnownTo(s, team, sees)).map((unit) => unit.uid)),
+      nextSquadId: nextAfter((s.squads ?? []).filter((squad) => areAllied(s, squad.team, team)).map((squad) => squad.id)),
     }),
   },
   {
