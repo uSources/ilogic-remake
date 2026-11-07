@@ -7,7 +7,15 @@ import { listStep, type MenuCommand } from '../controls/menu';
 import { createMatch } from '../core/defaultGames';
 import type { Mission } from '../core/missions';
 import type { ObjectiveKind } from '../core/objectives';
-import { bestDays, campaignMissions, completedMissions, missionUnlocked, nextMissionIndex, objectiveText } from '../campaign';
+import {
+  bestDays,
+  campaignMissions,
+  completedMissions,
+  missionUnlocked,
+  nextMissionIndex,
+  objectiveText,
+  playerObjective,
+} from '../campaign';
 import { ui, type CampaignItemVM, type UIActions } from '../hud/store';
 import { settings, t, type TextKey } from '../settings';
 import { mapThumb } from './thumb';
@@ -83,7 +91,7 @@ export class CampaignScreen {
       title: mission.title[lang],
       status: done.has(mission.id) ? 'done' : missionUnlocked(index, done) ? 'open' : 'locked',
       thumb: this.missionThumb(index),
-      kind: t(OBJECTIVE_KIND_LABEL[mission.objective.kind]),
+      kind: t(OBJECTIVE_KIND_LABEL[playerObjective(mission)?.kind ?? 'hq']),
       best: bestDays(mission.id),
     }));
     const selected = campaignMissions()[this.selected]!;

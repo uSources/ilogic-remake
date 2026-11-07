@@ -8,6 +8,7 @@ import { capturePointsOf, captureProgress, inControlZone, isOnMap, unitById } fr
 import { gotoDestination, turnEndOrderOf } from '../../core/squads';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
+import { objectiveOf } from '../../core/objectives';
 import { isAlliedOwner, isHostile } from '../../core/teams';
 import { ownerSideOf, sideOf } from '../../ui/sides';
 import type { ViewOptions } from '../../ui/mapView';
@@ -71,8 +72,8 @@ export function controlPointMarks(s: GameState, viewer: TeamId, visible: (pos: P
 }
 
 /** Mision de escolta: la casilla de destino y donde esta la unidad a escoltar (o quien la lleva). */
-export function escortMarks(s: GameState, hidden: ReadonlySet<number>): { goal: Pos | null; vip: Pos | null } {
-  const objective = s.mission?.objective;
+export function escortMarks(s: GameState, viewer: TeamId, hidden: ReadonlySet<number>): { goal: Pos | null; vip: Pos | null } {
+  const objective = objectiveOf(s, viewer);
   if (objective?.kind !== 'escort') return { goal: null, vip: null };
   const vip = unitById(s, objective.uid);
   const shownAt = vip && vip.carrier !== null ? (unitById(s, vip.carrier) ?? vip) : vip;

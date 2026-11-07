@@ -3,7 +3,7 @@
  * (`record`) y le pide el panel en cada refresco (`panel`).
  */
 import { missionById } from '../../core/missions';
-import type { GameEvent, GameState } from '../../core/model';
+import type { GameEvent, GameState, TeamId } from '../../core/model';
 import { objectiveStatusText, objectiveText, ownedBuildingCount, TUTORIAL } from '../../campaign';
 import type { UIState } from '../../hud/store';
 import { settings } from '../../settings';
@@ -28,27 +28,32 @@ export class TutorialTracker {
   }
 
   /** Titulo, objetivo y, en el tutorial, el consejo del paso actual (null si no es una mision). */
-  panel(s: GameState, phase: Phase): UIState['mission'] {
+  panel(s: GameState, viewer: TeamId, phase: Phase): UIState['mission'] {
     const id = s.mission?.id;
     const mission = id ? missionById(s.content, id) : undefined;
     if (!mission) return null;
     let tip: string | null = null;
     let step: string | null = null;
     if (mission.tutorial) {
-      this.advance(s, phase);
+      this.advance(s, viewer, phase);
       const tutorialStep = TUTORIAL[this.step];
       if (tutorialStep) {
         tip = tutorialStep.text[settings.lang];
         step = `${this.step + 1}/${TUTORIAL.length}`;
       }
     }
-    return { title: mission.title[settings.lang], objective: objectiveText(mission, s), status: objectiveStatusText(s), tip, step };
+    const watching = { s, team: viewer };
+    return {
+      title: mission.title[settings.lang],
+      objective: objectiveText(mission, watching),
+      status: objectiveStatusText(watching),
+      tip,
+      step,
+    };
   }
 
   /** Pasa al siguiente consejo cuando se ha hecho lo que pedia el actual (puede saltar varios). */
-  private advance(s: GameState, phase: Phase): void {
-    const team = s.mission?.objective.owner;
-    if (team === undefined) return;
+  private advance(s: GameState, team: TeamId, phase: Phase): void {
     if (this.step === 0 && this.events.length === 0) this.ownedAtStart = ownedBuildingCount(s, team);
     for (let guard = 0; guard < TUTORIAL.length; guard++) {
       const tutorialStep = TUTORIAL[this.step];

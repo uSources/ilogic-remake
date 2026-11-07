@@ -25,10 +25,15 @@ export type MissionObjective =
 export type MissionBuilding = [type: string, owner: TeamId | null, x: number, y: number];
 export type MissionUnit = [type: string, team: TeamId, x: number, y: number, life?: number];
 
-/** Un equipo de la mision: quien lo juega y con cuanto dinero empieza. */
+/**
+ * Un equipo de la mision: quien lo juega, con cuanto dinero empieza y, si lo tiene, su objetivo (si
+ * lo cumple gana su alianza; si falla, sus enemigos). Cada equipo tiene el suyo o ninguno, asi que
+ * caben misiones con varias personas (por turnos o por la red) o con objetivos para la IA.
+ */
 export interface MissionTeam {
   controller: ControllerKind;
   funds: number;
+  objective?: MissionObjective;
 }
 
 /** Una mision tal como esta en missions.json. */
@@ -41,10 +46,8 @@ export interface MissionDef {
   map: string[];
   buildings: MissionBuilding[];
   units: MissionUnit[];
-  /** Los equipos, en orden (su puesto es el numero de equipo de edificios y unidades), y su dinero. */
+  /** Los equipos, en orden (su puesto es el numero de equipo de edificios y unidades), su dinero y sus objetivos. */
   teams: MissionTeam[];
-  /** El objetivo es del equipo que juega una persona (para los demas, perder si lo cumple). */
-  objective: MissionObjective;
   /** Cambios a las reglas nuevas (por defecto, las nuevas con niebla). */
   settings?: Partial<MatchSettings>;
   /** Consejos paso a paso (solo el tutorial). */
@@ -89,6 +92,7 @@ function validateTeamsOf(scope: Scope, teams: unknown): boolean {
   for (const team of teams as Partial<MissionTeam>[]) {
     scope.known('controller', team?.controller, MISSION_CONTROLLERS, 'el controlador ');
     scope.num('funds', team?.funds, { min: 0, int: true });
+    if (team?.objective !== undefined) scope.expect(typeof team.objective?.kind === 'string', 'objective tiene que tener un "kind"');
   }
   return true;
 }
@@ -103,7 +107,6 @@ function validateMission(check: Checker, context: ContentContext, mission: Parti
   const missionContext: MissionContext = { ...context, teamCount: mission.teams!.length };
   validateBuildingsOf(scope, missionContext, mission.buildings);
   validateUnitsOf(scope, missionContext, mission.units);
-  scope.expect(typeof mission.objective?.kind === 'string', 'objective tiene que tener un "kind"');
 }
 
 /** Comprueba missions.json: una lista de misiones sin ids repetidos, cada una bien escrita. */

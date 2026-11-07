@@ -19,7 +19,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 11;
+  version: 12;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -70,8 +70,11 @@ export interface GameState {
   setup?: GameSetup;
   /** [CAMBIO] Clima (regla weather): el de ahora, los dias que le quedan y el que viene despues. */
   weather?: WeatherState;
-  /** Mision de la campaña que se esta jugando (su id) y su objetivo (que dice de que equipo es: `owner`). */
-  mission?: { id: string; objective: Objective };
+  /**
+   * Mision de la campaña que se esta jugando (su id) y los objetivos de sus equipos, en el orden de
+   * los equipos (cada uno dice de cual es, `owner`; un equipo tiene uno o ninguno).
+   */
+  mission?: { id: string; objectives: Objective[] };
   /** [CAMBIO] Escuadras (cada una de un equipo; las unidades dicen a cual pertenecen con Unit.squad). */
   squads?: Squad[];
   /**

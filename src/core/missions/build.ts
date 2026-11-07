@@ -8,7 +8,7 @@ import { settingsWith } from '../matchSettings';
 import type { DeepReadonly } from '../util/freeze';
 import { newGameState } from '../gameState';
 import type { GameModeRegistry } from '../modes';
-import type { GameState, Pos, MatchSettings, TeamId } from '../model';
+import type { GameState, MatchSettings, Objective, Pos } from '../model';
 import { objectiveFromMission } from '../objectives';
 import { newUnit } from '../rules/lifecycle';
 
@@ -69,26 +69,23 @@ export function buildMission(mission: Mission, content: GameContent, seeds: Matc
   for (const [type, owner, x, y] of mission.buildings)
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });
   const unitUids = placeUnits(s, mission.units);
-  s.mission = { id: mission.id, objective: objectiveFromMission(mission.objective, missionTeam(mission), unitUids, content) };
+  s.mission = { id: mission.id, objectives: missionObjectives(mission, unitUids, content) };
   return s;
 }
 
-/** El equipo que juega la mision: el que lleva una persona (el dueño de su objetivo). */
-export function missionTeam(mission: Mission): TeamId {
-  const team = mission.teams.findIndex((candidate) => candidate.controller === 'human');
-  if (team < 0) throw new Error(`La mision ${mission.id} no tiene ningun equipo para una persona`);
-  return team;
+/** Los objetivos de los equipos de la mision en la partida, en el orden de los equipos (los que no tienen, ninguno). */
+function missionObjectives(mission: Mission, unitUids: readonly number[], content: GameContent): Objective[] {
+  return mission.teams.flatMap((team, owner) => (team.objective ? [objectiveFromMission(team.objective, owner, unitUids, content)] : []));
 }
 
 /**
  * Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los
- * pida). El dinero inicial de las reglas es el del equipo que la juega.
+ * pida). El dinero de cada equipo lo dice la mision (`MissionTeam.funds`).
  */
 export const missionSettings = (mission: Mission, content: GameContent): MatchSettings =>
   settingsWith(content, {
     commandPoints: null,
     upkeep: 0,
     weather: false,
-    initialFunds: mission.teams[missionTeam(mission)]!.funds,
     ...mission.settings,
   });

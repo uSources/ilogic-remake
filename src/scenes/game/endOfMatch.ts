@@ -10,6 +10,7 @@ import { missionById, type Mission } from '../../core/missions';
 import { decidingFall, isDefeatReason, isWinner, outcomeFor } from '../../core/rules';
 import { enemiesOf } from '../../core/teams';
 import type { DefeatReason, EndReason, GameState, MatchResult, Pos, TeamId } from '../../core/model';
+import { missionObjectives, objectiveOf } from '../../core/objectives';
 import type { PersonEnd } from '../../core/session';
 import { bestDays, campaignMissions, markCompleted } from '../../campaign';
 import { listStep, type MenuCommand } from '../../controls/menu';
@@ -106,7 +107,7 @@ export function endButtonsFor(mission: Mission | undefined, outcome: EndOutcome)
 /** Donde mirar al acabar (para el equipo que mira, `viewer`). `lastAt`: ultima casilla con un combate o una captura. */
 export function endFocus(s: GameState, viewer: TeamId, outcome: EndOutcome, reason: EndReason, lastAt: Pos | null): Pos {
   const hqOf = (team: TeamId) => s.buildings.find((building) => isHq(s, building) && building.owner === team);
-  const objective = s.mission?.objective;
+  const objective = objectiveOf(s, viewer) ?? missionObjectives(s).find((candidate) => candidate.kind === 'escort');
   if (reason === 'objective' && objective?.kind === 'escort') return objective.to;
   const endedByAMove = reason === 'hq' || reason === 'wipeout' || reason === 'objective';
   if (endedByAMove && lastAt) return lastAt;

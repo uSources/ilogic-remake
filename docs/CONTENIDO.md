@@ -13,7 +13,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/generals.json` | Los generales: ventaja fija, barra de carga y poderes (ataque aereo, reconocimiento...) |
 | `src/core/content/settings.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
 | `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
-| `src/core/content/missions.json` | Las misiones de la campaña, en orden: mapa en texto, edificios, unidades, equipos (quien los juega y su dinero) y objetivo (skill `nueva-mision`) |
+| `src/core/content/missions.json` | Las misiones de la campaña, en orden: mapa en texto, edificios, unidades y equipos (quien los juega, su dinero y su objetivo, si tiene; skill `nueva-mision`) |
 
 Cada fichero tiene su esquema (`units.schema.json`, `buildings.schema.json`): VS Code y otros editores
 autocompletan los campos, explican cada uno al pasar el raton y marcan los errores mientras escribes.

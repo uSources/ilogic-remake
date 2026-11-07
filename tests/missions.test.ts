@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { buildMission, checkMission, missionSettings } from '@core/missions';
+import { objectiveOf } from '@core/objectives';
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_SEEDS = matchSeedsFrom(1);
@@ -27,7 +28,7 @@ describe('misiones', () => {
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
     expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1), 'a pie de base a base').toBeLessThan(Infinity);
     expect(resultFor(s, 0)).toBe('playing');
-    const objective = s.mission!.objective;
+    const objective = objectiveOf(s, 0)!;
     if (objective.kind === 'escort') {
       const vip = s.units.find((unit) => unit.uid === objective.uid)!;
       expect(distanceMap(s, vip, unitTypeOf(s, vip).movement).at(objective.to), 'el convoy puede llegar').toBeLessThan(Infinity);
@@ -135,7 +136,8 @@ describe('misiones', () => {
     expect(resultFor(cl, 0)).toBe('won');
 
     const es = buildMission(byId('escort'), defaultContent(), MISSION_SEEDS);
-    const objective = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
+    const objective = objectiveOf(es, 0)!;
+    if (objective.kind !== 'escort') throw new Error('escort es de escoltar');
     const vip = es.units.find((unit) => unit.uid === objective.uid)!;
     expect(resultFor(es, 0)).toBe('playing');
     vip.x = objective.to.x;
@@ -157,7 +159,7 @@ describe('misiones', () => {
     expect(withMission((mission) => (mission.units = [['Dragon', 0, 1, 1]]))).toThrow(/unidad "Dragon"/);
     expect(withMission((mission) => (mission.buildings = [['Base', 7, 1, 1]]))).toThrow(/no esta en "teams"/);
     expect(withMission((mission) => (mission.teams = [{ controller: 'human', funds: 0 }]))).toThrow(/al menos dos equipos/);
-    expect(withMission((mission) => (mission.objective = {}))).toThrow(/objective/);
+    expect(withMission((mission) => ((mission.teams as { objective?: unknown }[])[0]!.objective = {}))).toThrow(/objective/);
     expect(withMission((mission) => (mission.id = 'bridgehead'))).toThrow(/repetido/);
   });
 });

@@ -64,6 +64,8 @@ export function checkMission(mission: Mission, content: GameContent): string[] {
     ...missingBases(mission, content),
     ...unknownTeams(mission),
     ...(mission.teams.some((team) => team.controller === 'human') ? [] : ['ningun equipo es de una persona']),
-    ...objectiveProblems(mission.objective, { unitCount: mission.units.length, mapSize: size }),
+    ...mission.teams.flatMap((team) =>
+      team.objective ? objectiveProblems(team.objective, { unitCount: mission.units.length, mapSize: size }) : [],
+    ),
   ];
 }

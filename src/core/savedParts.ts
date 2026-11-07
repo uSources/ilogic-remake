@@ -188,10 +188,16 @@ export function cleanBuildings(frame: SaveFrame, buildings: readonly unknown[]):
     if (building.capture != null && !isCaptureProgress(frame, building.capture)) building.capture = null;
 }
 
-/** La mision: su id y su objetivo, de un equipo de la partida (cada tipo de objetivo comprueba sus campos). */
+/** Un objetivo de la mision, de un equipo de la partida (cada tipo de objetivo comprueba sus campos). */
+const isValidTeamObjective = (frame: SaveFrame, objective: unknown): boolean =>
+  isObject(objective) && isTeam(frame, objective.owner) && isValidObjective(frame, objective);
+
+/** La mision: su id y los objetivos de sus equipos, cada uno de un equipo distinto. */
 export function isValidMission(frame: SaveFrame, mission: unknown): boolean {
-  if (!isObject(mission) || typeof mission.id !== 'string' || !isObject(mission.objective)) return false;
-  return isTeam(frame, mission.objective.owner) && isValidObjective(frame, mission.objective);
+  if (!isObject(mission) || typeof mission.id !== 'string' || !Array.isArray(mission.objectives)) return false;
+  const objectives: unknown[] = mission.objectives;
+  if (!objectives.every((objective) => isValidTeamObjective(frame, objective))) return false;
+  return new Set(objectives.filter(isObject).map((objective) => objective.owner)).size === objectives.length;
 }
 
 /**

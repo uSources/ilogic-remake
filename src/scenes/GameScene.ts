@@ -870,7 +870,7 @@ export class GameScene extends Phaser.Scene {
       intents: this.intentsToDraw(),
       captures: captureBars(this.s, this.viewer, this.vis),
       controlPoints: controlPointMarks(this.s, this.viewer, (pos) => this.visibleToPlayer(pos)),
-      ...escortMarks(this.s, this.hidden),
+      ...escortMarks(this.s, this.viewer, this.hidden),
     };
   }
 
@@ -975,7 +975,7 @@ export class GameScene extends Phaser.Scene {
       endTurn: { pending: this.turns.pendingUnits().length, armed: this.turns.endArmed() },
       anyStandingOrder: s.units.some((unit) => this.isOwn(unit) && !!this.standingOrderOf(unit)),
       hint: this.hint(busy),
-      mission: this.tutorial.panel(s, this.phase),
+      mission: this.tutorial.panel(s, this.viewer, this.phase),
     });
     this.publishCameraView();
   }

@@ -4,6 +4,7 @@ import { currentDefeat, isWinner, matchResult, VICTORY_RULES } from '@core/rules
 import { newUnit } from '@core/measure';
 import { restoreInvariants } from '@core/rules/invariants';
 import { buildMission, missionById } from '@core/missions';
+import { objectiveOf } from '@core/objectives';
 import { defaultContent } from '@core/content/default';
 import type { VictoryRuleId } from '@core/model';
 import { act, blankState, BLANK_SEEDS, expectRejected, hqId, resultFor, unitTypeNamed } from './helpers';
@@ -110,9 +111,17 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
 
   it('mision: si su dueño falla el objetivo, ganan sus enemigos', () => {
     const s = buildMission(missionById(defaultContent(), 'bridgehead')!, defaultContent(), BLANK_SEEDS);
-    const objective = s.mission!.objective;
+    const objective = objectiveOf(s, 0)!;
     if (objective.kind !== 'capture') throw new Error('bridgehead es de capturar');
     s.day = objective.days + 1;
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'objective' });
+  });
+
+  it('mision con objetivo para varios equipos: decide el primero, en el orden de los equipos, que se cumple o falla', () => {
+    const s = buildMission(missionById(defaultContent(), 'bridgehead')!, defaultContent(), BLANK_SEEDS);
+    s.mission!.objectives.push({ kind: 'survive', days: 3, owner: 1 });
+    expect(matchResult(s).status).toBe('playing');
+    s.day = 4;
     expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'objective' });
   });
 });

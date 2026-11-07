@@ -3,9 +3,10 @@
  * cuando se gana o se pierde y cuanto falta. Un objetivo nuevo es una entrada en `OBJECTIVES` (y su
  * frase en `campaign.ts`); el tipo de la partida esta en `Objective` (`model/objective.ts`).
  *
- * Un objetivo es de un equipo (`Objective.owner`, el que juega la mision): si se cumple y el
- * progreso se miden para ese equipo. Si lo cumple gana su alianza, y si falla, sus enemigos (la
- * regla 'objective' de rules/victory.ts).
+ * Un objetivo es de un equipo (`Objective.owner`): cada equipo de una mision tiene el suyo o
+ * ninguno (`MissionTeam.objective`), asi que caben misiones con varias personas o con objetivos
+ * para la IA. Si se cumple y el progreso se miden para su dueño. Si lo cumple gana su alianza, y si
+ * falla, sus enemigos (la regla 'objective' de rules/victory.ts).
  */
 
 import { entryOf, isEntryId, type GameContent, type MissionObjective } from './content';
@@ -181,3 +182,10 @@ export const objectiveStatus = (s: GameState, objective: Objective): ObjectiveSt
 /** Cuanto le falta al dueño del objetivo (null si no se cuenta). */
 export const measureObjective = (s: GameState, objective: Objective): ObjectiveProgress | null =>
   rulesOf(objective.kind).progress(s, objective.owner, objective);
+
+/** Los objetivos de la mision que se juega, en el orden de los equipos (ninguno si no es una mision). */
+export const missionObjectives = (s: GameState): readonly Objective[] => s.mission?.objectives ?? [];
+
+/** El objetivo del equipo `team` en la mision que se juega, si tiene. */
+export const objectiveOf = (s: GameState, team: TeamId): Objective | undefined =>
+  missionObjectives(s).find((objective) => objective.owner === team);

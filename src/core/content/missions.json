@@ -49,16 +49,16 @@
       "teams": [
         {
           "controller": "human",
-          "funds": 6000
+          "funds": 6000,
+          "objective": {
+            "kind": "hq"
+          }
         },
         {
           "controller": "ai",
           "funds": 0
         }
-      ],
-      "objective": {
-        "kind": "hq"
-      }
+      ]
     },
     {
       "id": "bridgehead",
@@ -121,19 +121,19 @@
       "teams": [
         {
           "controller": "human",
-          "funds": 4000
+          "funds": 4000,
+          "objective": {
+            "kind": "capture",
+            "count": 6,
+            "type": "City",
+            "days": 14
+          }
         },
         {
           "controller": "ai",
           "funds": 6000
         }
-      ],
-      "objective": {
-        "kind": "capture",
-        "count": 6,
-        "type": "City",
-        "days": 14
-      }
+      ]
     },
     {
       "id": "hold",
@@ -201,17 +201,17 @@
       "teams": [
         {
           "controller": "human",
-          "funds": 6000
+          "funds": 6000,
+          "objective": {
+            "kind": "survive",
+            "days": 8
+          }
         },
         {
           "controller": "ai",
           "funds": 15000
         }
-      ],
-      "objective": {
-        "kind": "survive",
-        "days": 8
-      }
+      ]
     },
     {
       "id": "escort",
@@ -272,22 +272,22 @@
       "teams": [
         {
           "controller": "human",
-          "funds": 5000
+          "funds": 5000,
+          "objective": {
+            "kind": "escort",
+            "vip": 0,
+            "to": {
+              "x": 18,
+              "y": 2
+            },
+            "days": 12
+          }
         },
         {
           "controller": "ai",
           "funds": 8000
         }
-      ],
-      "objective": {
-        "kind": "escort",
-        "vip": 0,
-        "to": {
-          "x": 18,
-          "y": 2
-        },
-        "days": 12
-      }
+      ]
     },
     {
       "id": "cleanup",
@@ -346,17 +346,17 @@
       "teams": [
         {
           "controller": "human",
-          "funds": 10000
+          "funds": 10000,
+          "objective": {
+            "kind": "destroy",
+            "days": 10
+          }
         },
         {
           "controller": "ai",
           "funds": 0
         }
-      ],
-      "objective": {
-        "kind": "destroy",
-        "days": 10
-      }
+      ]
     },
     {
       "id": "assault",
@@ -420,16 +420,16 @@
       "teams": [
         {
           "controller": "human",
-          "funds": 8000
+          "funds": 8000,
+          "objective": {
+            "kind": "hq"
+          }
         },
         {
           "controller": "ai",
           "funds": 14000
         }
-      ],
-      "objective": {
-        "kind": "hq"
-      }
+      ]
     }
   ]
 }

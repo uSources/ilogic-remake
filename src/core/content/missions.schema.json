@@ -10,10 +10,26 @@
       "type": "object",
       "required": ["es", "en"],
       "additionalProperties": false,
-      "properties": { "es": { "type": "string", "minLength": 1 }, "en": { "type": "string", "minLength": 1 } }
+      "properties": {
+        "es": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
-    "tile": { "type": "integer", "minimum": 0 },
-    "days": { "type": "integer", "minimum": 1, "description": "Ultimo dia para cumplirlo." },
+    "tile": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Ultimo dia para cumplirlo."
+    },
     "objective": {
       "description": "Lo que tiene que hacer el equipo que lo lleva (objectives.ts).",
       "oneOf": [
@@ -21,15 +37,25 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["kind"],
-          "properties": { "kind": { "const": "hq", "description": "Tomar la Base enemiga (o dejar al enemigo sin nada)." } }
+          "properties": {
+            "kind": {
+              "const": "hq",
+              "description": "Tomar la Base enemiga (o dejar al enemigo sin nada)."
+            }
+          }
         },
         {
           "type": "object",
           "additionalProperties": false,
           "required": ["kind", "days"],
           "properties": {
-            "kind": { "const": "survive", "description": "Aguantar hasta pasado el dia." },
-            "days": { "$ref": "#/definitions/days" }
+            "kind": {
+              "const": "survive",
+              "description": "Aguantar hasta pasado el dia."
+            },
+            "days": {
+              "$ref": "#/definitions/days"
+            }
           }
         },
         {
@@ -41,9 +67,16 @@
               "const": "capture",
               "description": "Tener `count` edificios de ese tipo (null: de cualquiera) antes de que acabe el dia."
             },
-            "count": { "type": "integer", "minimum": 1 },
-            "type": { "type": ["string", "null"] },
-            "days": { "$ref": "#/definitions/days" }
+            "count": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "type": {
+              "type": ["string", "null"]
+            },
+            "days": {
+              "$ref": "#/definitions/days"
+            }
           }
         },
         {
@@ -51,8 +84,13 @@
           "additionalProperties": false,
           "required": ["kind", "days"],
           "properties": {
-            "kind": { "const": "destroy", "description": "Destruir a todos los enemigos a tiempo." },
-            "days": { "$ref": "#/definitions/days" }
+            "kind": {
+              "const": "destroy",
+              "description": "Destruir a todos los enemigos a tiempo."
+            },
+            "days": {
+              "$ref": "#/definitions/days"
+            }
           }
         },
         {
@@ -60,43 +98,72 @@
           "additionalProperties": false,
           "required": ["kind", "vip", "to", "days"],
           "properties": {
-            "kind": { "const": "escort", "description": "Llevar la unidad numero `vip` de \"units\" a la casilla `to` a tiempo." },
-            "vip": { "type": "integer", "minimum": 0 },
+            "kind": {
+              "const": "escort",
+              "description": "Llevar la unidad numero `vip` de \"units\" a la casilla `to` a tiempo."
+            },
+            "vip": {
+              "type": "integer",
+              "minimum": 0
+            },
             "to": {
               "type": "object",
               "required": ["x", "y"],
               "additionalProperties": false,
-              "properties": { "x": { "$ref": "#/definitions/tile" }, "y": { "$ref": "#/definitions/tile" } }
+              "properties": {
+                "x": {
+                  "$ref": "#/definitions/tile"
+                },
+                "y": {
+                  "$ref": "#/definitions/tile"
+                }
+              }
             },
-            "days": { "$ref": "#/definitions/days" }
+            "days": {
+              "$ref": "#/definitions/days"
+            }
           }
         }
       ]
     }
   },
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "missions": {
       "type": "array",
       "description": "En el orden de la campaña: cada una se abre al acabar la anterior.",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "title", "brief", "theme", "map", "buildings", "units", "teams", "objective"],
+        "required": ["id", "title", "brief", "theme", "map", "buildings", "units", "teams"],
         "properties": {
           "id": {
             "type": "string",
             "pattern": "^\\w+$",
             "description": "Nombre interno; lo guardan las partidas y el progreso de la campaña."
           },
-          "tutorial": { "type": "boolean", "description": "Consejos paso a paso (solo el tutorial)." },
-          "title": { "$ref": "#/definitions/texts" },
-          "brief": { "$ref": "#/definitions/texts" },
-          "theme": { "type": "string", "description": "Id de themes.json: graficos y el terreno de las letras que dependen del tema." },
+          "tutorial": {
+            "type": "boolean",
+            "description": "Consejos paso a paso (solo el tutorial)."
+          },
+          "title": {
+            "$ref": "#/definitions/texts"
+          },
+          "brief": {
+            "$ref": "#/definitions/texts"
+          },
+          "theme": {
+            "type": "string",
+            "description": "Id de themes.json: graficos y el terreno de las letras que dependen del tema."
+          },
           "map": {
             "type": "array",
             "description": "Una fila por linea (y), una letra por casilla (x); cuadrado. Letras: las del tema (themes.json, \"mapLetters\") y las de terrain.json (\"mapLetter\").",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           },
           "buildings": {
             "type": "array",
@@ -106,10 +173,19 @@
               "minItems": 4,
               "maxItems": 4,
               "items": [
-                { "type": "string" },
-                { "type": ["integer", "null"], "minimum": 0 },
-                { "$ref": "#/definitions/tile" },
-                { "$ref": "#/definitions/tile" }
+                {
+                  "type": "string"
+                },
+                {
+                  "type": ["integer", "null"],
+                  "minimum": 0
+                },
+                {
+                  "$ref": "#/definitions/tile"
+                },
+                {
+                  "$ref": "#/definitions/tile"
+                }
               ]
             }
           },
@@ -121,29 +197,52 @@
               "minItems": 4,
               "maxItems": 5,
               "items": [
-                { "type": "string" },
-                { "type": "integer", "minimum": 0 },
-                { "$ref": "#/definitions/tile" },
-                { "$ref": "#/definitions/tile" },
-                { "type": "integer", "minimum": 1, "maximum": 100 }
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "$ref": "#/definitions/tile"
+                },
+                {
+                  "$ref": "#/definitions/tile"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
               ]
             }
           },
           "teams": {
             "type": "array",
             "minItems": 2,
-            "description": "En orden: su puesto es el numero de equipo de edificios y unidades.",
+            "description": "En orden: su puesto es el numero de equipo de edificios y unidades. Cada uno con su objetivo o sin el.",
             "items": {
               "type": "object",
               "additionalProperties": false,
               "required": ["controller", "funds"],
               "properties": {
-                "controller": { "enum": ["human", "ai"], "description": "Quien lo juega." },
-                "funds": { "type": "integer", "minimum": 0, "description": "Dinero al empezar." }
+                "controller": {
+                  "enum": ["human", "ai"],
+                  "description": "Quien lo juega."
+                },
+                "funds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Dinero al empezar."
+                },
+                "objective": {
+                  "$ref": "#/definitions/objective",
+                  "description": "Lo que tiene que hacer este equipo (si no tiene, gana o pierde por las reglas de siempre: quedarse sin Base o sin nada)."
+                }
               }
             }
           },
-          "objective": { "$ref": "#/definitions/objective" },
           "settings": {
             "type": "object",
             "description": "Cambios a las reglas (settings.json, \"defaults\"): por defecto, sin puntos de mando, mantenimiento ni clima."

@@ -3,7 +3,7 @@ import { objectiveStatusText, objectiveText } from '../src/campaign';
 import { settings } from '../src/settings';
 import { defaultContent } from '@core/content/default';
 import { buildMission } from '@core/missions';
-import { isValidObjective, measureObjective, objectiveStatus } from '@core/objectives';
+import { isValidObjective, measureObjective, missionObjectives, objectiveOf, objectiveStatus } from '@core/objectives';
 import { isDefeated, objectiveProgress } from '@core/rules';
 import { teamIds } from '@core/teams';
 import { mapGrid } from '@core/mapGrid';
@@ -21,7 +21,12 @@ afterEach(() => {
 function statesOf(id: string): GameState[] {
   const mission = defaultContent().missions.byId[id]!;
   const fresh = () => buildMission(mission, defaultContent(), BLANK_SEEDS);
-  const lastDay = (s: GameState) => ('days' in s.mission!.objective ? s.mission!.objective.days : 20);
+  /** El objetivo de quien juega (el equipo 0 en todas las misiones de la campaña). */
+  const playerGoal = (s: GameState) => objectiveOf(s, 0)!;
+  const lastDay = (s: GameState) => {
+    const goal = playerGoal(s);
+    return 'days' in goal ? goal.days : 20;
+  };
   const states: GameState[] = [];
   const atStart = fresh();
   states.push(atStart);
@@ -39,7 +44,7 @@ function statesOf(id: string): GameState[] {
   const noPlayerUnits = fresh();
   noPlayerUnits.units = noPlayerUnits.units.filter((unit) => unit.team === 1);
   states.push(noPlayerUnits);
-  const objective = atStart.mission!.objective;
+  const objective = playerGoal(atStart);
   if (objective.kind === 'escort') {
     const arrived = fresh();
     const vip = arrived.units.find((unit) => unit.uid === objective.uid)!;
@@ -68,23 +73,34 @@ function isAnyoneDefeated(s: GameState): boolean {
 describe('objetivos de mision', () => {
   it.each(MISSIONS.map((mission) => [mission.id] as const))('%s: mismo resultado y progreso que las reglas', (id) => {
     for (const s of statesOf(id)) {
-      const { objective } = s.mission!;
-      const team = objective.owner;
-      expect(measureObjective(s, objective)).toEqual(objectiveProgress(s));
-      if (objective.kind === 'hq' || isAnyoneDefeated(s)) continue;
-      expect(resultFor(s, team)).toBe(STATUS_FOR_OWNER[objectiveStatus(s, objective)]);
+      for (const objective of missionObjectives(s)) {
+        const team = objective.owner;
+        expect(measureObjective(s, objective)).toEqual(objectiveProgress(s, team));
+        if (objective.kind === 'hq' || isAnyoneDefeated(s)) continue;
+        expect(resultFor(s, team)).toBe(STATUS_FOR_OWNER[objectiveStatus(s, objective)]);
+      }
+    }
+  });
+
+  it('cada equipo de la mision lleva su objetivo, o ninguno; la partida los guarda por equipo', () => {
+    for (const mission of MISSIONS) {
+      const s = buildMission(mission, defaultContent(), BLANK_SEEDS);
+      const owners = missionObjectives(s).map((objective) => objective.owner);
+      expect(owners).toEqual(mission.teams.flatMap((team, id) => (team.objective ? [id] : [])));
+      expect(objectiveOf(s, 1)).toBeUndefined();
     }
   });
 
   it('textos del objetivo y del progreso, como antes', () => {
     const texts = MISSIONS.map((mission) => {
       const s = buildMission(mission, defaultContent(), BLANK_SEEDS);
-      return [objectiveText(mission), objectiveText(mission, s), objectiveText(null, s), objectiveStatusText(s)];
+      const viewer = { s, team: 0 };
+      return [objectiveText(mission), objectiveText(mission, viewer), objectiveText(null, viewer), objectiveStatusText(viewer)];
     });
     expect(objectiveText(null)).toBe('Conquista la Base enemiga.');
     settings.lang = 'en';
     expect(objectiveText(MISSIONS[1]!)).toBe('Own 6 citys before day 14 ends.');
-    expect(objectiveStatusText(buildMission(MISSIONS[4]!, defaultContent(), BLANK_SEEDS))).toBe('Left: 8 · Day 1 of 10');
+    expect(objectiveStatusText({ s: buildMission(MISSIONS[4]!, defaultContent(), BLANK_SEEDS), team: 0 })).toBe('Left: 8 · Day 1 of 10');
     settings.lang = 'es';
     expect(texts).toEqual([
       ['Conquista la Base enemiga.', 'Conquista la Base enemiga.', 'Conquista la Base enemiga.', null],

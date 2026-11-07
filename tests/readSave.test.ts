@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { loadGame } from '@core/defaultGames';
+import { createMatch, loadGame } from '@core/defaultGames';
 import { readSave, serialize } from '@core/save';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { cleanTeams, hasValidTeams } from '@core/savedParts';
@@ -100,5 +100,15 @@ describe('readSave: los contadores rotos se arreglan', () => {
     expect(saved.teams[0]!.stats).not.toBe('rotas');
     expect(hasValidTeams([saved.teams[0]])).toBe(false);
     expect(hasValidTeams([saved.teams[0], { ...saved.teams[1], alliance: saved.teams[0]!.alliance }])).toBe(false);
+  });
+
+  it('una mision: sus objetivos, cada uno de un equipo distinto de la partida', () => {
+    const s = createMatch({ mode: 'mission', mission: 'bridgehead', seed: 3 });
+    const saved = JSON.parse(serialize(s)) as { mission: { objectives: { owner: number }[] } };
+    expect(readSave(JSON.stringify(saved), defaultContent()).ok).toBe(true);
+    saved.mission.objectives.push({ ...saved.mission.objectives[0]! });
+    expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
+    saved.mission.objectives = [{ ...saved.mission.objectives[0]!, owner: 7 }];
+    expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
   });
 });

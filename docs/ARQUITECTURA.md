@@ -325,7 +325,7 @@ de la semilla del mapa y del dia (`weatherSeed`, weather.ts).
   (`SaveFrame`: contenido, bordes del mapa, cuantos equipos), y leer no cambia nada mas (ni
   escuadras ni teclas). Lo que la partida siempre guarda tiene que estar: no se rellena con valores
   por defecto (una regla que falta es `badSettings`).
-- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 9, atada al
+- Cada partida guarda la version de su formato (`SAVE_VERSION` en saveVersion.ts, ahora 12, atada al
   tipo de `GameState.version`) y **solo se lee la de ahora**: no hay migraciones. Mientras el juego no
   ha salido, cambiar lo que se guarda es subir la version, y las partidas guardadas con una de antes
   se descartan (`badVersion`): el menu no ofrece Continuar y, al intentar cargarla, se borra el hueco.
@@ -442,7 +442,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   que `matchResult` lance un error; por eso `buildMatch` exige que todos empiecen en pie
   (`assertAllStanding`) y `readSave` rechaza lo que no cuadre. Si lo que pasa al acabar un turno
   decide la partida, 'endTurn' no pasa el turno (ni ronda nueva, ni otro dia). Puntos del limite de
-  dias por alianza, progreso del objetivo de mision.
+  dias por alianza, progreso del objetivo de un equipo en la mision (`objectiveProgress(s, equipo)`).
 - `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
 
 `src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
@@ -663,8 +663,9 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   el fin de ronda lo trata como el de cualquiera (cobra, se cura): nadie lo usa, y es botin para los
   demas.
 - La partida termina (`isMatchOver`) cuando la primera forma de acabar de su modo lo decide
-  (`VICTORY_RULES`): solo queda en pie una alianza (o ninguna: empate), el objetivo de la mision o
-  el limite de dias (gana la alianza con mas puntos; si empatan, empate). Con 3 o mas equipos, que
+  (`VICTORY_RULES`): solo queda en pie una alianza (o ninguna: empate), un objetivo de la mision
+  (cada equipo tiene el suyo o ninguno, `s.mission.objectives`, `objectiveOf(s, equipo)`; decide el
+  primero, en el orden de los equipos, que se cumple o falla) o el limite de dias (gana la alianza con mas puntos; si empatan, empate). Con 3 o mas equipos, que
   caiga uno no la acaba.
 - Hace falta al menos dos alianzas (`newTeams` y `readSave` no aceptan menos).
 - Las reglas no miran el `controller`: solo dice quien decide (el controlador que le pone la sesion,
