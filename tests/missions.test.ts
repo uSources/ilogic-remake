@@ -167,6 +167,15 @@ describe('misiones', () => {
     expect(withMission((mission) => (mission.id = 'bridgehead'))).toThrow(/repetido/);
   });
 
+  it('el dinero inicial de las reglas es el de quien juega la mision (cada equipo empieza con el suyo)', () => {
+    for (const mission of MISSIONS) {
+      const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
+      const player = mission.teams.findIndex((team) => team.controller === 'human');
+      expect(s.settings.initialFunds).toBe(mission.teams[player]!.funds);
+      expect(s.teams.map((team) => team.funds)).toEqual(mission.teams.map((team) => team.funds));
+    }
+  });
+
   it('la unidad a escoltar es la marcada con "vip" de su equipo', () => {
     const escort = MISSIONS.find((mission) => mission.teams.some((team) => team.objective?.kind === 'escort'))!;
     const s = buildMission(escort, defaultContent(), MISSION_SEEDS);

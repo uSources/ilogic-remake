@@ -87,14 +87,19 @@ function missionObjectives(mission: Mission, unitUids: readonly number[], conten
   );
 }
 
+/** El dinero con el que empieza quien juega la mision (el primer equipo de una persona; si no hay, el primero). */
+const playerFunds = (mission: Mission): number => (mission.teams.find((team) => team.controller === 'human') ?? mission.teams[0])!.funds;
+
 /**
  * Las misiones estan ajustadas sin puntos de mando, mantenimiento ni clima (salvo que la mision los
- * pida). El dinero de cada equipo lo dice la mision (`MissionTeam.funds`).
+ * pida). El dinero de cada equipo lo dice la mision (`MissionTeam.funds`); el de las reglas
+ * (`initialFunds`, el que se enseña como dinero inicial) es el de quien la juega.
  */
 export const missionSettings = (mission: Mission, content: GameContent): MatchSettings =>
   settingsWith(content, {
     commandPoints: null,
     upkeep: 0,
     weather: false,
+    initialFunds: playerFunds(mission),
     ...mission.settings,
   });
