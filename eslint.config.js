@@ -94,6 +94,31 @@ const NO_AI = {
     'Las reglas, las acciones, las ordenes y la sesion no importan la IA (ai/, ai.ts, aiGenerals.ts, controllers/): la IA reutiliza autopilot/.',
 };
 /**
+ * I1/I2: quien decide por un equipo (la IA: ai/, ai.ts, aiGenerals.ts; y los pasos de autopilot/)
+ * solo propone acciones (`ActionPlan`) y solo lee la vista de su equipo (`PlayerView`): no manda
+ * nada (ni dispatch ni la sesion), no se hace su propia vista de la partida de verdad y no tira de
+ * los dados de la partida. Lo prueba tests/lintImports.test.ts.
+ */
+export const DECIDERS_ONLY_PROPOSE = [
+  {
+    regex: '(^|/)(actions/dispatch|actions)(\\.ts)?$|(^|/)session(\\.ts)?(/.*)?$',
+    message: 'Quien decide (la IA, autopilot/) no manda acciones: las propone (ActionPlan) y las manda quien cumple el plan.',
+  },
+  {
+    regex: '(^|/)playerView(\\.ts)?$',
+    importNames: ['playerView'],
+    message: 'Quien decide recibe la vista de su equipo (PlayerView): no se la hace de la partida de verdad.',
+  },
+  {
+    regex: '(^|/)dice(\\.ts)?$',
+    importNames: ['diceOf'],
+    message: 'Los dados son de las reglas: quien decide usa su propio azar (decisionRng, que le da su controlador).',
+  },
+];
+const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts', 'src/core/aiGenerals.ts'];
+const AUTOPILOT_FILES = ['src/core/autopilot/**/*.ts', 'src/core/autopilot.ts'];
+
+/**
  * L7: las reglas y las acciones no importan las piezas que se enchufan (generales, sus poderes, el
  * clima, las habilidades) ni los modulos de reglas concretos o su lista: preguntan a la partida por lo
  * que aportan (ruleModules/ruleset.ts) y los tipos de lo que se puede aportar (ruleModules/hooks.ts).
@@ -172,6 +197,16 @@ export default tseslint.config(
     // Sin la IA debajo de las reglas (NO_AI): la ultima de las de todo el nucleo para estos ficheros.
     files: NOT_THE_AI_FILES,
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI] }] },
+  },
+  {
+    // La IA solo propone y solo lee su vista (DECIDERS_ONLY_PROPOSE).
+    files: AI_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...DECIDERS_ONLY_PROPOSE] }] },
+  },
+  {
+    // Y autopilot/, ademas, sin la IA (NO_AI).
+    files: AUTOPILOT_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...DECIDERS_ONLY_PROPOSE] }] },
   },
   {
     // Y las reglas y las acciones, ademas, sin las piezas que se enchufan (ONLY_THROUGH_RULE_MODULES).
