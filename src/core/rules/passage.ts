@@ -1,9 +1,9 @@
 /**
  * Lo que las demas unidades le hacen a quien se mueve: por donde no le dejan pasar, por donde pasa
  * sin poder pararse encima y donde se tiene que parar. Si ninguna regla dice nada, lo de cualquier
- * partida: otra unidad cierra el paso (las reglas de 2013). Los modulos de reglas ponen lo suyo: [CAMBIO] pasar entre
- * aliados (`passAllies`), no saber de los enemigos que no se ven (`ambush`) y la zona de control
- * de algunas unidades (`stopRules`, habilidades).
+ * partida: otra unidad cierra el paso (las reglas de 2013). Los modulos de reglas ponen lo suyo,
+ * todo nuevo [CAMBIO]: pasar entre aliados (`passAllies`), no saber de los enemigos que no se ven
+ * (`ambush`) y la zona de control de algunas unidades (`stopRules`, habilidades).
  */
 import { posOf } from '../geom';
 import { createLayer } from '../mapGrid';

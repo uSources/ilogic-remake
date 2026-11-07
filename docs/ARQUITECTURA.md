@@ -455,8 +455,9 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
     un `enterCosts` o `moveBudgets`; la vision, `visionRadius`, `revealRules`, `concealment` o
     `coverSight`;
   - una clase de habilidad de unidad es su forma en `AbilityDef` (`content/types.ts`), su validacion
-    en `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta a las listas, su entrada en
-    `ABILITY_EFFECTS` (`abilities.ts`: una lista en el orden en que entran); el modulo de las habilidades lo enchufa todo;
+    en `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta a las listas en `ABILITY_HOOKS`
+    y su sitio en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos, y de ahi sale
+    `ABILITY_EFFECTS`, en ese orden); el modulo de las habilidades lo enchufa todo;
   - una clase de efecto de un poder del general es su forma en `GeneralEffect`, su validacion en
     `EFFECT_SHAPES` (`content/generals.ts`) y su entrada en `POWER_EFFECTS` (`generalPowers.ts`: si
     necesita casilla, su area, como se aplica y lo que le vale a la IA, `aiValue`);

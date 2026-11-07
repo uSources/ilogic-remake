@@ -68,28 +68,34 @@ export interface AbilityEffect {
   readonly hooks: RuleHooks;
 }
 
-/**
- * Lo que aporta cada clase de habilidad, en el orden en que entra en las listas de las reglas. El
- * orden decide: en el acierto, el escudo multiplica antes que el aura (otro orden cambia el redondeo
- * de la huella). Cada clase de ABILITY_SHAPES esta una vez (lo mira tests/abilities.test.ts).
- */
-export const ABILITY_EFFECTS: readonly AbilityEffect[] = [
+/** Lo que aporta cada clase de habilidad (el tipo obliga a que esten todas, como POWER_EFFECTS). */
+const ABILITY_HOOKS: { readonly [K in AbilityKind]: RuleHooks } = {
   // Escudo contra los disparos a distancia: hace fuertes a los grupos con quien lo lleva delante.
-  { kind: 'guard', hooks: { hitModifiers: [{ id: 'guard', factor: guardFactor }] } },
+  guard: { hitModifiers: [{ id: 'guard', factor: guardFactor }] },
   // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
-  { kind: 'zoneOfControl', hooks: { stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }] } },
+  zoneOfControl: { stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }] },
   // A las propias de alrededor les aciertan menos (cuenta la mejor).
-  { kind: 'aura', hooks: { hitModifiers: [{ id: 'aura', factor: (s, fight) => auraFactor(s, fight.defender) }] } },
+  aura: { hitModifiers: [{ id: 'aura', factor: (s, fight) => auraFactor(s, fight.defender) }] },
   // Ignora parte de la proteccion del objetivo.
-  {
-    kind: 'piercing',
-    hooks: { coverPiercing: [{ id: 'piercing', ignoredCover: (s, attacker) => abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0 }] },
+  piercing: {
+    coverPiercing: [{ id: 'piercing', ignoredCover: (s, attacker) => abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0 }],
   },
   // Ve dentro del terreno que esconde (bosque) en todo su radio de vision.
-  { kind: 'scout', hooks: { coverSight: [{ id: 'scout', seesIntoCover: (s, unit) => !!abilityOfUnit(s, unit, 'scout') }] } },
+  scout: { coverSight: [{ id: 'scout', seesIntoCover: (s, unit) => !!abilityOfUnit(s, unit, 'scout') }] },
   // Resta mas al capturar.
-  {
-    kind: 'quickCapture',
-    hooks: { captureFactors: [{ id: 'quickCapture', factor: (s, unit) => abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1 }] },
-  },
-];
+  quickCapture: { captureFactors: [{ id: 'quickCapture', factor: (s, unit) => abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1 }] },
+};
+
+/**
+ * En que orden entra lo de cada clase en las listas de las reglas. El orden decide: en el acierto,
+ * el escudo multiplica antes que el aura (otro orden cambia el redondeo de la huella).
+ */
+const ABILITY_ORDER = ['guard', 'zoneOfControl', 'aura', 'piercing', 'scout', 'quickCapture'] as const satisfies readonly AbilityKind[];
+
+/** true si ABILITY_ORDER tiene todas las clases (si falta alguna, never). */
+type AbilityOrderIsComplete = [Exclude<AbilityKind, (typeof ABILITY_ORDER)[number]>] extends [never] ? true : never;
+/** Si una clase nueva no esta en ABILITY_ORDER, esto no compila (que no este dos veces lo mira tests/abilities.test.ts). */
+export const ABILITY_ORDER_IS_COMPLETE: AbilityOrderIsComplete = true;
+
+/** Lo que aporta cada clase de habilidad, en el orden en que entra en las listas de las reglas. */
+export const ABILITY_EFFECTS: readonly AbilityEffect[] = ABILITY_ORDER.map((kind) => ({ kind, hooks: ABILITY_HOOKS[kind] }));

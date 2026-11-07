@@ -1,7 +1,7 @@
 /**
  * La forma de cada clase de habilidad de las unidades (units.json, "abilities"): que numeros lleva y
  * su validacion, una entrada por clase. Lo que hace cada una en la partida esta en core/abilities.ts
- * (`ABILITY_EFFECTS`), una lista con una entrada por clase: una clase nueva es su forma en `AbilityDef`
+ * (`ABILITY_HOOKS`, en el orden de `ABILITY_ORDER`): una clase nueva es su forma en `AbilityDef`
  * (types.ts), su entrada aqui y la suya alli (el compilador obliga aqui; alli, tests/abilities.test.ts).
  */
 import type { Scope } from './check';

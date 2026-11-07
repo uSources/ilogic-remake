@@ -130,7 +130,7 @@ las tienen en cuenta solas, porque pasan por las mismas reglas (`ABILITY_EFFECTS
 
 Una clase nueva: su forma en `AbilityDef` (`core/content/types.ts`), su validacion en
 `ABILITY_SHAPES` (`content/abilities.ts`, de ahi sale `ABILITY_KINDS`), lo que aporta a las listas de
-las reglas en `ABILITY_EFFECTS` (`core/abilities.ts`: un modificador del acierto, una regla de paso...;
+las reglas en `ABILITY_HOOKS` y su sitio en `ABILITY_ORDER` (`core/abilities.ts`: un modificador del acierto, una regla de paso...;
 ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
 (`ability_<kind>` en `settings.ts`, y `abilityVM` en `ui/hudModels.ts`), el esquema y un test en
 `tests/abilities.test.ts`.

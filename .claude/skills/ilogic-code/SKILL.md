@@ -128,8 +128,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   juego = entrada en `GAME_MODES` (`core/modes.ts`), su configuracion en `MatchConfig` y su
   preparacion en `MATCH_SETUPS` (`core/match.ts`); quien juega un equipo = un `Controller`
   (`core/session`); habilidad de unidad nueva = su forma en `AbilityDef`, su validacion en
-  `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta, su entrada en `ABILITY_EFFECTS`
-  (`abilities.ts`, una lista en orden);
+  `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta en `ABILITY_HOOKS` y su sitio
+  en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos);
   efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
   su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`).
   La IA no tiene variables globales: lo del turno va en `PlayCtx`. Antes de escribir un bucle o un

@@ -97,8 +97,8 @@ export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, t
   return charges.filter((charge) => charge.amount > 0);
 }
 
-/** El equipo ve todo el mapa (poder reveal activa). */
-export const revealsAll = (s: GameState, team: TeamId): boolean => !!teamState(s, team).general?.reveal;
+/** El general del equipo tiene puesto el reconocimiento (poder reveal): su alianza ve todo el mapa esta ronda. */
+export const hasReconnaissance = (s: GameState, team: TeamId): boolean => !!teamState(s, team).general?.reveal;
 
 /** Estrellas enteras de la barra. */
 export const chargeStars = (generalState: GeneralState): number => Math.floor(generalState.charge + 1e-9);

@@ -27,7 +27,8 @@ export type LazyMoveRange = MoveRange | (() => MoveRange);
 /**
  * Casillas desde las que `unit` puede disparar este turno: donde esta y, si puede moverse y disparar
  * y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`). Es el unico sitio que
- * mira `firesAfterMove`: quien no sabe aun si hara falta pasa el alcance como funcion.
+ * decide desde donde se dispara segun firesAfterMove: quien no sabe aun si hara falta el alcance lo
+ * pasa como funcion.
  */
 export function fireOrigins(s: GameState, unit: Unit, range: LazyMoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
   const origins: Pos[] = [posOf(unit)];

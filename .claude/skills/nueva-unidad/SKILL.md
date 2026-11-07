@@ -40,6 +40,6 @@ vigila).
 7. CHANGELOG.md (apartado `[Sin publicar]`) y `npm run check`, `npm run shots`.
 
 Una regla nueva (curar al lado, volar sobre agua...) que el JSON no sabe expresar si es codigo: campo
-nuevo en `UnitDef` + validacion + su campo en `UnitType` (`buildUnitTypes`, content/units.ts) + esquema + test, y la regla en su modulo de `core/rules/`. Una habilidad pasiva nueva: su forma en `AbilityDef`, su validacion en `ABILITY_SHAPES` (`content/abilities.ts`) y lo que aporta a las listas de las reglas en `ABILITY_EFFECTS` (`core/abilities.ts`). Si depende de un ajuste de la partida, es un modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas").
+nuevo en `UnitDef` + validacion + su campo en `UnitType` (`buildUnitTypes`, content/units.ts) + esquema + test, y la regla en su modulo de `core/rules/`. Una habilidad pasiva nueva: su forma en `AbilityDef`, su validacion en `ABILITY_SHAPES` (`content/abilities.ts`) y lo que aporta a las listas de las reglas en `ABILITY_HOOKS` y su sitio en `ABILITY_ORDER` (`core/abilities.ts`). Si depende de un ajuste de la partida, es un modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas").
 
 Probar rapido sin navegador: `npm run play -- --seed 7 -e "buy <x> <y> <id>; unit <id>; end; map"`.

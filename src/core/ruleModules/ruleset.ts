@@ -73,17 +73,3 @@ export const isRuleOn = (s: GameState, id: RuleModuleId): boolean => s.ruleset.m
 
 /** El modelo de daño de la partida: la tirada del combate y el reparto de la prevision salen de el. */
 export const damageModelOf = (s: GameState): DamageModel => s.ruleset.damageModel;
-
-/**
- * Lo de siempre (`always`) y lo de los modulos (`fromModules`) juntos por momento: primero los del
- * primer momento de `stages`, etc.; en cada uno, los de siempre y luego los de los modulos, en su
- * orden (sort es estable). Lo usan el fin de ronda (roundPhasesOf) y el ataque (combatResolutionOf).
- */
-export function inStageOrder<Stage, Entry extends { readonly stage: Stage }>(
-  stages: readonly Stage[],
-  always: readonly Entry[],
-  fromModules: readonly Entry[],
-): Entry[] {
-  const order = (entry: Entry) => stages.indexOf(entry.stage);
-  return [...always, ...fromModules].sort((first, second) => order(first) - order(second));
-}
