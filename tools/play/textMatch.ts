@@ -14,7 +14,7 @@ import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
-import { aiSeedFor, seededRng } from '@core/util/random';
+import { decisionRng } from '@core/dice';
 import { mapGrid } from '@core/mapGrid';
 import { generalOf } from '@core/generals';
 import { missionById } from '@core/missions';
@@ -37,7 +37,7 @@ import {
 import { serialize } from '@core/save';
 import { screenControllers } from '@core/controllers';
 import { GameSession, runMatch, type ActedStep } from '@core/session';
-import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, Rng, TeamId, Unit } from '@core/model';
+import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -78,7 +78,6 @@ export interface TextMatchOptions {
 
 export class TextMatch {
   readonly s: GameState;
-  private readonly rng: Rng;
   /** La partida en juego: los equipos de personas los juegan las ordenes; los demas, la IA. */
   private readonly session: GameSession;
   /** El equipo que se juega con las ordenes: la persona a la que le toca (con varias, por turnos). */
@@ -95,10 +94,9 @@ export class TextMatch {
 
   constructor(options: TextMatchOptions = {}) {
     const seed = options.seed ?? 1;
-    this.rng = seededRng(aiSeedFor(seed));
     this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
     this.me = playerTeam(this.s);
-    this.session = new GameSession(this.s, screenControllers(this.s, this.rng));
+    this.session = new GameSession(this.s, screenControllers(this.s));
     this.session.subscribe((step) => this.note(step));
     this.advance();
     this.told = [];
@@ -354,7 +352,7 @@ export class TextMatch {
   /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
   private aiPlaysMyTurn(): GameEvent[] {
     const view = playerView(this.s, this.me);
-    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), this.rng));
+    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), decisionRng(this.s, this.me)));
     return carryOut(plan, (action) => this.session.act(this.me, action)).events;
   }
 

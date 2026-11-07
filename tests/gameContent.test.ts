@@ -40,9 +40,9 @@ describe('contenido de cada partida', () => {
     const tankCost = (s: GameState) => buyOptions(s, factory(s)).find((option) => option.unitType.id === 'Tank')!.cost;
     expect(tankCost(expensive)).toBe(2 * tankCost(normal));
 
-    const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6, 11);
+    const [normalEvents, expensiveEvents] = playInterleaved([normal, expensive], 6);
     // Jugar las dos a la vez no cambia ninguna: la normal hace lo mismo que jugada sola.
-    const [alone] = playInterleaved([newMatch(defaultContent())], 6, 11);
+    const [alone] = playInterleaved([newMatch(defaultContent())], 6);
     expect(normalEvents).toEqual(alone);
     expect(expensiveEvents).not.toEqual(normalEvents);
     expect(entryOf(normal.content.units, 'Tank', 'unidad').cost).toBe(TANK.cost);

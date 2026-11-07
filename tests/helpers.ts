@@ -26,7 +26,6 @@ import { GameSession } from '@core/session';
 import { carryOut, dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/sandbox';
-import { seededRng } from '@core/util/random';
 import { endRound, isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
@@ -149,16 +148,15 @@ export function playOneTurn(session: GameSession): void {
 
 /**
  * Juega `days` rondas IA contra IA de cada partida a la vez, turno a turno (un turno de cada una por
- * equipo), cada una con su azar de semilla `seed`: para ver que dos partidas en el mismo proceso no
- * se mezclan. Devuelve los sucesos de las acciones de cada una (sin empezar ni acabar los turnos).
+ * equipo), cada una con el azar de sus decisiones (el de la partida): para ver que dos partidas en el
+ * mismo proceso no se mezclan. Devuelve los sucesos de las acciones de cada una (sin empezar ni acabar los turnos).
  */
-export function playInterleaved(games: readonly GameState[], days: number, seed: number): GameEvent[][] {
+export function playInterleaved(games: readonly GameState[], days: number): GameEvent[][] {
   const events: GameEvent[][] = games.map(() => []);
   const sessions = games.map((s, i) => {
-    const rng = seededRng(seed);
     const session = new GameSession(
       s,
-      s.teams.map(() => aiController(rng)),
+      s.teams.map(() => aiController()),
     );
     session.subscribe((step) => {
       if (!isTurnBoundary(step.action)) events[i]!.push(...step.events);

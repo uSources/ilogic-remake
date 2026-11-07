@@ -5,6 +5,7 @@
 import type { GameContent } from './content';
 import { gameModeOf } from './modes';
 import { rulesetFor } from './ruleModules/registry';
+import { decisionSeedFor } from './util/random';
 import { SAVE_VERSION } from './saveVersion';
 import { newTeams, type TeamSetup } from './teams';
 import type { GameModeId, GameState, MatchSettings, TeamId } from './model';
@@ -51,6 +52,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
     turn: turnOrder[0]!,
     turnStarted: false,
     dice: options.diceSeed >>> 0,
+    decisionSeed: decisionSeedFor(options.diceSeed),
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
     settings: { ...settings },
     content: options.content,

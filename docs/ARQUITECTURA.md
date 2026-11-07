@@ -279,9 +279,14 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 
 Los dados de las reglas (el combate) son de la partida: `GameState.dice` es el estado de un
 mulberry32 (un entero de 32 bits) y `diceOf(s)` tira de el, asi que se guarda y se repite con la
-partida. Las decisiones de quien juega (la IA, el generador de mapas) llevan su propio `Rng`
-(`seededRng`): lo que decide no cambia lo que sale en los dados. `util/random.ts`: el paso de
-mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `aiSeedFor`.
+partida. Las decisiones de la IA tienen su propio azar, tambien de la partida pero aparte:
+`GameState.decisionSeed` (fija, sale de la semilla de los dados con `decisionSeedFor`) y, para cada
+turno, `decisionRng(s, equipo)` (dice.ts: la semilla del turno, `turnSeed`, mezcla la de la
+partida, el dia y el equipo). Asi el mismo turno da las mismas decisiones al cargar la partida, al
+repetirla o en otra maquina (por la red), y lo que decide no cambia lo que sale en los dados. El
+generador de mapas lleva su `Rng` (`seededRng`), que da quien crea la partida. `util/random.ts`: el
+paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `decisionSeedFor`, `turnSeed`, y
+elegir al azar (`pick`, `weightedPick`: con la lista vacia no tiran).
 
 #### Guardar y leer
 
@@ -671,9 +676,8 @@ ningun otro controlador puede colar una) o 'awaitInput' (decide alguien de fuera
 
 Los de la IA (`aiController`, y `controllersFor`, que da el de cada equipo segun su
 `TeamState.controller`) estan en `core/controllers/` (fachada `core/controllers.ts`), fuera de
-session/: la sesion no importa la IA. La semilla del azar de la IA la elige quien empieza la sesion:
-el fondo del menu y las herramientas, `aiSeedFor(semilla)` (util/random.ts); la escena, una al azar
-(`seededRng(randomSeed())`; igualarlas, y llevar el azar de la IA en la partida, es de la fase 6).
+session/: la sesion no importa la IA. El azar de la IA sale de la partida (`decisionRng`, ver "El
+azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramientas deciden igual.
 
 - La partida en juego es una `GameSession` (`session/gameSession.ts`): la partida, sus
   controladores, el registro de lo que se ha hecho (`log`, para repetirlo) y los avisos de cada
@@ -754,10 +758,10 @@ sequenceDiagram
   IA contra IA (`tests/aiGolden.test.ts` y `npm run huella` lo vigilan); cargar una partida no cambia
   lo que saldra en sus combates: el resultado de un ataque ya esta fijado por la partida, y volver a
   cargar para atacar otra vez da el mismo.
-- La semilla de las decisiones de la IA no es de la partida sino de su controlador
-  (`aiController(rng)`): en la pantalla, una al empezar la partida; en las herramientas, la de su
-  `--seed`. Va aparte de `GameState` a proposito: es estado del que controla a ese equipo, no de las
-  reglas, y no se guarda (cargar y pasar turno puede dar otras decisiones, nunca otros dados).
+- [CAMBIO] La semilla de las decisiones de la IA es de la partida (`GameState.decisionSeed`, se
+  guarda con ella) y la de cada turno sale de ella, del dia y del equipo (`decisionRng`): cargar y
+  pasar turno da las mismas decisiones, y una partida por la red o una repeticion decide igual en
+  cada maquina. Va aparte de los dados: lo que decide la IA no cambia lo que sale en los combates.
 - **Nada de estado global de partida**: los ajustes van en `s.settings` (obligatorios; los de siempre,
   `content.defaultSettings`, estan congelados y cada partida lleva su copia, con los cambios de su modo,
   mision o laboratorio; que modulos de reglas lleva sale de ahi, sin guardar nada mas) y el tamaño

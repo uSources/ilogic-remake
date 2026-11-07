@@ -25,6 +25,7 @@ describe('readSave: leer una partida dice que ha fallado', () => {
     ['badMap', () => savedWith((raw) => (raw.map = [['Lava']]))],
     ['badTheme', () => savedWith((raw) => (raw.theme = 'Moon'))],
     ['badDice', () => savedWith((raw) => (raw.dice = -1))],
+    ['badDice', () => savedWith((raw) => (raw.decisionSeed = 1.5))],
     ['badTeams', () => savedWith((raw) => (raw.teams = []))],
     ['badTeams', () => savedWith((raw) => ((raw.teams as { fell: unknown }[])[0]!.fell = { order: 0, reason: 'bored' }))],
     ['badMode', () => savedWith((raw) => (raw.mode = 'arcade'))],

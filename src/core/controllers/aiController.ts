@@ -4,15 +4,19 @@
  * lo que sabe su equipo (la `PlayerView` que le da la sesion, al dia tras cada accion: `seeing`).
  */
 import { aiTurn, defaultAiProfile, type AiProfile } from '../ai';
-import type { Rng } from '../model';
+import { decisionRng } from '../dice';
 import { proposing, type Controller } from '../session/controller';
 import { seeing } from '../playerView';
 
 /**
  * La IA que juega con `profile` (la del juego con el contenido de la partida, si no se dice: su
- * `defaultAiProfile`) y decide con su azar `rng`.
+ * `defaultAiProfile`). Su azar de cada turno sale de la partida (`decisionRng`): la misma partida da
+ * las mismas decisiones, se juegue donde se juegue.
  */
-export const aiController = (rng: Rng, profile?: AiProfile): Controller => ({
+export const aiController = (profile?: AiProfile): Controller => ({
   name: 'ai',
-  playTurn: (view) => proposing(seeing(view, aiTurn(view, profile ?? defaultAiProfile(view.state.content), rng))),
+  playTurn: (view) => {
+    const rng = decisionRng(view.state, view.team);
+    return proposing(seeing(view, aiTurn(view, profile ?? defaultAiProfile(view.state.content), rng)));
+  },
 });

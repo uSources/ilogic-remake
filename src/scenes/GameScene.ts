@@ -13,8 +13,6 @@ import { Grid } from '../core/util/grid';
 import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
 import { serialize } from '../core/save';
 import type { GameSession, ActedStep } from '../core/session';
-import { seededRng } from '../core/util/random';
-import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
@@ -236,7 +234,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameStartData): void {
     this.resetMatch();
-    const start = startMatch(seededRng(randomSeed()), data);
+    const start = startMatch(data);
     this.session = start.session;
     this.s = start.session.state;
     this.viewer = start.viewer;

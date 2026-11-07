@@ -168,9 +168,9 @@ function tallyEvent(s: GameState, event: GameEvent, team: TeamId, tallies: Talli
   }
 }
 
-/** Quien juega cada lado: la IA (con el mismo azar para los dos) o nadie ('passive'). */
-function controllersOf(s: GameState, policies: PlayOptions['policies'], rng: Rng): Controller[] {
-  const controllerFor = (policy: Policy) => (policy === 'passive' ? passiveController() : aiController(rng));
+/** Quien juega cada lado: la IA (con el azar de la partida) o nadie ('passive'). */
+function controllersOf(s: GameState, policies: PlayOptions['policies']): Controller[] {
+  const controllerFor = (policy: Policy) => (policy === 'passive' ? passiveController() : aiController());
   return s.teams.map((team) => controllerFor(policies[sideOfTeam(team.id)]));
 }
 
@@ -242,7 +242,7 @@ export function playGame(options: PlayOptions): GameRecord {
   const rng = seededRng(options.seed);
   const s = balanceMatch(options, rng);
   const log = new GameLog(s);
-  const session = new GameSession(s, controllersOf(s, options.policies, rng));
+  const session = new GameSession(s, controllersOf(s, options.policies));
   session.subscribe(log.record);
   runMatch(session, { until: (state) => state.day > options.maxDays });
   const outcome = outcomeOf(s);

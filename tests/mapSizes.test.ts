@@ -57,7 +57,7 @@ describe('mapas de varios tamaños en el mismo proceso (sin tamaño global)', ()
   });
 
   it('dos partidas IA contra IA de 20 y de 40 jugadas a la vez hacen lo mismo que por separado', () => {
-    const play = (games: GameState[], days: number) => playInterleaved(games, days, 3);
+    const play = (games: GameState[], days: number) => playInterleaved(games, days);
     const newMatch = (size: number) => createMatch(skirmishConfig({ seed: size, size, teams: duel('ai', 'ai') }));
     const together = play([newMatch(20), newMatch(40)], 5);
     expect(together[0]).toEqual(play([newMatch(20)], 5)[0]);

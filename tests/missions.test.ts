@@ -4,7 +4,6 @@ import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { seededRng } from '@core/util/random';
 import { buildMission, checkMission, missionSettings, MISSIONS } from '@core/missions';
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
@@ -94,11 +93,10 @@ describe('misiones', () => {
 
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
     const s = buildMission(mission, defaultContent(), MISSION_DICE_SEED);
-    const rng = seededRng(5);
     runMatch(
       new GameSession(
         s,
-        s.teams.map(() => aiController(rng)),
+        s.teams.map(() => aiController()),
       ),
       { until: (state) => state.day > 20 },
     );

@@ -51,10 +51,10 @@ export function playDuel(seed: number, profiles: [AiProfile, AiProfile], size: n
   const s = createMatch(skirmishConfig({ seed, size, teams: duel('ai', 'ai') }), rng);
   const [first, second] = duelTeams(s);
   const controllers = new Map([
-    [first, aiController(rng, profiles[0])],
-    [second, aiController(rng, profiles[1])],
+    [first, aiController(profiles[0])],
+    [second, aiController(profiles[1])],
   ]);
-  runMatch(new GameSession(s, controllersFor(s, rng, controllers)), { until: (state) => state.day > maxDays });
+  runMatch(new GameSession(s, controllersFor(s, controllers)), { until: (state) => state.day > maxDays });
   const result = matchResult(s);
   if (result.status === 'draw') return null;
   if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';

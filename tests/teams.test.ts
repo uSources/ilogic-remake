@@ -260,11 +260,10 @@ describe('cuatro equipos en dos alianzas', () => {
 
   it('cada IA juega su turno sin atacar a sus aliados, y la partida se guarda y se carga igual', () => {
     const s = fourCorners();
-    const rng = seededRng(17);
     const attacks: { attacker: number; target: number }[] = [];
     const session = new GameSession(
       s,
-      s.teams.map(() => aiController(rng)),
+      s.teams.map(() => aiController()),
     );
     session.subscribe((step) => {
       for (const event of step.events) recordAttack(s, event, step.team, attacks);

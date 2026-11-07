@@ -12,10 +12,11 @@
  * 9: los ajustes dicen el modelo de daño por su nombre (`damageModel`; `damageSpread` es solo su tanto).
  * 10: el viaje de varios turnos es una orden mas (`standingOrder` 'goto'; antes `Unit.travelTo`) y el
  *    movimiento que lo acabo lo apunta en `UndoableMove.goto`.
+ * 11: la partida lleva la semilla de las decisiones de la IA (`decisionSeed`).
  * El tipo la ata al de GameState.version: subir una sin la otra no compila. Solo se lee la de ahora:
  * mientras el juego no ha salido, cambiar el formato es subir la version, y las partidas guardadas
  * con una de antes se descartan (readSave da 'badVersion'; el juego hace como si no hubiera).
  */
 import type { GameState } from './model';
 
-export const SAVE_VERSION: GameState['version'] = 10;
+export const SAVE_VERSION: GameState['version'] = 11;

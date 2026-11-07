@@ -29,7 +29,6 @@ import { PLAIN_SETTINGS } from './plainSettings';
 import { labControllers, viewerOf } from '../src/scenes/game/matchSetup';
 import { screenControllers } from '@core/controllers';
 import { GameSession, humanController, passiveController, remoteController, sequence } from '@core/session';
-import { seededRng } from '@core/util/random';
 import { dispatch } from '@core/actions';
 
 const HQ = hqId();
@@ -408,7 +407,7 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
 
 describe('escena: quien mira al abrir la partida (game/matchSetup.ts)', () => {
   /** La sesion de la escena para esa partida (sus controladores: screenControllers y, en el laboratorio, labControllers). */
-  const sceneSession = (s: GameState, isLab = false) => new GameSession(s, screenControllers(s, seededRng(1), labControllers(s, isLab)));
+  const sceneSession = (s: GameState, isLab = false) => new GameSession(s, screenControllers(s, labControllers(s, isLab)));
 
   it('la persona a la que le toca; si le toca a la IA, la primera persona; sin personas, el primer equipo', () => {
     const twoPeople = blankState({}, [{ controller: 'human' }, { controller: 'human' }]);

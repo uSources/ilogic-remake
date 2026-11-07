@@ -48,11 +48,24 @@ export function isRandomState(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < UINT32_RANGE;
 }
 
-/** Mezcla para que las decisiones de la IA no salgan de la misma semilla que el mapa. */
-const AI_SEED_MIX = 0x9e3779b9;
+/** Mezcla para que las decisiones de la IA no salgan de la misma semilla que los dados. */
+const DECISION_SEED_MIX = 0x9e3779b9;
 
-/** La semilla de las decisiones de la IA de una partida, sacada de la del mapa (la misma en todas partes). */
-export const aiSeedFor = (mapSeed: number): number => (mapSeed ^ AI_SEED_MIX) >>> 0;
+/** La semilla de las decisiones de una partida (`GameState.decisionSeed`), sacada de la de sus dados. */
+export const decisionSeedFor = (diceSeed: number): number => (diceSeed ^ DECISION_SEED_MIX) >>> 0;
+
+/** Multiplicadores para mezclar el dia y el equipo en la semilla de un turno (primos grandes de 32 bits). */
+const DAY_MIX = 0x85ebca6b;
+const TEAM_MIX = 0xc2b2ae35;
+
+/**
+ * La semilla de lo que decide el equipo `team` en su turno del dia `day`: la misma cada vez que se
+ * juega ese turno, y otra en cada turno y equipo (pasada por un paso de mulberry32 para mezclarla).
+ */
+export function turnSeed(decisionSeed: number, day: number, team: number): number {
+  const mixed = (decisionSeed ^ Math.imul(day, DAY_MIX) ^ Math.imul(team + 1, TEAM_MIX)) >>> 0;
+  return seedFromDraw(randomStep(mixed).value);
+}
 
 /** Uno de la lista al azar, todos con la misma probabilidad (undefined si esta vacia: entonces no tira). */
 export function pick<T>(items: readonly T[], rng: Rng): T | undefined {
