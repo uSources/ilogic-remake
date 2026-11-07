@@ -133,6 +133,16 @@ describe('PlayerView: lo que sabe un equipo', () => {
     expect(() => Object.freeze(unitById(view.state, mine.uid))).toThrow(/no se cambia/);
   });
 
+  it('ni por el prototipo: __proto__ y constructor no llevan al Object.prototype de verdad', () => {
+    const { s } = fogged();
+    const view = playerView(s, 0).state;
+    const unit = view.units[0]! as unknown as Record<string, unknown>;
+    expect(unit.__proto__).toBeUndefined();
+    expect(unit.constructor).toBeUndefined();
+    expect((view as unknown as Record<string, unknown>).__proto__).toBeUndefined();
+    expect((unit.cargo as unknown[]).map((passenger) => passenger)).toEqual([]);
+  });
+
   it('las reglas de la partida tampoco se cambian desde la vista (ni desde la partida: estan congeladas)', () => {
     const { s } = fogged();
     const view = playerView(s, 0);

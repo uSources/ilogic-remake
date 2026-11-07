@@ -197,6 +197,30 @@ function shownDescriptor(descriptor: PropertyDescriptor | undefined, shown: (val
 }
 
 /**
+ * Lo que no se da desde la vista aunque se pida por su nombre: `__proto__` y `constructor` llevarian
+ * al prototipo de verdad (`Object.prototype`, compartido por todo el programa), que se podria cambiar.
+ * Leerlos da undefined (las listas, sin `constructor`, siguen haciendo listas normales con map o filter).
+ */
+const UNSHOWN_KEYS: ReadonlySet<string | symbol> = new Set(['__proto__', 'constructor']);
+
+/**
+ * La envoltura de solo lectura de un objeto de la partida: lo que se lee pasa por `guard` (de solo
+ * lectura tambien, si es un objeto), cambiar no se puede y lo de UNSHOWN_KEYS no se da.
+ */
+function readOnlyHandler(guard: (value: unknown) => unknown): ProxyHandler<object> {
+  return {
+    get: (target, key): unknown => {
+      if (UNSHOWN_KEYS.has(key)) return undefined;
+      const property: unknown = Reflect.get(target, key);
+      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee.
+      return typeof property === 'object' ? guard(property) : property;
+    },
+    getOwnPropertyDescriptor: (target, key) => shownDescriptor(Reflect.getOwnPropertyDescriptor(target, key), guard),
+    ...REFUSED_CHANGES,
+  };
+}
+
+/**
  * Lo mismo que `value`, pero de solo lectura hasta el fondo: lo que se lee de ella tambien lo es.
  * Cada objeto tiene siempre la misma envoltura (`guards`), asi que comparar dos unidades de la vista
  * sigue dando lo que debe.
@@ -205,18 +229,50 @@ function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
   if (!needsGuard(value)) return value;
   const known = guards.get(value);
   if (known) return known as T;
-  const guard = (property: unknown): unknown => readOnly(property, guards);
-  const guarded = new Proxy(value, {
-    get: (target, key): unknown => {
-      const property: unknown = Reflect.get(target, key);
-      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee.
-      return typeof property === 'object' ? guard(property) : property;
-    },
-    getOwnPropertyDescriptor: (target, key) => shownDescriptor(Reflect.getOwnPropertyDescriptor(target, key), guard),
-    ...REFUSED_CHANGES,
-  });
+  const guarded: object = new Proxy(
+    value,
+    readOnlyHandler((property) => readOnly(property, guards)),
+  );
   guards.set(value, guarded);
-  return guarded;
+  return guarded as T;
+}
+
+/**
+ * Lo que no cambia en un turno, congelado una vez: el terreno, los ajustes y los modulos de reglas
+ * que salen de ellos (estos ya vienen congelados de arriba). La vista es de un turno: si algo de esto
+ * cambiara (el laboratorio cambia los ajustes), lo vera la del turno siguiente.
+ */
+const fixedPartsOf = (s: GameState): Record<string, unknown> => ({
+  map: Object.freeze(s.map.map((column) => Object.freeze([...column]))),
+  settings: Object.freeze({ ...s.settings }),
+  ruleset: s.ruleset,
+});
+
+/**
+ * La envoltura de la partida de la vista: lo que da `replacing` (lo fijo del turno o lo que cambia la
+ * niebla) en lugar de lo de la partida; lo demas, de la partida, de solo lectura.
+ */
+function viewHandler(
+  replacing: (key: string | symbol) => Record<string, unknown> | null,
+  guard: (value: unknown) => unknown,
+): ProxyHandler<GameState> {
+  return {
+    // Lo que mas se lee de la vista: sin crear nada por el camino.
+    get: (target, key, receiver): unknown => {
+      if (UNSHOWN_KEYS.has(key)) return undefined;
+      const instead = replacing(key);
+      return instead ? Reflect.get(instead, key) : guard(Reflect.get(target, key, receiver));
+    },
+    getOwnPropertyDescriptor: (target, key) => {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      const instead = replacing(key);
+      if (!instead) return shownDescriptor(descriptor, guard);
+      // Lo que la niebla quita de la partida (`setup`) puede no estar en ella: se da como una propiedad mas.
+      const value: unknown = Reflect.get(instead, key);
+      return { ...(descriptor ?? { writable: false, enumerable: true }), configurable: descriptor?.configurable ?? true, value };
+    },
+    ...REFUSED_CHANGES,
+  };
 }
 
 /**
@@ -226,14 +282,7 @@ function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
  */
 export function playerView(s: GameState, team: TeamId): PlayerView {
   const guards = new WeakMap<object, object>();
-  // Lo que no cambia en un turno, congelado una vez: el terreno, los ajustes y los modulos de reglas
-  // que salen de ellos (estos ya vienen congelados de arriba). La vista es de un turno: si algo de esto
-  // cambiara (el laboratorio cambia los ajustes), lo vera la del turno siguiente.
-  const fixed: Record<string, unknown> = {
-    map: Object.freeze(s.map.map((column) => Object.freeze([...column]))),
-    settings: Object.freeze({ ...s.settings }),
-    ruleset: s.ruleset,
-  };
+  const fixed = fixedPartsOf(s);
   // Lo que ve ahora: se vuelve a mirar la primera vez que se lee algo despues de `refresh` (tras una
   // accion), no en cada una: varias acciones seguidas sin mirar no cuestan nada.
   let current: SeenNow | null = null;
@@ -244,22 +293,10 @@ export function playerView(s: GameState, team: TeamId): PlayerView {
     const { parts } = seenNow();
     return Reflect.has(parts, key) ? parts : null;
   };
-  const state = new Proxy(s, {
-    // Lo que mas se lee de la vista: sin crear nada por el camino.
-    get: (target, key, receiver): unknown => {
-      const instead = replacing(key);
-      return instead ? Reflect.get(instead, key) : readOnly(Reflect.get(target, key, receiver), guards);
-    },
-    getOwnPropertyDescriptor: (target, key) => {
-      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
-      const instead = replacing(key);
-      if (!instead) return shownDescriptor(descriptor, (value) => readOnly(value, guards));
-      // Lo que la niebla quita de la partida (`setup`) puede no estar en ella: se da como una propiedad mas.
-      const value: unknown = Reflect.get(instead, key);
-      return { ...(descriptor ?? { writable: false, enumerable: true }), configurable: descriptor?.configurable ?? true, value };
-    },
-    ...REFUSED_CHANGES,
-  });
+  const state = new Proxy(
+    s,
+    viewHandler(replacing, (value) => readOnly(value, guards)),
+  );
   const refresh = () => {
     current = null;
   };
