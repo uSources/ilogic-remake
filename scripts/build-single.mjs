@@ -3,48 +3,35 @@
 //   npm run build && node scripts/build-single.mjs
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { assetMimeType, singleFileHtml } from './singleFile.mjs';
 
 const dist = process.argv[2] ? resolve(process.argv[2]) : new URL('../dist/', import.meta.url).pathname;
 const assets = {};
 (function walk(dir) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
+    const mime = assetMimeType(name);
     if (statSync(full).isDirectory()) walk(full);
-    // Musica: solo mp3 (lo leen todos los navegadores); el ogg duplicaria el peso.
-    else if (/\.(png|json|mp3)$/.test(name)) {
-      const rel = relative(dist, full).replace(/\\/g, '/');
-      const mime = name.endsWith('.png') ? 'image/png' : name.endsWith('.json') ? 'application/json' : 'audio/mpeg';
-      assets[rel] = `data:${mime};base64,${readFileSync(full).toString('base64')}`;
-    }
+    else if (mime) assets[relative(dist, full).replace(/\\/g, '/')] = `data:${mime};base64,${readFileSync(full).toString('base64')}`;
   }
 })(join(dist, 'assets'));
 
-let html = readFileSync(join(dist, 'index.html'), 'utf8');
+const html = readFileSync(join(dist, 'index.html'), 'utf8');
 const favicon = `data:image/png;base64,${readFileSync(join(dist, 'icons', 'favicon-64.png')).toString('base64')}`;
-const m = html.match(/<script type="module" crossorigin src="\.\/(assets\/[^"]+\.js)"><\/script>/);
-if (!m) throw new Error('No encuentro el script en dist/index.html');
-const js = readFileSync(join(dist, m[1]), 'utf8').replace(/<\/script/g, '<\\/script');
+const scriptTag = html.match(/<script type="module" crossorigin src="\.\/(assets\/[^"]+\.js)"><\/script>/);
+if (!scriptTag) throw new Error('No encuentro el script en dist/index.html');
+const js = readFileSync(join(dist, scriptTag[1]), 'utf8');
 // Hoja de estilos con las fuentes incrustadas (solo woff2: todos los navegadores actuales lo leen).
 const cssLink = html.match(/<link rel="stylesheet"[^>]*href="\.\/(assets\/[^"]+\.css)"[^>]*>/);
 if (!cssLink) throw new Error('No encuentro la hoja de estilos en dist/index.html');
 const cssDir = join(dist, cssLink[1], '..');
 const css = readFileSync(join(dist, cssLink[1]), 'utf8')
   .replace(/,\s*url\([^)]*\.woff\)\s*format\(["']?woff["']?\)/g, '')
-  .replace(/url\(([^)]+\.woff2)\)/g, (_, u) => {
-    const file = join(cssDir, u.replace(/^["']|["']$/g, ''));
+  .replace(/url\(([^)]+\.woff2)\)/g, (_, url) => {
+    const file = join(cssDir, url.replace(/^["']|["']$/g, ''));
     return `url(data:font/woff2;base64,${readFileSync(file).toString('base64')})`;
   });
-html = html
-  .replace(m[0], '')
-  .replace(cssLink[0], `<style>${css}</style>`)
-  // Por file:// no hay PWA: fuera el manifest y los iconos de app; el de la pestaña va incrustado.
-  .replace(/\s*<link rel="(?:manifest|apple-touch-icon)"[^>]*>/g, '')
-  .replace(/\s*<link rel="icon"[^>]*>/g, '')
-  .replace('</head>', `  <link rel="icon" type="image/png" href="${favicon}" />\n  </head>`)
-  .replace(
-    '</body>',
-    `<script>window.__ILOGIC_ASSETS__=${JSON.stringify(assets)};</script>\n<script type="module">${js}</script>\n</body>`,
-  );
+const page = singleFileHtml({ html, scriptTag: scriptTag[0], styleTag: cssLink[0], css, js, assets, favicon });
 mkdirSync(new URL('../dist-single/', import.meta.url), { recursive: true });
-writeFileSync(new URL('../dist-single/ilogic.html', import.meta.url), html);
-console.log(`dist-single/ilogic.html: ${(html.length / 1024 / 1024).toFixed(1)} MB, ${Object.keys(assets).length} recursos`);
+writeFileSync(new URL('../dist-single/ilogic.html', import.meta.url), page);
+console.log(`dist-single/ilogic.html: ${(page.length / 1024 / 1024).toFixed(1)} MB, ${Object.keys(assets).length} recursos`);
