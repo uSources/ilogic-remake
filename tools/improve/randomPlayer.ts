@@ -37,7 +37,7 @@ function* tried(action: GameAction): Proposals {
 /** Juega al azar, con `rng`. */
 export const randomController = (rng: Rng): Controller => ({
   name: 'random',
-  playTurn: (s, team) => randomTurn(s, rng, team),
+  playTurn: (view) => randomTurn(view.state, rng, view.team),
 });
 
 /** El turno de `team` al azar: cada unidad que puede actuar hace algo, y despues compra en algunos edificios. */

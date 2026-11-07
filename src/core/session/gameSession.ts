@@ -15,6 +15,7 @@ import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
 import { teamIds } from '../teams';
+import { playerView } from '../playerView';
 import type { ActionDispatcher, ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamFall, TeamId } from '../model';
 import type { Controller, TurnPlan, TurnStep } from './controller';
 import { isOffTurnAction, type LoggedAction } from './log';
@@ -203,7 +204,8 @@ export class GameSession {
 
   /** El turno en curso del controlador del equipo (lo empieza si aun no lo tenia). */
   private turnOf(team: TeamId): TurnInPlay {
-    if (this.current?.team !== team) this.current = { team, plan: this.controllerOf(team).playTurn(this.state, team), reply: undefined };
+    if (this.current?.team !== team)
+      this.current = { team, plan: this.controllerOf(team).playTurn(playerView(this.state, team)), reply: undefined };
     return this.current;
   }
 

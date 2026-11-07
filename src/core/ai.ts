@@ -24,7 +24,8 @@
  */
 import { aiGeneral } from './aiGenerals';
 import { teamUnits } from './rules/queries';
-import type { ActionPlan, GameState, Rng, TeamId } from './model';
+import type { ActionPlan, Rng } from './model';
+import type { PlayerView } from './playerView';
 import { playCtx, finish } from './autopilot/context';
 import { planFire } from './ai/fire';
 import { produce } from './ai/production';
@@ -34,11 +35,13 @@ import type { AiProfile } from './ai/profile';
 export { defaultAiProfile, type AiProfile } from './ai/profile';
 
 /**
- * Turno completo de la IA que juega con `profile`. Deja todas sus unidades inactivas; el mantenimiento
+ * Turno completo de la IA que juega con `profile`, con lo que sabe su equipo (`view`: no lee la
+ * partida de verdad). Deja todas sus unidades inactivas; el mantenimiento
  * va aparte (endRound). Propone sus acciones (`ActionPlan`): las manda quien la hace jugar (su
  * controlador, por la sesion) y le contesta con lo que ha dicho la partida.
  */
-export function* aiTurn(s: GameState, team: TeamId, profile: AiProfile, rng: Rng): ActionPlan {
+export function* aiTurn(view: PlayerView, profile: AiProfile, rng: Rng): ActionPlan {
+  const { state: s, team } = view;
   const alone = playCtx(team, profile);
   // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
   yield* aiGeneral(s, alone);

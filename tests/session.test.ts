@@ -157,7 +157,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     let surrendered = false;
     const quitter: Controller = {
       name: 'random',
-      playTurn: function* (state, team) {
+      playTurn: function* ({ state, team }) {
         const unit = state.units.find((candidate) => candidate.team === team && canMoveNow(candidate));
         const to = unit && reachableTiles(moveRange(state, unit)).find((tile) => tile.x !== unit.x || tile.y !== unit.y);
         if (unit && to) {

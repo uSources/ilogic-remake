@@ -31,7 +31,7 @@ export interface FuzzFailure {
 const coinFlipController = (rng: Rng): Controller => {
   const random = randomController(rng);
   const ai = aiController(rng);
-  return { name: 'random', playTurn: (s, team) => (rng() < 0.5 ? random : ai).playTurn(s, team) };
+  return { name: 'random', playTurn: (view) => (rng() < 0.5 ? random : ai).playTurn(view) };
 };
 
 /** Lo que se cuenta de un paso al fallar: quien, que accion y el principio de sus sucesos. */

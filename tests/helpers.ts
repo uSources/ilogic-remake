@@ -20,6 +20,8 @@ import type {
   Unit,
 } from '@core/model';
 import { aiController } from '@core/controllers';
+import { aiTurn, defaultAiProfile } from '@core/ai';
+import { playerView, seeing } from '@core/playerView';
 import { GameSession } from '@core/session';
 import { carryOut, dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
@@ -191,4 +193,10 @@ export function resultFor(s: GameState, team: TeamId): 'playing' | 'won' | 'lost
 /** Cumple un plan del nucleo (la IA, las ordenes) mandando cada accion con `dispatch` por `team`: sus sucesos. */
 export function playPlan(s: GameState, team: TeamId, plan: ActionPlan<unknown>): GameEvent[] {
   return carryOut(plan, (action) => dispatch(s, team, action)).events;
+}
+
+/** El turno de la IA del juego por `team`, con lo que sabe ese equipo (su vista, al dia tras cada accion). */
+export function aiPlan(s: GameState, team: TeamId, rng: Rng): ActionPlan {
+  const view = playerView(s, team);
+  return seeing(view, aiTurn(view, defaultAiProfile(s.content), rng));
 }

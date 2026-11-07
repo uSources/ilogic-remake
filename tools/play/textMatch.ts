@@ -7,6 +7,7 @@
  */
 import { aiTurn, defaultAiProfile } from '@core/ai';
 import { carryOut } from '@core/actions';
+import { playerView, seeing } from '@core/playerView';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
@@ -352,7 +353,8 @@ export class TextMatch {
 
   /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
   private aiPlaysMyTurn(): GameEvent[] {
-    const plan = aiTurn(this.s, this.me, defaultAiProfile(this.s.content), this.rng);
+    const view = playerView(this.s, this.me);
+    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), this.rng));
     return carryOut(plan, (action) => this.session.act(this.me, action)).events;
   }
 

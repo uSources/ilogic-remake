@@ -10,6 +10,7 @@
  * que da un `Controller`: la sesion y las reglas no cambian.
  */
 import type { ActionPlan, ActionResult, GameAction, GameState, TeamId } from '../model';
+import type { PlayerView } from '../playerView';
 
 /** Un paso del turno de un controlador. */
 export type TurnStep = { kind: 'propose'; action: GameAction } | { kind: 'awaitInput' };
@@ -27,8 +28,11 @@ export interface Controller {
    * empezar su turno). Es la unica forma de preguntarlo: `GameSession.isPerson`.
    */
   readonly person?: true;
-  /** El turno del equipo `team` en la partida `s`, paso a paso. */
-  playTurn(s: GameState, team: TeamId): TurnPlan;
+  /**
+   * El turno de su equipo, paso a paso, con lo que sabe de la partida (`view`: la de su equipo, que
+   * le da la sesion; nunca la partida de verdad).
+   */
+  playTurn(view: PlayerView): TurnPlan;
 }
 
 /** Propone una accion y da su resultado (lo que ha dicho la sesion al mandarla). */
@@ -58,8 +62,8 @@ export const passiveController = (): Controller => ({
  */
 export const scriptedController = (actionsFor: (s: GameState, team: TeamId) => readonly GameAction[]): Controller => ({
   name: 'scripted',
-  playTurn: function* (s, team) {
-    for (const action of actionsFor(s, team)) yield* propose(action);
+  playTurn: function* (view) {
+    for (const action of actionsFor(view.state, view.team)) yield* propose(action);
   },
 });
 
@@ -68,8 +72,8 @@ export const sequence = (...controllers: readonly Controller[]): Controller => (
   name: 'sequence',
   // Si en la serie decide una persona, el equipo es de una persona.
   ...(controllers.some((controller) => controller.person) ? { person: true as const } : {}),
-  playTurn: function* (s, team) {
-    for (const controller of controllers) yield* controller.playTurn(s, team);
+  playTurn: function* (view) {
+    for (const controller of controllers) yield* controller.playTurn(view);
   },
 });
 

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { changeSettings } from '@core/gameState';
-import { aiTurn, defaultAiProfile } from '@core/ai';
 import { assistTurn, previewStandingOrders } from '@core/autopilot';
 import { dispatch } from '@core/actions';
 import { settingsWith } from '@core/matchSettings';
@@ -12,7 +11,7 @@ import { GameSession, humanController, passiveController } from '@core/session';
 import { serialize } from '@core/save';
 import { giveStandingOrder } from '@core/squads/standingOrders';
 import type { GameState, Pos } from '@core/model';
-import { blankState, unitTypeNamed, hqId, playPlan } from './helpers';
+import { blankState, unitTypeNamed, hqId, playPlan, aiPlan } from './helpers';
 
 const HQ = hqId();
 
@@ -128,9 +127,9 @@ describe('previewStandingOrders', () => {
       return s;
     };
     const first = make();
-    playPlan(first, 1, aiTurn(first, 1, defaultAiProfile(defaultContent()), seededRng(5)));
+    playPlan(first, 1, aiPlan(first, 1, seededRng(5)));
     const second = make();
-    const plan = aiTurn(second, 1, defaultAiProfile(defaultContent()), seededRng(5));
+    const plan = aiPlan(second, 1, seededRng(5));
     for (let step = plan.next(); !step.done;) {
       previewStandingOrders(second, 0, dispatch);
       step = plan.next(dispatch(second, 1, step.value));
