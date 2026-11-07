@@ -41,7 +41,7 @@
     },
     {
       "id": "Woods",
-      "textLetter": "f",
+      "textLetter": "w",
       "name": {
         "es": "Bosque",
         "en": "Woods"
@@ -77,7 +77,7 @@
     },
     {
       "id": "Cactus",
-      "textLetter": "c",
+      "textLetter": "k",
       "name": {
         "es": "Cactus",
         "en": "Cactus"
@@ -205,7 +205,7 @@
     },
     {
       "id": "Frosty",
-      "textLetter": "o",
+      "textLetter": "&",
       "name": {
         "es": "Escarcha",
         "en": "Frost"

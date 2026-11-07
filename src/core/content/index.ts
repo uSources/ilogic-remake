@@ -31,6 +31,7 @@ import { validateMovements, type MovementDef } from './movements';
 import { resolveContent, type Content, type ResolvedContent } from './resolve';
 import { validateSettings, type SettingsFile } from './settings';
 import { validateTerrain } from './terrain';
+import { validateTextLetters } from './textLetters';
 import { validateThemes, type ThemeDef } from './themes';
 import type { BuildingDef, ContentContext, TerrainDef, UnitDef } from './types';
 import { validateUnits } from './units';
@@ -90,6 +91,7 @@ export function validateContent(files: Content): string[] {
   validateUnits(files.units, context, check);
   validateBuildings(files.buildings, context, check);
   validateTerrain(files.terrain, files.movements, check);
+  validateTextLetters(files.terrain, files.buildings, check);
   validateThemes(files.themes, context.terrainIds, check);
   validateMapgen(files.mapgen, context, check);
   validateSettings(files.settings, check);

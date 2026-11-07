@@ -107,7 +107,7 @@ export class TextMatch {
     {
       names: ['units', 'unidades'],
       plays: false,
-      run: (match, words) => match.units(words.list[0] === undefined ? null : words.numberAt(0)),
+      run: (match, words) => match.units(words.list[0] === undefined ? null : match.teamShownAs(words.numberAt(0))),
     },
     { names: ['unit', 'unidad'], plays: false, run: (match, words) => match.unitInfo(match.mine(words.numberAt(0), false)) },
     { names: ['move', 'mover'], plays: true, run: (match, words) => match.move(match.mine(words.numberAt(0)), words.posAt(1)) },
@@ -173,7 +173,7 @@ export class TextMatch {
   /** Mapa en texto: terreno, edificios y unidades (las enemigas solo si se ven). */
   map(): string {
     const s = this.s;
-    const vis = visibility(s, this.me);
+    const visible = visibility(s, this.me);
     const map = mapGrid(s);
     const { width, height } = map;
     const head = '    ' + Array.from({ length: width }, (_, x) => String(x % 10).padStart(3)).join('');
@@ -188,9 +188,9 @@ export class TextMatch {
           const char = buildingTypeOf(s, building).textLetter;
           cell = building.owner === null ? `*${char} ` : ` ${building.owner === this.me ? char : char.toLowerCase()} `;
         }
-        if (unit && unit.carrier === null && (unit.team === this.me || vis.at({ x, y })))
+        if (unit && unit.carrier === null && (unit.team === this.me || visible.at({ x, y })))
           cell = (unit.team === this.me ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
-        else if (!vis.at({ x, y }) && !building) cell = ' ? ';
+        else if (!visible.at({ x, y }) && !building) cell = ' ? ';
         row += cell;
       }
       rows.push(row);
@@ -198,13 +198,20 @@ export class TextMatch {
     return `${rows.join('\n')}\n${legend(this.s)}`;
   }
 
-  units(team: number | null): string {
-    const vis = visibility(this.s, this.me);
-    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === this.me || vis.at(unit)));
+  /** El equipo que se enseña con ese numero (`shownTeamNumber`: el 1 es el primero). */
+  private teamShownAs(shown: number): TeamId {
+    const team = teamIds(this.s).find((candidate) => shownTeamNumber(candidate) === shown);
+    if (team === undefined) throw new UsageError(`no hay equipo ${shown} (son del 1 al ${this.s.teams.length})`);
+    return team;
+  }
+
+  units(team: TeamId | null): string {
+    const visible = visibility(this.s, this.me);
+    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === this.me || visible.at(unit)));
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
-        const usedTag = [canStillAct(unit) ? '' : 'usada'].filter(Boolean).join(' ');
+        const usedTag = canStillAct(unit) ? '' : 'usada';
         return `${String(unit.uid).padStart(3)} ${unit.team === this.me ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
@@ -216,7 +223,7 @@ export class TextMatch {
     const tiles = reachableTiles(range);
     return [
       `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${canStillAct(unit) ? 'puede actuar' : 'ya ha actuado'}`,
-      `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
+      `puede ir a ${tiles.length} casillas: ${tiles.slice(0, TILES_SHOWN).map(posKey).join(' ')}${tiles.length > TILES_SHOWN ? ' ...' : ''}`,
       `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${unitTypeOf(this.s, unit).id} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
     ]
@@ -351,6 +358,9 @@ export class TextMatch {
 
 class UsageError extends Error {}
 
+/** Cuantas casillas a las que puede ir una unidad se enumeran (`unit`); de las demas, solo cuantas son. */
+const TILES_SHOWN = 40;
+
 /** Las palabras que siguen a una orden y como leer de ellas un numero o una casilla. */
 interface CommandWords {
   list: readonly string[];
@@ -482,7 +492,7 @@ function legend(s: GameState): string {
 
 const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   map                      mapa en texto
-  units [equipo]           unidades, todas o las de un equipo (las enemigas solo si se ven)
+  units [equipo]           unidades, todas o las de un equipo (el 1 es el primero; las enemigas solo si se ven)
   unit <id>                a donde puede ir y a quien puede atacar
   move <id> <x> <y>        mover
   attack <id> <x> <y>      atacar a la unidad de (x,y) desde donde esta (mover antes si hace falta)

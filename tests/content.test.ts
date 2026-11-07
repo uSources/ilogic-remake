@@ -160,6 +160,15 @@ describe('contenido (src/core/content/*.json)', () => {
     expect(errors).toContain(`edificio ${files.buildings[2]!.id}: textLetter: la letra "${files.buildings[0]!.textLetter}" ya es de otro`);
   });
 
+  it('la letra de un terreno no puede ser la de un edificio (en el mapa, la de otro equipo sale en minuscula)', () => {
+    const files = clone();
+    const factory = files.buildings.find((building) => building.id === 'Factory')!;
+    files.terrain[3]!.textLetter = factory.textLetter.toLowerCase();
+    expect(errsOf(files)).toContain(
+      `terreno ${files.terrain[3]!.id}: textLetter "${factory.textLetter.toLowerCase()}" se confunde en el mapa con el edificio Factory (de otro equipo sale en minuscula)`,
+    );
+  });
+
   it('temas y generador de mapas: nombran terrenos, unidades y edificios que existen', () => {
     const files = clone();
     files.themes[0]!.mapLetters.T = 'Jungle';

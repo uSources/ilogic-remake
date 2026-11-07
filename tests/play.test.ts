@@ -14,7 +14,11 @@ describe('partida por texto', () => {
   it('mapa, unidades y ordenes basicas', () => {
     const g = new TextMatch({ seed: 7, size: 20, theme: 'Plains' });
     expect(g.run('map').split('\n').length).toBeGreaterThan(20);
-    const units = g.run('units 0');
+    const units = g.run('units 1');
+    // Los equipos se cuentan desde 1, como los enseña la partida (shownTeamNumber): el 1 es el tuyo.
+    expect(units).toMatch(/tuya/);
+    expect(units).not.toMatch(/enemiga/);
+    expect(g.run('units 3')).toMatch(/^error: no hay equipo 3/);
     const uid = Number(units.trim().split(/\s+/)[0]);
     const info = g.run(`unit ${uid}`);
     const [x, y] = info.split('\n')[1]!.split(': ')[1]!.split(' ')[0]!.split(',').map(Number);
