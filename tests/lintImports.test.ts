@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readdirSync } from 'node:fs';
 import { ESLint, Linter } from 'eslint';
 import {
   APPLY_STEPS,
@@ -10,6 +11,7 @@ import {
 import * as rulesFacade from '@core/rules';
 import * as squadsFacade from '@core/squads';
 import * as actionsFacade from '@core/actions';
+import { stateWriters } from './stateWriters';
 
 /**
  * La regla L7 de eslint.config.js (las reglas y las acciones no importan las piezas que se
@@ -149,6 +151,10 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     "import { giveStandingOrder } from '../squads/standingOrders';",
     "import { formSquad } from '../squads/membership';",
     "import { endRound } from '../rules/round';",
+    "import { advanceWeather, ensureWeather } from '../weather';",
+    "import { applyPower } from '../generalPowers';",
+    "import { appointGeneral, chargeFromCombat, generalsNewRound } from '../generals';",
+    "import { recordEvents, recordEvent, sampleArmy } from '../stats.ts';",
   ])('prohibe %s a quien decide', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(true));
 
   it.each([
@@ -157,6 +163,9 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     "import { canStillAct } from '../rules/unitTurn';",
     "import { effectiveStandingOrder } from '../squads/standingOrders';",
     "import { assistTurn } from '../autopilot/standingOrders';",
+    "import { weatherNow } from '../weather';",
+    "import { armyValue } from '../stats';",
+    "import { generalOf } from '../generals';",
   ])('deja %s', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(false));
 
   it('la configuracion de verdad lo pone en quien decide, la sesion, los controladores y la vista', async () => {
@@ -175,6 +184,52 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
       for (const pattern of APPLY_STEPS) expect(options?.patterns ?? [], file).toContainEqual(pattern);
     }
   });
+
+  /**
+   * Lo que cambia la partida pero no es un paso de APPLY_STEPS, y por que quien decide ya no lo puede
+   * usar (o no le sirve): crear o cargar una partida escribe en la que se esta creando, y lo demas lo
+   * prohiben otras reglas de eslint.config.js.
+   */
+  const NOT_STEPS: Readonly<Record<string, string>> = {
+    'core/savedParts.ts#cleanCounters': 'limpia una partida que se esta leyendo',
+    'core/savedParts.ts#cleanOptionalParts': 'limpia una partida que se esta leyendo',
+    'core/save.ts#readSave': 'carga una partida nueva',
+    'core/save.ts#deserialize': 'carga una partida nueva',
+    'core/defaultGames.ts#createMatch': 'crea una partida nueva',
+    'core/defaultGames.ts#loadGame': 'carga una partida nueva',
+    'core/match.ts#buildMatch': 'crea una partida nueva',
+    'core/missions/build.ts#buildMission': 'crea una partida nueva',
+    'core/mapgen/buildings.ts#placeStartingUnits': 'el generador de mapas, en la partida que crea',
+    'core/mapgen/buildings.ts#placeStartingBuildings': 'el generador de mapas, en la partida que crea',
+    'core/mapgen/buildings.ts#placeNeutralBuildings': 'el generador de mapas, en la partida que crea',
+    'core/mapgen/controlPoints.ts#placeControlPoints': 'el generador de mapas, en la partida que crea',
+    'core/dice.ts#diceOf': 'tira los dados de la partida: DECIDERS_ONLY_PROPOSE',
+    'core/actions/dispatch.ts#dispatch': 'manda una accion: DECIDERS_ONLY_PROPOSE',
+    'core/actions/combat.ts#resolveAttack': 'el combate sin comprobar: UNCHECKED_ATTACK_ONLY_IN_MEASURE',
+    'core/measure.ts#uncheckedAttack': 'solo para medir: MEASURING_IS_NOT_THE_GAME',
+    'core/autopilot/preview.ts#plannedStandingOrders': 'simula en su propia copia de la partida (foggedCopy)',
+    'core/autopilot/preview.ts#previewStandingOrders': 'simula en su propia copia de la partida (foggedCopy)',
+  };
+
+  it('toda funcion del nucleo que cambia la partida esta en APPLY_STEPS (o se sabe por que no): la lista no se queda atras', () => {
+    const files = readdirSync('src/core', { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.ts') && !file.startsWith('model/'))
+      .map((file) => `src/core/${file}`);
+    const found = stateWriters(files)
+      .map(({ file, name }) => ({ id: `${file.replace(/^src\//, '')}#${name}`, name }))
+      .filter(({ id, name }) => !APPLY_STEP_NAMES.includes(name) && !(id in NOT_STEPS))
+      .map(({ id }) => id);
+    expect(found).toEqual([]);
+  }, 60_000);
+
+  it('la busqueda ve lo que cambia la partida: directamente, en un campo guardado en una variable y a traves de un gancho', () => {
+    const found = stateWriters(['src/core/weather.ts', 'src/core/stats.ts', 'src/core/rules/funds.ts']).map(({ name }) => name);
+    expect(found).toEqual(
+      expect.arrayContaining(['ensureWeather', 'advanceWeather', 'sampleArmy', 'recordEvent', 'recordEvents', 'earn', 'pay']),
+    );
+    expect(found).not.toContain('weatherNow');
+    expect(found).not.toContain('armyValue');
+  }, 60_000);
 
   it('las fachadas del nucleo no dan ninguno: fuera del nucleo la partida solo cambia con acciones', () => {
     const exported = [...Object.keys(rulesFacade), ...Object.keys(squadsFacade), ...Object.keys(actionsFacade)];

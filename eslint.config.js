@@ -115,11 +115,14 @@ export const DECIDERS_ONLY_PROPOSE = [
   },
 ];
 /**
- * Los pasos que cambian la partida y viven con las reglas (`rules/`, `squads/`): solo los llaman el
+ * Los pasos que cambian la partida y viven con las reglas (`rules/`, `squads/`, el clima, los generales
+ * y sus poderes, las estadisticas): solo los llaman el
  * `apply` de las acciones (actions/), los pasos de ronda y de turno, las INVARIANTS y lo que prepara
  * una partida. Quien decide (la IA, autopilot/), la sesion, los controladores, la vista y lo que
  * apunta (targeting, trail) solo preguntan: no los importan. Fuera del nucleo ya no se ven (las
- * fachadas no los dan: tests/layers.test.ts). Lo prueba tests/lintImports.test.ts.
+ * fachadas no los dan: tests/layers.test.ts). Lo prueba tests/lintImports.test.ts, que ademas busca en
+ * todo el nucleo las funciones que cambian la partida: una que no este aqui (ni sea de las que crean
+ * o cargan una partida) hace fallar el test, asi la lista no se queda atras.
  */
 const STEPS_BY_MODULE = {
   'rules/capture': ['dropStaleCaptures', 'advanceCapture'],
@@ -138,14 +141,18 @@ const STEPS_BY_MODULE = {
   'rules/control': ['controlRound'],
   'squads/standingOrders': ['giveStandingOrder', 'cancelStandingOrder', 'finishStandingOrder', 'keepCapturing', 'liftStandingOrder'],
   'squads/membership': ['pruneSquads', 'formSquad', 'setGroup', 'addToGroup', 'leaveSquad', 'renameSquad', 'disbandSquad'],
+  weather: ['advanceWeather', 'ensureWeather'],
+  generals: ['appointGeneral', 'chargeFromCombat', 'generalsNewRound'],
+  generalPowers: ['applyPower'],
+  stats: ['recordEvents', 'recordEvent', 'sampleArmy'],
 };
 /** El nombre de cada paso, para quien los busca (las fachadas no pueden darlos). */
 export const APPLY_STEP_NAMES = Object.values(STEPS_BY_MODULE).flat();
 /** Un patron por modulo: su ruta desde cualquier sitio del nucleo (`../rules/funds`, `./funds`, con o sin extension). */
 export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(([module, importNames]) => {
-  const [folder, file] = module.split('/');
+  const [file, folder] = module.split('/').reverse();
   return {
-    regex: `(^|/)(${folder}/)?${file}(\\.[jt]s)?$`,
+    regex: `(^|/)${folder ? `(${folder}/)?` : ''}${file}(\\.[jt]s)?$`,
     importNames,
     message: `${importNames.join(', ')} cambian la partida: solo los llaman las acciones, los pasos de ronda y de turno y las INVARIANTS. Quien decide propone una accion.`,
   };

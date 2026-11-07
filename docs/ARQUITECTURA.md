@@ -73,7 +73,10 @@ los pasos con los que se cambia la partida (`advanceCapture`, `mergeInto`, `earn
 `giveStandingOrder`, `formSquad`...): solo los llaman el `apply` de las acciones, los pasos de ronda
 y de turno, las `INVARIANTS` y lo que prepara una partida. La IA, autopilot/, la sesion, los
 controladores, la vista y lo que apunta la escena (`targeting.ts`, `trail.ts`) no los importan
-(`APPLY_STEPS`, eslint.config.js), y las fachadas no los dan (tests/lintImports.test.ts): las
+(`APPLY_STEPS`, eslint.config.js; tambien los del clima, los generales y las estadisticas:
+`advanceWeather`, `appointGeneral`, `applyPower`, `recordEvents`...), y las fachadas no los dan
+(tests/lintImports.test.ts, que ademas busca con los tipos de TypeScript toda funcion del nucleo que
+escribe en la partida, `tests/stateWriters.ts`, y falla si no esta en la lista): las
 herramientas y los tests que preparan una partida a mano ponen sus unidades con `newUnit` de
 `core/measure.ts`.
 
