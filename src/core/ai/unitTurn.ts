@@ -4,11 +4,11 @@
  * entrada mas en UNIT_BEHAVIOURS, en su sitio de la lista.
  */
 
-import { isHostileOwner } from '../teams';
-import { unitTypeOf, isHq } from '../gameContent';
 import { moveRange, type MoveRange } from '../rules/movement';
-import { buildingAt, unitById } from '../rules/queries';
-import type { ActionPlan, Building, GameState, Rng, Unit } from '../model';
+import { buildingAt, isEnemyHq, unitById } from '../rules/queries';
+import { isCapturer } from '../util/predicates';
+import { posOf } from '../geom';
+import type { ActionPlan, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, finish, needsRepair, type PlayCtx } from '../autopilot/context';
 import { captureHere, retreat, tryAttack } from '../autopilot/tactics';
 import { HUNT } from '../autopilot/engagement';
@@ -32,12 +32,10 @@ export interface UnitBehaviour {
   run(turn: UnitTurnContext): ActionPlan<boolean>;
 }
 
-const isEnemyHq = (s: GameState, building: Building, ai: PlayCtx): boolean => isHq(s, building) && isHostileOwner(s, building.owner, ai.me);
-
 /** Apartarse de la Base enemiga y, si puede, disparar desde la casilla nueva. */
 function* stepOffEnemyHq({ s, ai, unit, range }: UnitTurnContext): ActionPlan<boolean> {
-  const hq = buildingAt(s, unit)!;
-  const destination = bestMoveToward(s, ai, unit, hq, range, true);
+  // Hacia cualquier casilla que no sea la suya (la de la Base).
+  const destination = bestMoveToward(s, ai, unit, posOf(unit), range, true);
   if (!destination) return false;
   yield* doMove(unit, destination);
   const rangeAfterMove = moveRange(s, unit);
@@ -59,7 +57,7 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
     id: 'stepOffEnemyHq',
     when: ({ s, ai, unit }) => {
       const building = buildingAt(s, unit);
-      return !!building && isEnemyHq(s, building, ai) && !unitTypeOf(s, unit).canCapture;
+      return !!building && isEnemyHq(s, building, ai.me) && !isCapturer(s, unit);
     },
     run: stepOffEnemyHq,
   },

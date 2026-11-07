@@ -8,11 +8,13 @@ import { expectedDamage, fireOrigins } from '../rules/combat';
 import { canDamage, inAttackRange } from '../rules/weapons';
 import { engagement } from '../rules/engagement';
 import { moveRange } from '../rules/movement';
-import { firesAfterMove, isOnMap } from '../util/predicates';
+import { canFight, firesAfterMove, isOnMap } from '../util/predicates';
 import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
 import type { GameState, Unit } from '../model';
-import { needsRepair, strikeReach, visibleFoes, type PlayCtx } from '../autopilot/context';
+import { needsRepair, strikeReach, type PlayCtx } from '../autopilot/context';
+import { visibleFoes } from '../rules/visibility';
+import { flankBonusOnceHit } from '../ruleModules/flank';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {
@@ -27,7 +29,7 @@ type DamageTable = Map<number, Map<number, number>>;
 
 /** Puede disparar este turno y no tiene que irse a curar. */
 const isShooter = (s: GameState, ai: PlayCtx, unit: Unit): boolean =>
-  isOnMap(unit) && canStillFire(s, unit) && unitTypeOf(s, unit).attack !== null && !needsRepair(ai, unit);
+  isOnMap(unit) && canStillFire(s, unit) && canFight(s, unit) && !needsRepair(ai, unit);
 
 /** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
 function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {
@@ -58,7 +60,7 @@ function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: Dama
   for (const uid of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += damageTo(uid) * (squad.length ? 1 + s.settings.flankBonus : 1);
+    total += damageTo(uid) * (squad.length ? 1 + flankBonusOnceHit(s) : 1);
     squad.push(uid);
   }
   return total >= foe.life && squad.length >= 2 ? squad : null;

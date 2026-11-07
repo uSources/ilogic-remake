@@ -5,7 +5,6 @@
  * IA (ai/unitTurn.ts, ai/tactics.ts), que los reutiliza.
  */
 
-import { unitTypeOf } from '../gameContent';
 import { manhattan, samePos } from '../geom';
 import { canCapture } from '../rules/capture';
 import { fireOrigins } from '../rules/combat';
@@ -15,7 +14,11 @@ import { mergeTargets } from '../rules/transport';
 import { canStillFire } from '../rules/unitTurn';
 import type { ActionPlan, Building, GameState, Pos, Unit } from '../model';
 import { maxBy, minBy } from '../util/pick';
-import { act, bestMoveToward, doMove, finish, repairsHere, stepsMap, strikeReach, visibleFoes, type PlayCtx } from './context';
+import { act, bestMoveToward, doMove, finish, stepsMap, strikeReach, type PlayCtx } from './context';
+import { visibleFoes } from '../rules/visibility';
+import { canRepair } from '../rules/supply';
+import { buildingAt } from '../rules/queries';
+import { canFight } from '../util/predicates';
 import { attackScore, unitValue } from './scoring';
 import type { EngagementPolicy, FiringPositions } from './engagement';
 
@@ -35,7 +38,7 @@ function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRang
 function nearestRepairBuilding(s: GameState, play: PlayCtx, unit: Unit): Building | null {
   // La casilla en la que esta no sale: si alli la repararan, ya se habria quedado (retreat).
   const steps = stepsMap(s, play, unit);
-  const repairShops = s.buildings.filter((building) => repairsHere(s, unit, building) && steps.at(building) < Infinity);
+  const repairShops = s.buildings.filter((building) => canRepair(s, building, unit) && steps.at(building) < Infinity);
   return minBy(repairShops, (building) => steps.at(building));
 }
 
@@ -43,7 +46,8 @@ function nearestRepairBuilding(s: GameState, play: PlayCtx, unit: Unit): Buildin
 export function* retreat(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   if (yield* mergeWithMate(s, play, unit, range)) return true;
   // [CAMBIO] Si ya esta en un edificio que la repara, se queda (antes se marchaba a otro).
-  if (repairsHere(s, unit, unit)) {
+  const here = buildingAt(s, unit);
+  if (here && canRepair(s, here, unit)) {
     yield* finish(s, unit);
     return true;
   }
@@ -112,7 +116,7 @@ function originsFor(s: GameState, unit: Unit, range: MoveRange, firesFrom: Firin
 export function* tryAttack(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange, policy: EngagementPolicy): ActionPlan<boolean> {
   const { engages } = policy;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
-  if (unitTypeOf(s, unit).attack === null || !canStillFire(s, unit)) return false;
+  if (!canFight(s, unit) || !canStillFire(s, unit)) return false;
   // Solo mira a los enemigos dentro del radio al que llega a disparar este turno (strikeReach, con el
   // clima): de ellos sale a quien dispara y, si no puede a ninguno, a quien persigue (chaseNearest).
   const reach = strikeReach(s, unit);

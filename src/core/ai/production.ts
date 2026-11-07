@@ -3,10 +3,11 @@
  */
 
 import { teamState } from '../teams';
-import { unitTypeOf, buildingTypeOf } from '../gameContent';
-import { buildingIncome, buyOptions, upkeepOf, type BuyOption } from '../rules/economy';
+import { unitTypeOf } from '../gameContent';
+import { buyOptions, hasFullArmy, projectedIncome, usesCommandPoints, type BuyOption } from '../rules/economy';
+import { isCapturer } from '../util/predicates';
 import { teamUnits, unitAt } from '../rules/queries';
-import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from '../model';
+import type { ActionPlan, Building, GameState, Rng, Unit } from '../model';
 import { posOf } from '../geom';
 import { act, type PlayCtx } from '../autopilot/context';
 
@@ -52,22 +53,13 @@ function productionOrder(s: GameState, rng: Rng, limited: boolean): Building[] {
     : s.buildings;
 }
 
-/** Lo que gana el equipo cada turno: ingresos de sus edificios menos el mantenimiento de sus unidades. */
-function netIncome(s: GameState, me: TeamId): number {
-  const income = s.buildings.reduce(
-    (total, building) => total + (building.owner === me ? buildingIncome(s, buildingTypeOf(s, building)) : 0),
-    0,
-  );
-  return income - upkeepOf(s, me);
-}
-
 /** Lo que se plantea comprar en el edificio: lo que cabe (o se paga) sin repetir unidades de apoyo, e infanteria si faltan. */
 function purchaseOptions(s: GameState, ai: PlayCtx, building: Building, mine: Unit[], limited: boolean): BuyOption[] {
   const fits = (option: BuyOption) => (limited ? option.blocked === undefined || option.blocked === 'funds' : option.affordable);
   // Lo que no combate ("ai": { "support": true } en units.json): como mucho uno de cada a la vez.
   const repeatsSupport = (option: BuyOption) => option.unitType.isSupport && mine.some((unit) => unitTypeOf(s, unit) === option.unitType);
   const options = buyOptions(s, building).filter((option) => fits(option) && !repeatsSupport(option));
-  const capturers = mine.filter((unit) => unitTypeOf(s, unit).canCapture).length;
+  const capturers = mine.filter((unit) => isCapturer(s, unit)).length;
   const isAffordableCapturer = (option: BuyOption) => option.unitType.canCapture && option.affordable;
   if (capturers < ai.profile.weights.MINCAPTURERS && options.some(isAffordableCapturer)) return options.filter(isAffordableCapturer);
   return options;
@@ -93,12 +85,12 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
  */
 export function* produce(s: GameState, ai: PlayCtx, rng: Rng): ActionPlan {
   const me = ai.me;
-  const limited = s.settings.commandPoints !== null;
+  const limited = usesCommandPoints(s);
   const order = productionOrder(s, rng, limited);
-  const income = netIncome(s, me);
+  const income = projectedIncome(s, me);
   for (const building of order) {
+    if (building.owner !== me || hasFullArmy(s, me) || unitAt(s, building)) continue;
     const mine = teamUnits(s, me);
-    if (building.owner !== me || mine.length >= s.settings.maxUnits || unitAt(s, building)) continue;
     const options = purchaseOptions(s, ai, building, mine, limited);
     if (!options.length) continue;
     const purchase = choosePurchase(options, teamState(s, me).funds + income, rng);

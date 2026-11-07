@@ -6,14 +6,16 @@
  */
 
 import { isAlliedOwner } from '../teams';
-import { unitTypeOf, cloneState } from '../gameContent';
+import { cloneState } from '../gameContent';
 import { manhattan, samePos, posOf } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { effectiveStandingOrder } from '../squads/standingOrders';
 import { carryOut } from '../actions/plan';
 import type { ActionDispatcher, ActionPlan, GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../model';
-import { act, playCtx, canAct, doMove, finish, hiddenFoes, needsRepair, visibleFoes, type PlayCtx } from './context';
+import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
+import { hiddenFoes, visibleFoes } from '../rules/visibility';
+import { isCapturer } from '../util/predicates';
 import { standingOrderPlayOrder, standingOrderStep, formation, formationFrom } from './formation';
 import { captureHere, retreat, tryAttack } from './tactics';
 import { fireOnTheWay, guardZone, SHOOT_FROM_HERE } from './engagement';
@@ -62,7 +64,7 @@ function* shootFromHereOrWait({ s, play, unit }: StandingOrderTurnContext): Acti
 function* captureOrderTurn(turn: StandingOrderTurnContext): ActionPlan<boolean> {
   const { s, play, unit, at } = turn;
   const building = buildingAt(s, at);
-  if (!building || isAlliedOwner(s, building.owner, play.me) || !unitTypeOf(s, unit).canCapture) return true;
+  if (!building || isAlliedOwner(s, building.owner, play.me) || !isCapturer(s, unit)) return true;
   if (samePos(unit, at)) {
     yield* captureHere(s, unit);
     yield* finish(s, unit);

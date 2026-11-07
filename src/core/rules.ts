@@ -53,9 +53,20 @@ export {
   movementOf,
   canMoveOn,
   terrainMoveCost,
+  isEnemyHq,
 } from './rules/queries';
 export { canActNow, canMoveNow, canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
-export { visionOf, visibility, visibleFoeAt, isShownTo, isVisibleFoe, sightOf, type Sight } from './rules/visibility';
+export {
+  visionOf,
+  visibility,
+  visibleFoeAt,
+  visibleFoes,
+  hiddenFoes,
+  isShownTo,
+  isVisibleFoe,
+  sightOf,
+  type Sight,
+} from './rules/visibility';
 export {
   autoCapturers,
   capturePointsOf,
@@ -127,7 +138,7 @@ export type {
   StopRule,
 } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './rules/rank';
-export { flankBonusFor } from './ruleModules/flank';
+export { flankBonusFor, flankBonusOnceHit } from './ruleModules/flank';
 export { abilitiesOf } from './ruleModules/abilities';
 export { bountyFor } from './ruleModules/bounty';
 export { MELEE_COUNTER } from './ruleModules/counterattack';
@@ -138,11 +149,14 @@ export { engagement, fighterOf, reversed, type EngagementOptions } from './rules
 export { combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
 export { boundedDistribution, DAMAGE_MODELS, DAMAGE_MODEL_IDS, damageModelFor, SHOT_BY_SHOT, spreadAround } from './damage';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
-export { canSupply } from './rules/supply';
+export { canRepair, canSupply } from './rules/supply';
 export {
   commandUsed,
   armyLimit,
+  hasFullArmy,
+  usesCommandPoints,
   upkeepOf,
+  projectedIncome,
   buildingIncome,
   buyOptions,
   canBuyAt,

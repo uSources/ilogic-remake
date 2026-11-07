@@ -4,9 +4,8 @@
  * desde una unidad, la mejor casilla para acercarse a algo y proponer lo que hace una unidad.
  */
 
-import { isHostile } from '../teams';
-import { unitTypeOf, buildingTypeOf } from '../gameContent';
-import { movementOf, buildingAt } from '../rules/queries';
+import { unitTypeOf } from '../gameContent';
+import { movementOf } from '../rules/queries';
 import { moveBudget } from '../rules/movementProfile';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
@@ -15,9 +14,8 @@ import { letsAlliesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules
 import type { PassRule } from '../ruleModules/hooks';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
-import { visibility } from '../rules/visibility';
 import type { ActionPlan, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
-import { isAlive, isOnMap } from '../util/predicates';
+import { isAlive } from '../util/predicates';
 import type { AutopilotProfile } from './profile';
 
 /**
@@ -120,20 +118,6 @@ export function* doMove(unit: Unit, dest: Pos | null): ActionPlan<boolean> {
  */
 export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, unit) + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
-/** Enemigos de `me` vivos y en el mapa (no transportados), se vean o no. */
-const foesOnMap = (s: GameState, me: TeamId): Unit[] =>
-  s.units.filter((other) => isHostile(s, other.team, me) && isOnMap(other) && isAlive(other));
-
-/** Enemigos vivos, en el mapa (no transportados) y a la vista de `me`. */
-export function visibleFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {
-  return foesOnMap(s, me).filter((other) => visible.at(other));
-}
-
-/** Los mismos que `visibleFoes` no ve: enemigos vivos en el mapa escondidos para `me`. */
-export function hiddenFoes(s: GameState, me: TeamId, visible = visibility(s, me)): Unit[] {
-  return foesOnMap(s, me).filter((other) => !visible.at(other));
-}
-
 /**
  * Puede jugar este turno: lo mismo que pide cualquier accion de una unidad (`actorProblem`: suya,
  * en el mapa y sin gastar), y viva.
@@ -142,14 +126,3 @@ export const canAct = (s: GameState, unit: Unit): boolean => isAlive(unit) && ac
 
 /** Necesita volver a curarse a un edificio. */
 export const needsRepair = (play: PlayCtx, unit: Unit): boolean => unit.life < play.profile.weights.LIFETOBACK;
-
-/** En esa casilla hay un edificio propio que repara a la unidad. */
-export function repairsHere(s: GameState, unit: Unit, pos: Pos): boolean {
-  const building = buildingAt(s, pos);
-  return (
-    !!building &&
-    building.owner === unit.team &&
-    unitTypeOf(s, unit).repairedAt.includes(buildingTypeOf(s, building).id) &&
-    buildingTypeOf(s, building).heals > 0
-  );
-}

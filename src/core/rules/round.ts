@@ -1,7 +1,7 @@
 /**
  * Fin de ronda (ciclojuego, fase 2): reactivar unidades, cobrar, curar, mantenimiento, dia y clima.
  */
-import { unitTypeOf, buildingTypeOf } from '../gameContent';
+import { buildingTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import type { Building, GameEvent, GameState, RoundReport, Unit } from '../model';
 import type { RoundPhase, RoundReportPart, RoundStage } from '../ruleModules/hooks';
@@ -14,6 +14,7 @@ import { quietly } from '../util/quietly';
 import { buildingIncome } from './economy';
 import { unitAt } from './queries';
 import { readyUnit } from './unitTurn';
+import { canRepair } from './supply';
 import { sampleArmy } from '../stats';
 
 /** [CAMBIO] La unidad no se curara al acabar el dia (sin cura bajo fuego: ver `healingBlocks` de los modulos). */
@@ -27,10 +28,10 @@ function refreshUnits(s: GameState): GameEvent[] {
   return [];
 }
 
-/** La unidad propia que esta encima del edificio y que este cura (units.json, "repairedAt"), si la hay. */
+/** La unidad propia que esta encima del edificio y que este cura (`canRepair`), si la hay. */
 function patientOn(s: GameState, building: Building): Unit | null {
   const unit = unitAt(s, building);
-  if (!unit || unit.team !== building.owner || !unitTypeOf(s, unit).repairedAt.includes(buildingTypeOf(s, building).id)) return null;
+  if (!unit || !canRepair(s, building, unit)) return null;
   return unhealable(s, unit) ? null : unit;
 }
 

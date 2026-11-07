@@ -14,7 +14,8 @@ import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders'
 import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';
-import { bestMoveToward, needsRepair, strikeReach, visibleFoes, type PlayCtx } from './context';
+import { bestMoveToward, needsRepair, strikeReach, type PlayCtx } from './context';
+import { visibleFoes } from '../rules/visibility';
 import { isAlive, isOnMap } from '../util/predicates';
 import type { FiringPositions } from './engagement';
 

@@ -4,20 +4,20 @@
  * son de autopilot/tactics.ts (los usan tambien las ordenes permanentes, que no son de la IA).
  */
 
-import { areAllied, isAlliedOwner, isHostile, isHostileOwner } from '../teams';
-import { unitTypeOf, isHq } from '../gameContent';
+import { areAllied, isAlliedOwner } from '../teams';
+import { isHq } from '../gameContent';
 import { diamond, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canDamage } from '../rules/weapons';
 import { isContested } from '../rules/control';
 import { reachableTiles, type MoveRange } from '../rules/movement';
-import { buildingAt, unitAt } from '../rules/queries';
-import { visibility } from '../rules/visibility';
+import { buildingAt, isEnemyHq, unitAt } from '../rules/queries';
+import { sightOf, visibleFoes } from '../rules/visibility';
 import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
 import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
 import { captureHere } from '../autopilot/tactics';
-import { isOnMap } from '../util/predicates';
+import { isCapturer } from '../util/predicates';
 
 /** La Base enemiga vale mas que otro edificio: al buscar que capturar, cuenta como si estuviera estos pasos mas cerca. */
 const HQ_CAPTURE_HEAD_START = 4;
@@ -28,24 +28,27 @@ const HQ_CAPTURE_HEAD_START = 4;
 
 /** El edificio ajeno a la vista (hasta AI.MAXCAPTDIST) mas cercano por tierra, con la Base enemiga por delante. */
 function captureGoal(s: GameState, ai: PlayCtx, unit: Unit): Pos | null {
-  const visible = visibility(s, ai.me);
+  const sees = sightOf(s, ai.me);
   // Desde 1 casilla: lo de debajo ya lo ha mirado captureHere.
   const steps = stepsMap(s, ai, unit);
-  const isCapturable = (tile: Pos): boolean => {
+  const capturableAt = (tile: Pos): Building | null => {
     const building = buildingAt(s, tile);
-    if (!building || isAlliedOwner(s, building.owner, ai.me) || !visible.at(tile)) return false;
+    if (!building || isAlliedOwner(s, building.owner, ai.me) || !sees(tile)) return null;
     const occupant = unitAt(s, tile);
-    if (occupant && areAllied(s, occupant.team, ai.me)) return false;
-    return steps.at(tile) < Infinity;
+    if (occupant && areAllied(s, occupant.team, ai.me)) return null;
+    return steps.at(tile) < Infinity ? building : null;
   };
-  const headStart = (tile: Pos): number => (isHq(s, buildingAt(s, tile)!) ? HQ_CAPTURE_HEAD_START : 0);
-  const candidates = [...diamond(mapGrid(s), unit, 1, ai.profile.weights.MAXCAPTDIST)].filter(isCapturable);
-  return minBy(candidates, (tile) => steps.at(tile) - headStart(tile));
+  const candidates = [...diamond(mapGrid(s), unit, 1, ai.profile.weights.MAXCAPTDIST)].flatMap((tile) => {
+    const building = capturableAt(tile);
+    return building ? [{ tile, building }] : [];
+  });
+  const headStart = (building: Building): number => (isHq(s, building) ? HQ_CAPTURE_HEAD_START : 0);
+  return minBy(candidates, (candidate) => steps.at(candidate.tile) - headStart(candidate.building))?.tile ?? null;
 }
 
 /** Capturar lo de debajo o ir a capturar el edificio ajeno mas cercano (solo las que capturan). */
 export function* tryCapture(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
-  if (!unitTypeOf(s, unit).canCapture) return false;
+  if (!isCapturer(s, unit)) return false;
   if (yield* captureHere(s, unit)) return true;
   const goal = captureGoal(s, ai, unit);
   if (!goal) return false;
@@ -66,7 +69,7 @@ function advanceHeadStart(s: GameState, ai: PlayCtx, unit: Unit, goal: Pos): num
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
   if (s.controlPoints?.some((point) => samePos(point, goal))) return ai.profile.weights.CONTROLPOINT;
   const building = buildingAt(s, goal);
-  if (!building || !unitTypeOf(s, unit).canCapture || building.owner === null) return 0;
+  if (!building || !isCapturer(s, unit) || building.owner === null) return 0;
   return isHq(s, building) ? ai.profile.weights.CAPTUREHQ : ai.profile.weights.CAPTUREOWNED;
 }
 
@@ -76,15 +79,12 @@ function advanceHeadStart(s: GameState, ai: PlayCtx, unit: Unit, goal: Pos): num
  * estan disputados (sus zonas: ver controlRound) y libres.
  */
 function advanceGoals(s: GameState, ai: PlayCtx, unit: Unit): Pos[] {
-  const visible = visibility(s, ai.me);
   const isOpenPoint = (point: ControlPoint): boolean =>
     (!isAlliedOwner(s, point.owner, ai.me) || isContested(s, point)) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
-  if (unitTypeOf(s, unit).canCapture) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
-  const isVisibleTarget = (other: Unit): boolean =>
-    isHostile(s, other.team, ai.me) && isOnMap(other) && visible.at(other) && canDamage(s, unit, other);
-  const isEnemyHq = (building: Building): boolean => isHostileOwner(s, building.owner, ai.me) && isHq(s, building);
-  return [...s.units.filter(isVisibleTarget), ...s.buildings.filter(isEnemyHq), ...points];
+  if (isCapturer(s, unit)) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
+  const targets = visibleFoes(s, ai.me).filter((foe) => canDamage(s, unit, foe));
+  return [...targets, ...s.buildings.filter((building) => isEnemyHq(s, building, ai.me)), ...points];
 }
 
 /** Pasos hasta `goal` o, si no se puede llegar a esa casilla (ocupada), hasta su vecina mas cercana. */
@@ -110,7 +110,7 @@ export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange
   if (!nearest) return false;
   const goal = nearest.goal;
   // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).
-  const wouldBlock = !unitTypeOf(s, unit).canCapture && !!buildingAt(s, goal);
+  const wouldBlock = !isCapturer(s, unit) && !!buildingAt(s, goal);
   const destination = bestMoveToward(s, ai, unit, goal, range, wouldBlock);
   if (!destination) return false;
   yield* doMove(unit, destination);
