@@ -4,10 +4,11 @@ import type { GameState, Unit } from '../model';
 import { fallenIn, type AttackRecord } from '../rules/attackRecord';
 import { earn } from '../rules/funds';
 import type { RuleModule } from './hooks';
+import { isRuleOn } from './ruleset';
 
-/** Lo que se cobra por destruir una unidad como `lost` (0 sin botin). */
+/** Lo que se cobra por destruir una unidad como `lost` (0 si la partida no lleva botin). */
 export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
-  return Math.round(unitTypeOf(s, lost).cost * s.settings.bounty);
+  return isRuleOn(s, 'bounty') ? Math.round(unitTypeOf(s, lost).cost * s.settings.bounty) : 0;
 }
 
 declare module '../model/combat' {
