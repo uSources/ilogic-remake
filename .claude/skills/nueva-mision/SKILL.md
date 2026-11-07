@@ -43,5 +43,5 @@ Comprobar:
 2. Jugarla por texto: `npm run play -- --mission <id>` (o `-e "map; ai; ai; status"` para ver a la IA).
 3. En el navegador: `window.ilogicDebug.startGame({ mission: '<id>' })` y añadir una escena en
    `tests/visual/shots.mjs` si es importante que no cambie.
-4. Textos de objetivo y estado: `src/campaign.ts` (`objectiveText`, `objectiveStatus`).
+4. Textos de objetivo y estado: `src/campaign.ts` (`objectiveText`, `objectiveStatusText`).
 5. CHANGELOG.md y `npm run check`.

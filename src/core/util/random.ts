@@ -50,8 +50,10 @@ export function isRandomState(value: unknown): value is number {
 
 /**
  * Las dos semillas del azar de una partida, sacadas una aparte de la otra: la de sus dados
- * (`GameState.dice`) y la de las decisiones de la IA (`GameState.decisionSeed`). Saber una no dice
- * la otra (dentro de lo que da un generador de 32 bits: no es criptografico).
+ * (`GameState.dice`) y la de las decisiones de la IA (`GameState.decisionSeed`). Son dos tiradas
+ * seguidas del mismo generador de 32 bits, que no es criptografico: a simple vista una no dice la
+ * otra, pero quien sepa una puede sacar la otra probando las 2^32 semillas (unos 10 s). Sirve para
+ * que la IA no tire los mismos dados que el combate, no para esconder nada.
  */
 export interface MatchSeeds {
   dice: number;

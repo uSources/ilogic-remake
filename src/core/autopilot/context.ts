@@ -1,7 +1,7 @@
 /**
  * Lo que comparten los pasos de un turno jugado por el nucleo (las ordenes permanentes) o por la IA
- * (PlayCtx) y las ayudas que usan todos: medir distancias
- * desde una unidad, la mejor casilla para acercarse a algo y proponer lo que hace una unidad.
+ * (PlayCtx) y las ayudas que usan todos: medir distancias desde una unidad, la mejor casilla para
+ * acercarse a algo y proponer lo que hace una unidad.
  */
 
 import { unitTypeOf } from '../gameContent';

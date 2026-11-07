@@ -10,7 +10,7 @@ import type { StandingOrder } from './standingOrder';
 export type GameAction =
   /** Mover la unidad a `to`; `path`, el camino trazado (si no vale, el mas corto). */
   | { kind: 'move'; uid: number; to: Pos; path?: Pos[] }
-  /** Deshacer el ultimo movimiento de la unidad, si es lo ultimo que se ha hecho (ver LastMove). */
+  /** Deshacer el ultimo movimiento de la unidad, si es lo ultimo que se ha hecho (ver UndoableMove y rules/undo.ts). */
   | { kind: 'undoMove'; uid: number }
   | { kind: 'attack'; uid: number; target: number }
   | { kind: 'capture'; uid: number }

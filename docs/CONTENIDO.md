@@ -134,7 +134,7 @@ Una clase nueva: su forma en `AbilityDef` (`core/content/types.ts`), su validaci
 `ABILITY_SHAPES` (`content/abilities.ts`, de ahi sale `ABILITY_KINDS`), lo que aporta a las listas de
 las reglas en `ABILITY_HOOKS` y su sitio en `ABILITY_ORDER` (`core/abilities.ts`: un modificador del acierto, una regla de paso...;
 ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
-(`ability_<kind>` en `settings.ts`, y `abilityVM` en `ui/hudModels.ts`), el esquema y un test en
+(`ability_<kind>` en `src/i18n/es/cards.ts` y `en/cards.ts`, y `abilityVM` en `ui/models/tile.ts`), el esquema y un test en
 `tests/abilities.test.ts`.
 
 ## Campos de un edificio
@@ -312,7 +312,7 @@ Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 `GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
 `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, building).earning`, `terrainAt(s, pos)`, `themeOf(s)`,
 `s.content.generals` (los pesos de la IA, `s.content.ai`, los lee quien juega por su perfil: `defaultAiProfile(contenido).weights`); las reglas por defecto, `settingsWith(contenido, cambios)`;
-los nombres en pantalla, `nameOf(unitType)` (settings.ts). Nada lee el contenido al
+los nombres en pantalla, `nameOf(unitType)` (settings.ts: el nombre de la entrada en el idioma elegido). Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
 que se pide), y lo usan `createMatch`/`loadGame` (core/defaultGames.ts), la interfaz y las
 herramientas.

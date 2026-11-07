@@ -105,7 +105,7 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 - **Campaña** (menú principal): 6 misiones en mapas hechos a mano, que se desbloquean en orden.
   La primera es un tutorial que va diciendo qué hacer; las demás tienen objetivos propios (capturar
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
-  Las misiones están en `src/core/missions.ts` y es fácil añadir más.
+  Las misiones están en `src/core/content/missions.json` y es fácil añadir más (skill `nueva-mision`).
 - **Mover unidades:** se cogen y se arrastran (con el dedo, manteniendo pulsado). El camino sigue al
   puntero como una flecha y un bocadillo dice cuánto movimiento se gasta, la defensa de la casilla
   y si allí te pueden atacar. Al soltar pasa lo lógico: sobre un enemigo,

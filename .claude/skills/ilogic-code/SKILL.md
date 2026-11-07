@@ -92,7 +92,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
-  las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
+  las variables de `hud/styles/base/base.css`). Textos de pantalla en `src/i18n/es/` y `en/`, un fichero por tema (se leen con `t('clave')`, de `settings.ts`).
 - **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(settingChanges)` en los tests,

@@ -286,7 +286,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   una misma semilla da la misma partida en todos (K4).
 - `gameState.ts`: `newGameState({ map, settings, content, mode, teams, seeds, firstTeam?, theme? })`
   lo usan mapgen, misiones, laboratorio, duelos y tests. Quien la crea dice sus equipos (`teams:
-  duel('human', 'ai')` o una lista de `TeamSetup`) y las semillas de su azar (`seeds`: dados y decisiones, una aparte de la otra).
+  duel('human', 'ai')` o una lista de `TeamSetup`) y las semillas de su azar (`seeds`: dados y decisiones, una aparte de la otra; ver "El azar").
 - `defaultGames.ts`: `createMatch(config, mapRng?)` y `loadGame(json)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
   juego (ESLint).
 - `settingsSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
@@ -304,7 +304,7 @@ mulberry32 (un entero de 32 bits) y `diceOf(s)` tira de el, asi que se guarda y 
 partida. Las decisiones de la IA tienen su propio azar, tambien de la partida pero aparte:
 `GameState.decisionSeed` (fija; quien crea la partida la saca aparte de la de los dados: `MatchSeeds`,
 `matchSeedsFrom(semilla)` para una mision o un laboratorio, dos tiradas distintas del generador en
-mapgen) y, para cada
+mapgen; no es un secreto: con una, la otra sale probando las 2^32 semillas, unos 10 s) y, para cada
 turno, `turnSeedOf(s, equipo)` (turnSeeds.ts: la semilla del turno, `turnSeed`, mezcla la de la
 partida, el dia y el equipo). Quien decide no la saca de la partida: la vista se la da
 (`PlayerView.turnSeed`) y su azar es `decisionRngOf(vista)`; en la vista la semilla de la partida es
@@ -743,7 +743,7 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
   en ese orden, que es el de la cascada. Por eso hay alguna mezclada (`base/narrow.css`,
   `legacy.css`): mover reglas de sitio puede cambiar quien gana. Lo nuevo va al final; los colores son
   variables de `styles/base/base.css` (los mismos que `ui/palette.ts`).
-- **Textos**: `t('clave')` (de `settings.ts`) busca en `src/i18n/`, un fichero por tema en `es/` y su
+- **Textos**: `t('clave')` (de `settings.ts`, que solo la expone) busca en `src/i18n/`, un fichero por tema en `es/` y su
   traduccion con el mismo nombre en `en/` (tipada con `Translation`: si falta una clave, no
   compila). Un texto nuevo va al tema que toca en `es/` y luego en `en/`; las claves no se repiten
   entre temas (`tests/i18n.test.ts`).
@@ -1003,8 +1003,9 @@ abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide q
   `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
 - **Seleccion** (`selection.ts`): como en los juegos de estrategia en tiempo real. Funciones puras que
   reciben el gesto ya decidido (clic con sus teclas y cuantas veces, recuadro) y devuelven la
-  seleccion nueva (`clickSelect`, `boxSelect`); la escena solo la aplica (`applySelection`: una unidad
-  que puede actuar queda elegida para moverla; varias forman el grupo, con aro a los pies). Los
+  seleccion nueva (`clickSelect`, `boxSelect`); la escena solo la aplica (`GroupSelection.apply`,
+  scenes/game/groupSelection.ts: una unidad que puede actuar queda elegida para moverla; varias forman
+  el grupo, con aro a los pies). Los
   grupos con numero son escuadras con `Squad.key` (`setGroup`, `addToGroup`, `squadByKey` en
   `core/squads/`), y las teclas son la orden `group {n, mode}`.
 - **Raton**: arrastrar con el izquierdo desde una casilla sin unidad propia es recuadro; con el
@@ -1061,5 +1062,12 @@ mando puede jugar una partida entera sin raton.
 | Cambiar los gestos del raton o del dedo (toque, arrastrar, pellizcar, pulsacion larga, recuadro, borde de la pantalla) | `src/controls/pointer.ts` (`PointerGestures` reparte los eventos; cada gesto es una pieza pura de `src/controls/gestures/`; lo que hace en la partida esta en `src/scenes/game/pointerInput.ts`) |
 | Cambiar algo de la partida en pantalla (animaciones, turno enemigo, final, seleccion...) | `src/scenes/game/` (ver "La escena de la partida") |
 | Cambiar que hace un toque con el dedo | `src/ui/touch.ts` |
-| Textos | `src/settings.ts` (`TEXTS.es` / `TEXTS.en`) |
+| Textos | `src/i18n/es/*.ts` (un fichero por tema) y su traduccion en `src/i18n/en/` (ver "Interfaz HTML", "Textos"); `t('clave')` y `nameOf` en `src/settings.ts` |
+| Generar mapas | `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden en `steps.ts`, fachada `mapgen.ts`), sus numeros en `mapgen.json` y `themes.json` |
+| Añadir un tipo de movimiento (a pie, rueda, vuelo...) | `src/core/content/movements.json` (y su coste en cada terreno, `terrain.json`) |
+| Medir el combate sin partida (laboratorio, duelos) | `src/core/measure.ts` (`uncheckedAttack`, `newUnit`: solo para medir) |
+| Cuando acaba la partida para una pantalla, quien es persona, el autoguardado | `src/core/session/screen.ts` |
+| Las flechas de lo que haran las ordenes permanentes | `src/core/autopilot/preview.ts` (`previewStandingOrders`) |
+| El azar de cada turno de quien decide | `src/core/turnSeeds.ts` (`turnSeedOf`) y `decisionRngOf` en `src/core/playerView.ts` |
+| Las opciones de una herramienta (`npm run fuzz -- --games 50`) | `tools/cliArgs.ts` (`commandLine`) |
 | Misiones | `src/core/content/missions.json` (contenido, con su esquema); la partida de una, `src/core/missions/build.ts`, y lo que se mira de su mapa, `missions/check.ts` (+ skill `nueva-mision`); un tipo de objetivo nuevo, una entrada en `OBJECTIVES` (`src/core/objectives.ts`, con su `isValid` para las partidas guardadas) y su frase en `OBJECTIVE_TEXT` (`src/campaign.ts`) |
