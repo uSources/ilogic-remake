@@ -114,6 +114,12 @@ export interface CoverSight {
   seesIntoCover(s: GameState, unit: Unit): boolean;
 }
 
+/** Lo que cobra quien destruye una unidad de ese tipo (el botin). */
+export interface KillReward {
+  readonly id: string;
+  amount(s: GameState, lost: Pick<Unit, 'type'>): number;
+}
+
 /** Lo que multiplica lo que resta una unidad al capturar (quickCapture). */
 export interface CaptureFactor {
   readonly id: string;
@@ -184,6 +190,8 @@ export interface RuleHooks {
   /** Quien contraataca (`canCounter`, rules/combat.ts) y lo que pasa en cada ataque (COMBAT_RESOLUTION). */
   readonly counterRules?: readonly CounterRule[];
   readonly combatSteps?: readonly CombatStep[];
+  /** Lo que se cobra por destruir una unidad (ver `killReward`, rules/economy.ts). */
+  readonly killRewards?: readonly KillReward[];
   /** Pasos del fin de ronda (ver ROUND_PHASES, rules/round.ts). */
   readonly roundPhases?: readonly RoundPhase[];
   /** Partes del resumen de la ronda (ver ROUND_REPORT_PARTS, rules/round.ts). */

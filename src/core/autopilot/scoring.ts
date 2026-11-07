@@ -11,7 +11,7 @@ import { canCounter, expectedDamage } from '../rules/combat';
 import { engagement, reversed } from '../rules/engagement';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
-import { bountyFor } from '../ruleModules/bounty';
+import { killReward } from '../rules/economy';
 import { posOf } from '../geom';
 import { MAX_LIFE } from '../data';
 import type { GameState, Pos, Unit } from '../model';
@@ -52,12 +52,12 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     value: (attack) => attack.damage * unitValue(attack.s, attack.weights, attack.target),
   },
   {
-    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da el dinero que cobra (bountyFor), en la misma escala.
+    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da el dinero que cobra (killReward), en la misma escala.
     id: 'kill',
     value: (attack) =>
       kills(attack)
         ? attack.weights.killBonus * unitValue(attack.s, attack.weights, attack.target) +
-          moneyValue(attack.weights, bountyFor(attack.s, attack.target))
+          moneyValue(attack.weights, killReward(attack.s, attack.target))
         : 0,
   },
   {

@@ -64,8 +64,8 @@ export function rangePos(board: GridBounds, center: Pos, index: number): Pos | n
 
 /** Las 4 vecinas ortogonales dentro del mapa, en el orden del original: abajo, derecha, arriba, izquierda. */
 export function neighbors4(board: GridBounds, pos: Pos): Pos[] {
-  // Los indices 1 a 4 del rombo son el primer anillo, en el orden del original.
-  return [1, 2, 3, 4].map((index) => rangePos(board, pos, index)).filter((neighbor): neighbor is Pos => neighbor !== null);
+  // El primer anillo del rombo, en el orden del original.
+  return [...diamond(board, pos, 1, 1)];
 }
 
 /** Recorre las casillas a distancia entre minRadius y maxRadius (ambas incluidas) en orden de rombo. */

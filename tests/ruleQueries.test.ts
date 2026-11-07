@@ -5,6 +5,7 @@ import {
   flankBonusOnceHit,
   hasFullArmy,
   isEnemyHq,
+  killReward,
   newUnit,
   projectedIncome,
   upkeepOf,
@@ -73,5 +74,10 @@ describe('consultas de las reglas que usa la IA', () => {
   it('flankBonusOnceHit: el flanqueo de la partida, si lo lleva', () => {
     expect(flankBonusOnceHit(blankState({ flankBonus: 0.15 }))).toBe(0.15);
     expect(flankBonusOnceHit(blankState({ flankBonus: 0 }))).toBe(0);
+  });
+
+  it('killReward: lo que se cobra por destruir una unidad (el botin, si la partida lo lleva)', () => {
+    expect(killReward(blankState({ bounty: 0.25 }), { type: 'Soldier' })).toBe(Math.round(SOLDIER.cost * 0.25));
+    expect(killReward(blankState({ bounty: 0 }), { type: 'Soldier' })).toBe(0);
   });
 });

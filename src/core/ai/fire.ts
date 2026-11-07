@@ -24,6 +24,9 @@ export interface FirePlan {
   order: number[];
 }
 
+/** Tiradores que hacen falta para que sea fuego concentrado: si basta con uno, ya lo hace cada unidad por su cuenta. */
+const MIN_FOCUS_SHOOTERS = 2;
+
 /** uid del tirador -> (uid del objetivo -> dano esperado). Solo objetivos a los que llega este turno. */
 type DamageTable = Map<number, Map<number, number>>;
 
@@ -69,7 +72,7 @@ function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: Dama
     total += candidate.dealt * (squad.length ? 1 + flankBonusOnceHit(s) : 1);
     squad.push(candidate.uid);
   }
-  return total >= foe.life && squad.length >= 2 ? squad : null;
+  return total >= foe.life && squad.length >= MIN_FOCUS_SHOOTERS ? squad : null;
 }
 
 /** Lo que vale quitar a un enemigo: su precio por la vida que le queda (los mas valiosos, primero). */

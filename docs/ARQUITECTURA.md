@@ -574,7 +574,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `passAllies` | `passAllies` | los aliados se atraviesan (sin parar encima) |
 | `ambush` | `ambush` | los enemigos que no se ven no cuentan al planear; al chocar, emboscada |
 | `counterattack` | `counterattack` | `MELEE_COUNTER`: quien contraataca |
-| `bounty` | `bounty` > 0 | el botin al destruir (`bountyFor`) |
+| `bounty` | `bounty` > 0 | el botin al destruir (`killRewards`: lo que se cobra, `killReward` de rules/economy.ts, que preguntan el panel de combate y la IA) |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
 `counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),

@@ -131,7 +131,6 @@ export type {
 export { RANK_KILLS, rank } from './rules/rank';
 export { flankBonusFor, flankBonusOnceHit } from './ruleModules/flank';
 export { abilitiesOf } from './ruleModules/abilities';
-export { bountyFor } from './ruleModules/bounty';
 export { MELEE_COUNTER } from './ruleModules/counterattack';
 export { inAttackRange, canDamage, basePower } from './rules/weapons';
 export { fallenIn } from './rules/attackRecord';
@@ -152,6 +151,7 @@ export {
   buyOptions,
   canBuyAt,
   buyProblem,
+  killReward,
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';

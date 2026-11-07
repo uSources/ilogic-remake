@@ -10,6 +10,7 @@ import { isWalkable, teamUnits, unitAt } from './queries';
 import type { ActionRejection, Building, GameState, TeamId, Unit } from '../model';
 import { newUnit } from './lifecycle';
 import { pay } from './funds';
+import { hooksOf } from '../ruleModules/ruleset';
 
 /** Los ingresos y el mantenimiento se redondean a multiplos de esto. */
 const MONEY_STEP = 100;
@@ -17,6 +18,13 @@ const MONEY_STEP = 100;
 const roundToMoneyStep = (amount: number): number => Math.round(amount / MONEY_STEP) * MONEY_STEP;
 
 /** El equipo ya tiene todas las unidades que caben (`maxUnits`). */
+/**
+ * [CAMBIO] Lo que cobra quien destruye una unidad como `lost`: lo de los `killRewards` de los modulos
+ * (el botin), 0 si la partida no lleva ninguno. Lo preguntan el panel de combate y la IA.
+ */
+export const killReward = (s: GameState, lost: Pick<Unit, 'type'>): number =>
+  hooksOf(s, 'killRewards').reduce((total, reward) => total + reward.amount(s, lost), 0);
+
 export const hasFullArmy = (s: GameState, team: TeamId): boolean => teamUnits(s, team).length >= s.settings.maxUnits;
 
 /** El ejercito tiene tope de puntos de mando (regla commandPoints): cada unidad ocupa los de su tipo. */
