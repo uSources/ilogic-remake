@@ -4,7 +4,7 @@ import { currentDefeat, isWinner, matchResult, newUnit, restoreInvariants, VICTO
 import { buildMission, missionById } from '@core/missions';
 import { defaultContent } from '@core/content/default';
 import type { GameModeId, VictoryRuleId } from '@core/model';
-import { act, blankState, BLANK_DICE_SEED, expectRejected, hqId, resultFor, unitTypeNamed } from './helpers';
+import { act, blankState, BLANK_SEEDS, expectRejected, hqId, resultFor, unitTypeNamed } from './helpers';
 
 /** Quita al equipo su Base (con eso ha perdido) y le deja una unidad: ha caido por la Base, no por quedarse sin nada. */
 const takeHeadquarters = (s: ReturnType<typeof blankState>, team: number) => {
@@ -109,7 +109,7 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('mision: si su dueño falla el objetivo, ganan sus enemigos', () => {
-    const s = buildMission(missionById('bridgehead')!, defaultContent(), BLANK_DICE_SEED);
+    const s = buildMission(missionById('bridgehead')!, defaultContent(), BLANK_SEEDS);
     const objective = s.mission!.objective;
     if (objective.kind !== 'capture') throw new Error('bridgehead es de capturar');
     s.day = objective.days + 1;

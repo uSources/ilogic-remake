@@ -48,11 +48,21 @@ export function isRandomState(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < UINT32_RANGE;
 }
 
-/** Mezcla para que las decisiones de la IA no salgan de la misma semilla que los dados. */
-const DECISION_SEED_MIX = 0x9e3779b9;
+/**
+ * Las dos semillas del azar de una partida, sacadas una aparte de la otra: la de sus dados
+ * (`GameState.dice`) y la de las decisiones de la IA (`GameState.decisionSeed`). Saber una no dice
+ * la otra (dentro de lo que da un generador de 32 bits: no es criptografico).
+ */
+export interface MatchSeeds {
+  dice: number;
+  decisions: number;
+}
 
-/** La semilla de las decisiones de una partida (`GameState.decisionSeed`), sacada de la de sus dados. */
-export const decisionSeedFor = (diceSeed: number): number => (diceSeed ^ DECISION_SEED_MIX) >>> 0;
+/** Las semillas de una partida sacadas de una sola (dos tiradas seguidas de `seededRng(seed)`). */
+export function matchSeedsFrom(seed: number): MatchSeeds {
+  const rng = seededRng(seed);
+  return { dice: seedFromDraw(rng()), decisions: seedFromDraw(rng()) };
+}
 
 /** Multiplicadores para mezclar el dia y el equipo en la semilla de un turno (primos grandes de 32 bits). */
 const DAY_MIX = 0x85ebca6b;

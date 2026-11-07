@@ -1,4 +1,5 @@
 import { expect } from 'vitest';
+import type { MatchSeeds } from '@core/util/random';
 import { entryOf, type BuildingType, type TerrainType, type UnitType } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { settingsWith } from '@core/matchSettings';
@@ -75,7 +76,7 @@ export const endRoundReport = (s: GameState): RoundReport => roundReport(s, endR
 export const diceFrom = (rng: Rng): Dice => ({ roll: rng });
 
 /** Semilla de los dados de las partidas de prueba (`GameState.dice`). */
-export const BLANK_DICE_SEED = 1;
+export const BLANK_SEEDS: MatchSeeds = { dice: 1, decisions: 2 };
 
 /** Dinero de cada equipo en las partidas de prueba. */
 export const BLANK_FUNDS = 5000;
@@ -99,7 +100,7 @@ export function blankState(settingChanges: Partial<MatchSettings> = {}, teams: r
     content: defaultContent(),
     mode: 'skirmish',
     teams,
-    diceSeed: BLANK_DICE_SEED,
+    seeds: BLANK_SEEDS,
   });
   teams.forEach((_, team) => s.buildings.push({ type: hqId(), owner: team, ...blankHeadquarters(team), capture: null }));
   // La partida de prueba ya esta en el turno del primer equipo (sin nada que hacer al empezarlo).

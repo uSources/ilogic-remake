@@ -270,9 +270,9 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto);
   `rematchOf(s)` da la revancha. La usan la pantalla, `npm run play`, las herramientas y los tests:
   una misma semilla da la misma partida en todos (K4).
-- `gameState.ts`: `newGameState({ map, settings, content, mode, teams, diceSeed, firstTeam?, theme? })`
+- `gameState.ts`: `newGameState({ map, settings, content, mode, teams, seeds, firstTeam?, theme? })`
   lo usan mapgen, misiones, laboratorio, duelos y tests. Quien la crea dice sus equipos (`teams:
-  duel('human', 'ai')` o una lista de `TeamSetup`) y la semilla de sus dados.
+  duel('human', 'ai')` o una lista de `TeamSetup`) y las semillas de su azar (`seeds`: dados y decisiones, una aparte de la otra).
 - `defaultGames.ts`: `createMatch(config, mapRng?)` y `loadGame(json)` (lo que usa la web). Con `content/default.ts`, el unico sitio del nucleo que conoce el contenido del
   juego (ESLint).
 - `settingsSchema.ts`: cada regla es un interruptor o un numero (entero o no, en un intervalo, quiza
@@ -288,12 +288,14 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 Los dados de las reglas (el combate) son de la partida: `GameState.dice` es el estado de un
 mulberry32 (un entero de 32 bits) y `diceOf(s)` tira de el, asi que se guarda y se repite con la
 partida. Las decisiones de la IA tienen su propio azar, tambien de la partida pero aparte:
-`GameState.decisionSeed` (fija, sale de la semilla de los dados con `decisionSeedFor`) y, para cada
+`GameState.decisionSeed` (fija; quien crea la partida la saca aparte de la de los dados: `MatchSeeds`,
+`matchSeedsFrom(semilla)` para una mision o un laboratorio, dos tiradas distintas del generador en
+mapgen) y, para cada
 turno, `decisionRng(s, equipo)` (dice.ts: la semilla del turno, `turnSeed`, mezcla la de la
 partida, el dia y el equipo). Asi el mismo turno da las mismas decisiones al cargar la partida, al
 repetirla o en otra maquina (por la red), y lo que decide no cambia lo que sale en los dados. El
 generador de mapas lleva su `Rng` (`seededRng`), que da quien crea la partida. `util/random.ts`: el
-paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `decisionSeedFor`, `turnSeed`, y
+paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `matchSeedsFrom`, `turnSeed`, y
 elegir al azar (`pick`, `weightedPick`: con la lista vacia no tiran).
 
 #### Guardar y leer

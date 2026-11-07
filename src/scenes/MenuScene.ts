@@ -205,7 +205,7 @@ export class MenuScene extends Phaser.Scene {
     this.leaving = true;
     this.scene.start('Game', {
       start: 'new',
-      match: { mode: 'mission', mission: mission.id, diceSeed: randomSeed() },
+      match: { mode: 'mission', mission: mission.id, seed: randomSeed() },
     } satisfies GameStartData);
   }
 

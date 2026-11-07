@@ -19,7 +19,7 @@ import { newUnit } from './rules/lifecycle';
 import { distanceMap, type DistanceMap } from './rules/distance';
 import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
-import { seedFromDraw } from './util/random';
+import { seedFromDraw, type MatchSeeds } from './util/random';
 import type { GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
@@ -38,7 +38,7 @@ const areaScale = (size: GridSize) => (size.width * size.height) / (ORIGINAL_MAP
 /** Los numeros del generador del contenido de la partida (mapgen.json). */
 const settingsOf = (s: GameState): MapgenSettings => s.content.mapgen;
 
-function emptyState(size: number, options: NewMapOptions, diceSeed: number): GameState {
+function emptyState(size: number, options: NewMapOptions, seeds: MatchSeeds): GameState {
   // El terreno de partida no importa: el generador pone todas las casillas.
   const plain = options.content.plainTerrain.id;
   return newGameState({
@@ -48,7 +48,7 @@ function emptyState(size: number, options: NewMapOptions, diceSeed: number): Gam
     mode: 'skirmish',
     teams: options.teams,
     firstTeam: options.firstTeam,
-    diceSeed,
+    seeds,
   });
 }
 
@@ -514,13 +514,14 @@ export interface NewMapOptions {
 export function generateGame(rng: Rng, options: NewMapOptions): GameState {
   const size = options.size ?? ORIGINAL_MAP_SIDE;
   // El punto de partida del terreno se sortea una vez y vale para todos los intentos.
-  const originDraw = rng();
-  const origin = { x: Math.floor(originDraw * size), y: Math.floor(rng() * size) };
-  // Los dados de la partida salen de esa misma tirada: sin gastar otra, cada semilla sigue dando su mapa.
-  const diceSeed = seedFromDraw(originDraw);
+  const originDraw = { x: rng(), y: rng() };
+  const origin = { x: Math.floor(originDraw.x * size), y: Math.floor(originDraw.y * size) };
+  // Los dados y las decisiones salen de esas mismas tiradas, una de cada (dos numeros distintos del
+  // generador): sin gastar otras, cada semilla sigue dando su mapa.
+  const seeds: MatchSeeds = { dice: seedFromDraw(originDraw.x), decisions: seedFromDraw(originDraw.y) };
   for (let attempt = 0; ; attempt++) {
     const draft: MapDraft = {
-      s: emptyState(size, options, diceSeed),
+      s: emptyState(size, options, seeds),
       rng,
       origin,
       attempt,

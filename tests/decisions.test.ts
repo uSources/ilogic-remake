@@ -4,17 +4,21 @@ import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { serialize } from '@core/save';
 import { duel } from '@core/teams';
-import { decisionSeedFor, turnSeed } from '@core/util/random';
+import { matchSeedsFrom, turnSeed } from '@core/util/random';
 import { blankState } from './helpers';
 
 const draws = (rng: () => number) => Array.from({ length: 3 }, () => rng());
 
 /** El azar de las decisiones de la IA sale de la partida: se repite al cargarla, en una repeticion o por la red. */
 describe('el azar de las decisiones (GameState.decisionSeed, decisionRng)', () => {
-  it('lo pone la partida al crearla, de la semilla de sus dados, y va aparte de ellos', () => {
+  it('la pone quien crea la partida, aparte de la de sus dados', () => {
     const s = blankState();
-    expect(s.decisionSeed).toBe(decisionSeedFor(s.dice));
-    expect(s.decisionSeed).not.toBe(s.dice);
+    expect([s.dice, s.decisionSeed]).toEqual([1, 2]);
+    const seeds = matchSeedsFrom(7);
+    expect(seeds.decisions).not.toBe(seeds.dice);
+    expect(matchSeedsFrom(7)).toEqual(seeds);
+    const map = createMatch(skirmishConfig({ seed: 5, teams: duel('human', 'ai') }));
+    expect(map.decisionSeed).not.toBe(map.dice);
   });
 
   it('el mismo turno da las mismas decisiones; otro dia u otro equipo, otras', () => {

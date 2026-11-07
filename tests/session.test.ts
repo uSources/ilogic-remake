@@ -507,7 +507,7 @@ describe('modos de juego (core/modes.ts)', () => {
         { type: hqId(), owner: 1, at: { x: 11, y: 11 } },
       ],
       units: [],
-      diceSeed: 1,
+      seed: 1,
     });
     expect(s.settings.weather).toBe(false);
   });

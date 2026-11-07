@@ -32,7 +32,7 @@ const OBJECTIVE_KIND_LABEL: Record<ObjectiveKind, TextKey> = {
 /** Tamaño de casilla (pixeles) de las miniaturas de las misiones. */
 const MISSION_THUMB_PX = 6;
 /** Semilla de los dados de la partida que solo se dibuja en miniatura (no se juega: da igual cual). */
-const THUMB_DICE_SEED = 0;
+const THUMB_SEED = 0;
 
 export class CampaignScreen {
   private selected = 0;
@@ -61,7 +61,7 @@ export class CampaignScreen {
   missionThumb(index: number): string {
     const cached = this.thumbs.get(index);
     if (cached) return cached;
-    const s = createMatch({ mode: 'mission', mission: MISSIONS[index]!.id, diceSeed: THUMB_DICE_SEED });
+    const s = createMatch({ mode: 'mission', mission: MISSIONS[index]!.id, seed: THUMB_SEED });
     const thumb = mapThumb(s, this.host.palette, { units: true, px: MISSION_THUMB_PX });
     this.thumbs.set(index, thumb);
     return thumb;
